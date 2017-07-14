@@ -24,9 +24,10 @@ before_install:
   # install compiled release
   - wget https://github.com/google/protobuf/releases/download/v3.2.0/protoc-3.2.0-linux-x86_64.zip
   - unzip -q protoc-3.2.0-linux-x86_64.zip
-  - sudo install -m 755 bin/protoc /usr/local/bin
-  - sudo install -m 644 -d include/google/protobuf/*.proto /usr/local/include/google/protobuf/
-  - sudo install -m 644 -d include/google/protobuf/compiler/*.proto /usr/local/include/google/protobuf/compiler/
+  - sudo install -d /usr/local/include/google/protobuf/compiler
+  - sudo install -m 755 bin/protoc /usr/local/bin/
+  - sudo install -m 644 include/google/protobuf/*.proto /usr/local/include/google/protobuf/
+  - sudo install -m 644 include/google/protobuf/compiler/*.proto /usr/local/include/google/protobuf/compiler/
   - ls -l /usr/local/include
   - ls -l /usr/local/include/google
   - ls -l /usr/local/include/google/protobuf
