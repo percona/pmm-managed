@@ -1,0 +1,13 @@
+[Unit]
+Description=Configuration API of PMM server components
+After=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/sysconfig/pmm-managed
+ExecStart=/usr/sbin/pmm-managed $OPTIONS
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target
