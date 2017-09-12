@@ -43,6 +43,7 @@ import (
 	"github.com/percona/pmm-managed/api"
 	"github.com/percona/pmm-managed/handlers"
 	"github.com/percona/pmm-managed/services/prometheus"
+	"github.com/percona/pmm-managed/services/telemetry"
 	"github.com/percona/pmm-managed/utils/interceptors"
 	"github.com/percona/pmm-managed/utils/logger"
 )
@@ -64,6 +65,8 @@ var (
 	prometheusConfigF = flag.String("prometheus-config", "", "Prometheus configuration file path")
 	prometheusURLF    = flag.String("prometheus-url", "http://127.0.0.1:9090/", "Prometheus base URL")
 	promtoolF         = flag.String("promtool", "promtool", "promtool path")
+
+	telemetryConfigF = flag.String("telemetry-config", "", "Telemetry configuration file")
 )
 
 func addSwaggerHandler(mux *http.ServeMux, pattern string) {
@@ -237,6 +240,41 @@ func runDebugServer(ctx context.Context) {
 	cancel()
 }
 
+func runTelemetryService(ctx context.Context) {
+	l := logrus.WithField("component", "TELEMETRY")
+
+	disabled := strings.ToLower(os.Getenv("DISABLE_TELEMETRY"))
+	if disabled == "true" || disabled == "1" {
+		l.Infof("Telemetry is disabled by DISABLE_TELEMETRY env var")
+		return
+	}
+
+	cfg, _ := telemetry.LoadConfig(*telemetryConfigF)
+
+	updated, err := telemetry.CheckConfig(cfg)
+	if err != nil {
+		l.Warnf("cannot process telemetry condfig: %s", err)
+		l.Warnf("Telemetry is disabled")
+		return
+	}
+	if updated {
+		telemetry.SaveConfig(*telemetryConfigF, cfg)
+	}
+
+	svc, err := telemetry.NewService(cfg)
+	if err != nil {
+		l.Warnf("Cannot start telemetry: %s", err.Error())
+		return
+	}
+
+	l.Infof("Telemetry is enabled. Send data interval = %s seconds", cfg.Interval)
+	svc.Start()
+
+	<-ctx.Done()
+	svc.Stop()
+
+}
+
 func main() {
 	log.SetFlags(0)
 	log.SetPrefix("stdlog: ")
@@ -268,7 +306,7 @@ func main() {
 
 	// start servers, wait for them to exit
 	var wg sync.WaitGroup
-	wg.Add(3)
+	wg.Add(4)
 	go func() {
 		defer wg.Done()
 		runGRPCServer(ctx)
@@ -280,6 +318,10 @@ func main() {
 	go func() {
 		defer wg.Done()
 		runDebugServer(ctx)
+	}()
+	go func() {
+		defer wg.Done()
+		runTelemetryService(ctx)
 	}()
 	wg.Wait()
 }
