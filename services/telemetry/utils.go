@@ -25,7 +25,10 @@ func generateUUID() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return uuid.String(), nil
+
+	// Old telemetry IDs have only 32 chars in the table but UUIDs + "-" = 36
+	cleanUUID := strings.Replace(uuid.String(), "-", "", -1)
+	return cleanUUID, nil
 }
 
 func getOSNameAndVersion() (string, error) {

@@ -100,6 +100,34 @@ func TestService(t *testing.T) {
 	assert.Equal(t, isRunning, false)
 }
 
+func TestServiceIntegration(t *testing.T) {
+
+	integrationTests := os.Getenv("INTEGRATION_TESTS")
+	if integrationTests == "" {
+		t.Skipf("Env var INTEGRATION_TESTS is not set. Skipping integration test")
+	}
+
+	telemetryEnvURL := os.Getenv("PERCONA_VERSION_CHECK_URL")
+	if telemetryEnvURL == "" {
+		t.Skipf("Env var PERCONA_VERSION_CHECK_URL is not set. Skipping integration test")
+	}
+	uuid, _ := generateUUID()
+	cfg := &Config{
+		URL:      telemetryEnvURL,
+		Interval: 1,
+		UUID:     uuid,
+	}
+
+	service, err := NewService(cfg)
+	require.NoError(t, err)
+	service.Start()
+	isRunning := service.IsRunning()
+	assert.Equal(t, isRunning, true)
+
+	time.Sleep(2100 * time.Millisecond)
+	assert.Contains(t, service.GetLastStatus(), "telemetry data sent")
+
+}
 func TestCollectData(t *testing.T) {
 	config := &Config{}
 	svc, err := NewService(config)

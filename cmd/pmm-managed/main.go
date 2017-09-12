@@ -261,6 +261,13 @@ func runTelemetryService(ctx context.Context) {
 		telemetry.SaveConfig(*telemetryConfigF, cfg)
 	}
 
+	// Using this env var for compatibility with the Toolkit
+	if telemetryEnvURL := os.Getenv("PERCONA_VERSION_CHECK_URL"); telemetryEnvURL != "" {
+		l.Infof("PERCONA_VERSION_CHECK_URL env var is set")
+		l.Infof("Using %s as the telemetry endpoint", telemetryEnvURL)
+		cfg.URL = telemetryEnvURL
+	}
+
 	svc, err := telemetry.NewService(cfg)
 	if err != nil {
 		l.Warnf("Cannot start telemetry: %s", err.Error())

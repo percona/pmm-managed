@@ -114,7 +114,7 @@ func (s *Service) GetLastStatus() string {
 func (s *Service) collectData() (map[string]interface{}, error) {
 	data := map[string]interface{}{}
 	if osType, err := getOSNameAndVersion(); err == nil {
-		data["os_type"] = osType
+		data["OS"] = osType
 	}
 
 	data["PMM"] = Version
@@ -142,6 +142,8 @@ func (s *Service) sendRequest(data []byte) error {
 	}
 	req.Header.Add("X-Percona-Toolkit-Tool", "pmm")
 	resp, err := client.Do(req)
+	defer resp.Body.Close()
+
 	if err != nil {
 		return err
 	}
