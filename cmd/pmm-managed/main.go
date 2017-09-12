@@ -61,7 +61,7 @@ var (
 
 	swaggerF = flag.String("swagger", "off", "Server to serve Swagger: rest, debug or off")
 
-	prometheusConfigF = flag.String("prometheus-config", "", "Prometheus configuration file path")
+	prometheusConfigF = flag.String("prometheus-config", "/etc/prometheus.yml", "Prometheus configuration file path")
 	prometheusURLF    = flag.String("prometheus-url", "http://127.0.0.1:9090/", "Prometheus base URL")
 	promtoolF         = flag.String("promtool", "promtool", "promtool path")
 )
