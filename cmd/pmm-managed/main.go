@@ -271,12 +271,11 @@ func runTelemetryService(ctx context.Context) {
 		return
 	}
 
-	l.Infof("Telemetry is enabled. Send data interval = %s seconds", cfg.Interval)
+	l.Infof("Telemetry is enabled. Send data interval = %v", cfg.Interval)
 	svc.Start()
 
 	<-ctx.Done()
 	svc.Stop()
-
 }
 
 func main() {
