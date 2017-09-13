@@ -34,12 +34,14 @@ import (
 
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
 
+	consulapi "github.com/hashicorp/consul/api"
 	"github.com/percona/pmm-managed/api"
 	"github.com/percona/pmm-managed/handlers"
 	"github.com/percona/pmm-managed/services/prometheus"
@@ -67,6 +69,7 @@ var (
 	promtoolF         = flag.String("promtool", "promtool", "promtool path")
 
 	telemetryConfigF = flag.String("telemetry-config", "", "Telemetry configuration file")
+	consulAddress    = flag.String("consul-address", "localhost:8500", "consul endpoint address")
 )
 
 func addSwaggerHandler(mux *http.ServeMux, pattern string) {
@@ -249,13 +252,11 @@ func runTelemetryService(ctx context.Context) {
 		return
 	}
 
-	cfg, _ := telemetry.LoadConfig(*telemetryConfigF)
-
-	_, err := telemetry.CheckConfig(cfg)
-	if err != nil {
-		l.Warnf("cannot process telemetry condfig: %s", err)
-		l.Warnf("Telemetry is disabled")
-		return
+	cfg := telemetry.DefaultConfig()
+	if uuid, err := getTelemetryUUID(*consulAddress, cfg.UUID); err != nil {
+		l.Warnf("cannot get/set telemetry UUID in consul: %s", err)
+	} else {
+		cfg.UUID = uuid
 	}
 
 	// Using this env var for compatibility with the Toolkit
@@ -276,6 +277,29 @@ func runTelemetryService(ctx context.Context) {
 
 	<-ctx.Done()
 	svc.Stop()
+}
+
+func getTelemetryUUID(consulAddress, defaultUUID string) (string, error) {
+	client, err := consulapi.NewClient(&consulapi.Config{Address: consulAddress})
+	if err != nil {
+		return "", errors.Wrap(err, "cannot connect to consul")
+	}
+
+	kv := client.KV()
+	pair, _, err := kv.Get("/percona/callhome/uuid", nil)
+	if err != nil {
+		return "", err
+	}
+
+	if pair == nil {
+		pair = &consulapi.KVPair{Key: "/percona/callhome/uuid", Value: []byte(defaultUUID)}
+		_, err = kv.Put(pair, nil)
+		if err != nil {
+			return "", errors.Wrap(err, "cannot set telemetry uuid in consul")
+		}
+	}
+
+	return string(pair.Value), nil
 }
 
 func main() {

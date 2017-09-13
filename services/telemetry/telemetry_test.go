@@ -71,7 +71,7 @@ func TestService(t *testing.T) {
 	uuid, _ := generateUUID()
 	cfg := &Config{
 		URL:      ts.URL,
-		Interval: 1,
+		Interval: 1 * time.Second,
 		UUID:     uuid,
 	}
 
@@ -260,24 +260,4 @@ func TestGetOSNameAndVersion4(t *testing.T) {
 	// Restore original funcs
 	stat = os.Stat
 	readFile = ioutil.ReadFile
-}
-
-func TestWriteConfig(t *testing.T) {
-	file, err := ioutil.TempFile(os.TempDir(), "")
-	file.Close()
-	defer os.Remove(file.Name())
-
-	assert.NoError(t, err)
-
-	cfg := &Config{
-		UUID:     "abcdefg123456",
-		Interval: 24 * 60 * 60 * time.Second,
-		URL:      "percona.com",
-	}
-	err = WriteConfig(file.Name(), cfg)
-	assert.NoError(t, err)
-
-	savedCfg, err := LoadConfig(file.Name())
-	assert.NoError(t, err)
-	assert.Equal(t, cfg, savedCfg)
 }

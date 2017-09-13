@@ -41,6 +41,18 @@ var (
 	Version  = "1.3.0"
 )
 
+func DefaultConfig() *Config {
+	uuid, err := generateUUID()
+	if err != nil {
+		uuid = ""
+	}
+	return &Config{
+		URL:      defaultURL,
+		Interval: defaultinterval,
+		UUID:     uuid,
+	}
+}
+
 // NewService creates a new telemetry service given a configuration
 func NewService(config *Config) (*Service, error) {
 	service := &Service{
@@ -58,7 +70,7 @@ func (s *Service) Start() {
 	}
 	s.stopChan = make(chan bool)
 	s.isRunning = true
-	s.ticker = time.NewTicker(time.Second * time.Duration(s.Interval))
+	s.ticker = time.NewTicker(s.Interval)
 
 	s.wg.Add(1)
 	defer s.wg.Done()
