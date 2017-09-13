@@ -243,22 +243,19 @@ func runDebugServer(ctx context.Context) {
 func runTelemetryService(ctx context.Context) {
 	l := logrus.WithField("component", "TELEMETRY")
 
-	disabled := strings.ToLower(os.Getenv("DISABLE_TELEMETRY"))
-	if disabled == "true" || disabled == "1" {
+	disabled := strings.TrimSpace(strings.ToLower(os.Getenv("DISABLE_TELEMETRY")))
+	if disabled == "true" || disabled == "1" || disabled == "yes" {
 		l.Infof("Telemetry is disabled by DISABLE_TELEMETRY env var")
 		return
 	}
 
 	cfg, _ := telemetry.LoadConfig(*telemetryConfigF)
 
-	updated, err := telemetry.CheckConfig(cfg)
+	_, err := telemetry.CheckConfig(cfg)
 	if err != nil {
 		l.Warnf("cannot process telemetry condfig: %s", err)
 		l.Warnf("Telemetry is disabled")
 		return
-	}
-	if updated {
-		telemetry.SaveConfig(*telemetryConfigF, cfg)
 	}
 
 	// Using this env var for compatibility with the Toolkit

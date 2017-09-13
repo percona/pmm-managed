@@ -107,6 +107,7 @@ func TestServiceIntegration(t *testing.T) {
 		t.Skipf("Env var INTEGRATION_TESTS is not set. Skipping integration test")
 	}
 
+	// Using this env var for compatibility with the Toolkit
 	telemetryEnvURL := os.Getenv("PERCONA_VERSION_CHECK_URL")
 	if telemetryEnvURL == "" {
 		t.Skipf("Env var PERCONA_VERSION_CHECK_URL is not set. Skipping integration test")
@@ -137,7 +138,7 @@ func TestCollectData(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, m)
 
-	assert.Contains(t, m, "os_type")
+	assert.Contains(t, m, "OS")
 	assert.Contains(t, m, "PMM")
 }
 
@@ -149,14 +150,16 @@ func TestMakePayload(t *testing.T) {
 	require.NoError(t, err)
 
 	m := map[string]interface{}{
-		"os_type": "Kubuntu",
-		"pmm":     "1.2.3",
+		"OS":  "Kubuntu",
+		"pmm": "1.2.3",
 	}
 
 	b, err := svc.makePayload(m)
 	require.NoError(t, err)
-	want := "ABCDEFG12345;os_type;Kubuntu\nABCDEFG12345;pmm;1.2.3\n"
-	assert.Equal(t, string(b), want)
+	// Don't remove \n at the end of the strings. They are needed by the API
+	// so I want to ensure makePayload adds them
+	assert.Contains(t, string(b), "ABCDEFG12345;OS;Kubuntu\n")
+	assert.Contains(t, string(b), "ABCDEFG12345;pmm;1.2.3\n")
 
 }
 
