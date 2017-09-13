@@ -42,7 +42,7 @@ func CheckConfig(cfg *Config) (updated bool, err error) {
 	return updated, nil
 }
 
-func SaveConfig(filename string, config *Config) error {
+func WriteConfig(filename string, config *Config) error {
 	content, err := yaml.Marshal(config)
 	if err != nil {
 		return errors.Wrap(err, "cannot marshal call home config")

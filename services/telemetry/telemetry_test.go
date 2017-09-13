@@ -176,6 +176,10 @@ func TestGetOSNameAndVersion1(t *testing.T) {
 	osInfo, err := getOSNameAndVersion()
 	require.NoError(t, err)
 	assert.Equal(t, osInfo, "CarlOs 1.0")
+
+	// Restore original funcs
+	stat = os.Stat
+	readFile = ioutil.ReadFile
 }
 
 // linuxbase.org
@@ -202,6 +206,10 @@ func TestGetOSNameAndVersion2(t *testing.T) {
 	osInfo, err := getOSNameAndVersion()
 	require.NoError(t, err)
 	assert.Equal(t, osInfo, "CarlOs version 2.0")
+
+	// Restore original funcs
+	stat = os.Stat
+	readFile = ioutil.ReadFile
 }
 
 // For some versions of Debian/Ubuntu without lsb_release command
@@ -223,6 +231,10 @@ func TestGetOSNameAndVersion3(t *testing.T) {
 	osInfo, err := getOSNameAndVersion()
 	require.NoError(t, err)
 	assert.Equal(t, osInfo, "CarlOs version 3.0")
+
+	// Restore original funcs
+	stat = os.Stat
+	readFile = ioutil.ReadFile
 }
 
 // Older Debian/Ubuntu/etc.
@@ -244,25 +256,28 @@ func TestGetOSNameAndVersion4(t *testing.T) {
 	osInfo, err := getOSNameAndVersion()
 	require.NoError(t, err)
 	assert.Equal(t, osInfo, "Debian version 4.0")
+
+	// Restore original funcs
+	stat = os.Stat
+	readFile = ioutil.ReadFile
 }
 
-// Reserved to test config save
-func copyToTmp(filename string) (string, error) {
-	tmpfile, err := ioutil.TempFile(os.TempDir(), "prefix")
-	if err != nil {
-		return "", err
-	}
-	defer tmpfile.Close()
+func TestWriteConfig(t *testing.T) {
+	file, err := ioutil.TempFile(os.TempDir(), "")
+	file.Close()
+	defer os.Remove(file.Name())
 
-	content, err := ioutil.ReadAll(tmpfile)
-	if err != nil {
-		return "", nil
-	}
+	assert.NoError(t, err)
 
-	err = ioutil.WriteFile(tmpfile.Name(), content, os.ModePerm)
-	if err != nil {
-		return "", err
+	cfg := &Config{
+		UUID:     "abcdefg123456",
+		Interval: 24 * 60 * 60 * time.Second,
+		URL:      "percona.com",
 	}
+	err = WriteConfig(file.Name(), cfg)
+	assert.NoError(t, err)
 
-	return tmpfile.Name(), nil
+	savedCfg, err := LoadConfig(file.Name())
+	assert.NoError(t, err)
+	assert.Equal(t, cfg, savedCfg)
 }

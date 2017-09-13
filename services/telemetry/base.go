@@ -23,15 +23,15 @@ type Service struct {
 
 // Telemetry config
 type Config struct {
-	URL      string `yaml:"url'`
-	UUID     string `yaml:"uuid"`
-	Interval int    `yaml:"interval"`
+	URL      string        `yaml:"url'`
+	UUID     string        `yaml:"uuid"`
+	Interval time.Duration `yaml:"interval"`
 }
 
 const (
 	defaultURL      = "https://v.percona.com"
 	defaultUUID     = ""
-	defaultinterval = 24 * 60 * 60
+	defaultinterval = 24 * 60 * 60 * time.Second
 )
 
 var (
@@ -59,9 +59,11 @@ func (s *Service) Start() {
 	s.stopChan = make(chan bool)
 	s.isRunning = true
 	s.ticker = time.NewTicker(time.Second * time.Duration(s.Interval))
+
 	s.wg.Add(1)
+	defer s.wg.Done()
+
 	go func() {
-	LOOP:
 		for {
 			select {
 			case <-s.ticker.C:
@@ -78,10 +80,9 @@ func (s *Service) Start() {
 				}
 				s.lastStatus = fmt.Sprintf("%v telemetry data sent.", time.Now())
 			case <-s.stopChan:
-				break LOOP
+				return
 			}
 		}
-		s.wg.Done()
 	}()
 }
 
@@ -123,7 +124,7 @@ func (s *Service) collectData() (map[string]interface{}, error) {
 }
 
 func (s *Service) makePayload(data map[string]interface{}) ([]byte, error) {
-	w := bytes.NewBuffer(nil)
+	var w bytes.Buffer
 
 	for key, value := range data {
 		w.WriteString(fmt.Sprintf("%s;%s;%s\n", s.Config.UUID, key, value))
@@ -140,13 +141,14 @@ func (s *Service) sendRequest(data []byte) error {
 	if err != nil {
 		return err
 	}
+	req.Header.Add("Content-Type", "plain/text")
 	req.Header.Add("X-Percona-Toolkit-Tool", "pmm")
 	resp, err := client.Do(req)
-	defer resp.Body.Close()
-
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
+
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("Error while sending telemetry data: Status: %d, %s", resp.StatusCode, resp.Status)
 	}
