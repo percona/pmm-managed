@@ -68,8 +68,7 @@ var (
 	prometheusURLF    = flag.String("prometheus-url", "http://127.0.0.1:9090/", "Prometheus base URL")
 	promtoolF         = flag.String("promtool", "promtool", "promtool path")
 
-	telemetryConfigF = flag.String("telemetry-config", "", "Telemetry configuration file")
-	consulAddress    = flag.String("consul-address", "localhost:8500", "consul endpoint address")
+	consulAddress = flag.String("consul-address", "localhost:8500", "consul endpoint address")
 )
 
 func addSwaggerHandler(mux *http.ServeMux, pattern string) {
