@@ -1,7 +1,25 @@
+// pmm-managed
+// Copyright (C) 2017 Percona LLC
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+// Package consul provides facilities for working with Consul.
 package telemetry
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -13,12 +31,12 @@ import (
 // Telemetry exported and unexported fields
 type Service struct {
 	Config
-	ticker     *time.Ticker
 	lastStatus string
-	stopChan   chan bool
+	ticker     *time.Ticker
 	wg         sync.WaitGroup
-	isRunning  bool
-	lock       sync.Mutex
+
+	lock      sync.Mutex
+	isRunning bool
 }
 
 // Telemetry config
@@ -62,18 +80,13 @@ func NewService(config *Config) (*Service, error) {
 }
 
 // Start sets a new ticker to collect data every Config.Interval seconds.
-func (s *Service) Start() {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	if s.isRunning {
+func (s *Service) Start(ctx context.Context) {
+	if s.IsRunning() {
 		return
 	}
-	s.stopChan = make(chan bool)
-	s.isRunning = true
-	s.ticker = time.NewTicker(s.Interval)
-
+	s.setRunning(true)
 	s.wg.Add(1)
-	defer s.wg.Done()
+	s.ticker = time.NewTicker(s.Interval)
 
 	go func() {
 		for {
@@ -91,24 +104,24 @@ func (s *Service) Start() {
 					continue
 				}
 				s.lastStatus = fmt.Sprintf("%v telemetry data sent.", time.Now())
-			case <-s.stopChan:
+			case <-ctx.Done():
+				s.setRunning(false)
+				s.wg.Done()
 				return
 			}
 		}
 	}()
 }
 
-// Stop the service
-func (s *Service) Stop() {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	if !s.isRunning {
-		return
-	}
-	s.ticker.Stop()
-	close(s.stopChan)
+// Wait for the service to stop
+func (s *Service) Wait() {
 	s.wg.Wait()
-	s.isRunning = false
+}
+
+func (s *Service) setRunning(status bool) {
+	s.lock.Lock()
+	s.isRunning = status
+	s.lock.Unlock()
 }
 
 // IsRunning returns true if the service is running

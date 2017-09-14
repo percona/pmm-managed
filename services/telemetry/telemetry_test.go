@@ -1,6 +1,24 @@
+// pmm-managed
+// Copyright (C) 2017 Percona LLC
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+// Package consul provides facilities for working with Consul.
 package telemetry
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -75,33 +93,37 @@ func TestService(t *testing.T) {
 		UUID:     uuid,
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	service, err := NewService(cfg)
 	require.NoError(t, err)
-	service.Start()
+	service.Start(ctx)
 	isRunning := service.IsRunning()
 	assert.Equal(t, isRunning, true)
 
 	time.Sleep(1100 * time.Millisecond)
 	assert.Equal(t, count, 1)
-	service.Stop()
+	cancel()
+	service.Wait()
 	isRunning = service.IsRunning()
 	assert.Equal(t, isRunning, false)
 	assert.Equal(t, lastHeader, "pmm")
 
+	ctx, cancel = context.WithCancel(context.Background())
 	// Test a service restart
-	service.Start()
+	service.Start(ctx)
 	isRunning = service.IsRunning()
 	assert.Equal(t, isRunning, true)
 
 	time.Sleep(2100 * time.Millisecond)
 	assert.Equal(t, count, 3)
-	service.Stop()
+	cancel()
+	service.Wait()
 	isRunning = service.IsRunning()
 	assert.Equal(t, isRunning, false)
 }
 
 func TestServiceIntegration(t *testing.T) {
-
 	integrationTests := os.Getenv("INTEGRATION_TESTS")
 	if integrationTests == "" {
 		t.Skipf("Env var INTEGRATION_TESTS is not set. Skipping integration test")
@@ -119,16 +141,18 @@ func TestServiceIntegration(t *testing.T) {
 		UUID:     uuid,
 	}
 
+	ctx := context.Background()
+
 	service, err := NewService(cfg)
 	require.NoError(t, err)
-	service.Start()
+	service.Start(ctx)
 	isRunning := service.IsRunning()
 	assert.Equal(t, isRunning, true)
 
 	time.Sleep(2100 * time.Millisecond)
 	assert.Contains(t, service.GetLastStatus(), "telemetry data sent")
-
 }
+
 func TestCollectData(t *testing.T) {
 	config := &Config{}
 	svc, err := NewService(config)
@@ -160,7 +184,6 @@ func TestMakePayload(t *testing.T) {
 	// so I want to ensure makePayload adds them
 	assert.Contains(t, string(b), "ABCDEFG12345;OS;Kubuntu\n")
 	assert.Contains(t, string(b), "ABCDEFG12345;pmm;1.2.3\n")
-
 }
 
 // freedesktop.org and systemd
