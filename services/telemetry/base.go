@@ -41,14 +41,13 @@ type Service struct {
 
 // Telemetry config
 type Config struct {
-	URL      string        `yaml:"url'`
+	URL      string        `yaml:"url"`
 	UUID     string        `yaml:"uuid"`
 	Interval time.Duration `yaml:"interval"`
 }
 
 const (
 	defaultURL      = "https://v.percona.com"
-	defaultUUID     = ""
 	defaultinterval = 24 * 60 * 60 * time.Second
 )
 

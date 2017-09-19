@@ -30,8 +30,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const testdata = "../../testdata/telemetry/"
-
 type file struct {
 	path    string
 	content []byte
