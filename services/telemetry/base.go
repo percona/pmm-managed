@@ -24,7 +24,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"sync"
 	"time"
 )
 
@@ -32,12 +31,6 @@ import (
 type Service struct {
 	Config
 	PMMVersion string
-	lastStatus string
-	ticker     *time.Ticker
-	wg         sync.WaitGroup
-
-	lock      sync.Mutex
-	isRunning bool
 }
 
 // Telemetry config
@@ -79,62 +72,34 @@ func NewService(config *Config, pmmVersion string) (*Service, error) {
 	return service, nil
 }
 
-// Start sets a new ticker to collect data every Config.Interval seconds.
-func (s *Service) Start(ctx context.Context) {
-	if s.IsRunning() {
-		return
-	}
-	s.setRunning(true)
-	s.wg.Add(1)
-	s.ticker = time.NewTicker(s.Interval)
+// Run runs telemetry service, sending data every Config.Interval until context is canceled.
+func (s *Service) Run(ctx context.Context) {
+	ticker := time.NewTicker(s.Interval)
+	defer ticker.Stop()
 
-	go func() {
-		for {
-			select {
-			case <-s.ticker.C:
-				data, err := s.collectData()
-				payload, err := s.makePayload(data)
-				if err != nil {
-					s.lastStatus = fmt.Sprintf("%v cannot build payload for telemetry info: %s", time.Now(), err.Error())
-					continue
-				}
-				err = s.sendRequest(payload)
-				if err != nil {
-					s.lastStatus = fmt.Sprintf("%v error sending telemetry info: %s", time.Now(), err.Error())
-					continue
-				}
-				s.lastStatus = fmt.Sprintf("%v telemetry data sent.", time.Now())
-			case <-ctx.Done():
-				s.setRunning(false)
-				s.wg.Done()
-				return
-			}
+	for {
+		s.runOnce()
+
+		select {
+		case <-ticker.C:
+			// continue with next loop iteration
+		case <-ctx.Done():
+			return
 		}
-	}()
+	}
 }
 
-// Wait for the service to stop
-func (s *Service) Wait() {
-	s.wg.Wait()
-}
-
-func (s *Service) setRunning(status bool) {
-	s.lock.Lock()
-	s.isRunning = status
-	s.lock.Unlock()
-}
-
-// IsRunning returns true if the service is running
-func (s *Service) IsRunning() bool {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	return s.isRunning
-}
-
-// GetLastStatus returns a string having the timestamp and result
-// of the last call to the telemetry server
-func (s *Service) GetLastStatus() string {
-	return s.lastStatus
+func (s *Service) runOnce() string {
+	data, err := s.collectData()
+	payload, err := s.makePayload(data)
+	if err != nil {
+		return fmt.Sprintf("%s cannot build payload for telemetry info: %s", time.Now(), err)
+	}
+	err = s.sendRequest(payload)
+	if err != nil {
+		return fmt.Sprintf("%s error sending telemetry info: %s", time.Now(), err)
+	}
+	return fmt.Sprintf("%s telemetry data sent.", time.Now())
 }
 
 func (s *Service) collectData() (map[string]interface{}, error) {

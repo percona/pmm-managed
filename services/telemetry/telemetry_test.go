@@ -94,30 +94,30 @@ func TestService(t *testing.T) {
 
 	service, err := NewService(cfg, "1.3.0")
 	require.NoError(t, err)
-	service.Start(ctx)
-	isRunning := service.IsRunning()
-	assert.Equal(t, isRunning, true)
+	done := make(chan struct{})
+	go func() {
+		service.Run(ctx)
+		close(done)
+	}()
 
-	time.Sleep(1100 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 	assert.Equal(t, count, 1)
 	cancel()
-	service.Wait()
-	isRunning = service.IsRunning()
-	assert.Equal(t, isRunning, false)
+	<-done
 	assert.Equal(t, lastHeader, "pmm")
 
-	ctx, cancel = context.WithCancel(context.Background())
 	// Test a service restart
-	service.Start(ctx)
-	isRunning = service.IsRunning()
-	assert.Equal(t, isRunning, true)
+	ctx, cancel = context.WithCancel(context.Background())
+	done = make(chan struct{})
+	go func() {
+		service.Run(ctx)
+		close(done)
+	}()
 
-	time.Sleep(2100 * time.Millisecond)
+	time.Sleep(1100 * time.Millisecond)
 	assert.Equal(t, count, 3)
 	cancel()
-	service.Wait()
-	isRunning = service.IsRunning()
-	assert.Equal(t, isRunning, false)
+	<-done
 }
 
 func TestServiceIntegration(t *testing.T) {
@@ -138,16 +138,9 @@ func TestServiceIntegration(t *testing.T) {
 		UUID:     uuid,
 	}
 
-	ctx := context.Background()
-
 	service, err := NewService(cfg, "1.3.0")
 	require.NoError(t, err)
-	service.Start(ctx)
-	isRunning := service.IsRunning()
-	assert.Equal(t, isRunning, true)
-
-	time.Sleep(2100 * time.Millisecond)
-	assert.Contains(t, service.GetLastStatus(), "telemetry data sent")
+	assert.Contains(t, service.runOnce(), "telemetry data sent")
 }
 
 func TestCollectData(t *testing.T) {

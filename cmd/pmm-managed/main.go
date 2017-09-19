@@ -277,10 +277,7 @@ func runTelemetryService(ctx context.Context, consulClient *consul.Client) {
 	}
 
 	l.Infof("Telemetry is enabled. Send data interval = %v", cfg.Interval)
-	svc.Start(ctx)
-
-	<-ctx.Done()
-	svc.Wait()
+	svc.Run(ctx)
 }
 
 func getTelemetryUUID(consulClient *consul.Client, defaultUUID string) (string, error) {
