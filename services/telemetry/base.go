@@ -31,6 +31,7 @@ import (
 // Telemetry exported and unexported fields
 type Service struct {
 	Config
+	PMMVersion string
 	lastStatus string
 	ticker     *time.Ticker
 	wg         sync.WaitGroup
@@ -55,7 +56,6 @@ var (
 	stat     = os.Stat
 	readFile = ioutil.ReadFile
 	output   = commandOutput
-	Version  = "1.3.0"
 )
 
 func DefaultConfig() *Config {
@@ -71,9 +71,10 @@ func DefaultConfig() *Config {
 }
 
 // NewService creates a new telemetry service given a configuration
-func NewService(config *Config) (*Service, error) {
+func NewService(config *Config, pmmVersion string) (*Service, error) {
 	service := &Service{
-		Config: *config,
+		Config:     *config,
+		PMMVersion: pmmVersion,
 	}
 	return service, nil
 }
@@ -142,7 +143,7 @@ func (s *Service) collectData() (map[string]interface{}, error) {
 		data["OS"] = osType
 	}
 
-	data["PMM"] = Version
+	data["PMM"] = s.PMMVersion
 
 	return data, nil
 }

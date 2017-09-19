@@ -54,6 +54,9 @@ import (
 
 const (
 	shutdownTimeout = 3 * time.Second
+
+	// FIXME set it during build for PMM 1.4
+	pmmVersion = "1.3.0"
 )
 
 var (
@@ -99,7 +102,7 @@ func runGRPCServer(ctx context.Context) {
 		grpc.UnaryInterceptor(interceptors.Unary),
 		grpc.StreamInterceptor(interceptors.Stream),
 	)
-	api.RegisterBaseServer(gRPCServer, &handlers.BaseServer{})
+	api.RegisterBaseServer(gRPCServer, &handlers.BaseServer{PMMVersion: pmmVersion})
 	api.RegisterDemoServer(gRPCServer, &handlers.DemoServer{})
 	// TODO api.RegisterAlertsServer(gRPCServer, &handlers.AlertsServer{
 	// 	Prometheus: prometheus,
@@ -267,7 +270,7 @@ func runTelemetryService(ctx context.Context, consulClient *consul.Client) {
 		cfg.URL = telemetryEnvURL
 	}
 
-	svc, err := telemetry.NewService(cfg)
+	svc, err := telemetry.NewService(cfg, pmmVersion)
 	if err != nil {
 		l.Warnf("Cannot start telemetry: %s", err.Error())
 		return

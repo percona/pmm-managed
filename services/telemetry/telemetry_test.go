@@ -92,7 +92,7 @@ func TestService(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	service, err := NewService(cfg)
+	service, err := NewService(cfg, "1.3.0")
 	require.NoError(t, err)
 	service.Start(ctx)
 	isRunning := service.IsRunning()
@@ -140,7 +140,7 @@ func TestServiceIntegration(t *testing.T) {
 
 	ctx := context.Background()
 
-	service, err := NewService(cfg)
+	service, err := NewService(cfg, "1.3.0")
 	require.NoError(t, err)
 	service.Start(ctx)
 	isRunning := service.IsRunning()
@@ -152,7 +152,7 @@ func TestServiceIntegration(t *testing.T) {
 
 func TestCollectData(t *testing.T) {
 	config := &Config{}
-	svc, err := NewService(config)
+	svc, err := NewService(config, "1.3.0")
 	require.NoError(t, err)
 
 	m, err := svc.collectData()
@@ -167,7 +167,7 @@ func TestMakePayload(t *testing.T) {
 	config := &Config{
 		UUID: "ABCDEFG12345",
 	}
-	svc, err := NewService(config)
+	svc, err := NewService(config, "1.3.0")
 	require.NoError(t, err)
 
 	m := map[string]interface{}{
