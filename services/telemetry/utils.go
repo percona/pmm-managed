@@ -18,12 +18,21 @@ package telemetry
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
 
 	guuid "github.com/google/uuid"
 	"github.com/pkg/errors"
+)
+
+// for unit tests
+var (
+	stat     = os.Stat
+	readFile = ioutil.ReadFile
+	output   = commandOutput
 )
 
 func commandOutput(args ...string) ([]byte, error) {
@@ -36,10 +45,10 @@ func commandOutput(args ...string) ([]byte, error) {
 	return exec.Command(args[0], args[1:]...).Output()
 }
 
-func generateUUID() (string, error) {
+func GenerateUUID() (string, error) {
 	uuid, err := guuid.NewRandom()
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "can't generate UUID")
 	}
 
 	// Old telemetry IDs have only 32 chars in the table but UUIDs + "-" = 36

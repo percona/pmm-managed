@@ -21,55 +21,20 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"net/http"
-	"os"
 	"time"
 )
 
-// Telemetry exported and unexported fields
-type Service struct {
-	Config
-	PMMVersion string
-}
-
-// Telemetry config
-type Config struct {
-	URL      string        `yaml:"url"`
-	UUID     string        `yaml:"uuid"`
-	Interval time.Duration `yaml:"interval"`
-}
-
 const (
-	defaultURL      = "https://v.percona.com"
-	defaultinterval = 24 * 60 * 60 * time.Second
+	timeout = 5 * time.Second
 )
 
-var (
-	stat     = os.Stat
-	readFile = ioutil.ReadFile
-	output   = commandOutput
-)
-
-func DefaultConfig() *Config {
-	uuid, err := generateUUID()
-	if err != nil {
-		uuid = ""
-	}
-	return &Config{
-		URL:      defaultURL,
-		Interval: defaultinterval,
-		UUID:     uuid,
-	}
-}
-
-// NewService creates a new telemetry service given a configuration
-func NewService(config *Config, pmmVersion string) (*Service, error) {
-	service := &Service{
-		Config:     *config,
-		PMMVersion: pmmVersion,
-	}
-	return service, nil
+// Service is responsible for interactions with Percona Call Home service.
+type Service struct {
+	UUID       string
+	URL        string
+	PMMVersion string
+	Interval   time.Duration
 }
 
 // Run runs telemetry service, sending data every Config.Interval until context is canceled.
@@ -78,7 +43,7 @@ func (s *Service) Run(ctx context.Context) {
 	defer ticker.Stop()
 
 	for {
-		s.runOnce()
+		s.runOnce(ctx)
 
 		select {
 		case <-ticker.C:
@@ -89,50 +54,47 @@ func (s *Service) Run(ctx context.Context) {
 	}
 }
 
-func (s *Service) runOnce() string {
-	data, err := s.collectData()
-	payload, err := s.makePayload(data)
-	if err != nil {
-		return fmt.Sprintf("%s cannot build payload for telemetry info: %s", time.Now(), err)
-	}
-	err = s.sendRequest(payload)
-	if err != nil {
-		return fmt.Sprintf("%s error sending telemetry info: %s", time.Now(), err)
-	}
-	return fmt.Sprintf("%s telemetry data sent.", time.Now())
+func (s *Service) runOnce(ctx context.Context) bool {
+	data := s.collectData()
+	payload := s.makePayload(data)
+	err := s.sendRequest(ctx, payload)
+	return err == nil
 }
 
-func (s *Service) collectData() (map[string]interface{}, error) {
-	data := map[string]interface{}{}
+func (s *Service) collectData() map[string]string {
+	data := map[string]string{
+		"PMM": s.PMMVersion,
+	}
 	if osType, err := getOSNameAndVersion(); err == nil {
 		data["OS"] = osType
 	}
-
-	data["PMM"] = s.PMMVersion
-
-	return data, nil
+	return data
 }
 
-func (s *Service) makePayload(data map[string]interface{}) ([]byte, error) {
+func (s *Service) makePayload(data map[string]string) []byte {
 	var w bytes.Buffer
 
 	for key, value := range data {
-		w.WriteString(fmt.Sprintf("%s;%s;%s\n", s.Config.UUID, key, value))
+		w.WriteString(fmt.Sprintf("%s;%s;%s\n", s.UUID, key, value))
 	}
 
-	return w.Bytes(), nil
+	return w.Bytes()
 }
 
-func (s *Service) sendRequest(data []byte) error {
-	client := &http.Client{}
+func (s *Service) sendRequest(ctx context.Context, data []byte) error {
 	body := bytes.NewReader(data)
-
-	req, err := http.NewRequest("POST", s.Config.URL, body)
+	req, err := http.NewRequest("POST", s.URL, body)
 	if err != nil {
 		return err
 	}
 	req.Header.Add("Content-Type", "plain/text")
 	req.Header.Add("X-Percona-Toolkit-Tool", "pmm")
+
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	req = req.WithContext(ctx)
+
+	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
@@ -140,7 +102,7 @@ func (s *Service) sendRequest(data []byte) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("Error while sending telemetry data: Status: %d, %s", resp.StatusCode, resp.Status)
+		return fmt.Errorf("status code %d", resp.StatusCode)
 	}
 	return nil
 }

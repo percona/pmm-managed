@@ -83,17 +83,16 @@ func TestService(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	uuid, _ := generateUUID()
-	cfg := &Config{
-		URL:      ts.URL,
-		Interval: 1 * time.Second,
-		UUID:     uuid,
+	uuid, err := GenerateUUID()
+	require.NoError(t, err)
+	service := &Service{
+		UUID:       uuid,
+		URL:        ts.URL,
+		PMMVersion: "1.3.0",
+		Interval:   1 * time.Second,
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-
-	service, err := NewService(cfg, "1.3.0")
-	require.NoError(t, err)
 	done := make(chan struct{})
 	go func() {
 		service.Run(ctx)
@@ -131,25 +130,22 @@ func TestServiceIntegration(t *testing.T) {
 	if telemetryEnvURL == "" {
 		t.Skipf("Env var PERCONA_VERSION_CHECK_URL is not set. Skipping integration test")
 	}
-	uuid, _ := generateUUID()
-	cfg := &Config{
-		URL:      telemetryEnvURL,
-		Interval: 1,
-		UUID:     uuid,
-	}
-
-	service, err := NewService(cfg, "1.3.0")
+	uuid, err := GenerateUUID()
 	require.NoError(t, err)
-	assert.Contains(t, service.runOnce(), "telemetry data sent")
+	service := &Service{
+		UUID:       uuid,
+		URL:        telemetryEnvURL,
+		PMMVersion: "1.3.0",
+	}
+	assert.Contains(t, service.runOnce(context.Background()), "telemetry data sent")
 }
 
 func TestCollectData(t *testing.T) {
-	config := &Config{}
-	svc, err := NewService(config, "1.3.0")
-	require.NoError(t, err)
+	service := &Service{
+		PMMVersion: "1.3.0",
+	}
 
-	m, err := svc.collectData()
-	require.NoError(t, err)
+	m := service.collectData()
 	assert.NotEmpty(t, m)
 
 	assert.Contains(t, m, "OS")
@@ -157,23 +153,20 @@ func TestCollectData(t *testing.T) {
 }
 
 func TestMakePayload(t *testing.T) {
-	config := &Config{
+	service := &Service{
 		UUID: "ABCDEFG12345",
 	}
-	svc, err := NewService(config, "1.3.0")
-	require.NoError(t, err)
 
-	m := map[string]interface{}{
+	m := map[string]string{
 		"OS":  "Kubuntu",
-		"pmm": "1.2.3",
+		"PMM": "1.2.3",
 	}
 
-	b, err := svc.makePayload(m)
-	require.NoError(t, err)
+	b := service.makePayload(m)
 	// Don't remove \n at the end of the strings. They are needed by the API
 	// so I want to ensure makePayload adds them
 	assert.Contains(t, string(b), "ABCDEFG12345;OS;Kubuntu\n")
-	assert.Contains(t, string(b), "ABCDEFG12345;pmm;1.2.3\n")
+	assert.Contains(t, string(b), "ABCDEFG12345;PMM;1.2.3\n")
 }
 
 // freedesktop.org and systemd

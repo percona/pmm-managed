@@ -20,7 +20,6 @@ import (
 	"bytes"
 	_ "expvar"
 	"flag"
-	"fmt"
 	"html/template"
 	"log"
 	"net"
@@ -36,7 +35,6 @@ import (
 
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
-	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -248,54 +246,53 @@ func runDebugServer(ctx context.Context) {
 }
 
 func runTelemetryService(ctx context.Context, consulClient *consul.Client) {
-	l := logrus.WithField("component", "TELEMETRY")
+	l := logrus.WithField("component", "telemetry")
 
 	disabledStr := strings.TrimSpace(strings.ToLower(os.Getenv("DISABLE_TELEMETRY")))
 	if disabled, err := strconv.ParseBool(disabledStr); err == nil && disabled {
-		l.Infof("Telemetry is disabled by DISABLE_TELEMETRY env var")
+		l.Infof("Telemetry is disabled by DISABLE_TELEMETRY environment variable.")
 		return
 	}
 
-	cfg := telemetry.DefaultConfig()
-	if uuid, err := getTelemetryUUID(consulClient, cfg.UUID); err != nil {
+	svc := &telemetry.Service{
+		URL:        "https://v.percona.com/",
+		PMMVersion: pmmVersion,
+		Interval:   24 * time.Hour,
+	}
+	var err error
+	if svc.UUID, err = getTelemetryUUID(consulClient); err != nil {
 		l.Warnf("cannot get/set telemetry UUID in consul: %s", err)
-	} else {
-		cfg.UUID = uuid
+		return
 	}
 
 	// Using this env var for compatibility with the Toolkit
 	if telemetryEnvURL := os.Getenv("PERCONA_VERSION_CHECK_URL"); telemetryEnvURL != "" {
 		l.Infof("PERCONA_VERSION_CHECK_URL env var is set")
 		l.Infof("Using %s as the telemetry endpoint", telemetryEnvURL)
-		cfg.URL = telemetryEnvURL
+		svc.URL = telemetryEnvURL
 	}
 
-	svc, err := telemetry.NewService(cfg, pmmVersion)
-	if err != nil {
-		l.Warnf("Cannot start telemetry: %s", err.Error())
-		return
-	}
-
-	l.Infof("Telemetry is enabled. Send data interval = %v", cfg.Interval)
+	l.Infof("Telemetry is enabled. UUID: %s", svc.UUID)
 	svc.Run(ctx)
 }
 
-func getTelemetryUUID(consulClient *consul.Client, defaultUUID string) (string, error) {
-	if consulClient == nil {
-		return "", fmt.Errorf("consul client is nil")
-	}
-	uuid, err := consulClient.GetKV("callhome/uuid")
+func getTelemetryUUID(consulClient *consul.Client) (string, error) {
+	b, err := consulClient.GetKV("telemetry/uuid")
 	if err != nil {
 		return "", err
 	}
-
-	if len(uuid) == 0 {
-		err = consulClient.PutKV("callhome/uuid", []byte(defaultUUID))
-		if err != nil {
-			return "", errors.Wrap(err, "cannot set telemetry uuid in consul")
-		}
+	if len(b) > 0 {
+		return string(b), nil
 	}
-	return string(uuid), nil
+
+	uuid, err := telemetry.GenerateUUID()
+	if err != nil {
+		return "", err
+	}
+	if err = consulClient.PutKV("telemetry/uuid", []byte(uuid)); err != nil {
+		return "", err
+	}
+	return uuid, nil
 }
 
 func main() {
@@ -329,7 +326,7 @@ func main() {
 
 	consulClient, err := consul.NewClient(*consulAddress)
 	if err != nil {
-		l.Panicf("cannot connect to consul: %s", err)
+		l.Panic(err)
 	}
 
 	// start servers, wait for them to exit
