@@ -57,6 +57,27 @@ func GenerateUUID() (string, error) {
 }
 
 func getOSNameAndVersion() (string, error) {
+	// If running in a docker container, we cannot get the host operating system
+	// exact version, but we can get the host OS name and "a" version from the
+	// output of the dmesg command
+	// For example, Ubuntu 17.04 will return: Ubuntu 6.3.0-12ubuntu2
+	if _, err := stat("/proc/1/cgroup"); err != nil {
+		var cgroups, dmesgOutput []byte
+		var err error
+		if cgroups, err = ioutil.ReadFile("/proc/1/cgroup"); err != nil {
+			return "", fmt.Errorf("Cannot read /proc/1/cgroup")
+		}
+		if strings.Contains(string(cgroups), "docker") {
+			if dmesgOutput, err = output("dmesg"); err != nil {
+				return "", fmt.Errorf("Running inside docker container. Cannot get the output of dmesg")
+			}
+			re := regexp.MustCompile("Linux version.*?\\(.*?\\)\\s*\\(.*?\\((.*?)\\)")
+			m := re.FindAllStringSubmatch(string(dmesgOutput), -1)
+			if len(m) > 0 && len(m[0]) == 2 {
+				return m[0][1], nil
+			}
+		}
+	}
 	// freedesktop.org and systemd
 	if _, err := stat("/etc/os-release"); err == nil {
 		vals, err := getEntries("/etc/os-release", []string{"NAME", "VERSION"})
