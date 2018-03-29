@@ -38,7 +38,7 @@ import (
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
-var checkFailedRE = regexp.MustCompile(`FAILED: (.+)\n`)
+var checkFailedRE = regexp.MustCompile(`FAILED: parsing YAML file \S+: (.+)\n`)
 
 // Service is responsible for interactions with Prometheus.
 // It assumes the following:

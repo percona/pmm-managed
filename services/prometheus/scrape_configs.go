@@ -78,12 +78,12 @@ type ScrapeConfig struct {
 	RelabelConfigs []RelabelConfig
 }
 
-type Health int32
+type Health string
 
 const (
-	HealthUnknown Health = 0
-	HealthDown    Health = 1
-	HealthUp      Health = 2
+	HealthUnknown Health = "unknown"
+	HealthDown    Health = "down"
+	HealthUp      Health = "up"
 )
 
 // ScrapeTargetHealth represents Prometheus scrape target health: unknown, down, or up.
@@ -141,14 +141,14 @@ func (svc *Service) getTargetsHealth(ctx context.Context) (map[string]map[string
 	}
 	defer resp.Body.Close()
 
-	// Copied from vendor/github.com/prometheus/prometheus/web/api/v1/api.go to avoid a ton of dependencies
+	// copied from https://github.com/prometheus/prometheus/blob/v2.2.1/web/api/v1/api.go to avoid a ton of dependencies
 	type target struct {
 		DiscoveredLabels model.LabelSet `json:"discoveredLabels"`
 		Labels           model.LabelSet `json:"labels"`
 		ScrapeURL        string         `json:"scrapeUrl"`
 		LastError        string         `json:"lastError"`
 		LastScrape       time.Time      `json:"lastScrape"`
-		Health           string         `json:"health"` // 	"unknown", "up", or "down"
+		Health           Health         `json:"health"`
 	}
 	type result struct {
 		Status string `json:"status"`
@@ -168,14 +168,7 @@ func (svc *Service) getTargetsHealth(ctx context.Context) (map[string]map[string
 		if health[job] == nil {
 			health[job] = make(map[string]Health)
 		}
-
-		health[job][instance] = HealthUnknown
-		switch target.Health {
-		case "down":
-			health[job][instance] = HealthDown
-		case "up":
-			health[job][instance] = HealthUp
-		}
+		health[job][instance] = target.Health
 	}
 	return health, nil
 }
