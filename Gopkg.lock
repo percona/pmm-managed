@@ -8,7 +8,6 @@
   version = "v1.0.0"
 
 [[projects]]
-  branch = "master"
   name = "github.com/Percona-Lab/promconfig"
   packages = [
     "common/config",
@@ -28,7 +27,8 @@
     "discovery/zookeeper",
     "util/yaml"
   ]
-  revision = "620c8f4a08d4648fe93aa73694b8b75e7e1188e3"
+  revision = "c318f5f07e0904391b8b58335fd4c12a7e0381a1"
+  version = "v2.2.1"
 
 [[projects]]
   name = "github.com/PuerkitoBio/purell"

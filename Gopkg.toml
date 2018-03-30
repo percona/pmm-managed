@@ -2,7 +2,7 @@
 required = [
   "gopkg.in/reform.v1/reform",
 
-  # https://jira.percona.com/browse/PMM-2182
+  # We do not vendor promtool. See https://jira.percona.com/browse/PMM-2182
   # "github.com/prometheus/prometheus/cmd/promtool",
 
   "github.com/golang/protobuf/protoc-gen-go",
