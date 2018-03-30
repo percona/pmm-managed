@@ -28,7 +28,7 @@
     "discovery/zookeeper",
     "util/yaml"
   ]
-  revision = "31f9a2d2fdb15219ac65dd98e872ea4644075f64"
+  revision = "620c8f4a08d4648fe93aa73694b8b75e7e1188e3"
 
 [[projects]]
   name = "github.com/PuerkitoBio/purell"

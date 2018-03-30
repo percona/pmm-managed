@@ -80,7 +80,7 @@ func (tg *Group) UnmarshalJSON(b []byte) error {
 	}{}
 
 	dec := json.NewDecoder(bytes.NewReader(b))
-	dec.DisallowUnknownFields()
+	// dec.DisallowUnknownFields() TODO Enable when we switch to Go 1.10
 	if err := dec.Decode(&g); err != nil {
 		return err
 	}
