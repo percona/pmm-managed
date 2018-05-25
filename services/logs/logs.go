@@ -40,12 +40,12 @@ type File struct {
 	Err  error
 }
 
-type log struct {
+type Log struct {
 	FilePath string
 	UnitName string
 }
 
-var defaultLogs = []log{
+var DefaultLogs = []Log{
 	{"/var/log/consul.log", "consul"},
 	{"/var/log/createdb.log", ""},
 	{"/var/log/cron.log", "crond"},
@@ -68,16 +68,18 @@ var defaultLogs = []log{
 // Logs is responsible for interactions with logs.
 type Logs struct {
 	n              int
-	logs           []log
+	logs           []Log
 	journalctlPath string
+	ctx            context.Context
 }
 
 // New creates a new Logs service.
 // n is a number of last lines of log to read.
-func New(n int) *Logs {
+func New(ctx context.Context, logs []Log, n int) *Logs {
 	l := &Logs{
 		n:    n,
-		logs: defaultLogs,
+		logs: logs,
+		ctx:  ctx,
 	}
 
 	// PMM Server Docker image contails journalctl, so we can't use exec.LookPath("journalctl") alone for detection.
@@ -102,7 +104,7 @@ func (l *Logs) Zip(ctx context.Context, w io.Writer) error {
 		}
 
 		if err != nil {
-			logger.Get(ctx).WithField("component", "logs").Error(err)
+			logger.Get(l.ctx).WithField("component", "logs").Error(err)
 
 			// do not let a single error break the whole archive
 			if len(content) > 0 {
@@ -143,7 +145,7 @@ func (l *Logs) Files(ctx context.Context) []File {
 }
 
 // readLog reads last l.n lines from defined Log configuration.
-func (l *Logs) readLog(ctx context.Context, log *log) (name string, data []byte, err error) {
+func (l *Logs) readLog(ctx context.Context, log *Log) (name string, data []byte, err error) {
 	if log.UnitName != "" && l.journalctlPath != "" {
 		name = log.UnitName
 		data, err = l.journalctlN(ctx, log.UnitName)

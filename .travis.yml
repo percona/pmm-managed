@@ -5,7 +5,6 @@ language: go
 go:
   - 1.9.x
   - 1.10.x
-  - master
 
 matrix:
   allow_failures:
@@ -71,12 +70,15 @@ script:
   - git status
   - git diff --exit-code
 
+  - go get -u github.com/percona/mysqld_exporter
+  - go get -u github.com/percona/rds_exporter
   - make cover
 
 after_success:
   - bash <(curl -s https://codecov.io/bash) -X fix
 
 notifications:
+  email: false
   slack:
     on_success: change
     on_failure: always
