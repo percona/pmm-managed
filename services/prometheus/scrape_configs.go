@@ -78,12 +78,16 @@ type ScrapeConfig struct {
 	RelabelConfigs []RelabelConfig
 }
 
+// Health of the target.
 type Health string
 
 const (
+	// HealthUnknown represents unknown health state of target.
 	HealthUnknown Health = "unknown"
-	HealthDown    Health = "down"
-	HealthUp      Health = "up"
+	// HealthDown represents target that is down.
+	HealthDown Health = "down"
+	// HealthUp represents target that is up and healthy.
+	HealthUp Health = "up"
 )
 
 // ScrapeTargetHealth represents Prometheus scrape target health: unknown, down, or up.
