@@ -22,15 +22,18 @@ env:
     # AWS_RDS_PASSWORD
     - secure: "oD1CbcvhiIoNQbQJaiS+DmVoNnUyMAbkVyJ+UjOJgDaSuMXQJZp+/ocyvgubespBhV2ojj7hxMakTtB1uRqNvBLwp1qxuoevk19RISOWK7tZivtXdx6+HG2pu27jQM9uf8uP+Co3Nf+PUifBFIps6fuZFaPWMYHNHWEUp3Z2RBiRDXyT7Wi3j+J2JO8DmNMaPHmnUrxPRJZBypvmIwt3CDVEd+6Hy37cvMw3CsphAXPQOokfTmR/D7f/uziGFg9NRuYhjQv2ncxmIUjRqqxzvaVS1zoDfts/s2tnqwswWZpq5ossg+crWFTZmm80QCzfnWoyOHqtkZM8fwD+jMwDdEiI6LdSCkDmaEAVWB2KcRYTtY0JmfQMixrNRG413BG792otwT/ShlS78uTAEVT1tjDnh7bUwjpbmaVSDpuaeijpEnrVrXJObRBO+E1Y0QLhV0I0ZVKleaT5Y8M04YR2MWGfzr4Bz+q8p4cIWZ6R5kTtrCEAElgCgKfdfZep+YxyerHTCZlCBal2SL/ZcCR0CVzrAiCOO5QId5dA0AE5h185BzhXLXrs5I1PiO5ZXDjRAFw2z+Vr3EdV1Onx0/ulrnCZ0BsOO/t0nUIMqD33JG27xkaMB4+leSjAwcW7N+Wc9ql1+CBT7uHkXKmDyhDY7+UjSBlqHhC6zF2D3stmeMY="
 
-    - MYSQL_IMAGE=percona/percona-server:5.7
-
   matrix:
-    - PROMETHEUS_IMAGE=prom/prometheus:v2.2.1
+    # what we currently use in PMM
+    - PROMETHEUS_IMAGE=prom/prometheus:v2.3.2
       CONSUL_IMAGE=consul:0.8.5
+
+    # latest released version
     - PROMETHEUS_IMAGE=prom/prometheus:latest
-      CONSUL_IMAGE=consul:1.0.2
+      CONSUL_IMAGE=consul:latest
+
+    # current master (for Prometheus only)
     - PROMETHEUS_IMAGE=prom/prometheus:master
-      CONSUL_IMAGE=consul:1.0.2
+      CONSUL_IMAGE=consul:latest
 
 before_install:
   # install binary protoc release
