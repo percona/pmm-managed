@@ -3,9 +3,7 @@ all: test
 # installs tools to $GOBIN (or $GOPATH/bin) which is expected to be in $PATH
 init:
 	go install -v ./vendor/gopkg.in/reform.v1/reform
-
-	# Do not fail if installation fails. https://jira.percona.com/browse/PMM-2182
-	-go get -u github.com/prometheus/prometheus/cmd/promtool
+	go get -u github.com/prometheus/prometheus/cmd/promtool
 
 	go install -v ./vendor/github.com/golang/protobuf/protoc-gen-go
 	go install -v ./vendor/github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
@@ -16,11 +14,14 @@ init:
 
 	go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
 
-install:
+license:
+	go run .github/check-license.go
+
+install: license
 	go install -v ./...
 	go test -v -i ./...
 
-install-race:
+install-race: license
 	go install -v -race ./...
 	go test -v -race -i ./...
 
