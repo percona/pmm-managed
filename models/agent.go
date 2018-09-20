@@ -24,6 +24,8 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
+//go:generate reform
+
 type AgentType string
 
 const (

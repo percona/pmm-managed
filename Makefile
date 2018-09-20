@@ -3,6 +3,7 @@ all: test
 # installs tools to $GOBIN (or $GOPATH/bin) which is expected to be in $PATH
 init:
 	go install -v ./vendor/gopkg.in/reform.v1/reform
+	go install -v ./vendor/github.com/vektra/mockery/cmd/mockery
 	go get -u github.com/prometheus/prometheus/cmd/promtool
 
 	go install -v ./vendor/github.com/golang/protobuf/protoc-gen-go
@@ -51,7 +52,8 @@ _run:
 
 gen:
 	rm -f models/*_reform.go
-	reform models/
+
+	go generate ./...
 
 	rm -fr api/*.pb.* api/swagger/*.json api/swagger/client api/swagger/models
 

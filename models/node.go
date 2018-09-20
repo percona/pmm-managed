@@ -16,6 +16,8 @@
 
 package models
 
+//go:generate reform
+
 type NodeType string
 
 const (
