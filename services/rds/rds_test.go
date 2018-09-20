@@ -41,10 +41,10 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/mocks"
+	"github.com/percona/pmm-managed/services/prometheus"
 	"github.com/percona/pmm-managed/services/qan"
 	"github.com/percona/pmm-managed/utils/ports"
 	"github.com/percona/pmm-managed/utils/tests"
-	"github.com/percona/pmm-managed/utils/tests/promtest"
 )
 
 func setup(t *testing.T) (context.Context, *Service, *sql.DB, []byte, string, *mocks.Supervisor, *httptest.Server) {
@@ -125,7 +125,7 @@ func setup(t *testing.T) (context.Context, *Service, *sql.DB, []byte, string, *m
 	err = ioutil.WriteFile(filepath.Join(rootDir, "instance/13.json"), []byte(`{"UUID":"13"}`), 0666)
 	require.Nil(t, err)
 
-	p, ctx, before := promtest.Setup(t)
+	ctx, p, before := prometheus.SetupTest(t)
 
 	sqlDB := tests.OpenTestDB(t)
 	db := reform.NewDB(sqlDB, mysql.Dialect, reform.NewPrintfLogger(t.Logf))
@@ -150,7 +150,8 @@ func setup(t *testing.T) (context.Context, *Service, *sql.DB, []byte, string, *m
 }
 
 func teardown(t *testing.T, svc *Service, sqlDB *sql.DB, before []byte, rootDir string, supervisor *mocks.Supervisor, ts *httptest.Server) {
-	promtest.TearDown(t, svc.Prometheus, before)
+	prometheus.TearDownTest(t, svc.Prometheus, before)
+
 	err := sqlDB.Close()
 	require.NoError(t, err)
 	if rootDir != "" {
