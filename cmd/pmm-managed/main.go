@@ -110,7 +110,7 @@ func addLogsHandler(mux *http.ServeMux, logs *logs.Logs) {
 
 	mux.HandleFunc("/logs.zip", func(rw http.ResponseWriter, req *http.Request) {
 		// fail-safe
-		ctx, cancel := context.WithTimeout(req.Context(), time.Second)
+		ctx, cancel := context.WithTimeout(req.Context(), 10 * time.Second)
 		defer cancel()
 
 		t := time.Now().UTC()
