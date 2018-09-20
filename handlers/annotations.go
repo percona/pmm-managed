@@ -38,5 +38,7 @@ func (s *AnnotationsServer) Create(ctx context.Context, req *api.AnnotationsCrea
 	}, nil
 }
 
-// check interface
-var _ api.AnnotationsServer = (*AnnotationsServer)(nil)
+// check interfaces
+var (
+	_ api.AnnotationsServer = (*AnnotationsServer)(nil)
+)

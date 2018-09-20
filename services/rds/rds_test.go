@@ -255,7 +255,7 @@ func TestAddListRemove(t *testing.T) {
 	username, password := os.Getenv("AWS_RDS_USERNAME"), os.Getenv("AWS_RDS_PASSWORD")
 	supervisor.On("Start", mock.Anything, mock.Anything).Return(nil)
 	supervisor.On("Status", mock.Anything, mock.Anything).Return(fmt.Errorf("not running"))
-	supervisor.On("Stop", mock.Anything, mock.Anything).Return(nil) // todo why we stop it if it was not running?
+	supervisor.On("Stop", mock.Anything, mock.Anything).Return(nil) // TODO why we stop it if it was not running?
 	err = svc.Add(ctx, accessKey, secretKey, &InstanceID{"us-east-1", "rds-mysql57"}, username, password)
 	assert.NoError(t, err)
 
@@ -316,10 +316,10 @@ func TestRestore(t *testing.T) {
 	})
 
 	// Add one instance.
-	// todo: mock AWS service
+	// TODO: mock AWS service
 	supervisor.On("Start", mock.Anything, mock.Anything).Return(nil)
 	supervisor.On("Status", mock.Anything, mock.Anything).Return(fmt.Errorf("not running"))
-	supervisor.On("Stop", mock.Anything, mock.Anything).Return(nil) // todo why we stop it if it was not running?
+	supervisor.On("Stop", mock.Anything, mock.Anything).Return(nil) // TODO why we stop it if it was not running?
 	username, password := os.Getenv("AWS_RDS_USERNAME"), os.Getenv("AWS_RDS_PASSWORD")
 	err = svc.Add(ctx, accessKey, secretKey, &InstanceID{"us-east-1", "rds-mysql57"}, username, password)
 	assert.NoError(t, err)
