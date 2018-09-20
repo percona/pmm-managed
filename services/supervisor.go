@@ -22,12 +22,17 @@ import (
 	servicelib "github.com/percona/kardianos-service"
 )
 
-//go:generate mockery -name=Supervisor
+//go:generate mockery -name=Supervisor -case=snake
+
+// Supervisor is an interface for supervisor.Supervisor for mock generation.
 type Supervisor interface {
-	// Start installs, and starts job
+	// Start installs and starts a service.
 	Start(ctx context.Context, config *servicelib.Config) error
-	// Stop stops job, and removes it
+
+	// Start stops and uninstalls a service.
 	Stop(ctx context.Context, name string) error
-	// Status returns nil if job is running
+
+	// Status returns nil if service is installed and running.
+	// It returns error otherwise or if service status can't be determined.
 	Status(ctx context.Context, name string) error
 }
