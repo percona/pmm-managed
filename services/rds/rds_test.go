@@ -101,7 +101,8 @@ func setup(t *testing.T) (context.Context, *Service, *sql.DB, []byte, string, *m
 			panic("unsupported path: " + r.URL.Path)
 		}
 	}))
-	os.Setenv("PMM_QAN_API_URL", ts.URL)
+
+	require.NoError(t, os.Setenv("PMM_QAN_API_URL", ts.URL))
 
 	// We can't/shouldn't use /usr/local/percona/ (the default basedir), so use
 	// a tmpdir instead with roughly the same, fake structure.
@@ -152,7 +153,7 @@ func setup(t *testing.T) (context.Context, *Service, *sql.DB, []byte, string, *m
 func teardown(t *testing.T, svc *Service, sqlDB *sql.DB, before []byte, rootDir string, supervisor *mocks.Supervisor, ts *httptest.Server) {
 	prometheus.TearDownTest(t, svc.Prometheus, before)
 
-	os.Unsetenv("PMM_QAN_API_URL")
+	require.NoError(t, os.Unsetenv("PMM_QAN_API_URL"))
 
 	err := sqlDB.Close()
 	require.NoError(t, err)
