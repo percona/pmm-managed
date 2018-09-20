@@ -152,6 +152,8 @@ func setup(t *testing.T) (context.Context, *Service, *sql.DB, []byte, string, *m
 func teardown(t *testing.T, svc *Service, sqlDB *sql.DB, before []byte, rootDir string, supervisor *mocks.Supervisor, ts *httptest.Server) {
 	prometheus.TearDownTest(t, svc.Prometheus, before)
 
+	os.Unsetenv("PMM_QAN_API_URL")
+
 	err := sqlDB.Close()
 	require.NoError(t, err)
 	if rootDir != "" {
@@ -256,7 +258,7 @@ func TestAddListRemove(t *testing.T) {
 	username, password := os.Getenv("AWS_RDS_USERNAME"), os.Getenv("AWS_RDS_PASSWORD")
 	supervisor.On("Start", mock.Anything, mock.Anything).Return(nil)
 	supervisor.On("Status", mock.Anything, mock.Anything).Return(fmt.Errorf("not running"))
-	supervisor.On("Stop", mock.Anything, mock.Anything).Return(nil) // TODO why we stop it if it was not running?
+	supervisor.On("Stop", mock.Anything, mock.Anything).Return(nil)
 	err = svc.Add(ctx, accessKey, secretKey, &InstanceID{"us-east-1", "rds-mysql57"}, username, password)
 	assert.NoError(t, err)
 
@@ -317,10 +319,9 @@ func TestRestore(t *testing.T) {
 	})
 
 	// Add one instance.
-	// TODO: mock AWS service
 	supervisor.On("Start", mock.Anything, mock.Anything).Return(nil)
 	supervisor.On("Status", mock.Anything, mock.Anything).Return(fmt.Errorf("not running"))
-	supervisor.On("Stop", mock.Anything, mock.Anything).Return(nil) // TODO why we stop it if it was not running?
+	supervisor.On("Stop", mock.Anything, mock.Anything).Return(nil)
 	username, password := os.Getenv("AWS_RDS_USERNAME"), os.Getenv("AWS_RDS_PASSWORD")
 	err = svc.Add(ctx, accessKey, secretKey, &InstanceID{"us-east-1", "rds-mysql57"}, username, password)
 	assert.NoError(t, err)

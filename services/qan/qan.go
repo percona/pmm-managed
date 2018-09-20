@@ -220,11 +220,11 @@ func (svc *Service) removeInstance(ctx context.Context, qanURL *url.URL, uuid st
 	return nil
 }
 
-// ensureAgentRuns checks qan-agent process status and starts it if it is not configured or down.
+// EnsureAgentRuns checks qan-agent process status and starts it if it is not configured or down.
 func (svc *Service) EnsureAgentRuns(ctx context.Context, nameForSupervisor string, port uint16) error {
 	err := svc.supervisor.Status(ctx, nameForSupervisor)
 	if err != nil {
-		// TODO: if it's not running then why we stop it?
+		// error can also mean that service status can't be determined, so we always stop it first
 		err = svc.supervisor.Stop(ctx, nameForSupervisor)
 		if err != nil {
 			logger.Get(ctx).WithField("component", "qan").Warn(err)
