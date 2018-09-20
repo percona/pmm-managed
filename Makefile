@@ -14,14 +14,14 @@ init:
 
 	go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
 
-license:
+check-license:
 	go run .github/check-license.go
 
-install: license
+install: check-license
 	go install -v ./...
 	go test -v -i ./...
 
-install-race: license
+install-race: check-license
 	go install -v -race ./...
 	go test -v -race -i ./...
 
@@ -67,3 +67,9 @@ gen:
 	swagger generate client -f api/swagger/swagger.json -t api/swagger -A pmm-managed
 
 	go install -v github.com/percona/pmm-managed/api github.com/percona/pmm-managed/api/swagger/client
+
+up:
+	docker-compose up --force-recreate --abort-on-container-exit --renew-anon-volumes --remove-orphans
+
+down:
+	docker-compose down --volumes --remove-orphans
