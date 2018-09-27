@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -68,17 +69,17 @@ var DefaultLogs = []Log{
 	{"/var/log/prometheus.log", "prometheus", ""},
 	{"/var/log/qan-api.log", "percona-qan-api", ""},
 	{"/var/log/supervisor/supervisord.log", "", ""},
-	{"/etc/prometheus.yml", "expand", "/usr/bin/cat"},
-	{"/etc/supervisord.d/pmm.ini", "expand", "/usr/bin/cat"},
-	{"/etc/nginx/conf.d/pmm.conf", "expand", "/usr/bin/cat"},
-	{"prometheus_targets.txt", "expand", "/usr/bin/curl -s http://localhost/prometheus/targets"},
-	{"consul_nodes.txt", "expand", "/usr/bin/curl -s http://localhost/v1/internal/ui/nodes?dc=dc1"},
-	{"qan-api_instances.txt", "expand", "/usr/bin/curl -s http://localhost/qan-api/instances"},
-	{"managed_RDS-Aurora.txt", "expand", "/usr/bin/curl -s http://localhost/managed/RDS"},
-	{"pmm-version.txt", "expand", "head -1 /srv/update/main.yml"},
-	{"supervisorctl_status.log", "expand", "supervisorctl status"},
-	{"systemctl_status.log", "expand", "systemctl -l status"},
-	{"pt-summary.log", "expand", "pt-summary"},
+	{"/etc/prometheus.yml", "cat", ""},
+	{"/etc/supervisord.d/pmm.ini", "cat", ""},
+	{"/etc/nginx/conf.d/pmm.conf", "cat", ""},
+	{"prometheus_targets.html", "http", "http://localhost/prometheus/targets"},
+	{"consul_nodes.json", "http", "http://localhost/v1/internal/ui/nodes?dc=dc1"},
+	{"qan-api_instances.json", "http", "http://localhost/qan-api/instances"},
+	{"managed_RDS-Aurora.json", "http", "http://localhost/managed/RDS"},
+	{"pmm-version.txt", "pmmVersion", ""},
+	{"supervisorctl_status.log", "exec", "supervisorctl status"},
+	{"systemctl_status.log", "exec", "systemctl -l status"},
+	{"pt-summary.log", "exec", "pt-summary"},
 }
 
 // Logs is responsible for interactions with logs.
@@ -96,38 +97,42 @@ type manageConfig struct {
 	} `yaml:"users"`
 }
 
-// Fetch PMM credential
-func getCredential(ctx context.Context) string {
-	u := ""
+var Version string
+
+// getCredential fetchs PMM credential
+func getCredential(ctx context.Context) (string, error) {
+	var u string
 	f, err := os.Open("/srv/update/pmm-manage.yml")
 	if err != nil {
-		return u
+		return u, err
 	}
 	defer f.Close()
 
 	b, err := ioutil.ReadAll(f)
 	if err != nil {
-		return u
+		return u, err
 	}
 
 	var config manageConfig
 	if err = yaml.Unmarshal(b, &config); err != nil {
-		return u
+		return u, err
 	}
 	if len(config.Users) > 0 && config.Users[0].Username != "" {
-		u = (strings.Join([]string{config.Users[0].Username, config.Users[0].Password}, ":"))
+		u = strings.Join([]string{config.Users[0].Username, config.Users[0].Password}, ":")
 	}
-	return u
+	return u, err
 }
 
 // New creates a new Logs service.
 // n is a number of last lines of log to read.
-func New(ctx context.Context, logs []Log, n int) *Logs {
+func New(ctx context.Context, pmm_version string, logs []Log, n int) *Logs {
 	l := &Logs{
 		n:    n,
 		logs: logs,
 		ctx:  ctx,
 	}
+
+	Version = pmm_version
 
 	// PMM Server Docker image contails journalctl, so we can't use exec.LookPath("journalctl") alone for detection.
 	// TODO Probably, that check should be moved to supervisor service.
@@ -192,14 +197,35 @@ func (l *Logs) Files(ctx context.Context) []File {
 
 // readLog reads last l.n lines from defined Log configuration.
 func (l *Logs) readLog(ctx context.Context, log *Log) (name string, data []byte, err error) {
-	if log.UnitName == "expand" {
+	if log.UnitName == "exec" {
+		name = filepath.Base(log.FilePath)
+		data, err = l.collectExec(ctx, log.FilePath, log.Command)
+		return name, data, err
+	}
+
+	if log.UnitName == "pmmVersion" {
+		name = filepath.Base(log.FilePath)
+		data = []byte(Version)
+		return
+	}
+
+	if log.UnitName == "http" {
 		s := strings.Split(log.Command, "//")
-		credential := getCredential(ctx)
+		credential, err1 := getCredential(ctx)
 		if len(s) > 1 && len(credential) > 1 {
 			log.Command = fmt.Sprintf("%s//%s@%s", s[0], credential, s[1])
 		}
 		name = filepath.Base(log.FilePath)
-		data, err = l.collectExec(ctx, log.FilePath, log.Command)
+		data, err := l.readUrl(log.Command)
+		if err1 != nil {
+			return name, data, fmt.Errorf("%v; %v", err1, err)
+		}
+		return name, data, err
+	}
+
+	if log.UnitName == "cat" {
+		name = filepath.Base(log.FilePath)
+		data, err = l.readFile(log.FilePath)
 		return
 	}
 
@@ -242,7 +268,7 @@ func (l *Logs) tailN(ctx context.Context, path string) ([]byte, error) {
 	return b, nil
 }
 
-// collect output from various commands
+// collectExec collects output from various commands
 func (l *Logs) collectExec(ctx context.Context, path string, command string) ([]byte, error) {
 	cmd := &exec.Cmd{}
 	if filepath.Dir(path) != "." {
@@ -252,10 +278,38 @@ func (l *Logs) collectExec(ctx context.Context, path string, command string) ([]
 		cmd = exec.CommandContext(ctx, command[0], command[1:]...)
 	}
 	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
+	cmd.Stderr = new(bytes.Buffer)
 	b, err := cmd.Output()
 	if err != nil {
 		return b, fmt.Errorf("%s: %s: %s", strings.Join(cmd.Args, " "), err, stderr.String())
+	}
+	return b, nil
+}
+
+// readFile reads content of a file
+func (l *Logs) readFile(path string) ([]byte, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	b, err := ioutil.ReadAll(f)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+// readUrl reads content of a page
+func (l *Logs) readUrl(url string) ([]byte, error) {
+	u, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer u.Body.Close()
+	b, err := ioutil.ReadAll(u.Body)
+	if err != nil {
+		return nil, err
 	}
 	return b, nil
 }
