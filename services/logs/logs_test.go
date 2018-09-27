@@ -57,7 +57,7 @@ func TestZip(t *testing.T) {
 	defer teardown(t, logFileName)
 
 	logs := []Log{
-		{logFileName, ""},
+		{logFileName, "", ""},
 	}
 	l := New(ctx, logs, 1000)
 
@@ -98,7 +98,7 @@ func TestFiles(t *testing.T) {
 	defer teardown(t, logFileName)
 
 	logs := []Log{
-		{logFileName, ""},
+		{logFileName, "", ""},
 	}
 	l := New(ctx, logs, 1000)
 
