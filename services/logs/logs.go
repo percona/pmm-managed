@@ -97,6 +97,7 @@ type manageConfig struct {
 	} `yaml:"users"`
 }
 
+// PMM version
 var Version string
 
 // getCredential fetchs PMM credential
@@ -125,14 +126,14 @@ func getCredential(ctx context.Context) (string, error) {
 
 // New creates a new Logs service.
 // n is a number of last lines of log to read.
-func New(ctx context.Context, pmm_version string, logs []Log, n int) *Logs {
+func New(ctx context.Context, pmmVersion string, logs []Log, n int) *Logs {
 	l := &Logs{
 		n:    n,
 		logs: logs,
 		ctx:  ctx,
 	}
 
-	Version = pmm_version
+	Version = pmmVersion
 
 	// PMM Server Docker image contails journalctl, so we can't use exec.LookPath("journalctl") alone for detection.
 	// TODO Probably, that check should be moved to supervisor service.
@@ -216,7 +217,7 @@ func (l *Logs) readLog(ctx context.Context, log *Log) (name string, data []byte,
 			log.Command = fmt.Sprintf("%s//%s@%s", s[0], credential, s[1])
 		}
 		name = filepath.Base(log.FilePath)
-		data, err := l.readUrl(log.Command)
+		data, err := l.readURL(log.Command)
 		if err1 != nil {
 			return name, data, fmt.Errorf("%v; %v", err1, err)
 		}
@@ -301,7 +302,7 @@ func (l *Logs) readFile(path string) ([]byte, error) {
 }
 
 // readUrl reads content of a page
-func (l *Logs) readUrl(url string) ([]byte, error) {
+func (l *Logs) readURL(url string) ([]byte, error) {
 	u, err := http.Get(url)
 	if err != nil {
 		return nil, err
