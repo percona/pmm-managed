@@ -31,9 +31,9 @@ import (
 	"time"
 
 	servicelib "github.com/percona/kardianos-service"
+	"gopkg.in/yaml.v2"
 
 	"github.com/percona/pmm-managed/utils/logger"
-	"gopkg.in/yaml.v2"
 )
 
 // File represents log file content.
