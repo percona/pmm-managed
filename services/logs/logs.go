@@ -75,7 +75,7 @@ var DefaultLogs = []Log{
 	{"prometheus_targets.html", "http", "http://localhost/prometheus/targets"},
 	{"consul_nodes.json", "http", "http://localhost/v1/internal/ui/nodes?dc=dc1"},
 	{"qan-api_instances.json", "http", "http://localhost/qan-api/instances"},
-	{"managed_RDS-Aurora.json", "http", "http://localhost/managed/RDS"},
+	{"managed_RDS-Aurora.json", "http", "http://localhost/managed/v0/rds"},
 	{"pmm-version.txt", "pmmVersion", ""},
 	{"supervisorctl_status.log", "exec", "supervisorctl status"},
 	{"systemctl_status.log", "exec", "systemctl -l status"},
