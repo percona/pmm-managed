@@ -46,6 +46,18 @@ func NewClient(addr string) (*Client, error) {
 	return &Client{c}, nil
 }
 
+// GetNodes returns list of nodes.
+func (c *Client) GetNodes() ([]*api.Node, error) {
+	nodes, _, err := c.c.Catalog().Nodes(nil)
+	if err != nil {
+		return nil, errors.Wrapf(err, "cannot get Nodes")
+	}
+	if nodes == nil {
+		return nil, nil
+	}
+	return nodes, nil
+}
+
 // GetKV returns value for a given key from Consul, or nil, if key does not exist.
 func (c *Client) GetKV(key string) ([]byte, error) {
 	key = path.Join(prefix, key)

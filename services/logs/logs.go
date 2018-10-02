@@ -20,6 +20,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -34,6 +35,7 @@ import (
 	servicelib "github.com/percona/kardianos-service"
 	"gopkg.in/yaml.v2"
 
+	"github.com/percona/pmm-managed/services/consul"
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
@@ -73,7 +75,7 @@ var DefaultLogs = []Log{
 	{"/etc/supervisord.d/pmm.ini", "cat", ""},
 	{"/etc/nginx/conf.d/pmm.conf", "cat", ""},
 	{"prometheus_targets.html", "http", "http://localhost/prometheus/targets"},
-	{"consul_nodes.json", "http", "http://localhost/v1/internal/ui/nodes?dc=dc1"},
+	{"consul_nodes.json", "consul", "http://localhost/v1/internal/ui/nodes?dc=dc1"},
 	{"qan-api_instances.json", "http", "http://localhost/qan-api/instances"},
 	{"managed_RDS-Aurora.json", "http", "http://localhost/managed/v0/rds"},
 	{"pmm-version.txt", "pmmVersion", ""},
@@ -99,6 +101,9 @@ type manageConfig struct {
 
 // PMM version
 var Version string
+
+// client for Consul service
+var consulClient *consul.Client
 
 // getCredential fetchs PMM credential
 func getCredential(ctx context.Context) (string, error) {
@@ -126,7 +131,7 @@ func getCredential(ctx context.Context) (string, error) {
 
 // New creates a new Logs service.
 // n is a number of last lines of log to read.
-func New(ctx context.Context, pmmVersion string, logs []Log, n int) *Logs {
+func New(ctx context.Context, pmmVersion string, cc *consul.Client, logs []Log, n int) *Logs {
 	l := &Logs{
 		n:    n,
 		logs: logs,
@@ -134,6 +139,7 @@ func New(ctx context.Context, pmmVersion string, logs []Log, n int) *Logs {
 	}
 
 	Version = pmmVersion
+	consulClient = cc
 
 	// PMM Server Docker image contails journalctl, so we can't use exec.LookPath("journalctl") alone for detection.
 	// TODO Probably, that check should be moved to supervisor service.
@@ -207,6 +213,12 @@ func (l *Logs) readLog(ctx context.Context, log *Log) (name string, data []byte,
 	if log.UnitName == "pmmVersion" {
 		name = filepath.Base(log.FilePath)
 		data = []byte(Version)
+		return
+	}
+
+	if log.UnitName == "consul" {
+		name = filepath.Base(log.FilePath)
+		data, err = l.getConsulNodes(consulClient)
 		return
 	}
 
@@ -313,4 +325,11 @@ func (l *Logs) readURL(url string) ([]byte, error) {
 		return nil, err
 	}
 	return b, nil
+}
+
+// getConsulNodes gets list of nodes
+func (l *Logs) getConsulNodes(cc *consul.Client) ([]byte, error) {
+	nodes, _ := cc.GetNodes()
+	buf, err := json.Marshal(nodes)
+	return buf, err
 }
