@@ -48,43 +48,49 @@ type File struct {
 }
 
 type Log struct {
-	FilePath string
-	UnitName string
-	Command  string
+	FilePath  string
+	UnitName  string
+	Extractor []string
 }
 
 const lastLines = 1000
 
 var defaultLogs = []Log{
-	{"/var/log/consul.log", "consul", ""},
-	{"/var/log/createdb.log", "", ""},
-	{"/var/log/cron.log", "crond", ""},
-	{"/var/log/dashboard-upgrade.log", "", ""},
-	{"/var/log/grafana/grafana.log", "", ""},
-	{"/var/log/mysql.log", "", ""},
-	{"/var/log/mysqld.log", "mysqld", ""},
-	{"/var/log/nginx.log", "nginx", ""},
-	{"/var/log/nginx/access.log", "", ""},
-	{"/var/log/nginx/error.log", "", ""},
-	{"/var/log/node_exporter.log", "node_exporter", ""},
-	{"/var/log/orchestrator.log", "orchestrator", ""},
-	{"/var/log/pmm-manage.log", "pmm-manage", ""},
-	{"/var/log/pmm-managed.log", "pmm-managed", ""},
-	{"/var/log/prometheus1.log", "prometheus1", ""},
-	{"/var/log/prometheus.log", "prometheus", ""},
-	{"/var/log/qan-api.log", "percona-qan-api", ""},
-	{"/var/log/supervisor/supervisord.log", "", ""},
-	{"/etc/prometheus.yml", "cat", ""},
-	{"/etc/supervisord.d/pmm.ini", "cat", ""},
-	{"/etc/nginx/conf.d/pmm.conf", "cat", ""},
-	{"prometheus_targets.html", "http", "http://localhost/prometheus/targets"},
-	{"consul_nodes.json", "consul", "http://localhost/v1/internal/ui/nodes?dc=dc1"},
-	{"qan-api_instances.json", "http", "http://localhost/qan-api/instances"},
-	{"managed_RDS-Aurora.json", "http", "http://localhost/managed/v0/rds"},
-	{"pmm-version.txt", "pmmVersion", ""},
-	{"supervisorctl_status.log", "exec", "supervisorctl status"},
-	{"systemctl_status.log", "exec", "systemctl -l status"},
-	{"pt-summary.log", "exec", "pt-summary"},
+	{"/var/log/consul.log", "consul", nil},
+	{"/var/log/createdb.log", "", nil},
+	{"/var/log/cron.log", "crond", nil},
+	{"/var/log/dashboard-upgrade.log", "", nil},
+	{"/var/log/grafana/grafana.log", "", nil},
+	{"/var/log/mysql.log", "", nil},
+	{"/var/log/mysqld.log", "mysqld", nil},
+	{"/var/log/nginx.log", "nginx", nil},
+	{"/var/log/nginx/access.log", "", nil},
+	{"/var/log/nginx/error.log", "", nil},
+	{"/var/log/node_exporter.log", "node_exporter", nil},
+	{"/var/log/orchestrator.log", "orchestrator", nil},
+	{"/var/log/pmm-manage.log", "pmm-manage", nil},
+	{"/var/log/pmm-managed.log", "pmm-managed", nil},
+	{"/var/log/prometheus1.log", "prometheus1", nil},
+	{"/var/log/prometheus.log", "prometheus", nil},
+	{"/var/log/qan-api.log", "percona-qan-api", nil},
+	{"/var/log/supervisor/supervisord.log", "", nil},
+
+	// logs
+	// TODO handle separately
+	{"supervisorctl_status.log", "", []string{"exec", "supervisorctl status"}},
+	{"systemctl_status.log", "", []string{"exec", "systemctl -l status"}},
+	{"pt-summary.log", "", []string{"exec", "pt-summary"}},
+
+	// configs
+	// TODO handle separately
+	{"/etc/prometheus.yml", "", []string{"cat", ""}},
+	{"/etc/supervisord.d/pmm.ini", "", []string{"cat", ""}},
+	{"/etc/nginx/conf.d/pmm.conf", "", []string{"cat", ""}},
+	{"prometheus_targets.html", "", []string{"http", "http://localhost/prometheus/targets"}},
+	{"consul_nodes.json", "", []string{"consul", "http://localhost/v1/internal/ui/nodes?dc=dc1"}},
+	{"qan-api_instances.json", "", []string{"http", "http://localhost/qan-api/instances"}},
+	{"managed_RDS-Aurora.json", "", []string{"http", "http://localhost/managed/v0/rds"}},
+	{"pmm-version.txt", "", []string{"pmmVersion", ""}},
 }
 
 // Logs is responsible for interactions with logs.
@@ -204,44 +210,10 @@ func (l *Logs) Files(ctx context.Context) []File {
 	return files
 }
 
-// readLog reads last l.n lines from defined Log configuration.
+// readLog reads last lines from defined Log configuration.
 func (l *Logs) readLog(ctx context.Context, log *Log) (name string, data []byte, err error) {
-	if log.UnitName == "exec" {
-		name = filepath.Base(log.FilePath)
-		data, err = l.collectExec(ctx, log.FilePath, log.Command)
-		return name, data, err
-	}
-
-	if log.UnitName == "pmmVersion" {
-		name = filepath.Base(log.FilePath)
-		data = []byte(l.pmmVersion)
-		return
-	}
-
-	if log.UnitName == "consul" {
-		name = filepath.Base(log.FilePath)
-		data, err = l.getConsulNodes()
-		return
-	}
-
-	if log.UnitName == "http" {
-		s := strings.Split(log.Command, "//")
-		credential, err1 := getCredential()
-		if len(s) > 1 && len(credential) > 1 {
-			log.Command = fmt.Sprintf("%s//%s@%s", s[0], credential, s[1])
-		}
-		name = filepath.Base(log.FilePath)
-		data, err := l.readURL(log.Command)
-		if err1 != nil {
-			return name, data, fmt.Errorf("%v; %v", err1, err)
-		}
-		return name, data, err
-	}
-
-	if log.UnitName == "cat" {
-		name = filepath.Base(log.FilePath)
-		data, err = l.readFile(log.FilePath)
-		return
+	if log.Extractor != nil {
+		return l.readWithExtractor(ctx, log)
 	}
 
 	if log.UnitName != "" && l.journalctlPath != "" {
@@ -259,7 +231,42 @@ func (l *Logs) readLog(ctx context.Context, log *Log) (name string, data []byte,
 	return
 }
 
-// journalctlN reads last l.n lines from systemd unit u using `journalctl` command.
+func (l *Logs) readWithExtractor(ctx context.Context, log *Log) (name string, data []byte, err error) {
+	name = filepath.Base(log.FilePath)
+
+	switch log.Extractor[0] {
+	case "exec":
+		data, err = l.collectExec(ctx, log.FilePath, log.Extractor[1])
+
+	case "pmmVersion":
+		data = []byte(l.pmmVersion)
+
+	case "consul":
+		data, err = l.getConsulNodes()
+
+	case "http":
+		command := log.Extractor[1]
+		s := strings.Split(command, "//")
+		credential, err1 := getCredential()
+		if len(s) > 1 && len(credential) > 1 {
+			command = fmt.Sprintf("%s//%s@%s", s[0], credential, s[1])
+		}
+		data, err = l.readURL(command)
+		if err1 != nil {
+			err = fmt.Errorf("%v; %v", err1, err)
+		}
+
+	case "cat":
+		data, err = l.readFile(log.FilePath)
+
+	default:
+		panic("unhandled extractor")
+	}
+
+	return
+}
+
+// journalctlN reads last lines from systemd unit u using `journalctl` command.
 func (l *Logs) journalctlN(ctx context.Context, u string) ([]byte, error) {
 	cmd := exec.CommandContext(ctx, l.journalctlPath, "-n", strconv.Itoa(lastLines), "-u", u)
 	var stderr bytes.Buffer
@@ -271,7 +278,7 @@ func (l *Logs) journalctlN(ctx context.Context, u string) ([]byte, error) {
 	return b, nil
 }
 
-// tailN reads last l.n lines from log file at given path using `tail` command.
+// tailN reads last lines from log file at given path using `tail` command.
 func (l *Logs) tailN(ctx context.Context, path string) ([]byte, error) {
 	cmd := exec.CommandContext(ctx, "/usr/bin/tail", "-n", strconv.Itoa(lastLines), path)
 	var stderr bytes.Buffer
