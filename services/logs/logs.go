@@ -36,6 +36,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/percona/pmm-managed/services/consul"
+	"github.com/percona/pmm-managed/services/rds"
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
@@ -90,6 +91,7 @@ var defaultLogs = []Log{
 type Logs struct {
 	pmmVersion string
 	consul     *consul.Client
+	rds        *rds.Service
 	logs       []Log
 
 	journalctlPath string
@@ -128,7 +130,7 @@ func getCredential() (string, error) {
 
 // New creates a new Logs service.
 // n is a number of last lines of log to read.
-func New(pmmVersion string, consul *consul.Client, logs []Log) *Logs {
+func New(pmmVersion string, consul *consul.Client, rds *rds.Service, logs []Log) *Logs {
 	if logs == nil {
 		logs = defaultLogs
 	}
@@ -136,6 +138,7 @@ func New(pmmVersion string, consul *consul.Client, logs []Log) *Logs {
 	l := &Logs{
 		pmmVersion: pmmVersion,
 		consul:     consul,
+		rds:        rds,
 		logs:       logs,
 	}
 
