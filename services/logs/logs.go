@@ -52,7 +52,9 @@ type Log struct {
 	Command  string
 }
 
-var DefaultLogs = []Log{
+const lastLines = 1000
+
+var defaultLogs = []Log{
 	{"/var/log/consul.log", "consul", ""},
 	{"/var/log/createdb.log", "", ""},
 	{"/var/log/cron.log", "crond", ""},
@@ -86,11 +88,11 @@ var DefaultLogs = []Log{
 
 // Logs is responsible for interactions with logs.
 type Logs struct {
-	n              int
-	logs           []Log
+	pmmVersion string
+	consul     *consul.Client
+	logs       []Log
+
 	journalctlPath string
-	version        string
-	consulClient   *consul.Client
 }
 
 type manageConfig struct {
@@ -126,12 +128,15 @@ func getCredential() (string, error) {
 
 // New creates a new Logs service.
 // n is a number of last lines of log to read.
-func New(pmmVersion string, cc *consul.Client, logs []Log, n int) *Logs {
+func New(pmmVersion string, consul *consul.Client, logs []Log) *Logs {
+	if logs == nil {
+		logs = defaultLogs
+	}
+
 	l := &Logs{
-		n:            n,
-		logs:         logs,
-		version:      pmmVersion,
-		consulClient: cc,
+		pmmVersion: pmmVersion,
+		consul:     consul,
+		logs:       logs,
 	}
 
 	// PMM Server Docker image contails journalctl, so we can't use exec.LookPath("journalctl") alone for detection.
@@ -206,13 +211,13 @@ func (l *Logs) readLog(ctx context.Context, log *Log) (name string, data []byte,
 
 	if log.UnitName == "pmmVersion" {
 		name = filepath.Base(log.FilePath)
-		data = []byte(l.version)
+		data = []byte(l.pmmVersion)
 		return
 	}
 
 	if log.UnitName == "consul" {
 		name = filepath.Base(log.FilePath)
-		data, err = l.getConsulNodes(l.consulClient)
+		data, err = l.getConsulNodes()
 		return
 	}
 
@@ -253,7 +258,7 @@ func (l *Logs) readLog(ctx context.Context, log *Log) (name string, data []byte,
 
 // journalctlN reads last l.n lines from systemd unit u using `journalctl` command.
 func (l *Logs) journalctlN(ctx context.Context, u string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, l.journalctlPath, "-n", strconv.Itoa(l.n), "-u", u)
+	cmd := exec.CommandContext(ctx, l.journalctlPath, "-n", strconv.Itoa(lastLines), "-u", u)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	b, err := cmd.Output()
@@ -265,7 +270,7 @@ func (l *Logs) journalctlN(ctx context.Context, u string) ([]byte, error) {
 
 // tailN reads last l.n lines from log file at given path using `tail` command.
 func (l *Logs) tailN(ctx context.Context, path string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, "/usr/bin/tail", "-n", strconv.Itoa(l.n), path)
+	cmd := exec.CommandContext(ctx, "/usr/bin/tail", "-n", strconv.Itoa(lastLines), path)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	b, err := cmd.Output()
@@ -322,8 +327,10 @@ func (l *Logs) readURL(url string) ([]byte, error) {
 }
 
 // getConsulNodes gets list of nodes
-func (l *Logs) getConsulNodes(cc *consul.Client) ([]byte, error) {
-	nodes, _ := cc.GetNodes()
-	buf, err := json.Marshal(nodes)
-	return buf, err
+func (l *Logs) getConsulNodes() ([]byte, error) {
+	nodes, err := l.consul.GetNodes()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(nodes)
 }

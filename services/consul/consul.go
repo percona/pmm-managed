@@ -29,6 +29,10 @@ const (
 	prefix = "percona/"
 )
 
+// FIXME remove alias after reconsidering the usage of GetNodes() method
+// Currently it breaks encapsulation of this service
+type Node = api.Node
+
 // Client represents a client for Consul API.
 // All keys in KV operations are prefixed to avoid collisions.
 type Client struct {
@@ -47,13 +51,10 @@ func NewClient(addr string) (*Client, error) {
 }
 
 // GetNodes returns list of nodes.
-func (c *Client) GetNodes() ([]*api.Node, error) {
+func (c *Client) GetNodes() ([]*Node, error) {
 	nodes, _, err := c.c.Catalog().Nodes(nil)
 	if err != nil {
 		return nil, errors.Wrapf(err, "cannot get Nodes")
-	}
-	if nodes == nil {
-		return nil, nil
 	}
 	return nodes, nil
 }

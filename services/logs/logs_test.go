@@ -90,7 +90,7 @@ func TestZipDefaultLogs(t *testing.T) {
 	consulClient, ccerr := consul.NewClient("127.0.0.1:8500")
 	require.NoError(t, ccerr)
 
-	l := New("1.2.3", consulClient, DefaultLogs, 1000)
+	l := New("1.2.3", consulClient, nil)
 
 	buf := new(bytes.Buffer)
 	err := l.Zip(ctx, buf)
@@ -98,7 +98,7 @@ func TestZipDefaultLogs(t *testing.T) {
 
 	zr, err := zip.NewReader(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
 	require.NoError(t, err)
-	assert.Len(t, zr.File, len(DefaultLogs))
+	assert.Len(t, zr.File, len(defaultLogs))
 }
 
 func TestFiles(t *testing.T) {
@@ -108,7 +108,7 @@ func TestFiles(t *testing.T) {
 	logs := []Log{
 		{logFileName, "", ""},
 	}
-	l := New(version, consulClient, logs, 1000)
+	l := New(version, consulClient, logs)
 
 	files := l.Files(ctx)
 	assert.Len(t, files, len(logs))

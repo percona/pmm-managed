@@ -430,7 +430,7 @@ func main() {
 	defer sqlDB.Close()
 	db := reform.NewDB(sqlDB, mysql.Dialect, nil)
 
-	logs := logs.New(Version, consulClient, logs.DefaultLogs, 1000)
+	logs := logs.New(Version, consulClient, nil)
 
 	var wg sync.WaitGroup
 
