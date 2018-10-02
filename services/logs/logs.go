@@ -90,8 +90,8 @@ type Logs struct {
 	logs           []Log
 	journalctlPath string
 	ctx            context.Context
-	version		string
-	consulClient	*consul.Client
+	version        string
+	consulClient   *consul.Client
 }
 
 type manageConfig struct {
@@ -129,10 +129,10 @@ func getCredential(ctx context.Context) (string, error) {
 // n is a number of last lines of log to read.
 func New(ctx context.Context, pmmVersion string, cc *consul.Client, logs []Log, n int) *Logs {
 	l := &Logs{
-		n:    n,
-		logs: logs,
-		ctx:  ctx,
-		version: pmmVersion,
+		n:            n,
+		logs:         logs,
+		ctx:          ctx,
+		version:      pmmVersion,
 		consulClient: cc,
 	}
 
