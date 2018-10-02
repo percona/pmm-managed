@@ -102,7 +102,7 @@ type manageConfig struct {
 }
 
 // getCredential fetchs PMM credential
-func getCredential(ctx context.Context) (string, error) {
+func getCredential() (string, error) {
 	var u string
 	f, err := os.Open("/srv/update/pmm-manage.yml")
 	if err != nil {
@@ -149,6 +149,7 @@ func New(ctx context.Context, pmmVersion string, cc *consul.Client, logs []Log, 
 // Zip creates .zip archive with all logs.
 func (l *Logs) Zip(ctx context.Context, w io.Writer) error {
 	zw := zip.NewWriter(w)
+	ctx, _ = logger.Set(context.Background(), "Zip")
 
 	now := time.Now().UTC()
 	for _, log := range l.logs {
@@ -158,7 +159,7 @@ func (l *Logs) Zip(ctx context.Context, w io.Writer) error {
 		}
 
 		if err != nil {
-			logger.Get(l.ctx).WithField("component", "logs").Error(err)
+			logger.Get(ctx).WithField("component", "logs").Error(err)
 
 			// do not let a single error break the whole archive
 			if len(content) > 0 {
@@ -219,7 +220,7 @@ func (l *Logs) readLog(ctx context.Context, log *Log) (name string, data []byte,
 
 	if log.UnitName == "http" {
 		s := strings.Split(log.Command, "//")
-		credential, err1 := getCredential(ctx)
+		credential, err1 := getCredential()
 		if len(s) > 1 && len(credential) > 1 {
 			log.Command = fmt.Sprintf("%s//%s@%s", s[0], credential, s[1])
 		}

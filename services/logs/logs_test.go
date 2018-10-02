@@ -36,10 +36,9 @@ import (
 func setup(t *testing.T) (context.Context, *consul.Client, string, string) {
 	ctx, _ := logger.Set(context.Background(), t.Name())
 	version := "1.2.3"
+
 	consulClient, err := consul.NewClient("127.0.0.1:8500")
-        if err != nil {
-                t.Fatal(err)
-        }
+	require.NoError(t, err)
 
 	tmpDir, err := ioutil.TempDir("", t.Name())
 	require.NoError(t, err)
@@ -89,9 +88,8 @@ func TestZip(t *testing.T) {
 func TestZipDefaultLogs(t *testing.T) {
 	ctx, _ := logger.Set(context.Background(), t.Name())
 	consulClient, ccerr := consul.NewClient("127.0.0.1:8500")
-        if ccerr != nil {
-                t.Fatal(ccerr)
-        }
+	require.NoError(t, ccerr)
+
 	l := New(ctx, "1.2.3", consulClient, DefaultLogs, 1000)
 
 	buf := new(bytes.Buffer)
