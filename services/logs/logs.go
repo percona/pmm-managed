@@ -89,7 +89,6 @@ type Logs struct {
 	n              int
 	logs           []Log
 	journalctlPath string
-	ctx            context.Context
 	version        string
 	consulClient   *consul.Client
 }
@@ -127,11 +126,10 @@ func getCredential() (string, error) {
 
 // New creates a new Logs service.
 // n is a number of last lines of log to read.
-func New(ctx context.Context, pmmVersion string, cc *consul.Client, logs []Log, n int) *Logs {
+func New(pmmVersion string, cc *consul.Client, logs []Log, n int) *Logs {
 	l := &Logs{
 		n:            n,
 		logs:         logs,
-		ctx:          ctx,
 		version:      pmmVersion,
 		consulClient: cc,
 	}
