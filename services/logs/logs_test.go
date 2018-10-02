@@ -29,11 +29,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/percona/pmm-managed/services/consul"
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
-func setup(t *testing.T) (context.Context, string) {
+func setup(t *testing.T) (context.Context, *consul.Client, string, string) {
 	ctx, _ := logger.Set(context.Background(), t.Name())
+	version := "1.2.3"
+	consulClient, err := consul.NewClient("127.0.0.1:8500")
 
 	tmpDir, err := ioutil.TempDir("", t.Name())
 	require.NoError(t, err)
@@ -44,7 +47,7 @@ func setup(t *testing.T) (context.Context, string) {
 	f.WriteString(fmt.Sprintf("%s: log line %d\n", logFileName, 1))
 	f.Close()
 
-	return ctx, f.Name()
+	return ctx, consulClient, version, f.Name()
 }
 
 func teardown(t *testing.T, logFileName string) {
@@ -53,13 +56,13 @@ func teardown(t *testing.T, logFileName string) {
 }
 
 func TestZip(t *testing.T) {
-	ctx, logFileName := setup(t)
+	ctx, consulClient, version, logFileName := setup(t)
 	defer teardown(t, logFileName)
 
 	logs := []Log{
 		{logFileName, "", ""},
 	}
-	l := New(ctx, logs, 1000)
+	l := New(ctx, version, consulClient, logs, 1000)
 
 	buf := new(bytes.Buffer)
 	err := l.Zip(ctx, buf)
@@ -82,7 +85,7 @@ func TestZip(t *testing.T) {
 
 func TestZipDefaultLogs(t *testing.T) {
 	ctx, _ := logger.Set(context.Background(), t.Name())
-	l := New(ctx, DefaultLogs, 1000)
+	l := New(ctx, "1.2.3", consulClient, DefaultLogs, 1000)
 
 	buf := new(bytes.Buffer)
 	err := l.Zip(ctx, buf)
@@ -94,13 +97,13 @@ func TestZipDefaultLogs(t *testing.T) {
 }
 
 func TestFiles(t *testing.T) {
-	ctx, logFileName := setup(t)
+	ctx, consulClient, version, logFileName := setup(t)
 	defer teardown(t, logFileName)
 
 	logs := []Log{
 		{logFileName, "", ""},
 	}
-	l := New(ctx, logs, 1000)
+	l := New(ctx, version, consulClient, logs, 1000)
 
 	files := l.Files(ctx)
 	assert.Len(t, files, len(logs))

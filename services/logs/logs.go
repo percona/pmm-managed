@@ -90,6 +90,8 @@ type Logs struct {
 	logs           []Log
 	journalctlPath string
 	ctx            context.Context
+	version		string
+	consulClient	*consul.Client
 }
 
 type manageConfig struct {
@@ -98,12 +100,6 @@ type manageConfig struct {
 		Password string `yaml:"password"`
 	} `yaml:"users"`
 }
-
-// PMM version
-var Version string
-
-// client for Consul service
-var consulClient *consul.Client
 
 // getCredential fetchs PMM credential
 func getCredential(ctx context.Context) (string, error) {
@@ -136,10 +132,9 @@ func New(ctx context.Context, pmmVersion string, cc *consul.Client, logs []Log, 
 		n:    n,
 		logs: logs,
 		ctx:  ctx,
+		version: pmmVersion,
+		consulClient: cc,
 	}
-
-	Version = pmmVersion
-	consulClient = cc
 
 	// PMM Server Docker image contails journalctl, so we can't use exec.LookPath("journalctl") alone for detection.
 	// TODO Probably, that check should be moved to supervisor service.
@@ -212,13 +207,13 @@ func (l *Logs) readLog(ctx context.Context, log *Log) (name string, data []byte,
 
 	if log.UnitName == "pmmVersion" {
 		name = filepath.Base(log.FilePath)
-		data = []byte(Version)
+		data = []byte(l.version)
 		return
 	}
 
 	if log.UnitName == "consul" {
 		name = filepath.Base(log.FilePath)
-		data, err = l.getConsulNodes(consulClient)
+		data, err = l.getConsulNodes(l.consulClient)
 		return
 	}
 
