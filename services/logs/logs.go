@@ -89,7 +89,7 @@ var defaultLogs = []Log{
 	{"prometheus_targets.html", "", []string{"http", "http://localhost/prometheus/targets"}},
 	{"consul_nodes.json", "", []string{"consul", "http://localhost/v1/internal/ui/nodes?dc=dc1"}},
 	{"qan-api_instances.json", "", []string{"http", "http://localhost/qan-api/instances"}},
-	{"managed_RDS-Aurora.json", "", []string{"http", "http://localhost/managed/v0/rds"}},
+	{"managed_RDS-Aurora.json", "", []string{"rds", "http://localhost/managed/v0/rds"}},
 	{"pmm-version.txt", "", []string{"pmmVersion", ""}},
 }
 
@@ -161,7 +161,7 @@ func New(pmmVersion string, consul *consul.Client, rds *rds.Service, logs []Log)
 // Zip creates .zip archive with all logs.
 func (l *Logs) Zip(ctx context.Context, w io.Writer) error {
 	zw := zip.NewWriter(w)
-	ctx, _ = logger.Set(context.Background(), "Zip")
+	ctx, _ = logger.Set(context.Background(), "main")
 
 	now := time.Now().UTC()
 	for _, log := range l.logs {
@@ -243,6 +243,9 @@ func (l *Logs) readWithExtractor(ctx context.Context, log *Log) (name string, da
 
 	case "consul":
 		data, err = l.getConsulNodes()
+
+	case "rds":
+		data, err = l.getRDSInstances(ctx)
 
 	case "http":
 		command := log.Extractor[1]
@@ -339,6 +342,15 @@ func (l *Logs) readURL(url string) ([]byte, error) {
 // getConsulNodes gets list of nodes
 func (l *Logs) getConsulNodes() ([]byte, error) {
 	nodes, err := l.consul.GetNodes()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(nodes)
+}
+
+// getRDSInstances gets list of monitored instances
+func (l *Logs) getRDSInstances(ctx context.Context) ([]byte, error) {
+	nodes, err := l.rds.List(ctx)
 	if err != nil {
 		return nil, err
 	}
