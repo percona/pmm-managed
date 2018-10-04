@@ -117,7 +117,6 @@ func getCredential() (string, error) {
 	if err != nil {
 		return u, err
 	}
-	defer f.Close()
 
 	b, err := ioutil.ReadAll(f)
 	if err != nil {
@@ -128,8 +127,14 @@ func getCredential() (string, error) {
 	if err = yaml.Unmarshal(b, &config); err != nil {
 		return u, err
 	}
+
 	if len(config.Users) > 0 && config.Users[0].Username != "" {
 		u = strings.Join([]string{config.Users[0].Username, config.Users[0].Password}, ":")
+	}
+
+	err = f.Close()
+	if err != nil {
+		return u, err
 	}
 	return u, err
 }
@@ -295,7 +300,7 @@ func (l *Logs) tailN(ctx context.Context, path string) ([]byte, error) {
 
 // collectExec collects output from various commands
 func (l *Logs) collectExec(ctx context.Context, path string, command string) ([]byte, error) {
-	cmd := &exec.Cmd{}
+	var cmd *exec.Cmd
 	if filepath.Dir(path) != "." {
 		cmd = exec.CommandContext(ctx, command, path)
 	} else {
@@ -317,11 +322,17 @@ func (l *Logs) readFile(path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+
 	b, err := ioutil.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}
+
+	err = f.Close()
+	if err != nil {
+		return b, err
+	}
+
 	return b, nil
 }
 
