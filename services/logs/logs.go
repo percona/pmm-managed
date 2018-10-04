@@ -345,14 +345,14 @@ func (l *Logs) getConsulNodes() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(nodes)
+	return json.MarshalIndent(nodes, "", "  ")
 }
 
 // getRDSInstances gets list of monitored instances
 func (l *Logs) getRDSInstances(ctx context.Context) ([]byte, error) {
-	nodes, err := l.rds.List(ctx)
+	instances, err := l.rds.List(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(nodes)
+	return json.MarshalIndent(instances, "", " ")
 }
