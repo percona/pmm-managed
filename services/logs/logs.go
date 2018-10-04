@@ -295,7 +295,7 @@ func (l *Logs) tailN(ctx context.Context, path string) ([]byte, error) {
 
 // collectExec collects output from various commands
 func (l *Logs) collectExec(ctx context.Context, path string, command string) ([]byte, error) {
-	cmd := *exec.Cmd{}
+	cmd := &exec.Cmd{}
 	if filepath.Dir(path) != "." {
 		cmd = exec.CommandContext(ctx, command, path)
 	} else {
@@ -303,7 +303,7 @@ func (l *Logs) collectExec(ctx context.Context, path string, command string) ([]
 		cmd = exec.CommandContext(ctx, command[0], command[1:]...)
 	}
 	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
+	cmd.Stderr = new(bytes.Buffer)
 	b, err := cmd.Output()
 	if err != nil {
 		return b, fmt.Errorf("%s: %s: %s", strings.Join(cmd.Args, " "), err, stderr.String())
