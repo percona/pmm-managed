@@ -303,7 +303,7 @@ func (l *Logs) collectExec(ctx context.Context, path string, command string) ([]
 		cmd = exec.CommandContext(ctx, command[0], command[1:]...)
 	}
 	var stderr bytes.Buffer
-	cmd.Stderr = new(bytes.Buffer)
+	cmd.Stderr = &stderr
 	b, err := cmd.Output()
 	if err != nil {
 		return b, fmt.Errorf("%s: %s: %s", strings.Join(cmd.Args, " "), err, stderr.String())
