@@ -33,6 +33,7 @@ import (
 	"time"
 
 	servicelib "github.com/percona/kardianos-service"
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 
 	"github.com/percona/pmm-managed/services/consul"
@@ -166,8 +167,6 @@ func New(pmmVersion string, consul *consul.Client, rds *rds.Service, logs []Log)
 // Zip creates .zip archive with all logs.
 func (l *Logs) Zip(ctx context.Context, w io.Writer) error {
 	zw := zip.NewWriter(w)
-	ctx, _ = logger.Set(context.Background(), "main")
-
 	now := time.Now().UTC()
 	for _, log := range l.logs {
 		name, content, err := l.readLog(ctx, &log)
@@ -265,7 +264,7 @@ func (l *Logs) readWithExtractor(ctx context.Context, log *Log) (name string, da
 		}
 
 	case "cat":
-		data, err = l.readFile(log.FilePath)
+		data, err = ioutil.ReadFile(log.FilePath)
 
 	default:
 		panic("unhandled extractor")
@@ -316,26 +315,6 @@ func (l *Logs) collectExec(ctx context.Context, path string, command string) ([]
 	return b, nil
 }
 
-// readFile reads content of a file
-func (l *Logs) readFile(path string) ([]byte, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-
-	b, err := ioutil.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
-
-	err = f.Close()
-	if err != nil {
-		return b, err
-	}
-
-	return b, nil
-}
-
 // readUrl reads content of a page
 func (l *Logs) readURL(url string) ([]byte, error) {
 	u, err := http.Get(url)
@@ -361,6 +340,10 @@ func (l *Logs) getConsulNodes() ([]byte, error) {
 
 // getRDSInstances gets list of monitored instances
 func (l *Logs) getRDSInstances(ctx context.Context) ([]byte, error) {
+	if l.rds == nil {
+		return nil, errors.New("RDS service not initialized")
+	}
+
 	instances, err := l.rds.List(ctx)
 	if err != nil {
 		return nil, err
