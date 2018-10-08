@@ -167,6 +167,7 @@ func New(pmmVersion string, consul *consul.Client, rds *rds.Service, logs []Log)
 // Zip creates .zip archive with all logs.
 func (l *Logs) Zip(ctx context.Context, w io.Writer) error {
 	zw := zip.NewWriter(w)
+	ctx, _ = logger.Set(context.Background(), "main")
 	now := time.Now().UTC()
 	for _, log := range l.logs {
 		name, content, err := l.readLog(ctx, &log)
