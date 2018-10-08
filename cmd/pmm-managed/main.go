@@ -120,6 +120,7 @@ func addLogsHandler(mux *http.ServeMux, logs *logs.Logs) {
 		rw.Header().Set(`Access-Control-Allow-Origin`, `*`)
 		rw.Header().Set(`Content-Type`, `application/zip`)
 		rw.Header().Set(`Content-Disposition`, `attachment; filename="`+filename+`"`)
+		ctx, _ = logger.Set(context.Background(), "main")
 		if err := logs.Zip(ctx, rw); err != nil {
 			l.Error(err)
 		}
@@ -470,9 +471,9 @@ func main() {
 		defer wg.Done()
 		runGRPCServer(ctx, &grpcServerDependencies{
 			rdsServiceDependencies: deps,
-			rds:                    rds,
-			consulClient:           consulClient,
-			logs:                   logs,
+			rds:          rds,
+			consulClient: consulClient,
+			logs:         logs,
 		})
 	}()
 
