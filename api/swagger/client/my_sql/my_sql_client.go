@@ -53,34 +53,6 @@ func (a *Client) Add(params *AddParams) (*AddOK, error) {
 }
 
 /*
-Discover discover API
-*/
-func (a *Client) Discover(params *DiscoverParams) (*DiscoverOK, error) {
-	// TODO: Validate the params before sending
-	if params == nil {
-		params = NewDiscoverParams()
-	}
-
-	result, err := a.transport.Submit(&runtime.ClientOperation{
-		ID:                 "Discover",
-		Method:             "POST",
-		PathPattern:        "/v0/mysql/discover",
-		ProducesMediaTypes: []string{"application/json"},
-		ConsumesMediaTypes: []string{"application/json"},
-		Schemes:            []string{"http", "https"},
-		Params:             params,
-		Reader:             &DiscoverReader{formats: a.formats},
-		Context:            params.Context,
-		Client:             params.HTTPClient,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*DiscoverOK), nil
-
-}
-
-/*
 List list API
 */
 func (a *Client) List(params *ListParams) (*ListOK, error) {

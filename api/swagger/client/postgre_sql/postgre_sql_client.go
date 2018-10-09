@@ -53,34 +53,6 @@ func (a *Client) AddMixin4(params *AddMixin4Params) (*AddMixin4OK, error) {
 }
 
 /*
-DiscoverMixin4 discover mixin4 API
-*/
-func (a *Client) DiscoverMixin4(params *DiscoverMixin4Params) (*DiscoverMixin4OK, error) {
-	// TODO: Validate the params before sending
-	if params == nil {
-		params = NewDiscoverMixin4Params()
-	}
-
-	result, err := a.transport.Submit(&runtime.ClientOperation{
-		ID:                 "DiscoverMixin4",
-		Method:             "POST",
-		PathPattern:        "/v0/postgresql/discover",
-		ProducesMediaTypes: []string{"application/json"},
-		ConsumesMediaTypes: []string{"application/json"},
-		Schemes:            []string{"http", "https"},
-		Params:             params,
-		Reader:             &DiscoverMixin4Reader{formats: a.formats},
-		Context:            params.Context,
-		Client:             params.HTTPClient,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return result.(*DiscoverMixin4OK), nil
-
-}
-
-/*
 ListMixin4 list mixin4 API
 */
 func (a *Client) ListMixin4(params *ListMixin4Params) (*ListMixin4OK, error) {

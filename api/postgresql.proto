@@ -30,15 +30,6 @@ message PostgreSQLInstance {
     PostgreSQLService service = 2;
 }
 
-message PostgreSQLDiscoverRequest {
-    string aws_access_key_id = 1;
-    string aws_secret_access_key = 2;
-}
-
-message PostgreSQLDiscoverResponse {
-    repeated PostgreSQLInstance instances = 1;
-}
-
 message PostgreSQLListRequest {
 }
 
@@ -63,12 +54,6 @@ message PostgreSQLRemoveResponse {
 }
 
 service PostgreSQL {
-    rpc Discover(PostgreSQLDiscoverRequest) returns (PostgreSQLDiscoverResponse) {
-        option (google.api.http) = {
-            post: "/v0/postgresql/discover"
-            body: "*"
-        };
-    }
 
     rpc List(PostgreSQLListRequest) returns (PostgreSQLListResponse) {
         option (google.api.http) = {

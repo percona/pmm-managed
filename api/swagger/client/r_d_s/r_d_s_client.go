@@ -53,30 +53,30 @@ func (a *Client) AddMixin5(params *AddMixin5Params) (*AddMixin5OK, error) {
 }
 
 /*
-DiscoverMixin5 discover mixin5 API
+Discover discover API
 */
-func (a *Client) DiscoverMixin5(params *DiscoverMixin5Params) (*DiscoverMixin5OK, error) {
+func (a *Client) Discover(params *DiscoverParams) (*DiscoverOK, error) {
 	// TODO: Validate the params before sending
 	if params == nil {
-		params = NewDiscoverMixin5Params()
+		params = NewDiscoverParams()
 	}
 
 	result, err := a.transport.Submit(&runtime.ClientOperation{
-		ID:                 "DiscoverMixin5",
+		ID:                 "Discover",
 		Method:             "POST",
 		PathPattern:        "/v0/rds/discover",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http", "https"},
 		Params:             params,
-		Reader:             &DiscoverMixin5Reader{formats: a.formats},
+		Reader:             &DiscoverReader{formats: a.formats},
 		Context:            params.Context,
 		Client:             params.HTTPClient,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return result.(*DiscoverMixin5OK), nil
+	return result.(*DiscoverOK), nil
 
 }
 

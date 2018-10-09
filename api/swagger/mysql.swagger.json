@@ -78,32 +78,6 @@
           "MySQL"
         ]
       }
-    },
-    "/v0/mysql/discover": {
-      "post": {
-        "operationId": "Discover",
-        "responses": {
-          "200": {
-            "description": "",
-            "schema": {
-              "$ref": "#/definitions/apiMySQLDiscoverResponse"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/apiMySQLDiscoverRequest"
-            }
-          }
-        ],
-        "tags": [
-          "MySQL"
-        ]
-      }
     }
   },
   "definitions": {
@@ -123,28 +97,6 @@
     },
     "apiMySQLAddResponse": {
       "type": "object"
-    },
-    "apiMySQLDiscoverRequest": {
-      "type": "object",
-      "properties": {
-        "aws_access_key_id": {
-          "type": "string"
-        },
-        "aws_secret_access_key": {
-          "type": "string"
-        }
-      }
-    },
-    "apiMySQLDiscoverResponse": {
-      "type": "object",
-      "properties": {
-        "instances": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/apiMySQLInstance"
-          }
-        }
-      }
     },
     "apiMySQLInstance": {
       "type": "object",

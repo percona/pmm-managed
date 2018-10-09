@@ -156,32 +156,6 @@
         }
       }
     },
-    "/v0/mysql/discover": {
-      "post": {
-        "tags": [
-          "MySQL"
-        ],
-        "operationId": "Discover",
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/apiMySQLDiscoverRequest"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "(empty)",
-            "schema": {
-              "$ref": "#/definitions/apiMySQLDiscoverResponse"
-            }
-          }
-        }
-      }
-    },
     "/v0/postgresql": {
       "get": {
         "tags": [
@@ -241,32 +215,6 @@
             "description": "(empty)",
             "schema": {
               "$ref": "#/definitions/apiPostgreSQLRemoveResponse"
-            }
-          }
-        }
-      }
-    },
-    "/v0/postgresql/discover": {
-      "post": {
-        "tags": [
-          "PostgreSQL"
-        ],
-        "operationId": "DiscoverMixin4",
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/apiPostgreSQLDiscoverRequest"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "(empty)",
-            "schema": {
-              "$ref": "#/definitions/apiPostgreSQLDiscoverResponse"
             }
           }
         }
@@ -341,7 +289,7 @@
         "tags": [
           "RDS"
         ],
-        "operationId": "DiscoverMixin5",
+        "operationId": "Discover",
         "parameters": [
           {
             "name": "body",
@@ -612,28 +560,6 @@
     "apiMySQLAddResponse": {
       "type": "object"
     },
-    "apiMySQLDiscoverRequest": {
-      "type": "object",
-      "properties": {
-        "aws_access_key_id": {
-          "type": "string"
-        },
-        "aws_secret_access_key": {
-          "type": "string"
-        }
-      }
-    },
-    "apiMySQLDiscoverResponse": {
-      "type": "object",
-      "properties": {
-        "instances": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/apiMySQLInstance"
-          }
-        }
-      }
-    },
     "apiMySQLInstance": {
       "type": "object",
       "properties": {
@@ -723,28 +649,6 @@
     },
     "apiPostgreSQLAddResponse": {
       "type": "object"
-    },
-    "apiPostgreSQLDiscoverRequest": {
-      "type": "object",
-      "properties": {
-        "aws_access_key_id": {
-          "type": "string"
-        },
-        "aws_secret_access_key": {
-          "type": "string"
-        }
-      }
-    },
-    "apiPostgreSQLDiscoverResponse": {
-      "type": "object",
-      "properties": {
-        "instances": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/apiPostgreSQLInstance"
-          }
-        }
-      }
     },
     "apiPostgreSQLInstance": {
       "type": "object",

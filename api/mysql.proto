@@ -30,15 +30,6 @@ message MySQLInstance {
     MySQLService service = 2;
 }
 
-message MySQLDiscoverRequest {
-    string aws_access_key_id = 1;
-    string aws_secret_access_key = 2;
-}
-
-message MySQLDiscoverResponse {
-    repeated MySQLInstance instances = 1;
-}
-
 message MySQLListRequest {
 }
 
@@ -63,12 +54,6 @@ message MySQLRemoveResponse {
 }
 
 service MySQL {
-    rpc Discover(MySQLDiscoverRequest) returns (MySQLDiscoverResponse) {
-        option (google.api.http) = {
-            post: "/v0/mysql/discover"
-            body: "*"
-        };
-    }
 
     rpc List(MySQLListRequest) returns (MySQLListResponse) {
         option (google.api.http) = {

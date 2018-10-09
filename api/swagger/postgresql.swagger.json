@@ -78,32 +78,6 @@
           "PostgreSQL"
         ]
       }
-    },
-    "/v0/postgresql/discover": {
-      "post": {
-        "operationId": "Discover",
-        "responses": {
-          "200": {
-            "description": "",
-            "schema": {
-              "$ref": "#/definitions/apiPostgreSQLDiscoverResponse"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/apiPostgreSQLDiscoverRequest"
-            }
-          }
-        ],
-        "tags": [
-          "PostgreSQL"
-        ]
-      }
     }
   },
   "definitions": {
@@ -123,28 +97,6 @@
     },
     "apiPostgreSQLAddResponse": {
       "type": "object"
-    },
-    "apiPostgreSQLDiscoverRequest": {
-      "type": "object",
-      "properties": {
-        "aws_access_key_id": {
-          "type": "string"
-        },
-        "aws_secret_access_key": {
-          "type": "string"
-        }
-      }
-    },
-    "apiPostgreSQLDiscoverResponse": {
-      "type": "object",
-      "properties": {
-        "instances": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/apiPostgreSQLInstance"
-          }
-        }
-      }
     },
     "apiPostgreSQLInstance": {
       "type": "object",
