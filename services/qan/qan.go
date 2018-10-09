@@ -38,16 +38,11 @@ import (
 	"github.com/percona/pmm/proto"
 	"github.com/percona/pmm/proto/config"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services"
 	"github.com/percona/pmm-managed/utils/logger"
-)
-
-// affects only initial agent registration; after this, it should be changed manually in the config file
-const (
-	// qanAgentLoggingLevel = "debug"
-	qanAgentLoggingLevel = "info"
 )
 
 type Service struct {
@@ -65,6 +60,11 @@ func NewService(ctx context.Context, baseDir string, supervisor services.Supervi
 	return svc, nil
 }
 
+// qanAgentConfigPath returns agent.conf file path.
+func (svc *Service) qanAgentConfigPath() string {
+	return filepath.Join(svc.baseDir, "config", "agent.conf")
+}
+
 // ensureAgentIsRegistered registers a single qan-agent instance on PMM Server node in QAN.
 // It does not re-register or change configuration if agent is already registered.
 // QAN API URL is always returned when no error is encountered.
@@ -74,10 +74,12 @@ func (svc *Service) ensureAgentIsRegistered(ctx context.Context) (*url.URL, erro
 		return nil, err
 	}
 
+	l := logger.Get(ctx).WithField("component", "qan")
+
 	// do not change anything if qan-agent is already registered
-	path := filepath.Join(svc.baseDir, "config", "agent.conf")
+	path := svc.qanAgentConfigPath()
 	if _, err = os.Stat(path); err == nil {
-		logger.Get(ctx).WithField("component", "qan").Debugf("qan-agent already registered (%s exists).", path)
+		l.Debugf("qan-agent already registered (%s exists).", path)
 		return qanURL, nil
 	}
 
@@ -90,17 +92,21 @@ func (svc *Service) ensureAgentIsRegistered(ctx context.Context) (*url.URL, erro
 	}
 	args = append(args, qanURL.String()) // full URL, with username and password (yes, again! that's how installer is written)
 	cmd := exec.Command(path, args...)
-	logger.Get(ctx).WithField("component", "qan").Debug(strings.Join(cmd.Args, " "))
+	l.Debug(strings.Join(cmd.Args, " "))
 	b, err := cmd.CombinedOutput()
 	if err != nil {
-		logger.Get(ctx).WithField("component", "qan").Infof("%s", b)
+		l.Infof("%s", b)
 		return nil, errors.Wrap(err, "failed to register qan-agent")
 	}
-	logger.Get(ctx).WithField("component", "qan").Debugf("%s", b)
+	l.Debugf("%s", b)
 
-	// set logging level to the specified one, very useful for debugging
+	// set logging level - very useful for debugging
+	logLevel := "info"
+	if l.Level == logrus.DebugLevel {
+		logLevel = "debug"
+	}
 	path = filepath.Join(svc.baseDir, "config", "log.conf")
-	if err = ioutil.WriteFile(path, []byte(fmt.Sprintf(`{"Level":%q,"Offline":"false"}`, qanAgentLoggingLevel)), 0666); err != nil {
+	if err = ioutil.WriteFile(path, []byte(fmt.Sprintf(`{"Level":%q,"Offline":"false"}`, logLevel)), 0666); err != nil {
 		return nil, errors.Wrap(err, "failed to write log.conf")
 	}
 	return qanURL, nil
@@ -108,7 +114,7 @@ func (svc *Service) ensureAgentIsRegistered(ctx context.Context) (*url.URL, erro
 
 // getAgentUUID returns agent UUID from the qan-agent configuration file.
 func (svc *Service) getAgentUUID() (string, error) {
-	path := filepath.Join(svc.baseDir, "config", "agent.conf")
+	path := svc.qanAgentConfigPath()
 	f, err := os.Open(path)
 	if err != nil {
 		return "", errors.WithStack(err)
