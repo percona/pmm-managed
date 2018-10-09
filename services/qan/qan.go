@@ -112,6 +112,38 @@ func (svc *Service) ensureAgentIsRegistered(ctx context.Context) (*url.URL, erro
 	return qanURL, nil
 }
 
+// ensureAgentRuns checks qan-agent process status and starts it if it is not configured or down.
+func (svc *Service) ensureAgentRuns(ctx context.Context, nameForSupervisor string, port uint16) error {
+	err := svc.supervisor.Status(ctx, nameForSupervisor)
+	if err != nil {
+		// error can also mean that service status can't be determined, so we always stop it first
+		err = svc.supervisor.Stop(ctx, nameForSupervisor)
+		if err != nil {
+			logger.Get(ctx).WithField("component", "qan").Warn(err)
+		}
+
+		config := &servicelib.Config{
+			Name:        nameForSupervisor,
+			DisplayName: nameForSupervisor,
+			Description: nameForSupervisor,
+			Executable:  filepath.Join(svc.baseDir, "bin", "percona-qan-agent"),
+			Arguments: []string{
+				fmt.Sprintf("-listen=127.0.0.1:%d", port),
+			},
+		}
+		err = svc.supervisor.Start(ctx, config)
+	}
+	return err
+}
+
+// Restore ensures that agent is registered and running.
+func (svc *Service) Restore(ctx context.Context, nameForSupervisor string, port uint16) error {
+	if _, err := svc.ensureAgentIsRegistered(ctx); err != nil {
+		return err
+	}
+	return svc.ensureAgentRuns(ctx, nameForSupervisor, port)
+}
+
 // getAgentUUID returns agent UUID from the qan-agent configuration file.
 func (svc *Service) getAgentUUID() (string, error) {
 	path := svc.qanAgentConfigPath()
@@ -162,9 +194,9 @@ func (svc *Service) getOSUUID(ctx context.Context, qanURL *url.URL, agentUUID st
 	return instance.ParentUUID, nil
 }
 
-// addInstance adds instance to QAN API.
+// addInstanceToServer adds instance to QAN API.
 // If successful, instance's UUID field will be set.
-func (svc *Service) addInstance(ctx context.Context, qanURL *url.URL, instance *proto.Instance) error {
+func (svc *Service) addInstanceToServer(ctx context.Context, qanURL *url.URL, instance *proto.Instance) error {
 	b, err := json.Marshal(instance)
 	if err != nil {
 		return errors.WithStack(err)
@@ -178,7 +210,7 @@ func (svc *Service) addInstance(ctx context.Context, qanURL *url.URL, instance *
 	}
 	req.Header.Set("Content-Type", "application/json")
 	rb, _ := httputil.DumpRequestOut(req, true)
-	logger.Get(ctx).WithField("component", "qan").Debugf("addInstance request:\n\n%s\n", rb)
+	logger.Get(ctx).WithField("component", "qan").Debugf("addInstanceToServer request:\n\n%s\n", rb)
 
 	resp, err := svc.qanAPI.Do(req)
 	if err != nil {
@@ -188,10 +220,10 @@ func (svc *Service) addInstance(ctx context.Context, qanURL *url.URL, instance *
 
 	rb, _ = httputil.DumpResponse(resp, true)
 	if resp.StatusCode != 201 {
-		logger.Get(ctx).WithField("component", "qan").Errorf("addInstance response:\n\n%s\n", rb)
+		logger.Get(ctx).WithField("component", "qan").Errorf("addInstanceToServer response:\n\n%s\n", rb)
 		return errors.Errorf("unexpected QAN response status code %d", resp.StatusCode)
 	}
-	logger.Get(ctx).WithField("component", "qan").Debugf("addInstance response:\n\n%s\n", rb)
+	logger.Get(ctx).WithField("component", "qan").Debugf("addInstanceToServer response:\n\n%s\n", rb)
 
 	// Response Location header looks like this: http://127.0.0.1/qan-api/instances/6cea8824082d4ade682b94109664e6a9
 	// Extract UUID directly from it instead of following it.
@@ -200,8 +232,8 @@ func (svc *Service) addInstance(ctx context.Context, qanURL *url.URL, instance *
 	return nil
 }
 
-// removeInstance removes instance from QAN API.
-func (svc *Service) removeInstance(ctx context.Context, qanURL *url.URL, uuid string) error {
+// removeInstanceFromServer removes instance from QAN API.
+func (svc *Service) removeInstanceFromServer(ctx context.Context, qanURL *url.URL, uuid string) error {
 	url := *qanURL
 	url.Path = path.Join(url.Path, "instances", uuid)
 	req, err := http.NewRequest("DELETE", url.String(), nil)
@@ -209,7 +241,7 @@ func (svc *Service) removeInstance(ctx context.Context, qanURL *url.URL, uuid st
 		return errors.WithStack(err)
 	}
 	rb, _ := httputil.DumpRequestOut(req, true)
-	logger.Get(ctx).WithField("component", "qan").Debugf("removeInstance request:\n\n%s\n", rb)
+	logger.Get(ctx).WithField("component", "qan").Debugf("removeInstanceFromServer request:\n\n%s\n", rb)
 
 	resp, err := svc.qanAPI.Do(req)
 	if err != nil {
@@ -219,36 +251,11 @@ func (svc *Service) removeInstance(ctx context.Context, qanURL *url.URL, uuid st
 
 	rb, _ = httputil.DumpResponse(resp, true)
 	if resp.StatusCode != 204 {
-		logger.Get(ctx).WithField("component", "qan").Errorf("removeInstance response:\n\n%s\n", rb)
+		logger.Get(ctx).WithField("component", "qan").Errorf("removeInstanceFromServer response:\n\n%s\n", rb)
 		return errors.Errorf("unexpected QAN response status code %d", resp.StatusCode)
 	}
-	logger.Get(ctx).WithField("component", "qan").Debugf("removeInstance response:\n\n%s\n", rb)
+	logger.Get(ctx).WithField("component", "qan").Debugf("removeInstanceFromServer response:\n\n%s\n", rb)
 	return nil
-}
-
-// EnsureAgentRuns checks qan-agent process status and starts it if it is not configured or down.
-func (svc *Service) EnsureAgentRuns(ctx context.Context, agent *models.QanAgent) error {
-	nameForSupervisor := models.NameForSupervisor(agent.Type, *agent.ListenPort)
-	err := svc.supervisor.Status(ctx, nameForSupervisor)
-	if err != nil {
-		// error can also mean that service status can't be determined, so we always stop it first
-		err = svc.supervisor.Stop(ctx, nameForSupervisor)
-		if err != nil {
-			logger.Get(ctx).WithField("component", "qan").Warn(err)
-		}
-
-		config := &servicelib.Config{
-			Name:        nameForSupervisor,
-			DisplayName: nameForSupervisor,
-			Description: nameForSupervisor,
-			Executable:  filepath.Join(svc.baseDir, "bin", "percona-qan-agent"),
-			Arguments: []string{
-				fmt.Sprintf("-listen=127.0.0.1:%d", *agent.ListenPort),
-			},
-		}
-		err = svc.supervisor.Start(ctx, config)
-	}
-	return err
 }
 
 func (svc *Service) sendQANCommand(ctx context.Context, qanURL *url.URL, agentUUID string, command string, data []byte) error {
@@ -327,7 +334,7 @@ func (svc *Service) AddMySQL(ctx context.Context, nodeName string, mySQLService 
 		DSN:        sanitizeDSN(qanAgent.DSN(mySQLService)),
 		Version:    *mySQLService.EngineVersion,
 	}
-	if err = svc.addInstance(ctx, qanURL, instance); err != nil {
+	if err = svc.addInstanceToServer(ctx, qanURL, instance); err != nil {
 		return err
 	}
 	qanAgent.QANDBInstanceUUID = pointer.ToString(instance.UUID)
@@ -343,7 +350,7 @@ func (svc *Service) AddMySQL(ctx context.Context, nodeName string, mySQLService 
 		return errors.WithStack(err)
 	}
 
-	if err = svc.EnsureAgentRuns(ctx, qanAgent); err != nil {
+	if err = svc.ensureAgentRuns(ctx, models.NameForSupervisor(qanAgent.Type, *qanAgent.ListenPort), *qanAgent.ListenPort); err != nil {
 		return err
 	}
 
@@ -369,7 +376,7 @@ func (svc *Service) RemoveMySQL(ctx context.Context, qanAgent *models.QanAgent) 
 	}
 
 	// agent should be running to remove instance from it
-	if err = svc.EnsureAgentRuns(ctx, qanAgent); err != nil {
+	if err = svc.ensureAgentRuns(ctx, models.NameForSupervisor(qanAgent.Type, *qanAgent.ListenPort), *qanAgent.ListenPort); err != nil {
 		return err
 	}
 
@@ -385,7 +392,7 @@ func (svc *Service) RemoveMySQL(ctx context.Context, qanAgent *models.QanAgent) 
 		return err
 	}
 
-	return svc.removeInstance(ctx, qanURL, *qanAgent.QANDBInstanceUUID)
+	return svc.removeInstanceFromServer(ctx, qanURL, *qanAgent.QANDBInstanceUUID)
 
 	// we do not stop qan-agent even if it has zero MySQL instances now - to be safe
 }
