@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+package api;
+
+import "google/api/annotations.proto";
+
+message MySQLNode {
+    reserved 1, 2; // id and type
+
+    string region = 3;
+    string name = 4;
+}
+
+message MySQLService {
+    reserved 1, 2, 3; // id, type, and node_id
+
+    string address = 4;
+    uint32 port = 5;
+    string engine = 6;
+    string engine_version = 7;
+}
+
+message MySQLInstanceID {
+    string region = 1;
+    string name = 2;
+}
+
+message MySQLInstance {
+    MySQLNode node = 1;
+    MySQLService service = 2;
+}
+
+message MySQLDiscoverRequest {
+    string aws_access_key_id = 1;
+    string aws_secret_access_key = 2;
+}
+
+message MySQLDiscoverResponse {
+    repeated MySQLInstance instances = 1;
+}
+
+message MySQLListRequest {
+}
+
+message MySQLListResponse {
+    repeated MySQLInstance instances = 1;
+}
+
+message MySQLAddRequest {
+    MySQLInstanceID id = 1;
+    string username = 2;
+    string password = 3;
+}
+
+message MySQLAddResponse {
+}
+
+message MySQLRemoveRequest {
+    MySQLInstanceID id = 1;
+}
+
+message MySQLRemoveResponse {
+}
+
+service MySQL {
+    rpc Discover(MySQLDiscoverRequest) returns (MySQLDiscoverResponse) {
+        option (google.api.http) = {
+            post: "/v0/mysql/discover"
+            body: "*"
+        };
+    }
+
+    rpc List(MySQLListRequest) returns (MySQLListResponse) {
+        option (google.api.http) = {
+            get: "/v0/mysql"
+        };
+    }
+
+    rpc Add(MySQLAddRequest) returns (MySQLAddResponse) {
+        option (google.api.http) = {
+            post: "/v0/mysql"
+            body: "*"
+        };
+    }
+
+    rpc Remove(MySQLRemoveRequest) returns (MySQLRemoveResponse) {
+        option (google.api.http) = {
+            delete: "/v0/mysql"
+            body: "*"
+        };
+    }
+}

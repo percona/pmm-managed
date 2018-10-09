@@ -1,0 +1,223 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "mysql.proto",
+    "version": "version not set"
+  },
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v0/mysql": {
+      "get": {
+        "operationId": "List",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/apiMySQLListResponse"
+            }
+          }
+        },
+        "tags": [
+          "MySQL"
+        ]
+      },
+      "delete": {
+        "operationId": "Remove",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/apiMySQLRemoveResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/apiMySQLRemoveRequest"
+            }
+          }
+        ],
+        "tags": [
+          "MySQL"
+        ]
+      },
+      "post": {
+        "operationId": "Add",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/apiMySQLAddResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/apiMySQLAddRequest"
+            }
+          }
+        ],
+        "tags": [
+          "MySQL"
+        ]
+      }
+    },
+    "/v0/mysql/discover": {
+      "post": {
+        "operationId": "Discover",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/apiMySQLDiscoverResponse"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/apiMySQLDiscoverRequest"
+            }
+          }
+        ],
+        "tags": [
+          "MySQL"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "apiMySQLAddRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/apiMySQLInstanceID"
+        },
+        "username": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        }
+      }
+    },
+    "apiMySQLAddResponse": {
+      "type": "object"
+    },
+    "apiMySQLDiscoverRequest": {
+      "type": "object",
+      "properties": {
+        "aws_access_key_id": {
+          "type": "string"
+        },
+        "aws_secret_access_key": {
+          "type": "string"
+        }
+      }
+    },
+    "apiMySQLDiscoverResponse": {
+      "type": "object",
+      "properties": {
+        "instances": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/apiMySQLInstance"
+          }
+        }
+      }
+    },
+    "apiMySQLInstance": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "$ref": "#/definitions/apiMySQLNode"
+        },
+        "service": {
+          "$ref": "#/definitions/apiMySQLService"
+        }
+      }
+    },
+    "apiMySQLInstanceID": {
+      "type": "object",
+      "properties": {
+        "region": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "apiMySQLListResponse": {
+      "type": "object",
+      "properties": {
+        "instances": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/apiMySQLInstance"
+          }
+        }
+      }
+    },
+    "apiMySQLNode": {
+      "type": "object",
+      "properties": {
+        "region": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "apiMySQLRemoveRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/apiMySQLInstanceID"
+        }
+      }
+    },
+    "apiMySQLRemoveResponse": {
+      "type": "object"
+    },
+    "apiMySQLService": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "engine": {
+          "type": "string"
+        },
+        "engine_version": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

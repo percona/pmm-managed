@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+package api;
+
+import "google/api/annotations.proto";
+
+message PostgreSQLNode {
+    reserved 1, 2; // id and type
+
+    string region = 3;
+    string name = 4;
+}
+
+message PostgreSQLService {
+    reserved 1, 2, 3; // id, type, and node_id
+
+    string address = 4;
+    uint32 port = 5;
+    string engine = 6;
+    string engine_version = 7;
+}
+
+message PostgreSQLInstanceID {
+    string region = 1;
+    string name = 2;
+}
+
+message PostgreSQLInstance {
+    PostgreSQLNode node = 1;
+    PostgreSQLService service = 2;
+}
+
+message PostgreSQLDiscoverRequest {
+    string aws_access_key_id = 1;
+    string aws_secret_access_key = 2;
+}
+
+message PostgreSQLDiscoverResponse {
+    repeated PostgreSQLInstance instances = 1;
+}
+
+message PostgreSQLListRequest {
+}
+
+message PostgreSQLListResponse {
+    repeated PostgreSQLInstance instances = 1;
+}
+
+message PostgreSQLAddRequest {
+    PostgreSQLInstanceID id = 1;
+    string username = 2;
+    string password = 3;
+}
+
+message PostgreSQLAddResponse {
+}
+
+message PostgreSQLRemoveRequest {
+    PostgreSQLInstanceID id = 1;
+}
+
+message PostgreSQLRemoveResponse {
+}
+
+service PostgreSQL {
+    rpc Discover(PostgreSQLDiscoverRequest) returns (PostgreSQLDiscoverResponse) {
+        option (google.api.http) = {
+            post: "/v0/postgresql/discover"
+            body: "*"
+        };
+    }
+
+    rpc List(PostgreSQLListRequest) returns (PostgreSQLListResponse) {
+        option (google.api.http) = {
+            get: "/v0/postgresql"
+        };
+    }
+
+    rpc Add(PostgreSQLAddRequest) returns (PostgreSQLAddResponse) {
+        option (google.api.http) = {
+            post: "/v0/postgresql"
+            body: "*"
+        };
+    }
+
+    rpc Remove(PostgreSQLRemoveRequest) returns (PostgreSQLRemoveResponse) {
+        option (google.api.http) = {
+            delete: "/v0/postgresql"
+            body: "*"
+        };
+    }
+}
