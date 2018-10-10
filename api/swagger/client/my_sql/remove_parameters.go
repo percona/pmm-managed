@@ -64,7 +64,7 @@ for the remove operation typically these are written to a http.Request
 type RemoveParams struct {
 
 	/*ID*/
-	ID int64
+	ID int32
 
 	timeout    time.Duration
 	Context    context.Context
@@ -105,13 +105,13 @@ func (o *RemoveParams) SetHTTPClient(client *http.Client) {
 }
 
 // WithID adds the id to the remove params
-func (o *RemoveParams) WithID(id int64) *RemoveParams {
+func (o *RemoveParams) WithID(id int32) *RemoveParams {
 	o.SetID(id)
 	return o
 }
 
 // SetID adds the id to the remove params
-func (o *RemoveParams) SetID(id int64) {
+func (o *RemoveParams) SetID(id int32) {
 	o.ID = id
 }
 
@@ -124,7 +124,7 @@ func (o *RemoveParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Regist
 	var res []error
 
 	// path param id
-	if err := r.SetPathParam("id", swag.FormatInt64(o.ID)); err != nil {
+	if err := r.SetPathParam("id", swag.FormatInt32(o.ID)); err != nil {
 		return err
 	}
 

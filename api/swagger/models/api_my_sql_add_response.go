@@ -16,7 +16,7 @@ import (
 type APIMySQLAddResponse struct {
 
 	// id
-	ID int64 `json:"id,omitempty"`
+	ID int32 `json:"id,omitempty"`
 }
 
 // Validate validates this api my SQL add response
