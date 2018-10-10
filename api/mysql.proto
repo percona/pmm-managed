@@ -39,18 +39,17 @@ message MySQLAddRequest {
 }
 
 message MySQLAddResponse {
+    uint32 id = 1;
 }
 
 message MySQLRemoveRequest {
-    string address = 1;
-    uint32 port = 2;
+    uint32 id = 1;
 }
 
 message MySQLRemoveResponse {
 }
 
 service MySQL {
-
     rpc List(MySQLListRequest) returns (MySQLListResponse) {
         option (google.api.http) = {
             get: "/v0/mysql"
@@ -66,8 +65,7 @@ service MySQL {
 
     rpc Remove(MySQLRemoveRequest) returns (MySQLRemoveResponse) {
         option (google.api.http) = {
-            delete: "/v0/mysql"
-            body: "*"
+            delete: "/v0/mysql/{id}"
         };
     }
 }

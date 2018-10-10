@@ -92,7 +92,7 @@ func (a *Client) Remove(params *RemoveParams) (*RemoveOK, error) {
 	result, err := a.transport.Submit(&runtime.ClientOperation{
 		ID:                 "Remove",
 		Method:             "DELETE",
-		PathPattern:        "/v0/mysql",
+		PathPattern:        "/v0/mysql/{id}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http", "https"},

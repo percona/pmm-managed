@@ -130,7 +130,9 @@
             }
           }
         }
-      },
+      }
+    },
+    "/v0/mysql/{id}": {
       "delete": {
         "tags": [
           "MySQL"
@@ -138,12 +140,11 @@
         "operationId": "Remove",
         "parameters": [
           {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/apiMySQLRemoveRequest"
-            }
+            "type": "integer",
+            "format": "int64",
+            "name": "id",
+            "in": "path",
+            "required": true
           }
         ],
         "responses": {
@@ -562,7 +563,13 @@
       }
     },
     "apiMySQLAddResponse": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        }
+      }
     },
     "apiMySQLInstance": {
       "type": "object",
@@ -591,18 +598,6 @@
       "properties": {
         "name": {
           "type": "string"
-        }
-      }
-    },
-    "apiMySQLRemoveRequest": {
-      "type": "object",
-      "properties": {
-        "address": {
-          "type": "string"
-        },
-        "port": {
-          "type": "integer",
-          "format": "int64"
         }
       }
     },

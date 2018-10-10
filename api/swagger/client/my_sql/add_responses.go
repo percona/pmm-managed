@@ -47,7 +47,7 @@ func NewAddOK() *AddOK {
 (empty)
 */
 type AddOK struct {
-	Payload models.APIMySQLAddResponse
+	Payload *models.APIMySQLAddResponse
 }
 
 func (o *AddOK) Error() string {
@@ -56,8 +56,10 @@ func (o *AddOK) Error() string {
 
 func (o *AddOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
+	o.Payload = new(models.APIMySQLAddResponse)
+
 	// response payload
-	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && err != io.EOF {
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && err != io.EOF {
 		return err
 	}
 

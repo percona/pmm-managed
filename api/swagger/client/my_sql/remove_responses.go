@@ -51,7 +51,7 @@ type RemoveOK struct {
 }
 
 func (o *RemoveOK) Error() string {
-	return fmt.Sprintf("[DELETE /v0/mysql][%d] removeOK  %+v", 200, o.Payload)
+	return fmt.Sprintf("[DELETE /v0/mysql/{id}][%d] removeOK  %+v", 200, o.Payload)
 }
 
 func (o *RemoveOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

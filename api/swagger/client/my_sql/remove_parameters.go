@@ -14,10 +14,9 @@ import (
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/runtime"
 	cr "github.com/go-openapi/runtime/client"
+	"github.com/go-openapi/swag"
 
 	strfmt "github.com/go-openapi/strfmt"
-
-	models "github.com/percona/pmm-managed/api/swagger/models"
 )
 
 // NewRemoveParams creates a new RemoveParams object
@@ -64,8 +63,8 @@ for the remove operation typically these are written to a http.Request
 */
 type RemoveParams struct {
 
-	/*Body*/
-	Body *models.APIMySQLRemoveRequest
+	/*ID*/
+	ID int64
 
 	timeout    time.Duration
 	Context    context.Context
@@ -105,15 +104,15 @@ func (o *RemoveParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
-// WithBody adds the body to the remove params
-func (o *RemoveParams) WithBody(body *models.APIMySQLRemoveRequest) *RemoveParams {
-	o.SetBody(body)
+// WithID adds the id to the remove params
+func (o *RemoveParams) WithID(id int64) *RemoveParams {
+	o.SetID(id)
 	return o
 }
 
-// SetBody adds the body to the remove params
-func (o *RemoveParams) SetBody(body *models.APIMySQLRemoveRequest) {
-	o.Body = body
+// SetID adds the id to the remove params
+func (o *RemoveParams) SetID(id int64) {
+	o.ID = id
 }
 
 // WriteToRequest writes these params to a swagger request
@@ -124,10 +123,9 @@ func (o *RemoveParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Regist
 	}
 	var res []error
 
-	if o.Body != nil {
-		if err := r.SetBodyParam(o.Body); err != nil {
-			return err
-		}
+	// path param id
+	if err := r.SetPathParam("id", swag.FormatInt64(o.ID)); err != nil {
+		return err
 	}
 
 	if len(res) > 0 {
