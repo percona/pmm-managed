@@ -39,18 +39,17 @@ message PostgreSQLAddRequest {
 }
 
 message PostgreSQLAddResponse {
+    int32 id = 1;
 }
 
 message PostgreSQLRemoveRequest {
-    string address = 1;
-    uint32 port = 2;
+    int32 id = 1;
 }
 
 message PostgreSQLRemoveResponse {
 }
 
 service PostgreSQL {
-
     rpc List(PostgreSQLListRequest) returns (PostgreSQLListResponse) {
         option (google.api.http) = {
             get: "/v0/postgresql"
@@ -66,8 +65,7 @@ service PostgreSQL {
 
     rpc Remove(PostgreSQLRemoveRequest) returns (PostgreSQLRemoveResponse) {
         option (google.api.http) = {
-            delete: "/v0/postgresql"
-            body: "*"
+            delete: "/v0/postgresql/{id}"
         };
     }
 }

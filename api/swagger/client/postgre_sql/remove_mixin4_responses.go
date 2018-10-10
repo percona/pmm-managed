@@ -51,7 +51,7 @@ type RemoveMixin4OK struct {
 }
 
 func (o *RemoveMixin4OK) Error() string {
-	return fmt.Sprintf("[DELETE /v0/postgresql][%d] removeMixin4OK  %+v", 200, o.Payload)
+	return fmt.Sprintf("[DELETE /v0/postgresql/{id}][%d] removeMixin4OK  %+v", 200, o.Payload)
 }
 
 func (o *RemoveMixin4OK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

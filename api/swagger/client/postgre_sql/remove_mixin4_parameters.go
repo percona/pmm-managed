@@ -14,10 +14,9 @@ import (
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/runtime"
 	cr "github.com/go-openapi/runtime/client"
+	"github.com/go-openapi/swag"
 
 	strfmt "github.com/go-openapi/strfmt"
-
-	models "github.com/percona/pmm-managed/api/swagger/models"
 )
 
 // NewRemoveMixin4Params creates a new RemoveMixin4Params object
@@ -64,8 +63,8 @@ for the remove mixin4 operation typically these are written to a http.Request
 */
 type RemoveMixin4Params struct {
 
-	/*Body*/
-	Body *models.APIPostgreSQLRemoveRequest
+	/*ID*/
+	ID int32
 
 	timeout    time.Duration
 	Context    context.Context
@@ -105,15 +104,15 @@ func (o *RemoveMixin4Params) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
-// WithBody adds the body to the remove mixin4 params
-func (o *RemoveMixin4Params) WithBody(body *models.APIPostgreSQLRemoveRequest) *RemoveMixin4Params {
-	o.SetBody(body)
+// WithID adds the id to the remove mixin4 params
+func (o *RemoveMixin4Params) WithID(id int32) *RemoveMixin4Params {
+	o.SetID(id)
 	return o
 }
 
-// SetBody adds the body to the remove mixin4 params
-func (o *RemoveMixin4Params) SetBody(body *models.APIPostgreSQLRemoveRequest) {
-	o.Body = body
+// SetID adds the id to the remove mixin4 params
+func (o *RemoveMixin4Params) SetID(id int32) {
+	o.ID = id
 }
 
 // WriteToRequest writes these params to a swagger request
@@ -124,10 +123,9 @@ func (o *RemoveMixin4Params) WriteToRequest(r runtime.ClientRequest, reg strfmt.
 	}
 	var res []error
 
-	if o.Body != nil {
-		if err := r.SetBodyParam(o.Body); err != nil {
-			return err
-		}
+	// path param id
+	if err := r.SetPathParam("id", swag.FormatInt32(o.ID)); err != nil {
+		return err
 	}
 
 	if len(res) > 0 {

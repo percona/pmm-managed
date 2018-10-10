@@ -195,7 +195,9 @@
             }
           }
         }
-      },
+      }
+    },
+    "/v0/postgresql/{id}": {
       "delete": {
         "tags": [
           "PostgreSQL"
@@ -203,12 +205,11 @@
         "operationId": "RemoveMixin4",
         "parameters": [
           {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/apiPostgreSQLRemoveRequest"
-            }
+            "type": "integer",
+            "format": "int32",
+            "name": "id",
+            "in": "path",
+            "required": true
           }
         ],
         "responses": {
@@ -641,7 +642,13 @@
       }
     },
     "apiPostgreSQLAddResponse": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
     },
     "apiPostgreSQLInstance": {
       "type": "object",
@@ -670,18 +677,6 @@
       "properties": {
         "name": {
           "type": "string"
-        }
-      }
-    },
-    "apiPostgreSQLRemoveRequest": {
-      "type": "object",
-      "properties": {
-        "address": {
-          "type": "string"
-        },
-        "port": {
-          "type": "integer",
-          "format": "int64"
         }
       }
     },

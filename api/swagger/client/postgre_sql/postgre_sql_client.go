@@ -92,7 +92,7 @@ func (a *Client) RemoveMixin4(params *RemoveMixin4Params) (*RemoveMixin4OK, erro
 	result, err := a.transport.Submit(&runtime.ClientOperation{
 		ID:                 "RemoveMixin4",
 		Method:             "DELETE",
-		PathPattern:        "/v0/postgresql",
+		PathPattern:        "/v0/postgresql/{id}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http", "https"},

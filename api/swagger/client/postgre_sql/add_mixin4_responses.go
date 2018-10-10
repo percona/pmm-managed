@@ -47,7 +47,7 @@ func NewAddMixin4OK() *AddMixin4OK {
 (empty)
 */
 type AddMixin4OK struct {
-	Payload models.APIPostgreSQLAddResponse
+	Payload *models.APIPostgreSQLAddResponse
 }
 
 func (o *AddMixin4OK) Error() string {
@@ -56,8 +56,10 @@ func (o *AddMixin4OK) Error() string {
 
 func (o *AddMixin4OK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
+	o.Payload = new(models.APIPostgreSQLAddResponse)
+
 	// response payload
-	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && err != io.EOF {
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && err != io.EOF {
 		return err
 	}
 
