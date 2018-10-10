@@ -8,7 +8,6 @@ package models
 import (
 	strfmt "github.com/go-openapi/strfmt"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/swag"
 )
 
@@ -16,39 +15,15 @@ import (
 // swagger:model apiPostgreSQLRemoveRequest
 type APIPostgreSQLRemoveRequest struct {
 
-	// id
-	ID *APIPostgreSQLInstanceID `json:"id,omitempty"`
+	// address
+	Address string `json:"address,omitempty"`
+
+	// port
+	Port int64 `json:"port,omitempty"`
 }
 
 // Validate validates this api postgre SQL remove request
 func (m *APIPostgreSQLRemoveRequest) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateID(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *APIPostgreSQLRemoveRequest) validateID(formats strfmt.Registry) error {
-
-	if swag.IsZero(m.ID) { // not required
-		return nil
-	}
-
-	if m.ID != nil {
-		if err := m.ID.Validate(formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("id")
-			}
-			return err
-		}
-	}
-
 	return nil
 }
 

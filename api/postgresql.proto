@@ -7,8 +7,7 @@ import "google/api/annotations.proto";
 message PostgreSQLNode {
     reserved 1, 2; // id and type
 
-    string region = 3;
-    string name = 4;
+    string name = 3;
 }
 
 message PostgreSQLService {
@@ -18,11 +17,6 @@ message PostgreSQLService {
     uint32 port = 5;
     string engine = 6;
     string engine_version = 7;
-}
-
-message PostgreSQLInstanceID {
-    string region = 1;
-    string name = 2;
 }
 
 message PostgreSQLInstance {
@@ -38,16 +32,18 @@ message PostgreSQLListResponse {
 }
 
 message PostgreSQLAddRequest {
-    PostgreSQLInstanceID id = 1;
-    string username = 2;
-    string password = 3;
+    string address = 1;
+    uint32 port = 2;
+    string username = 3;
+    string password = 4;
 }
 
 message PostgreSQLAddResponse {
 }
 
 message PostgreSQLRemoveRequest {
-    PostgreSQLInstanceID id = 1;
+    string address = 1;
+    uint32 port = 2;
 }
 
 message PostgreSQLRemoveResponse {

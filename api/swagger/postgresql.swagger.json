@@ -84,8 +84,12 @@
     "apiPostgreSQLAddRequest": {
       "type": "object",
       "properties": {
-        "id": {
-          "$ref": "#/definitions/apiPostgreSQLInstanceID"
+        "address": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer",
+          "format": "int64"
         },
         "username": {
           "type": "string"
@@ -109,17 +113,6 @@
         }
       }
     },
-    "apiPostgreSQLInstanceID": {
-      "type": "object",
-      "properties": {
-        "region": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        }
-      }
-    },
     "apiPostgreSQLListResponse": {
       "type": "object",
       "properties": {
@@ -134,9 +127,6 @@
     "apiPostgreSQLNode": {
       "type": "object",
       "properties": {
-        "region": {
-          "type": "string"
-        },
         "name": {
           "type": "string"
         }
@@ -145,8 +135,12 @@
     "apiPostgreSQLRemoveRequest": {
       "type": "object",
       "properties": {
-        "id": {
-          "$ref": "#/definitions/apiPostgreSQLInstanceID"
+        "address": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },

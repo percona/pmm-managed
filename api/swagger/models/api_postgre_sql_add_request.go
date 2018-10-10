@@ -8,7 +8,6 @@ package models
 import (
 	strfmt "github.com/go-openapi/strfmt"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/swag"
 )
 
@@ -16,11 +15,14 @@ import (
 // swagger:model apiPostgreSQLAddRequest
 type APIPostgreSQLAddRequest struct {
 
-	// id
-	ID *APIPostgreSQLInstanceID `json:"id,omitempty"`
+	// address
+	Address string `json:"address,omitempty"`
 
 	// password
 	Password string `json:"password,omitempty"`
+
+	// port
+	Port int64 `json:"port,omitempty"`
 
 	// username
 	Username string `json:"username,omitempty"`
@@ -28,33 +30,6 @@ type APIPostgreSQLAddRequest struct {
 
 // Validate validates this api postgre SQL add request
 func (m *APIPostgreSQLAddRequest) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateID(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *APIPostgreSQLAddRequest) validateID(formats strfmt.Registry) error {
-
-	if swag.IsZero(m.ID) { // not required
-		return nil
-	}
-
-	if m.ID != nil {
-		if err := m.ID.Validate(formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("id")
-			}
-			return err
-		}
-	}
-
 	return nil
 }
 

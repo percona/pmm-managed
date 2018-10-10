@@ -7,8 +7,7 @@ import "google/api/annotations.proto";
 message MySQLNode {
     reserved 1, 2; // id and type
 
-    string region = 3;
-    string name = 4;
+    string name = 3;
 }
 
 message MySQLService {
@@ -18,11 +17,6 @@ message MySQLService {
     uint32 port = 5;
     string engine = 6;
     string engine_version = 7;
-}
-
-message MySQLInstanceID {
-    string region = 1;
-    string name = 2;
 }
 
 message MySQLInstance {
@@ -38,16 +32,18 @@ message MySQLListResponse {
 }
 
 message MySQLAddRequest {
-    MySQLInstanceID id = 1;
-    string username = 2;
-    string password = 3;
+    string address = 1;
+    uint32 port = 2;
+    string username = 3;
+    string password = 4;
 }
 
 message MySQLAddResponse {
 }
 
 message MySQLRemoveRequest {
-    MySQLInstanceID id = 1;
+    string address = 1;
+    uint32 port = 2;
 }
 
 message MySQLRemoveResponse {

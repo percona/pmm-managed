@@ -546,11 +546,15 @@
     "apiMySQLAddRequest": {
       "type": "object",
       "properties": {
-        "id": {
-          "$ref": "#/definitions/apiMySQLInstanceID"
+        "address": {
+          "type": "string"
         },
         "password": {
           "type": "string"
+        },
+        "port": {
+          "type": "integer",
+          "format": "int64"
         },
         "username": {
           "type": "string"
@@ -571,17 +575,6 @@
         }
       }
     },
-    "apiMySQLInstanceID": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "region": {
-          "type": "string"
-        }
-      }
-    },
     "apiMySQLListResponse": {
       "type": "object",
       "properties": {
@@ -598,17 +591,18 @@
       "properties": {
         "name": {
           "type": "string"
-        },
-        "region": {
-          "type": "string"
         }
       }
     },
     "apiMySQLRemoveRequest": {
       "type": "object",
       "properties": {
-        "id": {
-          "$ref": "#/definitions/apiMySQLInstanceID"
+        "address": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
@@ -636,11 +630,15 @@
     "apiPostgreSQLAddRequest": {
       "type": "object",
       "properties": {
-        "id": {
-          "$ref": "#/definitions/apiPostgreSQLInstanceID"
+        "address": {
+          "type": "string"
         },
         "password": {
           "type": "string"
+        },
+        "port": {
+          "type": "integer",
+          "format": "int64"
         },
         "username": {
           "type": "string"
@@ -661,17 +659,6 @@
         }
       }
     },
-    "apiPostgreSQLInstanceID": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "region": {
-          "type": "string"
-        }
-      }
-    },
     "apiPostgreSQLListResponse": {
       "type": "object",
       "properties": {
@@ -688,17 +675,18 @@
       "properties": {
         "name": {
           "type": "string"
-        },
-        "region": {
-          "type": "string"
         }
       }
     },
     "apiPostgreSQLRemoveRequest": {
       "type": "object",
       "properties": {
-        "id": {
-          "$ref": "#/definitions/apiPostgreSQLInstanceID"
+        "address": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },

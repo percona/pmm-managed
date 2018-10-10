@@ -84,8 +84,12 @@
     "apiMySQLAddRequest": {
       "type": "object",
       "properties": {
-        "id": {
-          "$ref": "#/definitions/apiMySQLInstanceID"
+        "address": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer",
+          "format": "int64"
         },
         "username": {
           "type": "string"
@@ -109,17 +113,6 @@
         }
       }
     },
-    "apiMySQLInstanceID": {
-      "type": "object",
-      "properties": {
-        "region": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        }
-      }
-    },
     "apiMySQLListResponse": {
       "type": "object",
       "properties": {
@@ -134,9 +127,6 @@
     "apiMySQLNode": {
       "type": "object",
       "properties": {
-        "region": {
-          "type": "string"
-        },
         "name": {
           "type": "string"
         }
@@ -145,8 +135,12 @@
     "apiMySQLRemoveRequest": {
       "type": "object",
       "properties": {
-        "id": {
-          "$ref": "#/definitions/apiMySQLInstanceID"
+        "address": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer",
+          "format": "int64"
         }
       }
     },
