@@ -29,9 +29,10 @@ import (
 type AgentType string
 
 const (
-	MySQLdExporterAgentType AgentType = "mysqld_exporter"
-	RDSExporterAgentType    AgentType = "rds_exporter"
-	QanAgentAgentType       AgentType = "qan-agent"
+	MySQLdExporterAgentType     AgentType = "mysqld_exporter"
+	PostgreSQLExporterAgentType AgentType = "postgresql_exporter"
+	RDSExporterAgentType        AgentType = "rds_exporter"
+	QanAgentAgentType           AgentType = "qan-agent"
 )
 
 //reform:agents
@@ -68,6 +69,26 @@ func (m *MySQLdExporter) DSN(service *RDSService) string {
 
 func (m *MySQLdExporter) NameForSupervisor() string {
 	return fmt.Sprintf("pmm-%s-%d", m.Type, *m.ListenPort)
+}
+
+//reform:agents
+type PostgreSQLExporter struct {
+	ID           int32     `reform:"id,pk"`
+	Type         AgentType `reform:"type"`
+	RunsOnNodeID int32     `reform:"runs_on_node_id"`
+
+	ServiceUsername *string `reform:"service_username"`
+	ServicePassword *string `reform:"service_password"`
+	ListenPort      *uint16 `reform:"listen_port"`
+}
+
+func (p *PostgreSQLExporter) DSN(service *PostgreSQLService) string {
+	address := net.JoinHostPort(*service.Address, strconv.Itoa(int(*service.Port)))
+	return fmt.Sprintf("postgres://%s:%s@%s", *p.ServiceUsername, *p.ServicePassword, address)
+}
+
+func (p *PostgreSQLExporter) NameForSupervisor() string {
+	return fmt.Sprintf("pmm-%s-%d", p.Type, *p.ListenPort)
 }
 
 //reform:agents

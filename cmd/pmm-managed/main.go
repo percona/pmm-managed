@@ -33,6 +33,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/percona/pmm-managed/services/postgresql"
+
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/pkg/errors"
@@ -88,10 +90,11 @@ var (
 	dbUsernameF = flag.String("db-username", "pmm-managed", "Database username")
 	dbPasswordF = flag.String("db-password", "pmm-managed", "Database password")
 
-	agentMySQLdExporterF    = flag.String("agent-mysqld-exporter", "/usr/local/percona/pmm-client/mysqld_exporter", "mysqld_exporter path")
-	agentRDSExporterF       = flag.String("agent-rds-exporter", "/usr/sbin/rds_exporter", "rds_exporter path")
-	agentRDSExporterConfigF = flag.String("agent-rds-exporter-config", "/etc/percona-rds-exporter.yml", "rds_exporter configuration file path")
-	agentQANBaseF           = flag.String("agent-qan-base", "/usr/local/percona/qan-agent", "qan-agent installation base path")
+	agentMySQLdExporterF     = flag.String("agent-mysqld-exporter", "/usr/local/percona/pmm-client/mysqld_exporter", "mysqld_exporter path")
+	agentPostgreSQLExporterF = flag.String("agent-postgresql-exporter", "/usr/local/percona/pmm-client/postgresql_exporter", "postgresql_exporter path")
+	agentRDSExporterF        = flag.String("agent-rds-exporter", "/usr/sbin/rds_exporter", "rds_exporter path")
+	agentRDSExporterConfigF  = flag.String("agent-rds-exporter-config", "/etc/percona-rds-exporter.yml", "rds_exporter configuration file path")
+	agentQANBaseF            = flag.String("agent-qan-base", "/usr/local/percona/qan-agent", "qan-agent installation base path")
 
 	debugF = flag.Bool("debug", false, "Enable debug logging")
 )
@@ -127,16 +130,51 @@ func addLogsHandler(mux *http.ServeMux, logs *logs.Logs) {
 	})
 }
 
-type rdsServiceDependencies struct {
+type serviceDependencies struct {
 	prometheus *prometheus.Service
 	supervisor *supervisor.Supervisor
 	qan        *qan.Service
 	db         *reform.DB
+	registry   *ports.Registry
 }
 
-func makeRDSService(ctx context.Context, deps *rdsServiceDependencies) (*rds.Service, error) {
+func makeRDSService(ctx context.Context, deps *serviceDependencies) (*rds.Service, error) {
+
+	rdsConfig := rds.ServiceConfig{
+		MySQLdExporterPath:    *agentMySQLdExporterF,
+		RDSExporterPath:       *agentRDSExporterF,
+		RDSExporterConfigPath: *agentRDSExporterConfigF,
+
+		DB:            deps.db,
+		Prometheus:    deps.prometheus,
+		QAN:           deps.qan,
+		Supervisor:    deps.supervisor,
+		PortsRegistry: deps.registry,
+	}
+	rdsService, err := rds.NewService(&rdsConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	err = deps.db.InTransaction(func(tx *reform.TX) error {
+		return rdsService.ApplyPrometheusConfiguration(ctx, tx.Querier)
+	})
+	if err != nil {
+		return nil, err
+	}
+	err = deps.db.InTransaction(func(tx *reform.TX) error {
+		return rdsService.Restore(ctx, tx)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return rdsService, nil
+}
+
+func makeRegistry(db *reform.DB) (*ports.Registry, error) {
 	// collect already reserved ports
-	rows, err := deps.db.Query("SELECT listen_port FROM agents")
+	rows, err := db.Query("SELECT listen_port FROM agents")
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -153,41 +191,45 @@ func makeRDSService(ctx context.Context, deps *rdsServiceDependencies) (*rds.Ser
 	if err = rows.Err(); err != nil {
 		return nil, errors.WithStack(err)
 	}
+	registry := ports.NewRegistry(10000, 10999, reserved)
+	return registry, err
+}
 
-	rdsConfig := rds.ServiceConfig{
-		MySQLdExporterPath:    *agentMySQLdExporterF,
-		RDSExporterPath:       *agentRDSExporterF,
-		RDSExporterConfigPath: *agentRDSExporterConfigF,
+func makePostgreSQLService(ctx context.Context, deps *serviceDependencies) (*postgresql.Service, error) {
+
+	serviceConfig := postgresql.ServiceConfig{
+		PostgreSQLExporterPath: *agentPostgreSQLExporterF,
 
 		DB:            deps.db,
 		Prometheus:    deps.prometheus,
 		QAN:           deps.qan,
 		Supervisor:    deps.supervisor,
-		PortsRegistry: ports.NewRegistry(10000, 10999, reserved),
+		PortsRegistry: deps.registry,
 	}
-	rds, err := rds.NewService(&rdsConfig)
+	postgresqlService, err := postgresql.NewService(&serviceConfig)
 	if err != nil {
 		return nil, err
 	}
 
 	err = deps.db.InTransaction(func(tx *reform.TX) error {
-		return rds.ApplyPrometheusConfiguration(ctx, tx.Querier)
+		return postgresqlService.ApplyPrometheusConfiguration(ctx, tx.Querier)
 	})
 	if err != nil {
 		return nil, err
 	}
 	err = deps.db.InTransaction(func(tx *reform.TX) error {
-		return rds.Restore(ctx, tx)
+		return postgresqlService.Restore(ctx, tx)
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return rds, nil
+	return postgresqlService, nil
 }
 
 type grpcServerDependencies struct {
-	*rdsServiceDependencies
+	*serviceDependencies
+	postgres     *postgresql.Service
 	rds          *rds.Service
 	consulClient *consul.Client
 	logs         *logs.Logs
@@ -211,6 +253,9 @@ func runGRPCServer(ctx context.Context, deps *grpcServerDependencies) {
 	})
 	api.RegisterRDSServer(gRPCServer, &handlers.RDSServer{
 		RDS: deps.rds,
+	})
+	api.RegisterPostgreSQLServer(gRPCServer, &handlers.PostgreSQLServer{
+		PostgreSQL: deps.postgres,
 	})
 	api.RegisterLogsServer(gRPCServer, &handlers.LogsServer{
 		Logs: deps.logs,
@@ -451,15 +496,26 @@ func main() {
 	defer sqlDB.Close()
 	db := reform.NewDB(sqlDB, mysql.Dialect, nil)
 
-	deps := &rdsServiceDependencies{
+	registry, err := makeRegistry(db)
+	if err != nil {
+		l.Panic(err)
+	}
+
+	deps := &serviceDependencies{
 		prometheus: prometheus,
 		supervisor: supervisor,
 		qan:        qan,
 		db:         db,
+		registry:   registry,
 	}
 	rds, err := makeRDSService(ctx, deps)
 	if err != nil {
 		l.Panicf("RDS service problem: %+v", err)
+	}
+
+	postgres, err := makePostgreSQLService(ctx, deps)
+	if err != nil {
+		l.Panicf("PostgreSQL service problem: %+v", err)
 	}
 
 	logs := logs.New(Version, consulClient, rds, nil)
@@ -470,10 +526,11 @@ func main() {
 	go func() {
 		defer wg.Done()
 		runGRPCServer(ctx, &grpcServerDependencies{
-			rdsServiceDependencies: deps,
-			rds:                    rds,
-			consulClient:           consulClient,
-			logs:                   logs,
+			serviceDependencies: deps,
+			rds:                 rds,
+			postgres:            postgres,
+			consulClient:        consulClient,
+			logs:                logs,
 		})
 	}()
 

@@ -551,6 +551,9 @@
         "address": {
           "type": "string"
         },
+        "name": {
+          "type": "string"
+        },
         "password": {
           "type": "string"
         },
@@ -627,6 +630,9 @@
       "type": "object",
       "properties": {
         "address": {
+          "type": "string"
+        },
+        "name": {
           "type": "string"
         },
         "password": {
