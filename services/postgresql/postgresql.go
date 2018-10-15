@@ -176,6 +176,7 @@ func (svc *Service) List(ctx context.Context) ([]Instance, error) {
 	return res, err
 }
 
+// Add new postgreSQL service and start postgres_exporter
 func (svc *Service) Add(ctx context.Context, name, address string, port uint32, username, password string) (int32, error) {
 	if address == "" {
 		return 0, status.Error(codes.InvalidArgument, "PostgreSQL instance host is not given.")
@@ -204,11 +205,8 @@ func (svc *Service) Add(ctx context.Context, name, address string, port uint32, 
 			}
 			return errors.WithStack(err)
 		}
-		//		cocroachDB := `CockroachDB CCL v2.0.6 (x86_64-unknown-linux-gnu, built 2018/10/01       |
-		//| 13:59:40, go1.10)`
-		//		postgresql := `PostgreSQL 10.5 (Ubuntu 10.5-0ubuntu0.18.04) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 7.3.0-16ubuntu3) 7.3.0, 64-bit`
 
-		engine, engineVersion := svc.engineAndEngineVersion(address, port, username, password, ctx)
+		engine, engineVersion := svc.engineAndEngineVersion(ctx, address, port, username, password)
 
 		// insert service
 		service := &models.PostgreSQLService{
@@ -235,7 +233,7 @@ func (svc *Service) Add(ctx context.Context, name, address string, port uint32, 
 	return id, err
 }
 
-func (svc *Service) engineAndEngineVersion(host string, port uint32, username string, password string, ctx context.Context) (string, string) {
+func (svc *Service) engineAndEngineVersion(ctx context.Context, host string, port uint32, username string, password string) (string, string) {
 	var databaseVersion string
 	address := net.JoinHostPort(host, strconv.Itoa(int(port)))
 	dsn := fmt.Sprintf(`postgres://%s:%s@%s`, username, password, address)
@@ -260,6 +258,7 @@ func (svc *Service) engineAndEngineVersion(host string, port uint32, username st
 	return engine, engineVersion
 }
 
+// Stop postgres_exporter and agent and remove agent from db
 func (svc *Service) Remove(ctx context.Context, id int32) error {
 	var err error
 	return svc.DB.InTransaction(func(tx *reform.TX) error {
@@ -319,7 +318,7 @@ func (svc *Service) Remove(ctx context.Context, id int32) error {
 		for _, agent := range agents {
 			switch agent.Type {
 			case models.PostgreSQLExporterAgentType:
-				a := models.MySQLdExporter{ID: agent.ID}
+				a := models.PostgreSQLExporter{ID: agent.ID}
 				if err = tx.Reload(&a); err != nil {
 					return errors.WithStack(err)
 				}
@@ -458,7 +457,6 @@ func (svc *Service) postgresExporterCfg(agent *models.PostgreSQLExporter, port u
 
 	arguments := []string{
 		fmt.Sprintf("-web.listen-address=127.0.0.1:%d", port),
-		//TODO: set arguments
 	}
 	sort.Strings(arguments)
 

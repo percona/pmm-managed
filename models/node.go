@@ -20,6 +20,7 @@ package models
 
 type NodeType string
 
+// Node types
 const (
 	PMMServerNodeType  NodeType = "pmm-server"
 	RDSNodeType        NodeType = "rds"

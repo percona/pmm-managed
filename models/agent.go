@@ -82,11 +82,13 @@ type PostgreSQLExporter struct {
 	ListenPort      *uint16 `reform:"listen_port"`
 }
 
+// Generate DSN for PostgreSQL service
 func (p *PostgreSQLExporter) DSN(service *PostgreSQLService) string {
 	address := net.JoinHostPort(*service.Address, strconv.Itoa(int(*service.Port)))
 	return fmt.Sprintf("postgres://%s:%s@%s", *p.ServiceUsername, *p.ServicePassword, address)
 }
 
+// Name of exporter for supervisor
 func (p *PostgreSQLExporter) NameForSupervisor() string {
 	return fmt.Sprintf("pmm-%s-%d", p.Type, *p.ListenPort)
 }
