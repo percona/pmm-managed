@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package agent;
+
+import "google/protobuf/timestamp.proto";
+
+message RegisterRequest {
+}
+
+message RegisterResponse {
+    string uuid = 1;
+}
+
+message ConnectRequest {
+    string uuid = 1;
+    string version = 2;
+}
+
+message ConnectResponse {
+}
+
+message PingRequest {
+    google.protobuf.Timestamp time = 1;
+}
+
+message PingResponse {
+    google.protobuf.Timestamp time = 1;
+}
+
+message AgentMessage {
+    uint32 id = 1;
+    oneof payload {
+        // requests from agent
+        ConnectRequest connect = 2;
+
+        // responses from agent
+        PingResponse ping = 3;
+    }
+}
+
+message ServerMessage {
+    uint32 id = 1;
+    oneof payload {
+        // responses from server
+        ConnectResponse connect = 2;
+
+        // requests from server
+        PingRequest ping = 3;
+    }
+}
+
+service Agent {
+    rpc Register (RegisterRequest) returns (RegisterResponse);
+
+    rpc Connect (stream AgentMessage) returns (stream ServerMessage);
+}

@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package inventory;
+
+import "google/api/annotations.proto";
+
+enum NodeType {
+    INVALID         = 0;
+    BARE_METAL      = 1;
+    VIRTUAL_MACHINE = 2;
+    CONTAINER       = 3;
+
+    REMOTE          = 8;
+    REMOTE_RDS      = 9;
+}
+
+message Node {
+    uint64   id   = 1;
+    NodeType type = 2;
+    string   name = 3;
+    reserved 4 to 7;
+}
+
+message BareMetalNode {
+    uint64   id   = 1;
+    NodeType type = 2;
+    string   name = 3;
+    reserved 4 to 7;
+}
+
+message VirtualMachineNode {
+    uint64   id   = 1;
+    NodeType type = 2;
+    string   name = 3;
+    reserved 4 to 7;
+}
+
+message ContainerNode {
+    uint64   id   = 1;
+    NodeType type = 2;
+    string   name = 3;
+    reserved 4 to 7;
+}
+
+message RemoteNode {
+    uint64   id   = 1;
+    NodeType type = 2;
+    string   name = 3;
+    reserved 4 to 7;
+}
+
+message RemoteRDSNode {
+    uint64   id   = 1;
+    NodeType type = 2;
+    string   name = 3;
+    reserved 4 to 7;
+
+    string region = 8;
+}

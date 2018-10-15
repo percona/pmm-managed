@@ -33,6 +33,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Percona-Lab/pmm-api/agent"
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/pkg/errors"
@@ -41,6 +42,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
+	"google.golang.org/grpc/reflection"
 	"gopkg.in/reform.v1"
 	reformMySQL "gopkg.in/reform.v1/dialects/mysql"
 
@@ -300,6 +302,14 @@ func runGRPCServer(ctx context.Context, deps *grpcServerDependencies) {
 	api.RegisterAnnotationsServer(gRPCServer, &handlers.AnnotationsServer{
 		Grafana: grafana,
 	})
+
+	// PMM 2.0 APIs
+	agent.RegisterAgentServer(gRPCServer, &handlers.AgentServer{})
+
+	if *debugF {
+		l.Debug("Reflection enabled.")
+		reflection.Register(gRPCServer)
+	}
 
 	grpc_prometheus.Register(gRPCServer)
 	grpc_prometheus.EnableHandlingTimeHistogram()

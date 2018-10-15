@@ -10,6 +10,17 @@
   version = "v1.0.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:3ddaa45899c8730b5536ddcd50df630bdc562e8ffb036164238035002592b8fb"
+  name = "github.com/Percona-Lab/pmm-api"
+  packages = [
+    "agent",
+    "inventory",
+  ]
+  pruneopts = "T"
+  revision = "4c05517caf1738c466c84246c2949e55e478b582"
+
+[[projects]]
   digest = "1:4362374738ba28a25378bcf08dc29d7e720ca214b2674b641dcaaa3320b2be19"
   name = "github.com/Percona-Lab/promconfig"
   packages = [
@@ -846,6 +857,8 @@
   analyzer-version = 1
   input-imports = [
     "github.com/AlekSi/pointer",
+    "github.com/Percona-Lab/pmm-api/agent",
+    "github.com/Percona-Lab/pmm-api/inventory",
     "github.com/Percona-Lab/promconfig/common/config",
     "github.com/Percona-Lab/promconfig/config",
     "github.com/Percona-Lab/promconfig/discovery/config",
