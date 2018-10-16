@@ -33,8 +33,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/percona/pmm-managed/services/postgresql"
-
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/pkg/errors"
@@ -52,6 +50,7 @@ import (
 	"github.com/percona/pmm-managed/services/consul"
 	"github.com/percona/pmm-managed/services/grafana"
 	"github.com/percona/pmm-managed/services/logs"
+	"github.com/percona/pmm-managed/services/postgresql"
 	"github.com/percona/pmm-managed/services/prometheus"
 	"github.com/percona/pmm-managed/services/qan"
 	"github.com/percona/pmm-managed/services/rds"

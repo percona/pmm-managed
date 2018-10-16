@@ -19,6 +19,7 @@ package models
 import (
 	"fmt"
 	"net"
+	"net/url"
 	"strconv"
 
 	"github.com/go-sql-driver/mysql"
@@ -28,6 +29,7 @@ import (
 
 type AgentType string
 
+// AgentType agent types for exporters and agents
 const (
 	MySQLdExporterAgentType     AgentType = "mysqld_exporter"
 	PostgreSQLExporterAgentType AgentType = "postgresql_exporter"
@@ -72,6 +74,7 @@ func (m *MySQLdExporter) NameForSupervisor() string {
 }
 
 //reform:agents
+// PostgreSQLExporter exports PostgreSQL metrics
 type PostgreSQLExporter struct {
 	ID           int32     `reform:"id,pk"`
 	Type         AgentType `reform:"type"`
@@ -82,13 +85,19 @@ type PostgreSQLExporter struct {
 	ListenPort      *uint16 `reform:"listen_port"`
 }
 
-// Generate DSN for PostgreSQL service
+// DSN returns DSN for PostgreSQL service
 func (p *PostgreSQLExporter) DSN(service *PostgreSQLService) string {
 	address := net.JoinHostPort(*service.Address, strconv.Itoa(int(*service.Port)))
-	return fmt.Sprintf("postgres://%s:%s@%s", *p.ServiceUsername, *p.ServicePassword, address)
+	uri := url.URL{
+		User:     url.UserPassword(*p.ServiceUsername, *p.ServicePassword),
+		Host:     address,
+		Scheme:   "postgres",
+		RawQuery: "sslmode=disable",
+	}
+	return uri.String()
 }
 
-// Name of exporter for supervisor
+// NameForSupervisor is a name of exporter for supervisor
 func (p *PostgreSQLExporter) NameForSupervisor() string {
 	return fmt.Sprintf("pmm-%s-%d", p.Type, *p.ListenPort)
 }

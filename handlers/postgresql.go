@@ -17,17 +17,18 @@
 package handlers
 
 import (
-	"golang.org/x/net/context"
-
+	"context"
 	"github.com/percona/pmm-managed/api"
 	"github.com/percona/pmm-managed/services/postgresql"
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
+// PostgreSQLServer handles requests to manage postgreSQL nodes and services.
 type PostgreSQLServer struct {
 	PostgreSQL *postgresql.Service
 }
 
+// List returns list of postgres instances.
 func (s *PostgreSQLServer) List(ctx context.Context, req *api.PostgreSQLListRequest) (*api.PostgreSQLListResponse, error) {
 	res, err := s.PostgreSQL.List(ctx)
 	if err != nil {
@@ -52,6 +53,7 @@ func (s *PostgreSQLServer) List(ctx context.Context, req *api.PostgreSQLListRequ
 	return &resp, nil
 }
 
+// Add adds new PostgreSQL instance.
 func (s *PostgreSQLServer) Add(ctx context.Context, req *api.PostgreSQLAddRequest) (*api.PostgreSQLAddResponse, error) {
 
 	id, err := s.PostgreSQL.Add(ctx, req.Name, req.Address, req.Port, req.Username, req.Password)
@@ -66,6 +68,7 @@ func (s *PostgreSQLServer) Add(ctx context.Context, req *api.PostgreSQLAddReques
 	return &resp, nil
 }
 
+// Remove removes PostgreSQL instance.
 func (s *PostgreSQLServer) Remove(ctx context.Context, req *api.PostgreSQLRemoveRequest) (*api.PostgreSQLRemoveResponse, error) {
 	if err := s.PostgreSQL.Remove(ctx, req.Id); err != nil {
 		logger.Get(ctx).Errorf("%+v", err)

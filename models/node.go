@@ -24,7 +24,7 @@ type NodeType string
 const (
 	PMMServerNodeType  NodeType = "pmm-server"
 	RDSNodeType        NodeType = "rds"
-	PostgreSQLNodeType NodeType = "postgres"
+	PostgreSQLNodeType NodeType = "postgresql"
 )
 
 //reform:nodes

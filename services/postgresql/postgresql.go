@@ -1,3 +1,20 @@
+// pmm-managed
+// Copyright (C) 2017 Percona LLC
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+// Package postgresql contains business logic of working with Remote PostgreSQL instances.
 package postgresql
 
 import (
@@ -72,6 +89,7 @@ func NewService(config *ServiceConfig) (*Service, error) {
 	return svc, nil
 }
 
+// ApplyPrometheusConfiguration Adds postgres to prometheus configuration and applies it
 func (svc *Service) ApplyPrometheusConfiguration(ctx context.Context, q *reform.Querier) error {
 	postgreSQLConfig := &prometheus.ScrapeConfig{
 		JobName:        "postgres",
@@ -200,13 +218,17 @@ func (svc *Service) Add(ctx context.Context, name, address string, port uint32, 
 		}
 		if err := tx.Insert(node); err != nil {
 			if err, ok := err.(*mysql.MySQLError); ok && err.Number == 0x426 {
-				return status.Errorf(codes.AlreadyExists, "PostgreSQL instance %q already exists",
+				return status.Errorf(codes.AlreadyExists, "PostgreSQL instance %q already exists.",
 					node.Name)
 			}
 			return errors.WithStack(err)
 		}
+		id = node.ID
 
-		engine, engineVersion := svc.engineAndEngineVersion(ctx, address, port, username, password)
+		engine, engineVersion, err := svc.engineAndEngineVersion(ctx, address, port, username, password)
+		if err != nil {
+			return errors.WithStack(err)
+		}
 
 		// insert service
 		service := &models.PostgreSQLService{
@@ -221,7 +243,6 @@ func (svc *Service) Add(ctx context.Context, name, address string, port uint32, 
 		if err := tx.Insert(service); err != nil {
 			return errors.WithStack(err)
 		}
-		id = service.PKValue().(int32)
 
 		if err := svc.addPostgreSQLExporter(ctx, tx, service, username, password); err != nil {
 			return err
@@ -233,22 +254,37 @@ func (svc *Service) Add(ctx context.Context, name, address string, port uint32, 
 	return id, err
 }
 
-func (svc *Service) engineAndEngineVersion(ctx context.Context, host string, port uint32, username string, password string) (string, string) {
+func (svc *Service) engineAndEngineVersion(ctx context.Context, host string, port uint32, username string, password string) (string, string, error) {
 	var databaseVersion string
 	address := net.JoinHostPort(host, strconv.Itoa(int(port)))
-	dsn := fmt.Sprintf(`postgres://%s:%s@%s`, username, password, address)
+	agent := models.PostgreSQLExporter{
+		ServiceUsername: pointer.ToString(username),
+		ServicePassword: pointer.ToString(password),
+	}
+	service := &models.PostgreSQLService{
+		Address: &address,
+		Port:    pointer.ToUint16(uint16(port)),
+	}
+	dsn := agent.DSN(service)
 	db, err := sql.Open("postgres", dsn)
 	if err == nil {
 		err = db.QueryRowContext(ctx, "SELECT Version();").Scan(&databaseVersion)
 		db.Close()
+	} else {
+		return "", "", errors.WithStack(err)
 	}
+	engine, engineVersion := svc.engineAndVersionFromPlainText(databaseVersion)
+	return engine, engineVersion, nil
+}
+
+func (svc *Service) engineAndVersionFromPlainText(databaseVersion string) (string, string) {
 	var engine string
 	var engineVersion string
-	cocroachDBRegexp := regexp.MustCompile(`CockroachDB CCL (v[\d\.]]+)`)
-	postgresDBRegexp := regexp.MustCompile(`PostgreSQL ([\d\.]]+)`)
-	if cocroachDBRegexp.MatchString(databaseVersion) {
+	cockroachDBRegexp := regexp.MustCompile(`CockroachDB CCL (v[\d\.]+)`)
+	postgresDBRegexp := regexp.MustCompile(`PostgreSQL ([\d\.]+)`)
+	if cockroachDBRegexp.MatchString(databaseVersion) {
 		engine = "CockroachDB"
-		submatch := cocroachDBRegexp.FindStringSubmatch(databaseVersion)
+		submatch := cockroachDBRegexp.FindStringSubmatch(databaseVersion)
 		engineVersion = submatch[1]
 	} else if postgresDBRegexp.MatchString(databaseVersion) {
 		engine = "PostgreSQL"
@@ -265,7 +301,7 @@ func (svc *Service) Remove(ctx context.Context, id int32) error {
 		var node models.PostgreSQLNode
 		if err = tx.SelectOneTo(&node, "WHERE type = ? AND id = ?", models.PostgreSQLNodeType, id); err != nil {
 			if err == reform.ErrNoRows {
-				return status.Errorf(codes.NotFound, "PostgreSQL instance %q not found.", id)
+				return status.Errorf(codes.NotFound, "PostgreSQL instance with id %q not found.", id)
 			}
 			return errors.WithStack(err)
 		}

@@ -314,6 +314,19 @@ scrape_configs:
   scrape_timeout: 9s
   metrics_path: /enhanced
   scheme: http
+- job_name: postgres
+  honor_labels: true
+  scrape_interval: 1s
+  scrape_timeout: 1s
+  metrics_path: /metrics
+  static_configs:
+  - targets:
+    - 127.0.0.1:30000
+    labels:
+      instance: localhost:5432
+  relabel_configs:
+  - target_label: job
+    replacement: postgres
 remote_read:
 - url: http://127.0.0.1:9094/prometheus/api/v1/read
   remote_timeout: 1m
