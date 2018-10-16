@@ -21,52 +21,37 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/AlekSi/pointer"
-	"github.com/percona/pmm-managed/models"
-	"github.com/stretchr/testify/mock"
 	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
 	"os"
-	"path/filepath"
+	"os/exec"
 	"testing"
 
+	"github.com/AlekSi/pointer"
+
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/mysql"
 
+	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/mocks"
 	"github.com/percona/pmm-managed/services/prometheus"
-	"github.com/percona/pmm-managed/services/qan"
 	"github.com/percona/pmm-managed/utils/ports"
 	"github.com/percona/pmm-managed/utils/tests"
 )
 
-func setup(t *testing.T) (context.Context, *Service, *sql.DB, []byte, string, *mocks.Supervisor, *httptest.Server) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		default:
-			panic("unsupported path: " + r.URL.Path)
-		}
-	}))
-
-	require.NoError(t, os.Setenv("PMM_QAN_API_URL", ts.URL))
+func setup(t *testing.T) (context.Context, *Service, *sql.DB, []byte, string, *mocks.Supervisor) {
 
 	// We can't/shouldn't use /usr/local/percona/ (the default basedir), so use
 	// a tmpdir instead with roughly the same, fake structure.
 	rootDir, err := ioutil.TempDir("/tmp", "pmm-managed-test-rootdir-")
 	assert.Nil(t, err)
 
-	postgreSQLExporterPath := filepath.Join(rootDir, "postgres_exporter")
-	createFakeBin(t, postgreSQLExporterPath)
-	os.MkdirAll(filepath.Join(rootDir, "etc"), 0777)
-	os.MkdirAll(filepath.Join(rootDir, "config"), 0777)
-	os.MkdirAll(filepath.Join(rootDir, "instance"), 0777)
-	err = ioutil.WriteFile(filepath.Join(rootDir, "instance/13.json"), []byte(`{"UUID":"13"}`), 0666)
-	require.Nil(t, err)
+	postgreSQLExporterPath, err := exec.LookPath("postgres_exporter")
+	require.NoError(t, err)
 
 	ctx, p, before := prometheus.SetupTest(t)
 
@@ -75,25 +60,20 @@ func setup(t *testing.T) (context.Context, *Service, *sql.DB, []byte, string, *m
 	portsRegistry := ports.NewRegistry(30000, 30999, nil)
 
 	supervisor := &mocks.Supervisor{}
-	qan, err := qan.NewService(ctx, rootDir, supervisor)
-	require.NoError(t, err)
 	svc, err := NewService(&ServiceConfig{
 		PostgreSQLExporterPath: postgreSQLExporterPath,
-		QAN:        qan,
-		Supervisor: supervisor,
+		Supervisor:             supervisor,
 
 		DB:            db,
 		Prometheus:    p,
 		PortsRegistry: portsRegistry,
 	})
 	require.NoError(t, err)
-	return ctx, svc, sqlDB, before, rootDir, supervisor, ts
+	return ctx, svc, sqlDB, before, rootDir, supervisor
 }
 
-func teardown(t *testing.T, svc *Service, sqlDB *sql.DB, before []byte, rootDir string, supervisor *mocks.Supervisor, ts *httptest.Server) {
+func teardown(t *testing.T, svc *Service, sqlDB *sql.DB, before []byte, rootDir string, supervisor *mocks.Supervisor) {
 	prometheus.TearDownTest(t, svc.Prometheus, before)
-
-	require.NoError(t, os.Unsetenv("PMM_QAN_API_URL"))
 
 	err := sqlDB.Close()
 	require.NoError(t, err)
@@ -101,13 +81,12 @@ func teardown(t *testing.T, svc *Service, sqlDB *sql.DB, before []byte, rootDir 
 		err := os.RemoveAll(rootDir)
 		assert.Nil(t, err)
 	}
-	ts.Close()
 	supervisor.AssertExpectations(t)
 }
 
 func TestAddListRemove(t *testing.T) {
-	ctx, svc, sqlDB, before, rootDir, supervisor, ts := setup(t)
-	defer teardown(t, svc, sqlDB, before, rootDir, supervisor, ts)
+	ctx, svc, sqlDB, before, rootDir, supervisor := setup(t)
+	defer teardown(t, svc, sqlDB, before, rootDir, supervisor)
 
 	actual, err := svc.List(ctx)
 	require.NoError(t, err)
@@ -160,8 +139,8 @@ func TestAddListRemove(t *testing.T) {
 }
 
 func TestRestore(t *testing.T) {
-	ctx, svc, sqlDB, before, rootDir, supervisor, ts := setup(t)
-	defer teardown(t, svc, sqlDB, before, rootDir, supervisor, ts)
+	ctx, svc, sqlDB, before, rootDir, supervisor := setup(t)
+	defer teardown(t, svc, sqlDB, before, rootDir, supervisor)
 
 	// Fill some hidden dependencies.
 	actual, err := svc.List(ctx)
@@ -188,35 +167,13 @@ func TestRestore(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func createFakeBin(t *testing.T, name string) {
-	var err error
-
-	dir := filepath.Dir(name)
-	err = os.MkdirAll(dir, 0777)
-	assert.NoError(t, err)
-
-	f, err := os.Create(name)
-	assert.NoError(t, err)
-
-	_, err = f.WriteString("#!/bin/sh\n")
-	assert.NoError(t, err)
-
-	_, err = f.WriteString("echo 'it works'")
-	assert.NoError(t, err)
-
-	err = f.Close()
-	assert.NoError(t, err)
-
-	err = os.Chmod(name, 0777)
-	assert.NoError(t, err)
-}
-
 func TestExtractFromVersion(t *testing.T) {
 
-	_, svc, sqlDB, before, rootDir, supervisor, ts := setup(t)
-	defer teardown(t, svc, sqlDB, before, rootDir, supervisor, ts)
+	_, svc, sqlDB, before, rootDir, supervisor := setup(t)
+	defer teardown(t, svc, sqlDB, before, rootDir, supervisor)
 
-	engine, engineVersion := svc.engineAndVersionFromPlainText("PostgreSQL 10.5 (Debian 10.5-1.pgdg90+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 6.3.0-18+deb9u1) 6.3.0 20170516, 64-bit")
+	version := "PostgreSQL 10.5 (Debian 10.5-1.pgdg90+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 6.3.0-18+deb9u1) 6.3.0 20170516, 64-bit"
+	engine, engineVersion := svc.engineAndVersionFromPlainText(version)
 
 	assert.Equal(t, "PostgreSQL", engine, "engine is not equal")
 	assert.Equal(t, "10.5", engineVersion, "engineVersion is not equal")
