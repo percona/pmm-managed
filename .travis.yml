@@ -52,6 +52,7 @@ before_install:
   - cd $GOPATH/src/github.com/percona
   - git clone https://github.com/percona/postgres_exporter.git
   - cd postgres_exporter && make build && cp postgres_exporter $GOPATH/bin/
+  - cd ${GOPATH}/src/github.com/percona/pmm-managed
 
 script:
   - sudo service mysql stop
