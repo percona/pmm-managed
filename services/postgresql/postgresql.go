@@ -21,24 +21,26 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/http"
+	"os/exec"
+	"regexp"
+	"sort"
+
 	"github.com/AlekSi/pointer"
 	"github.com/go-sql-driver/mysql"
 	"github.com/lib/pq"
 	servicelib "github.com/percona/kardianos-service"
-	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services"
-	"github.com/percona/pmm-managed/services/prometheus"
-	"github.com/percona/pmm-managed/utils/logger"
-	"github.com/percona/pmm-managed/utils/ports"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
-	"net/http"
-	"os/exec"
-	"regexp"
-	"sort"
+
+	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services"
+	"github.com/percona/pmm-managed/services/prometheus"
+	"github.com/percona/pmm-managed/utils/logger"
+	"github.com/percona/pmm-managed/utils/ports"
 )
 
 type ServiceConfig struct {
@@ -50,14 +52,14 @@ type ServiceConfig struct {
 	PortsRegistry *ports.Registry
 }
 
-//Service is responsible for interactions with PostgreSQL.
+// Service is responsible for interactions with PostgreSQL.
 type Service struct {
 	*ServiceConfig
 	httpClient    *http.Client
 	pmmServerNode *models.Node
 }
 
-//NewService creates a new service.
+// NewService creates a new service.
 func NewService(config *ServiceConfig) (*Service, error) {
 	var node models.Node
 	err := config.DB.FindOneTo(&node, "type", models.PMMServerNodeType)
@@ -86,7 +88,7 @@ func NewService(config *ServiceConfig) (*Service, error) {
 	return svc, nil
 }
 
-//ApplyPrometheusConfiguration Adds postgres to prometheus configuration and applies it
+// ApplyPrometheusConfiguration Adds postgres to prometheus configuration and applies it
 func (svc *Service) ApplyPrometheusConfiguration(ctx context.Context, q *reform.Querier) error {
 	postgreSQLConfig := &prometheus.ScrapeConfig{
 		JobName:        "postgres",
@@ -191,7 +193,7 @@ func (svc *Service) List(ctx context.Context) ([]Instance, error) {
 	return res, err
 }
 
-//Add new postgreSQL service and start postgres_exporter
+// Add new postgreSQL service and start postgres_exporter
 func (svc *Service) Add(ctx context.Context, name, address string, port uint32, username, password string) (int32, error) {
 	if address == "" {
 		return 0, status.Error(codes.InvalidArgument, "PostgreSQL instance host is not given.")
@@ -292,7 +294,7 @@ func (svc *Service) engineAndVersionFromPlainText(databaseVersion string) (strin
 	return engine, engineVersion
 }
 
-//Remove stops postgres_exporter and agent and remove agent from db
+// Remove stops postgres_exporter and agent and remove agent from db
 func (svc *Service) Remove(ctx context.Context, id int32) error {
 	var err error
 	return svc.DB.InTransaction(func(tx *reform.TX) error {
@@ -434,7 +436,7 @@ func (svc *Service) addPostgreSQLExporter(ctx context.Context, tx *reform.TX, se
 	return nil
 }
 
-//Restore configuration from database.
+// Restore configuration from database.
 func (svc *Service) Restore(ctx context.Context, tx *reform.TX) error {
 	nodes, err := tx.FindAllFrom(models.PostgreSQLNodeTable, "type", models.PostgreSQLNodeType)
 	if err != nil {
