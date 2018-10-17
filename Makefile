@@ -62,14 +62,16 @@ gen:
 		api/*.proto --go_out=plugins=grpc:api
 	protoc -Iapi -Ivendor/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
 		api/*.proto --grpc-gateway_out=logtostderr=true,request_context=true,allow_delete_body=true:api
-	protoc -Iapi -Ivendor/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
-		api/*.proto --swagger_out=logtostderr=true,allow_delete_body=true:api/swagger
+	# protoc -Iapi -Ivendor/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
+		# api/*.proto --swagger_out=logtostderr=true,allow_delete_body=true:api/swagger
 
-	swagger mixin api/swagger/*.swagger.json > api/swagger/swagger.json
-	swagger validate api/swagger/swagger.json
-	swagger generate client -f api/swagger/swagger.json -t api/swagger -A pmm-managed
+	# swagger mixin api/swagger/*.swagger.json > api/swagger/swagger.json
+	# swagger validate api/swagger/swagger.json
+	# swagger generate client -f api/swagger/swagger.json -t api/swagger -A pmm-managed
 
-	go install -v github.com/percona/pmm-managed/api github.com/percona/pmm-managed/api/swagger/client
+	# go install -v github.com/percona/pmm-managed/api github.com/percona/pmm-managed/api/swagger/client
+
+	cp ./vendor/github.com/Percona-Lab/pmm-api/inventory.swagger.json api/swagger/swagger.json
 
 up:
 	docker-compose up --force-recreate --abort-on-container-exit --renew-anon-volumes --remove-orphans
