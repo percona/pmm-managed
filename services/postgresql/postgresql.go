@@ -43,6 +43,12 @@ import (
 	"github.com/percona/pmm-managed/utils/ports"
 )
 
+// regexps to extract version numbers from the `SELECT Version();` output
+var (
+	postgresDBRegexp  = regexp.MustCompile(`PostgreSQL ([\d\.]+)`)
+	cockroachDBRegexp = regexp.MustCompile(`CockroachDB CCL (v[\d\.]+)`)
+)
+
 type ServiceConfig struct {
 	PostgresExporterPath string
 
@@ -280,15 +286,14 @@ func (svc *Service) engineAndEngineVersion(ctx context.Context, host string, por
 func (svc *Service) engineAndVersionFromPlainText(databaseVersion string) (string, string) {
 	var engine string
 	var engineVersion string
-	cockroachDBRegexp := regexp.MustCompile(`CockroachDB CCL (v[\d\.]+)`)
-	postgresDBRegexp := regexp.MustCompile(`PostgreSQL ([\d\.]+)`)
-	if cockroachDBRegexp.MatchString(databaseVersion) {
-		engine = "CockroachDB"
-		submatch := cockroachDBRegexp.FindStringSubmatch(databaseVersion)
-		engineVersion = submatch[1]
-	} else if postgresDBRegexp.MatchString(databaseVersion) {
+	switch {
+	case postgresDBRegexp.MatchString(databaseVersion):
 		engine = "PostgreSQL"
 		submatch := postgresDBRegexp.FindStringSubmatch(databaseVersion)
+		engineVersion = submatch[1]
+	case cockroachDBRegexp.MatchString(databaseVersion):
+		engine = "CockroachDB"
+		submatch := cockroachDBRegexp.FindStringSubmatch(databaseVersion)
 		engineVersion = submatch[1]
 	}
 	return engine, engineVersion
