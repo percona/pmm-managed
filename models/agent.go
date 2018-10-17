@@ -74,7 +74,7 @@ func (m *MySQLdExporter) NameForSupervisor() string {
 }
 
 //reform:agents
-// PostgreSQLExporter exports PostgreSQL metrics
+// PostgreSQLExporter exports PostgreSQL metrics.
 type PostgreSQLExporter struct {
 	ID           int32     `reform:"id,pk"`
 	Type         AgentType `reform:"type"`
@@ -85,7 +85,7 @@ type PostgreSQLExporter struct {
 	ListenPort      *uint16 `reform:"listen_port"`
 }
 
-// DSN returns DSN for PostgreSQL service
+// DSN returns DSN for PostgreSQL service.
 func (p *PostgreSQLExporter) DSN(service *PostgreSQLService) string {
 	address := net.JoinHostPort(*service.Address, strconv.Itoa(int(*service.Port)))
 	uri := url.URL{
@@ -97,7 +97,7 @@ func (p *PostgreSQLExporter) DSN(service *PostgreSQLService) string {
 	return uri.String()
 }
 
-// NameForSupervisor is a name of exporter for supervisor
+// NameForSupervisor is a name of exporter for supervisor.
 func (p *PostgreSQLExporter) NameForSupervisor() string {
 	return fmt.Sprintf("pmm-%s-%d", p.Type, *p.ListenPort)
 }

@@ -24,12 +24,12 @@ import (
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
-// PostgreSQLServer handles requests to manage postgreSQL nodes and services.
+// PostgreSQLServer handles requests to manage PostgreSQL nodes and services.
 type PostgreSQLServer struct {
 	PostgreSQL *postgresql.Service
 }
 
-// List returns list of postgres instances.
+// List returns a list of PostgreSQL instances.
 func (s *PostgreSQLServer) List(ctx context.Context, req *api.PostgreSQLListRequest) (*api.PostgreSQLListResponse, error) {
 	res, err := s.PostgreSQL.List(ctx)
 	if err != nil {

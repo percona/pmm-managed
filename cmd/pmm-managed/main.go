@@ -138,7 +138,6 @@ type serviceDependencies struct {
 }
 
 func makeRDSService(ctx context.Context, deps *serviceDependencies) (*rds.Service, error) {
-
 	rdsConfig := rds.ServiceConfig{
 		MySQLdExporterPath:    *agentMySQLdExporterF,
 		RDSExporterPath:       *agentRDSExporterF,
@@ -195,7 +194,6 @@ func makeRegistry(db *reform.DB) (*ports.Registry, error) {
 }
 
 func makePostgreSQLService(ctx context.Context, deps *serviceDependencies) (*postgresql.Service, error) {
-
 	serviceConfig := postgresql.ServiceConfig{
 		PostgreSQLExporterPath: *agentPostgreSQLExporterF,
 
