@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package inventory;
+
+import "google/api/annotations.proto";
+import "inventory/nodes.proto";
+
+message TestRequest {
+  repeated BareMetalNode test = 1;
+}
+
+message TestResponse {
+  repeated RemoteRDSNode test = 1;
+}
+
+service Inventory {
+  rpc Test(TestRequest) returns (TestResponse) {
+    option (google.api.http) = {
+      post: "/v0/test"
+      body: "*"
+    };
+  }
+}

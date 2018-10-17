@@ -1,0 +1,96 @@
+{
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "swagger": "2.0",
+  "info": {
+    "title": "PMM Server Inventory API",
+    "version": "version 0"
+  },
+  "paths": {
+    "/v0/test": {
+      "post": {
+        "tags": [
+          "Inventory"
+        ],
+        "operationId": "Test",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/inventoryTestRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "(empty)",
+            "schema": {
+              "$ref": "#/definitions/inventoryTestResponse"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "inventoryBareMetalNode": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "inventoryRemoteRDSNode": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "name": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        }
+      }
+    },
+    "inventoryTestRequest": {
+      "type": "object",
+      "properties": {
+        "test": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/inventoryBareMetalNode"
+          }
+        }
+      }
+    },
+    "inventoryTestResponse": {
+      "type": "object",
+      "properties": {
+        "test": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/inventoryRemoteRDSNode"
+          }
+        }
+      }
+    }
+  }
+}

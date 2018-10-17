@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package inventory;
+
+import "google/api/annotations.proto";
+
+enum AgentType {
+  AGENT_TYPE_INVALID = 0;
+  MYSQLD_EXPORTER = 1;
+  RDS_EXPORTER = 2;
+}
+
+message Agent {
+  int32 id = 1;
+  AgentType type = 2;
+  int32 runs_on_node_id = 3;
+}

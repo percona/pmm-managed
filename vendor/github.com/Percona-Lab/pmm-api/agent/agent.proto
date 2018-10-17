@@ -3,54 +3,60 @@ syntax = "proto3";
 package agent;
 
 import "google/protobuf/timestamp.proto";
+import "inventory/agents.proto";
 
 message RegisterRequest {
+  // FIXME We need node information there to create a new node or map new agent to the existing node.
+  //       This is hard problem.
+
 }
 
 message RegisterResponse {
-    string uuid = 1;
+  string uuid = 1;
 }
 
 message ConnectRequest {
-    string uuid = 1;
-    string version = 2;
+  string uuid = 1;
+  string version = 2;
 }
 
-message ConnectResponse {
-}
+message ConnectResponse {}
 
-message PingRequest {
-    google.protobuf.Timestamp time = 1;
-}
+message PingRequest {}
 
 message PingResponse {
-    google.protobuf.Timestamp time = 1;
+  google.protobuf.Timestamp current_time = 1;
 }
 
-message AgentMessage {
-    uint32 id = 1;
-    oneof payload {
-        // requests from agent
-        ConnectRequest connect = 2;
+message SetStateRequest {
+  repeated inventory.Agent agents = 1;
+}
 
-        // responses from agent
-        PingResponse ping = 3;
-    }
+message SetStateResponse {}
+
+message AgentMessage {
+  uint32 id = 1;
+  oneof payload {
+    // requests from agent
+    ConnectRequest connect = 2;
+    // responses from agent
+    PingResponse ping = 3;
+    SetStateResponse state = 4;
+  }
 }
 
 message ServerMessage {
-    uint32 id = 1;
-    oneof payload {
-        // responses from server
-        ConnectResponse connect = 2;
-
-        // requests from server
-        PingRequest ping = 3;
-    }
+  uint32 id = 1;
+  oneof payload {
+    // responses from server
+    ConnectResponse connect = 2;
+    // requests from server
+    PingRequest ping = 3;
+    SetStateRequest state = 4;
+  }
 }
 
 service Agent {
-    rpc Register (RegisterRequest) returns (RegisterResponse);
-
-    rpc Connect (stream AgentMessage) returns (stream ServerMessage);
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  rpc Connect(stream AgentMessage) returns (stream ServerMessage);
 }

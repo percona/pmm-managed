@@ -11,14 +11,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:3ddaa45899c8730b5536ddcd50df630bdc562e8ffb036164238035002592b8fb"
+  digest = "1:09b3f6acaa0ee23f045a692487df43ca9bf4e8b9efe9778407573ea6530bc61e"
   name = "github.com/Percona-Lab/pmm-api"
   packages = [
     "agent",
     "inventory",
   ]
   pruneopts = "T"
-  revision = "4c05517caf1738c466c84246c2949e55e478b582"
+  revision = "3673a1cd03c6cf56f97107b1ccccb2e503eac9d3"
 
 [[projects]]
   digest = "1:4362374738ba28a25378bcf08dc29d7e720ca214b2674b641dcaaa3320b2be19"
@@ -326,6 +326,14 @@
   pruneopts = "T"
   revision = "7e0847f9db758cdebd26c149d0ae9d5d0b9c98ce"
   version = "v1.4.0"
+
+[[projects]]
+  digest = "1:462966563db35f9fae6bacf677b75f7c8088220f97fa3f5d1d092918cd164c86"
+  name = "github.com/grpc-ecosystem/go-grpc-middleware"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "c250d6563d4d4c20252cd865923440e829844f4e"
+  version = "v1.0.0"
 
 [[projects]]
   digest = "1:87bf8ee866be36e40d8c51ced8cc04a2055732242739af7c704eff843bee1257"
@@ -814,6 +822,8 @@
     "metadata",
     "naming",
     "peer",
+    "reflection",
+    "reflection/grpc_reflection_v1alpha",
     "resolver",
     "resolver/dns",
     "resolver/passthrough",
@@ -879,7 +889,9 @@
     "github.com/go-swagger/go-swagger/cmd/swagger",
     "github.com/golang/protobuf/proto",
     "github.com/golang/protobuf/protoc-gen-go",
+    "github.com/golang/protobuf/ptypes",
     "github.com/google/uuid",
+    "github.com/grpc-ecosystem/go-grpc-middleware",
     "github.com/grpc-ecosystem/go-grpc-prometheus",
     "github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway",
     "github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger",
@@ -906,6 +918,7 @@
     "google.golang.org/grpc",
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/grpclog",
+    "google.golang.org/grpc/reflection",
     "google.golang.org/grpc/status",
     "gopkg.in/reform.v1",
     "gopkg.in/reform.v1/dialects/mysql",
