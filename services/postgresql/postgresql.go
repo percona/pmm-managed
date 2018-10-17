@@ -44,7 +44,7 @@ import (
 )
 
 type ServiceConfig struct {
-	PostgreSQLExporterPath string
+	PostgresExporterPath string
 
 	DB            *reform.DB
 	Prometheus    *prometheus.Service
@@ -68,7 +68,7 @@ func NewService(config *ServiceConfig) (*Service, error) {
 	}
 
 	for _, path := range []*string{
-		&config.PostgreSQLExporterPath,
+		&config.PostgresExporterPath,
 	} {
 		if *path == "" {
 			continue
@@ -120,8 +120,8 @@ func (svc *Service) ApplyPrometheusConfiguration(ctx context.Context, q *reform.
 		}
 		for _, agent := range agents {
 			switch agent.Type {
-			case models.PostgreSQLExporterAgentType:
-				a := models.PostgreSQLExporter{ID: agent.ID}
+			case models.PostgresExporterAgentType:
+				a := models.PostgresExporter{ID: agent.ID}
 				if e := q.Reload(&a); e != nil {
 					return errors.WithStack(e)
 				}
@@ -243,7 +243,7 @@ func (svc *Service) Add(ctx context.Context, name, address string, port uint32, 
 			return errors.WithStack(err)
 		}
 
-		if err := svc.addPostgreSQLExporter(ctx, tx, service, username, password); err != nil {
+		if err := svc.addPostgresExporter(ctx, tx, service, username, password); err != nil {
 			return err
 		}
 
@@ -255,7 +255,7 @@ func (svc *Service) Add(ctx context.Context, name, address string, port uint32, 
 
 func (svc *Service) engineAndEngineVersion(ctx context.Context, host string, port uint32, username string, password string) (string, string, error) {
 	var databaseVersion string
-	agent := models.PostgreSQLExporter{
+	agent := models.PostgresExporter{
 		ServiceUsername: pointer.ToString(username),
 		ServicePassword: pointer.ToString(password),
 	}
@@ -353,12 +353,12 @@ func (svc *Service) Remove(ctx context.Context, id int32) error {
 		}
 		for _, agent := range agents {
 			switch agent.Type {
-			case models.PostgreSQLExporterAgentType:
-				a := models.PostgreSQLExporter{ID: agent.ID}
+			case models.PostgresExporterAgentType:
+				a := models.PostgresExporter{ID: agent.ID}
 				if err = tx.Reload(&a); err != nil {
 					return errors.WithStack(err)
 				}
-				if svc.PostgreSQLExporterPath != "" {
+				if svc.PostgresExporterPath != "" {
 					if err = svc.Supervisor.Stop(ctx, a.NameForSupervisor()); err != nil {
 						return err
 					}
@@ -384,14 +384,14 @@ func (svc *Service) Remove(ctx context.Context, id int32) error {
 	})
 }
 
-func (svc *Service) addPostgreSQLExporter(ctx context.Context, tx *reform.TX, service *models.PostgreSQLService, username, password string) error {
+func (svc *Service) addPostgresExporter(ctx context.Context, tx *reform.TX, service *models.PostgreSQLService, username, password string) error {
 	// insert postgres_exporter agent and association
 	port, err := svc.PortsRegistry.Reserve()
 	if err != nil {
 		return err
 	}
-	agent := &models.PostgreSQLExporter{
-		Type:         models.PostgreSQLExporterAgentType,
+	agent := &models.PostgresExporter{
+		Type:         models.PostgresExporterAgentType,
 		RunsOnNodeID: svc.pmmServerNode.ID,
 
 		ServiceUsername: &username,
@@ -425,8 +425,8 @@ func (svc *Service) addPostgreSQLExporter(ctx context.Context, tx *reform.TX, se
 		return errors.WithStack(err)
 	}
 
-	// start mysqld_exporter agent
-	if svc.PostgreSQLExporterPath != "" {
+	// start postgres_exporter agent
+	if svc.PostgresExporterPath != "" {
 		cfg := svc.postgresExporterCfg(agent, port, dsn)
 		if err = svc.Supervisor.Start(ctx, cfg); err != nil {
 			return err
@@ -456,14 +456,14 @@ func (svc *Service) Restore(ctx context.Context, tx *reform.TX) error {
 		}
 		for _, agent := range agents {
 			switch agent.Type {
-			case models.PostgreSQLExporterAgentType:
-				a := &models.PostgreSQLExporter{ID: agent.ID}
+			case models.PostgresExporterAgentType:
+				a := &models.PostgresExporter{ID: agent.ID}
 				if err = tx.Reload(a); err != nil {
 					return errors.WithStack(err)
 				}
 				dsn := a.DSN(service)
 				port := *a.ListenPort
-				if svc.PostgreSQLExporterPath != "" {
+				if svc.PostgresExporterPath != "" {
 					name := a.NameForSupervisor()
 
 					// Checks if init script already running.
@@ -488,7 +488,7 @@ func (svc *Service) Restore(ctx context.Context, tx *reform.TX) error {
 	return nil
 }
 
-func (svc *Service) postgresExporterCfg(agent *models.PostgreSQLExporter, port uint16, dsn string) *servicelib.Config {
+func (svc *Service) postgresExporterCfg(agent *models.PostgresExporter, port uint16, dsn string) *servicelib.Config {
 	name := agent.NameForSupervisor()
 
 	arguments := []string{
@@ -500,7 +500,7 @@ func (svc *Service) postgresExporterCfg(agent *models.PostgreSQLExporter, port u
 		Name:        name,
 		DisplayName: name,
 		Description: name,
-		Executable:  svc.PostgreSQLExporterPath,
+		Executable:  svc.PostgresExporterPath,
 		Arguments:   arguments,
 		Environment: []string{fmt.Sprintf("DATA_SOURCE_NAME=%s", dsn)},
 	}

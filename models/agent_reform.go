@@ -252,49 +252,49 @@ var (
 	_ fmt.Stringer  = (*MySQLdExporter)(nil)
 )
 
-type postgreSQLExporterTableType struct {
+type postgresExporterTableType struct {
 	s parse.StructInfo
 	z []interface{}
 }
 
 // Schema returns a schema name in SQL database ("").
-func (v *postgreSQLExporterTableType) Schema() string {
+func (v *postgresExporterTableType) Schema() string {
 	return v.s.SQLSchema
 }
 
 // Name returns a view or table name in SQL database ("agents").
-func (v *postgreSQLExporterTableType) Name() string {
+func (v *postgresExporterTableType) Name() string {
 	return v.s.SQLName
 }
 
 // Columns returns a new slice of column names for that view or table in SQL database.
-func (v *postgreSQLExporterTableType) Columns() []string {
+func (v *postgresExporterTableType) Columns() []string {
 	return []string{"id", "type", "runs_on_node_id", "service_username", "service_password", "listen_port"}
 }
 
 // NewStruct makes a new struct for that view or table.
-func (v *postgreSQLExporterTableType) NewStruct() reform.Struct {
-	return new(PostgreSQLExporter)
+func (v *postgresExporterTableType) NewStruct() reform.Struct {
+	return new(PostgresExporter)
 }
 
 // NewRecord makes a new record for that table.
-func (v *postgreSQLExporterTableType) NewRecord() reform.Record {
-	return new(PostgreSQLExporter)
+func (v *postgresExporterTableType) NewRecord() reform.Record {
+	return new(PostgresExporter)
 }
 
 // PKColumnIndex returns an index of primary key column for that table in SQL database.
-func (v *postgreSQLExporterTableType) PKColumnIndex() uint {
+func (v *postgresExporterTableType) PKColumnIndex() uint {
 	return uint(v.s.PKFieldIndex)
 }
 
-// PostgreSQLExporterTable represents agents view or table in SQL database.
-var PostgreSQLExporterTable = &postgreSQLExporterTableType{
-	s: parse.StructInfo{Type: "PostgreSQLExporter", SQLSchema: "", SQLName: "agents", Fields: []parse.FieldInfo{{Name: "ID", Type: "int32", Column: "id"}, {Name: "Type", Type: "AgentType", Column: "type"}, {Name: "RunsOnNodeID", Type: "int32", Column: "runs_on_node_id"}, {Name: "ServiceUsername", Type: "*string", Column: "service_username"}, {Name: "ServicePassword", Type: "*string", Column: "service_password"}, {Name: "ListenPort", Type: "*uint16", Column: "listen_port"}}, PKFieldIndex: 0},
-	z: new(PostgreSQLExporter).Values(),
+// PostgresExporterTable represents agents view or table in SQL database.
+var PostgresExporterTable = &postgresExporterTableType{
+	s: parse.StructInfo{Type: "PostgresExporter", SQLSchema: "", SQLName: "agents", Fields: []parse.FieldInfo{{Name: "ID", Type: "int32", Column: "id"}, {Name: "Type", Type: "AgentType", Column: "type"}, {Name: "RunsOnNodeID", Type: "int32", Column: "runs_on_node_id"}, {Name: "ServiceUsername", Type: "*string", Column: "service_username"}, {Name: "ServicePassword", Type: "*string", Column: "service_password"}, {Name: "ListenPort", Type: "*uint16", Column: "listen_port"}}, PKFieldIndex: 0},
+	z: new(PostgresExporter).Values(),
 }
 
 // String returns a string representation of this struct or record.
-func (s PostgreSQLExporter) String() string {
+func (s PostgresExporter) String() string {
 	res := make([]string, 6)
 	res[0] = "ID: " + reform.Inspect(s.ID, true)
 	res[1] = "Type: " + reform.Inspect(s.Type, true)
@@ -307,7 +307,7 @@ func (s PostgreSQLExporter) String() string {
 
 // Values returns a slice of struct or record field values.
 // Returned interface{} values are never untyped nils.
-func (s *PostgreSQLExporter) Values() []interface{} {
+func (s *PostgresExporter) Values() []interface{} {
 	return []interface{}{
 		s.ID,
 		s.Type,
@@ -320,7 +320,7 @@ func (s *PostgreSQLExporter) Values() []interface{} {
 
 // Pointers returns a slice of pointers to struct or record fields.
 // Returned interface{} values are never untyped nils.
-func (s *PostgreSQLExporter) Pointers() []interface{} {
+func (s *PostgresExporter) Pointers() []interface{} {
 	return []interface{}{
 		&s.ID,
 		&s.Type,
@@ -332,34 +332,34 @@ func (s *PostgreSQLExporter) Pointers() []interface{} {
 }
 
 // View returns View object for that struct.
-func (s *PostgreSQLExporter) View() reform.View {
-	return PostgreSQLExporterTable
+func (s *PostgresExporter) View() reform.View {
+	return PostgresExporterTable
 }
 
 // Table returns Table object for that record.
-func (s *PostgreSQLExporter) Table() reform.Table {
-	return PostgreSQLExporterTable
+func (s *PostgresExporter) Table() reform.Table {
+	return PostgresExporterTable
 }
 
 // PKValue returns a value of primary key for that record.
 // Returned interface{} value is never untyped nil.
-func (s *PostgreSQLExporter) PKValue() interface{} {
+func (s *PostgresExporter) PKValue() interface{} {
 	return s.ID
 }
 
 // PKPointer returns a pointer to primary key field for that record.
 // Returned interface{} value is never untyped nil.
-func (s *PostgreSQLExporter) PKPointer() interface{} {
+func (s *PostgresExporter) PKPointer() interface{} {
 	return &s.ID
 }
 
 // HasPK returns true if record has non-zero primary key set, false otherwise.
-func (s *PostgreSQLExporter) HasPK() bool {
-	return s.ID != PostgreSQLExporterTable.z[PostgreSQLExporterTable.s.PKFieldIndex]
+func (s *PostgresExporter) HasPK() bool {
+	return s.ID != PostgresExporterTable.z[PostgresExporterTable.s.PKFieldIndex]
 }
 
 // SetPK sets record primary key.
-func (s *PostgreSQLExporter) SetPK(pk interface{}) {
+func (s *PostgresExporter) SetPK(pk interface{}) {
 	if i64, ok := pk.(int64); ok {
 		s.ID = int32(i64)
 	} else {
@@ -369,11 +369,11 @@ func (s *PostgreSQLExporter) SetPK(pk interface{}) {
 
 // check interfaces
 var (
-	_ reform.View   = PostgreSQLExporterTable
-	_ reform.Struct = (*PostgreSQLExporter)(nil)
-	_ reform.Table  = PostgreSQLExporterTable
-	_ reform.Record = (*PostgreSQLExporter)(nil)
-	_ fmt.Stringer  = (*PostgreSQLExporter)(nil)
+	_ reform.View   = PostgresExporterTable
+	_ reform.Struct = (*PostgresExporter)(nil)
+	_ reform.Table  = PostgresExporterTable
+	_ reform.Record = (*PostgresExporter)(nil)
+	_ fmt.Stringer  = (*PostgresExporter)(nil)
 )
 
 type rDSExporterTableType struct {
@@ -624,7 +624,7 @@ var (
 func init() {
 	parse.AssertUpToDate(&AgentTable.s, new(Agent))
 	parse.AssertUpToDate(&MySQLdExporterTable.s, new(MySQLdExporter))
-	parse.AssertUpToDate(&PostgreSQLExporterTable.s, new(PostgreSQLExporter))
+	parse.AssertUpToDate(&PostgresExporterTable.s, new(PostgresExporter))
 	parse.AssertUpToDate(&RDSExporterTable.s, new(RDSExporter))
 	parse.AssertUpToDate(&QanAgentTable.s, new(QanAgent))
 }

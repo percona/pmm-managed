@@ -89,11 +89,11 @@ var (
 	dbUsernameF = flag.String("db-username", "pmm-managed", "Database username")
 	dbPasswordF = flag.String("db-password", "pmm-managed", "Database password")
 
-	agentMySQLdExporterF     = flag.String("agent-mysqld-exporter", "/usr/local/percona/pmm-client/mysqld_exporter", "mysqld_exporter path")
-	agentPostgreSQLExporterF = flag.String("agent-postgresql-exporter", "/usr/local/percona/pmm-client/postgresql_exporter", "postgresql_exporter path")
-	agentRDSExporterF        = flag.String("agent-rds-exporter", "/usr/sbin/rds_exporter", "rds_exporter path")
-	agentRDSExporterConfigF  = flag.String("agent-rds-exporter-config", "/etc/percona-rds-exporter.yml", "rds_exporter configuration file path")
-	agentQANBaseF            = flag.String("agent-qan-base", "/usr/local/percona/qan-agent", "qan-agent installation base path")
+	agentMySQLdExporterF    = flag.String("agent-mysqld-exporter", "/usr/local/percona/pmm-client/mysqld_exporter", "mysqld_exporter path")
+	agentPostgresExporterF  = flag.String("agent-postgres-exporter", "/usr/local/percona/pmm-client/postgres_exporter", "postgres_exporter path")
+	agentRDSExporterF       = flag.String("agent-rds-exporter", "/usr/sbin/rds_exporter", "rds_exporter path")
+	agentRDSExporterConfigF = flag.String("agent-rds-exporter-config", "/etc/percona-rds-exporter.yml", "rds_exporter configuration file path")
+	agentQANBaseF           = flag.String("agent-qan-base", "/usr/local/percona/qan-agent", "qan-agent installation base path")
 
 	debugF = flag.Bool("debug", false, "Enable debug logging")
 )
@@ -195,7 +195,7 @@ func makeRegistry(db *reform.DB) (*ports.Registry, error) {
 
 func makePostgreSQLService(ctx context.Context, deps *serviceDependencies) (*postgresql.Service, error) {
 	serviceConfig := postgresql.ServiceConfig{
-		PostgreSQLExporterPath: *agentPostgreSQLExporterF,
+		PostgresExporterPath: *agentPostgresExporterF,
 
 		DB:            deps.db,
 		Prometheus:    deps.prometheus,

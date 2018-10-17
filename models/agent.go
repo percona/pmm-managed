@@ -31,10 +31,10 @@ type AgentType string
 
 // AgentType agent types for exporters and agents
 const (
-	MySQLdExporterAgentType     AgentType = "mysqld_exporter"
-	PostgreSQLExporterAgentType AgentType = "postgresql_exporter"
-	RDSExporterAgentType        AgentType = "rds_exporter"
-	QanAgentAgentType           AgentType = "qan-agent"
+	MySQLdExporterAgentType   AgentType = "mysqld_exporter"
+	PostgresExporterAgentType AgentType = "postgres_exporter"
+	RDSExporterAgentType      AgentType = "rds_exporter"
+	QanAgentAgentType         AgentType = "qan-agent"
 )
 
 //reform:agents
@@ -73,9 +73,11 @@ func (m *MySQLdExporter) NameForSupervisor() string {
 	return fmt.Sprintf("pmm-%s-%d", m.Type, *m.ListenPort)
 }
 
+// binary name is postgres_exporter, that's why PostgresExporter below is not PostgreSQLExporter
+
 //reform:agents
-// PostgreSQLExporter exports PostgreSQL metrics.
-type PostgreSQLExporter struct {
+// PostgresExporter exports PostgreSQL metrics.
+type PostgresExporter struct {
 	ID           int32     `reform:"id,pk"`
 	Type         AgentType `reform:"type"`
 	RunsOnNodeID int32     `reform:"runs_on_node_id"`
@@ -86,7 +88,7 @@ type PostgreSQLExporter struct {
 }
 
 // DSN returns DSN for PostgreSQL service.
-func (p *PostgreSQLExporter) DSN(service *PostgreSQLService) string {
+func (p *PostgresExporter) DSN(service *PostgreSQLService) string {
 	address := net.JoinHostPort(*service.Address, strconv.Itoa(int(*service.Port)))
 	uri := url.URL{
 		User:     url.UserPassword(*p.ServiceUsername, *p.ServicePassword),
@@ -98,7 +100,7 @@ func (p *PostgreSQLExporter) DSN(service *PostgreSQLService) string {
 }
 
 // NameForSupervisor is a name of exporter for supervisor.
-func (p *PostgreSQLExporter) NameForSupervisor() string {
+func (p *PostgresExporter) NameForSupervisor() string {
 	return fmt.Sprintf("pmm-%s-%d", p.Type, *p.ListenPort)
 }
 

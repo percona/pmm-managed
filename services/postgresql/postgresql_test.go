@@ -48,7 +48,7 @@ func setup(t *testing.T) (context.Context, *Service, *sql.DB, []byte, string, *m
 	rootDir, err := ioutil.TempDir("/tmp", "pmm-managed-test-rootdir-")
 	assert.Nil(t, err)
 
-	postgreSQLExporterPath, err := exec.LookPath("postgres_exporter")
+	postgresExporterPath, err := exec.LookPath("postgres_exporter")
 	require.NoError(t, err)
 
 	ctx, p, before := prometheus.SetupTest(t)
@@ -59,8 +59,8 @@ func setup(t *testing.T) (context.Context, *Service, *sql.DB, []byte, string, *m
 
 	supervisor := &mocks.Supervisor{}
 	svc, err := NewService(&ServiceConfig{
-		PostgreSQLExporterPath: postgreSQLExporterPath,
-		Supervisor:             supervisor,
+		PostgresExporterPath: postgresExporterPath,
+		Supervisor:           supervisor,
 
 		DB:            db,
 		Prometheus:    p,
