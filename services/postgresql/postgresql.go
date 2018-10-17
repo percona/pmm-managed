@@ -97,14 +97,13 @@ func NewService(config *ServiceConfig) (*Service, error) {
 // ApplyPrometheusConfiguration Adds postgres to prometheus configuration and applies it
 func (svc *Service) ApplyPrometheusConfiguration(ctx context.Context, q *reform.Querier) error {
 	postgreSQLConfig := &prometheus.ScrapeConfig{
-		JobName:        "postgres",
+		JobName:        "remote-postgresql",
 		ScrapeInterval: "1s",
 		ScrapeTimeout:  "1s",
 		MetricsPath:    "/metrics",
-		HonorLabels:    true,
 		RelabelConfigs: []prometheus.RelabelConfig{{
 			TargetLabel: "job",
-			Replacement: "postgres",
+			Replacement: "postgresql",
 		}},
 	}
 
