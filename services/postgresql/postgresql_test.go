@@ -129,7 +129,7 @@ func TestAddListRemove(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = svc.Remove(ctx, id)
-	tests.AssertGRPCError(t, status.New(codes.NotFound, fmt.Sprintf(`PostgreSQL instance with id %q not found.`, id)), err)
+	tests.AssertGRPCError(t, status.New(codes.NotFound, fmt.Sprintf(`PostgreSQL instance with ID %d not found.`, id)), err)
 
 	actual, err = svc.List(ctx)
 	require.NoError(t, err)

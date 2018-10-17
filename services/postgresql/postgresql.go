@@ -143,13 +143,10 @@ func (svc *Service) ApplyPrometheusConfiguration(ctx context.Context, q *reform.
 		}
 	}
 
-	// sort by region and name
+	// sort by instance
 	sorterFor := func(sc []prometheus.StaticConfig) func(int, int) bool {
 		return func(i, j int) bool {
-			if sc[i].Labels[0].Value != sc[j].Labels[0].Value {
-				return sc[i].Labels[0].Value < sc[j].Labels[0].Value
-			}
-			return sc[i].Labels[1].Value < sc[j].Labels[1].Value
+			return sc[i].Labels[0].Value < sc[j].Labels[0].Value
 		}
 	}
 	sort.Slice(postgreSQLConfig.StaticConfigs, sorterFor(postgreSQLConfig.StaticConfigs))
@@ -305,7 +302,7 @@ func (svc *Service) Remove(ctx context.Context, id int32) error {
 		var node models.PostgreSQLNode
 		if err = tx.SelectOneTo(&node, "WHERE type = ? AND id = ?", models.PostgreSQLNodeType, id); err != nil {
 			if err == reform.ErrNoRows {
-				return status.Errorf(codes.NotFound, "PostgreSQL instance with id %q not found.", id)
+				return status.Errorf(codes.NotFound, "PostgreSQL instance with ID %d not found.", id)
 			}
 			return errors.WithStack(err)
 		}
