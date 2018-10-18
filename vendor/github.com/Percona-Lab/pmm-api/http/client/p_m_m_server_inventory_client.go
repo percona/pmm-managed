@@ -6,7 +6,8 @@ package client
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
-	"github.com/Percona-Lab/pmm-api/swagger/client/inventory"
+	"github.com/Percona-Lab/pmm-api/http/client/agents"
+	"github.com/Percona-Lab/pmm-api/http/client/nodes"
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
 	strfmt "github.com/go-openapi/strfmt"
@@ -55,7 +56,9 @@ func New(transport runtime.ClientTransport, formats strfmt.Registry) *PMMServerI
 	cli := new(PMMServerInventory)
 	cli.Transport = transport
 
-	cli.Inventory = inventory.New(transport, formats)
+	cli.Agents = agents.New(transport, formats)
+
+	cli.Nodes = nodes.New(transport, formats)
 
 	return cli
 }
@@ -101,7 +104,9 @@ func (cfg *TransportConfig) WithSchemes(schemes []string) *TransportConfig {
 
 // PMMServerInventory is a client for p m m server inventory
 type PMMServerInventory struct {
-	Inventory *inventory.Client
+	Agents *agents.Client
+
+	Nodes *nodes.Client
 
 	Transport runtime.ClientTransport
 }
@@ -110,6 +115,8 @@ type PMMServerInventory struct {
 func (c *PMMServerInventory) SetTransport(transport runtime.ClientTransport) {
 	c.Transport = transport
 
-	c.Inventory.SetTransport(transport)
+	c.Agents.SetTransport(transport)
+
+	c.Nodes.SetTransport(transport)
 
 }

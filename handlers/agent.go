@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/Percona-Lab/pmm-api/agent"
+	"github.com/Percona-Lab/pmm-api/inventory"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/google/uuid"
 	"github.com/pkg/errors"
 
 	"github.com/percona/pmm-managed/services/agents"
@@ -30,16 +30,13 @@ import (
 )
 
 type AgentServer struct {
+	Store *agents.Store
 }
 
 func (s *AgentServer) Register(ctx context.Context, req *agent.RegisterRequest) (*agent.RegisterResponse, error) {
-	uuid, err := uuid.NewRandom()
-	if err != nil {
-		return nil, err
-	}
-
+	uuid := s.Store.RegisterAgent()
 	return &agent.RegisterResponse{
-		Uuid: uuid.String(),
+		Uuid: uuid,
 	}, nil
 }
 
@@ -51,11 +48,11 @@ func (s *AgentServer) Connect(stream agent.Agent_ConnectServer) error {
 	if err != nil {
 		return err
 	}
+	l.Infof("Got %T %s.", agentMessage, agentMessage)
 	connect := agentMessage.GetConnect()
 	if connect == nil {
 		return errors.Errorf("Expected ConnectRequest, got %T.", agentMessage.Payload)
 	}
-	l.Infof("Got %T %s.", connect, connect)
 	serverMessage := &agent.ServerMessage{
 		Payload: &agent.ServerMessage_Connect{
 			Connect: &agent.ConnectResponse{},
@@ -65,30 +62,45 @@ func (s *AgentServer) Connect(stream agent.Agent_ConnectServer) error {
 		return err
 	}
 
+	t := time.NewTicker(3 * time.Second)
+	defer t.Stop()
 	conn := agents.NewConn(stream)
-	for stream.Context().Err() == nil {
-		time.Sleep(time.Second)
+	for {
+		select {
+		case <-stream.Context().Done():
+			return nil
 
-		start := time.Now()
-		fromAgent, err := conn.SendAndRecv(&agent.ServerMessage_Ping{
-			Ping: &agent.PingRequest{},
-		})
-		if err != nil {
-			return err
+		case exporter := <-s.Store.NewExporters():
+			agentMessage, err := conn.SendAndRecv(&agent.ServerMessage_State{
+				State: &agent.SetStateRequest{
+					MysqldExporters: []*inventory.MySQLdExporter{exporter},
+				},
+			})
+			if err != nil {
+				return err
+			}
+			l.Debugf("%s", agentMessage)
+
+		case <-t.C:
+			start := time.Now()
+			agentMessage, err := conn.SendAndRecv(&agent.ServerMessage_Ping{
+				Ping: &agent.PingRequest{},
+			})
+			if err != nil {
+				return err
+			}
+			latency := time.Since(start) / 2
+			ping := agentMessage.GetPing()
+			if ping == nil {
+				return errors.Errorf("Expected PingResponse, got %T.", agentMessage.Payload)
+			}
+			t, err := ptypes.Timestamp(ping.CurrentTime)
+			if err != nil {
+				return err
+			}
+			l.Debugf("Latency: %s. Time drift: %s.", latency, t.Sub(start.Add(latency)))
 		}
-		latency := time.Since(start) / 2
-		ping := fromAgent.GetPing()
-		if ping == nil {
-			return errors.Errorf("Expected PingResponse, got %T.", agentMessage.Payload)
-		}
-		t, err := ptypes.Timestamp(ping.CurrentTime)
-		if err != nil {
-			return err
-		}
-		l.Infof("Latency: %s. Time drift: %s.", latency, t.Sub(start.Add(latency)))
 	}
-
-	return nil
 }
 
 // check interfaces

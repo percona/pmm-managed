@@ -9,6 +9,7 @@ message RegisterRequest {
   // FIXME We need node information there to create a new node or map new agent to the existing node.
   //       This is hard problem.
 
+  string hostname = 1;
 }
 
 message RegisterResponse {
@@ -29,7 +30,7 @@ message PingResponse {
 }
 
 message SetStateRequest {
-  repeated inventory.Agent agents = 1;
+  repeated inventory.MySQLdExporter mysqld_exporters = 1;
 }
 
 message SetStateResponse {}

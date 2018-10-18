@@ -4,44 +4,82 @@ package inventory;
 
 import "google/api/annotations.proto";
 
-enum NodeType {
-  NODE_TYPE_INVALID = 0;
-  BARE_METAL = 1;
-  VIRTUAL_MACHINE = 2;
-  CONTAINER = 3;
-  REMOTE = 8;
-  REMOTE_RDS = 9;
-}
+// enum NodeType {
+//   NODE_TYPE_INVALID = 0;
+//   BARE_METAL = 1;
+//   VIRTUAL_MACHINE = 2;
+//   CONTAINER = 3;
+//   REMOTE = 8;
+//   REMOTE_RDS = 9;
+// }
 
 // message Node {
-//   uint64 id = 1;
+//   uint32 id = 1;
 //   NodeType type = 2;
 //   string name = 3;
 //   reserved 4 to 7;
 // }
 
 message BareMetalNode {
-  uint64 id = 1;
+  // Unique node identifier.
+  uint32 id = 1;
+  // Unique node name.
   string name = 2;
+  // Hostname. Is not unique.
+  string hostname = 3;
 }
 
-message VirtualMachineNode {
-  uint64 id = 1;
-  string name = 2;
+// message VirtualMachineNode {
+//   uint32 id = 1;
+//   string name = 2;
+// }
+
+// message ContainerNode {
+//   uint32 id = 1;
+//   string name = 2;
+// }
+
+// message RemoteNode {
+//   uint32 id = 1;
+//   string name = 2;
+// }
+
+// message RemoteRDSNode {
+//   uint32 id = 1;
+//   string name = 2;
+//   string region = 3;
+// }
+
+message AddBareMetalNodeRequest {
+  // Unique node name.
+  string name = 1;
+  // Hostname. Is not unique.
+  string hostname = 2;
 }
 
-message ContainerNode {
-  uint64 id = 1;
-  string name = 2;
+message AddBareMetalNodeResponse {
+  BareMetalNode node = 1;
 }
 
-message RemoteNode {
-  uint64 id = 1;
-  string name = 2;
-}
+// message RemoveBareMetalNodeRequest {
+//   uint32 id = 1;
+// }
 
-message RemoteRDSNode {
-  uint64 id = 1;
-  string name = 2;
-  string region = 3;
+// message RemoveBareMetalNodeResponse {}
+
+service Nodes {
+  // Add Bare Metal node.
+  rpc AddBareMetal(AddBareMetalNodeRequest) returns (AddBareMetalNodeResponse) {
+    option (google.api.http) = {
+      post: "/v0/inventory/Nodes/AddBareMetal"
+      body: "*"
+    };
+  }
+  // rpc RemoveBareMetal(RemoveBareMetalNodeRequest) returns (RemoveBareMetalNodeResponse) {
+  //   option (google.api.http) = {
+  //     post: "/v0/inventory/Nodes/RemoveBareMetal"
+  //     body: "*"
+  //   };
+  // }
+
 }

@@ -11,14 +11,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:09b3f6acaa0ee23f045a692487df43ca9bf4e8b9efe9778407573ea6530bc61e"
+  digest = "1:d7883cfa00c1430ebf221ed724a1b0ccc8b7a0891df09b406714aebc0869623d"
   name = "github.com/Percona-Lab/pmm-api"
   packages = [
     "agent",
     "inventory",
   ]
   pruneopts = "T"
-  revision = "3673a1cd03c6cf56f97107b1ccccb2e503eac9d3"
+  revision = "7641637bec4f79f94413aa5449597b0b3f1f6af8"
 
 [[projects]]
   digest = "1:4362374738ba28a25378bcf08dc29d7e720ca214b2674b641dcaaa3320b2be19"

@@ -15,19 +15,20 @@
     "version": "version 0"
   },
   "paths": {
-    "/v0/test": {
+    "/v0/inventory/Agents/AddMySQLdExporter": {
       "post": {
         "tags": [
-          "Inventory"
+          "Agents"
         ],
-        "operationId": "Test",
+        "summary": "Add mysqld_exporter agent.",
+        "operationId": "AddMySQLdExporter",
         "parameters": [
           {
             "name": "body",
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/inventoryTestRequest"
+              "$ref": "#/definitions/inventoryAddMySQLdExporterRequest"
             }
           }
         ],
@@ -35,7 +36,34 @@
           "200": {
             "description": "(empty)",
             "schema": {
-              "$ref": "#/definitions/inventoryTestResponse"
+              "$ref": "#/definitions/inventoryAddMySQLdExporterResponse"
+            }
+          }
+        }
+      }
+    },
+    "/v0/inventory/Nodes/AddBareMetal": {
+      "post": {
+        "tags": [
+          "Nodes"
+        ],
+        "summary": "Add Bare Metal node.",
+        "operationId": "AddBareMetal",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/inventoryAddBareMetalNodeRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "(empty)",
+            "schema": {
+              "$ref": "#/definitions/inventoryAddBareMetalNodeResponse"
             }
           }
         }
@@ -43,52 +71,96 @@
     }
   },
   "definitions": {
+    "inventoryAddBareMetalNodeRequest": {
+      "type": "object",
+      "properties": {
+        "hostname": {
+          "description": "Hostname. Is not unique.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Unique node name.",
+          "type": "string"
+        }
+      }
+    },
+    "inventoryAddBareMetalNodeResponse": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "$ref": "#/definitions/inventoryBareMetalNode"
+        }
+      }
+    },
+    "inventoryAddMySQLdExporterRequest": {
+      "type": "object",
+      "properties": {
+        "password": {
+          "description": "MySQL password for extracting metrics.",
+          "type": "string"
+        },
+        "runs_on_node_id": {
+          "description": "Node identifier where agent should run.",
+          "type": "integer",
+          "format": "int64"
+        },
+        "username": {
+          "description": "MySQL username for extracting metrics.",
+          "type": "string"
+        }
+      }
+    },
+    "inventoryAddMySQLdExporterResponse": {
+      "type": "object",
+      "properties": {
+        "agent": {
+          "$ref": "#/definitions/inventoryMySQLdExporter"
+        }
+      }
+    },
     "inventoryBareMetalNode": {
       "type": "object",
       "properties": {
+        "hostname": {
+          "description": "Hostname. Is not unique.",
+          "type": "string"
+        },
         "id": {
-          "type": "string",
-          "format": "uint64"
+          "description": "Unique node identifier.",
+          "type": "integer",
+          "format": "int64"
         },
         "name": {
+          "description": "Unique node name.",
           "type": "string"
         }
       }
     },
-    "inventoryRemoteRDSNode": {
+    "inventoryMySQLdExporter": {
       "type": "object",
       "properties": {
         "id": {
-          "type": "string",
-          "format": "uint64"
+          "description": "Unique agent identifier.",
+          "type": "integer",
+          "format": "int64"
         },
-        "name": {
+        "listen_port": {
+          "description": "HTTP listen port for exposing metrics.",
+          "type": "integer",
+          "format": "int64"
+        },
+        "password": {
+          "description": "MySQL password for extracting metrics.",
           "type": "string"
         },
-        "region": {
+        "runs_on_node_id": {
+          "description": "Node identifier where agent runs.",
+          "type": "integer",
+          "format": "int64"
+        },
+        "username": {
+          "description": "MySQL username for extracting metrics.",
           "type": "string"
-        }
-      }
-    },
-    "inventoryTestRequest": {
-      "type": "object",
-      "properties": {
-        "test": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/inventoryBareMetalNode"
-          }
-        }
-      }
-    },
-    "inventoryTestResponse": {
-      "type": "object",
-      "properties": {
-        "test": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/inventoryRemoteRDSNode"
-          }
         }
       }
     }

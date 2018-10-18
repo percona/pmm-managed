@@ -3,3 +3,38 @@ syntax = "proto3";
 package inventory;
 
 import "google/api/annotations.proto";
+
+message MySQLService {
+  // Unique service identifier.
+  uint32 id = 1;
+  // Unique service name.
+  string name = 2;
+}
+
+message AddMySQLServiceRequest {}
+
+message AddMySQLServiceResponse {
+  MySQLService service = 1;
+}
+
+// message RemoveMySQLServiceRequest {
+//   uint32 id = 1;
+// }
+
+// message RemoveMySQLServiceResponse {}
+
+service Services {
+  // rpc AddMySQL(AddMySQLServiceRequest) returns (AddMySQLServiceResponse) {
+  //   option (google.api.http) = {
+  //     post: "/v0/inventory/Services/AddMySQL"
+  //     body: "*"
+  //   };
+  // }
+  //   rpc RemoveMySQL(RemoveMySQLServiceRequest) returns (RemoveMySQLServiceResponse) {
+  //     option (google.api.http) = {
+  //       post: "/v0/inventory/Services/RemoveMySQL"
+  //       body: "*"
+  //     };
+  //   }
+
+}

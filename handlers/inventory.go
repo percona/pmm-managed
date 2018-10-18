@@ -20,16 +20,32 @@ import (
 	"context"
 
 	"github.com/Percona-Lab/pmm-api/inventory"
+
+	"github.com/percona/pmm-managed/services/agents"
 )
 
 type InventoryServer struct {
+	Store  *agents.Store
+	Agents map[uint32]*agents.Conn
 }
 
-func (s *InventoryServer) Test(ctx context.Context, req *inventory.TestRequest) (*inventory.TestResponse, error) {
-	panic("not implemented")
+func (s *InventoryServer) AddBareMetal(ctx context.Context, req *inventory.AddBareMetalNodeRequest) (*inventory.AddBareMetalNodeResponse, error) {
+	node := s.Store.AddBareMetalNode(req)
+	return &inventory.AddBareMetalNodeResponse{
+		Node: node,
+	}, nil
+}
+
+func (s *InventoryServer) AddMySQLdExporter(ctx context.Context, req *inventory.AddMySQLdExporterRequest) (*inventory.AddMySQLdExporterResponse, error) {
+	exporter := s.Store.AddMySQLdExporter(req)
+	return &inventory.AddMySQLdExporterResponse{
+		Agent: exporter,
+	}, nil
 }
 
 // check interfaces
 var (
-	_ inventory.InventoryServer = (*InventoryServer)(nil)
+	_ inventory.NodesServer    = (*InventoryServer)(nil)
+	_ inventory.ServicesServer = (*InventoryServer)(nil)
+	_ inventory.AgentsServer   = (*InventoryServer)(nil)
 )
