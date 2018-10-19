@@ -23,6 +23,7 @@ import (
 
 	"github.com/Percona-Lab/pmm-api/agent"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -30,21 +31,24 @@ import (
 type Conn struct {
 	stream agent.Agent_ConnectServer
 	lastID uint32
+	l      *logrus.Entry
 }
 
-func NewConn(stream agent.Agent_ConnectServer) *Conn {
+func NewConn(uuid string, stream agent.Agent_ConnectServer) *Conn {
 	return &Conn{
 		stream: stream,
+		l:      logrus.WithField("pmm-agent", uuid),
 	}
 }
 
 func (c *Conn) SendAndRecv(toAgent agent.ServerMessagePayload) (*agent.AgentMessage, error) {
 	id := atomic.AddUint32(&c.lastID, 1)
-	err := c.stream.Send(&agent.ServerMessage{
+	serverMessage := &agent.ServerMessage{
 		Id:      id,
 		Payload: toAgent,
-	})
-	if err != nil {
+	}
+	c.l.Debugf("Send: %s.", serverMessage)
+	if err := c.stream.Send(serverMessage); err != nil {
 		return nil, errors.Wrap(err, "failed to send message to agent")
 	}
 
@@ -53,12 +57,13 @@ func (c *Conn) SendAndRecv(toAgent agent.ServerMessagePayload) (*agent.AgentMess
 	//       We should have a single stream receiver in a separate goroutine,
 	//       and internal subscriptions for IDs.
 
-	fromAgent, err := c.stream.Recv()
+	agentMessage, err := c.stream.Recv()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to receive message from agent")
 	}
-	if fromAgent.Id != id {
-		return nil, status.Errorf(codes.Internal, fmt.Sprintf("expected message from agent with ID %d, got ID %d", id, fromAgent.Id))
+	c.l.Debugf("Recv: %s.", agentMessage)
+	if agentMessage.Id != id {
+		return nil, status.Errorf(codes.Internal, fmt.Sprintf("expected message from agent with ID %d, got ID %d", id, agentMessage.Id))
 	}
-	return fromAgent, nil
+	return agentMessage, nil
 }

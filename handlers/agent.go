@@ -48,7 +48,7 @@ func (s *AgentServer) Connect(stream agent.Agent_ConnectServer) error {
 	if err != nil {
 		return err
 	}
-	l.Infof("Got %T %s.", agentMessage, agentMessage)
+	l.Infof("Recv: %T %s.", agentMessage, agentMessage)
 	connect := agentMessage.GetConnect()
 	if connect == nil {
 		return errors.Errorf("Expected ConnectRequest, got %T.", agentMessage.Payload)
@@ -62,16 +62,16 @@ func (s *AgentServer) Connect(stream agent.Agent_ConnectServer) error {
 		return err
 	}
 
-	t := time.NewTicker(3 * time.Second)
+	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
-	conn := agents.NewConn(stream)
+	conn := agents.NewConn(connect.Uuid, stream)
 	for {
 		select {
 		case <-stream.Context().Done():
 			return nil
 
 		case exporter := <-s.Store.NewExporters():
-			agentMessage, err := conn.SendAndRecv(&agent.ServerMessage_State{
+			_, err = conn.SendAndRecv(&agent.ServerMessage_State{
 				State: &agent.SetStateRequest{
 					MysqldExporters: []*inventory.MySQLdExporter{exporter},
 				},
@@ -79,7 +79,6 @@ func (s *AgentServer) Connect(stream agent.Agent_ConnectServer) error {
 			if err != nil {
 				return err
 			}
-			l.Debugf("%s", agentMessage)
 
 		case <-t.C:
 			start := time.Now()
