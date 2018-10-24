@@ -77,7 +77,6 @@ func NewService(config *ServiceConfig) (*Service, error) {
 	} {
 		if *path == "" {
 			continue
-			const defaultPostgresPort = 5432
 		}
 		p, err := exec.LookPath(*path)
 		if err != nil {
