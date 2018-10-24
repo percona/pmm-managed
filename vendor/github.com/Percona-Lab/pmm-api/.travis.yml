@@ -15,13 +15,12 @@ before_install:
 
 before_script:
   # ensure that Gopkg.lock is up-to-date
-  - curl -L https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64 -o ~/dep
-  - chmod +x ~/dep
-  - ~/dep ensure -v
-  - ~/dep check
+  - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+  - make init
+  - dep check
 
 script:
-  - make init gen
+  - make gen
 
   # check that generated files are up-to-date
   - git status
