@@ -47,6 +47,7 @@ type RDSService struct {
 	EngineVersion *string `reform:"engine_version"`
 }
 
+// ToMySQLService creates MySQLService from RDSService
 func (s *RDSService) ToMySQLService() *MySQLService {
 	return &MySQLService{
 		ID:     s.ID,

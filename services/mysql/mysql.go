@@ -302,7 +302,7 @@ func (svc *Service) Remove(ctx context.Context, id int32) error {
 		for _, agent := range agents {
 			switch agent.Type {
 			case models.MySQLdExporterAgentType:
-				err = svc.StopMySQLExporter(ctx, tx, agent)
+				err = svc.StopMySQLdExporter(ctx, tx, agent)
 				if err != nil {
 					return err
 				}

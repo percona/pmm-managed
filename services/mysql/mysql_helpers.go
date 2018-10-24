@@ -38,12 +38,13 @@ const (
 	qanAgentPort uint16 = 9000
 )
 
+// ServiceHelper adds, restores and stops MySQLdExporter and QANAgent.
 type ServiceHelper struct {
 	*ServiceConfig
 	pmmServerNode *models.Node
 }
 
-// NewService creates a new service.
+// NewServiceHelper creates a new ServiceHelper and checks path to MySQLdExporterPath.
 func NewServiceHelper(config *ServiceConfig, pmmServerNode *models.Node) (*ServiceHelper, error) {
 	for _, path := range []*string{
 		&config.MySQLdExporterPath,
@@ -65,6 +66,7 @@ func NewServiceHelper(config *ServiceConfig, pmmServerNode *models.Node) (*Servi
 	return sh, nil
 }
 
+// AgentsList returns a list of agents for service and for node.
 func (svc *ServiceHelper) AgentsList(tx *reform.TX, serviceId int32, nodeId int32) ([]models.Agent, []models.Agent, error) {
 	agentsForService, err := models.AgentsForServiceID(tx.Querier, serviceId)
 	if err != nil {
@@ -77,6 +79,7 @@ func (svc *ServiceHelper) AgentsList(tx *reform.TX, serviceId int32, nodeId int3
 	return agentsForService, agentsForNode, nil
 }
 
+// RemoveAgentsAccosiations removes associations of the service and agents and the node and agents.
 func (svc *ServiceHelper) RemoveAgentsAccosiations(tx *reform.TX, serviceId, nodeId int32, agentsForService, agentsForNode []models.Agent) error {
 	var err error
 	// remove associations of the service and agents
@@ -104,6 +107,7 @@ func (svc *ServiceHelper) RemoveAgentsAccosiations(tx *reform.TX, serviceId, nod
 	return nil
 }
 
+// AddMySQLdExporter starts MySQLdExporter and inserts agent to DB.
 func (svc *ServiceHelper) AddMySQLdExporter(ctx context.Context, tx *reform.TX, service *models.MySQLService, username, password string) error {
 	// insert mysqld_exporter agent and association
 	port, err := svc.PortsRegistry.Reserve()
@@ -157,6 +161,7 @@ func (svc *ServiceHelper) AddMySQLdExporter(ctx context.Context, tx *reform.TX, 
 	return nil
 }
 
+// MysqlExporterCfg returns configs for MySQLdExporter.
 func (svc *ServiceHelper) MysqlExporterCfg(agent *models.MySQLdExporter, port uint16, dsn string) *servicelib.Config {
 	name := agent.NameForSupervisor()
 
@@ -195,6 +200,7 @@ func (svc *ServiceHelper) MysqlExporterCfg(agent *models.MySQLdExporter, port ui
 	}
 }
 
+// RestoreMySQLdExporter restores MySQLdExporter.
 func (svc *ServiceHelper) RestoreMySQLdExporter(ctx context.Context, tx *reform.TX, agent models.Agent, service *models.MySQLService) error {
 	a := &models.MySQLdExporter{ID: agent.ID}
 	if err := tx.Reload(a); err != nil {
@@ -223,7 +229,8 @@ func (svc *ServiceHelper) RestoreMySQLdExporter(ctx context.Context, tx *reform.
 	return nil
 }
 
-func (svc *ServiceHelper) StopMySQLExporter(ctx context.Context, tx *reform.TX, agent models.Agent) error {
+// StopMySQLdExporter stops MySQLdExporter process.
+func (svc *ServiceHelper) StopMySQLdExporter(ctx context.Context, tx *reform.TX, agent models.Agent) error {
 	a := models.MySQLdExporter{ID: agent.ID}
 	if err := tx.Reload(&a); err != nil {
 		return errors.WithStack(err)
@@ -236,6 +243,7 @@ func (svc *ServiceHelper) StopMySQLExporter(ctx context.Context, tx *reform.TX, 
 	return nil
 }
 
+// AddQanAgent adds new MySQL service to QAN and inserts agent to DB.
 func (svc *ServiceHelper) AddQanAgent(ctx context.Context, tx *reform.TX, service *models.MySQLService, nodeName string, username, password string) error {
 	// Despite running a single qan-agent process on PMM Server, we use one database record per MySQL instance
 	// to store username/password and UUID.
@@ -275,6 +283,7 @@ func (svc *ServiceHelper) AddQanAgent(ctx context.Context, tx *reform.TX, servic
 	return nil
 }
 
+// StopQanAgent removes a MySQL service from QAN.
 func (svc *ServiceHelper) StopQanAgent(ctx context.Context, tx *reform.TX, agent models.Agent) error {
 	a := models.QanAgent{ID: agent.ID}
 	if err := tx.Reload(&a); err != nil {
@@ -288,6 +297,7 @@ func (svc *ServiceHelper) StopQanAgent(ctx context.Context, tx *reform.TX, agent
 	return nil
 }
 
+// RestoreQanAgent ensures QAN agent runs.
 func (svc *ServiceHelper) RestoreQanAgent(ctx context.Context, tx *reform.TX, agent models.Agent) error {
 	a := models.QanAgent{ID: agent.ID}
 	if err := tx.Reload(&a); err != nil {
