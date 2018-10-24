@@ -41,6 +41,8 @@ import (
 	"github.com/percona/pmm-managed/utils/ports"
 )
 
+const defaultPostgreSQLPort uint32 = 5432
+
 // regexps to extract version numbers from the `SELECT Version();` output
 var (
 	postgresDBRegexp  = regexp.MustCompile(`PostgreSQL ([\d\.]+)`)
@@ -75,6 +77,7 @@ func NewService(config *ServiceConfig) (*Service, error) {
 	} {
 		if *path == "" {
 			continue
+			const defaultPostgresPort = 5432
 		}
 		p, err := exec.LookPath(*path)
 		if err != nil {
@@ -196,11 +199,11 @@ func (svc *Service) Add(ctx context.Context, name, address string, port uint32, 
 	if address == "" {
 		return 0, status.Error(codes.InvalidArgument, "PostgreSQL instance host is not given.")
 	}
-	if port == 0 {
-		return 0, status.Error(codes.InvalidArgument, "PostgreSQL instance port is not given.")
-	}
 	if username == "" {
 		return 0, status.Error(codes.InvalidArgument, "Username is not given.")
+	}
+	if port == 0 {
+		port = defaultPostgreSQLPort
 	}
 	if name == "" {
 		name = address
