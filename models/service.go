@@ -47,6 +47,19 @@ type RDSService struct {
 	EngineVersion *string `reform:"engine_version"`
 }
 
+func (s *RDSService) ToMySQLService() *MySQLService {
+	return &MySQLService{
+		ID:     s.ID,
+		Type:   s.Type,
+		NodeID: s.NodeID,
+
+		Address:       s.Address,
+		Port:          s.Port,
+		Engine:        s.Engine,
+		EngineVersion: s.EngineVersion,
+	}
+}
+
 //reform:services
 type PostgreSQLService struct {
 	ID     int32       `reform:"id,pk"`

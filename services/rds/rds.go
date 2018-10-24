@@ -19,7 +19,6 @@ package rds
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -34,7 +33,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/rds"
-	"github.com/go-sql-driver/mysql"
+	mysqlDriver "github.com/go-sql-driver/mysql"
 	servicelib "github.com/percona/kardianos-service"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -44,36 +43,28 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services"
+	"github.com/percona/pmm-managed/services/mysql"
 	"github.com/percona/pmm-managed/services/prometheus"
-	"github.com/percona/pmm-managed/services/qan"
 	"github.com/percona/pmm-managed/utils/logger"
-	"github.com/percona/pmm-managed/utils/ports"
 )
 
 const (
 	awsCallTimeout         = 7 * time.Second
-	qanAgentPort    uint16 = 9000
 	rdsExporterPort uint16 = 9042
 )
 
 type ServiceConfig struct {
-	MySQLdExporterPath    string
+	*mysql.ServiceConfig
 	RDSExporterPath       string
 	RDSExporterConfigPath string
-
-	Prometheus    *prometheus.Service
-	Supervisor    services.Supervisor
-	DB            *reform.DB
-	PortsRegistry *ports.Registry
-	QAN           *qan.Service
 }
 
 // Service is responsible for interactions with AWS RDS.
 type Service struct {
 	*ServiceConfig
-	httpClient    *http.Client
-	pmmServerNode *models.Node
+	mysqlServiceHelper *mysql.ServiceHelper
+	httpClient         *http.Client
+	pmmServerNode      *models.Node
 }
 
 // NewService creates a new service.
@@ -85,7 +76,6 @@ func NewService(config *ServiceConfig) (*Service, error) {
 	}
 
 	for _, path := range []*string{
-		&config.MySQLdExporterPath,
 		&config.RDSExporterPath,
 	} {
 		if *path == "" {
@@ -98,10 +88,16 @@ func NewService(config *ServiceConfig) (*Service, error) {
 		*path = p
 	}
 
+	mysqlServiceHelper, err := mysql.NewServiceHelper(config.ServiceConfig, &node)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
 	svc := &Service{
-		ServiceConfig: config,
-		httpClient:    new(http.Client),
-		pmmServerNode: &node,
+		mysqlServiceHelper: mysqlServiceHelper,
+		ServiceConfig:      config,
+		httpClient:         new(http.Client),
+		pmmServerNode:      &node,
 	}
 	return svc, nil
 }
@@ -377,97 +373,6 @@ func (svc *Service) List(ctx context.Context) ([]Instance, error) {
 	return res, err
 }
 
-func (svc *Service) addMySQLdExporter(ctx context.Context, tx *reform.TX, service *models.RDSService, username, password string) error {
-	// insert mysqld_exporter agent and association
-	port, err := svc.PortsRegistry.Reserve()
-	if err != nil {
-		return err
-	}
-	agent := &models.MySQLdExporter{
-		Type:         models.MySQLdExporterAgentType,
-		RunsOnNodeID: svc.pmmServerNode.ID,
-
-		ServiceUsername: &username,
-		ServicePassword: &password,
-		ListenPort:      &port,
-	}
-	if err = tx.Insert(agent); err != nil {
-		return errors.WithStack(err)
-	}
-	if err = tx.Insert(&models.AgentService{AgentID: agent.ID, ServiceID: service.ID}); err != nil {
-		return errors.WithStack(err)
-	}
-
-	// check connection and a number of tables
-	var tableCount int
-	dsn := agent.DSN(svc.MySQLServiceFromRDSService(service))
-	db, err := sql.Open("mysql", dsn)
-	if err == nil {
-		err = db.QueryRowContext(ctx, "SELECT COUNT(*) FROM information_schema.tables").Scan(&tableCount)
-		db.Close()
-		agent.MySQLDisableTablestats = pointer.ToBool(tableCount > 1000)
-	}
-	if err != nil {
-		if err, ok := err.(*mysql.MySQLError); ok {
-			switch err.Number {
-			case 0x414: // 1044
-				return status.Error(codes.PermissionDenied, err.Message)
-			case 0x415: // 1045
-				return status.Error(codes.Unauthenticated, err.Message)
-			}
-		}
-		return errors.WithStack(err)
-	}
-
-	// start mysqld_exporter agent
-	if svc.MySQLdExporterPath != "" {
-		cfg := svc.mysqlExporterCfg(agent, port, dsn)
-		if err = svc.Supervisor.Start(ctx, cfg); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (svc *Service) mysqlExporterCfg(agent *models.MySQLdExporter, port uint16, dsn string) *servicelib.Config {
-	name := agent.NameForSupervisor()
-
-	arguments := []string{
-		"-collect.binlog_size",
-		"-collect.global_status",
-		"-collect.global_variables",
-		"-collect.info_schema.innodb_metrics",
-		"-collect.info_schema.processlist",
-		"-collect.info_schema.query_response_time",
-		"-collect.info_schema.userstats",
-		"-collect.perf_schema.eventswaits",
-		"-collect.perf_schema.file_events",
-		"-collect.slave_status",
-		fmt.Sprintf("-web.listen-address=127.0.0.1:%d", port),
-	}
-	if agent.MySQLDisableTablestats == nil || !*agent.MySQLDisableTablestats {
-		// enable tablestats and a few related collectors just like pmm-admin
-		// https://github.com/percona/pmm-client/blob/e94b61ed0e5482a27039f0d1b0b36076731f0c29/pmm/plugin/mysql/metrics/metrics.go#L98-L105
-		arguments = append(arguments, "-collect.auto_increment.columns")
-		arguments = append(arguments, "-collect.info_schema.tables")
-		arguments = append(arguments, "-collect.info_schema.tablestats")
-		arguments = append(arguments, "-collect.perf_schema.indexiowaits")
-		arguments = append(arguments, "-collect.perf_schema.tableiowaits")
-		arguments = append(arguments, "-collect.perf_schema.tablelocks")
-	}
-	sort.Strings(arguments)
-
-	return &servicelib.Config{
-		Name:        name,
-		DisplayName: name,
-		Description: name,
-		Executable:  svc.MySQLdExporterPath,
-		Arguments:   arguments,
-		Environment: []string{fmt.Sprintf("DATA_SOURCE_NAME=%s", dsn)},
-	}
-}
-
 func (svc *Service) updateRDSExporterConfig(tx *reform.TX, service *models.RDSService) (*rdsExporterConfig, error) {
 	// collect all RDS nodes
 	var config rdsExporterConfig
@@ -562,58 +467,6 @@ func (svc *Service) addRDSExporter(ctx context.Context, tx *reform.TX, service *
 	return nil
 }
 
-func (svc *Service) addQanAgent(ctx context.Context, tx *reform.TX, service *models.RDSService, node *models.RDSNode, username, password string) error {
-	// Despite running a single qan-agent process on PMM Server, we use one database record per MySQL instance
-	// to store username/password and UUID.
-
-	// insert qan-agent agent and association
-	agent := &models.QanAgent{
-		Type:         models.QanAgentAgentType,
-		RunsOnNodeID: svc.pmmServerNode.ID,
-
-		ServiceUsername: &username,
-		ServicePassword: &password,
-		ListenPort:      pointer.ToUint16(qanAgentPort),
-	}
-	var err error
-	if err = tx.Insert(agent); err != nil {
-		return errors.WithStack(err)
-	}
-	if err = tx.Insert(&models.AgentService{AgentID: agent.ID, ServiceID: service.ID}); err != nil {
-		return errors.WithStack(err)
-	}
-
-	// DSNs for mysqld_exporter and qan-agent are currently identical,
-	// so we do not check connection again
-
-	// start or reconfigure qan-agent
-	if svc.QAN != nil {
-		if err = svc.QAN.AddMySQL(ctx, node.Name, svc.MySQLServiceFromRDSService(service), agent); err != nil {
-			return err
-		}
-
-		// re-save agent with set QANDBInstanceUUID
-		if err = tx.Save(agent); err != nil {
-			return errors.WithStack(err)
-		}
-	}
-
-	return nil
-}
-
-func (svc *Service) MySQLServiceFromRDSService(service *models.RDSService) *models.MySQLService {
-	return &models.MySQLService{
-		ID:     service.ID,
-		Type:   service.Type,
-		NodeID: service.NodeID,
-
-		Address:       service.Address,
-		Port:          service.Port,
-		Engine:        service.Engine,
-		EngineVersion: service.EngineVersion,
-	}
-}
-
 func (svc *Service) Add(ctx context.Context, accessKey, secretKey string, id *InstanceID, username, password string) error {
 	if id.Name == "" {
 		return status.Error(codes.InvalidArgument, "RDS instance name is not given.")
@@ -650,7 +503,7 @@ func (svc *Service) Add(ctx context.Context, accessKey, secretKey string, id *In
 			Region: add.Node.Region,
 		}
 		if err = tx.Insert(node); err != nil {
-			if err, ok := err.(*mysql.MySQLError); ok && err.Number == 0x426 {
+			if err, ok := err.(*mysqlDriver.MySQLError); ok && err.Number == 0x426 {
 				return status.Errorf(codes.AlreadyExists, "RDS instance %q already exists in region %q.",
 					node.Name, node.Region)
 			}
@@ -675,13 +528,13 @@ func (svc *Service) Add(ctx context.Context, accessKey, secretKey string, id *In
 			return errors.WithStack(err)
 		}
 
-		if err = svc.addMySQLdExporter(ctx, tx, service, username, password); err != nil {
+		if err = svc.mysqlServiceHelper.AddMySQLdExporter(ctx, tx, service.ToMySQLService(), username, password); err != nil {
 			return err
 		}
 		if err = svc.addRDSExporter(ctx, tx, service, node); err != nil {
 			return err
 		}
-		if err = svc.addQanAgent(ctx, tx, service, node, username, password); err != nil {
+		if err = svc.mysqlServiceHelper.AddQanAgent(ctx, tx, service.ToMySQLService(), node.Name, username, password); err != nil {
 			return err
 		}
 
@@ -712,36 +565,14 @@ func (svc *Service) Remove(ctx context.Context, id *InstanceID) error {
 			return errors.WithStack(err)
 		}
 
-		// remove associations of the service and agents
-		agentsForService, err := models.AgentsForServiceID(tx.Querier, service.ID)
+		agentsForService, agentsForNode, err := svc.mysqlServiceHelper.AgentsList(tx, service.ID, node.ID)
 		if err != nil {
 			return err
-		}
-		for _, agent := range agentsForService {
-			var deleted uint
-			deleted, err = tx.DeleteFrom(models.AgentServiceView, "WHERE service_id = ? AND agent_id = ?", service.ID, agent.ID)
-			if err != nil {
-				return errors.WithStack(err)
-			}
-			if deleted != 1 {
-				return errors.Errorf("expected to delete 1 record, deleted %d", deleted)
-			}
 		}
 
-		// remove associations of the node and agents
-		agentsForNode, err := models.AgentsForNodeID(tx.Querier, node.ID)
+		err = svc.mysqlServiceHelper.RemoveAgentsAccosiations(tx, service.ID, node.ID, agentsForService, agentsForNode)
 		if err != nil {
 			return err
-		}
-		for _, agent := range agentsForNode {
-			var deleted uint
-			deleted, err = tx.DeleteFrom(models.AgentNodeView, "WHERE node_id = ? AND agent_id = ?", node.ID, agent.ID)
-			if err != nil {
-				return errors.WithStack(err)
-			}
-			if deleted != 1 {
-				return errors.Errorf("expected to delete 1 record, deleted %d", deleted)
-			}
 		}
 
 		// stop agents
@@ -755,49 +586,21 @@ func (svc *Service) Remove(ctx context.Context, id *InstanceID) error {
 		for _, agent := range agents {
 			switch agent.Type {
 			case models.MySQLdExporterAgentType:
-				a := models.MySQLdExporter{ID: agent.ID}
-				if err = tx.Reload(&a); err != nil {
-					return errors.WithStack(err)
-				}
-				if svc.MySQLdExporterPath != "" {
-					if err = svc.Supervisor.Stop(ctx, a.NameForSupervisor()); err != nil {
-						return err
-					}
+				err = svc.mysqlServiceHelper.StopMySQLExporter(ctx, tx, agent)
+				if err != nil {
+					return err
 				}
 
 			case models.RDSExporterAgentType:
-				a := models.RDSExporter{ID: agent.ID}
-				if err = tx.Reload(&a); err != nil {
-					return errors.WithStack(err)
-				}
-				if svc.RDSExporterPath != "" {
-					// update rds_exporter configuration
-					config, err := svc.updateRDSExporterConfig(tx, &service)
-					if err != nil {
-						return err
-					}
-
-					// stop or restart rds_exporter
-					name := a.NameForSupervisor()
-					if err = svc.Supervisor.Stop(ctx, name); err != nil {
-						return err
-					}
-					if len(config.Instances) > 0 {
-						if err = svc.Supervisor.Start(ctx, svc.rdsExporterServiceConfig(name)); err != nil {
-							return err
-						}
-					}
+				err = svc.stopRDSExporter(ctx, tx, agent, &service)
+				if err != nil {
+					return err
 				}
 
 			case models.QanAgentAgentType:
-				a := models.QanAgent{ID: agent.ID}
-				if err = tx.Reload(&a); err != nil {
-					return errors.WithStack(err)
-				}
-				if svc.QAN != nil {
-					if err = svc.QAN.RemoveMySQL(ctx, &a); err != nil {
-						return err
-					}
+				err = svc.mysqlServiceHelper.StopQanAgent(ctx, tx, agent)
+				if err != nil {
+					return err
 				}
 			}
 		}
@@ -841,86 +644,85 @@ func (svc *Service) Restore(ctx context.Context, tx *reform.TX) error {
 		for _, agent := range agents {
 			switch agent.Type {
 			case models.MySQLdExporterAgentType:
-				a := &models.MySQLdExporter{ID: agent.ID}
-				if err = tx.Reload(a); err != nil {
-					return errors.WithStack(err)
-				}
-				dsn := a.DSN(svc.MySQLServiceFromRDSService(service))
-				port := *a.ListenPort
-				if svc.MySQLdExporterPath != "" {
-					name := a.NameForSupervisor()
-
-					// Checks if init script already running.
-					err := svc.Supervisor.Status(ctx, name)
-					if err == nil {
-						// Stops init script.
-						if err = svc.Supervisor.Stop(ctx, name); err != nil {
-							return err
-						}
-					}
-
-					// Installs new version of the script.
-					cfg := svc.mysqlExporterCfg(a, port, dsn)
-					if err = svc.Supervisor.Start(ctx, cfg); err != nil {
-						return err
-					}
+				err = svc.mysqlServiceHelper.RestoreMySQLdExporter(ctx, tx, agent, service.ToMySQLService())
+				if err != nil {
+					return err
 				}
 
 			case models.RDSExporterAgentType:
-				a := models.RDSExporter{ID: agent.ID}
-				if err = tx.Reload(&a); err != nil {
-					return errors.WithStack(err)
-				}
-				if svc.RDSExporterPath != "" {
-					config, err := svc.updateRDSExporterConfig(tx, service)
-					if err != nil {
-						return err
-					}
-
-					if len(config.Instances) > 0 {
-						name := a.NameForSupervisor()
-
-						// Checks if init script already running.
-						err := svc.Supervisor.Status(ctx, name)
-						if err == nil {
-							// Stops init script.
-							if err = svc.Supervisor.Stop(ctx, name); err != nil {
-								return err
-							}
-						}
-
-						// Installs new version of the script.
-						if err = svc.Supervisor.Start(ctx, svc.rdsExporterServiceConfig(name)); err != nil {
-							return err
-						}
-					}
+				err = svc.restoreRDSExporter(ctx, tx, agent, service)
+				if err != nil {
+					return err
 				}
 
 			case models.QanAgentAgentType:
-				a := models.QanAgent{ID: agent.ID}
-				if err = tx.Reload(&a); err != nil {
-					return errors.WithStack(err)
-				}
-				if svc.QAN != nil {
-					name := a.NameForSupervisor()
-
-					// Checks if init script already running.
-					err := svc.Supervisor.Status(ctx, name)
-					if err == nil {
-						// Stops init script.
-						if err = svc.Supervisor.Stop(ctx, name); err != nil {
-							return err
-						}
-					}
-
-					// Installs new version of the script.
-					if err = svc.QAN.EnsureAgentRuns(ctx, name, *a.ListenPort); err != nil {
-						return err
-					}
+				err = svc.mysqlServiceHelper.RestoreQanAgent(ctx, tx, agent)
+				if err != nil {
+					return err
 				}
 			}
 		}
 	}
 
+	return nil
+}
+
+func (svc *Service) restoreRDSExporter(ctx context.Context, tx *reform.TX, agent models.Agent, service *models.RDSService) error {
+
+	a := models.RDSExporter{ID: agent.ID}
+	if err := tx.Reload(&a); err != nil {
+		return errors.WithStack(err)
+	}
+	if svc.RDSExporterPath != "" {
+		config, err := svc.updateRDSExporterConfig(tx, service)
+		if err != nil {
+			return err
+		}
+
+		if len(config.Instances) > 0 {
+			name := a.NameForSupervisor()
+
+			// Checks if init script already running.
+			err := svc.Supervisor.Status(ctx, name)
+			if err == nil {
+				// Stops init script.
+				if err = svc.Supervisor.Stop(ctx, name); err != nil {
+					return err
+				}
+			}
+
+			// Installs new version of the script.
+			if err = svc.Supervisor.Start(ctx, svc.rdsExporterServiceConfig(name)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (svc *Service) stopRDSExporter(ctx context.Context, tx *reform.TX, agent models.Agent, service *models.RDSService) error {
+
+	a := models.RDSExporter{ID: agent.ID}
+	if err := tx.Reload(&a); err != nil {
+		return errors.WithStack(err)
+	}
+	if svc.RDSExporterPath != "" {
+		// update rds_exporter configuration
+		config, err := svc.updateRDSExporterConfig(tx, service)
+		if err != nil {
+			return err
+		}
+
+		// stop or restart rds_exporter
+		name := a.NameForSupervisor()
+		if err = svc.Supervisor.Stop(ctx, name); err != nil {
+			return err
+		}
+		if len(config.Instances) > 0 {
+			if err = svc.Supervisor.Start(ctx, svc.rdsExporterServiceConfig(name)); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }

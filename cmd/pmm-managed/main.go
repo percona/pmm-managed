@@ -164,15 +164,17 @@ type serviceDependencies struct {
 
 func makeRDSService(ctx context.Context, deps *serviceDependencies) (*rds.Service, error) {
 	rdsConfig := rds.ServiceConfig{
-		MySQLdExporterPath:    *agentMySQLdExporterF,
 		RDSExporterPath:       *agentRDSExporterF,
 		RDSExporterConfigPath: *agentRDSExporterConfigF,
 
-		Prometheus:    deps.prometheus,
-		Supervisor:    deps.supervisor,
-		DB:            deps.db,
-		PortsRegistry: deps.portsRegistry,
-		QAN:           deps.qan,
+		ServiceConfig: &mysql.ServiceConfig{
+			MySQLdExporterPath: *agentMySQLdExporterF,
+			Prometheus:         deps.prometheus,
+			Supervisor:         deps.supervisor,
+			DB:                 deps.db,
+			PortsRegistry:      deps.portsRegistry,
+			QAN:                deps.qan,
+		},
 	}
 	rdsService, err := rds.NewService(&rdsConfig)
 	if err != nil {

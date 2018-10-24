@@ -37,10 +37,11 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
-	"gopkg.in/reform.v1/dialects/mysql"
+	reformMySQL "gopkg.in/reform.v1/dialects/mysql"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/mocks"
+	"github.com/percona/pmm-managed/services/mysql"
 	"github.com/percona/pmm-managed/services/prometheus"
 	"github.com/percona/pmm-managed/services/qan"
 	"github.com/percona/pmm-managed/utils/ports"
@@ -129,22 +130,26 @@ func setup(t *testing.T) (context.Context, *Service, *sql.DB, []byte, string, *m
 	ctx, p, before := prometheus.SetupTest(t)
 
 	sqlDB := tests.OpenTestDB(t)
-	db := reform.NewDB(sqlDB, mysql.Dialect, reform.NewPrintfLogger(t.Logf))
+	db := reform.NewDB(sqlDB, reformMySQL.Dialect, reform.NewPrintfLogger(t.Logf))
 	portsRegistry := ports.NewRegistry(30000, 30999, nil)
 
 	supervisor := &mocks.Supervisor{}
 	qan, err := qan.NewService(ctx, rootDir, supervisor)
 	require.NoError(t, err)
 	svc, err := NewService(&ServiceConfig{
-		MySQLdExporterPath:    mySQLdExporterPath,
 		RDSExporterPath:       rdsExporterPath,
 		RDSExporterConfigPath: rdsExporterConfigPath,
-		QAN:                   qan,
-		Supervisor:            supervisor,
 
-		DB:            db,
-		Prometheus:    p,
-		PortsRegistry: portsRegistry,
+		ServiceConfig: &mysql.ServiceConfig{
+			MySQLdExporterPath: mySQLdExporterPath,
+
+			Supervisor: supervisor,
+			Prometheus: p,
+
+			DB:            db,
+			PortsRegistry: portsRegistry,
+			QAN:           qan,
+		},
 	})
 	require.NoError(t, err)
 	return ctx, svc, sqlDB, before, rootDir, supervisor, ts
