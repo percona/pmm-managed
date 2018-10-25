@@ -113,8 +113,11 @@ func (svc *Service) ApplyPrometheusConfiguration(ctx context.Context, q *reform.
 		node := n.(*models.RemoteNode)
 
 		var service models.PostgreSQLService
-		if e := q.SelectOneTo(&service, "WHERE node_id = ? and type = ?", node.ID, models.PostgreSQLServiceType); e != nil {
+		if e := q.SelectOneTo(&service, "WHERE node_id = ?", node.ID); e != nil {
 			return errors.WithStack(e)
+		}
+		if service.Type != models.PostgreSQLServiceType {
+			continue
 		}
 
 		agents, err := models.AgentsForServiceID(q, service.ID)
