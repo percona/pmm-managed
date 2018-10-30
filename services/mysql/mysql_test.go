@@ -239,8 +239,7 @@ func TestRestore(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestExtractFromVersion(t *testing.T) {
-	svc := &Service{}
+func TestNormalizeEngineAndEngineVersion(t *testing.T) {
 	parameters := []struct {
 		versionComment  string
 		version         string
@@ -255,7 +254,7 @@ func TestExtractFromVersion(t *testing.T) {
 	}
 
 	for _, params := range parameters {
-		engine, engineVersion, err := svc.normalizeEngineAndEngineVersion(params.versionComment, params.version)
+		engine, engineVersion, err := normalizeEngineAndEngineVersion(params.versionComment, params.version)
 		assert.NoError(t, err)
 
 		assert.Equal(t, params.expectedEngine, engine, "engine is not equal")

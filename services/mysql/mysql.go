@@ -627,9 +627,10 @@ func (svc *Service) engineAndEngineVersion(ctx context.Context, host string, por
 	if err != nil {
 		return "", "", errors.WithStack(err)
 	}
-	return svc.normalizeEngineAndEngineVersion(versionComment, version)
+	return normalizeEngineAndEngineVersion(versionComment, version)
 }
-func (svc *Service) normalizeEngineAndEngineVersion(engine string, engineVersion string) (string, string, error) {
+
+func normalizeEngineAndEngineVersion(engine string, engineVersion string) (string, string, error) {
 	if versionRegexp.MatchString(engineVersion) {
 		submatch := versionRegexp.FindStringSubmatch(engineVersion)
 		engineVersion = submatch[1]
@@ -641,7 +642,7 @@ func (svc *Service) normalizeEngineAndEngineVersion(engine string, engineVersion
 		return "MariaDB", engineVersion, nil
 	case strings.Contains(lowerEngine, "percona"):
 		return "Percona Server", engineVersion, nil
-
+	default:
+		return "MySQL", engineVersion, nil
 	}
-	return "MySQL", engineVersion, nil
 }
