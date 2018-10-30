@@ -88,9 +88,9 @@ var defaultLogs = []Log{
 	{"/etc/supervisord.d/pmm.ini", "", []string{"cat", ""}},
 	{"/etc/nginx/conf.d/pmm.conf", "", []string{"cat", ""}},
 	{"prometheus_targets.html", "", []string{"http", "http://localhost/prometheus/targets"}},
-	{"consul_nodes.json", "", []string{"consul", "http://localhost/v1/internal/ui/nodes?dc=dc1"}},
+	{"consul_nodes.json", "", []string{"consul"}},
 	{"qan-api_instances.json", "", []string{"http", "http://localhost/qan-api/instances"}},
-	{"managed_RDS-Aurora.json", "", []string{"rds", "http://localhost/managed/v0/rds"}},
+	{"managed_RDS-Aurora.json", "", []string{"rds"}},
 	{"pmm-version.txt", "", []string{"pmmVersion", ""}},
 }
 
@@ -164,43 +164,6 @@ func New(pmmVersion string, consul *consul.Client, rds *rds.Service, logs []Log)
 	return l
 }
 
-// Zip creates .zip archive with all logs.
-func (l *Logs) Zip(ctx context.Context, w io.Writer) error {
-	zw := zip.NewWriter(w)
-	now := time.Now().UTC()
-	for _, log := range l.logs {
-		name, content, err := l.readLog(ctx, &log)
-		if name == "" {
-			continue
-		}
-
-		if err != nil {
-			logger.Get(ctx).WithField("component", "logs").Error(err)
-
-			// do not let a single error break the whole archive
-			if len(content) > 0 {
-				content = append(content, "\n\n"...)
-			}
-			content = append(content, []byte(err.Error())...)
-		}
-
-		f, err := zw.CreateHeader(&zip.FileHeader{
-			Name:     name,
-			Method:   zip.Deflate,
-			Modified: now,
-		})
-		if err != nil {
-			return err
-		}
-		if _, err = f.Write(content); err != nil {
-			return err
-		}
-	}
-
-	// make sure to check the error on Close
-	return zw.Close()
-}
-
 // Files returns list of logs and their content.
 func (l *Logs) Files(ctx context.Context) []File {
 	files := make([]File, len(l.logs))
@@ -212,6 +175,40 @@ func (l *Logs) Files(ctx context.Context) []File {
 	}
 
 	return files
+}
+
+// Zip creates .zip archive with all logs.
+func (l *Logs) Zip(ctx context.Context, w io.Writer) error {
+	zw := zip.NewWriter(w)
+	now := time.Now().UTC()
+	for _, file := range l.Files(ctx) {
+		if file.Err != nil {
+			logger.Get(ctx).WithField("component", "logs").Error(file.Err)
+
+			// do not let a single error break the whole archive
+			if len(file.Data) > 0 {
+				file.Data = append(file.Data, "\n\n"...)
+			}
+			file.Data = append(file.Data, []byte(file.Err.Error())...)
+		}
+
+		if file.Name == "" {
+			continue
+		}
+
+		f, err := zw.CreateHeader(&zip.FileHeader{
+			Name:     file.Name,
+			Method:   zip.Deflate,
+			Modified: now,
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to create zip file header")
+		}
+		if _, err = f.Write(file.Data); err != nil {
+			return errors.Wrap(err, "failed to write zip file data")
+		}
+	}
+	return errors.Wrap(zw.Close(), "failed to close zip file")
 }
 
 // readLog reads last lines from defined Log configuration.
