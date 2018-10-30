@@ -225,6 +225,10 @@ func (l *Logs) Zip(ctx context.Context, w io.Writer) error {
 	zw := zip.NewWriter(w)
 	now := time.Now().UTC()
 	for _, file := range l.Files(ctx) {
+		if file.Name == "" {
+			continue
+		}
+
 		if file.Err != nil {
 			logger.Get(ctx).WithField("component", "logs").Error(file.Err)
 
@@ -233,10 +237,6 @@ func (l *Logs) Zip(ctx context.Context, w io.Writer) error {
 				file.Data = append(file.Data, "\n\n"...)
 			}
 			file.Data = append(file.Data, []byte(file.Err.Error())...)
-		}
-
-		if file.Name == "" {
-			continue
 		}
 
 		f, err := zw.CreateHeader(&zip.FileHeader{
