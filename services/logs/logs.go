@@ -201,7 +201,9 @@ func (l *Logs) Files(ctx context.Context) []File {
 	// in case a single agent does several jobs and is returned several times
 	names := make(map[string]struct{}, len(agents))
 	for _, a := range agents {
-		names[a.(*models.Agent).NameForSupervisor()] = struct{}{}
+		agent := a.(*models.Agent)
+		name := models.NameForSupervisor(agent.Type, *agent.ListenPort)
+		names[name] = struct{}{}
 	}
 
 	for name := range names {

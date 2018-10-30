@@ -43,6 +43,11 @@ const (
 	QanAgentAgentType         AgentType = "qan-agent"
 )
 
+// NameForSupervisor returns a name of agent for supervisor.
+func NameForSupervisor(typ AgentType, listenPort uint16) string {
+	return fmt.Sprintf("pmm-%s-%d", typ, listenPort)
+}
+
 //reform:agents
 type Agent struct {
 	ID           int32     `reform:"id,pk"`
@@ -51,11 +56,6 @@ type Agent struct {
 
 	// TODO Does it really belong there? Remove when we have agent without one.
 	ListenPort *uint16 `reform:"listen_port"`
-}
-
-// NameForSupervisor is a name of agent for supervisor.
-func (a *Agent) NameForSupervisor() string {
-	return fmt.Sprintf("pmm-%s-%d", a.Type, *a.ListenPort)
 }
 
 //reform:agents
@@ -83,11 +83,6 @@ func (m *MySQLdExporter) DSN(service *MySQLService) string {
 	// TODO TLSConfig: "true", https://jira.percona.com/browse/PMM-1727
 	// TODO Other parameters?
 	return cfg.FormatDSN()
-}
-
-// NameForSupervisor is a name of exporter for supervisor.
-func (m *MySQLdExporter) NameForSupervisor() string {
-	return (&Agent{Type: m.Type, ListenPort: m.ListenPort}).NameForSupervisor()
 }
 
 // binary name is postgres_exporter, that's why PostgresExporter below is not PostgreSQLExporter
@@ -120,11 +115,6 @@ func (p *PostgresExporter) DSN(service *PostgreSQLService) string {
 	return uri.String()
 }
 
-// NameForSupervisor is a name of exporter for supervisor.
-func (p *PostgresExporter) NameForSupervisor() string {
-	return (&Agent{Type: p.Type, ListenPort: p.ListenPort}).NameForSupervisor()
-}
-
 //reform:agents
 type RDSExporter struct {
 	ID           int32     `reform:"id,pk"`
@@ -132,11 +122,6 @@ type RDSExporter struct {
 	RunsOnNodeID int32     `reform:"runs_on_node_id"`
 
 	ListenPort *uint16 `reform:"listen_port"`
-}
-
-// NameForSupervisor is a name of exporter for supervisor.
-func (r *RDSExporter) NameForSupervisor() string {
-	return (&Agent{Type: r.Type, ListenPort: r.ListenPort}).NameForSupervisor()
 }
 
 //reform:agents
@@ -164,9 +149,4 @@ func (q *QanAgent) DSN(service *MySQLService) string {
 	// TODO TLSConfig: "true", https://jira.percona.com/browse/PMM-1727
 	// TODO Other parameters?
 	return cfg.FormatDSN()
-}
-
-// NameForSupervisor is a name of agent for supervisor.
-func (q *QanAgent) NameForSupervisor() string {
-	return (&Agent{Type: q.Type, ListenPort: q.ListenPort}).NameForSupervisor()
 }
