@@ -48,6 +48,14 @@ type Agent struct {
 	ID           int32     `reform:"id,pk"`
 	Type         AgentType `reform:"type"`
 	RunsOnNodeID int32     `reform:"runs_on_node_id"`
+
+	// TODO Does it really belong there? Remove when we have agent without one.
+	ListenPort *uint16 `reform:"listen_port"`
+}
+
+// NameForSupervisor is a name of agent for supervisor.
+func (a *Agent) NameForSupervisor() string {
+	return fmt.Sprintf("pmm-%s-%d", a.Type, *a.ListenPort)
 }
 
 //reform:agents
@@ -77,8 +85,9 @@ func (m *MySQLdExporter) DSN(service *MySQLService) string {
 	return cfg.FormatDSN()
 }
 
+// NameForSupervisor is a name of exporter for supervisor.
 func (m *MySQLdExporter) NameForSupervisor() string {
-	return fmt.Sprintf("pmm-%s-%d", m.Type, *m.ListenPort)
+	return (&Agent{Type: m.Type, ListenPort: m.ListenPort}).NameForSupervisor()
 }
 
 // binary name is postgres_exporter, that's why PostgresExporter below is not PostgreSQLExporter
@@ -113,7 +122,7 @@ func (p *PostgresExporter) DSN(service *PostgreSQLService) string {
 
 // NameForSupervisor is a name of exporter for supervisor.
 func (p *PostgresExporter) NameForSupervisor() string {
-	return fmt.Sprintf("pmm-%s-%d", p.Type, *p.ListenPort)
+	return (&Agent{Type: p.Type, ListenPort: p.ListenPort}).NameForSupervisor()
 }
 
 //reform:agents
@@ -125,8 +134,9 @@ type RDSExporter struct {
 	ListenPort *uint16 `reform:"listen_port"`
 }
 
+// NameForSupervisor is a name of exporter for supervisor.
 func (r *RDSExporter) NameForSupervisor() string {
-	return fmt.Sprintf("pmm-%s-%d", r.Type, *r.ListenPort)
+	return (&Agent{Type: r.Type, ListenPort: r.ListenPort}).NameForSupervisor()
 }
 
 //reform:agents
@@ -156,6 +166,7 @@ func (q *QanAgent) DSN(service *MySQLService) string {
 	return cfg.FormatDSN()
 }
 
+// NameForSupervisor is a name of agent for supervisor.
 func (q *QanAgent) NameForSupervisor() string {
-	return fmt.Sprintf("pmm-%s-%d", q.Type, *q.ListenPort)
+	return (&Agent{Type: q.Type, ListenPort: q.ListenPort}).NameForSupervisor()
 }
