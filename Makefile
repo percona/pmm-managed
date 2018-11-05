@@ -1,6 +1,6 @@
 all: test
 
-# installs tools to $GOBIN (or $GOPATH/bin) which is expected to be in $PATH
+# installs tools to $GOPATH/bin which is expected to be in $PATH
 init:
 	go install -v ./vendor/gopkg.in/reform.v1/reform
 	go install -v ./vendor/github.com/vektra/mockery/cmd/mockery
@@ -13,7 +13,7 @@ init:
 
 	go get -u github.com/AlekSi/gocoverutil
 
-	curl https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh
+	curl https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOPATH)/bin
 
 check-license:
 	go run .github/check-license.go
@@ -36,7 +36,7 @@ cover: install
 	gocoverutil -ignore=github.com/percona/pmm-managed/api/... test -v -p 1 ./...
 
 check: install
-	./bin/golangci-lint run
+	golangci-lint run
 
 run: install _run
 
