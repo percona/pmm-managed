@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/Percona-Lab/pmm-api/agent"
+	"github.com/percona/pmm/api/agent"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -56,6 +56,7 @@ func (c *Conn) SendAndRecv(toAgent agent.ServerMessagePayload) (*agent.AgentMess
 	//       we should wait for the right message.
 	//       We should have a single stream receiver in a separate goroutine,
 	//       and internal subscriptions for IDs.
+	//       https://jira.percona.com/browse/PMM-3158
 
 	agentMessage, err := c.stream.Recv()
 	if err != nil {

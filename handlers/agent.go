@@ -20,9 +20,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/Percona-Lab/pmm-api/agent"
-	"github.com/Percona-Lab/pmm-api/inventory"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/percona/pmm/api/agent"
+	"github.com/percona/pmm/api/inventory"
 	"github.com/pkg/errors"
 
 	"github.com/percona/pmm-managed/services/agents"
@@ -49,13 +49,13 @@ func (s *AgentServer) Connect(stream agent.Agent_ConnectServer) error {
 		return err
 	}
 	l.Infof("Recv: %T %s.", agentMessage, agentMessage)
-	connect := agentMessage.GetConnect()
-	if connect == nil {
-		return errors.Errorf("Expected ConnectRequest, got %T.", agentMessage.Payload)
+	auth := agentMessage.GetAuth()
+	if auth == nil {
+		return errors.Errorf("Expected AuthRequest, got %T.", agentMessage.Payload)
 	}
 	serverMessage := &agent.ServerMessage{
-		Payload: &agent.ServerMessage_Connect{
-			Connect: &agent.ConnectResponse{},
+		Payload: &agent.ServerMessage_Auth{
+			Auth: &agent.AuthResponse{},
 		},
 	}
 	if err = stream.Send(serverMessage); err != nil {
@@ -64,7 +64,7 @@ func (s *AgentServer) Connect(stream agent.Agent_ConnectServer) error {
 
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
-	conn := agents.NewConn(connect.Uuid, stream)
+	conn := agents.NewConn(auth.Uuid, stream)
 	for {
 		select {
 		case <-stream.Context().Done():
@@ -73,7 +73,13 @@ func (s *AgentServer) Connect(stream agent.Agent_ConnectServer) error {
 		case exporter := <-s.Store.NewExporters():
 			_, err = conn.SendAndRecv(&agent.ServerMessage_State{
 				State: &agent.SetStateRequest{
-					MysqldExporters: []*inventory.MySQLdExporter{exporter},
+					AgentProcesses: []*agent.SetStateRequest_AgentProcess{{
+						AgentId: exporter.Id,
+						Type:    inventory.AgentType_MYSQLD_EXPORTER,
+						Args:    nil,
+						Env:     nil,
+						Configs: nil,
+					}},
 				},
 			})
 			if err != nil {

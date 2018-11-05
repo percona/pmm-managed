@@ -33,10 +33,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Percona-Lab/pmm-api/agent"
-	"github.com/Percona-Lab/pmm-api/inventory"
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/percona/pmm/api/agent"
+	"github.com/percona/pmm/api/inventory"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
@@ -309,12 +309,15 @@ func runGRPCServer(ctx context.Context, deps *grpcServerDependencies) {
 	agent.RegisterAgentServer(gRPCServer, &handlers.AgentServer{
 		Store: store,
 	})
-	inventoryServer := &handlers.InventoryServer{
+	inventory.RegisterNodesServer(gRPCServer, &handlers.NodesServer{
 		Store: store,
-	}
-	inventory.RegisterNodesServer(gRPCServer, inventoryServer)
-	inventory.RegisterServicesServer(gRPCServer, inventoryServer)
-	inventory.RegisterAgentsServer(gRPCServer, inventoryServer)
+	})
+	inventory.RegisterServicesServer(gRPCServer, &handlers.ServicesServer{
+		Store: store,
+	})
+	inventory.RegisterAgentsServer(gRPCServer, &handlers.AgentsServer{
+		Store: store,
+	})
 
 	if *debugF {
 		l.Debug("Reflection enabled.")

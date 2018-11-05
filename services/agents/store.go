@@ -21,7 +21,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/Percona-Lab/pmm-api/inventory"
+	"github.com/percona/pmm/api/inventory"
 )
 
 // Store is a temporary store for nodes, services, and agents.
@@ -51,7 +51,7 @@ func (s *Store) RegisterAgent() string {
 	return uuid.String()
 }
 
-func (s *Store) AddBareMetalNode(req *inventory.AddBareMetalNodeRequest) *inventory.BareMetalNode {
+func (s *Store) AddNode(req *inventory.AddNodeRequest) *inventory.AddNodeResponse {
 	s.m.Lock()
 	defer s.m.Unlock()
 
@@ -63,10 +63,14 @@ func (s *Store) AddBareMetalNode(req *inventory.AddBareMetalNodeRequest) *invent
 		Hostname: req.Hostname,
 	}
 	s.nodes[id] = node
-	return node
+	return &inventory.AddNodeResponse{
+		Node: &inventory.AddNodeResponse_BareMetal{
+			BareMetal: node,
+		},
+	}
 }
 
-func (s *Store) AddMySQLdExporter(req *inventory.AddMySQLdExporterRequest) *inventory.MySQLdExporter {
+func (s *Store) AddMySQLdExporter(req *inventory.AddMySQLdExporterAgentRequest) *inventory.AddMySQLdExporterAgentResponse {
 	s.m.Lock()
 	defer s.m.Unlock()
 
@@ -83,7 +87,9 @@ func (s *Store) AddMySQLdExporter(req *inventory.AddMySQLdExporterRequest) *inve
 
 	s.newExporters <- exporter
 
-	return exporter
+	return &inventory.AddMySQLdExporterAgentResponse{
+		MysqldExporter: exporter,
+	}
 }
 
 func (s *Store) NewExporters() <-chan *inventory.MySQLdExporter {
