@@ -10,17 +10,6 @@
   version = "v1.0.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:2fddf91d47fc8a31fa3ab7c642ec8ed90b48933c41e9f070fe03e28dc8352495"
-  name = "github.com/Percona-Lab/pmm-api"
-  packages = [
-    "agent",
-    "inventory",
-  ]
-  pruneopts = "T"
-  revision = "5a62c789dd2295aaa4be7fb612615a2005fb3ae5"
-
-[[projects]]
   digest = "1:4362374738ba28a25378bcf08dc29d7e720ca214b2674b641dcaaa3320b2be19"
   name = "github.com/Percona-Lab/promconfig"
   packages = [
@@ -533,15 +522,17 @@
   revision = "53dc743339ca3089f5648746b6a7eb42f0fe2c02"
 
 [[projects]]
-  branch = "master"
-  digest = "1:c244288746e1ecdcffcdf38f272cf9b70918df6714260991e4f704b42bb36a5f"
+  branch = "PMM-3105-api-2.0"
+  digest = "1:c6afc6d2fb7e37ccf7d06e9e0e632089a3267c24a1d0b345babf3fa9dad47251"
   name = "github.com/percona/pmm"
   packages = [
+    "api/agent",
+    "api/inventory",
     "proto",
     "proto/config",
   ]
   pruneopts = "T"
-  revision = "bafe2cdcdf68f608c2ec00b8f0260f2c2a04849c"
+  revision = "e852048bb9bcd0d91a28e9405e47dcb93f8c5857"
 
 [[projects]]
   digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
@@ -798,7 +789,7 @@
   revision = "383e8b2c3b9e36c4076b235b32537292176bae20"
 
 [[projects]]
-  digest = "1:1cbd746dcb73e28898e1539bf866044a9e5b96c965112772c111bffbb4037255"
+  digest = "1:ef437b2116089e1355b910bcbfb66c90d5164c6623f37deb5b94a6973a1ddf16"
   name = "google.golang.org/grpc"
   packages = [
     ".",
@@ -831,8 +822,8 @@
     "tap",
   ]
   pruneopts = "T"
-  revision = "8dea3dc473e90c8179e519d91302d0597c0ca1d1"
-  version = "v1.15.0"
+  revision = "2e463a05d100327ca47ac218281906921038fd95"
+  version = "v1.16.0"
 
 [[projects]]
   digest = "1:ed86c98e61a6bb7a2de5d123c8f2854989f0851a662a83a3ecf7936c9582d25b"
@@ -866,8 +857,6 @@
   analyzer-version = 1
   input-imports = [
     "github.com/AlekSi/pointer",
-    "github.com/Percona-Lab/pmm-api/agent",
-    "github.com/Percona-Lab/pmm-api/inventory",
     "github.com/Percona-Lab/promconfig/common/config",
     "github.com/Percona-Lab/promconfig/config",
     "github.com/Percona-Lab/promconfig/discovery/config",
@@ -878,8 +867,6 @@
     "github.com/aws/aws-sdk-go/aws/endpoints",
     "github.com/aws/aws-sdk-go/aws/session",
     "github.com/aws/aws-sdk-go/service/rds",
-    "github.com/go-openapi/strfmt",
-    "github.com/go-openapi/swag",
     "github.com/go-sql-driver/mysql",
     "github.com/go-swagger/go-swagger/cmd/swagger",
     "github.com/golang/protobuf/proto",
@@ -895,6 +882,8 @@
     "github.com/hashicorp/consul/api",
     "github.com/lib/pq",
     "github.com/percona/kardianos-service",
+    "github.com/percona/pmm/api/agent",
+    "github.com/percona/pmm/api/inventory",
     "github.com/percona/pmm/proto",
     "github.com/percona/pmm/proto/config",
     "github.com/pkg/errors",
