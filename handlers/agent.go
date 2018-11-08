@@ -71,13 +71,16 @@ func (s *AgentServer) Connect(stream agent.Agent_ConnectServer) error {
 			return nil
 
 		case exporter := <-s.Store.NewExporters():
+			env := []string{
+				`DATA_SOURCE_NAME="/"`,
+			}
 			_, err = conn.SendAndRecv(&agent.ServerMessage_State{
 				State: &agent.SetStateRequest{
 					AgentProcesses: []*agent.SetStateRequest_AgentProcess{{
 						AgentId: exporter.Id,
 						Type:    inventory.AgentType_MYSQLD_EXPORTER,
 						Args:    nil,
-						Env:     nil,
+						Env:     env,
 						Configs: nil,
 					}},
 				},

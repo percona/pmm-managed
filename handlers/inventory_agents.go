@@ -38,7 +38,7 @@ func (s *AgentsServer) GetAgent(ctx context.Context, req *inventory.GetAgentRequ
 }
 
 func (s *AgentsServer) AddMySQLdExporterAgent(ctx context.Context, req *inventory.AddMySQLdExporterAgentRequest) (*inventory.AddMySQLdExporterAgentResponse, error) {
-	panic("not implemented")
+	return s.Store.AddMySQLdExporter(req), nil
 }
 
 func (s *AgentsServer) RemoveAgent(ctx context.Context, req *inventory.RemoveAgentRequest) (*inventory.RemoveAgentResponse, error) {
