@@ -18,7 +18,6 @@
 package agents
 
 import (
-	"fmt"
 	"sync/atomic"
 
 	"github.com/percona/pmm/api/agent"
@@ -29,16 +28,21 @@ import (
 )
 
 type Conn struct {
-	stream agent.Agent_ConnectServer
-	lastID uint32
-	l      *logrus.Entry
+	stream            agent.Agent_ConnectServer
+	lastID            uint32
+	l                 *logrus.Entry
+	messageDispatcher *messageDispatcher
 }
 
 func NewConn(uuid string, stream agent.Agent_ConnectServer) *Conn {
-	return &Conn{
-		stream: stream,
-		l:      logrus.WithField("pmm-agent", uuid),
+	// Create goroutine to dispatch messages
+	conn := &Conn{
+		stream:            stream,
+		l:                 logrus.WithField("pmm-agent", uuid),
+		messageDispatcher: newMessageDispatcher(uuid),
 	}
+	go conn.startMessageDispatcher()
+	return conn
 }
 
 func (c *Conn) SendAndRecv(toAgent agent.ServerMessagePayload) (*agent.AgentMessage, error) {
@@ -52,19 +56,28 @@ func (c *Conn) SendAndRecv(toAgent agent.ServerMessagePayload) (*agent.AgentMess
 		return nil, errors.Wrap(err, "failed to send message to agent")
 	}
 
-	// FIXME Instead of reading the next message and dropping it if it is not what we expect,
-	//       we should wait for the right message.
-	//       We should have a single stream receiver in a separate goroutine,
-	//       and internal subscriptions for IDs.
-	//       https://jira.percona.com/browse/PMM-3158
-
-	agentMessage, err := c.stream.Recv()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to receive message from agent")
-	}
+	agentMessage := c.messageDispatcher.WaitForMessage(id)
 	c.l.Debugf("Recv: %s.", agentMessage)
-	if agentMessage.Id != id {
-		return nil, status.Errorf(codes.Internal, fmt.Sprintf("expected message from agent with ID %d, got ID %d", id, agentMessage.Id))
-	}
+
 	return agentMessage, nil
+}
+func (c *Conn) startMessageDispatcher() {
+	for {
+		select {
+		case <-c.stream.Context().Done():
+			c.l.Debugln("Close connection: ", c.lastID)
+			return
+		default:
+			agentMessage, err := c.stream.Recv()
+			if err != nil {
+				errorStatus, ok := status.FromError(err)
+				if ok && errorStatus.Code() == codes.Canceled {
+					c.l.Debugln("Connection closed from other side")
+					return
+				}
+				c.l.Fatal(errors.Wrap(err, "failed to receive message from agent"))
+			}
+			c.messageDispatcher.MessageReceived(agentMessage)
+		}
+	}
 }
