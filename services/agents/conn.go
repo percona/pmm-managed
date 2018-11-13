@@ -89,7 +89,7 @@ func (c *Conn) emit(message *agent.AgentMessage) {
 			}()
 		}
 	} else {
-		c.l.Warnln("Unexpected message: %T %s", message, message)
+		c.l.Warnf("Unexpected message: %T %s", message, message)
 	}
 }
 
