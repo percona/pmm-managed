@@ -83,10 +83,10 @@ func (c *Conn) emit(message *agent.AgentMessage) {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 	if _, ok := c.subscribers[message.Id]; ok {
-		for _, subscriber := range c.subscribers[message.Id] {
-			go func() {
+		for i := range c.subscribers[message.Id] {
+			go func(subscriber chan *agent.AgentMessage) {
 				subscriber <- message
-			}()
+			}(c.subscribers[message.Id][i])
 		}
 	} else {
 		c.l.Warnf("Unexpected message: %T %s", message, message)
