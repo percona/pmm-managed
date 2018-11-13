@@ -18,30 +18,30 @@
 package agents
 
 import (
+	"sync"
 	"sync/atomic"
 
 	"github.com/percona/pmm/api/agent"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type Conn struct {
-	stream            agent.Agent_ConnectServer
-	lastID            uint32
-	l                 *logrus.Entry
-	messageDispatcher *messageDispatcher
+	stream      agent.Agent_ConnectServer
+	lastID      uint32
+	l           *logrus.Entry
+	rw          sync.RWMutex
+	subscribers map[uint32][]chan *agent.AgentMessage
 }
 
 func NewConn(uuid string, stream agent.Agent_ConnectServer) *Conn {
-	// Create goroutine to dispatch messages
 	conn := &Conn{
-		stream:            stream,
-		l:                 logrus.WithField("pmm-agent", uuid),
-		messageDispatcher: newMessageDispatcher(uuid),
+		stream:      stream,
+		l:           logrus.WithField("pmm-agent", uuid),
+		subscribers: make(map[uint32][]chan *agent.AgentMessage),
 	}
-	go conn.startMessageDispatcher()
+	// create goroutine to dispatch messages
+	go conn.startResponseDispatcher()
 	return conn
 }
 
@@ -56,28 +56,61 @@ func (c *Conn) SendAndRecv(toAgent agent.ServerMessagePayload) (*agent.AgentMess
 		return nil, errors.Wrap(err, "failed to send message to agent")
 	}
 
-	agentMessage := c.messageDispatcher.WaitForMessage(id)
+	agentChan := make(chan *agent.AgentMessage)
+	defer close(agentChan)
+
+	c.addSubscriber(id, agentChan)
+	defer c.removeSubscriber(id, agentChan)
+
+	agentMessage := <-agentChan
 	c.l.Debugf("Recv: %s.", agentMessage)
 
 	return agentMessage, nil
 }
-func (c *Conn) startMessageDispatcher() {
-	for {
-		select {
-		case <-c.stream.Context().Done():
-			c.l.Debugln("Close connection: ", c.lastID)
+
+func (c *Conn) startResponseDispatcher() {
+	for c.stream.Context().Err() != nil {
+		agentMessage, err := c.stream.Recv()
+		if err != nil {
+			c.l.Warnln("Connection closed", err)
 			return
-		default:
-			agentMessage, err := c.stream.Recv()
-			if err != nil {
-				errorStatus, ok := status.FromError(err)
-				if ok && errorStatus.Code() == codes.Canceled {
-					c.l.Debugln("Connection closed from other side")
-					return
-				}
-				c.l.Fatal(errors.Wrap(err, "failed to receive message from agent"))
+		}
+		c.emit(agentMessage)
+	}
+}
+
+func (c *Conn) emit(message *agent.AgentMessage) {
+	c.rw.Lock()
+	defer c.rw.Unlock()
+	if _, ok := c.subscribers[message.Id]; ok {
+		for _, subscriber := range c.subscribers[message.Id] {
+			go func() {
+				subscriber <- message
+			}()
+		}
+	} else {
+		c.l.Warnln("Unexpected message: %T %s", message, message)
+	}
+}
+
+func (c *Conn) removeSubscriber(id uint32, agentChan chan *agent.AgentMessage) {
+	c.rw.Lock()
+	defer c.rw.Unlock()
+	if _, ok := c.subscribers[id]; ok {
+		for i := range c.subscribers[id] {
+			if c.subscribers[id][i] == agentChan {
+				c.subscribers[id] = append(c.subscribers[id][:i], c.subscribers[id][i+1:]...)
+				break
 			}
-			c.messageDispatcher.MessageReceived(agentMessage)
 		}
 	}
+}
+
+func (c *Conn) addSubscriber(id uint32, agentChan chan *agent.AgentMessage) {
+	c.rw.Lock()
+	defer c.rw.Unlock()
+	if _, ok := c.subscribers[id]; !ok {
+		c.subscribers[id] = []chan *agent.AgentMessage{}
+	}
+	c.subscribers[id] = append(c.subscribers[id], agentChan)
 }
