@@ -32,6 +32,7 @@ type Conn struct {
 	l           *logrus.Entry
 	rw          sync.RWMutex
 	subscribers map[uint32][]chan *agent.AgentMessage
+	requestChan chan *agent.AgentMessage
 }
 
 func NewConn(uuid string, stream agent.Agent_ConnectServer) *Conn {
@@ -39,6 +40,7 @@ func NewConn(uuid string, stream agent.Agent_ConnectServer) *Conn {
 		stream:      stream,
 		l:           logrus.WithField("pmm-agent", uuid),
 		subscribers: make(map[uint32][]chan *agent.AgentMessage),
+		requestChan: make(chan *agent.AgentMessage),
 	}
 	// create goroutine to dispatch messages
 	go conn.startResponseDispatcher()
@@ -68,6 +70,12 @@ func (c *Conn) SendAndRecv(toAgent agent.ServerMessagePayload) (*agent.AgentMess
 	return agentMessage, nil
 }
 
+func (c *Conn) RecvRequestMessage() *agent.AgentMessage {
+	agentMessage := <-c.requestChan
+	c.l.Debugf("Recv: %s.", agentMessage)
+	return agentMessage
+}
+
 func (c *Conn) startResponseDispatcher() {
 	for c.stream.Context().Err() != nil {
 		agentMessage, err := c.stream.Recv()
@@ -75,13 +83,21 @@ func (c *Conn) startResponseDispatcher() {
 			c.l.Warnln("Connection closed", err)
 			return
 		}
-		c.emit(agentMessage)
+
+		switch agentMessage.GetPayload().(type) {
+		case *agent.AgentMessage_Ping, *agent.AgentMessage_State:
+			go func(agentMessage *agent.AgentMessage) {
+				c.requestChan <- agentMessage
+			}(agentMessage)
+		case *agent.AgentMessage_Auth, *agent.AgentMessage_QanData:
+			c.emit(agentMessage)
+		}
 	}
 }
 
 func (c *Conn) emit(message *agent.AgentMessage) {
-	c.rw.Lock()
-	defer c.rw.Unlock()
+	c.rw.RLock()
+	defer c.rw.RUnlock()
 	if _, ok := c.subscribers[message.Id]; ok {
 		for i := range c.subscribers[message.Id] {
 			go func(subscriber chan *agent.AgentMessage) {
