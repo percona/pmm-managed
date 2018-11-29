@@ -16,40 +16,92 @@
 
 package models
 
+import (
+	"time"
+
+	"gopkg.in/reform.v1"
+)
+
 //go:generate reform
 
 type NodeType string
 
-// Node types
+// Node types.
 const (
-	PMMServerNodeType NodeType = "pmm-server"
-	RDSNodeType       NodeType = "rds"
-	RemoteNodeType    NodeType = "remote"
+	PMMServerNodeType NodeType = "pmm-server" // FIXME remove
+
+	BareMetalNodeType      NodeType = "bare-metal"
+	VirtualMachineNodeType NodeType = "virtual-machine"
+	ContainerNodeType      NodeType = "container"
+	RemoteNodeType         NodeType = "remote"
+	AWSRDSNodeType         NodeType = "aws-rds"
 )
 
 const RemoteNodeRegion string = "remote"
 
 //reform:nodes
 type Node struct {
-	ID   int32    `reform:"id,pk"`
+	ID   uint32   `reform:"id,pk"`
 	Type NodeType `reform:"type"`
 	Name string   `reform:"name"`
 }
 
 //reform:nodes
-type RDSNode struct {
-	ID   int32    `reform:"id,pk"`
+type NodeRow struct {
+	ID        uint32    `reform:"id,pk"`
+	Type      NodeType  `reform:"type"`
+	Name      string    `reform:"name"`
+	CreatedAt time.Time `reform:"created_at"`
+	UpdatedAt time.Time `reform:"updated_at"`
+
+	Hostname *string `reform:"hostname"`
+	Region   *string `reform:"region"`
+}
+
+func (nr *NodeRow) BeforeInsert() error {
+	now := time.Now().Truncate(time.Microsecond).UTC()
+	nr.CreatedAt = now
+	nr.UpdatedAt = now
+	return nil
+}
+
+func (nr *NodeRow) BeforeUpdate() error {
+	now := time.Now().Truncate(time.Microsecond).UTC()
+	nr.UpdatedAt = now
+	return nil
+}
+
+func (nr *NodeRow) AfterFind() error {
+	nr.CreatedAt = nr.CreatedAt.UTC()
+	nr.UpdatedAt = nr.UpdatedAt.UTC()
+	return nil
+}
+
+// check interfaces
+var (
+	_ reform.BeforeInserter = (*NodeRow)(nil)
+	_ reform.BeforeUpdater  = (*NodeRow)(nil)
+	_ reform.AfterFinder    = (*NodeRow)(nil)
+)
+
+// TODO remove types below
+
+//reform:nodes
+type AWSRDSNode struct {
+	ID   uint32   `reform:"id,pk"`
 	Type NodeType `reform:"type"`
 	Name string   `reform:"name"` // DBInstanceIdentifier
 
-	Region string `reform:"region"` // not a pointer, see database structure
+	// Hostname *string `reform:"hostname"`
+	Region *string `reform:"region"`
 }
 
 //reform:nodes
 type RemoteNode struct {
-	ID   int32    `reform:"id,pk"`
+	ID   uint32   `reform:"id,pk"`
 	Type NodeType `reform:"type"`
 	Name string   `reform:"name"` // DBInstanceIdentifier
 
-	Region string `reform:"region"` // not a pointer, see database structure
+	// Hostname *string `reform:"hostname"`
+	Region *string `reform:"region"`
 }

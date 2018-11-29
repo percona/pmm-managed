@@ -121,8 +121,8 @@ type InstanceID struct {
 }
 
 type Instance struct {
-	Node    models.RDSNode
-	Service models.RDSService
+	Node    models.AWSRDSNode
+	Service models.AWSRDSService
 }
 
 func (svc *Service) ApplyPrometheusConfiguration(ctx context.Context, q *reform.Querier) error {
@@ -174,14 +174,14 @@ func (svc *Service) ApplyPrometheusConfiguration(ctx context.Context, q *reform.
 		HonorLabels:    true,
 	}
 
-	nodes, err := q.FindAllFrom(models.RDSNodeTable, "type", models.RDSNodeType)
+	nodes, err := q.FindAllFrom(models.AWSRDSNodeTable, "type", models.AWSRDSNodeType)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	for _, n := range nodes {
-		node := n.(*models.RDSNode)
+		node := n.(*models.AWSRDSNode)
 
-		var service models.RDSService
+		var service models.AWSRDSService
 		if e := q.SelectOneTo(&service, "WHERE node_id = ?", node.ID); e != nil {
 			return errors.WithStack(e)
 		}
@@ -200,12 +200,12 @@ func (svc *Service) ApplyPrometheusConfiguration(ctx context.Context, q *reform.
 				if e := q.Reload(&a); e != nil {
 					return errors.WithStack(e)
 				}
-				logger.Get(ctx).WithField("component", "rds").Infof("%s %s %s %d", a.Type, node.Name, node.Region, *a.ListenPort)
+				logger.Get(ctx).WithField("component", "rds").Infof("%s %s %s %d", a.Type, node.Name, *node.Region, *a.ListenPort)
 
 				sc := prometheus.StaticConfig{
 					Targets: []string{fmt.Sprintf("127.0.0.1:%d", *a.ListenPort)},
 					Labels: []prometheus.LabelPair{
-						{Name: "aws_region", Value: node.Region},
+						{Name: "aws_region", Value: pointer.GetString(node.Region)},
 						{Name: "instance", Value: node.Name},
 					},
 				}
@@ -218,12 +218,12 @@ func (svc *Service) ApplyPrometheusConfiguration(ctx context.Context, q *reform.
 				if e := q.Reload(&a); e != nil {
 					return errors.WithStack(e)
 				}
-				logger.Get(ctx).WithField("component", "rds").Infof("%s %s %s %d", a.Type, node.Name, node.Region, *a.ListenPort)
+				logger.Get(ctx).WithField("component", "rds").Infof("%s %s %s %d", a.Type, node.Name, *node.Region, *a.ListenPort)
 
 				sc := prometheus.StaticConfig{
 					Targets: []string{fmt.Sprintf("127.0.0.1:%d", *a.ListenPort)},
 					Labels: []prometheus.LabelPair{
-						{Name: "aws_region", Value: node.Region},
+						{Name: "aws_region", Value: pointer.GetString(node.Region)},
 						{Name: "instance", Value: node.Name},
 					},
 				}
@@ -310,14 +310,14 @@ func (svc *Service) Discover(ctx context.Context, accessKey, secretKey string) (
 			l.Debugf("Got %d instances from %s.", len(out.DBInstances), region)
 			for _, db := range out.DBInstances {
 				instances <- Instance{
-					Node: models.RDSNode{
-						Type: models.RDSNodeType,
+					Node: models.AWSRDSNode{
+						Type: models.AWSRDSNodeType,
 						Name: *db.DBInstanceIdentifier,
 
-						Region: region,
+						Region: pointer.ToString(region),
 					},
-					Service: models.RDSService{
-						Type: models.RDSServiceType,
+					Service: models.AWSRDSService{
+						Type: models.AWSRDSServiceType,
 
 						Address:       db.Endpoint.Address,
 						Port:          pointer.ToUint16(uint16(*db.Endpoint.Port)),
@@ -342,7 +342,7 @@ func (svc *Service) Discover(ctx context.Context, accessKey, secretKey string) (
 	}
 	sort.Slice(res, func(i, j int) bool {
 		if res[i].Node.Region != res[j].Node.Region {
-			return res[i].Node.Region < res[j].Node.Region
+			return pointer.GetString(res[i].Node.Region) < pointer.GetString(res[j].Node.Region)
 		}
 		return res[i].Node.Name < res[j].Node.Name
 	})
@@ -352,22 +352,22 @@ func (svc *Service) Discover(ctx context.Context, accessKey, secretKey string) (
 func (svc *Service) List(ctx context.Context) ([]Instance, error) {
 	var res []Instance
 	err := svc.DB.InTransaction(func(tx *reform.TX) error {
-		structs, e := tx.SelectAllFrom(models.RDSNodeTable, "WHERE type = ? ORDER BY id", models.RDSNodeType)
+		structs, e := tx.SelectAllFrom(models.AWSRDSNodeTable, "WHERE type = ? ORDER BY id", models.AWSRDSNodeType)
 		if e != nil {
 			return e
 		}
-		nodes := make([]models.RDSNode, len(structs))
+		nodes := make([]models.AWSRDSNode, len(structs))
 		for i, str := range structs {
-			nodes[i] = *str.(*models.RDSNode)
+			nodes[i] = *str.(*models.AWSRDSNode)
 		}
 
-		structs, e = tx.SelectAllFrom(models.RDSServiceTable, "WHERE type = ? ORDER BY id", models.RDSServiceType)
+		structs, e = tx.SelectAllFrom(models.AWSRDSServiceTable, "WHERE type = ? ORDER BY id", models.AWSRDSServiceType)
 		if e != nil {
 			return e
 		}
-		services := make([]models.RDSService, len(structs))
+		services := make([]models.AWSRDSService, len(structs))
 		for i, str := range structs {
-			services[i] = *str.(*models.RDSService)
+			services[i] = *str.(*models.AWSRDSService)
 		}
 
 		for _, node := range nodes {
@@ -385,7 +385,7 @@ func (svc *Service) List(ctx context.Context) ([]Instance, error) {
 	return res, err
 }
 
-func (svc *Service) addMySQLdExporter(ctx context.Context, tx *reform.TX, service *models.RDSService, username, password string) error {
+func (svc *Service) addMySQLdExporter(ctx context.Context, tx *reform.TX, service *models.AWSRDSService, username, password string) error {
 	// insert mysqld_exporter agent and association
 	port, err := svc.PortsRegistry.Reserve()
 	if err != nil {
@@ -478,17 +478,17 @@ func (svc *Service) mysqlExporterCfg(agent *models.MySQLdExporter, dsn string) *
 	}
 }
 
-func (svc *Service) updateRDSExporterConfig(tx *reform.TX, service *models.RDSService) (*rdsExporterConfig, error) {
+func (svc *Service) updateRDSExporterConfig(tx *reform.TX, service *models.AWSRDSService) (*rdsExporterConfig, error) {
 	// collect all RDS nodes
 	var config rdsExporterConfig
-	nodes, err := tx.FindAllFrom(models.RDSNodeTable, "type", models.RDSNodeType)
+	nodes, err := tx.FindAllFrom(models.AWSRDSNodeTable, "type", models.AWSRDSNodeType)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	for _, n := range nodes {
-		node := n.(*models.RDSNode)
+		node := n.(*models.AWSRDSNode)
 		instance := rdsExporterInstance{
-			Region:       node.Region,
+			Region:       pointer.GetString(node.Region),
 			Instance:     node.Name,
 			Type:         unknown,
 			AWSAccessKey: service.AWSAccessKey,
@@ -536,7 +536,7 @@ func (svc *Service) rdsExporterServiceConfig(agent *models.RDSExporter) *service
 	}
 }
 
-func (svc *Service) addRDSExporter(ctx context.Context, tx *reform.TX, service *models.RDSService, node *models.RDSNode) error {
+func (svc *Service) addRDSExporter(ctx context.Context, tx *reform.TX, service *models.AWSRDSService, node *models.AWSRDSNode) error {
 	// insert rds_exporter agent and associations
 	agent := &models.RDSExporter{
 		Type:         models.RDSExporterAgentType,
@@ -574,7 +574,7 @@ func (svc *Service) addRDSExporter(ctx context.Context, tx *reform.TX, service *
 	return nil
 }
 
-func (svc *Service) addQanAgent(ctx context.Context, tx *reform.TX, service *models.RDSService, node *models.RDSNode, username, password string) error {
+func (svc *Service) addQanAgent(ctx context.Context, tx *reform.TX, service *models.AWSRDSService, node *models.AWSRDSNode, username, password string) error {
 	// Despite running a single qan-agent process on PMM Server, we use one database record per MySQL instance
 	// to store username/password and UUID.
 
@@ -613,7 +613,7 @@ func (svc *Service) addQanAgent(ctx context.Context, tx *reform.TX, service *mod
 	return nil
 }
 
-func (svc *Service) MySQLServiceFromRDSService(service *models.RDSService) *models.MySQLService {
+func (svc *Service) MySQLServiceFromRDSService(service *models.AWSRDSService) *models.MySQLService {
 	return &models.MySQLService{
 		ID:     service.ID,
 		Type:   service.Type,
@@ -644,7 +644,7 @@ func (svc *Service) Add(ctx context.Context, accessKey, secretKey string, id *In
 
 	var add *Instance
 	for _, instance := range instances {
-		if instance.Node.Name == id.Name && instance.Node.Region == id.Region {
+		if instance.Node.Name == id.Name && pointer.GetString(instance.Node.Region) == id.Region {
 			add = &instance
 			break
 		}
@@ -655,8 +655,8 @@ func (svc *Service) Add(ctx context.Context, accessKey, secretKey string, id *In
 
 	return svc.DB.InTransaction(func(tx *reform.TX) error {
 		// insert node
-		node := &models.RDSNode{
-			Type: models.RDSNodeType,
+		node := &models.AWSRDSNode{
+			Type: models.AWSRDSNodeType,
 			Name: add.Node.Name,
 
 			Region: add.Node.Region,
@@ -664,14 +664,14 @@ func (svc *Service) Add(ctx context.Context, accessKey, secretKey string, id *In
 		if err = tx.Insert(node); err != nil {
 			if err, ok := err.(*mysql.MySQLError); ok && err.Number == 0x426 {
 				return status.Errorf(codes.AlreadyExists, "RDS instance %q already exists in region %q.",
-					node.Name, node.Region)
+					node.Name, *node.Region)
 			}
 			return errors.WithStack(err)
 		}
 
 		// insert service
-		service := &models.RDSService{
-			Type:   models.RDSServiceType,
+		service := &models.AWSRDSService{
+			Type:   models.AWSRDSServiceType,
 			NodeID: node.ID,
 
 			Address:       add.Service.Address,
@@ -711,15 +711,15 @@ func (svc *Service) Remove(ctx context.Context, id *InstanceID) error {
 
 	var err error
 	return svc.DB.InTransaction(func(tx *reform.TX) error {
-		var node models.RDSNode
-		if err = tx.SelectOneTo(&node, "WHERE type = ? AND name = ? AND region = ?", models.RDSNodeType, id.Name, id.Region); err != nil {
+		var node models.AWSRDSNode
+		if err = tx.SelectOneTo(&node, "WHERE type = ? AND name = ? AND region = ?", models.AWSRDSNodeType, id.Name, id.Region); err != nil {
 			if err == reform.ErrNoRows {
 				return status.Errorf(codes.NotFound, "RDS instance %q not found in region %q.", id.Name, id.Region)
 			}
 			return errors.WithStack(err)
 		}
 
-		var service models.RDSService
+		var service models.AWSRDSService
 		if err = tx.SelectOneTo(&service, "WHERE node_id = ?", node.ID); err != nil {
 			return errors.WithStack(err)
 		}
@@ -757,7 +757,7 @@ func (svc *Service) Remove(ctx context.Context, id *InstanceID) error {
 		}
 
 		// stop agents
-		agents := make(map[int32]models.Agent, len(agentsForService)+len(agentsForNode))
+		agents := make(map[uint32]models.Agent, len(agentsForService)+len(agentsForNode))
 		for _, agent := range agentsForService {
 			agents[agent.ID] = agent
 		}
@@ -834,14 +834,14 @@ func (svc *Service) Remove(ctx context.Context, id *InstanceID) error {
 
 // Restore configuration from database.
 func (svc *Service) Restore(ctx context.Context, tx *reform.TX) error {
-	nodes, err := tx.FindAllFrom(models.RDSNodeTable, "type", models.RDSNodeType)
+	nodes, err := tx.FindAllFrom(models.AWSRDSNodeTable, "type", models.AWSRDSNodeType)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	for _, n := range nodes {
-		node := n.(*models.RDSNode)
+		node := n.(*models.AWSRDSNode)
 
-		service := &models.RDSService{}
+		service := &models.AWSRDSService{}
 		if e := tx.SelectOneTo(service, "WHERE node_id = ?", node.ID); e != nil {
 			return errors.WithStack(e)
 		}

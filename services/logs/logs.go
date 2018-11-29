@@ -57,28 +57,31 @@ type Log struct {
 	Extractor []string
 }
 
-const lastLines = 1000
+const (
+	lastLines                  = 1000
+	logsDataVolumeContainerDir = "/srv/logs/"
+)
 
 // overridden in tests
 var logsRootDir = "/var/log/"
 
 var defaultLogs = []Log{
-	{logsRootDir + "consul.log", "consul", nil},
-	{logsRootDir + "createdb.log", "", nil},
-	{logsRootDir + "cron.log", "crond", nil},
-	{logsRootDir + "dashboard-upgrade.log", "", nil},
+	{logsDataVolumeContainerDir + "consul.log", "consul", nil},
+	{logsDataVolumeContainerDir + "createdb.log", "", nil},
+	{logsDataVolumeContainerDir + "cron.log", "crond", nil},
+	{logsDataVolumeContainerDir + "dashboard-upgrade.log", "", nil},
 	{logsRootDir + "grafana/grafana.log", "", nil},
 	{logsRootDir + "mysql.log", "", nil},
 	{logsRootDir + "mysqld.log", "mysqld", nil},
-	{logsRootDir + "nginx.log", "nginx", nil},
+	{logsDataVolumeContainerDir + "nginx.log", "nginx", nil},
 	{logsRootDir + "nginx/access.log", "", nil},
 	{logsRootDir + "nginx/error.log", "", nil},
-	{logsRootDir + "node_exporter.log", "node_exporter", nil},
+	{logsDataVolumeContainerDir + "node_exporter.log", "node_exporter", nil},
 	{logsRootDir + "orchestrator.log", "orchestrator", nil},
-	{logsRootDir + "pmm-manage.log", "pmm-manage", nil},
-	{logsRootDir + "pmm-managed.log", "pmm-managed", nil},
-	{logsRootDir + "prometheus.log", "prometheus", nil},
-	{logsRootDir + "qan-api.log", "percona-qan-api", nil},
+	{logsDataVolumeContainerDir + "pmm-manage.log", "pmm-manage", nil},
+	{logsDataVolumeContainerDir + "pmm-managed.log", "pmm-managed", nil},
+	{logsDataVolumeContainerDir + "prometheus.log", "prometheus", nil},
+	{logsDataVolumeContainerDir + "qan-api.log", "percona-qan-api", nil},
 	{logsRootDir + "supervisor/supervisord.log", "", nil},
 
 	// logs
