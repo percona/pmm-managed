@@ -77,7 +77,6 @@ var defaultLogs = []Log{
 	{logsRootDir + "orchestrator.log", "orchestrator", nil},
 	{logsRootDir + "pmm-manage.log", "pmm-manage", nil},
 	{logsRootDir + "pmm-managed.log", "pmm-managed", nil},
-	{logsRootDir + "prometheus1.log", "prometheus1", nil},
 	{logsRootDir + "prometheus.log", "prometheus", nil},
 	{logsRootDir + "qan-api.log", "percona-qan-api", nil},
 	{logsRootDir + "supervisor/supervisord.log", "", nil},
