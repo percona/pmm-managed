@@ -16,31 +16,24 @@
 
 package agents
 
-/*
 import (
 	"context"
-	"fmt"
 	"io"
 	"net"
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
+	"github.com/percona/exporter_shared/helpers"
 	"github.com/percona/pmm/api/agent"
-	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type testServer struct {
 	connect func(agent.Agent_ConnectServer) error
-}
-
-func (s *testServer) Register(context.Context, *agent.RegisterRequest) (*agent.RegisterResponse, error) {
-	panic("should not be called")
 }
 
 func (s *testServer) Connect(stream agent.Agent_ConnectServer) error {
@@ -49,15 +42,21 @@ func (s *testServer) Connect(stream agent.Agent_ConnectServer) error {
 
 var _ agent.AgentServer = (*testServer)(nil)
 
-func setup(t *testing.T, connect func(agent.Agent_ConnectServer) error, expected ...error) (*Channel, *grpc.ClientConn, func(*testing.T)) {
+func setup(t *testing.T, connect func(*Channel) error, expected ...error) (agent.Agent_ConnectClient, *grpc.ClientConn, func(*testing.T)) {
+	// logrus.SetLevel(logrus.DebugLevel)
+
 	t.Parallel()
 
 	// start server with given connect handler
+	var channel *Channel
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	server := grpc.NewServer()
 	agent.RegisterAgentServer(server, &testServer{
-		connect: connect,
+		connect: func(stream agent.Agent_ConnectServer) error {
+			channel = NewChannel(stream)
+			return connect(channel)
+		},
 	})
 	go func() {
 		err = server.Serve(lis)
@@ -76,53 +75,86 @@ func setup(t *testing.T, connect func(agent.Agent_ConnectServer) error, expected
 	require.NoError(t, err, "failed to dial server")
 	stream, err := agent.NewAgentClient(cc).Connect(ctx)
 	require.NoError(t, err, "failed to create stream")
-	channel := NewChannel(stream)
 
 	teardown := func(t *testing.T) {
-		err := channel.Wait()
-		assert.Contains(t, expected, errors.Cause(err), "%+v", err)
+		// FIXME
+		// err := channel.Wait()
+		// assert.Contains(t, expected, errors.Cause(err), "%+v", err)
 
 		server.GracefulStop()
 		cancel()
 	}
 
-	return channel, cc, teardown
+	return stream, cc, teardown
 }
 
 func TestAgentRequest(t *testing.T) {
 	const count = 50
 	require.True(t, count > serverRequestsCap)
 
-	connect := func(stream agent.Agent_ConnectServer) error {
+	var mChannel *Channel
+	connect := func(channel *Channel) error { //nolint:unparam
+		mChannel = channel
 		for i := uint32(1); i <= count; i++ {
-			msg, err := stream.Recv()
-			require.NoError(t, err)
+			msg := <-channel.Requests()
+			require.NotNil(t, msg)
 			assert.Equal(t, i, msg.Id)
 			require.NotNil(t, msg.GetQanData())
 
-			err = stream.Send(&agent.ServerMessage{
+			channel.SendResponse(&agent.ServerMessage{
 				Id: i,
 				Payload: &agent.ServerMessage_QanData{
 					QanData: new(agent.QANDataResponse),
 				},
 			})
-			assert.NoError(t, err)
 		}
 
 		return nil
 	}
 
-	channel, _, teardown := setup(t, connect, io.EOF)
+	client, _, teardown := setup(t, connect, io.EOF)
 	defer teardown(t)
 
 	for i := uint32(1); i <= count; i++ {
-		resp := channel.SendRequest(&agent.AgentMessage_QanData{
-			QanData: new(agent.QANDataRequest),
+		err := client.Send(&agent.AgentMessage{
+			Id: i,
+			Payload: &agent.AgentMessage_QanData{
+				QanData: new(agent.QANDataRequest),
+			},
 		})
-		assert.NotNil(t, resp)
+		assert.NoError(t, err)
+
+		msg, err := client.Recv()
+		require.NoError(t, err)
+		assert.Equal(t, i, msg.Id)
+		require.NotNil(t, msg.GetQanData())
 	}
+
+	ch := make(chan prometheus.Metric)
+	go func() {
+		mChannel.Collect(ch)
+		close(ch)
+	}()
+	expectedReceived := &helpers.Metric{
+		Name:   "pmm_managed_channel_messages_received_total",
+		Help:   "A total number of received messages from pmm-agent.",
+		Labels: prometheus.Labels{},
+		Type:   dto.MetricType_COUNTER,
+		Value:  50,
+	}
+	assert.Equal(t, expectedReceived, helpers.ReadMetric(<-ch))
+	expectedSent := &helpers.Metric{
+		Name:   "pmm_managed_channel_messages_sent_total",
+		Help:   "A total number of sent messages to pmm-agent.",
+		Labels: prometheus.Labels{},
+		Type:   dto.MetricType_COUNTER,
+		Value:  50,
+	}
+	assert.Equal(t, expectedSent, helpers.ReadMetric(<-ch))
+	assert.Nil(t, <-ch)
 }
 
+/*
 func TestServerRequest(t *testing.T) {
 	const count = 50
 	require.True(t, count > serverRequestsCap)
@@ -170,6 +202,7 @@ func TestServerRequest(t *testing.T) {
 	}
 }
 
+/*
 func TestServerClosesStream(t *testing.T) {
 	connect := func(stream agent.Agent_ConnectServer) error {
 		msg, err := stream.Recv()
@@ -190,7 +223,7 @@ func TestServerClosesStream(t *testing.T) {
 }
 
 func TestAgentClosesConnection(t *testing.T) {
-	connect := func(stream agent.Agent_ConnectServer) error {
+	connect := func(stream agent.Agent_ConnectServer) error { //nolint:unparam
 		err := stream.Send(&agent.ServerMessage{
 			Id: 1,
 			Payload: &agent.ServerMessage_Ping{
@@ -219,7 +252,7 @@ func TestAgentClosesConnection(t *testing.T) {
 }
 
 func TestUnexpectedMessageFromServer(t *testing.T) {
-	connect := func(stream agent.Agent_ConnectServer) error {
+	connect := func(stream agent.Agent_ConnectServer) error { //nolint:unparam
 		// this message triggers "no subscriber for ID" error
 		err := stream.Send(&agent.ServerMessage{
 			Id: 111,
