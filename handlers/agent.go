@@ -33,24 +33,23 @@ type AgentServer struct {
 func (s *AgentServer) Connect(stream api.Agent_ConnectServer) error {
 	l := logger.Get(stream.Context())
 
+	channel := agents.NewChannel(stream)
+
 	// connect request/response
-	agentMessage, err := stream.Recv()
-	if err != nil {
-		return err
-	}
+	agentMessage := <-channel.Requests()
+
 	l.Infof("Recv: %T %s.", agentMessage, agentMessage)
 	auth := agentMessage.GetAuth()
 	if auth == nil {
 		return errors.Errorf("Expected AuthRequest, got %T.", agentMessage.Payload)
 	}
 	serverMessage := &api.ServerMessage{
+		Id: agentMessage.Id,
 		Payload: &api.ServerMessage_Auth{
 			Auth: &api.AuthResponse{},
 		},
 	}
-	if err = stream.Send(serverMessage); err != nil {
-		return err
-	}
+	channel.SendResponse(serverMessage)
 
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
