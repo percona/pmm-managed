@@ -32,6 +32,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type testServer struct {
@@ -101,7 +103,7 @@ func TestAgentRequest(t *testing.T) {
 			msg := <-ch.Requests()
 			require.NotNil(t, msg)
 			assert.Equal(t, i, msg.Id)
-			require.NotNil(t, msg.GetQanData())
+			assert.NotNil(t, msg.GetQanData())
 
 			ch.SendResponse(&agent.ServerMessage{
 				Id: i,
@@ -125,12 +127,12 @@ func TestAgentRequest(t *testing.T) {
 				QanData: new(agent.QANDataRequest),
 			},
 		})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		msg, err := stream.Recv()
 		require.NoError(t, err)
 		assert.Equal(t, i, msg.Id)
-		require.NotNil(t, msg.GetQanData())
+		assert.NotNil(t, msg.GetQanData())
 	}
 
 	err := stream.CloseSend()
@@ -176,10 +178,10 @@ func TestServerRequest(t *testing.T) {
 
 	connect := func(ch *Channel) error { //nolint:unparam
 		for i := uint32(1); i <= count; i++ {
-			res := ch.SendRequest(&agent.ServerMessage_Ping{
+			msg := ch.SendRequest(&agent.ServerMessage_Ping{
 				Ping: new(agent.PingRequest),
 			})
-			ping := res.(*agent.AgentMessage_Ping)
+			ping := msg.(*agent.AgentMessage_Ping)
 			ts, err := ptypes.Timestamp(ping.Ping.CurrentTime)
 			assert.NoError(t, err)
 			assert.InDelta(t, time.Now().Unix(), ts.Unix(), 1)
@@ -196,7 +198,7 @@ func TestServerRequest(t *testing.T) {
 		msg, err := stream.Recv()
 		require.NoError(t, err)
 		assert.Equal(t, i, msg.Id)
-		require.NotNil(t, msg.GetPing())
+		assert.NotNil(t, msg.GetPing())
 
 		err = stream.Send(&agent.AgentMessage{
 			Id: i,
@@ -213,74 +215,80 @@ func TestServerRequest(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-/*
 func TestServerExitsWithGRPCError(t *testing.T) {
 	errUnimplemented := status.Error(codes.Unimplemented, "Test error")
-	connect := func(stream agent.Agent_ConnectServer) error { //nolint:unparam
-		msg, err := stream.Recv()
-		require.NoError(t, err)
+	connect := func(ch *Channel) error { //nolint:unparam
+		msg := <-ch.Requests()
+		require.NotNil(t, msg)
 		assert.EqualValues(t, 1, msg.Id)
-		require.NotNil(t, msg.GetQanData())
+		assert.NotNil(t, msg.GetQanData())
 
 		return errUnimplemented
 	}
 
-	channel, _, teardown := setup(t, connect, errUnimplemented)
+	stream, _, teardown := setup(t, connect, status.Error(codes.Canceled, context.Canceled.Error()))
 	defer teardown(t)
 
-	resp := channel.SendRequest(&agent.AgentMessage_QanData{
-		QanData: new(agent.QANDataRequest),
+	err := stream.Send(&agent.AgentMessage{
+		Id: 1,
+		Payload: &agent.AgentMessage_QanData{
+			QanData: new(agent.QANDataRequest),
+		},
 	})
-	assert.Nil(t, resp)
+	assert.NoError(t, err)
+
+	_, err = stream.Recv()
+	assert.Equal(t, errUnimplemented, err)
 }
 
 func TestServerExitsWithUnknownError(t *testing.T) {
-	connect := func(stream agent.Agent_ConnectServer) error { //nolint:unparam
-		msg, err := stream.Recv()
-		require.NoError(t, err)
+	connect := func(ch *Channel) error { //nolint:unparam
+		msg := <-ch.Requests()
+		require.NotNil(t, msg)
 		assert.EqualValues(t, 1, msg.Id)
-		require.NotNil(t, msg.GetQanData())
+		assert.NotNil(t, msg.GetQanData())
 
 		return io.EOF // any error without GRPCStatus() method
 	}
 
-	channel, _, teardown := setup(t, connect, status.Error(codes.Unknown, "EOF"))
+	stream, _, teardown := setup(t, connect, status.Error(codes.Canceled, context.Canceled.Error()))
 	defer teardown(t)
 
-	resp := channel.SendRequest(&agent.AgentMessage_QanData{
-		QanData: new(agent.QANDataRequest),
+	err := stream.Send(&agent.AgentMessage{
+		Id: 1,
+		Payload: &agent.AgentMessage_QanData{
+			QanData: new(agent.QANDataRequest),
+		},
 	})
-	assert.Nil(t, resp)
+	assert.NoError(t, err)
+
+	_, err = stream.Recv()
+	assert.Equal(t, status.Error(codes.Unknown, "EOF"), err)
 }
 
 func TestAgentClosesStream(t *testing.T) {
-	connect := func(stream agent.Agent_ConnectServer) error { //nolint:unparam
-		err := stream.Send(&agent.ServerMessage{
-			Id: 1,
-			Payload: &agent.ServerMessage_Ping{
-				Ping: new(agent.PingRequest),
-			},
+	connect := func(ch *Channel) error { //nolint:unparam
+		msg := ch.SendRequest(&agent.ServerMessage_Ping{
+			Ping: new(agent.PingRequest),
 		})
-		assert.NoError(t, err)
-
-		msg, err := stream.Recv()
-		assert.Equal(t, io.EOF, err)
 		assert.Nil(t, msg)
 
+		assert.Nil(t, <-ch.Requests())
 		return nil
 	}
 
-	channel, _, teardown := setup(t, connect, io.EOF)
+	stream, _, teardown := setup(t, connect, io.EOF)
 	defer teardown(t)
 
-	req := <-channel.Requests()
-	ping := req.GetPing()
-	assert.NotNil(t, ping)
+	msg, err := stream.Recv()
+	require.NoError(t, err)
+	assert.NotNil(t, msg)
 
-	err := channel.s.CloseSend()
+	err = stream.CloseSend()
 	assert.NoError(t, err)
 }
 
+/*
 func TestAgentClosesConnection(t *testing.T) {
 	connect := func(stream agent.Agent_ConnectServer) error { //nolint:unparam
 		err := stream.Send(&agent.ServerMessage{
@@ -292,7 +300,7 @@ func TestAgentClosesConnection(t *testing.T) {
 		assert.NoError(t, err)
 
 		msg, err := stream.Recv()
-		assert.Equal(t, status.Error(codes.Canceled, "context canceled"), err)
+		assert.Equal(t, status.Error(codes.Canceled, context.Canceled.Error()), err)
 		assert.Nil(t, msg)
 
 		return nil
