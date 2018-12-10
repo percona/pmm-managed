@@ -26,8 +26,8 @@ import (
 // AgentService implements many-to-many relationship between Agents and Services.
 //reform:agent_services
 type AgentService struct {
-	AgentID   uint32 `reform:"agent_id"`
-	ServiceID uint32 `reform:"service_id"`
+	AgentID   string `reform:"agent_id"`
+	ServiceID string `reform:"service_id"`
 	// CreatedAt time.Time `reform:"created_at"`
 }
 
