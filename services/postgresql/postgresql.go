@@ -208,15 +208,15 @@ func (svc *Service) List(ctx context.Context) ([]Instance, error) {
 }
 
 // Add new postgreSQL service and start postgres_exporter
-func (svc *Service) Add(ctx context.Context, name, address string, port uint32, username, password string) (uint32, error) {
+func (svc *Service) Add(ctx context.Context, name, address string, port uint32, username, password string) (string, error) {
 	address = strings.TrimSpace(address)
 	username = strings.TrimSpace(username)
 	name = strings.TrimSpace(name)
 	if address == "" {
-		return 0, status.Error(codes.InvalidArgument, "PostgreSQL instance host is not given.")
+		return "", status.Error(codes.InvalidArgument, "PostgreSQL instance host is not given.")
 	}
 	if username == "" {
-		return 0, status.Error(codes.InvalidArgument, "Username is not given.")
+		return "", status.Error(codes.InvalidArgument, "Username is not given.")
 	}
 	if port == 0 {
 		port = defaultPostgreSQLPort
@@ -225,7 +225,7 @@ func (svc *Service) Add(ctx context.Context, name, address string, port uint32, 
 		name = address
 	}
 
-	var id uint32
+	var id string
 	err := svc.DB.InTransaction(func(tx *reform.TX) error {
 		// insert node
 		node := &models.RemoteNode{
@@ -314,7 +314,7 @@ func (svc *Service) engineAndVersionFromPlainText(databaseVersion string) (strin
 }
 
 // Remove stops postgres_exporter and agent and remove agent from db
-func (svc *Service) Remove(ctx context.Context, id uint32) error {
+func (svc *Service) Remove(ctx context.Context, id string) error {
 	var err error
 	return svc.DB.InTransaction(func(tx *reform.TX) error {
 		var node models.RemoteNode
@@ -363,7 +363,7 @@ func (svc *Service) Remove(ctx context.Context, id uint32) error {
 		}
 
 		// stop agents
-		agents := make(map[uint32]models.Agent, len(agentsForService)+len(agentsForNode))
+		agents := make(map[string]models.Agent, len(agentsForService)+len(agentsForNode))
 		for _, agent := range agentsForService {
 			agents[agent.ID] = agent
 		}
