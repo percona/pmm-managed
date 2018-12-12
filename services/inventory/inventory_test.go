@@ -99,6 +99,34 @@ func TestNodes(t *testing.T) {
 		assert.Nil(t, actualNode)
 	})
 
+	t.Run("GetEmptyID", func(t *testing.T) {
+		ns, teardown := setup(t)
+		defer teardown(t)
+
+		actualNode, err := ns.Get(ctx, "")
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Empty Node ID.`), err)
+		assert.Nil(t, actualNode)
+	})
+
+	t.Run("AddNameEmpty", func(t *testing.T) {
+		ns, teardown := setup(t)
+		defer teardown(t)
+
+		_, err := ns.Add(ctx, "", models.VirtualMachineNodeType, "", nil, nil)
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Empty Node name.`), err)
+	})
+
+	t.Run("AddIDNotUnique", func(t *testing.T) {
+		ns, teardown := setup(t)
+		defer teardown(t)
+
+		_, err := ns.Add(ctx, "test-id", models.ContainerNodeType, "test", nil, nil)
+		require.NoError(t, err)
+
+		_, err = ns.Add(ctx, "test-id", models.ContainerNodeType, "test", nil, nil)
+		tests.AssertGRPCError(t, status.New(codes.AlreadyExists, `Node with ID "test-id" already exists.`), err)
+	})
+
 	t.Run("AddNameNotUnique", func(t *testing.T) {
 		ns, teardown := setup(t)
 		defer teardown(t)
@@ -231,6 +259,15 @@ func TestServices(t *testing.T) {
 		actualService, err = ss.Get(ctx, "gen:00000000-0000-4000-8000-000000000001")
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "gen:00000000-0000-4000-8000-000000000001" not found.`), err)
 		assert.Nil(t, actualService)
+	})
+
+	t.Run("GetEmptyID", func(t *testing.T) {
+		ss, teardown := setup(t)
+		defer teardown(t)
+
+		actualNode, err := ss.Get(ctx, "")
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Empty Service ID.`), err)
+		assert.Nil(t, actualNode)
 	})
 
 	t.Run("AddNameNotUnique", func(t *testing.T) {
@@ -375,6 +412,15 @@ func TestAgents(t *testing.T) {
 		actualAgents, err = as.List(ctx)
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 0)
+	})
+
+	t.Run("GetEmptyID", func(t *testing.T) {
+		_, as, teardown := setup(t)
+		defer teardown(t)
+
+		actualNode, err := as.Get(ctx, "")
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Empty Agent ID.`), err)
+		assert.Nil(t, actualNode)
 	})
 
 	t.Run("AddPMMAgent", func(t *testing.T) {

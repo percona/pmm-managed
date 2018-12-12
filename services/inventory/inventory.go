@@ -23,11 +23,10 @@ import (
 
 // TODO Decide about transactions.
 
-// FIXME un-export MakeID when we remove old services (mysql, postgresql, remote)
+// FIXME remove it when we remove old services (mysql, postgresql, remote)
+var MakeID = makeID
 
-// MakeID generates new random ID for Node, Service, or Agent.
-func MakeID() string {
+// makeID generates new random ID for Node, Service, or Agent.
+func makeID() string {
 	return "gen:" + uuid.New().String()
 }
-
-var makeID = MakeID

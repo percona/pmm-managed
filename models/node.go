@@ -37,6 +37,7 @@ const (
 )
 
 const (
+	// PMMServerNodeID is a fixed Node ID for PMM Server where pmm-managed runs.
 	PMMServerNodeID string = "pmm-server"
 
 	RemoteNodeRegion string = "remote"

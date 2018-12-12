@@ -19,6 +19,7 @@ package tests
 import (
 	"encoding/binary"
 	"fmt"
+	"io"
 	"sync/atomic"
 )
 
@@ -40,3 +41,8 @@ func (t *IDReader) Read(b []byte) (int, error) {
 	binary.BigEndian.PutUint64(b[8:], id)
 	return len(b), nil
 }
+
+// check interfaces
+var (
+	_ io.Reader = (*IDReader)(nil)
+)

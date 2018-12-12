@@ -98,7 +98,7 @@ func (ns *NodesService) get(ctx context.Context, id string) (*models.NodeRow, er
 
 func (ns *NodesService) checkUniqueID(ctx context.Context, id string) error {
 	if id == "" {
-		return status.Error(codes.InvalidArgument, "Empty Node ID.")
+		panic("empty Node ID")
 	}
 
 	row := &models.NodeRow{ID: id}
