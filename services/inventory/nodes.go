@@ -105,11 +105,11 @@ func (ns *NodesService) checkUniqueHostnameRegion(ctx context.Context, hostname,
 	}
 }
 
-func (ns *NodesService) get(ctx context.Context, id uint32) (*models.NodeRow, error) {
+func (ns *NodesService) get(ctx context.Context, id string) (*models.NodeRow, error) {
 	row := &models.NodeRow{ID: id}
 	if err := ns.Q.Reload(row); err != nil {
 		if err == reform.ErrNoRows {
-			return nil, status.Errorf(codes.NotFound, "Node with ID %d not found.", id)
+			return nil, status.Errorf(codes.NotFound, "Node with ID %q not found.", id)
 		}
 		return nil, errors.WithStack(err)
 	}
@@ -132,7 +132,7 @@ func (ns *NodesService) List(ctx context.Context) ([]inventory.Node, error) {
 }
 
 // Get selects a single Node by ID.
-func (ns *NodesService) Get(ctx context.Context, id uint32) (inventory.Node, error) {
+func (ns *NodesService) Get(ctx context.Context, id string) (inventory.Node, error) {
 	row, err := ns.get(ctx, id)
 	if err != nil {
 		return nil, err
@@ -155,6 +155,7 @@ func (ns *NodesService) Add(ctx context.Context, nodeType models.NodeType, name 
 	}
 
 	row := &models.NodeRow{
+		ID:       makeID(),
 		Type:     nodeType,
 		Name:     name,
 		Hostname: hostname,
@@ -167,7 +168,7 @@ func (ns *NodesService) Add(ctx context.Context, nodeType models.NodeType, name 
 }
 
 // Change updates Node by ID.
-func (ns *NodesService) Change(ctx context.Context, id uint32, name string) (inventory.Node, error) {
+func (ns *NodesService) Change(ctx context.Context, id string, name string) (inventory.Node, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// ID is not 0, name is not empty and valid.
 
@@ -188,7 +189,7 @@ func (ns *NodesService) Change(ctx context.Context, id uint32, name string) (inv
 }
 
 // Remove deletes Node by ID.
-func (ns *NodesService) Remove(ctx context.Context, id uint32) error {
+func (ns *NodesService) Remove(ctx context.Context, id string) error {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// ID is not 0.
 
@@ -196,7 +197,7 @@ func (ns *NodesService) Remove(ctx context.Context, id uint32) error {
 
 	err := ns.Q.Delete(&models.NodeRow{ID: id})
 	if err == reform.ErrNoRows {
-		return status.Errorf(codes.NotFound, "Node with ID %d not found.", id)
+		return status.Errorf(codes.NotFound, "Node with ID %q not found.", id)
 	}
 	return errors.WithStack(err)
 }

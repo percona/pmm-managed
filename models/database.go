@@ -54,13 +54,13 @@ var databaseSchema = [][]string{
 			UNIQUE (hostname, region)
 		)`,
 
-		`INSERT INTO nodes (type, name) VALUES ('` + PMMServerNodeID + `', '` + string(PMMServerNodeType) + `', 'PMM Server')`,
+		`INSERT INTO nodes (id, type, name) VALUES ('` + PMMServerNodeID + `', '` + string(PMMServerNodeType) + `', 'PMM Server')`,
 
 		`CREATE TABLE services (
 			id VARCHAR(255) NOT NULL,
 			type VARCHAR(255) NOT NULL,
 			name VARCHAR(255) NOT NULL,
-			node_id INT NOT NULL,
+			node_id VARCHAR(255) NOT NULL,
 			-- created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			-- updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
@@ -81,7 +81,7 @@ var databaseSchema = [][]string{
 		`CREATE TABLE agents (
 			id VARCHAR(255) NOT NULL,
 			type VARCHAR(255) NOT NULL,
-			runs_on_node_id INT NOT NULL,
+			runs_on_node_id VARCHAR(255) NOT NULL,
 			disabled BOOL NOT NULL,
 			-- created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			-- updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

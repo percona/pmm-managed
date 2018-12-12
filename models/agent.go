@@ -59,7 +59,6 @@ type AgentRow struct {
 	// UpdatedAt    time.Time `reform:"updated_at"`
 
 	ListenPort      *uint16 `reform:"listen_port"`
-	UUID            *string `reform:"uuid"`
 	ServiceUsername *string `reform:"service_username"`
 	ServicePassword *string `reform:"service_password"`
 }

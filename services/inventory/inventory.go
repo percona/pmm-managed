@@ -17,4 +17,13 @@
 // Package inventory contains inventory business logic: Nodes, Services, Agents.
 package inventory
 
+import (
+	"github.com/google/uuid"
+)
+
 // TODO Decide about transactions.
+
+// makeID generates new random ID for Node, Service, or Agent.
+func makeID() string {
+	return "gen:" + uuid.New().String()
+}
