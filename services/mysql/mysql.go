@@ -433,7 +433,7 @@ func (svc *Service) Remove(ctx context.Context, id string) error {
 		var node models.RemoteNode
 		if err = tx.SelectOneTo(&node, "WHERE type = ? AND id = ?", models.RemoteNodeType, id); err != nil {
 			if err == reform.ErrNoRows {
-				return status.Errorf(codes.NotFound, "MySQL instance with ID %d not found.", id)
+				return status.Errorf(codes.NotFound, "MySQL instance with ID %q not found.", id)
 			}
 			return errors.WithStack(err)
 		}
