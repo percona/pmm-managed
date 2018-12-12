@@ -38,6 +38,7 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services"
+	"github.com/percona/pmm-managed/services/inventory"
 	"github.com/percona/pmm-managed/services/prometheus"
 	"github.com/percona/pmm-managed/utils/logger"
 	"github.com/percona/pmm-managed/utils/ports"
@@ -229,6 +230,7 @@ func (svc *Service) Add(ctx context.Context, name, address string, port uint32, 
 	err := svc.DB.InTransaction(func(tx *reform.TX) error {
 		// insert node
 		node := &models.RemoteNode{
+			ID:     inventory.MakeID(),
 			Type:   models.RemoteNodeType,
 			Name:   name,
 			Region: pointer.ToString(models.RemoteNodeRegion),
@@ -249,6 +251,7 @@ func (svc *Service) Add(ctx context.Context, name, address string, port uint32, 
 
 		// insert service
 		service := &models.PostgreSQLService{
+			ID:     inventory.MakeID(),
 			Type:   models.PostgreSQLServiceType,
 			Name:   name,
 			NodeID: node.ID,
@@ -410,6 +413,7 @@ func (svc *Service) addPostgresExporter(ctx context.Context, tx *reform.TX, serv
 		return err
 	}
 	agent := &models.PostgresExporter{
+		ID:           inventory.MakeID(),
 		Type:         models.PostgresExporterAgentType,
 		RunsOnNodeID: svc.pmmServerNode.ID,
 

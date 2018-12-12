@@ -37,6 +37,7 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services"
+	"github.com/percona/pmm-managed/services/inventory"
 	"github.com/percona/pmm-managed/services/prometheus"
 	"github.com/percona/pmm-managed/services/qan"
 	"github.com/percona/pmm-managed/utils/logger"
@@ -235,6 +236,7 @@ func (svc *Service) addMySQLdExporter(ctx context.Context, tx *reform.TX, servic
 		return err
 	}
 	agent := &models.MySQLdExporter{
+		ID:           inventory.MakeID(),
 		Type:         models.MySQLdExporterAgentType,
 		RunsOnNodeID: svc.pmmServerNode.ID,
 
@@ -327,6 +329,7 @@ func (svc *Service) addQanAgent(ctx context.Context, tx *reform.TX, service *mod
 
 	// insert qan-agent agent and association
 	agent := &models.QanAgent{
+		ID:           inventory.MakeID(),
 		Type:         models.QanAgentAgentType,
 		RunsOnNodeID: svc.pmmServerNode.ID,
 
@@ -381,6 +384,7 @@ func (svc *Service) Add(ctx context.Context, name, address string, port uint32, 
 	err := svc.DB.InTransaction(func(tx *reform.TX) error {
 		// insert node
 		node := &models.RemoteNode{
+			ID:     inventory.MakeID(),
 			Type:   models.RemoteNodeType,
 			Name:   name,
 			Region: pointer.ToString(models.RemoteNodeRegion),
@@ -401,6 +405,7 @@ func (svc *Service) Add(ctx context.Context, name, address string, port uint32, 
 
 		// insert service
 		service := &models.MySQLService{
+			ID:     inventory.MakeID(),
 			Type:   models.MySQLServiceType,
 			Name:   name,
 			NodeID: node.ID,

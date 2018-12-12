@@ -18,9 +18,6 @@ package inventory
 
 import (
 	"context"
-	"encoding/binary"
-	"fmt"
-	"sync/atomic"
 	"testing"
 
 	"github.com/AlekSi/pointer"
@@ -37,23 +34,6 @@ import (
 	"github.com/percona/pmm-managed/utils/tests"
 )
 
-type testIDReader struct {
-	lastID uint64
-}
-
-func (t *testIDReader) Read(b []byte) (int, error) {
-	if len(b) != 16 {
-		panic(fmt.Errorf("unexpected read of length %d", b))
-	}
-
-	for i := range b {
-		b[i] = 0
-	}
-	id := atomic.AddUint64(&t.lastID, 1)
-	binary.BigEndian.PutUint64(b[8:], id)
-	return len(b), nil
-}
-
 func TestNodes(t *testing.T) {
 	sqlDB := tests.OpenTestDB(t)
 	defer func() {
@@ -62,7 +42,7 @@ func TestNodes(t *testing.T) {
 	ctx := context.Background()
 
 	setup := func(t *testing.T) (ns *NodesService, teardown func(t *testing.T)) {
-		uuid.SetRand(new(testIDReader))
+		uuid.SetRand(new(tests.IDReader))
 
 		db := reform.NewDB(sqlDB, mysql.Dialect, reform.NewPrintfLogger(t.Logf))
 		tx, err := db.Begin()
@@ -192,7 +172,7 @@ func TestServices(t *testing.T) {
 	ctx := context.Background()
 
 	setup := func(t *testing.T) (ss *ServicesService, teardown func(t *testing.T)) {
-		uuid.SetRand(new(testIDReader))
+		uuid.SetRand(new(tests.IDReader))
 
 		db := reform.NewDB(sqlDB, mysql.Dialect, reform.NewPrintfLogger(t.Logf))
 		tx, err := db.Begin()
@@ -311,7 +291,7 @@ func TestAgents(t *testing.T) {
 	ctx := context.Background()
 
 	setup := func(t *testing.T) (ss *ServicesService, as *AgentsService, teardown func(t *testing.T)) {
-		uuid.SetRand(new(testIDReader))
+		uuid.SetRand(new(tests.IDReader))
 
 		db := reform.NewDB(sqlDB, mysql.Dialect, reform.NewPrintfLogger(t.Logf))
 		tx, err := db.Begin()
