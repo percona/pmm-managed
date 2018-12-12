@@ -53,6 +53,22 @@ func makeService(row *models.ServiceRow) inventory.Service {
 	}
 }
 
+func (ss *ServicesService) get(ctx context.Context, id string) (*models.ServiceRow, error) {
+	if id == "" {
+		return nil, status.Error(codes.InvalidArgument, "Empty Service ID.")
+	}
+
+	row := &models.ServiceRow{ID: id}
+	switch err := ss.Q.Reload(row); err {
+	case nil:
+		return row, nil
+	case reform.ErrNoRows:
+		return nil, status.Errorf(codes.NotFound, "Service with ID %q not found.", id)
+	default:
+		return nil, errors.WithStack(err)
+	}
+}
+
 func (ss *ServicesService) checkUniqueName(ctx context.Context, name string) error {
 	_, err := ss.Q.FindOneFrom(models.ServiceRowTable, "name", name)
 	switch err {
@@ -63,17 +79,6 @@ func (ss *ServicesService) checkUniqueName(ctx context.Context, name string) err
 	default:
 		return errors.WithStack(err)
 	}
-}
-
-func (ss *ServicesService) get(ctx context.Context, id string) (*models.ServiceRow, error) {
-	row := &models.ServiceRow{ID: id}
-	if err := ss.Q.Reload(row); err != nil {
-		if err == reform.ErrNoRows {
-			return nil, status.Errorf(codes.NotFound, "Service with ID %q not found.", id)
-		}
-		return nil, errors.WithStack(err)
-	}
-	return row, nil
 }
 
 // List selects all Services in a stable order.

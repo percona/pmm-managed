@@ -72,14 +72,19 @@ func (as *AgentsService) makeAgent(ctx context.Context, row *models.AgentRow) (i
 }
 
 func (as *AgentsService) get(ctx context.Context, id string) (*models.AgentRow, error) {
+	if id == "" {
+		return nil, status.Error(codes.InvalidArgument, "Empty Agent ID.")
+	}
+
 	row := &models.AgentRow{ID: id}
-	if err := as.Q.Reload(row); err != nil {
-		if err == reform.ErrNoRows {
-			return nil, status.Errorf(codes.NotFound, "Agent with ID %q not found.", id)
-		}
+	switch err := as.Q.Reload(row); err {
+	case nil:
+		return row, nil
+	case reform.ErrNoRows:
+		return nil, status.Errorf(codes.NotFound, "Agent with ID %q not found.", id)
+	default:
 		return nil, errors.WithStack(err)
 	}
-	return row, nil
 }
 
 // List selects all Agents in a stable order.
