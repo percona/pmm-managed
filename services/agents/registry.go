@@ -39,10 +39,10 @@ const (
 )
 
 type agentInfo struct {
-	connectedAt time.Time
-	channel     *Channel
-	l           *logrus.Entry
-	kick        chan struct{}
+	channel *Channel
+	id      string
+	l       *logrus.Entry
+	kick    chan struct{}
 }
 
 type sharedChannelMetrics struct {
@@ -117,39 +117,24 @@ func (r *Registry) Run(stream api.Agent_ConnectServer) error {
 		r.mDisconnects.WithLabelValues(disconnectReason).Inc()
 	}()
 
-	l := logger.Get(stream.Context())
-	md := api.GetAgentConnectMetadata(stream.Context())
-	if err := r.authenticate(&md); err != nil {
-		l.Warnf("Failed to authenticate connected pmm-agent %+v.", md)
+	agent, err := r.register(stream)
+	if err != nil {
 		disconnectReason = "auth"
 		return err
 	}
-	l.Infof("Connected pmm-agent: %+v.", md)
 
-	r.rw.Lock()
-	defer r.rw.Unlock()
-
-	if agent := r.agents[md.ID]; agent != nil {
-		close(agent.kick)
-	}
-
-	agent := &agentInfo{
-		connectedAt: time.Now(),
-		channel:     NewChannel(stream, l.WithField("component", "channel"), r.sharedMetrics),
-		l:           l,
-		kick:        make(chan struct{}),
-	}
-	r.agents[md.ID] = agent
+	r.ping(agent)
+	r.AgentStateChanged(agent.id)
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
-			r.ping(agent.channel, l)
+			r.ping(agent)
 
 		case <-agent.kick:
-			l.Warnf("Kicked.")
+			agent.l.Warn("Kicked.")
 			disconnectReason = "kicked"
 			return nil
 
@@ -169,7 +154,7 @@ func (r *Registry) Run(stream api.Agent_ConnectServer) error {
 					},
 				})
 			default:
-				l.Warnf("Unexpected request: %s.", req)
+				agent.l.Warnf("Unexpected request: %s.", req)
 				disconnectReason = "bad_request"
 				return nil
 			}
@@ -177,13 +162,60 @@ func (r *Registry) Run(stream api.Agent_ConnectServer) error {
 	}
 }
 
-func (r *Registry) authenticate(md *api.AgentConnectMetadata) error {
+func (r *Registry) AgentStateChanged(id string) {
+	r.rw.RLock()
+	agent := r.agents[id]
+	r.rw.RUnlock()
+
+	if agent == nil {
+		return
+	}
+
+	var processes []*api.SetStateRequest_AgentProcess
+
+	// FIXME collect subagents
+
+	res := agent.channel.SendRequest(&api.ServerMessage_State{
+		State: &api.SetStateRequest{
+			AgentProcesses: processes,
+		},
+	})
+	agent.l.Infof("%s", res)
+}
+
+func (r *Registry) register(stream api.Agent_ConnectServer) (*agentInfo, error) {
+	l := logger.Get(stream.Context())
+	md := api.GetAgentConnectMetadata(stream.Context())
+	if err := authenticate(&md, r.db.Querier); err != nil {
+		l.Warnf("Failed to authenticate connected pmm-agent %+v.", md)
+		return nil, err
+	}
+	l.Infof("Connected pmm-agent: %+v.", md)
+
+	r.rw.Lock()
+	defer r.rw.Unlock()
+
+	if agent := r.agents[md.ID]; agent != nil {
+		close(agent.kick)
+	}
+
+	agent := &agentInfo{
+		channel: NewChannel(stream, l.WithField("component", "channel"), r.sharedMetrics),
+		id:      md.ID,
+		l:       l,
+		kick:    make(chan struct{}),
+	}
+	r.agents[md.ID] = agent
+	return agent, nil
+}
+
+func authenticate(md *api.AgentConnectMetadata, q *reform.Querier) error {
 	if md.ID == "" {
 		return status.Error(codes.Unauthenticated, "Empty Agent ID.")
 	}
 
 	row := &models.AgentRow{ID: md.ID}
-	if err := r.db.Reload(row); err != nil {
+	if err := q.Reload(row); err != nil {
 		if err == reform.ErrNoRows {
 			return status.Errorf(codes.Unauthenticated, "No Agent with ID %q.", md.ID)
 		}
@@ -195,15 +227,15 @@ func (r *Registry) authenticate(md *api.AgentConnectMetadata) error {
 	}
 
 	row.Version = &md.Version
-	if err := r.db.Update(row); err != nil {
+	if err := q.Update(row); err != nil {
 		return errors.Wrap(err, "failed to update agent")
 	}
 	return nil
 }
 
-func (r *Registry) ping(channel *Channel, l *logrus.Entry) {
+func (r *Registry) ping(agent *agentInfo) {
 	start := time.Now()
-	res := channel.SendRequest(&api.ServerMessage_Ping{
+	res := agent.channel.SendRequest(&api.ServerMessage_Ping{
 		Ping: new(api.PingRequest),
 	})
 	if res == nil {
@@ -212,11 +244,11 @@ func (r *Registry) ping(channel *Channel, l *logrus.Entry) {
 	latency := time.Since(start) / 2
 	t, err := ptypes.Timestamp(res.(*api.AgentMessage_Ping).Ping.CurrentTime)
 	if err != nil {
-		l.Errorf("Failed to decode PingResponse.current_time: %s.", err)
+		agent.l.Errorf("Failed to decode PingResponse.current_time: %s.", err)
 		return
 	}
 	timeDrift := t.Sub(start.Add(latency))
-	l.Infof("Latency: %s. Time drift: %s.", latency, timeDrift)
+	agent.l.Infof("Latency: %s. Time drift: %s.", latency, timeDrift)
 	r.mLatency.Observe(latency.Seconds())
 	r.mTimeDrift.Observe(timeDrift.Seconds())
 }
@@ -235,6 +267,8 @@ func (r *Registry) Collect(ch chan<- prometheus.Metric) {
 	r.sharedMetrics.mSend.Collect(ch)
 	r.mConnects.Collect(ch)
 	r.mDisconnects.Collect(ch)
+
+	// TODO metric for channel's len(requests)
 }
 
 // check interfaces
