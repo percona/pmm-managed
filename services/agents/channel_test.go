@@ -30,6 +30,7 @@ import (
 	"github.com/percona/pmm/api/agent"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -59,7 +60,7 @@ func setup(t *testing.T, connect func(*Channel) error, expected ...error) (agent
 	server := grpc.NewServer()
 	agent.RegisterAgentServer(server, &testServer{
 		connect: func(stream agent.Agent_ConnectServer) error {
-			channel = NewChannel(stream)
+			channel = NewChannel(stream, logrus.WithField("component", "channel-test"))
 			return connect(channel)
 		},
 	})

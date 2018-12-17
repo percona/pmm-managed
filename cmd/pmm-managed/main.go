@@ -50,6 +50,7 @@ import (
 	"github.com/percona/pmm-managed/api"
 	"github.com/percona/pmm-managed/handlers"
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/agents"
 	"github.com/percona/pmm-managed/services/consul"
 	"github.com/percona/pmm-managed/services/grafana"
 	"github.com/percona/pmm-managed/services/inventory"
@@ -306,7 +307,9 @@ func runGRPCServer(ctx context.Context, deps *grpcServerDependencies) {
 	})
 
 	// PMM 2.0 APIs
-	agent.RegisterAgentServer(gRPCServer, &handlers.AgentServer{})
+	agent.RegisterAgentServer(gRPCServer, &handlers.AgentServer{
+		Registry: agents.NewRegistry(deps.db),
+	})
 	inventoryAPI.RegisterNodesServer(gRPCServer, &handlers.NodesServer{
 		Nodes: &inventory.NodesService{
 			Q: deps.db.Querier,

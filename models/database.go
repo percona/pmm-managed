@@ -86,6 +86,7 @@ var databaseSchema = [][]string{
 			-- created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			-- updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
+			version VARCHAR(255),
 			listen_port SMALLINT UNSIGNED,
 			service_username VARCHAR(255),
 			service_password VARCHAR(255),
