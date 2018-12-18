@@ -17,9 +17,15 @@
 package agents
 
 import (
+	"context"
+	"fmt"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/AlekSi/pointer"
+	"github.com/go-sql-driver/mysql"
 	"github.com/golang/protobuf/ptypes"
 	api "github.com/percona/pmm/api/agent"
 	"github.com/pkg/errors"
@@ -34,8 +40,8 @@ import (
 )
 
 const (
-	prometheusNamespace = "pmm_managed"
-	prometheusSubsystem = "agents"
+	// maximum time for connecting to the database
+	sqlDialTimeout = 5 * time.Second
 )
 
 type agentInfo struct {
@@ -43,11 +49,6 @@ type agentInfo struct {
 	id      string
 	l       *logrus.Entry
 	kick    chan struct{}
-}
-
-type sharedChannelMetrics struct {
-	mRecv prometheus.Counter
-	mSend prometheus.Counter
 }
 
 type Registry struct {
@@ -65,22 +66,9 @@ type Registry struct {
 
 func NewRegistry(db *reform.DB) *Registry {
 	return &Registry{
-		db:     db,
-		agents: make(map[string]*agentInfo),
-		sharedMetrics: &sharedChannelMetrics{
-			mRecv: prometheus.NewCounter(prometheus.CounterOpts{
-				Namespace: prometheusNamespace,
-				Subsystem: prometheusSubsystem,
-				Name:      "messages_received_total",
-				Help:      "A total number of messages received from pmm-agents.",
-			}),
-			mSend: prometheus.NewCounter(prometheus.CounterOpts{
-				Namespace: prometheusNamespace,
-				Subsystem: prometheusSubsystem,
-				Name:      "messages_sent_total",
-				Help:      "A total number of messages sent to pmm-agents.",
-			}),
-		},
+		db:            db,
+		agents:        make(map[string]*agentInfo),
+		sharedMetrics: newSharedMetrics(),
 		mConnects: prometheus.NewCounter(prometheus.CounterOpts{
 			Namespace: prometheusNamespace,
 			Subsystem: prometheusSubsystem,
@@ -124,7 +112,7 @@ func (r *Registry) Run(stream api.Agent_ConnectServer) error {
 	}
 
 	r.ping(agent)
-	r.AgentStateChanged(agent.id)
+	r.AgentStateChanged(stream.Context(), agent.id)
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
@@ -160,27 +148,6 @@ func (r *Registry) Run(stream api.Agent_ConnectServer) error {
 			}
 		}
 	}
-}
-
-func (r *Registry) AgentStateChanged(id string) {
-	r.rw.RLock()
-	agent := r.agents[id]
-	r.rw.RUnlock()
-
-	if agent == nil {
-		return
-	}
-
-	var processes []*api.SetStateRequest_AgentProcess
-
-	// FIXME collect subagents
-
-	res := agent.channel.SendRequest(&api.ServerMessage_State{
-		State: &api.SetStateRequest{
-			AgentProcesses: processes,
-		},
-	})
-	agent.l.Infof("%s", res)
 }
 
 func (r *Registry) register(stream api.Agent_ConnectServer) (*agentInfo, error) {
@@ -253,22 +220,144 @@ func (r *Registry) ping(agent *agentInfo) {
 	r.mTimeDrift.Observe(timeDrift.Seconds())
 }
 
+func (r *Registry) AgentStateChanged(ctx context.Context, id string) {
+	r.rw.RLock()
+	agent := r.agents[id]
+	r.rw.RUnlock()
+	if agent == nil {
+		return
+	}
+
+	l := logger.Get(ctx)
+
+	// We assume that all agents running on that Node except pmm-agent with given ID are subagents.
+	// FIXME That is just plain wrong. We should filter by type, exclude external exporters, etc.
+
+	pmmAgent := &models.AgentRow{ID: id}
+	if err := r.db.Reload(pmmAgent); err != nil {
+		l.Errorf("pmm-agent with ID %q not found: %s.", id, err)
+		return
+	}
+	if pmmAgent.Type != models.PMMAgentType {
+		l.Errorf("Invalid agent type: %s.", pmmAgent.Type)
+		return
+	}
+	structs, err := r.db.FindAllFrom(models.AgentRowTable, "runs_on_node_id", pmmAgent.RunsOnNodeID)
+	if err != nil {
+		l.Errorf("Failed to collect agents: %s.", err)
+		return
+	}
+
+	processes := make([]*api.SetStateRequest_AgentProcess, 0, len(structs))
+	for _, str := range structs {
+		row := str.(*models.AgentRow)
+		if row.Disabled {
+			continue
+		}
+
+		var process *api.SetStateRequest_AgentProcess
+		switch row.Type {
+		case models.PMMAgentType:
+			continue
+		case models.NodeExporterAgentType:
+			process = r.nodeExporterConfig(row)
+		case models.MySQLdExporterAgentType:
+			process = r.mysqldExporterConfig(row)
+		default:
+			l.Panicf("unhandled AgentRow type %s", row.Type)
+		}
+
+		processes = append(processes, process)
+	}
+
+	res := agent.channel.SendRequest(&api.ServerMessage_State{
+		State: &api.SetStateRequest{
+			AgentProcesses: processes,
+		},
+	})
+	agent.l.Infof("%s", res)
+}
+
+func (r *Registry) nodeExporterConfig(agent *models.AgentRow) *api.SetStateRequest_AgentProcess {
+	collectors := []string{
+		"diskstats",
+		"filefd",
+		"filesystem",
+		"loadavg",
+		"meminfo_numa",
+		"meminfo",
+		"netdev",
+		"netstat",
+		"stat",
+		"textfile",
+		"time",
+		"uname",
+		"vmstat",
+	}
+	return &api.SetStateRequest_AgentProcess{
+		AgentId: agent.ID,
+		Type:    api.Type_NODE_EXPORTER,
+		Args: []string{
+			fmt.Sprintf("-collectors.enabled=%s", strings.Join(collectors, ",")),
+		},
+	}
+}
+
+func (r *Registry) mysqldExporterConfig(agent *models.AgentRow) *api.SetStateRequest_AgentProcess {
+	args := []string{
+		"-collect.binlog_size",
+		"-collect.global_status",
+		"-collect.global_variables",
+		"-collect.info_schema.innodb_metrics",
+		"-collect.info_schema.processlist",
+		"-collect.info_schema.query_response_time",
+		"-collect.info_schema.userstats",
+		"-collect.perf_schema.eventswaits",
+		"-collect.perf_schema.file_events",
+		"-collect.slave_status",
+		"-web.listen-address=:{{ .listen_port }}",
+	}
+	// TODO Make it configurable. Play safe for now.
+	// args = append(args, "-collect.auto_increment.columns")
+	// args = append(args, "-collect.info_schema.tables")
+	// args = append(args, "-collect.info_schema.tablestats")
+	// args = append(args, "-collect.perf_schema.indexiowaits")
+	// args = append(args, "-collect.perf_schema.tableiowaits")
+	// args = append(args, "-collect.perf_schema.tablelocks")
+	sort.Strings(args)
+
+	// TODO TLSConfig: "true", https://jira.percona.com/browse/PMM-1727
+	// TODO Other parameters?
+	cfg := mysql.NewConfig()
+	cfg.User = pointer.GetString(agent.ServiceUsername)
+	cfg.Passwd = pointer.GetString(agent.ServicePassword)
+	cfg.Net = "tcp"
+	// TODO cfg.Addr = net.JoinHostPort(*service.Address, strconv.Itoa(int(*service.Port)))
+	cfg.Timeout = sqlDialTimeout
+	dsn := cfg.FormatDSN()
+
+	return &api.SetStateRequest_AgentProcess{
+		AgentId: agent.ID,
+		Type:    api.Type_MYSQLD_EXPORTER,
+		Args:    args,
+		Env: []string{
+			fmt.Sprintf("DATA_SOURCE_NAME=%s", dsn),
+		},
+	}
+}
+
 // Describe implements prometheus.Collector.
 func (r *Registry) Describe(ch chan<- *prometheus.Desc) {
-	r.sharedMetrics.mRecv.Describe(ch)
-	r.sharedMetrics.mSend.Describe(ch)
+	r.sharedMetrics.Describe(ch)
 	r.mConnects.Describe(ch)
 	r.mDisconnects.Describe(ch)
 }
 
 // Collect implement prometheus.Collector.
 func (r *Registry) Collect(ch chan<- prometheus.Metric) {
-	r.sharedMetrics.mRecv.Collect(ch)
-	r.sharedMetrics.mSend.Collect(ch)
+	r.sharedMetrics.Collect(ch)
 	r.mConnects.Collect(ch)
 	r.mDisconnects.Collect(ch)
-
-	// TODO metric for channel's len(requests)
 }
 
 // check interfaces

@@ -60,7 +60,7 @@ func setup(t *testing.T, connect func(*Channel) error, expected ...error) (agent
 	server := grpc.NewServer()
 	agent.RegisterAgentServer(server, &testServer{
 		connect: func(stream agent.Agent_ConnectServer) error {
-			channel = NewChannel(stream, logrus.WithField("component", "channel-test"))
+			channel = NewChannel(stream, logrus.WithField("component", "channel-test"), newSharedMetrics())
 			return connect(channel)
 		},
 	})
@@ -146,26 +146,26 @@ func TestAgentRequest(t *testing.T) {
 	metrics := make([]prometheus.Metric, 0, 100)
 	metricsCh := make(chan prometheus.Metric)
 	go func() {
-		channel.Collect(metricsCh)
+		channel.metrics.Collect(metricsCh)
 		close(metricsCh)
 	}()
 	for m := range metricsCh {
 		metrics = append(metrics, m)
 	}
 	expectedMetrics := strings.Split(strings.TrimSpace(`
-# HELP pmm_managed_channel_messages_received_total A total number of received messages from pmm-agent.
-# TYPE pmm_managed_channel_messages_received_total counter
-pmm_managed_channel_messages_received_total 50
-# HELP pmm_managed_channel_messages_sent_total A total number of sent messages to pmm-agent.
-# TYPE pmm_managed_channel_messages_sent_total counter
-pmm_managed_channel_messages_sent_total 50
+# HELP pmm_managed_agents_messages_received_total A total number of messages received from pmm-agents.
+# TYPE pmm_managed_agents_messages_received_total counter
+pmm_managed_agents_messages_received_total 50
+# HELP pmm_managed_agents_messages_sent_total A total number of messages sent to pmm-agents.
+# TYPE pmm_managed_agents_messages_sent_total counter
+pmm_managed_agents_messages_sent_total 50
 `), "\n")
 	assert.Equal(t, expectedMetrics, helpers.Format(metrics))
 
 	// check that descriptions match metrics: same number, same order
 	descCh := make(chan *prometheus.Desc)
 	go func() {
-		channel.Describe(descCh)
+		channel.metrics.Describe(descCh)
 		close(descCh)
 	}()
 	var i int
