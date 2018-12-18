@@ -51,9 +51,7 @@ func TestNodes(t *testing.T) {
 		teardown = func(t *testing.T) {
 			require.NoError(t, tx.Rollback())
 		}
-		ns = &NodesService{
-			Q: tx.Querier,
-		}
+		ns = NewNodesService(tx.Querier)
 		return
 	}
 
@@ -209,9 +207,7 @@ func TestServices(t *testing.T) {
 		teardown = func(t *testing.T) {
 			require.NoError(t, tx.Rollback())
 		}
-		ss = &ServicesService{
-			Q: tx.Querier,
-		}
+		ss = NewServicesService(tx.Querier)
 		return
 	}
 
@@ -337,12 +333,8 @@ func TestAgents(t *testing.T) {
 		teardown = func(t *testing.T) {
 			require.NoError(t, tx.Rollback())
 		}
-		ss = &ServicesService{
-			Q: tx.Querier,
-		}
-		as = &AgentsService{
-			Q: tx.Querier,
-		}
+		ss = NewServicesService(tx.Querier)
+		as = NewAgentsService(tx.Querier, nil)
 		return
 	}
 

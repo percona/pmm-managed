@@ -307,23 +307,18 @@ func runGRPCServer(ctx context.Context, deps *grpcServerDependencies) {
 	})
 
 	// PMM 2.0 APIs
+	agentsRegistry := agents.NewRegistry(deps.db)
 	agent.RegisterAgentServer(gRPCServer, &handlers.AgentServer{
-		Registry: agents.NewRegistry(deps.db),
+		Registry: agentsRegistry,
 	})
 	inventoryAPI.RegisterNodesServer(gRPCServer, &handlers.NodesServer{
-		Nodes: &inventory.NodesService{
-			Q: deps.db.Querier,
-		},
+		Nodes: inventory.NewNodesService(deps.db.Querier),
 	})
 	inventoryAPI.RegisterServicesServer(gRPCServer, &handlers.ServicesServer{
-		Services: &inventory.ServicesService{
-			Q: deps.db.Querier,
-		},
+		Services: inventory.NewServicesService(deps.db.Querier),
 	})
 	inventoryAPI.RegisterAgentsServer(gRPCServer, &handlers.AgentsServer{
-		Agents: &inventory.AgentsService{
-			Q: deps.db.Querier,
-		},
+		Agents: inventory.NewAgentsService(deps.db.Querier, agentsRegistry),
 	})
 
 	if *debugF {

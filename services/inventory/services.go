@@ -32,7 +32,15 @@ import (
 
 // ServicesService works with inventory API Services.
 type ServicesService struct {
-	Q *reform.Querier
+	q *reform.Querier
+	// r *agents.Registry
+}
+
+func NewServicesService(q *reform.Querier) *ServicesService {
+	return &ServicesService{
+		q: q,
+		// r: r,
+	}
 }
 
 // makeService converts database row to Inventory API Service.
@@ -59,7 +67,7 @@ func (ss *ServicesService) get(ctx context.Context, id string) (*models.ServiceR
 	}
 
 	row := &models.ServiceRow{ID: id}
-	switch err := ss.Q.Reload(row); err {
+	switch err := ss.q.Reload(row); err {
 	case nil:
 		return row, nil
 	case reform.ErrNoRows:
@@ -70,7 +78,7 @@ func (ss *ServicesService) get(ctx context.Context, id string) (*models.ServiceR
 }
 
 func (ss *ServicesService) checkUniqueName(ctx context.Context, name string) error {
-	_, err := ss.Q.FindOneFrom(models.ServiceRowTable, "name", name)
+	_, err := ss.q.FindOneFrom(models.ServiceRowTable, "name", name)
 	switch err {
 	case nil:
 		return status.Errorf(codes.AlreadyExists, "Service with name %q already exists.", name)
@@ -83,7 +91,7 @@ func (ss *ServicesService) checkUniqueName(ctx context.Context, name string) err
 
 // List selects all Services in a stable order.
 func (ss *ServicesService) List(ctx context.Context) ([]inventory.Service, error) {
-	structs, err := ss.Q.SelectAllFrom(models.ServiceRowTable, "ORDER BY id")
+	structs, err := ss.q.SelectAllFrom(models.ServiceRowTable, "ORDER BY id")
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -114,9 +122,7 @@ func (ss *ServicesService) AddMySQL(ctx context.Context, name string, nodeID str
 		return nil, err
 	}
 
-	ns := &NodesService{
-		Q: ss.Q,
-	}
+	ns := NewNodesService(ss.q)
 	if _, err := ns.get(ctx, nodeID); err != nil {
 		return nil, err
 	}
@@ -130,7 +136,7 @@ func (ss *ServicesService) AddMySQL(ctx context.Context, name string, nodeID str
 		Port:       port,
 		UnixSocket: unixSocket,
 	}
-	if err := ss.Q.Insert(row); err != nil {
+	if err := ss.q.Insert(row); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return makeService(row), nil
@@ -151,7 +157,7 @@ func (ss *ServicesService) Change(ctx context.Context, id string, name string) (
 	}
 
 	row.Name = name
-	if err = ss.Q.Update(row); err != nil {
+	if err = ss.q.Update(row); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return makeService(row), nil
@@ -164,7 +170,7 @@ func (ss *ServicesService) Remove(ctx context.Context, id string) error {
 
 	// TODO check absence of Agents
 
-	err := ss.Q.Delete(&models.ServiceRow{ID: id})
+	err := ss.q.Delete(&models.ServiceRow{ID: id})
 	if err == reform.ErrNoRows {
 		return status.Errorf(codes.NotFound, "Service with ID %q not found.", id)
 	}

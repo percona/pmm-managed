@@ -28,11 +28,20 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/agents"
 )
 
 // AgentsService works with inventory API Agents.
 type AgentsService struct {
-	Q *reform.Querier
+	q *reform.Querier
+	r *agents.Registry
+}
+
+func NewAgentsService(q *reform.Querier, r *agents.Registry) *AgentsService {
+	return &AgentsService{
+		q: q,
+		r: r,
+	}
 }
 
 // makeAgent converts database row to Inventory API Agent.
@@ -54,7 +63,7 @@ func (as *AgentsService) makeAgent(ctx context.Context, row *models.AgentRow) (i
 
 	case models.MySQLdExporterAgentType:
 		var agentService models.AgentService
-		if err := as.Q.FindOneTo(&agentService, "agent_id", row.ID); err != nil {
+		if err := as.q.FindOneTo(&agentService, "agent_id", row.ID); err != nil {
 			return nil, errors.WithStack(err)
 		}
 
@@ -77,7 +86,7 @@ func (as *AgentsService) get(ctx context.Context, id string) (*models.AgentRow, 
 	}
 
 	row := &models.AgentRow{ID: id}
-	switch err := as.Q.Reload(row); err {
+	switch err := as.q.Reload(row); err {
 	case nil:
 		return row, nil
 	case reform.ErrNoRows:
@@ -89,7 +98,7 @@ func (as *AgentsService) get(ctx context.Context, id string) (*models.AgentRow, 
 
 // List selects all Agents in a stable order.
 func (as *AgentsService) List(ctx context.Context) ([]inventory.Agent, error) {
-	structs, err := as.Q.SelectAllFrom(models.AgentRowTable, "ORDER BY id")
+	structs, err := as.q.SelectAllFrom(models.AgentRowTable, "ORDER BY id")
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -121,9 +130,7 @@ func (as *AgentsService) AddPMMAgent(ctx context.Context, nodeID string) (invent
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// TODO Check runs-on Node: it must be BM, VM, DC (i.e. not remote, AWS RDS, etc.)
 
-	ns := &NodesService{
-		Q: as.Q,
-	}
+	ns := NewNodesService(as.q)
 	if _, err := ns.get(ctx, nodeID); err != nil {
 		return nil, err
 	}
@@ -134,11 +141,11 @@ func (as *AgentsService) AddPMMAgent(ctx context.Context, nodeID string) (invent
 		RunsOnNodeID: nodeID,
 		Disabled:     true, // not connected when we create it
 	}
-	if err := as.Q.Insert(row); err != nil {
+	if err := as.q.Insert(row); err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	err := as.Q.Insert(&models.AgentNode{
+	err := as.q.Insert(&models.AgentNode{
 		AgentID: row.ID,
 		NodeID:  nodeID,
 	})
@@ -155,9 +162,7 @@ func (as *AgentsService) AddNodeExporter(ctx context.Context, nodeID string, dis
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// TODO Check runs-on Node: it must be BM, VM, DC (i.e. not remote, AWS RDS, etc.)
 
-	ns := &NodesService{
-		Q: as.Q,
-	}
+	ns := NewNodesService(as.q)
 	if _, err := ns.get(ctx, nodeID); err != nil {
 		return nil, err
 	}
@@ -168,11 +173,11 @@ func (as *AgentsService) AddNodeExporter(ctx context.Context, nodeID string, dis
 		RunsOnNodeID: nodeID,
 		Disabled:     disabled,
 	}
-	if err := as.Q.Insert(row); err != nil {
+	if err := as.q.Insert(row); err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	err := as.Q.Insert(&models.AgentNode{
+	err := as.q.Insert(&models.AgentNode{
 		AgentID: row.ID,
 		NodeID:  nodeID,
 	})
@@ -188,16 +193,12 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, nodeID string, d
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// TODO Check runs-on Node: it must be BM, VM, DC (i.e. not remote, AWS RDS, etc.)
 
-	ns := &NodesService{
-		Q: as.Q,
-	}
+	ns := NewNodesService(as.q)
 	if _, err := ns.get(ctx, nodeID); err != nil {
 		return nil, err
 	}
 
-	ss := &ServicesService{
-		Q: as.Q,
-	}
+	ss := NewServicesService(as.q)
 	if _, err := ss.get(ctx, serviceID); err != nil {
 		return nil, err
 	}
@@ -210,18 +211,18 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, nodeID string, d
 		ServiceUsername: username,
 		ServicePassword: password,
 	}
-	if err := as.Q.Insert(row); err != nil {
+	if err := as.q.Insert(row); err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	err := as.Q.Insert(&models.AgentNode{
+	err := as.q.Insert(&models.AgentNode{
 		AgentID: row.ID,
 		NodeID:  nodeID,
 	})
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	err = as.Q.Insert(&models.AgentService{
+	err = as.q.Insert(&models.AgentService{
 		AgentID:   row.ID,
 		ServiceID: serviceID,
 	})
@@ -240,7 +241,7 @@ func (as *AgentsService) SetDisabled(ctx context.Context, id string, disabled bo
 	}
 
 	row.Disabled = disabled
-	err = as.Q.Update(row)
+	err = as.q.Update(row)
 	return errors.WithStack(err)
 }
 
@@ -254,13 +255,19 @@ func (as *AgentsService) Remove(ctx context.Context, id string) error {
 		return err
 	}
 
-	if _, err = as.Q.DeleteFrom(models.AgentServiceView, "WHERE agent_id = "+as.Q.Placeholder(1), id); err != nil {
+	if _, err = as.q.DeleteFrom(models.AgentServiceView, "WHERE agent_id = "+as.q.Placeholder(1), id); err != nil {
 		return errors.WithStack(err)
 	}
-	if _, err = as.Q.DeleteFrom(models.AgentNodeView, "WHERE agent_id = "+as.Q.Placeholder(1), id); err != nil {
+	if _, err = as.q.DeleteFrom(models.AgentNodeView, "WHERE agent_id = "+as.q.Placeholder(1), id); err != nil {
 		return errors.WithStack(err)
 	}
 
-	err = as.Q.Delete(row)
-	return errors.WithStack(err)
+	if err = as.q.Delete(row); err != nil {
+		return errors.WithStack(err)
+	}
+
+	if row.Type == models.PMMAgentType {
+		as.r.Kick(ctx, id)
+	}
+	return nil
 }

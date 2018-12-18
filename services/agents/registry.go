@@ -112,7 +112,7 @@ func (r *Registry) Run(stream api.Agent_ConnectServer) error {
 	}
 
 	r.ping(agent)
-	r.AgentStateChanged(stream.Context(), agent.id)
+	r.SendSetStateRequest(stream.Context(), agent.id)
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
@@ -200,6 +200,22 @@ func authenticate(md *api.AgentConnectMetadata, q *reform.Querier) error {
 	return nil
 }
 
+// Kick disconnects pmm-agent with given ID.
+func (r *Registry) Kick(ctx context.Context, id string) {
+	r.rw.Lock()
+	defer r.rw.Unlock()
+
+	l := logger.Get(ctx)
+	agent := r.agents[id]
+	if agent == nil {
+		l.Infof("pmm-agent with ID %q is not connected.", id)
+		return
+	}
+	l.Infof("pmm-agent with ID %q is connected, kicking.", id)
+	delete(r.agents, id)
+	close(agent.kick)
+}
+
 func (r *Registry) ping(agent *agentInfo) {
 	start := time.Now()
 	res := agent.channel.SendRequest(&api.ServerMessage_Ping{
@@ -220,15 +236,16 @@ func (r *Registry) ping(agent *agentInfo) {
 	r.mTimeDrift.Observe(timeDrift.Seconds())
 }
 
-func (r *Registry) AgentStateChanged(ctx context.Context, id string) {
+func (r *Registry) SendSetStateRequest(ctx context.Context, id string) {
+	l := logger.Get(ctx)
+
 	r.rw.RLock()
 	agent := r.agents[id]
 	r.rw.RUnlock()
 	if agent == nil {
+		l.Infof("pmm-agent with ID %q is not currently connected, ignoring state change.", id)
 		return
 	}
-
-	l := logger.Get(ctx)
 
 	// We assume that all agents running on that Node except pmm-agent with given ID are subagents.
 	// FIXME That is just plain wrong. We should filter by type, exclude external exporters, etc.
@@ -239,7 +256,7 @@ func (r *Registry) AgentStateChanged(ctx context.Context, id string) {
 		return
 	}
 	if pmmAgent.Type != models.PMMAgentType {
-		l.Errorf("Invalid agent type: %s.", pmmAgent.Type)
+		l.Panicf("Agent with ID %q has invalid type %q.", id, pmmAgent.Type)
 		return
 	}
 	structs, err := r.db.FindAllFrom(models.AgentRowTable, "runs_on_node_id", pmmAgent.RunsOnNodeID)
