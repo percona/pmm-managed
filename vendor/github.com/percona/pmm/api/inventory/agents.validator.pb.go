@@ -3,10 +3,11 @@
 
 package inventory
 
+import fmt "fmt"
 import github_com_mwitkow_go_proto_validators "github.com/mwitkow/go-proto-validators"
 import proto "github.com/golang/protobuf/proto"
-import fmt "fmt"
 import math "math"
+import _ "github.com/mwitkow/go-proto-validators"
 import _ "google.golang.org/genproto/googleapis/api/annotations"
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -15,12 +16,27 @@ var _ = fmt.Errorf
 var _ = math.Inf
 
 func (this *PMMAgent) Validate() error {
+	if this.HostNodeInfo != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.HostNodeInfo); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("HostNodeInfo", err)
+		}
+	}
 	return nil
 }
 func (this *NodeExporter) Validate() error {
+	if this.HostNodeInfo != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.HostNodeInfo); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("HostNodeInfo", err)
+		}
+	}
 	return nil
 }
 func (this *MySQLdExporter) Validate() error {
+	if this.HostNodeInfo != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.HostNodeInfo); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("HostNodeInfo", err)
+		}
+	}
 	return nil
 }
 func (this *ListAgentsRequest) Validate() error {
@@ -51,6 +67,9 @@ func (this *ListAgentsResponse) Validate() error {
 	return nil
 }
 func (this *GetAgentRequest) Validate() error {
+	if this.Id == "" {
+		return github_com_mwitkow_go_proto_validators.FieldError("Id", fmt.Errorf(`value '%v' must not be an empty string`, this.Id))
+	}
 	return nil
 }
 func (this *GetAgentResponse) Validate() error {
@@ -78,6 +97,14 @@ func (this *GetAgentResponse) Validate() error {
 	return nil
 }
 func (this *AddPMMAgentRequest) Validate() error {
+	if nil == this.HostNodeInfo {
+		return github_com_mwitkow_go_proto_validators.FieldError("HostNodeInfo", fmt.Errorf("message must exist"))
+	}
+	if this.HostNodeInfo != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.HostNodeInfo); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("HostNodeInfo", err)
+		}
+	}
 	return nil
 }
 func (this *AddPMMAgentResponse) Validate() error {
@@ -89,6 +116,14 @@ func (this *AddPMMAgentResponse) Validate() error {
 	return nil
 }
 func (this *AddNodeExporterRequest) Validate() error {
+	if nil == this.HostNodeInfo {
+		return github_com_mwitkow_go_proto_validators.FieldError("HostNodeInfo", fmt.Errorf("message must exist"))
+	}
+	if this.HostNodeInfo != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.HostNodeInfo); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("HostNodeInfo", err)
+		}
+	}
 	return nil
 }
 func (this *AddNodeExporterResponse) Validate() error {
@@ -100,6 +135,14 @@ func (this *AddNodeExporterResponse) Validate() error {
 	return nil
 }
 func (this *AddMySQLdExporterRequest) Validate() error {
+	if nil == this.HostNodeInfo {
+		return github_com_mwitkow_go_proto_validators.FieldError("HostNodeInfo", fmt.Errorf("message must exist"))
+	}
+	if this.HostNodeInfo != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.HostNodeInfo); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("HostNodeInfo", err)
+		}
+	}
 	return nil
 }
 func (this *AddMySQLdExporterResponse) Validate() error {
@@ -111,18 +154,27 @@ func (this *AddMySQLdExporterResponse) Validate() error {
 	return nil
 }
 func (this *EnableAgentRequest) Validate() error {
+	if this.Id == "" {
+		return github_com_mwitkow_go_proto_validators.FieldError("Id", fmt.Errorf(`value '%v' must not be an empty string`, this.Id))
+	}
 	return nil
 }
 func (this *EnableAgentResponse) Validate() error {
 	return nil
 }
 func (this *DisableAgentRequest) Validate() error {
+	if this.Id == "" {
+		return github_com_mwitkow_go_proto_validators.FieldError("Id", fmt.Errorf(`value '%v' must not be an empty string`, this.Id))
+	}
 	return nil
 }
 func (this *DisableAgentResponse) Validate() error {
 	return nil
 }
 func (this *RemoveAgentRequest) Validate() error {
+	if this.Id == "" {
+		return github_com_mwitkow_go_proto_validators.FieldError("Id", fmt.Errorf(`value '%v' must not be an empty string`, this.Id))
+	}
 	return nil
 }
 func (this *RemoveAgentResponse) Validate() error {

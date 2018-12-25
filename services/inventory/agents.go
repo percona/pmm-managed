@@ -49,16 +49,28 @@ func (as *AgentsService) makeAgent(ctx context.Context, row *models.AgentRow) (i
 	switch row.Type {
 	case models.PMMAgentType:
 		return &inventory.PMMAgent{
-			Id:           row.ID,
-			RunsOnNodeId: row.RunsOnNodeID,
-			Running:      !row.Disabled,
+			Id: row.ID,
+			HostNodeInfo: &inventory.HostNodeInfo{
+				NodeId:            row.RunsOnNodeID,
+				ContainerId:       "TODO",
+				ContainerName:     "TODO",
+				KubernetesPodUid:  "TODO",
+				KubernetesPodName: "TODO",
+			},
+			Running: !row.Disabled,
 		}, nil
 
 	case models.NodeExporterAgentType:
 		return &inventory.NodeExporter{
-			Id:           row.ID,
-			RunsOnNodeId: row.RunsOnNodeID,
-			Disabled:     row.Disabled,
+			Id: row.ID,
+			HostNodeInfo: &inventory.HostNodeInfo{
+				NodeId:            row.RunsOnNodeID,
+				ContainerId:       "TODO",
+				ContainerName:     "TODO",
+				KubernetesPodUid:  "TODO",
+				KubernetesPodName: "TODO",
+			},
+			Disabled: row.Disabled,
 		}, nil
 
 	case models.MySQLdExporterAgentType:
@@ -68,11 +80,17 @@ func (as *AgentsService) makeAgent(ctx context.Context, row *models.AgentRow) (i
 		}
 
 		return &inventory.MySQLdExporter{
-			Id:           row.ID,
-			RunsOnNodeId: row.RunsOnNodeID,
-			Disabled:     row.Disabled,
-			ServiceId:    agentService.ServiceID,
-			Username:     pointer.GetString(row.ServiceUsername),
+			Id: row.ID,
+			HostNodeInfo: &inventory.HostNodeInfo{
+				NodeId:            row.RunsOnNodeID,
+				ContainerId:       "TODO",
+				ContainerName:     "TODO",
+				KubernetesPodUid:  "TODO",
+				KubernetesPodName: "TODO",
+			},
+			Disabled:  row.Disabled,
+			ServiceId: agentService.ServiceID,
+			Username:  pointer.GetString(row.ServiceUsername),
 		}, nil
 
 	default:

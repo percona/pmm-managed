@@ -48,9 +48,15 @@ func makeService(row *models.ServiceRow) inventory.Service {
 	switch row.Type {
 	case models.MySQLServiceType:
 		return &inventory.MySQLService{
-			Id:         row.ID,
-			Name:       row.Name,
-			NodeId:     row.NodeID,
+			Id:   row.ID,
+			Name: row.Name,
+			HostNodeInfo: &inventory.HostNodeInfo{
+				NodeId:            row.NodeID,
+				ContainerId:       "TODO",
+				ContainerName:     "TODO",
+				KubernetesPodUid:  "TODO",
+				KubernetesPodName: "TODO",
+			},
 			Address:    pointer.GetString(row.Address),
 			Port:       uint32(pointer.GetUint16(row.Port)),
 			UnixSocket: pointer.GetString(row.UnixSocket),
