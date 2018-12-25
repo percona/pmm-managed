@@ -61,7 +61,7 @@ type Registry struct {
 	mConnects     prometheus.Counter
 	mDisconnects  *prometheus.CounterVec
 	mLatency      prometheus.Summary
-	mTimeDrift    prometheus.Summary
+	mClockDrift   prometheus.Summary
 }
 
 func NewRegistry(db *reform.DB) *Registry {
@@ -88,11 +88,11 @@ func NewRegistry(db *reform.DB) *Registry {
 			Help:       "Ping latency.",
 			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
 		}),
-		mTimeDrift: prometheus.NewSummary(prometheus.SummaryOpts{
+		mClockDrift: prometheus.NewSummary(prometheus.SummaryOpts{
 			Namespace:  prometheusNamespace,
 			Subsystem:  prometheusSubsystem,
-			Name:       "time_drift_seconds",
-			Help:       "Time drift.",
+			Name:       "clock_drift_seconds",
+			Help:       "Clock drift.",
 			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
 		}),
 	}
@@ -230,10 +230,10 @@ func (r *Registry) ping(agent *agentInfo) {
 		agent.l.Errorf("Failed to decode PingResponse.current_time: %s.", err)
 		return
 	}
-	timeDrift := t.Sub(start.Add(latency))
-	agent.l.Infof("Latency: %s. Time drift: %s.", latency, timeDrift)
+	clockDrift := t.Sub(start.Add(latency))
+	agent.l.Infof("Latency: %s. Clock drift: %s.", latency, clockDrift)
 	r.mLatency.Observe(latency.Seconds())
-	r.mTimeDrift.Observe(timeDrift.Seconds())
+	r.mClockDrift.Observe(clockDrift.Seconds())
 }
 
 func (r *Registry) SendSetStateRequest(ctx context.Context, id string) {
