@@ -16,43 +16,29 @@ import (
 // swagger:model inventoryGetNodeResponse
 type InventoryGetNodeResponse struct {
 
-	// aws rds
-	AWSRDS *InventoryAWSRDSNode `json:"aws_rds,omitempty"`
+	// amazon rds remote
+	AmazonRDSRemote *InventoryAmazonRDSRemoteNode `json:"amazon_rds_remote,omitempty"`
 
-	// bare metal
-	BareMetal *InventoryBareMetalNode `json:"bare_metal,omitempty"`
-
-	// container
-	Container *InventoryContainerNode `json:"container,omitempty"`
+	// generic
+	Generic *InventoryGenericNode `json:"generic,omitempty"`
 
 	// remote
 	Remote *InventoryRemoteNode `json:"remote,omitempty"`
-
-	// virtual machine
-	VirtualMachine *InventoryVirtualMachineNode `json:"virtual_machine,omitempty"`
 }
 
 // Validate validates this inventory get node response
 func (m *InventoryGetNodeResponse) Validate(formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.validateAWSRDS(formats); err != nil {
+	if err := m.validateAmazonRDSRemote(formats); err != nil {
 		res = append(res, err)
 	}
 
-	if err := m.validateBareMetal(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateContainer(formats); err != nil {
+	if err := m.validateGeneric(formats); err != nil {
 		res = append(res, err)
 	}
 
 	if err := m.validateRemote(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateVirtualMachine(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -62,16 +48,16 @@ func (m *InventoryGetNodeResponse) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *InventoryGetNodeResponse) validateAWSRDS(formats strfmt.Registry) error {
+func (m *InventoryGetNodeResponse) validateAmazonRDSRemote(formats strfmt.Registry) error {
 
-	if swag.IsZero(m.AWSRDS) { // not required
+	if swag.IsZero(m.AmazonRDSRemote) { // not required
 		return nil
 	}
 
-	if m.AWSRDS != nil {
-		if err := m.AWSRDS.Validate(formats); err != nil {
+	if m.AmazonRDSRemote != nil {
+		if err := m.AmazonRDSRemote.Validate(formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("aws_rds")
+				return ve.ValidateName("amazon_rds_remote")
 			}
 			return err
 		}
@@ -80,34 +66,16 @@ func (m *InventoryGetNodeResponse) validateAWSRDS(formats strfmt.Registry) error
 	return nil
 }
 
-func (m *InventoryGetNodeResponse) validateBareMetal(formats strfmt.Registry) error {
+func (m *InventoryGetNodeResponse) validateGeneric(formats strfmt.Registry) error {
 
-	if swag.IsZero(m.BareMetal) { // not required
+	if swag.IsZero(m.Generic) { // not required
 		return nil
 	}
 
-	if m.BareMetal != nil {
-		if err := m.BareMetal.Validate(formats); err != nil {
+	if m.Generic != nil {
+		if err := m.Generic.Validate(formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("bare_metal")
-			}
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (m *InventoryGetNodeResponse) validateContainer(formats strfmt.Registry) error {
-
-	if swag.IsZero(m.Container) { // not required
-		return nil
-	}
-
-	if m.Container != nil {
-		if err := m.Container.Validate(formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("container")
+				return ve.ValidateName("generic")
 			}
 			return err
 		}
@@ -126,24 +94,6 @@ func (m *InventoryGetNodeResponse) validateRemote(formats strfmt.Registry) error
 		if err := m.Remote.Validate(formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("remote")
-			}
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (m *InventoryGetNodeResponse) validateVirtualMachine(formats strfmt.Registry) error {
-
-	if swag.IsZero(m.VirtualMachine) { // not required
-		return nil
-	}
-
-	if m.VirtualMachine != nil {
-		if err := m.VirtualMachine.Validate(formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("virtual_machine")
 			}
 			return err
 		}

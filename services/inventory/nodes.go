@@ -49,24 +49,11 @@ func makeNode(row *models.NodeRow) inventory.Node {
 	case models.PMMServerNodeType: // FIXME remove this branch
 		fallthrough
 
-	case models.BareMetalNodeType:
-		return &inventory.BareMetalNode{
+	case models.GenericNodeType:
+		return &inventory.GenericNode{
 			Id:       row.ID,
 			Name:     row.Name,
 			Hostname: pointer.GetString(row.Hostname),
-		}
-
-	case models.VirtualMachineNodeType:
-		return &inventory.VirtualMachineNode{
-			Id:       row.ID,
-			Name:     row.Name,
-			Hostname: pointer.GetString(row.Hostname),
-		}
-
-	case models.ContainerNodeType:
-		return &inventory.ContainerNode{
-			Id:   row.ID,
-			Name: row.Name,
 		}
 
 	case models.RemoteNodeType:
@@ -75,8 +62,8 @@ func makeNode(row *models.NodeRow) inventory.Node {
 			Name: row.Name,
 		}
 
-	case models.AWSRDSNodeType:
-		return &inventory.AWSRDSNode{
+	case models.AmazonRDSRemoteNodeType:
+		return &inventory.AmazonRDSRemoteNode{
 			Id:       row.ID,
 			Name:     row.Name,
 			Hostname: pointer.GetString(row.Hostname),
