@@ -97,6 +97,8 @@ var (
 	agentRDSExporterConfigF = flag.String("agent-rds-exporter-config", "/etc/percona-rds-exporter.yml", "rds_exporter configuration file path")
 	agentQANBaseF           = flag.String("agent-qan-base", "/usr/local/percona/qan-agent", "qan-agent installation base path")
 
+	rdsEnableGovCloud = flag.Bool("rds-enable-gov-cloud", false, "Enable GOV cloud for RDS")
+
 	debugF = flag.Bool("debug", false, "Enable debug logging")
 )
 
@@ -173,6 +175,8 @@ func makeRDSService(ctx context.Context, deps *serviceDependencies) (*rds.Servic
 		DB:            deps.db,
 		PortsRegistry: deps.portsRegistry,
 		QAN:           deps.qan,
+
+		RDSEnableGovCloud: *rdsEnableGovCloud,
 	}
 	rdsService, err := rds.NewService(&rdsConfig)
 	if err != nil {

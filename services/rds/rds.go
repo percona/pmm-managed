@@ -72,6 +72,8 @@ type ServiceConfig struct {
 	DB            *reform.DB
 	PortsRegistry *ports.Registry
 	QAN           *qan.Service
+
+	RDSEnableGovCloud bool
 }
 
 // Service is responsible for interactions with AWS RDS.
@@ -260,7 +262,10 @@ func (svc *Service) Discover(ctx context.Context, accessKey, secretKey string) (
 	var g errgroup.Group
 	instances := make(chan Instance)
 
-	partitions := []endpoints.Partition{endpoints.AwsPartition(), endpoints.AwsUsGovPartition()}
+	partitions := []endpoints.Partition{endpoints.AwsPartition()}
+	if svc.RDSEnableGovCloud {
+		partitions = append(partitions, endpoints.AwsUsGovPartition())
+	}
 	for _, p := range partitions {
 		for _, r := range p.Services()[endpoints.RdsServiceID].Regions() {
 			region := r.ID()
