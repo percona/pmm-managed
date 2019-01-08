@@ -72,6 +72,8 @@ type ServiceConfig struct {
 	DB            *reform.DB
 	PortsRegistry *ports.Registry
 	QAN           *qan.Service
+
+	RDSEnableGovCloud bool
 }
 
 // Service is responsible for interactions with AWS RDS.
@@ -260,74 +262,80 @@ func (svc *Service) Discover(ctx context.Context, accessKey, secretKey string) (
 	var g errgroup.Group
 	instances := make(chan Instance)
 
-	for _, r := range endpoints.AwsPartition().Services()[endpoints.RdsServiceID].Regions() {
-		region := r.ID()
-		g.Go(func() error {
-			// use given credentials, or default credential chain
-			var creds *credentials.Credentials
-			if accessKey != "" || secretKey != "" {
-				creds = credentials.NewCredentials(&credentials.StaticProvider{
-					Value: credentials.Value{
-						AccessKeyID:     accessKey,
-						SecretAccessKey: secretKey,
-					},
-				})
-			}
-			config := &aws.Config{
-				CredentialsChainVerboseErrors: aws.Bool(true),
-				Credentials:                   creds,
-				Region:                        aws.String(region),
-				HTTPClient:                    svc.httpClient,
-				Logger:                        aws.LoggerFunc(l.Debug),
-			}
-			if l.Level >= logrus.DebugLevel {
-				config.LogLevel = aws.LogLevel(aws.LogDebug)
-			}
-			s, err := session.NewSession(config)
-			if err != nil {
-				return errors.WithStack(err)
-			}
+	partitions := []endpoints.Partition{endpoints.AwsPartition()}
+	if svc.RDSEnableGovCloud {
+		partitions = append(partitions, endpoints.AwsUsGovPartition())
+	}
+	for _, p := range partitions {
+		for _, r := range p.Services()[endpoints.RdsServiceID].Regions() {
+			region := r.ID()
+			g.Go(func() error {
+				// use given credentials, or default credential chain
+				var creds *credentials.Credentials
+				if accessKey != "" || secretKey != "" {
+					creds = credentials.NewCredentials(&credentials.StaticProvider{
+						Value: credentials.Value{
+							AccessKeyID:     accessKey,
+							SecretAccessKey: secretKey,
+						},
+					})
+				}
+				config := &aws.Config{
+					CredentialsChainVerboseErrors: aws.Bool(true),
+					Credentials:                   creds,
+					Region:                        aws.String(region),
+					HTTPClient:                    svc.httpClient,
+					Logger:                        aws.LoggerFunc(l.Debug),
+				}
+				if l.Level >= logrus.DebugLevel {
+					config.LogLevel = aws.LogLevel(aws.LogDebug)
+				}
+				s, err := session.NewSession(config)
+				if err != nil {
+					return errors.WithStack(err)
+				}
 
-			out, err := rds.New(s).DescribeDBInstancesWithContext(ctx, new(rds.DescribeDBInstancesInput))
-			if err != nil {
-				l.Error(err)
+				out, err := rds.New(s).DescribeDBInstancesWithContext(ctx, new(rds.DescribeDBInstancesInput))
+				if err != nil {
+					l.Error(err)
 
-				if err, ok := err.(awserr.Error); ok {
-					if err.OrigErr() != nil && err.OrigErr() == ctx.Err() {
-						// ignore timeout, let other goroutines return partial data
-						return nil
+					if err, ok := err.(awserr.Error); ok {
+						if err.OrigErr() != nil && err.OrigErr() == ctx.Err() {
+							// ignore timeout, let other goroutines return partial data
+							return nil
+						}
+						switch err.Code() {
+						case "InvalidClientTokenId", "EmptyStaticCreds":
+							return status.Error(codes.InvalidArgument, err.Message())
+						default:
+							return err
+						}
 					}
-					switch err.Code() {
-					case "InvalidClientTokenId", "EmptyStaticCreds":
-						return status.Error(codes.InvalidArgument, err.Message())
-					default:
-						return err
+					return errors.WithStack(err)
+				}
+
+				l.Debugf("Got %d instances from %s.", len(out.DBInstances), region)
+				for _, db := range out.DBInstances {
+					instances <- Instance{
+						Node: models.RDSNode{
+							Type: models.RDSNodeType,
+							Name: *db.DBInstanceIdentifier,
+
+							Region: region,
+						},
+						Service: models.RDSService{
+							Type: models.RDSServiceType,
+
+							Address:       db.Endpoint.Address,
+							Port:          pointer.ToUint16(uint16(*db.Endpoint.Port)),
+							Engine:        db.Engine,
+							EngineVersion: db.EngineVersion,
+						},
 					}
 				}
-				return errors.WithStack(err)
-			}
-
-			l.Debugf("Got %d instances from %s.", len(out.DBInstances), region)
-			for _, db := range out.DBInstances {
-				instances <- Instance{
-					Node: models.RDSNode{
-						Type: models.RDSNodeType,
-						Name: *db.DBInstanceIdentifier,
-
-						Region: region,
-					},
-					Service: models.RDSService{
-						Type: models.RDSServiceType,
-
-						Address:       db.Endpoint.Address,
-						Port:          pointer.ToUint16(uint16(*db.Endpoint.Port)),
-						Engine:        db.Engine,
-						EngineVersion: db.EngineVersion,
-					},
-				}
-			}
-			return nil
-		})
+				return nil
+			})
+		}
 	}
 
 	go func() {
