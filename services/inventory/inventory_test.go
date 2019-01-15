@@ -222,9 +222,15 @@ func TestServices(t *testing.T) {
 		actualService, err := ss.AddMySQL(ctx, "test-mysql", models.PMMServerNodeID, pointer.ToString("127.0.0.1"), pointer.ToUint16(3306), nil)
 		require.NoError(t, err)
 		expectedService := &inventory.MySQLService{
-			Id:      "gen:00000000-0000-4000-8000-000000000001",
-			Name:    "test-mysql",
-			NodeId:  models.PMMServerNodeID,
+			Id:   "gen:00000000-0000-4000-8000-000000000001",
+			Name: "test-mysql",
+			HostNodeInfo: &inventory.HostNodeInfo{
+				NodeId:            models.PMMServerNodeID,
+				ContainerId:       "TODO",
+				ContainerName:     "TODO",
+				KubernetesPodUid:  "TODO",
+				KubernetesPodName: "TODO",
+			},
 			Address: "127.0.0.1",
 			Port:    3306,
 		}
@@ -237,9 +243,15 @@ func TestServices(t *testing.T) {
 		actualService, err = ss.Change(ctx, "gen:00000000-0000-4000-8000-000000000001", "test-mysql-new")
 		require.NoError(t, err)
 		expectedService = &inventory.MySQLService{
-			Id:      "gen:00000000-0000-4000-8000-000000000001",
-			Name:    "test-mysql-new",
-			NodeId:  models.PMMServerNodeID,
+			Id:   "gen:00000000-0000-4000-8000-000000000001",
+			Name: "test-mysql-new",
+			HostNodeInfo: &inventory.HostNodeInfo{
+				NodeId:            models.PMMServerNodeID,
+				ContainerId:       "TODO",
+				ContainerName:     "TODO",
+				KubernetesPodUid:  "TODO",
+				KubernetesPodName: "TODO",
+			},
 			Address: "127.0.0.1",
 			Port:    3306,
 		}
@@ -349,9 +361,15 @@ func TestAgents(t *testing.T) {
 		actualAgent, err := as.AddNodeExporter(ctx, models.PMMServerNodeID, true)
 		require.NoError(t, err)
 		expectedNodeExporterAgent := &inventory.NodeExporter{
-			Id:           "gen:00000000-0000-4000-8000-000000000001",
-			RunsOnNodeId: models.PMMServerNodeID,
-			Disabled:     true,
+			Id: "gen:00000000-0000-4000-8000-000000000001",
+			HostNodeInfo: &inventory.HostNodeInfo{
+				NodeId:            models.PMMServerNodeID,
+				ContainerId:       "TODO",
+				ContainerName:     "TODO",
+				KubernetesPodUid:  "TODO",
+				KubernetesPodName: "TODO",
+			},
+			Disabled: true,
 		}
 		assert.Equal(t, expectedNodeExporterAgent, actualAgent)
 
@@ -365,10 +383,16 @@ func TestAgents(t *testing.T) {
 		actualAgent, err = as.AddMySQLdExporter(ctx, models.PMMServerNodeID, false, "gen:00000000-0000-4000-8000-000000000002", pointer.ToString("username"), nil)
 		require.NoError(t, err)
 		expectedMySQLdExporterAgent := &inventory.MySQLdExporter{
-			Id:           "gen:00000000-0000-4000-8000-000000000003",
-			RunsOnNodeId: models.PMMServerNodeID,
-			ServiceId:    "gen:00000000-0000-4000-8000-000000000002",
-			Username:     "username",
+			Id: "gen:00000000-0000-4000-8000-000000000003",
+			HostNodeInfo: &inventory.HostNodeInfo{
+				NodeId:            models.PMMServerNodeID,
+				ContainerId:       "TODO",
+				ContainerName:     "TODO",
+				KubernetesPodUid:  "TODO",
+				KubernetesPodName: "TODO",
+			},
+			ServiceId: "gen:00000000-0000-4000-8000-000000000002",
+			Username:  "username",
 		}
 		assert.Equal(t, expectedMySQLdExporterAgent, actualAgent)
 
@@ -422,8 +446,14 @@ func TestAgents(t *testing.T) {
 		actualAgent, err := as.AddPMMAgent(ctx, models.PMMServerNodeID)
 		require.NoError(t, err)
 		expectedPMMAgent := &inventory.PMMAgent{
-			Id:           "gen:00000000-0000-4000-8000-000000000001",
-			RunsOnNodeId: models.PMMServerNodeID,
+			Id: "gen:00000000-0000-4000-8000-000000000001",
+			HostNodeInfo: &inventory.HostNodeInfo{
+				NodeId:            models.PMMServerNodeID,
+				ContainerId:       "TODO",
+				ContainerName:     "TODO",
+				KubernetesPodUid:  "TODO",
+				KubernetesPodName: "TODO",
+			},
 		}
 		assert.Equal(t, expectedPMMAgent, actualAgent)
 	})
