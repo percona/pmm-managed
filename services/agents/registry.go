@@ -265,26 +265,23 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, id string) {
 		return
 	}
 
-	processes := make([]*api.SetStateRequest_AgentProcess, 0, len(structs))
+	processes := make(map[string]*api.SetStateRequest_AgentProcess, len(structs))
 	for _, str := range structs {
 		row := str.(*models.AgentRow)
 		if row.Disabled {
 			continue
 		}
 
-		var process *api.SetStateRequest_AgentProcess
 		switch row.Type {
 		case models.PMMAgentType:
 			continue
 		case models.NodeExporterAgentType:
-			process = r.nodeExporterConfig(row)
+			processes[row.ID] = r.nodeExporterConfig(row)
 		case models.MySQLdExporterAgentType:
-			process = r.mysqldExporterConfig(row)
+			processes[row.ID] = r.mysqldExporterConfig(row)
 		default:
 			l.Panicf("unhandled AgentRow type %s", row.Type)
 		}
-
-		processes = append(processes, process)
 	}
 
 	res := agent.channel.SendRequest(&api.ServerMessage_State{
@@ -312,8 +309,7 @@ func (r *Registry) nodeExporterConfig(agent *models.AgentRow) *api.SetStateReque
 		"vmstat",
 	}
 	return &api.SetStateRequest_AgentProcess{
-		AgentId: agent.ID,
-		Type:    api.Type_NODE_EXPORTER,
+		Type: api.Type_NODE_EXPORTER,
 		Args: []string{
 			fmt.Sprintf("-collectors.enabled=%s", strings.Join(collectors, ",")),
 		},
@@ -354,9 +350,8 @@ func (r *Registry) mysqldExporterConfig(agent *models.AgentRow) *api.SetStateReq
 	dsn := cfg.FormatDSN()
 
 	return &api.SetStateRequest_AgentProcess{
-		AgentId: agent.ID,
-		Type:    api.Type_MYSQLD_EXPORTER,
-		Args:    args,
+		Type: api.Type_MYSQLD_EXPORTER,
+		Args: args,
 		Env: []string{
 			fmt.Sprintf("DATA_SOURCE_NAME=%s", dsn),
 		},
