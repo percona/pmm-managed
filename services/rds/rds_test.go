@@ -230,6 +230,7 @@ func TestDiscover(t *testing.T) {
 			},
 		}}
 
+		// If this test fails, see https://jira.percona.com/browse/PMM-1772 and linked issues.
 		assert.Equal(t, expected, actual)
 	})
 
