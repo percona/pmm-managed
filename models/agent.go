@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 )
 
@@ -210,4 +211,40 @@ func (q *QanAgent) DSN(service *MySQLService) string {
 	// TODO TLSConfig: "true", https://jira.percona.com/browse/PMM-1727
 	// TODO Other parameters?
 	return cfg.FormatDSN()
+}
+
+type AgentFilters struct {
+	ServiceId *string
+}
+
+// AgentsByFilters returns agents providing insights for a given filters.
+func AgentsByFilters(q *reform.Querier, filters AgentFilters) ([]*AgentRow, error) {
+	var agentIDs []interface{}
+	var structs []reform.Struct
+	var err error
+	if filters.ServiceId != nil {
+		agentServices, err := q.SelectAllFrom(AgentServiceView, "WHERE service_id = ? ORDER BY ID", *filters.ServiceId)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		for _, str := range agentServices {
+			agentIDs = append(agentIDs, str.(*AgentService).AgentID)
+		}
+
+		if len(agentIDs) == 0 {
+			return []*AgentRow{}, nil
+		}
+
+		structs, err = q.FindAllFrom(AgentRowTable, "id", agentIDs...)
+	} else {
+		structs, err = q.SelectAllFrom(AgentRowTable, "ORDER BY ID")
+	}
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	agents := make([]*AgentRow, len(structs))
+	for i, str := range structs {
+		agents[i] = str.(*AgentRow)
+	}
+	return agents, nil
 }
