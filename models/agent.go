@@ -213,8 +213,9 @@ func (q *QanAgent) DSN(service *MySQLService) string {
 	return cfg.FormatDSN()
 }
 
+// AgentFilters represents filters for agents list.
 type AgentFilters struct {
-	ServiceId *string
+	ServiceID *string
 }
 
 // AgentsByFilters returns agents providing insights for a given filters.
@@ -222,8 +223,8 @@ func AgentsByFilters(q *reform.Querier, filters AgentFilters) ([]*AgentRow, erro
 	var agentIDs []interface{}
 	var structs []reform.Struct
 	var err error
-	if filters.ServiceId != nil {
-		agentServices, err := q.SelectAllFrom(AgentServiceView, "WHERE service_id = ? ORDER BY ID", *filters.ServiceId)
+	if filters.ServiceID != nil {
+		agentServices, err := q.SelectAllFrom(AgentServiceView, "WHERE service_id = ? ORDER BY ID", *filters.ServiceID)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
