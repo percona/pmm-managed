@@ -31,9 +31,9 @@ type AgentsServer struct {
 	Agents *inventory.AgentsService
 }
 
-// ListAgents returns a list of all Agents.
+// ListAgents returns a list of Agents for a given filters.
 func (s *AgentsServer) ListAgents(ctx context.Context, req *api.ListAgentsRequest) (*api.ListAgentsResponse, error) {
-	agents, err := s.Agents.List(ctx)
+	agents, err := s.Agents.List(ctx, req.ServiceId)
 	if err != nil {
 		return nil, err
 	}

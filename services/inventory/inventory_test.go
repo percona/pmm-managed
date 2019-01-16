@@ -354,7 +354,7 @@ func TestAgents(t *testing.T) {
 		ss, as, teardown := setup(t)
 		defer teardown(t)
 
-		actualAgents, err := as.List(ctx)
+		actualAgents, err := as.List(ctx, "")
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 0)
 
@@ -407,11 +407,16 @@ func TestAgents(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, expectedMySQLdExporterAgent, actualAgent)
 
-		actualAgents, err = as.List(ctx)
+		actualAgents, err = as.List(ctx, "")
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 2)
 		assert.Equal(t, expectedNodeExporterAgent, actualAgents[0])
 		assert.Equal(t, expectedMySQLdExporterAgent, actualAgents[1])
+
+		actualAgents, err = as.List(ctx, "gen:00000000-0000-4000-8000-000000000002")
+		require.NoError(t, err)
+		require.Len(t, actualAgents, 1)
+		assert.Equal(t, expectedMySQLdExporterAgent, actualAgents[0])
 
 		err = as.Remove(ctx, "gen:00000000-0000-4000-8000-000000000001")
 		require.NoError(t, err)
@@ -425,7 +430,7 @@ func TestAgents(t *testing.T) {
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "gen:00000000-0000-4000-8000-000000000003" not found.`), err)
 		assert.Nil(t, actualAgent)
 
-		actualAgents, err = as.List(ctx)
+		actualAgents, err = as.List(ctx, "")
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 0)
 	})

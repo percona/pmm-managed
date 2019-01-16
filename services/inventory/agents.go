@@ -114,17 +114,20 @@ func (as *AgentsService) get(ctx context.Context, id string) (*models.AgentRow, 
 	}
 }
 
-// List selects all Agents in a stable order.
-func (as *AgentsService) List(ctx context.Context) ([]inventory.Agent, error) {
-	structs, err := as.q.SelectAllFrom(models.AgentRowTable, "ORDER BY id")
+// List selects all Agents in a stable order for a given service.
+func (as *AgentsService) List(ctx context.Context, serviceId string) ([]inventory.Agent, error) {
+	filters := models.AgentFilters{}
+	if serviceId != "" {
+		filters.ServiceId = &serviceId
+	}
+	agentRows, err := models.AgentsByFilters(as.q, filters)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	// TODO That loop makes len(structs) SELECTs, that can be slow. Optimize when needed.
-	res := make([]inventory.Agent, len(structs))
-	for i, str := range structs {
-		row := str.(*models.AgentRow)
+	// TODO That loop makes len(agentRows) SELECTs, that can be slow. Optimize when needed.
+	res := make([]inventory.Agent, len(agentRows))
+	for i, row := range agentRows {
 		agent, err := as.makeAgent(ctx, row)
 		if err != nil {
 			return nil, err
