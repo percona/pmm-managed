@@ -195,7 +195,7 @@ func AgentsByFilters(q *reform.Querier, filters AgentFilters) ([]*AgentRow, erro
 	var structs []reform.Struct
 	var err error
 	if filters.ServiceID != nil {
-		agentServices, err := q.SelectAllFrom(AgentServiceView, "WHERE service_id = ? ORDER BY ID", *filters.ServiceID)
+		agentServices, err := q.SelectAllFrom(AgentServiceView, "WHERE service_id = ?", *filters.ServiceID)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -208,11 +208,14 @@ func AgentsByFilters(q *reform.Querier, filters AgentFilters) ([]*AgentRow, erro
 		}
 
 		structs, err = q.FindAllFrom(AgentRowTable, "id", agentIDs...)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
 	} else {
 		structs, err = q.SelectAllFrom(AgentRowTable, "ORDER BY ID")
-	}
-	if err != nil {
-		return nil, errors.WithStack(err)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
 	}
 	agents := make([]*AgentRow, len(structs))
 	for i, str := range structs {
