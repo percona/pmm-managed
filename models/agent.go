@@ -21,6 +21,7 @@ import (
 	"net"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
@@ -186,7 +187,12 @@ type RDSExporter struct {
 
 // AgentFilters represents filters for agents list.
 type AgentFilters struct {
-	ServiceID *string
+	// Return only Agents running on that Node.
+	HostNodeId string
+	// Return only Agents that provide insights for that Node.
+	NodeId string
+	// Return only Agents that provide insights for that Service.
+	ServiceID string
 }
 
 // AgentsByFilters returns agents providing insights for a given filters.
@@ -194,20 +200,63 @@ func AgentsByFilters(q *reform.Querier, filters AgentFilters) ([]*AgentRow, erro
 	var agentIDs []interface{}
 	var structs []reform.Struct
 	var err error
-	if filters.ServiceID != nil {
-		agentServices, err := q.SelectAllFrom(AgentServiceView, "WHERE service_id = ?", *filters.ServiceID)
+	filtered := false
+	if filters.HostNodeId != "" {
+		agentNodes, err := q.SelectAllFrom(AgentRowTable, "WHERE runs_on_node_id = ?", filters.HostNodeId)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		for _, str := range agentServices {
-			agentIDs = append(agentIDs, str.(*AgentService).AgentID)
+		var ids []interface{}
+		for _, str := range agentNodes {
+			ids = append(ids, str.(*AgentRow).ID)
 		}
+		if len(ids) == 0 {
+			return []*AgentRow{}, nil
+		}
+		agentIDs = intersect(agentIDs, ids, filtered)
+		filtered = true
+	}
+	if filters.NodeId != "" {
+		agentNodes, err := q.SelectAllFrom(AgentNodeView, "WHERE node_id = ?", filters.NodeId)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		var ids []interface{}
+		for _, str := range agentNodes {
+			ids = append(ids, str.(*AgentNode).AgentID)
+		}
+		if len(ids) == 0 {
+			return []*AgentRow{}, nil
+		}
+		agentIDs = intersect(agentIDs, ids, filtered)
+		filtered = true
+	}
+	if filters.ServiceID != "" {
+		agentServices, err := q.SelectAllFrom(AgentServiceView, "WHERE service_id = ?", filters.ServiceID)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		var ids []interface{}
+		for _, str := range agentServices {
+			ids = append(ids, str.(*AgentService).AgentID)
+		}
+		if len(ids) == 0 {
+			return []*AgentRow{}, nil
+		}
+		agentIDs = intersect(agentIDs, ids, filtered)
+		filtered = true
+	}
 
+	if filtered {
 		if len(agentIDs) == 0 {
 			return []*AgentRow{}, nil
 		}
 
-		structs, err = q.FindAllFrom(AgentRowTable, "id", agentIDs...)
+		p := strings.Join(q.Placeholders(1, len(agentIDs)), ", ")
+		qi := q.QualifiedView(AgentRowTable) + "." + q.QuoteIdentifier("id")
+		tail := fmt.Sprintf("WHERE %s IN (%s) ORDER BY ID", qi, p)
+
+		structs, err = q.SelectAllFrom(AgentRowTable, tail, agentIDs...)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -222,4 +271,21 @@ func AgentsByFilters(q *reform.Querier, filters AgentFilters) ([]*AgentRow, erro
 		agents[i] = str.(*AgentRow)
 	}
 	return agents, nil
+}
+
+func intersect(filteredIDs []interface{}, newIDs []interface{}, filtered bool) []interface{} {
+	if filtered {
+		var ids []interface{}
+		for _, fid := range filteredIDs {
+			for _, nid := range newIDs {
+				if fid == nid {
+					ids = append(ids, fid)
+					break
+				}
+			}
+		}
+		return ids
+	} else {
+		return newIDs
+	}
 }

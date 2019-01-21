@@ -23,6 +23,7 @@ import (
 	"github.com/AlekSi/pointer"
 	api "github.com/percona/pmm/api/inventory"
 
+	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/inventory"
 )
 
@@ -33,7 +34,11 @@ type AgentsServer struct {
 
 // ListAgents returns a list of Agents for a given filters.
 func (s *AgentsServer) ListAgents(ctx context.Context, req *api.ListAgentsRequest) (*api.ListAgentsResponse, error) {
-	agents, err := s.Agents.List(ctx, req.ServiceId)
+
+	filters := models.AgentFilters{
+		ServiceID: req.ServiceId,
+	}
+	agents, err := s.Agents.List(ctx, filters)
 	if err != nil {
 		return nil, err
 	}

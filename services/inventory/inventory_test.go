@@ -335,7 +335,7 @@ func TestAgents(t *testing.T) {
 	}()
 	ctx := context.Background()
 
-	setup := func(t *testing.T) (ss *ServicesService, as *AgentsService, teardown func(t *testing.T)) {
+	setup := func(t *testing.T) (ss *ServicesService, ns *NodesService, as *AgentsService, teardown func(t *testing.T)) {
 		uuid.SetRand(new(tests.IDReader))
 
 		db := reform.NewDB(sqlDB, mysql.Dialect, reform.NewPrintfLogger(t.Logf))
@@ -346,15 +346,16 @@ func TestAgents(t *testing.T) {
 			require.NoError(t, tx.Rollback())
 		}
 		ss = NewServicesService(tx.Querier)
+		ns = NewNodesService(tx.Querier)
 		as = NewAgentsService(tx.Querier, nil)
 		return
 	}
 
 	t.Run("Basic", func(t *testing.T) {
-		ss, as, teardown := setup(t)
+		ss, ns, as, teardown := setup(t)
 		defer teardown(t)
 
-		actualAgents, err := as.List(ctx, "")
+		actualAgents, err := as.List(ctx, models.AgentFilters{})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 0)
 
@@ -380,12 +381,15 @@ func TestAgents(t *testing.T) {
 		_, err = ss.AddMySQL(ctx, "test-mysql", models.PMMServerNodeID, pointer.ToString("127.0.0.1"), pointer.ToUint16(3306), nil)
 		require.NoError(t, err)
 
-		actualAgent, err = as.AddMySQLdExporter(ctx, models.PMMServerNodeID, false, "gen:00000000-0000-4000-8000-000000000002", pointer.ToString("username"), nil)
+		_, err = ns.Add(ctx, "some-node-id", models.GenericNodeType, "new node name", pointer.ToString("127.0.0.1"), pointer.ToString(models.RemoteNodeRegion))
+		require.NoError(t, err)
+
+		actualAgent, err = as.AddMySQLdExporter(ctx, "some-node-id", false, "gen:00000000-0000-4000-8000-000000000002", pointer.ToString("username"), nil)
 		require.NoError(t, err)
 		expectedMySQLdExporterAgent := &inventory.MySQLdExporter{
 			Id: "gen:00000000-0000-4000-8000-000000000003",
 			HostNodeInfo: &inventory.HostNodeInfo{
-				NodeId:            models.PMMServerNodeID,
+				NodeId:            "some-node-id",
 				ContainerId:       "TODO",
 				ContainerName:     "TODO",
 				KubernetesPodUid:  "TODO",
@@ -407,16 +411,30 @@ func TestAgents(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, expectedMySQLdExporterAgent, actualAgent)
 
-		actualAgents, err = as.List(ctx, "")
+		actualAgents, err = as.List(ctx, models.AgentFilters{})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 2)
 		assert.Equal(t, expectedNodeExporterAgent, actualAgents[0])
 		assert.Equal(t, expectedMySQLdExporterAgent, actualAgents[1])
 
-		actualAgents, err = as.List(ctx, "gen:00000000-0000-4000-8000-000000000002")
+		actualAgents, err = as.List(ctx, models.AgentFilters{ServiceID: "gen:00000000-0000-4000-8000-000000000002"})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 1)
 		assert.Equal(t, expectedMySQLdExporterAgent, actualAgents[0])
+
+		actualAgents, err = as.List(ctx, models.AgentFilters{HostNodeId: "some-node-id"})
+		require.NoError(t, err)
+		require.Len(t, actualAgents, 1)
+		assert.Equal(t, expectedMySQLdExporterAgent, actualAgents[0])
+
+		actualAgents, err = as.List(ctx, models.AgentFilters{NodeId: models.PMMServerNodeID})
+		require.NoError(t, err)
+		require.Len(t, actualAgents, 1)
+		assert.Equal(t, expectedNodeExporterAgent, actualAgents[0])
+
+		actualAgents, err = as.List(ctx, models.AgentFilters{NodeId: models.PMMServerNodeID, ServiceID: "gen:00000000-0000-4000-8000-000000000002"})
+		require.NoError(t, err)
+		require.Len(t, actualAgents, 0)
 
 		err = as.Remove(ctx, "gen:00000000-0000-4000-8000-000000000001")
 		require.NoError(t, err)
@@ -430,13 +448,13 @@ func TestAgents(t *testing.T) {
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "gen:00000000-0000-4000-8000-000000000003" not found.`), err)
 		assert.Nil(t, actualAgent)
 
-		actualAgents, err = as.List(ctx, "")
+		actualAgents, err = as.List(ctx, models.AgentFilters{})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 0)
 	})
 
 	t.Run("GetEmptyID", func(t *testing.T) {
-		_, as, teardown := setup(t)
+		_, _, as, teardown := setup(t)
 		defer teardown(t)
 
 		actualNode, err := as.Get(ctx, "")
@@ -445,7 +463,7 @@ func TestAgents(t *testing.T) {
 	})
 
 	t.Run("AddPMMAgent", func(t *testing.T) {
-		_, as, teardown := setup(t)
+		_, _, as, teardown := setup(t)
 		defer teardown(t)
 
 		actualAgent, err := as.AddPMMAgent(ctx, models.PMMServerNodeID)
@@ -464,7 +482,7 @@ func TestAgents(t *testing.T) {
 	})
 
 	t.Run("AddNodeNotFound", func(t *testing.T) {
-		_, as, teardown := setup(t)
+		_, _, as, teardown := setup(t)
 		defer teardown(t)
 
 		_, err := as.AddNodeExporter(ctx, "no-such-id", true)
@@ -472,7 +490,7 @@ func TestAgents(t *testing.T) {
 	})
 
 	t.Run("AddServiceNotFound", func(t *testing.T) {
-		_, as, teardown := setup(t)
+		_, _, as, teardown := setup(t)
 		defer teardown(t)
 
 		_, err := as.AddMySQLdExporter(ctx, models.PMMServerNodeID, false, "no-such-id", pointer.ToString("username"), nil)
@@ -480,7 +498,7 @@ func TestAgents(t *testing.T) {
 	})
 
 	t.Run("DisableNotFound", func(t *testing.T) {
-		_, as, teardown := setup(t)
+		_, _, as, teardown := setup(t)
 		defer teardown(t)
 
 		err := as.SetDisabled(ctx, "no-such-id", true)
@@ -488,7 +506,7 @@ func TestAgents(t *testing.T) {
 	})
 
 	t.Run("RemoveNotFound", func(t *testing.T) {
-		_, as, teardown := setup(t)
+		_, _, as, teardown := setup(t)
 		defer teardown(t)
 
 		err := as.Remove(ctx, "no-such-id")

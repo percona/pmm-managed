@@ -115,11 +115,7 @@ func (as *AgentsService) get(ctx context.Context, id string) (*models.AgentRow, 
 }
 
 // List selects all Agents in a stable order for a given service.
-func (as *AgentsService) List(ctx context.Context, serviceID string) ([]inventory.Agent, error) {
-	filters := models.AgentFilters{}
-	if serviceID != "" {
-		filters.ServiceID = &serviceID
-	}
+func (as *AgentsService) List(ctx context.Context, filters models.AgentFilters) ([]inventory.Agent, error) {
 	agentRows, err := models.AgentsByFilters(as.q, filters)
 	if err != nil {
 		return nil, errors.WithStack(err)
