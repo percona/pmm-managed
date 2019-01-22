@@ -422,17 +422,17 @@ func TestAgents(t *testing.T) {
 		require.Len(t, actualAgents, 1)
 		assert.Equal(t, expectedMySQLdExporterAgent, actualAgents[0])
 
-		actualAgents, err = as.List(ctx, models.AgentFilters{HostNodeId: "some-node-id"})
+		actualAgents, err = as.List(ctx, models.AgentFilters{HostNodeID: "some-node-id"})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 1)
 		assert.Equal(t, expectedMySQLdExporterAgent, actualAgents[0])
 
-		actualAgents, err = as.List(ctx, models.AgentFilters{NodeId: models.PMMServerNodeID})
+		actualAgents, err = as.List(ctx, models.AgentFilters{NodeID: models.PMMServerNodeID})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 1)
 		assert.Equal(t, expectedNodeExporterAgent, actualAgents[0])
 
-		actualAgents, err = as.List(ctx, models.AgentFilters{NodeId: models.PMMServerNodeID, ServiceID: "gen:00000000-0000-4000-8000-000000000002"})
+		actualAgents, err = as.List(ctx, models.AgentFilters{NodeID: models.PMMServerNodeID, ServiceID: "gen:00000000-0000-4000-8000-000000000002"})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 0)
 
