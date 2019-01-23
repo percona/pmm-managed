@@ -19,10 +19,10 @@ package handlers
 import (
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
 
 	"github.com/AlekSi/pointer"
 	api "github.com/percona/pmm/api/inventory"
+	"github.com/pkg/errors"
 
 	"github.com/percona/pmm-managed/services/inventory"
 )
