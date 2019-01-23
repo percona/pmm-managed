@@ -39,7 +39,7 @@ func (s *AgentsServer) ListAgents(ctx context.Context, req *api.ListAgentsReques
 		RunsOnNodeID: req.HostNodeId,
 		NodeID:       req.NodeId,
 	}
-	if filtersCount(filters) > 0 {
+	if filtersCount(filters) > 1 {
 		return nil, errors.New("two or more filters are set")
 	}
 	agents, err := s.Agents.List(ctx, filters)
