@@ -306,36 +306,32 @@ func (as *AgentsService) agentsByFilters(filters AgentFilters) ([]*models.AgentR
 	switch {
 	case filters.RunsOnNodeID != "":
 		tail = fmt.Sprintf("WHERE runs_on_node_id = %s", as.q.Placeholder(1))
-		args = append(args, filters.RunsOnNodeID)
+		args = []interface{}{filters.RunsOnNodeID}
 	case filters.NodeID != "":
 		agentNodes, err := as.q.SelectAllFrom(models.AgentNodeView, "WHERE node_id = ?", filters.NodeID)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		var ids []interface{}
 		for _, str := range agentNodes {
-			ids = append(ids, str.(*models.AgentNode).AgentID)
+			args = append(args, str.(*models.AgentNode).AgentID)
 		}
-		if len(ids) == 0 {
+		if len(args) == 0 {
 			return []*models.AgentRow{}, nil
 		}
-		tail = fmt.Sprintf("WHERE id IN (%s)", strings.Join(as.q.Placeholders(1, len(args)+len(ids)), ", "))
-		args = append(args, ids...)
+		tail = fmt.Sprintf("WHERE id IN (%s)", strings.Join(as.q.Placeholders(1, len(args)), ", "))
 	case filters.ServiceID != "":
 		agentServices, err := as.q.SelectAllFrom(models.AgentServiceView, "WHERE service_id = ?", filters.ServiceID)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		var ids []interface{}
 		for _, str := range agentServices {
-			ids = append(ids, str.(*models.AgentService).AgentID)
+			args = append(args, str.(*models.AgentService).AgentID)
 		}
-		if len(ids) == 0 {
+		if len(args) == 0 {
 			return []*models.AgentRow{}, nil
 		}
 
-		tail = fmt.Sprintf("WHERE id IN (%s)", strings.Join(as.q.Placeholders(1, len(args)+len(ids)), ", "))
-		args = append(args, ids...)
+		tail = fmt.Sprintf("WHERE id IN (%s)", strings.Join(as.q.Placeholders(1, len(args)), ", "))
 	}
 
 	tail += " ORDER BY id"

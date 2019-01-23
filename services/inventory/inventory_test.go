@@ -432,10 +432,6 @@ func TestAgents(t *testing.T) {
 		require.Len(t, actualAgents, 1)
 		assert.Equal(t, expectedNodeExporterAgent, actualAgents[0])
 
-		actualAgents, err = as.List(ctx, AgentFilters{NodeID: models.PMMServerNodeID, ServiceID: "gen:00000000-0000-4000-8000-000000000002"})
-		require.NoError(t, err)
-		require.Len(t, actualAgents, 0)
-
 		err = as.Remove(ctx, "gen:00000000-0000-4000-8000-000000000001")
 		require.NoError(t, err)
 		actualAgent, err = as.Get(ctx, "gen:00000000-0000-4000-8000-000000000001")
