@@ -21,11 +21,9 @@ import (
 	"net"
 	"net/url"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
-	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 )
 
@@ -183,80 +181,4 @@ type RDSExporter struct {
 	Disabled     bool      `reform:"disabled"`
 
 	ListenPort *uint16 `reform:"listen_port"`
-}
-
-// AgentFilters represents filters for agents list.
-type AgentFilters struct {
-	// Return only Agents running on that Node.
-	HostNodeID string
-	// Return only Agents that provide insights for that Node.
-	NodeID string
-	// Return only Agents that provide insights for that Service.
-	ServiceID string
-}
-
-// AgentsByFilters returns agents providing insights for a given filters sorted by Agent ID.
-func AgentsByFilters(q *reform.Querier, filters AgentFilters) ([]*AgentRow, error) {
-	var joins []string
-	var conditions []string
-	var args []interface{}
-	var structs []reform.Struct
-	var err error
-	filtered := false
-	if filters.HostNodeID != "" {
-		qi := q.QualifiedView(AgentRowTable) + "." + q.QuoteIdentifier("runs_on_node_id")
-		condition := fmt.Sprintf("%s = ?", qi)
-		conditions = append(conditions, condition)
-		args = append(args, filters.HostNodeID)
-		filtered = true
-	}
-	if filters.NodeID != "" {
-		query := fmt.Sprintf("inner join %s on %s.%s = %s.%s",
-			q.QualifiedView(AgentNodeView),
-			q.QualifiedView(AgentRowTable), q.QuoteIdentifier("id"),
-			q.QualifiedView(AgentNodeView), q.QuoteIdentifier("agent_id"),
-		)
-		joins = append(joins, query)
-
-		qi := q.QualifiedView(AgentNodeView) + "." + q.QuoteIdentifier("node_id")
-		condition := fmt.Sprintf("%s = ?", qi)
-		conditions = append(conditions, condition)
-		args = append(args, filters.NodeID)
-		filtered = true
-	}
-	if filters.ServiceID != "" {
-		query := fmt.Sprintf("inner join %s on %s.%s = %s.%s",
-			q.QualifiedView(AgentServiceView),
-			q.QualifiedView(AgentRowTable), q.QuoteIdentifier("id"),
-			q.QualifiedView(AgentServiceView), q.QuoteIdentifier("agent_id"),
-		)
-		joins = append(joins, query)
-
-		qi := q.QualifiedView(AgentServiceView) + "." + q.QuoteIdentifier("service_id")
-		condition := fmt.Sprintf("%s = ?", qi)
-		conditions = append(conditions, condition)
-		args = append(args, filters.ServiceID)
-		filtered = true
-	}
-
-	if filtered {
-		jTail := strings.Join(joins, " ")
-		cTail := strings.Join(conditions, " AND ")
-		tail := fmt.Sprintf("%s WHERE %s ORDER BY ID", jTail, cTail)
-
-		structs, err = q.SelectAllFrom(AgentRowTable, tail, args...)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-	} else {
-		structs, err = q.SelectAllFrom(AgentRowTable, "ORDER BY ID")
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-	}
-	agents := make([]*AgentRow, len(structs))
-	for i, str := range structs {
-		agents[i] = str.(*AgentRow)
-	}
-	return agents, nil
 }

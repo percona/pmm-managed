@@ -335,7 +335,7 @@ func TestAgents(t *testing.T) {
 	}()
 	ctx := context.Background()
 
-	setup := func(t *testing.T) (ss *ServicesService, ns *NodesService, as *AgentsService, teardown func(t *testing.T)) {
+	setup := func(t *testing.T) (ns *NodesService, ss *ServicesService, as *AgentsService, teardown func(t *testing.T)) {
 		uuid.SetRand(new(tests.IDReader))
 
 		db := reform.NewDB(sqlDB, mysql.Dialect, reform.NewPrintfLogger(t.Logf))
@@ -345,17 +345,17 @@ func TestAgents(t *testing.T) {
 		teardown = func(t *testing.T) {
 			require.NoError(t, tx.Rollback())
 		}
-		ss = NewServicesService(tx.Querier)
 		ns = NewNodesService(tx.Querier)
+		ss = NewServicesService(tx.Querier)
 		as = NewAgentsService(tx.Querier, nil)
 		return
 	}
 
 	t.Run("Basic", func(t *testing.T) {
-		ss, ns, as, teardown := setup(t)
+		ns, ss, as, teardown := setup(t)
 		defer teardown(t)
 
-		actualAgents, err := as.List(ctx, models.AgentFilters{})
+		actualAgents, err := as.List(ctx, AgentFilters{})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 0)
 
@@ -411,28 +411,28 @@ func TestAgents(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, expectedMySQLdExporterAgent, actualAgent)
 
-		actualAgents, err = as.List(ctx, models.AgentFilters{})
+		actualAgents, err = as.List(ctx, AgentFilters{})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 2)
 		assert.Equal(t, expectedNodeExporterAgent, actualAgents[0])
 		assert.Equal(t, expectedMySQLdExporterAgent, actualAgents[1])
 
-		actualAgents, err = as.List(ctx, models.AgentFilters{ServiceID: "gen:00000000-0000-4000-8000-000000000002"})
+		actualAgents, err = as.List(ctx, AgentFilters{ServiceID: "gen:00000000-0000-4000-8000-000000000002"})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 1)
 		assert.Equal(t, expectedMySQLdExporterAgent, actualAgents[0])
 
-		actualAgents, err = as.List(ctx, models.AgentFilters{HostNodeID: "some-node-id"})
+		actualAgents, err = as.List(ctx, AgentFilters{RunsOnNodeID: "some-node-id"})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 1)
 		assert.Equal(t, expectedMySQLdExporterAgent, actualAgents[0])
 
-		actualAgents, err = as.List(ctx, models.AgentFilters{NodeID: models.PMMServerNodeID})
+		actualAgents, err = as.List(ctx, AgentFilters{NodeID: models.PMMServerNodeID})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 1)
 		assert.Equal(t, expectedNodeExporterAgent, actualAgents[0])
 
-		actualAgents, err = as.List(ctx, models.AgentFilters{NodeID: models.PMMServerNodeID, ServiceID: "gen:00000000-0000-4000-8000-000000000002"})
+		actualAgents, err = as.List(ctx, AgentFilters{NodeID: models.PMMServerNodeID, ServiceID: "gen:00000000-0000-4000-8000-000000000002"})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 0)
 
@@ -448,7 +448,7 @@ func TestAgents(t *testing.T) {
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "gen:00000000-0000-4000-8000-000000000003" not found.`), err)
 		assert.Nil(t, actualAgent)
 
-		actualAgents, err = as.List(ctx, models.AgentFilters{})
+		actualAgents, err = as.List(ctx, AgentFilters{})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 0)
 	})

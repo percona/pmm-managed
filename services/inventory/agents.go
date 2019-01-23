@@ -19,6 +19,7 @@ package inventory
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventory"
@@ -115,8 +116,8 @@ func (as *AgentsService) get(ctx context.Context, id string) (*models.AgentRow, 
 }
 
 // List selects all Agents in a stable order for a given service.
-func (as *AgentsService) List(ctx context.Context, filters models.AgentFilters) ([]inventory.Agent, error) {
-	agentRows, err := models.AgentsByFilters(as.q, filters)
+func (as *AgentsService) List(ctx context.Context, filters AgentFilters) ([]inventory.Agent, error) {
+	agentRows, err := agentsByFilters(as.q, filters)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -287,4 +288,77 @@ func (as *AgentsService) Remove(ctx context.Context, id string) error {
 		as.r.Kick(ctx, id)
 	}
 	return nil
+}
+
+// AgentFilters represents filters for agents list.
+type AgentFilters struct {
+	// Return only Agents running on that Node.
+	RunsOnNodeID string
+	// Return only Agents that provide insights for that Node.
+	NodeID string
+	// Return only Agents that provide insights for that Service.
+	ServiceID string
+}
+
+func agentsByFilters(q *reform.Querier, filters AgentFilters) ([]*models.AgentRow, error) {
+	var conditions []string
+	var args []interface{}
+	if filters.RunsOnNodeID != "" {
+		conditions = append(conditions, fmt.Sprintf("runs_on_node_id = %s", q.Placeholder(1)))
+		args = append(args, filters.RunsOnNodeID)
+	}
+	if filters.NodeID != "" {
+		agentNodes, err := q.SelectAllFrom(models.AgentNodeView, "WHERE node_id = ?", filters.NodeID)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		var ids []interface{}
+		for _, str := range agentNodes {
+			ids = append(ids, str.(*models.AgentNode).AgentID)
+		}
+		if len(ids) == 0 {
+			return []*models.AgentRow{}, nil
+		}
+
+		p := strings.Join(q.Placeholders(len(args)+1, len(args)+len(ids)), ", ")
+		qi := q.QualifiedView(models.AgentRowTable) + "." + q.QuoteIdentifier("id")
+		condition := fmt.Sprintf("%s IN (%s)", qi, p)
+		conditions = append(conditions, condition)
+		args = append(args, ids...)
+	}
+
+	if filters.ServiceID != "" {
+		agentServices, err := q.SelectAllFrom(models.AgentServiceView, "WHERE service_id = ?", filters.ServiceID)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		var ids []interface{}
+		for _, str := range agentServices {
+			ids = append(ids, str.(*models.AgentService).AgentID)
+		}
+		if len(ids) == 0 {
+			return []*models.AgentRow{}, nil
+		}
+
+		p := strings.Join(q.Placeholders(len(args)+1, len(ids)), ", ")
+		qi := q.QualifiedView(models.AgentRowTable) + "." + q.QuoteIdentifier("id")
+		condition := fmt.Sprintf("%s IN (%s)", qi, p)
+		conditions = append(conditions, condition)
+		args = append(args, ids...)
+	}
+
+	tail := "ORDER BY id"
+	if len(conditions) > 0 {
+		tail = fmt.Sprintf("WHERE %s %s", strings.Join(conditions, " AND "), tail)
+	}
+
+	structs, err := q.SelectAllFrom(models.AgentRowTable, tail, args...)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	agents := make([]*models.AgentRow, len(structs))
+	for i, str := range structs {
+		agents[i] = str.(*models.AgentRow)
+	}
+	return agents, nil
 }
