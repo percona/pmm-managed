@@ -19,9 +19,10 @@ package models
 import (
 	"database/sql"
 	"fmt"
+	"net/url"
 	"strings"
 
-	"github.com/go-sql-driver/mysql" // register SQL driver
+	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 )
@@ -65,7 +66,7 @@ var databaseSchema = [][]string{
 			-- updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
 			address VARCHAR(255),
-			port SMALLINT UNSIGNED,
+			port INTEGER,
 			unix_socket VARCHAR(255),
 
 			aws_access_key VARCHAR(255),
@@ -75,7 +76,8 @@ var databaseSchema = [][]string{
 
 			PRIMARY KEY (id),
 			UNIQUE (name),
-			FOREIGN KEY (node_id) REFERENCES nodes (id)
+			FOREIGN KEY (node_id) REFERENCES nodes (id),
+			CHECK(port >= 0)
 		)`,
 
 		`CREATE TABLE agents (
@@ -87,14 +89,15 @@ var databaseSchema = [][]string{
 			-- updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
 			version VARCHAR(255),
-			listen_port SMALLINT UNSIGNED,
+			listen_port INTEGER,
 			service_username VARCHAR(255),
 			service_password VARCHAR(255),
 
-			mysql_disable_tablestats TINYINT(1),
+			mysql_disable_tablestats BOOLEAN,
 
 			PRIMARY KEY (id),
-			FOREIGN KEY (runs_on_node_id) REFERENCES nodes (id)
+			FOREIGN KEY (runs_on_node_id) REFERENCES nodes (id),
+			CHECK(listen_port >= 0)
 		)`,
 
 		`CREATE TABLE agent_nodes (
@@ -130,20 +133,21 @@ var databaseSchema = [][]string{
 }
 
 func OpenDB(name, username, password string, logf reform.Printf) (*sql.DB, error) {
-	cfg := mysql.NewConfig()
-	cfg.User = username
-	cfg.Passwd = password
-	cfg.DBName = name
 
-	cfg.Net = "tcp"
-	cfg.Addr = "127.0.0.1:3306"
+	q := make(url.Values)
+	q.Set("sslmode", "disable")
 
-	// required for reform
-	cfg.ClientFoundRows = true
-	cfg.ParseTime = true
+	address := "127.0.0.1:5432"
+	uri := url.URL{
+		Scheme:   "postgres",
+		User:     url.UserPassword(username, password),
+		Host:     address,
+		Path:     name,
+		RawQuery: q.Encode(),
+	}
+	dsn := uri.String()
 
-	dsn := cfg.FormatDSN()
-	db, err := sql.Open("mysql", dsn)
+	db, err := sql.Open("postgres", dsn)
 	if err == nil {
 		db.SetMaxIdleConns(10)
 		db.SetMaxOpenConns(10)
@@ -151,7 +155,7 @@ func OpenDB(name, username, password string, logf reform.Printf) (*sql.DB, error
 		err = db.Ping()
 	}
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to connect to MySQL.")
+		return nil, errors.Wrap(err, "Failed to connect to PostgreSQL.")
 	}
 
 	if name == "" {
@@ -161,7 +165,7 @@ func OpenDB(name, username, password string, logf reform.Printf) (*sql.DB, error
 	latestVersion := len(databaseSchema) - 1 // skip item 0
 	var currentVersion int
 	err = db.QueryRow("SELECT id FROM schema_migrations ORDER BY id DESC LIMIT 1").Scan(&currentVersion)
-	if myErr, ok := err.(*mysql.MySQLError); ok && myErr.Number == 0x47a { // 1046 table doesn't exist
+	if myErr, ok := err.(*pq.Error); ok && myErr.Code == "42P01" { // 1046 table doesn't exist
 		err = nil
 	}
 	if err != nil {

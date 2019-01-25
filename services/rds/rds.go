@@ -35,6 +35,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/go-sql-driver/mysql"
+	"github.com/lib/pq"
 	servicelib "github.com/percona/kardianos-service"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -180,7 +181,7 @@ func (svc *Service) ApplyPrometheusConfiguration(ctx context.Context, q *reform.
 		node := n.(*models.AWSRDSNode)
 
 		var service models.AWSRDSService
-		if e := q.SelectOneTo(&service, "WHERE node_id = ?", node.ID); e != nil {
+		if e := q.SelectOneTo(&service, "WHERE node_id = "+q.Placeholder(1), node.ID); e != nil {
 			return errors.WithStack(e)
 		}
 
@@ -350,7 +351,8 @@ func (svc *Service) Discover(ctx context.Context, accessKey, secretKey string) (
 func (svc *Service) List(ctx context.Context) ([]Instance, error) {
 	var res []Instance
 	err := svc.DB.InTransaction(func(tx *reform.TX) error {
-		structs, e := tx.SelectAllFrom(models.AWSRDSNodeTable, "WHERE type = ? ORDER BY id", models.AmazonRDSRemoteNodeType)
+		tail := fmt.Sprintf("WHERE type = %s ORDER BY id", tx.Placeholder(1))
+		structs, e := tx.SelectAllFrom(models.AWSRDSNodeTable, tail, models.AmazonRDSRemoteNodeType)
 		if e != nil {
 			return e
 		}
@@ -359,7 +361,7 @@ func (svc *Service) List(ctx context.Context) ([]Instance, error) {
 			nodes[i] = *str.(*models.AWSRDSNode)
 		}
 
-		structs, e = tx.SelectAllFrom(models.AWSRDSServiceTable, "WHERE type = ? ORDER BY id", models.AWSRDSServiceType)
+		structs, e = tx.SelectAllFrom(models.AWSRDSServiceTable, tail, models.AWSRDSServiceType)
 		if e != nil {
 			return e
 		}
@@ -624,7 +626,7 @@ func (svc *Service) Add(ctx context.Context, accessKey, secretKey string, id *In
 			Region: add.Node.Region,
 		}
 		if err = tx.Insert(node); err != nil {
-			if err, ok := err.(*mysql.MySQLError); ok && err.Number == 0x426 {
+			if err, ok := err.(*pq.Error); ok && err.Code == "23505" {
 				return status.Errorf(codes.AlreadyExists, "RDS instance %q already exists in region %q.",
 					node.Name, *node.Region)
 			}
@@ -672,7 +674,8 @@ func (svc *Service) Remove(ctx context.Context, id *InstanceID) error {
 	var err error
 	return svc.DB.InTransaction(func(tx *reform.TX) error {
 		var node models.AWSRDSNode
-		if err = tx.SelectOneTo(&node, "WHERE type = ? AND name = ? AND region = ?", models.AmazonRDSRemoteNodeType, id.Name, id.Region); err != nil {
+		tail := fmt.Sprintf("WHERE type = %s AND name = %s AND region = %s", tx.Placeholder(1), tx.Placeholder(2), tx.Placeholder(3))
+		if err = tx.SelectOneTo(&node, tail, models.AmazonRDSRemoteNodeType, id.Name, id.Region); err != nil {
 			if err == reform.ErrNoRows {
 				return status.Errorf(codes.NotFound, "RDS instance %q not found in region %q.", id.Name, id.Region)
 			}
@@ -680,7 +683,7 @@ func (svc *Service) Remove(ctx context.Context, id *InstanceID) error {
 		}
 
 		var service models.AWSRDSService
-		if err = tx.SelectOneTo(&service, "WHERE node_id = ?", node.ID); err != nil {
+		if err = tx.SelectOneTo(&service, "WHERE node_id = "+tx.Placeholder(1), node.ID); err != nil {
 			return errors.WithStack(err)
 		}
 
@@ -691,7 +694,8 @@ func (svc *Service) Remove(ctx context.Context, id *InstanceID) error {
 		}
 		for _, agent := range agentsForService {
 			var deleted uint
-			deleted, err = tx.DeleteFrom(models.AgentServiceView, "WHERE service_id = ? AND agent_id = ?", service.ID, agent.ID)
+			tail := fmt.Sprintf("WHERE service_id = %s AND agent_id = %s", tx.Placeholder(1), tx.Placeholder(2))
+			deleted, err = tx.DeleteFrom(models.AgentServiceView, tail, service.ID, agent.ID)
 			if err != nil {
 				return errors.WithStack(err)
 			}
@@ -707,7 +711,8 @@ func (svc *Service) Remove(ctx context.Context, id *InstanceID) error {
 		}
 		for _, agent := range agentsForNode {
 			var deleted uint
-			deleted, err = tx.DeleteFrom(models.AgentNodeView, "WHERE node_id = ? AND agent_id = ?", node.ID, agent.ID)
+			tail := fmt.Sprintf("WHERE node_id = %s AND agent_id = %s", tx.Placeholder(1), tx.Placeholder(2))
+			deleted, err = tx.DeleteFrom(models.AgentNodeView, tail, node.ID, agent.ID)
 			if err != nil {
 				return errors.WithStack(err)
 			}
@@ -791,7 +796,7 @@ func (svc *Service) Restore(ctx context.Context, tx *reform.TX) error {
 		node := n.(*models.AWSRDSNode)
 
 		service := &models.AWSRDSService{}
-		if e := tx.SelectOneTo(service, "WHERE node_id = ?", node.ID); e != nil {
+		if e := tx.SelectOneTo(service, "WHERE node_id = "+tx.Placeholder(1), node.ID); e != nil {
 			return errors.WithStack(e)
 		}
 

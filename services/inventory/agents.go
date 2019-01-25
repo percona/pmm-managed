@@ -308,7 +308,7 @@ func (as *AgentsService) agentsByFilters(filters AgentFilters) ([]*models.AgentR
 		tail = fmt.Sprintf("WHERE runs_on_node_id = %s", as.q.Placeholder(1))
 		args = []interface{}{filters.RunsOnNodeID}
 	case filters.NodeID != "":
-		agentNodes, err := as.q.SelectAllFrom(models.AgentNodeView, "WHERE node_id = ?", filters.NodeID)
+		agentNodes, err := as.q.SelectAllFrom(models.AgentNodeView, "WHERE node_id = "+as.q.Placeholder(1), filters.NodeID)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -320,7 +320,7 @@ func (as *AgentsService) agentsByFilters(filters AgentFilters) ([]*models.AgentR
 		}
 		tail = fmt.Sprintf("WHERE id IN (%s)", strings.Join(as.q.Placeholders(1, len(args)), ", "))
 	case filters.ServiceID != "":
-		agentServices, err := as.q.SelectAllFrom(models.AgentServiceView, "WHERE service_id = ?", filters.ServiceID)
+		agentServices, err := as.q.SelectAllFrom(models.AgentServiceView, "WHERE service_id = "+as.q.Placeholder(1), filters.ServiceID)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}

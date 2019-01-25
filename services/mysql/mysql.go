@@ -29,6 +29,7 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/go-sql-driver/mysql"
+	"github.com/lib/pq"
 	servicelib "github.com/percona/kardianos-service"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -139,7 +140,7 @@ func (svc *Service) ApplyPrometheusConfiguration(ctx context.Context, q *reform.
 	for _, n := range nodes {
 		node := n.(*models.RemoteNode)
 
-		mySQLServices, err := q.SelectAllFrom(models.MySQLServiceTable, "WHERE node_id = ?", node.ID)
+		mySQLServices, err := q.SelectAllFrom(models.MySQLServiceTable, "WHERE node_id = "+q.Placeholder(1), node.ID)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -193,7 +194,7 @@ func (svc *Service) ApplyPrometheusConfiguration(ctx context.Context, q *reform.
 func (svc *Service) List(ctx context.Context) ([]Instance, error) {
 	var res []Instance
 	err := svc.DB.InTransaction(func(tx *reform.TX) error {
-		structs, e := tx.SelectAllFrom(models.RemoteNodeTable, "WHERE type = ? ORDER BY id", models.RemoteNodeType)
+		structs, e := tx.SelectAllFrom(models.RemoteNodeTable, fmt.Sprintf("WHERE type = %s ORDER BY id", tx.Placeholder(1)), models.RemoteNodeType)
 		if e != nil {
 			return e
 		}
@@ -202,7 +203,7 @@ func (svc *Service) List(ctx context.Context) ([]Instance, error) {
 			nodes[i] = *str.(*models.RemoteNode)
 		}
 
-		structs, e = tx.SelectAllFrom(models.MySQLServiceTable, "WHERE type = ? ORDER BY id", models.MySQLServiceType)
+		structs, e = tx.SelectAllFrom(models.MySQLServiceTable, fmt.Sprintf("WHERE type = %s ORDER BY id", tx.Placeholder(1)), models.MySQLServiceType)
 		if e != nil {
 			return e
 		}
@@ -347,7 +348,7 @@ func (svc *Service) Add(ctx context.Context, name, address string, port uint32, 
 			Region: pointer.ToString(models.RemoteNodeRegion),
 		}
 		if err := tx.Insert(node); err != nil {
-			if err, ok := err.(*mysql.MySQLError); ok && err.Number == 0x426 {
+			if err, ok := err.(*pq.Error); ok && err.Code == "23505" {
 				return status.Errorf(codes.AlreadyExists, "MySQL instance %q already exists.",
 					node.Name)
 			}
@@ -390,7 +391,8 @@ func (svc *Service) Remove(ctx context.Context, id string) error {
 	var err error
 	return svc.DB.InTransaction(func(tx *reform.TX) error {
 		var node models.RemoteNode
-		if err = tx.SelectOneTo(&node, "WHERE type = ? AND id = ?", models.RemoteNodeType, id); err != nil {
+		tail := fmt.Sprintf("WHERE type = %s AND id = %s", tx.Placeholder(1), tx.Placeholder(2))
+		if err = tx.SelectOneTo(&node, tail, models.RemoteNodeType, id); err != nil {
 			if err == reform.ErrNoRows {
 				return status.Errorf(codes.NotFound, "MySQL instance with ID %q not found.", id)
 			}
@@ -398,7 +400,8 @@ func (svc *Service) Remove(ctx context.Context, id string) error {
 		}
 
 		var service models.MySQLService
-		if err = tx.SelectOneTo(&service, "WHERE node_id = ? and type = ?", node.ID, models.MySQLServiceType); err != nil {
+		tail = fmt.Sprintf("WHERE node_id = %s AND type = %s", tx.Placeholder(1), tx.Placeholder(2))
+		if err = tx.SelectOneTo(&service, tail, node.ID, models.MySQLServiceType); err != nil {
 			return errors.WithStack(err)
 		}
 
@@ -409,7 +412,8 @@ func (svc *Service) Remove(ctx context.Context, id string) error {
 		}
 		for _, agent := range agentsForService {
 			var deleted uint
-			deleted, err = tx.DeleteFrom(models.AgentServiceView, "WHERE service_id = ? AND agent_id = ?", service.ID, agent.ID)
+			tail = fmt.Sprintf("WHERE service_id = %s AND agent_id = %s", tx.Placeholder(1), tx.Placeholder(2))
+			deleted, err = tx.DeleteFrom(models.AgentServiceView, tail, service.ID, agent.ID)
 			if err != nil {
 				return errors.WithStack(err)
 			}
@@ -425,7 +429,8 @@ func (svc *Service) Remove(ctx context.Context, id string) error {
 		}
 		for _, agent := range agentsForNode {
 			var deleted uint
-			deleted, err = tx.DeleteFrom(models.AgentNodeView, "WHERE node_id = ? AND agent_id = ?", node.ID, agent.ID)
+			tail = fmt.Sprintf("WHERE node_id = %s AND agent_id = %s", tx.Placeholder(1), tx.Placeholder(2))
+			deleted, err = tx.DeleteFrom(models.AgentNodeView, tail, node.ID, agent.ID)
 			if err != nil {
 				return errors.WithStack(err)
 			}
@@ -484,7 +489,7 @@ func (svc *Service) Restore(ctx context.Context, tx *reform.TX) error {
 	for _, n := range nodes {
 		node := n.(*models.RemoteNode)
 
-		mySQLServices, err := tx.SelectAllFrom(models.MySQLServiceTable, "WHERE node_id = ?", node.ID)
+		mySQLServices, err := tx.SelectAllFrom(models.MySQLServiceTable, "WHERE node_id = "+tx.Placeholder(1), node.ID)
 		if err != nil {
 			return errors.WithStack(err)
 		}
