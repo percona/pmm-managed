@@ -66,7 +66,7 @@ var (
 
 // AgentsForServiceID returns agents providing insights for a given service.
 func AgentsForServiceID(q *reform.Querier, serviceID string) ([]Agent, error) {
-	agentServices, err := q.SelectAllFrom(AgentServiceView, "WHERE service_id = "+q.Placeholder(1), serviceID)
+	agentServices, err := q.SelectAllFrom(AgentServiceView, "WHERE service_id = ?", serviceID)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

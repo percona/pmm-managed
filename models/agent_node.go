@@ -66,7 +66,7 @@ var (
 
 // AgentsForNodeID returns agents providing insights for a given node.
 func AgentsForNodeID(q *reform.Querier, nodeID string) ([]Agent, error) {
-	agentNodes, err := q.SelectAllFrom(AgentNodeView, "WHERE node_id = "+q.Placeholder(1), nodeID)
+	agentNodes, err := q.SelectAllFrom(AgentNodeView, "WHERE node_id = ?", nodeID)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

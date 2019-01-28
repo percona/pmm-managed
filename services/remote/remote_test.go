@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/reform.v1"
-	reformPostgreSQL "gopkg.in/reform.v1/dialects/postgresql"
+	"gopkg.in/reform.v1/dialects/mysql"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/mocks"
@@ -54,7 +54,7 @@ func setup(t *testing.T) (context.Context, *postgresql.Service, *Service, *sql.D
 	ctx, p, before := prometheus.SetupTest(t)
 
 	sqlDB := tests.OpenTestDB(t)
-	db := reform.NewDB(sqlDB, reformPostgreSQL.Dialect, reform.NewPrintfLogger(t.Logf))
+	db := reform.NewDB(sqlDB, mysql.Dialect, reform.NewPrintfLogger(t.Logf))
 	portsRegistry := ports.NewRegistry(30000, 30999, nil)
 
 	supervisor := &mocks.Supervisor{}

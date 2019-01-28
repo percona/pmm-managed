@@ -19,7 +19,6 @@ package remote
 
 import (
 	"context"
-	"fmt"
 
 	"gopkg.in/reform.v1"
 
@@ -53,8 +52,7 @@ type Instance struct {
 func (svc *Service) List(ctx context.Context) ([]Instance, error) {
 	var res []Instance
 	err := svc.DB.InTransaction(func(tx *reform.TX) error {
-		tail := fmt.Sprintf("WHERE type IN (%s, %s) ORDER BY id", svc.DB.Placeholder(1), svc.DB.Placeholder(2))
-		structs, e := tx.SelectAllFrom(models.RemoteNodeTable, tail, models.AmazonRDSRemoteNodeType, models.RemoteNodeType)
+		structs, e := tx.SelectAllFrom(models.RemoteNodeTable, "WHERE type IN (?, ?) ORDER BY id", models.AmazonRDSRemoteNodeType, models.RemoteNodeType)
 		if e != nil {
 			return e
 		}

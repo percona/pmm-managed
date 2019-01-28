@@ -31,7 +31,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/reform.v1"
-	"gopkg.in/reform.v1/dialects/postgresql"
+	"gopkg.in/reform.v1/dialects/mysql"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/consul"
@@ -46,7 +46,7 @@ func setup(t *testing.T) (context.Context, *consul.Client, *reform.DB, string) {
 	consulClient, err := consul.NewClient("127.0.0.1:8500")
 	require.NoError(t, err)
 
-	db := reform.NewDB(tests.OpenTestDB(t), postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+	db := reform.NewDB(tests.OpenTestDB(t), mysql.Dialect, reform.NewPrintfLogger(t.Logf))
 
 	tmpDir, err := ioutil.TempDir("", t.Name())
 	require.NoError(t, err)

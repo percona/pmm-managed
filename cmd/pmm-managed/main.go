@@ -45,7 +45,7 @@ import (
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/reflection"
 	"gopkg.in/reform.v1"
-	reformPostgreSQL "gopkg.in/reform.v1/dialects/postgresql"
+	reformMySQL "gopkg.in/reform.v1/dialects/mysql"
 
 	"github.com/percona/pmm-managed/api"
 	"github.com/percona/pmm-managed/handlers"
@@ -555,7 +555,7 @@ func main() {
 		l.Panicf("Failed to connect to database: %+v", err)
 	}
 	defer sqlDB.Close()
-	db := reform.NewDB(sqlDB, reformPostgreSQL.Dialect, nil)
+	db := reform.NewDB(sqlDB, reformMySQL.Dialect, nil)
 
 	portsRegistry, err := makePortsRegistry(db)
 	if err != nil {
