@@ -203,6 +203,7 @@ var postgresDatabaseSchema = [][]string{
 	},
 }
 
+// OpenPostgresDB opens connection to PostgreSQL database and runs migrations.
 func OpenPostgresDB(name, username, password string, logf reform.Printf) (*sql.DB, error) {
 
 	q := make(url.Values)

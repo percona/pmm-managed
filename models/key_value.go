@@ -1,6 +1,8 @@
 package models
 
-import "gopkg.in/reform.v1"
+import (
+	"gopkg.in/reform.v1"
+)
 
 //go:generate reform
 
