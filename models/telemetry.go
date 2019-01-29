@@ -17,32 +17,33 @@
 package models
 
 import (
+	"time"
+
 	"gopkg.in/reform.v1"
 )
 
 //go:generate reform
 
-// KeyValue represents Service as stored in database.
-//reform:key_values
-type KeyValue struct {
-	Key   string `reform:"key,pk"`
-	Value string `reform:"value"`
-	// CreatedAt time.Time   `reform:"created_at"`
+// TelemetryRow represents Service as stored in database.
+//reform:telemetry
+type TelemetryRow struct {
+	Uuid      string    `reform:"uuid,pk"`
+	CreatedAt time.Time `reform:"created_at"`
 	// UpdatedAt time.Time   `reform:"updated_at"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.
 //nolint:unparam
-func (sr *KeyValue) BeforeInsert() error {
-	// now := time.Now().Truncate(time.Microsecond).UTC()
-	// sr.CreatedAt = now
+func (sr *TelemetryRow) BeforeInsert() error {
+	now := time.Now().Truncate(time.Microsecond).UTC()
+	sr.CreatedAt = now
 	// sr.UpdatedAt = now
 	return nil
 }
 
 // BeforeUpdate implements reform.BeforeUpdater interface.
 //nolint:unparam
-func (sr *KeyValue) BeforeUpdate() error {
+func (sr *TelemetryRow) BeforeUpdate() error {
 	// now := time.Now().Truncate(time.Microsecond).UTC()
 	// sr.UpdatedAt = now
 	return nil
@@ -50,7 +51,7 @@ func (sr *KeyValue) BeforeUpdate() error {
 
 // AfterFind implements reform.AfterFinder interface.
 //nolint:unparam
-func (sr *KeyValue) AfterFind() error {
+func (sr *TelemetryRow) AfterFind() error {
 	// sr.CreatedAt = sr.CreatedAt.UTC()
 	// sr.UpdatedAt = sr.UpdatedAt.UTC()
 	return nil
@@ -58,7 +59,7 @@ func (sr *KeyValue) AfterFind() error {
 
 // check interfaces
 var (
-	_ reform.BeforeInserter = (*KeyValue)(nil)
-	_ reform.BeforeUpdater  = (*KeyValue)(nil)
-	_ reform.AfterFinder    = (*KeyValue)(nil)
+	_ reform.BeforeInserter = (*TelemetryRow)(nil)
+	_ reform.BeforeUpdater  = (*TelemetryRow)(nil)
+	_ reform.AfterFinder    = (*TelemetryRow)(nil)
 )

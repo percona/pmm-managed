@@ -195,10 +195,9 @@ var postgresDatabaseSchema = [][]string{
 			PRIMARY KEY (id)
 		)`,
 
-		`CREATE TABLE key_values (
-			key VARCHAR(255) NOT NULL PRIMARY KEY,
-			value TEXT NOT NULL
-			-- created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+		`CREATE TABLE telemetry (
+  			uuid VARCHAR NOT NULL PRIMARY KEY,
+  			created_at TIMESTAMP NOT NULL
 		)`,
 	},
 }
@@ -234,10 +233,10 @@ func OpenPostgresDB(name, username, password string, logf reform.Printf) (*sql.D
 		return db, nil
 	}
 
-	latestVersion := len(databaseSchema) - 1 // skip item 0
+	latestVersion := len(postgresDatabaseSchema) - 1 // skip item 0
 	var currentVersion int
 	err = db.QueryRow("SELECT id FROM schema_migrations ORDER BY id DESC LIMIT 1").Scan(&currentVersion)
-	if myErr, ok := err.(*pq.Error); ok && myErr.Code == "42P01" { // 1046 table doesn't exist
+	if pErr, ok := err.(*pq.Error); ok && pErr.Code == "42P01" { // 42P01 table doesn't exist
 		err = nil
 	}
 	if err != nil {
@@ -247,7 +246,7 @@ func OpenPostgresDB(name, username, password string, logf reform.Printf) (*sql.D
 
 	for version := currentVersion + 1; version <= latestVersion; version++ {
 		logf("Migrating database to schema version %d ...", version)
-		queries := databaseSchema[version]
+		queries := postgresDatabaseSchema[version]
 		queries = append(queries, fmt.Sprintf(`INSERT INTO schema_migrations (id) VALUES (%d)`, version))
 		for _, q := range queries {
 			q = strings.TrimSpace(q)

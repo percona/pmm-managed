@@ -471,38 +471,13 @@ func runDebugServer(ctx context.Context) {
 func runTelemetryService(ctx context.Context, db *reform.DB) {
 	l := logrus.WithField("component", "telemetry")
 
-	uuid, err := getTelemetryUUID(db)
+	uuid, err := telemetry.GetTelemetryUUID(db)
 	if err != nil {
-		l.Panicf("cannot get/set telemetry UUID in Consul: %s", err)
+		l.Panicf("cannot get/set telemetry UUID in DB: %s", err)
 	}
 
 	svc := telemetry.NewService(uuid, Version)
 	svc.Run(ctx)
-}
-
-func getTelemetryUUID(db *reform.DB) (string, error) {
-	b, err := db.SelectOneFrom(models.KeyValueTable, "WHERE key = "+db.Placeholder(1), "telemetry/uuid")
-	if err != nil && err != reform.ErrNoRows {
-		return "", err
-	}
-	if b != nil {
-		return b.(*models.KeyValue).Value, nil
-	}
-
-	uuid, err := telemetry.GenerateUUID()
-	if err != nil {
-		return "", err
-	}
-
-	row := &models.KeyValue{
-		Key:   "telemetry/uuid",
-		Value: uuid,
-	}
-	if err := db.Insert(row); err != nil {
-		return "", errors.WithStack(err)
-	}
-
-	return uuid, nil
 }
 
 func main() {
