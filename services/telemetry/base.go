@@ -213,8 +213,8 @@ func GetTelemetryUUID(db *reform.DB) (string, error) {
 	if err != nil && err != reform.ErrNoRows {
 		return "", errors.Wrap(err, "cannot get telemetry data from DB")
 	}
-	if row != nil && row.Uuid != "" {
-		return row.Uuid, nil
+	if row != nil && row.UUID != "" {
+		return row.UUID, nil
 	}
 
 	uuid, err := generateUUID()
@@ -223,7 +223,7 @@ func GetTelemetryUUID(db *reform.DB) (string, error) {
 	}
 
 	row = &models.TelemetryRow{
-		Uuid: uuid,
+		UUID: uuid,
 	}
 	if err := db.Insert(row); err != nil {
 		return "", errors.WithStack(err)

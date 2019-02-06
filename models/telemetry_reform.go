@@ -47,14 +47,14 @@ func (v *telemetryRowTableType) PKColumnIndex() uint {
 
 // TelemetryRowTable represents telemetry view or table in SQL database.
 var TelemetryRowTable = &telemetryRowTableType{
-	s: parse.StructInfo{Type: "TelemetryRow", SQLSchema: "", SQLName: "telemetry", Fields: []parse.FieldInfo{{Name: "Uuid", Type: "string", Column: "uuid"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}}, PKFieldIndex: 0},
+	s: parse.StructInfo{Type: "TelemetryRow", SQLSchema: "", SQLName: "telemetry", Fields: []parse.FieldInfo{{Name: "UUID", Type: "string", Column: "uuid"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}}, PKFieldIndex: 0},
 	z: new(TelemetryRow).Values(),
 }
 
 // String returns a string representation of this struct or record.
 func (s TelemetryRow) String() string {
 	res := make([]string, 2)
-	res[0] = "Uuid: " + reform.Inspect(s.Uuid, true)
+	res[0] = "UUID: " + reform.Inspect(s.UUID, true)
 	res[1] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
 	return strings.Join(res, ", ")
 }
@@ -63,7 +63,7 @@ func (s TelemetryRow) String() string {
 // Returned interface{} values are never untyped nils.
 func (s *TelemetryRow) Values() []interface{} {
 	return []interface{}{
-		s.Uuid,
+		s.UUID,
 		s.CreatedAt,
 	}
 }
@@ -72,7 +72,7 @@ func (s *TelemetryRow) Values() []interface{} {
 // Returned interface{} values are never untyped nils.
 func (s *TelemetryRow) Pointers() []interface{} {
 	return []interface{}{
-		&s.Uuid,
+		&s.UUID,
 		&s.CreatedAt,
 	}
 }
@@ -90,26 +90,26 @@ func (s *TelemetryRow) Table() reform.Table {
 // PKValue returns a value of primary key for that record.
 // Returned interface{} value is never untyped nil.
 func (s *TelemetryRow) PKValue() interface{} {
-	return s.Uuid
+	return s.UUID
 }
 
 // PKPointer returns a pointer to primary key field for that record.
 // Returned interface{} value is never untyped nil.
 func (s *TelemetryRow) PKPointer() interface{} {
-	return &s.Uuid
+	return &s.UUID
 }
 
 // HasPK returns true if record has non-zero primary key set, false otherwise.
 func (s *TelemetryRow) HasPK() bool {
-	return s.Uuid != TelemetryRowTable.z[TelemetryRowTable.s.PKFieldIndex]
+	return s.UUID != TelemetryRowTable.z[TelemetryRowTable.s.PKFieldIndex]
 }
 
 // SetPK sets record primary key.
 func (s *TelemetryRow) SetPK(pk interface{}) {
 	if i64, ok := pk.(int64); ok {
-		s.Uuid = string(i64)
+		s.UUID = string(i64)
 	} else {
-		s.Uuid = pk.(string)
+		s.UUID = pk.(string)
 	}
 }
 

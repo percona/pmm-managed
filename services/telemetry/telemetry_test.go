@@ -51,14 +51,14 @@ func TestGetTelemetryUUID(t *testing.T) {
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
 	// Generate  and set new UUID
-	generatedUuid, err := GetTelemetryUUID(db)
+	generatedUUID, err := GetTelemetryUUID(db)
 	require.NoError(t, err)
-	require.NotEmpty(t, generatedUuid, "UUID can't be empty")
+	require.NotEmpty(t, generatedUUID, "UUID can't be empty")
 
 	// Get UUID
-	newUuid, err := GetTelemetryUUID(db)
+	newUUID, err := GetTelemetryUUID(db)
 	require.NoError(t, err)
-	require.Equal(t, generatedUuid, newUuid) // Should return the same uuid each time.
+	require.Equal(t, generatedUUID, newUUID) // Should return the same uuid each time.
 }
 
 func TestMakePayload(t *testing.T) {

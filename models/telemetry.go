@@ -27,7 +27,7 @@ import (
 // TelemetryRow represents Service as stored in database.
 //reform:telemetry
 type TelemetryRow struct {
-	Uuid      string    `reform:"uuid,pk"`
+	UUID      string    `reform:"uuid,pk"`
 	CreatedAt time.Time `reform:"created_at"`
 	// UpdatedAt time.Time   `reform:"updated_at"`
 }
