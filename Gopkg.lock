@@ -166,7 +166,7 @@
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:0c5274a5aa5c4dbd9c0f3ca3705259f9776c22bfbb3992a56a3974de24e6deed"
+  digest = "1:4d4bcad56f02cd593656ba303b75ab30580f8f60c1afaf1fa3b35c88b5dbf200"
   name = "github.com/percona/pmm"
   packages = [
     "api/inventory/json/client",
@@ -175,7 +175,7 @@
     "api/inventory/json/client/services",
   ]
   pruneopts = ""
-  revision = "4563818d2b4e25bd3160376261a117a1dcae526d"
+  revision = "7411b82815b56670f7452a0039787333f03485b5"
 
 [[projects]]
   digest = "1:256484dbbcd271f9ecebc6795b2df8cad4c458dd0f5fd82a8c2fa0c29f233411"
@@ -214,14 +214,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:1e9704e5379e68ac473c28aeb3f7e7cd4036ae8a246bf0285b5ebdbb8e0cfacf"
+  digest = "1:1d52dac9bdc355f83ad9916bc657baa7d8735a108ae749da8e8d3513a1b15f28"
   name = "golang.org/x/net"
-  packages = [
-    "context",
-    "idna",
-  ]
+  packages = ["idna"]
   pruneopts = ""
-  revision = "d26f9f9a57f3fab6a695bec0d84433c2c50f8bbf"
+  revision = "65e2d4e15006aab9813ff8769e768bbf4bb667a0"
 
 [[projects]]
   branch = "master"
