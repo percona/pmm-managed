@@ -1,0 +1,8 @@
+[[constraint]]
+  name = "github.com/percona/pmm"
+  branch = "PMM-2.0"
+
+[prune]
+  # non-go = true
+  # go-tests = true
+  # unused-packages = true
