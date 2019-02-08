@@ -207,27 +207,22 @@ func getLinuxDistribution(procVersion string) string {
 
 // GetTelemetryUUID gets/sets telemetry UUID in DB.
 func GetTelemetryUUID(db *reform.DB) (string, error) {
-	row := &models.TelemetryRow{}
-
-	err := db.SelectOneTo(row, "")
+	var row models.TelemetryRow
+	err := db.SelectOneTo(&row, "")
 	if err != nil && err != reform.ErrNoRows {
 		return "", errors.Wrap(err, "cannot get telemetry data from DB")
 	}
-	if row != nil && row.UUID != "" {
+	if err == nil {
 		return row.UUID, nil
 	}
 
-	uuid, err := generateUUID()
+	row.UUID, err = generateUUID()
 	if err != nil {
 		return "", err
 	}
 
-	row = &models.TelemetryRow{
-		UUID: uuid,
-	}
-	if err := db.Insert(row); err != nil {
+	if err := db.Insert(&row); err != nil {
 		return "", errors.WithStack(err)
 	}
-
-	return uuid, nil
+	return row.UUID, nil
 }

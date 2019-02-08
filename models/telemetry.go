@@ -19,41 +19,41 @@ package models
 import (
 	"time"
 
+	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 )
 
 //go:generate reform
 
-// TelemetryRow represents Service as stored in database.
+// TelemetryRow stores telemetry information.
 //reform:telemetry
 type TelemetryRow struct {
 	UUID      string    `reform:"uuid,pk"`
 	CreatedAt time.Time `reform:"created_at"`
-	// UpdatedAt time.Time   `reform:"updated_at"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.
 //nolint:unparam
-func (sr *TelemetryRow) BeforeInsert() error {
+func (t *TelemetryRow) BeforeInsert() error {
+	if t.UUID == "" {
+		return errors.New("UUID should not be empty")
+	}
+
 	now := time.Now().Truncate(time.Microsecond).UTC()
-	sr.CreatedAt = now
-	// sr.UpdatedAt = now
+	t.CreatedAt = now
 	return nil
 }
 
 // BeforeUpdate implements reform.BeforeUpdater interface.
 //nolint:unparam
-func (sr *TelemetryRow) BeforeUpdate() error {
-	// now := time.Now().Truncate(time.Microsecond).UTC()
-	// sr.UpdatedAt = now
-	return nil
+func (t *TelemetryRow) BeforeUpdate() error {
+	panic("TelemetryRow should not be updated")
 }
 
 // AfterFind implements reform.AfterFinder interface.
 //nolint:unparam
-func (sr *TelemetryRow) AfterFind() error {
-	// sr.CreatedAt = sr.CreatedAt.UTC()
-	// sr.UpdatedAt = sr.UpdatedAt.UTC()
+func (t *TelemetryRow) AfterFind() error {
+	t.CreatedAt = t.CreatedAt.UTC()
 	return nil
 }
 

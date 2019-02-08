@@ -48,17 +48,20 @@ func TestIntegration(t *testing.T) {
 
 func TestGetTelemetryUUID(t *testing.T) {
 	sqlDB := tests.OpenTestPostgresDB(t)
+	defer func() {
+		require.NoError(t, sqlDB.Close())
+	}()
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	// Generate  and set new UUID
+	// generate and set new UUID
 	generatedUUID, err := GetTelemetryUUID(db)
 	require.NoError(t, err)
-	require.NotEmpty(t, generatedUUID, "UUID can't be empty")
+	assert.NotEmpty(t, generatedUUID)
 
-	// Get UUID
+	// get UUID
 	newUUID, err := GetTelemetryUUID(db)
 	require.NoError(t, err)
-	require.Equal(t, generatedUUID, newUUID) // Should return the same uuid each time.
+	assert.Equal(t, generatedUUID, newUUID)
 }
 
 func TestMakePayload(t *testing.T) {
