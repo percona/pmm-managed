@@ -473,7 +473,7 @@ func runTelemetryService(ctx context.Context, db *reform.DB) {
 
 	uuid, err := telemetry.GetTelemetryUUID(db)
 	if err != nil {
-		l.Panicf("cannot get/set telemetry UUID in DB: %s", err)
+		l.Panicf("cannot get/set telemetry UUID in DB: %+v", err)
 	}
 
 	svc := telemetry.NewService(uuid, Version)
@@ -488,6 +488,9 @@ func main() {
 
 	if *dbNameF == "" {
 		log.Fatal("-db-name flag must be given explicitly.")
+	}
+	if *postgresDBNameF == "" {
+		log.Fatal("-postgres-name flag must be given explicitly.")
 	}
 
 	if *debugF {

@@ -191,12 +191,11 @@ func OpenDB(name, username, password string, logf reform.Printf) (*sql.DB, error
 var postgresDatabaseSchema = [][]string{
 	1: {
 		`CREATE TABLE schema_migrations (
-			id INT NOT NULL,
-			PRIMARY KEY (id)
+			id INT PRIMARY KEY
 		)`,
 
 		`CREATE TABLE telemetry (
-  			uuid VARCHAR NOT NULL PRIMARY KEY,
+  			uuid VARCHAR PRIMARY KEY,
   			created_at TIMESTAMP NOT NULL
 		)`,
 	},
@@ -204,7 +203,6 @@ var postgresDatabaseSchema = [][]string{
 
 // OpenPostgresDB opens connection to PostgreSQL database and runs migrations.
 func OpenPostgresDB(name, username, password string, logf reform.Printf) (*sql.DB, error) {
-
 	q := make(url.Values)
 	q.Set("sslmode", "disable")
 
@@ -215,6 +213,9 @@ func OpenPostgresDB(name, username, password string, logf reform.Printf) (*sql.D
 		Host:     address,
 		Path:     name,
 		RawQuery: q.Encode(),
+	}
+	if uri.Path == "" {
+		uri.Path = "postgres"
 	}
 	dsn := uri.String()
 
@@ -236,7 +237,7 @@ func OpenPostgresDB(name, username, password string, logf reform.Printf) (*sql.D
 	latestVersion := len(postgresDatabaseSchema) - 1 // skip item 0
 	var currentVersion int
 	err = db.QueryRow("SELECT id FROM schema_migrations ORDER BY id DESC LIMIT 1").Scan(&currentVersion)
-	if pErr, ok := err.(*pq.Error); ok && pErr.Code == "42P01" { // 42P01 table doesn't exist
+	if pErr, ok := err.(*pq.Error); ok && pErr.Code == "42P01" { // undefined_table (see https://www.postgresql.org/docs/current/errcodes-appendix.html)
 		err = nil
 	}
 	if err != nil {
