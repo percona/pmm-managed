@@ -70,7 +70,7 @@ var databaseSchema = [][]string{
 			UNIQUE (instance, region)
 		)`,
 
-		`INSERT INTO nodes (node_type, node_id, node_name) VALUES ('` + string(PMMServerNodeType) + `', '` + PMMServerNodeID + `', 'PMM Server')`,
+		`INSERT INTO nodes (node_type, node_id, node_name) VALUES ('` + string(PMMServerNodeType) + `', '` + PMMServerNodeID + `', 'PMM Server')`, //nolint:gosec
 
 		`CREATE TABLE services (
 			-- common

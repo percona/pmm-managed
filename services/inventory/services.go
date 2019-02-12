@@ -131,7 +131,7 @@ func (ss *ServicesService) Get(ctx context.Context, id string) (api.Service, err
 }
 
 // AddMySQL inserts MySQL Service with given parameters.
-func (ss *ServicesService) AddMySQL(ctx context.Context, name string, nodeID string, address *string, port *uint16, unixSocket *string) (api.Service, error) {
+func (ss *ServicesService) AddMySQL(ctx context.Context, name string, nodeID string, address *string, port *uint16, unixSocket *string) (*api.MySQLService, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// Both address and socket can't be empty, etc.
 
@@ -160,7 +160,7 @@ func (ss *ServicesService) AddMySQL(ctx context.Context, name string, nodeID str
 	if err := ss.q.Insert(row); err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return makeService(row), nil
+	return makeService(row).(*api.MySQLService), nil
 }
 
 // Change updates Service by ID.

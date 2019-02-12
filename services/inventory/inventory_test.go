@@ -207,7 +207,7 @@ func TestServices(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, actualServices, 0)
 
-		actualService, err := ss.AddMySQL(ctx, "test-mysql", models.PMMServerNodeID, pointer.ToString("127.0.0.1"), pointer.ToUint16(3306), nil)
+		actualMySQLService, err := ss.AddMySQL(ctx, "test-mysql", models.PMMServerNodeID, pointer.ToString("127.0.0.1"), pointer.ToUint16(3306), nil)
 		require.NoError(t, err)
 		expectedService := &api.MySQLService{
 			ServiceId:   "/service_id/00000000-0000-4000-8000-000000000001",
@@ -216,9 +216,9 @@ func TestServices(t *testing.T) {
 			Address:     "127.0.0.1",
 			Port:        3306,
 		}
-		assert.Equal(t, expectedService, actualService)
+		assert.Equal(t, expectedService, actualMySQLService)
 
-		actualService, err = ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000001")
+		actualService, err := ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000001")
 		require.NoError(t, err)
 		assert.Equal(t, expectedService, actualService)
 
@@ -337,17 +337,17 @@ func TestAgents(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 0)
 
-		actualAgent, err := as.AddNodeExporter(ctx, models.PMMServerNodeID, true)
+		actualNodeExporter, err := as.AddNodeExporter(ctx, models.PMMServerNodeID)
 		require.NoError(t, err)
-		expectedNodeExporterAgent := &api.NodeExporter{
+		expectedNodeExporter := &api.NodeExporter{
 			AgentId: "/agent_id/00000000-0000-4000-8000-000000000001",
 			NodeId:  models.PMMServerNodeID,
 		}
-		assert.Equal(t, expectedNodeExporterAgent, actualAgent)
+		assert.Equal(t, expectedNodeExporter, actualNodeExporter)
 
-		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000001")
+		actualAgent, err := as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000001")
 		require.NoError(t, err)
-		assert.Equal(t, expectedNodeExporterAgent, actualAgent)
+		assert.Equal(t, expectedNodeExporter, actualAgent)
 
 		s, err := ss.AddMySQL(ctx, "test-mysql", models.PMMServerNodeID, pointer.ToString("127.0.0.1"), pointer.ToUint16(3306), nil)
 		require.NoError(t, err)
@@ -355,47 +355,47 @@ func TestAgents(t *testing.T) {
 		n, err := ns.Add(ctx, models.GenericNodeType, "new node name", nil, nil)
 		require.NoError(t, err)
 
-		actualAgent, err = as.AddMySQLdExporter(ctx, n.ID(), false, s.ID(), pointer.ToString("username"), nil)
+		actualAgent, err = as.AddMySQLdExporter(ctx, n.ID(), s.ID(), pointer.ToString("username"), nil)
 		require.NoError(t, err)
-		expectedMySQLdExporterAgent := &api.MySQLdExporter{
+		expectedMySQLdExporter := &api.MySQLdExporter{
 			AgentId:      "/agent_id/00000000-0000-4000-8000-000000000004",
 			RunsOnNodeId: n.ID(),
 			ServiceId:    s.ID(),
 			Username:     "username",
 		}
-		assert.Equal(t, expectedMySQLdExporterAgent, actualAgent)
+		assert.Equal(t, expectedMySQLdExporter, actualAgent)
 
 		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000004")
 		require.NoError(t, err)
-		assert.Equal(t, expectedMySQLdExporterAgent, actualAgent)
+		assert.Equal(t, expectedMySQLdExporter, actualAgent)
 
 		// err = as.SetDisabled(ctx, "/agent_id/00000000-0000-4000-8000-000000000001", true)
 		// require.NoError(t, err)
-		// expectedMySQLdExporterAgent.Disabled = true
+		// expectedMySQLdExporter.Disabled = true
 		// actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000001")
 		// require.NoError(t, err)
-		// assert.Equal(t, expectedMySQLdExporterAgent, actualAgent)
+		// assert.Equal(t, expectedMySQLdExporter, actualAgent)
 
 		actualAgents, err = as.List(ctx, AgentFilters{})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 2)
-		assert.Equal(t, expectedNodeExporterAgent, actualAgents[0])
-		assert.Equal(t, expectedMySQLdExporterAgent, actualAgents[1])
+		assert.Equal(t, expectedNodeExporter, actualAgents[0])
+		assert.Equal(t, expectedMySQLdExporter, actualAgents[1])
 
 		actualAgents, err = as.List(ctx, AgentFilters{ServiceID: s.ID()})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 1)
-		assert.Equal(t, expectedMySQLdExporterAgent, actualAgents[0])
+		assert.Equal(t, expectedMySQLdExporter, actualAgents[0])
 
 		actualAgents, err = as.List(ctx, AgentFilters{RunsOnNodeID: n.ID()})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 1)
-		assert.Equal(t, expectedMySQLdExporterAgent, actualAgents[0])
+		assert.Equal(t, expectedMySQLdExporter, actualAgents[0])
 
 		actualAgents, err = as.List(ctx, AgentFilters{NodeID: models.PMMServerNodeID})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 1)
-		assert.Equal(t, expectedNodeExporterAgent, actualAgents[0])
+		assert.Equal(t, expectedNodeExporter, actualAgents[0])
 
 		err = as.Remove(ctx, "/agent_id/00000000-0000-4000-8000-000000000001")
 		require.NoError(t, err)
@@ -440,7 +440,7 @@ func TestAgents(t *testing.T) {
 		_, _, as, teardown := setup(t)
 		defer teardown(t)
 
-		_, err := as.AddNodeExporter(ctx, "no-such-id", true)
+		_, err := as.AddNodeExporter(ctx, "no-such-id")
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Node with ID "no-such-id" not found.`), err)
 	})
 
@@ -448,7 +448,7 @@ func TestAgents(t *testing.T) {
 		_, _, as, teardown := setup(t)
 		defer teardown(t)
 
-		_, err := as.AddMySQLdExporter(ctx, models.PMMServerNodeID, false, "no-such-id", pointer.ToString("username"), nil)
+		_, err := as.AddMySQLdExporter(ctx, models.PMMServerNodeID, "no-such-id", pointer.ToString("username"), nil)
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "no-such-id" not found.`), err)
 	})
 

@@ -122,6 +122,16 @@ func (as *AgentsService) checkUniqueID(ctx context.Context, id string) error {
 	}
 }
 
+// AgentFilters represents filters for agents list.
+type AgentFilters struct {
+	// Return only Agents running on that Node.
+	RunsOnNodeID string
+	// Return only Agents that provide insights for that Node.
+	NodeID string
+	// Return only Agents that provide insights for that Service.
+	ServiceID string
+}
+
 // List selects all Agents in a stable order for a given service.
 func (as *AgentsService) List(ctx context.Context, filters AgentFilters) ([]api.Agent, error) {
 	var agentRows []*models.AgentRow
@@ -168,7 +178,7 @@ func (as *AgentsService) Get(ctx context.Context, id string) (api.Agent, error) 
 }
 
 // AddPMMAgent inserts pmm-agent Agent with given parameters.
-func (as *AgentsService) AddPMMAgent(ctx context.Context, nodeID string) (api.Agent, error) {
+func (as *AgentsService) AddPMMAgent(ctx context.Context, nodeID string) (*api.PMMAgent, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// TODO Check runs-on Node: it must be BM, VM, DC (i.e. not remote, AWS RDS, etc.)
 
@@ -200,11 +210,14 @@ func (as *AgentsService) AddPMMAgent(ctx context.Context, nodeID string) (api.Ag
 	}
 
 	agent, err := as.makeAgent(ctx, row)
-	return agent, err
+	if err != nil {
+		return nil, err
+	}
+	return agent.(*api.PMMAgent), nil
 }
 
 // AddNodeExporter inserts node_exporter Agent with given parameters.
-func (as *AgentsService) AddNodeExporter(ctx context.Context, nodeID string, disabled bool) (api.Agent, error) {
+func (as *AgentsService) AddNodeExporter(ctx context.Context, nodeID string) (*api.NodeExporter, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// TODO Check runs-on Node: it must be BM, VM, DC (i.e. not remote, AWS RDS, etc.)
 
@@ -247,11 +260,15 @@ func (as *AgentsService) AddNodeExporter(ctx context.Context, nodeID string, dis
 		as.r.SendSetStateRequest(ctx, agent.AgentID)
 	}
 
-	return as.makeAgent(ctx, row)
+	agent, err := as.makeAgent(ctx, row)
+	if err != nil {
+		return nil, err
+	}
+	return agent.(*api.NodeExporter), nil
 }
 
 // AddMySQLdExporter inserts mysqld_exporter Agent with given parameters.
-func (as *AgentsService) AddMySQLdExporter(ctx context.Context, nodeID string, disabled bool, serviceID string, username, password *string) (api.Agent, error) {
+func (as *AgentsService) AddMySQLdExporter(ctx context.Context, nodeID string, serviceID string, username, password *string) (*api.MySQLdExporter, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// TODO Check runs-on Node: it must be BM, VM, DC (i.e. not remote, AWS RDS, etc.)
 
@@ -308,7 +325,11 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, nodeID string, d
 		as.r.SendSetStateRequest(ctx, agent.AgentID)
 	}
 
-	return as.makeAgent(ctx, row)
+	agent, err := as.makeAgent(ctx, row)
+	if err != nil {
+		return nil, err
+	}
+	return agent.(*api.MySQLdExporter), nil
 }
 
 /*
@@ -353,14 +374,4 @@ func (as *AgentsService) Remove(ctx context.Context, id string) error {
 	}
 
 	return nil
-}
-
-// AgentFilters represents filters for agents list.
-type AgentFilters struct {
-	// Return only Agents running on that Node.
-	RunsOnNodeID string
-	// Return only Agents that provide insights for that Node.
-	NodeID string
-	// Return only Agents that provide insights for that Service.
-	ServiceID string
 }

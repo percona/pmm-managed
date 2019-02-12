@@ -78,7 +78,7 @@ func (s *ServicesServer) AddMySQLService(ctx context.Context, req *api.AddMySQLS
 	}
 
 	res := &api.AddMySQLServiceResponse{
-		Mysql: service.(*api.MySQLService),
+		Mysql: service,
 	}
 	return res, nil
 }

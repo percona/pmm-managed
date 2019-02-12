@@ -61,7 +61,6 @@ func (s *AgentsServer) ListAgents(ctx context.Context, req *api.ListAgentsReques
 		}
 	}
 	return res, nil
-
 }
 
 // GetAgent returns a single Agent by ID.
@@ -98,20 +97,20 @@ func (s *AgentsServer) AddPMMAgent(ctx context.Context, req *api.AddPMMAgentRequ
 	}
 
 	res := &api.AddPMMAgentResponse{
-		PmmAgent: agent.(*api.PMMAgent),
+		PmmAgent: agent,
 	}
 	return res, nil
 }
 
 // AddNodeExporter adds node_exporter Agent.
 func (s *AgentsServer) AddNodeExporter(ctx context.Context, req *api.AddNodeExporterRequest) (*api.AddNodeExporterResponse, error) {
-	agent, err := s.Agents.AddNodeExporter(ctx, req.NodeId, false)
+	agent, err := s.Agents.AddNodeExporter(ctx, req.NodeId)
 	if err != nil {
 		return nil, err
 	}
 
 	res := &api.AddNodeExporterResponse{
-		NodeExporter: agent.(*api.NodeExporter),
+		NodeExporter: agent,
 	}
 	return res, nil
 }
@@ -120,21 +119,23 @@ func (s *AgentsServer) AddNodeExporter(ctx context.Context, req *api.AddNodeExpo
 func (s *AgentsServer) AddMySQLdExporter(ctx context.Context, req *api.AddMySQLdExporterRequest) (*api.AddMySQLdExporterResponse, error) {
 	username := pointer.ToStringOrNil(req.Username)
 	password := pointer.ToStringOrNil(req.Password)
-	agent, err := s.Agents.AddMySQLdExporter(ctx, req.RunsOnNodeId, false, req.ServiceId, username, password)
+	agent, err := s.Agents.AddMySQLdExporter(ctx, req.RunsOnNodeId, req.ServiceId, username, password)
 	if err != nil {
 		return nil, err
 	}
 
 	res := &api.AddMySQLdExporterResponse{
-		MysqldExporter: agent.(*api.MySQLdExporter),
+		MysqldExporter: agent,
 	}
 	return res, nil
 }
 
+// AddRDSExporter adds rds_exporter Agent.
 func (s *AgentsServer) AddRDSExporter(ctx context.Context, req *api.AddRDSExporterRequest) (*api.AddRDSExporterResponse, error) {
 	panic("not implemented yet")
 }
 
+// AddExternalExporter adds external Agent.
 func (s *AgentsServer) AddExternalExporter(ctx context.Context, req *api.AddExternalExporterRequest) (*api.AddExternalExporterResponse, error) {
 	panic("not implemented yet")
 }
