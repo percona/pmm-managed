@@ -17,6 +17,8 @@
 package models
 
 import (
+	"time"
+
 	"gopkg.in/reform.v1"
 )
 
@@ -27,20 +29,18 @@ type ServiceType string
 
 // Service types.
 const (
-	MySQLServiceType ServiceType = "mysql"
-
-	AWSRDSServiceType     ServiceType = "aws-rds"
-	PostgreSQLServiceType ServiceType = "postgresql"
+	MySQLServiceType          ServiceType = "mysql"
+	AmazonRDSMySQLServiceType ServiceType = "amazon-rds-mysql"
 )
 
 // ServiceRow represents Service as stored in database.
 //reform:services
 type ServiceRow struct {
-	ID     string      `reform:"id,pk"`
-	Type   ServiceType `reform:"type"`
-	Name   string      `reform:"name"`
-	NodeID string      `reform:"node_id"`
-	// CreatedAt time.Time   `reform:"created_at"`
+	ServiceID   string      `reform:"service_id,pk"`
+	ServiceType ServiceType `reform:"service_type"`
+	ServiceName string      `reform:"service_name"`
+	NodeID      string      `reform:"node_id"`
+	CreatedAt   time.Time   `reform:"created_at"`
 	// UpdatedAt time.Time   `reform:"updated_at"`
 
 	Address    *string `reform:"address"`
@@ -51,8 +51,8 @@ type ServiceRow struct {
 // BeforeInsert implements reform.BeforeInserter interface.
 //nolint:unparam
 func (sr *ServiceRow) BeforeInsert() error {
-	// now := time.Now().Truncate(time.Microsecond).UTC()
-	// sr.CreatedAt = now
+	now := time.Now().Truncate(time.Microsecond).UTC()
+	sr.CreatedAt = now
 	// sr.UpdatedAt = now
 	return nil
 }
@@ -68,7 +68,7 @@ func (sr *ServiceRow) BeforeUpdate() error {
 // AfterFind implements reform.AfterFinder interface.
 //nolint:unparam
 func (sr *ServiceRow) AfterFind() error {
-	// sr.CreatedAt = sr.CreatedAt.UTC()
+	sr.CreatedAt = sr.CreatedAt.UTC()
 	// sr.UpdatedAt = sr.UpdatedAt.UTC()
 	return nil
 }
@@ -79,66 +79,3 @@ var (
 	_ reform.BeforeUpdater  = (*ServiceRow)(nil)
 	_ reform.AfterFinder    = (*ServiceRow)(nil)
 )
-
-// TODO remove code below
-
-//reform:services
-type Service struct {
-	ID     string      `reform:"id,pk"`
-	Type   ServiceType `reform:"type"`
-	NodeID string      `reform:"node_id"`
-}
-
-//reform:services
-type AWSRDSService struct {
-	ID     string      `reform:"id,pk"`
-	Type   ServiceType `reform:"type"`
-	Name   string      `reform:"name"`
-	NodeID string      `reform:"node_id"`
-
-	AWSAccessKey  *string `reform:"aws_access_key"` // may be nil
-	AWSSecretKey  *string `reform:"aws_secret_key"` // may be nil
-	Address       *string `reform:"address"`
-	Port          *uint16 `reform:"port"`
-	Engine        *string `reform:"engine"`
-	EngineVersion *string `reform:"engine_version"`
-}
-
-//reform:services
-type PostgreSQLService struct {
-	ID     string      `reform:"id,pk"`
-	Type   ServiceType `reform:"type"`
-	Name   string      `reform:"name"`
-	NodeID string      `reform:"node_id"`
-
-	Address       *string `reform:"address"`
-	Port          *uint16 `reform:"port"`
-	Engine        *string `reform:"engine"`
-	EngineVersion *string `reform:"engine_version"`
-}
-
-//reform:services
-type MySQLService struct {
-	ID     string      `reform:"id,pk"`
-	Type   ServiceType `reform:"type"`
-	Name   string      `reform:"name"`
-	NodeID string      `reform:"node_id"`
-
-	Address       *string `reform:"address"`
-	Port          *uint16 `reform:"port"`
-	Engine        *string `reform:"engine"`
-	EngineVersion *string `reform:"engine_version"`
-}
-
-//reform:services
-type RemoteService struct {
-	ID     string      `reform:"id,pk"`
-	Type   ServiceType `reform:"type"`
-	Name   string      `reform:"name"`
-	NodeID string      `reform:"node_id"`
-
-	Address       *string `reform:"address"`
-	Port          *uint16 `reform:"port"`
-	Engine        *string `reform:"engine"`
-	EngineVersion *string `reform:"engine_version"`
-}

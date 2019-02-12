@@ -17,6 +17,8 @@
 package models
 
 import (
+	"time"
+
 	"gopkg.in/reform.v1"
 )
 
@@ -27,38 +29,41 @@ type NodeType string
 
 // Node types.
 const (
+	PMMServerNodeID string = "pmm-server" // FIXME remove
+
 	PMMServerNodeType NodeType = "pmm-server" // FIXME remove
 
 	GenericNodeType         NodeType = "generic"
+	ContainerNodeType       NodeType = "container"
 	RemoteNodeType          NodeType = "remote"
-	AmazonRDSRemoteNodeType NodeType = "remote-amazon-rds"
-)
-
-const (
-	// PMMServerNodeID is a fixed Node ID for PMM Server where pmm-managed runs.
-	PMMServerNodeID string = "pmm-server"
-
-	RemoteNodeRegion string = "remote"
+	RemoteAmazonRDSNodeType NodeType = "remote-amazon-rds"
 )
 
 // NodeRow represents Node as stored in database.
 //reform:nodes
 type NodeRow struct {
-	ID   string   `reform:"id,pk"`
-	Type NodeType `reform:"type"`
-	Name string   `reform:"name"`
-	// CreatedAt time.Time `reform:"created_at"`
+	NodeID    string    `reform:"node_id,pk"`
+	NodeType  NodeType  `reform:"node_type"`
+	NodeName  string    `reform:"node_name"`
+	MachineID *string   `reform:"machine_id"`
+	CreatedAt time.Time `reform:"created_at"`
 	// UpdatedAt time.Time `reform:"updated_at"`
 
-	Hostname *string `reform:"hostname"`
+	Distro        *string `reform:"distro"`
+	DistroVersion *string `reform:"distro_version"`
+
+	DockerContainerID   *string `reform:"docker_container_id"`
+	DockerContainerName *string `reform:"docker_container_name"`
+
+	Instance *string `reform:"instance"`
 	Region   *string `reform:"region"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.
 //nolint:unparam
 func (nr *NodeRow) BeforeInsert() error {
-	// now := time.Now().Truncate(time.Microsecond).UTC()
-	// nr.CreatedAt = now
+	now := time.Now().Truncate(time.Microsecond).UTC()
+	nr.CreatedAt = now
 	// nr.UpdatedAt = now
 	return nil
 }
@@ -74,7 +79,7 @@ func (nr *NodeRow) BeforeUpdate() error {
 // AfterFind implements reform.AfterFinder interface.
 //nolint:unparam
 func (nr *NodeRow) AfterFind() error {
-	// nr.CreatedAt = nr.CreatedAt.UTC()
+	nr.CreatedAt = nr.CreatedAt.UTC()
 	// nr.UpdatedAt = nr.UpdatedAt.UTC()
 	return nil
 }
@@ -85,32 +90,3 @@ var (
 	_ reform.BeforeUpdater  = (*NodeRow)(nil)
 	_ reform.AfterFinder    = (*NodeRow)(nil)
 )
-
-// TODO remove code below
-
-//reform:nodes
-type Node struct {
-	ID   string   `reform:"id,pk"`
-	Type NodeType `reform:"type"`
-	Name string   `reform:"name"`
-}
-
-//reform:nodes
-type AWSRDSNode struct {
-	ID   string   `reform:"id,pk"`
-	Type NodeType `reform:"type"`
-	Name string   `reform:"name"` // DBInstanceIdentifier
-
-	// Hostname *string `reform:"hostname"`
-	Region *string `reform:"region"`
-}
-
-//reform:nodes
-type RemoteNode struct {
-	ID   string   `reform:"id,pk"`
-	Type NodeType `reform:"type"`
-	Name string   `reform:"name"` // DBInstanceIdentifier
-
-	// Hostname *string `reform:"hostname"`
-	Region *string `reform:"region"`
-}
