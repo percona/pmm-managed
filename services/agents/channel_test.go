@@ -29,7 +29,7 @@ import (
 	"github.com/percona/exporter_shared/helpers"
 	api "github.com/percona/pmm/api/agent"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
+	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -147,8 +147,8 @@ func TestAgentRequest(t *testing.T) {
 	assert.NoError(t, err)
 
 	// check metrics
-	metrics := make([]prometheus.Metric, 0, 100)
-	metricsCh := make(chan prometheus.Metric)
+	metrics := make([]prom.Metric, 0, 100)
+	metricsCh := make(chan prom.Metric)
 	go func() {
 		channel.metrics.Collect(metricsCh)
 		close(metricsCh)
@@ -167,7 +167,7 @@ pmm_managed_agents_messages_sent_total 50
 	assert.Equal(t, expectedMetrics, helpers.Format(metrics))
 
 	// check that descriptions match metrics: same number, same order
-	descCh := make(chan *prometheus.Desc)
+	descCh := make(chan *prom.Desc)
 	go func() {
 		channel.metrics.Describe(descCh)
 		close(descCh)

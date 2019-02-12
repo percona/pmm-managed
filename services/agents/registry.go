@@ -25,7 +25,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	api "github.com/percona/pmm/api/agent"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
+	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -55,38 +55,38 @@ type Registry struct {
 	agents map[string]*agentInfo // id -> info
 
 	sharedMetrics *sharedChannelMetrics
-	mConnects     prometheus.Counter
-	mDisconnects  *prometheus.CounterVec
-	mRoundTrip    prometheus.Summary
-	mClockDrift   prometheus.Summary
+	mConnects     prom.Counter
+	mDisconnects  *prom.CounterVec
+	mRoundTrip    prom.Summary
+	mClockDrift   prom.Summary
 }
 
 // NewRegistry creates a new registry with given database connection.
 func NewRegistry(db *reform.DB) *Registry {
-	return &Registry{
+	r := &Registry{
 		db:            db,
 		agents:        make(map[string]*agentInfo),
 		sharedMetrics: newSharedMetrics(),
-		mConnects: prometheus.NewCounter(prometheus.CounterOpts{
+		mConnects: prom.NewCounter(prom.CounterOpts{
 			Namespace: prometheusNamespace,
 			Subsystem: prometheusSubsystem,
 			Name:      "connects_total",
 			Help:      "A total number of pmm-agent connects.",
 		}),
-		mDisconnects: prometheus.NewCounterVec(prometheus.CounterOpts{
+		mDisconnects: prom.NewCounterVec(prom.CounterOpts{
 			Namespace: prometheusNamespace,
 			Subsystem: prometheusSubsystem,
 			Name:      "disconnects_total",
 			Help:      "A total number of pmm-agent disconnects.",
 		}, []string{"reason"}),
-		mRoundTrip: prometheus.NewSummary(prometheus.SummaryOpts{
+		mRoundTrip: prom.NewSummary(prom.SummaryOpts{
 			Namespace:  prometheusNamespace,
 			Subsystem:  prometheusSubsystem,
 			Name:       "round_trip_seconds",
 			Help:       "Round-trip time.",
 			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
 		}),
-		mClockDrift: prometheus.NewSummary(prometheus.SummaryOpts{
+		mClockDrift: prom.NewSummary(prom.SummaryOpts{
 			Namespace:  prometheusNamespace,
 			Subsystem:  prometheusSubsystem,
 			Name:       "clock_drift_seconds",
@@ -94,6 +94,11 @@ func NewRegistry(db *reform.DB) *Registry {
 			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
 		}),
 	}
+
+	// initialize metrics with labels
+	r.mDisconnects.WithLabelValues("unknown")
+
+	return r
 }
 
 // Run takes over pmm-agent gRPC stream and runs it until completion.
@@ -359,14 +364,14 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 }
 
 // Describe implements prometheus.Collector.
-func (r *Registry) Describe(ch chan<- *prometheus.Desc) {
+func (r *Registry) Describe(ch chan<- *prom.Desc) {
 	r.sharedMetrics.Describe(ch)
 	r.mConnects.Describe(ch)
 	r.mDisconnects.Describe(ch)
 }
 
 // Collect implement prometheus.Collector.
-func (r *Registry) Collect(ch chan<- prometheus.Metric) {
+func (r *Registry) Collect(ch chan<- prom.Metric) {
 	r.sharedMetrics.Collect(ch)
 	r.mConnects.Collect(ch)
 	r.mDisconnects.Collect(ch)
@@ -374,5 +379,5 @@ func (r *Registry) Collect(ch chan<- prometheus.Metric) {
 
 // check interfaces
 var (
-	_ prometheus.Collector = (*Registry)(nil)
+	_ prom.Collector = (*Registry)(nil)
 )

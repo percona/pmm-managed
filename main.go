@@ -38,6 +38,7 @@ import (
 	agentAPI "github.com/percona/pmm/api/agent"
 	inventoryAPI "github.com/percona/pmm/api/inventory"
 	"github.com/percona/pmm/version"
+	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
@@ -132,18 +133,15 @@ func addLogsHandler(mux *http.ServeMux, logs *logs.Logs) {
 }
 
 type serviceDependencies struct {
-	prometheus    *prometheus.Service
-	db            *reform.DB
-	portsRegistry *ports.Registry
-}
-
-type grpcServerDependencies struct {
-	*serviceDependencies
-	logs *logs.Logs
+	prometheus     *prometheus.Service
+	db             *reform.DB
+	portsRegistry  *ports.Registry
+	agentsRegistry *agents.Registry
+	logs           *logs.Logs
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
-func runGRPCServer(ctx context.Context, deps *grpcServerDependencies) {
+func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	l := logrus.WithField("component", "gRPC")
 	l.Infof("Starting server on http://%s/ ...", *gRPCAddrF)
 
@@ -166,9 +164,8 @@ func runGRPCServer(ctx context.Context, deps *grpcServerDependencies) {
 	})
 
 	// PMM 2.0 APIs
-	agentsRegistry := agents.NewRegistry(deps.db)
 	agentAPI.RegisterAgentServer(gRPCServer, &handlers.AgentServer{
-		Registry: agentsRegistry,
+		Registry: deps.agentsRegistry,
 	})
 	inventoryAPI.RegisterNodesServer(gRPCServer, &handlers.NodesServer{
 		Nodes: inventory.NewNodesService(deps.db.Querier),
@@ -177,7 +174,7 @@ func runGRPCServer(ctx context.Context, deps *grpcServerDependencies) {
 		Services: inventory.NewServicesService(deps.db.Querier),
 	})
 	inventoryAPI.RegisterAgentsServer(gRPCServer, &handlers.AgentsServer{
-		Agents: inventory.NewAgentsService(deps.db.Querier, agentsRegistry),
+		Agents: inventory.NewAgentsService(deps.db.Querier, deps.agentsRegistry),
 	})
 
 	if *debugF {
@@ -272,10 +269,15 @@ func runJSONServer(ctx context.Context, logs *logs.Logs) {
 }
 
 // runDebugServer runs debug server until context is canceled, then gracefully stops it.
-func runDebugServer(ctx context.Context) {
-	l := logrus.WithField("component", "debug")
+func runDebugServer(ctx context.Context, collectors ...prom.Collector) {
+	prom.MustRegister(collectors...)
+	handler := promhttp.HandlerFor(prom.DefaultGatherer, promhttp.HandlerOpts{
+		ErrorLog:      logrus.WithField("component", "metrics"),
+		ErrorHandling: promhttp.ContinueOnError,
+	})
+	http.Handle("/debug/metrics", promhttp.InstrumentMetricHandler(prom.DefaultRegisterer, handler))
 
-	http.Handle("/debug/metrics", promhttp.Handler())
+	l := logrus.WithField("component", "debug")
 
 	handlers := []string{"/debug/metrics", "/debug/vars", "/debug/requests", "/debug/events", "/debug/pprof"}
 	if *swaggerF == "debug" {
@@ -410,25 +412,23 @@ func main() {
 	defer postgresDB.Close()
 	pdb := reform.NewDB(postgresDB, reformPostgreSQL.Dialect, nil)
 
-	portsRegistry := ports.NewRegistry(10000, 10999, nil)
+	agentsRegistry := agents.NewRegistry(db)
+	logs := logs.New(version.Version, nil)
 
 	deps := &serviceDependencies{
-		prometheus:    prometheus,
-		db:            db,
-		portsRegistry: portsRegistry,
+		prometheus:     prometheus,
+		db:             db,
+		portsRegistry:  ports.NewRegistry(10000, 10999, nil),
+		agentsRegistry: agentsRegistry,
+		logs:           logs,
 	}
-
-	logs := logs.New(version.Version, nil)
 
 	var wg sync.WaitGroup
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		runGRPCServer(ctx, &grpcServerDependencies{
-			serviceDependencies: deps,
-			logs:                logs,
-		})
+		runGRPCServer(ctx, deps)
 	}()
 
 	wg.Add(1)
@@ -440,7 +440,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		runDebugServer(ctx)
+		runDebugServer(ctx, agentsRegistry)
 	}()
 
 	wg.Add(1)
