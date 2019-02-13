@@ -34,13 +34,13 @@ import (
 // ServicesService works with inventory API Services.
 type ServicesService struct {
 	q *reform.Querier
-	// r *agents.Registry
+	r registry
 }
 
-func NewServicesService(q *reform.Querier) *ServicesService {
+func NewServicesService(q *reform.Querier, r registry) *ServicesService {
 	return &ServicesService{
 		q: q,
-		// r: r,
+		r: r,
 	}
 }
 
@@ -143,7 +143,7 @@ func (ss *ServicesService) AddMySQL(ctx context.Context, name string, nodeID str
 		return nil, err
 	}
 
-	ns := NewNodesService(ss.q)
+	ns := NewNodesService(ss.q, ss.r)
 	if _, err := ns.get(ctx, nodeID); err != nil {
 		return nil, err
 	}

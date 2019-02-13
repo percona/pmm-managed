@@ -168,10 +168,10 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 		Registry: deps.agentsRegistry,
 	})
 	inventoryAPI.RegisterNodesServer(gRPCServer, &handlers.NodesServer{
-		Nodes: inventory.NewNodesService(deps.db.Querier),
+		Nodes: inventory.NewNodesService(deps.db.Querier, deps.agentsRegistry),
 	})
 	inventoryAPI.RegisterServicesServer(gRPCServer, &handlers.ServicesServer{
-		Services: inventory.NewServicesService(deps.db.Querier),
+		Services: inventory.NewServicesService(deps.db.Querier, deps.agentsRegistry),
 	})
 	inventoryAPI.RegisterAgentsServer(gRPCServer, &handlers.AgentsServer{
 		Agents: inventory.NewAgentsService(deps.db.Querier, deps.agentsRegistry),

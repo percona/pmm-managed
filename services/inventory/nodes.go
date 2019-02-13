@@ -34,13 +34,13 @@ import (
 // NodesService works with inventory API Nodes.
 type NodesService struct {
 	q *reform.Querier
-	// r *agents.Registry
+	r registry
 }
 
-func NewNodesService(q *reform.Querier) *NodesService {
+func NewNodesService(q *reform.Querier, r registry) *NodesService {
 	return &NodesService{
 		q: q,
-		// r: r,
+		r: r,
 	}
 }
 

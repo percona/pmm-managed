@@ -187,7 +187,7 @@ func (as *AgentsService) AddPMMAgent(ctx context.Context, nodeID string) (*api.P
 		return nil, err
 	}
 
-	ns := NewNodesService(as.q)
+	ns := NewNodesService(as.q, as.r)
 	if _, err := ns.get(ctx, nodeID); err != nil {
 		return nil, err
 	}
@@ -226,7 +226,7 @@ func (as *AgentsService) AddNodeExporter(ctx context.Context, nodeID string) (*a
 		return nil, err
 	}
 
-	ns := NewNodesService(as.q)
+	ns := NewNodesService(as.q, as.r)
 	if _, err := ns.get(ctx, nodeID); err != nil {
 		return nil, err
 	}
@@ -277,12 +277,12 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, nodeID string, s
 		return nil, err
 	}
 
-	ns := NewNodesService(as.q)
+	ns := NewNodesService(as.q, as.r)
 	if _, err := ns.get(ctx, nodeID); err != nil {
 		return nil, err
 	}
 
-	ss := NewServicesService(as.q)
+	ss := NewServicesService(as.q, as.r)
 	if _, err := ss.get(ctx, serviceID); err != nil {
 		return nil, err
 	}

@@ -49,10 +49,12 @@ func TestNodes(t *testing.T) {
 		tx, err := db.Begin()
 		require.NoError(t, err)
 
+		r := new(mockRegistry)
 		teardown = func(t *testing.T) {
 			require.NoError(t, tx.Rollback())
+			r.AssertExpectations(t)
 		}
-		ns = NewNodesService(tx.Querier)
+		ns = NewNodesService(tx.Querier, r)
 		return
 	}
 
@@ -192,10 +194,12 @@ func TestServices(t *testing.T) {
 		tx, err := db.Begin()
 		require.NoError(t, err)
 
+		r := new(mockRegistry)
 		teardown = func(t *testing.T) {
 			require.NoError(t, tx.Rollback())
+			r.AssertExpectations(t)
 		}
-		ss = NewServicesService(tx.Querier)
+		ss = NewServicesService(tx.Querier, r)
 		return
 	}
 
@@ -323,8 +327,8 @@ func TestAgents(t *testing.T) {
 			require.NoError(t, tx.Rollback())
 			r.AssertExpectations(t)
 		}
-		ns = NewNodesService(tx.Querier)
-		ss = NewServicesService(tx.Querier)
+		ns = NewNodesService(tx.Querier, r)
+		ss = NewServicesService(tx.Querier, r)
 		as = NewAgentsService(tx.Querier, r)
 		return
 	}
