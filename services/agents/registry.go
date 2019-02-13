@@ -368,6 +368,8 @@ func (r *Registry) Describe(ch chan<- *prom.Desc) {
 	r.sharedMetrics.Describe(ch)
 	r.mConnects.Describe(ch)
 	r.mDisconnects.Describe(ch)
+	r.mRoundTrip.Describe(ch)
+	r.mClockDrift.Describe(ch)
 }
 
 // Collect implement prometheus.Collector.
@@ -375,6 +377,8 @@ func (r *Registry) Collect(ch chan<- prom.Metric) {
 	r.sharedMetrics.Collect(ch)
 	r.mConnects.Collect(ch)
 	r.mDisconnects.Collect(ch)
+	r.mRoundTrip.Collect(ch)
+	r.mClockDrift.Collect(ch)
 }
 
 // check interfaces
