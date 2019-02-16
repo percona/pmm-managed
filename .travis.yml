@@ -10,6 +10,11 @@ matrix:
   allow_failures:
     - go: master
 
+cache:
+  directories:
+    - /home/travis/.cache/go-build
+    - /home/travis/gopath/pkg
+
 env:
   global:
     # Secure variables are not exposed for external pull requests: https://docs.travis-ci.com/user/pull-requests#Pull-Requests-and-Security-Restrictions
