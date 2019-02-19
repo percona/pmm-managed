@@ -45,7 +45,7 @@ func NewServicesService(q *reform.Querier, r registry) *ServicesService {
 }
 
 // makeService converts database row to Inventory API Service.
-func makeService(row *models.ServiceRow) api.Service {
+func makeService(row *models.Service) api.Service {
 	switch row.ServiceType {
 	case models.MySQLServiceType:
 		return &api.MySQLService{
@@ -58,16 +58,16 @@ func makeService(row *models.ServiceRow) api.Service {
 		}
 
 	default:
-		panic(fmt.Errorf("unhandled ServiceRow type %s", row.ServiceType))
+		panic(fmt.Errorf("unhandled Service type %s", row.ServiceType))
 	}
 }
 
-func (ss *ServicesService) get(ctx context.Context, id string) (*models.ServiceRow, error) {
+func (ss *ServicesService) get(ctx context.Context, id string) (*models.Service, error) {
 	if id == "" {
 		return nil, status.Error(codes.InvalidArgument, "Empty Service ID.")
 	}
 
-	row := &models.ServiceRow{ServiceID: id}
+	row := &models.Service{ServiceID: id}
 	switch err := ss.q.Reload(row); err {
 	case nil:
 		return row, nil
@@ -83,7 +83,7 @@ func (ss *ServicesService) checkUniqueID(ctx context.Context, id string) error {
 		panic("empty Service ID")
 	}
 
-	row := &models.ServiceRow{ServiceID: id}
+	row := &models.Service{ServiceID: id}
 	switch err := ss.q.Reload(row); err {
 	case nil:
 		return status.Errorf(codes.AlreadyExists, "Service with ID %q already exists.", id)
@@ -95,7 +95,7 @@ func (ss *ServicesService) checkUniqueID(ctx context.Context, id string) error {
 }
 
 func (ss *ServicesService) checkUniqueName(ctx context.Context, name string) error {
-	_, err := ss.q.FindOneFrom(models.ServiceRowTable, "service_name", name)
+	_, err := ss.q.FindOneFrom(models.ServiceTable, "service_name", name)
 	switch err {
 	case nil:
 		return status.Errorf(codes.AlreadyExists, "Service with name %q already exists.", name)
@@ -108,14 +108,14 @@ func (ss *ServicesService) checkUniqueName(ctx context.Context, name string) err
 
 // List selects all Services in a stable order.
 func (ss *ServicesService) List(ctx context.Context) ([]api.Service, error) {
-	structs, err := ss.q.SelectAllFrom(models.ServiceRowTable, "ORDER BY service_id")
+	structs, err := ss.q.SelectAllFrom(models.ServiceTable, "ORDER BY service_id")
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	res := make([]api.Service, len(structs))
 	for i, str := range structs {
-		row := str.(*models.ServiceRow)
+		row := str.(*models.Service)
 		res[i] = makeService(row)
 	}
 	return res, nil
@@ -148,7 +148,7 @@ func (ss *ServicesService) AddMySQL(ctx context.Context, name string, nodeID str
 		return nil, err
 	}
 
-	row := &models.ServiceRow{
+	row := &models.Service{
 		ServiceID:   id,
 		ServiceType: models.MySQLServiceType,
 		ServiceName: name,
@@ -191,7 +191,7 @@ func (ss *ServicesService) Remove(ctx context.Context, id string) error {
 
 	// TODO check absence of Agents
 
-	err := ss.q.Delete(&models.ServiceRow{ServiceID: id})
+	err := ss.q.Delete(&models.Service{ServiceID: id})
 	if err == reform.ErrNoRows {
 		return status.Errorf(codes.NotFound, "Service with ID %q not found.", id)
 	}

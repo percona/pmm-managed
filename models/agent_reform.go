@@ -10,49 +10,49 @@ import (
 	"gopkg.in/reform.v1/parse"
 )
 
-type agentRowTableType struct {
+type agentTableType struct {
 	s parse.StructInfo
 	z []interface{}
 }
 
 // Schema returns a schema name in SQL database ("").
-func (v *agentRowTableType) Schema() string {
+func (v *agentTableType) Schema() string {
 	return v.s.SQLSchema
 }
 
 // Name returns a view or table name in SQL database ("agents").
-func (v *agentRowTableType) Name() string {
+func (v *agentTableType) Name() string {
 	return v.s.SQLName
 }
 
 // Columns returns a new slice of column names for that view or table in SQL database.
-func (v *agentRowTableType) Columns() []string {
+func (v *agentTableType) Columns() []string {
 	return []string{"agent_id", "agent_type", "runs_on_node_id", "created_at", "version", "status", "listen_port", "username", "password", "metrics_url"}
 }
 
 // NewStruct makes a new struct for that view or table.
-func (v *agentRowTableType) NewStruct() reform.Struct {
-	return new(AgentRow)
+func (v *agentTableType) NewStruct() reform.Struct {
+	return new(Agent)
 }
 
 // NewRecord makes a new record for that table.
-func (v *agentRowTableType) NewRecord() reform.Record {
-	return new(AgentRow)
+func (v *agentTableType) NewRecord() reform.Record {
+	return new(Agent)
 }
 
 // PKColumnIndex returns an index of primary key column for that table in SQL database.
-func (v *agentRowTableType) PKColumnIndex() uint {
+func (v *agentTableType) PKColumnIndex() uint {
 	return uint(v.s.PKFieldIndex)
 }
 
-// AgentRowTable represents agents view or table in SQL database.
-var AgentRowTable = &agentRowTableType{
-	s: parse.StructInfo{Type: "AgentRow", SQLSchema: "", SQLName: "agents", Fields: []parse.FieldInfo{{Name: "AgentID", Type: "string", Column: "agent_id"}, {Name: "AgentType", Type: "AgentType", Column: "agent_type"}, {Name: "RunsOnNodeID", Type: "string", Column: "runs_on_node_id"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "Version", Type: "*string", Column: "version"}, {Name: "Status", Type: "*string", Column: "status"}, {Name: "ListenPort", Type: "*uint16", Column: "listen_port"}, {Name: "Username", Type: "*string", Column: "username"}, {Name: "Password", Type: "*string", Column: "password"}, {Name: "MetricsURL", Type: "*string", Column: "metrics_url"}}, PKFieldIndex: 0},
-	z: new(AgentRow).Values(),
+// AgentTable represents agents view or table in SQL database.
+var AgentTable = &agentTableType{
+	s: parse.StructInfo{Type: "Agent", SQLSchema: "", SQLName: "agents", Fields: []parse.FieldInfo{{Name: "AgentID", Type: "string", Column: "agent_id"}, {Name: "AgentType", Type: "AgentType", Column: "agent_type"}, {Name: "RunsOnNodeID", Type: "string", Column: "runs_on_node_id"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "Version", Type: "*string", Column: "version"}, {Name: "Status", Type: "*string", Column: "status"}, {Name: "ListenPort", Type: "*uint16", Column: "listen_port"}, {Name: "Username", Type: "*string", Column: "username"}, {Name: "Password", Type: "*string", Column: "password"}, {Name: "MetricsURL", Type: "*string", Column: "metrics_url"}}, PKFieldIndex: 0},
+	z: new(Agent).Values(),
 }
 
 // String returns a string representation of this struct or record.
-func (s AgentRow) String() string {
+func (s Agent) String() string {
 	res := make([]string, 10)
 	res[0] = "AgentID: " + reform.Inspect(s.AgentID, true)
 	res[1] = "AgentType: " + reform.Inspect(s.AgentType, true)
@@ -69,7 +69,7 @@ func (s AgentRow) String() string {
 
 // Values returns a slice of struct or record field values.
 // Returned interface{} values are never untyped nils.
-func (s *AgentRow) Values() []interface{} {
+func (s *Agent) Values() []interface{} {
 	return []interface{}{
 		s.AgentID,
 		s.AgentType,
@@ -86,7 +86,7 @@ func (s *AgentRow) Values() []interface{} {
 
 // Pointers returns a slice of pointers to struct or record fields.
 // Returned interface{} values are never untyped nils.
-func (s *AgentRow) Pointers() []interface{} {
+func (s *Agent) Pointers() []interface{} {
 	return []interface{}{
 		&s.AgentID,
 		&s.AgentType,
@@ -102,34 +102,34 @@ func (s *AgentRow) Pointers() []interface{} {
 }
 
 // View returns View object for that struct.
-func (s *AgentRow) View() reform.View {
-	return AgentRowTable
+func (s *Agent) View() reform.View {
+	return AgentTable
 }
 
 // Table returns Table object for that record.
-func (s *AgentRow) Table() reform.Table {
-	return AgentRowTable
+func (s *Agent) Table() reform.Table {
+	return AgentTable
 }
 
 // PKValue returns a value of primary key for that record.
 // Returned interface{} value is never untyped nil.
-func (s *AgentRow) PKValue() interface{} {
+func (s *Agent) PKValue() interface{} {
 	return s.AgentID
 }
 
 // PKPointer returns a pointer to primary key field for that record.
 // Returned interface{} value is never untyped nil.
-func (s *AgentRow) PKPointer() interface{} {
+func (s *Agent) PKPointer() interface{} {
 	return &s.AgentID
 }
 
 // HasPK returns true if record has non-zero primary key set, false otherwise.
-func (s *AgentRow) HasPK() bool {
-	return s.AgentID != AgentRowTable.z[AgentRowTable.s.PKFieldIndex]
+func (s *Agent) HasPK() bool {
+	return s.AgentID != AgentTable.z[AgentTable.s.PKFieldIndex]
 }
 
 // SetPK sets record primary key.
-func (s *AgentRow) SetPK(pk interface{}) {
+func (s *Agent) SetPK(pk interface{}) {
 	if i64, ok := pk.(int64); ok {
 		s.AgentID = string(i64)
 	} else {
@@ -139,13 +139,13 @@ func (s *AgentRow) SetPK(pk interface{}) {
 
 // check interfaces
 var (
-	_ reform.View   = AgentRowTable
-	_ reform.Struct = (*AgentRow)(nil)
-	_ reform.Table  = AgentRowTable
-	_ reform.Record = (*AgentRow)(nil)
-	_ fmt.Stringer  = (*AgentRow)(nil)
+	_ reform.View   = AgentTable
+	_ reform.Struct = (*Agent)(nil)
+	_ reform.Table  = AgentTable
+	_ reform.Record = (*Agent)(nil)
+	_ fmt.Stringer  = (*Agent)(nil)
 )
 
 func init() {
-	parse.AssertUpToDate(&AgentRowTable.s, new(AgentRow))
+	parse.AssertUpToDate(&AgentTable.s, new(Agent))
 }

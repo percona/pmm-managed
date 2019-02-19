@@ -2,7 +2,7 @@
 // Copyright (C) 2017 Percona LLC
 //
 // This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
+// it under the terms of the GNU Affero General Public License s published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
@@ -34,22 +34,22 @@ type AgentService struct {
 
 // BeforeInsert implements reform.BeforeInserter interface.
 //nolint:unparam
-func (as *AgentService) BeforeInsert() error {
+func (s *AgentService) BeforeInsert() error {
 	now := Now()
-	as.CreatedAt = now
+	s.CreatedAt = now
 	return nil
 }
 
 // BeforeUpdate implements reform.BeforeUpdater interface.
 //nolint:unparam
-func (as *AgentService) BeforeUpdate() error {
+func (s *AgentService) BeforeUpdate() error {
 	panic("AgentService should not be updated")
 }
 
 // AfterFind implements reform.AfterFinder interface.
 //nolint:unparam
-func (as *AgentService) AfterFind() error {
-	as.CreatedAt = as.CreatedAt.UTC()
+func (s *AgentService) AfterFind() error {
+	s.CreatedAt = s.CreatedAt.UTC()
 	return nil
 }
 

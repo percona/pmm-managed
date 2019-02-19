@@ -48,30 +48,30 @@ func TestModels(t *testing.T) {
 		require.NoError(t, err)
 		q = tx.Querier
 
-		require.NoError(t, q.Insert(&models.NodeRow{
+		require.NoError(t, q.Insert(&models.Node{
 			NodeID:   "N1",
 			NodeType: models.GenericNodeType,
 			NodeName: "N1 name",
 		}))
 
-		require.NoError(t, q.Insert(&models.ServiceRow{
+		require.NoError(t, q.Insert(&models.Service{
 			ServiceID:   "S1",
 			ServiceType: models.MySQLServiceType,
 			ServiceName: "S1 name",
 			NodeID:      "N1",
 		}))
 
-		require.NoError(t, q.Insert(&models.AgentRow{
+		require.NoError(t, q.Insert(&models.Agent{
 			AgentID:      "A1",
 			AgentType:    models.PMMAgentType,
 			RunsOnNodeID: "N1",
 		}))
-		require.NoError(t, q.Insert(&models.AgentRow{
+		require.NoError(t, q.Insert(&models.Agent{
 			AgentID:      "A2",
 			AgentType:    models.MySQLdExporterType,
 			RunsOnNodeID: "N1",
 		}))
-		require.NoError(t, q.Insert(&models.AgentRow{
+		require.NoError(t, q.Insert(&models.Agent{
 			AgentID:      "A3",
 			AgentType:    models.NodeExporterType,
 			RunsOnNodeID: "N1",
@@ -101,7 +101,7 @@ func TestModels(t *testing.T) {
 
 		nodes, err := models.NodesForAgent(q, "A3")
 		require.NoError(t, err)
-		expected := []*models.NodeRow{
+		expected := []*models.Node{
 			{
 				NodeID:    "N1",
 				NodeType:  models.GenericNodeType,
@@ -118,7 +118,7 @@ func TestModels(t *testing.T) {
 
 		services, err := models.ServicesForAgent(q, "A2")
 		require.NoError(t, err)
-		expected := []*models.ServiceRow{
+		expected := []*models.Service{
 			{
 				ServiceID:   "S1",
 				ServiceType: models.MySQLServiceType,
@@ -136,7 +136,7 @@ func TestModels(t *testing.T) {
 
 		agents, err := models.AgentsForNode(q, "N1")
 		require.NoError(t, err)
-		expected := []*models.AgentRow{
+		expected := []*models.Agent{
 			{
 				AgentID:      "A3",
 				AgentType:    models.NodeExporterType,
@@ -153,7 +153,7 @@ func TestModels(t *testing.T) {
 
 		agents, err := models.AgentsRunningOnNode(q, "N1")
 		require.NoError(t, err)
-		expected := []*models.AgentRow{
+		expected := []*models.Agent{
 			{
 				AgentID:      "A1",
 				AgentType:    models.PMMAgentType,
@@ -182,7 +182,7 @@ func TestModels(t *testing.T) {
 
 		agents, err := models.AgentsForService(q, "S1")
 		require.NoError(t, err)
-		expected := []*models.AgentRow{
+		expected := []*models.Agent{
 			{
 				AgentID:      "A2",
 				AgentType:    models.MySQLdExporterType,

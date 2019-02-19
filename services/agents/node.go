@@ -25,7 +25,7 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-func nodeExporterConfig(node *models.NodeRow, exporter *models.AgentRow) *api.SetStateRequest_AgentProcess {
+func nodeExporterConfig(node *models.Node, exporter *models.Agent) *api.SetStateRequest_AgentProcess {
 	tdp := templateDelimsPair(
 		pointer.GetString(exporter.MetricsURL),
 	)

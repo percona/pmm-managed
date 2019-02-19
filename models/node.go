@@ -26,7 +26,7 @@ import (
 )
 
 // NodesForAgent returns all Nodes for which Agent with given ID provides insights.
-func NodesForAgent(q *reform.Querier, agentID string) ([]*NodeRow, error) {
+func NodesForAgent(q *reform.Querier, agentID string) ([]*Node, error) {
 	structs, err := q.FindAllFrom(AgentNodeView, "agent_id", agentID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select Node IDs")
@@ -37,19 +37,19 @@ func NodesForAgent(q *reform.Querier, agentID string) ([]*NodeRow, error) {
 		nodeIDs[i] = s.(*AgentNode).NodeID
 	}
 	if len(nodeIDs) == 0 {
-		return []*NodeRow{}, nil
+		return []*Node{}, nil
 	}
 
 	p := strings.Join(q.Placeholders(1, len(nodeIDs)), ", ")
 	tail := fmt.Sprintf("WHERE node_id IN (%s) ORDER BY node_id", p) //nolint:gosec
-	structs, err = q.SelectAllFrom(NodeRowTable, tail, nodeIDs...)
+	structs, err = q.SelectAllFrom(NodeTable, tail, nodeIDs...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select Nodes")
 	}
 
-	res := make([]*NodeRow, len(structs))
+	res := make([]*Node, len(structs))
 	for i, s := range structs {
-		res[i] = s.(*NodeRow)
+		res[i] = s.(*Node)
 	}
 	return res, nil
 }
@@ -71,9 +71,9 @@ const (
 	RemoteAmazonRDSNodeType NodeType = "remote-amazon-rds"
 )
 
-// NodeRow represents Node as stored in database.
+// Node represents Node as stored in database.
 //reform:nodes
-type NodeRow struct {
+type Node struct {
 	NodeID    string    `reform:"node_id,pk"`
 	NodeType  NodeType  `reform:"node_type"`
 	NodeName  string    `reform:"node_name"`
@@ -93,32 +93,32 @@ type NodeRow struct {
 
 // BeforeInsert implements reform.BeforeInserter interface.
 //nolint:unparam
-func (nr *NodeRow) BeforeInsert() error {
+func (s *Node) BeforeInsert() error {
 	now := Now()
-	nr.CreatedAt = now
-	// nr.UpdatedAt = now
+	s.CreatedAt = now
+	// s.UpdatedAt = now
 	return nil
 }
 
 // BeforeUpdate implements reform.BeforeUpdater interface.
 //nolint:unparam
-func (nr *NodeRow) BeforeUpdate() error {
+func (s *Node) BeforeUpdate() error {
 	// now := Now()
-	// nr.UpdatedAt = now
+	// s.UpdatedAt = now
 	return nil
 }
 
 // AfterFind implements reform.AfterFinder interface.
 //nolint:unparam
-func (nr *NodeRow) AfterFind() error {
-	nr.CreatedAt = nr.CreatedAt.UTC()
-	// nr.UpdatedAt = nr.UpdatedAt.UTC()
+func (s *Node) AfterFind() error {
+	s.CreatedAt = s.CreatedAt.UTC()
+	// s.UpdatedAt = s.UpdatedAt.UTC()
 	return nil
 }
 
 // check interfaces
 var (
-	_ reform.BeforeInserter = (*NodeRow)(nil)
-	_ reform.BeforeUpdater  = (*NodeRow)(nil)
-	_ reform.AfterFinder    = (*NodeRow)(nil)
+	_ reform.BeforeInserter = (*Node)(nil)
+	_ reform.BeforeUpdater  = (*Node)(nil)
+	_ reform.AfterFinder    = (*Node)(nil)
 )

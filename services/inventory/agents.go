@@ -45,7 +45,7 @@ func NewAgentsService(q *reform.Querier, r registry) *AgentsService {
 }
 
 // makeAgent converts database row to Inventory API Agent.
-func (as *AgentsService) makeAgent(ctx context.Context, row *models.AgentRow) (api.Agent, error) {
+func (as *AgentsService) makeAgent(ctx context.Context, row *models.Agent) (api.Agent, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -80,11 +80,11 @@ func (as *AgentsService) makeAgent(ctx context.Context, row *models.AgentRow) (a
 		}, nil
 
 	default:
-		panic(fmt.Errorf("unhandled AgentRow type %s", row.AgentType))
+		panic(fmt.Errorf("unhandled Agent type %s", row.AgentType))
 	}
 }
 
-func (as *AgentsService) get(ctx context.Context, id string) (*models.AgentRow, error) {
+func (as *AgentsService) get(ctx context.Context, id string) (*models.Agent, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -92,7 +92,7 @@ func (as *AgentsService) get(ctx context.Context, id string) (*models.AgentRow, 
 		return nil, status.Error(codes.InvalidArgument, "Empty Agent ID.")
 	}
 
-	row := &models.AgentRow{AgentID: id}
+	row := &models.Agent{AgentID: id}
 	switch err := as.q.Reload(row); err {
 	case nil:
 		return row, nil
@@ -111,7 +111,7 @@ func (as *AgentsService) checkUniqueID(ctx context.Context, id string) error {
 		panic("empty Agent ID")
 	}
 
-	row := &models.AgentRow{AgentID: id}
+	row := &models.Agent{AgentID: id}
 	switch err := as.q.Reload(row); err {
 	case nil:
 		return status.Errorf(codes.AlreadyExists, "Agent with ID %q already exists.", id)
@@ -134,31 +134,31 @@ type AgentFilters struct {
 
 // List selects all Agents in a stable order for a given service.
 func (as *AgentsService) List(ctx context.Context, filters AgentFilters) ([]api.Agent, error) {
-	var agentRows []*models.AgentRow
+	var agents []*models.Agent
 	var err error
 	switch {
 	case filters.RunsOnNodeID != "":
-		agentRows, err = models.AgentsRunningOnNode(as.q, filters.RunsOnNodeID)
+		agents, err = models.AgentsRunningOnNode(as.q, filters.RunsOnNodeID)
 	case filters.NodeID != "":
-		agentRows, err = models.AgentsForNode(as.q, filters.NodeID)
+		agents, err = models.AgentsForNode(as.q, filters.NodeID)
 	case filters.ServiceID != "":
-		agentRows, err = models.AgentsForService(as.q, filters.ServiceID)
+		agents, err = models.AgentsForService(as.q, filters.ServiceID)
 	default:
 		var structs []reform.Struct
-		structs, err = as.q.SelectAllFrom(models.AgentRowTable, "ORDER BY agent_id")
+		structs, err = as.q.SelectAllFrom(models.AgentTable, "ORDER BY agent_id")
 		err = errors.Wrap(err, "failed to select Agents")
-		agentRows = make([]*models.AgentRow, len(structs))
+		agents = make([]*models.Agent, len(structs))
 		for i, s := range structs {
-			agentRows[i] = s.(*models.AgentRow)
+			agents[i] = s.(*models.Agent)
 		}
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO That loop makes len(agentRows) SELECTs, that can be slow. Optimize when needed.
-	res := make([]api.Agent, len(agentRows))
-	for i, row := range agentRows {
+	// TODO That loop makes len(agents) SELECTs, that can be slow. Optimize when needed.
+	res := make([]api.Agent, len(agents))
+	for i, row := range agents {
 		agent, err := as.makeAgent(ctx, row)
 		if err != nil {
 			return nil, err
@@ -192,7 +192,7 @@ func (as *AgentsService) AddPMMAgent(ctx context.Context, nodeID string) (*api.P
 		return nil, err
 	}
 
-	row := &models.AgentRow{
+	row := &models.Agent{
 		AgentID:      id,
 		AgentType:    models.PMMAgentType,
 		RunsOnNodeID: nodeID,
@@ -231,7 +231,7 @@ func (as *AgentsService) AddNodeExporter(ctx context.Context, nodeID string) (*a
 		return nil, err
 	}
 
-	row := &models.AgentRow{
+	row := &models.Agent{
 		AgentID:      id,
 		AgentType:    models.NodeExporterType,
 		RunsOnNodeID: nodeID,
@@ -287,7 +287,7 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, nodeID string, s
 		return nil, err
 	}
 
-	row := &models.AgentRow{
+	row := &models.Agent{
 		AgentID:      id,
 		AgentType:    models.MySQLdExporterType,
 		RunsOnNodeID: nodeID,

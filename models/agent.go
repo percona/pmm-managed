@@ -26,7 +26,7 @@ import (
 )
 
 // AgentsForNode returns all Agents providing insights for given Node.
-func AgentsForNode(q *reform.Querier, nodeID string) ([]*AgentRow, error) {
+func AgentsForNode(q *reform.Querier, nodeID string) ([]*Agent, error) {
 	structs, err := q.FindAllFrom(AgentNodeView, "node_id", nodeID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select Agent IDs")
@@ -37,41 +37,41 @@ func AgentsForNode(q *reform.Querier, nodeID string) ([]*AgentRow, error) {
 		agentIDs[i] = s.(*AgentNode).AgentID
 	}
 	if len(agentIDs) == 0 {
-		return []*AgentRow{}, nil
+		return []*Agent{}, nil
 	}
 
 	p := strings.Join(q.Placeholders(1, len(agentIDs)), ", ")
 	tail := fmt.Sprintf("WHERE agent_id IN (%s) ORDER BY agent_id", p) //nolint:gosec
-	structs, err = q.SelectAllFrom(AgentRowTable, tail, agentIDs...)
+	structs, err = q.SelectAllFrom(AgentTable, tail, agentIDs...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select Agents")
 	}
 
-	res := make([]*AgentRow, len(structs))
+	res := make([]*Agent, len(structs))
 	for i, s := range structs {
-		res[i] = s.(*AgentRow)
+		res[i] = s.(*Agent)
 	}
 	return res, nil
 }
 
 // AgentsRunningOnNode returns all Agents running on Node.
 // TODO Remove after https://jira.percona.com/browse/PMM-3478.
-func AgentsRunningOnNode(q *reform.Querier, nodeID string) ([]*AgentRow, error) {
+func AgentsRunningOnNode(q *reform.Querier, nodeID string) ([]*Agent, error) {
 	tail := fmt.Sprintf("WHERE runs_on_node_id = %s ORDER BY agent_id", q.Placeholder(1)) //nolint:gosec
-	structs, err := q.SelectAllFrom(AgentRowTable, tail, nodeID)
+	structs, err := q.SelectAllFrom(AgentTable, tail, nodeID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select Agents")
 	}
 
-	res := make([]*AgentRow, len(structs))
+	res := make([]*Agent, len(structs))
 	for i, s := range structs {
-		res[i] = s.(*AgentRow)
+		res[i] = s.(*Agent)
 	}
 	return res, nil
 }
 
 // AgentsForService returns all Agents providing insights for given Service.
-func AgentsForService(q *reform.Querier, serviceID string) ([]*AgentRow, error) {
+func AgentsForService(q *reform.Querier, serviceID string) ([]*Agent, error) {
 	structs, err := q.FindAllFrom(AgentServiceView, "service_id", serviceID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select Agent IDs")
@@ -82,19 +82,19 @@ func AgentsForService(q *reform.Querier, serviceID string) ([]*AgentRow, error) 
 		agentIDs[i] = s.(*AgentService).AgentID
 	}
 	if len(agentIDs) == 0 {
-		return []*AgentRow{}, nil
+		return []*Agent{}, nil
 	}
 
 	p := strings.Join(q.Placeholders(1, len(agentIDs)), ", ")
 	tail := fmt.Sprintf("WHERE agent_id IN (%s) ORDER BY agent_id", p) //nolint:gosec
-	structs, err = q.SelectAllFrom(AgentRowTable, tail, agentIDs...)
+	structs, err = q.SelectAllFrom(AgentTable, tail, agentIDs...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select Agents")
 	}
 
-	res := make([]*AgentRow, len(structs))
+	res := make([]*Agent, len(structs))
 	for i, s := range structs {
-		res[i] = s.(*AgentRow)
+		res[i] = s.(*Agent)
 	}
 	return res, nil
 }
@@ -113,9 +113,9 @@ const (
 	ExternalExporterType AgentType = "external"
 )
 
-// AgentRow represents Agent as stored in database.
+// Agent represents Agent as stored in database.
 //reform:agents
-type AgentRow struct {
+type Agent struct {
 	AgentID      string    `reform:"agent_id,pk"`
 	AgentType    AgentType `reform:"agent_type"`
 	RunsOnNodeID string    `reform:"runs_on_node_id"`
@@ -134,32 +134,32 @@ type AgentRow struct {
 
 // BeforeInsert implements reform.BeforeInserter interface.
 //nolint:unparam
-func (ar *AgentRow) BeforeInsert() error {
+func (s *Agent) BeforeInsert() error {
 	now := Now()
-	ar.CreatedAt = now
-	// ar.UpdatedAt = now
+	s.CreatedAt = now
+	// s.UpdatedAt = now
 	return nil
 }
 
 // BeforeUpdate implements reform.BeforeUpdater interface.
 //nolint:unparam
-func (ar *AgentRow) BeforeUpdate() error {
+func (s *Agent) BeforeUpdate() error {
 	// now := Now()
-	// ar.UpdatedAt = now
+	// s.UpdatedAt = now
 	return nil
 }
 
 // AfterFind implements reform.AfterFinder interface.
 //nolint:unparam
-func (ar *AgentRow) AfterFind() error {
-	ar.CreatedAt = ar.CreatedAt.UTC()
-	// ar.UpdatedAt = ar.UpdatedAt.UTC()
+func (s *Agent) AfterFind() error {
+	s.CreatedAt = s.CreatedAt.UTC()
+	// s.UpdatedAt = s.UpdatedAt.UTC()
 	return nil
 }
 
 // check interfaces
 var (
-	_ reform.BeforeInserter = (*AgentRow)(nil)
-	_ reform.BeforeUpdater  = (*AgentRow)(nil)
-	_ reform.AfterFinder    = (*AgentRow)(nil)
+	_ reform.BeforeInserter = (*Agent)(nil)
+	_ reform.BeforeUpdater  = (*Agent)(nil)
+	_ reform.AfterFinder    = (*Agent)(nil)
 )

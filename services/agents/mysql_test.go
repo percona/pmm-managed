@@ -27,11 +27,11 @@ import (
 )
 
 func TestMySQLdExporterConfig(t *testing.T) {
-	mysql := &models.ServiceRow{
+	mysql := &models.Service{
 		Address: pointer.ToString("1.2.3.4"),
 		Port:    pointer.ToUint16(3306),
 	}
-	exporter := &models.AgentRow{
+	exporter := &models.Agent{
 		Username: pointer.ToString("username"),
 		Password: pointer.ToString("password"),
 	}

@@ -30,7 +30,7 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-func mysqldExporterConfig(service *models.ServiceRow, exporter *models.AgentRow) *api.SetStateRequest_AgentProcess {
+func mysqldExporterConfig(service *models.Service, exporter *models.Agent) *api.SetStateRequest_AgentProcess {
 	tdp := templateDelimsPair(
 		pointer.GetString(service.Address),
 		pointer.GetString(service.UnixSocket),

@@ -37,14 +37,14 @@ func PMMAgentsForChangedNode(q *reform.Querier, nodeID string) ([]string, error)
 	// TODO Real code.
 	// Returning all pmm-agents is currently safe, but not optimal for large number of Agents.
 
-	structs, err := q.SelectAllFrom(AgentRowTable, "ORDER BY agent_id")
+	structs, err := q.SelectAllFrom(AgentTable, "ORDER BY agent_id")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select Agents")
 	}
 
 	var res []string
 	for _, str := range structs {
-		row := str.(*AgentRow)
+		row := str.(*Agent)
 		if row.AgentType == PMMAgentType {
 			res = append(res, row.AgentID)
 		}
@@ -62,14 +62,14 @@ func PMMAgentsForChangedService(q *reform.Querier, serviceID string) ([]string, 
 	// * run Agents providing insights for Node that hosts this Service.
 	// Returning all pmm-agents is currently safe, but not optimal for large number of Agents.
 
-	structs, err := q.SelectAllFrom(AgentRowTable, "ORDER BY agent_id")
+	structs, err := q.SelectAllFrom(AgentTable, "ORDER BY agent_id")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select Agents")
 	}
 
 	var res []string
 	for _, str := range structs {
-		row := str.(*AgentRow)
+		row := str.(*Agent)
 		if row.AgentType == PMMAgentType {
 			res = append(res, row.AgentID)
 		}
@@ -85,7 +85,7 @@ func PMMAgentForAgent(q *reform.Querier, agentID string) (string, error) {
 	// of a single pmm-agent. That is just plain wrong.
 	// FIXME https://jira.percona.com/browse/PMM-3478
 
-	agent := &AgentRow{AgentID: agentID}
+	agent := &Agent{AgentID: agentID}
 	if err := q.Reload(agent); err != nil {
 		return "", errors.Wrap(err, "failed to select Agent")
 	}

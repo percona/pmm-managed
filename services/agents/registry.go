@@ -208,7 +208,7 @@ func authenticate(md *api.AgentConnectMetadata, q *reform.Querier) error {
 		return status.Error(codes.Unauthenticated, "Empty Agent ID.")
 	}
 
-	row := &models.AgentRow{AgentID: md.ID}
+	row := &models.Agent{AgentID: md.ID}
 	if err := q.Reload(row); err != nil {
 		if err == reform.ErrNoRows {
 			return status.Errorf(codes.Unauthenticated, "No Agent with ID %q.", md.ID)
@@ -273,7 +273,7 @@ func (r *Registry) ping(ctx context.Context, agent *agentInfo) {
 
 func (r *Registry) stateChanged(s *api.StateChangedRequest) error {
 	err := r.db.InTransaction(func(tx *reform.TX) error {
-		agent := &models.AgentRow{AgentID: s.AgentId}
+		agent := &models.Agent{AgentID: s.AgentId}
 		if err := tx.Reload(agent); err != nil {
 			return errors.Wrap(err, "failed to select Agent by ID")
 		}
@@ -306,7 +306,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 	// We assume that all agents running on that Node except pmm-agent with given ID are subagents.
 	// FIXME That is just plain wrong. https://jira.percona.com/browse/PMM-3478
 
-	pmmAgent := &models.AgentRow{AgentID: pmmAgentID}
+	pmmAgent := &models.Agent{AgentID: pmmAgentID}
 	if err := r.db.Reload(pmmAgent); err != nil {
 		l.Errorf("pmm-agent with ID %q not found: %s.", pmmAgentID, err)
 		return
@@ -328,7 +328,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 			continue
 
 		case models.NodeExporterType:
-			node := &models.NodeRow{NodeID: row.RunsOnNodeID}
+			node := &models.Node{NodeID: row.RunsOnNodeID}
 			if err = r.db.Reload(node); err != nil {
 				l.Error(err)
 				return
@@ -348,7 +348,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 			processes[row.AgentID] = mysqldExporterConfig(services[0], row)
 
 		default:
-			l.Panicf("unhandled AgentRow type %s", row.AgentType)
+			l.Panicf("unhandled Agent type %s", row.AgentType)
 		}
 	}
 

@@ -10,49 +10,49 @@ import (
 	"gopkg.in/reform.v1/parse"
 )
 
-type nodeRowTableType struct {
+type nodeTableType struct {
 	s parse.StructInfo
 	z []interface{}
 }
 
 // Schema returns a schema name in SQL database ("").
-func (v *nodeRowTableType) Schema() string {
+func (v *nodeTableType) Schema() string {
 	return v.s.SQLSchema
 }
 
 // Name returns a view or table name in SQL database ("nodes").
-func (v *nodeRowTableType) Name() string {
+func (v *nodeTableType) Name() string {
 	return v.s.SQLName
 }
 
 // Columns returns a new slice of column names for that view or table in SQL database.
-func (v *nodeRowTableType) Columns() []string {
+func (v *nodeTableType) Columns() []string {
 	return []string{"node_id", "node_type", "node_name", "machine_id", "created_at", "distro", "distro_version", "docker_container_id", "docker_container_name", "instance", "region"}
 }
 
 // NewStruct makes a new struct for that view or table.
-func (v *nodeRowTableType) NewStruct() reform.Struct {
-	return new(NodeRow)
+func (v *nodeTableType) NewStruct() reform.Struct {
+	return new(Node)
 }
 
 // NewRecord makes a new record for that table.
-func (v *nodeRowTableType) NewRecord() reform.Record {
-	return new(NodeRow)
+func (v *nodeTableType) NewRecord() reform.Record {
+	return new(Node)
 }
 
 // PKColumnIndex returns an index of primary key column for that table in SQL database.
-func (v *nodeRowTableType) PKColumnIndex() uint {
+func (v *nodeTableType) PKColumnIndex() uint {
 	return uint(v.s.PKFieldIndex)
 }
 
-// NodeRowTable represents nodes view or table in SQL database.
-var NodeRowTable = &nodeRowTableType{
-	s: parse.StructInfo{Type: "NodeRow", SQLSchema: "", SQLName: "nodes", Fields: []parse.FieldInfo{{Name: "NodeID", Type: "string", Column: "node_id"}, {Name: "NodeType", Type: "NodeType", Column: "node_type"}, {Name: "NodeName", Type: "string", Column: "node_name"}, {Name: "MachineID", Type: "*string", Column: "machine_id"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "Distro", Type: "*string", Column: "distro"}, {Name: "DistroVersion", Type: "*string", Column: "distro_version"}, {Name: "DockerContainerID", Type: "*string", Column: "docker_container_id"}, {Name: "DockerContainerName", Type: "*string", Column: "docker_container_name"}, {Name: "Instance", Type: "*string", Column: "instance"}, {Name: "Region", Type: "*string", Column: "region"}}, PKFieldIndex: 0},
-	z: new(NodeRow).Values(),
+// NodeTable represents nodes view or table in SQL database.
+var NodeTable = &nodeTableType{
+	s: parse.StructInfo{Type: "Node", SQLSchema: "", SQLName: "nodes", Fields: []parse.FieldInfo{{Name: "NodeID", Type: "string", Column: "node_id"}, {Name: "NodeType", Type: "NodeType", Column: "node_type"}, {Name: "NodeName", Type: "string", Column: "node_name"}, {Name: "MachineID", Type: "*string", Column: "machine_id"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "Distro", Type: "*string", Column: "distro"}, {Name: "DistroVersion", Type: "*string", Column: "distro_version"}, {Name: "DockerContainerID", Type: "*string", Column: "docker_container_id"}, {Name: "DockerContainerName", Type: "*string", Column: "docker_container_name"}, {Name: "Instance", Type: "*string", Column: "instance"}, {Name: "Region", Type: "*string", Column: "region"}}, PKFieldIndex: 0},
+	z: new(Node).Values(),
 }
 
 // String returns a string representation of this struct or record.
-func (s NodeRow) String() string {
+func (s Node) String() string {
 	res := make([]string, 11)
 	res[0] = "NodeID: " + reform.Inspect(s.NodeID, true)
 	res[1] = "NodeType: " + reform.Inspect(s.NodeType, true)
@@ -70,7 +70,7 @@ func (s NodeRow) String() string {
 
 // Values returns a slice of struct or record field values.
 // Returned interface{} values are never untyped nils.
-func (s *NodeRow) Values() []interface{} {
+func (s *Node) Values() []interface{} {
 	return []interface{}{
 		s.NodeID,
 		s.NodeType,
@@ -88,7 +88,7 @@ func (s *NodeRow) Values() []interface{} {
 
 // Pointers returns a slice of pointers to struct or record fields.
 // Returned interface{} values are never untyped nils.
-func (s *NodeRow) Pointers() []interface{} {
+func (s *Node) Pointers() []interface{} {
 	return []interface{}{
 		&s.NodeID,
 		&s.NodeType,
@@ -105,34 +105,34 @@ func (s *NodeRow) Pointers() []interface{} {
 }
 
 // View returns View object for that struct.
-func (s *NodeRow) View() reform.View {
-	return NodeRowTable
+func (s *Node) View() reform.View {
+	return NodeTable
 }
 
 // Table returns Table object for that record.
-func (s *NodeRow) Table() reform.Table {
-	return NodeRowTable
+func (s *Node) Table() reform.Table {
+	return NodeTable
 }
 
 // PKValue returns a value of primary key for that record.
 // Returned interface{} value is never untyped nil.
-func (s *NodeRow) PKValue() interface{} {
+func (s *Node) PKValue() interface{} {
 	return s.NodeID
 }
 
 // PKPointer returns a pointer to primary key field for that record.
 // Returned interface{} value is never untyped nil.
-func (s *NodeRow) PKPointer() interface{} {
+func (s *Node) PKPointer() interface{} {
 	return &s.NodeID
 }
 
 // HasPK returns true if record has non-zero primary key set, false otherwise.
-func (s *NodeRow) HasPK() bool {
-	return s.NodeID != NodeRowTable.z[NodeRowTable.s.PKFieldIndex]
+func (s *Node) HasPK() bool {
+	return s.NodeID != NodeTable.z[NodeTable.s.PKFieldIndex]
 }
 
 // SetPK sets record primary key.
-func (s *NodeRow) SetPK(pk interface{}) {
+func (s *Node) SetPK(pk interface{}) {
 	if i64, ok := pk.(int64); ok {
 		s.NodeID = string(i64)
 	} else {
@@ -142,13 +142,13 @@ func (s *NodeRow) SetPK(pk interface{}) {
 
 // check interfaces
 var (
-	_ reform.View   = NodeRowTable
-	_ reform.Struct = (*NodeRow)(nil)
-	_ reform.Table  = NodeRowTable
-	_ reform.Record = (*NodeRow)(nil)
-	_ fmt.Stringer  = (*NodeRow)(nil)
+	_ reform.View   = NodeTable
+	_ reform.Struct = (*Node)(nil)
+	_ reform.Table  = NodeTable
+	_ reform.Record = (*Node)(nil)
+	_ fmt.Stringer  = (*Node)(nil)
 )
 
 func init() {
-	parse.AssertUpToDate(&NodeRowTable.s, new(NodeRow))
+	parse.AssertUpToDate(&NodeTable.s, new(Node))
 }
