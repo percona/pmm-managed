@@ -36,6 +36,7 @@ var Now = func() time.Time {
 func PMMAgentsForChangedNode(q *reform.Querier, nodeID string) ([]string, error) {
 	// TODO Real code.
 	// Returning all pmm-agents is currently safe, but not optimal for large number of Agents.
+	_ = nodeID
 
 	structs, err := q.SelectAllFrom(AgentTable, "ORDER BY agent_id")
 	if err != nil {
@@ -61,6 +62,7 @@ func PMMAgentsForChangedService(q *reform.Querier, serviceID string) ([]string, 
 	// * run Agents providing insights for this Service;
 	// * run Agents providing insights for Node that hosts this Service.
 	// Returning all pmm-agents is currently safe, but not optimal for large number of Agents.
+	_ = serviceID
 
 	structs, err := q.SelectAllFrom(AgentTable, "ORDER BY agent_id")
 	if err != nil {

@@ -61,8 +61,7 @@ type ServiceType string
 
 // Service types.
 const (
-	MySQLServiceType          ServiceType = "mysql"
-	AmazonRDSMySQLServiceType ServiceType = "amazon-rds-mysql"
+	MySQLServiceType ServiceType = "mysql"
 )
 
 // Service represents Service as stored in database.

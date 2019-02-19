@@ -106,11 +106,9 @@ type AgentType string
 
 // Agent types.
 const (
-	PMMAgentType         AgentType = "pmm-agent"
-	NodeExporterType     AgentType = "node_exporter"
-	MySQLdExporterType   AgentType = "mysqld_exporter"
-	RDSExporterType      AgentType = "rds_exporter"
-	ExternalExporterType AgentType = "external"
+	PMMAgentType       AgentType = "pmm-agent"
+	NodeExporterType   AgentType = "node_exporter"
+	MySQLdExporterType AgentType = "mysqld_exporter"
 )
 
 // Agent represents Agent as stored in database.

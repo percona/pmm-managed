@@ -136,6 +136,7 @@ var databaseSchema = [][]string{
 	},
 }
 
+// OpenDB opens connection to MySQL database and runs migrations.
 func OpenDB(name, username, password string, logf reform.Printf) (*sql.DB, error) {
 	cfg := mysql.NewConfig()
 	cfg.User = username
