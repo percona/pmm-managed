@@ -26,7 +26,6 @@ import (
 	api "github.com/percona/pmm/api/agent"
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -35,15 +34,9 @@ import (
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
-const (
-	// maximum time for connecting to the database
-	sqlDialTimeout = 5 * time.Second
-)
-
 type agentInfo struct {
 	channel *Channel
 	id      string
-	l       *logrus.Entry
 	kick    chan struct{}
 }
 
@@ -109,26 +102,29 @@ func (r *Registry) Run(stream api.Agent_ConnectServer) error {
 		r.mDisconnects.WithLabelValues(disconnectReason).Inc()
 	}()
 
+	ctx := stream.Context()
+	l := logger.Get(ctx)
 	agent, err := r.register(stream)
 	if err != nil {
 		disconnectReason = "auth"
 		return err
 	}
 	defer func() {
-		agent.l.Infof("Disconnecting client: %s.", disconnectReason)
+		l.Infof("Disconnecting client: %s.", disconnectReason)
 	}()
 
-	go r.SendSetStateRequest(stream.Context(), agent.id)
+	// send first SetStateRequest concurrently with ping from agent
+	go r.SendSetStateRequest(ctx, agent.id)
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
-			r.ping(agent)
+			r.ping(ctx, agent)
 
 		case <-agent.kick:
-			agent.l.Warn("Kicked.")
+			l.Warn("Kicked.")
 			disconnectReason = "kicked"
 			err = status.Errorf(codes.Aborted, "Another pmm-agent with ID %q connected to the server.", agent.id)
 			return err
@@ -152,7 +148,7 @@ func (r *Registry) Run(stream api.Agent_ConnectServer) error {
 
 			case *api.AgentMessage_StateChanged:
 				if err := r.stateChanged(req.StateChanged); err != nil {
-					agent.l.Errorf("%+v", err)
+					l.Errorf("%+v", err)
 				}
 
 				agent.channel.SendResponse(&api.ServerMessage{
@@ -173,7 +169,7 @@ func (r *Registry) Run(stream api.Agent_ConnectServer) error {
 				})
 
 			default:
-				agent.l.Warnf("Unexpected request payload: %s.", msg)
+				l.Warnf("Unexpected request payload: %s.", msg)
 				disconnectReason = "unimplemented"
 				return status.Error(codes.Unimplemented, "Unexpected request payload.")
 			}
@@ -182,8 +178,9 @@ func (r *Registry) Run(stream api.Agent_ConnectServer) error {
 }
 
 func (r *Registry) register(stream api.Agent_ConnectServer) (*agentInfo, error) {
-	l := logger.Get(stream.Context())
-	md := api.GetAgentConnectMetadata(stream.Context())
+	ctx := stream.Context()
+	l := logger.Get(ctx)
+	md := api.GetAgentConnectMetadata(ctx)
 	if err := authenticate(&md, r.db.Querier); err != nil {
 		l.Warnf("Failed to authenticate connected pmm-agent %+v.", md)
 		return nil, err
@@ -200,7 +197,6 @@ func (r *Registry) register(stream api.Agent_ConnectServer) (*agentInfo, error) 
 	agent := &agentInfo{
 		channel: NewChannel(stream, l.WithField("component", "channel"), r.sharedMetrics),
 		id:      md.ID,
-		l:       l,
 		kick:    make(chan struct{}),
 	}
 	r.agents[md.ID] = agent
@@ -251,7 +247,8 @@ func (r *Registry) Kick(ctx context.Context, pmmAgentID string) {
 }
 
 // ping sends Ping message to given Agent, waits for Pong and observes round-trip time and clock drift.
-func (r *Registry) ping(agent *agentInfo) {
+func (r *Registry) ping(ctx context.Context, agent *agentInfo) {
+	l := logger.Get(ctx)
 	start := time.Now()
 	res := agent.channel.SendRequest(&api.ServerMessage_Ping{
 		Ping: new(api.Ping),
@@ -262,14 +259,14 @@ func (r *Registry) ping(agent *agentInfo) {
 	roundtrip := time.Since(start)
 	agentTime, err := ptypes.Timestamp(res.(*api.AgentMessage_Pong).Pong.CurrentTime)
 	if err != nil {
-		agent.l.Errorf("Failed to decode Pong.current_time: %s.", err)
+		l.Errorf("Failed to decode Pong.current_time: %s.", err)
 		return
 	}
 	clockDrift := agentTime.Sub(start) - roundtrip/2
 	if clockDrift < 0 {
 		clockDrift = -clockDrift
 	}
-	agent.l.Infof("Round-trip time: %s. Estimated clock drift: %s.", roundtrip, clockDrift)
+	l.Infof("Round-trip time: %s. Estimated clock drift: %s.", roundtrip, clockDrift)
 	r.mRoundTrip.Observe(roundtrip.Seconds())
 	r.mClockDrift.Observe(clockDrift.Seconds())
 }
@@ -294,6 +291,7 @@ func (r *Registry) stateChanged(s *api.StateChangedRequest) error {
 	return nil
 }
 
+// SendSetStateRequest sends SetStateRequest to pmm-agent with given ID.
 func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 	l := logger.Get(ctx)
 
@@ -301,12 +299,12 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 	agent := r.agents[pmmAgentID]
 	r.rw.RUnlock()
 	if agent == nil {
-		l.Infof("pmm-agent with ID %q is not currently connected, ignoring state change.", pmmAgentID)
+		l.Infof("SendSetStateRequest: pmm-agent with ID %q is not currently connected.", pmmAgentID)
 		return
 	}
 
 	// We assume that all agents running on that Node except pmm-agent with given ID are subagents.
-	// FIXME That is just plain wrong. We should filter by type, exclude external exporters, etc.
+	// FIXME That is just plain wrong. https://jira.percona.com/browse/PMM-3478
 
 	pmmAgent := &models.AgentRow{AgentID: pmmAgentID}
 	if err := r.db.Reload(pmmAgent); err != nil {
@@ -317,15 +315,14 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		l.Panicf("Agent with ID %q has invalid type %q.", pmmAgentID, pmmAgent.AgentType)
 		return
 	}
-	structs, err := r.db.FindAllFrom(models.AgentRowTable, "runs_on_node_id", pmmAgent.RunsOnNodeID)
+	agents, err := models.AgentsRunningOnNode(r.db.Querier, pmmAgent.RunsOnNodeID)
 	if err != nil {
 		l.Errorf("Failed to collect agents: %s.", err)
 		return
 	}
 
-	processes := make(map[string]*api.SetStateRequest_AgentProcess, len(structs))
-	for _, str := range structs {
-		row := str.(*models.AgentRow)
+	processes := make(map[string]*api.SetStateRequest_AgentProcess, len(agents))
+	for _, row := range agents {
 		switch row.AgentType {
 		case models.PMMAgentType:
 			continue
@@ -355,12 +352,13 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		}
 	}
 
+	l.Infof("SendSetStateRequest: %+v.", processes)
 	res := agent.channel.SendRequest(&api.ServerMessage_SetState{
 		SetState: &api.SetStateRequest{
 			AgentProcesses: processes,
 		},
 	})
-	agent.l.Infof("SetState response: %+v.", res)
+	l.Infof("SetState response: %+v.", res)
 }
 
 // Describe implements prometheus.Collector.
