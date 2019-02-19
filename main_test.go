@@ -17,6 +17,7 @@
 package main
 
 import (
+	"go/build"
 	"os/exec"
 	"strings"
 	"testing"
@@ -33,4 +34,54 @@ func TestPackages(t *testing.T) {
 	out := string(b)
 	assert.False(t, strings.Contains(out, "-httptest.serve"), `pmm-managed should not import package "net/http/httptest"`)
 	assert.False(t, strings.Contains(out, "-test.run"), `pmm-managed should not import package "testing"`)
+}
+
+func TestImports(t *testing.T) {
+	type constraint struct {
+		blacklist []string
+	}
+
+	for path, c := range map[string]constraint{
+		// models should not import services
+		"github.com/percona/pmm-managed/models": {
+			blacklist: []string{
+				"github.com/percona/pmm-managed/services/agents",
+				"github.com/percona/pmm-managed/services/inventory",
+			},
+		},
+
+		// agents and inventory services should be independent
+		"github.com/percona/pmm-managed/services/agents": {
+			blacklist: []string{
+				"github.com/percona/pmm-managed/services/inventory",
+				"github.com/percona/pmm-managed/services/prometheus",
+			},
+		},
+		"github.com/percona/pmm-managed/services/inventory": {
+			blacklist: []string{
+				"github.com/percona/pmm-managed/services/agents",
+				"github.com/percona/pmm-managed/services/prometheus",
+			},
+		},
+	} {
+		p, err := build.Import(path, ".", build.IgnoreVendor)
+		require.NoError(t, err)
+
+		allImports := make(map[string]struct{})
+		for _, i := range p.Imports {
+			allImports[i] = struct{}{}
+		}
+		for _, i := range p.TestImports {
+			allImports[i] = struct{}{}
+		}
+		for _, i := range p.XTestImports {
+			allImports[i] = struct{}{}
+		}
+
+		for _, i := range c.blacklist {
+			if _, ok := allImports[i]; ok {
+				t.Errorf("Package %q should not import %q.", path, i)
+			}
+		}
+	}
 }
