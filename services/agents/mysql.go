@@ -21,6 +21,7 @@ import (
 	"net"
 	"sort"
 	"strconv"
+	"time"
 
 	"github.com/AlekSi/pointer"
 	"github.com/go-sql-driver/mysql"
@@ -51,17 +52,18 @@ func mysqldExporterConfig(service *models.ServiceRow, exporter *models.AgentRow)
 		"-collect.slave_status",
 		"-web.listen-address=:" + tdp.left + " .listen_port " + tdp.right,
 	}
+
+	// TODO Make it configurable.
+	args = append(args, "-collect.auto_increment.columns")
+	args = append(args, "-collect.info_schema.tables")
+	args = append(args, "-collect.info_schema.tablestats")
+	args = append(args, "-collect.perf_schema.indexiowaits")
+	args = append(args, "-collect.perf_schema.tableiowaits")
+	args = append(args, "-collect.perf_schema.tablelocks")
+
 	if pointer.GetString(exporter.MetricsURL) != "" {
 		args = append(args, "-web.telemetry-path="+*exporter.MetricsURL)
 	}
-
-	// TODO Make it configurable. Play safe for now.
-	// args = append(args, "-collect.auto_increment.columns")
-	// args = append(args, "-collect.info_schema.tables")
-	// args = append(args, "-collect.info_schema.tablestats")
-	// args = append(args, "-collect.perf_schema.indexiowaits")
-	// args = append(args, "-collect.perf_schema.tableiowaits")
-	// args = append(args, "-collect.perf_schema.tablelocks")
 
 	sort.Strings(args)
 
@@ -79,7 +81,7 @@ func mysqldExporterConfig(service *models.ServiceRow, exporter *models.AgentRow)
 		port := pointer.GetUint16(service.Port)
 		cfg.Addr = net.JoinHostPort(host, strconv.Itoa(int(port)))
 	}
-	cfg.Timeout = sqlDialTimeout
+	cfg.Timeout = 5 * time.Second
 	dsn := cfg.FormatDSN()
 
 	return &api.SetStateRequest_AgentProcess{

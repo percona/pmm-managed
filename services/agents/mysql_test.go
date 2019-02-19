@@ -41,15 +41,21 @@ func TestMySQLdExporterConfig(t *testing.T) {
 		TemplateLeftDelim:  "{{",
 		TemplateRightDelim: "}}",
 		Args: []string{
+			"-collect.auto_increment.columns",
 			"-collect.binlog_size",
 			"-collect.global_status",
 			"-collect.global_variables",
 			"-collect.info_schema.innodb_metrics",
 			"-collect.info_schema.processlist",
 			"-collect.info_schema.query_response_time",
+			"-collect.info_schema.tables",
+			"-collect.info_schema.tablestats",
 			"-collect.info_schema.userstats",
 			"-collect.perf_schema.eventswaits",
 			"-collect.perf_schema.file_events",
+			"-collect.perf_schema.indexiowaits",
+			"-collect.perf_schema.tableiowaits",
+			"-collect.perf_schema.tablelocks",
 			"-collect.slave_status",
 			"-web.listen-address=:{{ .listen_port }}",
 		},
@@ -57,5 +63,6 @@ func TestMySQLdExporterConfig(t *testing.T) {
 			"DATA_SOURCE_NAME=username:password@tcp(1.2.3.4:3306)/?timeout=5s",
 		},
 	}
+	assert.Equal(t, expected.Args, actual.Args)
 	assert.Equal(t, expected, actual)
 }
