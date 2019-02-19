@@ -24,7 +24,8 @@ import (
 
 	api "github.com/percona/pmm/api/agent"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
+
+	"github.com/percona/pmm-managed/utils/logger"
 )
 
 const (
@@ -36,7 +37,6 @@ const (
 // All exported methods are thread-safe.
 type Channel struct { //nolint:maligned
 	s       api.Agent_ConnectServer
-	l       *logrus.Entry
 	metrics *sharedChannelMetrics
 
 	lastSentRequestID uint32
@@ -55,10 +55,9 @@ type Channel struct { //nolint:maligned
 // NewChannel creates new two-way communication channel with given stream.
 //
 // Stream should not be used by the caller after channel is created.
-func NewChannel(stream api.Agent_ConnectServer, l *logrus.Entry, m *sharedChannelMetrics) *Channel {
+func NewChannel(stream api.Agent_ConnectServer, m *sharedChannelMetrics) *Channel {
 	s := &Channel{
 		s:       stream,
-		l:       l, // only for debug logging
 		metrics: m,
 
 		responses: make(map[uint32]chan api.AgentMessagePayload),
@@ -74,7 +73,7 @@ func NewChannel(stream api.Agent_ConnectServer, l *logrus.Entry, m *sharedChanne
 // close marks channel as closed with given error - only once.
 func (c *Channel) close(err error) {
 	c.closeOnce.Do(func() {
-		c.l.Debugf("Closing with error: %+v", err)
+		logger.Get(c.s.Context()).Debugf("Closing with error: %+v", err)
 		c.closeErr = err
 
 		c.m.Lock()
@@ -130,7 +129,7 @@ func (c *Channel) send(msg *api.ServerMessage) {
 	default:
 	}
 
-	c.l.Debugf("Sending message: %s.", msg)
+	logger.Get(c.s.Context()).Debugf("Sending message: %s.", msg)
 	err := c.s.Send(msg)
 	c.sendM.Unlock()
 	if err != nil {
@@ -144,7 +143,7 @@ func (c *Channel) send(msg *api.ServerMessage) {
 func (c *Channel) runReceiver() {
 	defer func() {
 		close(c.requests)
-		c.l.Debug("Exiting receiver goroutine.")
+		logger.Get(c.s.Context()).Debug("Exiting receiver goroutine.")
 	}()
 
 	for {
@@ -153,7 +152,7 @@ func (c *Channel) runReceiver() {
 			c.close(errors.Wrap(err, "failed to receive message"))
 			return
 		}
-		c.l.Debugf("Received message: %s.", msg)
+		logger.Get(c.s.Context()).Debugf("Received message: %s.", msg)
 		c.metrics.mRecv.Inc()
 
 		switch msg.Payload.(type) {
@@ -185,7 +184,7 @@ func (c *Channel) subscribe(id uint32) chan api.AgentMessagePayload {
 	_, ok := c.responses[id]
 	if ok {
 		// it is possible only on lastSentRequestID wrap around, and we can't recover from that
-		c.l.Panicf("Already have subscriber for ID %d.", id)
+		logger.Get(c.s.Context()).Panicf("Already have subscriber for ID %d.", id)
 	}
 
 	c.responses[id] = ch

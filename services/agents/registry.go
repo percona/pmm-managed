@@ -195,7 +195,7 @@ func (r *Registry) register(stream api.Agent_ConnectServer) (*agentInfo, error) 
 	}
 
 	agent := &agentInfo{
-		channel: NewChannel(stream, l.WithField("component", "channel"), r.sharedMetrics),
+		channel: NewChannel(stream, r.sharedMetrics),
 		id:      md.ID,
 		kick:    make(chan struct{}),
 	}

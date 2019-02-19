@@ -30,16 +30,17 @@ import (
 	api "github.com/percona/pmm/api/agent"
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/percona/pmm-managed/utils/interceptors"
 )
 
 type testServer struct {
-	connect func(api.Agent_ConnectServer) error
+	connectFunc func(api.Agent_ConnectServer) error
 }
 
 func (s *testServer) Register(context.Context, *api.RegisterRequest) (*api.RegisterResponse, error) {
@@ -47,7 +48,7 @@ func (s *testServer) Register(context.Context, *api.RegisterRequest) (*api.Regis
 }
 
 func (s *testServer) Connect(stream api.Agent_ConnectServer) error {
-	return s.connect(stream)
+	return s.connectFunc(stream)
 }
 
 var _ api.AgentServer = (*testServer)(nil)
@@ -61,10 +62,14 @@ func setup(t *testing.T, connect func(*Channel) error, expected ...error) (api.A
 	var channel *Channel
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
-	server := grpc.NewServer()
+
+	server := grpc.NewServer(
+		grpc.UnaryInterceptor(interceptors.Unary),
+		grpc.StreamInterceptor(interceptors.Stream),
+	)
 	api.RegisterAgentServer(server, &testServer{
-		connect: func(stream api.Agent_ConnectServer) error {
-			channel = NewChannel(stream, logrus.WithField("component", "channel-test"), newSharedMetrics())
+		connectFunc: func(stream api.Agent_ConnectServer) error {
+			channel = NewChannel(stream, newSharedMetrics())
 			return connect(channel)
 		},
 	})
@@ -249,7 +254,7 @@ func TestServerExitsWithGRPCError(t *testing.T) {
 	assert.Equal(t, errUnimplemented, err)
 }
 
-func TestServerExitsWithUnknownError(t *testing.T) {
+func TestServerExitsWithUnknownErrorIntercepted(t *testing.T) {
 	connect := func(ch *Channel) error { //nolint:unparam
 		msg := <-ch.Requests()
 		require.NotNil(t, msg)
@@ -271,7 +276,7 @@ func TestServerExitsWithUnknownError(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = stream.Recv()
-	assert.Equal(t, status.Error(codes.Unknown, "EOF"), err)
+	assert.Equal(t, status.Error(codes.Internal, "Internal server error."), err)
 }
 
 func TestAgentClosesStream(t *testing.T) {
