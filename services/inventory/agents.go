@@ -60,8 +60,10 @@ func (as *AgentsService) makeAgent(ctx context.Context, row *models.Agent) (api.
 
 	case models.NodeExporterType:
 		return &api.NodeExporter{
-			AgentId: row.AgentID,
-			NodeId:  row.RunsOnNodeID,
+			AgentId:    row.AgentID,
+			NodeId:     row.RunsOnNodeID,
+			Status:     api.AgentStatus(api.AgentStatus_value[row.Status]),
+			ListenPort: uint32(pointer.GetUint16(row.ListenPort)),
 		}, nil
 
 	case models.MySQLdExporterType:
@@ -78,6 +80,9 @@ func (as *AgentsService) makeAgent(ctx context.Context, row *models.Agent) (api.
 			RunsOnNodeId: row.RunsOnNodeID,
 			ServiceId:    services[0].ServiceID,
 			Username:     pointer.GetString(row.Username),
+			Password:     pointer.GetString(row.Password),
+			Status:       api.AgentStatus(api.AgentStatus_value[row.Status]),
+			ListenPort:   uint32(pointer.GetUint16(row.ListenPort)),
 		}, nil
 
 	default:

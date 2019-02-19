@@ -286,7 +286,7 @@ func (r *Registry) stateChanged(s *api.StateChangedRequest) error {
 			return errors.Wrap(err, "failed to select Agent by ID")
 		}
 
-		agent.Status = pointer.ToString(s.Status.String())
+		agent.Status = s.Status.String()
 		agent.ListenPort = pointer.ToUint16(uint16(s.ListenPort))
 		return tx.Update(agent)
 	})

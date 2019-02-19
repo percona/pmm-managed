@@ -99,9 +99,9 @@ var databaseSchema = [][]string{
 			-- updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
 			-- state
-			version VARCHAR(255),
-			status VARCHAR(255),
+			status VARCHAR(255) NOT NULL,
 			listen_port SMALLINT UNSIGNED,
+			version VARCHAR(255),
 
 			-- MySQLdExporter
 			username VARCHAR(255),

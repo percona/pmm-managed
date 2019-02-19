@@ -120,9 +120,9 @@ type Agent struct {
 	CreatedAt    time.Time `reform:"created_at"`
 	// UpdatedAt    time.Time `reform:"updated_at"`
 
-	Version    *string `reform:"version"`
-	Status     *string `reform:"status"`
+	Status     string  `reform:"status"`
 	ListenPort *uint16 `reform:"listen_port"`
+	Version    *string `reform:"version"`
 
 	Username *string `reform:"username"`
 	Password *string `reform:"password"`
