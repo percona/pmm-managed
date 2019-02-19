@@ -85,8 +85,11 @@ check-license:                  ## Check that all files have the same license he
 check: install check-license    ## Run checkers and linters.
 	golangci-lint run
 
-format:                         ## Run `goimports`.
-	goimports -local github.com/percona/pmm-managed -l -w $(shell find . -type f -name '*.go' -not -path "./vendor/*")
+FILES = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
+
+format:                         ## Format source code.
+	gofmt -w -s $(FILES)
+	goimports -local github.com/percona/pmm-managed -l -w $(FILES)
 
 run: install _run               ## Run pmm-managed.
 
