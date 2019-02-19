@@ -17,67 +17,12 @@
 package models
 
 import (
-	"fmt"
-	"strings"
 	"time"
 
-	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 )
 
 //go:generate reform
-
-// AgentsForNode returns all Agents providing insights for given Node.
-func AgentsForNode(q *reform.Querier, nodeID string) ([]*AgentRow, error) {
-	structs, err := q.FindAllFrom(AgentNodeView, "node_id", nodeID)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to select Agent IDs")
-	}
-
-	agentIDs := make([]interface{}, len(structs))
-	for i, s := range structs {
-		agentIDs[i] = s.(*AgentNode).AgentID
-	}
-
-	p := strings.Join(q.Placeholders(1, len(agentIDs)), ", ")
-	tail := fmt.Sprintf("WHERE agent_id IN (%s) ORDER BY agent_id", p) //nolint:gosec
-	structs, err = q.SelectAllFrom(AgentRowTable, tail, agentIDs...)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to select Agents")
-	}
-
-	res := make([]*AgentRow, len(structs))
-	for i, s := range structs {
-		res[i] = s.(*AgentRow)
-	}
-	return res, nil
-}
-
-// NodesForAgent returns all Nodes for which Agent with given ID provides insights.
-func NodesForAgent(q *reform.Querier, agentID string) ([]*NodeRow, error) {
-	structs, err := q.FindAllFrom(AgentNodeView, "agent_id", agentID)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to select Node IDs")
-	}
-
-	nodeIDs := make([]interface{}, len(structs))
-	for i, s := range structs {
-		nodeIDs[i] = s.(*AgentNode).NodeID
-	}
-
-	p := strings.Join(q.Placeholders(1, len(nodeIDs)), ", ")
-	tail := fmt.Sprintf("WHERE node_id IN (%s) ORDER BY node_id", p) //nolint:gosec
-	structs, err = q.SelectAllFrom(NodeRowTable, tail, nodeIDs...)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to select Nodes")
-	}
-
-	res := make([]*NodeRow, len(structs))
-	for i, s := range structs {
-		res[i] = s.(*NodeRow)
-	}
-	return res, nil
-}
 
 // AgentNode implements many-to-many relationship between Agents and Nodes.
 //reform:agent_nodes
@@ -90,7 +35,7 @@ type AgentNode struct {
 // BeforeInsert implements reform.BeforeInserter interface.
 //nolint:unparam
 func (an *AgentNode) BeforeInsert() error {
-	now := time.Now().Truncate(time.Microsecond).UTC()
+	now := Now()
 	an.CreatedAt = now
 	return nil
 }

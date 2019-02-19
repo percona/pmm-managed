@@ -17,67 +17,12 @@
 package models
 
 import (
-	"fmt"
-	"strings"
 	"time"
 
-	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 )
 
 //go:generate reform
-
-// AgentsForService returns all Agents providing insights for given Service.
-func AgentsForService(q *reform.Querier, serviceID string) ([]*AgentRow, error) {
-	structs, err := q.FindAllFrom(AgentServiceView, "service_id", serviceID)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to select Agent IDs")
-	}
-
-	agentIDs := make([]interface{}, len(structs))
-	for i, s := range structs {
-		agentIDs[i] = s.(*AgentService).AgentID
-	}
-
-	p := strings.Join(q.Placeholders(1, len(agentIDs)), ", ")
-	tail := fmt.Sprintf("WHERE agent_id IN (%s) ORDER BY agent_id", p) //nolint:gosec
-	structs, err = q.SelectAllFrom(AgentRowTable, tail, agentIDs...)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to select Agents")
-	}
-
-	res := make([]*AgentRow, len(structs))
-	for i, s := range structs {
-		res[i] = s.(*AgentRow)
-	}
-	return res, nil
-}
-
-// ServicesForAgent returns all Services for which Agent with given ID provides insights.
-func ServicesForAgent(q *reform.Querier, agentID string) ([]*ServiceRow, error) {
-	structs, err := q.FindAllFrom(AgentServiceView, "agent_id", agentID)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to select Service IDs")
-	}
-
-	serviceIDs := make([]interface{}, len(structs))
-	for i, s := range structs {
-		serviceIDs[i] = s.(*AgentService).ServiceID
-	}
-
-	p := strings.Join(q.Placeholders(1, len(serviceIDs)), ", ")
-	tail := fmt.Sprintf("WHERE service_id IN (%s) ORDER BY service_id", p) //nolint:gosec
-	structs, err = q.SelectAllFrom(ServiceRowTable, tail, serviceIDs...)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to select Services")
-	}
-
-	res := make([]*ServiceRow, len(structs))
-	for i, s := range structs {
-		res[i] = s.(*ServiceRow)
-	}
-	return res, nil
-}
 
 // AgentService implements many-to-many relationship between Agents and Services.
 //reform:agent_services
@@ -90,7 +35,7 @@ type AgentService struct {
 // BeforeInsert implements reform.BeforeInserter interface.
 //nolint:unparam
 func (as *AgentService) BeforeInsert() error {
-	now := time.Now().Truncate(time.Microsecond).UTC()
+	now := Now()
 	as.CreatedAt = now
 	return nil
 }

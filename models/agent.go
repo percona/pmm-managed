@@ -18,13 +18,41 @@ package models
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 )
 
-//go:generate reform
+// AgentsForNode returns all Agents providing insights for given Node.
+func AgentsForNode(q *reform.Querier, nodeID string) ([]*AgentRow, error) {
+	structs, err := q.FindAllFrom(AgentNodeView, "node_id", nodeID)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to select Agent IDs")
+	}
+
+	agentIDs := make([]interface{}, len(structs))
+	for i, s := range structs {
+		agentIDs[i] = s.(*AgentNode).AgentID
+	}
+	if len(agentIDs) == 0 {
+		return []*AgentRow{}, nil
+	}
+
+	p := strings.Join(q.Placeholders(1, len(agentIDs)), ", ")
+	tail := fmt.Sprintf("WHERE agent_id IN (%s) ORDER BY agent_id", p) //nolint:gosec
+	structs, err = q.SelectAllFrom(AgentRowTable, tail, agentIDs...)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to select Agents")
+	}
+
+	res := make([]*AgentRow, len(structs))
+	for i, s := range structs {
+		res[i] = s.(*AgentRow)
+	}
+	return res, nil
+}
 
 // AgentsRunningOnNode returns all Agents running on Node.
 // TODO Remove after https://jira.percona.com/browse/PMM-3478.
@@ -41,6 +69,37 @@ func AgentsRunningOnNode(q *reform.Querier, nodeID string) ([]*AgentRow, error) 
 	}
 	return res, nil
 }
+
+// AgentsForService returns all Agents providing insights for given Service.
+func AgentsForService(q *reform.Querier, serviceID string) ([]*AgentRow, error) {
+	structs, err := q.FindAllFrom(AgentServiceView, "service_id", serviceID)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to select Agent IDs")
+	}
+
+	agentIDs := make([]interface{}, len(structs))
+	for i, s := range structs {
+		agentIDs[i] = s.(*AgentService).AgentID
+	}
+	if len(agentIDs) == 0 {
+		return []*AgentRow{}, nil
+	}
+
+	p := strings.Join(q.Placeholders(1, len(agentIDs)), ", ")
+	tail := fmt.Sprintf("WHERE agent_id IN (%s) ORDER BY agent_id", p) //nolint:gosec
+	structs, err = q.SelectAllFrom(AgentRowTable, tail, agentIDs...)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to select Agents")
+	}
+
+	res := make([]*AgentRow, len(structs))
+	for i, s := range structs {
+		res[i] = s.(*AgentRow)
+	}
+	return res, nil
+}
+
+//go:generate reform
 
 // AgentType represents Agent type as stored in database.
 type AgentType string
@@ -76,7 +135,7 @@ type AgentRow struct {
 // BeforeInsert implements reform.BeforeInserter interface.
 //nolint:unparam
 func (ar *AgentRow) BeforeInsert() error {
-	now := time.Now().Truncate(time.Microsecond).UTC()
+	now := Now()
 	ar.CreatedAt = now
 	// ar.UpdatedAt = now
 	return nil
@@ -85,7 +144,7 @@ func (ar *AgentRow) BeforeInsert() error {
 // BeforeUpdate implements reform.BeforeUpdater interface.
 //nolint:unparam
 func (ar *AgentRow) BeforeUpdate() error {
-	// now := time.Now().Truncate(time.Microsecond).UTC()
+	// now := Now()
 	// ar.UpdatedAt = now
 	return nil
 }

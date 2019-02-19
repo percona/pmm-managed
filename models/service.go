@@ -17,10 +17,42 @@
 package models
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 )
+
+// ServicesForAgent returns all Services for which Agent with given ID provides insights.
+func ServicesForAgent(q *reform.Querier, agentID string) ([]*ServiceRow, error) {
+	structs, err := q.FindAllFrom(AgentServiceView, "agent_id", agentID)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to select Service IDs")
+	}
+
+	serviceIDs := make([]interface{}, len(structs))
+	for i, s := range structs {
+		serviceIDs[i] = s.(*AgentService).ServiceID
+	}
+	if len(serviceIDs) == 0 {
+		return []*ServiceRow{}, nil
+	}
+
+	p := strings.Join(q.Placeholders(1, len(serviceIDs)), ", ")
+	tail := fmt.Sprintf("WHERE service_id IN (%s) ORDER BY service_id", p) //nolint:gosec
+	structs, err = q.SelectAllFrom(ServiceRowTable, tail, serviceIDs...)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to select Services")
+	}
+
+	res := make([]*ServiceRow, len(structs))
+	for i, s := range structs {
+		res[i] = s.(*ServiceRow)
+	}
+	return res, nil
+}
 
 //go:generate reform
 
@@ -51,7 +83,7 @@ type ServiceRow struct {
 // BeforeInsert implements reform.BeforeInserter interface.
 //nolint:unparam
 func (sr *ServiceRow) BeforeInsert() error {
-	now := time.Now().Truncate(time.Microsecond).UTC()
+	now := Now()
 	sr.CreatedAt = now
 	// sr.UpdatedAt = now
 	return nil
@@ -60,7 +92,7 @@ func (sr *ServiceRow) BeforeInsert() error {
 // BeforeUpdate implements reform.BeforeUpdater interface.
 //nolint:unparam
 func (sr *ServiceRow) BeforeUpdate() error {
-	// now := time.Now().Truncate(time.Microsecond).UTC()
+	// now := Now()
 	// sr.UpdatedAt = now
 	return nil
 }

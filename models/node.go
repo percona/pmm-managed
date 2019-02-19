@@ -17,10 +17,42 @@
 package models
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 )
+
+// NodesForAgent returns all Nodes for which Agent with given ID provides insights.
+func NodesForAgent(q *reform.Querier, agentID string) ([]*NodeRow, error) {
+	structs, err := q.FindAllFrom(AgentNodeView, "agent_id", agentID)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to select Node IDs")
+	}
+
+	nodeIDs := make([]interface{}, len(structs))
+	for i, s := range structs {
+		nodeIDs[i] = s.(*AgentNode).NodeID
+	}
+	if len(nodeIDs) == 0 {
+		return []*NodeRow{}, nil
+	}
+
+	p := strings.Join(q.Placeholders(1, len(nodeIDs)), ", ")
+	tail := fmt.Sprintf("WHERE node_id IN (%s) ORDER BY node_id", p) //nolint:gosec
+	structs, err = q.SelectAllFrom(NodeRowTable, tail, nodeIDs...)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to select Nodes")
+	}
+
+	res := make([]*NodeRow, len(structs))
+	for i, s := range structs {
+		res[i] = s.(*NodeRow)
+	}
+	return res, nil
+}
 
 //go:generate reform
 
@@ -62,7 +94,7 @@ type NodeRow struct {
 // BeforeInsert implements reform.BeforeInserter interface.
 //nolint:unparam
 func (nr *NodeRow) BeforeInsert() error {
-	now := time.Now().Truncate(time.Microsecond).UTC()
+	now := Now()
 	nr.CreatedAt = now
 	// nr.UpdatedAt = now
 	return nil
@@ -71,7 +103,7 @@ func (nr *NodeRow) BeforeInsert() error {
 // BeforeUpdate implements reform.BeforeUpdater interface.
 //nolint:unparam
 func (nr *NodeRow) BeforeUpdate() error {
-	// now := time.Now().Truncate(time.Microsecond).UTC()
+	// now := Now()
 	// nr.UpdatedAt = now
 	return nil
 }
