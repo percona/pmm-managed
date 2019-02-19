@@ -27,5 +27,6 @@ import (
 // We use it instead of real type for testing and to avoid dependency cycle.
 type registry interface {
 	SendSetStateRequest(ctx context.Context, agentID string)
+	IsConnected(pmmAgentID string) bool
 	Kick(ctx context.Context, agentID string)
 }

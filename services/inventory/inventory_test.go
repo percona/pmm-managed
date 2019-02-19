@@ -50,6 +50,7 @@ func TestNodes(t *testing.T) {
 		require.NoError(t, err)
 
 		r := new(mockRegistry)
+		r.Test(t)
 		teardown = func(t *testing.T) {
 			require.NoError(t, tx.Rollback())
 			r.AssertExpectations(t)
@@ -195,6 +196,7 @@ func TestServices(t *testing.T) {
 		require.NoError(t, err)
 
 		r := new(mockRegistry)
+		r.Test(t)
 		teardown = func(t *testing.T) {
 			require.NoError(t, tx.Rollback())
 			r.AssertExpectations(t)
@@ -323,6 +325,7 @@ func TestAgents(t *testing.T) {
 		require.NoError(t, err)
 
 		r := new(mockRegistry)
+		r.Test(t)
 		teardown = func(t *testing.T) {
 			require.NoError(t, tx.Rollback())
 			r.AssertExpectations(t)
@@ -431,11 +434,23 @@ func TestAgents(t *testing.T) {
 		_, _, as, teardown := setup(t)
 		defer teardown(t)
 
+		as.r.(*mockRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000001").Return(false)
 		actualAgent, err := as.AddPMMAgent(ctx, models.PMMServerNodeID)
 		require.NoError(t, err)
 		expectedPMMAgent := &api.PMMAgent{
-			AgentId: "/agent_id/00000000-0000-4000-8000-000000000001",
-			NodeId:  models.PMMServerNodeID,
+			AgentId:   "/agent_id/00000000-0000-4000-8000-000000000001",
+			NodeId:    models.PMMServerNodeID,
+			Connected: false,
+		}
+		assert.Equal(t, expectedPMMAgent, actualAgent)
+
+		as.r.(*mockRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000002").Return(true)
+		actualAgent, err = as.AddPMMAgent(ctx, models.PMMServerNodeID)
+		require.NoError(t, err)
+		expectedPMMAgent = &api.PMMAgent{
+			AgentId:   "/agent_id/00000000-0000-4000-8000-000000000002",
+			NodeId:    models.PMMServerNodeID,
+			Connected: true,
 		}
 		assert.Equal(t, expectedPMMAgent, actualAgent)
 	})

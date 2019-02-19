@@ -94,6 +94,14 @@ func NewRegistry(db *reform.DB) *Registry {
 	return r
 }
 
+// IsConnected returns true if pmm-agent with given ID is currently connected, false otherwise.
+func (r *Registry) IsConnected(pmmAgentID string) bool {
+	r.rw.RLock()
+	agent := r.agents[pmmAgentID]
+	r.rw.RUnlock()
+	return agent != nil
+}
+
 // Run takes over pmm-agent gRPC stream and runs it until completion.
 func (r *Registry) Run(stream api.Agent_ConnectServer) error {
 	r.mConnects.Inc()

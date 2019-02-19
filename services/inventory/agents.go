@@ -53,8 +53,9 @@ func (as *AgentsService) makeAgent(ctx context.Context, row *models.Agent) (api.
 	switch row.AgentType {
 	case models.PMMAgentType:
 		return &api.PMMAgent{
-			AgentId: row.AgentID,
-			NodeId:  row.RunsOnNodeID,
+			AgentId:   row.AgentID,
+			NodeId:    row.RunsOnNodeID,
+			Connected: as.r.IsConnected(row.AgentID),
 		}, nil
 
 	case models.NodeExporterType:
@@ -356,10 +357,10 @@ func (as *AgentsService) Remove(ctx context.Context, id string) error {
 		return err
 	}
 
-	if _, err = as.q.DeleteFrom(models.AgentServiceView, "WHERE agent_id = "+as.q.Placeholder(1), id); err != nil {
+	if _, err = as.q.DeleteFrom(models.AgentServiceView, "WHERE agent_id = "+as.q.Placeholder(1), id); err != nil { //nolint:gosec
 		return errors.WithStack(err)
 	}
-	if _, err = as.q.DeleteFrom(models.AgentNodeView, "WHERE agent_id = "+as.q.Placeholder(1), id); err != nil {
+	if _, err = as.q.DeleteFrom(models.AgentNodeView, "WHERE agent_id = "+as.q.Placeholder(1), id); err != nil { //nolint:gosec
 		return errors.WithStack(err)
 	}
 
