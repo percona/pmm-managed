@@ -59,7 +59,6 @@ func makeService(row *models.Service) (api.Service, error) {
 			NodeId:       row.NodeID,
 			Address:      pointer.GetString(row.Address),
 			Port:         uint32(pointer.GetUint16(row.Port)),
-			UnixSocket:   pointer.GetString(row.UnixSocket),
 			CustomLabels: labels,
 		}, nil
 
@@ -140,7 +139,7 @@ func (ss *ServicesService) Get(ctx context.Context, id string) (api.Service, err
 }
 
 // AddMySQL inserts MySQL Service with given parameters.
-func (ss *ServicesService) AddMySQL(ctx context.Context, name string, nodeID string, address *string, port *uint16, unixSocket *string) (*api.MySQLService, error) {
+func (ss *ServicesService) AddMySQL(ctx context.Context, name string, nodeID string, address *string, port *uint16) (*api.MySQLService, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// Both address and socket can't be empty, etc.
 
@@ -164,7 +163,6 @@ func (ss *ServicesService) AddMySQL(ctx context.Context, name string, nodeID str
 		NodeID:      nodeID,
 		Address:     address,
 		Port:        port,
-		UnixSocket:  unixSocket,
 	}
 	if err := ss.q.Insert(row); err != nil {
 		return nil, errors.WithStack(err)

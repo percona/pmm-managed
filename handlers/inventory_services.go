@@ -81,8 +81,7 @@ func (s *servicesServer) GetService(ctx context.Context, req *api.GetServiceRequ
 func (s *servicesServer) AddMySQLService(ctx context.Context, req *api.AddMySQLServiceRequest) (*api.AddMySQLServiceResponse, error) {
 	address := pointer.ToStringOrNil(req.Address)
 	port := pointer.ToUint16OrNil(uint16(req.Port))
-	unixSocket := pointer.ToStringOrNil(req.UnixSocket)
-	service, err := s.s.AddMySQL(ctx, req.ServiceName, req.NodeId, address, port, unixSocket)
+	service, err := s.s.AddMySQL(ctx, req.ServiceName, req.NodeId, address, port)
 	if err != nil {
 		return nil, err
 	}

@@ -20,11 +20,6 @@ services:
     volumes:
       - ./testdata/grafana:/etc/grafana
 
-  consul:
-    image: ${CONSUL_IMAGE:-consul:0.8.5}
-    ports:
-      - 127.0.0.1:8500:8500
-
   mysql:
     # We use 5.5 inside pmm-server Docker container, but there is no percona/percona-server:5.5
     image: ${MYSQL_IMAGE:-percona/percona-server:5.7}

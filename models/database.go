@@ -85,7 +85,6 @@ var databaseSchema = [][]string{
 			-- MySQL
 			address VARCHAR(255),
 			port SMALLINT UNSIGNED,
-			unix_socket VARCHAR(255),
 
 			PRIMARY KEY (service_id),
 			UNIQUE (service_name),

@@ -53,7 +53,6 @@ import (
 	"github.com/percona/pmm-managed/handlers"
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/agents"
-	"github.com/percona/pmm-managed/services/consul"
 	"github.com/percona/pmm-managed/services/grafana"
 	"github.com/percona/pmm-managed/services/inventory"
 	"github.com/percona/pmm-managed/services/logs"
@@ -81,7 +80,6 @@ var (
 	prometheusURLF    = flag.String("prometheus-url", "http://127.0.0.1:9090/", "Prometheus base URL")
 	promtoolF         = flag.String("promtool", "promtool", "promtool path")
 
-	consulAddrF  = flag.String("consul-addr", "127.0.0.1:8500", "Consul HTTP API address")
 	grafanaAddrF = flag.String("grafana-addr", "127.0.0.1:3000", "Grafana HTTP API address")
 
 	dbNameF     = flag.String("db-name", "", "Database name")
@@ -153,9 +151,6 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	)
 	api.RegisterBaseServer(gRPCServer, &handlers.BaseServer{PMMVersion: version.Version})
 	api.RegisterDemoServer(gRPCServer, &handlers.DemoServer{})
-	api.RegisterScrapeConfigsServer(gRPCServer, &handlers.ScrapeConfigsServer{
-		Prometheus: deps.prometheus,
-	})
 	api.RegisterLogsServer(gRPCServer, &handlers.LogsServer{
 		Logs: deps.logs,
 	})
@@ -223,7 +218,6 @@ func runJSONServer(ctx context.Context, logs *logs.Logs) {
 	for _, r := range []registrar{
 		api.RegisterBaseHandlerFromEndpoint,
 		api.RegisterDemoHandlerFromEndpoint,
-		api.RegisterScrapeConfigsHandlerFromEndpoint,
 		api.RegisterLogsHandlerFromEndpoint,
 		api.RegisterAnnotationsHandlerFromEndpoint,
 
@@ -382,12 +376,7 @@ func main() {
 		cancel()
 	}()
 
-	consulClient, err := consul.NewClient(*consulAddrF)
-	if err != nil {
-		l.Panic(err)
-	}
-
-	prometheus, err := prometheus.NewService(*prometheusConfigF, *prometheusURLF, *promtoolF, consulClient)
+	prometheus, err := prometheus.NewService(*prometheusConfigF, *prometheusURLF, *promtoolF)
 	if err == nil {
 		err = prometheus.Check(ctx)
 	}

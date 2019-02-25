@@ -28,13 +28,12 @@ import (
 	"regexp"
 	"sync"
 
-	"github.com/Percona-Lab/promconfig/config"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/yaml.v2"
 
-	"github.com/percona/pmm-managed/services/consul"
+	"github.com/percona/pmm-managed/services/prometheus/internal/prometheus/config"
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
@@ -42,35 +41,35 @@ var checkFailedRE = regexp.MustCompile(`FAILED: parsing YAML file \S+: (.+)\n`)
 
 // Service is responsible for interactions with Prometheus.
 // It assumes the following:
-//   * Prometheus API is accessible;
+//   * Prometheus APIs (including lifecycle) are accessible;
 //   * Prometheus configuration and rule files are accessible;
 //   * promtool is available.
 type Service struct {
-	ConfigPath   string
+	configPath   string
 	baseURL      *url.URL
-	client       *http.Client
 	promtoolPath string
-	consul       *consul.Client
-	lock         sync.RWMutex // for Prometheus configuration file and, by extension, for most methods
+	client       *http.Client
+
+	m sync.Mutex // for Prometheus configuration file and, by extension, for most methods
 }
 
-func NewService(config string, baseURL string, promtool string, consul *consul.Client) (*Service, error) {
+// NewService creates new service.
+func NewService(configPath string, baseURL string, promtool string) (*Service, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return &Service{
-		ConfigPath:   config,
+		configPath:   configPath,
 		baseURL:      u,
-		client:       new(http.Client),
 		promtoolPath: promtool,
-		consul:       consul,
+		client:       new(http.Client),
 	}, nil
 }
 
 // loadConfig loads current Prometheus configuration from file.
 func (svc *Service) loadConfig() (*config.Config, error) {
-	cfg, err := config.LoadFile(svc.ConfigPath)
+	cfg, err := config.LoadFile(svc.configPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't load Prometheus configuration file")
 	}
@@ -80,12 +79,14 @@ func (svc *Service) loadConfig() (*config.Config, error) {
 // saveConfigAndReload saves given Prometheus configuration to file and reloads Prometheus.
 // If configuration can't be reloaded for some reason, old file is restored, and configuration is reloaded again.
 func (svc *Service) saveConfigAndReload(ctx context.Context, cfg *config.Config) error {
+	l := logger.Get(ctx).WithField("component", "prometheus")
+
 	// read existing content
-	old, err := ioutil.ReadFile(svc.ConfigPath)
+	old, err := ioutil.ReadFile(svc.configPath)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	fi, err := os.Stat(svc.ConfigPath)
+	fi, err := os.Stat(svc.configPath)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -94,23 +95,20 @@ func (svc *Service) saveConfigAndReload(ctx context.Context, cfg *config.Config)
 	var restore bool
 	defer func() {
 		if restore {
-			if err = ioutil.WriteFile(svc.ConfigPath, old, fi.Mode()); err != nil {
-				logger.Get(ctx).WithField("component", "prometheus").Error(err)
+			if err = ioutil.WriteFile(svc.configPath, old, fi.Mode()); err != nil {
+				l.Error(err)
 			}
 			if err = svc.reload(); err != nil {
-				logger.Get(ctx).WithField("component", "prometheus").Error(err)
+				l.Error(err)
 			}
 		}
 	}()
 
-	// marshal new content
-	new, err := yaml.Marshal(cfg)
-	if err != nil {
-		return errors.Wrap(err, "can't marshal Prometheus configuration file")
-	}
-	new = append([]byte("# Managed by pmm-managed. DO NOT EDIT.\n---\n"), new...)
-
 	// write new content to temporary file, check it
+	new, err := marshalConfig(cfg)
+	if err != nil {
+		return err
+	}
 	f, err := ioutil.TempFile("", "pmm-managed-config-")
 	if err != nil {
 		return errors.WithStack(err)
@@ -119,12 +117,13 @@ func (svc *Service) saveConfigAndReload(ctx context.Context, cfg *config.Config)
 		return errors.WithStack(err)
 	}
 	defer func() {
-		f.Close()
-		os.Remove(f.Name())
+		_ = f.Close()
+		_ = os.Remove(f.Name())
 	}()
-	b, err := exec.Command(svc.promtoolPath, "check", "config", f.Name()).CombinedOutput()
+	args := []string{"check", "config", f.Name()}
+	b, err := exec.CommandContext(ctx, svc.promtoolPath, args...).CombinedOutput() //nolint:gosec
 	if err != nil {
-		logger.Get(ctx).WithField("component", "prometheus").Errorf("%s", b)
+		l.Errorf("%s", b)
 
 		// return typed error if possible
 		s := string(b)
@@ -133,11 +132,11 @@ func (svc *Service) saveConfigAndReload(ctx context.Context, cfg *config.Config)
 		}
 		return errors.Wrap(err, s)
 	}
-	logger.Get(ctx).WithField("component", "prometheus").Debugf("%s", b)
+	l.Debugf("%s", b)
 
 	// write to permanent location and reload
 	restore = true
-	if err = ioutil.WriteFile(svc.ConfigPath, new, fi.Mode()); err != nil {
+	if err = ioutil.WriteFile(svc.configPath, new, fi.Mode()); err != nil {
 		return errors.WithStack(err)
 	}
 	if err = svc.reload(); err != nil {
@@ -145,6 +144,19 @@ func (svc *Service) saveConfigAndReload(ctx context.Context, cfg *config.Config)
 	}
 	restore = false
 	return nil
+}
+
+// marshalConfig marshals Prometheus configuration.
+func marshalConfig(cfg *config.Config) ([]byte, error) {
+	b, err := yaml.Marshal(cfg)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't marshal Prometheus configuration file")
+	}
+
+	// TODO add comments to each cfg.ScrapeConfigs element
+
+	b = append([]byte("# Managed by pmm-managed. DO NOT EDIT.\n---\n"), b...)
+	return b, nil
 }
 
 // reload causes Prometheus to reload configuration.
@@ -155,7 +167,7 @@ func (svc *Service) reload() error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() // nolint:errcheck
 
 	if resp.StatusCode == 200 {
 		return nil
@@ -197,36 +209,14 @@ func (svc *Service) Check(ctx context.Context) error {
 		return errors.Errorf("expected 200, got %d", resp.StatusCode)
 	}
 
-	b, err = exec.Command(svc.promtoolPath, "--version").CombinedOutput()
+	b, err = exec.CommandContext(ctx, svc.promtoolPath, "--version").CombinedOutput() //nolint:gosec
 	if err != nil {
 		return errors.Wrap(err, string(b))
 	}
 	l.Debugf("%s", b)
 
-	scs, err := svc.getFromConsul()
-	if err != nil {
-		return err
-	}
-	var changed bool
-	for _, sc := range scs {
-		var found bool
-		for _, configSC := range config.ScrapeConfigs {
-			if configSC.JobName == sc.JobName {
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			scrapeConfig, err := convertScrapeConfig(&sc)
-			if err != nil {
-				return err
-			}
-			config.ScrapeConfigs = append(config.ScrapeConfigs, scrapeConfig)
-			l.Infof("Scrape configuration restored from Consul: %+v", sc)
-			changed = true
-		}
-	}
+	// TODO
+	changed := true
 
 	if changed {
 		l.Info("Prometheus configuration updated.")

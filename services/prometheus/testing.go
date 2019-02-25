@@ -20,7 +20,6 @@ import (
 	"context"
 	"io/ioutil"
 
-	"github.com/percona/pmm-managed/services/consul"
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
@@ -37,15 +36,7 @@ type testingT interface {
 func SetupTest(t testingT) (ctx context.Context, p *Service, before []byte) {
 	ctx = logger.Set(context.Background(), t.Name())
 
-	consulClient, err := consul.NewClient("127.0.0.1:8500")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err = consulClient.DeleteKV(ConsulKey); err != nil {
-		t.Fatal(err)
-	}
-
-	p, err = NewService("../../testdata/prometheus/prometheus.yml", "http://127.0.0.1:9090/", "promtool", consulClient)
+	p, err := NewService("../../testdata/prometheus/prometheus.yml", "http://127.0.0.1:9090/", "promtool")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +44,7 @@ func SetupTest(t testingT) (ctx context.Context, p *Service, before []byte) {
 		t.Fatal(err)
 	}
 
-	if before, err = ioutil.ReadFile(p.ConfigPath); err != nil {
+	if before, err = ioutil.ReadFile(p.configPath); err != nil {
 		t.Fatal(err)
 	}
 
@@ -62,7 +53,7 @@ func SetupTest(t testingT) (ctx context.Context, p *Service, before []byte) {
 
 // TearDownTest tears down Prometheus service after testing.
 func TearDownTest(t testingT, p *Service, before []byte) {
-	if err := ioutil.WriteFile(p.ConfigPath, before, 0666); err != nil {
+	if err := ioutil.WriteFile(p.configPath, before, 0666); err != nil {
 		t.Fatal(err)
 	}
 }
