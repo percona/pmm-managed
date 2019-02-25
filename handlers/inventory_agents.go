@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/AlekSi/pointer"
 	api "github.com/percona/pmm/api/inventory"
 	"gopkg.in/reform.v1"
 
@@ -113,7 +112,7 @@ func (s *agentsServer) AddPMMAgent(ctx context.Context, req *api.AddPMMAgentRequ
 
 // AddNodeExporter adds node_exporter Agent.
 func (s *agentsServer) AddNodeExporter(ctx context.Context, req *api.AddNodeExporterRequest) (*api.AddNodeExporterResponse, error) {
-	agent, err := s.s.AddNodeExporter(ctx, s.db, req.NodeId)
+	agent, err := s.s.AddNodeExporter(ctx, s.db, req)
 	if err != nil {
 		return nil, err
 	}
@@ -126,9 +125,7 @@ func (s *agentsServer) AddNodeExporter(ctx context.Context, req *api.AddNodeExpo
 
 // AddMySQLdExporter adds mysqld_exporter Agent.
 func (s *agentsServer) AddMySQLdExporter(ctx context.Context, req *api.AddMySQLdExporterRequest) (*api.AddMySQLdExporterResponse, error) {
-	username := pointer.ToStringOrNil(req.Username)
-	password := pointer.ToStringOrNil(req.Password)
-	agent, err := s.s.AddMySQLdExporter(ctx, s.db, req.RunsOnNodeId, req.ServiceId, username, password)
+	agent, err := s.s.AddMySQLdExporter(ctx, s.db, req)
 	if err != nil {
 		return nil, err
 	}

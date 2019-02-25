@@ -347,7 +347,9 @@ func TestAgents(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 0)
 
-		actualNodeExporter, err := as.AddNodeExporter(ctx, db, models.PMMServerNodeID)
+		actualNodeExporter, err := as.AddNodeExporter(ctx, db, &api.AddNodeExporterRequest{
+			NodeId: models.PMMServerNodeID,
+		})
 		require.NoError(t, err)
 		expectedNodeExporter := &api.NodeExporter{
 			AgentId: "/agent_id/00000000-0000-4000-8000-000000000001",
@@ -365,7 +367,11 @@ func TestAgents(t *testing.T) {
 		n, err := ns.Add(ctx, models.GenericNodeType, "new node name", nil, nil)
 		require.NoError(t, err)
 
-		actualAgent, err = as.AddMySQLdExporter(ctx, db, n.ID(), s.ID(), pointer.ToString("username"), nil)
+		actualAgent, err = as.AddMySQLdExporter(ctx, db, &api.AddMySQLdExporterRequest{
+			RunsOnNodeId: n.ID(),
+			ServiceId:    s.ID(),
+			Username:     "username",
+		})
 		require.NoError(t, err)
 		expectedMySQLdExporter := &api.MySQLdExporter{
 			AgentId:      "/agent_id/00000000-0000-4000-8000-000000000004",
@@ -462,7 +468,9 @@ func TestAgents(t *testing.T) {
 		setup(t)
 		defer teardown(t)
 
-		_, err := as.AddNodeExporter(ctx, db, "no-such-id")
+		_, err := as.AddNodeExporter(ctx, db, &api.AddNodeExporterRequest{
+			NodeId: "no-such-id",
+		})
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Node with ID "no-such-id" not found.`), err)
 	})
 
@@ -470,7 +478,10 @@ func TestAgents(t *testing.T) {
 		setup(t)
 		defer teardown(t)
 
-		_, err := as.AddMySQLdExporter(ctx, db, models.PMMServerNodeID, "no-such-id", pointer.ToString("username"), nil)
+		_, err := as.AddMySQLdExporter(ctx, db, &api.AddMySQLdExporterRequest{
+			RunsOnNodeId: models.PMMServerNodeID,
+			ServiceId:    "no-such-id",
+		})
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "no-such-id" not found.`), err)
 	})
 

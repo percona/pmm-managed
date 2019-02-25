@@ -233,7 +233,7 @@ func (as *AgentsService) AddPMMAgent(ctx context.Context, db *reform.DB, nodeID 
 }
 
 // AddNodeExporter inserts node_exporter Agent with given parameters.
-func (as *AgentsService) AddNodeExporter(ctx context.Context, db *reform.DB, nodeID string) (*api.NodeExporter, error) {
+func (as *AgentsService) AddNodeExporter(ctx context.Context, db *reform.DB, req *api.AddNodeExporterRequest) (*api.NodeExporter, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// TODO Check runs-on Node: it must be BM, VM, DC (i.e. not remote, AWS RDS, etc.)
 
@@ -246,14 +246,17 @@ func (as *AgentsService) AddNodeExporter(ctx context.Context, db *reform.DB, nod
 		}
 
 		ns := NewNodesService(tx.Querier, as.r)
-		if _, err := ns.get(ctx, nodeID); err != nil {
+		if _, err := ns.get(ctx, req.NodeId); err != nil {
 			return err
 		}
 
 		row := &models.Agent{
 			AgentID:      id,
 			AgentType:    models.NodeExporterType,
-			RunsOnNodeID: nodeID,
+			RunsOnNodeID: req.NodeId,
+		}
+		if err := row.SetCustomLabels(req.CustomLabels); err != nil {
+			return err
 		}
 		if err := tx.Insert(row); err != nil {
 			return errors.WithStack(err)
@@ -261,7 +264,7 @@ func (as *AgentsService) AddNodeExporter(ctx context.Context, db *reform.DB, nod
 
 		err := tx.Insert(&models.AgentNode{
 			AgentID: row.AgentID,
-			NodeID:  nodeID,
+			NodeID:  req.NodeId,
 		})
 		if err != nil {
 			return errors.WithStack(err)
@@ -290,11 +293,12 @@ func (as *AgentsService) AddNodeExporter(ctx context.Context, db *reform.DB, nod
 }
 
 // AddMySQLdExporter inserts mysqld_exporter Agent with given parameters.
-func (as *AgentsService) AddMySQLdExporter(ctx context.Context, db *reform.DB, nodeID string, serviceID string, username, password *string) (*api.MySQLdExporter, error) {
+func (as *AgentsService) AddMySQLdExporter(ctx context.Context, db *reform.DB, req *api.AddMySQLdExporterRequest) (*api.MySQLdExporter, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// TODO Check runs-on Node: it must be BM, VM, DC (i.e. not remote, AWS RDS, etc.)
 
 	var res *api.MySQLdExporter
+	var pmmAgentID string
 	e := db.InTransaction(func(tx *reform.TX) error {
 		id := "/agent_id/" + uuid.New().String()
 		if err := checkUniqueID(tx.Querier, id); err != nil {
@@ -302,21 +306,24 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, db *reform.DB, n
 		}
 
 		ns := NewNodesService(tx.Querier, as.r)
-		if _, err := ns.get(ctx, nodeID); err != nil {
+		if _, err := ns.get(ctx, req.RunsOnNodeId); err != nil {
 			return err
 		}
 
 		ss := NewServicesService(tx.Querier, as.r)
-		if _, err := ss.get(ctx, serviceID); err != nil {
+		if _, err := ss.get(ctx, req.ServiceId); err != nil {
 			return err
 		}
 
 		row := &models.Agent{
 			AgentID:      id,
 			AgentType:    models.MySQLdExporterType,
-			RunsOnNodeID: nodeID,
-			Username:     username,
-			Password:     password,
+			RunsOnNodeID: req.RunsOnNodeId,
+			Username:     pointer.ToStringOrNil(req.Username),
+			Password:     pointer.ToStringOrNil(req.Password),
+		}
+		if err := row.SetCustomLabels(req.CustomLabels); err != nil {
+			return err
 		}
 		if err := tx.Insert(row); err != nil {
 			return errors.WithStack(err)
@@ -324,25 +331,22 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, db *reform.DB, n
 
 		err := tx.Insert(&models.AgentNode{
 			AgentID: row.AgentID,
-			NodeID:  nodeID,
+			NodeID:  req.RunsOnNodeId,
 		})
 		if err != nil {
 			return errors.WithStack(err)
 		}
 		err = tx.Insert(&models.AgentService{
 			AgentID:   row.AgentID,
-			ServiceID: serviceID,
+			ServiceID: req.ServiceId,
 		})
 		if err != nil {
 			return errors.WithStack(err)
 		}
 
-		pmmAgentID, err := models.PMMAgentForAgent(tx.Querier, row.AgentID)
+		pmmAgentID, err = models.PMMAgentForAgent(tx.Querier, row.AgentID)
 		if err != nil {
 			return err
-		}
-		if pmmAgentID != "" {
-			as.r.SendSetStateRequest(ctx, pmmAgentID)
 		}
 
 		agent, err := as.makeAgent(tx.Querier, row)
@@ -352,7 +356,14 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, db *reform.DB, n
 		res = agent.(*api.MySQLdExporter)
 		return nil
 	})
-	return res, e
+	if e != nil {
+		return nil, e
+	}
+
+	if pmmAgentID != "" {
+		as.r.SendSetStateRequest(ctx, pmmAgentID)
+	}
+	return res, nil
 }
 
 /*
