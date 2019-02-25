@@ -47,6 +47,7 @@ var databaseSchema = [][]string{
 			node_type VARCHAR(255) NOT NULL,
 			node_name VARCHAR(255) NOT NULL,
 			machine_id VARCHAR(255),
+			custom_labels TEXT,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			-- updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
@@ -77,6 +78,7 @@ var databaseSchema = [][]string{
 			service_type VARCHAR(255) NOT NULL,
 			service_name VARCHAR(255) NOT NULL,
 			node_id VARCHAR(255) NOT NULL,
+			custom_labels TEXT,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			-- updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
@@ -95,6 +97,7 @@ var databaseSchema = [][]string{
 			agent_id VARCHAR(255) NOT NULL,
 			agent_type VARCHAR(255) NOT NULL,
 			runs_on_node_id VARCHAR(255) NOT NULL,
+			custom_labels TEXT,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			-- updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 

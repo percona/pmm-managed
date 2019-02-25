@@ -45,17 +45,23 @@ func NewServicesService(q *reform.Querier, r registry) *ServicesService {
 }
 
 // makeService converts database row to Inventory API Service.
-func makeService(row *models.Service) api.Service {
+func makeService(row *models.Service) (api.Service, error) {
+	labels, err := row.GetCustomLabels()
+	if err != nil {
+		return nil, err
+	}
+
 	switch row.ServiceType {
 	case models.MySQLServiceType:
 		return &api.MySQLService{
-			ServiceId:   row.ServiceID,
-			ServiceName: row.ServiceName,
-			NodeId:      row.NodeID,
-			Address:     pointer.GetString(row.Address),
-			Port:        uint32(pointer.GetUint16(row.Port)),
-			UnixSocket:  pointer.GetString(row.UnixSocket),
-		}
+			ServiceId:    row.ServiceID,
+			ServiceName:  row.ServiceName,
+			NodeId:       row.NodeID,
+			Address:      pointer.GetString(row.Address),
+			Port:         uint32(pointer.GetUint16(row.Port)),
+			UnixSocket:   pointer.GetString(row.UnixSocket),
+			CustomLabels: labels,
+		}, nil
 
 	default:
 		panic(fmt.Errorf("unhandled Service type %s", row.ServiceType))
@@ -116,7 +122,10 @@ func (ss *ServicesService) List(ctx context.Context) ([]api.Service, error) {
 	res := make([]api.Service, len(structs))
 	for i, str := range structs {
 		row := str.(*models.Service)
-		res[i] = makeService(row)
+		res[i], err = makeService(row)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return res, nil
 }
@@ -127,7 +136,7 @@ func (ss *ServicesService) Get(ctx context.Context, id string) (api.Service, err
 	if err != nil {
 		return nil, err
 	}
-	return makeService(row), nil
+	return makeService(row)
 }
 
 // AddMySQL inserts MySQL Service with given parameters.
@@ -160,7 +169,11 @@ func (ss *ServicesService) AddMySQL(ctx context.Context, name string, nodeID str
 	if err := ss.q.Insert(row); err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return makeService(row).(*api.MySQLService), nil
+	res, err := makeService(row)
+	if err != nil {
+		return nil, err
+	}
+	return res.(*api.MySQLService), nil
 }
 
 // Change updates Service by ID.
@@ -181,7 +194,7 @@ func (ss *ServicesService) Change(ctx context.Context, id string, name string) (
 	if err = ss.q.Update(row); err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return makeService(row), nil
+	return makeService(row)
 }
 
 // Remove deletes Service by ID.

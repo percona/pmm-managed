@@ -26,7 +26,7 @@ import (
 // registry is a subset of methods of agents.Registry used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
 type registry interface {
-	SendSetStateRequest(ctx context.Context, agentID string)
+	SendSetStateRequest(ctx context.Context, pmmAgentID string)
 	IsConnected(pmmAgentID string) bool
-	Kick(ctx context.Context, agentID string)
+	Kick(ctx context.Context, pmmAgentID string)
 }

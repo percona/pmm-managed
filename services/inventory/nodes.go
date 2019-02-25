@@ -45,29 +45,51 @@ func NewNodesService(q *reform.Querier, r registry) *NodesService {
 }
 
 // makeNode converts database row to Inventory API Node.
-func makeNode(row *models.Node) api.Node {
+func makeNode(row *models.Node) (api.Node, error) {
+	labels, err := row.GetCustomLabels()
+	if err != nil {
+		return nil, err
+	}
+
 	switch row.NodeType {
 	case models.PMMServerNodeType: // FIXME remove this branch
 		fallthrough
 
 	case models.GenericNodeType:
 		return &api.GenericNode{
-			NodeId:   row.NodeID,
-			NodeName: row.NodeName,
-		}
+			NodeId:        row.NodeID,
+			NodeName:      row.NodeName,
+			MachineId:     pointer.GetString(row.MachineID),
+			Distro:        pointer.GetString(row.Distro),
+			DistroVersion: pointer.GetString(row.DistroVersion),
+			CustomLabels:  labels,
+		}, nil
+
+	case models.ContainerNodeType:
+		return &api.ContainerNode{
+			NodeId:              row.NodeID,
+			NodeName:            row.NodeName,
+			MachineId:           pointer.GetString(row.MachineID),
+			DockerContainerId:   pointer.GetString(row.DockerContainerID),
+			DockerContainerName: pointer.GetString(row.DockerContainerName),
+			CustomLabels:        labels,
+		}, nil
 
 	case models.RemoteNodeType:
 		return &api.RemoteNode{
-			NodeId:   row.NodeID,
-			NodeName: row.NodeName,
-		}
+			NodeId:       row.NodeID,
+			NodeName:     row.NodeName,
+			CustomLabels: labels,
+		}, nil
 
 	case models.RemoteAmazonRDSNodeType:
 		return &api.RemoteAmazonRDSNode{
-			NodeId:   row.NodeID,
-			NodeName: row.NodeName,
-			Region:   pointer.GetString(row.Region),
-		}
+			NodeId:       row.NodeID,
+			NodeName:     row.NodeName,
+			Instance:     pointer.GetString(row.Instance),
+			Region:       pointer.GetString(row.Region),
+			CustomLabels: labels,
+		}, nil
 
 	default:
 		panic(fmt.Errorf("unhandled Node type %s", row.NodeType))
@@ -152,7 +174,10 @@ func (ns *NodesService) List(ctx context.Context) ([]api.Node, error) {
 	res := make([]api.Node, len(structs))
 	for i, str := range structs {
 		row := str.(*models.Node)
-		res[i] = makeNode(row)
+		res[i], err = makeNode(row)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return res, nil
 }
@@ -163,7 +188,7 @@ func (ns *NodesService) Get(ctx context.Context, id string) (api.Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	return makeNode(row), nil
+	return makeNode(row)
 }
 
 // Add inserts Node with given parameters. ID will be generated.
@@ -195,7 +220,7 @@ func (ns *NodesService) Add(ctx context.Context, nodeType models.NodeType, name 
 	if err := ns.q.Insert(row); err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return makeNode(row), nil
+	return makeNode(row)
 }
 
 // Change updates Node by ID.
@@ -216,7 +241,7 @@ func (ns *NodesService) Change(ctx context.Context, id string, name string) (api
 	if err = ns.q.Update(row); err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return makeNode(row), nil
+	return makeNode(row)
 }
 
 // Remove deletes Node by ID.

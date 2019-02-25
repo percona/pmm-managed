@@ -27,7 +27,7 @@ func (v *serviceTableType) Name() string {
 
 // Columns returns a new slice of column names for that view or table in SQL database.
 func (v *serviceTableType) Columns() []string {
-	return []string{"service_id", "service_type", "service_name", "node_id", "created_at", "address", "port", "unix_socket"}
+	return []string{"service_id", "service_type", "service_name", "node_id", "custom_labels", "created_at", "address", "port", "unix_socket"}
 }
 
 // NewStruct makes a new struct for that view or table.
@@ -47,21 +47,22 @@ func (v *serviceTableType) PKColumnIndex() uint {
 
 // ServiceTable represents services view or table in SQL database.
 var ServiceTable = &serviceTableType{
-	s: parse.StructInfo{Type: "Service", SQLSchema: "", SQLName: "services", Fields: []parse.FieldInfo{{Name: "ServiceID", Type: "string", Column: "service_id"}, {Name: "ServiceType", Type: "ServiceType", Column: "service_type"}, {Name: "ServiceName", Type: "string", Column: "service_name"}, {Name: "NodeID", Type: "string", Column: "node_id"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "Address", Type: "*string", Column: "address"}, {Name: "Port", Type: "*uint16", Column: "port"}, {Name: "UnixSocket", Type: "*string", Column: "unix_socket"}}, PKFieldIndex: 0},
+	s: parse.StructInfo{Type: "Service", SQLSchema: "", SQLName: "services", Fields: []parse.FieldInfo{{Name: "ServiceID", Type: "string", Column: "service_id"}, {Name: "ServiceType", Type: "ServiceType", Column: "service_type"}, {Name: "ServiceName", Type: "string", Column: "service_name"}, {Name: "NodeID", Type: "string", Column: "node_id"}, {Name: "CustomLabels", Type: "[]uint8", Column: "custom_labels"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "Address", Type: "*string", Column: "address"}, {Name: "Port", Type: "*uint16", Column: "port"}, {Name: "UnixSocket", Type: "*string", Column: "unix_socket"}}, PKFieldIndex: 0},
 	z: new(Service).Values(),
 }
 
 // String returns a string representation of this struct or record.
 func (s Service) String() string {
-	res := make([]string, 8)
+	res := make([]string, 9)
 	res[0] = "ServiceID: " + reform.Inspect(s.ServiceID, true)
 	res[1] = "ServiceType: " + reform.Inspect(s.ServiceType, true)
 	res[2] = "ServiceName: " + reform.Inspect(s.ServiceName, true)
 	res[3] = "NodeID: " + reform.Inspect(s.NodeID, true)
-	res[4] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
-	res[5] = "Address: " + reform.Inspect(s.Address, true)
-	res[6] = "Port: " + reform.Inspect(s.Port, true)
-	res[7] = "UnixSocket: " + reform.Inspect(s.UnixSocket, true)
+	res[4] = "CustomLabels: " + reform.Inspect(s.CustomLabels, true)
+	res[5] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
+	res[6] = "Address: " + reform.Inspect(s.Address, true)
+	res[7] = "Port: " + reform.Inspect(s.Port, true)
+	res[8] = "UnixSocket: " + reform.Inspect(s.UnixSocket, true)
 	return strings.Join(res, ", ")
 }
 
@@ -73,6 +74,7 @@ func (s *Service) Values() []interface{} {
 		s.ServiceType,
 		s.ServiceName,
 		s.NodeID,
+		s.CustomLabels,
 		s.CreatedAt,
 		s.Address,
 		s.Port,
@@ -88,6 +90,7 @@ func (s *Service) Pointers() []interface{} {
 		&s.ServiceType,
 		&s.ServiceName,
 		&s.NodeID,
+		&s.CustomLabels,
 		&s.CreatedAt,
 		&s.Address,
 		&s.Port,
