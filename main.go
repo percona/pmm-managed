@@ -223,10 +223,6 @@ func runJSONServer(ctx context.Context, logs *logs.Logs) {
 		api.RegisterBaseHandlerFromEndpoint,
 		api.RegisterDemoHandlerFromEndpoint,
 		api.RegisterScrapeConfigsHandlerFromEndpoint,
-		api.RegisterRDSHandlerFromEndpoint,
-		api.RegisterMySQLHandlerFromEndpoint,
-		api.RegisterPostgreSQLHandlerFromEndpoint,
-		api.RegisterRemoteHandlerFromEndpoint,
 		api.RegisterLogsHandlerFromEndpoint,
 		api.RegisterAnnotationsHandlerFromEndpoint,
 
