@@ -352,6 +352,70 @@ func (as *AgentsService) SetDisabled(ctx context.Context, id string, disabled bo
 }
 */
 
+// AddMongoDBExporter inserts mongodb_exporter Agent with given parameters.
+func (as *AgentsService) AddMongoDBExporter(ctx context.Context, nodeID string, serviceID string, connectionString *string) (*api.MongoDBExporter, error) {
+	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
+	// TODO Check runs-on Node: it must be BM, VM, DC (i.e. not remote, AWS RDS, etc.)
+
+	id := "/agent_id/" + uuid.New().String()
+	if err := as.checkUniqueID(ctx, id); err != nil {
+		return nil, err
+	}
+
+	ns := NewNodesService(as.q, as.r)
+	if _, err := ns.get(ctx, nodeID); err != nil {
+		return nil, err
+	}
+
+	ss := NewServicesService(as.q, as.r)
+	if _, err := ss.get(ctx, serviceID); err != nil {
+		return nil, err
+	}
+
+	row := &models.Agent{
+		AgentID:          id,
+		AgentType:        models.MySQLdExporterType,
+		RunsOnNodeID:     nodeID,
+		ConnectionString: connectionString,
+	}
+	if err := as.q.Insert(row); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	err := as.q.Insert(&models.AgentNode{
+		AgentID: row.AgentID,
+		NodeID:  nodeID,
+	})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	err = as.q.Insert(&models.AgentService{
+		AgentID:   row.AgentID,
+		ServiceID: serviceID,
+	})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	// send new state to pmm-agents
+	agents, err := models.AgentsRunningOnNode(as.q, nodeID)
+	if err != nil {
+		return nil, err
+	}
+	for _, agent := range agents {
+		if agent.AgentType != models.PMMAgentType {
+			continue
+		}
+		as.r.SendSetStateRequest(ctx, agent.AgentID)
+	}
+
+	agent, err := as.makeAgent(ctx, row)
+	if err != nil {
+		return nil, err
+	}
+	return agent.(*api.MongoDBExporter), nil
+}
+
 // Remove deletes Agent by ID.
 func (as *AgentsService) Remove(ctx context.Context, id string) error {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416

@@ -141,8 +141,17 @@ func (s *AgentsServer) AddExternalExporter(ctx context.Context, req *api.AddExte
 }
 
 // AddMongoDBExporter adds mongodb_exporter Agent.
-func (s *AgentsServer) AddMongoDBExporter(context.Context, *api.AddMongoDBExporterRequest) (*api.AddMongoDBExporterResponse, error) {
-	panic("not implemented yet")
+func (s *AgentsServer) AddMongoDBExporter(ctx context.Context, req *api.AddMongoDBExporterRequest) (*api.AddMongoDBExporterResponse, error) {
+	connectionString := pointer.ToStringOrNil(req.ConnectionString)
+	agent, err := s.Agents.AddMongoDBExporter(ctx, req.RunsOnNodeId, req.ServiceId, connectionString)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &api.AddMongoDBExporterResponse{
+		MongodbExporter: agent,
+	}
+	return res, nil
 }
 
 // RemoveAgent removes Agent.

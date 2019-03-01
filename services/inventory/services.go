@@ -185,7 +185,7 @@ func (ss *ServicesService) AddMongoDB(ctx context.Context, name string, nodeID s
 
 	row := &models.Service{
 		ServiceID:   id,
-		ServiceType: models.MySQLServiceType,
+		ServiceType: models.MongoDBServiceType,
 		ServiceName: name,
 		NodeID:      nodeID,
 	}

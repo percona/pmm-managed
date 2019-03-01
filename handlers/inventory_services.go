@@ -43,6 +43,8 @@ func (s *ServicesServer) ListServices(ctx context.Context, req *api.ListServices
 		switch service := service.(type) {
 		case *api.MySQLService:
 			res.Mysql = append(res.Mysql, service)
+		case *api.MongoDBService:
+			res.Mongodb = append(res.Mongodb, service)
 		default:
 			panic(fmt.Errorf("unhandled inventory Service type %T", service))
 		}
@@ -61,6 +63,8 @@ func (s *ServicesServer) GetService(ctx context.Context, req *api.GetServiceRequ
 	switch service := service.(type) {
 	case *api.MySQLService:
 		res.Service = &api.GetServiceResponse_Mysql{Mysql: service}
+	case *api.MongoDBService:
+		res.Service = &api.GetServiceResponse_Mongodb{Mongodb: service}
 	default:
 		panic(fmt.Errorf("unhandled inventory Service type %T", service))
 	}
