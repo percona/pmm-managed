@@ -85,6 +85,24 @@ func (as *AgentsService) makeAgent(ctx context.Context, row *models.Agent) (api.
 			ListenPort:   uint32(pointer.GetUint16(row.ListenPort)),
 		}, nil
 
+	case models.MongoDBExporterType:
+		services, err := models.ServicesForAgent(as.q, row.AgentID)
+		if err != nil {
+			return nil, err
+		}
+		if len(services) != 1 {
+			return nil, errors.Errorf("expected exactly one Services, got %d", len(services))
+		}
+
+		return &api.MongoDBExporter{
+			AgentId:          row.AgentID,
+			RunsOnNodeId:     row.RunsOnNodeID,
+			ServiceId:        services[0].ServiceID,
+			ConnectionString: pointer.GetString(row.ConnectionString),
+			Status:           api.AgentStatus(api.AgentStatus_value[row.Status]),
+			ListenPort:       uint32(pointer.GetUint16(row.ListenPort)),
+		}, nil
+
 	default:
 		panic(fmt.Errorf("unhandled Agent type %s", row.AgentType))
 	}
@@ -374,7 +392,7 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, nodeID string, 
 
 	row := &models.Agent{
 		AgentID:          id,
-		AgentType:        models.MySQLdExporterType,
+		AgentType:        models.MongoDBExporterType,
 		RunsOnNodeID:     nodeID,
 		ConnectionString: connectionString,
 	}

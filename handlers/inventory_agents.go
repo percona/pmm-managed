@@ -56,6 +56,8 @@ func (s *AgentsServer) ListAgents(ctx context.Context, req *api.ListAgentsReques
 			res.RdsExporter = append(res.RdsExporter, agent)
 		case *api.ExternalExporter:
 			res.ExternalExporter = append(res.ExternalExporter, agent)
+		case *api.MongoDBExporter:
+			res.MongodbExporter = append(res.MongodbExporter, agent)
 		default:
 			panic(fmt.Errorf("unhandled inventory Agent type %T", agent))
 		}
@@ -82,6 +84,8 @@ func (s *AgentsServer) GetAgent(ctx context.Context, req *api.GetAgentRequest) (
 		res.Agent = &api.GetAgentResponse_RdsExporter{RdsExporter: agent}
 	case *api.ExternalExporter:
 		res.Agent = &api.GetAgentResponse_ExternalExporter{ExternalExporter: agent}
+	case *api.MongoDBExporter:
+		res.Agent = &api.GetAgentResponse_MongodbExporter{MongodbExporter: agent}
 	default:
 		panic(fmt.Errorf("unhandled inventory Agent type %T", agent))
 	}
