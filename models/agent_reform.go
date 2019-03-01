@@ -27,7 +27,7 @@ func (v *agentTableType) Name() string {
 
 // Columns returns a new slice of column names for that view or table in SQL database.
 func (v *agentTableType) Columns() []string {
-	return []string{"agent_id", "agent_type", "runs_on_node_id", "created_at", "status", "listen_port", "version", "username", "password", "connection_string", "metrics_url"}
+	return []string{"agent_id", "agent_type", "runs_on_node_id", "custom_labels", "created_at", "status", "listen_port", "version", "username", "password", "connection_string", "metrics_url"}
 }
 
 // NewStruct makes a new struct for that view or table.
@@ -47,24 +47,25 @@ func (v *agentTableType) PKColumnIndex() uint {
 
 // AgentTable represents agents view or table in SQL database.
 var AgentTable = &agentTableType{
-	s: parse.StructInfo{Type: "Agent", SQLSchema: "", SQLName: "agents", Fields: []parse.FieldInfo{{Name: "AgentID", Type: "string", Column: "agent_id"}, {Name: "AgentType", Type: "AgentType", Column: "agent_type"}, {Name: "RunsOnNodeID", Type: "string", Column: "runs_on_node_id"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "Status", Type: "string", Column: "status"}, {Name: "ListenPort", Type: "*uint16", Column: "listen_port"}, {Name: "Version", Type: "*string", Column: "version"}, {Name: "Username", Type: "*string", Column: "username"}, {Name: "Password", Type: "*string", Column: "password"}, {Name: "ConnectionString", Type: "*string", Column: "connection_string"}, {Name: "MetricsURL", Type: "*string", Column: "metrics_url"}}, PKFieldIndex: 0},
+	s: parse.StructInfo{Type: "Agent", SQLSchema: "", SQLName: "agents", Fields: []parse.FieldInfo{{Name: "AgentID", Type: "string", Column: "agent_id"}, {Name: "AgentType", Type: "AgentType", Column: "agent_type"}, {Name: "RunsOnNodeID", Type: "string", Column: "runs_on_node_id"}, {Name: "CustomLabels", Type: "[]uint8", Column: "custom_labels"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "Status", Type: "string", Column: "status"}, {Name: "ListenPort", Type: "*uint16", Column: "listen_port"}, {Name: "Version", Type: "*string", Column: "version"}, {Name: "Username", Type: "*string", Column: "username"}, {Name: "Password", Type: "*string", Column: "password"}, {Name: "ConnectionString", Type: "*string", Column: "connection_string"}, {Name: "MetricsURL", Type: "*string", Column: "metrics_url"}}, PKFieldIndex: 0},
 	z: new(Agent).Values(),
 }
 
 // String returns a string representation of this struct or record.
 func (s Agent) String() string {
-	res := make([]string, 11)
+	res := make([]string, 12)
 	res[0] = "AgentID: " + reform.Inspect(s.AgentID, true)
 	res[1] = "AgentType: " + reform.Inspect(s.AgentType, true)
 	res[2] = "RunsOnNodeID: " + reform.Inspect(s.RunsOnNodeID, true)
-	res[3] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
-	res[4] = "Status: " + reform.Inspect(s.Status, true)
-	res[5] = "ListenPort: " + reform.Inspect(s.ListenPort, true)
-	res[6] = "Version: " + reform.Inspect(s.Version, true)
-	res[7] = "Username: " + reform.Inspect(s.Username, true)
-	res[8] = "Password: " + reform.Inspect(s.Password, true)
-	res[9] = "ConnectionString: " + reform.Inspect(s.ConnectionString, true)
-	res[10] = "MetricsURL: " + reform.Inspect(s.MetricsURL, true)
+	res[3] = "CustomLabels: " + reform.Inspect(s.CustomLabels, true)
+	res[4] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
+	res[5] = "Status: " + reform.Inspect(s.Status, true)
+	res[6] = "ListenPort: " + reform.Inspect(s.ListenPort, true)
+	res[7] = "Version: " + reform.Inspect(s.Version, true)
+	res[8] = "Username: " + reform.Inspect(s.Username, true)
+	res[9] = "Password: " + reform.Inspect(s.Password, true)
+	res[10] = "ConnectionString: " + reform.Inspect(s.ConnectionString, true)
+	res[11] = "MetricsURL: " + reform.Inspect(s.MetricsURL, true)
 	return strings.Join(res, ", ")
 }
 
@@ -75,6 +76,7 @@ func (s *Agent) Values() []interface{} {
 		s.AgentID,
 		s.AgentType,
 		s.RunsOnNodeID,
+		s.CustomLabels,
 		s.CreatedAt,
 		s.Status,
 		s.ListenPort,
@@ -93,6 +95,7 @@ func (s *Agent) Pointers() []interface{} {
 		&s.AgentID,
 		&s.AgentType,
 		&s.RunsOnNodeID,
+		&s.CustomLabels,
 		&s.CreatedAt,
 		&s.Status,
 		&s.ListenPort,
