@@ -32,17 +32,19 @@ env:
 
   matrix:
     # what we currently use in PMM
-    - PROMETHEUS_IMAGE=prom/prometheus:v2.3.2
+    - PROMETHEUS_IMAGE=prom/prometheus:v2.7.0
       GRAFANA_IMAGE=grafana/grafana:5.1.3
+      POSTGRES_IMAGE=postgres:10
 
     # latest released version
     - PROMETHEUS_IMAGE=prom/prometheus:latest
       GRAFANA_IMAGE=grafana/grafana:latest
+      POSTGRES_IMAGE=postgres:latest
 
     # current master
-    # TODO enable this configuration: https://jira.percona.com/browse/PMM-3040
-    # - PROMETHEUS_IMAGE=prom/prometheus:master
-    #   GRAFANA_IMAGE=grafana/grafana:master
+    - PROMETHEUS_IMAGE=prom/prometheus:master
+      GRAFANA_IMAGE=grafana/grafana:master
+      POSTGRES_IMAGE=postgres:latest
 
 before_install:
   # install binary protoc release
