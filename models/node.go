@@ -80,6 +80,7 @@ type Node struct {
 	NodeName     string    `reform:"node_name"`
 	MachineID    *string   `reform:"machine_id"`
 	CustomLabels []byte    `reform:"custom_labels"`
+	Address      *string   `reform:"address"`
 	CreatedAt    time.Time `reform:"created_at"`
 	// UpdatedAt time.Time `reform:"updated_at"`
 
@@ -89,8 +90,7 @@ type Node struct {
 	DockerContainerID   *string `reform:"docker_container_id"`
 	DockerContainerName *string `reform:"docker_container_name"`
 
-	Instance *string `reform:"instance"`
-	Region   *string `reform:"region"`
+	Region *string `reform:"region"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.

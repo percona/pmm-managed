@@ -33,7 +33,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/grpc-ecosystem/go-grpc-prometheus"
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	agentAPI "github.com/percona/pmm/api/agent"
 	inventoryAPI "github.com/percona/pmm/api/inventory"
@@ -376,14 +376,6 @@ func main() {
 		cancel()
 	}()
 
-	prometheus, err := prometheus.NewService(*prometheusConfigF, *prometheusURLF, *promtoolF)
-	if err == nil {
-		err = prometheus.Check(ctx)
-	}
-	if err != nil {
-		l.Panicf("Prometheus service problem: %+v", err)
-	}
-
 	sqlDB, err := models.OpenDB(*dbNameF, *dbUsernameF, *dbPasswordF, l.Debugf)
 	if err != nil {
 		l.Panicf("Failed to connect to database: %+v", err)
@@ -398,7 +390,15 @@ func main() {
 	defer postgresDB.Close()
 	pdb := reform.NewDB(postgresDB, reformPostgreSQL.Dialect, nil)
 
-	agentsRegistry := agents.NewRegistry(db)
+	prometheus, err := prometheus.NewService(*prometheusConfigF, *promtoolF, db, *prometheusURLF)
+	if err == nil {
+		err = prometheus.Check(ctx)
+	}
+	if err != nil {
+		l.Panicf("Prometheus service problem: %+v", err)
+	}
+
+	agentsRegistry := agents.NewRegistry(db, prometheus)
 	logs := logs.New(version.Version, nil)
 
 	deps := &serviceDependencies{

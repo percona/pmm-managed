@@ -92,6 +92,11 @@ func (s *servicesServer) AddMySQLService(ctx context.Context, req *api.AddMySQLS
 	return res, nil
 }
 
+// AddMongoDBService adds MongoDB Service.
+func (s *servicesServer) AddMongoDBService(ctx context.Context, req *api.AddMongoDBServiceRequest) (*api.AddMongoDBServiceResponse, error) {
+	panic("not implemented yet")
+}
+
 // AddAmazonRDSMySQLService adds AmazonRDSMySQL Service.
 func (s *servicesServer) AddAmazonRDSMySQLService(ctx context.Context, req *api.AddAmazonRDSMySQLServiceRequest) (*api.AddAmazonRDSMySQLServiceResponse, error) {
 	panic("not implemented yet")

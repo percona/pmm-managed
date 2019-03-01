@@ -136,6 +136,11 @@ func (s *agentsServer) AddMySQLdExporter(ctx context.Context, req *api.AddMySQLd
 	return res, nil
 }
 
+// AddMongoDBExporter adds mongodb_exporter Agent.
+func (s *agentsServer) AddMongoDBExporter(ctx context.Context, req *api.AddMongoDBExporterRequest) (*api.AddMongoDBExporterResponse, error) {
+	panic("not implemented yet")
+}
+
 // AddRDSExporter adds rds_exporter Agent.
 func (s *agentsServer) AddRDSExporter(ctx context.Context, req *api.AddRDSExporterRequest) (*api.AddRDSExporterResponse, error) {
 	panic("not implemented yet")

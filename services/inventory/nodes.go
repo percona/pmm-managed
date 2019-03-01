@@ -63,6 +63,7 @@ func makeNode(row *models.Node) (api.Node, error) {
 			Distro:        pointer.GetString(row.Distro),
 			DistroVersion: pointer.GetString(row.DistroVersion),
 			CustomLabels:  labels,
+			Address:       pointer.GetString(row.Address),
 		}, nil
 
 	case models.ContainerNodeType:
@@ -86,7 +87,7 @@ func makeNode(row *models.Node) (api.Node, error) {
 		return &api.RemoteAmazonRDSNode{
 			NodeId:       row.NodeID,
 			NodeName:     row.NodeName,
-			Instance:     pointer.GetString(row.Instance),
+			Instance:     pointer.GetString(row.Address),
 			Region:       pointer.GetString(row.Region),
 			CustomLabels: labels,
 		}, nil
@@ -152,7 +153,7 @@ func (ns *NodesService) checkUniqueInstanceRegion(ctx context.Context, instance,
 		return status.Error(codes.InvalidArgument, "Empty Node region.")
 	}
 
-	tail := fmt.Sprintf("WHERE instance = %s AND region = %s LIMIT 1", ns.q.Placeholder(1), ns.q.Placeholder(2))
+	tail := fmt.Sprintf("WHERE address = %s AND region = %s LIMIT 1", ns.q.Placeholder(1), ns.q.Placeholder(2))
 	_, err := ns.q.SelectOneFrom(models.NodeTable, tail, instance, region)
 	switch err {
 	case nil:
@@ -192,7 +193,7 @@ func (ns *NodesService) Get(ctx context.Context, id string) (api.Node, error) {
 }
 
 // Add inserts Node with given parameters. ID will be generated.
-func (ns *NodesService) Add(ctx context.Context, nodeType models.NodeType, name string, instance, region *string) (api.Node, error) {
+func (ns *NodesService) Add(ctx context.Context, nodeType models.NodeType, name string, address, region *string) (api.Node, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// No hostname for Container, etc.
 
@@ -204,8 +205,8 @@ func (ns *NodesService) Add(ctx context.Context, nodeType models.NodeType, name 
 	if err := ns.checkUniqueName(ctx, name); err != nil {
 		return nil, err
 	}
-	if instance != nil && region != nil {
-		if err := ns.checkUniqueInstanceRegion(ctx, *instance, *region); err != nil {
+	if address != nil && region != nil {
+		if err := ns.checkUniqueInstanceRegion(ctx, *address, *region); err != nil {
 			return nil, err
 		}
 	}
@@ -214,7 +215,7 @@ func (ns *NodesService) Add(ctx context.Context, nodeType models.NodeType, name 
 		NodeID:   id,
 		NodeType: nodeType,
 		NodeName: name,
-		Instance: instance,
+		Address:  address,
 		Region:   region,
 	}
 	if err := ns.q.Insert(row); err != nil {
