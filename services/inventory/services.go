@@ -182,7 +182,7 @@ func (ss *ServicesService) AddMySQL(ctx context.Context, name string, nodeID str
 }
 
 // AddMongoDB inserts MongoDB Service with given parameters.
-func (ss *ServicesService) AddMongoDB(ctx context.Context, name string, nodeID string) (*api.MongoDBService, error) {
+func (ss *ServicesService) AddMongoDB(ctx context.Context, name, nodeID string) (*api.MongoDBService, error) {
 
 	id := "/service_id/" + uuid.New().String()
 	if err := ss.checkUniqueID(ctx, id); err != nil {
