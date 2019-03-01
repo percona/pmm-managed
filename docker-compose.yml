@@ -2,7 +2,7 @@
 version: '3'
 services:
   prometheus:
-    image: ${PROMETHEUS_IMAGE:-prom/prometheus:v2.7.0}
+    image: ${PROMETHEUS_IMAGE:-prom/prometheus:v2.7.1}
     command: [ "--config.file=/etc/prometheus/prometheus.yml",
                "--log.level=debug",
                "--storage.tsdb.path=/prometheus",
