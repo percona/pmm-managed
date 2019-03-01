@@ -472,7 +472,7 @@
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:5eab05c200be9ae1723adaf4e0c0838dfc735ffa35d3010e09326bb5c2cd8584"
+  digest = "1:69c57ae0780305ccf6ec7993e702241ac512adbde525376e878388b21940a525"
   name = "github.com/percona/pmm"
   packages = [
     "api/agent",
@@ -480,7 +480,7 @@
     "version",
   ]
   pruneopts = "T"
-  revision = "1455d2d4180dbce34ee026127b2dc4dbc357a411"
+  revision = "5b600f9677dcab39e3056f575535dc5613fe7de4"
 
 [[projects]]
   digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
@@ -841,7 +841,6 @@
     "github.com/percona/pmm/api/inventory",
     "github.com/percona/pmm/version",
     "github.com/pkg/errors",
-    "github.com/pmezard/go-difflib/difflib",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/prometheus/common/model",
