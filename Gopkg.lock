@@ -402,7 +402,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "0:"
+  digest = "1:11e2954742a78dc77b43bb339a755cd787f10c69047056e0a884a48e64d25af9"
   name = "github.com/hashicorp/serf"
   packages = ["coordinate"]
   pruneopts = "T"
@@ -529,7 +529,7 @@
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:69c57ae0780305ccf6ec7993e702241ac512adbde525376e878388b21940a525"
+  digest = "1:cec9e5a39e58916753b59b28f49fa1a8f17c5f873d74ee22d71d613eb3a42ae3"
   name = "github.com/percona/pmm"
   packages = [
     "api/agent",
@@ -537,7 +537,7 @@
     "version",
   ]
   pruneopts = "T"
-  revision = "5b600f9677dcab39e3056f575535dc5613fe7de4"
+  revision = "69a929e5b4296f140b0eb00e2795d043aa75c423"
 
 [[projects]]
   digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
