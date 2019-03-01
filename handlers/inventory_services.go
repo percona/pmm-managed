@@ -71,8 +71,7 @@ func (s *ServicesServer) GetService(ctx context.Context, req *api.GetServiceRequ
 func (s *ServicesServer) AddMySQLService(ctx context.Context, req *api.AddMySQLServiceRequest) (*api.AddMySQLServiceResponse, error) {
 	address := pointer.ToStringOrNil(req.Address)
 	port := pointer.ToUint16OrNil(uint16(req.Port))
-	unixSocket := pointer.ToStringOrNil(req.UnixSocket)
-	service, err := s.Services.AddMySQL(ctx, req.ServiceName, req.NodeId, address, port, unixSocket)
+	service, err := s.Services.AddMySQL(ctx, req.ServiceName, req.NodeId, address, port)
 	if err != nil {
 		return nil, err
 	}
@@ -104,6 +103,18 @@ func (s *ServicesServer) ChangeMySQLService(ctx context.Context, req *api.Change
 // ChangeAmazonRDSMySQLService changes AmazonRDSMySQL Service.
 func (s *ServicesServer) ChangeAmazonRDSMySQLService(ctx context.Context, req *api.ChangeAmazonRDSMySQLServiceRequest) (*api.ChangeAmazonRDSMySQLServiceResponse, error) {
 	panic("not implemented yet")
+}
+
+func (s *ServicesServer) AddMongoDBService(ctx context.Context, req *api.AddMongoDBServiceRequest) (*api.AddMongoDBServiceResponse, error) {
+	service, err := s.Services.AddMongoDB(ctx, req.ServiceName, req.NodeId)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &api.AddMongoDBServiceResponse{
+		Mongodb: service,
+	}
+	return res, nil
 }
 
 // RemoveService removes Service without any Agents.

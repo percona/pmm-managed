@@ -140,6 +140,11 @@ func (s *AgentsServer) AddExternalExporter(ctx context.Context, req *api.AddExte
 	panic("not implemented yet")
 }
 
+// AddMongoDBExporter adds mongodb_exporter Agent.
+func (s *AgentsServer) AddMongoDBExporter(context.Context, *api.AddMongoDBExporterRequest) (*api.AddMongoDBExporterResponse, error) {
+	panic("not implemented yet")
+}
+
 // RemoveAgent removes Agent.
 func (s *AgentsServer) RemoveAgent(ctx context.Context, req *api.RemoveAgentRequest) (*api.RemoveAgentResponse, error) {
 	if err := s.Agents.Remove(ctx, req.AgentId); err != nil {
