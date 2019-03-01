@@ -1,2 +1,34 @@
 # Managed by pmm-managed. DO NOT EDIT.
 ---
+global:
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  evaluation_interval: 1m
+scrape_configs:
+- job_name: prometheus
+  scrape_interval: 1s
+  scrape_timeout: 1s
+  metrics_path: /metrics
+  static_configs:
+  - targets:
+    - 127.0.0.1:9090
+    labels:
+      instance: pmm-server
+- job_name: grafana
+  scrape_interval: 5s
+  scrape_timeout: 4s
+  metrics_path: /metrics
+  static_configs:
+  - targets:
+    - 127.0.0.1:3000
+    labels:
+      instance: pmm-server
+- job_name: pmm-managed
+  scrape_interval: 10s
+  scrape_timeout: 5s
+  metrics_path: /debug/metrics
+  static_configs:
+  - targets:
+    - 127.0.0.1:7773
+    labels:
+      instance: pmm-server

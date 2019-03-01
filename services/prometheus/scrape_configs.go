@@ -40,7 +40,7 @@ func scrapeConfigForPrometheus() *config.ScrapeConfig {
 		JobName:        "prometheus",
 		ScrapeInterval: model.Duration(time.Second),
 		ScrapeTimeout:  model.Duration(time.Second),
-		MetricsPath:    "/prometheus/metrics",
+		MetricsPath:    "/metrics",
 		ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 			StaticConfigs: []*targetgroup.Group{{
 				Targets: []model.LabelSet{{addressLabel: "127.0.0.1:9090"}},
@@ -59,6 +59,21 @@ func scrapeConfigForGrafana() *config.ScrapeConfig {
 		ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 			StaticConfigs: []*targetgroup.Group{{
 				Targets: []model.LabelSet{{addressLabel: "127.0.0.1:3000"}},
+				Labels:  model.LabelSet{"instance": "pmm-server"},
+			}},
+		},
+	}
+}
+
+func scrapeConfigForPMMManaged() *config.ScrapeConfig {
+	return &config.ScrapeConfig{
+		JobName:        "pmm-managed",
+		ScrapeInterval: model.Duration(10 * time.Second),
+		ScrapeTimeout:  model.Duration(5 * time.Second),
+		MetricsPath:    "/debug/metrics",
+		ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
+			StaticConfigs: []*targetgroup.Group{{
+				Targets: []model.LabelSet{{addressLabel: "127.0.0.1:7773"}},
 				Labels:  model.LabelSet{"instance": "pmm-server"},
 			}},
 		},

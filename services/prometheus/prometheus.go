@@ -107,6 +107,7 @@ func (svc *Service) marshalConfig(ctx context.Context) ([]byte, error) {
 		ScrapeConfigs: []*config.ScrapeConfig{
 			scrapeConfigForPrometheus(),
 			scrapeConfigForGrafana(),
+			scrapeConfigForPMMManaged(),
 		},
 	}
 
