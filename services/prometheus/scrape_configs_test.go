@@ -21,9 +21,11 @@ import (
 	"time"
 
 	"github.com/AlekSi/pointer"
+	"github.com/pmezard/go-difflib/difflib"
 	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v2"
 
 	"github.com/percona/pmm-managed/models"
 	config_util "github.com/percona/pmm-managed/services/prometheus/internal/common/config"
@@ -36,10 +38,13 @@ func TestScrapeConfig(t *testing.T) {
 	t.Run("scrapeConfigsForMySQLdExporter", func(t *testing.T) {
 		t.Run("Normal", func(t *testing.T) {
 			node := &models.Node{
+				NodeID:  "/node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d",
 				Address: pointer.ToString("1.2.3.4"),
 			}
 			service := &models.Service{
-				Address: pointer.ToString("5.6.7.8"),
+				ServiceID: "/service_id/014647c3-b2f5-44eb-94f4-d943260a968c",
+				NodeID:    "/node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d",
+				Address:   pointer.ToString("5.6.7.8"),
 			}
 			agent := &models.Agent{
 				AgentID:      "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
@@ -59,7 +64,12 @@ func TestScrapeConfig(t *testing.T) {
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
 						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
-						Labels:  model.LabelSet{"_some_agent_label": "baz"},
+						Labels: model.LabelSet{
+							"_some_agent_label": "baz",
+							"instance":          "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
+							"node_id":           "/node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d",
+							"service_id":        "/service_id/014647c3-b2f5-44eb-94f4-d943260a968c",
+						},
 					}},
 				},
 				HTTPClientConfig: config_util.HTTPClientConfig{
@@ -76,7 +86,12 @@ func TestScrapeConfig(t *testing.T) {
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
 						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
-						Labels:  model.LabelSet{"_some_agent_label": "baz"},
+						Labels: model.LabelSet{
+							"_some_agent_label": "baz",
+							"instance":          "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
+							"node_id":           "/node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d",
+							"service_id":        "/service_id/014647c3-b2f5-44eb-94f4-d943260a968c",
+						},
 					}},
 				},
 				HTTPClientConfig: config_util.HTTPClientConfig{
@@ -93,7 +108,12 @@ func TestScrapeConfig(t *testing.T) {
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
 						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
-						Labels:  model.LabelSet{"_some_agent_label": "baz"},
+						Labels: model.LabelSet{
+							"_some_agent_label": "baz",
+							"instance":          "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
+							"node_id":           "/node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d",
+							"service_id":        "/service_id/014647c3-b2f5-44eb-94f4-d943260a968c",
+						},
 					}},
 				},
 				HTTPClientConfig: config_util.HTTPClientConfig{
@@ -105,7 +125,25 @@ func TestScrapeConfig(t *testing.T) {
 			}}
 			actual, err := scrapeConfigsForMySQLdExporter(node, service, agent)
 			require.NoError(t, err)
-			assert.Equal(t, expected, actual)
+			require.Len(t, actual, len(expected))
+			for i := 0; i < len(expected); i++ {
+				if !assert.Equal(t, expected[i], actual[i]) {
+					e, err := yaml.Marshal(expected[i])
+					require.NoError(t, err)
+					a, err := yaml.Marshal(actual[i])
+					require.NoError(t, err)
+
+					diff, err := difflib.GetUnifiedDiffString(difflib.UnifiedDiff{
+						A:        difflib.SplitLines(string(e)),
+						FromFile: "Expected",
+						B:        difflib.SplitLines(string(a)),
+						ToFile:   "Actual",
+						Context:  3,
+					})
+					require.NoError(t, err)
+					t.Logf("Diff:\n%s", diff)
+				}
+			}
 		})
 
 		t.Run("BadCustomLabels", func(t *testing.T) {
@@ -117,7 +155,7 @@ func TestScrapeConfig(t *testing.T) {
 			}
 
 			_, err := scrapeConfigsForMySQLdExporter(node, service, agent)
-			require.EqualError(t, err, "failed to set custom labels: unexpected end of JSON input")
+			require.EqualError(t, err, "failed to decode custom labels: unexpected end of JSON input")
 		})
 	})
 }

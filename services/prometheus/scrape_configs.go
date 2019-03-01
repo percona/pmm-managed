@@ -80,7 +80,60 @@ func scrapeConfigForPMMManaged() *config.ScrapeConfig {
 	}
 }
 
+func mergeLabels(labels model.LabelSet, node *models.Node, service *models.Service, agent *models.Agent) error {
+	nLabels, err := node.GetCustomLabels()
+	if err != nil {
+		return err
+	}
+	sLabels, err := service.GetCustomLabels()
+	if err != nil {
+		return err
+	}
+	aLabels, err := agent.GetCustomLabels()
+	if err != nil {
+		return err
+	}
+
+	for k, v := range nLabels {
+		labels[model.LabelName(k)] = model.LabelValue(v)
+	}
+	for k, v := range sLabels {
+		labels[model.LabelName(k)] = model.LabelValue(v)
+	}
+	for k, v := range aLabels {
+		labels[model.LabelName(k)] = model.LabelValue(v)
+	}
+
+	var toDelete []model.LabelName
+	for k, v := range labels {
+		if v == "" {
+			toDelete = append(toDelete, k)
+		}
+	}
+	for _, k := range toDelete {
+		delete(labels, k)
+	}
+
+	return errors.Wrap(labels.Validate(), "failed to merge labels")
+}
+
 func scrapeConfigsForMySQLdExporter(node *models.Node, service *models.Service, agent *models.Agent) ([]*config.ScrapeConfig, error) {
+	labels := model.LabelSet{
+		model.LabelName("node_id"):               model.LabelValue(node.NodeID),
+		model.LabelName("node_name"):             model.LabelValue(node.NodeName),
+		model.LabelName("machine_id"):            model.LabelValue(pointer.GetString(node.MachineID)),
+		model.LabelName("docker_container_id"):   model.LabelValue(pointer.GetString(node.DockerContainerID)),
+		model.LabelName("docker_container_name"): model.LabelValue(pointer.GetString(node.DockerContainerName)),
+
+		model.LabelName("service_id"):   model.LabelValue(service.ServiceID),
+		model.LabelName("service_name"): model.LabelValue(service.ServiceName),
+
+		model.LabelName("instance"): model.LabelValue(agent.AgentID),
+	}
+	if err := mergeLabels(labels, node, service, agent); err != nil {
+		return nil, err
+	}
+
 	hr := &config.ScrapeConfig{
 		JobName:        strings.Replace(agent.AgentID, "/", "_", -1) + "_hr",
 		ScrapeInterval: model.Duration(time.Second),
@@ -109,11 +162,6 @@ func scrapeConfigsForMySQLdExporter(node *models.Node, service *models.Service, 
 	target := model.LabelSet{addressLabel: model.LabelValue(hostport)}
 	if err := target.Validate(); err != nil {
 		return nil, errors.Wrap(err, "failed to set targets")
-	}
-
-	var labels model.LabelSet
-	if err := labels.UnmarshalJSON(agent.CustomLabels); err != nil {
-		return nil, errors.Wrap(err, "failed to set custom labels")
 	}
 
 	for _, cfg := range res {
