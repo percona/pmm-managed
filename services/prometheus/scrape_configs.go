@@ -118,18 +118,7 @@ func mergeLabels(labels model.LabelSet, node *models.Node, service *models.Servi
 }
 
 func scrapeConfigsForMySQLdExporter(node *models.Node, service *models.Service, agent *models.Agent) ([]*config.ScrapeConfig, error) {
-	labels := model.LabelSet{
-		model.LabelName("node_id"):               model.LabelValue(node.NodeID),
-		model.LabelName("node_name"):             model.LabelValue(node.NodeName),
-		model.LabelName("machine_id"):            model.LabelValue(pointer.GetString(node.MachineID)),
-		model.LabelName("docker_container_id"):   model.LabelValue(pointer.GetString(node.DockerContainerID)),
-		model.LabelName("docker_container_name"): model.LabelValue(pointer.GetString(node.DockerContainerName)),
-
-		model.LabelName("service_id"):   model.LabelValue(service.ServiceID),
-		model.LabelName("service_name"): model.LabelValue(service.ServiceName),
-
-		model.LabelName("instance"): model.LabelValue(agent.AgentID),
-	}
+	labels := commonExporterLabelSet(node, service, agent)
 	if err := mergeLabels(labels, node, service, agent); err != nil {
 		return nil, err
 	}
@@ -189,18 +178,7 @@ func scrapeConfigsForMySQLdExporter(node *models.Node, service *models.Service, 
 }
 
 func scrapeConfigsForMongoDBExporter(node *models.Node, service *models.Service, agent *models.Agent) (*config.ScrapeConfig, error) {
-	labels := model.LabelSet{
-		model.LabelName("node_id"):               model.LabelValue(node.NodeID),
-		model.LabelName("node_name"):             model.LabelValue(node.NodeName),
-		model.LabelName("machine_id"):            model.LabelValue(pointer.GetString(node.MachineID)),
-		model.LabelName("docker_container_id"):   model.LabelValue(pointer.GetString(node.DockerContainerID)),
-		model.LabelName("docker_container_name"): model.LabelValue(pointer.GetString(node.DockerContainerName)),
-
-		model.LabelName("service_id"):   model.LabelValue(service.ServiceID),
-		model.LabelName("service_name"): model.LabelValue(service.ServiceName),
-
-		model.LabelName("instance"): model.LabelValue(agent.AgentID),
-	}
+	labels := commonExporterLabelSet(node, service, agent)
 	if err := mergeLabels(labels, node, service, agent); err != nil {
 		return nil, err
 	}
@@ -229,4 +207,19 @@ func scrapeConfigsForMongoDBExporter(node *models.Node, service *models.Service,
 	}
 
 	return res, nil
+}
+
+func commonExporterLabelSet(node *models.Node, service *models.Service, agent *models.Agent) model.LabelSet {
+	return model.LabelSet{
+		model.LabelName("node_id"):               model.LabelValue(node.NodeID),
+		model.LabelName("node_name"):             model.LabelValue(node.NodeName),
+		model.LabelName("machine_id"):            model.LabelValue(pointer.GetString(node.MachineID)),
+		model.LabelName("docker_container_id"):   model.LabelValue(pointer.GetString(node.DockerContainerID)),
+		model.LabelName("docker_container_name"): model.LabelValue(pointer.GetString(node.DockerContainerName)),
+
+		model.LabelName("service_id"):   model.LabelValue(service.ServiceID),
+		model.LabelName("service_name"): model.LabelValue(service.ServiceName),
+
+		model.LabelName("instance"): model.LabelValue(agent.AgentID),
+	}
 }
