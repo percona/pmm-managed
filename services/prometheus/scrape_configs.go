@@ -27,7 +27,6 @@ import (
 	"github.com/prometheus/common/model"
 
 	"github.com/percona/pmm-managed/models"
-	config_util "github.com/percona/pmm-managed/services/prometheus/internal/common/config"
 	"github.com/percona/pmm-managed/services/prometheus/internal/prometheus/config"
 	sd_config "github.com/percona/pmm-managed/services/prometheus/internal/prometheus/discovery/config"
 	"github.com/percona/pmm-managed/services/prometheus/internal/prometheus/discovery/targetgroup"
@@ -159,18 +158,6 @@ func scrapeConfigsForMySQLdExporter(node *models.Node, service *models.Service, 
 				Targets: []model.LabelSet{target},
 				Labels:  labels,
 			}},
-		}
-	}
-
-	username, password := pointer.GetString(agent.Username), pointer.GetString(agent.Password)
-	if username != "" {
-		for _, cfg := range res {
-			cfg.HTTPClientConfig = config_util.HTTPClientConfig{
-				BasicAuth: &config_util.BasicAuth{
-					Username: username,
-					Password: password,
-				},
-			}
 		}
 	}
 

@@ -28,7 +28,6 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/percona/pmm-managed/models"
-	config_util "github.com/percona/pmm-managed/services/prometheus/internal/common/config"
 	"github.com/percona/pmm-managed/services/prometheus/internal/prometheus/config"
 	sd_config "github.com/percona/pmm-managed/services/prometheus/internal/prometheus/discovery/config"
 	"github.com/percona/pmm-managed/services/prometheus/internal/prometheus/discovery/targetgroup"
@@ -53,8 +52,6 @@ func TestScrapeConfig(t *testing.T) {
 				RunsOnNodeID: "/node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d",
 				CustomLabels: []byte(`{"_some_agent_label": "baz"}`),
 				ListenPort:   pointer.ToUint16(12345),
-				Username:     pointer.ToString("username"),
-				Password:     pointer.ToString("password"),
 			}
 
 			expected := []*config.ScrapeConfig{{
@@ -73,12 +70,6 @@ func TestScrapeConfig(t *testing.T) {
 						},
 					}},
 				},
-				HTTPClientConfig: config_util.HTTPClientConfig{
-					BasicAuth: &config_util.BasicAuth{
-						Username: "username",
-						Password: "password",
-					},
-				},
 			}, {
 				JobName:        "_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr",
 				ScrapeInterval: model.Duration(10 * time.Second),
@@ -95,12 +86,6 @@ func TestScrapeConfig(t *testing.T) {
 						},
 					}},
 				},
-				HTTPClientConfig: config_util.HTTPClientConfig{
-					BasicAuth: &config_util.BasicAuth{
-						Username: "username",
-						Password: "password",
-					},
-				},
 			}, {
 				JobName:        "_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_lr",
 				ScrapeInterval: model.Duration(60 * time.Second),
@@ -116,12 +101,6 @@ func TestScrapeConfig(t *testing.T) {
 							"service_id":        "/service_id/014647c3-b2f5-44eb-94f4-d943260a968c",
 						},
 					}},
-				},
-				HTTPClientConfig: config_util.HTTPClientConfig{
-					BasicAuth: &config_util.BasicAuth{
-						Username: "username",
-						Password: "password",
-					},
 				},
 			}}
 
