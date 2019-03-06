@@ -79,8 +79,8 @@ type AddMySqldExporterBody struct {
 	// MySQL password for scraping metrics.
 	Password string `json:"password,omitempty"`
 
-	// Node identifier where this instance runs.
-	RunsOnNodeID string `json:"runs_on_node_id,omitempty"`
+	// pmm-agent identifier where this instance runs.
+	PMMAgentID string `json:"pmm_agent_id,omitempty"`
 
 	// Service identifier.
 	ServiceID string `json:"service_id,omitempty"`
@@ -188,13 +188,13 @@ type AddMySqldExporterOKBodyMysqldExporter struct {
 	// MySQL password for scraping metrics.
 	Password string `json:"password,omitempty"`
 
-	// Node identifier where this instance runs.
-	RunsOnNodeID string `json:"runs_on_node_id,omitempty"`
+	// pmm-agent identifier where this instance runs.
+	PMMAgentID string `json:"pmm_agent_id,omitempty"`
 
 	// Service identifier.
 	ServiceID string `json:"service_id,omitempty"`
 
-	// AgentStatus represents actual Agent process status.
+	// AgentStatus represents actual Agent status.
 	// Enum: [AGENT_STATUS_INVALID STARTING RUNNING WAITING STOPPING DONE]
 	Status *string `json:"status,omitempty"`
 

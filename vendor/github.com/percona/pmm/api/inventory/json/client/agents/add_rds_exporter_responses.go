@@ -76,8 +76,8 @@ type AddRDSExporterBody struct {
 	// Custom user-assigned labels.
 	CustomLabels map[string]string `json:"custom_labels,omitempty"`
 
-	// Node identifier where this instance runs.
-	RunsOnNodeID string `json:"runs_on_node_id,omitempty"`
+	// pmm-agent identifier where this instance runs.
+	PMMAgentID string `json:"pmm_agent_id,omitempty"`
 
 	// A list of Service identifiers (Node identifiers are extracted from Services).
 	ServiceIds []string `json:"service_ids"`
@@ -179,13 +179,13 @@ type AddRDSExporterOKBodyRDSExporter struct {
 	// Listen port for scraping metrics.
 	ListenPort int64 `json:"listen_port,omitempty"`
 
-	// Node identifier where this instance runs.
-	RunsOnNodeID string `json:"runs_on_node_id,omitempty"`
+	// pmm-agent identifier where this instance runs.
+	PMMAgentID string `json:"pmm_agent_id,omitempty"`
 
 	// A list of Service identifiers (Node identifiers are extracted from Services).
 	ServiceIds []string `json:"service_ids"`
 
-	// AgentStatus represents actual Agent process status.
+	// AgentStatus represents actual Agent status.
 	// Enum: [AGENT_STATUS_INVALID STARTING RUNNING WAITING STOPPING DONE]
 	Status *string `json:"status,omitempty"`
 }

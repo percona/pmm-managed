@@ -325,7 +325,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		l.Panicf("Agent with ID %q has invalid type %q.", pmmAgentID, pmmAgent.AgentType)
 		return
 	}
-	agents, err := models.AgentsRunningOnNode(r.db.Querier, pmmAgent.RunsOnNodeID)
+	agents, err := models.AgentsRunningByPMMAgent(r.db.Querier, pointer.GetString(pmmAgent.PMMAgentID))
 	if err != nil {
 		l.Errorf("Failed to collect agents: %s.", err)
 		return
@@ -338,7 +338,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 			continue
 
 		case models.NodeExporterType:
-			node := &models.Node{NodeID: row.RunsOnNodeID}
+			node := &models.Node{NodeID: pointer.GetString(row.RunsOnNodeID)}
 			if err = r.db.Reload(node); err != nil {
 				l.Error(err)
 				return

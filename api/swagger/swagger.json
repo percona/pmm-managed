@@ -104,8 +104,8 @@
                     "type": "string"
                   }
                 },
-                "runs_on_node_id": {
-                  "description": "Node identifier where this instance runs.",
+                "pmm_agent_id": {
+                  "description": "pmm-agent identifier where this instance runs.",
                   "type": "string"
                 },
                 "service_id": {
@@ -146,8 +146,8 @@
                       "type": "integer",
                       "format": "int64"
                     },
-                    "runs_on_node_id": {
-                      "description": "Node identifier where this instance runs.",
+                    "pmm_agent_id": {
+                      "description": "pmm-agent identifier where this instance runs.",
                       "type": "string"
                     },
                     "service_id": {
@@ -155,7 +155,7 @@
                       "type": "string"
                     },
                     "status": {
-                      "description": "AgentStatus represents actual Agent process status.",
+                      "description": "AgentStatus represents actual Agent status.",
                       "type": "string",
                       "default": "AGENT_STATUS_INVALID",
                       "enum": [
@@ -201,8 +201,8 @@
                   "description": "MySQL password for scraping metrics.",
                   "type": "string"
                 },
-                "runs_on_node_id": {
-                  "description": "Node identifier where this instance runs.",
+                "pmm_agent_id": {
+                  "description": "pmm-agent identifier where this instance runs.",
                   "type": "string"
                 },
                 "service_id": {
@@ -247,8 +247,8 @@
                       "description": "MySQL password for scraping metrics.",
                       "type": "string"
                     },
-                    "runs_on_node_id": {
-                      "description": "Node identifier where this instance runs.",
+                    "pmm_agent_id": {
+                      "description": "pmm-agent identifier where this instance runs.",
                       "type": "string"
                     },
                     "service_id": {
@@ -256,7 +256,7 @@
                       "type": "string"
                     },
                     "status": {
-                      "description": "AgentStatus represents actual Agent process status.",
+                      "description": "AgentStatus represents actual Agent status.",
                       "type": "string",
                       "default": "AGENT_STATUS_INVALID",
                       "enum": [
@@ -302,8 +302,8 @@
                     "type": "string"
                   }
                 },
-                "node_id": {
-                  "description": "Node identifier where this instance runs.",
+                "pmm_agent_id": {
+                  "description": "pmm-agent identifier where this instance runs.",
                   "type": "string"
                 }
               }
@@ -336,12 +336,12 @@
                       "type": "integer",
                       "format": "int64"
                     },
-                    "node_id": {
-                      "description": "Node identifier where this instance runs.",
+                    "pmm_agent_id": {
+                      "description": "pmm-agent identifier where this instance runs.",
                       "type": "string"
                     },
                     "status": {
-                      "description": "AgentStatus represents actual Agent process status.",
+                      "description": "AgentStatus represents actual Agent status.",
                       "type": "string",
                       "default": "AGENT_STATUS_INVALID",
                       "enum": [
@@ -383,7 +383,7 @@
                     "type": "string"
                   }
                 },
-                "node_id": {
+                "runs_on_node_id": {
                   "description": "Node identifier where this instance runs.",
                   "type": "string"
                 }
@@ -417,8 +417,65 @@
                         "type": "string"
                       }
                     },
-                    "node_id": {
+                    "runs_on_node_id": {
                       "description": "Node identifier where this instance runs.",
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/inventory/Agents/AddQANMySQLPerfSchemaAgent": {
+      "post": {
+        "tags": [
+          "Agents"
+        ],
+        "summary": "AddQANMySQLPerfSchemaAgent adds mongodb_exporter Agent.",
+        "operationId": "AddQANMySQLPerfSchemaAgent",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "pmm_agent_id": {
+                  "description": "pmm-agent identifier where this instance runs.",
+                  "type": "string"
+                },
+                "service_id": {
+                  "description": "Service identifier.",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "qan_mysql_perfschema_agent": {
+                  "description": "QANMySQLPerfSchemaAgent runs within pmm-agent and sends MySQL Query Analytics data to the PMM Server.",
+                  "type": "object",
+                  "properties": {
+                    "agent_id": {
+                      "description": "Unique randomly generated instance identifier.",
+                      "type": "string"
+                    },
+                    "pmm_agent_id": {
+                      "description": "pmm-agent identifier where this instance runs.",
+                      "type": "string"
+                    },
+                    "service_id": {
+                      "description": "Service identifier.",
                       "type": "string"
                     }
                   }
@@ -451,8 +508,8 @@
                     "type": "string"
                   }
                 },
-                "runs_on_node_id": {
-                  "description": "Node identifier where this instance runs.",
+                "pmm_agent_id": {
+                  "description": "pmm-agent identifier where this instance runs.",
                   "type": "string"
                 },
                 "service_ids": {
@@ -492,8 +549,8 @@
                       "type": "integer",
                       "format": "int64"
                     },
-                    "runs_on_node_id": {
-                      "description": "Node identifier where this instance runs.",
+                    "pmm_agent_id": {
+                      "description": "pmm-agent identifier where this instance runs.",
                       "type": "string"
                     },
                     "service_ids": {
@@ -504,7 +561,7 @@
                       }
                     },
                     "status": {
-                      "description": "AgentStatus represents actual Agent process status.",
+                      "description": "AgentStatus represents actual Agent status.",
                       "type": "string",
                       "default": "AGENT_STATUS_INVALID",
                       "enum": [
@@ -598,8 +655,8 @@
                       "type": "integer",
                       "format": "int64"
                     },
-                    "runs_on_node_id": {
-                      "description": "Node identifier where this instance runs.",
+                    "pmm_agent_id": {
+                      "description": "pmm-agent identifier where this instance runs.",
                       "type": "string"
                     },
                     "service_id": {
@@ -607,7 +664,7 @@
                       "type": "string"
                     },
                     "status": {
-                      "description": "AgentStatus represents actual Agent process status.",
+                      "description": "AgentStatus represents actual Agent status.",
                       "type": "string",
                       "default": "AGENT_STATUS_INVALID",
                       "enum": [
@@ -645,8 +702,8 @@
                       "description": "MySQL password for scraping metrics.",
                       "type": "string"
                     },
-                    "runs_on_node_id": {
-                      "description": "Node identifier where this instance runs.",
+                    "pmm_agent_id": {
+                      "description": "pmm-agent identifier where this instance runs.",
                       "type": "string"
                     },
                     "service_id": {
@@ -654,7 +711,7 @@
                       "type": "string"
                     },
                     "status": {
-                      "description": "AgentStatus represents actual Agent process status.",
+                      "description": "AgentStatus represents actual Agent status.",
                       "type": "string",
                       "default": "AGENT_STATUS_INVALID",
                       "enum": [
@@ -692,12 +749,12 @@
                       "type": "integer",
                       "format": "int64"
                     },
-                    "node_id": {
-                      "description": "Node identifier where this instance runs.",
+                    "pmm_agent_id": {
+                      "description": "pmm-agent identifier where this instance runs.",
                       "type": "string"
                     },
                     "status": {
-                      "description": "AgentStatus represents actual Agent process status.",
+                      "description": "AgentStatus represents actual Agent status.",
                       "type": "string",
                       "default": "AGENT_STATUS_INVALID",
                       "enum": [
@@ -731,8 +788,26 @@
                         "type": "string"
                       }
                     },
-                    "node_id": {
+                    "runs_on_node_id": {
                       "description": "Node identifier where this instance runs.",
+                      "type": "string"
+                    }
+                  }
+                },
+                "qan_mysql_perfschema_agent": {
+                  "description": "QANMySQLPerfSchemaAgent runs within pmm-agent and sends MySQL Query Analytics data to the PMM Server.",
+                  "type": "object",
+                  "properties": {
+                    "agent_id": {
+                      "description": "Unique randomly generated instance identifier.",
+                      "type": "string"
+                    },
+                    "pmm_agent_id": {
+                      "description": "pmm-agent identifier where this instance runs.",
+                      "type": "string"
+                    },
+                    "service_id": {
+                      "description": "Service identifier.",
                       "type": "string"
                     }
                   }
@@ -757,8 +832,8 @@
                       "type": "integer",
                       "format": "int64"
                     },
-                    "runs_on_node_id": {
-                      "description": "Node identifier where this instance runs.",
+                    "pmm_agent_id": {
+                      "description": "pmm-agent identifier where this instance runs.",
                       "type": "string"
                     },
                     "service_ids": {
@@ -769,7 +844,7 @@
                       }
                     },
                     "status": {
-                      "description": "AgentStatus represents actual Agent process status.",
+                      "description": "AgentStatus represents actual Agent status.",
                       "type": "string",
                       "default": "AGENT_STATUS_INVALID",
                       "enum": [
@@ -808,8 +883,8 @@
                   "description": "Return only Agents that provide insights for that Node.",
                   "type": "string"
                 },
-                "runs_on_node_id": {
-                  "description": "Return only Agents running on that Node.",
+                "pmm_agent_id": {
+                  "description": "Return only Agents started by this pmm-agent.",
                   "type": "string"
                 },
                 "service_id": {
@@ -876,8 +951,8 @@
                         "type": "integer",
                         "format": "int64"
                       },
-                      "runs_on_node_id": {
-                        "description": "Node identifier where this instance runs.",
+                      "pmm_agent_id": {
+                        "description": "pmm-agent identifier where this instance runs.",
                         "type": "string"
                       },
                       "service_id": {
@@ -885,7 +960,7 @@
                         "type": "string"
                       },
                       "status": {
-                        "description": "AgentStatus represents actual Agent process status.",
+                        "description": "AgentStatus represents actual Agent status.",
                         "type": "string",
                         "default": "AGENT_STATUS_INVALID",
                         "enum": [
@@ -926,8 +1001,8 @@
                         "description": "MySQL password for scraping metrics.",
                         "type": "string"
                       },
-                      "runs_on_node_id": {
-                        "description": "Node identifier where this instance runs.",
+                      "pmm_agent_id": {
+                        "description": "pmm-agent identifier where this instance runs.",
                         "type": "string"
                       },
                       "service_id": {
@@ -935,7 +1010,7 @@
                         "type": "string"
                       },
                       "status": {
-                        "description": "AgentStatus represents actual Agent process status.",
+                        "description": "AgentStatus represents actual Agent status.",
                         "type": "string",
                         "default": "AGENT_STATUS_INVALID",
                         "enum": [
@@ -976,12 +1051,12 @@
                         "type": "integer",
                         "format": "int64"
                       },
-                      "node_id": {
-                        "description": "Node identifier where this instance runs.",
+                      "pmm_agent_id": {
+                        "description": "pmm-agent identifier where this instance runs.",
                         "type": "string"
                       },
                       "status": {
-                        "description": "AgentStatus represents actual Agent process status.",
+                        "description": "AgentStatus represents actual Agent status.",
                         "type": "string",
                         "default": "AGENT_STATUS_INVALID",
                         "enum": [
@@ -1018,8 +1093,29 @@
                           "type": "string"
                         }
                       },
-                      "node_id": {
+                      "runs_on_node_id": {
                         "description": "Node identifier where this instance runs.",
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "qan_mysql_perfschema_agent": {
+                  "type": "array",
+                  "items": {
+                    "description": "QANMySQLPerfSchemaAgent runs within pmm-agent and sends MySQL Query Analytics data to the PMM Server.",
+                    "type": "object",
+                    "properties": {
+                      "agent_id": {
+                        "description": "Unique randomly generated instance identifier.",
+                        "type": "string"
+                      },
+                      "pmm_agent_id": {
+                        "description": "pmm-agent identifier where this instance runs.",
+                        "type": "string"
+                      },
+                      "service_id": {
+                        "description": "Service identifier.",
                         "type": "string"
                       }
                     }
@@ -1047,8 +1143,8 @@
                         "type": "integer",
                         "format": "int64"
                       },
-                      "runs_on_node_id": {
-                        "description": "Node identifier where this instance runs.",
+                      "pmm_agent_id": {
+                        "description": "pmm-agent identifier where this instance runs.",
                         "type": "string"
                       },
                       "service_ids": {
@@ -1059,7 +1155,7 @@
                         }
                       },
                       "status": {
-                        "description": "AgentStatus represents actual Agent process status.",
+                        "description": "AgentStatus represents actual Agent status.",
                         "type": "string",
                         "default": "AGENT_STATUS_INVALID",
                         "enum": [

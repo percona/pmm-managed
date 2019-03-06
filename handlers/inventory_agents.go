@@ -42,9 +42,9 @@ func NewAgentsServer(s *inventory.AgentsService, db *reform.DB) api.AgentsServer
 // ListAgents returns a list of Agents for a given filters.
 func (s *agentsServer) ListAgents(ctx context.Context, req *api.ListAgentsRequest) (*api.ListAgentsResponse, error) {
 	filters := inventory.AgentFilters{
-		RunsOnNodeID: req.GetRunsOnNodeId(),
-		NodeID:       req.GetNodeId(),
-		ServiceID:    req.GetServiceId(),
+		PMMAgentID: req.GetPmmAgentId(),
+		NodeID:     req.GetNodeId(),
+		ServiceID:  req.GetServiceId(),
 	}
 	agents, err := s.s.List(ctx, s.db, filters)
 	if err != nil {
@@ -103,7 +103,7 @@ func (s *agentsServer) GetAgent(ctx context.Context, req *api.GetAgentRequest) (
 
 // AddPMMAgent adds pmm-agent Agent.
 func (s *agentsServer) AddPMMAgent(ctx context.Context, req *api.AddPMMAgentRequest) (*api.AddPMMAgentResponse, error) {
-	agent, err := s.s.AddPMMAgent(ctx, s.db, req.NodeId)
+	agent, err := s.s.AddPMMAgent(ctx, s.db, req.RunsOnNodeId)
 	if err != nil {
 		return nil, err
 	}
@@ -170,4 +170,9 @@ func (s *agentsServer) RemoveAgent(ctx context.Context, req *api.RemoveAgentRequ
 	}
 
 	return new(api.RemoveAgentResponse), nil
+}
+
+// AddQANMySQLPerfSchemaAgent is not implemented
+func (s *agentsServer) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *api.AddQANMySQLPerfSchemaAgentRequest) (*api.AddQANMySQLPerfSchemaAgentResponse, error) {
+	panic("not implemented")
 }
