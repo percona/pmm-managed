@@ -427,6 +427,20 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, db *reform.DB, 
 	return res, nil
 }
 
+// AddQANMySQLPerfSchemaAgent adds MySQL PerfSchema QAN Agent.
+func (as *AgentsService) AddQANMySQLPerfSchemaAgent(ctx context.Context, db *reform.DB, req *api.AddQANMySQLPerfSchemaAgentRequest) (*api.QANMySQLPerfSchemaAgent, error) {
+	// TODO validate
+	// TODO save
+	res := &api.QANMySQLPerfSchemaAgent{
+		AgentId:    "FIXME",
+		PmmAgentId: req.PmmAgentId,
+		ServiceId:  req.ServiceId,
+	}
+
+	as.r.SendSetStateRequest(ctx, req.PmmAgentId)
+	return res, nil
+}
+
 // Remove deletes Agent by ID.
 func (as *AgentsService) Remove(ctx context.Context, db *reform.DB, id string) error {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416

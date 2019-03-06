@@ -319,7 +319,8 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		return
 	}
 
-	processes := make(map[string]*api.SetStateRequest_AgentProcess, len(agents))
+	agentProcesses := make(map[string]*api.SetStateRequest_AgentProcess)
+	internalAgents := make(map[string]*api.SetStateRequest_InternalAgent)
 	for _, row := range agents {
 		switch row.AgentType {
 		case models.PMMAgentType:
@@ -335,7 +336,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 				l.Errorf("Expected exactly one Node, got %d.", len(nodes))
 				return
 			}
-			processes[row.AgentID] = nodeExporterConfig(nodes[0], row)
+			agentProcesses[row.AgentID] = nodeExporterConfig(nodes[0], row)
 
 		case models.MySQLdExporterType:
 			services, err := models.ServicesForAgent(r.db.Querier, row.AgentID)
@@ -347,7 +348,19 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 				l.Errorf("Expected exactly one Service, got %d.", len(services))
 				return
 			}
-			processes[row.AgentID] = mysqldExporterConfig(services[0], row)
+			agentProcesses[row.AgentID] = mysqldExporterConfig(services[0], row)
+
+		case models.QANMySQLPerfSchemaAgentType:
+			services, err := models.ServicesForAgent(r.db.Querier, row.AgentID)
+			if err != nil {
+				l.Error(err)
+				return
+			}
+			if len(services) != 1 {
+				l.Errorf("Expected exactly one Services, got %d.", len(services))
+				return
+			}
+			internalAgents[row.AgentID] = qanMySQLPerfSchemaAgentConfig(services[0])
 
 		case models.MongoDBExporterType:
 			services, err := models.ServicesForAgent(r.db.Querier, row.AgentID)
@@ -359,18 +372,20 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 				l.Errorf("Expected exactly one Services, got %d.", len(services))
 				return
 			}
-			processes[row.AgentID] = mongodbExporterConfig(services[0], row)
+			agentProcesses[row.AgentID] = mongodbExporterConfig(services[0], row)
 
 		default:
 			l.Panicf("unhandled Agent type %s", row.AgentType)
 		}
 	}
 
-	l.Infof("SendSetStateRequest: %+v.", processes)
+	state := &api.SetStateRequest{
+		AgentProcesses: agentProcesses,
+		InternalAgents: internalAgents,
+	}
+	l.Infof("SendSetStateRequest: %+v.", state)
 	res := agent.channel.SendRequest(&api.ServerMessage_SetState{
-		SetState: &api.SetStateRequest{
-			AgentProcesses: processes,
-		},
+		SetState: state,
 	})
 	l.Infof("SetState response: %+v.", res)
 }

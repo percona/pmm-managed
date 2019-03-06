@@ -30,6 +30,7 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
+// mysqldExporterConfig returns desired configuration of mysqld_exporter process.
 func mysqldExporterConfig(service *models.Service, exporter *models.Agent) *api.SetStateRequest_AgentProcess {
 	tdp := templateDelimsPair(
 		pointer.GetString(service.Address),
@@ -86,5 +87,12 @@ func mysqldExporterConfig(service *models.Service, exporter *models.Agent) *api.
 		Env: []string{
 			fmt.Sprintf("DATA_SOURCE_NAME=%s", dsn),
 		},
+	}
+}
+
+// qanMySQLPerfSchemaAgentConfig returns desired configuration of qan-mysql-perfschema internal agent.
+func qanMySQLPerfSchemaAgentConfig(service *models.Service) *api.SetStateRequest_InternalAgent {
+	return &api.SetStateRequest_InternalAgent{
+		Type: api.Type_QAN_MYSQL_PERFSCHEMA_AGENT,
 	}
 }

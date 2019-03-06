@@ -165,7 +165,15 @@ func (s *agentsServer) AddMongoDBExporter(ctx context.Context, req *api.AddMongo
 
 // AddQANMySQLPerfSchemaAgent adds MySQL PerfSchema QAN Agent.
 func (s *agentsServer) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *api.AddQANMySQLPerfSchemaAgentRequest) (*api.AddQANMySQLPerfSchemaAgentResponse, error) {
-	panic("not implemented yet")
+	agent, err := s.s.AddQANMySQLPerfSchemaAgent(ctx, s.db, req)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &api.AddQANMySQLPerfSchemaAgentResponse{
+		QanMysqlPerfschemaAgent: agent,
+	}
+	return res, nil
 }
 
 // RemoveAgent removes Agent.
