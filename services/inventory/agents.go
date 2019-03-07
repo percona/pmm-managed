@@ -97,13 +97,13 @@ func (as *AgentsService) makeAgent(q *reform.Querier, row *models.Agent) (api.Ag
 		}
 
 		return &api.MongoDBExporter{
-			AgentId:      row.AgentID,
-			PmmAgentId:   pointer.GetString(row.PMMAgentID),
-			ServiceId:    services[0].ServiceID,
-			Username:     pointer.GetString(row.Username),
-			Password:     pointer.GetString(row.Password),
-			Status:       api.AgentStatus(api.AgentStatus_value[row.Status]),
-			ListenPort:   uint32(pointer.GetUint16(row.ListenPort)),
+			AgentId:    row.AgentID,
+			PmmAgentId: pointer.GetString(row.PMMAgentID),
+			ServiceId:  services[0].ServiceID,
+			Username:   pointer.GetString(row.Username),
+			Password:   pointer.GetString(row.Password),
+			Status:     api.AgentStatus(api.AgentStatus_value[row.Status]),
+			ListenPort: uint32(pointer.GetUint16(row.ListenPort)),
 		}, nil
 
 	default:
