@@ -53,7 +53,7 @@ func (as *AgentsService) makeAgent(q *reform.Querier, row *models.Agent) (api.Ag
 	case models.PMMAgentType:
 		return &api.PMMAgent{
 			AgentId:      row.AgentID,
-			NodeId:       row.RunsOnNodeID,
+			RunsOnNodeId: pointer.GetString(row.RunsOnNodeID),
 			Connected:    as.r.IsConnected(row.AgentID),
 			CustomLabels: labels,
 		}, nil
@@ -61,7 +61,7 @@ func (as *AgentsService) makeAgent(q *reform.Querier, row *models.Agent) (api.Ag
 	case models.NodeExporterType:
 		return &api.NodeExporter{
 			AgentId:      row.AgentID,
-			NodeId:       row.RunsOnNodeID,
+			PmmAgentId:   pointer.GetString(row.PMMAgentID),
 			Status:       api.AgentStatus(api.AgentStatus_value[row.Status]),
 			ListenPort:   uint32(pointer.GetUint16(row.ListenPort)),
 			CustomLabels: labels,
@@ -78,7 +78,7 @@ func (as *AgentsService) makeAgent(q *reform.Querier, row *models.Agent) (api.Ag
 
 		return &api.MySQLdExporter{
 			AgentId:      row.AgentID,
-			RunsOnNodeId: row.RunsOnNodeID,
+			PmmAgentId:   pointer.GetString(row.PMMAgentID),
 			ServiceId:    services[0].ServiceID,
 			Username:     pointer.GetString(row.Username),
 			Password:     pointer.GetString(row.Password),
@@ -98,7 +98,7 @@ func (as *AgentsService) makeAgent(q *reform.Querier, row *models.Agent) (api.Ag
 
 		return &api.MongoDBExporter{
 			AgentId:      row.AgentID,
-			RunsOnNodeId: row.RunsOnNodeID,
+			PmmAgentId:   pointer.GetString(row.PMMAgentID),
 			ServiceId:    services[0].ServiceID,
 			Username:     pointer.GetString(row.Username),
 			Password:     pointer.GetString(row.Password),
@@ -145,8 +145,8 @@ func checkUniqueID(q *reform.Querier, id string) error {
 
 // AgentFilters represents filters for agents list.
 type AgentFilters struct {
-	// Return only Agents running on that Node.
-	RunsOnNodeID string
+	// Return only Agents started by this pmm-agent.
+	PMMAgentID string
 	// Return only Agents that provide insights for that Node.
 	NodeID string
 	// Return only Agents that provide insights for that Service.
@@ -160,8 +160,8 @@ func (as *AgentsService) List(ctx context.Context, db *reform.DB, filters AgentF
 		var agents []*models.Agent
 		var err error
 		switch {
-		case filters.RunsOnNodeID != "":
-			agents, err = models.AgentsRunningOnNode(tx.Querier, filters.RunsOnNodeID)
+		case filters.PMMAgentID != "":
+			agents, err = models.AgentsRunningByPMMAgent(tx.Querier, filters.PMMAgentID)
 		case filters.NodeID != "":
 			agents, err = models.AgentsForNode(tx.Querier, filters.NodeID)
 		case filters.ServiceID != "":
@@ -227,17 +227,10 @@ func (as *AgentsService) AddPMMAgent(ctx context.Context, db *reform.DB, nodeID 
 		row := &models.Agent{
 			AgentID:      id,
 			AgentType:    models.PMMAgentType,
-			RunsOnNodeID: nodeID,
+			RunsOnNodeID: pointer.ToStringOrNil(nodeID),
+			PMMAgentID:   nil,
 		}
 		if err := tx.Insert(row); err != nil {
-			return errors.WithStack(err)
-		}
-
-		err := tx.Insert(&models.AgentNode{
-			AgentID: row.AgentID,
-			NodeID:  nodeID,
-		})
-		if err != nil {
 			return errors.WithStack(err)
 		}
 
@@ -257,22 +250,22 @@ func (as *AgentsService) AddNodeExporter(ctx context.Context, db *reform.DB, req
 	// TODO Check runs-on Node: it must be BM, VM, DC (i.e. not remote, AWS RDS, etc.)
 
 	var res *api.NodeExporter
-	var pmmAgentID string
 	e := db.InTransaction(func(tx *reform.TX) error {
 		id := "/agent_id/" + uuid.New().String()
 		if err := checkUniqueID(tx.Querier, id); err != nil {
 			return err
 		}
 
-		ns := NewNodesService(tx.Querier, as.r)
-		if _, err := ns.get(ctx, req.NodeId); err != nil {
+		pmmAgent, err := get(tx.Querier, req.PmmAgentId)
+		if err != nil {
 			return err
 		}
 
 		row := &models.Agent{
 			AgentID:      id,
 			AgentType:    models.NodeExporterType,
-			RunsOnNodeID: req.NodeId,
+			PMMAgentID:   pointer.ToStringOrNil(req.PmmAgentId),
+			RunsOnNodeID: nil,
 		}
 		if err := row.SetCustomLabels(req.CustomLabels); err != nil {
 			return err
@@ -281,17 +274,12 @@ func (as *AgentsService) AddNodeExporter(ctx context.Context, db *reform.DB, req
 			return errors.WithStack(err)
 		}
 
-		err := tx.Insert(&models.AgentNode{
+		err = tx.Insert(&models.AgentNode{
 			AgentID: row.AgentID,
-			NodeID:  req.NodeId,
+			NodeID:  pointer.GetString(pmmAgent.RunsOnNodeID),
 		})
 		if err != nil {
 			return errors.WithStack(err)
-		}
-
-		pmmAgentID, err = models.PMMAgentForAgent(tx.Querier, row.AgentID)
-		if err != nil {
-			return err
 		}
 
 		agent, err := as.makeAgent(tx.Querier, row)
@@ -305,8 +293,8 @@ func (as *AgentsService) AddNodeExporter(ctx context.Context, db *reform.DB, req
 		return nil, e
 	}
 
-	if pmmAgentID != "" {
-		as.r.SendSetStateRequest(ctx, pmmAgentID)
+	if req.PmmAgentId != "" {
+		as.r.SendSetStateRequest(ctx, req.PmmAgentId)
 	}
 	return res, nil
 }
@@ -317,15 +305,9 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, db *reform.DB, r
 	// TODO Check runs-on Node: it must be BM, VM, DC (i.e. not remote, AWS RDS, etc.)
 
 	var res *api.MySQLdExporter
-	var pmmAgentID string
 	e := db.InTransaction(func(tx *reform.TX) error {
 		id := "/agent_id/" + uuid.New().String()
 		if err := checkUniqueID(tx.Querier, id); err != nil {
-			return err
-		}
-
-		ns := NewNodesService(tx.Querier, as.r)
-		if _, err := ns.get(ctx, req.RunsOnNodeId); err != nil {
 			return err
 		}
 
@@ -337,7 +319,8 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, db *reform.DB, r
 		row := &models.Agent{
 			AgentID:      id,
 			AgentType:    models.MySQLdExporterType,
-			RunsOnNodeID: req.RunsOnNodeId,
+			PMMAgentID:   pointer.ToStringOrNil(req.PmmAgentId),
+			RunsOnNodeID: nil,
 			Username:     pointer.ToStringOrNil(req.Username),
 			Password:     pointer.ToStringOrNil(req.Password),
 		}
@@ -348,24 +331,12 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, db *reform.DB, r
 			return errors.WithStack(err)
 		}
 
-		err := tx.Insert(&models.AgentNode{
-			AgentID: row.AgentID,
-			NodeID:  req.RunsOnNodeId,
-		})
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		err = tx.Insert(&models.AgentService{
+		err := tx.Insert(&models.AgentService{
 			AgentID:   row.AgentID,
 			ServiceID: req.ServiceId,
 		})
 		if err != nil {
 			return errors.WithStack(err)
-		}
-
-		pmmAgentID, err = models.PMMAgentForAgent(tx.Querier, row.AgentID)
-		if err != nil {
-			return err
 		}
 
 		agent, err := as.makeAgent(tx.Querier, row)
@@ -379,8 +350,8 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, db *reform.DB, r
 		return nil, e
 	}
 
-	if pmmAgentID != "" {
-		as.r.SendSetStateRequest(ctx, pmmAgentID)
+	if req.PmmAgentId != "" {
+		as.r.SendSetStateRequest(ctx, req.PmmAgentId)
 	}
 	return res, nil
 }
@@ -405,15 +376,9 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, db *reform.DB, 
 	// TODO Check runs-on Node: it must be BM, VM, DC (i.e. not remote, AWS RDS, etc.)
 
 	var res *api.MongoDBExporter
-	var pmmAgentID string
 	e := db.InTransaction(func(tx *reform.TX) error {
 		id := "/agent_id/" + uuid.New().String()
 		if err := checkUniqueID(tx.Querier, id); err != nil {
-			return err
-		}
-
-		ns := NewNodesService(tx.Querier, as.r)
-		if _, err := ns.get(ctx, req.RunsOnNodeId); err != nil {
 			return err
 		}
 
@@ -425,7 +390,8 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, db *reform.DB, 
 		row := &models.Agent{
 			AgentID:      id,
 			AgentType:    models.MongoDBExporterType,
-			RunsOnNodeID: req.RunsOnNodeId,
+			PMMAgentID:   pointer.ToStringOrNil(req.PmmAgentId),
+			RunsOnNodeID: nil,
 			Username:     pointer.ToStringOrNil(req.Username),
 			Password:     pointer.ToStringOrNil(req.Password),
 		}
@@ -436,24 +402,12 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, db *reform.DB, 
 			return errors.WithStack(err)
 		}
 
-		err := tx.Insert(&models.AgentNode{
-			AgentID: row.AgentID,
-			NodeID:  req.RunsOnNodeId,
-		})
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		err = tx.Insert(&models.AgentService{
+		err := tx.Insert(&models.AgentService{
 			AgentID:   row.AgentID,
 			ServiceID: req.ServiceId,
 		})
 		if err != nil {
 			return errors.WithStack(err)
-		}
-
-		pmmAgentID, err = models.PMMAgentForAgent(tx.Querier, row.AgentID)
-		if err != nil {
-			return err
 		}
 
 		agent, err := as.makeAgent(tx.Querier, row)
@@ -467,8 +421,8 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, db *reform.DB, 
 		return nil, e
 	}
 
-	if pmmAgentID != "" {
-		as.r.SendSetStateRequest(ctx, pmmAgentID)
+	if req.PmmAgentId != "" {
+		as.r.SendSetStateRequest(ctx, req.PmmAgentId)
 	}
 	return res, nil
 }
@@ -484,11 +438,6 @@ func (as *AgentsService) Remove(ctx context.Context, db *reform.DB, id string) e
 			return err
 		}
 
-		pmmAgentID, err := models.PMMAgentForAgent(tx.Querier, row.AgentID)
-		if err != nil {
-			return err
-		}
-
 		if _, err = tx.DeleteFrom(models.AgentServiceView, "WHERE agent_id = "+tx.Placeholder(1), id); err != nil { //nolint:gosec
 			return errors.WithStack(err)
 		}
@@ -500,8 +449,8 @@ func (as *AgentsService) Remove(ctx context.Context, db *reform.DB, id string) e
 			return errors.WithStack(err)
 		}
 
-		if pmmAgentID != "" {
-			as.r.SendSetStateRequest(ctx, pmmAgentID)
+		if pointer.GetString(row.PMMAgentID) != "" {
+			as.r.SendSetStateRequest(ctx, pointer.GetString(row.PMMAgentID))
 		}
 
 		if row.AgentType == models.PMMAgentType {
