@@ -25,9 +25,9 @@ import (
 )
 
 func TestRegistry(t *testing.T) {
-	// 10000 is marked as reserved, 10001 is busy, 10002 is free
-	r := NewRegistry(10000, 10002, []uint16{10000})
-	l1, err := net.Listen("tcp", "127.0.0.1:10001")
+	// 10000 is marked as reserved, 10003 is busy, 10002 is free
+	r := NewRegistry(10000, 10003, []uint16{10000})
+	l1, err := net.Listen("tcp", "127.0.0.1:10003")
 	require.NoError(t, err)
 	defer l1.Close()
 
@@ -43,7 +43,7 @@ func TestRegistry(t *testing.T) {
 
 	err = r.Release(10000)
 	assert.NoError(t, err)
-	err = r.Release(10001)
+	err = r.Release(10003)
 	assert.Equal(t, errNotReservedPort, err)
 	err = r.Release(10002)
 	assert.Equal(t, errPortBusy, err)
@@ -56,7 +56,7 @@ func TestRegistry(t *testing.T) {
 	assert.EqualValues(t, 10000, p)
 	p, err = r.Reserve()
 	assert.NoError(t, err)
-	assert.EqualValues(t, 10001, p)
+	assert.EqualValues(t, 10003, p)
 	_, err = r.Reserve()
 	assert.Equal(t, errNoFreePort, err)
 
