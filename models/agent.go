@@ -55,7 +55,7 @@ func AgentsForNode(q *reform.Querier, nodeID string) ([]*Agent, error) {
 	return res, nil
 }
 
-// AgentsRunningByPMMAgent returns all Agents running by PMMAgent
+// AgentsRunningByPMMAgent returns all Agents running by PMMAgent.
 func AgentsRunningByPMMAgent(q *reform.Querier, pmmAgentID string) ([]*Agent, error) {
 	tail := fmt.Sprintf("WHERE pmm_agent_id = %s ORDER BY agent_id", q.Placeholder(1)) //nolint:gosec
 	structs, err := q.SelectAllFrom(AgentTable, tail, pmmAgentID)
