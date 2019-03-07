@@ -412,9 +412,6 @@ func TestAgents(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, expectedMySQLdExporter, actualAgent)
 
-		mn, err := ns.Add(ctx, models.GenericNodeType, "new node name for mongo", nil, nil)
-		require.NoError(t, err)
-
 		ms, err := ss.AddMongoDB(ctx, "test-mongo", models.PMMServerNodeID, pointer.ToString("127.0.0.1"), pointer.ToUint16(27017))
 		require.NoError(t, err)
 
