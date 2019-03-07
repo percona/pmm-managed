@@ -199,7 +199,7 @@
   version = "v0.2.1"
 
 [[projects]]
-  branch = "PMM-3478-runs_on_node_id-to-pmm_agent_id"
+  branch = "PMM-2.0"
   digest = "1:afb49bee93d72d2e803e217a8ad347e9cc1b480b599712d057975b611450cc01"
   name = "github.com/percona/pmm"
   packages = [
@@ -209,7 +209,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "f4a4e424bbb2abdb0db497c1b92a7219dd95ec3c"
+  revision = "b39f915a590034d497933c28d936cf2d5bc244c4"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
