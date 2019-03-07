@@ -97,12 +97,13 @@ func (as *AgentsService) makeAgent(q *reform.Querier, row *models.Agent) (api.Ag
 		}
 
 		return &api.MongoDBExporter{
-			AgentId:          row.AgentID,
-			RunsOnNodeId:     row.RunsOnNodeID,
-			ServiceId:        services[0].ServiceID,
-			ConnectionString: pointer.GetString(row.ConnectionString),
-			Status:           api.AgentStatus(api.AgentStatus_value[row.Status]),
-			ListenPort:       uint32(pointer.GetUint16(row.ListenPort)),
+			AgentId:      row.AgentID,
+			RunsOnNodeId: row.RunsOnNodeID,
+			ServiceId:    services[0].ServiceID,
+			Username:     pointer.GetString(row.Username),
+			Password:     pointer.GetString(row.Password),
+			Status:       api.AgentStatus(api.AgentStatus_value[row.Status]),
+			ListenPort:   uint32(pointer.GetUint16(row.ListenPort)),
 		}, nil
 
 	default:
@@ -422,10 +423,11 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, db *reform.DB, 
 		}
 
 		row := &models.Agent{
-			AgentID:          id,
-			AgentType:        models.MongoDBExporterType,
-			RunsOnNodeID:     req.RunsOnNodeId,
-			ConnectionString: pointer.ToStringOrNil(req.ConnectionString),
+			AgentID:      id,
+			AgentType:    models.MongoDBExporterType,
+			RunsOnNodeID: req.RunsOnNodeId,
+			Username:     pointer.ToStringOrNil(req.Username),
+			Password:     pointer.ToStringOrNil(req.Password),
 		}
 		if err := row.SetCustomLabels(req.CustomLabels); err != nil {
 			return err
