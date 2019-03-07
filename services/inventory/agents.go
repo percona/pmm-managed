@@ -227,6 +227,7 @@ func (as *AgentsService) AddPMMAgent(ctx context.Context, db *reform.DB, nodeID 
 			AgentID:      id,
 			AgentType:    models.PMMAgentType,
 			RunsOnNodeID: pointer.ToStringOrNil(nodeID),
+			PMMAgentID:   nil,
 		}
 
 		if err := tx.Insert(row); err != nil {
@@ -261,9 +262,10 @@ func (as *AgentsService) AddNodeExporter(ctx context.Context, db *reform.DB, req
 		}
 
 		row := &models.Agent{
-			AgentID:    id,
-			AgentType:  models.NodeExporterType,
-			PMMAgentID: pointer.ToStringOrNil(req.PmmAgentId),
+			AgentID:      id,
+			AgentType:    models.NodeExporterType,
+			PMMAgentID:   pointer.ToStringOrNil(req.PmmAgentId),
+			RunsOnNodeID: nil,
 		}
 		if err := row.SetCustomLabels(req.CustomLabels); err != nil {
 			return err
@@ -315,11 +317,12 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, db *reform.DB, r
 		}
 
 		row := &models.Agent{
-			AgentID:    id,
-			AgentType:  models.MySQLdExporterType,
-			PMMAgentID: pointer.ToStringOrNil(req.PmmAgentId),
-			Username:   pointer.ToStringOrNil(req.Username),
-			Password:   pointer.ToStringOrNil(req.Password),
+			AgentID:      id,
+			AgentType:    models.MySQLdExporterType,
+			PMMAgentID:   pointer.ToStringOrNil(req.PmmAgentId),
+			RunsOnNodeID: nil,
+			Username:     pointer.ToStringOrNil(req.Username),
+			Password:     pointer.ToStringOrNil(req.Password),
 		}
 		if err := row.SetCustomLabels(req.CustomLabels); err != nil {
 			return err
@@ -388,6 +391,7 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, db *reform.DB, 
 			AgentID:          id,
 			AgentType:        models.MongoDBExporterType,
 			PMMAgentID:       pointer.ToStringOrNil(req.PmmAgentId),
+			RunsOnNodeID:     nil,
 			ConnectionString: pointer.ToStringOrNil(req.ConnectionString),
 		}
 		if err := row.SetCustomLabels(req.CustomLabels); err != nil {

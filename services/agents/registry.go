@@ -313,19 +313,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		return
 	}
 
-	// We assume that all agents running on that Node except pmm-agent with given ID are subagents.
-	// FIXME That is just plain wrong. https://jira.percona.com/browse/PMM-3478
-
-	pmmAgent := &models.Agent{AgentID: pmmAgentID}
-	if err := r.db.Reload(pmmAgent); err != nil {
-		l.Errorf("pmm-agent with ID %q not found: %s.", pmmAgentID, err)
-		return
-	}
-	if pmmAgent.AgentType != models.PMMAgentType {
-		l.Panicf("Agent with ID %q has invalid type %q.", pmmAgentID, pmmAgent.AgentType)
-		return
-	}
-	agents, err := models.AgentsRunningByPMMAgent(r.db.Querier, pointer.GetString(pmmAgent.PMMAgentID))
+	agents, err := models.AgentsRunningByPMMAgent(r.db.Querier, pmmAgentID)
 	if err != nil {
 		l.Errorf("Failed to collect agents: %s.", err)
 		return

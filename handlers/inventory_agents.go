@@ -176,8 +176,3 @@ func (s *agentsServer) RemoveAgent(ctx context.Context, req *api.RemoveAgentRequ
 
 	return new(api.RemoveAgentResponse), nil
 }
-
-// AddQANMySQLPerfSchemaAgent is not implemented
-func (s *agentsServer) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *api.AddQANMySQLPerfSchemaAgentRequest) (*api.AddQANMySQLPerfSchemaAgentResponse, error) {
-	panic("not implemented")
-}
