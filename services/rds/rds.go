@@ -264,7 +264,6 @@ func (svc *Service) Discover(ctx context.Context, accessKey, secretKey string) (
 	instances := make(chan Instance)
 
 	partitions := []endpoints.Partition{endpoints.AwsPartition()}
-
 	if svc.RDSEnableGovCloud {
 		partitions = append(partitions, endpoints.AwsUsGovPartition())
 	}
