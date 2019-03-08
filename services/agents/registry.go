@@ -344,7 +344,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 				return
 			}
 			if len(services) != 1 {
-				l.Errorf("Expected exactly one Services, got %d.", len(services))
+				l.Errorf("Expected exactly one Service, got %d.", len(services))
 				return
 			}
 			processes[row.AgentID] = mysqldExporterConfig(services[0], row)
