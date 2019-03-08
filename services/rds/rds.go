@@ -74,6 +74,7 @@ type ServiceConfig struct {
 	QAN           *qan.Service
 
 	RDSEnableGovCloud bool
+	RDSEnableCnCloud  bool
 }
 
 // Service is responsible for interactions with AWS RDS.
