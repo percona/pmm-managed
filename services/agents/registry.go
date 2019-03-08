@@ -326,12 +326,16 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 			continue
 
 		case models.NodeExporterType:
-			node := &models.Node{NodeID: pointer.GetString(row.RunsOnNodeID)}
-			if err = r.db.Reload(node); err != nil {
+			nodes, err := models.NodesForAgent(r.db.Querier, row.AgentID)
+			if err != nil {
 				l.Error(err)
 				return
 			}
-			processes[row.AgentID] = nodeExporterConfig(node, row)
+			if len(nodes) != 1 {
+				l.Errorf("Expected exactly one Nodes, got %d.", len(nodes))
+				return
+			}
+			processes[row.AgentID] = nodeExporterConfig(nodes[0], row)
 
 		case models.MySQLdExporterType:
 			services, err := models.ServicesForAgent(r.db.Querier, row.AgentID)
