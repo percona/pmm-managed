@@ -83,7 +83,6 @@ func setup(t *testing.T, connect func(*Channel) error, expected ...error) (api.A
 	// make client and channel
 	opts := []grpc.DialOption{
 		grpc.WithBlock(),
-		grpc.WithWaitForHandshake(),
 		grpc.WithInsecure(),
 	}
 	cc, err := grpc.DialContext(ctx, lis.Addr().String(), opts...)

@@ -60,7 +60,7 @@ func TestMySQLdExporterConfig(t *testing.T) {
 			"-web.listen-address=:{{ .listen_port }}",
 		},
 		Env: []string{
-			"DATA_SOURCE_NAME=username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:3306)/?timeout=5s",
+			"DATA_SOURCE_NAME=username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:3306)/?clientFoundRows=true&parseTime=true&timeout=5s",
 		},
 	}
 	assert.Equal(t, expected.Args, actual.Args)

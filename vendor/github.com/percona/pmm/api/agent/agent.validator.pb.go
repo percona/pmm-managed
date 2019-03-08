@@ -59,7 +59,7 @@ func (this *SetStateRequest_AgentProcess) Validate() error {
 	// Validation of proto3 map<> fields is unsupported.
 	return nil
 }
-func (this *SetStateRequest_InternalAgent) Validate() error {
+func (this *SetStateRequest_BuiltinAgent) Validate() error {
 	return nil
 }
 func (this *SetStateResponse) Validate() error {

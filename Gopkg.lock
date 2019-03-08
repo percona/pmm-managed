@@ -200,16 +200,17 @@
 
 [[projects]]
   branch = "PMM-3595-qan-mysql-perfschema"
-  digest = "1:6a3772246603070f0fc2bb8fcdbf4ba6e479be35281fc3a6d6f1c0d36127a95b"
+  digest = "1:d463cd240b3481e65c5f8f746a16f49a37af6762774cd4a9bc951eec7b4f4148"
   name = "github.com/percona/pmm"
   packages = [
     "api/agent",
     "api/inventory",
+    "api/qan",
     "api/server",
     "version",
   ]
   pruneopts = "NUT"
-  revision = "799a5a10d0086dc8d9c7b9a9e5a0f650a03080f5"
+  revision = "0118627e6de0dc51fbf244f02be03b51c720f958"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
@@ -503,6 +504,7 @@
     "github.com/aws/aws-sdk-go/service/rds",
     "github.com/go-sql-driver/mysql",
     "github.com/golang/protobuf/ptypes",
+    "github.com/golang/protobuf/ptypes/any",
     "github.com/google/uuid",
     "github.com/grpc-ecosystem/go-grpc-middleware",
     "github.com/grpc-ecosystem/go-grpc-prometheus",
@@ -512,6 +514,7 @@
     "github.com/percona/exporter_shared/helpers",
     "github.com/percona/pmm/api/agent",
     "github.com/percona/pmm/api/inventory",
+    "github.com/percona/pmm/api/qan",
     "github.com/percona/pmm/api/server",
     "github.com/percona/pmm/version",
     "github.com/pkg/errors",

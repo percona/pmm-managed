@@ -44,6 +44,7 @@ type agentInfo struct {
 type Registry struct {
 	db         *reform.DB
 	prometheus prometheus
+	qanClient  qanClient
 
 	rw     sync.RWMutex
 	agents map[string]*agentInfo // id -> info
@@ -56,10 +57,11 @@ type Registry struct {
 }
 
 // NewRegistry creates a new registry with given database connection.
-func NewRegistry(db *reform.DB, prometheus prometheus) *Registry {
+func NewRegistry(db *reform.DB, prometheus prometheus, qanClient qanClient) *Registry {
 	r := &Registry{
 		db:         db,
 		prometheus: prometheus,
+		qanClient:  qanClient,
 
 		agents: make(map[string]*agentInfo),
 
@@ -171,7 +173,9 @@ func (r *Registry) Run(stream api.Agent_ConnectServer) error {
 				})
 
 			case *api.AgentMessage_QanData:
-				// TODO pass it to QAN
+				d := req.QanData.Data
+				l.Debugf("Received data for QAN: %s (%d bytes).", d.TypeUrl, len(d.Value))
+				r.qanClient.TODO(ctx, d)
 
 				agent.channel.SendResponse(&api.ServerMessage{
 					Id: msg.Id,
@@ -320,7 +324,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 	}
 
 	agentProcesses := make(map[string]*api.SetStateRequest_AgentProcess)
-	internalAgents := make(map[string]*api.SetStateRequest_InternalAgent)
+	builtinAgents := make(map[string]*api.SetStateRequest_BuiltinAgent)
 	for _, row := range agents {
 		switch row.AgentType {
 		case models.PMMAgentType:
@@ -360,7 +364,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 				l.Errorf("Expected exactly one Services, got %d.", len(services))
 				return
 			}
-			internalAgents[row.AgentID] = qanMySQLPerfSchemaAgentConfig(services[0])
+			builtinAgents[row.AgentID] = qanMySQLPerfSchemaAgentConfig(services[0], row)
 
 		case models.MongoDBExporterType:
 			services, err := models.ServicesForAgent(r.db.Querier, row.AgentID)
@@ -381,7 +385,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 
 	state := &api.SetStateRequest{
 		AgentProcesses: agentProcesses,
-		InternalAgents: internalAgents,
+		BuiltinAgents:  builtinAgents,
 	}
 	l.Infof("SendSetStateRequest: %+v.", state)
 	res := agent.channel.SendRequest(&api.ServerMessage_SetState{

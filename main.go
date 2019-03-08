@@ -56,6 +56,7 @@ import (
 	"github.com/percona/pmm-managed/services/inventory"
 	"github.com/percona/pmm-managed/services/logs"
 	"github.com/percona/pmm-managed/services/prometheus"
+	"github.com/percona/pmm-managed/services/qan"
 	"github.com/percona/pmm-managed/services/telemetry"
 	"github.com/percona/pmm-managed/utils/interceptors"
 	"github.com/percona/pmm-managed/utils/logger"
@@ -78,6 +79,7 @@ var (
 	promtoolF         = flag.String("promtool", "promtool", "promtool path")
 
 	grafanaAddrF = flag.String("grafana-addr", "127.0.0.1:3000", "Grafana HTTP API address")
+	qanAPIAddrF  = flag.String("qan-api-addr", "127.0.0.1:9911", "QAN API gRPC API address")
 
 	_ = flag.String("db-name", "", "IGNORED REMOVE ME AFTER PMM-3466")
 	_ = flag.String("db-username", "", "IGNORED REMOVE ME AFTER PMM-3466")
@@ -303,6 +305,21 @@ func runTelemetryService(ctx context.Context, db *reform.DB) {
 	svc.Run(ctx)
 }
 
+func getQANClient(ctx context.Context) *qan.Client {
+	// no grpc.WithBlock()
+	opts := []grpc.DialOption{
+		grpc.WithInsecure(),
+		grpc.WithBackoffMaxDelay(time.Second),
+		grpc.WithUserAgent("pmm-managed/" + version.Version),
+	}
+
+	conn, err := grpc.DialContext(ctx, *qanAPIAddrF, opts...)
+	if err != nil {
+		logrus.Fatalf("Failed to connect QAN API %s: %s.", *qanAPIAddrF, err)
+	}
+	return qan.NewClient(conn)
+}
+
 func main() {
 	log.SetFlags(0)
 	log.Printf("%s.", version.ShortInfo())
@@ -354,7 +371,7 @@ func main() {
 		l.Panicf("Prometheus service problem: %+v", err)
 	}
 
-	agentsRegistry := agents.NewRegistry(db, prometheus)
+	agentsRegistry := agents.NewRegistry(db, prometheus, getQANClient(ctx))
 	logs := logs.New(version.Version)
 
 	deps := &serviceDependencies{
