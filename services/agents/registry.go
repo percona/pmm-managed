@@ -332,7 +332,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 				return
 			}
 			if len(nodes) != 1 {
-				l.Errorf("Expected exactly one Nodes, got %d.", len(nodes))
+				l.Errorf("Expected exactly one Node, got %d.", len(nodes))
 				return
 			}
 			processes[row.AgentID] = nodeExporterConfig(nodes[0], row)
