@@ -1,0 +1,35 @@
+dist: trusty
+sudo: required
+language: go
+
+go:
+  - 1.12.x
+  - master
+
+matrix:
+  allow_failures:
+    - go: master
+
+before_cache:
+  - go clean -testcache
+
+cache:
+  directories:
+    - /home/travis/.cache/go-build
+    - /home/travis/gopath/pkg
+
+script:
+  # ensure that code is in sync with Gopkg.toml/lock
+  - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+  - dep ensure -v
+  - git status
+  - git diff --exit-code
+
+  - make
+
+notifications:
+  slack:
+    on_success: change
+    on_failure: always
+    rooms:
+      secure: jl8m0thPSqXXGZqjh5ysqKz+SsAupsEcJdiaMvO4hemjJYqWvsXLjRX7DXNyery05/82LvBHuuop7uDkW/kRVRoX8QDv1clafXXaOe/llHQu3aYwPIkKM1vk+PFkK2A+yHK/pnLSuiA4/bT8qo8U0oVHIxoNiaBtbK1jx3theA/QDZZoUUwI/nt7AT8yld4uPCSl/pJlc2H01yJTw7mpWSNARBtIQkhjlHpT0NGvcvdIPk7MzcYaBNdbHBp1b8jLmTvY4ji4J/QxlUmtMFiaokcRoBjmcWq4x7cwqrNPLYc3fBADIk8ZZi/NS6O6Tl95OqEpqrLon0zgAEYrA0ahBwgJ1aW1t2D/Nl4Z3tZV4IfJkks59kjZvjIOABzYcxxrh/CiBU4XbM0Oqn4R7w2FuS1xi/SQLrTgEkVtchUDuYpNmTyczQdFu8/+edNX0WkZwe+F7qtlotPZZ9hlSdtsMwsWJ6PM+/Clp1Z9dSghHI5rRqwiByVz67TM22Jz6R8TRXK94qS0BC4x2WKJGbDvcnCWtV1Vjjv5arEx6jNUAeipsgqHYat3TQoLWDnbqRca2w6QkmJgSV3Utccbtv51dSvLOo7gbE7ijjUB+zGe/Q5JY9jD4pXnso7gClTTV/G4QOX/mkh9829W0V2J7Miv0Nt8mNI0r5USiInxpTqgdFY=
