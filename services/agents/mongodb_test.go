@@ -33,7 +33,7 @@ func TestMongodbExporterConfig(t *testing.T) {
 	}
 	exporter := &models.Agent{
 		Username: pointer.ToString("username"),
-		Password: pointer.ToString("password"),
+		Password: pointer.ToString("s3cur3 p@$$w0r4."),
 	}
 	actual := mongodbExporterConfig(mongo, exporter)
 	expected := &api.SetStateRequest_AgentProcess{
@@ -48,7 +48,7 @@ func TestMongodbExporterConfig(t *testing.T) {
 			"--web.listen-address=:{{ .listen_port }}",
 		},
 		Env: []string{
-			"MONGODB_URI=mongodb://username:password@1.2.3.4:27017/",
+			"MONGODB_URI=mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:27017",
 		},
 	}
 	assert.Equal(t, expected.Args, actual.Args)

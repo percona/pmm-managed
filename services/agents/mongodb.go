@@ -19,6 +19,7 @@ package agents
 import (
 	"fmt"
 	"net"
+	"net/url"
 	"sort"
 	"strconv"
 
@@ -52,11 +53,11 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent) *api
 
 	host := pointer.GetString(service.Address)
 	port := pointer.GetUint16(service.Port)
-
-	usr := pointer.GetString(exporter.Username)
-	passwd := pointer.GetString(exporter.Password)
-	addr := net.JoinHostPort(host, strconv.Itoa(int(port)))
-	connString := fmt.Sprintf("mongodb://%s:%s@%s/", usr, passwd, addr)
+	connURL := url.URL{
+		Scheme: "mongodb",
+		User:   url.UserPassword(pointer.GetString(exporter.Username), pointer.GetString(exporter.Password)),
+		Host:   net.JoinHostPort(host, strconv.Itoa(int(port))),
+	}
 
 	return &api.SetStateRequest_AgentProcess{
 		Type:               api.Type_MONGODB_EXPORTER,
@@ -64,7 +65,7 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent) *api
 		TemplateRightDelim: tdp.right,
 		Args:               args,
 		Env: []string{
-			fmt.Sprintf("MONGODB_URI=%s", connString),
+			fmt.Sprintf("MONGODB_URI=%s", connURL.String()),
 		},
 	}
 }
