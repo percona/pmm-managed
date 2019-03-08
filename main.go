@@ -33,7 +33,7 @@ import (
 	"sync"
 	"time"
 
-	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	agentAPI "github.com/percona/pmm/api/agent"
 	inventoryAPI "github.com/percona/pmm/api/inventory"
@@ -47,8 +47,7 @@ import (
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/reflection"
 	"gopkg.in/reform.v1"
-	reformMySQL "gopkg.in/reform.v1/dialects/mysql"
-	reformPostgreSQL "gopkg.in/reform.v1/dialects/postgresql"
+	"gopkg.in/reform.v1/dialects/postgresql"
 
 	"github.com/percona/pmm-managed/handlers"
 	"github.com/percona/pmm-managed/models"
@@ -330,21 +329,14 @@ func main() {
 		cancel()
 	}()
 
-	sqlDB, err := models.OpenDB(*dbNameF, *dbUsernameF, *dbPasswordF, l.Debugf)
-	if err != nil {
-		l.Panicf("Failed to connect to database: %+v", err)
-	}
-	defer sqlDB.Close()
-	db := reform.NewDB(sqlDB, reformMySQL.Dialect, nil)
-
 	postgresDB, err := models.OpenPostgresDB(*postgresDBNameF, *postgresDBUsernameF, *postgresDBPasswordF, l.Debugf)
 	if err != nil {
 		l.Panicf("Failed to connect to database: %+v", err)
 	}
 	defer postgresDB.Close()
-	pdb := reform.NewDB(postgresDB, reformPostgreSQL.Dialect, nil)
+	pdb := reform.NewDB(postgresDB, postgresql.Dialect, nil)
 
-	prometheus, err := prometheus.NewService(*prometheusConfigF, *promtoolF, db, *prometheusURLF)
+	prometheus, err := prometheus.NewService(*prometheusConfigF, *promtoolF, pdb, *prometheusURLF)
 	if err == nil {
 		err = prometheus.Check(ctx)
 	}
@@ -352,12 +344,12 @@ func main() {
 		l.Panicf("Prometheus service problem: %+v", err)
 	}
 
-	agentsRegistry := agents.NewRegistry(db, prometheus)
+	agentsRegistry := agents.NewRegistry(pdb, prometheus)
 	logs := logs.New(version.Version)
 
 	deps := &serviceDependencies{
 		prometheus:     prometheus,
-		db:             db,
+		db:             pdb,
 		portsRegistry:  ports.NewRegistry(10000, 10999, nil),
 		agentsRegistry: agentsRegistry,
 		logs:           logs,

@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/go-sql-driver/mysql"
+	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -30,23 +30,23 @@ import (
 func assertCantBeNull(t *testing.T, err error, column string) {
 	t.Helper()
 
-	require.IsType(t, &mysql.MySQLError{}, err)
-	mysqlErr := err.(*mysql.MySQLError)
-	assert.EqualValues(t, 1048, mysqlErr.Number)
-	assert.Equal(t, fmt.Sprintf("Column '%s' cannot be null", column), mysqlErr.Message)
+	require.IsType(t, &pq.Error{}, err)
+	pgErr := err.(*pq.Error)
+	assert.EqualValues(t, pq.ErrorCode("23502"), pgErr.Code)
+	assert.Equal(t, fmt.Sprintf("null value in column \"%s\" violates not-null constraint", column), pgErr.Message)
 }
 
-func assertDuplicate(t *testing.T, err error, entry, key string) {
+func assertDuplicate(t *testing.T, err error, constraint string) {
 	t.Helper()
 
-	require.IsType(t, &mysql.MySQLError{}, err)
-	mysqlErr := err.(*mysql.MySQLError)
-	assert.EqualValues(t, 1062, mysqlErr.Number)
-	assert.Equal(t, fmt.Sprintf("Duplicate entry '%s' for key '%s'", entry, key), mysqlErr.Message)
+	require.IsType(t, &pq.Error{}, err)
+	pgErr := err.(*pq.Error)
+	assert.EqualValues(t, pq.ErrorCode("23505"), pgErr.Code)
+	assert.Equal(t, fmt.Sprintf("duplicate key value violates unique constraint \"%s\"", constraint), pgErr.Message)
 }
 
 func TestDatabaseUniqueIndexes(t *testing.T) {
-	db := tests.OpenTestDB(t)
+	db := tests.OpenTestPostgresDB(t)
 	defer func() {
 		require.NoError(t, db.Close())
 	}()
@@ -64,14 +64,14 @@ func TestDatabaseUniqueIndexes(t *testing.T) {
 			"INSERT INTO nodes (node_id, node_type, node_name) " +
 				"VALUES ('1', '', 'other name')",
 		)
-		assertDuplicate(t, err, "1", "PRIMARY")
+		assertDuplicate(t, err, "nodes_pkey")
 
 		// node_name
 		_, err = db.Exec(
 			"INSERT INTO nodes (node_id, node_type, node_name) " +
 				"VALUES ('2', '', 'name')",
 		)
-		assertDuplicate(t, err, "name", "node_name")
+		assertDuplicate(t, err, "nodes_node_name_key")
 
 		// machine_id
 		_, err = db.Exec(
@@ -83,7 +83,7 @@ func TestDatabaseUniqueIndexes(t *testing.T) {
 			"INSERT INTO nodes (node_id, node_type, node_name, machine_id) " +
 				"VALUES ('32', '', 'name32', 'machine-id')",
 		)
-		assertDuplicate(t, err, "machine-id", "machine_id")
+		assertDuplicate(t, err, "nodes_machine_id_key")
 
 		// docker_container_id
 		_, err = db.Exec(
@@ -95,7 +95,7 @@ func TestDatabaseUniqueIndexes(t *testing.T) {
 			"INSERT INTO nodes (node_id, node_type, node_name, docker_container_id) " +
 				"VALUES ('42', '', 'name42', 'docker-container-id')",
 		)
-		assertDuplicate(t, err, "docker-container-id", "docker_container_id")
+		assertDuplicate(t, err, "nodes_docker_container_id_key")
 
 		// (address, region)
 		_, err = db.Exec(
@@ -107,7 +107,7 @@ func TestDatabaseUniqueIndexes(t *testing.T) {
 			"INSERT INTO nodes (node_id, node_type, node_name, address, region) " +
 				"VALUES ('52', '', 'name52', 'instance1', 'region1')",
 		)
-		assertDuplicate(t, err, "instance1-region1", "address")
+		assertDuplicate(t, err, "nodes_address_region_key")
 		// same address, NULL region is fine
 		_, err = db.Exec(
 			"INSERT INTO nodes (node_id, node_type, node_name, address) " +

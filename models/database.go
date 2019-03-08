@@ -22,7 +22,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/go-sql-driver/mysql"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
@@ -30,11 +29,11 @@ import (
 
 // FIXME Re-add created_at/updated_at: https://jira.percona.com/browse/PMM-3350
 
-// databaseSchema maps schema version from schema_migrations table (id column) to a slice of DDL queries.
+// postgresDatabaseSchema maps schema version from schema_migrations table (id column) to a slice of DDL queries.
 //
 // Initial AUTO_INCREMENT values are spaced to prevent programming errors, or at least make them more visible.
 // It does not imply that one can have at most 1000 nodes, etc.
-var databaseSchema = [][]string{
+var postgresDatabaseSchema = [][]string{
 	1: {
 		`CREATE TABLE schema_migrations (
 			id INT NOT NULL,
@@ -50,7 +49,7 @@ var databaseSchema = [][]string{
 			custom_labels TEXT,
 			address VARCHAR(255),
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			-- updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 			-- Generic
 			distro VARCHAR(255),
@@ -81,11 +80,11 @@ var databaseSchema = [][]string{
 			node_id VARCHAR(255) NOT NULL,
 			custom_labels TEXT,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			-- updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 			-- MySQL
 			address VARCHAR(255),
-			port SMALLINT UNSIGNED,
+			port SMALLINT,
 
 			PRIMARY KEY (service_id),
 			UNIQUE (service_name),
@@ -100,11 +99,11 @@ var databaseSchema = [][]string{
 			pmm_agent_id VARCHAR(255),
 			custom_labels TEXT,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			-- updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 			-- state
 			status VARCHAR(255) NOT NULL,
-			listen_port SMALLINT UNSIGNED,
+			listen_port SMALLINT,
 			version VARCHAR(255),
 
 			-- Credentials to access service
@@ -134,78 +133,6 @@ var databaseSchema = [][]string{
 			FOREIGN KEY (agent_id) REFERENCES agents (agent_id),
 			FOREIGN KEY (service_id) REFERENCES services (service_id),
 			UNIQUE (agent_id, service_id)
-		)`,
-	},
-	2: {
-		`
-		-- MongoDBExporter
-		ALTER TABLE agents ADD connection_string VARCHAR(255) AFTER password
-		`,
-	},
-}
-
-// OpenDB opens connection to MySQL database and runs migrations.
-func OpenDB(name, username, password string, logf reform.Printf) (*sql.DB, error) {
-	cfg := mysql.NewConfig()
-	cfg.User = username
-	cfg.Passwd = password
-	cfg.DBName = name
-
-	cfg.Net = "tcp"
-	cfg.Addr = "127.0.0.1:3306"
-
-	// required for reform
-	cfg.ClientFoundRows = true
-	cfg.ParseTime = true
-
-	dsn := cfg.FormatDSN()
-	db, err := sql.Open("mysql", dsn)
-	if err == nil {
-		db.SetMaxIdleConns(10)
-		db.SetMaxOpenConns(10)
-		db.SetConnMaxLifetime(0)
-		err = db.Ping()
-	}
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to connect to MySQL.")
-	}
-
-	if name == "" {
-		return db, nil
-	}
-
-	latestVersion := len(databaseSchema) - 1 // skip item 0
-	var currentVersion int
-	err = db.QueryRow("SELECT id FROM schema_migrations ORDER BY id DESC LIMIT 1").Scan(&currentVersion)
-	if myErr, ok := err.(*mysql.MySQLError); ok && myErr.Number == 0x47a { // 1046 table doesn't exist
-		err = nil
-	}
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to get current version.")
-	}
-	logf("Current database schema version: %d. Latest version: %d.", currentVersion, latestVersion)
-
-	for version := currentVersion + 1; version <= latestVersion; version++ {
-		logf("Migrating database to schema version %d ...", version)
-		queries := databaseSchema[version]
-		queries = append(queries, fmt.Sprintf(`INSERT INTO schema_migrations (id) VALUES (%d)`, version))
-		for _, q := range queries {
-			q = strings.TrimSpace(q)
-			logf("\n%s\n", q)
-			if _, err = db.Exec(q); err != nil {
-				return nil, errors.Wrapf(err, "Failed to execute statement:\n%s.", q)
-			}
-		}
-	}
-
-	return db, nil
-}
-
-// postgresDatabaseSchema maps schema version from schema_migrations table (id column) to a slice of DDL queries.
-var postgresDatabaseSchema = [][]string{
-	1: {
-		`CREATE TABLE schema_migrations (
-			id INT PRIMARY KEY
 		)`,
 
 		`CREATE TABLE telemetry (
