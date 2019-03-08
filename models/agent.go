@@ -130,8 +130,6 @@ type Agent struct {
 	Username *string `reform:"username"`
 	Password *string `reform:"password"`
 
-	ConnectionString *string `reform:"connection_string"`
-
 	MetricsURL *string `reform:"metrics_url"`
 }
 
