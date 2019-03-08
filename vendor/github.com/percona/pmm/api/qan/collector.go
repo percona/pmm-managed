@@ -1,4 +1,4 @@
-package qan
+package qanpb
 
 const (
 	// AgentMessageTypeURL contains qan.AgentMessage type URL for any.Any.

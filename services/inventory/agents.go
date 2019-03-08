@@ -73,7 +73,7 @@ func (as *AgentsService) makeAgent(q *reform.Querier, row *models.Agent) (api.Ag
 			return nil, err
 		}
 		if len(services) != 1 {
-			return nil, errors.Errorf("expected exactly one Services, got %d", len(services))
+			return nil, errors.Errorf("expected exactly one Service, got %d", len(services))
 		}
 
 		return &api.MySQLdExporter{
@@ -93,7 +93,7 @@ func (as *AgentsService) makeAgent(q *reform.Querier, row *models.Agent) (api.Ag
 			return nil, err
 		}
 		if len(services) != 1 {
-			return nil, errors.Errorf("expected exactly one Services, got %d", len(services))
+			return nil, errors.Errorf("expected exactly one Service, got %d", len(services))
 		}
 
 		return &api.MongoDBExporter{
@@ -104,6 +104,24 @@ func (as *AgentsService) makeAgent(q *reform.Querier, row *models.Agent) (api.Ag
 			Password:   pointer.GetString(row.Password),
 			Status:     api.AgentStatus(api.AgentStatus_value[row.Status]),
 			ListenPort: uint32(pointer.GetUint16(row.ListenPort)),
+		}, nil
+
+	case models.QANMySQLPerfSchemaAgentType:
+		services, err := models.ServicesForAgent(q, row.AgentID)
+		if err != nil {
+			return nil, err
+		}
+		if len(services) != 1 {
+			return nil, errors.Errorf("expected exactly one Service, got %d", len(services))
+		}
+
+		return &api.QANMySQLPerfSchemaAgent{
+			AgentId:    row.AgentID,
+			PmmAgentId: pointer.GetString(row.PMMAgentID),
+			ServiceId:  services[0].ServiceID,
+			Username:   pointer.GetString(row.Username),
+			Password:   pointer.GetString(row.Password),
+			Status:     api.AgentStatus(api.AgentStatus_value[row.Status]),
 		}, nil
 
 	default:
@@ -228,7 +246,6 @@ func (as *AgentsService) AddPMMAgent(ctx context.Context, db *reform.DB, nodeID 
 			AgentID:      id,
 			AgentType:    models.PMMAgentType,
 			RunsOnNodeID: pointer.ToStringOrNil(nodeID),
-			PMMAgentID:   nil,
 		}
 		if err := tx.Insert(row); err != nil {
 			return errors.WithStack(err)
@@ -247,7 +264,6 @@ func (as *AgentsService) AddPMMAgent(ctx context.Context, db *reform.DB, nodeID 
 // AddNodeExporter inserts node_exporter Agent with given parameters.
 func (as *AgentsService) AddNodeExporter(ctx context.Context, db *reform.DB, req *api.AddNodeExporterRequest) (*api.NodeExporter, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
-	// TODO Check runs-on Node: it must be BM, VM, DC (i.e. not remote, AWS RDS, etc.)
 
 	var res *api.NodeExporter
 	e := db.InTransaction(func(tx *reform.TX) error {
@@ -262,10 +278,9 @@ func (as *AgentsService) AddNodeExporter(ctx context.Context, db *reform.DB, req
 		}
 
 		row := &models.Agent{
-			AgentID:      id,
-			AgentType:    models.NodeExporterType,
-			PMMAgentID:   pointer.ToStringOrNil(req.PmmAgentId),
-			RunsOnNodeID: nil,
+			AgentID:    id,
+			AgentType:  models.NodeExporterType,
+			PMMAgentID: &req.PmmAgentId,
 		}
 		if err := row.SetCustomLabels(req.CustomLabels); err != nil {
 			return err
@@ -293,16 +308,13 @@ func (as *AgentsService) AddNodeExporter(ctx context.Context, db *reform.DB, req
 		return nil, e
 	}
 
-	if req.PmmAgentId != "" {
-		as.r.SendSetStateRequest(ctx, req.PmmAgentId)
-	}
+	as.r.SendSetStateRequest(ctx, req.PmmAgentId)
 	return res, nil
 }
 
 // AddMySQLdExporter inserts mysqld_exporter Agent with given parameters.
 func (as *AgentsService) AddMySQLdExporter(ctx context.Context, db *reform.DB, req *api.AddMySQLdExporterRequest) (*api.MySQLdExporter, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
-	// TODO Check runs-on Node: it must be BM, VM, DC (i.e. not remote, AWS RDS, etc.)
 
 	var res *api.MySQLdExporter
 	e := db.InTransaction(func(tx *reform.TX) error {
@@ -317,12 +329,11 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, db *reform.DB, r
 		}
 
 		row := &models.Agent{
-			AgentID:      id,
-			AgentType:    models.MySQLdExporterType,
-			PMMAgentID:   pointer.ToStringOrNil(req.PmmAgentId),
-			RunsOnNodeID: nil,
-			Username:     pointer.ToStringOrNil(req.Username),
-			Password:     pointer.ToStringOrNil(req.Password),
+			AgentID:    id,
+			AgentType:  models.MySQLdExporterType,
+			PMMAgentID: &req.PmmAgentId,
+			Username:   pointer.ToStringOrNil(req.Username),
+			Password:   pointer.ToStringOrNil(req.Password),
 		}
 		if err := row.SetCustomLabels(req.CustomLabels); err != nil {
 			return err
@@ -350,9 +361,7 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, db *reform.DB, r
 		return nil, e
 	}
 
-	if req.PmmAgentId != "" {
-		as.r.SendSetStateRequest(ctx, req.PmmAgentId)
-	}
+	as.r.SendSetStateRequest(ctx, req.PmmAgentId)
 	return res, nil
 }
 
@@ -373,7 +382,6 @@ func (as *AgentsService) SetDisabled(ctx context.Context, id string, disabled bo
 // AddMongoDBExporter inserts mongodb_exporter Agent with given parameters.
 func (as *AgentsService) AddMongoDBExporter(ctx context.Context, db *reform.DB, req *api.AddMongoDBExporterRequest) (*api.MongoDBExporter, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
-	// TODO Check runs-on Node: it must be BM, VM, DC (i.e. not remote, AWS RDS, etc.)
 
 	var res *api.MongoDBExporter
 	e := db.InTransaction(func(tx *reform.TX) error {
@@ -388,12 +396,11 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, db *reform.DB, 
 		}
 
 		row := &models.Agent{
-			AgentID:      id,
-			AgentType:    models.MongoDBExporterType,
-			PMMAgentID:   pointer.ToStringOrNil(req.PmmAgentId),
-			RunsOnNodeID: nil,
-			Username:     pointer.ToStringOrNil(req.Username),
-			Password:     pointer.ToStringOrNil(req.Password),
+			AgentID:    id,
+			AgentType:  models.MongoDBExporterType,
+			PMMAgentID: &req.PmmAgentId,
+			Username:   pointer.ToStringOrNil(req.Username),
+			Password:   pointer.ToStringOrNil(req.Password),
 		}
 		if err := row.SetCustomLabels(req.CustomLabels); err != nil {
 			return err
@@ -421,20 +428,54 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, db *reform.DB, 
 		return nil, e
 	}
 
-	if req.PmmAgentId != "" {
-		as.r.SendSetStateRequest(ctx, req.PmmAgentId)
-	}
+	as.r.SendSetStateRequest(ctx, req.PmmAgentId)
 	return res, nil
 }
 
 // AddQANMySQLPerfSchemaAgent adds MySQL PerfSchema QAN Agent.
 func (as *AgentsService) AddQANMySQLPerfSchemaAgent(ctx context.Context, db *reform.DB, req *api.AddQANMySQLPerfSchemaAgentRequest) (*api.QANMySQLPerfSchemaAgent, error) {
-	// TODO validate
-	// TODO save
-	res := &api.QANMySQLPerfSchemaAgent{
-		AgentId:    "FIXME",
-		PmmAgentId: req.PmmAgentId,
-		ServiceId:  req.ServiceId,
+	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
+
+	var res *api.QANMySQLPerfSchemaAgent
+	e := db.InTransaction(func(tx *reform.TX) error {
+		id := "/agent_id/" + uuid.New().String()
+		if err := checkUniqueID(tx.Querier, id); err != nil {
+			return err
+		}
+
+		ss := NewServicesService(tx.Querier, as.r)
+		if _, err := ss.get(ctx, req.ServiceId); err != nil {
+			return err
+		}
+
+		row := &models.Agent{
+			AgentID:    id,
+			AgentType:  models.QANMySQLPerfSchemaAgentType,
+			PMMAgentID: &req.PmmAgentId,
+			Username:   pointer.ToStringOrNil(req.Username),
+			Password:   pointer.ToStringOrNil(req.Password),
+		}
+		if err := tx.Insert(row); err != nil {
+			return errors.WithStack(err)
+		}
+
+		err := tx.Insert(&models.AgentService{
+			AgentID:   row.AgentID,
+			ServiceID: req.ServiceId,
+		})
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		agent, err := as.makeAgent(tx.Querier, row)
+		if err != nil {
+			return err
+		}
+		res = agent.(*api.QANMySQLPerfSchemaAgent)
+		return nil
+	})
+	if e != nil {
+		return nil, e
 	}
 
 	as.r.SendSetStateRequest(ctx, req.PmmAgentId)
