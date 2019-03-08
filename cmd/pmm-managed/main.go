@@ -98,6 +98,7 @@ var (
 	agentQANBaseF           = flag.String("agent-qan-base", "/usr/local/percona/qan-agent", "qan-agent installation base path")
 
 	rdsEnableGovCloud = flag.Bool("rds-enable-gov-cloud", false, "Enable GOV cloud for RDS")
+	rdsEnableCnCloud = flag.Bool("rds-enable-cn-cloud", false, "Enable AWS CN cloud for RDS")
 
 	debugF = flag.Bool("debug", false, "Enable debug logging")
 )
@@ -177,6 +178,7 @@ func makeRDSService(ctx context.Context, deps *serviceDependencies) (*rds.Servic
 		QAN:           deps.qan,
 
 		RDSEnableGovCloud: *rdsEnableGovCloud,
+		RDSEnableCnCloud: *rdsEnableCnCloud,
 	}
 	rdsService, err := rds.NewService(&rdsConfig)
 	if err != nil {

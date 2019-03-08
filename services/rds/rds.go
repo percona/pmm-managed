@@ -263,11 +263,16 @@ func (svc *Service) Discover(ctx context.Context, accessKey, secretKey string) (
 	instances := make(chan Instance)
 
 	partitions := []endpoints.Partition{endpoints.AwsPartition()}
-	// add AWS CN region
-	partitions = append(partitions, endpoints.AwsCnPartition())
+
 	if svc.RDSEnableGovCloud {
 		partitions = append(partitions, endpoints.AwsUsGovPartition())
 	}
+
+	// add AWS CN region
+	if svc.RDSEnableCnCloud {
+		partitions = append(partitions, endpoints.AwsCnPartition())
+	}
+
 	for _, p := range partitions {
 		for _, r := range p.Services()[endpoints.RdsServiceID].Regions() {
 			region := r.ID()
