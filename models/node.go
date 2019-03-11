@@ -81,7 +81,7 @@ type Node struct {
 	CustomLabels []byte    `reform:"custom_labels"`
 	Address      *string   `reform:"address"` // nil means "unknown"; also stores Remote instance
 	CreatedAt    time.Time `reform:"created_at"`
-	// UpdatedAt time.Time `reform:"updated_at"`
+	UpdatedAt    time.Time `reform:"updated_at"`
 
 	Distro        *string `reform:"distro"`
 	DistroVersion *string `reform:"distro_version"`
@@ -97,15 +97,14 @@ type Node struct {
 func (s *Node) BeforeInsert() error {
 	now := Now()
 	s.CreatedAt = now
-	// s.UpdatedAt = now
+	s.UpdatedAt = now
 	return nil
 }
 
 // BeforeUpdate implements reform.BeforeUpdater interface.
 //nolint:unparam
 func (s *Node) BeforeUpdate() error {
-	// now := Now()
-	// s.UpdatedAt = now
+	s.UpdatedAt = Now()
 	return nil
 }
 
