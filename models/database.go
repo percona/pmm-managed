@@ -102,7 +102,7 @@ var databaseSchema = [][]string{
 
 			-- state
 			status VARCHAR(255) NOT NULL,
-			listen_port SMALLINT,
+			listen_port INTEGER,
 			version VARCHAR(255),
 
 			-- Credentials to access service
