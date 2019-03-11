@@ -3,7 +3,7 @@ help:                           ## Display this help message.
 	@grep '^[a-zA-Z]' $(MAKEFILE_LIST) | \
 	    awk -F ':.*?## ' 'NF==2 {printf "  %-26s%s\n", $$1, $$2}'
 
-PMM_RELEASE_PATH ?= bin/pmm-managed
+PMM_RELEASE_PATH ?= bin
 PMM_RELEASE_VERSION ?= 2.0.0-dev
 PMM_RELEASE_TIMESTAMP ?= $(shell date '+%s')
 PMM_RELEASE_FULLCOMMIT ?= $(shell git rev-parse HEAD)
