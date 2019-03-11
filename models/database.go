@@ -43,8 +43,8 @@ var databaseSchema = [][]string{
 			machine_id VARCHAR(255),
 			custom_labels TEXT,
 			address VARCHAR(255),
-			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			created_at TIMESTAMP NOT NULL,
+			updated_at TIMESTAMP NOT NULL,
 
 			-- Generic
 			distro VARCHAR(255),
