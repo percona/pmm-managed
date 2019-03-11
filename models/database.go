@@ -68,7 +68,7 @@ var databaseSchema = [][]string{
 			UNIQUE (address, region)
 		)`,
 
-		fmt.Sprintf(`INSERT INTO nodes (node_id, node_type,	node_name, created_at, updated_at) VALUES ('%s', '%s', 'PMM Server', '%s', '%s')`,
+		fmt.Sprintf(`INSERT INTO nodes (node_id, node_type,	node_name, created_at, updated_at) VALUES ('%s', '%s', 'PMM Server', '%s', '%s')`, //nolint:gosec
 			PMMServerNodeID, GenericNodeType, now, now), //nolint:gosec
 
 		`CREATE TABLE services (
