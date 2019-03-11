@@ -98,6 +98,9 @@ func (s *Node) BeforeInsert() error {
 	now := Now()
 	s.CreatedAt = now
 	s.UpdatedAt = now
+	if len(s.CustomLabels) == 0 {
+		s.CustomLabels = nil
+	}
 	return nil
 }
 
@@ -105,6 +108,9 @@ func (s *Node) BeforeInsert() error {
 //nolint:unparam
 func (s *Node) BeforeUpdate() error {
 	s.UpdatedAt = Now()
+	if len(s.CustomLabels) == 0 {
+		s.CustomLabels = nil
+	}
 	return nil
 }
 
@@ -112,7 +118,10 @@ func (s *Node) BeforeUpdate() error {
 //nolint:unparam
 func (s *Node) AfterFind() error {
 	s.CreatedAt = s.CreatedAt.UTC()
-	// s.UpdatedAt = s.UpdatedAt.UTC()
+	s.UpdatedAt = s.UpdatedAt.UTC()
+	if len(s.CustomLabels) == 0 {
+		s.CustomLabels = nil
+	}
 	return nil
 }
 

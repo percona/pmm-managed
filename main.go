@@ -329,14 +329,14 @@ func main() {
 		cancel()
 	}()
 
-	postgresDB, err := models.OpenPostgresDB(*postgresDBNameF, *postgresDBUsernameF, *postgresDBPasswordF, l.Debugf)
+	postgresDB, err := models.OpenDB(*postgresDBNameF, *postgresDBUsernameF, *postgresDBPasswordF, l.Debugf)
 	if err != nil {
 		l.Panicf("Failed to connect to database: %+v", err)
 	}
 	defer postgresDB.Close()
-	pdb := reform.NewDB(postgresDB, postgresql.Dialect, nil)
+	db := reform.NewDB(postgresDB, postgresql.Dialect, nil)
 
-	prometheus, err := prometheus.NewService(*prometheusConfigF, *promtoolF, pdb, *prometheusURLF)
+	prometheus, err := prometheus.NewService(*prometheusConfigF, *promtoolF, db, *prometheusURLF)
 	if err == nil {
 		err = prometheus.Check(ctx)
 	}
@@ -344,12 +344,12 @@ func main() {
 		l.Panicf("Prometheus service problem: %+v", err)
 	}
 
-	agentsRegistry := agents.NewRegistry(pdb, prometheus)
+	agentsRegistry := agents.NewRegistry(db, prometheus)
 	logs := logs.New(version.Version)
 
 	deps := &serviceDependencies{
 		prometheus:     prometheus,
-		db:             pdb,
+		db:             db,
 		portsRegistry:  ports.NewRegistry(10000, 10999, nil),
 		agentsRegistry: agentsRegistry,
 		logs:           logs,
@@ -378,7 +378,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		runTelemetryService(ctx, pdb)
+		runTelemetryService(ctx, db)
 	}()
 
 	wg.Wait()

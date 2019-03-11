@@ -32,6 +32,7 @@ func assertCantBeNull(t *testing.T, err error, column string) {
 
 	require.IsType(t, &pq.Error{}, err)
 	pgErr := err.(*pq.Error)
+	// see: https://www.postgresql.org/docs/10/errcodes-appendix.html
 	assert.EqualValues(t, pq.ErrorCode("23502"), pgErr.Code)
 	assert.Equal(t, fmt.Sprintf("null value in column \"%s\" violates not-null constraint", column), pgErr.Message)
 }
@@ -41,6 +42,7 @@ func assertDuplicate(t *testing.T, err error, constraint string) {
 
 	require.IsType(t, &pq.Error{}, err)
 	pgErr := err.(*pq.Error)
+	// see: https://www.postgresql.org/docs/10/errcodes-appendix.html
 	assert.EqualValues(t, pq.ErrorCode("23505"), pgErr.Code)
 	assert.Equal(t, fmt.Sprintf("duplicate key value violates unique constraint \"%s\"", constraint), pgErr.Message)
 }

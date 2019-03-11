@@ -29,7 +29,7 @@ import (
 func OpenTestPostgresDB(tb testing.TB) *sql.DB {
 	tb.Helper()
 
-	db, err := models.OpenPostgresDB("", "pmm-managed", "pmm-managed", tb.Logf)
+	db, err := models.OpenDB("", "pmm-managed", "pmm-managed", tb.Logf)
 	require.NoError(tb, err)
 
 	const testDatabase = "pmm-managed-dev"
@@ -41,7 +41,7 @@ func OpenTestPostgresDB(tb testing.TB) *sql.DB {
 	err = db.Close()
 	require.NoError(tb, err)
 
-	db, err = models.OpenPostgresDB(testDatabase, "pmm-managed", "pmm-managed", tb.Logf)
+	db, err = models.OpenDB(testDatabase, "pmm-managed", "pmm-managed", tb.Logf)
 	require.NoError(tb, err)
 	return db
 }

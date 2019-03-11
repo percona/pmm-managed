@@ -106,11 +106,11 @@ func TestModels(t *testing.T) {
 		require.NoError(t, err)
 		expected := []*models.Node{
 			{
-				NodeID:       "N1",
-				NodeType:     models.GenericNodeType,
-				NodeName:     "N1 name",
-				CreatedAt:    now,
-				CustomLabels: []byte{},
+				NodeID:    "N1",
+				NodeType:  models.GenericNodeType,
+				NodeName:  "N1 name",
+				CreatedAt: now,
+				UpdatedAt: now,
 			},
 		}
 		assert.Equal(t, expected, nodes)
@@ -124,12 +124,12 @@ func TestModels(t *testing.T) {
 		require.NoError(t, err)
 		expected := []*models.Service{
 			{
-				ServiceID:    "S1",
-				ServiceType:  models.MySQLServiceType,
-				ServiceName:  "S1 name",
-				NodeID:       "N1",
-				CreatedAt:    now,
-				CustomLabels: []byte{},
+				ServiceID:   "S1",
+				ServiceType: models.MySQLServiceType,
+				ServiceName: "S1 name",
+				NodeID:      "N1",
+				CreatedAt:   now,
+				UpdatedAt:   now,
 			},
 		}
 		assert.Equal(t, expected, services)
@@ -148,7 +148,7 @@ func TestModels(t *testing.T) {
 				PMMAgentID:   pointer.ToStringOrNil("A1"),
 				RunsOnNodeID: nil,
 				CreatedAt:    now,
-				CustomLabels: []byte{},
+				UpdatedAt:    now,
 			},
 		}
 		assert.Equal(t, expected, agents)
@@ -167,7 +167,7 @@ func TestModels(t *testing.T) {
 				PMMAgentID:   pointer.ToStringOrNil("A1"),
 				RunsOnNodeID: nil,
 				CreatedAt:    now,
-				CustomLabels: []byte{},
+				UpdatedAt:    now,
 			},
 			{
 				AgentID:      "A3",
@@ -175,7 +175,7 @@ func TestModels(t *testing.T) {
 				PMMAgentID:   pointer.ToStringOrNil("A1"),
 				RunsOnNodeID: nil,
 				CreatedAt:    now,
-				CustomLabels: []byte{},
+				UpdatedAt:    now,
 			},
 		}
 		assert.Equal(t, expected, agents)
@@ -194,7 +194,7 @@ func TestModels(t *testing.T) {
 				PMMAgentID:   pointer.ToStringOrNil("A1"),
 				RunsOnNodeID: nil,
 				CreatedAt:    now,
-				CustomLabels: []byte{},
+				UpdatedAt:    now,
 			},
 		}
 		assert.Equal(t, expected, agents)

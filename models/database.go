@@ -27,13 +27,8 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-// FIXME Re-add created_at/updated_at: https://jira.percona.com/browse/PMM-3350
-
-// postgresDatabaseSchema maps schema version from schema_migrations table (id column) to a slice of DDL queries.
-//
-// Initial AUTO_INCREMENT values are spaced to prevent programming errors, or at least make them more visible.
-// It does not imply that one can have at most 1000 nodes, etc.
-var postgresDatabaseSchema = [][]string{
+// databaseSchema maps schema version from schema_migrations table (id column) to a slice of DDL queries.
+var databaseSchema = [][]string{
 	1: {
 		`CREATE TABLE schema_migrations (
 			id INT NOT NULL,
@@ -79,12 +74,12 @@ var postgresDatabaseSchema = [][]string{
 			service_name VARCHAR(255) NOT NULL,
 			node_id VARCHAR(255) NOT NULL,
 			custom_labels TEXT,
-			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			created_at TIMESTAMP NOT NULL,
+			updated_at TIMESTAMP NOT NULL,
 
 			-- MySQL
 			address VARCHAR(255),
-			port SMALLINT,
+			port INTEGER,
 
 			PRIMARY KEY (service_id),
 			UNIQUE (service_name),
@@ -98,8 +93,8 @@ var postgresDatabaseSchema = [][]string{
 			runs_on_node_id VARCHAR(255),
 			pmm_agent_id VARCHAR(255),
 			custom_labels TEXT,
-			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			created_at TIMESTAMP NOT NULL,
+			updated_at TIMESTAMP NOT NULL,
 
 			-- state
 			status VARCHAR(255) NOT NULL,
@@ -118,7 +113,7 @@ var postgresDatabaseSchema = [][]string{
 		`CREATE TABLE agent_nodes (
 			agent_id VARCHAR(255) NOT NULL,
 			node_id VARCHAR(255) NOT NULL,
-			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			created_at TIMESTAMP NOT NULL,
 
 			FOREIGN KEY (agent_id) REFERENCES agents (agent_id),
 			FOREIGN KEY (node_id) REFERENCES nodes (node_id),
@@ -128,7 +123,7 @@ var postgresDatabaseSchema = [][]string{
 		`CREATE TABLE agent_services (
 			agent_id VARCHAR(255) NOT NULL,
 			service_id VARCHAR(255) NOT NULL,
-			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			created_at TIMESTAMP NOT NULL,
 
 			FOREIGN KEY (agent_id) REFERENCES agents (agent_id),
 			FOREIGN KEY (service_id) REFERENCES services (service_id),
@@ -142,8 +137,8 @@ var postgresDatabaseSchema = [][]string{
 	},
 }
 
-// OpenPostgresDB opens connection to PostgreSQL database and runs migrations.
-func OpenPostgresDB(name, username, password string, logf reform.Printf) (*sql.DB, error) {
+// OpenDB opens connection to PostgreSQL database and runs migrations.
+func OpenDB(name, username, password string, logf reform.Printf) (*sql.DB, error) {
 	q := make(url.Values)
 	q.Set("sslmode", "disable")
 
@@ -175,7 +170,7 @@ func OpenPostgresDB(name, username, password string, logf reform.Printf) (*sql.D
 		return db, nil
 	}
 
-	latestVersion := len(postgresDatabaseSchema) - 1 // skip item 0
+	latestVersion := len(databaseSchema) - 1 // skip item 0
 	var currentVersion int
 	err = db.QueryRow("SELECT id FROM schema_migrations ORDER BY id DESC LIMIT 1").Scan(&currentVersion)
 	if pErr, ok := err.(*pq.Error); ok && pErr.Code == "42P01" { // undefined_table (see https://www.postgresql.org/docs/current/errcodes-appendix.html)
@@ -188,7 +183,7 @@ func OpenPostgresDB(name, username, password string, logf reform.Printf) (*sql.D
 
 	for version := currentVersion + 1; version <= latestVersion; version++ {
 		logf("Migrating database to schema version %d ...", version)
-		queries := postgresDatabaseSchema[version]
+		queries := databaseSchema[version]
 		queries = append(queries, fmt.Sprintf(`INSERT INTO schema_migrations (id) VALUES (%d)`, version))
 		for _, q := range queries {
 			q = strings.TrimSpace(q)
