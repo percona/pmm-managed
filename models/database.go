@@ -21,11 +21,14 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 )
+
+var now string = time.Now().UTC().Format(time.RFC3339)
 
 // databaseSchema maps schema version from schema_migrations table (id column) to a slice of DDL queries.
 var databaseSchema = [][]string{
@@ -65,7 +68,7 @@ var databaseSchema = [][]string{
 			UNIQUE (address, region)
 		)`,
 
-		fmt.Sprintf(`INSERT INTO nodes (node_id, node_type,	node_name) VALUES ('%s', '%s', 'PMM Server')`, PMMServerNodeID, GenericNodeType), //nolint:gosec
+		fmt.Sprintf(`INSERT INTO nodes (node_id, node_type,	node_name, created_at, updated_at) VALUES ('%s', '%s', 'PMM Server', '%s', '%s')`, PMMServerNodeID, GenericNodeType, now, now), //nolint:gosec
 
 		`CREATE TABLE services (
 			-- common

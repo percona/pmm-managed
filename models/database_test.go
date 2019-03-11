@@ -19,6 +19,7 @@ package models_test
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
@@ -56,69 +57,71 @@ func TestDatabaseUniqueIndexes(t *testing.T) {
 	var err error
 
 	t.Run("Nodes", func(t *testing.T) {
+
+		now := time.Now().UTC().Format(time.RFC3339)
 		// node_id
 		_, err = db.Exec(
-			"INSERT INTO nodes (node_id, node_type, node_name) " +
-				"VALUES ('1', '', 'name')",
+			"INSERT INTO nodes (node_id, node_type, node_name, created_at, updated_at) " +
+				"VALUES ('1', '', 'name', '" + now + "', '" + now + "')",
 		)
 		require.NoError(t, err)
 		_, err = db.Exec(
-			"INSERT INTO nodes (node_id, node_type, node_name) " +
-				"VALUES ('1', '', 'other name')",
+			"INSERT INTO nodes (node_id, node_type, node_name, created_at, updated_at) " +
+				"VALUES ('1', '', 'other name', '" + now + "', '" + now + "')",
 		)
 		assertDuplicate(t, err, "nodes_pkey")
 
 		// node_name
 		_, err = db.Exec(
-			"INSERT INTO nodes (node_id, node_type, node_name) " +
-				"VALUES ('2', '', 'name')",
+			"INSERT INTO nodes (node_id, node_type, node_name, created_at, updated_at) " +
+				"VALUES ('2', '', 'name', '" + now + "', '" + now + "')",
 		)
 		assertDuplicate(t, err, "nodes_node_name_key")
 
 		// machine_id
 		_, err = db.Exec(
-			"INSERT INTO nodes (node_id, node_type, node_name, machine_id) " +
-				"VALUES ('31', '', 'name31', 'machine-id')",
+			"INSERT INTO nodes (node_id, node_type, node_name, machine_id, created_at, updated_at) " +
+				"VALUES ('31', '', 'name31', 'machine-id', '" + now + "', '" + now + "')",
 		)
 		require.NoError(t, err)
 		_, err = db.Exec(
-			"INSERT INTO nodes (node_id, node_type, node_name, machine_id) " +
-				"VALUES ('32', '', 'name32', 'machine-id')",
+			"INSERT INTO nodes (node_id, node_type, node_name, machine_id, created_at, updated_at) " +
+				"VALUES ('32', '', 'name32', 'machine-id', '" + now + "', '" + now + "')",
 		)
 		assertDuplicate(t, err, "nodes_machine_id_key")
 
 		// docker_container_id
 		_, err = db.Exec(
-			"INSERT INTO nodes (node_id, node_type, node_name, docker_container_id) " +
-				"VALUES ('41', '', 'name41', 'docker-container-id')",
+			"INSERT INTO nodes (node_id, node_type, node_name, docker_container_id, created_at, updated_at) " +
+				"VALUES ('41', '', 'name41', 'docker-container-id', '" + now + "', '" + now + "')",
 		)
 		require.NoError(t, err)
 		_, err = db.Exec(
-			"INSERT INTO nodes (node_id, node_type, node_name, docker_container_id) " +
-				"VALUES ('42', '', 'name42', 'docker-container-id')",
+			"INSERT INTO nodes (node_id, node_type, node_name, docker_container_id, created_at, updated_at) " +
+				"VALUES ('42', '', 'name42', 'docker-container-id', '" + now + "', '" + now + "')",
 		)
 		assertDuplicate(t, err, "nodes_docker_container_id_key")
 
 		// (address, region)
 		_, err = db.Exec(
-			"INSERT INTO nodes (node_id, node_type, node_name, address, region) " +
-				"VALUES ('51', '', 'name51', 'instance1', 'region1')",
+			"INSERT INTO nodes (node_id, node_type, node_name, address, region, created_at, updated_at) " +
+				"VALUES ('51', '', 'name51', 'instance1', 'region1', '" + now + "', '" + now + "')",
 		)
 		require.NoError(t, err)
 		_, err = db.Exec(
-			"INSERT INTO nodes (node_id, node_type, node_name, address, region) " +
-				"VALUES ('52', '', 'name52', 'instance1', 'region1')",
+			"INSERT INTO nodes (node_id, node_type, node_name, address, region, created_at, updated_at) " +
+				"VALUES ('52', '', 'name52', 'instance1', 'region1', '" + now + "', '" + now + "')",
 		)
 		assertDuplicate(t, err, "nodes_address_region_key")
 		// same address, NULL region is fine
 		_, err = db.Exec(
-			"INSERT INTO nodes (node_id, node_type, node_name, address) " +
-				"VALUES ('53', '', 'name53', 'instance1')",
+			"INSERT INTO nodes (node_id, node_type, node_name, address, created_at, updated_at) " +
+				"VALUES ('53', '', 'name53', 'instance1', '" + now + "', '" + now + "')",
 		)
 		require.NoError(t, err)
 		_, err = db.Exec(
-			"INSERT INTO nodes (node_id, node_type, node_name, address) " +
-				"VALUES ('54', '', 'name54', 'instance1')",
+			"INSERT INTO nodes (node_id, node_type, node_name, address, created_at, updated_at) " +
+				"VALUES ('54', '', 'name54', 'instance1', '" + now + "', '" + now + "')",
 		)
 		require.NoError(t, err)
 	})
