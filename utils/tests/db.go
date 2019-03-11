@@ -25,8 +25,8 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-// OpenTestPostgresDB recreates testing postgres database and returns an open connection to it.
-func OpenTestPostgresDB(tb testing.TB) *sql.DB {
+// OpenTestDB recreates testing postgres database and returns an open connection to it.
+func OpenTestDB(tb testing.TB) *sql.DB {
 	tb.Helper()
 
 	db, err := models.OpenDB("", "pmm-managed", "pmm-managed", tb.Logf)

@@ -28,7 +28,7 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-var now = time.Now().UTC().Format(time.RFC3339)
+var initialCurrentTime = time.Now().UTC().Format(time.RFC3339)
 
 // databaseSchema maps schema version from schema_migrations table (id column) to a slice of DDL queries.
 var databaseSchema = [][]string{
@@ -40,26 +40,26 @@ var databaseSchema = [][]string{
 
 		`CREATE TABLE nodes (
 			-- common
-			node_id VARCHAR(255) NOT NULL,
-			node_type VARCHAR(255) NOT NULL,
-			node_name VARCHAR(255) NOT NULL,
-			machine_id VARCHAR(255),
+			node_id VARCHAR NOT NULL,
+			node_type VARCHAR NOT NULL,
+			node_name VARCHAR NOT NULL,
+			machine_id VARCHAR,
 			custom_labels TEXT,
-			address VARCHAR(255),
+			address VARCHAR,
 			created_at TIMESTAMP NOT NULL,
 			updated_at TIMESTAMP NOT NULL,
 
 			-- Generic
-			distro VARCHAR(255),
-			distro_version VARCHAR(255),
+			distro VARCHAR,
+			distro_version VARCHAR,
 
 			-- Container
-			docker_container_id VARCHAR(255),
-			docker_container_name VARCHAR(255),
+			docker_container_id VARCHAR,
+			docker_container_name VARCHAR,
 
 			-- RemoteAmazonRDS
 			-- RDS instance is stored in address
-			region VARCHAR(255),
+			region VARCHAR,
 
 			PRIMARY KEY (node_id),
 			UNIQUE (node_name),
@@ -69,14 +69,14 @@ var databaseSchema = [][]string{
 		)`,
 
 		fmt.Sprintf(`INSERT INTO nodes (node_id, node_type,	node_name, created_at, updated_at) VALUES ('%s', '%s', 'PMM Server', '%s', '%s')`, //nolint:gosec
-			PMMServerNodeID, GenericNodeType, now, now), //nolint:gosec
+			PMMServerNodeID, GenericNodeType, initialCurrentTime, initialCurrentTime), //nolint:gosec
 
 		`CREATE TABLE services (
 			-- common
-			service_id VARCHAR(255) NOT NULL,
-			service_type VARCHAR(255) NOT NULL,
-			service_name VARCHAR(255) NOT NULL,
-			node_id VARCHAR(255) NOT NULL,
+			service_id VARCHAR NOT NULL,
+			service_type VARCHAR NOT NULL,
+			service_name VARCHAR NOT NULL,
+			node_id VARCHAR NOT NULL,
 			custom_labels TEXT,
 			created_at TIMESTAMP NOT NULL,
 			updated_at TIMESTAMP NOT NULL,
@@ -92,31 +92,31 @@ var databaseSchema = [][]string{
 
 		`CREATE TABLE agents (
 			-- common
-			agent_id VARCHAR(255) NOT NULL,
-			agent_type VARCHAR(255) NOT NULL,
-			runs_on_node_id VARCHAR(255),
-			pmm_agent_id VARCHAR(255),
+			agent_id VARCHAR NOT NULL,
+			agent_type VARCHAR NOT NULL,
+			runs_on_node_id VARCHAR,
+			pmm_agent_id VARCHAR,
 			custom_labels TEXT,
 			created_at TIMESTAMP NOT NULL,
 			updated_at TIMESTAMP NOT NULL,
 
 			-- state
-			status VARCHAR(255) NOT NULL,
+			status VARCHAR NOT NULL,
 			listen_port INTEGER,
-			version VARCHAR(255),
+			version VARCHAR,
 
 			-- Credentials to access service
-			username VARCHAR(255),
-			password VARCHAR(255),
-			metrics_url VARCHAR(255),
+			username VARCHAR,
+			password VARCHAR,
+			metrics_url VARCHAR,
 
 			PRIMARY KEY (agent_id),
 			FOREIGN KEY (runs_on_node_id) REFERENCES nodes (node_id)
 		)`,
 
 		`CREATE TABLE agent_nodes (
-			agent_id VARCHAR(255) NOT NULL,
-			node_id VARCHAR(255) NOT NULL,
+			agent_id VARCHAR NOT NULL,
+			node_id VARCHAR NOT NULL,
 			created_at TIMESTAMP NOT NULL,
 
 			FOREIGN KEY (agent_id) REFERENCES agents (agent_id),
@@ -125,8 +125,8 @@ var databaseSchema = [][]string{
 		)`,
 
 		`CREATE TABLE agent_services (
-			agent_id VARCHAR(255) NOT NULL,
-			service_id VARCHAR(255) NOT NULL,
+			agent_id VARCHAR NOT NULL,
+			service_id VARCHAR NOT NULL,
 			created_at TIMESTAMP NOT NULL,
 
 			FOREIGN KEY (agent_id) REFERENCES agents (agent_id),

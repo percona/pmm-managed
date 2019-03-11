@@ -37,7 +37,7 @@ import (
 )
 
 func TestNodes(t *testing.T) {
-	sqlDB := tests.OpenTestPostgresDB(t)
+	sqlDB := tests.OpenTestDB(t)
 	defer func() {
 		require.NoError(t, sqlDB.Close())
 	}()
@@ -183,7 +183,7 @@ func TestNodes(t *testing.T) {
 }
 
 func TestServices(t *testing.T) {
-	sqlDB := tests.OpenTestPostgresDB(t)
+	sqlDB := tests.OpenTestDB(t)
 	defer func() {
 		require.NoError(t, sqlDB.Close())
 	}()
@@ -349,7 +349,7 @@ func TestAgents(t *testing.T) {
 
 		uuid.SetRand(new(tests.IDReader))
 
-		db = reform.NewDB(tests.OpenTestPostgresDB(t), postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+		db = reform.NewDB(tests.OpenTestDB(t), postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
 		r := new(mockRegistry)
 		r.Test(t)

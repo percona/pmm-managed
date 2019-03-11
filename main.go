@@ -329,12 +329,12 @@ func main() {
 		cancel()
 	}()
 
-	postgresDB, err := models.OpenDB(*postgresDBNameF, *postgresDBUsernameF, *postgresDBPasswordF, l.Debugf)
+	sqlDB, err := models.OpenDB(*postgresDBNameF, *postgresDBUsernameF, *postgresDBPasswordF, l.Debugf)
 	if err != nil {
 		l.Panicf("Failed to connect to database: %+v", err)
 	}
-	defer postgresDB.Close()
-	db := reform.NewDB(postgresDB, postgresql.Dialect, nil)
+	defer sqlDB.Close()
+	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
 	prometheus, err := prometheus.NewService(*prometheusConfigF, *promtoolF, db, *prometheusURLF)
 	if err == nil {

@@ -31,7 +31,7 @@ import (
 )
 
 func TestModels(t *testing.T) {
-	sqlDB := tests.OpenTestPostgresDB(t)
+	sqlDB := tests.OpenTestDB(t)
 	defer func() {
 		require.NoError(t, sqlDB.Close())
 	}()
