@@ -62,6 +62,10 @@ func (s *servicesServer) ListServices(ctx context.Context, req *api.ListServices
 
 // GetService returns a single Service by ID.
 func (s *servicesServer) GetService(ctx context.Context, req *api.GetServiceRequest) (*api.GetServiceResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, toBadRequestWithFieldViolation(err)
+	}
+
 	service, err := s.s.Get(ctx, req.ServiceId)
 	if err != nil {
 		return nil, err
@@ -83,6 +87,10 @@ func (s *servicesServer) GetService(ctx context.Context, req *api.GetServiceRequ
 
 // AddMySQLService adds MySQL Service.
 func (s *servicesServer) AddMySQLService(ctx context.Context, req *api.AddMySQLServiceRequest) (*api.AddMySQLServiceResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, toBadRequestWithFieldViolation(err)
+	}
+
 	address := pointer.ToStringOrNil(req.Address)
 	port := pointer.ToUint16OrNil(uint16(req.Port))
 	service, err := s.s.AddMySQL(ctx, req.ServiceName, req.NodeId, address, port)
@@ -103,6 +111,10 @@ func (s *servicesServer) AddAmazonRDSMySQLService(ctx context.Context, req *api.
 
 // ChangeMySQLService changes MySQL Service.
 func (s *servicesServer) ChangeMySQLService(ctx context.Context, req *api.ChangeMySQLServiceRequest) (*api.ChangeMySQLServiceResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, toBadRequestWithFieldViolation(err)
+	}
+
 	service, err := s.s.Change(ctx, req.ServiceId, req.ServiceName)
 	if err != nil {
 		return nil, err
@@ -120,6 +132,10 @@ func (s *servicesServer) ChangeAmazonRDSMySQLService(ctx context.Context, req *a
 }
 
 func (s *servicesServer) AddMongoDBService(ctx context.Context, req *api.AddMongoDBServiceRequest) (*api.AddMongoDBServiceResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, toBadRequestWithFieldViolation(err)
+	}
+
 	address := pointer.ToStringOrNil(req.Address)
 	port := pointer.ToUint16OrNil(uint16(req.Port))
 	service, err := s.s.AddMongoDB(ctx, req.ServiceName, req.NodeId, address, port)
@@ -135,6 +151,10 @@ func (s *servicesServer) AddMongoDBService(ctx context.Context, req *api.AddMong
 
 // RemoveService removes Service without any Agents.
 func (s *servicesServer) RemoveService(ctx context.Context, req *api.RemoveServiceRequest) (*api.RemoveServiceResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, toBadRequestWithFieldViolation(err)
+	}
+
 	if err := s.s.Remove(ctx, req.ServiceId); err != nil {
 		return nil, err
 	}

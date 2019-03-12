@@ -65,6 +65,10 @@ func (s *nodesServer) ListNodes(ctx context.Context, req *api.ListNodesRequest) 
 
 // GetNode returns a single Node by ID.
 func (s *nodesServer) GetNode(ctx context.Context, req *api.GetNodeRequest) (*api.GetNodeResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, toBadRequestWithFieldViolation(err)
+	}
+
 	node, err := s.s.Get(ctx, req.NodeId)
 	if err != nil {
 		return nil, err
@@ -88,6 +92,10 @@ func (s *nodesServer) GetNode(ctx context.Context, req *api.GetNodeRequest) (*ap
 
 // AddGenericNode adds Generic Node.
 func (s *nodesServer) AddGenericNode(ctx context.Context, req *api.AddGenericNodeRequest) (*api.AddGenericNodeResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, toBadRequestWithFieldViolation(err)
+	}
+
 	node, err := s.s.Add(ctx, models.GenericNodeType, req.NodeName, pointer.ToStringOrNil(req.Address), nil)
 	if err != nil {
 		return nil, err
@@ -101,6 +109,10 @@ func (s *nodesServer) AddGenericNode(ctx context.Context, req *api.AddGenericNod
 
 // AddContainerNode adds Container Node.
 func (s *nodesServer) AddContainerNode(ctx context.Context, req *api.AddContainerNodeRequest) (*api.AddContainerNodeResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, toBadRequestWithFieldViolation(err)
+	}
+
 	node, err := s.s.Add(ctx, models.ContainerNodeType, req.NodeName, nil, nil)
 	if err != nil {
 		return nil, err
@@ -114,6 +126,10 @@ func (s *nodesServer) AddContainerNode(ctx context.Context, req *api.AddContaine
 
 // AddRemoteNode adds Remote Node.
 func (s *nodesServer) AddRemoteNode(ctx context.Context, req *api.AddRemoteNodeRequest) (*api.AddRemoteNodeResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, toBadRequestWithFieldViolation(err)
+	}
+
 	node, err := s.s.Add(ctx, models.RemoteNodeType, req.NodeName, nil, nil)
 	if err != nil {
 		return nil, err
@@ -127,6 +143,10 @@ func (s *nodesServer) AddRemoteNode(ctx context.Context, req *api.AddRemoteNodeR
 
 // AddRemoteAmazonRDSNode adds Amazon (AWS) RDS remote Node.
 func (s *nodesServer) AddRemoteAmazonRDSNode(ctx context.Context, req *api.AddRemoteAmazonRDSNodeRequest) (*api.AddRemoteAmazonRDSNodeResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, toBadRequestWithFieldViolation(err)
+	}
+
 	node, err := s.s.Add(ctx, models.RemoteAmazonRDSNodeType, req.NodeName, &req.Instance, &req.Region)
 	if err != nil {
 		return nil, err
@@ -140,6 +160,10 @@ func (s *nodesServer) AddRemoteAmazonRDSNode(ctx context.Context, req *api.AddRe
 
 // ChangeGenericNode changes Generic Node.
 func (s *nodesServer) ChangeGenericNode(ctx context.Context, req *api.ChangeGenericNodeRequest) (*api.ChangeGenericNodeResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, toBadRequestWithFieldViolation(err)
+	}
+
 	node, err := s.s.Change(ctx, req.NodeId, req.NodeName)
 	if err != nil {
 		return nil, err
@@ -153,6 +177,10 @@ func (s *nodesServer) ChangeGenericNode(ctx context.Context, req *api.ChangeGene
 
 // ChangeContainerNode changes Container Node.
 func (s *nodesServer) ChangeContainerNode(ctx context.Context, req *api.ChangeContainerNodeRequest) (*api.ChangeContainerNodeResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, toBadRequestWithFieldViolation(err)
+	}
+
 	node, err := s.s.Change(ctx, req.NodeId, req.NodeName)
 	if err != nil {
 		return nil, err
@@ -166,6 +194,10 @@ func (s *nodesServer) ChangeContainerNode(ctx context.Context, req *api.ChangeCo
 
 // ChangeRemoteNode changes Remote Node.
 func (s *nodesServer) ChangeRemoteNode(ctx context.Context, req *api.ChangeRemoteNodeRequest) (*api.ChangeRemoteNodeResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, toBadRequestWithFieldViolation(err)
+	}
+
 	node, err := s.s.Change(ctx, req.NodeId, req.NodeName)
 	if err != nil {
 		return nil, err
@@ -179,6 +211,10 @@ func (s *nodesServer) ChangeRemoteNode(ctx context.Context, req *api.ChangeRemot
 
 // ChangeRemoteAmazonRDSNode changes Amazon (AWS) RDS remote Node.
 func (s *nodesServer) ChangeRemoteAmazonRDSNode(ctx context.Context, req *api.ChangeRemoteAmazonRDSNodeRequest) (*api.ChangeRemoteAmazonRDSNodeResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, toBadRequestWithFieldViolation(err)
+	}
+
 	node, err := s.s.Change(ctx, req.NodeId, req.NodeName)
 	if err != nil {
 		return nil, err
@@ -192,6 +228,10 @@ func (s *nodesServer) ChangeRemoteAmazonRDSNode(ctx context.Context, req *api.Ch
 
 // RemoveNode removes Node without any Agents and Services.
 func (s *nodesServer) RemoveNode(ctx context.Context, req *api.RemoveNodeRequest) (*api.RemoveNodeResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, toBadRequestWithFieldViolation(err)
+	}
+
 	if err := s.s.Remove(ctx, req.NodeId); err != nil {
 		return nil, err
 	}

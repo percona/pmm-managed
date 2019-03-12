@@ -75,6 +75,10 @@ func (s *agentsServer) ListAgents(ctx context.Context, req *api.ListAgentsReques
 
 // GetAgent returns a single Agent by ID.
 func (s *agentsServer) GetAgent(ctx context.Context, req *api.GetAgentRequest) (*api.GetAgentResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, toBadRequestWithFieldViolation(err)
+	}
+
 	agent, err := s.s.Get(ctx, s.db, req.AgentId)
 	if err != nil {
 		return nil, err
@@ -103,7 +107,6 @@ func (s *agentsServer) GetAgent(ctx context.Context, req *api.GetAgentRequest) (
 
 // AddPMMAgent adds pmm-agent Agent.
 func (s *agentsServer) AddPMMAgent(ctx context.Context, req *api.AddPMMAgentRequest) (*api.AddPMMAgentResponse, error) {
-
 	if err := req.Validate(); err != nil {
 		return nil, toBadRequestWithFieldViolation(err)
 	}
@@ -121,6 +124,10 @@ func (s *agentsServer) AddPMMAgent(ctx context.Context, req *api.AddPMMAgentRequ
 
 // AddNodeExporter adds node_exporter Agent.
 func (s *agentsServer) AddNodeExporter(ctx context.Context, req *api.AddNodeExporterRequest) (*api.AddNodeExporterResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, toBadRequestWithFieldViolation(err)
+	}
+
 	agent, err := s.s.AddNodeExporter(ctx, s.db, req)
 	if err != nil {
 		return nil, err
@@ -134,6 +141,10 @@ func (s *agentsServer) AddNodeExporter(ctx context.Context, req *api.AddNodeExpo
 
 // AddMySQLdExporter adds mysqld_exporter Agent.
 func (s *agentsServer) AddMySQLdExporter(ctx context.Context, req *api.AddMySQLdExporterRequest) (*api.AddMySQLdExporterResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, toBadRequestWithFieldViolation(err)
+	}
+
 	agent, err := s.s.AddMySQLdExporter(ctx, s.db, req)
 	if err != nil {
 		return nil, err
@@ -157,6 +168,10 @@ func (s *agentsServer) AddExternalExporter(ctx context.Context, req *api.AddExte
 
 // AddMongoDBExporter adds mongodb_exporter Agent.
 func (s *agentsServer) AddMongoDBExporter(ctx context.Context, req *api.AddMongoDBExporterRequest) (*api.AddMongoDBExporterResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, toBadRequestWithFieldViolation(err)
+	}
+
 	agent, err := s.s.AddMongoDBExporter(ctx, s.db, req)
 	if err != nil {
 		return nil, err
@@ -175,6 +190,10 @@ func (s *agentsServer) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *api.
 
 // RemoveAgent removes Agent.
 func (s *agentsServer) RemoveAgent(ctx context.Context, req *api.RemoveAgentRequest) (*api.RemoveAgentResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, toBadRequestWithFieldViolation(err)
+	}
+
 	if err := s.s.Remove(ctx, s.db, req.AgentId); err != nil {
 		return nil, err
 	}
