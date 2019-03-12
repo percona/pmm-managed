@@ -57,7 +57,6 @@ func TestDatabaseUniqueIndexes(t *testing.T) {
 	var err error
 
 	t.Run("Nodes", func(t *testing.T) {
-
 		now := time.Now().UTC().Format(time.RFC3339)
 		// node_id
 		_, err = db.Exec(
