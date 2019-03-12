@@ -417,15 +417,16 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:79f8bb1b9d02fa61546fecfc467884a564c77c8791ff9c28dfe16b5f2c76d02f"
+  digest = "1:4598ffabd9d28f464bd4b80e823b0eb1f2c72f96e48db9421ef502b838a3688b"
   name = "google.golang.org/genproto"
   packages = [
     "googleapis/api/annotations",
+    "googleapis/rpc/errdetails",
     "googleapis/rpc/status",
     "protobuf/field_mask",
   ]
   pruneopts = "NUT"
-  revision = "c21a8b77f9f040598af1c8c5c0870568f1959df3"
+  revision = "5fe7a883aa19554f42890211544aa549836af7b7"
 
 [[projects]]
   digest = "1:d88b6a00529e21d2c0d3b764271a206f1ac300f6103da2d2d86d8373d4e520c4"
@@ -533,6 +534,7 @@
     "github.com/vektra/mockery/cmd/mockery",
     "golang.org/x/sync/errgroup",
     "golang.org/x/sys/unix",
+    "google.golang.org/genproto/googleapis/rpc/errdetails",
     "google.golang.org/grpc",
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/grpclog",
