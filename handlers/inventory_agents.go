@@ -19,8 +19,14 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"log"
+	"strings"
 
+	"github.com/iancoleman/strcase"
 	api "github.com/percona/pmm/api/inventory"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/services/inventory"
@@ -103,6 +109,27 @@ func (s *agentsServer) GetAgent(ctx context.Context, req *api.GetAgentRequest) (
 
 // AddPMMAgent adds pmm-agent Agent.
 func (s *agentsServer) AddPMMAgent(ctx context.Context, req *api.AddPMMAgentRequest) (*api.AddPMMAgentResponse, error) {
+
+	if err := req.Validate(); err != nil {
+		errSlice := strings.SplitN(err.Error(), ":", 3)
+		if len(errSlice) > 1 {
+			fieldName := strcase.ToSnake(strings.TrimSpace(strings.Replace(errSlice[0], "invalid field", "", 1)))
+			errorMsg := errSlice[1]
+			st := status.New(codes.InvalidArgument, fmt.Sprintf("invalid field '%s': %s", fieldName, errorMsg))
+			v := &errdetails.BadRequest_FieldViolation{
+				Field:       fieldName,
+				Description: errorMsg,
+			}
+			br := &errdetails.BadRequest{}
+			br.FieldViolations = append(br.FieldViolations, v)
+			st2, _ := st.WithDetails(br)
+
+			log.Printf("%#v", st2.Proto())
+
+			return nil, st2.Err()
+		}
+	}
+
 	agent, err := s.s.AddPMMAgent(ctx, s.db, req.RunsOnNodeId)
 	if err != nil {
 		return nil, err

@@ -141,6 +141,14 @@
   version = "v1.8.1"
 
 [[projects]]
+  branch = "master"
+  digest = "1:c13aea0b77243f1fcd0253583c90e180010a3a5bbdf43f61a3daddc48d88b0b2"
+  name = "github.com/iancoleman/strcase"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "3605ed457bf7f8caa1371b4fafadadc026673479"
+
+[[projects]]
   digest = "1:1f2aebae7e7c856562355ec0198d8ca2fa222fb05e5b1b66632a1fce39631885"
   name = "github.com/jmespath/go-jmespath"
   packages = ["."]
@@ -505,6 +513,7 @@
     "github.com/grpc-ecosystem/go-grpc-middleware",
     "github.com/grpc-ecosystem/go-grpc-prometheus",
     "github.com/grpc-ecosystem/grpc-gateway/runtime",
+    "github.com/iancoleman/strcase",
     "github.com/lib/pq",
     "github.com/mwitkow/go-conntrack",
     "github.com/percona/exporter_shared/helpers",
