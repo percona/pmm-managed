@@ -57,7 +57,7 @@ func TestDatabaseUniqueIndexes(t *testing.T) {
 	var err error
 
 	t.Run("Nodes", func(t *testing.T) {
-		now := time.Now().UTC().Format(time.RFC3339)
+		now := time.Now().UTC()
 		// node_id
 		_, err = db.Exec(
 			"INSERT INTO nodes (node_id, node_type, node_name, created_at, updated_at) "+
