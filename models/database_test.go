@@ -19,12 +19,12 @@ package models_test
 import (
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/tests"
 )
 
@@ -57,7 +57,7 @@ func TestDatabaseUniqueIndexes(t *testing.T) {
 	var err error
 
 	t.Run("Nodes", func(t *testing.T) {
-		now := time.Now().UTC()
+		now := models.Now()
 		// node_id
 		_, err = db.Exec(
 			"INSERT INTO nodes (node_id, node_type, node_name, created_at, updated_at) "+

@@ -28,7 +28,7 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-var initialCurrentTime = time.Now().UTC().Format(time.RFC3339)
+var initialCurrentTime = Now().Format(time.RFC3339)
 
 // databaseSchema maps schema version from schema_migrations table (id column) to a slice of DDL queries.
 var databaseSchema = [][]string{
