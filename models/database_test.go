@@ -21,10 +21,10 @@ import (
 	"testing"
 
 	"github.com/lib/pq"
-	"github.com/percona/pmm-managed/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/tests"
 )
 
