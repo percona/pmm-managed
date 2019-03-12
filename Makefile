@@ -90,5 +90,5 @@ env-up:                         ## Start development environment.
 env-down:                       ## Stop development environment.
 	docker-compose down --volumes --remove-orphans
 
-clean:
+clean:                       ## Removes geenerated artifacts
 	rm -Rf ./bin
