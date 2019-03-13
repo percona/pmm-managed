@@ -19,14 +19,14 @@ package main
 import (
 	"bytes"
 	"context"
-	_ "expvar"
+	_ "expvar" // register /debug/vars
 	"flag"
 	"fmt"
 	"html/template"
 	"log"
 	"net"
 	"net/http"
-	_ "net/http/pprof"
+	_ "net/http/pprof" // register /debug/pprof
 	"os"
 	"os/signal"
 	"strings"
@@ -44,11 +44,11 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
+	channelz "google.golang.org/grpc/channelz/service"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/reflection"
 	"gopkg.in/reform.v1"
-	reformMySQL "gopkg.in/reform.v1/dialects/mysql"
-	reformPostgreSQL "gopkg.in/reform.v1/dialects/postgresql"
+	"gopkg.in/reform.v1/dialects/postgresql"
 
 	"github.com/percona/pmm-managed/handlers"
 	"github.com/percona/pmm-managed/models"
@@ -132,7 +132,9 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 		grpc.UnaryInterceptor(interceptors.Unary),
 		grpc.StreamInterceptor(interceptors.Stream),
 	)
-	serverAPI.RegisterServerServer(gRPCServer, handlers.NewServerServer(version.Version))
+	serverAPI.RegisterServerServer(gRPCServer, handlers.NewServerServer(
+		version.Version,
+	))
 	agentAPI.RegisterAgentServer(gRPCServer, &handlers.AgentServer{
 		Registry: deps.agentsRegistry,
 	})
@@ -148,13 +150,15 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	))
 
 	if *debugF {
-		l.Debug("Reflection enabled.")
+		l.Debug("Reflection and channelz are enabled.")
 		reflection.Register(gRPCServer)
+		channelz.RegisterChannelzServiceToServer(gRPCServer)
 	}
 
 	grpc_prometheus.EnableHandlingTimeHistogram()
 	grpc_prometheus.Register(gRPCServer)
 
+	// run server until it is stopped gracefully or not
 	listener, err := net.Listen("tcp", *gRPCAddrF)
 	if err != nil {
 		l.Panic(err)
@@ -171,6 +175,8 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	}()
 
 	<-ctx.Done()
+
+	// try to stop server gracefully, then not
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	go func() {
 		<-ctx.Done()
@@ -235,7 +241,13 @@ func runDebugServer(ctx context.Context, collectors ...prom.Collector) {
 
 	l := logrus.WithField("component", "debug")
 
-	handlers := []string{"/debug/metrics", "/debug/vars", "/debug/requests", "/debug/events", "/debug/pprof"}
+	handlers := []string{
+		"/debug/metrics",  // by http.Handle above
+		"/debug/vars",     // by expvar
+		"/debug/requests", // by golang.org/x/net/trace imported by google.golang.org/grpc
+		"/debug/events",   // by golang.org/x/net/trace imported by google.golang.org/grpc
+		"/debug/pprof",    // by net/http/pprof
+	}
 	for i, h := range handlers {
 		handlers[i] = "http://" + *debugAddrF + h
 	}
@@ -330,19 +342,12 @@ func main() {
 		cancel()
 	}()
 
-	sqlDB, err := models.OpenDB(*dbNameF, *dbUsernameF, *dbPasswordF, l.Debugf)
+	sqlDB, err := models.OpenDB(*postgresDBNameF, *postgresDBUsernameF, *postgresDBPasswordF, l.Debugf)
 	if err != nil {
 		l.Panicf("Failed to connect to database: %+v", err)
 	}
 	defer sqlDB.Close()
-	db := reform.NewDB(sqlDB, reformMySQL.Dialect, nil)
-
-	postgresDB, err := models.OpenPostgresDB(*postgresDBNameF, *postgresDBUsernameF, *postgresDBPasswordF, l.Debugf)
-	if err != nil {
-		l.Panicf("Failed to connect to database: %+v", err)
-	}
-	defer postgresDB.Close()
-	pdb := reform.NewDB(postgresDB, reformPostgreSQL.Dialect, nil)
+	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
 	prometheus, err := prometheus.NewService(*prometheusConfigF, *promtoolF, db, *prometheusURLF)
 	if err == nil {
@@ -386,7 +391,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		runTelemetryService(ctx, pdb)
+		runTelemetryService(ctx, db)
 	}()
 
 	wg.Wait()
