@@ -40,7 +40,7 @@ var databaseSchema = [][]string{
 
 		`CREATE TABLE nodes (
 			-- common
-			node_id VARCHAR NOT NULL ,
+			node_id VARCHAR NOT NULL,
 			node_type VARCHAR NOT NULL CHECK (node_type <> ''),
 			node_name VARCHAR NOT NULL CHECK (node_name <> ''),
 			machine_id VARCHAR CHECK (machine_id <> ''),
