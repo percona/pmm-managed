@@ -65,7 +65,17 @@ var databaseSchema = [][]string{
 			UNIQUE (node_name),
 			UNIQUE (machine_id),
 			UNIQUE (docker_container_id),
-			UNIQUE (address, region)
+			UNIQUE (address, region),
+
+			CHECK (node_type <> ''),
+			CHECK (node_name <> ''),
+			CHECK (machine_id <> ''),
+			CHECK (address <> ''),
+			CHECK (distro <> ''),
+			CHECK (distro_version <> ''),
+			CHECK (docker_container_id <> ''),
+			CHECK (docker_container_name <> ''),
+			CHECK (region <> '')
 		)`,
 
 		fmt.Sprintf(`INSERT INTO nodes (node_id, node_type,	node_name, created_at, updated_at) VALUES ('%s', '%s', 'PMM Server', '%s', '%s')`, //nolint:gosec
@@ -87,7 +97,12 @@ var databaseSchema = [][]string{
 
 			PRIMARY KEY (service_id),
 			UNIQUE (service_name),
-			FOREIGN KEY (node_id) REFERENCES nodes (node_id)
+			FOREIGN KEY (node_id) REFERENCES nodes (node_id),
+
+			CHECK (service_type <> ''),
+			CHECK (service_name <> ''),
+			CHECK (node_id <> ''),
+			CHECK (address <> '')
 		)`,
 
 		`CREATE TABLE agents (
@@ -111,7 +126,16 @@ var databaseSchema = [][]string{
 			metrics_url VARCHAR,
 
 			PRIMARY KEY (agent_id),
-			FOREIGN KEY (runs_on_node_id) REFERENCES nodes (node_id)
+			FOREIGN KEY (runs_on_node_id) REFERENCES nodes (node_id),
+			FOREIGN KEY (pmm_agent_id) REFERENCES agents (agent_id),
+
+			CHECK (agent_type <> ''),
+			CHECK (runs_on_node_id <> ''),
+			CHECK (pmm_agent_id <> ''),
+			CHECK (version <> ''),
+			CHECK (username <> ''),
+			CHECK (password <> ''),
+			CHECK (metrics_url <> '')
 		)`,
 
 		`CREATE TABLE agent_nodes (
