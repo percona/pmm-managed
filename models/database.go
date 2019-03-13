@@ -91,7 +91,6 @@ var databaseSchema = [][]string{
 			created_at TIMESTAMP NOT NULL,
 			updated_at TIMESTAMP NOT NULL,
 
-			-- MySQL
 			address VARCHAR(255),
 			port INTEGER,
 
