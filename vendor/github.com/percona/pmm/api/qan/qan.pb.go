@@ -18,7 +18,7 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
-// ExampleFormat is formant of query example: real or query without values
+// ExampleFormat is format of query example: real or query without values.
 type ExampleFormat int32
 
 const (
@@ -42,7 +42,7 @@ func (x ExampleFormat) String() string {
 	return proto.EnumName(ExampleFormat_name, int32(x))
 }
 func (ExampleFormat) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_qan_3fc45e23a3421d5b, []int{0}
+	return fileDescriptor_qan_925fd59c6d2631b5, []int{0}
 }
 
 // ExampleType is a type of query example selected for this query class in given period of time.
@@ -75,7 +75,7 @@ func (x ExampleType) String() string {
 	return proto.EnumName(ExampleType_name, int32(x))
 }
 func (ExampleType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_qan_3fc45e23a3421d5b, []int{1}
+	return fileDescriptor_qan_925fd59c6d2631b5, []int{1}
 }
 
 func init() {
@@ -83,9 +83,9 @@ func init() {
 	proto.RegisterEnum("qan.ExampleType", ExampleType_name, ExampleType_value)
 }
 
-func init() { proto.RegisterFile("qan/qan.proto", fileDescriptor_qan_3fc45e23a3421d5b) }
+func init() { proto.RegisterFile("qan/qan.proto", fileDescriptor_qan_925fd59c6d2631b5) }
 
-var fileDescriptor_qan_3fc45e23a3421d5b = []byte{
+var fileDescriptor_qan_925fd59c6d2631b5 = []byte{
 	// 197 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x4c, 0xce, 0xc1, 0x6a, 0x83, 0x30,
 	0x1c, 0xc7, 0xf1, 0xa9, 0x9b, 0xc2, 0x5f, 0xdc, 0x42, 0x18, 0x63, 0xec, 0x11, 0x3c, 0x6c, 0x87,

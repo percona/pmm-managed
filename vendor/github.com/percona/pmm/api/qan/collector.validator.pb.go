@@ -7,27 +7,18 @@ import github_com_mwitkow_go_proto_validators "github.com/mwitkow/go-proto-valid
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import _ "github.com/golang/protobuf/ptypes/any"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
-func (this *AgentMessage) Validate() error {
+func (this *CollectRequest) Validate() error {
 	for _, item := range this.MetricsBucket {
 		if item != nil {
 			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(item); err != nil {
 				return github_com_mwitkow_go_proto_validators.FieldError("MetricsBucket", err)
 			}
-		}
-	}
-	return nil
-}
-func (this *AgentMessageTODO) Validate() error {
-	if this.Data != nil {
-		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Data); err != nil {
-			return github_com_mwitkow_go_proto_validators.FieldError("Data", err)
 		}
 	}
 	return nil
@@ -38,9 +29,6 @@ func (this *MetricsBucket) Validate() error {
 	// Validation of proto3 map<> fields is unsupported.
 	return nil
 }
-func (this *ApiMessage) Validate() error {
-	return nil
-}
-func (this *ApiMessageTODO) Validate() error {
+func (this *CollectResponse) Validate() error {
 	return nil
 }
