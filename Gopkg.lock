@@ -210,7 +210,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "5800f1c7c28ad4c9dcf598485a50816b2b182b33"
+  revision = "75b3499cc296f46d963a117054a0bfa1960410a3"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
@@ -504,7 +504,6 @@
     "github.com/aws/aws-sdk-go/service/rds",
     "github.com/go-sql-driver/mysql",
     "github.com/golang/protobuf/ptypes",
-    "github.com/golang/protobuf/ptypes/any",
     "github.com/google/uuid",
     "github.com/grpc-ecosystem/go-grpc-middleware",
     "github.com/grpc-ecosystem/go-grpc-prometheus",
