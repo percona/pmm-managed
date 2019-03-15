@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/AlekSi/pointer"
-	api "github.com/percona/pmm/api/agent"
+	"github.com/percona/pmm/api/agentpb"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/percona/pmm-managed/models"
@@ -36,8 +36,8 @@ func TestMySQLdExporterConfig(t *testing.T) {
 		Password: pointer.ToString("s3cur3 p@$$w0r4."),
 	}
 	actual := mysqldExporterConfig(mysql, exporter)
-	expected := &api.SetStateRequest_AgentProcess{
-		Type:               api.Type_MYSQLD_EXPORTER,
+	expected := &agentpb.SetStateRequest_AgentProcess{
+		Type:               agentpb.Type_MYSQLD_EXPORTER,
 		TemplateLeftDelim:  "{{",
 		TemplateRightDelim: "}}",
 		Args: []string{

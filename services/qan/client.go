@@ -19,28 +19,46 @@ package qan
 import (
 	"context"
 
-	"github.com/golang/protobuf/ptypes/any"
-	qanAPI "github.com/percona/pmm/api/qan"
+	"github.com/percona/pmm/api/qanpb"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+
+	"github.com/percona/pmm-managed/models"
 )
 
 type Client struct {
-	c qanAPI.AgentClient
+	c qanpb.CollectorClient
 	l *logrus.Entry
 }
 
 func NewClient(cc *grpc.ClientConn) *Client {
 	return &Client{
-		c: qanAPI.NewAgentClient(cc),
+		c: qanpb.NewCollectorClient(cc),
 		l: logrus.WithField("component", "qan"),
 	}
 }
 
-func (c *Client) TODO(ctx context.Context, m *any.Any) {
-	res, err := c.c.TODO(ctx, &qanAPI.AgentMessageTODO{Data: m})
+func (c *Client) Collect(ctx context.Context, req *qanpb.CollectRequest, agent *models.Agent) error {
+	labels, err := agent.GetCustomLabels()
 	if err != nil {
 		c.l.Error(err)
 	}
-	c.l.Debug(res)
+
+	for _, m := range req.MetricsBucket {
+		if m.Labels == nil {
+			m.Labels = make(map[string]string)
+		}
+		for k, v := range labels {
+			m.Labels[k] = v
+		}
+	}
+
+	c.l.Debugf("%+v", req)
+	res, err := c.c.Collect(ctx, req)
+	if err != nil {
+		return errors.Wrap(err, "failed to sent CollectRequest to QAN")
+	}
+	c.l.Debugf("%+v", res)
+	return nil
 }

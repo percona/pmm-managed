@@ -19,7 +19,9 @@ package agents
 import (
 	"context"
 
-	"github.com/golang/protobuf/ptypes/any"
+	"github.com/percona/pmm/api/qanpb"
+
+	"github.com/percona/pmm-managed/models"
 )
 
 //go:generate mockery -name=prometheus -case=snake -inpkg -testonly
@@ -34,5 +36,5 @@ type prometheus interface {
 // qanClient is a subset of methods of qan.Client used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
 type qanClient interface {
-	TODO(ctx context.Context, m *any.Any)
+	Collect(ctx context.Context, req *qanpb.CollectRequest, agent *models.Agent) error
 }

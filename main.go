@@ -35,9 +35,9 @@ import (
 
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
-	agentAPI "github.com/percona/pmm/api/agent"
-	inventoryAPI "github.com/percona/pmm/api/inventory"
-	serverAPI "github.com/percona/pmm/api/server"
+	"github.com/percona/pmm/api/agentpb"
+	inventorypb "github.com/percona/pmm/api/inventory"
+	serverpb "github.com/percona/pmm/api/server"
 	"github.com/percona/pmm/version"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -134,19 +134,19 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 		grpc.UnaryInterceptor(interceptors.Unary),
 		grpc.StreamInterceptor(interceptors.Stream),
 	)
-	serverAPI.RegisterServerServer(gRPCServer, handlers.NewServerServer(
+	serverpb.RegisterServerServer(gRPCServer, handlers.NewServerServer(
 		version.Version,
 	))
-	agentAPI.RegisterAgentServer(gRPCServer, &handlers.AgentServer{
+	agentpb.RegisterAgentServer(gRPCServer, &handlers.AgentServer{
 		Registry: deps.agentsRegistry,
 	})
-	inventoryAPI.RegisterNodesServer(gRPCServer, handlers.NewNodesServer(
+	inventorypb.RegisterNodesServer(gRPCServer, handlers.NewNodesServer(
 		inventory.NewNodesService(deps.db.Querier, deps.agentsRegistry),
 	))
-	inventoryAPI.RegisterServicesServer(gRPCServer, handlers.NewServicesServer(
+	inventorypb.RegisterServicesServer(gRPCServer, handlers.NewServicesServer(
 		inventory.NewServicesService(deps.db.Querier, deps.agentsRegistry),
 	))
-	inventoryAPI.RegisterAgentsServer(gRPCServer, handlers.NewAgentsServer(
+	inventorypb.RegisterAgentsServer(gRPCServer, handlers.NewAgentsServer(
 		inventory.NewAgentsService(deps.agentsRegistry),
 		deps.db,
 	))
@@ -198,10 +198,10 @@ func runJSONServer(ctx context.Context, logs *logs.Logs) {
 
 	type registrar func(context.Context, *runtime.ServeMux, string, []grpc.DialOption) error
 	for _, r := range []registrar{
-		serverAPI.RegisterServerHandlerFromEndpoint,
-		inventoryAPI.RegisterNodesHandlerFromEndpoint,
-		inventoryAPI.RegisterServicesHandlerFromEndpoint,
-		inventoryAPI.RegisterAgentsHandlerFromEndpoint,
+		serverpb.RegisterServerHandlerFromEndpoint,
+		inventorypb.RegisterNodesHandlerFromEndpoint,
+		inventorypb.RegisterServicesHandlerFromEndpoint,
+		inventorypb.RegisterAgentsHandlerFromEndpoint,
 	} {
 		if err := r(ctx, proxyMux, *gRPCAddrF, opts); err != nil {
 			l.Panic(err)

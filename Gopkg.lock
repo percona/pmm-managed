@@ -200,17 +200,17 @@
 
 [[projects]]
   branch = "PMM-3595-qan-mysql-perfschema"
-  digest = "1:4a6a0634096751c7793f11cb483aa9fa4e7d38d20e911b48bce532865d0ff7b7"
+  digest = "1:af4510b7681a585b0215f95b4a6e9d43ef2250cde0883f320bd0bca8dd0a1ade"
   name = "github.com/percona/pmm"
   packages = [
-    "api/agent",
+    "api/agentpb",
     "api/inventory",
-    "api/qan",
+    "api/qanpb",
     "api/server",
     "version",
   ]
   pruneopts = "NUT"
-  revision = "c2700bcfb807e64f836fa4234b0b8a4abc2d8dc5"
+  revision = "5800f1c7c28ad4c9dcf598485a50816b2b182b33"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
@@ -512,9 +512,9 @@
     "github.com/lib/pq",
     "github.com/mwitkow/go-conntrack",
     "github.com/percona/exporter_shared/helpers",
-    "github.com/percona/pmm/api/agent",
+    "github.com/percona/pmm/api/agentpb",
     "github.com/percona/pmm/api/inventory",
-    "github.com/percona/pmm/api/qan",
+    "github.com/percona/pmm/api/qanpb",
     "github.com/percona/pmm/api/server",
     "github.com/percona/pmm/version",
     "github.com/pkg/errors",
