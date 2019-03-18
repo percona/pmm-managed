@@ -11,26 +11,26 @@ import (
 	"github.com/percona/pmm-managed/services/inventory"
 )
 
-// MySQLService MySQL Management Service
+// MySQLService MySQL Management Service.
 type MySQLService struct {
 	db          *reform.DB
 	servicesSvc *inventory.ServicesService
 	agentsSvc   *inventory.AgentsService
 }
 
-// NewMySQLService creates new MySQL Management Service
+// NewMySQLService creates new MySQL Management Service.
 func NewMySQLService(db *reform.DB, s *inventory.ServicesService, a *inventory.AgentsService) *MySQLService {
 	return &MySQLService{db, s, a}
 }
 
-// Add adds "MySQL Service", "MySQL Exporter Agent" and "QAN MySQL PerfSchema Agent"
+// Add adds "MySQL Service", "MySQL Exporter Agent" and "QAN MySQL PerfSchema Agent".
 func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLRequest) (res *managementpb.AddMySQLResponse, err error) {
 	res = &managementpb.AddMySQLResponse{}
 
 	if e := s.db.InTransaction(func(tx *reform.TX) error {
 		address := pointer.ToStringOrNil(req.Address)
 		port := pointer.ToUint16OrNil(uint16(req.Port))
-		service, err := s.servicesSvc.AddMySQL(ctx, req.ServiceName, req.NodeId, address, port, tx.Querier)
+		service, err := s.servicesSvc.AddMySQL(ctx, tx.Querier, req.ServiceName, req.NodeId, address, port)
 		if err != nil {
 			return err
 		}
@@ -44,7 +44,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 				Password:   req.Password,
 			}
 
-			agent, err := s.agentsSvc.AddMySQLdExporter(ctx, request, tx.Querier)
+			agent, err := s.agentsSvc.AddMySQLdExporter(ctx, tx.Querier, request)
 			if err != nil {
 				return err
 			}
@@ -60,7 +60,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 				Password:   req.QanPassword,
 			}
 
-			qAgent, err := s.agentsSvc.AddQANMySQLPerfSchemaAgent(ctx, request, tx.Querier)
+			qAgent, err := s.agentsSvc.AddQANMySQLPerfSchemaAgent(ctx, tx.Querier, request)
 			if err != nil {
 				return err
 			}

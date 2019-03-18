@@ -129,7 +129,7 @@ func (s *agentsServer) AddNodeExporter(ctx context.Context, req *inventorypb.Add
 
 // AddMySQLdExporter adds mysqld_exporter Agent.
 func (s *agentsServer) AddMySQLdExporter(ctx context.Context, req *inventorypb.AddMySQLdExporterRequest) (*inventorypb.AddMySQLdExporterResponse, error) {
-	agent, err := s.s.AddMySQLdExporter(ctx, req, nil)
+	agent, err := s.s.AddMySQLdExporter(ctx, s.db.Querier, req)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +152,7 @@ func (s *agentsServer) AddExternalExporter(ctx context.Context, req *inventorypb
 
 // AddMongoDBExporter adds mongodb_exporter Agent.
 func (s *agentsServer) AddMongoDBExporter(ctx context.Context, req *inventorypb.AddMongoDBExporterRequest) (*inventorypb.AddMongoDBExporterResponse, error) {
-	agent, err := s.s.AddMongoDBExporter(ctx, req)
+	agent, err := s.s.AddMongoDBExporter(ctx, s.db.Querier, req)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +165,7 @@ func (s *agentsServer) AddMongoDBExporter(ctx context.Context, req *inventorypb.
 
 // AddQANMySQLPerfSchemaAgent adds MySQL PerfSchema QAN Agent.
 func (s *agentsServer) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *inventorypb.AddQANMySQLPerfSchemaAgentRequest) (*inventorypb.AddQANMySQLPerfSchemaAgentResponse, error) {
-	agent, err := s.s.AddQANMySQLPerfSchemaAgent(ctx, req, nil)
+	agent, err := s.s.AddQANMySQLPerfSchemaAgent(ctx, s.db.Querier, req)
 	if err != nil {
 		return nil, err
 	}

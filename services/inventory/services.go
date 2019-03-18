@@ -33,15 +33,13 @@ import (
 
 // ServicesService works with inventory API Services.
 type ServicesService struct {
-	q  *reform.Querier
 	r  registry
 	ns *NodesService
 }
 
 // NewServicesService creates new ServicesService
-func NewServicesService(q *reform.Querier, r registry, ns *NodesService) *ServicesService {
+func NewServicesService(r registry, ns *NodesService) *ServicesService {
 	return &ServicesService{
-		q:  q,
 		r:  r,
 		ns: ns,
 	}
@@ -79,13 +77,13 @@ func makeService(row *models.Service) (inventorypb.Service, error) {
 	}
 }
 
-func (ss *ServicesService) get(ctx context.Context, id string) (*models.Service, error) {
+func (ss *ServicesService) get(ctx context.Context, q *reform.Querier, id string) (*models.Service, error) {
 	if id == "" {
 		return nil, status.Error(codes.InvalidArgument, "Empty Service ID.")
 	}
 
 	row := &models.Service{ServiceID: id}
-	switch err := ss.q.Reload(row); err {
+	switch err := q.Reload(row); err {
 	case nil:
 		return row, nil
 	case reform.ErrNoRows:
@@ -96,18 +94,13 @@ func (ss *ServicesService) get(ctx context.Context, id string) (*models.Service,
 }
 
 //nolint:unparam
-func (ss *ServicesService) checkUniqueID(ctx context.Context, id string, external *reform.Querier) error {
+func (ss *ServicesService) checkUniqueID(ctx context.Context, q *reform.Querier, id string) error {
 	if id == "" {
 		panic("empty Service ID")
 	}
 
-	querier := ss.q
-	if external != nil {
-		querier = external
-	}
-
 	row := &models.Service{ServiceID: id}
-	switch err := querier.Reload(row); err {
+	switch err := q.Reload(row); err {
 	case nil:
 		return status.Errorf(codes.AlreadyExists, "Service with ID %q already exists.", id)
 	case reform.ErrNoRows:
@@ -118,13 +111,8 @@ func (ss *ServicesService) checkUniqueID(ctx context.Context, id string, externa
 }
 
 //nolint:unparam
-func (ss *ServicesService) checkUniqueName(ctx context.Context, name string, external *reform.Querier) error {
-	querier := ss.q
-	if external != nil {
-		querier = external
-	}
-
-	_, err := querier.FindOneFrom(models.ServiceTable, "service_name", name)
+func (ss *ServicesService) checkUniqueName(ctx context.Context, q *reform.Querier, name string) error {
+	_, err := q.FindOneFrom(models.ServiceTable, "service_name", name)
 	switch err {
 	case nil:
 		return status.Errorf(codes.AlreadyExists, "Service with name %q already exists.", name)
@@ -136,8 +124,8 @@ func (ss *ServicesService) checkUniqueName(ctx context.Context, name string, ext
 }
 
 // List selects all Services in a stable order.
-func (ss *ServicesService) List(ctx context.Context) ([]inventorypb.Service, error) {
-	structs, err := ss.q.SelectAllFrom(models.ServiceTable, "ORDER BY service_id")
+func (ss *ServicesService) List(ctx context.Context, q *reform.Querier) ([]inventorypb.Service, error) {
+	structs, err := q.SelectAllFrom(models.ServiceTable, "ORDER BY service_id")
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -154,8 +142,8 @@ func (ss *ServicesService) List(ctx context.Context) ([]inventorypb.Service, err
 }
 
 // Get selects a single Service by ID.
-func (ss *ServicesService) Get(ctx context.Context, id string) (inventorypb.Service, error) {
-	row, err := ss.get(ctx, id)
+func (ss *ServicesService) Get(ctx context.Context, q *reform.Querier, id string) (inventorypb.Service, error) {
+	row, err := ss.get(ctx, q, id)
 	if err != nil {
 		return nil, err
 	}
@@ -163,30 +151,19 @@ func (ss *ServicesService) Get(ctx context.Context, id string) (inventorypb.Serv
 }
 
 // AddMySQL inserts MySQL Service with given parameters.
-func (ss *ServicesService) AddMySQL(
-	ctx context.Context,
-	name,
-	nodeID string,
-	address *string,
-	port *uint16,
-	external *reform.Querier) (*inventorypb.MySQLService, error) {
+func (ss *ServicesService) AddMySQL(ctx context.Context, q *reform.Querier, name, nodeID string, address *string, port *uint16) (*inventorypb.MySQLService, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// Both address and socket can't be empty, etc.
 
-	querier := ss.q
-	if external != nil {
-		querier = external
-	}
-
 	id := "/service_id/" + uuid.New().String()
-	if err := ss.checkUniqueID(ctx, id, querier); err != nil {
+	if err := ss.checkUniqueID(ctx, q, id); err != nil {
 		return nil, err
 	}
-	if err := ss.checkUniqueName(ctx, name, querier); err != nil {
+	if err := ss.checkUniqueName(ctx, q, name); err != nil {
 		return nil, err
 	}
 
-	if _, err := ss.ns.Get(ctx, nodeID, querier); err != nil {
+	if _, err := ss.ns.Get(ctx, q, nodeID); err != nil {
 		return nil, err
 	}
 
@@ -198,7 +175,7 @@ func (ss *ServicesService) AddMySQL(
 		Address:     address,
 		Port:        port,
 	}
-	if err := querier.Insert(row); err != nil {
+	if err := q.Insert(row); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	res, err := makeService(row)
@@ -209,17 +186,17 @@ func (ss *ServicesService) AddMySQL(
 }
 
 // AddMongoDB inserts MongoDB Service with given parameters.
-func (ss *ServicesService) AddMongoDB(ctx context.Context, name, nodeID string, address *string, port *uint16) (*inventorypb.MongoDBService, error) {
+func (ss *ServicesService) AddMongoDB(ctx context.Context, q *reform.Querier, name, nodeID string, address *string, port *uint16) (*inventorypb.MongoDBService, error) {
 
 	id := "/service_id/" + uuid.New().String()
-	if err := ss.checkUniqueID(ctx, id, nil); err != nil {
+	if err := ss.checkUniqueID(ctx, q, id); err != nil {
 		return nil, err
 	}
-	if err := ss.checkUniqueName(ctx, name, nil); err != nil {
+	if err := ss.checkUniqueName(ctx, q, name); err != nil {
 		return nil, err
 	}
 
-	if _, err := ss.ns.Get(ctx, nodeID, nil); err != nil {
+	if _, err := ss.ns.Get(ctx, q, nodeID); err != nil {
 		return nil, err
 	}
 
@@ -231,7 +208,7 @@ func (ss *ServicesService) AddMongoDB(ctx context.Context, name, nodeID string, 
 		Address:     address,
 		Port:        port,
 	}
-	if err := ss.q.Insert(row); err != nil {
+	if err := q.Insert(row); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	res, err := makeService(row)
@@ -242,34 +219,34 @@ func (ss *ServicesService) AddMongoDB(ctx context.Context, name, nodeID string, 
 }
 
 // Change updates Service by ID.
-func (ss *ServicesService) Change(ctx context.Context, id string, name string) (inventorypb.Service, error) {
+func (ss *ServicesService) Change(ctx context.Context, q *reform.Querier, id string, name string) (inventorypb.Service, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// ID is not 0, name is not empty and valid.
 
-	if err := ss.checkUniqueName(ctx, name, nil); err != nil {
+	if err := ss.checkUniqueName(ctx, q, name); err != nil {
 		return nil, err
 	}
 
-	row, err := ss.get(ctx, id)
+	row, err := ss.get(ctx, q, id)
 	if err != nil {
 		return nil, err
 	}
 
 	row.ServiceName = name
-	if err = ss.q.Update(row); err != nil {
+	if err = q.Update(row); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return makeService(row)
 }
 
 // Remove deletes Service by ID.
-func (ss *ServicesService) Remove(ctx context.Context, id string) error {
+func (ss *ServicesService) Remove(ctx context.Context, q *reform.Querier, id string) error {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// ID is not 0.
 
 	// TODO check absence of Agents
 
-	err := ss.q.Delete(&models.Service{ServiceID: id})
+	err := q.Delete(&models.Service{ServiceID: id})
 	if err == reform.ErrNoRows {
 		return status.Errorf(codes.NotFound, "Service with ID %q not found.", id)
 	}

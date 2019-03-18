@@ -33,13 +33,11 @@ import (
 
 // NodesService works with inventory API Nodes.
 type NodesService struct {
-	q *reform.Querier
 	r registry
 }
 
-func NewNodesService(q *reform.Querier, r registry) *NodesService {
+func NewNodesService(r registry) *NodesService {
 	return &NodesService{
-		q: q,
 		r: r,
 	}
 }
@@ -95,18 +93,13 @@ func makeNode(row *models.Node) (inventorypb.Node, error) {
 }
 
 //nolint:unparam
-func (ns *NodesService) get(ctx context.Context, id string, external *reform.Querier) (*models.Node, error) {
+func (ns *NodesService) get(ctx context.Context, q *reform.Querier, id string) (*models.Node, error) {
 	if id == "" {
 		return nil, status.Error(codes.InvalidArgument, "Empty Node ID.")
 	}
 
-	querier := ns.q
-	if external != nil {
-		querier = external
-	}
-
 	row := &models.Node{NodeID: id}
-	switch err := querier.Reload(row); err {
+	switch err := q.Reload(row); err {
 	case nil:
 		return row, nil
 	case reform.ErrNoRows:
@@ -116,13 +109,13 @@ func (ns *NodesService) get(ctx context.Context, id string, external *reform.Que
 	}
 }
 
-func (ns *NodesService) checkUniqueID(ctx context.Context, id string) error {
+func (ns *NodesService) checkUniqueID(ctx context.Context, q *reform.Querier, id string) error {
 	if id == "" {
 		panic("empty Node ID")
 	}
 
 	row := &models.Node{NodeID: id}
-	switch err := ns.q.Reload(row); err {
+	switch err := q.Reload(row); err {
 	case nil:
 		return status.Errorf(codes.AlreadyExists, "Node with ID %q already exists.", id)
 	case reform.ErrNoRows:
@@ -132,12 +125,12 @@ func (ns *NodesService) checkUniqueID(ctx context.Context, id string) error {
 	}
 }
 
-func (ns *NodesService) checkUniqueName(ctx context.Context, name string) error {
+func (ns *NodesService) checkUniqueName(ctx context.Context, q *reform.Querier, name string) error {
 	if name == "" {
 		return status.Error(codes.InvalidArgument, "Empty Node name.")
 	}
 
-	_, err := ns.q.FindOneFrom(models.NodeTable, "node_name", name)
+	_, err := q.FindOneFrom(models.NodeTable, "node_name", name)
 	switch err {
 	case nil:
 		return status.Errorf(codes.AlreadyExists, "Node with name %q already exists.", name)
@@ -148,7 +141,7 @@ func (ns *NodesService) checkUniqueName(ctx context.Context, name string) error 
 	}
 }
 
-func (ns *NodesService) checkUniqueInstanceRegion(ctx context.Context, instance, region string) error {
+func (ns *NodesService) checkUniqueInstanceRegion(ctx context.Context, q *reform.Querier, instance, region string) error {
 	if instance == "" {
 		return status.Error(codes.InvalidArgument, "Empty Node instance.")
 	}
@@ -156,8 +149,8 @@ func (ns *NodesService) checkUniqueInstanceRegion(ctx context.Context, instance,
 		return status.Error(codes.InvalidArgument, "Empty Node region.")
 	}
 
-	tail := fmt.Sprintf("WHERE address = %s AND region = %s LIMIT 1", ns.q.Placeholder(1), ns.q.Placeholder(2))
-	_, err := ns.q.SelectOneFrom(models.NodeTable, tail, instance, region)
+	tail := fmt.Sprintf("WHERE address = %s AND region = %s LIMIT 1", q.Placeholder(1), q.Placeholder(2))
+	_, err := q.SelectOneFrom(models.NodeTable, tail, instance, region)
 	switch err {
 	case nil:
 		return status.Errorf(codes.AlreadyExists, "Node with instance %q and region %q already exists.", instance, region)
@@ -169,8 +162,8 @@ func (ns *NodesService) checkUniqueInstanceRegion(ctx context.Context, instance,
 }
 
 // List selects all Nodes in a stable order.
-func (ns *NodesService) List(ctx context.Context) ([]inventorypb.Node, error) {
-	structs, err := ns.q.SelectAllFrom(models.NodeTable, "ORDER BY node_id")
+func (ns *NodesService) List(ctx context.Context, q *reform.Querier) ([]inventorypb.Node, error) {
+	structs, err := q.SelectAllFrom(models.NodeTable, "ORDER BY node_id")
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -187,8 +180,8 @@ func (ns *NodesService) List(ctx context.Context) ([]inventorypb.Node, error) {
 }
 
 // Get selects a single Node by ID.
-func (ns *NodesService) Get(ctx context.Context, id string, external *reform.Querier) (inventorypb.Node, error) {
-	row, err := ns.get(ctx, id, external)
+func (ns *NodesService) Get(ctx context.Context, q *reform.Querier, id string) (inventorypb.Node, error) {
+	row, err := ns.get(ctx, q, id)
 	if err != nil {
 		return nil, err
 	}
@@ -196,20 +189,20 @@ func (ns *NodesService) Get(ctx context.Context, id string, external *reform.Que
 }
 
 // Add inserts Node with given parameters. ID will be generated.
-func (ns *NodesService) Add(ctx context.Context, nodeType models.NodeType, name string, address, region *string) (inventorypb.Node, error) {
+func (ns *NodesService) Add(ctx context.Context, q *reform.Querier, nodeType models.NodeType, name string, address, region *string) (inventorypb.Node, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// No hostname for Container, etc.
 
 	id := "/node_id/" + uuid.New().String()
-	if err := ns.checkUniqueID(ctx, id); err != nil {
+	if err := ns.checkUniqueID(ctx, q, id); err != nil {
 		return nil, err
 	}
 
-	if err := ns.checkUniqueName(ctx, name); err != nil {
+	if err := ns.checkUniqueName(ctx, q, name); err != nil {
 		return nil, err
 	}
 	if address != nil && region != nil {
-		if err := ns.checkUniqueInstanceRegion(ctx, *address, *region); err != nil {
+		if err := ns.checkUniqueInstanceRegion(ctx, q, *address, *region); err != nil {
 			return nil, err
 		}
 	}
@@ -221,41 +214,41 @@ func (ns *NodesService) Add(ctx context.Context, nodeType models.NodeType, name 
 		Address:  address,
 		Region:   region,
 	}
-	if err := ns.q.Insert(row); err != nil {
+	if err := q.Insert(row); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return makeNode(row)
 }
 
 // Change updates Node by ID.
-func (ns *NodesService) Change(ctx context.Context, id string, name string) (inventorypb.Node, error) {
+func (ns *NodesService) Change(ctx context.Context, q *reform.Querier, id string, name string) (inventorypb.Node, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// ID is not 0, name is not empty and valid.
 
-	if err := ns.checkUniqueName(ctx, name); err != nil {
+	if err := ns.checkUniqueName(ctx, q, name); err != nil {
 		return nil, err
 	}
 
-	row, err := ns.get(ctx, id, nil)
+	row, err := ns.get(ctx, q, id)
 	if err != nil {
 		return nil, err
 	}
 
 	row.NodeName = name
-	if err = ns.q.Update(row); err != nil {
+	if err = q.Update(row); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return makeNode(row)
 }
 
 // Remove deletes Node by ID.
-func (ns *NodesService) Remove(ctx context.Context, id string) error {
+func (ns *NodesService) Remove(ctx context.Context, q *reform.Querier, id string) error {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// ID is not 0.
 
 	// TODO check absence of Services and Agents
 
-	err := ns.q.Delete(&models.Node{NodeID: id})
+	err := q.Delete(&models.Node{NodeID: id})
 	if err == reform.ErrNoRows {
 		return status.Errorf(codes.NotFound, "Node with ID %q not found.", id)
 	}
