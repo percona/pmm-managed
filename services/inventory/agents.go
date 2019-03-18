@@ -33,12 +33,14 @@ import (
 
 // AgentsService works with inventory API Agents.
 type AgentsService struct {
-	r registry
+	r  registry
+	db *reform.DB
 }
 
-func NewAgentsService(r registry) *AgentsService {
+func NewAgentsService(db *reform.DB, r registry) *AgentsService {
 	return &AgentsService{
-		r: r,
+		r:  r,
+		db: db,
 	}
 }
 
@@ -172,9 +174,9 @@ type AgentFilters struct {
 }
 
 // List selects all Agents in a stable order for a given service.
-func (as *AgentsService) List(ctx context.Context, db *reform.DB, filters AgentFilters) ([]inventorypb.Agent, error) {
+func (as *AgentsService) List(ctx context.Context, filters AgentFilters) ([]inventorypb.Agent, error) {
 	var res []inventorypb.Agent
-	e := db.InTransaction(func(tx *reform.TX) error {
+	e := as.db.InTransaction(func(tx *reform.TX) error {
 		var agents []*models.Agent
 		var err error
 		switch {
@@ -212,9 +214,9 @@ func (as *AgentsService) List(ctx context.Context, db *reform.DB, filters AgentF
 }
 
 // Get selects a single Agent by ID.
-func (as *AgentsService) Get(ctx context.Context, db *reform.DB, id string) (inventorypb.Agent, error) {
+func (as *AgentsService) Get(ctx context.Context, id string) (inventorypb.Agent, error) {
 	var res inventorypb.Agent
-	e := db.InTransaction(func(tx *reform.TX) error {
+	e := as.db.InTransaction(func(tx *reform.TX) error {
 		row, err := get(tx.Querier, id)
 		if err != nil {
 			return err
@@ -226,19 +228,19 @@ func (as *AgentsService) Get(ctx context.Context, db *reform.DB, id string) (inv
 }
 
 // AddPMMAgent inserts pmm-agent Agent with given parameters.
-func (as *AgentsService) AddPMMAgent(ctx context.Context, db *reform.DB, nodeID string) (*inventorypb.PMMAgent, error) {
+func (as *AgentsService) AddPMMAgent(ctx context.Context, nodeID string) (*inventorypb.PMMAgent, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// TODO Check runs-on Node: it must be BM, VM, DC (i.e. not remote, AWS RDS, etc.)
 
 	var res *inventorypb.PMMAgent
-	e := db.InTransaction(func(tx *reform.TX) error {
+	e := as.db.InTransaction(func(tx *reform.TX) error {
 		id := "/agent_id/" + uuid.New().String()
 		if err := checkUniqueID(tx.Querier, id); err != nil {
 			return err
 		}
 
 		ns := NewNodesService(tx.Querier, as.r)
-		if _, err := ns.get(ctx, nodeID); err != nil {
+		if _, err := ns.get(ctx, nodeID, nil); err != nil {
 			return err
 		}
 
@@ -262,11 +264,11 @@ func (as *AgentsService) AddPMMAgent(ctx context.Context, db *reform.DB, nodeID 
 }
 
 // AddNodeExporter inserts node_exporter Agent with given parameters.
-func (as *AgentsService) AddNodeExporter(ctx context.Context, db *reform.DB, req *inventorypb.AddNodeExporterRequest) (*inventorypb.NodeExporter, error) {
+func (as *AgentsService) AddNodeExporter(ctx context.Context, req *inventorypb.AddNodeExporterRequest) (*inventorypb.NodeExporter, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 
 	var res *inventorypb.NodeExporter
-	e := db.InTransaction(func(tx *reform.TX) error {
+	e := as.db.InTransaction(func(tx *reform.TX) error {
 		id := "/agent_id/" + uuid.New().String()
 		if err := checkUniqueID(tx.Querier, id); err != nil {
 			return err
@@ -313,52 +315,23 @@ func (as *AgentsService) AddNodeExporter(ctx context.Context, db *reform.DB, req
 }
 
 // AddMySQLdExporter inserts mysqld_exporter Agent with given parameters.
-func (as *AgentsService) AddMySQLdExporter(ctx context.Context, db *reform.DB, req *inventorypb.AddMySQLdExporterRequest) (*inventorypb.MySQLdExporter, error) {
+func (as *AgentsService) AddMySQLdExporter(ctx context.Context, req *inventorypb.AddMySQLdExporterRequest, externalQuerier *reform.Querier) (*inventorypb.MySQLdExporter, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
-
 	var res *inventorypb.MySQLdExporter
-	e := db.InTransaction(func(tx *reform.TX) error {
-		id := "/agent_id/" + uuid.New().String()
-		if err := checkUniqueID(tx.Querier, id); err != nil {
-			return err
-		}
+	var err error
 
-		ss := NewServicesService(tx.Querier, as.r)
-		if _, err := ss.get(ctx, req.ServiceId); err != nil {
+	if externalQuerier != nil {
+		if res, err = as.addMySQLdExporter(ctx, req, externalQuerier); err != nil {
+			return nil, err
+		}
+	} else {
+		e := as.db.InTransaction(func(tx *reform.TX) error {
+			res, err = as.addMySQLdExporter(ctx, req, tx.Querier)
 			return err
-		}
-
-		row := &models.Agent{
-			AgentID:    id,
-			AgentType:  models.MySQLdExporterType,
-			PMMAgentID: &req.PmmAgentId,
-			Username:   pointer.ToStringOrNil(req.Username),
-			Password:   pointer.ToStringOrNil(req.Password),
-		}
-		if err := row.SetCustomLabels(req.CustomLabels); err != nil {
-			return err
-		}
-		if err := tx.Insert(row); err != nil {
-			return errors.WithStack(err)
-		}
-
-		err := tx.Insert(&models.AgentService{
-			AgentID:   row.AgentID,
-			ServiceID: req.ServiceId,
 		})
-		if err != nil {
-			return errors.WithStack(err)
+		if e != nil {
+			return nil, e
 		}
-
-		agent, err := as.makeAgent(tx.Querier, row)
-		if err != nil {
-			return err
-		}
-		res = agent.(*inventorypb.MySQLdExporter)
-		return nil
-	})
-	if e != nil {
-		return nil, e
 	}
 
 	as.r.SendSetStateRequest(ctx, req.PmmAgentId)
@@ -380,17 +353,17 @@ func (as *AgentsService) SetDisabled(ctx context.Context, id string, disabled bo
 */
 
 // AddMongoDBExporter inserts mongodb_exporter Agent with given parameters.
-func (as *AgentsService) AddMongoDBExporter(ctx context.Context, db *reform.DB, req *inventorypb.AddMongoDBExporterRequest) (*inventorypb.MongoDBExporter, error) {
+func (as *AgentsService) AddMongoDBExporter(ctx context.Context, req *inventorypb.AddMongoDBExporterRequest) (*inventorypb.MongoDBExporter, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 
 	var res *inventorypb.MongoDBExporter
-	e := db.InTransaction(func(tx *reform.TX) error {
+	e := as.db.InTransaction(func(tx *reform.TX) error {
 		id := "/agent_id/" + uuid.New().String()
 		if err := checkUniqueID(tx.Querier, id); err != nil {
 			return err
 		}
 
-		ss := NewServicesService(tx.Querier, as.r)
+		ss := NewServicesService(tx.Querier, as.r, nil)
 		if _, err := ss.get(ctx, req.ServiceId); err != nil {
 			return err
 		}
@@ -433,61 +406,34 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, db *reform.DB, 
 }
 
 // AddQANMySQLPerfSchemaAgent adds MySQL PerfSchema QAN Agent.
-func (as *AgentsService) AddQANMySQLPerfSchemaAgent(ctx context.Context, db *reform.DB, req *inventorypb.AddQANMySQLPerfSchemaAgentRequest) (*inventorypb.QANMySQLPerfSchemaAgent, error) {
+func (as *AgentsService) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *inventorypb.AddQANMySQLPerfSchemaAgentRequest, externalQuerier *reform.Querier) (*inventorypb.QANMySQLPerfSchemaAgent, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
-
 	var res *inventorypb.QANMySQLPerfSchemaAgent
-	e := db.InTransaction(func(tx *reform.TX) error {
-		id := "/agent_id/" + uuid.New().String()
-		if err := checkUniqueID(tx.Querier, id); err != nil {
+	var err error
+
+	if externalQuerier != nil {
+		if res, err = as.addQANMySQLPerfSchemaAgent(ctx, req, externalQuerier); err != nil {
+			return nil, err
+		}
+	} else {
+		if e := as.db.InTransaction(func(tx *reform.TX) error {
+			res, err = as.addQANMySQLPerfSchemaAgent(ctx, req, tx.Querier)
 			return err
+		}); e != nil {
+			return nil, e
 		}
-
-		ss := NewServicesService(tx.Querier, as.r)
-		if _, err := ss.get(ctx, req.ServiceId); err != nil {
-			return err
-		}
-
-		row := &models.Agent{
-			AgentID:    id,
-			AgentType:  models.QANMySQLPerfSchemaAgentType,
-			PMMAgentID: &req.PmmAgentId,
-			Username:   pointer.ToStringOrNil(req.Username),
-			Password:   pointer.ToStringOrNil(req.Password),
-		}
-		if err := tx.Insert(row); err != nil {
-			return errors.WithStack(err)
-		}
-
-		err := tx.Insert(&models.AgentService{
-			AgentID:   row.AgentID,
-			ServiceID: req.ServiceId,
-		})
-		if err != nil {
-			return errors.WithStack(err)
-		}
-
-		agent, err := as.makeAgent(tx.Querier, row)
-		if err != nil {
-			return err
-		}
-		res = agent.(*inventorypb.QANMySQLPerfSchemaAgent)
-		return nil
-	})
-	if e != nil {
-		return nil, e
 	}
 
 	as.r.SendSetStateRequest(ctx, req.PmmAgentId)
-	return res, nil
+	return res, err
 }
 
 // Remove deletes Agent by ID.
-func (as *AgentsService) Remove(ctx context.Context, db *reform.DB, id string) error {
+func (as *AgentsService) Remove(ctx context.Context, id string) error {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// ID is not 0.
 
-	return db.InTransaction(func(tx *reform.TX) error {
+	return as.db.InTransaction(func(tx *reform.TX) error {
 		row, err := get(tx.Querier, id)
 		if err != nil {
 			return err
@@ -514,4 +460,83 @@ func (as *AgentsService) Remove(ctx context.Context, db *reform.DB, id string) e
 
 		return nil
 	})
+}
+
+func (as *AgentsService) addMySQLdExporter(ctx context.Context, req *inventorypb.AddMySQLdExporterRequest, q *reform.Querier) (res *inventorypb.MySQLdExporter, err error) {
+	id := "/agent_id/" + uuid.New().String()
+	if err := checkUniqueID(q, id); err != nil {
+		return nil, err
+	}
+
+	ss := NewServicesService(q, as.r, nil)
+	if _, err := ss.get(ctx, req.ServiceId); err != nil {
+		return nil, err
+	}
+
+	row := &models.Agent{
+		AgentID:    id,
+		AgentType:  models.MySQLdExporterType,
+		PMMAgentID: &req.PmmAgentId,
+		Username:   pointer.ToStringOrNil(req.Username),
+		Password:   pointer.ToStringOrNil(req.Password),
+	}
+	if err := row.SetCustomLabels(req.CustomLabels); err != nil {
+		return nil, err
+	}
+	if err := q.Insert(row); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	err = q.Insert(&models.AgentService{
+		AgentID:   row.AgentID,
+		ServiceID: req.ServiceId,
+	})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	agent, err := as.makeAgent(q, row)
+	if err != nil {
+		return nil, err
+	}
+	res = agent.(*inventorypb.MySQLdExporter)
+	return res, nil
+}
+
+func (as *AgentsService) addQANMySQLPerfSchemaAgent(ctx context.Context, req *inventorypb.AddQANMySQLPerfSchemaAgentRequest, q *reform.Querier) (res *inventorypb.QANMySQLPerfSchemaAgent, err error) {
+	id := "/agent_id/" + uuid.New().String()
+	if err := checkUniqueID(q, id); err != nil {
+		return nil, err
+	}
+
+	ss := NewServicesService(q, as.r, nil)
+	if _, err := ss.get(ctx, req.ServiceId); err != nil {
+		return nil, err
+	}
+
+	row := &models.Agent{
+		AgentID:    id,
+		AgentType:  models.QANMySQLPerfSchemaAgentType,
+		PMMAgentID: &req.PmmAgentId,
+		Username:   pointer.ToStringOrNil(req.Username),
+		Password:   pointer.ToStringOrNil(req.Password),
+	}
+	if err := q.Insert(row); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	err = q.Insert(&models.AgentService{
+		AgentID:   row.AgentID,
+		ServiceID: req.ServiceId,
+	})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	agent, err := as.makeAgent(q, row)
+	if err != nil {
+		return nil, err
+	}
+	res = agent.(*inventorypb.QANMySQLPerfSchemaAgent)
+	return res, nil
 }

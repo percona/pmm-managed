@@ -1,19 +1,20 @@
-package management
+package handlers
 
 import (
 	"context"
 
+	"github.com/percona/pmm-managed/services/management"
 	"github.com/percona/pmm/api/managementpb"
 )
 
 type mysqlGrpcServer struct {
-	svc *MySQLService
+	svc *management.MySQLService
 }
 
-func NewMysqlGrpcServer(s *MySQLService) managementpb.MySQLServer {
+func NewManagementMysqlServer(s *management.MySQLService) managementpb.MySQLServer {
 	return &mysqlGrpcServer{svc: s}
 }
 
 func (s *mysqlGrpcServer) Add(ctx context.Context, req *managementpb.AddMySQLRequest) (*managementpb.AddMySQLResponse, error) {
-	panic("not implemented")
+	return s.svc.Add(ctx, req)
 }

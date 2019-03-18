@@ -33,14 +33,16 @@ import (
 
 // ServicesService works with inventory API Services.
 type ServicesService struct {
-	q *reform.Querier
-	r registry
+	q  *reform.Querier
+	r  registry
+	ns *NodesService
 }
 
-func NewServicesService(q *reform.Querier, r registry) *ServicesService {
+func NewServicesService(q *reform.Querier, r registry, ns *NodesService) *ServicesService {
 	return &ServicesService{
-		q: q,
-		r: r,
+		q:  q,
+		r:  r,
+		ns: ns,
 	}
 }
 
@@ -92,13 +94,18 @@ func (ss *ServicesService) get(ctx context.Context, id string) (*models.Service,
 	}
 }
 
-func (ss *ServicesService) checkUniqueID(ctx context.Context, id string) error {
+func (ss *ServicesService) checkUniqueID(ctx context.Context, id string, external *reform.Querier) error {
 	if id == "" {
 		panic("empty Service ID")
 	}
 
+	querier := ss.q
+	if external != nil {
+		querier = external
+	}
+
 	row := &models.Service{ServiceID: id}
-	switch err := ss.q.Reload(row); err {
+	switch err := querier.Reload(row); err {
 	case nil:
 		return status.Errorf(codes.AlreadyExists, "Service with ID %q already exists.", id)
 	case reform.ErrNoRows:
@@ -108,8 +115,13 @@ func (ss *ServicesService) checkUniqueID(ctx context.Context, id string) error {
 	}
 }
 
-func (ss *ServicesService) checkUniqueName(ctx context.Context, name string) error {
-	_, err := ss.q.FindOneFrom(models.ServiceTable, "service_name", name)
+func (ss *ServicesService) checkUniqueName(ctx context.Context, name string, external *reform.Querier) error {
+	querier := ss.q
+	if external != nil {
+		querier = external
+	}
+
+	_, err := querier.FindOneFrom(models.ServiceTable, "service_name", name)
 	switch err {
 	case nil:
 		return status.Errorf(codes.AlreadyExists, "Service with name %q already exists.", name)
@@ -148,20 +160,24 @@ func (ss *ServicesService) Get(ctx context.Context, id string) (inventorypb.Serv
 }
 
 // AddMySQL inserts MySQL Service with given parameters.
-func (ss *ServicesService) AddMySQL(ctx context.Context, name string, nodeID string, address *string, port *uint16) (*inventorypb.MySQLService, error) {
+func (ss *ServicesService) AddMySQL(ctx context.Context, name string, nodeID string, address *string, port *uint16, external *reform.Querier) (*inventorypb.MySQLService, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// Both address and socket can't be empty, etc.
 
+	querier := ss.q
+	if external != nil {
+		querier = external
+	}
+
 	id := "/service_id/" + uuid.New().String()
-	if err := ss.checkUniqueID(ctx, id); err != nil {
+	if err := ss.checkUniqueID(ctx, id, querier); err != nil {
 		return nil, err
 	}
-	if err := ss.checkUniqueName(ctx, name); err != nil {
+	if err := ss.checkUniqueName(ctx, name, querier); err != nil {
 		return nil, err
 	}
 
-	ns := NewNodesService(ss.q, ss.r)
-	if _, err := ns.get(ctx, nodeID); err != nil {
+	if _, err := ss.ns.Get(ctx, nodeID, querier); err != nil {
 		return nil, err
 	}
 
@@ -173,7 +189,7 @@ func (ss *ServicesService) AddMySQL(ctx context.Context, name string, nodeID str
 		Address:     address,
 		Port:        port,
 	}
-	if err := ss.q.Insert(row); err != nil {
+	if err := querier.Insert(row); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	res, err := makeService(row)
@@ -187,15 +203,14 @@ func (ss *ServicesService) AddMySQL(ctx context.Context, name string, nodeID str
 func (ss *ServicesService) AddMongoDB(ctx context.Context, name, nodeID string, address *string, port *uint16) (*inventorypb.MongoDBService, error) {
 
 	id := "/service_id/" + uuid.New().String()
-	if err := ss.checkUniqueID(ctx, id); err != nil {
+	if err := ss.checkUniqueID(ctx, id, nil); err != nil {
 		return nil, err
 	}
-	if err := ss.checkUniqueName(ctx, name); err != nil {
+	if err := ss.checkUniqueName(ctx, name, nil); err != nil {
 		return nil, err
 	}
 
-	ns := NewNodesService(ss.q, ss.r)
-	if _, err := ns.get(ctx, nodeID); err != nil {
+	if _, err := ss.ns.Get(ctx, nodeID, nil); err != nil {
 		return nil, err
 	}
 
@@ -222,7 +237,7 @@ func (ss *ServicesService) Change(ctx context.Context, id string, name string) (
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// ID is not 0, name is not empty and valid.
 
-	if err := ss.checkUniqueName(ctx, name); err != nil {
+	if err := ss.checkUniqueName(ctx, name, nil); err != nil {
 		return nil, err
 	}
 

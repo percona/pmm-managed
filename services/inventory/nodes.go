@@ -94,13 +94,18 @@ func makeNode(row *models.Node) (inventorypb.Node, error) {
 	}
 }
 
-func (ns *NodesService) get(ctx context.Context, id string) (*models.Node, error) {
+func (ns *NodesService) get(ctx context.Context, id string, external *reform.Querier) (*models.Node, error) {
 	if id == "" {
 		return nil, status.Error(codes.InvalidArgument, "Empty Node ID.")
 	}
 
+	querier := ns.q
+	if external != nil {
+		querier = external
+	}
+
 	row := &models.Node{NodeID: id}
-	switch err := ns.q.Reload(row); err {
+	switch err := querier.Reload(row); err {
 	case nil:
 		return row, nil
 	case reform.ErrNoRows:
@@ -181,8 +186,8 @@ func (ns *NodesService) List(ctx context.Context) ([]inventorypb.Node, error) {
 }
 
 // Get selects a single Node by ID.
-func (ns *NodesService) Get(ctx context.Context, id string) (inventorypb.Node, error) {
-	row, err := ns.get(ctx, id)
+func (ns *NodesService) Get(ctx context.Context, id string, external *reform.Querier) (inventorypb.Node, error) {
+	row, err := ns.get(ctx, id, external)
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +235,7 @@ func (ns *NodesService) Change(ctx context.Context, id string, name string) (inv
 		return nil, err
 	}
 
-	row, err := ns.get(ctx, id)
+	row, err := ns.get(ctx, id, nil)
 	if err != nil {
 		return nil, err
 	}

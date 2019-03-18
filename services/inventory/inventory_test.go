@@ -76,7 +76,7 @@ func TestNodes(t *testing.T) {
 		}
 		assert.Equal(t, expectedNode, actualNode)
 
-		actualNode, err = ns.Get(ctx, "/node_id/00000000-0000-4000-8000-000000000001")
+		actualNode, err = ns.Get(ctx, "/node_id/00000000-0000-4000-8000-000000000001", nil)
 		require.NoError(t, err)
 		assert.Equal(t, expectedNode, actualNode)
 
@@ -95,7 +95,7 @@ func TestNodes(t *testing.T) {
 
 		err = ns.Remove(ctx, "/node_id/00000000-0000-4000-8000-000000000001")
 		require.NoError(t, err)
-		actualNode, err = ns.Get(ctx, "/node_id/00000000-0000-4000-8000-000000000001")
+		actualNode, err = ns.Get(ctx, "/node_id/00000000-0000-4000-8000-000000000001", nil)
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Node with ID "/node_id/00000000-0000-4000-8000-000000000001" not found.`), err)
 		assert.Nil(t, actualNode)
 	})
@@ -104,7 +104,7 @@ func TestNodes(t *testing.T) {
 		ns, teardown := setup(t)
 		defer teardown(t)
 
-		actualNode, err := ns.Get(ctx, "")
+		actualNode, err := ns.Get(ctx, "", nil)
 		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Empty Node ID.`), err)
 		assert.Nil(t, actualNode)
 	})
@@ -202,7 +202,8 @@ func TestServices(t *testing.T) {
 			require.NoError(t, tx.Rollback())
 			r.AssertExpectations(t)
 		}
-		ss = NewServicesService(tx.Querier, r)
+		ns := NewNodesService(tx.Querier, r)
+		ss = NewServicesService(tx.Querier, r, ns)
 		return
 	}
 
@@ -214,7 +215,7 @@ func TestServices(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, actualServices, 0)
 
-		actualMySQLService, err := ss.AddMySQL(ctx, "test-mysql", models.PMMServerNodeID, pointer.ToString("127.0.0.1"), pointer.ToUint16(3306))
+		actualMySQLService, err := ss.AddMySQL(ctx, "test-mysql", models.PMMServerNodeID, pointer.ToString("127.0.0.1"), pointer.ToUint16(3306), nil)
 		require.NoError(t, err)
 		expectedService := &inventorypb.MySQLService{
 			ServiceId:   "/service_id/00000000-0000-4000-8000-000000000001",
@@ -291,10 +292,10 @@ func TestServices(t *testing.T) {
 		ss, teardown := setup(t)
 		defer teardown(t)
 
-		_, err := ss.AddMySQL(ctx, "test-mysql", models.PMMServerNodeID, pointer.ToString("127.0.0.1"), pointer.ToUint16(3306))
+		_, err := ss.AddMySQL(ctx, "test-mysql", models.PMMServerNodeID, pointer.ToString("127.0.0.1"), pointer.ToUint16(3306), nil)
 		require.NoError(t, err)
 
-		_, err = ss.AddMySQL(ctx, "test-mysql", models.PMMServerNodeID, pointer.ToString("127.0.0.1"), pointer.ToUint16(3306))
+		_, err = ss.AddMySQL(ctx, "test-mysql", models.PMMServerNodeID, pointer.ToString("127.0.0.1"), pointer.ToUint16(3306), nil)
 		tests.AssertGRPCError(t, status.New(codes.AlreadyExists, `Service with name "test-mysql" already exists.`), err)
 	})
 
@@ -302,7 +303,7 @@ func TestServices(t *testing.T) {
 		ss, teardown := setup(t)
 		defer teardown(t)
 
-		_, err := ss.AddMySQL(ctx, "test-mysql", "no-such-id", pointer.ToString("127.0.0.1"), pointer.ToUint16(3306))
+		_, err := ss.AddMySQL(ctx, "test-mysql", "no-such-id", pointer.ToString("127.0.0.1"), pointer.ToUint16(3306), nil)
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Node with ID "no-such-id" not found.`), err)
 	})
 
@@ -318,10 +319,10 @@ func TestServices(t *testing.T) {
 		ss, teardown := setup(t)
 		defer teardown(t)
 
-		_, err := ss.AddMySQL(ctx, "test-mysql", models.PMMServerNodeID, pointer.ToString("127.0.0.1"), pointer.ToUint16(3306))
+		_, err := ss.AddMySQL(ctx, "test-mysql", models.PMMServerNodeID, pointer.ToString("127.0.0.1"), pointer.ToUint16(3306), nil)
 		require.NoError(t, err)
 
-		s, err := ss.AddMySQL(ctx, "test-mysql-2", models.PMMServerNodeID, pointer.ToString("127.0.0.2"), pointer.ToUint16(3306))
+		s, err := ss.AddMySQL(ctx, "test-mysql-2", models.PMMServerNodeID, pointer.ToString("127.0.0.2"), pointer.ToUint16(3306), nil)
 		require.NoError(t, err)
 
 		_, err = ss.Change(ctx, s.ID(), "test-mysql")
@@ -354,8 +355,9 @@ func TestAgents(t *testing.T) {
 		r := new(mockRegistry)
 		r.Test(t)
 
-		ss = NewServicesService(db.Querier, r)
-		as = NewAgentsService(r)
+		ns := NewNodesService(db.Querier, r)
+		ss = NewServicesService(db.Querier, r, ns)
+		as = NewAgentsService(db, r)
 	}
 
 	teardown := func(t *testing.T) {
@@ -367,16 +369,16 @@ func TestAgents(t *testing.T) {
 		setup(t)
 		defer teardown(t)
 
-		actualAgents, err := as.List(ctx, db, AgentFilters{})
+		actualAgents, err := as.List(ctx, AgentFilters{})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 0)
 
 		as.r.(*mockRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000001").Return(true)
 		as.r.(*mockRegistry).On("SendSetStateRequest", ctx, "/agent_id/00000000-0000-4000-8000-000000000001")
-		pmmAgent, err := as.AddPMMAgent(ctx, db, models.PMMServerNodeID)
+		pmmAgent, err := as.AddPMMAgent(ctx, models.PMMServerNodeID)
 		require.NoError(t, err)
 
-		actualNodeExporter, err := as.AddNodeExporter(ctx, db, &inventorypb.AddNodeExporterRequest{
+		actualNodeExporter, err := as.AddNodeExporter(ctx, &inventorypb.AddNodeExporterRequest{
 			PmmAgentId: pmmAgent.AgentId,
 		})
 
@@ -387,18 +389,18 @@ func TestAgents(t *testing.T) {
 		}
 		assert.Equal(t, expectedNodeExporter, actualNodeExporter)
 
-		actualAgent, err := as.Get(ctx, db, "/agent_id/00000000-0000-4000-8000-000000000002")
+		actualAgent, err := as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000002")
 		require.NoError(t, err)
 		assert.Equal(t, expectedNodeExporter, actualAgent)
 
-		s, err := ss.AddMySQL(ctx, "test-mysql", models.PMMServerNodeID, pointer.ToString("127.0.0.1"), pointer.ToUint16(3306))
+		s, err := ss.AddMySQL(ctx, "test-mysql", models.PMMServerNodeID, pointer.ToString("127.0.0.1"), pointer.ToUint16(3306), nil)
 		require.NoError(t, err)
 
-		actualAgent, err = as.AddMySQLdExporter(ctx, db, &inventorypb.AddMySQLdExporterRequest{
+		actualAgent, err = as.AddMySQLdExporter(ctx, &inventorypb.AddMySQLdExporterRequest{
 			PmmAgentId: pmmAgent.AgentId,
 			ServiceId:  s.ID(),
 			Username:   "username",
-		})
+		}, nil)
 		require.NoError(t, err)
 		expectedMySQLdExporter := &inventorypb.MySQLdExporter{
 			AgentId:    "/agent_id/00000000-0000-4000-8000-000000000004",
@@ -408,14 +410,14 @@ func TestAgents(t *testing.T) {
 		}
 		assert.Equal(t, expectedMySQLdExporter, actualAgent)
 
-		actualAgent, err = as.Get(ctx, db, "/agent_id/00000000-0000-4000-8000-000000000004")
+		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000004")
 		require.NoError(t, err)
 		assert.Equal(t, expectedMySQLdExporter, actualAgent)
 
 		ms, err := ss.AddMongoDB(ctx, "test-mongo", models.PMMServerNodeID, pointer.ToString("127.0.0.1"), pointer.ToUint16(27017))
 		require.NoError(t, err)
 
-		actualAgent, err = as.AddMongoDBExporter(ctx, db, &inventorypb.AddMongoDBExporterRequest{
+		actualAgent, err = as.AddMongoDBExporter(ctx, &inventorypb.AddMongoDBExporterRequest{
 			PmmAgentId: pmmAgent.AgentId,
 			ServiceId:  ms.ID(),
 			Username:   "username",
@@ -429,7 +431,7 @@ func TestAgents(t *testing.T) {
 		}
 		assert.Equal(t, expectedMongoDBExporter, actualAgent)
 
-		actualAgent, err = as.Get(ctx, db, "/agent_id/00000000-0000-4000-8000-000000000006")
+		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000006")
 		require.NoError(t, err)
 		assert.Equal(t, expectedMongoDBExporter, actualAgent)
 
@@ -440,7 +442,7 @@ func TestAgents(t *testing.T) {
 		// require.NoError(t, err)
 		// assert.Equal(t, expectedMySQLdExporter, actualAgent)
 
-		actualAgents, err = as.List(ctx, db, AgentFilters{})
+		actualAgents, err = as.List(ctx, AgentFilters{})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 4)
 		assert.Equal(t, pmmAgent, actualAgents[0])
@@ -448,56 +450,56 @@ func TestAgents(t *testing.T) {
 		assert.Equal(t, expectedMySQLdExporter, actualAgents[2])
 		assert.Equal(t, expectedMongoDBExporter, actualAgents[3])
 
-		actualAgents, err = as.List(ctx, db, AgentFilters{ServiceID: s.ID()})
+		actualAgents, err = as.List(ctx, AgentFilters{ServiceID: s.ID()})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 1)
 		assert.Equal(t, expectedMySQLdExporter, actualAgents[0])
 
-		actualAgents, err = as.List(ctx, db, AgentFilters{PMMAgentID: pmmAgent.AgentId})
+		actualAgents, err = as.List(ctx, AgentFilters{PMMAgentID: pmmAgent.AgentId})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 3)
 		assert.Equal(t, expectedNodeExporter, actualAgents[0])
 		assert.Equal(t, expectedMySQLdExporter, actualAgents[1])
 		assert.Equal(t, expectedMongoDBExporter, actualAgents[2])
 
-		actualAgents, err = as.List(ctx, db, AgentFilters{PMMAgentID: pmmAgent.AgentId, NodeID: models.PMMServerNodeID})
+		actualAgents, err = as.List(ctx, AgentFilters{PMMAgentID: pmmAgent.AgentId, NodeID: models.PMMServerNodeID})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 3)
 		assert.Equal(t, expectedNodeExporter, actualAgents[0])
 		assert.Equal(t, expectedMySQLdExporter, actualAgents[1])
 		assert.Equal(t, expectedMongoDBExporter, actualAgents[2])
 
-		actualAgents, err = as.List(ctx, db, AgentFilters{NodeID: models.PMMServerNodeID})
+		actualAgents, err = as.List(ctx, AgentFilters{NodeID: models.PMMServerNodeID})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 1)
 		assert.Equal(t, expectedNodeExporter, actualAgents[0])
 
-		err = as.Remove(ctx, db, "/agent_id/00000000-0000-4000-8000-000000000002")
+		err = as.Remove(ctx, "/agent_id/00000000-0000-4000-8000-000000000002")
 		require.NoError(t, err)
-		actualAgent, err = as.Get(ctx, db, "/agent_id/00000000-0000-4000-8000-000000000002")
+		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000002")
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "/agent_id/00000000-0000-4000-8000-000000000002" not found.`), err)
 		assert.Nil(t, actualAgent)
 
-		err = as.Remove(ctx, db, "/agent_id/00000000-0000-4000-8000-000000000004")
+		err = as.Remove(ctx, "/agent_id/00000000-0000-4000-8000-000000000004")
 		require.NoError(t, err)
-		actualAgent, err = as.Get(ctx, db, "/agent_id/00000000-0000-4000-8000-000000000004")
+		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000004")
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "/agent_id/00000000-0000-4000-8000-000000000004" not found.`), err)
 		assert.Nil(t, actualAgent)
 
-		err = as.Remove(ctx, db, "/agent_id/00000000-0000-4000-8000-000000000006")
+		err = as.Remove(ctx, "/agent_id/00000000-0000-4000-8000-000000000006")
 		require.NoError(t, err)
-		actualAgent, err = as.Get(ctx, db, "/agent_id/00000000-0000-4000-8000-000000000006")
+		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000006")
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "/agent_id/00000000-0000-4000-8000-000000000006" not found.`), err)
 		assert.Nil(t, actualAgent)
 
 		as.r.(*mockRegistry).On("Kick", ctx, "/agent_id/00000000-0000-4000-8000-000000000001").Return(true)
-		err = as.Remove(ctx, db, "/agent_id/00000000-0000-4000-8000-000000000001")
+		err = as.Remove(ctx, "/agent_id/00000000-0000-4000-8000-000000000001")
 		require.NoError(t, err)
-		actualAgent, err = as.Get(ctx, db, "/agent_id/00000000-0000-4000-8000-000000000001")
+		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000001")
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "/agent_id/00000000-0000-4000-8000-000000000001" not found.`), err)
 		assert.Nil(t, actualAgent)
 
-		actualAgents, err = as.List(ctx, db, AgentFilters{})
+		actualAgents, err = as.List(ctx, AgentFilters{})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 0)
 	})
@@ -506,7 +508,7 @@ func TestAgents(t *testing.T) {
 		setup(t)
 		defer teardown(t)
 
-		actualNode, err := as.Get(ctx, db, "")
+		actualNode, err := as.Get(ctx, "")
 		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Empty Agent ID.`), err)
 		assert.Nil(t, actualNode)
 	})
@@ -516,7 +518,7 @@ func TestAgents(t *testing.T) {
 		defer teardown(t)
 
 		as.r.(*mockRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000001").Return(false)
-		actualAgent, err := as.AddPMMAgent(ctx, db, models.PMMServerNodeID)
+		actualAgent, err := as.AddPMMAgent(ctx, models.PMMServerNodeID)
 		require.NoError(t, err)
 		expectedPMMAgent := &inventorypb.PMMAgent{
 			AgentId:      "/agent_id/00000000-0000-4000-8000-000000000001",
@@ -526,7 +528,7 @@ func TestAgents(t *testing.T) {
 		assert.Equal(t, expectedPMMAgent, actualAgent)
 
 		as.r.(*mockRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000002").Return(true)
-		actualAgent, err = as.AddPMMAgent(ctx, db, models.PMMServerNodeID)
+		actualAgent, err = as.AddPMMAgent(ctx, models.PMMServerNodeID)
 		require.NoError(t, err)
 		expectedPMMAgent = &inventorypb.PMMAgent{
 			AgentId:      "/agent_id/00000000-0000-4000-8000-000000000002",
@@ -540,7 +542,7 @@ func TestAgents(t *testing.T) {
 		setup(t)
 		defer teardown(t)
 
-		_, err := as.AddNodeExporter(ctx, db, &inventorypb.AddNodeExporterRequest{
+		_, err := as.AddNodeExporter(ctx, &inventorypb.AddNodeExporterRequest{
 			PmmAgentId: "no-such-id",
 		})
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "no-such-id" not found.`), err)
@@ -551,13 +553,13 @@ func TestAgents(t *testing.T) {
 		defer teardown(t)
 
 		as.r.(*mockRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000001").Return(true)
-		pmmAgent, err := as.AddPMMAgent(ctx, db, models.PMMServerNodeID)
+		pmmAgent, err := as.AddPMMAgent(ctx, models.PMMServerNodeID)
 		require.NoError(t, err)
 
-		_, err = as.AddMySQLdExporter(ctx, db, &inventorypb.AddMySQLdExporterRequest{
+		_, err = as.AddMySQLdExporter(ctx, &inventorypb.AddMySQLdExporterRequest{
 			PmmAgentId: pmmAgent.AgentId,
 			ServiceId:  "no-such-id",
-		})
+		}, nil)
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "no-such-id" not found.`), err)
 	})
 
@@ -573,7 +575,7 @@ func TestAgents(t *testing.T) {
 		setup(t)
 		defer teardown(t)
 
-		err := as.Remove(ctx, db, "no-such-id")
+		err := as.Remove(ctx, "no-such-id")
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "no-such-id" not found.`), err)
 	})
 }

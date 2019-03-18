@@ -85,7 +85,7 @@ func (s *servicesServer) GetService(ctx context.Context, req *inventorypb.GetSer
 func (s *servicesServer) AddMySQLService(ctx context.Context, req *inventorypb.AddMySQLServiceRequest) (*inventorypb.AddMySQLServiceResponse, error) {
 	address := pointer.ToStringOrNil(req.Address)
 	port := pointer.ToUint16OrNil(uint16(req.Port))
-	service, err := s.s.AddMySQL(ctx, req.ServiceName, req.NodeId, address, port)
+	service, err := s.s.AddMySQL(ctx, req.ServiceName, req.NodeId, address, port, nil)
 	if err != nil {
 		return nil, err
 	}

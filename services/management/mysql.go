@@ -11,46 +11,62 @@ import (
 )
 
 type MySQLService struct {
-	nodesSvc    *inventory.NodesService
+	db          *reform.DB
 	servicesSvc *inventory.ServicesService
 	agentsSvc   *inventory.AgentsService
 }
 
-func NewMySQLService(n *inventory.NodesService, s *inventory.ServicesService, a *inventory.AgentsService) *MySQLService {
-	return &MySQLService{n, s, a}
+func NewMySQLService(db *reform.DB, s *inventory.ServicesService, a *inventory.AgentsService) *MySQLService {
+	return &MySQLService{db, s, a}
 }
 
-func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLRequest) error {
-	db := &reform.DB{}
+func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLRequest) (res *managementpb.AddMySQLResponse, err error) {
 
-	node, err := s.nodesSvc.Get(ctx, req.NodeId)
-	if err != nil {
-		return err // TODO: Node not found error
-	}
-
-	nodeAgents, err := s.agentsSvc.List(ctx, db, inventory.AgentFilters{NodeID: node.ID()})
-	// TODO: PMMAgent Not Found Error
-
-	address := pointer.ToStringOrNil(req.Address)
-	port := pointer.ToUint16OrNil(uint16(req.Port))
-	svc, err := s.servicesSvc.AddMySQL(ctx, req.ServiceName, node.ID(), address, port)
-	if err != nil {
-		return err // TODO: Can't add service error
-	}
-
-	// Only if "mysqld_exporter" flag provided
-	if req.MysqldExporter {
-		_, err = s.agentsSvc.AddMySQLdExporter(ctx, db, &inventorypb.AddMySQLdExporterRequest{
-			PmmAgentId: req.ServiceName,
-			ServiceId:  svc.ID(),
-			Username:   req.Username,
-			Password:   req.Password,
-		})
-
+	if e := s.db.InTransaction(func(tx *reform.TX) error {
+		address := pointer.ToStringOrNil(req.Address)
+		port := pointer.ToUint16OrNil(uint16(req.Port))
+		service, err := s.servicesSvc.AddMySQL(ctx, req.ServiceName, req.NodeId, address, port, tx.Querier)
 		if err != nil {
-			return err // TODO: Can't add exporter error
+			return err
 		}
+		res.Service = service
+
+		if req.MysqldExporter {
+			request := &inventorypb.AddMySQLdExporterRequest{
+				PmmAgentId: req.PmmAgentId,
+				ServiceId:  service.ID(),
+				Username:   req.Username,
+				Password:   req.Password,
+			}
+
+			agent, err := s.agentsSvc.AddMySQLdExporter(ctx, request, tx.Querier)
+			if err != nil {
+				return err
+			}
+
+			res.MysqldExporter = agent
+		}
+
+		if req.QanMysqlPerfschema {
+			request := &inventorypb.AddQANMySQLPerfSchemaAgentRequest{
+				PmmAgentId: req.PmmAgentId,
+				ServiceId:  service.ID(),
+				Username:   req.QanUsername,
+				Password:   req.QanPassword,
+			}
+
+			qAgent, err := s.agentsSvc.AddQANMySQLPerfSchemaAgent(ctx, request, tx.Querier)
+			if err != nil {
+				return err
+			}
+
+			res.QanMysqlPerfschema = qAgent
+		}
+
+		return nil
+	}); e != nil {
+		return nil, e
 	}
 
-	return nil
+	return res, nil
 }

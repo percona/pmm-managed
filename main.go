@@ -33,12 +33,12 @@ import (
 	"sync"
 	"time"
 
-	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/percona/pmm/api/agentpb"
 	inventorypb "github.com/percona/pmm/api/inventory"
+	"github.com/percona/pmm/api/managementpb"
 	serverpb "github.com/percona/pmm/api/server"
-	agentpb "github.com/percona/pmm/api/agent"
-	managementpb "github.com/percona/pmm/api/managementpb"
 	"github.com/percona/pmm/version"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -133,8 +133,8 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	l.Infof("Starting server on http://%s/ ...", *gRPCAddrF)
 
 	nodesSvc := inventory.NewNodesService(deps.db.Querier, deps.agentsRegistry)
-	servicesSvc := inventory.NewServicesService(deps.db.Querier, deps.agentsRegistry)
-	agentsSvc := inventory.NewAgentsService(deps.agentsRegistry)
+	servicesSvc := inventory.NewServicesService(deps.db.Querier, deps.agentsRegistry, nodesSvc)
+	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry)
 
 	gRPCServer := grpc.NewServer(
 		grpc.UnaryInterceptor(interceptors.Unary),
@@ -156,8 +156,8 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 		agentsSvc,
 		deps.db,
 	))
-	managementAPI.RegisterMySQLServer(gRPCServer, management.NewMysqlGrpcServer(
-		management.NewMySQLService(nodesSvc, servicesSvc, agentsSvc),
+	managementpb.RegisterMySQLServer(gRPCServer, handlers.NewManagementMysqlServer(
+		management.NewMySQLService(deps.db, servicesSvc, agentsSvc),
 	))
 
 	if *debugF {

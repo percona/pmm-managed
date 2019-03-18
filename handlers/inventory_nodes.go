@@ -65,7 +65,7 @@ func (s *nodesServer) ListNodes(ctx context.Context, req *inventorypb.ListNodesR
 
 // GetNode returns a single Node by ID.
 func (s *nodesServer) GetNode(ctx context.Context, req *inventorypb.GetNodeRequest) (*inventorypb.GetNodeResponse, error) {
-	node, err := s.s.Get(ctx, req.NodeId)
+	node, err := s.s.Get(ctx, req.NodeId, nil)
 	if err != nil {
 		return nil, err
 	}
