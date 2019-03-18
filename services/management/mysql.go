@@ -21,6 +21,7 @@ func NewMySQLService(db *reform.DB, s *inventory.ServicesService, a *inventory.A
 }
 
 func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLRequest) (res *managementpb.AddMySQLResponse, err error) {
+	res = &managementpb.AddMySQLResponse{}
 
 	if e := s.db.InTransaction(func(tx *reform.TX) error {
 		address := pointer.ToStringOrNil(req.Address)
