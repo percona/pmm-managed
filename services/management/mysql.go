@@ -10,16 +10,19 @@ import (
 	"gopkg.in/reform.v1"
 )
 
+// MySQLService MySQL Management Service
 type MySQLService struct {
 	db          *reform.DB
 	servicesSvc *inventory.ServicesService
 	agentsSvc   *inventory.AgentsService
 }
 
+// NewMySQLService creates new MySQL Management Service
 func NewMySQLService(db *reform.DB, s *inventory.ServicesService, a *inventory.AgentsService) *MySQLService {
 	return &MySQLService{db, s, a}
 }
 
+// Add adds "MySQL Service", "MySQL Exporter Agent" and "QAN MySQL PerfSchema Agent"
 func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLRequest) (res *managementpb.AddMySQLResponse, err error) {
 	res = &managementpb.AddMySQLResponse{}
 

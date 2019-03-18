@@ -38,6 +38,7 @@ type ServicesService struct {
 	ns *NodesService
 }
 
+// NewServicesService creates new ServicesService
 func NewServicesService(q *reform.Querier, r registry, ns *NodesService) *ServicesService {
 	return &ServicesService{
 		q:  q,
@@ -94,6 +95,7 @@ func (ss *ServicesService) get(ctx context.Context, id string) (*models.Service,
 	}
 }
 
+//nolint:unparam
 func (ss *ServicesService) checkUniqueID(ctx context.Context, id string, external *reform.Querier) error {
 	if id == "" {
 		panic("empty Service ID")
@@ -115,6 +117,7 @@ func (ss *ServicesService) checkUniqueID(ctx context.Context, id string, externa
 	}
 }
 
+//nolint:unparam
 func (ss *ServicesService) checkUniqueName(ctx context.Context, name string, external *reform.Querier) error {
 	querier := ss.q
 	if external != nil {
@@ -160,7 +163,7 @@ func (ss *ServicesService) Get(ctx context.Context, id string) (inventorypb.Serv
 }
 
 // AddMySQL inserts MySQL Service with given parameters.
-func (ss *ServicesService) AddMySQL(ctx context.Context, name string, nodeID string, address *string, port *uint16, external *reform.Querier) (*inventorypb.MySQLService, error) {
+func (ss *ServicesService) AddMySQL(ctx context.Context, name, nodeID string, address *string, port *uint16, external *reform.Querier) (*inventorypb.MySQLService, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// Both address and socket can't be empty, etc.
 

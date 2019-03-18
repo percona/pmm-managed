@@ -94,6 +94,7 @@ func makeNode(row *models.Node) (inventorypb.Node, error) {
 	}
 }
 
+//nolint:unparam
 func (ns *NodesService) get(ctx context.Context, id string, external *reform.Querier) (*models.Node, error) {
 	if id == "" {
 		return nil, status.Error(codes.InvalidArgument, "Empty Node ID.")
