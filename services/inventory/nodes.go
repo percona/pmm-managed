@@ -226,7 +226,7 @@ func (ns *NodesService) Change(ctx context.Context, q *reform.Querier, id string
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// ID is not 0, name is not empty and valid.
 
-	if err := ns.checkUniqueName(ctx, q, name); err != nil {
+	if err := ns.checkUniqueName(q, name); err != nil {
 		return nil, err
 	}
 

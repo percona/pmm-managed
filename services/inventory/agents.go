@@ -436,6 +436,7 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, q *reform.Queri
 }
 
 // AddQANMySQLPerfSchemaAgent adds MySQL PerfSchema QAN Agent.
+//nolint:lll
 func (as *AgentsService) AddQANMySQLPerfSchemaAgent(ctx context.Context, q *reform.Querier, req *inventorypb.AddQANMySQLPerfSchemaAgentRequest) (*inventorypb.QANMySQLPerfSchemaAgent, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	var res *inventorypb.QANMySQLPerfSchemaAgent
