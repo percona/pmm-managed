@@ -3,8 +3,9 @@ package handlers
 import (
 	"context"
 
-	"github.com/percona/pmm-managed/services/management"
 	"github.com/percona/pmm/api/managementpb"
+
+	"github.com/percona/pmm-managed/services/management"
 )
 
 type mysqlGrpcServer struct {

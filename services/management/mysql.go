@@ -4,10 +4,11 @@ import (
 	"context"
 
 	"github.com/AlekSi/pointer"
-	"github.com/percona/pmm-managed/services/inventory"
 	inventorypb "github.com/percona/pmm/api/inventory"
 	"github.com/percona/pmm/api/managementpb"
 	"gopkg.in/reform.v1"
+
+	"github.com/percona/pmm-managed/services/inventory"
 )
 
 // MySQLService MySQL Management Service
