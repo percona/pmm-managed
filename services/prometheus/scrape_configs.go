@@ -39,7 +39,7 @@ func scrapeConfigForPrometheus() *config.ScrapeConfig {
 		JobName:        "prometheus",
 		ScrapeInterval: model.Duration(time.Second),
 		ScrapeTimeout:  model.Duration(time.Second),
-		MetricsPath:    "/metrics",
+		MetricsPath:    "/prometheus/metrics",
 		ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 			StaticConfigs: []*targetgroup.Group{{
 				Targets: []model.LabelSet{{addressLabel: "127.0.0.1:9090"}},
