@@ -33,10 +33,11 @@ import (
 	"sync"
 	"time"
 
-	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	agentAPI "github.com/percona/pmm/api/agent"
 	inventoryAPI "github.com/percona/pmm/api/inventory"
+	managementAPI "github.com/percona/pmm/api/managementpb"
 	serverAPI "github.com/percona/pmm/api/server"
 	"github.com/percona/pmm/version"
 	prom "github.com/prometheus/client_golang/prometheus"
@@ -55,6 +56,7 @@ import (
 	"github.com/percona/pmm-managed/services/agents"
 	"github.com/percona/pmm-managed/services/inventory"
 	"github.com/percona/pmm-managed/services/logs"
+	"github.com/percona/pmm-managed/services/management"
 	"github.com/percona/pmm-managed/services/prometheus"
 	"github.com/percona/pmm-managed/services/telemetry"
 	"github.com/percona/pmm-managed/utils/interceptors"
@@ -128,6 +130,10 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	l := logrus.WithField("component", "gRPC")
 	l.Infof("Starting server on http://%s/ ...", *gRPCAddrF)
 
+	nodesSvc := inventory.NewNodesService(deps.db.Querier, deps.agentsRegistry)
+	servicesSvc := inventory.NewServicesService(deps.db.Querier, deps.agentsRegistry)
+	agentsSvc := inventory.NewAgentsService(deps.agentsRegistry)
+
 	gRPCServer := grpc.NewServer(
 		grpc.UnaryInterceptor(interceptors.Unary),
 		grpc.StreamInterceptor(interceptors.Stream),
@@ -139,14 +145,17 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 		Registry: deps.agentsRegistry,
 	})
 	inventoryAPI.RegisterNodesServer(gRPCServer, handlers.NewNodesServer(
-		inventory.NewNodesService(deps.db.Querier, deps.agentsRegistry),
+		nodesSvc,
 	))
 	inventoryAPI.RegisterServicesServer(gRPCServer, handlers.NewServicesServer(
-		inventory.NewServicesService(deps.db.Querier, deps.agentsRegistry),
+		servicesSvc,
 	))
 	inventoryAPI.RegisterAgentsServer(gRPCServer, handlers.NewAgentsServer(
-		inventory.NewAgentsService(deps.agentsRegistry),
+		agentsSvc,
 		deps.db,
+	))
+	managementAPI.RegisterMySQLServer(gRPCServer, management.NewMysqlGrpcServer(
+		management.NewMySQLService(nodesSvc, servicesSvc, agentsSvc),
 	))
 
 	if *debugF {
@@ -200,6 +209,7 @@ func runJSONServer(ctx context.Context, logs *logs.Logs) {
 		inventoryAPI.RegisterNodesHandlerFromEndpoint,
 		inventoryAPI.RegisterServicesHandlerFromEndpoint,
 		inventoryAPI.RegisterAgentsHandlerFromEndpoint,
+		managementAPI.RegisterMySQLHandlerFromEndpoint,
 	} {
 		if err := r(ctx, proxyMux, *gRPCAddrF, opts); err != nil {
 			l.Panic(err)
