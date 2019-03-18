@@ -163,7 +163,13 @@ func (ss *ServicesService) Get(ctx context.Context, id string) (inventorypb.Serv
 }
 
 // AddMySQL inserts MySQL Service with given parameters.
-func (ss *ServicesService) AddMySQL(ctx context.Context, name, nodeID string, address *string, port *uint16, external *reform.Querier) (*inventorypb.MySQLService, error) {
+func (ss *ServicesService) AddMySQL(
+	ctx context.Context,
+	name,
+	nodeID string,
+	address *string,
+	port *uint16,
+	external *reform.Querier) (*inventorypb.MySQLService, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// Both address and socket can't be empty, etc.
 
