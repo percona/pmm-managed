@@ -36,6 +36,7 @@ type NodesService struct {
 	r registry
 }
 
+// NewNodesService creates NodesService.
 func NewNodesService(r registry) *NodesService {
 	return &NodesService{
 		r: r,
@@ -109,7 +110,7 @@ func (ns *NodesService) get(ctx context.Context, q *reform.Querier, id string) (
 	}
 }
 
-func (ns *NodesService) checkUniqueID(ctx context.Context, q *reform.Querier, id string) error {
+func (ns *NodesService) checkUniqueID(q *reform.Querier, id string) error {
 	if id == "" {
 		panic("empty Node ID")
 	}
@@ -125,7 +126,7 @@ func (ns *NodesService) checkUniqueID(ctx context.Context, q *reform.Querier, id
 	}
 }
 
-func (ns *NodesService) checkUniqueName(ctx context.Context, q *reform.Querier, name string) error {
+func (ns *NodesService) checkUniqueName(q *reform.Querier, name string) error {
 	if name == "" {
 		return status.Error(codes.InvalidArgument, "Empty Node name.")
 	}
@@ -141,7 +142,7 @@ func (ns *NodesService) checkUniqueName(ctx context.Context, q *reform.Querier, 
 	}
 }
 
-func (ns *NodesService) checkUniqueInstanceRegion(ctx context.Context, q *reform.Querier, instance, region string) error {
+func (ns *NodesService) checkUniqueInstanceRegion(q *reform.Querier, instance, region string) error {
 	if instance == "" {
 		return status.Error(codes.InvalidArgument, "Empty Node instance.")
 	}
@@ -149,7 +150,7 @@ func (ns *NodesService) checkUniqueInstanceRegion(ctx context.Context, q *reform
 		return status.Error(codes.InvalidArgument, "Empty Node region.")
 	}
 
-	tail := fmt.Sprintf("WHERE address = %s AND region = %s LIMIT 1", q.Placeholder(1), q.Placeholder(2))
+	tail := fmt.Sprintf("WHERE address = %s AND region = %s LIMIT 1", q.Placeholder(1), q.Placeholder(2)) //nolint:gosec
 	_, err := q.SelectOneFrom(models.NodeTable, tail, instance, region)
 	switch err {
 	case nil:
@@ -194,15 +195,15 @@ func (ns *NodesService) Add(ctx context.Context, q *reform.Querier, nodeType mod
 	// No hostname for Container, etc.
 
 	id := "/node_id/" + uuid.New().String()
-	if err := ns.checkUniqueID(ctx, q, id); err != nil {
+	if err := ns.checkUniqueID(q, id); err != nil {
 		return nil, err
 	}
 
-	if err := ns.checkUniqueName(ctx, q, name); err != nil {
+	if err := ns.checkUniqueName(q, name); err != nil {
 		return nil, err
 	}
 	if address != nil && region != nil {
-		if err := ns.checkUniqueInstanceRegion(ctx, q, *address, *region); err != nil {
+		if err := ns.checkUniqueInstanceRegion(q, *address, *region); err != nil {
 			return nil, err
 		}
 	}
