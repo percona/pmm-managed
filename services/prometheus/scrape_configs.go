@@ -137,7 +137,7 @@ func mergeLabels(labels model.LabelSet, node *models.Node, service *models.Servi
 }
 
 func jobName(agent *models.Agent) string {
-	return strings.Replace(agent.AgentID, "/", "_", -1)
+	return string(agent.AgentType) + strings.Replace(agent.AgentID, "/", "_", -1)
 }
 
 func scrapeConfigForNodeExporter(node *models.Node, agent *models.Agent) (*config.ScrapeConfig, error) {

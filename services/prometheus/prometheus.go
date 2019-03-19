@@ -115,7 +115,7 @@ func (svc *Service) marshalConfig(ctx context.Context) ([]byte, error) {
 	}
 
 	e := svc.db.InTransaction(func(tx *reform.TX) error {
-		agents, err := tx.SelectAllFrom(models.AgentTable, "ORDER BY agent_id")
+		agents, err := tx.SelectAllFrom(models.AgentTable, "ORDER BY agent_type, agent_id")
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -293,7 +293,7 @@ func (svc *Service) Check(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 	b, err := ioutil.ReadAll(resp.Body)
 	l.Debugf("Prometheus: %s", b)
 	if err != nil {

@@ -49,7 +49,7 @@ func TestScrapeConfig(t *testing.T) {
 			}
 
 			expected := &config.ScrapeConfig{
-				JobName:        "_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd",
+				JobName:        "node_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd",
 				ScrapeInterval: model.Duration(time.Second),
 				ScrapeTimeout:  model.Duration(time.Second),
 				MetricsPath:    "/metrics",
@@ -91,7 +91,7 @@ func TestScrapeConfig(t *testing.T) {
 			}
 
 			expected := []*config.ScrapeConfig{{
-				JobName:        "_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr",
+				JobName:        "mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr",
 				ScrapeInterval: model.Duration(time.Second),
 				ScrapeTimeout:  model.Duration(time.Second),
 				MetricsPath:    "/metrics-hr",
@@ -107,7 +107,7 @@ func TestScrapeConfig(t *testing.T) {
 					}},
 				},
 			}, {
-				JobName:        "_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr",
+				JobName:        "mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr",
 				ScrapeInterval: model.Duration(10 * time.Second),
 				ScrapeTimeout:  model.Duration(5 * time.Second),
 				MetricsPath:    "/metrics-mr",
@@ -123,7 +123,7 @@ func TestScrapeConfig(t *testing.T) {
 					}},
 				},
 			}, {
-				JobName:        "_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_lr",
+				JobName:        "mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_lr",
 				ScrapeInterval: model.Duration(60 * time.Second),
 				ScrapeTimeout:  model.Duration(10 * time.Second),
 				MetricsPath:    "/metrics-lr",
@@ -181,7 +181,7 @@ func TestScrapeConfig(t *testing.T) {
 			}
 
 			expected := &config.ScrapeConfig{
-				JobName:        "_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd",
+				JobName:        "mongodb_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd",
 				ScrapeInterval: model.Duration(time.Second),
 				ScrapeTimeout:  model.Duration(time.Second),
 				MetricsPath:    "/metrics",
