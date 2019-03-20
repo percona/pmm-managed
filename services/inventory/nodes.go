@@ -243,6 +243,7 @@ func (ns *NodesService) Change(ctx context.Context, q *reform.Querier, id string
 }
 
 // Remove deletes Node by ID.
+//nolint:unparam
 func (ns *NodesService) Remove(ctx context.Context, q *reform.Querier, id string) error { //nolint:unparam
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// ID is not 0.
