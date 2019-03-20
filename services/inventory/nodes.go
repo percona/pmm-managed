@@ -163,7 +163,7 @@ func (ns *NodesService) checkUniqueInstanceRegion(q *reform.Querier, instance, r
 }
 
 // List selects all Nodes in a stable order.
-func (ns *NodesService) List(ctx context.Context, q *reform.Querier) ([]inventorypb.Node, error) {
+func (ns *NodesService) List(ctx context.Context, q *reform.Querier) ([]inventorypb.Node, error) { //nolint:unparam
 	structs, err := q.SelectAllFrom(models.NodeTable, "ORDER BY node_id")
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -190,7 +190,7 @@ func (ns *NodesService) Get(ctx context.Context, q *reform.Querier, id string) (
 }
 
 // Add inserts Node with given parameters. ID will be generated.
-func (ns *NodesService) Add(ctx context.Context, q *reform.Querier, nodeType models.NodeType, name string, address, region *string) (inventorypb.Node, error) {
+func (ns *NodesService) Add(ctx context.Context, q *reform.Querier, nodeType models.NodeType, name string, address, region *string) (inventorypb.Node, error) { //nolint:unparam
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// No hostname for Container, etc.
 
@@ -243,7 +243,7 @@ func (ns *NodesService) Change(ctx context.Context, q *reform.Querier, id string
 }
 
 // Remove deletes Node by ID.
-func (ns *NodesService) Remove(ctx context.Context, q *reform.Querier, id string) error {
+func (ns *NodesService) Remove(ctx context.Context, q *reform.Querier, id string) error { //nolint:unparam
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// ID is not 0.
 

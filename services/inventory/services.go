@@ -151,6 +151,7 @@ func (ss *ServicesService) Get(ctx context.Context, q *reform.Querier, id string
 }
 
 // AddMySQL inserts MySQL Service with given parameters.
+//nolint:dupl
 func (ss *ServicesService) AddMySQL(ctx context.Context, q *reform.Querier, name, nodeID string, address *string, port *uint16) (*inventorypb.MySQLService, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// Both address and socket can't be empty, etc.
@@ -186,6 +187,7 @@ func (ss *ServicesService) AddMySQL(ctx context.Context, q *reform.Querier, name
 }
 
 // AddMongoDB inserts MongoDB Service with given parameters.
+//nolint:dupl
 func (ss *ServicesService) AddMongoDB(ctx context.Context, q *reform.Querier, name, nodeID string, address *string, port *uint16) (*inventorypb.MongoDBService, error) {
 
 	id := "/service_id/" + uuid.New().String()
