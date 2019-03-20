@@ -503,17 +503,19 @@ func (as *AgentsService) AddQANMySQLPerfSchemaAgent(ctx context.Context, q *refo
 }
 
 // AddPostgresExporter inserts postgres_exporter Agent with given parameters.
-func (as *AgentsService) AddPostgresExporter(ctx context.Context, db *reform.DB, req *inventorypb.AddPostgresExporterRequest) (*inventorypb.PostgresExporter, error) {
+func (as *AgentsService) AddPostgresExporter(ctx context.Context, q *reform.Querier, req *inventorypb.AddPostgresExporterRequest) (*inventorypb.PostgresExporter, error) {
+	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 
 	var res *inventorypb.PostgresExporter
-	e := db.InTransaction(func(tx *reform.TX) error {
+	e := as.db.InTransaction(func(tx *reform.TX) error {
 		id := "/agent_id/" + uuid.New().String()
 		if err := checkUniqueID(tx.Querier, id); err != nil {
 			return err
 		}
 
-		ss := NewServicesService(tx.Querier, as.r)
-		if _, err := ss.get(ctx, req.ServiceId); err != nil {
+		ns := NewNodesService(as.r)
+		ss := NewServicesService(as.r, ns)
+		if _, err := ss.Get(ctx, q, req.ServiceId); err != nil {
 			return err
 		}
 

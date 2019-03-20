@@ -253,17 +253,19 @@ func (ss *ServicesService) Change(ctx context.Context, q *reform.Querier, id str
 }
 
 // AddPostgreSQL inserts PostgreSQL Service with given parameters.
-func (ss *ServicesService) AddPostgreSQL(ctx context.Context, name, nodeID string, address *string, port *uint16) (*inventorypb.PostgreSQLService, error) {
+func (ss *ServicesService) AddPostgreSQL(ctx context.Context, q *reform.Querier, name, nodeID string, address *string, port *uint16) (*inventorypb.PostgreSQLService, error) {
+	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
+	// Both address and socket can't be empty, etc.
+
 	id := "/service_id/" + uuid.New().String()
-	if err := ss.checkUniqueID(ctx, id); err != nil {
+	if err := ss.checkUniqueID(ctx, q, id); err != nil {
 		return nil, err
 	}
-	if err := ss.checkUniqueName(ctx, name); err != nil {
+	if err := ss.checkUniqueName(ctx, q, name); err != nil {
 		return nil, err
 	}
 
-	ns := NewNodesService(ss.q, ss.r)
-	if _, err := ns.get(ctx, nodeID); err != nil {
+	if _, err := ss.ns.Get(ctx, q, nodeID); err != nil {
 		return nil, err
 	}
 
@@ -275,7 +277,7 @@ func (ss *ServicesService) AddPostgreSQL(ctx context.Context, name, nodeID strin
 		Address:     address,
 		Port:        port,
 	}
-	if err := ss.q.Insert(row); err != nil {
+	if err := q.Insert(row); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	res, err := makeService(row)

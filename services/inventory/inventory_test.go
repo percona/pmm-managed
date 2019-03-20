@@ -280,7 +280,7 @@ func TestServices(t *testing.T) {
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "/service_id/00000000-0000-4000-8000-000000000002" not found.`), err)
 		assert.Nil(t, actualService)
 
-		actualService, err = ss.AddPostgreSQL(ctx, "test-postgres", models.PMMServerNodeID, pointer.ToString("127.0.0.1"), pointer.ToUint16(5432))
+		actualService, err = ss.AddPostgreSQL(ctx, q, "test-postgres", models.PMMServerNodeID, pointer.ToString("127.0.0.1"), pointer.ToUint16(5432))
 		require.NoError(t, err)
 		expectedPostgreSQLService := &inventorypb.PostgreSQLService{
 			ServiceId:   "/service_id/00000000-0000-4000-8000-000000000003",
@@ -291,18 +291,18 @@ func TestServices(t *testing.T) {
 		}
 		assert.Equal(t, expectedPostgreSQLService, actualService)
 
-		actualService, err = ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000003")
+		actualService, err = ss.Get(ctx, q, "/service_id/00000000-0000-4000-8000-000000000003")
 		require.NoError(t, err)
 		assert.Equal(t, expectedPostgreSQLService, actualService)
 
-		actualServices, err = ss.List(ctx)
+		actualServices, err = ss.List(ctx, q)
 		require.NoError(t, err)
 		require.Len(t, actualServices, 1)
 		assert.Equal(t, expectedPostgreSQLService, actualServices[0])
 
-		err = ss.Remove(ctx, "/service_id/00000000-0000-4000-8000-000000000003")
+		err = ss.Remove(ctx, q, "/service_id/00000000-0000-4000-8000-000000000003")
 		require.NoError(t, err)
-		actualService, err = ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000003")
+		actualService, err = ss.Get(ctx, q, "/service_id/00000000-0000-4000-8000-000000000003")
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "/service_id/00000000-0000-4000-8000-000000000003" not found.`), err)
 		assert.Nil(t, actualService)
 	})
@@ -463,10 +463,10 @@ func TestAgents(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, expectedMongoDBExporter, actualAgent)
 
-		ps, err := ss.AddPostgreSQL(ctx, "test-postgres", models.PMMServerNodeID, pointer.ToString("127.0.0.1"), pointer.ToUint16(5432))
+		ps, err := ss.AddPostgreSQL(ctx, db.Querier, "test-postgres", models.PMMServerNodeID, pointer.ToString("127.0.0.1"), pointer.ToUint16(5432))
 		require.NoError(t, err)
 
-		actualAgent, err = as.AddPostgresExporter(ctx, db, &inventorypb.AddPostgresExporterRequest{
+		actualAgent, err = as.AddPostgresExporter(ctx, db.Querier, &inventorypb.AddPostgresExporterRequest{
 			PmmAgentId: pmmAgent.AgentId,
 			ServiceId:  ps.ID(),
 			Username:   "username",
@@ -480,7 +480,7 @@ func TestAgents(t *testing.T) {
 		}
 		assert.Equal(t, expectedPostgresExporter, actualAgent)
 
-		actualAgent, err = as.Get(ctx, db, "/agent_id/00000000-0000-4000-8000-000000000008")
+		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000008")
 		require.NoError(t, err)
 		assert.Equal(t, expectedPostgresExporter, actualAgent)
 
@@ -544,9 +544,9 @@ func TestAgents(t *testing.T) {
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "/agent_id/00000000-0000-4000-8000-000000000006" not found.`), err)
 		assert.Nil(t, actualAgent)
 
-		err = as.Remove(ctx, db, "/agent_id/00000000-0000-4000-8000-000000000008")
+		err = as.Remove(ctx, "/agent_id/00000000-0000-4000-8000-000000000008")
 		require.NoError(t, err)
-		actualAgent, err = as.Get(ctx, db, "/agent_id/00000000-0000-4000-8000-000000000008")
+		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000008")
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "/agent_id/00000000-0000-4000-8000-000000000008" not found.`), err)
 		assert.Nil(t, actualAgent)
 

@@ -186,7 +186,7 @@ func (s *agentsServer) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *inve
 
 // AddPostgresExporter adds postgres_exporter Agent.
 func (s *agentsServer) AddPostgresExporter(ctx context.Context, req *inventorypb.AddPostgresExporterRequest) (*inventorypb.AddPostgresExporterResponse, error) {
-	agent, err := s.s.AddPostgresExporter(ctx, s.db, req)
+	agent, err := s.s.AddPostgresExporter(ctx, s.db.Querier, req)
 	if err != nil {
 		return nil, err
 	}
