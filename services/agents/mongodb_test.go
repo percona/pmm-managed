@@ -55,7 +55,7 @@ func TestMongodbExporterConfig(t *testing.T) {
 	assert.Equal(t, expected.Env, actual.Env)
 	assert.Equal(t, expected, actual)
 
-	t.Run("CheckEmptyPassword", func(t *testing.T) {
+	t.Run("CheckEmptyUsername", func(t *testing.T) {
 		mongo := &models.Service{
 			Address: pointer.ToString("1.2.3.4"),
 			Port:    pointer.ToUint16(27017),
