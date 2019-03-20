@@ -190,7 +190,7 @@ func (ns *NodesService) Get(ctx context.Context, q *reform.Querier, id string) (
 }
 
 // Add inserts Node with given parameters. ID will be generated.
-func (ns *NodesService) Add(ctx context.Context, q *reform.Querier, nodeType models.NodeType, name string, address, region *string) (inventorypb.Node, error) { //nolint:unparam
+func (ns *NodesService) Add(ctx context.Context, q *reform.Querier, nodeType models.NodeType, name string, address, region *string) (inventorypb.Node, error) { //nolint:unparam,lll
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// No hostname for Container, etc.
 

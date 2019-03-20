@@ -77,6 +77,7 @@ func makeService(row *models.Service) (inventorypb.Service, error) {
 	}
 }
 
+//nolint:unparam
 func (ss *ServicesService) get(ctx context.Context, q *reform.Querier, id string) (*models.Service, error) {
 	if id == "" {
 		return nil, status.Error(codes.InvalidArgument, "Empty Service ID.")
@@ -124,6 +125,7 @@ func (ss *ServicesService) checkUniqueName(ctx context.Context, q *reform.Querie
 }
 
 // List selects all Services in a stable order.
+//nolint:unparam
 func (ss *ServicesService) List(ctx context.Context, q *reform.Querier) ([]inventorypb.Service, error) {
 	structs, err := q.SelectAllFrom(models.ServiceTable, "ORDER BY service_id")
 	if err != nil {
@@ -142,6 +144,7 @@ func (ss *ServicesService) List(ctx context.Context, q *reform.Querier) ([]inven
 }
 
 // Get selects a single Service by ID.
+//nolint:unparam
 func (ss *ServicesService) Get(ctx context.Context, q *reform.Querier, id string) (inventorypb.Service, error) {
 	row, err := ss.get(ctx, q, id)
 	if err != nil {
