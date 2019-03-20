@@ -66,6 +66,10 @@ func (s *agentsServer) ListAgents(ctx context.Context, req *inventorypb.ListAgen
 			res.ExternalExporter = append(res.ExternalExporter, agent)
 		case *inventorypb.MongoDBExporter:
 			res.MongodbExporter = append(res.MongodbExporter, agent)
+		case *inventorypb.QANMySQLPerfSchemaAgent:
+			res.QanMysqlPerfschemaAgent = append(res.QanMysqlPerfschemaAgent, agent)
+		case *inventorypb.PostgresExporter:
+			res.PostgresExporter = append(res.PostgresExporter, agent)
 		default:
 			panic(fmt.Errorf("unhandled inventory Agent type %T", agent))
 		}
@@ -94,6 +98,10 @@ func (s *agentsServer) GetAgent(ctx context.Context, req *inventorypb.GetAgentRe
 		res.Agent = &inventorypb.GetAgentResponse_ExternalExporter{ExternalExporter: agent}
 	case *inventorypb.MongoDBExporter:
 		res.Agent = &inventorypb.GetAgentResponse_MongodbExporter{MongodbExporter: agent}
+	case *inventorypb.QANMySQLPerfSchemaAgent:
+		res.Agent = &inventorypb.GetAgentResponse_QanMysqlPerfschemaAgent{QanMysqlPerfschemaAgent: agent}
+	case *inventorypb.PostgresExporter:
+		res.Agent = &inventorypb.GetAgentResponse_PostgresExporter{PostgresExporter: agent}
 	default:
 		panic(fmt.Errorf("unhandled inventory Agent type %T", agent))
 	}
@@ -172,6 +180,19 @@ func (s *agentsServer) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *inve
 
 	res := &inventorypb.AddQANMySQLPerfSchemaAgentResponse{
 		QanMysqlPerfschemaAgent: agent,
+	}
+	return res, nil
+}
+
+// AddPostgresExporter adds postgres_exporter Agent.
+func (s *agentsServer) AddPostgresExporter(ctx context.Context, req *inventorypb.AddPostgresExporterRequest) (*inventorypb.AddPostgresExporterResponse, error) {
+	agent, err := s.s.AddPostgresExporter(ctx, s.db, req)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &inventorypb.AddPostgresExporterResponse{
+		PostgresExporter: agent,
 	}
 	return res, nil
 }

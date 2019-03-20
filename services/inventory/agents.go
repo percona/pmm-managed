@@ -124,6 +124,26 @@ func (as *AgentsService) makeAgent(q *reform.Querier, row *models.Agent) (invent
 			Status:     inventorypb.AgentStatus(inventorypb.AgentStatus_value[row.Status]),
 		}, nil
 
+	case models.PostgresExporterType:
+		services, err := models.ServicesForAgent(q, row.AgentID)
+		if err != nil {
+			return nil, err
+		}
+		if len(services) != 1 {
+			return nil, errors.Errorf("expected exactly one Service, got %d", len(services))
+		}
+
+		return &inventorypb.PostgresExporter{
+			AgentId:      row.AgentID,
+			PmmAgentId:   pointer.GetString(row.PMMAgentID),
+			ServiceId:    services[0].ServiceID,
+			Username:     pointer.GetString(row.Username),
+			Password:     pointer.GetString(row.Password),
+			Status:       inventorypb.AgentStatus(inventorypb.AgentStatus_value[row.Status]),
+			ListenPort:   uint32(pointer.GetUint16(row.ListenPort)),
+			CustomLabels: labels,
+		}, nil
+
 	default:
 		panic(fmt.Errorf("unhandled Agent type %s", row.AgentType))
 	}
@@ -472,6 +492,58 @@ func (as *AgentsService) AddQANMySQLPerfSchemaAgent(ctx context.Context, db *ref
 			return err
 		}
 		res = agent.(*inventorypb.QANMySQLPerfSchemaAgent)
+		return nil
+	})
+	if e != nil {
+		return nil, e
+	}
+
+	as.r.SendSetStateRequest(ctx, req.PmmAgentId)
+	return res, nil
+}
+
+// AddPostgresExporter inserts postgres_exporter Agent with given parameters.
+func (as *AgentsService) AddPostgresExporter(ctx context.Context, db *reform.DB, req *inventorypb.AddPostgresExporterRequest) (*inventorypb.PostgresExporter, error) {
+
+	var res *inventorypb.PostgresExporter
+	e := db.InTransaction(func(tx *reform.TX) error {
+		id := "/agent_id/" + uuid.New().String()
+		if err := checkUniqueID(tx.Querier, id); err != nil {
+			return err
+		}
+
+		ss := NewServicesService(tx.Querier, as.r)
+		if _, err := ss.get(ctx, req.ServiceId); err != nil {
+			return err
+		}
+
+		row := &models.Agent{
+			AgentID:    id,
+			AgentType:  models.PostgresExporterType,
+			PMMAgentID: &req.PmmAgentId,
+			Username:   pointer.ToStringOrNil(req.Username),
+			Password:   pointer.ToStringOrNil(req.Password),
+		}
+		if err := row.SetCustomLabels(req.CustomLabels); err != nil {
+			return err
+		}
+		if err := tx.Insert(row); err != nil {
+			return errors.WithStack(err)
+		}
+
+		err := tx.Insert(&models.AgentService{
+			AgentID:   row.AgentID,
+			ServiceID: req.ServiceId,
+		})
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		agent, err := as.makeAgent(tx.Querier, row)
+		if err != nil {
+			return err
+		}
+		res = agent.(*inventorypb.PostgresExporter)
 		return nil
 	})
 	if e != nil {

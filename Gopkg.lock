@@ -132,10 +132,11 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:69b5bdc0545fa057e73e7704cb9f7e8c48b9bb6f7cbe2b25686c0a67bba52276"
+  digest = "1:25150403150754a84bb3a3f1d59c6b26162d2fd70cf368fb18d4c3ef113c1e35"
   name = "github.com/grpc-ecosystem/grpc-gateway"
   packages = [
     "internal",
+    "protoc-gen-swagger/options",
     "runtime",
     "utilities",
   ]
@@ -203,7 +204,7 @@
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:af4510b7681a585b0215f95b4a6e9d43ef2250cde0883f320bd0bca8dd0a1ade"
+  digest = "1:617e579f8b36ff7659da2be7dbc2f2731dda74e0cf6fbfe8b675bbb7167e0f79"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -213,7 +214,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "4ebf620263b318f98906a4da36c17679a91989b1"
+  revision = "f7c6e62d01c3eb04518290181300f20f53cd3bd9"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"

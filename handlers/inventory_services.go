@@ -133,6 +133,20 @@ func (s *servicesServer) AddMongoDBService(ctx context.Context, req *inventorypb
 	return res, nil
 }
 
+func (s *servicesServer) AddPostgreSQLService(ctx context.Context, req *inventorypb.AddPostgreSQLServiceRequest) (*inventorypb.AddPostgreSQLServiceResponse, error) {
+	address := pointer.ToStringOrNil(req.Address)
+	port := pointer.ToUint16OrNil(uint16(req.Port))
+	service, err := s.s.AddPostgreSQL(ctx, req.ServiceName, req.NodeId, address, port)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &inventorypb.AddPostgreSQLServiceResponse{
+		Postgresql: service,
+	}
+	return res, nil
+}
+
 // RemoveService removes Service without any Agents.
 func (s *servicesServer) RemoveService(ctx context.Context, req *inventorypb.RemoveServiceRequest) (*inventorypb.RemoveServiceResponse, error) {
 	if err := s.s.Remove(ctx, req.ServiceId); err != nil {

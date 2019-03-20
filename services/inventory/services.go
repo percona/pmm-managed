@@ -70,6 +70,15 @@ func makeService(row *models.Service) (inventorypb.Service, error) {
 			Port:         uint32(pointer.GetUint16(row.Port)),
 			CustomLabels: labels,
 		}, nil
+	case models.PostgreSQLServiceType:
+		return &inventorypb.PostgreSQLService{
+			ServiceId:    row.ServiceID,
+			ServiceName:  row.ServiceName,
+			NodeId:       row.NodeID,
+			Address:      pointer.GetString(row.Address),
+			Port:         uint32(pointer.GetUint16(row.Port)),
+			CustomLabels: labels,
+		}, nil
 
 	default:
 		panic(fmt.Errorf("unhandled Service type %s", row.ServiceType))
@@ -185,7 +194,6 @@ func (ss *ServicesService) AddMySQL(ctx context.Context, name string, nodeID str
 
 // AddMongoDB inserts MongoDB Service with given parameters.
 func (ss *ServicesService) AddMongoDB(ctx context.Context, name, nodeID string, address *string, port *uint16) (*inventorypb.MongoDBService, error) {
-
 	id := "/service_id/" + uuid.New().String()
 	if err := ss.checkUniqueID(ctx, id); err != nil {
 		return nil, err
@@ -236,6 +244,39 @@ func (ss *ServicesService) Change(ctx context.Context, id string, name string) (
 		return nil, errors.WithStack(err)
 	}
 	return makeService(row)
+}
+
+// AddPostgreSQL inserts PostgreSQL Service with given parameters.
+func (ss *ServicesService) AddPostgreSQL(ctx context.Context, name, nodeID string, address *string, port *uint16) (*inventorypb.PostgreSQLService, error) {
+	id := "/service_id/" + uuid.New().String()
+	if err := ss.checkUniqueID(ctx, id); err != nil {
+		return nil, err
+	}
+	if err := ss.checkUniqueName(ctx, name); err != nil {
+		return nil, err
+	}
+
+	ns := NewNodesService(ss.q, ss.r)
+	if _, err := ns.get(ctx, nodeID); err != nil {
+		return nil, err
+	}
+
+	row := &models.Service{
+		ServiceID:   id,
+		ServiceType: models.PostgreSQLServiceType,
+		ServiceName: name,
+		NodeID:      nodeID,
+		Address:     address,
+		Port:        port,
+	}
+	if err := ss.q.Insert(row); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	res, err := makeService(row)
+	if err != nil {
+		return nil, err
+	}
+	return res.(*inventorypb.PostgreSQLService), nil
 }
 
 // Remove deletes Service by ID.
