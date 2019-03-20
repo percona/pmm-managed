@@ -245,6 +245,7 @@ func (ss *ServicesService) Change(ctx context.Context, q *reform.Querier, id str
 }
 
 // Remove deletes Service by ID.
+//nolint:unparam
 func (ss *ServicesService) Remove(ctx context.Context, q *reform.Querier, id string) error {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// ID is not 0.
