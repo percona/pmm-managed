@@ -199,30 +199,6 @@ func (this *AddPostgreSQLServiceResponse) Validate() error {
 	}
 	return nil
 }
-func (this *AddPostgreSQLServiceRequest) Validate() error {
-	if this.ServiceName == "" {
-		return github_com_mwitkow_go_proto_validators.FieldError("ServiceName", fmt.Errorf(`value '%v' must not be an empty string`, this.ServiceName))
-	}
-	if this.NodeId == "" {
-		return github_com_mwitkow_go_proto_validators.FieldError("NodeId", fmt.Errorf(`value '%v' must not be an empty string`, this.NodeId))
-	}
-	if this.Address == "" {
-		return github_com_mwitkow_go_proto_validators.FieldError("Address", fmt.Errorf(`value '%v' must not be an empty string`, this.Address))
-	}
-	if !(this.Port > 0) {
-		return github_com_mwitkow_go_proto_validators.FieldError("Port", fmt.Errorf(`value '%v' must be greater than '0'`, this.Port))
-	}
-	// Validation of proto3 map<> fields is unsupported.
-	return nil
-}
-func (this *AddPostgreSQLServiceResponse) Validate() error {
-	if this.Postgresql != nil {
-		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Postgresql); err != nil {
-			return github_com_mwitkow_go_proto_validators.FieldError("Postgresql", err)
-		}
-	}
-	return nil
-}
 func (this *RemoveServiceRequest) Validate() error {
 	if this.ServiceId == "" {
 		return github_com_mwitkow_go_proto_validators.FieldError("ServiceId", fmt.Errorf(`value '%v' must not be an empty string`, this.ServiceId))
