@@ -21,37 +21,40 @@ import (
 	"fmt"
 
 	"github.com/AlekSi/pointer"
-	api "github.com/percona/pmm/api/inventory"
+	inventorypb "github.com/percona/pmm/api/inventory"
+	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/services/inventory"
 )
 
 type servicesServer struct {
-	s *inventory.ServicesService
+	db *reform.DB
+	s  *inventory.ServicesService
 }
 
 // NewServicesServer returns Inventory API handler for managing Services.
-func NewServicesServer(s *inventory.ServicesService) api.ServicesServer {
+func NewServicesServer(db *reform.DB, s *inventory.ServicesService) inventorypb.ServicesServer {
 	return &servicesServer{
-		s: s,
+		db: db,
+		s:  s,
 	}
 }
 
 // ListServices returns a list of all Services.
-func (s *servicesServer) ListServices(ctx context.Context, req *api.ListServicesRequest) (*api.ListServicesResponse, error) {
-	services, err := s.s.List(ctx)
+func (s *servicesServer) ListServices(ctx context.Context, req *inventorypb.ListServicesRequest) (*inventorypb.ListServicesResponse, error) {
+	services, err := s.s.List(ctx, s.db.Querier)
 	if err != nil {
 		return nil, err
 	}
 
-	res := new(api.ListServicesResponse)
+	res := new(inventorypb.ListServicesResponse)
 	for _, service := range services {
 		switch service := service.(type) {
-		case *api.MySQLService:
+		case *inventorypb.MySQLService:
 			res.Mysql = append(res.Mysql, service)
-		case *api.AmazonRDSMySQLService:
+		case *inventorypb.AmazonRDSMySQLService:
 			res.AmazonRdsMysql = append(res.AmazonRdsMysql, service)
-		case *api.MongoDBService:
+		case *inventorypb.MongoDBService:
 			res.Mongodb = append(res.Mongodb, service)
 		default:
 			panic(fmt.Errorf("unhandled inventory Service type %T", service))
@@ -61,20 +64,20 @@ func (s *servicesServer) ListServices(ctx context.Context, req *api.ListServices
 }
 
 // GetService returns a single Service by ID.
-func (s *servicesServer) GetService(ctx context.Context, req *api.GetServiceRequest) (*api.GetServiceResponse, error) {
-	service, err := s.s.Get(ctx, req.ServiceId)
+func (s *servicesServer) GetService(ctx context.Context, req *inventorypb.GetServiceRequest) (*inventorypb.GetServiceResponse, error) {
+	service, err := s.s.Get(ctx, s.db.Querier, req.ServiceId)
 	if err != nil {
 		return nil, err
 	}
 
-	res := new(api.GetServiceResponse)
+	res := new(inventorypb.GetServiceResponse)
 	switch service := service.(type) {
-	case *api.MySQLService:
-		res.Service = &api.GetServiceResponse_Mysql{Mysql: service}
-	case *api.AmazonRDSMySQLService:
-		res.Service = &api.GetServiceResponse_AmazonRdsMysql{AmazonRdsMysql: service}
-	case *api.MongoDBService:
-		res.Service = &api.GetServiceResponse_Mongodb{Mongodb: service}
+	case *inventorypb.MySQLService:
+		res.Service = &inventorypb.GetServiceResponse_Mysql{Mysql: service}
+	case *inventorypb.AmazonRDSMySQLService:
+		res.Service = &inventorypb.GetServiceResponse_AmazonRdsMysql{AmazonRdsMysql: service}
+	case *inventorypb.MongoDBService:
+		res.Service = &inventorypb.GetServiceResponse_Mongodb{Mongodb: service}
 	default:
 		panic(fmt.Errorf("unhandled inventory Service type %T", service))
 	}
@@ -82,62 +85,48 @@ func (s *servicesServer) GetService(ctx context.Context, req *api.GetServiceRequ
 }
 
 // AddMySQLService adds MySQL Service.
-func (s *servicesServer) AddMySQLService(ctx context.Context, req *api.AddMySQLServiceRequest) (*api.AddMySQLServiceResponse, error) {
+func (s *servicesServer) AddMySQLService(ctx context.Context, req *inventorypb.AddMySQLServiceRequest) (*inventorypb.AddMySQLServiceResponse, error) {
 	address := pointer.ToStringOrNil(req.Address)
 	port := pointer.ToUint16OrNil(uint16(req.Port))
-	service, err := s.s.AddMySQL(ctx, req.ServiceName, req.NodeId, address, port)
+	service, err := s.s.AddMySQL(ctx, s.db.Querier, req.ServiceName, req.NodeId, address, port)
 	if err != nil {
 		return nil, err
 	}
 
-	res := &api.AddMySQLServiceResponse{
+	res := &inventorypb.AddMySQLServiceResponse{
 		Mysql: service,
 	}
 	return res, nil
 }
 
 // AddAmazonRDSMySQLService adds AmazonRDSMySQL Service.
-func (s *servicesServer) AddAmazonRDSMySQLService(ctx context.Context, req *api.AddAmazonRDSMySQLServiceRequest) (*api.AddAmazonRDSMySQLServiceResponse, error) {
+func (s *servicesServer) AddAmazonRDSMySQLService(ctx context.Context, req *inventorypb.AddAmazonRDSMySQLServiceRequest) (*inventorypb.AddAmazonRDSMySQLServiceResponse, error) {
 	panic("not implemented yet")
 }
 
-// ChangeMySQLService changes MySQL Service.
-func (s *servicesServer) ChangeMySQLService(ctx context.Context, req *api.ChangeMySQLServiceRequest) (*api.ChangeMySQLServiceResponse, error) {
-	service, err := s.s.Change(ctx, req.ServiceId, req.ServiceName)
-	if err != nil {
-		return nil, err
-	}
-
-	res := &api.ChangeMySQLServiceResponse{
-		Mysql: service.(*api.MySQLService),
-	}
-	return res, nil
-}
-
-// ChangeAmazonRDSMySQLService changes AmazonRDSMySQL Service.
-func (s *servicesServer) ChangeAmazonRDSMySQLService(ctx context.Context, req *api.ChangeAmazonRDSMySQLServiceRequest) (*api.ChangeAmazonRDSMySQLServiceResponse, error) {
-	panic("not implemented yet")
-}
-
-func (s *servicesServer) AddMongoDBService(ctx context.Context, req *api.AddMongoDBServiceRequest) (*api.AddMongoDBServiceResponse, error) {
+func (s *servicesServer) AddMongoDBService(ctx context.Context, req *inventorypb.AddMongoDBServiceRequest) (*inventorypb.AddMongoDBServiceResponse, error) {
 	address := pointer.ToStringOrNil(req.Address)
 	port := pointer.ToUint16OrNil(uint16(req.Port))
-	service, err := s.s.AddMongoDB(ctx, req.ServiceName, req.NodeId, address, port)
+	service, err := s.s.AddMongoDB(ctx, s.db.Querier, req.ServiceName, req.NodeId, address, port)
 	if err != nil {
 		return nil, err
 	}
 
-	res := &api.AddMongoDBServiceResponse{
+	res := &inventorypb.AddMongoDBServiceResponse{
 		Mongodb: service,
 	}
 	return res, nil
 }
 
+func (s *servicesServer) AddPostgreSQLService(ctx context.Context, req *inventorypb.AddPostgreSQLServiceRequest) (*inventorypb.AddPostgreSQLServiceResponse, error) {
+	panic("not implemented yet")
+}
+
 // RemoveService removes Service without any Agents.
-func (s *servicesServer) RemoveService(ctx context.Context, req *api.RemoveServiceRequest) (*api.RemoveServiceResponse, error) {
-	if err := s.s.Remove(ctx, req.ServiceId); err != nil {
+func (s *servicesServer) RemoveService(ctx context.Context, req *inventorypb.RemoveServiceRequest) (*inventorypb.RemoveServiceResponse, error) {
+	if err := s.s.Remove(ctx, s.db.Querier, req.ServiceId); err != nil {
 		return nil, err
 	}
 
-	return new(api.RemoveServiceResponse), nil
+	return new(inventorypb.RemoveServiceResponse), nil
 }

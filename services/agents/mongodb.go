@@ -24,12 +24,12 @@ import (
 	"strconv"
 
 	"github.com/AlekSi/pointer"
-	api "github.com/percona/pmm/api/agent"
+	"github.com/percona/pmm/api/agentpb"
 
 	"github.com/percona/pmm-managed/models"
 )
 
-func mongodbExporterConfig(service *models.Service, exporter *models.Agent) *api.SetStateRequest_AgentProcess {
+func mongodbExporterConfig(service *models.Service, exporter *models.Agent) *agentpb.SetStateRequest_AgentProcess {
 	tdp := templateDelimsPair(
 		pointer.GetString(service.Address),
 		pointer.GetString(exporter.Username),
@@ -53,14 +53,20 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent) *api
 
 	host := pointer.GetString(service.Address)
 	port := pointer.GetUint16(service.Port)
+
 	connURL := url.URL{
 		Scheme: "mongodb",
-		User:   url.UserPassword(pointer.GetString(exporter.Username), pointer.GetString(exporter.Password)),
 		Host:   net.JoinHostPort(host, strconv.Itoa(int(port))),
 	}
 
-	return &api.SetStateRequest_AgentProcess{
-		Type:               api.Type_MONGODB_EXPORTER,
+	username := pointer.GetString(exporter.Username)
+	password := pointer.GetString(exporter.Password)
+	if username != "" {
+		connURL.User = url.UserPassword(username, password)
+	}
+
+	return &agentpb.SetStateRequest_AgentProcess{
+		Type:               agentpb.Type_MONGODB_EXPORTER,
 		TemplateLeftDelim:  tdp.left,
 		TemplateRightDelim: tdp.right,
 		Args:               args,

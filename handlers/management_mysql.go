@@ -14,16 +14,26 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package agents
+package handlers
 
 import (
 	"context"
+
+	"github.com/percona/pmm/api/managementpb"
+
+	"github.com/percona/pmm-managed/services/management"
 )
 
-//go:generate mockery -name=prometheus -inpkg -testonly
+type mysqlGrpcServer struct {
+	svc *management.MySQLService
+}
 
-// prometheus is a subset of methods of prometheus.Service used by this package.
-// We use it instead of real type for testing and to avoid dependency cycle.
-type prometheus interface {
-	UpdateConfiguration(ctx context.Context) error
+// NewManagementMysqlServer creates Management MySQL Server.
+func NewManagementMysqlServer(s *management.MySQLService) managementpb.MySQLServer {
+	return &mysqlGrpcServer{svc: s}
+}
+
+// Add adds "MySQL Service", "MySQL Exporter Agent" and "QAN MySQL PerfSchema Agent".
+func (s *mysqlGrpcServer) Add(ctx context.Context, req *managementpb.AddMySQLRequest) (*managementpb.AddMySQLResponse, error) {
+	return s.svc.Add(ctx, req)
 }

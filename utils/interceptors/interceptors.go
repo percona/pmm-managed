@@ -23,9 +23,9 @@ import (
 	"runtime/pprof"
 	"time"
 
-	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	"github.com/grpc-ecosystem/go-grpc-prometheus"
-	api "github.com/percona/pmm/api/agent"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/percona/pmm/api/agentpb"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -104,7 +104,7 @@ func Stream(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, 
 	// set logger
 	l := logrus.WithField("request", logger.MakeRequestID())
 	if info.FullMethod == "/agent.Agent/Connect" {
-		agentID := api.GetAgentConnectMetadata(ctx).ID
+		agentID := agentpb.GetAgentConnectMetadata(ctx).ID
 		if agentID != "" {
 			l = l.WithField("agent_id", agentID)
 		}
@@ -112,7 +112,7 @@ func Stream(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, 
 	ctx = logger.SetEntry(ctx, l)
 
 	err := logRequest(l, "Stream "+info.FullMethod, func() error {
-		wrapped := middleware.WrapServerStream(ss)
+		wrapped := grpc_middleware.WrapServerStream(ss)
 		wrapped.WrappedContext = ctx
 		return grpc_prometheus.StreamServerInterceptor(srv, wrapped, info, handler)
 	})

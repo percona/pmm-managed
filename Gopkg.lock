@@ -113,9 +113,12 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:1b497700cbc61544430babb4e4fd4313758bb9fec7144ca50c625fa6ce8266c7"
+  digest = "1:d9cf802f97049c2b61debfae0bbedf645663730d16fe09d65584498bdd59690a"
   name = "github.com/grpc-ecosystem/go-grpc-middleware"
-  packages = ["."]
+  packages = [
+    ".",
+    "validator",
+  ]
   pruneopts = "NUT"
   revision = "c250d6563d4d4c20252cd865923440e829844f4e"
   version = "v1.0.0"
@@ -129,10 +132,11 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:69b5bdc0545fa057e73e7704cb9f7e8c48b9bb6f7cbe2b25686c0a67bba52276"
+  digest = "1:25150403150754a84bb3a3f1d59c6b26162d2fd70cf368fb18d4c3ef113c1e35"
   name = "github.com/grpc-ecosystem/grpc-gateway"
   packages = [
     "internal",
+    "protoc-gen-swagger/options",
     "runtime",
     "utilities",
   ]
@@ -200,16 +204,18 @@
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:91cb6f95437ed95be7eb739a1a3b72d4b5a3833a371f655cc38472362bc7f357"
+  digest = "1:af97e85fe46f38f4098ed8a8c64dd839b84a9edd02ed46bc39d1f58eb57d2a31"
   name = "github.com/percona/pmm"
   packages = [
-    "api/agent",
+    "api/agentpb",
     "api/inventory",
+    "api/managementpb",
+    "api/qanpb",
     "api/server",
     "version",
   ]
   pruneopts = "NUT"
-  revision = "f52595aaf357c858ea8726e98c2a0ab63cb49ac1"
+  revision = "b44cd9a2ed49d3aa373c06ae29ccf947ac762d9f"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
@@ -505,13 +511,16 @@
     "github.com/golang/protobuf/ptypes",
     "github.com/google/uuid",
     "github.com/grpc-ecosystem/go-grpc-middleware",
+    "github.com/grpc-ecosystem/go-grpc-middleware/validator",
     "github.com/grpc-ecosystem/go-grpc-prometheus",
     "github.com/grpc-ecosystem/grpc-gateway/runtime",
     "github.com/lib/pq",
     "github.com/mwitkow/go-conntrack",
     "github.com/percona/exporter_shared/helpers",
-    "github.com/percona/pmm/api/agent",
+    "github.com/percona/pmm/api/agentpb",
     "github.com/percona/pmm/api/inventory",
+    "github.com/percona/pmm/api/managementpb",
+    "github.com/percona/pmm/api/qanpb",
     "github.com/percona/pmm/api/server",
     "github.com/percona/pmm/version",
     "github.com/pkg/errors",

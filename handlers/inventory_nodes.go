@@ -21,40 +21,43 @@ import (
 	"fmt"
 
 	"github.com/AlekSi/pointer"
-	api "github.com/percona/pmm/api/inventory"
+	inventorypb "github.com/percona/pmm/api/inventory"
+	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/inventory"
 )
 
 type nodesServer struct {
-	s *inventory.NodesService
+	db *reform.DB
+	s  *inventory.NodesService
 }
 
 // NewNodesServer returns Inventory API handler for managing Nodes.
-func NewNodesServer(s *inventory.NodesService) api.NodesServer {
+func NewNodesServer(db *reform.DB, s *inventory.NodesService) inventorypb.NodesServer {
 	return &nodesServer{
-		s: s,
+		db: db,
+		s:  s,
 	}
 }
 
 // ListNodes returns a list of all Nodes.
-func (s *nodesServer) ListNodes(ctx context.Context, req *api.ListNodesRequest) (*api.ListNodesResponse, error) {
-	nodes, err := s.s.List(ctx)
+func (s *nodesServer) ListNodes(ctx context.Context, req *inventorypb.ListNodesRequest) (*inventorypb.ListNodesResponse, error) {
+	nodes, err := s.s.List(ctx, s.db.Querier)
 	if err != nil {
 		return nil, err
 	}
 
-	res := new(api.ListNodesResponse)
+	res := new(inventorypb.ListNodesResponse)
 	for _, node := range nodes {
 		switch node := node.(type) {
-		case *api.GenericNode:
+		case *inventorypb.GenericNode:
 			res.Generic = append(res.Generic, node)
-		case *api.ContainerNode:
+		case *inventorypb.ContainerNode:
 			res.Container = append(res.Container, node)
-		case *api.RemoteNode:
+		case *inventorypb.RemoteNode:
 			res.Remote = append(res.Remote, node)
-		case *api.RemoteAmazonRDSNode:
+		case *inventorypb.RemoteAmazonRDSNode:
 			res.RemoteAmazonRds = append(res.RemoteAmazonRds, node)
 		default:
 			panic(fmt.Errorf("unhandled inventory Node type %T", node))
@@ -64,22 +67,22 @@ func (s *nodesServer) ListNodes(ctx context.Context, req *api.ListNodesRequest) 
 }
 
 // GetNode returns a single Node by ID.
-func (s *nodesServer) GetNode(ctx context.Context, req *api.GetNodeRequest) (*api.GetNodeResponse, error) {
-	node, err := s.s.Get(ctx, req.NodeId)
+func (s *nodesServer) GetNode(ctx context.Context, req *inventorypb.GetNodeRequest) (*inventorypb.GetNodeResponse, error) {
+	node, err := s.s.Get(ctx, s.db.Querier, req.NodeId)
 	if err != nil {
 		return nil, err
 	}
 
-	res := new(api.GetNodeResponse)
+	res := new(inventorypb.GetNodeResponse)
 	switch node := node.(type) {
-	case *api.GenericNode:
-		res.Node = &api.GetNodeResponse_Generic{Generic: node}
-	case *api.ContainerNode:
-		res.Node = &api.GetNodeResponse_Container{Container: node}
-	case *api.RemoteNode:
-		res.Node = &api.GetNodeResponse_Remote{Remote: node}
-	case *api.RemoteAmazonRDSNode:
-		res.Node = &api.GetNodeResponse_RemoteAmazonRds{RemoteAmazonRds: node}
+	case *inventorypb.GenericNode:
+		res.Node = &inventorypb.GetNodeResponse_Generic{Generic: node}
+	case *inventorypb.ContainerNode:
+		res.Node = &inventorypb.GetNodeResponse_Container{Container: node}
+	case *inventorypb.RemoteNode:
+		res.Node = &inventorypb.GetNodeResponse_Remote{Remote: node}
+	case *inventorypb.RemoteAmazonRDSNode:
+		res.Node = &inventorypb.GetNodeResponse_RemoteAmazonRds{RemoteAmazonRds: node}
 	default:
 		panic(fmt.Errorf("unhandled inventory Node type %T", node))
 	}
@@ -87,114 +90,62 @@ func (s *nodesServer) GetNode(ctx context.Context, req *api.GetNodeRequest) (*ap
 }
 
 // AddGenericNode adds Generic Node.
-func (s *nodesServer) AddGenericNode(ctx context.Context, req *api.AddGenericNodeRequest) (*api.AddGenericNodeResponse, error) {
-	node, err := s.s.Add(ctx, models.GenericNodeType, req.NodeName, pointer.ToStringOrNil(req.Address), nil)
+func (s *nodesServer) AddGenericNode(ctx context.Context, req *inventorypb.AddGenericNodeRequest) (*inventorypb.AddGenericNodeResponse, error) {
+	node, err := s.s.Add(ctx, s.db.Querier, models.GenericNodeType, req.NodeName, pointer.ToStringOrNil(req.Address), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	res := &api.AddGenericNodeResponse{
-		Generic: node.(*api.GenericNode),
+	res := &inventorypb.AddGenericNodeResponse{
+		Generic: node.(*inventorypb.GenericNode),
 	}
 	return res, nil
 }
 
 // AddContainerNode adds Container Node.
-func (s *nodesServer) AddContainerNode(ctx context.Context, req *api.AddContainerNodeRequest) (*api.AddContainerNodeResponse, error) {
-	node, err := s.s.Add(ctx, models.ContainerNodeType, req.NodeName, nil, nil)
+func (s *nodesServer) AddContainerNode(ctx context.Context, req *inventorypb.AddContainerNodeRequest) (*inventorypb.AddContainerNodeResponse, error) {
+	node, err := s.s.Add(ctx, s.db.Querier, models.ContainerNodeType, req.NodeName, nil, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	res := &api.AddContainerNodeResponse{
-		Container: node.(*api.ContainerNode),
+	res := &inventorypb.AddContainerNodeResponse{
+		Container: node.(*inventorypb.ContainerNode),
 	}
 	return res, nil
 }
 
 // AddRemoteNode adds Remote Node.
-func (s *nodesServer) AddRemoteNode(ctx context.Context, req *api.AddRemoteNodeRequest) (*api.AddRemoteNodeResponse, error) {
-	node, err := s.s.Add(ctx, models.RemoteNodeType, req.NodeName, nil, nil)
+func (s *nodesServer) AddRemoteNode(ctx context.Context, req *inventorypb.AddRemoteNodeRequest) (*inventorypb.AddRemoteNodeResponse, error) {
+	node, err := s.s.Add(ctx, s.db.Querier, models.RemoteNodeType, req.NodeName, nil, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	res := &api.AddRemoteNodeResponse{
-		Remote: node.(*api.RemoteNode),
+	res := &inventorypb.AddRemoteNodeResponse{
+		Remote: node.(*inventorypb.RemoteNode),
 	}
 	return res, nil
 }
 
 // AddRemoteAmazonRDSNode adds Amazon (AWS) RDS remote Node.
-func (s *nodesServer) AddRemoteAmazonRDSNode(ctx context.Context, req *api.AddRemoteAmazonRDSNodeRequest) (*api.AddRemoteAmazonRDSNodeResponse, error) {
-	node, err := s.s.Add(ctx, models.RemoteAmazonRDSNodeType, req.NodeName, &req.Instance, &req.Region)
+func (s *nodesServer) AddRemoteAmazonRDSNode(ctx context.Context, req *inventorypb.AddRemoteAmazonRDSNodeRequest) (*inventorypb.AddRemoteAmazonRDSNodeResponse, error) {
+	node, err := s.s.Add(ctx, s.db.Querier, models.RemoteAmazonRDSNodeType, req.NodeName, &req.Instance, &req.Region)
 	if err != nil {
 		return nil, err
 	}
 
-	res := &api.AddRemoteAmazonRDSNodeResponse{
-		RemoteAmazonRds: node.(*api.RemoteAmazonRDSNode),
-	}
-	return res, nil
-}
-
-// ChangeGenericNode changes Generic Node.
-func (s *nodesServer) ChangeGenericNode(ctx context.Context, req *api.ChangeGenericNodeRequest) (*api.ChangeGenericNodeResponse, error) {
-	node, err := s.s.Change(ctx, req.NodeId, req.NodeName)
-	if err != nil {
-		return nil, err
-	}
-
-	res := &api.ChangeGenericNodeResponse{
-		Generic: node.(*api.GenericNode),
-	}
-	return res, nil
-}
-
-// ChangeContainerNode changes Container Node.
-func (s *nodesServer) ChangeContainerNode(ctx context.Context, req *api.ChangeContainerNodeRequest) (*api.ChangeContainerNodeResponse, error) {
-	node, err := s.s.Change(ctx, req.NodeId, req.NodeName)
-	if err != nil {
-		return nil, err
-	}
-
-	res := &api.ChangeContainerNodeResponse{
-		Container: node.(*api.ContainerNode),
-	}
-	return res, nil
-}
-
-// ChangeRemoteNode changes Remote Node.
-func (s *nodesServer) ChangeRemoteNode(ctx context.Context, req *api.ChangeRemoteNodeRequest) (*api.ChangeRemoteNodeResponse, error) {
-	node, err := s.s.Change(ctx, req.NodeId, req.NodeName)
-	if err != nil {
-		return nil, err
-	}
-
-	res := &api.ChangeRemoteNodeResponse{
-		Remote: node.(*api.RemoteNode),
-	}
-	return res, nil
-}
-
-// ChangeRemoteAmazonRDSNode changes Amazon (AWS) RDS remote Node.
-func (s *nodesServer) ChangeRemoteAmazonRDSNode(ctx context.Context, req *api.ChangeRemoteAmazonRDSNodeRequest) (*api.ChangeRemoteAmazonRDSNodeResponse, error) {
-	node, err := s.s.Change(ctx, req.NodeId, req.NodeName)
-	if err != nil {
-		return nil, err
-	}
-
-	res := &api.ChangeRemoteAmazonRDSNodeResponse{
-		RemoteAmazonRds: node.(*api.RemoteAmazonRDSNode),
+	res := &inventorypb.AddRemoteAmazonRDSNodeResponse{
+		RemoteAmazonRds: node.(*inventorypb.RemoteAmazonRDSNode),
 	}
 	return res, nil
 }
 
 // RemoveNode removes Node without any Agents and Services.
-func (s *nodesServer) RemoveNode(ctx context.Context, req *api.RemoveNodeRequest) (*api.RemoveNodeResponse, error) {
-	if err := s.s.Remove(ctx, req.NodeId); err != nil {
+func (s *nodesServer) RemoveNode(ctx context.Context, req *inventorypb.RemoveNodeRequest) (*inventorypb.RemoveNodeResponse, error) {
+	if err := s.s.Remove(ctx, s.db.Querier, req.NodeId); err != nil {
 		return nil, err
 	}
 
-	return new(api.RemoveNodeResponse), nil
+	return new(inventorypb.RemoveNodeResponse), nil
 }
