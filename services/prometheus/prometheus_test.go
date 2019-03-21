@@ -54,7 +54,7 @@ func setup(t *testing.T) (context.Context, *reform.DB, *Service, []byte) {
 	return ctx, db, svc, original
 }
 
-func teardown(t *testing.T, ctx context.Context, db *reform.DB, svc *Service, original []byte) { //nolint:golint
+func teardown(t *testing.T, db *reform.DB, svc *Service, original []byte) { //nolint:golint
 	t.Helper()
 
 	assert.NoError(t, ioutil.WriteFile(configPath, original, 0644))
@@ -66,7 +66,7 @@ func teardown(t *testing.T, ctx context.Context, db *reform.DB, svc *Service, or
 func TestPrometheus(t *testing.T) {
 	t.Run("Default", func(t *testing.T) {
 		ctx, db, svc, original := setup(t)
-		defer teardown(t, ctx, db, svc, original)
+		defer teardown(t, db, svc, original)
 
 		assert.NoError(t, svc.UpdateConfiguration(ctx))
 
@@ -77,7 +77,7 @@ func TestPrometheus(t *testing.T) {
 
 	t.Run("Normal", func(t *testing.T) {
 		ctx, db, svc, original := setup(t)
-		defer teardown(t, ctx, db, svc, original)
+		defer teardown(t, db, svc, original)
 
 		for _, str := range []reform.Struct{
 			&models.Node{
