@@ -637,3 +637,165 @@ func TestMongoDBExporter(t *testing.T) {
 		}
 	})
 }
+
+func TestQanAgentExporter(t *testing.T) {
+	t.Run("Basic", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
+		defer removeNodes(t, genericNodeID)
+
+		service := addMySQLService(t, &services.AddMySQLServiceBody{
+			NodeID:      genericNodeID,
+			Address:     "localhost",
+			Port:        3306,
+			ServiceName: pmmapitests.TestString(t, "MySQL Service for QanAgent test"),
+		})
+		serviceID := service.Mysql.ServiceID
+		defer removeServices(t, serviceID)
+
+		pmmAgent := addPMMAgent(t, genericNodeID)
+		pmmAgentID := pmmAgent.PMMAgent.AgentID
+		defer removeAgents(t, pmmAgentID)
+
+		res, err := client.Default.Agents.AddQANMySQLPerfSchemaAgent(
+			&agents.AddQANMySQLPerfSchemaAgentParams{
+				Body: agents.AddQANMySQLPerfSchemaAgentBody{
+					ServiceID:  serviceID,
+					Username:   "username",
+					Password:   "password",
+					PMMAgentID: pmmAgentID,
+				},
+				Context: pmmapitests.Context,
+			})
+		agentID := res.Payload.QANMysqlPerfschemaAgent.AgentID
+		defer removeAgents(t, agentID)
+
+		getAgentRes, err := client.Default.Agents.GetAgent(&agents.GetAgentParams{
+			Body:    agents.GetAgentBody{AgentID: agentID},
+			Context: pmmapitests.Context,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, &agents.GetAgentOK{
+			Payload: &agents.GetAgentOKBody{
+				QANMysqlPerfschemaAgent: &agents.GetAgentOKBodyQANMysqlPerfschemaAgent{
+					AgentID:    agentID,
+					ServiceID:  serviceID,
+					Username:   "username",
+					Password:   "password",
+					PMMAgentID: pmmAgentID,
+				},
+			},
+		}, getAgentRes)
+	})
+
+	t.Run("AddServiceIDEmpty", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
+		defer removeNodes(t, genericNodeID)
+
+		pmmAgent := addPMMAgent(t, genericNodeID)
+		pmmAgentID := pmmAgent.PMMAgent.AgentID
+		defer removeAgents(t, pmmAgentID)
+
+		res, err := client.Default.Agents.AddQANMySQLPerfSchemaAgent(&agents.AddQANMySQLPerfSchemaAgentParams{
+			Body: agents.AddQANMySQLPerfSchemaAgentBody{
+				ServiceID:  "",
+				PMMAgentID: pmmAgentID,
+				Username:   "username",
+				Password:   "password",
+			},
+			Context: pmmapitests.Context,
+		})
+		assertEqualAPIError(t, err, ServerResponse{400, "invalid field ServiceId: value '' must not be an empty string"})
+		if !assert.Nil(t, res) {
+			removeAgents(t, res.Payload.QANMysqlPerfschemaAgent.AgentID)
+		}
+	})
+
+	t.Run("AddPMMAgentIDEmpty", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
+		defer removeNodes(t, genericNodeID)
+
+		service := addMySQLService(t, &services.AddMySQLServiceBody{
+			NodeID:      genericNodeID,
+			Address:     "localhost",
+			Port:        3306,
+			ServiceName: pmmapitests.TestString(t, "MySQL Service for agent"),
+		})
+		serviceID := service.Mysql.ServiceID
+		defer removeServices(t, serviceID)
+
+		res, err := client.Default.Agents.AddQANMySQLPerfSchemaAgent(&agents.AddQANMySQLPerfSchemaAgentParams{
+			Body: agents.AddQANMySQLPerfSchemaAgentBody{
+				ServiceID:  serviceID,
+				PMMAgentID: "",
+				Username:   "username",
+				Password:   "password",
+			},
+			Context: pmmapitests.Context,
+		})
+		assertEqualAPIError(t, err, ServerResponse{400, "invalid field PmmAgentId: value '' must not be an empty string"})
+		if !assert.Nil(t, res) {
+			removeAgents(t, res.Payload.QANMysqlPerfschemaAgent.AgentID)
+		}
+	})
+
+	t.Run("NotExistServiceID", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
+		defer removeNodes(t, genericNodeID)
+
+		pmmAgent := addPMMAgent(t, genericNodeID)
+		pmmAgentID := pmmAgent.PMMAgent.AgentID
+		defer removeAgents(t, pmmAgentID)
+
+		res, err := client.Default.Agents.AddQANMySQLPerfSchemaAgent(&agents.AddQANMySQLPerfSchemaAgentParams{
+			Body: agents.AddQANMySQLPerfSchemaAgentBody{
+				ServiceID:  "pmm-service-id",
+				PMMAgentID: pmmAgentID,
+				Username:   "username",
+				Password:   "password",
+			},
+			Context: pmmapitests.Context,
+		})
+		assertEqualAPIError(t, err, ServerResponse{404, "Service with ID \"pmm-service-id\" not found."})
+		if !assert.Nil(t, res) {
+			removeAgents(t, res.Payload.QANMysqlPerfschemaAgent.AgentID)
+		}
+	})
+
+	t.Run("NotExistPMMAgentID", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
+		defer removeNodes(t, genericNodeID)
+
+		service := addMySQLService(t, &services.AddMySQLServiceBody{
+			NodeID:      genericNodeID,
+			Address:     "localhost",
+			Port:        3306,
+			ServiceName: pmmapitests.TestString(t, "MySQL Service for not exists node ID"),
+		})
+		serviceID := service.Mysql.ServiceID
+		defer removeServices(t, serviceID)
+
+		res, err := client.Default.Agents.AddQANMySQLPerfSchemaAgent(&agents.AddQANMySQLPerfSchemaAgentParams{
+			Body: agents.AddQANMySQLPerfSchemaAgentBody{
+				ServiceID:  serviceID,
+				PMMAgentID: "pmm-not-exist-server",
+				Username:   "username",
+				Password:   "password",
+			},
+			Context: pmmapitests.Context,
+		})
+		assertEqualAPIError(t, err, ServerResponse{400, ""})
+		if !assert.Nil(t, res) {
+			removeAgents(t, res.Payload.QANMysqlPerfschemaAgent.AgentID)
+		}
+	})
+}
