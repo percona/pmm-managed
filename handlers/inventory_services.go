@@ -104,24 +104,6 @@ func (s *servicesServer) AddAmazonRDSMySQLService(ctx context.Context, req *inve
 	panic("not implemented yet")
 }
 
-// ChangeMySQLService changes MySQL Service.
-func (s *servicesServer) ChangeMySQLService(ctx context.Context, req *inventorypb.ChangeMySQLServiceRequest) (*inventorypb.ChangeMySQLServiceResponse, error) {
-	service, err := s.s.Change(ctx, s.db.Querier, req.ServiceId, req.ServiceName)
-	if err != nil {
-		return nil, err
-	}
-
-	res := &inventorypb.ChangeMySQLServiceResponse{
-		Mysql: service.(*inventorypb.MySQLService),
-	}
-	return res, nil
-}
-
-// ChangeAmazonRDSMySQLService changes AmazonRDSMySQL Service.
-func (s *servicesServer) ChangeAmazonRDSMySQLService(ctx context.Context, req *inventorypb.ChangeAmazonRDSMySQLServiceRequest) (*inventorypb.ChangeAmazonRDSMySQLServiceResponse, error) {
-	panic("not implemented yet")
-}
-
 func (s *servicesServer) AddMongoDBService(ctx context.Context, req *inventorypb.AddMongoDBServiceRequest) (*inventorypb.AddMongoDBServiceResponse, error) {
 	address := pointer.ToStringOrNil(req.Address)
 	port := pointer.ToUint16OrNil(uint16(req.Port))
@@ -137,17 +119,7 @@ func (s *servicesServer) AddMongoDBService(ctx context.Context, req *inventorypb
 }
 
 func (s *servicesServer) AddPostgreSQLService(ctx context.Context, req *inventorypb.AddPostgreSQLServiceRequest) (*inventorypb.AddPostgreSQLServiceResponse, error) {
-	address := pointer.ToStringOrNil(req.Address)
-	port := pointer.ToUint16OrNil(uint16(req.Port))
-	service, err := s.s.AddPostgreSQL(ctx, s.db.Querier, req.ServiceName, req.NodeId, address, port)
-	if err != nil {
-		return nil, err
-	}
-
-	res := &inventorypb.AddPostgreSQLServiceResponse{
-		Postgresql: service,
-	}
-	return res, nil
+	panic("not implemented yet")
 }
 
 // RemoveService removes Service without any Agents.

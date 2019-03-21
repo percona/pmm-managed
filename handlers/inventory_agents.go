@@ -66,10 +66,6 @@ func (s *agentsServer) ListAgents(ctx context.Context, req *inventorypb.ListAgen
 			res.ExternalExporter = append(res.ExternalExporter, agent)
 		case *inventorypb.MongoDBExporter:
 			res.MongodbExporter = append(res.MongodbExporter, agent)
-		case *inventorypb.QANMySQLPerfSchemaAgent:
-			res.QanMysqlPerfschemaAgent = append(res.QanMysqlPerfschemaAgent, agent)
-		case *inventorypb.PostgresExporter:
-			res.PostgresExporter = append(res.PostgresExporter, agent)
 		default:
 			panic(fmt.Errorf("unhandled inventory Agent type %T", agent))
 		}
@@ -98,10 +94,6 @@ func (s *agentsServer) GetAgent(ctx context.Context, req *inventorypb.GetAgentRe
 		res.Agent = &inventorypb.GetAgentResponse_ExternalExporter{ExternalExporter: agent}
 	case *inventorypb.MongoDBExporter:
 		res.Agent = &inventorypb.GetAgentResponse_MongodbExporter{MongodbExporter: agent}
-	case *inventorypb.QANMySQLPerfSchemaAgent:
-		res.Agent = &inventorypb.GetAgentResponse_QanMysqlPerfschemaAgent{QanMysqlPerfschemaAgent: agent}
-	case *inventorypb.PostgresExporter:
-		res.Agent = &inventorypb.GetAgentResponse_PostgresExporter{PostgresExporter: agent}
 	default:
 		panic(fmt.Errorf("unhandled inventory Agent type %T", agent))
 	}
@@ -122,6 +114,10 @@ func (s *agentsServer) AddPMMAgent(ctx context.Context, req *inventorypb.AddPMMA
 	return res, nil
 }
 
+func (s *agentsServer) ChangePMMAgent(context.Context, *inventorypb.ChangePMMAgentRequest) (*inventorypb.ChangePMMAgentResponse, error) {
+	panic("not implemented")
+}
+
 // AddNodeExporter adds node_exporter Agent.
 func (s *agentsServer) AddNodeExporter(ctx context.Context, req *inventorypb.AddNodeExporterRequest) (*inventorypb.AddNodeExporterResponse, error) {
 	agent, err := s.s.AddNodeExporter(ctx, req)
@@ -133,6 +129,10 @@ func (s *agentsServer) AddNodeExporter(ctx context.Context, req *inventorypb.Add
 		NodeExporter: agent,
 	}
 	return res, nil
+}
+
+func (s *agentsServer) ChangeNodeExporter(context.Context, *inventorypb.ChangeNodeExporterRequest) (*inventorypb.ChangeNodeExporterResponse, error) {
+	panic("not implemented")
 }
 
 // AddMySQLdExporter adds mysqld_exporter Agent.
@@ -148,14 +148,26 @@ func (s *agentsServer) AddMySQLdExporter(ctx context.Context, req *inventorypb.A
 	return res, nil
 }
 
+func (s *agentsServer) ChangeMySQLdExporter(context.Context, *inventorypb.ChangeMySQLdExporterRequest) (*inventorypb.ChangeMySQLdExporterResponse, error) {
+	panic("not implemented")
+}
+
 // AddRDSExporter adds rds_exporter Agent.
 func (s *agentsServer) AddRDSExporter(ctx context.Context, req *inventorypb.AddRDSExporterRequest) (*inventorypb.AddRDSExporterResponse, error) {
 	panic("not implemented yet")
 }
 
+func (s *agentsServer) ChangeRDSExporter(context.Context, *inventorypb.ChangeRDSExporterRequest) (*inventorypb.ChangeRDSExporterResponse, error) {
+	panic("not implemented")
+}
+
 // AddExternalExporter adds external Agent.
 func (s *agentsServer) AddExternalExporter(ctx context.Context, req *inventorypb.AddExternalExporterRequest) (*inventorypb.AddExternalExporterResponse, error) {
 	panic("not implemented yet")
+}
+
+func (s *agentsServer) ChangeExternalExporter(context.Context, *inventorypb.ChangeExternalExporterRequest) (*inventorypb.ChangeExternalExporterResponse, error) {
+	panic("not implemented")
 }
 
 // AddMongoDBExporter adds mongodb_exporter Agent.
@@ -171,6 +183,10 @@ func (s *agentsServer) AddMongoDBExporter(ctx context.Context, req *inventorypb.
 	return res, nil
 }
 
+func (s *agentsServer) ChangeMongoDBExporter(context.Context, *inventorypb.ChangeMongoDBExporterRequest) (*inventorypb.ChangeMongoDBExporterResponse, error) {
+	panic("not implemented")
+}
+
 // AddQANMySQLPerfSchemaAgent adds MySQL PerfSchema QAN Agent.
 func (s *agentsServer) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *inventorypb.AddQANMySQLPerfSchemaAgentRequest) (*inventorypb.AddQANMySQLPerfSchemaAgentResponse, error) {
 	agent, err := s.s.AddQANMySQLPerfSchemaAgent(ctx, s.db.Querier, req)
@@ -184,17 +200,16 @@ func (s *agentsServer) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *inve
 	return res, nil
 }
 
-// AddPostgresExporter adds postgres_exporter Agent.
-func (s *agentsServer) AddPostgresExporter(ctx context.Context, req *inventorypb.AddPostgresExporterRequest) (*inventorypb.AddPostgresExporterResponse, error) {
-	agent, err := s.s.AddPostgresExporter(ctx, s.db.Querier, req)
-	if err != nil {
-		return nil, err
-	}
+func (s *agentsServer) ChangeQANMySQLPerfSchemaAgent(context.Context, *inventorypb.ChangeQANMySQLPerfSchemaAgentRequest) (*inventorypb.ChangeQANMySQLPerfSchemaAgentResponse, error) {
+	panic("not implemented")
+}
 
-	res := &inventorypb.AddPostgresExporterResponse{
-		PostgresExporter: agent,
-	}
-	return res, nil
+func (s *agentsServer) AddPostgresExporter(context.Context, *inventorypb.AddPostgresExporterRequest) (*inventorypb.AddPostgresExporterResponse, error) {
+	panic("not implemented")
+}
+
+func (s *agentsServer) ChangePostgresExporter(context.Context, *inventorypb.ChangePostgresExporterRequest) (*inventorypb.ChangePostgresExporterResponse, error) {
+	panic("not implemented")
 }
 
 // RemoveAgent removes Agent.
