@@ -71,6 +71,15 @@ func makeService(row *models.Service) (inventorypb.Service, error) {
 			Port:         uint32(pointer.GetUint16(row.Port)),
 			CustomLabels: labels,
 		}, nil
+	case models.PostgreSQLServiceType:
+		return &inventorypb.PostgreSQLService{
+			ServiceId:    row.ServiceID,
+			ServiceName:  row.ServiceName,
+			NodeId:       row.NodeID,
+			Address:      pointer.GetString(row.Address),
+			Port:         uint32(pointer.GetUint16(row.Port)),
+			CustomLabels: labels,
+		}, nil
 
 	default:
 		panic(fmt.Errorf("unhandled Service type %s", row.ServiceType))
