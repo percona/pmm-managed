@@ -2,12 +2,9 @@ package inventory
 
 import (
 	"context"
-	"fmt"
-	"os"
+	"reflect"
 	"testing"
 
-	"github.com/go-openapi/runtime"
-	"github.com/google/uuid"
 	"github.com/percona/pmm/api/inventory/json/client"
 	"github.com/percona/pmm/api/inventory/json/client/agents"
 	"github.com/percona/pmm/api/inventory/json/client/nodes"
@@ -15,25 +12,27 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	_ "github.com/Percona-Lab/pmm-api-tests" // init default client
+	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
 )
 
-func withUUID(t *testing.T, name string) string {
-	t.Helper()
-	hostname, err := os.Hostname()
-	require.NoError(t, err)
-	random, err := uuid.NewRandom()
-	require.NoError(t, err)
+type ErrorResponse interface {
+	Code() int
+}
 
-	return fmt.Sprintf("test-for-%s-%s-%s", hostname, name, random.String())
+type ServerResponse struct {
+	Code  int
+	Error string
 }
 
 func removeNodes(t *testing.T, nodeIDs ...string) {
 	t.Helper()
+
 	for _, nodeID := range nodeIDs {
 		params := &nodes.RemoveNodeParams{
-			Body:    nodes.RemoveNodeBody{NodeID: nodeID},
-			Context: context.TODO(),
+			Body: nodes.RemoveNodeBody{
+				NodeID: nodeID,
+			},
+			Context: context.Background(),
 		}
 		res, err := client.Default.Nodes.RemoveNode(params)
 		assert.NoError(t, err)
@@ -41,27 +40,31 @@ func removeNodes(t *testing.T, nodeIDs ...string) {
 	}
 }
 
-func addGenericNode(t *testing.T, nodeName string) *nodes.AddGenericNodeOKBody {
+func addGenericNode(t *testing.T, nodeName string) *nodes.AddGenericNodeOKBodyGeneric {
 	t.Helper()
+
 	params := &nodes.AddGenericNodeParams{
 		Body: nodes.AddGenericNodeBody{
 			NodeName: nodeName,
 		},
-		Context: context.TODO(),
+		Context: pmmapitests.Context,
 	}
 	res, err := client.Default.Nodes.AddGenericNode(params)
 	assert.NoError(t, err)
 	require.NotNil(t, res)
-	return res.Payload
+	require.NotNil(t, res.Payload)
+	require.NotNil(t, res.Payload.Generic)
+	return res.Payload.Generic
 }
 
 func addRemoteNode(t *testing.T, nodeName string) *nodes.AddRemoteNodeOKBody {
 	t.Helper()
+
 	params := &nodes.AddRemoteNodeParams{
 		Body: nodes.AddRemoteNodeBody{
 			NodeName: nodeName,
 		},
-		Context: context.TODO(),
+		Context: pmmapitests.Context,
 	}
 	res, err := client.Default.Nodes.AddRemoteNode(params)
 	assert.NoError(t, err)
@@ -71,10 +74,13 @@ func addRemoteNode(t *testing.T, nodeName string) *nodes.AddRemoteNodeOKBody {
 
 func removeServices(t *testing.T, serviceIDs ...string) {
 	t.Helper()
+
 	for _, serviceID := range serviceIDs {
 		params := &services.RemoveServiceParams{
-			Body:    services.RemoveServiceBody{ServiceID: serviceID},
-			Context: context.TODO(),
+			Body: services.RemoveServiceBody{
+				ServiceID: serviceID,
+			},
+			Context: context.Background(),
 		}
 		res, err := client.Default.Services.RemoveService(params)
 		assert.NoError(t, err)
@@ -82,11 +88,12 @@ func removeServices(t *testing.T, serviceIDs ...string) {
 	}
 }
 
-func addMySQLService(t *testing.T, body services.AddMySQLServiceBody) *services.AddMySQLServiceOKBody {
+func addMySQLService(t *testing.T, body *services.AddMySQLServiceBody) *services.AddMySQLServiceOKBody {
 	t.Helper()
+
 	params := &services.AddMySQLServiceParams{
-		Body:    body,
-		Context: context.TODO(),
+		Body:    *body,
+		Context: pmmapitests.Context,
 	}
 	res, err := client.Default.Services.AddMySQLService(params)
 	assert.NoError(t, err)
@@ -96,10 +103,13 @@ func addMySQLService(t *testing.T, body services.AddMySQLServiceBody) *services.
 
 func removeAgents(t *testing.T, agentIDs ...string) {
 	t.Helper()
+
 	for _, agentID := range agentIDs {
 		params := &agents.RemoveAgentParams{
-			Body:    agents.RemoveAgentBody{AgentID: agentID},
-			Context: context.TODO(),
+			Body: agents.RemoveAgentBody{
+				AgentID: agentID,
+			},
+			Context: context.Background(),
 		}
 		res, err := client.Default.Agents.RemoveAgent(params)
 		assert.NoError(t, err)
@@ -107,11 +117,14 @@ func removeAgents(t *testing.T, agentIDs ...string) {
 	}
 }
 
-func addPMMAgent(t *testing.T, node string) *agents.AddPMMAgentOKBody {
+func addPMMAgent(t *testing.T, nodeID string) *agents.AddPMMAgentOKBody {
 	t.Helper()
+
 	res, err := client.Default.Agents.AddPMMAgent(&agents.AddPMMAgentParams{
-		Body:    agents.AddPMMAgentBody{NodeID: node},
-		Context: context.TODO(),
+		Body: agents.AddPMMAgentBody{
+			RunsOnNodeID: nodeID,
+		},
+		Context: pmmapitests.Context,
 	})
 	assert.NoError(t, err)
 	require.NotNil(t, res)
@@ -120,29 +133,57 @@ func addPMMAgent(t *testing.T, node string) *agents.AddPMMAgentOKBody {
 
 func addMySqldExporter(t *testing.T, body agents.AddMySqldExporterBody) *agents.AddMySqldExporterOKBody {
 	t.Helper()
+
 	res, err := client.Default.Agents.AddMySqldExporter(&agents.AddMySqldExporterParams{
 		Body:    body,
-		Context: context.TODO(),
+		Context: pmmapitests.Context,
 	})
 	assert.NoError(t, err)
 	require.NotNil(t, res)
 	return res.Payload
 }
 
-func assertEqualAPIError(t *testing.T, err error, expectedCode int) bool {
+func addMongoDBExporter(t *testing.T, body agents.AddMongoDBExporterBody) *agents.AddMongoDBExporterOKBody {
 	t.Helper()
-	expectedError := &runtime.APIError{
-		OperationName: "unknown error",
-		Code:          expectedCode,
+
+	res, err := client.Default.Agents.AddMongoDBExporter(&agents.AddMongoDBExporterParams{
+		Body:    body,
+		Context: pmmapitests.Context,
+	})
+	assert.NoError(t, err)
+	require.NotNil(t, res)
+	return res.Payload
+}
+
+func assertEqualAPIError(t *testing.T, err error, expected ServerResponse) bool {
+	t.Helper()
+
+	if !assert.Error(t, err) {
+		return false
 	}
-	assert.Error(t, err)
-	err.(*runtime.APIError).Response = nil
-	return assert.Equal(t, expectedError, err)
+
+	assert.Equal(t, expected.Code, err.(ErrorResponse).Code())
+
+	// Have to use reflect because there are a lot of types with the same structure and different names.
+	val := reflect.ValueOf(err)
+
+	payload := val.Elem().FieldByName("Payload")
+	if !assert.True(t, payload.IsValid(), "Wrong response structure. There is no field Payload.") {
+		return false
+	}
+
+	errorField := payload.Elem().FieldByName("Error")
+	if !assert.True(t, errorField.IsValid(), "Wrong response structure. There is no field Error in Payload.") {
+		return false
+	}
+
+	return assert.Equal(t, expected.Error, errorField.String())
 }
 
 func assertMySQLServiceExists(t *testing.T, res *services.ListServicesOK, serviceID string) bool {
 	t.Helper()
-	return assert.Conditionf(t, func() (success bool) {
+
+	return assert.Conditionf(t, func() bool {
 		for _, v := range res.Payload.Mysql {
 			if v.ServiceID == serviceID {
 				return true
@@ -154,7 +195,8 @@ func assertMySQLServiceExists(t *testing.T, res *services.ListServicesOK, servic
 
 func assertMySQLServiceNotExist(t *testing.T, res *services.ListServicesOK, serviceID string) bool {
 	t.Helper()
-	return assert.Conditionf(t, func() (success bool) {
+
+	return assert.Conditionf(t, func() bool {
 		for _, v := range res.Payload.Mysql {
 			if v.ServiceID == serviceID {
 				return false
@@ -165,7 +207,7 @@ func assertMySQLServiceNotExist(t *testing.T, res *services.ListServicesOK, serv
 }
 
 func assertMySQLExporterExists(t *testing.T, res *agents.ListAgentsOK, mySqldExporterID string) bool {
-	return assert.Conditionf(t, func() (success bool) {
+	return assert.Conditionf(t, func() bool {
 		for _, v := range res.Payload.MysqldExporter {
 			if v.AgentID == mySqldExporterID {
 				return true
@@ -176,7 +218,7 @@ func assertMySQLExporterExists(t *testing.T, res *agents.ListAgentsOK, mySqldExp
 }
 
 func assertMySQLExporterNotExists(t *testing.T, res *agents.ListAgentsOK, mySqldExporterID string) bool {
-	return assert.Conditionf(t, func() (success bool) {
+	return assert.Conditionf(t, func() bool {
 		for _, v := range res.Payload.MysqldExporter {
 			if v.AgentID == mySqldExporterID {
 				return false
@@ -187,7 +229,7 @@ func assertMySQLExporterNotExists(t *testing.T, res *agents.ListAgentsOK, mySqld
 }
 
 func assertPMMAgentExists(t *testing.T, res *agents.ListAgentsOK, pmmAgentID string) bool {
-	return assert.Conditionf(t, func() (success bool) {
+	return assert.Conditionf(t, func() bool {
 		for _, v := range res.Payload.PMMAgent {
 			if v.AgentID == pmmAgentID {
 				return true
@@ -198,7 +240,7 @@ func assertPMMAgentExists(t *testing.T, res *agents.ListAgentsOK, pmmAgentID str
 }
 
 func assertPMMAgentNotExists(t *testing.T, res *agents.ListAgentsOK, pmmAgentID string) bool {
-	return assert.Conditionf(t, func() (success bool) {
+	return assert.Conditionf(t, func() bool {
 		for _, v := range res.Payload.PMMAgent {
 			if v.AgentID == pmmAgentID {
 				return false
