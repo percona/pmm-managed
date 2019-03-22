@@ -65,6 +65,7 @@ func (as *AgentsService) makeAgent(q *reform.Querier, row *models.Agent) (invent
 		return &inventorypb.NodeExporter{
 			AgentId:      row.AgentID,
 			PmmAgentId:   pointer.GetString(row.PMMAgentID),
+			Disabled:     row.Disabled,
 			Status:       inventorypb.AgentStatus(inventorypb.AgentStatus_value[row.Status]),
 			ListenPort:   uint32(pointer.GetUint16(row.ListenPort)),
 			CustomLabels: labels,
