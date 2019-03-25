@@ -111,6 +111,7 @@ const (
 	MySQLdExporterType          AgentType = "mysqld_exporter"
 	MongoDBExporterType         AgentType = "mongodb_exporter"
 	QANMySQLPerfSchemaAgentType AgentType = "qan-mysql-perfschema-agent"
+	PostgresExporterType        AgentType = "postgres_exporter"
 )
 
 // Agent represents Agent as stored in database.
@@ -124,6 +125,7 @@ type Agent struct {
 	CreatedAt    time.Time `reform:"created_at"`
 	UpdatedAt    time.Time `reform:"updated_at"`
 
+	Disabled   bool    `reform:"disabled"`
 	Status     string  `reform:"status"`
 	ListenPort *uint16 `reform:"listen_port"`
 	Version    *string `reform:"version"`
