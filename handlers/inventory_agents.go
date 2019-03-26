@@ -135,6 +135,7 @@ func (s *agentsServer) AddNodeExporter(ctx context.Context, req *inventorypb.Add
 	return res, nil
 }
 
+// ChangeNodeExporter changes disabled flag and custom labels of node_exporter Agent.
 func (s *agentsServer) ChangeNodeExporter(ctx context.Context, req *inventorypb.ChangeNodeExporterRequest) (*inventorypb.ChangeNodeExporterResponse, error) {
 	agent, err := s.s.ChangeNodeExporter(ctx, req)
 	if err != nil {
@@ -160,6 +161,7 @@ func (s *agentsServer) AddMySQLdExporter(ctx context.Context, req *inventorypb.A
 	return res, nil
 }
 
+// ChangeMySQLdExporter changes disabled flag and custom labels of mysqld_exporter Agent.
 func (s *agentsServer) ChangeMySQLdExporter(ctx context.Context, req *inventorypb.ChangeMySQLdExporterRequest) (*inventorypb.ChangeMySQLdExporterResponse, error) {
 	agent, err := s.s.ChangeMySQLdExporter(ctx, req)
 	if err != nil {
@@ -203,6 +205,7 @@ func (s *agentsServer) AddMongoDBExporter(ctx context.Context, req *inventorypb.
 	return res, nil
 }
 
+// ChangeMongoDBExporter changes disabled flag and custom labels of mongo_exporter Agent.
 func (s *agentsServer) ChangeMongoDBExporter(ctx context.Context, req *inventorypb.ChangeMongoDBExporterRequest) (*inventorypb.ChangeMongoDBExporterResponse, error) {
 	agent, err := s.s.ChangeMongoDBExporter(ctx, req)
 	if err != nil {
@@ -228,6 +231,7 @@ func (s *agentsServer) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *inve
 	return res, nil
 }
 
+// ChangeQANMySQLPerfSchemaAgent changes disabled flag and custom labels of MySQL PerfSchema QAN Agent.
 func (s *agentsServer) ChangeQANMySQLPerfSchemaAgent(ctx context.Context, req *inventorypb.ChangeQANMySQLPerfSchemaAgentRequest) (*inventorypb.ChangeQANMySQLPerfSchemaAgentResponse, error) {
 	agent, err := s.s.ChangeQANMySQLPerfSchemaAgent(ctx, req)
 	if err != nil {
@@ -244,6 +248,7 @@ func (s *agentsServer) AddPostgresExporter(context.Context, *inventorypb.AddPost
 	panic("not implemented")
 }
 
+// ChangeMongoDBExporter changes disabled flag and custom labels of postgres_exporter Agent.
 func (s *agentsServer) ChangePostgresExporter(ctx context.Context, req *inventorypb.ChangePostgresExporterRequest) (*inventorypb.ChangePostgresExporterResponse, error) {
 	agent, err := s.s.ChangePostgresExporter(ctx, req)
 	if err != nil {
