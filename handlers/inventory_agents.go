@@ -248,7 +248,7 @@ func (s *agentsServer) AddPostgresExporter(context.Context, *inventorypb.AddPost
 	panic("not implemented")
 }
 
-// ChangeMongoDBExporter changes disabled flag and custom labels of postgres_exporter Agent.
+// ChangePostgresExporter changes disabled flag and custom labels of postgres_exporter Agent.
 func (s *agentsServer) ChangePostgresExporter(ctx context.Context, req *inventorypb.ChangePostgresExporterRequest) (*inventorypb.ChangePostgresExporterResponse, error) {
 	agent, err := s.s.ChangePostgresExporter(ctx, req)
 	if err != nil {

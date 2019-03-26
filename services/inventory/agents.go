@@ -439,7 +439,7 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, q *reform.Querie
 	return res, nil
 }
 
-// ChangeNodeExporter updates mysqld_exporter Agent with given parameters.
+// ChangeMySQLdExporter updates mysqld_exporter Agent with given parameters.
 func (as *AgentsService) ChangeMySQLdExporter(ctx context.Context, req *inventorypb.ChangeMySQLdExporterRequest) (*inventorypb.MySQLdExporter, error) {
 	var res *inventorypb.MySQLdExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
@@ -553,7 +553,7 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, q *reform.Queri
 	return res, nil
 }
 
-// ChangeNodeExporter updates mongo_exporter Agent with given parameters.
+// ChangeMongoDBExporter updates mongo_exporter Agent with given parameters.
 func (as *AgentsService) ChangeMongoDBExporter(ctx context.Context, req *inventorypb.ChangeMongoDBExporterRequest) (*inventorypb.MongoDBExporter, error) {
 	var res *inventorypb.MongoDBExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
@@ -648,7 +648,7 @@ func (as *AgentsService) AddQANMySQLPerfSchemaAgent(ctx context.Context, q *refo
 	return res, err
 }
 
-// ChangeNodeExporter updates MySQL PerfSchema QAN Agent with given parameters.
+// ChangeQANMySQLPerfSchemaAgent updates MySQL PerfSchema QAN Agent with given parameters.
 func (as *AgentsService) ChangeQANMySQLPerfSchemaAgent(ctx context.Context, req *inventorypb.ChangeQANMySQLPerfSchemaAgentRequest) (*inventorypb.QANMySQLPerfSchemaAgent, error) {
 	var res *inventorypb.QANMySQLPerfSchemaAgent
 	e := as.db.InTransaction(func(tx *reform.TX) error {
@@ -748,7 +748,7 @@ func (as *AgentsService) AddPostgresExporter(ctx context.Context, q *reform.Quer
 	return res, nil
 }
 
-// ChangeNodeExporter updates postgres_exporter Agent with given parameters.
+// ChangePostgresExporter updates postgres_exporter Agent with given parameters.
 func (as *AgentsService) ChangePostgresExporter(ctx context.Context, req *inventorypb.ChangePostgresExporterRequest) (*inventorypb.PostgresExporter, error) {
 	var res *inventorypb.PostgresExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
