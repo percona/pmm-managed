@@ -129,10 +129,6 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 		l.Infof("Disconnecting client: %s.", disconnectReason)
 	}()
 
-	if err := r.sendAgentMetadata(stream, agent.id); err != nil {
-		disconnectReason = "unknown"
-		return err
-	}
 	// send first SetStateRequest concurrently with ping from agent
 	go r.SendSetStateRequest(ctx, agent.id)
 
@@ -203,7 +199,8 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*agentInfo, err
 	ctx := stream.Context()
 	l := logger.Get(ctx)
 	md := agentpb.GetAgentConnectMetadata(ctx)
-	if err := authenticate(&md, r.db.Querier); err != nil {
+	runsOnNodeId, err := authenticate(&md, r.db.Querier)
+	if err != nil {
 		l.Warnf("Failed to authenticate connected pmm-agent %+v.", md)
 		return nil, err
 	}
@@ -216,6 +213,11 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*agentInfo, err
 		close(agent.kick)
 	}
 
+	if err := r.sendAgentMetadata(stream, runsOnNodeId); err != nil {
+		l.Warnf("Failed to send pmm-agent metadata")
+		return nil, err
+	}
+
 	agent := &agentInfo{
 		channel: NewChannel(stream, r.sharedMetrics),
 		id:      md.ID,
@@ -225,28 +227,33 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*agentInfo, err
 	return agent, nil
 }
 
-func authenticate(md *agentpb.AgentConnectMetadata, q *reform.Querier) error {
+func authenticate(md *agentpb.AgentConnectMetadata, q *reform.Querier) (string, error) {
 	if md.ID == "" {
-		return status.Error(codes.Unauthenticated, "Empty Agent ID.")
+		return "", status.Error(codes.Unauthenticated, "Empty Agent ID.")
 	}
 
 	row := &models.Agent{AgentID: md.ID}
 	if err := q.Reload(row); err != nil {
 		if err == reform.ErrNoRows {
-			return status.Errorf(codes.Unauthenticated, "No Agent with ID %q.", md.ID)
+			return "", status.Errorf(codes.Unauthenticated, "No Agent with ID %q.", md.ID)
 		}
-		return errors.Wrap(err, "failed to find agent")
+		return "", errors.Wrap(err, "failed to find agent")
 	}
 
 	if row.AgentType != models.PMMAgentType {
-		return status.Errorf(codes.Unauthenticated, "No pmm-agent with ID %q.", md.ID)
+		return "", status.Errorf(codes.Unauthenticated, "No pmm-agent with ID %q.", md.ID)
+	}
+
+	if pointer.GetString(row.RunsOnNodeID) == "" {
+		return "", status.Errorf(codes.Unauthenticated, "Can't get 'runs_on_node_id' for pmm-agent with ID %q.", md.ID)
 	}
 
 	row.Version = &md.Version
 	if err := q.Update(row); err != nil {
-		return errors.Wrap(err, "failed to update agent")
+		return "", errors.Wrap(err, "failed to update agent")
 	}
-	return nil
+
+	return pointer.GetString(row.RunsOnNodeID), nil
 }
 
 // Kick disconnects pmm-agent with given ID.
@@ -414,24 +421,12 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 	l.Infof("SetState response: %+v.", res)
 }
 
-func (r *Registry) sendAgentMetadata(stream agentpb.Agent_ConnectServer, agentID string) error {
+func (r *Registry) sendAgentMetadata(stream agentpb.Agent_ConnectServer, RunsOnNodeID string) error {
 	ctx := stream.Context()
 	l := logger.Get(ctx)
 
-	// TODO: Refactor. Use repository or service to get an agent.
-	row := &models.Agent{AgentID: agentID}
-	if err := r.db.Reload(row); err != nil {
-		if err == reform.ErrNoRows {
-			return status.Errorf(codes.NotFound, "No Agent with ID %q.", agentID)
-		}
-		return errors.Wrap(err, "failed to find agent")
-	}
-	if row.AgentType != models.PMMAgentType {
-		return status.Errorf(codes.NotFound, "No pmm-agent with ID %q.", agentID)
-	}
-
 	header := metadata.Pairs(
-		"pmm-agent-node-id", pointer.GetString(row.RunsOnNodeID),
+		"pmm-agent-node-id", RunsOnNodeID,
 		"pmm-managed-version", version.Version,
 	)
 	l.Infof("Sending metadata: %s", header)
