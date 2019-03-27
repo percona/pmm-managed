@@ -27,6 +27,7 @@ import (
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -420,7 +421,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 	l.Infof("SetState response: %+v.", res)
 }
 
-func (r *Registry) sendAgentMetadata(stream agentpb.Agent_ConnectServer, runsOnNodeID string) error {
+func (r *Registry) sendAgentMetadata(stream grpc.ServerStream, runsOnNodeID string) error {
 	ctx := stream.Context()
 	l := logger.Get(ctx)
 
