@@ -28,7 +28,6 @@ import (
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
@@ -425,14 +424,15 @@ func (r *Registry) sendAgentMetadata(stream agentpb.Agent_ConnectServer, runsOnN
 	ctx := stream.Context()
 	l := logger.Get(ctx)
 
-	header := metadata.Pairs(
-		"pmm-agent-node-id", runsOnNodeID,
-		"pmm-managed-version", version.Version,
-	)
-	l.Infof("Sending metadata: %s", header)
-	if err := stream.SendHeader(header); err != nil {
-		return status.Errorf(codes.Internal, "Can't send server metadata to client.")
+	md := agentpb.AgentServerMetadata{
+		AgentRunsOnNodeID: runsOnNodeID,
+		ServerVersion:     version.Version,
 	}
+	l.Infof("Sending metadata: %v", md)
+	if err := agentpb.SendAgentServerMetadata(stream, md); err != nil {
+		return err
+	}
+
 	return nil
 }
 
