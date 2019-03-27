@@ -107,7 +107,7 @@ func (s *agentsServer) GetAgent(ctx context.Context, req *inventorypb.GetAgentRe
 
 // AddPMMAgent adds pmm-agent Agent.
 func (s *agentsServer) AddPMMAgent(ctx context.Context, req *inventorypb.AddPMMAgentRequest) (*inventorypb.AddPMMAgentResponse, error) {
-	agent, err := s.s.AddPMMAgent(ctx, req.RunsOnNodeId)
+	agent, err := s.s.AddPMMAgent(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -244,8 +244,18 @@ func (s *agentsServer) ChangeQANMySQLPerfSchemaAgent(ctx context.Context, req *i
 	return res, nil
 }
 
-func (s *agentsServer) AddPostgresExporter(context.Context, *inventorypb.AddPostgresExporterRequest) (*inventorypb.AddPostgresExporterResponse, error) {
-	panic("not implemented")
+// AddPostgresExporter adds postgres_exporter Agent.
+func (s *agentsServer) AddPostgresExporter(ctx context.Context, req *inventorypb.AddPostgresExporterRequest) (*inventorypb.AddPostgresExporterResponse, error) {
+	agent, err := s.s.AddPostgresExporter(ctx, s.db.Querier, req)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &inventorypb.AddPostgresExporterResponse{
+		PostgresExporter: agent,
+	}
+	return res, nil
+
 }
 
 // ChangePostgresExporter changes disabled flag and custom labels of postgres_exporter Agent.
