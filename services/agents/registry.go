@@ -199,7 +199,7 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*agentInfo, err
 	ctx := stream.Context()
 	l := logger.Get(ctx)
 	md := agentpb.GetAgentConnectMetadata(ctx)
-	runsOnNodeId, err := authenticate(&md, r.db.Querier)
+	runsOnNodeID, err := authenticate(&md, r.db.Querier)
 	if err != nil {
 		l.Warnf("Failed to authenticate connected pmm-agent %+v.", md)
 		return nil, err
@@ -213,7 +213,7 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*agentInfo, err
 		close(agent.kick)
 	}
 
-	if err := r.sendAgentMetadata(stream, runsOnNodeId); err != nil {
+	if err := r.sendAgentMetadata(stream, runsOnNodeID); err != nil {
 		l.Warnf("Failed to send pmm-agent metadata")
 		return nil, err
 	}
