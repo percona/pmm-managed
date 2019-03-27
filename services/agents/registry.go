@@ -227,7 +227,7 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*agentInfo, err
 	return agent, nil
 }
 
-func authenticate(md *agentpb.AgentConnectMetadata, q *reform.Querier) (string, error) {
+func authenticate(md *agentpb.AgentConnectMetadata, q *reform.Querier) (string, error) { //nolint:unused
 	if md.ID == "" {
 		return "", status.Error(codes.Unauthenticated, "Empty Agent ID.")
 	}
@@ -421,7 +421,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 	l.Infof("SetState response: %+v.", res)
 }
 
-func (r *Registry) sendAgentMetadata(stream grpc.ServerStream, runsOnNodeID string) error {
+func (r *Registry) sendAgentMetadata(stream grpc.ServerStream, runsOnNodeID string) error { //nolint:unused
 	ctx := stream.Context()
 	l := logger.Get(ctx)
 
