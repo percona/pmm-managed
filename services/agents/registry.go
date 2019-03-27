@@ -24,9 +24,11 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/percona/pmm/api/agentpb"
+	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
@@ -127,6 +129,10 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 		l.Infof("Disconnecting client: %s.", disconnectReason)
 	}()
 
+	if err := r.sendAgentMetadata(stream, agent.id); err != nil {
+		disconnectReason = "unknown"
+		return err
+	}
 	// send first SetStateRequest concurrently with ping from agent
 	go r.SendSetStateRequest(ctx, agent.id)
 
@@ -406,6 +412,33 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		SetState: state,
 	})
 	l.Infof("SetState response: %+v.", res)
+}
+
+func (r *Registry) sendAgentMetadata(stream agentpb.Agent_ConnectServer, agentID string) error {
+	ctx := stream.Context()
+	l := logger.Get(ctx)
+
+	// TODO: Refactor. Use repository or service to get an agent.
+	row := &models.Agent{AgentID: agentID}
+	if err := r.db.Reload(row); err != nil {
+		if err == reform.ErrNoRows {
+			return status.Errorf(codes.NotFound, "No Agent with ID %q.", agentID)
+		}
+		return errors.Wrap(err, "failed to find agent")
+	}
+	if row.AgentType != models.PMMAgentType {
+		return status.Errorf(codes.NotFound, "No pmm-agent with ID %q.", agentID)
+	}
+
+	header := metadata.Pairs(
+		"pmm-agent-node-id", pointer.GetString(row.RunsOnNodeID),
+		"pmm-managed-version", version.Version,
+	)
+	l.Infof("Sending metadata: %s", header)
+	if err := stream.SendHeader(header); err != nil {
+		return status.Errorf(codes.Internal, "Can't send server metadata to client.")
+	}
+	return nil
 }
 
 // Describe implements prometheus.Collector.
