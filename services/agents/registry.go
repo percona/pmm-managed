@@ -421,12 +421,12 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 	l.Infof("SetState response: %+v.", res)
 }
 
-func (r *Registry) sendAgentMetadata(stream agentpb.Agent_ConnectServer, RunsOnNodeID string) error {
+func (r *Registry) sendAgentMetadata(stream agentpb.Agent_ConnectServer, runsOnNodeID string) error {
 	ctx := stream.Context()
 	l := logger.Get(ctx)
 
 	header := metadata.Pairs(
-		"pmm-agent-node-id", RunsOnNodeID,
+		"pmm-agent-node-id", runsOnNodeID,
 		"pmm-managed-version", version.Version,
 	)
 	l.Infof("Sending metadata: %s", header)
