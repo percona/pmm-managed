@@ -430,8 +430,8 @@ func (r *Registry) sendAgentMetadata(stream grpc.ServerStream, runsOnNodeID stri
 		ServerVersion:     version.Version,
 	}
 	l.Infof("Sending metadata: %v", md)
-	if err := agentpb.SendAgentServerMetadata(stream, md); err != nil {
-		return err
+	if err := agentpb.SendAgentServerMetadata(stream, &md); err != nil {
+		return status.Errorf(codes.Internal, "Can't send server metadata to client.")
 	}
 
 	return nil
