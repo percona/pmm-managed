@@ -25,7 +25,7 @@ script:
   - git status
   - git diff --exit-code
 
-  - make
+  - make build
 
 notifications:
   slack:

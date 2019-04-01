@@ -1,9 +1,11 @@
-all:
+build:
 	go install -v ./...
+	go test -i -v ./...
 	go test -c -v ./inventory
 	go test -c -v ./server
 
-race:
-	go install -v -race ./...
-	go test -c -v -race ./inventory
-	go test -c -v -race ./server
+run:
+	go test -v ./...
+
+run-race:
+	go test -v -race ./...

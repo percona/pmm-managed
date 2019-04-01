@@ -182,8 +182,11 @@ func TestContainerNode(t *testing.T) {
 		expectedResponse := &nodes.GetNodeOK{
 			Payload: &nodes.GetNodeOKBody{
 				Container: &nodes.GetNodeOKBodyContainer{
-					NodeID:   res.Payload.Container.NodeID,
-					NodeName: nodeName,
+					NodeID:              res.Payload.Container.NodeID,
+					NodeName:            nodeName,
+					DockerContainerID:   "docker-id",
+					DockerContainerName: "docker-name",
+					MachineID:           "machine-id",
 				},
 			},
 		}
