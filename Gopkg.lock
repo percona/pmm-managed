@@ -166,7 +166,7 @@
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:9b770be85bccd8f97d587d89a1344f29e20f96334d0210f12d8b54a5f6a9e4fb"
+  digest = "1:281c2a53d4a10b44eb1927b669cc0ed0f92fb6376cafb2047f1e28e222409e4d"
   name = "github.com/percona/pmm"
   packages = [
     "api/inventory/json/client",
@@ -175,7 +175,7 @@
     "api/inventory/json/client/services",
   ]
   pruneopts = "NUT"
-  revision = "3e0ee23ae0c2346284270e9a4e44af6d074a7603"
+  revision = "06713600ef6fd15c2ea657abc963b3fa8bc36d4c"
 
 [[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"

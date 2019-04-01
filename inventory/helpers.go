@@ -88,14 +88,27 @@ func removeServices(t *testing.T, serviceIDs ...string) {
 	}
 }
 
-func addMySQLService(t *testing.T, body *services.AddMySQLServiceBody) *services.AddMySQLServiceOKBody {
+func addMySQLService(t *testing.T, body services.AddMySQLServiceBody) *services.AddMySQLServiceOKBody {
 	t.Helper()
 
 	params := &services.AddMySQLServiceParams{
-		Body:    *body,
+		Body:    body,
 		Context: pmmapitests.Context,
 	}
 	res, err := client.Default.Services.AddMySQLService(params)
+	assert.NoError(t, err)
+	require.NotNil(t, res)
+	return res.Payload
+}
+
+func addPostgreSQLService(t *testing.T, body services.AddPostgreSQLServiceBody) *services.AddPostgreSQLServiceOKBody {
+	t.Helper()
+
+	params := &services.AddPostgreSQLServiceParams{
+		Body:    body,
+		Context: pmmapitests.Context,
+	}
+	res, err := client.Default.Services.AddPostgreSQLService(params)
 	assert.NoError(t, err)
 	require.NotNil(t, res)
 	return res.Payload
@@ -147,6 +160,18 @@ func addMongoDBExporter(t *testing.T, body agents.AddMongoDBExporterBody) *agent
 	t.Helper()
 
 	res, err := client.Default.Agents.AddMongoDBExporter(&agents.AddMongoDBExporterParams{
+		Body:    body,
+		Context: pmmapitests.Context,
+	})
+	assert.NoError(t, err)
+	require.NotNil(t, res)
+	return res.Payload
+}
+
+func addPostgresExporter(t *testing.T, body agents.AddPostgresExporterBody) *agents.AddPostgresExporterOKBody {
+	t.Helper()
+
+	res, err := client.Default.Agents.AddPostgresExporter(&agents.AddPostgresExporterParams{
 		Body:    body,
 		Context: pmmapitests.Context,
 	})

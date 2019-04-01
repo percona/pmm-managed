@@ -24,7 +24,7 @@ func TestServices(t *testing.T) {
 		remoteNodeID := remoteNodeOKBody.Remote.NodeID
 		defer removeNodes(t, remoteNodeID)
 
-		service := addMySQLService(t, &services.AddMySQLServiceBody{
+		service := addMySQLService(t, services.AddMySQLServiceBody{
 			NodeID:      genericNodeID,
 			Address:     "localhost",
 			Port:        3306,
@@ -33,7 +33,7 @@ func TestServices(t *testing.T) {
 		serviceID := service.Mysql.ServiceID
 		defer removeServices(t, serviceID)
 
-		remoteService := addMySQLService(t, &services.AddMySQLServiceBody{
+		remoteService := addMySQLService(t, services.AddMySQLServiceBody{
 			NodeID:      remoteNodeID,
 			Address:     "localhost",
 			Port:        3306,
@@ -61,7 +61,7 @@ func TestServices(t *testing.T) {
 		remoteNodeID := remoteNodeOKBody.Remote.NodeID
 		defer removeNodes(t, remoteNodeID)
 
-		service := addMySQLService(t, &services.AddMySQLServiceBody{
+		service := addMySQLService(t, services.AddMySQLServiceBody{
 			NodeID:      genericNodeID,
 			Address:     "localhost",
 			Port:        3306,
@@ -70,7 +70,7 @@ func TestServices(t *testing.T) {
 		serviceID := service.Mysql.ServiceID
 		defer removeServices(t, serviceID)
 
-		remoteService := addMySQLService(t, &services.AddMySQLServiceBody{
+		remoteService := addMySQLService(t, services.AddMySQLServiceBody{
 			NodeID:      remoteNodeID,
 			Address:     "localhost",
 			Port:        3306,
