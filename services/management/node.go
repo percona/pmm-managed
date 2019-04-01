@@ -56,7 +56,7 @@ func (s *NodeService) Register(ctx context.Context, req *managementpb.RegisterNo
 		node, err := s.findNodeByName(ctx, tx.Querier, req.NodeName)
 		switch err.(type) {
 		case nodeNotFoundErr:
-			node, err = s.createNewNode(ctx, tx.Querier, req, res)
+			node, err = s.createNewNode(ctx, tx.Querier, req)
 			if err != nil {
 				return errors.Wrap(err, "can't create node")
 			}
@@ -66,12 +66,7 @@ func (s *NodeService) Register(ctx context.Context, req *managementpb.RegisterNo
 			return err
 		}
 
-		switch n := node.(type) {
-		case *inventorypb.GenericNode:
-			res.GenericNode = n
-		case *inventorypb.ContainerNode:
-			res.ContainerNode = n
-		}
+		s.addNodeToResponse(node, res)
 
 		pmmAgent, err := s.findPmmAgentByNodeID(ctx, tx.Querier, node.ID())
 		switch err.(type) {
@@ -109,7 +104,7 @@ func (s *NodeService) Register(ctx context.Context, req *managementpb.RegisterNo
 	return res, nil
 }
 
-func (s *NodeService) createNewNode(ctx context.Context, q *reform.Querier, req *managementpb.RegisterNodeRequest, res *managementpb.RegisterNodeResponse) (inventorypb.Node, error) {
+func (s *NodeService) createNewNode(ctx context.Context, q *reform.Querier, req *managementpb.RegisterNodeRequest) (inventorypb.Node, error) {
 	var nodeType models.NodeType
 	switch req.NodeType {
 	case inventorypb.NodeType_GENERIC_NODE:
@@ -156,7 +151,7 @@ func (s *NodeService) findNodeByName(ctx context.Context, q *reform.Querier, nam
 	return nil, nfErr
 }
 
-func (s *NodeService) findPmmAgentByNodeID(ctx context.Context, q *reform.Querier, nodeId string) (pmmAgent *inventorypb.PMMAgent, err error) {
+func (s *NodeService) findPmmAgentByNodeID(ctx context.Context, q *reform.Querier, nodeID string) (pmmAgent *inventorypb.PMMAgent, err error) {
 	agents, err := s.ag.List(ctx, q, inventory.AgentFilters{})
 	if err != nil {
 		return nil, err
@@ -165,7 +160,7 @@ func (s *NodeService) findPmmAgentByNodeID(ctx context.Context, q *reform.Querie
 	var ok bool
 	for _, a := range agents {
 		pmmAgent, ok = a.(*inventorypb.PMMAgent)
-		if ok && pmmAgent.RunsOnNodeId == nodeId {
+		if ok && pmmAgent.RunsOnNodeId == nodeID {
 			return pmmAgent, nil
 		}
 	}
@@ -174,8 +169,8 @@ func (s *NodeService) findPmmAgentByNodeID(ctx context.Context, q *reform.Querie
 	return pmmAgent, anfErr
 }
 
-func (s *NodeService) findNodeExporterByPmmAgentID(ctx context.Context, q *reform.Querier, pmmAgentId string) (nodeExporter *inventorypb.NodeExporter, err error) {
-	agents, err := s.ag.List(ctx, q, inventory.AgentFilters{PMMAgentID: pmmAgentId})
+func (s *NodeService) findNodeExporterByPmmAgentID(ctx context.Context, q *reform.Querier, pmmAgentID string) (nodeExporter *inventorypb.NodeExporter, err error) {
+	agents, err := s.ag.List(ctx, q, inventory.AgentFilters{PMMAgentID: pmmAgentID})
 	if err != nil {
 		return nil, err
 	}
@@ -183,13 +178,22 @@ func (s *NodeService) findNodeExporterByPmmAgentID(ctx context.Context, q *refor
 	var ok bool
 	for _, a := range agents {
 		nodeExporter, ok = a.(*inventorypb.NodeExporter)
-		if ok && nodeExporter.PmmAgentId == pmmAgentId {
+		if ok && nodeExporter.PmmAgentId == pmmAgentID {
 			return nodeExporter, nil
 		}
 	}
 
 	var anfErr agentNotFoundErr = "agent not found"
 	return nodeExporter, anfErr
+}
+
+func (s *NodeService) addNodeToResponse(node inventorypb.Node, res *managementpb.RegisterNodeResponse) {
+	switch n := node.(type) {
+	case *inventorypb.GenericNode:
+		res.GenericNode = n
+	case *inventorypb.ContainerNode:
+		res.ContainerNode = n
+	}
 }
 
 type nodeNotFoundErr string
