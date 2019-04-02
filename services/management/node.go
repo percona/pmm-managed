@@ -22,7 +22,6 @@ import (
 	"github.com/AlekSi/pointer"
 	inventorypb "github.com/percona/pmm/api/inventory"
 	"github.com/percona/pmm/api/managementpb"
-	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -58,7 +57,7 @@ func (s *NodeService) Register(ctx context.Context, req *managementpb.RegisterNo
 		case nodeNotFoundErr:
 			node, err = s.createNewNode(ctx, tx.Querier, req)
 			if err != nil {
-				return errors.Wrap(err, "can't create node")
+				return err
 			}
 		case nil:
 			// noop
