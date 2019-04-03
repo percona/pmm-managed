@@ -228,7 +228,7 @@ func (as *AgentsService) AddPMMAgent(ctx context.Context, req *inventorypb.AddPM
 
 	var res *inventorypb.PMMAgent
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		row, err := models.AgentCreatePmm(tx.Querier, req.RunsOnNodeId, req.CustomLabels)
+		row, err := models.AgentAddPmmAgent(tx.Querier, req.RunsOnNodeId, req.CustomLabels)
 		if err != nil {
 			return err
 		}

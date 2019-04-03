@@ -30,6 +30,7 @@ import (
 	"gopkg.in/reform.v1"
 )
 
+// AgentFindByID finds agent by ID.
 func AgentFindByID(q *reform.Querier, id string) (*Agent, error) {
 	if id == "" {
 		return nil, status.Error(codes.InvalidArgument, "Empty Agent ID.")
@@ -70,6 +71,7 @@ func agentNewID(q *reform.Querier) (string, error) {
 	return id, nil
 }
 
+// AgentRemove removes agent by ID.
 func AgentRemove(q *reform.Querier, id string) (*Agent, error) {
 	row, err := AgentFindByID(q, id)
 	if err != nil {
@@ -90,6 +92,7 @@ func AgentRemove(q *reform.Querier, id string) (*Agent, error) {
 	return row, nil
 }
 
+// AgentFindAll finds all agents.
 func AgentFindAll(q *reform.Querier) ([]*Agent, error) {
 	var structs []reform.Struct
 	structs, err := q.SelectAllFrom(AgentTable, "ORDER BY agent_id")
@@ -101,7 +104,8 @@ func AgentFindAll(q *reform.Querier) ([]*Agent, error) {
 	return agents, err
 }
 
-func AgentCreatePmm(q *reform.Querier, runsOnNodeID string, customLabels map[string]string) (*Agent, error) {
+// AgentAddPmmAgent creates PMMAgent.
+func AgentAddPmmAgent(q *reform.Querier, runsOnNodeID string, customLabels map[string]string) (*Agent, error) {
 	id, err := agentNewID(q)
 	if err != nil {
 		return nil, err
@@ -126,6 +130,7 @@ func AgentCreatePmm(q *reform.Querier, runsOnNodeID string, customLabels map[str
 	return row, nil
 }
 
+// AgentAddNodeExporter creates NodeExporter agent.
 func AgentAddNodeExporter(q *reform.Querier, pmmAgentID string, customLabels map[string]string) (*Agent, error) {
 	id, err := agentNewID(q)
 	if err != nil {
@@ -159,6 +164,7 @@ func AgentAddNodeExporter(q *reform.Querier, pmmAgentID string, customLabels map
 	return row, nil
 }
 
+// ChangeCommonExporterParams describe common change params for exporters.
 type ChangeCommonExporterParams struct {
 	AgentID            string
 	CustomLabels       map[string]string
@@ -166,6 +172,7 @@ type ChangeCommonExporterParams struct {
 	RemoveCustomLabels bool
 }
 
+// AgentChangeExporter changes common params for given agent.
 func AgentChangeExporter(q *reform.Querier, params *ChangeCommonExporterParams) (*Agent, error) {
 	row, err := AgentFindByID(q, params.AgentID)
 	if err != nil {
@@ -192,6 +199,7 @@ func AgentChangeExporter(q *reform.Querier, params *ChangeCommonExporterParams) 
 	return row, nil
 }
 
+// AddExporterAgentParams params for add common exporter.
 type AddExporterAgentParams struct {
 	PMMAgentID   string
 	ServiceID    string
@@ -200,6 +208,7 @@ type AddExporterAgentParams struct {
 	CustomLabels map[string]string
 }
 
+// AgentAddExporter adds exporter with given type.
 func AgentAddExporter(q *reform.Querier, agentType AgentType, params *AddExporterAgentParams) (*Agent, error) {
 	id, err := agentNewID(q)
 	if err != nil {
