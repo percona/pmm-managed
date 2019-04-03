@@ -286,5 +286,9 @@ func (ns *NodesService) Update(ctx context.Context, q *reform.Querier, nodeId st
 		row.MachineID = pointer.ToStringOrNil(params.MachineID)
 	}
 
+	if err := q.Update(row); err != nil {
+		return nil, err
+	}
+
 	return makeNode(row)
 }
