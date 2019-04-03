@@ -21,11 +21,8 @@ import (
 	"fmt"
 
 	"github.com/AlekSi/pointer"
-	"github.com/google/uuid"
 	inventorypb "github.com/percona/pmm/api/inventory"
 	"github.com/pkg/errors"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -45,8 +42,8 @@ func NewAgentsService(db *reform.DB, r registry) *AgentsService {
 	}
 }
 
-// makeAgent converts database row to Inventory API Agent.
-func (as *AgentsService) makeAgent(q *reform.Querier, row *models.Agent) (inventorypb.Agent, error) {
+// toInventoryAgent converts database row to Inventory API Agent.
+func (as *AgentsService) toInventoryAgent(q *reform.Querier, row *models.Agent) (inventorypb.Agent, error) {
 	labels, err := row.GetCustomLabels()
 	if err != nil {
 		return nil, err
@@ -159,36 +156,17 @@ func (as *AgentsService) makeAgent(q *reform.Querier, row *models.Agent) (invent
 	}
 }
 
-func get(q *reform.Querier, id string) (*models.Agent, error) {
-	if id == "" {
-		return nil, status.Error(codes.InvalidArgument, "Empty Agent ID.")
+func (as *AgentsService) toInventoryAgents(agents []*models.Agent, q *reform.Querier) ([]inventorypb.Agent, error) {
+	// TODO That loop makes len(agents) SELECTs, that can be slow. Optimize when needed.
+	res := make([]inventorypb.Agent, len(agents))
+	for i, row := range agents {
+		agent, err := as.toInventoryAgent(q, row)
+		if err != nil {
+			return res, err
+		}
+		res[i] = agent
 	}
-
-	row := &models.Agent{AgentID: id}
-	switch err := q.Reload(row); err {
-	case nil:
-		return row, nil
-	case reform.ErrNoRows:
-		return nil, status.Errorf(codes.NotFound, "Agent with ID %q not found.", id)
-	default:
-		return nil, errors.WithStack(err)
-	}
-}
-
-func checkUniqueID(q *reform.Querier, id string) error {
-	if id == "" {
-		panic("empty Agent ID")
-	}
-
-	row := &models.Agent{AgentID: id}
-	switch err := q.Reload(row); err {
-	case nil:
-		return status.Errorf(codes.AlreadyExists, "Agent with ID %q already exists.", id)
-	case reform.ErrNoRows:
-		return nil
-	default:
-		return errors.WithStack(err)
-	}
+	return res, nil
 }
 
 // AgentFilters represents filters for agents list.
@@ -216,27 +194,13 @@ func (as *AgentsService) List(ctx context.Context, filters AgentFilters) ([]inve
 		case filters.ServiceID != "":
 			agents, err = models.AgentsForService(tx.Querier, filters.ServiceID)
 		default:
-			var structs []reform.Struct
-			structs, err = tx.Querier.SelectAllFrom(models.AgentTable, "ORDER BY agent_id")
-			err = errors.Wrap(err, "failed to select Agents")
-			agents = make([]*models.Agent, len(structs))
-			for i, s := range structs {
-				agents[i] = s.(*models.Agent)
-			}
+			agents, err = models.AgentFindAll(tx.Querier)
 		}
 		if err != nil {
 			return err
 		}
 
-		// TODO That loop makes len(agents) SELECTs, that can be slow. Optimize when needed.
-		res = make([]inventorypb.Agent, len(agents))
-		for i, row := range agents {
-			agent, err := as.makeAgent(tx.Querier, row)
-			if err != nil {
-				return err
-			}
-			res[i] = agent
-		}
+		res, err = as.toInventoryAgents(agents, tx.Querier)
 		return nil
 	})
 	return res, e
@@ -247,11 +211,11 @@ func (as *AgentsService) List(ctx context.Context, filters AgentFilters) ([]inve
 func (as *AgentsService) Get(ctx context.Context, id string) (inventorypb.Agent, error) {
 	var res inventorypb.Agent
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		row, err := get(tx.Querier, id)
+		row, err := models.AgentFindByID(tx.Querier, id)
 		if err != nil {
 			return err
 		}
-		res, err = as.makeAgent(tx.Querier, row)
+		res, err = as.toInventoryAgent(tx.Querier, row)
 		return err
 	})
 	return res, e
@@ -264,28 +228,12 @@ func (as *AgentsService) AddPMMAgent(ctx context.Context, req *inventorypb.AddPM
 
 	var res *inventorypb.PMMAgent
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		id := "/agent_id/" + uuid.New().String()
-		if err := checkUniqueID(tx.Querier, id); err != nil {
+		row, err := models.AgentCreatePmm(tx.Querier, req.RunsOnNodeId, req.CustomLabels)
+		if err != nil {
 			return err
 		}
 
-		if _, err := models.FindNodeByID(as.db.Querier, req.RunsOnNodeId); err != nil {
-			return err
-		}
-
-		row := &models.Agent{
-			AgentID:      id,
-			AgentType:    models.PMMAgentType,
-			RunsOnNodeID: &req.RunsOnNodeId,
-		}
-		if err := row.SetCustomLabels(req.CustomLabels); err != nil {
-			return err
-		}
-		if err := tx.Insert(row); err != nil {
-			return errors.WithStack(err)
-		}
-
-		agent, err := as.makeAgent(tx.Querier, row)
+		agent, err := as.toInventoryAgent(tx.Querier, row)
 		if err != nil {
 			return err
 		}
@@ -301,37 +249,12 @@ func (as *AgentsService) AddNodeExporter(ctx context.Context, req *inventorypb.A
 
 	var res *inventorypb.NodeExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		id := "/agent_id/" + uuid.New().String()
-		if err := checkUniqueID(tx.Querier, id); err != nil {
-			return err
-		}
-
-		pmmAgent, err := get(tx.Querier, req.PmmAgentId)
+		row, err := models.AgentAddNodeExporter(tx.Querier, req.PmmAgentId, req.CustomLabels)
 		if err != nil {
 			return err
 		}
 
-		row := &models.Agent{
-			AgentID:    id,
-			AgentType:  models.NodeExporterType,
-			PMMAgentID: &req.PmmAgentId,
-		}
-		if err := row.SetCustomLabels(req.CustomLabels); err != nil {
-			return err
-		}
-		if err := tx.Insert(row); err != nil {
-			return errors.WithStack(err)
-		}
-
-		err = tx.Insert(&models.AgentNode{
-			AgentID: row.AgentID,
-			NodeID:  pointer.GetString(pmmAgent.RunsOnNodeID),
-		})
-		if err != nil {
-			return errors.WithStack(err)
-		}
-
-		agent, err := as.makeAgent(tx.Querier, row)
+		agent, err := as.toInventoryAgent(tx.Querier, row)
 		if err != nil {
 			return err
 		}
@@ -350,34 +273,24 @@ func (as *AgentsService) AddNodeExporter(ctx context.Context, req *inventorypb.A
 func (as *AgentsService) ChangeNodeExporter(ctx context.Context, req *inventorypb.ChangeNodeExporterRequest) (*inventorypb.NodeExporter, error) {
 	var res *inventorypb.NodeExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		row, err := get(tx.Querier, req.AgentId)
+
+		params := &models.ChangeCommonExporterParams{
+			AgentID:            req.AgentId,
+			CustomLabels:       req.CustomLabels,
+			RemoveCustomLabels: req.RemoveCustomLabels,
+		}
+		if req.GetEnabled() {
+			params.Disabled = false
+		}
+		if req.GetDisabled() {
+			params.Disabled = true
+		}
+		row, err := models.AgentChangeExporter(tx.Querier, params)
 		if err != nil {
 			return err
 		}
 
-		if req.GetEnabled() {
-			row.Disabled = false
-		}
-		if req.GetDisabled() {
-			row.Disabled = true
-		}
-
-		if req.RemoveCustomLabels {
-			if err = row.SetCustomLabels(nil); err != nil {
-				return err
-			}
-		}
-		if len(req.CustomLabels) != 0 {
-			if err = row.SetCustomLabels(req.CustomLabels); err != nil {
-				return err
-			}
-		}
-
-		if err = tx.Update(row); err != nil {
-			return errors.WithStack(err)
-		}
-
-		agent, err := as.makeAgent(tx.Querier, row)
+		agent, err := as.toInventoryAgent(tx.Querier, row)
 		if err != nil {
 			return err
 		}
@@ -397,39 +310,20 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, q *reform.Querie
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 
 	var res *inventorypb.MySQLdExporter
-	id := "/agent_id/" + uuid.New().String()
-	if err := checkUniqueID(q, id); err != nil {
-		return nil, err
-	}
 
-	ss := NewServicesService(as.r)
-	if _, err := ss.Get(ctx, q, req.ServiceId); err != nil {
-		return nil, err
+	params := &models.AddExporterAgentParams{
+		PMMAgentID:   req.PmmAgentId,
+		ServiceID:    req.ServiceId,
+		Username:     req.Username,
+		Password:     req.Password,
+		CustomLabels: req.CustomLabels,
 	}
-
-	row := &models.Agent{
-		AgentID:    id,
-		AgentType:  models.MySQLdExporterType,
-		PMMAgentID: &req.PmmAgentId,
-		Username:   pointer.ToStringOrNil(req.Username),
-		Password:   pointer.ToStringOrNil(req.Password),
-	}
-	if err := row.SetCustomLabels(req.CustomLabels); err != nil {
-		return nil, err
-	}
-	if err := q.Insert(row); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	err := q.Insert(&models.AgentService{
-		AgentID:   row.AgentID,
-		ServiceID: req.ServiceId,
-	})
+	row, err := models.AgentAddExporter(q, models.MySQLdExporterType, params)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
-	agent, err := as.makeAgent(q, row)
+	agent, err := as.toInventoryAgent(q, row)
 	if err != nil {
 		return nil, err
 	}
@@ -444,34 +338,24 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, q *reform.Querie
 func (as *AgentsService) ChangeMySQLdExporter(ctx context.Context, req *inventorypb.ChangeMySQLdExporterRequest) (*inventorypb.MySQLdExporter, error) {
 	var res *inventorypb.MySQLdExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		row, err := get(tx.Querier, req.AgentId)
+
+		params := &models.ChangeCommonExporterParams{
+			AgentID:            req.AgentId,
+			CustomLabels:       req.CustomLabels,
+			RemoveCustomLabels: req.RemoveCustomLabels,
+		}
+		if req.GetEnabled() {
+			params.Disabled = false
+		}
+		if req.GetDisabled() {
+			params.Disabled = true
+		}
+		row, err := models.AgentChangeExporter(tx.Querier, params)
 		if err != nil {
 			return err
 		}
 
-		if req.GetEnabled() {
-			row.Disabled = false
-		}
-		if req.GetDisabled() {
-			row.Disabled = true
-		}
-
-		if req.RemoveCustomLabels {
-			if err = row.SetCustomLabels(nil); err != nil {
-				return err
-			}
-		}
-		if len(req.CustomLabels) != 0 {
-			if err = row.SetCustomLabels(req.CustomLabels); err != nil {
-				return err
-			}
-		}
-
-		if err = tx.Update(row); err != nil {
-			return errors.WithStack(err)
-		}
-
-		agent, err := as.makeAgent(tx.Querier, row)
+		agent, err := as.toInventoryAgent(tx.Querier, row)
 		if err != nil {
 			return err
 		}
@@ -506,39 +390,20 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, q *reform.Queri
 
 	var res *inventorypb.MongoDBExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		id := "/agent_id/" + uuid.New().String()
-		if err := checkUniqueID(tx.Querier, id); err != nil {
-			return err
-		}
 
-		ss := NewServicesService(as.r)
-		if _, err := ss.Get(ctx, q, req.ServiceId); err != nil {
-			return err
+		params := &models.AddExporterAgentParams{
+			PMMAgentID:   req.PmmAgentId,
+			ServiceID:    req.ServiceId,
+			Username:     req.Username,
+			Password:     req.Password,
+			CustomLabels: req.CustomLabels,
 		}
-
-		row := &models.Agent{
-			AgentID:    id,
-			AgentType:  models.MongoDBExporterType,
-			PMMAgentID: &req.PmmAgentId,
-			Username:   pointer.ToStringOrNil(req.Username),
-			Password:   pointer.ToStringOrNil(req.Password),
-		}
-		if err := row.SetCustomLabels(req.CustomLabels); err != nil {
-			return err
-		}
-		if err := tx.Insert(row); err != nil {
-			return errors.WithStack(err)
-		}
-
-		err := tx.Insert(&models.AgentService{
-			AgentID:   row.AgentID,
-			ServiceID: req.ServiceId,
-		})
+		row, err := models.AgentAddExporter(q, models.MongoDBExporterType, params)
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 
-		agent, err := as.makeAgent(tx.Querier, row)
+		agent, err := as.toInventoryAgent(tx.Querier, row)
 		if err != nil {
 			return err
 		}
@@ -557,34 +422,24 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, q *reform.Queri
 func (as *AgentsService) ChangeMongoDBExporter(ctx context.Context, req *inventorypb.ChangeMongoDBExporterRequest) (*inventorypb.MongoDBExporter, error) {
 	var res *inventorypb.MongoDBExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		row, err := get(tx.Querier, req.AgentId)
+
+		params := &models.ChangeCommonExporterParams{
+			AgentID:            req.AgentId,
+			CustomLabels:       req.CustomLabels,
+			RemoveCustomLabels: req.RemoveCustomLabels,
+		}
+		if req.GetEnabled() {
+			params.Disabled = false
+		}
+		if req.GetDisabled() {
+			params.Disabled = true
+		}
+		row, err := models.AgentChangeExporter(tx.Querier, params)
 		if err != nil {
 			return err
 		}
 
-		if req.GetEnabled() {
-			row.Disabled = false
-		}
-		if req.GetDisabled() {
-			row.Disabled = true
-		}
-
-		if req.RemoveCustomLabels {
-			if err = row.SetCustomLabels(nil); err != nil {
-				return err
-			}
-		}
-		if len(req.CustomLabels) != 0 {
-			if err = row.SetCustomLabels(req.CustomLabels); err != nil {
-				return err
-			}
-		}
-
-		if err = tx.Update(row); err != nil {
-			return errors.WithStack(err)
-		}
-
-		agent, err := as.makeAgent(tx.Querier, row)
+		agent, err := as.toInventoryAgent(tx.Querier, row)
 		if err != nil {
 			return err
 		}
@@ -605,39 +460,20 @@ func (as *AgentsService) AddQANMySQLPerfSchemaAgent(ctx context.Context, q *refo
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 
 	var res *inventorypb.QANMySQLPerfSchemaAgent
-	id := "/agent_id/" + uuid.New().String()
-	if err := checkUniqueID(q, id); err != nil {
-		return nil, err
-	}
 
-	ss := NewServicesService(as.r)
-	if _, err := ss.Get(ctx, q, req.ServiceId); err != nil {
-		return nil, err
+	params := &models.AddExporterAgentParams{
+		PMMAgentID:   req.PmmAgentId,
+		ServiceID:    req.ServiceId,
+		Username:     req.Username,
+		Password:     req.Password,
+		CustomLabels: req.CustomLabels,
 	}
-
-	row := &models.Agent{
-		AgentID:    id,
-		AgentType:  models.QANMySQLPerfSchemaAgentType,
-		PMMAgentID: &req.PmmAgentId,
-		Username:   pointer.ToStringOrNil(req.Username),
-		Password:   pointer.ToStringOrNil(req.Password),
-	}
-	if err := row.SetCustomLabels(req.CustomLabels); err != nil {
-		return nil, err
-	}
-	if err := q.Insert(row); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	err := q.Insert(&models.AgentService{
-		AgentID:   row.AgentID,
-		ServiceID: req.ServiceId,
-	})
+	row, err := models.AgentAddExporter(q, models.QANMySQLPerfSchemaAgentType, params)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, err
 	}
 
-	agent, err := as.makeAgent(q, row)
+	agent, err := as.toInventoryAgent(q, row)
 	if err != nil {
 		return nil, err
 	}
@@ -651,34 +487,24 @@ func (as *AgentsService) AddQANMySQLPerfSchemaAgent(ctx context.Context, q *refo
 func (as *AgentsService) ChangeQANMySQLPerfSchemaAgent(ctx context.Context, req *inventorypb.ChangeQANMySQLPerfSchemaAgentRequest) (*inventorypb.QANMySQLPerfSchemaAgent, error) {
 	var res *inventorypb.QANMySQLPerfSchemaAgent
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		row, err := get(tx.Querier, req.AgentId)
+
+		params := &models.ChangeCommonExporterParams{
+			AgentID:            req.AgentId,
+			CustomLabels:       req.CustomLabels,
+			RemoveCustomLabels: req.RemoveCustomLabels,
+		}
+		if req.GetEnabled() {
+			params.Disabled = false
+		}
+		if req.GetDisabled() {
+			params.Disabled = true
+		}
+		row, err := models.AgentChangeExporter(tx.Querier, params)
 		if err != nil {
 			return err
 		}
 
-		if req.GetEnabled() {
-			row.Disabled = false
-		}
-		if req.GetDisabled() {
-			row.Disabled = true
-		}
-
-		if req.RemoveCustomLabels {
-			if err = row.SetCustomLabels(nil); err != nil {
-				return err
-			}
-		}
-		if len(req.CustomLabels) != 0 {
-			if err = row.SetCustomLabels(req.CustomLabels); err != nil {
-				return err
-			}
-		}
-
-		if err = tx.Update(row); err != nil {
-			return errors.WithStack(err)
-		}
-
-		agent, err := as.makeAgent(tx.Querier, row)
+		agent, err := as.toInventoryAgent(tx.Querier, row)
 		if err != nil {
 			return err
 		}
@@ -699,39 +525,19 @@ func (as *AgentsService) AddPostgresExporter(ctx context.Context, q *reform.Quer
 
 	var res *inventorypb.PostgresExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		id := "/agent_id/" + uuid.New().String()
-		if err := checkUniqueID(tx.Querier, id); err != nil {
-			return err
+		params := &models.AddExporterAgentParams{
+			PMMAgentID:   req.PmmAgentId,
+			ServiceID:    req.ServiceId,
+			Username:     req.Username,
+			Password:     req.Password,
+			CustomLabels: req.CustomLabels,
 		}
-
-		ss := NewServicesService(as.r)
-		if _, err := ss.Get(ctx, q, req.ServiceId); err != nil {
-			return err
-		}
-
-		row := &models.Agent{
-			AgentID:    id,
-			AgentType:  models.PostgresExporterType,
-			PMMAgentID: &req.PmmAgentId,
-			Username:   pointer.ToStringOrNil(req.Username),
-			Password:   pointer.ToStringOrNil(req.Password),
-		}
-		if err := row.SetCustomLabels(req.CustomLabels); err != nil {
-			return err
-		}
-		if err := tx.Insert(row); err != nil {
-			return errors.WithStack(err)
-		}
-
-		err := tx.Insert(&models.AgentService{
-			AgentID:   row.AgentID,
-			ServiceID: req.ServiceId,
-		})
+		row, err := models.AgentAddExporter(q, models.PostgresExporterType, params)
 		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 
-		agent, err := as.makeAgent(tx.Querier, row)
+		agent, err := as.toInventoryAgent(tx.Querier, row)
 		if err != nil {
 			return err
 		}
@@ -750,34 +556,24 @@ func (as *AgentsService) AddPostgresExporter(ctx context.Context, q *reform.Quer
 func (as *AgentsService) ChangePostgresExporter(ctx context.Context, req *inventorypb.ChangePostgresExporterRequest) (*inventorypb.PostgresExporter, error) {
 	var res *inventorypb.PostgresExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		row, err := get(tx.Querier, req.AgentId)
+
+		params := &models.ChangeCommonExporterParams{
+			AgentID:            req.AgentId,
+			CustomLabels:       req.CustomLabels,
+			RemoveCustomLabels: req.RemoveCustomLabels,
+		}
+		if req.GetEnabled() {
+			params.Disabled = false
+		}
+		if req.GetDisabled() {
+			params.Disabled = true
+		}
+		row, err := models.AgentChangeExporter(tx.Querier, params)
 		if err != nil {
 			return err
 		}
 
-		if req.GetEnabled() {
-			row.Disabled = false
-		}
-		if req.GetDisabled() {
-			row.Disabled = true
-		}
-
-		if req.RemoveCustomLabels {
-			if err = row.SetCustomLabels(nil); err != nil {
-				return err
-			}
-		}
-		if len(req.CustomLabels) != 0 {
-			if err = row.SetCustomLabels(req.CustomLabels); err != nil {
-				return err
-			}
-		}
-
-		if err = tx.Update(row); err != nil {
-			return errors.WithStack(err)
-		}
-
-		agent, err := as.makeAgent(tx.Querier, row)
+		agent, err := as.toInventoryAgent(tx.Querier, row)
 		if err != nil {
 			return err
 		}
@@ -797,31 +593,27 @@ func (as *AgentsService) Remove(ctx context.Context, id string) error {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// ID is not 0.
 
-	return as.db.InTransaction(func(tx *reform.TX) error {
-		row, err := get(tx.Querier, id)
+	removedAgent := new(models.Agent)
+	err := as.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		removedAgent, err = models.AgentRemove(tx.Querier, id)
 		if err != nil {
 			return err
 		}
-
-		if _, err = tx.DeleteFrom(models.AgentServiceView, "WHERE agent_id = "+tx.Placeholder(1), id); err != nil { //nolint:gosec
-			return errors.WithStack(err)
-		}
-		if _, err = tx.DeleteFrom(models.AgentNodeView, "WHERE agent_id = "+tx.Placeholder(1), id); err != nil { //nolint:gosec
-			return errors.WithStack(err)
-		}
-
-		if err = tx.Delete(row); err != nil {
-			return errors.WithStack(err)
-		}
-
-		if pointer.GetString(row.PMMAgentID) != "" {
-			as.r.SendSetStateRequest(ctx, pointer.GetString(row.PMMAgentID))
-		}
-
-		if row.AgentType == models.PMMAgentType {
-			as.r.Kick(ctx, id)
-		}
-
 		return nil
 	})
+
+	if err != nil {
+		return err
+	}
+
+	if removedAgent.IsChild() {
+		as.r.SendSetStateRequest(ctx, pointer.GetString(removedAgent.PMMAgentID))
+	}
+
+	if removedAgent.IsPMMAgent() {
+		as.r.Kick(ctx, id)
+	}
+
+	return nil
 }
