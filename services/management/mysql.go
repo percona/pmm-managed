@@ -24,6 +24,7 @@ import (
 	"github.com/percona/pmm/api/managementpb"
 	"gopkg.in/reform.v1"
 
+	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/inventory"
 )
 
@@ -44,7 +45,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 	res = &managementpb.AddMySQLResponse{}
 
 	if e := s.db.InTransaction(func(tx *reform.TX) error {
-		service, err := s.servicesSvc.AddMySQL(ctx, tx.Querier, &inventory.AddDBMSServiceParams{
+		service, err := s.servicesSvc.AddMySQL(ctx, tx.Querier, &models.AddDBMSServiceParams{
 			ServiceName: req.ServiceName,
 			NodeID:      req.NodeId,
 			Address:     pointer.ToStringOrNil(req.Address),

@@ -104,7 +104,7 @@ func TestAgents(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, expectedNodeExporter, actualAgent)
 
-		s, err := ss.AddMySQL(ctx, db.Querier, &AddDBMSServiceParams{
+		s, err := ss.AddMySQL(ctx, db.Querier, &models.AddDBMSServiceParams{
 			ServiceName: "test-mysql",
 			NodeID:      models.PMMServerNodeID,
 			Address:     pointer.ToString("127.0.0.1"),
@@ -130,7 +130,7 @@ func TestAgents(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, expectedMySQLdExporter, actualAgent)
 
-		ms, err := ss.AddMongoDB(ctx, db.Querier, &AddDBMSServiceParams{
+		ms, err := ss.AddMongoDB(ctx, db.Querier, &models.AddDBMSServiceParams{
 			ServiceName: "test-mongo",
 			NodeID:      models.PMMServerNodeID,
 			Address:     pointer.ToString("127.0.0.1"),
@@ -156,7 +156,7 @@ func TestAgents(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, expectedMongoDBExporter, actualAgent)
 
-		ps, err := ss.AddPostgreSQL(ctx, db.Querier, &AddDBMSServiceParams{
+		ps, err := ss.AddPostgreSQL(ctx, db.Querier, &models.AddDBMSServiceParams{
 			ServiceName: "test-postgres",
 			NodeID:      models.PMMServerNodeID,
 			Address:     pointer.ToString("127.0.0.1"),

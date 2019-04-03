@@ -22,9 +22,120 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 )
+
+func FindServiceByID(q *reform.Querier, id string) (*Service, error) {
+	if id == "" {
+		return nil, status.Error(codes.InvalidArgument, "Empty Service ID.")
+	}
+
+	row := &Service{ServiceID: id}
+	switch err := q.Reload(row); err {
+	case nil:
+		return row, nil
+	case reform.ErrNoRows:
+		return nil, status.Errorf(codes.NotFound, "Service with ID %q not found.", id)
+	default:
+		return nil, errors.WithStack(err)
+	}
+}
+
+func checkServiceUniqueID(q *reform.Querier, id string) error {
+	if id == "" {
+		panic("empty Service ID")
+	}
+
+	row := &Service{ServiceID: id}
+	switch err := q.Reload(row); err {
+	case nil:
+		return status.Errorf(codes.AlreadyExists, "Service with ID %q already exists.", id)
+	case reform.ErrNoRows:
+		return nil
+	default:
+		return errors.WithStack(err)
+	}
+}
+
+func checkServiceUniqueName(q *reform.Querier, name string) error {
+	_, err := q.FindOneFrom(ServiceTable, "service_name", name)
+	switch err {
+	case nil:
+		return status.Errorf(codes.AlreadyExists, "Service with name %q already exists.", name)
+	case reform.ErrNoRows:
+		return nil
+	default:
+		return errors.WithStack(err)
+	}
+}
+
+// AddDBMSServiceParams contains parameters for adding DBMS (MySQL, PostgreSQL, MongoDB) Services.
+type AddDBMSServiceParams struct {
+	ServiceName  string
+	NodeID       string
+	CustomLabels map[string]string
+	Address      *string
+	Port         *uint16
+}
+
+func AddNewService(q *reform.Querier, serviceType ServiceType, params *AddDBMSServiceParams) (*Service, error) {
+	id := "/service_id/" + uuid.New().String()
+	if err := checkServiceUniqueID(q, id); err != nil {
+		return nil, err
+	}
+	if err := checkServiceUniqueName(q, params.ServiceName); err != nil {
+		return nil, err
+	}
+
+	if _, err := FindNodeByID(q, params.NodeID); err != nil {
+		return nil, err
+	}
+
+	row := &Service{
+		ServiceID:   id,
+		ServiceType: serviceType,
+		ServiceName: params.ServiceName,
+		NodeID:      params.NodeID,
+		Address:     params.Address,
+		Port:        params.Port,
+	}
+	if err := row.SetCustomLabels(params.CustomLabels); err != nil {
+		return nil, err
+	}
+	if err := q.Insert(row); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return row, nil
+}
+
+// FindAllServices finds all nodes and loads it from persistent store.
+func FindAllServices(q *reform.Querier) ([]*Service, error) {
+	structs, err := q.SelectAllFrom(ServiceTable, "ORDER BY service_id")
+	if err != nil {
+		return nil, err
+	}
+
+	services := make([]*Service, len(structs))
+	for i, s := range structs {
+		services[i] = s.(*Service)
+	}
+
+	return services, nil
+}
+
+// RemoveService removes single node prom persistent store.
+func RemoveService(q *reform.Querier, id string) error {
+	err := q.Delete(&Service{ServiceID: id})
+	if err == reform.ErrNoRows {
+		return status.Errorf(codes.NotFound, "Service with ID %q not found.", id)
+	}
+	return nil
+}
 
 // ServicesForAgent returns all Services for which Agent with given ID provides insights.
 func ServicesForAgent(q *reform.Querier, agentID string) ([]*Service, error) {

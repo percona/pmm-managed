@@ -1,5 +1,4 @@
-// pmm-managed
-// Copyright (C) 2017 Percona LLC
+// Copyright (C) 2019 Percona LLC
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -14,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package handlers
+package inventory
 
 import (
 	"context"
@@ -24,24 +23,24 @@ import (
 	inventorypb "github.com/percona/pmm/api/inventory"
 	"gopkg.in/reform.v1"
 
-	"github.com/percona/pmm-managed/services/inventory"
+	"github.com/percona/pmm-managed/models"
 )
 
-type servicesServer struct {
+type servicesGrpcServer struct {
 	db *reform.DB
-	s  *inventory.ServicesService
+	s  *ServicesService
 }
 
-// NewServicesServer returns Inventory API handler for managing Services.
-func NewServicesServer(db *reform.DB, s *inventory.ServicesService) inventorypb.ServicesServer {
-	return &servicesServer{
+// NewServicesGrpcServer returns Inventory API handler for managing Services.
+func NewServicesGrpcServer(db *reform.DB, s *ServicesService) inventorypb.ServicesServer {
+	return &servicesGrpcServer{
 		db: db,
 		s:  s,
 	}
 }
 
 // ListServices returns a list of all Services.
-func (s *servicesServer) ListServices(ctx context.Context, req *inventorypb.ListServicesRequest) (*inventorypb.ListServicesResponse, error) {
+func (s *servicesGrpcServer) ListServices(ctx context.Context, req *inventorypb.ListServicesRequest) (*inventorypb.ListServicesResponse, error) {
 	services, err := s.s.List(ctx, s.db.Querier)
 	if err != nil {
 		return nil, err
@@ -64,7 +63,7 @@ func (s *servicesServer) ListServices(ctx context.Context, req *inventorypb.List
 }
 
 // GetService returns a single Service by ID.
-func (s *servicesServer) GetService(ctx context.Context, req *inventorypb.GetServiceRequest) (*inventorypb.GetServiceResponse, error) {
+func (s *servicesGrpcServer) GetService(ctx context.Context, req *inventorypb.GetServiceRequest) (*inventorypb.GetServiceResponse, error) {
 	service, err := s.s.Get(ctx, s.db.Querier, req.ServiceId)
 	if err != nil {
 		return nil, err
@@ -85,8 +84,8 @@ func (s *servicesServer) GetService(ctx context.Context, req *inventorypb.GetSer
 }
 
 // AddMySQLService adds MySQL Service.
-func (s *servicesServer) AddMySQLService(ctx context.Context, req *inventorypb.AddMySQLServiceRequest) (*inventorypb.AddMySQLServiceResponse, error) {
-	service, err := s.s.AddMySQL(ctx, s.db.Querier, &inventory.AddDBMSServiceParams{
+func (s *servicesGrpcServer) AddMySQLService(ctx context.Context, req *inventorypb.AddMySQLServiceRequest) (*inventorypb.AddMySQLServiceResponse, error) {
+	service, err := s.s.AddMySQL(ctx, s.db.Querier, &models.AddDBMSServiceParams{
 		ServiceName:  req.ServiceName,
 		NodeID:       req.NodeId,
 		Address:      pointer.ToStringOrNil(req.Address),
@@ -104,12 +103,12 @@ func (s *servicesServer) AddMySQLService(ctx context.Context, req *inventorypb.A
 }
 
 // AddAmazonRDSMySQLService adds AmazonRDSMySQL Service.
-func (s *servicesServer) AddAmazonRDSMySQLService(ctx context.Context, req *inventorypb.AddAmazonRDSMySQLServiceRequest) (*inventorypb.AddAmazonRDSMySQLServiceResponse, error) {
+func (s *servicesGrpcServer) AddAmazonRDSMySQLService(ctx context.Context, req *inventorypb.AddAmazonRDSMySQLServiceRequest) (*inventorypb.AddAmazonRDSMySQLServiceResponse, error) {
 	panic("not implemented yet")
 }
 
-func (s *servicesServer) AddMongoDBService(ctx context.Context, req *inventorypb.AddMongoDBServiceRequest) (*inventorypb.AddMongoDBServiceResponse, error) {
-	service, err := s.s.AddMongoDB(ctx, s.db.Querier, &inventory.AddDBMSServiceParams{
+func (s *servicesGrpcServer) AddMongoDBService(ctx context.Context, req *inventorypb.AddMongoDBServiceRequest) (*inventorypb.AddMongoDBServiceResponse, error) {
+	service, err := s.s.AddMongoDB(ctx, s.db.Querier, &models.AddDBMSServiceParams{
 		ServiceName:  req.ServiceName,
 		NodeID:       req.NodeId,
 		Address:      pointer.ToStringOrNil(req.Address),
@@ -126,8 +125,8 @@ func (s *servicesServer) AddMongoDBService(ctx context.Context, req *inventorypb
 	return res, nil
 }
 
-func (s *servicesServer) AddPostgreSQLService(ctx context.Context, req *inventorypb.AddPostgreSQLServiceRequest) (*inventorypb.AddPostgreSQLServiceResponse, error) {
-	service, err := s.s.AddPostgreSQL(ctx, s.db.Querier, &inventory.AddDBMSServiceParams{
+func (s *servicesGrpcServer) AddPostgreSQLService(ctx context.Context, req *inventorypb.AddPostgreSQLServiceRequest) (*inventorypb.AddPostgreSQLServiceResponse, error) {
+	service, err := s.s.AddPostgreSQL(ctx, s.db.Querier, &models.AddDBMSServiceParams{
 		ServiceName:  req.ServiceName,
 		NodeID:       req.NodeId,
 		Address:      pointer.ToStringOrNil(req.Address),
@@ -145,7 +144,7 @@ func (s *servicesServer) AddPostgreSQLService(ctx context.Context, req *inventor
 }
 
 // RemoveService removes Service without any Agents.
-func (s *servicesServer) RemoveService(ctx context.Context, req *inventorypb.RemoveServiceRequest) (*inventorypb.RemoveServiceResponse, error) {
+func (s *servicesGrpcServer) RemoveService(ctx context.Context, req *inventorypb.RemoveServiceRequest) (*inventorypb.RemoveServiceResponse, error) {
 	if err := s.s.Remove(ctx, s.db.Querier, req.ServiceId); err != nil {
 		return nil, err
 	}
