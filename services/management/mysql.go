@@ -25,19 +25,22 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/inventory"
 )
+
+type agentStateRequestSender interface {
+	SendSetStateRequest(ctx context.Context, pmmAgentID string)
+	IsConnected(pmmAgentID string) bool
+}
 
 // MySQLService MySQL Management Service.
 type MySQLService struct {
-	db          *reform.DB
-	servicesSvc *inventory.ServicesService
-	agentsSvc   *inventory.AgentsService
+	db   *reform.DB
+	asrs agentStateRequestSender
 }
 
 // NewMySQLService creates new MySQL Management Service.
-func NewMySQLService(db *reform.DB, s *inventory.ServicesService, a *inventory.AgentsService) *MySQLService {
-	return &MySQLService{db, s, a}
+func NewMySQLService(db *reform.DB, asrs agentStateRequestSender) *MySQLService {
+	return &MySQLService{db, asrs}
 }
 
 // Add adds "MySQL Service", "MySQL Exporter Agent" and "QAN MySQL PerfSchema Agent".
@@ -45,53 +48,74 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 	res = &managementpb.AddMySQLResponse{}
 
 	if e := s.db.InTransaction(func(tx *reform.TX) error {
-		service, err := s.servicesSvc.AddMySQL(ctx, tx.Querier, &models.AddDBMSServiceParams{
+
+		service, err := models.AddNewService(tx.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
 			ServiceName: req.ServiceName,
 			NodeID:      req.NodeId,
 			Address:     pointer.ToStringOrNil(req.Address),
 			Port:        pointer.ToUint16OrNil(uint16(req.Port)),
 		})
+
 		if err != nil {
 			return err
 		}
-		res.Service = service
+
+		invService, err := models.ToInventoryService(service)
+		if err != nil {
+			return err
+		}
+
+		res.Service = invService.(*inventorypb.MySQLService)
 
 		if req.MysqldExporter {
-			request := &inventorypb.AddMySQLdExporterRequest{
-				PmmAgentId: req.PmmAgentId,
-				ServiceId:  service.ID(),
+
+			params := &models.AddExporterAgentParams{
+				PMMAgentID: req.PmmAgentId,
+				ServiceID:  invService.ID(),
 				Username:   req.Username,
 				Password:   req.Password,
 			}
-
-			agent, err := s.agentsSvc.AddMySQLdExporter(ctx, tx.Querier, request)
+			row, err := models.AgentAddExporter(tx.Querier, models.MySQLdExporterType, params)
 			if err != nil {
 				return err
 			}
 
-			res.MysqldExporter = agent
+			agent, err := models.ToInventoryAgent(tx.Querier, row, s.asrs)
+			if err != nil {
+				return err
+			}
+
+			res.MysqldExporter = agent.(*inventorypb.MySQLdExporter)
 		}
 
 		if req.QanMysqlPerfschema {
-			request := &inventorypb.AddQANMySQLPerfSchemaAgentRequest{
-				PmmAgentId: req.PmmAgentId,
-				ServiceId:  service.ID(),
+
+			params := &models.AddExporterAgentParams{
+				PMMAgentID: req.PmmAgentId,
+				ServiceID:  invService.ID(),
 				Username:   req.QanUsername,
 				Password:   req.QanPassword,
 			}
 
-			qAgent, err := s.agentsSvc.AddQANMySQLPerfSchemaAgent(ctx, tx.Querier, request)
+			row, err := models.AgentAddExporter(tx.Querier, models.QANMySQLPerfSchemaAgentType, params)
 			if err != nil {
 				return err
 			}
 
-			res.QanMysqlPerfschema = qAgent
+			qAgent, err := models.ToInventoryAgent(tx.Querier, row, s.asrs)
+			if err != nil {
+				return err
+			}
+
+			res.QanMysqlPerfschema = qAgent.(*inventorypb.QANMySQLPerfSchemaAgent)
 		}
 
 		return nil
 	}); e != nil {
 		return nil, e
 	}
+
+	s.asrs.SendSetStateRequest(ctx, req.PmmAgentId)
 
 	return res, nil
 }

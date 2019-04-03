@@ -136,6 +136,7 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 
 	servicesSvc := inventory.NewServicesService(deps.agentsRegistry)
 	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry)
+	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsRegistry)
 
 	gRPCServer := grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
@@ -155,13 +156,8 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	})
 	inventorypb.RegisterNodesServer(gRPCServer, inventory.NewNodesGrpcServer(deps.db))
 	inventorypb.RegisterServicesServer(gRPCServer, inventory.NewServicesGrpcServer(deps.db, servicesSvc))
-	inventorypb.RegisterAgentsServer(gRPCServer, handlers.NewAgentsServer(
-		agentsSvc,
-		deps.db,
-	))
-	managementpb.RegisterMySQLServer(gRPCServer, handlers.NewManagementMysqlServer(
-		management.NewMySQLService(deps.db, servicesSvc, agentsSvc),
-	))
+	inventorypb.RegisterAgentsServer(gRPCServer, handlers.NewAgentsServer(deps.db, agentsSvc))
+	managementpb.RegisterMySQLServer(gRPCServer, handlers.NewManagementMysqlServer(mysqlSvc))
 
 	if *debugF {
 		l.Debug("Reflection and channelz are enabled.")

@@ -45,7 +45,7 @@ func (s *nodesGrpcServer) ListNodes(ctx context.Context, req *inventorypb.ListNo
 		return nil, err // TODO: Convert to gRPC errors
 	}
 
-	nodes, err := toInventoryNodes(allNodes)
+	nodes, err := models.ToInventoryNodes(allNodes)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (s *nodesGrpcServer) GetNode(ctx context.Context, req *inventorypb.GetNodeR
 		return nil, err // TODO: Convert to gRPC errors
 	}
 
-	node, err := toInventoryNode(modelNode)
+	node, err := models.ToInventoryNode(modelNode)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func (s *nodesGrpcServer) AddGenericNode(ctx context.Context, req *inventorypb.A
 		return nil, err // TODO: Convert to gRPC errors
 	}
 
-	invNode, err := toInventoryNode(node)
+	invNode, err := models.ToInventoryNode(node)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +144,7 @@ func (s *nodesGrpcServer) AddContainerNode(ctx context.Context, req *inventorypb
 		return nil, err // TODO: Convert to gRPC errors
 	}
 
-	invNode, err := toInventoryNode(node)
+	invNode, err := models.ToInventoryNode(node)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +170,7 @@ func (s *nodesGrpcServer) AddRemoteNode(ctx context.Context, req *inventorypb.Ad
 		return nil, err // TODO: Convert to gRPC errors
 	}
 
-	invNode, err := toInventoryNode(node)
+	invNode, err := models.ToInventoryNode(node)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +198,7 @@ func (s *nodesGrpcServer) AddRemoteAmazonRDSNode(ctx context.Context, req *inven
 		return nil, err // TODO: Convert to gRPC errors
 	}
 
-	invNode, err := toInventoryNode(node)
+	invNode, err := models.ToInventoryNode(node)
 	if err != nil {
 		return nil, err
 	}
@@ -222,66 +222,4 @@ func (s *nodesGrpcServer) RemoveNode(ctx context.Context, req *inventorypb.Remov
 	}
 
 	return new(inventorypb.RemoveNodeResponse), nil
-}
-
-// toInventoryNode converts database row to Inventory API Node.
-func toInventoryNode(row *models.Node) (inventorypb.Node, error) {
-	labels, err := row.GetCustomLabels()
-	if err != nil {
-		return nil, err
-	}
-
-	switch row.NodeType {
-	case models.GenericNodeType:
-		return &inventorypb.GenericNode{
-			NodeId:        row.NodeID,
-			NodeName:      row.NodeName,
-			MachineId:     pointer.GetString(row.MachineID),
-			Distro:        pointer.GetString(row.Distro),
-			DistroVersion: pointer.GetString(row.DistroVersion),
-			CustomLabels:  labels,
-			Address:       pointer.GetString(row.Address),
-		}, nil
-
-	case models.ContainerNodeType:
-		return &inventorypb.ContainerNode{
-			NodeId:              row.NodeID,
-			NodeName:            row.NodeName,
-			MachineId:           pointer.GetString(row.MachineID),
-			DockerContainerId:   pointer.GetString(row.DockerContainerID),
-			DockerContainerName: pointer.GetString(row.DockerContainerName),
-			CustomLabels:        labels,
-		}, nil
-
-	case models.RemoteNodeType:
-		return &inventorypb.RemoteNode{
-			NodeId:       row.NodeID,
-			NodeName:     row.NodeName,
-			CustomLabels: labels,
-		}, nil
-
-	case models.RemoteAmazonRDSNodeType:
-		return &inventorypb.RemoteAmazonRDSNode{
-			NodeId:       row.NodeID,
-			NodeName:     row.NodeName,
-			Instance:     pointer.GetString(row.Address),
-			Region:       pointer.GetString(row.Region),
-			CustomLabels: labels,
-		}, nil
-
-	default:
-		panic(fmt.Errorf("unhandled Node type %s", row.NodeType))
-	}
-}
-
-func toInventoryNodes(nodes []*models.Node) ([]inventorypb.Node, error) {
-	var err error
-	res := make([]inventorypb.Node, len(nodes))
-	for i, n := range nodes {
-		res[i], err = toInventoryNode(n)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return res, nil
 }

@@ -18,9 +18,7 @@ package inventory
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/AlekSi/pointer"
 	inventorypb "github.com/percona/pmm/api/inventory"
 	"gopkg.in/reform.v1"
 
@@ -39,59 +37,6 @@ func NewServicesService(r registry) *ServicesService {
 	}
 }
 
-// toInventoryService converts database row to Inventory API Service.
-func toInventoryService(row *models.Service) (inventorypb.Service, error) {
-	labels, err := row.GetCustomLabels()
-	if err != nil {
-		return nil, err
-	}
-
-	switch row.ServiceType {
-	case models.MySQLServiceType:
-		return &inventorypb.MySQLService{
-			ServiceId:    row.ServiceID,
-			ServiceName:  row.ServiceName,
-			NodeId:       row.NodeID,
-			Address:      pointer.GetString(row.Address),
-			Port:         uint32(pointer.GetUint16(row.Port)),
-			CustomLabels: labels,
-		}, nil
-	case models.MongoDBServiceType:
-		return &inventorypb.MongoDBService{
-			ServiceId:    row.ServiceID,
-			ServiceName:  row.ServiceName,
-			NodeId:       row.NodeID,
-			Address:      pointer.GetString(row.Address),
-			Port:         uint32(pointer.GetUint16(row.Port)),
-			CustomLabels: labels,
-		}, nil
-	case models.PostgreSQLServiceType:
-		return &inventorypb.PostgreSQLService{
-			ServiceId:    row.ServiceID,
-			ServiceName:  row.ServiceName,
-			NodeId:       row.NodeID,
-			Address:      pointer.GetString(row.Address),
-			Port:         uint32(pointer.GetUint16(row.Port)),
-			CustomLabels: labels,
-		}, nil
-
-	default:
-		panic(fmt.Errorf("unhandled Service type %s", row.ServiceType))
-	}
-}
-
-func toInventoryServices(services []*models.Service) ([]inventorypb.Service, error) {
-	var err error
-	res := make([]inventorypb.Service, len(services))
-	for i, srv := range services {
-		res[i], err = toInventoryService(srv)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return res, nil
-}
-
 // List selects all Services in a stable order.
 //nolint:unparam
 func (ss *ServicesService) List(ctx context.Context, q *reform.Querier) ([]inventorypb.Service, error) {
@@ -99,7 +44,7 @@ func (ss *ServicesService) List(ctx context.Context, q *reform.Querier) ([]inven
 	if err != nil {
 		return nil, err
 	}
-	return toInventoryServices(services)
+	return models.ToInventoryServices(services)
 }
 
 // Get selects a single Service by ID.
@@ -109,7 +54,7 @@ func (ss *ServicesService) Get(ctx context.Context, q *reform.Querier, id string
 	if err != nil {
 		return nil, err
 	}
-	return toInventoryService(row)
+	return models.ToInventoryService(row)
 }
 
 // AddMySQL inserts MySQL Service with given parameters.
@@ -123,7 +68,7 @@ func (ss *ServicesService) AddMySQL(ctx context.Context, q *reform.Querier, para
 		return nil, err
 	}
 
-	res, err := toInventoryService(row)
+	res, err := models.ToInventoryService(row)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +85,7 @@ func (ss *ServicesService) AddMongoDB(ctx context.Context, q *reform.Querier, pa
 		return nil, err
 	}
 
-	res, err := toInventoryService(row)
+	res, err := models.ToInventoryService(row)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +101,7 @@ func (ss *ServicesService) AddPostgreSQL(ctx context.Context, q *reform.Querier,
 	if err != nil {
 		return nil, err
 	}
-	res, err := toInventoryService(row)
+	res, err := models.ToInventoryService(row)
 	if err != nil {
 		return nil, err
 	}

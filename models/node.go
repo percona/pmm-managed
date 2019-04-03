@@ -22,7 +22,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlekSi/pointer"
 	"github.com/google/uuid"
+	inventorypb "github.com/percona/pmm/api/inventory"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -200,6 +202,69 @@ func NodesForAgent(q *reform.Querier, agentID string) ([]*Node, error) {
 	res := make([]*Node, len(structs))
 	for i, s := range structs {
 		res[i] = s.(*Node)
+	}
+	return res, nil
+}
+
+// ToInventoryNode converts database row to Inventory API Node.
+func ToInventoryNode(row *Node) (inventorypb.Node, error) {
+	labels, err := row.GetCustomLabels()
+	if err != nil {
+		return nil, err
+	}
+
+	switch row.NodeType {
+	case GenericNodeType:
+		return &inventorypb.GenericNode{
+			NodeId:        row.NodeID,
+			NodeName:      row.NodeName,
+			MachineId:     pointer.GetString(row.MachineID),
+			Distro:        pointer.GetString(row.Distro),
+			DistroVersion: pointer.GetString(row.DistroVersion),
+			CustomLabels:  labels,
+			Address:       pointer.GetString(row.Address),
+		}, nil
+
+	case ContainerNodeType:
+		return &inventorypb.ContainerNode{
+			NodeId:              row.NodeID,
+			NodeName:            row.NodeName,
+			MachineId:           pointer.GetString(row.MachineID),
+			DockerContainerId:   pointer.GetString(row.DockerContainerID),
+			DockerContainerName: pointer.GetString(row.DockerContainerName),
+			CustomLabels:        labels,
+		}, nil
+
+	case RemoteNodeType:
+		return &inventorypb.RemoteNode{
+			NodeId:       row.NodeID,
+			NodeName:     row.NodeName,
+			CustomLabels: labels,
+		}, nil
+
+	case RemoteAmazonRDSNodeType:
+		return &inventorypb.RemoteAmazonRDSNode{
+			NodeId:       row.NodeID,
+			NodeName:     row.NodeName,
+			Instance:     pointer.GetString(row.Address),
+			Region:       pointer.GetString(row.Region),
+			CustomLabels: labels,
+		}, nil
+
+	default:
+		panic(fmt.Errorf("unhandled Node type %s", row.NodeType))
+	}
+}
+
+// ToInventoryNode converts database rows to Inventory API Nodes.
+func ToInventoryNodes(nodes []*Node) ([]inventorypb.Node, error) {
+	var err error
+	res := make([]inventorypb.Node, len(nodes))
+	for i, n := range nodes {
+		res[i], err = ToInventoryNode(n)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return res, nil
 }

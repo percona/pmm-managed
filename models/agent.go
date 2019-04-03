@@ -24,6 +24,7 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/google/uuid"
+	inventorypb "github.com/percona/pmm/api/inventory"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -313,6 +314,137 @@ func AgentsForService(q *reform.Querier, serviceID string) ([]*Agent, error) {
 	res := make([]*Agent, len(structs))
 	for i, s := range structs {
 		res[i] = s.(*Agent)
+	}
+	return res, nil
+}
+
+type AgentConnectionChecker interface {
+	IsConnected(pmmAgentID string) bool
+}
+
+// toInventoryAgent converts database row to Inventory API Agent.
+func ToInventoryAgent(q *reform.Querier, row *Agent, connChecker AgentConnectionChecker) (inventorypb.Agent, error) {
+	labels, err := row.GetCustomLabels()
+	if err != nil {
+		return nil, err
+	}
+
+	switch row.AgentType {
+	case PMMAgentType:
+		return &inventorypb.PMMAgent{
+			AgentId:      row.AgentID,
+			RunsOnNodeId: pointer.GetString(row.RunsOnNodeID),
+			Connected:    connChecker.IsConnected(row.AgentID),
+			CustomLabels: labels,
+		}, nil
+
+	case NodeExporterType:
+		return &inventorypb.NodeExporter{
+			AgentId:      row.AgentID,
+			PmmAgentId:   pointer.GetString(row.PMMAgentID),
+			Disabled:     row.Disabled,
+			Status:       inventorypb.AgentStatus(inventorypb.AgentStatus_value[row.Status]),
+			ListenPort:   uint32(pointer.GetUint16(row.ListenPort)),
+			CustomLabels: labels,
+		}, nil
+
+	case MySQLdExporterType:
+		services, err := ServicesForAgent(q, row.AgentID)
+		if err != nil {
+			return nil, err
+		}
+		if len(services) != 1 {
+			return nil, errors.Errorf("expected exactly one Service, got %d", len(services))
+		}
+
+		return &inventorypb.MySQLdExporter{
+			AgentId:      row.AgentID,
+			PmmAgentId:   pointer.GetString(row.PMMAgentID),
+			ServiceId:    services[0].ServiceID,
+			Username:     pointer.GetString(row.Username),
+			Password:     pointer.GetString(row.Password),
+			Disabled:     row.Disabled,
+			Status:       inventorypb.AgentStatus(inventorypb.AgentStatus_value[row.Status]),
+			ListenPort:   uint32(pointer.GetUint16(row.ListenPort)),
+			CustomLabels: labels,
+		}, nil
+
+	case MongoDBExporterType:
+		services, err := ServicesForAgent(q, row.AgentID)
+		if err != nil {
+			return nil, err
+		}
+		if len(services) != 1 {
+			return nil, errors.Errorf("expected exactly one Service, got %d", len(services))
+		}
+
+		return &inventorypb.MongoDBExporter{
+			AgentId:      row.AgentID,
+			PmmAgentId:   pointer.GetString(row.PMMAgentID),
+			ServiceId:    services[0].ServiceID,
+			Username:     pointer.GetString(row.Username),
+			Password:     pointer.GetString(row.Password),
+			Disabled:     row.Disabled,
+			Status:       inventorypb.AgentStatus(inventorypb.AgentStatus_value[row.Status]),
+			ListenPort:   uint32(pointer.GetUint16(row.ListenPort)),
+			CustomLabels: labels,
+		}, nil
+
+	case QANMySQLPerfSchemaAgentType:
+		services, err := ServicesForAgent(q, row.AgentID)
+		if err != nil {
+			return nil, err
+		}
+		if len(services) != 1 {
+			return nil, errors.Errorf("expected exactly one Service, got %d", len(services))
+		}
+
+		return &inventorypb.QANMySQLPerfSchemaAgent{
+			AgentId:      row.AgentID,
+			PmmAgentId:   pointer.GetString(row.PMMAgentID),
+			ServiceId:    services[0].ServiceID,
+			Username:     pointer.GetString(row.Username),
+			Password:     pointer.GetString(row.Password),
+			Disabled:     row.Disabled,
+			Status:       inventorypb.AgentStatus(inventorypb.AgentStatus_value[row.Status]),
+			CustomLabels: labels,
+		}, nil
+
+	case PostgresExporterType:
+		services, err := ServicesForAgent(q, row.AgentID)
+		if err != nil {
+			return nil, err
+		}
+		if len(services) != 1 {
+			return nil, errors.Errorf("expected exactly one Service, got %d", len(services))
+		}
+
+		return &inventorypb.PostgresExporter{
+			AgentId:      row.AgentID,
+			PmmAgentId:   pointer.GetString(row.PMMAgentID),
+			ServiceId:    services[0].ServiceID,
+			Username:     pointer.GetString(row.Username),
+			Password:     pointer.GetString(row.Password),
+			Disabled:     row.Disabled,
+			Status:       inventorypb.AgentStatus(inventorypb.AgentStatus_value[row.Status]),
+			ListenPort:   uint32(pointer.GetUint16(row.ListenPort)),
+			CustomLabels: labels,
+		}, nil
+
+	default:
+		panic(fmt.Errorf("unhandled Agent type %s", row.AgentType))
+	}
+}
+
+func ToInventoryAgents(agents []*Agent, q *reform.Querier, connChecker AgentConnectionChecker) ([]inventorypb.Agent, error) {
+	// TODO That loop makes len(agents) SELECTs, that can be slow. Optimize when needed.
+	res := make([]inventorypb.Agent, len(agents))
+	for i, row := range agents {
+		agent, err := ToInventoryAgent(q, row, connChecker)
+		if err != nil {
+			return res, err
+		}
+		res[i] = agent
 	}
 	return res, nil
 }
