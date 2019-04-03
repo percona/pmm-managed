@@ -33,15 +33,13 @@ import (
 
 // ServicesService works with inventory API Services.
 type ServicesService struct {
-	r  registry
-	ns *NodesService
+	r registry
 }
 
 // NewServicesService creates new ServicesService
-func NewServicesService(r registry, ns *NodesService) *ServicesService {
+func NewServicesService(r registry) *ServicesService {
 	return &ServicesService{
-		r:  r,
-		ns: ns,
+		r: r,
 	}
 }
 
@@ -185,7 +183,7 @@ func (ss *ServicesService) AddMySQL(ctx context.Context, q *reform.Querier, para
 		return nil, err
 	}
 
-	if _, err := ss.ns.Get(ctx, q, params.NodeID); err != nil {
+	if _, err := models.FindNodeByID(q, params.NodeID); err != nil {
 		return nil, err
 	}
 
@@ -223,7 +221,7 @@ func (ss *ServicesService) AddMongoDB(ctx context.Context, q *reform.Querier, pa
 		return nil, err
 	}
 
-	if _, err := ss.ns.Get(ctx, q, params.NodeID); err != nil {
+	if _, err := models.FindNodeByID(q, params.NodeID); err != nil {
 		return nil, err
 	}
 
@@ -261,7 +259,7 @@ func (ss *ServicesService) AddPostgreSQL(ctx context.Context, q *reform.Querier,
 		return nil, err
 	}
 
-	if _, err := ss.ns.Get(ctx, q, params.NodeID); err != nil {
+	if _, err := models.FindNodeByID(q, params.NodeID); err != nil {
 		return nil, err
 	}
 

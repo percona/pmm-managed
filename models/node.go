@@ -105,6 +105,7 @@ func AddNode(q *reform.Querier, params *AddNodeParams) (*Node, error) {
 	if err := checkUniqueName(q, params.NodeName); err != nil {
 		return nil, err
 	}
+
 	if params.Address != nil && params.Region != nil {
 		if err := checkUniqueNodeInstanceRegion(q, *params.Address, *params.Region); err != nil {
 			return nil, err
