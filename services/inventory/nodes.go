@@ -258,6 +258,7 @@ func (ns *NodesService) Remove(ctx context.Context, q *reform.Querier, id string
 	return errors.WithStack(err)
 }
 
+// UpdateNodeParams describe editable node parameters.
 type UpdateNodeParams struct {
 	MachineID       string
 	CustomLabels    map[string]string
@@ -266,8 +267,8 @@ type UpdateNodeParams struct {
 }
 
 // Update updates Node.
-func (ns *NodesService) Update(ctx context.Context, q *reform.Querier, nodeId string, params *UpdateNodeParams) (inventorypb.Node, error) {
-	row, err := ns.get(ctx, q, nodeId)
+func (ns *NodesService) Update(ctx context.Context, q *reform.Querier, nodeID string, params *UpdateNodeParams) (inventorypb.Node, error) {
+	row, err := ns.get(ctx, q, nodeID)
 	if err != nil {
 		return nil, err
 	}
