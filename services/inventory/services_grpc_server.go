@@ -26,6 +26,7 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
+//nolint:unused
 type servicesGrpcServer struct {
 	s *ServicesService
 }
@@ -99,6 +100,7 @@ func (s *servicesGrpcServer) AddMySQLService(ctx context.Context, req *inventory
 }
 
 // AddAmazonRDSMySQLService adds AmazonRDSMySQL Service.
+//nolint:lll
 func (s *servicesGrpcServer) AddAmazonRDSMySQLService(ctx context.Context, req *inventorypb.AddAmazonRDSMySQLServiceRequest) (*inventorypb.AddAmazonRDSMySQLServiceResponse, error) {
 	panic("not implemented yet")
 }

@@ -38,7 +38,7 @@ import (
 func TestServices(t *testing.T) {
 	ctx := logger.Set(context.Background(), t.Name())
 
-	setup := func(t *testing.T) (q *reform.Querier, ss *ServicesService, teardown func(t *testing.T)) {
+	setup := func(t *testing.T) (ss *ServicesService, teardown func(t *testing.T)) {
 		uuid.SetRand(new(tests.IDReader))
 
 		sqlDB := tests.OpenTestDB(t)
@@ -56,7 +56,7 @@ func TestServices(t *testing.T) {
 	}
 
 	t.Run("Basic", func(t *testing.T) {
-		_, ss, teardown := setup(t)
+		ss, teardown := setup(t)
 		defer teardown(t)
 
 		actualServices, err := ss.List(ctx)
@@ -158,7 +158,7 @@ func TestServices(t *testing.T) {
 	})
 
 	t.Run("GetEmptyID", func(t *testing.T) {
-		_, ss, teardown := setup(t)
+		ss, teardown := setup(t)
 		defer teardown(t)
 
 		actualNode, err := ss.Get(ctx, "")
@@ -167,7 +167,7 @@ func TestServices(t *testing.T) {
 	})
 
 	t.Run("AddNameNotUnique", func(t *testing.T) {
-		_, ss, teardown := setup(t)
+		ss, teardown := setup(t)
 		defer teardown(t)
 
 		_, err := ss.AddMySQL(ctx, &models.AddDBMSServiceParams{
@@ -188,7 +188,7 @@ func TestServices(t *testing.T) {
 	})
 
 	t.Run("AddNodeNotFound", func(t *testing.T) {
-		_, ss, teardown := setup(t)
+		ss, teardown := setup(t)
 		defer teardown(t)
 
 		_, err := ss.AddMySQL(ctx, &models.AddDBMSServiceParams{
@@ -201,7 +201,7 @@ func TestServices(t *testing.T) {
 	})
 
 	t.Run("RemoveNotFound", func(t *testing.T) {
-		_, ss, teardown := setup(t)
+		ss, teardown := setup(t)
 		defer teardown(t)
 
 		err := ss.Remove(ctx, "no-such-id")

@@ -37,7 +37,7 @@ func TestNodes(t *testing.T) {
 	ctx := logger.Set(context.Background(), t.Name())
 
 	//nolint:unparam
-	setup := func(t *testing.T) (q *reform.Querier, ns inventorypb.NodesServer, teardown func(t *testing.T)) {
+	setup := func(t *testing.T) (ns inventorypb.NodesServer, teardown func(t *testing.T)) {
 		uuid.SetRand(new(tests.IDReader))
 
 		sqlDB := tests.OpenTestDB(t)
@@ -55,7 +55,7 @@ func TestNodes(t *testing.T) {
 	}
 
 	t.Run("Basic", func(t *testing.T) {
-		_, ns, teardown := setup(t)
+		ns, teardown := setup(t)
 		defer teardown(t)
 
 		actualNodes, err := ns.ListNodes(ctx, nil)
@@ -87,7 +87,7 @@ func TestNodes(t *testing.T) {
 	})
 
 	t.Run("GetEmptyID", func(t *testing.T) {
-		_, ns, teardown := setup(t)
+		ns, teardown := setup(t)
 		defer teardown(t)
 
 		getNodeResponse, err := ns.GetNode(ctx, &inventorypb.GetNodeRequest{NodeId: ""})
@@ -96,7 +96,7 @@ func TestNodes(t *testing.T) {
 	})
 
 	t.Run("AddNameEmpty", func(t *testing.T) {
-		_, ns, teardown := setup(t)
+		ns, teardown := setup(t)
 		defer teardown(t)
 
 		_, err := ns.AddGenericNode(ctx, &inventorypb.AddGenericNodeRequest{NodeName: ""})
@@ -104,7 +104,7 @@ func TestNodes(t *testing.T) {
 	})
 
 	t.Run("AddNameNotUnique", func(t *testing.T) {
-		_, ns, teardown := setup(t)
+		ns, teardown := setup(t)
 		defer teardown(t)
 
 		_, err := ns.AddGenericNode(ctx, &inventorypb.AddGenericNodeRequest{NodeName: "test", Address: "test"})
@@ -115,7 +115,7 @@ func TestNodes(t *testing.T) {
 	})
 
 	t.Run("AddHostnameNotUnique", func(t *testing.T) {
-		_, ns, teardown := setup(t)
+		ns, teardown := setup(t)
 		defer teardown(t)
 
 		_, err := ns.AddGenericNode(ctx, &inventorypb.AddGenericNodeRequest{NodeName: "test1", Address: "test"})
@@ -126,7 +126,7 @@ func TestNodes(t *testing.T) {
 	})
 
 	t.Run("AddInstanceRegionNotUnique", func(t *testing.T) {
-		_, ns, teardown := setup(t)
+		ns, teardown := setup(t)
 		defer teardown(t)
 
 		_, err := ns.AddRemoteAmazonRDSNode(ctx, &inventorypb.AddRemoteAmazonRDSNodeRequest{NodeName: "test1", Instance: "test-instance", Region: "test-region"})
@@ -138,7 +138,7 @@ func TestNodes(t *testing.T) {
 	})
 
 	t.Run("RemoveNotFound", func(t *testing.T) {
-		_, ns, teardown := setup(t)
+		ns, teardown := setup(t)
 		defer teardown(t)
 
 		_, err := ns.RemoveNode(ctx, &inventorypb.RemoveNodeRequest{NodeId: "no-such-id"})

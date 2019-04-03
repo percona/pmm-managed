@@ -220,6 +220,7 @@ func (s *nodesGrpcServer) AddRemoteNode(ctx context.Context, req *inventorypb.Ad
 }
 
 // AddRemoteAmazonRDSNode adds Amazon (AWS) RDS remote Node.
+//nolint:lll
 func (s *nodesGrpcServer) AddRemoteAmazonRDSNode(ctx context.Context, req *inventorypb.AddRemoteAmazonRDSNodeRequest) (*inventorypb.AddRemoteAmazonRDSNodeResponse, error) {
 	params := &models.AddNodeParams{
 		NodeName:     req.NodeName,
