@@ -48,7 +48,7 @@ func NewNodeService(db *reform.DB, ns *inventory.NodesService, ag *inventory.Age
 
 // Register do registration of the new node.
 func (s *NodeService) Register(ctx context.Context, req *managementpb.RegisterNodeRequest) (res *managementpb.RegisterNodeResponse, err error) {
-	res = &managementpb.RegisterNodeResponse{}
+	res = new(managementpb.RegisterNodeResponse)
 
 	if e := s.db.InTransaction(func(tx *reform.TX) error {
 
@@ -84,6 +84,8 @@ func (s *NodeService) Register(ctx context.Context, req *managementpb.RegisterNo
 		default:
 			return err
 		}
+
+		res.PmmAgent = pmmAgent
 
 		_, err = s.findNodeExporterByPmmAgentID(ctx, tx.Querier, pmmAgent.ID())
 		switch err.(type) {
@@ -124,8 +126,8 @@ func (s *NodeService) createNewNode(ctx context.Context, q *reform.Querier, req 
 		MachineID:           pointer.ToStringOrNil(req.MachineId),
 		Distro:              pointer.ToStringOrNil(req.Distro),
 		DistroVersion:       pointer.ToStringOrNil(req.DistroVersion),
-		DockerContainerID:   pointer.ToStringOrNil(req.DockerContainerId),
-		DockerContainerName: pointer.ToStringOrNil(req.DockerContainerName),
+		DockerContainerID:   pointer.ToStringOrNil(req.ContainerId),
+		DockerContainerName: pointer.ToStringOrNil(req.ContainerName),
 		CustomLabels:        req.CustomLabels,
 		Address:             nil,
 		Region:              nil,
