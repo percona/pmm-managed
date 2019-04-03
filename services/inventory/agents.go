@@ -96,6 +96,7 @@ func (as *AgentsService) Get(ctx context.Context, id string) (inventorypb.Agent,
 }
 
 // AddPMMAgent inserts pmm-agent Agent with given parameters.
+//nolint:unparam
 func (as *AgentsService) AddPMMAgent(ctx context.Context, req *inventorypb.AddPMMAgentRequest) (*inventorypb.PMMAgent, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// TODO Check runs-on Node: it must be BM, VM, DC (i.e. not remote, AWS RDS, etc.)
