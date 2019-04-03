@@ -85,7 +85,6 @@ func checkUniqueNodeInstanceRegion(q *reform.Querier, instance, region string) e
 
 // AddNodeParams contains parameters for adding Nodes.
 type AddNodeParams struct {
-	NodeType            NodeType
 	NodeName            string
 	MachineID           *string
 	Distro              *string
@@ -98,7 +97,7 @@ type AddNodeParams struct {
 }
 
 // AddNode adds new node to persistent store.
-func AddNode(q *reform.Querier, params *AddNodeParams) (*Node, error) {
+func AddNode(q *reform.Querier, nodeType NodeType, params *AddNodeParams) (*Node, error) {
 	id := "/node_id/" + uuid.New().String()
 	if err := checkIsUniqueNodeID(q, id); err != nil {
 		return nil, err
@@ -116,7 +115,7 @@ func AddNode(q *reform.Querier, params *AddNodeParams) (*Node, error) {
 
 	row := &Node{
 		NodeID:              id,
-		NodeType:            params.NodeType,
+		NodeType:            nodeType,
 		NodeName:            params.NodeName,
 		MachineID:           params.MachineID,
 		Distro:              params.Distro,

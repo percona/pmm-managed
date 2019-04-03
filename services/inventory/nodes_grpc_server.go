@@ -40,9 +40,18 @@ func NewNodesGrpcServer(db *reform.DB) inventorypb.NodesServer {
 
 // ListNodes returns a list of all Nodes.
 func (s *nodesGrpcServer) ListNodes(ctx context.Context, req *inventorypb.ListNodesRequest) (*inventorypb.ListNodesResponse, error) {
-	allNodes, err := models.FindAllNodes(s.db.Querier)
-	if err != nil {
-		return nil, err // TODO: Convert to gRPC errors
+
+	allNodes := make([]*models.Node, 0)
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		allNodes, err = models.FindAllNodes(tx.Querier)
+		if err != nil {
+			return err // TODO: Convert to gRPC errors
+		}
+		return nil
+	})
+	if e != nil {
+		return nil, e
 	}
 
 	nodes, err := models.ToInventoryNodes(allNodes)
@@ -70,9 +79,17 @@ func (s *nodesGrpcServer) ListNodes(ctx context.Context, req *inventorypb.ListNo
 
 // GetNode returns a single Node by ID.
 func (s *nodesGrpcServer) GetNode(ctx context.Context, req *inventorypb.GetNodeRequest) (*inventorypb.GetNodeResponse, error) {
-	modelNode, err := models.FindNodeByID(s.db.Querier, req.NodeId)
-	if err != nil {
-		return nil, err // TODO: Convert to gRPC errors
+	modelNode := new(models.Node)
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		modelNode, err = models.FindNodeByID(tx.Querier, req.NodeId)
+		if err != nil {
+			return err // TODO: Convert to gRPC errors
+		}
+		return nil
+	})
+	if e != nil {
+		return nil, e
 	}
 
 	node, err := models.ToInventoryNode(modelNode)
@@ -99,7 +116,6 @@ func (s *nodesGrpcServer) GetNode(ctx context.Context, req *inventorypb.GetNodeR
 // AddGenericNode adds Generic Node.
 func (s *nodesGrpcServer) AddGenericNode(ctx context.Context, req *inventorypb.AddGenericNodeRequest) (*inventorypb.AddGenericNodeResponse, error) {
 	params := &models.AddNodeParams{
-		NodeType:      models.GenericNodeType,
 		NodeName:      req.NodeName,
 		MachineID:     pointer.ToStringOrNil(req.MachineId),
 		Distro:        pointer.ToStringOrNil(req.Distro),
@@ -110,9 +126,17 @@ func (s *nodesGrpcServer) AddGenericNode(ctx context.Context, req *inventorypb.A
 
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// No hostname for Container, etc.
-	node, err := models.AddNode(s.db.Querier, params)
-	if err != nil {
-		return nil, err // TODO: Convert to gRPC errors
+	node := new(models.Node)
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		node, err = models.AddNode(tx.Querier, models.GenericNodeType, params)
+		if err != nil {
+			return err // TODO: Convert to gRPC errors
+		}
+		return nil
+	})
+	if e != nil {
+		return nil, e
 	}
 
 	invNode, err := models.ToInventoryNode(node)
@@ -129,7 +153,6 @@ func (s *nodesGrpcServer) AddGenericNode(ctx context.Context, req *inventorypb.A
 // AddContainerNode adds Container Node.
 func (s *nodesGrpcServer) AddContainerNode(ctx context.Context, req *inventorypb.AddContainerNodeRequest) (*inventorypb.AddContainerNodeResponse, error) {
 	params := &models.AddNodeParams{
-		NodeType:            models.ContainerNodeType,
 		NodeName:            req.NodeName,
 		MachineID:           pointer.ToStringOrNil(req.MachineId),
 		DockerContainerID:   pointer.ToStringOrNil(req.DockerContainerId),
@@ -139,9 +162,17 @@ func (s *nodesGrpcServer) AddContainerNode(ctx context.Context, req *inventorypb
 
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// No hostname for Container, etc.
-	node, err := models.AddNode(s.db.Querier, params)
-	if err != nil {
-		return nil, err // TODO: Convert to gRPC errors
+	node := new(models.Node)
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		node, err = models.AddNode(tx.Querier, models.ContainerNodeType, params)
+		if err != nil {
+			return err // TODO: Convert to gRPC errors
+		}
+		return nil
+	})
+	if e != nil {
+		return nil, e
 	}
 
 	invNode, err := models.ToInventoryNode(node)
@@ -158,16 +189,23 @@ func (s *nodesGrpcServer) AddContainerNode(ctx context.Context, req *inventorypb
 // AddRemoteNode adds Remote Node.
 func (s *nodesGrpcServer) AddRemoteNode(ctx context.Context, req *inventorypb.AddRemoteNodeRequest) (*inventorypb.AddRemoteNodeResponse, error) {
 	params := &models.AddNodeParams{
-		NodeType:     models.RemoteNodeType,
 		NodeName:     req.NodeName,
 		CustomLabels: req.CustomLabels,
 	}
 
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// No hostname for Container, etc.
-	node, err := models.AddNode(s.db.Querier, params)
-	if err != nil {
-		return nil, err // TODO: Convert to gRPC errors
+	node := new(models.Node)
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		node, err = models.AddNode(tx.Querier, models.RemoteNodeType, params)
+		if err != nil {
+			return err // TODO: Convert to gRPC errors
+		}
+		return nil
+	})
+	if e != nil {
+		return nil, e
 	}
 
 	invNode, err := models.ToInventoryNode(node)
@@ -184,7 +222,6 @@ func (s *nodesGrpcServer) AddRemoteNode(ctx context.Context, req *inventorypb.Ad
 // AddRemoteAmazonRDSNode adds Amazon (AWS) RDS remote Node.
 func (s *nodesGrpcServer) AddRemoteAmazonRDSNode(ctx context.Context, req *inventorypb.AddRemoteAmazonRDSNodeRequest) (*inventorypb.AddRemoteAmazonRDSNodeResponse, error) {
 	params := &models.AddNodeParams{
-		NodeType:     models.RemoteAmazonRDSNodeType,
 		NodeName:     req.NodeName,
 		Address:      &req.Instance,
 		Region:       &req.Region,
@@ -193,9 +230,17 @@ func (s *nodesGrpcServer) AddRemoteAmazonRDSNode(ctx context.Context, req *inven
 
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// No hostname for Container, etc.
-	node, err := models.AddNode(s.db.Querier, params)
-	if err != nil {
-		return nil, err // TODO: Convert to gRPC errors
+	node := new(models.Node)
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		node, err = models.AddNode(tx.Querier, models.RemoteAmazonRDSNodeType, params)
+		if err != nil {
+			return err // TODO: Convert to gRPC errors
+		}
+		return nil
+	})
+	if e != nil {
+		return nil, e
 	}
 
 	invNode, err := models.ToInventoryNode(node)
@@ -216,9 +261,15 @@ func (s *nodesGrpcServer) RemoveNode(ctx context.Context, req *inventorypb.Remov
 
 	// TODO check absence of Services and Agents
 
-	err := models.RemoveNode(s.db.Querier, req.NodeId)
-	if err != nil {
-		return nil, err // TODO: Convert to gRPC errors
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		err := models.RemoveNode(tx.Querier, req.NodeId)
+		if err != nil {
+			return err // TODO: Convert to gRPC errors
+		}
+		return nil
+	})
+	if e != nil {
+		return nil, e
 	}
 
 	return new(inventorypb.RemoveNodeResponse), nil
