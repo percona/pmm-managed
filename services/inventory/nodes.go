@@ -276,7 +276,8 @@ func (ns *NodesService) Update(ctx context.Context, q *reform.Querier, nodeID st
 	if params.RemoveLabels {
 		row.CustomLabels = nil
 	} else {
-		if err := row.SetCustomLabels(params.CustomLabels); err != nil {
+		err := row.SetCustomLabels(params.CustomLabels)
+		if err != nil {
 			return nil, err
 		}
 	}
