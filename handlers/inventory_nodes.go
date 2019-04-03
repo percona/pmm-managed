@@ -91,7 +91,7 @@ func (s *nodesServer) GetNode(ctx context.Context, req *inventorypb.GetNodeReque
 
 // AddGenericNode adds Generic Node.
 func (s *nodesServer) AddGenericNode(ctx context.Context, req *inventorypb.AddGenericNodeRequest) (*inventorypb.AddGenericNodeResponse, error) {
-	params := &inventory.AddNodeParams{
+	params := &models.AddNodeParams{
 		NodeType:      models.GenericNodeType,
 		NodeName:      req.NodeName,
 		MachineID:     pointer.ToStringOrNil(req.MachineId),
@@ -113,7 +113,7 @@ func (s *nodesServer) AddGenericNode(ctx context.Context, req *inventorypb.AddGe
 
 // AddContainerNode adds Container Node.
 func (s *nodesServer) AddContainerNode(ctx context.Context, req *inventorypb.AddContainerNodeRequest) (*inventorypb.AddContainerNodeResponse, error) {
-	params := &inventory.AddNodeParams{
+	params := &models.AddNodeParams{
 		NodeType:            models.ContainerNodeType,
 		NodeName:            req.NodeName,
 		MachineID:           pointer.ToStringOrNil(req.MachineId),
@@ -134,7 +134,7 @@ func (s *nodesServer) AddContainerNode(ctx context.Context, req *inventorypb.Add
 
 // AddRemoteNode adds Remote Node.
 func (s *nodesServer) AddRemoteNode(ctx context.Context, req *inventorypb.AddRemoteNodeRequest) (*inventorypb.AddRemoteNodeResponse, error) {
-	params := &inventory.AddNodeParams{
+	params := &models.AddNodeParams{
 		NodeType:     models.RemoteNodeType,
 		NodeName:     req.NodeName,
 		CustomLabels: req.CustomLabels,
@@ -152,7 +152,7 @@ func (s *nodesServer) AddRemoteNode(ctx context.Context, req *inventorypb.AddRem
 
 // AddRemoteAmazonRDSNode adds Amazon (AWS) RDS remote Node.
 func (s *nodesServer) AddRemoteAmazonRDSNode(ctx context.Context, req *inventorypb.AddRemoteAmazonRDSNodeRequest) (*inventorypb.AddRemoteAmazonRDSNodeResponse, error) {
-	params := &inventory.AddNodeParams{
+	params := &models.AddNodeParams{
 		NodeType:     models.RemoteAmazonRDSNodeType,
 		NodeName:     req.NodeName,
 		Address:      &req.Instance,

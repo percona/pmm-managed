@@ -134,7 +134,7 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	l := logrus.WithField("component", "gRPC")
 	l.Infof("Starting server on http://%s/ ...", *gRPCAddrF)
 
-	nodesSvc := inventory.NewNodesService(deps.agentsRegistry)
+	nodesSvc := inventory.NewNodesService()
 	servicesSvc := inventory.NewServicesService(deps.agentsRegistry, nodesSvc)
 	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry)
 

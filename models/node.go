@@ -22,9 +22,157 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 )
+
+func checkIsUniqueNodeID(q *reform.Querier, id string) error {
+	if id == "" {
+		panic("empty Node ID")
+	}
+
+	row := &Node{NodeID: id}
+	switch err := q.Reload(row); err {
+	case nil:
+		return status.Errorf(codes.AlreadyExists, "Node with ID %q already exists.", id)
+	case reform.ErrNoRows:
+		return nil
+	default:
+		return errors.WithStack(err)
+	}
+}
+
+func checkUniqueName(q *reform.Querier, name string) error {
+	if name == "" {
+		return status.Error(codes.InvalidArgument, "Empty Node name.")
+	}
+
+	_, err := q.FindOneFrom(NodeTable, "node_name", name)
+	switch err {
+	case nil:
+		return status.Errorf(codes.AlreadyExists, "Node with name %q already exists.", name)
+	case reform.ErrNoRows:
+		return nil
+	default:
+		return errors.WithStack(err)
+	}
+}
+
+func checkUniqueNodeInstanceRegion(q *reform.Querier, instance, region string) error {
+	if instance == "" {
+		return status.Error(codes.InvalidArgument, "Empty Node instance.")
+	}
+	if region == "" {
+		return status.Error(codes.InvalidArgument, "Empty Node region.")
+	}
+
+	tail := fmt.Sprintf("WHERE address = %s AND region = %s LIMIT 1", q.Placeholder(1), q.Placeholder(2)) //nolint:gosec
+	_, err := q.SelectOneFrom(NodeTable, tail, instance, region)
+	switch err {
+	case nil:
+		return status.Errorf(codes.AlreadyExists, "Node with instance %q and region %q already exists.", instance, region)
+	case reform.ErrNoRows:
+		return nil
+	default:
+		return errors.WithStack(err)
+	}
+}
+
+// AddNodeParams contains parameters for adding Nodes.
+type AddNodeParams struct {
+	NodeType            NodeType
+	NodeName            string
+	MachineID           *string
+	Distro              *string
+	DistroVersion       *string
+	DockerContainerID   *string
+	DockerContainerName *string
+	CustomLabels        map[string]string
+	Address             *string
+	Region              *string
+}
+
+// AddNode adds new node to persistent store.
+func AddNode(q *reform.Querier, params *AddNodeParams) (*Node, error) {
+	id := "/node_id/" + uuid.New().String()
+	if err := checkIsUniqueNodeID(q, id); err != nil {
+		return nil, err
+	}
+
+	if err := checkUniqueName(q, params.NodeName); err != nil {
+		return nil, err
+	}
+	if params.Address != nil && params.Region != nil {
+		if err := checkUniqueNodeInstanceRegion(q, *params.Address, *params.Region); err != nil {
+			return nil, err
+		}
+	}
+
+	row := &Node{
+		NodeID:              id,
+		NodeType:            params.NodeType,
+		NodeName:            params.NodeName,
+		MachineID:           params.MachineID,
+		Distro:              params.Distro,
+		DistroVersion:       params.DistroVersion,
+		DockerContainerID:   params.DockerContainerID,
+		DockerContainerName: params.DockerContainerName,
+		Address:             params.Address,
+		Region:              params.Region,
+	}
+	if err := row.SetCustomLabels(params.CustomLabels); err != nil {
+		return nil, err
+	}
+	if err := q.Insert(row); err != nil {
+		return nil, err
+	}
+
+	return row, nil
+}
+
+// FindAllNodes finds all nodes and loads it from persistent store.
+func FindAllNodes(q *reform.Querier) ([]*Node, error) {
+	structs, err := q.SelectAllFrom(NodeTable, "ORDER BY node_id")
+	if err != nil {
+		return nil, err
+	}
+
+	nodes := make([]*Node, len(structs))
+	for i, s := range structs {
+		nodes[i] = s.(*Node)
+	}
+
+	return nodes, nil
+}
+
+// FindNodeByID finds a node by ID and loads it from persistent store.
+func FindNodeByID(q *reform.Querier, id string) (*Node, error) {
+	if id == "" {
+		return nil, status.Error(codes.InvalidArgument, "Empty Node ID.")
+	}
+
+	row := &Node{NodeID: id}
+	switch err := q.Reload(row); err {
+	case nil:
+		return row, nil
+	case reform.ErrNoRows:
+		return nil, status.Errorf(codes.NotFound, "Node with ID %q not found.", id)
+	default:
+		return nil, errors.WithStack(err)
+	}
+}
+
+// RemoveNode removes single node prom persistent store.
+func RemoveNode(q *reform.Querier, id string) error {
+	err := q.Delete(&Node{NodeID: id})
+	if err == reform.ErrNoRows {
+		return status.Errorf(codes.NotFound, "Node with ID %q not found.", id)
+	}
+	return nil
+}
 
 // NodesForAgent returns all Nodes for which Agent with given ID provides insights.
 func NodesForAgent(q *reform.Querier, agentID string) ([]*Node, error) {

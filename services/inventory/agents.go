@@ -269,7 +269,7 @@ func (as *AgentsService) AddPMMAgent(ctx context.Context, req *inventorypb.AddPM
 			return err
 		}
 
-		ns := NewNodesService(as.r)
+		ns := NewNodesService()
 		if _, err := ns.Get(ctx, as.db.Querier, req.RunsOnNodeId); err != nil {
 			return err
 		}
@@ -403,7 +403,7 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, q *reform.Querie
 		return nil, err
 	}
 
-	ns := NewNodesService(as.r)
+	ns := NewNodesService()
 	ss := NewServicesService(as.r, ns)
 	if _, err := ss.Get(ctx, q, req.ServiceId); err != nil {
 		return nil, err
@@ -513,7 +513,7 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, q *reform.Queri
 			return err
 		}
 
-		ns := NewNodesService(as.r)
+		ns := NewNodesService()
 		ss := NewServicesService(as.r, ns)
 		if _, err := ss.Get(ctx, q, req.ServiceId); err != nil {
 			return err
@@ -613,7 +613,7 @@ func (as *AgentsService) AddQANMySQLPerfSchemaAgent(ctx context.Context, q *refo
 		return nil, err
 	}
 
-	ns := NewNodesService(as.r)
+	ns := NewNodesService()
 	ss := NewServicesService(as.r, ns)
 	if _, err := ss.Get(ctx, q, req.ServiceId); err != nil {
 		return nil, err
@@ -708,7 +708,7 @@ func (as *AgentsService) AddPostgresExporter(ctx context.Context, q *reform.Quer
 			return err
 		}
 
-		ns := NewNodesService(as.r)
+		ns := NewNodesService()
 		ss := NewServicesService(as.r, ns)
 		if _, err := ss.Get(ctx, q, req.ServiceId); err != nil {
 			return err

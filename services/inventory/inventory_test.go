@@ -57,7 +57,7 @@ func TestNodes(t *testing.T) {
 			require.NoError(t, tx.Rollback())
 			r.AssertExpectations(t)
 		}
-		ns = NewNodesService(r)
+		ns = NewNodesService()
 		return
 	}
 
@@ -69,7 +69,7 @@ func TestNodes(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, actualNodes, 1) // PMMServerNodeType
 
-		actualNode, err := ns.Add(ctx, q, &AddNodeParams{
+		actualNode, err := ns.Add(ctx, q, &models.AddNodeParams{
 			NodeType: models.GenericNodeType,
 			NodeName: "test-bm",
 		})
@@ -109,7 +109,7 @@ func TestNodes(t *testing.T) {
 		q, ns, teardown := setup(t)
 		defer teardown(t)
 
-		_, err := ns.Add(ctx, q, &AddNodeParams{
+		_, err := ns.Add(ctx, q, &models.AddNodeParams{
 			NodeType: models.GenericNodeType,
 		})
 		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Empty Node name.`), err)
@@ -119,14 +119,14 @@ func TestNodes(t *testing.T) {
 		q, ns, teardown := setup(t)
 		defer teardown(t)
 
-		_, err := ns.Add(ctx, q, &AddNodeParams{
+		_, err := ns.Add(ctx, q, &models.AddNodeParams{
 			NodeType: models.GenericNodeType,
 			NodeName: "test",
 			Address:  pointer.ToString("test"),
 		})
 		require.NoError(t, err)
 
-		_, err = ns.Add(ctx, q, &AddNodeParams{
+		_, err = ns.Add(ctx, q, &models.AddNodeParams{
 			NodeType: models.RemoteNodeType,
 			NodeName: "test",
 		})
@@ -137,14 +137,14 @@ func TestNodes(t *testing.T) {
 		q, ns, teardown := setup(t)
 		defer teardown(t)
 
-		_, err := ns.Add(ctx, q, &AddNodeParams{
+		_, err := ns.Add(ctx, q, &models.AddNodeParams{
 			NodeType: models.GenericNodeType,
 			NodeName: "test1",
 			Address:  pointer.ToString("test"),
 		})
 		require.NoError(t, err)
 
-		_, err = ns.Add(ctx, q, &AddNodeParams{
+		_, err = ns.Add(ctx, q, &models.AddNodeParams{
 			NodeType: models.GenericNodeType,
 			NodeName: "test2",
 			Address:  pointer.ToString("test"),
@@ -156,7 +156,7 @@ func TestNodes(t *testing.T) {
 		q, ns, teardown := setup(t)
 		defer teardown(t)
 
-		_, err := ns.Add(ctx, q, &AddNodeParams{
+		_, err := ns.Add(ctx, q, &models.AddNodeParams{
 			NodeType: models.RemoteAmazonRDSNodeType,
 			NodeName: "test1",
 			Address:  pointer.ToString("test-instance"),
@@ -164,7 +164,7 @@ func TestNodes(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		_, err = ns.Add(ctx, q, &AddNodeParams{
+		_, err = ns.Add(ctx, q, &models.AddNodeParams{
 			NodeType: models.RemoteAmazonRDSNodeType,
 			NodeName: "test2",
 			Address:  pointer.ToString("test-instance"),
@@ -204,7 +204,7 @@ func TestServices(t *testing.T) {
 			require.NoError(t, tx.Rollback())
 			r.AssertExpectations(t)
 		}
-		ns := NewNodesService(r)
+		ns := NewNodesService()
 		ss = NewServicesService(r, ns)
 		return
 	}
@@ -380,7 +380,7 @@ func TestAgents(t *testing.T) {
 		r := new(mockRegistry)
 		r.Test(t)
 
-		ns := NewNodesService(r)
+		ns := NewNodesService()
 		ss = NewServicesService(r, ns)
 		as = NewAgentsService(db, r)
 	}

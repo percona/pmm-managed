@@ -21,30 +21,22 @@ import (
 	"fmt"
 
 	"github.com/AlekSi/pointer"
-	"github.com/google/uuid"
 	inventorypb "github.com/percona/pmm/api/inventory"
-	"github.com/pkg/errors"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
 )
 
 // NodesService works with inventory API Nodes.
-type NodesService struct {
-	r registry
-}
+type NodesService struct{}
 
 // NewNodesService creates NodesService.
-func NewNodesService(r registry) *NodesService {
-	return &NodesService{
-		r: r,
-	}
+func NewNodesService() *NodesService {
+	return &NodesService{}
 }
 
-// makeNode converts database row to Inventory API Node.
-func makeNode(row *models.Node) (inventorypb.Node, error) {
+// toInventoryNode converts database row to Inventory API Node.
+func toInventoryNode(row *models.Node) (inventorypb.Node, error) {
 	labels, err := row.GetCustomLabels()
 	if err != nil {
 		return nil, err
@@ -93,86 +85,11 @@ func makeNode(row *models.Node) (inventorypb.Node, error) {
 	}
 }
 
-//nolint:unparam
-func (ns *NodesService) get(ctx context.Context, q *reform.Querier, id string) (*models.Node, error) {
-	if id == "" {
-		return nil, status.Error(codes.InvalidArgument, "Empty Node ID.")
-	}
-
-	row := &models.Node{NodeID: id}
-	switch err := q.Reload(row); err {
-	case nil:
-		return row, nil
-	case reform.ErrNoRows:
-		return nil, status.Errorf(codes.NotFound, "Node with ID %q not found.", id)
-	default:
-		return nil, errors.WithStack(err)
-	}
-}
-
-func (ns *NodesService) checkUniqueID(q *reform.Querier, id string) error {
-	if id == "" {
-		panic("empty Node ID")
-	}
-
-	row := &models.Node{NodeID: id}
-	switch err := q.Reload(row); err {
-	case nil:
-		return status.Errorf(codes.AlreadyExists, "Node with ID %q already exists.", id)
-	case reform.ErrNoRows:
-		return nil
-	default:
-		return errors.WithStack(err)
-	}
-}
-
-func (ns *NodesService) checkUniqueName(q *reform.Querier, name string) error {
-	if name == "" {
-		return status.Error(codes.InvalidArgument, "Empty Node name.")
-	}
-
-	_, err := q.FindOneFrom(models.NodeTable, "node_name", name)
-	switch err {
-	case nil:
-		return status.Errorf(codes.AlreadyExists, "Node with name %q already exists.", name)
-	case reform.ErrNoRows:
-		return nil
-	default:
-		return errors.WithStack(err)
-	}
-}
-
-func (ns *NodesService) checkUniqueInstanceRegion(q *reform.Querier, instance, region string) error {
-	if instance == "" {
-		return status.Error(codes.InvalidArgument, "Empty Node instance.")
-	}
-	if region == "" {
-		return status.Error(codes.InvalidArgument, "Empty Node region.")
-	}
-
-	tail := fmt.Sprintf("WHERE address = %s AND region = %s LIMIT 1", q.Placeholder(1), q.Placeholder(2)) //nolint:gosec
-	_, err := q.SelectOneFrom(models.NodeTable, tail, instance, region)
-	switch err {
-	case nil:
-		return status.Errorf(codes.AlreadyExists, "Node with instance %q and region %q already exists.", instance, region)
-	case reform.ErrNoRows:
-		return nil
-	default:
-		return errors.WithStack(err)
-	}
-}
-
-// List selects all Nodes in a stable order.
-func (ns *NodesService) List(ctx context.Context, q *reform.Querier) ([]inventorypb.Node, error) { //nolint:unparam
-	structs, err := q.SelectAllFrom(models.NodeTable, "ORDER BY node_id")
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	res := make([]inventorypb.Node, len(structs))
-	for i, str := range structs {
-		row := str.(*models.Node)
-		res[i], err = makeNode(row)
+func toInventoryNodes(nodes []*models.Node) ([]inventorypb.Node, error) {
+	var err error
+	res := make([]inventorypb.Node, len(nodes))
+	for i, n := range nodes {
+		res[i], err = toInventoryNode(n)
 		if err != nil {
 			return nil, err
 		}
@@ -180,67 +97,33 @@ func (ns *NodesService) List(ctx context.Context, q *reform.Querier) ([]inventor
 	return res, nil
 }
 
-// Get selects a single Node by ID.
-func (ns *NodesService) Get(ctx context.Context, q *reform.Querier, id string) (inventorypb.Node, error) {
-	row, err := ns.get(ctx, q, id)
+// List selects all Nodes in a stable order.
+func (ns *NodesService) List(ctx context.Context, q *reform.Querier) ([]inventorypb.Node, error) { //nolint:unparam
+	nodes, err := models.FindAllNodes(q)
 	if err != nil {
-		return nil, err
+		return nil, err // TODO: Convert to gRPC errors
 	}
-	return makeNode(row)
+	return toInventoryNodes(nodes)
 }
 
-// AddNodeParams contains parameters for adding Nodes.
-type AddNodeParams struct {
-	NodeType            models.NodeType
-	NodeName            string
-	MachineID           *string
-	Distro              *string
-	DistroVersion       *string
-	DockerContainerID   *string
-	DockerContainerName *string
-	CustomLabels        map[string]string
-	Address             *string
-	Region              *string
+// Get selects a single Node by ID.
+func (ns *NodesService) Get(ctx context.Context, q *reform.Querier, id string) (inventorypb.Node, error) {
+	node, err := models.FindNodeByID(q, id)
+	if err != nil {
+		return nil, err // TODO: Convert to gRPC errors
+	}
+	return toInventoryNode(node)
 }
 
 // Add inserts Node with given parameters. ID will be generated.
-func (ns *NodesService) Add(ctx context.Context, q *reform.Querier, params *AddNodeParams) (inventorypb.Node, error) { //nolint:unparam
+func (ns *NodesService) Add(ctx context.Context, q *reform.Querier, params *models.AddNodeParams) (inventorypb.Node, error) { //nolint:unparam
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// No hostname for Container, etc.
-
-	id := "/node_id/" + uuid.New().String()
-	if err := ns.checkUniqueID(q, id); err != nil {
-		return nil, err
+	node, err := models.AddNode(q, params)
+	if err != nil {
+		return nil, err // TODO: Convert to gRPC errors
 	}
-
-	if err := ns.checkUniqueName(q, params.NodeName); err != nil {
-		return nil, err
-	}
-	if params.Address != nil && params.Region != nil {
-		if err := ns.checkUniqueInstanceRegion(q, *params.Address, *params.Region); err != nil {
-			return nil, err
-		}
-	}
-
-	row := &models.Node{
-		NodeID:              id,
-		NodeType:            params.NodeType,
-		NodeName:            params.NodeName,
-		MachineID:           params.MachineID,
-		Distro:              params.Distro,
-		DistroVersion:       params.DistroVersion,
-		DockerContainerID:   params.DockerContainerID,
-		DockerContainerName: params.DockerContainerName,
-		Address:             params.Address,
-		Region:              params.Region,
-	}
-	if err := row.SetCustomLabels(params.CustomLabels); err != nil {
-		return nil, err
-	}
-	if err := q.Insert(row); err != nil {
-		return nil, errors.WithStack(err)
-	}
-	return makeNode(row)
+	return toInventoryNode(node)
 }
 
 // Remove deletes Node by ID.
@@ -251,9 +134,10 @@ func (ns *NodesService) Remove(ctx context.Context, q *reform.Querier, id string
 
 	// TODO check absence of Services and Agents
 
-	err := q.Delete(&models.Node{NodeID: id})
-	if err == reform.ErrNoRows {
-		return status.Errorf(codes.NotFound, "Node with ID %q not found.", id)
+	err := models.RemoveNode(q, id)
+	if err != nil {
+		return err // TODO: Convert to gRPC errors
 	}
-	return errors.WithStack(err)
+
+	return nil
 }
