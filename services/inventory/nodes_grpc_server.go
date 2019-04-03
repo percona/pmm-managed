@@ -1,4 +1,5 @@
-// Copyright (C) 2019 Percona LLC
+// pmm-managed
+// Copyright (C) 2017 Percona LLC
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -30,7 +31,7 @@ type nodesGrpcServer struct {
 	db *reform.DB
 }
 
-// NewNodesServer returns Inventory API handler for managing Nodes.
+// NewNodesGrpcServer returns Inventory API handler for managing Nodes.
 func NewNodesGrpcServer(db *reform.DB) inventorypb.NodesServer {
 	return &nodesGrpcServer{
 		db: db,

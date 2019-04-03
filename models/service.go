@@ -29,6 +29,7 @@ import (
 	"gopkg.in/reform.v1"
 )
 
+// FindServiceByID finds service by ID.
 func FindServiceByID(q *reform.Querier, id string) (*Service, error) {
 	if id == "" {
 		return nil, status.Error(codes.InvalidArgument, "Empty Service ID.")
@@ -82,6 +83,7 @@ type AddDBMSServiceParams struct {
 	Port         *uint16
 }
 
+// AddNewService adds new service to storage.
 func AddNewService(q *reform.Querier, serviceType ServiceType, params *AddDBMSServiceParams) (*Service, error) {
 	id := "/service_id/" + uuid.New().String()
 	if err := checkServiceUniqueID(q, id); err != nil {

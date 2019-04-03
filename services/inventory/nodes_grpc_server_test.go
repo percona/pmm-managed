@@ -1,5 +1,5 @@
 // pmm-managed
-// Copyright (C) 2019 Percona LLC
+// Copyright (C) 2017 Percona LLC
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -36,6 +36,7 @@ import (
 func TestNodes(t *testing.T) {
 	ctx := logger.Set(context.Background(), t.Name())
 
+	//nolint:unparam
 	setup := func(t *testing.T) (q *reform.Querier, ns inventorypb.NodesServer, teardown func(t *testing.T)) {
 		uuid.SetRand(new(tests.IDReader))
 
