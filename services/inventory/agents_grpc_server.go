@@ -23,6 +23,7 @@ import (
 	inventorypb "github.com/percona/pmm/api/inventory"
 )
 
+//nolint:unused
 type agentsGrpcServer struct {
 	s *AgentsService
 }
@@ -216,6 +217,7 @@ func (s *agentsGrpcServer) ChangeMongoDBExporter(ctx context.Context, req *inven
 }
 
 // AddQANMySQLPerfSchemaAgent adds MySQL PerfSchema QAN Agent.
+//nolint:lll
 func (s *agentsGrpcServer) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *inventorypb.AddQANMySQLPerfSchemaAgentRequest) (*inventorypb.AddQANMySQLPerfSchemaAgentResponse, error) {
 	agent, err := s.s.AddQANMySQLPerfSchemaAgent(ctx, req)
 	if err != nil {
@@ -229,6 +231,7 @@ func (s *agentsGrpcServer) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *
 }
 
 // ChangeQANMySQLPerfSchemaAgent changes disabled flag and custom labels of MySQL PerfSchema QAN Agent.
+//nolint:lll
 func (s *agentsGrpcServer) ChangeQANMySQLPerfSchemaAgent(ctx context.Context, req *inventorypb.ChangeQANMySQLPerfSchemaAgentRequest) (*inventorypb.ChangeQANMySQLPerfSchemaAgentResponse, error) {
 	agent, err := s.s.ChangeQANMySQLPerfSchemaAgent(ctx, req)
 	if err != nil {
@@ -256,6 +259,7 @@ func (s *agentsGrpcServer) AddPostgresExporter(ctx context.Context, req *invento
 }
 
 // ChangePostgresExporter changes disabled flag and custom labels of postgres_exporter Agent.
+//nolint:lll
 func (s *agentsGrpcServer) ChangePostgresExporter(ctx context.Context, req *inventorypb.ChangePostgresExporterRequest) (*inventorypb.ChangePostgresExporterResponse, error) {
 	agent, err := s.s.ChangePostgresExporter(ctx, req)
 	if err != nil {

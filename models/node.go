@@ -255,7 +255,7 @@ func ToInventoryNode(row *Node) (inventorypb.Node, error) {
 	}
 }
 
-// ToInventoryNode converts database rows to Inventory API Nodes.
+// ToInventoryNodes converts database rows to Inventory API Nodes.
 func ToInventoryNodes(nodes []*Node) ([]inventorypb.Node, error) {
 	var err error
 	res := make([]inventorypb.Node, len(nodes))

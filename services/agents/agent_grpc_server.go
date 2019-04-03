@@ -28,7 +28,7 @@ type agentGrpcServer struct {
 }
 
 // NewAgentGrpcServer creates new agents server.
-func NewAgentGrpcServer(r *Registry) *agentGrpcServer {
+func NewAgentGrpcServer(r *Registry) agentpb.AgentServer {
 	return &agentGrpcServer{
 		registry: r,
 	}

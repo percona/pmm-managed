@@ -79,7 +79,7 @@ func (ss *ServicesService) Get(ctx context.Context, id string) (inventorypb.Serv
 }
 
 // AddMySQL inserts MySQL Service with given parameters.
-//nolint:dupl
+//nolint:dupl,unparam
 func (ss *ServicesService) AddMySQL(ctx context.Context, params *models.AddDBMSServiceParams) (*inventorypb.MySQLService, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// Both address and socket can't be empty, etc.
@@ -105,7 +105,7 @@ func (ss *ServicesService) AddMySQL(ctx context.Context, params *models.AddDBMSS
 }
 
 // AddMongoDB inserts MongoDB Service with given parameters.
-//nolint:dupl
+//nolint:dupl,unparam
 func (ss *ServicesService) AddMongoDB(ctx context.Context, params *models.AddDBMSServiceParams) (*inventorypb.MongoDBService, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 
@@ -130,6 +130,7 @@ func (ss *ServicesService) AddMongoDB(ctx context.Context, params *models.AddDBM
 }
 
 // AddPostgreSQL inserts PostgreSQL Service with given parameters.
+//nolint:dupl,unparam
 func (ss *ServicesService) AddPostgreSQL(ctx context.Context, params *models.AddDBMSServiceParams) (*inventorypb.PostgreSQLService, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// Both address and socket can't be empty, etc.

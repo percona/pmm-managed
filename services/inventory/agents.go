@@ -72,6 +72,9 @@ func (as *AgentsService) List(ctx context.Context, filters AgentFilters) ([]inve
 		}
 
 		res, err = models.ToInventoryAgents(agents, tx.Querier, as.r)
+		if err != nil {
+			return err
+		}
 		return nil
 	})
 	return res, e
@@ -334,7 +337,7 @@ func (as *AgentsService) ChangeMongoDBExporter(ctx context.Context, req *invento
 }
 
 // AddQANMySQLPerfSchemaAgent adds MySQL PerfSchema QAN Agent.
-//nolint:lll
+//nolint:lll,unused
 func (as *AgentsService) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *inventorypb.AddQANMySQLPerfSchemaAgentRequest) (*inventorypb.QANMySQLPerfSchemaAgent, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 

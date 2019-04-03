@@ -318,11 +318,12 @@ func AgentsForService(q *reform.Querier, serviceID string) ([]*Agent, error) {
 	return res, nil
 }
 
+// AgentConnectionChecker provides interface for check pmm agent connection status.
 type AgentConnectionChecker interface {
 	IsConnected(pmmAgentID string) bool
 }
 
-// toInventoryAgent converts database row to Inventory API Agent.
+// ToInventoryAgent converts database row to Inventory API Agent.
 func ToInventoryAgent(q *reform.Querier, row *Agent, connChecker AgentConnectionChecker) (inventorypb.Agent, error) {
 	labels, err := row.GetCustomLabels()
 	if err != nil {
@@ -436,6 +437,7 @@ func ToInventoryAgent(q *reform.Querier, row *Agent, connChecker AgentConnection
 	}
 }
 
+// ToInventoryAgents converts database rows to Inventory API Agents.
 func ToInventoryAgents(agents []*Agent, q *reform.Querier, connChecker AgentConnectionChecker) ([]inventorypb.Agent, error) {
 	// TODO That loop makes len(agents) SELECTs, that can be slow. Optimize when needed.
 	res := make([]inventorypb.Agent, len(agents))
@@ -544,10 +546,12 @@ func (s *Agent) SetCustomLabels(m map[string]string) error {
 	return nil
 }
 
+// IsChild check is an agent have pmm_agent_id.
 func (s *Agent) IsChild() bool {
 	return pointer.GetString(s.PMMAgentID) != ""
 }
 
+// IsPMMAgent check is it PMMAgent.
 func (s *Agent) IsPMMAgent() bool {
 	return s.AgentType == PMMAgentType
 }
