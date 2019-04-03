@@ -21,22 +21,17 @@ import (
 	"fmt"
 
 	inventorypb "github.com/percona/pmm/api/inventory"
-	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/services/inventory"
 )
 
 type agentsServer struct {
-	s  *inventory.AgentsService
-	db *reform.DB
+	s *inventory.AgentsService
 }
 
 // NewAgentsServer returns Inventory API handler for managing Agents.
-func NewAgentsServer(db *reform.DB, s *inventory.AgentsService) inventorypb.AgentsServer {
-	return &agentsServer{
-		s:  s,
-		db: db,
-	}
+func NewAgentsServer(s *inventory.AgentsService) inventorypb.AgentsServer {
+	return &agentsServer{s}
 }
 
 // ListAgents returns a list of Agents for a given filters.
@@ -154,7 +149,7 @@ func (s *agentsServer) ChangeNodeExporter(ctx context.Context, req *inventorypb.
 
 // AddMySQLdExporter adds mysqld_exporter Agent.
 func (s *agentsServer) AddMySQLdExporter(ctx context.Context, req *inventorypb.AddMySQLdExporterRequest) (*inventorypb.AddMySQLdExporterResponse, error) {
-	agent, err := s.s.AddMySQLdExporter(ctx, s.db.Querier, req)
+	agent, err := s.s.AddMySQLdExporter(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +193,7 @@ func (s *agentsServer) ChangeExternalExporter(context.Context, *inventorypb.Chan
 
 // AddMongoDBExporter adds mongodb_exporter Agent.
 func (s *agentsServer) AddMongoDBExporter(ctx context.Context, req *inventorypb.AddMongoDBExporterRequest) (*inventorypb.AddMongoDBExporterResponse, error) {
-	agent, err := s.s.AddMongoDBExporter(ctx, s.db.Querier, req)
+	agent, err := s.s.AddMongoDBExporter(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +219,7 @@ func (s *agentsServer) ChangeMongoDBExporter(ctx context.Context, req *inventory
 
 // AddQANMySQLPerfSchemaAgent adds MySQL PerfSchema QAN Agent.
 func (s *agentsServer) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *inventorypb.AddQANMySQLPerfSchemaAgentRequest) (*inventorypb.AddQANMySQLPerfSchemaAgentResponse, error) {
-	agent, err := s.s.AddQANMySQLPerfSchemaAgent(ctx, s.db.Querier, req)
+	agent, err := s.s.AddQANMySQLPerfSchemaAgent(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -250,7 +245,7 @@ func (s *agentsServer) ChangeQANMySQLPerfSchemaAgent(ctx context.Context, req *i
 
 // AddPostgresExporter adds postgres_exporter Agent.
 func (s *agentsServer) AddPostgresExporter(ctx context.Context, req *inventorypb.AddPostgresExporterRequest) (*inventorypb.AddPostgresExporterResponse, error) {
-	agent, err := s.s.AddPostgresExporter(ctx, s.db.Querier, req)
+	agent, err := s.s.AddPostgresExporter(ctx, req)
 	if err != nil {
 		return nil, err
 	}

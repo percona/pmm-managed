@@ -29,6 +29,13 @@ type AgentServer struct {
 	Registry *agents.Registry
 }
 
+// NewAgentServer creates new agents server.
+func NewAgentServer(r *agents.Registry) *AgentServer {
+	return &AgentServer{
+		Registry: r,
+	}
+}
+
 // Register TODO https://jira.percona.com/browse/PMM-3453
 func (s *AgentServer) Register(context.Context, *agentpb.RegisterRequest) (*agentpb.RegisterResponse, error) {
 	panic("not implemented yet")

@@ -22,27 +22,22 @@ import (
 
 	"github.com/AlekSi/pointer"
 	inventorypb "github.com/percona/pmm/api/inventory"
-	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
 )
 
 type servicesGrpcServer struct {
-	db *reform.DB
-	s  *ServicesService
+	s *ServicesService
 }
 
 // NewServicesGrpcServer returns Inventory API handler for managing Services.
-func NewServicesGrpcServer(db *reform.DB, s *ServicesService) inventorypb.ServicesServer {
-	return &servicesGrpcServer{
-		db: db,
-		s:  s,
-	}
+func NewServicesGrpcServer(s *ServicesService) inventorypb.ServicesServer {
+	return &servicesGrpcServer{s}
 }
 
 // ListServices returns a list of all Services.
 func (s *servicesGrpcServer) ListServices(ctx context.Context, req *inventorypb.ListServicesRequest) (*inventorypb.ListServicesResponse, error) {
-	services, err := s.s.List(ctx, s.db.Querier)
+	services, err := s.s.List(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +60,7 @@ func (s *servicesGrpcServer) ListServices(ctx context.Context, req *inventorypb.
 
 // GetService returns a single Service by ID.
 func (s *servicesGrpcServer) GetService(ctx context.Context, req *inventorypb.GetServiceRequest) (*inventorypb.GetServiceResponse, error) {
-	service, err := s.s.Get(ctx, s.db.Querier, req.ServiceId)
+	service, err := s.s.Get(ctx, req.ServiceId)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +81,7 @@ func (s *servicesGrpcServer) GetService(ctx context.Context, req *inventorypb.Ge
 
 // AddMySQLService adds MySQL Service.
 func (s *servicesGrpcServer) AddMySQLService(ctx context.Context, req *inventorypb.AddMySQLServiceRequest) (*inventorypb.AddMySQLServiceResponse, error) {
-	service, err := s.s.AddMySQL(ctx, s.db.Querier, &models.AddDBMSServiceParams{
+	service, err := s.s.AddMySQL(ctx, &models.AddDBMSServiceParams{
 		ServiceName:  req.ServiceName,
 		NodeID:       req.NodeId,
 		Address:      pointer.ToStringOrNil(req.Address),
@@ -109,7 +104,7 @@ func (s *servicesGrpcServer) AddAmazonRDSMySQLService(ctx context.Context, req *
 }
 
 func (s *servicesGrpcServer) AddMongoDBService(ctx context.Context, req *inventorypb.AddMongoDBServiceRequest) (*inventorypb.AddMongoDBServiceResponse, error) {
-	service, err := s.s.AddMongoDB(ctx, s.db.Querier, &models.AddDBMSServiceParams{
+	service, err := s.s.AddMongoDB(ctx, &models.AddDBMSServiceParams{
 		ServiceName:  req.ServiceName,
 		NodeID:       req.NodeId,
 		Address:      pointer.ToStringOrNil(req.Address),
@@ -127,7 +122,7 @@ func (s *servicesGrpcServer) AddMongoDBService(ctx context.Context, req *invento
 }
 
 func (s *servicesGrpcServer) AddPostgreSQLService(ctx context.Context, req *inventorypb.AddPostgreSQLServiceRequest) (*inventorypb.AddPostgreSQLServiceResponse, error) {
-	service, err := s.s.AddPostgreSQL(ctx, s.db.Querier, &models.AddDBMSServiceParams{
+	service, err := s.s.AddPostgreSQL(ctx, &models.AddDBMSServiceParams{
 		ServiceName:  req.ServiceName,
 		NodeID:       req.NodeId,
 		Address:      pointer.ToStringOrNil(req.Address),
@@ -146,7 +141,7 @@ func (s *servicesGrpcServer) AddPostgreSQLService(ctx context.Context, req *inve
 
 // RemoveService removes Service without any Agents.
 func (s *servicesGrpcServer) RemoveService(ctx context.Context, req *inventorypb.RemoveServiceRequest) (*inventorypb.RemoveServiceResponse, error) {
-	if err := s.s.Remove(ctx, s.db.Querier, req.ServiceId); err != nil {
+	if err := s.s.Remove(ctx, req.ServiceId); err != nil {
 		return nil, err
 	}
 

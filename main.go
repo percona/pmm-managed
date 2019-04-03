@@ -134,10 +134,6 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	l := logrus.WithField("component", "gRPC")
 	l.Infof("Starting server on http://%s/ ...", *gRPCAddrF)
 
-	servicesSvc := inventory.NewServicesService(deps.agentsRegistry)
-	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry)
-	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsRegistry)
-
 	gRPCServer := grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			interceptors.Unary,
@@ -148,15 +144,20 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 			grpc_validator.StreamServerInterceptor(),
 		)),
 	)
-	serverpb.RegisterServerServer(gRPCServer, handlers.NewServerServer(
-		version.Version,
-	))
-	agentpb.RegisterAgentServer(gRPCServer, &handlers.AgentServer{
-		Registry: deps.agentsRegistry,
-	})
+
+	serverpb.RegisterServerServer(gRPCServer, handlers.NewServerServer(version.Version))
+
+	agentpb.RegisterAgentServer(gRPCServer, handlers.NewAgentServer(deps.agentsRegistry))
+
+	servicesSvc := inventory.NewServicesService(deps.db, deps.agentsRegistry)
+	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry)
+
 	inventorypb.RegisterNodesServer(gRPCServer, inventory.NewNodesGrpcServer(deps.db))
-	inventorypb.RegisterServicesServer(gRPCServer, inventory.NewServicesGrpcServer(deps.db, servicesSvc))
-	inventorypb.RegisterAgentsServer(gRPCServer, handlers.NewAgentsServer(deps.db, agentsSvc))
+	inventorypb.RegisterServicesServer(gRPCServer, inventory.NewServicesGrpcServer(servicesSvc))
+	inventorypb.RegisterAgentsServer(gRPCServer, handlers.NewAgentsServer(agentsSvc))
+
+	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsRegistry)
+
 	managementpb.RegisterMySQLServer(gRPCServer, handlers.NewManagementMysqlServer(mysqlSvc))
 
 	if *debugF {

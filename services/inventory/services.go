@@ -27,48 +27,77 @@ import (
 
 // ServicesService works with inventory API Services.
 type ServicesService struct {
-	r registry
+	db *reform.DB
+	r  registry
 }
 
 // NewServicesService creates new ServicesService
-func NewServicesService(r registry) *ServicesService {
+func NewServicesService(db *reform.DB, r registry) *ServicesService {
 	return &ServicesService{
-		r: r,
+		db: db,
+		r:  r,
 	}
 }
 
 // List selects all Services in a stable order.
 //nolint:unparam
-func (ss *ServicesService) List(ctx context.Context, q *reform.Querier) ([]inventorypb.Service, error) {
-	services, err := models.FindAllServices(q)
-	if err != nil {
-		return nil, err
+func (ss *ServicesService) List(ctx context.Context) ([]inventorypb.Service, error) {
+	services := make([]*models.Service, 0)
+	e := ss.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		services, err = models.FindAllServices(tx.Querier)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if e != nil {
+		return nil, e
 	}
+
 	return models.ToInventoryServices(services)
 }
 
 // Get selects a single Service by ID.
 //nolint:unparam
-func (ss *ServicesService) Get(ctx context.Context, q *reform.Querier, id string) (inventorypb.Service, error) {
-	row, err := models.FindServiceByID(q, id)
-	if err != nil {
-		return nil, err
+func (ss *ServicesService) Get(ctx context.Context, id string) (inventorypb.Service, error) {
+	service := new(models.Service)
+	e := ss.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		service, err = models.FindServiceByID(tx.Querier, id)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if e != nil {
+		return nil, e
 	}
-	return models.ToInventoryService(row)
+
+	return models.ToInventoryService(service)
 }
 
 // AddMySQL inserts MySQL Service with given parameters.
 //nolint:dupl
-func (ss *ServicesService) AddMySQL(ctx context.Context, q *reform.Querier, params *models.AddDBMSServiceParams) (*inventorypb.MySQLService, error) {
+func (ss *ServicesService) AddMySQL(ctx context.Context, params *models.AddDBMSServiceParams) (*inventorypb.MySQLService, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// Both address and socket can't be empty, etc.
 
-	row, err := models.AddNewService(q, models.MySQLServiceType, params)
-	if err != nil {
-		return nil, err
+	service := new(models.Service)
+	e := ss.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		service, err = models.AddNewService(tx.Querier, models.MySQLServiceType, params)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if e != nil {
+		return nil, e
 	}
 
-	res, err := models.ToInventoryService(row)
+	res, err := models.ToInventoryService(service)
 	if err != nil {
 		return nil, err
 	}
@@ -77,15 +106,23 @@ func (ss *ServicesService) AddMySQL(ctx context.Context, q *reform.Querier, para
 
 // AddMongoDB inserts MongoDB Service with given parameters.
 //nolint:dupl
-func (ss *ServicesService) AddMongoDB(ctx context.Context, q *reform.Querier, params *models.AddDBMSServiceParams) (*inventorypb.MongoDBService, error) {
+func (ss *ServicesService) AddMongoDB(ctx context.Context, params *models.AddDBMSServiceParams) (*inventorypb.MongoDBService, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 
-	row, err := models.AddNewService(q, models.MongoDBServiceType, params)
-	if err != nil {
-		return nil, err
+	service := new(models.Service)
+	e := ss.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		service, err = models.AddNewService(tx.Querier, models.MongoDBServiceType, params)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if e != nil {
+		return nil, e
 	}
 
-	res, err := models.ToInventoryService(row)
+	res, err := models.ToInventoryService(service)
 	if err != nil {
 		return nil, err
 	}
@@ -93,15 +130,24 @@ func (ss *ServicesService) AddMongoDB(ctx context.Context, q *reform.Querier, pa
 }
 
 // AddPostgreSQL inserts PostgreSQL Service with given parameters.
-func (ss *ServicesService) AddPostgreSQL(ctx context.Context, q *reform.Querier, params *models.AddDBMSServiceParams) (*inventorypb.PostgreSQLService, error) {
+func (ss *ServicesService) AddPostgreSQL(ctx context.Context, params *models.AddDBMSServiceParams) (*inventorypb.PostgreSQLService, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// Both address and socket can't be empty, etc.
 
-	row, err := models.AddNewService(q, models.PostgreSQLServiceType, params)
-	if err != nil {
-		return nil, err
+	service := new(models.Service)
+	e := ss.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		service, err = models.AddNewService(tx.Querier, models.PostgreSQLServiceType, params)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if e != nil {
+		return nil, e
 	}
-	res, err := models.ToInventoryService(row)
+
+	res, err := models.ToInventoryService(service)
 	if err != nil {
 		return nil, err
 	}
@@ -110,15 +156,19 @@ func (ss *ServicesService) AddPostgreSQL(ctx context.Context, q *reform.Querier,
 
 // Remove deletes Service by ID.
 //nolint:unparam
-func (ss *ServicesService) Remove(ctx context.Context, q *reform.Querier, id string) error {
+func (ss *ServicesService) Remove(ctx context.Context, id string) error {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// ID is not 0.
 
 	// TODO check absence of Agents
 
-	err := models.RemoveService(q, id)
-	if err != nil {
-		return err
-	}
-	return nil
+	e := ss.db.InTransaction(func(tx *reform.TX) error {
+		err := models.RemoveService(tx.Querier, id)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	return e
 }
