@@ -167,6 +167,43 @@ func FindNodeByID(q *reform.Querier, id string) (*Node, error) {
 	}
 }
 
+// UpdateNodeParams describe editable node parameters.
+type UpdateNodeParams struct {
+	MachineID       string
+	CustomLabels    map[string]string
+	RemoveLabels    bool
+	RemoveMachineID bool
+}
+
+// UpdateNode updates Node.
+func UpdateNode(q *reform.Querier, nodeID string, params *UpdateNodeParams) (inventorypb.Node, error) {
+	row, err := FindNodeByID(q, nodeID)
+	if err != nil {
+		return nil, err
+	}
+
+	if params.RemoveLabels {
+		row.CustomLabels = nil
+	} else {
+		err := row.SetCustomLabels(params.CustomLabels)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if params.RemoveMachineID {
+		row.MachineID = nil
+	} else {
+		row.MachineID = pointer.ToStringOrNil(params.MachineID)
+	}
+
+	if err := q.Update(row); err != nil {
+		return nil, err
+	}
+
+	return ToInventoryNode(row)
+}
+
 // RemoveNode removes single node prom persistent store.
 func RemoveNode(q *reform.Querier, id string) error {
 	err := q.Delete(&Node{NodeID: id})

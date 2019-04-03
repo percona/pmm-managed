@@ -157,8 +157,10 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	inventorypb.RegisterAgentsServer(gRPCServer, inventory.NewAgentsGrpcServer(agentsSvc))
 
 	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsRegistry)
+	nodeSvc := management.NewNodeService(deps.db, deps.agentsRegistry)
 
 	managementpb.RegisterMySQLServer(gRPCServer, management.NewManagementMysqlGrpcServer(mysqlSvc))
+	managementpb.RegisterNodeServer(gRPCServer, management.NewManagementNodeGrpcServer(nodeSvc))
 
 	if *debugF {
 		l.Debug("Reflection and channelz are enabled.")
@@ -212,6 +214,7 @@ func runJSONServer(ctx context.Context, logs *logs.Logs) {
 		inventorypb.RegisterServicesHandlerFromEndpoint,
 		inventorypb.RegisterAgentsHandlerFromEndpoint,
 		managementpb.RegisterMySQLHandlerFromEndpoint,
+		managementpb.RegisterNodeHandlerFromEndpoint,
 	} {
 		if err := r(ctx, proxyMux, *gRPCAddrF, opts); err != nil {
 			l.Panic(err)
