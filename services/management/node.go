@@ -60,7 +60,11 @@ func (s *NodeService) Register(ctx context.Context, req *managementpb.RegisterNo
 				return err
 			}
 		case nil:
-			// noop
+			params := &inventory.UpdateNodeParams{MachineID: req.MachineId, CustomLabels: req.CustomLabels}
+			node, err = s.ns.Update(ctx, tx.Querier, node.ID(), params)
+			if err != nil {
+				return err
+			}
 		default:
 			return err
 		}

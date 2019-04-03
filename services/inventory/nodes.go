@@ -257,3 +257,34 @@ func (ns *NodesService) Remove(ctx context.Context, q *reform.Querier, id string
 	}
 	return errors.WithStack(err)
 }
+
+type UpdateNodeParams struct {
+	MachineID       string
+	CustomLabels    map[string]string
+	RemoveLabels    bool
+	RemoveMachineID bool
+}
+
+// Update updates Node.
+func (ns *NodesService) Update(ctx context.Context, q *reform.Querier, nodeId string, params *UpdateNodeParams) (inventorypb.Node, error) {
+	row, err := ns.get(ctx, q, nodeId)
+	if err != nil {
+		return nil, err
+	}
+
+	if params.RemoveLabels {
+		row.CustomLabels = nil
+	} else {
+		if err := row.SetCustomLabels(params.CustomLabels); err != nil {
+			return nil, err
+		}
+	}
+
+	if params.RemoveMachineID {
+		row.MachineID = nil
+	} else {
+		row.MachineID = pointer.ToStringOrNil(params.MachineID)
+	}
+
+	return makeNode(row)
+}
