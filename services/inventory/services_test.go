@@ -36,40 +36,34 @@ import (
 )
 
 func TestServices(t *testing.T) {
-	sqlDB := tests.OpenTestDB(t)
-	defer func() {
-		require.NoError(t, sqlDB.Close())
-	}()
 	ctx := logger.Set(context.Background(), t.Name())
 
 	setup := func(t *testing.T) (q *reform.Querier, ss *ServicesService, teardown func(t *testing.T)) {
 		uuid.SetRand(new(tests.IDReader))
 
+		sqlDB := tests.OpenTestDB(t)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-		tx, err := db.Begin()
-		require.NoError(t, err)
-		q = tx.Querier
 
 		r := new(mockRegistry)
 		r.Test(t)
 		teardown = func(t *testing.T) {
-			require.NoError(t, tx.Rollback())
+			require.NoError(t, sqlDB.Close())
 			r.AssertExpectations(t)
 		}
 
-		ss = NewServicesService(r)
+		ss = NewServicesService(db, r)
 		return
 	}
 
 	t.Run("Basic", func(t *testing.T) {
-		q, ss, teardown := setup(t)
+		_, ss, teardown := setup(t)
 		defer teardown(t)
 
-		actualServices, err := ss.List(ctx, q)
+		actualServices, err := ss.List(ctx)
 		require.NoError(t, err)
 		require.Len(t, actualServices, 0)
 
-		actualMySQLService, err := ss.AddMySQL(ctx, q, &models.AddDBMSServiceParams{
+		actualMySQLService, err := ss.AddMySQL(ctx, &models.AddDBMSServiceParams{
 			ServiceName: "test-mysql",
 			NodeID:      models.PMMServerNodeID,
 			Address:     pointer.ToString("127.0.0.1"),
@@ -85,22 +79,22 @@ func TestServices(t *testing.T) {
 		}
 		assert.Equal(t, expectedService, actualMySQLService)
 
-		actualService, err := ss.Get(ctx, q, "/service_id/00000000-0000-4000-8000-000000000001")
+		actualService, err := ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000001")
 		require.NoError(t, err)
 		assert.Equal(t, expectedService, actualService)
 
-		actualServices, err = ss.List(ctx, q)
+		actualServices, err = ss.List(ctx)
 		require.NoError(t, err)
 		require.Len(t, actualServices, 1)
 		assert.Equal(t, expectedService, actualServices[0])
 
-		err = ss.Remove(ctx, q, "/service_id/00000000-0000-4000-8000-000000000001")
+		err = ss.Remove(ctx, "/service_id/00000000-0000-4000-8000-000000000001")
 		require.NoError(t, err)
-		actualService, err = ss.Get(ctx, q, "/service_id/00000000-0000-4000-8000-000000000001")
+		actualService, err = ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000001")
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "/service_id/00000000-0000-4000-8000-000000000001" not found.`), err)
 		assert.Nil(t, actualService)
 
-		actualService, err = ss.AddMongoDB(ctx, q, &models.AddDBMSServiceParams{
+		actualService, err = ss.AddMongoDB(ctx, &models.AddDBMSServiceParams{
 			ServiceName: "test-mongo",
 			NodeID:      models.PMMServerNodeID,
 			Address:     pointer.ToString("127.0.0.1"),
@@ -116,22 +110,22 @@ func TestServices(t *testing.T) {
 		}
 		assert.Equal(t, expectedMdbService, actualService)
 
-		actualService, err = ss.Get(ctx, q, "/service_id/00000000-0000-4000-8000-000000000002")
+		actualService, err = ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000002")
 		require.NoError(t, err)
 		assert.Equal(t, expectedMdbService, actualService)
 
-		actualServices, err = ss.List(ctx, q)
+		actualServices, err = ss.List(ctx)
 		require.NoError(t, err)
 		require.Len(t, actualServices, 1)
 		assert.Equal(t, expectedMdbService, actualServices[0])
 
-		err = ss.Remove(ctx, q, "/service_id/00000000-0000-4000-8000-000000000002")
+		err = ss.Remove(ctx, "/service_id/00000000-0000-4000-8000-000000000002")
 		require.NoError(t, err)
-		actualService, err = ss.Get(ctx, q, "/service_id/00000000-0000-4000-8000-000000000002")
+		actualService, err = ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000002")
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "/service_id/00000000-0000-4000-8000-000000000002" not found.`), err)
 		assert.Nil(t, actualService)
 
-		actualService, err = ss.AddPostgreSQL(ctx, q, &models.AddDBMSServiceParams{
+		actualService, err = ss.AddPostgreSQL(ctx, &models.AddDBMSServiceParams{
 			ServiceName: "test-postgres",
 			NodeID:      models.PMMServerNodeID,
 			Address:     pointer.ToString("127.0.0.1"),
@@ -147,36 +141,36 @@ func TestServices(t *testing.T) {
 		}
 		assert.Equal(t, expectedPostgreSQLService, actualService)
 
-		actualService, err = ss.Get(ctx, q, "/service_id/00000000-0000-4000-8000-000000000003")
+		actualService, err = ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000003")
 		require.NoError(t, err)
 		assert.Equal(t, expectedPostgreSQLService, actualService)
 
-		actualServices, err = ss.List(ctx, q)
+		actualServices, err = ss.List(ctx)
 		require.NoError(t, err)
 		require.Len(t, actualServices, 1)
 		assert.Equal(t, expectedPostgreSQLService, actualServices[0])
 
-		err = ss.Remove(ctx, q, "/service_id/00000000-0000-4000-8000-000000000003")
+		err = ss.Remove(ctx, "/service_id/00000000-0000-4000-8000-000000000003")
 		require.NoError(t, err)
-		actualService, err = ss.Get(ctx, q, "/service_id/00000000-0000-4000-8000-000000000003")
+		actualService, err = ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000003")
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "/service_id/00000000-0000-4000-8000-000000000003" not found.`), err)
 		assert.Nil(t, actualService)
 	})
 
 	t.Run("GetEmptyID", func(t *testing.T) {
-		q, ss, teardown := setup(t)
+		_, ss, teardown := setup(t)
 		defer teardown(t)
 
-		actualNode, err := ss.Get(ctx, q, "")
+		actualNode, err := ss.Get(ctx, "")
 		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Empty Service ID.`), err)
 		assert.Nil(t, actualNode)
 	})
 
 	t.Run("AddNameNotUnique", func(t *testing.T) {
-		q, ss, teardown := setup(t)
+		_, ss, teardown := setup(t)
 		defer teardown(t)
 
-		_, err := ss.AddMySQL(ctx, q, &models.AddDBMSServiceParams{
+		_, err := ss.AddMySQL(ctx, &models.AddDBMSServiceParams{
 			ServiceName: "test-mysql",
 			NodeID:      models.PMMServerNodeID,
 			Address:     pointer.ToString("127.0.0.1"),
@@ -184,7 +178,7 @@ func TestServices(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		_, err = ss.AddMySQL(ctx, q, &models.AddDBMSServiceParams{
+		_, err = ss.AddMySQL(ctx, &models.AddDBMSServiceParams{
 			ServiceName: "test-mysql",
 			NodeID:      models.PMMServerNodeID,
 			Address:     pointer.ToString("127.0.0.1"),
@@ -194,10 +188,10 @@ func TestServices(t *testing.T) {
 	})
 
 	t.Run("AddNodeNotFound", func(t *testing.T) {
-		q, ss, teardown := setup(t)
+		_, ss, teardown := setup(t)
 		defer teardown(t)
 
-		_, err := ss.AddMySQL(ctx, q, &models.AddDBMSServiceParams{
+		_, err := ss.AddMySQL(ctx, &models.AddDBMSServiceParams{
 			ServiceName: "test-mysql",
 			NodeID:      "no-such-id",
 			Address:     pointer.ToString("127.0.0.1"),
@@ -207,10 +201,10 @@ func TestServices(t *testing.T) {
 	})
 
 	t.Run("RemoveNotFound", func(t *testing.T) {
-		q, ss, teardown := setup(t)
+		_, ss, teardown := setup(t)
 		defer teardown(t)
 
-		err := ss.Remove(ctx, q, "no-such-id")
+		err := ss.Remove(ctx, "no-such-id")
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "no-such-id" not found.`), err)
 	})
 }

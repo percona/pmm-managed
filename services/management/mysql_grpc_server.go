@@ -14,22 +14,20 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package handlers
+package management
 
 import (
 	"context"
 
 	"github.com/percona/pmm/api/managementpb"
-
-	"github.com/percona/pmm-managed/services/management"
 )
 
 type mysqlGrpcServer struct {
-	svc *management.MySQLService
+	svc *MySQLService
 }
 
-// NewManagementMysqlServer creates Management MySQL Server.
-func NewManagementMysqlServer(s *management.MySQLService) managementpb.MySQLServer {
+// NewManagementMysqlGrpcServer creates Management MySQL Server.
+func NewManagementMysqlGrpcServer(s *MySQLService) managementpb.MySQLServer {
 	return &mysqlGrpcServer{svc: s}
 }
 

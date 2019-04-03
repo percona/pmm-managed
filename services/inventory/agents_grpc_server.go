@@ -14,29 +14,27 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package handlers
+package inventory
 
 import (
 	"context"
 	"fmt"
 
 	inventorypb "github.com/percona/pmm/api/inventory"
-
-	"github.com/percona/pmm-managed/services/inventory"
 )
 
-type agentsServer struct {
-	s *inventory.AgentsService
+type agentsGrpcServer struct {
+	s *AgentsService
 }
 
-// NewAgentsServer returns Inventory API handler for managing Agents.
-func NewAgentsServer(s *inventory.AgentsService) inventorypb.AgentsServer {
-	return &agentsServer{s}
+// NewAgentsGrpcServer returns Inventory API handler for managing Agents.
+func NewAgentsGrpcServer(s *AgentsService) inventorypb.AgentsServer {
+	return &agentsGrpcServer{s}
 }
 
 // ListAgents returns a list of Agents for a given filters.
-func (s *agentsServer) ListAgents(ctx context.Context, req *inventorypb.ListAgentsRequest) (*inventorypb.ListAgentsResponse, error) {
-	filters := inventory.AgentFilters{
+func (s *agentsGrpcServer) ListAgents(ctx context.Context, req *inventorypb.ListAgentsRequest) (*inventorypb.ListAgentsResponse, error) {
+	filters := AgentFilters{
 		PMMAgentID: req.GetPmmAgentId(),
 		NodeID:     req.GetNodeId(),
 		ServiceID:  req.GetServiceId(),
@@ -73,7 +71,7 @@ func (s *agentsServer) ListAgents(ctx context.Context, req *inventorypb.ListAgen
 }
 
 // GetAgent returns a single Agent by ID.
-func (s *agentsServer) GetAgent(ctx context.Context, req *inventorypb.GetAgentRequest) (*inventorypb.GetAgentResponse, error) {
+func (s *agentsGrpcServer) GetAgent(ctx context.Context, req *inventorypb.GetAgentRequest) (*inventorypb.GetAgentResponse, error) {
 	agent, err := s.s.Get(ctx, req.AgentId)
 	if err != nil {
 		return nil, err
@@ -105,7 +103,7 @@ func (s *agentsServer) GetAgent(ctx context.Context, req *inventorypb.GetAgentRe
 }
 
 // AddPMMAgent adds pmm-agent Agent.
-func (s *agentsServer) AddPMMAgent(ctx context.Context, req *inventorypb.AddPMMAgentRequest) (*inventorypb.AddPMMAgentResponse, error) {
+func (s *agentsGrpcServer) AddPMMAgent(ctx context.Context, req *inventorypb.AddPMMAgentRequest) (*inventorypb.AddPMMAgentResponse, error) {
 	agent, err := s.s.AddPMMAgent(ctx, req)
 	if err != nil {
 		return nil, err
@@ -117,12 +115,12 @@ func (s *agentsServer) AddPMMAgent(ctx context.Context, req *inventorypb.AddPMMA
 	return res, nil
 }
 
-func (s *agentsServer) ChangePMMAgent(context.Context, *inventorypb.ChangePMMAgentRequest) (*inventorypb.ChangePMMAgentResponse, error) {
+func (s *agentsGrpcServer) ChangePMMAgent(context.Context, *inventorypb.ChangePMMAgentRequest) (*inventorypb.ChangePMMAgentResponse, error) {
 	panic("not implemented")
 }
 
 // AddNodeExporter adds node_exporter Agent.
-func (s *agentsServer) AddNodeExporter(ctx context.Context, req *inventorypb.AddNodeExporterRequest) (*inventorypb.AddNodeExporterResponse, error) {
+func (s *agentsGrpcServer) AddNodeExporter(ctx context.Context, req *inventorypb.AddNodeExporterRequest) (*inventorypb.AddNodeExporterResponse, error) {
 	agent, err := s.s.AddNodeExporter(ctx, req)
 	if err != nil {
 		return nil, err
@@ -135,7 +133,7 @@ func (s *agentsServer) AddNodeExporter(ctx context.Context, req *inventorypb.Add
 }
 
 // ChangeNodeExporter changes disabled flag and custom labels of node_exporter Agent.
-func (s *agentsServer) ChangeNodeExporter(ctx context.Context, req *inventorypb.ChangeNodeExporterRequest) (*inventorypb.ChangeNodeExporterResponse, error) {
+func (s *agentsGrpcServer) ChangeNodeExporter(ctx context.Context, req *inventorypb.ChangeNodeExporterRequest) (*inventorypb.ChangeNodeExporterResponse, error) {
 	agent, err := s.s.ChangeNodeExporter(ctx, req)
 	if err != nil {
 		return nil, err
@@ -148,7 +146,7 @@ func (s *agentsServer) ChangeNodeExporter(ctx context.Context, req *inventorypb.
 }
 
 // AddMySQLdExporter adds mysqld_exporter Agent.
-func (s *agentsServer) AddMySQLdExporter(ctx context.Context, req *inventorypb.AddMySQLdExporterRequest) (*inventorypb.AddMySQLdExporterResponse, error) {
+func (s *agentsGrpcServer) AddMySQLdExporter(ctx context.Context, req *inventorypb.AddMySQLdExporterRequest) (*inventorypb.AddMySQLdExporterResponse, error) {
 	agent, err := s.s.AddMySQLdExporter(ctx, req)
 	if err != nil {
 		return nil, err
@@ -161,7 +159,7 @@ func (s *agentsServer) AddMySQLdExporter(ctx context.Context, req *inventorypb.A
 }
 
 // ChangeMySQLdExporter changes disabled flag and custom labels of mysqld_exporter Agent.
-func (s *agentsServer) ChangeMySQLdExporter(ctx context.Context, req *inventorypb.ChangeMySQLdExporterRequest) (*inventorypb.ChangeMySQLdExporterResponse, error) {
+func (s *agentsGrpcServer) ChangeMySQLdExporter(ctx context.Context, req *inventorypb.ChangeMySQLdExporterRequest) (*inventorypb.ChangeMySQLdExporterResponse, error) {
 	agent, err := s.s.ChangeMySQLdExporter(ctx, req)
 	if err != nil {
 		return nil, err
@@ -174,25 +172,25 @@ func (s *agentsServer) ChangeMySQLdExporter(ctx context.Context, req *inventoryp
 }
 
 // AddRDSExporter adds rds_exporter Agent.
-func (s *agentsServer) AddRDSExporter(ctx context.Context, req *inventorypb.AddRDSExporterRequest) (*inventorypb.AddRDSExporterResponse, error) {
+func (s *agentsGrpcServer) AddRDSExporter(ctx context.Context, req *inventorypb.AddRDSExporterRequest) (*inventorypb.AddRDSExporterResponse, error) {
 	panic("not implemented yet")
 }
 
-func (s *agentsServer) ChangeRDSExporter(context.Context, *inventorypb.ChangeRDSExporterRequest) (*inventorypb.ChangeRDSExporterResponse, error) {
+func (s *agentsGrpcServer) ChangeRDSExporter(context.Context, *inventorypb.ChangeRDSExporterRequest) (*inventorypb.ChangeRDSExporterResponse, error) {
 	panic("not implemented")
 }
 
 // AddExternalExporter adds external Agent.
-func (s *agentsServer) AddExternalExporter(ctx context.Context, req *inventorypb.AddExternalExporterRequest) (*inventorypb.AddExternalExporterResponse, error) {
+func (s *agentsGrpcServer) AddExternalExporter(ctx context.Context, req *inventorypb.AddExternalExporterRequest) (*inventorypb.AddExternalExporterResponse, error) {
 	panic("not implemented yet")
 }
 
-func (s *agentsServer) ChangeExternalExporter(context.Context, *inventorypb.ChangeExternalExporterRequest) (*inventorypb.ChangeExternalExporterResponse, error) {
+func (s *agentsGrpcServer) ChangeExternalExporter(context.Context, *inventorypb.ChangeExternalExporterRequest) (*inventorypb.ChangeExternalExporterResponse, error) {
 	panic("not implemented")
 }
 
 // AddMongoDBExporter adds mongodb_exporter Agent.
-func (s *agentsServer) AddMongoDBExporter(ctx context.Context, req *inventorypb.AddMongoDBExporterRequest) (*inventorypb.AddMongoDBExporterResponse, error) {
+func (s *agentsGrpcServer) AddMongoDBExporter(ctx context.Context, req *inventorypb.AddMongoDBExporterRequest) (*inventorypb.AddMongoDBExporterResponse, error) {
 	agent, err := s.s.AddMongoDBExporter(ctx, req)
 	if err != nil {
 		return nil, err
@@ -205,7 +203,7 @@ func (s *agentsServer) AddMongoDBExporter(ctx context.Context, req *inventorypb.
 }
 
 // ChangeMongoDBExporter changes disabled flag and custom labels of mongo_exporter Agent.
-func (s *agentsServer) ChangeMongoDBExporter(ctx context.Context, req *inventorypb.ChangeMongoDBExporterRequest) (*inventorypb.ChangeMongoDBExporterResponse, error) {
+func (s *agentsGrpcServer) ChangeMongoDBExporter(ctx context.Context, req *inventorypb.ChangeMongoDBExporterRequest) (*inventorypb.ChangeMongoDBExporterResponse, error) {
 	agent, err := s.s.ChangeMongoDBExporter(ctx, req)
 	if err != nil {
 		return nil, err
@@ -218,7 +216,7 @@ func (s *agentsServer) ChangeMongoDBExporter(ctx context.Context, req *inventory
 }
 
 // AddQANMySQLPerfSchemaAgent adds MySQL PerfSchema QAN Agent.
-func (s *agentsServer) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *inventorypb.AddQANMySQLPerfSchemaAgentRequest) (*inventorypb.AddQANMySQLPerfSchemaAgentResponse, error) {
+func (s *agentsGrpcServer) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *inventorypb.AddQANMySQLPerfSchemaAgentRequest) (*inventorypb.AddQANMySQLPerfSchemaAgentResponse, error) {
 	agent, err := s.s.AddQANMySQLPerfSchemaAgent(ctx, req)
 	if err != nil {
 		return nil, err
@@ -231,7 +229,7 @@ func (s *agentsServer) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *inve
 }
 
 // ChangeQANMySQLPerfSchemaAgent changes disabled flag and custom labels of MySQL PerfSchema QAN Agent.
-func (s *agentsServer) ChangeQANMySQLPerfSchemaAgent(ctx context.Context, req *inventorypb.ChangeQANMySQLPerfSchemaAgentRequest) (*inventorypb.ChangeQANMySQLPerfSchemaAgentResponse, error) {
+func (s *agentsGrpcServer) ChangeQANMySQLPerfSchemaAgent(ctx context.Context, req *inventorypb.ChangeQANMySQLPerfSchemaAgentRequest) (*inventorypb.ChangeQANMySQLPerfSchemaAgentResponse, error) {
 	agent, err := s.s.ChangeQANMySQLPerfSchemaAgent(ctx, req)
 	if err != nil {
 		return nil, err
@@ -244,7 +242,7 @@ func (s *agentsServer) ChangeQANMySQLPerfSchemaAgent(ctx context.Context, req *i
 }
 
 // AddPostgresExporter adds postgres_exporter Agent.
-func (s *agentsServer) AddPostgresExporter(ctx context.Context, req *inventorypb.AddPostgresExporterRequest) (*inventorypb.AddPostgresExporterResponse, error) {
+func (s *agentsGrpcServer) AddPostgresExporter(ctx context.Context, req *inventorypb.AddPostgresExporterRequest) (*inventorypb.AddPostgresExporterResponse, error) {
 	agent, err := s.s.AddPostgresExporter(ctx, req)
 	if err != nil {
 		return nil, err
@@ -258,7 +256,7 @@ func (s *agentsServer) AddPostgresExporter(ctx context.Context, req *inventorypb
 }
 
 // ChangePostgresExporter changes disabled flag and custom labels of postgres_exporter Agent.
-func (s *agentsServer) ChangePostgresExporter(ctx context.Context, req *inventorypb.ChangePostgresExporterRequest) (*inventorypb.ChangePostgresExporterResponse, error) {
+func (s *agentsGrpcServer) ChangePostgresExporter(ctx context.Context, req *inventorypb.ChangePostgresExporterRequest) (*inventorypb.ChangePostgresExporterResponse, error) {
 	agent, err := s.s.ChangePostgresExporter(ctx, req)
 	if err != nil {
 		return nil, err
@@ -271,7 +269,7 @@ func (s *agentsServer) ChangePostgresExporter(ctx context.Context, req *inventor
 }
 
 // RemoveAgent removes Agent.
-func (s *agentsServer) RemoveAgent(ctx context.Context, req *inventorypb.RemoveAgentRequest) (*inventorypb.RemoveAgentResponse, error) {
+func (s *agentsGrpcServer) RemoveAgent(ctx context.Context, req *inventorypb.RemoveAgentRequest) (*inventorypb.RemoveAgentResponse, error) {
 	if err := s.s.Remove(ctx, req.AgentId); err != nil {
 		return nil, err
 	}

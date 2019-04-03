@@ -53,7 +53,6 @@ import (
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
-	"github.com/percona/pmm-managed/handlers"
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/agents"
 	"github.com/percona/pmm-managed/services/inventory"
@@ -61,6 +60,7 @@ import (
 	"github.com/percona/pmm-managed/services/management"
 	"github.com/percona/pmm-managed/services/prometheus"
 	"github.com/percona/pmm-managed/services/qan"
+	"github.com/percona/pmm-managed/services/server"
 	"github.com/percona/pmm-managed/services/telemetry"
 	"github.com/percona/pmm-managed/utils/interceptors"
 	"github.com/percona/pmm-managed/utils/logger"
@@ -145,20 +145,20 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 		)),
 	)
 
-	serverpb.RegisterServerServer(gRPCServer, handlers.NewServerServer(version.Version))
+	serverpb.RegisterServerServer(gRPCServer, server.NewGrpcServer(version.Version))
 
-	agentpb.RegisterAgentServer(gRPCServer, handlers.NewAgentServer(deps.agentsRegistry))
+	agentpb.RegisterAgentServer(gRPCServer, agents.NewAgentGrpcServer(deps.agentsRegistry))
 
 	servicesSvc := inventory.NewServicesService(deps.db, deps.agentsRegistry)
 	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry)
 
 	inventorypb.RegisterNodesServer(gRPCServer, inventory.NewNodesGrpcServer(deps.db))
 	inventorypb.RegisterServicesServer(gRPCServer, inventory.NewServicesGrpcServer(servicesSvc))
-	inventorypb.RegisterAgentsServer(gRPCServer, handlers.NewAgentsServer(agentsSvc))
+	inventorypb.RegisterAgentsServer(gRPCServer, inventory.NewAgentsGrpcServer(agentsSvc))
 
 	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsRegistry)
 
-	managementpb.RegisterMySQLServer(gRPCServer, handlers.NewManagementMysqlServer(mysqlSvc))
+	managementpb.RegisterMySQLServer(gRPCServer, management.NewManagementMysqlGrpcServer(mysqlSvc))
 
 	if *debugF {
 		l.Debug("Reflection and channelz are enabled.")

@@ -1,5 +1,4 @@
-// pmm-managed
-// Copyright (C) 2017 Percona LLC
+// Copyright (C) 2019 Percona LLC
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -15,7 +14,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Package handlers implements gRPC API of pmm-managed.
-package handlers
+package server
 
 import (
 	"context"
@@ -23,18 +22,18 @@ import (
 	"github.com/percona/pmm/api/serverpb"
 )
 
-type serverServer struct {
+type grpcServer struct {
 	version string
 }
 
-// NewServerServer returns Inventory API handler for managing Server.
-func NewServerServer(version string) serverpb.ServerServer {
-	return &serverServer{
+// NewGrpcServer returns Inventory API handler for managing Server.
+func NewGrpcServer(version string) serverpb.ServerServer {
+	return &grpcServer{
 		version: version,
 	}
 }
 
-func (s *serverServer) Version(ctx context.Context, req *serverpb.VersionRequest) (*serverpb.VersionResponse, error) {
+func (s *grpcServer) Version(ctx context.Context, req *serverpb.VersionRequest) (*serverpb.VersionResponse, error) {
 	return &serverpb.VersionResponse{
 		Version: s.version,
 	}, nil
