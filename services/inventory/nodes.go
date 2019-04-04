@@ -38,7 +38,8 @@ func NewNodesService(db *reform.DB) *NodesService {
 	}
 }
 
-// ListNodes returns a list of all Nodes.
+// List returns a list of all Nodes.
+//nolint:unused
 func (s *NodesService) List(ctx context.Context, req *inventorypb.ListNodesRequest) ([]inventorypb.Node, error) {
 
 	allNodes := make([]*models.Node, 0)
@@ -62,7 +63,8 @@ func (s *NodesService) List(ctx context.Context, req *inventorypb.ListNodesReque
 	return nodes, nil
 }
 
-// GetNode returns a single Node by ID.
+// Get returns a single Node by ID.
+//nolint:unused
 func (s *NodesService) Get(ctx context.Context, req *inventorypb.GetNodeRequest) (inventorypb.Node, error) {
 	modelNode := new(models.Node)
 	e := s.db.InTransaction(func(tx *reform.TX) error {
@@ -86,6 +88,7 @@ func (s *NodesService) Get(ctx context.Context, req *inventorypb.GetNodeRequest)
 }
 
 // AddGenericNode adds Generic Node.
+//nolint:unused
 func (s *NodesService) AddGenericNode(ctx context.Context, req *inventorypb.AddGenericNodeRequest) (*inventorypb.GenericNode, error) {
 	params := &models.AddNodeParams{
 		NodeName:      req.NodeName,
@@ -120,6 +123,7 @@ func (s *NodesService) AddGenericNode(ctx context.Context, req *inventorypb.AddG
 }
 
 // AddContainerNode adds Container Node.
+//nolint:unused
 func (s *NodesService) AddContainerNode(ctx context.Context, req *inventorypb.AddContainerNodeRequest) (*inventorypb.ContainerNode, error) {
 	params := &models.AddNodeParams{
 		NodeName:            req.NodeName,
@@ -153,6 +157,7 @@ func (s *NodesService) AddContainerNode(ctx context.Context, req *inventorypb.Ad
 }
 
 // AddRemoteNode adds Remote Node.
+//nolint:unused
 func (s *NodesService) AddRemoteNode(ctx context.Context, req *inventorypb.AddRemoteNodeRequest) (*inventorypb.RemoteNode, error) {
 	params := &models.AddNodeParams{
 		NodeName:     req.NodeName,
@@ -183,7 +188,7 @@ func (s *NodesService) AddRemoteNode(ctx context.Context, req *inventorypb.AddRe
 }
 
 // AddRemoteAmazonRDSNode adds Amazon (AWS) RDS remote Node.
-//nolint:lll
+//nolint:lll,unused
 func (s *NodesService) AddRemoteAmazonRDSNode(ctx context.Context, req *inventorypb.AddRemoteAmazonRDSNodeRequest) (*inventorypb.RemoteAmazonRDSNode, error) {
 	params := &models.AddNodeParams{
 		NodeName:     req.NodeName,
@@ -216,6 +221,7 @@ func (s *NodesService) AddRemoteAmazonRDSNode(ctx context.Context, req *inventor
 }
 
 // RemoveNode removes Node without any Agents and Services.
+//nolint:unused
 func (s *NodesService) Remove(ctx context.Context, req *inventorypb.RemoveNodeRequest) (*inventorypb.RemoveNodeResponse, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 	// ID is not 0.
