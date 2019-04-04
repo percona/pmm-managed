@@ -1,4 +1,5 @@
-// Copyright (C) 2019 Percona LLC
+// pmm-managed
+// Copyright (C) 2017 Percona LLC
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -13,7 +14,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package inventory contains inventory business logic: Nodes, Services, Agents.
 package grpc
 
 import (
