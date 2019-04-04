@@ -24,6 +24,8 @@ import (
 
 // registry is a subset of methods of agents.Registry used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
+// TODO: Revert tests and service for nodes and remove this
+//nolint:unused
 type registry interface {
 	SendSetStateRequest(ctx context.Context, pmmAgentID string)
 	IsConnected(pmmAgentID string) bool
