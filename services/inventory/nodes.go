@@ -22,6 +22,8 @@ import (
 
 	"github.com/AlekSi/pointer"
 	inventorypb "github.com/percona/pmm/api/inventory"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -47,7 +49,7 @@ func (s *NodesService) List(ctx context.Context, req *inventorypb.ListNodesReque
 		var err error
 		allNodes, err = models.FindAllNodes(tx.Querier)
 		if err != nil {
-			return err // TODO: Convert to gRPC errors
+			return status.Error(codes.NotFound, "nodes wasn't found")
 		}
 		return nil
 	})
@@ -71,7 +73,7 @@ func (s *NodesService) Get(ctx context.Context, req *inventorypb.GetNodeRequest)
 		var err error
 		modelNode, err = models.FindNodeByID(tx.Querier, req.NodeId)
 		if err != nil {
-			return err // TODO: Convert to gRPC errors
+			return err
 		}
 		return nil
 	})
@@ -106,7 +108,7 @@ func (s *NodesService) AddGenericNode(ctx context.Context, req *inventorypb.AddG
 		var err error
 		node, err = models.AddNode(tx.Querier, models.GenericNodeType, params)
 		if err != nil {
-			return err // TODO: Convert to gRPC errors
+			return err
 		}
 		return nil
 	})
@@ -140,7 +142,7 @@ func (s *NodesService) AddContainerNode(ctx context.Context, req *inventorypb.Ad
 		var err error
 		node, err = models.AddNode(tx.Querier, models.ContainerNodeType, params)
 		if err != nil {
-			return err // TODO: Convert to gRPC errors
+			return err
 		}
 		return nil
 	})
@@ -171,7 +173,7 @@ func (s *NodesService) AddRemoteNode(ctx context.Context, req *inventorypb.AddRe
 		var err error
 		node, err = models.AddNode(tx.Querier, models.RemoteNodeType, params)
 		if err != nil {
-			return err // TODO: Convert to gRPC errors
+			return err
 		}
 		return nil
 	})
@@ -204,7 +206,7 @@ func (s *NodesService) AddRemoteAmazonRDSNode(ctx context.Context, req *inventor
 		var err error
 		node, err = models.AddNode(tx.Querier, models.RemoteAmazonRDSNodeType, params)
 		if err != nil {
-			return err // TODO: Convert to gRPC errors
+			return err
 		}
 		return nil
 	})
@@ -231,7 +233,7 @@ func (s *NodesService) Remove(ctx context.Context, req *inventorypb.RemoveNodeRe
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		err := models.RemoveNode(tx.Querier, req.NodeId)
 		if err != nil {
-			return err // TODO: Convert to gRPC errors
+			return err
 		}
 		return nil
 	})
