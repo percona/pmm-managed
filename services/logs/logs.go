@@ -60,9 +60,6 @@ var defaultLogs = map[string]logInfo{
 	"clickhouse-server.log":     {"/srv/logs/clickhouse-server.log", ""},
 	"clickhouse-server.err.log": {"/srv/logs/clickhouse-server.err.log", ""},
 	"postgres.log":              {"/srv/logs/postgres.log", ""},
-	"createdb.log":              {"/srv/logs/createdb.log", ""},
-	"createdb2.log":             {"/srv/logs/createdb2.log", ""},
-	"createdb3.log":             {"/srv/logs/createdb3.log", ""},
 
 	// nginx
 	"nginx.log":        {"/srv/logs/nginx.log", "nginx"},
