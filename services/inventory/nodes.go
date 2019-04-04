@@ -220,7 +220,7 @@ func (s *NodesService) AddRemoteAmazonRDSNode(ctx context.Context, req *inventor
 	return invNode.(*inventorypb.RemoteAmazonRDSNode), nil
 }
 
-// RemoveNode removes Node without any Agents and Services.
+// Remove removes Node without any Agents and Services.
 //nolint:unused
 func (s *NodesService) Remove(ctx context.Context, req *inventorypb.RemoveNodeRequest) (*inventorypb.RemoveNodeResponse, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
