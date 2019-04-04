@@ -92,7 +92,7 @@ func init() {
 	// use JSON APIs over HTTP/1.1
 	transport := httptransport.New(BaseURL.Host, BaseURL.Path, []string{BaseURL.Scheme})
 	transport.SetLogger(logrus.WithField("component", "client"))
-	transport.Debug = *debugF || *traceF
+	transport.SetDebug(*debugF || *traceF)
 	// disable HTTP/2
 	transport.Transport.(*http.Transport).TLSNextProto = map[string]func(string, *tls.Conn) http.RoundTripper{}
 	client.Default = client.New(transport, nil)
