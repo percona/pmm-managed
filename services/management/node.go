@@ -59,45 +59,40 @@ func (s *NodeService) Register(ctx context.Context, req *managementpb.RegisterNo
 			}
 		case nil:
 			params := &models.UpdateNodeParams{MachineID: req.MachineId, CustomLabels: req.CustomLabels}
-			n, err := models.UpdateNode(tx.Querier, node.ID(), params)
+			node, err = models.UpdateNode(tx.Querier, node.NodeID, params)
 			if err != nil {
 				return err
 			}
 
-			node, err = inventory.ToInventoryNode(n)
-			if err != nil {
-				return err
-			}
 		default:
 			return err
 		}
 
-		s.addNodeToResponse(node, res)
+		if err := s.addNodeToResponse(node, res); err != nil {
+			return err
+		}
 
-		pmmAgent, err := s.findPmmAgentByNodeID(ctx, tx.Querier, node.ID())
+		pmmAgent, err := s.findPmmAgentByNodeID(ctx, tx.Querier, node.NodeID)
 		switch err.(type) {
 		case agentNotFoundErr:
-			mAgent, err := models.AgentAddPmmAgent(tx.Querier, node.ID(), nil)
+			pmmAgent, err = models.AgentAddPmmAgent(tx.Querier, node.NodeID, nil)
 			if err != nil {
 				return err
 			}
-			invAgent, err := inventory.ToInventoryAgent(tx.Querier, mAgent, s.asrs)
-			if err != nil {
-				return err
-			}
-			pmmAgent = invAgent.(*inventorypb.PMMAgent)
 		case nil:
 			// noop
 		default:
 			return err
 		}
 
-		res.PmmAgent = pmmAgent
+		if err := s.addPmmAgentToResponse(tx.Querier, pmmAgent, res); err != nil {
+			return err
+		}
 
-		_, err = s.findNodeExporterByPmmAgentID(ctx, tx.Querier, pmmAgent.ID())
+		_, err = s.findNodeExporterByPmmAgentID(ctx, tx.Querier, pmmAgent.AgentID)
 		switch err.(type) {
 		case agentNotFoundErr:
-			_, err := models.AgentAddNodeExporter(tx.Querier, pmmAgent.ID(), nil)
+			_, err := models.AgentAddNodeExporter(tx.Querier, pmmAgent.AgentID, nil)
 			if err != nil {
 				return err
 			}
@@ -117,7 +112,7 @@ func (s *NodeService) Register(ctx context.Context, req *managementpb.RegisterNo
 	return res, nil
 }
 
-func (s *NodeService) createNewNode(ctx context.Context, q *reform.Querier, req *managementpb.RegisterNodeRequest) (inventorypb.Node, error) {
+func (s *NodeService) createNewNode(ctx context.Context, q *reform.Querier, req *managementpb.RegisterNodeRequest) (*models.Node, error) {
 	var nodeType models.NodeType
 	switch req.NodeType {
 	case inventorypb.NodeType_GENERIC_NODE:
@@ -144,11 +139,10 @@ func (s *NodeService) createNewNode(ctx context.Context, q *reform.Querier, req 
 		return nil, err
 	}
 
-	return inventory.ToInventoryNode(node)
+	return node, nil
 }
 
-func (s *NodeService) findNodeByName(ctx context.Context, q *reform.Querier, name string) (inventorypb.Node, error) {
-
+func (s *NodeService) findNodeByName(ctx context.Context, q *reform.Querier, name string) (*models.Node, error) {
 	nodes, err := models.FindAllNodes(q)
 	if err != nil {
 		return nil, err
@@ -156,7 +150,7 @@ func (s *NodeService) findNodeByName(ctx context.Context, q *reform.Querier, nam
 
 	for _, n := range nodes {
 		if n.NodeName == name {
-			return inventory.ToInventoryNode(n)
+			return n, nil
 		}
 	}
 
@@ -164,7 +158,7 @@ func (s *NodeService) findNodeByName(ctx context.Context, q *reform.Querier, nam
 	return nil, nfErr
 }
 
-func (s *NodeService) findPmmAgentByNodeID(ctx context.Context, q *reform.Querier, nodeID string) (pmmAgent *inventorypb.PMMAgent, err error) {
+func (s *NodeService) findPmmAgentByNodeID(ctx context.Context, q *reform.Querier, nodeID string) (pmmAgent *models.Agent, err error) {
 	agents, err := models.AgentFindAll(q)
 	if err != nil {
 		return nil, err
@@ -172,12 +166,7 @@ func (s *NodeService) findPmmAgentByNodeID(ctx context.Context, q *reform.Querie
 
 	for _, a := range agents {
 		if pointer.GetString(a.RunsOnNodeID) == nodeID {
-			invAgent, err := inventory.ToInventoryAgent(q, a, s.asrs)
-			if err != nil {
-				return pmmAgent, err
-			}
-			pmmAgent = invAgent.(*inventorypb.PMMAgent)
-			return pmmAgent, nil
+			return a, nil
 		}
 	}
 
@@ -186,7 +175,6 @@ func (s *NodeService) findPmmAgentByNodeID(ctx context.Context, q *reform.Querie
 }
 
 func (s *NodeService) findNodeExporterByPmmAgentID(ctx context.Context, q *reform.Querier, pmmAgentID string) (nodeExporter *inventorypb.NodeExporter, err error) {
-
 	agents, err := models.AgentsRunningByPMMAgent(q, pmmAgentID)
 	if err != nil {
 		return nil, err
@@ -207,13 +195,29 @@ func (s *NodeService) findNodeExporterByPmmAgentID(ctx context.Context, q *refor
 	return nodeExporter, anfErr
 }
 
-func (s *NodeService) addNodeToResponse(node inventorypb.Node, res *managementpb.RegisterNodeResponse) {
+func (s *NodeService) addNodeToResponse(model *models.Node, res *managementpb.RegisterNodeResponse) error {
+	node, err := inventory.ToInventoryNode(model)
+	if err != nil {
+		return err
+	}
+
 	switch n := node.(type) {
 	case *inventorypb.GenericNode:
 		res.GenericNode = n
 	case *inventorypb.ContainerNode:
 		res.ContainerNode = n
 	}
+
+	return nil
+}
+
+func (s *NodeService) addPmmAgentToResponse(q *reform.Querier, model *models.Agent, res *managementpb.RegisterNodeResponse) error {
+	invAgent, err := inventory.ToInventoryAgent(q, model, s.asrs)
+	if err != nil {
+		return err
+	}
+	res.PmmAgent = invAgent.(*inventorypb.PMMAgent)
+	return nil
 }
 
 type nodeNotFoundErr string
