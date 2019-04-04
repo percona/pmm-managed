@@ -14,20 +14,28 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+// Package handlers implements gRPC API of pmm-managed.
 package grpc
 
 import (
 	"context"
+
+	"github.com/percona/pmm/api/serverpb"
 )
 
-//go:generate mockery -name=registry -case=snake -inpkg -testonly
+type server struct {
+	version string
+}
 
-// registry is a subset of methods of agents.Registry used by this package.
-// We use it instead of real type for testing and to avoid dependency cycle.
-// TODO: Revert tests and service for nodes and remove this
-//nolint:unused
-type registry interface {
-	SendSetStateRequest(ctx context.Context, pmmAgentID string)
-	IsConnected(pmmAgentID string) bool
-	Kick(ctx context.Context, pmmAgentID string)
+// NewServer returns Inventory API handler for managing Server.
+func NewServer(version string) serverpb.ServerServer {
+	return &server{
+		version: version,
+	}
+}
+
+func (s *server) Version(ctx context.Context, req *serverpb.VersionRequest) (*serverpb.VersionResponse, error) {
+	return &serverpb.VersionResponse{
+		Version: s.version,
+	}, nil
 }

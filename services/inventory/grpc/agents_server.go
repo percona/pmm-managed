@@ -26,17 +26,17 @@ import (
 )
 
 //nolint:unused
-type agentsGrpcServer struct {
+type agentsServer struct {
 	s *inventory.AgentsService
 }
 
-// NewAgentsGrpcServer returns Inventory API handler for managing Agents.
-func NewAgentsGrpcServer(s *inventory.AgentsService) inventorypb.AgentsServer {
-	return &agentsGrpcServer{s}
+// NewAgentsServer returns Inventory API handler for managing Agents.
+func NewAgentsServer(s *inventory.AgentsService) inventorypb.AgentsServer {
+	return &agentsServer{s}
 }
 
 // ListAgents returns a list of Agents for a given filters.
-func (s *agentsGrpcServer) ListAgents(ctx context.Context, req *inventorypb.ListAgentsRequest) (*inventorypb.ListAgentsResponse, error) {
+func (s *agentsServer) ListAgents(ctx context.Context, req *inventorypb.ListAgentsRequest) (*inventorypb.ListAgentsResponse, error) {
 	filters := inventory.AgentFilters{
 		PMMAgentID: req.GetPmmAgentId(),
 		NodeID:     req.GetNodeId(),
@@ -74,7 +74,7 @@ func (s *agentsGrpcServer) ListAgents(ctx context.Context, req *inventorypb.List
 }
 
 // GetAgent returns a single Agent by ID.
-func (s *agentsGrpcServer) GetAgent(ctx context.Context, req *inventorypb.GetAgentRequest) (*inventorypb.GetAgentResponse, error) {
+func (s *agentsServer) GetAgent(ctx context.Context, req *inventorypb.GetAgentRequest) (*inventorypb.GetAgentResponse, error) {
 	agent, err := s.s.Get(ctx, req.AgentId)
 	if err != nil {
 		return nil, err
@@ -106,7 +106,7 @@ func (s *agentsGrpcServer) GetAgent(ctx context.Context, req *inventorypb.GetAge
 }
 
 // AddPMMAgent adds pmm-agent Agent.
-func (s *agentsGrpcServer) AddPMMAgent(ctx context.Context, req *inventorypb.AddPMMAgentRequest) (*inventorypb.AddPMMAgentResponse, error) {
+func (s *agentsServer) AddPMMAgent(ctx context.Context, req *inventorypb.AddPMMAgentRequest) (*inventorypb.AddPMMAgentResponse, error) {
 	agent, err := s.s.AddPMMAgent(ctx, req)
 	if err != nil {
 		return nil, err
@@ -118,12 +118,12 @@ func (s *agentsGrpcServer) AddPMMAgent(ctx context.Context, req *inventorypb.Add
 	return res, nil
 }
 
-func (s *agentsGrpcServer) ChangePMMAgent(context.Context, *inventorypb.ChangePMMAgentRequest) (*inventorypb.ChangePMMAgentResponse, error) {
+func (s *agentsServer) ChangePMMAgent(context.Context, *inventorypb.ChangePMMAgentRequest) (*inventorypb.ChangePMMAgentResponse, error) {
 	panic("not implemented")
 }
 
 // AddNodeExporter adds node_exporter Agent.
-func (s *agentsGrpcServer) AddNodeExporter(ctx context.Context, req *inventorypb.AddNodeExporterRequest) (*inventorypb.AddNodeExporterResponse, error) {
+func (s *agentsServer) AddNodeExporter(ctx context.Context, req *inventorypb.AddNodeExporterRequest) (*inventorypb.AddNodeExporterResponse, error) {
 	agent, err := s.s.AddNodeExporter(ctx, req)
 	if err != nil {
 		return nil, err
@@ -136,7 +136,7 @@ func (s *agentsGrpcServer) AddNodeExporter(ctx context.Context, req *inventorypb
 }
 
 // ChangeNodeExporter changes disabled flag and custom labels of node_exporter Agent.
-func (s *agentsGrpcServer) ChangeNodeExporter(ctx context.Context, req *inventorypb.ChangeNodeExporterRequest) (*inventorypb.ChangeNodeExporterResponse, error) {
+func (s *agentsServer) ChangeNodeExporter(ctx context.Context, req *inventorypb.ChangeNodeExporterRequest) (*inventorypb.ChangeNodeExporterResponse, error) {
 	agent, err := s.s.ChangeNodeExporter(ctx, req)
 	if err != nil {
 		return nil, err
@@ -149,7 +149,7 @@ func (s *agentsGrpcServer) ChangeNodeExporter(ctx context.Context, req *inventor
 }
 
 // AddMySQLdExporter adds mysqld_exporter Agent.
-func (s *agentsGrpcServer) AddMySQLdExporter(ctx context.Context, req *inventorypb.AddMySQLdExporterRequest) (*inventorypb.AddMySQLdExporterResponse, error) {
+func (s *agentsServer) AddMySQLdExporter(ctx context.Context, req *inventorypb.AddMySQLdExporterRequest) (*inventorypb.AddMySQLdExporterResponse, error) {
 	agent, err := s.s.AddMySQLdExporter(ctx, req)
 	if err != nil {
 		return nil, err
@@ -162,7 +162,7 @@ func (s *agentsGrpcServer) AddMySQLdExporter(ctx context.Context, req *inventory
 }
 
 // ChangeMySQLdExporter changes disabled flag and custom labels of mysqld_exporter Agent.
-func (s *agentsGrpcServer) ChangeMySQLdExporter(ctx context.Context, req *inventorypb.ChangeMySQLdExporterRequest) (*inventorypb.ChangeMySQLdExporterResponse, error) {
+func (s *agentsServer) ChangeMySQLdExporter(ctx context.Context, req *inventorypb.ChangeMySQLdExporterRequest) (*inventorypb.ChangeMySQLdExporterResponse, error) {
 	agent, err := s.s.ChangeMySQLdExporter(ctx, req)
 	if err != nil {
 		return nil, err
@@ -175,25 +175,25 @@ func (s *agentsGrpcServer) ChangeMySQLdExporter(ctx context.Context, req *invent
 }
 
 // AddRDSExporter adds rds_exporter Agent.
-func (s *agentsGrpcServer) AddRDSExporter(ctx context.Context, req *inventorypb.AddRDSExporterRequest) (*inventorypb.AddRDSExporterResponse, error) {
+func (s *agentsServer) AddRDSExporter(ctx context.Context, req *inventorypb.AddRDSExporterRequest) (*inventorypb.AddRDSExporterResponse, error) {
 	panic("not implemented yet")
 }
 
-func (s *agentsGrpcServer) ChangeRDSExporter(context.Context, *inventorypb.ChangeRDSExporterRequest) (*inventorypb.ChangeRDSExporterResponse, error) {
+func (s *agentsServer) ChangeRDSExporter(context.Context, *inventorypb.ChangeRDSExporterRequest) (*inventorypb.ChangeRDSExporterResponse, error) {
 	panic("not implemented")
 }
 
 // AddExternalExporter adds external Agent.
-func (s *agentsGrpcServer) AddExternalExporter(ctx context.Context, req *inventorypb.AddExternalExporterRequest) (*inventorypb.AddExternalExporterResponse, error) {
+func (s *agentsServer) AddExternalExporter(ctx context.Context, req *inventorypb.AddExternalExporterRequest) (*inventorypb.AddExternalExporterResponse, error) {
 	panic("not implemented yet")
 }
 
-func (s *agentsGrpcServer) ChangeExternalExporter(context.Context, *inventorypb.ChangeExternalExporterRequest) (*inventorypb.ChangeExternalExporterResponse, error) {
+func (s *agentsServer) ChangeExternalExporter(context.Context, *inventorypb.ChangeExternalExporterRequest) (*inventorypb.ChangeExternalExporterResponse, error) {
 	panic("not implemented")
 }
 
 // AddMongoDBExporter adds mongodb_exporter Agent.
-func (s *agentsGrpcServer) AddMongoDBExporter(ctx context.Context, req *inventorypb.AddMongoDBExporterRequest) (*inventorypb.AddMongoDBExporterResponse, error) {
+func (s *agentsServer) AddMongoDBExporter(ctx context.Context, req *inventorypb.AddMongoDBExporterRequest) (*inventorypb.AddMongoDBExporterResponse, error) {
 	agent, err := s.s.AddMongoDBExporter(ctx, req)
 	if err != nil {
 		return nil, err
@@ -206,7 +206,7 @@ func (s *agentsGrpcServer) AddMongoDBExporter(ctx context.Context, req *inventor
 }
 
 // ChangeMongoDBExporter changes disabled flag and custom labels of mongo_exporter Agent.
-func (s *agentsGrpcServer) ChangeMongoDBExporter(ctx context.Context, req *inventorypb.ChangeMongoDBExporterRequest) (*inventorypb.ChangeMongoDBExporterResponse, error) {
+func (s *agentsServer) ChangeMongoDBExporter(ctx context.Context, req *inventorypb.ChangeMongoDBExporterRequest) (*inventorypb.ChangeMongoDBExporterResponse, error) {
 	agent, err := s.s.ChangeMongoDBExporter(ctx, req)
 	if err != nil {
 		return nil, err
@@ -220,7 +220,7 @@ func (s *agentsGrpcServer) ChangeMongoDBExporter(ctx context.Context, req *inven
 
 // AddQANMySQLPerfSchemaAgent adds MySQL PerfSchema QAN Agent.
 //nolint:lll
-func (s *agentsGrpcServer) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *inventorypb.AddQANMySQLPerfSchemaAgentRequest) (*inventorypb.AddQANMySQLPerfSchemaAgentResponse, error) {
+func (s *agentsServer) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *inventorypb.AddQANMySQLPerfSchemaAgentRequest) (*inventorypb.AddQANMySQLPerfSchemaAgentResponse, error) {
 	agent, err := s.s.AddQANMySQLPerfSchemaAgent(ctx, req)
 	if err != nil {
 		return nil, err
@@ -234,7 +234,7 @@ func (s *agentsGrpcServer) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *
 
 // ChangeQANMySQLPerfSchemaAgent changes disabled flag and custom labels of MySQL PerfSchema QAN Agent.
 //nolint:lll
-func (s *agentsGrpcServer) ChangeQANMySQLPerfSchemaAgent(ctx context.Context, req *inventorypb.ChangeQANMySQLPerfSchemaAgentRequest) (*inventorypb.ChangeQANMySQLPerfSchemaAgentResponse, error) {
+func (s *agentsServer) ChangeQANMySQLPerfSchemaAgent(ctx context.Context, req *inventorypb.ChangeQANMySQLPerfSchemaAgentRequest) (*inventorypb.ChangeQANMySQLPerfSchemaAgentResponse, error) {
 	agent, err := s.s.ChangeQANMySQLPerfSchemaAgent(ctx, req)
 	if err != nil {
 		return nil, err
@@ -247,7 +247,7 @@ func (s *agentsGrpcServer) ChangeQANMySQLPerfSchemaAgent(ctx context.Context, re
 }
 
 // AddPostgresExporter adds postgres_exporter Agent.
-func (s *agentsGrpcServer) AddPostgresExporter(ctx context.Context, req *inventorypb.AddPostgresExporterRequest) (*inventorypb.AddPostgresExporterResponse, error) {
+func (s *agentsServer) AddPostgresExporter(ctx context.Context, req *inventorypb.AddPostgresExporterRequest) (*inventorypb.AddPostgresExporterResponse, error) {
 	agent, err := s.s.AddPostgresExporter(ctx, req)
 	if err != nil {
 		return nil, err
@@ -262,7 +262,7 @@ func (s *agentsGrpcServer) AddPostgresExporter(ctx context.Context, req *invento
 
 // ChangePostgresExporter changes disabled flag and custom labels of postgres_exporter Agent.
 //nolint:lll
-func (s *agentsGrpcServer) ChangePostgresExporter(ctx context.Context, req *inventorypb.ChangePostgresExporterRequest) (*inventorypb.ChangePostgresExporterResponse, error) {
+func (s *agentsServer) ChangePostgresExporter(ctx context.Context, req *inventorypb.ChangePostgresExporterRequest) (*inventorypb.ChangePostgresExporterResponse, error) {
 	agent, err := s.s.ChangePostgresExporter(ctx, req)
 	if err != nil {
 		return nil, err
@@ -275,7 +275,7 @@ func (s *agentsGrpcServer) ChangePostgresExporter(ctx context.Context, req *inve
 }
 
 // RemoveAgent removes Agent.
-func (s *agentsGrpcServer) RemoveAgent(ctx context.Context, req *inventorypb.RemoveAgentRequest) (*inventorypb.RemoveAgentResponse, error) {
+func (s *agentsServer) RemoveAgent(ctx context.Context, req *inventorypb.RemoveAgentRequest) (*inventorypb.RemoveAgentResponse, error) {
 	if err := s.s.Remove(ctx, req.AgentId); err != nil {
 		return nil, err
 	}

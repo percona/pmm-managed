@@ -25,16 +25,16 @@ import (
 )
 
 //nolint:unused
-type nodeGrpcServer struct {
+type nodeServer struct {
 	svc *management.NodeService
 }
 
-// NewManagementNodeGrpcServer creates Management Node Server.
-func NewManagementNodeGrpcServer(s *management.NodeService) managementpb.NodeServer {
-	return &nodeGrpcServer{svc: s}
+// NewManagementNodeServer creates Management Node Server.
+func NewManagementNodeServer(s *management.NodeService) managementpb.NodeServer {
+	return &nodeServer{svc: s}
 }
 
 // Register do registration of new Node.
-func (s *nodeGrpcServer) Register(ctx context.Context, req *managementpb.RegisterNodeRequest) (res *managementpb.RegisterNodeResponse, err error) {
+func (s *nodeServer) Register(ctx context.Context, req *managementpb.RegisterNodeRequest) (res *managementpb.RegisterNodeResponse, err error) {
 	return s.svc.Register(ctx, req)
 }

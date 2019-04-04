@@ -17,13 +17,224 @@
 package inventory
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/AlekSi/pointer"
 	inventorypb "github.com/percona/pmm/api/inventory"
+	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
 )
+
+type NodesService struct {
+	db *reform.DB
+}
+
+// NewNodesService returns Inventory API handler for managing Nodes.
+func NewNodesService(db *reform.DB) *NodesService {
+	return &NodesService{
+		db: db,
+	}
+}
+
+// ListNodes returns a list of all Nodes.
+func (s *NodesService) List(ctx context.Context, req *inventorypb.ListNodesRequest) ([]inventorypb.Node, error) {
+
+	allNodes := make([]*models.Node, 0)
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		allNodes, err = models.FindAllNodes(tx.Querier)
+		if err != nil {
+			return err // TODO: Convert to gRPC errors
+		}
+		return nil
+	})
+	if e != nil {
+		return nil, e
+	}
+
+	nodes, err := ToInventoryNodes(allNodes)
+	if err != nil {
+		return nil, err
+	}
+
+	return nodes, nil
+}
+
+// GetNode returns a single Node by ID.
+func (s *NodesService) Get(ctx context.Context, req *inventorypb.GetNodeRequest) (inventorypb.Node, error) {
+	modelNode := new(models.Node)
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		modelNode, err = models.FindNodeByID(tx.Querier, req.NodeId)
+		if err != nil {
+			return err // TODO: Convert to gRPC errors
+		}
+		return nil
+	})
+	if e != nil {
+		return nil, e
+	}
+
+	node, err := ToInventoryNode(modelNode)
+	if err != nil {
+		return nil, err
+	}
+
+	return node, nil
+}
+
+// AddGenericNode adds Generic Node.
+func (s *NodesService) AddGenericNode(ctx context.Context, req *inventorypb.AddGenericNodeRequest) (*inventorypb.GenericNode, error) {
+	params := &models.AddNodeParams{
+		NodeName:      req.NodeName,
+		MachineID:     pointer.ToStringOrNil(req.MachineId),
+		Distro:        pointer.ToStringOrNil(req.Distro),
+		DistroVersion: pointer.ToStringOrNil(req.DistroVersion),
+		CustomLabels:  req.CustomLabels,
+		Address:       pointer.ToStringOrNil(req.Address),
+	}
+
+	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
+	// No hostname for Container, etc.
+	node := new(models.Node)
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		node, err = models.AddNode(tx.Querier, models.GenericNodeType, params)
+		if err != nil {
+			return err // TODO: Convert to gRPC errors
+		}
+		return nil
+	})
+	if e != nil {
+		return nil, e
+	}
+
+	invNode, err := ToInventoryNode(node)
+	if err != nil {
+		return nil, err
+	}
+
+	return invNode.(*inventorypb.GenericNode), nil
+}
+
+// AddContainerNode adds Container Node.
+func (s *NodesService) AddContainerNode(ctx context.Context, req *inventorypb.AddContainerNodeRequest) (*inventorypb.ContainerNode, error) {
+	params := &models.AddNodeParams{
+		NodeName:            req.NodeName,
+		MachineID:           pointer.ToStringOrNil(req.MachineId),
+		DockerContainerID:   pointer.ToStringOrNil(req.DockerContainerId),
+		DockerContainerName: pointer.ToStringOrNil(req.DockerContainerName),
+		CustomLabels:        req.CustomLabels,
+	}
+
+	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
+	// No hostname for Container, etc.
+	node := new(models.Node)
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		node, err = models.AddNode(tx.Querier, models.ContainerNodeType, params)
+		if err != nil {
+			return err // TODO: Convert to gRPC errors
+		}
+		return nil
+	})
+	if e != nil {
+		return nil, e
+	}
+
+	invNode, err := ToInventoryNode(node)
+	if err != nil {
+		return nil, err
+	}
+
+	return invNode.(*inventorypb.ContainerNode), nil
+}
+
+// AddRemoteNode adds Remote Node.
+func (s *NodesService) AddRemoteNode(ctx context.Context, req *inventorypb.AddRemoteNodeRequest) (*inventorypb.RemoteNode, error) {
+	params := &models.AddNodeParams{
+		NodeName:     req.NodeName,
+		CustomLabels: req.CustomLabels,
+	}
+
+	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
+	// No hostname for Container, etc.
+	node := new(models.Node)
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		node, err = models.AddNode(tx.Querier, models.RemoteNodeType, params)
+		if err != nil {
+			return err // TODO: Convert to gRPC errors
+		}
+		return nil
+	})
+	if e != nil {
+		return nil, e
+	}
+
+	invNode, err := ToInventoryNode(node)
+	if err != nil {
+		return nil, err
+	}
+
+	return invNode.(*inventorypb.RemoteNode), nil
+}
+
+// AddRemoteAmazonRDSNode adds Amazon (AWS) RDS remote Node.
+//nolint:lll
+func (s *NodesService) AddRemoteAmazonRDSNode(ctx context.Context, req *inventorypb.AddRemoteAmazonRDSNodeRequest) (*inventorypb.RemoteAmazonRDSNode, error) {
+	params := &models.AddNodeParams{
+		NodeName:     req.NodeName,
+		Address:      &req.Instance,
+		Region:       &req.Region,
+		CustomLabels: req.CustomLabels,
+	}
+
+	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
+	// No hostname for Container, etc.
+	node := new(models.Node)
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		node, err = models.AddNode(tx.Querier, models.RemoteAmazonRDSNodeType, params)
+		if err != nil {
+			return err // TODO: Convert to gRPC errors
+		}
+		return nil
+	})
+	if e != nil {
+		return nil, e
+	}
+
+	invNode, err := ToInventoryNode(node)
+	if err != nil {
+		return nil, err
+	}
+
+	return invNode.(*inventorypb.RemoteAmazonRDSNode), nil
+}
+
+// RemoveNode removes Node without any Agents and Services.
+func (s *NodesService) Remove(ctx context.Context, req *inventorypb.RemoveNodeRequest) (*inventorypb.RemoveNodeResponse, error) {
+	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
+	// ID is not 0.
+
+	// TODO check absence of Services and Agents
+
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		err := models.RemoveNode(tx.Querier, req.NodeId)
+		if err != nil {
+			return err // TODO: Convert to gRPC errors
+		}
+		return nil
+	})
+	if e != nil {
+		return nil, e
+	}
+
+	return new(inventorypb.RemoveNodeResponse), nil
+}
 
 // ToInventoryNode converts database row to Inventory API Node.
 func ToInventoryNode(row *models.Node) (inventorypb.Node, error) {

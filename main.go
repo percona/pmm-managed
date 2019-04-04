@@ -55,6 +55,7 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/agents"
+	agentgrpc "github.com/percona/pmm-managed/services/agents/grpc"
 	"github.com/percona/pmm-managed/services/inventory"
 	inventorygrpc "github.com/percona/pmm-managed/services/inventory/grpc"
 	"github.com/percona/pmm-managed/services/logs"
@@ -62,7 +63,7 @@ import (
 	managementgrpc "github.com/percona/pmm-managed/services/management/grpc"
 	"github.com/percona/pmm-managed/services/prometheus"
 	"github.com/percona/pmm-managed/services/qan"
-	"github.com/percona/pmm-managed/services/server"
+	servergrpc "github.com/percona/pmm-managed/services/server/grpc"
 	"github.com/percona/pmm-managed/services/telemetry"
 	"github.com/percona/pmm-managed/utils/interceptors"
 	"github.com/percona/pmm-managed/utils/logger"
@@ -147,22 +148,23 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 		)),
 	)
 
-	serverpb.RegisterServerServer(gRPCServer, server.NewGrpcServer(version.Version))
+	serverpb.RegisterServerServer(gRPCServer, servergrpc.NewServer(version.Version))
 
-	agentpb.RegisterAgentServer(gRPCServer, agents.NewAgentGrpcServer(deps.agentsRegistry))
+	agentpb.RegisterAgentServer(gRPCServer, agentgrpc.NewAgentServer(deps.agentsRegistry))
 
 	servicesSvc := inventory.NewServicesService(deps.db, deps.agentsRegistry)
 	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry)
+	nodesSvc := inventory.NewNodesService(deps.db)
 
-	inventorypb.RegisterNodesServer(gRPCServer, inventorygrpc.NewNodesGrpcServer(deps.db))
-	inventorypb.RegisterServicesServer(gRPCServer, inventorygrpc.NewServicesGrpcServer(servicesSvc))
-	inventorypb.RegisterAgentsServer(gRPCServer, inventorygrpc.NewAgentsGrpcServer(agentsSvc))
+	inventorypb.RegisterNodesServer(gRPCServer, inventorygrpc.NewNodesServer(nodesSvc))
+	inventorypb.RegisterServicesServer(gRPCServer, inventorygrpc.NewServicesServer(servicesSvc))
+	inventorypb.RegisterAgentsServer(gRPCServer, inventorygrpc.NewAgentsServer(agentsSvc))
 
 	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsRegistry)
 	nodeSvc := management.NewNodeService(deps.db, deps.agentsRegistry)
 
-	managementpb.RegisterMySQLServer(gRPCServer, managementgrpc.NewManagementMysqlGrpcServer(mysqlSvc))
-	managementpb.RegisterNodeServer(gRPCServer, managementgrpc.NewManagementNodeGrpcServer(nodeSvc))
+	managementpb.RegisterMySQLServer(gRPCServer, managementgrpc.NewManagementMysqlServer(mysqlSvc))
+	managementpb.RegisterNodeServer(gRPCServer, managementgrpc.NewManagementNodeServer(nodeSvc))
 
 	if *debugF {
 		l.Debug("Reflection and channelz are enabled.")

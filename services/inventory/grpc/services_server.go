@@ -28,17 +28,17 @@ import (
 )
 
 //nolint:unused
-type servicesGrpcServer struct {
+type servicesServer struct {
 	s *inventory.ServicesService
 }
 
-// NewServicesGrpcServer returns Inventory API handler for managing Services.
-func NewServicesGrpcServer(s *inventory.ServicesService) inventorypb.ServicesServer {
-	return &servicesGrpcServer{s}
+// NewServicesServer returns Inventory API handler for managing Services.
+func NewServicesServer(s *inventory.ServicesService) inventorypb.ServicesServer {
+	return &servicesServer{s}
 }
 
 // ListServices returns a list of all Services.
-func (s *servicesGrpcServer) ListServices(ctx context.Context, req *inventorypb.ListServicesRequest) (*inventorypb.ListServicesResponse, error) {
+func (s *servicesServer) ListServices(ctx context.Context, req *inventorypb.ListServicesRequest) (*inventorypb.ListServicesResponse, error) {
 	services, err := s.s.List(ctx)
 	if err != nil {
 		return nil, err
@@ -61,7 +61,7 @@ func (s *servicesGrpcServer) ListServices(ctx context.Context, req *inventorypb.
 }
 
 // GetService returns a single Service by ID.
-func (s *servicesGrpcServer) GetService(ctx context.Context, req *inventorypb.GetServiceRequest) (*inventorypb.GetServiceResponse, error) {
+func (s *servicesServer) GetService(ctx context.Context, req *inventorypb.GetServiceRequest) (*inventorypb.GetServiceResponse, error) {
 	service, err := s.s.Get(ctx, req.ServiceId)
 	if err != nil {
 		return nil, err
@@ -82,7 +82,7 @@ func (s *servicesGrpcServer) GetService(ctx context.Context, req *inventorypb.Ge
 }
 
 // AddMySQLService adds MySQL Service.
-func (s *servicesGrpcServer) AddMySQLService(ctx context.Context, req *inventorypb.AddMySQLServiceRequest) (*inventorypb.AddMySQLServiceResponse, error) {
+func (s *servicesServer) AddMySQLService(ctx context.Context, req *inventorypb.AddMySQLServiceRequest) (*inventorypb.AddMySQLServiceResponse, error) {
 	service, err := s.s.AddMySQL(ctx, &models.AddDBMSServiceParams{
 		ServiceName:  req.ServiceName,
 		NodeID:       req.NodeId,
@@ -102,11 +102,11 @@ func (s *servicesGrpcServer) AddMySQLService(ctx context.Context, req *inventory
 
 // AddAmazonRDSMySQLService adds AmazonRDSMySQL Service.
 //nolint:lll
-func (s *servicesGrpcServer) AddAmazonRDSMySQLService(ctx context.Context, req *inventorypb.AddAmazonRDSMySQLServiceRequest) (*inventorypb.AddAmazonRDSMySQLServiceResponse, error) {
+func (s *servicesServer) AddAmazonRDSMySQLService(ctx context.Context, req *inventorypb.AddAmazonRDSMySQLServiceRequest) (*inventorypb.AddAmazonRDSMySQLServiceResponse, error) {
 	panic("not implemented yet")
 }
 
-func (s *servicesGrpcServer) AddMongoDBService(ctx context.Context, req *inventorypb.AddMongoDBServiceRequest) (*inventorypb.AddMongoDBServiceResponse, error) {
+func (s *servicesServer) AddMongoDBService(ctx context.Context, req *inventorypb.AddMongoDBServiceRequest) (*inventorypb.AddMongoDBServiceResponse, error) {
 	service, err := s.s.AddMongoDB(ctx, &models.AddDBMSServiceParams{
 		ServiceName:  req.ServiceName,
 		NodeID:       req.NodeId,
@@ -124,7 +124,7 @@ func (s *servicesGrpcServer) AddMongoDBService(ctx context.Context, req *invento
 	return res, nil
 }
 
-func (s *servicesGrpcServer) AddPostgreSQLService(ctx context.Context, req *inventorypb.AddPostgreSQLServiceRequest) (*inventorypb.AddPostgreSQLServiceResponse, error) {
+func (s *servicesServer) AddPostgreSQLService(ctx context.Context, req *inventorypb.AddPostgreSQLServiceRequest) (*inventorypb.AddPostgreSQLServiceResponse, error) {
 	service, err := s.s.AddPostgreSQL(ctx, &models.AddDBMSServiceParams{
 		ServiceName:  req.ServiceName,
 		NodeID:       req.NodeId,
@@ -143,7 +143,7 @@ func (s *servicesGrpcServer) AddPostgreSQLService(ctx context.Context, req *inve
 }
 
 // RemoveService removes Service without any Agents.
-func (s *servicesGrpcServer) RemoveService(ctx context.Context, req *inventorypb.RemoveServiceRequest) (*inventorypb.RemoveServiceResponse, error) {
+func (s *servicesServer) RemoveService(ctx context.Context, req *inventorypb.RemoveServiceRequest) (*inventorypb.RemoveServiceResponse, error) {
 	if err := s.s.Remove(ctx, req.ServiceId); err != nil {
 		return nil, err
 	}

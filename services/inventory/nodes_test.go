@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package grpc
+package inventory
 
 import (
 	"context"
@@ -37,7 +37,7 @@ func TestNodes(t *testing.T) {
 	ctx := logger.Set(context.Background(), t.Name())
 
 	//nolint:unparam
-	setup := func(t *testing.T) (ns inventorypb.NodesServer, teardown func(t *testing.T)) {
+	setup := func(t *testing.T) (ns *NodesService, teardown func(t *testing.T)) {
 		uuid.SetRand(new(tests.IDReader))
 
 		sqlDB := tests.OpenTestDB(t)
@@ -50,7 +50,7 @@ func TestNodes(t *testing.T) {
 			r.AssertExpectations(t)
 			require.NoError(t, sqlDB.Close())
 		}
-		ns = NewNodesGrpcServer(db)
+		ns = NewNodesService(db)
 		return
 	}
 
@@ -58,9 +58,9 @@ func TestNodes(t *testing.T) {
 		ns, teardown := setup(t)
 		defer teardown(t)
 
-		actualNodes, err := ns.ListNodes(ctx, nil)
+		actualNodes, err := ns.List(ctx, nil)
 		require.NoError(t, err)
-		require.Len(t, actualNodes.Generic, 1) // PMMServerNodeType
+		require.Len(t, actualNodes, 1) // PMMServerNodeType
 
 		addNodeResponse, err := ns.AddGenericNode(ctx, &inventorypb.AddGenericNodeRequest{NodeName: "test-bm"})
 		require.NoError(t, err)
@@ -68,20 +68,20 @@ func TestNodes(t *testing.T) {
 			NodeId:   "/node_id/00000000-0000-4000-8000-000000000001",
 			NodeName: "test-bm",
 		}
-		assert.Equal(t, expectedNode, addNodeResponse.GetGeneric())
+		assert.Equal(t, expectedNode, addNodeResponse)
 
-		getNodeResponse, err := ns.GetNode(ctx, &inventorypb.GetNodeRequest{NodeId: "/node_id/00000000-0000-4000-8000-000000000001"})
+		getNodeResponse, err := ns.Get(ctx, &inventorypb.GetNodeRequest{NodeId: "/node_id/00000000-0000-4000-8000-000000000001"})
 		require.NoError(t, err)
-		assert.Equal(t, expectedNode, getNodeResponse.GetGeneric())
+		assert.Equal(t, expectedNode, getNodeResponse)
 
-		nodesResponse, err := ns.ListNodes(ctx, nil)
+		nodesResponse, err := ns.List(ctx, nil)
 		require.NoError(t, err)
-		require.Len(t, nodesResponse.Generic, 2)
-		assert.Equal(t, expectedNode, nodesResponse.Generic[0])
+		require.Len(t, nodesResponse, 2)
+		assert.Equal(t, expectedNode, nodesResponse[0])
 
-		_, err = ns.RemoveNode(ctx, &inventorypb.RemoveNodeRequest{NodeId: "/node_id/00000000-0000-4000-8000-000000000001"})
+		_, err = ns.Remove(ctx, &inventorypb.RemoveNodeRequest{NodeId: "/node_id/00000000-0000-4000-8000-000000000001"})
 		require.NoError(t, err)
-		getNodeResponse, err = ns.GetNode(ctx, &inventorypb.GetNodeRequest{NodeId: "/node_id/00000000-0000-4000-8000-000000000001"})
+		getNodeResponse, err = ns.Get(ctx, &inventorypb.GetNodeRequest{NodeId: "/node_id/00000000-0000-4000-8000-000000000001"})
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Node with ID "/node_id/00000000-0000-4000-8000-000000000001" not found.`), err)
 		assert.Nil(t, getNodeResponse)
 	})
@@ -90,7 +90,7 @@ func TestNodes(t *testing.T) {
 		ns, teardown := setup(t)
 		defer teardown(t)
 
-		getNodeResponse, err := ns.GetNode(ctx, &inventorypb.GetNodeRequest{NodeId: ""})
+		getNodeResponse, err := ns.Get(ctx, &inventorypb.GetNodeRequest{NodeId: ""})
 		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Empty Node ID.`), err)
 		assert.Nil(t, getNodeResponse)
 	})
@@ -141,7 +141,7 @@ func TestNodes(t *testing.T) {
 		ns, teardown := setup(t)
 		defer teardown(t)
 
-		_, err := ns.RemoveNode(ctx, &inventorypb.RemoveNodeRequest{NodeId: "no-such-id"})
+		_, err := ns.Remove(ctx, &inventorypb.RemoveNodeRequest{NodeId: "no-such-id"})
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Node with ID "no-such-id" not found.`), err)
 	})
 }
