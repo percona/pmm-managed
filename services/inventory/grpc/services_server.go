@@ -1,5 +1,4 @@
-// pmm-managed
-// Copyright (C) 2017 Percona LLC
+// Copyright (C) 2019 Percona LLC
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -14,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package inventory
+package grpc
 
 import (
 	"context"
@@ -24,15 +23,16 @@ import (
 	inventorypb "github.com/percona/pmm/api/inventory"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/inventory"
 )
 
 //nolint:unused
 type servicesGrpcServer struct {
-	s *ServicesService
+	s *inventory.ServicesService
 }
 
 // NewServicesGrpcServer returns Inventory API handler for managing Services.
-func NewServicesGrpcServer(s *ServicesService) inventorypb.ServicesServer {
+func NewServicesGrpcServer(s *inventory.ServicesService) inventorypb.ServicesServer {
 	return &servicesGrpcServer{s}
 }
 

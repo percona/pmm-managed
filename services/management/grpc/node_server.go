@@ -1,5 +1,4 @@
-// pmm-managed
-// Copyright (C) 2017 Percona LLC
+// Copyright (C) 2019 Percona LLC
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -14,24 +13,27 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package management
+package grpc
 
 import (
 	"context"
 
 	"github.com/percona/pmm/api/managementpb"
+
+	"github.com/percona/pmm-managed/services/management"
 )
 
-type mysqlGrpcServer struct {
-	svc *MySQLService
+//nolint:unused
+type nodeGrpcServer struct {
+	svc *management.NodeService
 }
 
-// NewManagementMysqlGrpcServer creates Management MySQL Server.
-func NewManagementMysqlGrpcServer(s *MySQLService) managementpb.MySQLServer {
-	return &mysqlGrpcServer{svc: s}
+// NewManagementNodeGrpcServer creates Management Node Server.
+func NewManagementNodeGrpcServer(s *management.NodeService) managementpb.NodeServer {
+	return &nodeGrpcServer{svc: s}
 }
 
-// Add adds "MySQL Service", "MySQL Exporter Agent" and "QAN MySQL PerfSchema Agent".
-func (s *mysqlGrpcServer) Add(ctx context.Context, req *managementpb.AddMySQLRequest) (*managementpb.AddMySQLResponse, error) {
-	return s.svc.Add(ctx, req)
+// Register do registration of new Node.
+func (s *nodeGrpcServer) Register(ctx context.Context, req *managementpb.RegisterNodeRequest) (res *managementpb.RegisterNodeResponse, err error) {
+	return s.svc.Register(ctx, req)
 }

@@ -1,5 +1,4 @@
-// pmm-managed
-// Copyright (C) 2017 Percona LLC
+// Copyright (C) 2019 Percona LLC
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -14,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package inventory
+package grpc
 
 import (
 	"context"
@@ -25,6 +24,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/inventory"
 )
 
 type nodesGrpcServer struct {
@@ -54,7 +54,7 @@ func (s *nodesGrpcServer) ListNodes(ctx context.Context, req *inventorypb.ListNo
 		return nil, e
 	}
 
-	nodes, err := models.ToInventoryNodes(allNodes)
+	nodes, err := inventory.ToInventoryNodes(allNodes)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +92,7 @@ func (s *nodesGrpcServer) GetNode(ctx context.Context, req *inventorypb.GetNodeR
 		return nil, e
 	}
 
-	node, err := models.ToInventoryNode(modelNode)
+	node, err := inventory.ToInventoryNode(modelNode)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +139,7 @@ func (s *nodesGrpcServer) AddGenericNode(ctx context.Context, req *inventorypb.A
 		return nil, e
 	}
 
-	invNode, err := models.ToInventoryNode(node)
+	invNode, err := inventory.ToInventoryNode(node)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +175,7 @@ func (s *nodesGrpcServer) AddContainerNode(ctx context.Context, req *inventorypb
 		return nil, e
 	}
 
-	invNode, err := models.ToInventoryNode(node)
+	invNode, err := inventory.ToInventoryNode(node)
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +208,7 @@ func (s *nodesGrpcServer) AddRemoteNode(ctx context.Context, req *inventorypb.Ad
 		return nil, e
 	}
 
-	invNode, err := models.ToInventoryNode(node)
+	invNode, err := inventory.ToInventoryNode(node)
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +244,7 @@ func (s *nodesGrpcServer) AddRemoteAmazonRDSNode(ctx context.Context, req *inven
 		return nil, e
 	}
 
-	invNode, err := models.ToInventoryNode(node)
+	invNode, err := inventory.ToInventoryNode(node)
 	if err != nil {
 		return nil, err
 	}

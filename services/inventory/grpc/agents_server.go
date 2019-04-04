@@ -1,5 +1,4 @@
-// pmm-managed
-// Copyright (C) 2017 Percona LLC
+// Copyright (C) 2019 Percona LLC
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -14,28 +13,30 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package inventory
+package grpc
 
 import (
 	"context"
 	"fmt"
 
 	inventorypb "github.com/percona/pmm/api/inventory"
+
+	"github.com/percona/pmm-managed/services/inventory"
 )
 
 //nolint:unused
 type agentsGrpcServer struct {
-	s *AgentsService
+	s *inventory.AgentsService
 }
 
 // NewAgentsGrpcServer returns Inventory API handler for managing Agents.
-func NewAgentsGrpcServer(s *AgentsService) inventorypb.AgentsServer {
+func NewAgentsGrpcServer(s *inventory.AgentsService) inventorypb.AgentsServer {
 	return &agentsGrpcServer{s}
 }
 
 // ListAgents returns a list of Agents for a given filters.
 func (s *agentsGrpcServer) ListAgents(ctx context.Context, req *inventorypb.ListAgentsRequest) (*inventorypb.ListAgentsResponse, error) {
-	filters := AgentFilters{
+	filters := inventory.AgentFilters{
 		PMMAgentID: req.GetPmmAgentId(),
 		NodeID:     req.GetNodeId(),
 		ServiceID:  req.GetServiceId(),

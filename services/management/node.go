@@ -27,6 +27,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/inventory" // TODO: Refactor, as service shouldn't depend on other service in one abstraction level.
 )
 
 // NodeService represents service for working with nodes.
@@ -58,7 +59,12 @@ func (s *NodeService) Register(ctx context.Context, req *managementpb.RegisterNo
 			}
 		case nil:
 			params := &models.UpdateNodeParams{MachineID: req.MachineId, CustomLabels: req.CustomLabels}
-			node, err = models.UpdateNode(tx.Querier, node.ID(), params)
+			n, err := models.UpdateNode(tx.Querier, node.ID(), params)
+			if err != nil {
+				return err
+			}
+
+			node, err = inventory.ToInventoryNode(n)
 			if err != nil {
 				return err
 			}
@@ -75,7 +81,7 @@ func (s *NodeService) Register(ctx context.Context, req *managementpb.RegisterNo
 			if err != nil {
 				return err
 			}
-			invAgent, err := models.ToInventoryAgent(tx.Querier, mAgent, s.asrs)
+			invAgent, err := inventory.ToInventoryAgent(tx.Querier, mAgent, s.asrs)
 			if err != nil {
 				return err
 			}
@@ -138,7 +144,7 @@ func (s *NodeService) createNewNode(ctx context.Context, q *reform.Querier, req 
 		return nil, err
 	}
 
-	return models.ToInventoryNode(node)
+	return inventory.ToInventoryNode(node)
 }
 
 func (s *NodeService) findNodeByName(ctx context.Context, q *reform.Querier, name string) (inventorypb.Node, error) {
@@ -150,7 +156,7 @@ func (s *NodeService) findNodeByName(ctx context.Context, q *reform.Querier, nam
 
 	for _, n := range nodes {
 		if n.NodeName == name {
-			return models.ToInventoryNode(n)
+			return inventory.ToInventoryNode(n)
 		}
 	}
 
@@ -166,7 +172,7 @@ func (s *NodeService) findPmmAgentByNodeID(ctx context.Context, q *reform.Querie
 
 	for _, a := range agents {
 		if pointer.GetString(a.RunsOnNodeID) == nodeID {
-			invAgent, err := models.ToInventoryAgent(q, a, s.asrs)
+			invAgent, err := inventory.ToInventoryAgent(q, a, s.asrs)
 			if err != nil {
 				return pmmAgent, err
 			}
@@ -188,7 +194,7 @@ func (s *NodeService) findNodeExporterByPmmAgentID(ctx context.Context, q *refor
 
 	for _, a := range agents {
 		if pointer.GetString(a.PMMAgentID) == pmmAgentID {
-			invAgent, err := models.ToInventoryAgent(q, a, s.asrs)
+			invAgent, err := inventory.ToInventoryAgent(q, a, s.asrs)
 			if err != nil {
 				return nodeExporter, err
 			}

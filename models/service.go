@@ -22,9 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AlekSi/pointer"
 	"github.com/google/uuid"
-	inventorypb "github.com/percona/pmm/api/inventory"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -166,60 +164,6 @@ func ServicesForAgent(q *reform.Querier, agentID string) ([]*Service, error) {
 	res := make([]*Service, len(structs))
 	for i, s := range structs {
 		res[i] = s.(*Service)
-	}
-	return res, nil
-}
-
-// ToInventoryService converts database row to Inventory API Service.
-func ToInventoryService(row *Service) (inventorypb.Service, error) {
-	labels, err := row.GetCustomLabels()
-	if err != nil {
-		return nil, err
-	}
-
-	switch row.ServiceType {
-	case MySQLServiceType:
-		return &inventorypb.MySQLService{
-			ServiceId:    row.ServiceID,
-			ServiceName:  row.ServiceName,
-			NodeId:       row.NodeID,
-			Address:      pointer.GetString(row.Address),
-			Port:         uint32(pointer.GetUint16(row.Port)),
-			CustomLabels: labels,
-		}, nil
-	case MongoDBServiceType:
-		return &inventorypb.MongoDBService{
-			ServiceId:    row.ServiceID,
-			ServiceName:  row.ServiceName,
-			NodeId:       row.NodeID,
-			Address:      pointer.GetString(row.Address),
-			Port:         uint32(pointer.GetUint16(row.Port)),
-			CustomLabels: labels,
-		}, nil
-	case PostgreSQLServiceType:
-		return &inventorypb.PostgreSQLService{
-			ServiceId:    row.ServiceID,
-			ServiceName:  row.ServiceName,
-			NodeId:       row.NodeID,
-			Address:      pointer.GetString(row.Address),
-			Port:         uint32(pointer.GetUint16(row.Port)),
-			CustomLabels: labels,
-		}, nil
-
-	default:
-		panic(fmt.Errorf("unhandled Service type %s", row.ServiceType))
-	}
-}
-
-// ToInventoryServices converts database rows to Inventory API Services.
-func ToInventoryServices(services []*Service) ([]inventorypb.Service, error) {
-	var err error
-	res := make([]inventorypb.Service, len(services))
-	for i, srv := range services {
-		res[i], err = ToInventoryService(srv)
-		if err != nil {
-			return nil, err
-		}
 	}
 	return res, nil
 }

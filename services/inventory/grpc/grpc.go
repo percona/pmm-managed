@@ -1,5 +1,4 @@
-// pmm-managed
-// Copyright (C) 2017 Percona LLC
+// Copyright (C) 2019 Percona LLC
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -14,25 +13,19 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package management
+// Package inventory contains inventory business logic: Nodes, Services, Agents.
+package grpc
 
 import (
 	"context"
-
-	"github.com/percona/pmm/api/managementpb"
 )
 
-//nolint:unused
-type nodeGrpcServer struct {
-	svc *NodeService
-}
+//go:generate mockery -name=registry -case=snake -inpkg -testonly
 
-// NewManagementNodeGrpcServer creates Management Node Server.
-func NewManagementNodeGrpcServer(s *NodeService) managementpb.NodeServer {
-	return &nodeGrpcServer{svc: s}
-}
-
-// Register do registration of new Node.
-func (s *nodeGrpcServer) Register(ctx context.Context, req *managementpb.RegisterNodeRequest) (res *managementpb.RegisterNodeResponse, err error) {
-	return s.svc.Register(ctx, req)
+// registry is a subset of methods of agents.Registry used by this package.
+// We use it instead of real type for testing and to avoid dependency cycle.
+type registry interface {
+	SendSetStateRequest(ctx context.Context, pmmAgentID string)
+	IsConnected(pmmAgentID string) bool
+	Kick(ctx context.Context, pmmAgentID string)
 }

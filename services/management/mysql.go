@@ -25,6 +25,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/inventory" // TODO: Refactor, as service shouldn't depend on other service in one abstraction level.
 )
 
 type agentStateRequestSender interface {
@@ -60,7 +61,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 			return err
 		}
 
-		invService, err := models.ToInventoryService(service)
+		invService, err := inventory.ToInventoryService(service)
 		if err != nil {
 			return err
 		}
@@ -80,7 +81,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 				return err
 			}
 
-			agent, err := models.ToInventoryAgent(tx.Querier, row, s.asrs)
+			agent, err := inventory.ToInventoryAgent(tx.Querier, row, s.asrs)
 			if err != nil {
 				return err
 			}
@@ -102,7 +103,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 				return err
 			}
 
-			qAgent, err := models.ToInventoryAgent(tx.Querier, row, s.asrs)
+			qAgent, err := inventory.ToInventoryAgent(tx.Querier, row, s.asrs)
 			if err != nil {
 				return err
 			}
