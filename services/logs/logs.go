@@ -72,7 +72,7 @@ var defaultLogs = map[string]logInfo{
 
 	// core PMM components
 	"pmm-managed.log": {"/srv/logs/pmm-managed.log", "pmm-managed"},
-	"qan-api2.log":    {"/srv/logs/qan-api2.log", ""},
+	"qan-api2.log":    {"/srv/logs/qan-api2.log", "percona-qan-api2"},
 
 	// upgrades
 	"dashboard-upgrade.log": {"/srv/logs/dashboard-upgrade.log", ""},
