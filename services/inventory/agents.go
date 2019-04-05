@@ -500,11 +500,11 @@ func (as *AgentsService) Remove(ctx context.Context, id string) error {
 		return err
 	}
 
-	if removedAgent.IsChild() {
-		as.r.SendSetStateRequest(ctx, pointer.GetString(removedAgent.PMMAgentID))
+	if pmmAgentID := pointer.GetString(removedAgent.PMMAgentID); pmmAgentID != "" {
+		as.r.SendSetStateRequest(ctx, pmmAgentID)
 	}
 
-	if removedAgent.IsPMMAgent() {
+	if removedAgent.AgentType == models.PMMAgentType {
 		as.r.Kick(ctx, id)
 	}
 

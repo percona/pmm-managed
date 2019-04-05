@@ -45,35 +45,11 @@ func AgentFindByID(q *reform.Querier, id string) (*Agent, error) {
 	}
 }
 
-func agentCheckUniqueID(q *reform.Querier, id string) error {
-	if id == "" {
-		panic("empty Agent ID")
-	}
-
-	row := &Agent{AgentID: id}
-	switch err := q.Reload(row); err {
-	case nil:
-		return status.Errorf(codes.AlreadyExists, "Agent with ID %q already exists.", id)
-	case reform.ErrNoRows:
-		return nil
-	default:
-		return errors.WithStack(err)
-	}
-}
-
-func agentNewID(q *reform.Querier) (string, error) {
-	id := "/agent_id/" + uuid.New().String()
-	if err := agentCheckUniqueID(q, id); err != nil {
-		return id, err
-	}
-	return id, nil
-}
-
 // AgentRemove removes agent by ID.
 func AgentRemove(q *reform.Querier, id string) (*Agent, error) {
 	row, err := AgentFindByID(q, id)
 	if err != nil {
-		return row, err
+		return nil, err
 	}
 
 	if _, err = q.DeleteFrom(AgentServiceView, "WHERE agent_id = "+q.Placeholder(1), id); err != nil { //nolint:gosec
@@ -100,6 +76,19 @@ func AgentFindAll(q *reform.Querier) ([]*Agent, error) {
 		agents[i] = s.(*Agent)
 	}
 	return agents, err
+}
+
+func agentNewID(q *reform.Querier) (string, error) {
+	id := "/agent_id/" + uuid.New().String()
+	row := &Agent{AgentID: id}
+	switch err := q.Reload(row); err {
+	case nil:
+		return "", status.Errorf(codes.AlreadyExists, "Agent with ID %q already exists.", id)
+	case reform.ErrNoRows:
+		return id, nil
+	default:
+		return "", errors.WithStack(err)
+	}
 }
 
 // AgentAddPmmAgent creates PMMAgent.
