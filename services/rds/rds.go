@@ -308,7 +308,7 @@ func (svc *Service) Discover(ctx context.Context, accessKey, secretKey string) (
 				pageNum := 0
 				DBInstanceOutput := []*rds.DescribeDBInstancesOutput{}
 
-				err := rds.New(s).DescribeDBInstancesPagesWithContext(ctx, new(rds.DescribeDBInstancesInput),
+				err = rds.New(s).DescribeDBInstancesPagesWithContext(ctx, new(rds.DescribeDBInstancesInput),
 					func(page *rds.DescribeDBInstancesOutput, lastPage bool) bool {
 						pageNum++
 
