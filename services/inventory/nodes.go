@@ -70,6 +70,7 @@ func makeNode(row *models.Node) (inventorypb.Node, error) {
 			DockerContainerId:   pointer.GetString(row.DockerContainerID),
 			DockerContainerName: pointer.GetString(row.DockerContainerName),
 			CustomLabels:        labels,
+			Address:             pointer.GetString(row.Address),
 		}, nil
 
 	case models.RemoteNodeType:
@@ -256,4 +257,46 @@ func (ns *NodesService) Remove(ctx context.Context, q *reform.Querier, id string
 		return status.Errorf(codes.NotFound, "Node with ID %q not found.", id)
 	}
 	return errors.WithStack(err)
+}
+
+// UpdateNodeParams describe editable node parameters.
+type UpdateNodeParams struct {
+	Address         string
+	MachineID       string
+	CustomLabels    map[string]string
+	RemoveLabels    bool
+	RemoveMachineID bool
+}
+
+// Update updates Node.
+func (ns *NodesService) Update(ctx context.Context, q *reform.Querier, nodeID string, params *UpdateNodeParams) (inventorypb.Node, error) {
+	row, err := ns.get(ctx, q, nodeID)
+	if err != nil {
+		return nil, err
+	}
+
+	if params.Address != "" {
+		row.Address = &params.Address
+	}
+
+	if params.RemoveLabels {
+		row.CustomLabels = nil
+	} else {
+		err := row.SetCustomLabels(params.CustomLabels)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if params.RemoveMachineID {
+		row.MachineID = nil
+	} else {
+		row.MachineID = pointer.ToStringOrNil(params.MachineID)
+	}
+
+	if err := q.Update(row); err != nil {
+		return nil, err
+	}
+
+	return makeNode(row)
 }

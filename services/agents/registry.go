@@ -24,6 +24,7 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/percona/pmm/api/agentpb"
+	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc/codes"
@@ -196,51 +197,66 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*agentInfo, error) {
 	ctx := stream.Context()
 	l := logger.Get(ctx)
-	md := agentpb.GetAgentConnectMetadata(ctx)
-	if err := authenticate(&md, r.db.Querier); err != nil {
-		l.Warnf("Failed to authenticate connected pmm-agent %+v.", md)
+	agentMD := agentpb.GetAgentConnectMetadata(ctx)
+	runsOnNodeID, err := authenticate(&agentMD, r.db.Querier)
+	if err != nil {
+		l.Warnf("Failed to authenticate connected pmm-agent %+v.", agentMD)
 		return nil, err
 	}
-	l.Infof("Connected pmm-agent: %+v.", md)
+	l.Infof("Connected pmm-agent: %+v.", agentMD)
+
+	serverMD := agentpb.AgentServerMetadata{
+		AgentRunsOnNodeID: runsOnNodeID,
+		ServerVersion:     version.Version,
+	}
+	l.Debugf("Sending metadata: %+v.", serverMD)
+	if err = agentpb.SendAgentServerMetadata(stream, &serverMD); err != nil {
+		return nil, errors.Wrap(err, "failed to send server metadata")
+	}
 
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
-	if agent := r.agents[md.ID]; agent != nil {
+	if agent := r.agents[agentMD.ID]; agent != nil {
 		close(agent.kick)
 	}
 
 	agent := &agentInfo{
 		channel: NewChannel(stream, r.sharedMetrics),
-		id:      md.ID,
+		id:      agentMD.ID,
 		kick:    make(chan struct{}),
 	}
-	r.agents[md.ID] = agent
+	r.agents[agentMD.ID] = agent
 	return agent, nil
 }
 
-func authenticate(md *agentpb.AgentConnectMetadata, q *reform.Querier) error {
+func authenticate(md *agentpb.AgentConnectMetadata, q *reform.Querier) (string, error) { //nolint:unused
 	if md.ID == "" {
-		return status.Error(codes.Unauthenticated, "Empty Agent ID.")
+		return "", status.Error(codes.Unauthenticated, "Empty Agent ID.")
 	}
 
 	row := &models.Agent{AgentID: md.ID}
 	if err := q.Reload(row); err != nil {
 		if err == reform.ErrNoRows {
-			return status.Errorf(codes.Unauthenticated, "No Agent with ID %q.", md.ID)
+			return "", status.Errorf(codes.Unauthenticated, "No Agent with ID %q.", md.ID)
 		}
-		return errors.Wrap(err, "failed to find agent")
+		return "", errors.Wrap(err, "failed to find agent")
 	}
 
 	if row.AgentType != models.PMMAgentType {
-		return status.Errorf(codes.Unauthenticated, "No pmm-agent with ID %q.", md.ID)
+		return "", status.Errorf(codes.Unauthenticated, "No pmm-agent with ID %q.", md.ID)
+	}
+
+	if pointer.GetString(row.RunsOnNodeID) == "" {
+		return "", status.Errorf(codes.Unauthenticated, "Can't get 'runs_on_node_id' for pmm-agent with ID %q.", md.ID)
 	}
 
 	row.Version = &md.Version
 	if err := q.Update(row); err != nil {
-		return errors.Wrap(err, "failed to update agent")
+		return "", errors.Wrap(err, "failed to update agent")
 	}
-	return nil
+
+	return pointer.GetString(row.RunsOnNodeID), nil
 }
 
 // Kick disconnects pmm-agent with given ID.

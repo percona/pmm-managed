@@ -40,7 +40,7 @@ import (
 	"github.com/percona/pmm/api/agentpb"
 	inventorypb "github.com/percona/pmm/api/inventory"
 	"github.com/percona/pmm/api/managementpb"
-	serverpb "github.com/percona/pmm/api/server"
+	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/version"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -110,7 +110,7 @@ func addLogsHandler(mux *http.ServeMux, logs *logs.Logs) {
 		ctx, cancel := context.WithTimeout(req.Context(), 10*time.Second)
 		defer cancel()
 
-		filename := fmt.Sprintf("pmm-server_%s", time.Now().UTC().Format("2006-01-02_15-04"))
+		filename := fmt.Sprintf("pmm-server_%s.zip", time.Now().UTC().Format("2006-01-02_15-04"))
 		rw.Header().Set(`Access-Control-Allow-Origin`, `*`)
 		rw.Header().Set(`Content-Type`, `application/zip`)
 		rw.Header().Set(`Content-Disposition`, `attachment; filename="`+filename+`"`)
@@ -169,6 +169,9 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	managementpb.RegisterMySQLServer(gRPCServer, handlers.NewManagementMysqlServer(
 		management.NewMySQLService(deps.db, servicesSvc, agentsSvc),
 	))
+	managementpb.RegisterNodeServer(gRPCServer, handlers.NewManagementNodeServer(
+		management.NewNodeService(deps.db, nodesSvc, agentsSvc),
+	))
 
 	if *debugF {
 		l.Debug("Reflection and channelz are enabled.")
@@ -222,6 +225,7 @@ func runJSONServer(ctx context.Context, logs *logs.Logs) {
 		inventorypb.RegisterServicesHandlerFromEndpoint,
 		inventorypb.RegisterAgentsHandlerFromEndpoint,
 		managementpb.RegisterMySQLHandlerFromEndpoint,
+		managementpb.RegisterNodeHandlerFromEndpoint,
 	} {
 		if err := r(ctx, proxyMux, *gRPCAddrF, opts); err != nil {
 			l.Panic(err)
