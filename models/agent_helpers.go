@@ -17,10 +17,8 @@
 package models
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/AlekSi/pointer"
 	"github.com/google/uuid"
@@ -317,114 +315,52 @@ func AgentsForService(q *reform.Querier, serviceID string) ([]*Agent, error) {
 	return res, nil
 }
 
-//go:generate reform
+// PMMAgentsForChangedNode returns pmm-agents IDs that are affected
+// by the change of the Node with given ID.
+// It may return (nil, nil) if no such pmm-agents are found.
+// It returns wrapped reform.ErrNoRows if Service with given ID is not found.
+func PMMAgentsForChangedNode(q *reform.Querier, nodeID string) ([]string, error) {
+	// TODO Real code.
+	// Returning all pmm-agents is currently safe, but not optimal for large number of Agents.
+	_ = nodeID
 
-// AgentType represents Agent type as stored in database.
-type AgentType string
-
-// Agent types.
-const (
-	PMMAgentType                AgentType = "pmm-agent"
-	NodeExporterType            AgentType = "node_exporter"
-	MySQLdExporterType          AgentType = "mysqld_exporter"
-	MongoDBExporterType         AgentType = "mongodb_exporter"
-	QANMySQLPerfSchemaAgentType AgentType = "qan-mysql-perfschema-agent"
-	PostgresExporterType        AgentType = "postgres_exporter"
-)
-
-// Agent represents Agent as stored in database.
-//reform:agents
-type Agent struct {
-	AgentID      string    `reform:"agent_id,pk"`
-	AgentType    AgentType `reform:"agent_type"`
-	RunsOnNodeID *string   `reform:"runs_on_node_id"`
-	PMMAgentID   *string   `reform:"pmm_agent_id"`
-	CustomLabels []byte    `reform:"custom_labels"`
-	CreatedAt    time.Time `reform:"created_at"`
-	UpdatedAt    time.Time `reform:"updated_at"`
-
-	Disabled   bool    `reform:"disabled"`
-	Status     string  `reform:"status"`
-	ListenPort *uint16 `reform:"listen_port"`
-	Version    *string `reform:"version"`
-
-	Username   *string `reform:"username"`
-	Password   *string `reform:"password"`
-	MetricsURL *string `reform:"metrics_url"`
-}
-
-// BeforeInsert implements reform.BeforeInserter interface.
-//nolint:unparam
-func (s *Agent) BeforeInsert() error {
-	now := Now()
-	s.CreatedAt = now
-	s.UpdatedAt = now
-	if len(s.CustomLabels) == 0 {
-		s.CustomLabels = nil
-	}
-	return nil
-}
-
-// BeforeUpdate implements reform.BeforeUpdater interface.
-//nolint:unparam
-func (s *Agent) BeforeUpdate() error {
-	s.UpdatedAt = Now()
-	if len(s.CustomLabels) == 0 {
-		s.CustomLabels = nil
-	}
-	return nil
-}
-
-// AfterFind implements reform.AfterFinder interface.
-//nolint:unparam
-func (s *Agent) AfterFind() error {
-	s.CreatedAt = s.CreatedAt.UTC()
-	s.UpdatedAt = s.UpdatedAt.UTC()
-	if len(s.CustomLabels) == 0 {
-		s.CustomLabels = nil
-	}
-	return nil
-}
-
-// GetCustomLabels decodes custom labels.
-func (s *Agent) GetCustomLabels() (map[string]string, error) {
-	if len(s.CustomLabels) == 0 {
-		return nil, nil
-	}
-	m := make(map[string]string)
-	if err := json.Unmarshal(s.CustomLabels, &m); err != nil {
-		return nil, errors.Wrap(err, "failed to decode custom labels")
-	}
-	return m, nil
-}
-
-// SetCustomLabels encodes custom labels.
-func (s *Agent) SetCustomLabels(m map[string]string) error {
-	if len(m) == 0 {
-		s.CustomLabels = nil
-		return nil
-	}
-	b, err := json.Marshal(m)
+	structs, err := q.SelectAllFrom(AgentTable, "ORDER BY agent_id")
 	if err != nil {
-		return errors.Wrap(err, "failed to encode custom labels")
+		return nil, errors.Wrap(err, "failed to select Agents")
 	}
-	s.CustomLabels = b
-	return nil
+
+	var res []string
+	for _, str := range structs {
+		row := str.(*Agent)
+		if row.AgentType == PMMAgentType {
+			res = append(res, row.AgentID)
+		}
+	}
+	return res, nil
 }
 
-// IsChild check is an agent have pmm_agent_id.
-func (s *Agent) IsChild() bool {
-	return pointer.GetString(s.PMMAgentID) != ""
-}
+// PMMAgentsForChangedService returns pmm-agents IDs that are affected
+// by the change of the Service with given ID.
+// It may return (nil, nil) if no such pmm-agents are found.
+// It returns wrapped reform.ErrNoRows if Service with given ID is not found.
+func PMMAgentsForChangedService(q *reform.Querier, serviceID string) ([]string, error) {
+	// TODO Real code. We need to returns IDs of pmm-agents that:
+	// * run Agents providing insights for this Service;
+	// * run Agents providing insights for Node that hosts this Service.
+	// Returning all pmm-agents is currently safe, but not optimal for large number of Agents.
+	_ = serviceID
 
-// IsPMMAgent check is it PMMAgent.
-func (s *Agent) IsPMMAgent() bool {
-	return s.AgentType == PMMAgentType
-}
+	structs, err := q.SelectAllFrom(AgentTable, "ORDER BY agent_id")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to select Agents")
+	}
 
-// check interfaces
-var (
-	_ reform.BeforeInserter = (*Agent)(nil)
-	_ reform.BeforeUpdater  = (*Agent)(nil)
-	_ reform.AfterFinder    = (*Agent)(nil)
-)
+	var res []string
+	for _, str := range structs {
+		row := str.(*Agent)
+		if row.AgentType == PMMAgentType {
+			res = append(res, row.AgentID)
+		}
+	}
+	return res, nil
+}
