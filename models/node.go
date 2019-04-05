@@ -168,6 +168,7 @@ func FindNodeByID(q *reform.Querier, id string) (*Node, error) {
 
 // UpdateNodeParams describe editable node parameters.
 type UpdateNodeParams struct {
+	Address         string
 	MachineID       string
 	CustomLabels    map[string]string
 	RemoveLabels    bool
@@ -179,6 +180,10 @@ func UpdateNode(q *reform.Querier, nodeID string, params *UpdateNodeParams) (*No
 	row, err := FindNodeByID(q, nodeID)
 	if err != nil {
 		return nil, err
+	}
+
+	if params.Address != "" {
+		row.Address = &params.Address
 	}
 
 	if params.RemoveLabels {
