@@ -25,7 +25,11 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/inventory" // TODO: Refactor, as service shouldn't depend on other service in one abstraction level.
+
+	// FIXME Refactor, as service shouldn't depend on other service in one abstraction level.
+	// https://jira.percona.com/browse/PMM-3541
+	// See also main_test.go
+	"github.com/percona/pmm-managed/services/inventory"
 )
 
 type agentStateRequestSender interface {
