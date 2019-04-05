@@ -128,15 +128,6 @@ func FindAllServices(q *reform.Querier) ([]*Service, error) {
 	return services, nil
 }
 
-// RemoveService removes single node prom persistent store.
-func RemoveService(q *reform.Querier, id string) error {
-	err := q.Delete(&Service{ServiceID: id})
-	if err == reform.ErrNoRows {
-		return status.Errorf(codes.NotFound, "Service with ID %q not found.", id)
-	}
-	return nil
-}
-
 // ServicesForAgent returns all Services for which Agent with given ID provides insights.
 func ServicesForAgent(q *reform.Querier, agentID string) ([]*Service, error) {
 	structs, err := q.FindAllFrom(AgentServiceView, "agent_id", agentID)
@@ -164,4 +155,13 @@ func ServicesForAgent(q *reform.Querier, agentID string) ([]*Service, error) {
 		res[i] = s.(*Service)
 	}
 	return res, nil
+}
+
+// RemoveService removes single node prom persistent store.
+func RemoveService(q *reform.Querier, id string) error {
+	err := q.Delete(&Service{ServiceID: id})
+	if err == reform.ErrNoRows {
+		return status.Errorf(codes.NotFound, "Service with ID %q not found.", id)
+	}
+	return nil
 }

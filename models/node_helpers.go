@@ -206,15 +206,6 @@ func UpdateNode(q *reform.Querier, nodeID string, params *UpdateNodeParams) (*No
 	return row, nil
 }
 
-// RemoveNode removes single node prom persistent store.
-func RemoveNode(q *reform.Querier, id string) error {
-	err := q.Delete(&Node{NodeID: id})
-	if err == reform.ErrNoRows {
-		return status.Errorf(codes.NotFound, "Node with ID %q not found.", id)
-	}
-	return nil
-}
-
 // NodesForAgent returns all Nodes for which Agent with given ID provides insights.
 func NodesForAgent(q *reform.Querier, agentID string) ([]*Node, error) {
 	structs, err := q.FindAllFrom(AgentNodeView, "agent_id", agentID)
@@ -242,4 +233,13 @@ func NodesForAgent(q *reform.Querier, agentID string) ([]*Node, error) {
 		res[i] = s.(*Node)
 	}
 	return res, nil
+}
+
+// RemoveNode removes single node prom persistent store.
+func RemoveNode(q *reform.Querier, id string) error {
+	err := q.Delete(&Node{NodeID: id})
+	if err == reform.ErrNoRows {
+		return status.Errorf(codes.NotFound, "Node with ID %q not found.", id)
+	}
+	return nil
 }

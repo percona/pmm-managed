@@ -483,10 +483,7 @@ func (as *AgentsService) ChangePostgresExporter(ctx context.Context, req *invent
 
 // Remove deletes Agent by ID.
 func (as *AgentsService) Remove(ctx context.Context, id string) error {
-	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
-	// ID is not 0.
-
-	removedAgent := new(models.Agent)
+	var removedAgent *models.Agent
 	err := as.db.InTransaction(func(tx *reform.TX) error {
 		var err error
 		removedAgent, err = models.AgentRemove(tx.Querier, id)
