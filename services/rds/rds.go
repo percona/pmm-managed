@@ -60,6 +60,9 @@ const (
 
 	// maximum time for connecting to the database and running all queries
 	sqlCheckTimeout = 5 * time.Second
+
+	// maximum number for page to DescribeDBInstances
+	maxPageNum = 5
 )
 
 type ServiceConfig struct {
@@ -302,7 +305,21 @@ func (svc *Service) Discover(ctx context.Context, accessKey, secretKey string) (
 					return errors.WithStack(err)
 				}
 
-				out, err := rds.New(s).DescribeDBInstancesWithContext(ctx, new(rds.DescribeDBInstancesInput))
+				pageNum := 0
+				DBInstanceOutput := []*rds.DescribeDBInstancesOutput{}
+
+				rds.New(s).DescribeDBInstancesPagesWithContext(ctx, new(rds.DescribeDBInstancesInput),
+					func(page *rds.DescribeDBInstancesOutput, lastPage bool) bool {
+						pageNum++
+
+						DBInstanceOutput = append(DBInstanceOutput, page)
+						if lastPage == true {
+							return pageNum <= maxPageNum
+						}
+
+						return pageNum <= maxPageNum
+					})
+
 				if err != nil {
 					l.Error(err)
 
@@ -321,23 +338,25 @@ func (svc *Service) Discover(ctx context.Context, accessKey, secretKey string) (
 					return errors.WithStack(err)
 				}
 
-				l.Debugf("Got %d instances from %s.", len(out.DBInstances), region)
-				for _, db := range out.DBInstances {
-					instances <- Instance{
-						Node: models.RDSNode{
-							Type: models.RDSNodeType,
-							Name: *db.DBInstanceIdentifier,
+				for _, out := range DBInstanceOutput {
+					l.Debugf("Got %d instances from %s.", len(out.DBInstances), region)
+					for _, db := range out.DBInstances {
+						instances <- Instance{
+							Node: models.RDSNode{
+								Type: models.RDSNodeType,
+								Name: *db.DBInstanceIdentifier,
 
-							Region: region,
-						},
-						Service: models.RDSService{
-							Type: models.RDSServiceType,
+								Region: region,
+							},
+							Service: models.RDSService{
+								Type: models.RDSServiceType,
 
-							Address:       db.Endpoint.Address,
-							Port:          pointer.ToUint16(uint16(*db.Endpoint.Port)),
-							Engine:        db.Engine,
-							EngineVersion: db.EngineVersion,
-						},
+								Address:       db.Endpoint.Address,
+								Port:          pointer.ToUint16(uint16(*db.Endpoint.Port)),
+								Engine:        db.Engine,
+								EngineVersion: db.EngineVersion,
+							},
+						}
 					}
 				}
 				return nil
