@@ -271,6 +271,7 @@ func ToInventoryNode(row *models.Node) (inventorypb.Node, error) {
 			DockerContainerId:   pointer.GetString(row.DockerContainerID),
 			DockerContainerName: pointer.GetString(row.DockerContainerName),
 			CustomLabels:        labels,
+			Address:             pointer.GetString(row.Address),
 		}, nil
 
 	case models.RemoteNodeType:
