@@ -313,7 +313,7 @@ func (svc *Service) Discover(ctx context.Context, accessKey, secretKey string) (
 						pageNum++
 
 						out = append(out, page.DBInstances...)
-						if lastPage == true {
+						if lastPage {
 							return false
 						}
 
