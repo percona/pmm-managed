@@ -338,8 +338,8 @@ func (svc *Service) Discover(ctx context.Context, accessKey, secretKey string) (
 					return errors.WithStack(err)
 				}
 
-				l.Debugf("Got %d instances from %s.", len(out.DBInstances), region)
-				for _, db := range out.DBInstances {
+				l.Debugf("Got %d instances from %s.", len(out), region)
+				for _, db := range out {
 					instances <- Instance{
 						Node: models.RDSNode{
 							Type: models.RDSNodeType,
