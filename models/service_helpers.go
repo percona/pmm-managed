@@ -27,19 +27,16 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-func checkUniqueServiceID(q *reform.Querier, id string) error {
-	if id == "" {
-		panic("empty Service ID")
-	}
-
-	row := &Service{ServiceID: id}
-	switch err := q.Reload(row); err {
+func serviceNewID(q *reform.Querier) (string, error) {
+	id := "/service_id/" + uuid.New().String()
+	service := &Service{ServiceID: id}
+	switch err := q.Reload(service); err {
 	case nil:
-		return status.Errorf(codes.AlreadyExists, "Service with ID %q already exists.", id)
+		return "", status.Errorf(codes.AlreadyExists, "Service with ID %q already exists.", id)
 	case reform.ErrNoRows:
-		return nil
+		return id, nil
 	default:
-		return errors.WithStack(err)
+		return "", errors.WithStack(err)
 	}
 }
 
@@ -80,10 +77,10 @@ func FindServiceByID(q *reform.Querier, id string) (*Service, error) {
 		return nil, status.Error(codes.InvalidArgument, "Empty Service ID.")
 	}
 
-	row := &Service{ServiceID: id}
-	switch err := q.Reload(row); err {
+	service := &Service{ServiceID: id}
+	switch err := q.Reload(service); err {
 	case nil:
-		return row, nil
+		return service, nil
 	case reform.ErrNoRows:
 		return nil, status.Errorf(codes.NotFound, "Service with ID %q not found.", id)
 	default:
@@ -131,19 +128,19 @@ type CreateServiceParams struct {
 
 // CreateService creates a Service.
 func CreateService(q *reform.Querier, serviceType ServiceType, params *CreateServiceParams) (*Service, error) {
-	id := "/service_id/" + uuid.New().String()
-	if err := checkUniqueServiceID(q, id); err != nil {
+	id, err := serviceNewID(q)
+	if err != nil {
 		return nil, err
 	}
-	if err := checkUniqueServiceName(q, params.ServiceName); err != nil {
-		return nil, err
-	}
-
-	if _, err := FindNodeByID(q, params.NodeID); err != nil {
+	if err = checkUniqueServiceName(q, params.ServiceName); err != nil {
 		return nil, err
 	}
 
-	row := &Service{
+	if _, err = FindNodeByID(q, params.NodeID); err != nil {
+		return nil, err
+	}
+
+	service := &Service{
 		ServiceID:   id,
 		ServiceType: serviceType,
 		ServiceName: params.ServiceName,
@@ -151,14 +148,14 @@ func CreateService(q *reform.Querier, serviceType ServiceType, params *CreateSer
 		Address:     params.Address,
 		Port:        params.Port,
 	}
-	if err := row.SetCustomLabels(params.CustomLabels); err != nil {
+	if err = service.SetCustomLabels(params.CustomLabels); err != nil {
 		return nil, err
 	}
-	if err := q.Insert(row); err != nil {
+	if err = q.Insert(service); err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	return row, nil
+	return service, nil
 }
 
 // RemoveService removes a Service.

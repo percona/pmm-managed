@@ -28,20 +28,16 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-// AgentFindByID finds agent by ID.
-func AgentFindByID(q *reform.Querier, id string) (*Agent, error) {
-	if id == "" {
-		return nil, status.Error(codes.InvalidArgument, "Empty Agent ID.")
-	}
-
-	row := &Agent{AgentID: id}
-	switch err := q.Reload(row); err {
+func agentNewID(q *reform.Querier) (string, error) {
+	id := "/agent_id/" + uuid.New().String()
+	agent := &Agent{AgentID: id}
+	switch err := q.Reload(agent); err {
 	case nil:
-		return row, nil
+		return "", status.Errorf(codes.AlreadyExists, "Agent with ID %q already exists.", id)
 	case reform.ErrNoRows:
-		return nil, status.Errorf(codes.NotFound, "Agent with ID %q not found.", id)
+		return id, nil
 	default:
-		return nil, errors.WithStack(err)
+		return "", errors.WithStack(err)
 	}
 }
 
@@ -57,16 +53,20 @@ func AgentFindAll(q *reform.Querier) ([]*Agent, error) {
 	return agents, err
 }
 
-func agentNewID(q *reform.Querier) (string, error) {
-	id := "/agent_id/" + uuid.New().String()
+// AgentFindByID finds agent by ID.
+func AgentFindByID(q *reform.Querier, id string) (*Agent, error) {
+	if id == "" {
+		return nil, status.Error(codes.InvalidArgument, "Empty Agent ID.")
+	}
+
 	row := &Agent{AgentID: id}
 	switch err := q.Reload(row); err {
 	case nil:
-		return "", status.Errorf(codes.AlreadyExists, "Agent with ID %q already exists.", id)
+		return row, nil
 	case reform.ErrNoRows:
-		return id, nil
+		return nil, status.Errorf(codes.NotFound, "Agent with ID %q not found.", id)
 	default:
-		return "", errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 }
 

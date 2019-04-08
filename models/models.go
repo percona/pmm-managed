@@ -17,6 +17,7 @@
 // Package models contains generated Reform records and helpers.
 //
 // Common order of helpers:
+//  * unexported xxxNewID;
 //  * unexported validators (checkXXX);
 //  * FindAllXXX;
 //  * FindXXXByID;

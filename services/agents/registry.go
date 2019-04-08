@@ -409,7 +409,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 			agentProcesses[row.AgentID] = mongodbExporterConfig(services[0], row)
 
 		case models.PostgresExporterType:
-			services, err := models.ServicesForAgent(r.db.Querier, row.AgentID)
+			services, err := models.FindServicesForAgentID(r.db.Querier, row.AgentID)
 			if err != nil {
 				l.Error(err)
 				return

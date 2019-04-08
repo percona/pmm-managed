@@ -27,19 +27,16 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-func checkUniqueNodeID(q *reform.Querier, id string) error {
-	if id == "" {
-		panic("empty Node ID")
-	}
-
+func nodeNewID(q *reform.Querier) (string, error) {
+	id := "/node_id/" + uuid.New().String()
 	node := &Node{NodeID: id}
 	switch err := q.Reload(node); err {
 	case nil:
-		return status.Errorf(codes.AlreadyExists, "Node with ID %q already exists.", id)
+		return "", status.Errorf(codes.AlreadyExists, "Node with ID %q already exists.", id)
 	case reform.ErrNoRows:
-		return nil
+		return id, nil
 	default:
-		return errors.WithStack(err)
+		return "", errors.WithStack(err)
 	}
 }
 
@@ -155,17 +152,17 @@ type CreateNodeParams struct {
 
 // CreateNode creates a Node.
 func CreateNode(q *reform.Querier, nodeType NodeType, params *CreateNodeParams) (*Node, error) {
-	id := "/node_id/" + uuid.New().String()
-	if err := checkUniqueNodeID(q, id); err != nil {
+	id, err := nodeNewID(q)
+	if err != nil {
 		return nil, err
 	}
 
-	if err := checkUniqueNodeName(q, params.NodeName); err != nil {
+	if err = checkUniqueNodeName(q, params.NodeName); err != nil {
 		return nil, err
 	}
 
 	if params.Address != nil && params.Region != nil {
-		if err := checkUniqueNodeInstanceRegion(q, *params.Address, *params.Region); err != nil {
+		if err = checkUniqueNodeInstanceRegion(q, *params.Address, *params.Region); err != nil {
 			return nil, err
 		}
 	}
@@ -182,10 +179,10 @@ func CreateNode(q *reform.Querier, nodeType NodeType, params *CreateNodeParams) 
 		Address:             params.Address,
 		Region:              params.Region,
 	}
-	if err := node.SetCustomLabels(params.CustomLabels); err != nil {
+	if err = node.SetCustomLabels(params.CustomLabels); err != nil {
 		return nil, err
 	}
-	if err := q.Insert(node); err != nil {
+	if err = q.Insert(node); err != nil {
 		return nil, err
 	}
 
