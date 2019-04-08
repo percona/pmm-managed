@@ -20,7 +20,7 @@
 //  * unexported validators (checkXXX);
 //  * FindAllXXX;
 //  * FindXXXByID;
-//  * other finder (e.g. FindNodesForAgent);
+//  * other finder (e.g. FindNodesForAgentID);
 //  * CreateXXX;
 //  * UpdateXXX;
 //  * RemoveXXX.

@@ -53,8 +53,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 	res = &managementpb.AddMySQLResponse{}
 
 	if e := s.db.InTransaction(func(tx *reform.TX) error {
-
-		service, err := models.AddNewService(tx.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
+		service, err := models.CreateService(tx.Querier, models.MySQLServiceType, &models.CreateServiceParams{
 			ServiceName: req.ServiceName,
 			NodeID:      req.NodeId,
 			Address:     pointer.ToStringOrNil(req.Address),
@@ -73,7 +72,6 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 		res.Service = invService.(*inventorypb.MySQLService)
 
 		if req.MysqldExporter {
-
 			params := &models.AddExporterAgentParams{
 				PMMAgentID: req.PmmAgentId,
 				ServiceID:  invService.ID(),

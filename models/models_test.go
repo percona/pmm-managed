@@ -116,11 +116,11 @@ func TestModels(t *testing.T) {
 		assert.Equal(t, expected, nodes)
 	})
 
-	t.Run("ServicesForAgent", func(t *testing.T) {
+	t.Run("FindServicesForAgentID", func(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
 
-		services, err := models.ServicesForAgent(q, "A2")
+		services, err := models.FindServicesForAgentID(q, "A2")
 		require.NoError(t, err)
 		expected := []*models.Service{
 			{

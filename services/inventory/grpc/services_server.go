@@ -83,7 +83,7 @@ func (s *servicesServer) GetService(ctx context.Context, req *inventorypb.GetSer
 
 // AddMySQLService adds MySQL Service.
 func (s *servicesServer) AddMySQLService(ctx context.Context, req *inventorypb.AddMySQLServiceRequest) (*inventorypb.AddMySQLServiceResponse, error) {
-	service, err := s.s.AddMySQL(ctx, &models.AddDBMSServiceParams{
+	service, err := s.s.AddMySQL(ctx, &models.CreateServiceParams{
 		ServiceName:  req.ServiceName,
 		NodeID:       req.NodeId,
 		Address:      pointer.ToStringOrNil(req.Address),
@@ -107,7 +107,7 @@ func (s *servicesServer) AddAmazonRDSMySQLService(ctx context.Context, req *inve
 }
 
 func (s *servicesServer) AddMongoDBService(ctx context.Context, req *inventorypb.AddMongoDBServiceRequest) (*inventorypb.AddMongoDBServiceResponse, error) {
-	service, err := s.s.AddMongoDB(ctx, &models.AddDBMSServiceParams{
+	service, err := s.s.AddMongoDB(ctx, &models.CreateServiceParams{
 		ServiceName:  req.ServiceName,
 		NodeID:       req.NodeId,
 		Address:      pointer.ToStringOrNil(req.Address),
@@ -125,7 +125,7 @@ func (s *servicesServer) AddMongoDBService(ctx context.Context, req *inventorypb
 }
 
 func (s *servicesServer) AddPostgreSQLService(ctx context.Context, req *inventorypb.AddPostgreSQLServiceRequest) (*inventorypb.AddPostgreSQLServiceResponse, error) {
-	service, err := s.s.AddPostgreSQL(ctx, &models.AddDBMSServiceParams{
+	service, err := s.s.AddPostgreSQL(ctx, &models.CreateServiceParams{
 		ServiceName:  req.ServiceName,
 		NodeID:       req.NodeId,
 		Address:      pointer.ToStringOrNil(req.Address),

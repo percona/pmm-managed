@@ -129,7 +129,7 @@ func (svc *Service) marshalConfig(ctx context.Context) ([]byte, error) {
 			if err != nil {
 				return err
 			}
-			services, err := models.ServicesForAgent(tx.Querier, agent.AgentID)
+			services, err := models.FindServicesForAgentID(tx.Querier, agent.AgentID)
 			if err != nil {
 				return err
 			}

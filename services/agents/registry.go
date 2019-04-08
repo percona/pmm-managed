@@ -373,7 +373,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 			agentProcesses[row.AgentID] = nodeExporterConfig(nodes[0], row)
 
 		case models.MySQLdExporterType:
-			services, err := models.ServicesForAgent(r.db.Querier, row.AgentID)
+			services, err := models.FindServicesForAgentID(r.db.Querier, row.AgentID)
 			if err != nil {
 				l.Error(err)
 				return
@@ -385,7 +385,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 			agentProcesses[row.AgentID] = mysqldExporterConfig(services[0], row)
 
 		case models.QANMySQLPerfSchemaAgentType:
-			services, err := models.ServicesForAgent(r.db.Querier, row.AgentID)
+			services, err := models.FindServicesForAgentID(r.db.Querier, row.AgentID)
 			if err != nil {
 				l.Error(err)
 				return
@@ -397,7 +397,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 			builtinAgents[row.AgentID] = qanMySQLPerfSchemaAgentConfig(services[0], row)
 
 		case models.MongoDBExporterType:
-			services, err := models.ServicesForAgent(r.db.Querier, row.AgentID)
+			services, err := models.FindServicesForAgentID(r.db.Querier, row.AgentID)
 			if err != nil {
 				l.Error(err)
 				return

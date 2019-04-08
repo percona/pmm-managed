@@ -540,7 +540,7 @@ func ToInventoryAgent(q *reform.Querier, row *models.Agent, connChecker AgentCon
 		}, nil
 
 	case models.MySQLdExporterType:
-		services, err := models.ServicesForAgent(q, row.AgentID)
+		services, err := models.FindServicesForAgentID(q, row.AgentID)
 		if err != nil {
 			return nil, err
 		}
@@ -561,7 +561,7 @@ func ToInventoryAgent(q *reform.Querier, row *models.Agent, connChecker AgentCon
 		}, nil
 
 	case models.MongoDBExporterType:
-		services, err := models.ServicesForAgent(q, row.AgentID)
+		services, err := models.FindServicesForAgentID(q, row.AgentID)
 		if err != nil {
 			return nil, err
 		}
@@ -582,7 +582,7 @@ func ToInventoryAgent(q *reform.Querier, row *models.Agent, connChecker AgentCon
 		}, nil
 
 	case models.QANMySQLPerfSchemaAgentType:
-		services, err := models.ServicesForAgent(q, row.AgentID)
+		services, err := models.FindServicesForAgentID(q, row.AgentID)
 		if err != nil {
 			return nil, err
 		}
@@ -602,7 +602,7 @@ func ToInventoryAgent(q *reform.Querier, row *models.Agent, connChecker AgentCon
 		}, nil
 
 	case models.PostgresExporterType:
-		services, err := models.ServicesForAgent(q, row.AgentID)
+		services, err := models.FindServicesForAgentID(q, row.AgentID)
 		if err != nil {
 			return nil, err
 		}

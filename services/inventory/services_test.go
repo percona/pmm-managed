@@ -63,7 +63,7 @@ func TestServices(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, actualServices, 0)
 
-		actualMySQLService, err := ss.AddMySQL(ctx, &models.AddDBMSServiceParams{
+		actualMySQLService, err := ss.AddMySQL(ctx, &models.CreateServiceParams{
 			ServiceName: "test-mysql",
 			NodeID:      models.PMMServerNodeID,
 			Address:     pointer.ToString("127.0.0.1"),
@@ -94,7 +94,7 @@ func TestServices(t *testing.T) {
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "/service_id/00000000-0000-4000-8000-000000000001" not found.`), err)
 		assert.Nil(t, actualService)
 
-		actualService, err = ss.AddMongoDB(ctx, &models.AddDBMSServiceParams{
+		actualService, err = ss.AddMongoDB(ctx, &models.CreateServiceParams{
 			ServiceName: "test-mongo",
 			NodeID:      models.PMMServerNodeID,
 			Address:     pointer.ToString("127.0.0.1"),
@@ -125,7 +125,7 @@ func TestServices(t *testing.T) {
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "/service_id/00000000-0000-4000-8000-000000000002" not found.`), err)
 		assert.Nil(t, actualService)
 
-		actualService, err = ss.AddPostgreSQL(ctx, &models.AddDBMSServiceParams{
+		actualService, err = ss.AddPostgreSQL(ctx, &models.CreateServiceParams{
 			ServiceName: "test-postgres",
 			NodeID:      models.PMMServerNodeID,
 			Address:     pointer.ToString("127.0.0.1"),
@@ -170,7 +170,7 @@ func TestServices(t *testing.T) {
 		ss, teardown := setup(t)
 		defer teardown(t)
 
-		_, err := ss.AddMySQL(ctx, &models.AddDBMSServiceParams{
+		_, err := ss.AddMySQL(ctx, &models.CreateServiceParams{
 			ServiceName: "test-mysql",
 			NodeID:      models.PMMServerNodeID,
 			Address:     pointer.ToString("127.0.0.1"),
@@ -178,7 +178,7 @@ func TestServices(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		_, err = ss.AddMySQL(ctx, &models.AddDBMSServiceParams{
+		_, err = ss.AddMySQL(ctx, &models.CreateServiceParams{
 			ServiceName: "test-mysql",
 			NodeID:      models.PMMServerNodeID,
 			Address:     pointer.ToString("127.0.0.1"),
@@ -191,7 +191,7 @@ func TestServices(t *testing.T) {
 		ss, teardown := setup(t)
 		defer teardown(t)
 
-		_, err := ss.AddMySQL(ctx, &models.AddDBMSServiceParams{
+		_, err := ss.AddMySQL(ctx, &models.CreateServiceParams{
 			ServiceName: "test-mysql",
 			NodeID:      "no-such-id",
 			Address:     pointer.ToString("127.0.0.1"),
