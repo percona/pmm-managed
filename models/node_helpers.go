@@ -27,20 +27,20 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-func nodeNewID(q *reform.Querier) (string, error) {
-	id := "/node_id/" + uuid.New().String()
-	node := &Node{NodeID: id}
+func newNodeID(q *reform.Querier) (string, error) {
+	nodeID := "/node_id/" + uuid.New().String()
+	node := &Node{NodeID: nodeID}
 	switch err := q.Reload(node); err {
 	case nil:
-		return "", status.Errorf(codes.AlreadyExists, "Node with ID %q already exists.", id)
+		return "", status.Errorf(codes.AlreadyExists, "Node with ID %q already exists.", nodeID)
 	case reform.ErrNoRows:
-		return id, nil
+		return nodeID, nil
 	default:
 		return "", errors.WithStack(err)
 	}
 }
 
-func checkUniqueNodeName(q *reform.Querier, name string) error {
+func checkNodeName(q *reform.Querier, name string) error {
 	if name == "" {
 		return status.Error(codes.InvalidArgument, "Empty Node name.")
 	}
@@ -80,7 +80,7 @@ func checkUniqueNodeInstanceRegion(q *reform.Querier, instance, region string) e
 func FindAllNodes(q *reform.Querier) ([]*Node, error) {
 	structs, err := q.SelectAllFrom(NodeTable, "ORDER BY node_id")
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	nodes := make([]*Node, len(structs))
@@ -89,23 +89,6 @@ func FindAllNodes(q *reform.Querier) ([]*Node, error) {
 	}
 
 	return nodes, nil
-}
-
-// FindNodeByID finds a Node by ID.
-func FindNodeByID(q *reform.Querier, id string) (*Node, error) {
-	if id == "" {
-		return nil, status.Error(codes.InvalidArgument, "Empty Node ID.")
-	}
-
-	node := &Node{NodeID: id}
-	switch err := q.Reload(node); err {
-	case nil:
-		return node, nil
-	case reform.ErrNoRows:
-		return nil, status.Errorf(codes.NotFound, "Node with ID %q not found.", id)
-	default:
-		return nil, errors.WithStack(err)
-	}
 }
 
 // FindNodesForAgentID returns all Nodes for which Agent with given ID provides insights.
@@ -137,6 +120,23 @@ func FindNodesForAgentID(q *reform.Querier, agentID string) ([]*Node, error) {
 	return res, nil
 }
 
+// FindNodeByID finds a Node by ID.
+func FindNodeByID(q *reform.Querier, nodeID string) (*Node, error) {
+	if nodeID == "" {
+		return nil, status.Error(codes.InvalidArgument, "Empty Node ID.")
+	}
+
+	node := &Node{NodeID: nodeID}
+	switch err := q.Reload(node); err {
+	case nil:
+		return node, nil
+	case reform.ErrNoRows:
+		return nil, status.Errorf(codes.NotFound, "Node with ID %q not found.", nodeID)
+	default:
+		return nil, errors.WithStack(err)
+	}
+}
+
 // CreateNodeParams contains parameters for creating Nodes.
 type CreateNodeParams struct {
 	NodeName            string
@@ -152,12 +152,12 @@ type CreateNodeParams struct {
 
 // CreateNode creates a Node.
 func CreateNode(q *reform.Querier, nodeType NodeType, params *CreateNodeParams) (*Node, error) {
-	id, err := nodeNewID(q)
+	nodeID, err := newNodeID(q)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = checkUniqueNodeName(q, params.NodeName); err != nil {
+	if err = checkNodeName(q, params.NodeName); err != nil {
 		return nil, err
 	}
 
@@ -168,7 +168,7 @@ func CreateNode(q *reform.Querier, nodeType NodeType, params *CreateNodeParams) 
 	}
 
 	node := &Node{
-		NodeID:              id,
+		NodeID:              nodeID,
 		NodeType:            nodeType,
 		NodeName:            params.NodeName,
 		MachineID:           params.MachineID,
@@ -234,10 +234,14 @@ func UpdateNode(q *reform.Querier, nodeID string, params *UpdateNodeParams) (*No
 }
 
 // RemoveNode removes a Node.
-func RemoveNode(q *reform.Querier, id string) error {
-	err := q.Delete(&Node{NodeID: id})
-	if err == reform.ErrNoRows {
-		return status.Errorf(codes.NotFound, "Node with ID %q not found.", id)
+func RemoveNode(q *reform.Querier, nodeID string) error {
+	node, err := FindNodeByID(q, nodeID)
+	if err != nil {
+		return err
 	}
-	return nil
+
+	// TODO validate that there are no Services and Agents on this Node, and no Agents for this Node
+	// https://jira.percona.com/browse/PMM-3816
+
+	return q.Delete(node)
 }

@@ -17,14 +17,13 @@
 // Package models contains generated Reform records and helpers.
 //
 // Common order of helpers:
-//  * unexported xxxNewID;
-//  * unexported validators (checkXXX);
-//  * FindAllXXX;
-//  * FindXXXByID;
-//  * other finder (e.g. FindNodesForAgentID);
-//  * CreateXXX;
-//  * UpdateXXX;
-//  * RemoveXXX.
+//  * unexported newXxxID;
+//  * unexported validators (checkXxx);
+//  * FindAllXxx, other mass finders;
+//  * FindXxxByID, other singular finders;
+//  * CreateXxx;
+//  * UpdateXxx;
+//  * RemoveXxx.
 package models
 
 import (

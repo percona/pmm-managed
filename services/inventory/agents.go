@@ -61,13 +61,13 @@ func (as *AgentsService) List(ctx context.Context, filters AgentFilters) ([]inve
 		var err error
 		switch {
 		case filters.PMMAgentID != "":
-			agents, err = models.AgentsRunningByPMMAgent(tx.Querier, filters.PMMAgentID)
+			agents, err = models.FindAgentsForPMMAgentID(tx.Querier, filters.PMMAgentID)
 		case filters.NodeID != "":
-			agents, err = models.AgentsForNode(tx.Querier, filters.NodeID)
+			agents, err = models.FindAgentsForNodeID(tx.Querier, filters.NodeID)
 		case filters.ServiceID != "":
-			agents, err = models.AgentsForService(tx.Querier, filters.ServiceID)
+			agents, err = models.FindAgentsForServiceID(tx.Querier, filters.ServiceID)
 		default:
-			agents, err = models.AgentFindAll(tx.Querier)
+			agents, err = models.FindAllAgents(tx.Querier)
 		}
 		if err != nil {
 			return err
@@ -87,7 +87,7 @@ func (as *AgentsService) List(ctx context.Context, filters AgentFilters) ([]inve
 func (as *AgentsService) Get(ctx context.Context, id string) (inventorypb.Agent, error) {
 	var res inventorypb.Agent
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		row, err := models.AgentFindByID(tx.Querier, id)
+		row, err := models.FindAgentByID(tx.Querier, id)
 		if err != nil {
 			return err
 		}
@@ -150,8 +150,7 @@ func (as *AgentsService) AddNodeExporter(ctx context.Context, req *inventorypb.A
 func (as *AgentsService) ChangeNodeExporter(ctx context.Context, req *inventorypb.ChangeNodeExporterRequest) (*inventorypb.NodeExporter, error) {
 	var res *inventorypb.NodeExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-
-		params := &models.ChangeCommonExporterParams{
+		params := &models.UpdateAgentParams{
 			AgentID:            req.AgentId,
 			CustomLabels:       req.CustomLabels,
 			RemoveCustomLabels: req.RemoveCustomLabels,
@@ -162,7 +161,7 @@ func (as *AgentsService) ChangeNodeExporter(ctx context.Context, req *inventoryp
 		if req.GetDisabled() {
 			params.Disabled = true
 		}
-		row, err := models.AgentChangeExporter(tx.Querier, params)
+		row, err := models.UpdateAgent(tx.Querier, params)
 		if err != nil {
 			return err
 		}
@@ -190,14 +189,14 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, req *inventorypb
 
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 
-		params := &models.AddExporterAgentParams{
+		params := &models.CreateAgentParams{
 			PMMAgentID:   req.PmmAgentId,
 			ServiceID:    req.ServiceId,
 			Username:     req.Username,
 			Password:     req.Password,
 			CustomLabels: req.CustomLabels,
 		}
-		row, err := models.AgentAddExporter(tx.Querier, models.MySQLdExporterType, params)
+		row, err := models.CreateAgent(tx.Querier, models.MySQLdExporterType, params)
 		if err != nil {
 			return err
 		}
@@ -224,7 +223,7 @@ func (as *AgentsService) ChangeMySQLdExporter(ctx context.Context, req *inventor
 	var res *inventorypb.MySQLdExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 
-		params := &models.ChangeCommonExporterParams{
+		params := &models.UpdateAgentParams{
 			AgentID:            req.AgentId,
 			CustomLabels:       req.CustomLabels,
 			RemoveCustomLabels: req.RemoveCustomLabels,
@@ -235,7 +234,7 @@ func (as *AgentsService) ChangeMySQLdExporter(ctx context.Context, req *inventor
 		if req.GetDisabled() {
 			params.Disabled = true
 		}
-		row, err := models.AgentChangeExporter(tx.Querier, params)
+		row, err := models.UpdateAgent(tx.Querier, params)
 		if err != nil {
 			return err
 		}
@@ -276,14 +275,14 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, req *inventoryp
 	var res *inventorypb.MongoDBExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 
-		params := &models.AddExporterAgentParams{
+		params := &models.CreateAgentParams{
 			PMMAgentID:   req.PmmAgentId,
 			ServiceID:    req.ServiceId,
 			Username:     req.Username,
 			Password:     req.Password,
 			CustomLabels: req.CustomLabels,
 		}
-		row, err := models.AgentAddExporter(tx.Querier, models.MongoDBExporterType, params)
+		row, err := models.CreateAgent(tx.Querier, models.MongoDBExporterType, params)
 		if err != nil {
 			return err
 		}
@@ -308,7 +307,7 @@ func (as *AgentsService) ChangeMongoDBExporter(ctx context.Context, req *invento
 	var res *inventorypb.MongoDBExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 
-		params := &models.ChangeCommonExporterParams{
+		params := &models.UpdateAgentParams{
 			AgentID:            req.AgentId,
 			CustomLabels:       req.CustomLabels,
 			RemoveCustomLabels: req.RemoveCustomLabels,
@@ -319,7 +318,7 @@ func (as *AgentsService) ChangeMongoDBExporter(ctx context.Context, req *invento
 		if req.GetDisabled() {
 			params.Disabled = true
 		}
-		row, err := models.AgentChangeExporter(tx.Querier, params)
+		row, err := models.UpdateAgent(tx.Querier, params)
 		if err != nil {
 			return err
 		}
@@ -347,14 +346,14 @@ func (as *AgentsService) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *in
 	var res *inventorypb.QANMySQLPerfSchemaAgent
 
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		params := &models.AddExporterAgentParams{
+		params := &models.CreateAgentParams{
 			PMMAgentID:   req.PmmAgentId,
 			ServiceID:    req.ServiceId,
 			Username:     req.Username,
 			Password:     req.Password,
 			CustomLabels: req.CustomLabels,
 		}
-		row, err := models.AgentAddExporter(tx.Querier, models.QANMySQLPerfSchemaAgentType, params)
+		row, err := models.CreateAgent(tx.Querier, models.QANMySQLPerfSchemaAgentType, params)
 		if err != nil {
 			return err
 		}
@@ -381,7 +380,7 @@ func (as *AgentsService) ChangeQANMySQLPerfSchemaAgent(ctx context.Context, req 
 	var res *inventorypb.QANMySQLPerfSchemaAgent
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 
-		params := &models.ChangeCommonExporterParams{
+		params := &models.UpdateAgentParams{
 			AgentID:            req.AgentId,
 			CustomLabels:       req.CustomLabels,
 			RemoveCustomLabels: req.RemoveCustomLabels,
@@ -392,7 +391,7 @@ func (as *AgentsService) ChangeQANMySQLPerfSchemaAgent(ctx context.Context, req 
 		if req.GetDisabled() {
 			params.Disabled = true
 		}
-		row, err := models.AgentChangeExporter(tx.Querier, params)
+		row, err := models.UpdateAgent(tx.Querier, params)
 		if err != nil {
 			return err
 		}
@@ -418,14 +417,14 @@ func (as *AgentsService) AddPostgresExporter(ctx context.Context, req *inventory
 
 	var res *inventorypb.PostgresExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		params := &models.AddExporterAgentParams{
+		params := &models.CreateAgentParams{
 			PMMAgentID:   req.PmmAgentId,
 			ServiceID:    req.ServiceId,
 			Username:     req.Username,
 			Password:     req.Password,
 			CustomLabels: req.CustomLabels,
 		}
-		row, err := models.AgentAddExporter(tx.Querier, models.PostgresExporterType, params)
+		row, err := models.CreateAgent(tx.Querier, models.PostgresExporterType, params)
 		if err != nil {
 			return err
 		}
@@ -450,7 +449,7 @@ func (as *AgentsService) ChangePostgresExporter(ctx context.Context, req *invent
 	var res *inventorypb.PostgresExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 
-		params := &models.ChangeCommonExporterParams{
+		params := &models.UpdateAgentParams{
 			AgentID:            req.AgentId,
 			CustomLabels:       req.CustomLabels,
 			RemoveCustomLabels: req.RemoveCustomLabels,
@@ -461,7 +460,7 @@ func (as *AgentsService) ChangePostgresExporter(ctx context.Context, req *invent
 		if req.GetDisabled() {
 			params.Disabled = true
 		}
-		row, err := models.AgentChangeExporter(tx.Querier, params)
+		row, err := models.UpdateAgent(tx.Querier, params)
 		if err != nil {
 			return err
 		}
@@ -486,7 +485,7 @@ func (as *AgentsService) Remove(ctx context.Context, id string) error {
 	var removedAgent *models.Agent
 	err := as.db.InTransaction(func(tx *reform.TX) error {
 		var err error
-		removedAgent, err = models.AgentRemove(tx.Querier, id)
+		removedAgent, err = models.RemoveAgent(tx.Querier, id)
 		if err != nil {
 			return err
 		}

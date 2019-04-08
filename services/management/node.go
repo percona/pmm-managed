@@ -170,7 +170,7 @@ func (s *NodeService) findNodeByName(q *reform.Querier, name string) (*models.No
 }
 
 func (s *NodeService) findPmmAgentByNodeID(q *reform.Querier, nodeID string) (pmmAgent *models.Agent, err error) {
-	agents, err := models.AgentFindAll(q)
+	agents, err := models.FindAllAgents(q)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +185,7 @@ func (s *NodeService) findPmmAgentByNodeID(q *reform.Querier, nodeID string) (pm
 }
 
 func (s *NodeService) findNodeExporterByPmmAgentID(q *reform.Querier, pmmAgentID string) (nodeExporter *inventorypb.NodeExporter, err error) {
-	agents, err := models.AgentsRunningByPMMAgent(q, pmmAgentID)
+	agents, err := models.FindAgentsForPMMAgentID(q, pmmAgentID)
 	if err != nil {
 		return nil, err
 	}

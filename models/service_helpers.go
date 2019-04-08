@@ -27,20 +27,20 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-func serviceNewID(q *reform.Querier) (string, error) {
-	id := "/service_id/" + uuid.New().String()
-	service := &Service{ServiceID: id}
+func newServiceID(q *reform.Querier) (string, error) {
+	serviceID := "/service_id/" + uuid.New().String()
+	service := &Service{ServiceID: serviceID}
 	switch err := q.Reload(service); err {
 	case nil:
-		return "", status.Errorf(codes.AlreadyExists, "Service with ID %q already exists.", id)
+		return "", status.Errorf(codes.AlreadyExists, "Service with ID %q already exists.", serviceID)
 	case reform.ErrNoRows:
-		return id, nil
+		return serviceID, nil
 	default:
 		return "", errors.WithStack(err)
 	}
 }
 
-func checkUniqueServiceName(q *reform.Querier, name string) error {
+func checkServiceName(q *reform.Querier, name string) error {
 	if name == "" {
 		return status.Error(codes.InvalidArgument, "Empty Service name.")
 	}
@@ -60,7 +60,7 @@ func checkUniqueServiceName(q *reform.Querier, name string) error {
 func FindAllServices(q *reform.Querier) ([]*Service, error) {
 	structs, err := q.SelectAllFrom(ServiceTable, "ORDER BY service_id")
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	services := make([]*Service, len(structs))
@@ -69,23 +69,6 @@ func FindAllServices(q *reform.Querier) ([]*Service, error) {
 	}
 
 	return services, nil
-}
-
-// FindServiceByID finds Service by ID.
-func FindServiceByID(q *reform.Querier, id string) (*Service, error) {
-	if id == "" {
-		return nil, status.Error(codes.InvalidArgument, "Empty Service ID.")
-	}
-
-	service := &Service{ServiceID: id}
-	switch err := q.Reload(service); err {
-	case nil:
-		return service, nil
-	case reform.ErrNoRows:
-		return nil, status.Errorf(codes.NotFound, "Service with ID %q not found.", id)
-	default:
-		return nil, errors.WithStack(err)
-	}
 }
 
 // FindServicesForAgentID returns all Services for which Agent with given ID provides insights.
@@ -117,6 +100,23 @@ func FindServicesForAgentID(q *reform.Querier, agentID string) ([]*Service, erro
 	return res, nil
 }
 
+// FindServiceByID finds Service by ID.
+func FindServiceByID(q *reform.Querier, serviceID string) (*Service, error) {
+	if serviceID == "" {
+		return nil, status.Error(codes.InvalidArgument, "Empty Service ID.")
+	}
+
+	service := &Service{ServiceID: serviceID}
+	switch err := q.Reload(service); err {
+	case nil:
+		return service, nil
+	case reform.ErrNoRows:
+		return nil, status.Errorf(codes.NotFound, "Service with ID %q not found.", serviceID)
+	default:
+		return nil, errors.WithStack(err)
+	}
+}
+
 // CreateServiceParams contains parameters for creating Services.
 type CreateServiceParams struct {
 	ServiceName  string
@@ -128,11 +128,11 @@ type CreateServiceParams struct {
 
 // CreateService creates a Service.
 func CreateService(q *reform.Querier, serviceType ServiceType, params *CreateServiceParams) (*Service, error) {
-	id, err := serviceNewID(q)
+	serviceID, err := newServiceID(q)
 	if err != nil {
 		return nil, err
 	}
-	if err = checkUniqueServiceName(q, params.ServiceName); err != nil {
+	if err = checkServiceName(q, params.ServiceName); err != nil {
 		return nil, err
 	}
 
@@ -141,7 +141,7 @@ func CreateService(q *reform.Querier, serviceType ServiceType, params *CreateSer
 	}
 
 	service := &Service{
-		ServiceID:   id,
+		ServiceID:   serviceID,
 		ServiceType: serviceType,
 		ServiceName: params.ServiceName,
 		NodeID:      params.NodeID,
@@ -159,10 +159,14 @@ func CreateService(q *reform.Querier, serviceType ServiceType, params *CreateSer
 }
 
 // RemoveService removes a Service.
-func RemoveService(q *reform.Querier, id string) error {
-	err := q.Delete(&Service{ServiceID: id})
-	if err == reform.ErrNoRows {
-		return status.Errorf(codes.NotFound, "Service with ID %q not found.", id)
+func RemoveService(q *reform.Querier, serviceID string) error {
+	service, err := FindServiceByID(q, serviceID)
+	if err != nil {
+		return err
 	}
-	return nil
+
+	// TODO validate that there are no Agents for this Service
+	// https://jira.percona.com/browse/PMM-3816
+
+	return q.Delete(service)
 }

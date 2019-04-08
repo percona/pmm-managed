@@ -28,190 +28,36 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-func agentNewID(q *reform.Querier) (string, error) {
-	id := "/agent_id/" + uuid.New().String()
-	agent := &Agent{AgentID: id}
+func newAgentID(q *reform.Querier) (string, error) {
+	agentID := "/agent_id/" + uuid.New().String()
+	agent := &Agent{AgentID: agentID}
 	switch err := q.Reload(agent); err {
 	case nil:
-		return "", status.Errorf(codes.AlreadyExists, "Agent with ID %q already exists.", id)
+		return "", status.Errorf(codes.AlreadyExists, "Agent with ID %q already exists.", agentID)
 	case reform.ErrNoRows:
-		return id, nil
+		return agentID, nil
 	default:
 		return "", errors.WithStack(err)
 	}
 }
 
-// AgentFindAll finds all agents.
-func AgentFindAll(q *reform.Querier) ([]*Agent, error) {
-	var structs []reform.Struct
+// FindAllAgents returns all Agents.
+func FindAllAgents(q *reform.Querier) ([]*Agent, error) {
 	structs, err := q.SelectAllFrom(AgentTable, "ORDER BY agent_id")
-	err = errors.Wrap(err, "failed to select Agents")
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
 	agents := make([]*Agent, len(structs))
 	for i, s := range structs {
 		agents[i] = s.(*Agent)
 	}
-	return agents, err
+
+	return agents, nil
 }
 
-// AgentFindByID finds agent by ID.
-func AgentFindByID(q *reform.Querier, id string) (*Agent, error) {
-	if id == "" {
-		return nil, status.Error(codes.InvalidArgument, "Empty Agent ID.")
-	}
-
-	row := &Agent{AgentID: id}
-	switch err := q.Reload(row); err {
-	case nil:
-		return row, nil
-	case reform.ErrNoRows:
-		return nil, status.Errorf(codes.NotFound, "Agent with ID %q not found.", id)
-	default:
-		return nil, errors.WithStack(err)
-	}
-}
-
-// AgentAddPmmAgent creates PMMAgent.
-func AgentAddPmmAgent(q *reform.Querier, runsOnNodeID string, customLabels map[string]string) (*Agent, error) {
-	id, err := agentNewID(q)
-	if err != nil {
-		return nil, err
-	}
-
-	if _, err := FindNodeByID(q, runsOnNodeID); err != nil {
-		return nil, err
-	}
-
-	row := &Agent{
-		AgentID:      id,
-		AgentType:    PMMAgentType,
-		RunsOnNodeID: &runsOnNodeID,
-	}
-	if err := row.SetCustomLabels(customLabels); err != nil {
-		return nil, err
-	}
-	if err := q.Insert(row); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return row, nil
-}
-
-// AgentAddNodeExporter creates NodeExporter agent.
-func AgentAddNodeExporter(q *reform.Querier, pmmAgentID string, customLabels map[string]string) (*Agent, error) {
-	id, err := agentNewID(q)
-	if err != nil {
-		return nil, err
-	}
-
-	pmmAgent, err := AgentFindByID(q, pmmAgentID)
-	if err != nil {
-		return nil, err
-	}
-
-	row := &Agent{
-		AgentID:    id,
-		AgentType:  NodeExporterType,
-		PMMAgentID: &pmmAgentID,
-	}
-	if err := row.SetCustomLabels(customLabels); err != nil {
-		return nil, err
-	}
-	if err := q.Insert(row); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	err = q.Insert(&AgentNode{
-		AgentID: row.AgentID,
-		NodeID:  pointer.GetString(pmmAgent.RunsOnNodeID),
-	})
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	return row, nil
-}
-
-// ChangeCommonExporterParams describe common change params for exporters.
-type ChangeCommonExporterParams struct {
-	AgentID            string
-	CustomLabels       map[string]string
-	Disabled           bool
-	RemoveCustomLabels bool
-}
-
-// AgentChangeExporter changes common params for given agent.
-func AgentChangeExporter(q *reform.Querier, params *ChangeCommonExporterParams) (*Agent, error) {
-	row, err := AgentFindByID(q, params.AgentID)
-	if err != nil {
-		return nil, err
-	}
-
-	row.Disabled = params.Disabled
-
-	if params.RemoveCustomLabels {
-		if err = row.SetCustomLabels(nil); err != nil {
-			return nil, err
-		}
-	}
-	if len(params.CustomLabels) != 0 {
-		if err = row.SetCustomLabels(params.CustomLabels); err != nil {
-			return nil, err
-		}
-	}
-
-	if err = q.Update(row); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return row, nil
-}
-
-// AddExporterAgentParams params for add common exporter.
-type AddExporterAgentParams struct {
-	PMMAgentID   string
-	ServiceID    string
-	Username     string
-	Password     string
-	CustomLabels map[string]string
-}
-
-// AgentAddExporter adds exporter with given type.
-func AgentAddExporter(q *reform.Querier, agentType AgentType, params *AddExporterAgentParams) (*Agent, error) {
-	id, err := agentNewID(q)
-	if err != nil {
-		return nil, err
-	}
-
-	if _, err := FindServiceByID(q, params.ServiceID); err != nil {
-		return nil, err
-	}
-
-	row := &Agent{
-		AgentID:    id,
-		AgentType:  agentType,
-		PMMAgentID: &params.PMMAgentID,
-		Username:   pointer.ToStringOrNil(params.Username),
-		Password:   pointer.ToStringOrNil(params.Password),
-	}
-	if err := row.SetCustomLabels(params.CustomLabels); err != nil {
-		return nil, err
-	}
-	if err := q.Insert(row); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	err = q.Insert(&AgentService{
-		AgentID:   row.AgentID,
-		ServiceID: params.ServiceID,
-	})
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return row, nil
-}
-
-// AgentsForNode returns all Agents providing insights for given Node.
-func AgentsForNode(q *reform.Querier, nodeID string) ([]*Agent, error) {
+// FindAgentsForNodeID returns all Agents providing insights for given Node.
+func FindAgentsForNodeID(q *reform.Querier, nodeID string) ([]*Agent, error) {
 	structs, err := q.FindAllFrom(AgentNodeView, "node_id", nodeID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select Agent IDs")
@@ -239,8 +85,8 @@ func AgentsForNode(q *reform.Querier, nodeID string) ([]*Agent, error) {
 	return res, nil
 }
 
-// AgentsRunningByPMMAgent returns all Agents running by PMMAgent.
-func AgentsRunningByPMMAgent(q *reform.Querier, pmmAgentID string) ([]*Agent, error) {
+// FindAgentsForPMMAgentID returns all Agents running by PMMAgent.
+func FindAgentsForPMMAgentID(q *reform.Querier, pmmAgentID string) ([]*Agent, error) {
 	tail := fmt.Sprintf("WHERE pmm_agent_id = %s ORDER BY agent_id", q.Placeholder(1)) //nolint:gosec
 	structs, err := q.SelectAllFrom(AgentTable, tail, pmmAgentID)
 	if err != nil {
@@ -254,8 +100,8 @@ func AgentsRunningByPMMAgent(q *reform.Querier, pmmAgentID string) ([]*Agent, er
 	return res, nil
 }
 
-// AgentsForService returns all Agents providing insights for given Service.
-func AgentsForService(q *reform.Querier, serviceID string) ([]*Agent, error) {
+// FindAgentsForServiceID returns all Agents providing insights for given Service.
+func FindAgentsForServiceID(q *reform.Querier, serviceID string) ([]*Agent, error) {
 	structs, err := q.FindAllFrom(AgentServiceView, "service_id", serviceID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select Agent IDs")
@@ -299,9 +145,9 @@ func PMMAgentsForChangedNode(q *reform.Querier, nodeID string) ([]string, error)
 
 	var res []string
 	for _, str := range structs {
-		row := str.(*Agent)
-		if row.AgentType == PMMAgentType {
-			res = append(res, row.AgentID)
+		agent := str.(*Agent)
+		if agent.AgentType == PMMAgentType {
+			res = append(res, agent.AgentID)
 		}
 	}
 	return res, nil
@@ -325,31 +171,188 @@ func PMMAgentsForChangedService(q *reform.Querier, serviceID string) ([]string, 
 
 	var res []string
 	for _, str := range structs {
-		row := str.(*Agent)
-		if row.AgentType == PMMAgentType {
-			res = append(res, row.AgentID)
+		agent := str.(*Agent)
+		if agent.AgentType == PMMAgentType {
+			res = append(res, agent.AgentID)
 		}
 	}
 	return res, nil
 }
 
-// AgentRemove removes Agent by ID.
-func AgentRemove(q *reform.Querier, id string) (*Agent, error) {
-	row, err := AgentFindByID(q, id)
+// FindAgentByID finds agent by ID.
+func FindAgentByID(q *reform.Querier, id string) (*Agent, error) {
+	if id == "" {
+		return nil, status.Error(codes.InvalidArgument, "Empty Agent ID.")
+	}
+
+	agent := &Agent{AgentID: id}
+	switch err := q.Reload(agent); err {
+	case nil:
+		return agent, nil
+	case reform.ErrNoRows:
+		return nil, status.Errorf(codes.NotFound, "Agent with ID %q not found.", id)
+	default:
+		return nil, errors.WithStack(err)
+	}
+}
+
+// AgentAddPmmAgent creates PMMAgent.
+func AgentAddPmmAgent(q *reform.Querier, runsOnNodeID string, customLabels map[string]string) (*Agent, error) {
+	id, err := newAgentID(q)
 	if err != nil {
 		return nil, err
 	}
 
-	if _, err = q.DeleteFrom(AgentServiceView, "WHERE agent_id = "+q.Placeholder(1), id); err != nil { //nolint:gosec
-		return nil, errors.WithStack(err)
+	if _, err := FindNodeByID(q, runsOnNodeID); err != nil {
+		return nil, err
 	}
-	if _, err = q.DeleteFrom(AgentNodeView, "WHERE agent_id = "+q.Placeholder(1), id); err != nil { //nolint:gosec
+
+	agent := &Agent{
+		AgentID:      id,
+		AgentType:    PMMAgentType,
+		RunsOnNodeID: &runsOnNodeID,
+	}
+	if err := agent.SetCustomLabels(customLabels); err != nil {
+		return nil, err
+	}
+	if err := q.Insert(agent); err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	if err = q.Delete(row); err != nil {
+	return agent, nil
+}
+
+// AgentAddNodeExporter creates NodeExporter agent.
+func AgentAddNodeExporter(q *reform.Querier, pmmAgentID string, customLabels map[string]string) (*Agent, error) {
+	id, err := newAgentID(q)
+	if err != nil {
+		return nil, err
+	}
+
+	pmmAgent, err := FindAgentByID(q, pmmAgentID)
+	if err != nil {
+		return nil, err
+	}
+
+	agent := &Agent{
+		AgentID:    id,
+		AgentType:  NodeExporterType,
+		PMMAgentID: &pmmAgentID,
+	}
+	if err := agent.SetCustomLabels(customLabels); err != nil {
+		return nil, err
+	}
+	if err := q.Insert(agent); err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	return row, nil
+	err = q.Insert(&AgentNode{
+		AgentID: agent.AgentID,
+		NodeID:  pointer.GetString(pmmAgent.RunsOnNodeID),
+	})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return agent, nil
+}
+
+// CreateAgentParams params for add common exporter.
+type CreateAgentParams struct {
+	PMMAgentID   string
+	ServiceID    string
+	Username     string
+	Password     string
+	CustomLabels map[string]string
+}
+
+// CreateAgent adds exporter with given type.
+func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentParams) (*Agent, error) {
+	id, err := newAgentID(q)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := FindServiceByID(q, params.ServiceID); err != nil {
+		return nil, err
+	}
+
+	agent := &Agent{
+		AgentID:    id,
+		AgentType:  agentType,
+		PMMAgentID: &params.PMMAgentID,
+		Username:   pointer.ToStringOrNil(params.Username),
+		Password:   pointer.ToStringOrNil(params.Password),
+	}
+	if err := agent.SetCustomLabels(params.CustomLabels); err != nil {
+		return nil, err
+	}
+	if err := q.Insert(agent); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	err = q.Insert(&AgentService{
+		AgentID:   agent.AgentID,
+		ServiceID: params.ServiceID,
+	})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return agent, nil
+}
+
+// UpdateAgentParams describe common change params for exporters.
+type UpdateAgentParams struct {
+	AgentID            string
+	CustomLabels       map[string]string
+	Disabled           bool
+	RemoveCustomLabels bool
+}
+
+// UpdateAgent changes common params for given agent.
+func UpdateAgent(q *reform.Querier, params *UpdateAgentParams) (*Agent, error) {
+	agent, err := FindAgentByID(q, params.AgentID)
+	if err != nil {
+		return nil, err
+	}
+
+	agent.Disabled = params.Disabled
+
+	if params.RemoveCustomLabels {
+		if err = agent.SetCustomLabels(nil); err != nil {
+			return nil, err
+		}
+	}
+	if len(params.CustomLabels) != 0 {
+		if err = agent.SetCustomLabels(params.CustomLabels); err != nil {
+			return nil, err
+		}
+	}
+
+	if err = q.Update(agent); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return agent, nil
+}
+
+// RemoveAgent removes Agent by ID and returns it.
+func RemoveAgent(q *reform.Querier, agentID string) (*Agent, error) {
+	agent, err := FindAgentByID(q, agentID)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err = q.DeleteFrom(AgentServiceView, "WHERE agent_id = "+q.Placeholder(1), agentID); err != nil { //nolint:gosec
+		return nil, errors.WithStack(err)
+	}
+	if _, err = q.DeleteFrom(AgentNodeView, "WHERE agent_id = "+q.Placeholder(1), agentID); err != nil { //nolint:gosec
+		return nil, errors.WithStack(err)
+	}
+
+	if err = q.Delete(agent); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return agent, nil
 }

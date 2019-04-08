@@ -72,13 +72,13 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 		res.Service = invService.(*inventorypb.MySQLService)
 
 		if req.MysqldExporter {
-			params := &models.AddExporterAgentParams{
+			params := &models.CreateAgentParams{
 				PMMAgentID: req.PmmAgentId,
 				ServiceID:  invService.ID(),
 				Username:   req.Username,
 				Password:   req.Password,
 			}
-			row, err := models.AgentAddExporter(tx.Querier, models.MySQLdExporterType, params)
+			row, err := models.CreateAgent(tx.Querier, models.MySQLdExporterType, params)
 			if err != nil {
 				return err
 			}
@@ -93,14 +93,14 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 
 		if req.QanMysqlPerfschema {
 
-			params := &models.AddExporterAgentParams{
+			params := &models.CreateAgentParams{
 				PMMAgentID: req.PmmAgentId,
 				ServiceID:  invService.ID(),
 				Username:   req.QanUsername,
 				Password:   req.QanPassword,
 			}
 
-			row, err := models.AgentAddExporter(tx.Querier, models.QANMySQLPerfSchemaAgentType, params)
+			row, err := models.CreateAgent(tx.Querier, models.QANMySQLPerfSchemaAgentType, params)
 			if err != nil {
 				return err
 			}

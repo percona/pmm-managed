@@ -135,11 +135,11 @@ func TestModels(t *testing.T) {
 		assert.Equal(t, expected, services)
 	})
 
-	t.Run("AgentsForNode", func(t *testing.T) {
+	t.Run("FindAgentsForNodeID", func(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
 
-		agents, err := models.AgentsForNode(q, "N1")
+		agents, err := models.FindAgentsForNodeID(q, "N1")
 		require.NoError(t, err)
 		expected := []*models.Agent{
 			{
@@ -154,11 +154,11 @@ func TestModels(t *testing.T) {
 		assert.Equal(t, expected, agents)
 	})
 
-	t.Run("AgentsRunningByPMMAgent", func(t *testing.T) {
+	t.Run("FindAgentsForPMMAgentID", func(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
 
-		agents, err := models.AgentsRunningByPMMAgent(q, "A1")
+		agents, err := models.FindAgentsForPMMAgentID(q, "A1")
 		require.NoError(t, err)
 		expected := []*models.Agent{
 			{
@@ -181,11 +181,11 @@ func TestModels(t *testing.T) {
 		assert.Equal(t, expected, agents)
 	})
 
-	t.Run("AgentsForService", func(t *testing.T) {
+	t.Run("FindAgentsForServiceID", func(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
 
-		agents, err := models.AgentsForService(q, "S1")
+		agents, err := models.FindAgentsForServiceID(q, "S1")
 		require.NoError(t, err)
 		expected := []*models.Agent{
 			{

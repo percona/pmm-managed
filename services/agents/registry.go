@@ -235,7 +235,7 @@ func authenticate(md *agentpb.AgentConnectMetadata, q *reform.Querier) (string, 
 		return "", status.Error(codes.Unauthenticated, "Empty Agent ID.")
 	}
 
-	agent, err := models.AgentFindByID(q, md.ID)
+	agent, err := models.FindAgentByID(q, md.ID)
 	if err != nil {
 		if gRPCError := status.Convert(err); gRPCError != nil && gRPCError.Code() == codes.NotFound {
 			return "", status.Errorf(codes.Unauthenticated, "No Agent with ID %q.", md.ID)
@@ -343,7 +343,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		return
 	}
 
-	agents, err := models.AgentsRunningByPMMAgent(r.db.Querier, pmmAgentID)
+	agents, err := models.FindAgentsForPMMAgentID(r.db.Querier, pmmAgentID)
 	if err != nil {
 		l.Errorf("Failed to collect agents: %s.", err)
 		return
