@@ -42,7 +42,7 @@ func TestImports(t *testing.T) {
 	}
 
 	for path, c := range map[string]constraint{
-		// models should not import services or APIs
+		// models should not import services or APIs.
 		"github.com/percona/pmm-managed/models": {
 			blacklistPrefixes: []string{
 				"github.com/percona/pmm-managed/services",
@@ -50,7 +50,7 @@ func TestImports(t *testing.T) {
 			},
 		},
 
-		// services should be independent: agents, inventory, management, prometheus, qan
+		// Services should be independent: agents, inventory, management, prometheus, qan.
 		"github.com/percona/pmm-managed/services/agents": {
 			blacklistPrefixes: []string{
 				"github.com/percona/pmm-managed/services",
@@ -61,6 +61,12 @@ func TestImports(t *testing.T) {
 				"github.com/percona/pmm-managed/services",
 			},
 		},
+		// FIXME https://jira.percona.com/browse/PMM-3541
+		// "github.com/percona/pmm-managed/services/management": {
+		// 	blacklistPrefixes: []string{
+		// 		"github.com/percona/pmm-managed/services",
+		// 	},
+		// },
 		"github.com/percona/pmm-managed/services/prometheus": {
 			blacklistPrefixes: []string{
 				"github.com/percona/pmm-managed/services",
@@ -71,13 +77,6 @@ func TestImports(t *testing.T) {
 				"github.com/percona/pmm-managed/services",
 			},
 		},
-
-		// FIXME https://jira.percona.com/browse/PMM-3541
-		// "github.com/percona/pmm-managed/services/management": {
-		// 	blacklistPrefixes: []string{
-		// 		"github.com/percona/pmm-managed/services",
-		// 	},
-		// },
 	} {
 		p, err := build.Import(path, ".", build.IgnoreVendor)
 		require.NoError(t, err)

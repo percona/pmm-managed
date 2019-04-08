@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/AlekSi/pointer"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -28,13 +27,13 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-func checkIsUniqueNodeID(q *reform.Querier, id string) error {
+func checkUniqueNodeID(q *reform.Querier, id string) error {
 	if id == "" {
 		panic("empty Node ID")
 	}
 
-	row := &Node{NodeID: id}
-	switch err := q.Reload(row); err {
+	node := &Node{NodeID: id}
+	switch err := q.Reload(node); err {
 	case nil:
 		return status.Errorf(codes.AlreadyExists, "Node with ID %q already exists.", id)
 	case reform.ErrNoRows:
@@ -44,7 +43,7 @@ func checkIsUniqueNodeID(q *reform.Querier, id string) error {
 	}
 }
 
-func checkUniqueName(q *reform.Querier, name string) error {
+func checkUniqueNodeName(q *reform.Querier, name string) error {
 	if name == "" {
 		return status.Error(codes.InvalidArgument, "Empty Node name.")
 	}
@@ -80,59 +79,7 @@ func checkUniqueNodeInstanceRegion(q *reform.Querier, instance, region string) e
 	}
 }
 
-// AddNodeParams contains parameters for adding Nodes.
-type AddNodeParams struct {
-	NodeName            string
-	MachineID           *string
-	Distro              *string
-	DistroVersion       *string
-	DockerContainerID   *string
-	DockerContainerName *string
-	CustomLabels        map[string]string
-	Address             *string
-	Region              *string
-}
-
-// AddNode adds new node to persistent store.
-func AddNode(q *reform.Querier, nodeType NodeType, params *AddNodeParams) (*Node, error) {
-	id := "/node_id/" + uuid.New().String()
-	if err := checkIsUniqueNodeID(q, id); err != nil {
-		return nil, err
-	}
-
-	if err := checkUniqueName(q, params.NodeName); err != nil {
-		return nil, err
-	}
-
-	if params.Address != nil && params.Region != nil {
-		if err := checkUniqueNodeInstanceRegion(q, *params.Address, *params.Region); err != nil {
-			return nil, err
-		}
-	}
-
-	row := &Node{
-		NodeID:              id,
-		NodeType:            nodeType,
-		NodeName:            params.NodeName,
-		MachineID:           params.MachineID,
-		Distro:              params.Distro,
-		DistroVersion:       params.DistroVersion,
-		DockerContainerID:   params.DockerContainerID,
-		DockerContainerName: params.DockerContainerName,
-		Address:             params.Address,
-		Region:              params.Region,
-	}
-	if err := row.SetCustomLabels(params.CustomLabels); err != nil {
-		return nil, err
-	}
-	if err := q.Insert(row); err != nil {
-		return nil, err
-	}
-
-	return row, nil
-}
-
-// FindAllNodes finds all nodes and loads it from persistent store.
+// FindAllNodes returns all Nodes.
 func FindAllNodes(q *reform.Querier) ([]*Node, error) {
 	structs, err := q.SelectAllFrom(NodeTable, "ORDER BY node_id")
 	if err != nil {
@@ -147,16 +94,16 @@ func FindAllNodes(q *reform.Querier) ([]*Node, error) {
 	return nodes, nil
 }
 
-// FindNodeByID finds a node by ID and loads it from persistent store.
+// FindNodeByID finds a Node by ID.
 func FindNodeByID(q *reform.Querier, id string) (*Node, error) {
 	if id == "" {
 		return nil, status.Error(codes.InvalidArgument, "Empty Node ID.")
 	}
 
-	row := &Node{NodeID: id}
-	switch err := q.Reload(row); err {
+	node := &Node{NodeID: id}
+	switch err := q.Reload(node); err {
 	case nil:
-		return row, nil
+		return node, nil
 	case reform.ErrNoRows:
 		return nil, status.Errorf(codes.NotFound, "Node with ID %q not found.", id)
 	default:
@@ -164,50 +111,8 @@ func FindNodeByID(q *reform.Querier, id string) (*Node, error) {
 	}
 }
 
-// UpdateNodeParams describe editable node parameters.
-type UpdateNodeParams struct {
-	Address         string
-	MachineID       string
-	CustomLabels    map[string]string
-	RemoveLabels    bool
-	RemoveMachineID bool
-}
-
-// UpdateNode updates Node.
-func UpdateNode(q *reform.Querier, nodeID string, params *UpdateNodeParams) (*Node, error) {
-	row, err := FindNodeByID(q, nodeID)
-	if err != nil {
-		return nil, err
-	}
-
-	if params.Address != "" {
-		row.Address = &params.Address
-	}
-
-	if params.RemoveLabels {
-		row.CustomLabels = nil
-	} else {
-		err := row.SetCustomLabels(params.CustomLabels)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if params.RemoveMachineID {
-		row.MachineID = nil
-	} else {
-		row.MachineID = pointer.ToStringOrNil(params.MachineID)
-	}
-
-	if err := q.Update(row); err != nil {
-		return nil, err
-	}
-
-	return row, nil
-}
-
-// NodesForAgent returns all Nodes for which Agent with given ID provides insights.
-func NodesForAgent(q *reform.Querier, agentID string) ([]*Node, error) {
+// FindNodesForAgentID returns all Nodes for which Agent with given ID provides insights.
+func FindNodesForAgentID(q *reform.Querier, agentID string) ([]*Node, error) {
 	structs, err := q.FindAllFrom(AgentNodeView, "agent_id", agentID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select Node IDs")
@@ -235,7 +140,103 @@ func NodesForAgent(q *reform.Querier, agentID string) ([]*Node, error) {
 	return res, nil
 }
 
-// RemoveNode removes single node prom persistent store.
+// CreateNodeParams contains parameters for creating Nodes.
+type CreateNodeParams struct {
+	NodeName            string
+	MachineID           *string
+	Distro              *string
+	DistroVersion       *string
+	DockerContainerID   *string
+	DockerContainerName *string
+	CustomLabels        map[string]string
+	Address             *string
+	Region              *string
+}
+
+// CreateNode creates a Node.
+func CreateNode(q *reform.Querier, nodeType NodeType, params *CreateNodeParams) (*Node, error) {
+	id := "/node_id/" + uuid.New().String()
+	if err := checkUniqueNodeID(q, id); err != nil {
+		return nil, err
+	}
+
+	if err := checkUniqueNodeName(q, params.NodeName); err != nil {
+		return nil, err
+	}
+
+	if params.Address != nil && params.Region != nil {
+		if err := checkUniqueNodeInstanceRegion(q, *params.Address, *params.Region); err != nil {
+			return nil, err
+		}
+	}
+
+	node := &Node{
+		NodeID:              id,
+		NodeType:            nodeType,
+		NodeName:            params.NodeName,
+		MachineID:           params.MachineID,
+		Distro:              params.Distro,
+		DistroVersion:       params.DistroVersion,
+		DockerContainerID:   params.DockerContainerID,
+		DockerContainerName: params.DockerContainerName,
+		Address:             params.Address,
+		Region:              params.Region,
+	}
+	if err := node.SetCustomLabels(params.CustomLabels); err != nil {
+		return nil, err
+	}
+	if err := q.Insert(node); err != nil {
+		return nil, err
+	}
+
+	return node, nil
+}
+
+// UpdateNodeParams contains parameters for updating Nodes.
+type UpdateNodeParams struct {
+	Address            string
+	MachineID          string
+	RemoveMachineID    bool
+	CustomLabels       map[string]string
+	RemoveCustomLabels bool
+}
+
+// UpdateNode updates Node.
+func UpdateNode(q *reform.Querier, nodeID string, params *UpdateNodeParams) (*Node, error) {
+	node, err := FindNodeByID(q, nodeID)
+	if err != nil {
+		return nil, err
+	}
+
+	if params.Address != "" {
+		node.Address = &params.Address
+	}
+
+	switch {
+	case params.MachineID != "":
+		node.MachineID = &params.MachineID
+	case params.RemoveMachineID:
+		node.MachineID = nil
+	}
+
+	switch {
+	case len(params.CustomLabels) != 0:
+		err = node.SetCustomLabels(params.CustomLabels)
+	case params.RemoveCustomLabels:
+		err = node.SetCustomLabels(nil)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if err = q.Update(node); err != nil {
+		return nil, err
+	}
+
+	return node, nil
+}
+
+// RemoveNode removes a Node.
 func RemoveNode(q *reform.Querier, id string) error {
 	err := q.Delete(&Node{NodeID: id})
 	if err == reform.ErrNoRows {

@@ -59,11 +59,14 @@ func (s *NodeService) Register(ctx context.Context, req *managementpb.RegisterNo
 	res = new(managementpb.RegisterNodeResponse)
 
 	if e := s.db.InTransaction(func(tx *reform.TX) error {
-
 		node, err := s.findNodeByName(tx.Querier, req.NodeName)
 		switch err {
 		case nil:
-			params := &models.UpdateNodeParams{Address: req.Address, MachineID: req.MachineId, CustomLabels: req.CustomLabels}
+			params := &models.UpdateNodeParams{
+				Address:      req.Address,
+				MachineID:    req.MachineId,
+				CustomLabels: req.CustomLabels,
+			}
 			node, err = models.UpdateNode(tx.Querier, node.NodeID, params)
 			if err != nil {
 				return err
@@ -132,7 +135,7 @@ func (s *NodeService) createNewNode(q *reform.Querier, req *managementpb.Registe
 		return nil, status.Error(codes.InvalidArgument, "unsupported node type")
 	}
 
-	params := &models.AddNodeParams{
+	params := &models.CreateNodeParams{
 		NodeName:            req.NodeName,
 		MachineID:           pointer.ToStringOrNil(req.MachineId),
 		Distro:              pointer.ToStringOrNil(req.Distro),
@@ -143,7 +146,7 @@ func (s *NodeService) createNewNode(q *reform.Querier, req *managementpb.Registe
 		Address:             pointer.ToStringOrNil(req.Address),
 		Region:              nil,
 	}
-	node, err := models.AddNode(q, nodeType, params)
+	node, err := models.CreateNode(q, nodeType, params)
 	if err != nil {
 		return nil, err
 	}

@@ -15,6 +15,15 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Package models contains generated Reform records and helpers.
+//
+// Common order of helpers:
+//  * unexported validators (checkXXX);
+//  * FindAllXXX;
+//  * FindXXXByID;
+//  * other finder (e.g. FindNodesForAgent);
+//  * CreateXXX;
+//  * UpdateXXX;
+//  * RemoveXXX.
 package models
 
 import (

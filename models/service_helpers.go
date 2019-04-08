@@ -27,7 +27,7 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-// FindServiceByID finds service by ID.
+// FindServiceByID finds Service by ID.
 func FindServiceByID(q *reform.Querier, id string) (*Service, error) {
 	if id == "" {
 		return nil, status.Error(codes.InvalidArgument, "Empty Service ID.")
@@ -42,6 +42,50 @@ func FindServiceByID(q *reform.Querier, id string) (*Service, error) {
 	default:
 		return nil, errors.WithStack(err)
 	}
+}
+
+// FindAllServices returns all Services.
+func FindAllServices(q *reform.Querier) ([]*Service, error) {
+	structs, err := q.SelectAllFrom(ServiceTable, "ORDER BY service_id")
+	if err != nil {
+		return nil, err
+	}
+
+	services := make([]*Service, len(structs))
+	for i, s := range structs {
+		services[i] = s.(*Service)
+	}
+
+	return services, nil
+}
+
+// ServicesForAgent returns all Services for which Agent with given ID provides insights.
+func ServicesForAgent(q *reform.Querier, agentID string) ([]*Service, error) {
+	structs, err := q.FindAllFrom(AgentServiceView, "agent_id", agentID)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to select Service IDs")
+	}
+
+	serviceIDs := make([]interface{}, len(structs))
+	for i, s := range structs {
+		serviceIDs[i] = s.(*AgentService).ServiceID
+	}
+	if len(serviceIDs) == 0 {
+		return []*Service{}, nil
+	}
+
+	p := strings.Join(q.Placeholders(1, len(serviceIDs)), ", ")
+	tail := fmt.Sprintf("WHERE service_id IN (%s) ORDER BY service_id", p) //nolint:gosec
+	structs, err = q.SelectAllFrom(ServiceTable, tail, serviceIDs...)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to select Services")
+	}
+
+	res := make([]*Service, len(structs))
+	for i, s := range structs {
+		res[i] = s.(*Service)
+	}
+	return res, nil
 }
 
 func checkServiceUniqueID(q *reform.Querier, id string) error {
@@ -113,51 +157,7 @@ func AddNewService(q *reform.Querier, serviceType ServiceType, params *AddDBMSSe
 	return row, nil
 }
 
-// FindAllServices finds all nodes and loads it from persistent store.
-func FindAllServices(q *reform.Querier) ([]*Service, error) {
-	structs, err := q.SelectAllFrom(ServiceTable, "ORDER BY service_id")
-	if err != nil {
-		return nil, err
-	}
-
-	services := make([]*Service, len(structs))
-	for i, s := range structs {
-		services[i] = s.(*Service)
-	}
-
-	return services, nil
-}
-
-// ServicesForAgent returns all Services for which Agent with given ID provides insights.
-func ServicesForAgent(q *reform.Querier, agentID string) ([]*Service, error) {
-	structs, err := q.FindAllFrom(AgentServiceView, "agent_id", agentID)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to select Service IDs")
-	}
-
-	serviceIDs := make([]interface{}, len(structs))
-	for i, s := range structs {
-		serviceIDs[i] = s.(*AgentService).ServiceID
-	}
-	if len(serviceIDs) == 0 {
-		return []*Service{}, nil
-	}
-
-	p := strings.Join(q.Placeholders(1, len(serviceIDs)), ", ")
-	tail := fmt.Sprintf("WHERE service_id IN (%s) ORDER BY service_id", p) //nolint:gosec
-	structs, err = q.SelectAllFrom(ServiceTable, tail, serviceIDs...)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to select Services")
-	}
-
-	res := make([]*Service, len(structs))
-	for i, s := range structs {
-		res[i] = s.(*Service)
-	}
-	return res, nil
-}
-
-// RemoveService removes single node prom persistent store.
+// RemoveService removes single Service.
 func RemoveService(q *reform.Querier, id string) error {
 	err := q.Delete(&Service{ServiceID: id})
 	if err == reform.ErrNoRows {

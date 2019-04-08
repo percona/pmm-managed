@@ -43,7 +43,6 @@ func NewNodesService(db *reform.DB) *NodesService {
 // List returns a list of all Nodes.
 //nolint:unparam
 func (s *NodesService) List(ctx context.Context, req *inventorypb.ListNodesRequest) ([]inventorypb.Node, error) {
-
 	allNodes := make([]*models.Node, 0)
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
@@ -92,7 +91,7 @@ func (s *NodesService) Get(ctx context.Context, req *inventorypb.GetNodeRequest)
 // AddGenericNode adds Generic Node.
 //nolint:unparam
 func (s *NodesService) AddGenericNode(ctx context.Context, req *inventorypb.AddGenericNodeRequest) (*inventorypb.GenericNode, error) {
-	params := &models.AddNodeParams{
+	params := &models.CreateNodeParams{
 		NodeName:      req.NodeName,
 		MachineID:     pointer.ToStringOrNil(req.MachineId),
 		Distro:        pointer.ToStringOrNil(req.Distro),
@@ -106,7 +105,7 @@ func (s *NodesService) AddGenericNode(ctx context.Context, req *inventorypb.AddG
 	node := new(models.Node)
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
-		node, err = models.AddNode(tx.Querier, models.GenericNodeType, params)
+		node, err = models.CreateNode(tx.Querier, models.GenericNodeType, params)
 		if err != nil {
 			return err
 		}
@@ -127,7 +126,7 @@ func (s *NodesService) AddGenericNode(ctx context.Context, req *inventorypb.AddG
 // AddContainerNode adds Container Node.
 //nolint:unparam
 func (s *NodesService) AddContainerNode(ctx context.Context, req *inventorypb.AddContainerNodeRequest) (*inventorypb.ContainerNode, error) {
-	params := &models.AddNodeParams{
+	params := &models.CreateNodeParams{
 		NodeName:            req.NodeName,
 		MachineID:           pointer.ToStringOrNil(req.MachineId),
 		DockerContainerID:   pointer.ToStringOrNil(req.DockerContainerId),
@@ -140,7 +139,7 @@ func (s *NodesService) AddContainerNode(ctx context.Context, req *inventorypb.Ad
 	node := new(models.Node)
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
-		node, err = models.AddNode(tx.Querier, models.ContainerNodeType, params)
+		node, err = models.CreateNode(tx.Querier, models.ContainerNodeType, params)
 		if err != nil {
 			return err
 		}
@@ -161,7 +160,7 @@ func (s *NodesService) AddContainerNode(ctx context.Context, req *inventorypb.Ad
 // AddRemoteNode adds Remote Node.
 //nolint:unparam
 func (s *NodesService) AddRemoteNode(ctx context.Context, req *inventorypb.AddRemoteNodeRequest) (*inventorypb.RemoteNode, error) {
-	params := &models.AddNodeParams{
+	params := &models.CreateNodeParams{
 		NodeName:     req.NodeName,
 		CustomLabels: req.CustomLabels,
 	}
@@ -171,7 +170,7 @@ func (s *NodesService) AddRemoteNode(ctx context.Context, req *inventorypb.AddRe
 	node := new(models.Node)
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
-		node, err = models.AddNode(tx.Querier, models.RemoteNodeType, params)
+		node, err = models.CreateNode(tx.Querier, models.RemoteNodeType, params)
 		if err != nil {
 			return err
 		}
@@ -192,7 +191,7 @@ func (s *NodesService) AddRemoteNode(ctx context.Context, req *inventorypb.AddRe
 // AddRemoteAmazonRDSNode adds Amazon (AWS) RDS remote Node.
 //nolint:lll,unparam
 func (s *NodesService) AddRemoteAmazonRDSNode(ctx context.Context, req *inventorypb.AddRemoteAmazonRDSNodeRequest) (*inventorypb.RemoteAmazonRDSNode, error) {
-	params := &models.AddNodeParams{
+	params := &models.CreateNodeParams{
 		NodeName:     req.NodeName,
 		Address:      &req.Instance,
 		Region:       &req.Region,
@@ -204,7 +203,7 @@ func (s *NodesService) AddRemoteAmazonRDSNode(ctx context.Context, req *inventor
 	node := new(models.Node)
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
-		node, err = models.AddNode(tx.Querier, models.RemoteAmazonRDSNodeType, params)
+		node, err = models.CreateNode(tx.Querier, models.RemoteAmazonRDSNodeType, params)
 		if err != nil {
 			return err
 		}
