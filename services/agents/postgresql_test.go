@@ -27,7 +27,7 @@ import (
 )
 
 func TestPostgresExporterConfig(t *testing.T) {
-	mysql := &models.Service{
+	postgresql := &models.Service{
 		Address: pointer.ToString("1.2.3.4"),
 		Port:    pointer.ToUint16(5432),
 	}
@@ -35,9 +35,9 @@ func TestPostgresExporterConfig(t *testing.T) {
 		Username: pointer.ToString("username"),
 		Password: pointer.ToString("s3cur3 p@$$w0r4."),
 	}
-	actual := postgresExporterConfig(mysql, exporter)
+	actual := postgresExporterConfig(postgresql, exporter)
 	expected := &agentpb.SetStateRequest_AgentProcess{
-		Type:               agentpb.Type_MYSQLD_EXPORTER,
+		Type:               agentpb.Type_POSTGRES_EXPORTER,
 		TemplateLeftDelim:  "{{",
 		TemplateRightDelim: "}}",
 		Args: []string{

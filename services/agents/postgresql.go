@@ -31,8 +31,8 @@ import (
 
 func postgresqlDSN(service *models.Service, exporter *models.Agent) string {
 	q := make(url.Values)
-	q.Set("sslmode", "disable") // TODO https://jira.percona.com/browse/PMM-1727
-	q.Set("connect_timeout", strconv.Itoa(5))
+	q.Set("sslmode", "disable") // TODO: make it configurable
+	q.Set("connect_timeout", "5")
 
 	address := net.JoinHostPort(*service.Address, strconv.Itoa(int(*service.Port)))
 	uri := url.URL{
@@ -45,7 +45,7 @@ func postgresqlDSN(service *models.Service, exporter *models.Agent) string {
 	return uri.String()
 }
 
-// postgresExporterConfig returns desired configuration of mysqld_exporter process.
+// postgresExporterConfig returns desired configuration of postgres_exporter process.
 func postgresExporterConfig(service *models.Service, exporter *models.Agent) *agentpb.SetStateRequest_AgentProcess {
 	tdp := templateDelimsPair(
 		pointer.GetString(service.Address),
@@ -65,7 +65,7 @@ func postgresExporterConfig(service *models.Service, exporter *models.Agent) *ag
 	sort.Strings(args)
 
 	return &agentpb.SetStateRequest_AgentProcess{
-		Type:               agentpb.Type_MYSQLD_EXPORTER,
+		Type:               agentpb.Type_POSTGRES_EXPORTER,
 		TemplateLeftDelim:  tdp.left,
 		TemplateRightDelim: tdp.right,
 		Args:               args,
