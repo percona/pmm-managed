@@ -11,7 +11,7 @@ import (
 	"syscall"
 
 	httptransport "github.com/go-openapi/runtime/client"
-	"github.com/percona/pmm/api/inventory/json/client"
+	"github.com/percona/pmm/api/inventorypb/json/client"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )

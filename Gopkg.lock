@@ -166,16 +166,16 @@
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:2c9a34458effc048bd687774f5e3bea267d4e43b005762afbd82a609f4322bc5"
+  digest = "1:8f3e493ecf0924e9a7a8a132465d20babc8de111c4adb218dfa97254dfae6115"
   name = "github.com/percona/pmm"
   packages = [
-    "api/inventory/json/client",
-    "api/inventory/json/client/agents",
-    "api/inventory/json/client/nodes",
-    "api/inventory/json/client/services",
+    "api/inventorypb/json/client",
+    "api/inventorypb/json/client/agents",
+    "api/inventorypb/json/client/nodes",
+    "api/inventorypb/json/client/services",
   ]
   pruneopts = "NUT"
-  revision = "3293d77b958621e8aec236e731daae8195ec3ba4"
+  revision = "0b99bc21e13aa99b21e9b572b827d86c2dfb4f7b"
 
 [[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
@@ -268,10 +268,10 @@
   analyzer-version = 1
   input-imports = [
     "github.com/go-openapi/runtime/client",
-    "github.com/percona/pmm/api/inventory/json/client",
-    "github.com/percona/pmm/api/inventory/json/client/agents",
-    "github.com/percona/pmm/api/inventory/json/client/nodes",
-    "github.com/percona/pmm/api/inventory/json/client/services",
+    "github.com/percona/pmm/api/inventorypb/json/client",
+    "github.com/percona/pmm/api/inventorypb/json/client/agents",
+    "github.com/percona/pmm/api/inventorypb/json/client/nodes",
+    "github.com/percona/pmm/api/inventorypb/json/client/services",
     "github.com/sirupsen/logrus",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",

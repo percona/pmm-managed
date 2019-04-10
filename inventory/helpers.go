@@ -5,10 +5,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/percona/pmm/api/inventory/json/client"
-	"github.com/percona/pmm/api/inventory/json/client/agents"
-	"github.com/percona/pmm/api/inventory/json/client/nodes"
-	"github.com/percona/pmm/api/inventory/json/client/services"
+	"github.com/percona/pmm/api/inventorypb/json/client"
+	"github.com/percona/pmm/api/inventorypb/json/client/agents"
+	"github.com/percona/pmm/api/inventorypb/json/client/nodes"
+	"github.com/percona/pmm/api/inventorypb/json/client/services"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
