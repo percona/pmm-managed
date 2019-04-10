@@ -168,5 +168,6 @@ func RemoveService(q *reform.Querier, serviceID string) error {
 	// TODO validate that there are no Agents for this Service
 	// https://jira.percona.com/browse/PMM-3816
 
-	return q.Delete(service)
+	err = q.Delete(service)
+	return errors.WithStack(err)
 }

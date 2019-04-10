@@ -353,6 +353,5 @@ func RemoveAgent(q *reform.Querier, agentID string) (*Agent, error) {
 	if err = q.Delete(agent); err != nil {
 		return nil, errors.WithStack(err)
 	}
-
 	return agent, nil
 }

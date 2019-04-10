@@ -243,5 +243,6 @@ func RemoveNode(q *reform.Querier, nodeID string) error {
 	// TODO validate that there are no Services and Agents on this Node, and no Agents for this Node
 	// https://jira.percona.com/browse/PMM-3816
 
-	return q.Delete(node)
+	err = q.Delete(node)
+	return errors.WithStack(err)
 }
