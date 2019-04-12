@@ -39,7 +39,10 @@ func NewServicesServer(s *inventory.ServicesService) inventorypb.ServicesServer 
 
 // ListServices returns a list of all Services.
 func (s *servicesServer) ListServices(ctx context.Context, req *inventorypb.ListServicesRequest) (*inventorypb.ListServicesResponse, error) {
-	services, err := s.s.List(ctx)
+	filters := inventory.ServiceFilters{
+		NodeID: req.GetNodeId(),
+	}
+	services, err := s.s.List(ctx, filters)
 	if err != nil {
 		return nil, err
 	}
