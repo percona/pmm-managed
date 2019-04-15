@@ -37,7 +37,7 @@ func NewServicesServer(s *inventory.ServicesService) inventorypb.ServicesServer 
 	return &servicesServer{s}
 }
 
-// ListServices returns a list of all Services.
+// ListServices returns a list of Services for a given filters.
 func (s *servicesServer) ListServices(ctx context.Context, req *inventorypb.ListServicesRequest) (*inventorypb.ListServicesResponse, error) {
 	filters := inventory.ServiceFilters{
 		NodeID: req.GetNodeId(),

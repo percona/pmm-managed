@@ -88,7 +88,7 @@ func ServicesForAgent(q *reform.Querier, agentID string) ([]*Service, error) {
 	return res, nil
 }
 
-// ServicesForNode returns all Services for Node with given ID provides insights.
+// ServicesForNode returns all Services for Node with given ID.
 func ServicesForNode(q *reform.Querier, nodeID string) ([]*Service, error) {
 	tail := fmt.Sprintf("WHERE node_id = %s ORDER BY service_id", q.Placeholder(1)) //nolint:gosec
 	structs, err := q.SelectAllFrom(ServiceTable, tail, nodeID)

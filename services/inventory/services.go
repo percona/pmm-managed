@@ -41,9 +41,9 @@ func NewServicesService(db *reform.DB, r registry) *ServicesService {
 	}
 }
 
-// ServiceFilters represents filters for agents list.
+// ServiceFilters represents filters for services list.
 type ServiceFilters struct {
-	// Return only Services that provide insights for that Node.
+	// Return only Services runs on that Node.
 	NodeID string
 }
 
