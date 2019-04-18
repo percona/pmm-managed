@@ -22,6 +22,7 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/google/uuid"
+	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/api/managementpb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -79,6 +80,25 @@ func TestRemoveService(t *testing.T) {
 		assert.Nil(t, response)
 	})
 
+	t.Run("Wrong service type", func(t *testing.T) {
+		ctx := logger.Set(context.Background(), t.Name())
+		ss, teardown := setup(t)
+		defer teardown(t)
+
+		service, err := models.AddNewService(ss.db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
+			ServiceName: "test-mysql",
+			NodeID:      models.PMMServerNodeID,
+			Address:     pointer.ToString("127.0.0.1"),
+			Port:        pointer.ToUint16(3306),
+		})
+		require.NoError(t, err)
+		defer models.RemoveService(ss.db.Querier, service.ServiceID)
+
+		response, err := ss.RemoveService(ctx, &managementpb.RemoveServiceRequest{ServiceId: service.ServiceID, ServiceType: inventorypb.ServiceType_POSTGRESQL_SERVICE})
+		assert.EqualError(t, err, "rpc error: code = InvalidArgument desc = wrong service type")
+		assert.Nil(t, response)
+	})
+
 	t.Run("Basic", func(t *testing.T) {
 		ctx := logger.Set(context.Background(), t.Name())
 		ss, teardown := setup(t)
@@ -105,7 +125,7 @@ func TestRemoveService(t *testing.T) {
 		require.NoError(t, err)
 		ss.asrs.(*mockRegistry).On("SendSetStateRequest", ctx, pmmAgent.AgentID)
 
-		response, err := ss.RemoveService(ctx, &managementpb.RemoveServiceRequest{ServiceName: service.ServiceName})
+		response, err := ss.RemoveService(ctx, &managementpb.RemoveServiceRequest{ServiceName: service.ServiceName, ServiceType: inventorypb.ServiceType_MYSQL_SERVICE})
 		assert.NoError(t, err)
 		assert.NotNil(t, response)
 

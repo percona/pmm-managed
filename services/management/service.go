@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/AlekSi/pointer"
+	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/api/managementpb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -31,6 +32,11 @@ import (
 var (
 	errNoParamsNotFound    = status.Error(codes.InvalidArgument, "params not found")
 	errOneOfParamsExpected = status.Error(codes.InvalidArgument, "service_id or service_name expected; not both")
+	serviceTypes           = map[inventorypb.ServiceType]models.ServiceType{
+		inventorypb.ServiceType_MYSQL_SERVICE:      models.MySQLServiceType,
+		inventorypb.ServiceType_MONGODB_SERVICE:    models.MongoDBServiceType,
+		inventorypb.ServiceType_POSTGRESQL_SERVICE: models.PostgreSQLServiceType,
+	}
 )
 
 // ServiceService represents service for working with services.
@@ -49,7 +55,7 @@ func NewServiceService(db *reform.DB, asrs agentStateRequestSender) *ServiceServ
 
 // RemoveService removes Service with Agents.
 func (ss *ServiceService) RemoveService(ctx context.Context, req *managementpb.RemoveServiceRequest) (*managementpb.RemoveServiceResponse, error) {
-	err := validateRequest(req)
+	err := ss.validateRequest(req)
 	if err != nil {
 		return nil, err
 	}
@@ -66,6 +72,12 @@ func (ss *ServiceService) RemoveService(ctx context.Context, req *managementpb.R
 		}
 		if err != nil {
 			return err
+		}
+		if req.ServiceType != inventorypb.ServiceType_SERVICE_TYPE_INVALID {
+			err := ss.checkServiceType(service, req.ServiceType)
+			if err != nil {
+				return err
+			}
 		}
 
 		agents, err := models.AgentsForService(ss.db.Querier, service.ServiceID)
@@ -95,7 +107,14 @@ func (ss *ServiceService) RemoveService(ctx context.Context, req *managementpb.R
 	return &managementpb.RemoveServiceResponse{}, nil
 }
 
-func validateRequest(request *managementpb.RemoveServiceRequest) error {
+func (ss *ServiceService) checkServiceType(service *models.Service, serviceType inventorypb.ServiceType) error {
+	if expected, ok := serviceTypes[serviceType]; ok && expected == service.ServiceType {
+		return nil
+	}
+	return status.Error(codes.InvalidArgument, "wrong service type")
+}
+
+func (ss *ServiceService) validateRequest(request *managementpb.RemoveServiceRequest) error {
 	if request.ServiceName == "" && request.ServiceId == "" {
 		return errNoParamsNotFound
 	}
