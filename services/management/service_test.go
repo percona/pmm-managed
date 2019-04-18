@@ -75,7 +75,7 @@ func TestRemoveService(t *testing.T) {
 		defer teardown(t)
 
 		response, err := ss.RemoveService(ctx, &managementpb.RemoveServiceRequest{ServiceName: "some-service-name"})
-		assert.EqualError(t, err, "rpc error: code = NotFound desc = Service with Name \"some-service-name\" not found.")
+		assert.EqualError(t, err, "rpc error: code = NotFound desc = Service with name \"some-service-name\" not found.")
 		assert.Nil(t, response)
 	})
 
