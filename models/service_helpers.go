@@ -56,7 +56,7 @@ func FindServiceByName(q *reform.Querier, name string) (*Service, error) {
 	case nil:
 		return service, nil
 	case reform.ErrNoRows:
-		return nil, status.Errorf(codes.NotFound, "Service with Name %q not found.", name)
+		return nil, status.Errorf(codes.NotFound, "Service with name %q not found.", name)
 	default:
 		return nil, errors.WithStack(err)
 	}
