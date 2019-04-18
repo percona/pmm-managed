@@ -221,6 +221,7 @@ func runJSONServer(ctx context.Context, logs *logs.Logs) {
 		inventorypb.RegisterAgentsHandlerFromEndpoint,
 		managementpb.RegisterMySQLHandlerFromEndpoint,
 		managementpb.RegisterNodeHandlerFromEndpoint,
+		managementpb.RegisterServiceHandlerFromEndpoint,
 	} {
 		if err := r(ctx, proxyMux, *gRPCAddrF, opts); err != nil {
 			l.Panic(err)
