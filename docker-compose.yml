@@ -12,7 +12,6 @@ services:
       - 127.0.0.1:9090:9090
     volumes:
       - ./testdata/prometheus:/etc/prometheus
-    network_mode: host
 
   grafana:
     image: ${GRAFANA_IMAGE:-grafana/grafana:6.1.2}
