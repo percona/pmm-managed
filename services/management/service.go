@@ -33,6 +33,7 @@ var (
 	errOneOfParamsExpected = status.Error(codes.InvalidArgument, "service_id or service_name expected; not both")
 )
 
+// ServiceService represents service for working with services.
 type ServiceService struct {
 	db   *reform.DB
 	asrs agentStateRequestSender
