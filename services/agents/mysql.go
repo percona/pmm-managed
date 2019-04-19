@@ -105,3 +105,11 @@ func qanMySQLPerfSchemaAgentConfig(service *models.Service, exporter *models.Age
 		Dsn:  mysqlDSN(service, exporter),
 	}
 }
+
+// qanMySQLSlowlogAgentConfig returns desired configuration of qan-mysql-slowlog internal agent.
+func qanMySQLSlowlogAgentConfig(service *models.Service, exporter *models.Agent) *agentpb.SetStateRequest_BuiltinAgent {
+	return &agentpb.SetStateRequest_BuiltinAgent{
+		Type: agentpb.Type_QAN_MYSQL_SLOWLOG_AGENT,
+		Dsn:  mysqlDSN(service, exporter),
+	}
+}
