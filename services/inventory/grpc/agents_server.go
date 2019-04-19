@@ -283,6 +283,8 @@ func (s *agentsServer) RemoveAgent(ctx context.Context, req *inventorypb.RemoveA
 	return new(inventorypb.RemoveAgentResponse), nil
 }
 
+// AddQANMongoDBProfilerAgent adds MongoDB Profiler QAN Agent.
+//nolint:lll
 func (s *agentsServer) AddQANMongoDBProfilerAgent(ctx context.Context, req *inventorypb.AddQANMongoDBProfilerAgentRequest) (*inventorypb.AddQANMongoDBProfilerAgentResponse, error) {
 	agent, err := s.s.AddQANMongoDBProfilerAgent(ctx, req)
 	if err != nil {
@@ -295,6 +297,8 @@ func (s *agentsServer) AddQANMongoDBProfilerAgent(ctx context.Context, req *inve
 	return res, nil
 }
 
+// ChangeQANMongoDBProfilerAgent changes disabled flag and custom labels of MongoDB Profiler QAN Agent.
+//nolint:lll
 func (s *agentsServer) ChangeQANMongoDBProfilerAgent(ctx context.Context, req *inventorypb.ChangeQANMongoDBProfilerAgentRequest) (*inventorypb.ChangeQANMongoDBProfilerAgentResponse, error) {
 	agent, err := s.s.ChangeQANMongoDBProfilerAgent(ctx, req)
 	if err != nil {
@@ -307,10 +311,14 @@ func (s *agentsServer) ChangeQANMongoDBProfilerAgent(ctx context.Context, req *i
 	return res, nil
 }
 
+// AddQANMySQLSlowlogAgent adds MySQL slowlog QAN Agent.
+//nolint:lll
 func (s *agentsServer) AddQANMySQLSlowlogAgent(ctx context.Context, req *inventorypb.AddQANMySQLSlowlogAgentRequest) (*inventorypb.AddQANMySQLSlowlogAgentResponse, error) {
 	panic("implement me")
 }
 
+// ChangeQANMySQLSlowlogAgent changes disabled flag and custom labels of MySQL slowlog QAN Agent.
+//nolint:lll
 func (s *agentsServer) ChangeQANMySQLSlowlogAgent(ctx context.Context, req *inventorypb.ChangeQANMySQLSlowlogAgentRequest) (*inventorypb.ChangeQANMySQLSlowlogAgentResponse, error) {
 	panic("implement me")
 }
