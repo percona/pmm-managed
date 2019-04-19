@@ -64,6 +64,8 @@ func (s *agentsServer) ListAgents(ctx context.Context, req *inventorypb.ListAgen
 			res.MongodbExporter = append(res.MongodbExporter, agent)
 		case *inventorypb.QANMySQLPerfSchemaAgent:
 			res.QanMysqlPerfschemaAgent = append(res.QanMysqlPerfschemaAgent, agent)
+		case *inventorypb.QANMySQLSlowlogAgent:
+			res.QanMysqlSlowlogAgent = append(res.QanMysqlSlowlogAgent, agent)
 		case *inventorypb.PostgresExporter:
 			res.PostgresExporter = append(res.PostgresExporter, agent)
 		default:
@@ -96,6 +98,8 @@ func (s *agentsServer) GetAgent(ctx context.Context, req *inventorypb.GetAgentRe
 		res.Agent = &inventorypb.GetAgentResponse_MongodbExporter{MongodbExporter: agent}
 	case *inventorypb.QANMySQLPerfSchemaAgent:
 		res.Agent = &inventorypb.GetAgentResponse_QanMysqlPerfschemaAgent{QanMysqlPerfschemaAgent: agent}
+	case *inventorypb.QANMySQLSlowlogAgent:
+		res.Agent = &inventorypb.GetAgentResponse_QanMysqlSlowlogAgent{QanMysqlSlowlogAgent: agent}
 	case *inventorypb.PostgresExporter:
 		res.Agent = &inventorypb.GetAgentResponse_PostgresExporter{PostgresExporter: agent}
 	default:
@@ -246,6 +250,34 @@ func (s *agentsServer) ChangeQANMySQLPerfSchemaAgent(ctx context.Context, req *i
 	return res, nil
 }
 
+// AddQANMySQLSlowlogAgent adds MySQL Slowlog QAN Agent.
+//nolint:lll
+func (s *agentsServer) AddQANMySQLSlowlogAgent(ctx context.Context, req *inventorypb.AddQANMySQLSlowlogAgentRequest) (*inventorypb.AddQANMySQLSlowlogAgentResponse, error) {
+	agent, err := s.s.AddQANMySQLSlowlogAgent(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &inventorypb.AddQANMySQLSlowlogAgentResponse{
+		QanMysqlSlowlogAgent: agent,
+	}
+	return res, nil
+}
+
+// ChangeQANMySQLSlowlogAgent changes disabled flag and custom labels of MySQL Slowlog QAN Agent.
+//nolint:lll
+func (s *agentsServer) ChangeQANMySQLSlowlogAgent(ctx context.Context, req *inventorypb.ChangeQANMySQLSlowlogAgentRequest) (*inventorypb.ChangeQANMySQLSlowlogAgentResponse, error) {
+	agent, err := s.s.ChangeQANMySQLSlowlogAgent(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &inventorypb.ChangeQANMySQLSlowlogAgentResponse{
+		QanMysqlSlowlogAgent: agent,
+	}
+	return res, nil
+}
+
 // AddPostgresExporter adds postgres_exporter Agent.
 func (s *agentsServer) AddPostgresExporter(ctx context.Context, req *inventorypb.AddPostgresExporterRequest) (*inventorypb.AddPostgresExporterResponse, error) {
 	agent, err := s.s.AddPostgresExporter(ctx, req)
@@ -272,6 +304,14 @@ func (s *agentsServer) ChangePostgresExporter(ctx context.Context, req *inventor
 		PostgresExporter: agent,
 	}
 	return res, nil
+}
+
+func (s *agentsServer) AddQANMongoDBProfilerAgent(context.Context, *inventorypb.AddQANMongoDBProfilerAgentRequest) (*inventorypb.AddQANMongoDBProfilerAgentResponse, error) {
+	panic("implement me")
+}
+
+func (s *agentsServer) ChangeQANMongoDBProfilerAgent(context.Context, *inventorypb.ChangeQANMongoDBProfilerAgentRequest) (*inventorypb.ChangeQANMongoDBProfilerAgentResponse, error) {
+	panic("implement me")
 }
 
 // RemoveAgent removes Agent.
