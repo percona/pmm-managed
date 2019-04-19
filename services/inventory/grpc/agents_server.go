@@ -282,3 +282,35 @@ func (s *agentsServer) RemoveAgent(ctx context.Context, req *inventorypb.RemoveA
 
 	return new(inventorypb.RemoveAgentResponse), nil
 }
+
+func (s *agentsServer) AddQANMongoDBProfilerAgent(ctx context.Context, req *inventorypb.AddQANMongoDBProfilerAgentRequest) (*inventorypb.AddQANMongoDBProfilerAgentResponse, error) {
+	agent, err := s.s.AddQANMongoDBProfilerAgent(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &inventorypb.AddQANMongoDBProfilerAgentResponse{
+		QanMongodbProfilerAgent: agent,
+	}
+	return res, nil
+}
+
+func (s *agentsServer) ChangeQANMongoDBProfilerAgent(ctx context.Context, req *inventorypb.ChangeQANMongoDBProfilerAgentRequest) (*inventorypb.ChangeQANMongoDBProfilerAgentResponse, error) {
+	agent, err := s.s.ChangeQANMongoDBProfilerAgent(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &inventorypb.ChangeQANMongoDBProfilerAgentResponse{
+		QanMongodbProfilerAgent: agent,
+	}
+	return res, nil
+}
+
+func (s *agentsServer) AddQANMySQLSlowlogAgent(ctx context.Context, req *inventorypb.AddQANMySQLSlowlogAgentRequest) (*inventorypb.AddQANMySQLSlowlogAgentResponse, error) {
+	panic("implement me")
+}
+
+func (s *agentsServer) ChangeQANMySQLSlowlogAgent(ctx context.Context, req *inventorypb.ChangeQANMySQLSlowlogAgentRequest) (*inventorypb.ChangeQANMySQLSlowlogAgentResponse, error) {
+	panic("implement me")
+}

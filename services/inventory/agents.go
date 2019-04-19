@@ -481,6 +481,79 @@ func (as *AgentsService) ChangePostgresExporter(ctx context.Context, req *invent
 	return res, nil
 }
 
+// AddQANMongoDBProfilerAgent adds MongoDB Profiler QAN Agent.
+//nolint:lll,unused
+func (as *AgentsService) AddQANMongoDBProfilerAgent(ctx context.Context, req *inventorypb.AddQANMongoDBProfilerAgentRequest) (*inventorypb.QANMongoDBProfilerAgent, error) {
+	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
+
+	var res *inventorypb.QANMongoDBProfilerAgent
+
+	e := as.db.InTransaction(func(tx *reform.TX) error {
+		params := &models.AddExporterAgentParams{
+			PMMAgentID:   req.PmmAgentId,
+			ServiceID:    req.ServiceId,
+			Username:     req.Username,
+			Password:     req.Password,
+			CustomLabels: req.CustomLabels,
+		}
+		row, err := models.AgentAddExporter(tx.Querier, models.QANMongoDBProfilerAgentType, params)
+		if err != nil {
+			return err
+		}
+
+		agent, err := ToInventoryAgent(tx.Querier, row, as.r)
+		if err != nil {
+			return err
+		}
+		res = agent.(*inventorypb.QANMongoDBProfilerAgent)
+
+		return nil
+	})
+
+	if e != nil {
+		return res, e
+	}
+
+	as.r.SendSetStateRequest(ctx, req.PmmAgentId)
+	return res, e
+}
+
+// ChangeQANMongoDBProfilerAgent updates MongoDB Profiler QAN Agent with given parameters.
+func (as *AgentsService) ChangeQANMongoDBProfilerAgent(ctx context.Context, req *inventorypb.ChangeQANMongoDBProfilerAgentRequest) (*inventorypb.QANMongoDBProfilerAgent, error) {
+	var res *inventorypb.QANMongoDBProfilerAgent
+	e := as.db.InTransaction(func(tx *reform.TX) error {
+
+		params := &models.ChangeCommonExporterParams{
+			AgentID:            req.AgentId,
+			CustomLabels:       req.CustomLabels,
+			RemoveCustomLabels: req.RemoveCustomLabels,
+		}
+		if req.GetEnabled() {
+			params.Disabled = false
+		}
+		if req.GetDisabled() {
+			params.Disabled = true
+		}
+		row, err := models.AgentChangeExporter(tx.Querier, params)
+		if err != nil {
+			return err
+		}
+
+		agent, err := ToInventoryAgent(tx.Querier, row, as.r)
+		if err != nil {
+			return err
+		}
+		res = agent.(*inventorypb.QANMongoDBProfilerAgent)
+		return nil
+	})
+	if e != nil {
+		return nil, e
+	}
+
+	as.r.SendSetStateRequest(ctx, res.PmmAgentId)
+	return res, nil
+}
+
 // Remove deletes Agent by ID.
 func (as *AgentsService) Remove(ctx context.Context, id string) error {
 	var removedAgent *models.Agent
@@ -591,6 +664,26 @@ func ToInventoryAgent(q *reform.Querier, row *models.Agent, connChecker AgentCon
 		}
 
 		return &inventorypb.QANMySQLPerfSchemaAgent{
+			AgentId:      row.AgentID,
+			PmmAgentId:   pointer.GetString(row.PMMAgentID),
+			ServiceId:    services[0].ServiceID,
+			Username:     pointer.GetString(row.Username),
+			Password:     pointer.GetString(row.Password),
+			Disabled:     row.Disabled,
+			Status:       inventorypb.AgentStatus(inventorypb.AgentStatus_value[row.Status]),
+			CustomLabels: labels,
+		}, nil
+
+	case models.QANMongoDBProfilerAgentType:
+		services, err := models.ServicesForAgent(q, row.AgentID)
+		if err != nil {
+			return nil, err
+		}
+		if len(services) != 1 {
+			return nil, errors.Errorf("expected exactly one Service, got %d", len(services))
+		}
+
+		return &inventorypb.QANMongoDBProfilerAgent{
 			AgentId:      row.AgentID,
 			PmmAgentId:   pointer.GetString(row.PMMAgentID),
 			ServiceId:    services[0].ServiceID,
