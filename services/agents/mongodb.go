@@ -50,6 +50,29 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent) *age
 
 	sort.Strings(args)
 
+	connString := mongoDSN(service, exporter)
+
+	return &agentpb.SetStateRequest_AgentProcess{
+		Type:               agentpb.Type_MONGODB_EXPORTER,
+		TemplateLeftDelim:  tdp.left,
+		TemplateRightDelim: tdp.right,
+		Args:               args,
+		Env: []string{
+			fmt.Sprintf("MONGODB_URI=%s", connString),
+		},
+	}
+}
+
+// qanMongoDBProfilerAgentConfig returns desired configuration of qan-mysql-perfschema internal agent.
+func qanMongoDBProfilerAgentConfig(service *models.Service, exporter *models.Agent) *agentpb.SetStateRequest_BuiltinAgent {
+	return &agentpb.SetStateRequest_BuiltinAgent{
+		Type: agentpb.Type_QAN_MONGODB_PROFILER_AGENT,
+		Dsn:  mongoDSN(service, exporter),
+	}
+}
+
+func mongoDSN(service *models.Service, exporter *models.Agent) string {
+
 	host := pointer.GetString(service.Address)
 	port := pointer.GetUint16(service.Port)
 
@@ -64,13 +87,5 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent) *age
 		connURL.User = url.UserPassword(username, password)
 	}
 
-	return &agentpb.SetStateRequest_AgentProcess{
-		Type:               agentpb.Type_MONGODB_EXPORTER,
-		TemplateLeftDelim:  tdp.left,
-		TemplateRightDelim: tdp.right,
-		Args:               args,
-		Env: []string{
-			fmt.Sprintf("MONGODB_URI=%s", connURL.String()),
-		},
-	}
+	return connURL.String()
 }
