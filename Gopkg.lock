@@ -200,8 +200,8 @@
   name = "github.com/percona/exporter_shared"
   packages = ["helpers"]
   pruneopts = "NUT"
-  revision = "9fef860598cb595f0f27ff3b5d515bbd7ed7d233"
-  version = "v0.2.1"
+  revision = "8986abb41c843706a15d64a3088c1aa39195c295"
+  version = "v0.2.2"
 
 [[projects]]
   branch = "PMM-2.0"
@@ -263,8 +263,8 @@
     "model",
   ]
   pruneopts = "NUT"
-  revision = "cfeb6f9992ffa54aaa4f2170ade4067ee478b250"
-  version = "v0.2.0"
+  revision = "a82f4c12f983cc2649298185f296632953e50d3e"
+  version = "v0.3.0"
 
 [[projects]]
   branch = "master"
