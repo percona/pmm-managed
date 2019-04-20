@@ -272,3 +272,25 @@ func assertPMMAgentNotExists(t *testing.T, res *agents.ListAgentsOK, pmmAgentID 
 		return true
 	}, "There should be PMM-agent with id `%s`", pmmAgentID)
 }
+
+func assertNodeExporterExists(t *testing.T, res *agents.ListAgentsOK, nodeExporterID string) bool {
+	return assert.Conditionf(t, func() bool {
+		for _, v := range res.Payload.NodeExporter {
+			if v.AgentID == nodeExporterID {
+				return true
+			}
+		}
+		return false
+	}, "There should be Node exporter with id `%s`", nodeExporterID)
+}
+
+func assertNodeExporterNotExists(t *testing.T, res *agents.ListAgentsOK, nodeExporterID string) bool {
+	return assert.Conditionf(t, func() bool {
+		for _, v := range res.Payload.NodeExporter {
+			if v.AgentID == nodeExporterID {
+				return false
+			}
+		}
+		return true
+	}, "There should be Node exporter with id `%s`", nodeExporterID)
+}

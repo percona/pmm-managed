@@ -88,6 +88,20 @@ func TestAgents(t *testing.T) {
 		mySqldExporterID := mySqldExporter.MysqldExporter.AgentID
 		defer removeAgents(t, mySqldExporterID)
 
+		nodeExporter, err := client.Default.Agents.AddNodeExporter(&agents.AddNodeExporterParams{
+			Body: agents.AddNodeExporterBody{
+				PMMAgentID: pmmAgentID,
+				CustomLabels: map[string]string{
+					"custom_label_node_exporter": "node_exporter",
+				},
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		require.NotNil(t, nodeExporter)
+		nodeExporterID := nodeExporter.Payload.NodeExporter.AgentID
+		defer removeAgents(t, nodeExporterID)
+
 		// Filter by pmm agent ID.
 		res, err := client.Default.Agents.ListAgents(&agents.ListAgentsParams{
 			Body:    agents.ListAgentsBody{PMMAgentID: pmmAgentID},
@@ -95,8 +109,9 @@ func TestAgents(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.NotNil(t, res)
-		require.NotZerof(t, len(res.Payload.MysqldExporter), "There should be at least one service")
+		require.NotZerof(t, len(res.Payload.MysqldExporter), "There should be at least one agent")
 		assertMySQLExporterExists(t, res, mySqldExporterID)
+		assertNodeExporterExists(t, res, nodeExporterID)
 		assertPMMAgentNotExists(t, res, pmmAgentID)
 
 		// Filter by node ID.
@@ -106,9 +121,10 @@ func TestAgents(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.NotNil(t, res)
-		require.NotZerof(t, len(res.Payload.PMMAgent), "There should be at least one service")
+		require.NotZerof(t, len(res.Payload.NodeExporter), "There should be at least one node exporter")
 		assertMySQLExporterNotExists(t, res, mySqldExporterID)
-		assertPMMAgentExists(t, res, pmmAgentID)
+		assertPMMAgentNotExists(t, res, pmmAgentID)
+		assertNodeExporterExists(t, res, nodeExporterID)
 
 		// Filter by service ID.
 		res, err = client.Default.Agents.ListAgents(&agents.ListAgentsParams{
@@ -117,12 +133,14 @@ func TestAgents(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.NotNil(t, res)
-		require.NotZerof(t, len(res.Payload.MysqldExporter), "There should be at least one service")
+		require.NotZerof(t, len(res.Payload.MysqldExporter), "There should be at least one mysql exporter")
 		assertMySQLExporterExists(t, res, mySqldExporterID)
 		assertPMMAgentNotExists(t, res, pmmAgentID)
+		assertNodeExporterNotExists(t, res, nodeExporterID)
 	})
 
 	t.Run("TwoOrMoreFilters", func(t *testing.T) {
+		t.Skip("Will think about this later :)")
 		t.Parallel()
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
@@ -520,7 +538,7 @@ func TestMySQLdExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		assertEqualAPIError(t, err, ServerResponse{404, ""})
+		assertEqualAPIError(t, err, ServerResponse{404, "Agent with ID \"pmm-not-exist-server\" not found."})
 		if !assert.Nil(t, res) {
 			removeAgents(t, res.Payload.MysqldExporter.AgentID)
 		}
@@ -794,7 +812,7 @@ func TestMongoDBExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		assertEqualAPIError(t, err, ServerResponse{404, ""})
+		assertEqualAPIError(t, err, ServerResponse{404, "Agent with ID \"pmm-not-exist-server\" not found."})
 		if !assert.Nil(t, res) {
 			removeAgents(t, res.Payload.MongodbExporter.AgentID)
 		}
@@ -1012,7 +1030,7 @@ func TestQanAgentExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		assertEqualAPIError(t, err, ServerResponse{400, ""})
+		assertEqualAPIError(t, err, ServerResponse{404, "Agent with ID \"pmm-not-exist-server\" not found."})
 		if !assert.Nil(t, res) {
 			removeAgents(t, res.Payload.QANMysqlPerfschemaAgent.AgentID)
 		}
@@ -1233,7 +1251,7 @@ func TestPostgresExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		assertEqualAPIError(t, err, ServerResponse{404, ""})
+		assertEqualAPIError(t, err, ServerResponse{404, "Agent with ID \"pmm-not-exist-server\" not found."})
 		if !assert.Nil(t, res) {
 			removeAgents(t, res.Payload.PostgresExporter.AgentID)
 		}
