@@ -44,6 +44,24 @@ func FindServiceByID(q *reform.Querier, id string) (*Service, error) {
 	}
 }
 
+// FindServiceByName finds Service by Name.
+func FindServiceByName(q *reform.Querier, name string) (*Service, error) {
+	if name == "" {
+		return nil, status.Error(codes.InvalidArgument, "Empty Service Name.")
+	}
+
+	service := new(Service)
+	err := q.FindOneTo(service, "service_name", name)
+	switch err {
+	case nil:
+		return service, nil
+	case reform.ErrNoRows:
+		return nil, status.Errorf(codes.NotFound, "Service with name %q not found.", name)
+	default:
+		return nil, errors.WithStack(err)
+	}
+}
+
 // FindAllServices returns all Services.
 func FindAllServices(q *reform.Querier) ([]*Service, error) {
 	structs, err := q.SelectAllFrom(ServiceTable, "ORDER BY service_id")
@@ -77,6 +95,21 @@ func ServicesForAgent(q *reform.Querier, agentID string) ([]*Service, error) {
 	p := strings.Join(q.Placeholders(1, len(serviceIDs)), ", ")
 	tail := fmt.Sprintf("WHERE service_id IN (%s) ORDER BY service_id", p) //nolint:gosec
 	structs, err = q.SelectAllFrom(ServiceTable, tail, serviceIDs...)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to select Services")
+	}
+
+	res := make([]*Service, len(structs))
+	for i, s := range structs {
+		res[i] = s.(*Service)
+	}
+	return res, nil
+}
+
+// ServicesForNode returns all Services for Node with given ID.
+func ServicesForNode(q *reform.Querier, nodeID string) ([]*Service, error) {
+	tail := fmt.Sprintf("WHERE node_id = %s ORDER BY service_id", q.Placeholder(1)) //nolint:gosec
+	structs, err := q.SelectAllFrom(ServiceTable, tail, nodeID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select Services")
 	}

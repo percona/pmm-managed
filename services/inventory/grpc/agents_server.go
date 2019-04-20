@@ -306,12 +306,32 @@ func (s *agentsServer) ChangePostgresExporter(ctx context.Context, req *inventor
 	return res, nil
 }
 
-func (s *agentsServer) AddQANMongoDBProfilerAgent(context.Context, *inventorypb.AddQANMongoDBProfilerAgentRequest) (*inventorypb.AddQANMongoDBProfilerAgentResponse, error) {
-	panic("implement me")
+// AddQANMongoDBProfilerAgent adds MongoDB Profiler QAN Agent.
+//nolint:lll
+func (s *agentsServer) AddQANMongoDBProfilerAgent(ctx context.Context, req *inventorypb.AddQANMongoDBProfilerAgentRequest) (*inventorypb.AddQANMongoDBProfilerAgentResponse, error) {
+	agent, err := s.s.AddQANMongoDBProfilerAgent(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &inventorypb.AddQANMongoDBProfilerAgentResponse{
+		QanMongodbProfilerAgent: agent,
+	}
+	return res, nil
 }
 
-func (s *agentsServer) ChangeQANMongoDBProfilerAgent(context.Context, *inventorypb.ChangeQANMongoDBProfilerAgentRequest) (*inventorypb.ChangeQANMongoDBProfilerAgentResponse, error) {
-	panic("implement me")
+// ChangeQANMongoDBProfilerAgent changes disabled flag and custom labels of MongoDB Profiler QAN Agent.
+//nolint:lll
+func (s *agentsServer) ChangeQANMongoDBProfilerAgent(ctx context.Context, req *inventorypb.ChangeQANMongoDBProfilerAgentRequest) (*inventorypb.ChangeQANMongoDBProfilerAgentResponse, error) {
+	agent, err := s.s.ChangeQANMongoDBProfilerAgent(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &inventorypb.ChangeQANMongoDBProfilerAgentResponse{
+		QanMongodbProfilerAgent: agent,
+	}
+	return res, nil
 }
 
 // RemoveAgent removes Agent.
