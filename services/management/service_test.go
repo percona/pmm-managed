@@ -35,7 +35,6 @@ import (
 )
 
 func TestRemoveService(t *testing.T) {
-
 	setup := func(t *testing.T) (ss *ServiceService, teardown func(t *testing.T)) {
 		uuid.SetRand(new(tests.IDReader))
 		sqlDB := tests.OpenTestDB(t)
@@ -92,7 +91,6 @@ func TestRemoveService(t *testing.T) {
 			Port:        pointer.ToUint16(3306),
 		})
 		require.NoError(t, err)
-		defer models.RemoveService(ss.db.Querier, service.ServiceID)
 
 		response, err := ss.RemoveService(ctx, &managementpb.RemoveServiceRequest{ServiceId: service.ServiceID, ServiceType: inventorypb.ServiceType_POSTGRESQL_SERVICE})
 		assert.EqualError(t, err, "rpc error: code = InvalidArgument desc = wrong service type")
@@ -114,7 +112,6 @@ func TestRemoveService(t *testing.T) {
 
 		pmmAgent, err := models.AgentAddPmmAgent(ss.db.Querier, models.PMMServerNodeID, nil)
 		require.NoError(t, err)
-		defer models.AgentRemove(ss.db.Querier, pmmAgent.AgentID)
 
 		mysqldExporter, err := models.AgentAddExporter(ss.db.Querier, models.MySQLdExporterType, &models.AddExporterAgentParams{
 			PMMAgentID: pmmAgent.AgentID,
