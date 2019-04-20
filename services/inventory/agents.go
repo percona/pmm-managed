@@ -91,6 +91,7 @@ func (as *AgentsService) Get(ctx context.Context, id string) (inventorypb.Agent,
 		if err != nil {
 			return err
 		}
+
 		res, err = ToInventoryAgent(tx.Querier, row, as.r)
 		return err
 	})
@@ -150,7 +151,6 @@ func (as *AgentsService) AddNodeExporter(ctx context.Context, req *inventorypb.A
 func (as *AgentsService) ChangeNodeExporter(ctx context.Context, req *inventorypb.ChangeNodeExporterRequest) (*inventorypb.NodeExporter, error) {
 	var res *inventorypb.NodeExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-
 		params := &models.ChangeCommonExporterParams{
 			AgentID:            req.AgentId,
 			CustomLabels:       req.CustomLabels,
@@ -187,9 +187,7 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, req *inventorypb
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 
 	var res *inventorypb.MySQLdExporter
-
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-
 		params := &models.AddExporterAgentParams{
 			PMMAgentID:   req.PmmAgentId,
 			ServiceID:    req.ServiceId,
@@ -206,9 +204,7 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, req *inventorypb
 		if err != nil {
 			return err
 		}
-
 		res = agent.(*inventorypb.MySQLdExporter)
-
 		return nil
 	})
 	if e != nil {
@@ -223,7 +219,6 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, req *inventorypb
 func (as *AgentsService) ChangeMySQLdExporter(ctx context.Context, req *inventorypb.ChangeMySQLdExporterRequest) (*inventorypb.MySQLdExporter, error) {
 	var res *inventorypb.MySQLdExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-
 		params := &models.ChangeCommonExporterParams{
 			AgentID:            req.AgentId,
 			CustomLabels:       req.CustomLabels,
@@ -275,7 +270,6 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, req *inventoryp
 
 	var res *inventorypb.MongoDBExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-
 		params := &models.AddExporterAgentParams{
 			PMMAgentID:   req.PmmAgentId,
 			ServiceID:    req.ServiceId,
@@ -307,7 +301,6 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, req *inventoryp
 func (as *AgentsService) ChangeMongoDBExporter(ctx context.Context, req *inventorypb.ChangeMongoDBExporterRequest) (*inventorypb.MongoDBExporter, error) {
 	var res *inventorypb.MongoDBExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-
 		params := &models.ChangeCommonExporterParams{
 			AgentID:            req.AgentId,
 			CustomLabels:       req.CustomLabels,
@@ -345,7 +338,6 @@ func (as *AgentsService) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *in
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 
 	var res *inventorypb.QANMySQLPerfSchemaAgent
-
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 		params := &models.AddExporterAgentParams{
 			PMMAgentID:   req.PmmAgentId,
@@ -364,10 +356,8 @@ func (as *AgentsService) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *in
 			return err
 		}
 		res = agent.(*inventorypb.QANMySQLPerfSchemaAgent)
-
 		return nil
 	})
-
 	if e != nil {
 		return res, e
 	}
@@ -380,7 +370,6 @@ func (as *AgentsService) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *in
 func (as *AgentsService) ChangeQANMySQLPerfSchemaAgent(ctx context.Context, req *inventorypb.ChangeQANMySQLPerfSchemaAgentRequest) (*inventorypb.QANMySQLPerfSchemaAgent, error) {
 	var res *inventorypb.QANMySQLPerfSchemaAgent
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-
 		params := &models.ChangeCommonExporterParams{
 			AgentID:            req.AgentId,
 			CustomLabels:       req.CustomLabels,
@@ -449,7 +438,6 @@ func (as *AgentsService) AddPostgresExporter(ctx context.Context, req *inventory
 func (as *AgentsService) ChangePostgresExporter(ctx context.Context, req *inventorypb.ChangePostgresExporterRequest) (*inventorypb.PostgresExporter, error) {
 	var res *inventorypb.PostgresExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-
 		params := &models.ChangeCommonExporterParams{
 			AgentID:            req.AgentId,
 			CustomLabels:       req.CustomLabels,
@@ -487,7 +475,6 @@ func (as *AgentsService) AddQANMongoDBProfilerAgent(ctx context.Context, req *in
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 
 	var res *inventorypb.QANMongoDBProfilerAgent
-
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 		params := &models.AddExporterAgentParams{
 			PMMAgentID:   req.PmmAgentId,
@@ -506,10 +493,8 @@ func (as *AgentsService) AddQANMongoDBProfilerAgent(ctx context.Context, req *in
 			return err
 		}
 		res = agent.(*inventorypb.QANMongoDBProfilerAgent)
-
 		return nil
 	})
-
 	if e != nil {
 		return res, e
 	}
@@ -523,7 +508,6 @@ func (as *AgentsService) AddQANMongoDBProfilerAgent(ctx context.Context, req *in
 func (as *AgentsService) ChangeQANMongoDBProfilerAgent(ctx context.Context, req *inventorypb.ChangeQANMongoDBProfilerAgentRequest) (*inventorypb.QANMongoDBProfilerAgent, error) {
 	var res *inventorypb.QANMongoDBProfilerAgent
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-
 		params := &models.ChangeCommonExporterParams{
 			AgentID:            req.AgentId,
 			CustomLabels:       req.CustomLabels,
@@ -566,7 +550,6 @@ func (as *AgentsService) Remove(ctx context.Context, id string) error {
 		}
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}
