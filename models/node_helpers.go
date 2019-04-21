@@ -144,11 +144,13 @@ func FindNodesForAgentID(q *reform.Querier, agentID string) ([]*Node, error) {
 type CreateNodeParams struct {
 	NodeName      string
 	MachineID     *string
-	Distro        *string
+	Distro        string
+	NodeModel     string
+	AZ            string
 	ContainerID   *string
 	ContainerName *string
 	CustomLabels  map[string]string
-	Address       *string
+	Address       string
 	Region        *string
 }
 
@@ -163,8 +165,10 @@ func CreateNode(q *reform.Querier, nodeType NodeType, params *CreateNodeParams) 
 		return nil, err
 	}
 
-	if params.Address != nil && params.Region != nil {
-		if err := checkUniqueNodeInstanceRegion(q, *params.Address, *params.Region); err != nil {
+	// TODO check unique machine_id for generic nodes
+
+	if params.Region != nil {
+		if err := checkUniqueNodeInstanceRegion(q, params.Address, *params.Region); err != nil {
 			return nil, err
 		}
 	}
@@ -175,6 +179,8 @@ func CreateNode(q *reform.Querier, nodeType NodeType, params *CreateNodeParams) 
 		NodeName:      params.NodeName,
 		MachineID:     params.MachineID,
 		Distro:        params.Distro,
+		NodeModel:     params.NodeModel,
+		AZ:            params.AZ,
 		ContainerID:   params.ContainerID,
 		ContainerName: params.ContainerName,
 		Address:       params.Address,
@@ -207,7 +213,7 @@ func UpdateNode(q *reform.Querier, nodeID string, params *UpdateNodeParams) (*No
 	}
 
 	if params.Address != "" {
-		node.Address = &params.Address
+		node.Address = params.Address
 	}
 
 	switch {
