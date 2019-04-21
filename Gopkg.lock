@@ -204,8 +204,8 @@
   version = "v0.2.2"
 
 [[projects]]
-  branch = "PMM-2.0"
-  digest = "1:f0ebb908a9b83f23ebad9c0012389964690560bca06c7e8dda2ea5d6043368e3"
+  branch = "PMM-3707-standard-labels"
+  digest = "1:3edc61878cf48d0ca7c53edb6c58301c7a2f8e50e904277496a31b7d1099a291"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -216,7 +216,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "615470566afa3ae828edd58b4cb86b2828f56f1d"
+  revision = "ef9f9e7cb787551e6958cf2bbd28c1fd1eca7c0f"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
