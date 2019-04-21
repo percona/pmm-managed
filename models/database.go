@@ -65,8 +65,7 @@ var databaseSchema = [][]string{
 			UNIQUE (container_id),
 			UNIQUE (address, region)
 		)`,
-		`
-		CREATE UNIQUE INDEX nodes_machine_id_generic_key
+		`CREATE UNIQUE INDEX nodes_machine_id_generic_key
 			ON nodes (machine_id)
 			WHERE node_type = 'generic'
 		`,

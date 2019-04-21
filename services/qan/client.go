@@ -20,14 +20,13 @@ package qan
 import (
 	"context"
 
-	"github.com/percona/pmm-managed/models"
-
-	"gopkg.in/reform.v1"
-
 	"github.com/percona/pmm/api/qanpb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"gopkg.in/reform.v1"
+
+	"github.com/percona/pmm-managed/models"
 )
 
 // Client represents qan-api client for data collection.
