@@ -58,6 +58,7 @@ func TestDatabaseUniqueIndexes(t *testing.T) {
 
 	t.Run("Nodes", func(t *testing.T) {
 		now := models.Now()
+
 		// node_id
 		_, err = db.Exec(
 			"INSERT INTO nodes (node_id, node_type, node_name, created_at, updated_at) "+
@@ -87,7 +88,19 @@ func TestDatabaseUniqueIndexes(t *testing.T) {
 			"INSERT INTO nodes (node_id, node_type, node_name, machine_id, created_at, updated_at) "+
 				"VALUES ('32', 'generic', 'name32', 'machine-id', $1, $2)", now, now,
 		)
-		assertDuplicate(t, err, "nodes_machine_id_key")
+		assertDuplicate(t, err, "nodes_machine_id_generic_key")
+
+		// machine_id for container
+		_, err = db.Exec(
+			"INSERT INTO nodes (node_id, node_type, node_name, machine_id, created_at, updated_at) "+
+				"VALUES ('31-container', 'container', 'name31-container', 'machine-id', $1, $2)", now, now,
+		)
+		require.NoError(t, err)
+		_, err = db.Exec(
+			"INSERT INTO nodes (node_id, node_type, node_name, machine_id, created_at, updated_at) "+
+				"VALUES ('32-container', 'container', 'name32-container', 'machine-id', $1, $2)", now, now,
+		)
+		require.NoError(t, err)
 
 		// container_id
 		_, err = db.Exec(
