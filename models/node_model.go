@@ -52,8 +52,7 @@ type Node struct {
 	CreatedAt    time.Time `reform:"created_at"`
 	UpdatedAt    time.Time `reform:"updated_at"`
 
-	Distro        *string `reform:"distro"`
-	DistroVersion *string `reform:"distro_version"`
+	Distro *string `reform:"distro"`
 
 	DockerContainerID   *string `reform:"docker_container_id"` // nil means "unknown"; non-nil value must be unique
 	DockerContainerName *string `reform:"docker_container_name"`

@@ -139,7 +139,6 @@ func (s *NodeService) createNewNode(q *reform.Querier, req *managementpb.Registe
 		NodeName:            req.NodeName,
 		MachineID:           pointer.ToStringOrNil(req.MachineId),
 		Distro:              pointer.ToStringOrNil(req.Distro),
-		DistroVersion:       pointer.ToStringOrNil(req.DistroVersion),
 		DockerContainerID:   pointer.ToStringOrNil(req.ContainerId),
 		DockerContainerName: pointer.ToStringOrNil(req.ContainerName),
 		CustomLabels:        req.CustomLabels,

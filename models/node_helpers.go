@@ -176,7 +176,6 @@ func CreateNode(q *reform.Querier, nodeType NodeType, params *CreateNodeParams) 
 		NodeName:            params.NodeName,
 		MachineID:           params.MachineID,
 		Distro:              params.Distro,
-		DistroVersion:       params.DistroVersion,
 		DockerContainerID:   params.DockerContainerID,
 		DockerContainerName: params.DockerContainerName,
 		Address:             params.Address,

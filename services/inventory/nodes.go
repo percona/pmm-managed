@@ -92,12 +92,11 @@ func (s *NodesService) Get(ctx context.Context, req *inventorypb.GetNodeRequest)
 //nolint:unparam
 func (s *NodesService) AddGenericNode(ctx context.Context, req *inventorypb.AddGenericNodeRequest) (*inventorypb.GenericNode, error) {
 	params := &models.CreateNodeParams{
-		NodeName:      req.NodeName,
-		MachineID:     pointer.ToStringOrNil(req.MachineId),
-		Distro:        pointer.ToStringOrNil(req.Distro),
-		DistroVersion: pointer.ToStringOrNil(req.DistroVersion),
-		CustomLabels:  req.CustomLabels,
-		Address:       pointer.ToStringOrNil(req.Address),
+		NodeName:     req.NodeName,
+		MachineID:    pointer.ToStringOrNil(req.MachineId),
+		Distro:       pointer.ToStringOrNil(req.Distro),
+		CustomLabels: req.CustomLabels,
+		Address:      pointer.ToStringOrNil(req.Address),
 	}
 
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
@@ -253,13 +252,12 @@ func ToInventoryNode(row *models.Node) (inventorypb.Node, error) {
 	switch row.NodeType {
 	case models.GenericNodeType:
 		return &inventorypb.GenericNode{
-			NodeId:        row.NodeID,
-			NodeName:      row.NodeName,
-			MachineId:     pointer.GetString(row.MachineID),
-			Distro:        pointer.GetString(row.Distro),
-			DistroVersion: pointer.GetString(row.DistroVersion),
-			CustomLabels:  labels,
-			Address:       pointer.GetString(row.Address),
+			NodeId:       row.NodeID,
+			NodeName:     row.NodeName,
+			MachineId:    pointer.GetString(row.MachineID),
+			Distro:       pointer.GetString(row.Distro),
+			CustomLabels: labels,
+			Address:      pointer.GetString(row.Address),
 		}, nil
 
 	case models.ContainerNodeType:
