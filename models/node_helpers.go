@@ -142,15 +142,14 @@ func FindNodesForAgentID(q *reform.Querier, agentID string) ([]*Node, error) {
 
 // CreateNodeParams contains parameters for creating Nodes.
 type CreateNodeParams struct {
-	NodeName            string
-	MachineID           *string
-	Distro              *string
-	DistroVersion       *string
-	DockerContainerID   *string
-	DockerContainerName *string
-	CustomLabels        map[string]string
-	Address             *string
-	Region              *string
+	NodeName      string
+	MachineID     *string
+	Distro        *string
+	ContainerID   *string
+	ContainerName *string
+	CustomLabels  map[string]string
+	Address       *string
+	Region        *string
 }
 
 // CreateNode creates a Node.
@@ -171,15 +170,15 @@ func CreateNode(q *reform.Querier, nodeType NodeType, params *CreateNodeParams) 
 	}
 
 	node := &Node{
-		NodeID:              id,
-		NodeType:            nodeType,
-		NodeName:            params.NodeName,
-		MachineID:           params.MachineID,
-		Distro:              params.Distro,
-		DockerContainerID:   params.DockerContainerID,
-		DockerContainerName: params.DockerContainerName,
-		Address:             params.Address,
-		Region:              params.Region,
+		NodeID:        id,
+		NodeType:      nodeType,
+		NodeName:      params.NodeName,
+		MachineID:     params.MachineID,
+		Distro:        params.Distro,
+		ContainerID:   params.ContainerID,
+		ContainerName: params.ContainerName,
+		Address:       params.Address,
+		Region:        params.Region,
 	}
 	if err := node.SetCustomLabels(params.CustomLabels); err != nil {
 		return nil, err

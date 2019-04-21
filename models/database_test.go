@@ -89,17 +89,17 @@ func TestDatabaseUniqueIndexes(t *testing.T) {
 		)
 		assertDuplicate(t, err, "nodes_machine_id_key")
 
-		// docker_container_id
+		// container_id
 		_, err = db.Exec(
-			"INSERT INTO nodes (node_id, node_type, node_name, docker_container_id, created_at, updated_at) "+
+			"INSERT INTO nodes (node_id, node_type, node_name, container_id, created_at, updated_at) "+
 				"VALUES ('41', 'generic', 'name41', 'docker-container-id', $1, $2)", now, now,
 		)
 		require.NoError(t, err)
 		_, err = db.Exec(
-			"INSERT INTO nodes (node_id, node_type, node_name, docker_container_id, created_at, updated_at) "+
+			"INSERT INTO nodes (node_id, node_type, node_name, container_id, created_at, updated_at) "+
 				"VALUES ('42', 'generic', 'name42', 'docker-container-id', $1, $2)", now, now,
 		)
-		assertDuplicate(t, err, "nodes_docker_container_id_key")
+		assertDuplicate(t, err, "nodes_container_id_key")
 
 		// (address, region)
 		_, err = db.Exec(

@@ -51,11 +51,10 @@ var databaseSchema = [][]string{
 
 			-- Generic
 			distro VARCHAR CHECK (distro <> ''),
-			distro_version VARCHAR CHECK (distro_version <> ''),
 
 			-- Container
-			docker_container_id VARCHAR CHECK (docker_container_id <> ''),
-			docker_container_name VARCHAR CHECK (docker_container_name <> ''),
+			container_id VARCHAR CHECK (container_id <> ''),
+			container_name VARCHAR CHECK (container_name <> ''),
 
 			-- RemoteAmazonRDS
 			-- RDS instance is stored in address
@@ -64,7 +63,7 @@ var databaseSchema = [][]string{
 			PRIMARY KEY (node_id),
 			UNIQUE (node_name),
 			UNIQUE (machine_id),
-			UNIQUE (docker_container_id),
+			UNIQUE (container_id),
 			UNIQUE (address, region)
 		)`,
 

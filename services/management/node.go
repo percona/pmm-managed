@@ -136,14 +136,14 @@ func (s *NodeService) createNewNode(q *reform.Querier, req *managementpb.Registe
 	}
 
 	params := &models.CreateNodeParams{
-		NodeName:            req.NodeName,
-		MachineID:           pointer.ToStringOrNil(req.MachineId),
-		Distro:              pointer.ToStringOrNil(req.Distro),
-		DockerContainerID:   pointer.ToStringOrNil(req.ContainerId),
-		DockerContainerName: pointer.ToStringOrNil(req.ContainerName),
-		CustomLabels:        req.CustomLabels,
-		Address:             pointer.ToStringOrNil(req.Address),
-		Region:              nil,
+		NodeName:      req.NodeName,
+		MachineID:     pointer.ToStringOrNil(req.MachineId),
+		Distro:        pointer.ToStringOrNil(req.Distro),
+		ContainerID:   pointer.ToStringOrNil(req.ContainerId),
+		ContainerName: pointer.ToStringOrNil(req.ContainerName),
+		CustomLabels:  req.CustomLabels,
+		Address:       pointer.ToStringOrNil(req.Address),
+		Region:        nil,
 	}
 	node, err := models.CreateNode(q, nodeType, params)
 	if err != nil {

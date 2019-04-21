@@ -126,11 +126,11 @@ func (s *NodesService) AddGenericNode(ctx context.Context, req *inventorypb.AddG
 //nolint:unparam
 func (s *NodesService) AddContainerNode(ctx context.Context, req *inventorypb.AddContainerNodeRequest) (*inventorypb.ContainerNode, error) {
 	params := &models.CreateNodeParams{
-		NodeName:            req.NodeName,
-		MachineID:           pointer.ToStringOrNil(req.MachineId),
-		DockerContainerID:   pointer.ToStringOrNil(req.DockerContainerId),
-		DockerContainerName: pointer.ToStringOrNil(req.DockerContainerName),
-		CustomLabels:        req.CustomLabels,
+		NodeName:      req.NodeName,
+		MachineID:     pointer.ToStringOrNil(req.MachineId),
+		ContainerID:   pointer.ToStringOrNil(req.ContainerId),
+		ContainerName: pointer.ToStringOrNil(req.ContainerName),
+		CustomLabels:  req.CustomLabels,
 	}
 
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
@@ -262,13 +262,13 @@ func ToInventoryNode(row *models.Node) (inventorypb.Node, error) {
 
 	case models.ContainerNodeType:
 		return &inventorypb.ContainerNode{
-			NodeId:              row.NodeID,
-			NodeName:            row.NodeName,
-			MachineId:           pointer.GetString(row.MachineID),
-			DockerContainerId:   pointer.GetString(row.DockerContainerID),
-			DockerContainerName: pointer.GetString(row.DockerContainerName),
-			CustomLabels:        labels,
-			Address:             pointer.GetString(row.Address),
+			NodeId:        row.NodeID,
+			NodeName:      row.NodeName,
+			MachineId:     pointer.GetString(row.MachineID),
+			ContainerId:   pointer.GetString(row.ContainerID),
+			ContainerName: pointer.GetString(row.ContainerName),
+			CustomLabels:  labels,
+			Address:       pointer.GetString(row.Address),
 		}, nil
 
 	case models.RemoteNodeType:

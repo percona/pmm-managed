@@ -86,8 +86,8 @@ func commonExporterLabelSet(node *models.Node, service *models.Service, agent *m
 	res[model.LabelName("node_type")] = model.LabelValue(node.NodeType)
 	res[model.LabelName("node_name")] = model.LabelValue(node.NodeName)
 	res[model.LabelName("machine_id")] = model.LabelValue(pointer.GetString(node.MachineID))
-	res[model.LabelName("container_id")] = model.LabelValue(pointer.GetString(node.DockerContainerID))
-	res[model.LabelName("container_name")] = model.LabelValue(pointer.GetString(node.DockerContainerName))
+	res[model.LabelName("container_id")] = model.LabelValue(pointer.GetString(node.ContainerID))
+	res[model.LabelName("container_name")] = model.LabelValue(pointer.GetString(node.ContainerName))
 	res[model.LabelName("region")] = model.LabelValue(pointer.GetString(node.Region)) // TODO https://jira.percona.com/browse/PMM-3786
 	// TODO node_model, az
 

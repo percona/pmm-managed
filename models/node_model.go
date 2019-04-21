@@ -54,8 +54,8 @@ type Node struct {
 
 	Distro *string `reform:"distro"`
 
-	DockerContainerID   *string `reform:"docker_container_id"` // nil means "unknown"; non-nil value must be unique
-	DockerContainerName *string `reform:"docker_container_name"`
+	ContainerID   *string `reform:"container_id"` // nil means "unknown"; non-nil value must be unique
+	ContainerName *string `reform:"container_name"`
 
 	Region *string `reform:"region"` // nil means "not Remote"; non-nil value must be unique in combination with instance/address
 }
