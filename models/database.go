@@ -115,7 +115,8 @@ var databaseSchema = [][]string{
 
 			PRIMARY KEY (agent_id),
 			FOREIGN KEY (runs_on_node_id) REFERENCES nodes (node_id),
-			FOREIGN KEY (pmm_agent_id) REFERENCES agents (agent_id)
+			FOREIGN KEY (pmm_agent_id) REFERENCES agents (agent_id),
+			CONSTRAINT runs_on_node_id_or_pmm_agent_id CHECK (runs_on_node_id IS NULL OR pmm_agent_id IS NULL)
 		)`,
 
 		`CREATE TABLE agent_nodes (
