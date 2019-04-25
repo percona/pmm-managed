@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/percona/pmm/api/inventorypb/json/client"
+	"github.com/percona/pmm/api/inventorypb/json/client/agents"
 	"github.com/percona/pmm/api/inventorypb/json/client/services"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -113,6 +114,73 @@ func TestGetService(t *testing.T) {
 		}
 		res, err := client.Default.Services.GetService(params)
 		assertEqualAPIError(t, err, ServerResponse{400, "invalid field ServiceId: value '' must not be an empty string"})
+		assert.Nil(t, res)
+	})
+}
+
+func TestRemoveService(t *testing.T) {
+	t.Run("Basic", func(t *testing.T) {
+		t.Parallel()
+
+		node := addRemoteNode(t, pmmapitests.TestString(t, "Remote node for agents list"))
+		nodeID := node.Remote.NodeID
+		defer removeNodes(t, nodeID)
+
+		service := addMySQLService(t, services.AddMySQLServiceBody{
+			NodeID:      nodeID,
+			Address:     "localhost",
+			Port:        3306,
+			ServiceName: pmmapitests.TestString(t, "MySQL Service for agent"),
+		})
+		serviceID := service.Mysql.ServiceID
+
+		params := &services.RemoveServiceParams{
+			Body: services.RemoveServiceBody{
+				ServiceID: serviceID,
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err := client.Default.Services.RemoveService(params)
+		assert.NoError(t, err)
+		assert.NotNil(t, res)
+	})
+	t.Run("Has agents", func(t *testing.T) {
+		t.Parallel()
+
+		node := addRemoteNode(t, pmmapitests.TestString(t, "Remote node for agents list"))
+		nodeID := node.Remote.NodeID
+		defer removeNodes(t, nodeID)
+
+		service := addMySQLService(t, services.AddMySQLServiceBody{
+			NodeID:      nodeID,
+			Address:     "localhost",
+			Port:        3306,
+			ServiceName: pmmapitests.TestString(t, "MySQL Service for agent"),
+		})
+		serviceID := service.Mysql.ServiceID
+		defer removeServices(t, serviceID)
+
+		pmmAgent := addPMMAgent(t, nodeID)
+		pmmAgentID := pmmAgent.PMMAgent.AgentID
+		defer removeAgents(t, pmmAgentID)
+
+		mySqldExporter := addMySqldExporter(t, agents.AddMySqldExporterBody{
+			ServiceID:  serviceID,
+			Username:   "username",
+			Password:   "password",
+			PMMAgentID: pmmAgentID,
+		})
+		mySqldExporterID := mySqldExporter.MysqldExporter.AgentID
+		defer removeAgents(t, mySqldExporterID)
+
+		params := &services.RemoveServiceParams{
+			Body: services.RemoveServiceBody{
+				ServiceID: serviceID,
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err := client.Default.Services.RemoveService(params)
+		assertEqualAPIError(t, err, ServerResponse{412, fmt.Sprintf(`Service with ID "%s" has agents.`, serviceID)})
 		assert.Nil(t, res)
 	})
 }
