@@ -149,7 +149,7 @@ func checkServiceUniqueName(q *reform.Querier, name string) error {
 	}
 }
 
-func checkServiceDoesNotHaveAgents(q *reform.Querier, serviceID string) error {
+func checkServiceAbsenceOfAgents(q *reform.Querier, serviceID string) error {
 	structs, err := q.FindAllFrom(AgentServiceView, "service_id", serviceID)
 	if err != nil {
 		return errors.WithStack(err)
@@ -205,7 +205,7 @@ func AddNewService(q *reform.Querier, serviceType ServiceType, params *AddDBMSSe
 
 // RemoveService removes single Service.
 func RemoveService(q *reform.Querier, id string) error {
-	if err := checkServiceDoesNotHaveAgents(q, id); err != nil {
+	if err := checkServiceAbsenceOfAgents(q, id); err != nil {
 		return err
 	}
 	err := q.Delete(&Service{ServiceID: id})
