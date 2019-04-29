@@ -16,7 +16,7 @@ required = [
 # TODO switch to tags before PMM 2.0 release
 [[constraint]]
   name = "github.com/percona/pmm"
-  branch = "PMM-2.0"
+  branch = "PMM-3921-mongodb-management-api"
 
 [[constraint]]
   # Stick to 0.9.x for now.

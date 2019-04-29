@@ -204,8 +204,8 @@
   version = "v0.2.2"
 
 [[projects]]
-  branch = "PMM-2.0"
-  digest = "1:74f83c0ceb0bfc2cef83ef01c1cb5f58aacd7b8b62d6ba72f90044340f276440"
+  branch = "PMM-3921-mongodb-management-api"
+  digest = "1:4f138114f66ca87f696ac2c007a7eb6f56729c3a2ab86e5b1d51f8c82d6a64ba"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -216,7 +216,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "73e7f165a827d770df52859aade7ae675a7266d2"
+  revision = "f91a223d9cb6613ea6fd79854ff2e1ef43e7b346"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"

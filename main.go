@@ -163,7 +163,9 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsRegistry)
 	nodeSvc := management.NewNodeService(deps.db, deps.agentsRegistry)
 	serviceSvc := management.NewServiceService(deps.db, deps.agentsRegistry)
+	mongodbSvc := management.NewMongoDBService(deps.db, deps.agentsRegistry)
 
+	managementpb.RegisterMongoDBServer(gRPCServer, managementgrpc.NewManagementMongoDBServer(mongodbSvc))
 	managementpb.RegisterMySQLServer(gRPCServer, managementgrpc.NewManagementMysqlServer(mysqlSvc))
 	managementpb.RegisterNodeServer(gRPCServer, managementgrpc.NewManagementNodeServer(nodeSvc))
 	managementpb.RegisterServiceServer(gRPCServer, managementgrpc.NewManagementServiceServer(serviceSvc))
@@ -220,6 +222,7 @@ func runJSONServer(ctx context.Context, logs *logs.Logs) {
 		inventorypb.RegisterServicesHandlerFromEndpoint,
 		inventorypb.RegisterAgentsHandlerFromEndpoint,
 		managementpb.RegisterMySQLHandlerFromEndpoint,
+		managementpb.RegisterMongoDBHandlerFromEndpoint,
 		managementpb.RegisterNodeHandlerFromEndpoint,
 		managementpb.RegisterServiceHandlerFromEndpoint,
 	} {
