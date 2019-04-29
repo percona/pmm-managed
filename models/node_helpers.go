@@ -111,6 +111,25 @@ func FindNodeByID(q *reform.Querier, id string) (*Node, error) {
 	}
 }
 
+// FindNodeByName finds a Node by name. Returns:
+//  * codes.InvalidArgument is name is empty;
+//  * codes.NotFound if Node not found.
+func FindNodeByName(q *reform.Querier, name string) (*Node, error) {
+	if name == "" {
+		return nil, status.Error(codes.InvalidArgument, "Empty Node name.")
+	}
+
+	var node Node
+	switch err := q.FindOneTo(&node, "node_name", name); err {
+	case nil:
+		return &node, nil
+	case reform.ErrNoRows:
+		return nil, status.Errorf(codes.NotFound, "Node with name %q not found.", name)
+	default:
+		return nil, errors.WithStack(err)
+	}
+}
+
 // FindNodesForAgentID returns all Nodes for which Agent with given ID provides insights.
 func FindNodesForAgentID(q *reform.Querier, agentID string) ([]*Node, error) {
 	structs, err := q.FindAllFrom(AgentNodeView, "agent_id", agentID)
@@ -203,6 +222,7 @@ type UpdateNodeParams struct {
 	RemoveMachineID    bool
 	CustomLabels       map[string]string
 	RemoveCustomLabels bool
+	// TODO distro, node_model, region, az, container_id, container_name
 }
 
 // UpdateNode updates Node.
@@ -240,11 +260,17 @@ func UpdateNode(q *reform.Querier, nodeID string, params *UpdateNodeParams) (*No
 	return node, nil
 }
 
-// RemoveNode removes a Node.
-func RemoveNode(q *reform.Querier, id string) error {
-	err := q.Delete(&Node{NodeID: id})
-	if err == reform.ErrNoRows {
-		return status.Errorf(codes.NotFound, "Node with ID %q not found.", id)
+// RemoveNode removes Node by ID.
+func RemoveNode(q *reform.Querier, id string) (*Node, error) {
+	node, err := FindNodeByID(q, id)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+
+	// TODO check that there are no linked Services and Agents
+
+	if err = q.Delete(node); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return node, nil
 }

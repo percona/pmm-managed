@@ -162,7 +162,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 				})
 
 			case *agentpb.AgentMessage_StateChanged:
-				if err := r.stateChanged(ctx, req.StateChanged); err != nil {
+				if err = r.stateChanged(ctx, req.StateChanged); err != nil {
 					l.Errorf("%+v", err)
 				}
 
@@ -174,7 +174,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 				})
 
 			case *agentpb.AgentMessage_QanCollect:
-				if err := r.qanClient.Collect(ctx, req.QanCollect.Message); err != nil {
+				if err = r.qanClient.Collect(ctx, req.QanCollect.Message); err != nil {
 					l.Errorf("%+v", err)
 				}
 

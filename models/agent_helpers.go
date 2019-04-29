@@ -339,7 +339,7 @@ func PMMAgentsForChangedService(q *reform.Querier, serviceID string) ([]string, 
 
 // AgentRemove removes Agent by ID.
 func AgentRemove(q *reform.Querier, id string) (*Agent, error) {
-	row, err := AgentFindByID(q, id)
+	agent, err := AgentFindByID(q, id)
 	if err != nil {
 		return nil, err
 	}
@@ -351,9 +351,8 @@ func AgentRemove(q *reform.Querier, id string) (*Agent, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	if err = q.Delete(row); err != nil {
+	if err = q.Delete(agent); err != nil {
 		return nil, errors.WithStack(err)
 	}
-
-	return row, nil
+	return agent, nil
 }

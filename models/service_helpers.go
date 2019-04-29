@@ -203,14 +203,19 @@ func AddNewService(q *reform.Querier, serviceType ServiceType, params *AddDBMSSe
 	return row, nil
 }
 
-// RemoveService removes single Service.
-func RemoveService(q *reform.Querier, id string) error {
+// RemoveService removes Service by ID.
+func RemoveService(q *reform.Querier, id string) (*Service, error) {
+	service, err := FindServiceByID(q, id)
+	if err != nil {
+		return nil, err
+	}
+
 	if err := checkServiceAbsenceOfAgents(q, id); err != nil {
-		return err
+		return nil, err
 	}
-	err := q.Delete(&Service{ServiceID: id})
-	if err == reform.ErrNoRows {
-		return status.Errorf(codes.NotFound, "Service with ID %q not found.", id)
+
+	if err = q.Delete(service); err != nil {
+		return nil, errors.WithStack(err)
 	}
-	return nil
+	return service, nil
 }

@@ -288,7 +288,7 @@ func (s *NodesService) Remove(ctx context.Context, req *inventorypb.RemoveNodeRe
 	// TODO check absence of Services and Agents
 
 	e := s.db.InTransaction(func(tx *reform.TX) error {
-		err := models.RemoveNode(tx.Querier, req.NodeId)
+		_, err := models.RemoveNode(tx.Querier, req.NodeId)
 		if err != nil {
 			return err
 		}

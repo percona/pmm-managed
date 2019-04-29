@@ -171,11 +171,8 @@ func (ss *ServicesService) AddPostgreSQL(ctx context.Context, params *models.Add
 // Remove deletes Service by ID.
 //nolint:unparam
 func (ss *ServicesService) Remove(ctx context.Context, id string) error {
-	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
-	// ID is not 0.
-
 	e := ss.db.InTransaction(func(tx *reform.TX) error {
-		err := models.RemoveService(tx.Querier, id)
+		_, err := models.RemoveService(tx.Querier, id)
 		if err != nil {
 			return err
 		}
