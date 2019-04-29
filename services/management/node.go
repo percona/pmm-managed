@@ -163,23 +163,26 @@ func createOrUpdateNode(req *managementpb.RegisterNodeRequest, q *reform.Querier
 	}
 }
 
-func createOrUpdatePMMAgent(nodeID string) (*models.Agent, error) {
-
-}
-
-func (s *NodeService) findPmmAgentByNodeID(q *reform.Querier, nodeID string) (pmmAgent *models.Agent, err error) {
+func findOrCreatePMMAgent(q *reform.Querier, node *models.Node, customLabels map[string]string) (*models.Agent, error) {
 	agents, err := models.AgentFindAll(q)
 	if err != nil {
 		return nil, err
 	}
 
+	var res []*models.Agent
 	for _, a := range agents {
-		if pointer.GetString(a.RunsOnNodeID) == nodeID {
-			return a, nil
+		if a.AgentType == models.PMMAgentType && pointer.GetString(a.RunsOnNodeID) == node.NodeID {
+			res = append(res, a)
 		}
 	}
-
-	return pmmAgent, errAgentNotFound
+	switch len(res) {
+	case 0:
+		return models.AgentAddPmmAgent(q, node.NodeID, nil)
+	case 1:
+		return res[0], nil
+	default:
+		return nil, status.Errorf(codes.FailedPrecondition, "Found %d pmm-agents for Node %q.", len(res), node.NodeID)
+	}
 }
 
 func (s *NodeService) findNodeExporterByPmmAgentID(q *reform.Querier, pmmAgentID string) (nodeExporter *inventorypb.NodeExporter, err error) {
