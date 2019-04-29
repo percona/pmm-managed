@@ -160,10 +160,10 @@ func TestContainerNode(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "Test Container Node")
 		params := &nodes.AddContainerNodeParams{
 			Body: nodes.AddContainerNodeBody{
-				NodeName:            nodeName,
-				DockerContainerID:   "docker-id",
-				DockerContainerName: "docker-name",
-				MachineID:           "machine-id",
+				NodeName:      nodeName,
+				ContainerID:   "docker-id",
+				ContainerName: "docker-name",
+				MachineID:     "machine-id",
 			},
 			Context: pmmapitests.Context,
 		}
@@ -182,11 +182,11 @@ func TestContainerNode(t *testing.T) {
 		expectedResponse := &nodes.GetNodeOK{
 			Payload: &nodes.GetNodeOKBody{
 				Container: &nodes.GetNodeOKBodyContainer{
-					NodeID:              res.Payload.Container.NodeID,
-					NodeName:            nodeName,
-					DockerContainerID:   "docker-id",
-					DockerContainerName: "docker-name",
-					MachineID:           "machine-id",
+					NodeID:        res.Payload.Container.NodeID,
+					NodeName:      nodeName,
+					ContainerID:   "docker-id",
+					ContainerName: "docker-name",
+					MachineID:     "machine-id",
 				},
 			},
 		}
