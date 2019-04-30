@@ -93,8 +93,8 @@ func (s *MongoDBService) Add(ctx context.Context, req *managementpb.AddMongoDBRe
 			params := &models.AddExporterAgentParams{
 				PMMAgentID: req.PmmAgentId,
 				ServiceID:  invService.ID(),
-				Username:   req.QanUsername,
-				Password:   req.QanPassword,
+				Username:   req.Username,
+				Password:   req.Password,
 			}
 
 			row, err := models.AgentAddExporter(tx.Querier, models.QANMongoDBProfilerAgentType, params)
