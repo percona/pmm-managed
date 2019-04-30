@@ -33,7 +33,7 @@ func NewManagementMongoDBServer(s *management.MongoDBService) managementpb.Mongo
 	return &mongodbServer{svc: s}
 }
 
-// Add adds "MongoDB Service", "MongoDB Exporter Agent" and "QAN MongoDB Profiler".
-func (s *mongodbServer) Add(ctx context.Context, req *managementpb.AddMongoDBRequest) (*managementpb.AddMongoDBResponse, error) {
+// AddMongoDB adds "MongoDB Service", "MongoDB Exporter Agent" and "QAN MongoDB Profiler".
+func (s *mongodbServer) AddMongoDB(ctx context.Context, req *managementpb.AddMongoDBRequest) (*managementpb.AddMongoDBResponse, error) {
 	return s.svc.Add(ctx, req)
 }
