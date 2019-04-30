@@ -67,7 +67,6 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 		res.Service = invService.(*inventorypb.MySQLService)
 
 		if req.MysqldExporter {
-
 			params := &models.AddExporterAgentParams{
 				PMMAgentID: req.PmmAgentId,
 				ServiceID:  invService.ID(),
@@ -88,7 +87,6 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 		}
 
 		if req.QanMysqlPerfschema {
-
 			params := &models.AddExporterAgentParams{
 				PMMAgentID: req.PmmAgentId,
 				ServiceID:  invService.ID(),

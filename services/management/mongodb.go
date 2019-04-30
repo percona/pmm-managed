@@ -68,7 +68,6 @@ func (s *MongoDBService) Add(ctx context.Context, req *managementpb.AddMongoDBRe
 		res.Service = invService.(*inventorypb.MongoDBService)
 
 		if req.MongodbExporter {
-
 			params := &models.AddExporterAgentParams{
 				PMMAgentID: req.PmmAgentId,
 				ServiceID:  invService.ID(),
@@ -89,7 +88,6 @@ func (s *MongoDBService) Add(ctx context.Context, req *managementpb.AddMongoDBRe
 		}
 
 		if req.QanMongodbProfiler {
-
 			params := &models.AddExporterAgentParams{
 				PMMAgentID: req.PmmAgentId,
 				ServiceID:  invService.ID(),
