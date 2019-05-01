@@ -104,6 +104,8 @@ func (s *agentsServer) GetAgent(ctx context.Context, req *inventorypb.GetAgentRe
 		res.Agent = &inventorypb.GetAgentResponse_QanMysqlSlowlogAgent{QanMysqlSlowlogAgent: agent}
 	case *inventorypb.PostgresExporter:
 		res.Agent = &inventorypb.GetAgentResponse_PostgresExporter{PostgresExporter: agent}
+	case *inventorypb.QANMongoDBProfilerAgent:
+		res.Agent = &inventorypb.GetAgentResponse_QanMongodbProfilerAgent{QanMongodbProfilerAgent: agent}
 	default:
 		panic(fmt.Errorf("unhandled inventory Agent type %T", agent))
 	}
