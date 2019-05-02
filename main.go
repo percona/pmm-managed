@@ -248,6 +248,7 @@ func runJSONServer(ctx context.Context, logs *logs.Logs) {
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	if err := server.Shutdown(ctx); err != nil {
 		l.Errorf("Failed to shutdown gracefully: %s", err)
+		server.Close()
 	}
 	cancel()
 }
@@ -309,6 +310,7 @@ func runDebugServer(ctx context.Context, collectors ...prom.Collector) {
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	if err := server.Shutdown(ctx); err != nil {
 		l.Errorf("Failed to shutdown gracefully: %s", err)
+		server.Close()
 	}
 	cancel()
 }

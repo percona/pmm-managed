@@ -93,7 +93,7 @@ func (ss *ServiceService) RemoveService(ctx context.Context, req *managementpb.R
 				pmmAgentIDs[pointer.GetString(agent.PMMAgentID)] = true
 			}
 		}
-		err = models.RemoveService(ss.db.Querier, service.ServiceID)
+		_, err = models.RemoveService(ss.db.Querier, service.ServiceID)
 		if err != nil {
 			return err
 		}
