@@ -1,7 +1,7 @@
 # tools
 required = [
   "gopkg.in/reform.v1/reform",
-
+  "github.com/BurntSushi/go-sumtype",
   "github.com/vektra/mockery/cmd/mockery",
 
   # We do not vendor promtool. See https://jira.percona.com/browse/PMM-2182
@@ -16,7 +16,7 @@ required = [
 # TODO switch to tags before PMM 2.0 release
 [[constraint]]
   name = "github.com/percona/pmm"
-  branch = "PMM-2.0"
+  branch = "sumtype"
 
 [[constraint]]
   # Stick to 0.9.x for now.
