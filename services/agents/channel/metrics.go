@@ -25,11 +25,13 @@ const (
 	prometheusSubsystem = "channel"
 )
 
+// SharedChannelMetrics represents channel metrics shared between all channels.
 type SharedChannelMetrics struct {
 	mRecv prom.Counter
 	mSend prom.Counter
 }
 
+// NewSharedMetrics creates new SharedChannelMetrics.
 func NewSharedMetrics() *SharedChannelMetrics {
 	return &SharedChannelMetrics{
 		mRecv: prom.NewCounter(prom.CounterOpts{
