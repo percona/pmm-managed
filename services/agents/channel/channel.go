@@ -32,18 +32,18 @@ const (
 	agentRequestsCap = 32
 )
 
-// Request represents an request from agent.
+// AgentRequest represents an request from agent.
 // It is similar to agentpb.AgentMessage except it can contain only requests,
 // and the payload is already unwrapped (XXX instead of AgentMessage_XXX).
-type Request struct {
+type AgentRequest struct {
 	ID      uint32
 	Payload agentpb.AgentRequestPayload
 }
 
-// Response represents server's response.
+// ServerResponse represents server's response.
 // It is similar to agentpb.ServerMessage except it can contain only responses,
 // and the payload is already unwrapped (XXX instead of ServerMessage_XXX).
-type Response struct {
+type ServerResponse struct {
 	ID      uint32
 	Payload agentpb.ServerResponsePayload
 }
@@ -61,7 +61,7 @@ type Channel struct { //nolint:maligned
 
 	m         sync.Mutex
 	responses map[uint32]chan agentpb.AgentResponsePayload
-	requests  chan *Request
+	requests  chan *AgentRequest
 
 	closeOnce sync.Once
 	closeWait chan struct{}
@@ -77,7 +77,7 @@ func New(stream agentpb.Agent_ConnectServer, m *SharedChannelMetrics) *Channel {
 		metrics: m,
 
 		responses: make(map[uint32]chan agentpb.AgentResponsePayload),
-		requests:  make(chan *Request, agentRequestsCap),
+		requests:  make(chan *AgentRequest, agentRequestsCap),
 
 		closeWait: make(chan struct{}),
 	}
@@ -112,12 +112,12 @@ func (c *Channel) Wait() error {
 }
 
 // Requests returns a channel for incoming requests. It must be read. It is closed on any error (see Wait).
-func (c *Channel) Requests() <-chan *Request {
+func (c *Channel) Requests() <-chan *AgentRequest {
 	return c.requests
 }
 
 // SendResponse sends message to pmm-managed. It is no-op once channel is closed (see Wait).
-func (c *Channel) SendResponse(resp *Response) {
+func (c *Channel) SendResponse(resp *ServerResponse) {
 	msg := &agentpb.ServerMessage{
 		Id:      resp.ID,
 		Payload: resp.Payload.ServerMessageResponsePayload(),
@@ -178,17 +178,17 @@ func (c *Channel) runReceiver() {
 		switch p := msg.Payload.(type) {
 		// requests
 		case *agentpb.AgentMessage_Ping:
-			c.requests <- &Request{
+			c.requests <- &AgentRequest{
 				ID:      msg.Id,
 				Payload: p.Ping,
 			}
 		case *agentpb.AgentMessage_StateChanged:
-			c.requests <- &Request{
+			c.requests <- &AgentRequest{
 				ID:      msg.Id,
 				Payload: p.StateChanged,
 			}
 		case *agentpb.AgentMessage_QanCollect:
-			c.requests <- &Request{
+			c.requests <- &AgentRequest{
 				ID:      msg.Id,
 				Payload: p.QanCollect,
 			}

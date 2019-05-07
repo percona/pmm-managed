@@ -159,7 +159,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 
 			switch p := req.Payload.(type) {
 			case *agentpb.Ping:
-				agent.channel.SendResponse(&channel.Response{
+				agent.channel.SendResponse(&channel.ServerResponse{
 					ID: req.ID,
 					Payload: &agentpb.Pong{
 						CurrentTime: ptypes.TimestampNow(),
@@ -171,7 +171,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 					l.Errorf("%+v", err)
 				}
 
-				agent.channel.SendResponse(&channel.Response{
+				agent.channel.SendResponse(&channel.ServerResponse{
 					ID:      req.ID,
 					Payload: new(agentpb.StateChangedResponse),
 				})
@@ -181,7 +181,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 					l.Errorf("%+v", err)
 				}
 
-				agent.channel.SendResponse(&channel.Response{
+				agent.channel.SendResponse(&channel.ServerResponse{
 					ID:      req.ID,
 					Payload: new(agentpb.QANCollectResponse),
 				})

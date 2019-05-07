@@ -113,7 +113,7 @@ func TestAgentRequest(t *testing.T) {
 			assert.Equal(t, i, req.ID)
 			assert.IsType(t, new(agentpb.QANCollectRequest), req.Payload)
 
-			ch.SendResponse(&Response{
+			ch.SendResponse(&ServerResponse{
 				ID:      i,
 				Payload: new(agentpb.QANCollectResponse),
 			})
