@@ -51,7 +51,8 @@ type ServerResponse struct {
 // Channel encapsulates two-way communication channel between pmm-managed and pmm-agent.
 //
 // All exported methods are thread-safe.
-type Channel struct { //nolint:maligned
+type Channel struct {
+	//nolint:maligned
 	s       agentpb.Agent_ConnectServer
 	metrics *SharedChannelMetrics
 
@@ -200,9 +201,9 @@ func (c *Channel) runReceiver() {
 			c.publish(msg.Id, p.SetState)
 
 		case *agentpb.AgentMessage_ActionRunResponse:
-			c.publish(msg.Id, p.SetState)
+			c.publish(msg.Id, p.ActionRunResponse)
 		case *agentpb.AgentMessage_ActionCancelResponse:
-			c.publish(msg.Id, p.SetState)
+			c.publish(msg.Id, p.ActionCancelResponse)
 		case *agentpb.AgentMessage_ActionResult:
 			// TODO: PMM-3978: Doing something with ActionResult. For example push it to UI...
 

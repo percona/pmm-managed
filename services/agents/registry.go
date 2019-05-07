@@ -328,10 +328,8 @@ func (r *Registry) RunAction(ctx context.Context, pmmAgentID, actionName string)
 	agent := r.agents[pmmAgentID]
 	r.rw.RUnlock()
 
-	res := agent.channel.SendRequest(&agentpb.ServerMessage_ActionRunRequest{
-		ActionRunRequest: &agentpb.ActionRunRequest{
-			Name: actionName,
-		},
+	res := agent.channel.SendRequest(&agentpb.ActionRunRequest{
+		Name: actionName,
 	})
 
 	l.Infof("ActionRun response: %+v.", res)
@@ -345,10 +343,8 @@ func (r *Registry) CancelAction(ctx context.Context, pmmAgentID, actionID string
 	agent := r.agents[pmmAgentID]
 	r.rw.RUnlock()
 
-	res := agent.channel.SendRequest(&agentpb.ServerMessage_ActionCancelRequest{
-		ActionCancelRequest: &agentpb.ActionCancelRequest{
-			Id: actionID,
-		},
+	res := agent.channel.SendRequest(&agentpb.ActionCancelRequest{
+		Id: actionID,
 	})
 
 	l.Infof("ActionCancel response: %+v.", res)
