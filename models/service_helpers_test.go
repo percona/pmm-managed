@@ -98,7 +98,10 @@ func TestServiceHelpers(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
 
-		err := models.RemoveService(q, "S0")
+		err := models.RemoveService(q, "")
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Empty Service ID.`), err)
+
+		err = models.RemoveService(q, "S0")
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "S0" not found.`), err)
 
 		err = models.RemoveService(q, "S1")
