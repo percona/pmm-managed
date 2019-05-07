@@ -35,8 +35,7 @@ const (
 // Channel encapsulates two-way communication channel between pmm-managed and pmm-agent.
 //
 // All exported methods are thread-safe.
-type Channel struct {
-	//nolint:maligned
+type Channel struct { //nolint:maligned
 	s       agentpb.Agent_ConnectServer
 	metrics *sharedChannelMetrics
 

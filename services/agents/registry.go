@@ -321,6 +321,7 @@ func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRe
 	return r.prometheus.UpdateConfiguration(ctx)
 }
 
+// RunAction runs PMM Action on the given client.
 func (r *Registry) RunAction(ctx context.Context, pmmAgentID, actionName string) {
 	l := logger.Get(ctx)
 
@@ -337,6 +338,7 @@ func (r *Registry) RunAction(ctx context.Context, pmmAgentID, actionName string)
 	l.Infof("ActionRun response: %+v.", res)
 }
 
+// CancelAction stops PMM Action with the given ID on the given client.
 func (r *Registry) CancelAction(ctx context.Context, pmmAgentID, actionID string) {
 	l := logger.Get(ctx)
 
