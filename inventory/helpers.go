@@ -1,8 +1,6 @@
 package inventory
 
 import (
-	"context"
-	"reflect"
 	"testing"
 
 	"github.com/percona/pmm/api/inventorypb/json/client"
@@ -14,31 +12,6 @@ import (
 
 	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
 )
-
-type ErrorResponse interface {
-	Code() int
-}
-
-type ServerResponse struct {
-	Code  int
-	Error string
-}
-
-func removeNodes(t *testing.T, nodeIDs ...string) {
-	t.Helper()
-
-	for _, nodeID := range nodeIDs {
-		params := &nodes.RemoveNodeParams{
-			Body: nodes.RemoveNodeBody{
-				NodeID: nodeID,
-			},
-			Context: context.Background(),
-		}
-		res, err := client.Default.Nodes.RemoveNode(params)
-		assert.NoError(t, err)
-		assert.NotNil(t, res)
-	}
-}
 
 func addGenericNode(t *testing.T, nodeName string) *nodes.AddGenericNodeOKBodyGeneric {
 	t.Helper()
@@ -72,22 +45,6 @@ func addRemoteNode(t *testing.T, nodeName string) *nodes.AddRemoteNodeOKBody {
 	return res.Payload
 }
 
-func removeServices(t *testing.T, serviceIDs ...string) {
-	t.Helper()
-
-	for _, serviceID := range serviceIDs {
-		params := &services.RemoveServiceParams{
-			Body: services.RemoveServiceBody{
-				ServiceID: serviceID,
-			},
-			Context: context.Background(),
-		}
-		res, err := client.Default.Services.RemoveService(params)
-		assert.NoError(t, err)
-		assert.NotNil(t, res)
-	}
-}
-
 func addMySQLService(t *testing.T, body services.AddMySQLServiceBody) *services.AddMySQLServiceOKBody {
 	t.Helper()
 
@@ -112,22 +69,6 @@ func addPostgreSQLService(t *testing.T, body services.AddPostgreSQLServiceBody) 
 	assert.NoError(t, err)
 	require.NotNil(t, res)
 	return res.Payload
-}
-
-func removeAgents(t *testing.T, agentIDs ...string) {
-	t.Helper()
-
-	for _, agentID := range agentIDs {
-		params := &agents.RemoveAgentParams{
-			Body: agents.RemoveAgentBody{
-				AgentID: agentID,
-			},
-			Context: context.Background(),
-		}
-		res, err := client.Default.Agents.RemoveAgent(params)
-		assert.NoError(t, err)
-		assert.NotNil(t, res)
-	}
 }
 
 func addPMMAgent(t *testing.T, nodeID string) *agents.AddPMMAgentOKBody {
@@ -178,29 +119,6 @@ func addPostgresExporter(t *testing.T, body agents.AddPostgresExporterBody) *age
 	assert.NoError(t, err)
 	require.NotNil(t, res)
 	return res.Payload
-}
-
-func assertEqualAPIError(t *testing.T, err error, expected ServerResponse) bool {
-	t.Helper()
-
-	if !assert.Error(t, err) {
-		return false
-	}
-
-	require.Implementsf(t, new(ErrorResponse), err, "Wrong response type. Expected %T, got %T.\nError message: %v", new(ErrorResponse), err, err)
-
-	assert.Equal(t, expected.Code, err.(ErrorResponse).Code())
-
-	// Have to use reflect because there are a lot of types with the same structure and different names.
-	val := reflect.ValueOf(err)
-
-	payload := val.Elem().FieldByName("Payload")
-	require.True(t, payload.IsValid(), "Wrong response structure. There is no field Payload.")
-
-	errorField := payload.Elem().FieldByName("Error")
-	require.True(t, errorField.IsValid(), "Wrong response structure. There is no field Error in Payload.")
-
-	return assert.Equal(t, expected.Error, errorField.String())
 }
 
 func assertMySQLServiceExists(t *testing.T, res *services.ListServicesOK, serviceID string) bool {

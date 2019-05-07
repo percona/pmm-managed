@@ -16,7 +16,8 @@ import (
 
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
-	"github.com/percona/pmm/api/inventorypb/json/client"
+	inventoryClient "github.com/percona/pmm/api/inventorypb/json/client"
+	managementClient "github.com/percona/pmm/api/managementpb/json/client"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
@@ -143,7 +144,8 @@ func init() {
 		}
 	}
 
-	client.Default = client.New(transport, nil)
+	inventoryClient.Default = inventoryClient.New(transport, nil)
+	managementClient.Default = managementClient.New(transport, nil)
 }
 
 // check interfaces

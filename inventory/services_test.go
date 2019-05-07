@@ -19,11 +19,11 @@ func TestServices(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		remoteNodeOKBody := addRemoteNode(t, pmmapitests.TestString(t, "Remote node for services test"))
 		remoteNodeID := remoteNodeOKBody.Remote.NodeID
-		defer removeNodes(t, remoteNodeID)
+		defer pmmapitests.RemoveNodes(t, remoteNodeID)
 
 		service := addMySQLService(t, services.AddMySQLServiceBody{
 			NodeID:      genericNodeID,
@@ -32,7 +32,7 @@ func TestServices(t *testing.T) {
 			ServiceName: pmmapitests.TestString(t, "Some MySQL Service"),
 		})
 		serviceID := service.Mysql.ServiceID
-		defer removeServices(t, serviceID)
+		defer pmmapitests.RemoveServices(t, serviceID)
 
 		remoteService := addMySQLService(t, services.AddMySQLServiceBody{
 			NodeID:      remoteNodeID,
@@ -41,7 +41,7 @@ func TestServices(t *testing.T) {
 			ServiceName: pmmapitests.TestString(t, "Some MySQL Service on remote Node"),
 		})
 		remoteServiceID := remoteService.Mysql.ServiceID
-		defer removeServices(t, remoteServiceID)
+		defer pmmapitests.RemoveServices(t, remoteServiceID)
 
 		res, err := client.Default.Services.ListServices(&services.ListServicesParams{Context: pmmapitests.Context})
 		assert.NoError(t, err)
@@ -56,11 +56,11 @@ func TestServices(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		remoteNodeOKBody := addRemoteNode(t, pmmapitests.TestString(t, "Remote node to check services filter"))
 		remoteNodeID := remoteNodeOKBody.Remote.NodeID
-		defer removeNodes(t, remoteNodeID)
+		defer pmmapitests.RemoveNodes(t, remoteNodeID)
 
 		service := addMySQLService(t, services.AddMySQLServiceBody{
 			NodeID:      genericNodeID,
@@ -69,7 +69,7 @@ func TestServices(t *testing.T) {
 			ServiceName: pmmapitests.TestString(t, "Some MySQL Service for filters test"),
 		})
 		serviceID := service.Mysql.ServiceID
-		defer removeServices(t, serviceID)
+		defer pmmapitests.RemoveServices(t, serviceID)
 
 		remoteService := addMySQLService(t, services.AddMySQLServiceBody{
 			NodeID:      remoteNodeID,
@@ -78,7 +78,7 @@ func TestServices(t *testing.T) {
 			ServiceName: pmmapitests.TestString(t, "Some MySQL Service on remote Node for filters test"),
 		})
 		remoteServiceID := remoteService.Mysql.ServiceID
-		defer removeServices(t, remoteServiceID)
+		defer pmmapitests.RemoveServices(t, remoteServiceID)
 
 		res, err := client.Default.Services.ListServices(&services.ListServicesParams{
 			Body:    services.ListServicesBody{NodeID: remoteNodeID},
@@ -101,7 +101,7 @@ func TestGetService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.GetService(params)
-		assertEqualAPIError(t, err, ServerResponse{404, "Service with ID \"pmm-not-found\" not found."})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Service with ID \"pmm-not-found\" not found."})
 		assert.Nil(t, res)
 	})
 
@@ -113,7 +113,7 @@ func TestGetService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.GetService(params)
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field ServiceId: value '' must not be an empty string"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field ServiceId: value '' must not be an empty string"})
 		assert.Nil(t, res)
 	})
 }
@@ -124,7 +124,7 @@ func TestRemoveService(t *testing.T) {
 
 		node := addRemoteNode(t, pmmapitests.TestString(t, "Remote node for agents list"))
 		nodeID := node.Remote.NodeID
-		defer removeNodes(t, nodeID)
+		defer pmmapitests.RemoveNodes(t, nodeID)
 
 		service := addMySQLService(t, services.AddMySQLServiceBody{
 			NodeID:      nodeID,
@@ -149,7 +149,7 @@ func TestRemoveService(t *testing.T) {
 
 		node := addRemoteNode(t, pmmapitests.TestString(t, "Remote node for agents list"))
 		nodeID := node.Remote.NodeID
-		defer removeNodes(t, nodeID)
+		defer pmmapitests.RemoveNodes(t, nodeID)
 
 		service := addMySQLService(t, services.AddMySQLServiceBody{
 			NodeID:      nodeID,
@@ -158,11 +158,11 @@ func TestRemoveService(t *testing.T) {
 			ServiceName: pmmapitests.TestString(t, "MySQL Service for agent"),
 		})
 		serviceID := service.Mysql.ServiceID
-		defer removeServices(t, serviceID)
+		defer pmmapitests.RemoveServices(t, serviceID)
 
 		pmmAgent := addPMMAgent(t, nodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
-		defer removeAgents(t, pmmAgentID)
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
 		mySqldExporter := addMySqldExporter(t, agents.AddMySqldExporterBody{
 			ServiceID:  serviceID,
@@ -171,7 +171,7 @@ func TestRemoveService(t *testing.T) {
 			PMMAgentID: pmmAgentID,
 		})
 		mySqldExporterID := mySqldExporter.MysqldExporter.AgentID
-		defer removeAgents(t, mySqldExporterID)
+		defer pmmapitests.RemoveAgents(t, mySqldExporterID)
 
 		params := &services.RemoveServiceParams{
 			Body: services.RemoveServiceBody{
@@ -180,7 +180,7 @@ func TestRemoveService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.RemoveService(params)
-		assertEqualAPIError(t, err, ServerResponse{412, fmt.Sprintf(`Service with ID "%s" has agents.`, serviceID)})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{412, fmt.Sprintf(`Service with ID "%s" has agents.`, serviceID)})
 		assert.Nil(t, res)
 	})
 }
@@ -191,7 +191,7 @@ func TestMySQLService(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		serviceName := pmmapitests.TestString(t, "Basic MySQL Service")
 		params := &services.AddMySQLServiceParams{
@@ -218,7 +218,7 @@ func TestMySQLService(t *testing.T) {
 				},
 			},
 		}, res)
-		defer removeServices(t, serviceID)
+		defer pmmapitests.RemoveServices(t, serviceID)
 
 		// Check if the service saved in pmm-managed.
 		serviceRes, err := client.Default.Services.GetService(&services.GetServiceParams{
@@ -250,9 +250,9 @@ func TestMySQLService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err = client.Default.Services.AddMySQLService(params)
-		assertEqualAPIError(t, err, ServerResponse{409, fmt.Sprintf("Service with name %q already exists.", serviceName)})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{409, fmt.Sprintf("Service with name %q already exists.", serviceName)})
 		if !assert.Nil(t, res) {
-			removeServices(t, res.Payload.Mysql.ServiceID)
+			pmmapitests.RemoveServices(t, res.Payload.Mysql.ServiceID)
 		}
 	})
 
@@ -269,9 +269,9 @@ func TestMySQLService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.AddMySQLService(params)
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field NodeId: value '' must not be an empty string"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field NodeId: value '' must not be an empty string"})
 		if !assert.Nil(t, res) {
-			removeServices(t, res.Payload.Mysql.ServiceID)
+			pmmapitests.RemoveServices(t, res.Payload.Mysql.ServiceID)
 		}
 	})
 
@@ -280,7 +280,7 @@ func TestMySQLService(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		params := &services.AddMySQLServiceParams{
 			Body: services.AddMySQLServiceBody{
@@ -291,9 +291,9 @@ func TestMySQLService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.AddMySQLService(params)
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field Port: value '0' must be greater than '0'"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field Port: value '0' must be greater than '0'"})
 		if !assert.Nil(t, res) {
-			removeServices(t, res.Payload.Mysql.ServiceID)
+			pmmapitests.RemoveServices(t, res.Payload.Mysql.ServiceID)
 		}
 	})
 
@@ -302,7 +302,7 @@ func TestMySQLService(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		params := &services.AddMySQLServiceParams{
 			Body: services.AddMySQLServiceBody{
@@ -312,9 +312,9 @@ func TestMySQLService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.AddMySQLService(params)
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field ServiceName: value '' must not be an empty string"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field ServiceName: value '' must not be an empty string"})
 		if !assert.Nil(t, res) {
-			removeServices(t, res.Payload.Mysql.ServiceID)
+			pmmapitests.RemoveServices(t, res.Payload.Mysql.ServiceID)
 		}
 	})
 }
@@ -325,7 +325,7 @@ func TestAmazonRDSMySQLService(t *testing.T) {
 	t.Run("Basic", func(t *testing.T) {
 		remoteNodeOKBody := addRemoteNode(t, pmmapitests.TestString(t, "Remote node to check services filter"))
 		remoteNodeID := remoteNodeOKBody.Remote.NodeID
-		defer removeNodes(t, remoteNodeID)
+		defer pmmapitests.RemoveNodes(t, remoteNodeID)
 
 		serviceName := pmmapitests.TestString(t, "Basic AmazonRDSMySQL Service")
 		params := &services.AddAmazonRDSMySQLServiceParams{
@@ -341,7 +341,7 @@ func TestAmazonRDSMySQLService(t *testing.T) {
 		assert.NoError(t, err)
 		require.NotNil(t, res)
 		serviceID := res.Payload.AmazonRDSMysql.ServiceID
-		defer removeServices(t, serviceID)
+		defer pmmapitests.RemoveServices(t, serviceID)
 		assert.Equal(t, &services.AddAmazonRDSMySQLServiceOK{
 			Payload: &services.AddAmazonRDSMySQLServiceOKBody{
 				AmazonRDSMysql: &services.AddAmazonRDSMySQLServiceOKBodyAmazonRDSMysql{
@@ -384,9 +384,9 @@ func TestAmazonRDSMySQLService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err = client.Default.Services.AddAmazonRDSMySQLService(params)
-		assertEqualAPIError(t, err, ServerResponse{409, ""})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{409, ""})
 		if !assert.Nil(t, res) {
-			removeServices(t, res.Payload.AmazonRDSMysql.ServiceID)
+			pmmapitests.RemoveServices(t, res.Payload.AmazonRDSMysql.ServiceID)
 		}
 	})
 }
@@ -397,7 +397,7 @@ func TestMongoDBService(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		serviceName := pmmapitests.TestString(t, "Basic Mongo Service")
 		params := &services.AddMongoDBServiceParams{
@@ -424,7 +424,7 @@ func TestMongoDBService(t *testing.T) {
 				},
 			},
 		}, res)
-		defer removeServices(t, serviceID)
+		defer pmmapitests.RemoveServices(t, serviceID)
 
 		// Check if the service saved in pmm-managed.
 		serviceRes, err := client.Default.Services.GetService(&services.GetServiceParams{
@@ -456,9 +456,9 @@ func TestMongoDBService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err = client.Default.Services.AddMongoDBService(params)
-		assertEqualAPIError(t, err, ServerResponse{409, fmt.Sprintf("Service with name %q already exists.", serviceName)})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{409, fmt.Sprintf("Service with name %q already exists.", serviceName)})
 		if !assert.Nil(t, res) {
-			removeServices(t, res.Payload.Mongodb.ServiceID)
+			pmmapitests.RemoveServices(t, res.Payload.Mongodb.ServiceID)
 		}
 	})
 
@@ -473,9 +473,9 @@ func TestMongoDBService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.AddMongoDBService(params)
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field NodeId: value '' must not be an empty string"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field NodeId: value '' must not be an empty string"})
 		if !assert.Nil(t, res) {
-			removeServices(t, res.Payload.Mongodb.ServiceID)
+			pmmapitests.RemoveServices(t, res.Payload.Mongodb.ServiceID)
 		}
 	})
 
@@ -484,7 +484,7 @@ func TestMongoDBService(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		params := &services.AddMongoDBServiceParams{
 			Body: services.AddMongoDBServiceBody{
@@ -494,9 +494,9 @@ func TestMongoDBService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.AddMongoDBService(params)
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field ServiceName: value '' must not be an empty string"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field ServiceName: value '' must not be an empty string"})
 		if !assert.Nil(t, res) {
-			removeServices(t, res.Payload.Mongodb.ServiceID)
+			pmmapitests.RemoveServices(t, res.Payload.Mongodb.ServiceID)
 		}
 	})
 }
@@ -507,7 +507,7 @@ func TestPostgreSQLService(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		serviceName := pmmapitests.TestString(t, "Basic PostgreSQL Service")
 		params := &services.AddPostgreSQLServiceParams{
@@ -534,7 +534,7 @@ func TestPostgreSQLService(t *testing.T) {
 				},
 			},
 		}, res)
-		defer removeServices(t, serviceID)
+		defer pmmapitests.RemoveServices(t, serviceID)
 
 		// Check if the service saved in pmm-managed.
 		serviceRes, err := client.Default.Services.GetService(&services.GetServiceParams{
@@ -566,9 +566,9 @@ func TestPostgreSQLService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err = client.Default.Services.AddPostgreSQLService(params)
-		assertEqualAPIError(t, err, ServerResponse{409, fmt.Sprintf("Service with name %q already exists.", serviceName)})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{409, fmt.Sprintf("Service with name %q already exists.", serviceName)})
 		if !assert.Nil(t, res) {
-			removeServices(t, res.Payload.Postgresql.ServiceID)
+			pmmapitests.RemoveServices(t, res.Payload.Postgresql.ServiceID)
 		}
 	})
 
@@ -585,9 +585,9 @@ func TestPostgreSQLService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.AddPostgreSQLService(params)
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field NodeId: value '' must not be an empty string"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field NodeId: value '' must not be an empty string"})
 		if !assert.Nil(t, res) {
-			removeServices(t, res.Payload.Postgresql.ServiceID)
+			pmmapitests.RemoveServices(t, res.Payload.Postgresql.ServiceID)
 		}
 	})
 
@@ -596,7 +596,7 @@ func TestPostgreSQLService(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		params := &services.AddPostgreSQLServiceParams{
 			Body: services.AddPostgreSQLServiceBody{
@@ -607,9 +607,9 @@ func TestPostgreSQLService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.AddPostgreSQLService(params)
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field Port: value '0' must be greater than '0'"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field Port: value '0' must be greater than '0'"})
 		if !assert.Nil(t, res) {
-			removeServices(t, res.Payload.Postgresql.ServiceID)
+			pmmapitests.RemoveServices(t, res.Payload.Postgresql.ServiceID)
 		}
 	})
 
@@ -618,7 +618,7 @@ func TestPostgreSQLService(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		params := &services.AddPostgreSQLServiceParams{
 			Body: services.AddPostgreSQLServiceBody{
@@ -628,9 +628,9 @@ func TestPostgreSQLService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.AddPostgreSQLService(params)
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field ServiceName: value '' must not be an empty string"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field ServiceName: value '' must not be an empty string"})
 		if !assert.Nil(t, res) {
-			removeServices(t, res.Payload.Postgresql.ServiceID)
+			pmmapitests.RemoveServices(t, res.Payload.Postgresql.ServiceID)
 		}
 	})
 }

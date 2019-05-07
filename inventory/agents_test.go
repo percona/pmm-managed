@@ -18,11 +18,11 @@ func TestAgents(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Generic node for agents list")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		node := addRemoteNode(t, pmmapitests.TestString(t, "Remote node for agents list"))
 		nodeID := node.Remote.NodeID
-		defer removeNodes(t, nodeID)
+		defer pmmapitests.RemoveNodes(t, nodeID)
 
 		service := addMySQLService(t, services.AddMySQLServiceBody{
 			NodeID:      genericNodeID,
@@ -31,11 +31,11 @@ func TestAgents(t *testing.T) {
 			ServiceName: pmmapitests.TestString(t, "MySQL Service for agent"),
 		})
 		serviceID := service.Mysql.ServiceID
-		defer removeServices(t, serviceID)
+		defer pmmapitests.RemoveServices(t, serviceID)
 
 		pmmAgent := addPMMAgent(t, nodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
-		defer removeAgents(t, pmmAgentID)
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
 		mySqldExporter := addMySqldExporter(t, agents.AddMySqldExporterBody{
 			ServiceID:  serviceID,
@@ -44,7 +44,7 @@ func TestAgents(t *testing.T) {
 			PMMAgentID: pmmAgentID,
 		})
 		mySqldExporterID := mySqldExporter.MysqldExporter.AgentID
-		defer removeAgents(t, mySqldExporterID)
+		defer pmmapitests.RemoveAgents(t, mySqldExporterID)
 
 		res, err := client.Default.Agents.ListAgents(&agents.ListAgentsParams{Context: pmmapitests.Context})
 		require.NoError(t, err)
@@ -60,11 +60,11 @@ func TestAgents(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Generic node for agents filters")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		node := addRemoteNode(t, pmmapitests.TestString(t, "Remote node for agents filters"))
 		nodeID := node.Remote.NodeID
-		defer removeNodes(t, nodeID)
+		defer pmmapitests.RemoveNodes(t, nodeID)
 
 		service := addMySQLService(t, services.AddMySQLServiceBody{
 			NodeID:      genericNodeID,
@@ -73,11 +73,11 @@ func TestAgents(t *testing.T) {
 			ServiceName: pmmapitests.TestString(t, "MySQL Service for filter test"),
 		})
 		serviceID := service.Mysql.ServiceID
-		defer removeServices(t, serviceID)
+		defer pmmapitests.RemoveServices(t, serviceID)
 
 		pmmAgent := addPMMAgent(t, nodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
-		defer removeAgents(t, pmmAgentID)
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
 		mySqldExporter := addMySqldExporter(t, agents.AddMySqldExporterBody{
 			ServiceID:  serviceID,
@@ -86,7 +86,7 @@ func TestAgents(t *testing.T) {
 			PMMAgentID: pmmAgentID,
 		})
 		mySqldExporterID := mySqldExporter.MysqldExporter.AgentID
-		defer removeAgents(t, mySqldExporterID)
+		defer pmmapitests.RemoveAgents(t, mySqldExporterID)
 
 		nodeExporter, err := client.Default.Agents.AddNodeExporter(&agents.AddNodeExporterParams{
 			Body: agents.AddNodeExporterBody{
@@ -100,7 +100,7 @@ func TestAgents(t *testing.T) {
 		assert.NoError(t, err)
 		require.NotNil(t, nodeExporter)
 		nodeExporterID := nodeExporter.Payload.NodeExporter.AgentID
-		defer removeAgents(t, nodeExporterID)
+		defer pmmapitests.RemoveAgents(t, nodeExporterID)
 
 		// Filter by pmm agent ID.
 		res, err := client.Default.Agents.ListAgents(&agents.ListAgentsParams{
@@ -145,11 +145,11 @@ func TestAgents(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		pmmAgent := addPMMAgent(t, genericNodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
-		defer removeAgents(t, pmmAgentID)
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
 		res, err := client.Default.Agents.ListAgents(&agents.ListAgentsParams{
 			Body: agents.ListAgentsBody{
@@ -170,12 +170,12 @@ func TestPMMAgent(t *testing.T) {
 
 		node := addRemoteNode(t, pmmapitests.TestString(t, "Remote node for PMM-agent"))
 		nodeID := node.Remote.NodeID
-		defer removeNodes(t, nodeID)
+		defer pmmapitests.RemoveNodes(t, nodeID)
 
 		res := addPMMAgent(t, nodeID)
 		require.Equal(t, nodeID, res.PMMAgent.RunsOnNodeID)
 		agentID := res.PMMAgent.AgentID
-		defer removeAgents(t, agentID)
+		defer pmmapitests.RemoveAgents(t, agentID)
 
 		getAgentRes, err := client.Default.Agents.GetAgent(&agents.GetAgentParams{
 			Body:    agents.GetAgentBody{AgentID: agentID},
@@ -199,9 +199,9 @@ func TestPMMAgent(t *testing.T) {
 			Body:    agents.AddPMMAgentBody{RunsOnNodeID: ""},
 			Context: pmmapitests.Context,
 		})
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field RunsOnNodeId: value '' must not be an empty string"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field RunsOnNodeId: value '' must not be an empty string"})
 		if !assert.Nil(t, res) {
-			removeNodes(t, res.Payload.PMMAgent.AgentID)
+			pmmapitests.RemoveNodes(t, res.Payload.PMMAgent.AgentID)
 		}
 	})
 }
@@ -212,11 +212,11 @@ func TestNodeExporter(t *testing.T) {
 
 		node := addRemoteNode(t, pmmapitests.TestString(t, "Remote node for Node exporter"))
 		nodeID := node.Remote.NodeID
-		defer removeNodes(t, nodeID)
+		defer pmmapitests.RemoveNodes(t, nodeID)
 
 		pmmAgent := addPMMAgent(t, nodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
-		defer removeAgents(t, pmmAgentID)
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
 		res, err := client.Default.Agents.AddNodeExporter(&agents.AddNodeExporterParams{
 			Body: agents.AddNodeExporterBody{
@@ -232,7 +232,7 @@ func TestNodeExporter(t *testing.T) {
 		require.NotNil(t, res.Payload.NodeExporter)
 		require.Equal(t, pmmAgentID, res.Payload.NodeExporter.PMMAgentID)
 		agentID := res.Payload.NodeExporter.AgentID
-		defer removeAgents(t, agentID)
+		defer pmmapitests.RemoveAgents(t, agentID)
 
 		getAgentRes, err := client.Default.Agents.GetAgent(&agents.GetAgentParams{
 			Body:    agents.GetAgentBody{AgentID: agentID},
@@ -304,9 +304,9 @@ func TestNodeExporter(t *testing.T) {
 			Body:    agents.AddNodeExporterBody{PMMAgentID: ""},
 			Context: pmmapitests.Context,
 		})
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field PmmAgentId: value '' must not be an empty string"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field PmmAgentId: value '' must not be an empty string"})
 		if !assert.Nil(t, res) {
-			removeNodes(t, res.Payload.NodeExporter.AgentID)
+			pmmapitests.RemoveNodes(t, res.Payload.NodeExporter.AgentID)
 		}
 	})
 
@@ -317,9 +317,9 @@ func TestNodeExporter(t *testing.T) {
 			Body:    agents.AddNodeExporterBody{PMMAgentID: "pmm-node-exporter-node"},
 			Context: pmmapitests.Context,
 		})
-		assertEqualAPIError(t, err, ServerResponse{404, "Agent with ID \"pmm-node-exporter-node\" not found."})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Agent with ID \"pmm-node-exporter-node\" not found."})
 		if !assert.Nil(t, res) {
-			removeNodes(t, res.Payload.NodeExporter.AgentID)
+			pmmapitests.RemoveNodes(t, res.Payload.NodeExporter.AgentID)
 		}
 	})
 }
@@ -330,11 +330,11 @@ func TestMySQLdExporter(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		node := addRemoteNode(t, pmmapitests.TestString(t, "Remote node for Node exporter"))
 		nodeID := node.Remote.NodeID
-		defer removeNodes(t, nodeID)
+		defer pmmapitests.RemoveNodes(t, nodeID)
 
 		service := addMySQLService(t, services.AddMySQLServiceBody{
 			NodeID:      genericNodeID,
@@ -343,11 +343,11 @@ func TestMySQLdExporter(t *testing.T) {
 			ServiceName: pmmapitests.TestString(t, "MySQL Service for MySQLdExporter test"),
 		})
 		serviceID := service.Mysql.ServiceID
-		defer removeServices(t, serviceID)
+		defer pmmapitests.RemoveServices(t, serviceID)
 
 		pmmAgent := addPMMAgent(t, nodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
-		defer removeAgents(t, pmmAgentID)
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
 		mySqldExporter := addMySqldExporter(t, agents.AddMySqldExporterBody{
 			ServiceID:  serviceID,
@@ -359,7 +359,7 @@ func TestMySQLdExporter(t *testing.T) {
 			},
 		})
 		agentID := mySqldExporter.MysqldExporter.AgentID
-		defer removeAgents(t, agentID)
+		defer pmmapitests.RemoveAgents(t, agentID)
 
 		getAgentRes, err := client.Default.Agents.GetAgent(&agents.GetAgentParams{
 			Body:    agents.GetAgentBody{AgentID: agentID},
@@ -437,11 +437,11 @@ func TestMySQLdExporter(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		pmmAgent := addPMMAgent(t, genericNodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
-		defer removeAgents(t, pmmAgentID)
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
 		res, err := client.Default.Agents.AddMySqldExporter(&agents.AddMySqldExporterParams{
 			Body: agents.AddMySqldExporterBody{
@@ -450,9 +450,9 @@ func TestMySQLdExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field ServiceId: value '' must not be an empty string"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field ServiceId: value '' must not be an empty string"})
 		if !assert.Nil(t, res) {
-			removeNodes(t, res.Payload.MysqldExporter.AgentID)
+			pmmapitests.RemoveNodes(t, res.Payload.MysqldExporter.AgentID)
 		}
 	})
 
@@ -461,7 +461,7 @@ func TestMySQLdExporter(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		service := addMySQLService(t, services.AddMySQLServiceBody{
 			NodeID:      genericNodeID,
@@ -470,7 +470,7 @@ func TestMySQLdExporter(t *testing.T) {
 			ServiceName: pmmapitests.TestString(t, "MySQL Service for agent"),
 		})
 		serviceID := service.Mysql.ServiceID
-		defer removeServices(t, serviceID)
+		defer pmmapitests.RemoveServices(t, serviceID)
 
 		res, err := client.Default.Agents.AddMySqldExporter(&agents.AddMySqldExporterParams{
 			Body: agents.AddMySqldExporterBody{
@@ -481,9 +481,9 @@ func TestMySQLdExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field PmmAgentId: value '' must not be an empty string"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field PmmAgentId: value '' must not be an empty string"})
 		if !assert.Nil(t, res) {
-			removeAgents(t, res.Payload.MysqldExporter.AgentID)
+			pmmapitests.RemoveAgents(t, res.Payload.MysqldExporter.AgentID)
 		}
 	})
 
@@ -492,11 +492,11 @@ func TestMySQLdExporter(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		pmmAgent := addPMMAgent(t, genericNodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
-		defer removeAgents(t, pmmAgentID)
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
 		res, err := client.Default.Agents.AddMySqldExporter(&agents.AddMySqldExporterParams{
 			Body: agents.AddMySqldExporterBody{
@@ -507,9 +507,9 @@ func TestMySQLdExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		assertEqualAPIError(t, err, ServerResponse{404, "Service with ID \"pmm-service-id\" not found."})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Service with ID \"pmm-service-id\" not found."})
 		if !assert.Nil(t, res) {
-			removeAgents(t, res.Payload.MysqldExporter.AgentID)
+			pmmapitests.RemoveAgents(t, res.Payload.MysqldExporter.AgentID)
 		}
 	})
 
@@ -518,7 +518,7 @@ func TestMySQLdExporter(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		service := addMySQLService(t, services.AddMySQLServiceBody{
 			NodeID:      genericNodeID,
@@ -527,7 +527,7 @@ func TestMySQLdExporter(t *testing.T) {
 			ServiceName: pmmapitests.TestString(t, "MySQL Service for not exists node ID"),
 		})
 		serviceID := service.Mysql.ServiceID
-		defer removeServices(t, serviceID)
+		defer pmmapitests.RemoveServices(t, serviceID)
 
 		res, err := client.Default.Agents.AddMySqldExporter(&agents.AddMySqldExporterParams{
 			Body: agents.AddMySqldExporterBody{
@@ -538,9 +538,9 @@ func TestMySQLdExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		assertEqualAPIError(t, err, ServerResponse{404, "Agent with ID \"pmm-not-exist-server\" not found."})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Agent with ID \"pmm-not-exist-server\" not found."})
 		if !assert.Nil(t, res) {
-			removeAgents(t, res.Payload.MysqldExporter.AgentID)
+			pmmapitests.RemoveAgents(t, res.Payload.MysqldExporter.AgentID)
 		}
 	})
 }
@@ -553,11 +553,11 @@ func TestRDSExporter(t *testing.T) {
 
 		node := addRemoteNode(t, pmmapitests.TestString(t, "Remote node for Node exporter"))
 		nodeID := node.Remote.NodeID
-		defer removeNodes(t, nodeID)
+		defer pmmapitests.RemoveNodes(t, nodeID)
 
 		pmmAgent := addPMMAgent(t, nodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
-		defer removeAgents(t, pmmAgentID)
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
 		service := addMySQLService(t, services.AddMySQLServiceBody{
 			NodeID:      nodeID,
@@ -566,7 +566,7 @@ func TestRDSExporter(t *testing.T) {
 			ServiceName: pmmapitests.TestString(t, "MySQL Service for RDSExporter test"),
 		})
 		serviceID := service.Mysql.ServiceID
-		defer removeServices(t, serviceID)
+		defer pmmapitests.RemoveServices(t, serviceID)
 
 		res, err := client.Default.Agents.AddRDSExporter(&agents.AddRDSExporterParams{
 			Body: agents.AddRDSExporterBody{
@@ -579,7 +579,7 @@ func TestRDSExporter(t *testing.T) {
 		require.NotNil(t, res)
 		require.NotNil(t, res.Payload.RDSExporter)
 		agentID := res.Payload.RDSExporter.AgentID
-		defer removeAgents(t, agentID)
+		defer pmmapitests.RemoveAgents(t, agentID)
 
 		getAgentRes, err := client.Default.Agents.GetAgent(&agents.GetAgentParams{
 			Body:    agents.GetAgentBody{AgentID: agentID},
@@ -604,11 +604,11 @@ func TestMongoDBExporter(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		node := addRemoteNode(t, pmmapitests.TestString(t, "Remote node for Node exporter"))
 		nodeID := node.Remote.NodeID
-		defer removeNodes(t, nodeID)
+		defer pmmapitests.RemoveNodes(t, nodeID)
 
 		service := addMySQLService(t, services.AddMySQLServiceBody{
 			NodeID:      genericNodeID,
@@ -617,11 +617,11 @@ func TestMongoDBExporter(t *testing.T) {
 			ServiceName: pmmapitests.TestString(t, "MySQL Service for MongoDBExporter test"),
 		})
 		serviceID := service.Mysql.ServiceID
-		defer removeServices(t, serviceID)
+		defer pmmapitests.RemoveServices(t, serviceID)
 
 		pmmAgent := addPMMAgent(t, nodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
-		defer removeAgents(t, pmmAgentID)
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
 		mongoDBExporter := addMongoDBExporter(t, agents.AddMongoDBExporterBody{
 			ServiceID:  serviceID,
@@ -633,7 +633,7 @@ func TestMongoDBExporter(t *testing.T) {
 			},
 		})
 		agentID := mongoDBExporter.MongodbExporter.AgentID
-		defer removeAgents(t, agentID)
+		defer pmmapitests.RemoveAgents(t, agentID)
 
 		getAgentRes, err := client.Default.Agents.GetAgent(&agents.GetAgentParams{
 			Body:    agents.GetAgentBody{AgentID: agentID},
@@ -711,11 +711,11 @@ func TestMongoDBExporter(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		pmmAgent := addPMMAgent(t, genericNodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
-		defer removeAgents(t, pmmAgentID)
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
 		res, err := client.Default.Agents.AddMongoDBExporter(&agents.AddMongoDBExporterParams{
 			Body: agents.AddMongoDBExporterBody{
@@ -724,9 +724,9 @@ func TestMongoDBExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field ServiceId: value '' must not be an empty string"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field ServiceId: value '' must not be an empty string"})
 		if !assert.Nil(t, res) {
-			removeAgents(t, res.Payload.MongodbExporter.AgentID)
+			pmmapitests.RemoveAgents(t, res.Payload.MongodbExporter.AgentID)
 		}
 	})
 
@@ -735,7 +735,7 @@ func TestMongoDBExporter(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		service := addMySQLService(t, services.AddMySQLServiceBody{
 			NodeID:      genericNodeID,
@@ -744,7 +744,7 @@ func TestMongoDBExporter(t *testing.T) {
 			ServiceName: pmmapitests.TestString(t, "MySQL Service for agent"),
 		})
 		serviceID := service.Mysql.ServiceID
-		defer removeServices(t, serviceID)
+		defer pmmapitests.RemoveServices(t, serviceID)
 
 		res, err := client.Default.Agents.AddMongoDBExporter(&agents.AddMongoDBExporterParams{
 			Body: agents.AddMongoDBExporterBody{
@@ -755,9 +755,9 @@ func TestMongoDBExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field PmmAgentId: value '' must not be an empty string"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field PmmAgentId: value '' must not be an empty string"})
 		if !assert.Nil(t, res) {
-			removeAgents(t, res.Payload.MongodbExporter.AgentID)
+			pmmapitests.RemoveAgents(t, res.Payload.MongodbExporter.AgentID)
 		}
 	})
 
@@ -766,11 +766,11 @@ func TestMongoDBExporter(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		pmmAgent := addPMMAgent(t, genericNodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
-		defer removeAgents(t, pmmAgentID)
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
 		res, err := client.Default.Agents.AddMongoDBExporter(&agents.AddMongoDBExporterParams{
 			Body: agents.AddMongoDBExporterBody{
@@ -781,9 +781,9 @@ func TestMongoDBExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		assertEqualAPIError(t, err, ServerResponse{404, "Service with ID \"pmm-service-id\" not found."})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Service with ID \"pmm-service-id\" not found."})
 		if !assert.Nil(t, res) {
-			removeAgents(t, res.Payload.MongodbExporter.AgentID)
+			pmmapitests.RemoveAgents(t, res.Payload.MongodbExporter.AgentID)
 		}
 	})
 
@@ -792,7 +792,7 @@ func TestMongoDBExporter(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		service := addMySQLService(t, services.AddMySQLServiceBody{
 			NodeID:      genericNodeID,
@@ -801,7 +801,7 @@ func TestMongoDBExporter(t *testing.T) {
 			ServiceName: pmmapitests.TestString(t, "MySQL Service for not exists node ID"),
 		})
 		serviceID := service.Mysql.ServiceID
-		defer removeServices(t, serviceID)
+		defer pmmapitests.RemoveServices(t, serviceID)
 
 		res, err := client.Default.Agents.AddMongoDBExporter(&agents.AddMongoDBExporterParams{
 			Body: agents.AddMongoDBExporterBody{
@@ -812,9 +812,9 @@ func TestMongoDBExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		assertEqualAPIError(t, err, ServerResponse{404, "Agent with ID \"pmm-not-exist-server\" not found."})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Agent with ID \"pmm-not-exist-server\" not found."})
 		if !assert.Nil(t, res) {
-			removeAgents(t, res.Payload.MongodbExporter.AgentID)
+			pmmapitests.RemoveAgents(t, res.Payload.MongodbExporter.AgentID)
 		}
 	})
 }
@@ -824,7 +824,7 @@ func TestQanAgentExporter(t *testing.T) {
 		t.Parallel()
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		service := addMySQLService(t, services.AddMySQLServiceBody{
 			NodeID:      genericNodeID,
@@ -833,11 +833,11 @@ func TestQanAgentExporter(t *testing.T) {
 			ServiceName: pmmapitests.TestString(t, "MySQL Service for QanAgent test"),
 		})
 		serviceID := service.Mysql.ServiceID
-		defer removeServices(t, serviceID)
+		defer pmmapitests.RemoveServices(t, serviceID)
 
 		pmmAgent := addPMMAgent(t, genericNodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
-		defer removeAgents(t, pmmAgentID)
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
 		res, err := client.Default.Agents.AddQANMySQLPerfSchemaAgent(
 			&agents.AddQANMySQLPerfSchemaAgentParams{
@@ -853,7 +853,7 @@ func TestQanAgentExporter(t *testing.T) {
 				Context: pmmapitests.Context,
 			})
 		agentID := res.Payload.QANMysqlPerfschemaAgent.AgentID
-		defer removeAgents(t, agentID)
+		defer pmmapitests.RemoveAgents(t, agentID)
 
 		getAgentRes, err := client.Default.Agents.GetAgent(&agents.GetAgentParams{
 			Body:    agents.GetAgentBody{AgentID: agentID},
@@ -930,11 +930,11 @@ func TestQanAgentExporter(t *testing.T) {
 		t.Parallel()
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		pmmAgent := addPMMAgent(t, genericNodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
-		defer removeAgents(t, pmmAgentID)
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
 		res, err := client.Default.Agents.AddQANMySQLPerfSchemaAgent(&agents.AddQANMySQLPerfSchemaAgentParams{
 			Body: agents.AddQANMySQLPerfSchemaAgentBody{
@@ -945,9 +945,9 @@ func TestQanAgentExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field ServiceId: value '' must not be an empty string"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field ServiceId: value '' must not be an empty string"})
 		if !assert.Nil(t, res) {
-			removeAgents(t, res.Payload.QANMysqlPerfschemaAgent.AgentID)
+			pmmapitests.RemoveAgents(t, res.Payload.QANMysqlPerfschemaAgent.AgentID)
 		}
 	})
 
@@ -955,7 +955,7 @@ func TestQanAgentExporter(t *testing.T) {
 		t.Parallel()
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		service := addMySQLService(t, services.AddMySQLServiceBody{
 			NodeID:      genericNodeID,
@@ -964,7 +964,7 @@ func TestQanAgentExporter(t *testing.T) {
 			ServiceName: pmmapitests.TestString(t, "MySQL Service for agent"),
 		})
 		serviceID := service.Mysql.ServiceID
-		defer removeServices(t, serviceID)
+		defer pmmapitests.RemoveServices(t, serviceID)
 
 		res, err := client.Default.Agents.AddQANMySQLPerfSchemaAgent(&agents.AddQANMySQLPerfSchemaAgentParams{
 			Body: agents.AddQANMySQLPerfSchemaAgentBody{
@@ -975,9 +975,9 @@ func TestQanAgentExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field PmmAgentId: value '' must not be an empty string"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field PmmAgentId: value '' must not be an empty string"})
 		if !assert.Nil(t, res) {
-			removeAgents(t, res.Payload.QANMysqlPerfschemaAgent.AgentID)
+			pmmapitests.RemoveAgents(t, res.Payload.QANMysqlPerfschemaAgent.AgentID)
 		}
 	})
 
@@ -985,11 +985,11 @@ func TestQanAgentExporter(t *testing.T) {
 		t.Parallel()
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		pmmAgent := addPMMAgent(t, genericNodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
-		defer removeAgents(t, pmmAgentID)
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
 		res, err := client.Default.Agents.AddQANMySQLPerfSchemaAgent(&agents.AddQANMySQLPerfSchemaAgentParams{
 			Body: agents.AddQANMySQLPerfSchemaAgentBody{
@@ -1000,9 +1000,9 @@ func TestQanAgentExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		assertEqualAPIError(t, err, ServerResponse{404, "Service with ID \"pmm-service-id\" not found."})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Service with ID \"pmm-service-id\" not found."})
 		if !assert.Nil(t, res) {
-			removeAgents(t, res.Payload.QANMysqlPerfschemaAgent.AgentID)
+			pmmapitests.RemoveAgents(t, res.Payload.QANMysqlPerfschemaAgent.AgentID)
 		}
 	})
 
@@ -1010,7 +1010,7 @@ func TestQanAgentExporter(t *testing.T) {
 		t.Parallel()
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		service := addMySQLService(t, services.AddMySQLServiceBody{
 			NodeID:      genericNodeID,
@@ -1019,7 +1019,7 @@ func TestQanAgentExporter(t *testing.T) {
 			ServiceName: pmmapitests.TestString(t, "MySQL Service for not exists node ID"),
 		})
 		serviceID := service.Mysql.ServiceID
-		defer removeServices(t, serviceID)
+		defer pmmapitests.RemoveServices(t, serviceID)
 
 		res, err := client.Default.Agents.AddQANMySQLPerfSchemaAgent(&agents.AddQANMySQLPerfSchemaAgentParams{
 			Body: agents.AddQANMySQLPerfSchemaAgentBody{
@@ -1030,9 +1030,9 @@ func TestQanAgentExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		assertEqualAPIError(t, err, ServerResponse{404, "Agent with ID \"pmm-not-exist-server\" not found."})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Agent with ID \"pmm-not-exist-server\" not found."})
 		if !assert.Nil(t, res) {
-			removeAgents(t, res.Payload.QANMysqlPerfschemaAgent.AgentID)
+			pmmapitests.RemoveAgents(t, res.Payload.QANMysqlPerfschemaAgent.AgentID)
 		}
 	})
 }
@@ -1043,11 +1043,11 @@ func TestPostgresExporter(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		node := addRemoteNode(t, pmmapitests.TestString(t, "Remote node for Node exporter"))
 		nodeID := node.Remote.NodeID
-		defer removeNodes(t, nodeID)
+		defer pmmapitests.RemoveNodes(t, nodeID)
 
 		service := addPostgreSQLService(t, services.AddPostgreSQLServiceBody{
 			NodeID:      genericNodeID,
@@ -1056,11 +1056,11 @@ func TestPostgresExporter(t *testing.T) {
 			ServiceName: pmmapitests.TestString(t, "PostgreSQL Service for PostgresExporter test"),
 		})
 		serviceID := service.Postgresql.ServiceID
-		defer removeServices(t, serviceID)
+		defer pmmapitests.RemoveServices(t, serviceID)
 
 		pmmAgent := addPMMAgent(t, nodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
-		defer removeAgents(t, pmmAgentID)
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
 		PostgresExporter := addPostgresExporter(t, agents.AddPostgresExporterBody{
 			ServiceID:  serviceID,
@@ -1072,7 +1072,7 @@ func TestPostgresExporter(t *testing.T) {
 			},
 		})
 		agentID := PostgresExporter.PostgresExporter.AgentID
-		defer removeAgents(t, agentID)
+		defer pmmapitests.RemoveAgents(t, agentID)
 
 		getAgentRes, err := client.Default.Agents.GetAgent(&agents.GetAgentParams{
 			Body:    agents.GetAgentBody{AgentID: agentID},
@@ -1150,11 +1150,11 @@ func TestPostgresExporter(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		pmmAgent := addPMMAgent(t, genericNodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
-		defer removeAgents(t, pmmAgentID)
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
 		res, err := client.Default.Agents.AddPostgresExporter(&agents.AddPostgresExporterParams{
 			Body: agents.AddPostgresExporterBody{
@@ -1163,9 +1163,9 @@ func TestPostgresExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field ServiceId: value '' must not be an empty string"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field ServiceId: value '' must not be an empty string"})
 		if !assert.Nil(t, res) {
-			removeNodes(t, res.Payload.PostgresExporter.AgentID)
+			pmmapitests.RemoveNodes(t, res.Payload.PostgresExporter.AgentID)
 		}
 	})
 
@@ -1174,7 +1174,7 @@ func TestPostgresExporter(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		service := addPostgreSQLService(t, services.AddPostgreSQLServiceBody{
 			NodeID:      genericNodeID,
@@ -1183,7 +1183,7 @@ func TestPostgresExporter(t *testing.T) {
 			ServiceName: pmmapitests.TestString(t, "PostgreSQL Service for agent"),
 		})
 		serviceID := service.Postgresql.ServiceID
-		defer removeServices(t, serviceID)
+		defer pmmapitests.RemoveServices(t, serviceID)
 
 		res, err := client.Default.Agents.AddPostgresExporter(&agents.AddPostgresExporterParams{
 			Body: agents.AddPostgresExporterBody{
@@ -1194,9 +1194,9 @@ func TestPostgresExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field PmmAgentId: value '' must not be an empty string"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field PmmAgentId: value '' must not be an empty string"})
 		if !assert.Nil(t, res) {
-			removeAgents(t, res.Payload.PostgresExporter.AgentID)
+			pmmapitests.RemoveAgents(t, res.Payload.PostgresExporter.AgentID)
 		}
 	})
 
@@ -1205,11 +1205,11 @@ func TestPostgresExporter(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		pmmAgent := addPMMAgent(t, genericNodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
-		defer removeAgents(t, pmmAgentID)
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
 		res, err := client.Default.Agents.AddPostgresExporter(&agents.AddPostgresExporterParams{
 			Body: agents.AddPostgresExporterBody{
@@ -1220,9 +1220,9 @@ func TestPostgresExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		assertEqualAPIError(t, err, ServerResponse{404, "Service with ID \"pmm-service-id\" not found."})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Service with ID \"pmm-service-id\" not found."})
 		if !assert.Nil(t, res) {
-			removeAgents(t, res.Payload.PostgresExporter.AgentID)
+			pmmapitests.RemoveAgents(t, res.Payload.PostgresExporter.AgentID)
 		}
 	})
 
@@ -1231,7 +1231,7 @@ func TestPostgresExporter(t *testing.T) {
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		service := addPostgreSQLService(t, services.AddPostgreSQLServiceBody{
 			NodeID:      genericNodeID,
@@ -1240,7 +1240,7 @@ func TestPostgresExporter(t *testing.T) {
 			ServiceName: pmmapitests.TestString(t, "PostgreSQL Service for not exists node ID"),
 		})
 		serviceID := service.Postgresql.ServiceID
-		defer removeServices(t, serviceID)
+		defer pmmapitests.RemoveServices(t, serviceID)
 
 		res, err := client.Default.Agents.AddPostgresExporter(&agents.AddPostgresExporterParams{
 			Body: agents.AddPostgresExporterBody{
@@ -1251,9 +1251,9 @@ func TestPostgresExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		assertEqualAPIError(t, err, ServerResponse{404, "Agent with ID \"pmm-not-exist-server\" not found."})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Agent with ID \"pmm-not-exist-server\" not found."})
 		if !assert.Nil(t, res) {
-			removeAgents(t, res.Payload.PostgresExporter.AgentID)
+			pmmapitests.RemoveAgents(t, res.Payload.PostgresExporter.AgentID)
 		}
 	})
 }

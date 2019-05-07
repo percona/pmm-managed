@@ -18,10 +18,10 @@ func TestNodes(t *testing.T) {
 
 		remoteNode := addRemoteNode(t, pmmapitests.TestString(t, "Test Remote Node for List"))
 		remoteNodeID := remoteNode.Remote.NodeID
-		defer removeNodes(t, remoteNodeID)
+		defer pmmapitests.RemoveNodes(t, remoteNodeID)
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for List")).NodeID
 		require.NotEmpty(t, genericNodeID)
-		defer removeNodes(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		res, err := client.Default.Nodes.ListNodes(nil)
 		require.NoError(t, err)
@@ -53,7 +53,7 @@ func TestGetNode(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "TestGenericNode")
 		nodeID := addGenericNode(t, nodeName).NodeID
 		require.NotEmpty(t, nodeID)
-		defer removeNodes(t, nodeID)
+		defer pmmapitests.RemoveNodes(t, nodeID)
 
 		expectedResponse := &nodes.GetNodeOK{
 			Payload: &nodes.GetNodeOKBody{
@@ -81,7 +81,7 @@ func TestGetNode(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Nodes.GetNode(params)
-		assertEqualAPIError(t, err, ServerResponse{404, "Node with ID \"pmm-not-found\" not found."})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Node with ID \"pmm-not-found\" not found."})
 		assert.Nil(t, res)
 	})
 
@@ -93,7 +93,7 @@ func TestGetNode(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Nodes.GetNode(params)
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field NodeId: value '' must not be an empty string"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field NodeId: value '' must not be an empty string"})
 		assert.Nil(t, res)
 	})
 }
@@ -112,7 +112,7 @@ func TestGenericNode(t *testing.T) {
 		require.NotNil(t, res)
 		require.NotNil(t, res.Payload.Generic)
 		nodeID := res.Payload.Generic.NodeID
-		defer removeNodes(t, nodeID)
+		defer pmmapitests.RemoveNodes(t, nodeID)
 
 		// Check node exists in DB.
 		getNodeRes, err := client.Default.Nodes.GetNode(&nodes.GetNodeParams{
@@ -132,9 +132,9 @@ func TestGenericNode(t *testing.T) {
 
 		// Check duplicates.
 		res, err = client.Default.Nodes.AddGenericNode(params)
-		assertEqualAPIError(t, err, ServerResponse{409, fmt.Sprintf("Node with name %q already exists.", nodeName)})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{409, fmt.Sprintf("Node with name %q already exists.", nodeName)})
 		if !assert.Nil(t, res) {
-			removeNodes(t, res.Payload.Generic.NodeID)
+			pmmapitests.RemoveNodes(t, res.Payload.Generic.NodeID)
 		}
 	})
 
@@ -146,9 +146,9 @@ func TestGenericNode(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Nodes.AddGenericNode(params)
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field NodeName: value '' must not be an empty string"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field NodeName: value '' must not be an empty string"})
 		if !assert.Nil(t, res) {
-			removeNodes(t, res.Payload.Generic.NodeID)
+			pmmapitests.RemoveNodes(t, res.Payload.Generic.NodeID)
 		}
 	})
 }
@@ -171,7 +171,7 @@ func TestContainerNode(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, res.Payload.Container)
 		nodeID := res.Payload.Container.NodeID
-		defer removeNodes(t, nodeID)
+		defer pmmapitests.RemoveNodes(t, nodeID)
 
 		// Check node exists in DB.
 		getNodeRes, err := client.Default.Nodes.GetNode(&nodes.GetNodeParams{
@@ -194,9 +194,9 @@ func TestContainerNode(t *testing.T) {
 
 		// Check duplicates.
 		res, err = client.Default.Nodes.AddContainerNode(params)
-		assertEqualAPIError(t, err, ServerResponse{409, fmt.Sprintf("Node with name %q already exists.", nodeName)})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{409, fmt.Sprintf("Node with name %q already exists.", nodeName)})
 		if !assert.Nil(t, res) {
-			removeNodes(t, res.Payload.Container.NodeID)
+			pmmapitests.RemoveNodes(t, res.Payload.Container.NodeID)
 		}
 	})
 
@@ -208,9 +208,9 @@ func TestContainerNode(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Nodes.AddContainerNode(params)
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field NodeName: value '' must not be an empty string"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field NodeName: value '' must not be an empty string"})
 		if !assert.Nil(t, res) {
-			removeNodes(t, res.Payload.Container.NodeID)
+			pmmapitests.RemoveNodes(t, res.Payload.Container.NodeID)
 		}
 	})
 }
@@ -230,7 +230,7 @@ func TestRemoteNode(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, res.Payload.Remote)
 		nodeID := res.Payload.Remote.NodeID
-		defer removeNodes(t, nodeID)
+		defer pmmapitests.RemoveNodes(t, nodeID)
 
 		// Check node exists in DB.
 		getNodeRes, err := client.Default.Nodes.GetNode(&nodes.GetNodeParams{
@@ -250,9 +250,9 @@ func TestRemoteNode(t *testing.T) {
 
 		// Check duplicates.
 		res, err = client.Default.Nodes.AddRemoteNode(params)
-		assertEqualAPIError(t, err, ServerResponse{409, fmt.Sprintf("Node with name %q already exists.", nodeName)})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{409, fmt.Sprintf("Node with name %q already exists.", nodeName)})
 		if !assert.Nil(t, res) {
-			removeNodes(t, res.Payload.Remote.NodeID)
+			pmmapitests.RemoveNodes(t, res.Payload.Remote.NodeID)
 		}
 	})
 
@@ -264,9 +264,9 @@ func TestRemoteNode(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Nodes.AddRemoteNode(params)
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field NodeName: value '' must not be an empty string"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field NodeName: value '' must not be an empty string"})
 		if !assert.Nil(t, res) {
-			removeNodes(t, res.Payload.Remote.NodeID)
+			pmmapitests.RemoveNodes(t, res.Payload.Remote.NodeID)
 		}
 	})
 }
@@ -289,7 +289,7 @@ func TestRemoteAmazonRDSNode(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, res.Payload.RemoteAmazonRDS)
 		nodeID := res.Payload.RemoteAmazonRDS.NodeID
-		defer removeNodes(t, nodeID)
+		defer pmmapitests.RemoveNodes(t, nodeID)
 
 		// Check if the node saved in PMM-Managed.
 		getNodeRes, err := client.Default.Nodes.GetNode(&nodes.GetNodeParams{
@@ -311,9 +311,9 @@ func TestRemoteAmazonRDSNode(t *testing.T) {
 
 		// Check duplicates.
 		res, err = client.Default.Nodes.AddRemoteAmazonRDSNode(params)
-		assertEqualAPIError(t, err, ServerResponse{409, fmt.Sprintf("Node with name %q already exists.", nodeName)})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{409, fmt.Sprintf("Node with name %q already exists.", nodeName)})
 		if !assert.Nil(t, res) {
-			removeNodes(t, res.Payload.RemoteAmazonRDS.NodeID)
+			pmmapitests.RemoveNodes(t, res.Payload.RemoteAmazonRDS.NodeID)
 		}
 	})
 
@@ -327,9 +327,9 @@ func TestRemoteAmazonRDSNode(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Nodes.AddRemoteAmazonRDSNode(params)
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field NodeName: value '' must not be an empty string"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field NodeName: value '' must not be an empty string"})
 		if !assert.Nil(t, res) {
-			removeNodes(t, res.Payload.RemoteAmazonRDS.NodeID)
+			pmmapitests.RemoveNodes(t, res.Payload.RemoteAmazonRDS.NodeID)
 		}
 	})
 
@@ -344,9 +344,9 @@ func TestRemoteAmazonRDSNode(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Nodes.AddRemoteAmazonRDSNode(params)
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field Instance: value '' must not be an empty string"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field Instance: value '' must not be an empty string"})
 		if !assert.Nil(t, res) {
-			removeNodes(t, res.Payload.RemoteAmazonRDS.NodeID)
+			pmmapitests.RemoveNodes(t, res.Payload.RemoteAmazonRDS.NodeID)
 		}
 	})
 
@@ -361,9 +361,9 @@ func TestRemoteAmazonRDSNode(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Nodes.AddRemoteAmazonRDSNode(params)
-		assertEqualAPIError(t, err, ServerResponse{400, "invalid field Region: value '' must not be an empty string"})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field Region: value '' must not be an empty string"})
 		if !assert.Nil(t, res) {
-			removeNodes(t, res.Payload.RemoteAmazonRDS.NodeID)
+			pmmapitests.RemoveNodes(t, res.Payload.RemoteAmazonRDS.NodeID)
 		}
 	})
 }

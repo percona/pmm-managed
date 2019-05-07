@@ -2,6 +2,14 @@
 
 
 [[projects]]
+  digest = "1:5cf6e9d01a446e38eb9280981d77db685301e7b040e294de9255f7a0c2559990"
+  name = "github.com/AlekSi/pointer"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "08a25bac605b3fcb6cc27f3917b2c2c87451963d"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:0a111edd8693fd977f42a0c4f199a0efb13c20aec9da99ad8830c7bb6a87e8d6"
   name = "github.com/PuerkitoBio/purell"
   packages = ["."]
@@ -166,16 +174,22 @@
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:1989cbc237ec0b892d76718f2e11f946c901552a048f36220661c588aefe7690"
+  digest = "1:b0cc9e4285a1e11e861a1860883622aa8a531977284ee69e23fd47e004f2d09f"
   name = "github.com/percona/pmm"
   packages = [
     "api/inventorypb/json/client",
     "api/inventorypb/json/client/agents",
     "api/inventorypb/json/client/nodes",
     "api/inventorypb/json/client/services",
+    "api/managementpb/json/client",
+    "api/managementpb/json/client/mongo_db",
+    "api/managementpb/json/client/my_sql",
+    "api/managementpb/json/client/node",
+    "api/managementpb/json/client/postgre_sql",
+    "api/managementpb/json/client/service",
   ]
   pruneopts = "NUT"
-  revision = "73e7f165a827d770df52859aade7ae675a7266d2"
+  revision = "22797528f20340cce8100de87950a245568b3803"
 
 [[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
@@ -256,12 +270,19 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/AlekSi/pointer",
     "github.com/go-openapi/runtime",
     "github.com/go-openapi/runtime/client",
     "github.com/percona/pmm/api/inventorypb/json/client",
     "github.com/percona/pmm/api/inventorypb/json/client/agents",
     "github.com/percona/pmm/api/inventorypb/json/client/nodes",
     "github.com/percona/pmm/api/inventorypb/json/client/services",
+    "github.com/percona/pmm/api/managementpb/json/client",
+    "github.com/percona/pmm/api/managementpb/json/client/mongo_db",
+    "github.com/percona/pmm/api/managementpb/json/client/my_sql",
+    "github.com/percona/pmm/api/managementpb/json/client/node",
+    "github.com/percona/pmm/api/managementpb/json/client/postgre_sql",
+    "github.com/percona/pmm/api/managementpb/json/client/service",
     "github.com/sirupsen/logrus",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
