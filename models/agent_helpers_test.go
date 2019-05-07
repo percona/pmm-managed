@@ -23,6 +23,8 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
@@ -51,13 +53,13 @@ func TestAgentHelpers(t *testing.T) {
 			&models.Node{
 				NodeID:   "N1",
 				NodeType: models.GenericNodeType,
-				NodeName: "N1 name",
+				NodeName: "Node with Service",
 			},
 
 			&models.Service{
 				ServiceID:   "S1",
 				ServiceType: models.MySQLServiceType,
-				ServiceName: "S1 name",
+				ServiceName: "Service on N1",
 				NodeID:      "N1",
 			},
 
@@ -104,16 +106,14 @@ func TestAgentHelpers(t *testing.T) {
 
 		agents, err := models.AgentsForNode(q, "N1")
 		require.NoError(t, err)
-		expected := []*models.Agent{
-			{
-				AgentID:      "A3",
-				AgentType:    models.NodeExporterType,
-				PMMAgentID:   pointer.ToStringOrNil("A1"),
-				RunsOnNodeID: nil,
-				CreatedAt:    now,
-				UpdatedAt:    now,
-			},
-		}
+		expected := []*models.Agent{{
+			AgentID:      "A3",
+			AgentType:    models.NodeExporterType,
+			PMMAgentID:   pointer.ToStringOrNil("A1"),
+			RunsOnNodeID: nil,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		}}
 		assert.Equal(t, expected, agents)
 	})
 
@@ -123,24 +123,21 @@ func TestAgentHelpers(t *testing.T) {
 
 		agents, err := models.AgentsRunningByPMMAgent(q, "A1")
 		require.NoError(t, err)
-		expected := []*models.Agent{
-			{
-				AgentID:      "A2",
-				AgentType:    models.MySQLdExporterType,
-				PMMAgentID:   pointer.ToStringOrNil("A1"),
-				RunsOnNodeID: nil,
-				CreatedAt:    now,
-				UpdatedAt:    now,
-			},
-			{
-				AgentID:      "A3",
-				AgentType:    models.NodeExporterType,
-				PMMAgentID:   pointer.ToStringOrNil("A1"),
-				RunsOnNodeID: nil,
-				CreatedAt:    now,
-				UpdatedAt:    now,
-			},
-		}
+		expected := []*models.Agent{{
+			AgentID:      "A2",
+			AgentType:    models.MySQLdExporterType,
+			PMMAgentID:   pointer.ToStringOrNil("A1"),
+			RunsOnNodeID: nil,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		}, {
+			AgentID:      "A3",
+			AgentType:    models.NodeExporterType,
+			PMMAgentID:   pointer.ToStringOrNil("A1"),
+			RunsOnNodeID: nil,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		}}
 		assert.Equal(t, expected, agents)
 	})
 
@@ -150,16 +147,14 @@ func TestAgentHelpers(t *testing.T) {
 
 		agents, err := models.AgentsForService(q, "S1")
 		require.NoError(t, err)
-		expected := []*models.Agent{
-			{
-				AgentID:      "A2",
-				AgentType:    models.MySQLdExporterType,
-				PMMAgentID:   pointer.ToStringOrNil("A1"),
-				RunsOnNodeID: nil,
-				CreatedAt:    now,
-				UpdatedAt:    now,
-			},
-		}
+		expected := []*models.Agent{{
+			AgentID:      "A2",
+			AgentType:    models.MySQLdExporterType,
+			PMMAgentID:   pointer.ToStringOrNil("A1"),
+			RunsOnNodeID: nil,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		}}
 		assert.Equal(t, expected, agents)
 	})
 
@@ -179,5 +174,34 @@ func TestAgentHelpers(t *testing.T) {
 		ids, err := models.PMMAgentsForChangedService(q, "S1")
 		require.NoError(t, err)
 		assert.Equal(t, []string{"A1"}, ids)
+	})
+
+	t.Run("RemoveAgent", func(t *testing.T) {
+		q, teardown := setup(t)
+		defer teardown(t)
+
+		agent, err := models.RemoveAgent(q, "")
+		assert.Nil(t, agent)
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Empty Agent ID.`), err)
+
+		agent, err = models.RemoveAgent(q, "A0")
+		assert.Nil(t, agent)
+		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "A0" not found.`), err)
+
+		agent, err = models.RemoveAgent(q, "A1")
+		assert.Nil(t, agent)
+		tests.AssertGRPCError(t, status.New(codes.FailedPrecondition, `pmm-agent with ID "A1" has agents.`), err)
+
+		agent, err = models.RemoveAgent(q, "A2")
+		expected := &models.Agent{
+			AgentID:      "A2",
+			AgentType:    models.MySQLdExporterType,
+			PMMAgentID:   pointer.ToStringOrNil("A1"),
+			RunsOnNodeID: nil,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		}
+		assert.Equal(t, expected, agent)
+		assert.NoError(t, err)
 	})
 }

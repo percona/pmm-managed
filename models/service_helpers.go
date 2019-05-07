@@ -205,5 +205,5 @@ func RemoveService(q *reform.Querier, id string) error {
 		return status.Errorf(codes.FailedPrecondition, "Service with ID %q has agents.", id)
 	}
 
-	return q.Delete(s)
+	return errors.Wrap(q.Delete(s), "failed to delete Service")
 }

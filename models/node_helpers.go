@@ -271,5 +271,5 @@ func RemoveNode(q *reform.Querier, id string) error {
 		return status.Errorf(codes.FailedPrecondition, "Node with ID %q has services.", id)
 	}
 
-	return q.Delete(n)
+	return errors.Wrap(q.Delete(n), "failed to delete Node")
 }
