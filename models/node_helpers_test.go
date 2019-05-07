@@ -103,6 +103,22 @@ func TestNodeHelpers(t *testing.T) {
 		return
 	}
 
+	t.Run("FindNodesForAgentID", func(t *testing.T) {
+		q, teardown := setup(t)
+		defer teardown(t)
+
+		nodes, err := models.FindNodesForAgentID(q, "A2")
+		require.NoError(t, err)
+		expected := []*models.Node{{
+			NodeID:    "N3",
+			NodeType:  models.GenericNodeType,
+			NodeName:  "Node with node_exporter",
+			CreatedAt: now,
+			UpdatedAt: now,
+		}}
+		assert.Equal(t, expected, nodes)
+	})
+
 	t.Run("RemoveNode", func(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)

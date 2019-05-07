@@ -30,110 +30,73 @@ import (
 	"github.com/percona/pmm-managed/utils/tests"
 )
 
-func TestModels(t *testing.T) {
+func TestAgentHelpers(t *testing.T) {
+	now, origNowF := models.Now(), models.Now
+	models.Now = func() time.Time {
+		return now
+	}
 	sqlDB := tests.OpenTestDB(t)
 	defer func() {
+		models.Now = origNowF
 		require.NoError(t, sqlDB.Close())
 	}()
 
-	now := models.Now()
-	origNow := models.Now
-
 	setup := func(t *testing.T) (q *reform.Querier, teardown func(t *testing.T)) {
-		models.Now = func() time.Time {
-			return now
-		}
-
 		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 		tx, err := db.Begin()
 		require.NoError(t, err)
 		q = tx.Querier
 
-		require.NoError(t, q.Insert(&models.Node{
-			NodeID:   "N1",
-			NodeType: models.GenericNodeType,
-			NodeName: "N1 name",
-		}))
-
-		require.NoError(t, q.Insert(&models.Service{
-			ServiceID:   "S1",
-			ServiceType: models.MySQLServiceType,
-			ServiceName: "S1 name",
-			NodeID:      "N1",
-		}))
-
-		require.NoError(t, q.Insert(&models.Agent{
-			AgentID:      "A1",
-			AgentType:    models.PMMAgentType,
-			RunsOnNodeID: pointer.ToStringOrNil("N1"),
-		}))
-		require.NoError(t, q.Insert(&models.Agent{
-			AgentID:      "A2",
-			AgentType:    models.MySQLdExporterType,
-			PMMAgentID:   pointer.ToStringOrNil("A1"),
-			RunsOnNodeID: nil,
-		}))
-		require.NoError(t, q.Insert(&models.Agent{
-			AgentID:      "A3",
-			AgentType:    models.NodeExporterType,
-			PMMAgentID:   pointer.ToStringOrNil("A1"),
-			RunsOnNodeID: nil,
-		}))
-
-		require.NoError(t, q.Insert(&models.AgentNode{
-			AgentID: "A3",
-			NodeID:  "N1",
-		}))
-
-		require.NoError(t, q.Insert(&models.AgentService{
-			AgentID:   "A2",
-			ServiceID: "S1",
-		}))
-
-		teardown = func(t *testing.T) {
-			require.NoError(t, tx.Rollback())
-
-			models.Now = origNow
-		}
-		return
-	}
-
-	t.Run("FindNodesForAgentID", func(t *testing.T) {
-		q, teardown := setup(t)
-		defer teardown(t)
-
-		nodes, err := models.FindNodesForAgentID(q, "A3")
-		require.NoError(t, err)
-		expected := []*models.Node{
-			{
-				NodeID:    "N1",
-				NodeType:  models.GenericNodeType,
-				NodeName:  "N1 name",
-				CreatedAt: now,
-				UpdatedAt: now,
+		for _, str := range []reform.Struct{
+			&models.Node{
+				NodeID:   "N1",
+				NodeType: models.GenericNodeType,
+				NodeName: "N1 name",
 			},
-		}
-		assert.Equal(t, expected, nodes)
-	})
 
-	t.Run("ServicesForAgent", func(t *testing.T) {
-		q, teardown := setup(t)
-		defer teardown(t)
-
-		services, err := models.ServicesForAgent(q, "A2")
-		require.NoError(t, err)
-		expected := []*models.Service{
-			{
+			&models.Service{
 				ServiceID:   "S1",
 				ServiceType: models.MySQLServiceType,
 				ServiceName: "S1 name",
 				NodeID:      "N1",
-				CreatedAt:   now,
-				UpdatedAt:   now,
 			},
+
+			&models.Agent{
+				AgentID:      "A1",
+				AgentType:    models.PMMAgentType,
+				RunsOnNodeID: pointer.ToString("N1"),
+			},
+			&models.Agent{
+				AgentID:      "A2",
+				AgentType:    models.MySQLdExporterType,
+				PMMAgentID:   pointer.ToString("A1"),
+				RunsOnNodeID: nil,
+			},
+			&models.Agent{
+				AgentID:      "A3",
+				AgentType:    models.NodeExporterType,
+				PMMAgentID:   pointer.ToString("A1"),
+				RunsOnNodeID: nil,
+			},
+
+			&models.AgentNode{
+				AgentID: "A3",
+				NodeID:  "N1",
+			},
+
+			&models.AgentService{
+				AgentID:   "A2",
+				ServiceID: "S1",
+			},
+		} {
+			require.NoError(t, q.Insert(str))
 		}
-		assert.Equal(t, expected, services)
-	})
+
+		teardown = func(t *testing.T) {
+			require.NoError(t, tx.Rollback())
+		}
+		return
+	}
 
 	t.Run("AgentsForNode", func(t *testing.T) {
 		q, teardown := setup(t)
