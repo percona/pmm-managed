@@ -196,50 +196,6 @@ func CreateNode(q *reform.Querier, nodeType NodeType, params *CreateNodeParams) 
 	return node, nil
 }
 
-// UpdateNodeParams contains parameters for updating Nodes.
-type UpdateNodeParams struct {
-	Address            string
-	MachineID          string
-	RemoveMachineID    bool
-	CustomLabels       map[string]string
-	RemoveCustomLabels bool
-}
-
-// UpdateNode updates Node.
-func UpdateNode(q *reform.Querier, nodeID string, params *UpdateNodeParams) (*Node, error) {
-	node, err := FindNodeByID(q, nodeID)
-	if err != nil {
-		return nil, err
-	}
-
-	if params.Address != "" {
-		node.Address = params.Address
-	}
-
-	switch {
-	case params.MachineID != "":
-		node.MachineID = &params.MachineID
-	case params.RemoveMachineID:
-		node.MachineID = nil
-	}
-
-	switch {
-	case len(params.CustomLabels) != 0:
-		err = node.SetCustomLabels(params.CustomLabels)
-	case params.RemoveCustomLabels:
-		err = node.SetCustomLabels(nil)
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	if err = q.Update(node); err != nil {
-		return nil, err
-	}
-
-	return node, nil
-}
-
 // RemoveNode removes single Node.
 func RemoveNode(q *reform.Querier, id string) error {
 	n, err := FindNodeByID(q, id)

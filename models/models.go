@@ -22,7 +22,6 @@
 //  * FindXXXByID;
 //  * other finder (e.g. FindNodesForAgent);
 //  * CreateXXX;
-//  * UpdateXXX;
 //  * RemoveXXX.
 package models
 

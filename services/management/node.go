@@ -62,15 +62,7 @@ func (s *NodeService) Register(ctx context.Context, req *managementpb.RegisterNo
 		node, err := s.findNodeByName(tx.Querier, req.NodeName)
 		switch err {
 		case nil:
-			params := &models.UpdateNodeParams{
-				Address:      req.Address,
-				MachineID:    req.MachineId,
-				CustomLabels: req.CustomLabels,
-			}
-			node, err = models.UpdateNode(tx.Querier, node.NodeID, params)
-			if err != nil {
-				return err
-			}
+			return status.Errorf(codes.AlreadyExists, "Node with name %q already exists.", req.NodeName)
 		case errNodeNotFound:
 			node, err = s.createNewNode(tx.Querier, req)
 			if err != nil {
