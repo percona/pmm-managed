@@ -205,7 +205,10 @@ func (c *Channel) runReceiver() {
 		case *agentpb.AgentMessage_ActionCancelResponse:
 			c.publish(msg.Id, p.ActionCancelResponse)
 		case *agentpb.AgentMessage_ActionResult:
-			// TODO: PMM-3978: Doing something with ActionResult. For example push it to UI...
+			c.requests <- &AgentRequest{
+				ID:      msg.Id,
+				Payload: p.ActionResult,
+			}
 
 		case nil:
 			c.close(errors.Errorf("failed to handle received message %s", msg))

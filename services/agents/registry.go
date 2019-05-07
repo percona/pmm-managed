@@ -186,6 +186,10 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 					Payload: new(agentpb.QANCollectResponse),
 				})
 
+			case *agentpb.ActionResult:
+				// TODO: PMM-3978: Doing something with ActionResult. For example push it to UI...
+				l.Debug(p)
+
 			case nil:
 				l.Warnf("Unexpected request: %v.", req)
 				disconnectReason = "unimplemented"
