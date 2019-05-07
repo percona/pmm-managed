@@ -35,7 +35,8 @@ const (
 // Channel encapsulates two-way communication channel between pmm-managed and pmm-agent.
 //
 // All exported methods are thread-safe.
-type Channel struct { //nolint:maligned
+type Channel struct {
+	//nolint:maligned
 	s       agentpb.Agent_ConnectServer
 	metrics *sharedChannelMetrics
 
@@ -161,8 +162,13 @@ func (c *Channel) runReceiver() {
 			c.requests <- msg
 
 		// responses
-		case *agentpb.AgentMessage_Pong, *agentpb.AgentMessage_SetState:
+		case *agentpb.AgentMessage_Pong,
+			*agentpb.AgentMessage_SetState,
+			*agentpb.AgentMessage_ActionRunResponse,
+			*agentpb.AgentMessage_ActionCancelResponse:
 			c.publish(msg.Id, msg.Payload)
+		case *agentpb.AgentMessage_ActionResult:
+			// TODO: PMM-3978: Doing something with ActionResult. For example push it to UI...
 
 		default:
 			c.close(errors.Errorf("failed to handle received message %s", msg))

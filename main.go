@@ -171,6 +171,7 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	managementpb.RegisterNodeServer(gRPCServer, managementgrpc.NewManagementNodeServer(nodeSvc))
 	managementpb.RegisterServiceServer(gRPCServer, managementgrpc.NewManagementServiceServer(serviceSvc))
 	managementpb.RegisterMongoDBServer(gRPCServer, managementgrpc.NewManagementMongoDBServer(mongodbSvc))
+	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewManagementActionsServer(deps.agentsRegistry))
 
 	if *debugF {
 		l.Debug("Reflection and channelz are enabled.")
@@ -228,6 +229,7 @@ func runJSONServer(ctx context.Context, logs *logs.Logs) {
 		managementpb.RegisterNodeHandlerFromEndpoint,
 		managementpb.RegisterServiceHandlerFromEndpoint,
 		managementpb.RegisterMongoDBHandlerFromEndpoint,
+		managementpb.RegisterActionsHandlerFromEndpoint,
 	} {
 		if err := r(ctx, proxyMux, *gRPCAddrF, opts); err != nil {
 			l.Panic(err)

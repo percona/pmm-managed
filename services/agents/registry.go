@@ -321,6 +321,38 @@ func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRe
 	return r.prometheus.UpdateConfiguration(ctx)
 }
 
+func (r *Registry) RunAction(ctx context.Context, pmmAgentID, actionName string) {
+	l := logger.Get(ctx)
+
+	r.rw.RLock()
+	agent := r.agents[pmmAgentID]
+	r.rw.RUnlock()
+
+	res := agent.channel.SendRequest(&agentpb.ServerMessage_ActionRunRequest{
+		ActionRunRequest: &agentpb.ActionRunRequest{
+			Name: actionName,
+		},
+	})
+
+	l.Infof("ActionRun response: %+v.", res)
+}
+
+func (r *Registry) CancelAction(ctx context.Context, pmmAgentID, actionID string) {
+	l := logger.Get(ctx)
+
+	r.rw.RLock()
+	agent := r.agents[pmmAgentID]
+	r.rw.RUnlock()
+
+	res := agent.channel.SendRequest(&agentpb.ServerMessage_ActionCancelRequest{
+		ActionCancelRequest: &agentpb.ActionCancelRequest{
+			Id: actionID,
+		},
+	})
+
+	l.Infof("ActionCancel response: %+v.", res)
+}
+
 // SendSetStateRequest sends SetStateRequest to pmm-agent with given ID.
 func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 	l := logger.Get(ctx)
