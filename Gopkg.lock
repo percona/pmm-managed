@@ -174,7 +174,7 @@
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:b0cc9e4285a1e11e861a1860883622aa8a531977284ee69e23fd47e004f2d09f"
+  digest = "1:a88549d39d17352c4954b7d0f5e6fbe6e95ac3efc264f2970a7d78c5b9e5d1e7"
   name = "github.com/percona/pmm"
   packages = [
     "api/inventorypb/json/client",
@@ -189,7 +189,7 @@
     "api/managementpb/json/client/service",
   ]
   pruneopts = "NUT"
-  revision = "22797528f20340cce8100de87950a245568b3803"
+  revision = "143a173ad3b75a036c4e466017a8d132db826553"
 
 [[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
@@ -220,28 +220,30 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:82491a0790e0945762096c875e2e14932a5d7b37a7ce3e83ef3b50437a71e09a"
+  digest = "1:15a159ca3e34c429f800dd822cbb37707e98552c9523b8d07fdd244dba62f04b"
   name = "golang.org/x/net"
   packages = ["idna"]
   pruneopts = "NUT"
-  revision = "afa5a82059c6356159f699d81beff22a81842231"
+  revision = "f4e77d36d62c17c2336347bb2670ddbd02d092b7"
 
 [[projects]]
   branch = "master"
-  digest = "1:f632c225ef300cb47bb7363bc1006ca57601af35f03b8fe41d03ed67b581c4fc"
+  digest = "1:d6494258c58901a31c7a82b491a170e9f10c3111dcacaa9128df54ac07b9510b"
   name = "golang.org/x/sys"
   packages = ["unix"]
   pruneopts = "NUT"
-  revision = "e8e3143a4f4a00f1fafef0dd82ba78223281b01b"
+  revision = "2953c62de483abe29031e197e72d3b7061f65f91"
 
 [[projects]]
-  digest = "1:e33513a825fcd765e97b5de639a2f7547542d1a8245df0cef18e1fd390b778a9"
+  digest = "1:66a2f252a58b4fbbad0e4e180e1d85a83c222b6bce09c3dcdef3dc87c72eda7c"
   name = "golang.org/x/text"
   packages = [
     "collate",
     "collate/build",
     "internal/colltab",
     "internal/gen",
+    "internal/language",
+    "internal/language/compact",
     "internal/tag",
     "internal/triegen",
     "internal/ucd",
@@ -255,8 +257,8 @@
     "width",
   ]
   pruneopts = "NUT"
-  revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
-  version = "v0.3.0"
+  revision = "342b2e1fbaa52c93f31447ad2c6abc048c63e475"
+  version = "v0.3.2"
 
 [[projects]]
   digest = "1:18108594151654e9e696b27b181b953f9a90b16bf14d253dd1b397b025a1487f"
