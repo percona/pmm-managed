@@ -55,19 +55,6 @@ func checkServiceUniqueName(q *reform.Querier, name string) error {
 	}
 }
 
-func checkServiceAbsenceOfAgents(q *reform.Querier, serviceID string) error {
-	structs, err := q.FindAllFrom(AgentServiceView, "service_id", serviceID)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	switch len(structs) {
-	case 0:
-		return nil
-	default:
-		return status.Errorf(codes.FailedPrecondition, "Service with ID %q has agents.", serviceID)
-	}
-}
-
 // FindAllServices returns all Services.
 func FindAllServices(q *reform.Querier) ([]*Service, error) {
 	structs, err := q.SelectAllFrom(ServiceTable, "ORDER BY service_id")
@@ -205,12 +192,18 @@ func AddNewService(q *reform.Querier, serviceType ServiceType, params *AddDBMSSe
 
 // RemoveService removes single Service.
 func RemoveService(q *reform.Querier, id string) error {
-	if err := checkServiceAbsenceOfAgents(q, id); err != nil {
+	s, err := FindServiceByID(q, id)
+	if err != nil {
 		return err
 	}
-	err := q.Delete(&Service{ServiceID: id})
-	if err == reform.ErrNoRows {
-		return status.Errorf(codes.NotFound, "Service with ID %q not found.", id)
+
+	agents, err := q.FindAllFrom(AgentServiceView, "service_id", id)
+	if err != nil {
+		return errors.Wrap(err, "failed to select Agent IDs")
 	}
-	return nil
+	if len(agents) != 0 {
+		return status.Errorf(codes.FailedPrecondition, "Service with ID %q has agents.", id)
+	}
+
+	return q.Delete(s)
 }

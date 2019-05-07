@@ -53,7 +53,7 @@ func TestServiceHelpers(t *testing.T) {
 			&models.Node{
 				NodeID:   "N1",
 				NodeType: models.GenericNodeType,
-				NodeName: "N1 name",
+				NodeName: "Node",
 			},
 
 			&models.Service{
@@ -72,12 +72,12 @@ func TestServiceHelpers(t *testing.T) {
 			&models.Agent{
 				AgentID:      "A1",
 				AgentType:    models.PMMAgentType,
-				RunsOnNodeID: pointer.ToStringOrNil("N1"),
+				RunsOnNodeID: pointer.ToString("N1"),
 			},
 			&models.Agent{
 				AgentID:    "A2",
 				AgentType:  models.MySQLdExporterType,
-				PMMAgentID: pointer.ToStringOrNil("A1"),
+				PMMAgentID: pointer.ToString("A1"),
 			},
 
 			&models.AgentService{
