@@ -48,7 +48,7 @@ func (m *StateChangedRequest) AgentMessageRequestPayload() isAgentMessage_Payloa
 func (m *QANCollectRequest) AgentMessageRequestPayload() isAgentMessage_Payload {
 	return &AgentMessage_QanCollect{QanCollect: m}
 }
-func (m *ActionResult) AgentMessageRequestPayload() isAgentMessage_Payload {
+func (m *ActionResultRequest) AgentMessageRequestPayload() isAgentMessage_Payload {
 	return &AgentMessage_ActionResult{ActionResult: m}
 }
 
@@ -59,11 +59,12 @@ func (m *Pong) AgentMessageResponsePayload() isAgentMessage_Payload {
 func (m *SetStateResponse) AgentMessageResponsePayload() isAgentMessage_Payload {
 	return &AgentMessage_SetState{SetState: m}
 }
-func (m *ActionRunResponse) AgentMessageResponsePayload() isAgentMessage_Payload {
-	return &AgentMessage_ActionRunResponse{ActionRunResponse: m}
+
+func (m *StartActionResponse) AgentMessageResponsePayload() isAgentMessage_Payload {
+	return &AgentMessage_StartAction{StartAction: m}
 }
-func (m *ActionCancelResponse) AgentMessageResponsePayload() isAgentMessage_Payload {
-	return &AgentMessage_ActionCancelResponse{ActionCancelResponse: m}
+func (m *StopActionResponse) AgentMessageResponsePayload() isAgentMessage_Payload {
+	return &AgentMessage_StopAction{StopAction: m}
 }
 
 // ServerMessage response payloads
@@ -76,6 +77,9 @@ func (m *StateChangedResponse) ServerMessageResponsePayload() isServerMessage_Pa
 func (m *QANCollectResponse) ServerMessageResponsePayload() isServerMessage_Payload {
 	return &ServerMessage_QanCollect{QanCollect: m}
 }
+func (m *ActionResultResponse) ServerMessageResponsePayload() isServerMessage_Payload {
+	return &ServerMessage_ActionResult{ActionResult: m}
+}
 
 // ServerMessage request payloads
 func (m *Ping) ServerMessageRequestPayload() isServerMessage_Payload {
@@ -84,11 +88,12 @@ func (m *Ping) ServerMessageRequestPayload() isServerMessage_Payload {
 func (m *SetStateRequest) ServerMessageRequestPayload() isServerMessage_Payload {
 	return &ServerMessage_SetState{SetState: m}
 }
-func (m *ActionRunRequest) ServerMessageRequestPayload() isServerMessage_Payload {
-	return &ServerMessage_ActionRunRequest{ActionRunRequest: m}
+
+func (m *StartActionRequest) ServerMessageRequestPayload() isServerMessage_Payload {
+	return &ServerMessage_StartAction{StartAction: m}
 }
-func (m *ActionCancelRequest) ServerMessageRequestPayload() isServerMessage_Payload {
-	return &ServerMessage_ActionCancelRequest{ActionCancelRequest: m}
+func (m *StopActionRequest) ServerMessageRequestPayload() isServerMessage_Payload {
+	return &ServerMessage_StopAction{StopAction: m}
 }
 
 func (*Ping) sealed()                   {}
@@ -99,11 +104,12 @@ func (m *SetStateResponse) sealed()     {}
 func (m *StateChangedResponse) sealed() {}
 func (m *QANCollectResponse) sealed()   {}
 func (m *SetStateRequest) sealed()      {}
-func (m *ActionRunRequest) sealed()     {}
-func (m *ActionCancelRequest) sealed()  {}
-func (m *ActionRunResponse) sealed()    {}
-func (m *ActionCancelResponse) sealed() {}
-func (m *ActionResult) sealed()         {}
+func (m *StartActionRequest) sealed()   {}
+func (m *StopActionRequest) sealed()    {}
+func (m *StartActionResponse) sealed()  {}
+func (m *StopActionResponse) sealed()   {}
+func (m *ActionResultRequest) sealed()  {}
+func (m *ActionResultResponse) sealed() {}
 
 // check interfaces
 var (
@@ -111,24 +117,25 @@ var (
 	_ AgentRequestPayload = (*Ping)(nil)
 	_ AgentRequestPayload = (*StateChangedRequest)(nil)
 	_ AgentRequestPayload = (*QANCollectRequest)(nil)
-	_ AgentRequestPayload = (*ActionResult)(nil)
+	_ AgentRequestPayload = (*ActionResultRequest)(nil)
 
 	// AgentMessage response payloads
 	_ AgentResponsePayload = (*Pong)(nil)
 	_ AgentResponsePayload = (*SetStateResponse)(nil)
-	_ AgentResponsePayload = (*ActionRunResponse)(nil)
-	_ AgentResponsePayload = (*ActionRunResponse)(nil)
+	_ AgentResponsePayload = (*StartActionResponse)(nil)
+	_ AgentResponsePayload = (*StopActionResponse)(nil)
 
 	// ServerMessage response payloads
 	_ ServerResponsePayload = (*Pong)(nil)
 	_ ServerResponsePayload = (*StateChangedResponse)(nil)
 	_ ServerResponsePayload = (*QANCollectResponse)(nil)
+	_ ServerResponsePayload = (*ActionResultResponse)(nil)
 
 	// ServerMessage request payloads
 	_ ServerRequestPayload = (*Ping)(nil)
 	_ ServerRequestPayload = (*SetStateRequest)(nil)
-	_ ServerRequestPayload = (*ActionRunRequest)(nil)
-	_ ServerRequestPayload = (*ActionCancelRequest)(nil)
+	_ ServerRequestPayload = (*StartActionRequest)(nil)
+	_ ServerRequestPayload = (*StopActionRequest)(nil)
 )
 
 //go-sumtype:decl AgentParams

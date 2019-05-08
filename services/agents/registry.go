@@ -186,9 +186,12 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 					Payload: new(agentpb.QANCollectResponse),
 				})
 
-			case *agentpb.ActionResult:
+			case *agentpb.ActionResultRequest:
 				// TODO: PMM-3978: Doing something with ActionResult. For example push it to UI...
-				l.Debug(p)
+				agent.channel.SendResponse(&channel.ServerResponse{
+					ID:      req.ID,
+					Payload: new(agentpb.ActionResultResponse),
+				})
 
 			case nil:
 				l.Warnf("Unexpected request: %v.", req)
@@ -325,14 +328,14 @@ func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRe
 }
 
 // RunAction runs PMM Action on the given client.
-func (r *Registry) RunAction(ctx context.Context, pmmAgentID, actionName string) {
+func (r *Registry) RunAction(ctx context.Context, pmmAgentID string, actionName agentpb.ActionName) {
 	l := logger.Get(ctx)
 
 	r.rw.RLock()
 	agent := r.agents[pmmAgentID]
 	r.rw.RUnlock()
 
-	res := agent.channel.SendRequest(&agentpb.ActionRunRequest{
+	res := agent.channel.SendRequest(&agentpb.StartActionRequest{
 		Name: actionName,
 	})
 
@@ -347,7 +350,7 @@ func (r *Registry) CancelAction(ctx context.Context, pmmAgentID, actionID string
 	agent := r.agents[pmmAgentID]
 	r.rw.RUnlock()
 
-	res := agent.channel.SendRequest(&agentpb.ActionCancelRequest{
+	res := agent.channel.SendRequest(&agentpb.StopActionRequest{
 		Id: actionID,
 	})
 

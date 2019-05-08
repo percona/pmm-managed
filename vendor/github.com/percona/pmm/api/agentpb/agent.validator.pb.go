@@ -61,20 +61,22 @@ func (this *SetStateRequest_BuiltinAgent) Validate() error {
 func (this *SetStateResponse) Validate() error {
 	return nil
 }
-func (this *ActionRunRequest) Validate() error {
-	// Validation of proto3 map<> fields is unsupported.
+func (this *StartActionRequest) Validate() error {
 	return nil
 }
-func (this *ActionRunResponse) Validate() error {
+func (this *StartActionResponse) Validate() error {
 	return nil
 }
-func (this *ActionCancelRequest) Validate() error {
+func (this *StopActionRequest) Validate() error {
 	return nil
 }
-func (this *ActionCancelResponse) Validate() error {
+func (this *StopActionResponse) Validate() error {
 	return nil
 }
-func (this *ActionResult) Validate() error {
+func (this *ActionResultRequest) Validate() error {
+	return nil
+}
+func (this *ActionResultResponse) Validate() error {
 	return nil
 }
 func (this *AgentMessage) Validate() error {
@@ -99,6 +101,13 @@ func (this *AgentMessage) Validate() error {
 			}
 		}
 	}
+	if oneOfNester, ok := this.GetPayload().(*AgentMessage_ActionResult); ok {
+		if oneOfNester.ActionResult != nil {
+			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.ActionResult); err != nil {
+				return github_com_mwitkow_go_proto_validators.FieldError("ActionResult", err)
+			}
+		}
+	}
 	if oneOfNester, ok := this.GetPayload().(*AgentMessage_Pong); ok {
 		if oneOfNester.Pong != nil {
 			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.Pong); err != nil {
@@ -113,24 +122,17 @@ func (this *AgentMessage) Validate() error {
 			}
 		}
 	}
-	if oneOfNester, ok := this.GetPayload().(*AgentMessage_ActionRunResponse); ok {
-		if oneOfNester.ActionRunResponse != nil {
-			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.ActionRunResponse); err != nil {
-				return github_com_mwitkow_go_proto_validators.FieldError("ActionRunResponse", err)
+	if oneOfNester, ok := this.GetPayload().(*AgentMessage_StartAction); ok {
+		if oneOfNester.StartAction != nil {
+			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.StartAction); err != nil {
+				return github_com_mwitkow_go_proto_validators.FieldError("StartAction", err)
 			}
 		}
 	}
-	if oneOfNester, ok := this.GetPayload().(*AgentMessage_ActionCancelResponse); ok {
-		if oneOfNester.ActionCancelResponse != nil {
-			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.ActionCancelResponse); err != nil {
-				return github_com_mwitkow_go_proto_validators.FieldError("ActionCancelResponse", err)
-			}
-		}
-	}
-	if oneOfNester, ok := this.GetPayload().(*AgentMessage_ActionResult); ok {
-		if oneOfNester.ActionResult != nil {
-			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.ActionResult); err != nil {
-				return github_com_mwitkow_go_proto_validators.FieldError("ActionResult", err)
+	if oneOfNester, ok := this.GetPayload().(*AgentMessage_StopAction); ok {
+		if oneOfNester.StopAction != nil {
+			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.StopAction); err != nil {
+				return github_com_mwitkow_go_proto_validators.FieldError("StopAction", err)
 			}
 		}
 	}
@@ -158,6 +160,13 @@ func (this *ServerMessage) Validate() error {
 			}
 		}
 	}
+	if oneOfNester, ok := this.GetPayload().(*ServerMessage_ActionResult); ok {
+		if oneOfNester.ActionResult != nil {
+			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.ActionResult); err != nil {
+				return github_com_mwitkow_go_proto_validators.FieldError("ActionResult", err)
+			}
+		}
+	}
 	if oneOfNester, ok := this.GetPayload().(*ServerMessage_Ping); ok {
 		if oneOfNester.Ping != nil {
 			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.Ping); err != nil {
@@ -172,17 +181,17 @@ func (this *ServerMessage) Validate() error {
 			}
 		}
 	}
-	if oneOfNester, ok := this.GetPayload().(*ServerMessage_ActionRunRequest); ok {
-		if oneOfNester.ActionRunRequest != nil {
-			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.ActionRunRequest); err != nil {
-				return github_com_mwitkow_go_proto_validators.FieldError("ActionRunRequest", err)
+	if oneOfNester, ok := this.GetPayload().(*ServerMessage_StartAction); ok {
+		if oneOfNester.StartAction != nil {
+			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.StartAction); err != nil {
+				return github_com_mwitkow_go_proto_validators.FieldError("StartAction", err)
 			}
 		}
 	}
-	if oneOfNester, ok := this.GetPayload().(*ServerMessage_ActionCancelRequest); ok {
-		if oneOfNester.ActionCancelRequest != nil {
-			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.ActionCancelRequest); err != nil {
-				return github_com_mwitkow_go_proto_validators.FieldError("ActionCancelRequest", err)
+	if oneOfNester, ok := this.GetPayload().(*ServerMessage_StopAction); ok {
+		if oneOfNester.StopAction != nil {
+			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.StopAction); err != nil {
+				return github_com_mwitkow_go_proto_validators.FieldError("StopAction", err)
 			}
 		}
 	}

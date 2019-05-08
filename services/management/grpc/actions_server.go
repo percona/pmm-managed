@@ -19,11 +19,12 @@ package grpc
 import (
 	"context"
 
+	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/managementpb"
 )
 
 type actionsSender interface {
-	RunAction(ctx context.Context, pmmAgentID, actionName string)
+	RunAction(ctx context.Context, pmmAgentID string, actionName agentpb.ActionName)
 	CancelAction(ctx context.Context, pmmAgentID, actionID string)
 }
 
@@ -39,7 +40,7 @@ func NewManagementActionsServer(s actionsSender) managementpb.ActionsServer {
 
 // RunAction runs an Action.
 func (s *actionsServer) RunAction(ctx context.Context, req *managementpb.RunActionRequest) (*managementpb.RunActionResponse, error) {
-	s.actionsSender.RunAction(ctx, req.PmmAgentId, req.ActionName)
+	s.actionsSender.RunAction(ctx, req.PmmAgentId, agentpb.ActionName_PT_SUMMARY)
 	return nil, nil
 }
 
