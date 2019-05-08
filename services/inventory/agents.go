@@ -255,20 +255,6 @@ func (as *AgentsService) ChangeMySQLdExporter(ctx context.Context, req *inventor
 	return res, nil
 }
 
-/*
-// SetDisabled enables or disables Agent by ID.
-func (as *AgentsService) SetDisabled(ctx context.Context, id string, disabled bool) error {
-	row, _, err := as.get(ctx, id)
-	if err != nil {
-		return err
-	}
-
-	row.Disabled = disabled
-	err = as.q.Update(row)
-	return errors.WithStack(err)
-}
-*/
-
 // AddMongoDBExporter inserts mongodb_exporter Agent with given parameters.
 func (as *AgentsService) AddMongoDBExporter(ctx context.Context, req *inventorypb.AddMongoDBExporterRequest) (*inventorypb.MongoDBExporter, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
