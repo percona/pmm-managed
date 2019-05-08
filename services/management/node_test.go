@@ -14,23 +14,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package models contains generated Reform records and helpers.
-//
-// Common order of helpers:
-//  * unexported validators (checkXXX);
-//  * FindAllXXX;
-//  * FindXXXByID;
-//  * other finder (e.g. FindNodesForAgent);
-//  * CreateXXX;
-//  * ChangeXXX;
-//  * RemoveXXX.
-package models
+package management
 
 import (
-	"time"
+	"testing"
 )
 
-// Now returns current time with database precision.
-var Now = func() time.Time {
-	return time.Now().Truncate(time.Microsecond).UTC()
+func TestNode(t *testing.T) {
 }

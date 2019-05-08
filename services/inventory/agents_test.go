@@ -89,8 +89,10 @@ func TestAgents(t *testing.T) {
 
 		actualNodeExporter, err = as.ChangeNodeExporter(ctx, &inventorypb.ChangeNodeExporterRequest{
 			AgentId: "/agent_id/00000000-0000-4000-8000-000000000002",
-			ChangeDisabled: &inventorypb.ChangeNodeExporterRequest_Disabled{
-				Disabled: true,
+			Common: &inventorypb.ChangeCommonAgentParams{
+				ChangeDisabled: &inventorypb.ChangeCommonAgentParams_Disabled{
+					Disabled: true,
+				},
 			},
 		})
 		require.NoError(t, err)

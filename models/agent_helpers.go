@@ -130,41 +130,6 @@ func AgentAddNodeExporter(q *reform.Querier, pmmAgentID string, customLabels map
 	return row, nil
 }
 
-// ChangeCommonExporterParams describe common change params for exporters.
-type ChangeCommonExporterParams struct {
-	AgentID            string
-	CustomLabels       map[string]string
-	Disabled           bool
-	RemoveCustomLabels bool
-}
-
-// AgentChangeExporter changes common params for given agent.
-func AgentChangeExporter(q *reform.Querier, params *ChangeCommonExporterParams) (*Agent, error) {
-	row, err := AgentFindByID(q, params.AgentID)
-	if err != nil {
-		return nil, err
-	}
-
-	row.Disabled = params.Disabled
-
-	if params.RemoveCustomLabels {
-		if err = row.SetCustomLabels(nil); err != nil {
-			return nil, err
-		}
-	}
-	if len(params.CustomLabels) != 0 {
-		if err = row.SetCustomLabels(params.CustomLabels); err != nil {
-			return nil, err
-		}
-	}
-
-	if err = q.Update(row); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return row, nil
-}
-
 // AddExporterAgentParams params for add common exporter.
 type AddExporterAgentParams struct {
 	PMMAgentID   string
@@ -335,6 +300,46 @@ func PMMAgentsForChangedService(q *reform.Querier, serviceID string) ([]string, 
 		}
 	}
 	return res, nil
+}
+
+// ChangeCommonAgentParams contains parameters that can be changed for all Agents.
+type ChangeCommonAgentParams struct {
+	Disabled           *bool // true - disable, false - enable, nil - do not change
+	CustomLabels       map[string]string
+	RemoveCustomLabels bool
+}
+
+// ChangeAgent changes common parameters for given Agent.
+func ChangeAgent(q *reform.Querier, agentID string, params *ChangeCommonAgentParams) (*Agent, error) {
+	row, err := AgentFindByID(q, agentID)
+	if err != nil {
+		return nil, err
+	}
+
+	if params.Disabled != nil {
+		if *params.Disabled {
+			row.Disabled = true
+		} else {
+			row.Disabled = false
+		}
+	}
+
+	if params.RemoveCustomLabels {
+		if err = row.SetCustomLabels(nil); err != nil {
+			return nil, err
+		}
+	}
+	if len(params.CustomLabels) != 0 {
+		if err = row.SetCustomLabels(params.CustomLabels); err != nil {
+			return nil, err
+		}
+	}
+
+	if err = q.Update(row); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return row, nil
 }
 
 // RemoveAgent removes Agent by ID.
