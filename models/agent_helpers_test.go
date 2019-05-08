@@ -192,7 +192,8 @@ func TestAgentHelpers(t *testing.T) {
 		assert.Nil(t, agent)
 		tests.AssertGRPCError(t, status.New(codes.FailedPrecondition, `pmm-agent with ID "A1" has agents.`), err)
 
-		agent, err = models.RemoveAgent(q, "A2")
+		agent, err = models.AgentFindByID(q, "A2")
+		assert.NoError(t, err)
 		expected := &models.Agent{
 			AgentID:      "A2",
 			AgentType:    models.MySQLdExporterType,
@@ -202,6 +203,10 @@ func TestAgentHelpers(t *testing.T) {
 			UpdatedAt:    now,
 		}
 		assert.Equal(t, expected, agent)
+		agent, err = models.RemoveAgent(q, "A2")
+		assert.Equal(t, expected, agent)
 		assert.NoError(t, err)
+		_, err = models.AgentFindByID(q, "A2")
+		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "A2" not found.`), err)
 	})
 }

@@ -138,7 +138,11 @@ func TestNodeHelpers(t *testing.T) {
 		err = models.RemoveNode(q, "N3")
 		tests.AssertGRPCError(t, status.New(codes.FailedPrecondition, `Node with ID "N3" has agents.`), err)
 
+		_, err = models.FindNodeByID(q, "N4")
+		require.NoError(t, err)
 		err = models.RemoveNode(q, "N4")
 		assert.NoError(t, err)
+		_, err = models.FindNodeByID(q, "N4")
+		tests.AssertGRPCError(t, status.New(codes.NotFound, `Node with ID "N4" not found.`), err)
 	})
 }
