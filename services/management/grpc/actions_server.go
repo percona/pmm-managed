@@ -23,29 +23,29 @@ import (
 	"github.com/percona/pmm/api/managementpb"
 )
 
-type actionsSender interface {
+type actionsService interface {
 	RunAction(ctx context.Context, pmmAgentID string, actionName agentpb.ActionName)
 	CancelAction(ctx context.Context, pmmAgentID, actionID string)
 }
 
 //nolint:unused
 type actionsServer struct {
-	actionsSender actionsSender
+	as actionsService
 }
 
 // NewManagementActionsServer creates Management Actions Server.
-func NewManagementActionsServer(s actionsSender) managementpb.ActionsServer {
-	return &actionsServer{actionsSender: s}
+func NewManagementActionsServer(s actionsService) managementpb.ActionsServer {
+	return &actionsServer{as: s}
 }
 
 // RunAction runs an Action.
 func (s *actionsServer) RunAction(ctx context.Context, req *managementpb.RunActionRequest) (*managementpb.RunActionResponse, error) {
-	s.actionsSender.RunAction(ctx, req.PmmAgentId, agentpb.ActionName_PT_SUMMARY)
+	s.as.RunAction(ctx, req.PmmAgentId, agentpb.ActionName_PT_SUMMARY)
 	return nil, nil
 }
 
 // CancelAction stops an Action.
 func (s *actionsServer) CancelAction(ctx context.Context, req *managementpb.CancelActionRequest) (*managementpb.CancelActionResponse, error) {
-	s.actionsSender.CancelAction(ctx, req.PmmAgentId, req.ActionId)
+	s.as.CancelAction(ctx, req.PmmAgentId, req.ActionId)
 	return nil, nil
 }
