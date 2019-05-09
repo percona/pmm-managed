@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/percona/pmm/api/inventorypb/json/client"
 	"github.com/percona/pmm/api/inventorypb/json/client/agents"
@@ -14,6 +15,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 // TestString returns semi-random string that can be used as a test data.
 func TestString(t *testing.T, name string) string {
@@ -32,8 +37,12 @@ type ServerResponse struct {
 	Error string
 }
 
-func AssertEqualAPIError(t *testing.T, err error, expected ServerResponse) bool {
-	t.Helper()
+func AssertEqualAPIError(t require.TestingT, err error, expected ServerResponse) bool {
+	if n, ok := t.(interface {
+		Helper()
+	}); ok {
+		n.Helper()
+	}
 
 	if !assert.Error(t, err) {
 		return false
@@ -53,6 +62,53 @@ func AssertEqualAPIError(t *testing.T, err error, expected ServerResponse) bool 
 	require.True(t, errorField.IsValid(), "Wrong response structure. There is no field Error in Payload.")
 
 	return assert.Equal(t, expected.Error, errorField.String())
+}
+
+func ExpectFailure(t *testing.T, link string) (failureTestingT *expectedFailureTestingT) {
+	failureTestingT = &expectedFailureTestingT{
+		t:    t,
+		link: link,
+	}
+	return failureTestingT
+}
+
+// expectedFailureTestingT expects that test will fail.
+// if test is failed we skip it
+// if it doesn't we call Fail
+
+type expectedFailureTestingT struct {
+	t      *testing.T
+	errors []string
+	failed bool
+	link   string
+}
+
+func (tt *expectedFailureTestingT) Errorf(format string, args ...interface{}) {
+	tt.errors = append(tt.errors, fmt.Sprintf(format, args...))
+	tt.failed = true
+}
+
+func (tt *expectedFailureTestingT) FailNow() {
+	tt.failed = true
+}
+func (tt *expectedFailureTestingT) Helper() {
+	tt.t.Helper()
+}
+func (tt *expectedFailureTestingT) Name() string {
+	return tt.t.Name()
+}
+
+func (tt *expectedFailureTestingT) Check() {
+	tt.t.Helper()
+	if tt.failed {
+		for _, v := range tt.errors {
+			tt.t.Log(v)
+		}
+		tt.t.Skip(fmt.Sprintf("Expected failure %s.", tt.link))
+	} else {
+		tt.t.Log(fmt.Sprintf("%s expected to fail, but didn't", tt.Name()))
+		tt.t.Fail()
+	}
 }
 
 func RemoveNodes(t *testing.T, nodeIDs ...string) {

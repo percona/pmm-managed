@@ -1,6 +1,7 @@
 package inventory
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -10,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
+	"github.com/Percona-Lab/pmm-api-tests"
 )
 
 func TestServices(t *testing.T) {
@@ -144,6 +145,7 @@ func TestRemoveService(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, res)
 	})
+
 	t.Run("Has agents", func(t *testing.T) {
 		t.Parallel()
 
@@ -182,6 +184,31 @@ func TestRemoveService(t *testing.T) {
 		res, err := client.Default.Services.RemoveService(params)
 		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{412, fmt.Sprintf(`Service with ID "%s" has agents.`, serviceID)})
 		assert.Nil(t, res)
+	})
+
+	t.Run("Not-exist service", func(t *testing.T) {
+		t.Parallel()
+		serviceID := "not-exist-service-id"
+
+		params := &services.RemoveServiceParams{
+			Body: services.RemoveServiceBody{
+				ServiceID: serviceID,
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err := client.Default.Services.RemoveService(params)
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, fmt.Sprintf(`Service with ID "%s" not found.`, serviceID)})
+		assert.Nil(t, res)
+	})
+
+	t.Run("Empty params", func(t *testing.T) {
+		t.Parallel()
+		removeResp, err := client.Default.Services.RemoveService(&services.RemoveServiceParams{
+			Body:    services.RemoveServiceBody{},
+			Context: context.Background(),
+		})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field ServiceId: value '' must not be an empty string"})
+		assert.Nil(t, removeResp)
 	})
 }
 

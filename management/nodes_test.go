@@ -44,6 +44,9 @@ func TestNodeRegister(t *testing.T) {
 		})
 
 		t.Run("With all fields", func(t *testing.T) {
+			tt := pmmapitests.ExpectFailure(t, "https://jira.percona.com/browse/PMM-3982")
+			defer tt.Check()
+
 			nodeName := pmmapitests.TestString(t, "node-name")
 			machineID := pmmapitests.TestString(t, "machine-id")
 			nodeModel := pmmapitests.TestString(t, "node-model")
@@ -63,7 +66,7 @@ func TestNodeRegister(t *testing.T) {
 			defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
 			// Check Node is created
-			assertNodeCreated(t, nodeID, nodes.GetNodeOKBody{
+			assertNodeCreated(tt, nodeID, nodes.GetNodeOKBody{
 				Generic: &nodes.GetNodeOKBodyGeneric{
 					NodeID:       nodeID,
 					NodeName:     nodeName,
@@ -88,6 +91,8 @@ func TestNodeRegister(t *testing.T) {
 		})
 
 		t.Run("Re-register", func(t *testing.T) {
+			t.Skip("Re-register logic is not defined yet. https://jira.percona.com/browse/PMM-3717")
+
 			nodeName := pmmapitests.TestString(t, "node-name")
 			nodeID, pmmAgentID := registerGenericNode(t, node.RegisterBody{
 				NodeName: nodeName,
@@ -171,6 +176,9 @@ func TestNodeRegister(t *testing.T) {
 		})
 
 		t.Run("With all fields", func(t *testing.T) {
+			tt := pmmapitests.ExpectFailure(t, "https://jira.percona.com/browse/PMM-3982")
+			defer tt.Check()
+
 			nodeName := pmmapitests.TestString(t, "node-name")
 			nodeModel := pmmapitests.TestString(t, "node-model")
 			containerID := pmmapitests.TestString(t, "container-id")
@@ -191,7 +199,7 @@ func TestNodeRegister(t *testing.T) {
 			defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
 			// Check Node is created
-			assertNodeCreated(t, nodeID, nodes.GetNodeOKBody{
+			assertNodeCreated(tt, nodeID, nodes.GetNodeOKBody{
 				Container: &nodes.GetNodeOKBodyContainer{
 					NodeID:        nodeID,
 					NodeName:      nodeName,
@@ -216,6 +224,8 @@ func TestNodeRegister(t *testing.T) {
 		})
 
 		t.Run("Re-register", func(t *testing.T) {
+			t.Skip("Re-register logic is not defined yet. https://jira.percona.com/browse/PMM-3717")
+
 			nodeName := pmmapitests.TestString(t, "node-name")
 			nodeID, pmmAgentID := registerContainerNode(t, node.RegisterBody{
 				NodeName: nodeName,
@@ -272,6 +282,8 @@ func TestNodeRegister(t *testing.T) {
 	})
 
 	t.Run("Re-register node with different type", func(t *testing.T) {
+		t.Skip("Re-register logic is not defined yet. https://jira.percona.com/browse/PMM-3717")
+
 		nodeName := pmmapitests.TestString(t, "node-name")
 		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterBody{
 			NodeName: nodeName,

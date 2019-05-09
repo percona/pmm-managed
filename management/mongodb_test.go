@@ -20,7 +20,6 @@ import (
 
 func TestAddMongoDB(t *testing.T) {
 	t.Run("Basic", func(t *testing.T) {
-
 		nodeName := pmmapitests.TestString(t, "node-for-basic-name")
 		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterBody{
 			NodeName: nodeName,
@@ -79,7 +78,7 @@ func TestAddMongoDB(t *testing.T) {
 		defer removeAllAgentsInList(t, listAgents)
 	})
 
-	t.Run("All fields", func(t *testing.T) {
+	t.Run("With agents", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-name-for-all-fields")
 		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterBody{
 			NodeName: nodeName,
@@ -100,12 +99,8 @@ func TestAddMongoDB(t *testing.T) {
 				Port:               27017,
 				Username:           "username",
 				Password:           "password",
-				Environment:        "some-environment",
-				Cluster:            "cluster-name",
-				ReplicationSet:     "replication-set",
 				MongodbExporter:    true,
 				QANMongodbProfiler: true,
-				CustomLabels:       map[string]string{"bar": "foo"},
 			},
 		}
 		addMongoDBOK, err := client.Default.MongoDB.AddMongoDB(params)
@@ -126,19 +121,15 @@ func TestAddMongoDB(t *testing.T) {
 		assert.NotNil(t, serviceOK)
 		assert.Equal(t, services.GetServiceOKBody{
 			Mongodb: &services.GetServiceOKBodyMongodb{
-				ServiceID:      serviceID,
-				NodeID:         nodeID,
-				ServiceName:    serviceName,
-				Address:        "10.10.10.10",
-				Port:           27017,
-				Environment:    "some-environment",
-				Cluster:        "cluster-name",
-				ReplicationSet: "replication-set",
-				CustomLabels:   map[string]string{"bar": "foo"},
+				ServiceID:   serviceID,
+				NodeID:      nodeID,
+				ServiceName: serviceName,
+				Address:     "10.10.10.10",
+				Port:        27017,
 			},
 		}, *serviceOK.Payload)
 
-		// Check that no one exporter is added.
+		// Check that exporters are added.
 		listAgents, err := inventoryClient.Default.Agents.ListAgents(&agents.ListAgentsParams{
 			Context: pmmapitests.Context,
 			Body: agents.ListAgentsBody{
@@ -171,6 +162,65 @@ func TestAddMongoDB(t *testing.T) {
 				},
 			},
 		}, *listAgents.Payload)
+	})
+
+	t.Run("With labels", func(realT *testing.T) {
+		expectedFailureTestingT := pmmapitests.ExpectFailure(realT, "https://jira.percona.com/browse/PMM-3982")
+		defer expectedFailureTestingT.Check()
+
+		nodeName := pmmapitests.TestString(realT, "node-name-for-all-fields")
+		nodeID, pmmAgentID := registerGenericNode(realT, node.RegisterBody{
+			NodeName: nodeName,
+			NodeType: pointer.ToString(node.RegisterBodyNodeTypeGENERICNODE),
+		})
+		defer pmmapitests.RemoveNodes(realT, nodeID)
+		defer removePMMAgentWithSubAgents(realT, pmmAgentID)
+
+		serviceName := pmmapitests.TestString(realT, "service-name-for-all-fields")
+
+		params := &mongodb.AddMongoDBParams{
+			Context: pmmapitests.Context,
+			Body: mongodb.AddMongoDBBody{
+				NodeID:         nodeID,
+				PMMAgentID:     pmmAgentID,
+				ServiceName:    serviceName,
+				Address:        "10.10.10.10",
+				Port:           27017,
+				Environment:    "some-environment",
+				Cluster:        "cluster-name",
+				ReplicationSet: "replication-set",
+				CustomLabels:   map[string]string{"bar": "foo"},
+			},
+		}
+		addMongoDBOK, err := client.Default.MongoDB.AddMongoDB(params)
+		require.NoError(realT, err)
+		require.NotNil(realT, addMongoDBOK)
+		require.NotNil(realT, addMongoDBOK.Payload.Service)
+		serviceID := addMongoDBOK.Payload.Service.ServiceID
+		defer pmmapitests.RemoveServices(realT, serviceID)
+
+		// Check that service is created and its fields.
+		serviceOK, err := inventoryClient.Default.Services.GetService(&services.GetServiceParams{
+			Body: services.GetServiceBody{
+				ServiceID: serviceID,
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(realT, err)
+		assert.NotNil(realT, serviceOK)
+		assert.Equal(expectedFailureTestingT, services.GetServiceOKBody{
+			Mongodb: &services.GetServiceOKBodyMongodb{
+				ServiceID:      serviceID,
+				NodeID:         nodeID,
+				ServiceName:    serviceName,
+				Address:        "10.10.10.10",
+				Port:           27017,
+				Environment:    "some-environment",
+				Cluster:        "cluster-name",
+				ReplicationSet: "replication-set",
+				CustomLabels:   map[string]string{"bar": "foo"},
+			},
+		}, *serviceOK.Payload)
 	})
 
 	t.Run("With the same name", func(t *testing.T) {

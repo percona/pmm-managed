@@ -1,11 +1,13 @@
 package inventory
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
 	"github.com/percona/pmm/api/inventorypb/json/client"
 	"github.com/percona/pmm/api/inventorypb/json/client/nodes"
+	"github.com/percona/pmm/api/inventorypb/json/client/services"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -55,11 +57,12 @@ func TestGetNode(t *testing.T) {
 		require.NotEmpty(t, nodeID)
 		defer pmmapitests.RemoveNodes(t, nodeID)
 
-		expectedResponse := &nodes.GetNodeOK{
+		expectedResponse := nodes.GetNodeOK{
 			Payload: &nodes.GetNodeOKBody{
 				Generic: &nodes.GetNodeOKBodyGeneric{
 					NodeID:   nodeID,
 					NodeName: nodeName,
+					Address:  "10.10.10.10",
 				},
 			},
 		}
@@ -69,8 +72,8 @@ func TestGetNode(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Nodes.GetNode(params)
-		require.NoError(t, err)
-		require.Equal(t, res, expectedResponse)
+		assert.NoError(t, err)
+		assert.Equal(t, expectedResponse.Payload, res.Payload)
 	})
 
 	t.Run("NotFound", func(t *testing.T) {
@@ -104,7 +107,10 @@ func TestGenericNode(t *testing.T) {
 
 		nodeName := pmmapitests.TestString(t, "Test Generic Node")
 		params := &nodes.AddGenericNodeParams{
-			Body:    nodes.AddGenericNodeBody{NodeName: nodeName},
+			Body: nodes.AddGenericNodeBody{
+				NodeName: nodeName,
+				Address:  "10.10.10.10",
+			},
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Nodes.AddGenericNode(params)
@@ -125,6 +131,7 @@ func TestGenericNode(t *testing.T) {
 				Generic: &nodes.GetNodeOKBodyGeneric{
 					NodeID:   res.Payload.Generic.NodeID,
 					NodeName: nodeName,
+					Address:  "10.10.10.10",
 				},
 			},
 		}
@@ -164,6 +171,7 @@ func TestContainerNode(t *testing.T) {
 				ContainerID:   "docker-id",
 				ContainerName: "docker-name",
 				MachineID:     "machine-id",
+				Address:       "10.10.1.10",
 			},
 			Context: pmmapitests.Context,
 		}
@@ -187,6 +195,7 @@ func TestContainerNode(t *testing.T) {
 					ContainerID:   "docker-id",
 					ContainerName: "docker-name",
 					MachineID:     "machine-id",
+					Address:       "10.10.1.10",
 				},
 			},
 		}
@@ -365,5 +374,93 @@ func TestRemoteAmazonRDSNode(t *testing.T) {
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveNodes(t, res.Payload.RemoteAmazonRDS.NodeID)
 		}
+	})
+}
+
+func TestRemoveNode(t *testing.T) {
+	t.Run("Basic", func(t *testing.T) {
+		t.Parallel()
+
+		nodeName := pmmapitests.TestString(t, "Generic Node for basic remove test")
+		node := addGenericNode(t, nodeName)
+		nodeID := node.NodeID
+
+		removeResp, err := client.Default.Nodes.RemoveNode(&nodes.RemoveNodeParams{
+			Body: nodes.RemoveNodeBody{
+				NodeID: nodeID,
+			},
+			Context: context.Background(),
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, removeResp)
+	})
+
+	t.Run("With service", func(t *testing.T) {
+		t.Parallel()
+
+		nodeName := pmmapitests.TestString(t, "Generic Node for remove test")
+		node := addGenericNode(t, nodeName)
+		defer pmmapitests.RemoveNodes(t, node.NodeID)
+
+		service := addMySQLService(t, services.AddMySQLServiceBody{
+			NodeID:      node.NodeID,
+			Address:     "localhost",
+			Port:        3306,
+			ServiceName: pmmapitests.TestString(t, "MySQL Service for agent"),
+		})
+		serviceID := service.Mysql.ServiceID
+		defer pmmapitests.RemoveServices(t, serviceID)
+
+		removeResp, err := client.Default.Nodes.RemoveNode(&nodes.RemoveNodeParams{
+			Body: nodes.RemoveNodeBody{
+				NodeID: node.NodeID,
+			},
+			Context: context.Background(),
+		})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{412, fmt.Sprintf(`Node with ID %q has services.`, node.NodeID)})
+		assert.Nil(t, removeResp)
+	})
+
+	t.Run("With pmm-agent", func(t *testing.T) {
+		t.Parallel()
+
+		nodeName := pmmapitests.TestString(t, "Generic Node for remove test")
+		node := addGenericNode(t, nodeName)
+		defer pmmapitests.RemoveNodes(t, node.NodeID)
+
+		agentOKBody := addPMMAgent(t, node.NodeID)
+		defer pmmapitests.RemoveAgents(t, agentOKBody.PMMAgent.AgentID)
+
+		removeResp, err := client.Default.Nodes.RemoveNode(&nodes.RemoveNodeParams{
+			Body: nodes.RemoveNodeBody{
+				NodeID: node.NodeID,
+			},
+			Context: context.Background(),
+		})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{412, fmt.Sprintf(`Node with ID %q has pmm-agent.`, node.NodeID)})
+		assert.Nil(t, removeResp)
+	})
+
+	t.Run("Not-exist node", func(t *testing.T) {
+		t.Parallel()
+		nodeID := "not-exist-node-id"
+		removeResp, err := client.Default.Nodes.RemoveNode(&nodes.RemoveNodeParams{
+			Body: nodes.RemoveNodeBody{
+				NodeID: nodeID,
+			},
+			Context: context.Background(),
+		})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, fmt.Sprintf(`Node with ID %q not found.`, nodeID)})
+		assert.Nil(t, removeResp)
+	})
+
+	t.Run("Empty params", func(t *testing.T) {
+		t.Parallel()
+		removeResp, err := client.Default.Nodes.RemoveNode(&nodes.RemoveNodeParams{
+			Body:    nodes.RemoveNodeBody{},
+			Context: context.Background(),
+		})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field NodeId: value '' must not be an empty string"})
+		assert.Nil(t, removeResp)
 	})
 }

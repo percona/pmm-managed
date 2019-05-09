@@ -78,7 +78,7 @@ func TestAddMySQL(t *testing.T) {
 		defer removeAllAgentsInList(t, listAgents)
 	})
 
-	t.Run("All fields", func(t *testing.T) {
+	t.Run("With agents", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-for-all-fields-name")
 		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterBody{
 			NodeName: nodeName,
@@ -101,13 +101,9 @@ func TestAddMySQL(t *testing.T) {
 				Password:           "password",
 				QANUsername:        "qan-username",
 				QANPassword:        "qan-pass",
-				Environment:        "some-environment",
-				Cluster:            "cluster-name",
-				ReplicationSet:     "replication-set",
 				MysqldExporter:     true,
 				QANMysqlSlowlog:    true,
 				QANMysqlPerfschema: true,
-				CustomLabels:       map[string]string{"bar": "foo"},
 			},
 		}
 		addMySQLOK, err := client.Default.MySQL.AddMySQL(params)
@@ -128,19 +124,15 @@ func TestAddMySQL(t *testing.T) {
 		assert.NotNil(t, serviceOK)
 		assert.Equal(t, services.GetServiceOKBody{
 			Mysql: &services.GetServiceOKBodyMysql{
-				ServiceID:      serviceID,
-				NodeID:         nodeID,
-				ServiceName:    serviceName,
-				Address:        "10.10.10.10",
-				Port:           3306,
-				Environment:    "some-environment",
-				Cluster:        "cluster-name",
-				ReplicationSet: "replication-set",
-				CustomLabels:   map[string]string{"bar": "foo"},
+				ServiceID:   serviceID,
+				NodeID:      nodeID,
+				ServiceName: serviceName,
+				Address:     "10.10.10.10",
+				Port:        3306,
 			},
 		}, *serviceOK.Payload)
 
-		// Check that no one exporter is added.
+		// Check that exporters are added.
 		listAgents, err := inventoryClient.Default.Agents.ListAgents(&agents.ListAgentsParams{
 			Context: pmmapitests.Context,
 			Body: agents.ListAgentsBody{
@@ -182,6 +174,69 @@ func TestAddMySQL(t *testing.T) {
 				},
 			},
 		}, *listAgents.Payload)
+	})
+
+	t.Run("With labels", func(t *testing.T) {
+		tt := pmmapitests.ExpectFailure(t, "https://jira.percona.com/browse/PMM-3982")
+		defer tt.Check()
+
+		nodeName := pmmapitests.TestString(t, "node-for-all-fields-name")
+		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterBody{
+			NodeName: nodeName,
+			NodeType: pointer.ToString(node.RegisterBodyNodeTypeGENERICNODE),
+		})
+		defer pmmapitests.RemoveNodes(t, nodeID)
+		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+
+		serviceName := pmmapitests.TestString(t, "service-for-all-fields-name")
+
+		params := &mysql.AddMySQLParams{
+			Context: pmmapitests.Context,
+			Body: mysql.AddMySQLBody{
+				NodeID:         nodeID,
+				PMMAgentID:     pmmAgentID,
+				ServiceName:    serviceName,
+				Address:        "10.10.10.10",
+				Port:           3306,
+				Username:       "username",
+				Password:       "password",
+				QANUsername:    "qan-username",
+				QANPassword:    "qan-pass",
+				Environment:    "some-environment",
+				Cluster:        "cluster-name",
+				ReplicationSet: "replication-set",
+				CustomLabels:   map[string]string{"bar": "foo"},
+			},
+		}
+		addMySQLOK, err := client.Default.MySQL.AddMySQL(params)
+		require.NoError(t, err)
+		require.NotNil(t, addMySQLOK)
+		require.NotNil(t, addMySQLOK.Payload.Service)
+		serviceID := addMySQLOK.Payload.Service.ServiceID
+		defer pmmapitests.RemoveServices(t, serviceID)
+
+		// Check that service is created and its fields.
+		serviceOK, err := inventoryClient.Default.Services.GetService(&services.GetServiceParams{
+			Body: services.GetServiceBody{
+				ServiceID: serviceID,
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, serviceOK)
+		assert.Equal(tt, services.GetServiceOKBody{
+			Mysql: &services.GetServiceOKBodyMysql{
+				ServiceID:      serviceID,
+				NodeID:         nodeID,
+				ServiceName:    serviceName,
+				Address:        "10.10.10.10",
+				Port:           3306,
+				Environment:    "some-environment",
+				Cluster:        "cluster-name",
+				ReplicationSet: "replication-set",
+				CustomLabels:   map[string]string{"bar": "foo"},
+			},
+		}, *serviceOK.Payload)
 	})
 
 	t.Run("With the same name", func(t *testing.T) {

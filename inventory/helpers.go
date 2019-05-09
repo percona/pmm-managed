@@ -19,6 +19,7 @@ func addGenericNode(t *testing.T, nodeName string) *nodes.AddGenericNodeOKBodyGe
 	params := &nodes.AddGenericNodeParams{
 		Body: nodes.AddGenericNodeBody{
 			NodeName: nodeName,
+			Address:  "10.10.10.10",
 		},
 		Context: pmmapitests.Context,
 	}
@@ -83,6 +84,21 @@ func addPMMAgent(t *testing.T, nodeID string) *agents.AddPMMAgentOKBody {
 	assert.NoError(t, err)
 	require.NotNil(t, res)
 	return res.Payload
+}
+
+func addNodeExporter(t *testing.T, pmmAgentID string, customLabels map[string]string) *agents.AddNodeExporterOK {
+	res, err := client.Default.Agents.AddNodeExporter(&agents.AddNodeExporterParams{
+		Body: agents.AddNodeExporterBody{
+			PMMAgentID:   pmmAgentID,
+			CustomLabels: customLabels,
+		},
+		Context: pmmapitests.Context,
+	})
+	assert.NoError(t, err)
+	require.NotNil(t, res)
+	require.NotNil(t, res.Payload.NodeExporter)
+	require.Equal(t, pmmAgentID, res.Payload.NodeExporter.PMMAgentID)
+	return res
 }
 
 func addMySqldExporter(t *testing.T, body agents.AddMySqldExporterBody) *agents.AddMySqldExporterOKBody {

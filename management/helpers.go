@@ -82,8 +82,12 @@ func assertPMMAgentCreated(t *testing.T, nodeID string, pmmAgentID string) {
 	}, *agentOK.Payload)
 }
 
-func assertNodeCreated(t *testing.T, nodeID string, expectedResult nodes.GetNodeOKBody) {
-	t.Helper()
+func assertNodeCreated(t assert.TestingT, nodeID string, expectedResult nodes.GetNodeOKBody) {
+	if n, ok := t.(interface {
+		Helper()
+	}); ok {
+		n.Helper()
+	}
 	nodeOK, err := inventoryClient.Default.Nodes.GetNode(&nodes.GetNodeParams{
 		Body: nodes.GetNodeBody{
 			NodeID: nodeID,
