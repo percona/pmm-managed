@@ -130,6 +130,7 @@ type serviceDependencies struct {
 	portsRegistry  *ports.Registry
 	agentsRegistry *agents.Registry
 	logs           *logs.Logs
+	actionsStorage *management.InMemoryActionsStorage
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -165,13 +166,14 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	nodeSvc := management.NewNodeService(deps.db, deps.agentsRegistry)
 	serviceSvc := management.NewServiceService(deps.db, deps.agentsRegistry)
 	mongodbSvc := management.NewMongoDBService(deps.db, deps.agentsRegistry)
+	actionsSvc := management.NewActionsService(deps.agentsRegistry, deps.actionsStorage)
 
 	managementpb.RegisterMySQLServer(gRPCServer, managementgrpc.NewManagementMysqlServer(mysqlSvc))
 	managementpb.RegisterPostgreSQLServer(gRPCServer, managementgrpc.NewManagementPostgresqlServer(postgresqlSvc))
 	managementpb.RegisterNodeServer(gRPCServer, managementgrpc.NewManagementNodeServer(nodeSvc))
 	managementpb.RegisterServiceServer(gRPCServer, managementgrpc.NewManagementServiceServer(serviceSvc))
 	managementpb.RegisterMongoDBServer(gRPCServer, managementgrpc.NewManagementMongoDBServer(mongodbSvc))
-	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewManagementActionsServer(deps.agentsRegistry))
+	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewManagementActionsServer(actionsSvc))
 
 	if *debugF {
 		l.Debug("Reflection and channelz are enabled.")
@@ -399,8 +401,9 @@ func main() {
 		l.Panicf("Prometheus service problem: %+v", err)
 	}
 
+	actionsStorage := management.NewInMemoryActionsStorage()
 	qanClient := getQANClient(ctx, db)
-	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient)
+	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient, actionsStorage)
 	logs := logs.New(version.Version)
 
 	deps := &serviceDependencies{
@@ -409,6 +412,7 @@ func main() {
 		portsRegistry:  ports.NewRegistry(10000, 10999, nil),
 		agentsRegistry: agentsRegistry,
 		logs:           logs,
+		actionsStorage: actionsStorage,
 	}
 
 	var wg sync.WaitGroup

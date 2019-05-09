@@ -34,6 +34,7 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/agents/channel"
+	"github.com/percona/pmm-managed/services/management"
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
@@ -41,6 +42,11 @@ const (
 	prometheusNamespace = "pmm_managed"
 	prometheusSubsystem = "agents"
 )
+
+type actionsStorage interface {
+	// Store an action result to persistent storage.
+	Store(management.ActionResult)
+}
 
 type agentInfo struct {
 	channel *channel.Channel
@@ -50,9 +56,10 @@ type agentInfo struct {
 
 // Registry keeps track of all connected pmm-agents.
 type Registry struct {
-	db         *reform.DB
-	prometheus prometheus
-	qanClient  qanClient
+	db             *reform.DB
+	prometheus     prometheus
+	qanClient      qanClient
+	actionsStorage actionsStorage
 
 	rw     sync.RWMutex
 	agents map[string]*agentInfo // id -> info
@@ -65,11 +72,12 @@ type Registry struct {
 }
 
 // NewRegistry creates a new registry with given database connection.
-func NewRegistry(db *reform.DB, prometheus prometheus, qanClient qanClient) *Registry {
+func NewRegistry(db *reform.DB, prometheus prometheus, qanClient qanClient, actionsStorage actionsStorage) *Registry {
 	r := &Registry{
-		db:         db,
-		prometheus: prometheus,
-		qanClient:  qanClient,
+		db:             db,
+		prometheus:     prometheus,
+		qanClient:      qanClient,
+		actionsStorage: actionsStorage,
 
 		agents: make(map[string]*agentInfo),
 
@@ -187,10 +195,15 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 				})
 
 			case *agentpb.ActionResultRequest:
-				// TODO: PMM-3978: Doing something with ActionResult. For example push it to UI...
 				agent.channel.SendResponse(&channel.ServerResponse{
 					ID:      req.ID,
 					Payload: new(agentpb.ActionResultResponse),
+				})
+				// TODO: PMM-3978: In the future we need to merge action parts before send it to storage.
+				r.actionsStorage.Store(management.ActionResult{
+					ID:         p.Id,
+					PmmAgentID: agent.id,
+					Output:     string(p.Output),
 				})
 
 			case nil:
@@ -327,34 +340,11 @@ func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRe
 	return r.prometheus.UpdateConfiguration(ctx)
 }
 
-// RunAction runs PMM Action on the given client.
-func (r *Registry) RunAction(ctx context.Context, pmmAgentID string, actionName agentpb.ActionName) {
-	l := logger.Get(ctx)
-
+func (r *Registry) SendRequest(ctx context.Context, pmmAgentID string, payload agentpb.ServerRequestPayload) agentpb.AgentResponsePayload {
 	r.rw.RLock()
 	agent := r.agents[pmmAgentID]
 	r.rw.RUnlock()
-
-	res := agent.channel.SendRequest(&agentpb.StartActionRequest{
-		Name: actionName,
-	})
-
-	l.Infof("ActionRun response: %+v.", res)
-}
-
-// CancelAction stops PMM Action with the given ID on the given client.
-func (r *Registry) CancelAction(ctx context.Context, pmmAgentID, actionID string) {
-	l := logger.Get(ctx)
-
-	r.rw.RLock()
-	agent := r.agents[pmmAgentID]
-	r.rw.RUnlock()
-
-	res := agent.channel.SendRequest(&agentpb.StopActionRequest{
-		Id: actionID,
-	})
-
-	l.Infof("ActionCancel response: %+v.", res)
+	return agent.channel.SendRequest(payload)
 }
 
 // SendSetStateRequest sends SetStateRequest to pmm-agent with given ID.

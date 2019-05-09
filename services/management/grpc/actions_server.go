@@ -21,31 +21,50 @@ import (
 
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/managementpb"
-)
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
-type actionsService interface {
-	RunAction(ctx context.Context, pmmAgentID string, actionName agentpb.ActionName)
-	CancelAction(ctx context.Context, pmmAgentID, actionID string)
-}
+	"github.com/percona/pmm-managed/services/management"
+)
 
 //nolint:unused
 type actionsServer struct {
-	as actionsService
+	as *management.ActionsService
 }
 
 // NewManagementActionsServer creates Management Actions Server.
-func NewManagementActionsServer(s actionsService) managementpb.ActionsServer {
+func NewManagementActionsServer(s *management.ActionsService) managementpb.ActionsServer {
 	return &actionsServer{as: s}
 }
 
 // RunAction runs an Action.
 func (s *actionsServer) RunAction(ctx context.Context, req *managementpb.RunActionRequest) (*managementpb.RunActionResponse, error) {
-	s.as.RunAction(ctx, req.PmmAgentId, agentpb.ActionName_PT_SUMMARY)
-	return nil, nil
+	actionID := s.as.RunAction(ctx, req.PmmAgentId, agentpb.ActionName_PT_SUMMARY, []string{})
+	return &managementpb.RunActionResponse{
+		PmmAgentId: req.PmmAgentId,
+		ActionId:   actionID,
+	}, nil
 }
 
 // CancelAction stops an Action.
 func (s *actionsServer) CancelAction(ctx context.Context, req *managementpb.CancelActionRequest) (*managementpb.CancelActionResponse, error) {
 	s.as.CancelAction(ctx, req.PmmAgentId, req.ActionId)
-	return nil, nil
+	return &managementpb.CancelActionResponse{
+		PmmAgentId: req.PmmAgentId,
+		ActionId:   req.ActionId,
+	}, nil
+}
+
+// GetActionResult gets an Action result.
+func (s *actionsServer) GetActionResult(ctx context.Context, req *managementpb.GetActionResultRequest) (*managementpb.GetActionResultResponse, error) {
+	res, ok := s.as.GetActionResult(ctx, req.ActionId)
+	if !ok {
+		return nil, status.Error(codes.NotFound, "ActionResult with given ID wasn't found")
+	}
+
+	return &managementpb.GetActionResultResponse{
+		Id:         res.ID,
+		PmmAgentId: res.PmmAgentID,
+		Output:     res.Output,
+	}, nil
 }
