@@ -166,7 +166,7 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	nodeSvc := management.NewNodeService(deps.db, deps.agentsRegistry)
 	serviceSvc := management.NewServiceService(deps.db, deps.agentsRegistry)
 	mongodbSvc := management.NewMongoDBService(deps.db, deps.agentsRegistry)
-	actionsSvc := management.NewActionsService(deps.agentsRegistry, deps.actionsStorage)
+	actionsSvc := management.NewActionsService(deps.agentsRegistry, deps.actionsStorage, deps.db)
 
 	managementpb.RegisterMySQLServer(gRPCServer, managementgrpc.NewManagementMysqlServer(mysqlSvc))
 	managementpb.RegisterPostgreSQLServer(gRPCServer, managementgrpc.NewManagementPostgresqlServer(postgresqlSvc))

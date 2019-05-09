@@ -337,6 +337,36 @@ func PMMAgentsForChangedService(q *reform.Querier, serviceID string) ([]string, 
 	return res, nil
 }
 
+func PMMAgentsForNode(q *reform.Querier, nodeID string) ([]*Agent, error) {
+	return PMMAgentsForNode(q, nodeID)
+}
+
+func PMMAgentsForService(q *reform.Querier, serviceID string) ([]*Agent, error) {
+	serviceRecord, err := q.SelectOneFrom(ServiceTable, "WHERE service_id = $1", serviceID)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to select Service")
+	}
+	s := serviceRecord.(*Service)
+
+	return pmmAgentsForNode(q, s.NodeID)
+}
+
+func pmmAgentsForNode(q *reform.Querier, nodeID string) ([]*Agent, error) {
+	structs, err := q.SelectAllFrom(AgentTable, "runs_on_node_id = $1", nodeID)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to select Agents")
+	}
+
+	var res []*Agent
+	for _, str := range structs {
+		row := str.(*Agent)
+		if row.AgentType == PMMAgentType {
+			res = append(res, row)
+		}
+	}
+	return res, nil
+}
+
 // RemoveAgent removes Agent by ID.
 func RemoveAgent(q *reform.Querier, id string) (*Agent, error) {
 	a, err := AgentFindByID(q, id)

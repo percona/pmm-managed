@@ -19,7 +19,6 @@ package grpc
 import (
 	"context"
 
-	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/managementpb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -39,7 +38,15 @@ func NewManagementActionsServer(s *management.ActionsService) managementpb.Actio
 
 // RunAction runs an Action.
 func (s *actionsServer) RunAction(ctx context.Context, req *managementpb.RunActionRequest) (*managementpb.RunActionResponse, error) {
-	actionID := s.as.RunAction(ctx, req.PmmAgentId, agentpb.ActionName_PT_SUMMARY, []string{})
+	p := management.RunActionParams{
+		ActionName:   req.ActionName,
+		ActionParams: req.ActionParams,
+		PmmAgentID:   req.PmmAgentId,
+		NodeID:       req.NodeId,
+		ServiceID:    req.ServiceId,
+	}
+	// TODO: Handle errors.
+	actionID, _ := s.as.RunAction(ctx, p)
 	return &managementpb.RunActionResponse{
 		PmmAgentId: req.PmmAgentId,
 		ActionId:   actionID,
