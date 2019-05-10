@@ -284,6 +284,6 @@ func (s *NodesService) AddRemoteAmazonRDSNode(ctx context.Context, req *inventor
 //nolint:unparam
 func (s *NodesService) Remove(ctx context.Context, id string) error {
 	return s.db.InTransaction(func(tx *reform.TX) error {
-		return models.RemoveNode(tx.Querier, id)
+		return models.RemoveNode(tx.Querier, id, models.RemoveRestrict)
 	})
 }

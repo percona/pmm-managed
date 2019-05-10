@@ -34,3 +34,13 @@ import (
 var Now = func() time.Time {
 	return time.Now().Truncate(time.Microsecond).UTC()
 }
+
+// RemoveMode defines how Remove functions deal with dependend objects.
+type RemoveMode int
+
+const (
+	// RemoveRestrict returns error if there dependend objects.
+	RemoveRestrict RemoveMode = iota
+	// RemoveCascade removes dependend objects recursively.
+	RemoveCascade
+)

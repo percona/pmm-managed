@@ -587,7 +587,7 @@ func (as *AgentsService) Remove(ctx context.Context, id string) error {
 	var removedAgent *models.Agent
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 		var err error
-		removedAgent, err = models.RemoveAgent(tx.Querier, id)
+		removedAgent, err = models.RemoveAgent(tx.Querier, id, models.RemoveRestrict)
 		return err
 	})
 	if e != nil {

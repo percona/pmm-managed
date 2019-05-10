@@ -343,18 +343,30 @@ func ChangeAgent(q *reform.Querier, agentID string, params *ChangeCommonAgentPar
 }
 
 // RemoveAgent removes Agent by ID.
-func RemoveAgent(q *reform.Querier, id string) (*Agent, error) {
+func RemoveAgent(q *reform.Querier, id string, mode RemoveMode) (*Agent, error) {
 	a, err := AgentFindByID(q, id)
 	if err != nil {
 		return nil, err
 	}
 
-	agents, err := q.SelectAllFrom(AgentTable, "WHERE pmm_agent_id = $1", id)
+	structs, err := q.SelectAllFrom(AgentTable, "WHERE pmm_agent_id = $1", id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select Agents")
 	}
-	if len(agents) != 0 {
-		return nil, status.Errorf(codes.FailedPrecondition, "pmm-agent with ID %q has agents.", id)
+	if len(structs) != 0 {
+		switch mode {
+		case RemoveRestrict:
+			return nil, status.Errorf(codes.FailedPrecondition, "pmm-agent with ID %q has agents.", id)
+		case RemoveCascade:
+			for _, str := range structs {
+				agentID := str.(*Agent).AgentID
+				if _, err = RemoveAgent(q, agentID, RemoveRestrict); err != nil {
+					return nil, err
+				}
+			}
+		default:
+			panic(fmt.Errorf("unhandled RemoveMode %v", mode))
+		}
 	}
 
 	if _, err = q.DeleteFrom(AgentServiceView, "WHERE agent_id = $1", id); err != nil {
