@@ -66,7 +66,7 @@ func TestAddMongoDB(t *testing.T) {
 			},
 		}, *serviceOK.Payload)
 
-		// Check that no one exporter is added.
+		// Check that mongodb exporter is added by default.
 		listAgents, err := inventoryClient.Default.Agents.ListAgents(&agents.ListAgentsParams{
 			Context: pmmapitests.Context,
 			Body: agents.ListAgentsBody{
@@ -74,7 +74,15 @@ func TestAddMongoDB(t *testing.T) {
 			},
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, agents.ListAgentsOKBody{}, *listAgents.Payload)
+		assert.Equal(t, agents.ListAgentsOKBody{
+			MongodbExporter: []*agents.MongodbExporterItems0{
+				{
+					AgentID:    listAgents.Payload.MongodbExporter[0].AgentID,
+					ServiceID:  serviceID,
+					PMMAgentID: pmmAgentID,
+				},
+			},
+		}, *listAgents.Payload)
 		defer removeAllAgentsInList(t, listAgents)
 	})
 
@@ -99,7 +107,6 @@ func TestAddMongoDB(t *testing.T) {
 				Port:               27017,
 				Username:           "username",
 				Password:           "password",
-				MongodbExporter:    true,
 				QANMongodbProfiler: true,
 			},
 		}
@@ -198,6 +205,7 @@ func TestAddMongoDB(t *testing.T) {
 		require.NotNil(realT, addMongoDBOK.Payload.Service)
 		serviceID := addMongoDBOK.Payload.Service.ServiceID
 		defer pmmapitests.RemoveServices(realT, serviceID)
+		defer removeServiceAgents(realT, serviceID)
 
 		// Check that service is created and its fields.
 		serviceOK, err := inventoryClient.Default.Services.GetService(&services.GetServiceParams{
@@ -250,6 +258,7 @@ func TestAddMongoDB(t *testing.T) {
 		require.NotNil(t, addMongoDBOK.Payload.Service)
 		serviceID := addMongoDBOK.Payload.Service.ServiceID
 		defer pmmapitests.RemoveServices(t, serviceID)
+		defer removeServiceAgents(t, serviceID)
 
 		params = &mongodb.AddMongoDBParams{
 			Context: pmmapitests.Context,
@@ -381,7 +390,6 @@ func TestRemoveMongoDB(t *testing.T) {
 				Port:               27017,
 				Username:           "username",
 				Password:           "password",
-				MongodbExporter:    withAgents,
 				QANMongodbProfiler: withAgents,
 			},
 		}

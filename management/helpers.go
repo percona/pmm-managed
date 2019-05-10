@@ -111,6 +111,18 @@ func removePMMAgentWithSubAgents(t *testing.T, pmmAgentID string) {
 	pmmapitests.RemoveAgents(t, pmmAgentID)
 }
 
+func removeServiceAgents(t *testing.T, serviceID string) {
+	t.Helper()
+	listAgentsOK, err := inventoryClient.Default.Agents.ListAgents(&agents.ListAgentsParams{
+		Body: agents.ListAgentsBody{
+			ServiceID: serviceID,
+		},
+		Context: context.Background(),
+	})
+	assert.NoError(t, err)
+	removeAllAgentsInList(t, listAgentsOK)
+}
+
 func removeAllAgentsInList(t *testing.T, listAgentsOK *agents.ListAgentsOK) {
 	t.Helper()
 	var agentIDs []string

@@ -38,6 +38,7 @@ func TestAddMySQL(t *testing.T) {
 				ServiceName: serviceName,
 				Address:     "10.10.10.10",
 				Port:        3306,
+				Username:    "username",
 			},
 		}
 		addMySQLOK, err := client.Default.MySQL.AddMySQL(params)
@@ -66,7 +67,7 @@ func TestAddMySQL(t *testing.T) {
 			},
 		}, *serviceOK.Payload)
 
-		// Check that no one exporter is added.
+		// Check that mysqld exporter is added by default.
 		listAgents, err := inventoryClient.Default.Agents.ListAgents(&agents.ListAgentsParams{
 			Context: pmmapitests.Context,
 			Body: agents.ListAgentsBody{
@@ -74,7 +75,16 @@ func TestAddMySQL(t *testing.T) {
 			},
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, agents.ListAgentsOKBody{}, *listAgents.Payload)
+		assert.Equal(t, agents.ListAgentsOKBody{
+			MysqldExporter: []*agents.MysqldExporterItems0{
+				{
+					AgentID:    listAgents.Payload.MysqldExporter[0].AgentID,
+					ServiceID:  serviceID,
+					PMMAgentID: pmmAgentID,
+					Username:   "username",
+				},
+			},
+		}, *listAgents.Payload)
 		defer removeAllAgentsInList(t, listAgents)
 	})
 
@@ -99,9 +109,6 @@ func TestAddMySQL(t *testing.T) {
 				Port:               3306,
 				Username:           "username",
 				Password:           "password",
-				QANUsername:        "qan-username",
-				QANPassword:        "qan-pass",
-				MysqldExporter:     true,
 				QANMysqlSlowlog:    true,
 				QANMysqlPerfschema: true,
 			},
@@ -160,8 +167,8 @@ func TestAddMySQL(t *testing.T) {
 					AgentID:    listAgents.Payload.QANMysqlSlowlogAgent[0].AgentID,
 					ServiceID:  serviceID,
 					PMMAgentID: pmmAgentID,
-					Username:   "qan-username",
-					Password:   "qan-pass",
+					Username:   "username",
+					Password:   "password",
 				},
 			},
 			QANMysqlPerfschemaAgent: []*agents.QANMysqlPerfschemaAgentItems0{
@@ -169,8 +176,8 @@ func TestAddMySQL(t *testing.T) {
 					AgentID:    listAgents.Payload.QANMysqlPerfschemaAgent[0].AgentID,
 					ServiceID:  serviceID,
 					PMMAgentID: pmmAgentID,
-					Username:   "qan-username",
-					Password:   "qan-pass",
+					Username:   "username",
+					Password:   "password",
 				},
 			},
 		}, *listAgents.Payload)
@@ -200,8 +207,6 @@ func TestAddMySQL(t *testing.T) {
 				Port:           3306,
 				Username:       "username",
 				Password:       "password",
-				QANUsername:    "qan-username",
-				QANPassword:    "qan-pass",
 				Environment:    "some-environment",
 				Cluster:        "cluster-name",
 				ReplicationSet: "replication-set",
@@ -214,6 +219,7 @@ func TestAddMySQL(t *testing.T) {
 		require.NotNil(t, addMySQLOK.Payload.Service)
 		serviceID := addMySQLOK.Payload.Service.ServiceID
 		defer pmmapitests.RemoveServices(t, serviceID)
+		defer removeServiceAgents(t, serviceID)
 
 		// Check that service is created and its fields.
 		serviceOK, err := inventoryClient.Default.Services.GetService(&services.GetServiceParams{
@@ -258,6 +264,7 @@ func TestAddMySQL(t *testing.T) {
 				ServiceName: serviceName,
 				Address:     "10.10.10.10",
 				Port:        3306,
+				Username:    "username",
 			},
 		}
 		addMySQLOK, err := client.Default.MySQL.AddMySQL(params)
@@ -266,6 +273,7 @@ func TestAddMySQL(t *testing.T) {
 		require.NotNil(t, addMySQLOK.Payload.Service)
 		serviceID := addMySQLOK.Payload.Service.ServiceID
 		defer pmmapitests.RemoveServices(t, serviceID)
+		defer removeServiceAgents(t, serviceID)
 
 		params = &mysql.AddMySQLParams{
 			Context: pmmapitests.Context,
@@ -275,6 +283,7 @@ func TestAddMySQL(t *testing.T) {
 				ServiceName: serviceName,
 				Address:     "11.11.11.11",
 				Port:        3307,
+				Username:    "username",
 			},
 		}
 		addMySQLOK, err = client.Default.MySQL.AddMySQL(params)
@@ -378,6 +387,31 @@ func TestAddMySQL(t *testing.T) {
 		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{Code: 400, Error: "invalid field PmmAgentId: value '' must not be an empty string"})
 		assert.Nil(t, addMySQLOK)
 	})
+
+	t.Run("Empty username", func(t *testing.T) {
+		nodeName := pmmapitests.TestString(t, "node-name")
+		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterBody{
+			NodeName: nodeName,
+			NodeType: pointer.ToString(node.RegisterBodyNodeTypeGENERICNODE),
+		})
+		defer pmmapitests.RemoveNodes(t, nodeID)
+		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+
+		serviceName := pmmapitests.TestString(t, "service-name")
+		params := &mysql.AddMySQLParams{
+			Context: pmmapitests.Context,
+			Body: mysql.AddMySQLBody{
+				NodeID:      nodeID,
+				ServiceName: serviceName,
+				Address:     "10.10.10.10",
+				Port:        3306,
+				PMMAgentID:  pmmAgentID,
+			},
+		}
+		addMySQLOK, err := client.Default.MySQL.AddMySQL(params)
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{Code: 400, Error: "invalid field Username: value '' must not be an empty string"})
+		assert.Nil(t, addMySQLOK)
+	})
 }
 
 func TestRemoveMySQL(t *testing.T) {
@@ -397,9 +431,6 @@ func TestRemoveMySQL(t *testing.T) {
 				Port:               3306,
 				Username:           "username",
 				Password:           "password",
-				QANUsername:        "qan-username",
-				QANPassword:        "qan-pass",
-				MysqldExporter:     withAgents,
 				QANMysqlSlowlog:    withAgents,
 				QANMysqlPerfschema: withAgents,
 			},

@@ -38,6 +38,7 @@ func TestAddPostgreSQL(t *testing.T) {
 				ServiceName: serviceName,
 				Address:     "10.10.10.10",
 				Port:        5432,
+				Username:    "username",
 			},
 		}
 		addPostgreSQLOK, err := client.Default.PostgreSQL.AddPostgreSQL(params)
@@ -74,71 +75,6 @@ func TestAddPostgreSQL(t *testing.T) {
 			},
 		})
 		assert.NoError(t, err)
-		assert.Equal(t, agents.ListAgentsOKBody{}, *listAgents.Payload)
-		defer removeAllAgentsInList(t, listAgents)
-	})
-
-	t.Run("With exporters", func(t *testing.T) {
-		nodeName := pmmapitests.TestString(t, "node-for-all-fields-name")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterBody{
-			NodeName: nodeName,
-			NodeType: pointer.ToString(node.RegisterBodyNodeTypeGENERICNODE),
-		})
-		defer pmmapitests.RemoveNodes(t, nodeID)
-		defer removePMMAgentWithSubAgents(t, pmmAgentID)
-
-		serviceName := pmmapitests.TestString(t, "service-for-all-fields-name")
-
-		params := &postgresql.AddPostgreSQLParams{
-			Context: pmmapitests.Context,
-			Body: postgresql.AddPostgreSQLBody{
-				NodeID:           nodeID,
-				PMMAgentID:       pmmAgentID,
-				ServiceName:      serviceName,
-				Address:          "10.10.10.10",
-				Port:             5432,
-				Username:         "username",
-				Password:         "password",
-				PostgresExporter: true,
-			},
-		}
-		addPostgreSQLOK, err := client.Default.PostgreSQL.AddPostgreSQL(params)
-		require.NoError(t, err)
-		require.NotNil(t, addPostgreSQLOK)
-		require.NotNil(t, addPostgreSQLOK.Payload.Service)
-		serviceID := addPostgreSQLOK.Payload.Service.ServiceID
-		defer pmmapitests.RemoveServices(t, serviceID)
-
-		// Check that service is created and its fields.
-		serviceOK, err := inventoryClient.Default.Services.GetService(&services.GetServiceParams{
-			Body: services.GetServiceBody{
-				ServiceID: serviceID,
-			},
-			Context: pmmapitests.Context,
-		})
-		assert.NoError(t, err)
-		assert.NotNil(t, serviceOK)
-		assert.Equal(t, services.GetServiceOKBody{
-			Postgresql: &services.GetServiceOKBodyPostgresql{
-				ServiceID:   serviceID,
-				NodeID:      nodeID,
-				ServiceName: serviceName,
-				Address:     "10.10.10.10",
-				Port:        5432,
-			},
-		}, *serviceOK.Payload)
-
-		// Check that postgres_exporter is added.
-		listAgents, err := inventoryClient.Default.Agents.ListAgents(&agents.ListAgentsParams{
-			Context: pmmapitests.Context,
-			Body: agents.ListAgentsBody{
-				ServiceID: serviceID,
-			},
-		})
-		assert.NoError(t, err)
-		require.NotNil(t, listAgents)
-		defer removeAllAgentsInList(t, listAgents)
-		require.Len(t, listAgents.Payload.PostgresExporter, 1)
 		assert.Equal(t, agents.ListAgentsOKBody{
 			PostgresExporter: []*agents.PostgresExporterItems0{
 				{
@@ -146,10 +82,10 @@ func TestAddPostgreSQL(t *testing.T) {
 					ServiceID:  serviceID,
 					PMMAgentID: pmmAgentID,
 					Username:   "username",
-					Password:   "password",
 				},
 			},
 		}, *listAgents.Payload)
+		defer removeAllAgentsInList(t, listAgents)
 	})
 
 	t.Run("With labels", func(realT *testing.T) {
@@ -174,6 +110,7 @@ func TestAddPostgreSQL(t *testing.T) {
 				ServiceName:  serviceName,
 				Address:      "10.10.10.10",
 				Port:         5432,
+				Username:     "username",
 				Environment:  "some-environment",
 				CustomLabels: map[string]string{"bar": "foo"},
 			},
@@ -184,6 +121,7 @@ func TestAddPostgreSQL(t *testing.T) {
 		require.NotNil(realT, addPostgreSQLOK.Payload.Service)
 		serviceID := addPostgreSQLOK.Payload.Service.ServiceID
 		defer pmmapitests.RemoveServices(realT, serviceID)
+		defer removeServiceAgents(realT, serviceID)
 
 		// Check that service is created and its fields.
 		serviceOK, err := inventoryClient.Default.Services.GetService(&services.GetServiceParams{
@@ -224,6 +162,7 @@ func TestAddPostgreSQL(t *testing.T) {
 				NodeID:      nodeID,
 				PMMAgentID:  pmmAgentID,
 				ServiceName: serviceName,
+				Username:    "username",
 				Address:     "10.10.10.10",
 				Port:        5432,
 			},
@@ -234,6 +173,7 @@ func TestAddPostgreSQL(t *testing.T) {
 		require.NotNil(t, addPostgreSQLOK.Payload.Service)
 		serviceID := addPostgreSQLOK.Payload.Service.ServiceID
 		defer pmmapitests.RemoveServices(t, serviceID)
+		defer removeServiceAgents(t, serviceID)
 
 		params = &postgresql.AddPostgreSQLParams{
 			Context: pmmapitests.Context,
@@ -241,8 +181,9 @@ func TestAddPostgreSQL(t *testing.T) {
 				NodeID:      nodeID,
 				PMMAgentID:  pmmAgentID,
 				ServiceName: serviceName,
+				Username:    "username",
 				Address:     "11.11.11.11",
-				Port:        3307,
+				Port:        5433,
 			},
 		}
 		addPostgreSQLOK, err = client.Default.PostgreSQL.AddPostgreSQL(params)
@@ -349,7 +290,7 @@ func TestAddPostgreSQL(t *testing.T) {
 }
 
 func TestRemovePostgreSQL(t *testing.T) {
-	addPostgreSQL := func(serviceName, nodeName string, withAgents bool) (nodeID string, pmmAgentID string, serviceID string) {
+	addPostgreSQL := func(serviceName, nodeName string) (nodeID string, pmmAgentID string, serviceID string) {
 		nodeID, pmmAgentID = registerGenericNode(t, node.RegisterBody{
 			NodeName: nodeName,
 			NodeType: pointer.ToString(node.RegisterBodyNodeTypeGENERICNODE),
@@ -358,14 +299,13 @@ func TestRemovePostgreSQL(t *testing.T) {
 		params := &postgresql.AddPostgreSQLParams{
 			Context: pmmapitests.Context,
 			Body: postgresql.AddPostgreSQLBody{
-				NodeID:           nodeID,
-				PMMAgentID:       pmmAgentID,
-				ServiceName:      serviceName,
-				Address:          "10.10.10.10",
-				Port:             5432,
-				Username:         "username",
-				Password:         "password",
-				PostgresExporter: withAgents,
+				NodeID:      nodeID,
+				PMMAgentID:  pmmAgentID,
+				ServiceName: serviceName,
+				Address:     "10.10.10.10",
+				Port:        5432,
+				Username:    "username",
+				Password:    "password",
 			},
 		}
 		addPostgreSQLOK, err := client.Default.PostgreSQL.AddPostgreSQL(params)
@@ -379,7 +319,7 @@ func TestRemovePostgreSQL(t *testing.T) {
 	t.Run("By name", func(t *testing.T) {
 		serviceName := pmmapitests.TestString(t, "service-remove-by-name")
 		nodeName := pmmapitests.TestString(t, "node-remove-by-name")
-		nodeID, pmmAgentID, serviceID := addPostgreSQL(serviceName, nodeName, true)
+		nodeID, pmmAgentID, serviceID := addPostgreSQL(serviceName, nodeName)
 		defer pmmapitests.RemoveNodes(t, nodeID)
 		defer removePMMAgentWithSubAgents(t, pmmAgentID)
 
@@ -411,7 +351,7 @@ func TestRemovePostgreSQL(t *testing.T) {
 	t.Run("By ID", func(t *testing.T) {
 		serviceName := pmmapitests.TestString(t, "service-remove-by-id")
 		nodeName := pmmapitests.TestString(t, "node-remove-by-id")
-		nodeID, pmmAgentID, serviceID := addPostgreSQL(serviceName, nodeName, true)
+		nodeID, pmmAgentID, serviceID := addPostgreSQL(serviceName, nodeName)
 		defer pmmapitests.RemoveNodes(t, nodeID)
 		defer removePMMAgentWithSubAgents(t, pmmAgentID)
 
@@ -442,7 +382,7 @@ func TestRemovePostgreSQL(t *testing.T) {
 	t.Run("Both params", func(t *testing.T) {
 		serviceName := pmmapitests.TestString(t, "service-remove-both-params")
 		nodeName := pmmapitests.TestString(t, "node-remove-both-params")
-		nodeID, pmmAgentID, serviceID := addPostgreSQL(serviceName, nodeName, false)
+		nodeID, pmmAgentID, serviceID := addPostgreSQL(serviceName, nodeName)
 		defer pmmapitests.RemoveNodes(t, nodeID)
 		defer pmmapitests.RemoveServices(t, serviceID)
 		defer removePMMAgentWithSubAgents(t, pmmAgentID)
@@ -462,7 +402,7 @@ func TestRemovePostgreSQL(t *testing.T) {
 	t.Run("Wrong type", func(t *testing.T) {
 		serviceName := pmmapitests.TestString(t, "service-remove-wrong-type")
 		nodeName := pmmapitests.TestString(t, "node-remove-wrong-type")
-		nodeID, pmmAgentID, serviceID := addPostgreSQL(serviceName, nodeName, false)
+		nodeID, pmmAgentID, serviceID := addPostgreSQL(serviceName, nodeName)
 		defer pmmapitests.RemoveNodes(t, nodeID)
 		defer pmmapitests.RemoveServices(t, serviceID)
 		defer removePMMAgentWithSubAgents(t, pmmAgentID)
