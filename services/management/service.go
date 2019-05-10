@@ -30,9 +30,7 @@ import (
 )
 
 var (
-	errNoParamsNotFound    = status.Error(codes.InvalidArgument, "params not found")
-	errOneOfParamsExpected = status.Error(codes.InvalidArgument, "service_id or service_name expected; not both")
-	serviceTypes           = map[inventorypb.ServiceType]models.ServiceType{
+	serviceTypes = map[inventorypb.ServiceType]models.ServiceType{
 		inventorypb.ServiceType_MYSQL_SERVICE:      models.MySQLServiceType,
 		inventorypb.ServiceType_MONGODB_SERVICE:    models.MongoDBServiceType,
 		inventorypb.ServiceType_POSTGRESQL_SERVICE: models.PostgreSQLServiceType,
@@ -116,10 +114,10 @@ func (ss *ServiceService) checkServiceType(service *models.Service, serviceType 
 
 func (ss *ServiceService) validateRequest(request *managementpb.RemoveServiceRequest) error {
 	if request.ServiceName == "" && request.ServiceId == "" {
-		return errNoParamsNotFound
+		return status.Error(codes.InvalidArgument, "params not found")
 	}
 	if request.ServiceName != "" && request.ServiceId != "" {
-		return errOneOfParamsExpected
+		return status.Error(codes.InvalidArgument, "service_id or service_name expected; not both")
 	}
 	return nil
 }
