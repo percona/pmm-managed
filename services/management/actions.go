@@ -92,7 +92,7 @@ func (a *ActionsService) CancelAction(ctx context.Context, pmmAgentID, actionID 
 }
 
 // GetActionResult gets PMM Action with the given ID from action results storage.
-func (a *ActionsService) GetActionResult(ctx context.Context, actionID string) (ActionResult, bool) {
+func (a *ActionsService) GetActionResult(ctx context.Context, actionID string) (models.ActionResult, bool) {
 	return a.actionsStorage.Load(actionID)
 }
 
@@ -174,15 +174,6 @@ func validatePmmAgentId(pmmAgentId string, agents []*models.Agent) (string, erro
 	return "", errPmmAgentIdNotFound
 }
 
-// ActionResult describes an PMM Action result which is storing in ActionsResult storage.
-type ActionResult struct {
-	ID         string
-	PmmAgentID string
-	ErrCode    int32
-	ErrMessage string
-	Output     string
-}
-
 // InMemoryActionsStorage in memory action results storage.
 type InMemoryActionsStorage struct {
 	container sync.Map
@@ -194,15 +185,15 @@ func NewInMemoryActionsStorage() *InMemoryActionsStorage {
 }
 
 // Store stores an action result in action results storage.
-func (s *InMemoryActionsStorage) Store(result ActionResult) {
+func (s *InMemoryActionsStorage) Store(result models.ActionResult) {
 	s.container.Store(result.ID, result)
 }
 
 // Load gets an action result from storage by action id.
-func (s *InMemoryActionsStorage) Load(id string) (ActionResult, bool) {
+func (s *InMemoryActionsStorage) Load(id string) (models.ActionResult, bool) {
 	v, ok := s.container.Load(id)
 	if !ok {
-		return ActionResult{}, false
+		return models.ActionResult{}, false
 	}
-	return v.(ActionResult), true
+	return v.(models.ActionResult), true
 }

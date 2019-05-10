@@ -34,7 +34,6 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/agents/channel"
-	"github.com/percona/pmm-managed/services/management"
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
@@ -45,7 +44,7 @@ const (
 
 type actionsStorage interface {
 	// Store an action result to persistent storage.
-	Store(management.ActionResult)
+	Store(models.ActionResult)
 }
 
 type agentInfo struct {
@@ -200,7 +199,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 					Payload: new(agentpb.ActionResultResponse),
 				})
 				// TODO: PMM-3978: In the future we need to merge action parts before send it to storage.
-				r.actionsStorage.Store(management.ActionResult{
+				r.actionsStorage.Store(models.ActionResult{
 					ID:         p.ActionId,
 					PmmAgentID: agent.id,
 					ErrCode:    p.ErrCode,
