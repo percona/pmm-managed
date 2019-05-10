@@ -29,6 +29,11 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
+var (
+	errUnsupportedAction  = errors.New("unsupported action")
+	errPmmAgentIdNotFound = errors.New("can't detect pmm_agent_id")
+)
+
 type agentsRegistry interface {
 	// SendRequest sends request to pmm-agent with given id.
 	SendRequest(ctx context.Context, pmmAgentID string, payload agentpb.ServerRequestPayload) agentpb.AgentResponsePayload
@@ -63,52 +68,25 @@ type RunActionParams struct {
 }
 
 // RunAction runs PMM Action on the given client.
-func (a *ActionsService) RunAction(ctx context.Context, rp RunActionParams) (string, error) {
-	actionID := "/action_id/" + uuid.New().String()
-	pmmAgentId := ""
-	params := rp.ActionParams
-	var err error
-
-	switch rp.ActionName {
-	case agentpb.ActionName_PT_SUMMARY:
-		pmmAgentId, err = findPmmAgentIdByNodeId(a.db.Querier, rp.PmmAgentID, rp.NodeID)
-		if err != nil {
-			return "", err
-		}
-
-	case agentpb.ActionName_PT_MYSQL_SUMMARY:
-		pmmAgentId, err = findPmmAgentIdByServiceId(a.db.Querier, rp.PmmAgentID, rp.ServiceID)
-		if err != nil {
-			return "", err
-		}
-
-	case agentpb.ActionName_MYSQL_EXPLAIN:
-		pmmAgentId, err = findPmmAgentIdByServiceId(a.db.Querier, rp.PmmAgentID, rp.ServiceID)
-		if err != nil {
-			return "", err
-		}
-
-	case agentpb.ActionName_ACTION_NAME_INVALID:
-		err = errors.New("unknown action name")
+func (a *ActionsService) RunAction(ctx context.Context, rp RunActionParams) (actionId string, error error) {
+	action, err := a.prepareAction(rp)
+	if err != nil {
+		return "", err
 	}
 
-	if pmmAgentId == "" {
-		return "", errors.New("can't find proper pmm_agent_id")
-	}
-
-	res := a.agentsRegistry.SendRequest(ctx, pmmAgentId, &agentpb.StartActionRequest{
-		Id:         actionID,
-		Name:       rp.ActionName,
-		Parameters: params,
+	res := a.agentsRegistry.SendRequest(ctx, action.PmmAgentID, &agentpb.StartActionRequest{
+		ActionId:   action.ID,
+		Name:       action.Name,
+		Parameters: action.Params,
 	})
 	a.logger.Infof("RunAction response: %+v.", res)
-	return actionID, nil
+	return action.ID, nil
 }
 
 // CancelAction stops PMM Action with the given ID on the given client.
 func (a *ActionsService) CancelAction(ctx context.Context, pmmAgentID, actionID string) {
 	res := a.agentsRegistry.SendRequest(ctx, pmmAgentID, &agentpb.StopActionRequest{
-		Id: actionID,
+		ActionId: actionID,
 	})
 	a.logger.Infof("CancelAction response: %+v.", res)
 }
@@ -118,12 +96,54 @@ func (a *ActionsService) GetActionResult(ctx context.Context, actionID string) (
 	return a.actionsStorage.Load(actionID)
 }
 
+type preparedAction struct {
+	ID         string
+	Name       agentpb.ActionName
+	Params     []string
+	PmmAgentID string
+}
+
+func (a *ActionsService) prepareAction(rp RunActionParams) (preparedAction, error) {
+	action := preparedAction{
+		ID:         "/action_id/" + uuid.New().String(),
+		PmmAgentID: rp.PmmAgentID,
+		Name:       rp.ActionName,
+		Params:     rp.ActionParams,
+	}
+	var err error
+
+	switch action.Name {
+	case agentpb.ActionName_PT_SUMMARY:
+		action.PmmAgentID, err = findPmmAgentIdByNodeId(a.db.Querier, rp.PmmAgentID, rp.NodeID)
+		if err != nil {
+			return action, err
+		}
+
+	case agentpb.ActionName_PT_MYSQL_SUMMARY:
+		action.PmmAgentID, err = findPmmAgentIdByServiceId(a.db.Querier, rp.PmmAgentID, rp.ServiceID)
+		if err != nil {
+			return action, err
+		}
+
+	case agentpb.ActionName_MYSQL_EXPLAIN:
+		action.PmmAgentID, err = findPmmAgentIdByServiceId(a.db.Querier, rp.PmmAgentID, rp.ServiceID)
+		if err != nil {
+			return action, err
+		}
+
+	case agentpb.ActionName_ACTION_NAME_INVALID:
+		return action, errUnsupportedAction
+	}
+
+	return action, errUnsupportedAction
+}
+
 func findPmmAgentIdByNodeId(q *reform.Querier, pmmAgentId, nodeID string) (string, error) {
 	agents, err := models.PMMAgentsForNode(q, nodeID)
 	if err != nil {
 		return "", err
 	}
-	return findPmmAgentIdInAgents(pmmAgentId, agents)
+	return validatePmmAgentId(pmmAgentId, agents)
 }
 
 func findPmmAgentIdByServiceId(q *reform.Querier, pmmAgentId, serviceID string) (string, error) {
@@ -131,10 +151,10 @@ func findPmmAgentIdByServiceId(q *reform.Querier, pmmAgentId, serviceID string) 
 	if err != nil {
 		return "", err
 	}
-	return findPmmAgentIdInAgents(pmmAgentId, agents)
+	return validatePmmAgentId(pmmAgentId, agents)
 }
 
-func findPmmAgentIdInAgents(pmmAgentId string, agents []*models.Agent) (string, error) {
+func validatePmmAgentId(pmmAgentId string, agents []*models.Agent) (string, error) {
 	// no explicit ID is given, and there is only one
 	if pmmAgentId == "" && len(agents) == 1 {
 		return agents[0].AgentID, nil
@@ -142,7 +162,7 @@ func findPmmAgentIdInAgents(pmmAgentId string, agents []*models.Agent) (string, 
 
 	// no explicit ID is given, and there are zero or several
 	if pmmAgentId == "" {
-		return "", errors.New("can't detect pmm_agent_id")
+		return "", errPmmAgentIdNotFound
 	}
 
 	// check that explicit agent id is correct
@@ -151,13 +171,15 @@ func findPmmAgentIdInAgents(pmmAgentId string, agents []*models.Agent) (string, 
 			return a.AgentID, nil
 		}
 	}
-	return "", errors.New("contradiction")
+	return "", errPmmAgentIdNotFound
 }
 
 // ActionResult describes an PMM Action result which is storing in ActionsResult storage.
 type ActionResult struct {
 	ID         string
 	PmmAgentID string
+	ErrCode    int32
+	ErrMessage string
 	Output     string
 }
 
@@ -170,8 +192,6 @@ type InMemoryActionsStorage struct {
 func NewInMemoryActionsStorage() *InMemoryActionsStorage {
 	return &InMemoryActionsStorage{}
 }
-
-// TODO: Store action result first, then store action output.
 
 // Store stores an action result in action results storage.
 func (s *InMemoryActionsStorage) Store(result ActionResult) {
