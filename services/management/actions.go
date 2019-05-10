@@ -53,6 +53,7 @@ func NewActionsService(r agentsRegistry, s *InMemoryActionsStorage, db *reform.D
 	}
 }
 
+// RunActionParams parameters for run actions.
 type RunActionParams struct {
 	ActionName   agentpb.ActionName
 	ActionParams []string
@@ -177,7 +178,7 @@ func (s *InMemoryActionsStorage) Store(result ActionResult) {
 	s.container.Store(result.ID, result)
 }
 
-// Get gets an action result from storage by action id.
+// Load gets an action result from storage by action id.
 func (s *InMemoryActionsStorage) Load(id string) (ActionResult, bool) {
 	v, ok := s.container.Load(id)
 	if !ok {

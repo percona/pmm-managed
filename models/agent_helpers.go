@@ -337,10 +337,12 @@ func PMMAgentsForChangedService(q *reform.Querier, serviceID string) ([]string, 
 	return res, nil
 }
 
+// PMMAgentsForNode gets pmm-agent for node.
 func PMMAgentsForNode(q *reform.Querier, nodeID string) ([]*Agent, error) {
-	return PMMAgentsForNode(q, nodeID)
+	return findPmmAgentsForNode(q, nodeID)
 }
 
+// PMMAgentsForService gets pmm-agent for service.
 func PMMAgentsForService(q *reform.Querier, serviceID string) ([]*Agent, error) {
 	serviceRecord, err := q.SelectOneFrom(ServiceTable, "WHERE service_id = $1", serviceID)
 	if err != nil {
@@ -348,11 +350,11 @@ func PMMAgentsForService(q *reform.Querier, serviceID string) ([]*Agent, error) 
 	}
 	s := serviceRecord.(*Service)
 
-	return pmmAgentsForNode(q, s.NodeID)
+	return findPmmAgentsForNode(q, s.NodeID)
 }
 
-func pmmAgentsForNode(q *reform.Querier, nodeID string) ([]*Agent, error) {
-	structs, err := q.SelectAllFrom(AgentTable, "runs_on_node_id = $1", nodeID)
+func findPmmAgentsForNode(q *reform.Querier, nodeID string) ([]*Agent, error) {
+	structs, err := q.SelectAllFrom(AgentTable, "WHERE runs_on_node_id = $1", nodeID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select Agents")
 	}

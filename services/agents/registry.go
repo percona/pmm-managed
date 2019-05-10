@@ -340,6 +340,7 @@ func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRe
 	return r.prometheus.UpdateConfiguration(ctx)
 }
 
+// SendRequest sends request to pmm agent.
 func (r *Registry) SendRequest(ctx context.Context, pmmAgentID string, payload agentpb.ServerRequestPayload) agentpb.AgentResponsePayload {
 	r.rw.RLock()
 	agent := r.agents[pmmAgentID]

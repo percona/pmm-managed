@@ -45,12 +45,12 @@ func (s *actionsServer) RunAction(ctx context.Context, req *managementpb.RunActi
 		NodeID:       req.NodeId,
 		ServiceID:    req.ServiceId,
 	}
-	// TODO: Handle errors.
-	actionID, _ := s.as.RunAction(ctx, p)
+
+	actionID, err := s.as.RunAction(ctx, p)
 	return &managementpb.RunActionResponse{
 		PmmAgentId: req.PmmAgentId,
 		ActionId:   actionID,
-	}, nil
+	}, err
 }
 
 // CancelAction stops an Action.
