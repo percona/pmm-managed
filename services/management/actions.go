@@ -68,7 +68,7 @@ type RunActionParams struct {
 }
 
 // RunAction runs PMM Action on the given client.
-func (a *ActionsService) RunAction(ctx context.Context, rp RunActionParams) (actionId string, error error) {
+func (a *ActionsService) RunAction(ctx context.Context, rp RunActionParams) (actionId string, errorVar error) {
 	action, err := a.prepareAction(rp)
 	if err != nil {
 		return "", err
