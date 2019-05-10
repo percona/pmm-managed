@@ -54,6 +54,7 @@ func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgr
 			Address:      pointer.ToStringOrNil(req.Address),
 			Port:         pointer.ToUint16OrNil(uint16(req.Port)),
 			CustomLabels: req.CustomLabels,
+			// TODO Environment, Cluster, ReplicationSet
 		})
 		if err != nil {
 			return err
