@@ -36,8 +36,8 @@ import (
 	"github.com/percona/pmm-managed/utils/tests"
 )
 
-func TestRemoveService(t *testing.T) {
-	setup := func(t *testing.T) (ctx context.Context, ss *ServiceService, teardown func(t *testing.T)) {
+func TestServiceService(t *testing.T) {
+	setup := func(t *testing.T) (ctx context.Context, s *ServiceService, teardown func()) {
 		t.Helper()
 
 		uuid.SetRand(new(tests.IDReader))
@@ -48,9 +48,9 @@ func TestRemoveService(t *testing.T) {
 		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 		r := new(mockRegistry)
 		r.Test(t)
-		ss = NewServiceService(db, r)
+		s = NewServiceService(db, r)
 
-		teardown = func(t *testing.T) {
+		teardown = func() {
 			require.NoError(t, sqlDB.Close())
 			r.AssertExpectations(t)
 		}
@@ -58,84 +58,86 @@ func TestRemoveService(t *testing.T) {
 		return
 	}
 
-	t.Run("No params", func(t *testing.T) {
-		ctx, ss, teardown := setup(t)
-		defer teardown(t)
+	t.Run("Remove", func(t *testing.T) {
+		t.Run("No params", func(t *testing.T) {
+			ctx, s, teardown := setup(t)
+			defer teardown()
 
-		response, err := ss.RemoveService(ctx, &managementpb.RemoveServiceRequest{})
-		assert.Nil(t, response)
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `params not found`), err)
-	})
-
-	t.Run("Both params", func(t *testing.T) {
-		ctx, ss, teardown := setup(t)
-		defer teardown(t)
-
-		response, err := ss.RemoveService(ctx, &managementpb.RemoveServiceRequest{ServiceId: "some-id", ServiceName: "some-service-name"})
-		assert.Nil(t, response)
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `service_id or service_name expected; not both`), err)
-	})
-
-	t.Run("Not found", func(t *testing.T) {
-		ctx, ss, teardown := setup(t)
-		defer teardown(t)
-
-		response, err := ss.RemoveService(ctx, &managementpb.RemoveServiceRequest{ServiceName: "some-service-name"})
-		assert.Nil(t, response)
-		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with name "some-service-name" not found.`), err)
-	})
-
-	t.Run("Wrong service type", func(t *testing.T) {
-		ctx, ss, teardown := setup(t)
-		defer teardown(t)
-
-		service, err := models.AddNewService(ss.db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
-			ServiceName: "test-mysql",
-			NodeID:      models.PMMServerNodeID,
-			Address:     pointer.ToString("127.0.0.1"),
-			Port:        pointer.ToUint16(3306),
+			response, err := s.RemoveService(ctx, &managementpb.RemoveServiceRequest{})
+			assert.Nil(t, response)
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `params not found`), err)
 		})
-		require.NoError(t, err)
 
-		response, err := ss.RemoveService(ctx, &managementpb.RemoveServiceRequest{ServiceId: service.ServiceID, ServiceType: inventorypb.ServiceType_POSTGRESQL_SERVICE})
-		assert.Nil(t, response)
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `wrong service type`), err)
-	})
+		t.Run("Both params", func(t *testing.T) {
+			ctx, s, teardown := setup(t)
+			defer teardown()
 
-	t.Run("Basic", func(t *testing.T) {
-		ctx, ss, teardown := setup(t)
-		defer teardown(t)
-
-		service, err := models.AddNewService(ss.db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
-			ServiceName: "test-mysql",
-			NodeID:      models.PMMServerNodeID,
-			Address:     pointer.ToString("127.0.0.1"),
-			Port:        pointer.ToUint16(3306),
+			response, err := s.RemoveService(ctx, &managementpb.RemoveServiceRequest{ServiceId: "some-id", ServiceName: "some-service-name"})
+			assert.Nil(t, response)
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `service_id or service_name expected; not both`), err)
 		})
-		require.NoError(t, err)
 
-		pmmAgent, err := models.AgentAddPmmAgent(ss.db.Querier, models.PMMServerNodeID, nil)
-		require.NoError(t, err)
+		t.Run("Not found", func(t *testing.T) {
+			ctx, s, teardown := setup(t)
+			defer teardown()
 
-		mysqldExporter, err := models.AgentAddExporter(ss.db.Querier, models.MySQLdExporterType, &models.AddExporterAgentParams{
-			PMMAgentID: pmmAgent.AgentID,
-			ServiceID:  service.ServiceID,
-			Password:   "password",
-			Username:   "username",
+			response, err := s.RemoveService(ctx, &managementpb.RemoveServiceRequest{ServiceName: "some-service-name"})
+			assert.Nil(t, response)
+			tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with name "some-service-name" not found.`), err)
 		})
-		require.NoError(t, err)
 
-		ss.registry.(*mockRegistry).On("SendSetStateRequest", ctx, pmmAgent.AgentID)
-		response, err := ss.RemoveService(ctx, &managementpb.RemoveServiceRequest{ServiceName: service.ServiceName, ServiceType: inventorypb.ServiceType_MYSQL_SERVICE})
-		assert.NotNil(t, response)
-		assert.NoError(t, err)
+		t.Run("Wrong service type", func(t *testing.T) {
+			ctx, s, teardown := setup(t)
+			defer teardown()
 
-		agent, err := models.AgentFindByID(ss.db.Querier, mysqldExporter.AgentID)
-		assert.Nil(t, agent)
-		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "/agent_id/00000000-0000-4000-8000-000000000003" not found.`), err)
+			service, err := models.AddNewService(s.db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
+				ServiceName: "test-mysql",
+				NodeID:      models.PMMServerNodeID,
+				Address:     pointer.ToString("127.0.0.1"),
+				Port:        pointer.ToUint16(3306),
+			})
+			require.NoError(t, err)
 
-		service, err = models.FindServiceByID(ss.db.Querier, service.ServiceID)
-		assert.Nil(t, service)
-		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "/service_id/00000000-0000-4000-8000-000000000001" not found.`), err)
+			response, err := s.RemoveService(ctx, &managementpb.RemoveServiceRequest{ServiceId: service.ServiceID, ServiceType: inventorypb.ServiceType_POSTGRESQL_SERVICE})
+			assert.Nil(t, response)
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `wrong service type`), err)
+		})
+
+		t.Run("Basic", func(t *testing.T) {
+			ctx, s, teardown := setup(t)
+			defer teardown()
+
+			service, err := models.AddNewService(s.db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
+				ServiceName: "test-mysql",
+				NodeID:      models.PMMServerNodeID,
+				Address:     pointer.ToString("127.0.0.1"),
+				Port:        pointer.ToUint16(3306),
+			})
+			require.NoError(t, err)
+
+			pmmAgent, err := models.AgentAddPmmAgent(s.db.Querier, models.PMMServerNodeID, nil)
+			require.NoError(t, err)
+
+			mysqldExporter, err := models.AgentAddExporter(s.db.Querier, models.MySQLdExporterType, &models.AddExporterAgentParams{
+				PMMAgentID: pmmAgent.AgentID,
+				ServiceID:  service.ServiceID,
+				Password:   "password",
+				Username:   "username",
+			})
+			require.NoError(t, err)
+
+			s.registry.(*mockRegistry).On("SendSetStateRequest", ctx, pmmAgent.AgentID)
+			response, err := s.RemoveService(ctx, &managementpb.RemoveServiceRequest{ServiceName: service.ServiceName, ServiceType: inventorypb.ServiceType_MYSQL_SERVICE})
+			assert.NotNil(t, response)
+			assert.NoError(t, err)
+
+			agent, err := models.AgentFindByID(s.db.Querier, mysqldExporter.AgentID)
+			assert.Nil(t, agent)
+			tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "/agent_id/00000000-0000-4000-8000-000000000003" not found.`), err)
+
+			service, err = models.FindServiceByID(s.db.Querier, service.ServiceID)
+			assert.Nil(t, service)
+			tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "/service_id/00000000-0000-4000-8000-000000000001" not found.`), err)
+		})
 	})
 }
