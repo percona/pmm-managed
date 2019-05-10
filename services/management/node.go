@@ -41,9 +41,10 @@ type NodeService struct {
 }
 
 // NewNodeService creates NodeService instance.
-func NewNodeService(db *reform.DB) *NodeService {
+func NewNodeService(db *reform.DB, registry registry) *NodeService {
 	return &NodeService{
-		db: db,
+		db:       db,
+		registry: registry,
 	}
 }
 
@@ -53,11 +54,14 @@ func (s *NodeService) Register(ctx context.Context, req *managementpb.RegisterNo
 
 	if e := s.db.InTransaction(func(tx *reform.TX) error {
 		node, err := models.FindNodeByName(tx.Querier, req.NodeName)
-		if status.Code(err) == codes.OK {
+		switch status.Code(err) {
+		case codes.OK:
 			if !req.Reregister {
 				return status.Errorf(codes.AlreadyExists, "Node with name %q already exists.", req.NodeName)
 			}
 			err = models.RemoveNode(tx.Querier, node.NodeID, models.RemoveCascade)
+		case codes.NotFound:
+			err = nil
 		}
 		if err != nil {
 			return err

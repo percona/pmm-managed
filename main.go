@@ -160,7 +160,7 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	inventorypb.RegisterServicesServer(gRPCServer, inventorygrpc.NewServicesServer(servicesSvc))
 	inventorypb.RegisterAgentsServer(gRPCServer, inventorygrpc.NewAgentsServer(agentsSvc))
 
-	nodeSvc := management.NewNodeService(deps.db)
+	nodeSvc := management.NewNodeService(deps.db, deps.agentsRegistry)
 	serviceSvc := management.NewServiceService(deps.db, deps.agentsRegistry)
 	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsRegistry)
 	mongodbSvc := management.NewMongoDBService(deps.db, deps.agentsRegistry)
