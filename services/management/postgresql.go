@@ -67,7 +67,7 @@ func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgr
 
 		row, err := models.AgentAddExporter(tx.Querier, models.PostgresExporterType, &models.AddExporterAgentParams{
 			PMMAgentID: req.PmmAgentId,
-			ServiceID:  invService.ID(),
+			ServiceID:  service.ServiceID,
 			Username:   req.Username,
 			Password:   req.Password,
 		})

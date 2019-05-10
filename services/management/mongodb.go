@@ -68,7 +68,7 @@ func (s *MongoDBService) Add(ctx context.Context, req *managementpb.AddMongoDBRe
 
 		row, err := models.AgentAddExporter(tx.Querier, models.MongoDBExporterType, &models.AddExporterAgentParams{
 			PMMAgentID: req.PmmAgentId,
-			ServiceID:  invService.ID(),
+			ServiceID:  service.ServiceID,
 			Username:   req.Username,
 			Password:   req.Password,
 		})
@@ -85,7 +85,7 @@ func (s *MongoDBService) Add(ctx context.Context, req *managementpb.AddMongoDBRe
 		if req.QanMongodbProfiler {
 			row, err = models.AgentAddExporter(tx.Querier, models.QANMongoDBProfilerAgentType, &models.AddExporterAgentParams{
 				PMMAgentID: req.PmmAgentId,
-				ServiceID:  invService.ID(),
+				ServiceID:  service.ServiceID,
 				Username:   req.Username,
 				Password:   req.Password,
 			})

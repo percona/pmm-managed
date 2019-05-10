@@ -117,14 +117,14 @@ func TestAgents(t *testing.T) {
 
 		actualAgent, err = as.AddMySQLdExporter(ctx, &inventorypb.AddMySQLdExporterRequest{
 			PmmAgentId: pmmAgent.AgentId,
-			ServiceId:  s.ID(),
+			ServiceId:  s.ServiceId,
 			Username:   "username",
 		})
 		require.NoError(t, err)
 		expectedMySQLdExporter := &inventorypb.MySQLdExporter{
 			AgentId:    "/agent_id/00000000-0000-4000-8000-000000000004",
 			PmmAgentId: "/agent_id/00000000-0000-4000-8000-000000000001",
-			ServiceId:  s.ID(),
+			ServiceId:  s.ServiceId,
 			Username:   "username",
 		}
 		assert.Equal(t, expectedMySQLdExporter, actualAgent)
@@ -143,14 +143,14 @@ func TestAgents(t *testing.T) {
 
 		actualAgent, err = as.AddMongoDBExporter(ctx, &inventorypb.AddMongoDBExporterRequest{
 			PmmAgentId: pmmAgent.AgentId,
-			ServiceId:  ms.ID(),
+			ServiceId:  ms.ServiceId,
 			Username:   "username",
 		})
 		require.NoError(t, err)
 		expectedMongoDBExporter := &inventorypb.MongoDBExporter{
 			AgentId:    "/agent_id/00000000-0000-4000-8000-000000000006",
 			PmmAgentId: pmmAgent.AgentId,
-			ServiceId:  ms.ID(),
+			ServiceId:  ms.ServiceId,
 			Username:   "username",
 		}
 		assert.Equal(t, expectedMongoDBExporter, actualAgent)
@@ -161,14 +161,14 @@ func TestAgents(t *testing.T) {
 
 		actualAgent, err = as.AddQANMySQLSlowlogAgent(ctx, &inventorypb.AddQANMySQLSlowlogAgentRequest{
 			PmmAgentId: pmmAgent.AgentId,
-			ServiceId:  s.ID(),
+			ServiceId:  s.ServiceId,
 			Username:   "username",
 		})
 		require.NoError(t, err)
 		expectedQANMySQLSlowlogAgent := &inventorypb.QANMySQLSlowlogAgent{
 			AgentId:    "/agent_id/00000000-0000-4000-8000-000000000007",
 			PmmAgentId: pmmAgent.AgentId,
-			ServiceId:  s.ID(),
+			ServiceId:  s.ServiceId,
 			Username:   "username",
 		}
 		assert.Equal(t, expectedQANMySQLSlowlogAgent, actualAgent)
@@ -187,14 +187,14 @@ func TestAgents(t *testing.T) {
 
 		actualAgent, err = as.AddPostgresExporter(ctx, &inventorypb.AddPostgresExporterRequest{
 			PmmAgentId: pmmAgent.AgentId,
-			ServiceId:  ps.ID(),
+			ServiceId:  ps.ServiceId,
 			Username:   "username",
 		})
 		require.NoError(t, err)
 		expectedPostgresExporter := &inventorypb.PostgresExporter{
 			AgentId:    "/agent_id/00000000-0000-4000-8000-000000000009",
 			PmmAgentId: pmmAgent.AgentId,
-			ServiceId:  ps.ID(),
+			ServiceId:  ps.ServiceId,
 			Username:   "username",
 		}
 		assert.Equal(t, expectedPostgresExporter, actualAgent)
@@ -214,7 +214,7 @@ func TestAgents(t *testing.T) {
 		assert.Equal(t, expectedPostgresExporter, actualAgents[5])
 
 		// filter by service ID
-		actualAgents, err = as.List(ctx, AgentFilters{ServiceID: s.ID()})
+		actualAgents, err = as.List(ctx, AgentFilters{ServiceID: s.ServiceId})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 2)
 		assert.Equal(t, expectedMySQLdExporter, actualAgents[0])

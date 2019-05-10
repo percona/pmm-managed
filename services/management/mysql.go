@@ -67,7 +67,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 
 		row, err := models.AgentAddExporter(tx.Querier, models.MySQLdExporterType, &models.AddExporterAgentParams{
 			PMMAgentID: req.PmmAgentId,
-			ServiceID:  invService.ID(),
+			ServiceID:  service.ServiceID,
 			Username:   req.Username,
 			Password:   req.Password,
 		})
@@ -84,7 +84,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 		if req.QanMysqlPerfschema {
 			row, err = models.AgentAddExporter(tx.Querier, models.QANMySQLPerfSchemaAgentType, &models.AddExporterAgentParams{
 				PMMAgentID: req.PmmAgentId,
-				ServiceID:  invService.ID(),
+				ServiceID:  service.ServiceID,
 				Username:   req.Username,
 				Password:   req.Password,
 			})
@@ -102,7 +102,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 		if req.QanMysqlSlowlog {
 			row, err = models.AgentAddExporter(tx.Querier, models.QANMySQLSlowlogAgentType, &models.AddExporterAgentParams{
 				PMMAgentID: req.PmmAgentId,
-				ServiceID:  invService.ID(),
+				ServiceID:  service.ServiceID,
 				Username:   req.Username,
 				Password:   req.Password,
 			})
