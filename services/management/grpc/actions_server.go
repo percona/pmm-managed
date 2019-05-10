@@ -70,8 +70,10 @@ func (s *actionsServer) GetActionResult(ctx context.Context, req *managementpb.G
 	}
 
 	return &managementpb.GetActionResultResponse{
-		Id:         res.ID,
+		ActionId:   res.ID,
 		PmmAgentId: res.PmmAgentID,
+		ErrCode:    res.ErrCode,
+		ErrMessage: res.ErrMessage,
 		Output:     res.Output,
 	}, nil
 }
