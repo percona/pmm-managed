@@ -138,12 +138,11 @@ func (c *Client) Collect(ctx context.Context, req *qanpb.CollectRequest) error {
 			"node_model":      &m.NodeModel,
 			"container_name":  &m.ContainerName,
 		} {
-			if *field != "" {
-				c.l.Errorf("%q wasn't empty: %q.", labelName, *field)
-			}
-
 			value := labels[labelName]
 			delete(labels, labelName)
+			if *field != "" {
+				c.l.Errorf("%q wasn't empty: overwriting %q with %q.", labelName, *field, value)
+			}
 			*field = value
 		}
 
