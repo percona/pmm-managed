@@ -114,8 +114,8 @@ func (s *Agent) UnifiedLabels() (map[string]string, error) {
 		"agent_id":   s.AgentID,
 		"agent_type": string(s.AgentType),
 	}
-	for k, v := range custom {
-		res[k] = v
+	for name, value := range custom {
+		res[name] = value
 	}
 
 	if err = prepareLabels(res, true); err != nil {

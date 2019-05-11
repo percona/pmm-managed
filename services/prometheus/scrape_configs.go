@@ -80,7 +80,7 @@ func scrapeConfigForPMMManaged() *config.ScrapeConfig {
 }
 
 func mergeLabels(node *models.Node, service *models.Service, agent *models.Agent) (model.LabelSet, error) {
-	res := make(model.LabelSet)
+	res := make(model.LabelSet, 16)
 
 	labels, err := node.UnifiedLabels()
 	if err != nil {

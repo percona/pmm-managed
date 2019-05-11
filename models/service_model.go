@@ -110,8 +110,8 @@ func (s *Service) UnifiedLabels() (map[string]string, error) {
 		"cluster":         s.Cluster,
 		"replication_set": s.ReplicationSet,
 	}
-	for k, v := range custom {
-		res[k] = v
+	for name, value := range custom {
+		res[name] = value
 	}
 
 	if err = prepareLabels(res, true); err != nil {
