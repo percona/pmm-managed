@@ -95,6 +95,31 @@ func (s *Service) SetCustomLabels(m map[string]string) error {
 	return setCustomLabels(m, &s.CustomLabels)
 }
 
+// UnifiedLabels returns combined standard and custom labels with empty labels removed.
+func (s *Service) UnifiedLabels() (map[string]string, error) {
+	custom, err := s.GetCustomLabels()
+	if err != nil {
+		return nil, err
+	}
+
+	res := map[string]string{
+		"service_id":      s.ServiceID,
+		"service_name":    s.ServiceName,
+		"service_type":    string(s.ServiceType),
+		"environment":     s.Environment,
+		"cluster":         s.Cluster,
+		"replication_set": s.ReplicationSet,
+	}
+	for k, v := range custom {
+		res[k] = v
+	}
+
+	if err = prepareLabels(res, true); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
 // check interfaces
 var (
 	_ reform.BeforeInserter = (*Service)(nil)

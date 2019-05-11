@@ -103,7 +103,7 @@ func (s *Node) SetCustomLabels(m map[string]string) error {
 	return setCustomLabels(m, &s.CustomLabels)
 }
 
-// UnifiedLabels returns combined standard and custom labels.
+// UnifiedLabels returns combined standard and custom labels with empty labels removed.
 func (s *Node) UnifiedLabels() (map[string]string, error) {
 	custom, err := s.GetCustomLabels()
 	if err != nil {
@@ -121,13 +121,12 @@ func (s *Node) UnifiedLabels() (map[string]string, error) {
 		"region":         pointer.GetString(s.Region),
 		"az":             s.AZ,
 	}
-	for k, v := range custom {
-		res[k] = v
+	for name, value := range custom {
+		res[name] = value
 	}
-	for k, v := range res {
-		if v == "" {
-			delete(res, k)
-		}
+
+	if err = prepareLabels(res, true); err != nil {
+		return nil, err
 	}
 	return res, nil
 }

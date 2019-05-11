@@ -54,8 +54,8 @@ const (
 
 var labelNameRE = regexp.MustCompile("^[a-zA-Z_][a-zA-Z0-9_]*$")
 
-// prepareLabels checks that label names are valid, and removes labels with empty values.
-func prepareLabels(m map[string]string) error {
+// prepareLabels checks that label names are valid, and trims or removes empty values.
+func prepareLabels(m map[string]string, removeEmptyValues bool) error {
 	for name, value := range m {
 		if !labelNameRE.MatchString(name) {
 			return status.Errorf(codes.InvalidArgument, "Invalid label name %q.", name)
@@ -66,7 +66,11 @@ func prepareLabels(m map[string]string) error {
 
 		value = strings.TrimSpace(value)
 		if value == "" {
-			delete(m, name)
+			if removeEmptyValues {
+				delete(m, name)
+			} else {
+				m[name] = value
+			}
 		}
 	}
 
@@ -87,7 +91,7 @@ func getCustomLabels(field []byte) (map[string]string, error) {
 
 // setCustomLabels encodes custom labels m to the Node/Service/Agent field.
 func setCustomLabels(m map[string]string, field *[]byte) error {
-	if err := prepareLabels(m); err != nil {
+	if err := prepareLabels(m, false); err != nil {
 		return err
 	}
 

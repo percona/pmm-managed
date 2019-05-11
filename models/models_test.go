@@ -33,14 +33,14 @@ func TestCustomLabels(t *testing.T) {
 	t.Run("Normal", func(t *testing.T) {
 		err = setCustomLabels(map[string]string{"_1foo": "bar", "baz": "  "}, &b)
 		assert.NoError(t, err)
-		assert.Equal(t, `{"_1foo":"bar"}`, string(b))
+		assert.Equal(t, `{"_1foo":"bar","baz":""}`, string(b))
 		m, err := getCustomLabels(b)
 		assert.NoError(t, err)
-		assert.Equal(t, map[string]string{"_1foo": "bar"}, m)
+		assert.Equal(t, map[string]string{"_1foo": "bar", "baz": ""}, m)
 	})
 
-	t.Run("AllEmpty", func(t *testing.T) {
-		err = setCustomLabels(map[string]string{"baz": "  "}, &b)
+	t.Run("Empty", func(t *testing.T) {
+		err = setCustomLabels(map[string]string{}, &b)
 		assert.NoError(t, err)
 		assert.Nil(t, b)
 		m, err := getCustomLabels(b)

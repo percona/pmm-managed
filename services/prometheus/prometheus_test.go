@@ -201,6 +201,7 @@ scrape_configs:
       _agent_label: baz
       _node_label: foo
       _service_label: bar
+      agent_id: /agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd
       agent_type: mysqld_exporter
       instance: /agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd
       node_id: /node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d
@@ -220,6 +221,7 @@ scrape_configs:
       _agent_label: baz
       _node_label: foo
       _service_label: bar
+      agent_id: /agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd
       agent_type: mysqld_exporter
       instance: /agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd
       node_id: /node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d
@@ -239,6 +241,7 @@ scrape_configs:
       _agent_label: baz
       _node_label: foo
       _service_label: bar
+      agent_id: /agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd
       agent_type: mysqld_exporter
       instance: /agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd
       node_id: /node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d
@@ -258,6 +261,7 @@ scrape_configs:
       _agent_label: postgres-baz
       _node_label: foo
       _service_label: bar
+      agent_id: /agent_id/29e14468-d479-4b4d-bfb7-4ac2fb865bac
       agent_type: postgres_exporter
       instance: /agent_id/29e14468-d479-4b4d-bfb7-4ac2fb865bac
       node_id: /node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d

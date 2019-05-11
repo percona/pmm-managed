@@ -103,6 +103,27 @@ func (s *Agent) SetCustomLabels(m map[string]string) error {
 	return setCustomLabels(m, &s.CustomLabels)
 }
 
+// UnifiedLabels returns combined standard and custom labels with empty labels removed.
+func (s *Agent) UnifiedLabels() (map[string]string, error) {
+	custom, err := s.GetCustomLabels()
+	if err != nil {
+		return nil, err
+	}
+
+	res := map[string]string{
+		"agent_id":   s.AgentID,
+		"agent_type": string(s.AgentType),
+	}
+	for k, v := range custom {
+		res[k] = v
+	}
+
+	if err = prepareLabels(res, true); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
 // check interfaces
 var (
 	_ reform.BeforeInserter = (*Agent)(nil)
