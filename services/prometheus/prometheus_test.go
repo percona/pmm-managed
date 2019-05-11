@@ -31,7 +31,7 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/logger"
-	"github.com/percona/pmm-managed/utils/tests"
+	"github.com/percona/pmm-managed/utils/testdb"
 )
 
 var configPath = filepath.Join("..", "..", "testdata", "prometheus", "prometheus.yml")
@@ -41,7 +41,7 @@ func setup(t *testing.T) (context.Context, *reform.DB, *Service, []byte) {
 
 	ctx := logger.Set(context.Background(), t.Name())
 
-	sqlDB := tests.OpenTestDB(t)
+	sqlDB := testdb.Open(t)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
 	svc, err := NewService(configPath, "promtool", db, "http://127.0.0.1:9090/prometheus/")

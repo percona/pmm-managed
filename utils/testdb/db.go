@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package tests
+package testdb
 
 import (
 	"database/sql"
@@ -25,8 +25,8 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-// OpenTestDB recreates testing postgres database and returns an open connection to it.
-func OpenTestDB(tb testing.TB) *sql.DB {
+// Open recreates testing PostgreSQL database and returns an open connection to it.
+func Open(tb testing.TB) *sql.DB {
 	tb.Helper()
 
 	db, err := models.OpenDB("", "pmm-managed", "pmm-managed", tb.Logf)
