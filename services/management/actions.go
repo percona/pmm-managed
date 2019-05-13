@@ -31,7 +31,7 @@ import (
 
 var (
 	errUnsupportedAction  = errors.New("unsupported action")
-	errPmmAgentIdNotFound = errors.New("can't detect pmm_agent_id")
+	errPmmAgentIDNotFound = errors.New("can't detect pmm_agent_id")
 )
 
 type agentsRegistry interface {
@@ -68,7 +68,7 @@ type RunActionParams struct {
 }
 
 // RunAction runs PMM Action on the given client.
-func (a *ActionsService) RunAction(ctx context.Context, rp RunActionParams) (actionId string, errorVar error) {
+func (a *ActionsService) RunAction(ctx context.Context, rp RunActionParams) (actionID string, errorVar error) {
 	action, err := a.prepareAction(rp)
 	if err != nil {
 		return "", err
@@ -138,40 +138,40 @@ func (a *ActionsService) prepareAction(rp RunActionParams) (preparedAction, erro
 	return action, errUnsupportedAction
 }
 
-func findPmmAgentIdByNodeId(q *reform.Querier, pmmAgentId, nodeID string) (string, error) {
+func findPmmAgentIdByNodeId(q *reform.Querier, pmmAgentID, nodeID string) (string, error) {
 	agents, err := models.PMMAgentsForNode(q, nodeID)
 	if err != nil {
 		return "", err
 	}
-	return validatePmmAgentId(pmmAgentId, agents)
+	return validatePmmAgentId(pmmAgentID, agents)
 }
 
-func findPmmAgentIdByServiceId(q *reform.Querier, pmmAgentId, serviceID string) (string, error) {
+func findPmmAgentIdByServiceId(q *reform.Querier, pmmAgentID, serviceID string) (string, error) {
 	agents, err := models.PMMAgentsForService(q, serviceID)
 	if err != nil {
 		return "", err
 	}
-	return validatePmmAgentId(pmmAgentId, agents)
+	return validatePmmAgentId(pmmAgentID, agents)
 }
 
-func validatePmmAgentId(pmmAgentId string, agents []*models.Agent) (string, error) {
+func validatePmmAgentId(pmmAgentID string, agents []*models.Agent) (string, error) {
 	// no explicit ID is given, and there is only one
-	if pmmAgentId == "" && len(agents) == 1 {
+	if pmmAgentID == "" && len(agents) == 1 {
 		return agents[0].AgentID, nil
 	}
 
 	// no explicit ID is given, and there are zero or several
-	if pmmAgentId == "" {
-		return "", errPmmAgentIdNotFound
+	if pmmAgentID == "" {
+		return "", errPmmAgentIDNotFound
 	}
 
 	// check that explicit agent id is correct
 	for _, a := range agents {
-		if a.AgentID == pmmAgentId {
+		if a.AgentID == pmmAgentID {
 			return a.AgentID, nil
 		}
 	}
-	return "", errPmmAgentIdNotFound
+	return "", errPmmAgentIDNotFound
 }
 
 // InMemoryActionsStorage in memory action results storage.
