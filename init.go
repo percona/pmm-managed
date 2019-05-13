@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -139,8 +138,7 @@ func init() {
 		if *serverInsecureTLSF {
 			httpTransport.TLSClientConfig.InsecureSkipVerify = true
 		} else {
-			host, _, _ := net.SplitHostPort(BaseURL.Host)
-			httpTransport.TLSClientConfig.ServerName = host
+			httpTransport.TLSClientConfig.ServerName = BaseURL.Hostname()
 		}
 	}
 
