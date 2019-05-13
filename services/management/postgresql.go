@@ -44,18 +44,18 @@ func NewPostgreSQLService(db *reform.DB, registry registry) *PostgreSQLService {
 }
 
 // Add adds "PostgreSQL Service", "PostgreSQL Exporter Agent" and "QAN PostgreSQL PerfSchema Agent".
-func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgreSQLRequest) (res *managementpb.AddPostgreSQLResponse, err error) {
-	res = &managementpb.AddPostgreSQLResponse{}
+func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgreSQLRequest) (*managementpb.AddPostgreSQLResponse, error) {
+	res := new(managementpb.AddPostgreSQLResponse)
 
 	if e := s.db.InTransaction(func(tx *reform.TX) error {
 		service, err := models.AddNewService(tx.Querier, models.PostgreSQLServiceType, &models.AddDBMSServiceParams{
 			ServiceName:  req.ServiceName,
 			NodeID:       req.NodeId,
+			Environment:  req.Environment,
 			Address:      pointer.ToStringOrNil(req.Address),
 			Port:         pointer.ToUint16OrNil(uint16(req.Port)),
 			CustomLabels: req.CustomLabels,
 		})
-
 		if err != nil {
 			return err
 		}
@@ -64,16 +64,14 @@ func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgr
 		if err != nil {
 			return err
 		}
-
 		res.Service = invService.(*inventorypb.PostgreSQLService)
 
-		params := &models.AddExporterAgentParams{
+		row, err := models.AgentAddExporter(tx.Querier, models.PostgresExporterType, &models.AddExporterAgentParams{
 			PMMAgentID: req.PmmAgentId,
-			ServiceID:  invService.ID(),
+			ServiceID:  service.ServiceID,
 			Username:   req.Username,
 			Password:   req.Password,
-		}
-		row, err := models.AgentAddExporter(tx.Querier, models.PostgresExporterType, params)
+		})
 		if err != nil {
 			return err
 		}
@@ -82,7 +80,6 @@ func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgr
 		if err != nil {
 			return err
 		}
-
 		res.PostgresExporter = agent.(*inventorypb.PostgresExporter)
 
 		return nil
@@ -91,6 +88,5 @@ func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgr
 	}
 
 	s.registry.SendSetStateRequest(ctx, req.PmmAgentId)
-
 	return res, nil
 }

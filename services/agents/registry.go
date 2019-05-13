@@ -259,7 +259,7 @@ func authenticate(md *agentpb.AgentConnectMetadata, q *reform.Querier) (string, 
 
 	agent, err := models.AgentFindByID(q, md.ID)
 	if err != nil {
-		if gRPCError := status.Convert(err); gRPCError != nil && gRPCError.Code() == codes.NotFound {
+		if status.Code(err) == codes.NotFound {
 			return "", status.Errorf(codes.Unauthenticated, "No Agent with ID %q.", md.ID)
 		}
 		return "", errors.Wrap(err, "failed to find agent")
@@ -352,6 +352,12 @@ func (r *Registry) SendRequest(ctx context.Context, pmmAgentID string, payload a
 // SendSetStateRequest sends SetStateRequest to pmm-agent with given ID.
 func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 	l := logger.Get(ctx)
+	start := time.Now()
+	defer func() {
+		if dur := time.Since(start); dur > time.Second {
+			l.Warnf("SendSetStateRequest took %s.", dur)
+		}
+	}()
 
 	r.rw.RLock()
 	agent := r.agents[pmmAgentID]
