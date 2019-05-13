@@ -114,19 +114,19 @@ func (a *ActionsService) prepareAction(rp RunActionParams) (preparedAction, erro
 
 	switch action.Name {
 	case agentpb.ActionName_PT_SUMMARY:
-		action.PmmAgentID, err = findPmmAgentIdByNodeId(a.db.Querier, rp.PmmAgentID, rp.NodeID)
+		action.PmmAgentID, err = findPmmAgentIDByNodeID(a.db.Querier, rp.PmmAgentID, rp.NodeID)
 		if err != nil {
 			return action, err
 		}
 
 	case agentpb.ActionName_PT_MYSQL_SUMMARY:
-		action.PmmAgentID, err = findPmmAgentIdByServiceId(a.db.Querier, rp.PmmAgentID, rp.ServiceID)
+		action.PmmAgentID, err = findPmmAgentIDByServiceID(a.db.Querier, rp.PmmAgentID, rp.ServiceID)
 		if err != nil {
 			return action, err
 		}
 
 	case agentpb.ActionName_MYSQL_EXPLAIN:
-		action.PmmAgentID, err = findPmmAgentIdByServiceId(a.db.Querier, rp.PmmAgentID, rp.ServiceID)
+		action.PmmAgentID, err = findPmmAgentIDByServiceID(a.db.Querier, rp.PmmAgentID, rp.ServiceID)
 		if err != nil {
 			return action, err
 		}
@@ -138,23 +138,23 @@ func (a *ActionsService) prepareAction(rp RunActionParams) (preparedAction, erro
 	return action, errUnsupportedAction
 }
 
-func findPmmAgentIdByNodeId(q *reform.Querier, pmmAgentID, nodeID string) (string, error) {
+func findPmmAgentIDByNodeID(q *reform.Querier, pmmAgentID, nodeID string) (string, error) {
 	agents, err := models.PMMAgentsForNode(q, nodeID)
 	if err != nil {
 		return "", err
 	}
-	return validatePmmAgentId(pmmAgentID, agents)
+	return validatePmmAgentID(pmmAgentID, agents)
 }
 
-func findPmmAgentIdByServiceId(q *reform.Querier, pmmAgentID, serviceID string) (string, error) {
+func findPmmAgentIDByServiceID(q *reform.Querier, pmmAgentID, serviceID string) (string, error) {
 	agents, err := models.PMMAgentsForService(q, serviceID)
 	if err != nil {
 		return "", err
 	}
-	return validatePmmAgentId(pmmAgentID, agents)
+	return validatePmmAgentID(pmmAgentID, agents)
 }
 
-func validatePmmAgentId(pmmAgentID string, agents []*models.Agent) (string, error) {
+func validatePmmAgentID(pmmAgentID string, agents []*models.Agent) (string, error) {
 	// no explicit ID is given, and there is only one
 	if pmmAgentID == "" && len(agents) == 1 {
 		return agents[0].AgentID, nil
