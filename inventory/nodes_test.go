@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/percona/pmm/api/inventorypb/json/client/agents"
+
 	"github.com/percona/pmm/api/inventorypb/json/client"
 	"github.com/percona/pmm/api/inventorypb/json/client/nodes"
 	"github.com/percona/pmm/api/inventorypb/json/client/services"
@@ -400,16 +402,15 @@ func TestRemoveNode(t *testing.T) {
 
 		nodeName := pmmapitests.TestString(t, "Generic Node for remove test")
 		node := addGenericNode(t, nodeName)
-		defer pmmapitests.RemoveNodes(t, node.NodeID)
 
+		serviceName := pmmapitests.TestString(t, "MySQL Service for agent")
 		service := addMySQLService(t, services.AddMySQLServiceBody{
 			NodeID:      node.NodeID,
 			Address:     "localhost",
 			Port:        3306,
-			ServiceName: pmmapitests.TestString(t, "MySQL Service for agent"),
+			ServiceName: serviceName,
 		})
 		serviceID := service.Mysql.ServiceID
-		defer pmmapitests.RemoveServices(t, serviceID)
 
 		removeResp, err := client.Default.Nodes.RemoveNode(&nodes.RemoveNodeParams{
 			Body: nodes.RemoveNodeBody{
@@ -419,6 +420,62 @@ func TestRemoveNode(t *testing.T) {
 		})
 		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{412, fmt.Sprintf(`Node with ID %q has services.`, node.NodeID)})
 		assert.Nil(t, removeResp)
+
+		// Check that node and service isn't removed.
+		getServiceResp, err := client.Default.Nodes.GetNode(&nodes.GetNodeParams{
+			Body:    nodes.GetNodeBody{NodeID: node.NodeID},
+			Context: pmmapitests.Context,
+		})
+		assert.NotNil(t, getServiceResp)
+		assert.NoError(t, err)
+
+		listAgentsOK, err := client.Default.Services.ListServices(&services.ListServicesParams{
+			Body: services.ListServicesBody{
+				NodeID: node.NodeID,
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, &services.ListServicesOKBody{
+			Mysql: []*services.MysqlItems0{
+				{
+					NodeID:      node.NodeID,
+					ServiceID:   serviceID,
+					Address:     "localhost",
+					Port:        3306,
+					ServiceName: serviceName,
+				},
+			},
+		}, listAgentsOK.Payload)
+
+		// Remove with force flag.
+		params := &nodes.RemoveNodeParams{
+			Body: nodes.RemoveNodeBody{
+				NodeID: node.NodeID,
+				Force:  true,
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err := client.Default.Nodes.RemoveNode(params)
+		assert.NoError(t, err)
+		assert.NotNil(t, res)
+
+		// Check that the node and agents are removed.
+		getServiceResp, err = client.Default.Nodes.GetNode(&nodes.GetNodeParams{
+			Body:    nodes.GetNodeBody{NodeID: node.NodeID},
+			Context: pmmapitests.Context,
+		})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, fmt.Sprintf("Node with ID %q not found.", node.NodeID)})
+		assert.Nil(t, getServiceResp)
+
+		listAgentsOK, err = client.Default.Services.ListServices(&services.ListServicesParams{
+			Body: services.ListServicesBody{
+				NodeID: node.NodeID,
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, &services.ListServicesOKBody{}, listAgentsOK.Payload)
 	})
 
 	t.Run("With pmm-agent", func(t *testing.T) {
@@ -426,10 +483,8 @@ func TestRemoveNode(t *testing.T) {
 
 		nodeName := pmmapitests.TestString(t, "Generic Node for remove test")
 		node := addGenericNode(t, nodeName)
-		defer pmmapitests.RemoveNodes(t, node.NodeID)
 
-		agentOKBody := addPMMAgent(t, node.NodeID)
-		defer pmmapitests.RemoveAgents(t, agentOKBody.PMMAgent.AgentID)
+		_ = addPMMAgent(t, node.NodeID)
 
 		removeResp, err := client.Default.Nodes.RemoveNode(&nodes.RemoveNodeParams{
 			Body: nodes.RemoveNodeBody{
@@ -439,6 +494,35 @@ func TestRemoveNode(t *testing.T) {
 		})
 		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{412, fmt.Sprintf(`Node with ID %q has pmm-agent.`, node.NodeID)})
 		assert.Nil(t, removeResp)
+
+		// Remove with force flag.
+		params := &nodes.RemoveNodeParams{
+			Body: nodes.RemoveNodeBody{
+				NodeID: node.NodeID,
+				Force:  true,
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err := client.Default.Nodes.RemoveNode(params)
+		assert.NoError(t, err)
+		assert.NotNil(t, res)
+
+		// Check that the node and agents are removed.
+		getServiceResp, err := client.Default.Nodes.GetNode(&nodes.GetNodeParams{
+			Body:    nodes.GetNodeBody{NodeID: node.NodeID},
+			Context: pmmapitests.Context,
+		})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, fmt.Sprintf("Node with ID %q not found.", node.NodeID)})
+		assert.Nil(t, getServiceResp)
+
+		listAgentsOK, err := client.Default.Agents.ListAgents(&agents.ListAgentsParams{
+			Body: agents.ListAgentsBody{
+				NodeID: node.NodeID,
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, &agents.ListAgentsOKBody{}, listAgentsOK.Payload)
 	})
 
 	t.Run("Not-exist node", func(t *testing.T) {

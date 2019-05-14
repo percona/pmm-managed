@@ -248,7 +248,7 @@ func TestPMMAgent(t *testing.T) {
 				"custom_label_mysql_exporter": "mysql_exporter",
 			},
 		})
-		agentID := mySqldExporter.MysqldExporter.AgentID
+		mySqldExporterID := mySqldExporter.MysqldExporter.AgentID
 
 		params := &agents.RemoveAgentParams{
 			Body: agents.RemoveAgentBody{
@@ -258,11 +258,79 @@ func TestPMMAgent(t *testing.T) {
 		}
 		res, err := client.Default.Agents.RemoveAgent(params)
 		assert.Nil(t, res)
-		if pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{412, fmt.Sprintf(`pmm-agent with ID "%s" has agents.`, pmmAgentID)}) {
-			pmmapitests.RemoveAgents(t, agentID)
-			pmmapitests.RemoveAgents(t, nodeExporterID)
-			pmmapitests.RemoveAgents(t, pmmAgentID)
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{412, fmt.Sprintf(`pmm-agent with ID "%s" has agents.`, pmmAgentID)})
+
+		// Check that agents aren't removed.
+		getAgentRes, err := client.Default.Agents.GetAgent(&agents.GetAgentParams{
+			Body:    agents.GetAgentBody{AgentID: pmmAgentID},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, &agents.GetAgentOK{
+			Payload: &agents.GetAgentOKBody{
+				PMMAgent: &agents.GetAgentOKBodyPMMAgent{
+					AgentID:      pmmAgentID,
+					RunsOnNodeID: nodeID,
+				},
+			},
+		}, getAgentRes)
+
+		listAgentsOK, err := client.Default.Agents.ListAgents(&agents.ListAgentsParams{
+			Body: agents.ListAgentsBody{
+				PMMAgentID: pmmAgentID,
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, &agents.ListAgentsOKBody{
+			NodeExporter: []*agents.NodeExporterItems0{
+				{
+					PMMAgentID: pmmAgentID,
+					AgentID:    nodeExporterID,
+				},
+			},
+			MysqldExporter: []*agents.MysqldExporterItems0{
+				{
+					PMMAgentID: pmmAgentID,
+					AgentID:    mySqldExporterID,
+					ServiceID:  serviceID,
+					Username:   "username",
+					Password:   "password",
+					CustomLabels: map[string]string{
+						"custom_label_mysql_exporter": "mysql_exporter",
+					},
+				},
+			},
+		}, listAgentsOK.Payload)
+
+		// Remove with force flag.
+		params = &agents.RemoveAgentParams{
+			Body: agents.RemoveAgentBody{
+				AgentID: pmmAgentID,
+				Force:   true,
+			},
+			Context: context.Background(),
 		}
+		res, err = client.Default.Agents.RemoveAgent(params)
+		assert.NoError(t, err)
+		assert.NotNil(t, res)
+
+		// Check that agents are removed.
+		getAgentRes, err = client.Default.Agents.GetAgent(&agents.GetAgentParams{
+			Body:    agents.GetAgentBody{AgentID: pmmAgentID},
+			Context: pmmapitests.Context,
+		})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, fmt.Sprintf("Agent with ID %q not found.", pmmAgentID)})
+		assert.Nil(t, getAgentRes)
+
+		listAgentsOK, err = client.Default.Agents.ListAgents(&agents.ListAgentsParams{
+			Body: agents.ListAgentsBody{
+				PMMAgentID: pmmAgentID,
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, &agents.ListAgentsOKBody{}, listAgentsOK.Payload)
 	})
 
 	t.Run("Remove not-exist agent", func(t *testing.T) {
@@ -330,9 +398,11 @@ func TestNodeExporter(t *testing.T) {
 		// Test change API.
 		changeNodeExporterOK, err := client.Default.Agents.ChangeNodeExporter(&agents.ChangeNodeExporterParams{
 			Body: agents.ChangeNodeExporterBody{
-				AgentID:            agentID,
-				Disabled:           true,
-				RemoveCustomLabels: true,
+				AgentID: agentID,
+				Common: &agents.ChangeNodeExporterParamsBodyCommon{
+					Disabled:           true,
+					RemoveCustomLabels: true,
+				},
 			},
 			Context: pmmapitests.Context,
 		})
@@ -350,9 +420,11 @@ func TestNodeExporter(t *testing.T) {
 		changeNodeExporterOK, err = client.Default.Agents.ChangeNodeExporter(&agents.ChangeNodeExporterParams{
 			Body: agents.ChangeNodeExporterBody{
 				AgentID: agentID,
-				Enabled: true,
-				CustomLabels: map[string]string{
-					"new_label": "node_exporter",
+				Common: &agents.ChangeNodeExporterParamsBodyCommon{
+					Enabled: true,
+					CustomLabels: map[string]string{
+						"new_label": "node_exporter",
+					},
 				},
 			},
 			Context: pmmapitests.Context,
@@ -459,9 +531,11 @@ func TestMySQLdExporter(t *testing.T) {
 		// Test change API.
 		changeMySQLdExporterOK, err := client.Default.Agents.ChangeMySqldExporter(&agents.ChangeMySqldExporterParams{
 			Body: agents.ChangeMySqldExporterBody{
-				AgentID:            agentID,
-				Disabled:           true,
-				RemoveCustomLabels: true,
+				AgentID: agentID,
+				Common: &agents.ChangeMySqldExporterParamsBodyCommon{
+					Disabled:           true,
+					RemoveCustomLabels: true,
+				},
 			},
 			Context: pmmapitests.Context,
 		})
@@ -482,9 +556,11 @@ func TestMySQLdExporter(t *testing.T) {
 		changeMySQLdExporterOK, err = client.Default.Agents.ChangeMySqldExporter(&agents.ChangeMySqldExporterParams{
 			Body: agents.ChangeMySqldExporterBody{
 				AgentID: agentID,
-				Enabled: true,
-				CustomLabels: map[string]string{
-					"new_label": "mysql_exporter",
+				Common: &agents.ChangeMySqldExporterParamsBodyCommon{
+					Enabled: true,
+					CustomLabels: map[string]string{
+						"new_label": "mysql_exporter",
+					},
 				},
 			},
 			Context: pmmapitests.Context,
@@ -733,9 +809,11 @@ func TestMongoDBExporter(t *testing.T) {
 		// Test change API.
 		changeMongoDBExporterOK, err := client.Default.Agents.ChangeMongoDBExporter(&agents.ChangeMongoDBExporterParams{
 			Body: agents.ChangeMongoDBExporterBody{
-				AgentID:            agentID,
-				Disabled:           true,
-				RemoveCustomLabels: true,
+				AgentID: agentID,
+				Common: &agents.ChangeMongoDBExporterParamsBodyCommon{
+					Disabled:           true,
+					RemoveCustomLabels: true,
+				},
 			},
 			Context: pmmapitests.Context,
 		})
@@ -756,9 +834,11 @@ func TestMongoDBExporter(t *testing.T) {
 		changeMongoDBExporterOK, err = client.Default.Agents.ChangeMongoDBExporter(&agents.ChangeMongoDBExporterParams{
 			Body: agents.ChangeMongoDBExporterBody{
 				AgentID: agentID,
-				Enabled: true,
-				CustomLabels: map[string]string{
-					"new_label": "mongodb_exporter",
+				Common: &agents.ChangeMongoDBExporterParamsBodyCommon{
+					Enabled: true,
+					CustomLabels: map[string]string{
+						"new_label": "mongodb_exporter",
+					},
 				},
 			},
 			Context: pmmapitests.Context,
@@ -953,9 +1033,11 @@ func TestQanAgentExporter(t *testing.T) {
 		// Test change API.
 		changeQANMySQLPerfSchemaAgentOK, err := client.Default.Agents.ChangeQANMySQLPerfSchemaAgent(&agents.ChangeQANMySQLPerfSchemaAgentParams{
 			Body: agents.ChangeQANMySQLPerfSchemaAgentBody{
-				AgentID:            agentID,
-				Disabled:           true,
-				RemoveCustomLabels: true,
+				AgentID: agentID,
+				Common: &agents.ChangeQANMySQLPerfSchemaAgentParamsBodyCommon{
+					Disabled:           true,
+					RemoveCustomLabels: true,
+				},
 			},
 			Context: pmmapitests.Context,
 		})
@@ -976,9 +1058,11 @@ func TestQanAgentExporter(t *testing.T) {
 		changeQANMySQLPerfSchemaAgentOK, err = client.Default.Agents.ChangeQANMySQLPerfSchemaAgent(&agents.ChangeQANMySQLPerfSchemaAgentParams{
 			Body: agents.ChangeQANMySQLPerfSchemaAgentBody{
 				AgentID: agentID,
-				Enabled: true,
-				CustomLabels: map[string]string{
-					"new_label": "QANMysqlPerfschemaAgent",
+				Common: &agents.ChangeQANMySQLPerfSchemaAgentParamsBodyCommon{
+					Enabled: true,
+					CustomLabels: map[string]string{
+						"new_label": "QANMysqlPerfschemaAgent",
+					},
 				},
 			},
 			Context: pmmapitests.Context,
@@ -1172,9 +1256,11 @@ func TestPostgresExporter(t *testing.T) {
 		// Test change API.
 		changePostgresExporterOK, err := client.Default.Agents.ChangePostgresExporter(&agents.ChangePostgresExporterParams{
 			Body: agents.ChangePostgresExporterBody{
-				AgentID:            agentID,
-				Disabled:           true,
-				RemoveCustomLabels: true,
+				AgentID: agentID,
+				Common: &agents.ChangePostgresExporterParamsBodyCommon{
+					Disabled:           true,
+					RemoveCustomLabels: true,
+				},
 			},
 			Context: pmmapitests.Context,
 		})
@@ -1195,9 +1281,11 @@ func TestPostgresExporter(t *testing.T) {
 		changePostgresExporterOK, err = client.Default.Agents.ChangePostgresExporter(&agents.ChangePostgresExporterParams{
 			Body: agents.ChangePostgresExporterBody{
 				AgentID: agentID,
-				Enabled: true,
-				CustomLabels: map[string]string{
-					"new_label": "postgres_exporter",
+				Common: &agents.ChangePostgresExporterParamsBodyCommon{
+					Enabled: true,
+					CustomLabels: map[string]string{
+						"new_label": "postgres_exporter",
+					},
 				},
 			},
 			Context: pmmapitests.Context,

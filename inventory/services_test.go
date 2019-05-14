@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Percona-Lab/pmm-api-tests"
+	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
 )
 
 func TestServices(t *testing.T) {
@@ -160,20 +160,17 @@ func TestRemoveService(t *testing.T) {
 			ServiceName: pmmapitests.TestString(t, "MySQL Service for agent"),
 		})
 		serviceID := service.Mysql.ServiceID
-		defer pmmapitests.RemoveServices(t, serviceID)
 
 		pmmAgent := addPMMAgent(t, nodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
 		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
-		mySqldExporter := addMySqldExporter(t, agents.AddMySqldExporterBody{
+		_ = addMySqldExporter(t, agents.AddMySqldExporterBody{
 			ServiceID:  serviceID,
 			Username:   "username",
 			Password:   "password",
 			PMMAgentID: pmmAgentID,
 		})
-		mySqldExporterID := mySqldExporter.MysqldExporter.AgentID
-		defer pmmapitests.RemoveAgents(t, mySqldExporterID)
 
 		params := &services.RemoveServiceParams{
 			Body: services.RemoveServiceBody{
@@ -184,6 +181,35 @@ func TestRemoveService(t *testing.T) {
 		res, err := client.Default.Services.RemoveService(params)
 		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{412, fmt.Sprintf(`Service with ID "%s" has agents.`, serviceID)})
 		assert.Nil(t, res)
+
+		// Remove with force flag.
+		params = &services.RemoveServiceParams{
+			Body: services.RemoveServiceBody{
+				ServiceID: serviceID,
+				Force:     true,
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err = client.Default.Services.RemoveService(params)
+		assert.NoError(t, err)
+		assert.NotNil(t, res)
+
+		// Check that the service and agents are removed.
+		getServiceResp, err := client.Default.Services.GetService(&services.GetServiceParams{
+			Body:    services.GetServiceBody{ServiceID: serviceID},
+			Context: pmmapitests.Context,
+		})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, fmt.Sprintf("Service with ID %q not found.", serviceID)})
+		assert.Nil(t, getServiceResp)
+
+		listAgentsOK, err := client.Default.Agents.ListAgents(&agents.ListAgentsParams{
+			Body: agents.ListAgentsBody{
+				ServiceID: serviceID,
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, &agents.ListAgentsOKBody{}, listAgentsOK.Payload)
 	})
 
 	t.Run("Not-exist service", func(t *testing.T) {
