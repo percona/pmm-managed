@@ -202,8 +202,8 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 				r.actionsStorage.Store(models.ActionResult{
 					ID:         p.ActionId,
 					PmmAgentID: agent.id,
-					ErrCode:    p.ErrCode,
-					ErrMessage: p.ErrMessage,
+					Done:       p.Done,
+					Error:      p.Error,
 					Output:     string(p.Output),
 				})
 

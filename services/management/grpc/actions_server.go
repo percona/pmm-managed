@@ -31,49 +31,70 @@ type actionsServer struct {
 	as *management.ActionsService
 }
 
-// NewManagementActionsServer creates Management Actions Server.
-func NewManagementActionsServer(s *management.ActionsService) managementpb.ActionsServer {
-	return &actionsServer{as: s}
-}
-
-// RunAction runs an Action.
-func (s *actionsServer) RunAction(ctx context.Context, req *managementpb.RunActionRequest) (*managementpb.RunActionResponse, error) {
-	p := management.RunActionParams{
-		ActionName:   req.ActionName,
-		ActionParams: req.ActionParams,
-		PmmAgentID:   req.PmmAgentId,
-		NodeID:       req.NodeId,
-		ServiceID:    req.ServiceId,
-	}
-
-	actionID, err := s.as.RunAction(ctx, p)
-	return &managementpb.RunActionResponse{
-		PmmAgentId: req.PmmAgentId,
-		ActionId:   actionID,
-	}, err
-}
-
-// CancelAction stops an Action.
-func (s *actionsServer) CancelAction(ctx context.Context, req *managementpb.CancelActionRequest) (*managementpb.CancelActionResponse, error) {
-	s.as.CancelAction(ctx, req.PmmAgentId, req.ActionId)
-	return &managementpb.CancelActionResponse{
-		PmmAgentId: req.PmmAgentId,
-		ActionId:   req.ActionId,
-	}, nil
-}
-
-// GetActionResult gets an Action result.
-func (s *actionsServer) GetActionResult(ctx context.Context, req *managementpb.GetActionResultRequest) (*managementpb.GetActionResultResponse, error) {
+func (s *actionsServer) GetAction(ctx context.Context, req *managementpb.GetActionRequest) (*managementpb.GetActionResponse, error) {
 	res, ok := s.as.GetActionResult(ctx, req.ActionId)
 	if !ok {
 		return nil, status.Error(codes.NotFound, "ActionResult with given ID wasn't found")
 	}
 
-	return &managementpb.GetActionResultResponse{
+	return &managementpb.GetActionResponse{
 		ActionId:   res.ID,
 		PmmAgentId: res.PmmAgentID,
-		ErrCode:    res.ErrCode,
-		ErrMessage: res.ErrMessage,
+		Done:       res.Done,
+		Error:      res.Error,
 		Output:     res.Output,
 	}, nil
+}
+
+func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
+	p := management.RunActionParams{
+		ActionName: managementpb.ActionType_PT_SUMMARY,
+		PmmAgentID: req.PmmAgentId,
+		NodeID:     req.NodeId,
+	}
+
+	actionID, err := s.as.RunAction(ctx, p)
+	return &managementpb.StartPTSummaryActionResponse{
+		PmmAgentId: req.PmmAgentId,
+		ActionId:   actionID,
+	}, err
+}
+
+func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
+	p := management.RunActionParams{
+		ActionName: managementpb.ActionType_PT_MYSQL_SUMMARY,
+		PmmAgentID: req.PmmAgentId,
+		ServiceID:  req.ServiceId,
+	}
+
+	actionID, err := s.as.RunAction(ctx, p)
+	return &managementpb.StartPTMySQLSummaryActionResponse{
+		PmmAgentId: req.PmmAgentId,
+		ActionId:   actionID,
+	}, err
+}
+
+func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *managementpb.StartMySQLExplainActionRequest) (*managementpb.StartMySQLExplainActionResponse, error) {
+	p := management.RunActionParams{
+		ActionName: managementpb.ActionType_MYSQL_EXPLAIN,
+		PmmAgentID: req.PmmAgentId,
+		ServiceID:  req.ServiceId,
+	}
+
+	actionID, err := s.as.RunAction(ctx, p)
+	return &managementpb.StartMySQLExplainActionResponse{
+		PmmAgentId: req.PmmAgentId,
+		ActionId:   actionID,
+	}, err
+}
+
+// NewManagementActionsServer creates Management Actions Server.
+func NewManagementActionsServer(s *management.ActionsService) managementpb.ActionsServer {
+	return &actionsServer{as: s}
+}
+
+// CancelAction stops an Action.
+func (s *actionsServer) CancelAction(ctx context.Context, req *managementpb.CancelActionRequest) (*managementpb.CancelActionResponse, error) {
+	s.as.CancelAction(ctx, req.ActionId)
+	return &managementpb.CancelActionResponse{}, nil
 }

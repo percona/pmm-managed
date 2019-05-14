@@ -20,7 +20,7 @@ package models
 type ActionResult struct {
 	ID         string
 	PmmAgentID string
-	ErrCode    int32
-	ErrMessage string
+	Done       bool
+	Error      string
 	Output     string
 }

@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/percona/pmm/api/agentpb"
+	"github.com/percona/pmm/api/managementpb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/reform.v1"
@@ -60,7 +61,7 @@ func NewActionsService(r agentsRegistry, s *InMemoryActionsStorage, db *reform.D
 
 // RunActionParams parameters for run actions.
 type RunActionParams struct {
-	ActionName   agentpb.ActionName
+	ActionName   managementpb.ActionType
 	ActionParams []string
 	PmmAgentID   string
 	NodeID       string
@@ -74,18 +75,43 @@ func (a *ActionsService) RunAction(ctx context.Context, rp RunActionParams) (act
 		return "", err
 	}
 
-	res := a.agentsRegistry.SendRequest(ctx, action.PmmAgentID, &agentpb.StartActionRequest{
-		ActionId:   action.ID,
-		Name:       action.Name,
-		Parameters: action.Params,
-	})
+	req := &agentpb.StartActionRequest{
+		ActionId: action.ID,
+		Type:     action.Name,
+	}
+	switch rp.ActionName {
+	case managementpb.ActionType_PT_SUMMARY:
+		req.Params = &agentpb.StartActionRequest_ProcessParams_{
+			ProcessParams: &agentpb.StartActionRequest_ProcessParams{
+				Args: action.Params,
+			},
+		}
+	case managementpb.ActionType_PT_MYSQL_SUMMARY:
+		req.Params = &agentpb.StartActionRequest_ProcessParams_{
+			ProcessParams: &agentpb.StartActionRequest_ProcessParams{
+				Args: action.Params,
+			},
+		}
+	case managementpb.ActionType_MYSQL_EXPLAIN:
+		return "", errUnsupportedAction
+	case managementpb.ActionType_ACTION_TYPE_INVALID:
+		return "", errUnsupportedAction
+	}
+
+	res := a.agentsRegistry.SendRequest(ctx, action.PmmAgentID, req)
 	a.logger.Infof("RunAction response: %+v.", res)
 	return action.ID, nil
 }
 
 // CancelAction stops PMM Action with the given ID on the given client.
-func (a *ActionsService) CancelAction(ctx context.Context, pmmAgentID, actionID string) {
-	res := a.agentsRegistry.SendRequest(ctx, pmmAgentID, &agentpb.StopActionRequest{
+func (a *ActionsService) CancelAction(ctx context.Context, actionID string) {
+	action, ok := a.actionsStorage.Load(actionID)
+	if !ok {
+		a.logger.Error("Unknown action with ID: %s.", actionID)
+		return
+	}
+
+	res := a.agentsRegistry.SendRequest(ctx, action.PmmAgentID, &agentpb.StopActionRequest{
 		ActionId: actionID,
 	})
 	a.logger.Infof("CancelAction response: %+v.", res)
@@ -98,7 +124,7 @@ func (a *ActionsService) GetActionResult(ctx context.Context, actionID string) (
 
 type preparedAction struct {
 	ID         string
-	Name       agentpb.ActionName
+	Name       managementpb.ActionType
 	Params     []string
 	PmmAgentID string
 }
@@ -113,25 +139,25 @@ func (a *ActionsService) prepareAction(rp RunActionParams) (preparedAction, erro
 	var err error
 
 	switch action.Name {
-	case agentpb.ActionName_PT_SUMMARY:
+	case managementpb.ActionType_PT_SUMMARY:
 		action.PmmAgentID, err = findPmmAgentIDByNodeID(a.db.Querier, rp.PmmAgentID, rp.NodeID)
 		if err != nil {
 			return action, err
 		}
 
-	case agentpb.ActionName_PT_MYSQL_SUMMARY:
+	case managementpb.ActionType_PT_MYSQL_SUMMARY:
 		action.PmmAgentID, err = findPmmAgentIDByServiceID(a.db.Querier, rp.PmmAgentID, rp.ServiceID)
 		if err != nil {
 			return action, err
 		}
 
-	case agentpb.ActionName_MYSQL_EXPLAIN:
+	case managementpb.ActionType_MYSQL_EXPLAIN:
 		action.PmmAgentID, err = findPmmAgentIDByServiceID(a.db.Querier, rp.PmmAgentID, rp.ServiceID)
 		if err != nil {
 			return action, err
 		}
 
-	case agentpb.ActionName_ACTION_NAME_INVALID:
+	case managementpb.ActionType_ACTION_TYPE_INVALID:
 		return action, errUnsupportedAction
 	}
 
