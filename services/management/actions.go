@@ -142,27 +142,18 @@ func (a *ActionsService) prepareAction(rp RunActionParams) (preparedAction, erro
 	switch action.Name {
 	case managementpb.ActionType_PT_SUMMARY:
 		action.PmmAgentID, err = findPmmAgentIDByNodeID(a.db.Querier, rp.PmmAgentID, rp.NodeID)
-		if err != nil {
-			return action, err
-		}
 
 	case managementpb.ActionType_PT_MYSQL_SUMMARY:
 		action.PmmAgentID, err = findPmmAgentIDByServiceID(a.db.Querier, rp.PmmAgentID, rp.ServiceID)
-		if err != nil {
-			return action, err
-		}
 
 	case managementpb.ActionType_MYSQL_EXPLAIN:
 		action.PmmAgentID, err = findPmmAgentIDByServiceID(a.db.Querier, rp.PmmAgentID, rp.ServiceID)
-		if err != nil {
-			return action, err
-		}
 
 	case managementpb.ActionType_ACTION_TYPE_INVALID:
 		return action, errUnsupportedAction
 	}
 
-	return action, errUnsupportedAction
+	return action, err
 }
 
 func findPmmAgentIDByNodeID(q *reform.Querier, pmmAgentID, nodeID string) (string, error) {
