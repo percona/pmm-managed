@@ -31,6 +31,8 @@ type actionsServer struct {
 	as *management.ActionsService
 }
 
+// GetAction gets an action result.
+//nolint:lll
 func (s *actionsServer) GetAction(ctx context.Context, req *managementpb.GetActionRequest) (*managementpb.GetActionResponse, error) {
 	res, ok := s.as.GetActionResult(ctx, req.ActionId)
 	if !ok {
@@ -46,6 +48,8 @@ func (s *actionsServer) GetAction(ctx context.Context, req *managementpb.GetActi
 	}, nil
 }
 
+// StartPTSummaryAction starts pt-summary action.
+//nolint:lll
 func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
 	p := management.RunActionParams{
 		ActionName: managementpb.ActionType_PT_SUMMARY,
@@ -60,6 +64,8 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 	}, err
 }
 
+// StartPTMySQLSummaryAction starts pt-mysql-summary action.
+//nolint:lll
 func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
 	p := management.RunActionParams{
 		ActionName: managementpb.ActionType_PT_MYSQL_SUMMARY,
@@ -74,6 +80,8 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 	}, err
 }
 
+// StartMySQLExplainAction starts mysql-explain action.
+//nolint:lll
 func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *managementpb.StartMySQLExplainActionRequest) (*managementpb.StartMySQLExplainActionResponse, error) {
 	p := management.RunActionParams{
 		ActionName: managementpb.ActionType_MYSQL_EXPLAIN,
@@ -94,6 +102,7 @@ func NewManagementActionsServer(s *management.ActionsService) managementpb.Actio
 }
 
 // CancelAction stops an Action.
+//nolint:lll
 func (s *actionsServer) CancelAction(ctx context.Context, req *managementpb.CancelActionRequest) (*managementpb.CancelActionResponse, error) {
 	s.as.CancelAction(ctx, req.ActionId)
 	return &managementpb.CancelActionResponse{}, nil

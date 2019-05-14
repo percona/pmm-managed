@@ -17,6 +17,7 @@
 package models
 
 // ActionResult describes an PMM Action result which is storing in ActionsResult storage.
+//nolint:unused
 type ActionResult struct {
 	ID         string
 	PmmAgentID string

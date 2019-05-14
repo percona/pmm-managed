@@ -342,6 +342,7 @@ func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRe
 }
 
 // SendRequest sends request to pmm agent.
+//nolint:unparam
 func (r *Registry) SendRequest(ctx context.Context, pmmAgentID string, payload agentpb.ServerRequestPayload) agentpb.AgentResponsePayload {
 	r.rw.RLock()
 	agent := r.agents[pmmAgentID]

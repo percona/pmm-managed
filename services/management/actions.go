@@ -118,6 +118,7 @@ func (a *ActionsService) CancelAction(ctx context.Context, actionID string) {
 }
 
 // GetActionResult gets PMM Action with the given ID from action results storage.
+//nolint:unparam
 func (a *ActionsService) GetActionResult(ctx context.Context, actionID string) (models.ActionResult, bool) {
 	return a.actionsStorage.Load(actionID)
 }
