@@ -349,19 +349,39 @@ func PMMAgentsForNode(q *reform.Querier, nodeID string) ([]*Agent, error) {
 
 // PMMAgentsForService gets pmm-agent for service.
 func PMMAgentsForService(q *reform.Querier, serviceID string) ([]*Agent, error) {
-	serviceRecord, err := q.SelectOneFrom(ServiceTable, "WHERE service_id = $1", serviceID)
+	_, err := q.SelectOneFrom(ServiceTable, "WHERE service_id = $1", serviceID)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to select Service")
+		return nil, errors.Wrap(err, "failed to select service")
 	}
-	s := serviceRecord.(*Service)
 
-	return findPmmAgentsForNode(q, s.NodeID)
+	agents, err := q.SelectAllFrom(AgentServiceView, "WHERE service_id = $1", serviceID)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to select agents for service")
+	}
+
+	var ids []string
+	for _, ag := range agents {
+		a := ag.(*Agent)
+		ids = append(ids, a.AgentID)
+	}
+
+	pmmAgents, err := q.SelectAllFrom(AgentTable, "WHERE agent_id IN($1) AND agent_type=$2", ids, PMMAgentType)
+	if err != nil || len(pmmAgents) == 0 || len(pmmAgents) > 1 {
+		return nil, errors.Wrap(err, "failed to select pmm-agent for service")
+	}
+
+	var res []*Agent
+	for _, str := range pmmAgents {
+		row := str.(*Agent)
+		res = append(res, row)
+	}
+	return res, nil
 }
 
 func findPmmAgentsForNode(q *reform.Querier, nodeID string) ([]*Agent, error) {
 	structs, err := q.SelectAllFrom(AgentTable, "WHERE runs_on_node_id = $1", nodeID)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to select Agents")
+		return nil, errors.Wrap(err, "failed to select agents")
 	}
 
 	var res []*Agent
