@@ -359,7 +359,7 @@ func PMMAgentsForService(q *reform.Querier, serviceID string) ([]*Agent, error) 
 		return nil, errors.Wrap(err, "failed to select agents for service")
 	}
 
-	var ids []string
+	ids := make([]string, len(agents))
 	for _, ag := range agents {
 		a := ag.(*Agent)
 		ids = append(ids, a.AgentID)
@@ -370,7 +370,7 @@ func PMMAgentsForService(q *reform.Querier, serviceID string) ([]*Agent, error) 
 		return nil, errors.Wrap(err, "failed to select pmm-agent for service")
 	}
 
-	var res []*Agent
+	res := make([]*Agent, len(pmmAgents))
 	for _, str := range pmmAgents {
 		row := str.(*Agent)
 		res = append(res, row)
