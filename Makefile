@@ -26,7 +26,8 @@ init:                           ## Installs tools to $GOPATH/bin (which is expec
 
 	go install -v ./vendor/gopkg.in/reform.v1/reform \
 					./vendor/github.com/BurntSushi/go-sumtype \
-					./vendor/github.com/vektra/mockery/cmd/mockery
+					./vendor/github.com/vektra/mockery/cmd/mockery \
+					./vendor/github.com/AlekSi/gocoverutil
 
 	go get -u github.com/prometheus/prometheus/cmd/promtool
 
@@ -51,8 +52,11 @@ test:                           ## Run tests.
 test-race:                      ## Run tests with race detector.
 	go test $(TEST_FLAGS) -p 1 -race ./...
 
-test-cover:                     ## Run tests and collect coverage information.
+test-cover:                     ## Run tests and collect per-package coverage information.
 	go test $(TEST_FLAGS) -p 1 -coverprofile=cover.out -covermode=count ./...
+
+test-crosscover:                ## Run tests and collect cross-package coverage information.
+	gocoverutil -coverprofile=crosscover.out test $(TEST_FLAGS) -p 1 -covermode=count ./...
 
 check:                          ## Run required checkers and linters.
 	go run .github/check-license.go
