@@ -65,6 +65,9 @@ before_script:
   - git diff --exit-code
 
 script:
+  - pwd
+  - go env
+
   # for main_test.go
   - make install
 
