@@ -15,7 +15,7 @@ matrix:
 cache:
   directories:
     - /home/travis/.cache/go-build
-    - /home/travis/gopath/pkg
+    # - /home/travis/gopath/pkg
 
 before_cache:
   - go clean -testcache
@@ -60,14 +60,12 @@ install:
 
 before_script:
   # ensure that generated files are not changed
-  - make init gen
+  - make init
+  - make gen
   - git status
   - git diff --exit-code
 
 script:
-  - pwd
-  - go env
-
   # for main_test.go
   - make install
 
