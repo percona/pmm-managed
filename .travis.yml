@@ -19,6 +19,7 @@ cache:
 
 before_cache:
   - go clean -testcache
+  # - go clean -cache
 
 env:
   global:
