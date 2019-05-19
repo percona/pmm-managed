@@ -2,17 +2,6 @@
 
 
 [[projects]]
-  digest = "1:99c9143d69b343477f8e2397b1b4a69b3c988faa7e46fbb01df1a9399b1b9dbd"
-  name = "github.com/AlekSi/gocoverutil"
-  packages = [
-    ".",
-    "gocoverutil",
-  ]
-  pruneopts = "NUT"
-  revision = "e2c713fd388fe6ce023f8c3e3d89346fa6b02f86"
-  version = "v0.2.0"
-
-[[projects]]
   branch = "develop"
   digest = "1:15310eb747a3957085a05b6f4d446eb93af24db2b7e7b8ec24cbcff65d878e6a"
   name = "github.com/AlekSi/pointer"
@@ -394,10 +383,9 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:9202f58f7e97f1a7ce930289086fb942deecae3f2e8eec61b6fe209ecdb36167"
+  digest = "1:b0a93dc5abc427a2f5a495f0142ee3d98cf87f8b31ccfec92c0db77684a499df"
   name = "golang.org/x/tools"
   packages = [
-    "cover",
     "go/ast/astutil",
     "go/buildutil",
     "go/gcexportdata",
@@ -513,7 +501,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/AlekSi/gocoverutil",
     "github.com/AlekSi/pointer",
     "github.com/BurntSushi/go-sumtype",
     "github.com/aws/aws-sdk-go/aws",
