@@ -2,6 +2,7 @@
 
 package management
 
+import agentpb "github.com/percona/pmm/api/agentpb"
 import context "context"
 import mock "github.com/stretchr/testify/mock"
 
@@ -27,6 +28,22 @@ func (_m *mockRegistry) IsConnected(pmmAgentID string) bool {
 // Kick provides a mock function with given fields: ctx, pmmAgentID
 func (_m *mockRegistry) Kick(ctx context.Context, pmmAgentID string) {
 	_m.Called(ctx, pmmAgentID)
+}
+
+// SendRequest provides a mock function with given fields: ctx, pmmAgentID, payload
+func (_m *mockRegistry) SendRequest(ctx context.Context, pmmAgentID string, payload agentpb.ServerRequestPayload) agentpb.AgentResponsePayload {
+	ret := _m.Called(ctx, pmmAgentID, payload)
+
+	var r0 agentpb.AgentResponsePayload
+	if rf, ok := ret.Get(0).(func(context.Context, string, agentpb.ServerRequestPayload) agentpb.AgentResponsePayload); ok {
+		r0 = rf(ctx, pmmAgentID, payload)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(agentpb.AgentResponsePayload)
+		}
+	}
+
+	return r0
 }
 
 // SendSetStateRequest provides a mock function with given fields: ctx, pmmAgentID
