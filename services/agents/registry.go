@@ -342,11 +342,15 @@ func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRe
 
 // SendRequest sends request to pmm agent.
 //nolint:unparam
-func (r *Registry) SendRequest(ctx context.Context, pmmAgentID string, payload agentpb.ServerRequestPayload) agentpb.AgentResponsePayload {
+func (r *Registry) SendRequest(ctx context.Context, pmmAgentID string, payload agentpb.ServerRequestPayload) (agentpb.AgentResponsePayload, error) {
 	r.rw.RLock()
-	agent := r.agents[pmmAgentID]
+	agent, ok := r.agents[pmmAgentID]
 	r.rw.RUnlock()
-	return agent.channel.SendRequest(payload)
+	if !ok || agent == nil {
+		return nil, errors.New("Couldn't send a request to pmm-agent. Looks like it was disconnected.")
+	}
+
+	return agent.channel.SendRequest(payload), nil
 }
 
 // SendSetStateRequest sends SetStateRequest to pmm-agent with given ID.

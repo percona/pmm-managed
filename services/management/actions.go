@@ -95,7 +95,11 @@ func (a *ActionsService) RunAction(ctx context.Context, rp *RunActionParams) (st
 		return "", errUnsupportedAction
 	}
 
-	res := a.registry.SendRequest(ctx, action.PmmAgentID, req)
+	res, err := a.registry.SendRequest(ctx, action.PmmAgentID, req)
+	if err != nil {
+		return "", status.Error(codes.Internal, err.Error())
+	}
+
 	a.logger.Infof("RunAction response: %+v.", res)
 	return action.ID, nil
 }
@@ -108,9 +112,12 @@ func (a *ActionsService) CancelAction(ctx context.Context, actionID string) {
 		return
 	}
 
-	res := a.registry.SendRequest(ctx, action.PmmAgentID, &agentpb.StopActionRequest{
-		ActionId: actionID,
-	})
+	res, err := a.registry.SendRequest(ctx, action.PmmAgentID, &agentpb.StopActionRequest{ActionId: actionID})
+	if err != nil {
+		a.logger.Error(err)
+		return
+	}
+
 	a.logger.Infof("CancelAction response: %+v.", res)
 }
 
