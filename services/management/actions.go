@@ -65,7 +65,8 @@ type RunActionParams struct {
 }
 
 // RunAction runs PMM Action on the given client.
-func (a *ActionsService) RunAction(ctx context.Context, rp RunActionParams) (actionID string, errorVar error) {
+// First parameter returned by this method is "ActionID".
+func (a *ActionsService) RunAction(ctx context.Context, rp *RunActionParams) (string, error) {
 	action, err := a.prepareAction(rp)
 	if err != nil {
 		return "", err
@@ -101,7 +102,7 @@ func (a *ActionsService) RunAction(ctx context.Context, rp RunActionParams) (act
 
 // CancelAction stops PMM Action with the given ID on the given client.
 func (a *ActionsService) CancelAction(ctx context.Context, actionID string) {
-	action, ok := a.storage.Load(actionID)
+	action, ok := a.storage.Load(ctx, actionID)
 	if !ok {
 		a.logger.Errorf("Unknown action with ID: %s.", actionID)
 		return
@@ -116,7 +117,7 @@ func (a *ActionsService) CancelAction(ctx context.Context, actionID string) {
 // GetActionResult gets PMM Action with the given ID from action results storage.
 //nolint:unparam
 func (a *ActionsService) GetActionResult(ctx context.Context, actionID string) (*models.ActionResult, bool) {
-	return a.storage.Load(actionID)
+	return a.storage.Load(ctx, actionID)
 }
 
 type preparedAction struct {
@@ -126,7 +127,7 @@ type preparedAction struct {
 	PmmAgentID string
 }
 
-func (a *ActionsService) prepareAction(rp RunActionParams) (preparedAction, error) {
+func (a *ActionsService) prepareAction(rp *RunActionParams) (preparedAction, error) {
 	action := preparedAction{
 		ID:         "/action_id/" + uuid.New().String(),
 		PmmAgentID: rp.PmmAgentID,
@@ -200,14 +201,14 @@ func NewInMemoryActionsStorage() *InMemoryActionsStorage {
 }
 
 // Store stores an action result in action results storage.
-func (s *InMemoryActionsStorage) Store(result *models.ActionResult) {
+func (s *InMemoryActionsStorage) Store(ctx context.Context, result *models.ActionResult) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	s.container[result.ID] = *result
 }
 
 // Load gets an action result from storage by action id.
-func (s *InMemoryActionsStorage) Load(id string) (*models.ActionResult, bool) {
+func (s *InMemoryActionsStorage) Load(ctx context.Context, id string) (*models.ActionResult, bool) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	v, ok := s.container[id]

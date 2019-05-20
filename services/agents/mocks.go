@@ -42,5 +42,5 @@ type qanClient interface {
 // actionsStorage // TODO: Add comment
 type actionsStorage interface {
 	// Store an action result to persistent storage.
-	Store(*models.ActionResult)
+	Store(context.Context, *models.ActionResult)
 }

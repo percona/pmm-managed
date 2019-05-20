@@ -190,7 +190,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 
 			case *agentpb.ActionResultRequest:
 				// TODO: PMM-3978: In the future we need to merge action parts before send it to storage.
-				r.actionsStorage.Store(&models.ActionResult{
+				r.actionsStorage.Store(context.TODO(), &models.ActionResult{
 					ID:         p.ActionId,
 					PmmAgentID: agent.id,
 					Done:       p.Done,

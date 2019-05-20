@@ -57,7 +57,7 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 		NodeID:     req.NodeId,
 	}
 
-	actionID, err := s.as.RunAction(ctx, p)
+	actionID, err := s.as.RunAction(ctx, &p)
 	return &managementpb.StartPTSummaryActionResponse{
 		PmmAgentId: req.PmmAgentId,
 		ActionId:   actionID,
@@ -73,7 +73,7 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 		ServiceID:  req.ServiceId,
 	}
 
-	actionID, err := s.as.RunAction(ctx, p)
+	actionID, err := s.as.RunAction(ctx, &p)
 	return &managementpb.StartPTMySQLSummaryActionResponse{
 		PmmAgentId: req.PmmAgentId,
 		ActionId:   actionID,
@@ -89,7 +89,7 @@ func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *manage
 		ServiceID:  req.ServiceId,
 	}
 
-	actionID, err := s.as.RunAction(ctx, p)
+	actionID, err := s.as.RunAction(ctx, &p)
 	return &managementpb.StartMySQLExplainActionResponse{
 		PmmAgentId: req.PmmAgentId,
 		ActionId:   actionID,
