@@ -347,7 +347,7 @@ func (r *Registry) SendRequest(ctx context.Context, pmmAgentID string, payload a
 	agent, ok := r.agents[pmmAgentID]
 	r.rw.RUnlock()
 	if !ok || agent == nil {
-		return nil, errors.New("Couldn't send a request to pmm-agent. Looks like it was disconnected.")
+		return nil, errors.New("Couldn't send a request to pmm-agent. Looks like it was disconnected")
 	}
 
 	return agent.channel.SendRequest(payload), nil
