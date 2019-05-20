@@ -34,17 +34,3 @@ scrape_configs:
     - 127.0.0.1:7773
     labels:
       instance: pmm-server
-- job_name: node_exporter_agent_id_380f1b0e-6dce-40ca-9614-92db2da439de
-  scrape_interval: 1s
-  scrape_timeout: 1s
-  metrics_path: /metrics
-  static_configs:
-  - targets:
-    - 192.168.1.10:32768
-    labels:
-      agent_id: /agent_id/380f1b0e-6dce-40ca-9614-92db2da439de
-      agent_type: node_exporter
-      instance: /agent_id/380f1b0e-6dce-40ca-9614-92db2da439de
-      node_id: /node_id/2414afcc-faa4-4a09-8583-69e483b9d391
-      node_name: dextermac.local
-      node_type: generic
