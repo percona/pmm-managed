@@ -39,7 +39,7 @@ type qanClient interface {
 	Collect(ctx context.Context, req *qanpb.CollectRequest) error
 }
 
-// actionsStorage // TODO: Add comment
+// actionsStorage is an interface represents abstract storage for action results.
 type actionsStorage interface {
 	// Store an action result to persistent storage.
 	Store(context.Context, *models.ActionResult)
