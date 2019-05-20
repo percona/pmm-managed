@@ -16,7 +16,11 @@
 
 package management
 
-import "context"
+import (
+	"context"
+
+	"github.com/percona/pmm/api/agentpb"
+)
 
 //go:generate mockery -name=registry -case=snake -inpkg -testonly
 
@@ -26,4 +30,6 @@ type registry interface {
 	IsConnected(pmmAgentID string) bool
 	Kick(ctx context.Context, pmmAgentID string)
 	SendSetStateRequest(ctx context.Context, pmmAgentID string)
+	// SendRequest sends request to pmm-agent with given id.
+	SendRequest(ctx context.Context, pmmAgentID string, payload agentpb.ServerRequestPayload) agentpb.AgentResponsePayload
 }

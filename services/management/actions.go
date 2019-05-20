@@ -23,34 +23,30 @@ import (
 	"github.com/google/uuid"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/managementpb"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
 )
 
 var (
-	errUnsupportedAction  = errors.New("unsupported action")
-	errPmmAgentIDNotFound = errors.New("can't detect pmm_agent_id")
+	errUnsupportedAction  = status.Error(codes.InvalidArgument, "unsupported action")
+	errPmmAgentIDNotFound = status.Error(codes.Internal, "can't detect pmm_agent_id")
 )
-
-type agentsRegistry interface {
-	// SendRequest sends request to pmm-agent with given id.
-	SendRequest(ctx context.Context, pmmAgentID string, payload agentpb.ServerRequestPayload) agentpb.AgentResponsePayload
-}
 
 // ActionsService describes an Actions Application Service.
 // Provides functions for PMM Actions manipulation.
 type ActionsService struct {
-	registry agentsRegistry
+	registry registry
 	storage  *InMemoryActionsStorage
 	logger   *logrus.Entry
 	db       *reform.DB
 }
 
 // NewActionsService creates new actions service.
-func NewActionsService(r agentsRegistry, s *InMemoryActionsStorage, db *reform.DB) *ActionsService {
+func NewActionsService(r registry, s *InMemoryActionsStorage, db *reform.DB) *ActionsService {
 	return &ActionsService{
 		registry: r,
 		storage:  s,
@@ -119,7 +115,7 @@ func (a *ActionsService) CancelAction(ctx context.Context, actionID string) {
 
 // GetActionResult gets PMM Action with the given ID from action results storage.
 //nolint:unparam
-func (a *ActionsService) GetActionResult(ctx context.Context, actionID string) (models.ActionResult, bool) {
+func (a *ActionsService) GetActionResult(ctx context.Context, actionID string) (*models.ActionResult, bool) {
 	return a.storage.Load(actionID)
 }
 
@@ -194,7 +190,8 @@ func validatePmmAgentID(pmmAgentID string, agents []*models.Agent) (string, erro
 
 // InMemoryActionsStorage in memory action results storage.
 type InMemoryActionsStorage struct {
-	container sync.Map
+	container map[string]models.ActionResult
+	mx        sync.Mutex
 }
 
 // NewInMemoryActionsStorage created new InMemoryActionsStorage.
@@ -204,14 +201,18 @@ func NewInMemoryActionsStorage() *InMemoryActionsStorage {
 
 // Store stores an action result in action results storage.
 func (s *InMemoryActionsStorage) Store(result models.ActionResult) {
-	s.container.Store(result.ID, result)
+	s.mx.Lock()
+	defer s.mx.Unlock()
+	s.container[result.ID] = result
 }
 
 // Load gets an action result from storage by action id.
-func (s *InMemoryActionsStorage) Load(id string) (models.ActionResult, bool) {
-	v, ok := s.container.Load(id)
+func (s *InMemoryActionsStorage) Load(id string) (*models.ActionResult, bool) {
+	s.mx.Lock()
+	defer s.mx.Unlock()
+	v, ok := s.container[id]
 	if !ok {
-		return models.ActionResult{}, false
+		return nil, false
 	}
-	return v.(models.ActionResult), true
+	return &v, true
 }
