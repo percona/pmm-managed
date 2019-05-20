@@ -342,13 +342,27 @@ func ChangeAgent(q *reform.Querier, agentID string, params *ChangeCommonAgentPar
 	return row, nil
 }
 
-// PMMAgentsForNode gets pmm-agent for node.
-func PMMAgentsForNode(q *reform.Querier, nodeID string) ([]*Agent, error) {
-	return findPmmAgentsForNode(q, nodeID)
+// FindPMMAgentsForNode gets pmm-agent for node.
+// TODO: Add tests
+func FindPMMAgentsForNode(q *reform.Querier, nodeID string) ([]*Agent, error) {
+	structs, err := q.SelectAllFrom(AgentTable, "WHERE runs_on_node_id = $1", nodeID)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to select agents")
+	}
+
+	var res []*Agent
+	for _, str := range structs {
+		row := str.(*Agent)
+		if row.AgentType == PMMAgentType {
+			res = append(res, row)
+		}
+	}
+	return res, nil
 }
 
-// PMMAgentsForService gets pmm-agent for service.
-func PMMAgentsForService(q *reform.Querier, serviceID string) ([]*Agent, error) {
+// FindPMMAgentsForService gets pmm-agent for service.
+// TODO: Add tests
+func FindPMMAgentsForService(q *reform.Querier, serviceID string) ([]*Agent, error) {
 	_, err := q.SelectOneFrom(ServiceTable, "WHERE service_id = $1", serviceID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select service")
@@ -374,22 +388,6 @@ func PMMAgentsForService(q *reform.Querier, serviceID string) ([]*Agent, error) 
 	for _, str := range pmmAgents {
 		row := str.(*Agent)
 		res = append(res, row)
-	}
-	return res, nil
-}
-
-func findPmmAgentsForNode(q *reform.Querier, nodeID string) ([]*Agent, error) {
-	structs, err := q.SelectAllFrom(AgentTable, "WHERE runs_on_node_id = $1", nodeID)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to select agents")
-	}
-
-	var res []*Agent
-	for _, str := range structs {
-		row := str.(*Agent)
-		if row.AgentType == PMMAgentType {
-			res = append(res, row)
-		}
 	}
 	return res, nil
 }

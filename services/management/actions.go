@@ -43,19 +43,19 @@ type agentsRegistry interface {
 // ActionsService describes an Actions Application Service.
 // Provides functions for PMM Actions manipulation.
 type ActionsService struct {
-	agentsRegistry agentsRegistry
-	actionsStorage *InMemoryActionsStorage
-	logger         logrus.FieldLogger
-	db             *reform.DB
+	registry agentsRegistry
+	storage  *InMemoryActionsStorage
+	logger   *logrus.Entry
+	db       *reform.DB
 }
 
 // NewActionsService creates new actions service.
 func NewActionsService(r agentsRegistry, s *InMemoryActionsStorage, db *reform.DB) *ActionsService {
 	return &ActionsService{
-		agentsRegistry: r,
-		actionsStorage: s,
-		logger:         logrus.WithField("component", "actions-service"),
-		db:             db,
+		registry: r,
+		storage:  s,
+		logger:   logrus.WithField("component", "actions-service"),
+		db:       db,
 	}
 }
 
@@ -98,20 +98,20 @@ func (a *ActionsService) RunAction(ctx context.Context, rp RunActionParams) (act
 		return "", errUnsupportedAction
 	}
 
-	res := a.agentsRegistry.SendRequest(ctx, action.PmmAgentID, req)
+	res := a.registry.SendRequest(ctx, action.PmmAgentID, req)
 	a.logger.Infof("RunAction response: %+v.", res)
 	return action.ID, nil
 }
 
 // CancelAction stops PMM Action with the given ID on the given client.
 func (a *ActionsService) CancelAction(ctx context.Context, actionID string) {
-	action, ok := a.actionsStorage.Load(actionID)
+	action, ok := a.storage.Load(actionID)
 	if !ok {
-		a.logger.Error("Unknown action with ID: %s.", actionID)
+		a.logger.Errorf("Unknown action with ID: %s.", actionID)
 		return
 	}
 
-	res := a.agentsRegistry.SendRequest(ctx, action.PmmAgentID, &agentpb.StopActionRequest{
+	res := a.registry.SendRequest(ctx, action.PmmAgentID, &agentpb.StopActionRequest{
 		ActionId: actionID,
 	})
 	a.logger.Infof("CancelAction response: %+v.", res)
@@ -120,7 +120,7 @@ func (a *ActionsService) CancelAction(ctx context.Context, actionID string) {
 // GetActionResult gets PMM Action with the given ID from action results storage.
 //nolint:unparam
 func (a *ActionsService) GetActionResult(ctx context.Context, actionID string) (models.ActionResult, bool) {
-	return a.actionsStorage.Load(actionID)
+	return a.storage.Load(actionID)
 }
 
 type preparedAction struct {
@@ -157,7 +157,7 @@ func (a *ActionsService) prepareAction(rp RunActionParams) (preparedAction, erro
 }
 
 func findPmmAgentIDByNodeID(q *reform.Querier, pmmAgentID, nodeID string) (string, error) {
-	agents, err := models.PMMAgentsForNode(q, nodeID)
+	agents, err := models.FindPMMAgentsForNode(q, nodeID)
 	if err != nil {
 		return "", err
 	}
@@ -165,7 +165,7 @@ func findPmmAgentIDByNodeID(q *reform.Querier, pmmAgentID, nodeID string) (strin
 }
 
 func findPmmAgentIDByServiceID(q *reform.Querier, pmmAgentID, serviceID string) (string, error) {
-	agents, err := models.PMMAgentsForService(q, serviceID)
+	agents, err := models.FindPMMAgentsForService(q, serviceID)
 	if err != nil {
 		return "", err
 	}

@@ -20,6 +20,8 @@ import (
 	"context"
 
 	"github.com/percona/pmm/api/qanpb"
+
+	"github.com/percona/pmm-managed/models"
 )
 
 //go:generate mockery -name=prometheus -case=snake -inpkg -testonly
@@ -35,4 +37,10 @@ type prometheus interface {
 // We use it instead of real type for testing and to avoid dependency cycle.
 type qanClient interface {
 	Collect(ctx context.Context, req *qanpb.CollectRequest) error
+}
+
+// actionsStorage // TODO: Add comment
+type actionsStorage interface {
+	// Store an action result to persistent storage.
+	Store(models.ActionResult)
 }

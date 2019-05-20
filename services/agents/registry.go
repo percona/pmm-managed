@@ -42,11 +42,6 @@ const (
 	prometheusSubsystem = "agents"
 )
 
-type actionsStorage interface {
-	// Store an action result to persistent storage.
-	Store(models.ActionResult)
-}
-
 type agentInfo struct {
 	channel *channel.Channel
 	id      string
@@ -194,10 +189,6 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 				})
 
 			case *agentpb.ActionResultRequest:
-				agent.channel.SendResponse(&channel.ServerResponse{
-					ID:      req.ID,
-					Payload: new(agentpb.ActionResultResponse),
-				})
 				// TODO: PMM-3978: In the future we need to merge action parts before send it to storage.
 				r.actionsStorage.Store(models.ActionResult{
 					ID:         p.ActionId,
@@ -205,6 +196,14 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 					Done:       p.Done,
 					Error:      p.Error,
 					Output:     string(p.Output),
+				})
+				if !p.Done {
+					l.Warnf("Action was done with an error: %v.", p.Error)
+				}
+
+				agent.channel.SendResponse(&channel.ServerResponse{
+					ID:      req.ID,
+					Payload: new(agentpb.ActionResultResponse),
 				})
 
 			case nil:
