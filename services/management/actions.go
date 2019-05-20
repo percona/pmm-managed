@@ -200,10 +200,10 @@ func NewInMemoryActionsStorage() *InMemoryActionsStorage {
 }
 
 // Store stores an action result in action results storage.
-func (s *InMemoryActionsStorage) Store(result models.ActionResult) {
+func (s *InMemoryActionsStorage) Store(result *models.ActionResult) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
-	s.container[result.ID] = result
+	s.container[result.ID] = *result
 }
 
 // Load gets an action result from storage by action id.
