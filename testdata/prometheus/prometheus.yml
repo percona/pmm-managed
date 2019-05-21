@@ -34,3 +34,105 @@ scrape_configs:
     - 127.0.0.1:7773
     labels:
       instance: pmm-server
+- job_name: mysqld_exporter_agent_id_4ab6cc14-10b8-4bcc-bba2-aab95e81299c_hr
+  scrape_interval: 1s
+  scrape_timeout: 1s
+  metrics_path: /metrics-hr
+  static_configs:
+  - targets:
+    - 127.0.0.1:32769
+    labels:
+      agent_id: /agent_id/4ab6cc14-10b8-4bcc-bba2-aab95e81299c
+      agent_type: mysqld_exporter
+      instance: /agent_id/4ab6cc14-10b8-4bcc-bba2-aab95e81299c
+      machine_id: machine-id
+      node_id: /node_id/2ef168bf-4828-45d7-80b3-87a1036f2f41
+      node_name: new-node
+      node_type: generic
+      service_id: /service_id/9c53c855-5285-4a49-bcf0-453da6a76974
+      service_name: nurlan-XPS-15-9570-mysql
+      service_type: mysql
+- job_name: mysqld_exporter_agent_id_4ab6cc14-10b8-4bcc-bba2-aab95e81299c_mr
+  scrape_interval: 10s
+  scrape_timeout: 5s
+  metrics_path: /metrics-mr
+  static_configs:
+  - targets:
+    - 127.0.0.1:32769
+    labels:
+      agent_id: /agent_id/4ab6cc14-10b8-4bcc-bba2-aab95e81299c
+      agent_type: mysqld_exporter
+      instance: /agent_id/4ab6cc14-10b8-4bcc-bba2-aab95e81299c
+      machine_id: machine-id
+      node_id: /node_id/2ef168bf-4828-45d7-80b3-87a1036f2f41
+      node_name: new-node
+      node_type: generic
+      service_id: /service_id/9c53c855-5285-4a49-bcf0-453da6a76974
+      service_name: nurlan-XPS-15-9570-mysql
+      service_type: mysql
+- job_name: mysqld_exporter_agent_id_4ab6cc14-10b8-4bcc-bba2-aab95e81299c_lr
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics-lr
+  static_configs:
+  - targets:
+    - 127.0.0.1:32769
+    labels:
+      agent_id: /agent_id/4ab6cc14-10b8-4bcc-bba2-aab95e81299c
+      agent_type: mysqld_exporter
+      instance: /agent_id/4ab6cc14-10b8-4bcc-bba2-aab95e81299c
+      machine_id: machine-id
+      node_id: /node_id/2ef168bf-4828-45d7-80b3-87a1036f2f41
+      node_name: new-node
+      node_type: generic
+      service_id: /service_id/9c53c855-5285-4a49-bcf0-453da6a76974
+      service_name: nurlan-XPS-15-9570-mysql
+      service_type: mysql
+- job_name: node_exporter_agent_id_0ad0952c-b43e-4e0b-8555-c4fe9412f410
+  scrape_interval: 1s
+  scrape_timeout: 1s
+  metrics_path: /metrics
+  static_configs:
+  - targets:
+    - 192.168.1.14:32768
+    labels:
+      agent_id: /agent_id/0ad0952c-b43e-4e0b-8555-c4fe9412f410
+      agent_type: node_exporter
+      instance: /agent_id/0ad0952c-b43e-4e0b-8555-c4fe9412f410
+      machine_id: |
+        619d68d22b96945324eb45735bad3294
+      node_id: /node_id/43f83e3d-eb63-451f-89de-fd88fb53b33e
+      node_name: nurlan-XPS-15-9570
+      node_type: generic
+      test: raw
+- job_name: node_exporter_agent_id_bbc17fd8-edd0-4208-ac85-8cf865f4f810
+  scrape_interval: 1s
+  scrape_timeout: 1s
+  metrics_path: /metrics
+  static_configs:
+  - targets:
+    - 127.0.0.1:32768
+    labels:
+      agent_id: /agent_id/bbc17fd8-edd0-4208-ac85-8cf865f4f810
+      agent_type: node_exporter
+      instance: /agent_id/bbc17fd8-edd0-4208-ac85-8cf865f4f810
+      machine_id: machine-id
+      node_id: /node_id/2ef168bf-4828-45d7-80b3-87a1036f2f41
+      node_name: new-node
+      node_type: generic
+- job_name: node_exporter_agent_id_dfd68c66-2261-43e0-ad1a-a06ee668ff4d
+  scrape_interval: 1s
+  scrape_timeout: 1s
+  metrics_path: /metrics
+  static_configs:
+  - targets:
+    - 192.168.1.14:32769
+    labels:
+      agent_id: /agent_id/dfd68c66-2261-43e0-ad1a-a06ee668ff4d
+      agent_type: node_exporter
+      instance: /agent_id/dfd68c66-2261-43e0-ad1a-a06ee668ff4d
+      machine_id: |
+        619d68d22b96945324eb45735bad3294
+      node_id: /node_id/43f83e3d-eb63-451f-89de-fd88fb53b33e
+      node_name: nurlan-XPS-15-9570
+      node_type: generic

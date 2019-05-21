@@ -19,8 +19,11 @@ package agents
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
+
+	"github.com/percona/pmm/api/inventorypb"
 
 	"github.com/AlekSi/pointer"
 	"github.com/golang/protobuf/ptypes"
@@ -454,6 +457,37 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 	l.Infof("SendSetStateRequest: %+v.", state)
 	resp := agent.channel.SendRequest(state)
 	l.Infof("SetState response: %+v.", resp)
+}
+
+func (r *Registry) CheckConnectionToService(ctx context.Context, pmmAgentID string, serviceType inventorypb.ServiceType, dsn string) (err error) {
+	l := logger.Get(ctx)
+	start := time.Now()
+	defer func() {
+		if dur := time.Since(start); dur > time.Second {
+			l.Warnf("CheckConnectionToService took %s.", dur)
+		}
+	}()
+
+	r.rw.RLock()
+	agent := r.agents[pmmAgentID]
+	r.rw.RUnlock()
+	if agent == nil {
+		l.Infof("SendSetStateRequest: pmm-agent with ID %q is not currently connected.", pmmAgentID)
+		return status.Error(codes.Unimplemented, fmt.Sprintf("pmm-agent with ID %q is not currently connected.", pmmAgentID))
+	}
+
+	request := &agentpb.CheckConnectionRequest{
+		Type: serviceType,
+		Dsn:  dsn,
+	}
+	l.Infof("CheckConnectionRequest: %+v.", request)
+	resp := agent.channel.SendRequest(request)
+	l.Infof("CheckConnection response: %+v.", resp)
+	checkConnectionResponse := resp.(*agentpb.CheckConnectionResponse)
+	if !checkConnectionResponse.Success {
+		return nil
+	}
+	return status.Error(codes.FailedPrecondition, checkConnectionResponse.Error)
 }
 
 // Describe implements prometheus.Collector.

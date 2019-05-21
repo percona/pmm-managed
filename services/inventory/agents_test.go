@@ -54,8 +54,11 @@ func TestAgents(t *testing.T) {
 		r := new(mockRegistry)
 		r.Test(t)
 
+		d := new(mockDsnPreparer)
+		d.Test(t)
+
 		ss = NewServicesService(db, r)
-		as = NewAgentsService(db, r)
+		as = NewAgentsService(db, d, r)
 	}
 
 	teardown := func(t *testing.T) {
@@ -71,8 +74,14 @@ func TestAgents(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 0)
 
+		dsn := "username@tcp(127.0.0.1:3306)/?clientFoundRows=true&parseTime=true&timeout=5s"
+
 		as.r.(*mockRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000001").Return(true)
 		as.r.(*mockRegistry).On("SendSetStateRequest", ctx, "/agent_id/00000000-0000-4000-8000-000000000001")
+		as.r.(*mockRegistry).
+			On("CheckConnectionToService", ctx, "/agent_id/00000000-0000-4000-8000-000000000001", inventorypb.ServiceType_MYSQL_SERVICE, dsn).
+			Return(nil)
+		as.dp.(*mockDsnPreparer).On("MySQLDSN", "127.0.0.1", uint16(3306), "username", "").Return(dsn)
 		pmmAgent, err := as.AddPMMAgent(ctx, &inventorypb.AddPMMAgentRequest{
 			RunsOnNodeId: models.PMMServerNodeID,
 		})

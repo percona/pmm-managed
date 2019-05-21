@@ -129,6 +129,7 @@ type serviceDependencies struct {
 	db             *reform.DB
 	portsRegistry  *ports.Registry
 	agentsRegistry *agents.Registry
+	dsnPreparer    *agents.DSNPreparer
 	logs           *logs.Logs
 }
 
@@ -154,7 +155,7 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 
 	nodesSvc := inventory.NewNodesService(deps.db)
 	servicesSvc := inventory.NewServicesService(deps.db, deps.agentsRegistry)
-	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry)
+	agentsSvc := inventory.NewAgentsService(deps.db, deps.dsnPreparer, deps.agentsRegistry)
 
 	inventorypb.RegisterNodesServer(gRPCServer, inventorygrpc.NewNodesServer(nodesSvc))
 	inventorypb.RegisterServicesServer(gRPCServer, inventorygrpc.NewServicesServer(servicesSvc))
@@ -406,6 +407,7 @@ func main() {
 		db:             db,
 		portsRegistry:  ports.NewRegistry(10000, 10999, nil),
 		agentsRegistry: agentsRegistry,
+		dsnPreparer:    agents.NewDSNPreparer(),
 		logs:           logs,
 	}
 

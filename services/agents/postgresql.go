@@ -29,16 +29,20 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-func postgresqlDSN(service *models.Service, exporter *models.Agent) string {
-	q := make(url.Values)
-	q.Set("sslmode", "disable") // TODO: make it configurable
-	q.Set("connect_timeout", "5")
-
+func postgresqlDSNForAgent(service *models.Service, exporter *models.Agent) string {
 	host := pointer.GetString(service.Address)
 	port := pointer.GetUint16(service.Port)
 	username := pointer.GetString(exporter.Username)
 	password := pointer.GetString(exporter.Password)
 
+	return postgresqlDSN(host, port, password, username)
+}
+
+func postgresqlDSN(host string, port uint16, password string, username string) string {
+	q := make(url.Values)
+	q.Set("sslmode", "disable")
+	// TODO: make it configurable
+	q.Set("connect_timeout", "5")
 	u := &url.URL{
 		Scheme:   "postgres",
 		Host:     net.JoinHostPort(host, strconv.Itoa(int(port))),
@@ -51,7 +55,6 @@ func postgresqlDSN(service *models.Service, exporter *models.Agent) string {
 	case username != "":
 		u.User = url.User(username)
 	}
-
 	return u.String()
 }
 
@@ -80,7 +83,7 @@ func postgresExporterConfig(service *models.Service, exporter *models.Agent) *ag
 		TemplateRightDelim: tdp.right,
 		Args:               args,
 		Env: []string{
-			fmt.Sprintf("DATA_SOURCE_NAME=%s", postgresqlDSN(service, exporter)),
+			fmt.Sprintf("DATA_SOURCE_NAME=%s", postgresqlDSNForAgent(service, exporter)),
 		},
 	}
 }
