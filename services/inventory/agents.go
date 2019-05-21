@@ -31,15 +31,13 @@ import (
 // AgentsService works with inventory API Agents.
 type AgentsService struct {
 	r  registry
-	dp dsnPreparer
 	db *reform.DB
 }
 
 // NewAgentsService creates new AgentsService
-func NewAgentsService(db *reform.DB, dsnPreparer dsnPreparer, r registry) *AgentsService {
+func NewAgentsService(db *reform.DB, r registry) *AgentsService {
 	return &AgentsService{
 		r:  r,
-		dp: dsnPreparer,
 		db: db,
 	}
 }
@@ -316,19 +314,6 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, req *inventorypb
 
 	var res *inventorypb.MySQLdExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		if !req.SkipConnectionCheck {
-			service, err := models.FindServiceByID(tx.Querier, req.ServiceId)
-			if err != nil {
-				return err
-			}
-
-			dsn := as.dp.MySQLDSN(pointer.GetString(service.Address), pointer.GetUint16(service.Port), req.Username, req.Password)
-			err = as.r.CheckConnectionToService(ctx, req.PmmAgentId, inventorypb.ServiceType_MYSQL_SERVICE, dsn)
-			if err != nil {
-				return err
-			}
-		}
-
 		params := &models.AddExporterAgentParams{
 			PMMAgentID:   req.PmmAgentId,
 			ServiceID:    req.ServiceId,
@@ -339,6 +324,17 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, req *inventorypb
 		row, err := models.AgentAddExporter(tx.Querier, models.MySQLdExporterType, params)
 		if err != nil {
 			return err
+		}
+		if !req.SkipConnectionCheck {
+			service, err := models.FindServiceByID(tx.Querier, req.ServiceId)
+			if err != nil {
+				return err
+			}
+
+			err = as.r.CheckConnectionToService(ctx, service, row)
+			if err != nil {
+				return err
+			}
 		}
 
 		agent, err := ToInventoryAgent(tx.Querier, row, as.r)

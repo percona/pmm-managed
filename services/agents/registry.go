@@ -23,11 +23,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/percona/pmm/api/inventorypb"
-
 	"github.com/AlekSi/pointer"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/percona/pmm/api/agentpb"
+	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
@@ -328,6 +327,7 @@ func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRe
 
 // SendSetStateRequest sends SetStateRequest to pmm-agent with given ID.
 func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
+	// TODO: extract to a separate struct to keep Single Responsibility principles.
 	l := logger.Get(ctx)
 	start := time.Now()
 	defer func() {
@@ -459,7 +459,9 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 	l.Infof("SetState response: %+v.", resp)
 }
 
-func (r *Registry) CheckConnectionToService(ctx context.Context, pmmAgentID string, serviceType inventorypb.ServiceType, dsn string) (err error) {
+// CheckConnectionToService sends request to pmm-agent to check connection to service.
+func (r *Registry) CheckConnectionToService(ctx context.Context, service *models.Service, agent *models.Agent) error {
+	// TODO: extract to a separate struct to keep Single Responsibility principles.
 	l := logger.Get(ctx)
 	start := time.Now()
 	defer func() {
@@ -468,26 +470,52 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, pmmAgentID stri
 		}
 	}()
 
-	r.rw.RLock()
-	agent := r.agents[pmmAgentID]
-	r.rw.RUnlock()
-	if agent == nil {
-		l.Infof("SendSetStateRequest: pmm-agent with ID %q is not currently connected.", pmmAgentID)
-		return status.Error(codes.Unimplemented, fmt.Sprintf("pmm-agent with ID %q is not currently connected.", pmmAgentID))
+	pmmAgentID := pointer.GetString(agent.PMMAgentID)
+	pmmAgent, err := r.Get(ctx, pmmAgentID)
+	if err != nil {
+		l.Infof("CheckConnectionToService: pmm-agent with ID %q is not currently connected.", pmmAgentID)
+		return err
+	}
+	var request *agentpb.CheckConnectionRequest
+
+	switch service.ServiceType {
+	case models.MySQLServiceType:
+		request = &agentpb.CheckConnectionRequest{
+			Type: inventorypb.ServiceType_MYSQL_SERVICE,
+			Dsn:  mysqlDSN(service, agent),
+		}
+	case models.PostgreSQLServiceType:
+		request = &agentpb.CheckConnectionRequest{
+			Type: inventorypb.ServiceType_POSTGRESQL_SERVICE,
+			Dsn:  postgresqlDSN(service, agent),
+		}
+	case models.MongoDBServiceType:
+		request = &agentpb.CheckConnectionRequest{
+			Type: inventorypb.ServiceType_MONGODB_SERVICE,
+			Dsn:  mongoDSN(service, agent),
+		}
+	default:
+		l.Panicf("unhandled Service type %s", service.ServiceType)
 	}
 
-	request := &agentpb.CheckConnectionRequest{
-		Type: serviceType,
-		Dsn:  dsn,
-	}
 	l.Infof("CheckConnectionRequest: %+v.", request)
-	resp := agent.channel.SendRequest(request)
+	resp := pmmAgent.channel.SendRequest(request)
 	l.Infof("CheckConnection response: %+v.", resp)
 	checkConnectionResponse := resp.(*agentpb.CheckConnectionResponse)
 	if !checkConnectionResponse.Success {
 		return nil
 	}
 	return status.Error(codes.FailedPrecondition, checkConnectionResponse.Error)
+}
+
+func (r *Registry) Get(ctx context.Context, pmmAgentID string) (*agentInfo, error) {
+	r.rw.RLock()
+	pmmAgent := r.agents[pmmAgentID]
+	r.rw.RUnlock()
+	if pmmAgent == nil {
+		return nil, status.Error(codes.Unimplemented, fmt.Sprintf("pmm-agent with ID %q is not currently connected.", pmmAgentID))
+	}
+	return pmmAgent, nil
 }
 
 // Describe implements prometheus.Collector.

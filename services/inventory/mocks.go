@@ -18,7 +18,8 @@ package inventory
 
 import (
 	"context"
-	"github.com/percona/pmm/api/inventorypb"
+	
+	"github.com/percona/pmm-managed/models"
 )
 
 //go:generate mockery -name=registry -case=snake -inpkg -testonly
@@ -29,16 +30,5 @@ type registry interface {
 	IsConnected(pmmAgentID string) bool
 	Kick(ctx context.Context, pmmAgentID string)
 	SendSetStateRequest(ctx context.Context, pmmAgentID string)
-	CheckConnectionToService(ctx context.Context, pmmAgentID string, serviceType inventorypb.ServiceType, dsn string) (err error)
-}
-
-
-//go:generate mockery -name=dsnPreparer -case=snake -inpkg -testonly
-
-// registry is a methods of agents.DSNPreparer used by this package.
-// We use it instead of real type for testing and to avoid dependency cycle.
-type dsnPreparer interface {
-	MySQLDSN(host string, port uint16, username, password string) string
-	PostgreSQLDSN(host string, port uint16, username, password string) string
-	MongoDBDSN(host string, port uint16, username, password string) string
+	CheckConnectionToService(ctx context.Context, service *models.Service, agent *models.Agent) (err error)
 }
