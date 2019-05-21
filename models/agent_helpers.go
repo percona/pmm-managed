@@ -342,8 +342,7 @@ func ChangeAgent(q *reform.Querier, agentID string, params *ChangeCommonAgentPar
 	return row, nil
 }
 
-// FindPMMAgentsForNode gets pmm-agent for node.
-// TODO: Add tests
+// FindPMMAgentsForNode gets pmm-agents for node where it runs.
 func FindPMMAgentsForNode(q *reform.Querier, nodeID string) ([]*Agent, error) {
 	structs, err := q.SelectAllFrom(AgentTable, "WHERE runs_on_node_id = $1", nodeID)
 	if err != nil {
@@ -360,35 +359,59 @@ func FindPMMAgentsForNode(q *reform.Querier, nodeID string) ([]*Agent, error) {
 	return res, nil
 }
 
-// FindPMMAgentsForService gets pmm-agent for service.
-// TODO: Add tests
+// FindPMMAgentsForService gets pmm-agents for service.
 func FindPMMAgentsForService(q *reform.Querier, serviceID string) ([]*Agent, error) {
 	_, err := q.SelectOneFrom(ServiceTable, "WHERE service_id = $1", serviceID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select service")
 	}
 
-	agents, err := q.SelectAllFrom(AgentServiceView, "WHERE service_id = $1", serviceID)
+	// First, select all agents that scrapping insights for service.
+	agentServices, err := q.SelectAllFrom(AgentServiceView, "WHERE service_id = $1", serviceID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select agents for service")
 	}
-
-	ids := make([]string, len(agents))
-	for _, ag := range agents {
-		a := ag.(*Agent)
-		ids = append(ids, a.AgentID)
+	aids := make([]interface{}, len(agentServices))
+	for _, ag := range agentServices {
+		a := ag.(*AgentService)
+		aids = append(aids, a.AgentID)
 	}
 
-	pmmAgents, err := q.SelectAllFrom(AgentTable, "WHERE agent_id IN($1) AND agent_type=$2", ids, PMMAgentType)
-	if err != nil || len(pmmAgents) == 0 || len(pmmAgents) > 1 {
-		return nil, errors.Wrap(err, "failed to select pmm-agent for service")
+	// Then find all agents with PMMAgentID.
+	p := strings.Join(q.Placeholders(1, len(aids)), ", ")
+	tail := fmt.Sprintf("WHERE agent_id IN (%s)", p) //nolint:gosec
+	allAgents, err := q.SelectAllFrom(AgentTable, tail, aids...)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to find agents for service")
 	}
-
-	res := make([]*Agent, len(pmmAgents))
-	for _, str := range pmmAgents {
+	pmmAgentIDs := make([]interface{}, len(allAgents))
+	for _, str := range allAgents {
 		row := str.(*Agent)
-		res = append(res, row)
+		if row.PMMAgentID != nil {
+			for _, a := range pmmAgentIDs {
+				if a == *row.PMMAgentID {
+					break
+				}
+				pmmAgentIDs = append(pmmAgentIDs, *row.PMMAgentID)
+			}
+		}
 	}
+
+	// Last, find all pmm-agents.
+	ph := strings.Join(q.Placeholders(1, len(pmmAgentIDs)), ", ")
+	atail := fmt.Sprintf("WHERE agent_id IN (%s)", ph) //nolint:gosec
+	pmmAgentRecords, err := q.SelectAllFrom(AgentTable, atail, pmmAgentIDs...)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to find pmm-agents by children agents")
+	}
+	var res []*Agent
+	for _, str := range pmmAgentRecords {
+		row := str.(*Agent)
+		if row.AgentType == PMMAgentType {
+			res = append(res, row)
+		}
+	}
+
 	return res, nil
 }
 

@@ -206,4 +206,24 @@ func TestAgentHelpers(t *testing.T) {
 		_, err = models.AgentFindByID(q, "A1")
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "A1" not found.`), err)
 	})
+
+	t.Run("FindPMMAgentsForNode", func(t *testing.T) {
+		q, teardown := setup(t)
+		defer teardown(t)
+
+		agents, err := models.FindPMMAgentsForNode(q, "N1")
+		require.NoError(t, err)
+		assert.Equal(t, "A1", agents[0].AgentID)
+	})
+
+	t.Run("FindPMMAgentsForService", func(t *testing.T) {
+		q, teardown := setup(t)
+		defer teardown(t)
+
+		agents, err := models.FindPMMAgentsForService(q, "S1")
+		require.NoError(t, err)
+		t.Log(agents, err)
+		assert.Equal(t, "A1", agents[0].AgentID)
+	})
+
 }
