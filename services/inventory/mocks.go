@@ -18,7 +18,7 @@ package inventory
 
 import (
 	"context"
-	
+
 	"github.com/percona/pmm-managed/models"
 )
 

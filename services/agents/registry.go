@@ -471,7 +471,7 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, service *models
 	}()
 
 	pmmAgentID := pointer.GetString(agent.PMMAgentID)
-	pmmAgent, err := r.Get(ctx, pmmAgentID)
+	pmmAgent, err := r.get(ctx, pmmAgentID)
 	if err != nil {
 		l.Infof("CheckConnectionToService: pmm-agent with ID %q is not currently connected.", pmmAgentID)
 		return err
@@ -508,7 +508,7 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, service *models
 	return status.Error(codes.FailedPrecondition, checkConnectionResponse.Error)
 }
 
-func (r *Registry) Get(ctx context.Context, pmmAgentID string) (*agentInfo, error) {
+func (r *Registry) get(ctx context.Context, pmmAgentID string) (*agentInfo, error) {
 	r.rw.RLock()
 	pmmAgent := r.agents[pmmAgentID]
 	r.rw.RUnlock()
