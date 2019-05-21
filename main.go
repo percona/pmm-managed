@@ -168,14 +168,12 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	postgresqlSvc := management.NewPostgreSQLService(deps.db, deps.agentsRegistry)
 	actionsSvc := management.NewActionsService(deps.agentsRegistry, deps.actionsStorage, deps.db)
 
-
 	managementpb.RegisterNodeServer(gRPCServer, managementgrpc.NewManagementNodeServer(nodeSvc))
 	managementpb.RegisterServiceServer(gRPCServer, managementgrpc.NewManagementServiceServer(serviceSvc))
 	managementpb.RegisterMySQLServer(gRPCServer, managementgrpc.NewManagementMySQLServer(mysqlSvc))
 	managementpb.RegisterMongoDBServer(gRPCServer, managementgrpc.NewManagementMongoDBServer(mongodbSvc))
 	managementpb.RegisterPostgreSQLServer(gRPCServer, managementgrpc.NewManagementPostgreSQLServer(postgresqlSvc))
 	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewManagementActionsServer(actionsSvc))
-
 
 	if *debugF {
 		l.Debug("Reflection and channelz are enabled.")

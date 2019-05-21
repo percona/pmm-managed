@@ -31,7 +31,7 @@ func (_m *mockRegistry) Kick(ctx context.Context, pmmAgentID string) {
 }
 
 // SendRequest provides a mock function with given fields: ctx, pmmAgentID, payload
-func (_m *mockRegistry) SendRequest(ctx context.Context, pmmAgentID string, payload agentpb.ServerRequestPayload) agentpb.AgentResponsePayload {
+func (_m *mockRegistry) SendRequest(ctx context.Context, pmmAgentID string, payload agentpb.ServerRequestPayload) (agentpb.AgentResponsePayload, error) {
 	ret := _m.Called(ctx, pmmAgentID, payload)
 
 	var r0 agentpb.AgentResponsePayload
@@ -43,7 +43,14 @@ func (_m *mockRegistry) SendRequest(ctx context.Context, pmmAgentID string, payl
 		}
 	}
 
-	return r0
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string, agentpb.ServerRequestPayload) error); ok {
+		r1 = rf(ctx, pmmAgentID, payload)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // SendSetStateRequest provides a mock function with given fields: ctx, pmmAgentID
