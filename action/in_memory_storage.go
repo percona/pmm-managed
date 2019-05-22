@@ -14,18 +14,38 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package management
+package action
 
 import (
 	"context"
+	"sync"
 )
 
-//go:generate mockery -name=registry -case=snake -inpkg -testonly
+// InMemoryStorage in memory action results storage.
+type InMemoryStorage struct {
+	container map[string]Result
+	mx        sync.Mutex
+}
 
-// registry is a subset of methods of agents.Registry used by this package.
-// We use it instead of real type for testing and to avoid dependency cycle.
-type registry interface {
-	IsConnected(pmmAgentID string) bool
-	Kick(ctx context.Context, pmmAgentID string)
-	SendSetStateRequest(ctx context.Context, pmmAgentID string)
+// NewInMemoryStorage created new InMemoryActionsStorage.
+func NewInMemoryStorage() *InMemoryStorage {
+	return &InMemoryStorage{}
+}
+
+// Store stores an action result in action results storage.
+func (s *InMemoryStorage) Store(ctx context.Context, result *Result) {
+	s.mx.Lock()
+	defer s.mx.Unlock()
+	s.container[result.ID] = *result
+}
+
+// Load gets an action result from storage by action id.
+func (s *InMemoryStorage) Load(ctx context.Context, id string) (*Result, bool) {
+	s.mx.Lock()
+	defer s.mx.Unlock()
+	v, ok := s.container[id]
+	if !ok {
+		return nil, false
+	}
+	return &v, true
 }

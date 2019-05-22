@@ -25,6 +25,7 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/percona/pmm/api/agentpb"
+	"github.com/percona/pmm/api/managementpb"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
@@ -32,6 +33,7 @@ import (
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
+	"github.com/percona/pmm-managed/action"
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/agents/channel"
 	"github.com/percona/pmm-managed/utils/logger"
@@ -190,7 +192,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 
 			case *agentpb.ActionResultRequest:
 				// TODO: PMM-3978: In the future we need to merge action parts before send it to storage.
-				r.actionsStorage.Store(context.TODO(), &models.ActionResult{
+				r.actionsStorage.Store(context.TODO(), &action.Result{
 					ID:         p.ActionId,
 					PmmAgentID: agent.id,
 					Done:       p.Done,
@@ -338,19 +340,6 @@ func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRe
 	}
 
 	return r.prometheus.UpdateConfiguration(ctx)
-}
-
-// SendRequest sends request to pmm agent.
-//nolint:unparam
-func (r *Registry) SendRequest(ctx context.Context, pmmAgentID string, payload agentpb.ServerRequestPayload) (agentpb.AgentResponsePayload, error) {
-	r.rw.RLock()
-	agent, ok := r.agents[pmmAgentID]
-	r.rw.RUnlock()
-	if !ok || agent == nil {
-		return nil, errors.New("Couldn't send a request to pmm-agent. Looks like it was disconnected")
-	}
-
-	return agent.channel.SendRequest(payload), nil
 }
 
 // SendSetStateRequest sends SetStateRequest to pmm-agent with given ID.
@@ -502,6 +491,98 @@ func (r *Registry) Collect(ch chan<- prom.Metric) {
 	r.mDisconnects.Collect(ch)
 	r.mRoundTrip.Collect(ch)
 	r.mClockDrift.Collect(ch)
+}
+
+// StartPTSummaryAction starts pt-summary action on pmm-agent.
+func (r *Registry) StartPTSummaryAction(ctx context.Context, a *action.PtSummary) error {
+	aRequest := &agentpb.StartActionRequest{
+		ActionId: a.Id,
+		Type:     managementpb.ActionType_PT_SUMMARY,
+		Params: &agentpb.StartActionRequest_ProcessParams_{
+			ProcessParams: &agentpb.StartActionRequest_ProcessParams{
+				Args: a.Args,
+			},
+		},
+	}
+
+	_, err := r.sendRequest(ctx, a.PMMAgentID, aRequest)
+	return err
+}
+
+// StartPTMySQLSummaryAction starts pt-mysql-summary action on pmm-agent.
+func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, a *action.PtMySQLSummary) error {
+	aRequest := &agentpb.StartActionRequest{
+		ActionId: a.Id,
+		Type:     managementpb.ActionType_PT_MYSQL_SUMMARY,
+		Params: &agentpb.StartActionRequest_ProcessParams_{
+			ProcessParams: &agentpb.StartActionRequest_ProcessParams{
+				Args: a.Args,
+			},
+		},
+	}
+
+	_, err := r.sendRequest(ctx, a.PMMAgentID, aRequest)
+	return err
+}
+
+// StartMySQLExplainAction starts mysql-explain action on pmm-agent.
+func (r *Registry) StartMySQLExplainAction(ctx context.Context, a *action.MySQLExplain) error {
+	aRequest := &agentpb.StartActionRequest{
+		ActionId: a.Id,
+		Type:     managementpb.ActionType_MYSQL_EXPLAIN,
+		Params: &agentpb.StartActionRequest_MysqlExplainParams{
+			MysqlExplainParams: &agentpb.StartActionRequest_MySQLExplainParams{
+				Dsn:          a.Dsn,
+				Query:        a.Query,
+				OutputFormat: agentpb.MysqlExplainOutputFormat_MYSQL_EXPLAIN_OUTPUT_FORMAT_DEFAULT,
+			},
+		},
+	}
+
+	_, err := r.sendRequest(ctx, a.PMMAgentID, aRequest)
+	return err
+}
+
+// StartMySQLExplainJSONAction starts mysql-explain-json action on pmm-agent.
+func (r *Registry) StartMySQLExplainJSONAction(ctx context.Context, a *action.MySQLExplainJSON) error {
+	aRequest := &agentpb.StartActionRequest{
+		ActionId: a.Id,
+		Type:     managementpb.ActionType_MYSQL_EXPLAIN,
+		Params: &agentpb.StartActionRequest_MysqlExplainParams{
+			MysqlExplainParams: &agentpb.StartActionRequest_MySQLExplainParams{
+				Dsn:          a.Dsn,
+				Query:        a.Query,
+				OutputFormat: agentpb.MysqlExplainOutputFormat_MYSQL_EXPLAIN_OUTPUT_FORMAT_JSON,
+			},
+		},
+	}
+
+	_, err := r.sendRequest(ctx, a.PMMAgentID, aRequest)
+	return err
+}
+
+// StopAction stops action with given given id.
+func (r *Registry) StopAction(ctx context.Context, actionID string) error {
+	actionResult, ok := r.actionsStorage.Load(ctx, actionID)
+	if !ok {
+		return errors.Errorf("Couldn't find action result record in storage")
+	}
+
+	_, err := r.sendRequest(ctx, actionResult.PmmAgentID, &agentpb.StopActionRequest{ActionId: actionResult.ID})
+	return err
+}
+
+// SendRequest sends request to pmm agent.
+//nolint:unparam
+func (r *Registry) sendRequest(ctx context.Context, pmmAgentID string, payload agentpb.ServerRequestPayload) (agentpb.AgentResponsePayload, error) {
+	r.rw.RLock()
+	agent, ok := r.agents[pmmAgentID]
+	r.rw.RUnlock()
+	if !ok || agent == nil {
+		return nil, errors.New("Couldn't send a request to pmm-agent. Looks like it was disconnected")
+	}
+
+	return agent.channel.SendRequest(payload), nil
 }
 
 // check interfaces

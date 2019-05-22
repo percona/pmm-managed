@@ -14,18 +14,37 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package management
+package action
 
-import (
-	"context"
-)
+import "gopkg.in/reform.v1"
 
-//go:generate mockery -name=registry -case=snake -inpkg -testonly
+type MySQLExplain struct {
+	Id         string
+	ServiceID  string
+	PMMAgentID string
+	Dsn        string
+	Query      string
 
-// registry is a subset of methods of agents.Registry used by this package.
-// We use it instead of real type for testing and to avoid dependency cycle.
-type registry interface {
-	IsConnected(pmmAgentID string) bool
-	Kick(ctx context.Context, pmmAgentID string)
-	SendSetStateRequest(ctx context.Context, pmmAgentID string)
+	q *reform.Querier
+}
+
+// TODO: Add DSN string: findAgentForService(MYSQLD_EXPORTER, req.ServiceID)
+func NewMySQLExplain(serviceId, pmmAgentID string, query string, q *reform.Querier) *MySQLExplain {
+	return &MySQLExplain{
+		Id:         getNewActionID(),
+		ServiceID:  serviceId,
+		PMMAgentID: pmmAgentID,
+		Query:      query,
+
+		q: q,
+	}
+}
+
+func (exp *MySQLExplain) Prepare() error {
+	var err error
+	exp.PMMAgentID, err = findPmmAgentIDByServiceID(exp.q, exp.PMMAgentID, exp.ServiceID)
+	if err != nil {
+		return err
+	}
+	return nil
 }

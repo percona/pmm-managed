@@ -14,18 +14,35 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package management
+package action
 
-import (
-	"context"
-)
+import "gopkg.in/reform.v1"
 
-//go:generate mockery -name=registry -case=snake -inpkg -testonly
+type PtSummary struct {
+	Id         string
+	NodeID     string
+	PMMAgentID string
+	Args       []string
 
-// registry is a subset of methods of agents.Registry used by this package.
-// We use it instead of real type for testing and to avoid dependency cycle.
-type registry interface {
-	IsConnected(pmmAgentID string) bool
-	Kick(ctx context.Context, pmmAgentID string)
-	SendSetStateRequest(ctx context.Context, pmmAgentID string)
+	q *reform.Querier
+}
+
+func NewPtSummary(nodeID, pmmAgentID string, args []string, q *reform.Querier) *PtSummary {
+	return &PtSummary{
+		Id:         getNewActionID(),
+		NodeID:     nodeID,
+		PMMAgentID: pmmAgentID,
+		Args:       args,
+
+		q: q,
+	}
+}
+
+func (ps *PtSummary) Prepare() error {
+	var err error
+	ps.PMMAgentID, err = findPmmAgentIDByNodeID(ps.q, ps.PMMAgentID, ps.NodeID)
+	if err != nil {
+		return err
+	}
+	return nil
 }

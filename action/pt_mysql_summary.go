@@ -14,14 +14,35 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package models
+package action
 
-// ActionResult describes an PMM Action result which is storing in ActionsResult storage.
-//nolint:unused
-type ActionResult struct {
-	ID         string
-	PmmAgentID string
-	Done       bool
-	Error      string
-	Output     string
+import "gopkg.in/reform.v1"
+
+type PtMySQLSummary struct {
+	Id         string
+	ServiceID  string
+	PMMAgentID string
+	Args       []string
+
+	q *reform.Querier
+}
+
+func NewPtMySQLSummary(serviceId, pmmAgentID string, args []string, q *reform.Querier) *PtMySQLSummary {
+	return &PtMySQLSummary{
+		Id:         getNewActionID(),
+		ServiceID:  serviceId,
+		PMMAgentID: pmmAgentID,
+		Args:       args,
+
+		q: q,
+	}
+}
+
+func (pms *PtMySQLSummary) Prepare() error {
+	var err error
+	pms.PMMAgentID, err = findPmmAgentIDByServiceID(pms.q, pms.PMMAgentID, pms.ServiceID)
+	if err != nil {
+		return err
+	}
+	return nil
 }

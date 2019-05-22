@@ -21,7 +21,7 @@ import (
 
 	"github.com/percona/pmm/api/qanpb"
 
-	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/action"
 )
 
 //go:generate mockery -name=prometheus -case=snake -inpkg -testonly
@@ -42,5 +42,6 @@ type qanClient interface {
 // actionsStorage is an interface represents abstract storage for action results.
 type actionsStorage interface {
 	// Store an action result to persistent storage.
-	Store(context.Context, *models.ActionResult)
+	Store(context.Context, *action.Result)
+	Load(context.Context, string) (*action.Result, bool)
 }

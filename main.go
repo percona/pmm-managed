@@ -53,6 +53,7 @@ import (
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
+	"github.com/percona/pmm-managed/action"
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/agents"
 	agentgrpc "github.com/percona/pmm-managed/services/agents/grpc"
@@ -130,7 +131,7 @@ type serviceDependencies struct {
 	portsRegistry  *ports.Registry
 	agentsRegistry *agents.Registry
 	logs           *logs.Logs
-	actionsStorage *management.InMemoryActionsStorage
+	actionsStorage *action.InMemoryStorage
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -166,14 +167,13 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsRegistry)
 	mongodbSvc := management.NewMongoDBService(deps.db, deps.agentsRegistry)
 	postgresqlSvc := management.NewPostgreSQLService(deps.db, deps.agentsRegistry)
-	actionsSvc := management.NewActionsService(deps.agentsRegistry, deps.actionsStorage, deps.db)
 
 	managementpb.RegisterNodeServer(gRPCServer, managementgrpc.NewManagementNodeServer(nodeSvc))
 	managementpb.RegisterServiceServer(gRPCServer, managementgrpc.NewManagementServiceServer(serviceSvc))
 	managementpb.RegisterMySQLServer(gRPCServer, managementgrpc.NewManagementMySQLServer(mysqlSvc))
 	managementpb.RegisterMongoDBServer(gRPCServer, managementgrpc.NewManagementMongoDBServer(mongodbSvc))
 	managementpb.RegisterPostgreSQLServer(gRPCServer, managementgrpc.NewManagementPostgreSQLServer(postgresqlSvc))
-	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewManagementActionsServer(actionsSvc))
+	managementpb.RegisterActionsServer(gRPCServer, action.NewGRPCServer(deps.agentsRegistry, deps.actionsStorage, deps.db))
 
 	if *debugF {
 		l.Debug("Reflection and channelz are enabled.")
@@ -401,7 +401,7 @@ func main() {
 		l.Panicf("Prometheus service problem: %+v", err)
 	}
 
-	actionsStorage := management.NewInMemoryActionsStorage()
+	actionsStorage := action.NewInMemoryStorage()
 	qanClient := getQANClient(ctx, db)
 	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient, actionsStorage)
 	logs := logs.New(version.Version)
