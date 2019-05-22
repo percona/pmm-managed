@@ -212,8 +212,8 @@
   version = "v0.2.2"
 
 [[projects]]
-  branch = "PMM-4046-skip-connection-check-management-api"
-  digest = "1:eba7d40a5e5ccdf872644faadd5a82d11ad728d535d4e23e2061db43bb35b3d0"
+  branch = "PMM-2.0"
+  digest = "1:d8d14b65cc11994cfbcc1c34e1136bb095bef3c67423980c15a09f31b166e043"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -224,7 +224,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "3f544c7468cccb2bec4e96e038cb7652d7de94d7"
+  revision = "cc992bcbff8c65dfeb210fd27dee3ed0bc7c9e79"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"

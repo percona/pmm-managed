@@ -19,6 +19,7 @@ package inventory
 import (
 	"context"
 	"database/sql"
+	"reflect"
 	"testing"
 
 	"github.com/AlekSi/pointer"
@@ -74,7 +75,7 @@ func TestAgents(t *testing.T) {
 
 		as.r.(*mockRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000001").Return(true)
 		as.r.(*mockRegistry).On("SendSetStateRequest", ctx, "/agent_id/00000000-0000-4000-8000-000000000001")
-		as.r.(*mockRegistry).On("CheckConnectionToService", ctx, mock.Anything, mock.Anything).Return(nil)
+		as.r.(*mockRegistry).On("CheckConnectionToService", ctx, mock.AnythingOfType(reflect.TypeOf(&models.Service{}).Name()), mock.Anything).Return(nil)
 		pmmAgent, err := as.AddPMMAgent(ctx, &inventorypb.AddPMMAgentRequest{
 			RunsOnNodeId: models.PMMServerNodeID,
 		})

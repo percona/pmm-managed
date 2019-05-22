@@ -17,7 +17,7 @@ required = [
 # TODO switch to tags before PMM 2.0 release
 [[constraint]]
   name = "github.com/percona/pmm"
-  branch = "PMM-4046-skip-connection-check-management-api"
+  branch = "PMM-2.0"
 
 [[constraint]]
   # Stick to 0.9.x for now.

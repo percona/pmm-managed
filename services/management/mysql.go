@@ -78,8 +78,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 			return err
 		}
 		if !req.SkipConnectionCheck {
-			err = s.registry.CheckConnectionToService(ctx, service, row)
-			if err != nil {
+			if err = s.registry.CheckConnectionToService(ctx, service, row); err != nil {
 				return err
 			}
 		}

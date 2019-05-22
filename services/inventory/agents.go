@@ -331,8 +331,7 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, req *inventorypb
 				return err
 			}
 
-			err = as.r.CheckConnectionToService(ctx, service, row)
-			if err != nil {
+			if err = as.r.CheckConnectionToService(ctx, service, row); err != nil {
 				return err
 			}
 		}
@@ -387,8 +386,7 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, req *inventoryp
 				return err
 			}
 
-			err = as.r.CheckConnectionToService(ctx, service, row)
-			if err != nil {
+			if err = as.r.CheckConnectionToService(ctx, service, row); err != nil {
 				return err
 			}
 		}
@@ -444,8 +442,7 @@ func (as *AgentsService) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *in
 				return err
 			}
 
-			err = as.r.CheckConnectionToService(ctx, service, row)
-			if err != nil {
+			if err = as.r.CheckConnectionToService(ctx, service, row); err != nil {
 				return err
 			}
 		}
@@ -501,8 +498,7 @@ func (as *AgentsService) AddQANMySQLSlowlogAgent(ctx context.Context, req *inven
 				return err
 			}
 
-			err = as.r.CheckConnectionToService(ctx, service, row)
-			if err != nil {
+			if err = as.r.CheckConnectionToService(ctx, service, row); err != nil {
 				return err
 			}
 		}
@@ -557,8 +553,7 @@ func (as *AgentsService) AddPostgresExporter(ctx context.Context, req *inventory
 				return err
 			}
 
-			err = as.r.CheckConnectionToService(ctx, service, row)
-			if err != nil {
+			if err = as.r.CheckConnectionToService(ctx, service, row); err != nil {
 				return err
 			}
 		}
@@ -614,8 +609,7 @@ func (as *AgentsService) AddQANMongoDBProfilerAgent(ctx context.Context, req *in
 				return err
 			}
 
-			err = as.r.CheckConnectionToService(ctx, service, row)
-			if err != nil {
+			if err = as.r.CheckConnectionToService(ctx, service, row); err != nil {
 				return err
 			}
 		}

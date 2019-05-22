@@ -80,8 +80,7 @@ func (s *MongoDBService) Add(ctx context.Context, req *managementpb.AddMongoDBRe
 		}
 
 		if !req.SkipConnectionCheck {
-			err = s.registry.CheckConnectionToService(ctx, service, row)
-			if err != nil {
+			if err = s.registry.CheckConnectionToService(ctx, service, row); err != nil {
 				return err
 			}
 		}

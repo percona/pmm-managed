@@ -336,11 +336,9 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		}
 	}()
 
-	r.rw.RLock()
-	agent := r.agents[pmmAgentID]
-	r.rw.RUnlock()
-	if agent == nil {
-		l.Infof("SendSetStateRequest: pmm-agent with ID %q is not currently connected.", pmmAgentID)
+	agent, err := r.get(pmmAgentID)
+	if err != nil {
+		l.Infof("SendSetStateRequest: %s", err.Error())
 		return
 	}
 
@@ -465,7 +463,7 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, service *models
 	l := logger.Get(ctx)
 	start := time.Now()
 	defer func() {
-		if dur := time.Since(start); dur > time.Second {
+		if dur := time.Since(start); dur > 2 * time.Second {
 			l.Warnf("CheckConnectionToService took %s.", dur)
 		}
 	}()
@@ -473,11 +471,10 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, service *models
 	pmmAgentID := pointer.GetString(agent.PMMAgentID)
 	pmmAgent, err := r.get(pmmAgentID)
 	if err != nil {
-		l.Infof("CheckConnectionToService: pmm-agent with ID %q is not currently connected.", pmmAgentID)
-		return err
+		return status.Error(codes.FailedPrecondition, err.Error())
 	}
-	var request *agentpb.CheckConnectionRequest
 
+	var request *agentpb.CheckConnectionRequest
 	switch service.ServiceType {
 	case models.MySQLServiceType:
 		request = &agentpb.CheckConnectionRequest{
@@ -502,10 +499,10 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, service *models
 	resp := pmmAgent.channel.SendRequest(request)
 	l.Infof("CheckConnection response: %+v.", resp)
 	checkConnectionResponse := resp.(*agentpb.CheckConnectionResponse)
-	if !checkConnectionResponse.Success {
-		return nil
+	if checkConnectionResponse.Error != "" {
+		return status.Error(codes.FailedPrecondition, checkConnectionResponse.Error)
 	}
-	return status.Error(codes.FailedPrecondition, checkConnectionResponse.Error)
+	return nil
 }
 
 func (r *Registry) get(pmmAgentID string) (*agentInfo, error) {
@@ -513,7 +510,7 @@ func (r *Registry) get(pmmAgentID string) (*agentInfo, error) {
 	pmmAgent := r.agents[pmmAgentID]
 	r.rw.RUnlock()
 	if pmmAgent == nil {
-		return nil, status.Error(codes.Unimplemented, fmt.Sprintf("pmm-agent with ID %q is not currently connected.", pmmAgentID))
+		return nil, fmt.Errorf("pmm-agent with ID %q is not currently connected", pmmAgentID)
 	}
 	return pmmAgent, nil
 }
