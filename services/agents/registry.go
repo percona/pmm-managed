@@ -463,7 +463,7 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, service *models
 	l := logger.Get(ctx)
 	start := time.Now()
 	defer func() {
-		if dur := time.Since(start); dur > 2 * time.Second {
+		if dur := time.Since(start); dur > 2*time.Second {
 			l.Warnf("CheckConnectionToService took %s.", dur)
 		}
 	}()
