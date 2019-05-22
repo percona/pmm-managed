@@ -127,7 +127,7 @@ func (a *ActionsService) StartMySQLExplainAction(ctx context.Context, rp *StartM
 
 	req.Params = &agentpb.StartActionRequest_MysqlExplainParams{
 		MysqlExplainParams: &agentpb.StartActionRequest_MySQLExplainParams{
-			Dsn:          "", // TODO: Add DSN string
+			Dsn:          "", // TODO: Add DSN string: findAgentForService(MYSQLD_EXPORTER, req.ServiceID)
 			Query:        rp.Query,
 			OutputFormat: rp.OutputFormat,
 		},
