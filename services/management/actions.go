@@ -56,7 +56,7 @@ func NewActionsService(r registry, s *InMemoryActionsStorage, db *reform.DB) *Ac
 }
 
 // RunActionParams parameters for run actions.
-type RunActionParams struct {
+type RunProcessActionParams struct {
 	ActionName   managementpb.ActionType
 	ActionParams []string
 	PmmAgentID   string
@@ -64,44 +64,82 @@ type RunActionParams struct {
 	ServiceID    string
 }
 
-// RunAction runs PMM Action on the given client.
+// RunProcessAction runs Process PMM Action on the given client.
 // First parameter returned by this method is "ActionID".
-func (a *ActionsService) RunAction(ctx context.Context, rp *RunActionParams) (string, error) {
-	action, err := a.prepareAction(rp)
+func (a *ActionsService) RunProcessAction(ctx context.Context, rp *RunProcessActionParams) (string, error) {
+	actionID := getNewActionID()
+	pmmAgentID, err := a.resolvePmmAgentID(rp.ActionName, rp.NodeID, rp.ServiceID, rp.PmmAgentID)
 	if err != nil {
 		return "", err
 	}
 
 	req := &agentpb.StartActionRequest{
-		ActionId: action.ID,
-		Type:     action.Name,
+		ActionId: actionID,
+		Type:     rp.ActionName,
 	}
 	switch rp.ActionName {
 	case managementpb.ActionType_PT_SUMMARY:
 		req.Params = &agentpb.StartActionRequest_ProcessParams_{
 			ProcessParams: &agentpb.StartActionRequest_ProcessParams{
-				Args: action.Params,
+				Args: rp.ActionParams,
 			},
 		}
 	case managementpb.ActionType_PT_MYSQL_SUMMARY:
 		req.Params = &agentpb.StartActionRequest_ProcessParams_{
 			ProcessParams: &agentpb.StartActionRequest_ProcessParams{
-				Args: action.Params,
+				Args: rp.ActionParams,
 			},
 		}
-	case managementpb.ActionType_MYSQL_EXPLAIN:
-		return "", errUnsupportedAction
-	case managementpb.ActionType_ACTION_TYPE_INVALID:
+	default:
 		return "", errUnsupportedAction
 	}
 
-	res, err := a.registry.SendRequest(ctx, action.PmmAgentID, req)
+	res, err := a.registry.SendRequest(ctx, pmmAgentID, req)
 	if err != nil {
 		return "", status.Error(codes.Internal, err.Error())
 	}
 
-	a.logger.Infof("RunAction response: %+v.", res)
-	return action.ID, nil
+	a.logger.Infof("RunProcessAction response: %+v.", res)
+	return actionID, nil
+}
+
+// RunActionParams parameters for run actions.
+type StartMySQLExplainActionParams struct {
+	OutputFormat agentpb.MysqlExplainOutputFormat
+	Query        string
+	PmmAgentID   string
+	ServiceID    string
+}
+
+// StartMySQLExplainAction runs MySQL Explain PMM Action on the given client.
+// First parameter returned by this method is "ActionID".
+func (a *ActionsService) StartMySQLExplainAction(ctx context.Context, rp *StartMySQLExplainActionParams) (string, error) {
+	actionID := getNewActionID()
+	pmmAgentID, err := a.resolvePmmAgentID(managementpb.ActionType_MYSQL_EXPLAIN, "", rp.ServiceID, rp.PmmAgentID)
+	if err != nil {
+		return "", err
+	}
+
+	req := &agentpb.StartActionRequest{
+		ActionId: actionID,
+		Type:     managementpb.ActionType_MYSQL_EXPLAIN,
+	}
+
+	req.Params = &agentpb.StartActionRequest_MysqlExplainParams{
+		MysqlExplainParams: &agentpb.StartActionRequest_MySQLExplainParams{
+			Dsn:          "", // TODO: Add DSN string
+			Query:        rp.Query,
+			OutputFormat: rp.OutputFormat,
+		},
+	}
+
+	res, err := a.registry.SendRequest(ctx, pmmAgentID, req)
+	if err != nil {
+		return "", status.Error(codes.Internal, err.Error())
+	}
+
+	a.logger.Infof("StartMySQLExplainAction response: %+v.", res)
+	return actionID, nil
 }
 
 // CancelAction stops PMM Action with the given ID on the given client.
@@ -127,37 +165,22 @@ func (a *ActionsService) GetActionResult(ctx context.Context, actionID string) (
 	return a.storage.Load(ctx, actionID)
 }
 
-type preparedAction struct {
-	ID         string
-	Name       managementpb.ActionType
-	Params     []string
-	PmmAgentID string
-}
-
-func (a *ActionsService) prepareAction(rp *RunActionParams) (preparedAction, error) {
-	action := preparedAction{
-		ID:         "/action_id/" + uuid.New().String(),
-		PmmAgentID: rp.PmmAgentID,
-		Name:       rp.ActionName,
-		Params:     rp.ActionParams,
-	}
-	var err error
-
-	switch action.Name {
+func (a *ActionsService) resolvePmmAgentID(actionType managementpb.ActionType, nodeID, serviceID, pmmAgentID string) (string, error) {
+	switch actionType {
 	case managementpb.ActionType_PT_SUMMARY:
-		action.PmmAgentID, err = findPmmAgentIDByNodeID(a.db.Querier, rp.PmmAgentID, rp.NodeID)
+		return findPmmAgentIDByNodeID(a.db.Querier, pmmAgentID, nodeID)
 
 	case managementpb.ActionType_PT_MYSQL_SUMMARY:
-		action.PmmAgentID, err = findPmmAgentIDByServiceID(a.db.Querier, rp.PmmAgentID, rp.ServiceID)
+		return findPmmAgentIDByServiceID(a.db.Querier, pmmAgentID, serviceID)
 
 	case managementpb.ActionType_MYSQL_EXPLAIN:
-		action.PmmAgentID, err = findPmmAgentIDByServiceID(a.db.Querier, rp.PmmAgentID, rp.ServiceID)
+		return findPmmAgentIDByServiceID(a.db.Querier, pmmAgentID, serviceID)
 
 	case managementpb.ActionType_ACTION_TYPE_INVALID:
-		return action, errUnsupportedAction
+		return "", errUnsupportedAction
 	}
 
-	return action, err
+	return "", errUnsupportedAction
 }
 
 func findPmmAgentIDByNodeID(q *reform.Querier, pmmAgentID, nodeID string) (string, error) {
@@ -223,4 +246,8 @@ func (s *InMemoryActionsStorage) Load(ctx context.Context, id string) (*models.A
 		return nil, false
 	}
 	return &v, true
+}
+
+func getNewActionID() string {
+	return "/action_id/" + uuid.New().String()
 }

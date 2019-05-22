@@ -19,6 +19,7 @@ package grpc
 import (
 	"context"
 
+	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/managementpb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -29,6 +30,11 @@ import (
 //nolint:unused
 type actionsServer struct {
 	as *management.ActionsService
+}
+
+// NewManagementActionsServer creates Management Actions Server.
+func NewManagementActionsServer(s *management.ActionsService) managementpb.ActionsServer {
+	return &actionsServer{as: s}
 }
 
 // GetAction gets an action result.
@@ -51,13 +57,13 @@ func (s *actionsServer) GetAction(ctx context.Context, req *managementpb.GetActi
 // StartPTSummaryAction starts pt-summary action.
 //nolint:lll
 func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
-	p := management.RunActionParams{
+	p := management.RunProcessActionParams{
 		ActionName: managementpb.ActionType_PT_SUMMARY,
 		PmmAgentID: req.PmmAgentId,
 		NodeID:     req.NodeId,
 	}
 
-	actionID, err := s.as.RunAction(ctx, &p)
+	actionID, err := s.as.RunProcessAction(ctx, &p)
 	return &managementpb.StartPTSummaryActionResponse{
 		PmmAgentId: req.PmmAgentId,
 		ActionId:   actionID,
@@ -67,13 +73,13 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 // StartPTMySQLSummaryAction starts pt-mysql-summary action.
 //nolint:lll
 func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
-	p := management.RunActionParams{
+	p := management.RunProcessActionParams{
 		ActionName: managementpb.ActionType_PT_MYSQL_SUMMARY,
 		PmmAgentID: req.PmmAgentId,
 		ServiceID:  req.ServiceId,
 	}
 
-	actionID, err := s.as.RunAction(ctx, &p)
+	actionID, err := s.as.RunProcessAction(ctx, &p)
 	return &managementpb.StartPTMySQLSummaryActionResponse{
 		PmmAgentId: req.PmmAgentId,
 		ActionId:   actionID,
@@ -83,22 +89,35 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 // StartMySQLExplainAction starts mysql-explain action.
 //nolint:lll
 func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *managementpb.StartMySQLExplainActionRequest) (*managementpb.StartMySQLExplainActionResponse, error) {
-	p := management.RunActionParams{
-		ActionName: managementpb.ActionType_MYSQL_EXPLAIN,
-		PmmAgentID: req.PmmAgentId,
-		ServiceID:  req.ServiceId,
+	p := management.StartMySQLExplainActionParams{
+		PmmAgentID:   req.PmmAgentId,
+		ServiceID:    req.ServiceId,
+		Query:        req.Query,
+		OutputFormat: agentpb.MysqlExplainOutputFormat_MYSQL_EXPLAIN_OUTPUT_FORMAT_DEFAULT,
 	}
 
-	actionID, err := s.as.RunAction(ctx, &p)
+	actionID, err := s.as.StartMySQLExplainAction(ctx, &p)
 	return &managementpb.StartMySQLExplainActionResponse{
 		PmmAgentId: req.PmmAgentId,
 		ActionId:   actionID,
 	}, err
 }
 
-// NewManagementActionsServer creates Management Actions Server.
-func NewManagementActionsServer(s *management.ActionsService) managementpb.ActionsServer {
-	return &actionsServer{as: s}
+// StartMySQLExplainJSONAction starts mysql-explain json action.
+//nolint:lll
+func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *managementpb.StartMySQLExplainJSONActionRequest) (*managementpb.StartMySQLExplainJSONActionResponse, error) {
+	p := management.StartMySQLExplainActionParams{
+		PmmAgentID:   req.PmmAgentId,
+		ServiceID:    req.ServiceId,
+		Query:        req.Query,
+		OutputFormat: agentpb.MysqlExplainOutputFormat_MYSQL_EXPLAIN_OUTPUT_FORMAT_JSON,
+	}
+
+	actionID, err := s.as.StartMySQLExplainAction(ctx, &p)
+	return &managementpb.StartMySQLExplainJSONActionResponse{
+		PmmAgentId: req.PmmAgentId,
+		ActionId:   actionID,
+	}, err
 }
 
 // CancelAction stops an Action.
