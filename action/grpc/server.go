@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package action
+package grpc
 
 import (
 	"context"
@@ -23,18 +23,20 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
+
+	"github.com/percona/pmm-managed/action"
 )
 
 //nolint:unused
-type gRPCServer struct {
+type server struct {
 	service service
-	storage *InMemoryStorage
+	storage *action.InMemoryStorage
 	db      *reform.DB
 }
 
-// NewGRPCServer creates Management Actions Server.
-func NewGRPCServer(svc service, s *InMemoryStorage, db *reform.DB) managementpb.ActionsServer {
-	return &gRPCServer{
+// NewServer creates Management Actions Server.
+func NewServer(svc service, s *action.InMemoryStorage, db *reform.DB) managementpb.ActionsServer {
+	return &server{
 		service: svc,
 		storage: s,
 		db:      db,
@@ -43,7 +45,7 @@ func NewGRPCServer(svc service, s *InMemoryStorage, db *reform.DB) managementpb.
 
 // GetAction gets an action result.
 //nolint:lll
-func (s *gRPCServer) GetAction(ctx context.Context, req *managementpb.GetActionRequest) (*managementpb.GetActionResponse, error) {
+func (s *server) GetAction(ctx context.Context, req *managementpb.GetActionRequest) (*managementpb.GetActionResponse, error) {
 	res, ok := s.storage.Load(ctx, req.ActionId)
 	if !ok {
 		return nil, status.Error(codes.NotFound, "ActionResult with given ID wasn't found")
@@ -60,9 +62,9 @@ func (s *gRPCServer) GetAction(ctx context.Context, req *managementpb.GetActionR
 
 // StartPTSummaryAction starts pt-summary action.
 //nolint:lll
-func (s *gRPCServer) StartPTSummaryAction(ctx context.Context, req *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
+func (s *server) StartPTSummaryAction(ctx context.Context, req *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
 	// TODO: Add real pt-summary arguments
-	a := NewPtSummary(req.NodeId, req.PmmAgentId, []string{}, s.db.Querier)
+	a := action.NewPtSummary(req.NodeId, req.PmmAgentId, []string{}, s.db.Querier)
 	err := a.Prepare()
 	if err != nil {
 		return nil, err
@@ -81,9 +83,9 @@ func (s *gRPCServer) StartPTSummaryAction(ctx context.Context, req *managementpb
 
 // StartPTMySQLSummaryAction starts pt-mysql-summary action.
 //nolint:lll
-func (s *gRPCServer) StartPTMySQLSummaryAction(ctx context.Context, req *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
+func (s *server) StartPTMySQLSummaryAction(ctx context.Context, req *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
 	// TODO: Add real pt-mysql-summary arguments
-	a := NewPtMySQLSummary(req.ServiceId, req.PmmAgentId, []string{}, s.db.Querier)
+	a := action.NewPtMySQLSummary(req.ServiceId, req.PmmAgentId, []string{}, s.db.Querier)
 	err := a.Prepare()
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
@@ -102,8 +104,8 @@ func (s *gRPCServer) StartPTMySQLSummaryAction(ctx context.Context, req *managem
 
 // StartMySQLExplainAction starts mysql-explain action.
 //nolint:lll
-func (s *gRPCServer) StartMySQLExplainAction(ctx context.Context, req *managementpb.StartMySQLExplainActionRequest) (*managementpb.StartMySQLExplainActionResponse, error) {
-	a := NewMySQLExplain(req.ServiceId, req.PmmAgentId, req.Query, s.db.Querier)
+func (s *server) StartMySQLExplainAction(ctx context.Context, req *managementpb.StartMySQLExplainActionRequest) (*managementpb.StartMySQLExplainActionResponse, error) {
+	a := action.NewMySQLExplain(req.ServiceId, req.PmmAgentId, req.Query, s.db.Querier)
 	err := a.Prepare()
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
@@ -122,8 +124,8 @@ func (s *gRPCServer) StartMySQLExplainAction(ctx context.Context, req *managemen
 
 // StartMySQLExplainJSONAction starts mysql-explain json action.
 //nolint:lll
-func (s *gRPCServer) StartMySQLExplainJSONAction(ctx context.Context, req *managementpb.StartMySQLExplainJSONActionRequest) (*managementpb.StartMySQLExplainJSONActionResponse, error) {
-	a := NewMySQLExplainJSON(req.ServiceId, req.PmmAgentId, req.Query, s.db.Querier)
+func (s *server) StartMySQLExplainJSONAction(ctx context.Context, req *managementpb.StartMySQLExplainJSONActionRequest) (*managementpb.StartMySQLExplainJSONActionResponse, error) {
+	a := action.NewMySQLExplainJSON(req.ServiceId, req.PmmAgentId, req.Query, s.db.Querier)
 	err := a.Prepare()
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
@@ -142,7 +144,7 @@ func (s *gRPCServer) StartMySQLExplainJSONAction(ctx context.Context, req *manag
 
 // CancelAction stops an Action.
 //nolint:lll
-func (s *gRPCServer) CancelAction(ctx context.Context, req *managementpb.CancelActionRequest) (*managementpb.CancelActionResponse, error) {
+func (s *server) CancelAction(ctx context.Context, req *managementpb.CancelActionRequest) (*managementpb.CancelActionResponse, error) {
 	err := s.service.StopAction(ctx, req.ActionId)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Couldn't cancel action with ID: %s, reason: %v", req.ActionId, err)

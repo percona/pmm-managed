@@ -17,8 +17,6 @@
 package action
 
 import (
-	"context"
-
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -26,14 +24,6 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 )
-
-type service interface {
-	StartPTSummaryAction(context.Context, *PtSummary) error
-	StartPTMySQLSummaryAction(context.Context, *PtMySQLSummary) error
-	StartMySQLExplainAction(context.Context, *MySQLExplain) error
-	StartMySQLExplainJSONAction(context.Context, *MySQLExplainJSON) error
-	StopAction(context.Context, string) error
-}
 
 var (
 	errPmmAgentIDNotFound = status.Error(codes.Internal, "can't detect pmm_agent_id")

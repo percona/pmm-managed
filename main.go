@@ -54,6 +54,7 @@ import (
 	"gopkg.in/reform.v1/dialects/postgresql"
 
 	"github.com/percona/pmm-managed/action"
+	actiongrpc "github.com/percona/pmm-managed/action/grpc"
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/agents"
 	agentgrpc "github.com/percona/pmm-managed/services/agents/grpc"
@@ -173,7 +174,7 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	managementpb.RegisterMySQLServer(gRPCServer, managementgrpc.NewManagementMySQLServer(mysqlSvc))
 	managementpb.RegisterMongoDBServer(gRPCServer, managementgrpc.NewManagementMongoDBServer(mongodbSvc))
 	managementpb.RegisterPostgreSQLServer(gRPCServer, managementgrpc.NewManagementPostgreSQLServer(postgresqlSvc))
-	managementpb.RegisterActionsServer(gRPCServer, action.NewGRPCServer(deps.agentsRegistry, deps.actionsStorage, deps.db))
+	managementpb.RegisterActionsServer(gRPCServer, actiongrpc.NewServer(deps.agentsRegistry, deps.actionsStorage, deps.db))
 
 	if *debugF {
 		l.Debug("Reflection and channelz are enabled.")
