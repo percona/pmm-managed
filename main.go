@@ -134,6 +134,7 @@ type serviceDependencies struct {
 	agentsRegistry *agents.Registry
 	logs           *logs.Logs
 	actionStorage  action.Storage
+	rvr            action.PMMAgentIDResolver
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -175,7 +176,7 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	managementpb.RegisterMySQLServer(gRPCServer, managementgrpc.NewManagementMySQLServer(mysqlSvc))
 	managementpb.RegisterMongoDBServer(gRPCServer, managementgrpc.NewManagementMongoDBServer(mongodbSvc))
 	managementpb.RegisterPostgreSQLServer(gRPCServer, managementgrpc.NewManagementPostgreSQLServer(postgresqlSvc))
-	managementpb.RegisterActionsServer(gRPCServer, actiongrpc.NewServer(deps.agentsRegistry, deps.actionStorage, deps.db))
+	managementpb.RegisterActionsServer(gRPCServer, actiongrpc.NewServer(deps.agentsRegistry, deps.actionStorage, deps.rvr, deps.db))
 
 	if *debugF {
 		l.Debug("Reflection and channelz are enabled.")
@@ -415,6 +416,7 @@ func main() {
 		agentsRegistry: agentsRegistry,
 		logs:           logs,
 		actionStorage:  actionStorage,
+		rvr:            models.NewPMMAgentIDSQLResolver(db),
 	}
 
 	var wg sync.WaitGroup
