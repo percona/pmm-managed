@@ -16,7 +16,13 @@
 
 package action
 
-import "gopkg.in/reform.v1"
+import (
+	"context"
+
+	"gopkg.in/reform.v1"
+
+	"github.com/percona/pmm-managed/models"
+)
 
 type PtSummary struct {
 	ID         string
@@ -25,12 +31,14 @@ type PtSummary struct {
 	Args       []string
 
 	q *reform.Querier
+	s ptSummaryStarter
 }
 
-func NewPtSummary(q *reform.Querier) *PtSummary {
+func NewPtSummary(q *reform.Querier, s ptSummaryStarter) *PtSummary {
 	return &PtSummary{
-		ID: getNewActionID(),
+		ID: createActionID(),
 		q:  q,
+		s:  s,
 	}
 }
 
@@ -40,9 +48,18 @@ func (ps *PtSummary) Prepare(nodeID, pmmAgentID string, args []string) error {
 	ps.PMMAgentID = pmmAgentID
 	ps.Args = args
 
-	ps.PMMAgentID, err = findPmmAgentIDByNodeID(ps.q, ps.PMMAgentID, ps.NodeID)
+	agents, err := models.FindPMMAgentsForNode(ps.q, ps.NodeID)
+	if err != nil {
+		return err
+	}
+
+	ps.PMMAgentID, err = validatePMMAgentID(ps.PMMAgentID, agents)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (ps *PtSummary) Start(ctx context.Context) error {
+	return ps.s.StartPTSummaryAction(ctx, ps)
 }

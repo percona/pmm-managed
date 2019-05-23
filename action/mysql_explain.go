@@ -16,7 +16,13 @@
 
 package action
 
-import "gopkg.in/reform.v1"
+import (
+	"context"
+
+	"gopkg.in/reform.v1"
+
+	"github.com/percona/pmm-managed/models"
+)
 
 type MySQLExplain struct {
 	ID         string
@@ -26,12 +32,14 @@ type MySQLExplain struct {
 	Query      string
 
 	q *reform.Querier
+	s mysqlExplainStarter
 }
 
-func NewMySQLExplain(q *reform.Querier) *MySQLExplain {
+func NewMySQLExplain(q *reform.Querier, s mysqlExplainStarter) *MySQLExplain {
 	return &MySQLExplain{
-		ID: getNewActionID(),
+		ID: createActionID(),
 		q:  q,
+		s:  s,
 	}
 }
 
@@ -41,11 +49,20 @@ func (exp *MySQLExplain) Prepare(serviceID, pmmAgentID, query string) error {
 	exp.ServiceID = serviceID
 	exp.PMMAgentID = pmmAgentID
 
-	exp.PMMAgentID, err = findPmmAgentIDByServiceID(exp.q, exp.PMMAgentID, exp.ServiceID)
+	agents, err := models.FindPMMAgentsForService(exp.q, exp.ServiceID)
+	if err != nil {
+		return err
+	}
+
+	exp.PMMAgentID, err = validatePMMAgentID(exp.PMMAgentID, agents)
 	if err != nil {
 		return err
 	}
 	// TODO: Add DSN string: findAgentForService(MYSQLD_EXPORTER, req.ServiceID)
 
 	return nil
+}
+
+func (exp *MySQLExplain) Start(ctx context.Context) error {
+	return exp.s.StartMySQLExplainAction(ctx, exp)
 }

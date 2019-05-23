@@ -16,7 +16,13 @@
 
 package action
 
-import "gopkg.in/reform.v1"
+import (
+	"context"
+
+	"gopkg.in/reform.v1"
+
+	"github.com/percona/pmm-managed/models"
+)
 
 type PtMySQLSummary struct {
 	ID         string
@@ -25,12 +31,14 @@ type PtMySQLSummary struct {
 	Args       []string
 
 	q *reform.Querier
+	s ptMySQLSummaryStarter
 }
 
-func NewPtMySQLSummary(q *reform.Querier) *PtMySQLSummary {
+func NewPtMySQLSummary(q *reform.Querier, s ptMySQLSummaryStarter) *PtMySQLSummary {
 	return &PtMySQLSummary{
-		ID: getNewActionID(),
+		ID: createActionID(),
 		q:  q,
+		s:  s,
 	}
 }
 
@@ -40,9 +48,18 @@ func (pms *PtMySQLSummary) Prepare(serviceID, pmmAgentID string, args []string) 
 	pms.PMMAgentID = pmmAgentID
 	pms.Args = args
 
-	pms.PMMAgentID, err = findPmmAgentIDByServiceID(pms.q, pms.PMMAgentID, pms.ServiceID)
+	agents, err := models.FindPMMAgentsForService(pms.q, pms.ServiceID)
+	if err != nil {
+		return err
+	}
+
+	pms.PMMAgentID, err = validatePMMAgentID(pms.PMMAgentID, agents)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (pms *PtMySQLSummary) Start(ctx context.Context) error {
+	return pms.s.StartPTMySQLSummaryAction(ctx, pms)
 }

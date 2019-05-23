@@ -29,15 +29,15 @@ import (
 
 //nolint:unused
 type server struct {
-	service service
+	ss      action.StarterStopper
 	storage *action.InMemoryStorage
 	db      *reform.DB
 }
 
 // NewServer creates Management Actions Server.
-func NewServer(svc service, s *action.InMemoryStorage, db *reform.DB) managementpb.ActionsServer {
+func NewServer(ss action.StarterStopper, s *action.InMemoryStorage, db *reform.DB) managementpb.ActionsServer {
 	return &server{
-		service: svc,
+		ss:      ss,
 		storage: s,
 		db:      db,
 	}
@@ -63,87 +63,87 @@ func (s *server) GetAction(ctx context.Context, req *managementpb.GetActionReque
 // StartPTSummaryAction starts pt-summary action.
 //nolint:lll
 func (s *server) StartPTSummaryAction(ctx context.Context, req *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
-	a := action.NewPtSummary(s.db.Querier)
+	a := action.NewPtSummary(s.db.Querier, s.ss)
 	err := a.Prepare(req.NodeId, req.PmmAgentId, []string{}) // TODO: Add real pt-summary arguments
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.service.StartPTSummaryAction(ctx, a)
+	err = a.Start(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &managementpb.StartPTSummaryActionResponse{
 		PmmAgentId: a.PMMAgentID,
-		ActionId:   a.Id,
+		ActionId:   a.ID,
 	}, err
 }
 
 // StartPTMySQLSummaryAction starts pt-mysql-summary action.
 //nolint:lll
 func (s *server) StartPTMySQLSummaryAction(ctx context.Context, req *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
-	a := action.NewPtMySQLSummary(s.db.Querier)
+	a := action.NewPtMySQLSummary(s.db.Querier, s.ss)
 	err := a.Prepare(req.ServiceId, req.PmmAgentId, []string{}) // TODO: Add real pt-mysql-summary arguments
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 
-	err = s.service.StartPTMySQLSummaryAction(ctx, a)
+	err = a.Start(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &managementpb.StartPTMySQLSummaryActionResponse{
 		PmmAgentId: a.PMMAgentID,
-		ActionId:   a.Id,
+		ActionId:   a.ID,
 	}, err
 }
 
 // StartMySQLExplainAction starts mysql-explain action.
 //nolint:lll
 func (s *server) StartMySQLExplainAction(ctx context.Context, req *managementpb.StartMySQLExplainActionRequest) (*managementpb.StartMySQLExplainActionResponse, error) {
-	a := action.NewMySQLExplain(s.db.Querier)
+	a := action.NewMySQLExplain(s.db.Querier, s.ss)
 	err := a.Prepare(req.ServiceId, req.PmmAgentId, req.Query)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 
-	err = s.service.StartMySQLExplainAction(ctx, a)
+	err = a.Start(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &managementpb.StartMySQLExplainActionResponse{
 		PmmAgentId: a.PMMAgentID,
-		ActionId:   a.Id,
+		ActionId:   a.ID,
 	}, err
 }
 
 // StartMySQLExplainJSONAction starts mysql-explain json action.
 //nolint:lll
 func (s *server) StartMySQLExplainJSONAction(ctx context.Context, req *managementpb.StartMySQLExplainJSONActionRequest) (*managementpb.StartMySQLExplainJSONActionResponse, error) {
-	a := action.NewMySQLExplainJSON(s.db.Querier)
+	a := action.NewMySQLExplainJSON(s.db.Querier, s.ss)
 	err := a.Prepare(req.ServiceId, req.PmmAgentId, req.Query)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 
-	err = s.service.StartMySQLExplainJSONAction(ctx, a)
+	err = a.Start(ctx)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &managementpb.StartMySQLExplainJSONActionResponse{
 		PmmAgentId: a.PMMAgentID,
-		ActionId:   a.Id,
+		ActionId:   a.ID,
 	}, err
 }
 
 // CancelAction stops an Action.
 //nolint:lll
 func (s *server) CancelAction(ctx context.Context, req *managementpb.CancelActionRequest) (*managementpb.CancelActionResponse, error) {
-	err := s.service.StopAction(ctx, req.ActionId)
+	err := s.ss.StopAction(ctx, req.ActionId)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Couldn't cancel action with ID: %s, reason: %v", req.ActionId, err)
 	}

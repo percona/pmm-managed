@@ -17,13 +17,42 @@
 package action
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
 )
+
+type StarterStopper interface {
+	ptSummaryStarter
+	ptMySQLSummaryStarter
+	mysqlExplainStarter
+	mysqlExplainJSONStarter
+	Stopper
+}
+
+type Stopper interface {
+	StopAction(ctx context.Context, actionID string) error
+}
+
+type ptSummaryStarter interface {
+	StartPTSummaryAction(context.Context, *PtSummary) error
+}
+
+type ptMySQLSummaryStarter interface {
+	StartPTMySQLSummaryAction(context.Context, *PtMySQLSummary) error
+}
+
+type mysqlExplainStarter interface {
+	StartMySQLExplainAction(context.Context, *MySQLExplain) error
+}
+
+type mysqlExplainJSONStarter interface {
+	StartMySQLExplainJSONAction(context.Context, *MySQLExplainJSON) error
+}
 
 var (
 	errPmmAgentIDNotFound = status.Error(codes.Internal, "can't detect pmm_agent_id")
@@ -39,27 +68,11 @@ type Result struct {
 	Output     string
 }
 
-func getNewActionID() string {
+func createActionID() string {
 	return "/action_id/" + uuid.New().String()
 }
 
-func findPmmAgentIDByNodeID(q *reform.Querier, pmmAgentID, nodeID string) (string, error) {
-	agents, err := models.FindPMMAgentsForNode(q, nodeID)
-	if err != nil {
-		return "", err
-	}
-	return validatePmmAgentID(pmmAgentID, agents)
-}
-
-func findPmmAgentIDByServiceID(q *reform.Querier, pmmAgentID, serviceID string) (string, error) {
-	agents, err := models.FindPMMAgentsForService(q, serviceID)
-	if err != nil {
-		return "", err
-	}
-	return validatePmmAgentID(pmmAgentID, agents)
-}
-
-func validatePmmAgentID(pmmAgentID string, agents []*models.Agent) (string, error) {
+func validatePMMAgentID(pmmAgentID string, agents []*models.Agent) (string, error) {
 	// no explicit ID is given, and there is only one
 	if pmmAgentID == "" && len(agents) == 1 {
 		return agents[0].AgentID, nil

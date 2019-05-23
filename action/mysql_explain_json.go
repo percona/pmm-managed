@@ -16,7 +16,13 @@
 
 package action
 
-import "gopkg.in/reform.v1"
+import (
+	"context"
+
+	"gopkg.in/reform.v1"
+
+	"github.com/percona/pmm-managed/models"
+)
 
 type MySQLExplainJSON struct {
 	ID         string
@@ -26,12 +32,14 @@ type MySQLExplainJSON struct {
 	Query      string
 
 	q *reform.Querier
+	s mysqlExplainJSONStarter
 }
 
-func NewMySQLExplainJSON(q *reform.Querier) *MySQLExplainJSON {
+func NewMySQLExplainJSON(q *reform.Querier, s mysqlExplainJSONStarter) *MySQLExplainJSON {
 	return &MySQLExplainJSON{
-		ID: getNewActionID(),
+		ID: createActionID(),
 		q:  q,
+		s:  s,
 	}
 }
 
@@ -41,11 +49,20 @@ func (expj *MySQLExplainJSON) Prepare(serviceID, pmmAgentID, query string) error
 	expj.PMMAgentID = pmmAgentID
 	expj.Query = query
 
-	expj.PMMAgentID, err = findPmmAgentIDByServiceID(expj.q, expj.PMMAgentID, expj.ServiceID)
+	agents, err := models.FindPMMAgentsForService(expj.q, expj.ServiceID)
+	if err != nil {
+		return err
+	}
+
+	expj.PMMAgentID, err = validatePMMAgentID(expj.PMMAgentID, agents)
 	if err != nil {
 		return err
 	}
 	// TODO: Add DSN string: findAgentForService(MYSQLD_EXPORTER, req.ServiceID)
 
 	return nil
+}
+
+func (expj *MySQLExplainJSON) Start(ctx context.Context) error {
+	return expj.s.StartMySQLExplainJSONAction(ctx, expj)
 }
