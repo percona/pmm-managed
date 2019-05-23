@@ -20,8 +20,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"github.com/pkg/errors"
 
 	"github.com/percona/pmm-managed/models"
 )
@@ -55,7 +54,7 @@ type mysqlExplainJSONStarter interface {
 }
 
 var (
-	errPmmAgentIDNotFound = status.Error(codes.Internal, "can't detect pmm_agent_id")
+	errPmmAgentIDNotFound = errors.New("can't detect pmm_agent_id")
 )
 
 // Result describes an PMM Action result which is storing in ActionsResult storage.
