@@ -32,10 +32,10 @@ type MySQLExplain struct {
 	Query      string
 
 	q *reform.Querier
-	s mysqlExplainStarter
+	s MySQLExplainStarter
 }
 
-func NewMySQLExplain(q *reform.Querier, s mysqlExplainStarter) *MySQLExplain {
+func NewMySQLExplain(q *reform.Querier, s MySQLExplainStarter) *MySQLExplain {
 	return &MySQLExplain{
 		ID: createActionID(),
 		q:  q,

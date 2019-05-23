@@ -25,32 +25,31 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-type StarterStopper interface {
-	ptSummaryStarter
-	ptMySQLSummaryStarter
-	mysqlExplainStarter
-	mysqlExplainJSONStarter
-	Stopper
-}
-
 type Stopper interface {
-	StopAction(ctx context.Context, actionID string) error
+	StopAction(ctx context.Context, actionID, pmmAgentID string) error
 }
 
-type ptSummaryStarter interface {
+type PtSummaryStarter interface {
 	StartPTSummaryAction(context.Context, *PtSummary) error
 }
 
-type ptMySQLSummaryStarter interface {
+type PtMySQLSummaryStarter interface {
 	StartPTMySQLSummaryAction(context.Context, *PtMySQLSummary) error
 }
 
-type mysqlExplainStarter interface {
+type MySQLExplainStarter interface {
 	StartMySQLExplainAction(context.Context, *MySQLExplain) error
 }
 
-type mysqlExplainJSONStarter interface {
+type MySQLExplainJSONStarter interface {
 	StartMySQLExplainJSONAction(context.Context, *MySQLExplainJSON) error
+}
+
+// Storage is an interface represents abstract storage for action results.
+type Storage interface {
+	// Store an action result to persistent storage.
+	Store(context.Context, *Result)
+	Load(context.Context, string) (*Result, bool)
 }
 
 var (

@@ -52,10 +52,10 @@ type agentInfo struct {
 
 // Registry keeps track of all connected pmm-agents.
 type Registry struct {
-	db             *reform.DB
-	prometheus     prometheus
-	qanClient      qanClient
-	actionsStorage actionsStorage
+	db         *reform.DB
+	prometheus prometheus
+	qanClient  qanClient
+	aStorage   action.Storage
 
 	rw     sync.RWMutex
 	agents map[string]*agentInfo // id -> info
@@ -68,12 +68,12 @@ type Registry struct {
 }
 
 // NewRegistry creates a new registry with given database connection.
-func NewRegistry(db *reform.DB, prometheus prometheus, qanClient qanClient, actionsStorage actionsStorage) *Registry {
+func NewRegistry(db *reform.DB, prometheus prometheus, qanClient qanClient, aStorage action.Storage) *Registry {
 	r := &Registry{
-		db:             db,
-		prometheus:     prometheus,
-		qanClient:      qanClient,
-		actionsStorage: actionsStorage,
+		db:         db,
+		prometheus: prometheus,
+		qanClient:  qanClient,
+		aStorage:   aStorage,
 
 		agents: make(map[string]*agentInfo),
 
@@ -192,7 +192,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 
 			case *agentpb.ActionResultRequest:
 				// TODO: PMM-3978: In the future we need to merge action parts before send it to storage.
-				r.actionsStorage.Store(context.TODO(), &action.Result{
+				r.aStorage.Store(context.TODO(), &action.Result{
 					ID:         p.ActionId,
 					PmmAgentID: agent.id,
 					Done:       p.Done,
@@ -562,13 +562,8 @@ func (r *Registry) StartMySQLExplainJSONAction(ctx context.Context, a *action.My
 }
 
 // StopAction stops action with given given id.
-func (r *Registry) StopAction(ctx context.Context, actionID string) error {
-	actionResult, ok := r.actionsStorage.Load(ctx, actionID)
-	if !ok {
-		return errors.Errorf("Couldn't find action result record in storage")
-	}
-
-	_, err := r.sendRequest(ctx, actionResult.PmmAgentID, &agentpb.StopActionRequest{ActionId: actionResult.ID})
+func (r *Registry) StopAction(ctx context.Context, actionID, pmmAgentID string) error {
+	_, err := r.sendRequest(ctx, pmmAgentID, &agentpb.StopActionRequest{ActionId: actionID})
 	return err
 }
 

@@ -55,6 +55,7 @@ import (
 
 	"github.com/percona/pmm-managed/action"
 	actiongrpc "github.com/percona/pmm-managed/action/grpc"
+	actionstorage "github.com/percona/pmm-managed/action/storage"
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/agents"
 	agentgrpc "github.com/percona/pmm-managed/services/agents/grpc"
@@ -132,7 +133,7 @@ type serviceDependencies struct {
 	portsRegistry  *ports.Registry
 	agentsRegistry *agents.Registry
 	logs           *logs.Logs
-	actionsStorage *action.InMemoryStorage
+	actionStorage  action.Storage
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -174,7 +175,7 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	managementpb.RegisterMySQLServer(gRPCServer, managementgrpc.NewManagementMySQLServer(mysqlSvc))
 	managementpb.RegisterMongoDBServer(gRPCServer, managementgrpc.NewManagementMongoDBServer(mongodbSvc))
 	managementpb.RegisterPostgreSQLServer(gRPCServer, managementgrpc.NewManagementPostgreSQLServer(postgresqlSvc))
-	managementpb.RegisterActionsServer(gRPCServer, actiongrpc.NewServer(deps.agentsRegistry, deps.actionsStorage, deps.db))
+	managementpb.RegisterActionsServer(gRPCServer, actiongrpc.NewServer(deps.agentsRegistry, deps.actionStorage, deps.db))
 
 	if *debugF {
 		l.Debug("Reflection and channelz are enabled.")
@@ -402,9 +403,9 @@ func main() {
 		l.Panicf("Prometheus service problem: %+v", err)
 	}
 
-	actionsStorage := action.NewInMemoryStorage()
+	actionStorage := actionstorage.NewInMemory()
 	qanClient := getQANClient(ctx, db)
-	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient, actionsStorage)
+	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient, actionStorage)
 	logs := logs.New(version.Version)
 
 	deps := &serviceDependencies{
@@ -413,7 +414,7 @@ func main() {
 		portsRegistry:  ports.NewRegistry(10000, 10999, nil),
 		agentsRegistry: agentsRegistry,
 		logs:           logs,
-		actionsStorage: actionsStorage,
+		actionStorage:  actionStorage,
 	}
 
 	var wg sync.WaitGroup

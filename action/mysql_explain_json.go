@@ -32,10 +32,10 @@ type MySQLExplainJSON struct {
 	Query      string
 
 	q *reform.Querier
-	s mysqlExplainJSONStarter
+	s MySQLExplainJSONStarter
 }
 
-func NewMySQLExplainJSON(q *reform.Querier, s mysqlExplainJSONStarter) *MySQLExplainJSON {
+func NewMySQLExplainJSON(q *reform.Querier, s MySQLExplainJSONStarter) *MySQLExplainJSON {
 	return &MySQLExplainJSON{
 		ID: createActionID(),
 		q:  q,

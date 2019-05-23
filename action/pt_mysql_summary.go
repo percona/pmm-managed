@@ -31,10 +31,10 @@ type PtMySQLSummary struct {
 	Args       []string
 
 	q *reform.Querier
-	s ptMySQLSummaryStarter
+	s PtMySQLSummaryStarter
 }
 
-func NewPtMySQLSummary(q *reform.Querier, s ptMySQLSummaryStarter) *PtMySQLSummary {
+func NewPtMySQLSummary(q *reform.Querier, s PtMySQLSummaryStarter) *PtMySQLSummary {
 	return &PtMySQLSummary{
 		ID: createActionID(),
 		q:  q,

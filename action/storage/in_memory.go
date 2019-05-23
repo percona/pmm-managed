@@ -14,33 +14,35 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package action
+package storage
 
 import (
 	"context"
 	"sync"
+
+	"github.com/percona/pmm-managed/action"
 )
 
-// InMemoryStorage in memory action results storage.
-type InMemoryStorage struct {
-	container map[string]Result
+// InMemory in memory action results storage.
+type InMemory struct {
+	container map[string]action.Result
 	mx        sync.Mutex
 }
 
 // NewInMemoryStorage created new InMemoryActionsStorage.
-func NewInMemoryStorage() *InMemoryStorage {
-	return &InMemoryStorage{}
+func NewInMemory() *InMemory {
+	return &InMemory{}
 }
 
 // Store stores an action result in action results storage.
-func (s *InMemoryStorage) Store(ctx context.Context, result *Result) {
+func (s *InMemory) Store(ctx context.Context, result *action.Result) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	s.container[result.ID] = *result
 }
 
 // Load gets an action result from storage by action id.
-func (s *InMemoryStorage) Load(ctx context.Context, id string) (*Result, bool) {
+func (s *InMemory) Load(ctx context.Context, id string) (*action.Result, bool) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	v, ok := s.container[id]

@@ -14,25 +14,14 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package agents
+package grpc
 
-import (
-	"context"
+import "github.com/percona/pmm-managed/action"
 
-	"github.com/percona/pmm/api/qanpb"
-)
-
-//go:generate mockery -name=prometheus -case=snake -inpkg -testonly
-//go:generate mockery -name=qanClient  -case=snake -inpkg -testonly
-
-// prometheus is a subset of methods of prometheus.Service used by this package.
-// We use it instead of real type for testing and to avoid dependency cycle.
-type prometheus interface {
-	UpdateConfiguration(ctx context.Context) error
-}
-
-// qanClient is a subset of methods of qan.Client used by this package.
-// We use it instead of real type for testing and to avoid dependency cycle.
-type qanClient interface {
-	Collect(ctx context.Context, req *qanpb.CollectRequest) error
+type actionsStarterStopper interface {
+	action.PtSummaryStarter
+	action.PtMySQLSummaryStarter
+	action.MySQLExplainStarter
+	action.MySQLExplainJSONStarter
+	action.Stopper
 }

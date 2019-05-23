@@ -29,13 +29,13 @@ import (
 
 //nolint:unused
 type server struct {
-	ss      action.StarterStopper
-	storage *action.InMemoryStorage
+	ss      actionsStarterStopper
+	storage action.Storage
 	db      *reform.DB
 }
 
 // NewServer creates Management Actions Server.
-func NewServer(ss action.StarterStopper, s *action.InMemoryStorage, db *reform.DB) managementpb.ActionsServer {
+func NewServer(ss actionsStarterStopper, s action.Storage, db *reform.DB) managementpb.ActionsServer {
 	return &server{
 		ss:      ss,
 		storage: s,
@@ -143,7 +143,12 @@ func (s *server) StartMySQLExplainJSONAction(ctx context.Context, req *managemen
 // CancelAction stops an Action.
 //nolint:lll
 func (s *server) CancelAction(ctx context.Context, req *managementpb.CancelActionRequest) (*managementpb.CancelActionResponse, error) {
-	err := s.ss.StopAction(ctx, req.ActionId)
+	ar, ok := s.storage.Load(ctx, req.ActionId)
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "Couldn't find action result record in storage")
+	}
+
+	err := s.ss.StopAction(ctx, ar.ID, ar.PmmAgentID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Couldn't cancel action with ID: %s, reason: %v", req.ActionId, err)
 	}

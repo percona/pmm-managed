@@ -31,10 +31,10 @@ type PtSummary struct {
 	Args       []string
 
 	q *reform.Querier
-	s ptSummaryStarter
+	s PtSummaryStarter
 }
 
-func NewPtSummary(q *reform.Querier, s ptSummaryStarter) *PtSummary {
+func NewPtSummary(q *reform.Querier, s PtSummaryStarter) *PtSummary {
 	return &PtSummary{
 		ID: createActionID(),
 		q:  q,
