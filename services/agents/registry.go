@@ -19,7 +19,6 @@ package agents
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -51,6 +50,8 @@ type agentInfo struct {
 }
 
 // Registry keeps track of all connected pmm-agents.
+//
+// TODO Split into several types?
 type Registry struct {
 	db         *reform.DB
 	prometheus prometheus
@@ -112,10 +113,8 @@ func NewRegistry(db *reform.DB, prometheus prometheus, qanClient qanClient) *Reg
 
 // IsConnected returns true if pmm-agent with given ID is currently connected, false otherwise.
 func (r *Registry) IsConnected(pmmAgentID string) bool {
-	r.rw.RLock()
-	agent := r.agents[pmmAgentID]
-	r.rw.RUnlock()
-	return agent != nil
+	_, err := r.get(pmmAgentID)
+	return err == nil
 }
 
 // Run takes over pmm-agent gRPC stream and runs it until completion.
@@ -223,6 +222,7 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*agentInfo, err
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
+	// do not use r.get() - r.rw is already locked
 	if agent := r.agents[agentMD.ID]; agent != nil {
 		close(agent.kick)
 	}
@@ -273,6 +273,7 @@ func (r *Registry) Kick(ctx context.Context, pmmAgentID string) {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
+	// do not use r.get() - r.rw is already locked
 	l := logger.Get(ctx)
 	agent := r.agents[pmmAgentID]
 	if agent == nil {
@@ -327,7 +328,6 @@ func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRe
 
 // SendSetStateRequest sends SetStateRequest to pmm-agent with given ID.
 func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
-	// TODO: extract to a separate struct to keep Single Responsibility principles.
 	l := logger.Get(ctx)
 	start := time.Now()
 	defer func() {
@@ -338,7 +338,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 
 	agent, err := r.get(pmmAgentID)
 	if err != nil {
-		l.Infof("SendSetStateRequest: %s", err.Error())
+		l.Infof("SendSetStateRequest: %s.", err)
 		return
 	}
 
@@ -471,7 +471,7 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, service *models
 	pmmAgentID := pointer.GetString(agent.PMMAgentID)
 	pmmAgent, err := r.get(pmmAgentID)
 	if err != nil {
-		return status.Error(codes.FailedPrecondition, err.Error())
+		return err
 	}
 
 	var request *agentpb.CheckConnectionRequest
@@ -510,7 +510,7 @@ func (r *Registry) get(pmmAgentID string) (*agentInfo, error) {
 	pmmAgent := r.agents[pmmAgentID]
 	r.rw.RUnlock()
 	if pmmAgent == nil {
-		return nil, fmt.Errorf("pmm-agent with ID %q is not currently connected", pmmAgentID)
+		return nil, status.Errorf(codes.FailedPrecondition, "pmm-agent with ID %q is not currently connected", pmmAgentID)
 	}
 	return pmmAgent, nil
 }
