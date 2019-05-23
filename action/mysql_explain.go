@@ -20,8 +20,6 @@ import (
 	"context"
 
 	"gopkg.in/reform.v1"
-
-	"github.com/percona/pmm-managed/models"
 )
 
 type MySQLExplain struct {
@@ -33,13 +31,15 @@ type MySQLExplain struct {
 
 	q *reform.Querier
 	s MySQLExplainStarter
+	r PMMAgentIDResolver
 }
 
-func NewMySQLExplain(q *reform.Querier, s MySQLExplainStarter) *MySQLExplain {
+func NewMySQLExplain(q *reform.Querier, s MySQLExplainStarter, r PMMAgentIDResolver) *MySQLExplain {
 	return &MySQLExplain{
 		ID: createActionID(),
 		q:  q,
 		s:  s,
+		r:  r,
 	}
 }
 
@@ -49,12 +49,7 @@ func (exp *MySQLExplain) Prepare(serviceID, pmmAgentID, query string) error {
 	exp.ServiceID = serviceID
 	exp.PMMAgentID = pmmAgentID
 
-	agents, err := models.FindPMMAgentsForService(exp.q, exp.ServiceID)
-	if err != nil {
-		return err
-	}
-
-	exp.PMMAgentID, err = validatePMMAgentID(exp.PMMAgentID, agents)
+	exp.PMMAgentID, err = exp.r.ResolveByServiceID(exp.ServiceID, exp.PMMAgentID)
 	if err != nil {
 		return err
 	}

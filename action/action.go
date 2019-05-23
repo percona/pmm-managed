@@ -20,9 +20,6 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
-
-	"github.com/percona/pmm-managed/models"
 )
 
 type Stopper interface {
@@ -52,9 +49,10 @@ type Storage interface {
 	Load(context.Context, string) (*Result, bool)
 }
 
-var (
-	errPmmAgentIDNotFound = errors.New("can't detect pmm_agent_id")
-)
+type PMMAgentIDResolver interface {
+	ResolveByServiceID(serviceID, pmmAgentID string) (string, error)
+	ResolveByNodeID(nodeID, pmmAgentID string) (string, error)
+}
 
 // Result describes an PMM Action result which is storing in ActionsResult storage.
 //nolint:unused
@@ -68,24 +66,4 @@ type Result struct {
 
 func createActionID() string {
 	return "/action_id/" + uuid.New().String()
-}
-
-func validatePMMAgentID(pmmAgentID string, agents []*models.Agent) (string, error) {
-	// no explicit ID is given, and there is only one
-	if pmmAgentID == "" && len(agents) == 1 {
-		return agents[0].AgentID, nil
-	}
-
-	// no explicit ID is given, and there are zero or several
-	if pmmAgentID == "" {
-		return "", errPmmAgentIDNotFound
-	}
-
-	// check that explicit agent id is correct
-	for _, a := range agents {
-		if a.AgentID == pmmAgentID {
-			return a.AgentID, nil
-		}
-	}
-	return "", errPmmAgentIDNotFound
 }
