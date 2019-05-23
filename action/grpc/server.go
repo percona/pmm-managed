@@ -63,9 +63,8 @@ func (s *server) GetAction(ctx context.Context, req *managementpb.GetActionReque
 // StartPTSummaryAction starts pt-summary action.
 //nolint:lll
 func (s *server) StartPTSummaryAction(ctx context.Context, req *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
-	// TODO: Add real pt-summary arguments
-	a := action.NewPtSummary(req.NodeId, req.PmmAgentId, []string{}, s.db.Querier)
-	err := a.Prepare()
+	a := action.NewPtSummary(s.db.Querier)
+	err := a.Prepare(req.NodeId, req.PmmAgentId, []string{}) // TODO: Add real pt-summary arguments
 	if err != nil {
 		return nil, err
 	}
@@ -84,9 +83,8 @@ func (s *server) StartPTSummaryAction(ctx context.Context, req *managementpb.Sta
 // StartPTMySQLSummaryAction starts pt-mysql-summary action.
 //nolint:lll
 func (s *server) StartPTMySQLSummaryAction(ctx context.Context, req *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
-	// TODO: Add real pt-mysql-summary arguments
-	a := action.NewPtMySQLSummary(req.ServiceId, req.PmmAgentId, []string{}, s.db.Querier)
-	err := a.Prepare()
+	a := action.NewPtMySQLSummary(s.db.Querier)
+	err := a.Prepare(req.ServiceId, req.PmmAgentId, []string{}) // TODO: Add real pt-mysql-summary arguments
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
@@ -105,8 +103,8 @@ func (s *server) StartPTMySQLSummaryAction(ctx context.Context, req *managementp
 // StartMySQLExplainAction starts mysql-explain action.
 //nolint:lll
 func (s *server) StartMySQLExplainAction(ctx context.Context, req *managementpb.StartMySQLExplainActionRequest) (*managementpb.StartMySQLExplainActionResponse, error) {
-	a := action.NewMySQLExplain(req.ServiceId, req.PmmAgentId, req.Query, s.db.Querier)
-	err := a.Prepare()
+	a := action.NewMySQLExplain(s.db.Querier)
+	err := a.Prepare(req.ServiceId, req.PmmAgentId, req.Query)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
@@ -125,8 +123,8 @@ func (s *server) StartMySQLExplainAction(ctx context.Context, req *managementpb.
 // StartMySQLExplainJSONAction starts mysql-explain json action.
 //nolint:lll
 func (s *server) StartMySQLExplainJSONAction(ctx context.Context, req *managementpb.StartMySQLExplainJSONActionRequest) (*managementpb.StartMySQLExplainJSONActionResponse, error) {
-	a := action.NewMySQLExplainJSON(req.ServiceId, req.PmmAgentId, req.Query, s.db.Querier)
-	err := a.Prepare()
+	a := action.NewMySQLExplainJSON(s.db.Querier)
+	err := a.Prepare(req.ServiceId, req.PmmAgentId, req.Query)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}

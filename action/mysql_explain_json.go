@@ -19,7 +19,7 @@ package action
 import "gopkg.in/reform.v1"
 
 type MySQLExplainJSON struct {
-	Id         string
+	ID         string
 	ServiceID  string
 	PMMAgentID string
 	Dsn        string
@@ -28,23 +28,24 @@ type MySQLExplainJSON struct {
 	q *reform.Querier
 }
 
-// TODO: Add DSN string: findAgentForService(MYSQLD_EXPORTER, req.ServiceID)
-func NewMySQLExplainJSON(serviceId, pmmAgentID string, query string, q *reform.Querier) *MySQLExplainJSON {
+func NewMySQLExplainJSON(q *reform.Querier) *MySQLExplainJSON {
 	return &MySQLExplainJSON{
-		Id:         getNewActionID(),
-		ServiceID:  serviceId,
-		PMMAgentID: pmmAgentID,
-		Query:      query,
-
-		q: q,
+		ID: getNewActionID(),
+		q:  q,
 	}
 }
 
-func (expj *MySQLExplainJSON) Prepare() error {
+func (expj *MySQLExplainJSON) Prepare(serviceID, pmmAgentID, query string) error {
 	var err error
+	expj.ServiceID = serviceID
+	expj.PMMAgentID = pmmAgentID
+	expj.Query = query
+
 	expj.PMMAgentID, err = findPmmAgentIDByServiceID(expj.q, expj.PMMAgentID, expj.ServiceID)
 	if err != nil {
 		return err
 	}
+	// TODO: Add DSN string: findAgentForService(MYSQLD_EXPORTER, req.ServiceID)
+
 	return nil
 }

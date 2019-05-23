@@ -19,7 +19,7 @@ package action
 import "gopkg.in/reform.v1"
 
 type PtSummary struct {
-	Id         string
+	ID         string
 	NodeID     string
 	PMMAgentID string
 	Args       []string
@@ -27,19 +27,19 @@ type PtSummary struct {
 	q *reform.Querier
 }
 
-func NewPtSummary(nodeID, pmmAgentID string, args []string, q *reform.Querier) *PtSummary {
+func NewPtSummary(q *reform.Querier) *PtSummary {
 	return &PtSummary{
-		Id:         getNewActionID(),
-		NodeID:     nodeID,
-		PMMAgentID: pmmAgentID,
-		Args:       args,
-
-		q: q,
+		ID: getNewActionID(),
+		q:  q,
 	}
 }
 
-func (ps *PtSummary) Prepare() error {
+func (ps *PtSummary) Prepare(nodeID, pmmAgentID string, args []string) error {
 	var err error
+	ps.NodeID = nodeID
+	ps.PMMAgentID = pmmAgentID
+	ps.Args = args
+
 	ps.PMMAgentID, err = findPmmAgentIDByNodeID(ps.q, ps.PMMAgentID, ps.NodeID)
 	if err != nil {
 		return err

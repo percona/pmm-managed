@@ -19,7 +19,7 @@ package action
 import "gopkg.in/reform.v1"
 
 type MySQLExplain struct {
-	Id         string
+	ID         string
 	ServiceID  string
 	PMMAgentID string
 	Dsn        string
@@ -28,23 +28,24 @@ type MySQLExplain struct {
 	q *reform.Querier
 }
 
-// TODO: Add DSN string: findAgentForService(MYSQLD_EXPORTER, req.ServiceID)
-func NewMySQLExplain(serviceId, pmmAgentID string, query string, q *reform.Querier) *MySQLExplain {
+func NewMySQLExplain(q *reform.Querier) *MySQLExplain {
 	return &MySQLExplain{
-		Id:         getNewActionID(),
-		ServiceID:  serviceId,
-		PMMAgentID: pmmAgentID,
-		Query:      query,
-
-		q: q,
+		ID: getNewActionID(),
+		q:  q,
 	}
 }
 
-func (exp *MySQLExplain) Prepare() error {
+func (exp *MySQLExplain) Prepare(serviceID, pmmAgentID, query string) error {
 	var err error
+	exp.Query = query
+	exp.ServiceID = serviceID
+	exp.PMMAgentID = pmmAgentID
+
 	exp.PMMAgentID, err = findPmmAgentIDByServiceID(exp.q, exp.PMMAgentID, exp.ServiceID)
 	if err != nil {
 		return err
 	}
+	// TODO: Add DSN string: findAgentForService(MYSQLD_EXPORTER, req.ServiceID)
+
 	return nil
 }

@@ -19,7 +19,7 @@ package action
 import "gopkg.in/reform.v1"
 
 type PtMySQLSummary struct {
-	Id         string
+	ID         string
 	ServiceID  string
 	PMMAgentID string
 	Args       []string
@@ -27,19 +27,19 @@ type PtMySQLSummary struct {
 	q *reform.Querier
 }
 
-func NewPtMySQLSummary(serviceId, pmmAgentID string, args []string, q *reform.Querier) *PtMySQLSummary {
+func NewPtMySQLSummary(q *reform.Querier) *PtMySQLSummary {
 	return &PtMySQLSummary{
-		Id:         getNewActionID(),
-		ServiceID:  serviceId,
-		PMMAgentID: pmmAgentID,
-		Args:       args,
-
-		q: q,
+		ID: getNewActionID(),
+		q:  q,
 	}
 }
 
-func (pms *PtMySQLSummary) Prepare() error {
+func (pms *PtMySQLSummary) Prepare(serviceID, pmmAgentID string, args []string) error {
 	var err error
+	pms.ServiceID = serviceID
+	pms.PMMAgentID = pmmAgentID
+	pms.Args = args
+
 	pms.PMMAgentID, err = findPmmAgentIDByServiceID(pms.q, pms.PMMAgentID, pms.ServiceID)
 	if err != nil {
 		return err

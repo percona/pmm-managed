@@ -496,7 +496,7 @@ func (r *Registry) Collect(ch chan<- prom.Metric) {
 // StartPTSummaryAction starts pt-summary action on pmm-agent.
 func (r *Registry) StartPTSummaryAction(ctx context.Context, a *action.PtSummary) error {
 	aRequest := &agentpb.StartActionRequest{
-		ActionId: a.Id,
+		ActionId: a.ID,
 		Type:     managementpb.ActionType_PT_SUMMARY,
 		Params: &agentpb.StartActionRequest_ProcessParams_{
 			ProcessParams: &agentpb.StartActionRequest_ProcessParams{
@@ -512,7 +512,7 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, a *action.PtSummary
 // StartPTMySQLSummaryAction starts pt-mysql-summary action on pmm-agent.
 func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, a *action.PtMySQLSummary) error {
 	aRequest := &agentpb.StartActionRequest{
-		ActionId: a.Id,
+		ActionId: a.ID,
 		Type:     managementpb.ActionType_PT_MYSQL_SUMMARY,
 		Params: &agentpb.StartActionRequest_ProcessParams_{
 			ProcessParams: &agentpb.StartActionRequest_ProcessParams{
@@ -528,7 +528,7 @@ func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, a *action.PtMy
 // StartMySQLExplainAction starts mysql-explain action on pmm-agent.
 func (r *Registry) StartMySQLExplainAction(ctx context.Context, a *action.MySQLExplain) error {
 	aRequest := &agentpb.StartActionRequest{
-		ActionId: a.Id,
+		ActionId: a.ID,
 		Type:     managementpb.ActionType_MYSQL_EXPLAIN,
 		Params: &agentpb.StartActionRequest_MysqlExplainParams{
 			MysqlExplainParams: &agentpb.StartActionRequest_MySQLExplainParams{
@@ -546,7 +546,7 @@ func (r *Registry) StartMySQLExplainAction(ctx context.Context, a *action.MySQLE
 // StartMySQLExplainJSONAction starts mysql-explain-json action on pmm-agent.
 func (r *Registry) StartMySQLExplainJSONAction(ctx context.Context, a *action.MySQLExplainJSON) error {
 	aRequest := &agentpb.StartActionRequest{
-		ActionId: a.Id,
+		ActionId: a.ID,
 		Type:     managementpb.ActionType_MYSQL_EXPLAIN,
 		Params: &agentpb.StartActionRequest_MysqlExplainParams{
 			MysqlExplainParams: &agentpb.StartActionRequest_MySQLExplainParams{
