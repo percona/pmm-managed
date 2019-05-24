@@ -95,6 +95,7 @@ func (f *factory) NewPTMySQLSummary(ctx context.Context, serviceID, pmmAgentID s
 	return a, nil
 }
 
+//nolint:dupl
 func (f *factory) NewMySQLExplain(ctx context.Context, serviceID, pmmAgentID, query string) (*MySQLExplain, error) {
 	a := &MySQLExplain{
 		ID:         getUUID(),
@@ -126,6 +127,7 @@ func (f *factory) NewMySQLExplain(ctx context.Context, serviceID, pmmAgentID, qu
 	return a, nil
 }
 
+//nolint:dupl
 func (f *factory) NewMySQLExplainJSON(ctx context.Context, serviceID, pmmAgentID, query string) (*MySQLExplainJSON, error) {
 	a := &MySQLExplainJSON{
 		ID:         getUUID(),
