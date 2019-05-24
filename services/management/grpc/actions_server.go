@@ -31,7 +31,7 @@ type actionsServer struct {
 	f action.Factory
 }
 
-// NewServer creates Management Actions Server.
+// NewActionsServer creates Management Actions Server.
 func NewActionsServer(r action.Runner, s action.Storage, f action.Factory) managementpb.ActionsServer {
 	return &actionsServer{r, s, f}
 }
