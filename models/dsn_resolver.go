@@ -53,7 +53,7 @@ func (r *DSNResolver) ResolveDSNByServiceID(serviceID string) (string, error) {
 			return errors.New("couldn't resolve pmm-agent")
 		}
 
-		pmmAgentID := pointer.GetString(pmmAgents[0].PMMAgentID)
+		pmmAgentID := pmmAgents[0].AgentID
 		var agentType AgentType
 		switch svc.ServiceType {
 		case MySQLServiceType:

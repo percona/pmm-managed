@@ -34,7 +34,9 @@ type ActionStorage struct {
 
 // NewActionStorage created new InMemoryActionsStorage.
 func NewActionStorage() *ActionStorage {
-	return &ActionStorage{}
+	return &ActionStorage{
+		container: make(map[string]*action.Result),
+	}
 }
 
 // Store stores an action result in action results storage.
