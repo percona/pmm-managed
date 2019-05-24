@@ -571,7 +571,7 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, a *action.PtSummary
 
 	agent, err := r.get(a.PMMAgentID)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "couldn't start action")
 	}
 
 	agent.channel.SendRequest(aRequest)
@@ -593,7 +593,7 @@ func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, a *action.PtMy
 
 	agent, err := r.get(a.PMMAgentID)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "couldn't start action")
 	}
 
 	agent.channel.SendRequest(aRequest)
@@ -617,7 +617,7 @@ func (r *Registry) StartMySQLExplainAction(ctx context.Context, a *action.MySQLE
 
 	agent, err := r.get(a.PMMAgentID)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "couldn't start action")
 	}
 
 	agent.channel.SendRequest(aRequest)
@@ -641,7 +641,7 @@ func (r *Registry) StartMySQLExplainJSONAction(ctx context.Context, a *action.My
 
 	agent, err := r.get(a.PMMAgentID)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "couldn't start action")
 	}
 
 	agent.channel.SendRequest(aRequest)
@@ -653,7 +653,7 @@ func (r *Registry) StartMySQLExplainJSONAction(ctx context.Context, a *action.My
 func (r *Registry) StopAction(ctx context.Context, actionID, pmmAgentID string) error {
 	agent, err := r.get(actionID)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "couldn't stop action")
 	}
 	agent.channel.SendRequest(&agentpb.StopActionRequest{ActionId: actionID})
 	return nil

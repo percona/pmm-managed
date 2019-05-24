@@ -43,7 +43,7 @@ func (s *inMemoryStorage) Store(ctx context.Context, result *Result) error {
 	defer s.mx.Unlock()
 	_, ok := s.container[result.ID]
 	if ok {
-		return errors.New("ActionResult already exists")
+		return errors.New("already exists")
 	}
 	s.container[result.ID] = result
 	return nil
@@ -56,7 +56,7 @@ func (s *inMemoryStorage) Update(ctx context.Context, result *Result) error {
 	defer s.mx.Unlock()
 	_, ok := s.container[result.ID]
 	if !ok {
-		return errors.New("ActionResult doesn't exists")
+		return errors.New("not found")
 	}
 
 	a := s.container[result.ID]
@@ -75,7 +75,7 @@ func (s *inMemoryStorage) Load(ctx context.Context, id string) (*Result, error) 
 	defer s.mx.Unlock()
 	v, ok := s.container[id]
 	if !ok {
-		return nil, errors.New("ActionResult not found")
+		return nil, errors.New("not found")
 	}
 	return v, nil
 }

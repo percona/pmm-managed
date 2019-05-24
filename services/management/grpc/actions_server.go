@@ -20,6 +20,8 @@ import (
 	"context"
 
 	"github.com/percona/pmm/api/managementpb"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/percona/pmm-managed/services/action"
 )
@@ -41,7 +43,7 @@ func NewActionsServer(r action.Runner, s action.Storage, f action.Factory) manag
 func (s *actionsServer) GetAction(ctx context.Context, req *managementpb.GetActionRequest) (*managementpb.GetActionResponse, error) {
 	res, err := s.s.Load(ctx, req.ActionId)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.NotFound, err.Error())
 	}
 
 	return &managementpb.GetActionResponse{
@@ -58,23 +60,23 @@ func (s *actionsServer) GetAction(ctx context.Context, req *managementpb.GetActi
 func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
 	a, err := s.f.NewPTSummary(ctx, req.NodeId, req.PmmAgentId)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 
 	err = s.s.Store(ctx, &action.Result{ID: a.ID, PmmAgentID: a.PMMAgentID})
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
 
 	err = s.r.StartPTSummaryAction(ctx, a)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
 
 	return &managementpb.StartPTSummaryActionResponse{
 		PmmAgentId: a.PMMAgentID,
 		ActionId:   a.ID,
-	}, err
+	}, nil
 }
 
 // StartPTMySQLSummaryAction starts pt-mysql-summary action.
@@ -82,23 +84,23 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
 	a, err := s.f.NewPTMySQLSummary(ctx, req.ServiceId, req.PmmAgentId)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 
 	err = s.s.Store(ctx, &action.Result{ID: a.ID, PmmAgentID: a.PMMAgentID})
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 
 	err = s.r.StartPTMySQLSummaryAction(ctx, a)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 
 	return &managementpb.StartPTMySQLSummaryActionResponse{
 		PmmAgentId: a.PMMAgentID,
 		ActionId:   a.ID,
-	}, err
+	}, nil
 }
 
 // StartMySQLExplainAction starts mysql-explain action.
@@ -106,23 +108,23 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *managementpb.StartMySQLExplainActionRequest) (*managementpb.StartMySQLExplainActionResponse, error) {
 	a, err := s.f.NewMySQLExplain(ctx, req.ServiceId, req.PmmAgentId, req.Query)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 
 	err = s.s.Store(ctx, &action.Result{ID: a.ID, PmmAgentID: a.PMMAgentID})
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 
 	err = s.r.StartMySQLExplainAction(ctx, a)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 
 	return &managementpb.StartMySQLExplainActionResponse{
 		PmmAgentId: a.PMMAgentID,
 		ActionId:   a.ID,
-	}, err
+	}, nil
 }
 
 // StartMySQLExplainJSONAction starts mysql-explain json action.
@@ -130,23 +132,23 @@ func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *manage
 func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *managementpb.StartMySQLExplainJSONActionRequest) (*managementpb.StartMySQLExplainJSONActionResponse, error) {
 	a, err := s.f.NewMySQLExplainJSON(ctx, req.ServiceId, req.PmmAgentId, req.Query)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 
 	err = s.s.Store(ctx, &action.Result{ID: a.ID, PmmAgentID: a.PMMAgentID})
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 
 	err = s.r.StartMySQLExplainJSONAction(ctx, a)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 
 	return &managementpb.StartMySQLExplainJSONActionResponse{
 		PmmAgentId: a.PMMAgentID,
 		ActionId:   a.ID,
-	}, err
+	}, nil
 }
 
 // CancelAction stops an Action.
@@ -154,12 +156,12 @@ func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *ma
 func (s *actionsServer) CancelAction(ctx context.Context, req *managementpb.CancelActionRequest) (*managementpb.CancelActionResponse, error) {
 	ar, err := s.s.Load(ctx, req.ActionId)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 
 	err = s.r.StopAction(ctx, ar.ID, ar.PmmAgentID)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 
 	return &managementpb.CancelActionResponse{}, nil

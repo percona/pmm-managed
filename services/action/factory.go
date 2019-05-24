@@ -26,10 +26,6 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-var (
-	errPmmAgentIDNotFound = errors.New("can't detect pmm_agent_id")
-)
-
 type factory struct {
 	db *reform.DB
 }
@@ -55,12 +51,12 @@ func (f *factory) NewPTSummary(ctx context.Context, nodeID, pmmAgentID string) (
 
 	agents, err := models.FindPMMAgentsForNode(f.db.Querier, a.NodeID)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "couldn't create action")
 	}
 
 	a.PMMAgentID, err = findPmmAgentIDToRunAction(a.PMMAgentID, agents)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "couldn't create action")
 	}
 
 	return a, nil
@@ -76,12 +72,12 @@ func (f *factory) NewPTMySQLSummary(ctx context.Context, serviceID, pmmAgentID s
 
 	agents, err := models.FindPMMAgentsForService(f.db.Querier, a.ServiceID)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "couldn't create action")
 	}
 
 	a.PMMAgentID, err = findPmmAgentIDToRunAction(a.PMMAgentID, agents)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "couldn't create action")
 	}
 
 	return a, nil
@@ -97,17 +93,17 @@ func (f *factory) NewMySQLExplain(ctx context.Context, serviceID, pmmAgentID, qu
 
 	agents, err := models.FindPMMAgentsForService(f.db.Querier, a.ServiceID)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "couldn't create action")
 	}
 
 	a.PMMAgentID, err = findPmmAgentIDToRunAction(a.PMMAgentID, agents)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "couldn't create action")
 	}
 
 	a.Dsn, err = f.resolveDSNByServiceID(a.ServiceID)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "couldn't create action")
 	}
 
 	return a, nil
@@ -123,17 +119,17 @@ func (f *factory) NewMySQLExplainJSON(ctx context.Context, serviceID, pmmAgentID
 
 	agents, err := models.FindPMMAgentsForService(f.db.Querier, a.ServiceID)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "couldn't create action")
 	}
 
 	a.PMMAgentID, err = findPmmAgentIDToRunAction(a.PMMAgentID, agents)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "couldn't create action")
 	}
 
 	a.Dsn, err = f.resolveDSNByServiceID(a.ServiceID)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "couldn't create action")
 	}
 
 	return a, nil
@@ -145,16 +141,16 @@ func (f *factory) resolveDSNByServiceID(serviceID string) (string, error) {
 	err := f.db.InTransaction(func(tx *reform.TX) error {
 		svc, err := models.FindServiceByID(tx.Querier, serviceID)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "couldn't resolve dsn")
 		}
 
 		pmmAgents, err := models.FindPMMAgentsForService(tx.Querier, serviceID)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "couldn't resolve dsn")
 		}
 
 		if len(pmmAgents) != 1 {
-			return errors.New("couldn't resolve pmm-agent")
+			return errors.New("couldn't resolve dsn, as there should be only one pmm-agent")
 		}
 
 		pmmAgentID := pmmAgents[0].AgentID
@@ -167,32 +163,30 @@ func (f *factory) resolveDSNByServiceID(serviceID string) (string, error) {
 		case models.PostgreSQLServiceType:
 			agentType = models.PostgresExporterType
 		default:
-			return errors.New("couldn't resolve service type")
+			return errors.New("couldn't resolve dsn, as service is unsupported")
 		}
 
-		agents, err := models.FindAgentsByPmmAgentIDAndAgentType(tx.Querier, pmmAgentID, agentType)
+		exporters, err := models.FindAgentsByPmmAgentIDAndAgentType(tx.Querier, pmmAgentID, agentType)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "couldn't resolve dsn")
 		}
 
-		if len(agents) != 1 {
-			return errors.New("couldn't resolve agent")
+		if len(exporters) != 1 {
+			return errors.New("couldn't resolve dsn, as there should be only one exporter")
 		}
-
-		resolvedAgent := agents[0]
 
 		switch svc.ServiceType {
 		case models.MySQLServiceType:
-			result = models.DSNforMySQL(svc, resolvedAgent)
+			result = models.DSNforMySQL(svc, exporters[0])
 
 		case models.MongoDBServiceType:
-			result = models.DSNforMongoDB(svc, resolvedAgent)
+			result = models.DSNforMongoDB(svc, exporters[0])
 
 		case models.PostgreSQLServiceType:
-			result = models.DSNforPostgreSQL(svc, resolvedAgent)
+			result = models.DSNforPostgreSQL(svc, exporters[0])
 		}
 
-		return errors.New("couldn't resolve service type")
+		return nil
 	})
 	if err != nil {
 		return result, err
@@ -209,7 +203,7 @@ func findPmmAgentIDToRunAction(pmmAgentID string, agents []*models.Agent) (strin
 
 	// no explicit ID is given, and there are zero or several
 	if pmmAgentID == "" {
-		return "", errPmmAgentIDNotFound
+		return "", errors.New("couldn't find pmm-agent-id to run action")
 	}
 
 	// check that explicit agent id is correct
@@ -218,7 +212,7 @@ func findPmmAgentIDToRunAction(pmmAgentID string, agents []*models.Agent) (strin
 			return a.AgentID, nil
 		}
 	}
-	return "", errPmmAgentIDNotFound
+	return "", errors.New("couldn't find pmm-agent-id to run action")
 }
 
 // nolint: unused
