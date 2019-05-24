@@ -18,6 +18,7 @@ package action
 
 import "fmt"
 
+// PtSummary represents pt-summary domain model.
 type PtSummary struct {
 	ID         string
 	PMMAgentID string
@@ -34,6 +35,7 @@ type PtSummary struct {
 	Version            bool
 }
 
+// NewPtSummary creates new pt-summary model with predefined state.
 func NewPtSummary(pmmAgentID, nodeID string) *PtSummary {
 	return &PtSummary{
 		ID:                 getUUID(),
@@ -47,6 +49,7 @@ func NewPtSummary(pmmAgentID, nodeID string) *PtSummary {
 	}
 }
 
+// Args returns arguments slice for pmm-agent actions implementation.
 func (s *PtSummary) Args() []string {
 	var args []string
 	if s.Config != "" {
@@ -79,6 +82,7 @@ func (s *PtSummary) Args() []string {
 	return args
 }
 
+// PtMySQLSummary represents pt-mysql-summary domain model.
 type PtMySQLSummary struct {
 	ID         string
 	PMMAgentID string
@@ -87,6 +91,7 @@ type PtMySQLSummary struct {
 	Args []string
 }
 
+// MySQLExplain represents mysql-explain domain model.
 type MySQLExplain struct {
 	ID         string
 	PMMAgentID string
@@ -96,6 +101,7 @@ type MySQLExplain struct {
 	Query string
 }
 
+// MySQLExplainJSON represents mysql-explain-json domain model.
 type MySQLExplainJSON struct {
 	ID         string
 	PMMAgentID string
@@ -105,7 +111,7 @@ type MySQLExplainJSON struct {
 	Query string
 }
 
-// Result describes an PMM Action result which is storing in ActionsResult storage.
+// Result describes an action result which is storing in persistent storage.
 type Result struct {
 	ID         string
 	PmmAgentID string

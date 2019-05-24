@@ -55,7 +55,6 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/action"
-	actionstorage "github.com/percona/pmm-managed/services/action/storage"
 	"github.com/percona/pmm-managed/services/agents"
 	agentgrpc "github.com/percona/pmm-managed/services/agents/grpc"
 	"github.com/percona/pmm-managed/services/inventory"
@@ -67,6 +66,7 @@ import (
 	"github.com/percona/pmm-managed/services/qan"
 	servergrpc "github.com/percona/pmm-managed/services/server/grpc"
 	"github.com/percona/pmm-managed/services/telemetry"
+	"github.com/percona/pmm-managed/storage/inmemory"
 	"github.com/percona/pmm-managed/utils/interceptors"
 	"github.com/percona/pmm-managed/utils/logger"
 	"github.com/percona/pmm-managed/utils/ports"
@@ -405,7 +405,7 @@ func main() {
 		l.Panicf("Prometheus service problem: %+v", err)
 	}
 
-	actionStorage := actionstorage.NewInMemory()
+	actionStorage := inmemory.NewActionStorage()
 	qanClient := getQANClient(ctx, db)
 	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient, actionStorage)
 	logs := logs.New(version.Version)

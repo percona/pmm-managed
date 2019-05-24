@@ -14,7 +14,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package storage
+// Package inmemory is an infrastructure level package that provides in memory storage implementations.
+package inmemory
 
 import (
 	"context"
@@ -25,19 +26,20 @@ import (
 	"github.com/percona/pmm-managed/services/action"
 )
 
-// InMemory in memory action results storage.
-type InMemory struct {
+// ActionStorage in memory action results storage.
+type ActionStorage struct {
 	container map[string]*action.Result
 	mx        sync.Mutex
 }
 
-// NewInMemoryStorage created new InMemoryActionsStorage.
-func NewInMemory() *InMemory {
-	return &InMemory{}
+// NewActionStorage created new InMemoryActionsStorage.
+func NewActionStorage() *ActionStorage {
+	return &ActionStorage{}
 }
 
 // Store stores an action result in action results storage.
-func (s *InMemory) Store(ctx context.Context, result *action.Result) error {
+//nolint:unparam
+func (s *ActionStorage) Store(ctx context.Context, result *action.Result) error {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	_, ok := s.container[result.ID]
@@ -48,8 +50,9 @@ func (s *InMemory) Store(ctx context.Context, result *action.Result) error {
 	return nil
 }
 
-// Store stores an action result in action results storage.
-func (s *InMemory) Update(ctx context.Context, result *action.Result) error {
+// Update updates an action result in action results storage.
+//nolint:unparam
+func (s *ActionStorage) Update(ctx context.Context, result *action.Result) error {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	_, ok := s.container[result.ID]
@@ -66,8 +69,9 @@ func (s *InMemory) Update(ctx context.Context, result *action.Result) error {
 	return nil
 }
 
-// Load gets an action result from storage by action id.
-func (s *InMemory) Load(ctx context.Context, id string) (*action.Result, error) {
+// Load loads an action result from storage by action id.
+//nolint:unparam
+func (s *ActionStorage) Load(ctx context.Context, id string) (*action.Result, error) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	v, ok := s.container[id]

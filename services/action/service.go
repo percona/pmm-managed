@@ -18,8 +18,6 @@ package action
 
 import (
 	"context"
-
-	"gopkg.in/reform.v1"
 )
 
 type service struct {
@@ -27,10 +25,10 @@ type service struct {
 	s   Storage
 	rsv PMMAgentIDResolver
 	dsn DSNResolver
-	db  *reform.DB
 }
 
-func NewService(r Runner, s Storage, rsv PMMAgentIDResolver, dsn DSNResolver) *service {
+// NewService creates default actions service implementation.
+func NewService(r Runner, s Storage, rsv PMMAgentIDResolver, dsn DSNResolver) Service {
 	return &service{
 		r:   r,
 		s:   s,
