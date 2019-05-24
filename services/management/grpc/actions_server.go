@@ -69,7 +69,7 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 // StartPTMySQLSummaryAction starts pt-mysql-summary action.
 //nolint:lll
 func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
-	a, err := s.svc.StartPTMySQLSummaryAction(ctx, req.PmmAgentId, req.ServiceId, []string{})
+	a, err := s.svc.StartPTMySQLSummaryAction(ctx, req.PmmAgentId, req.ServiceId)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}

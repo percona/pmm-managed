@@ -74,12 +74,12 @@ func (s *service) StartPTSummaryAction(ctx context.Context, pmmAgentID, nodeID s
 
 // StartPTMySQLSummaryAction starts pt-mysql-summary action.
 //nolint:lll
-func (s *service) StartPTMySQLSummaryAction(ctx context.Context, pmmAgentID, serviceID string, args []string) (*PtMySQLSummary, error) {
+func (s *service) StartPTMySQLSummaryAction(ctx context.Context, pmmAgentID, serviceID string) (*PtMySQLSummary, error) {
 	a := &PtMySQLSummary{
 		ID:         getUUID(),
 		ServiceID:  serviceID,
 		PMMAgentID: pmmAgentID,
-		Args:       args,
+		Args:       []string{},
 	}
 
 	var err error

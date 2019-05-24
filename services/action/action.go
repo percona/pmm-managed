@@ -48,7 +48,7 @@ type DSNResolver interface {
 type Service interface {
 	GetActionResult(ctx context.Context, actionID string) (*Result, error)
 	StartPTSummaryAction(ctx context.Context, pmmAgentID, nodeID string) (*PtSummary, error)
-	StartPTMySQLSummaryAction(ctx context.Context, pmmAgentID, serviceID string, args []string) (*PtMySQLSummary, error)
+	StartPTMySQLSummaryAction(ctx context.Context, pmmAgentID, serviceID string) (*PtMySQLSummary, error)
 	StartMySQLExplainAction(ctx context.Context, pmmAgentID, serviceID, query string) (*MySQLExplain, error)
 	StartMySQLExplainJSONAction(ctx context.Context, pmmAgentID, serviceID, query string) (*MySQLExplainJSON, error)
 	CancelAction(ctx context.Context, actionID string) error
