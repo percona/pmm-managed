@@ -51,14 +51,8 @@ func (s *service) GetActionResult(ctx context.Context, actionID string) (*Result
 
 // StartPTSummaryAction starts pt-summary action.
 //nolint:lll
-func (s *service) StartPTSummaryAction(ctx context.Context, pmmAgentID, nodeID string, args []string) (*PtSummary, error) {
-	a := &PtSummary{
-		ID:         getUUID(),
-		NodeID:     nodeID,
-		PMMAgentID: pmmAgentID,
-		Args:       args,
-	}
-
+func (s *service) StartPTSummaryAction(ctx context.Context, pmmAgentID, nodeID string) (*PtSummary, error) {
+	a := NewPtSummary(pmmAgentID, nodeID)
 	var err error
 	a.PMMAgentID, err = s.rsv.ResolvePMMAgentIDByNodeID(a.NodeID, a.PMMAgentID)
 	if err != nil {

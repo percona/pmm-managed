@@ -16,41 +16,101 @@
 
 package action
 
+import "fmt"
+
 type PtSummary struct {
 	ID         string
-	NodeID     string
 	PMMAgentID string
-	Args       []string
+	NodeID     string
+
+	Config             string
+	Help               bool
+	ReadSamples        string
+	SaveSamples        string
+	Sleep              uint32
+	SummarizeMounts    bool
+	SummarizeNetwork   bool
+	SummarizeProcesses bool
+	Version            bool
+}
+
+func NewPtSummary(pmmAgentID, nodeID string) *PtSummary {
+	return &PtSummary{
+		ID:                 getUUID(),
+		NodeID:             nodeID,
+		PMMAgentID:         pmmAgentID,
+		SummarizeMounts:    true,
+		SummarizeNetwork:   true,
+		SummarizeProcesses: true,
+		Sleep:              5,
+		Help:               false,
+	}
+}
+
+func (s *PtSummary) Args() []string {
+	var args []string
+	if s.Config != "" {
+		args = append(args, "--config", s.Config)
+	}
+	if s.Version {
+		args = append(args, "--version")
+	}
+	if s.Help {
+		args = append(args, "--help")
+	}
+	if s.ReadSamples != "" {
+		args = append(args, "--read-samples", s.ReadSamples)
+	}
+	if s.SaveSamples != "" {
+		args = append(args, "--save-samples", s.SaveSamples)
+	}
+	if s.Sleep > 0 {
+		args = append(args, "--sleep", fmt.Sprintf("%d", s.Sleep))
+	}
+	if s.SummarizeMounts {
+		args = append(args, "--summarize-mounts")
+	}
+	if s.SummarizeNetwork {
+		args = append(args, "--summarize-network")
+	}
+	if s.SummarizeProcesses {
+		args = append(args, "--summarize-processes")
+	}
+	return args
 }
 
 type PtMySQLSummary struct {
 	ID         string
-	ServiceID  string
 	PMMAgentID string
-	Args       []string
+	ServiceID  string
+
+	Args []string
 }
 
 type MySQLExplain struct {
 	ID         string
-	ServiceID  string
 	PMMAgentID string
-	Dsn        string
-	Query      string
+	ServiceID  string
+
+	Dsn   string
+	Query string
 }
 
 type MySQLExplainJSON struct {
 	ID         string
-	ServiceID  string
 	PMMAgentID string
-	Dsn        string
-	Query      string
+	ServiceID  string
+
+	Dsn   string
+	Query string
 }
 
 // Result describes an PMM Action result which is storing in ActionsResult storage.
 type Result struct {
 	ID         string
 	PmmAgentID string
-	Done       bool
-	Error      string
-	Output     string
+
+	Done   bool
+	Error  string
+	Output string
 }

@@ -56,7 +56,7 @@ func (s *actionsServer) GetAction(ctx context.Context, req *managementpb.GetActi
 // StartPTSummaryAction starts pt-summary action.
 //nolint:lll
 func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
-	a, err := s.svc.StartPTSummaryAction(ctx, req.PmmAgentId, req.NodeId, []string{})
+	a, err := s.svc.StartPTSummaryAction(ctx, req.PmmAgentId, req.NodeId)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}

@@ -563,7 +563,7 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, a *action.PtSummary
 		Type:     managementpb.ActionType_PT_SUMMARY,
 		Params: &agentpb.StartActionRequest_ProcessParams_{
 			ProcessParams: &agentpb.StartActionRequest_ProcessParams{
-				Args: a.Args,
+				Args: a.Args(),
 			},
 		},
 	}
