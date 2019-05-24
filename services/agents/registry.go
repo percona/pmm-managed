@@ -34,8 +34,8 @@ import (
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
+	"github.com/percona/pmm-managed/action"
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/action"
 	"github.com/percona/pmm-managed/services/agents/channel"
 	"github.com/percona/pmm-managed/utils/logger"
 )

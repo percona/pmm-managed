@@ -23,7 +23,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/percona/pmm-managed/services/action"
+	"github.com/percona/pmm-managed/action"
 )
 
 //nolint:unused

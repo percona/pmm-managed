@@ -53,8 +53,8 @@ import (
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
+	"github.com/percona/pmm-managed/action"
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/action"
 	"github.com/percona/pmm-managed/services/agents"
 	agentgrpc "github.com/percona/pmm-managed/services/agents/grpc"
 	"github.com/percona/pmm-managed/services/inventory"
