@@ -51,7 +51,7 @@ func postgresExporterConfig(service *models.Service, exporter *models.Agent) *ag
 		TemplateRightDelim: tdp.right,
 		Args:               args,
 		Env: []string{
-			fmt.Sprintf("DATA_SOURCE_NAME=%s", models.PostgreSQLDSN(service, exporter)),
+			fmt.Sprintf("DATA_SOURCE_NAME=%s", models.DSNforPostgreSQL(service, exporter)),
 		},
 	}
 }

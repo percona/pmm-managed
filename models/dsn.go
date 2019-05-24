@@ -26,7 +26,8 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
-func MySQLDSN(service *Service, exporter *Agent) string {
+// DSNforMySQL generates MySQL DSN string from service and exporter.
+func DSNforMySQL(service *Service, exporter *Agent) string {
 	// TODO TLSConfig: "true", https://jira.percona.com/browse/PMM-1727
 	// TODO Other parameters?
 
@@ -46,7 +47,8 @@ func MySQLDSN(service *Service, exporter *Agent) string {
 	return cfg.FormatDSN()
 }
 
-func PostgreSQLDSN(service *Service, exporter *Agent) string {
+// DSNforPostgreSQL generates Postgres DSN string from service and exporter.
+func DSNforPostgreSQL(service *Service, exporter *Agent) string {
 	q := make(url.Values)
 	q.Set("sslmode", "disable") // TODO: make it configurable
 	q.Set("connect_timeout", "1")
@@ -72,7 +74,8 @@ func PostgreSQLDSN(service *Service, exporter *Agent) string {
 	return u.String()
 }
 
-func MongoDBDSN(service *Service, exporter *Agent) string {
+// DSNforMongoDB generates MongoDB DSN string from service and exporter.
+func DSNforMongoDB(service *Service, exporter *Agent) string {
 	host := pointer.GetString(service.Address)
 	port := pointer.GetUint16(service.Port)
 	username := pointer.GetString(exporter.Username)

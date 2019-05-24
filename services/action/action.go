@@ -14,10 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package action provides models and service for interacting with Actions.
-// It's application layer package, so it contains only abstract application logic
-// and separated with infrastructure and data layers through interfaces.
-// Infrastructure and data layers packages should implement those interfaces.
+// Package action provides models and services for interacting with Actions.
 package action
 
 import (

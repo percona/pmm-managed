@@ -54,7 +54,7 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent) *age
 		TemplateRightDelim: tdp.right,
 		Args:               args,
 		Env: []string{
-			fmt.Sprintf("MONGODB_URI=%s", models.MongoDBDSN(service, exporter)),
+			fmt.Sprintf("MONGODB_URI=%s", models.DSNforMongoDB(service, exporter)),
 		},
 	}
 }
@@ -63,6 +63,6 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent) *age
 func qanMongoDBProfilerAgentConfig(service *models.Service, agent *models.Agent) *agentpb.SetStateRequest_BuiltinAgent {
 	return &agentpb.SetStateRequest_BuiltinAgent{
 		Type: agentpb.Type_QAN_MONGODB_PROFILER_AGENT,
-		Dsn:  models.MongoDBDSN(service, agent),
+		Dsn:  models.DSNforMongoDB(service, agent),
 	}
 }

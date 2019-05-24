@@ -34,6 +34,7 @@ type factory struct {
 	db *reform.DB
 }
 
+// NewFactory creates new actions factory.
 func NewFactory(db *reform.DB) Factory {
 	return &factory{
 		db: db,
@@ -182,13 +183,13 @@ func (f *factory) resolveDSNByServiceID(serviceID string) (string, error) {
 
 		switch svc.ServiceType {
 		case models.MySQLServiceType:
-			result = models.MySQLDSN(svc, resolvedAgent)
+			result = models.DSNforMySQL(svc, resolvedAgent)
 
 		case models.MongoDBServiceType:
-			result = models.MongoDBDSN(svc, resolvedAgent)
+			result = models.DSNforMongoDB(svc, resolvedAgent)
 
 		case models.PostgreSQLServiceType:
-			result = models.PostgreSQLDSN(svc, resolvedAgent)
+			result = models.DSNforPostgreSQL(svc, resolvedAgent)
 		}
 
 		return errors.New("couldn't resolve service type")

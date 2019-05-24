@@ -58,7 +58,7 @@ type Registry struct {
 	db         *reform.DB
 	prometheus prometheus
 	qanClient  qanClient
-	aStorage   action.Storage
+	aStorage   action.Storage //nolint:unused
 
 	rw     sync.RWMutex
 	agents map[string]*agentInfo // id -> info
@@ -502,17 +502,17 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, service *models
 	case models.MySQLServiceType:
 		request = &agentpb.CheckConnectionRequest{
 			Type: inventorypb.ServiceType_MYSQL_SERVICE,
-			Dsn:  models.MySQLDSN(service, agent),
+			Dsn:  models.DSNforMySQL(service, agent),
 		}
 	case models.PostgreSQLServiceType:
 		request = &agentpb.CheckConnectionRequest{
 			Type: inventorypb.ServiceType_POSTGRESQL_SERVICE,
-			Dsn:  models.PostgreSQLDSN(service, agent),
+			Dsn:  models.DSNforPostgreSQL(service, agent),
 		}
 	case models.MongoDBServiceType:
 		request = &agentpb.CheckConnectionRequest{
 			Type: inventorypb.ServiceType_MONGODB_SERVICE,
-			Dsn:  models.MongoDBDSN(service, agent),
+			Dsn:  models.DSNforMongoDB(service, agent),
 		}
 	default:
 		l.Panicf("unhandled Service type %s", service.ServiceType)
@@ -557,6 +557,7 @@ func (r *Registry) Collect(ch chan<- prom.Metric) {
 }
 
 // StartPTSummaryAction starts pt-summary action on pmm-agent.
+//nolint:unparam
 func (r *Registry) StartPTSummaryAction(ctx context.Context, a *action.PtSummary) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: a.ID,
@@ -578,6 +579,7 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, a *action.PtSummary
 }
 
 // StartPTMySQLSummaryAction starts pt-mysql-summary action on pmm-agent.
+//nolint:unparam
 func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, a *action.PtMySQLSummary) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: a.ID,
@@ -599,6 +601,7 @@ func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, a *action.PtMy
 }
 
 // StartMySQLExplainAction starts mysql-explain action on pmm-agent.
+//nolint:unparam
 func (r *Registry) StartMySQLExplainAction(ctx context.Context, a *action.MySQLExplain) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: a.ID,
@@ -622,6 +625,7 @@ func (r *Registry) StartMySQLExplainAction(ctx context.Context, a *action.MySQLE
 }
 
 // StartMySQLExplainJSONAction starts mysql-explain-json action on pmm-agent.
+//nolint:unparam
 func (r *Registry) StartMySQLExplainJSONAction(ctx context.Context, a *action.MySQLExplainJSON) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: a.ID,
@@ -645,6 +649,7 @@ func (r *Registry) StartMySQLExplainJSONAction(ctx context.Context, a *action.My
 }
 
 // StopAction stops action with given given id.
+//nolint:unparam
 func (r *Registry) StopAction(ctx context.Context, actionID, pmmAgentID string) error {
 	agent, err := r.get(actionID)
 	if err != nil {
