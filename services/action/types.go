@@ -35,20 +35,6 @@ type PtSummary struct {
 	Version            bool
 }
 
-// NewPtSummary creates new pt-summary model with predefined state.
-func NewPtSummary(pmmAgentID, nodeID string) *PtSummary {
-	return &PtSummary{
-		ID:                 getUUID(),
-		NodeID:             nodeID,
-		PMMAgentID:         pmmAgentID,
-		SummarizeMounts:    true,
-		SummarizeNetwork:   true,
-		SummarizeProcesses: true,
-		Sleep:              5,
-		Help:               false,
-	}
-}
-
 // Args returns arguments slice for pmm-agent actions implementation.
 func (s *PtSummary) Args() []string {
 	var args []string

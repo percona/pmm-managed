@@ -15,33 +15,31 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Package inmemory is an infrastructure level package that provides in memory storage implementations.
-package inmemory
+package action
 
 import (
 	"context"
 	"sync"
 
 	"github.com/pkg/errors"
-
-	"github.com/percona/pmm-managed/services/action"
 )
 
-// ActionStorage in memory action results storage.
-type ActionStorage struct {
-	container map[string]*action.Result
+// inMemoryStorage in memory action results storage implementation.
+type inMemoryStorage struct {
+	container map[string]*Result
 	mx        sync.Mutex
 }
 
-// NewActionStorage created new InMemoryActionsStorage.
-func NewActionStorage() *ActionStorage {
-	return &ActionStorage{
-		container: make(map[string]*action.Result),
+// NewInMemoryStorage created new InMemoryActionsStorage.
+func NewInMemoryStorage() Storage {
+	return &inMemoryStorage{
+		container: make(map[string]*Result),
 	}
 }
 
 // Store stores an action result in action results storage.
 //nolint:unparam
-func (s *ActionStorage) Store(ctx context.Context, result *action.Result) error {
+func (s *inMemoryStorage) Store(ctx context.Context, result *Result) error {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	_, ok := s.container[result.ID]
@@ -54,7 +52,7 @@ func (s *ActionStorage) Store(ctx context.Context, result *action.Result) error 
 
 // Update updates an action result in action results storage.
 //nolint:unparam
-func (s *ActionStorage) Update(ctx context.Context, result *action.Result) error {
+func (s *inMemoryStorage) Update(ctx context.Context, result *Result) error {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	_, ok := s.container[result.ID]
@@ -73,7 +71,7 @@ func (s *ActionStorage) Update(ctx context.Context, result *action.Result) error
 
 // Load loads an action result from storage by action id.
 //nolint:unparam
-func (s *ActionStorage) Load(ctx context.Context, id string) (*action.Result, error) {
+func (s *inMemoryStorage) Load(ctx context.Context, id string) (*Result, error) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	v, ok := s.container[id]

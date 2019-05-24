@@ -66,7 +66,6 @@ import (
 	"github.com/percona/pmm-managed/services/qan"
 	servergrpc "github.com/percona/pmm-managed/services/server/grpc"
 	"github.com/percona/pmm-managed/services/telemetry"
-	"github.com/percona/pmm-managed/storage/inmemory"
 	"github.com/percona/pmm-managed/utils/interceptors"
 	"github.com/percona/pmm-managed/utils/logger"
 	"github.com/percona/pmm-managed/utils/ports"
@@ -132,9 +131,8 @@ type serviceDependencies struct {
 	portsRegistry  *ports.Registry
 	agentsRegistry *agents.Registry
 	logs           *logs.Logs
-	actionStorage  action.Storage
-	rvr            action.PMMAgentIDResolver
-	dsn            action.DSNResolver
+	aStorage       action.Storage
+	aFactory       action.Factory
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -170,14 +168,13 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsRegistry)
 	mongodbSvc := management.NewMongoDBService(deps.db, deps.agentsRegistry)
 	postgresqlSvc := management.NewPostgreSQLService(deps.db, deps.agentsRegistry)
-	actionsSvc := action.NewService(deps.agentsRegistry, deps.actionStorage, deps.rvr, deps.dsn)
 
 	managementpb.RegisterNodeServer(gRPCServer, managementgrpc.NewManagementNodeServer(nodeSvc))
 	managementpb.RegisterServiceServer(gRPCServer, managementgrpc.NewManagementServiceServer(serviceSvc))
 	managementpb.RegisterMySQLServer(gRPCServer, managementgrpc.NewManagementMySQLServer(mysqlSvc))
 	managementpb.RegisterMongoDBServer(gRPCServer, managementgrpc.NewManagementMongoDBServer(mongodbSvc))
 	managementpb.RegisterPostgreSQLServer(gRPCServer, managementgrpc.NewManagementPostgreSQLServer(postgresqlSvc))
-	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(actionsSvc))
+	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(deps.agentsRegistry, deps.aStorage, deps.aFactory))
 
 	if *debugF {
 		l.Debug("Reflection and channelz are enabled.")
@@ -405,9 +402,9 @@ func main() {
 		l.Panicf("Prometheus service problem: %+v", err)
 	}
 
-	actionStorage := inmemory.NewActionStorage()
+	aStorage := action.NewInMemoryStorage()
 	qanClient := getQANClient(ctx, db)
-	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient, actionStorage)
+	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient, aStorage)
 	logs := logs.New(version.Version)
 
 	deps := &serviceDependencies{
@@ -416,9 +413,8 @@ func main() {
 		portsRegistry:  ports.NewRegistry(10000, 10999, nil),
 		agentsRegistry: agentsRegistry,
 		logs:           logs,
-		actionStorage:  actionStorage,
-		rvr:            models.NewPMMAgentIDSQLResolver(db),
-		dsn:            models.NewDSNResolver(db),
+		aStorage:       aStorage,
+		aFactory:       action.NewFactory(db),
 	}
 
 	var wg sync.WaitGroup

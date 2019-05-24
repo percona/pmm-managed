@@ -502,17 +502,17 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, service *models
 	case models.MySQLServiceType:
 		request = &agentpb.CheckConnectionRequest{
 			Type: inventorypb.ServiceType_MYSQL_SERVICE,
-			Dsn:  mysqlDSN(service, agent),
+			Dsn:  models.MySQLDSN(service, agent),
 		}
 	case models.PostgreSQLServiceType:
 		request = &agentpb.CheckConnectionRequest{
 			Type: inventorypb.ServiceType_POSTGRESQL_SERVICE,
-			Dsn:  postgresqlDSN(service, agent),
+			Dsn:  models.PostgreSQLDSN(service, agent),
 		}
 	case models.MongoDBServiceType:
 		request = &agentpb.CheckConnectionRequest{
 			Type: inventorypb.ServiceType_MONGODB_SERVICE,
-			Dsn:  mongoDSN(service, agent),
+			Dsn:  models.MongoDBDSN(service, agent),
 		}
 	default:
 		l.Panicf("unhandled Service type %s", service.ServiceType)
@@ -568,8 +568,13 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, a *action.PtSummary
 		},
 	}
 
-	_, err := r.sendRequest(ctx, a.PMMAgentID, aRequest)
-	return err
+	agent, err := r.get(a.PMMAgentID)
+	if err != nil {
+		return err
+	}
+
+	agent.channel.SendRequest(aRequest)
+	return nil
 }
 
 // StartPTMySQLSummaryAction starts pt-mysql-summary action on pmm-agent.
@@ -584,8 +589,13 @@ func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, a *action.PtMy
 		},
 	}
 
-	_, err := r.sendRequest(ctx, a.PMMAgentID, aRequest)
-	return err
+	agent, err := r.get(a.PMMAgentID)
+	if err != nil {
+		return err
+	}
+
+	agent.channel.SendRequest(aRequest)
+	return nil
 }
 
 // StartMySQLExplainAction starts mysql-explain action on pmm-agent.
@@ -602,8 +612,13 @@ func (r *Registry) StartMySQLExplainAction(ctx context.Context, a *action.MySQLE
 		},
 	}
 
-	_, err := r.sendRequest(ctx, a.PMMAgentID, aRequest)
-	return err
+	agent, err := r.get(a.PMMAgentID)
+	if err != nil {
+		return err
+	}
+
+	agent.channel.SendRequest(aRequest)
+	return nil
 }
 
 // StartMySQLExplainJSONAction starts mysql-explain-json action on pmm-agent.
@@ -620,27 +635,23 @@ func (r *Registry) StartMySQLExplainJSONAction(ctx context.Context, a *action.My
 		},
 	}
 
-	_, err := r.sendRequest(ctx, a.PMMAgentID, aRequest)
-	return err
+	agent, err := r.get(a.PMMAgentID)
+	if err != nil {
+		return err
+	}
+
+	agent.channel.SendRequest(aRequest)
+	return nil
 }
 
 // StopAction stops action with given given id.
 func (r *Registry) StopAction(ctx context.Context, actionID, pmmAgentID string) error {
-	_, err := r.sendRequest(ctx, pmmAgentID, &agentpb.StopActionRequest{ActionId: actionID})
-	return err
-}
-
-// SendRequest sends request to pmm agent.
-//nolint:unparam
-func (r *Registry) sendRequest(ctx context.Context, pmmAgentID string, payload agentpb.ServerRequestPayload) (agentpb.AgentResponsePayload, error) {
-	r.rw.RLock()
-	agent, ok := r.agents[pmmAgentID]
-	r.rw.RUnlock()
-	if !ok || agent == nil {
-		return nil, errors.New("Couldn't send a request to pmm-agent. Looks like it was disconnected")
+	agent, err := r.get(actionID)
+	if err != nil {
+		return err
 	}
-
-	return agent.channel.SendRequest(payload), nil
+	agent.channel.SendRequest(&agentpb.StopActionRequest{ActionId: actionID})
+	return nil
 }
 
 // check interfaces
