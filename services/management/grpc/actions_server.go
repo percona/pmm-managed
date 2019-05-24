@@ -56,7 +56,7 @@ func (s *actionsServer) GetAction(ctx context.Context, req *managementpb.GetActi
 }
 
 // StartPTSummaryAction starts pt-summary action.
-//nolint:lll
+//nolint:lll,dupl
 func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
 	a, err := s.f.NewPTSummary(ctx, req.NodeId, req.PmmAgentId)
 	if err != nil {
@@ -80,7 +80,7 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 }
 
 // StartPTMySQLSummaryAction starts pt-mysql-summary action.
-//nolint:lll
+//nolint:lll,dupl
 func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
 	a, err := s.f.NewPTMySQLSummary(ctx, req.ServiceId, req.PmmAgentId)
 	if err != nil {
@@ -104,7 +104,7 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 }
 
 // StartMySQLExplainAction starts mysql-explain action.
-//nolint:lll
+//nolint:lll,dupl
 func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *managementpb.StartMySQLExplainActionRequest) (*managementpb.StartMySQLExplainActionResponse, error) {
 	a, err := s.f.NewMySQLExplain(ctx, req.ServiceId, req.PmmAgentId, req.Query)
 	if err != nil {
@@ -128,7 +128,7 @@ func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *manage
 }
 
 // StartMySQLExplainJSONAction starts mysql-explain json action.
-//nolint:lll
+//nolint:lll,dupl
 func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *managementpb.StartMySQLExplainJSONActionRequest) (*managementpb.StartMySQLExplainJSONActionResponse, error) {
 	a, err := s.f.NewMySQLExplainJSON(ctx, req.ServiceId, req.PmmAgentId, req.Query)
 	if err != nil {
