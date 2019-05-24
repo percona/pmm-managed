@@ -16,11 +16,19 @@
 
 package action
 
-import (
-	"context"
+type PtSummary struct {
+	ID         string
+	NodeID     string
+	PMMAgentID string
+	Args       []string
+}
 
-	"gopkg.in/reform.v1"
-)
+type PtMySQLSummary struct {
+	ID         string
+	ServiceID  string
+	PMMAgentID string
+	Args       []string
+}
 
 type MySQLExplain struct {
 	ID         string
@@ -28,36 +36,21 @@ type MySQLExplain struct {
 	PMMAgentID string
 	Dsn        string
 	Query      string
-
-	q *reform.Querier
-	s MySQLExplainStarter
-	r PMMAgentIDResolver
 }
 
-func NewMySQLExplain(q *reform.Querier, s MySQLExplainStarter, r PMMAgentIDResolver) *MySQLExplain {
-	return &MySQLExplain{
-		ID: createActionID(),
-		q:  q,
-		s:  s,
-		r:  r,
-	}
+type MySQLExplainJSON struct {
+	ID         string
+	ServiceID  string
+	PMMAgentID string
+	Dsn        string
+	Query      string
 }
 
-func (exp *MySQLExplain) Prepare(serviceID, pmmAgentID, query string) error {
-	var err error
-	exp.Query = query
-	exp.ServiceID = serviceID
-	exp.PMMAgentID = pmmAgentID
-
-	exp.PMMAgentID, err = exp.r.ResolveByServiceID(exp.ServiceID, exp.PMMAgentID)
-	if err != nil {
-		return err
-	}
-	// TODO: Add DSN string: findAgentForService(MYSQLD_EXPORTER, req.ServiceID)
-
-	return nil
-}
-
-func (exp *MySQLExplain) Start(ctx context.Context) error {
-	return exp.s.StartMySQLExplainAction(ctx, exp)
+// Result describes an PMM Action result which is storing in ActionsResult storage.
+type Result struct {
+	ID         string
+	PmmAgentID string
+	Done       bool
+	Error      string
+	Output     string
 }

@@ -20,12 +20,14 @@ import (
 	"context"
 	"sync"
 
-	"github.com/percona/pmm-managed/action"
+	"github.com/pkg/errors"
+
+	"github.com/percona/pmm-managed/services/action"
 )
 
 // InMemory in memory action results storage.
 type InMemory struct {
-	container map[string]action.Result
+	container map[string]*action.Result
 	mx        sync.Mutex
 }
 
@@ -35,19 +37,42 @@ func NewInMemory() *InMemory {
 }
 
 // Store stores an action result in action results storage.
-func (s *InMemory) Store(ctx context.Context, result *action.Result) {
+func (s *InMemory) Store(ctx context.Context, result *action.Result) error {
 	s.mx.Lock()
 	defer s.mx.Unlock()
-	s.container[result.ID] = *result
+	_, ok := s.container[result.ID]
+	if ok {
+		return errors.New("ActionResult already exists")
+	}
+	s.container[result.ID] = result
+	return nil
+}
+
+// Store stores an action result in action results storage.
+func (s *InMemory) Update(ctx context.Context, result *action.Result) error {
+	s.mx.Lock()
+	defer s.mx.Unlock()
+	_, ok := s.container[result.ID]
+	if !ok {
+		return errors.New("ActionResult doesn't exists")
+	}
+
+	a := s.container[result.ID]
+
+	a.PmmAgentID = result.PmmAgentID
+	a.Error = result.Error
+	a.Done = result.Done
+	a.Output = result.Output
+	return nil
 }
 
 // Load gets an action result from storage by action id.
-func (s *InMemory) Load(ctx context.Context, id string) (*action.Result, bool) {
+func (s *InMemory) Load(ctx context.Context, id string) (*action.Result, error) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	v, ok := s.container[id]
 	if !ok {
-		return nil, false
+		return nil, errors.New("ActionResult not found")
 	}
-	return &v, true
+	return v, nil
 }

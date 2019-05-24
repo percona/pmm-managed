@@ -34,8 +34,8 @@ import (
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
-	"github.com/percona/pmm-managed/action"
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/action"
 	"github.com/percona/pmm-managed/services/agents/channel"
 	"github.com/percona/pmm-managed/utils/logger"
 )
@@ -193,13 +193,17 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 
 			case *agentpb.ActionResultRequest:
 				// TODO: PMM-3978: In the future we need to merge action parts before send it to storage.
-				r.aStorage.Store(context.TODO(), &action.Result{
+				err := r.aStorage.Update(context.TODO(), &action.Result{
 					ID:         p.ActionId,
 					PmmAgentID: agent.id,
 					Done:       p.Done,
 					Error:      p.Error,
 					Output:     string(p.Output),
 				})
+				if err != nil {
+					l.Warnf(err.Error())
+				}
+
 				if !p.Done {
 					l.Warnf("Action was done with an error: %v.", p.Error)
 				}

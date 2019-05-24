@@ -53,10 +53,9 @@ import (
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
-	"github.com/percona/pmm-managed/action"
-	actiongrpc "github.com/percona/pmm-managed/action/grpc"
-	actionstorage "github.com/percona/pmm-managed/action/storage"
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/action"
+	actionstorage "github.com/percona/pmm-managed/services/action/storage"
 	"github.com/percona/pmm-managed/services/agents"
 	agentgrpc "github.com/percona/pmm-managed/services/agents/grpc"
 	"github.com/percona/pmm-managed/services/inventory"
@@ -135,6 +134,7 @@ type serviceDependencies struct {
 	logs           *logs.Logs
 	actionStorage  action.Storage
 	rvr            action.PMMAgentIDResolver
+	dsn            action.DSNResolver
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -170,13 +170,14 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsRegistry)
 	mongodbSvc := management.NewMongoDBService(deps.db, deps.agentsRegistry)
 	postgresqlSvc := management.NewPostgreSQLService(deps.db, deps.agentsRegistry)
+	actionsSvc := action.NewService(deps.agentsRegistry, deps.actionStorage, deps.rvr, deps.dsn)
 
 	managementpb.RegisterNodeServer(gRPCServer, managementgrpc.NewManagementNodeServer(nodeSvc))
 	managementpb.RegisterServiceServer(gRPCServer, managementgrpc.NewManagementServiceServer(serviceSvc))
 	managementpb.RegisterMySQLServer(gRPCServer, managementgrpc.NewManagementMySQLServer(mysqlSvc))
 	managementpb.RegisterMongoDBServer(gRPCServer, managementgrpc.NewManagementMongoDBServer(mongodbSvc))
 	managementpb.RegisterPostgreSQLServer(gRPCServer, managementgrpc.NewManagementPostgreSQLServer(postgresqlSvc))
-	managementpb.RegisterActionsServer(gRPCServer, actiongrpc.NewServer(deps.agentsRegistry, deps.actionStorage, deps.rvr, deps.db))
+	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(actionsSvc))
 
 	if *debugF {
 		l.Debug("Reflection and channelz are enabled.")
@@ -417,6 +418,7 @@ func main() {
 		logs:           logs,
 		actionStorage:  actionStorage,
 		rvr:            models.NewPMMAgentIDSQLResolver(db),
+		dsn:            models.NewDSNResolver(db),
 	}
 
 	var wg sync.WaitGroup

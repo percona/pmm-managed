@@ -35,7 +35,7 @@ func NewPMMAgentIDSQLResolver(db *reform.DB) *PMMAgentIDSQLResolver {
 	}
 }
 
-func (r *PMMAgentIDSQLResolver) ResolveByServiceID(serviceID, pmmAgentID string) (string, error) {
+func (r *PMMAgentIDSQLResolver) ResolvePMMAgentIDByServiceID(serviceID, pmmAgentID string) (string, error) {
 	agents, err := FindPMMAgentsForService(r.db.Querier, serviceID)
 	if err != nil {
 		return "", err
@@ -44,7 +44,7 @@ func (r *PMMAgentIDSQLResolver) ResolveByServiceID(serviceID, pmmAgentID string)
 	return validatePMMAgentID(pmmAgentID, agents)
 }
 
-func (r *PMMAgentIDSQLResolver) ResolveByNodeID(nodeID, pmmAgentID string) (string, error) {
+func (r *PMMAgentIDSQLResolver) ResolvePMMAgentIDByNodeID(nodeID, pmmAgentID string) (string, error) {
 	agents, err := FindPMMAgentsForNode(r.db.Querier, nodeID)
 	if err != nil {
 		return "", err

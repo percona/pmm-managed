@@ -415,6 +415,23 @@ func FindPMMAgentsForService(q *reform.Querier, serviceID string) ([]*Agent, err
 	return res, nil
 }
 
+func FindAgentsByPmmAgentIDAndAgentType(q *reform.Querier, pmmAgentID string, agentType AgentType) ([]*Agent, error) {
+	structs, err := q.SelectAllFrom(AgentTable, "WHERE pmm_agent_id = $1 AND agent_type = $2", pmmAgentID, agentType)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to select Agents")
+	}
+
+	var res []*Agent
+	for _, str := range structs {
+		row := str.(*Agent)
+		if row.AgentType == agentType {
+			res = append(res, row)
+		}
+	}
+
+	return res, nil
+}
+
 // RemoveAgent removes Agent by ID.
 func RemoveAgent(q *reform.Querier, id string, mode RemoveMode) (*Agent, error) {
 	a, err := AgentFindByID(q, id)
