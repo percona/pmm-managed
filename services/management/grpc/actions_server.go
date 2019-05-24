@@ -63,11 +63,6 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 
-	err = s.s.Store(ctx, &action.Result{ID: a.ID, PmmAgentID: a.PMMAgentID})
-	if err != nil {
-		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
-	}
-
 	err = s.r.StartPTSummaryAction(ctx, a)
 	if err != nil {
 		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
@@ -87,14 +82,9 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 
-	err = s.s.Store(ctx, &action.Result{ID: a.ID, PmmAgentID: a.PMMAgentID})
-	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, err.Error())
-	}
-
 	err = s.r.StartPTMySQLSummaryAction(ctx, a)
 	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, err.Error())
+		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
 
 	return &managementpb.StartPTMySQLSummaryActionResponse{
@@ -107,11 +97,6 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 //nolint:lll,dupl
 func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *managementpb.StartMySQLExplainActionRequest) (*managementpb.StartMySQLExplainActionResponse, error) {
 	a, err := s.f.NewMySQLExplain(ctx, req.ServiceId, req.PmmAgentId, req.Query)
-	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, err.Error())
-	}
-
-	err = s.s.Store(ctx, &action.Result{ID: a.ID, PmmAgentID: a.PMMAgentID})
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
@@ -131,11 +116,6 @@ func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *manage
 //nolint:lll,dupl
 func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *managementpb.StartMySQLExplainJSONActionRequest) (*managementpb.StartMySQLExplainJSONActionResponse, error) {
 	a, err := s.f.NewMySQLExplainJSON(ctx, req.ServiceId, req.PmmAgentId, req.Query)
-	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, err.Error())
-	}
-
-	err = s.s.Store(ctx, &action.Result{ID: a.ID, PmmAgentID: a.PMMAgentID})
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}

@@ -414,7 +414,7 @@ func main() {
 		agentsRegistry: agentsRegistry,
 		logs:           logs,
 		aStorage:       aStorage,
-		aFactory:       action.NewFactory(db),
+		aFactory:       action.NewFactory(db, aStorage),
 	}
 
 	var wg sync.WaitGroup

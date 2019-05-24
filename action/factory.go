@@ -28,12 +28,14 @@ import (
 
 type factory struct {
 	db *reform.DB
+	s  Storage
 }
 
 // NewFactory creates new actions factory.
-func NewFactory(db *reform.DB) Factory {
+func NewFactory(db *reform.DB, s Storage) Factory {
 	return &factory{
 		db: db,
+		s:  s,
 	}
 }
 
@@ -59,6 +61,11 @@ func (f *factory) NewPTSummary(ctx context.Context, nodeID, pmmAgentID string) (
 		return nil, errors.Wrap(err, "couldn't create action")
 	}
 
+	err = f.s.Store(ctx, &Result{ID: a.ID, PmmAgentID: a.PMMAgentID})
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't create action")
+	}
+
 	return a, nil
 }
 
@@ -76,6 +83,11 @@ func (f *factory) NewPTMySQLSummary(ctx context.Context, serviceID, pmmAgentID s
 	}
 
 	a.PMMAgentID, err = findPmmAgentIDToRunAction(a.PMMAgentID, agents)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't create action")
+	}
+
+	err = f.s.Store(ctx, &Result{ID: a.ID, PmmAgentID: a.PMMAgentID})
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't create action")
 	}
@@ -106,6 +118,11 @@ func (f *factory) NewMySQLExplain(ctx context.Context, serviceID, pmmAgentID, qu
 		return nil, errors.Wrap(err, "couldn't create action")
 	}
 
+	err = f.s.Store(ctx, &Result{ID: a.ID, PmmAgentID: a.PMMAgentID})
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't create action")
+	}
+
 	return a, nil
 }
 
@@ -128,6 +145,11 @@ func (f *factory) NewMySQLExplainJSON(ctx context.Context, serviceID, pmmAgentID
 	}
 
 	a.Dsn, err = f.resolveDSNByServiceID(a.ServiceID)
+	if err != nil {
+		return nil, errors.Wrap(err, "couldn't create action")
+	}
+
+	err = f.s.Store(ctx, &Result{ID: a.ID, PmmAgentID: a.PMMAgentID})
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't create action")
 	}
