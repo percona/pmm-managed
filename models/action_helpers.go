@@ -34,7 +34,7 @@ func InsertActionResult(q *reform.Querier, result *ActionResult) error {
 }
 
 // UpdateActionResult updates an action result in action results storage.
-//nolint:unparam
+//nolint:unparam,unused
 func UpdateActionResult(q *reform.Querier, result *ActionResult) error {
 	if err := q.Update(result); err != nil {
 		return errors.WithStack(err)
