@@ -97,6 +97,7 @@ func DSNforMongoDB(service *Service, exporter *Agent) string {
 	return u.String()
 }
 
+// ResolveDSNByServiceID resolves DSN by service id.
 func ResolveDSNByServiceID(q *reform.Querier, serviceID string) (string, error) {
 	var result string
 

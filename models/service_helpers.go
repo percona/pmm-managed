@@ -225,23 +225,3 @@ func RemoveService(q *reform.Querier, id string, mode RemoveMode) error {
 
 	return errors.Wrap(q.Delete(s), "failed to delete Service")
 }
-
-func FindPmmAgentIDToRunAction(pmmAgentID string, agents []*Agent) (string, error) {
-	// no explicit ID is given, and there is only one
-	if pmmAgentID == "" && len(agents) == 1 {
-		return agents[0].AgentID, nil
-	}
-
-	// no explicit ID is given, and there are zero or several
-	if pmmAgentID == "" {
-		return "", errors.New("couldn't find pmm-agent-id to run action")
-	}
-
-	// check that explicit agent id is correct
-	for _, a := range agents {
-		if a.AgentID == pmmAgentID {
-			return a.AgentID, nil
-		}
-	}
-	return "", errors.New("couldn't find pmm-agent-id to run action")
-}
