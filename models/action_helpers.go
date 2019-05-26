@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package action
+package models
 
 import (
 	"context"
@@ -23,22 +23,22 @@ import (
 	"github.com/pkg/errors"
 )
 
-// InMemoryStorage in memory action results storage implementation.
-type InMemoryStorage struct {
-	container map[string]*Result
+// InMemoryActionsStorage in memory action results storage implementation.
+type InMemoryActionsStorage struct {
+	container map[string]*ActionResult
 	mx        sync.Mutex
 }
 
-// NewInMemoryStorage created new InMemoryActionsStorage.
-func NewInMemoryStorage() *InMemoryStorage {
-	return &InMemoryStorage{
-		container: make(map[string]*Result),
+// NewInMemoryActionsStorage created new InMemoryActionsStorage.
+func NewInMemoryActionsStorage() *InMemoryActionsStorage {
+	return &InMemoryActionsStorage{
+		container: make(map[string]*ActionResult),
 	}
 }
 
 // Store stores an action result in action results storage.
 //nolint:unparam
-func (s *InMemoryStorage) Store(ctx context.Context, result *Result) error {
+func (s *InMemoryActionsStorage) Store(ctx context.Context, result *ActionResult) error {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	_, ok := s.container[result.ID]
@@ -51,7 +51,7 @@ func (s *InMemoryStorage) Store(ctx context.Context, result *Result) error {
 
 // Update updates an action result in action results storage.
 //nolint:unparam
-func (s *InMemoryStorage) Update(ctx context.Context, result *Result) error {
+func (s *InMemoryActionsStorage) Update(ctx context.Context, result *ActionResult) error {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	_, ok := s.container[result.ID]
@@ -70,7 +70,7 @@ func (s *InMemoryStorage) Update(ctx context.Context, result *Result) error {
 
 // Load loads an action result from storage by action id.
 //nolint:unparam
-func (s *InMemoryStorage) Load(ctx context.Context, id string) (*Result, error) {
+func (s *InMemoryActionsStorage) Load(ctx context.Context, id string) (*ActionResult, error) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	v, ok := s.container[id]

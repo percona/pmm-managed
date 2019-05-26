@@ -53,7 +53,6 @@ import (
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
-	"github.com/percona/pmm-managed/action"
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/agents"
 	agentgrpc "github.com/percona/pmm-managed/services/agents/grpc"
@@ -131,8 +130,7 @@ type serviceDependencies struct {
 	portsRegistry  *ports.Registry
 	agentsRegistry *agents.Registry
 	logs           *logs.Logs
-	aStorage       *action.InMemoryStorage
-	aFactory       *action.Factory
+	aStorage       *models.InMemoryActionsStorage
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -174,7 +172,7 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	managementpb.RegisterMySQLServer(gRPCServer, managementgrpc.NewManagementMySQLServer(mysqlSvc))
 	managementpb.RegisterMongoDBServer(gRPCServer, managementgrpc.NewManagementMongoDBServer(mongodbSvc))
 	managementpb.RegisterPostgreSQLServer(gRPCServer, managementgrpc.NewManagementPostgreSQLServer(postgresqlSvc))
-	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(deps.agentsRegistry, deps.aStorage, deps.aFactory))
+	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(deps.agentsRegistry, deps.aStorage, deps.db))
 
 	if *debugF {
 		l.Debug("Reflection and channelz are enabled.")
@@ -402,7 +400,7 @@ func main() {
 		l.Panicf("Prometheus service problem: %+v", err)
 	}
 
-	aStorage := action.NewInMemoryStorage()
+	aStorage := models.NewInMemoryActionsStorage()
 	qanClient := getQANClient(ctx, db)
 	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient, aStorage)
 	logs := logs.New(version.Version)
@@ -414,7 +412,6 @@ func main() {
 		agentsRegistry: agentsRegistry,
 		logs:           logs,
 		aStorage:       aStorage,
-		aFactory:       action.NewFactory(db, aStorage),
 	}
 
 	var wg sync.WaitGroup

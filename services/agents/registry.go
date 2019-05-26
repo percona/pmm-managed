@@ -34,7 +34,6 @@ import (
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
-	"github.com/percona/pmm-managed/action"
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/agents/channel"
 	"github.com/percona/pmm-managed/utils/logger"
@@ -58,7 +57,7 @@ type Registry struct {
 	db         *reform.DB
 	prometheus prometheus
 	qanClient  qanClient
-	aStorage   *action.InMemoryStorage //nolint:unused
+	aStorage   *models.InMemoryActionsStorage //nolint:unused
 
 	rw     sync.RWMutex
 	agents map[string]*agentInfo // id -> info
@@ -71,7 +70,7 @@ type Registry struct {
 }
 
 // NewRegistry creates a new registry with given database connection.
-func NewRegistry(db *reform.DB, prometheus prometheus, qanClient qanClient, aStorage *action.InMemoryStorage) *Registry {
+func NewRegistry(db *reform.DB, prometheus prometheus, qanClient qanClient, aStorage *models.InMemoryActionsStorage) *Registry {
 	r := &Registry{
 		db:         db,
 		prometheus: prometheus,
@@ -193,7 +192,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 
 			case *agentpb.ActionResultRequest:
 				// TODO: PMM-3978: In the future we need to merge action parts before send it to storage.
-				err := r.aStorage.Update(context.TODO(), &action.Result{
+				err := r.aStorage.Update(context.TODO(), &models.ActionResult{
 					ID:         p.ActionId,
 					PmmAgentID: agent.id,
 					Done:       p.Done,
@@ -558,7 +557,7 @@ func (r *Registry) Collect(ch chan<- prom.Metric) {
 
 // StartPTSummaryAction starts pt-summary action on pmm-agent.
 //nolint:unparam
-func (r *Registry) StartPTSummaryAction(ctx context.Context, a *action.PtSummary) error {
+func (r *Registry) StartPTSummaryAction(ctx context.Context, a *models.PtSummaryAction) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: a.ID,
 		Type:     managementpb.ActionType_PT_SUMMARY,
@@ -580,7 +579,7 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, a *action.PtSummary
 
 // StartPTMySQLSummaryAction starts pt-mysql-summary action on pmm-agent.
 //nolint:unparam
-func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, a *action.PtMySQLSummary) error {
+func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, a *models.PtMySQLSummaryAction) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: a.ID,
 		Type:     managementpb.ActionType_PT_MYSQL_SUMMARY,
@@ -602,7 +601,7 @@ func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, a *action.PtMy
 
 // StartMySQLExplainAction starts mysql-explain action on pmm-agent.
 //nolint:unparam
-func (r *Registry) StartMySQLExplainAction(ctx context.Context, a *action.MySQLExplain) error {
+func (r *Registry) StartMySQLExplainAction(ctx context.Context, a *models.MySQLExplainAction) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: a.ID,
 		Type:     managementpb.ActionType_MYSQL_EXPLAIN,
@@ -626,7 +625,7 @@ func (r *Registry) StartMySQLExplainAction(ctx context.Context, a *action.MySQLE
 
 // StartMySQLExplainJSONAction starts mysql-explain-json action on pmm-agent.
 //nolint:unparam
-func (r *Registry) StartMySQLExplainJSONAction(ctx context.Context, a *action.MySQLExplainJSON) error {
+func (r *Registry) StartMySQLExplainJSONAction(ctx context.Context, a *models.MySQLExplainJSONAction) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: a.ID,
 		Type:     managementpb.ActionType_MYSQL_EXPLAIN,

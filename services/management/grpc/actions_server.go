@@ -22,21 +22,22 @@ import (
 	"github.com/percona/pmm/api/managementpb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"gopkg.in/reform.v1"
 
-	"github.com/percona/pmm-managed/action"
+	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/agents"
 )
 
 //nolint:unused
 type actionsServer struct {
-	r *agents.Registry
-	s *action.InMemoryStorage
-	f *action.Factory
+	r  *agents.Registry
+	s  *models.InMemoryActionsStorage
+	db *reform.DB
 }
 
 // NewActionsServer creates Management Actions Server.
-func NewActionsServer(r *agents.Registry, s *action.InMemoryStorage, f *action.Factory) managementpb.ActionsServer {
-	return &actionsServer{r, s, f}
+func NewActionsServer(r *agents.Registry, s *models.InMemoryActionsStorage, db *reform.DB) managementpb.ActionsServer {
+	return &actionsServer{r, s, db}
 }
 
 // GetAction gets an action result.
@@ -59,9 +60,30 @@ func (s *actionsServer) GetAction(ctx context.Context, req *managementpb.GetActi
 // StartPTSummaryAction starts pt-summary action.
 //nolint:lll,dupl
 func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
-	a, err := s.f.NewPTSummary(ctx, req.NodeId, req.PmmAgentId)
+	a := &models.PtSummaryAction{
+		ID:                 models.GetActionUUID(),
+		NodeID:             req.NodeId,
+		PMMAgentID:         req.PmmAgentId,
+		SummarizeMounts:    true,
+		SummarizeNetwork:   true,
+		SummarizeProcesses: true,
+		Sleep:              5,
+		Help:               false,
+	}
+
+	ag, err := models.FindPMMAgentsForNode(s.db.Querier, a.NodeID)
 	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, err.Error())
+		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+	}
+
+	a.PMMAgentID, err = models.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
+	if err != nil {
+		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+	}
+
+	err = s.s.Store(ctx, &models.ActionResult{ID: a.ID, PmmAgentID: a.PMMAgentID})
+	if err != nil {
+		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
 
 	err = s.r.StartPTSummaryAction(ctx, a)
@@ -78,9 +100,26 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 // StartPTMySQLSummaryAction starts pt-mysql-summary action.
 //nolint:lll,dupl
 func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
-	a, err := s.f.NewPTMySQLSummary(ctx, req.ServiceId, req.PmmAgentId)
+	a := &models.PtMySQLSummaryAction{
+		ID:         models.GetActionUUID(),
+		ServiceID:  req.ServiceId,
+		PMMAgentID: req.PmmAgentId,
+		Args:       []string{},
+	}
+
+	ag, err := models.FindPMMAgentsForService(s.db.Querier, a.ServiceID)
 	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, err.Error())
+		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+	}
+
+	a.PMMAgentID, err = models.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
+	if err != nil {
+		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+	}
+
+	err = s.s.Store(ctx, &models.ActionResult{ID: a.ID, PmmAgentID: a.PMMAgentID})
+	if err != nil {
+		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
 
 	err = s.r.StartPTMySQLSummaryAction(ctx, a)
@@ -97,9 +136,31 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 // StartMySQLExplainAction starts mysql-explain action.
 //nolint:lll,dupl
 func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *managementpb.StartMySQLExplainActionRequest) (*managementpb.StartMySQLExplainActionResponse, error) {
-	a, err := s.f.NewMySQLExplain(ctx, req.ServiceId, req.PmmAgentId, req.Query)
+	a := &models.MySQLExplainAction{
+		ID:         models.GetActionUUID(),
+		ServiceID:  req.ServiceId,
+		PMMAgentID: req.PmmAgentId,
+		Query:      req.Query,
+	}
+
+	ag, err := models.FindPMMAgentsForService(s.db.Querier, a.ServiceID)
 	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, err.Error())
+		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+	}
+
+	a.PMMAgentID, err = models.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
+	if err != nil {
+		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+	}
+
+	a.Dsn, err = models.ResolveDSNByServiceID(s.db.Querier, a.ServiceID)
+	if err != nil {
+		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+	}
+
+	err = s.s.Store(ctx, &models.ActionResult{ID: a.ID, PmmAgentID: a.PMMAgentID})
+	if err != nil {
+		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
 
 	err = s.r.StartMySQLExplainAction(ctx, a)
@@ -116,14 +177,31 @@ func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *manage
 // StartMySQLExplainJSONAction starts mysql-explain json action.
 //nolint:lll,dupl
 func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *managementpb.StartMySQLExplainJSONActionRequest) (*managementpb.StartMySQLExplainJSONActionResponse, error) {
-	a, err := s.f.NewMySQLExplainJSON(ctx, req.ServiceId, req.PmmAgentId, req.Query)
-	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, err.Error())
+	a := &models.MySQLExplainJSONAction{
+		ID:         models.GetActionUUID(),
+		ServiceID:  req.ServiceId,
+		PMMAgentID: req.PmmAgentId,
+		Query:      req.Query,
 	}
 
-	err = s.r.StartMySQLExplainJSONAction(ctx, a)
+	ag, err := models.FindPMMAgentsForService(s.db.Querier, a.ServiceID)
 	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, err.Error())
+		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+	}
+
+	a.PMMAgentID, err = models.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
+	if err != nil {
+		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+	}
+
+	a.Dsn, err = models.ResolveDSNByServiceID(s.db.Querier, a.ServiceID)
+	if err != nil {
+		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+	}
+
+	err = s.s.Store(ctx, &models.ActionResult{ID: a.ID, PmmAgentID: a.PMMAgentID})
+	if err != nil {
+		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
 
 	return &managementpb.StartMySQLExplainJSONActionResponse{

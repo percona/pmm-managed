@@ -24,6 +24,8 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/go-sql-driver/mysql"
+	"github.com/pkg/errors"
+	"gopkg.in/reform.v1"
 )
 
 // DSNforMySQL generates MySQL DSN string from service and exporter.
@@ -93,4 +95,57 @@ func DSNforMongoDB(service *Service, exporter *Agent) string {
 	}
 
 	return u.String()
+}
+
+func ResolveDSNByServiceID(q *reform.Querier, serviceID string) (string, error) {
+	var result string
+
+	svc, err := FindServiceByID(q, serviceID)
+	if err != nil {
+		return "", errors.Wrap(err, "couldn't resolve dsn")
+	}
+
+	pmmAgents, err := FindPMMAgentsForService(q, serviceID)
+	if err != nil {
+		return "", errors.Wrap(err, "couldn't resolve dsn")
+	}
+
+	if len(pmmAgents) != 1 {
+		return "", errors.New("couldn't resolve dsn, as there should be only one pmm-agent")
+	}
+
+	pmmAgentID := pmmAgents[0].AgentID
+	var agentType AgentType
+	switch svc.ServiceType {
+	case MySQLServiceType:
+		agentType = MySQLdExporterType
+	case MongoDBServiceType:
+		agentType = MongoDBExporterType
+	case PostgreSQLServiceType:
+		agentType = PostgresExporterType
+	default:
+		return "", errors.New("couldn't resolve dsn, as service is unsupported")
+	}
+
+	exporters, err := FindAgentsByPmmAgentIDAndAgentType(q, pmmAgentID, agentType)
+	if err != nil {
+		return "", errors.Wrap(err, "couldn't resolve dsn")
+	}
+
+	if len(exporters) != 1 {
+		return "", errors.New("couldn't resolve dsn, as there should be only one exporter")
+	}
+
+	switch svc.ServiceType {
+	case MySQLServiceType:
+		result = DSNforMySQL(svc, exporters[0])
+
+	case MongoDBServiceType:
+		result = DSNforMongoDB(svc, exporters[0])
+
+	case PostgreSQLServiceType:
+		result = DSNforPostgreSQL(svc, exporters[0])
+	}
+
+	return result, nil
 }

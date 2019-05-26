@@ -14,12 +14,16 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package action
+package models
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/google/uuid"
+)
 
 // PtSummary represents pt-summary domain model.
-type PtSummary struct {
+type PtSummaryAction struct {
 	ID         string
 	PMMAgentID string
 	NodeID     string
@@ -36,7 +40,7 @@ type PtSummary struct {
 }
 
 // Args returns arguments slice for pmm-agent actions implementation.
-func (s *PtSummary) Args() []string {
+func (s *PtSummaryAction) Args() []string {
 	var args []string
 	if s.Config != "" {
 		args = append(args, "--config", s.Config)
@@ -69,7 +73,7 @@ func (s *PtSummary) Args() []string {
 }
 
 // PtMySQLSummary represents pt-mysql-summary domain model.
-type PtMySQLSummary struct {
+type PtMySQLSummaryAction struct {
 	ID         string
 	PMMAgentID string
 	ServiceID  string
@@ -78,7 +82,7 @@ type PtMySQLSummary struct {
 }
 
 // MySQLExplain represents mysql-explain domain model.
-type MySQLExplain struct {
+type MySQLExplainAction struct {
 	ID         string
 	PMMAgentID string
 	ServiceID  string
@@ -88,7 +92,7 @@ type MySQLExplain struct {
 }
 
 // MySQLExplainJSON represents mysql-explain-json domain model.
-type MySQLExplainJSON struct {
+type MySQLExplainJSONAction struct {
 	ID         string
 	PMMAgentID string
 	ServiceID  string
@@ -98,11 +102,16 @@ type MySQLExplainJSON struct {
 }
 
 // Result describes an action result which is storing in persistent storage.
-type Result struct {
+type ActionResult struct {
 	ID         string
 	PmmAgentID string
 
 	Done   bool
 	Error  string
 	Output string
+}
+
+// nolint: unused
+func GetActionUUID() string {
+	return "/action_id/" + uuid.New().String()
 }
