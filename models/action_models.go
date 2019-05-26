@@ -38,6 +38,7 @@ type ActionResult struct {
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.
+//nolint:unparam
 func (s *ActionResult) BeforeInsert() error {
 	now := Now()
 	s.CreatedAt = now
@@ -46,12 +47,14 @@ func (s *ActionResult) BeforeInsert() error {
 }
 
 // BeforeUpdate implements reform.BeforeUpdater interface.
+//nolint:unparam
 func (s *ActionResult) BeforeUpdate() error {
 	s.UpdatedAt = Now()
 	return nil
 }
 
 // AfterFind implements reform.AfterFinder interface.
+//nolint:unparam
 func (s *ActionResult) AfterFind() error {
 	s.CreatedAt = s.CreatedAt.UTC()
 	s.UpdatedAt = s.UpdatedAt.UTC()

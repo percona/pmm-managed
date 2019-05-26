@@ -23,7 +23,7 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-// StoreActionResult stores an action result in action results storage.
+// InsertActionResult stores an action result in action results storage.
 //nolint:unparam
 func InsertActionResult(q *reform.Querier, result *ActionResult) error {
 	if err := q.Insert(result); err != nil {
