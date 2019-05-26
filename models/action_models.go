@@ -111,6 +111,7 @@ type ActionResult struct {
 	Output string
 }
 
+// GetActionUUID generates action uuid.
 // nolint: unused
 func GetActionUUID() string {
 	return "/action_id/" + uuid.New().String()
