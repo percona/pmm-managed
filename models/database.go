@@ -155,7 +155,10 @@ var databaseSchema = [][]string{
 			error VARCHAR,
 			output TEXT,
 
-			PRIMARY KEY (id),
+			created_at TIMESTAMP NOT NULL,
+			updated_at TIMESTAMP NOT NULL,
+
+			PRIMARY KEY (id)
 		)`,
 	},
 }
