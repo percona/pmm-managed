@@ -24,6 +24,7 @@ import (
 )
 
 // InMemoryActionsStorage in memory action results storage implementation.
+//nolint:unused
 type InMemoryActionsStorage struct {
 	container map[string]*ActionResult
 	mx        sync.Mutex

@@ -204,6 +204,11 @@ func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *ma
 		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
 
+	err = s.r.StartMySQLExplainJSONAction(ctx, a)
+	if err != nil {
+		return nil, status.Error(codes.FailedPrecondition, err.Error())
+	}
+
 	return &managementpb.StartMySQLExplainJSONActionResponse{
 		PmmAgentId: a.PMMAgentID,
 		ActionId:   a.ID,
