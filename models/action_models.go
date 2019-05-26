@@ -22,7 +22,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// PtSummary represents pt-summary domain model.
+// PtSummaryAction represents pt-summary domain model.
 type PtSummaryAction struct {
 	ID         string
 	PMMAgentID string
@@ -72,7 +72,7 @@ func (s *PtSummaryAction) Args() []string {
 	return args
 }
 
-// PtMySQLSummary represents pt-mysql-summary domain model.
+// PtMySQLSummaryAction represents pt-mysql-summary domain model.
 type PtMySQLSummaryAction struct {
 	ID         string
 	PMMAgentID string
@@ -81,7 +81,7 @@ type PtMySQLSummaryAction struct {
 	Args []string
 }
 
-// MySQLExplain represents mysql-explain domain model.
+// MySQLExplainAction represents mysql-explain domain model.
 type MySQLExplainAction struct {
 	ID         string
 	PMMAgentID string
@@ -91,7 +91,7 @@ type MySQLExplainAction struct {
 	Query string
 }
 
-// MySQLExplainJSON represents mysql-explain-json domain model.
+// MySQLExplainJSONAction represents mysql-explain-json domain model.
 type MySQLExplainJSONAction struct {
 	ID         string
 	PMMAgentID string
@@ -101,7 +101,7 @@ type MySQLExplainJSONAction struct {
 	Query string
 }
 
-// Result describes an action result which is storing in persistent storage.
+// ActionResult describes an action result which is storing in persistent storage.
 type ActionResult struct {
 	ID         string
 	PmmAgentID string
