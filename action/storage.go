@@ -23,22 +23,22 @@ import (
 	"github.com/pkg/errors"
 )
 
-// inMemoryStorage in memory action results storage implementation.
-type inMemoryStorage struct {
+// InMemoryStorage in memory action results storage implementation.
+type InMemoryStorage struct {
 	container map[string]*Result
 	mx        sync.Mutex
 }
 
 // NewInMemoryStorage created new InMemoryActionsStorage.
-func NewInMemoryStorage() Storage {
-	return &inMemoryStorage{
+func NewInMemoryStorage() *InMemoryStorage {
+	return &InMemoryStorage{
 		container: make(map[string]*Result),
 	}
 }
 
 // Store stores an action result in action results storage.
 //nolint:unparam
-func (s *inMemoryStorage) Store(ctx context.Context, result *Result) error {
+func (s *InMemoryStorage) Store(ctx context.Context, result *Result) error {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	_, ok := s.container[result.ID]
@@ -51,7 +51,7 @@ func (s *inMemoryStorage) Store(ctx context.Context, result *Result) error {
 
 // Update updates an action result in action results storage.
 //nolint:unparam
-func (s *inMemoryStorage) Update(ctx context.Context, result *Result) error {
+func (s *InMemoryStorage) Update(ctx context.Context, result *Result) error {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	_, ok := s.container[result.ID]
@@ -70,7 +70,7 @@ func (s *inMemoryStorage) Update(ctx context.Context, result *Result) error {
 
 // Load loads an action result from storage by action id.
 //nolint:unparam
-func (s *inMemoryStorage) Load(ctx context.Context, id string) (*Result, error) {
+func (s *InMemoryStorage) Load(ctx context.Context, id string) (*Result, error) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 	v, ok := s.container[id]

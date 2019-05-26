@@ -58,7 +58,7 @@ type Registry struct {
 	db         *reform.DB
 	prometheus prometheus
 	qanClient  qanClient
-	aStorage   action.Storage //nolint:unused
+	aStorage   *action.InMemoryStorage //nolint:unused
 
 	rw     sync.RWMutex
 	agents map[string]*agentInfo // id -> info
@@ -71,7 +71,7 @@ type Registry struct {
 }
 
 // NewRegistry creates a new registry with given database connection.
-func NewRegistry(db *reform.DB, prometheus prometheus, qanClient qanClient, aStorage action.Storage) *Registry {
+func NewRegistry(db *reform.DB, prometheus prometheus, qanClient qanClient, aStorage *action.InMemoryStorage) *Registry {
 	r := &Registry{
 		db:         db,
 		prometheus: prometheus,

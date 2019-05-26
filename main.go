@@ -131,8 +131,8 @@ type serviceDependencies struct {
 	portsRegistry  *ports.Registry
 	agentsRegistry *agents.Registry
 	logs           *logs.Logs
-	aStorage       action.Storage
-	aFactory       action.Factory
+	aStorage       *action.InMemoryStorage
+	aFactory       *action.Factory
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.

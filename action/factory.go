@@ -26,20 +26,20 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-type factory struct {
+type Factory struct {
 	db *reform.DB
-	s  Storage
+	s  *InMemoryStorage
 }
 
-// NewFactory creates new actions factory.
-func NewFactory(db *reform.DB, s Storage) Factory {
-	return &factory{
+// NewFactory creates new actions Factory.
+func NewFactory(db *reform.DB, s *InMemoryStorage) *Factory {
+	return &Factory{
 		db: db,
 		s:  s,
 	}
 }
 
-func (f *factory) NewPTSummary(ctx context.Context, nodeID, pmmAgentID string) (*PtSummary, error) {
+func (f *Factory) NewPTSummary(ctx context.Context, nodeID, pmmAgentID string) (*PtSummary, error) {
 	a := &PtSummary{
 		ID:                 getUUID(),
 		NodeID:             nodeID,
@@ -69,7 +69,7 @@ func (f *factory) NewPTSummary(ctx context.Context, nodeID, pmmAgentID string) (
 	return a, nil
 }
 
-func (f *factory) NewPTMySQLSummary(ctx context.Context, serviceID, pmmAgentID string) (*PtMySQLSummary, error) {
+func (f *Factory) NewPTMySQLSummary(ctx context.Context, serviceID, pmmAgentID string) (*PtMySQLSummary, error) {
 	a := &PtMySQLSummary{
 		ID:         getUUID(),
 		ServiceID:  serviceID,
@@ -96,7 +96,7 @@ func (f *factory) NewPTMySQLSummary(ctx context.Context, serviceID, pmmAgentID s
 }
 
 //nolint:dupl
-func (f *factory) NewMySQLExplain(ctx context.Context, serviceID, pmmAgentID, query string) (*MySQLExplain, error) {
+func (f *Factory) NewMySQLExplain(ctx context.Context, serviceID, pmmAgentID, query string) (*MySQLExplain, error) {
 	a := &MySQLExplain{
 		ID:         getUUID(),
 		ServiceID:  serviceID,
@@ -128,7 +128,7 @@ func (f *factory) NewMySQLExplain(ctx context.Context, serviceID, pmmAgentID, qu
 }
 
 //nolint:dupl
-func (f *factory) NewMySQLExplainJSON(ctx context.Context, serviceID, pmmAgentID, query string) (*MySQLExplainJSON, error) {
+func (f *Factory) NewMySQLExplainJSON(ctx context.Context, serviceID, pmmAgentID, query string) (*MySQLExplainJSON, error) {
 	a := &MySQLExplainJSON{
 		ID:         getUUID(),
 		ServiceID:  serviceID,
@@ -159,7 +159,7 @@ func (f *factory) NewMySQLExplainJSON(ctx context.Context, serviceID, pmmAgentID
 	return a, nil
 }
 
-func (f *factory) resolveDSNByServiceID(serviceID string) (string, error) {
+func (f *Factory) resolveDSNByServiceID(serviceID string) (string, error) {
 	var result string
 
 	err := f.db.InTransaction(func(tx *reform.TX) error {

@@ -24,17 +24,18 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/percona/pmm-managed/action"
+	"github.com/percona/pmm-managed/services/agents"
 )
 
 //nolint:unused
 type actionsServer struct {
-	r action.Runner
-	s action.Storage
-	f action.Factory
+	r *agents.Registry
+	s *action.InMemoryStorage
+	f *action.Factory
 }
 
 // NewActionsServer creates Management Actions Server.
-func NewActionsServer(r action.Runner, s action.Storage, f action.Factory) managementpb.ActionsServer {
+func NewActionsServer(r *agents.Registry, s *action.InMemoryStorage, f *action.Factory) managementpb.ActionsServer {
 	return &actionsServer{r, s, f}
 }
 
