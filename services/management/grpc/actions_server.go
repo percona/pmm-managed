@@ -31,19 +31,18 @@ import (
 //nolint:unused
 type actionsServer struct {
 	r  *agents.Registry
-	s  *models.InMemoryActionsStorage
 	db *reform.DB
 }
 
 // NewActionsServer creates Management Actions Server.
-func NewActionsServer(r *agents.Registry, s *models.InMemoryActionsStorage, db *reform.DB) managementpb.ActionsServer {
-	return &actionsServer{r, s, db}
+func NewActionsServer(r *agents.Registry, db *reform.DB) managementpb.ActionsServer {
+	return &actionsServer{r, db}
 }
 
 // GetAction gets an action result.
 //nolint:lll
 func (s *actionsServer) GetAction(ctx context.Context, req *managementpb.GetActionRequest) (*managementpb.GetActionResponse, error) {
-	res, err := s.s.Load(ctx, req.ActionId)
+	res, err := models.LoadActionResult(s.db.Querier, req.ActionId)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, err.Error())
 	}
@@ -81,7 +80,7 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
 
-	err = s.s.Store(ctx, &models.ActionResult{ID: a.ID, PmmAgentID: a.PMMAgentID})
+	err = models.InsertActionResult(s.db.Querier, &models.ActionResult{ID: a.ID, PmmAgentID: a.PMMAgentID})
 	if err != nil {
 		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
@@ -117,7 +116,7 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
 
-	err = s.s.Store(ctx, &models.ActionResult{ID: a.ID, PmmAgentID: a.PMMAgentID})
+	err = models.InsertActionResult(s.db.Querier, &models.ActionResult{ID: a.ID, PmmAgentID: a.PMMAgentID})
 	if err != nil {
 		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
@@ -158,7 +157,7 @@ func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *manage
 		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
 
-	err = s.s.Store(ctx, &models.ActionResult{ID: a.ID, PmmAgentID: a.PMMAgentID})
+	err = models.InsertActionResult(s.db.Querier, &models.ActionResult{ID: a.ID, PmmAgentID: a.PMMAgentID})
 	if err != nil {
 		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
@@ -199,7 +198,7 @@ func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *ma
 		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
 
-	err = s.s.Store(ctx, &models.ActionResult{ID: a.ID, PmmAgentID: a.PMMAgentID})
+	err = models.InsertActionResult(s.db.Querier, &models.ActionResult{ID: a.ID, PmmAgentID: a.PMMAgentID})
 	if err != nil {
 		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
@@ -218,7 +217,7 @@ func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *ma
 // CancelAction stops an Action.
 //nolint:lll
 func (s *actionsServer) CancelAction(ctx context.Context, req *managementpb.CancelActionRequest) (*managementpb.CancelActionResponse, error) {
-	ar, err := s.s.Load(ctx, req.ActionId)
+	ar, err := models.LoadActionResult(s.db.Querier, req.ActionId)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}

@@ -147,6 +147,16 @@ var databaseSchema = [][]string{
   			uuid VARCHAR PRIMARY KEY,
   			created_at TIMESTAMP NOT NULL
 		)`,
+
+		`CREATE TABLE actionresults (
+			id VARCHAR NOT NULL,
+			pmm_agent_id VARCHAR CHECK (pmm_agent_id <> ''),
+			done BOOLEAN,
+			error VARCHAR,
+			output TEXT,
+
+			PRIMARY KEY (id),
+		)`,
 	},
 }
 

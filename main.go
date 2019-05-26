@@ -130,7 +130,6 @@ type serviceDependencies struct {
 	portsRegistry  *ports.Registry
 	agentsRegistry *agents.Registry
 	logs           *logs.Logs
-	aStorage       *models.InMemoryActionsStorage
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -172,7 +171,7 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	managementpb.RegisterMySQLServer(gRPCServer, managementgrpc.NewManagementMySQLServer(mysqlSvc))
 	managementpb.RegisterMongoDBServer(gRPCServer, managementgrpc.NewManagementMongoDBServer(mongodbSvc))
 	managementpb.RegisterPostgreSQLServer(gRPCServer, managementgrpc.NewManagementPostgreSQLServer(postgresqlSvc))
-	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(deps.agentsRegistry, deps.aStorage, deps.db))
+	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(deps.agentsRegistry, deps.db))
 
 	if *debugF {
 		l.Debug("Reflection and channelz are enabled.")
@@ -400,9 +399,8 @@ func main() {
 		l.Panicf("Prometheus service problem: %+v", err)
 	}
 
-	aStorage := models.NewInMemoryActionsStorage()
 	qanClient := getQANClient(ctx, db)
-	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient, aStorage)
+	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient)
 	logs := logs.New(version.Version)
 
 	deps := &serviceDependencies{
@@ -411,7 +409,6 @@ func main() {
 		portsRegistry:  ports.NewRegistry(10000, 10999, nil),
 		agentsRegistry: agentsRegistry,
 		logs:           logs,
-		aStorage:       aStorage,
 	}
 
 	var wg sync.WaitGroup

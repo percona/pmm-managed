@@ -18,9 +18,45 @@ package models
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 )
+
+//go:generate reform
+
+// ActionResult describes an action result which is storing in persistent storage.
+//reform:actionresults
+type ActionResult struct {
+	ID         string    `reform:"id,pk"`
+	PmmAgentID string    `reform:"pmm_agent_id"`
+	Done       bool      `reform:"done"`
+	Error      string    `reform:"error"`
+	Output     string    `reform:"output"`
+	CreatedAt  time.Time `reform:"created_at"`
+	UpdatedAt  time.Time `reform:"updated_at"`
+}
+
+// BeforeInsert implements reform.BeforeInserter interface.
+func (s *ActionResult) BeforeInsert() error {
+	now := Now()
+	s.CreatedAt = now
+	s.UpdatedAt = now
+	return nil
+}
+
+// BeforeUpdate implements reform.BeforeUpdater interface.
+func (s *ActionResult) BeforeUpdate() error {
+	s.UpdatedAt = Now()
+	return nil
+}
+
+// AfterFind implements reform.AfterFinder interface.
+func (s *ActionResult) AfterFind() error {
+	s.CreatedAt = s.CreatedAt.UTC()
+	s.UpdatedAt = s.UpdatedAt.UTC()
+	return nil
+}
 
 // PtSummaryAction represents pt-summary domain model.
 type PtSummaryAction struct {
@@ -99,16 +135,6 @@ type MySQLExplainJSONAction struct {
 
 	Dsn   string
 	Query string
-}
-
-// ActionResult describes an action result which is storing in persistent storage.
-type ActionResult struct {
-	ID         string
-	PmmAgentID string
-
-	Done   bool
-	Error  string
-	Output string
 }
 
 // GetActionUUID generates action uuid.

@@ -17,68 +17,47 @@
 package models
 
 import (
-	"context"
-	"sync"
-
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"gopkg.in/reform.v1"
 )
 
-// InMemoryActionsStorage in memory action results storage implementation.
-//nolint:unused
-type InMemoryActionsStorage struct {
-	container map[string]*ActionResult
-	mx        sync.Mutex
-}
-
-// NewInMemoryActionsStorage created new InMemoryActionsStorage.
-func NewInMemoryActionsStorage() *InMemoryActionsStorage {
-	return &InMemoryActionsStorage{
-		container: make(map[string]*ActionResult),
-	}
-}
-
-// Store stores an action result in action results storage.
+// StoreActionResult stores an action result in action results storage.
 //nolint:unparam
-func (s *InMemoryActionsStorage) Store(ctx context.Context, result *ActionResult) error {
-	s.mx.Lock()
-	defer s.mx.Unlock()
-	_, ok := s.container[result.ID]
-	if ok {
-		return errors.New("already exists")
+func InsertActionResult(q *reform.Querier, result *ActionResult) error {
+	if err := q.Insert(result); err != nil {
+		return errors.WithStack(err)
 	}
-	s.container[result.ID] = result
+
 	return nil
 }
 
-// Update updates an action result in action results storage.
+// UpdateActionResult updates an action result in action results storage.
 //nolint:unparam
-func (s *InMemoryActionsStorage) Update(ctx context.Context, result *ActionResult) error {
-	s.mx.Lock()
-	defer s.mx.Unlock()
-	_, ok := s.container[result.ID]
-	if !ok {
-		return errors.New("not found")
+func UpdateActionResult(q *reform.Querier, result *ActionResult) error {
+	if err := q.Update(result); err != nil {
+		return errors.WithStack(err)
 	}
-
-	a := s.container[result.ID]
-
-	a.PmmAgentID = result.PmmAgentID
-	a.Error = result.Error
-	a.Done = result.Done
-	a.Output = result.Output
 	return nil
 }
 
-// Load loads an action result from storage by action id.
+// LoadActionResult loads an action result from storage by action id.
 //nolint:unparam
-func (s *InMemoryActionsStorage) Load(ctx context.Context, id string) (*ActionResult, error) {
-	s.mx.Lock()
-	defer s.mx.Unlock()
-	v, ok := s.container[id]
-	if !ok {
-		return nil, errors.New("not found")
+func LoadActionResult(q *reform.Querier, id string) (*ActionResult, error) {
+	if id == "" {
+		return nil, status.Error(codes.InvalidArgument, "Empty ActionResult ID.")
 	}
-	return v, nil
+
+	row := &ActionResult{ID: id}
+	switch err := q.Reload(row); err {
+	case nil:
+		return row, nil
+	case reform.ErrNoRows:
+		return nil, status.Errorf(codes.NotFound, "ActionResult with ID %q not found.", id)
+	default:
+		return nil, errors.WithStack(err)
+	}
 }
 
 // FindPmmAgentIDToRunAction finds pmm-agent-id to run action.

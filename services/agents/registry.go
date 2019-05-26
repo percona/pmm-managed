@@ -57,7 +57,6 @@ type Registry struct {
 	db         *reform.DB
 	prometheus prometheus
 	qanClient  qanClient
-	aStorage   *models.InMemoryActionsStorage //nolint:unused
 
 	rw     sync.RWMutex
 	agents map[string]*agentInfo // id -> info
@@ -70,12 +69,11 @@ type Registry struct {
 }
 
 // NewRegistry creates a new registry with given database connection.
-func NewRegistry(db *reform.DB, prometheus prometheus, qanClient qanClient, aStorage *models.InMemoryActionsStorage) *Registry {
+func NewRegistry(db *reform.DB, prometheus prometheus, qanClient qanClient) *Registry {
 	r := &Registry{
 		db:         db,
 		prometheus: prometheus,
 		qanClient:  qanClient,
-		aStorage:   aStorage,
 
 		agents: make(map[string]*agentInfo),
 
@@ -192,7 +190,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 
 			case *agentpb.ActionResultRequest:
 				// TODO: PMM-3978: In the future we need to merge action parts before send it to storage.
-				err := r.aStorage.Update(context.TODO(), &models.ActionResult{
+				err := models.UpdateActionResult(r.db.Querier, &models.ActionResult{
 					ID:         p.ActionId,
 					PmmAgentID: agent.id,
 					Done:       p.Done,
