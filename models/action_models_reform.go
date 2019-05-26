@@ -20,7 +20,7 @@ func (v *actionResultTableType) Schema() string {
 	return v.s.SQLSchema
 }
 
-// Name returns a view or table name in SQL database ("actionresults").
+// Name returns a view or table name in SQL database ("action_results").
 func (v *actionResultTableType) Name() string {
 	return v.s.SQLName
 }
@@ -45,9 +45,9 @@ func (v *actionResultTableType) PKColumnIndex() uint {
 	return uint(v.s.PKFieldIndex)
 }
 
-// ActionResultTable represents actionresults view or table in SQL database.
+// ActionResultTable represents action_results view or table in SQL database.
 var ActionResultTable = &actionResultTableType{
-	s: parse.StructInfo{Type: "ActionResult", SQLSchema: "", SQLName: "actionresults", Fields: []parse.FieldInfo{{Name: "ID", Type: "string", Column: "id"}, {Name: "PmmAgentID", Type: "string", Column: "pmm_agent_id"}, {Name: "Done", Type: "bool", Column: "done"}, {Name: "Error", Type: "string", Column: "error"}, {Name: "Output", Type: "string", Column: "output"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}}, PKFieldIndex: 0},
+	s: parse.StructInfo{Type: "ActionResult", SQLSchema: "", SQLName: "action_results", Fields: []parse.FieldInfo{{Name: "ID", Type: "string", Column: "id"}, {Name: "PmmAgentID", Type: "string", Column: "pmm_agent_id"}, {Name: "Done", Type: "bool", Column: "done"}, {Name: "Error", Type: "string", Column: "error"}, {Name: "Output", Type: "string", Column: "output"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}}, PKFieldIndex: 0},
 	z: new(ActionResult).Values(),
 }
 

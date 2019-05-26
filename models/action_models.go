@@ -26,7 +26,7 @@ import (
 //go:generate reform
 
 // ActionResult describes an action result which is storing in persistent storage.
-//reform:actionresults
+//reform:action_results
 type ActionResult struct {
 	ID         string    `reform:"id,pk"`
 	PmmAgentID string    `reform:"pmm_agent_id"`

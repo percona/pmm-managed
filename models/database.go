@@ -148,7 +148,7 @@ var databaseSchema = [][]string{
   			created_at TIMESTAMP NOT NULL
 		)`,
 
-		`CREATE TABLE actionresults (
+		`CREATE TABLE action_results (
 			id VARCHAR NOT NULL,
 			pmm_agent_id VARCHAR CHECK (pmm_agent_id <> ''),
 			done BOOLEAN,
