@@ -58,6 +58,7 @@ func nodeExporterConfig(node *models.Node, exporter *models.Agent) *agentpb.SetS
 			"--collector.qdisc",
 			//"--collector.systemd", PMM-3843 disabled for now
 			"--collector.wifi",
+			"--collector.netstat.fields=\"^(.*_(InErrors|InErrs)|Ip(6|Ext)_(InOctets|OutOctets)|Tcp_(ActiveOpens|PassiveOpens|RetransSegs|CurrEstab|AttemptFails|OutSegs)|Tcp_Rto(Algorithm|Min|Max))$\"",
 		)
 	}
 
