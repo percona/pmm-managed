@@ -29,7 +29,7 @@ import (
 )
 
 // DSNforMySQL generates MySQL DSN string from service and exporter.
-func DSNforMySQL(service *Service, exporter *Agent) string {
+func DSNforMySQL(service *Service, exporter *Agent, db string) string {
 	// TODO TLSConfig: "true", https://jira.percona.com/browse/PMM-1727
 	// TODO Other parameters?
 
@@ -41,6 +41,7 @@ func DSNforMySQL(service *Service, exporter *Agent) string {
 	port := pointer.GetUint16(service.Port)
 	cfg.Addr = net.JoinHostPort(host, strconv.Itoa(int(port)))
 	cfg.Timeout = 1 * time.Second
+	cfg.DBName = db
 
 	// QAN code in pmm-agent uses reform which requires those fields
 	cfg.ClientFoundRows = true
@@ -98,7 +99,7 @@ func DSNforMongoDB(service *Service, exporter *Agent) string {
 }
 
 // ResolveDSNByServiceID resolves DSN by service id.
-func ResolveDSNByServiceID(q *reform.Querier, serviceID string) (string, error) {
+func ResolveDSNByServiceID(q *reform.Querier, serviceID, db string) (string, error) {
 	var result string
 
 	svc, err := FindServiceByID(q, serviceID)
@@ -139,7 +140,7 @@ func ResolveDSNByServiceID(q *reform.Querier, serviceID string) (string, error) 
 
 	switch svc.ServiceType {
 	case MySQLServiceType:
-		result = DSNforMySQL(svc, exporters[0])
+		result = DSNforMySQL(svc, exporters[0], db)
 
 	case MongoDBServiceType:
 		result = DSNforMongoDB(svc, exporters[0])

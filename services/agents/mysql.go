@@ -70,7 +70,7 @@ func mysqldExporterConfig(service *models.Service, exporter *models.Agent) *agen
 		TemplateRightDelim: tdp.right,
 		Args:               args,
 		Env: []string{
-			fmt.Sprintf("DATA_SOURCE_NAME=%s", models.DSNforMySQL(service, exporter)),
+			fmt.Sprintf("DATA_SOURCE_NAME=%s", models.DSNforMySQL(service, exporter, "")),
 		},
 	}
 }
@@ -79,7 +79,7 @@ func mysqldExporterConfig(service *models.Service, exporter *models.Agent) *agen
 func qanMySQLPerfSchemaAgentConfig(service *models.Service, agent *models.Agent) *agentpb.SetStateRequest_BuiltinAgent {
 	return &agentpb.SetStateRequest_BuiltinAgent{
 		Type: agentpb.Type_QAN_MYSQL_PERFSCHEMA_AGENT,
-		Dsn:  models.DSNforMySQL(service, agent),
+		Dsn:  models.DSNforMySQL(service, agent, ""),
 	}
 }
 
@@ -87,6 +87,6 @@ func qanMySQLPerfSchemaAgentConfig(service *models.Service, agent *models.Agent)
 func qanMySQLSlowlogAgentConfig(service *models.Service, agent *models.Agent) *agentpb.SetStateRequest_BuiltinAgent {
 	return &agentpb.SetStateRequest_BuiltinAgent{
 		Type: agentpb.Type_QAN_MYSQL_SLOWLOG_AGENT,
-		Dsn:  models.DSNforMySQL(service, agent),
+		Dsn:  models.DSNforMySQL(service, agent, ""),
 	}
 }

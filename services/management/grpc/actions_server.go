@@ -152,7 +152,7 @@ func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *manage
 		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
 
-	a.Dsn, err = models.ResolveDSNByServiceID(s.db.Querier, a.ServiceID)
+	a.Dsn, err = models.ResolveDSNByServiceID(s.db.Querier, a.ServiceID, req.Database)
 	if err != nil {
 		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
@@ -193,7 +193,7 @@ func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *ma
 		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
 
-	a.Dsn, err = models.ResolveDSNByServiceID(s.db.Querier, a.ServiceID)
+	a.Dsn, err = models.ResolveDSNByServiceID(s.db.Querier, a.ServiceID, req.Database)
 	if err != nil {
 		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
