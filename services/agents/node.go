@@ -54,7 +54,7 @@ func nodeExporterConfig(node *models.Node, exporter *models.Agent) *agentpb.SetS
 			//"--collector.logind", PMM-3843 disabled for now
 			"--collector.meminfo_numa",
 			"--collector.mountstats",
-			`--collector.netstat.fields="^(.*_(InErrors|InErrs|InCsumErrors)|Tcp_(ActiveOpens|PassiveOpens|RetransSegs|CurrEstab|AttemptFails|OutSegs|InSegs|EstabResets|OutRsts|OutSegs|)|Tcp_Rto(Algorithm|Min|Max)|Udp_(RcvbufErrors|SndbufErrors)|UdpLite_(InDatagrams|OutDatagrams|RcvbufErrors|SndbufErrors|NoPorts)|Icmp_(OutEchoReps|OutEchos|InEchos|InEchoReps|InAddrMaskReps|InAddrMasks|OutAddrMaskReps|OutAddrMasks|InTimestampReps|InTimestamps|OutTimestampReps|OutTimestamps|OutErrors|InDestUnreachs|OutDestUnreachs|InTimeExcds|InRedirects|OutRedirects)|IcmpMsg_(InType3|OutType3))$"`,
+			`--collector.netstat.fields="^(.*_(InErrors|InErrs|InCsumErrors)|Tcp_(ActiveOpens|PassiveOpens|RetransSegs|CurrEstab|AttemptFails|OutSegs|InSegs|EstabResets|OutRsts|OutSegs)|Tcp_Rto(Algorithm|Min|Max)|Udp_(RcvbufErrors|SndbufErrors)|Udp(6?|Lite6?)_(InDatagrams|OutDatagrams|RcvbufErrors|SndbufErrors|NoPorts)|Icmp6?_(OutEchoReps|OutEchos|InEchos|InEchoReps|InAddrMaskReps|InAddrMasks|OutAddrMaskReps|OutAddrMasks|InTimestampReps|InTimestamps|OutTimestampReps|OutTimestamps|OutErrors|InDestUnreachs|OutDestUnreachs|InTimeExcds|InRedirects|OutRedirects|InMsgs|OutMsgs)|IcmpMsg_(InType3|OutType3)|Ip(6|Ext)_(InOctets|OutOctets)|Ip_Forwarding|TcpExt_(Listen.*|Syncookies.*|TCPTimeouts))$"`,
 			"--collector.processes",
 			"--collector.qdisc",
 			//"--collector.systemd", PMM-3843 disabled for now
