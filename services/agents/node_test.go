@@ -41,6 +41,7 @@ func TestNodeExporterConfig(t *testing.T) {
 				"--collector.ksmd",
 				"--collector.meminfo_numa",
 				"--collector.mountstats",
+				`--collector.netstat.fields="^(.*_(InErrors|InErrs|InCsumErrors)|Tcp_(ActiveOpens|PassiveOpens|RetransSegs|CurrEstab|AttemptFails|OutSegs|InSegs|EstabResets|OutRsts|OutSegs|)|Tcp_Rto(Algorithm|Min|Max)|Udp_(RcvbufErrors|SndbufErrors)|UdpLite_(InDatagrams|OutDatagrams|RcvbufErrors|SndbufErrors|NoPorts)|Icmp_(OutEchoReps|OutEchos|InEchos|InEchoReps|InAddrMaskReps|InAddrMasks|OutAddrMaskReps|OutAddrMasks|InTimestampReps|InTimestamps|OutTimestampReps|OutTimestamps|OutErrors|InDestUnreachs|OutDestUnreachs|InTimeExcds|InRedirects|OutRedirects)|IcmpMsg_(InType3|OutType3))$"`,
 				"--collector.processes",
 				"--collector.qdisc",
 				"--collector.wifi",
