@@ -151,9 +151,9 @@ var databaseSchema = [][]string{
 		`CREATE TABLE action_results (
 			id VARCHAR NOT NULL,
 			pmm_agent_id VARCHAR CHECK (pmm_agent_id <> ''),
-			done BOOLEAN,
-			error VARCHAR,
-			output TEXT,
+			done BOOLEAN NOT NULL,
+			error VARCHAR NOT NULL,
+			output TEXT NOT NULL,
 
 			created_at TIMESTAMP NOT NULL,
 			updated_at TIMESTAMP NOT NULL,

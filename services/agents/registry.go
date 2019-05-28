@@ -201,7 +201,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 					l.Warnf(err.Error())
 				}
 
-				if !p.Done {
+				if !p.Done && p.Error != "" {
 					l.Warnf("Action was done with an error: %v.", p.Error)
 				}
 
@@ -568,7 +568,7 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, a *models.PtSummary
 
 	agent, err := r.get(a.PMMAgentID)
 	if err != nil {
-		return errors.Wrap(err, "couldn't start action")
+		return err
 	}
 
 	agent.channel.SendRequest(aRequest)
@@ -647,7 +647,7 @@ func (r *Registry) StartMySQLExplainJSONAction(ctx context.Context, a *models.My
 
 // StopAction stops action with given given id.
 //nolint:unparam
-func (r *Registry) StopAction(ctx context.Context, actionID, pmmAgentID string) error {
+func (r *Registry) StopAction(ctx context.Context, actionID string) error {
 	agent, err := r.get(actionID)
 	if err != nil {
 		return errors.Wrap(err, "couldn't stop action")

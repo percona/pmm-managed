@@ -222,7 +222,7 @@ func (s *actionsServer) CancelAction(ctx context.Context, req *managementpb.Canc
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
 
-	err = s.r.StopAction(ctx, ar.ID, ar.PmmAgentID)
+	err = s.r.StopAction(ctx, ar.ID)
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, err.Error())
 	}
