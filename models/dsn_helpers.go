@@ -25,6 +25,8 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/go-sql-driver/mysql"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 )
 
@@ -104,16 +106,16 @@ func ResolveDSNByServiceID(q *reform.Querier, serviceID, db string) (string, err
 
 	svc, err := FindServiceByID(q, serviceID)
 	if err != nil {
-		return "", errors.Wrap(err, "couldn't resolve dsn")
+		return "", status.Errorf(codes.FailedPrecondition, "couldn't resolve dsn")
 	}
 
 	pmmAgents, err := FindPMMAgentsForService(q, serviceID)
 	if err != nil {
-		return "", errors.Wrap(err, "couldn't resolve dsn")
+		return "", status.Errorf(codes.FailedPrecondition, "couldn't resolve dsn")
 	}
 
 	if len(pmmAgents) != 1 {
-		return "", errors.New("couldn't resolve dsn, as there should be only one pmm-agent")
+		return "", status.Errorf(codes.FailedPrecondition, "couldn't resolve dsn, as there should be only one pmm-agent")
 	}
 
 	pmmAgentID := pmmAgents[0].AgentID
@@ -126,7 +128,7 @@ func ResolveDSNByServiceID(q *reform.Querier, serviceID, db string) (string, err
 	case PostgreSQLServiceType:
 		agentType = PostgresExporterType
 	default:
-		return "", errors.New("couldn't resolve dsn, as service is unsupported")
+		return "", status.Errorf(codes.FailedPrecondition, "couldn't resolve dsn, as service is unsupported")
 	}
 
 	exporters, err := FindAgentsByPmmAgentIDAndAgentType(q, pmmAgentID, agentType)

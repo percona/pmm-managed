@@ -44,7 +44,7 @@ func NewActionsServer(r *agents.Registry, db *reform.DB) managementpb.ActionsSer
 func (s *actionsServer) GetAction(ctx context.Context, req *managementpb.GetActionRequest) (*managementpb.GetActionResponse, error) {
 	res, err := models.LoadActionResult(s.db.Querier, req.ActionId)
 	if err != nil {
-		return nil, status.Errorf(codes.NotFound, err.Error())
+		return nil, err
 	}
 
 	return &managementpb.GetActionResponse{
@@ -68,17 +68,17 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 
 	ag, err := models.FindPMMAgentsForNode(s.db.Querier, a.NodeID)
 	if err != nil {
-		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+		return nil, err
 	}
 
 	a.PMMAgentID, err = models.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
 	if err != nil {
-		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+		return nil, err
 	}
 
 	err = models.InsertActionResult(s.db.Querier, &models.ActionResult{ID: a.ID, PmmAgentID: a.PMMAgentID})
 	if err != nil {
-		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+		return nil, err
 	}
 
 	err = s.r.StartPTSummaryAction(ctx, a)
@@ -104,17 +104,17 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 
 	ag, err := models.FindPMMAgentsForService(s.db.Querier, a.ServiceID)
 	if err != nil {
-		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+		return nil, err
 	}
 
 	a.PMMAgentID, err = models.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
 	if err != nil {
-		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+		return nil, err
 	}
 
 	err = models.InsertActionResult(s.db.Querier, &models.ActionResult{ID: a.ID, PmmAgentID: a.PMMAgentID})
 	if err != nil {
-		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+		return nil, err
 	}
 
 	err = s.r.StartPTMySQLSummaryAction(ctx, a)
@@ -140,22 +140,22 @@ func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *manage
 
 	ag, err := models.FindPMMAgentsForService(s.db.Querier, a.ServiceID)
 	if err != nil {
-		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+		return nil, err
 	}
 
 	a.PMMAgentID, err = models.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
 	if err != nil {
-		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+		return nil, err
 	}
 
 	a.Dsn, err = models.ResolveDSNByServiceID(s.db.Querier, a.ServiceID, req.Database)
 	if err != nil {
-		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+		return nil, err
 	}
 
 	err = models.InsertActionResult(s.db.Querier, &models.ActionResult{ID: a.ID, PmmAgentID: a.PMMAgentID})
 	if err != nil {
-		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+		return nil, err
 	}
 
 	err = s.r.StartMySQLExplainAction(ctx, a)
@@ -181,22 +181,22 @@ func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *ma
 
 	ag, err := models.FindPMMAgentsForService(s.db.Querier, a.ServiceID)
 	if err != nil {
-		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+		return nil, err
 	}
 
 	a.PMMAgentID, err = models.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
 	if err != nil {
-		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+		return nil, err
 	}
 
 	a.Dsn, err = models.ResolveDSNByServiceID(s.db.Querier, a.ServiceID, req.Database)
 	if err != nil {
-		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+		return nil, err
 	}
 
 	err = models.InsertActionResult(s.db.Querier, &models.ActionResult{ID: a.ID, PmmAgentID: a.PMMAgentID})
 	if err != nil {
-		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+		return nil, err
 	}
 
 	err = s.r.StartMySQLExplainJSONAction(ctx, a)
@@ -215,7 +215,7 @@ func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *ma
 func (s *actionsServer) CancelAction(ctx context.Context, req *managementpb.CancelActionRequest) (*managementpb.CancelActionResponse, error) {
 	ar, err := models.LoadActionResult(s.db.Querier, req.ActionId)
 	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, err.Error())
+		return nil, err
 	}
 
 	err = s.r.StopAction(ctx, ar.ID)

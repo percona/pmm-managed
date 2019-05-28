@@ -346,7 +346,7 @@ func ChangeAgent(q *reform.Querier, agentID string, params *ChangeCommonAgentPar
 func FindPMMAgentsForNode(q *reform.Querier, nodeID string) ([]*Agent, error) {
 	structs, err := q.SelectAllFrom(AgentTable, "WHERE runs_on_node_id = $1", nodeID)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to select agents")
+		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
 
 	var res []*Agent
@@ -363,13 +363,13 @@ func FindPMMAgentsForNode(q *reform.Querier, nodeID string) ([]*Agent, error) {
 func FindPMMAgentsForService(q *reform.Querier, serviceID string) ([]*Agent, error) {
 	_, err := q.SelectOneFrom(ServiceTable, "WHERE service_id = $1", serviceID)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to select service")
+		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
 
 	// First, select all agents that scrapping insights for service.
 	agentServices, err := q.SelectAllFrom(AgentServiceView, "WHERE service_id = $1", serviceID)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to select agents for service")
+		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
 	aids := make([]interface{}, len(agentServices))
 	for _, ag := range agentServices {
@@ -382,7 +382,7 @@ func FindPMMAgentsForService(q *reform.Querier, serviceID string) ([]*Agent, err
 	tail := fmt.Sprintf("WHERE agent_id IN (%s)", p) //nolint:gosec
 	allAgents, err := q.SelectAllFrom(AgentTable, tail, aids...)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to find agents for service")
+		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
 	pmmAgentIDs := make([]interface{}, len(allAgents))
 	for _, str := range allAgents {
@@ -402,7 +402,7 @@ func FindPMMAgentsForService(q *reform.Querier, serviceID string) ([]*Agent, err
 	atail := fmt.Sprintf("WHERE agent_id IN (%s)", ph) //nolint:gosec
 	pmmAgentRecords, err := q.SelectAllFrom(AgentTable, atail, pmmAgentIDs...)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to find pmm-agents by children agents")
+		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
 	}
 	var res []*Agent
 	for _, str := range pmmAgentRecords {

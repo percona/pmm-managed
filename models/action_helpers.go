@@ -26,7 +26,7 @@ import (
 // InsertActionResult stores an action result in action results storage.
 func InsertActionResult(q *reform.Querier, result *ActionResult) error {
 	if err := q.Insert(result); err != nil {
-		return errors.WithStack(err)
+		return status.Errorf(codes.FailedPrecondition, err.Error())
 	}
 
 	return nil
@@ -43,7 +43,7 @@ func UpdateActionResult(q *reform.Querier, result *ActionResult) error {
 // LoadActionResult loads an action result from storage by action id.
 func LoadActionResult(q *reform.Querier, id string) (*ActionResult, error) {
 	if id == "" {
-		return nil, status.Error(codes.InvalidArgument, "Empty ActionResult ID.")
+		return nil, status.Errorf(codes.InvalidArgument, "ActionResult with ID %q not found.", id)
 	}
 
 	row := &ActionResult{ID: id}
@@ -66,7 +66,7 @@ func FindPmmAgentIDToRunAction(pmmAgentID string, agents []*Agent) (string, erro
 
 	// no explicit ID is given, and there are zero or several
 	if pmmAgentID == "" {
-		return "", errors.New("couldn't find pmm-agent-id to run action")
+		return "", status.Errorf(codes.InvalidArgument, "couldn't find pmm-agent-id to run action")
 	}
 
 	// check that explicit agent id is correct
@@ -75,5 +75,5 @@ func FindPmmAgentIDToRunAction(pmmAgentID string, agents []*Agent) (string, erro
 			return a.AgentID, nil
 		}
 	}
-	return "", errors.New("couldn't find pmm-agent-id to run action")
+	return "", status.Errorf(codes.FailedPrecondition, "couldn't find pmm-agent-id to run action")
 }
