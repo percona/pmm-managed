@@ -214,6 +214,10 @@ func TestAgentHelpers(t *testing.T) {
 		agents, err := models.FindPMMAgentsForNode(q, "N1")
 		require.NoError(t, err)
 		assert.Equal(t, "A1", agents[0].AgentID)
+
+		// find with non existing node.
+		_, err = models.FindPMMAgentsForNode(q, "X1")
+		require.Error(t, err)
 	})
 
 	t.Run("FindPMMAgentsForService", func(t *testing.T) {
@@ -224,6 +228,24 @@ func TestAgentHelpers(t *testing.T) {
 		require.NoError(t, err)
 		t.Log(agents, err)
 		assert.Equal(t, "A1", agents[0].AgentID)
+
+		// find with non existing service.
+		_, err = models.FindPMMAgentsForService(q, "X1")
+		require.Error(t, err)
+	})
+
+	t.Run("FindAgentsByPmmAgentIDAndAgentType", func(t *testing.T) {
+		q, teardown := setup(t)
+		defer teardown(t)
+
+		agents, err := models.FindAgentsByPmmAgentIDAndAgentType(q, "A1", models.MySQLdExporterType)
+		require.NoError(t, err)
+		t.Log(agents, err)
+		assert.Equal(t, "A2", agents[0].AgentID)
+
+		// find with no existing pmm-agent-id
+		_, err = models.FindAgentsByPmmAgentIDAndAgentType(q, "X1", models.MySQLdExporterType)
+		require.Error(t, err)
 	})
 
 }

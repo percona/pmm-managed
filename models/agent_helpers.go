@@ -356,6 +356,11 @@ func FindPMMAgentsForNode(q *reform.Querier, nodeID string) ([]*Agent, error) {
 			res = append(res, row)
 		}
 	}
+
+	if len(res) == 0 {
+		return nil, status.Errorf(codes.NotFound, "Couldn't found any pmm-agents by NodeID")
+	}
+
 	return res, nil
 }
 
@@ -429,6 +434,10 @@ func FindAgentsByPmmAgentIDAndAgentType(q *reform.Querier, pmmAgentID string, ag
 		if row.AgentType == agentType {
 			res = append(res, row)
 		}
+	}
+
+	if len(res) == 0 {
+		return nil, status.Errorf(codes.NotFound, "Couldn't found any agent")
 	}
 
 	return res, nil
