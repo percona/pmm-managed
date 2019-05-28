@@ -34,12 +34,12 @@ func CreateActionResult(q *reform.Querier, pmmAgentID string) (*ActionResult, er
 }
 
 // ChangeActionResult updates an action result in action results storage.
-func ChangeActionResult(q *reform.Querier, actionID, pmmAgentID, error, output string, done bool) error {
+func ChangeActionResult(q *reform.Querier, actionID, pmmAgentID, aError, output string, done bool) error {
 	result := &ActionResult{
 		ID:         actionID,
 		PmmAgentID: pmmAgentID,
 		Done:       done,
-		Error:      error,
+		Error:      aError,
 		Output:     output,
 	}
 	if err := q.Update(result); err != nil {
