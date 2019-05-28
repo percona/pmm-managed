@@ -100,11 +100,11 @@ func TestActionHelpers(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "A3", id)
 
-		id, err = models.FindPmmAgentIDToRunAction("A4", a2)
+		_, err = models.FindPmmAgentIDToRunAction("A4", a2)
 		require.Error(t, err)
 		tests.AssertGRPCError(t, status.New(codes.FailedPrecondition, "couldn't find pmm-agent-id to run action"), err)
 
-		id, err = models.FindPmmAgentIDToRunAction("", a2)
+		_, err = models.FindPmmAgentIDToRunAction("", a2)
 		require.Error(t, err)
 		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "couldn't find pmm-agent-id to run action"), err)
 	})
