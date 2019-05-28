@@ -99,9 +99,9 @@ type MySQLExplainJSONAction struct {
 	Query string
 }
 
-// GetActionUUID generates action uuid.
+// getActionUUID generates action uuid.
 // nolint: unused
-func GetActionUUID() string {
+func getActionUUID() string {
 	return "/action_id/" + uuid.New().String()
 }
 

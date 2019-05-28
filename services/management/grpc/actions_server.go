@@ -42,7 +42,7 @@ func NewActionsServer(r *agents.Registry, db *reform.DB) managementpb.ActionsSer
 // GetAction gets an action result.
 //nolint:lll
 func (s *actionsServer) GetAction(ctx context.Context, req *managementpb.GetActionRequest) (*managementpb.GetActionResponse, error) {
-	res, err := models.LoadActionResult(s.db.Querier, req.ActionId)
+	res, err := models.FindActionResultByID(s.db.Querier, req.ActionId)
 	if err != nil {
 		return nil, err
 	}
@@ -59,8 +59,13 @@ func (s *actionsServer) GetAction(ctx context.Context, req *managementpb.GetActi
 // StartPTSummaryAction starts pt-summary action.
 //nolint:lll,dupl
 func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
+	res, err := models.CreateActionResult(s.db.Querier, req.PmmAgentId)
+	if err != nil {
+		return nil, err
+	}
+
 	a := &models.PtSummaryAction{
-		ID:         models.GetActionUUID(),
+		ID:         res.ID,
 		NodeID:     req.NodeId,
 		PMMAgentID: req.PmmAgentId,
 		Args:       []string{},
@@ -72,11 +77,6 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 	}
 
 	a.PMMAgentID, err = models.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
-	if err != nil {
-		return nil, err
-	}
-
-	err = models.InsertActionResult(s.db.Querier, &models.ActionResult{ID: a.ID, PmmAgentID: a.PMMAgentID})
 	if err != nil {
 		return nil, err
 	}
@@ -95,8 +95,13 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 // StartPTMySQLSummaryAction starts pt-mysql-summary action.
 //nolint:lll,dupl
 func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
+	res, err := models.CreateActionResult(s.db.Querier, req.PmmAgentId)
+	if err != nil {
+		return nil, err
+	}
+
 	a := &models.PtMySQLSummaryAction{
-		ID:         models.GetActionUUID(),
+		ID:         res.ID,
 		ServiceID:  req.ServiceId,
 		PMMAgentID: req.PmmAgentId,
 		Args:       []string{},
@@ -108,11 +113,6 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 	}
 
 	a.PMMAgentID, err = models.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
-	if err != nil {
-		return nil, err
-	}
-
-	err = models.InsertActionResult(s.db.Querier, &models.ActionResult{ID: a.ID, PmmAgentID: a.PMMAgentID})
 	if err != nil {
 		return nil, err
 	}
@@ -131,8 +131,13 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 // StartMySQLExplainAction starts mysql-explain action.
 //nolint:lll,dupl
 func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *managementpb.StartMySQLExplainActionRequest) (*managementpb.StartMySQLExplainActionResponse, error) {
+	res, err := models.CreateActionResult(s.db.Querier, req.PmmAgentId)
+	if err != nil {
+		return nil, err
+	}
+
 	a := &models.MySQLExplainAction{
-		ID:         models.GetActionUUID(),
+		ID:         res.ID,
 		ServiceID:  req.ServiceId,
 		PMMAgentID: req.PmmAgentId,
 		Query:      req.Query,
@@ -148,12 +153,7 @@ func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *manage
 		return nil, err
 	}
 
-	a.Dsn, err = models.ResolveDSNByServiceID(s.db.Querier, a.ServiceID, req.Database)
-	if err != nil {
-		return nil, err
-	}
-
-	err = models.InsertActionResult(s.db.Querier, &models.ActionResult{ID: a.ID, PmmAgentID: a.PMMAgentID})
+	a.Dsn, err = models.FindDSNByServiceID(s.db.Querier, a.ServiceID, req.Database)
 	if err != nil {
 		return nil, err
 	}
@@ -172,8 +172,13 @@ func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *manage
 // StartMySQLExplainJSONAction starts mysql-explain json action.
 //nolint:lll,dupl
 func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *managementpb.StartMySQLExplainJSONActionRequest) (*managementpb.StartMySQLExplainJSONActionResponse, error) {
+	res, err := models.CreateActionResult(s.db.Querier, req.PmmAgentId)
+	if err != nil {
+		return nil, err
+	}
+
 	a := &models.MySQLExplainJSONAction{
-		ID:         models.GetActionUUID(),
+		ID:         res.ID,
 		ServiceID:  req.ServiceId,
 		PMMAgentID: req.PmmAgentId,
 		Query:      req.Query,
@@ -189,12 +194,7 @@ func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *ma
 		return nil, err
 	}
 
-	a.Dsn, err = models.ResolveDSNByServiceID(s.db.Querier, a.ServiceID, req.Database)
-	if err != nil {
-		return nil, err
-	}
-
-	err = models.InsertActionResult(s.db.Querier, &models.ActionResult{ID: a.ID, PmmAgentID: a.PMMAgentID})
+	a.Dsn, err = models.FindDSNByServiceID(s.db.Querier, a.ServiceID, req.Database)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +213,7 @@ func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *ma
 // CancelAction stops an Action.
 //nolint:lll
 func (s *actionsServer) CancelAction(ctx context.Context, req *managementpb.CancelActionRequest) (*managementpb.CancelActionResponse, error) {
-	ar, err := models.LoadActionResult(s.db.Querier, req.ActionId)
+	ar, err := models.FindActionResultByID(s.db.Querier, req.ActionId)
 	if err != nil {
 		return nil, err
 	}

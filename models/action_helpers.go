@@ -23,25 +23,33 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-// InsertActionResult stores an action result in action results storage.
-func InsertActionResult(q *reform.Querier, result *ActionResult) error {
+// CreateActionResult stores an action result in action results storage.
+func CreateActionResult(q *reform.Querier, pmmAgentID string) (*ActionResult, error) {
+	result := &ActionResult{ID: getActionUUID(), PmmAgentID: pmmAgentID}
 	if err := q.Insert(result); err != nil {
-		return status.Errorf(codes.FailedPrecondition, err.Error())
+		return result, status.Errorf(codes.FailedPrecondition, "Couldn't create ActionResult, reason: %v", err)
 	}
 
-	return nil
+	return result, nil
 }
 
-// UpdateActionResult updates an action result in action results storage.
-func UpdateActionResult(q *reform.Querier, result *ActionResult) error {
+// ChangeActionResult updates an action result in action results storage.
+func ChangeActionResult(q *reform.Querier, actionID, pmmAgentID, error, output string, done bool) error {
+	result := &ActionResult{
+		ID:         actionID,
+		PmmAgentID: pmmAgentID,
+		Done:       done,
+		Error:      error,
+		Output:     output,
+	}
 	if err := q.Update(result); err != nil {
 		return errors.WithStack(err)
 	}
 	return nil
 }
 
-// LoadActionResult loads an action result from storage by action id.
-func LoadActionResult(q *reform.Querier, id string) (*ActionResult, error) {
+// FindActionResultByID loads an action result from storage by action id.
+func FindActionResultByID(q *reform.Querier, id string) (*ActionResult, error) {
 	if id == "" {
 		return nil, status.Errorf(codes.InvalidArgument, "ActionResult with ID %q not found.", id)
 	}

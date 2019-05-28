@@ -24,7 +24,6 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/go-sql-driver/mysql"
-	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -100,22 +99,22 @@ func DSNforMongoDB(service *Service, exporter *Agent) string {
 	return u.String()
 }
 
-// ResolveDSNByServiceID resolves DSN by service id.
-func ResolveDSNByServiceID(q *reform.Querier, serviceID, db string) (string, error) {
+// FindDSNByServiceID resolves DSN by service id.
+func FindDSNByServiceID(q *reform.Querier, serviceID, db string) (string, error) {
 	var result string
 
 	svc, err := FindServiceByID(q, serviceID)
 	if err != nil {
-		return "", status.Errorf(codes.FailedPrecondition, "couldn't resolve dsn")
+		return "", err
 	}
 
 	pmmAgents, err := FindPMMAgentsForService(q, serviceID)
 	if err != nil {
-		return "", status.Errorf(codes.FailedPrecondition, "couldn't resolve dsn")
+		return "", err
 	}
 
 	if len(pmmAgents) != 1 {
-		return "", status.Errorf(codes.FailedPrecondition, "couldn't resolve dsn, as there should be only one pmm-agent")
+		return "", status.Errorf(codes.FailedPrecondition, "Couldn't resolve dsn, as there should be only one pmm-agent")
 	}
 
 	pmmAgentID := pmmAgents[0].AgentID
@@ -128,16 +127,16 @@ func ResolveDSNByServiceID(q *reform.Querier, serviceID, db string) (string, err
 	case PostgreSQLServiceType:
 		agentType = PostgresExporterType
 	default:
-		return "", status.Errorf(codes.FailedPrecondition, "couldn't resolve dsn, as service is unsupported")
+		return "", status.Errorf(codes.FailedPrecondition, "Couldn't resolve dsn, as service is unsupported")
 	}
 
 	exporters, err := FindAgentsByPmmAgentIDAndAgentType(q, pmmAgentID, agentType)
 	if err != nil {
-		return "", errors.Wrap(err, "couldn't resolve dsn")
+		return "", err
 	}
 
 	if len(exporters) != 1 {
-		return "", errors.New("couldn't resolve dsn, as there should be only one exporter")
+		return "", status.Errorf(codes.FailedPrecondition, "Couldn't resolve dsn, as there should be only one exporter")
 	}
 
 	switch svc.ServiceType {

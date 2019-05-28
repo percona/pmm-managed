@@ -420,7 +420,7 @@ func FindPMMAgentsForService(q *reform.Querier, serviceID string) ([]*Agent, err
 func FindAgentsByPmmAgentIDAndAgentType(q *reform.Querier, pmmAgentID string, agentType AgentType) ([]*Agent, error) {
 	structs, err := q.SelectAllFrom(AgentTable, "WHERE pmm_agent_id = $1 AND agent_type = $2", pmmAgentID, agentType)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to select Agents")
+		return nil, status.Errorf(codes.FailedPrecondition, "Failed to select Agents, reason: %v", err)
 	}
 
 	var res []*Agent
