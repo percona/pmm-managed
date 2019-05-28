@@ -61,44 +61,6 @@ func (s *ActionResult) AfterFind() error {
 	return nil
 }
 
-// PtSummaryAction represents pt-summary domain model.
-type PtSummaryAction struct {
-	ID         string
-	PMMAgentID string
-	NodeID     string
-
-	Args []string
-}
-
-// PtMySQLSummaryAction represents pt-mysql-summary domain model.
-type PtMySQLSummaryAction struct {
-	ID         string
-	PMMAgentID string
-	ServiceID  string
-
-	Args []string
-}
-
-// MySQLExplainAction represents mysql-explain domain model.
-type MySQLExplainAction struct {
-	ID         string
-	PMMAgentID string
-	ServiceID  string
-
-	Dsn   string
-	Query string
-}
-
-// MySQLExplainJSONAction represents mysql-explain-json domain model.
-type MySQLExplainJSONAction struct {
-	ID         string
-	PMMAgentID string
-	ServiceID  string
-
-	Dsn   string
-	Query string
-}
-
 // getActionUUID generates action uuid.
 // nolint: unused
 func getActionUUID() string {

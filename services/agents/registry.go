@@ -35,6 +35,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/action"
 	"github.com/percona/pmm-managed/services/agents/channel"
 	"github.com/percona/pmm-managed/utils/logger"
 )
@@ -549,7 +550,7 @@ func (r *Registry) Collect(ch chan<- prom.Metric) {
 
 // StartPTSummaryAction starts pt-summary action on pmm-agent.
 //nolint:unparam
-func (r *Registry) StartPTSummaryAction(ctx context.Context, a *models.PtSummaryAction) error {
+func (r *Registry) StartPTSummaryAction(ctx context.Context, a *action.PtSummary) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: a.ID,
 		Type:     managementpb.ActionType_PT_SUMMARY,
@@ -571,7 +572,7 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, a *models.PtSummary
 
 // StartPTMySQLSummaryAction starts pt-mysql-summary action on pmm-agent.
 //nolint:unparam
-func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, a *models.PtMySQLSummaryAction) error {
+func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, a *action.PtMySQLSummary) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: a.ID,
 		Type:     managementpb.ActionType_PT_MYSQL_SUMMARY,
@@ -593,7 +594,7 @@ func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, a *models.PtMy
 
 // StartMySQLExplainAction starts mysql-explain action on pmm-agent.
 //nolint:unparam
-func (r *Registry) StartMySQLExplainAction(ctx context.Context, a *models.MySQLExplainAction) error {
+func (r *Registry) StartMySQLExplainAction(ctx context.Context, a *action.MySQLExplain) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: a.ID,
 		Type:     managementpb.ActionType_MYSQL_EXPLAIN,
@@ -617,7 +618,7 @@ func (r *Registry) StartMySQLExplainAction(ctx context.Context, a *models.MySQLE
 
 // StartMySQLExplainJSONAction starts mysql-explain-json action on pmm-agent.
 //nolint:unparam
-func (r *Registry) StartMySQLExplainJSONAction(ctx context.Context, a *models.MySQLExplainJSONAction) error {
+func (r *Registry) StartMySQLExplainJSONAction(ctx context.Context, a *action.MySQLExplainJSON) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: a.ID,
 		Type:     managementpb.ActionType_MYSQL_EXPLAIN,

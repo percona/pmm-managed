@@ -25,6 +25,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/action"
 	"github.com/percona/pmm-managed/services/agents"
 )
 
@@ -64,7 +65,7 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 		return nil, err
 	}
 
-	a := &models.PtSummaryAction{
+	a := &action.PtSummary{
 		ID:         res.ID,
 		NodeID:     req.NodeId,
 		PMMAgentID: req.PmmAgentId,
@@ -100,7 +101,7 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 		return nil, err
 	}
 
-	a := &models.PtMySQLSummaryAction{
+	a := &action.PtMySQLSummary{
 		ID:         res.ID,
 		ServiceID:  req.ServiceId,
 		PMMAgentID: req.PmmAgentId,
@@ -136,7 +137,7 @@ func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *manage
 		return nil, err
 	}
 
-	a := &models.MySQLExplainAction{
+	a := &action.MySQLExplain{
 		ID:         res.ID,
 		ServiceID:  req.ServiceId,
 		PMMAgentID: req.PmmAgentId,
@@ -177,7 +178,7 @@ func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *ma
 		return nil, err
 	}
 
-	a := &models.MySQLExplainJSONAction{
+	a := &action.MySQLExplainJSON{
 		ID:         res.ID,
 		ServiceID:  req.ServiceId,
 		PMMAgentID: req.PmmAgentId,
