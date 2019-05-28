@@ -24,7 +24,6 @@ import (
 )
 
 // InsertActionResult stores an action result in action results storage.
-//nolint:unparam
 func InsertActionResult(q *reform.Querier, result *ActionResult) error {
 	if err := q.Insert(result); err != nil {
 		return errors.WithStack(err)
@@ -34,7 +33,6 @@ func InsertActionResult(q *reform.Querier, result *ActionResult) error {
 }
 
 // UpdateActionResult updates an action result in action results storage.
-//nolint:unparam,unused
 func UpdateActionResult(q *reform.Querier, result *ActionResult) error {
 	if err := q.Update(result); err != nil {
 		return errors.WithStack(err)
@@ -43,7 +41,6 @@ func UpdateActionResult(q *reform.Querier, result *ActionResult) error {
 }
 
 // LoadActionResult loads an action result from storage by action id.
-//nolint:unparam
 func LoadActionResult(q *reform.Querier, id string) (*ActionResult, error) {
 	if id == "" {
 		return nil, status.Error(codes.InvalidArgument, "Empty ActionResult ID.")

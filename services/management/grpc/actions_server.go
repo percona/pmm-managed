@@ -60,14 +60,10 @@ func (s *actionsServer) GetAction(ctx context.Context, req *managementpb.GetActi
 //nolint:lll,dupl
 func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
 	a := &models.PtSummaryAction{
-		ID:                 models.GetActionUUID(),
-		NodeID:             req.NodeId,
-		PMMAgentID:         req.PmmAgentId,
-		SummarizeMounts:    true,
-		SummarizeNetwork:   true,
-		SummarizeProcesses: true,
-		Sleep:              5,
-		Help:               false,
+		ID:         models.GetActionUUID(),
+		NodeID:     req.NodeId,
+		PMMAgentID: req.PmmAgentId,
+		Args:       []string{},
 	}
 
 	ag, err := models.FindPMMAgentsForNode(s.db.Querier, a.NodeID)

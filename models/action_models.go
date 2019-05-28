@@ -17,10 +17,10 @@
 package models
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"gopkg.in/reform.v1"
 )
 
 //go:generate reform
@@ -67,48 +67,7 @@ type PtSummaryAction struct {
 	PMMAgentID string
 	NodeID     string
 
-	Config             string
-	Help               bool
-	ReadSamples        string
-	SaveSamples        string
-	Sleep              uint32
-	SummarizeMounts    bool
-	SummarizeNetwork   bool
-	SummarizeProcesses bool
-	Version            bool
-}
-
-// Args returns arguments slice for pmm-agent actions implementation.
-func (s *PtSummaryAction) Args() []string {
-	var args []string
-	if s.Config != "" {
-		args = append(args, "--config", s.Config)
-	}
-	if s.Version {
-		args = append(args, "--version")
-	}
-	if s.Help {
-		args = append(args, "--help")
-	}
-	if s.ReadSamples != "" {
-		args = append(args, "--read-samples", s.ReadSamples)
-	}
-	if s.SaveSamples != "" {
-		args = append(args, "--save-samples", s.SaveSamples)
-	}
-	if s.Sleep > 0 {
-		args = append(args, "--sleep", fmt.Sprintf("%d", s.Sleep))
-	}
-	if s.SummarizeMounts {
-		args = append(args, "--summarize-mounts")
-	}
-	if s.SummarizeNetwork {
-		args = append(args, "--summarize-network")
-	}
-	if s.SummarizeProcesses {
-		args = append(args, "--summarize-processes")
-	}
-	return args
+	Args []string
 }
 
 // PtMySQLSummaryAction represents pt-mysql-summary domain model.
@@ -145,3 +104,10 @@ type MySQLExplainJSONAction struct {
 func GetActionUUID() string {
 	return "/action_id/" + uuid.New().String()
 }
+
+// check interfaces
+var (
+	_ reform.BeforeInserter = (*ActionResult)(nil)
+	_ reform.BeforeUpdater  = (*ActionResult)(nil)
+	_ reform.AfterFinder    = (*ActionResult)(nil)
+)
