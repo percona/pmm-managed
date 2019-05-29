@@ -41,19 +41,20 @@ func TestNodeExporterConfig(t *testing.T) {
 				"--collector.ksmd",
 				"--collector.meminfo_numa",
 				"--collector.mountstats",
-				"--collector.processes",
-				"--collector.qdisc",
-				"--collector.wifi",
-				"--web.listen-address=:{{ .listen_port }}",
 				"--collector.netstat.fields=^(.*_(InErrors|InErrs|InCsumErrors)" +
 					"|Tcp_(ActiveOpens|PassiveOpens|RetransSegs|CurrEstab|AttemptFails|OutSegs|InSegs|EstabResets|OutRsts|OutSegs)|Tcp_Rto(Algorithm|Min|Max)" +
 					"|Udp_(RcvbufErrors|SndbufErrors)|Udp(6?|Lite6?)_(InDatagrams|OutDatagrams|RcvbufErrors|SndbufErrors|NoPorts)" +
 					"|Icmp6?_(OutEchoReps|OutEchos|InEchos|InEchoReps|InAddrMaskReps|InAddrMasks|OutAddrMaskReps|OutAddrMasks|InTimestampReps|InTimestamps" +
 					"|OutTimestampReps|OutTimestamps|OutErrors|InDestUnreachs|OutDestUnreachs|InTimeExcds|InRedirects|OutRedirects|InMsgs|OutMsgs)" +
 					"|IcmpMsg_(InType3|OutType3)|Ip(6|Ext)_(InOctets|OutOctets)|Ip_Forwarding|TcpExt_(Listen.*|Syncookies.*|TCPTimeouts))$",
+				"--collector.processes",
+				"--collector.qdisc",
 				"--collector.vmstat.fields=^(pg(steal_(kswapd|direct)|refill|alloc)_(movable|normal|dma3?2?)" +
 					"|nr_(dirty.*|slab.*|vmscan.*|isolated.*|free.*|shmem.*|i?n?active.*|anon_transparent_.*|writeback.*|unstable" +
-					"|unevictable|mlock|mapped|bounce|page_table_pages|kernel_stack)|drop_slab|slabs_scanned|pgd?e?activate)$",
+					"|unevictable|mlock|mapped|bounce|page_table_pages|kernel_stack)|drop_slab|slabs_scanned|pgd?e?activate)" +
+					"|pgpg(in|out)|pswp(in|out)|pgm?a?j?fault)$",
+				"--collector.wifi",
+				"--web.listen-address=:{{ .listen_port }}",
 			},
 		}
 		assert.Equal(t, expected.Args, actual.Args)
