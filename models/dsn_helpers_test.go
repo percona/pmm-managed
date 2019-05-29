@@ -108,7 +108,7 @@ func TestFindDSNByServiceID(t *testing.T) {
 		return
 	}
 
-	t.Run("AgentsForNode", func(t *testing.T) {
+	t.Run("FindDSNByServiceIDandPMMAgentID", func(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
 
