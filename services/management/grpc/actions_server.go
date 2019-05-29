@@ -20,8 +20,6 @@ import (
 	"context"
 
 	"github.com/percona/pmm/api/managementpb"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -29,7 +27,6 @@ import (
 	"github.com/percona/pmm-managed/services/agents"
 )
 
-//nolint:unused
 type actionsServer struct {
 	r  *agents.Registry
 	db *reform.DB
@@ -84,7 +81,7 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 
 	err = s.r.StartPTSummaryAction(ctx, a)
 	if err != nil {
-		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+		return nil, err
 	}
 
 	return &managementpb.StartPTSummaryActionResponse{
@@ -120,7 +117,7 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 
 	err = s.r.StartPTMySQLSummaryAction(ctx, a)
 	if err != nil {
-		return nil, status.Errorf(codes.FailedPrecondition, err.Error())
+		return nil, err
 	}
 
 	return &managementpb.StartPTMySQLSummaryActionResponse{
@@ -161,7 +158,7 @@ func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *manage
 
 	err = s.r.StartMySQLExplainAction(ctx, a)
 	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, err.Error())
+		return nil, err
 	}
 
 	return &managementpb.StartMySQLExplainActionResponse{
@@ -202,7 +199,7 @@ func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *ma
 
 	err = s.r.StartMySQLExplainJSONAction(ctx, a)
 	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, err.Error())
+		return nil, err
 	}
 
 	return &managementpb.StartMySQLExplainJSONActionResponse{
@@ -221,7 +218,7 @@ func (s *actionsServer) CancelAction(ctx context.Context, req *managementpb.Canc
 
 	err = s.r.StopAction(ctx, ar.ID)
 	if err != nil {
-		return nil, status.Error(codes.FailedPrecondition, err.Error())
+		return nil, err
 	}
 
 	return &managementpb.CancelActionResponse{}, nil

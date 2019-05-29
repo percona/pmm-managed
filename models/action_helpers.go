@@ -17,7 +17,6 @@
 package models
 
 import (
-	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -43,7 +42,7 @@ func ChangeActionResult(q *reform.Querier, actionID, pmmAgentID, aError, output 
 		Output:     output,
 	}
 	if err := q.Update(result); err != nil {
-		return errors.WithStack(err)
+		return status.Errorf(codes.FailedPrecondition, "Couldn't update ActionResult, reason: %v", err)
 	}
 	return nil
 }
@@ -51,7 +50,7 @@ func ChangeActionResult(q *reform.Querier, actionID, pmmAgentID, aError, output 
 // FindActionResultByID loads an action result from storage by action id.
 func FindActionResultByID(q *reform.Querier, id string) (*ActionResult, error) {
 	if id == "" {
-		return nil, status.Errorf(codes.InvalidArgument, "ActionResult with ID %q not found.", id)
+		return nil, status.Errorf(codes.InvalidArgument, "Couldn't get AgentResult, as id is empty.")
 	}
 
 	row := &ActionResult{ID: id}
@@ -61,7 +60,7 @@ func FindActionResultByID(q *reform.Querier, id string) (*ActionResult, error) {
 	case reform.ErrNoRows:
 		return nil, status.Errorf(codes.NotFound, "ActionResult with ID %q not found.", id)
 	default:
-		return nil, errors.WithStack(err)
+		return nil, status.Errorf(codes.FailedPrecondition, "Couldn't get AgentResult, reason: %v", err)
 	}
 }
 
@@ -74,7 +73,7 @@ func FindPmmAgentIDToRunAction(pmmAgentID string, agents []*Agent) (string, erro
 
 	// no explicit ID is given, and there are zero or several
 	if pmmAgentID == "" {
-		return "", status.Errorf(codes.InvalidArgument, "couldn't find pmm-agent-id to run action")
+		return "", status.Errorf(codes.InvalidArgument, "Couldn't find pmm-agent-id to run action")
 	}
 
 	// check that explicit agent id is correct
@@ -83,5 +82,5 @@ func FindPmmAgentIDToRunAction(pmmAgentID string, agents []*Agent) (string, erro
 			return a.AgentID, nil
 		}
 	}
-	return "", status.Errorf(codes.FailedPrecondition, "couldn't find pmm-agent-id to run action")
+	return "", status.Errorf(codes.FailedPrecondition, "Couldn't find pmm-agent-id to run action")
 }
