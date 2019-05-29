@@ -33,7 +33,7 @@ import (
 	"github.com/percona/pmm-managed/utils/tests"
 )
 
-func TestDsnHelpers(t *testing.T) {
+func TestAgentHelpers(t *testing.T) {
 	now, origNowF := models.Now(), models.Now
 	models.Now = func() time.Time {
 		return now
