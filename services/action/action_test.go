@@ -14,22 +14,27 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package models_test
+package action_test
 
 import (
 	"testing"
 	"time"
 
+	"github.com/AlekSi/pointer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/action"
 	"github.com/percona/pmm-managed/utils/testdb"
+	"github.com/percona/pmm-managed/utils/tests"
 )
 
-func TestActionHelpers(t *testing.T) {
+func TestFindPmmAgentIDToRunAction(t *testing.T) {
 	now, origNowF := models.Now(), models.Now
 	models.Now = func() time.Time {
 		return now
@@ -61,15 +66,33 @@ func TestActionHelpers(t *testing.T) {
 		return
 	}
 
-	t.Run("FindActionResultByID", func(t *testing.T) {
-		q, teardown := setup(t)
-		defer teardown(t)
+	_, teardown := setup(t)
+	defer teardown(t)
 
-		a, err := models.FindActionResultByID(q, "A1")
-		require.NoError(t, err)
-		assert.NotEmpty(t, a.ID)
+	a := []*models.Agent{
+		{AgentID: "A1", AgentType: models.PMMAgentType},
+		{AgentID: "A2", AgentType: models.MySQLdExporterType, PMMAgentID: pointer.ToString("A1")},
+	}
 
-		_, err = models.FindActionResultByID(q, "A2")
-		require.Error(t, err)
-	})
+	id, err := action.FindPmmAgentIDToRunAction("A1", a)
+	require.NoError(t, err)
+	assert.Equal(t, "A1", id)
+
+	a2 := []*models.Agent{
+		{AgentID: "A1", AgentType: models.PMMAgentType},
+		{AgentID: "A2", AgentType: models.MySQLdExporterType, PMMAgentID: pointer.ToString("A1")},
+		{AgentID: "A3", AgentType: models.MySQLdExporterType, PMMAgentID: pointer.ToString("A1")},
+	}
+
+	id, err = action.FindPmmAgentIDToRunAction("A3", a2)
+	require.NoError(t, err)
+	assert.Equal(t, "A3", id)
+
+	_, err = action.FindPmmAgentIDToRunAction("A4", a2)
+	require.Error(t, err)
+	tests.AssertGRPCError(t, status.New(codes.FailedPrecondition, "Couldn't find pmm-agent-id to run action"), err)
+
+	_, err = action.FindPmmAgentIDToRunAction("", a2)
+	require.Error(t, err)
+	tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Couldn't find pmm-agent-id to run action"), err)
 }
