@@ -125,26 +125,26 @@ func FindDSNByServiceIDandPMMAgentID(q *reform.Querier, serviceID, pmmAgentID, d
 		return "", err
 	}
 
-	var filteredExporters []*Agent
+	fexp := make([]*Agent, 0)
 	for _, e := range exporters {
 		if pointer.GetString(e.PMMAgentID) == pmmAgentID {
-			filteredExporters = append(filteredExporters, e)
+			fexp = append(fexp, e)
 		}
 	}
 
-	if len(filteredExporters) != 1 {
+	if len(fexp) != 1 {
 		return "", status.Errorf(codes.FailedPrecondition, "Couldn't resolve dsn, as there should be only one exporter")
 	}
 
 	switch svc.ServiceType {
 	case MySQLServiceType:
-		result = DSNforMySQL(svc, exporters[0], db)
+		result = DSNforMySQL(svc, fexp[0], db)
 
 	case MongoDBServiceType:
-		result = DSNforMongoDB(svc, exporters[0])
+		result = DSNforMongoDB(svc, fexp[0])
 
 	case PostgreSQLServiceType:
-		result = DSNforPostgreSQL(svc, exporters[0])
+		result = DSNforPostgreSQL(svc, fexp[0])
 	}
 
 	return result, nil
