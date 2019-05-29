@@ -344,7 +344,7 @@ func ChangeAgent(q *reform.Querier, agentID string, params *ChangeCommonAgentPar
 
 // FindPMMAgentsForNode gets pmm-agents for node where it runs.
 func FindPMMAgentsForNode(q *reform.Querier, nodeID string) ([]*Agent, error) {
-	structs, err := q.SelectAllFrom(AgentTable, "WHERE runs_on_node_id = $1", nodeID)
+	structs, err := q.SelectAllFrom(AgentTable, "WHERE runs_on_node_id = $1 AND agent_type = $2", nodeID, PMMAgentType)
 	if err != nil {
 		return nil, status.Errorf(codes.FailedPrecondition, "Couldn't get agents by runs_on_node_id, %s", nodeID)
 	}
@@ -352,9 +352,7 @@ func FindPMMAgentsForNode(q *reform.Querier, nodeID string) ([]*Agent, error) {
 	var res []*Agent
 	for _, str := range structs {
 		row := str.(*Agent)
-		if row.AgentType == PMMAgentType {
-			res = append(res, row)
-		}
+		res = append(res, row)
 	}
 
 	if len(res) == 0 {
@@ -404,7 +402,7 @@ func FindPMMAgentsForService(q *reform.Querier, serviceID string) ([]*Agent, err
 
 	// Last, find all pmm-agents.
 	ph := strings.Join(q.Placeholders(1, len(pmmAgentIDs)), ", ")
-	atail := fmt.Sprintf("WHERE agent_id IN (%s)", ph) //nolint:gosec
+	atail := fmt.Sprintf("WHERE agent_id IN (%s) AND agent_type = '%s'", ph, PMMAgentType) //nolint:gosec
 	pmmAgentRecords, err := q.SelectAllFrom(AgentTable, atail, pmmAgentIDs...)
 	if err != nil {
 		return nil, status.Errorf(codes.FailedPrecondition, "Couldn't get pmm-agents for service %s", serviceID)
@@ -412,9 +410,7 @@ func FindPMMAgentsForService(q *reform.Querier, serviceID string) ([]*Agent, err
 	var res []*Agent
 	for _, str := range pmmAgentRecords {
 		row := str.(*Agent)
-		if row.AgentType == PMMAgentType {
-			res = append(res, row)
-		}
+		res = append(res, row)
 	}
 
 	return res, nil
@@ -431,9 +427,7 @@ func FindAgentsByPmmAgentIDAndAgentType(q *reform.Querier, pmmAgentID string, ag
 	var res []*Agent
 	for _, str := range structs {
 		row := str.(*Agent)
-		if row.AgentType == agentType {
-			res = append(res, row)
-		}
+		res = append(res, row)
 	}
 
 	if len(res) == 0 {

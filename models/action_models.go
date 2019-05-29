@@ -19,7 +19,6 @@ package models
 import (
 	"time"
 
-	"github.com/google/uuid"
 	"gopkg.in/reform.v1"
 )
 
@@ -56,11 +55,6 @@ func (s *ActionResult) AfterFind() error {
 	s.CreatedAt = s.CreatedAt.UTC()
 	s.UpdatedAt = s.UpdatedAt.UTC()
 	return nil
-}
-
-// getActionUUID generates action uuid.
-func getActionUUID() string {
-	return "/action_id/" + uuid.New().String()
 }
 
 // check interfaces

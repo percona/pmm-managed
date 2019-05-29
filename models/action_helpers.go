@@ -17,6 +17,7 @@
 package models
 
 import (
+	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -24,7 +25,7 @@ import (
 
 // CreateActionResult stores an action result in action results storage.
 func CreateActionResult(q *reform.Querier, pmmAgentID string) (*ActionResult, error) {
-	result := &ActionResult{ID: getActionUUID(), PmmAgentID: pmmAgentID}
+	result := &ActionResult{ID: "/action_id/" + uuid.New().String(), PmmAgentID: pmmAgentID}
 	if err := q.Insert(result); err != nil {
 		return result, status.Errorf(codes.FailedPrecondition, "Couldn't create ActionResult, reason: %v", err)
 	}
