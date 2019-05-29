@@ -416,10 +416,24 @@ func FindPMMAgentsForService(q *reform.Querier, serviceID string) ([]*Agent, err
 	return res, nil
 }
 
-// FindAgentsByPmmAgentIDAndAgentType find agents by pmm-agent-id and agent-type.
+// FindAgentsByServiceIDAndAgentType find agents by service_id and agent_type.
 //nolint:unused
-func FindAgentsByPmmAgentIDAndAgentType(q *reform.Querier, pmmAgentID string, agentType AgentType) ([]*Agent, error) {
-	structs, err := q.SelectAllFrom(AgentTable, "WHERE pmm_agent_id = $1 AND agent_type = $2", pmmAgentID, agentType)
+func FindAgentsByServiceIDAndAgentType(q *reform.Querier, serviceID string, agentType AgentType) ([]*Agent, error) {
+	asMap, err := q.SelectAllFrom(AgentServiceView, "WHERE service_id = $1", serviceID)
+	if err != nil {
+		return nil, status.Errorf(codes.FailedPrecondition, "Failed to select AgentService map, reason: %v", err)
+	}
+
+	aIds := make([]interface{}, len(asMap))
+	for _, str := range asMap {
+		row := str.(*AgentService)
+		aIds = append(aIds, row.AgentID)
+	}
+
+	// Last, find all pmm-agents.
+	ph := strings.Join(q.Placeholders(1, len(aIds)), ", ")
+	atail := fmt.Sprintf("WHERE agent_id IN (%s) AND agent_type = '%s'", ph, agentType) //nolint:gosec
+	structs, err := q.SelectAllFrom(AgentTable, atail, aIds...)
 	if err != nil {
 		return nil, status.Errorf(codes.FailedPrecondition, "Failed to select Agents, reason: %v", err)
 	}

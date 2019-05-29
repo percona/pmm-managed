@@ -21,89 +21,14 @@ import (
 	"time"
 
 	"github.com/AlekSi/pointer"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/testdb"
-	"github.com/percona/pmm-managed/utils/tests"
 )
-
-func TestDsnHelpers(t *testing.T) {
-	now, origNowF := models.Now(), models.Now
-	models.Now = func() time.Time {
-		return now
-	}
-	sqlDB := testdb.Open(t)
-	defer func() {
-		models.Now = origNowF
-		require.NoError(t, sqlDB.Close())
-	}()
-
-	setup := func(t *testing.T) (q *reform.Querier, teardown func(t *testing.T)) {
-		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-		tx, err := db.Begin()
-		require.NoError(t, err)
-		q = tx.Querier
-
-		for _, str := range []reform.Struct{
-			&models.Node{
-				NodeID:   "N1",
-				NodeType: models.GenericNodeType,
-				NodeName: "Node with Service",
-			},
-
-			&models.Service{
-				ServiceID:   "S1",
-				ServiceType: models.MySQLServiceType,
-				ServiceName: "Service1 on N1",
-				NodeID:      "N1",
-			},
-
-			&models.Agent{
-				AgentID:      "A1",
-				AgentType:    models.PMMAgentType,
-				RunsOnNodeID: pointer.ToString("N1"),
-			},
-
-			&models.Agent{
-				AgentID:      "A2",
-				AgentType:    models.PMMAgentType,
-				RunsOnNodeID: pointer.ToString("N1"),
-			},
-
-			&models.AgentService{
-				AgentID:   "A1",
-				ServiceID: "S1",
-			},
-			&models.AgentService{
-				AgentID:   "A2",
-				ServiceID: "S1",
-			},
-		} {
-			require.NoError(t, q.Insert(str))
-		}
-
-		teardown = func(t *testing.T) {
-			require.NoError(t, tx.Rollback())
-		}
-		return
-	}
-
-	t.Run("FindDSNByServiceID", func(t *testing.T) {
-		q, teardown := setup(t)
-		defer teardown(t)
-
-		// test when there are more than one pmm-agent
-		_, err := models.FindDSNByServiceID(q, "S1", "")
-		require.Error(t, err)
-		tests.AssertGRPCError(t, status.New(codes.FailedPrecondition, "Couldn't resolve dsn, as there should be only one pmm-agent"), err)
-	})
-
-}
 
 func TestFindDSNByServiceID(t *testing.T) {
 
@@ -148,6 +73,7 @@ func TestFindDSNByServiceID(t *testing.T) {
 				ServiceType: models.MySQLServiceType,
 				ServiceName: "Service-2 on N1",
 				NodeID:      "N1",
+				Address:     pointer.ToString("127.0.0.1"),
 			},
 			&models.Agent{
 				AgentID:      "A1",
@@ -160,6 +86,7 @@ func TestFindDSNByServiceID(t *testing.T) {
 				AgentType:    models.MySQLdExporterType,
 				PMMAgentID:   pointer.ToString("PA1"),
 				RunsOnNodeID: nil,
+				Username:     pointer.ToString("pmm-user"),
 			},
 
 			&models.AgentService{
@@ -185,9 +112,9 @@ func TestFindDSNByServiceID(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
 
-		dsn, err := models.FindDSNByServiceID(q, "S2", "test")
+		dsn, err := models.FindDSNByServiceIDandPMMAgentID(q, "S2", "PA1", "test")
 		require.NoError(t, err)
-		expected := ""
+		expected := "pmm-user@tcp(127.0.0.1:0)/test?clientFoundRows=true&parseTime=true&timeout=1s"
 		assert.Equal(t, expected, dsn)
 	})
 }

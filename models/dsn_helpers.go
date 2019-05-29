@@ -99,8 +99,8 @@ func DSNforMongoDB(service *Service, exporter *Agent) string {
 	return u.String()
 }
 
-// FindDSNByServiceID resolves DSN by service id.
-func FindDSNByServiceID(q *reform.Querier, serviceID, db string) (string, error) {
+// FindDSNByServiceIDandPMMAgentID resolves DSN by service id.
+func FindDSNByServiceIDandPMMAgentID(q *reform.Querier, serviceID, pmmAgentID, db string) (string, error) {
 	var result string
 
 	svc, err := FindServiceByID(q, serviceID)
@@ -108,16 +108,6 @@ func FindDSNByServiceID(q *reform.Querier, serviceID, db string) (string, error)
 		return "", err
 	}
 
-	pmmAgents, err := FindPMMAgentsForService(q, serviceID)
-	if err != nil {
-		return "", err
-	}
-
-	if len(pmmAgents) != 1 {
-		return "", status.Errorf(codes.FailedPrecondition, "Couldn't resolve dsn, as there should be only one pmm-agent")
-	}
-
-	pmmAgentID := pmmAgents[0].AgentID
 	var agentType AgentType
 	switch svc.ServiceType {
 	case MySQLServiceType:
@@ -130,12 +120,19 @@ func FindDSNByServiceID(q *reform.Querier, serviceID, db string) (string, error)
 		return "", status.Errorf(codes.FailedPrecondition, "Couldn't resolve dsn, as service is unsupported")
 	}
 
-	exporters, err := FindAgentsByPmmAgentIDAndAgentType(q, pmmAgentID, agentType)
+	exporters, err := FindAgentsByServiceIDAndAgentType(q, serviceID, agentType)
 	if err != nil {
 		return "", err
 	}
 
-	if len(exporters) != 1 {
+	var filteredExporters []*Agent
+	for _, e := range exporters {
+		if pointer.GetString(e.PMMAgentID) == pmmAgentID {
+			filteredExporters = append(filteredExporters, e)
+		}
+	}
+
+	if len(filteredExporters) != 1 {
 		return "", status.Errorf(codes.FailedPrecondition, "Couldn't resolve dsn, as there should be only one exporter")
 	}
 

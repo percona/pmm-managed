@@ -151,7 +151,7 @@ func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *manage
 		return nil, err
 	}
 
-	a.Dsn, err = models.FindDSNByServiceID(s.db.Querier, a.ServiceID, req.Database)
+	a.Dsn, err = models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, a.ServiceID, a.PMMAgentID, req.Database)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +192,7 @@ func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *ma
 		return nil, err
 	}
 
-	a.Dsn, err = models.FindDSNByServiceID(s.db.Querier, a.ServiceID, req.Database)
+	a.Dsn, err = models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, a.ServiceID, a.PMMAgentID, req.Database)
 	if err != nil {
 		return nil, err
 	}
