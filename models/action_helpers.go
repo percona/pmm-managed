@@ -64,24 +64,3 @@ func FindActionResultByID(q *reform.Querier, id string) (*ActionResult, error) {
 		return nil, status.Errorf(codes.FailedPrecondition, "Couldn't get AgentResult, reason: %v", err)
 	}
 }
-
-// FindPmmAgentIDToRunAction finds pmm-agent-id to run action.
-func FindPmmAgentIDToRunAction(pmmAgentID string, agents []*Agent) (string, error) {
-	// no explicit ID is given, and there is only one
-	if pmmAgentID == "" && len(agents) == 1 {
-		return agents[0].AgentID, nil
-	}
-
-	// no explicit ID is given, and there are zero or several
-	if pmmAgentID == "" {
-		return "", status.Errorf(codes.InvalidArgument, "Couldn't find pmm-agent-id to run action")
-	}
-
-	// check that explicit agent id is correct
-	for _, a := range agents {
-		if a.AgentID == pmmAgentID {
-			return a.AgentID, nil
-		}
-	}
-	return "", status.Errorf(codes.FailedPrecondition, "Couldn't find pmm-agent-id to run action")
-}

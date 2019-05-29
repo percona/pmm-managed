@@ -74,7 +74,7 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 		return nil, err
 	}
 
-	a.PMMAgentID, err = models.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
+	a.PMMAgentID, err = action.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 		return nil, err
 	}
 
-	a.PMMAgentID, err = models.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
+	a.PMMAgentID, err = action.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +146,7 @@ func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *manage
 		return nil, err
 	}
 
-	a.PMMAgentID, err = models.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
+	a.PMMAgentID, err = action.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +187,7 @@ func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *ma
 		return nil, err
 	}
 
-	a.PMMAgentID, err = models.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
+	a.PMMAgentID, err = action.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
 	if err != nil {
 		return nil, err
 	}

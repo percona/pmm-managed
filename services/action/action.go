@@ -16,6 +16,13 @@
 
 package action
 
+import (
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
+	"github.com/percona/pmm-managed/models"
+)
+
 // PtSummary represents pt-summary domain model.
 type PtSummary struct {
 	ID         string
@@ -52,4 +59,25 @@ type MySQLExplainJSON struct {
 
 	Dsn   string
 	Query string
+}
+
+// FindPmmAgentIDToRunAction finds pmm-agent-id to run action.
+func FindPmmAgentIDToRunAction(pmmAgentID string, agents []*models.Agent) (string, error) {
+	// no explicit ID is given, and there is only one
+	if pmmAgentID == "" && len(agents) == 1 {
+		return agents[0].AgentID, nil
+	}
+
+	// no explicit ID is given, and there are zero or several
+	if pmmAgentID == "" {
+		return "", status.Errorf(codes.InvalidArgument, "Couldn't find pmm-agent-id to run action")
+	}
+
+	// check that explicit agent id is correct
+	for _, a := range agents {
+		if a.AgentID == pmmAgentID {
+			return a.AgentID, nil
+		}
+	}
+	return "", status.Errorf(codes.FailedPrecondition, "Couldn't find pmm-agent-id to run action")
 }
