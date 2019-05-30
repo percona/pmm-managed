@@ -17,8 +17,11 @@
 package main
 
 import (
+	"fmt"
 	"go/build"
+	"os"
 	"os/exec"
+	"sort"
 	"strings"
 	"testing"
 
@@ -41,6 +44,7 @@ func TestImports(t *testing.T) {
 		blacklistPrefixes []string
 	}
 
+	allImports := make(map[string]map[string]struct{})
 	for path, c := range map[string]constraint{
 		// models should not import services or APIs.
 		"github.com/percona/pmm-managed/models": {
@@ -102,19 +106,21 @@ func TestImports(t *testing.T) {
 		p, err := build.Import(path, ".", build.IgnoreVendor)
 		require.NoError(t, err)
 
-		allImports := make(map[string]struct{})
+		if allImports[path] == nil {
+			allImports[path] = make(map[string]struct{})
+		}
 		for _, i := range p.Imports {
-			allImports[i] = struct{}{}
+			allImports[path][i] = struct{}{}
 		}
 		for _, i := range p.TestImports {
-			allImports[i] = struct{}{}
+			allImports[path][i] = struct{}{}
 		}
 		for _, i := range p.XTestImports {
-			allImports[i] = struct{}{}
+			allImports[path][i] = struct{}{}
 		}
 
 		for _, b := range c.blacklistPrefixes {
-			for i := range allImports {
+			for i := range allImports[path] {
 				// whitelist own subpackages
 				if strings.HasPrefix(i, path) {
 					continue
@@ -127,4 +133,37 @@ func TestImports(t *testing.T) {
 			}
 		}
 	}
+
+	f, err := os.Create("packages.dot")
+	require.NoError(t, err)
+	defer f.Close()
+
+	fmt.Fprintf(f, "digraph packages {\n")
+
+	packages := make([]string, 0, len(allImports))
+	for p := range allImports {
+		packages = append(packages, p)
+	}
+	sort.Strings(packages)
+
+	for _, p := range packages {
+		imports := make([]string, 0, len(allImports[p]))
+		for p := range allImports[p] {
+			imports = append(imports, p)
+		}
+		sort.Strings(imports)
+
+		p = strings.TrimPrefix(p, "github.com/percona/pmm-managed")
+		for _, i := range imports {
+			if strings.Contains(i, "/utils/") || strings.Contains(i, "/internal/") {
+				continue
+			}
+			if strings.HasPrefix(i, "github.com/percona/pmm-managed") {
+				i = strings.TrimPrefix(i, "github.com/percona/pmm-managed")
+				fmt.Fprintf(f, "\t%q -> %q;\n", p, i)
+			}
+		}
+	}
+
+	fmt.Fprintf(f, "}\n")
 }
