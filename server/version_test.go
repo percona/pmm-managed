@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -35,8 +36,7 @@ func TestVersion(t *testing.T) {
 			err = json.NewDecoder(resp.Body).Decode(&res)
 			require.NoError(t, err)
 
-			t.Skip("https://jira.percona.com/browse/PMM-3705")
-			assert.Equal(t, "2.0.0-dev", res.Version)
+			assert.True(t, strings.HasPrefix(res.Version, "2.0.0-"), "version = %q", res.Version)
 		})
 	}
 }
