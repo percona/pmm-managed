@@ -50,23 +50,27 @@ func TestImports(t *testing.T) {
 			},
 		},
 
-		// Services should be independent: agents, inventory, management, prometheus, qan.
+		// services should be independent
+		"github.com/percona/pmm-managed/services/action": {
+			blacklistPrefixes: []string{
+				"github.com/percona/pmm-managed/services",
+			},
+		},
 		"github.com/percona/pmm-managed/services/agents": {
 			blacklistPrefixes: []string{
 				"github.com/percona/pmm-managed/services",
 			},
 		},
-		"github.com/percona/pmm-managed/services/inventory": {
+		"github.com/percona/pmm-managed/services/grafana": {
 			blacklistPrefixes: []string{
 				"github.com/percona/pmm-managed/services",
 			},
 		},
-		// FIXME https://jira.percona.com/browse/PMM-3541
-		// "github.com/percona/pmm-managed/services/management": {
-		// 	blacklistPrefixes: []string{
-		// 		"github.com/percona/pmm-managed/services",
-		// 	},
-		// },
+		"github.com/percona/pmm-managed/services/logs": {
+			blacklistPrefixes: []string{
+				"github.com/percona/pmm-managed/services",
+			},
+		},
 		"github.com/percona/pmm-managed/services/prometheus": {
 			blacklistPrefixes: []string{
 				"github.com/percona/pmm-managed/services",
@@ -75,6 +79,23 @@ func TestImports(t *testing.T) {
 		"github.com/percona/pmm-managed/services/qan": {
 			blacklistPrefixes: []string{
 				"github.com/percona/pmm-managed/services",
+			},
+		},
+		"github.com/percona/pmm-managed/services/telemetry": {
+			blacklistPrefixes: []string{
+				"github.com/percona/pmm-managed/services",
+			},
+		},
+
+		// those services should be independent too, but import converters
+		"github.com/percona/pmm-managed/services/inventory": {
+			blacklistPrefixes: []string{
+				"github.com/percona/pmm-managed/services/",
+			},
+		},
+		"github.com/percona/pmm-managed/services/management": {
+			blacklistPrefixes: []string{
+				"github.com/percona/pmm-managed/services/",
 			},
 		},
 	} {

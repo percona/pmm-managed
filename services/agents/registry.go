@@ -56,7 +56,7 @@ type agentInfo struct {
 // TODO Split into several types?
 type Registry struct {
 	db         *reform.DB
-	prometheus prometheus
+	prometheus prometheusService
 	qanClient  qanClient
 
 	rw     sync.RWMutex
@@ -70,7 +70,7 @@ type Registry struct {
 }
 
 // NewRegistry creates a new registry with given database connection.
-func NewRegistry(db *reform.DB, prometheus prometheus, qanClient qanClient) *Registry {
+func NewRegistry(db *reform.DB, prometheus prometheusService, qanClient qanClient) *Registry {
 	r := &Registry{
 		db:         db,
 		prometheus: prometheus,
