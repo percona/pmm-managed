@@ -38,6 +38,8 @@ func TestAddMongoDB(t *testing.T) {
 				ServiceName: serviceName,
 				Address:     "10.10.10.10",
 				Port:        27017,
+
+				SkipConnectionCheck: true,
 			},
 		}
 		addMongoDBOK, err := client.Default.MongoDB.AddMongoDB(params)
@@ -108,6 +110,8 @@ func TestAddMongoDB(t *testing.T) {
 				Username:           "username",
 				Password:           "password",
 				QANMongodbProfiler: true,
+
+				SkipConnectionCheck: true,
 			},
 		}
 		addMongoDBOK, err := client.Default.MongoDB.AddMongoDB(params)
@@ -172,8 +176,6 @@ func TestAddMongoDB(t *testing.T) {
 	})
 
 	t.Run("With labels", func(realT *testing.T) {
-		expectedFailureTestingT := pmmapitests.ExpectFailure(realT, "https://jira.percona.com/browse/PMM-3982")
-		defer expectedFailureTestingT.Check()
 
 		nodeName := pmmapitests.TestString(realT, "node-name-for-all-fields")
 		nodeID, pmmAgentID := registerGenericNode(realT, node.RegisterBody{
@@ -197,6 +199,8 @@ func TestAddMongoDB(t *testing.T) {
 				Cluster:        "cluster-name",
 				ReplicationSet: "replication-set",
 				CustomLabels:   map[string]string{"bar": "foo"},
+
+				SkipConnectionCheck: true,
 			},
 		}
 		addMongoDBOK, err := client.Default.MongoDB.AddMongoDB(params)
@@ -216,7 +220,7 @@ func TestAddMongoDB(t *testing.T) {
 		})
 		assert.NoError(realT, err)
 		assert.NotNil(realT, serviceOK)
-		assert.Equal(expectedFailureTestingT, services.GetServiceOKBody{
+		assert.Equal(t, services.GetServiceOKBody{
 			Mongodb: &services.GetServiceOKBodyMongodb{
 				ServiceID:      serviceID,
 				NodeID:         nodeID,
@@ -250,6 +254,8 @@ func TestAddMongoDB(t *testing.T) {
 				ServiceName: serviceName,
 				Address:     "10.10.10.10",
 				Port:        27017,
+
+				SkipConnectionCheck: true,
 			},
 		}
 		addMongoDBOK, err := client.Default.MongoDB.AddMongoDB(params)
@@ -374,7 +380,8 @@ func TestAddMongoDB(t *testing.T) {
 }
 
 func TestRemoveMongoDB(t *testing.T) {
-	addMongoDB := func(serviceName, nodeName string, withAgents bool) (nodeID string, pmmAgentID string, serviceID string) {
+	addMongoDB := func(t *testing.T, serviceName, nodeName string, withAgents bool) (nodeID string, pmmAgentID string, serviceID string) {
+		t.Helper()
 		nodeID, pmmAgentID = registerGenericNode(t, node.RegisterBody{
 			NodeName: nodeName,
 			NodeType: pointer.ToString(node.RegisterBodyNodeTypeGENERICNODE),
@@ -391,6 +398,8 @@ func TestRemoveMongoDB(t *testing.T) {
 				Username:           "username",
 				Password:           "password",
 				QANMongodbProfiler: withAgents,
+
+				SkipConnectionCheck: true,
 			},
 		}
 		addMongoDBOK, err := client.Default.MongoDB.AddMongoDB(params)
@@ -404,7 +413,7 @@ func TestRemoveMongoDB(t *testing.T) {
 	t.Run("By name", func(t *testing.T) {
 		serviceName := pmmapitests.TestString(t, "service-remove-by-name")
 		nodeName := pmmapitests.TestString(t, "node-remove-by-name")
-		nodeID, pmmAgentID, serviceID := addMongoDB(serviceName, nodeName, true)
+		nodeID, pmmAgentID, serviceID := addMongoDB(t, serviceName, nodeName, true)
 		defer pmmapitests.RemoveNodes(t, nodeID)
 		defer removePMMAgentWithSubAgents(t, pmmAgentID)
 
@@ -436,7 +445,7 @@ func TestRemoveMongoDB(t *testing.T) {
 	t.Run("By ID", func(t *testing.T) {
 		serviceName := pmmapitests.TestString(t, "service-remove-by-id")
 		nodeName := pmmapitests.TestString(t, "node-remove-by-id")
-		nodeID, pmmAgentID, serviceID := addMongoDB(serviceName, nodeName, true)
+		nodeID, pmmAgentID, serviceID := addMongoDB(t, serviceName, nodeName, true)
 		defer pmmapitests.RemoveNodes(t, nodeID)
 		defer removePMMAgentWithSubAgents(t, pmmAgentID)
 
@@ -467,7 +476,7 @@ func TestRemoveMongoDB(t *testing.T) {
 	t.Run("Both params", func(t *testing.T) {
 		serviceName := pmmapitests.TestString(t, "service-remove-both-params")
 		nodeName := pmmapitests.TestString(t, "node-remove-both-params")
-		nodeID, pmmAgentID, serviceID := addMongoDB(serviceName, nodeName, false)
+		nodeID, pmmAgentID, serviceID := addMongoDB(t, serviceName, nodeName, false)
 		defer pmmapitests.RemoveNodes(t, nodeID)
 		defer pmmapitests.RemoveServices(t, serviceID)
 		defer removePMMAgentWithSubAgents(t, pmmAgentID)
@@ -487,7 +496,7 @@ func TestRemoveMongoDB(t *testing.T) {
 	t.Run("Wrong type", func(t *testing.T) {
 		serviceName := pmmapitests.TestString(t, "service-remove-wrong-type")
 		nodeName := pmmapitests.TestString(t, "node-remove-wrong-type")
-		nodeID, pmmAgentID, serviceID := addMongoDB(serviceName, nodeName, false)
+		nodeID, pmmAgentID, serviceID := addMongoDB(t, serviceName, nodeName, false)
 		defer pmmapitests.RemoveNodes(t, nodeID)
 		defer pmmapitests.RemoveServices(t, serviceID)
 		defer removePMMAgentWithSubAgents(t, pmmAgentID)

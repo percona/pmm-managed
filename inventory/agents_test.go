@@ -44,6 +44,8 @@ func TestAgents(t *testing.T) {
 			Username:   "username",
 			Password:   "password",
 			PMMAgentID: pmmAgentID,
+
+			SkipConnectionCheck: true,
 		})
 		mySqldExporterID := mySqldExporter.MysqldExporter.AgentID
 		defer pmmapitests.RemoveAgents(t, mySqldExporterID)
@@ -86,6 +88,8 @@ func TestAgents(t *testing.T) {
 			Username:   "username",
 			Password:   "password",
 			PMMAgentID: pmmAgentID,
+
+			SkipConnectionCheck: true,
 		})
 		mySqldExporterID := mySqldExporter.MysqldExporter.AgentID
 		defer pmmapitests.RemoveAgents(t, mySqldExporterID)
@@ -247,6 +251,8 @@ func TestPMMAgent(t *testing.T) {
 			CustomLabels: map[string]string{
 				"custom_label_mysql_exporter": "mysql_exporter",
 			},
+
+			SkipConnectionCheck: true,
 		})
 		mySqldExporterID := mySqldExporter.MysqldExporter.AgentID
 
@@ -504,6 +510,8 @@ func TestMySQLdExporter(t *testing.T) {
 			CustomLabels: map[string]string{
 				"custom_label_mysql_exporter": "mysql_exporter",
 			},
+
+			SkipConnectionCheck: true,
 		})
 		agentID := mySqldExporter.MysqldExporter.AgentID
 		defer pmmapitests.RemoveAgents(t, agentID)
@@ -782,6 +790,8 @@ func TestMongoDBExporter(t *testing.T) {
 			CustomLabels: map[string]string{
 				"new_label": "mongodb_exporter",
 			},
+
+			SkipConnectionCheck: true,
 		})
 		agentID := mongoDBExporter.MongodbExporter.AgentID
 		defer pmmapitests.RemoveAgents(t, agentID)
@@ -1004,6 +1014,8 @@ func TestQanAgentExporter(t *testing.T) {
 					CustomLabels: map[string]string{
 						"new_label": "QANMysqlPerfschemaAgent",
 					},
+
+					SkipConnectionCheck: true,
 				},
 				Context: pmmapitests.Context,
 			})
@@ -1101,6 +1113,8 @@ func TestQanAgentExporter(t *testing.T) {
 				PMMAgentID: pmmAgentID,
 				Username:   "username",
 				Password:   "password",
+
+				SkipConnectionCheck: true,
 			},
 			Context: pmmapitests.Context,
 		})
@@ -1131,6 +1145,8 @@ func TestQanAgentExporter(t *testing.T) {
 				PMMAgentID: "",
 				Username:   "username",
 				Password:   "password",
+
+				SkipConnectionCheck: true,
 			},
 			Context: pmmapitests.Context,
 		})
@@ -1229,6 +1245,8 @@ func TestPostgresExporter(t *testing.T) {
 			CustomLabels: map[string]string{
 				"custom_label_postgres_exporter": "postgres_exporter",
 			},
+
+			SkipConnectionCheck: true,
 		})
 		agentID := PostgresExporter.PostgresExporter.AgentID
 		defer pmmapitests.RemoveAgents(t, agentID)

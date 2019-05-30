@@ -170,6 +170,8 @@ func TestRemoveService(t *testing.T) {
 			Username:   "username",
 			Password:   "password",
 			PMMAgentID: pmmAgentID,
+
+			SkipConnectionCheck: true,
 		})
 
 		params := &services.RemoveServiceParams{

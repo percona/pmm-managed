@@ -44,9 +44,6 @@ func TestNodeRegister(t *testing.T) {
 		})
 
 		t.Run("With all fields", func(t *testing.T) {
-			tt := pmmapitests.ExpectFailure(t, "https://jira.percona.com/browse/PMM-3982")
-			defer tt.Check()
-
 			nodeName := pmmapitests.TestString(t, "node-name")
 			machineID := pmmapitests.TestString(t, "machine-id")
 			nodeModel := pmmapitests.TestString(t, "node-model")
@@ -66,7 +63,7 @@ func TestNodeRegister(t *testing.T) {
 			defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
 			// Check Node is created
-			assertNodeCreated(tt, nodeID, nodes.GetNodeOKBody{
+			assertNodeCreated(t, nodeID, nodes.GetNodeOKBody{
 				Generic: &nodes.GetNodeOKBodyGeneric{
 					NodeID:       nodeID,
 					NodeName:     nodeName,
@@ -176,9 +173,6 @@ func TestNodeRegister(t *testing.T) {
 		})
 
 		t.Run("With all fields", func(t *testing.T) {
-			tt := pmmapitests.ExpectFailure(t, "https://jira.percona.com/browse/PMM-3982")
-			defer tt.Check()
-
 			nodeName := pmmapitests.TestString(t, "node-name")
 			nodeModel := pmmapitests.TestString(t, "node-model")
 			containerID := pmmapitests.TestString(t, "container-id")
@@ -199,7 +193,7 @@ func TestNodeRegister(t *testing.T) {
 			defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
 			// Check Node is created
-			assertNodeCreated(tt, nodeID, nodes.GetNodeOKBody{
+			assertNodeCreated(t, nodeID, nodes.GetNodeOKBody{
 				Container: &nodes.GetNodeOKBodyContainer{
 					NodeID:        nodeID,
 					NodeName:      nodeName,

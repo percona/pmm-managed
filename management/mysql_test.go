@@ -39,6 +39,8 @@ func TestAddMySQL(t *testing.T) {
 				Address:     "10.10.10.10",
 				Port:        3306,
 				Username:    "username",
+
+				SkipConnectionCheck: true,
 			},
 		}
 		addMySQLOK, err := client.Default.MySQL.AddMySQL(params)
@@ -111,6 +113,8 @@ func TestAddMySQL(t *testing.T) {
 				Password:           "password",
 				QANMysqlSlowlog:    true,
 				QANMysqlPerfschema: true,
+
+				SkipConnectionCheck: true,
 			},
 		}
 		addMySQLOK, err := client.Default.MySQL.AddMySQL(params)
@@ -184,9 +188,6 @@ func TestAddMySQL(t *testing.T) {
 	})
 
 	t.Run("With labels", func(t *testing.T) {
-		tt := pmmapitests.ExpectFailure(t, "https://jira.percona.com/browse/PMM-3982")
-		defer tt.Check()
-
 		nodeName := pmmapitests.TestString(t, "node-for-all-fields-name")
 		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterBody{
 			NodeName: nodeName,
@@ -211,6 +212,8 @@ func TestAddMySQL(t *testing.T) {
 				Cluster:        "cluster-name",
 				ReplicationSet: "replication-set",
 				CustomLabels:   map[string]string{"bar": "foo"},
+
+				SkipConnectionCheck: true,
 			},
 		}
 		addMySQLOK, err := client.Default.MySQL.AddMySQL(params)
@@ -230,7 +233,7 @@ func TestAddMySQL(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		assert.NotNil(t, serviceOK)
-		assert.Equal(tt, services.GetServiceOKBody{
+		assert.Equal(t, services.GetServiceOKBody{
 			Mysql: &services.GetServiceOKBodyMysql{
 				ServiceID:      serviceID,
 				NodeID:         nodeID,
@@ -265,6 +268,8 @@ func TestAddMySQL(t *testing.T) {
 				Address:     "10.10.10.10",
 				Port:        3306,
 				Username:    "username",
+
+				SkipConnectionCheck: true,
 			},
 		}
 		addMySQLOK, err := client.Default.MySQL.AddMySQL(params)
@@ -415,7 +420,8 @@ func TestAddMySQL(t *testing.T) {
 }
 
 func TestRemoveMySQL(t *testing.T) {
-	addMySQL := func(serviceName, nodeName string, withAgents bool) (nodeID string, pmmAgentID string, serviceID string) {
+	addMySQL := func(t *testing.T, serviceName, nodeName string, withAgents bool) (nodeID string, pmmAgentID string, serviceID string) {
+		t.Helper()
 		nodeID, pmmAgentID = registerGenericNode(t, node.RegisterBody{
 			NodeName: nodeName,
 			NodeType: pointer.ToString(node.RegisterBodyNodeTypeGENERICNODE),
@@ -433,6 +439,8 @@ func TestRemoveMySQL(t *testing.T) {
 				Password:           "password",
 				QANMysqlSlowlog:    withAgents,
 				QANMysqlPerfschema: withAgents,
+
+				SkipConnectionCheck: true,
 			},
 		}
 		addMySQLOK, err := client.Default.MySQL.AddMySQL(params)
@@ -446,7 +454,7 @@ func TestRemoveMySQL(t *testing.T) {
 	t.Run("By name", func(t *testing.T) {
 		serviceName := pmmapitests.TestString(t, "service-remove-by-name")
 		nodeName := pmmapitests.TestString(t, "node-remove-by-name")
-		nodeID, pmmAgentID, serviceID := addMySQL(serviceName, nodeName, true)
+		nodeID, pmmAgentID, serviceID := addMySQL(t, serviceName, nodeName, true)
 		defer pmmapitests.RemoveNodes(t, nodeID)
 		defer removePMMAgentWithSubAgents(t, pmmAgentID)
 
@@ -478,7 +486,7 @@ func TestRemoveMySQL(t *testing.T) {
 	t.Run("By ID", func(t *testing.T) {
 		serviceName := pmmapitests.TestString(t, "service-remove-by-id")
 		nodeName := pmmapitests.TestString(t, "node-remove-by-id")
-		nodeID, pmmAgentID, serviceID := addMySQL(serviceName, nodeName, true)
+		nodeID, pmmAgentID, serviceID := addMySQL(t, serviceName, nodeName, true)
 		defer pmmapitests.RemoveNodes(t, nodeID)
 		defer removePMMAgentWithSubAgents(t, pmmAgentID)
 
@@ -509,7 +517,7 @@ func TestRemoveMySQL(t *testing.T) {
 	t.Run("Both params", func(t *testing.T) {
 		serviceName := pmmapitests.TestString(t, "service-remove-both-params")
 		nodeName := pmmapitests.TestString(t, "node-remove-both-params")
-		nodeID, pmmAgentID, serviceID := addMySQL(serviceName, nodeName, false)
+		nodeID, pmmAgentID, serviceID := addMySQL(t, serviceName, nodeName, false)
 		defer pmmapitests.RemoveNodes(t, nodeID)
 		defer pmmapitests.RemoveServices(t, serviceID)
 		defer removePMMAgentWithSubAgents(t, pmmAgentID)
@@ -529,7 +537,7 @@ func TestRemoveMySQL(t *testing.T) {
 	t.Run("Wrong type", func(t *testing.T) {
 		serviceName := pmmapitests.TestString(t, "service-remove-wrong-type")
 		nodeName := pmmapitests.TestString(t, "node-remove-wrong-type")
-		nodeID, pmmAgentID, serviceID := addMySQL(serviceName, nodeName, false)
+		nodeID, pmmAgentID, serviceID := addMySQL(t, serviceName, nodeName, false)
 		defer pmmapitests.RemoveNodes(t, nodeID)
 		defer pmmapitests.RemoveServices(t, serviceID)
 		defer removePMMAgentWithSubAgents(t, pmmAgentID)
