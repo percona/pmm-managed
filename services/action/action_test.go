@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package action_test
+package action
 
 import (
 	"testing"
@@ -29,7 +29,6 @@ import (
 	"gopkg.in/reform.v1/dialects/postgresql"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/action"
 	"github.com/percona/pmm-managed/utils/testdb"
 	"github.com/percona/pmm-managed/utils/tests"
 )
@@ -74,7 +73,7 @@ func TestFindPmmAgentIDToRunAction(t *testing.T) {
 		{AgentID: "A2", AgentType: models.MySQLdExporterType, PMMAgentID: pointer.ToString("A1")},
 	}
 
-	id, err := action.FindPmmAgentIDToRunAction("A1", a)
+	id, err := FindPmmAgentIDToRunAction("A1", a)
 	require.NoError(t, err)
 	assert.Equal(t, "A1", id)
 
@@ -84,15 +83,15 @@ func TestFindPmmAgentIDToRunAction(t *testing.T) {
 		{AgentID: "A3", AgentType: models.MySQLdExporterType, PMMAgentID: pointer.ToString("A1")},
 	}
 
-	id, err = action.FindPmmAgentIDToRunAction("A3", a2)
+	id, err = FindPmmAgentIDToRunAction("A3", a2)
 	require.NoError(t, err)
 	assert.Equal(t, "A3", id)
 
-	_, err = action.FindPmmAgentIDToRunAction("A4", a2)
+	_, err = FindPmmAgentIDToRunAction("A4", a2)
 	require.Error(t, err)
 	tests.AssertGRPCError(t, status.New(codes.FailedPrecondition, "Couldn't find pmm-agent-id to run action"), err)
 
-	_, err = action.FindPmmAgentIDToRunAction("", a2)
+	_, err = FindPmmAgentIDToRunAction("", a2)
 	require.Error(t, err)
 	tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Couldn't find pmm-agent-id to run action"), err)
 }
