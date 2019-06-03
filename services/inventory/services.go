@@ -88,6 +88,19 @@ func ToInventoryService(row *models.Service) (inventorypb.Service, error) {
 			CustomLabels:   labels,
 		}, nil
 
+	case models.ProxySQLServiceType:
+		return &inventorypb.ProxySQLService{
+			ServiceId:      row.ServiceID,
+			ServiceName:    row.ServiceName,
+			NodeId:         row.NodeID,
+			Address:        pointer.GetString(row.Address),
+			Port:           uint32(pointer.GetUint16(row.Port)),
+			Environment:    row.Environment,
+			Cluster:        row.Cluster,
+			ReplicationSet: row.ReplicationSet,
+			CustomLabels:   labels,
+		}, nil
+
 	default:
 		panic(fmt.Errorf("unhandled Service type %s", row.ServiceType))
 	}
@@ -227,17 +240,11 @@ func (ss *ServicesService) AddPostgreSQL(ctx context.Context, params *models.Add
 // AddProxySQL inserts ProxySQL Service with given parameters.
 //nolint:dupl,unparam
 func (ss *ServicesService) AddProxySQL(ctx context.Context, params *models.AddDBMSServiceParams) (*inventorypb.ProxySQLService, error) {
-	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
-	// Both address and socket can't be empty, etc.
-
 	service := new(models.Service)
 	e := ss.db.InTransaction(func(tx *reform.TX) error {
 		var err error
 		service, err = models.AddNewService(tx.Querier, models.ProxySQLServiceType, params)
-		if err != nil {
-			return err
-		}
-		return nil
+		return err
 	})
 	if e != nil {
 		return nil, e

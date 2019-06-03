@@ -212,7 +212,7 @@
   version = "v0.2.2"
 
 [[projects]]
-  branch = "PMM-4026-API-for-ProxySQL"
+  branch = "PMM-2.0"
   digest = "1:8a4a30532469ce0727ce7d879d794b4a49fbd0353d23f2ef8b37b65ec2abf992"
   name = "github.com/percona/pmm"
   packages = [
@@ -224,7 +224,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "82261ce353ea6d437a67c85066506fb9515747e3"
+  revision = "43c66a35e2970a5d59c5253ce0cf34e4dce03eb3"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"

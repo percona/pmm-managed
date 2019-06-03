@@ -655,7 +655,7 @@ func (as *AgentsService) ChangeQANMongoDBProfilerAgent(ctx context.Context, req 
 	return res, nil
 }
 
-// AddProxySQLExporter inserts mysqld_exporter Agent with given parameters.
+// AddProxySQLExporter inserts proxysql_exporter Agent with given parameters.
 func (as *AgentsService) AddProxySQLExporter(ctx context.Context, req *inventorypb.AddProxySQLExporterRequest) (*inventorypb.ProxySQLExporter, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
 
@@ -698,7 +698,7 @@ func (as *AgentsService) AddProxySQLExporter(ctx context.Context, req *inventory
 	return res, nil
 }
 
-// ChangeProxySQLExporter updates mysqld_exporter Agent with given parameters.
+// ChangeProxySQLExporter updates proxysql_exporter Agent with given parameters.
 func (as *AgentsService) ChangeProxySQLExporter(ctx context.Context, req *inventorypb.ChangeProxySQLExporterRequest) (*inventorypb.ProxySQLExporter, error) {
 	agent, err := as.changeAgent(req.AgentId, req.Common)
 	if err != nil {
