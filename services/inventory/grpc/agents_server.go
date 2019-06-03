@@ -29,6 +29,14 @@ type agentsServer struct {
 	s *inventory.AgentsService
 }
 
+func (s *agentsServer) AddProxySQLExporter(context.Context, *inventorypb.AddProxySQLExporterRequest) (*inventorypb.AddProxySQLExporterResponse, error) {
+	panic("implement me")
+}
+
+func (s *agentsServer) ChangeProxySQLExporter(context.Context, *inventorypb.ChangeProxySQLExporterRequest) (*inventorypb.ChangeProxySQLExporterResponse, error) {
+	panic("implement me")
+}
+
 // NewAgentsServer returns Inventory API handler for managing Agents.
 func NewAgentsServer(s *inventory.AgentsService) inventorypb.AgentsServer {
 	return &agentsServer{s}

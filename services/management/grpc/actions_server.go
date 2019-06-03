@@ -208,6 +208,88 @@ func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *ma
 	}, nil
 }
 
+// StartMySQLShowCreateTableAction starts mysql-show-create-table action.
+//nolint:lll,dupl
+func (s *actionsServer) StartMySQLShowCreateTableAction(ctx context.Context, req *managementpb.StartMySQLShowCreateTableActionRequest) (*managementpb.StartMySQLShowCreateTableActionResponse, error) {
+	res, err := models.CreateActionResult(s.db.Querier, req.PmmAgentId)
+	if err != nil {
+		return nil, err
+	}
+
+	a := &action.MySQLShowCreateTable{
+		ID:         res.ID,
+		ServiceID:  req.ServiceId,
+		PMMAgentID: req.PmmAgentId,
+		Table:      req.TableName,
+	}
+
+	ag, err := models.FindPMMAgentsForService(s.db.Querier, a.ServiceID)
+	if err != nil {
+		return nil, err
+	}
+
+	a.PMMAgentID, err = action.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
+	if err != nil {
+		return nil, err
+	}
+
+	a.Dsn, err = models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, a.ServiceID, a.PMMAgentID, req.Database)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.r.StartMySQLShowCreateTableAction(ctx, a)
+	if err != nil {
+		return nil, err
+	}
+
+	return &managementpb.StartMySQLShowCreateTableActionResponse{
+		PmmAgentId: a.PMMAgentID,
+		ActionId:   a.ID,
+	}, nil
+}
+
+// StartMySQLShowTableStatusAction starts mysql-show-table-status action.
+//nolint:lll,dupl
+func (s *actionsServer) StartMySQLShowTableStatusAction(ctx context.Context, req *managementpb.StartMySQLShowTableStatusActionRequest) (*managementpb.StartMySQLShowTableStatusActionResponse, error) {
+	res, err := models.CreateActionResult(s.db.Querier, req.PmmAgentId)
+	if err != nil {
+		return nil, err
+	}
+
+	a := &action.MySQLShowTableStatus{
+		ID:         res.ID,
+		ServiceID:  req.ServiceId,
+		PMMAgentID: req.PmmAgentId,
+		Table:      req.TableName,
+	}
+
+	ag, err := models.FindPMMAgentsForService(s.db.Querier, a.ServiceID)
+	if err != nil {
+		return nil, err
+	}
+
+	a.PMMAgentID, err = action.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
+	if err != nil {
+		return nil, err
+	}
+
+	a.Dsn, err = models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, a.ServiceID, a.PMMAgentID, req.Database)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.r.StartMySQLShowTableStatusAction(ctx, a)
+	if err != nil {
+		return nil, err
+	}
+
+	return &managementpb.StartMySQLShowTableStatusActionResponse{
+		PmmAgentId: a.PMMAgentID,
+		ActionId:   a.ID,
+	}, nil
+}
+
 // CancelAction stops an Action.
 //nolint:lll
 func (s *actionsServer) CancelAction(ctx context.Context, req *managementpb.CancelActionRequest) (*managementpb.CancelActionResponse, error) {

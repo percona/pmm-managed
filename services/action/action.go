@@ -61,6 +61,26 @@ type MySQLExplainJSON struct {
 	Query string
 }
 
+// MySQLShowCreateTable represents mysql-show-create-table domain model.
+type MySQLShowCreateTable struct {
+	ID         string
+	PMMAgentID string
+	ServiceID  string
+
+	Dsn   string
+	Table string
+}
+
+// MySQLShowTableStatus represents mysql-show-table-status domain model.
+type MySQLShowTableStatus struct {
+	ID         string
+	PMMAgentID string
+	ServiceID  string
+
+	Dsn   string
+	Table string
+}
+
 // FindPmmAgentIDToRunAction finds pmm-agent-id to run action.
 func FindPmmAgentIDToRunAction(pmmAgentID string, agents []*models.Agent) (string, error) {
 	// no explicit ID is given, and there is only one

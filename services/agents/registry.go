@@ -640,6 +640,52 @@ func (r *Registry) StartMySQLExplainJSONAction(ctx context.Context, a *action.My
 	return nil
 }
 
+// StartMySQLShowCreateTableAction starts mysql-show-create-table action on pmm-agent.
+// TODO: Extract it from here. Where...?
+func (r *Registry) StartMySQLShowCreateTableAction(ctx context.Context, a *action.MySQLShowCreateTable) error {
+	aRequest := &agentpb.StartActionRequest{
+		ActionId: a.ID,
+		Type:     managementpb.ActionType_MYSQL_SHOW_CREATE_TABLE,
+		Params: &agentpb.StartActionRequest_MysqlShowCreateTableParams{
+			MysqlShowCreateTableParams: &agentpb.StartActionRequest_MySQLShowCreateTableParams{
+				Dsn:   a.Dsn,
+				Table: a.Table,
+			},
+		},
+	}
+
+	agent, err := r.get(a.PMMAgentID)
+	if err != nil {
+		return err
+	}
+
+	agent.channel.SendRequest(aRequest)
+	return nil
+}
+
+// StartMySQLShowTableStatusAction starts mysql-show-table-status action on pmm-agent.
+// TODO: Extract it from here. Where...?
+func (r *Registry) StartMySQLShowTableStatusAction(ctx context.Context, a *action.MySQLShowTableStatus) error {
+	aRequest := &agentpb.StartActionRequest{
+		ActionId: a.ID,
+		Type:     managementpb.ActionType_MYSQL_SHOW_TABLE_INFO,
+		Params: &agentpb.StartActionRequest_MysqlShowTableStatusParams{
+			MysqlShowTableStatusParams: &agentpb.StartActionRequest_MySQLShowTableStatusParams{
+				Dsn:   a.Dsn,
+				Table: a.Table,
+			},
+		},
+	}
+
+	agent, err := r.get(a.PMMAgentID)
+	if err != nil {
+		return err
+	}
+
+	agent.channel.SendRequest(aRequest)
+	return nil
+}
+
 // StopAction stops action with given given id.
 // TODO: Extract it from here. Where...?
 func (r *Registry) StopAction(ctx context.Context, actionID string) error {

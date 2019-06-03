@@ -31,6 +31,10 @@ type servicesServer struct {
 	s *inventory.ServicesService
 }
 
+func (s *servicesServer) AddProxySQLService(context.Context, *inventorypb.AddProxySQLServiceRequest) (*inventorypb.AddProxySQLServiceResponse, error) {
+	panic("implement me")
+}
+
 // NewServicesServer returns Inventory API handler for managing Services.
 func NewServicesServer(s *inventory.ServicesService) inventorypb.ServicesServer {
 	return &servicesServer{s}
