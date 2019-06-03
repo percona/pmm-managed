@@ -35,7 +35,6 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/action"
 	"github.com/percona/pmm-managed/services/agents/channel"
 	"github.com/percona/pmm-managed/utils/logger"
 )
@@ -550,18 +549,18 @@ func (r *Registry) Collect(ch chan<- prom.Metric) {
 
 // StartPTSummaryAction starts pt-summary action on pmm-agent.
 // TODO: Extract it from here. Where...?
-func (r *Registry) StartPTSummaryAction(ctx context.Context, a *action.PtSummary) error {
+func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID string, args []string) error {
 	aRequest := &agentpb.StartActionRequest{
-		ActionId: a.ID,
+		ActionId: id,
 		Type:     managementpb.ActionType_PT_SUMMARY,
 		Params: &agentpb.StartActionRequest_ProcessParams_{
 			ProcessParams: &agentpb.StartActionRequest_ProcessParams{
-				Args: a.Args,
+				Args: args,
 			},
 		},
 	}
 
-	agent, err := r.get(a.PMMAgentID)
+	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
@@ -572,18 +571,18 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, a *action.PtSummary
 
 // StartPTMySQLSummaryAction starts pt-mysql-summary action on pmm-agent.
 // TODO: Extract it from here. Where...?
-func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, a *action.PtMySQLSummary) error {
+func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID string, args []string) error {
 	aRequest := &agentpb.StartActionRequest{
-		ActionId: a.ID,
+		ActionId: id,
 		Type:     managementpb.ActionType_PT_MYSQL_SUMMARY,
 		Params: &agentpb.StartActionRequest_ProcessParams_{
 			ProcessParams: &agentpb.StartActionRequest_ProcessParams{
-				Args: a.Args,
+				Args: args,
 			},
 		},
 	}
 
-	agent, err := r.get(a.PMMAgentID)
+	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
@@ -594,20 +593,20 @@ func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, a *action.PtMy
 
 // StartMySQLExplainAction starts mysql-explain action on pmm-agent.
 // TODO: Extract it from here. Where...?
-func (r *Registry) StartMySQLExplainAction(ctx context.Context, a *action.MySQLExplain) error {
+func (r *Registry) StartMySQLExplainAction(ctx context.Context, id, pmmAgentID, dsn, query string) error {
 	aRequest := &agentpb.StartActionRequest{
-		ActionId: a.ID,
+		ActionId: id,
 		Type:     managementpb.ActionType_MYSQL_EXPLAIN,
 		Params: &agentpb.StartActionRequest_MysqlExplainParams{
 			MysqlExplainParams: &agentpb.StartActionRequest_MySQLExplainParams{
-				Dsn:          a.Dsn,
-				Query:        a.Query,
+				Dsn:          dsn,
+				Query:        query,
 				OutputFormat: agentpb.MysqlExplainOutputFormat_MYSQL_EXPLAIN_OUTPUT_FORMAT_DEFAULT,
 			},
 		},
 	}
 
-	agent, err := r.get(a.PMMAgentID)
+	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
@@ -618,20 +617,20 @@ func (r *Registry) StartMySQLExplainAction(ctx context.Context, a *action.MySQLE
 
 // StartMySQLExplainJSONAction starts mysql-explain-json action on pmm-agent.
 // TODO: Extract it from here. Where...?
-func (r *Registry) StartMySQLExplainJSONAction(ctx context.Context, a *action.MySQLExplainJSON) error {
+func (r *Registry) StartMySQLExplainJSONAction(ctx context.Context, id, pmmAgentID, dsn, query string) error {
 	aRequest := &agentpb.StartActionRequest{
-		ActionId: a.ID,
+		ActionId: id,
 		Type:     managementpb.ActionType_MYSQL_EXPLAIN,
 		Params: &agentpb.StartActionRequest_MysqlExplainParams{
 			MysqlExplainParams: &agentpb.StartActionRequest_MySQLExplainParams{
-				Dsn:          a.Dsn,
-				Query:        a.Query,
+				Dsn:          dsn,
+				Query:        query,
 				OutputFormat: agentpb.MysqlExplainOutputFormat_MYSQL_EXPLAIN_OUTPUT_FORMAT_JSON,
 			},
 		},
 	}
 
-	agent, err := r.get(a.PMMAgentID)
+	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
@@ -642,19 +641,19 @@ func (r *Registry) StartMySQLExplainJSONAction(ctx context.Context, a *action.My
 
 // StartMySQLShowCreateTableAction starts mysql-show-create-table action on pmm-agent.
 // TODO: Extract it from here. Where...?
-func (r *Registry) StartMySQLShowCreateTableAction(ctx context.Context, a *action.MySQLShowCreateTable) error {
+func (r *Registry) StartMySQLShowCreateTableAction(ctx context.Context, id, pmmAgentID, dsn, table string) error {
 	aRequest := &agentpb.StartActionRequest{
-		ActionId: a.ID,
+		ActionId: id,
 		Type:     managementpb.ActionType_MYSQL_SHOW_CREATE_TABLE,
 		Params: &agentpb.StartActionRequest_MysqlShowCreateTableParams{
 			MysqlShowCreateTableParams: &agentpb.StartActionRequest_MySQLShowCreateTableParams{
-				Dsn:   a.Dsn,
-				Table: a.Table,
+				Dsn:   dsn,
+				Table: table,
 			},
 		},
 	}
 
-	agent, err := r.get(a.PMMAgentID)
+	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
@@ -665,19 +664,19 @@ func (r *Registry) StartMySQLShowCreateTableAction(ctx context.Context, a *actio
 
 // StartMySQLShowTableStatusAction starts mysql-show-table-status action on pmm-agent.
 // TODO: Extract it from here. Where...?
-func (r *Registry) StartMySQLShowTableStatusAction(ctx context.Context, a *action.MySQLShowTableStatus) error {
+func (r *Registry) StartMySQLShowTableStatusAction(ctx context.Context, id, pmmAgentID, dsn, table string) error {
 	aRequest := &agentpb.StartActionRequest{
-		ActionId: a.ID,
+		ActionId: id,
 		Type:     managementpb.ActionType_MYSQL_SHOW_TABLE_INFO,
 		Params: &agentpb.StartActionRequest_MysqlShowTableStatusParams{
 			MysqlShowTableStatusParams: &agentpb.StartActionRequest_MySQLShowTableStatusParams{
-				Dsn:   a.Dsn,
-				Table: a.Table,
+				Dsn:   dsn,
+				Table: table,
 			},
 		},
 	}
 
-	agent, err := r.get(a.PMMAgentID)
+	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}

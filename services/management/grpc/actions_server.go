@@ -23,7 +23,6 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/action"
 	"github.com/percona/pmm-managed/services/agents"
 )
 
@@ -62,31 +61,24 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 		return nil, err
 	}
 
-	a := &action.PtSummary{
-		ID:         res.ID,
-		NodeID:     req.NodeId,
-		PMMAgentID: req.PmmAgentId,
-		Args:       []string{},
-	}
-
-	ag, err := models.FindPMMAgentsForNode(s.db.Querier, a.NodeID)
+	ag, err := models.FindPMMAgentsForNode(s.db.Querier, req.NodeId)
 	if err != nil {
 		return nil, err
 	}
 
-	a.PMMAgentID, err = action.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
+	req.PmmAgentId, err = models.FindPmmAgentIDToRunAction(req.PmmAgentId, ag)
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.r.StartPTSummaryAction(ctx, a)
+	err = s.r.StartPTSummaryAction(ctx, res.ID, req.PmmAgentId, []string{})
 	if err != nil {
 		return nil, err
 	}
 
 	return &managementpb.StartPTSummaryActionResponse{
-		PmmAgentId: a.PMMAgentID,
-		ActionId:   a.ID,
+		PmmAgentId: req.PmmAgentId,
+		ActionId:   res.ID,
 	}, nil
 }
 
@@ -98,31 +90,24 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 		return nil, err
 	}
 
-	a := &action.PtMySQLSummary{
-		ID:         res.ID,
-		ServiceID:  req.ServiceId,
-		PMMAgentID: req.PmmAgentId,
-		Args:       []string{},
-	}
-
-	ag, err := models.FindPMMAgentsForService(s.db.Querier, a.ServiceID)
+	ag, err := models.FindPMMAgentsForService(s.db.Querier, req.ServiceId)
 	if err != nil {
 		return nil, err
 	}
 
-	a.PMMAgentID, err = action.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
+	req.PmmAgentId, err = models.FindPmmAgentIDToRunAction(req.PmmAgentId, ag)
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.r.StartPTMySQLSummaryAction(ctx, a)
+	err = s.r.StartPTMySQLSummaryAction(ctx, res.ID, req.PmmAgentId, []string{})
 	if err != nil {
 		return nil, err
 	}
 
 	return &managementpb.StartPTMySQLSummaryActionResponse{
-		PmmAgentId: a.PMMAgentID,
-		ActionId:   a.ID,
+		PmmAgentId: req.PmmAgentId,
+		ActionId:   res.ID,
 	}, nil
 }
 
@@ -134,36 +119,29 @@ func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *manage
 		return nil, err
 	}
 
-	a := &action.MySQLExplain{
-		ID:         res.ID,
-		ServiceID:  req.ServiceId,
-		PMMAgentID: req.PmmAgentId,
-		Query:      req.Query,
-	}
-
-	ag, err := models.FindPMMAgentsForService(s.db.Querier, a.ServiceID)
+	ag, err := models.FindPMMAgentsForService(s.db.Querier, req.ServiceId)
 	if err != nil {
 		return nil, err
 	}
 
-	a.PMMAgentID, err = action.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
+	req.PmmAgentId, err = models.FindPmmAgentIDToRunAction(req.PmmAgentId, ag)
 	if err != nil {
 		return nil, err
 	}
 
-	a.Dsn, err = models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, a.ServiceID, a.PMMAgentID, req.Database)
+	dsn, err := models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.r.StartMySQLExplainAction(ctx, a)
+	err = s.r.StartMySQLExplainAction(ctx, res.ID, req.PmmAgentId, dsn, req.Query)
 	if err != nil {
 		return nil, err
 	}
 
 	return &managementpb.StartMySQLExplainActionResponse{
-		PmmAgentId: a.PMMAgentID,
-		ActionId:   a.ID,
+		PmmAgentId: req.PmmAgentId,
+		ActionId:   res.ID,
 	}, nil
 }
 
@@ -175,36 +153,29 @@ func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *ma
 		return nil, err
 	}
 
-	a := &action.MySQLExplainJSON{
-		ID:         res.ID,
-		ServiceID:  req.ServiceId,
-		PMMAgentID: req.PmmAgentId,
-		Query:      req.Query,
-	}
-
-	ag, err := models.FindPMMAgentsForService(s.db.Querier, a.ServiceID)
+	ag, err := models.FindPMMAgentsForService(s.db.Querier, req.ServiceId)
 	if err != nil {
 		return nil, err
 	}
 
-	a.PMMAgentID, err = action.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
+	req.PmmAgentId, err = models.FindPmmAgentIDToRunAction(req.PmmAgentId, ag)
 	if err != nil {
 		return nil, err
 	}
 
-	a.Dsn, err = models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, a.ServiceID, a.PMMAgentID, req.Database)
+	dsn, err := models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.r.StartMySQLExplainJSONAction(ctx, a)
+	err = s.r.StartMySQLExplainJSONAction(ctx, res.ID, req.PmmAgentId, dsn, req.Query)
 	if err != nil {
 		return nil, err
 	}
 
 	return &managementpb.StartMySQLExplainJSONActionResponse{
-		PmmAgentId: a.PMMAgentID,
-		ActionId:   a.ID,
+		PmmAgentId: req.PmmAgentId,
+		ActionId:   res.ID,
 	}, nil
 }
 
@@ -216,36 +187,29 @@ func (s *actionsServer) StartMySQLShowCreateTableAction(ctx context.Context, req
 		return nil, err
 	}
 
-	a := &action.MySQLShowCreateTable{
-		ID:         res.ID,
-		ServiceID:  req.ServiceId,
-		PMMAgentID: req.PmmAgentId,
-		Table:      req.TableName,
-	}
-
-	ag, err := models.FindPMMAgentsForService(s.db.Querier, a.ServiceID)
+	ag, err := models.FindPMMAgentsForService(s.db.Querier, req.ServiceId)
 	if err != nil {
 		return nil, err
 	}
 
-	a.PMMAgentID, err = action.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
+	req.PmmAgentId, err = models.FindPmmAgentIDToRunAction(req.PmmAgentId, ag)
 	if err != nil {
 		return nil, err
 	}
 
-	a.Dsn, err = models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, a.ServiceID, a.PMMAgentID, req.Database)
+	dsn, err := models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.r.StartMySQLShowCreateTableAction(ctx, a)
+	err = s.r.StartMySQLShowCreateTableAction(ctx, res.ID, req.PmmAgentId, dsn, req.TableName)
 	if err != nil {
 		return nil, err
 	}
 
 	return &managementpb.StartMySQLShowCreateTableActionResponse{
-		PmmAgentId: a.PMMAgentID,
-		ActionId:   a.ID,
+		PmmAgentId: req.PmmAgentId,
+		ActionId:   res.ID,
 	}, nil
 }
 
@@ -257,36 +221,29 @@ func (s *actionsServer) StartMySQLShowTableStatusAction(ctx context.Context, req
 		return nil, err
 	}
 
-	a := &action.MySQLShowTableStatus{
-		ID:         res.ID,
-		ServiceID:  req.ServiceId,
-		PMMAgentID: req.PmmAgentId,
-		Table:      req.TableName,
-	}
-
-	ag, err := models.FindPMMAgentsForService(s.db.Querier, a.ServiceID)
+	ag, err := models.FindPMMAgentsForService(s.db.Querier, req.ServiceId)
 	if err != nil {
 		return nil, err
 	}
 
-	a.PMMAgentID, err = action.FindPmmAgentIDToRunAction(a.PMMAgentID, ag)
+	req.PmmAgentId, err = models.FindPmmAgentIDToRunAction(req.PmmAgentId, ag)
 	if err != nil {
 		return nil, err
 	}
 
-	a.Dsn, err = models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, a.ServiceID, a.PMMAgentID, req.Database)
+	dsn, err := models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.r.StartMySQLShowTableStatusAction(ctx, a)
+	err = s.r.StartMySQLShowTableStatusAction(ctx, res.ID, req.PmmAgentId, dsn, req.TableName)
 	if err != nil {
 		return nil, err
 	}
 
 	return &managementpb.StartMySQLShowTableStatusActionResponse{
-		PmmAgentId: a.PMMAgentID,
-		ActionId:   a.ID,
+		PmmAgentId: req.PmmAgentId,
+		ActionId:   res.ID,
 	}, nil
 }
 
