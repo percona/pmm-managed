@@ -55,11 +55,6 @@ func TestImports(t *testing.T) {
 		},
 
 		// services should be independent
-		"github.com/percona/pmm-managed/services/action": {
-			blacklistPrefixes: []string{
-				"github.com/percona/pmm-managed/services",
-			},
-		},
 		"github.com/percona/pmm-managed/services/agents": {
 			blacklistPrefixes: []string{
 				"github.com/percona/pmm-managed/services",
