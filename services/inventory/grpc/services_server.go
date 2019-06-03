@@ -61,6 +61,8 @@ func (s *servicesServer) ListServices(ctx context.Context, req *inventorypb.List
 			res.Mongodb = append(res.Mongodb, service)
 		case *inventorypb.PostgreSQLService:
 			res.Postgresql = append(res.Postgresql, service)
+		case *inventorypb.ProxySQLService:
+			res.Proxysql = append(res.Proxysql, service)
 		default:
 			panic(fmt.Errorf("unhandled inventory Service type %T", service))
 		}
@@ -85,6 +87,8 @@ func (s *servicesServer) GetService(ctx context.Context, req *inventorypb.GetSer
 		res.Service = &inventorypb.GetServiceResponse_Mongodb{Mongodb: service}
 	case *inventorypb.PostgreSQLService:
 		res.Service = &inventorypb.GetServiceResponse_Postgresql{Postgresql: service}
+	case *inventorypb.ProxySQLService:
+		res.Service = &inventorypb.GetServiceResponse_Proxysql{Proxysql: service}
 	default:
 		panic(fmt.Errorf("unhandled inventory Service type %T", service))
 	}
