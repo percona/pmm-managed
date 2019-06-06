@@ -131,6 +131,19 @@ func ToAPIService(service *models.Service) (inventorypb.Service, error) {
 			CustomLabels:   labels,
 		}, nil
 
+	case models.ProxySQLServiceType:
+		return &inventorypb.ProxySQLService{
+			ServiceId:      service.ServiceID,
+			ServiceName:    service.ServiceName,
+			NodeId:         service.NodeID,
+			Address:        pointer.GetString(service.Address),
+			Port:           uint32(pointer.GetUint16(service.Port)),
+			Environment:    service.Environment,
+			Cluster:        service.Cluster,
+			ReplicationSet: service.ReplicationSet,
+			CustomLabels:   labels,
+		}, nil
+
 	default:
 		panic(fmt.Errorf("unhandled Service type %s", service.ServiceType))
 	}
@@ -247,6 +260,19 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 			Password:     pointer.GetString(agent.Password),
 			Disabled:     agent.Disabled,
 			Status:       inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
+			CustomLabels: labels,
+		}, nil
+
+	case models.ProxySQLExporterType:
+		return &inventorypb.ProxySQLExporter{
+			AgentId:      agent.AgentID,
+			PmmAgentId:   pointer.GetString(agent.PMMAgentID),
+			ServiceId:    serviceID,
+			Username:     pointer.GetString(agent.Username),
+			Password:     pointer.GetString(agent.Password),
+			Disabled:     agent.Disabled,
+			Status:       inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
+			ListenPort:   uint32(pointer.GetUint16(agent.ListenPort)),
 			CustomLabels: labels,
 		}, nil
 

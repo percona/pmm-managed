@@ -29,14 +29,6 @@ type agentsServer struct {
 	s *inventory.AgentsService
 }
 
-func (s *agentsServer) AddProxySQLExporter(context.Context, *inventorypb.AddProxySQLExporterRequest) (*inventorypb.AddProxySQLExporterResponse, error) {
-	panic("implement me")
-}
-
-func (s *agentsServer) ChangeProxySQLExporter(context.Context, *inventorypb.ChangeProxySQLExporterRequest) (*inventorypb.ChangeProxySQLExporterResponse, error) {
-	panic("implement me")
-}
-
 // NewAgentsServer returns Inventory API handler for managing Agents.
 func NewAgentsServer(s *inventory.AgentsService) inventorypb.AgentsServer {
 	return &agentsServer{s}
@@ -339,6 +331,33 @@ func (s *agentsServer) ChangeQANMongoDBProfilerAgent(ctx context.Context, req *i
 
 	res := &inventorypb.ChangeQANMongoDBProfilerAgentResponse{
 		QanMongodbProfilerAgent: agent,
+	}
+	return res, nil
+}
+
+// AddProxySQLExporter adds proxysql_exporter Agent.
+func (s *agentsServer) AddProxySQLExporter(ctx context.Context, req *inventorypb.AddProxySQLExporterRequest) (*inventorypb.AddProxySQLExporterResponse, error) {
+	agent, err := s.s.AddProxySQLExporter(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &inventorypb.AddProxySQLExporterResponse{
+		ProxysqlExporter: agent,
+	}
+	return res, nil
+}
+
+// ChangeProxySQLExporter changes disabled flag and custom labels of proxysql_exporter Agent.
+//nolint:lll
+func (s *agentsServer) ChangeProxySQLExporter(ctx context.Context, req *inventorypb.ChangeProxySQLExporterRequest) (*inventorypb.ChangeProxySQLExporterResponse, error) {
+	agent, err := s.s.ChangeProxySQLExporter(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &inventorypb.ChangeProxySQLExporterResponse{
+		ProxysqlExporter: agent,
 	}
 	return res, nil
 }

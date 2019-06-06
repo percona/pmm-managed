@@ -1,8 +1,6 @@
 digraph packages {
 	"/models" -> "/models";
-	"/services/action" -> "/models";
 	"/services/agents" -> "/models";
-	"/services/agents" -> "/services/action";
 	"/services/agents" -> "/services/agents/channel";
 	"/services/inventory" -> "/models";
 	"/services/inventory" -> "/services";

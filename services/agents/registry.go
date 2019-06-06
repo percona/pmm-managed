@@ -216,8 +216,11 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*agentInfo, error) {
 	ctx := stream.Context()
 	l := logger.Get(ctx)
-	agentMD := agentpb.GetAgentConnectMetadata(ctx)
-	runsOnNodeID, err := authenticate(&agentMD, r.db.Querier)
+	agentMD, err := agentpb.ReceiveAgentConnectMetadata(stream)
+	if err != nil {
+		return nil, err
+	}
+	runsOnNodeID, err := authenticate(agentMD, r.db.Querier)
 	if err != nil {
 		l.Warnf("Failed to authenticate connected pmm-agent %+v.", agentMD)
 		return nil, err
@@ -457,6 +460,18 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 			}
 			builtinAgents[row.AgentID] = qanMongoDBProfilerAgentConfig(services[0], row)
 
+		case models.ProxySQLExporterType:
+			services, err := models.ServicesForAgent(r.db.Querier, row.AgentID)
+			if err != nil {
+				l.Error(err)
+				return
+			}
+			if len(services) != 1 {
+				l.Errorf("Expected exactly one Service, got %d.", len(services))
+				return
+			}
+			agentProcesses[row.AgentID] = proxysqlExporterConfig(services[0], row)
+
 		default:
 			l.Panicf("unhandled Agent type %s", row.AgentType)
 		}
@@ -504,6 +519,11 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, service *models
 		request = &agentpb.CheckConnectionRequest{
 			Type: inventorypb.ServiceType_MONGODB_SERVICE,
 			Dsn:  models.DSNforMongoDB(service, agent),
+		}
+	case models.ProxySQLServiceType:
+		request = &agentpb.CheckConnectionRequest{
+			Type: inventorypb.ServiceType_PROXYSQL_SERVICE,
+			Dsn:  models.DSNforMySQL(service, agent, ""),
 		}
 	default:
 		l.Panicf("unhandled Service type %s", service.ServiceType)

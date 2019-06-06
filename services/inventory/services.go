@@ -171,6 +171,26 @@ func (ss *ServicesService) AddPostgreSQL(ctx context.Context, params *models.Add
 	return res.(*inventorypb.PostgreSQLService), nil
 }
 
+// AddProxySQL inserts ProxySQL Service with given parameters.
+//nolint:dupl,unparam
+func (ss *ServicesService) AddProxySQL(ctx context.Context, params *models.AddDBMSServiceParams) (*inventorypb.ProxySQLService, error) {
+	service := new(models.Service)
+	e := ss.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		service, err = models.AddNewService(tx.Querier, models.ProxySQLServiceType, params)
+		return err
+	})
+	if e != nil {
+		return nil, e
+	}
+
+	res, err := services.ToAPIService(service)
+	if err != nil {
+		return nil, err
+	}
+	return res.(*inventorypb.ProxySQLService), nil
+}
+
 // Remove removes Service without any Agents.
 //nolint:unparam
 func (ss *ServicesService) Remove(ctx context.Context, id string, force bool) error {

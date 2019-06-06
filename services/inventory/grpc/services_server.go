@@ -31,10 +31,6 @@ type servicesServer struct {
 	s *inventory.ServicesService
 }
 
-func (s *servicesServer) AddProxySQLService(context.Context, *inventorypb.AddProxySQLServiceRequest) (*inventorypb.AddProxySQLServiceResponse, error) {
-	panic("implement me")
-}
-
 // NewServicesServer returns Inventory API handler for managing Services.
 func NewServicesServer(s *inventory.ServicesService) inventorypb.ServicesServer {
 	return &servicesServer{s}
@@ -161,6 +157,27 @@ func (s *servicesServer) AddPostgreSQLService(ctx context.Context, req *inventor
 
 	res := &inventorypb.AddPostgreSQLServiceResponse{
 		Postgresql: service,
+	}
+	return res, nil
+}
+
+func (s *servicesServer) AddProxySQLService(ctx context.Context, req *inventorypb.AddProxySQLServiceRequest) (*inventorypb.AddProxySQLServiceResponse, error) {
+	service, err := s.s.AddProxySQL(ctx, &models.AddDBMSServiceParams{
+		ServiceName:    req.ServiceName,
+		NodeID:         req.NodeId,
+		Environment:    req.Environment,
+		Cluster:        req.Cluster,
+		ReplicationSet: req.ReplicationSet,
+		Address:        pointer.ToStringOrNil(req.Address),
+		Port:           pointer.ToUint16OrNil(uint16(req.Port)),
+		CustomLabels:   req.CustomLabels,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	res := &inventorypb.AddProxySQLServiceResponse{
+		Proxysql: service,
 	}
 	return res, nil
 }
