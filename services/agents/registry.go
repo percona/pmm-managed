@@ -26,7 +26,6 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
-	"github.com/percona/pmm/api/managementpb"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
@@ -227,13 +226,13 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*agentInfo, err
 	}
 	l.Infof("Connected pmm-agent: %+v.", agentMD)
 
-	serverMD := agentpb.AgentServerMetadata{
+	serverMD := agentpb.ServerConnectMetadata{
 		AgentRunsOnNodeID: runsOnNodeID,
 		ServerVersion:     version.Version,
 	}
 	l.Debugf("Sending metadata: %+v.", serverMD)
-	if err = agentpb.SendAgentServerMetadata(stream, &serverMD); err != nil {
-		return nil, errors.Wrap(err, "failed to send server metadata")
+	if err = agentpb.SendServerConnectMetadata(stream, &serverMD); err != nil {
+		return nil, err
 	}
 
 	r.rw.Lock()
@@ -572,7 +571,6 @@ func (r *Registry) Collect(ch chan<- prom.Metric) {
 func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID string, args []string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
-		Type:     managementpb.ActionType_PT_SUMMARY,
 		Params: &agentpb.StartActionRequest_PtSummaryParams{
 			PtSummaryParams: &agentpb.StartActionRequest_ProcessParams{
 				Args: args,
@@ -594,7 +592,6 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID stri
 func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID string, args []string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
-		Type:     managementpb.ActionType_PT_MYSQL_SUMMARY,
 		Params: &agentpb.StartActionRequest_PtMysqlSummaryParams{
 			PtMysqlSummaryParams: &agentpb.StartActionRequest_ProcessParams{
 				Args: args,
@@ -616,7 +613,6 @@ func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID
 func (r *Registry) StartMySQLExplainAction(ctx context.Context, id, pmmAgentID, dsn, query string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
-		Type:     managementpb.ActionType_MYSQL_EXPLAIN,
 		Params: &agentpb.StartActionRequest_MysqlExplainParams{
 			MysqlExplainParams: &agentpb.StartActionRequest_MySQLExplainParams{
 				Dsn:          dsn,
@@ -640,7 +636,6 @@ func (r *Registry) StartMySQLExplainAction(ctx context.Context, id, pmmAgentID, 
 func (r *Registry) StartMySQLExplainJSONAction(ctx context.Context, id, pmmAgentID, dsn, query string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
-		Type:     managementpb.ActionType_MYSQL_EXPLAIN,
 		Params: &agentpb.StartActionRequest_MysqlExplainParams{
 			MysqlExplainParams: &agentpb.StartActionRequest_MySQLExplainParams{
 				Dsn:          dsn,
@@ -664,7 +659,6 @@ func (r *Registry) StartMySQLExplainJSONAction(ctx context.Context, id, pmmAgent
 func (r *Registry) StartMySQLShowCreateTableAction(ctx context.Context, id, pmmAgentID, dsn, table string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
-		Type:     managementpb.ActionType_MYSQL_SHOW_CREATE_TABLE,
 		Params: &agentpb.StartActionRequest_MysqlShowCreateTableParams{
 			MysqlShowCreateTableParams: &agentpb.StartActionRequest_MySQLShowCreateTableParams{
 				Dsn:   dsn,
@@ -687,7 +681,6 @@ func (r *Registry) StartMySQLShowCreateTableAction(ctx context.Context, id, pmmA
 func (r *Registry) StartMySQLShowTableStatusAction(ctx context.Context, id, pmmAgentID, dsn, table string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
-		Type:     managementpb.ActionType_MYSQL_SHOW_TABLE_INFO,
 		Params: &agentpb.StartActionRequest_MysqlShowTableStatusParams{
 			MysqlShowTableStatusParams: &agentpb.StartActionRequest_MySQLShowTableStatusParams{
 				Dsn:   dsn,
