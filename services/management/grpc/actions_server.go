@@ -247,6 +247,11 @@ func (s *actionsServer) StartMySQLShowTableStatusAction(ctx context.Context, req
 	}, nil
 }
 
+// StartMySQLShowIndexAction starts mysql-show-index action.
+func (s *actionsServer) StartMySQLShowIndexAction(ctx context.Context, req *managementpb.StartMySQLShowIndexActionRequest) (*managementpb.StartMySQLShowIndexActionResponse, error) {
+	panic("TODO")
+}
+
 // CancelAction stops an Action.
 //nolint:lll
 func (s *actionsServer) CancelAction(ctx context.Context, req *managementpb.CancelActionRequest) (*managementpb.CancelActionResponse, error) {

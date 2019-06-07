@@ -573,8 +573,8 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID stri
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Type:     managementpb.ActionType_PT_SUMMARY,
-		Params: &agentpb.StartActionRequest_ProcessParams_{
-			ProcessParams: &agentpb.StartActionRequest_ProcessParams{
+		Params: &agentpb.StartActionRequest_PtSummaryParams{
+			PtSummaryParams: &agentpb.StartActionRequest_ProcessParams{
 				Args: args,
 			},
 		},
@@ -595,8 +595,8 @@ func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Type:     managementpb.ActionType_PT_MYSQL_SUMMARY,
-		Params: &agentpb.StartActionRequest_ProcessParams_{
-			ProcessParams: &agentpb.StartActionRequest_ProcessParams{
+		Params: &agentpb.StartActionRequest_PtMysqlSummaryParams{
+			PtMysqlSummaryParams: &agentpb.StartActionRequest_ProcessParams{
 				Args: args,
 			},
 		},
