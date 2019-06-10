@@ -507,22 +507,22 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, service *models
 	case models.MySQLServiceType:
 		request = &agentpb.CheckConnectionRequest{
 			Type: inventorypb.ServiceType_MYSQL_SERVICE,
-			Dsn:  models.DSNforMySQL(service, agent, ""),
+			Dsn:  agent.DSN(service, time.Second, ""),
 		}
 	case models.PostgreSQLServiceType:
 		request = &agentpb.CheckConnectionRequest{
 			Type: inventorypb.ServiceType_POSTGRESQL_SERVICE,
-			Dsn:  models.DSNforPostgreSQL(service, agent),
+			Dsn:  agent.DSN(service, time.Second, "postgres"),
 		}
 	case models.MongoDBServiceType:
 		request = &agentpb.CheckConnectionRequest{
 			Type: inventorypb.ServiceType_MONGODB_SERVICE,
-			Dsn:  models.DSNforMongoDB(service, agent),
+			Dsn:  agent.DSN(service, time.Second, ""),
 		}
 	case models.ProxySQLServiceType:
 		request = &agentpb.CheckConnectionRequest{
 			Type: inventorypb.ServiceType_PROXYSQL_SERVICE,
-			Dsn:  models.DSNforMySQL(service, agent, ""),
+			Dsn:  agent.DSN(service, time.Second, ""),
 		}
 	default:
 		l.Panicf("unhandled Service type %s", service.ServiceType)

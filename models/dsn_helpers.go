@@ -17,92 +17,16 @@
 package models
 
 import (
-	"net"
-	"net/url"
-	"strconv"
 	"time"
 
 	"github.com/AlekSi/pointer"
-	"github.com/go-sql-driver/mysql"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 )
 
-// DSNforMySQL generates MySQL DSN string from service and exporter.
-func DSNforMySQL(service *Service, exporter *Agent, db string) string {
-	// TODO TLSConfig: "true", https://jira.percona.com/browse/PMM-1727
-	// TODO Other parameters?
-
-	cfg := mysql.NewConfig()
-	cfg.User = pointer.GetString(exporter.Username)
-	cfg.Passwd = pointer.GetString(exporter.Password)
-	cfg.Net = "tcp"
-	host := pointer.GetString(service.Address)
-	port := pointer.GetUint16(service.Port)
-	cfg.Addr = net.JoinHostPort(host, strconv.Itoa(int(port)))
-	cfg.Timeout = 1 * time.Second
-	cfg.DBName = db
-
-	// QAN code in pmm-agent uses reform which requires those fields
-	cfg.ClientFoundRows = true
-	cfg.ParseTime = true
-
-	return cfg.FormatDSN()
-}
-
-// DSNforPostgreSQL generates Postgres DSN string from service and exporter.
-func DSNforPostgreSQL(service *Service, exporter *Agent) string {
-	q := make(url.Values)
-	q.Set("sslmode", "disable") // TODO: make it configurable
-	q.Set("connect_timeout", "1")
-
-	host := pointer.GetString(service.Address)
-	port := pointer.GetUint16(service.Port)
-	username := pointer.GetString(exporter.Username)
-	password := pointer.GetString(exporter.Password)
-
-	u := &url.URL{
-		Scheme:   "postgres",
-		Host:     net.JoinHostPort(host, strconv.Itoa(int(port))),
-		Path:     "postgres",
-		RawQuery: q.Encode(),
-	}
-	switch {
-	case password != "":
-		u.User = url.UserPassword(username, password)
-	case username != "":
-		u.User = url.User(username)
-	}
-
-	return u.String()
-}
-
-// DSNforMongoDB generates MongoDB DSN string from service and exporter.
-func DSNforMongoDB(service *Service, exporter *Agent) string {
-	host := pointer.GetString(service.Address)
-	port := pointer.GetUint16(service.Port)
-	username := pointer.GetString(exporter.Username)
-	password := pointer.GetString(exporter.Password)
-
-	u := &url.URL{
-		Scheme: "mongodb",
-		Host:   net.JoinHostPort(host, strconv.Itoa(int(port))),
-	}
-	switch {
-	case password != "":
-		u.User = url.UserPassword(username, password)
-	case username != "":
-		u.User = url.User(username)
-	}
-
-	return u.String()
-}
-
 // FindDSNByServiceIDandPMMAgentID resolves DSN by service id.
 func FindDSNByServiceIDandPMMAgentID(q *reform.Querier, serviceID, pmmAgentID, db string) (string, error) {
-	var result string
-
 	svc, err := FindServiceByID(q, serviceID)
 	if err != nil {
 		return "", err
@@ -136,16 +60,5 @@ func FindDSNByServiceIDandPMMAgentID(q *reform.Querier, serviceID, pmmAgentID, d
 		return "", status.Errorf(codes.FailedPrecondition, "Couldn't resolve dsn, as there should be only one exporter")
 	}
 
-	switch svc.ServiceType {
-	case MySQLServiceType:
-		result = DSNforMySQL(svc, fexp[0], db)
-
-	case MongoDBServiceType:
-		result = DSNforMongoDB(svc, fexp[0])
-
-	case PostgreSQLServiceType:
-		result = DSNforPostgreSQL(svc, fexp[0])
-	}
-
-	return result, nil
+	return fexp[0].DSN(svc, time.Second, db), nil
 }

@@ -247,5 +247,4 @@ func TestAgentHelpers(t *testing.T) {
 		_, err = models.FindAgentsByServiceIDAndAgentType(q, "X1", models.MySQLdExporterType)
 		require.Error(t, err)
 	})
-
 }

@@ -19,6 +19,7 @@ package agents
 import (
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/agentpb"
@@ -51,7 +52,7 @@ func postgresExporterConfig(service *models.Service, exporter *models.Agent) *ag
 		TemplateRightDelim: tdp.right,
 		Args:               args,
 		Env: []string{
-			fmt.Sprintf("DATA_SOURCE_NAME=%s", models.DSNforPostgreSQL(service, exporter)),
+			fmt.Sprintf("DATA_SOURCE_NAME=%s", exporter.DSN(service, time.Second, "postgres")),
 		},
 	}
 }

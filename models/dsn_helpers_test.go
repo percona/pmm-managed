@@ -31,7 +31,6 @@ import (
 )
 
 func TestFindDSNByServiceID(t *testing.T) {
-
 	now, origNowF := models.Now(), models.Now
 	models.Now = func() time.Time {
 		return now
@@ -114,7 +113,7 @@ func TestFindDSNByServiceID(t *testing.T) {
 
 		dsn, err := models.FindDSNByServiceIDandPMMAgentID(q, "S2", "PA1", "test")
 		require.NoError(t, err)
-		expected := "pmm-user@tcp(127.0.0.1:0)/test?clientFoundRows=true&parseTime=true&timeout=1s"
+		expected := "pmm-user@tcp(127.0.0.1:0)/test?timeout=1s"
 		assert.Equal(t, expected, dsn)
 	})
 }

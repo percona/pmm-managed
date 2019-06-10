@@ -19,6 +19,7 @@ package agents
 import (
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/agentpb"
@@ -54,7 +55,7 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent) *age
 		TemplateRightDelim: tdp.right,
 		Args:               args,
 		Env: []string{
-			fmt.Sprintf("MONGODB_URI=%s", models.DSNforMongoDB(service, exporter)),
+			fmt.Sprintf("MONGODB_URI=%s", exporter.DSN(service, time.Second, "")),
 		},
 	}
 }
@@ -63,6 +64,6 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent) *age
 func qanMongoDBProfilerAgentConfig(service *models.Service, agent *models.Agent) *agentpb.SetStateRequest_BuiltinAgent {
 	return &agentpb.SetStateRequest_BuiltinAgent{
 		Type: agentpb.Type_QAN_MONGODB_PROFILER_AGENT,
-		Dsn:  models.DSNforMongoDB(service, agent),
+		Dsn:  agent.DSN(service, time.Second, ""),
 	}
 }
