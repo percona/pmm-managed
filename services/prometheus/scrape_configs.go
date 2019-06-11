@@ -32,13 +32,23 @@ import (
 	"github.com/percona/pmm-managed/services/prometheus/internal/prometheus/discovery/targetgroup"
 )
 
+// standard high, medium, and low resolution values
+const (
+	hrInterval = model.Duration(1 * time.Second)
+	hrTimeout  = model.Duration(1 * time.Second)
+	mrInterval = model.Duration(5 * time.Second)
+	mrTimeout  = model.Duration(4 * time.Second)
+	lrInterval = model.Duration(60 * time.Second)
+	lrTimeout  = model.Duration(10 * time.Second)
+)
+
 const addressLabel = model.LabelName(model.AddressLabel)
 
 func scrapeConfigForPrometheus() *config.ScrapeConfig {
 	return &config.ScrapeConfig{
 		JobName:        "prometheus",
-		ScrapeInterval: model.Duration(time.Second),
-		ScrapeTimeout:  model.Duration(time.Second),
+		ScrapeInterval: hrInterval,
+		ScrapeTimeout:  hrTimeout,
 		MetricsPath:    "/prometheus/metrics",
 		ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 			StaticConfigs: []*targetgroup.Group{{
@@ -52,8 +62,8 @@ func scrapeConfigForPrometheus() *config.ScrapeConfig {
 func scrapeConfigForGrafana() *config.ScrapeConfig {
 	return &config.ScrapeConfig{
 		JobName:        "grafana",
-		ScrapeInterval: model.Duration(5 * time.Second),
-		ScrapeTimeout:  model.Duration(4 * time.Second),
+		ScrapeInterval: mrInterval,
+		ScrapeTimeout:  mrTimeout,
 		MetricsPath:    "/metrics",
 		ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 			StaticConfigs: []*targetgroup.Group{{
@@ -67,8 +77,8 @@ func scrapeConfigForGrafana() *config.ScrapeConfig {
 func scrapeConfigForPMMManaged() *config.ScrapeConfig {
 	return &config.ScrapeConfig{
 		JobName:        "pmm-managed",
-		ScrapeInterval: model.Duration(10 * time.Second),
-		ScrapeTimeout:  model.Duration(5 * time.Second),
+		ScrapeInterval: mrInterval,
+		ScrapeTimeout:  mrTimeout,
 		MetricsPath:    "/debug/metrics",
 		ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 			StaticConfigs: []*targetgroup.Group{{
@@ -138,8 +148,8 @@ func scrapeConfigForNodeExporter(node *models.Node, agent *models.Agent) (*confi
 
 	res := &config.ScrapeConfig{
 		JobName:        jobName(agent),
-		ScrapeInterval: model.Duration(time.Second),
-		ScrapeTimeout:  model.Duration(time.Second),
+		ScrapeInterval: hrInterval,
+		ScrapeTimeout:  hrTimeout,
 		MetricsPath:    "/metrics",
 		ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 			StaticConfigs: []*targetgroup.Group{{
@@ -160,20 +170,20 @@ func scrapeConfigsForMySQLdExporter(node *models.Node, service *models.Service, 
 
 	hr := &config.ScrapeConfig{
 		JobName:        jobName(agent) + "_hr",
-		ScrapeInterval: model.Duration(time.Second),
-		ScrapeTimeout:  model.Duration(time.Second),
+		ScrapeInterval: hrInterval,
+		ScrapeTimeout:  hrTimeout,
 		MetricsPath:    "/metrics-hr",
 	}
 	mr := &config.ScrapeConfig{
 		JobName:        jobName(agent) + "_mr",
-		ScrapeInterval: model.Duration(10 * time.Second),
-		ScrapeTimeout:  model.Duration(5 * time.Second),
+		ScrapeInterval: mrInterval,
+		ScrapeTimeout:  mrTimeout,
 		MetricsPath:    "/metrics-mr",
 	}
 	lr := &config.ScrapeConfig{
 		JobName:        jobName(agent) + "_lr",
-		ScrapeInterval: model.Duration(60 * time.Second),
-		ScrapeTimeout:  model.Duration(10 * time.Second),
+		ScrapeInterval: lrInterval,
+		ScrapeTimeout:  lrTimeout,
 		MetricsPath:    "/metrics-lr",
 	}
 	res := []*config.ScrapeConfig{hr, mr, lr}
@@ -208,8 +218,8 @@ func scrapeConfigForPostgresExporter(node *models.Node, service *models.Service,
 
 	cfg := &config.ScrapeConfig{
 		JobName:        jobName(agent),
-		ScrapeInterval: model.Duration(time.Second),
-		ScrapeTimeout:  model.Duration(time.Second),
+		ScrapeInterval: hrInterval,
+		ScrapeTimeout:  hrTimeout,
 		MetricsPath:    "/metrics",
 	}
 
@@ -251,8 +261,8 @@ func scrapeConfigForMongoDBExporter(node *models.Node, service *models.Service, 
 
 	res := &config.ScrapeConfig{
 		JobName:        jobName(agent),
-		ScrapeInterval: model.Duration(time.Second),
-		ScrapeTimeout:  model.Duration(time.Second),
+		ScrapeInterval: hrInterval,
+		ScrapeTimeout:  hrTimeout,
 		MetricsPath:    "/metrics",
 		ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 			StaticConfigs: []*targetgroup.Group{{

@@ -31,7 +31,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prometheus/common/model"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -100,9 +99,9 @@ func (svc *Service) marshalConfig(ctx context.Context) ([]byte, error) {
 
 	cfg := &config.Config{
 		GlobalConfig: config.GlobalConfig{
-			ScrapeInterval:     model.Duration(time.Minute),
-			ScrapeTimeout:      model.Duration(10 * time.Second),
-			EvaluationInterval: model.Duration(time.Minute),
+			ScrapeInterval:     lrInterval,
+			ScrapeTimeout:      lrTimeout,
+			EvaluationInterval: lrInterval,
 		},
 		RuleFiles: []string{
 			"/etc/prometheus.d/*.rules.yml",

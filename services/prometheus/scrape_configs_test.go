@@ -122,8 +122,8 @@ func TestScrapeConfig(t *testing.T) {
 				},
 			}, {
 				JobName:        "mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr",
-				ScrapeInterval: model.Duration(10 * time.Second),
-				ScrapeTimeout:  model.Duration(5 * time.Second),
+				ScrapeInterval: model.Duration(5 * time.Second),
+				ScrapeTimeout:  model.Duration(4 * time.Second),
 				MetricsPath:    "/metrics-mr",
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
