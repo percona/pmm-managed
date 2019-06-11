@@ -19,6 +19,7 @@ package grpc
 import (
 	"context"
 
+	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/managementpb"
 	"gopkg.in/reform.v1"
 
@@ -134,7 +135,7 @@ func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *manage
 		return nil, err
 	}
 
-	err = s.r.StartMySQLExplainAction(ctx, res.ID, req.PmmAgentId, dsn, req.Query)
+	err = s.r.StartMySQLExplainAction(ctx, res.ID, req.PmmAgentId, dsn, req.Query, agentpb.MysqlExplainOutputFormat_MYSQL_EXPLAIN_OUTPUT_FORMAT_DEFAULT)
 	if err != nil {
 		return nil, err
 	}
@@ -168,12 +169,45 @@ func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *ma
 		return nil, err
 	}
 
-	err = s.r.StartMySQLExplainJSONAction(ctx, res.ID, req.PmmAgentId, dsn, req.Query)
+	err = s.r.StartMySQLExplainAction(ctx, res.ID, req.PmmAgentId, dsn, req.Query, agentpb.MysqlExplainOutputFormat_MYSQL_EXPLAIN_OUTPUT_FORMAT_JSON)
 	if err != nil {
 		return nil, err
 	}
 
 	return &managementpb.StartMySQLExplainJSONActionResponse{
+		PmmAgentId: req.PmmAgentId,
+		ActionId:   res.ID,
+	}, nil
+}
+
+// FIXME
+func (s *actionsServer) StartMySQLExplainTraditionalJSONAction(ctx context.Context, req *managementpb.StartMySQLExplainTraditionalJSONActionRequest) (*managementpb.StartMySQLExplainTraditionalJSONActionResponse, error) {
+	ag, err := models.FindPMMAgentsForService(s.db.Querier, req.ServiceId)
+	if err != nil {
+		return nil, err
+	}
+
+	req.PmmAgentId, err = models.FindPmmAgentIDToRunAction(req.PmmAgentId, ag)
+	if err != nil {
+		return nil, err
+	}
+
+	dsn, err := models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, req.ServiceId, req.PmmAgentId, req.Database)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := models.CreateActionResult(s.db.Querier, req.PmmAgentId)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.r.StartMySQLExplainAction(ctx, res.ID, req.PmmAgentId, dsn, req.Query, agentpb.MysqlExplainOutputFormat_MYSQL_EXPLAIN_OUTPUT_FORMAT_TRADITIONAL_JSON)
+	if err != nil {
+		return nil, err
+	}
+
+	return &managementpb.StartMySQLExplainTraditionalJSONActionResponse{
 		PmmAgentId: req.PmmAgentId,
 		ActionId:   res.ID,
 	}, nil
