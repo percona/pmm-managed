@@ -191,7 +191,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 				// TODO: PMM-3978: In the future we need to merge action parts before send it to storage.
 				err := models.ChangeActionResult(r.db.Querier, p.ActionId, agent.id, p.Error, string(p.Output), p.Done)
 				if err != nil {
-					l.Warnf(err.Error())
+					l.Warnf("Failed to change action: %+v", err)
 				}
 
 				if !p.Done && p.Error != "" {

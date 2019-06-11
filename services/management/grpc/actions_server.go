@@ -46,7 +46,7 @@ func (s *actionsServer) GetAction(ctx context.Context, req *managementpb.GetActi
 
 	return &managementpb.GetActionResponse{
 		ActionId:   res.ID,
-		PmmAgentId: res.PmmAgentID,
+		PmmAgentId: res.PMMAgentID,
 		Done:       res.Done,
 		Error:      res.Error,
 		Output:     res.Output,

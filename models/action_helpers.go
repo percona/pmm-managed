@@ -18,35 +18,11 @@ package models
 
 import (
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 )
-
-// CreateActionResult stores an action result in action results storage.
-func CreateActionResult(q *reform.Querier, pmmAgentID string) (*ActionResult, error) {
-	result := &ActionResult{ID: "/action_id/" + uuid.New().String(), PmmAgentID: pmmAgentID}
-	if err := q.Insert(result); err != nil {
-		return result, status.Errorf(codes.FailedPrecondition, "Couldn't create ActionResult, reason: %v", err)
-	}
-
-	return result, nil
-}
-
-// ChangeActionResult updates an action result in action results storage.
-func ChangeActionResult(q *reform.Querier, actionID, pmmAgentID, aError, output string, done bool) error {
-	result := &ActionResult{
-		ID:         actionID,
-		PmmAgentID: pmmAgentID,
-		Done:       done,
-		Error:      aError,
-		Output:     output,
-	}
-	if err := q.Update(result); err != nil {
-		return status.Errorf(codes.FailedPrecondition, "Couldn't update ActionResult, reason: %v", err)
-	}
-	return nil
-}
 
 // FindActionResultByID loads an action result from storage by action id.
 func FindActionResultByID(q *reform.Querier, id string) (*ActionResult, error) {
@@ -84,4 +60,28 @@ func FindPmmAgentIDToRunAction(pmmAgentID string, agents []*Agent) (string, erro
 		}
 	}
 	return "", status.Errorf(codes.FailedPrecondition, "Couldn't find pmm-agent-id to run action")
+}
+
+// CreateActionResult stores an action result in action results storage.
+func CreateActionResult(q *reform.Querier, pmmAgentID string) (*ActionResult, error) {
+	result := &ActionResult{ID: "/action_id/" + uuid.New().String(), PMMAgentID: pmmAgentID}
+	if err := q.Insert(result); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return result, nil
+}
+
+// ChangeActionResult updates an action result in action results storage.
+func ChangeActionResult(q *reform.Querier, actionID, pmmAgentID, aError, output string, done bool) error {
+	result := &ActionResult{
+		ID:         actionID,
+		PMMAgentID: pmmAgentID,
+		Done:       done,
+		Error:      aError,
+		Output:     output,
+	}
+	if err := q.Update(result); err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
 }

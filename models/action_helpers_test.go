@@ -53,7 +53,7 @@ func TestActionHelpers(t *testing.T) {
 		for _, str := range []reform.Struct{
 			&models.ActionResult{
 				ID:         "A1",
-				PmmAgentID: "A2",
+				PMMAgentID: "A2",
 			},
 		} {
 			require.NoError(t, q.Insert(str))
@@ -98,7 +98,7 @@ func TestFindPmmAgentIDToRunAction(t *testing.T) {
 		for _, str := range []reform.Struct{
 			&models.ActionResult{
 				ID:         "A1",
-				PmmAgentID: "A2",
+				PMMAgentID: "A2",
 			},
 		} {
 			require.NoError(t, q.Insert(str))

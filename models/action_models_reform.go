@@ -47,7 +47,7 @@ func (v *actionResultTableType) PKColumnIndex() uint {
 
 // ActionResultTable represents action_results view or table in SQL database.
 var ActionResultTable = &actionResultTableType{
-	s: parse.StructInfo{Type: "ActionResult", SQLSchema: "", SQLName: "action_results", Fields: []parse.FieldInfo{{Name: "ID", Type: "string", Column: "id"}, {Name: "PmmAgentID", Type: "string", Column: "pmm_agent_id"}, {Name: "Done", Type: "bool", Column: "done"}, {Name: "Error", Type: "string", Column: "error"}, {Name: "Output", Type: "string", Column: "output"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}}, PKFieldIndex: 0},
+	s: parse.StructInfo{Type: "ActionResult", SQLSchema: "", SQLName: "action_results", Fields: []parse.FieldInfo{{Name: "ID", Type: "string", Column: "id"}, {Name: "PMMAgentID", Type: "string", Column: "pmm_agent_id"}, {Name: "Done", Type: "bool", Column: "done"}, {Name: "Error", Type: "string", Column: "error"}, {Name: "Output", Type: "string", Column: "output"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}}, PKFieldIndex: 0},
 	z: new(ActionResult).Values(),
 }
 
@@ -55,7 +55,7 @@ var ActionResultTable = &actionResultTableType{
 func (s ActionResult) String() string {
 	res := make([]string, 7)
 	res[0] = "ID: " + reform.Inspect(s.ID, true)
-	res[1] = "PmmAgentID: " + reform.Inspect(s.PmmAgentID, true)
+	res[1] = "PMMAgentID: " + reform.Inspect(s.PMMAgentID, true)
 	res[2] = "Done: " + reform.Inspect(s.Done, true)
 	res[3] = "Error: " + reform.Inspect(s.Error, true)
 	res[4] = "Output: " + reform.Inspect(s.Output, true)
@@ -69,7 +69,7 @@ func (s ActionResult) String() string {
 func (s *ActionResult) Values() []interface{} {
 	return []interface{}{
 		s.ID,
-		s.PmmAgentID,
+		s.PMMAgentID,
 		s.Done,
 		s.Error,
 		s.Output,
@@ -83,7 +83,7 @@ func (s *ActionResult) Values() []interface{} {
 func (s *ActionResult) Pointers() []interface{} {
 	return []interface{}{
 		&s.ID,
-		&s.PmmAgentID,
+		&s.PMMAgentID,
 		&s.Done,
 		&s.Error,
 		&s.Output,

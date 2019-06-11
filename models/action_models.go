@@ -28,7 +28,7 @@ import (
 //reform:action_results
 type ActionResult struct {
 	ID         string    `reform:"id,pk"`
-	PmmAgentID string    `reform:"pmm_agent_id"`
+	PMMAgentID string    `reform:"pmm_agent_id"`
 	Done       bool      `reform:"done"`
 	Error      string    `reform:"error"`
 	Output     string    `reform:"output"`

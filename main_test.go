@@ -131,7 +131,7 @@ func TestImports(t *testing.T) {
 
 	f, err := os.Create("packages.dot")
 	require.NoError(t, err)
-	defer f.Close()
+	defer func() { require.NoError(t, f.Close()) }()
 
 	fmt.Fprintf(f, "digraph packages {\n")
 
