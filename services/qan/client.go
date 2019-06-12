@@ -143,9 +143,9 @@ func (c *Client) Collect(ctx context.Context, req *qanpb.CollectRequest) error {
 			delete(labels, labelName)
 			if *field != "" {
 				if *field == value {
-					c.l.Warnf("%q is not empty, but has the same value %q.", labelName, *field)
+					c.l.Debugf("%q is not empty, but has the same value %q.", labelName, *field)
 				} else {
-					c.l.Errorf("%q is not empty: overwriting %q with %q.", labelName, *field, value)
+					c.l.Warnf("%q is not empty: overwriting %q with %q.", labelName, *field, value)
 				}
 			}
 			*field = value
