@@ -674,6 +674,27 @@ func (r *Registry) StartMySQLShowTableStatusAction(ctx context.Context, id, pmmA
 	return nil
 }
 
+// StartMySQLShowIndexAction starts mysql-show-index action on pmm-agent.
+func (r *Registry) StartMySQLShowIndexAction(ctx context.Context, id, pmmAgentID, dsn, table string) error {
+	aRequest := &agentpb.StartActionRequest{
+		ActionId: id,
+		Params: &agentpb.StartActionRequest_MysqlShowIndexParams{
+			MysqlShowIndexParams: &agentpb.StartActionRequest_MySQLShowIndexParams{
+				Dsn:   dsn,
+				Table: table,
+			},
+		},
+	}
+
+	agent, err := r.get(pmmAgentID)
+	if err != nil {
+		return err
+	}
+
+	agent.channel.SendRequest(aRequest)
+	return nil
+}
+
 // StopAction stops action with given given id.
 // TODO: Extract it from here. Where...?
 func (r *Registry) StopAction(ctx context.Context, actionID string) error {
