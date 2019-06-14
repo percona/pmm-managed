@@ -689,3 +689,137 @@ func TestPostgreSQLService(t *testing.T) {
 		}
 	})
 }
+
+func TestProxySQLService(t *testing.T) {
+	t.Run("Basic", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+
+		serviceName := pmmapitests.TestString(t, "Basic ProxySQL Service")
+		params := &services.AddProxySQLServiceParams{
+			Body: services.AddProxySQLServiceBody{
+				NodeID:      genericNodeID,
+				Address:     "localhost",
+				Port:        5432,
+				ServiceName: serviceName,
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err := client.Default.Services.AddProxySQLService(params)
+		assert.NoError(t, err)
+		require.NotNil(t, res)
+		serviceID := res.Payload.Proxysql.ServiceID
+		assert.Equal(t, &services.AddProxySQLServiceOK{
+			Payload: &services.AddProxySQLServiceOKBody{
+				Proxysql: &services.AddProxySQLServiceOKBodyProxysql{
+					ServiceID:   serviceID,
+					NodeID:      genericNodeID,
+					Address:     "localhost",
+					Port:        5432,
+					ServiceName: serviceName,
+				},
+			},
+		}, res)
+		defer pmmapitests.RemoveServices(t, serviceID)
+
+		// Check if the service saved in pmm-managed.
+		serviceRes, err := client.Default.Services.GetService(&services.GetServiceParams{
+			Body:    services.GetServiceBody{ServiceID: serviceID},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, serviceRes)
+		assert.Equal(t, &services.GetServiceOK{
+			Payload: &services.GetServiceOKBody{
+				Proxysql: &services.GetServiceOKBodyProxysql{
+					ServiceID:   serviceID,
+					NodeID:      genericNodeID,
+					Address:     "localhost",
+					Port:        5432,
+					ServiceName: serviceName,
+				},
+			},
+		}, serviceRes)
+
+		// Check duplicates.
+		params = &services.AddProxySQLServiceParams{
+			Body: services.AddProxySQLServiceBody{
+				NodeID:      genericNodeID,
+				Address:     "127.0.0.1",
+				Port:        3336,
+				ServiceName: serviceName,
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err = client.Default.Services.AddProxySQLService(params)
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{409, fmt.Sprintf("Service with name %q already exists.", serviceName)})
+		if !assert.Nil(t, res) {
+			pmmapitests.RemoveServices(t, res.Payload.Proxysql.ServiceID)
+		}
+	})
+
+	t.Run("AddNodeIDEmpty", func(t *testing.T) {
+		t.Parallel()
+
+		params := &services.AddProxySQLServiceParams{
+			Body: services.AddProxySQLServiceBody{
+				NodeID:      "",
+				Address:     "localhost",
+				Port:        5432,
+				ServiceName: pmmapitests.TestString(t, "ProxySQL Service with empty node id"),
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err := client.Default.Services.AddProxySQLService(params)
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field NodeId: value '' must not be an empty string"})
+		if !assert.Nil(t, res) {
+			pmmapitests.RemoveServices(t, res.Payload.Proxysql.ServiceID)
+		}
+	})
+
+	t.Run("AddEmptyPort", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+
+		params := &services.AddProxySQLServiceParams{
+			Body: services.AddProxySQLServiceBody{
+				NodeID:      genericNodeID,
+				Address:     "localhost",
+				ServiceName: pmmapitests.TestString(t, "ProxySQL Service with empty node id"),
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err := client.Default.Services.AddProxySQLService(params)
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field Port: value '0' must be greater than '0'"})
+		if !assert.Nil(t, res) {
+			pmmapitests.RemoveServices(t, res.Payload.Proxysql.ServiceID)
+		}
+	})
+
+	t.Run("AddServiceNameEmpty", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+
+		params := &services.AddProxySQLServiceParams{
+			Body: services.AddProxySQLServiceBody{
+				NodeID:      genericNodeID,
+				ServiceName: "",
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err := client.Default.Services.AddProxySQLService(params)
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field ServiceName: value '' must not be an empty string"})
+		if !assert.Nil(t, res) {
+			pmmapitests.RemoveServices(t, res.Payload.Proxysql.ServiceID)
+		}
+	})
+}

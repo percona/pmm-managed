@@ -72,6 +72,19 @@ func addPostgreSQLService(t *testing.T, body services.AddPostgreSQLServiceBody) 
 	return res.Payload
 }
 
+func addProxySQLService(t *testing.T, body services.AddProxySQLServiceBody) *services.AddProxySQLServiceOKBody {
+	t.Helper()
+
+	params := &services.AddProxySQLServiceParams{
+		Body:    body,
+		Context: pmmapitests.Context,
+	}
+	res, err := client.Default.Services.AddProxySQLService(params)
+	assert.NoError(t, err)
+	require.NotNil(t, res)
+	return res.Payload
+}
+
 func addPMMAgent(t *testing.T, nodeID string) *agents.AddPMMAgentOKBody {
 	t.Helper()
 
@@ -129,6 +142,18 @@ func addPostgresExporter(t *testing.T, body agents.AddPostgresExporterBody) *age
 	t.Helper()
 
 	res, err := client.Default.Agents.AddPostgresExporter(&agents.AddPostgresExporterParams{
+		Body:    body,
+		Context: pmmapitests.Context,
+	})
+	assert.NoError(t, err)
+	require.NotNil(t, res)
+	return res.Payload
+}
+
+func addProxySQLExporter(t *testing.T, body agents.AddProxySQLExporterBody) *agents.AddProxySQLExporterOKBody {
+	t.Helper()
+
+	res, err := client.Default.Agents.AddProxySQLExporter(&agents.AddProxySQLExporterParams{
 		Body:    body,
 		Context: pmmapitests.Context,
 	})

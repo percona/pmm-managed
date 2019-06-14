@@ -1438,3 +1438,230 @@ func TestPostgresExporter(t *testing.T) {
 		}
 	})
 }
+
+func TestProxySQLExporter(t *testing.T) {
+	t.Run("Basic", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+
+		node := addRemoteNode(t, pmmapitests.TestString(t, "Remote node for Node exporter"))
+		nodeID := node.Remote.NodeID
+		defer pmmapitests.RemoveNodes(t, nodeID)
+
+		service := addProxySQLService(t, services.AddProxySQLServiceBody{
+			NodeID:      genericNodeID,
+			Address:     "localhost",
+			Port:        5432,
+			ServiceName: pmmapitests.TestString(t, "ProxySQL Service for ProxySQLExporter test"),
+		})
+		serviceID := service.Proxysql.ServiceID
+		defer pmmapitests.RemoveServices(t, serviceID)
+
+		pmmAgent := addPMMAgent(t, nodeID)
+		pmmAgentID := pmmAgent.PMMAgent.AgentID
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
+
+		ProxySQLExporter := addProxySQLExporter(t, agents.AddProxySQLExporterBody{
+			ServiceID:  serviceID,
+			Username:   "username",
+			Password:   "password",
+			PMMAgentID: pmmAgentID,
+			CustomLabels: map[string]string{
+				"custom_label_proxysql_exporter": "proxysql_exporter",
+			},
+
+			SkipConnectionCheck: true,
+		})
+		agentID := ProxySQLExporter.ProxysqlExporter.AgentID
+		defer pmmapitests.RemoveAgents(t, agentID)
+
+		getAgentRes, err := client.Default.Agents.GetAgent(&agents.GetAgentParams{
+			Body:    agents.GetAgentBody{AgentID: agentID},
+			Context: pmmapitests.Context,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, &agents.GetAgentOK{
+			Payload: &agents.GetAgentOKBody{
+				ProxysqlExporter: &agents.GetAgentOKBodyProxysqlExporter{
+					AgentID:    agentID,
+					ServiceID:  serviceID,
+					Username:   "username",
+					Password:   "password",
+					PMMAgentID: pmmAgentID,
+					CustomLabels: map[string]string{
+						"custom_label_proxysql_exporter": "proxysql_exporter",
+					},
+				},
+			},
+		}, getAgentRes)
+
+		// Test change API.
+		changeProxySQLExporterOK, err := client.Default.Agents.ChangeProxySQLExporter(&agents.ChangeProxySQLExporterParams{
+			Body: agents.ChangeProxySQLExporterBody{
+				AgentID: agentID,
+				Common: &agents.ChangeProxySQLExporterParamsBodyCommon{
+					Disabled:           true,
+					RemoveCustomLabels: true,
+				},
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, &agents.ChangeProxySQLExporterOK{
+			Payload: &agents.ChangeProxySQLExporterOKBody{
+				ProxysqlExporter: &agents.ChangeProxySQLExporterOKBodyProxysqlExporter{
+					AgentID:    agentID,
+					ServiceID:  serviceID,
+					Username:   "username",
+					Password:   "password",
+					PMMAgentID: pmmAgentID,
+					Disabled:   true,
+				},
+			},
+		}, changeProxySQLExporterOK)
+
+		changeProxySQLExporterOK, err = client.Default.Agents.ChangeProxySQLExporter(&agents.ChangeProxySQLExporterParams{
+			Body: agents.ChangeProxySQLExporterBody{
+				AgentID: agentID,
+				Common: &agents.ChangeProxySQLExporterParamsBodyCommon{
+					Enabled: true,
+					CustomLabels: map[string]string{
+						"new_label": "proxysql_exporter",
+					},
+				},
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, &agents.ChangeProxySQLExporterOK{
+			Payload: &agents.ChangeProxySQLExporterOKBody{
+				ProxysqlExporter: &agents.ChangeProxySQLExporterOKBodyProxysqlExporter{
+					AgentID:    agentID,
+					ServiceID:  serviceID,
+					Username:   "username",
+					Password:   "password",
+					PMMAgentID: pmmAgentID,
+					Disabled:   false,
+					CustomLabels: map[string]string{
+						"new_label": "proxysql_exporter",
+					},
+				},
+			},
+		}, changeProxySQLExporterOK)
+	})
+
+	t.Run("AddServiceIDEmpty", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+
+		pmmAgent := addPMMAgent(t, genericNodeID)
+		pmmAgentID := pmmAgent.PMMAgent.AgentID
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
+
+		res, err := client.Default.Agents.AddProxySQLExporter(&agents.AddProxySQLExporterParams{
+			Body: agents.AddProxySQLExporterBody{
+				ServiceID:  "",
+				PMMAgentID: pmmAgentID,
+			},
+			Context: pmmapitests.Context,
+		})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field ServiceId: value '' must not be an empty string"})
+		if !assert.Nil(t, res) {
+			pmmapitests.RemoveNodes(t, res.Payload.ProxysqlExporter.AgentID)
+		}
+	})
+
+	t.Run("AddPMMAgentIDEmpty", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+
+		service := addProxySQLService(t, services.AddProxySQLServiceBody{
+			NodeID:      genericNodeID,
+			Address:     "localhost",
+			Port:        5432,
+			ServiceName: pmmapitests.TestString(t, "ProxySQL Service for agent"),
+		})
+		serviceID := service.Proxysql.ServiceID
+		defer pmmapitests.RemoveServices(t, serviceID)
+
+		res, err := client.Default.Agents.AddProxySQLExporter(&agents.AddProxySQLExporterParams{
+			Body: agents.AddProxySQLExporterBody{
+				ServiceID:  serviceID,
+				PMMAgentID: "",
+				Username:   "username",
+				Password:   "password",
+			},
+			Context: pmmapitests.Context,
+		})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field PmmAgentId: value '' must not be an empty string"})
+		if !assert.Nil(t, res) {
+			pmmapitests.RemoveAgents(t, res.Payload.ProxysqlExporter.AgentID)
+		}
+	})
+
+	t.Run("NotExistServiceID", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+
+		pmmAgent := addPMMAgent(t, genericNodeID)
+		pmmAgentID := pmmAgent.PMMAgent.AgentID
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
+
+		res, err := client.Default.Agents.AddProxySQLExporter(&agents.AddProxySQLExporterParams{
+			Body: agents.AddProxySQLExporterBody{
+				ServiceID:  "pmm-service-id",
+				PMMAgentID: pmmAgentID,
+				Username:   "username",
+				Password:   "password",
+			},
+			Context: pmmapitests.Context,
+		})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Service with ID \"pmm-service-id\" not found."})
+		if !assert.Nil(t, res) {
+			pmmapitests.RemoveAgents(t, res.Payload.ProxysqlExporter.AgentID)
+		}
+	})
+
+	t.Run("NotExistPMMAgentID", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+
+		service := addProxySQLService(t, services.AddProxySQLServiceBody{
+			NodeID:      genericNodeID,
+			Address:     "localhost",
+			Port:        5432,
+			ServiceName: pmmapitests.TestString(t, "ProxySQL Service for not exists node ID"),
+		})
+		serviceID := service.Proxysql.ServiceID
+		defer pmmapitests.RemoveServices(t, serviceID)
+
+		res, err := client.Default.Agents.AddProxySQLExporter(&agents.AddProxySQLExporterParams{
+			Body: agents.AddProxySQLExporterBody{
+				ServiceID:  serviceID,
+				PMMAgentID: "pmm-not-exist-server",
+				Username:   "username",
+				Password:   "password",
+			},
+			Context: pmmapitests.Context,
+		})
+		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Agent with ID \"pmm-not-exist-server\" not found."})
+		if !assert.Nil(t, res) {
+			pmmapitests.RemoveAgents(t, res.Payload.ProxysqlExporter.AgentID)
+		}
+	})
+}

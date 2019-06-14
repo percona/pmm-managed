@@ -174,7 +174,7 @@
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:b171582686bf08e52d3c4e78b9bdd0553909874f2d610dd2c64732a10d7eff5b"
+  digest = "1:e5f259cd426a032ee0e51daed00f6d6b548b81835884a11368e633c33bb26127"
   name = "github.com/percona/pmm"
   packages = [
     "api/inventorypb/json/client",
@@ -191,7 +191,7 @@
     "api/managementpb/json/client/service",
   ]
   pruneopts = "NUT"
-  revision = "e6803cfc7c08a552185b92815f83082cd269fd54"
+  revision = "efb3f1c5dd55290d93c84b3918a77e6c79a2b66c"
 
 [[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
@@ -282,10 +282,12 @@
     "github.com/percona/pmm/api/inventorypb/json/client/nodes",
     "github.com/percona/pmm/api/inventorypb/json/client/services",
     "github.com/percona/pmm/api/managementpb/json/client",
+    "github.com/percona/pmm/api/managementpb/json/client/actions",
     "github.com/percona/pmm/api/managementpb/json/client/mongo_db",
     "github.com/percona/pmm/api/managementpb/json/client/my_sql",
     "github.com/percona/pmm/api/managementpb/json/client/node",
     "github.com/percona/pmm/api/managementpb/json/client/postgre_sql",
+    "github.com/percona/pmm/api/managementpb/json/client/proxy_sql",
     "github.com/percona/pmm/api/managementpb/json/client/service",
     "github.com/sirupsen/logrus",
     "github.com/stretchr/testify/assert",

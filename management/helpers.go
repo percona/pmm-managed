@@ -138,6 +138,9 @@ func removeAllAgentsInList(t *testing.T, listAgentsOK *agents.ListAgentsOK) {
 	for _, agent := range listAgentsOK.Payload.MysqldExporter {
 		agentIDs = append(agentIDs, agent.AgentID)
 	}
+	for _, agent := range listAgentsOK.Payload.ProxysqlExporter {
+		agentIDs = append(agentIDs, agent.AgentID)
+	}
 	for _, agent := range listAgentsOK.Payload.QANMysqlPerfschemaAgent {
 		agentIDs = append(agentIDs, agent.AgentID)
 	}
