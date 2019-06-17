@@ -7,16 +7,19 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
 	inventoryClient "github.com/percona/pmm/api/inventorypb/json/client"
 	managementClient "github.com/percona/pmm/api/managementpb/json/client"
+	serverClient "github.com/percona/pmm/api/serverpb/json/client"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
@@ -45,6 +48,8 @@ func (e errFromNginx) GoString() string {
 
 //nolint:gochecknoinits
 func init() {
+	rand.Seed(time.Now().UnixNano())
+
 	debugF := flag.Bool("pmm.debug", false, "Enable debug output [PMM_DEBUG].")
 	traceF := flag.Bool("pmm.trace", false, "Enable trace output [PMM_TRACE].")
 	serverURLF := flag.String("pmm.server-url", "https://127.0.0.1:8443/", "PMM Server URL [PMM_SERVER_URL].")
@@ -144,6 +149,13 @@ func init() {
 
 	inventoryClient.Default = inventoryClient.New(transport, nil)
 	managementClient.Default = managementClient.New(transport, nil)
+	serverClient.Default = serverClient.New(transport, nil)
+
+	// do not run tests if server is not available
+	_, err = serverClient.Default.Server.Version(nil)
+	if err != nil {
+		panic(err)
+	}
 }
 
 // check interfaces

@@ -60,40 +60,40 @@
     "internal",
   ]
   pruneopts = "NUT"
-  revision = "e2f3fdbb7ed0e56e070ccbfb6fc75b288a33c014"
-  version = "v0.19.0"
+  revision = "147e766af12c74c10c633436007317dbcd9abb0b"
+  version = "v0.19.2"
 
 [[projects]]
-  digest = "1:2c25c65f6928a43066d02607fbedd6a1b21322db5f8d1ab92ac77ac3bcc72776"
+  digest = "1:561157070be37514e296bbf1144e5e3130573483e253443bf378917475f55836"
   name = "github.com/go-openapi/errors"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "7a7ff1b7b8020f22574411a32f28b4d168d69237"
-  version = "v0.19.0"
+  revision = "0b2a0a1f89aa2eec2d13e03cd80ab0fdaf01f8ce"
+  version = "v0.19.2"
 
 [[projects]]
   digest = "1:260f7ebefc63024c8dfe2c9f1a2935a89fa4213637a1f522f592f80c001cc441"
   name = "github.com/go-openapi/jsonpointer"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "ef5f0afec364d3b9396b7b77b43dbe26bf1f8004"
-  version = "v0.19.0"
+  revision = "a105a905c5e6ad147f08504784917f3e178e0ba5"
+  version = "v0.19.2"
 
 [[projects]]
   digest = "1:98abd61947ff5c7c6fcfec5473d02a4821ed3a2dd99a4fbfdb7925b0dd745546"
   name = "github.com/go-openapi/jsonreference"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "8483a886a90412cd6858df4ea3483dce9c8e35a3"
-  version = "v0.19.0"
+  revision = "2903bfd4bfbaf188694f1edf731f2725a8fa344f"
+  version = "v0.19.2"
 
 [[projects]]
   digest = "1:c3cb0571346173abe3b329baf50e5ca05d2d1640cfe2817c65ed377e44c34afc"
   name = "github.com/go-openapi/loads"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "74628589c3b94e3526a842d24f46589980f5ab22"
-  version = "v0.19.0"
+  revision = "8548893a17237be4a5b2f74773f23002f4179bbe"
+  version = "v0.19.2"
 
 [[projects]]
   digest = "1:ec42320b8a77cd349d95389f8ce34a9758f3f6da1ab356bae4a5590bcd1bf50c"
@@ -113,12 +113,12 @@
   version = "v0.19.0"
 
 [[projects]]
-  digest = "1:8f80caf2fa31f78a035f33981c9685013033073b53f344f579e60fa69f0c6670"
+  digest = "1:f04cb7797917efbe9d9efd509a311f28930a9ee7ef1e047d01808d64ded53554"
   name = "github.com/go-openapi/spec"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "53d776530bf78a11b03a7b52dd8a083086b045e5"
-  version = "v0.19.0"
+  revision = "bdfd7e07daecc404d77868a88b2364d0aed0ee5a"
+  version = "v0.19.2"
 
 [[projects]]
   digest = "1:60aff2b170a49776659202b25183974d06afea5641bf92c2c8525bbe67ffde6a"
@@ -129,12 +129,12 @@
   version = "v0.19.0"
 
 [[projects]]
-  digest = "1:076ebf43e6e70f18ef9d079a685ede59a0f4dc9247256c209cf57407f959cef9"
+  digest = "1:10332cabbb0525ad9384874b4c0e23501540b7f469ab4177f47f227d46ad2dca"
   name = "github.com/go-openapi/swag"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "b3e2804c8535ee0d1b89320afd98474d5b8e9e3b"
-  version = "v0.19.0"
+  revision = "7e8dd5ceab83c86d17bc967d09e195414fe2b47e"
+  version = "v0.19.2"
 
 [[projects]]
   digest = "1:d2f9c34eee6ddafe36cc96f0ce0499c0df78380aa54fd8053df1397621db786b"
@@ -154,7 +154,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:df495c9184b4e6cbb9d55652236dbcbe72c65a1c8b6469da50722628cea474e7"
+  digest = "1:927762c6729b4e72957ba3310e485ed09cf8451c5a637a52fd016a9fe09e7936"
   name = "github.com/mailru/easyjson"
   packages = [
     "buffer",
@@ -162,7 +162,7 @@
     "jwriter",
   ]
   pruneopts = "NUT"
-  revision = "1ea4449da9834f4d333f1cc461c374aea217d249"
+  revision = "94de47d64c6323a57053b3dd1c97f250cee92741"
 
 [[projects]]
   digest = "1:a45ae66dea4c899d79fceb116accfa1892105c251f0dcd9a217ddc276b42ec68"
@@ -174,7 +174,7 @@
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:e5f259cd426a032ee0e51daed00f6d6b548b81835884a11368e633c33bb26127"
+  digest = "1:77da74783c55f032905f4d29a4594b3156edf64d033dbff1c97c39014b24247c"
   name = "github.com/percona/pmm"
   packages = [
     "api/inventorypb/json/client",
@@ -189,9 +189,11 @@
     "api/managementpb/json/client/postgre_sql",
     "api/managementpb/json/client/proxy_sql",
     "api/managementpb/json/client/service",
+    "api/serverpb/json/client",
+    "api/serverpb/json/client/server",
   ]
   pruneopts = "NUT"
-  revision = "efb3f1c5dd55290d93c84b3918a77e6c79a2b66c"
+  revision = "3b769b4ca86e69a42e60fd8434526388c387f6d3"
 
 [[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
@@ -202,12 +204,12 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:998e4640c25e00ccb7b2569bf94562283937b8afb3485c0e1a0a05a15330240d"
+  digest = "1:f4aaa07a6c33f2b354726d0571acbc8ca118837c75709f6353203ae1a3f8eeab"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "8bdbc7bcc01dcbb8ec23dc8a28e332258d25251f"
-  version = "v1.4.1"
+  revision = "839c75faf7f98a33d445d181f3018b5c3409a45e"
+  version = "v1.4.2"
 
 [[projects]]
   digest = "1:85adecf1dbfae5769cc62a8bcea6498f8e9f0e2452e4e6686eb36fa4428a5a6e"
@@ -226,15 +228,15 @@
   name = "golang.org/x/net"
   packages = ["idna"]
   pruneopts = "NUT"
-  revision = "f4e77d36d62c17c2336347bb2670ddbd02d092b7"
+  revision = "d28f0bde5980168871434b95cfc858db9f2a7a99"
 
 [[projects]]
   branch = "master"
-  digest = "1:d6494258c58901a31c7a82b491a170e9f10c3111dcacaa9128df54ac07b9510b"
+  digest = "1:7d34df51df6848f156ee3ee93f86bfd5c29d0b9424651707fa6fc561d0505971"
   name = "golang.org/x/sys"
   packages = ["unix"]
   pruneopts = "NUT"
-  revision = "2953c62de483abe29031e197e72d3b7061f65f91"
+  revision = "15dcb6c0061f497a3f66e3ea034b629c6dd4d99e"
 
 [[projects]]
   digest = "1:66a2f252a58b4fbbad0e4e180e1d85a83c222b6bce09c3dcdef3dc87c72eda7c"
@@ -289,6 +291,7 @@
     "github.com/percona/pmm/api/managementpb/json/client/postgre_sql",
     "github.com/percona/pmm/api/managementpb/json/client/proxy_sql",
     "github.com/percona/pmm/api/managementpb/json/client/service",
+    "github.com/percona/pmm/api/serverpb/json/client",
     "github.com/sirupsen/logrus",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",

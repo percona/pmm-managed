@@ -2,16 +2,19 @@ package action
 
 import (
 	"fmt"
-	"github.com/Percona-Lab/pmm-api-tests"
+	"testing"
+	"time"
+
 	"github.com/percona/pmm/api/managementpb/json/client"
 	"github.com/percona/pmm/api/managementpb/json/client/actions"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
+
+	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
 )
 
 func TestRunExplain(t *testing.T) {
 	t.Skip("not implemented yet")
+
 	explainActionOK, err := client.Default.Actions.StartMySQLExplainAction(&actions.StartMySQLExplainActionParams{
 		Context: pmmapitests.Context,
 		Body: actions.StartMySQLExplainActionBody{
