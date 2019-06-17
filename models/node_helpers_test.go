@@ -140,16 +140,40 @@ func TestNodeHelpers(t *testing.T) {
 	})
 
 	t.Run("CreateNode", func(t *testing.T) {
-		t.Run("Errors", func(t *testing.T) {
+		t.Run("DuplicateMachineID", func(t *testing.T) {
+			// https://jira.percona.com/browse/PMM-4196
+
 			q, teardown := setup(t)
 			defer teardown(t)
 
+			machineID := "/machine_id/GenericNode"
 			_, err := models.CreateNode(q, models.GenericNodeType, &models.CreateNodeParams{
 				NodeName:  t.Name(),
-				MachineID: pointer.ToString("/machine_id/MySQLNode"),
+				MachineID: &machineID,
 			})
-			expectedMsg := `Generic Node with machine-id "/machine_id/MySQLNode" already exists: "MySQLNode" "Node for MySQL Service".`
-			tests.AssertGRPCError(t, status.New(codes.AlreadyExists, expectedMsg), err)
+			assert.NoError(t, err)
+
+			structs, err := q.SelectAllFrom(models.NodeTable, "WHERE machine_id = $1 ORDER BY node_id", machineID)
+			require.NoError(t, err)
+			require.Len(t, structs, 2)
+			expected := &models.Node{
+				NodeID:    "GenericNode",
+				NodeType:  models.GenericNodeType,
+				NodeName:  "Node for Agents",
+				MachineID: pointer.ToString("/machine_id/GenericNode"),
+				CreatedAt: now,
+				UpdatedAt: now,
+			}
+			assert.Equal(t, expected, structs[0])
+			expected = &models.Node{
+				NodeID:    structs[1].(*models.Node).NodeID,
+				NodeType:  models.GenericNodeType,
+				NodeName:  t.Name(),
+				MachineID: &machineID,
+				CreatedAt: now,
+				UpdatedAt: now,
+			}
+			assert.Equal(t, expected, structs[1])
 		})
 	})
 

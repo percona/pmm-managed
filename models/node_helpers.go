@@ -59,44 +59,6 @@ func checkUniqueNodeName(q *reform.Querier, name string) error {
 	}
 }
 
-func checkMachineID(q *reform.Querier, nodeType NodeType, machineID string) error {
-	// FIXME
-	return nil
-
-	/*
-		if nodeType != GenericNodeType {
-			// TODO check Container Nodes
-			return nil
-		}
-
-		if machineID == "" {
-			return status.Error(codes.InvalidArgument, "Empty Node machine-id.")
-		}
-
-		// TODO uncomment once https://github.com/percona/pmm-agent/pull/76
-		// and https://github.com/percona/pmm-admin/pull/46 are merged.
-		// if !strings.HasPrefix(machineID, "/machine_id/") {
-		// 	return status.Error(codes.InvalidArgument, "Invalid format for Node machine-id.")
-		// }
-
-		structs, err := q.FindAllFrom(NodeTable, "machine_id", machineID)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		for _, str := range structs {
-			node := str.(*Node)
-			switch node.NodeType {
-			case GenericNodeType:
-				return status.Errorf(codes.AlreadyExists, "Generic Node with machine-id %q already exists: %q %q.", machineID, node.NodeID, node.NodeName)
-			default:
-				// TODO ?
-			}
-		}
-
-		return nil
-	*/
-}
-
 func checkUniqueNodeInstanceRegion(q *reform.Querier, instance, region string) error {
 	if instance == "" {
 		return status.Error(codes.InvalidArgument, "Empty Node instance.")
@@ -220,11 +182,7 @@ func CreateNode(q *reform.Querier, nodeType NodeType, params *CreateNodeParams) 
 		return nil, err
 	}
 
-	if params.MachineID != nil {
-		if err := checkMachineID(q, nodeType, *params.MachineID); err != nil {
-			return nil, err
-		}
-	}
+	// do not check that machine-id is unique: https://jira.percona.com/browse/PMM-4196
 
 	if params.Region != nil {
 		if err := checkUniqueNodeInstanceRegion(q, params.Address, *params.Region); err != nil {
