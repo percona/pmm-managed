@@ -334,21 +334,18 @@ func runTelemetryService(ctx context.Context, db *reform.DB) {
 	sleepCancel()
 
 	const delay = 10 * time.Second
-	var uuid string
-	var err error
 	for ctx.Err() == nil {
-		uuid, err = telemetry.GetTelemetryUUID(db)
+		uuid, err := telemetry.GetTelemetryUUID(db)
 		if err == nil {
-			break
+			svc := telemetry.NewService(uuid, version.Version)
+			svc.Run(ctx)
+			return
 		}
 		l.Debugf("Cannot get/set telemetry UUID, retrying in %s: %s.", delay, err)
 		sleepCtx, sleepCancel = context.WithTimeout(ctx, 5*time.Minute)
 		<-sleepCtx.Done()
 		sleepCancel()
 	}
-
-	svc := telemetry.NewService(uuid, version.Version)
-	svc.Run(ctx)
 }
 
 func getQANClient(ctx context.Context, db *reform.DB) *qan.Client {
