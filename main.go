@@ -342,7 +342,7 @@ func runTelemetryService(ctx context.Context, db *reform.DB) {
 			return
 		}
 		l.Debugf("Cannot get/set telemetry UUID, retrying in %s: %s.", delay, err)
-		sleepCtx, sleepCancel = context.WithTimeout(ctx, 5*time.Minute)
+		sleepCtx, sleepCancel = context.WithTimeout(ctx, delay)
 		<-sleepCtx.Done()
 		sleepCancel()
 	}
