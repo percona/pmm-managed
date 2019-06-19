@@ -424,12 +424,22 @@ func main() {
 	}()
 
 	prometheus, err := prometheus.NewService(*prometheusConfigF, *promtoolF, db, *prometheusURLF)
-	if err == nil {
-		err = prometheus.Check(ctx)
-	}
 	if err != nil {
 		l.Panicf("Prometheus service problem: %+v", err)
 	}
+	go func() {
+		const delay = 10 * time.Second
+		for ctx.Err() == nil {
+			err := prometheus.Check(ctx)
+			if err == nil {
+				return
+			}
+			l.Warnf("Prometheus problem, retrying in %s: %s.", delay, err)
+			sleepCtx, sleepCancel := context.WithTimeout(ctx, delay)
+			<-sleepCtx.Done()
+			sleepCancel()
+		}
+	}()
 
 	qanClient := getQANClient(ctx, db)
 	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient)
