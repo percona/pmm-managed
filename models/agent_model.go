@@ -173,10 +173,16 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		return cfg.FormatDSN()
 
 	case QANMongoDBProfilerAgentType, MongoDBExporterType:
+		q := make(url.Values)
+		if dialTimeout != 0 {
+			q.Set("connectTimeoutMS", strconv.Itoa(int(dialTimeout/time.Millisecond)))
+		}
+
 		u := &url.URL{
-			Scheme: "mongodb",
-			Host:   net.JoinHostPort(host, strconv.Itoa(int(port))),
-			Path:   database,
+			Scheme:   "mongodb",
+			Host:     net.JoinHostPort(host, strconv.Itoa(int(port))),
+			Path:     database,
+			RawQuery: q.Encode(),
 		}
 		switch {
 		case password != "":
@@ -185,11 +191,6 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			u.User = url.User(username)
 		}
 
-		if dialTimeout > 0 {
-			v := u.Query()
-			v.Set("connectTimeoutMS", strconv.Itoa(int(dialTimeout/time.Millisecond)))
-			u.RawQuery = v.Encode()
-		}
 		return u.String()
 
 	case PostgresExporterType:
