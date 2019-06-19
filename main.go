@@ -327,9 +327,24 @@ func runDebugServer(ctx context.Context, collectors ...prom.Collector) {
 func runTelemetryService(ctx context.Context, db *reform.DB) {
 	l := logrus.WithField("component", "telemetry")
 
-	uuid, err := telemetry.GetTelemetryUUID(db)
-	if err != nil {
-		l.Panicf("cannot get/set telemetry UUID in DB: %+v", err)
+	// Do not report this instance as running for the first 5 minutes.
+	// Among other things, that solves reporting during PMM Server building when we start pmm-managed.
+	sleepCtx, sleepCancel := context.WithTimeout(ctx, 5*time.Minute)
+	<-sleepCtx.Done()
+	sleepCancel()
+
+	const delay = 10 * time.Second
+	var uuid string
+	var err error
+	for ctx.Err() == nil {
+		uuid, err = telemetry.GetTelemetryUUID(db)
+		if err == nil {
+			break
+		}
+		l.Debugf("Cannot get/set telemetry UUID, retrying in %s: %s.", delay, err)
+		sleepCtx, sleepCancel = context.WithTimeout(ctx, 5*time.Minute)
+		<-sleepCtx.Done()
+		sleepCancel()
 	}
 
 	svc := telemetry.NewService(uuid, version.Version)
@@ -398,14 +413,16 @@ func main() {
 		l := l.WithField("component", "migrations")
 		l.Infof("Migrating database...")
 		const delay = time.Second
-		for {
+		for ctx.Err() == nil {
 			err := models.MigrateDB(sqlDB, l.Debugf)
 			if err == nil {
 				l.Infof("Done.")
 				return
 			}
 			l.Warnf("Failed to migrate, retrying in %s: %s.", delay, err)
-			time.Sleep(delay)
+			sleepCtx, sleepCancel := context.WithTimeout(ctx, delay)
+			<-sleepCtx.Done()
+			sleepCancel()
 		}
 	}()
 
