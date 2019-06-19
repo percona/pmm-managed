@@ -387,12 +387,27 @@ func main() {
 		cancel()
 	}()
 
-	sqlDB, err := models.OpenDB(*postgresDBNameF, *postgresDBUsernameF, *postgresDBPasswordF, l.Debugf)
+	sqlDB, err := models.OpenDB(*postgresDBNameF, *postgresDBUsernameF, *postgresDBPasswordF)
 	if err != nil {
 		l.Panicf("Failed to connect to database: %+v", err)
 	}
 	defer sqlDB.Close()
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
+
+	go func() {
+		l := l.WithField("component", "migrations")
+		l.Infof("Migrating database...")
+		const delay = time.Second
+		for {
+			err := models.MigrateDB(sqlDB, l.Debugf)
+			if err == nil {
+				l.Infof("Done.")
+				return
+			}
+			l.Warnf("Failed to migrate, retrying in %s: %s.", delay, err)
+			time.Sleep(delay)
+		}
+	}()
 
 	prometheus, err := prometheus.NewService(*prometheusConfigF, *promtoolF, db, *prometheusURLF)
 	if err == nil {
