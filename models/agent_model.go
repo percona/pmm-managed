@@ -172,20 +172,23 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 
 		return cfg.FormatDSN()
 
-	case MongoDBExporterType:
-		// TODO return MongoURI for the new driver
-		fallthrough
-
-	case QANMongoDBProfilerAgentType:
+	case QANMongoDBProfilerAgentType, MongoDBExporterType:
 		u := &url.URL{
 			Scheme: "mongodb",
 			Host:   net.JoinHostPort(host, strconv.Itoa(int(port))),
+			Path:   fmt.Sprintf("/%s", database),
 		}
 		switch {
 		case password != "":
 			u.User = url.UserPassword(username, password)
 		case username != "":
 			u.User = url.User(username)
+		}
+
+		if dialTimeout > 0 {
+			v := u.Query()
+			v.Set("connectTimeoutMS", strconv.Itoa(int(dialTimeout/time.Millisecond)))
+			u.RawQuery = v.Encode()
 		}
 		return u.String()
 
