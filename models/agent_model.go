@@ -176,7 +176,7 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		u := &url.URL{
 			Scheme: "mongodb",
 			Host:   net.JoinHostPort(host, strconv.Itoa(int(port))),
-			Path:   fmt.Sprintf("/%s", database),
+			Path:   database,
 		}
 		switch {
 		case password != "":
