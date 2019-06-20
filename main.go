@@ -406,22 +406,29 @@ func main() {
 	defer sqlDB.Close()
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
-	go func() {
-		l := l.WithField("component", "migrations")
-		l.Infof("Migrating database...")
-		const delay = time.Second
-		for ctx.Err() == nil {
-			err := models.MigrateDB(sqlDB, l.Debugf)
-			if err == nil {
-				l.Infof("Done.")
-				return
+	// try synchronously once, then retry in the background
+	if migrateErr := models.MigrateDB(sqlDB, l.Debugf); migrateErr != nil {
+		go func() {
+			for {
+				const delay = time.Second
+				l := l.WithField("component", "migrations")
+				l.Warnf("Failed to migrate database, retrying in %s: %s.", delay, migrateErr)
+				sleepCtx, sleepCancel := context.WithTimeout(ctx, delay)
+				<-sleepCtx.Done()
+				sleepCancel()
+
+				if ctx.Err() != nil {
+					return
+				}
+
+				l.Infof("Migrating database...")
+				if migrateErr = models.MigrateDB(sqlDB, l.Debugf); migrateErr == nil {
+					l.Infof("Done.")
+					return
+				}
 			}
-			l.Warnf("Failed to migrate, retrying in %s: %s.", delay, err)
-			sleepCtx, sleepCancel := context.WithTimeout(ctx, delay)
-			<-sleepCtx.Done()
-			sleepCancel()
-		}
-	}()
+		}()
+	}
 
 	prometheus, err := prometheus.NewService(*prometheusConfigF, *promtoolF, db, *prometheusURLF)
 	if err != nil {
