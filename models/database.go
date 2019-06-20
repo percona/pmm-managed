@@ -204,23 +204,19 @@ func MigrateDB(sqlDB *sql.DB, logf reform.Printf) error {
 	}
 	logf("Current database schema version: %d. Latest version: %d.", currentVersion, latestVersion)
 
-	for version := currentVersion + 1; version <= latestVersion; version++ {
-		logf("Migrating database to schema version %d ...", version)
-		queries := databaseSchema[version]
-		queries = append(queries, fmt.Sprintf(`INSERT INTO schema_migrations (id) VALUES (%d)`, version))
-		err = db.InTransaction(func(tx *reform.TX) error {
+	// rollback all migrations if one of them fails; PostgreSQL supports DDL transactions
+	return db.InTransaction(func(tx *reform.TX) error {
+		for version := currentVersion + 1; version <= latestVersion; version++ {
+			logf("Migrating database to schema version %d ...", version)
+			queries := databaseSchema[version]
+			queries = append(queries, fmt.Sprintf(`INSERT INTO schema_migrations (id) VALUES (%d)`, version))
 			for _, q := range queries {
 				q = strings.TrimSpace(q)
 				if _, err = tx.Exec(q); err != nil {
 					return errors.Wrapf(err, "failed to execute statement:\n%s", q)
 				}
 			}
-			return nil
-		})
-		if err != nil {
-			return err
 		}
-	}
-
-	return nil
+		return nil
+	})
 }
