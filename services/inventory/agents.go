@@ -588,7 +588,7 @@ func (as *AgentsService) ChangeProxySQLExporter(ctx context.Context, req *invent
 	return res, nil
 }
 
-// AddQANPostgreSQLPgStatementsAgent adds MySQL PerfSchema QAN Agent.
+// AddQANPostgreSQLPgStatementsAgent adds PostgreSQL Pg stat statements QAN Agent.
 //nolint:lll,unused
 func (as *AgentsService) AddQANPostgreSQLPgStatementsAgent(ctx context.Context, req *inventorypb.AddQANPostgreSQLPgStatementsAgentRequest) (*inventorypb.QANPostgreSQLPgStatementsAgent, error) {
 	// TODO Decide about validation. https://jira.percona.com/browse/PMM-1416
@@ -632,7 +632,7 @@ func (as *AgentsService) AddQANPostgreSQLPgStatementsAgent(ctx context.Context, 
 	return res, e
 }
 
-// ChangeQANPostgreSQLPgStatementsAgent updates MySQL PerfSchema QAN Agent with given parameters.
+// ChangeQANPostgreSQLPgStatementsAgent updates PostgreSQL Pg stat statements QAN Agent with given parameters.
 func (as *AgentsService) ChangeQANPostgreSQLPgStatementsAgent(ctx context.Context, req *inventorypb.ChangeQANPostgreSQLPgStatementsAgentRequest) (*inventorypb.QANPostgreSQLPgStatementsAgent, error) {
 	agent, err := as.changeAgent(req.AgentId, req.Common)
 	if err != nil {
