@@ -36,15 +36,16 @@ type AgentType string
 
 // Agent types (in the same order as in agents.proto).
 const (
-	PMMAgentType                AgentType = "pmm-agent"
-	NodeExporterType            AgentType = "node_exporter"
-	MySQLdExporterType          AgentType = "mysqld_exporter"
-	MongoDBExporterType         AgentType = "mongodb_exporter"
-	PostgresExporterType        AgentType = "postgres_exporter"
-	QANMySQLPerfSchemaAgentType AgentType = "qan-mysql-perfschema-agent"
-	QANMySQLSlowlogAgentType    AgentType = "qan-mysql-slowlog-agent"
-	QANMongoDBProfilerAgentType AgentType = "qan-mongodb-profiler-agent"
-	ProxySQLExporterType        AgentType = "proxysql_exporter"
+	PMMAgentType                       AgentType = "pmm-agent"
+	NodeExporterType                   AgentType = "node_exporter"
+	MySQLdExporterType                 AgentType = "mysqld_exporter"
+	MongoDBExporterType                AgentType = "mongodb_exporter"
+	PostgresExporterType               AgentType = "postgres_exporter"
+	QANMySQLPerfSchemaAgentType        AgentType = "qan-mysql-perfschema-agent"
+	QANMySQLSlowlogAgentType           AgentType = "qan-mysql-slowlog-agent"
+	QANMongoDBProfilerAgentType        AgentType = "qan-mongodb-profiler-agent"
+	QANPostgreSQLPgStatementsAgentType AgentType = "qan-postgresql-pgstatements-agent"
+	ProxySQLExporterType               AgentType = "proxysql_exporter"
 )
 
 // Agent represents Agent as stored in database.
