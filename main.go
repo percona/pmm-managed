@@ -409,9 +409,9 @@ func main() {
 	// try synchronously once, then retry in the background
 	if migrateErr := models.MigrateDB(sqlDB, l.Debugf); migrateErr != nil {
 		go func() {
+			l := l.WithField("component", "migrations")
 			for {
 				const delay = time.Second
-				l := l.WithField("component", "migrations")
 				l.Warnf("Failed to migrate database, retrying in %s: %s.", delay, migrateErr)
 				sleepCtx, sleepCancel := context.WithTimeout(ctx, delay)
 				<-sleepCtx.Done()
