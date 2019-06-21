@@ -116,7 +116,7 @@ func TestServiceService(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			pmmAgent, err := models.AgentAddPmmAgent(s.db.Querier, models.PMMServerNodeID, nil)
+			pmmAgent, err := models.CreatePMMAgent(s.db.Querier, models.PMMServerNodeID, nil)
 			require.NoError(t, err)
 
 			mysqldExporter, err := models.AgentAddExporter(s.db.Querier, models.MySQLdExporterType, &models.AddExporterAgentParams{

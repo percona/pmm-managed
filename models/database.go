@@ -23,8 +23,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlekSi/pointer"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 )
@@ -66,10 +69,6 @@ var databaseSchema = [][]string{
 			UNIQUE (container_id),
 			UNIQUE (address, region)
 		)`,
-
-		fmt.Sprintf(`INSERT INTO nodes (node_id, node_type,	node_name, distro, node_model, az, address, created_at, updated_at) `+ //nolint:gosec
-			`VALUES ('%s', '%s', 'PMM Server', 'Linux', '', '', '', '%s', '%s')`, //nolint:gosec
-			PMMServerNodeID, GenericNodeType, initialCurrentTime, initialCurrentTime), //nolint:gosec
 
 		`CREATE TABLE services (
 			-- common
@@ -190,7 +189,7 @@ func OpenDB(name, username, password string) (*sql.DB, error) {
 }
 
 // MigrateDB runs PostgreSQL database migrations.
-func MigrateDB(sqlDB *sql.DB, logf reform.Printf) error {
+func MigrateDB(sqlDB *sql.DB, username, password string, logf reform.Printf) error {
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(logf))
 
 	latestVersion := len(databaseSchema) - 1 // skip item 0
@@ -217,6 +216,49 @@ func MigrateDB(sqlDB *sql.DB, logf reform.Printf) error {
 				}
 			}
 		}
+
+		_, err = createNodeWithID(tx.Querier, PMMServerNodeID, GenericNodeType, &CreateNodeParams{
+			NodeName: PMMServerNodeName,
+			Address:  "127.0.0.1",
+		})
+		if err != nil {
+			if status.Code(err) != codes.AlreadyExists {
+				return nil
+			}
+			return err
+		}
+		node, err := FindNodeByName(tx.Querier, PMMServerNodeName)
+		if err != nil {
+			return err
+		}
+		if _, err = createPMMAgentWithID(tx.Querier, PMMServerAgentID, node.NodeID, nil); err != nil {
+			return err
+		}
+		if _, err = CreateNodeExporter(tx.Querier, PMMServerAgentID, nil); err != nil {
+			return err
+		}
+		service, err := AddNewService(tx.Querier, PostgreSQLServiceType, &AddDBMSServiceParams{
+			ServiceName: "PMM Server PostgreSQL",
+			NodeID:      node.NodeID,
+			Address:     pointer.ToString("127.0.0.1"),
+			Port:        pointer.ToUint16(5432),
+		})
+		if err != nil {
+			return err
+		}
+		_, err = AgentAddExporter(tx.Querier, PostgresExporterType, &AddExporterAgentParams{
+			PMMAgentID: PMMServerAgentID,
+			ServiceID:  service.ServiceID,
+			Username:   username,
+			Password:   password,
+		})
+		if err != nil {
+			return err
+		}
+
+		// TODO add PostgreSQL QAN
+		// TODO add clickhouse_exporter
+
 		return nil
 	})
 }

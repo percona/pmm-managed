@@ -146,7 +146,7 @@ func (as *AgentsService) AddPMMAgent(ctx context.Context, req *inventorypb.AddPM
 
 	var res *inventorypb.PMMAgent
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		row, err := models.AgentAddPmmAgent(tx.Querier, req.RunsOnNodeId, req.CustomLabels)
+		row, err := models.CreatePMMAgent(tx.Querier, req.RunsOnNodeId, req.CustomLabels)
 		if err != nil {
 			return err
 		}
@@ -167,7 +167,7 @@ func (as *AgentsService) AddNodeExporter(ctx context.Context, req *inventorypb.A
 
 	var res *inventorypb.NodeExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		row, err := models.AgentAddNodeExporter(tx.Querier, req.PmmAgentId, req.CustomLabels)
+		row, err := models.CreateNodeExporter(tx.Querier, req.PmmAgentId, req.CustomLabels)
 		if err != nil {
 			return err
 		}

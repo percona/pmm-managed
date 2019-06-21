@@ -69,6 +69,10 @@ func TestAgents(t *testing.T) {
 		setup(t)
 		defer teardown(t)
 
+		as.r.(*mockAgentsRegistry).On("Kick", ctx, models.PMMServerAgentID).Return(true)
+		err := as.Remove(ctx, models.PMMServerAgentID, true)
+		require.NoError(t, err)
+
 		actualAgents, err := as.List(ctx, AgentFilters{})
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 0)
