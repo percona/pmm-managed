@@ -212,7 +212,7 @@
   version = "v0.2.2"
 
 [[projects]]
-  branch = "PMM-4176-qan-for-postgresql"
+  branch = "PMM-2.0"
   digest = "1:cda9ccb3a9eceb820b3ae1d53a5ab13fa742894736518e90f0fefcee5671413a"
   name = "github.com/percona/pmm"
   packages = [
@@ -224,7 +224,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "67487507ff0326e07e0a788cdb2196cd6b6c2deb"
+  revision = "9d75391cec2d200bdefd8ba27a70b4ce814e1906"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
