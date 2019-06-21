@@ -191,7 +191,7 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		}
 		return u.String()
 
-	case PostgresExporterType:
+	case PostgresExporterType, QANPostgreSQLPgStatementsAgentType:
 		q := make(url.Values)
 		q.Set("sslmode", "disable") // TODO: make it configurable
 		if dialTimeout != 0 {
