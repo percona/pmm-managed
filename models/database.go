@@ -255,8 +255,16 @@ func MigrateDB(sqlDB *sql.DB, username, password string, logf reform.Printf) err
 		if err != nil {
 			return err
 		}
+		_, err = AgentAddExporter(tx.Querier, QANPostgreSQLPgStatementsAgentType, &AddExporterAgentParams{
+			PMMAgentID: PMMServerAgentID,
+			ServiceID:  service.ServiceID,
+			Username:   username,
+			Password:   password,
+		})
+		if err != nil {
+			return err
+		}
 
-		// TODO add PostgreSQL QAN
 		// TODO add clickhouse_exporter
 
 		return nil
