@@ -206,7 +206,6 @@ func TestNodeHelpers(t *testing.T) {
 
 		nodes, err := models.FindAllNodes(q)
 		assert.NoError(t, err)
-		require.Len(t, nodes, 1)
-		require.Equal(t, models.PMMServerNodeID, nodes[0].NodeID)
+		require.Len(t, nodes, 0)
 	})
 }

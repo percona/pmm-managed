@@ -165,7 +165,7 @@ func TestAgentHelpers(t *testing.T) {
 
 		ids, err := models.PMMAgentsForChangedNode(q, "N1")
 		require.NoError(t, err)
-		assert.Equal(t, []string{"A1", models.PMMServerAgentID}, ids)
+		assert.Equal(t, []string{"A1"}, ids)
 	})
 
 	t.Run("PMMAgentsForChangedService", func(t *testing.T) {
@@ -174,7 +174,7 @@ func TestAgentHelpers(t *testing.T) {
 
 		ids, err := models.PMMAgentsForChangedService(q, "S1")
 		require.NoError(t, err)
-		assert.Equal(t, []string{"A1", models.PMMServerAgentID}, ids)
+		assert.Equal(t, []string{"A1"}, ids)
 	})
 
 	t.Run("RemoveAgent", func(t *testing.T) {

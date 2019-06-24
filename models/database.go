@@ -194,10 +194,11 @@ type SetupFixturesMode int
 const (
 	// SetupFixtures adds initial data to the database.
 	SetupFixtures SetupFixturesMode = iota
-	// SkipFixtures skips adding initial data to the database.
+	// SkipFixtures skips adding initial data to the database. Useful for tests.
 	SkipFixtures
 )
 
+// SetupDBParams represents SetupDB parameters.
 type SetupDBParams struct {
 	Logf          reform.Printf
 	Username      string
