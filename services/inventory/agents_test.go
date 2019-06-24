@@ -18,7 +18,6 @@ package inventory
 
 import (
 	"context"
-	"database/sql"
 	"reflect"
 	"testing"
 
@@ -40,42 +39,38 @@ import (
 )
 
 func TestAgents(t *testing.T) {
-	var (
-		ctx context.Context
-		db  *reform.DB
-		ss  *ServicesService
-		as  *AgentsService
-	)
-	setup := func(t *testing.T) {
-		ctx = logger.Set(context.Background(), t.Name())
+	var ctx context.Context
 
+	setup := func(t *testing.T) (ss *ServicesService, as *AgentsService, teardown func(t *testing.T)) {
+		ctx = logger.Set(context.Background(), t.Name())
 		uuid.SetRand(new(tests.IDReader))
 
-		db = reform.NewDB(testdb.Open(t, models.SkipFixtures), postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+		sqlDB := testdb.Open(t, models.SetupFixtures)
+		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
 		r := new(mockAgentsRegistry)
 		r.Test(t)
 
+		teardown = func(t *testing.T) {
+			r.AssertExpectations(t)
+			require.NoError(t, sqlDB.Close())
+		}
 		ss = NewServicesService(db, r)
 		as = NewAgentsService(db, r)
-	}
 
-	teardown := func(t *testing.T) {
-		assert.NoError(t, db.DBInterface().(*sql.DB).Close())
-		as.r.(*mockAgentsRegistry).AssertExpectations(t)
+		return
 	}
 
 	t.Run("Basic", func(t *testing.T) {
-		setup(t)
+		// FIXME split this test into several smaller
+
+		ss, as, teardown := setup(t)
 		defer teardown(t)
 
-		as.r.(*mockAgentsRegistry).On("Kick", ctx, models.PMMServerAgentID).Return(true)
-		err := as.Remove(ctx, models.PMMServerAgentID, true)
-		require.NoError(t, err)
-
+		as.r.(*mockAgentsRegistry).On("IsConnected", models.PMMServerAgentID).Return(true)
 		actualAgents, err := as.List(ctx, AgentFilters{})
 		require.NoError(t, err)
-		require.Len(t, actualAgents, 0)
+		require.Len(t, actualAgents, 4) // PMM Server's pmm-agent, node_exporter, postgres_exporter, PostgreSQL QAN
 
 		as.r.(*mockAgentsRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000005").Return(true)
 		as.r.(*mockAgentsRegistry).On("SendSetStateRequest", ctx, "/agent_id/00000000-0000-4000-8000-000000000005")
@@ -86,6 +81,12 @@ func TestAgents(t *testing.T) {
 			RunsOnNodeId: models.PMMServerNodeID,
 		})
 		require.NoError(t, err)
+		expectedPMMAgent := &inventorypb.PMMAgent{
+			AgentId:      "/agent_id/00000000-0000-4000-8000-000000000005",
+			RunsOnNodeId: models.PMMServerNodeID,
+			Connected:    true,
+		}
+		assert.Equal(t, expectedPMMAgent, pmmAgent)
 
 		actualNodeExporter, err := as.AddNodeExporter(ctx, &inventorypb.AddNodeExporterRequest{
 			PmmAgentId: pmmAgent.AgentId,
@@ -158,14 +159,14 @@ func TestAgents(t *testing.T) {
 		})
 		require.NoError(t, err)
 		expectedMongoDBExporter := &inventorypb.MongoDBExporter{
-			AgentId:    "/agent_id/00000000-0000-4000-8000-000000000006",
+			AgentId:    "/agent_id/00000000-0000-4000-8000-00000000000a",
 			PmmAgentId: pmmAgent.AgentId,
 			ServiceId:  ms.ServiceId,
 			Username:   "username",
 		}
 		assert.Equal(t, expectedMongoDBExporter, actualAgent)
 
-		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000006")
+		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-00000000000a")
 		require.NoError(t, err)
 		assert.Equal(t, expectedMongoDBExporter, actualAgent)
 
@@ -176,14 +177,14 @@ func TestAgents(t *testing.T) {
 		})
 		require.NoError(t, err)
 		expectedQANMySQLSlowlogAgent := &inventorypb.QANMySQLSlowlogAgent{
-			AgentId:    "/agent_id/00000000-0000-4000-8000-000000000007",
+			AgentId:    "/agent_id/00000000-0000-4000-8000-00000000000b",
 			PmmAgentId: pmmAgent.AgentId,
 			ServiceId:  s.ServiceId,
 			Username:   "username",
 		}
 		assert.Equal(t, expectedQANMySQLSlowlogAgent, actualAgent)
 
-		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000007")
+		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-00000000000b")
 		require.NoError(t, err)
 		assert.Equal(t, expectedQANMySQLSlowlogAgent, actualAgent)
 
@@ -202,26 +203,29 @@ func TestAgents(t *testing.T) {
 		})
 		require.NoError(t, err)
 		expectedPostgresExporter := &inventorypb.PostgresExporter{
-			AgentId:    "/agent_id/00000000-0000-4000-8000-000000000009",
+			AgentId:    "/agent_id/00000000-0000-4000-8000-00000000000d",
 			PmmAgentId: pmmAgent.AgentId,
 			ServiceId:  ps.ServiceId,
 			Username:   "username",
 		}
 		assert.Equal(t, expectedPostgresExporter, actualAgent)
 
-		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000009")
+		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-00000000000d")
 		require.NoError(t, err)
 		assert.Equal(t, expectedPostgresExporter, actualAgent)
 
 		actualAgents, err = as.List(ctx, AgentFilters{})
 		require.NoError(t, err)
-		require.Len(t, actualAgents, 6)
-		assert.Equal(t, pmmAgent, actualAgents[0])
-		assert.Equal(t, expectedNodeExporter, actualAgents[1])
-		assert.Equal(t, expectedMySQLdExporter, actualAgents[2])
-		assert.Equal(t, expectedMongoDBExporter, actualAgents[3])
-		assert.Equal(t, expectedQANMySQLSlowlogAgent, actualAgents[4])
-		assert.Equal(t, expectedPostgresExporter, actualAgents[5])
+		for i, a := range actualAgents {
+			t.Logf("%d: %T %s", i, a, a)
+		}
+		require.Len(t, actualAgents, 10)
+		assert.Equal(t, pmmAgent, actualAgents[3])
+		assert.Equal(t, expectedNodeExporter, actualAgents[4])
+		assert.Equal(t, expectedMySQLdExporter, actualAgents[5])
+		assert.Equal(t, expectedMongoDBExporter, actualAgents[6])
+		assert.Equal(t, expectedQANMySQLSlowlogAgent, actualAgents[7])
+		assert.Equal(t, expectedPostgresExporter, actualAgents[8])
 
 		// filter by service ID
 		actualAgents, err = as.List(ctx, AgentFilters{ServiceID: s.ServiceId})
@@ -250,41 +254,11 @@ func TestAgents(t *testing.T) {
 
 		actualAgents, err = as.List(ctx, AgentFilters{NodeID: models.PMMServerNodeID})
 		require.NoError(t, err)
-		require.Len(t, actualAgents, 1)
-		assert.Equal(t, expectedNodeExporter, actualAgents[0])
-
-		err = as.Remove(ctx, "/agent_id/00000000-0000-4000-8000-000000000006", false)
-		require.NoError(t, err)
-		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000006")
-		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "/agent_id/00000000-0000-4000-8000-000000000006" not found.`), err)
-		assert.Nil(t, actualAgent)
-
-		err = as.Remove(ctx, "/agent_id/00000000-0000-4000-8000-000000000008", false)
-		require.NoError(t, err)
-		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000008")
-		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "/agent_id/00000000-0000-4000-8000-000000000008" not found.`), err)
-		assert.Nil(t, actualAgent)
-
-		err = as.Remove(ctx, "/agent_id/00000000-0000-4000-8000-000000000006", false)
-		require.NoError(t, err)
-		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000006")
-		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "/agent_id/00000000-0000-4000-8000-000000000006" not found.`), err)
-		assert.Nil(t, actualAgent)
-
-		err = as.Remove(ctx, "/agent_id/00000000-0000-4000-8000-000000000007", false)
-		require.NoError(t, err)
-		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000007")
-		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "/agent_id/00000000-0000-4000-8000-000000000007" not found.`), err)
-		assert.Nil(t, actualAgent)
-
-		err = as.Remove(ctx, "/agent_id/00000000-0000-4000-8000-000000000009", false)
-		require.NoError(t, err)
-		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000009")
-		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "/agent_id/00000000-0000-4000-8000-000000000009" not found.`), err)
-		assert.Nil(t, actualAgent)
+		require.Len(t, actualAgents, 2)
+		assert.Equal(t, expectedNodeExporter, actualAgents[1])
 
 		as.r.(*mockAgentsRegistry).On("Kick", ctx, "/agent_id/00000000-0000-4000-8000-000000000005").Return(true)
-		err = as.Remove(ctx, "/agent_id/00000000-0000-4000-8000-000000000005", false)
+		err = as.Remove(ctx, "/agent_id/00000000-0000-4000-8000-000000000005", true)
 		require.NoError(t, err)
 		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000005")
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "/agent_id/00000000-0000-4000-8000-000000000005" not found.`), err)
@@ -292,11 +266,11 @@ func TestAgents(t *testing.T) {
 
 		actualAgents, err = as.List(ctx, AgentFilters{})
 		require.NoError(t, err)
-		require.Len(t, actualAgents, 0)
+		require.Len(t, actualAgents, 4) // PMM Server's pmm-agent, node_exporter, postgres_exporter, PostgreSQL QAN
 	})
 
 	t.Run("GetEmptyID", func(t *testing.T) {
-		setup(t)
+		_, as, teardown := setup(t)
 		defer teardown(t)
 
 		actualNode, err := as.Get(ctx, "")
@@ -305,7 +279,7 @@ func TestAgents(t *testing.T) {
 	})
 
 	t.Run("AddPMMAgent", func(t *testing.T) {
-		setup(t)
+		_, as, teardown := setup(t)
 		defer teardown(t)
 
 		as.r.(*mockAgentsRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000005").Return(false)
@@ -334,7 +308,7 @@ func TestAgents(t *testing.T) {
 	})
 
 	t.Run("AddPmmAgentNotFound", func(t *testing.T) {
-		setup(t)
+		_, as, teardown := setup(t)
 		defer teardown(t)
 
 		_, err := as.AddNodeExporter(ctx, &inventorypb.AddNodeExporterRequest{
@@ -344,7 +318,7 @@ func TestAgents(t *testing.T) {
 	})
 
 	t.Run("AddServiceNotFound", func(t *testing.T) {
-		setup(t)
+		_, as, teardown := setup(t)
 		defer teardown(t)
 
 		as.r.(*mockAgentsRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000005").Return(true)
@@ -361,7 +335,7 @@ func TestAgents(t *testing.T) {
 	})
 
 	t.Run("RemoveNotFound", func(t *testing.T) {
-		setup(t)
+		_, as, teardown := setup(t)
 		defer teardown(t)
 
 		err := as.Remove(ctx, "no-such-id", false)
