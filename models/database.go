@@ -260,8 +260,8 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) error {
 
 func setupFixture1(q *reform.Querier, username, password string) error {
 	// create PMM Server Node and associated Agents
-	_, err := createNodeWithID(q, PMMServerNodeID, GenericNodeType, &CreateNodeParams{
-		NodeName: PMMServerNodeName,
+	node, err := createNodeWithID(q, PMMServerNodeID, GenericNodeType, &CreateNodeParams{
+		NodeName: "PMM Server",
 		Address:  "127.0.0.1",
 	})
 	if err != nil {
@@ -269,10 +269,6 @@ func setupFixture1(q *reform.Querier, username, password string) error {
 			// this fixture was already added previously
 			return nil
 		}
-		return err
-	}
-	node, err := FindNodeByName(q, PMMServerNodeName)
-	if err != nil {
 		return err
 	}
 	if _, err = createPMMAgentWithID(q, PMMServerAgentID, node.NodeID, nil); err != nil {

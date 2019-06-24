@@ -40,9 +40,6 @@ const (
 // PMMServerNodeID is a special Node ID representing PMM Server Node.
 const PMMServerNodeID string = "pmm-server" // no /node_id/ prefix
 
-// PMMServerNodeName is a special Node name for PMM Server Node.
-const PMMServerNodeName string = "PMM Server"
-
 // Node represents Node as stored in database.
 //reform:nodes
 type Node struct {
