@@ -40,6 +40,8 @@ func TestServices(t *testing.T) {
 	var ctx context.Context
 
 	setup := func(t *testing.T) (ss *ServicesService, teardown func(t *testing.T)) {
+		t.Helper()
+
 		ctx = logger.Set(context.Background(), t.Name())
 		uuid.SetRand(new(tests.IDReader))
 
@@ -48,12 +50,13 @@ func TestServices(t *testing.T) {
 
 		r := new(mockAgentsRegistry)
 		r.Test(t)
+
 		teardown = func(t *testing.T) {
 			require.NoError(t, sqlDB.Close())
 			r.AssertExpectations(t)
 		}
-
 		ss = NewServicesService(db, r)
+
 		return
 	}
 

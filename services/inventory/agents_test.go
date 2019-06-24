@@ -42,6 +42,8 @@ func TestAgents(t *testing.T) {
 	var ctx context.Context
 
 	setup := func(t *testing.T) (ss *ServicesService, as *AgentsService, teardown func(t *testing.T)) {
+		t.Helper()
+
 		ctx = logger.Set(context.Background(), t.Name())
 		uuid.SetRand(new(tests.IDReader))
 

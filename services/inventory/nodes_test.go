@@ -38,8 +38,9 @@ import (
 func TestNodes(t *testing.T) {
 	var ctx context.Context
 
-	//nolint:unparam
 	setup := func(t *testing.T) (ns *NodesService, teardown func(t *testing.T)) {
+		t.Helper()
+
 		ctx = logger.Set(context.Background(), t.Name())
 		uuid.SetRand(new(tests.IDReader))
 

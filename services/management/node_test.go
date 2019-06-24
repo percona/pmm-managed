@@ -37,23 +37,23 @@ import (
 )
 
 func TestNodeService(t *testing.T) {
-	setup := func(t *testing.T) (ctx context.Context, s *NodeService, teardown func()) {
+	setup := func(t *testing.T) (ctx context.Context, s *NodeService, teardown func(t *testing.T)) {
 		t.Helper()
 
+		ctx = logger.Set(context.Background(), t.Name())
 		uuid.SetRand(new(tests.IDReader))
 
-		ctx = logger.Set(context.Background(), t.Name())
-
-		sqlDB := testdb.Open(t, models.SkipFixtures)
+		sqlDB := testdb.Open(t, models.SetupFixtures)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+
 		r := new(mockAgentsRegistry)
 		r.Test(t)
-		s = NewNodeService(db, r)
 
-		teardown = func() {
+		teardown = func(t *testing.T) {
 			require.NoError(t, sqlDB.Close())
 			r.AssertExpectations(t)
 		}
+		s = NewNodeService(db, r)
 
 		return
 	}
@@ -61,7 +61,7 @@ func TestNodeService(t *testing.T) {
 	t.Run("Register", func(t *testing.T) {
 		t.Run("New", func(t *testing.T) {
 			ctx, s, teardown := setup(t)
-			defer teardown()
+			defer teardown(t)
 
 			res, err := s.Register(ctx, &managementpb.RegisterNodeRequest{
 				NodeType: inventorypb.NodeType_GENERIC_NODE,
