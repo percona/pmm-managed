@@ -51,7 +51,7 @@ func TestAgents(t *testing.T) {
 
 		uuid.SetRand(new(tests.IDReader))
 
-		db = reform.NewDB(testdb.Open(t), postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+		db = reform.NewDB(testdb.Open(t, models.SkipFixtures), postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
 		r := new(mockAgentsRegistry)
 		r.Test(t)
@@ -77,8 +77,8 @@ func TestAgents(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, actualAgents, 0)
 
-		as.r.(*mockAgentsRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000001").Return(true)
-		as.r.(*mockAgentsRegistry).On("SendSetStateRequest", ctx, "/agent_id/00000000-0000-4000-8000-000000000001")
+		as.r.(*mockAgentsRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000005").Return(true)
+		as.r.(*mockAgentsRegistry).On("SendSetStateRequest", ctx, "/agent_id/00000000-0000-4000-8000-000000000005")
 		as.r.(*mockAgentsRegistry).On("CheckConnectionToService", ctx,
 			mock.AnythingOfType(reflect.TypeOf(&models.Service{}).Name()),
 			mock.AnythingOfType(reflect.TypeOf(&models.Agent{}).Name())).Return(nil)
@@ -92,13 +92,13 @@ func TestAgents(t *testing.T) {
 		})
 		require.NoError(t, err)
 		expectedNodeExporter := &inventorypb.NodeExporter{
-			AgentId:    "/agent_id/00000000-0000-4000-8000-000000000002",
-			PmmAgentId: "/agent_id/00000000-0000-4000-8000-000000000001",
+			AgentId:    "/agent_id/00000000-0000-4000-8000-000000000006",
+			PmmAgentId: "/agent_id/00000000-0000-4000-8000-000000000005",
 		}
 		assert.Equal(t, expectedNodeExporter, actualNodeExporter)
 
 		actualNodeExporter, err = as.ChangeNodeExporter(ctx, &inventorypb.ChangeNodeExporterRequest{
-			AgentId: "/agent_id/00000000-0000-4000-8000-000000000002",
+			AgentId: "/agent_id/00000000-0000-4000-8000-000000000006",
 			Common: &inventorypb.ChangeCommonAgentParams{
 				ChangeDisabled: &inventorypb.ChangeCommonAgentParams_Disabled{
 					Disabled: true,
@@ -107,13 +107,13 @@ func TestAgents(t *testing.T) {
 		})
 		require.NoError(t, err)
 		expectedNodeExporter = &inventorypb.NodeExporter{
-			AgentId:    "/agent_id/00000000-0000-4000-8000-000000000002",
-			PmmAgentId: "/agent_id/00000000-0000-4000-8000-000000000001",
+			AgentId:    "/agent_id/00000000-0000-4000-8000-000000000006",
+			PmmAgentId: "/agent_id/00000000-0000-4000-8000-000000000005",
 			Disabled:   true,
 		}
 		assert.Equal(t, expectedNodeExporter, actualNodeExporter)
 
-		actualAgent, err := as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000002")
+		actualAgent, err := as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000006")
 		require.NoError(t, err)
 		assert.Equal(t, expectedNodeExporter, actualAgent)
 
@@ -132,14 +132,14 @@ func TestAgents(t *testing.T) {
 		})
 		require.NoError(t, err)
 		expectedMySQLdExporter := &inventorypb.MySQLdExporter{
-			AgentId:    "/agent_id/00000000-0000-4000-8000-000000000004",
-			PmmAgentId: "/agent_id/00000000-0000-4000-8000-000000000001",
+			AgentId:    "/agent_id/00000000-0000-4000-8000-000000000008",
+			PmmAgentId: "/agent_id/00000000-0000-4000-8000-000000000005",
 			ServiceId:  s.ServiceId,
 			Username:   "username",
 		}
 		assert.Equal(t, expectedMySQLdExporter, actualAgent)
 
-		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000004")
+		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000008")
 		require.NoError(t, err)
 		assert.Equal(t, expectedMySQLdExporter, actualAgent)
 
@@ -253,16 +253,16 @@ func TestAgents(t *testing.T) {
 		require.Len(t, actualAgents, 1)
 		assert.Equal(t, expectedNodeExporter, actualAgents[0])
 
-		err = as.Remove(ctx, "/agent_id/00000000-0000-4000-8000-000000000002", false)
+		err = as.Remove(ctx, "/agent_id/00000000-0000-4000-8000-000000000006", false)
 		require.NoError(t, err)
-		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000002")
-		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "/agent_id/00000000-0000-4000-8000-000000000002" not found.`), err)
+		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000006")
+		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "/agent_id/00000000-0000-4000-8000-000000000006" not found.`), err)
 		assert.Nil(t, actualAgent)
 
-		err = as.Remove(ctx, "/agent_id/00000000-0000-4000-8000-000000000004", false)
+		err = as.Remove(ctx, "/agent_id/00000000-0000-4000-8000-000000000008", false)
 		require.NoError(t, err)
-		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000004")
-		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "/agent_id/00000000-0000-4000-8000-000000000004" not found.`), err)
+		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000008")
+		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "/agent_id/00000000-0000-4000-8000-000000000008" not found.`), err)
 		assert.Nil(t, actualAgent)
 
 		err = as.Remove(ctx, "/agent_id/00000000-0000-4000-8000-000000000006", false)
@@ -283,11 +283,11 @@ func TestAgents(t *testing.T) {
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "/agent_id/00000000-0000-4000-8000-000000000009" not found.`), err)
 		assert.Nil(t, actualAgent)
 
-		as.r.(*mockAgentsRegistry).On("Kick", ctx, "/agent_id/00000000-0000-4000-8000-000000000001").Return(true)
-		err = as.Remove(ctx, "/agent_id/00000000-0000-4000-8000-000000000001", false)
+		as.r.(*mockAgentsRegistry).On("Kick", ctx, "/agent_id/00000000-0000-4000-8000-000000000005").Return(true)
+		err = as.Remove(ctx, "/agent_id/00000000-0000-4000-8000-000000000005", false)
 		require.NoError(t, err)
-		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000001")
-		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "/agent_id/00000000-0000-4000-8000-000000000001" not found.`), err)
+		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000005")
+		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "/agent_id/00000000-0000-4000-8000-000000000005" not found.`), err)
 		assert.Nil(t, actualAgent)
 
 		actualAgents, err = as.List(ctx, AgentFilters{})
@@ -308,25 +308,25 @@ func TestAgents(t *testing.T) {
 		setup(t)
 		defer teardown(t)
 
-		as.r.(*mockAgentsRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000001").Return(false)
+		as.r.(*mockAgentsRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000005").Return(false)
 		actualAgent, err := as.AddPMMAgent(ctx, &inventorypb.AddPMMAgentRequest{
 			RunsOnNodeId: models.PMMServerNodeID,
 		})
 		require.NoError(t, err)
 		expectedPMMAgent := &inventorypb.PMMAgent{
-			AgentId:      "/agent_id/00000000-0000-4000-8000-000000000001",
+			AgentId:      "/agent_id/00000000-0000-4000-8000-000000000005",
 			RunsOnNodeId: models.PMMServerNodeID,
 			Connected:    false,
 		}
 		assert.Equal(t, expectedPMMAgent, actualAgent)
 
-		as.r.(*mockAgentsRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000002").Return(true)
+		as.r.(*mockAgentsRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000006").Return(true)
 		actualAgent, err = as.AddPMMAgent(ctx, &inventorypb.AddPMMAgentRequest{
 			RunsOnNodeId: models.PMMServerNodeID,
 		})
 		require.NoError(t, err)
 		expectedPMMAgent = &inventorypb.PMMAgent{
-			AgentId:      "/agent_id/00000000-0000-4000-8000-000000000002",
+			AgentId:      "/agent_id/00000000-0000-4000-8000-000000000006",
 			RunsOnNodeId: models.PMMServerNodeID,
 			Connected:    true,
 		}
@@ -347,7 +347,7 @@ func TestAgents(t *testing.T) {
 		setup(t)
 		defer teardown(t)
 
-		as.r.(*mockAgentsRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000001").Return(true)
+		as.r.(*mockAgentsRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000005").Return(true)
 		pmmAgent, err := as.AddPMMAgent(ctx, &inventorypb.AddPMMAgentRequest{
 			RunsOnNodeId: models.PMMServerNodeID,
 		})

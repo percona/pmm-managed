@@ -188,9 +188,26 @@ func OpenDB(name, username, password string) (*sql.DB, error) {
 	return db, nil
 }
 
-// SetupDB runs PostgreSQL database migrations and adds initial data.
-func SetupDB(sqlDB *sql.DB, username, password string, logf reform.Printf) error {
-	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(logf))
+// SetupFixturesMode defines if SetupDB adds initial data to the database or not.
+type SetupFixturesMode int
+
+const (
+	// SetupFixtures adds initial data to the database.
+	SetupFixtures SetupFixturesMode = iota
+	// SkipFixtures skips adding initial data to the database.
+	SkipFixtures
+)
+
+type SetupDBParams struct {
+	Logf          reform.Printf
+	Username      string
+	Password      string
+	SetupFixtures SetupFixturesMode
+}
+
+// SetupDB runs PostgreSQL database migrations and optionally adds initial data.
+func SetupDB(sqlDB *sql.DB, params *SetupDBParams) error {
+	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(params.Logf))
 
 	latestVersion := len(databaseSchema) - 1 // skip item 0
 	var currentVersion int
@@ -201,12 +218,12 @@ func SetupDB(sqlDB *sql.DB, username, password string, logf reform.Printf) error
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	logf("Current database schema version: %d. Latest version: %d.", currentVersion, latestVersion)
+	params.Logf("Current database schema version: %d. Latest version: %d.", currentVersion, latestVersion)
 
 	// rollback all migrations if one of them fails; PostgreSQL supports DDL transactions
 	return db.InTransaction(func(tx *reform.TX) error {
 		for version := currentVersion + 1; version <= latestVersion; version++ {
-			logf("Migrating database to schema version %d ...", version)
+			params.Logf("Migrating database to schema version %d ...", version)
 			queries := databaseSchema[version]
 			queries = append(queries, fmt.Sprintf(`INSERT INTO schema_migrations (id) VALUES (%d)`, version))
 			for _, q := range queries {
@@ -217,10 +234,14 @@ func SetupDB(sqlDB *sql.DB, username, password string, logf reform.Printf) error
 			}
 		}
 
-		if err = setupFixture1(tx.Querier, username, password); err != nil {
+		if params.SetupFixtures == SkipFixtures {
+			return nil
+		}
+
+		if err = setupFixture1(tx.Querier, params.Username, params.Password); err != nil {
 			return err
 		}
-		if err = setupFixture2(tx.Querier, username, password); err != nil {
+		if err = setupFixture2(tx.Querier, params.Username, params.Password); err != nil {
 			return err
 		}
 		return nil

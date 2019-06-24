@@ -30,6 +30,7 @@ import (
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
+	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/logger"
 	"github.com/percona/pmm-managed/utils/testdb"
 	"github.com/percona/pmm-managed/utils/tests"
@@ -43,7 +44,7 @@ func TestNodeService(t *testing.T) {
 
 		ctx = logger.Set(context.Background(), t.Name())
 
-		sqlDB := testdb.Open(t)
+		sqlDB := testdb.Open(t, models.SkipFixtures)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 		r := new(mockAgentsRegistry)
 		r.Test(t)
