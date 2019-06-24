@@ -208,7 +208,11 @@ func (svc *Service) marshalConfig(ctx context.Context) ([]byte, error) {
 					cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfg)
 				}
 
-			case models.QANMySQLPerfSchemaAgentType, models.QANMySQLSlowlogAgentType, models.QANMongoDBProfilerAgentType:
+			case models.QANMySQLPerfSchemaAgentType, models.QANMySQLSlowlogAgentType:
+				continue
+			case models.QANMongoDBProfilerAgentType:
+				continue
+			case models.QANPostgreSQLPgStatementsAgentType:
 				continue
 
 			default:

@@ -43,7 +43,7 @@ func Open(tb testing.TB) *sql.DB {
 
 	db, err = models.OpenDB(testDatabase, "pmm-managed", "pmm-managed")
 	require.NoError(tb, err)
-	err = models.MigrateDB(db, "pmm-managed", "pmm-managed", tb.Logf)
+	err = models.SetupDB(db, "pmm-managed", "pmm-managed", tb.Logf)
 	require.NoError(tb, err)
 	return db
 }

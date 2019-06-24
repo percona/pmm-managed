@@ -106,6 +106,8 @@ func CreatePMMAgent(q *reform.Querier, runsOnNodeID string, customLabels map[str
 
 // CreateNodeExporter creates NodeExporter.
 func CreateNodeExporter(q *reform.Querier, pmmAgentID string, customLabels map[string]string) (*Agent, error) {
+	// TODO merge into CreateAgent
+
 	id := "/agent_id/" + uuid.New().String()
 	if err := checkUniqueAgentID(q, id); err != nil {
 		return nil, err
@@ -138,8 +140,8 @@ func CreateNodeExporter(q *reform.Querier, pmmAgentID string, customLabels map[s
 	return row, nil
 }
 
-// AddExporterAgentParams params for add common exporter.
-type AddExporterAgentParams struct {
+// CreateAgentParams params for add common exporter.
+type CreateAgentParams struct {
 	PMMAgentID   string
 	ServiceID    string
 	Username     string
@@ -147,8 +149,8 @@ type AddExporterAgentParams struct {
 	CustomLabels map[string]string
 }
 
-// AgentAddExporter adds exporter with given type.
-func AgentAddExporter(q *reform.Querier, agentType AgentType, params *AddExporterAgentParams) (*Agent, error) {
+// CreateAgent creates Agent with given type.
+func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentParams) (*Agent, error) {
 	id := "/agent_id/" + uuid.New().String()
 	if err := checkUniqueAgentID(q, id); err != nil {
 		return nil, err

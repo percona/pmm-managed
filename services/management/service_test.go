@@ -119,7 +119,7 @@ func TestServiceService(t *testing.T) {
 			pmmAgent, err := models.CreatePMMAgent(s.db.Querier, models.PMMServerNodeID, nil)
 			require.NoError(t, err)
 
-			mysqldExporter, err := models.AgentAddExporter(s.db.Querier, models.MySQLdExporterType, &models.AddExporterAgentParams{
+			mysqldExporter, err := models.CreateAgent(s.db.Querier, models.MySQLdExporterType, &models.CreateAgentParams{
 				PMMAgentID: pmmAgent.AgentID,
 				ServiceID:  service.ServiceID,
 				Password:   "password",

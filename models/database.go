@@ -140,8 +140,8 @@ var databaseSchema = [][]string{
 		)`,
 
 		`CREATE TABLE telemetry (
-  			uuid VARCHAR PRIMARY KEY,
-  			created_at TIMESTAMP NOT NULL
+			uuid VARCHAR PRIMARY KEY,
+			created_at TIMESTAMP NOT NULL
 		)`,
 
 		`CREATE TABLE action_results (
@@ -188,8 +188,8 @@ func OpenDB(name, username, password string) (*sql.DB, error) {
 	return db, nil
 }
 
-// MigrateDB runs PostgreSQL database migrations.
-func MigrateDB(sqlDB *sql.DB, username, password string, logf reform.Printf) error {
+// SetupDB runs PostgreSQL database migrations and adds initial data.
+func SetupDB(sqlDB *sql.DB, username, password string, logf reform.Printf) error {
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(logf))
 
 	latestVersion := len(databaseSchema) - 1 // skip item 0
@@ -217,56 +217,74 @@ func MigrateDB(sqlDB *sql.DB, username, password string, logf reform.Printf) err
 			}
 		}
 
-		_, err = createNodeWithID(tx.Querier, PMMServerNodeID, GenericNodeType, &CreateNodeParams{
-			NodeName: PMMServerNodeName,
-			Address:  "127.0.0.1",
-		})
-		if err != nil {
-			if status.Code(err) != codes.AlreadyExists {
-				return nil
-			}
+		if err = setupFixture1(tx.Querier, username, password); err != nil {
 			return err
 		}
-		node, err := FindNodeByName(tx.Querier, PMMServerNodeName)
-		if err != nil {
+		if err = setupFixture2(tx.Querier, username, password); err != nil {
 			return err
 		}
-		if _, err = createPMMAgentWithID(tx.Querier, PMMServerAgentID, node.NodeID, nil); err != nil {
-			return err
-		}
-		if _, err = CreateNodeExporter(tx.Querier, PMMServerAgentID, nil); err != nil {
-			return err
-		}
-		service, err := AddNewService(tx.Querier, PostgreSQLServiceType, &AddDBMSServiceParams{
-			ServiceName: "PMM Server PostgreSQL",
-			NodeID:      node.NodeID,
-			Address:     pointer.ToString("127.0.0.1"),
-			Port:        pointer.ToUint16(5432),
-		})
-		if err != nil {
-			return err
-		}
-		_, err = AgentAddExporter(tx.Querier, PostgresExporterType, &AddExporterAgentParams{
-			PMMAgentID: PMMServerAgentID,
-			ServiceID:  service.ServiceID,
-			Username:   username,
-			Password:   password,
-		})
-		if err != nil {
-			return err
-		}
-		_, err = AgentAddExporter(tx.Querier, QANPostgreSQLPgStatementsAgentType, &AddExporterAgentParams{
-			PMMAgentID: PMMServerAgentID,
-			ServiceID:  service.ServiceID,
-			Username:   username,
-			Password:   password,
-		})
-		if err != nil {
-			return err
-		}
-
-		// TODO add clickhouse_exporter
-
 		return nil
 	})
+}
+
+func setupFixture1(q *reform.Querier, username, password string) error {
+	// create PMM Server Node and associated Agents
+	_, err := createNodeWithID(q, PMMServerNodeID, GenericNodeType, &CreateNodeParams{
+		NodeName: PMMServerNodeName,
+		Address:  "127.0.0.1",
+	})
+	if err != nil {
+		if status.Code(err) != codes.AlreadyExists {
+			// this fixture was already added previously
+			return nil
+		}
+		return err
+	}
+	node, err := FindNodeByName(q, PMMServerNodeName)
+	if err != nil {
+		return err
+	}
+	if _, err = createPMMAgentWithID(q, PMMServerAgentID, node.NodeID, nil); err != nil {
+		return err
+	}
+	if _, err = CreateNodeExporter(q, PMMServerAgentID, nil); err != nil {
+		return err
+	}
+
+	// create PostgreSQL Service and associated Agents
+	service, err := AddNewService(q, PostgreSQLServiceType, &AddDBMSServiceParams{
+		ServiceName: "PMM Server PostgreSQL",
+		NodeID:      node.NodeID,
+		Address:     pointer.ToString("127.0.0.1"),
+		Port:        pointer.ToUint16(5432),
+	})
+	if err != nil {
+		return err
+	}
+	_, err = CreateAgent(q, PostgresExporterType, &CreateAgentParams{
+		PMMAgentID: PMMServerAgentID,
+		ServiceID:  service.ServiceID,
+		Username:   username,
+		Password:   password,
+	})
+	if err != nil {
+		return err
+	}
+	_, err = CreateAgent(q, QANPostgreSQLPgStatementsAgentType, &CreateAgentParams{
+		PMMAgentID: PMMServerAgentID,
+		ServiceID:  service.ServiceID,
+		Username:   username,
+		Password:   password,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func setupFixture2(q *reform.Querier, username, password string) error {
+	// TODO add clickhouse_exporter
+
+	return nil
 }
