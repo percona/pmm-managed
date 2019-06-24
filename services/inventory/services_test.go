@@ -37,12 +37,13 @@ import (
 )
 
 func TestServices(t *testing.T) {
-	ctx := logger.Set(context.Background(), t.Name())
+	var ctx context.Context
 
 	setup := func(t *testing.T) (ss *ServicesService, teardown func(t *testing.T)) {
+		ctx = logger.Set(context.Background(), t.Name())
 		uuid.SetRand(new(tests.IDReader))
 
-		sqlDB := testdb.Open(t, models.SkipFixtures)
+		sqlDB := testdb.Open(t, models.SetupFixtures)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
 		r := new(mockAgentsRegistry)
@@ -56,7 +57,7 @@ func TestServices(t *testing.T) {
 		return
 	}
 
-	t.Run("Basic", func(t *testing.T) {
+	t.Run("BasicMySQL", func(t *testing.T) {
 		ss, teardown := setup(t)
 		defer teardown(t)
 
@@ -94,39 +95,57 @@ func TestServices(t *testing.T) {
 		actualService, err = ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000005")
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "/service_id/00000000-0000-4000-8000-000000000005" not found.`), err)
 		assert.Nil(t, actualService)
+	})
 
-		actualService, err = ss.AddMongoDB(ctx, &models.AddDBMSServiceParams{
+	t.Run("BasicMongoDB", func(t *testing.T) {
+		ss, teardown := setup(t)
+		defer teardown(t)
+
+		actualServices, err := ss.List(ctx, ServiceFilters{})
+		require.NoError(t, err)
+		require.Len(t, actualServices, 1) // PMM Server PostgreSQL
+
+		actualMongoDBService, err := ss.AddMongoDB(ctx, &models.AddDBMSServiceParams{
 			ServiceName: "test-mongo",
 			NodeID:      models.PMMServerNodeID,
 			Address:     pointer.ToString("127.0.0.1"),
 			Port:        pointer.ToUint16(27017),
 		})
 		require.NoError(t, err)
-		expectedMdbService := &inventorypb.MongoDBService{
-			ServiceId:   "/service_id/00000000-0000-4000-8000-000000000006",
+		expectedMongoDBService := &inventorypb.MongoDBService{
+			ServiceId:   "/service_id/00000000-0000-4000-8000-000000000005",
 			ServiceName: "test-mongo",
 			NodeId:      models.PMMServerNodeID,
 			Address:     "127.0.0.1",
 			Port:        27017,
 		}
-		assert.Equal(t, expectedMdbService, actualService)
+		assert.Equal(t, expectedMongoDBService, actualMongoDBService)
 
-		actualService, err = ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000006")
+		actualService, err := ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000005")
 		require.NoError(t, err)
-		assert.Equal(t, expectedMdbService, actualService)
+		assert.Equal(t, expectedMongoDBService, actualService)
 
 		actualServices, err = ss.List(ctx, ServiceFilters{})
 		require.NoError(t, err)
 		require.Len(t, actualServices, 2)
-		assert.Equal(t, expectedMdbService, actualServices[1])
+		assert.Equal(t, expectedMongoDBService, actualServices[1])
 
-		err = ss.Remove(ctx, "/service_id/00000000-0000-4000-8000-000000000006", false)
+		err = ss.Remove(ctx, "/service_id/00000000-0000-4000-8000-000000000005", false)
 		require.NoError(t, err)
-		actualService, err = ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000006")
-		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "/service_id/00000000-0000-4000-8000-000000000006" not found.`), err)
+		actualService, err = ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000005")
+		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "/service_id/00000000-0000-4000-8000-000000000005" not found.`), err)
 		assert.Nil(t, actualService)
+	})
 
-		actualService, err = ss.AddPostgreSQL(ctx, &models.AddDBMSServiceParams{
+	t.Run("BasicPostgreSQL", func(t *testing.T) {
+		ss, teardown := setup(t)
+		defer teardown(t)
+
+		actualServices, err := ss.List(ctx, ServiceFilters{})
+		require.NoError(t, err)
+		require.Len(t, actualServices, 1) // PMM Server PostgreSQL
+
+		actualPostgreSQLService, err := ss.AddPostgreSQL(ctx, &models.AddDBMSServiceParams{
 			ServiceName: "test-postgres",
 			NodeID:      models.PMMServerNodeID,
 			Address:     pointer.ToString("127.0.0.1"),
@@ -134,15 +153,15 @@ func TestServices(t *testing.T) {
 		})
 		require.NoError(t, err)
 		expectedPostgreSQLService := &inventorypb.PostgreSQLService{
-			ServiceId:   "/service_id/00000000-0000-4000-8000-000000000007",
+			ServiceId:   "/service_id/00000000-0000-4000-8000-000000000005",
 			ServiceName: "test-postgres",
 			NodeId:      models.PMMServerNodeID,
 			Address:     "127.0.0.1",
 			Port:        5432,
 		}
-		assert.Equal(t, expectedPostgreSQLService, actualService)
+		assert.Equal(t, expectedPostgreSQLService, actualPostgreSQLService)
 
-		actualService, err = ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000007")
+		actualService, err := ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000005")
 		require.NoError(t, err)
 		assert.Equal(t, expectedPostgreSQLService, actualService)
 
@@ -151,13 +170,22 @@ func TestServices(t *testing.T) {
 		require.Len(t, actualServices, 2)
 		assert.Equal(t, expectedPostgreSQLService, actualServices[1])
 
-		err = ss.Remove(ctx, "/service_id/00000000-0000-4000-8000-000000000007", false)
+		err = ss.Remove(ctx, "/service_id/00000000-0000-4000-8000-000000000005", false)
 		require.NoError(t, err)
-		actualService, err = ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000007")
-		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "/service_id/00000000-0000-4000-8000-000000000007" not found.`), err)
+		actualService, err = ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000005")
+		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "/service_id/00000000-0000-4000-8000-000000000005" not found.`), err)
 		assert.Nil(t, actualService)
+	})
 
-		actualService, err = ss.AddProxySQL(ctx, &models.AddDBMSServiceParams{
+	t.Run("BasicProxySQL", func(t *testing.T) {
+		ss, teardown := setup(t)
+		defer teardown(t)
+
+		actualServices, err := ss.List(ctx, ServiceFilters{})
+		require.NoError(t, err)
+		require.Len(t, actualServices, 1) // PMM Server PostgreSQL
+
+		actualProxySQLService, err := ss.AddProxySQL(ctx, &models.AddDBMSServiceParams{
 			ServiceName: "test-proxysql",
 			NodeID:      models.PMMServerNodeID,
 			Address:     pointer.ToString("127.0.0.1"),
@@ -165,15 +193,15 @@ func TestServices(t *testing.T) {
 		})
 		require.NoError(t, err)
 		expectedProxySQLService := &inventorypb.ProxySQLService{
-			ServiceId:   "/service_id/00000000-0000-4000-8000-000000000008",
+			ServiceId:   "/service_id/00000000-0000-4000-8000-000000000005",
 			ServiceName: "test-proxysql",
 			NodeId:      models.PMMServerNodeID,
 			Address:     "127.0.0.1",
 			Port:        5432,
 		}
-		assert.Equal(t, expectedProxySQLService, actualService)
+		assert.Equal(t, expectedProxySQLService, actualProxySQLService)
 
-		actualService, err = ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000008")
+		actualService, err := ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000005")
 		require.NoError(t, err)
 		assert.Equal(t, expectedProxySQLService, actualService)
 
@@ -182,10 +210,10 @@ func TestServices(t *testing.T) {
 		require.Len(t, actualServices, 2)
 		assert.Equal(t, expectedProxySQLService, actualServices[1])
 
-		err = ss.Remove(ctx, "/service_id/00000000-0000-4000-8000-000000000008", false)
+		err = ss.Remove(ctx, "/service_id/00000000-0000-4000-8000-000000000005", false)
 		require.NoError(t, err)
-		actualService, err = ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000008")
-		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "/service_id/00000000-0000-4000-8000-000000000008" not found.`), err)
+		actualService, err = ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000005")
+		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "/service_id/00000000-0000-4000-8000-000000000005" not found.`), err)
 		assert.Nil(t, actualService)
 	})
 

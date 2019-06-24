@@ -44,7 +44,9 @@ func Open(tb testing.TB, setupFixtures models.SetupFixturesMode) *sql.DB {
 	db, err = models.OpenDB(testDatabase, "pmm-managed", "pmm-managed")
 	require.NoError(tb, err)
 	err = models.SetupDB(db, &models.SetupDBParams{
-		Logf:          tb.Logf,
+		// Uncomment to see all setup queries:
+		// Logf: tb.Logf,
+
 		Username:      "pmm-managed",
 		Password:      "pmm-managed",
 		SetupFixtures: setupFixtures,

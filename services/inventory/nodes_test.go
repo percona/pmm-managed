@@ -36,13 +36,14 @@ import (
 )
 
 func TestNodes(t *testing.T) {
-	ctx := logger.Set(context.Background(), t.Name())
+	var ctx context.Context
 
 	//nolint:unparam
 	setup := func(t *testing.T) (ns *NodesService, teardown func(t *testing.T)) {
+		ctx = logger.Set(context.Background(), t.Name())
 		uuid.SetRand(new(tests.IDReader))
 
-		sqlDB := testdb.Open(t, models.SkipFixtures)
+		sqlDB := testdb.Open(t, models.SetupFixtures)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
 		r := new(mockAgentsRegistry)

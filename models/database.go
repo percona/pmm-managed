@@ -208,7 +208,11 @@ type SetupDBParams struct {
 
 // SetupDB runs PostgreSQL database migrations and optionally adds initial data.
 func SetupDB(sqlDB *sql.DB, params *SetupDBParams) error {
-	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(params.Logf))
+	var logger reform.Logger
+	if params.Logf != nil {
+		logger = reform.NewPrintfLogger(params.Logf)
+	}
+	db := reform.NewDB(sqlDB, postgresql.Dialect, logger)
 
 	latestVersion := len(databaseSchema) - 1 // skip item 0
 	var currentVersion int
@@ -219,12 +223,17 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	params.Logf("Current database schema version: %d. Latest version: %d.", currentVersion, latestVersion)
+	if params.Logf != nil {
+		params.Logf("Current database schema version: %d. Latest version: %d.", currentVersion, latestVersion)
+	}
 
 	// rollback all migrations if one of them fails; PostgreSQL supports DDL transactions
 	return db.InTransaction(func(tx *reform.TX) error {
 		for version := currentVersion + 1; version <= latestVersion; version++ {
-			params.Logf("Migrating database to schema version %d ...", version)
+			if params.Logf != nil {
+				params.Logf("Migrating database to schema version %d ...", version)
+			}
+
 			queries := databaseSchema[version]
 			queries = append(queries, fmt.Sprintf(`INSERT INTO schema_migrations (id) VALUES (%d)`, version))
 			for _, q := range queries {
