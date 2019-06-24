@@ -134,11 +134,11 @@ func TestServiceService(t *testing.T) {
 
 			agent, err := models.AgentFindByID(s.db.Querier, mysqldExporter.AgentID)
 			assert.Nil(t, agent)
-			tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "/agent_id/00000000-0000-4000-8000-000000000003" not found.`), err)
+			tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "/agent_id/00000000-0000-4000-8000-000000000007" not found.`), err)
 
 			service, err = models.FindServiceByID(s.db.Querier, service.ServiceID)
 			assert.Nil(t, service)
-			tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "/service_id/00000000-0000-4000-8000-000000000001" not found.`), err)
+			tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "/service_id/00000000-0000-4000-8000-000000000005" not found.`), err)
 		})
 	})
 }
