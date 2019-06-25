@@ -25,16 +25,21 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/version"
+	"gopkg.in/reform.v1"
 
+	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
 type server struct {
+	db *reform.DB
 }
 
 // NewServer returns new server for Server service.
-func NewServer() serverpb.ServerServer {
-	return new(server)
+func NewServer(db *reform.DB) serverpb.ServerServer {
+	return &server{
+		db: db,
+	}
 }
 
 // Version returns PMM Server version.
@@ -55,12 +60,30 @@ func (s *server) Version(ctx context.Context, req *serverpb.VersionRequest) (*se
 	return res, nil
 }
 
+func convertSettings(s *models.Settings) *serverpb.Settings {
+	return &serverpb.Settings{
+		MetricsResolutions: &serverpb.MetricsResolutions{
+			Hr: ptypes.DurationProto(s.MetricsResolutions.HR),
+			Mr: ptypes.DurationProto(s.MetricsResolutions.MR),
+			Lr: ptypes.DurationProto(s.MetricsResolutions.LR),
+		},
+		Telemetry: !s.Telemetry.Disabled,
+	}
+}
+
 // GetSettings returns current PMM Server settings.
-func (s *server) GetSettings(context.Context, *serverpb.GetSettingsRequest) (*serverpb.GetSettingsResponse, error) {
-	panic("not implemented yet")
+func (s *server) GetSettings(ctx context.Context, req *serverpb.GetSettingsRequest) (*serverpb.GetSettingsResponse, error) {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return nil, err
+	}
+	res := &serverpb.GetSettingsResponse{
+		Settings: convertSettings(settings),
+	}
+	return res, nil
 }
 
 // ChangeSettings changes PMM Server settings.
-func (s *server) ChangeSettings(context.Context, *serverpb.ChangeSettingsRequest) (*serverpb.ChangeSettingsResponse, error) {
+func (s *server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSettingsRequest) (*serverpb.ChangeSettingsResponse, error) {
 	panic("not implemented yet")
 }

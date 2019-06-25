@@ -148,7 +148,7 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 		)),
 	)
 
-	serverpb.RegisterServerServer(gRPCServer, servergrpc.NewServer())
+	serverpb.RegisterServerServer(gRPCServer, servergrpc.NewServer(deps.db))
 
 	agentpb.RegisterAgentServer(gRPCServer, agentgrpc.NewAgentServer(deps.agentsRegistry))
 
