@@ -325,27 +325,18 @@ func runDebugServer(ctx context.Context, collectors ...prom.Collector) {
 }
 
 func runTelemetryService(ctx context.Context, db *reform.DB) {
-	l := logrus.WithField("component", "telemetry")
-
 	// Do not report this instance as running for the first 5 minutes.
 	// Among other things, that solves reporting during PMM Server building when we start pmm-managed.
 	sleepCtx, sleepCancel := context.WithTimeout(ctx, 5*time.Minute)
 	<-sleepCtx.Done()
 	sleepCancel()
 
-	const delay = 10 * time.Second
-	for ctx.Err() == nil {
-		uuid, err := telemetry.GetTelemetryUUID(db)
-		if err == nil {
-			svc := telemetry.NewService(uuid, version.Version)
-			svc.Run(ctx)
-			return
-		}
-		l.Debugf("Cannot get/set telemetry UUID, retrying in %s: %s.", delay, err)
-		sleepCtx, sleepCancel = context.WithTimeout(ctx, delay)
-		<-sleepCtx.Done()
-		sleepCancel()
+	if ctx.Err() != nil {
+		return
 	}
+
+	svc := telemetry.NewService(db, version.Version)
+	svc.Run(ctx)
 }
 
 func getQANClient(ctx context.Context, db *reform.DB) *qan.Client {

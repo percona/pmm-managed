@@ -50,25 +50,24 @@ const (
 
 // Service is responsible for interactions with Percona Call Home service.
 type Service struct {
-	uuid       string
+	db         *reform.DB
 	pmmVersion string
+	l          *logrus.Entry
 
-	l   *logrus.Entry
 	os  string
 	url string
 }
 
 // NewService creates a new service with given UUID and PMM version.
-func NewService(uuid string, pmmVersion string) *Service {
+func NewService(db *reform.DB, pmmVersion string) *Service {
 	return &Service{
-		uuid:       uuid,
+		db:         db,
 		pmmVersion: pmmVersion,
+		l:          logrus.WithField("component", "telemetry"),
 	}
 }
 
 func (s *Service) init() bool {
-	s.l = logrus.WithField("component", "telemetry")
-
 	disabledStr := strings.TrimSpace(strings.ToLower(os.Getenv(envDisable)))
 	if disabled, err := strconv.ParseBool(disabledStr); err == nil && disabled {
 		s.l.Infof("Disabled by %s environment variable.", envDisable)
@@ -93,7 +92,6 @@ func (s *Service) init() bool {
 	}
 	s.l.Debugf("Using %q as the endpoint.", s.url)
 
-	s.l.Infof("Enabled. UUID: %s", s.uuid)
 	return true
 }
 
@@ -107,7 +105,9 @@ func (s *Service) Run(ctx context.Context) {
 	defer ticker.Stop()
 
 	for {
-		s.sendOnce(ctx)
+		if err := s.sendOnce(ctx); err != nil {
+			s.l.Debugf("Telemetry info not send: %s.", err)
+		}
 
 		select {
 		case <-ticker.C:
@@ -119,18 +119,37 @@ func (s *Service) Run(ctx context.Context) {
 }
 
 func (s *Service) sendOnce(ctx context.Context) error {
-	payload := s.makePayload()
-	err := s.sendRequest(ctx, payload)
+	var settings *models.Settings
+	err := s.db.InTransaction(func(tx *reform.TX) error {
+		var e error
+		if settings, e = models.GetSettings(tx); e != nil {
+			return e
+		}
+
+		if settings.Telemetry.Disabled {
+			return errors.New("disabled via settings")
+		}
+		if settings.Telemetry.UUID == "" {
+			settings.Telemetry.UUID, e = generateUUID()
+			if e != nil {
+				return e
+			}
+			return models.SaveSettings(tx, settings)
+		}
+		return nil
+	})
 	if err != nil {
-		s.l.Debugf("Failed to send info: %s", err)
+		return err
 	}
-	return err
+
+	payload := s.makePayload(settings.Telemetry.UUID)
+	return s.sendRequest(ctx, payload)
 }
 
-func (s *Service) makePayload() []byte {
+func (s *Service) makePayload(uuid string) []byte {
 	var w bytes.Buffer
-	fmt.Fprintf(&w, "%s;%s;%s\n", s.uuid, "OS", s.os)
-	fmt.Fprintf(&w, "%s;%s;%s\n", s.uuid, "PMM", s.pmmVersion)
+	fmt.Fprintf(&w, "%s;%s;%s\n", uuid, "OS", s.os)
+	fmt.Fprintf(&w, "%s;%s;%s\n", uuid, "PMM", s.pmmVersion)
 	return w.Bytes()
 }
 
@@ -152,7 +171,7 @@ func (s *Service) sendRequest(ctx context.Context, data []byte) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("status code %d", resp.StatusCode)
@@ -203,26 +222,4 @@ func getLinuxDistribution(procVersion string) string {
 		}
 	}
 	return "unknown"
-}
-
-// GetTelemetryUUID gets/sets telemetry UUID in DB.
-func GetTelemetryUUID(db *reform.DB) (string, error) {
-	var row models.TelemetryRow
-	err := db.SelectOneTo(&row, "")
-	if err != nil && err != reform.ErrNoRows {
-		return "", errors.Wrap(err, "cannot get telemetry data from DB")
-	}
-	if err == nil {
-		return row.UUID, nil
-	}
-
-	row.UUID, err = generateUUID()
-	if err != nil {
-		return "", err
-	}
-
-	if err := db.Insert(&row); err != nil {
-		return "", errors.WithStack(err)
-	}
-	return row.UUID, nil
 }
