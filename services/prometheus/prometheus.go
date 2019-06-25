@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/common/model"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -97,23 +98,30 @@ func (svc *Service) reload() error {
 func (svc *Service) marshalConfig(ctx context.Context) ([]byte, error) {
 	l := logger.Get(ctx).WithField("component", "prometheus")
 
-	cfg := &config.Config{
-		GlobalConfig: config.GlobalConfig{
-			ScrapeInterval:     lrInterval,
-			ScrapeTimeout:      lrTimeout,
-			EvaluationInterval: lrInterval,
-		},
-		RuleFiles: []string{
-			"/etc/prometheus.d/*.rules.yml",
-		},
-		ScrapeConfigs: []*config.ScrapeConfig{
-			scrapeConfigForPrometheus(),
-			scrapeConfigForGrafana(),
-			scrapeConfigForPMMManaged(),
-		},
-	}
-
+	var cfg *config.Config
 	e := svc.db.InTransaction(func(tx *reform.TX) error {
+		settings, err := models.GetSettings(tx)
+		if err != nil {
+			return err
+		}
+		s := settings.MetricsResolutions
+
+		cfg = &config.Config{
+			GlobalConfig: config.GlobalConfig{
+				ScrapeInterval:     model.Duration(s.LR),
+				ScrapeTimeout:      scrapeTimeout(s.LR),
+				EvaluationInterval: model.Duration(s.LR),
+			},
+			RuleFiles: []string{
+				"/etc/prometheus.d/*.rules.yml",
+			},
+			ScrapeConfigs: []*config.ScrapeConfig{
+				scrapeConfigForPrometheus(s.HR),
+				scrapeConfigForGrafana(s.MR),
+				scrapeConfigForPMMManaged(s.MR),
+			},
+		}
+
 		agents, err := tx.SelectAllFrom(models.AgentTable, "ORDER BY agent_type, agent_id")
 		if err != nil {
 			return errors.WithStack(err)
@@ -140,7 +148,7 @@ func (svc *Service) marshalConfig(ctx context.Context) ([]byte, error) {
 
 			case models.NodeExporterType:
 				for _, node := range nodes {
-					scfg, err := scrapeConfigForNodeExporter(node, agent)
+					scfg, err := scrapeConfigForNodeExporter(s.HR, node, agent)
 					if err != nil {
 						l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 						continue
@@ -155,7 +163,7 @@ func (svc *Service) marshalConfig(ctx context.Context) ([]byte, error) {
 						return errors.WithStack(err)
 					}
 
-					scfgs, err := scrapeConfigsForMySQLdExporter(node, service, agent)
+					scfgs, err := scrapeConfigsForMySQLdExporter(&s, node, service, agent)
 					if err != nil {
 						l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 						continue
@@ -170,7 +178,7 @@ func (svc *Service) marshalConfig(ctx context.Context) ([]byte, error) {
 						return errors.WithStack(err)
 					}
 
-					scfg, err := scrapeConfigForMongoDBExporter(node, service, agent)
+					scfg, err := scrapeConfigForMongoDBExporter(s.HR, node, service, agent)
 					if err != nil {
 						l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 						continue
@@ -185,7 +193,7 @@ func (svc *Service) marshalConfig(ctx context.Context) ([]byte, error) {
 						return errors.WithStack(err)
 					}
 
-					scfg, err := scrapeConfigForPostgresExporter(node, service, agent)
+					scfg, err := scrapeConfigForPostgresExporter(s.HR, node, service, agent)
 					if err != nil {
 						l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 						continue
@@ -200,7 +208,7 @@ func (svc *Service) marshalConfig(ctx context.Context) ([]byte, error) {
 						return errors.WithStack(err)
 					}
 
-					scfg, err := scrapeConfigForProxySQLExporter(node, service, agent)
+					scfg, err := scrapeConfigForProxySQLExporter(s.HR, node, service, agent)
 					if err != nil {
 						l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 						continue
