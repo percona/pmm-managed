@@ -180,10 +180,15 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			q.Set("connectTimeoutMS", strconv.Itoa(int(dialTimeout/time.Millisecond)))
 		}
 
+		path := database
+		if database == "" {
+			path = "/"
+		}
+
 		u := &url.URL{
 			Scheme:   "mongodb",
 			Host:     net.JoinHostPort(host, strconv.Itoa(int(port))),
-			Path:     database,
+			Path:     path,
 			RawQuery: q.Encode(),
 		}
 		switch {
