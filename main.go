@@ -63,7 +63,7 @@ import (
 	managementgrpc "github.com/percona/pmm-managed/services/management/grpc"
 	"github.com/percona/pmm-managed/services/prometheus"
 	"github.com/percona/pmm-managed/services/qan"
-	servergrpc "github.com/percona/pmm-managed/services/server/grpc"
+	"github.com/percona/pmm-managed/services/server"
 	"github.com/percona/pmm-managed/services/telemetry"
 	"github.com/percona/pmm-managed/utils/interceptors"
 	"github.com/percona/pmm-managed/utils/logger"
@@ -148,7 +148,7 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 		)),
 	)
 
-	serverpb.RegisterServerServer(gRPCServer, servergrpc.NewServer(deps.db))
+	serverpb.RegisterServerServer(gRPCServer, server.NewServer(deps.db, deps.prometheus))
 
 	agentpb.RegisterAgentServer(gRPCServer, agentgrpc.NewAgentServer(deps.agentsRegistry))
 

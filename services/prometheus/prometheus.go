@@ -32,6 +32,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/common/model"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -95,9 +96,7 @@ func (svc *Service) reload() error {
 }
 
 // marshalConfig marshals Prometheus configuration.
-func (svc *Service) marshalConfig(ctx context.Context) ([]byte, error) {
-	l := logger.Get(ctx).WithField("component", "prometheus")
-
+func (svc *Service) marshalConfig(l *logrus.Entry) ([]byte, error) {
 	var cfg *config.Config
 	e := svc.db.InTransaction(func(tx *reform.TX) error {
 		settings, err := models.GetSettings(tx)
@@ -247,9 +246,7 @@ func (svc *Service) marshalConfig(ctx context.Context) ([]byte, error) {
 
 // saveConfigAndReload saves given Prometheus configuration to file and reloads Prometheus.
 // If configuration can't be reloaded for some reason, old file is restored, and configuration is reloaded again.
-func (svc *Service) saveConfigAndReload(ctx context.Context, cfg []byte) error {
-	l := logger.Get(ctx).WithField("component", "prometheus")
-
+func (svc *Service) saveConfigAndReload(l *logrus.Entry, cfg []byte) error {
 	// read existing content
 	oldCfg, err := ioutil.ReadFile(svc.configPath)
 	if err != nil {
@@ -293,7 +290,7 @@ func (svc *Service) saveConfigAndReload(ctx context.Context, cfg []byte) error {
 		_ = os.Remove(f.Name())
 	}()
 	args := []string{"check", "config", f.Name()}
-	b, err := exec.CommandContext(ctx, svc.promtoolPath, args...).CombinedOutput() //nolint:gosec
+	b, err := exec.Command(svc.promtoolPath, args...).CombinedOutput() //nolint:gosec
 	if err != nil {
 		l.Errorf("%s", b)
 
@@ -320,6 +317,8 @@ func (svc *Service) saveConfigAndReload(ctx context.Context, cfg []byte) error {
 }
 
 // UpdateConfiguration updates Prometheus configuration.
+// ctx is used only to get request-scoped logger.
+// It is not possible to cancel this operation.
 func (svc *Service) UpdateConfiguration(ctx context.Context) error {
 	l := logger.Get(ctx).WithField("component", "prometheus")
 	start := time.Now()
@@ -332,11 +331,11 @@ func (svc *Service) UpdateConfiguration(ctx context.Context) error {
 	svc.configM.Lock()
 	defer svc.configM.Unlock()
 
-	cfg, err := svc.marshalConfig(ctx)
+	cfg, err := svc.marshalConfig(l)
 	if err != nil {
 		return err
 	}
-	return svc.saveConfigAndReload(ctx, cfg)
+	return svc.saveConfigAndReload(l, cfg)
 }
 
 // Check verifies that Prometheus works.

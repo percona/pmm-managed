@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package grpc implements gRPC APIs of pmm-managed Server API.
-package grpc
+// Package server implements pmm-managed Server API.
+package server
 
 import (
 	"context"
@@ -25,6 +25,8 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/version"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -32,13 +34,15 @@ import (
 )
 
 type server struct {
-	db *reform.DB
+	db         *reform.DB
+	prometheus prometheusService
 }
 
 // NewServer returns new server for Server service.
-func NewServer(db *reform.DB) serverpb.ServerServer {
+func NewServer(db *reform.DB, prometheus prometheusService) serverpb.ServerServer {
 	return &server{
-		db: db,
+		db:         db,
+		prometheus: prometheus,
 	}
 }
 
@@ -85,5 +89,49 @@ func (s *server) GetSettings(ctx context.Context, req *serverpb.GetSettingsReque
 
 // ChangeSettings changes PMM Server settings.
 func (s *server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSettingsRequest) (*serverpb.ChangeSettingsResponse, error) {
-	panic("not implemented yet")
+	if req.EnableTelemetry && req.DisableTelemetry {
+		return nil, status.Error(codes.InvalidArgument, "Both enable_telemetry and disable_telemetry are present.")
+	}
+
+	var settings *models.Settings
+	err := s.db.InTransaction(func(tx *reform.TX) error {
+		var e error
+		if settings, e = models.GetSettings(tx); e != nil {
+			return e
+		}
+
+		// absent or zero resolution value means "do not change"
+		if res := req.MetricsResolutions; res != nil {
+			if hr, e := ptypes.Duration(res.Hr); e == nil && hr != 0 {
+				settings.MetricsResolutions.HR = hr
+			}
+			if mr, e := ptypes.Duration(res.Mr); e == nil && mr != 0 {
+				settings.MetricsResolutions.MR = mr
+			}
+			if lr, e := ptypes.Duration(res.Lr); e == nil && lr != 0 {
+				settings.MetricsResolutions.LR = lr
+			}
+		}
+
+		if req.EnableTelemetry {
+			settings.Telemetry.Disabled = false
+		}
+		if req.DisableTelemetry {
+			settings.Telemetry.Disabled = true
+		}
+
+		return models.SaveSettings(tx, settings)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if err = s.prometheus.UpdateConfiguration(ctx); err != nil {
+		return nil, err
+	}
+
+	res := &serverpb.ChangeSettingsResponse{
+		Settings: convertSettings(settings),
+	}
+	return res, nil
 }
