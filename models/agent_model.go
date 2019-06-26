@@ -183,6 +183,9 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			q.Set("connectTimeoutMS", strconv.Itoa(int(dialTimeout/time.Millisecond)))
 		}
 
+		// https://docs.mongodb.com/manual/reference/connection-string/
+		// > If the connection string does not specify a database/ you must specify a slash (/)
+		// between the last host and the question mark (?) that begins the string of options.
 		path := database
 		if database == "" {
 			path = "/"
@@ -200,7 +203,6 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		case username != "":
 			u.User = url.User(username)
 		}
-
 		return u.String()
 
 	case PostgresExporterType, QANPostgreSQLPgStatementsAgentType:

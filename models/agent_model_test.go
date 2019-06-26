@@ -63,21 +63,12 @@ func TestAgent(t *testing.T) {
 				assert.Equal(t, expected, agent.DSN(service, time.Second, "database"))
 			})
 		}
-	})
 
-	t.Run("MongoDSN without database should we with slash before query", func(t *testing.T) {
-		agent := &Agent{
-			AgentType: MongoDBExporterType,
-			Username:  pointer.ToString("username"),
-			Password:  pointer.ToString("s3cur3 p@$$w0r4."),
-		}
+		t.Run("MongoDBNoDatabase", func(t *testing.T) {
+			agent.AgentType = MongoDBExporterType
 
-		service := &Service{
-			Address: pointer.ToString("1.2.3.4"),
-			Port:    pointer.ToUint16(12345),
-		}
-
-		assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?connectTimeoutMS=1000", agent.DSN(service, time.Second, ""))
-		assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000", agent.DSN(service, time.Second, "database"))
+			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?connectTimeoutMS=1000", agent.DSN(service, time.Second, ""))
+			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/", agent.DSN(service, 0, ""))
+		})
 	})
 }
