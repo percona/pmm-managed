@@ -20,6 +20,7 @@ package server
 import (
 	"context"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
@@ -34,28 +35,95 @@ import (
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
-type server struct {
+// Server represents service for checking PMM Server status and changing settings.
+type Server struct {
 	db         *reform.DB
 	prometheus prometheusService
 	l          *logrus.Entry
+
+	envMetricsResolution time.Duration
+	envDisableTelemetry  bool
 }
 
 // NewServer returns new server for Server service.
-func NewServer(db *reform.DB, prometheus prometheusService, env []string) serverpb.ServerServer {
-	l := logrus.WithField("component", "server")
-	for _, e := range env {
-		l.Infof("%s", e)
-	}
-
-	return &server{
+func NewServer(db *reform.DB, prometheus prometheusService, env []string) *Server {
+	s := &Server{
 		db:         db,
 		prometheus: prometheus,
-		l:          l,
+		l:          logrus.WithField("component", "server"),
+	}
+	s.parseEnv(env)
+	return s
+}
+
+func (s *Server) parseEnv(env []string) {
+	for _, e := range env {
+		p := strings.SplitN(e, "=", 2)
+		if len(p) != 2 {
+			s.l.Warnf("Failed to parse environment variable %s.", e)
+			continue
+		}
+
+		k, v := strings.ToUpper(p[0]), p[1]
+		var err error
+		switch k {
+		case "METRICS_RESOLUTION":
+			var d time.Duration
+			d, err = time.ParseDuration(v)
+			if err != nil {
+				i, _ := strconv.ParseInt(v, 10, 64)
+				if i != 0 {
+					d = time.Duration(i) * time.Second
+					err = nil
+				}
+			}
+			if d != 0 && d < time.Second {
+				s.l.Warnf("Failed to parse environment variable %s: minimal resolution is 1s.", e)
+				continue
+			}
+			if err == nil {
+				s.envMetricsResolution = d
+			}
+
+		case "DISABLE_TELEMETRY":
+			var b bool
+			b, err = strconv.ParseBool(v)
+			if err == nil {
+				s.envDisableTelemetry = b
+			}
+		}
+
+		if err != nil {
+			s.l.Warnf("Failed to parse environment variable %s: %s", e, err)
+		}
 	}
 }
 
+// UpdateSettings updates settings in the database with environment variables values.
+func (s *Server) UpdateSettings() error {
+	if s.envMetricsResolution == 0 && !s.envDisableTelemetry {
+		return nil
+	}
+
+	return s.db.InTransaction(func(tx *reform.TX) error {
+		settings, err := models.GetSettings(tx.Querier)
+		if err != nil {
+			return err
+		}
+
+		if s.envMetricsResolution != 0 {
+			settings.MetricsResolutions.HR = s.envMetricsResolution
+		}
+		if s.envDisableTelemetry {
+			settings.Telemetry.Disabled = true
+		}
+
+		return models.SaveSettings(tx.Querier, settings)
+	})
+}
+
 // Version returns PMM Server version.
-func (s *server) Version(ctx context.Context, req *serverpb.VersionRequest) (*serverpb.VersionResponse, error) {
+func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*serverpb.VersionResponse, error) {
 	res := &serverpb.VersionResponse{
 		Version:          version.Version,
 		PmmManagedCommit: version.FullCommit,
@@ -84,7 +152,7 @@ func convertSettings(s *models.Settings) *serverpb.Settings {
 }
 
 // GetSettings returns current PMM Server settings.
-func (s *server) GetSettings(ctx context.Context, req *serverpb.GetSettingsRequest) (*serverpb.GetSettingsResponse, error) {
+func (s *Server) GetSettings(ctx context.Context, req *serverpb.GetSettingsRequest) (*serverpb.GetSettingsResponse, error) {
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		return nil, err
@@ -96,7 +164,7 @@ func (s *server) GetSettings(ctx context.Context, req *serverpb.GetSettingsReque
 }
 
 // ChangeSettings changes PMM Server settings.
-func (s *server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSettingsRequest) (*serverpb.ChangeSettingsResponse, error) {
+func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSettingsRequest) (*serverpb.ChangeSettingsResponse, error) {
 	if req.EnableTelemetry && req.DisableTelemetry {
 		return nil, status.Error(codes.InvalidArgument, "Both enable_telemetry and disable_telemetry are present.")
 	}
@@ -111,16 +179,31 @@ func (s *server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		// absent or zero resolution value means "do not change"
 		if res := req.MetricsResolutions; res != nil {
 			if hr, e := ptypes.Duration(res.Hr); e == nil && hr != 0 {
+				if s.envMetricsResolution != 0 {
+					return status.Error(codes.FailedPrecondition, "High resolution for metrics is set via METRICS_RESOLUTION environment variable.")
+				}
+				if hr < time.Second {
+					return status.Error(codes.FailedPrecondition, "Minimal resolution is 1s.")
+				}
 				settings.MetricsResolutions.HR = hr
 			}
 			if mr, e := ptypes.Duration(res.Mr); e == nil && mr != 0 {
+				if mr < time.Second {
+					return status.Error(codes.FailedPrecondition, "Minimal resolution is 1s.")
+				}
 				settings.MetricsResolutions.MR = mr
 			}
 			if lr, e := ptypes.Duration(res.Lr); e == nil && lr != 0 {
+				if lr < time.Second {
+					return status.Error(codes.FailedPrecondition, "Minimal resolution is 1s.")
+				}
 				settings.MetricsResolutions.LR = lr
 			}
 		}
 
+		if s.envDisableTelemetry && (req.EnableTelemetry || req.DisableTelemetry) {
+			return status.Error(codes.FailedPrecondition, "Telemetry is disabled via DISABLE_TELEMETRY environment variable.")
+		}
 		if req.EnableTelemetry {
 			settings.Telemetry.Disabled = false
 		}
@@ -143,3 +226,8 @@ func (s *server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	}
 	return res, nil
 }
+
+// check interfaces
+var (
+	_ serverpb.ServerServer = (*Server)(nil)
+)

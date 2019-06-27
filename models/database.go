@@ -181,7 +181,7 @@ func OpenDB(name, username, password string) (*sql.DB, error) {
 
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed to connect to PostgreSQL.")
+		return nil, errors.Wrap(err, "failed to create a connection pool to PostgreSQL")
 	}
 
 	db.SetMaxIdleConns(10)
