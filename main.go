@@ -148,7 +148,7 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 		)),
 	)
 
-	serverpb.RegisterServerServer(gRPCServer, server.NewServer(deps.db, deps.prometheus))
+	serverpb.RegisterServerServer(gRPCServer, server.NewServer(deps.db, deps.prometheus, os.Environ()))
 
 	agentpb.RegisterAgentServer(gRPCServer, agentgrpc.NewAgentServer(deps.agentsRegistry))
 

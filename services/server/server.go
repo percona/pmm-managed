@@ -25,6 +25,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/version"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -36,13 +37,20 @@ import (
 type server struct {
 	db         *reform.DB
 	prometheus prometheusService
+	l          *logrus.Entry
 }
 
 // NewServer returns new server for Server service.
-func NewServer(db *reform.DB, prometheus prometheusService) serverpb.ServerServer {
+func NewServer(db *reform.DB, prometheus prometheusService, env []string) serverpb.ServerServer {
+	l := logrus.WithField("component", "server")
+	for _, e := range env {
+		l.Infof("%s", e)
+	}
+
 	return &server{
 		db:         db,
 		prometheus: prometheus,
+		l:          l,
 	}
 }
 
