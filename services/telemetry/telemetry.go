@@ -25,7 +25,6 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -43,9 +42,8 @@ const (
 	defaultURL = "https://v.percona.com/"
 
 	// environment variables that affect telemetry service
-	envDisable = "DISABLE_TELEMETRY"
-	envURL     = "PERCONA_VERSION_CHECK_URL" // the same name as for the Toolkit
-	envOS      = "TELEMETRY_OS"              // set by AMI and OVF, empty for Docker image
+	envURL = "PERCONA_VERSION_CHECK_URL" // the same name as for the Toolkit
+	envOS  = "TELEMETRY_OS"              // set by AMI and OVF, empty for Docker image
 )
 
 // Service is responsible for interactions with Percona Call Home service.
@@ -67,13 +65,7 @@ func NewService(db *reform.DB, pmmVersion string) *Service {
 	}
 }
 
-func (s *Service) init() bool {
-	disabledStr := strings.TrimSpace(strings.ToLower(os.Getenv(envDisable)))
-	if disabled, err := strconv.ParseBool(disabledStr); err == nil && disabled {
-		s.l.Infof("Disabled by %s environment variable.", envDisable)
-		return false
-	}
-
+func (s *Service) init() {
 	if os := os.Getenv(envOS); os != "" {
 		s.os = os
 	} else {
@@ -91,15 +83,11 @@ func (s *Service) init() bool {
 		s.url = defaultURL
 	}
 	s.l.Debugf("Using %q as the endpoint.", s.url)
-
-	return true
 }
 
 // Run runs telemetry service, sending data every interval until context is canceled.
 func (s *Service) Run(ctx context.Context) {
-	if !s.init() {
-		return
-	}
+	s.init()
 
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()

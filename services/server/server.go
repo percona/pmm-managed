@@ -64,7 +64,7 @@ func (s *Server) parseEnv(env []string) {
 			continue
 		}
 
-		k, v := strings.ToUpper(p[0]), p[1]
+		k, v := strings.ToUpper(p[0]), strings.ToLower(p[1])
 		var err error
 		switch k {
 		case "METRICS_RESOLUTION":

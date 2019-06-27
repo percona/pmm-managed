@@ -34,8 +34,8 @@ func TestServer(t *testing.T) {
 			assert.Equal(t, 2*time.Second, s.envMetricsResolution)
 
 			s = NewServer(nil, nil, []string{
-				"DISABLE_TELEMETRY=True",
-				"METRICS_RESOLUTION=3s",
+				"DISABLE_TELEMETRY=TrUe",
+				"METRICS_RESOLUTION=3S",
 			})
 			assert.Equal(t, true, s.envDisableTelemetry)
 			assert.Equal(t, 3*time.Second, s.envMetricsResolution)
