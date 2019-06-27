@@ -212,7 +212,7 @@
   version = "v0.2.2"
 
 [[projects]]
-  branch = "PMM-4261-add-connection-check-timeout"
+  branch = "PMM-2.0"
   digest = "1:bfa5443f016db2c3dbec3ac1839b51b70a8c3393dad9a3d82cb42cf44f23a965"
   name = "github.com/percona/pmm"
   packages = [
@@ -224,7 +224,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "c8cfd4f5ad18dd34286a43621774cf87a0c9c6a0"
+  revision = "d6128f46e580404636d492ade750e33a128b0209"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
