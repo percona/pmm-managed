@@ -59,6 +59,26 @@ func AssertEqualAPIError(t require.TestingT, err error, expected ServerResponse)
 	return assert.Equal(t, expected.Error, errorField.String())
 }
 
+func AssertAPIErrorf(t require.TestingT, actual error, expectedCode int, expectedFormat string, a ...interface{}) bool {
+	if n, ok := t.(interface {
+		Helper()
+	}); ok {
+		n.Helper()
+	}
+
+	if !assert.Error(t, actual) {
+		return false
+	}
+
+	if len(a) != 0 {
+		expectedFormat = fmt.Sprintf(expectedFormat, a...)
+	}
+	return AssertEqualAPIError(t, actual, ServerResponse{
+		Code:  expectedCode,
+		Error: expectedFormat,
+	})
+}
+
 func ExpectFailure(t *testing.T, link string) (failureTestingT *expectedFailureTestingT) {
 	failureTestingT = &expectedFailureTestingT{
 		t:    t,
