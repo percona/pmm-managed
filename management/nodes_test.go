@@ -3,12 +3,11 @@ package management
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb/json/client/nodes"
 	"github.com/percona/pmm/api/managementpb/json/client"
 	"github.com/percona/pmm/api/managementpb/json/client/node"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
