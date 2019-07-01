@@ -1,7 +1,6 @@
 package management
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/AlekSi/pointer"
@@ -14,6 +13,7 @@ import (
 	"github.com/percona/pmm/api/managementpb/json/client/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
 
 	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
 )
@@ -271,7 +271,7 @@ func TestAddProxySQL(t *testing.T) {
 		}
 		addProxySQLOK, err = client.Default.ProxySQL.AddProxySQL(params)
 		require.Nil(t, addProxySQLOK)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{409, fmt.Sprintf(`Service with name "%s" already exists.`, serviceName)})
+		pmmapitests.AssertAPIErrorf(t, err, 409, codes.AlreadyExists, `Service with name %q already exists.`, serviceName)
 	})
 
 	t.Run("Empty Node ID", func(t *testing.T) {
@@ -280,7 +280,7 @@ func TestAddProxySQL(t *testing.T) {
 			Body:    proxysql.AddProxySQLBody{},
 		}
 		addProxySQLOK, err := client.Default.ProxySQL.AddProxySQL(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{Code: 400, Error: "invalid field NodeId: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field NodeId: value '' must not be an empty string")
 		assert.Nil(t, addProxySQLOK)
 	})
 
@@ -298,7 +298,7 @@ func TestAddProxySQL(t *testing.T) {
 			Body:    proxysql.AddProxySQLBody{NodeID: nodeID},
 		}
 		addProxySQLOK, err := client.Default.ProxySQL.AddProxySQL(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{Code: 400, Error: "invalid field ServiceName: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field ServiceName: value '' must not be an empty string")
 		assert.Nil(t, addProxySQLOK)
 	})
 
@@ -320,7 +320,7 @@ func TestAddProxySQL(t *testing.T) {
 			},
 		}
 		addProxySQLOK, err := client.Default.ProxySQL.AddProxySQL(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{Code: 400, Error: "invalid field Address: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Address: value '' must not be an empty string")
 		assert.Nil(t, addProxySQLOK)
 	})
 
@@ -343,7 +343,7 @@ func TestAddProxySQL(t *testing.T) {
 			},
 		}
 		addProxySQLOK, err := client.Default.ProxySQL.AddProxySQL(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{Code: 400, Error: "invalid field Port: value '0' must be greater than '0'"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Port: value '0' must be greater than '0'")
 		assert.Nil(t, addProxySQLOK)
 	})
 
@@ -367,7 +367,7 @@ func TestAddProxySQL(t *testing.T) {
 			},
 		}
 		addProxySQLOK, err := client.Default.ProxySQL.AddProxySQL(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{Code: 400, Error: "invalid field PmmAgentId: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field PmmAgentId: value '' must not be an empty string")
 		assert.Nil(t, addProxySQLOK)
 	})
 
@@ -392,7 +392,7 @@ func TestAddProxySQL(t *testing.T) {
 			},
 		}
 		addProxySQLOK, err := client.Default.ProxySQL.AddProxySQL(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{Code: 400, Error: "invalid field Username: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Username: value '' must not be an empty string")
 		assert.Nil(t, addProxySQLOK)
 	})
 }
@@ -507,7 +507,7 @@ func TestRemoveProxySQL(t *testing.T) {
 			Context: pmmapitests.Context,
 		})
 		assert.Nil(t, removeServiceOK)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "service_id or service_name expected; not both"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "service_id or service_name expected; not both")
 	})
 
 	t.Run("Wrong type", func(t *testing.T) {
@@ -526,7 +526,7 @@ func TestRemoveProxySQL(t *testing.T) {
 			Context: pmmapitests.Context,
 		})
 		assert.Nil(t, removeServiceOK)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "wrong service type"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "wrong service type")
 	})
 
 	t.Run("No params", func(t *testing.T) {
@@ -535,6 +535,6 @@ func TestRemoveProxySQL(t *testing.T) {
 			Context: pmmapitests.Context,
 		})
 		assert.Nil(t, removeServiceOK)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "params not found"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "params not found")
 	})
 }

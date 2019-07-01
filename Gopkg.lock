@@ -265,6 +265,14 @@
   version = "v0.3.2"
 
 [[projects]]
+  digest = "1:a222e924e8dfeca0eccb0e6e8958d233752df7d52b6996f03df2a13a542c30f4"
+  name = "google.golang.org/grpc"
+  packages = ["codes"]
+  pruneopts = "NUT"
+  revision = "501c41df7f472c740d0674ff27122f3f48c80ce7"
+  version = "v1.21.1"
+
+[[projects]]
   digest = "1:18108594151654e9e696b27b181b953f9a90b16bf14d253dd1b397b025a1487f"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
@@ -297,6 +305,7 @@
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
     "golang.org/x/sys/unix",
+    "google.golang.org/grpc/codes",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

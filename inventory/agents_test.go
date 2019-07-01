@@ -2,7 +2,6 @@ package inventory
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/percona/pmm/api/inventorypb/json/client"
@@ -10,6 +9,7 @@ import (
 	"github.com/percona/pmm/api/inventorypb/json/client/services"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
 
 	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
 )
@@ -214,7 +214,7 @@ func TestPMMAgent(t *testing.T) {
 			Body:    agents.AddPMMAgentBody{RunsOnNodeID: ""},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field RunsOnNodeId: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field RunsOnNodeId: value '' must not be an empty string")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveNodes(t, res.Payload.PMMAgent.AgentID)
 		}
@@ -264,7 +264,7 @@ func TestPMMAgent(t *testing.T) {
 		}
 		res, err := client.Default.Agents.RemoveAgent(params)
 		assert.Nil(t, res)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{412, fmt.Sprintf(`pmm-agent with ID "%s" has agents.`, pmmAgentID)})
+		pmmapitests.AssertAPIErrorf(t, err, 412, codes.FailedPrecondition, `pmm-agent with ID %q has agents.`, pmmAgentID)
 
 		// Check that agents aren't removed.
 		getAgentRes, err := client.Default.Agents.GetAgent(&agents.GetAgentParams{
@@ -326,7 +326,7 @@ func TestPMMAgent(t *testing.T) {
 			Body:    agents.GetAgentBody{AgentID: pmmAgentID},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, fmt.Sprintf("Agent with ID %q not found.", pmmAgentID)})
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Agent with ID %q not found.", pmmAgentID)
 		assert.Nil(t, getAgentRes)
 
 		listAgentsOK, err = client.Default.Agents.ListAgents(&agents.ListAgentsParams{
@@ -351,7 +351,7 @@ func TestPMMAgent(t *testing.T) {
 		}
 		res, err := client.Default.Agents.RemoveAgent(params)
 		assert.Nil(t, res)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, fmt.Sprintf(`Agent with ID %q not found.`, agentID)})
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, `Agent with ID %q not found.`, agentID)
 	})
 
 	t.Run("Remove with empty params", func(t *testing.T) {
@@ -361,7 +361,7 @@ func TestPMMAgent(t *testing.T) {
 			Body:    agents.RemoveAgentBody{},
 			Context: context.Background(),
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field AgentId: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field AgentId: value '' must not be an empty string")
 		assert.Nil(t, removeResp)
 	})
 }
@@ -457,7 +457,7 @@ func TestNodeExporter(t *testing.T) {
 			Body:    agents.AddNodeExporterBody{PMMAgentID: ""},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field PmmAgentId: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field PmmAgentId: value '' must not be an empty string")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveNodes(t, res.Payload.NodeExporter.AgentID)
 		}
@@ -470,7 +470,7 @@ func TestNodeExporter(t *testing.T) {
 			Body:    agents.AddNodeExporterBody{PMMAgentID: "pmm-node-exporter-node"},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Agent with ID \"pmm-node-exporter-node\" not found."})
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Agent with ID \"pmm-node-exporter-node\" not found.")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveNodes(t, res.Payload.NodeExporter.AgentID)
 		}
@@ -609,7 +609,7 @@ func TestMySQLdExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field ServiceId: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field ServiceId: value '' must not be an empty string")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveNodes(t, res.Payload.MysqldExporter.AgentID)
 		}
@@ -640,7 +640,7 @@ func TestMySQLdExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field PmmAgentId: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field PmmAgentId: value '' must not be an empty string")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveAgents(t, res.Payload.MysqldExporter.AgentID)
 		}
@@ -666,7 +666,7 @@ func TestMySQLdExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Service with ID \"pmm-service-id\" not found."})
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Service with ID \"pmm-service-id\" not found.")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveAgents(t, res.Payload.MysqldExporter.AgentID)
 		}
@@ -697,7 +697,7 @@ func TestMySQLdExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Agent with ID \"pmm-not-exist-server\" not found."})
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Agent with ID \"pmm-not-exist-server\" not found.")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveAgents(t, res.Payload.MysqldExporter.AgentID)
 		}
@@ -889,7 +889,7 @@ func TestMongoDBExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field ServiceId: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field ServiceId: value '' must not be an empty string")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveAgents(t, res.Payload.MongodbExporter.AgentID)
 		}
@@ -920,7 +920,7 @@ func TestMongoDBExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field PmmAgentId: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field PmmAgentId: value '' must not be an empty string")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveAgents(t, res.Payload.MongodbExporter.AgentID)
 		}
@@ -946,7 +946,7 @@ func TestMongoDBExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Service with ID \"pmm-service-id\" not found."})
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Service with ID \"pmm-service-id\" not found.")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveAgents(t, res.Payload.MongodbExporter.AgentID)
 		}
@@ -977,7 +977,7 @@ func TestMongoDBExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Agent with ID \"pmm-not-exist-server\" not found."})
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Agent with ID \"pmm-not-exist-server\" not found.")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveAgents(t, res.Payload.MongodbExporter.AgentID)
 		}
@@ -1119,7 +1119,7 @@ func TestQanAgentExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field ServiceId: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field ServiceId: value '' must not be an empty string")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveAgents(t, res.Payload.QANMysqlPerfschemaAgent.AgentID)
 		}
@@ -1151,7 +1151,7 @@ func TestQanAgentExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field PmmAgentId: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field PmmAgentId: value '' must not be an empty string")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveAgents(t, res.Payload.QANMysqlPerfschemaAgent.AgentID)
 		}
@@ -1176,7 +1176,7 @@ func TestQanAgentExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Service with ID \"pmm-service-id\" not found."})
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Service with ID \"pmm-service-id\" not found.")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveAgents(t, res.Payload.QANMysqlPerfschemaAgent.AgentID)
 		}
@@ -1206,7 +1206,7 @@ func TestQanAgentExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Agent with ID \"pmm-not-exist-server\" not found."})
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Agent with ID \"pmm-not-exist-server\" not found.")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveAgents(t, res.Payload.QANMysqlPerfschemaAgent.AgentID)
 		}
@@ -1345,7 +1345,7 @@ func TestPostgresExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field ServiceId: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field ServiceId: value '' must not be an empty string")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveNodes(t, res.Payload.PostgresExporter.AgentID)
 		}
@@ -1376,7 +1376,7 @@ func TestPostgresExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field PmmAgentId: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field PmmAgentId: value '' must not be an empty string")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveAgents(t, res.Payload.PostgresExporter.AgentID)
 		}
@@ -1402,7 +1402,7 @@ func TestPostgresExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Service with ID \"pmm-service-id\" not found."})
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Service with ID \"pmm-service-id\" not found.")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveAgents(t, res.Payload.PostgresExporter.AgentID)
 		}
@@ -1433,7 +1433,7 @@ func TestPostgresExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Agent with ID \"pmm-not-exist-server\" not found."})
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Agent with ID \"pmm-not-exist-server\" not found.")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveAgents(t, res.Payload.PostgresExporter.AgentID)
 		}
@@ -1572,7 +1572,7 @@ func TestProxySQLExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field ServiceId: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field ServiceId: value '' must not be an empty string")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveNodes(t, res.Payload.ProxysqlExporter.AgentID)
 		}
@@ -1603,7 +1603,7 @@ func TestProxySQLExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field PmmAgentId: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field PmmAgentId: value '' must not be an empty string")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveAgents(t, res.Payload.ProxysqlExporter.AgentID)
 		}
@@ -1629,7 +1629,7 @@ func TestProxySQLExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Service with ID \"pmm-service-id\" not found."})
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Service with ID \"pmm-service-id\" not found.")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveAgents(t, res.Payload.ProxysqlExporter.AgentID)
 		}
@@ -1660,7 +1660,7 @@ func TestProxySQLExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Agent with ID \"pmm-not-exist-server\" not found."})
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Agent with ID \"pmm-not-exist-server\" not found.")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveAgents(t, res.Payload.ProxysqlExporter.AgentID)
 		}
@@ -1802,7 +1802,7 @@ func TestPostgreSQLQanAgentExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field ServiceId: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field ServiceId: value '' must not be an empty string")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveAgents(t, res.Payload.QANPostgresqlPgstatementsAgent.AgentID)
 		}
@@ -1834,7 +1834,7 @@ func TestPostgreSQLQanAgentExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field PmmAgentId: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field PmmAgentId: value '' must not be an empty string")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveAgents(t, res.Payload.QANPostgresqlPgstatementsAgent.AgentID)
 		}
@@ -1859,7 +1859,7 @@ func TestPostgreSQLQanAgentExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Service with ID \"pmm-service-id\" not found."})
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Service with ID \"pmm-service-id\" not found.")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveAgents(t, res.Payload.QANPostgresqlPgstatementsAgent.AgentID)
 		}
@@ -1889,7 +1889,7 @@ func TestPostgreSQLQanAgentExporter(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Agent with ID \"pmm-not-exist-server\" not found."})
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Agent with ID \"pmm-not-exist-server\" not found.")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveAgents(t, res.Payload.QANPostgresqlPgstatementsAgent.AgentID)
 		}

@@ -7,6 +7,7 @@ import (
 	"github.com/percona/pmm/api/serverpb/json/client/server"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
 
 	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
 )
@@ -55,7 +56,7 @@ func TestSettings(t *testing.T) {
 						DisableTelemetry: true,
 					},
 				})
-				pmmapitests.AssertAPIErrorf(t, err, 400, `Both enable_telemetry and disable_telemetry are present.`)
+				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `Both enable_telemetry and disable_telemetry are present.`)
 				assert.Empty(t, res)
 			})
 
@@ -68,7 +69,7 @@ func TestSettings(t *testing.T) {
 						},
 					},
 				})
-				pmmapitests.AssertAPIErrorf(t, err, 412, `Minimal resolution is 1s.`)
+				pmmapitests.AssertAPIErrorf(t, err, 412, codes.FailedPrecondition, `Minimal resolution is 1s.`)
 				assert.Empty(t, res)
 			})
 

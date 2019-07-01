@@ -9,6 +9,7 @@ import (
 	"github.com/percona/pmm/api/managementpb/json/client/node"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
 
 	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
 )
@@ -293,7 +294,7 @@ func TestNodeRegister(t *testing.T) {
 			},
 		}
 		registerOK, err := client.Default.Node.Register(&params)
-		pmmapitests.AssertAPIErrorf(t, err, 400, "")
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "")
 		require.Nil(t, registerOK)
 	})
 
@@ -303,7 +304,7 @@ func TestNodeRegister(t *testing.T) {
 			Body:    node.RegisterBody{},
 		}
 		registerOK, err := client.Default.Node.Register(&params)
-		pmmapitests.AssertAPIErrorf(t, err, 400, "invalid field NodeName: value '' must not be an empty string")
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field NodeName: value '' must not be an empty string")
 		require.Nil(t, registerOK)
 	})
 
@@ -315,7 +316,7 @@ func TestNodeRegister(t *testing.T) {
 			},
 		}
 		registerOK, err := client.Default.Node.Register(&params)
-		pmmapitests.AssertAPIErrorf(t, err, 400, `Unsupported Node type "NODE_TYPE_INVALID".`)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `Unsupported Node type "NODE_TYPE_INVALID".`)
 		require.Nil(t, registerOK)
 	})
 }

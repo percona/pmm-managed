@@ -2,7 +2,6 @@ package inventory
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/percona/pmm/api/inventorypb/json/client"
@@ -10,6 +9,7 @@ import (
 	"github.com/percona/pmm/api/inventorypb/json/client/services"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
 
 	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
 )
@@ -102,7 +102,7 @@ func TestGetService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.GetService(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, "Service with ID \"pmm-not-found\" not found."})
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Service with ID \"pmm-not-found\" not found.")
 		assert.Nil(t, res)
 	})
 
@@ -114,7 +114,7 @@ func TestGetService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.GetService(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field ServiceId: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field ServiceId: value '' must not be an empty string")
 		assert.Nil(t, res)
 	})
 }
@@ -181,7 +181,7 @@ func TestRemoveService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.RemoveService(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{412, fmt.Sprintf(`Service with ID "%s" has agents.`, serviceID)})
+		pmmapitests.AssertAPIErrorf(t, err, 412, codes.FailedPrecondition, `Service with ID %q has agents.`, serviceID)
 		assert.Nil(t, res)
 
 		// Remove with force flag.
@@ -201,7 +201,7 @@ func TestRemoveService(t *testing.T) {
 			Body:    services.GetServiceBody{ServiceID: serviceID},
 			Context: pmmapitests.Context,
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, fmt.Sprintf("Service with ID %q not found.", serviceID)})
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Service with ID %q not found.", serviceID)
 		assert.Nil(t, getServiceResp)
 
 		listAgentsOK, err := client.Default.Agents.ListAgents(&agents.ListAgentsParams{
@@ -225,7 +225,7 @@ func TestRemoveService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.RemoveService(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{404, fmt.Sprintf(`Service with ID "%s" not found.`, serviceID)})
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, `Service with ID %q not found.`, serviceID)
 		assert.Nil(t, res)
 	})
 
@@ -235,7 +235,7 @@ func TestRemoveService(t *testing.T) {
 			Body:    services.RemoveServiceBody{},
 			Context: context.Background(),
 		})
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field ServiceId: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field ServiceId: value '' must not be an empty string")
 		assert.Nil(t, removeResp)
 	})
 }
@@ -305,7 +305,7 @@ func TestMySQLService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err = client.Default.Services.AddMySQLService(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{409, fmt.Sprintf("Service with name %q already exists.", serviceName)})
+		pmmapitests.AssertAPIErrorf(t, err, 409, codes.AlreadyExists, "Service with name %q already exists.", serviceName)
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveServices(t, res.Payload.Mysql.ServiceID)
 		}
@@ -324,7 +324,7 @@ func TestMySQLService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.AddMySQLService(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field NodeId: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field NodeId: value '' must not be an empty string")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveServices(t, res.Payload.Mysql.ServiceID)
 		}
@@ -346,7 +346,7 @@ func TestMySQLService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.AddMySQLService(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field Port: value '0' must be greater than '0'"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Port: value '0' must be greater than '0'")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveServices(t, res.Payload.Mysql.ServiceID)
 		}
@@ -367,7 +367,7 @@ func TestMySQLService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.AddMySQLService(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field ServiceName: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field ServiceName: value '' must not be an empty string")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveServices(t, res.Payload.Mysql.ServiceID)
 		}
@@ -439,7 +439,7 @@ func TestAmazonRDSMySQLService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err = client.Default.Services.AddAmazonRDSMySQLService(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{409, ""})
+		pmmapitests.AssertAPIErrorf(t, err, 409, codes.InvalidArgument, "")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveServices(t, res.Payload.AmazonRDSMysql.ServiceID)
 		}
@@ -511,7 +511,7 @@ func TestMongoDBService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err = client.Default.Services.AddMongoDBService(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{409, fmt.Sprintf("Service with name %q already exists.", serviceName)})
+		pmmapitests.AssertAPIErrorf(t, err, 409, codes.AlreadyExists, "Service with name %q already exists.", serviceName)
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveServices(t, res.Payload.Mongodb.ServiceID)
 		}
@@ -528,7 +528,7 @@ func TestMongoDBService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.AddMongoDBService(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field NodeId: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field NodeId: value '' must not be an empty string")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveServices(t, res.Payload.Mongodb.ServiceID)
 		}
@@ -549,7 +549,7 @@ func TestMongoDBService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.AddMongoDBService(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field ServiceName: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field ServiceName: value '' must not be an empty string")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveServices(t, res.Payload.Mongodb.ServiceID)
 		}
@@ -621,7 +621,7 @@ func TestPostgreSQLService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err = client.Default.Services.AddPostgreSQLService(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{409, fmt.Sprintf("Service with name %q already exists.", serviceName)})
+		pmmapitests.AssertAPIErrorf(t, err, 409, codes.AlreadyExists, "Service with name %q already exists.", serviceName)
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveServices(t, res.Payload.Postgresql.ServiceID)
 		}
@@ -640,7 +640,7 @@ func TestPostgreSQLService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.AddPostgreSQLService(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field NodeId: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field NodeId: value '' must not be an empty string")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveServices(t, res.Payload.Postgresql.ServiceID)
 		}
@@ -662,7 +662,7 @@ func TestPostgreSQLService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.AddPostgreSQLService(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field Port: value '0' must be greater than '0'"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Port: value '0' must be greater than '0'")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveServices(t, res.Payload.Postgresql.ServiceID)
 		}
@@ -683,7 +683,7 @@ func TestPostgreSQLService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.AddPostgreSQLService(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field ServiceName: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field ServiceName: value '' must not be an empty string")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveServices(t, res.Payload.Postgresql.ServiceID)
 		}
@@ -755,7 +755,7 @@ func TestProxySQLService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err = client.Default.Services.AddProxySQLService(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{409, fmt.Sprintf("Service with name %q already exists.", serviceName)})
+		pmmapitests.AssertAPIErrorf(t, err, 409, codes.AlreadyExists, "Service with name %q already exists.", serviceName)
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveServices(t, res.Payload.Proxysql.ServiceID)
 		}
@@ -774,7 +774,7 @@ func TestProxySQLService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.AddProxySQLService(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field NodeId: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field NodeId: value '' must not be an empty string")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveServices(t, res.Payload.Proxysql.ServiceID)
 		}
@@ -796,7 +796,7 @@ func TestProxySQLService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.AddProxySQLService(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field Port: value '0' must be greater than '0'"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Port: value '0' must be greater than '0'")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveServices(t, res.Payload.Proxysql.ServiceID)
 		}
@@ -817,7 +817,7 @@ func TestProxySQLService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.AddProxySQLService(params)
-		pmmapitests.AssertEqualAPIError(t, err, pmmapitests.ServerResponse{400, "invalid field ServiceName: value '' must not be an empty string"})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field ServiceName: value '' must not be an empty string")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveServices(t, res.Payload.Proxysql.ServiceID)
 		}
