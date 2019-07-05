@@ -114,10 +114,10 @@ func addNodeExporter(t *testing.T, pmmAgentID string, customLabels map[string]st
 	return res
 }
 
-func addMySqldExporter(t *testing.T, body agents.AddMySqldExporterBody) *agents.AddMySqldExporterOKBody {
+func addMySQLdExporter(t *testing.T, body agents.AddMySQLdExporterBody) *agents.AddMySQLdExporterOKBody {
 	t.Helper()
 
-	res, err := client.Default.Agents.AddMySqldExporter(&agents.AddMySqldExporterParams{
+	res, err := client.Default.Agents.AddMySQLdExporter(&agents.AddMySQLdExporterParams{
 		Body:    body,
 		Context: pmmapitests.Context,
 	})
