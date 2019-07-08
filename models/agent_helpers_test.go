@@ -105,7 +105,7 @@ func TestAgentHelpers(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
 
-		agents, err := models.AgentsForNode(q, "N1")
+		agents, err := models.FindAgentsForNode(q, "N1")
 		require.NoError(t, err)
 		expected := []*models.Agent{{
 			AgentID:      "A3",
@@ -122,7 +122,7 @@ func TestAgentHelpers(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
 
-		agents, err := models.AgentsRunningByPMMAgent(q, "A1")
+		agents, err := models.FindAgentsRunningByPMMAgent(q, "A1")
 		require.NoError(t, err)
 		expected := []*models.Agent{{
 			AgentID:      "A2",
@@ -146,7 +146,7 @@ func TestAgentHelpers(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
 
-		agents, err := models.AgentsForService(q, "S1")
+		agents, err := models.FindAgentsForService(q, "S1")
 		require.NoError(t, err)
 		expected := []*models.Agent{{
 			AgentID:      "A2",

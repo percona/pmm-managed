@@ -360,7 +360,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		return
 	}
 
-	agents, err := models.AgentsRunningByPMMAgent(r.db.Querier, pmmAgentID)
+	agents, err := models.FindAgentsRunningByPMMAgent(r.db.Querier, pmmAgentID)
 	if err != nil {
 		l.Errorf("Failed to collect agents: %s.", err)
 		return

@@ -97,11 +97,11 @@ func (as *AgentsService) List(ctx context.Context, filters AgentFilters) ([]inve
 		var err error
 		switch {
 		case filters.PMMAgentID != "":
-			agents, err = models.AgentsRunningByPMMAgent(tx.Querier, filters.PMMAgentID)
+			agents, err = models.FindAgentsRunningByPMMAgent(tx.Querier, filters.PMMAgentID)
 		case filters.NodeID != "":
-			agents, err = models.AgentsForNode(tx.Querier, filters.NodeID)
+			agents, err = models.FindAgentsForNode(tx.Querier, filters.NodeID)
 		case filters.ServiceID != "":
-			agents, err = models.AgentsForService(tx.Querier, filters.ServiceID)
+			agents, err = models.FindAgentsForService(tx.Querier, filters.ServiceID)
 		default:
 			agents, err = models.FindAllAgents(tx.Querier)
 		}
