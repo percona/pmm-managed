@@ -127,7 +127,7 @@ func (as *AgentsService) List(ctx context.Context, filters AgentFilters) ([]inve
 func (as *AgentsService) Get(ctx context.Context, id string) (inventorypb.Agent, error) {
 	var res inventorypb.Agent
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		row, err := models.AgentFindByID(tx.Querier, id)
+		row, err := models.FindAgentByID(tx.Querier, id)
 		if err != nil {
 			return err
 		}

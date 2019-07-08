@@ -185,7 +185,7 @@ func TestAgentHelpers(t *testing.T) {
 		agent, err = models.RemoveAgent(q, "A1", models.RemoveCascade)
 		assert.Equal(t, expected, agent)
 		assert.NoError(t, err)
-		_, err = models.AgentFindByID(q, "A1")
+		_, err = models.FindAgentByID(q, "A1")
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "A1" not found.`), err)
 	})
 

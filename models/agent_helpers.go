@@ -44,8 +44,8 @@ func checkUniqueAgentID(q *reform.Querier, id string) error {
 	}
 }
 
-// AgentFindByID finds agent by ID.
-func AgentFindByID(q *reform.Querier, id string) (*Agent, error) {
+// FindAgentByID finds agent by ID.
+func FindAgentByID(q *reform.Querier, id string) (*Agent, error) {
 	if id == "" {
 		return nil, status.Error(codes.InvalidArgument, "Empty Agent ID.")
 	}
@@ -113,7 +113,7 @@ func CreateNodeExporter(q *reform.Querier, pmmAgentID string, customLabels map[s
 		return nil, err
 	}
 
-	pmmAgent, err := AgentFindByID(q, pmmAgentID)
+	pmmAgent, err := FindAgentByID(q, pmmAgentID)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +156,7 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 		return nil, err
 	}
 
-	if _, err := AgentFindByID(q, params.PMMAgentID); err != nil {
+	if _, err := FindAgentByID(q, params.PMMAgentID); err != nil {
 		return nil, err
 	}
 
@@ -260,46 +260,6 @@ func AgentsForService(q *reform.Querier, serviceID string) ([]*Agent, error) {
 		res[i] = s.(*Agent)
 	}
 	return res, nil
-}
-
-// ChangeCommonAgentParams contains parameters that can be changed for all Agents.
-type ChangeCommonAgentParams struct {
-	Disabled           *bool // true - disable, false - enable, nil - do not change
-	CustomLabels       map[string]string
-	RemoveCustomLabels bool
-}
-
-// ChangeAgent changes common parameters for given Agent.
-func ChangeAgent(q *reform.Querier, agentID string, params *ChangeCommonAgentParams) (*Agent, error) {
-	row, err := AgentFindByID(q, agentID)
-	if err != nil {
-		return nil, err
-	}
-
-	if params.Disabled != nil {
-		if *params.Disabled {
-			row.Disabled = true
-		} else {
-			row.Disabled = false
-		}
-	}
-
-	if params.RemoveCustomLabels {
-		if err = row.SetCustomLabels(nil); err != nil {
-			return nil, err
-		}
-	}
-	if len(params.CustomLabels) != 0 {
-		if err = row.SetCustomLabels(params.CustomLabels); err != nil {
-			return nil, err
-		}
-	}
-
-	if err = q.Update(row); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return row, nil
 }
 
 // FindPMMAgentsForNode gets pmm-agents for node where it runs.
@@ -411,9 +371,49 @@ func FindAgentsByServiceIDAndAgentType(q *reform.Querier, serviceID string, agen
 	return res, nil
 }
 
+// ChangeCommonAgentParams contains parameters that can be changed for all Agents.
+type ChangeCommonAgentParams struct {
+	Disabled           *bool // true - disable, false - enable, nil - do not change
+	CustomLabels       map[string]string
+	RemoveCustomLabels bool
+}
+
+// ChangeAgent changes common parameters for given Agent.
+func ChangeAgent(q *reform.Querier, agentID string, params *ChangeCommonAgentParams) (*Agent, error) {
+	row, err := FindAgentByID(q, agentID)
+	if err != nil {
+		return nil, err
+	}
+
+	if params.Disabled != nil {
+		if *params.Disabled {
+			row.Disabled = true
+		} else {
+			row.Disabled = false
+		}
+	}
+
+	if params.RemoveCustomLabels {
+		if err = row.SetCustomLabels(nil); err != nil {
+			return nil, err
+		}
+	}
+	if len(params.CustomLabels) != 0 {
+		if err = row.SetCustomLabels(params.CustomLabels); err != nil {
+			return nil, err
+		}
+	}
+
+	if err = q.Update(row); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return row, nil
+}
+
 // RemoveAgent removes Agent by ID.
 func RemoveAgent(q *reform.Querier, id string, mode RemoveMode) (*Agent, error) {
-	a, err := AgentFindByID(q, id)
+	a, err := FindAgentByID(q, id)
 	if err != nil {
 		return nil, err
 	}
