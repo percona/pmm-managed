@@ -30,16 +30,13 @@ import (
 	"gopkg.in/reform.v1/dialects/postgresql"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/utils/logger"
 	"github.com/percona/pmm-managed/utils/testdb"
 )
 
 var configPath = filepath.Join("..", "..", "testdata", "prometheus", "prometheus.yml")
 
-func setup(t *testing.T) (context.Context, *reform.DB, *Service, []byte) {
+func setup(t *testing.T) (*reform.DB, *Service, []byte) {
 	t.Helper()
-
-	ctx := logger.Set(context.Background(), t.Name())
 
 	sqlDB := testdb.Open(t, models.SkipFixtures)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
@@ -50,7 +47,9 @@ func setup(t *testing.T) (context.Context, *reform.DB, *Service, []byte) {
 	original, err := ioutil.ReadFile(configPath) //nolint:gosec
 	require.NoError(t, err)
 
-	return ctx, db, svc, original
+	require.NoError(t, svc.Check(context.Background()))
+
+	return db, svc, original
 }
 
 func teardown(t *testing.T, db *reform.DB, svc *Service, original []byte) { //nolint:golint
@@ -64,10 +63,10 @@ func teardown(t *testing.T, db *reform.DB, svc *Service, original []byte) { //no
 
 func TestPrometheus(t *testing.T) {
 	t.Run("Default", func(t *testing.T) {
-		ctx, db, svc, original := setup(t)
+		db, svc, original := setup(t)
 		defer teardown(t, db, svc, original)
 
-		assert.NoError(t, svc.UpdateConfiguration(ctx))
+		assert.NoError(t, svc.updateConfiguration())
 
 		actual, err := ioutil.ReadFile(configPath) //nolint:gosec
 		require.NoError(t, err)
@@ -75,10 +74,8 @@ func TestPrometheus(t *testing.T) {
 	})
 
 	t.Run("Normal", func(t *testing.T) {
-		ctx, db, svc, original := setup(t)
+		db, svc, original := setup(t)
 		defer teardown(t, db, svc, original)
-
-		require.NoError(t, svc.Check(ctx))
 
 		for _, str := range []reform.Struct{
 			&models.Node{
@@ -164,7 +161,7 @@ func TestPrometheus(t *testing.T) {
 			require.NoError(t, db.Insert(str), "%+v", str)
 		}
 
-		assert.NoError(t, svc.UpdateConfiguration(ctx))
+		assert.NoError(t, svc.updateConfiguration())
 
 		expected := `# Managed by pmm-managed. DO NOT EDIT.
 ---

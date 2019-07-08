@@ -340,7 +340,8 @@ func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRe
 		return err
 	}
 
-	return r.prometheus.UpdateConfiguration(ctx)
+	r.prometheus.UpdateConfiguration()
+	return nil
 }
 
 // SendSetStateRequest sends SetStateRequest to pmm-agent with given ID.
