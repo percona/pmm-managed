@@ -103,7 +103,7 @@ func (as *AgentsService) List(ctx context.Context, filters AgentFilters) ([]inve
 		case filters.ServiceID != "":
 			agents, err = models.AgentsForService(tx.Querier, filters.ServiceID)
 		default:
-			agents, err = models.AgentFindAll(tx.Querier)
+			agents, err = models.FindAllAgents(tx.Querier)
 		}
 		if err != nil {
 			return err

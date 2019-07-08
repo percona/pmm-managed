@@ -44,33 +44,36 @@ func checkUniqueAgentID(q *reform.Querier, id string) error {
 	}
 }
 
-// FindAgentByID finds agent by ID.
+// FindAllAgents returns all Agents.
+func FindAllAgents(q *reform.Querier) ([]*Agent, error) {
+	structs, err := q.SelectAllFrom(AgentTable, "ORDER BY agent_id")
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	agents := make([]*Agent, len(structs))
+	for i, s := range structs {
+		agents[i] = s.(*Agent)
+	}
+
+	return agents, nil
+}
+
+// FindAgentByID finds Agent by ID.
 func FindAgentByID(q *reform.Querier, id string) (*Agent, error) {
 	if id == "" {
 		return nil, status.Error(codes.InvalidArgument, "Empty Agent ID.")
 	}
 
-	row := &Agent{AgentID: id}
-	switch err := q.Reload(row); err {
+	agent := &Agent{AgentID: id}
+	switch err := q.Reload(agent); err {
 	case nil:
-		return row, nil
+		return agent, nil
 	case reform.ErrNoRows:
 		return nil, status.Errorf(codes.NotFound, "Agent with ID %q not found.", id)
 	default:
 		return nil, errors.WithStack(err)
 	}
-}
-
-// AgentFindAll finds all agents.
-func AgentFindAll(q *reform.Querier) ([]*Agent, error) {
-	var structs []reform.Struct
-	structs, err := q.SelectAllFrom(AgentTable, "ORDER BY agent_id")
-	err = errors.Wrap(err, "failed to select Agents")
-	agents := make([]*Agent, len(structs))
-	for i, s := range structs {
-		agents[i] = s.(*Agent)
-	}
-	return agents, err
 }
 
 // createPMMAgentWithID creates PMMAgent with given ID.
