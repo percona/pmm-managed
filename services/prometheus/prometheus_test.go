@@ -94,6 +94,18 @@ func TestPrometheus(t *testing.T) {
 				RunsOnNodeID: pointer.ToString("/node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d"),
 			},
 
+			// listen port not known
+			&models.Agent{
+				AgentID:    "/agent_id/711674c2-36e6-42d5-8e63-5d7c84c9053a",
+				AgentType:  models.NodeExporterType,
+				PMMAgentID: pointer.ToString("/agent_id/217907dc-d34d-4e2e-aa84-a1b765d49853"),
+				ListenPort: nil,
+			},
+			&models.AgentNode{
+				AgentID: "/agent_id/711674c2-36e6-42d5-8e63-5d7c84c9053a",
+				NodeID:  "/node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d",
+			},
+
 			&models.Service{
 				ServiceID:    "/service_id/014647c3-b2f5-44eb-94f4-d943260a968c",
 				ServiceType:  models.MySQLServiceType,

@@ -152,7 +152,9 @@ func (svc *Service) marshalConfig(l *logrus.Entry) ([]byte, error) {
 						l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 						continue
 					}
-					cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfg)
+					if scfg != nil {
+						cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfg)
+					}
 				}
 
 			case models.MySQLdExporterType:
@@ -182,7 +184,9 @@ func (svc *Service) marshalConfig(l *logrus.Entry) ([]byte, error) {
 						l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 						continue
 					}
-					cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfg)
+					if scfg != nil {
+						cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfg)
+					}
 				}
 
 			case models.PostgresExporterType:
@@ -197,7 +201,9 @@ func (svc *Service) marshalConfig(l *logrus.Entry) ([]byte, error) {
 						l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 						continue
 					}
-					cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfg)
+					if scfg != nil {
+						cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfg)
+					}
 				}
 
 			case models.ProxySQLExporterType:
@@ -212,7 +218,9 @@ func (svc *Service) marshalConfig(l *logrus.Entry) ([]byte, error) {
 						l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 						continue
 					}
-					cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfg)
+					if scfg != nil {
+						cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfg)
+					}
 				}
 
 			case models.QANMySQLPerfSchemaAgentType, models.QANMySQLSlowlogAgentType:
