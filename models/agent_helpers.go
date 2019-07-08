@@ -133,9 +133,13 @@ func FindAgentsForService(q *reform.Querier, serviceID string) ([]*Agent, error)
 
 // FindAgentsRunningByPMMAgent returns all Agents running by PMMAgent.
 func FindAgentsRunningByPMMAgent(q *reform.Querier, pmmAgentID string) ([]*Agent, error) {
+	if _, err := FindAgentByID(q, pmmAgentID); err != nil {
+		return nil, err
+	}
+
 	structs, err := q.SelectAllFrom(AgentTable, "WHERE pmm_agent_id = $1 ORDER BY agent_id", pmmAgentID)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to select Agents")
+		return nil, errors.WithStack(err)
 	}
 
 	res := make([]*Agent, len(structs))
