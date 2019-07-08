@@ -193,12 +193,12 @@ func TestAgentHelpers(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
 
-		agents, err := models.FindPMMAgentsForNode(q, "N1")
+		agents, err := models.FindPMMAgentsRunningOnNode(q, "N1")
 		require.NoError(t, err)
 		assert.Equal(t, "A1", agents[0].AgentID)
 
 		// find with non existing node.
-		_, err = models.FindPMMAgentsForNode(q, "X1")
+		_, err = models.FindPMMAgentsRunningOnNode(q, "X1")
 		require.Error(t, err)
 	})
 
