@@ -159,24 +159,6 @@ func TestAgentHelpers(t *testing.T) {
 		assert.Equal(t, expected, agents)
 	})
 
-	t.Run("PMMAgentsForChangedNode", func(t *testing.T) {
-		q, teardown := setup(t)
-		defer teardown(t)
-
-		ids, err := models.PMMAgentsForChangedNode(q, "N1")
-		require.NoError(t, err)
-		assert.Equal(t, []string{"A1"}, ids)
-	})
-
-	t.Run("PMMAgentsForChangedService", func(t *testing.T) {
-		q, teardown := setup(t)
-		defer teardown(t)
-
-		ids, err := models.PMMAgentsForChangedService(q, "S1")
-		require.NoError(t, err)
-		assert.Equal(t, []string{"A1"}, ids)
-	})
-
 	t.Run("RemoveAgent", func(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
