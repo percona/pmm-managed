@@ -40,7 +40,7 @@ func NewAuthServer() *AuthServer {
 func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	b, err := httputil.DumpRequest(req, true)
 	if err != nil {
-		s.l.Warnf("%v", err)
+		s.l.Errorf("Failed to dump request: %v.", err)
 	}
 	s.l.Debugf("Request:\n%s", b)
 
