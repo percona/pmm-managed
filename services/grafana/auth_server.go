@@ -45,12 +45,13 @@ func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	s.l.Debugf("Request:\n%s", b)
 
 	_, role := path.Split(req.URL.Path)
-	switch role {
-	case "admin", "editor", "viewer":
-		s.l.Debugf("Role: %s", role)
-		rw.WriteHeader(200)
-	default:
+	if role != "admin" && role != "editor" && role != "viewer" {
 		s.l.Errorf("Unexpected role %q.", role)
 		rw.WriteHeader(500)
+		return
 	}
+	s.l.Debugf("Role: %s", role)
+
+	s.l.Warnf("Unhandled request, authenticating anyway.")
+	rw.WriteHeader(200)
 }
