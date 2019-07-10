@@ -39,6 +39,7 @@ import (
 // Client represents a client for Grafana API.
 type Client struct {
 	addr string
+	l    *logrus.Entry
 	http *http.Client
 	irtm prometheus.Collector
 }
@@ -55,13 +56,15 @@ func NewClient(addr string) *Client {
 		ExpectContinueTimeout: 1 * time.Second,
 	}
 
-	if logrus.GetLevel() >= logrus.DebugLevel {
-		t = irt.WithLogger(t, logrus.WithField("component", "grafana/client").Debugf)
+	l := logrus.WithField("component", "grafana/client")
+	if l.Logger.GetLevel() >= logrus.DebugLevel {
+		t = irt.WithLogger(t, l.Debugf)
 	}
 	t, irtm := irt.WithMetrics(t, "grafana_client")
 
 	return &Client{
 		addr: addr,
+		l:    l,
 		http: &http.Client{
 			Transport: t,
 		},
@@ -79,36 +82,46 @@ func (c *Client) Collect(ch chan<- prometheus.Metric) {
 	c.irtm.Collect(ch)
 }
 
-func (c *Client) isGrafanaAdmin(authHeaders http.Header) (bool, error) {
-	// https://grafana.com/docs/http_api/user/#actual-user
-
+func (c *Client) get(ctx context.Context, path string, authHeaders http.Header, respBody interface{}) error {
 	u := url.URL{
 		Scheme: "http",
 		Host:   c.addr,
-		Path:   "/api/user",
+		Path:   path,
 	}
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
-		return false, err
+		return errors.WithStack(err)
 	}
 	for k := range authHeaders {
 		req.Header.Set(k, authHeaders.Get(k))
 	}
 
+	req = req.WithContext(ctx)
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return false, err
+		return errors.WithStack(err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
 	if resp.StatusCode != 200 {
-		return false, nil
+		return errors.Errorf("unexpected status %d", resp.StatusCode)
 	}
 
+	if err = json.NewDecoder(resp.Body).Decode(respBody); err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
+// isGrafanaAdmin returns true if current authenticated user is Grafana (super) admin.
+func (c *Client) isGrafanaAdmin(ctx context.Context, authHeaders http.Header) (bool, error) {
+	// https://grafana.com/docs/http_api/user/#actual-user - work with any authentication
+
 	var m map[string]interface{}
-	if err = json.NewDecoder(resp.Body).Decode(&m); err != nil {
+	if err := c.get(ctx, "/api/user", authHeaders, &m); err != nil {
 		return false, err
 	}
+
 	a, _ := m["isGrafanaAdmin"].(bool)
 	return a, nil
 }
@@ -122,41 +135,21 @@ const (
 	admin  role = "admin"
 )
 
-func (c *Client) getRole(authHeaders http.Header) (role, error) {
+func (c *Client) getRole(ctx context.Context, authHeaders http.Header) (role, error) {
 	// https://grafana.com/docs/http_api/user/#organizations-of-the-actual-user
 
-	u := url.URL{
-		Scheme: "http",
-		Host:   c.addr,
-		Path:   "/api/user/orgs",
-	}
-	req, err := http.NewRequest("GET", u.String(), nil)
-	if err != nil {
-		return none, err
-	}
-	for k := range authHeaders {
-		req.Header.Set(k, authHeaders.Get(k))
-	}
-
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return none, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return none, nil
-	}
-
 	var s []interface{}
-	if err = json.NewDecoder(resp.Body).Decode(&s); err != nil {
+	if err := c.get(ctx, "/api/user/orgs", authHeaders, &s); err != nil {
 		return none, err
 	}
+
 	for _, el := range s {
 		m, _ := el.(map[string]interface{})
 		if m == nil {
 			continue
 		}
+
+		// check only default organization (with ID 1)
 		if id, _ := m["orgId"].(float64); id == 1 {
 			role, _ := m["role"].(string)
 			switch strings.ToLower(role) {
@@ -165,7 +158,7 @@ func (c *Client) getRole(authHeaders http.Header) (role, error) {
 			case "editor":
 				return editor, nil
 			case "admin":
-				return viewer, nil
+				return admin, nil
 			default:
 				return none, nil
 			}

@@ -78,11 +78,11 @@ func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) error 
 		}
 	}
 
-	if isGrafanaAdmin, _ := s.c.isGrafanaAdmin(h); isGrafanaAdmin {
+	if isGrafanaAdmin, _ := s.c.isGrafanaAdmin(ctx, h); isGrafanaAdmin {
 		return nil
 	}
 
-	role, err := s.c.getRole(h)
+	role, err := s.c.getRole(ctx, h)
 	if err != nil {
 		return err
 	}
