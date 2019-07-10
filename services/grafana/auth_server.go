@@ -18,6 +18,7 @@ package grafana
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httputil"
 	"time"
@@ -55,38 +56,39 @@ func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) error {
 	// TODO l := logger.Get(ctx) once we have it after https://jira.percona.com/browse/PMM-4326
+	l := s.l
 
-	if s.l.Logger.GetLevel() >= logrus.DebugLevel {
+	if l.Logger.GetLevel() >= logrus.DebugLevel {
 		b, err := httputil.DumpRequest(req, true)
 		if err != nil {
-			s.l.Errorf("Failed to dump request: %v.", err)
+			l.Errorf("Failed to dump request: %v.", err)
 		}
-		s.l.Debugf("Request:\n%s", b)
+		l.Debugf("Request:\n%s", b)
 	}
 
 	if req.URL.Path != "/auth_request" {
 		return errors.Errorf("Unexpected path %s.", req.URL.Path)
 	}
 
-	h := make(http.Header)
+	uri := req.Header.Get("X-Original-Uri")
+	l = l.WithField("req", fmt.Sprintf("%s %s", req.Header.Get("X-Original-Method"), uri))
+
+	authHeaders := make(http.Header)
 	for _, k := range []string{
 		"Authorization",
 		"Cookie",
 	} {
 		if v := req.Header.Get(k); v != "" {
-			h.Set(k, v)
+			authHeaders.Set(k, v)
 		}
 	}
 
-	if isGrafanaAdmin, _ := s.c.isGrafanaAdmin(ctx, h); isGrafanaAdmin {
+	if isGrafanaAdmin, _ := s.c.isGrafanaAdmin(ctx, authHeaders); isGrafanaAdmin {
+		l.Debugf("Grafana admin, allowing access.")
 		return nil
 	}
 
-	role, err := s.c.getRole(ctx, h)
-	if err != nil {
-		return err
-	}
-
-	s.l.Warnf("Unhandled request(%q, %s), authenticating anyway.", role, req.URL.Path)
+	role, err := s.c.getRole(ctx, authHeaders)
+	l.Warnf("Authenticating anyway: %q %v", role, err)
 	return nil
 }

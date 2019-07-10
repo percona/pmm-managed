@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -57,8 +58,8 @@ func NewClient(addr string) *Client {
 	}
 
 	l := logrus.WithField("component", "grafana/client")
-	if l.Logger.GetLevel() >= logrus.DebugLevel {
-		t = irt.WithLogger(t, l.Debugf)
+	if l.Logger.GetLevel() >= logrus.TraceLevel {
+		t = irt.WithLogger(t, l.Tracef)
 	}
 	t, irtm := irt.WithMetrics(t, "grafana_client")
 
@@ -80,6 +81,15 @@ func (c *Client) Describe(ch chan<- *prometheus.Desc) {
 // Collect implements prometheus.Collector.
 func (c *Client) Collect(ch chan<- prometheus.Metric) {
 	c.irtm.Collect(ch)
+}
+
+type authError struct {
+	code    int
+	headers http.Header
+}
+
+func (a *authError) Error() string {
+	return fmt.Sprintf("status code %d", a.code)
 }
 
 func (c *Client) get(ctx context.Context, path string, authHeaders http.Header, respBody interface{}) error {
@@ -104,7 +114,10 @@ func (c *Client) get(ctx context.Context, path string, authHeaders http.Header, 
 	defer resp.Body.Close() //nolint:errcheck
 
 	if resp.StatusCode != 200 {
-		return errors.Errorf("unexpected status %d", resp.StatusCode)
+		return &authError{
+			code:    resp.StatusCode,
+			headers: resp.Header,
+		}
 	}
 
 	if err = json.NewDecoder(resp.Body).Decode(respBody); err != nil {
