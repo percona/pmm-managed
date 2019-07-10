@@ -28,12 +28,14 @@ import (
 
 // AuthServer authenticates incoming requests via Grafana API.
 type AuthServer struct {
+	c *Client
 	l *logrus.Entry
 }
 
 // NewAuthServer creates new AuthServer.
-func NewAuthServer() *AuthServer {
+func NewAuthServer(c *Client) *AuthServer {
 	return &AuthServer{
+		c: c,
 		l: logrus.WithField("component", "grafana/auth"),
 	}
 }
@@ -53,9 +55,8 @@ func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) error {
 	// TODO l := logger.Get(ctx) once we have it after https://jira.percona.com/browse/PMM-4326
-	l := s.l.Logger
 
-	if l.GetLevel() >= logrus.DebugLevel {
+	if s.l.Logger.GetLevel() >= logrus.DebugLevel {
 		b, err := httputil.DumpRequest(req, true)
 		if err != nil {
 			s.l.Errorf("Failed to dump request: %v.", err)
@@ -67,14 +68,25 @@ func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) error 
 		return errors.Errorf("Unexpected path %s.", req.URL.Path)
 	}
 
-	username, password, ok := req.BasicAuth()
-	if ok {
-		// TODO real code
-		_ = username
-		_ = password
+	h := make(http.Header)
+	for _, k := range []string{
+		"Authorization",
+		"Cookie",
+	} {
+		if v := req.Header.Get(k); v != "" {
+			h.Set(k, v)
+		}
+	}
+
+	if isGrafanaAdmin, _ := s.c.isGrafanaAdmin(h); isGrafanaAdmin {
 		return nil
 	}
 
-	s.l.Warnf("Unhandled request, authenticating anyway.")
+	role, err := s.c.getRole(h)
+	if err != nil {
+		return err
+	}
+
+	s.l.Warnf("Unhandled request(%q, %s), authenticating anyway.", role, req.URL.Path)
 	return nil
 }

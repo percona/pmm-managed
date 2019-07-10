@@ -25,10 +25,12 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/sirupsen/logrus"
 
 	"github.com/percona/pmm-managed/utils/irt"
 	"github.com/percona/pmm-managed/utils/logger"
@@ -43,7 +45,7 @@ type Client struct {
 
 // NewClient creates a new client for given Grafana address.
 func NewClient(addr string) *Client {
-	transport, irtm := irt.New("grafana_client", &http.Transport{
+	var t http.RoundTripper = &http.Transport{
 		DialContext: (&net.Dialer{
 			Timeout:   3 * time.Second,
 			KeepAlive: 30 * time.Second,
@@ -51,12 +53,17 @@ func NewClient(addr string) *Client {
 		MaxIdleConns:          50,
 		IdleConnTimeout:       90 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
-	})
+	}
+
+	if logrus.GetLevel() >= logrus.DebugLevel {
+		t = irt.WithLogger(t, logrus.WithField("component", "grafana/client").Debugf)
+	}
+	t, irtm := irt.WithMetrics(t, "grafana_client")
 
 	return &Client{
 		addr: addr,
 		http: &http.Client{
-			Transport: transport,
+			Transport: t,
 		},
 		irtm: irtm,
 	}
@@ -70,6 +77,102 @@ func (c *Client) Describe(ch chan<- *prometheus.Desc) {
 // Collect implements prometheus.Collector.
 func (c *Client) Collect(ch chan<- prometheus.Metric) {
 	c.irtm.Collect(ch)
+}
+
+func (c *Client) isGrafanaAdmin(authHeaders http.Header) (bool, error) {
+	// https://grafana.com/docs/http_api/user/#actual-user
+
+	u := url.URL{
+		Scheme: "http",
+		Host:   c.addr,
+		Path:   "/api/user",
+	}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return false, err
+	}
+	for k := range authHeaders {
+		req.Header.Set(k, authHeaders.Get(k))
+	}
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return false, nil
+	}
+
+	var m map[string]interface{}
+	if err = json.NewDecoder(resp.Body).Decode(&m); err != nil {
+		return false, err
+	}
+	a, _ := m["isGrafanaAdmin"].(bool)
+	return a, nil
+}
+
+type role string
+
+const (
+	none   role = "none"
+	viewer role = "viewer"
+	editor role = "editor"
+	admin  role = "admin"
+)
+
+func (c *Client) getRole(authHeaders http.Header) (role, error) {
+	// https://grafana.com/docs/http_api/user/#organizations-of-the-actual-user
+
+	u := url.URL{
+		Scheme: "http",
+		Host:   c.addr,
+		Path:   "/api/user/orgs",
+	}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return none, err
+	}
+	for k := range authHeaders {
+		req.Header.Set(k, authHeaders.Get(k))
+	}
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return none, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return none, nil
+	}
+
+	var s []interface{}
+	if err = json.NewDecoder(resp.Body).Decode(&s); err != nil {
+		return none, err
+	}
+	for _, el := range s {
+		m, _ := el.(map[string]interface{})
+		if m == nil {
+			continue
+		}
+		if id, _ := m["orgId"].(float64); id == 1 {
+			role, _ := m["role"].(string)
+			switch strings.ToLower(role) {
+			case "viewer":
+				return viewer, nil
+			case "editor":
+				return editor, nil
+			case "admin":
+				return viewer, nil
+			default:
+				return none, nil
+			}
+		}
+	}
+
+	return none, nil
 }
 
 type annotation struct {

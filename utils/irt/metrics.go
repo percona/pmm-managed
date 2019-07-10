@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package irt provides Instrumented http.RoundTripper.
+// Package irt provides Instrumented http.RoundTrippers.
 package irt
 
 import (
@@ -24,8 +24,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// New returns http.RoundTripper instrumented with returned Prometheus metrics.
-func New(subsystem string, t http.RoundTripper) (http.RoundTripper, prometheus.Collector) {
+// WithMetrics returns http.RoundTripper instrumented with returned Prometheus metrics.
+func WithMetrics(t http.RoundTripper, subsystem string) (http.RoundTripper, prometheus.Collector) {
 	m := &metrics{
 		inflight: prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: "promhttp",

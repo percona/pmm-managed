@@ -240,7 +240,7 @@ func runHTTP1Server(ctx context.Context, logs *logs.Logs) {
 
 	mux := http.NewServeMux()
 	addLogsHandler(mux, logs)
-	mux.Handle("/auth_request", grafana.NewAuthServer())
+	mux.Handle("/auth_request", grafana.NewAuthServer(grafana.NewClient(*grafanaAddrF)))
 	mux.Handle("/", proxyMux)
 
 	server := &http.Server{
