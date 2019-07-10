@@ -21,13 +21,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 
+	"github.com/percona/pmm-managed/utils/irt"
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
@@ -35,14 +38,38 @@ import (
 type Client struct {
 	addr string
 	http *http.Client
+	irtm prometheus.Collector
 }
 
 // NewClient creates a new client for given Grafana address.
 func NewClient(addr string) *Client {
+	transport, irtm := irt.New("grafana_client", &http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout:   3 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		MaxIdleConns:          50,
+		IdleConnTimeout:       90 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	})
+
 	return &Client{
 		addr: addr,
-		http: &http.Client{},
+		http: &http.Client{
+			Transport: transport,
+		},
+		irtm: irtm,
 	}
+}
+
+// Describe implements prometheus.Collector.
+func (c *Client) Describe(ch chan<- *prometheus.Desc) {
+	c.irtm.Describe(ch)
+}
+
+// Collect implements prometheus.Collector.
+func (c *Client) Collect(ch chan<- prometheus.Metric) {
+	c.irtm.Collect(ch)
 }
 
 type annotation struct {
@@ -142,3 +169,8 @@ func (c *Client) findAnnotations(ctx context.Context, from, to time.Time) ([]ann
 	}
 	return response, nil
 }
+
+// check interfaces
+var (
+	_ prometheus.Collector = (*Client)(nil)
+)

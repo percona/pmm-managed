@@ -17,10 +17,12 @@
 package grafana
 
 import (
+	"context"
 	"net/http"
 	"net/http/httputil"
-	"path"
+	"time"
 
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -36,22 +38,43 @@ func NewAuthServer() *AuthServer {
 	}
 }
 
-// ServeHTTP serves internal location /auth/<role>.
+// ServeHTTP serves internal location /auth_request.
 func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	b, err := httputil.DumpRequest(req, true)
-	if err != nil {
-		s.l.Errorf("Failed to dump request: %v.", err)
-	}
-	s.l.Debugf("Request:\n%s", b)
+	// fail-safe
+	ctx, cancel := context.WithTimeout(req.Context(), 3*time.Second)
+	defer cancel()
 
-	_, role := path.Split(req.URL.Path)
-	if role != "admin" && role != "editor" && role != "viewer" {
-		s.l.Errorf("Unexpected role %q.", role)
+	if err := s.authenticate(ctx, req); err != nil {
+		s.l.Errorf("%+v", err)
 		rw.WriteHeader(500)
 		return
 	}
-	s.l.Debugf("Role: %s", role)
+}
+
+func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) error {
+	// TODO l := logger.Get(ctx) once we have it after https://jira.percona.com/browse/PMM-4326
+	l := s.l.Logger
+
+	if l.GetLevel() >= logrus.DebugLevel {
+		b, err := httputil.DumpRequest(req, true)
+		if err != nil {
+			s.l.Errorf("Failed to dump request: %v.", err)
+		}
+		s.l.Debugf("Request:\n%s", b)
+	}
+
+	if req.URL.Path != "/auth_request" {
+		return errors.Errorf("Unexpected path %s.", req.URL.Path)
+	}
+
+	username, password, ok := req.BasicAuth()
+	if ok {
+		// TODO real code
+		_ = username
+		_ = password
+		return nil
+	}
 
 	s.l.Warnf("Unhandled request, authenticating anyway.")
-	rw.WriteHeader(200)
+	return nil
 }
