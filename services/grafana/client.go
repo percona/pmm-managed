@@ -34,13 +34,11 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/percona/pmm-managed/utils/irt"
-	"github.com/percona/pmm-managed/utils/logger"
 )
 
 // Client represents a client for Grafana API.
 type Client struct {
 	addr string
-	l    *logrus.Entry
 	http *http.Client
 	irtm prometheus.Collector
 }
@@ -57,15 +55,13 @@ func NewClient(addr string) *Client {
 		ExpectContinueTimeout: 1 * time.Second,
 	}
 
-	l := logrus.WithField("component", "grafana/client")
-	if l.Logger.GetLevel() >= logrus.TraceLevel {
-		t = irt.WithLogger(t, l.Tracef)
+	if logrus.GetLevel() >= logrus.TraceLevel {
+		t = irt.WithLogger(t, logrus.WithField("component", "grafana/client").Tracef)
 	}
 	t, irtm := irt.WithMetrics(t, "grafana_client")
 
 	return &Client{
 		addr: addr,
-		l:    l,
 		http: &http.Client{
 			Transport: t,
 		},
@@ -83,15 +79,20 @@ func (c *Client) Collect(ch chan<- prometheus.Metric) {
 	c.irtm.Collect(ch)
 }
 
-type authError struct {
+// apiError contains unexpected response details.
+type apiError struct {
 	code    int
 	headers http.Header
 }
 
-func (a *authError) Error() string {
+// Error implements error interface.
+func (a *apiError) Error() string {
 	return fmt.Sprintf("status code %d", a.code)
 }
 
+// get makes GET request to the given path with given headers and decodes JSON response with 200 OK status
+// to respBody. It returns apiError on any other status, or other fatal errors.
+// ctx is used only for cancelation.
 func (c *Client) get(ctx context.Context, path string, authHeaders http.Header, respBody interface{}) error {
 	u := url.URL{
 		Scheme: "http",
@@ -114,7 +115,7 @@ func (c *Client) get(ctx context.Context, path string, authHeaders http.Header, 
 	defer resp.Body.Close() //nolint:errcheck
 
 	if resp.StatusCode != 200 {
-		return &authError{
+		return &apiError{
 			code:    resp.StatusCode,
 			headers: resp.Header,
 		}
@@ -126,9 +127,10 @@ func (c *Client) get(ctx context.Context, path string, authHeaders http.Header, 
 	return nil
 }
 
-// isGrafanaAdmin returns true if current authenticated user is Grafana (super) admin.
+// isGrafanaAdmin returns true if currently authenticated user is Grafana (super) admin.
+// ctx is used only for cancelation.
 func (c *Client) isGrafanaAdmin(ctx context.Context, authHeaders http.Header) (bool, error) {
-	// https://grafana.com/docs/http_api/user/#actual-user - work with any authentication
+	// https://grafana.com/docs/http_api/user/#actual-user - works with any authentication
 
 	var m map[string]interface{}
 	if err := c.get(ctx, "/api/user", authHeaders, &m); err != nil {
@@ -139,17 +141,36 @@ func (c *Client) isGrafanaAdmin(ctx context.Context, authHeaders http.Header) (b
 	return a, nil
 }
 
-type role string
+// role defines Grafana user role within the organization.
+// Role with more permissions has larger numerical value: viewer < editor, etc.
+type role int
 
 const (
-	none   role = "none"
-	viewer role = "viewer"
-	editor role = "editor"
-	admin  role = "admin"
+	none role = iota
+	viewer
+	editor
+	admin
 )
 
+func (r role) String() string {
+	switch r {
+	case none:
+		return "none"
+	case viewer:
+		return "viewer"
+	case editor:
+		return "editor"
+	case admin:
+		return "admin"
+	default:
+		return fmt.Sprintf("unexpected role %d", int(r))
+	}
+}
+
+// getRole returns currently authenticated user's role in default organization (with ID 1).
+// ctx is used only for cancelation.
 func (c *Client) getRole(ctx context.Context, authHeaders http.Header) (role, error) {
-	// https://grafana.com/docs/http_api/user/#organizations-of-the-actual-user
+	// https://grafana.com/docs/http_api/user/#organizations-of-the-actual-user - works with any authentication
 
 	var s []interface{}
 	if err := c.get(ctx, "/api/user/orgs", authHeaders, &s); err != nil {
@@ -227,15 +248,14 @@ func (c *Client) CreateAnnotation(ctx context.Context, tags []string, text strin
 		Host:   c.addr,
 		Path:   "/api/annotations",
 	}
+
+	// TODO should be updated to use c.get-like helper
+
 	resp, err := c.http.Post(u.String(), "application/json", &buf)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to make request")
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		logger.Get(ctx).Warnf("Grafana responded with status %d.", resp.StatusCode)
-	}
+	defer resp.Body.Close() //nolint:errcheck
 
 	var response struct {
 		Message string `json:"message"`
@@ -258,15 +278,14 @@ func (c *Client) findAnnotations(ctx context.Context, from, to time.Time) ([]ann
 			"to":   []string{strconv.FormatInt(to.UnixNano()/int64(time.Millisecond), 10)},
 		}.Encode(),
 	}
+
+	// TODO should be updated to use c.get
+
 	resp, err := c.http.Get(u.String())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to make request")
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		logger.Get(ctx).Warnf("Grafana responded with status %d.", resp.StatusCode)
-	}
+	defer resp.Body.Close() //nolint:errcheck
 
 	var response []annotation
 	if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {
@@ -282,4 +301,6 @@ func (c *Client) findAnnotations(ctx context.Context, from, to time.Time) ([]ann
 // check interfaces
 var (
 	_ prometheus.Collector = (*Client)(nil)
+	_ error                = (*apiError)(nil)
+	_ fmt.Stringer         = role(0)
 )

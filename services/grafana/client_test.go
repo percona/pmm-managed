@@ -18,22 +18,63 @@ package grafana
 
 import (
 	"context"
+	"net/http"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/percona/pmm-managed/utils/logger"
 )
 
 func TestClient(t *testing.T) {
+	// logrus.SetLevel(logrus.TraceLevel)
+
+	ctx := context.Background()
+	c := NewClient("127.0.0.1:3000")
+
+	req, err := http.NewRequest("GET", "/dummy", nil)
+	require.NoError(t, err)
+	req.SetBasicAuth("admin", "admin")
+	authHeaders := req.Header
+
+	t.Run("isGrafanaAdmin", func(t *testing.T) {
+		t.Run("Normal", func(t *testing.T) {
+			admin, err := c.isGrafanaAdmin(ctx, authHeaders)
+			assert.NoError(t, err)
+			assert.True(t, admin)
+		})
+
+		t.Run("Unauthorized", func(t *testing.T) {
+			admin, err := c.isGrafanaAdmin(ctx, nil)
+			apiError, _ := err.(*apiError)
+			require.NotNil(t, apiError)
+			assert.Equal(t, 401, apiError.code)
+			assert.False(t, admin)
+		})
+	})
+
+	t.Run("getRole", func(t *testing.T) {
+		t.Run("Normal", func(t *testing.T) {
+			role, err := c.getRole(ctx, authHeaders)
+			assert.NoError(t, err)
+			assert.Equal(t, admin, role)
+			assert.Equal(t, "admin", role.String())
+		})
+
+		t.Run("Unauthorized", func(t *testing.T) {
+			role, err := c.getRole(ctx, nil)
+			apiError, _ := err.(*apiError)
+			require.NotNil(t, apiError)
+			assert.Equal(t, 401, apiError.code)
+			assert.Equal(t, none, role)
+			assert.Equal(t, "none", role.String())
+		})
+	})
+
 	t.Run("CreateAnnotation", func(t *testing.T) {
 		t.Skip("https://jira.percona.com/browse/PMM-3812")
 
 		from := time.Now()
-		ctx := logger.Set(context.Background(), t.Name())
-		c := NewClient("127.0.0.1:3000")
 
 		t.Run("Normal", func(t *testing.T) {
 			msg, err := c.CreateAnnotation(ctx, []string{"tag1", "tag2"}, "Normal")
