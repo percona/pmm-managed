@@ -22,6 +22,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -81,30 +82,33 @@ func (c *Client) Collect(ch chan<- prometheus.Metric) {
 
 // apiError contains unexpected response details.
 type apiError struct {
-	code    int
-	headers http.Header
+	code int
+	body string
 }
 
 // Error implements error interface.
 func (a *apiError) Error() string {
-	return fmt.Sprintf("status code %d", a.code)
+	return fmt.Sprintf("%d: %s", a.code, a.body)
 }
 
-// get makes GET request to the given path with given headers and decodes JSON response with 200 OK status
+// do makes HTTP request with given parameters, and decodes JSON response with 200 OK status
 // to respBody. It returns apiError on any other status, or other fatal errors.
 // ctx is used only for cancelation.
-func (c *Client) get(ctx context.Context, path string, authHeaders http.Header, respBody interface{}) error {
+func (c *Client) do(ctx context.Context, method, path string, headers http.Header, body []byte, respBody interface{}) error {
 	u := url.URL{
 		Scheme: "http",
 		Host:   c.addr,
 		Path:   path,
 	}
-	req, err := http.NewRequest("GET", u.String(), nil)
+	req, err := http.NewRequest(method, u.String(), bytes.NewReader(body))
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	for k := range authHeaders {
-		req.Header.Set(k, authHeaders.Get(k))
+	if len(body) != 0 {
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	}
+	for k := range headers {
+		req.Header.Set(k, headers.Get(k))
 	}
 
 	req = req.WithContext(ctx)
@@ -114,31 +118,23 @@ func (c *Client) get(ctx context.Context, path string, authHeaders http.Header, 
 	}
 	defer resp.Body.Close() //nolint:errcheck
 
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return errors.WithStack(err)
+	}
 	if resp.StatusCode != 200 {
 		return &apiError{
-			code:    resp.StatusCode,
-			headers: resp.Header,
+			code: resp.StatusCode,
+			body: string(b),
 		}
 	}
 
-	if err = json.NewDecoder(resp.Body).Decode(respBody); err != nil {
-		return errors.WithStack(err)
+	if respBody != nil {
+		if err = json.Unmarshal(b, respBody); err != nil {
+			return errors.WithStack(err)
+		}
 	}
 	return nil
-}
-
-// isGrafanaAdmin returns true if currently authenticated user is Grafana (super) admin.
-// ctx is used only for cancelation.
-func (c *Client) isGrafanaAdmin(ctx context.Context, authHeaders http.Header) (bool, error) {
-	// https://grafana.com/docs/http_api/user/#actual-user - works with any authentication
-
-	var m map[string]interface{}
-	if err := c.get(ctx, "/api/user", authHeaders, &m); err != nil {
-		return false, err
-	}
-
-	a, _ := m["isGrafanaAdmin"].(bool)
-	return a, nil
 }
 
 // role defines Grafana user role within the organization.
@@ -150,30 +146,41 @@ const (
 	viewer
 	editor
 	admin
+	grafanaAdmin
 )
 
 func (r role) String() string {
 	switch r {
 	case none:
-		return "none"
+		return "None"
 	case viewer:
-		return "viewer"
+		return "Viewer"
 	case editor:
-		return "editor"
+		return "Editor"
 	case admin:
-		return "admin"
+		return "Admin"
+	case grafanaAdmin:
+		return "GrafanaAdmin"
 	default:
 		return fmt.Sprintf("unexpected role %d", int(r))
 	}
 }
 
-// getRole returns currently authenticated user's role in default organization (with ID 1).
+// getRole returns grafanaAdmin if currently authenticated user is a Grafana (super) admin.
+// Otherwise, it returns a role in the default organization (with ID 1).
 // ctx is used only for cancelation.
 func (c *Client) getRole(ctx context.Context, authHeaders http.Header) (role, error) {
-	// https://grafana.com/docs/http_api/user/#organizations-of-the-actual-user - works with any authentication
+	// https://grafana.com/docs/http_api/user/#actual-user - works with any authentication
+	var m map[string]interface{}
+	if err := c.do(ctx, "GET", "/api/user", authHeaders, nil, &m); err == nil {
+		if a, _ := m["isGrafanaAdmin"].(bool); a {
+			return grafanaAdmin, nil
+		}
+	}
 
+	// https://grafana.com/docs/http_api/user/#organizations-of-the-actual-user - works with any authentication
 	var s []interface{}
-	if err := c.get(ctx, "/api/user/orgs", authHeaders, &s); err != nil {
+	if err := c.do(ctx, "GET", "/api/user/orgs", authHeaders, nil, &s); err != nil {
 		return none, err
 	}
 
@@ -200,6 +207,41 @@ func (c *Client) getRole(ctx context.Context, authHeaders http.Header) (role, er
 	}
 
 	return none, nil
+}
+
+func (c *Client) testCreateUser(ctx context.Context, login string, role role, authHeaders http.Header) (int, error) {
+	// https://grafana.com/docs/http_api/admin/#global-users
+	b, err := json.Marshal(map[string]string{
+		"name":     login,
+		"email":    login + "@percona.invalid",
+		"login":    login,
+		"password": login,
+	})
+	if err != nil {
+		return 0, errors.WithStack(err)
+	}
+	var m map[string]interface{}
+	if err = c.do(ctx, "POST", "/api/admin/users", authHeaders, b, &m); err != nil {
+		return 0, err
+	}
+	userID := int(m["id"].(float64))
+
+	// https://grafana.com/docs/http_api/org/#updates-the-given-user
+	b, err = json.Marshal(map[string]string{
+		"role": role.String(),
+	})
+	if err != nil {
+		return 0, errors.WithStack(err)
+	}
+	if err = c.do(ctx, "PATCH", "/api/org/users/"+strconv.Itoa(userID), authHeaders, b, nil); err != nil {
+		return 0, err
+	}
+	return userID, nil
+}
+
+func (c *Client) testDeleteUser(ctx context.Context, userID int, authHeaders http.Header) error {
+	// https://grafana.com/docs/http_api/admin/#delete-global-user
+	return c.do(ctx, "DELETE", "/api/admin/users/"+strconv.Itoa(userID), authHeaders, nil, nil)
 }
 
 type annotation struct {
@@ -249,7 +291,7 @@ func (c *Client) CreateAnnotation(ctx context.Context, tags []string, text strin
 		Path:   "/api/annotations",
 	}
 
-	// TODO should be updated to use c.get-like helper
+	// TODO should be updated to use c.do
 
 	resp, err := c.http.Post(u.String(), "application/json", &buf)
 	if err != nil {
@@ -279,7 +321,7 @@ func (c *Client) findAnnotations(ctx context.Context, from, to time.Time) ([]ann
 		}.Encode(),
 	}
 
-	// TODO should be updated to use c.get
+	// TODO should be updated to use c.do
 
 	resp, err := c.http.Get(u.String())
 	if err != nil {

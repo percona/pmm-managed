@@ -21,23 +21,43 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httputil"
+	"path"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
+// rules maps original URL prefix to minimal required role.
+// TODO https://jira.percona.com/browse/PMM-4338
+var rules = map[string]role{
+	"/v0/inventory/Nodes/List":    editor,
+	"/v0/inventory/Nodes/Get":     editor,
+	"/v0/inventory/Services/List": editor,
+	"/v0/inventory/Services/Get":  editor,
+	"/v0/inventory/Agents/List":   editor,
+	"/v0/inventory/Agents/Get":    editor,
+
+	"/v0/inventory/": admin,
+
+	"/": admin, // fail-safe
+}
+
 // AuthServer authenticates incoming requests via Grafana API.
 type AuthServer struct {
-	c *Client
-	l *logrus.Entry
+	c             *Client
+	l             *logrus.Entry
+	skipAuthCheck bool // FIXME Remove after https://jira.percona.com/browse/PMM-4338
+
+	// TODO server metrics should be provided by middleware https://jira.percona.com/browse/PMM-4326
 }
 
 // NewAuthServer creates new AuthServer.
 func NewAuthServer(c *Client) *AuthServer {
 	return &AuthServer{
-		c: c,
-		l: logrus.WithField("component", "grafana/auth"),
+		c:             c,
+		l:             logrus.WithField("component", "grafana/auth"),
+		skipAuthCheck: true, // FIXME https://jira.percona.com/browse/PMM-4338
 	}
 }
 
@@ -48,9 +68,14 @@ func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	defer cancel()
 
 	if err := s.authenticate(ctx, req); err != nil {
-		s.l.Errorf("%+v", err)
-		rw.WriteHeader(500)
-		return
+		switch e := err.(type) {
+		case *apiError:
+			s.l.Warnf("%+v", err)
+			rw.WriteHeader(e.code)
+		default:
+			s.l.Errorf("%+v", err)
+			rw.WriteHeader(500)
+		}
 	}
 }
 
@@ -71,6 +96,9 @@ func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) error 
 	}
 
 	uri := req.Header.Get("X-Original-Uri")
+	if uri == "" {
+		return errors.Errorf("Empty X-Original-Uri.")
+	}
 	l = l.WithField("req", fmt.Sprintf("%s %s", req.Header.Get("X-Original-Method"), uri))
 
 	authHeaders := make(http.Header)
@@ -83,12 +111,40 @@ func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) error 
 		}
 	}
 
-	if isGrafanaAdmin, _ := s.c.isGrafanaAdmin(ctx, authHeaders); isGrafanaAdmin {
+	role, err := s.c.getRole(ctx, authHeaders)
+	l = l.WithField("role", role.String())
+	if err != nil {
+		if s.skipAuthCheck {
+			l.Warnf("Not authenticated, but authenticating anyway: %v", err)
+			err = nil
+		}
+		return err
+	}
+
+	if role == grafanaAdmin {
 		l.Debugf("Grafana admin, allowing access.")
 		return nil
 	}
 
-	role, err := s.c.getRole(ctx, authHeaders)
-	l.Warnf("Authenticating anyway: %q %v", role, err)
-	return nil
+	// find the longest prefix present in rules
+	for {
+		if _, ok := rules[uri]; ok {
+			break
+		}
+		uri = path.Dir(uri)
+	}
+	minRole := rules[uri]
+	if minRole <= role {
+		l.Debugf("Minimal required role is %q, granting access.", minRole)
+		return nil
+	}
+
+	if s.skipAuthCheck {
+		l.Warnf("Minimal required role is %q, but authenticating anyway.", minRole)
+		return nil
+	}
+	return &apiError{
+		code: 403,
+		body: fmt.Sprintf("Minimal required role is %q, actual role is %q.", minRole, role),
+	}
 }

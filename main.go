@@ -205,7 +205,7 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 
 // runHTTP1Server runs grpc-gateway and other HTTP 1.1 APIs (like auth_request and logs.zip)
 // until context is canceled, then gracefully stops it.
-func runHTTP1Server(ctx context.Context, logs *logs.Logs) {
+func runHTTP1Server(ctx context.Context, logs *logs.Logs, authServer *grafana.AuthServer) {
 	l := logrus.WithField("component", "JSON")
 	l.Infof("Starting server on http://%s/ ...", http1Addr)
 
@@ -238,7 +238,7 @@ func runHTTP1Server(ctx context.Context, logs *logs.Logs) {
 
 	mux := http.NewServeMux()
 	addLogsHandler(mux, logs)
-	mux.Handle("/auth_request", grafana.NewAuthServer(grafana.NewClient(*grafanaAddrF)))
+	mux.Handle("/auth_request", authServer)
 	mux.Handle("/", proxyMux)
 
 	server := &http.Server{
@@ -263,8 +263,7 @@ func runHTTP1Server(ctx context.Context, logs *logs.Logs) {
 
 // runDebugServer runs debug server until context is canceled, then gracefully stops it.
 // TODO merge with HTTP1 server? https://jira.percona.com/browse/PMM-4326
-func runDebugServer(ctx context.Context, collectors ...prom.Collector) {
-	prom.MustRegister(collectors...)
+func runDebugServer(ctx context.Context) {
 	handler := promhttp.HandlerFor(prom.DefaultGatherer, promhttp.HandlerOpts{
 		ErrorLog:      logrus.WithField("component", "metrics"),
 		ErrorHandling: promhttp.ContinueOnError,
@@ -458,8 +457,14 @@ func main() {
 	}
 
 	qanClient := getQANClient(ctx, db)
-	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient)
 	logs := logs.New(version.Version)
+
+	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient)
+	prom.MustRegister(agentsRegistry)
+
+	grafanaClient := grafana.NewClient(*grafanaAddrF)
+	prom.MustRegister(grafanaClient)
+	authServer := grafana.NewAuthServer(grafanaClient)
 
 	deps := &serviceDependencies{
 		db:             db,
@@ -480,13 +485,13 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		runHTTP1Server(ctx, logs)
+		runHTTP1Server(ctx, logs, authServer)
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		runDebugServer(ctx, agentsRegistry)
+		runDebugServer(ctx)
 	}()
 
 	wg.Add(1)

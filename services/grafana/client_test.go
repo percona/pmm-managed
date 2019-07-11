@@ -18,6 +18,7 @@ package grafana
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -37,38 +38,55 @@ func TestClient(t *testing.T) {
 	req.SetBasicAuth("admin", "admin")
 	authHeaders := req.Header
 
-	t.Run("isGrafanaAdmin", func(t *testing.T) {
-		t.Run("Normal", func(t *testing.T) {
-			admin, err := c.isGrafanaAdmin(ctx, authHeaders)
-			assert.NoError(t, err)
-			assert.True(t, admin)
-		})
-
-		t.Run("Unauthorized", func(t *testing.T) {
-			admin, err := c.isGrafanaAdmin(ctx, nil)
-			apiError, _ := err.(*apiError)
-			require.NotNil(t, apiError)
-			assert.Equal(t, 401, apiError.code)
-			assert.False(t, admin)
-		})
-	})
-
 	t.Run("getRole", func(t *testing.T) {
-		t.Run("Normal", func(t *testing.T) {
+		t.Run("GrafanaAdmin", func(t *testing.T) {
+			t.Parallel()
+
 			role, err := c.getRole(ctx, authHeaders)
 			assert.NoError(t, err)
-			assert.Equal(t, admin, role)
-			assert.Equal(t, "admin", role.String())
+			assert.Equal(t, grafanaAdmin, role)
+			assert.Equal(t, "GrafanaAdmin", role.String())
 		})
 
 		t.Run("Unauthorized", func(t *testing.T) {
+			t.Parallel()
+
 			role, err := c.getRole(ctx, nil)
 			apiError, _ := err.(*apiError)
 			require.NotNil(t, apiError)
 			assert.Equal(t, 401, apiError.code)
 			assert.Equal(t, none, role)
-			assert.Equal(t, "none", role.String())
+			assert.Equal(t, "None", role.String())
 		})
+
+		for _, role := range []role{viewer, editor, admin} {
+			role := role
+
+			t.Run(role.String(), func(t *testing.T) {
+				t.Parallel()
+
+				login := fmt.Sprintf("%s-%d", role, time.Now().Nanosecond())
+				userID, err := c.testCreateUser(ctx, login, role, authHeaders)
+				require.NoError(t, err)
+				require.NotZero(t, userID)
+				if err != nil {
+					defer func() {
+						err = c.testDeleteUser(ctx, userID, authHeaders)
+						require.NoError(t, err)
+					}()
+				}
+
+				req, err := http.NewRequest("GET", "/dummy", nil)
+				require.NoError(t, err)
+				req.SetBasicAuth(login, login)
+				userAuthHeaders := req.Header
+
+				actualRole, err := c.getRole(ctx, userAuthHeaders)
+				assert.NoError(t, err)
+				assert.Equal(t, role, actualRole)
+				assert.Equal(t, role.String(), actualRole.String())
+			})
+		}
 	})
 
 	t.Run("CreateAnnotation", func(t *testing.T) {
