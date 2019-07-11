@@ -69,7 +69,6 @@ import (
 	"github.com/percona/pmm-managed/services/telemetry"
 	"github.com/percona/pmm-managed/utils/interceptors"
 	"github.com/percona/pmm-managed/utils/logger"
-	"github.com/percona/pmm-managed/utils/ports"
 )
 
 const (
@@ -120,7 +119,6 @@ type serviceDependencies struct {
 	db             *reform.DB
 	prometheus     *prometheus.Service
 	server         *server.Server
-	portsRegistry  *ports.Registry
 	agentsRegistry *agents.Registry
 	logs           *logs.Logs
 }
@@ -467,7 +465,6 @@ func main() {
 		db:             db,
 		prometheus:     prometheus,
 		server:         server,
-		portsRegistry:  ports.NewRegistry(10000, 10999, nil),
 		agentsRegistry: agentsRegistry,
 		logs:           logs,
 	}
