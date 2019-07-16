@@ -52,7 +52,7 @@ func init() {
 
 	debugF := flag.Bool("pmm.debug", false, "Enable debug output [PMM_DEBUG].")
 	traceF := flag.Bool("pmm.trace", false, "Enable trace output [PMM_TRACE].")
-	serverURLF := flag.String("pmm.server-url", "https://127.0.0.1:8443/", "PMM Server URL [PMM_SERVER_URL].")
+	serverURLF := flag.String("pmm.server-url", "https://admin:admin@127.0.0.1:8443/", "PMM Server URL [PMM_SERVER_URL].")
 	serverInsecureTLSF := flag.Bool("pmm.server-insecure-tls", false, "Skip PMM Server TLS certificate validation.")
 	flag.Parse()
 	envvars := map[string]*flag.Flag{

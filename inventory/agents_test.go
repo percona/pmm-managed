@@ -335,8 +335,8 @@ func TestPMMAgent(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		assert.NoError(t, err)
-		assert.Equal(t, &agents.ListAgentsOKBody{}, listAgentsOK.Payload)
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Agent with ID %q not found.", pmmAgentID)
+		assert.Nil(t, listAgentsOK)
 	})
 
 	t.Run("Remove not-exist agent", func(t *testing.T) {

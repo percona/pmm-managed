@@ -520,8 +520,8 @@ func TestRemoveNode(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		assert.NoError(t, err)
-		assert.Equal(t, &agents.ListAgentsOKBody{}, listAgentsOK.Payload)
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Node with ID %q not found.", node.NodeID)
+		assert.Nil(t, listAgentsOK)
 	})
 
 	t.Run("Not-exist node", func(t *testing.T) {

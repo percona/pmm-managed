@@ -478,9 +478,8 @@ func TestRemoveMySQL(t *testing.T) {
 				ServiceID: serviceID,
 			},
 		})
-		assert.NoError(t, err)
-		assert.Equal(t, agents.ListAgentsOKBody{}, *listAgents.Payload)
-		defer removeAllAgentsInList(t, listAgents)
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Service with ID %q not found.", serviceID)
+		assert.Nil(t, listAgents)
 	})
 
 	t.Run("By ID", func(t *testing.T) {
@@ -502,6 +501,7 @@ func TestRemoveMySQL(t *testing.T) {
 		if !noError || !notNil {
 			defer pmmapitests.RemoveServices(t, serviceID)
 		}
+
 		// Check that the service removed with agents.
 		listAgents, err := inventoryClient.Default.Agents.ListAgents(&agents.ListAgentsParams{
 			Context: pmmapitests.Context,
@@ -509,9 +509,8 @@ func TestRemoveMySQL(t *testing.T) {
 				ServiceID: serviceID,
 			},
 		})
-		assert.NoError(t, err)
-		assert.Equal(t, agents.ListAgentsOKBody{}, *listAgents.Payload)
-		defer removeAllAgentsInList(t, listAgents)
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Service with ID %q not found.", serviceID)
+		assert.Nil(t, listAgents)
 	})
 
 	t.Run("Both params", func(t *testing.T) {

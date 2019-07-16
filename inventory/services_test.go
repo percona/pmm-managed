@@ -210,8 +210,8 @@ func TestRemoveService(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		assert.NoError(t, err)
-		assert.Equal(t, &agents.ListAgentsOKBody{}, listAgentsOK.Payload)
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Service with ID %q not found.", serviceID)
+		assert.Nil(t, listAgentsOK)
 	})
 
 	t.Run("Not-exist service", func(t *testing.T) {
