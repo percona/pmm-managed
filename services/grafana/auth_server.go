@@ -47,12 +47,17 @@ var rules = map[string]role{
 
 	"/v0/qan/": admin,
 
-	"/v1/ChangeSettings": admin,
-	"/v1/GetSettings":    admin,
+	"/v1/Updates/Check":   grafanaAdmin,
+	"/v1/Updates/Perform": grafanaAdmin,
+
+	"/v1/Settings/Change": admin,
+	"/v1/Settings/Get":    admin,
+
+	"/v1/readyz": none,
+	"/ping":      viewer, // TODO switch to none when nginx is updated
 
 	"/v1/version":         viewer,
 	"/managed/v1/version": viewer, // PMM 1.x variant
-	"/ping":               viewer, // would leak info without any authentication
 
 	// "/" is a special case
 }

@@ -122,24 +122,6 @@ func (s *Server) UpdateSettings() error {
 	})
 }
 
-// Version returns PMM Server version.
-func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*serverpb.VersionResponse, error) {
-	res := &serverpb.VersionResponse{
-		Version:          version.Version,
-		PmmManagedCommit: version.FullCommit,
-	}
-
-	sec, err := strconv.ParseInt(version.Timestamp, 10, 64)
-	if err == nil {
-		res.Timestamp, err = ptypes.TimestampProto(time.Unix(sec, 0))
-	}
-	if err != nil {
-		logger.Get(ctx).Warn(err)
-	}
-
-	return res, nil
-}
-
 func convertSettings(s *models.Settings) *serverpb.Settings {
 	return &serverpb.Settings{
 		MetricsResolutions: &serverpb.MetricsResolutions{
@@ -149,6 +131,45 @@ func convertSettings(s *models.Settings) *serverpb.Settings {
 		},
 		Telemetry: !s.Telemetry.Disabled,
 	}
+}
+
+// Version returns PMM Server version.
+func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*serverpb.VersionResponse, error) {
+	res := &serverpb.VersionResponse{
+		Version:         "",    // TODO
+		UpdateAvailable: false, // TODO
+		Managed: &serverpb.VersionResponse_Managed{
+			Version:          version.Version,
+			PmmManagedCommit: version.FullCommit,
+		},
+	}
+
+	sec, err := strconv.ParseInt(version.Timestamp, 10, 64)
+	if err == nil {
+		res.Managed.Timestamp, err = ptypes.TimestampProto(time.Unix(sec, 0))
+	}
+	if err != nil {
+		logger.Get(ctx).Warn(err)
+	}
+
+	return res, nil
+}
+
+// Readiness returns an error when some PMM Server component is not ready yet or is being restarted.
+// It can be used as for Docker health check or Kubernetes readiness probe.
+func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) (*serverpb.ReadinessResponse, error) {
+	// TODO https://jira.percona.com/browse/PMM-1962
+	return &serverpb.ReadinessResponse{}, nil
+}
+
+// CheckUpdates checks PMM Server updates availability.
+func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesRequest) (*serverpb.CheckUpdatesResponse, error) {
+	return &serverpb.CheckUpdatesResponse{}, nil
+}
+
+// PerformUpdate performs PMM Server update.
+func (s *Server) PerformUpdate(ctx context.Context, req *serverpb.PerformUpdateRequest) (*serverpb.PerformUpdateResponse, error) {
+	panic("not implemented")
 }
 
 // GetSettings returns current PMM Server settings.

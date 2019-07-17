@@ -17,7 +17,8 @@ required = [
 # TODO switch to tags before PMM 2.0 release
 [[constraint]]
   name = "github.com/percona/pmm"
-  branch = "PMM-2.0"
+  # branch = "PMM-2.0"
+  branch = "PMM-4379-update-api-stubs"
 
 # TODO Remove when v1.1.0 is released.
 # https://github.com/AlekSi/pointer/milestone/1
