@@ -18,6 +18,7 @@ package prometheus
 
 import (
 	"net"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -226,7 +227,39 @@ func scrapeConfigForMongoDBExporter(interval time.Duration, node *models.Node, s
 }
 
 func scrapeConfigForPostgresExporter(interval time.Duration, node *models.Node, service *models.Service, agent *models.Agent) (*config.ScrapeConfig, error) {
-	return scrapeConfigForStandardExporter(interval, node, service, agent)
+	labels, err := mergeLabels(node, service, agent)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg := &config.ScrapeConfig{
+		JobName:        jobName(agent),
+		ScrapeInterval: model.Duration(interval),
+		ScrapeTimeout:  scrapeTimeout(interval),
+		MetricsPath:    "/metrics",
+		Params: url.Values{
+			"collect[]": []string{"exporter"},
+		},
+	}
+
+	port := pointer.GetUint16(agent.ListenPort)
+	if port == 0 {
+		return nil, nil
+	}
+	hostport := net.JoinHostPort(node.Address, strconv.Itoa(int(port)))
+	target := model.LabelSet{addressLabel: model.LabelValue(hostport)}
+	if err = target.Validate(); err != nil {
+		return nil, errors.Wrap(err, "failed to set targets")
+	}
+
+	cfg.ServiceDiscoveryConfig = sd_config.ServiceDiscoveryConfig{
+		StaticConfigs: []*targetgroup.Group{{
+			Targets: []model.LabelSet{target},
+			Labels:  labels,
+		}},
+	}
+
+	return cfg, nil
 }
 
 func scrapeConfigForProxySQLExporter(interval time.Duration, node *models.Node, service *models.Service, agent *models.Agent) (*config.ScrapeConfig, error) {
