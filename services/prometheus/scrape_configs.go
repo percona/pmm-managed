@@ -135,7 +135,7 @@ func jobName(agent *models.Agent) string {
 
 // scrapeConfigForStandardExporter returns scrape config for standard exporter: /metrics endpoint, high resolution.
 // If listen port is not known yet, it returns (nil, nil).
-func scrapeConfigForStandardExporter(interval time.Duration, node *models.Node, service *models.Service, agent *models.Agent) (*config.ScrapeConfig, error) {
+func scrapeConfigForStandardExporter(interval time.Duration, node *models.Node, service *models.Service, agent *models.Agent, collect []string) (*config.ScrapeConfig, error) {
 	labels, err := mergeLabels(node, service, agent)
 	if err != nil {
 		return nil, err
@@ -146,6 +146,12 @@ func scrapeConfigForStandardExporter(interval time.Duration, node *models.Node, 
 		ScrapeInterval: model.Duration(interval),
 		ScrapeTimeout:  scrapeTimeout(interval),
 		MetricsPath:    "/metrics",
+	}
+
+	if len(collect) > 0 {
+		cfg.Params = url.Values{
+			"collect[]": collect,
+		}
 	}
 
 	port := pointer.GetUint16(agent.ListenPort)
@@ -169,7 +175,7 @@ func scrapeConfigForStandardExporter(interval time.Duration, node *models.Node, 
 }
 
 func scrapeConfigForNodeExporter(interval time.Duration, node *models.Node, agent *models.Agent) (*config.ScrapeConfig, error) {
-	return scrapeConfigForStandardExporter(interval, node, nil, agent)
+	return scrapeConfigForStandardExporter(interval, node, nil, agent, []string{})
 }
 
 // scrapeConfigsForMySQLdExporter returns scrape config for mysqld_exporter.
@@ -223,45 +229,13 @@ func scrapeConfigsForMySQLdExporter(s *models.MetricsResolutions, node *models.N
 }
 
 func scrapeConfigForMongoDBExporter(interval time.Duration, node *models.Node, service *models.Service, agent *models.Agent) (*config.ScrapeConfig, error) {
-	return scrapeConfigForStandardExporter(interval, node, service, agent)
+	return scrapeConfigForStandardExporter(interval, node, service, agent, []string{})
 }
 
 func scrapeConfigForPostgresExporter(interval time.Duration, node *models.Node, service *models.Service, agent *models.Agent) (*config.ScrapeConfig, error) {
-	labels, err := mergeLabels(node, service, agent)
-	if err != nil {
-		return nil, err
-	}
-
-	cfg := &config.ScrapeConfig{
-		JobName:        jobName(agent),
-		ScrapeInterval: model.Duration(interval),
-		ScrapeTimeout:  scrapeTimeout(interval),
-		MetricsPath:    "/metrics",
-		Params: url.Values{
-			"collect[]": []string{"exporter"},
-		},
-	}
-
-	port := pointer.GetUint16(agent.ListenPort)
-	if port == 0 {
-		return nil, nil
-	}
-	hostport := net.JoinHostPort(node.Address, strconv.Itoa(int(port)))
-	target := model.LabelSet{addressLabel: model.LabelValue(hostport)}
-	if err = target.Validate(); err != nil {
-		return nil, errors.Wrap(err, "failed to set targets")
-	}
-
-	cfg.ServiceDiscoveryConfig = sd_config.ServiceDiscoveryConfig{
-		StaticConfigs: []*targetgroup.Group{{
-			Targets: []model.LabelSet{target},
-			Labels:  labels,
-		}},
-	}
-
-	return cfg, nil
+	return scrapeConfigForStandardExporter(interval, node, service, agent, []string{"exporter"})
 }
 
 func scrapeConfigForProxySQLExporter(interval time.Duration, node *models.Node, service *models.Service, agent *models.Agent) (*config.ScrapeConfig, error) {
-	return scrapeConfigForStandardExporter(interval, node, service, agent)
+	return scrapeConfigForStandardExporter(interval, node, service, agent, []string{})
 }
