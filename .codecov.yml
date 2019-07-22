@@ -1,2 +1,6 @@
 coverage:
-  range: "55...65"
+  range: "60...80"
+  status:
+    patch:
+      default:
+        threshold: 1

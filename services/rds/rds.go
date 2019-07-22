@@ -74,6 +74,7 @@ type ServiceConfig struct {
 	QAN           *qan.Service
 
 	RDSEnableGovCloud bool
+	RDSEnableCnCloud  bool
 }
 
 // Service is responsible for interactions with AWS RDS.
@@ -266,6 +267,12 @@ func (svc *Service) Discover(ctx context.Context, accessKey, secretKey string) (
 	if svc.RDSEnableGovCloud {
 		partitions = append(partitions, endpoints.AwsUsGovPartition())
 	}
+
+	// add AWS CN region
+	if svc.RDSEnableCnCloud {
+		partitions = append(partitions, endpoints.AwsCnPartition())
+	}
+
 	for _, p := range partitions {
 		for _, r := range p.Services()[endpoints.RdsServiceID].Regions() {
 			region := r.ID()
