@@ -136,17 +136,17 @@ func convertSettings(s *models.Settings) *serverpb.Settings {
 // Version returns PMM Server version.
 func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*serverpb.VersionResponse, error) {
 	res := &serverpb.VersionResponse{
-		Version:         "",    // TODO
-		UpdateAvailable: false, // TODO
+		CurrentVersion: version.Version, // TODO
+		LatestVersion:  version.Version, // TODO
 		Managed: &serverpb.VersionResponse_Managed{
-			Version:          version.Version,
-			PmmManagedCommit: version.FullCommit,
+			Version: version.Version,
+			Commit:  version.FullCommit,
 		},
 	}
 
-	sec, err := strconv.ParseInt(version.Timestamp, 10, 64)
+	t, err := version.Time()
 	if err == nil {
-		res.Managed.Timestamp, err = ptypes.TimestampProto(time.Unix(sec, 0))
+		res.Managed.Timestamp, err = ptypes.TimestampProto(t)
 	}
 	if err != nil {
 		logger.Get(ctx).Warn(err)
