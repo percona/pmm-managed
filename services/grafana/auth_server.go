@@ -31,7 +31,6 @@ import (
 )
 
 // rules maps original URL prefix to minimal required role.
-// TODO https://jira.percona.com/browse/PMM-4338
 var rules = map[string]role{
 	"/agent.Agent/Connect": none,
 
@@ -45,7 +44,7 @@ var rules = map[string]role{
 
 	"/v0/management/": admin,
 
-	"/v0/qan/": admin,
+	"/v0/qan/": editor,
 
 	"/v1/ChangeSettings": admin,
 	"/v1/GetSettings":    admin,
