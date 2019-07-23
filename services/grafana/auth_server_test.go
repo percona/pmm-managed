@@ -39,13 +39,13 @@ func TestAuthServer(t *testing.T) {
 	req.SetBasicAuth("admin", "admin")
 	authHeaders := req.Header
 
-	t.Run("GrafanaAdmin", func(t *testing.T) {
+	t.Run("GrafanaAdminFallback", func(t *testing.T) {
 		t.Parallel()
 
 		req, err := http.NewRequest("GET", "/auth_request", nil)
 		require.NoError(t, err)
 		req.SetBasicAuth("admin", "admin")
-		req.Header.Set("X-Original-Uri", "/prometheus/targets")
+		req.Header.Set("X-Original-Uri", "/foo")
 
 		err = s.authenticate(ctx, req)
 		assert.NoError(t, err)

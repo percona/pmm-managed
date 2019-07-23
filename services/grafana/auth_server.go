@@ -48,9 +48,13 @@ var rules = map[string]role{
 	"/v1/ChangeSettings": admin,
 	"/v1/GetSettings":    admin,
 
-	"/v1/version":         viewer,
-	"/managed/v1/version": viewer, // PMM 1.x variant
-	"/ping":               viewer, // would leak info without any authentication
+	"/qan/":        viewer,
+	"/prometheus/": admin,
+
+	// FIXME should be viewer, would leak info without any authentication
+	"/v1/version":         none,
+	"/managed/v1/version": none, // PMM 1.x variant
+	"/ping":               none,
 
 	// "/" is a special case
 }
@@ -171,6 +175,7 @@ func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) error 
 	}
 	role, err := s.c.getRole(ctx, authHeaders)
 	if err != nil {
+		l.Warnf("%s", err)
 		return err
 	}
 	l = l.WithField("role", role.String())
