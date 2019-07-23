@@ -21,6 +21,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/qanpb"
 	"github.com/pkg/errors"
@@ -130,11 +131,20 @@ func (c *Client) Collect(ctx context.Context, req *agentpb.CollectRequest) error
 		mb := &qanpb.MetricsBucket{
 			Queryid:              m.Common.Queryid,
 			Fingerprint:          m.Common.Fingerprint,
+			ServiceName:          service.ServiceName,
 			Database:             m.Common.Database,
 			Schema:               m.Common.Schema,
 			Tables:               m.Common.Tables,
 			Username:             m.Common.Username,
 			ClientHost:           m.Common.ClientHost,
+			ReplicationSet:       service.ReplicationSet,
+			Cluster:              service.Cluster,
+			ServiceType:          string(service.ServiceType),
+			Environment:          service.Environment,
+			Az:                   node.AZ,
+			Region:               pointer.GetString(node.Region),
+			NodeModel:            node.NodeModel,
+			ContainerName:        pointer.GetString(node.ContainerName),
 			AgentId:              m.Common.AgentId,
 			AgentType:            m.Common.AgentType,
 			PeriodStartUnixSecs:  m.Common.PeriodStartUnixSecs,
@@ -164,19 +174,18 @@ func (c *Client) Collect(ctx context.Context, req *agentpb.CollectRequest) error
 		}
 
 		// in order of fields in MetricsBucket
-		for labelName, field := range map[string]*string{
-			"service_name":    &mb.ServiceName,
-			"replication_set": &mb.ReplicationSet,
-			"cluster":         &mb.Cluster,
-			"service_type":    &mb.ServiceType,
-			"environment":     &mb.Environment,
-			"az":              &mb.Az,
-			"region":          &mb.Region,
-			"node_model":      &mb.NodeModel,
-			"container_name":  &mb.ContainerName,
-			"agent_id":        &mb.AgentId,
+		for _, labelName := range []string{
+			"service_name",
+			"replication_set",
+			"cluster",
+			"service_type",
+			"environment",
+			"az",
+			"region",
+			"node_model",
+			"container_name",
+			"agent_id",
 		} {
-			*field = labels[labelName]
 			delete(labels, labelName)
 		}
 

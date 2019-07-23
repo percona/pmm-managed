@@ -55,6 +55,7 @@ func TestClient(t *testing.T) {
 				NodeName:     "test-generic-node",
 				Address:      "1.2.3.4",
 				CustomLabels: []byte(`{"_node_label": "foo"}`),
+				NodeModel:    "test-node-model",
 			},
 			&models.Agent{
 				AgentID:      "/agent_id/217907dc-d34d-4e2e-aa84-a1b765d49853",
@@ -190,6 +191,7 @@ func TestClient(t *testing.T) {
 					MQueryTimeSum:       1234,
 					ServiceName:         "test-mysql",
 					ServiceType:         "mysql",
+					NodeModel:           "test-node-model",
 					Labels: map[string]string{
 						"_agent_label":   "baz",
 						"_node_label":    "foo",
@@ -259,6 +261,7 @@ func TestClient(t *testing.T) {
 					NumQueries:  1,
 					ServiceName: "test-mongodb",
 					ServiceType: "mongodb",
+					NodeModel:   "test-node-model",
 					Labels: map[string]string{
 						"_agent_label":   "mongodb-baz",
 						"_node_label":    "foo",
@@ -332,6 +335,7 @@ func TestClient(t *testing.T) {
 					MQueryTimeSum:       55,
 					ServiceName:         "test-postgresql",
 					ServiceType:         "postgresql",
+					NodeModel:           "test-node-model",
 					Labels: map[string]string{
 						"_agent_label":   "postgres-baz",
 						"_node_label":    "foo",
