@@ -188,7 +188,7 @@ func (c *Client) Collect(ctx context.Context, req *agentpb.CollectRequest) error
 			*field = value
 		}
 
-		for _ ,labelName := range []string {
+		for _, labelName := range []string{
 			"agent_id",
 			"agent_type",
 			"service_id",
