@@ -33,6 +33,18 @@ import (
 var rules = map[string]role{
 	"/agent.Agent/Connect": none,
 
+	"/inventory.Agents/Get":    editor,
+	"/inventory.Agents/List":   editor,
+	"/inventory.Nodes/Get":     editor,
+	"/inventory.Nodes/List":    editor,
+	"/inventory.Services/Get":  editor,
+	"/inventory.Services/List": editor,
+	"/inventory.":              admin,
+
+	"/management.": admin,
+
+	"/server.": admin,
+
 	"/v0/inventory/Agents/Get":    editor,
 	"/v0/inventory/Agents/List":   editor,
 	"/v0/inventory/Nodes/Get":     editor,
@@ -43,18 +55,19 @@ var rules = map[string]role{
 
 	"/v0/management/": admin,
 
-	"/v0/qan/": editor,
-
 	"/v1/ChangeSettings": admin,
 	"/v1/GetSettings":    admin,
+
+	"/v0/qan/": editor,
 
 	"/qan/":        viewer,
 	"/prometheus/": admin,
 
 	// FIXME should be viewer, would leak info without any authentication
 	"/v1/version":         none,
+	"/v1/readyz":          none,
 	"/managed/v1/version": none, // PMM 1.x variant
-	"/ping":               none,
+	"/ping":               none, // PMM 1.x variant
 
 	// "/" is a special case
 }
