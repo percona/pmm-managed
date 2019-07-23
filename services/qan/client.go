@@ -21,7 +21,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/qanpb"
 	"github.com/pkg/errors"
@@ -137,14 +136,7 @@ func (c *Client) Collect(ctx context.Context, req *agentpb.CollectRequest) error
 			Tables:               m.Common.Tables,
 			Username:             m.Common.Username,
 			ClientHost:           m.Common.ClientHost,
-			ReplicationSet:       service.ReplicationSet,
-			Cluster:              service.Cluster,
 			ServiceType:          string(service.ServiceType),
-			Environment:          service.Environment,
-			Az:                   node.AZ,
-			Region:               pointer.GetString(node.Region),
-			NodeModel:            node.NodeModel,
-			ContainerName:        pointer.GetString(node.ContainerName),
 			AgentId:              m.Common.AgentId,
 			AgentType:            m.Common.AgentType,
 			PeriodStartUnixSecs:  m.Common.PeriodStartUnixSecs,
@@ -174,17 +166,37 @@ func (c *Client) Collect(ctx context.Context, req *agentpb.CollectRequest) error
 		}
 
 		// in order of fields in MetricsBucket
-		for _, labelName := range []string{
-			"service_name",
-			"replication_set",
-			"cluster",
-			"service_type",
-			"environment",
-			"az",
-			"region",
-			"node_model",
-			"container_name",
+		for labelName, field := range map[string]*string{
+			"service_name":    &mb.ServiceName,
+			"replication_set": &mb.ReplicationSet,
+			"cluster":         &mb.Cluster,
+			"environment":     &mb.Environment,
+			"az":              &mb.Az,
+			"region":          &mb.Region,
+			"node_model":      &mb.NodeModel,
+			"container_name":  &mb.ContainerName,
+		} {
+			value := labels[labelName]
+			delete(labels, labelName)
+			if *field != "" {
+				if *field == value {
+					c.l.Debugf("%q is not empty, but has the same value %q.", labelName, *field)
+				} else {
+					c.l.Warnf("%q is not empty: overwriting %q with %q.", labelName, *field, value)
+				}
+			}
+			*field = value
+		}
+
+		for _ ,labelName := range []string {
 			"agent_id",
+			"agent_type",
+			"service_id",
+			"service_type",
+			"service_name",
+			"node_id",
+			"node_type",
+			"node_name",
 		} {
 			delete(labels, labelName)
 		}
