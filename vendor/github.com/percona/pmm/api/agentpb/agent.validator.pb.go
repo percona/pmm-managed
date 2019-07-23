@@ -10,7 +10,6 @@ import (
 	_ "github.com/golang/protobuf/ptypes/timestamp"
 	github_com_mwitkow_go_proto_validators "github.com/mwitkow/go-proto-validators"
 	_ "github.com/percona/pmm/api/inventorypb"
-	_ "github.com/percona/pmm/api/qanpb"
 	math "math"
 )
 
@@ -31,9 +30,9 @@ func (this *Pong) Validate() error {
 	return nil
 }
 func (this *QANCollectRequest) Validate() error {
-	if this.Message != nil {
-		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Message); err != nil {
-			return github_com_mwitkow_go_proto_validators.FieldError("Message", err)
+	if this.Request != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Request); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("Request", err)
 		}
 	}
 	return nil
