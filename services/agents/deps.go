@@ -22,17 +22,14 @@ import (
 	"github.com/percona/pmm/api/agentpb"
 )
 
-//go:generate mockery -name=prometheusService -case=snake -inpkg -testonly
-//go:generate mockery -name=qanClient  -case=snake -inpkg -testonly
-
 // prometheusService is a subset of methods of prometheus.Service used by this package.
-// We use it instead of real type for testing and to avoid dependency cycle.
+// We use it instead of real type to avoid dependency cycle.
 type prometheusService interface {
 	UpdateConfiguration()
 }
 
 // qanClient is a subset of methods of qan.Client used by this package.
-// We use it instead of real type for testing and to avoid dependency cycle.
+// We use it instead of real type to avoid dependency cycle.
 type qanClient interface {
 	Collect(ctx context.Context, req *agentpb.CollectRequest) error
 }
