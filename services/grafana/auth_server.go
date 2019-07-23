@@ -31,7 +31,6 @@ import (
 )
 
 // rules maps original URL prefix to minimal required role.
-// TODO https://jira.percona.com/browse/PMM-4338
 var rules = map[string]role{
 	"/agent.Agent/Connect": none,
 
@@ -45,7 +44,7 @@ var rules = map[string]role{
 
 	"/v0/management/": admin,
 
-	"/v0/qan/": admin,
+	"/v0/qan/": editor,
 
 	"/v1/Updates/Check":   grafanaAdmin,
 	"/v1/Updates/Perform": grafanaAdmin,
@@ -53,9 +52,8 @@ var rules = map[string]role{
 	"/v1/Settings/Change": admin,
 	"/v1/Settings/Get":    admin,
 
-	"/v1/readyz": none,
-	"/ping":      viewer, // TODO switch to none when nginx is updated
-
+	"/v1/readyz":          none,
+	"/ping":               none,
 	"/v1/version":         viewer,
 	"/managed/v1/version": viewer, // PMM 1.x variant
 
