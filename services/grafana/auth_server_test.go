@@ -45,7 +45,7 @@ func TestAuthServer(t *testing.T) {
 		req, err := http.NewRequest("GET", "/auth_request", nil)
 		require.NoError(t, err)
 		req.SetBasicAuth("admin", "admin")
-		req.Header.Set("X-Original-Uri", "/")
+		req.Header.Set("X-Original-Uri", "/prometheus/targets")
 
 		err = s.authenticate(ctx, req)
 		assert.NoError(t, err)
@@ -67,7 +67,7 @@ func TestAuthServer(t *testing.T) {
 		"/v0/inventory/Nodes/":     admin,
 		"/v0/inventory/Nodes":      admin,
 		"/v0/inventory/":           admin,
-		"/":                        grafanaAdmin,
+		"/agent.Agent/Connect":     none,
 	} {
 		for _, role := range []role{viewer, editor, admin} {
 			uri := uri
@@ -98,7 +98,8 @@ func TestAuthServer(t *testing.T) {
 				if minRole <= role {
 					assert.NoError(t, err)
 				} else {
-					assert.EqualError(t, err, "403: Forbidden.")
+					msg := fmt.Sprintf("Minimal required role is %q.", minRole)
+					assert.EqualError(t, err, `authError: 403: `+msg)
 				}
 			})
 		}

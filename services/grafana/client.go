@@ -80,19 +80,19 @@ func (c *Client) Collect(ch chan<- prometheus.Metric) {
 	c.irtm.Collect(ch)
 }
 
-// apiError contains unexpected response details.
-type apiError struct {
+// clientError contains unexpected response details.
+type clientError struct {
 	code int
 	body string
 }
 
 // Error implements error interface.
-func (a *apiError) Error() string {
-	return fmt.Sprintf("%d: %s", a.code, a.body)
+func (a *clientError) Error() string {
+	return fmt.Sprintf("clientError: %d: %s", a.code, a.body)
 }
 
 // do makes HTTP request with given parameters, and decodes JSON response with 200 OK status
-// to respBody. It returns apiError on any other status, or other fatal errors.
+// to respBody. It returns wrapped clientError on any other status, or other fatal errors.
 // ctx is used only for cancelation.
 func (c *Client) do(ctx context.Context, method, path string, headers http.Header, body []byte, respBody interface{}) error {
 	u := url.URL{
@@ -123,10 +123,10 @@ func (c *Client) do(ctx context.Context, method, path string, headers http.Heade
 		return errors.WithStack(err)
 	}
 	if resp.StatusCode != 200 {
-		return &apiError{
+		return errors.WithStack(&clientError{
 			code: resp.StatusCode,
 			body: string(b),
-		}
+		})
 	}
 
 	if respBody != nil {
@@ -343,6 +343,6 @@ func (c *Client) findAnnotations(ctx context.Context, from, to time.Time) ([]ann
 // check interfaces
 var (
 	_ prometheus.Collector = (*Client)(nil)
-	_ error                = (*apiError)(nil)
+	_ error                = (*clientError)(nil)
 	_ fmt.Stringer         = role(0)
 )

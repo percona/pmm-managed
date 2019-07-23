@@ -18,7 +18,6 @@ package grafana
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
@@ -72,30 +71,39 @@ func NewAuthServer(c *Client) *AuthServer {
 	}
 }
 
+// authError contains authentication error details.
+type authError struct {
+	code int
+	msg  string
+}
+
+// Error implements error interface.
+func (a *authError) Error() string {
+	return fmt.Sprintf("authError: %d: %s", a.code, a.msg)
+}
+
 // ServeHTTP serves internal location /auth_request.
 func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// fail-safe
 	ctx, cancel := context.WithTimeout(req.Context(), 3*time.Second)
 	defer cancel()
 
-	if err := s.authenticate(ctx, req); err != nil {
-		switch e := err.(type) {
-		case *apiError:
-			// Add both error and message to mirror gRPC/grpc-gateway errors:
-			// https://github.com/grpc-ecosystem/grpc-gateway/blob/bebc7374a79e1105d786ef3468b474e47d652511/runtime/errors.go#L67-L75
-			m := map[string]interface{}{
-				"code":    e.code,
-				"error":   e.body,
-				"message": e.body,
-			}
-			rw.WriteHeader(e.code)
-			if err = json.NewEncoder(rw).Encode(m); err != nil {
-				s.l.Warnf("Failed to encode apiError: %s.", err)
-			}
-		default:
-			s.l.Errorf("%+v", err)
-			rw.WriteHeader(500)
-		}
+	err := s.authenticate(ctx, req)
+	if err == nil {
+		return
+	}
+
+	// response body is ignored by nginx
+	switch e := errors.Cause(err).(type) {
+	case *clientError:
+		s.l.Warnf("%+v", err)
+		rw.WriteHeader(e.code)
+	case *authError:
+		s.l.Warnf("%+v", err)
+		rw.WriteHeader(e.code)
+	default:
+		s.l.Errorf("%+v", err)
+		rw.WriteHeader(500)
 	}
 }
 
@@ -115,12 +123,43 @@ func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) error 
 		return errors.Errorf("Unexpected path %s.", req.URL.Path)
 	}
 
-	uri := req.Header.Get("X-Original-Uri")
-	if uri == "" {
+	origURI := req.Header.Get("X-Original-Uri")
+	if origURI == "" {
 		return errors.Errorf("Empty X-Original-Uri.")
 	}
-	l = l.WithField("req", fmt.Sprintf("%s %s", req.Header.Get("X-Original-Method"), uri))
+	l = l.WithField("req", fmt.Sprintf("%s %s", req.Header.Get("X-Original-Method"), origURI))
 
+	// find the longest prefix present in rules:
+	// /foo/bar -> /foo/ -> /foo -> /
+	prefix := origURI
+	for prefix != "/" {
+		if _, ok := rules[prefix]; ok {
+			break
+		}
+
+		if strings.HasSuffix(prefix, "/") {
+			prefix = strings.TrimSuffix(prefix, "/")
+		} else {
+			prefix = path.Dir(prefix) + "/"
+		}
+	}
+
+	// fallback to Grafana admin if there is no explicit rule
+	// TODO https://jira.percona.com/browse/PMM-4338
+	minRole, ok := rules[prefix]
+	if ok {
+		l = l.WithField("prefix", prefix)
+	} else {
+		l.Warnf("No explicit rule for %q, falling back to Grafana admin.", origURI)
+		minRole = grafanaAdmin
+	}
+
+	if minRole == none {
+		l.Debugf("Minimal required role is %q, granting access without checking Grafana.", minRole)
+		return nil
+	}
+
+	// check Grafana with some headers from request
 	authHeaders := make(http.Header)
 	for _, k := range []string{
 		"Authorization",
@@ -130,50 +169,21 @@ func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) error 
 			authHeaders.Set(k, v)
 		}
 	}
-
 	role, err := s.c.getRole(ctx, authHeaders)
-	l = l.WithField("role", role.String())
 	if err != nil {
 		return err
 	}
+	l = l.WithField("role", role.String())
 
 	if role == grafanaAdmin {
 		l.Debugf("Grafana admin, allowing access.")
 		return nil
 	}
 
-	// find the longest prefix present in rules:
-	// /foo/bar -> /foo/ -> /foo -> /
-	for uri != "/" {
-		if _, ok := rules[uri]; ok {
-			break
-		}
-
-		if strings.HasSuffix(uri, "/") {
-			uri = strings.TrimSuffix(uri, "/")
-		} else {
-			uri = path.Dir(uri) + "/"
-		}
-	}
-	l = l.WithField("uri", uri)
-
-	if uri == "/" {
-		l.Error("Unhandled URI.")
-		return &apiError{
-			code: 403,
-			body: "Forbidden.",
-		}
-	}
-
-	minRole := rules[uri]
 	if minRole <= role {
 		l.Debugf("Minimal required role is %q, granting access.", minRole)
 		return nil
 	}
 
-	l.Warnf("Minimal required role is %q.", minRole)
-	return &apiError{
-		code: 403,
-		body: "Forbidden.",
-	}
+	return &authError{code: 403, msg: fmt.Sprintf("Minimal required role is %q.", minRole)}
 }
