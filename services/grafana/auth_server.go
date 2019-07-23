@@ -52,6 +52,7 @@ var rules = map[string]role{
 	"/v1/Settings/Change": admin,
 	"/v1/Settings/Get":    admin,
 
+	// TODO cleanup
 	"/v1/readyz":          none,
 	"/ping":               none,
 	"/v1/version":         viewer,
