@@ -199,10 +199,15 @@ scrape_configs:
     - 127.0.0.1:7773
     labels:
       instance: pmm-server
-- job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr
+- job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_1s
+  params:
+    collect[]:
+    - global_status
+    - info_schema.innodb_metrics
+    - custom_query.hr
   scrape_interval: 1s
   scrape_timeout: 1s
-  metrics_path: /metrics-hr
+  metrics_path: /metrics
   static_configs:
   - targets:
     - 1.2.3.4:12345
@@ -219,10 +224,22 @@ scrape_configs:
       service_id: /service_id/014647c3-b2f5-44eb-94f4-d943260a968c
       service_name: test-mysql
       service_type: mysql
-- job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr
+- job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_5s
+  params:
+    collect[]:
+    - slave_status
+    - info_schema.processlist
+    - info_schema.innodb_cmp
+    - info_schema.innodb_cmpmem
+    - info_schema.query_response_time
+    - perf_schema.tablelocks
+    - perf_schema.eventswaits
+    - perf_schema.file_events
+    - engine_innodb_status
+    - custom_query.mr
   scrape_interval: 5s
   scrape_timeout: 4s
-  metrics_path: /metrics-mr
+  metrics_path: /metrics
   static_configs:
   - targets:
     - 1.2.3.4:12345
@@ -239,10 +256,28 @@ scrape_configs:
       service_id: /service_id/014647c3-b2f5-44eb-94f4-d943260a968c
       service_name: test-mysql
       service_type: mysql
-- job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_lr
+- job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_1m0s
+  params:
+    collect[]:
+    - auto_increment.columns
+    - binlog_size
+    - engine_tokudb_status
+    - global_variables
+    - heartbeat
+    - info_schema.tables
+    - info_schema.innodb_tablespaces
+    - info_schema.clientstats
+    - info_schema.userstats
+    - info_schema.tablestats
+    - perf_schema.eventsstatements
+    - perf_schema.file_instances
+    - perf_schema.indexiowaits
+    - perf_schema.tablestats
+    - perf_schema.tableiowaits
+    - custom_query.lr
   scrape_interval: 1m
   scrape_timeout: 10s
-  metrics_path: /metrics-lr
+  metrics_path: /metrics
   static_configs:
   - targets:
     - 1.2.3.4:12345
@@ -259,10 +294,11 @@ scrape_configs:
       service_id: /service_id/014647c3-b2f5-44eb-94f4-d943260a968c
       service_name: test-mysql
       service_type: mysql
-- job_name: postgres_exporter_agent_id_29e14468-d479-4b4d-bfb7-4ac2fb865bac
+- job_name: postgres_exporter_agent_id_29e14468-d479-4b4d-bfb7-4ac2fb865bac_1s
   params:
     collect[]:
     - exporter
+    - custom_query.hr
   scrape_interval: 1s
   scrape_timeout: 1s
   metrics_path: /metrics

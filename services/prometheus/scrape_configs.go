@@ -219,7 +219,17 @@ func scrapeConfigForNodeExporter(s *models.MetricsResolutions, node *models.Node
 		return nil, err
 	}
 
-	return []*config.ScrapeConfig{hr, mr, lr}, nil
+	r := make([]*config.ScrapeConfig, 0)
+	if hr != nil {
+		r = append(r, hr)
+	}
+	if mr != nil {
+		r = append(r, mr)
+	}
+	if lr != nil {
+		r = append(r, lr)
+	}
+	return r, nil
 }
 
 // scrapeConfigsForMySQLdExporter returns scrape config for mysqld_exporter.
@@ -275,7 +285,17 @@ func scrapeConfigsForMySQLdExporter(s *models.MetricsResolutions, node *models.N
 		return nil, err
 	}
 
-	return []*config.ScrapeConfig{hr, mr, lr}, nil
+	r := make([]*config.ScrapeConfig, 0)
+	if hr != nil {
+		r = append(r, hr)
+	}
+	if mr != nil {
+		r = append(r, mr)
+	}
+	if lr != nil {
+		r = append(r, lr)
+	}
+	return r, nil
 }
 
 func scrapeConfigForMongoDBExporter(s *models.MetricsResolutions, node *models.Node, service *models.Service, agent *models.Agent) ([]*config.ScrapeConfig, error) {
@@ -288,7 +308,11 @@ func scrapeConfigForMongoDBExporter(s *models.MetricsResolutions, node *models.N
 		return nil, err
 	}
 
-	return []*config.ScrapeConfig{hr}, nil
+	r := make([]*config.ScrapeConfig, 0)
+	if hr != nil {
+		r = append(r, hr)
+	}
+	return r, nil
 }
 
 func scrapeConfigForPostgresExporter(s *models.MetricsResolutions, node *models.Node, service *models.Service, agent *models.Agent) ([]*config.ScrapeConfig, error) {
@@ -302,7 +326,11 @@ func scrapeConfigForPostgresExporter(s *models.MetricsResolutions, node *models.
 		return nil, err
 	}
 
-	return []*config.ScrapeConfig{hr}, nil
+	r := make([]*config.ScrapeConfig, 0)
+	if hr != nil {
+		r = append(r, hr)
+	}
+	return r, nil
 }
 
 func scrapeConfigForProxySQLExporter(s *models.MetricsResolutions, node *models.Node, service *models.Service, agent *models.Agent) ([]*config.ScrapeConfig, error) {
@@ -316,5 +344,9 @@ func scrapeConfigForProxySQLExporter(s *models.MetricsResolutions, node *models.
 		return nil, err
 	}
 
-	return []*config.ScrapeConfig{hr}, nil
+	r := make([]*config.ScrapeConfig, 0)
+	if hr != nil {
+		r = append(r, hr)
+	}
+	return r, nil
 }
