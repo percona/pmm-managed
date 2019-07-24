@@ -65,7 +65,8 @@ func TestClient(t *testing.T) {
 		})
 
 		t.Run("NewUserViewerByDefault", func(t *testing.T) {
-			t.Parallel()
+			// do not run this test in parallel - they lock Grafana's sqlite3 database
+			// t.Parallel()
 
 			// See [users] in grafana.ini.
 
@@ -95,7 +96,8 @@ func TestClient(t *testing.T) {
 			role := role
 
 			t.Run(role.String(), func(t *testing.T) {
-				t.Parallel()
+				// do not run this test in parallel - they lock Grafana's sqlite3 database
+				// t.Parallel()
 
 				login := fmt.Sprintf("%s-%d", role, time.Now().Nanosecond())
 				userID, err := c.testCreateUser(ctx, login, role, authHeaders)
