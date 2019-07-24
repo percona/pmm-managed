@@ -174,13 +174,13 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 
 			case models.NodeExporterType:
 				for _, node := range nodes {
-					scfg, err := scrapeConfigForNodeExporter(s.HR, node, agent)
+					scfgs, err := scrapeConfigForNodeExporter(&s, node, agent)
 					if err != nil {
 						svc.l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 						continue
 					}
-					if scfg != nil {
-						cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfg)
+					if scfgs != nil {
+						cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfgs...)
 					}
 				}
 
@@ -206,13 +206,13 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 						return errors.WithStack(err)
 					}
 
-					scfg, err := scrapeConfigForMongoDBExporter(s.HR, node, service, agent)
+					scfgs, err := scrapeConfigForMongoDBExporter(&s, node, service, agent)
 					if err != nil {
 						svc.l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 						continue
 					}
-					if scfg != nil {
-						cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfg)
+					if scfgs != nil {
+						cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfgs...)
 					}
 				}
 
@@ -223,13 +223,13 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 						return errors.WithStack(err)
 					}
 
-					scfg, err := scrapeConfigForPostgresExporter(s.HR, node, service, agent)
+					scfgs, err := scrapeConfigForPostgresExporter(&s, node, service, agent)
 					if err != nil {
 						svc.l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 						continue
 					}
-					if scfg != nil {
-						cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfg)
+					if scfgs != nil {
+						cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfgs...)
 					}
 				}
 
@@ -240,13 +240,13 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 						return errors.WithStack(err)
 					}
 
-					scfg, err := scrapeConfigForProxySQLExporter(s.HR, node, service, agent)
+					scfgs, err := scrapeConfigForProxySQLExporter(&s, node, service, agent)
 					if err != nil {
 						svc.l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 						continue
 					}
-					if scfg != nil {
-						cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfg)
+					if scfgs != nil {
+						cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfgs...)
 					}
 				}
 
