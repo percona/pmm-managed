@@ -21,9 +21,12 @@ import (
 )
 
 const (
-	MetricResolutionHigh   = time.Second
+	// MetricResolutionHigh high resolution.
+	MetricResolutionHigh = time.Second
+	// MetricResolutionMedium medium resolution.
 	MetricResolutionMedium = 5 * time.Second
-	MetricResolutionLow    = 60 * time.Second
+	// MetricResolutionLow low resolution.
+	MetricResolutionLow = 60 * time.Second
 )
 
 // MetricsResolutions contains standard Prometheus metrics resolutions.
