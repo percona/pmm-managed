@@ -96,7 +96,6 @@ func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// response body is ignored by nginx
 	code := s.authenticate(ctx, req)
 	rw.WriteHeader(code)
-	return
 }
 
 func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) int {
