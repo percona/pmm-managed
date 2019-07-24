@@ -130,8 +130,8 @@ func mergeLabels(node *models.Node, service *models.Service, agent *models.Agent
 	return res, nil
 }
 
-func jobName(agent *models.Agent) string {
-	return string(agent.AgentType) + strings.Replace(agent.AgentID, "/", "_", -1)
+func jobName(agent *models.Agent, interval time.Duration) string {
+	return string(agent.AgentType) + strings.Replace(agent.AgentID, "/", "_", -1) + fmt.Sprintf("_%s", interval)
 }
 
 // scrapeConfigForStandardExporter returns scrape config for standard exporter: /metrics endpoint, high resolution.
@@ -143,7 +143,7 @@ func scrapeConfigForStandardExporter(interval time.Duration, node *models.Node, 
 	}
 
 	cfg := &config.ScrapeConfig{
-		JobName:        fmt.Sprintf("%s_%s", jobName(agent), interval),
+		JobName:        jobName(agent, interval),
 		ScrapeInterval: model.Duration(interval),
 		ScrapeTimeout:  scrapeTimeout(interval),
 		MetricsPath:    "/metrics",
@@ -188,8 +188,8 @@ func scrapeConfigForNodeExporter(s *models.MetricsResolutions, node *models.Node
 		"time",
 		"vmstat",
 		"meminfo_numa",
-		"textfile(hr)",           // TODO: Implement it!
-		"textfile.directory(hr)", // TODO: Implement it!
+		"textfile.hr",
+		"textfile.directory.hr",
 	}
 	hr, err := scrapeConfigForStandardExporter(s.HR, node, nil, agent, hrc)
 	if err != nil {
@@ -197,8 +197,8 @@ func scrapeConfigForNodeExporter(s *models.MetricsResolutions, node *models.Node
 	}
 
 	mrc := []string{
-		"textfile(mr)",           // TODO: Implement it!
-		"textfile.directory(mr)", // TODO: Implement it!
+		"textfile.mr",
+		"textfile.directory.mr",
 	}
 	mr, err := scrapeConfigForStandardExporter(s.MR, node, nil, agent, mrc)
 	if err != nil {
@@ -211,8 +211,8 @@ func scrapeConfigForNodeExporter(s *models.MetricsResolutions, node *models.Node
 		"entropy",
 		"filesystem",
 		"uname",
-		"textfile(lr)",           // TODO: Implement it!
-		"textfile.directory(lr)", // TODO: Implement it!
+		"textfile.lr",
+		"textfile.directory.lr",
 	}
 	lr, err := scrapeConfigForStandardExporter(s.LR, node, nil, agent, lrc)
 	if err != nil {
@@ -228,7 +228,7 @@ func scrapeConfigsForMySQLdExporter(s *models.MetricsResolutions, node *models.N
 	hrc := []string{
 		"global_status",
 		"info_schema.innodb_metrics",
-		"custom_query(hr)", // TODO: Implement it!
+		"custom_query.hr",
 	}
 	hr, err := scrapeConfigForStandardExporter(s.HR, node, service, agent, hrc)
 	if err != nil {
@@ -245,7 +245,7 @@ func scrapeConfigsForMySQLdExporter(s *models.MetricsResolutions, node *models.N
 		"perf_schema.eventswaits",
 		"perf_schema.file_events",
 		"engine_innodb_status",
-		"custom_query(mr)", // TODO: Implement it!
+		"custom_query.mr",
 	}
 	mr, err := scrapeConfigForStandardExporter(s.MR, node, service, agent, mrc)
 	if err != nil {
@@ -268,7 +268,7 @@ func scrapeConfigsForMySQLdExporter(s *models.MetricsResolutions, node *models.N
 		"perf_schema.indexiowaits",
 		"perf_schema.tablestats",
 		"perf_schema.tableiowaits",
-		"custom_query(lr)", // TODO: Implement it!
+		"custom_query.lr",
 	}
 	lr, err := scrapeConfigForStandardExporter(s.LR, node, service, agent, lrc)
 	if err != nil {
@@ -294,7 +294,7 @@ func scrapeConfigForMongoDBExporter(s *models.MetricsResolutions, node *models.N
 func scrapeConfigForPostgresExporter(s *models.MetricsResolutions, node *models.Node, service *models.Service, agent *models.Agent) ([]*config.ScrapeConfig, error) {
 	hrc := []string{
 		"exporter",
-		"custom_query(hr)", // TODO: Implement it!
+		"custom_query.hr",
 	}
 
 	hr, err := scrapeConfigForStandardExporter(s.HR, node, service, agent, hrc)
