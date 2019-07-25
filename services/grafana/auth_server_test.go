@@ -39,16 +39,27 @@ func TestAuthServer(t *testing.T) {
 	req.SetBasicAuth("admin", "admin")
 	authHeaders := req.Header
 
-	t.Run("GrafanaAdmin", func(t *testing.T) {
+	t.Run("GrafanaAdminFallback", func(t *testing.T) {
 		t.Parallel()
 
 		req, err := http.NewRequest("GET", "/auth_request", nil)
 		require.NoError(t, err)
 		req.SetBasicAuth("admin", "admin")
-		req.Header.Set("X-Original-Uri", "/")
+		req.Header.Set("X-Original-Uri", "/foo")
 
-		err = s.authenticate(ctx, req)
-		assert.NoError(t, err)
+		code := s.authenticate(ctx, req)
+		assert.Equal(t, 200, code)
+	})
+
+	t.Run("NoAnonymousAccess", func(t *testing.T) {
+		t.Parallel()
+
+		req, err := http.NewRequest("GET", "/auth_request", nil)
+		require.NoError(t, err)
+		req.Header.Set("X-Original-Uri", "/foo")
+
+		code := s.authenticate(ctx, req)
+		assert.Equal(t, 401, code)
 	})
 
 	t.Run("EmptyOriginalUri", func(t *testing.T) {
@@ -58,8 +69,8 @@ func TestAuthServer(t *testing.T) {
 		require.NoError(t, err)
 		req.SetBasicAuth("admin", "admin")
 
-		err = s.authenticate(ctx, req)
-		assert.EqualError(t, err, "Empty X-Original-Uri.")
+		code := s.authenticate(ctx, req)
+		assert.Equal(t, 500, code)
 	})
 
 	for uri, minRole := range map[string]role{
@@ -67,7 +78,7 @@ func TestAuthServer(t *testing.T) {
 		"/v0/inventory/Nodes/":     admin,
 		"/v0/inventory/Nodes":      admin,
 		"/v0/inventory/":           admin,
-		"/":                        grafanaAdmin,
+		"/agent.Agent/Connect":     none,
 	} {
 		for _, role := range []role{viewer, editor, admin} {
 			uri := uri
@@ -94,11 +105,11 @@ func TestAuthServer(t *testing.T) {
 				req.SetBasicAuth(login, login)
 				req.Header.Set("X-Original-Uri", uri)
 
-				err = s.authenticate(ctx, req)
+				code := s.authenticate(ctx, req)
 				if minRole <= role {
-					assert.NoError(t, err)
+					assert.Equal(t, 200, code)
 				} else {
-					assert.EqualError(t, err, "403: Forbidden.")
+					assert.Equal(t, 403, code)
 				}
 			})
 		}
