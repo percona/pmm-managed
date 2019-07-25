@@ -88,7 +88,7 @@ func (c *Client) Collect(ctx context.Context, metricsBuckets []*agentpb.MetricsB
 			c.l.Warnf("Collect for %d buckets took %s.", len(metricsBuckets), dur)
 		}
 	}()
-	metricBuckets := make([]*qanpb.MetricsBucket, len(metricsBuckets))
+	convertedMetricsBuckets := make([]*qanpb.MetricsBucket, 0, len(metricsBuckets))
 
 	for i, m := range metricsBuckets {
 		if m.Common.AgentId == "" {
@@ -142,8 +142,8 @@ func (c *Client) Collect(ctx context.Context, metricsBuckets []*agentpb.MetricsB
 			PeriodStartUnixSecs:  m.Common.PeriodStartUnixSecs,
 			PeriodLengthSecs:     m.Common.PeriodLengthSecs,
 			Example:              m.Common.Example,
-			ExampleFormat:        qanpb.ExampleFormat(m.Common.ExampleFormat),
-			ExampleType:          qanpb.ExampleType(m.Common.ExampleType),
+			ExampleFormat:        convertExampleFormat(m.Common.ExampleFormat),
+			ExampleType:          convertExampleType(m.Common.ExampleType),
 			NumQueriesWithErrors: m.Common.NumQueriesWithErrors,
 			Errors:               m.Common.Errors,
 			NumQueries:           m.Common.NumQueries,
@@ -165,7 +165,6 @@ func (c *Client) Collect(ctx context.Context, metricsBuckets []*agentpb.MetricsB
 
 		// in order of fields in MetricsBucket
 		for labelName, field := range map[string]*string{
-			"service_name":    &mb.ServiceName,
 			"replication_set": &mb.ReplicationSet,
 			"cluster":         &mb.Cluster,
 			"environment":     &mb.Environment,
@@ -201,11 +200,11 @@ func (c *Client) Collect(ctx context.Context, metricsBuckets []*agentpb.MetricsB
 
 		mb.Labels = labels
 
-		metricBuckets[i] = mb
+		convertedMetricsBuckets[i] = mb
 	}
 
 	qanReq := &qanpb.CollectRequest{
-		MetricsBucket: metricBuckets,
+		MetricsBucket: convertedMetricsBuckets,
 	}
 
 	c.l.Debugf("%+v", qanReq)
@@ -215,6 +214,32 @@ func (c *Client) Collect(ctx context.Context, metricsBuckets []*agentpb.MetricsB
 	}
 	c.l.Debugf("%+v", res)
 	return nil
+}
+
+func convertExampleFormat(exampleFormat agentpb.ExampleFormat) qanpb.ExampleFormat {
+	switch exampleFormat {
+	case agentpb.ExampleFormat_EXAMPLE:
+		return qanpb.ExampleFormat_EXAMPLE
+	case agentpb.ExampleFormat_FINGERPRINT:
+		return qanpb.ExampleFormat_FINGERPRINT
+	default:
+		return qanpb.ExampleFormat_EXAMPLE_FORMAT_INVALID
+	}
+}
+
+func convertExampleType(exampleType agentpb.ExampleType) qanpb.ExampleType {
+	switch exampleType {
+	case agentpb.ExampleType_RANDOM:
+		return qanpb.ExampleType_RANDOM
+	case agentpb.ExampleType_SLOWEST:
+		return qanpb.ExampleType_SLOWEST
+	case agentpb.ExampleType_FASTEST:
+		return qanpb.ExampleType_FASTEST
+	case agentpb.ExampleType_WITH_ERROR:
+		return qanpb.ExampleType_WITH_ERROR
+	default:
+		return qanpb.ExampleType_EXAMPLE_TYPE_INVALID
+	}
 }
 
 func fillMySQL(mb *qanpb.MetricsBucket, bm *agentpb.MetricsBucket_MySQL) {
