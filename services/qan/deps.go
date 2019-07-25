@@ -26,7 +26,7 @@ import (
 //go:generate mockery -name=qanCollectorClient  -case=snake -inpkg -testonly
 
 // qanClient is a subset of methods of qanpb.CollectorClient used by this package.
-// We use it instead of real type for testing
+// We use it instead of real type for testing.
 type qanCollectorClient interface {
 	Collect(ctx context.Context, in *qanpb.CollectRequest, opts ...grpc.CallOption) (*qanpb.CollectResponse, error)
 }
