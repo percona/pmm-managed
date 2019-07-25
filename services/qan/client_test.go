@@ -40,7 +40,6 @@ import (
 
 func TestClient(t *testing.T) {
 	t.Run("Check CollectRequest conversion", func(t *testing.T) {
-
 		sqlDB := testdb.Open(t, models.SetupFixtures)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 		ctx := logger.Set(context.Background(), t.Name())
@@ -334,6 +333,5 @@ func TestClient(t *testing.T) {
 			}}
 			c.AssertCalled(t, "Collect", ctx, expectedRequest)
 		})
-
 	})
 }
