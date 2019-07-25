@@ -136,8 +136,8 @@ func convertSettings(s *models.Settings) *serverpb.Settings {
 // Version returns PMM Server version.
 func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*serverpb.VersionResponse, error) {
 	res := &serverpb.VersionResponse{
-		CurrentVersion: version.Version, // TODO
-		LatestVersion:  version.Version, // TODO
+		InstalledVersion: version.Version, // TODO
+		UpdateAvailable:  false,           // TODO
 		Managed: &serverpb.VersionResponse_Managed{
 			Version: version.Version,
 			Commit:  version.FullCommit,
@@ -167,9 +167,14 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 	return &serverpb.CheckUpdatesResponse{}, nil
 }
 
-// PerformUpdate performs PMM Server update.
-func (s *Server) PerformUpdate(ctx context.Context, req *serverpb.PerformUpdateRequest) (*serverpb.PerformUpdateResponse, error) {
-	panic("not implemented")
+// StartUpdate starts PMM Server update.
+func (s *Server) StartUpdate(ctx context.Context, req *serverpb.StartUpdateRequest) (*serverpb.StartUpdateResponse, error) {
+	return &serverpb.StartUpdateResponse{}, nil
+}
+
+// UpdateStatus returns PMM Server update status.
+func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusRequest) (*serverpb.UpdateStatusResponse, error) {
+	return &serverpb.UpdateStatusResponse{}, nil
 }
 
 // GetSettings returns current PMM Server settings.
