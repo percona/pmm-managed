@@ -213,8 +213,8 @@
   version = "v0.4.0"
 
 [[projects]]
-  branch = "PMM-4351-split-qan-protocol"
-  digest = "1:864c0b3a7176fcd66820a531cf24bd343ce5e1d90f6a137ac3033a8910b45688"
+  branch = "PMM-2.0"
+  digest = "1:e24c028926c873aa980114c8e4440a5f82e5c8506a510a96c63ce2a754082314"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -225,7 +225,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "79dd85e2a6ad3e7260698a52c166472f830635de"
+  revision = "455cab14b6272badfec896629bbe39f178298679"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
