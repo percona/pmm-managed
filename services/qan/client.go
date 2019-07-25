@@ -78,19 +78,19 @@ func mergeLabels(node *models.Node, service *models.Service, agent *models.Agent
 }
 
 // Collect adds labels to the data from pmm-agent and sends it to qan-api.
-func (c *Client) Collect(ctx context.Context, req *agentpb.CollectRequest) error {
+func (c *Client) Collect(ctx context.Context, metricsBuckets []*agentpb.MetricsBucket) error {
 	// TODO That code is simple, but performance will be very bad for any non-trivial load.
 	// https://jira.percona.com/browse/PMM-3894
 
 	start := time.Now()
 	defer func() {
 		if dur := time.Since(start); dur > time.Second {
-			c.l.Warnf("Collect for %d buckets took %s.", len(req.MetricsBucket), dur)
+			c.l.Warnf("Collect for %d buckets took %s.", len(metricsBuckets), dur)
 		}
 	}()
-	metricBuckets := make([]*qanpb.MetricsBucket, len(req.MetricsBucket))
+	metricBuckets := make([]*qanpb.MetricsBucket, len(metricsBuckets))
 
-	for i, m := range req.MetricsBucket {
+	for i, m := range metricsBuckets {
 		if m.Common.AgentId == "" {
 			c.l.Errorf("Empty agent_id for bucket with query_id %q, can't add labels.", m.Common.Queryid)
 			continue
@@ -142,9 +142,9 @@ func (c *Client) Collect(ctx context.Context, req *agentpb.CollectRequest) error
 			PeriodStartUnixSecs:  m.Common.PeriodStartUnixSecs,
 			PeriodLengthSecs:     m.Common.PeriodLengthSecs,
 			Example:              m.Common.Example,
-			ExampleFormat:        m.Common.ExampleFormat,
+			ExampleFormat:        qanpb.ExampleFormat(m.Common.ExampleFormat),
 			IsTruncated:          m.Common.IsTruncated,
-			ExampleType:          m.Common.ExampleType,
+			ExampleType:          qanpb.ExampleType(m.Common.ExampleType),
 			ExampleMetrics:       m.Common.ExampleMetrics,
 			NumQueriesWithErrors: m.Common.NumQueriesWithErrors,
 			Errors:               m.Common.Errors,

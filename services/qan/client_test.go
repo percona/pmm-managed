@@ -138,40 +138,38 @@ func TestClient(t *testing.T) {
 				l:  logrus.WithField("component", "qan-test"),
 			}
 			c.On("Collect", ctx, mock.AnythingOfType(reflect.TypeOf(&qanpb.CollectRequest{}).String())).Return(&qanpb.CollectResponse{}, nil)
-			request := &agentpb.CollectRequest{
-				MetricsBucket: []*agentpb.MetricsBucket{
-					{
-						Common: &agentpb.MetricsBucket_Common{
-							Queryid:             "some-query-id",
-							Fingerprint:         "SELECT * FROM `city`",
-							Schema:              "world",
-							AgentId:             "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
-							PeriodStartUnixSecs: 1554116340,
-							PeriodLengthSecs:    60,
-							AgentType:           inventorypb.AgentType_QAN_MYSQL_PERFSCHEMA_AGENT,
-							Example:             "SELECT /* AllCities */ * FROM city",
-							ExampleFormat:       qanpb.ExampleFormat_EXAMPLE,
-							ExampleType:         qanpb.ExampleType_RANDOM,
-							NumQueries:          1,
-							MQueryTimeCnt:       1,
-							MQueryTimeSum:       1234,
-						},
-						Mysql: &agentpb.MetricsBucket_MySQL{
-							MLockTimeCnt:     1,
-							MLockTimeSum:     3456,
-							MRowsSentCnt:     1,
-							MRowsSentSum:     4079,
-							MRowsExaminedCnt: 1,
-							MRowsExaminedSum: 4079,
-							MFullScanCnt:     1,
-							MFullScanSum:     1,
-							MNoIndexUsedCnt:  1,
-							MNoIndexUsedSum:  1,
-						},
+			metricsBuckets := []*agentpb.MetricsBucket{
+				{
+					Common: &agentpb.MetricsBucket_Common{
+						Queryid:             "some-query-id",
+						Fingerprint:         "SELECT * FROM `city`",
+						Schema:              "world",
+						AgentId:             "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
+						PeriodStartUnixSecs: 1554116340,
+						PeriodLengthSecs:    60,
+						AgentType:           inventorypb.AgentType_QAN_MYSQL_PERFSCHEMA_AGENT,
+						Example:             "SELECT /* AllCities */ * FROM city",
+						ExampleFormat:       agentpb.ExampleFormat_EXAMPLE,
+						ExampleType:         agentpb.ExampleType_RANDOM,
+						NumQueries:          1,
+						MQueryTimeCnt:       1,
+						MQueryTimeSum:       1234,
+					},
+					Mysql: &agentpb.MetricsBucket_MySQL{
+						MLockTimeCnt:     1,
+						MLockTimeSum:     3456,
+						MRowsSentCnt:     1,
+						MRowsSentSum:     4079,
+						MRowsExaminedCnt: 1,
+						MRowsExaminedSum: 4079,
+						MFullScanCnt:     1,
+						MFullScanSum:     1,
+						MNoIndexUsedCnt:  1,
+						MNoIndexUsedSum:  1,
 					},
 				},
 			}
-			err := client.Collect(ctx, request)
+			err := client.Collect(ctx, metricsBuckets)
 			require.NoError(t, err)
 
 			expectedRequest := &qanpb.CollectRequest{MetricsBucket: []*qanpb.MetricsBucket{
@@ -222,27 +220,25 @@ func TestClient(t *testing.T) {
 				l:  logrus.WithField("component", "qan-test"),
 			}
 			c.On("Collect", ctx, mock.AnythingOfType(reflect.TypeOf(&qanpb.CollectRequest{}).String())).Return(&qanpb.CollectResponse{}, nil)
-			request := &agentpb.CollectRequest{
-				MetricsBucket: []*agentpb.MetricsBucket{
-					{
-						Common: &agentpb.MetricsBucket_Common{
-							Queryid:     "some-mongo-query-id",
-							Fingerprint: "INSERT peoples",
-							Database:    "test",
-							Schema:      "peoples",
-							AgentId:     "/agent_id/b153f0d8-34e4-4635-9184-499161b4d12c",
-							AgentType:   inventorypb.AgentType_QAN_MONGODB_PROFILER_AGENT,
-							NumQueries:  1,
-						},
-						Mongodb: &agentpb.MetricsBucket_MongoDB{
-							MResponseLengthSum: 60,
-							MResponseLengthMin: 60,
-							MResponseLengthMax: 60,
-						},
+			metricsBuckets := []*agentpb.MetricsBucket{
+				{
+					Common: &agentpb.MetricsBucket_Common{
+						Queryid:     "some-mongo-query-id",
+						Fingerprint: "INSERT peoples",
+						Database:    "test",
+						Schema:      "peoples",
+						AgentId:     "/agent_id/b153f0d8-34e4-4635-9184-499161b4d12c",
+						AgentType:   inventorypb.AgentType_QAN_MONGODB_PROFILER_AGENT,
+						NumQueries:  1,
+					},
+					Mongodb: &agentpb.MetricsBucket_MongoDB{
+						MResponseLengthSum: 60,
+						MResponseLengthMin: 60,
+						MResponseLengthMax: 60,
 					},
 				},
 			}
-			err := client.Collect(ctx, request)
+			err := client.Collect(ctx, metricsBuckets)
 			require.NoError(t, err)
 
 			expectedRequest := &qanpb.CollectRequest{MetricsBucket: []*qanpb.MetricsBucket{
@@ -280,33 +276,31 @@ func TestClient(t *testing.T) {
 				l:  logrus.WithField("component", "qan-test"),
 			}
 			c.On("Collect", ctx, mock.AnythingOfType(reflect.TypeOf(&qanpb.CollectRequest{}).String())).Return(&qanpb.CollectResponse{}, nil)
-			request := &agentpb.CollectRequest{
-				MetricsBucket: []*agentpb.MetricsBucket{
-					{
-						Common: &agentpb.MetricsBucket_Common{
-							Queryid:             "some-query-id",
-							Fingerprint:         "SELECT /* AllCities */ * FROM city",
-							Schema:              "pmm-agent",
-							Tables:              []string{"city"},
-							Username:            "pmm-agent",
-							AgentId:             "/agent_id/29e14468-d479-4b4d-bfb7-4ac2fb865bac",
-							PeriodStartUnixSecs: 1554116340,
-							PeriodLengthSecs:    60,
-							AgentType:           inventorypb.AgentType_QAN_POSTGRESQL_PGSTATEMENTS_AGENT,
-							NumQueries:          1,
-							MQueryTimeCnt:       1,
-							MQueryTimeSum:       55,
-						},
-						Postgresql: &agentpb.MetricsBucket_PostgreSQL{
-							MSharedBlksHitCnt: 1,
-							MSharedBlksHitSum: 33,
-							MRowsCnt:          1,
-							MRowsSum:          4079,
-						},
+			metricsBuckets := []*agentpb.MetricsBucket{
+				{
+					Common: &agentpb.MetricsBucket_Common{
+						Queryid:             "some-query-id",
+						Fingerprint:         "SELECT /* AllCities */ * FROM city",
+						Schema:              "pmm-agent",
+						Tables:              []string{"city"},
+						Username:            "pmm-agent",
+						AgentId:             "/agent_id/29e14468-d479-4b4d-bfb7-4ac2fb865bac",
+						PeriodStartUnixSecs: 1554116340,
+						PeriodLengthSecs:    60,
+						AgentType:           inventorypb.AgentType_QAN_POSTGRESQL_PGSTATEMENTS_AGENT,
+						NumQueries:          1,
+						MQueryTimeCnt:       1,
+						MQueryTimeSum:       55,
+					},
+					Postgresql: &agentpb.MetricsBucket_PostgreSQL{
+						MSharedBlksHitCnt: 1,
+						MSharedBlksHitSum: 33,
+						MRowsCnt:          1,
+						MRowsSum:          4079,
 					},
 				},
 			}
-			err := client.Collect(ctx, request)
+			err := client.Collect(ctx, metricsBuckets)
 			require.NoError(t, err)
 
 			expectedRequest := &qanpb.CollectRequest{MetricsBucket: []*qanpb.MetricsBucket{

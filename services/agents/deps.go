@@ -31,5 +31,5 @@ type prometheusService interface {
 // qanClient is a subset of methods of qan.Client used by this package.
 // We use it instead of real type to avoid dependency cycle.
 type qanClient interface {
-	Collect(ctx context.Context, req *agentpb.CollectRequest) error
+	Collect(ctx context.Context, metricsBuckets []*agentpb.MetricsBucket) error
 }

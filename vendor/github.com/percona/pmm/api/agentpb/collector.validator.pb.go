@@ -8,7 +8,6 @@ import (
 	proto "github.com/golang/protobuf/proto"
 	github_com_mwitkow_go_proto_validators "github.com/mwitkow/go-proto-validators"
 	_ "github.com/percona/pmm/api/inventorypb"
-	_ "github.com/percona/pmm/api/qanpb"
 	math "math"
 )
 
@@ -17,16 +16,6 @@ var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
-func (this *CollectRequest) Validate() error {
-	for _, item := range this.MetricsBucket {
-		if item != nil {
-			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(item); err != nil {
-				return github_com_mwitkow_go_proto_validators.FieldError("MetricsBucket", err)
-			}
-		}
-	}
-	return nil
-}
 func (this *MetricsBucket) Validate() error {
 	if this.Common != nil {
 		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Common); err != nil {
