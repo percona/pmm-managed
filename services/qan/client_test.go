@@ -333,5 +333,28 @@ func TestClient(t *testing.T) {
 			}}
 			c.AssertCalled(t, "Collect", ctx, expectedRequest)
 		})
+
+		t.Run("Test conversion skips bad buckets", func(t *testing.T) {
+			c := new(mockQanCollectorClient)
+			c.Test(t)
+			client := Client{
+				c:  c,
+				db: db,
+				l:  logrus.WithField("component", "qan-test"),
+			}
+			c.On("Collect", ctx, mock.AnythingOfType(reflect.TypeOf(&qanpb.CollectRequest{}).String())).Return(&qanpb.CollectResponse{}, nil)
+			metricsBuckets := []*agentpb.MetricsBucket{
+				{
+					Common: &agentpb.MetricsBucket_Common{
+						AgentId: "no-such-agent",
+					},
+				},
+			}
+			err := client.Collect(ctx, metricsBuckets)
+			require.NoError(t, err)
+
+			expectedRequest := &qanpb.CollectRequest{MetricsBucket: []*qanpb.MetricsBucket{}}
+			c.AssertCalled(t, "Collect", ctx, expectedRequest)
+		})
 	})
 }
