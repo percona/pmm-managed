@@ -19,6 +19,7 @@ package prometheus
 import (
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/AlekSi/pointer"
 	"github.com/pmezard/go-difflib/difflib"
@@ -36,7 +37,11 @@ import (
 func TestScrapeConfig(t *testing.T) {
 	t.Run("scrapeConfigForNodeExporter", func(t *testing.T) {
 		t.Run("Normal", func(t *testing.T) {
-			s := models.NewMetricsResolutions()
+			s := &models.MetricsResolutions{
+				HR: time.Second,
+				MR: 5 * time.Second,
+				LR: 60 * time.Second,
+			}
 
 			node := &models.Node{
 				NodeID:       "/node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d",
@@ -155,7 +160,11 @@ func TestScrapeConfig(t *testing.T) {
 	})
 
 	t.Run("scrapeConfigsForMySQLdExporter", func(t *testing.T) {
-		s := models.NewMetricsResolutions()
+		s := &models.MetricsResolutions{
+			HR: time.Second,
+			MR: 5 * time.Second,
+			LR: 60 * time.Second,
+		}
 
 		t.Run("Normal", func(t *testing.T) {
 			node := &models.Node{
@@ -301,7 +310,11 @@ func TestScrapeConfig(t *testing.T) {
 
 	t.Run("scrapeConfigForMongoDBExporter", func(t *testing.T) {
 		t.Run("Normal", func(t *testing.T) {
-			s := models.NewMetricsResolutions()
+			s := &models.MetricsResolutions{
+				HR: time.Second,
+				MR: 5 * time.Second,
+				LR: 60 * time.Second,
+			}
 
 			node := &models.Node{
 				NodeID:       "/node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d",
@@ -368,7 +381,12 @@ func TestScrapeConfig(t *testing.T) {
 				ListenPort:   pointer.ToUint16(12345),
 			}
 
-			res := models.NewMetricsResolutions()
+			res := &models.MetricsResolutions{
+				HR: time.Second,
+				MR: 5 * time.Second,
+				LR: 60 * time.Second,
+			}
+
 			_, err := scrapeConfigForMongoDBExporter(res, node, service, agent)
 			require.EqualError(t, err, "failed to decode custom labels: unexpected end of JSON input")
 		})
@@ -376,7 +394,11 @@ func TestScrapeConfig(t *testing.T) {
 
 	t.Run("scrapeConfigForPostgresExporter", func(t *testing.T) {
 		t.Run("Normal", func(t *testing.T) {
-			s := models.NewMetricsResolutions()
+			s := &models.MetricsResolutions{
+				HR: time.Second,
+				MR: 5 * time.Second,
+				LR: 60 * time.Second,
+			}
 
 			node := &models.Node{
 				NodeID:       "/node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d",
@@ -443,7 +465,12 @@ func TestScrapeConfig(t *testing.T) {
 				ListenPort:   pointer.ToUint16(12345),
 			}
 
-			res := models.NewMetricsResolutions()
+			res := &models.MetricsResolutions{
+				HR: time.Second,
+				MR: 5 * time.Second,
+				LR: 60 * time.Second,
+			}
+
 			_, err := scrapeConfigForPostgresExporter(res, node, service, agent)
 			require.EqualError(t, err, "failed to decode custom labels: unexpected end of JSON input")
 		})
@@ -451,7 +478,11 @@ func TestScrapeConfig(t *testing.T) {
 
 	t.Run("scrapeConfigForProxySQLExporter", func(t *testing.T) {
 		t.Run("Normal", func(t *testing.T) {
-			s := models.NewMetricsResolutions()
+			s := &models.MetricsResolutions{
+				HR: time.Second,
+				MR: 5 * time.Second,
+				LR: 60 * time.Second,
+			}
 
 			node := &models.Node{
 				NodeID:       "/node_id/7cc6ec12-4951-48c6-a4d5-7c3141fa4107",
@@ -518,7 +549,12 @@ func TestScrapeConfig(t *testing.T) {
 				ListenPort:   pointer.ToUint16(12345),
 			}
 
-			res := models.NewMetricsResolutions()
+			res := &models.MetricsResolutions{
+				HR: time.Second,
+				MR: 5 * time.Second,
+				LR: 60 * time.Second,
+			}
+
 			_, err := scrapeConfigForProxySQLExporter(res, node, service, agent)
 			require.EqualError(t, err, "failed to decode custom labels: unexpected end of JSON input")
 		})

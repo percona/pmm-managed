@@ -20,29 +20,11 @@ import (
 	"time"
 )
 
-const (
-	// MetricResolutionHigh high resolution.
-	MetricResolutionHigh = time.Second
-	// MetricResolutionMedium medium resolution.
-	MetricResolutionMedium = 5 * time.Second
-	// MetricResolutionLow low resolution.
-	MetricResolutionLow = 60 * time.Second
-)
-
 // MetricsResolutions contains standard Prometheus metrics resolutions.
 type MetricsResolutions struct {
 	HR time.Duration `json:"hr"`
 	MR time.Duration `json:"mr"`
 	LR time.Duration `json:"lr"`
-}
-
-// NewMetricsResolutions creates initialized Prometheus metrics resolutions.
-func NewMetricsResolutions() *MetricsResolutions {
-	return &MetricsResolutions{
-		HR: MetricResolutionHigh,
-		MR: MetricResolutionMedium,
-		LR: MetricResolutionLow,
-	}
 }
 
 // Settings contains PMM Server settings.
@@ -61,12 +43,12 @@ func (s *Settings) fillDefaults() {
 	// no default for Telemetry UUID - it set by telemetry service
 
 	if s.MetricsResolutions.HR == 0 {
-		s.MetricsResolutions.HR = MetricResolutionHigh
+		s.MetricsResolutions.HR = time.Second
 	}
 	if s.MetricsResolutions.MR == 0 {
-		s.MetricsResolutions.MR = MetricResolutionMedium
+		s.MetricsResolutions.MR = 5 * time.Second
 	}
 	if s.MetricsResolutions.LR == 0 {
-		s.MetricsResolutions.LR = MetricResolutionLow
+		s.MetricsResolutions.LR = 60 * time.Second
 	}
 }

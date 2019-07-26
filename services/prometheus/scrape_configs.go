@@ -131,7 +131,7 @@ func mergeLabels(node *models.Node, service *models.Service, agent *models.Agent
 }
 
 func jobName(agent *models.Agent, interval time.Duration) string {
-	return string(agent.AgentType) + strings.Replace(agent.AgentID, "/", "_", -1) + fmt.Sprintf("_%s", interval)
+	return fmt.Sprintf("%s%s_%s", string(agent.AgentType), strings.Replace(agent.AgentID, "/", "_", -1), interval)
 }
 
 // scrapeConfigForStandardExporter returns scrape config for standard exporter: /metrics endpoint, high resolution.
@@ -219,7 +219,7 @@ func scrapeConfigForNodeExporter(s *models.MetricsResolutions, node *models.Node
 		return nil, err
 	}
 
-	r := make([]*config.ScrapeConfig, 0)
+	var r []*config.ScrapeConfig
 	if hr != nil {
 		r = append(r, hr)
 	}
@@ -285,7 +285,7 @@ func scrapeConfigsForMySQLdExporter(s *models.MetricsResolutions, node *models.N
 		return nil, err
 	}
 
-	r := make([]*config.ScrapeConfig, 0)
+	var r []*config.ScrapeConfig
 	if hr != nil {
 		r = append(r, hr)
 	}
@@ -308,7 +308,7 @@ func scrapeConfigForMongoDBExporter(s *models.MetricsResolutions, node *models.N
 		return nil, err
 	}
 
-	r := make([]*config.ScrapeConfig, 0)
+	var r []*config.ScrapeConfig
 	if hr != nil {
 		r = append(r, hr)
 	}
@@ -326,7 +326,7 @@ func scrapeConfigForPostgresExporter(s *models.MetricsResolutions, node *models.
 		return nil, err
 	}
 
-	r := make([]*config.ScrapeConfig, 0)
+	var r []*config.ScrapeConfig
 	if hr != nil {
 		r = append(r, hr)
 	}
@@ -344,7 +344,7 @@ func scrapeConfigForProxySQLExporter(s *models.MetricsResolutions, node *models.
 		return nil, err
 	}
 
-	r := make([]*config.ScrapeConfig, 0)
+	var r []*config.ScrapeConfig
 	if hr != nil {
 		r = append(r, hr)
 	}
