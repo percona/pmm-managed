@@ -90,7 +90,7 @@ func (c *Client) Collect(ctx context.Context, metricsBuckets []*agentpb.MetricsB
 	}()
 	convertedMetricsBuckets := make([]*qanpb.MetricsBucket, 0, len(metricsBuckets))
 
-	for i, m := range metricsBuckets {
+	for _, m := range metricsBuckets {
 		if m.Common.AgentId == "" {
 			c.l.Errorf("Empty agent_id for bucket with query_id %q, can't add labels.", m.Common.Queryid)
 			continue
@@ -200,7 +200,7 @@ func (c *Client) Collect(ctx context.Context, metricsBuckets []*agentpb.MetricsB
 
 		mb.Labels = labels
 
-		convertedMetricsBuckets[i] = mb
+		convertedMetricsBuckets = append(convertedMetricsBuckets, mb)
 	}
 
 	qanReq := &qanpb.CollectRequest{
