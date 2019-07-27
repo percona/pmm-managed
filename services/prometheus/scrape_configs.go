@@ -131,7 +131,7 @@ func mergeLabels(node *models.Node, service *models.Service, agent *models.Agent
 }
 
 func jobName(agent *models.Agent, interval time.Duration) string {
-	return fmt.Sprintf("%s%s_%s", string(agent.AgentType), strings.Replace(agent.AgentID, "/", "_", -1), interval)
+	return fmt.Sprintf("%s%s_%s", agent.AgentType, strings.Replace(agent.AgentID, "/", "_", -1), interval)
 }
 
 // scrapeConfigForStandardExporter returns scrape config for standard exporter: /metrics endpoint, high resolution.
