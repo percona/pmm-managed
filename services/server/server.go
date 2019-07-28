@@ -42,6 +42,7 @@ type Server struct {
 	db         *reform.DB
 	prometheus prometheusService
 	l          *logrus.Entry
+	pmmUpdate  *pmmUpdate
 
 	envMetricsResolution time.Duration
 	envDisableTelemetry  bool
@@ -53,6 +54,7 @@ func NewServer(db *reform.DB, prometheus prometheusService, env []string) *Serve
 		db:         db,
 		prometheus: prometheus,
 		l:          logrus.WithField("component", "server"),
+		pmmUpdate:  new(pmmUpdate),
 	}
 	s.parseEnv(env)
 	return s
@@ -170,7 +172,7 @@ func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) 
 
 // CheckUpdates checks PMM Server updates availability.
 func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesRequest) (*serverpb.CheckUpdatesResponse, error) {
-	v, err := checkUpdates(ctx)
+	v, err := s.pmmUpdate.checkUpdates(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +205,7 @@ func (s *Server) StartUpdate(ctx context.Context, req *serverpb.StartUpdateReque
 		return nil, e
 	}
 
-	if err = startUpdate(); err != nil {
+	if err := s.pmmUpdate.startUpdate(); err != nil {
 		return nil, err
 	}
 
@@ -237,7 +239,7 @@ func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusReq
 		return nil, err
 	}
 	return &serverpb.UpdateStatusResponse{
-		Log: []string{
+		LogLines: []string{
 			"TODO",
 		},
 		Done: true,
