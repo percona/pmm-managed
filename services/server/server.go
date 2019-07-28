@@ -19,11 +19,13 @@ package server
 
 import (
 	"context"
+	"crypto/subtle"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
+	"github.com/google/uuid"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/version"
 	"github.com/sirupsen/logrus"
@@ -159,22 +161,87 @@ func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*se
 // It can be used as for Docker health check or Kubernetes readiness probe.
 func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) (*serverpb.ReadinessResponse, error) {
 	// TODO https://jira.percona.com/browse/PMM-1962
+
+	if err := s.prometheus.Check(ctx); err != nil {
+		return nil, err
+	}
 	return &serverpb.ReadinessResponse{}, nil
 }
 
 // CheckUpdates checks PMM Server updates availability.
 func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesRequest) (*serverpb.CheckUpdatesResponse, error) {
-	return &serverpb.CheckUpdatesResponse{}, nil
+	v, err := checkUpdates(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &serverpb.CheckUpdatesResponse{
+		InstalledVersion: v.InstalledVersion,
+		LatestVersion:    v.LatestVersion,
+	}
+	res.InstalledTimestamp, _ = ptypes.TimestampProto(v.InstalledTime)
+	res.LatestTimestamp, _ = ptypes.TimestampProto(v.LatestTime)
+	return res, nil
 }
 
 // StartUpdate starts PMM Server update.
 func (s *Server) StartUpdate(ctx context.Context, req *serverpb.StartUpdateRequest) (*serverpb.StartUpdateResponse, error) {
-	return &serverpb.StartUpdateResponse{}, nil
+	var authToken string
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		settings, err := models.GetSettings(tx.Querier)
+		if err != nil {
+			return err
+		}
+		if settings.Updates.AuthToken != "" {
+			return status.Error(codes.AlreadyExists, "Update is already underway.")
+		}
+		authToken = "/update_auth_token/" + uuid.New().String()
+		settings.Updates.AuthToken = authToken
+		return models.SaveSettings(tx.Querier, settings)
+	})
+	if e != nil {
+		return nil, e
+	}
+
+	if err = startUpdate(); err != nil {
+		return nil, err
+	}
+
+	return &serverpb.StartUpdateResponse{
+		AuthToken: authToken,
+	}, nil
 }
 
 // UpdateStatus returns PMM Server update status.
 func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusRequest) (*serverpb.UpdateStatusResponse, error) {
-	return &serverpb.UpdateStatusResponse{}, nil
+	settings, err := models.GetSettings(s.db.Querier)
+	if err != nil {
+		return nil, err
+	}
+
+	if subtle.ConstantTimeCompare([]byte(req.AuthToken), []byte(settings.Updates.AuthToken)) == 0 {
+		return nil, status.Error(codes.PermissionDenied, "Invalid authentication token.")
+	}
+
+	// TODO
+
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		settings, err = models.GetSettings(tx.Querier)
+		if err != nil {
+			return err
+		}
+		settings.Updates.AuthToken = ""
+		return models.SaveSettings(tx.Querier, settings)
+	})
+	if e != nil {
+		return nil, err
+	}
+	return &serverpb.UpdateStatusResponse{
+		Log: []string{
+			"TODO",
+		},
+		Done: true,
+	}, nil
 }
 
 // GetSettings returns current PMM Server settings.
