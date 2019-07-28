@@ -178,11 +178,15 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 	}
 
 	res := &serverpb.CheckUpdatesResponse{
-		InstalledVersion: v.InstalledVersion,
-		LatestVersion:    v.LatestVersion,
+		InstalledVersion: v.InstalledRPMVersion,
+		LatestVersion:    v.LatestRPMVersion,
 	}
-	res.InstalledTimestamp, _ = ptypes.TimestampProto(v.InstalledTime)
-	res.LatestTimestamp, _ = ptypes.TimestampProto(v.LatestTime)
+	if v.InstalledTime != nil {
+		res.InstalledTimestamp, _ = ptypes.TimestampProto(*v.InstalledTime)
+	}
+	if v.LatestTime != nil {
+		res.LatestTimestamp, _ = ptypes.TimestampProto(*v.LatestTime)
+	}
 	return res, nil
 }
 
