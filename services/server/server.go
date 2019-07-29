@@ -140,8 +140,8 @@ func convertSettings(s *models.Settings) *serverpb.Settings {
 // Version returns PMM Server version.
 func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*serverpb.VersionResponse, error) {
 	res := &serverpb.VersionResponse{
-		InstalledVersion: version.Version, // TODO
-		UpdateAvailable:  false,           // TODO
+		Version:         version.Version, // TODO
+		UpdateAvailable: false,           // TODO
 		Managed: &serverpb.VersionResponse_Managed{
 			Version: version.Version,
 			Commit:  version.FullCommit,
