@@ -37,6 +37,8 @@ import (
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
+const updateCheckInterval = 24 * time.Hour
+
 // Server represents service for checking PMM Server status and changing settings.
 type Server struct {
 	db         *reform.DB
@@ -54,7 +56,7 @@ func NewServer(db *reform.DB, prometheus prometheusService, env []string) *Serve
 		db:         db,
 		prometheus: prometheus,
 		l:          logrus.WithField("component", "server"),
-		pmmUpdate:  new(pmmUpdate),
+		pmmUpdate:  newPMMUpdate(logrus.WithField("component", "server/pmm-update")),
 	}
 	s.parseEnv(env)
 	return s
@@ -103,6 +105,25 @@ func (s *Server) parseEnv(env []string) {
 	}
 }
 
+// Run runs check for updates loop until ctx is canceled.
+func (s *Server) Run(ctx context.Context) {
+	s.l.Info("Starting...")
+	ticker := time.NewTicker(updateCheckInterval)
+	defer ticker.Stop()
+
+	for {
+		_ = s.pmmUpdate.forceCheckUpdates()
+
+		select {
+		case <-ticker.C:
+			// continue with next loop iteration
+		case <-ctx.Done():
+			s.l.Info("Done.")
+			return
+		}
+	}
+}
+
 // UpdateSettings updates settings in the database with environment variables values.
 func (s *Server) UpdateSettings() error {
 	if s.envMetricsResolution == 0 && !s.envDisableTelemetry {
@@ -140,12 +161,18 @@ func convertSettings(s *models.Settings) *serverpb.Settings {
 // Version returns PMM Server version.
 func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*serverpb.VersionResponse, error) {
 	res := &serverpb.VersionResponse{
-		Version:         version.Version, // TODO
-		UpdateAvailable: false,           // TODO
+		Version: version.Version, // TODO remove this default
 		Managed: &serverpb.VersionResponse_Managed{
 			Version: version.Version,
 			Commit:  version.FullCommit,
 		},
+	}
+	if v := s.pmmUpdate.updateCheckResult(); v != nil {
+		res.Version = v.InstalledRPMVersion
+
+		// FIXME decide if we need to compare versions in Go code at all,
+		// and if yes, should we do it there
+		res.UpdateAvailable = (v.InstalledRPMVersion != v.LatestRPMVersion)
 	}
 
 	t, err := version.Time()
@@ -172,11 +199,11 @@ func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) 
 
 // CheckUpdates checks PMM Server updates availability.
 func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesRequest) (*serverpb.CheckUpdatesResponse, error) {
-	v, err := s.pmmUpdate.checkUpdates(ctx)
-	if err != nil {
+	if err := s.pmmUpdate.forceCheckUpdates(); err != nil {
 		return nil, err
 	}
 
+	v := s.pmmUpdate.updateCheckResult()
 	res := &serverpb.CheckUpdatesResponse{
 		InstalledVersion: v.InstalledRPMVersion,
 		LatestVersion:    v.LatestRPMVersion,
@@ -209,9 +236,7 @@ func (s *Server) StartUpdate(ctx context.Context, req *serverpb.StartUpdateReque
 		return nil, e
 	}
 
-	if err := s.pmmUpdate.startUpdate(); err != nil {
-		return nil, err
-	}
+	// TODO
 
 	return &serverpb.StartUpdateResponse{
 		AuthToken: authToken,
