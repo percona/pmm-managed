@@ -182,14 +182,15 @@ func scraperConfigsForNodeExporter(s *models.MetricsResolutions, node *models.No
 		"filesystem",
 		"loadavg",
 		"meminfo",
+		"meminfo_numa",
 		"netdev",
 		"netstat",
 		"stat",
 		"time",
 		"vmstat",
-		"meminfo_numa",
 		"textfile.hr",
-		"textfile.directory.hr",
+		"standard.process",
+		"standard.go",
 	}
 	hr, err := scraperConfigForStandardExporter(s.HR, node, nil, agent, hrc)
 	if err != nil {
@@ -198,7 +199,6 @@ func scraperConfigsForNodeExporter(s *models.MetricsResolutions, node *models.No
 
 	mrc := []string{
 		"textfile.mr",
-		"textfile.directory.mr",
 	}
 	mr, err := scraperConfigForStandardExporter(s.MR, node, nil, agent, mrc)
 	if err != nil {
@@ -212,7 +212,6 @@ func scraperConfigsForNodeExporter(s *models.MetricsResolutions, node *models.No
 		"filesystem",
 		"uname",
 		"textfile.lr",
-		"textfile.directory.lr",
 	}
 	lr, err := scraperConfigForStandardExporter(s.LR, node, nil, agent, lrc)
 	if err != nil {
@@ -239,6 +238,8 @@ func scraperConfigsForMySQLdExporter(s *models.MetricsResolutions, node *models.
 		"global_status",
 		"info_schema.innodb_metrics",
 		"custom_query.hr",
+		"standard.process",
+		"standard.go",
 	}
 	hr, err := scraperConfigForStandardExporter(s.HR, node, service, agent, hrc)
 	if err != nil {
@@ -246,15 +247,15 @@ func scraperConfigsForMySQLdExporter(s *models.MetricsResolutions, node *models.
 	}
 
 	mrc := []string{
-		"slave_status",
-		"info_schema.processlist",
+		"engine_innodb_status",
 		"info_schema.innodb_cmp",
 		"info_schema.innodb_cmpmem",
+		"info_schema.processlist",
 		"info_schema.query_response_time",
-		"perf_schema.tablelocks",
 		"perf_schema.eventswaits",
 		"perf_schema.file_events",
-		"engine_innodb_status",
+		"perf_schema.tablelocks",
+		"slave_status",
 		"custom_query.mr",
 	}
 	mr, err := scraperConfigForStandardExporter(s.MR, node, service, agent, mrc)
@@ -268,16 +269,16 @@ func scraperConfigsForMySQLdExporter(s *models.MetricsResolutions, node *models.
 		"engine_tokudb_status",
 		"global_variables",
 		"heartbeat",
-		"info_schema.tables",
-		"info_schema.innodb_tablespaces",
 		"info_schema.clientstats",
-		"info_schema.userstats",
+		"info_schema.innodb_tablespaces",
+		"info_schema.tables",
 		"info_schema.tablestats",
+		"info_schema.userstats",
 		"perf_schema.eventsstatements",
 		"perf_schema.file_instances",
 		"perf_schema.indexiowaits",
-		"perf_schema.tablestats",
 		"perf_schema.tableiowaits",
+		"perf_schema.tablestats",
 		"custom_query.lr",
 	}
 	lr, err := scraperConfigForStandardExporter(s.LR, node, service, agent, lrc)
@@ -319,9 +320,26 @@ func scraperConfigsForPostgresExporter(s *models.MetricsResolutions, node *model
 	hrc := []string{
 		"exporter",
 		"custom_query.hr",
+		"standard.process",
+		"standard.go",
+	}
+	hr, err := scraperConfigForStandardExporter(s.HR, node, service, agent, hrc)
+	if err != nil {
+		return nil, err
 	}
 
-	hr, err := scraperConfigForStandardExporter(s.HR, node, service, agent, hrc)
+	mrc := []string{
+		"custom_query.mr",
+	}
+	mr, err := scraperConfigForStandardExporter(s.MR, node, service, agent, mrc)
+	if err != nil {
+		return nil, err
+	}
+
+	lrc := []string{
+		"custom_query.lr",
+	}
+	lr, err := scraperConfigForStandardExporter(s.LR, node, service, agent, lrc)
 	if err != nil {
 		return nil, err
 	}
@@ -330,6 +348,12 @@ func scraperConfigsForPostgresExporter(s *models.MetricsResolutions, node *model
 	if hr != nil {
 		r = append(r, hr)
 	}
+	if mr != nil {
+		r = append(r, mr)
+	}
+	if lr != nil {
+		r = append(r, lr)
+	}
 	return r, nil
 }
 
@@ -337,6 +361,8 @@ func scraperConfigsForProxySQLExporter(s *models.MetricsResolutions, node *model
 	hrc := []string{
 		"mysql_connection_pool",
 		"mysql_status",
+		"standard.process",
+		"standard.go",
 	}
 
 	hr, err := scraperConfigForStandardExporter(s.HR, node, service, agent, hrc)
