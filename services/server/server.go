@@ -169,10 +169,7 @@ func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*se
 	}
 	if v := s.pmmUpdate.updateCheckResult(); v != nil {
 		res.Version = v.InstalledRPMVersion
-
-		// FIXME decide if we need to compare versions in Go code at all,
-		// and if yes, should we do it there
-		res.UpdateAvailable = (v.InstalledRPMVersion != v.LatestRPMVersion)
+		res.UpdateAvailable = v.UpdateAvailable
 	}
 
 	t, err := version.Time()
@@ -205,11 +202,10 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 
 	v := s.pmmUpdate.updateCheckResult()
 	res := &serverpb.CheckUpdatesResponse{
-		InstalledVersion: v.InstalledRPMVersion,
-		LatestVersion:    v.LatestRPMVersion,
-	}
-	if v.InstalledTime != nil {
-		res.InstalledTimestamp, _ = ptypes.TimestampProto(*v.InstalledTime)
+		Version:         v.InstalledRPMVersion,
+		UpdateAvailable: v.UpdateAvailable,
+		LatestVersion:   v.LatestRPMVersion,
+		LatestNewsUrl:   "", // TODO
 	}
 	if v.LatestTime != nil {
 		res.LatestTimestamp, _ = ptypes.TimestampProto(*v.LatestTime)
