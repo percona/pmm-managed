@@ -134,9 +134,9 @@ func jobName(agent *models.Agent, interval time.Duration) string {
 	return fmt.Sprintf("%s%s_%s", agent.AgentType, strings.Replace(agent.AgentID, "/", "_", -1), interval)
 }
 
-// scrapeConfigForStandardExporter returns scrape config for standard exporter: /metrics endpoint, high resolution.
+// scraperConfigForStandardExporter returns scrape config for standard exporter: /metrics endpoint, high resolution.
 // If listen port is not known yet, it returns (nil, nil).
-func scrapeConfigForStandardExporter(interval time.Duration, node *models.Node, service *models.Service, agent *models.Agent, collect []string) (*config.ScrapeConfig, error) {
+func scraperConfigForStandardExporter(interval time.Duration, node *models.Node, service *models.Service, agent *models.Agent, collect []string) (*config.ScrapeConfig, error) {
 	labels, err := mergeLabels(node, service, agent)
 	if err != nil {
 		return nil, err
@@ -175,7 +175,7 @@ func scrapeConfigForStandardExporter(interval time.Duration, node *models.Node, 
 	return cfg, nil
 }
 
-func scrapeConfigForNodeExporter(s *models.MetricsResolutions, node *models.Node, agent *models.Agent) ([]*config.ScrapeConfig, error) {
+func scraperConfigsForNodeExporter(s *models.MetricsResolutions, node *models.Node, agent *models.Agent) ([]*config.ScrapeConfig, error) {
 	hrc := []string{
 		"diskstats",
 		"filefd",
@@ -191,7 +191,7 @@ func scrapeConfigForNodeExporter(s *models.MetricsResolutions, node *models.Node
 		"textfile.hr",
 		"textfile.directory.hr",
 	}
-	hr, err := scrapeConfigForStandardExporter(s.HR, node, nil, agent, hrc)
+	hr, err := scraperConfigForStandardExporter(s.HR, node, nil, agent, hrc)
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +200,7 @@ func scrapeConfigForNodeExporter(s *models.MetricsResolutions, node *models.Node
 		"textfile.mr",
 		"textfile.directory.mr",
 	}
-	mr, err := scrapeConfigForStandardExporter(s.MR, node, nil, agent, mrc)
+	mr, err := scraperConfigForStandardExporter(s.MR, node, nil, agent, mrc)
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +214,7 @@ func scrapeConfigForNodeExporter(s *models.MetricsResolutions, node *models.Node
 		"textfile.lr",
 		"textfile.directory.lr",
 	}
-	lr, err := scrapeConfigForStandardExporter(s.LR, node, nil, agent, lrc)
+	lr, err := scraperConfigForStandardExporter(s.LR, node, nil, agent, lrc)
 	if err != nil {
 		return nil, err
 	}
@@ -232,15 +232,15 @@ func scrapeConfigForNodeExporter(s *models.MetricsResolutions, node *models.Node
 	return r, nil
 }
 
-// scrapeConfigsForMySQLdExporter returns scrape config for mysqld_exporter.
+// scraperConfigsForMySQLdExporter returns scrape config for mysqld_exporter.
 // If listen port is not known yet, it returns (nil, nil).
-func scrapeConfigsForMySQLdExporter(s *models.MetricsResolutions, node *models.Node, service *models.Service, agent *models.Agent) ([]*config.ScrapeConfig, error) {
+func scraperConfigsForMySQLdExporter(s *models.MetricsResolutions, node *models.Node, service *models.Service, agent *models.Agent) ([]*config.ScrapeConfig, error) {
 	hrc := []string{
 		"global_status",
 		"info_schema.innodb_metrics",
 		"custom_query.hr",
 	}
-	hr, err := scrapeConfigForStandardExporter(s.HR, node, service, agent, hrc)
+	hr, err := scraperConfigForStandardExporter(s.HR, node, service, agent, hrc)
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +257,7 @@ func scrapeConfigsForMySQLdExporter(s *models.MetricsResolutions, node *models.N
 		"engine_innodb_status",
 		"custom_query.mr",
 	}
-	mr, err := scrapeConfigForStandardExporter(s.MR, node, service, agent, mrc)
+	mr, err := scraperConfigForStandardExporter(s.MR, node, service, agent, mrc)
 	if err != nil {
 		return nil, err
 	}
@@ -280,7 +280,7 @@ func scrapeConfigsForMySQLdExporter(s *models.MetricsResolutions, node *models.N
 		"perf_schema.tableiowaits",
 		"custom_query.lr",
 	}
-	lr, err := scrapeConfigForStandardExporter(s.LR, node, service, agent, lrc)
+	lr, err := scraperConfigForStandardExporter(s.LR, node, service, agent, lrc)
 	if err != nil {
 		return nil, err
 	}
@@ -298,12 +298,12 @@ func scrapeConfigsForMySQLdExporter(s *models.MetricsResolutions, node *models.N
 	return r, nil
 }
 
-func scrapeConfigForMongoDBExporter(s *models.MetricsResolutions, node *models.Node, service *models.Service, agent *models.Agent) ([]*config.ScrapeConfig, error) {
+func scraperConfigsForMongoDBExporter(s *models.MetricsResolutions, node *models.Node, service *models.Service, agent *models.Agent) ([]*config.ScrapeConfig, error) {
 	hrc := []string{
 		"collection",
 		"database",
 	}
-	hr, err := scrapeConfigForStandardExporter(s.HR, node, service, agent, hrc)
+	hr, err := scraperConfigForStandardExporter(s.HR, node, service, agent, hrc)
 	if err != nil {
 		return nil, err
 	}
@@ -315,13 +315,13 @@ func scrapeConfigForMongoDBExporter(s *models.MetricsResolutions, node *models.N
 	return r, nil
 }
 
-func scrapeConfigForPostgresExporter(s *models.MetricsResolutions, node *models.Node, service *models.Service, agent *models.Agent) ([]*config.ScrapeConfig, error) {
+func scraperConfigsForPostgresExporter(s *models.MetricsResolutions, node *models.Node, service *models.Service, agent *models.Agent) ([]*config.ScrapeConfig, error) {
 	hrc := []string{
 		"exporter",
 		"custom_query.hr",
 	}
 
-	hr, err := scrapeConfigForStandardExporter(s.HR, node, service, agent, hrc)
+	hr, err := scraperConfigForStandardExporter(s.HR, node, service, agent, hrc)
 	if err != nil {
 		return nil, err
 	}
@@ -333,13 +333,13 @@ func scrapeConfigForPostgresExporter(s *models.MetricsResolutions, node *models.
 	return r, nil
 }
 
-func scrapeConfigForProxySQLExporter(s *models.MetricsResolutions, node *models.Node, service *models.Service, agent *models.Agent) ([]*config.ScrapeConfig, error) {
+func scraperConfigsForProxySQLExporter(s *models.MetricsResolutions, node *models.Node, service *models.Service, agent *models.Agent) ([]*config.ScrapeConfig, error) {
 	hrc := []string{
 		"mysql_connection_pool",
 		"mysql_status",
 	}
 
-	hr, err := scrapeConfigForStandardExporter(s.HR, node, service, agent, hrc)
+	hr, err := scraperConfigForStandardExporter(s.HR, node, service, agent, hrc)
 	if err != nil {
 		return nil, err
 	}

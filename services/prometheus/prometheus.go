@@ -174,7 +174,7 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 
 			case models.NodeExporterType:
 				for _, node := range nodes {
-					scfgs, err := scrapeConfigForNodeExporter(&s, node, agent)
+					scfgs, err := scraperConfigsForNodeExporter(&s, node, agent)
 					if err != nil {
 						svc.l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 						continue
@@ -189,7 +189,7 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 						return errors.WithStack(err)
 					}
 
-					scfgs, err := scrapeConfigsForMySQLdExporter(&s, node, service, agent)
+					scfgs, err := scraperConfigsForMySQLdExporter(&s, node, service, agent)
 					if err != nil {
 						svc.l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 						continue
@@ -204,7 +204,7 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 						return errors.WithStack(err)
 					}
 
-					scfgs, err := scrapeConfigForMongoDBExporter(&s, node, service, agent)
+					scfgs, err := scraperConfigsForMongoDBExporter(&s, node, service, agent)
 					if err != nil {
 						svc.l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 						continue
@@ -219,7 +219,7 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 						return errors.WithStack(err)
 					}
 
-					scfgs, err := scrapeConfigForPostgresExporter(&s, node, service, agent)
+					scfgs, err := scraperConfigsForPostgresExporter(&s, node, service, agent)
 					if err != nil {
 						svc.l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 						continue
@@ -234,7 +234,7 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 						return errors.WithStack(err)
 					}
 
-					scfgs, err := scrapeConfigForProxySQLExporter(&s, node, service, agent)
+					scfgs, err := scraperConfigsForProxySQLExporter(&s, node, service, agent)
 					if err != nil {
 						svc.l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 						continue
