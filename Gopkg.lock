@@ -171,7 +171,7 @@
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:ce21a240ee1f75f297f4ce0736461d4c60a241a01cac75835f5c9651e7c41b22"
+  digest = "1:ee3a77029c82c78fa3e897941308d1414baf442f4b5466329a17ba1753aeedbb"
   name = "github.com/percona/pmm"
   packages = [
     "api/inventorypb/json/client",
@@ -190,7 +190,7 @@
     "api/serverpb/json/client/server",
   ]
   pruneopts = "NUT"
-  revision = "8a179474d91169701cc9d12c9cb551a376cbdfaa"
+  revision = "df931f31889ff5815f4b7298eb9de566c49aa0a9"
 
 [[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
@@ -231,8 +231,8 @@
     "x/bsonx/bsoncore",
   ]
   pruneopts = "NUT"
-  revision = "582ff343271e8893d785ff094855498c285bce0a"
-  version = "v1.0.3"
+  revision = "0d1270edf53072da4da781b76d2e1db58831152f"
+  version = "v1.0.4"
 
 [[projects]]
   branch = "master"
@@ -240,15 +240,15 @@
   name = "golang.org/x/net"
   packages = ["idna"]
   pruneopts = "NUT"
-  revision = "da137c7871d730100384dbcf36e6f8fa493aef5b"
+  revision = "ca1201d0de80cfde86cb01aea620983605dfe99b"
 
 [[projects]]
   branch = "master"
-  digest = "1:a01f916cb826c0059f8af4caa1b8d7f18cf3047ca7e371c7a04206704f0cdb20"
+  digest = "1:4de466b9ebe9685614b7db1ab3b2fb4a16a79aa1ea639866d033901c577f3328"
   name = "golang.org/x/sys"
   packages = ["unix"]
   pruneopts = "NUT"
-  revision = "04f50cda93cbb67f2afa353c52f342100e80e625"
+  revision = "fc99dfbffb4e5ed5758a37e31dd861afe285406b"
 
 [[projects]]
   digest = "1:66a2f252a58b4fbbad0e4e180e1d85a83c222b6bce09c3dcdef3dc87c72eda7c"
@@ -281,8 +281,8 @@
   name = "google.golang.org/grpc"
   packages = ["codes"]
   pruneopts = "NUT"
-  revision = "1d89a3c832915b2314551c1d2a506874d62e53f7"
-  version = "v1.22.0"
+  revision = "045159ad57f3781d409358e3ade910a018c16b30"
+  version = "v1.22.1"
 
 [[projects]]
   digest = "1:18108594151654e9e696b27b181b953f9a90b16bf14d253dd1b397b025a1487f"

@@ -417,7 +417,7 @@ func TestRemoveNode(t *testing.T) {
 			},
 			Context: context.Background(),
 		})
-		pmmapitests.AssertAPIErrorf(t, err, 412, codes.FailedPrecondition, `Node with ID %q has services.`, node.NodeID)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.FailedPrecondition, `Node with ID %q has services.`, node.NodeID)
 		assert.Nil(t, removeResp)
 
 		// Check that node and service isn't removed.
@@ -491,7 +491,7 @@ func TestRemoveNode(t *testing.T) {
 			},
 			Context: context.Background(),
 		})
-		pmmapitests.AssertAPIErrorf(t, err, 412, codes.FailedPrecondition, `Node with ID %q has pmm-agent.`, node.NodeID)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.FailedPrecondition, `Node with ID %q has pmm-agent.`, node.NodeID)
 		assert.Nil(t, removeResp)
 
 		// Remove with force flag.

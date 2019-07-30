@@ -29,7 +29,7 @@ var (
 	// Context is canceled on SIGTERM or SIGINT. Tests should cleanup and exit.
 	Context context.Context
 
-	// BaseURL contains PMM Server base URL like https://127.0.0.1:8443/.
+	// BaseURL contains PMM Server base URL like https://admin:admin@127.0.0.1:8443/.
 	BaseURL *url.URL
 
 	// Hostname contains local hostname that is used for generating test data.

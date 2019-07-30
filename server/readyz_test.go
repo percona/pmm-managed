@@ -1,11 +1,9 @@
 package server
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,14 +12,19 @@ import (
 	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
 )
 
-func TestVersion(t *testing.T) {
+func TestReadyz(t *testing.T) {
 	paths := []string{
-		"managed/v1/version",
-		"v1/version",
+		"ping",
+		"v1/readyz",
 	}
 	for _, path := range paths {
 		t.Run(path, func(t *testing.T) {
-			uri := pmmapitests.BaseURL.ResolveReference(&url.URL{
+			// make a BaseURL without authentication
+			baseURL, err := url.Parse(pmmapitests.BaseURL.String())
+			require.NoError(t, err)
+			baseURL.User = nil
+
+			uri := baseURL.ResolveReference(&url.URL{
 				Path: path,
 			})
 
@@ -32,14 +35,7 @@ func TestVersion(t *testing.T) {
 			b, err := ioutil.ReadAll(resp.Body)
 			require.NoError(t, err)
 			assert.Equal(t, 200, resp.StatusCode, "response:\n%s", b)
-
-			var res struct {
-				Version string
-			}
-			err = json.Unmarshal(b, &res)
-			require.NoError(t, err, "response:\n%s", b)
-
-			assert.True(t, strings.HasPrefix(res.Version, "2.0.0-"), "version = %q should has suffix", res.Version)
+			assert.Equal(t, `{}`, string(b))
 		})
 	}
 }

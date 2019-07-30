@@ -69,7 +69,7 @@ func TestSettings(t *testing.T) {
 						},
 					},
 				})
-				pmmapitests.AssertAPIErrorf(t, err, 412, codes.FailedPrecondition, `Minimal resolution is 1s.`)
+				pmmapitests.AssertAPIErrorf(t, err, 400, codes.FailedPrecondition, `Minimal resolution is 1s.`)
 				assert.Empty(t, res)
 			})
 
@@ -102,7 +102,6 @@ func TestSettings(t *testing.T) {
 					Lr: "60s",
 				}
 				require.Equal(t, getExpected, getRes.Payload.Settings.MetricsResolutions)
-
 			})
 		})
 	})

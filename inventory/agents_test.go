@@ -264,7 +264,7 @@ func TestPMMAgent(t *testing.T) {
 		}
 		res, err := client.Default.Agents.RemoveAgent(params)
 		assert.Nil(t, res)
-		pmmapitests.AssertAPIErrorf(t, err, 412, codes.FailedPrecondition, `pmm-agent with ID %q has agents.`, pmmAgentID)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.FailedPrecondition, `pmm-agent with ID %q has agents.`, pmmAgentID)
 
 		// Check that agents aren't removed.
 		getAgentRes, err := client.Default.Agents.GetAgent(&agents.GetAgentParams{
