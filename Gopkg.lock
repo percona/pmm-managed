@@ -18,7 +18,7 @@
   revision = "fcb4a6205bdc6ce526f359ae5eae5fb6ded53916"
 
 [[projects]]
-  digest = "1:4006dc9343be626f96b50befd41d496d638f2894e843cc378c5b9133384d084b"
+  digest = "1:71c300f777ea3e0a85f7597d95e31445a6ac293c71436937e044c82e4eb916c6"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -55,8 +55,8 @@
     "service/sts/stsiface",
   ]
   pruneopts = "NUT"
-  revision = "ba829de1f3457a55eddf7ed693f36fe9069e39c4"
-  version = "v1.21.6"
+  revision = "384f4536edd1f4b59cf0c03ab3b346aba4c1c9cc"
+  version = "v1.21.7"
 
 [[projects]]
   digest = "1:707ebe952a8b3d00b343c01536c79c73771d100f63ec6babeaed5c79e2b8a8dd"
@@ -222,8 +222,8 @@
   version = "v0.4.0"
 
 [[projects]]
-  branch = "PMM-4379-update-api-stubs"
-  digest = "1:a1d9ffccd31cbdffd521edc9c60c4f0de89d55b4331d4ff2cf7856894647adfc"
+  branch = "PMM-2.0"
+  digest = "1:d205dd897ef65276c3b57b217413337c57371d489feae053845f46397ddb1d30"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -235,7 +235,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "79b25ad4821fbafc4eff9db8f45f14a91956e9a7"
+  revision = "df931f31889ff5815f4b7298eb9de566c49aa0a9"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
@@ -418,7 +418,7 @@
     "internal/semver",
   ]
   pruneopts = "NUT"
-  revision = "fc6e2057e7f6701ef9b5ef49a089bff4da7f4610"
+  revision = "ff9f1409240a6589b749f29c118cc0ac9bd5bcde"
 
 [[projects]]
   digest = "1:c25289f43ac4a68d88b02245742347c94f1e108c534dda442188015ff80669b3"
