@@ -222,8 +222,8 @@
   version = "v0.4.0"
 
 [[projects]]
-  branch = "PMM-2.0"
-  digest = "1:d205dd897ef65276c3b57b217413337c57371d489feae053845f46397ddb1d30"
+  branch = "PMM-4181-postgresql-actions"
+  digest = "1:4441c6451f8880e891768915c77c0a18dfd69ad0b2e7f5364458fc91bf60c81f"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -235,7 +235,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "df931f31889ff5815f4b7298eb9de566c49aa0a9"
+  revision = "d07f2cea4ad8e8e34222a5851c3773089f6b67a9"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"

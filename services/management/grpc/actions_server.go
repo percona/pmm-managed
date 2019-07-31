@@ -253,6 +253,28 @@ func (s *actionsServer) StartMySQLShowIndexAction(ctx context.Context, req *mana
 	}, nil
 }
 
+
+func (s *actionsServer) StartPostgreSQLShowCreateTableAction(context.Context, *managementpb.StartPostgreSQLShowCreateTableActionRequest) (*managementpb.StartPostgreSQLShowCreateTableActionResponse, error) {
+	panic("implement me")
+}
+
+func (s *actionsServer) StartPostgreSQLShowIndexAction(ctx context.Context, req *managementpb.StartPostgreSQLShowIndexActionRequest) (*managementpb.StartPostgreSQLShowIndexActionResponse, error) {
+	res, dsn, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.r.StartPostgreSQLShowIndexAction(ctx, res.ID, res.PMMAgentID, dsn, req.TableName)
+	if err != nil {
+		return nil, err
+	}
+
+	return &managementpb.StartPostgreSQLShowIndexActionResponse{
+		PmmAgentId: req.PmmAgentId,
+		ActionId:   res.ID,
+	}, nil
+}
+
 // CancelAction stops an Action.
 func (s *actionsServer) CancelAction(ctx context.Context, req *managementpb.CancelActionRequest) (*managementpb.CancelActionResponse, error) {
 	ar, err := models.FindActionResultByID(s.db.Querier, req.ActionId)
