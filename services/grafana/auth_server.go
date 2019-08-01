@@ -18,6 +18,7 @@ package grafana
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
@@ -76,6 +77,12 @@ var rules = map[string]role{
 	// "/" is a special case
 }
 
+// clientError contains authentication error response details.
+type authError struct {
+	code    int
+	message string
+}
+
 // AuthServer authenticates incoming requests via Grafana API.
 type AuthServer struct {
 	c *Client
@@ -98,12 +105,24 @@ func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithTimeout(req.Context(), 3*time.Second)
 	defer cancel()
 
-	// response body is ignored by nginx
-	code := s.authenticate(ctx, req)
-	rw.WriteHeader(code)
+	if err := s.authenticate(ctx, req); err != nil {
+		// nginx completely ignores auth_request subrequest response body;
+		// out nginx configuration then sends the same request as a normal request
+		// and returns response body to the client
+		m := map[string]interface{}{
+			"code":    err.code,
+			"error":   err.message, // set both "error" and "message" for compatibility with grpc-gateway
+			"message": err.message,
+		}
+		rw.Header().Set("Content-Type", "application/json")
+		rw.WriteHeader(err.code)
+		if err := json.NewEncoder(rw).Encode(m); err != nil {
+			s.l.Warnf("%s", err)
+		}
+	}
 }
 
-func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) int {
+func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) *authError {
 	// TODO l := logger.Get(ctx) once we have it after https://jira.percona.com/browse/PMM-4326
 	l := s.l
 
@@ -117,13 +136,13 @@ func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) int {
 
 	if req.URL.Path != "/auth_request" {
 		l.Errorf("Unexpected path %s.", req.URL.Path)
-		return 500
+		return &authError{code: 500, message: "Internal server error."}
 	}
 
 	origURI := req.Header.Get("X-Original-Uri")
 	if origURI == "" {
 		l.Errorf("Empty X-Original-Uri.")
-		return 500
+		return &authError{code: 500, message: "Internal server error."}
 	}
 	l = l.WithField("req", fmt.Sprintf("%s %s", req.Header.Get("X-Original-Method"), origURI))
 
@@ -154,7 +173,7 @@ func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) int {
 
 	if minRole == none {
 		l.Debugf("Minimal required role is %q, granting access without checking Grafana.", minRole)
-		return 200
+		return nil
 	}
 
 	// check Grafana with some headers from request
@@ -171,22 +190,22 @@ func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) int {
 	if err != nil {
 		l.Warnf("%s", err)
 		if cErr, ok := errors.Cause(err).(*clientError); ok {
-			return cErr.code
+			return &authError{code: cErr.Code, message: cErr.ErrorMessage}
 		}
-		return 500
+		return &authError{code: 500, message: "Internal server error."}
 	}
 	l = l.WithField("role", role.String())
 
 	if role == grafanaAdmin {
 		l.Debugf("Grafana admin, allowing access.")
-		return 200
+		return nil
 	}
 
 	if minRole <= role {
 		l.Debugf("Minimal required role is %q, granting access.", minRole)
-		return 200
+		return nil
 	}
 
 	l.Warnf("Minimal required role is %q.", minRole)
-	return 403
+	return &authError{code: 403, message: "Access denied."}
 }

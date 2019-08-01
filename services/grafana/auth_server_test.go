@@ -47,8 +47,8 @@ func TestAuthServer(t *testing.T) {
 		req.SetBasicAuth("admin", "admin")
 		req.Header.Set("X-Original-Uri", "/foo")
 
-		code := s.authenticate(ctx, req)
-		assert.Equal(t, 200, code)
+		res := s.authenticate(ctx, req)
+		assert.Nil(t, res)
 	})
 
 	t.Run("NoAnonymousAccess", func(t *testing.T) {
@@ -58,8 +58,8 @@ func TestAuthServer(t *testing.T) {
 		require.NoError(t, err)
 		req.Header.Set("X-Original-Uri", "/foo")
 
-		code := s.authenticate(ctx, req)
-		assert.Equal(t, 401, code)
+		res := s.authenticate(ctx, req)
+		assert.Equal(t, &authError{code: 401, message: "Unauthorized"}, res)
 	})
 
 	t.Run("EmptyOriginalUri", func(t *testing.T) {
@@ -69,8 +69,8 @@ func TestAuthServer(t *testing.T) {
 		require.NoError(t, err)
 		req.SetBasicAuth("admin", "admin")
 
-		code := s.authenticate(ctx, req)
-		assert.Equal(t, 500, code)
+		res := s.authenticate(ctx, req)
+		assert.Equal(t, &authError{code: 500, message: "Internal server error."}, res)
 	})
 
 	for uri, minRole := range map[string]role{
@@ -105,11 +105,11 @@ func TestAuthServer(t *testing.T) {
 				req.SetBasicAuth(login, login)
 				req.Header.Set("X-Original-Uri", uri)
 
-				code := s.authenticate(ctx, req)
+				res := s.authenticate(ctx, req)
 				if minRole <= role {
-					assert.Equal(t, 200, code)
+					assert.Nil(t, res)
 				} else {
-					assert.Equal(t, 403, code)
+					assert.Equal(t, &authError{code: 403, message: "Access denied."}, res)
 				}
 			})
 		}
