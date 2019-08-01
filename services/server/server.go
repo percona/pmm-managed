@@ -172,6 +172,10 @@ func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*se
 		res.Version = v.InstalledRPMNiceVersion
 		res.FullVersion = v.InstalledRPMVersion
 		res.UpdateAvailable = v.UpdateAvailable
+		if v.InstalledTime != nil {
+			t := v.InstalledTime.UTC().Truncate(24 * time.Hour) // return only date
+			res.Timestamp, _ = ptypes.TimestampProto(t)
+		}
 	}
 
 	t, err := version.Time()
@@ -212,10 +216,12 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 		LatestNewsUrl:     "", // TODO https://jira.percona.com/browse/PMM-4444
 	}
 	if v.InstalledTime != nil {
-		res.Timestamp, _ = ptypes.TimestampProto(*v.InstalledTime)
+		t := v.InstalledTime.UTC().Truncate(24 * time.Hour) // return only date
+		res.Timestamp, _ = ptypes.TimestampProto(t)
 	}
 	if v.LatestTime != nil {
-		res.LatestTimestamp, _ = ptypes.TimestampProto(*v.LatestTime)
+		t := v.LatestTime.UTC().Truncate(24 * time.Hour) // return only date
+		res.LatestTimestamp, _ = ptypes.TimestampProto(t)
 	}
 	return res, nil
 }

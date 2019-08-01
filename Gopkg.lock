@@ -223,7 +223,7 @@
 
 [[projects]]
   branch = "PMM-4443-parse-times"
-  digest = "1:80a3e73607c381d9386e5a8232bbaafda0fd83c82f262367e313393e98d77517"
+  digest = "1:2511e792922722ac8a50db24a774e64cdf29705f779fc29fa7104e8197632400"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -235,7 +235,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "55d74643e31ddfe3f7c4f9c164dfc4a7e953a006"
+  revision = "cee03cbf3b8eafee4685887a2366dac75b4d878b"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
