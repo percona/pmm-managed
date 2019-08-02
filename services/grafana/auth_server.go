@@ -26,8 +26,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
 )
 
 // rules maps original URL prefix to minimal required role.
@@ -79,7 +81,7 @@ var rules = map[string]role{
 
 // clientError contains authentication error response details.
 type authError struct {
-	code    int
+	code    codes.Code
 	message string
 }
 
@@ -109,13 +111,15 @@ func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		// nginx completely ignores auth_request subrequest response body;
 		// out nginx configuration then sends the same request as a normal request
 		// and returns response body to the client
+
+		// copy grpc-gateway behavior: set correct codes, set both "error" and "message"
 		m := map[string]interface{}{
-			"code":    err.code,
-			"error":   err.message, // set both "error" and "message" for compatibility with grpc-gateway
+			"code":    int(err.code),
+			"error":   err.message,
 			"message": err.message,
 		}
 		rw.Header().Set("Content-Type", "application/json")
-		rw.WriteHeader(err.code)
+		rw.WriteHeader(runtime.HTTPStatusFromCode(err.code))
 		if err := json.NewEncoder(rw).Encode(m); err != nil {
 			s.l.Warnf("%s", err)
 		}
@@ -136,13 +140,13 @@ func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) *authE
 
 	if req.URL.Path != "/auth_request" {
 		l.Errorf("Unexpected path %s.", req.URL.Path)
-		return &authError{code: 500, message: "Internal server error."}
+		return &authError{code: codes.Internal, message: "Internal server error."}
 	}
 
 	origURI := req.Header.Get("X-Original-Uri")
 	if origURI == "" {
 		l.Errorf("Empty X-Original-Uri.")
-		return &authError{code: 500, message: "Internal server error."}
+		return &authError{code: codes.Internal, message: "Internal server error."}
 	}
 	l = l.WithField("req", fmt.Sprintf("%s %s", req.Header.Get("X-Original-Method"), origURI))
 
@@ -190,9 +194,13 @@ func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) *authE
 	if err != nil {
 		l.Warnf("%s", err)
 		if cErr, ok := errors.Cause(err).(*clientError); ok {
-			return &authError{code: cErr.Code, message: cErr.ErrorMessage}
+			code := codes.Internal
+			if cErr.Code == 401 || cErr.Code == 403 {
+				code = codes.Unauthenticated
+			}
+			return &authError{code: code, message: cErr.ErrorMessage}
 		}
-		return &authError{code: 500, message: "Internal server error."}
+		return &authError{code: codes.Internal, message: "Internal server error."}
 	}
 	l = l.WithField("role", role.String())
 
@@ -207,5 +215,5 @@ func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) *authE
 	}
 
 	l.Warnf("Minimal required role is %q.", minRole)
-	return &authError{code: 403, message: "Access denied."}
+	return &authError{code: codes.PermissionDenied, message: "Access denied."}
 }

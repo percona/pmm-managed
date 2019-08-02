@@ -25,6 +25,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
 )
 
 func TestAuthServer(t *testing.T) {
@@ -59,7 +60,7 @@ func TestAuthServer(t *testing.T) {
 		req.Header.Set("X-Original-Uri", "/foo")
 
 		res := s.authenticate(ctx, req)
-		assert.Equal(t, &authError{code: 401, message: "Unauthorized"}, res)
+		assert.Equal(t, &authError{code: codes.Unauthenticated, message: "Unauthorized"}, res)
 	})
 
 	t.Run("EmptyOriginalUri", func(t *testing.T) {
@@ -70,7 +71,7 @@ func TestAuthServer(t *testing.T) {
 		req.SetBasicAuth("admin", "admin")
 
 		res := s.authenticate(ctx, req)
-		assert.Equal(t, &authError{code: 500, message: "Internal server error."}, res)
+		assert.Equal(t, &authError{code: codes.Internal, message: "Internal server error."}, res)
 	})
 
 	for uri, minRole := range map[string]role{
@@ -109,7 +110,7 @@ func TestAuthServer(t *testing.T) {
 				if minRole <= role {
 					assert.Nil(t, res)
 				} else {
-					assert.Equal(t, &authError{code: 403, message: "Access denied."}, res)
+					assert.Equal(t, &authError{code: codes.PermissionDenied, message: "Access denied."}, res)
 				}
 			})
 		}
