@@ -171,7 +171,7 @@
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:ee3a77029c82c78fa3e897941308d1414baf442f4b5466329a17ba1753aeedbb"
+  digest = "1:a1f21e32b50a3dfa965ffa5c87135a9d10a11c23dd012f4f2988c443457d1438"
   name = "github.com/percona/pmm"
   packages = [
     "api/inventorypb/json/client",
@@ -190,7 +190,7 @@
     "api/serverpb/json/client/server",
   ]
   pruneopts = "NUT"
-  revision = "df931f31889ff5815f4b7298eb9de566c49aa0a9"
+  revision = "d88ef0760234f0f81a9700927b2028321216b448"
 
 [[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
@@ -244,11 +244,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:4de466b9ebe9685614b7db1ab3b2fb4a16a79aa1ea639866d033901c577f3328"
+  digest = "1:9c684a8c6bb9501591c1ac600e7669fdf4683b1a08be53e17e98e4660985c000"
   name = "golang.org/x/sys"
   packages = ["unix"]
   pruneopts = "NUT"
-  revision = "fc99dfbffb4e5ed5758a37e31dd861afe285406b"
+  revision = "cbf593c0f2f39034e9104bbf77e2ec7c48c98fc5"
 
 [[projects]]
   digest = "1:66a2f252a58b4fbbad0e4e180e1d85a83c222b6bce09c3dcdef3dc87c72eda7c"

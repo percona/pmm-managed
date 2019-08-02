@@ -18,7 +18,10 @@ func TestReadyz(t *testing.T) {
 		"v1/readyz",
 	}
 	for _, path := range paths {
+		path := path
 		t.Run(path, func(t *testing.T) {
+			t.Parallel()
+
 			// make a BaseURL without authentication
 			baseURL, err := url.Parse(pmmapitests.BaseURL.String())
 			require.NoError(t, err)
