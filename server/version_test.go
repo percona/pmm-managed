@@ -43,7 +43,6 @@ func TestVersion(t *testing.T) {
 			require.NoError(t, err, "response:\n%s", b)
 
 			assert.True(t, strings.HasPrefix(res.Version, "2.0.0-"), "version = %q should have '2.0.0-' prefix", res.Version)
-			assert.True(t, strings.HasSuffix(res.FullVersion, ".el7"), "version = %q should have '.el7' suffix", res.FullVersion)
 			ts := time.Time(res.Timestamp)
 			assert.Equal(t, time.Date(ts.Year(), ts.Month(), ts.Day(), 0, 0, 0, 0, time.UTC), ts, "timestamp should contain only date")
 		})

@@ -152,7 +152,7 @@ func init() {
 	serverClient.Default = serverClient.New(transport, nil)
 
 	// do not run tests if server is not available
-	_, err = serverClient.Default.Server.Version(nil)
+	_, err = serverClient.Default.Server.Readiness(nil)
 	if err != nil {
 		panic(err)
 	}

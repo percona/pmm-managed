@@ -14,6 +14,12 @@ func TestUpdates(t *testing.T) {
 	t.Run("CheckUpdates", func(t *testing.T) {
 		t.Parallel()
 
+		version, err := serverClient.Default.Server.Version(nil)
+		require.NoError(t, err)
+		if !strings.HasSuffix(version.Payload.FullVersion, ".el7") {
+			t.Skip("skipping test in developer's environment")
+		}
+
 		res, err := serverClient.Default.Server.CheckUpdates(nil)
 		require.NoError(t, err)
 
