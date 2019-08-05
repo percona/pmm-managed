@@ -33,38 +33,38 @@ import (
 var rules = map[string]role{
 	"/agent.Agent/Connect": none,
 
-	"/inventory.Agents/Get":    editor,
-	"/inventory.Agents/List":   editor,
-	"/inventory.Nodes/Get":     editor,
-	"/inventory.Nodes/List":    editor,
-	"/inventory.Services/Get":  editor,
-	"/inventory.Services/List": editor,
+	"/inventory.Agents/Get":    admin,
+	"/inventory.Agents/List":   admin,
+	"/inventory.Nodes/Get":     admin,
+	"/inventory.Nodes/List":    admin,
+	"/inventory.Services/Get":  admin,
+	"/inventory.Services/List": admin,
 	"/inventory.":              admin,
 
 	"/management.": admin,
 
 	"/server.": admin,
 
-	"/v0/inventory/Agents/Get":    editor,
-	"/v0/inventory/Agents/List":   editor,
-	"/v0/inventory/Nodes/Get":     editor,
-	"/v0/inventory/Nodes/List":    editor,
-	"/v0/inventory/Services/Get":  editor,
-	"/v0/inventory/Services/List": editor,
+	"/v0/inventory/Agents/Get":    admin,
+	"/v0/inventory/Agents/List":   admin,
+	"/v0/inventory/Nodes/Get":     admin,
+	"/v0/inventory/Nodes/List":    admin,
+	"/v0/inventory/Services/Get":  admin,
+	"/v0/inventory/Services/List": admin,
 	"/v0/inventory/":              admin,
 
 	"/v0/management/": admin,
 
-	"/v1/Updates/Check":   grafanaAdmin,
-	"/v1/Updates/Perform": grafanaAdmin,
+	"/v1/Updates/Check":   admin,
+	"/v1/Updates/Perform": admin,
 
 	"/v1/Settings/Change": admin,
 	"/v1/Settings/Get":    admin,
 
-	"/v0/qan/": editor,
+	"/v0/qan/": viewer,
 
 	"/qan/":        viewer,
-	"/prometheus/": admin,
+	"/prometheus/": viewer,
 
 	// TODO cleanup
 	"/v1/readyz": none,
