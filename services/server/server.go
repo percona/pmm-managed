@@ -185,6 +185,10 @@ func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*se
 	}
 
 	res := &serverpb.VersionResponse{
+		// always return something in this field:
+		// it is used by PMM 1.x's pmm-client for compatibility checking
+		Version: version.Version,
+
 		Managed: &serverpb.VersionInfo{
 			Version:     version.Version,
 			FullVersion: version.FullCommit,
@@ -196,6 +200,7 @@ func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*se
 	}
 
 	if v, _ := s.pmmUpdate.checkResult(); v != nil {
+		res.Version = v.InstalledRPMNiceVersion
 		res.Server = &serverpb.VersionInfo{
 			Version:     v.InstalledRPMNiceVersion,
 			FullVersion: v.InstalledRPMVersion,
