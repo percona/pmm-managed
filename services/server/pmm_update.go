@@ -31,14 +31,14 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const updateCheckResultFresh = updateCheckInterval + 10*time.Minute
+const checkResultFresh = updateCheckInterval + 10*time.Minute
 
 // pmmUpdate wraps pmm2-update invocations with caching.
 type pmmUpdate struct {
-	l                 *logrus.Entry
-	rw                sync.RWMutex
-	latestCheckResult *version.UpdateCheckResult
-	latestCheckTime   time.Time
+	l            *logrus.Entry
+	rw           sync.RWMutex
+	latestResult *version.UpdateCheckResult
+	latestTime   time.Time
 }
 
 func newPMMUpdate(l *logrus.Entry) *pmmUpdate {
@@ -47,23 +47,23 @@ func newPMMUpdate(l *logrus.Entry) *pmmUpdate {
 	}
 }
 
-// updateCheckResult returns the latest `pmm-update -check` result.
-// It may call forceCheckUpdates if the latest result is empty or too old.
-func (p *pmmUpdate) updateCheckResult() *version.UpdateCheckResult {
+// checkResult returns the latest `pmm-update -check` result.
+// It may force re-check if the latest result is empty or too old.
+func (p *pmmUpdate) checkResult() *version.UpdateCheckResult {
 	p.rw.RLock()
 	defer p.rw.RUnlock()
 
-	if time.Since(p.latestCheckTime) > updateCheckResultFresh {
+	if time.Since(p.latestTime) > checkResultFresh {
 		p.rw.RUnlock()
-		_ = p.forceCheckUpdates()
+		_ = p.check()
 		p.rw.RLock()
 	}
 
-	return p.latestCheckResult
+	return p.latestResult
 }
 
-// forceCheckUpdates calls `pmm2-update -check` and fills latestCheckResult/latestCheckTime on success.
-func (p *pmmUpdate) forceCheckUpdates() error {
+// check calls `pmm2-update -check` and fills latestResult/latestTime on success.
+func (p *pmmUpdate) check() error {
 	p.rw.Lock()
 	defer p.rw.Unlock()
 
@@ -88,7 +88,7 @@ func (p *pmmUpdate) forceCheckUpdates() error {
 	}
 
 	p.l.Debugf("%s output: %s", cmdLine, stderr.Bytes())
-	p.latestCheckResult = &res
-	p.latestCheckTime = time.Now()
+	p.latestResult = &res
+	p.latestTime = time.Now()
 	return nil
 }
