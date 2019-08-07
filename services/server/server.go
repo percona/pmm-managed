@@ -195,7 +195,7 @@ func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*se
 		res.Managed.Timestamp = ts
 	}
 
-	if v := s.pmmUpdate.checkResult(); v != nil {
+	if v, _ := s.pmmUpdate.checkResult(); v != nil {
 		res.Server = &serverpb.VersionInfo{
 			Version:     v.InstalledRPMNiceVersion,
 			FullVersion: v.InstalledRPMVersion,
@@ -227,7 +227,7 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 		}
 	}
 
-	v := s.pmmUpdate.checkResult()
+	v, lastCheck := s.pmmUpdate.checkResult()
 	if v == nil {
 		return nil, status.Error(codes.Unavailable, "failed to check for updates")
 	}
@@ -244,6 +244,7 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 		UpdateAvailable: v.UpdateAvailable,
 		LatestNewsUrl:   "", // TODO https://jira.percona.com/browse/PMM-4444
 	}
+	res.LastCheck, _ = ptypes.TimestampProto(lastCheck)
 	if v.InstalledTime != nil {
 		t := v.InstalledTime.UTC().Truncate(24 * time.Hour) // return only date
 		res.Installed.Timestamp, _ = ptypes.TimestampProto(t)
