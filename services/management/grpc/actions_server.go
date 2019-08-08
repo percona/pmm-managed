@@ -18,6 +18,7 @@ package grpc
 
 import (
 	"context"
+	"net/url"
 
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/managementpb"
@@ -253,9 +254,22 @@ func (s *actionsServer) StartMySQLShowIndexAction(ctx context.Context, req *mana
 	}, nil
 }
 
+func (s *actionsServer) StartPostgreSQLShowCreateTableAction(ctx context.Context, req *managementpb.StartPostgreSQLShowCreateTableActionRequest) (*managementpb.StartPostgreSQLShowCreateTableActionResponse, error) {
+	res, dsn, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
+	if err != nil {
+		return nil, err
+	}
+	uri, err := url.Parse(dsn)
+	if err != nil {
+		return nil, err
+	}
 
-func (s *actionsServer) StartPostgreSQLShowCreateTableAction(context.Context, *managementpb.StartPostgreSQLShowCreateTableActionRequest) (*managementpb.StartPostgreSQLShowCreateTableActionResponse, error) {
-	panic("implement me")
+	args := []string{"-t", req.TableName, }
+
+	err = s.r.StartPostgreSQLShowCreateTableAction(ctx, res.ID, res.PMMAgentID, args)
+	if err != nil {
+		return nil, err
+	}
 }
 
 func (s *actionsServer) StartPostgreSQLShowIndexAction(ctx context.Context, req *managementpb.StartPostgreSQLShowIndexActionRequest) (*managementpb.StartPostgreSQLShowIndexActionResponse, error) {
