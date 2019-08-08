@@ -6,6 +6,9 @@
 set -o errexit
 set -o xtrace
 
+# use other containers for PostgreSQL, Prometheus, etc.
+supervisorctl stop all
+
 # to install man pages
 sed -i '/nodocs/d' /etc/yum.conf
 

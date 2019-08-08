@@ -88,6 +88,7 @@ var (
 	grafanaAddrF = flag.String("grafana-addr", "127.0.0.1:3000", "Grafana HTTP API address")
 	qanAPIAddrF  = flag.String("qan-api-addr", "127.0.0.1:9911", "QAN API gRPC API address")
 
+	postgresAddrF       = flag.String("postgres-addr", "127.0.0.1:5432", "PostgreSQL address")
 	postgresDBNameF     = flag.String("postgres-name", "", "PostgreSQL database name")
 	postgresDBUsernameF = flag.String("postgres-username", "pmm-managed", "PostgreSQL database username")
 	postgresDBPasswordF = flag.String("postgres-password", "pmm-managed", "PostgreSQL database password")
@@ -408,7 +409,7 @@ func main() {
 		cancel()
 	}()
 
-	sqlDB, err := models.OpenDB(*postgresDBNameF, *postgresDBUsernameF, *postgresDBPasswordF)
+	sqlDB, err := models.OpenDB(*postgresAddrF, *postgresDBNameF, *postgresDBUsernameF, *postgresDBPasswordF)
 	if err != nil {
 		l.Panicf("Failed to connect to database: %+v", err)
 	}
