@@ -60,7 +60,6 @@ import (
 	"github.com/percona/pmm-managed/services/grafana"
 	"github.com/percona/pmm-managed/services/inventory"
 	inventorygrpc "github.com/percona/pmm-managed/services/inventory/grpc"
-	"github.com/percona/pmm-managed/services/logs"
 	"github.com/percona/pmm-managed/services/management"
 	managementgrpc "github.com/percona/pmm-managed/services/management/grpc"
 	"github.com/percona/pmm-managed/services/prometheus"
@@ -97,7 +96,7 @@ var (
 	traceF = flag.Bool("trace", false, "Enable trace logging")
 )
 
-func addLogsHandler(mux *http.ServeMux, logs *logs.Logs) {
+func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
 	l := logrus.WithField("component", "logs.zip")
 
 	mux.HandleFunc("/logs.zip", func(rw http.ResponseWriter, req *http.Request) {
@@ -204,7 +203,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 }
 
 type http1ServerDeps struct {
-	logs       *logs.Logs
+	logs       *supervisord.Logs
 	authServer *grafana.AuthServer
 }
 
@@ -445,11 +444,8 @@ func main() {
 		}()
 	}
 
-	// TODO
-	_ = supervisord.New()
-
 	qanClient := getQANClient(ctx, db)
-	logs := logs.New(version.Version)
+	logs := supervisord.NewLogs(version.Version)
 
 	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient)
 	prom.MustRegister(agentsRegistry)
