@@ -171,7 +171,7 @@
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:4beb5646863fe65f31730e5cc39de2be7a19ffbc7dfbceac1de42ec19cce5740"
+  digest = "1:01eedd63567d53ca16ad1504f53852e7908d8927ed5f6d974970be6e8dc09d0a"
   name = "github.com/percona/pmm"
   packages = [
     "api/inventorypb/json/client",
@@ -188,9 +188,10 @@
     "api/managementpb/json/client/service",
     "api/serverpb/json/client",
     "api/serverpb/json/client/server",
+    "utils/tlsconfig",
   ]
   pruneopts = "NUT"
-  revision = "768fd0a1faea0ecb19ca6d4a21e2cd0eede6393e"
+  revision = "b1ff2dcaa6d5ee2ed80636a991dc6a5227828aa9"
 
 [[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
@@ -313,6 +314,7 @@
     "github.com/percona/pmm/api/managementpb/json/client/service",
     "github.com/percona/pmm/api/serverpb/json/client",
     "github.com/percona/pmm/api/serverpb/json/client/server",
+    "github.com/percona/pmm/utils/tlsconfig",
     "github.com/sirupsen/logrus",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
