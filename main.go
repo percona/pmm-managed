@@ -66,6 +66,7 @@ import (
 	"github.com/percona/pmm-managed/services/prometheus"
 	"github.com/percona/pmm-managed/services/qan"
 	"github.com/percona/pmm-managed/services/server"
+	"github.com/percona/pmm-managed/services/supervisord"
 	"github.com/percona/pmm-managed/services/telemetry"
 	"github.com/percona/pmm-managed/utils/interceptors"
 	"github.com/percona/pmm-managed/utils/logger"
@@ -115,16 +116,15 @@ func addLogsHandler(mux *http.ServeMux, logs *logs.Logs) {
 	})
 }
 
-type serviceDependencies struct {
+type gRPCServerDeps struct {
 	db             *reform.DB
 	prometheus     *prometheus.Service
 	server         *server.Server
 	agentsRegistry *agents.Registry
-	logs           *logs.Logs
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
-func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
+func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	l := logrus.WithField("component", "gRPC")
 	l.Infof("Starting server on http://%s/ ...", gRPCAddr)
 
@@ -203,9 +203,14 @@ func runGRPCServer(ctx context.Context, deps *serviceDependencies) {
 	cancel()
 }
 
+type http1ServerDeps struct {
+	logs       *logs.Logs
+	authServer *grafana.AuthServer
+}
+
 // runHTTP1Server runs grpc-gateway and other HTTP 1.1 APIs (like auth_request and logs.zip)
 // until context is canceled, then gracefully stops it.
-func runHTTP1Server(ctx context.Context, logs *logs.Logs, authServer *grafana.AuthServer) {
+func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 	l := logrus.WithField("component", "JSON")
 	l.Infof("Starting server on http://%s/ ...", http1Addr)
 
@@ -237,8 +242,8 @@ func runHTTP1Server(ctx context.Context, logs *logs.Logs, authServer *grafana.Au
 	}
 
 	mux := http.NewServeMux()
-	addLogsHandler(mux, logs)
-	mux.Handle("/auth_request", authServer)
+	addLogsHandler(mux, deps.logs)
+	mux.Handle("/auth_request", deps.authServer)
 	mux.Handle("/", proxyMux)
 
 	server := &http.Server{
@@ -440,6 +445,9 @@ func main() {
 		}()
 	}
 
+	// TODO
+	_ = supervisord.New()
+
 	qanClient := getQANClient(ctx, db)
 	logs := logs.New(version.Version)
 
@@ -495,19 +503,21 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		runGRPCServer(ctx, &serviceDependencies{
+		runGRPCServer(ctx, &gRPCServerDeps{
 			db:             db,
 			prometheus:     prometheus,
 			server:         server,
 			agentsRegistry: agentsRegistry,
-			logs:           logs,
 		})
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		runHTTP1Server(ctx, logs, authServer)
+		runHTTP1Server(ctx, &http1ServerDeps{
+			logs:       logs,
+			authServer: authServer,
+		})
 	}()
 
 	wg.Add(1)
