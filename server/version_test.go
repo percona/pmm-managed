@@ -42,9 +42,32 @@ func TestVersion(t *testing.T) {
 			err = json.Unmarshal(b, &res)
 			require.NoError(t, err, "response:\n%s", b)
 
-			assert.True(t, strings.HasPrefix(res.Version, "2.0.0-"), "version = %q should have '2.0.0-' prefix", res.Version)
-			ts := time.Time(res.Timestamp)
-			assert.Equal(t, time.Date(ts.Year(), ts.Month(), ts.Day(), 0, 0, 0, 0, time.UTC), ts, "timestamp should contain only date")
+			require.True(t, strings.HasPrefix(res.Version, "2.0.0-"),
+				"version = %q must have '2.0.0-' prefix for PMM 1.x's pmm-client compatibility checking", res.Version)
+
+			require.NotEmpty(t, res.Managed)
+			assert.True(t, strings.HasPrefix(res.Managed.Version, "2.0.0-"),
+				"managed.version = %q should have '2.0.0-' prefix", res.Managed.Version)
+			assert.NotEmpty(t, res.Managed.FullVersion)
+			assert.NotEmpty(t, res.Managed.Timestamp)
+			ts := time.Time(res.Managed.Timestamp)
+			hour, min, _ := ts.Clock()
+			assert.NotZero(t, hour, "managed timestamp should not contain only date")
+			assert.NotZero(t, min, "managed timestamp should not contain only date")
+
+			if res.Server == nil || res.Server.Version == "" {
+				t.Skip("skipping the rest of the test in developer's environment")
+			}
+
+			require.NotEmpty(t, res.Server)
+			assert.True(t, strings.HasPrefix(res.Server.Version, "2.0.0-"),
+				"server.version = %q should have '2.0.0-' prefix", res.Server.Version)
+			assert.NotEmpty(t, res.Server.FullVersion)
+			require.NotEmpty(t, res.Server.Timestamp)
+			ts = time.Time(res.Server.Timestamp)
+			hour, min, _ = ts.Clock()
+			assert.NotZero(t, hour, "server timestamp should not contain only date")
+			assert.NotZero(t, min, "server timestamp should not contain only date")
 		})
 	}
 }
