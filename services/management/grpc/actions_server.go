@@ -264,12 +264,15 @@ func (s *actionsServer) StartPostgreSQLShowCreateTableAction(ctx context.Context
 		return nil, err
 	}
 
-	args := []string{"-t", req.TableName, }
-
-	err = s.r.StartPostgreSQLShowCreateTableAction(ctx, res.ID, res.PMMAgentID, args)
+	err = s.r.StartPostgreSQLShowCreateTableAction(ctx, res.ID, res.PMMAgentID, dsn, req.TableName)
 	if err != nil {
 		return nil, err
 	}
+
+	return &managementpb.StartPostgreSQLShowCreateTableActionResponse{
+		PmmAgentId: req.PmmAgentId,
+		ActionId:   res.ID,
+	}, nil
 }
 
 func (s *actionsServer) StartPostgreSQLShowIndexAction(ctx context.Context, req *managementpb.StartPostgreSQLShowIndexActionRequest) (*managementpb.StartPostgreSQLShowIndexActionResponse, error) {

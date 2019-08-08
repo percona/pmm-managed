@@ -657,12 +657,13 @@ func (r *Registry) StartMySQLShowIndexAction(ctx context.Context, id, pmmAgentID
 
 // StartPostgreSQLShowCreateTableAction starts mysql-show-create-table action on pmm-agent.
 // TODO: Extract it from here. Where...?
-func (r *Registry) StartPostgreSQLShowCreateTableAction(ctx context.Context, id, pmmAgentID string, args []string) error {
+func (r *Registry) StartPostgreSQLShowCreateTableAction(ctx context.Context, id, pmmAgentID, dsn, table string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
-		Params: &agentpb.StartActionRequest_PgDumpParams{
-			PgDumpParams: &agentpb.StartActionRequest_ProcessParams{
-				Args: args,
+		Params: &agentpb.StartActionRequest_PostgresqlShowCreateTableParams{
+			PostgresqlShowCreateTableParams: &agentpb.StartActionRequest_PostgreSQLShowCreateTableParams{
+				Dsn:   dsn,
+				Table: table,
 			},
 		},
 	}
