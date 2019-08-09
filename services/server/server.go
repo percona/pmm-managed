@@ -20,6 +20,7 @@ package server
 import (
 	"context"
 	"crypto/subtle"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -28,13 +29,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/version"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/utils/logger"
 )
 
 const updateCheckInterval = 24 * time.Hour
@@ -112,7 +113,7 @@ func (s *Server) Run(ctx context.Context) {
 	defer ticker.Stop()
 
 	for {
-		_ = s.pmmUpdate.forceCheckUpdates()
+		_ = s.pmmUpdate.check()
 
 		select {
 		case <-ticker.C:
@@ -160,24 +161,53 @@ func convertSettings(s *models.Settings) *serverpb.Settings {
 
 // Version returns PMM Server version.
 func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*serverpb.VersionResponse, error) {
-	res := &serverpb.VersionResponse{
-		Version: version.Version, // TODO remove this default
-		Managed: &serverpb.VersionResponse_Managed{
-			Version: version.Version,
-			Commit:  version.FullCommit,
-		},
-	}
-	if v := s.pmmUpdate.updateCheckResult(); v != nil {
-		res.Version = v.InstalledRPMVersion
-		res.UpdateAvailable = v.UpdateAvailable
+	// for API testing of authentication, panic handling, etc.
+	if req.Dummy != "" {
+		switch {
+		case strings.HasPrefix(req.Dummy, "panic-"):
+			switch req.Dummy {
+			case "panic-error":
+				panic(errors.New("panic-error"))
+			case "panic-fmterror":
+				panic(fmt.Errorf("panic-fmterror"))
+			default:
+				panic(req.Dummy)
+			}
+
+		case strings.HasPrefix(req.Dummy, "grpccode-"):
+			code, err := strconv.Atoi(strings.TrimPrefix(req.Dummy, "grpccode-"))
+			if err != nil {
+				return nil, err
+			}
+			grpcCode := codes.Code(code)
+			return nil, status.Errorf(grpcCode, "gRPC code %d (%s)", grpcCode, grpcCode)
+		}
 	}
 
-	t, err := version.Time()
-	if err == nil {
-		res.Managed.Timestamp, err = ptypes.TimestampProto(t)
+	res := &serverpb.VersionResponse{
+		// always return something in this field:
+		// it is used by PMM 1.x's pmm-client for compatibility checking
+		Version: version.Version,
+
+		Managed: &serverpb.VersionInfo{
+			Version:     version.Version,
+			FullVersion: version.FullCommit,
+		},
 	}
-	if err != nil {
-		logger.Get(ctx).Warn(err)
+	if t, err := version.Time(); err == nil {
+		ts, _ := ptypes.TimestampProto(t)
+		res.Managed.Timestamp = ts
+	}
+
+	if v, _ := s.pmmUpdate.checkResult(); v != nil {
+		res.Version = v.InstalledRPMNiceVersion
+		res.Server = &serverpb.VersionInfo{
+			Version:     v.InstalledRPMNiceVersion,
+			FullVersion: v.InstalledRPMVersion,
+		}
+		if v.InstalledTime != nil {
+			res.Server.Timestamp, _ = ptypes.TimestampProto(*v.InstalledTime)
+		}
 	}
 
 	return res, nil
@@ -196,19 +226,37 @@ func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) 
 
 // CheckUpdates checks PMM Server updates availability.
 func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesRequest) (*serverpb.CheckUpdatesResponse, error) {
-	if err := s.pmmUpdate.forceCheckUpdates(); err != nil {
-		return nil, err
+	if req.Force {
+		if err := s.pmmUpdate.check(); err != nil {
+			return nil, err
+		}
 	}
 
-	v := s.pmmUpdate.updateCheckResult()
+	v, lastCheck := s.pmmUpdate.checkResult()
+	if v == nil {
+		return nil, status.Error(codes.Unavailable, "failed to check for updates")
+	}
+
 	res := &serverpb.CheckUpdatesResponse{
-		Version:         v.InstalledRPMVersion,
+		Installed: &serverpb.VersionInfo{
+			Version:     v.InstalledRPMNiceVersion,
+			FullVersion: v.InstalledRPMVersion,
+		},
+		Latest: &serverpb.VersionInfo{
+			Version:     v.LatestRPMNiceVersion,
+			FullVersion: v.LatestRPMVersion,
+		},
 		UpdateAvailable: v.UpdateAvailable,
-		LatestVersion:   v.LatestRPMVersion,
-		LatestNewsUrl:   "", // TODO
+		LatestNewsUrl:   "", // TODO https://jira.percona.com/browse/PMM-4444
+	}
+	res.LastCheck, _ = ptypes.TimestampProto(lastCheck)
+	if v.InstalledTime != nil {
+		t := v.InstalledTime.UTC().Truncate(24 * time.Hour) // return only date
+		res.Installed.Timestamp, _ = ptypes.TimestampProto(t)
 	}
 	if v.LatestTime != nil {
-		res.LatestTimestamp, _ = ptypes.TimestampProto(*v.LatestTime)
+		t := v.LatestTime.UTC().Truncate(24 * time.Hour) // return only date
+		res.Latest.Timestamp, _ = ptypes.TimestampProto(t)
 	}
 	return res, nil
 }
@@ -232,7 +280,7 @@ func (s *Server) StartUpdate(ctx context.Context, req *serverpb.StartUpdateReque
 		return nil, e
 	}
 
-	// TODO
+	// TODO https://jira.percona.com/browse/PMM-4448
 
 	return &serverpb.StartUpdateResponse{
 		AuthToken: authToken,
@@ -250,7 +298,7 @@ func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusReq
 		return nil, status.Error(codes.PermissionDenied, "Invalid authentication token.")
 	}
 
-	// TODO
+	// TODO https://jira.percona.com/browse/PMM-4448
 
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		settings, err = models.GetSettings(tx.Querier)
