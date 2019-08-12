@@ -253,6 +253,7 @@ func (s *actionsServer) StartMySQLShowIndexAction(ctx context.Context, req *mana
 	}, nil
 }
 
+// StartMySQLShowIndexAction starts PostgreSQL SHOW CREATE TABLE Action.
 func (s *actionsServer) StartPostgreSQLShowCreateTableAction(ctx context.Context, req *managementpb.StartPostgreSQLShowCreateTableActionRequest) (*managementpb.StartPostgreSQLShowCreateTableActionResponse, error) {
 	res, dsn, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
@@ -270,6 +271,7 @@ func (s *actionsServer) StartPostgreSQLShowCreateTableAction(ctx context.Context
 	}, nil
 }
 
+// StartMySQLShowIndexAction starts PostgreSQL SHOW INDEX Action.
 func (s *actionsServer) StartPostgreSQLShowIndexAction(ctx context.Context, req *managementpb.StartPostgreSQLShowIndexActionRequest) (*managementpb.StartPostgreSQLShowIndexActionResponse, error) {
 	res, dsn, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {

@@ -655,7 +655,7 @@ func (r *Registry) StartMySQLShowIndexAction(ctx context.Context, id, pmmAgentID
 	return nil
 }
 
-// StartPostgreSQLShowCreateTableAction starts mysql-show-create-table action on pmm-agent.
+// StartPostgreSQLShowCreateTableAction starts postgresql-show-create-table action on pmm-agent.
 // TODO: Extract it from here. Where...?
 func (r *Registry) StartPostgreSQLShowCreateTableAction(ctx context.Context, id, pmmAgentID, dsn, table string) error {
 	aRequest := &agentpb.StartActionRequest{
@@ -677,7 +677,7 @@ func (r *Registry) StartPostgreSQLShowCreateTableAction(ctx context.Context, id,
 	return nil
 }
 
-// StartPostgreSQLShowIndexAction starts mysql-show-index action on pmm-agent.
+// StartPostgreSQLShowIndexAction starts postgresql-show-index action on pmm-agent.
 // TODO: Extract it from here. Where...?
 func (r *Registry) StartPostgreSQLShowIndexAction(ctx context.Context, id, pmmAgentID, dsn, table string) error {
 	aRequest := &agentpb.StartActionRequest{
