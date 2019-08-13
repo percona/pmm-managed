@@ -47,8 +47,9 @@ type Server struct {
 	l          *logrus.Entry
 	pmmUpdate  *pmmUpdate
 
-	envMetricsResolution time.Duration
-	envDisableTelemetry  bool
+	envMetricsResolution   time.Duration
+	envDisableTelemetry    bool
+	envQANAPIDataRetention uint32
 }
 
 // NewServer returns new server for Server service.
@@ -98,6 +99,13 @@ func (s *Server) parseEnv(env []string) {
 			if err == nil {
 				s.envDisableTelemetry = b
 			}
+
+		case "QANAPI_DATA_RETENTION":
+			var d uint64
+			d, err = strconv.ParseUint(v, 10, 64)
+			if err == nil {
+				s.envQANAPIDataRetention = uint32(d)
+			}
 		}
 
 		if err != nil {
@@ -144,6 +152,10 @@ func (s *Server) UpdateSettings() error {
 			settings.Telemetry.Disabled = true
 		}
 
+		if s.envQANAPIDataRetention > 0 {
+			settings.QAN.DataRetention = s.envQANAPIDataRetention
+		}
+
 		return models.SaveSettings(tx.Querier, settings)
 	})
 }
@@ -156,6 +168,7 @@ func convertSettings(s *models.Settings) *serverpb.Settings {
 			Lr: ptypes.DurationProto(s.MetricsResolutions.LR),
 		},
 		Telemetry: !s.Telemetry.Disabled,
+		Qan:       &serverpb.QAN{DataRetention: s.QAN.DataRetention},
 	}
 }
 
@@ -379,11 +392,17 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			settings.Telemetry.Disabled = true
 		}
 
+		if req.Qan != nil && req.Qan.DataRetention > 0 {
+			settings.QAN.DataRetention = req.Qan.DataRetention
+		}
+
 		return models.SaveSettings(tx, settings)
 	})
 	if err != nil {
 		return nil, err
 	}
+
+	// TODO: add method to update QAN-API configuration (qan-api.ini).
 
 	s.prometheus.UpdateConfiguration()
 

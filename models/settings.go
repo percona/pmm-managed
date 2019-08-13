@@ -27,6 +27,11 @@ type MetricsResolutions struct {
 	LR time.Duration `json:"lr"`
 }
 
+// QAN contains query analytics configuration.
+type QAN struct {
+	DataRetention uint32 `json:"data_retention"` // number of days data retention
+}
+
 // Settings contains PMM Server settings.
 type Settings struct {
 	Telemetry struct {
@@ -39,6 +44,8 @@ type Settings struct {
 	} `json:"updates"`
 
 	MetricsResolutions MetricsResolutions `json:"metrics_resolutions"`
+
+	QAN QAN `json:"qan"`
 }
 
 // fillDefaults sets zero values to their default values.
@@ -54,5 +61,9 @@ func (s *Settings) fillDefaults() {
 	}
 	if s.MetricsResolutions.LR == 0 {
 		s.MetricsResolutions.LR = 60 * time.Second
+	}
+
+	if s.QAN.DataRetention == 0 {
+		s.QAN.DataRetention = 30
 	}
 }
