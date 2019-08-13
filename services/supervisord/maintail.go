@@ -24,22 +24,26 @@ import (
 
 type eventType string
 
-// See http://supervisord.org/subprocess.html#process-states
 const (
+	// See http://supervisord.org/subprocess.html#process-states
 	exitedExpected   eventType = "EXITED (expected)"
 	exitedUnexpected eventType = "EXITED (unexpected)"
 	fatal            eventType = "FATAL"
+
+	logReopen eventType = "logreopen"
 )
 
 var (
 	exitedExpectedRE   = regexp.MustCompile(`^exited\: ([\w-]+) \(exit status \d+; expected\)$`)
 	exitedUnexpectedRE = regexp.MustCompile(`^exited\: ([\w-]+) \(exit status \d+; not expected\)$`)
 	fatalRE            = regexp.MustCompile(`^gave up\: ([\w-]+) entered FATAL state, too many start retries too quickly$`)
+	logReopenRE        = regexp.MustCompile(`^([\w-]+) logreopen$`)
 
 	events = map[*regexp.Regexp]eventType{
 		exitedExpectedRE:   exitedExpected,
 		exitedUnexpectedRE: exitedUnexpected,
 		fatalRE:            fatal,
+		logReopenRE:        logReopen,
 	}
 )
 

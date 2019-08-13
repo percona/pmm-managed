@@ -91,6 +91,7 @@ func TestParseEvent(t *testing.T) {
 		}
 		expected := []*event{
 			{Time: time.Date(2019, 8, 8, 17, 9, 48, 494000000, time.UTC), Type: exitedUnexpected, Program: "pmm-update-perform"},
+			{Time: time.Date(2019, 8, 8, 17, 9, 57, 284000000, time.UTC), Type: logReopen, Program: "supervisord"},
 			{Time: time.Date(2019, 8, 8, 17, 10, 27, 761000000, time.UTC), Type: exitedExpected, Program: "dashboard-upgrade"},
 			{Time: time.Date(2019, 8, 8, 17, 10, 28, 975000000, time.UTC), Type: exitedExpected, Program: "pmm-update-perform"},
 		}

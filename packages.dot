@@ -27,5 +27,6 @@ digraph packages {
 	"/services/management/grpc" -> "/services/management";
 	"/services/prometheus" -> "/models";
 	"/services/qan" -> "/models";
+	"/services/server" -> "/models";
 	"/services/telemetry" -> "/models";
 }

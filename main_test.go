@@ -75,6 +75,16 @@ func TestImports(t *testing.T) {
 				"github.com/percona/pmm-managed/services",
 			},
 		},
+		"github.com/percona/pmm-managed/services/rds": {
+			blacklistPrefixes: []string{
+				"github.com/percona/pmm-managed/services",
+			},
+		},
+		"github.com/percona/pmm-managed/services/server": {
+			blacklistPrefixes: []string{
+				"github.com/percona/pmm-managed/services",
+			},
+		},
 		"github.com/percona/pmm-managed/services/supervisord": {
 			blacklistPrefixes: []string{
 				"github.com/percona/pmm-managed/services",
