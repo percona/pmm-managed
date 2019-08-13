@@ -421,7 +421,9 @@ func main() {
 		l.Panicf("Prometheus service problem: %+v", err)
 	}
 
-	server := server.NewServer(db, prometheus, os.Environ())
+	logs := supervisord.NewLogs(version.Version)
+	supervisord := supervisord.New()
+	server := server.NewServer(db, prometheus, supervisord, os.Environ())
 
 	// try synchronously once, then retry in the background
 	setupL := logrus.WithField("component", "setup")
@@ -446,7 +448,6 @@ func main() {
 	}
 
 	qanClient := getQANClient(ctx, db)
-	logs := supervisord.NewLogs(version.Version)
 
 	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient)
 	prom.MustRegister(agentsRegistry)
@@ -461,6 +462,12 @@ func main() {
 	go func() {
 		defer wg.Done()
 		prometheus.Run(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		supervisord.Run(ctx)
 	}()
 
 	wg.Add(1)

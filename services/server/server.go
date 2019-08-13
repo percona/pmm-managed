@@ -42,17 +42,18 @@ const updateCheckInterval = 24 * time.Hour
 
 // Server represents service for checking PMM Server status and changing settings.
 type Server struct {
-	db         *reform.DB
-	prometheus prometheusService
-	l          *logrus.Entry
-	pmmUpdate  *pmmUpdate
+	db          *reform.DB
+	prometheus  prometheusService
+	supervisord supervisordService
+	l           *logrus.Entry
+	pmmUpdate   *pmmUpdate
 
 	envMetricsResolution time.Duration
 	envDisableTelemetry  bool
 }
 
 // NewServer returns new server for Server service.
-func NewServer(db *reform.DB, prometheus prometheusService, env []string) *Server {
+func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervisordService, env []string) *Server {
 	s := &Server{
 		db:         db,
 		prometheus: prometheus,

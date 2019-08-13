@@ -21,10 +21,17 @@ import (
 )
 
 //go:generate mockery -name=prometheusService -case=snake -inpkg -testonly
+//go:generate mockery -name=supervisordService -case=snake -inpkg -testonly
 
 // prometheusService is a subset of methods of prometheus.Service used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
 type prometheusService interface {
 	UpdateConfiguration()
 	Check(ctx context.Context) error
+}
+
+// supervisordService is a subset of methods of supervisord.Service used by this package.
+// We use it instead of real type for testing and to avoid dependency cycle.
+type supervisordService interface {
+	StartPMMUpdate() error
 }
