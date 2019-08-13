@@ -83,7 +83,7 @@ type Logs struct {
 	logs       map[string]logInfo // for testing
 }
 
-// New creates a new Logs service.
+// NewLogs creates a new Logs service.
 // n is a number of last lines of log to read.
 func NewLogs(pmmVersion string) *Logs {
 	return &Logs{
@@ -155,7 +155,7 @@ func (l *Logs) files(ctx context.Context) []fileContent {
 	}
 
 	// add supervisord status
-	cmd := exec.CommandContext(ctx, "supervisorctl", "status")
+	cmd := exec.CommandContext(ctx, "supervisorctl", "status") //nolint:gosec
 	pdeathsig.Set(cmd, unix.SIGKILL)
 	b, err := cmd.CombinedOutput() //nolint:gosec
 	files = append(files, fileContent{
@@ -165,7 +165,7 @@ func (l *Logs) files(ctx context.Context) []fileContent {
 	})
 
 	// add systemd status for OVF/AMI
-	cmd = exec.CommandContext(ctx, "systemctl", "-l", "status")
+	cmd = exec.CommandContext(ctx, "systemctl", "-l", "status") //nolint:gosec
 	pdeathsig.Set(cmd, unix.SIGKILL)
 	b, err = cmd.CombinedOutput() //nolint:gosec
 	files = append(files, fileContent{
