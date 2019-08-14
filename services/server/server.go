@@ -21,8 +21,11 @@ import (
 	"context"
 	"crypto/subtle"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
@@ -42,26 +45,40 @@ const updateCheckInterval = 24 * time.Hour
 
 // Server represents service for checking PMM Server status and changing settings.
 type Server struct {
-	db          *reform.DB
-	prometheus  prometheusService
-	supervisord supervisordService
-	l           *logrus.Entry
-	pmmUpdate   *pmmUpdate
+	db                    *reform.DB
+	prometheus            prometheusService
+	supervisord           supervisordService
+	l                     *logrus.Entry
+	pmmUpdate             *pmmUpdate
+	pmmUpdateProgressFile string
+
+	pmmUpdateProgressFileM sync.Mutex
 
 	envMetricsResolution time.Duration
 	envDisableTelemetry  bool
 }
 
+type pmmUpdateProgress struct {
+	AuthToken string `json:"auth_token"`
+}
+
 // NewServer returns new server for Server service.
-func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervisordService, env []string) *Server {
+func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervisordService, env []string) (*Server, error) {
+	path := os.TempDir()
+	if _, err := os.Stat(path); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	path = filepath.Join(path, "pmm-update.json")
+
 	s := &Server{
-		db:         db,
-		prometheus: prometheus,
-		l:          logrus.WithField("component", "server"),
-		pmmUpdate:  newPMMUpdate(logrus.WithField("component", "server/pmm-update")),
+		db:                    db,
+		prometheus:            prometheus,
+		l:                     logrus.WithField("component", "server"),
+		pmmUpdate:             newPMMUpdate(logrus.WithField("component", "server/pmm-update")),
+		pmmUpdateProgressFile: path,
 	}
 	s.parseEnv(env)
-	return s
+	return s, nil
 }
 
 func (s *Server) parseEnv(env []string) {

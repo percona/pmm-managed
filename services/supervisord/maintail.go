@@ -32,6 +32,7 @@ const (
 	exitedUnexpected eventType = "EXITED (unexpected)"
 	fatal            eventType = "FATAL"
 
+	unknown   eventType = "unknown"
 	logReopen eventType = "logreopen"
 )
 

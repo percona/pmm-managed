@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -37,8 +38,10 @@ import (
 type Service struct {
 	supervisorctlPath string
 	l                 *logrus.Entry
-	m                 sync.Mutex
-	subs              map[chan *event]sub
+
+	rw                        sync.RWMutex
+	subs                      map[chan *event]sub
+	pmmUpdatePerformLastEvent eventType
 }
 
 type sub struct {
@@ -54,15 +57,22 @@ const (
 
 // New creates new service.
 func New() *Service {
+	path, _ := exec.LookPath("supervisorctl")
 	return &Service{
-		supervisorctlPath: "supervisorctl",
-		l:                 logrus.WithField("component", "supervisord"),
-		subs:              make(map[chan *event]sub),
+		supervisorctlPath:         path,
+		l:                         logrus.WithField("component", "supervisord"),
+		subs:                      make(map[chan *event]sub),
+		pmmUpdatePerformLastEvent: unknown,
 	}
 }
 
 // Run reads supervisord's log (maintail) and sends events to subscribers.
 func (s *Service) Run(ctx context.Context) {
+	if s.supervisorctlPath == "" {
+		s.l.Errorf("supervisorctl not found, updates are disabled.")
+		return
+	}
+
 	var lastEvent *event
 	for ctx.Err() == nil {
 		cmd := exec.CommandContext(ctx, s.supervisorctlPath, "maintail", "-f") //nolint:gosec
@@ -89,10 +99,14 @@ func (s *Service) Run(ctx context.Context) {
 			}
 			lastEvent = e
 
-			s.m.Lock()
+			s.rw.Lock()
 
 			var toDelete []chan *event
 			for ch, sub := range s.subs {
+				if e.Program == pmmUpdatePerformProgram {
+					s.pmmUpdatePerformLastEvent = e.Type
+				}
+
 				if e.Program == sub.program {
 					var found bool
 					for _, t := range sub.eventTypes {
@@ -113,7 +127,7 @@ func (s *Service) Run(ctx context.Context) {
 				delete(s.subs, ch)
 			}
 
-			s.m.Unlock()
+			s.rw.Unlock()
 		}
 
 		if err := scanner.Err(); err != nil {
@@ -128,31 +142,32 @@ func (s *Service) Run(ctx context.Context) {
 
 func (s *Service) subscribe(program string, eventTypes ...eventType) chan *event {
 	ch := make(chan *event, 1)
-	s.m.Lock()
+	s.rw.Lock()
 	s.subs[ch] = sub{
 		program:    program,
 		eventTypes: eventTypes,
 	}
-	s.m.Unlock()
+	s.rw.Unlock()
 	return ch
 }
 
 func (s *Service) supervisorctl(args ...string) ([]byte, error) {
+	if s.supervisorctlPath == "" {
+		return nil, errors.New("supervisorctl not found")
+	}
+
 	cmd := exec.Command(s.supervisorctlPath, args...) //nolint:gosec
 	pdeathsig.Set(cmd, unix.SIGKILL)
 	b, err := cmd.Output()
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	return b, nil
+	return b, errors.WithStack(err)
 }
 
 // StartPMMUpdate starts pmm-update-perform supervisord program with some preparations.
 func (s *Service) StartPMMUpdate() error {
 	ch := s.subscribe("supervisord", logReopen)
 
-	s.m.Lock()
-	defer s.m.Lock()
+	s.rw.Lock()
+	defer s.rw.Lock()
 
 	// We need to remove and reopen log file for UpdateStatus API to be able to read it without it being rotated.
 	// Additionally, SIGUSR2 is expected by our Ansible playbook.
@@ -191,4 +206,38 @@ func (s *Service) StartPMMUpdate() error {
 
 	_, err = s.supervisorctl("start", pmmUpdatePerformProgram)
 	return err
+}
+
+// PMMUpdateRunning returns true if pmm-update-perform supervisord program is running or being restarted,
+// false if it is not running / failed.
+func (s *Service) PMMUpdateRunning() bool {
+	s.rw.RLock()
+	defer s.rw.RUnlock()
+
+	// first check with status command is case we missed that event during maintail or pmm-managed restart
+	b, err := s.supervisorctl("status", pmmUpdatePerformProgram)
+	if err != nil {
+		s.l.Warn(err)
+	}
+	s.l.Debugf("%s", b)
+	if f := strings.Fields(string(b)); len(f) > 2 {
+		switch f[1] {
+		case "FATAL":
+			return false
+		case "STARTING", "RUNNING", "BACKOFF", "STOPPING":
+			return true
+		default:
+			// we need to inspect last event
+		}
+	}
+
+	switch s.pmmUpdatePerformLastEvent {
+	case starting, running, exitedUnexpected:
+		return true
+	case fatal:
+		return false
+	default:
+		s.l.Warnf("Unknown %s status.", pmmUpdatePerformProgram)
+		return false
+	}
 }

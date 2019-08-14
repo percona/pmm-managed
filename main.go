@@ -423,7 +423,10 @@ func main() {
 
 	logs := supervisord.NewLogs(version.Version)
 	supervisord := supervisord.New()
-	server := server.NewServer(db, prometheus, supervisord, os.Environ())
+	server, err := server.NewServer(db, prometheus, supervisord, os.Environ())
+	if err != nil {
+		l.Panicf("Server problem: %+v", err)
+	}
 
 	// try synchronously once, then retry in the background
 	setupL := logrus.WithField("component", "setup")
