@@ -15,7 +15,7 @@ import (
 
 func TestUpdates(t *testing.T) {
 	t.Run("CheckUpdates", func(t *testing.T) {
-		t.Parallel()
+		// do not run this test in parallel with other tests
 
 		version, err := serverClient.Default.Server.Version(nil)
 		require.NoError(t, err)
