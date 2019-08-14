@@ -19,7 +19,6 @@ package server
 
 import (
 	"context"
-	"crypto/subtle"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -29,7 +28,6 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/google/uuid"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
@@ -282,23 +280,23 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 // StartUpdate starts PMM Server update.
 func (s *Server) StartUpdate(ctx context.Context, req *serverpb.StartUpdateRequest) (*serverpb.StartUpdateResponse, error) {
 	var authToken string
-	e := s.db.InTransaction(func(tx *reform.TX) error {
-		settings, err := models.GetSettings(tx.Querier)
-		if err != nil {
-			return err
-		}
-		if settings.Updates.AuthToken != "" {
-			return status.Error(codes.AlreadyExists, "Update is already underway.")
-		}
-		authToken = "/update_auth_token/" + uuid.New().String()
-		settings.Updates.AuthToken = authToken
-		return models.SaveSettings(tx.Querier, settings)
-	})
-	if e != nil {
-		return nil, e
-	}
 
 	// TODO https://jira.percona.com/browse/PMM-4448
+	// e := s.db.InTransaction(func(tx *reform.TX) error {
+	// 	settings, err := models.GetSettings(tx.Querier)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	if settings.Updates.AuthToken != "" {
+	// 		return status.Error(codes.AlreadyExists, "Update is already underway.")
+	// 	}
+	// 	authToken = "/update_auth_token/" + uuid.New().String()
+	// 	settings.Updates.AuthToken = authToken
+	// 	return models.SaveSettings(tx.Querier, settings)
+	// })
+	// if e != nil {
+	// 	return nil, e
+	// }
 
 	return &serverpb.StartUpdateResponse{
 		AuthToken: authToken,
@@ -307,28 +305,29 @@ func (s *Server) StartUpdate(ctx context.Context, req *serverpb.StartUpdateReque
 
 // UpdateStatus returns PMM Server update status.
 func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusRequest) (*serverpb.UpdateStatusResponse, error) {
-	settings, err := models.GetSettings(s.db.Querier)
-	if err != nil {
-		return nil, err
-	}
-
-	if subtle.ConstantTimeCompare([]byte(req.AuthToken), []byte(settings.Updates.AuthToken)) == 0 {
-		return nil, status.Error(codes.PermissionDenied, "Invalid authentication token.")
-	}
-
 	// TODO https://jira.percona.com/browse/PMM-4448
 
-	e := s.db.InTransaction(func(tx *reform.TX) error {
-		settings, err = models.GetSettings(tx.Querier)
-		if err != nil {
-			return err
-		}
-		settings.Updates.AuthToken = ""
-		return models.SaveSettings(tx.Querier, settings)
-	})
-	if e != nil {
-		return nil, err
-	}
+	// settings, err := models.GetSettings(s.db.Querier)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// if subtle.ConstantTimeCompare([]byte(req.AuthToken), []byte(settings.Updates.AuthToken)) == 0 {
+	// 	return nil, status.Error(codes.PermissionDenied, "Invalid authentication token.")
+	// }
+
+	// e := s.db.InTransaction(func(tx *reform.TX) error {
+	// 	settings, err = models.GetSettings(tx.Querier)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	settings.Updates.AuthToken = ""
+	// 	return models.SaveSettings(tx.Querier, settings)
+	// })
+	// if e != nil {
+	// 	return nil, err
+	// }
+
 	return &serverpb.UpdateStatusResponse{
 		LogLines: []string{
 			"TODO",
