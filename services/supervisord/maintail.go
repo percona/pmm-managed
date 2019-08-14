@@ -26,6 +26,8 @@ type eventType string
 
 const (
 	// See http://supervisord.org/subprocess.html#process-states
+	starting         eventType = "STARTING"
+	running          eventType = "RUNNING"
 	exitedExpected   eventType = "EXITED (expected)"
 	exitedUnexpected eventType = "EXITED (unexpected)"
 	fatal            eventType = "FATAL"
@@ -34,12 +36,16 @@ const (
 )
 
 var (
+	startingRE         = regexp.MustCompile(`^spawned: '([\w-]+)' with pid \d+$`)
+	runningRE          = regexp.MustCompile(`^success: ([\w-]+) entered RUNNING state, process has stayed up for > than \d+ seconds \(startsecs\)$`)
 	exitedExpectedRE   = regexp.MustCompile(`^exited\: ([\w-]+) \(exit status \d+; expected\)$`)
 	exitedUnexpectedRE = regexp.MustCompile(`^exited\: ([\w-]+) \(exit status \d+; not expected\)$`)
 	fatalRE            = regexp.MustCompile(`^gave up\: ([\w-]+) entered FATAL state, too many start retries too quickly$`)
 	logReopenRE        = regexp.MustCompile(`^([\w-]+) logreopen$`)
 
 	events = map[*regexp.Regexp]eventType{
+		startingRE:         starting,
+		runningRE:          running,
 		exitedExpectedRE:   exitedExpected,
 		exitedUnexpectedRE: exitedUnexpected,
 		fatalRE:            fatal,
