@@ -33,6 +33,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// Service is responsible for interactions with Supervisord via supervisorctl.
 type Service struct {
 	supervisorctlPath string
 	l                 *logrus.Entry
@@ -51,6 +52,7 @@ const (
 	pmmUpdatePerformLog     = "/srv/logs/pmm-update-perform.log"
 )
 
+// New creates new service.
 func New() *Service {
 	return &Service{
 		supervisorctlPath: "supervisorctl",
@@ -59,6 +61,7 @@ func New() *Service {
 	}
 }
 
+// Run reads supervisord's log (maintail) and sends events to subscribers.
 func (s *Service) Run(ctx context.Context) {
 	var lastEvent *event
 	for ctx.Err() == nil {
@@ -87,6 +90,7 @@ func (s *Service) Run(ctx context.Context) {
 			lastEvent = e
 
 			s.m.Lock()
+
 			var toDelete []chan *event
 			for ch, sub := range s.subs {
 				if e.Program == sub.program {
@@ -104,11 +108,14 @@ func (s *Service) Run(ctx context.Context) {
 					}
 				}
 			}
+
 			for _, ch := range toDelete {
 				delete(s.subs, ch)
 			}
+
 			s.m.Unlock()
 		}
+
 		if err := scanner.Err(); err != nil {
 			s.l.Error(err)
 		}
@@ -140,18 +147,22 @@ func (s *Service) supervisorctl(args ...string) ([]byte, error) {
 	return b, nil
 }
 
+// StartPMMUpdate starts pmm-update-perform supervisord program with some preparations.
 func (s *Service) StartPMMUpdate() error {
 	ch := s.subscribe("supervisord", logReopen)
 
 	s.m.Lock()
 	defer s.m.Lock()
 
-	// TODO comment
+	// We need to remove and reopen log file for UpdateStatus API to be able to read it without it being rotated.
+	// Additionally, SIGUSR2 is expected by our Ansible playbook.
 
+	// remove existing log file
 	if err := os.Remove(pmmUpdatePerformLog); err != nil {
 		s.l.Warn(err)
 	}
 
+	// send SIGUSR2 to supervisord and wait for it to reopen log file
 	b, err := s.supervisorctl("pid")
 	if err != nil {
 		return err
@@ -169,6 +180,7 @@ func (s *Service) StartPMMUpdate() error {
 	}
 	<-ch
 
+	// check log file size for debugging
 	fi, err := os.Stat(pmmUpdatePerformLog)
 	if err != nil {
 		s.l.Warn(err)
