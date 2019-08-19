@@ -37,32 +37,32 @@ func mysqldExporterConfig(service *models.Service, exporter *models.Agent) *agen
 	)
 
 	args := []string{
-		"-collect.binlog_size",
-		"-collect.global_status",
-		"-collect.global_variables",
-		"-collect.info_schema.innodb_cmp",
-		"-collect.info_schema.innodb_cmpmem",
-		"-collect.info_schema.innodb_metrics",
-		"-collect.info_schema.processlist",
-		"-collect.info_schema.query_response_time",
-		"-collect.info_schema.userstats",
-		"-collect.perf_schema.eventswaits",
-		"-collect.perf_schema.file_events",
-		"-collect.slave_status",
-		"-web.listen-address=:" + tdp.left + " .listen_port " + tdp.right,
+		"--collect.binlog_size",
+		"--collect.global_status",
+		"--collect.global_variables",
+		"--collect.info_schema.innodb_cmp",
+		"--collect.info_schema.innodb_cmpmem",
+		"--collect.info_schema.innodb_metrics",
+		"--collect.info_schema.processlist",
+		"--collect.info_schema.query_response_time",
+		"--collect.info_schema.userstats",
+		"--collect.perf_schema.eventswaits",
+		"--collect.perf_schema.file_events",
+		"--collect.slave_status",
+		"--web.listen-address=:" + tdp.left + " .listen_port " + tdp.right,
 	}
 
 	// TODO Make it configurable.
-	args = append(args, "-collect.auto_increment.columns")
-	args = append(args, "-collect.info_schema.tables")
-	args = append(args, "-collect.info_schema.tablestats")
-	args = append(args, "-collect.perf_schema.indexiowaits")
-	args = append(args, "-collect.perf_schema.tableiowaits")
-	args = append(args, "-collect.perf_schema.tablelocks")
-	args = append(args, "-collect.custom_query=false")
+	args = append(args, "--collect.auto_increment.columns")
+	args = append(args, "--collect.info_schema.tables")
+	args = append(args, "--collect.info_schema.tablestats")
+	args = append(args, "--collect.perf_schema.indexiowaits")
+	args = append(args, "--collect.perf_schema.tableiowaits")
+	args = append(args, "--collect.perf_schema.tablelocks")
+	args = append(args, "--collect.custom_query=false")
 
 	if pointer.GetString(exporter.MetricsURL) != "" {
-		args = append(args, "-web.telemetry-path="+*exporter.MetricsURL)
+		args = append(args, "--web.telemetry-path="+*exporter.MetricsURL)
 	}
 
 	sort.Strings(args)
