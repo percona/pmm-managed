@@ -232,7 +232,11 @@ func TestRemoteNode(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "Test Remote Node")
 		params := &nodes.AddRemoteNodeParams{
 			Body: nodes.AddRemoteNodeBody{
-				NodeName: nodeName,
+				NodeName:     nodeName,
+				Az:           "eu",
+				Region:       "us-west",
+				Address:      "10.10.10.10",
+				CustomLabels: map[string]string{"foo": "bar"},
 			},
 			Context: pmmapitests.Context,
 		}
@@ -251,8 +255,12 @@ func TestRemoteNode(t *testing.T) {
 		expectedResponse := &nodes.GetNodeOK{
 			Payload: &nodes.GetNodeOKBody{
 				Remote: &nodes.GetNodeOKBodyRemote{
-					NodeID:   res.Payload.Remote.NodeID,
-					NodeName: nodeName,
+					NodeID:       res.Payload.Remote.NodeID,
+					NodeName:     nodeName,
+					Az:           "eu",
+					Region:       "us-west",
+					Address:      "10.10.10.10",
+					CustomLabels: map[string]string{"foo": "bar"},
 				},
 			},
 		}

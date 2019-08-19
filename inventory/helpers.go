@@ -37,6 +37,7 @@ func addRemoteNode(t *testing.T, nodeName string) *nodes.AddRemoteNodeOKBody {
 	params := &nodes.AddRemoteNodeParams{
 		Body: nodes.AddRemoteNodeBody{
 			NodeName: nodeName,
+			Address:  "10.10.10.10",
 		},
 		Context: pmmapitests.Context,
 	}

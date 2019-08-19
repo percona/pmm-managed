@@ -18,13 +18,12 @@ cache:
     - /home/travis/.cache/go-build
     - /home/travis/gopath/pkg
 
-script:
-  # ensure that code is in sync with Gopkg.toml/lock
+install:
+  # ensure that vendor/ is in sync with code and Gopkg.toml/lock
   - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-  - dep ensure -v
-  - git status
-  - git diff --exit-code
+  - dep check
 
+script:
   - make build
 
 notifications:
