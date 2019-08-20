@@ -19,6 +19,8 @@ package server
 
 import (
 	"context"
+	"crypto/subtle"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -28,6 +30,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
+	"github.com/google/uuid"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
@@ -279,27 +282,19 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 
 // StartUpdate starts PMM Server update.
 func (s *Server) StartUpdate(ctx context.Context, req *serverpb.StartUpdateRequest) (*serverpb.StartUpdateResponse, error) {
-	var authToken string
+	offset, err := s.supervisord.StartPMMUpdate()
+	if err != nil {
+		return nil, err
+	}
 
-	// TODO https://jira.percona.com/browse/PMM-4448
-	// e := s.db.InTransaction(func(tx *reform.TX) error {
-	// 	settings, err := models.GetSettings(tx.Querier)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	if settings.Updates.AuthToken != "" {
-	// 		return status.Error(codes.AlreadyExists, "Update is already underway.")
-	// 	}
-	// 	authToken = "/update_auth_token/" + uuid.New().String()
-	// 	settings.Updates.AuthToken = authToken
-	// 	return models.SaveSettings(tx.Querier, settings)
-	// })
-	// if e != nil {
-	// 	return nil, e
-	// }
+	authToken := uuid.New().String()
+	if err = s.writeUpdateAuthToken(authToken); err != nil {
+		return nil, err
+	}
 
 	return &serverpb.StartUpdateResponse{
 		AuthToken: authToken,
+		LogOffset: offset,
 	}, nil
 }
 
@@ -307,26 +302,13 @@ func (s *Server) StartUpdate(ctx context.Context, req *serverpb.StartUpdateReque
 func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusRequest) (*serverpb.UpdateStatusResponse, error) {
 	// TODO https://jira.percona.com/browse/PMM-4448
 
-	// settings, err := models.GetSettings(s.db.Querier)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// if subtle.ConstantTimeCompare([]byte(req.AuthToken), []byte(settings.Updates.AuthToken)) == 0 {
-	// 	return nil, status.Error(codes.PermissionDenied, "Invalid authentication token.")
-	// }
-
-	// e := s.db.InTransaction(func(tx *reform.TX) error {
-	// 	settings, err = models.GetSettings(tx.Querier)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	settings.Updates.AuthToken = ""
-	// 	return models.SaveSettings(tx.Querier, settings)
-	// })
-	// if e != nil {
-	// 	return nil, err
-	// }
+	token, err := s.readUpdateAuthToken()
+	if err != nil {
+		return nil, err
+	}
+	if subtle.ConstantTimeCompare([]byte(req.AuthToken), []byte(token)) == 0 {
+		return nil, status.Error(codes.PermissionDenied, "Invalid authentication token.")
+	}
 
 	return &serverpb.UpdateStatusResponse{
 		LogLines: []string{
@@ -334,6 +316,45 @@ func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusReq
 		},
 		Done: true,
 	}, nil
+}
+
+func (s *Server) writeUpdateAuthToken(token string) error {
+	s.pmmUpdateProgressFileM.Lock()
+	defer s.pmmUpdateProgressFileM.Unlock()
+
+	p := &pmmUpdateProgress{
+		AuthToken: token,
+	}
+	f, err := os.OpenFile(s.pmmUpdateProgressFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600|os.ModeExclusive)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer func() {
+		if err = f.Close(); err != nil {
+			s.l.Error(err)
+		}
+	}()
+
+	return errors.WithStack(json.NewEncoder(f).Encode(p))
+}
+
+func (s *Server) readUpdateAuthToken() (string, error) {
+	s.pmmUpdateProgressFileM.Lock()
+	defer s.pmmUpdateProgressFileM.Unlock()
+
+	f, err := os.OpenFile(s.pmmUpdateProgressFile, os.O_RDONLY, os.ModeExclusive)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	defer func() {
+		if err = f.Close(); err != nil {
+			s.l.Error(err)
+		}
+	}()
+
+	var p pmmUpdateProgress
+	err = json.NewDecoder(f).Decode(&p)
+	return p.AuthToken, errors.WithStack(err)
 }
 
 // GetSettings returns current PMM Server settings.

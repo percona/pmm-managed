@@ -33,5 +33,5 @@ type prometheusService interface {
 // supervisordService is a subset of methods of supervisord.Service used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
 type supervisordService interface {
-	StartPMMUpdate() error
+	StartPMMUpdate() (uint32, error)
 }

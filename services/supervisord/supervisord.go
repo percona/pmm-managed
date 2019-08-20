@@ -19,7 +19,6 @@ package supervisord
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"os"
 	"os/exec"
@@ -32,6 +31,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // Service is responsible for interactions with Supervisord via supervisorctl.
@@ -77,8 +78,12 @@ func (s *Service) Run(ctx context.Context) {
 	for ctx.Err() == nil {
 		cmd := exec.CommandContext(ctx, s.supervisorctlPath, "maintail", "-f") //nolint:gosec
 		pdeathsig.Set(cmd, unix.SIGKILL)
-		var stdout bytes.Buffer
-		cmd.Stdout = &stdout
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			s.l.Error(err)
+			time.Sleep(time.Second)
+			continue
+		}
 
 		if err := cmd.Start(); err != nil {
 			s.l.Error(err)
@@ -86,7 +91,7 @@ func (s *Service) Run(ctx context.Context) {
 			continue
 		}
 
-		scanner := bufio.NewScanner(&stdout)
+		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
 			e := parseEvent(scanner.Text())
 			if e == nil {
@@ -163,7 +168,12 @@ func (s *Service) supervisorctl(args ...string) ([]byte, error) {
 }
 
 // StartPMMUpdate starts pmm-update-perform supervisord program with some preparations.
-func (s *Service) StartPMMUpdate() error {
+// It returns initial log file offset.
+func (s *Service) StartPMMUpdate() (uint32, error) {
+	if s.pmmUpdateRunning() {
+		return 0, status.Errorf(codes.FailedPrecondition, "Update is already running.")
+	}
+
 	ch := s.subscribe("supervisord", logReopen)
 
 	s.rw.Lock()
@@ -180,37 +190,39 @@ func (s *Service) StartPMMUpdate() error {
 	// send SIGUSR2 to supervisord and wait for it to reopen log file
 	b, err := s.supervisorctl("pid")
 	if err != nil {
-		return err
+		return 0, err
 	}
 	pid, err := strconv.Atoi(string(b))
 	if err != nil {
-		return errors.WithStack(err)
+		return 0, errors.WithStack(err)
 	}
 	p, err := os.FindProcess(pid)
 	if err != nil {
-		return errors.WithStack(err)
+		return 0, errors.WithStack(err)
 	}
 	if err = p.Signal(unix.SIGUSR2); err != nil {
 		s.l.Warn(err)
 	}
 	<-ch
 
-	// check log file size for debugging
+	var offset uint32
 	fi, err := os.Stat(pmmUpdatePerformLog)
-	if err != nil {
+	if err == nil {
+		if fi.Size() != 0 {
+			s.l.Warnf("Unexpected log file size: %+v", fi)
+		}
+		offset = uint32(fi.Size())
+	} else {
 		s.l.Warn(err)
-	}
-	if fi.Size() != 0 {
-		s.l.Warnf("%+v", fi)
 	}
 
 	_, err = s.supervisorctl("start", pmmUpdatePerformProgram)
-	return err
+	return offset, err
 }
 
-// PMMUpdateRunning returns true if pmm-update-perform supervisord program is running or being restarted,
+// pmmUpdateRunning returns true if pmm-update-perform supervisord program is running or being restarted,
 // false if it is not running / failed.
-func (s *Service) PMMUpdateRunning() bool {
+func (s *Service) pmmUpdateRunning() bool {
 	s.rw.RLock()
 	defer s.rw.RUnlock()
 

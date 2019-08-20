@@ -10,15 +10,22 @@ type mockSupervisordService struct {
 }
 
 // StartPMMUpdate provides a mock function with given fields:
-func (_m *mockSupervisordService) StartPMMUpdate() error {
+func (_m *mockSupervisordService) StartPMMUpdate() (uint32, error) {
 	ret := _m.Called()
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func() error); ok {
+	var r0 uint32
+	if rf, ok := ret.Get(0).(func() uint32); ok {
 		r0 = rf()
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(uint32)
 	}
 
-	return r0
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }

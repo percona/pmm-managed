@@ -151,8 +151,8 @@
     "utilities",
   ]
   pruneopts = "NUT"
-  revision = "ad529a448ba494a88058f9e5be0988713174ac86"
-  version = "v1.9.5"
+  revision = "fd2d159495beeea56e2b747d3d4b68299a81210c"
+  version = "v1.9.6"
 
 [[projects]]
   digest = "1:1f2aebae7e7c856562355ec0198d8ca2fa222fb05e5b1b66632a1fce39631885"
@@ -235,7 +235,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "4dc7a7875df2e21d256631b7c4547eec1c726924"
+  revision = "5db1f48ea03f632752ca311d1383ff4e30041c6a"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
@@ -442,7 +442,7 @@
   revision = "24fa4b261c55da65468f2abfdae2b024eef27dfb"
 
 [[projects]]
-  digest = "1:4b80ce1c300dde345f466a4d89e4ed1f419b745d8b5cd16f0879693fc43c4cda"
+  digest = "1:583b1c5c5daf09f86e8b587e061d6312d16a242811a394d5825c84d5f18cebed"
   name = "google.golang.org/grpc"
   packages = [
     ".",
@@ -484,8 +484,8 @@
     "tap",
   ]
   pruneopts = "NUT"
-  revision = "045159ad57f3781d409358e3ade910a018c16b30"
-  version = "v1.22.1"
+  revision = "6eaf6f47437a6b4e2153a190160ef39a92c7eceb"
+  version = "v1.23.0"
 
 [[projects]]
   digest = "1:2ed325d52993ed3487ff72c036bb5826a4cd0e0d8d145956c746bf32eb7afafb"

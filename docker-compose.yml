@@ -8,6 +8,9 @@ services:
       # for tests
       - PMM_SERVER_IMAGE=${PMM_SERVER_IMAGE:-perconalab/pmm-server:2.0.0-beta6}
       - PATH=/root/go/bin:$PATH
+    ports:
+      - 127.0.0.1:80:80
+      - 127.0.0.1:443:443
     volumes:
       - .:/root/go/src/github.com/percona/pmm-managed
 
