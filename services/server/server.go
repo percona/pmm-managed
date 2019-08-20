@@ -47,9 +47,9 @@ type Server struct {
 	l          *logrus.Entry
 	pmmUpdate  *pmmUpdate
 
-	envMetricsResolution   time.Duration
-	envDisableTelemetry    bool
-	envQANAPIDataRetention uint32
+	envMetricsResolution time.Duration
+	envDisableTelemetry  bool
+	envDataRetention     time.Duration
 }
 
 // NewServer returns new server for Server service.
@@ -100,11 +100,26 @@ func (s *Server) parseEnv(env []string) {
 				s.envDisableTelemetry = b
 			}
 
-		case "QANAPI_DATA_RETENTION":
-			var d uint64
-			d, err = strconv.ParseUint(v, 10, 64)
+		case "DATA_RETENTION":
+			var d time.Duration
+			d, err = time.ParseDuration(v)
+			if err != nil {
+				i, _ := strconv.ParseInt(v, 10, 64)
+				if i != 0 {
+					d = time.Duration(i) * time.Second
+					err = nil
+				}
+			}
+			if d != 0 && d < time.Second {
+				s.l.Warnf("Failed to parse DATA_RETENTION environment variable %s: minimal resolution is 1s.", e)
+				continue
+			}
+			if d%(24*time.Hour) != 0 {
+				s.l.Warnf("The DATA_RETENTION duration must be a multiple of 24 hours, but is %v", d)
+				continue
+			}
 			if err == nil {
-				s.envQANAPIDataRetention = uint32(d)
+				s.envDataRetention = d
 			}
 		}
 
@@ -152,8 +167,8 @@ func (s *Server) UpdateSettings() error {
 			settings.Telemetry.Disabled = true
 		}
 
-		if s.envQANAPIDataRetention > 0 {
-			settings.QAN.DataRetention = s.envQANAPIDataRetention
+		if s.envDataRetention != 0 {
+			settings.QAN.DataRetention = s.envDataRetention
 		}
 
 		return models.SaveSettings(tx.Querier, settings)
@@ -168,7 +183,9 @@ func convertSettings(s *models.Settings) *serverpb.Settings {
 			Lr: ptypes.DurationProto(s.MetricsResolutions.LR),
 		},
 		Telemetry: !s.Telemetry.Disabled,
-		Qan:       &serverpb.QAN{DataRetention: s.QAN.DataRetention},
+		Qan: &serverpb.QAN{
+			DataRetention: ptypes.DurationProto(s.QAN.DataRetention),
+		},
 	}
 }
 
@@ -392,8 +409,10 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			settings.Telemetry.Disabled = true
 		}
 
-		if req.Qan != nil && req.Qan.DataRetention > 0 {
-			settings.QAN.DataRetention = req.Qan.DataRetention
+		if qan := req.Qan; qan != nil {
+			if rd, e := ptypes.Duration(qan.DataRetention); e == nil && rd != 0 {
+				settings.QAN.DataRetention = rd
+			}
 		}
 
 		return models.SaveSettings(tx, settings)

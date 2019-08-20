@@ -42,7 +42,7 @@ func TestSettings(t *testing.T) {
 				MR: 5 * time.Second,
 				LR: time.Minute,
 			},
-			QAN: models.QAN{DataRetention: 30},
+			QAN: models.QAN{DataRetention: 30 * 24 * time.Hour},
 		}
 		assert.Equal(t, expected, actual)
 	})
@@ -57,7 +57,7 @@ func TestSettings(t *testing.T) {
 				MR: 5 * time.Second,
 				LR: time.Minute,
 			},
-			QAN: models.QAN{DataRetention: 30},
+			QAN: models.QAN{DataRetention: 30 * 24 * time.Hour},
 		}
 		assert.Equal(t, expected, s)
 	})

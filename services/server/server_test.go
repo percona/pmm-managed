@@ -29,40 +29,40 @@ func TestServer(t *testing.T) {
 			s := NewServer(nil, nil, []string{
 				"DISABLE_TELEMETRY=1",
 				"METRICS_RESOLUTION=2",
-				"QANAPI_DATA_RETENTION=10",
+				"DATA_RETENTION=240h",
 			})
 			assert.Equal(t, true, s.envDisableTelemetry)
 			assert.Equal(t, 2*time.Second, s.envMetricsResolution)
-			assert.Equal(t, uint32(10), s.envQANAPIDataRetention)
+			assert.Equal(t, 10*24*time.Hour, s.envDataRetention)
 
 			s = NewServer(nil, nil, []string{
 				"DISABLE_TELEMETRY=TrUe",
 				"METRICS_RESOLUTION=3S",
-				"QANAPI_DATA_RETENTION=15",
+				"DATA_RETENTION=360h",
 			})
 			assert.Equal(t, true, s.envDisableTelemetry)
 			assert.Equal(t, 3*time.Second, s.envMetricsResolution)
-			assert.Equal(t, uint32(15), s.envQANAPIDataRetention)
+			assert.Equal(t, 15*24*time.Hour, s.envDataRetention)
 		})
 
 		t.Run("Invalid", func(t *testing.T) {
 			s := NewServer(nil, nil, []string{
 				"DISABLE_TELEMETRY=YES",
 				"METRICS_RESOLUTION=0.1s",
-				"QANAPI_DATA_RETENTION=15d",
+				"DATA_RETENTION=15d",
 			})
 			assert.Equal(t, false, s.envDisableTelemetry)
 			assert.Equal(t, time.Duration(0), s.envMetricsResolution)
-			assert.Equal(t, uint32(0), s.envQANAPIDataRetention)
+			assert.Equal(t, time.Duration(0), s.envDataRetention)
 
 			s = NewServer(nil, nil, []string{
 				"DISABLE_TELEMETRY=on",
 				"METRICS_RESOLUTION=-1",
-				"QANAPI_DATA_RETENTION=-10",
+				"DATA_RETENTION=-10",
 			})
 			assert.Equal(t, false, s.envDisableTelemetry)
 			assert.Equal(t, time.Duration(0), s.envMetricsResolution)
-			assert.Equal(t, uint32(0), s.envQANAPIDataRetention)
+			assert.Equal(t, time.Duration(0), s.envDataRetention)
 		})
 	})
 }

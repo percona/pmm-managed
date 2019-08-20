@@ -29,7 +29,7 @@ type MetricsResolutions struct {
 
 // QAN contains query analytics configuration.
 type QAN struct {
-	DataRetention uint32 `json:"data_retention"` // number of days data retention
+	DataRetention time.Duration `json:"data_retention"` // number of days data retention
 }
 
 // Settings contains PMM Server settings.
@@ -62,8 +62,7 @@ func (s *Settings) fillDefaults() {
 	if s.MetricsResolutions.LR == 0 {
 		s.MetricsResolutions.LR = 60 * time.Second
 	}
-
 	if s.QAN.DataRetention == 0 {
-		s.QAN.DataRetention = 30
+		s.QAN.DataRetention = 30 * 24 * time.Hour
 	}
 }
