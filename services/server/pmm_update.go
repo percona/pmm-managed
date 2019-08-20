@@ -35,16 +35,55 @@ const checkResultFresh = updateCheckInterval + 10*time.Minute
 
 // pmmUpdate wraps pmm2-update invocations with caching.
 type pmmUpdate struct {
-	l               *logrus.Entry
-	rw              sync.RWMutex
-	lastCheckResult *version.UpdateCheckResult
-	lastCheckTime   time.Time
+	l                        *logrus.Entry
+	rw                       sync.RWMutex
+	lastInstalledPackageInfo *version.PackageInfo
+	lastCheckResult          *version.UpdateCheckResult
+	lastCheckTime            time.Time
 }
 
 func newPMMUpdate(l *logrus.Entry) *pmmUpdate {
 	return &pmmUpdate{
 		l: l,
 	}
+}
+
+// installedPackageInfo returns currently installed version information.
+// It is always cached since pmm-update package is always updated before pmm-managed update/restart.
+func (p *pmmUpdate) installedPackageInfo() *version.PackageInfo {
+	p.rw.RLock()
+	if p.lastInstalledPackageInfo != nil {
+		res := p.lastInstalledPackageInfo
+		p.rw.RUnlock()
+		return res
+	}
+	p.rw.RUnlock()
+
+	// use -installed since it is much faster
+	cmdLine := "pmm2-update -installed"
+	args := strings.Split(cmdLine, " ")
+	cmd := exec.Command(args[0], args[1:]...) //nolint:gosec
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	pdeathsig.Set(cmd, unix.SIGKILL)
+
+	b, err := cmd.Output()
+	if err != nil {
+		p.l.Errorf("%s output: %s. Error: %s", cmdLine, stderr.Bytes(), err)
+		return nil
+	}
+
+	var res version.UpdateInstalledResult
+	if err = json.Unmarshal(b, &res); err != nil {
+		p.l.Errorf("%s output: %s", cmdLine, stderr.Bytes())
+		return nil
+	}
+
+	p.rw.Lock()
+	p.lastInstalledPackageInfo = &res.Installed
+	p.rw.Unlock()
+
+	return &res.Installed
 }
 
 // checkResult returns last `pmm-update -check` result and check time.
@@ -62,13 +101,11 @@ func (p *pmmUpdate) checkResult() (*version.UpdateCheckResult, time.Time) {
 	return p.lastCheckResult, p.lastCheckTime
 }
 
-// check calls `pmm2-update -check` and fills lastCheckResult/lastCheckTime on success.
+// check calls `pmm2-update -check` and fills lastInstalledPackageInfo/lastCheckResult/lastCheckTime on success.
 func (p *pmmUpdate) check() error {
 	p.rw.Lock()
 	defer p.rw.Unlock()
 
-	// We almost could use supervisord package there, but getting the result
-	// (as opposed to the progress logging) from the stdout log is just too painful.
 	cmdLine := "pmm2-update -check"
 	args := strings.Split(cmdLine, " ")
 	cmd := exec.Command(args[0], args[1:]...) //nolint:gosec
@@ -89,6 +126,7 @@ func (p *pmmUpdate) check() error {
 	}
 
 	p.l.Debugf("%s output: %s", cmdLine, stderr.Bytes())
+	p.lastInstalledPackageInfo = &res.Installed
 	p.lastCheckResult = &res
 	p.lastCheckTime = time.Now()
 	return nil

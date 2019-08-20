@@ -215,14 +215,14 @@ func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*se
 		res.Managed.Timestamp = ts
 	}
 
-	if v, _ := s.pmmUpdate.checkResult(); v != nil {
-		res.Version = v.InstalledRPMNiceVersion
+	if v := s.pmmUpdate.installedPackageInfo(); v != nil {
+		res.Version = v.Version
 		res.Server = &serverpb.VersionInfo{
-			Version:     v.InstalledRPMNiceVersion,
-			FullVersion: v.InstalledRPMVersion,
+			Version:     v.Version,
+			FullVersion: v.FullVersion,
 		}
-		if v.InstalledTime != nil {
-			res.Server.Timestamp, _ = ptypes.TimestampProto(*v.InstalledTime)
+		if v.BuildTime != nil {
+			res.Server.Timestamp, _ = ptypes.TimestampProto(*v.BuildTime)
 		}
 	}
 
@@ -255,23 +255,23 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 
 	res := &serverpb.CheckUpdatesResponse{
 		Installed: &serverpb.VersionInfo{
-			Version:     v.InstalledRPMNiceVersion,
-			FullVersion: v.InstalledRPMVersion,
+			Version:     v.Installed.Version,
+			FullVersion: v.Installed.FullVersion,
 		},
 		Latest: &serverpb.VersionInfo{
-			Version:     v.LatestRPMNiceVersion,
-			FullVersion: v.LatestRPMVersion,
+			Version:     v.Latest.Version,
+			FullVersion: v.Latest.FullVersion,
 		},
 		UpdateAvailable: v.UpdateAvailable,
 		LatestNewsUrl:   "", // TODO https://jira.percona.com/browse/PMM-4444
 	}
 	res.LastCheck, _ = ptypes.TimestampProto(lastCheck)
-	if v.InstalledTime != nil {
-		t := v.InstalledTime.UTC().Truncate(24 * time.Hour) // return only date
+	if v.Installed.BuildTime != nil {
+		t := v.Installed.BuildTime.UTC().Truncate(24 * time.Hour) // return only date
 		res.Installed.Timestamp, _ = ptypes.TimestampProto(t)
 	}
-	if v.LatestTime != nil {
-		t := v.LatestTime.UTC().Truncate(24 * time.Hour) // return only date
+	if v.Latest.BuildTime != nil {
+		t := v.Latest.BuildTime.UTC().Truncate(24 * time.Hour) // return only date
 		res.Latest.Timestamp, _ = ptypes.TimestampProto(t)
 	}
 	return res, nil
