@@ -46,20 +46,20 @@ const updateCheckInterval = 24 * time.Hour
 
 // Server represents service for checking PMM Server status and changing settings.
 type Server struct {
-	db                    *reform.DB
-	prometheus            prometheusService
-	supervisord           supervisordService
-	l                     *logrus.Entry
-	pmmUpdate             *pmmUpdate
-	pmmUpdateProgressFile string
+	db                *reform.DB
+	prometheus        prometheusService
+	supervisord       supervisordService
+	l                 *logrus.Entry
+	pmmUpdate         *pmmUpdate
+	pmmUpdateAuthFile string
 
-	pmmUpdateProgressFileM sync.Mutex
+	pmmUpdateAuthFileM sync.Mutex
 
 	envMetricsResolution time.Duration
 	envDisableTelemetry  bool
 }
 
-type pmmUpdateProgress struct {
+type pmmUpdateAuth struct {
 	AuthToken string `json:"auth_token"`
 }
 
@@ -72,12 +72,12 @@ func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervis
 	path = filepath.Join(path, "pmm-update.json")
 
 	s := &Server{
-		db:                    db,
-		prometheus:            prometheus,
-		supervisord:           supervisord,
-		l:                     logrus.WithField("component", "server"),
-		pmmUpdate:             newPMMUpdate(logrus.WithField("component", "server/pmm-update")),
-		pmmUpdateProgressFile: path,
+		db:                db,
+		prometheus:        prometheus,
+		supervisord:       supervisord,
+		l:                 logrus.WithField("component", "server"),
+		pmmUpdate:         newPMMUpdate(logrus.WithField("component", "server/pmm-update")),
+		pmmUpdateAuthFile: path,
 	}
 	s.parseEnv(env)
 	return s, nil
@@ -323,13 +323,13 @@ func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusReq
 }
 
 func (s *Server) writeUpdateAuthToken(token string) error {
-	s.pmmUpdateProgressFileM.Lock()
-	defer s.pmmUpdateProgressFileM.Unlock()
+	s.pmmUpdateAuthFileM.Lock()
+	defer s.pmmUpdateAuthFileM.Unlock()
 
-	p := &pmmUpdateProgress{
+	a := &pmmUpdateAuth{
 		AuthToken: token,
 	}
-	f, err := os.OpenFile(s.pmmUpdateProgressFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600|os.ModeExclusive)
+	f, err := os.OpenFile(s.pmmUpdateAuthFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600|os.ModeExclusive)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -339,14 +339,14 @@ func (s *Server) writeUpdateAuthToken(token string) error {
 		}
 	}()
 
-	return errors.WithStack(json.NewEncoder(f).Encode(p))
+	return errors.WithStack(json.NewEncoder(f).Encode(a))
 }
 
 func (s *Server) readUpdateAuthToken() (string, error) {
-	s.pmmUpdateProgressFileM.Lock()
-	defer s.pmmUpdateProgressFileM.Unlock()
+	s.pmmUpdateAuthFileM.Lock()
+	defer s.pmmUpdateAuthFileM.Unlock()
 
-	f, err := os.OpenFile(s.pmmUpdateProgressFile, os.O_RDONLY, os.ModeExclusive)
+	f, err := os.OpenFile(s.pmmUpdateAuthFile, os.O_RDONLY, os.ModeExclusive)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
@@ -356,9 +356,9 @@ func (s *Server) readUpdateAuthToken() (string, error) {
 		}
 	}()
 
-	var p pmmUpdateProgress
-	err = json.NewDecoder(f).Decode(&p)
-	return p.AuthToken, errors.WithStack(err)
+	var a pmmUpdateAuth
+	err = json.NewDecoder(f).Decode(&a)
+	return a.AuthToken, errors.WithStack(err)
 }
 
 // GetSettings returns current PMM Server settings.
