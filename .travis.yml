@@ -40,13 +40,13 @@ env:
     - PROMETHEUS_IMAGE=prom/prometheus:v2.10.0
       GRAFANA_IMAGE=grafana/grafana:6.2.5
       POSTGRES_IMAGE=postgres:10
-      PMM_SERVER_IMAGE=perconalab/pmm-server:2.0.0-beta5
+      PMM_SERVER_IMAGE=perconalab/pmm-server:2.0.0-beta6
 
     # latest released version
     - PROMETHEUS_IMAGE=prom/prometheus:latest
       GRAFANA_IMAGE=grafana/grafana:latest
       POSTGRES_IMAGE=postgres:latest
-      PMM_SERVER_IMAGE=perconalab/pmm-server:2.0.0-beta5
+      PMM_SERVER_IMAGE=perconalab/pmm-server:2.0.0-beta6
 
     # current master
     - PROMETHEUS_IMAGE=prom/prometheus:master
