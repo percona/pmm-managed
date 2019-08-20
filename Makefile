@@ -38,6 +38,7 @@ init:                           ## Installs tools to $GOPATH/bin (which is expec
 gen:                            ## Generate files.
 	rm -f models/*_reform.go
 	go generate ./...
+	make format
 
 install:                        ## Install pmm-managed binary.
 	go install $(LD_FLAGS) ./...

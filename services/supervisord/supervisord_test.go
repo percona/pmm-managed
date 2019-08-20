@@ -37,5 +37,5 @@ func TestService(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	go s.Run(ctx)
-	assert.Equal(t, false, s.pmmUpdateRunning())
+	assert.Equal(t, false, s.PMMUpdateRunning())
 }

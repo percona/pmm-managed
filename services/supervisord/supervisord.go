@@ -20,6 +20,7 @@ package supervisord
 import (
 	"bufio"
 	"context"
+	"io"
 	"os"
 	"os/exec"
 	"strconv"
@@ -40,7 +41,9 @@ type Service struct {
 	supervisorctlPath string
 	l                 *logrus.Entry
 
-	rw                        sync.RWMutex
+	m sync.Mutex
+
+	subsM                     sync.Mutex
 	subs                      map[chan *event]sub
 	pmmUpdatePerformLastEvent eventType
 }
@@ -97,6 +100,7 @@ func (s *Service) Run(ctx context.Context) {
 			if e == nil {
 				continue
 			}
+			s.l.Debugf("Got event: %+v", e)
 
 			// skip old events (and events with exactly the same time as old events) if maintail was restarted
 			if lastEvent != nil && !lastEvent.Time.Before(e.Time) {
@@ -104,7 +108,7 @@ func (s *Service) Run(ctx context.Context) {
 			}
 			lastEvent = e
 
-			s.rw.Lock()
+			s.subsM.Lock()
 
 			var toDelete []chan *event
 			for ch, sub := range s.subs {
@@ -132,7 +136,7 @@ func (s *Service) Run(ctx context.Context) {
 				delete(s.subs, ch)
 			}
 
-			s.rw.Unlock()
+			s.subsM.Unlock()
 		}
 
 		if err := scanner.Err(); err != nil {
@@ -147,12 +151,12 @@ func (s *Service) Run(ctx context.Context) {
 
 func (s *Service) subscribe(program string, eventTypes ...eventType) chan *event {
 	ch := make(chan *event, 1)
-	s.rw.Lock()
+	s.subsM.Lock()
 	s.subs[ch] = sub{
 		program:    program,
 		eventTypes: eventTypes,
 	}
-	s.rw.Unlock()
+	s.subsM.Unlock()
 	return ch
 }
 
@@ -162,6 +166,7 @@ func (s *Service) supervisorctl(args ...string) ([]byte, error) {
 	}
 
 	cmd := exec.Command(s.supervisorctlPath, args...) //nolint:gosec
+	s.l.Debugf("Running %q...", strings.Join(cmd.Args, " "))
 	pdeathsig.Set(cmd, unix.SIGKILL)
 	b, err := cmd.Output()
 	return b, errors.WithStack(err)
@@ -170,20 +175,24 @@ func (s *Service) supervisorctl(args ...string) ([]byte, error) {
 // StartPMMUpdate starts pmm-update-perform supervisord program with some preparations.
 // It returns initial log file offset.
 func (s *Service) StartPMMUpdate() (uint32, error) {
-	if s.pmmUpdateRunning() {
+	if s.PMMUpdateRunning() {
 		return 0, status.Errorf(codes.FailedPrecondition, "Update is already running.")
 	}
 
-	ch := s.subscribe("supervisord", logReopen)
+	s.m.Lock()
+	defer s.m.Unlock()
 
-	s.rw.Lock()
-	defer s.rw.Lock()
+	ch := s.subscribe("supervisord", logReopen)
 
 	// We need to remove and reopen log file for UpdateStatus API to be able to read it without it being rotated.
 	// Additionally, SIGUSR2 is expected by our Ansible playbook.
 
 	// remove existing log file
-	if err := os.Remove(pmmUpdatePerformLog); err != nil {
+	err := os.Remove(pmmUpdatePerformLog)
+	if err != nil && os.IsNotExist(err) {
+		err = nil
+	}
+	if err != nil {
 		s.l.Warn(err)
 	}
 
@@ -192,7 +201,7 @@ func (s *Service) StartPMMUpdate() (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
-	pid, err := strconv.Atoi(string(b))
+	pid, err := strconv.Atoi(strings.TrimSpace(string(b)))
 	if err != nil {
 		return 0, errors.WithStack(err)
 	}
@@ -203,16 +212,20 @@ func (s *Service) StartPMMUpdate() (uint32, error) {
 	if err = p.Signal(unix.SIGUSR2); err != nil {
 		s.l.Warn(err)
 	}
+	s.l.Debug("Waiting for logreopen...")
 	<-ch
 
 	var offset uint32
 	fi, err := os.Stat(pmmUpdatePerformLog)
-	if err == nil {
+	switch {
+	case err == nil:
 		if fi.Size() != 0 {
 			s.l.Warnf("Unexpected log file size: %+v", fi)
 		}
 		offset = uint32(fi.Size())
-	} else {
+	case os.IsNotExist(err):
+		// that's expected as we remove this file above
+	default:
 		s.l.Warn(err)
 	}
 
@@ -220,11 +233,11 @@ func (s *Service) StartPMMUpdate() (uint32, error) {
 	return offset, err
 }
 
-// pmmUpdateRunning returns true if pmm-update-perform supervisord program is running or being restarted,
+// PMMUpdateRunning returns true if pmm-update-perform supervisord program is running or being restarted,
 // false if it is not running / failed.
-func (s *Service) pmmUpdateRunning() bool {
-	s.rw.RLock()
-	defer s.rw.RUnlock()
+func (s *Service) PMMUpdateRunning() bool {
+	s.m.Lock()
+	defer s.m.Unlock()
 
 	// First check with status command is case we missed that event during maintail or pmm-managed restart.
 	// See http://supervisord.org/subprocess.html#process-states
@@ -260,4 +273,34 @@ func (s *Service) pmmUpdateRunning() bool {
 		s.l.Warnf("Unhandled %s status (last event %q), assuming it is not running.", pmmUpdatePerformProgram, s.pmmUpdatePerformLastEvent)
 		return false
 	}
+}
+
+func (s *Service) PMMUpdateLog(offset uint32) ([]string, uint32, error) {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	f, err := os.Open(pmmUpdatePerformLog)
+	if err != nil {
+		return nil, 0, errors.WithStack(err)
+	}
+	defer f.Close() //nolint:errcheck
+
+	if _, err = f.Seek(io.SeekStart, int(offset)); err != nil {
+		return nil, 0, errors.WithStack(err)
+	}
+
+	lines := make([]string, 0, 10)
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+	if err = scanner.Err(); err != nil {
+		s.l.Warn(err)
+	}
+
+	newOffset, err := f.Seek(io.SeekCurrent, 0)
+	if err != nil {
+		s.l.Warn(err)
+	}
+	return lines, uint32(newOffset), nil
 }

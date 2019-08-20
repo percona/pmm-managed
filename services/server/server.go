@@ -74,6 +74,7 @@ func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervis
 	s := &Server{
 		db:                    db,
 		prometheus:            prometheus,
+		supervisord:           supervisord,
 		l:                     logrus.WithField("component", "server"),
 		pmmUpdate:             newPMMUpdate(logrus.WithField("component", "server/pmm-update")),
 		pmmUpdateProgressFile: path,
@@ -300,8 +301,6 @@ func (s *Server) StartUpdate(ctx context.Context, req *serverpb.StartUpdateReque
 
 // UpdateStatus returns PMM Server update status.
 func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusRequest) (*serverpb.UpdateStatusResponse, error) {
-	// TODO https://jira.percona.com/browse/PMM-4448
-
 	token, err := s.readUpdateAuthToken()
 	if err != nil {
 		return nil, err
@@ -310,11 +309,16 @@ func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusReq
 		return nil, status.Error(codes.PermissionDenied, "Invalid authentication token.")
 	}
 
+	done := !s.supervisord.PMMUpdateRunning()
+	lines, newOffset, err := s.supervisord.PMMUpdateLog(req.LogOffset)
+	if err != nil {
+		s.l.Warn(err)
+	}
+
 	return &serverpb.UpdateStatusResponse{
-		LogLines: []string{
-			"TODO",
-		},
-		Done: true,
+		LogLines:  lines,
+		LogOffset: newOffset,
+		Done:      done,
 	}, nil
 }
 

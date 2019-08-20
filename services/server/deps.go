@@ -34,4 +34,6 @@ type prometheusService interface {
 // We use it instead of real type for testing and to avoid dependency cycle.
 type supervisordService interface {
 	StartPMMUpdate() (uint32, error)
+	PMMUpdateRunning() bool
+	PMMUpdateLog(offset uint32) ([]string, uint32, error)
 }
