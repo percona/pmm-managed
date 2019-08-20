@@ -214,30 +214,38 @@ func (s *Service) PMMUpdateRunning() bool {
 	s.rw.RLock()
 	defer s.rw.RUnlock()
 
-	// first check with status command is case we missed that event during maintail or pmm-managed restart
+	// First check with status command is case we missed that event during maintail or pmm-managed restart.
+	// See http://supervisord.org/subprocess.html#process-states
 	b, err := s.supervisorctl("status", pmmUpdatePerformProgram)
 	if err != nil {
 		s.l.Warn(err)
 	}
 	s.l.Debugf("%s", b)
 	if f := strings.Fields(string(b)); len(f) > 2 {
-		switch f[1] {
-		case "FATAL":
+		switch status := f[1]; status {
+		case "FATAL", "STOPPED": // will not be restarted
 			return false
 		case "STARTING", "RUNNING", "BACKOFF", "STOPPING":
 			return true
+		case "EXITED":
+			// it might be restarted - we need to inspect last event
 		default:
-			// we need to inspect last event
+			s.l.Warnf("Unknown %s process status %q.", pmmUpdatePerformProgram, status)
+			// inspect last event
 		}
 	}
 
 	switch s.pmmUpdatePerformLastEvent {
-	case starting, running, exitedUnexpected:
+	case stopping, starting, running:
 		return true
-	case fatal:
+	case exitedUnexpected: // will be restarted
+		return true
+	case exitedExpected, fatal: // will not be restarted
 		return false
+	case stopped: // we don't know
+		fallthrough
 	default:
-		s.l.Warnf("Unknown %s status.", pmmUpdatePerformProgram)
+		s.l.Warnf("Unhandled %s status (last event %q), assuming it is not running.", pmmUpdatePerformProgram, s.pmmUpdatePerformLastEvent)
 		return false
 	}
 }

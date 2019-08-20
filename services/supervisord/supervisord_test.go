@@ -25,6 +25,8 @@ import (
 )
 
 func TestService(t *testing.T) {
+	// logrus.SetLevel(logrus.DebugLevel)
+
 	t.Parallel()
 
 	s := New()
