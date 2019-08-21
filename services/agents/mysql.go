@@ -59,7 +59,9 @@ func mysqldExporterConfig(service *models.Service, exporter *models.Agent) *agen
 	args = append(args, "--collect.perf_schema.indexiowaits")
 	args = append(args, "--collect.perf_schema.tableiowaits")
 	args = append(args, "--collect.perf_schema.tablelocks")
-	args = append(args, "--collect.custom_query=false")
+	args = append(args, "--collect.custom_query.mr")
+	args = append(args, "--collect.custom_query.lr")
+	args = append(args, "--collect.custom_query.hr")
 
 	if pointer.GetString(exporter.MetricsURL) != "" {
 		args = append(args, "--web.telemetry-path="+*exporter.MetricsURL)

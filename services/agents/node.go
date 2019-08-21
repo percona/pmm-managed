@@ -75,6 +75,9 @@ func nodeExporterConfig(node *models.Node, exporter *models.Agent) *agentpb.SetS
 			// Disabled for now due to https://jira.percona.com/browse/PMM-3843
 			// "--collector.logind",
 			// "--collector.systemd",
+			"--collector.textfile.lr",
+			"--collector.textfile.mr",
+			"--collector.textfile.hr",
 		)
 	}
 

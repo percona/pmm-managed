@@ -44,6 +44,10 @@ func postgresExporterConfig(service *models.Service, exporter *models.Agent) *ag
 		args = append(args, "--web.telemetry-path="+*exporter.MetricsURL)
 	}
 
+	args = append(args, "--collect.custom_query.mr")
+	args = append(args, "--collect.custom_query.lr")
+	args = append(args, "--collect.custom_query.hr")
+
 	sort.Strings(args)
 
 	return &agentpb.SetStateRequest_AgentProcess{
