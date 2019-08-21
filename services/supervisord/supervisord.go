@@ -285,7 +285,7 @@ func (s *Service) PMMUpdateLog(offset uint32) ([]string, uint32, error) {
 	}
 	defer f.Close() //nolint:errcheck
 
-	if _, err = f.Seek(io.SeekStart, int(offset)); err != nil {
+	if _, err = f.Seek(int64(offset), io.SeekStart); err != nil {
 		return nil, 0, errors.WithStack(err)
 	}
 
@@ -298,7 +298,7 @@ func (s *Service) PMMUpdateLog(offset uint32) ([]string, uint32, error) {
 		s.l.Warn(err)
 	}
 
-	newOffset, err := f.Seek(io.SeekCurrent, 0)
+	newOffset, err := f.Seek(0, io.SeekCurrent)
 	if err != nil {
 		s.l.Warn(err)
 	}
