@@ -18,62 +18,58 @@ package grafana
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
-	"path"
 	"strings"
 	"time"
 
+	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
 )
 
 // rules maps original URL prefix to minimal required role.
 var rules = map[string]role{
+	// TODO https://jira.percona.com/browse/PMM-4420
 	"/agent.Agent/Connect": none,
 
-	"/inventory.Agents/Get":    editor,
-	"/inventory.Agents/List":   editor,
-	"/inventory.Nodes/Get":     editor,
-	"/inventory.Nodes/List":    editor,
-	"/inventory.Services/Get":  editor,
-	"/inventory.Services/List": editor,
-	"/inventory.":              admin,
+	"/inventory.":                 admin,
+	"/management.":                admin,
+	"/management.Actions/":        viewer,
+	"/server.Server/CheckUpdates": viewer,
+	"/server.":                    admin,
 
-	"/management.": admin,
+	"/v0/inventory/":          admin,
+	"/v0/management/":         admin,
+	"/v0/management/Actions/": viewer,
+	"/v1/Updates/Check":       viewer,
+	"/v1/Updates/":            admin,
+	"/v1/Settings/":           admin,
 
-	"/server.": admin,
-
-	"/v0/inventory/Agents/Get":    editor,
-	"/v0/inventory/Agents/List":   editor,
-	"/v0/inventory/Nodes/Get":     editor,
-	"/v0/inventory/Nodes/List":    editor,
-	"/v0/inventory/Services/Get":  editor,
-	"/v0/inventory/Services/List": editor,
-	"/v0/inventory/":              admin,
-
-	"/v0/management/": admin,
-
-	"/v1/Updates/Check":   grafanaAdmin,
-	"/v1/Updates/Perform": grafanaAdmin,
-
-	"/v1/Settings/Change": admin,
-	"/v1/Settings/Get":    admin,
-
-	"/v0/qan/": editor,
-
-	"/qan/":        viewer,
-	"/prometheus/": admin,
-
-	// TODO cleanup
+	// must be available without authentication for health checking
 	"/v1/readyz": none,
 	"/ping":      none, // PMM 1.x variant
 
+	// must not be available without authentication as it can leak data
 	"/v1/version":         viewer,
 	"/managed/v1/version": viewer, // PMM 1.x variant
 
+	"/v0/qan/": viewer,
+
+	// not rules for /qan and /swagger UIs as there are no auth_request for them in nginx configuration
+
+	"/prometheus/": admin,
+
 	// "/" is a special case
+}
+
+// clientError contains authentication error response details.
+type authError struct {
+	code    codes.Code
+	message string
 }
 
 // AuthServer authenticates incoming requests via Grafana API.
@@ -98,12 +94,37 @@ func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithTimeout(req.Context(), 3*time.Second)
 	defer cancel()
 
-	// response body is ignored by nginx
-	code := s.authenticate(ctx, req)
-	rw.WriteHeader(code)
+	if err := s.authenticate(ctx, req); err != nil {
+		// nginx completely ignores auth_request subrequest response body;
+		// out nginx configuration then sends the same request as a normal request
+		// and returns response body to the client
+
+		// copy grpc-gateway behavior: set correct codes, set both "error" and "message"
+		m := map[string]interface{}{
+			"code":    int(err.code),
+			"error":   err.message,
+			"message": err.message,
+		}
+		rw.Header().Set("Content-Type", "application/json")
+		rw.WriteHeader(runtime.HTTPStatusFromCode(err.code))
+		if err := json.NewEncoder(rw).Encode(m); err != nil {
+			s.l.Warnf("%s", err)
+		}
+	}
 }
 
-func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) int {
+// nextPrefix returns path's prefix, stopping on slashes and dots:
+// /foo.Bar/Baz -> /foo.Bar/ -> /foo. -> /
+// That works for both gRPC and JSON URLs.
+func nextPrefix(path string) string {
+	path = strings.TrimRight(path, "/.")
+	if i := strings.LastIndexAny(path, "/."); i != -1 {
+		return path[:i+1]
+	}
+	return path
+}
+
+func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) *authError {
 	// TODO l := logger.Get(ctx) once we have it after https://jira.percona.com/browse/PMM-4326
 	l := s.l
 
@@ -117,29 +138,24 @@ func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) int {
 
 	if req.URL.Path != "/auth_request" {
 		l.Errorf("Unexpected path %s.", req.URL.Path)
-		return 500
+		return &authError{code: codes.Internal, message: "Internal server error."}
 	}
 
 	origURI := req.Header.Get("X-Original-Uri")
 	if origURI == "" {
 		l.Errorf("Empty X-Original-Uri.")
-		return 500
+		return &authError{code: codes.Internal, message: "Internal server error."}
 	}
 	l = l.WithField("req", fmt.Sprintf("%s %s", req.Header.Get("X-Original-Method"), origURI))
 
-	// find the longest prefix present in rules:
-	// /foo/bar -> /foo/ -> /foo -> /
+	// find the longest prefix present in rules, stopping on slashes and dots:
+	// /foo.Bar/Baz -> /foo.Bar/ -> /foo. -> /
 	prefix := origURI
 	for prefix != "/" {
 		if _, ok := rules[prefix]; ok {
 			break
 		}
-
-		if strings.HasSuffix(prefix, "/") {
-			prefix = strings.TrimSuffix(prefix, "/")
-		} else {
-			prefix = path.Dir(prefix) + "/"
-		}
+		prefix = nextPrefix(prefix)
 	}
 
 	// fallback to Grafana admin if there is no explicit rule
@@ -154,7 +170,7 @@ func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) int {
 
 	if minRole == none {
 		l.Debugf("Minimal required role is %q, granting access without checking Grafana.", minRole)
-		return 200
+		return nil
 	}
 
 	// check Grafana with some headers from request
@@ -171,22 +187,26 @@ func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) int {
 	if err != nil {
 		l.Warnf("%s", err)
 		if cErr, ok := errors.Cause(err).(*clientError); ok {
-			return cErr.code
+			code := codes.Internal
+			if cErr.Code == 401 || cErr.Code == 403 {
+				code = codes.Unauthenticated
+			}
+			return &authError{code: code, message: cErr.ErrorMessage}
 		}
-		return 500
+		return &authError{code: codes.Internal, message: "Internal server error."}
 	}
 	l = l.WithField("role", role.String())
 
 	if role == grafanaAdmin {
 		l.Debugf("Grafana admin, allowing access.")
-		return 200
+		return nil
 	}
 
 	if minRole <= role {
 		l.Debugf("Minimal required role is %q, granting access.", minRole)
-		return 200
+		return nil
 	}
 
 	l.Warnf("Minimal required role is %q.", minRole)
-	return 403
+	return &authError{code: codes.PermissionDenied, message: "Access denied."}
 }
