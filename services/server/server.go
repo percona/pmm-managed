@@ -410,8 +410,11 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		}
 
 		if qan := req.Qan; qan != nil {
-			if rd, e := ptypes.Duration(qan.DataRetention); e == nil && rd != 0 {
-				settings.QAN.DataRetention = rd
+			if dr, e := ptypes.Duration(qan.DataRetention); e == nil && dr != 0 {
+				if dr%(24*time.Hour) != 0 {
+					return status.Error(codes.InvalidArgument, fmt.Sprintf("The data retention duration must be a multiple of 24 hours, but is %v", dr))
+				}
+				settings.QAN.DataRetention = dr
 			}
 		}
 
