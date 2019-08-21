@@ -39,7 +39,7 @@ env:
     # what we currently use in PMM
     - PROMETHEUS_IMAGE=prom/prometheus:v2.10.0
       GRAFANA_IMAGE=grafana/grafana:6.2.5
-      POSTGRES_IMAGE=postgres:10
+      POSTGRES_IMAGE=postgres:11
       PMM_SERVER_IMAGE=perconalab/pmm-server:2.0.0-beta6
 
     # latest released version
@@ -89,10 +89,13 @@ after_success:
 jobs:
   include:
     - stage: test in devcontainer
+      install: true
+      before_script: true
       script:
         - ls -al
         - pwd
         - docker exec pmm-managed-server /root/go/src/github.com/percona/pmm-managed/.devcontainer/install-dev-tools.sh
+      after_success: true
 
 notifications:
   slack:
