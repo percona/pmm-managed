@@ -413,11 +413,13 @@ func (as *AgentsService) AddPostgresExporter(ctx context.Context, req *inventory
 	var res *inventorypb.PostgresExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 		params := &models.CreateAgentParams{
-			PMMAgentID:   req.PmmAgentId,
-			ServiceID:    req.ServiceId,
-			Username:     req.Username,
-			Password:     req.Password,
-			CustomLabels: req.CustomLabels,
+			PMMAgentID:          req.PmmAgentId,
+			ServiceID:           req.ServiceId,
+			Username:            req.Username,
+			Password:            req.Password,
+			CustomLabels:        req.CustomLabels,
+			TLS:                 req.TLS,
+			SkipConnectionCheck: req.SkipTLSVerify,
 		}
 		row, err := models.CreateAgent(tx.Querier, models.PostgresExporterType, params)
 		if err != nil {

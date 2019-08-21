@@ -69,9 +69,11 @@ type Agent struct {
 	ListenPort *uint16 `reform:"listen_port"`
 	Version    *string `reform:"version"`
 
-	Username   *string `reform:"username"`
-	Password   *string `reform:"password"`
-	MetricsURL *string `reform:"metrics_url"`
+	Username      *string `reform:"username"`
+	Password      *string `reform:"password"`
+	TLS           *bool   `reform:"tls"`
+	SkipTLSVerify *bool   `reform:"skip_tls_verify"`
+	MetricsURL    *string `reform:"metrics_url"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.
