@@ -86,6 +86,14 @@ after_success:
   - ./codecov -f cover.out -F cover -X fix
   - ./codecov -f crosscover.out -F crosscover -X fix
 
+jobs:
+  include:
+    - state: test in devcontainer
+      script:
+        - ls -al
+        - pwd
+        - docker exec pmm-managed-server /root/go/src/github.com/percona/pmm-managed/.devcontainer/install-dev-tools.sh
+
 notifications:
   slack:
     on_success: change
