@@ -88,7 +88,7 @@ after_success:
 
 jobs:
   include:
-    - state: test in devcontainer
+    - stage: test in devcontainer
       script:
         - ls -al
         - pwd
