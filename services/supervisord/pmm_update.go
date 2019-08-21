@@ -14,10 +14,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package server
+package supervisord
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"os/exec"
 	"strings"
@@ -31,7 +32,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const checkResultFresh = updateCheckInterval + 10*time.Minute
+const (
+	updateCheckInterval = 24 * time.Hour
+	checkResultFresh    = updateCheckInterval + 10*time.Minute
+)
 
 // pmmUpdate wraps pmm2-update invocations with caching.
 type pmmUpdate struct {
@@ -45,6 +49,25 @@ type pmmUpdate struct {
 func newPMMUpdate(l *logrus.Entry) *pmmUpdate {
 	return &pmmUpdate{
 		l: l,
+	}
+}
+
+// run runs check for updates loop until ctx is canceled.
+func (p *pmmUpdate) run(ctx context.Context) {
+	p.l.Info("Starting...")
+	ticker := time.NewTicker(updateCheckInterval)
+	defer ticker.Stop()
+
+	for {
+		_ = p.check()
+
+		select {
+		case <-ticker.C:
+			// continue with next loop iteration
+		case <-ctx.Done():
+			p.l.Info("Done.")
+			return
+		}
 	}
 }
 

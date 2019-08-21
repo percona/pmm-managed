@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/percona/pmm/utils/pdeathsig"
+	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
@@ -40,6 +41,8 @@ import (
 type Service struct {
 	supervisorctlPath string
 	l                 *logrus.Entry
+
+	pmmUpdate *pmmUpdate
 
 	m sync.Mutex
 
@@ -65,6 +68,7 @@ func New() *Service {
 	return &Service{
 		supervisorctlPath:         path,
 		l:                         logrus.WithField("component", "supervisord"),
+		pmmUpdate:                 newPMMUpdate(logrus.WithField("component", "supervisord/pmm-update")),
 		subs:                      make(map[chan *event]sub),
 		pmmUpdatePerformLastEvent: unknown,
 	}
@@ -72,6 +76,25 @@ func New() *Service {
 
 // Run reads supervisord's log (maintail) and sends events to subscribers.
 func (s *Service) Run(ctx context.Context) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		// Do not check for updates for the first 10 minutes.
+		// That solves PMM Server building problems when we start pmm-managed.
+		// TODO https://jira.percona.com/browse/PMM-4429
+		sleepCtx, sleepCancel := context.WithTimeout(ctx, 10*time.Minute)
+		<-sleepCtx.Done()
+		sleepCancel()
+		if ctx.Err() != nil {
+			return
+		}
+
+		s.pmmUpdate.run(ctx)
+	}()
+	defer wg.Wait()
+
 	if s.supervisorctlPath == "" {
 		s.l.Errorf("supervisorctl not found, updates are disabled.")
 		return
@@ -147,6 +170,18 @@ func (s *Service) Run(ctx context.Context) {
 			s.l.Error(err)
 		}
 	}
+}
+
+func (s *Service) InstalledPackageInfo() *version.PackageInfo {
+	return s.pmmUpdate.installedPackageInfo()
+}
+
+func (s *Service) CheckResult() (*version.UpdateCheckResult, time.Time) {
+	return s.pmmUpdate.checkResult()
+}
+
+func (s *Service) Check() error {
+	return s.pmmUpdate.check()
 }
 
 func (s *Service) subscribe(program string, eventTypes ...eventType) chan *event {

@@ -34,7 +34,7 @@ services:
       - ./testdata/grafana:/etc/grafana
 
   postgres:
-    image: ${POSTGRES_IMAGE:-postgres:10}
+    image: ${POSTGRES_IMAGE:-postgres:11}
     ports:
       - 127.0.0.1:5432:5432
     environment:

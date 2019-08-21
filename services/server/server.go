@@ -42,17 +42,13 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-const updateCheckInterval = 24 * time.Hour
-
 // Server represents service for checking PMM Server status and changing settings.
 type Server struct {
-	db                *reform.DB
-	prometheus        prometheusService
-	supervisord       supervisordService
-	l                 *logrus.Entry
-	pmmUpdate         *pmmUpdate
-	pmmUpdateAuthFile string
-
+	db                 *reform.DB
+	prometheus         prometheusService
+	supervisord        supervisordService
+	l                  *logrus.Entry
+	pmmUpdateAuthFile  string
 	pmmUpdateAuthFileM sync.Mutex
 
 	envMetricsResolution time.Duration
@@ -76,7 +72,6 @@ func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervis
 		prometheus:        prometheus,
 		supervisord:       supervisord,
 		l:                 logrus.WithField("component", "server"),
-		pmmUpdate:         newPMMUpdate(logrus.WithField("component", "server/pmm-update")),
 		pmmUpdateAuthFile: path,
 	}
 	s.parseEnv(env)
@@ -122,25 +117,6 @@ func (s *Server) parseEnv(env []string) {
 
 		if err != nil {
 			s.l.Warnf("Failed to parse environment variable %s: %s", e, err)
-		}
-	}
-}
-
-// Run runs check for updates loop until ctx is canceled.
-func (s *Server) Run(ctx context.Context) {
-	s.l.Info("Starting...")
-	ticker := time.NewTicker(updateCheckInterval)
-	defer ticker.Stop()
-
-	for {
-		_ = s.pmmUpdate.check()
-
-		select {
-		case <-ticker.C:
-			// continue with next loop iteration
-		case <-ctx.Done():
-			s.l.Info("Done.")
-			return
 		}
 	}
 }
@@ -219,7 +195,7 @@ func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*se
 		res.Managed.Timestamp = ts
 	}
 
-	if v := s.pmmUpdate.installedPackageInfo(); v != nil {
+	if v := s.supervisord.InstalledPackageInfo(); v != nil {
 		res.Version = v.Version
 		res.Server = &serverpb.VersionInfo{
 			Version:     v.Version,
@@ -247,12 +223,12 @@ func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) 
 // CheckUpdates checks PMM Server updates availability.
 func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesRequest) (*serverpb.CheckUpdatesResponse, error) {
 	if req.Force {
-		if err := s.pmmUpdate.check(); err != nil {
+		if err := s.supervisord.Check(); err != nil {
 			return nil, err
 		}
 	}
 
-	v, lastCheck := s.pmmUpdate.checkResult()
+	v, lastCheck := s.supervisord.CheckResult()
 	if v == nil {
 		return nil, status.Error(codes.Unavailable, "failed to check for updates")
 	}
