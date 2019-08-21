@@ -1,3 +1,8 @@
+# tools
+required = [
+"github.com/jstemmer/go-junit-report",
+]
+
 [prune]
   go-tests = true
   non-go = true

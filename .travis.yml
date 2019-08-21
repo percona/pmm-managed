@@ -1,5 +1,4 @@
-dist: trusty
-sudo: required
+dist: bionic
 language: go
 
 go:
@@ -24,7 +23,7 @@ install:
   - dep check
 
 script:
-  - make build
+  - make init build
 
 notifications:
   slack:

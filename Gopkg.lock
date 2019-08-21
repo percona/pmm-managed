@@ -142,6 +142,18 @@
   version = "v1.8.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:62f0c127ab95c674d55b12077b34602012c3bb495e673665a31b78151154c78e"
+  name = "github.com/jstemmer/go-junit-report"
+  packages = [
+    ".",
+    "formatter",
+    "parser",
+  ]
+  pruneopts = "NUT"
+  revision = "af01ea7f8024089b458d804d5cdf190f962a9a0c"
+
+[[projects]]
   digest = "1:58999a98719fddbac6303cb17e8d85b945f60b72f48e3a2df6b950b97fa926f1"
   name = "github.com/konsorten/go-windows-terminal-sequences"
   packages = ["."]
@@ -300,6 +312,7 @@
     "github.com/AlekSi/pointer",
     "github.com/go-openapi/runtime",
     "github.com/go-openapi/runtime/client",
+    "github.com/jstemmer/go-junit-report",
     "github.com/percona/pmm/api/inventorypb/json/client",
     "github.com/percona/pmm/api/inventorypb/json/client/agents",
     "github.com/percona/pmm/api/inventorypb/json/client/nodes",
