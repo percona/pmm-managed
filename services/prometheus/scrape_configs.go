@@ -207,7 +207,6 @@ func scraperConfigsForNodeExporter(s *models.MetricsResolutions, node *models.No
 
 	lrc := []string{
 		"bonding",
-		"boottime",
 		"entropy",
 		"filesystem",
 		"uname",
