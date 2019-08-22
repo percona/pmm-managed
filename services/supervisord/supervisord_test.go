@@ -19,11 +19,14 @@ package supervisord
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestService(t *testing.T) {
@@ -36,8 +39,49 @@ func TestService(t *testing.T) {
 	s := New()
 	require.NotEmpty(t, s.supervisorctlPath)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go s.Run(ctx)
+
 	assert.Equal(t, false, s.UpdateRunning())
+
+	t.Run("StartUpdate", func(t *testing.T) {
+		offset, err := s.StartUpdate()
+		require.NoError(t, err)
+		assert.Zero(t, offset)
+
+		assert.True(t, s.UpdateRunning())
+
+		_, err = s.StartUpdate()
+		assert.Equal(t, status.Errorf(codes.FailedPrecondition, "Update is already running."), err)
+
+		// get logs as often as possible to increase a chance for race detector to spot something
+		for {
+			lines, newOffset, err := s.UpdateLog(offset)
+			require.NoError(t, err)
+			if newOffset == offset {
+				assert.Empty(t, lines)
+				continue
+			}
+
+			assert.NotEmpty(t, lines)
+			t.Logf("%s", strings.Join(lines, "\n"))
+
+			assert.NotZero(t, newOffset)
+			assert.True(t, newOffset > offset, "expected newOffset = %d > offset = %d", newOffset, offset)
+			offset = newOffset
+
+			if !s.UpdateRunning() {
+				break
+			}
+		}
+
+		// double-check that we did not miss `pmp-update -perform` self-update and restart by supervisord
+		time.Sleep(2 * time.Second)
+		assert.False(t, s.UpdateRunning())
+		lines, newOffset, err := s.UpdateLog(offset)
+		require.NoError(t, err)
+		assert.Empty(t, lines)
+		assert.Equal(t, offset, newOffset, "offset = %d, newOffset = %d", offset, newOffset)
+	})
 }

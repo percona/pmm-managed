@@ -43,11 +43,11 @@ type Service struct {
 	l                 *logrus.Entry
 	pmmUpdateCheck    *pmmUpdateChecker
 
-	m sync.Mutex
-
-	subsM                     sync.Mutex
+	eventsM                   sync.Mutex
 	subs                      map[chan *event]sub
 	pmmUpdatePerformLastEvent eventType
+
+	pmmUpdatePerformLogM sync.Mutex
 }
 
 type sub struct {
@@ -130,7 +130,7 @@ func (s *Service) Run(ctx context.Context) {
 			}
 			lastEvent = e
 
-			s.subsM.Lock()
+			s.eventsM.Lock()
 
 			var toDelete []chan *event
 			for ch, sub := range s.subs {
@@ -158,7 +158,7 @@ func (s *Service) Run(ctx context.Context) {
 				delete(s.subs, ch)
 			}
 
-			s.subsM.Unlock()
+			s.eventsM.Unlock()
 		}
 
 		if err := scanner.Err(); err != nil {
@@ -188,12 +188,12 @@ func (s *Service) ForceCheckUpdates() error {
 
 func (s *Service) subscribe(program string, eventTypes ...eventType) chan *event {
 	ch := make(chan *event, 1)
-	s.subsM.Lock()
+	s.eventsM.Lock()
 	s.subs[ch] = sub{
 		program:    program,
 		eventTypes: eventTypes,
 	}
-	s.subsM.Unlock()
+	s.eventsM.Unlock()
 	return ch
 }
 
@@ -216,13 +216,11 @@ func (s *Service) StartUpdate() (uint32, error) {
 		return 0, status.Errorf(codes.FailedPrecondition, "Update is already running.")
 	}
 
-	s.m.Lock()
-	defer s.m.Unlock()
-
-	ch := s.subscribe("supervisord", logReopen)
-
 	// We need to remove and reopen log file for UpdateStatus API to be able to read it without it being rotated.
 	// Additionally, SIGUSR2 is expected by our Ansible playbook.
+
+	s.pmmUpdatePerformLogM.Lock()
+	defer s.pmmUpdatePerformLogM.Unlock()
 
 	// remove existing log file
 	err := os.Remove(pmmUpdatePerformLog)
@@ -234,6 +232,7 @@ func (s *Service) StartUpdate() (uint32, error) {
 	}
 
 	// send SIGUSR2 to supervisord and wait for it to reopen log file
+	ch := s.subscribe("supervisord", logReopen)
 	b, err := s.supervisorctl("pid")
 	if err != nil {
 		return 0, err
@@ -273,9 +272,6 @@ func (s *Service) StartUpdate() (uint32, error) {
 // UpdateRunning returns true if pmm-update-perform supervisord program is running or being restarted,
 // false if it is not running / failed.
 func (s *Service) UpdateRunning() bool {
-	s.m.Lock()
-	defer s.m.Unlock()
-
 	// First check with status command is case we missed that event during maintail or pmm-managed restart.
 	// See http://supervisord.org/subprocess.html#process-states
 	b, err := s.supervisorctl("status", pmmUpdatePerformProgram)
@@ -297,7 +293,11 @@ func (s *Service) UpdateRunning() bool {
 		}
 	}
 
-	switch s.pmmUpdatePerformLastEvent {
+	s.eventsM.Lock()
+	lastEvent := s.pmmUpdatePerformLastEvent
+	s.eventsM.Unlock()
+
+	switch lastEvent {
 	case stopping, starting, running:
 		return true
 	case exitedUnexpected: // will be restarted
@@ -307,14 +307,16 @@ func (s *Service) UpdateRunning() bool {
 	case stopped: // we don't know
 		fallthrough
 	default:
-		s.l.Warnf("Unhandled %s status (last event %q), assuming it is not running.", pmmUpdatePerformProgram, s.pmmUpdatePerformLastEvent)
+		s.l.Warnf("Unhandled %s status (last event %q), assuming it is not running.", pmmUpdatePerformProgram, lastEvent)
 		return false
 	}
 }
 
+// UpdateLog returns some lines and a new offset from pmm-update-perform log starting from the given offset.
+// It may return zero lines and the same offset. Caller is expected to handle this.
 func (s *Service) UpdateLog(offset uint32) ([]string, uint32, error) {
-	s.m.Lock()
-	defer s.m.Unlock()
+	s.pmmUpdatePerformLogM.Lock()
+	defer s.pmmUpdatePerformLogM.Unlock()
 
 	f, err := os.Open(pmmUpdatePerformLog)
 	if err != nil {
@@ -327,17 +329,18 @@ func (s *Service) UpdateLog(offset uint32) ([]string, uint32, error) {
 	}
 
 	lines := make([]string, 0, 10)
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
+	reader := bufio.NewReader(f)
+	newOffset := offset
+	for {
+		line, err := reader.ReadString('\n')
+		if err == nil {
+			newOffset += uint32(len(line))
+			lines = append(lines, strings.TrimSuffix(line, "\n"))
+			continue
+		}
+		if err == io.EOF {
+			err = nil
+		}
+		return lines, newOffset, errors.WithStack(err)
 	}
-	if err = scanner.Err(); err != nil {
-		s.l.Warn(err)
-	}
-
-	newOffset, err := f.Seek(0, io.SeekCurrent)
-	if err != nil {
-		s.l.Warn(err)
-	}
-	return lines, uint32(newOffset), nil
 }

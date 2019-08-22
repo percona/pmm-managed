@@ -44,6 +44,9 @@ func TestPMMUpdateChecker(t *testing.T) {
 		require.NotEmpty(t, info.BuildTime)
 		assert.True(t, time.Since(*info.BuildTime) < 60*24*time.Hour, "InstalledTime = %s", info.BuildTime)
 		assert.Equal(t, "local", info.Repo)
+
+		info2 := c.installed()
+		assert.Equal(t, info, info2)
 	})
 
 	t.Run("Check", func(t *testing.T) {
