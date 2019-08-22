@@ -296,12 +296,9 @@ func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusReq
 		if err != nil {
 			s.l.Warn(err)
 		}
-		if len(lines) != 0 {
-			break
-		}
-
 		done = !s.supervisord.UpdateRunning()
-		if done {
+
+		if len(lines) != 0 || done {
 			break
 		}
 
