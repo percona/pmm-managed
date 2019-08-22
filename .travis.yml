@@ -65,17 +65,17 @@ before_script:
 
 script:
   - make devcontainer TARGET=test-race TEST_FLAGS='-timeout=120s -v' TEST_PACKAGES=./services/supervisord
-  # - make devcontainer TARGET=test-cover TEST_FLAGS='-timeout=120s -v' TEST_PACKAGES=./services/supervisord
+  - make devcontainer TARGET=test-cover TEST_FLAGS='-timeout=120s -v' TEST_PACKAGES=./services/supervisord
   - make devcontainer TARGET=test-crosscover TEST_FLAGS='-timeout=120s -v' TEST_PACKAGES=./services/supervisord
 
-  # - mv cover.out devcontainer-cover.out
+  - mv cover.out devcontainer-cover.out
   - mv crosscover.out devcontainer-crosscover.out
 
   # for main_test.go
   - make install
 
   - make test-race
-  # - make test-cover
+  - make test-cover
   - make test-crosscover
 
   - make check
@@ -83,10 +83,10 @@ script:
 after_success:
   - curl https://codecov.io/bash > codecov
   - chmod +x codecov
-  # - ./codecov -f cover.out -F normal,cover -X fix
-  - ./codecov -f crosscover.out -F normal,crosscover -X fix
-  # - ./codecov -f cover.out -F normal,cover -X fix
+  - ./codecov -f devcontainer-cover.out -F devcontainer,cover -X fix
   - ./codecov -f devcontainer-crosscover.out -F devcontainer,crosscover -X fix
+  - ./codecov -f cover.out -F normal,cover -X fix
+  - ./codecov -f crosscover.out -F normal,crosscover -X fix
 
 notifications:
   slack:
