@@ -2,11 +2,12 @@
 version: '3'
 services:
   pmm-managed-server:
-    image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server:2.0.0-beta6}
+    image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server:dev-latest}
     container_name: pmm-managed-server
     environment:
       # for tests
-      - PMM_SERVER_IMAGE=${PMM_SERVER_IMAGE:-perconalab/pmm-server:2.0.0-beta6}
+      - DEVCONTAINER=1
+      - PMM_SERVER_IMAGE=${PMM_SERVER_IMAGE:-perconalab/pmm-server:dev-latest}
       - PATH=/root/go/bin:$PATH
     ports:
       - 127.0.0.1:80:80

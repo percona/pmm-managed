@@ -91,8 +91,8 @@ _run:
 
 devcontainer:                   ## Run TARGET in devcontainer.
 	docker exec pmm-managed-server env \
-		TEST_FLAGS=$(TEST_FLAGS) \
-		TEST_PACKAGES=$(TEST_PACKAGES) \
+		TEST_FLAGS='$(TEST_FLAGS)' \
+		TEST_PACKAGES='$(TEST_PACKAGES)' \
 		make -C /root/go/src/github.com/percona/pmm-managed $(TARGET)
 
 env-up:                         ## Start development environment.

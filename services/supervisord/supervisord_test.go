@@ -29,7 +29,7 @@ import (
 func TestService(t *testing.T) {
 	// logrus.SetLevel(logrus.DebugLevel)
 
-	if os.Getenv("PMM_SERVER_IMAGE") == "" {
+	if os.Getenv("DEVCONTAINER") == "" {
 		t.Skip("can be tested only inside devcontainer")
 	}
 
