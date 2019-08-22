@@ -322,6 +322,10 @@ func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusReq
 	}, nil
 }
 
+// writeUpdateAuthToken writes authentication token for getting update status and logs to the file.
+//
+// We can't rely on Grafana for authentication or on PostgreSQL for storage as their configuration
+// is being changed during update.
 func (s *Server) writeUpdateAuthToken(token string) error {
 	s.pmmUpdateAuthFileM.Lock()
 	defer s.pmmUpdateAuthFileM.Unlock()
@@ -342,6 +346,7 @@ func (s *Server) writeUpdateAuthToken(token string) error {
 	return errors.WithStack(json.NewEncoder(f).Encode(a))
 }
 
+// readUpdateAuthToken reads authentication token for getting update status and logs from the file.
 func (s *Server) readUpdateAuthToken() (string, error) {
 	s.pmmUpdateAuthFileM.Lock()
 	defer s.pmmUpdateAuthFileM.Unlock()
