@@ -36,11 +36,11 @@ type prometheusService interface {
 // supervisordService is a subset of methods of supervisord.Service used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
 type supervisordService interface {
-	InstalledPackageInfo() *version.PackageInfo
-	CheckResult() (*version.UpdateCheckResult, time.Time)
-	Check() error
+	InstalledPMMVersion() *version.PackageInfo
+	LastCheckUpdatesResult() (*version.UpdateCheckResult, time.Time)
+	ForceCheckUpdates() error
 
-	StartPMMUpdate() (uint32, error)
-	PMMUpdateRunning() bool
-	PMMUpdateLog(offset uint32) ([]string, uint32, error)
+	StartUpdate() (uint32, error)
+	UpdateRunning() bool
+	UpdateLog(offset uint32) ([]string, uint32, error)
 }

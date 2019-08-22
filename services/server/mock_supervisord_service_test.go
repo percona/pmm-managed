@@ -11,8 +11,8 @@ type mockSupervisordService struct {
 	mock.Mock
 }
 
-// Check provides a mock function with given fields:
-func (_m *mockSupervisordService) Check() error {
+// ForceCheckUpdates provides a mock function with given fields:
+func (_m *mockSupervisordService) ForceCheckUpdates() error {
 	ret := _m.Called()
 
 	var r0 error
@@ -25,8 +25,24 @@ func (_m *mockSupervisordService) Check() error {
 	return r0
 }
 
-// CheckResult provides a mock function with given fields:
-func (_m *mockSupervisordService) CheckResult() (*version.UpdateCheckResult, time.Time) {
+// InstalledPMMVersion provides a mock function with given fields:
+func (_m *mockSupervisordService) InstalledPMMVersion() *version.PackageInfo {
+	ret := _m.Called()
+
+	var r0 *version.PackageInfo
+	if rf, ok := ret.Get(0).(func() *version.PackageInfo); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*version.PackageInfo)
+		}
+	}
+
+	return r0
+}
+
+// LastCheckUpdatesResult provides a mock function with given fields:
+func (_m *mockSupervisordService) LastCheckUpdatesResult() (*version.UpdateCheckResult, time.Time) {
 	ret := _m.Called()
 
 	var r0 *version.UpdateCheckResult
@@ -48,24 +64,29 @@ func (_m *mockSupervisordService) CheckResult() (*version.UpdateCheckResult, tim
 	return r0, r1
 }
 
-// InstalledPackageInfo provides a mock function with given fields:
-func (_m *mockSupervisordService) InstalledPackageInfo() *version.PackageInfo {
+// StartUpdate provides a mock function with given fields:
+func (_m *mockSupervisordService) StartUpdate() (uint32, error) {
 	ret := _m.Called()
 
-	var r0 *version.PackageInfo
-	if rf, ok := ret.Get(0).(func() *version.PackageInfo); ok {
+	var r0 uint32
+	if rf, ok := ret.Get(0).(func() uint32); ok {
 		r0 = rf()
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*version.PackageInfo)
-		}
+		r0 = ret.Get(0).(uint32)
 	}
 
-	return r0
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
-// PMMUpdateLog provides a mock function with given fields: offset
-func (_m *mockSupervisordService) PMMUpdateLog(offset uint32) ([]string, uint32, error) {
+// UpdateLog provides a mock function with given fields: offset
+func (_m *mockSupervisordService) UpdateLog(offset uint32) ([]string, uint32, error) {
 	ret := _m.Called(offset)
 
 	var r0 []string
@@ -94,8 +115,8 @@ func (_m *mockSupervisordService) PMMUpdateLog(offset uint32) ([]string, uint32,
 	return r0, r1, r2
 }
 
-// PMMUpdateRunning provides a mock function with given fields:
-func (_m *mockSupervisordService) PMMUpdateRunning() bool {
+// UpdateRunning provides a mock function with given fields:
+func (_m *mockSupervisordService) UpdateRunning() bool {
 	ret := _m.Called()
 
 	var r0 bool
@@ -106,25 +127,4 @@ func (_m *mockSupervisordService) PMMUpdateRunning() bool {
 	}
 
 	return r0
-}
-
-// StartPMMUpdate provides a mock function with given fields:
-func (_m *mockSupervisordService) StartPMMUpdate() (uint32, error) {
-	ret := _m.Called()
-
-	var r0 uint32
-	if rf, ok := ret.Get(0).(func() uint32); ok {
-		r0 = rf()
-	} else {
-		r0 = ret.Get(0).(uint32)
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
 }

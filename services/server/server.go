@@ -195,7 +195,7 @@ func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*se
 		res.Managed.Timestamp = ts
 	}
 
-	if v := s.supervisord.InstalledPackageInfo(); v != nil {
+	if v := s.supervisord.InstalledPMMVersion(); v != nil {
 		res.Version = v.Version
 		res.Server = &serverpb.VersionInfo{
 			Version:     v.Version,
@@ -223,12 +223,12 @@ func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) 
 // CheckUpdates checks PMM Server updates availability.
 func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesRequest) (*serverpb.CheckUpdatesResponse, error) {
 	if req.Force {
-		if err := s.supervisord.Check(); err != nil {
+		if err := s.supervisord.ForceCheckUpdates(); err != nil {
 			return nil, err
 		}
 	}
 
-	v, lastCheck := s.supervisord.CheckResult()
+	v, lastCheck := s.supervisord.LastCheckUpdatesResult()
 	if v == nil {
 		return nil, status.Error(codes.Unavailable, "failed to check for updates")
 	}
@@ -259,7 +259,7 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 
 // StartUpdate starts PMM Server update.
 func (s *Server) StartUpdate(ctx context.Context, req *serverpb.StartUpdateRequest) (*serverpb.StartUpdateResponse, error) {
-	offset, err := s.supervisord.StartPMMUpdate()
+	offset, err := s.supervisord.StartUpdate()
 	if err != nil {
 		return nil, err
 	}
@@ -285,8 +285,8 @@ func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusReq
 		return nil, status.Error(codes.PermissionDenied, "Invalid authentication token.")
 	}
 
-	done := !s.supervisord.PMMUpdateRunning()
-	lines, newOffset, err := s.supervisord.PMMUpdateLog(req.LogOffset)
+	done := !s.supervisord.UpdateRunning()
+	lines, newOffset, err := s.supervisord.UpdateLog(req.LogOffset)
 	if err != nil {
 		s.l.Warn(err)
 	}

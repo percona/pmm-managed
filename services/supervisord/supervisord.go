@@ -41,8 +41,7 @@ import (
 type Service struct {
 	supervisorctlPath string
 	l                 *logrus.Entry
-
-	pmmUpdate *pmmUpdateCheck
+	pmmUpdateCheck    *pmmUpdateChecker
 
 	m sync.Mutex
 
@@ -68,7 +67,7 @@ func New() *Service {
 	return &Service{
 		supervisorctlPath:         path,
 		l:                         logrus.WithField("component", "supervisord"),
-		pmmUpdate:                 newPMMUpdateCheck(logrus.WithField("component", "supervisord/pmm-update")),
+		pmmUpdateCheck:            newPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker")),
 		subs:                      make(map[chan *event]sub),
 		pmmUpdatePerformLastEvent: unknown,
 	}
@@ -91,7 +90,7 @@ func (s *Service) Run(ctx context.Context) {
 			return
 		}
 
-		s.pmmUpdate.run(ctx)
+		s.pmmUpdateCheck.run(ctx)
 	}()
 	defer wg.Wait()
 
@@ -172,16 +171,19 @@ func (s *Service) Run(ctx context.Context) {
 	}
 }
 
-func (s *Service) InstalledPackageInfo() *version.PackageInfo {
-	return s.pmmUpdate.installedPackageInfo()
+// InstalledPMMVersion returns currently installed PMM version information.
+func (s *Service) InstalledPMMVersion() *version.PackageInfo {
+	return s.pmmUpdateCheck.installed()
 }
 
-func (s *Service) CheckResult() (*version.UpdateCheckResult, time.Time) {
-	return s.pmmUpdate.checkResult()
+// LastCheckUpdatesResult returns last PMM update check result and last check time.
+func (s *Service) LastCheckUpdatesResult() (*version.UpdateCheckResult, time.Time) {
+	return s.pmmUpdateCheck.checkResult()
 }
 
-func (s *Service) Check() error {
-	return s.pmmUpdate.check()
+// ForceCheckUpdates forces check for PMM updates. Result can be obtained via LastCheckUpdatesResult.
+func (s *Service) ForceCheckUpdates() error {
+	return s.pmmUpdateCheck.check()
 }
 
 func (s *Service) subscribe(program string, eventTypes ...eventType) chan *event {
@@ -207,10 +209,10 @@ func (s *Service) supervisorctl(args ...string) ([]byte, error) {
 	return b, errors.WithStack(err)
 }
 
-// StartPMMUpdate starts pmm-update-perform supervisord program with some preparations.
+// StartUpdate starts pmm-update-perform supervisord program with some preparations.
 // It returns initial log file offset.
-func (s *Service) StartPMMUpdate() (uint32, error) {
-	if s.PMMUpdateRunning() {
+func (s *Service) StartUpdate() (uint32, error) {
+	if s.UpdateRunning() {
 		return 0, status.Errorf(codes.FailedPrecondition, "Update is already running.")
 	}
 
@@ -268,9 +270,9 @@ func (s *Service) StartPMMUpdate() (uint32, error) {
 	return offset, err
 }
 
-// PMMUpdateRunning returns true if pmm-update-perform supervisord program is running or being restarted,
+// UpdateRunning returns true if pmm-update-perform supervisord program is running or being restarted,
 // false if it is not running / failed.
-func (s *Service) PMMUpdateRunning() bool {
+func (s *Service) UpdateRunning() bool {
 	s.m.Lock()
 	defer s.m.Unlock()
 
@@ -310,7 +312,7 @@ func (s *Service) PMMUpdateRunning() bool {
 	}
 }
 
-func (s *Service) PMMUpdateLog(offset uint32) ([]string, uint32, error) {
+func (s *Service) UpdateLog(offset uint32) ([]string, uint32, error) {
 	s.m.Lock()
 	defer s.m.Unlock()
 

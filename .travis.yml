@@ -19,24 +19,26 @@ cache:
 
 before_cache:
   - go clean -testcache
-  - go clean -cache
+  # - go clean -cache
 
 env:
   global:
     - CODECOV_ENV=PROMETHEUS_IMAGE,GRAFANA_IMAGE,POSTGRES_IMAGE,PMM_SERVER_IMAGE
 
   matrix:
+    # TODO use perconalab/pmm-server:2.0.0-beta7 in first blocks once it is released
+
     # what we currently use in PMM
     - PROMETHEUS_IMAGE=prom/prometheus:v2.10.0
       GRAFANA_IMAGE=grafana/grafana:6.2.5
       POSTGRES_IMAGE=postgres:11
-      PMM_SERVER_IMAGE=perconalab/pmm-server:2.0.0-beta6
+      PMM_SERVER_IMAGE=perconalab/pmm-server:dev-latest
 
     # latest released version
     - PROMETHEUS_IMAGE=prom/prometheus:latest
       GRAFANA_IMAGE=grafana/grafana:latest
       POSTGRES_IMAGE=postgres:latest
-      PMM_SERVER_IMAGE=perconalab/pmm-server:2.0.0-beta6
+      PMM_SERVER_IMAGE=perconalab/pmm-server:dev-latest
 
     # current master
     - PROMETHEUS_IMAGE=prom/prometheus:master
@@ -46,6 +48,7 @@ env:
 
 before_install:
   - docker-compose up -d
+  - docker exec pmm-managed-server /root/go/src/github.com/percona/pmm-managed/.devcontainer/install-dev-tools.sh
 
 install:
   # ensure that vendor/ is in sync with code and Gopkg.toml/lock
@@ -61,6 +64,13 @@ before_script:
   - git diff --exit-code
 
 script:
+  - make devcontainer TARGET=test-race TEST_FLAGS='-timeout=20s -v' TEST_PACKAGES=./services/supervisord
+  # - make devcontainer TARGET=test-cover TEST_FLAGS='-timeout=20s -v' TEST_PACKAGES=./services/supervisord
+  - make devcontainer TARGET=test-crosscover TEST_FLAGS='-timeout=20s -v' TEST_PACKAGES=./services/supervisord
+
+  # - mv cover.out devcontainer-cover.out
+  - mv crosscover.out devcontainer-crosscover.out
+
   # for main_test.go
   - make install
 
@@ -69,22 +79,6 @@ script:
   - make test-crosscover
 
   - make check
-
-jobs:
-  include:
-    - install:
-        - docker exec pmm-managed-server /root/go/src/github.com/percona/pmm-managed/.devcontainer/install-dev-tools.sh
-      before_script: true
-      script:
-        - ls -al
-        - pwd
-
-        - make devcontainer TARGET=test-race TEST_FLAGS='-timeout=20s -v' TEST_PACKAGES=./services/supervisord
-        # - make devcontainer TARGET=test-cover TEST_FLAGS='-timeout=20s -v' TEST_PACKAGES=./services/supervisord
-        - make devcontainer TARGET=test-crosscover TEST_FLAGS='-timeout=20s -v' TEST_PACKAGES=./services/supervisord
-
-        # - mv cover.out devcontainer-cover.out
-        - mv crosscover.out devcontainer-crosscover.out
 
 after_success:
   - curl https://codecov.io/bash > codecov

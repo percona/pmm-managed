@@ -28,15 +28,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPMMUpdate(t *testing.T) {
+func TestPMMUpdateChecker(t *testing.T) {
 	if os.Getenv("DEVCONTAINER") == "" {
 		t.Skip("can be tested only inside devcontainer")
 	}
 
-	c := newPMMUpdateCheck(logrus.WithField("test", t.Name()))
+	c := newPMMUpdateChecker(logrus.WithField("test", t.Name()))
 
 	t.Run("InstalledPackageInfo", func(t *testing.T) {
-		info := c.installedPackageInfo()
+		info := c.installed()
 		require.NotNil(t, info)
 
 		assert.True(t, strings.HasPrefix(info.Version, "2.0.0-beta"), "%s", info.Version)
