@@ -285,11 +285,11 @@ func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusReq
 		return nil, status.Error(codes.PermissionDenied, "Invalid authentication token.")
 	}
 
-	// wait up to 5 seconds for new log lines
+	// wait up to 20 seconds for new log lines
 	var lines []string
 	var newOffset uint32
 	var done bool
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 	for ctx.Err() == nil {
 		lines, newOffset, err = s.supervisord.UpdateLog(req.LogOffset)
