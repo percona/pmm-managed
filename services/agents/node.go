@@ -58,7 +58,7 @@ func nodeExporterConfig(node *models.Node, exporter *models.Agent) *agentpb.SetS
 			"--collector.qdisc",
 			"--collector.wifi",
 			"--collector.standard.go",
-			"--collector.standard.proccess",
+			"--collector.standard.process",
 
 			// add more netstat fields
 			"--collector.netstat.fields=^(.*_(InErrors|InErrs|InCsumErrors)"+
