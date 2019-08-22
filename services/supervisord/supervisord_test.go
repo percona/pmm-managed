@@ -60,8 +60,11 @@ func TestService(t *testing.T) {
 			lines, newOffset, err := s.UpdateLog(offset)
 			require.NoError(t, err)
 			if newOffset == offset {
-				assert.Empty(t, lines)
-				continue
+				assert.Empty(t, lines, "lines:\n%s", strings.Join(lines, "\n"))
+				if s.UpdateRunning() {
+					continue
+				}
+				break
 			}
 
 			assert.NotEmpty(t, lines)
@@ -70,18 +73,18 @@ func TestService(t *testing.T) {
 			assert.NotZero(t, newOffset)
 			assert.True(t, newOffset > offset, "expected newOffset = %d > offset = %d", newOffset, offset)
 			offset = newOffset
-
-			if !s.UpdateRunning() {
-				break
-			}
 		}
 
-		// double-check that we did not miss `pmp-update -perform` self-update and restart by supervisord
-		time.Sleep(2 * time.Second)
-		assert.False(t, s.UpdateRunning())
-		lines, newOffset, err := s.UpdateLog(offset)
-		require.NoError(t, err)
-		assert.Empty(t, lines)
-		assert.Equal(t, offset, newOffset, "offset = %d, newOffset = %d", offset, newOffset)
+		// extra checks that we did not miss `pmp-update -perform` self-update and restart by supervisord
+		const delay = 50 * time.Millisecond
+		const wait = 2 * time.Second
+		for i := 0; i < int(delay/wait); i++ {
+			time.Sleep(200 * time.Millisecond)
+			assert.False(t, s.UpdateRunning())
+			lines, newOffset, err := s.UpdateLog(offset)
+			require.NoError(t, err)
+			assert.Empty(t, lines, "lines:\n%s", strings.Join(lines, "\n"))
+			assert.Equal(t, offset, newOffset, "offset = %d, newOffset = %d", offset, newOffset)
+		}
 	})
 }

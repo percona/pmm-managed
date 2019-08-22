@@ -285,10 +285,34 @@ func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusReq
 		return nil, status.Error(codes.PermissionDenied, "Invalid authentication token.")
 	}
 
-	done := !s.supervisord.UpdateRunning()
-	lines, newOffset, err := s.supervisord.UpdateLog(req.LogOffset)
-	if err != nil {
-		s.l.Warn(err)
+	// wait up to 5 seconds for new log lines
+	var lines []string
+	var newOffset uint32
+	var done bool
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	t := time.NewTicker(200 * time.Millisecond)
+	defer t.Stop()
+	for {
+		lines, newOffset, err = s.supervisord.UpdateLog(req.LogOffset)
+		if err != nil {
+			s.l.Warn(err)
+		}
+		if len(lines) != 0 {
+			break
+		}
+
+		done = !s.supervisord.UpdateRunning()
+		if done {
+			break
+		}
+
+		select {
+		case <-ctx.Done():
+			break
+		case <-t.C:
+			// nothing, continue
+		}
 	}
 
 	return &serverpb.UpdateStatusResponse{

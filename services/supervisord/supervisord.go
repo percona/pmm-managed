@@ -102,16 +102,17 @@ func (s *Service) Run(ctx context.Context) {
 	var lastEvent *event
 	for ctx.Err() == nil {
 		cmd := exec.CommandContext(ctx, s.supervisorctlPath, "maintail", "-f") //nolint:gosec
+		cmdLine := strings.Join(cmd.Args, " ")
 		pdeathsig.Set(cmd, unix.SIGKILL)
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
-			s.l.Error(err)
+			s.l.Errorf("%s: StdoutPipe failed: %s", cmdLine, err)
 			time.Sleep(time.Second)
 			continue
 		}
 
 		if err := cmd.Start(); err != nil {
-			s.l.Error(err)
+			s.l.Errorf("%s: Start failed: %s", cmdLine, err)
 			time.Sleep(time.Second)
 			continue
 		}
@@ -162,11 +163,11 @@ func (s *Service) Run(ctx context.Context) {
 		}
 
 		if err := scanner.Err(); err != nil {
-			s.l.Error(err)
+			s.l.Errorf("Scanner: %s", err)
 		}
 
 		if err := cmd.Wait(); err != nil {
-			s.l.Error(err)
+			s.l.Errorf("%s: wait failed: %s", cmdLine, err)
 		}
 	}
 }
@@ -203,10 +204,11 @@ func (s *Service) supervisorctl(args ...string) ([]byte, error) {
 	}
 
 	cmd := exec.Command(s.supervisorctlPath, args...) //nolint:gosec
-	s.l.Debugf("Running %q...", strings.Join(cmd.Args, " "))
+	cmdLine := strings.Join(cmd.Args, " ")
+	s.l.Debugf("Running %q...", cmdLine)
 	pdeathsig.Set(cmd, unix.SIGKILL)
 	b, err := cmd.Output()
-	return b, errors.WithStack(err)
+	return b, errors.Wrapf(err, "%s failed", cmdLine)
 }
 
 // StartUpdate starts pmm-update-perform supervisord program with some preparations.
@@ -246,7 +248,7 @@ func (s *Service) StartUpdate() (uint32, error) {
 		return 0, errors.WithStack(err)
 	}
 	if err = p.Signal(unix.SIGUSR2); err != nil {
-		s.l.Warn(err)
+		s.l.Warnf("Failed to send SIGUSR2: %s", err)
 	}
 	s.l.Debug("Waiting for logreopen...")
 	<-ch
