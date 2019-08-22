@@ -291,9 +291,7 @@ func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusReq
 	var done bool
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	t := time.NewTicker(200 * time.Millisecond)
-	defer t.Stop()
-	for {
+	for ctx.Err() == nil {
 		lines, newOffset, err = s.supervisord.UpdateLog(req.LogOffset)
 		if err != nil {
 			s.l.Warn(err)
@@ -307,12 +305,7 @@ func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusReq
 			break
 		}
 
-		select {
-		case <-ctx.Done():
-			break
-		case <-t.C:
-			// nothing, continue
-		}
+		time.Sleep(200 * time.Millisecond)
 	}
 
 	return &serverpb.UpdateStatusResponse{
