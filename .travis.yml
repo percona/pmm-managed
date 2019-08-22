@@ -19,7 +19,7 @@ cache:
 
 before_cache:
   - go clean -testcache
-  # - go clean -cache
+  - go clean -cache
 
 env:
   global:
@@ -46,7 +46,6 @@ env:
 
 before_install:
   - docker-compose up -d
-  - docker exec pmm-managed-server /root/go/src/github.com/percona/pmm-managed/.devcontainer/install-dev-tools.sh
 
 install:
   # ensure that vendor/ is in sync with code and Gopkg.toml/lock
@@ -62,13 +61,6 @@ before_script:
   - git diff --exit-code
 
 script:
-  - make devcontainer TARGET=test-race TEST_FLAGS='-timeout=20s -v' TEST_PACKAGES=./services/supervisord
-  # - make devcontainer TARGET=test-cover TEST_FLAGS='-timeout=20s -v' TEST_PACKAGES=./services/supervisord
-  - make devcontainer TARGET=test-crosscover TEST_FLAGS='-timeout=20s -v' TEST_PACKAGES=./services/supervisord
-
-  # - mv cover.out devcontainer-cover.out
-  - mv crosscover.out devcontainer-crosscover.out
-
   # for main_test.go
   - make install
 
@@ -77,6 +69,22 @@ script:
   - make test-crosscover
 
   - make check
+
+jobs:
+  include:
+    - install:
+        - docker exec pmm-managed-server /root/go/src/github.com/percona/pmm-managed/.devcontainer/install-dev-tools.sh
+      before_script: true
+      script:
+        - ls -al
+        - pwd
+
+        - make devcontainer TARGET=test-race TEST_FLAGS='-timeout=20s -v' TEST_PACKAGES=./services/supervisord
+        # - make devcontainer TARGET=test-cover TEST_FLAGS='-timeout=20s -v' TEST_PACKAGES=./services/supervisord
+        - make devcontainer TARGET=test-crosscover TEST_FLAGS='-timeout=20s -v' TEST_PACKAGES=./services/supervisord
+
+        # - mv cover.out devcontainer-cover.out
+        - mv crosscover.out devcontainer-crosscover.out
 
 after_success:
   - curl https://codecov.io/bash > codecov
