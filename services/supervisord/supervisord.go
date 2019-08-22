@@ -42,7 +42,7 @@ type Service struct {
 	supervisorctlPath string
 	l                 *logrus.Entry
 
-	pmmUpdate *pmmUpdate
+	pmmUpdate *pmmUpdateCheck
 
 	m sync.Mutex
 
@@ -68,7 +68,7 @@ func New() *Service {
 	return &Service{
 		supervisorctlPath:         path,
 		l:                         logrus.WithField("component", "supervisord"),
-		pmmUpdate:                 newPMMUpdate(logrus.WithField("component", "supervisord/pmm-update")),
+		pmmUpdate:                 newPMMUpdateCheck(logrus.WithField("component", "supervisord/pmm-update")),
 		subs:                      make(map[chan *event]sub),
 		pmmUpdatePerformLastEvent: unknown,
 	}

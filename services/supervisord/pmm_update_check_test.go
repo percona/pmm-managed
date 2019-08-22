@@ -17,14 +17,33 @@
 package supervisord
 
 import (
+	"context"
+	"os"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPMMUpdate(t *testing.T) {
-	t.Parallel()
+	if os.Getenv("PMM_SERVER_IMAGE") == "" {
+		t.Skip("can be tested only inside devcontainer")
+	}
 
-	pu := newPMMUpdate(logrus.WithField("test", t.Name()))
-	_ = pu.installedPackageInfo()
+	c := newPMMUpdateCheck(logrus.WithField("test", t.Name()))
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	c.run(ctx)
+
+	t.Run("installedPackageInfo", func(t *testing.T) {
+		info := c.installedPackageInfo()
+		assert.True(t, strings.HasPrefix(info.Version, "2.0.0-beta"), "%s", info.Version)
+		assert.True(t, strings.HasPrefix(info.FullVersion, "1:2.0.0"), "%s", info.FullVersion)
+		require.NotEmpty(t, info.BuildTime)
+		assert.True(t, time.Since(*info.BuildTime) < 60*24*time.Hour, "InstalledTime = %s", info.BuildTime)
+		assert.Equal(t, "local", info.Repo)
+	})
 }

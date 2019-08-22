@@ -33,27 +33,28 @@ import (
 )
 
 const (
-	updateCheckInterval = 24 * time.Hour
-	checkResultFresh    = updateCheckInterval + 10*time.Minute
+	updateCheckInterval    = 24 * time.Hour
+	updateCheckResultFresh = updateCheckInterval + 10*time.Minute
 )
 
-// pmmUpdate wraps pmm2-update invocations with caching.
-type pmmUpdate struct {
-	l                        *logrus.Entry
+// pmmUpdateCheck wraps pmm2-update invocations for version checking with caching.
+type pmmUpdateCheck struct {
+	l *logrus.Entry
+
 	rw                       sync.RWMutex
 	lastInstalledPackageInfo *version.PackageInfo
 	lastCheckResult          *version.UpdateCheckResult
 	lastCheckTime            time.Time
 }
 
-func newPMMUpdate(l *logrus.Entry) *pmmUpdate {
-	return &pmmUpdate{
+func newPMMUpdateCheck(l *logrus.Entry) *pmmUpdateCheck {
+	return &pmmUpdateCheck{
 		l: l,
 	}
 }
 
 // run runs check for updates loop until ctx is canceled.
-func (p *pmmUpdate) run(ctx context.Context) {
+func (p *pmmUpdateCheck) run(ctx context.Context) {
 	p.l.Info("Starting...")
 	ticker := time.NewTicker(updateCheckInterval)
 	defer ticker.Stop()
@@ -73,7 +74,7 @@ func (p *pmmUpdate) run(ctx context.Context) {
 
 // installedPackageInfo returns currently installed version information.
 // It is always cached since pmm-update package is always updated before pmm-managed update/restart.
-func (p *pmmUpdate) installedPackageInfo() *version.PackageInfo {
+func (p *pmmUpdateCheck) installedPackageInfo() *version.PackageInfo {
 	p.rw.RLock()
 	if p.lastInstalledPackageInfo != nil {
 		res := p.lastInstalledPackageInfo
@@ -111,11 +112,11 @@ func (p *pmmUpdate) installedPackageInfo() *version.PackageInfo {
 
 // checkResult returns last `pmm-update -check` result and check time.
 // It may force re-check if last result is empty or too old.
-func (p *pmmUpdate) checkResult() (*version.UpdateCheckResult, time.Time) {
+func (p *pmmUpdateCheck) checkResult() (*version.UpdateCheckResult, time.Time) {
 	p.rw.RLock()
 	defer p.rw.RUnlock()
 
-	if time.Since(p.lastCheckTime) > checkResultFresh {
+	if time.Since(p.lastCheckTime) > updateCheckResultFresh {
 		p.rw.RUnlock()
 		_ = p.check()
 		p.rw.RLock()
@@ -125,7 +126,7 @@ func (p *pmmUpdate) checkResult() (*version.UpdateCheckResult, time.Time) {
 }
 
 // check calls `pmm2-update -check` and fills lastInstalledPackageInfo/lastCheckResult/lastCheckTime on success.
-func (p *pmmUpdate) check() error {
+func (p *pmmUpdateCheck) check() error {
 	p.rw.Lock()
 	defer p.rw.Unlock()
 

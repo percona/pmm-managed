@@ -18,21 +18,23 @@ package supervisord
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestService(t *testing.T) {
 	// logrus.SetLevel(logrus.DebugLevel)
 
-	t.Parallel()
+	if os.Getenv("PMM_SERVER_IMAGE") == "" {
+		t.Skip("can be tested only inside devcontainer")
+	}
 
 	s := New()
-	if s.supervisorctlPath == "" {
-		t.Skip("supervisorctl not found, skipping test")
-	}
+	require.NotEmpty(t, s.supervisorctlPath)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
