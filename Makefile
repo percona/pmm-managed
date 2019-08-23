@@ -13,7 +13,8 @@ run:
 	cat pmm-api-tests-output.txt | go-junit-report > pmm-api-tests-junit-report.xml
 
 run-race:
-	go test -count=1 -v -race ./...
+	go test -count=1 -v -race ./... 2>&1 | tee pmm-api-tests-output.txt
+	cat pmm-api-tests-output.txt | go-junit-report > pmm-api-tests-junit-report.xml
 
 FILES = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
