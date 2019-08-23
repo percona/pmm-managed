@@ -35,16 +35,58 @@ var (
 
 	// Hostname contains local hostname that is used for generating test data.
 	Hostname string
+
+	// RunUpdateTest is true if PMM Server update should be tested.
+	RunUpdateTest bool
 )
 
-type errFromNginx string
+// ErrFromNginx is an error type for nginx HTML response.
+type ErrFromNginx string
 
-func (e errFromNginx) Error() string {
-	return "response from nginx: " + string(e)
+// Error implements error interface.
+func (e *ErrFromNginx) Error() string {
+	return "response from nginx: " + string(*e)
 }
 
-func (e errFromNginx) GoString() string {
-	return fmt.Sprintf("errFromNginx(%q)", string(e))
+// GoString implements fmt.GoStringer interface.
+func (e *ErrFromNginx) GoString() string {
+	return fmt.Sprintf("ErrFromNginx(%q)", string(*e))
+}
+
+// Transport returns configured Swagger transport for given URL.
+func Transport(baseURL *url.URL, insecureTLS bool) *httptransport.Runtime {
+	transport := httptransport.New(baseURL.Host, baseURL.Path, []string{baseURL.Scheme})
+	if u := baseURL.User; u != nil {
+		password, _ := u.Password()
+		transport.DefaultAuthentication = httptransport.BasicAuth(u.Username(), password)
+	}
+	transport.SetLogger(logrus.WithField("component", "client"))
+	transport.SetDebug(logrus.GetLevel() >= logrus.DebugLevel)
+	transport.Context = context.Background() // not Context - do not cancel the whole transport
+
+	// set error handlers for nginx responses if pmm-managed is down
+	errorConsumer := runtime.ConsumerFunc(func(reader io.Reader, data interface{}) error {
+		b, _ := ioutil.ReadAll(reader)
+		err := ErrFromNginx(string(b))
+		return &err
+	})
+	transport.Consumers = map[string]runtime.Consumer{
+		runtime.JSONMime:    runtime.JSONConsumer(),
+		runtime.HTMLMime:    errorConsumer,
+		runtime.TextMime:    errorConsumer,
+		runtime.DefaultMime: errorConsumer,
+	}
+
+	// disable HTTP/2, set TLS config
+	httpTransport := transport.Transport.(*http.Transport)
+	httpTransport.TLSNextProto = map[string]func(string, *tls.Conn) http.RoundTripper{}
+	if baseURL.Scheme == "https" {
+		httpTransport.TLSClientConfig = tlsconfig.Get()
+		httpTransport.TLSClientConfig.ServerName = baseURL.Hostname()
+		httpTransport.TLSClientConfig.InsecureSkipVerify = insecureTLS
+	}
+
+	return transport
 }
 
 //nolint:gochecknoinits
@@ -55,15 +97,16 @@ func init() {
 	traceF := flag.Bool("pmm.trace", false, "Enable trace output [PMM_TRACE].")
 	serverURLF := flag.String("pmm.server-url", "https://admin:admin@127.0.0.1:8443/", "PMM Server URL [PMM_SERVER_URL].")
 	serverInsecureTLSF := flag.Bool("pmm.server-insecure-tls", false, "Skip PMM Server TLS certificate validation [PMM_SERVER_INSECURE_TLS].")
+	runUpdateTestF := flag.Bool("pmm.run-update-test", false, "Run PMM Server update test [PMM_RUN_UPDATE_TEST].")
 	flag.Parse()
-	envvars := map[string]*flag.Flag{
+
+	for envVar, f := range map[string]*flag.Flag{
 		"PMM_DEBUG":               flag.Lookup("pmm.debug"),
 		"PMM_TRACE":               flag.Lookup("pmm.trace"),
 		"PMM_SERVER_URL":          flag.Lookup("pmm.server-url"),
 		"PMM_SERVER_INSECURE_TLS": flag.Lookup("pmm.server-insecure-tls"),
-	}
-
-	for envVar, f := range envvars {
+		"PMM_RUN_UPDATE_TEST":     flag.Lookup("pmm.run-update-test"),
+	} {
 		env, ok := os.LookupEnv(envVar)
 		if ok {
 			err := f.Value.Set(env)
@@ -80,6 +123,7 @@ func init() {
 		logrus.SetLevel(logrus.TraceLevel)
 		logrus.SetReportCaller(true)
 	}
+	RunUpdateTest = *runUpdateTestF
 
 	var cancel context.CancelFunc
 	Context, cancel = context.WithCancel(context.Background())
@@ -112,37 +156,7 @@ func init() {
 		logrus.Fatalf("Failed to detect hostname: %s", err)
 	}
 
-	// use JSON APIs over HTTP/1.1
-	transport := httptransport.New(BaseURL.Host, BaseURL.Path, []string{BaseURL.Scheme})
-	if u := BaseURL.User; u != nil {
-		password, _ := u.Password()
-		transport.DefaultAuthentication = httptransport.BasicAuth(u.Username(), password)
-	}
-	transport.SetLogger(logrus.WithField("component", "client"))
-	transport.SetDebug(logrus.GetLevel() >= logrus.DebugLevel)
-	transport.Context = context.Background() // not Context - do not cancel the whole transport
-
-	// set error handlers for nginx responses if pmm-managed is down
-	errorConsumer := runtime.ConsumerFunc(func(reader io.Reader, data interface{}) error {
-		b, _ := ioutil.ReadAll(reader)
-		return errFromNginx(string(b))
-	})
-	transport.Consumers = map[string]runtime.Consumer{
-		runtime.JSONMime:    runtime.JSONConsumer(),
-		runtime.HTMLMime:    errorConsumer,
-		runtime.TextMime:    errorConsumer,
-		runtime.DefaultMime: errorConsumer,
-	}
-
-	// disable HTTP/2, set TLS config
-	httpTransport := transport.Transport.(*http.Transport)
-	httpTransport.TLSNextProto = map[string]func(string, *tls.Conn) http.RoundTripper{}
-	if BaseURL.Scheme == "https" {
-		httpTransport.TLSClientConfig = tlsconfig.Get()
-		httpTransport.TLSClientConfig.ServerName = BaseURL.Hostname()
-		httpTransport.TLSClientConfig.InsecureSkipVerify = *serverInsecureTLSF
-	}
-
+	transport := Transport(BaseURL, *serverInsecureTLSF)
 	inventoryClient.Default = inventoryClient.New(transport, nil)
 	managementClient.Default = managementClient.New(transport, nil)
 	serverClient.Default = serverClient.New(transport, nil)
@@ -156,6 +170,6 @@ func init() {
 
 // check interfaces
 var (
-	_ error          = errFromNginx("")
-	_ fmt.GoStringer = errFromNginx("")
+	_ error          = (*ErrFromNginx)(nil)
+	_ fmt.GoStringer = (*ErrFromNginx)(nil)
 )
