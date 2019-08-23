@@ -22,6 +22,8 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/api/managementpb"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -43,10 +45,31 @@ func NewMySQLService(db *reform.DB, registry agentsRegistry) *MySQLService {
 func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLRequest) (*managementpb.AddMySQLResponse, error) {
 	res := new(managementpb.AddMySQLResponse)
 
+	if err := validateNodeParamsOneOf(req.NodeId, req.NodeName, req.RegisterNode); err != nil {
+		return nil, err
+	}
+
 	if e := s.db.InTransaction(func(tx *reform.TX) error {
+		var nodeID string
+		switch {
+		case req.NodeId != "":
+			nodeID = req.NodeId
+		case req.NodeName != "":
+			node, err := models.FindNodeByName(tx.Querier, req.NodeName)
+			if err != nil {
+				return err
+			}
+			nodeID = node.NodeID
+		case req.RegisterNode != nil:
+			node, err := validateAndCreateNode(tx, req.RegisterNode)
+			if err != nil {
+				return err
+			}
+			nodeID = node.NodeID
+		}
 		service, err := models.AddNewService(tx.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
 			ServiceName:    req.ServiceName,
-			NodeID:         req.NodeId,
+			NodeID:         nodeID,
 			Environment:    req.Environment,
 			Cluster:        req.Cluster,
 			ReplicationSet: req.ReplicationSet,
@@ -128,4 +151,21 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 
 	s.registry.SendSetStateRequest(ctx, req.PmmAgentId)
 	return res, nil
+}
+
+func validateNodeParamsOneOf(nodeID string, nodeName string, registerNodeRequest *managementpb.RegisterNodeRequest) error {
+	got := 0
+	if nodeID != "" {
+		got++
+	}
+	if nodeName != "" {
+		got++
+	}
+	if registerNodeRequest != nil {
+		got++
+	}
+	if got != 1 {
+		return status.Errorf(codes.InvalidArgument, "expected only one param; node id, node name or register node params")
+	}
+	return nil
 }
