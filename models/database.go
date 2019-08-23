@@ -111,8 +111,8 @@ var databaseSchema = [][]string{
 			username VARCHAR CHECK (username <> ''),
 			password VARCHAR CHECK (password <> ''),
 			metrics_url VARCHAR CHECK (metrics_url <> ''),
-			tls BOOLEAN NOT NUL DEFAULT FALSE,
-			tls_skip_verify BOOLEAN NOT NULL DEFAULT TRUE,
+			tls BOOLEAN,
+			tls_skip_verify BOOLEAN NULL,
 
 			PRIMARY KEY (agent_id),
 			FOREIGN KEY (runs_on_node_id) REFERENCES nodes (node_id),

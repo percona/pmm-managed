@@ -71,8 +71,8 @@ type Agent struct {
 
 	Username      *string `reform:"username"`
 	Password      *string `reform:"password"`
-	TLS           *bool   `reform:"tls"`
-	TLSSkipVerify *bool   `reform:"tls_skip_verify"`
+	TLS           bool    `reform:"tls"`
+	TLSSkipVerify bool    `reform:"tls_skip_verify"`
 	MetricsURL    *string `reform:"metrics_url"`
 }
 
@@ -213,8 +213,8 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		q := make(url.Values)
 		q.Set("sslmode", "disable")
 
-		if *s.TLS {
-			if *s.TLSSkipVerify {
+		if s.TLS {
+			if s.TLSSkipVerify {
 				q.Set("sslmode", "require")
 			} else {
 				q.Set("sslmode", "verify-full") // TODO: in order to make this work, we need to add certs

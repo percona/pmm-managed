@@ -360,8 +360,8 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 		PMMAgentID:    &params.PMMAgentID,
 		Username:      pointer.ToStringOrNil(params.Username),
 		Password:      pointer.ToStringOrNil(params.Password),
-		TLS:           &params.TLS,
-		TLSSkipVerify: &params.TLSSkipVerify,
+		TLS:           params.TLS,
+		TLSSkipVerify: params.TLSSkipVerify,
 	}
 	if err := row.SetCustomLabels(params.CustomLabels); err != nil {
 		return nil, err
