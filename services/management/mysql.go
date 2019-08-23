@@ -153,7 +153,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 	return res, nil
 }
 
-func validateNodeParamsOneOf(nodeID string, nodeName string, registerNodeRequest *managementpb.RegisterNodeRequest) error {
+func validateNodeParamsOneOf(nodeID, nodeName string, registerNodeRequest *managementpb.RegisterNodeRequest) error {
 	got := 0
 	if nodeID != "" {
 		got++
