@@ -72,7 +72,7 @@ type Agent struct {
 	Username      *string `reform:"username"`
 	Password      *string `reform:"password"`
 	TLS           *bool   `reform:"tls"`
-	SkipTLSVerify *bool   `reform:"skip_tls_verify"`
+	TLSSkipVerify *bool   `reform:"tls_skip_verify"`
 	MetricsURL    *string `reform:"metrics_url"`
 }
 
@@ -211,7 +211,16 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 
 	case PostgresExporterType, QANPostgreSQLPgStatementsAgentType:
 		q := make(url.Values)
-		q.Set("sslmode", "disable") // TODO: make it configurable
+		q.Set("sslmode", "disable")
+
+		if *s.TLS {
+			if *s.TLSSkipVerify {
+				q.Set("sslmode", "require")
+			} else {
+				q.Set("sslmode", "verify-full") // TODO: in order to make this work, we need to add certs
+			}
+		}
+
 		if dialTimeout != 0 {
 			q.Set("connect_timeout", strconv.Itoa(int(dialTimeout.Seconds())))
 		}

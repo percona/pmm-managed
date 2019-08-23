@@ -336,7 +336,7 @@ type CreateAgentParams struct {
 	Password      string
 	CustomLabels  map[string]string
 	TLS           bool
-	SkipTLSVerify bool
+	TLSSkipVerify bool
 }
 
 // CreateAgent creates Agent with given type.
@@ -361,7 +361,7 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 		Username:      pointer.ToStringOrNil(params.Username),
 		Password:      pointer.ToStringOrNil(params.Password),
 		TLS:           &params.TLS,
-		SkipTLSVerify: &params.SkipTLSVerify,
+		TLSSkipVerify: &params.TLSSkipVerify,
 	}
 	if err := row.SetCustomLabels(params.CustomLabels); err != nil {
 		return nil, err
