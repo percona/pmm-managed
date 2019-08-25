@@ -1,3 +1,5 @@
+all: build
+
 init:
 	go install ./vendor/github.com/jstemmer/go-junit-report
 
