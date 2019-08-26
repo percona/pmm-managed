@@ -34,10 +34,6 @@ type QAN struct {
 
 // Settings contains PMM Server settings.
 type Settings struct {
-	Updates struct {
-		AuthToken string `json:"auth_token"`
-	} `json:"updates"`
-
 	Telemetry struct {
 		Disabled bool   `json:"disabled"`
 		UUID     string `json:"uuid"`
