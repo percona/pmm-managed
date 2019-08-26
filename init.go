@@ -36,6 +36,9 @@ var (
 	// Hostname contains local hostname that is used for generating test data.
 	Hostname string
 
+	// True if -debug or -trace flag is passed.
+	Debug bool
+
 	// RunUpdateTest is true if PMM Server update should be tested.
 	RunUpdateTest bool
 )
@@ -123,6 +126,7 @@ func init() {
 		logrus.SetLevel(logrus.TraceLevel)
 		logrus.SetReportCaller(true)
 	}
+	Debug = *debugF || *traceF
 	RunUpdateTest = *runUpdateTestF
 
 	var cancel context.CancelFunc
