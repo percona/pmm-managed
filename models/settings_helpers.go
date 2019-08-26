@@ -59,7 +59,7 @@ func SaveSettings(q reform.DBTX, s *Settings) error {
 			return status.Error(codes.InvalidArgument, pair.name+": minimal resolution is 1s")
 		}
 		if pair.dur.Truncate(time.Second) != pair.dur {
-			return status.Error(codes.InvalidArgument, pair.name+": should a natural number of seconds")
+			return status.Error(codes.InvalidArgument, pair.name+": should be a natural number of seconds")
 		}
 	}
 
@@ -67,7 +67,7 @@ func SaveSettings(q reform.DBTX, s *Settings) error {
 		return status.Error(codes.InvalidArgument, "data_retention: minimal resolution is 24h")
 	}
 	if s.QAN.DataRetention.Truncate(24*time.Hour) != s.QAN.DataRetention {
-		return status.Error(codes.InvalidArgument, "data_retention: should a natural number of days")
+		return status.Error(codes.InvalidArgument, "data_retention: should be a natural number of days")
 	}
 
 	b, err := json.Marshal(s)

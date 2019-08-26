@@ -85,7 +85,7 @@ func TestSettings(t *testing.T) {
 				},
 			}
 			err = models.SaveSettings(sqlDB, s)
-			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "lr: should a natural number of seconds"), err)
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "lr: should be a natural number of seconds"), err)
 		})
 
 		t.Run("DataRetention", func(t *testing.T) {
@@ -103,7 +103,7 @@ func TestSettings(t *testing.T) {
 				},
 			}
 			err = models.SaveSettings(sqlDB, s)
-			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "data_retention: should a natural number of days"), err)
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "data_retention: should be a natural number of days"), err)
 		})
 	})
 }
