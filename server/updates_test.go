@@ -126,6 +126,7 @@ func TestUpdate(t *testing.T) {
 
 	// read log lines like UI would do, but without delays to increase a chance for race detector to spot something
 	for {
+		start := time.Now()
 		statusRes, err := noAuthClient.Server.UpdateStatus(&server.UpdateStatusParams{
 			Body: server.UpdateStatusBody{
 				AuthToken: authToken,
@@ -146,11 +147,12 @@ func TestUpdate(t *testing.T) {
 			}
 			continue
 		}
-		t.Logf("new offset = %d, done = %t:\n%s", statusRes.Payload.LogOffset, statusRes.Payload.Done, strings.Join(statusRes.Payload.LogLines, "\n"))
+		t.Logf("%s, offset = %d->%d, done = %t:\n%s", time.Since(start), logOffset, statusRes.Payload.LogOffset,
+			statusRes.Payload.Done, strings.Join(statusRes.Payload.LogLines, "\n"))
 
 		if statusRes.Payload.LogOffset == logOffset {
 			assert.Empty(t, statusRes.Payload.LogLines, "lines should be empty for the same offset")
-			assert.True(t, statusRes.Payload.Done, "lines should be empty only when done")
+			require.True(t, statusRes.Payload.Done, "lines should be empty only when done")
 			break
 		}
 
