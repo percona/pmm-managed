@@ -29,7 +29,7 @@ type MetricsResolutions struct {
 
 // QAN contains query analytics configuration.
 type QAN struct {
-	DataRetention time.Duration `json:"data_retention"` // number of days data retention
+	DataRetention time.Duration `json:"data_retention"`
 }
 
 // Settings contains PMM Server settings.

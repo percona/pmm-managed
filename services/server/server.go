@@ -178,7 +178,7 @@ func convertSettings(s *models.Settings) *serverpb.Settings {
 			Mr: ptypes.DurationProto(s.MetricsResolutions.MR),
 			Lr: ptypes.DurationProto(s.MetricsResolutions.LR),
 		},
-		Telemetry: !s.Telemetry.Disabled,
+		TelemetryEnabled: !s.Telemetry.Disabled,
 		Qan: &serverpb.QAN{
 			DataRetention: ptypes.DurationProto(s.QAN.DataRetention),
 		},
