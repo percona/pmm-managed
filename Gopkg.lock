@@ -222,7 +222,7 @@
   version = "v0.5.0"
 
 [[projects]]
-  branch = "PMM-4249-api-data-retention"
+  branch = "PMM-2.0"
   digest = "1:b3327ca10e33845daf529e7fcd2d873150d8c497beca14719e319833e0f68d40"
   name = "github.com/percona/pmm"
   packages = [
@@ -235,7 +235,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "9c83e5a42b1f185112cd7553ddb7eb266204cb75"
+  revision = "b1ff4151870b89078fa04d469f6869849cea853b"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
