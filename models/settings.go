@@ -34,18 +34,17 @@ type QAN struct {
 
 // Settings contains PMM Server settings.
 type Settings struct {
+	Updates struct {
+		AuthToken string `json:"auth_token"`
+	} `json:"updates"`
+
 	Telemetry struct {
 		Disabled bool   `json:"disabled"`
 		UUID     string `json:"uuid"`
 	} `json:"telemetry"`
 
-	Updates struct {
-		AuthToken string `json:"auth_token"`
-	} `json:"updates"`
-
 	MetricsResolutions MetricsResolutions `json:"metrics_resolutions"`
-
-	QAN QAN `json:"qan"`
+	QAN                QAN                `json:"qan"`
 }
 
 // fillDefaults sets zero values to their default values.
@@ -62,6 +61,7 @@ func (s *Settings) fillDefaults() {
 	if s.MetricsResolutions.LR == 0 {
 		s.MetricsResolutions.LR = 60 * time.Second
 	}
+
 	if s.QAN.DataRetention == 0 {
 		s.QAN.DataRetention = 30 * 24 * time.Hour
 	}
