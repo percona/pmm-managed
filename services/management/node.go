@@ -49,7 +49,41 @@ func (s *NodeService) Register(ctx context.Context, req *managementpb.RegisterNo
 	res := new(managementpb.RegisterNodeResponse)
 
 	if e := s.db.InTransaction(func(tx *reform.TX) error {
-		node, err := validateAndCreateNode(tx, req)
+		node, err := models.FindNodeByName(tx.Querier, req.NodeName)
+		switch status.Code(err) {
+		case codes.OK:
+			if !req.Reregister {
+				return status.Errorf(codes.AlreadyExists, "Node with name %q already exists.", req.NodeName)
+			}
+			err = models.RemoveNode(tx.Querier, node.NodeID, models.RemoveCascade)
+		case codes.NotFound:
+			err = nil
+		}
+		if err != nil {
+			return err
+		}
+
+		var nodeType models.NodeType
+		switch req.NodeType {
+		case inventorypb.NodeType_GENERIC_NODE:
+			nodeType = models.GenericNodeType
+		case inventorypb.NodeType_CONTAINER_NODE:
+			nodeType = models.ContainerNodeType
+		default:
+			return status.Errorf(codes.InvalidArgument, "Unsupported Node type %q.", req.NodeType)
+		}
+		node, err = models.CreateNode(tx.Querier, nodeType, &models.CreateNodeParams{
+			NodeName:      req.NodeName,
+			MachineID:     pointer.ToStringOrNil(req.MachineId),
+			Distro:        req.Distro,
+			NodeModel:     req.NodeModel,
+			AZ:            req.Az,
+			ContainerID:   pointer.ToStringOrNil(req.ContainerId),
+			ContainerName: pointer.ToStringOrNil(req.ContainerName),
+			CustomLabels:  req.CustomLabels,
+			Address:       req.Address,
+			Region:        pointer.ToStringOrNil(req.Region),
+		})
 		if err != nil {
 			return err
 		}
@@ -85,48 +119,4 @@ func (s *NodeService) Register(ctx context.Context, req *managementpb.RegisterNo
 	}
 
 	return res, nil
-}
-
-func validateAndCreateNode(tx *reform.TX, req *managementpb.RegisterNodeRequest) (*models.Node, error) {
-	node, err := models.FindNodeByName(tx.Querier, req.NodeName)
-	switch status.Code(err) {
-	case codes.OK:
-		if !req.Reregister {
-			return nil, status.Errorf(codes.AlreadyExists, "Node with name %q already exists.", req.NodeName)
-		}
-		err = models.RemoveNode(tx.Querier, node.NodeID, models.RemoveCascade)
-	case codes.NotFound:
-		err = nil
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	var nodeType models.NodeType
-	switch req.NodeType {
-	case inventorypb.NodeType_GENERIC_NODE:
-		nodeType = models.GenericNodeType
-	case inventorypb.NodeType_CONTAINER_NODE:
-		nodeType = models.ContainerNodeType
-	case inventorypb.NodeType_REMOTE_NODE:
-		nodeType = models.ContainerNodeType
-	default:
-		return nil, status.Errorf(codes.InvalidArgument, "Unsupported Node type %q.", req.NodeType)
-	}
-	node, err = models.CreateNode(tx.Querier, nodeType, &models.CreateNodeParams{
-		NodeName:      req.NodeName,
-		MachineID:     pointer.ToStringOrNil(req.MachineId),
-		Distro:        req.Distro,
-		NodeModel:     req.NodeModel,
-		AZ:            req.Az,
-		ContainerID:   pointer.ToStringOrNil(req.ContainerId),
-		ContainerName: pointer.ToStringOrNil(req.ContainerName),
-		CustomLabels:  req.CustomLabels,
-		Address:       req.Address,
-		Region:        pointer.ToStringOrNil(req.Region),
-	})
-	if err != nil {
-		return nil, err
-	}
-	return node, nil
 }

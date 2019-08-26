@@ -45,7 +45,7 @@ func NewMySQLService(db *reform.DB, registry agentsRegistry) *MySQLService {
 func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLRequest) (*managementpb.AddMySQLResponse, error) {
 	res := new(managementpb.AddMySQLResponse)
 
-	if err := validateNodeParamsOneOf(req.NodeId, req.NodeName, req.RegisterNode); err != nil {
+	if err := validateNodeParamsOneOf(req.NodeId, req.NodeName, req.AddNode); err != nil {
 		return nil, err
 	}
 
@@ -60,8 +60,30 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 				return err
 			}
 			nodeID = node.NodeID
-		case req.RegisterNode != nil:
-			node, err := validateAndCreateNode(tx, req.RegisterNode)
+		case req.AddNode != nil:
+			var nodeType models.NodeType
+			switch req.AddNode.NodeType {
+			case inventorypb.NodeType_GENERIC_NODE:
+				nodeType = models.GenericNodeType
+			case inventorypb.NodeType_CONTAINER_NODE:
+				nodeType = models.ContainerNodeType
+			case inventorypb.NodeType_REMOTE_NODE:
+				nodeType = models.ContainerNodeType
+			default:
+				return status.Errorf(codes.InvalidArgument, "Unsupported Node type %q.", req.AddNode.NodeType)
+			}
+			node, err := models.CreateNode(tx.Querier, nodeType, &models.CreateNodeParams{
+				NodeName:      req.AddNode.NodeName,
+				MachineID:     pointer.ToStringOrNil(req.AddNode.MachineId),
+				Distro:        req.AddNode.Distro,
+				NodeModel:     req.AddNode.NodeModel,
+				AZ:            req.AddNode.Az,
+				ContainerID:   pointer.ToStringOrNil(req.AddNode.ContainerId),
+				ContainerName: pointer.ToStringOrNil(req.AddNode.ContainerName),
+				CustomLabels:  req.AddNode.CustomLabels,
+				Address:       req.Address,
+				Region:        pointer.ToStringOrNil(req.AddNode.Region),
+			})
 			if err != nil {
 				return err
 			}
@@ -153,7 +175,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 	return res, nil
 }
 
-func validateNodeParamsOneOf(nodeID, nodeName string, registerNodeRequest *managementpb.RegisterNodeRequest) error {
+func validateNodeParamsOneOf(nodeID string, nodeName string, addNodeParams *managementpb.AddNodeParams) error {
 	got := 0
 	if nodeID != "" {
 		got++
@@ -161,7 +183,7 @@ func validateNodeParamsOneOf(nodeID, nodeName string, registerNodeRequest *manag
 	if nodeName != "" {
 		got++
 	}
-	if registerNodeRequest != nil {
+	if addNodeParams != nil {
 		got++
 	}
 	if got != 1 {

@@ -34,3 +34,70 @@ scrape_configs:
     - 127.0.0.1:7773
     labels:
       instance: pmm-server
+- job_name: mysqld_exporter_agent_id_5e88d2d6-fb3c-44f0-bcfe-48cf23643c43_hr
+  scrape_interval: 1s
+  scrape_timeout: 1s
+  metrics_path: /metrics-hr
+  static_configs:
+  - targets:
+    - 127.0.0.1:32769
+    labels:
+      agent_id: /agent_id/5e88d2d6-fb3c-44f0-bcfe-48cf23643c43
+      agent_type: mysqld_exporter
+      instance: /agent_id/5e88d2d6-fb3c-44f0-bcfe-48cf23643c43
+      node_id: /node_id/3871629a-e57c-45e7-a4f5-d0441e667826
+      node_name: remote node
+      node_type: container
+      service_id: /service_id/e40695b9-5589-4803-9979-9c5b44530b78
+      service_name: 127.0.0.1
+      service_type: mysql
+- job_name: mysqld_exporter_agent_id_5e88d2d6-fb3c-44f0-bcfe-48cf23643c43_mr
+  scrape_interval: 5s
+  scrape_timeout: 4s
+  metrics_path: /metrics-mr
+  static_configs:
+  - targets:
+    - 127.0.0.1:32769
+    labels:
+      agent_id: /agent_id/5e88d2d6-fb3c-44f0-bcfe-48cf23643c43
+      agent_type: mysqld_exporter
+      instance: /agent_id/5e88d2d6-fb3c-44f0-bcfe-48cf23643c43
+      node_id: /node_id/3871629a-e57c-45e7-a4f5-d0441e667826
+      node_name: remote node
+      node_type: container
+      service_id: /service_id/e40695b9-5589-4803-9979-9c5b44530b78
+      service_name: 127.0.0.1
+      service_type: mysql
+- job_name: mysqld_exporter_agent_id_5e88d2d6-fb3c-44f0-bcfe-48cf23643c43_lr
+  scrape_interval: 1m
+  scrape_timeout: 10s
+  metrics_path: /metrics-lr
+  static_configs:
+  - targets:
+    - 127.0.0.1:32769
+    labels:
+      agent_id: /agent_id/5e88d2d6-fb3c-44f0-bcfe-48cf23643c43
+      agent_type: mysqld_exporter
+      instance: /agent_id/5e88d2d6-fb3c-44f0-bcfe-48cf23643c43
+      node_id: /node_id/3871629a-e57c-45e7-a4f5-d0441e667826
+      node_name: remote node
+      node_type: container
+      service_id: /service_id/e40695b9-5589-4803-9979-9c5b44530b78
+      service_name: 127.0.0.1
+      service_type: mysql
+- job_name: node_exporter_agent_id_ecbc388c-265e-44a5-9c2b-e12947b3fa74
+  scrape_interval: 1s
+  scrape_timeout: 1s
+  metrics_path: /metrics
+  static_configs:
+  - targets:
+    - 192.168.1.22:32768
+    labels:
+      agent_id: /agent_id/ecbc388c-265e-44a5-9c2b-e12947b3fa74
+      agent_type: node_exporter
+      instance: /agent_id/ecbc388c-265e-44a5-9c2b-e12947b3fa74
+      machine_id: |
+        /machine_id/619d68d22b96945324eb45735bad3294
+      node_id: /node_id/372b101e-9ef4-4d70-874c-e24329dc3eaa
+      node_name: nurlan-XPS-15-9570
+      node_type: generic
