@@ -20,10 +20,6 @@ import (
 	"text/template"
 )
 
-const (
-	configPathPrefix = "/etc/supervisord.d/"
-)
-
 var tmpl = template.Must(template.New("").Option("missingkey=error").Parse(`
 {{define "prometheus"}}
 [program:prometheus]

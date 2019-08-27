@@ -41,6 +41,7 @@ import (
 // Service is responsible for interactions with Supervisord via supervisorctl.
 type Service struct {
 	db                *reform.DB
+	configDir         string
 	supervisorctlPath string
 	l                 *logrus.Entry
 	pmmUpdateCheck    *pmmUpdateChecker
@@ -64,10 +65,11 @@ const (
 )
 
 // New creates new service.
-func New(db *reform.DB) *Service {
+func New(db *reform.DB, configDir string) *Service {
 	path, _ := exec.LookPath("supervisorctl")
 	return &Service{
 		db:                        db,
+		configDir:                 configDir,
 		supervisorctlPath:         path,
 		l:                         logrus.WithField("component", "supervisord"),
 		pmmUpdateCheck:            newPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker")),

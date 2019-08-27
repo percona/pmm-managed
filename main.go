@@ -94,6 +94,8 @@ var (
 	postgresDBUsernameF = flag.String("postgres-username", "pmm-managed", "PostgreSQL database username")
 	postgresDBPasswordF = flag.String("postgres-password", "pmm-managed", "PostgreSQL database password")
 
+	supervisordConfigDirF = flag.String("supervisord-config-dir", "", "Supervisord configuration directory")
+
 	debugF = flag.Bool("debug", false, "Enable debug logging")
 	traceF = flag.Bool("trace", false, "Enable trace logging")
 )
@@ -427,7 +429,7 @@ func main() {
 	}
 
 	logs := supervisord.NewLogs(version.Version)
-	supervisord := supervisord.New(db)
+	supervisord := supervisord.New(db, *supervisordConfigDirF)
 	server, err := server.NewServer(db, prometheus, supervisord)
 	if err != nil {
 		l.Panicf("Server problem: %+v", err)
