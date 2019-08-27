@@ -51,6 +51,7 @@ import (
 	channelz "google.golang.org/grpc/channelz/service"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
@@ -340,10 +341,14 @@ func setupDatabase(ctx context.Context, sqlDB *sql.DB, prometheus *prometheus.Se
 		return false
 	}
 
+	// log and ignore validation errors; fail on other errors
 	l.Infof("Updating settings...")
-	if err = server.UpdateSettings(); err != nil {
-		l.Warnf("Settings problem: %s.", err)
-		return false
+	if err = server.UpdateSettingsFromEnv(os.Environ()); err != nil {
+		if _, ok := status.FromError(err); !ok {
+			l.Warnf("Settings problem: %s.", err)
+			return false
+		}
+		l.Warnf("Failed to update settings from environment: %s.", err)
 	}
 
 	l.Infof("Checking Prometheus...")
@@ -413,7 +418,7 @@ func main() {
 	if err != nil {
 		l.Panicf("Failed to connect to database: %+v", err)
 	}
-	defer sqlDB.Close()
+	defer sqlDB.Close() //nolint:errcheck
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
 	prometheus, err := prometheus.NewService(*prometheusConfigF, *promtoolF, db, *prometheusURLF)
@@ -423,7 +428,7 @@ func main() {
 
 	logs := supervisord.NewLogs(version.Version)
 	supervisord := supervisord.New()
-	server, err := server.NewServer(db, prometheus, supervisord, os.Environ())
+	server, err := server.NewServer(db, prometheus, supervisord)
 	if err != nil {
 		l.Panicf("Server problem: %+v", err)
 	}
@@ -471,23 +476,6 @@ func main() {
 	go func() {
 		defer wg.Done()
 		supervisord.Run(ctx)
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
-		// Do not check for updates for the first 10 minutes.
-		// That solves PMM Server building problems when we start pmm-managed.
-		// TODO https://jira.percona.com/browse/PMM-4429
-		sleepCtx, sleepCancel := context.WithTimeout(ctx, 10*time.Minute)
-		<-sleepCtx.Done()
-		sleepCancel()
-		if ctx.Err() != nil {
-			return
-		}
-
-		server.Run(ctx)
 	}()
 
 	wg.Add(1)
