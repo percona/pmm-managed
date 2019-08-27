@@ -352,6 +352,7 @@ func (s *Service) UpdateLog(offset uint32) ([]string, uint32, error) {
 	}
 }
 
+// UpdateConfiguration updates Prometheus and qan-api2 configurations, restarting them if needed.
 func (s *Service) UpdateConfiguration() {
 	// TODO
 	return
