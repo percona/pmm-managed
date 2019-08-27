@@ -43,4 +43,6 @@ type supervisordService interface {
 	StartUpdate() (uint32, error)
 	UpdateRunning() bool
 	UpdateLog(offset uint32) ([]string, uint32, error)
+
+	UpdateConfiguration()
 }

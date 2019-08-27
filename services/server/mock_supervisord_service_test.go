@@ -89,6 +89,11 @@ func (_m *mockSupervisordService) StartUpdate() (uint32, error) {
 	return r0, r1
 }
 
+// UpdateConfiguration provides a mock function with given fields:
+func (_m *mockSupervisordService) UpdateConfiguration() {
+	_m.Called()
+}
+
 // UpdateLog provides a mock function with given fields: offset
 func (_m *mockSupervisordService) UpdateLog(offset uint32) ([]string, uint32, error) {
 	ret := _m.Called(offset)

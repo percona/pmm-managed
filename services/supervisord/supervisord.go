@@ -35,10 +35,12 @@ import (
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"gopkg.in/reform.v1"
 )
 
 // Service is responsible for interactions with Supervisord via supervisorctl.
 type Service struct {
+	db                *reform.DB
 	supervisorctlPath string
 	l                 *logrus.Entry
 	pmmUpdateCheck    *pmmUpdateChecker
@@ -62,9 +64,10 @@ const (
 )
 
 // New creates new service.
-func New() *Service {
+func New(db *reform.DB) *Service {
 	path, _ := exec.LookPath("supervisorctl")
 	return &Service{
+		db:                        db,
 		supervisorctlPath:         path,
 		l:                         logrus.WithField("component", "supervisord"),
 		pmmUpdateCheck:            newPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker")),
@@ -345,4 +348,9 @@ func (s *Service) UpdateLog(offset uint32) ([]string, uint32, error) {
 		}
 		return lines, newOffset, errors.WithStack(err)
 	}
+}
+
+func (s *Service) UpdateConfiguration() {
+	// TODO
+	return
 }

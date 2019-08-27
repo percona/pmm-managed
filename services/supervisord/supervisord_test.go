@@ -36,7 +36,7 @@ func TestService(t *testing.T) {
 		t.Skip("can be tested only inside devcontainer")
 	}
 
-	s := New()
+	s := New(nil)
 	require.NotEmpty(t, s.supervisorctlPath)
 
 	ctx, cancel := context.WithCancel(context.Background())
