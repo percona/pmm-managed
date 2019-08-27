@@ -302,6 +302,8 @@ func scraperConfigsForMongoDBExporter(s *models.MetricsResolutions, node *models
 	hrc := []string{
 		"collection",
 		"database",
+		"standard.process",
+		"standard.go",
 	}
 	hr, err := scraperConfigForStandardExporter(s.HR, node, service, agent, hrc)
 	if err != nil {

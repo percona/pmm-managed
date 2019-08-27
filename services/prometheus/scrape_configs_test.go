@@ -138,7 +138,6 @@ func TestScrapeConfig(t *testing.T) {
 					},
 					Params: url.Values{"collect[]": []string{
 						"bonding",
-						"boottime",
 						"entropy",
 						"filesystem",
 						"uname",
@@ -362,6 +361,8 @@ func TestScrapeConfig(t *testing.T) {
 					Params: url.Values{"collect[]": []string{
 						"collection",
 						"database",
+						"standard.process",
+						"standard.go",
 					}},
 				},
 			}
