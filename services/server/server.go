@@ -338,7 +338,7 @@ func (s *Server) readUpdateAuthToken() (string, error) {
 
 func convertSettings(s *models.Settings) *serverpb.Settings {
 	return &serverpb.Settings{
-		TelemetryEnabled: !s.Telemetry.Disabled,
+		Telemetry: !s.Telemetry.Disabled,
 		MetricsResolutions: &serverpb.MetricsResolutions{
 			Hr: ptypes.DurationProto(s.MetricsResolutions.HR),
 			Mr: ptypes.DurationProto(s.MetricsResolutions.MR),
