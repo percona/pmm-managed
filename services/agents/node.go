@@ -42,6 +42,11 @@ func nodeExporterConfig(node *models.Node, exporter *models.Agent) *agentpb.SetS
 		// "--collector.textfile.directory",
 
 		"--web.listen-address=:" + tdp.left + " .listen_port " + tdp.right,
+		"--collector.standard.go",
+		"--collector.standard.process",
+		"--collector.textfile.lr",
+		"--collector.textfile.mr",
+		"--collector.textfile.hr",
 	}
 
 	// do not enable Linux-specific collectors on macOS, that's useful for our development
@@ -57,9 +62,6 @@ func nodeExporterConfig(node *models.Node, exporter *models.Agent) *agentpb.SetS
 			"--collector.processes",
 			"--collector.qdisc",
 			"--collector.wifi",
-			"--collector.standard.go",
-			"--collector.standard.process",
-
 			// add more netstat fields
 			"--collector.netstat.fields=^(.*_(InErrors|InErrs|InCsumErrors)"+
 				"|Tcp_(ActiveOpens|PassiveOpens|RetransSegs|CurrEstab|AttemptFails|OutSegs|InSegs|EstabResets|OutRsts|OutSegs)|Tcp_Rto(Algorithm|Min|Max)"+
@@ -77,9 +79,6 @@ func nodeExporterConfig(node *models.Node, exporter *models.Agent) *agentpb.SetS
 			// Disabled for now due to https://jira.percona.com/browse/PMM-3843
 			// "--collector.logind",
 			// "--collector.systemd",
-			"--collector.textfile.lr",
-			"--collector.textfile.mr",
-			"--collector.textfile.hr",
 		)
 	}
 

@@ -44,7 +44,9 @@ func TestMySQLdExporterConfig(t *testing.T) {
 		Args: []string{
 			"--collect.auto_increment.columns",
 			"--collect.binlog_size",
-			"--collect.custom_query=false",
+			"--collect.custom_query.hr",
+			"--collect.custom_query.lr",
+			"--collect.custom_query.mr",
 			"--collect.global_status",
 			"--collect.global_variables",
 			"--collect.info_schema.innodb_cmp",
