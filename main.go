@@ -330,37 +330,57 @@ func runDebugServer(ctx context.Context) {
 	cancel()
 }
 
-func setupDatabase(ctx context.Context, sqlDB *sql.DB, prometheus *prometheus.Service, server *server.Server, l *logrus.Entry) bool {
-	l.Infof("Migrating database...")
-	err := models.SetupDB(sqlDB, &models.SetupDBParams{
-		Logf:          l.Debugf,
+type setupDeps struct {
+	sqlDB       *sql.DB
+	supervisord *supervisord.Service
+	prometheus  *prometheus.Service
+	server      *server.Server
+	l           *logrus.Entry
+}
+
+// setup migrates database and performs other setup tasks that depend on database.
+func setup(ctx context.Context, deps *setupDeps) bool {
+	deps.l.Infof("Migrating database...")
+	db, err := models.SetupDB(deps.sqlDB, &models.SetupDBParams{
+		Logf:          deps.l.Debugf,
 		Username:      *postgresDBUsernameF,
 		Password:      *postgresDBPasswordF,
 		SetupFixtures: models.SetupFixtures,
 	})
 	if err != nil {
-		l.Warnf("Failed to migrate database: %s.", err)
+		deps.l.Warnf("Failed to migrate database: %s.", err)
 		return false
 	}
 
 	// log and ignore validation errors; fail on other errors
-	l.Infof("Updating settings...")
-	if err = server.UpdateSettingsFromEnv(os.Environ()); err != nil {
+	deps.l.Infof("Updating settings...")
+	if err = deps.server.UpdateSettingsFromEnv(os.Environ()); err != nil {
 		if _, ok := status.FromError(err); !ok {
-			l.Warnf("Settings problem: %s.", err)
+			deps.l.Warnf("Settings problem: %s.", err)
 			return false
 		}
-		l.Warnf("Failed to update settings from environment: %s.", err)
+		deps.l.Warnf("Failed to update settings from environment: %s.", err)
 	}
 
-	l.Infof("Checking Prometheus...")
-	if err = prometheus.Check(ctx); err != nil {
-		l.Warnf("Prometheus problem: %s.", err)
+	deps.l.Infof("Updating supervisord configuration...")
+	settings, err := models.GetSettings(db.Querier)
+	if err != nil {
+		deps.l.Warnf("Failed to get settings: %s.", err)
 		return false
 	}
-	prometheus.RequestConfigurationUpdate()
+	if err = deps.supervisord.UpdateConfiguration(settings); err != nil {
+		deps.l.Warnf("Failed to update supervisord configuration: %s.", err)
+		return false
+	}
 
-	l.Info("Setup completed.")
+	deps.l.Infof("Checking Prometheus...")
+	if err = deps.prometheus.Check(ctx); err != nil {
+		deps.l.Warnf("Prometheus problem: %s.", err)
+		return false
+	}
+	deps.prometheus.RequestConfigurationUpdate()
+
+	deps.l.Info("Setup completed.")
 	return true
 }
 
@@ -436,12 +456,18 @@ func main() {
 	}
 
 	// try synchronously once, then retry in the background
-	setupL := logrus.WithField("component", "setup")
-	if !setupDatabase(ctx, sqlDB, prometheus, server, setupL) {
+	deps := &setupDeps{
+		sqlDB:       sqlDB,
+		supervisord: supervisord,
+		prometheus:  prometheus,
+		server:      server,
+		l:           logrus.WithField("component", "setup"),
+	}
+	if !setup(ctx, deps) {
 		go func() {
 			const delay = 2 * time.Second
 			for {
-				setupL.Warnf("Retrying in %s.", delay)
+				deps.l.Warnf("Retrying in %s.", delay)
 				sleepCtx, sleepCancel := context.WithTimeout(ctx, delay)
 				<-sleepCtx.Done()
 				sleepCancel()
@@ -450,7 +476,7 @@ func main() {
 					return
 				}
 
-				if setupDatabase(ctx, sqlDB, prometheus, server, setupL) {
+				if setup(ctx, deps) {
 					return
 				}
 			}
