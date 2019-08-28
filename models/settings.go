@@ -34,11 +34,9 @@ type Settings struct {
 		UUID     string `json:"uuid"`
 	} `json:"telemetry"`
 
-	Updates struct {
-		AuthToken string `json:"auth_token"`
-	} `json:"updates"`
-
 	MetricsResolutions MetricsResolutions `json:"metrics_resolutions"`
+
+	DataRetention time.Duration `json:"data_retention"`
 }
 
 // fillDefaults sets zero values to their default values.
@@ -54,5 +52,9 @@ func (s *Settings) fillDefaults() {
 	}
 	if s.MetricsResolutions.LR == 0 {
 		s.MetricsResolutions.LR = 60 * time.Second
+	}
+
+	if s.DataRetention == 0 {
+		s.DataRetention = 30 * 24 * time.Hour
 	}
 }

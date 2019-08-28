@@ -51,6 +51,7 @@ import (
 	channelz "google.golang.org/grpc/channelz/service"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
@@ -92,6 +93,8 @@ var (
 	postgresDBNameF     = flag.String("postgres-name", "", "PostgreSQL database name")
 	postgresDBUsernameF = flag.String("postgres-username", "pmm-managed", "PostgreSQL database username")
 	postgresDBPasswordF = flag.String("postgres-password", "pmm-managed", "PostgreSQL database password")
+
+	supervisordConfigDirF = flag.String("supervisord-config-dir", "", "Supervisord configuration directory")
 
 	debugF = flag.Bool("debug", false, "Enable debug logging")
 	traceF = flag.Bool("trace", false, "Enable trace logging")
@@ -327,33 +330,57 @@ func runDebugServer(ctx context.Context) {
 	cancel()
 }
 
-func setupDatabase(ctx context.Context, sqlDB *sql.DB, prometheus *prometheus.Service, server *server.Server, l *logrus.Entry) bool {
-	l.Infof("Migrating database...")
-	err := models.SetupDB(sqlDB, &models.SetupDBParams{
-		Logf:          l.Debugf,
+type setupDeps struct {
+	sqlDB       *sql.DB
+	supervisord *supervisord.Service
+	prometheus  *prometheus.Service
+	server      *server.Server
+	l           *logrus.Entry
+}
+
+// setup migrates database and performs other setup tasks that depend on database.
+func setup(ctx context.Context, deps *setupDeps) bool {
+	deps.l.Infof("Migrating database...")
+	db, err := models.SetupDB(deps.sqlDB, &models.SetupDBParams{
+		Logf:          deps.l.Debugf,
 		Username:      *postgresDBUsernameF,
 		Password:      *postgresDBPasswordF,
 		SetupFixtures: models.SetupFixtures,
 	})
 	if err != nil {
-		l.Warnf("Failed to migrate database: %s.", err)
+		deps.l.Warnf("Failed to migrate database: %s.", err)
 		return false
 	}
 
-	l.Infof("Updating settings...")
-	if err = server.UpdateSettings(); err != nil {
-		l.Warnf("Settings problem: %s.", err)
+	// log and ignore validation errors; fail on other errors
+	deps.l.Infof("Updating settings...")
+	if err = deps.server.UpdateSettingsFromEnv(os.Environ()); err != nil {
+		if _, ok := status.FromError(err); !ok {
+			deps.l.Warnf("Settings problem: %+v.", err)
+			return false
+		}
+		deps.l.Warnf("Failed to update settings from environment: %+v.", err)
+	}
+
+	deps.l.Infof("Updating supervisord configuration...")
+	settings, err := models.GetSettings(db.Querier)
+	if err != nil {
+		deps.l.Warnf("Failed to get settings: %+v.", err)
+		return false
+	}
+	if err = deps.supervisord.UpdateConfiguration(settings); err != nil {
+		deps.l.Warnf("Failed to update supervisord configuration: %+v.", err)
 		return false
 	}
 
-	l.Infof("Checking Prometheus...")
-	if err = prometheus.Check(ctx); err != nil {
-		l.Warnf("Prometheus problem: %s.", err)
+	deps.l.Infof("Checking Prometheus...")
+	if err = deps.prometheus.Check(ctx); err != nil {
+		deps.l.Warnf("Prometheus problem: %+v.", err)
 		return false
 	}
-	prometheus.UpdateConfiguration()
+	deps.prometheus.RequestConfigurationUpdate()
 
-	l.Info("Setup completed.")
+	deps.l.Info("Setup completed.")
 	return true
 }
 
@@ -413,7 +440,7 @@ func main() {
 	if err != nil {
 		l.Panicf("Failed to connect to database: %+v", err)
 	}
-	defer sqlDB.Close()
+	defer sqlDB.Close() //nolint:errcheck
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
 	prometheus, err := prometheus.NewService(*prometheusConfigF, *promtoolF, db, *prometheusURLF)
@@ -422,19 +449,25 @@ func main() {
 	}
 
 	logs := supervisord.NewLogs(version.Version)
-	supervisord := supervisord.New()
-	server, err := server.NewServer(db, prometheus, supervisord, os.Environ())
+	supervisord := supervisord.New(*supervisordConfigDirF)
+	server, err := server.NewServer(db, prometheus, supervisord)
 	if err != nil {
 		l.Panicf("Server problem: %+v", err)
 	}
 
 	// try synchronously once, then retry in the background
-	setupL := logrus.WithField("component", "setup")
-	if !setupDatabase(ctx, sqlDB, prometheus, server, setupL) {
+	deps := &setupDeps{
+		sqlDB:       sqlDB,
+		supervisord: supervisord,
+		prometheus:  prometheus,
+		server:      server,
+		l:           logrus.WithField("component", "setup"),
+	}
+	if !setup(ctx, deps) {
 		go func() {
 			const delay = 2 * time.Second
 			for {
-				setupL.Warnf("Retrying in %s.", delay)
+				deps.l.Warnf("Retrying in %s.", delay)
 				sleepCtx, sleepCancel := context.WithTimeout(ctx, delay)
 				<-sleepCtx.Done()
 				sleepCancel()
@@ -443,7 +476,7 @@ func main() {
 					return
 				}
 
-				if setupDatabase(ctx, sqlDB, prometheus, server, setupL) {
+				if setup(ctx, deps) {
 					return
 				}
 			}
