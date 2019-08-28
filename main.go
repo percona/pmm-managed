@@ -356,26 +356,26 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 	deps.l.Infof("Updating settings...")
 	if err = deps.server.UpdateSettingsFromEnv(os.Environ()); err != nil {
 		if _, ok := status.FromError(err); !ok {
-			deps.l.Warnf("Settings problem: %s.", err)
+			deps.l.Warnf("Settings problem: %+v.", err)
 			return false
 		}
-		deps.l.Warnf("Failed to update settings from environment: %s.", err)
+		deps.l.Warnf("Failed to update settings from environment: %+v.", err)
 	}
 
 	deps.l.Infof("Updating supervisord configuration...")
 	settings, err := models.GetSettings(db.Querier)
 	if err != nil {
-		deps.l.Warnf("Failed to get settings: %s.", err)
+		deps.l.Warnf("Failed to get settings: %+v.", err)
 		return false
 	}
 	if err = deps.supervisord.UpdateConfiguration(settings); err != nil {
-		deps.l.Warnf("Failed to update supervisord configuration: %s.", err)
+		deps.l.Warnf("Failed to update supervisord configuration: %+v.", err)
 		return false
 	}
 
 	deps.l.Infof("Checking Prometheus...")
 	if err = deps.prometheus.Check(ctx); err != nil {
-		deps.l.Warnf("Prometheus problem: %s.", err)
+		deps.l.Warnf("Prometheus problem: %+v.", err)
 		return false
 	}
 	deps.prometheus.RequestConfigurationUpdate()

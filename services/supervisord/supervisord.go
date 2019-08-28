@@ -397,6 +397,9 @@ func (s *Service) saveConfigAndReload(name string, cfg []byte) (bool, error) {
 	// read existing content
 	path := filepath.Join(s.configDir, name+".ini")
 	oldCfg, err := ioutil.ReadFile(path) //nolint:gosec
+	if os.IsNotExist(err) {
+		err = nil
+	}
 	if err != nil {
 		return false, errors.WithStack(err)
 	}
@@ -412,10 +415,10 @@ func (s *Service) saveConfigAndReload(name string, cfg []byte) (bool, error) {
 	defer func() {
 		if restore {
 			if err = ioutil.WriteFile(path, oldCfg, 0644); err != nil {
-				s.l.Error(err)
+				s.l.Errorf("Failed to restore: %s.", err)
 			}
 			if err = s.reload(name); err != nil {
-				s.l.Error(err)
+				s.l.Errorf("Failed to restore/reload: %s.", err)
 			}
 		}
 	}()
@@ -445,12 +448,12 @@ func (s *Service) UpdateConfiguration(settings *models.Settings) error {
 
 		b, e := s.marshalConfig(tmpl, settings)
 		if e != nil {
-			s.l.Errorf("%s", e)
+			s.l.Errorf("Failed to marshal config: %s.", e)
 			err = e
 			continue
 		}
 		if _, e = s.saveConfigAndReload(tmpl.Name(), b); e != nil {
-			s.l.Errorf("%s", e)
+			s.l.Errorf("Failed to save/reload: %s.", e)
 			err = e
 			continue
 		}
