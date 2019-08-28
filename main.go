@@ -429,7 +429,7 @@ func main() {
 	}
 
 	logs := supervisord.NewLogs(version.Version)
-	supervisord := supervisord.New(db, *supervisordConfigDirF)
+	supervisord := supervisord.New(*supervisordConfigDirF)
 	server, err := server.NewServer(db, prometheus, supervisord)
 	if err != nil {
 		l.Panicf("Server problem: %+v", err)

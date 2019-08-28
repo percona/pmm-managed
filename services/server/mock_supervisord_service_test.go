@@ -3,9 +3,11 @@
 package server
 
 import (
-	time "time"
-
 	mock "github.com/stretchr/testify/mock"
+
+	models "github.com/percona/pmm-managed/models"
+
+	time "time"
 
 	version "github.com/percona/pmm/version"
 )
@@ -89,9 +91,18 @@ func (_m *mockSupervisordService) StartUpdate() (uint32, error) {
 	return r0, r1
 }
 
-// UpdateConfiguration provides a mock function with given fields:
-func (_m *mockSupervisordService) UpdateConfiguration() {
-	_m.Called()
+// UpdateConfiguration provides a mock function with given fields: settings
+func (_m *mockSupervisordService) UpdateConfiguration(settings *models.Settings) error {
+	ret := _m.Called(settings)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*models.Settings) error); ok {
+		r0 = rf(settings)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // UpdateLog provides a mock function with given fields: offset

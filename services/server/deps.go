@@ -21,6 +21,8 @@ import (
 	"time"
 
 	"github.com/percona/pmm/version"
+
+	"github.com/percona/pmm-managed/models"
 )
 
 //go:generate mockery -name=prometheusService -case=snake -inpkg -testonly
@@ -44,5 +46,5 @@ type supervisordService interface {
 	UpdateRunning() bool
 	UpdateLog(offset uint32) ([]string, uint32, error)
 
-	UpdateConfiguration()
+	UpdateConfiguration(settings *models.Settings) error
 }
