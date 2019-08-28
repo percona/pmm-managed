@@ -120,8 +120,8 @@ var databaseSchema = [][]string{
 		)`,
 
 		`ALTER TABLE agents 
-           ADD COLUMN tls BOOLEAN NOT NULL DEFAULT FALSE AFTER metrics_url,
-           ADD COLUMN tls_skip_verify BOOLEAN NOT NULL DEFAULT TRUE AFTER tls
+           ADD COLUMN tls BOOLEAN NOT NULL DEFAULT FALSE,
+           ADD COLUMN tls_skip_verify BOOLEAN NOT NULL DEFAULT TRUE
 		`,
 
 		`CREATE TABLE agent_nodes (
