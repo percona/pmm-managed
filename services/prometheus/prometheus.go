@@ -102,7 +102,7 @@ func (svc *Service) Run(ctx context.Context) {
 
 			if err := svc.updateConfiguration(); err != nil {
 				svc.l.Errorf("Failed to update configuration, will retry: %+v.", err)
-				svc.UpdateConfiguration()
+				svc.RequestConfigurationUpdate()
 			}
 		}
 	}
@@ -359,6 +359,7 @@ func (svc *Service) saveConfigAndReload(cfg []byte) error {
 	return nil
 }
 
+// updateConfiguration updates Prometheus configuration.
 func (svc *Service) updateConfiguration() error {
 	start := time.Now()
 	defer func() {
@@ -374,8 +375,8 @@ func (svc *Service) updateConfiguration() error {
 	return svc.saveConfigAndReload(cfg)
 }
 
-// UpdateConfiguration requests Prometheus configuration update.
-func (svc *Service) UpdateConfiguration() {
+// RequestConfigurationUpdate requests Prometheus configuration update.
+func (svc *Service) RequestConfigurationUpdate() {
 	select {
 	case svc.sema <- struct{}{}:
 	default:

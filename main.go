@@ -358,7 +358,7 @@ func setupDatabase(ctx context.Context, sqlDB *sql.DB, prometheus *prometheus.Se
 		l.Warnf("Prometheus problem: %s.", err)
 		return false
 	}
-	prometheus.UpdateConfiguration()
+	prometheus.RequestConfigurationUpdate()
 
 	l.Info("Setup completed.")
 	return true

@@ -436,7 +436,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	}
 
 	err = s.supervisord.UpdateConfiguration(settings)
-	s.prometheus.UpdateConfiguration()
+	s.prometheus.RequestConfigurationUpdate()
 	if err != nil {
 		return nil, err
 	}
