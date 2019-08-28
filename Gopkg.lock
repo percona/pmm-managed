@@ -222,8 +222,8 @@
   version = "v0.5.0"
 
 [[projects]]
-  branch = "PMM-4544-node-data-in-management-api"
-  digest = "1:6a155570558d74def222d073c612fcff1b1448f29e1f0fcca590798ed55419ec"
+  branch = "PMM-2.0"
+  digest = "1:0e30ce05faa0f74f890149a99761ec34fc386ec6077fe31f308b1fbf5035608f"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -235,7 +235,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "21630fe1fb4229a8e61a8b129dbaf28a37f8bb33"
+  revision = "8f73fba53308b05f2898a01bed621f34d439b55a"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
