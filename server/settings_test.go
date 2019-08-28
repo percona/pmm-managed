@@ -29,10 +29,7 @@ func TestSettings(t *testing.T) {
 			Lr: "60s",
 		}
 		assert.Equal(t, expected, res.Payload.Settings.MetricsResolutions)
-		expectedDataRetention := &server.GetSettingsOKBodySettingsQAN{
-			DataRetention: "2592000s",
-		}
-		assert.Equal(t, expectedDataRetention, res.Payload.Settings.QAN)
+		assert.Equal(t, "2592000s", res.Payload.Settings.DataRetention)
 
 		t.Run("ChangeSettings", func(t *testing.T) {
 			teardown := func(t *testing.T) {
@@ -46,9 +43,7 @@ func TestSettings(t *testing.T) {
 							Mr: "5s",
 							Lr: "60s",
 						},
-						QAN: &server.ChangeSettingsParamsBodyQAN{
-							DataRetention: "720h",
-						},
+						DataRetention: "720h",
 					},
 					Context: pmmapitests.Context,
 				})
@@ -60,10 +55,7 @@ func TestSettings(t *testing.T) {
 					Lr: "60s",
 				}
 				assert.Equal(t, expected, res.Payload.Settings.MetricsResolutions)
-				expectedDataRetention := &server.ChangeSettingsOKBodySettingsQAN{
-					DataRetention: "2592000s",
-				}
-				assert.Equal(t, expectedDataRetention, res.Payload.Settings.QAN)
+				assert.Equal(t, "2592000s", res.Payload.Settings.DataRetention)
 			}
 
 			defer teardown(t)
@@ -134,9 +126,7 @@ func TestSettings(t *testing.T) {
 
 				res, err := serverClient.Default.Server.ChangeSettings(&server.ChangeSettingsParams{
 					Body: server.ChangeSettingsBody{
-						QAN: &server.ChangeSettingsParamsBodyQAN{
-							DataRetention: "1",
-						},
+						DataRetention: "1",
 					},
 					Context: pmmapitests.Context,
 				})
@@ -149,9 +139,7 @@ func TestSettings(t *testing.T) {
 
 				res, err := serverClient.Default.Server.ChangeSettings(&server.ChangeSettingsParams{
 					Body: server.ChangeSettingsBody{
-						QAN: &server.ChangeSettingsParamsBodyQAN{
-							DataRetention: "10s",
-						},
+						DataRetention: "10s",
 					},
 					Context: pmmapitests.Context,
 				})
@@ -164,9 +152,7 @@ func TestSettings(t *testing.T) {
 
 				res, err := serverClient.Default.Server.ChangeSettings(&server.ChangeSettingsParams{
 					Body: server.ChangeSettingsBody{
-						QAN: &server.ChangeSettingsParamsBodyQAN{
-							DataRetention: "36h",
-						},
+						DataRetention: "36h",
 					},
 					Context: pmmapitests.Context,
 				})
@@ -185,9 +171,7 @@ func TestSettings(t *testing.T) {
 							Mr: "15s",
 							Lr: "2m",
 						},
-						QAN: &server.ChangeSettingsParamsBodyQAN{
-							DataRetention: "240h",
-						},
+						DataRetention: "240h",
 					},
 					Context: pmmapitests.Context,
 				})
@@ -209,10 +193,7 @@ func TestSettings(t *testing.T) {
 					Lr: "120s",
 				}
 				assert.Equal(t, getExpected, getRes.Payload.Settings.MetricsResolutions)
-				expectedDataRetention := &server.GetSettingsOKBodySettingsQAN{
-					DataRetention: "864000s",
-				}
-				assert.Equal(t, expectedDataRetention, getRes.Payload.Settings.QAN)
+				assert.Equal(t, "864000s", res.Payload.Settings.DataRetention)
 			})
 
 			t.Run("grpc-gateway", func(t *testing.T) {
