@@ -111,8 +111,6 @@ var databaseSchema = [][]string{
 			username VARCHAR CHECK (username <> ''),
 			password VARCHAR CHECK (password <> ''),
 			metrics_url VARCHAR CHECK (metrics_url <> ''),
-			tls BOOLEAN,
-			tls_skip_verify BOOLEAN NULL,
 
 			PRIMARY KEY (agent_id),
 			FOREIGN KEY (runs_on_node_id) REFERENCES nodes (node_id),
@@ -120,6 +118,11 @@ var databaseSchema = [][]string{
 			CONSTRAINT runs_on_node_id_xor_pmm_agent_id CHECK ((runs_on_node_id IS NULL) <> (pmm_agent_id IS NULL)),
 			CONSTRAINT runs_on_node_id_only_for_pmm_agent CHECK ((runs_on_node_id IS NULL) <> (agent_type='` + string(PMMAgentType) + `'))
 		)`,
+
+		`ALTER TABLE agents 
+           ADD COLUMN tls BOOLEAN NOT NULL DEFAULT FALSE AFTER metrics_url,
+           ADD COLUMN tls_skip_verify BOOLEAN NOT NULL DEFAULT TRUE AFTER tls
+		`,
 
 		`CREATE TABLE agent_nodes (
 			agent_id VARCHAR NOT NULL,
