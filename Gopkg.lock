@@ -222,7 +222,7 @@
   version = "v0.5.0"
 
 [[projects]]
-  branch = "PMM-4289-supervisord-config"
+  branch = "PMM-2.0"
   digest = "1:2584483ea4609576e24e9219c91fa13b7ea71d3ca677e801120b46dad5511c25"
   name = "github.com/percona/pmm"
   packages = [
@@ -235,7 +235,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "53dc11a1215678ca998d4c1e73966850f6a9d3b9"
+  revision = "093b70a3828bcabe57a0b024d3120fc8b04643e8"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
