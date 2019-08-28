@@ -37,16 +37,13 @@ func nodeExporterConfig(node *models.Node, exporter *models.Agent) *agentpb.SetS
 		// "--collector.supervisord",
 		// "--collector.tcpstat",
 
-		// TODO
-		// "--collector.textfile",
-		// "--collector.textfile.directory",
-
-		"--web.listen-address=:" + tdp.left + " .listen_port " + tdp.right,
 		"--collector.standard.go",
 		"--collector.standard.process",
 		"--collector.textfile.lr",
 		"--collector.textfile.mr",
 		"--collector.textfile.hr",
+
+		"--web.listen-address=:" + tdp.left + " .listen_port " + tdp.right,
 	}
 
 	// do not enable Linux-specific collectors on macOS, that's useful for our development
