@@ -2,6 +2,7 @@ package server
 
 import (
 	"io"
+	"net"
 	"net/url"
 	"strings"
 	"testing"
@@ -136,13 +137,19 @@ func TestUpdate(t *testing.T) {
 			Context: pmmapitests.Context,
 		})
 		if err != nil {
+			// check that we know and understand all possible errors
 			switch err := err.(type) {
 			case *pmmapitests.ErrFromNginx:
 				// nothing
 			case *url.Error:
-				assert.Equal(t, io.EOF, err.Err)
+				switch err2 := err.Err.(type) {
+				case *net.OpError:
+					t.Logf("%[1]T %[1]s", err2)
+				default:
+					assert.Equal(t, io.EOF, err.Err, "%[1]T %[1]s", err)
+				}
 			case *server.UpdateStatusDefault:
-				assert.Equal(t, 503, err.Code())
+				assert.Equal(t, 503, err.Code(), "%[1]T %[1]s", err)
 			default:
 				t.Fatalf("%#v", err)
 			}
