@@ -58,12 +58,12 @@ var defaultLogs = map[string]logInfo{
 	// storages
 	"clickhouse-server.log":     {"/srv/logs/clickhouse-server.log"},
 	"clickhouse-server.err.log": {"/srv/logs/clickhouse-server.err.log"},
-	"postgres.log":              {"/srv/logs/postgres.log"},
+	"postgres.log":              {"/srv/logs/postgresql.log"},
 
 	// nginx
-	"nginx.log":        {"/srv/logs/nginx.log"},
-	"nginx_access.log": {"/var/log/nginx/access.log"},
-	"nginx_error.log":  {"/var/log/nginx/error.log"},
+	"nginx.log":        {"/srv/logs/nginx.startup.log"},
+	"nginx_access.log": {"/srv/logs/nginx.access.log"},
+	"nginx_error.log":  {"/srv/logs/nginx.error.log"},
 
 	// metrics
 	"prometheus.log": {"/srv/logs/prometheus.log"},
@@ -160,16 +160,6 @@ func (l *Logs) files(ctx context.Context) []fileContent {
 	b, err := cmd.CombinedOutput() //nolint:gosec
 	files = append(files, fileContent{
 		Name: "supervisorctl_status.log",
-		Data: b,
-		Err:  err,
-	})
-
-	// add systemd status for OVF/AMI
-	cmd = exec.CommandContext(ctx, "systemctl", "-l", "status") //nolint:gosec
-	pdeathsig.Set(cmd, unix.SIGKILL)
-	b, err = cmd.CombinedOutput() //nolint:gosec
-	files = append(files, fileContent{
-		Name: "systemctl_status.log",
 		Data: b,
 		Err:  err,
 	})
