@@ -37,9 +37,11 @@ func nodeExporterConfig(node *models.Node, exporter *models.Agent) *agentpb.SetS
 		// "--collector.supervisord",
 		// "--collector.tcpstat",
 
-		// TODO
-		// "--collector.textfile",
-		// "--collector.textfile.directory",
+		"--collector.standard.go",
+		"--collector.standard.process",
+		"--collector.textfile.lr",
+		"--collector.textfile.mr",
+		"--collector.textfile.hr",
 
 		"--web.listen-address=:" + tdp.left + " .listen_port " + tdp.right,
 	}
@@ -57,7 +59,6 @@ func nodeExporterConfig(node *models.Node, exporter *models.Agent) *agentpb.SetS
 			"--collector.processes",
 			"--collector.qdisc",
 			"--collector.wifi",
-
 			// add more netstat fields
 			"--collector.netstat.fields=^(.*_(InErrors|InErrs|InCsumErrors)"+
 				"|Tcp_(ActiveOpens|PassiveOpens|RetransSegs|CurrEstab|AttemptFails|OutSegs|InSegs|EstabResets|OutRsts|OutSegs)|Tcp_Rto(Algorithm|Min|Max)"+

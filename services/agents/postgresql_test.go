@@ -42,6 +42,9 @@ func TestPostgresExporterConfig(t *testing.T) {
 		TemplateLeftDelim:  "{{",
 		TemplateRightDelim: "}}",
 		Args: []string{
+			"--collect.custom_query.hr",
+			"--collect.custom_query.lr",
+			"--collect.custom_query.mr",
 			"--web.listen-address=:{{ .listen_port }}",
 		},
 		Env: []string{
