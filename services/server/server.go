@@ -52,6 +52,7 @@ type Server struct {
 	pmmUpdateAuthFileM sync.Mutex
 
 	envRW                sync.RWMutex
+	envDisableUpdates    bool
 	envDisableTelemetry  bool
 	envMetricsResolution time.Duration
 	envDataRetention     time.Duration
@@ -100,11 +101,21 @@ func (s *Server) UpdateSettingsFromEnv(env []string) error {
 
 			k, v := strings.ToUpper(p[0]), strings.ToLower(p[1])
 			var err error
+			var value interface{}
 			switch k {
+			case "DISABLE_UPDATES":
+				var b bool
+				b, err = strconv.ParseBool(v)
+				if err == nil {
+					value = b
+					s.envDisableUpdates = b
+				}
+
 			case "DISABLE_TELEMETRY":
 				var b bool
 				b, err = strconv.ParseBool(v)
 				if err == nil {
+					value = b
 					s.envDisableTelemetry = b
 					settings.Telemetry.Disabled = b
 				}
@@ -113,6 +124,7 @@ func (s *Server) UpdateSettingsFromEnv(env []string) error {
 				var d time.Duration
 				d, err = time.ParseDuration(v)
 				if err == nil {
+					value = d
 					s.envMetricsResolution = d
 					settings.MetricsResolutions.HR = d
 				}
@@ -121,12 +133,19 @@ func (s *Server) UpdateSettingsFromEnv(env []string) error {
 				var d time.Duration
 				d, err = time.ParseDuration(v)
 				if err == nil {
+					value = d
 					s.envDataRetention = d
-					settings.QAN.DataRetention = d
+					settings.DataRetention = d
 				}
+
+			default:
+				s.l.Tracef("Skipping %q.", e)
+				continue
 			}
 
-			if err != nil {
+			if err == nil {
+				s.l.Infof("Environment variable %q parsed: %v.", e, value)
+			} else {
 				s.l.Warnf("Failed to parse environment variable %q: %s.", e, err)
 			}
 		}
@@ -239,6 +258,14 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 
 // StartUpdate starts PMM Server update.
 func (s *Server) StartUpdate(ctx context.Context, req *serverpb.StartUpdateRequest) (*serverpb.StartUpdateResponse, error) {
+	s.envRW.RLock()
+	updatesDisabled := s.envDisableUpdates
+	s.envRW.RUnlock()
+
+	if updatesDisabled {
+		return nil, status.Error(codes.FailedPrecondition, "Updates are disabled via DISABLE_UPDATES environment variable.")
+	}
+
 	offset, err := s.supervisord.StartUpdate()
 	if err != nil {
 		return nil, err
@@ -265,11 +292,11 @@ func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusReq
 		return nil, status.Error(codes.PermissionDenied, "Invalid authentication token.")
 	}
 
-	// wait up to 20 seconds for new log lines
+	// wait up to 30 seconds for new log lines
 	var lines []string
 	var newOffset uint32
 	var done bool
-	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	for ctx.Err() == nil {
 		lines, newOffset, err = s.supervisord.UpdateLog(req.LogOffset)
@@ -344,14 +371,15 @@ func convertSettings(s *models.Settings) *serverpb.Settings {
 			Mr: ptypes.DurationProto(s.MetricsResolutions.MR),
 			Lr: ptypes.DurationProto(s.MetricsResolutions.LR),
 		},
-		Qan: &serverpb.QAN{
-			DataRetention: ptypes.DurationProto(s.QAN.DataRetention),
-		},
+		DataRetention: ptypes.DurationProto(s.DataRetention),
 	}
 }
 
 // GetSettings returns current PMM Server settings.
 func (s *Server) GetSettings(ctx context.Context, req *serverpb.GetSettingsRequest) (*serverpb.GetSettingsResponse, error) {
+	s.envRW.RLock()
+	defer s.envRW.RUnlock()
+
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		return nil, err
@@ -359,6 +387,7 @@ func (s *Server) GetSettings(ctx context.Context, req *serverpb.GetSettingsReque
 	res := &serverpb.GetSettingsResponse{
 		Settings: convertSettings(settings),
 	}
+	res.Settings.UpdatesDisabled = s.envDisableUpdates
 	return res, nil
 }
 
@@ -404,11 +433,11 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		}
 
 		// absent or zero value means "do not change"
-		if dr, e := ptypes.Duration(req.GetQan().GetDataRetention()); e == nil && dr != 0 {
+		if dr, e := ptypes.Duration(req.GetDataRetention()); e == nil && dr != 0 {
 			if s.envDataRetention != 0 {
-				return status.Error(codes.FailedPrecondition, "Data retension for queries is set via DATA_RETENTION environment variable.")
+				return status.Error(codes.FailedPrecondition, "Data retention for queries is set via DATA_RETENTION environment variable.")
 			}
-			settings.QAN.DataRetention = dr
+			settings.DataRetention = dr
 		}
 
 		return models.SaveSettings(tx, settings)
@@ -417,13 +446,16 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		return nil, err
 	}
 
-	// TODO: add method to update QAN-API configuration (qan-api.ini).
-
-	s.prometheus.UpdateConfiguration()
+	err = s.supervisord.UpdateConfiguration(settings)
+	s.prometheus.RequestConfigurationUpdate()
+	if err != nil {
+		return nil, err
+	}
 
 	res := &serverpb.ChangeSettingsResponse{
 		Settings: convertSettings(settings),
 	}
+	res.Settings.UpdatesDisabled = s.envDisableUpdates
 	return res, nil
 }
 
