@@ -86,12 +86,12 @@ func TestScrapeConfig(t *testing.T) {
 						"meminfo_numa",
 						"netdev",
 						"netstat",
+						"standard.go",
+						"standard.process",
 						"stat",
+						"textfile.hr",
 						"time",
 						"vmstat",
-						"textfile.hr",
-						"standard.process",
-						"standard.go",
 					}},
 				},
 				{
@@ -139,9 +139,8 @@ func TestScrapeConfig(t *testing.T) {
 					Params: url.Values{"collect[]": []string{
 						"bonding",
 						"entropy",
-						"filesystem",
-						"uname",
 						"textfile.lr",
+						"uname",
 					}},
 				},
 			}

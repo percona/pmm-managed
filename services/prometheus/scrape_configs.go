@@ -185,12 +185,12 @@ func scraperConfigsForNodeExporter(s *models.MetricsResolutions, node *models.No
 		"meminfo_numa",
 		"netdev",
 		"netstat",
+		"standard.go",
+		"standard.process",
 		"stat",
+		"textfile.hr",
 		"time",
 		"vmstat",
-		"textfile.hr",
-		"standard.process",
-		"standard.go",
 	}
 	hr, err := scraperConfigForStandardExporter(s.HR, node, nil, agent, hrc)
 	if err != nil {
@@ -208,9 +208,8 @@ func scraperConfigsForNodeExporter(s *models.MetricsResolutions, node *models.No
 	lrc := []string{
 		"bonding",
 		"entropy",
-		"filesystem",
-		"uname",
 		"textfile.lr",
+		"uname",
 	}
 	lr, err := scraperConfigForStandardExporter(s.LR, node, nil, agent, lrc)
 	if err != nil {
