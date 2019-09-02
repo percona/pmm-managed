@@ -164,7 +164,7 @@ func (l *Logs) files(ctx context.Context) []fileContent {
 		Err:  err,
 	})
 
-        // add systemd status for OVF/AMI
+	// add systemd status for OVF/AMI
 	cmd = exec.CommandContext(ctx, "systemctl", "-l", "status") //nolint:gosec
 	pdeathsig.Set(cmd, unix.SIGKILL)
 	b, err = cmd.CombinedOutput() //nolint:gosec
