@@ -53,7 +53,7 @@ const (
 var defaultLogs = map[string]logInfo{
 	// system
 	"cron.log":        {"/srv/logs/cron.log"},
-	"supervisord.log": {"/var/log/supervisor/supervisord.log"},
+	"supervisord.log": {"/srv/logs/supervisord.log"},
 
 	// storages
 	"clickhouse-server.log":     {"/srv/logs/clickhouse-server.log"},
@@ -67,7 +67,7 @@ var defaultLogs = map[string]logInfo{
 
 	// metrics
 	"prometheus.log": {"/srv/logs/prometheus.log"},
-	"grafana.log":    {"/var/log/grafana/grafana.log"},
+	"grafana.log":    {"/srv/logs/grafana.log"},
 
 	// core PMM components
 	"pmm-managed.log": {"/srv/logs/pmm-managed.log"},
