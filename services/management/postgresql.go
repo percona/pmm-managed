@@ -18,11 +18,11 @@ package management
 
 import (
 	"context"
-	"github.com/pkg/errors"
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/api/managementpb"
+	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
