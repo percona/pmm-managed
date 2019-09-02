@@ -1,0 +1,58 @@
+package management
+
+import (
+	"github.com/AlekSi/pointer"
+	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm/api/inventorypb"
+	"github.com/percona/pmm/api/managementpb"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"gopkg.in/reform.v1"
+)
+
+func addNode(tx *reform.TX, addNodeParams *managementpb.AddNodeParams, address string) (*models.Node, error) {
+	var nodeType models.NodeType
+	switch addNodeParams.NodeType {
+	case inventorypb.NodeType_GENERIC_NODE:
+		nodeType = models.GenericNodeType
+	case inventorypb.NodeType_CONTAINER_NODE:
+		nodeType = models.ContainerNodeType
+	case inventorypb.NodeType_REMOTE_NODE:
+		nodeType = models.ContainerNodeType
+	default:
+		return nil, status.Errorf(codes.InvalidArgument, "Unsupported Node type %q.", addNodeParams.NodeType)
+	}
+	node, err := models.CreateNode(tx.Querier, nodeType, &models.CreateNodeParams{
+		NodeName:      addNodeParams.NodeName,
+		MachineID:     pointer.ToStringOrNil(addNodeParams.MachineId),
+		Distro:        addNodeParams.Distro,
+		NodeModel:     addNodeParams.NodeModel,
+		AZ:            addNodeParams.Az,
+		ContainerID:   pointer.ToStringOrNil(addNodeParams.ContainerId),
+		ContainerName: pointer.ToStringOrNil(addNodeParams.ContainerName),
+		CustomLabels:  addNodeParams.CustomLabels,
+		Address:       address,
+		Region:        pointer.ToStringOrNil(addNodeParams.Region),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return node, nil
+}
+
+func validateNodeParamsOneOf(nodeID string, nodeName string, addNodeParams *managementpb.AddNodeParams) error {
+	got := 0
+	if nodeID != "" {
+		got++
+	}
+	if nodeName != "" {
+		got++
+	}
+	if addNodeParams != nil {
+		got++
+	}
+	if got != 1 {
+		return status.Errorf(codes.InvalidArgument, "expected only one param; node id, node name or register node params")
+	}
+	return nil
+}

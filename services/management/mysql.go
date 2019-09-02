@@ -18,12 +18,11 @@ package management
 
 import (
 	"context"
+	"github.com/pkg/errors"
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/api/managementpb"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -61,31 +60,9 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 			}
 			nodeID = node.NodeID
 		case req.AddNode != nil:
-			var nodeType models.NodeType
-			switch req.AddNode.NodeType {
-			case inventorypb.NodeType_GENERIC_NODE:
-				nodeType = models.GenericNodeType
-			case inventorypb.NodeType_CONTAINER_NODE:
-				nodeType = models.ContainerNodeType
-			case inventorypb.NodeType_REMOTE_NODE:
-				nodeType = models.ContainerNodeType
-			default:
-				return status.Errorf(codes.InvalidArgument, "Unsupported Node type %q.", req.AddNode.NodeType)
-			}
-			node, err := models.CreateNode(tx.Querier, nodeType, &models.CreateNodeParams{
-				NodeName:      req.AddNode.NodeName,
-				MachineID:     pointer.ToStringOrNil(req.AddNode.MachineId),
-				Distro:        req.AddNode.Distro,
-				NodeModel:     req.AddNode.NodeModel,
-				AZ:            req.AddNode.Az,
-				ContainerID:   pointer.ToStringOrNil(req.AddNode.ContainerId),
-				ContainerName: pointer.ToStringOrNil(req.AddNode.ContainerName),
-				CustomLabels:  req.AddNode.CustomLabels,
-				Address:       req.Address,
-				Region:        pointer.ToStringOrNil(req.AddNode.Region),
-			})
+			node, err := addNode(tx, req.AddNode, req.Address)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "can't create new node")
 			}
 			nodeID = node.NodeID
 		}
@@ -175,19 +152,3 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 	return res, nil
 }
 
-func validateNodeParamsOneOf(nodeID string, nodeName string, addNodeParams *managementpb.AddNodeParams) error {
-	got := 0
-	if nodeID != "" {
-		got++
-	}
-	if nodeName != "" {
-		got++
-	}
-	if addNodeParams != nil {
-		got++
-	}
-	if got != 1 {
-		return status.Errorf(codes.InvalidArgument, "expected only one param; node id, node name or register node params")
-	}
-	return nil
-}

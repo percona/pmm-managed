@@ -18,6 +18,7 @@ package management
 
 import (
 	"context"
+	"github.com/pkg/errors"
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb"
@@ -44,10 +45,31 @@ func NewMongoDBService(db *reform.DB, registry agentsRegistry) *MongoDBService {
 func (s *MongoDBService) Add(ctx context.Context, req *managementpb.AddMongoDBRequest) (*managementpb.AddMongoDBResponse, error) {
 	res := new(managementpb.AddMongoDBResponse)
 
+	if err := validateNodeParamsOneOf(req.NodeId, req.NodeName, req.AddNode); err != nil {
+		return nil, err
+	}
+
 	if e := s.db.InTransaction(func(tx *reform.TX) error {
+		var nodeID string
+		switch {
+		case req.NodeId != "":
+			nodeID = req.NodeId
+		case req.NodeName != "":
+			node, err := models.FindNodeByName(tx.Querier, req.NodeName)
+			if err != nil {
+				return err
+			}
+			nodeID = node.NodeID
+		case req.AddNode != nil:
+			node, err := addNode(tx, req.AddNode, req.Address)
+			if err != nil {
+				return errors.Wrap(err, "can't create new node")
+			}
+			nodeID = node.NodeID
+		}
 		service, err := models.AddNewService(tx.Querier, models.MongoDBServiceType, &models.AddDBMSServiceParams{
 			ServiceName:    req.ServiceName,
-			NodeID:         req.NodeId,
+			NodeID:         nodeID,
 			Environment:    req.Environment,
 			Cluster:        req.Cluster,
 			ReplicationSet: req.ReplicationSet,
