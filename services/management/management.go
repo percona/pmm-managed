@@ -29,9 +29,9 @@ func nodeID(tx *reform.TX, nodeID, nodeName string, addNodeParams *managementpb.
 		if err != nil {
 			return "", err
 		}
-		nodeID = node.NodeID
+		return node.NodeID, nil
 	}
-	return nodeID, nil
+	return "", status.Errorf(codes.InvalidArgument,"node_id, node_name or add_node is required")
 }
 
 func addNode(tx *reform.TX, addNodeParams *managementpb.AddNodeParams, address string) (*models.Node, error) {
@@ -58,18 +58,16 @@ func addNode(tx *reform.TX, addNodeParams *managementpb.AddNodeParams, address s
 }
 
 func nodeType(inputNodeType inventorypb.NodeType) (models.NodeType, error) {
-	var nodeType models.NodeType
 	switch inputNodeType {
 	case inventorypb.NodeType_GENERIC_NODE:
-		nodeType = models.GenericNodeType
+		return models.GenericNodeType, nil
 	case inventorypb.NodeType_CONTAINER_NODE:
-		nodeType = models.ContainerNodeType
+		return models.ContainerNodeType, nil
 	case inventorypb.NodeType_REMOTE_NODE:
-		nodeType = models.RemoteNodeType
+		return models.RemoteNodeType, nil
 	default:
 		return "", status.Errorf(codes.InvalidArgument, "Unsupported Node type %q.", inputNodeType)
 	}
-	return nodeType, nil
 }
 
 func validateNodeParamsOneOf(nodeID, nodeName string, addNodeParams *managementpb.AddNodeParams) error {
