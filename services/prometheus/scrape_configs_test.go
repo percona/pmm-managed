@@ -113,7 +113,7 @@ func TestScrapeConfig(t *testing.T) {
 				MetricsPath:    "/metrics-hr",
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
+						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
 						Labels: model.LabelSet{
 							"_some_agent_label":   "baz",
 							"_some_node_label":    "foo",
@@ -134,7 +134,7 @@ func TestScrapeConfig(t *testing.T) {
 				MetricsPath:    "/metrics-mr",
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
+						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
 						Labels: model.LabelSet{
 							"_some_agent_label":   "baz",
 							"_some_node_label":    "foo",
@@ -155,7 +155,7 @@ func TestScrapeConfig(t *testing.T) {
 				MetricsPath:    "/metrics-lr",
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
+						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
 						Labels: model.LabelSet{
 							"_some_agent_label":   "baz",
 							"_some_node_label":    "foo",
@@ -171,7 +171,7 @@ func TestScrapeConfig(t *testing.T) {
 				},
 			}}
 
-			actual, err := scrapeConfigsForMySQLdExporter(s, node, service, agent)
+			actual, err := scrapeConfigsForMySQLdExporter(s, "4.5.6.7", node, service, agent)
 			require.NoError(t, err)
 			require.Len(t, actual, len(expected))
 			for i := 0; i < len(expected); i++ {
@@ -187,7 +187,7 @@ func TestScrapeConfig(t *testing.T) {
 				ListenPort:   pointer.ToUint16(12345),
 			}
 
-			_, err := scrapeConfigsForMySQLdExporter(s, node, service, agent)
+			_, err := scrapeConfigsForMySQLdExporter(s, "4.5.6.7", node, service, agent)
 			require.EqualError(t, err, "failed to decode custom labels: unexpected end of JSON input")
 		})
 	})
@@ -221,7 +221,7 @@ func TestScrapeConfig(t *testing.T) {
 				MetricsPath:    "/metrics",
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
+						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
 						Labels: model.LabelSet{
 							"_some_agent_label":   "baz",
 							"_some_node_label":    "foo",
@@ -237,7 +237,7 @@ func TestScrapeConfig(t *testing.T) {
 				},
 			}
 
-			actual, err := scrapeConfigForMongoDBExporter(time.Second, node, service, agent)
+			actual, err := scrapeConfigForMongoDBExporter(time.Second, "4.5.6.7", node, service, agent)
 			require.NoError(t, err)
 			assertScrappedConfigsEqual(t, expected, actual)
 		})
@@ -250,7 +250,7 @@ func TestScrapeConfig(t *testing.T) {
 				ListenPort:   pointer.ToUint16(12345),
 			}
 
-			_, err := scrapeConfigForMongoDBExporter(time.Second, node, service, agent)
+			_, err := scrapeConfigForMongoDBExporter(time.Second, "4.5.6.7", node, service, agent)
 			require.EqualError(t, err, "failed to decode custom labels: unexpected end of JSON input")
 		})
 	})
@@ -287,7 +287,7 @@ func TestScrapeConfig(t *testing.T) {
 				},
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
+						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
 						Labels: model.LabelSet{
 							"_some_agent_label":   "baz",
 							"_some_node_label":    "foo",
@@ -303,7 +303,7 @@ func TestScrapeConfig(t *testing.T) {
 				},
 			}
 
-			actual, err := scrapeConfigForPostgresExporter(time.Second, node, service, agent)
+			actual, err := scrapeConfigForPostgresExporter(time.Second, "4.5.6.7", node, service, agent)
 			require.NoError(t, err)
 			assertScrappedConfigsEqual(t, expected, actual)
 		})
@@ -316,7 +316,7 @@ func TestScrapeConfig(t *testing.T) {
 				ListenPort:   pointer.ToUint16(12345),
 			}
 
-			_, err := scrapeConfigForPostgresExporter(time.Second, node, service, agent)
+			_, err := scrapeConfigForPostgresExporter(time.Second, "4.5.6.7", node, service, agent)
 			require.EqualError(t, err, "failed to decode custom labels: unexpected end of JSON input")
 		})
 	})
@@ -350,7 +350,7 @@ func TestScrapeConfig(t *testing.T) {
 				MetricsPath:    "/metrics",
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
+						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
 						Labels: model.LabelSet{
 							"_some_agent_label":   "baz",
 							"_some_node_label":    "foo",
@@ -366,7 +366,7 @@ func TestScrapeConfig(t *testing.T) {
 				},
 			}
 
-			actual, err := scrapeConfigForProxySQLExporter(time.Second, node, service, agent)
+			actual, err := scrapeConfigForProxySQLExporter(time.Second, "4.5.6.7", node, service, agent)
 			require.NoError(t, err)
 			assertScrappedConfigsEqual(t, expected, actual)
 		})
@@ -379,7 +379,7 @@ func TestScrapeConfig(t *testing.T) {
 				ListenPort:   pointer.ToUint16(12345),
 			}
 
-			_, err := scrapeConfigForProxySQLExporter(time.Second, node, service, agent)
+			_, err := scrapeConfigForProxySQLExporter(time.Second, node.Address, node, service, agent)
 			require.EqualError(t, err, "failed to decode custom labels: unexpected end of JSON input")
 		})
 	})
