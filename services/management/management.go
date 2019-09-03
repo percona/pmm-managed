@@ -30,8 +30,9 @@ func nodeID(tx *reform.TX, nodeID, nodeName string, addNodeParams *managementpb.
 			return "", err
 		}
 		return node.NodeID, nil
+	default:
+		return "", status.Errorf(codes.InvalidArgument, "node_id, node_name or add_node is required")
 	}
-	return "", status.Errorf(codes.InvalidArgument, "node_id, node_name or add_node is required")
 }
 
 func addNode(tx *reform.TX, addNodeParams *managementpb.AddNodeParams, address string) (*models.Node, error) {
