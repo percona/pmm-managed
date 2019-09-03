@@ -12,16 +12,9 @@ import (
 )
 
 func addNode(tx *reform.TX, addNodeParams *managementpb.AddNodeParams, address string) (*models.Node, error) {
-	var nodeType models.NodeType
-	switch addNodeParams.NodeType {
-	case inventorypb.NodeType_GENERIC_NODE:
-		nodeType = models.GenericNodeType
-	case inventorypb.NodeType_CONTAINER_NODE:
-		nodeType = models.ContainerNodeType
-	case inventorypb.NodeType_REMOTE_NODE:
-		nodeType = models.ContainerNodeType
-	default:
-		return nil, status.Errorf(codes.InvalidArgument, "Unsupported Node type %q.", addNodeParams.NodeType)
+	nodeType, err := nodeType(addNodeParams.NodeType)
+	if err != nil {
+		return nil, err
 	}
 	node, err := models.CreateNode(tx.Querier, nodeType, &models.CreateNodeParams{
 		NodeName:      addNodeParams.NodeName,
@@ -39,6 +32,21 @@ func addNode(tx *reform.TX, addNodeParams *managementpb.AddNodeParams, address s
 		return nil, err
 	}
 	return node, nil
+}
+
+func nodeType(inputNodeType inventorypb.NodeType) (models.NodeType, error) {
+	var nodeType models.NodeType
+	switch inputNodeType {
+	case inventorypb.NodeType_GENERIC_NODE:
+		nodeType = models.GenericNodeType
+	case inventorypb.NodeType_CONTAINER_NODE:
+		nodeType = models.ContainerNodeType
+	case inventorypb.NodeType_REMOTE_NODE:
+		nodeType = models.RemoteNodeType
+	default:
+		return "", status.Errorf(codes.InvalidArgument, "Unsupported Node type %q.", inputNodeType)
+	}
+	return nodeType, nil
 }
 
 func validateNodeParamsOneOf(nodeID, nodeName string, addNodeParams *managementpb.AddNodeParams) error {

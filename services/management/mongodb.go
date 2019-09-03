@@ -22,7 +22,6 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/api/managementpb"
-	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -63,7 +62,7 @@ func (s *MongoDBService) Add(ctx context.Context, req *managementpb.AddMongoDBRe
 		case req.AddNode != nil:
 			node, err := addNode(tx, req.AddNode, req.Address)
 			if err != nil {
-				return errors.Wrap(err, "can't create new node")
+				return err
 			}
 			nodeID = node.NodeID
 		}
