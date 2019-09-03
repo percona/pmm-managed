@@ -43,27 +43,10 @@ func NewMySQLService(db *reform.DB, registry agentsRegistry) *MySQLService {
 func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLRequest) (*managementpb.AddMySQLResponse, error) {
 	res := new(managementpb.AddMySQLResponse)
 
-	if err := validateNodeParamsOneOf(req.NodeId, req.NodeName, req.AddNode); err != nil {
-		return nil, err
-	}
-
 	if e := s.db.InTransaction(func(tx *reform.TX) error {
-		var nodeID string
-		switch {
-		case req.NodeId != "":
-			nodeID = req.NodeId
-		case req.NodeName != "":
-			node, err := models.FindNodeByName(tx.Querier, req.NodeName)
-			if err != nil {
-				return err
-			}
-			nodeID = node.NodeID
-		case req.AddNode != nil:
-			node, err := addNode(tx, req.AddNode, req.Address)
-			if err != nil {
-				return err
-			}
-			nodeID = node.NodeID
+		nodeID, err := nodeID(tx, req.NodeId, req.NodeName, req.AddNode, req.Address)
+		if err != nil {
+			return err
 		}
 		service, err := models.AddNewService(tx.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
 			ServiceName:    req.ServiceName,

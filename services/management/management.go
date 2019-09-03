@@ -11,6 +11,29 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
+func nodeID(tx *reform.TX, nodeID, nodeName string, addNodeParams *managementpb.AddNodeParams, address string) (string, error) {
+	if err := validateNodeParamsOneOf(nodeID, nodeName, addNodeParams); err != nil {
+		return "", err
+	}
+	switch {
+	case nodeID != "":
+		return nodeID, nil
+	case nodeName != "":
+		node, err := models.FindNodeByName(tx.Querier, nodeName)
+		if err != nil {
+			return "", err
+		}
+		return node.NodeID, nil
+	case addNodeParams != nil:
+		node, err := addNode(tx, addNodeParams, address)
+		if err != nil {
+			return "", err
+		}
+		nodeID = node.NodeID
+	}
+	return nodeID, nil
+}
+
 func addNode(tx *reform.TX, addNodeParams *managementpb.AddNodeParams, address string) (*models.Node, error) {
 	nodeType, err := nodeType(addNodeParams.NodeType)
 	if err != nil {
