@@ -7,7 +7,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
-	
+
 	"github.com/percona/pmm-managed/models"
 )
 
@@ -41,7 +41,7 @@ func addNode(tx *reform.TX, addNodeParams *managementpb.AddNodeParams, address s
 	return node, nil
 }
 
-func validateNodeParamsOneOf(nodeID string, nodeName string, addNodeParams *managementpb.AddNodeParams) error {
+func validateNodeParamsOneOf(nodeID, nodeName string, addNodeParams *managementpb.AddNodeParams) error {
 	got := 0
 	if nodeID != "" {
 		got++
