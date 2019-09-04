@@ -29,20 +29,21 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/percona/pmm-managed/models"
+	config_util "github.com/percona/pmm-managed/services/prometheus/internal/common/config"
 	"github.com/percona/pmm-managed/services/prometheus/internal/prometheus/config"
 	sd_config "github.com/percona/pmm-managed/services/prometheus/internal/prometheus/discovery/config"
 	"github.com/percona/pmm-managed/services/prometheus/internal/prometheus/discovery/targetgroup"
 )
 
 func TestScrapeConfig(t *testing.T) {
+	s := &models.MetricsResolutions{
+		HR: time.Second,
+		MR: 5 * time.Second,
+		LR: 60 * time.Second,
+	}
+
 	t.Run("scrapeConfigsForNodeExporter", func(t *testing.T) {
 		t.Run("Normal", func(t *testing.T) {
-			s := &models.MetricsResolutions{
-				HR: time.Second,
-				MR: 5 * time.Second,
-				LR: 60 * time.Second,
-			}
-
 			node := &models.Node{
 				NodeID:       "/node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d",
 				NodeName:     "node_name",
@@ -63,6 +64,12 @@ func TestScrapeConfig(t *testing.T) {
 					ScrapeInterval: model.Duration(s.HR),
 					ScrapeTimeout:  scrapeTimeout(s.HR),
 					MetricsPath:    "/metrics",
+					HTTPClientConfig: config_util.HTTPClientConfig{
+						BasicAuth: &config_util.BasicAuth{
+							Username: "pmm",
+							Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
+						},
+					},
 					ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 						StaticConfigs: []*targetgroup.Group{{
 							Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
@@ -157,12 +164,6 @@ func TestScrapeConfig(t *testing.T) {
 	})
 
 	t.Run("scrapeConfigsForMySQLdExporter", func(t *testing.T) {
-		s := &models.MetricsResolutions{
-			HR: time.Second,
-			MR: 5 * time.Second,
-			LR: 60 * time.Second,
-		}
-
 		t.Run("Normal", func(t *testing.T) {
 			node := &models.Node{
 				NodeID:       "/node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d",
@@ -189,6 +190,12 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeInterval: model.Duration(s.HR),
 				ScrapeTimeout:  scrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
+				HTTPClientConfig: config_util.HTTPClientConfig{
+					BasicAuth: &config_util.BasicAuth{
+						Username: "pmm",
+						Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
+					},
+				},
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
 						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
@@ -309,12 +316,6 @@ func TestScrapeConfig(t *testing.T) {
 
 	t.Run("scrapeConfigsForMongoDBExporter", func(t *testing.T) {
 		t.Run("Normal", func(t *testing.T) {
-			s := &models.MetricsResolutions{
-				HR: time.Second,
-				MR: 5 * time.Second,
-				LR: 60 * time.Second,
-			}
-
 			node := &models.Node{
 				NodeID:       "/node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d",
 				NodeName:     "node_name",
@@ -341,6 +342,12 @@ func TestScrapeConfig(t *testing.T) {
 					ScrapeInterval: model.Duration(s.HR),
 					ScrapeTimeout:  scrapeTimeout(s.HR),
 					MetricsPath:    "/metrics",
+					HTTPClientConfig: config_util.HTTPClientConfig{
+						BasicAuth: &config_util.BasicAuth{
+							Username: "pmm",
+							Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
+						},
+					},
 					ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 						StaticConfigs: []*targetgroup.Group{{
 							Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
@@ -382,25 +389,13 @@ func TestScrapeConfig(t *testing.T) {
 				ListenPort:   pointer.ToUint16(12345),
 			}
 
-			res := &models.MetricsResolutions{
-				HR: time.Second,
-				MR: 5 * time.Second,
-				LR: 60 * time.Second,
-			}
-
-			_, err := scrapeConfigsForMongoDBExporter(res, "", node, service, agent)
+			_, err := scrapeConfigsForMongoDBExporter(s, "", node, service, agent)
 			require.EqualError(t, err, "failed to decode custom labels: unexpected end of JSON input")
 		})
 	})
 
 	t.Run("scrapeConfigsForPostgresExporter", func(t *testing.T) {
 		t.Run("Normal", func(t *testing.T) {
-			s := &models.MetricsResolutions{
-				HR: time.Second,
-				MR: 5 * time.Second,
-				LR: 60 * time.Second,
-			}
-
 			node := &models.Node{
 				NodeID:       "/node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d",
 				NodeName:     "node_name",
@@ -427,6 +422,12 @@ func TestScrapeConfig(t *testing.T) {
 					ScrapeInterval: model.Duration(s.HR),
 					ScrapeTimeout:  scrapeTimeout(s.HR),
 					MetricsPath:    "/metrics",
+					HTTPClientConfig: config_util.HTTPClientConfig{
+						BasicAuth: &config_util.BasicAuth{
+							Username: "pmm",
+							Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
+						},
+					},
 					ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 						StaticConfigs: []*targetgroup.Group{{
 							Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
@@ -518,25 +519,13 @@ func TestScrapeConfig(t *testing.T) {
 				ListenPort:   pointer.ToUint16(12345),
 			}
 
-			res := &models.MetricsResolutions{
-				HR: time.Second,
-				MR: 5 * time.Second,
-				LR: 60 * time.Second,
-			}
-
-			_, err := scrapeConfigsForPostgresExporter(res, "", node, service, agent)
+			_, err := scrapeConfigsForPostgresExporter(s, "", node, service, agent)
 			require.EqualError(t, err, "failed to decode custom labels: unexpected end of JSON input")
 		})
 	})
 
 	t.Run("scrapeConfigsForProxySQLExporter", func(t *testing.T) {
 		t.Run("Normal", func(t *testing.T) {
-			s := &models.MetricsResolutions{
-				HR: time.Second,
-				MR: 5 * time.Second,
-				LR: 60 * time.Second,
-			}
-
 			node := &models.Node{
 				NodeID:       "/node_id/7cc6ec12-4951-48c6-a4d5-7c3141fa4107",
 				NodeName:     "node_name",
@@ -563,6 +552,12 @@ func TestScrapeConfig(t *testing.T) {
 					ScrapeInterval: model.Duration(s.HR),
 					ScrapeTimeout:  scrapeTimeout(s.HR),
 					MetricsPath:    "/metrics",
+					HTTPClientConfig: config_util.HTTPClientConfig{
+						BasicAuth: &config_util.BasicAuth{
+							Username: "pmm",
+							Password: "/agent_id/782589c6-d3af-45e5-aa20-7f664a690940",
+						},
+					},
 					ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 						StaticConfigs: []*targetgroup.Group{{
 							Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
@@ -604,13 +599,7 @@ func TestScrapeConfig(t *testing.T) {
 				ListenPort:   pointer.ToUint16(12345),
 			}
 
-			res := &models.MetricsResolutions{
-				HR: time.Second,
-				MR: 5 * time.Second,
-				LR: 60 * time.Second,
-			}
-
-			_, err := scrapeConfigsForProxySQLExporter(res, "", node, service, agent)
+			_, err := scrapeConfigsForProxySQLExporter(s, "", node, service, agent)
 			require.EqualError(t, err, "failed to decode custom labels: unexpected end of JSON input")
 		})
 	})
