@@ -166,7 +166,7 @@ func TestScrapeConfig(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, actual, len(expected))
 			for i := 0; i < len(expected); i++ {
-				assertScrappedConfigsEqual(t, expected[i], actual[i])
+				assertScrapeConfigsEqual(t, expected[i], actual[i])
 			}
 		})
 	})
@@ -317,7 +317,7 @@ func TestScrapeConfig(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, actual, len(expected))
 			for i := 0; i < len(expected); i++ {
-				assertScrappedConfigsEqual(t, expected[i], actual[i])
+				assertScrapeConfigsEqual(t, expected[i], actual[i])
 			}
 		})
 
@@ -369,7 +369,7 @@ func TestScrapeConfig(t *testing.T) {
 				},
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
+						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
 						Labels: model.LabelSet{
 							"_some_agent_label":   "baz",
 							"_some_node_label":    "foo",
@@ -395,7 +395,7 @@ func TestScrapeConfig(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, actual, len(expected))
 			for i := 0; i < len(expected); i++ {
-				assertScrappedConfigsEqual(t, expected[i], actual[i])
+				assertScrapeConfigsEqual(t, expected[i], actual[i])
 			}
 		})
 
@@ -447,7 +447,7 @@ func TestScrapeConfig(t *testing.T) {
 				},
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
+						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
 						Labels: model.LabelSet{
 							"_some_agent_label":   "baz",
 							"_some_node_label":    "foo",
@@ -480,7 +480,7 @@ func TestScrapeConfig(t *testing.T) {
 				},
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
+						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
 						Labels: model.LabelSet{
 							"_some_agent_label":   "baz",
 							"_some_node_label":    "foo",
@@ -510,7 +510,7 @@ func TestScrapeConfig(t *testing.T) {
 				},
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
+						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
 						Labels: model.LabelSet{
 							"_some_agent_label":   "baz",
 							"_some_node_label":    "foo",
@@ -533,7 +533,7 @@ func TestScrapeConfig(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, actual, len(expected))
 			for i := 0; i < len(expected); i++ {
-				assertScrappedConfigsEqual(t, expected[i], actual[i])
+				assertScrapeConfigsEqual(t, expected[i], actual[i])
 			}
 		})
 
@@ -585,7 +585,7 @@ func TestScrapeConfig(t *testing.T) {
 				},
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
+						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
 						Labels: model.LabelSet{
 							"_some_agent_label":   "baz",
 							"_some_node_label":    "foo",
@@ -611,7 +611,7 @@ func TestScrapeConfig(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, actual, len(expected))
 			for i := 0; i < len(expected); i++ {
-				assertScrappedConfigsEqual(t, expected[i], actual[i])
+				assertScrapeConfigsEqual(t, expected[i], actual[i])
 			}
 		})
 
@@ -629,7 +629,7 @@ func TestScrapeConfig(t *testing.T) {
 	})
 }
 
-func assertScrappedConfigsEqual(t *testing.T, expected, actual *config.ScrapeConfig) bool {
+func assertScrapeConfigsEqual(t *testing.T, expected, actual *config.ScrapeConfig) bool {
 	if !assert.Equal(t, expected, actual) {
 		e, err := yaml.Marshal(expected)
 		require.NoError(t, err)

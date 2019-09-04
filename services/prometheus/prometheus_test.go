@@ -254,6 +254,9 @@ scrape_configs:
       service_id: /service_id/014647c3-b2f5-44eb-94f4-d943260a968c
       service_name: test-mysql
       service_type: mysql
+  basic_auth:
+    username: pmm
+    password: /agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd
 - job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_5s
   params:
     collect[]:
@@ -267,10 +270,6 @@ scrape_configs:
     - perf_schema.tablelocks
     - slave_status
     - custom_query.mr
-  basic_auth:
-    username: pmm
-    password: /agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd
-- job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr
   scrape_interval: 5s
   scrape_timeout: 4s
   metrics_path: /metrics
@@ -290,6 +289,9 @@ scrape_configs:
       service_id: /service_id/014647c3-b2f5-44eb-94f4-d943260a968c
       service_name: test-mysql
       service_type: mysql
+  basic_auth:
+    username: pmm
+    password: /agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd
 - job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_1m0s
   params:
     collect[]:
@@ -309,10 +311,6 @@ scrape_configs:
     - perf_schema.tableiowaits
     - perf_schema.tablestats
     - custom_query.lr
-  basic_auth:
-    username: pmm
-    password: /agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd
-- job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_lr
   scrape_interval: 1m
   scrape_timeout: 10s
   metrics_path: /metrics
@@ -335,10 +333,17 @@ scrape_configs:
   basic_auth:
     username: pmm
     password: /agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd
-- job_name: mysqld_exporter_agent_id_f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a_hr
+- job_name: mysqld_exporter_agent_id_f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a_1s
+  params:
+    collect[]:
+    - global_status
+    - info_schema.innodb_metrics
+    - custom_query.hr
+    - standard.process
+    - standard.go
   scrape_interval: 1s
   scrape_timeout: 1s
-  metrics_path: /metrics-hr
+  metrics_path: /metrics
   static_configs:
   - targets:
     - 1.2.3.4:12345
@@ -358,10 +363,22 @@ scrape_configs:
   basic_auth:
     username: pmm
     password: /agent_id/f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a
-- job_name: mysqld_exporter_agent_id_f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a_mr
+- job_name: mysqld_exporter_agent_id_f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a_5s
+  params:
+    collect[]:
+    - engine_innodb_status
+    - info_schema.innodb_cmp
+    - info_schema.innodb_cmpmem
+    - info_schema.processlist
+    - info_schema.query_response_time
+    - perf_schema.eventswaits
+    - perf_schema.file_events
+    - perf_schema.tablelocks
+    - slave_status
+    - custom_query.mr
   scrape_interval: 5s
   scrape_timeout: 4s
-  metrics_path: /metrics-mr
+  metrics_path: /metrics
   static_configs:
   - targets:
     - 1.2.3.4:12345
@@ -381,10 +398,28 @@ scrape_configs:
   basic_auth:
     username: pmm
     password: /agent_id/f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a
-- job_name: mysqld_exporter_agent_id_f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a_lr
+- job_name: mysqld_exporter_agent_id_f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a_1m0s
+  params:
+    collect[]:
+    - auto_increment.columns
+    - binlog_size
+    - engine_tokudb_status
+    - global_variables
+    - heartbeat
+    - info_schema.clientstats
+    - info_schema.innodb_tablespaces
+    - info_schema.tables
+    - info_schema.tablestats
+    - info_schema.userstats
+    - perf_schema.eventsstatements
+    - perf_schema.file_instances
+    - perf_schema.indexiowaits
+    - perf_schema.tableiowaits
+    - perf_schema.tablestats
+    - custom_query.lr
   scrape_interval: 1m
   scrape_timeout: 10s
-  metrics_path: /metrics-lr
+  metrics_path: /metrics
   static_configs:
   - targets:
     - 1.2.3.4:12345
@@ -404,7 +439,7 @@ scrape_configs:
   basic_auth:
     username: pmm
     password: /agent_id/f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a
-- job_name: postgres_exporter_agent_id_29e14468-d479-4b4d-bfb7-4ac2fb865bac
+- job_name: postgres_exporter_agent_id_29e14468-d479-4b4d-bfb7-4ac2fb865bac_1s
   params:
     collect[]:
     - exporter
@@ -430,6 +465,9 @@ scrape_configs:
       service_id: /service_id/9cffbdd4-3cd2-47f8-a5f9-a749c3d5fee1
       service_name: test-postgresql
       service_type: postgresql
+  basic_auth:
+    username: pmm
+    password: /agent_id/29e14468-d479-4b4d-bfb7-4ac2fb865bac
 - job_name: postgres_exporter_agent_id_29e14468-d479-4b4d-bfb7-4ac2fb865bac_5s
   params:
     collect[]:
@@ -453,6 +491,9 @@ scrape_configs:
       service_id: /service_id/9cffbdd4-3cd2-47f8-a5f9-a749c3d5fee1
       service_name: test-postgresql
       service_type: postgresql
+  basic_auth:
+    username: pmm
+    password: /agent_id/29e14468-d479-4b4d-bfb7-4ac2fb865bac
 - job_name: postgres_exporter_agent_id_29e14468-d479-4b4d-bfb7-4ac2fb865bac_1m0s
   params:
     collect[]:
@@ -482,6 +523,6 @@ scrape_configs:
 `
 		actual, err := ioutil.ReadFile(configPath) //nolint:gosec
 		require.NoError(t, err)
-		assert.Equal(t, expected, string(actual))
+		assert.Equal(t, expected, string(actual), "actual:\n%s", actual)
 	})
 }
