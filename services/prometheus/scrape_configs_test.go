@@ -35,7 +35,7 @@ import (
 )
 
 func TestScrapeConfig(t *testing.T) {
-	t.Run("scraperConfigsForNodeExporter", func(t *testing.T) {
+	t.Run("scrapeConfigsForNodeExporter", func(t *testing.T) {
 		t.Run("Normal", func(t *testing.T) {
 			s := &models.MetricsResolutions{
 				HR: time.Second,
@@ -145,7 +145,7 @@ func TestScrapeConfig(t *testing.T) {
 				},
 			}
 
-			actual, err := scraperConfigsForNodeExporter(s, node, agent)
+			actual, err := scrapeConfigsForNodeExporter(s, "", node, agent)
 			require.NoError(t, err)
 
 			require.NoError(t, err)
@@ -156,7 +156,7 @@ func TestScrapeConfig(t *testing.T) {
 		})
 	})
 
-	t.Run("scraperConfigsForMySQLdExporter", func(t *testing.T) {
+	t.Run("scrapeConfigsForMySQLdExporter", func(t *testing.T) {
 		s := &models.MetricsResolutions{
 			HR: time.Second,
 			MR: 5 * time.Second,
@@ -191,7 +191,7 @@ func TestScrapeConfig(t *testing.T) {
 				MetricsPath:    "/metrics",
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
+						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
 						Labels: model.LabelSet{
 							"_some_agent_label":   "baz",
 							"_some_node_label":    "foo",
@@ -219,7 +219,7 @@ func TestScrapeConfig(t *testing.T) {
 				MetricsPath:    "/metrics",
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
+						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
 						Labels: model.LabelSet{
 							"_some_agent_label":   "baz",
 							"_some_node_label":    "foo",
@@ -252,7 +252,7 @@ func TestScrapeConfig(t *testing.T) {
 				MetricsPath:    "/metrics",
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
+						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
 						Labels: model.LabelSet{
 							"_some_agent_label":   "baz",
 							"_some_node_label":    "foo",
@@ -286,7 +286,7 @@ func TestScrapeConfig(t *testing.T) {
 				}},
 			}}
 
-			actual, err := scraperConfigsForMySQLdExporter(s, node, service, agent)
+			actual, err := scrapeConfigsForMySQLdExporter(s, "", node, service, agent)
 			require.NoError(t, err)
 			require.Len(t, actual, len(expected))
 			for i := 0; i < len(expected); i++ {
@@ -302,12 +302,12 @@ func TestScrapeConfig(t *testing.T) {
 				ListenPort:   pointer.ToUint16(12345),
 			}
 
-			_, err := scraperConfigsForMySQLdExporter(s, node, service, agent)
+			_, err := scrapeConfigsForMySQLdExporter(s, "", node, service, agent)
 			require.EqualError(t, err, "failed to decode custom labels: unexpected end of JSON input")
 		})
 	})
 
-	t.Run("scraperConfigsForMongoDBExporter", func(t *testing.T) {
+	t.Run("scrapeConfigsForMongoDBExporter", func(t *testing.T) {
 		t.Run("Normal", func(t *testing.T) {
 			s := &models.MetricsResolutions{
 				HR: time.Second,
@@ -366,7 +366,7 @@ func TestScrapeConfig(t *testing.T) {
 				},
 			}
 
-			actual, err := scraperConfigsForMongoDBExporter(s, node, service, agent)
+			actual, err := scrapeConfigsForMongoDBExporter(s, "", node, service, agent)
 			require.NoError(t, err)
 			require.Len(t, actual, len(expected))
 			for i := 0; i < len(expected); i++ {
@@ -388,12 +388,12 @@ func TestScrapeConfig(t *testing.T) {
 				LR: 60 * time.Second,
 			}
 
-			_, err := scraperConfigsForMongoDBExporter(res, node, service, agent)
+			_, err := scrapeConfigsForMongoDBExporter(res, "", node, service, agent)
 			require.EqualError(t, err, "failed to decode custom labels: unexpected end of JSON input")
 		})
 	})
 
-	t.Run("scraperConfigsForPostgresExporter", func(t *testing.T) {
+	t.Run("scrapeConfigsForPostgresExporter", func(t *testing.T) {
 		t.Run("Normal", func(t *testing.T) {
 			s := &models.MetricsResolutions{
 				HR: time.Second,
@@ -502,7 +502,7 @@ func TestScrapeConfig(t *testing.T) {
 				},
 			}
 
-			actual, err := scraperConfigsForPostgresExporter(s, node, service, agent)
+			actual, err := scrapeConfigsForPostgresExporter(s, "", node, service, agent)
 			require.NoError(t, err)
 			require.Len(t, actual, len(expected))
 			for i := 0; i < len(expected); i++ {
@@ -524,12 +524,12 @@ func TestScrapeConfig(t *testing.T) {
 				LR: 60 * time.Second,
 			}
 
-			_, err := scraperConfigsForPostgresExporter(res, node, service, agent)
+			_, err := scrapeConfigsForPostgresExporter(res, "", node, service, agent)
 			require.EqualError(t, err, "failed to decode custom labels: unexpected end of JSON input")
 		})
 	})
 
-	t.Run("scraperConfigsForProxySQLExporter", func(t *testing.T) {
+	t.Run("scrapeConfigsForProxySQLExporter", func(t *testing.T) {
 		t.Run("Normal", func(t *testing.T) {
 			s := &models.MetricsResolutions{
 				HR: time.Second,
@@ -588,7 +588,7 @@ func TestScrapeConfig(t *testing.T) {
 				},
 			}
 
-			actual, err := scraperConfigsForProxySQLExporter(s, node, service, agent)
+			actual, err := scrapeConfigsForProxySQLExporter(s, "", node, service, agent)
 			require.NoError(t, err)
 			require.Len(t, actual, len(expected))
 			for i := 0; i < len(expected); i++ {
@@ -610,7 +610,7 @@ func TestScrapeConfig(t *testing.T) {
 				LR: 60 * time.Second,
 			}
 
-			_, err := scraperConfigsForProxySQLExporter(res, node, service, agent)
+			_, err := scrapeConfigsForProxySQLExporter(res, "", node, service, agent)
 			require.EqualError(t, err, "failed to decode custom labels: unexpected end of JSON input")
 		})
 	})

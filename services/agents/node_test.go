@@ -28,7 +28,9 @@ import (
 func TestNodeExporterConfig(t *testing.T) {
 	t.Run("Linux", func(t *testing.T) {
 		node := &models.Node{}
-		exporter := &models.Agent{}
+		exporter := &models.Agent{
+			AgentID: "agent-id",
+		}
 		actual := nodeExporterConfig(node, exporter)
 		expected := &agentpb.SetStateRequest_AgentProcess{
 			Type:               agentpb.Type_NODE_EXPORTER,
@@ -100,6 +102,9 @@ func TestNodeExporterConfig(t *testing.T) {
 				"--web.disable-exporter-metrics",
 				"--web.listen-address=:{{ .listen_port }}",
 			},
+			Env: []string{
+				"HTTP_AUTH=pmm:agent-id",
+			},
 		}
 		assertNoDuplicateFlags(t, actual.Args)
 		assert.Equal(t, expected.Args, actual.Args)
@@ -111,7 +116,9 @@ func TestNodeExporterConfig(t *testing.T) {
 		node := &models.Node{
 			Distro: "darwin",
 		}
-		exporter := &models.Agent{}
+		exporter := &models.Agent{
+			AgentID: "agent-id",
+		}
 		actual := nodeExporterConfig(node, exporter)
 		expected := &agentpb.SetStateRequest_AgentProcess{
 			Type:               agentpb.Type_NODE_EXPORTER,
@@ -123,6 +130,9 @@ func TestNodeExporterConfig(t *testing.T) {
 				"--collector.textfile.directory.mr=/usr/local/percona/pmm2/collectors/textfile-collector/medium-resolution",
 				"--web.disable-exporter-metrics",
 				"--web.listen-address=:{{ .listen_port }}",
+			},
+			Env: []string{
+				"HTTP_AUTH=pmm:agent-id",
 			},
 		}
 		assertNoDuplicateFlags(t, actual.Args)
