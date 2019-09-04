@@ -69,6 +69,7 @@ func TestMySQLdExporterConfig(t *testing.T) {
 			"DATA_SOURCE_NAME=username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:3306)/?timeout=1s",
 		},
 	}
+	assertNoDuplicateFlags(t, actual.Args)
 	assert.Equal(t, expected.Args, actual.Args)
 	assert.Equal(t, expected.Env, actual.Env)
 	assert.Equal(t, expected, actual)

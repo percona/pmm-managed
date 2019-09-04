@@ -51,6 +51,7 @@ func TestMongodbExporterConfig(t *testing.T) {
 			"MONGODB_URI=mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:27017/?connectTimeoutMS=1000",
 		},
 	}
+	assertNoDuplicateFlags(t, actual.Args)
 	assert.Equal(t, expected.Args, actual.Args)
 	assert.Equal(t, expected.Env, actual.Env)
 	assert.Equal(t, expected, actual)

@@ -51,6 +51,7 @@ func TestPostgresExporterConfig(t *testing.T) {
 			"DATA_SOURCE_NAME=postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:5432/postgres?connect_timeout=1&sslmode=disable",
 		},
 	}
+	assertNoDuplicateFlags(t, actual.Args)
 	assert.Equal(t, expected.Args, actual.Args)
 	assert.Equal(t, expected.Env, actual.Env)
 	assert.Equal(t, expected, actual)
