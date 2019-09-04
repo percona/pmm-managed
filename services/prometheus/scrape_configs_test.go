@@ -59,7 +59,7 @@ func TestScrapeConfig(t *testing.T) {
 			}
 
 			expected := []*config.ScrapeConfig{{
-				JobName:        "node_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_1s",
+				JobName:        "node_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-1s",
 				ScrapeInterval: model.Duration(s.HR),
 				ScrapeTimeout:  scrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
@@ -100,7 +100,7 @@ func TestScrapeConfig(t *testing.T) {
 					"vmstat",
 				}},
 			}, {
-				JobName:        "node_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_5s",
+				JobName:        "node_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr-5s",
 				ScrapeInterval: model.Duration(s.MR),
 				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/metrics",
@@ -128,7 +128,7 @@ func TestScrapeConfig(t *testing.T) {
 					"textfile.mr",
 				}},
 			}, {
-				JobName:        "node_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_1m0s",
+				JobName:        "node_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_lr-1m0s",
 				ScrapeInterval: model.Duration(s.LR),
 				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/metrics",
@@ -194,7 +194,7 @@ func TestScrapeConfig(t *testing.T) {
 			}
 
 			expected := []*config.ScrapeConfig{{
-				JobName:        "mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_1s",
+				JobName:        "mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-1s",
 				ScrapeInterval: model.Duration(s.HR),
 				ScrapeTimeout:  scrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
@@ -228,7 +228,7 @@ func TestScrapeConfig(t *testing.T) {
 					"standard.go",
 				}},
 			}, {
-				JobName:        "mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_5s",
+				JobName:        "mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr-5s",
 				ScrapeInterval: model.Duration(s.MR),
 				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/metrics",
@@ -267,7 +267,7 @@ func TestScrapeConfig(t *testing.T) {
 					"custom_query.mr",
 				}},
 			}, {
-				JobName:        "mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_1m0s",
+				JobName:        "mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_lr-1m0s",
 				ScrapeInterval: model.Duration(s.LR),
 				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/metrics",
@@ -357,7 +357,7 @@ func TestScrapeConfig(t *testing.T) {
 			}
 
 			expected := []*config.ScrapeConfig{{
-				JobName:        "mongodb_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_1s",
+				JobName:        "mongodb_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-1s",
 				ScrapeInterval: model.Duration(s.HR),
 				ScrapeTimeout:  scrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
@@ -435,7 +435,7 @@ func TestScrapeConfig(t *testing.T) {
 			}
 
 			expected := []*config.ScrapeConfig{{
-				JobName:        "postgres_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_1s",
+				JobName:        "postgres_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-1s",
 				ScrapeInterval: model.Duration(s.HR),
 				ScrapeTimeout:  scrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
@@ -468,7 +468,7 @@ func TestScrapeConfig(t *testing.T) {
 					"standard.go",
 				}},
 			}, {
-				JobName:        "postgres_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_5s",
+				JobName:        "postgres_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr-5s",
 				ScrapeInterval: model.Duration(s.MR),
 				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/metrics",
@@ -498,7 +498,7 @@ func TestScrapeConfig(t *testing.T) {
 					"custom_query.mr",
 				}},
 			}, {
-				JobName:        "postgres_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_1m0s",
+				JobName:        "postgres_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_lr-1m0s",
 				ScrapeInterval: model.Duration(s.LR),
 				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/metrics",
@@ -553,19 +553,19 @@ func TestScrapeConfig(t *testing.T) {
 	t.Run("scrapeConfigsForProxySQLExporter", func(t *testing.T) {
 		t.Run("Normal", func(t *testing.T) {
 			node := &models.Node{
-				NodeID:       "/node_id/7cc6ec12-4951-48c6-a4d5-7c3141fa4107",
+				NodeID:       "/node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d",
 				NodeName:     "node_name",
 				Address:      "1.2.3.4",
 				CustomLabels: []byte(`{"_some_node_label": "foo"}`),
 			}
 			service := &models.Service{
-				ServiceID:    "/service_id/56fa3285-4476-49cc-95ff-96b36c24b0b6",
-				NodeID:       "/node_id/7cc6ec12-4951-48c6-a4d5-7c3141fa4107",
+				ServiceID:    "/service_id/014647c3-b2f5-44eb-94f4-d943260a968c",
+				NodeID:       "/node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d",
 				Address:      pointer.ToString("5.6.7.8"),
 				CustomLabels: []byte(`{"_some_service_label": "bar"}`),
 			}
 			agent := &models.Agent{
-				AgentID:      "/agent_id/782589c6-d3af-45e5-aa20-7f664a690940",
+				AgentID:      "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
 				AgentType:    models.ProxySQLExporterType,
 				RunsOnNodeID: nil,
 				CustomLabels: []byte(`{"_some_agent_label": "baz"}`),
@@ -573,14 +573,14 @@ func TestScrapeConfig(t *testing.T) {
 			}
 
 			expected := []*config.ScrapeConfig{{
-				JobName:        "proxysql_exporter_agent_id_782589c6-d3af-45e5-aa20-7f664a690940_1s",
+				JobName:        "proxysql_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-1s",
 				ScrapeInterval: model.Duration(s.HR),
 				ScrapeTimeout:  scrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config_util.HTTPClientConfig{
 					BasicAuth: &config_util.BasicAuth{
 						Username: "pmm",
-						Password: "/agent_id/782589c6-d3af-45e5-aa20-7f664a690940",
+						Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
 					},
 				},
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
@@ -590,12 +590,12 @@ func TestScrapeConfig(t *testing.T) {
 							"_some_agent_label":   "baz",
 							"_some_node_label":    "foo",
 							"_some_service_label": "bar",
-							"agent_id":            "/agent_id/782589c6-d3af-45e5-aa20-7f664a690940",
+							"agent_id":            "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
 							"agent_type":          "proxysql_exporter",
-							"instance":            "/agent_id/782589c6-d3af-45e5-aa20-7f664a690940",
-							"node_id":             "/node_id/7cc6ec12-4951-48c6-a4d5-7c3141fa4107",
+							"instance":            "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
+							"node_id":             "/node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d",
 							"node_name":           "node_name",
-							"service_id":          "/service_id/56fa3285-4476-49cc-95ff-96b36c24b0b6",
+							"service_id":          "/service_id/014647c3-b2f5-44eb-94f4-d943260a968c",
 						},
 					}},
 				},

@@ -227,7 +227,7 @@ scrape_configs:
     - 127.0.0.1:7773
     labels:
       instance: pmm-server
-- job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_1s
+- job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-1s
   params:
     collect[]:
     - global_status
@@ -257,7 +257,7 @@ scrape_configs:
   basic_auth:
     username: pmm
     password: /agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd
-- job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_5s
+- job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr-5s
   params:
     collect[]:
     - engine_innodb_status
@@ -292,7 +292,7 @@ scrape_configs:
   basic_auth:
     username: pmm
     password: /agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd
-- job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_1m0s
+- job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_lr-1m0s
   params:
     collect[]:
     - auto_increment.columns
@@ -333,7 +333,7 @@ scrape_configs:
   basic_auth:
     username: pmm
     password: /agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd
-- job_name: mysqld_exporter_agent_id_f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a_1s
+- job_name: mysqld_exporter_agent_id_f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a_hr-1s
   params:
     collect[]:
     - global_status
@@ -363,7 +363,7 @@ scrape_configs:
   basic_auth:
     username: pmm
     password: /agent_id/f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a
-- job_name: mysqld_exporter_agent_id_f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a_5s
+- job_name: mysqld_exporter_agent_id_f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a_mr-5s
   params:
     collect[]:
     - engine_innodb_status
@@ -398,7 +398,7 @@ scrape_configs:
   basic_auth:
     username: pmm
     password: /agent_id/f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a
-- job_name: mysqld_exporter_agent_id_f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a_1m0s
+- job_name: mysqld_exporter_agent_id_f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a_lr-1m0s
   params:
     collect[]:
     - auto_increment.columns
@@ -439,7 +439,7 @@ scrape_configs:
   basic_auth:
     username: pmm
     password: /agent_id/f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a
-- job_name: postgres_exporter_agent_id_29e14468-d479-4b4d-bfb7-4ac2fb865bac_1s
+- job_name: postgres_exporter_agent_id_29e14468-d479-4b4d-bfb7-4ac2fb865bac_hr-1s
   params:
     collect[]:
     - exporter
@@ -468,7 +468,7 @@ scrape_configs:
   basic_auth:
     username: pmm
     password: /agent_id/29e14468-d479-4b4d-bfb7-4ac2fb865bac
-- job_name: postgres_exporter_agent_id_29e14468-d479-4b4d-bfb7-4ac2fb865bac_5s
+- job_name: postgres_exporter_agent_id_29e14468-d479-4b4d-bfb7-4ac2fb865bac_mr-5s
   params:
     collect[]:
     - custom_query.mr
@@ -494,7 +494,7 @@ scrape_configs:
   basic_auth:
     username: pmm
     password: /agent_id/29e14468-d479-4b4d-bfb7-4ac2fb865bac
-- job_name: postgres_exporter_agent_id_29e14468-d479-4b4d-bfb7-4ac2fb865bac_1m0s
+- job_name: postgres_exporter_agent_id_29e14468-d479-4b4d-bfb7-4ac2fb865bac_lr-1m0s
   params:
     collect[]:
     - custom_query.lr
