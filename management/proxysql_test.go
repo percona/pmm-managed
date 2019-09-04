@@ -274,16 +274,6 @@ func TestAddProxySQL(t *testing.T) {
 		pmmapitests.AssertAPIErrorf(t, err, 409, codes.AlreadyExists, `Service with name %q already exists.`, serviceName)
 	})
 
-	t.Run("Empty Node ID", func(t *testing.T) {
-		params := &proxysql.AddProxySQLParams{
-			Context: pmmapitests.Context,
-			Body:    proxysql.AddProxySQLBody{},
-		}
-		addProxySQLOK, err := client.Default.ProxySQL.AddProxySQL(params)
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field NodeId: value '' must not be an empty string")
-		assert.Nil(t, addProxySQLOK)
-	})
-
 	t.Run("Empty Service Name", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-name")
 		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterBody{

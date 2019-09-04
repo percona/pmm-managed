@@ -280,16 +280,6 @@ func TestAddPostgreSQL(t *testing.T) {
 		pmmapitests.AssertAPIErrorf(t, err, 409, codes.AlreadyExists, `Service with name %q already exists.`, serviceName)
 	})
 
-	t.Run("Empty Node ID", func(t *testing.T) {
-		params := &postgresql.AddPostgreSQLParams{
-			Context: pmmapitests.Context,
-			Body:    postgresql.AddPostgreSQLBody{},
-		}
-		addPostgreSQLOK, err := client.Default.PostgreSQL.AddPostgreSQL(params)
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field NodeId: value '' must not be an empty string")
-		assert.Nil(t, addPostgreSQLOK)
-	})
-
 	t.Run("Empty Service Name", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-name")
 		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterBody{

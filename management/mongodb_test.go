@@ -281,16 +281,6 @@ func TestAddMongoDB(t *testing.T) {
 		pmmapitests.AssertAPIErrorf(t, err, 409, codes.AlreadyExists, `Service with name %q already exists.`, serviceName)
 	})
 
-	t.Run("Empty Node ID", func(t *testing.T) {
-		params := &mongodb.AddMongoDBParams{
-			Context: pmmapitests.Context,
-			Body:    mongodb.AddMongoDBBody{},
-		}
-		addMongoDBOK, err := client.Default.MongoDB.AddMongoDB(params)
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field NodeId: value '' must not be an empty string")
-		assert.Nil(t, addMongoDBOK)
-	})
-
 	t.Run("Empty Service Name", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-name")
 		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterBody{
