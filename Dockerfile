@@ -1,4 +1,4 @@
-FROM golang:latest
+FROM golang:1.12
 
 RUN mkdir -p $GOPATH/src/github.com/Percona-Lab/pmm-api-tests
 
