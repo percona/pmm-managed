@@ -194,7 +194,7 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 
 			case models.NodeExporterType:
 				for _, node := range nodes {
-					scfgs, err := scrapeConfigsForNodeExporter(&s, host, node, agent)
+					scfgs, err := scrapeConfigsForNodeExporter(&s, node, agent)
 					if err != nil {
 						svc.l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 						continue

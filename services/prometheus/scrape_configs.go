@@ -186,7 +186,7 @@ func scrapeConfigForStandardExporter(interval time.Duration, host string, node *
 	return cfg, nil
 }
 
-func scrapeConfigsForNodeExporter(s *models.MetricsResolutions, host string, node *models.Node, agent *models.Agent) ([]*config.ScrapeConfig, error) {
+func scrapeConfigsForNodeExporter(s *models.MetricsResolutions, node *models.Node, agent *models.Agent) ([]*config.ScrapeConfig, error) {
 	hrc := []string{
 		"diskstats",
 		"filefd",
@@ -203,7 +203,7 @@ func scrapeConfigsForNodeExporter(s *models.MetricsResolutions, host string, nod
 		"time",
 		"vmstat",
 	}
-	hr, err := scrapeConfigForStandardExporter(s.HR, host, node, nil, agent, hrc)
+	hr, err := scrapeConfigForStandardExporter(s.HR, node.Address, node, nil, agent, hrc)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +211,7 @@ func scrapeConfigsForNodeExporter(s *models.MetricsResolutions, host string, nod
 	mrc := []string{
 		"textfile.mr",
 	}
-	mr, err := scrapeConfigForStandardExporter(s.MR, host, node, nil, agent, mrc)
+	mr, err := scrapeConfigForStandardExporter(s.MR, node.Address, node, nil, agent, mrc)
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +222,7 @@ func scrapeConfigsForNodeExporter(s *models.MetricsResolutions, host string, nod
 		"textfile.lr",
 		"uname",
 	}
-	lr, err := scrapeConfigForStandardExporter(s.LR, host, node, nil, agent, lrc)
+	lr, err := scrapeConfigForStandardExporter(s.LR, node.Address, node, nil, agent, lrc)
 	if err != nil {
 		return nil, err
 	}

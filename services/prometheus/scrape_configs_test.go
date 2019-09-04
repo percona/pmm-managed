@@ -104,6 +104,12 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeInterval: model.Duration(s.MR),
 				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/metrics",
+				HTTPClientConfig: config_util.HTTPClientConfig{
+					BasicAuth: &config_util.BasicAuth{
+						Username: "pmm",
+						Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
+					},
+				},
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
 						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
@@ -126,6 +132,12 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeInterval: model.Duration(s.LR),
 				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/metrics",
+				HTTPClientConfig: config_util.HTTPClientConfig{
+					BasicAuth: &config_util.BasicAuth{
+						Username: "pmm",
+						Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
+					},
+				},
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
 						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
@@ -148,7 +160,7 @@ func TestScrapeConfig(t *testing.T) {
 				}},
 			}}
 
-			actual, err := scrapeConfigsForNodeExporter(s, "4.5.6.7", node, agent)
+			actual, err := scrapeConfigsForNodeExporter(s, node, agent)
 			require.NoError(t, err)
 
 			require.NoError(t, err)
@@ -220,6 +232,12 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeInterval: model.Duration(s.MR),
 				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/metrics",
+				HTTPClientConfig: config_util.HTTPClientConfig{
+					BasicAuth: &config_util.BasicAuth{
+						Username: "pmm",
+						Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
+					},
+				},
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
 						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
@@ -253,6 +271,12 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeInterval: model.Duration(s.LR),
 				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/metrics",
+				HTTPClientConfig: config_util.HTTPClientConfig{
+					BasicAuth: &config_util.BasicAuth{
+						Username: "pmm",
+						Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
+					},
+				},
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
 						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
@@ -448,6 +472,12 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeInterval: model.Duration(s.MR),
 				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/metrics",
+				HTTPClientConfig: config_util.HTTPClientConfig{
+					BasicAuth: &config_util.BasicAuth{
+						Username: "pmm",
+						Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
+					},
+				},
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
 						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
@@ -472,6 +502,12 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeInterval: model.Duration(s.LR),
 				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/metrics",
+				HTTPClientConfig: config_util.HTTPClientConfig{
+					BasicAuth: &config_util.BasicAuth{
+						Username: "pmm",
+						Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
+					},
+				},
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
 						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
