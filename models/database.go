@@ -165,6 +165,10 @@ var databaseSchema = [][]string{
            ADD COLUMN tls BOOLEAN NOT NULL DEFAULT FALSE,
            ADD COLUMN tls_skip_verify BOOLEAN NOT NULL DEFAULT TRUE
 		`,
+
+		`ALTER TABLE agents
+           ALTER COLUMN tls DROP DEFAULT,
+           ALTER COLUMN tls_skip_verify DROP DEFAULT`,
 	},
 }
 
