@@ -119,11 +119,6 @@ var databaseSchema = [][]string{
 			CONSTRAINT runs_on_node_id_only_for_pmm_agent CHECK ((runs_on_node_id IS NULL) <> (agent_type='` + string(PMMAgentType) + `'))
 		)`,
 
-		`ALTER TABLE agents 
-           ADD COLUMN tls BOOLEAN NOT NULL DEFAULT FALSE,
-           ADD COLUMN tls_skip_verify BOOLEAN NOT NULL DEFAULT TRUE
-		`,
-
 		`CREATE TABLE agent_nodes (
 			agent_id VARCHAR NOT NULL,
 			node_id VARCHAR NOT NULL,
@@ -163,6 +158,13 @@ var databaseSchema = [][]string{
 			settings jsonb
 		)`,
 		`INSERT INTO settings (settings) VALUES ('{}')`,
+	},
+
+	3: {
+		`ALTER TABLE agents 
+           ADD COLUMN tls BOOLEAN NOT NULL DEFAULT FALSE,
+           ADD COLUMN tls_skip_verify BOOLEAN NOT NULL DEFAULT TRUE
+		`,
 	},
 }
 
