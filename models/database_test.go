@@ -162,8 +162,9 @@ func TestDatabaseUniqueIndexes(t *testing.T) {
 
 		// runs_on_node_id XOR pmm_agent_id
 		_, err = db.Exec(
-			"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, disabled, status, created_at, updated_at) "+
-				"VALUES ('/agent_id/2', 'pmm-agent', '/node_id/1', NULL, false, '', $1, $2)", now, now,
+			"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, disabled, status, created_at, updated_at, "+
+				"tls, tls_skip_verify) VALUES ('/agent_id/2', 'pmm-agent', '/node_id/1', NULL, false, '', $1, $2, false, false)",
+			now, now,
 		)
 		require.NoError(t, err)
 		_, err = db.Exec(
