@@ -194,7 +194,13 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 
 			case models.NodeExporterType:
 				for _, node := range nodes {
-					scfgs, err := scrapeConfigsForNodeExporter(&s, node, agent)
+					scfgs, err := scrapeConfigsForNodeExporter(&s, &scrapeConfigParams{
+						host:    host,
+						node:    node,
+						service: nil,
+						agent:   agent,
+					})
+
 					if err != nil {
 						svc.l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 						continue
@@ -254,7 +260,12 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 						return errors.WithStack(err)
 					}
 
-					scfgs, err := scrapeConfigsForProxySQLExporter(&s, host, node, service, agent)
+					scfgs, err := scrapeConfigsForProxySQLExporter(&s, &scrapeConfigParams{
+						host:    host,
+						node:    node,
+						service: service,
+						agent:   agent,
+					})
 					if err != nil {
 						svc.l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 						continue

@@ -160,7 +160,11 @@ func TestScrapeConfig(t *testing.T) {
 				}},
 			}}
 
-			actual, err := scrapeConfigsForNodeExporter(s, node, agent)
+			actual, err := scrapeConfigsForNodeExporter(s, &scrapeConfigParams{
+				host:  "1.2.3.4",
+				node:  node,
+				agent: agent,
+			})
 			require.NoError(t, err)
 
 			require.NoError(t, err)
@@ -599,15 +603,14 @@ func TestScrapeConfig(t *testing.T) {
 						},
 					}},
 				},
-				Params: url.Values{"collect[]": []string{
-					"mysql_connection_pool",
-					"mysql_status",
-					"standard.process",
-					"standard.go",
-				}},
 			}}
 
-			actual, err := scrapeConfigsForProxySQLExporter(s, "4.5.6.7", node, service, agent)
+			actual, err := scrapeConfigsForProxySQLExporter(s, &scrapeConfigParams{
+				host:    "4.5.6.7",
+				node:    node,
+				service: service,
+				agent:   agent,
+			})
 			require.NoError(t, err)
 			require.Len(t, actual, len(expected))
 			for i := 0; i < len(expected); i++ {
@@ -623,7 +626,12 @@ func TestScrapeConfig(t *testing.T) {
 				ListenPort:   pointer.ToUint16(12345),
 			}
 
-			_, err := scrapeConfigsForProxySQLExporter(s, "4.5.6.7", node, service, agent)
+			_, err := scrapeConfigsForProxySQLExporter(s, &scrapeConfigParams{
+				host:    "4.5.6.7",
+				node:    node,
+				service: service,
+				agent:   agent,
+			})
 			require.EqualError(t, err, "failed to decode custom labels: unexpected end of JSON input")
 		})
 	})
