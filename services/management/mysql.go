@@ -57,6 +57,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 			Address:        pointer.ToStringOrNil(req.Address),
 			Port:           pointer.ToUint16OrNil(uint16(req.Port)),
 			CustomLabels:   req.CustomLabels,
+			QueryexamplesDisabled: req.DisableQueryExamples,
 		})
 		if err != nil {
 			return err

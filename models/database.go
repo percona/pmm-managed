@@ -159,6 +159,10 @@ var databaseSchema = [][]string{
 		)`,
 		`INSERT INTO settings (settings) VALUES ('{}')`,
 	},
+
+	3: {
+		`ALTER TABLE services ADD COLUMN queryexamples_disabled BOOLEAN NOT NULL DEFAULT FALSE`,
+	},
 }
 
 // OpenDB returns configured connection pool for PostgreSQL.

@@ -92,5 +92,6 @@ func qanMySQLSlowlogAgentConfig(service *models.Service, agent *models.Agent) *a
 	return &agentpb.SetStateRequest_BuiltinAgent{
 		Type: agentpb.Type_QAN_MYSQL_SLOWLOG_AGENT,
 		Dsn:  agent.DSN(service, time.Second, ""),
+		DisableQueryExamples: service.QueryexamplesDisabled,
 	}
 }
