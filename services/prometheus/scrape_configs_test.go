@@ -225,11 +225,11 @@ func TestScrapeConfig(t *testing.T) {
 					}},
 				},
 				Params: url.Values{"collect[]": []string{
+					"custom_query.hr",
 					"global_status",
 					"info_schema.innodb_metrics",
-					"custom_query.hr",
-					"standard.process",
 					"standard.go",
+					"standard.process",
 				}},
 			}, {
 				JobName:        "mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr-5s",
@@ -259,6 +259,7 @@ func TestScrapeConfig(t *testing.T) {
 					}},
 				},
 				Params: url.Values{"collect[]": []string{
+					"custom_query.mr",
 					"engine_innodb_status",
 					"info_schema.innodb_cmp",
 					"info_schema.innodb_cmpmem",
@@ -266,9 +267,7 @@ func TestScrapeConfig(t *testing.T) {
 					"info_schema.query_response_time",
 					"perf_schema.eventswaits",
 					"perf_schema.file_events",
-					"perf_schema.tablelocks",
 					"slave_status",
-					"custom_query.mr",
 				}},
 			}, {
 				JobName:        "mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_lr-1m0s",
@@ -298,26 +297,25 @@ func TestScrapeConfig(t *testing.T) {
 					}},
 				},
 				Params: url.Values{"collect[]": []string{
-					"auto_increment.columns",
 					"binlog_size",
+					"custom_query.lr",
 					"engine_tokudb_status",
 					"global_variables",
 					"heartbeat",
 					"info_schema.clientstats",
 					"info_schema.innodb_tablespaces",
-					"info_schema.tables",
-					"info_schema.tablestats",
 					"info_schema.userstats",
 					"perf_schema.eventsstatements",
 					"perf_schema.file_instances",
-					"perf_schema.indexiowaits",
-					"perf_schema.tableiowaits",
-					"perf_schema.tablestats",
-					"custom_query.lr",
 				}},
 			}}
 
-			actual, err := scrapeConfigsForMySQLdExporter(s, "4.5.6.7", node, service, agent)
+			actual, err := scrapeConfigsForMySQLdExporter(s, &scrapeConfigParams{
+				host:    "4.5.6.7",
+				node:    node,
+				service: service,
+				agent:   agent,
+			})
 			require.NoError(t, err)
 			require.Len(t, actual, len(expected))
 			for i := 0; i < len(expected); i++ {
@@ -333,7 +331,12 @@ func TestScrapeConfig(t *testing.T) {
 				ListenPort:   pointer.ToUint16(12345),
 			}
 
-			_, err := scrapeConfigsForMySQLdExporter(s, "4.5.6.7", node, service, agent)
+			_, err := scrapeConfigsForMySQLdExporter(s, &scrapeConfigParams{
+				host:    "4.5.6.7",
+				node:    node,
+				service: service,
+				agent:   agent,
+			})
 			require.EqualError(t, err, "failed to decode custom labels: unexpected end of JSON input")
 		})
 	})
@@ -390,8 +393,8 @@ func TestScrapeConfig(t *testing.T) {
 				Params: url.Values{"collect[]": []string{
 					"collection",
 					"database",
-					"standard.process",
 					"standard.go",
+					"standard.process",
 				}},
 			}}
 
@@ -466,10 +469,10 @@ func TestScrapeConfig(t *testing.T) {
 					}},
 				},
 				Params: url.Values{"collect[]": []string{
-					"exporter",
 					"custom_query.hr",
-					"standard.process",
+					"exporter",
 					"standard.go",
+					"standard.process",
 				}},
 			}, {
 				JobName:        "postgres_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr-5s",
@@ -638,6 +641,8 @@ func TestScrapeConfig(t *testing.T) {
 }
 
 func assertScrapeConfigsEqual(t *testing.T, expected, actual *config.ScrapeConfig) bool {
+	t.Helper()
+
 	if !assert.Equal(t, expected, actual) {
 		e, err := yaml.Marshal(expected)
 		require.NoError(t, err)

@@ -22,6 +22,7 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/percona/pmm-managed/models"
 )
@@ -53,10 +54,10 @@ func TestPostgresExporterConfig(t *testing.T) {
 			"HTTP_AUTH=pmm:agent-id",
 		},
 	}
-	assertNoDuplicateFlags(t, actual.Args)
-	assert.Equal(t, expected.Args, actual.Args)
-	assert.Equal(t, expected.Env, actual.Env)
-	assert.Equal(t, expected, actual)
+	requireNoDuplicateFlags(t, actual.Args)
+	require.Equal(t, expected.Args, actual.Args)
+	require.Equal(t, expected.Env, actual.Env)
+	require.Equal(t, expected, actual)
 
 	t.Run("EmptyPassword", func(t *testing.T) {
 		exporter.Password = nil

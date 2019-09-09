@@ -200,7 +200,6 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 						service: nil,
 						agent:   agent,
 					})
-
 					if err != nil {
 						svc.l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 						continue
@@ -215,7 +214,12 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 						return errors.WithStack(err)
 					}
 
-					scfgs, err := scrapeConfigsForMySQLdExporter(&s, host, node, service, agent)
+					scfgs, err := scrapeConfigsForMySQLdExporter(&s, &scrapeConfigParams{
+						host:    host,
+						node:    node,
+						service: service,
+						agent:   agent,
+					})
 					if err != nil {
 						svc.l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 						continue

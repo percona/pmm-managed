@@ -230,11 +230,11 @@ scrape_configs:
 - job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-5s
   params:
     collect[]:
+    - custom_query.hr
     - global_status
     - info_schema.innodb_metrics
-    - custom_query.hr
-    - standard.process
     - standard.go
+    - standard.process
   scrape_interval: 5s
   scrape_timeout: 4s
   metrics_path: /metrics
@@ -260,6 +260,7 @@ scrape_configs:
 - job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr-5s
   params:
     collect[]:
+    - custom_query.mr
     - engine_innodb_status
     - info_schema.innodb_cmp
     - info_schema.innodb_cmpmem
@@ -267,9 +268,7 @@ scrape_configs:
     - info_schema.query_response_time
     - perf_schema.eventswaits
     - perf_schema.file_events
-    - perf_schema.tablelocks
     - slave_status
-    - custom_query.mr
   scrape_interval: 5s
   scrape_timeout: 4s
   metrics_path: /metrics
@@ -295,22 +294,16 @@ scrape_configs:
 - job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_lr-1m0s
   params:
     collect[]:
-    - auto_increment.columns
     - binlog_size
+    - custom_query.lr
     - engine_tokudb_status
     - global_variables
     - heartbeat
     - info_schema.clientstats
     - info_schema.innodb_tablespaces
-    - info_schema.tables
-    - info_schema.tablestats
     - info_schema.userstats
     - perf_schema.eventsstatements
     - perf_schema.file_instances
-    - perf_schema.indexiowaits
-    - perf_schema.tableiowaits
-    - perf_schema.tablestats
-    - custom_query.lr
   scrape_interval: 1m
   scrape_timeout: 10s
   metrics_path: /metrics
@@ -336,11 +329,11 @@ scrape_configs:
 - job_name: mysqld_exporter_agent_id_f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a_hr-5s
   params:
     collect[]:
+    - custom_query.hr
     - global_status
     - info_schema.innodb_metrics
-    - custom_query.hr
-    - standard.process
     - standard.go
+    - standard.process
   scrape_interval: 5s
   scrape_timeout: 4s
   metrics_path: /metrics
@@ -366,6 +359,7 @@ scrape_configs:
 - job_name: mysqld_exporter_agent_id_f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a_mr-5s
   params:
     collect[]:
+    - custom_query.mr
     - engine_innodb_status
     - info_schema.innodb_cmp
     - info_schema.innodb_cmpmem
@@ -373,9 +367,7 @@ scrape_configs:
     - info_schema.query_response_time
     - perf_schema.eventswaits
     - perf_schema.file_events
-    - perf_schema.tablelocks
     - slave_status
-    - custom_query.mr
   scrape_interval: 5s
   scrape_timeout: 4s
   metrics_path: /metrics
@@ -401,22 +393,16 @@ scrape_configs:
 - job_name: mysqld_exporter_agent_id_f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a_lr-1m0s
   params:
     collect[]:
-    - auto_increment.columns
     - binlog_size
+    - custom_query.lr
     - engine_tokudb_status
     - global_variables
     - heartbeat
     - info_schema.clientstats
     - info_schema.innodb_tablespaces
-    - info_schema.tables
-    - info_schema.tablestats
     - info_schema.userstats
     - perf_schema.eventsstatements
     - perf_schema.file_instances
-    - perf_schema.indexiowaits
-    - perf_schema.tableiowaits
-    - perf_schema.tablestats
-    - custom_query.lr
   scrape_interval: 1m
   scrape_timeout: 10s
   metrics_path: /metrics
@@ -442,10 +428,10 @@ scrape_configs:
 - job_name: postgres_exporter_agent_id_29e14468-d479-4b4d-bfb7-4ac2fb865bac_hr-5s
   params:
     collect[]:
-    - exporter
     - custom_query.hr
-    - standard.process
+    - exporter
     - standard.go
+    - standard.process
   scrape_interval: 5s
   scrape_timeout: 4s
   metrics_path: /metrics

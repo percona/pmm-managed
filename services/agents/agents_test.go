@@ -23,14 +23,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func assertNoDuplicateFlags(t *testing.T, flags []string) {
+func requireNoDuplicateFlags(t *testing.T, flags []string) {
 	s := make(map[string]struct{})
 	for _, f := range flags {
 		name := strings.Split(f, "=")[0]
-		name = strings.TrimPrefix(name, "--no-") // --no-<name> disables --<name>
-		name = strings.TrimPrefix(name, "--")
+		if strings.HasPrefix(name, "--no-") { // kingpin's --no-<name> disables --<name>
+			name = "--" + strings.TrimPrefix(name, "--no-")
+		}
 		if _, present := s[name]; present {
-			assert.Failf(t, "flag (or no- form) is already present", "%q", name)
+			assert.Failf(t, "flag (or --no- form) is already present", "%q", name)
 		}
 		s[name] = struct{}{}
 	}
