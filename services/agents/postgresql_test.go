@@ -45,8 +45,11 @@ func TestPostgresExporterConfig(t *testing.T) {
 		TemplateRightDelim: "}}",
 		Args: []string{
 			"--collect.custom_query.hr",
+			"--collect.custom_query.hr.directory=/usr/local/percona/pmm2/collectors/custom-queries/postgresql/high-resolution",
 			"--collect.custom_query.lr",
+			"--collect.custom_query.lr.directory=/usr/local/percona/pmm2/collectors/custom-queries/postgresql/low-resolution",
 			"--collect.custom_query.mr",
+			"--collect.custom_query.mr.directory=/usr/local/percona/pmm2/collectors/custom-queries/postgresql/medium-resolution",
 			"--web.listen-address=:{{ .listen_port }}",
 		},
 		Env: []string{

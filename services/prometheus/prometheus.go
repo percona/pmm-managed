@@ -254,7 +254,12 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 						return errors.WithStack(err)
 					}
 
-					scfgs, err := scrapeConfigsForPostgresExporter(&s, host, node, service, agent)
+					scfgs, err := scrapeConfigsForPostgresExporter(&s, &scrapeConfigParams{
+						host:    host,
+						node:    node,
+						service: service,
+						agent:   agent,
+					})
 					if err != nil {
 						svc.l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 						continue

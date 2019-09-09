@@ -37,16 +37,25 @@ func postgresExporterConfig(service *models.Service, exporter *models.Agent) *ag
 	)
 
 	args := []string{
+		// LR
+		"--collect.custom_query.lr",
+
+		// MR
+		"--collect.custom_query.mr",
+
+		// HR
+		"--collect.custom_query.hr",
+
+		"--collect.custom_query.lr.directory=/usr/local/percona/pmm2/collectors/custom-queries/postgresql/low-resolution",
+		"--collect.custom_query.mr.directory=/usr/local/percona/pmm2/collectors/custom-queries/postgresql/medium-resolution",
+		"--collect.custom_query.hr.directory=/usr/local/percona/pmm2/collectors/custom-queries/postgresql/high-resolution",
+
 		"--web.listen-address=:" + tdp.left + " .listen_port " + tdp.right,
 	}
 
 	if pointer.GetString(exporter.MetricsURL) != "" {
 		args = append(args, "--web.telemetry-path="+*exporter.MetricsURL)
 	}
-
-	args = append(args, "--collect.custom_query.mr")
-	args = append(args, "--collect.custom_query.lr")
-	args = append(args, "--collect.custom_query.hr")
 
 	sort.Strings(args)
 

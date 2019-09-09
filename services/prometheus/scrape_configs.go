@@ -317,18 +317,12 @@ func scrapeConfigsForMongoDBExporter(s *models.MetricsResolutions, params *scrap
 	return r, nil
 }
 
-func scrapeConfigsForPostgresExporter(s *models.MetricsResolutions, host string, node *models.Node, service *models.Service, agent *models.Agent) ([]*config.ScrapeConfig, error) {
-	params := &scrapeConfigParams{
-		host:    host,
-		node:    node,
-		service: service,
-		agent:   agent,
-	}
+func scrapeConfigsForPostgresExporter(s *models.MetricsResolutions, params *scrapeConfigParams) ([]*config.ScrapeConfig, error) {
 	hr, err := scrapeConfigForStandardExporter("hr", s.HR, params, []string{
 		"exporter",
 		"custom_query.hr",
-		"standard.process",
 		"standard.go",
+		"standard.process",
 	})
 	if err != nil {
 		return nil, err
