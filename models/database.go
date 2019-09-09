@@ -159,6 +159,9 @@ var databaseSchema = [][]string{
 		)`,
 		`INSERT INTO settings (settings) VALUES ('{}')`,
 	},
+	4: {
+		`ALTER TABLE services ADD COLUMN size_slow_logs INTEGER NOT NULL DEFAULT 0`,
+	},
 }
 
 // OpenDB returns configured connection pool for PostgreSQL.
