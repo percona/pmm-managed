@@ -304,19 +304,8 @@ func scrapeConfigsForMySQLdExporter(s *models.MetricsResolutions, params *scrape
 	return r, nil
 }
 
-func scrapeConfigsForMongoDBExporter(s *models.MetricsResolutions, host string, node *models.Node, service *models.Service, agent *models.Agent) ([]*config.ScrapeConfig, error) {
-	params := &scrapeConfigParams{
-		host:    host,
-		node:    node,
-		service: service,
-		agent:   agent,
-	}
-	hr, err := scrapeConfigForStandardExporter("hr", s.HR, params, []string{
-		"collection",
-		"database",
-		"standard.process",
-		"standard.go",
-	})
+func scrapeConfigsForMongoDBExporter(s *models.MetricsResolutions, params *scrapeConfigParams) ([]*config.ScrapeConfig, error) {
+	hr, err := scrapeConfigForStandardExporter("hr", s.HR, params, nil)
 	if err != nil {
 		return nil, err
 	}

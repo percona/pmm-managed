@@ -390,15 +390,14 @@ func TestScrapeConfig(t *testing.T) {
 						},
 					}},
 				},
-				Params: url.Values{"collect[]": []string{
-					"collection",
-					"database",
-					"standard.go",
-					"standard.process",
-				}},
 			}}
 
-			actual, err := scrapeConfigsForMongoDBExporter(s, "4.5.6.7", node, service, agent)
+			actual, err := scrapeConfigsForMongoDBExporter(s, &scrapeConfigParams{
+				host:    "4.5.6.7",
+				node:    node,
+				service: service,
+				agent:   agent,
+			})
 			require.NoError(t, err)
 			require.Len(t, actual, len(expected))
 			for i := 0; i < len(expected); i++ {
@@ -414,7 +413,12 @@ func TestScrapeConfig(t *testing.T) {
 				ListenPort:   pointer.ToUint16(12345),
 			}
 
-			_, err := scrapeConfigsForMongoDBExporter(s, "4.5.6.7", node, service, agent)
+			_, err := scrapeConfigsForMongoDBExporter(s, &scrapeConfigParams{
+				host:    "4.5.6.7",
+				node:    node,
+				service: service,
+				agent:   agent,
+			})
 			require.EqualError(t, err, "failed to decode custom labels: unexpected end of JSON input")
 		})
 	})
