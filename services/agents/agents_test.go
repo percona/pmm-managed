@@ -27,8 +27,10 @@ func assertNoDuplicateFlags(t *testing.T, flags []string) {
 	s := make(map[string]struct{})
 	for _, f := range flags {
 		name := strings.Split(f, "=")[0]
+		name = strings.TrimPrefix(name, "--no-") // --no-<name> disables --<name>
+		name = strings.TrimPrefix(name, "--")
 		if _, present := s[name]; present {
-			assert.Failf(t, "flag already present", "%q", name)
+			assert.Failf(t, "flag (or no- form) is already present", "%q", name)
 		}
 		s[name] = struct{}{}
 	}
