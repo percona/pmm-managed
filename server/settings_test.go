@@ -24,7 +24,7 @@ func TestSettings(t *testing.T) {
 		require.NoError(t, err)
 		assert.True(t, res.Payload.Settings.TelemetryEnabled)
 		expected := &server.GetSettingsOKBodySettingsMetricsResolutions{
-			Hr: "1s",
+			Hr: "5s",
 			Mr: "5s",
 			Lr: "60s",
 		}
@@ -39,7 +39,7 @@ func TestSettings(t *testing.T) {
 					Body: server.ChangeSettingsBody{
 						EnableTelemetry: true,
 						MetricsResolutions: &server.ChangeSettingsParamsBodyMetricsResolutions{
-							Hr: "1s",
+							Hr: "5s",
 							Mr: "5s",
 							Lr: "60s",
 						},
@@ -50,7 +50,7 @@ func TestSettings(t *testing.T) {
 				require.NoError(t, err)
 				assert.True(t, res.Payload.Settings.TelemetryEnabled)
 				expected := &server.ChangeSettingsOKBodySettingsMetricsResolutions{
-					Hr: "1s",
+					Hr: "5s",
 					Mr: "5s",
 					Lr: "60s",
 				}
