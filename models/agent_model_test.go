@@ -100,7 +100,6 @@ func TestPostgresAgentTLS(t *testing.T) {
 			agent.TLS = testCase.tls
 			agent.TLSSkipVerify = testCase.tlsSkipVerify
 			assert.Equal(t, testCase.want, agent.DSN(service, time.Second, "database"))
-
 		})
 	}
 }

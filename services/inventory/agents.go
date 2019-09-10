@@ -204,6 +204,7 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, req *inventorypb
 			Username:     req.Username,
 			Password:     req.Password,
 			CustomLabels: req.CustomLabels,
+			// TODO TLS
 		}
 		row, err := models.CreateAgent(tx.Querier, models.MySQLdExporterType, params)
 		if err != nil {
@@ -257,6 +258,7 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, req *inventoryp
 			Username:     req.Username,
 			Password:     req.Password,
 			CustomLabels: req.CustomLabels,
+			// TODO TLS
 		}
 		row, err := models.CreateAgent(tx.Querier, models.MongoDBExporterType, params)
 		if err != nil {
@@ -311,6 +313,7 @@ func (as *AgentsService) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *in
 			Username:     req.Username,
 			Password:     req.Password,
 			CustomLabels: req.CustomLabels,
+			// TODO TLS
 		}
 		row, err := models.CreateAgent(tx.Querier, models.QANMySQLPerfSchemaAgentType, params)
 		if err != nil {
@@ -365,6 +368,7 @@ func (as *AgentsService) AddQANMySQLSlowlogAgent(ctx context.Context, req *inven
 			Username:     req.Username,
 			Password:     req.Password,
 			CustomLabels: req.CustomLabels,
+			// TODO TLS
 		}
 		row, err := models.CreateAgent(tx.Querier, models.QANMySQLSlowlogAgentType, params)
 		if err != nil {
@@ -474,6 +478,7 @@ func (as *AgentsService) AddQANMongoDBProfilerAgent(ctx context.Context, req *in
 			Username:     req.Username,
 			Password:     req.Password,
 			CustomLabels: req.CustomLabels,
+			// TODO TLS
 		}
 		row, err := models.CreateAgent(tx.Querier, models.QANMongoDBProfilerAgentType, params)
 		if err != nil {
@@ -528,6 +533,7 @@ func (as *AgentsService) AddProxySQLExporter(ctx context.Context, req *inventory
 			Username:     req.Username,
 			Password:     req.Password,
 			CustomLabels: req.CustomLabels,
+			// TODO TLS
 		}
 		row, err := models.CreateAgent(tx.Querier, models.ProxySQLExporterType, params)
 		if err != nil {
@@ -582,6 +588,7 @@ func (as *AgentsService) AddQANPostgreSQLPgStatementsAgent(ctx context.Context, 
 			Username:     req.Username,
 			Password:     req.Password,
 			CustomLabels: req.CustomLabels,
+			// TODO TLS
 		}
 		row, err := models.CreateAgent(tx.Querier, models.QANPostgreSQLPgStatementsAgentType, params)
 		if err != nil {

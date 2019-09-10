@@ -211,15 +211,16 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 
 	case PostgresExporterType, QANPostgreSQLPgStatementsAgentType:
 		q := make(url.Values)
-		q.Set("sslmode", "disable")
 
+		sslmode := "disable"
 		if s.TLS {
 			if s.TLSSkipVerify {
-				q.Set("sslmode", "require")
+				sslmode = "require"
 			} else {
-				q.Set("sslmode", "verify-full") // TODO: in order to make this work, we need to add certs
+				sslmode = "verify-full"
 			}
 		}
+		q.Set("sslmode", sslmode)
 
 		if dialTimeout != 0 {
 			q.Set("connect_timeout", strconv.Itoa(int(dialTimeout.Seconds())))
