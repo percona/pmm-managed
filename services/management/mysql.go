@@ -76,6 +76,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 			ServiceID:  service.ServiceID,
 			Username:   req.Username,
 			Password:   req.Password,
+			// TODO TLS
 		})
 		if err != nil {
 			return err
@@ -98,6 +99,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 				ServiceID:  service.ServiceID,
 				Username:   req.Username,
 				Password:   req.Password,
+				// TODO TLS
 			})
 			if err != nil {
 				return err
@@ -116,6 +118,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 				ServiceID:  service.ServiceID,
 				Username:   req.Username,
 				Password:   req.Password,
+				// TODO TLS
 			})
 			if err != nil {
 				return err
