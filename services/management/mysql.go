@@ -48,16 +48,18 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 		if err != nil {
 			return err
 		}
+
 		service, err := models.AddNewService(tx.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
-			ServiceName:    req.ServiceName,
-			NodeID:         nodeID,
-			Environment:    req.Environment,
-			Cluster:        req.Cluster,
-			ReplicationSet: req.ReplicationSet,
-			Address:        pointer.ToStringOrNil(req.Address),
-			Port:           pointer.ToUint16OrNil(uint16(req.Port)),
-			CustomLabels:   req.CustomLabels,
-			SizeSlowLogs:   uint64(req.SizeSlowLogs),
+			ServiceName:           req.ServiceName,
+			NodeID:                nodeID,
+			Environment:           req.Environment,
+			Cluster:               req.Cluster,
+			ReplicationSet:        req.ReplicationSet,
+			Address:               pointer.ToStringOrNil(req.Address),
+			Port:                  pointer.ToUint16OrNil(uint16(req.Port)),
+			CustomLabels:          req.CustomLabels,
+			MaxSlowlogFileSize:    req.MaxSlowlogFileSize,
+			QueryexamplesDisabled: req.DisableQueryExamples,
 		})
 		if err != nil {
 			return err

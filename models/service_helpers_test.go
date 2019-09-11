@@ -102,13 +102,13 @@ func TestServiceHelpers(t *testing.T) {
 		services, err := models.ServicesForAgent(q, "A2")
 		require.NoError(t, err)
 		expected := []*models.Service{{
-			ServiceID:    "S2",
-			ServiceType:  models.MySQLServiceType,
-			ServiceName:  "Service with Agents",
-			NodeID:       "N1",
-			CreatedAt:    now,
-			UpdatedAt:    now,
-			SizeSlowLogs: 0,
+			ServiceID:             "S2",
+			ServiceType:           models.MySQLServiceType,
+			ServiceName:           "Service with Agents",
+			NodeID:                "N1",
+			CreatedAt:             now,
+			UpdatedAt:             now,
+			QueryexamplesDisabled: false,
 		}}
 		assert.Equal(t, expected, services)
 	})

@@ -160,7 +160,10 @@ var databaseSchema = [][]string{
 		`INSERT INTO settings (settings) VALUES ('{}')`,
 	},
 	4: {
-		`ALTER TABLE services ADD COLUMN size_slow_logs INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE services ADD COLUMN max_slowlog_file_size INTEGER NOT NULL DEFAULT 0`,
+	},
+	3: {
+		`ALTER TABLE services ADD COLUMN queryexamples_disabled BOOLEAN NOT NULL DEFAULT FALSE`,
 	},
 }
 

@@ -50,9 +50,10 @@ type Service struct {
 	CreatedAt      time.Time   `reform:"created_at"`
 	UpdatedAt      time.Time   `reform:"updated_at"`
 
-	Address      *string `reform:"address"`
-	Port         *uint16 `reform:"port"`
-	SizeSlowLogs uint64  `reform:"size_slow_logs"`
+	Address               *string `reform:"address"`
+	Port                  *uint16 `reform:"port"`
+	MaxSlowlogFileSize    int64   `reform:"max_slowlog_file_size"`
+	QueryexamplesDisabled bool    `reform:"queryexamples_disabled"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.

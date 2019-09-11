@@ -27,7 +27,7 @@ func (v *serviceTableType) Name() string {
 
 // Columns returns a new slice of column names for that view or table in SQL database.
 func (v *serviceTableType) Columns() []string {
-	return []string{"service_id", "service_type", "service_name", "node_id", "environment", "cluster", "replication_set", "custom_labels", "created_at", "updated_at", "address", "port", "size_slow_logs"}
+	return []string{"service_id", "service_type", "service_name", "node_id", "environment", "cluster", "replication_set", "custom_labels", "created_at", "updated_at", "address", "port", "max_slowlog_file_size", "queryexamples_disabled"}
 }
 
 // NewStruct makes a new struct for that view or table.
@@ -47,13 +47,13 @@ func (v *serviceTableType) PKColumnIndex() uint {
 
 // ServiceTable represents services view or table in SQL database.
 var ServiceTable = &serviceTableType{
-	s: parse.StructInfo{Type: "Service", SQLSchema: "", SQLName: "services", Fields: []parse.FieldInfo{{Name: "ServiceID", Type: "string", Column: "service_id"}, {Name: "ServiceType", Type: "ServiceType", Column: "service_type"}, {Name: "ServiceName", Type: "string", Column: "service_name"}, {Name: "NodeID", Type: "string", Column: "node_id"}, {Name: "Environment", Type: "string", Column: "environment"}, {Name: "Cluster", Type: "string", Column: "cluster"}, {Name: "ReplicationSet", Type: "string", Column: "replication_set"}, {Name: "CustomLabels", Type: "[]uint8", Column: "custom_labels"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}, {Name: "Address", Type: "*string", Column: "address"}, {Name: "Port", Type: "*uint16", Column: "port"}, {Name: "SizeSlowLogs", Type: "uint64", Column: "size_slow_logs"}}, PKFieldIndex: 0},
+	s: parse.StructInfo{Type: "Service", SQLSchema: "", SQLName: "services", Fields: []parse.FieldInfo{{Name: "ServiceID", Type: "string", Column: "service_id"}, {Name: "ServiceType", Type: "ServiceType", Column: "service_type"}, {Name: "ServiceName", Type: "string", Column: "service_name"}, {Name: "NodeID", Type: "string", Column: "node_id"}, {Name: "Environment", Type: "string", Column: "environment"}, {Name: "Cluster", Type: "string", Column: "cluster"}, {Name: "ReplicationSet", Type: "string", Column: "replication_set"}, {Name: "CustomLabels", Type: "[]uint8", Column: "custom_labels"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}, {Name: "Address", Type: "*string", Column: "address"}, {Name: "Port", Type: "*uint16", Column: "port"}, {Name: "MaxSlowlogFileSize", Type: "int64", Column: "max_slowlog_file_size"}, {Name: "QueryexamplesDisabled", Type: "bool", Column: "queryexamples_disabled"}}, PKFieldIndex: 0},
 	z: new(Service).Values(),
 }
 
 // String returns a string representation of this struct or record.
 func (s Service) String() string {
-	res := make([]string, 13)
+	res := make([]string, 14)
 	res[0] = "ServiceID: " + reform.Inspect(s.ServiceID, true)
 	res[1] = "ServiceType: " + reform.Inspect(s.ServiceType, true)
 	res[2] = "ServiceName: " + reform.Inspect(s.ServiceName, true)
@@ -66,7 +66,8 @@ func (s Service) String() string {
 	res[9] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
 	res[10] = "Address: " + reform.Inspect(s.Address, true)
 	res[11] = "Port: " + reform.Inspect(s.Port, true)
-	res[12] = "SizeSlowLogs: " + reform.Inspect(s.SizeSlowLogs, true)
+	res[12] = "MaxSlowlogFileSize: " + reform.Inspect(s.MaxSlowlogFileSize, true)
+	res[13] = "QueryexamplesDisabled: " + reform.Inspect(s.QueryexamplesDisabled, true)
 	return strings.Join(res, ", ")
 }
 
@@ -86,7 +87,8 @@ func (s *Service) Values() []interface{} {
 		s.UpdatedAt,
 		s.Address,
 		s.Port,
-		s.SizeSlowLogs,
+		s.MaxSlowlogFileSize,
+		s.QueryexamplesDisabled,
 	}
 }
 
@@ -106,7 +108,8 @@ func (s *Service) Pointers() []interface{} {
 		&s.UpdatedAt,
 		&s.Address,
 		&s.Port,
-		&s.SizeSlowLogs,
+		&s.MaxSlowlogFileSize,
+		&s.QueryexamplesDisabled,
 	}
 }
 
