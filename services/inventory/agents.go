@@ -366,12 +366,13 @@ func (as *AgentsService) AddQANMySQLSlowlogAgent(ctx context.Context, req *inven
 	var res *inventorypb.QANMySQLSlowlogAgent
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 		params := &models.CreateAgentParams{
-			PMMAgentID:   req.PmmAgentId,
-			ServiceID:    req.ServiceId,
-			Username:     req.Username,
-			Password:     req.Password,
-			CustomLabels: req.CustomLabels,
-			// TODO TLS
+			PMMAgentID:    req.PmmAgentId,
+			ServiceID:     req.ServiceId,
+			Username:      req.Username,
+			Password:      req.Password,
+			CustomLabels:  req.CustomLabels,
+			TLS:           req.Tls,
+			TLSSkipVerify: req.TlsSkipVerify,
 		}
 		row, err := models.CreateAgent(tx.Querier, models.QANMySQLSlowlogAgentType, params)
 		if err != nil {
@@ -476,12 +477,13 @@ func (as *AgentsService) AddQANMongoDBProfilerAgent(ctx context.Context, req *in
 	var res *inventorypb.QANMongoDBProfilerAgent
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 		params := &models.CreateAgentParams{
-			PMMAgentID:   req.PmmAgentId,
-			ServiceID:    req.ServiceId,
-			Username:     req.Username,
-			Password:     req.Password,
-			CustomLabels: req.CustomLabels,
-			// TODO TLS
+			PMMAgentID:    req.PmmAgentId,
+			ServiceID:     req.ServiceId,
+			Username:      req.Username,
+			Password:      req.Password,
+			CustomLabels:  req.CustomLabels,
+			TLS:           req.Tls,
+			TLSSkipVerify: req.TlsSkipVerify,
 		}
 		row, err := models.CreateAgent(tx.Querier, models.QANMongoDBProfilerAgentType, params)
 		if err != nil {
@@ -531,12 +533,13 @@ func (as *AgentsService) AddProxySQLExporter(ctx context.Context, req *inventory
 	var res *inventorypb.ProxySQLExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 		params := &models.CreateAgentParams{
-			PMMAgentID:   req.PmmAgentId,
-			ServiceID:    req.ServiceId,
-			Username:     req.Username,
-			Password:     req.Password,
-			CustomLabels: req.CustomLabels,
-			// TODO TLS
+			PMMAgentID:    req.PmmAgentId,
+			ServiceID:     req.ServiceId,
+			Username:      req.Username,
+			Password:      req.Password,
+			CustomLabels:  req.CustomLabels,
+			TLS:           req.Tls,
+			TLSSkipVerify: req.TlsSkipVerify,
 		}
 		row, err := models.CreateAgent(tx.Querier, models.ProxySQLExporterType, params)
 		if err != nil {
@@ -586,12 +589,13 @@ func (as *AgentsService) AddQANPostgreSQLPgStatementsAgent(ctx context.Context, 
 	var res *inventorypb.QANPostgreSQLPgStatementsAgent
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 		params := &models.CreateAgentParams{
-			PMMAgentID:   req.PmmAgentId,
-			ServiceID:    req.ServiceId,
-			Username:     req.Username,
-			Password:     req.Password,
-			CustomLabels: req.CustomLabels,
-			// TODO TLS
+			PMMAgentID:    req.PmmAgentId,
+			ServiceID:     req.ServiceId,
+			Username:      req.Username,
+			Password:      req.Password,
+			CustomLabels:  req.CustomLabels,
+			TLS:           req.Tls,
+			TLSSkipVerify: req.TlsSkipVerify,
 		}
 		row, err := models.CreateAgent(tx.Querier, models.QANPostgreSQLPgStatementsAgentType, params)
 		if err != nil {
