@@ -524,6 +524,7 @@ func (r *Registry) Collect(ch chan<- prom.Metric) {
 	r.mClockDrift.Collect(ch)
 }
 
+/*
 // StartPTSummaryAction starts pt-summary action on pmm-agent.
 // TODO: Extract it from here. Where...?
 func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID string, args []string) error {
@@ -565,6 +566,7 @@ func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID
 	agent.channel.SendRequest(aRequest)
 	return nil
 }
+*/
 
 // StartMySQLExplainAction starts MySQL EXPLAIN Action on pmm-agent.
 // TODO: Extract it from here. Where...?

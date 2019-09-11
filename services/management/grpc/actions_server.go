@@ -53,6 +53,7 @@ func (s *actionsServer) GetAction(ctx context.Context, req *managementpb.GetActi
 	}, nil
 }
 
+/*
 // StartPTSummaryAction starts pt-summary action.
 func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
 	agents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, req.NodeId)
@@ -112,6 +113,7 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 		ActionId:   res.ID,
 	}, nil
 }
+*/
 
 func (s *actionsServer) prepareServiceAction(serviceID, pmmAgentID, database string) (*models.ActionResult, string, error) {
 	var res *models.ActionResult
