@@ -193,16 +193,15 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 	switch agent.AgentType {
 	case models.MySQLdExporterType:
 		return &inventorypb.MySQLdExporter{
-			AgentId:      agent.AgentID,
-			PmmAgentId:   pointer.GetString(agent.PMMAgentID),
-			ServiceId:    serviceID,
-			Username:     pointer.GetString(agent.Username),
-			Password:     pointer.GetString(agent.Password),
-			Disabled:     agent.Disabled,
-			Status:       inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
-			ListenPort:   uint32(pointer.GetUint16(agent.ListenPort)),
-			CustomLabels: labels,
-			// TODO TLS
+			AgentId:       agent.AgentID,
+			PmmAgentId:    pointer.GetString(agent.PMMAgentID),
+			ServiceId:     serviceID,
+			Username:      pointer.GetString(agent.Username),
+			Password:      pointer.GetString(agent.Password),
+			Disabled:      agent.Disabled,
+			Status:        inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
+			ListenPort:    uint32(pointer.GetUint16(agent.ListenPort)),
+			CustomLabels:  labels,
 			Tls:           agent.TLS,
 			TlsSkipVerify: agent.TLSSkipVerify,
 		}, nil
