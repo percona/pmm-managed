@@ -199,12 +199,13 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, req *inventorypb
 	var res *inventorypb.MySQLdExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 		params := &models.CreateAgentParams{
-			PMMAgentID:   req.PmmAgentId,
-			ServiceID:    req.ServiceId,
-			Username:     req.Username,
-			Password:     req.Password,
-			CustomLabels: req.CustomLabels,
-			// TODO TLS
+			PMMAgentID:    req.PmmAgentId,
+			ServiceID:     req.ServiceId,
+			Username:      req.Username,
+			Password:      req.Password,
+			CustomLabels:  req.CustomLabels,
+			TLS:           req.Tls,
+			TLSSkipVerify: req.TlsSkipVerify,
 		}
 		row, err := models.CreateAgent(tx.Querier, models.MySQLdExporterType, params)
 		if err != nil {

@@ -69,11 +69,12 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 		res.Service = invService.(*inventorypb.MySQLService)
 
 		row, err := models.CreateAgent(tx.Querier, models.MySQLdExporterType, &models.CreateAgentParams{
-			PMMAgentID: req.PmmAgentId,
-			ServiceID:  service.ServiceID,
-			Username:   req.Username,
-			Password:   req.Password,
-			// TODO TLS
+			PMMAgentID:    req.PmmAgentId,
+			ServiceID:     service.ServiceID,
+			Username:      req.Username,
+			Password:      req.Password,
+			TLS:           req.Tls,
+			TLSSkipVerify: req.TlsSkipVerify,
 		})
 		if err != nil {
 			return err

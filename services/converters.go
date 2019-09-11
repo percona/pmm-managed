@@ -203,6 +203,8 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 			ListenPort:   uint32(pointer.GetUint16(agent.ListenPort)),
 			CustomLabels: labels,
 			// TODO TLS
+			Tls:           agent.TLS,
+			TlsSkipVerify: agent.TLSSkipVerify,
 		}, nil
 
 	case models.MongoDBExporterType:
