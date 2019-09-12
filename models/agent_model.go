@@ -154,10 +154,16 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		cfg.Addr = net.JoinHostPort(host, strconv.Itoa(int(port)))
 		cfg.Timeout = dialTimeout
 		cfg.DBName = database
+		cfg.Params = make(map[string]string)
 		if s.TLS {
 			// TODO: how certs and other parameters are going to be specified? We need to implement calling RegisterTLSConfig
 			// See https://godoc.org/github.com/go-sql-driver/mysql#RegisterTLSConfig
 			cfg.TLSConfig = "true"
+			if s.TLSSkipVerify {
+				cfg.Params["tls"] = "skip-verify"
+			} else {
+				cfg.Params["tls"] = "preferred"
+			}
 		}
 
 		// MultiStatements must not be used as it enables SQL injections (in particular, in pmm-agent's Actions)
@@ -174,10 +180,16 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		cfg.Addr = net.JoinHostPort(host, strconv.Itoa(int(port)))
 		cfg.Timeout = dialTimeout
 		cfg.DBName = database
+		cfg.Params = make(map[string]string)
 		if s.TLS {
 			// TODO: how certs and other parameters are going to be specified? We need to implement calling RegisterTLSConfig
 			// See https://godoc.org/github.com/go-sql-driver/mysql#RegisterTLSConfig
 			cfg.TLSConfig = "true"
+			if s.TLSSkipVerify {
+				cfg.Params["tls"] = "skip-verify"
+			} else {
+				cfg.Params["tls"] = "preferred"
+			}
 		}
 
 		// MultiStatements must not be used as it enables SQL injections (in particular, in pmm-agent's Actions)
@@ -204,6 +216,9 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		}
 		if s.TLS {
 			q.Add("ssl", "true")
+			if s.TLSSkipVerify {
+				q.Add("tlsInsecure", "true")
+			}
 		}
 
 		u := &url.URL{
