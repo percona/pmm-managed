@@ -158,7 +158,6 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		if s.TLS {
 			// TODO: how certs and other parameters are going to be specified? We need to implement calling RegisterTLSConfig
 			// See https://godoc.org/github.com/go-sql-driver/mysql#RegisterTLSConfig
-			cfg.TLSConfig = "true"
 			if s.TLSSkipVerify {
 				cfg.Params["tls"] = "skip-verify"
 			} else {
@@ -184,7 +183,6 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		if s.TLS {
 			// TODO: how certs and other parameters are going to be specified? We need to implement calling RegisterTLSConfig
 			// See https://godoc.org/github.com/go-sql-driver/mysql#RegisterTLSConfig
-			cfg.TLSConfig = "true"
 			if s.TLSSkipVerify {
 				cfg.Params["tls"] = "skip-verify"
 			} else {
