@@ -186,7 +186,7 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			if s.TLSSkipVerify {
 				cfg.Params["tls"] = "skip-verify"
 			} else {
-				cfg.Params["tls"] = "preferred"
+				cfg.Params["tls"] = "true"
 			}
 		}
 
