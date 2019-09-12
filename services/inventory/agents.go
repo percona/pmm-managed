@@ -310,14 +310,14 @@ func (as *AgentsService) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *in
 	var res *inventorypb.QANMySQLPerfSchemaAgent
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 		params := &models.CreateAgentParams{
-			PMMAgentID:    req.PmmAgentId,
-			ServiceID:     req.ServiceId,
-			Username:      req.Username,
-			Password:      req.Password,
-			CustomLabels:  req.CustomLabels,
-			TLS:           req.Tls,
-			TLSSkipVerify: req.TlsSkipVerify,
-			// TODO QueryExamplesDisabled
+			PMMAgentID:            req.PmmAgentId,
+			ServiceID:             req.ServiceId,
+			Username:              req.Username,
+			Password:              req.Password,
+			CustomLabels:          req.CustomLabels,
+			TLS:                   req.Tls,
+			TLSSkipVerify:         req.TlsSkipVerify,
+			QueryExamplesDisabled: req.DisableQueryExamples,
 		}
 		row, err := models.CreateAgent(tx.Querier, models.QANMySQLPerfSchemaAgentType, params)
 		if err != nil {
