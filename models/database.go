@@ -290,7 +290,7 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 func setupFixture1(q *reform.Querier, username, password string) error {
 	// create PMM Server Node and associated Agents
 	node, err := createNodeWithID(q, PMMServerNodeID, GenericNodeType, &CreateNodeParams{
-		NodeName: "PMM Server",
+		NodeName: "pmm-server",
 		Address:  "127.0.0.1",
 	})
 	if err != nil {
@@ -309,7 +309,7 @@ func setupFixture1(q *reform.Querier, username, password string) error {
 
 	// create PostgreSQL Service and associated Agents
 	service, err := AddNewService(q, PostgreSQLServiceType, &AddDBMSServiceParams{
-		ServiceName: "PMM Server PostgreSQL",
+		ServiceName: "pmm-server-postgresql",
 		NodeID:      node.NodeID,
 		Address:     pointer.ToString("127.0.0.1"),
 		Port:        pointer.ToUint16(5432),
