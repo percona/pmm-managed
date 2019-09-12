@@ -69,14 +69,18 @@ func TestPMMUpdateChecker(t *testing.T) {
 		// pmm-update package version. That is true for Travis CI. If this test fails locally,
 		// run "docker pull perconalab/pmm-server:dev-latest" and recreate devcontainer.
 		if os.Getenv("PMM_SERVER_IMAGE") == "perconalab/pmm-server:dev-latest" {
-			assert.Equal(t, res.Installed, res.Latest)
-			assert.False(t, res.UpdateAvailable)
+			t.Log("Assuming the latest pmm-update version.")
+			assert.False(t, res.UpdateAvailable, "update should not be available")
+			assert.Equal(t, res.Installed, res.Latest, "version should be the same (latest)")
+			assert.Equal(t, *res.Installed.BuildTime, *res.Latest.BuildTime, "build times should be the same")
+			assert.Equal(t, "local", res.Latest.Repo)
 		} else {
-			assert.NotEqual(t, res.Installed.Version, res.Latest.Version)
-			assert.NotEqual(t, res.Installed.FullVersion, res.Latest.FullVersion)
-			assert.NotEqual(t, *res.Installed.BuildTime, *res.Latest.BuildTime)
+			t.Log("Assuming pmm-update update is available.")
+			assert.True(t, res.UpdateAvailable, "update should be available")
+			assert.NotEqual(t, res.Installed.Version, res.Latest.Version, "versions should not be the same")
+			assert.NotEqual(t, res.Installed.FullVersion, res.Latest.FullVersion, "versions should not be the same")
+			assert.NotEqual(t, *res.Installed.BuildTime, *res.Latest.BuildTime, "build times should not be the same (%s)", *res.Installed.BuildTime)
 			assert.Equal(t, "pmm2-laboratory", res.Latest.Repo)
-			assert.True(t, res.UpdateAvailable)
 		}
 
 		// cached result
