@@ -111,8 +111,9 @@ func mysqldExporterConfig(service *models.Service, exporter *models.Agent) *agen
 // qanMySQLPerfSchemaAgentConfig returns desired configuration of qan-mysql-perfschema built-in agent.
 func qanMySQLPerfSchemaAgentConfig(service *models.Service, agent *models.Agent) *agentpb.SetStateRequest_BuiltinAgent {
 	return &agentpb.SetStateRequest_BuiltinAgent{
-		Type: agentpb.Type_QAN_MYSQL_PERFSCHEMA_AGENT,
-		Dsn:  agent.DSN(service, time.Second, ""),
+		Type:                 agentpb.Type_QAN_MYSQL_PERFSCHEMA_AGENT,
+		Dsn:                  agent.DSN(service, time.Second, ""),
+		DisableQueryExamples: agent.QueryExamplesDisabled,
 	}
 }
 
@@ -121,7 +122,7 @@ func qanMySQLSlowlogAgentConfig(service *models.Service, agent *models.Agent) *a
 	return &agentpb.SetStateRequest_BuiltinAgent{
 		Type:                 agentpb.Type_QAN_MYSQL_SLOWLOG_AGENT,
 		Dsn:                  agent.DSN(service, time.Second, ""),
-		MaxQueryLogSize:      service.MaxSlowlogFileSize,
-		DisableQueryExamples: service.QueryexamplesDisabled,
+		DisableQueryExamples: agent.QueryExamplesDisabled,
+		MaxQueryLogSize:      agent.MaxQueryLogSize,
 	}
 }

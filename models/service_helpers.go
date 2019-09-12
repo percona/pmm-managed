@@ -151,16 +151,14 @@ func ServicesForNode(q *reform.Querier, nodeID string) ([]*Service, error) {
 
 // AddDBMSServiceParams contains parameters for adding DBMS (MySQL, PostgreSQL, MongoDB) Services.
 type AddDBMSServiceParams struct {
-	ServiceName           string
-	NodeID                string
-	Environment           string
-	Cluster               string
-	ReplicationSet        string
-	CustomLabels          map[string]string
-	Address               *string
-	Port                  *uint16
-	MaxSlowlogFileSize    int64
-	QueryexamplesDisabled bool
+	ServiceName    string
+	NodeID         string
+	Environment    string
+	Cluster        string
+	ReplicationSet string
+	CustomLabels   map[string]string
+	Address        *string
+	Port           *uint16
 }
 
 // AddNewService adds new service to storage.
@@ -178,17 +176,15 @@ func AddNewService(q *reform.Querier, serviceType ServiceType, params *AddDBMSSe
 	}
 
 	row := &Service{
-		ServiceID:             id,
-		ServiceType:           serviceType,
-		ServiceName:           params.ServiceName,
-		NodeID:                params.NodeID,
-		Environment:           params.Environment,
-		Cluster:               params.Cluster,
-		ReplicationSet:        params.ReplicationSet,
-		Address:               params.Address,
-		Port:                  params.Port,
-		MaxSlowlogFileSize:    params.MaxSlowlogFileSize,
-		QueryexamplesDisabled: params.QueryexamplesDisabled,
+		ServiceID:      id,
+		ServiceType:    serviceType,
+		ServiceName:    params.ServiceName,
+		NodeID:         params.NodeID,
+		Environment:    params.Environment,
+		Cluster:        params.Cluster,
+		ReplicationSet: params.ReplicationSet,
+		Address:        params.Address,
+		Port:           params.Port,
 	}
 	if err := row.SetCustomLabels(params.CustomLabels); err != nil {
 		return nil, err
