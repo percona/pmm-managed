@@ -146,7 +146,6 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 
 	switch s.AgentType {
 	case MySQLdExporterType, ProxySQLExporterType:
-
 		cfg := mysql.NewConfig()
 		cfg.User = username
 		cfg.Passwd = password
@@ -161,7 +160,7 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			if s.TLSSkipVerify {
 				cfg.Params["tls"] = "skip-verify"
 			} else {
-				cfg.Params["tls"] = "preferred"
+				cfg.Params["tls"] = "true"
 			}
 		}
 
@@ -171,7 +170,6 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		return cfg.FormatDSN()
 
 	case QANMySQLPerfSchemaAgentType, QANMySQLSlowlogAgentType:
-
 		cfg := mysql.NewConfig()
 		cfg.User = username
 		cfg.Passwd = password
@@ -212,6 +210,7 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		if database == "" {
 			path = "/"
 		}
+
 		if s.TLS {
 			q.Add("ssl", "true")
 			if s.TLSSkipVerify {
