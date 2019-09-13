@@ -168,11 +168,12 @@ func TestAddMySQL(t *testing.T) {
 			},
 			QANMysqlSlowlogAgent: []*agents.QANMysqlSlowlogAgentItems0{
 				{
-					AgentID:    listAgents.Payload.QANMysqlSlowlogAgent[0].AgentID,
-					ServiceID:  serviceID,
-					PMMAgentID: pmmAgentID,
-					Username:   "username",
-					Password:   "password",
+					AgentID:            listAgents.Payload.QANMysqlSlowlogAgent[0].AgentID,
+					ServiceID:          serviceID,
+					PMMAgentID:         pmmAgentID,
+					Username:           "username",
+					Password:           "password",
+					MaxSlowlogFileSize: "1073741824",
 				},
 			},
 			QANMysqlPerfschemaAgent: []*agents.QANMysqlPerfschemaAgentItems0{
