@@ -700,59 +700,6 @@ func TestMySQLdExporter(t *testing.T) {
 	})
 }
 
-func TestRDSExporter(t *testing.T) {
-	t.Skip("Not implemented yet.")
-
-	t.Run("Basic", func(t *testing.T) {
-		t.Parallel()
-
-		node := addRemoteNode(t, pmmapitests.TestString(t, "Remote node for Node exporter"))
-		nodeID := node.Remote.NodeID
-		defer pmmapitests.RemoveNodes(t, nodeID)
-
-		pmmAgent := addPMMAgent(t, nodeID)
-		pmmAgentID := pmmAgent.PMMAgent.AgentID
-		defer pmmapitests.RemoveAgents(t, pmmAgentID)
-
-		service := addMySQLService(t, services.AddMySQLServiceBody{
-			NodeID:      nodeID,
-			Address:     "localhost",
-			Port:        3306,
-			ServiceName: pmmapitests.TestString(t, "MySQL Service for RDSExporter test"),
-		})
-		serviceID := service.Mysql.ServiceID
-		defer pmmapitests.RemoveServices(t, serviceID)
-
-		res, err := client.Default.Agents.AddRDSExporter(&agents.AddRDSExporterParams{
-			Body: agents.AddRDSExporterBody{
-				PMMAgentID: pmmAgentID,
-				ServiceIds: []string{serviceID},
-			},
-			Context: pmmapitests.Context,
-		})
-		require.NoError(t, err)
-		require.NotNil(t, res)
-		require.NotNil(t, res.Payload.RDSExporter)
-		agentID := res.Payload.RDSExporter.AgentID
-		defer pmmapitests.RemoveAgents(t, agentID)
-
-		getAgentRes, err := client.Default.Agents.GetAgent(&agents.GetAgentParams{
-			Body:    agents.GetAgentBody{AgentID: agentID},
-			Context: pmmapitests.Context,
-		})
-		require.NoError(t, err)
-		assert.Equal(t, &agents.GetAgentOK{
-			Payload: &agents.GetAgentOKBody{
-				RDSExporter: &agents.GetAgentOKBodyRDSExporter{
-					AgentID:    agentID,
-					PMMAgentID: pmmAgentID,
-					ServiceIds: []string{serviceID},
-				},
-			},
-		}, getAgentRes)
-	})
-}
-
 func TestMongoDBExporter(t *testing.T) {
 	t.Run("Basic", func(t *testing.T) {
 		t.Parallel()

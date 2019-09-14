@@ -15,13 +15,13 @@ import (
 	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
 )
 
-func registerGenericNode(t *testing.T, body node.RegisterBody) (string, string) {
+func registerGenericNode(t *testing.T, body node.RegisterNodeBody) (string, string) {
 	t.Helper()
-	params := node.RegisterParams{
+	params := node.RegisterNodeParams{
 		Context: pmmapitests.Context,
 		Body:    body,
 	}
-	registerOK, err := client.Default.Node.Register(&params)
+	registerOK, err := client.Default.Node.RegisterNode(&params)
 	require.NoError(t, err)
 	require.NotNil(t, registerOK)
 	require.NotNil(t, registerOK.Payload.PMMAgent)
@@ -31,13 +31,13 @@ func registerGenericNode(t *testing.T, body node.RegisterBody) (string, string) 
 	return registerOK.Payload.GenericNode.NodeID, registerOK.Payload.PMMAgent.AgentID
 }
 
-func registerContainerNode(t *testing.T, body node.RegisterBody) (string, string) {
+func registerContainerNode(t *testing.T, body node.RegisterNodeBody) (string, string) {
 	t.Helper()
-	params := node.RegisterParams{
+	params := node.RegisterNodeParams{
 		Context: pmmapitests.Context,
 		Body:    body,
 	}
-	registerOK, err := client.Default.Node.Register(&params)
+	registerOK, err := client.Default.Node.RegisterNode(&params)
 	require.NoError(t, err)
 	require.NotNil(t, registerOK)
 	require.NotNil(t, registerOK.Payload.PMMAgent)
@@ -145,12 +145,6 @@ func removeAllAgentsInList(t *testing.T, listAgentsOK *agents.ListAgentsOK) {
 		agentIDs = append(agentIDs, agent.AgentID)
 	}
 	for _, agent := range listAgentsOK.Payload.MongodbExporter {
-		agentIDs = append(agentIDs, agent.AgentID)
-	}
-	for _, agent := range listAgentsOK.Payload.RDSExporter {
-		agentIDs = append(agentIDs, agent.AgentID)
-	}
-	for _, agent := range listAgentsOK.Payload.ExternalExporter {
 		agentIDs = append(agentIDs, agent.AgentID)
 	}
 	for _, agent := range listAgentsOK.Payload.QANMongodbProfilerAgent {

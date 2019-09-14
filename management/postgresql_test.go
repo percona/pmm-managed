@@ -21,9 +21,9 @@ import (
 func TestAddPostgreSQL(t *testing.T) {
 	t.Run("Basic", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-for-basic-name")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterBody{
+		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
-			NodeType: pointer.ToString(node.RegisterBodyNodeTypeGENERICNODE),
+			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
 		defer removePMMAgentWithSubAgents(t, pmmAgentID)
@@ -92,9 +92,9 @@ func TestAddPostgreSQL(t *testing.T) {
 
 	t.Run("With agents", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-for-all-fields-name")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterBody{
+		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
-			NodeType: pointer.ToString(node.RegisterBodyNodeTypeGENERICNODE),
+			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
 		defer removePMMAgentWithSubAgents(t, pmmAgentID)
@@ -176,9 +176,9 @@ func TestAddPostgreSQL(t *testing.T) {
 
 	t.Run("With labels", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-for-all-fields-name")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterBody{
+		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
-			NodeType: pointer.ToString(node.RegisterBodyNodeTypeGENERICNODE),
+			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
 		defer removePMMAgentWithSubAgents(t, pmmAgentID)
@@ -232,9 +232,9 @@ func TestAddPostgreSQL(t *testing.T) {
 
 	t.Run("With the same name", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-for-the-same-name")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterBody{
+		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
-			NodeType: pointer.ToString(node.RegisterBodyNodeTypeGENERICNODE),
+			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
 		defer removePMMAgentWithSubAgents(t, pmmAgentID)
@@ -280,9 +280,9 @@ func TestAddPostgreSQL(t *testing.T) {
 
 	t.Run("Empty Service Name", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-name")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterBody{
+		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
-			NodeType: pointer.ToString(node.RegisterBodyNodeTypeGENERICNODE),
+			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
 		defer removePMMAgentWithSubAgents(t, pmmAgentID)
@@ -298,9 +298,9 @@ func TestAddPostgreSQL(t *testing.T) {
 
 	t.Run("Empty Address", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-name")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterBody{
+		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
-			NodeType: pointer.ToString(node.RegisterBodyNodeTypeGENERICNODE),
+			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
 		defer removePMMAgentWithSubAgents(t, pmmAgentID)
@@ -320,9 +320,9 @@ func TestAddPostgreSQL(t *testing.T) {
 
 	t.Run("Empty Port", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-name")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterBody{
+		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
-			NodeType: pointer.ToString(node.RegisterBodyNodeTypeGENERICNODE),
+			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
 		defer removePMMAgentWithSubAgents(t, pmmAgentID)
@@ -343,9 +343,9 @@ func TestAddPostgreSQL(t *testing.T) {
 
 	t.Run("Empty Pmm Agent ID", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-name")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterBody{
+		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
-			NodeType: pointer.ToString(node.RegisterBodyNodeTypeGENERICNODE),
+			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
 		defer removePMMAgentWithSubAgents(t, pmmAgentID)
@@ -368,9 +368,9 @@ func TestAddPostgreSQL(t *testing.T) {
 
 func TestRemovePostgreSQL(t *testing.T) {
 	addPostgreSQL := func(t *testing.T, serviceName, nodeName string, withAgents bool) (nodeID string, pmmAgentID string, serviceID string) {
-		nodeID, pmmAgentID = registerGenericNode(t, node.RegisterBody{
+		nodeID, pmmAgentID = registerGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
-			NodeType: pointer.ToString(node.RegisterBodyNodeTypeGENERICNODE),
+			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 
 		params := &postgresql.AddPostgreSQLParams{
