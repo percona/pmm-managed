@@ -242,7 +242,7 @@
   version = "v0.5.0"
 
 [[projects]]
-  branch = "PMM-3989-remove-passwords"
+  branch = "PMM-2.0"
   digest = "1:a2f2f11be3c16f6b19b4f6a494a9e217dd5ad01012aebd599814f76707eb19ef"
   name = "github.com/percona/pmm"
   packages = [
@@ -255,7 +255,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "422305a4c2f0c91b94154cb531bb3daa06f86620"
+  revision = "7b6717f7e7c3602c4227d7436fb447609badae8f"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
