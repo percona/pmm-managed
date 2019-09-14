@@ -55,8 +55,6 @@ func (s *agentsServer) ListAgents(ctx context.Context, req *inventorypb.ListAgen
 			res.NodeExporter = append(res.NodeExporter, agent)
 		case *inventorypb.MySQLdExporter:
 			res.MysqldExporter = append(res.MysqldExporter, agent)
-		case *inventorypb.RDSExporter:
-			res.RdsExporter = append(res.RdsExporter, agent)
 		case *inventorypb.ExternalExporter:
 			res.ExternalExporter = append(res.ExternalExporter, agent)
 		case *inventorypb.MongoDBExporter:
@@ -95,8 +93,6 @@ func (s *agentsServer) GetAgent(ctx context.Context, req *inventorypb.GetAgentRe
 		res.Agent = &inventorypb.GetAgentResponse_NodeExporter{NodeExporter: agent}
 	case *inventorypb.MySQLdExporter:
 		res.Agent = &inventorypb.GetAgentResponse_MysqldExporter{MysqldExporter: agent}
-	case *inventorypb.RDSExporter:
-		res.Agent = &inventorypb.GetAgentResponse_RdsExporter{RdsExporter: agent}
 	case *inventorypb.ExternalExporter:
 		res.Agent = &inventorypb.GetAgentResponse_ExternalExporter{ExternalExporter: agent}
 	case *inventorypb.MongoDBExporter:
@@ -182,15 +178,6 @@ func (s *agentsServer) ChangeMySQLdExporter(ctx context.Context, req *inventoryp
 		MysqldExporter: agent,
 	}
 	return res, nil
-}
-
-// AddRDSExporter adds rds_exporter Agent.
-func (s *agentsServer) AddRDSExporter(ctx context.Context, req *inventorypb.AddRDSExporterRequest) (*inventorypb.AddRDSExporterResponse, error) {
-	panic("not implemented yet")
-}
-
-func (s *agentsServer) ChangeRDSExporter(context.Context, *inventorypb.ChangeRDSExporterRequest) (*inventorypb.ChangeRDSExporterResponse, error) {
-	panic("not implemented")
 }
 
 // AddExternalExporter adds external Agent.
