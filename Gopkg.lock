@@ -243,7 +243,7 @@
 
 [[projects]]
   branch = "PMM-3786-api-cleanups"
-  digest = "1:b19e7e5c8705d7b1db2ac7a3e54258664e60d2fed11e91aad2fd88fff2f3139c"
+  digest = "1:639cc87a1681ad7086e107093351a51439a4e7295e12c14340bf10b707a515cc"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -255,7 +255,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "51f2abae4f6f8a9326ea69e29d7831d017ec9320"
+  revision = "3045d7eb5bb067ae453116f5c1341f4f31064e1d"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
