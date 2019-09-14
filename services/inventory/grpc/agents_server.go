@@ -55,8 +55,6 @@ func (s *agentsServer) ListAgents(ctx context.Context, req *inventorypb.ListAgen
 			res.NodeExporter = append(res.NodeExporter, agent)
 		case *inventorypb.MySQLdExporter:
 			res.MysqldExporter = append(res.MysqldExporter, agent)
-		case *inventorypb.ExternalExporter:
-			res.ExternalExporter = append(res.ExternalExporter, agent)
 		case *inventorypb.MongoDBExporter:
 			res.MongodbExporter = append(res.MongodbExporter, agent)
 		case *inventorypb.QANMySQLPerfSchemaAgent:
@@ -93,8 +91,6 @@ func (s *agentsServer) GetAgent(ctx context.Context, req *inventorypb.GetAgentRe
 		res.Agent = &inventorypb.GetAgentResponse_NodeExporter{NodeExporter: agent}
 	case *inventorypb.MySQLdExporter:
 		res.Agent = &inventorypb.GetAgentResponse_MysqldExporter{MysqldExporter: agent}
-	case *inventorypb.ExternalExporter:
-		res.Agent = &inventorypb.GetAgentResponse_ExternalExporter{ExternalExporter: agent}
 	case *inventorypb.MongoDBExporter:
 		res.Agent = &inventorypb.GetAgentResponse_MongodbExporter{MongodbExporter: agent}
 	case *inventorypb.QANMySQLPerfSchemaAgent:
@@ -178,15 +174,6 @@ func (s *agentsServer) ChangeMySQLdExporter(ctx context.Context, req *inventoryp
 		MysqldExporter: agent,
 	}
 	return res, nil
-}
-
-// AddExternalExporter adds external Agent.
-func (s *agentsServer) AddExternalExporter(ctx context.Context, req *inventorypb.AddExternalExporterRequest) (*inventorypb.AddExternalExporterResponse, error) {
-	panic("not implemented yet")
-}
-
-func (s *agentsServer) ChangeExternalExporter(context.Context, *inventorypb.ChangeExternalExporterRequest) (*inventorypb.ChangeExternalExporterResponse, error) {
-	panic("not implemented")
 }
 
 // AddMongoDBExporter adds mongodb_exporter Agent.
