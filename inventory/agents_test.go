@@ -301,7 +301,6 @@ func TestPMMAgent(t *testing.T) {
 					AgentID:    mySqldExporterID,
 					ServiceID:  serviceID,
 					Username:   "username",
-					Password:   "password",
 					CustomLabels: map[string]string{
 						"custom_label_mysql_exporter": "mysql_exporter",
 					},
@@ -527,7 +526,6 @@ func TestMySQLdExporter(t *testing.T) {
 					AgentID:    agentID,
 					ServiceID:  serviceID,
 					Username:   "username",
-					Password:   "password",
 					PMMAgentID: pmmAgentID,
 					CustomLabels: map[string]string{
 						"custom_label_mysql_exporter": "mysql_exporter",
@@ -554,7 +552,6 @@ func TestMySQLdExporter(t *testing.T) {
 					AgentID:    agentID,
 					ServiceID:  serviceID,
 					Username:   "username",
-					Password:   "password",
 					PMMAgentID: pmmAgentID,
 					Disabled:   true,
 				},
@@ -580,7 +577,6 @@ func TestMySQLdExporter(t *testing.T) {
 					AgentID:    agentID,
 					ServiceID:  serviceID,
 					Username:   "username",
-					Password:   "password",
 					PMMAgentID: pmmAgentID,
 					Disabled:   false,
 					CustomLabels: map[string]string{
@@ -807,7 +803,6 @@ func TestMongoDBExporter(t *testing.T) {
 					AgentID:    agentID,
 					ServiceID:  serviceID,
 					Username:   "username",
-					Password:   "password",
 					PMMAgentID: pmmAgentID,
 					CustomLabels: map[string]string{
 						"new_label": "mongodb_exporter",
@@ -834,7 +829,6 @@ func TestMongoDBExporter(t *testing.T) {
 					AgentID:    agentID,
 					ServiceID:  serviceID,
 					Username:   "username",
-					Password:   "password",
 					PMMAgentID: pmmAgentID,
 					Disabled:   true,
 				},
@@ -860,7 +854,6 @@ func TestMongoDBExporter(t *testing.T) {
 					AgentID:    agentID,
 					ServiceID:  serviceID,
 					Username:   "username",
-					Password:   "password",
 					PMMAgentID: pmmAgentID,
 					Disabled:   false,
 					CustomLabels: map[string]string{
@@ -1034,7 +1027,6 @@ func TestQanAgentExporter(t *testing.T) {
 					AgentID:    agentID,
 					ServiceID:  serviceID,
 					Username:   "username",
-					Password:   "password",
 					PMMAgentID: pmmAgentID,
 					CustomLabels: map[string]string{
 						"new_label": "QANMysqlPerfschemaAgent",
@@ -1061,7 +1053,6 @@ func TestQanAgentExporter(t *testing.T) {
 					AgentID:    agentID,
 					ServiceID:  serviceID,
 					Username:   "username",
-					Password:   "password",
 					PMMAgentID: pmmAgentID,
 					Disabled:   true,
 				},
@@ -1087,7 +1078,6 @@ func TestQanAgentExporter(t *testing.T) {
 					AgentID:    agentID,
 					ServiceID:  serviceID,
 					Username:   "username",
-					Password:   "password",
 					PMMAgentID: pmmAgentID,
 					Disabled:   false,
 					CustomLabels: map[string]string{
@@ -1263,7 +1253,6 @@ func TestPostgresExporter(t *testing.T) {
 					AgentID:    agentID,
 					ServiceID:  serviceID,
 					Username:   "username",
-					Password:   "password",
 					PMMAgentID: pmmAgentID,
 					CustomLabels: map[string]string{
 						"custom_label_postgres_exporter": "postgres_exporter",
@@ -1290,7 +1279,6 @@ func TestPostgresExporter(t *testing.T) {
 					AgentID:    agentID,
 					ServiceID:  serviceID,
 					Username:   "username",
-					Password:   "password",
 					PMMAgentID: pmmAgentID,
 					Disabled:   true,
 				},
@@ -1316,7 +1304,6 @@ func TestPostgresExporter(t *testing.T) {
 					AgentID:    agentID,
 					ServiceID:  serviceID,
 					Username:   "username",
-					Password:   "password",
 					PMMAgentID: pmmAgentID,
 					Disabled:   false,
 					CustomLabels: map[string]string{
@@ -1490,7 +1477,6 @@ func TestProxySQLExporter(t *testing.T) {
 					AgentID:    agentID,
 					ServiceID:  serviceID,
 					Username:   "username",
-					Password:   "password",
 					PMMAgentID: pmmAgentID,
 					CustomLabels: map[string]string{
 						"custom_label_proxysql_exporter": "proxysql_exporter",
@@ -1517,7 +1503,6 @@ func TestProxySQLExporter(t *testing.T) {
 					AgentID:    agentID,
 					ServiceID:  serviceID,
 					Username:   "username",
-					Password:   "password",
 					PMMAgentID: pmmAgentID,
 					Disabled:   true,
 				},
@@ -1543,7 +1528,6 @@ func TestProxySQLExporter(t *testing.T) {
 					AgentID:    agentID,
 					ServiceID:  serviceID,
 					Username:   "username",
-					Password:   "password",
 					PMMAgentID: pmmAgentID,
 					Disabled:   false,
 					CustomLabels: map[string]string{
@@ -1717,7 +1701,6 @@ func TestPostgreSQLQanAgentExporter(t *testing.T) {
 					AgentID:    agentID,
 					ServiceID:  serviceID,
 					Username:   "username",
-					Password:   "password",
 					PMMAgentID: pmmAgentID,
 					CustomLabels: map[string]string{
 						"new_label": "QANPostgreSQLPgStatementsAgent",
@@ -1744,7 +1727,6 @@ func TestPostgreSQLQanAgentExporter(t *testing.T) {
 					AgentID:    agentID,
 					ServiceID:  serviceID,
 					Username:   "username",
-					Password:   "password",
 					PMMAgentID: pmmAgentID,
 					Disabled:   true,
 				},
@@ -1770,7 +1752,6 @@ func TestPostgreSQLQanAgentExporter(t *testing.T) {
 					AgentID:    agentID,
 					ServiceID:  serviceID,
 					Username:   "username",
-					Password:   "password",
 					PMMAgentID: pmmAgentID,
 					Disabled:   false,
 					CustomLabels: map[string]string{

@@ -161,7 +161,6 @@ func TestAddPostgreSQL(t *testing.T) {
 					ServiceID:  serviceID,
 					PMMAgentID: pmmAgentID,
 					Username:   "username",
-					Password:   "password",
 				},
 			},
 			QANPostgresqlPgstatementsAgent: []*agents.QANPostgresqlPgstatementsAgentItems0{
@@ -170,7 +169,6 @@ func TestAddPostgreSQL(t *testing.T) {
 					ServiceID:  serviceID,
 					PMMAgentID: pmmAgentID,
 					Username:   "username",
-					Password:   "password",
 				},
 			},
 		}, *listAgents.Payload)

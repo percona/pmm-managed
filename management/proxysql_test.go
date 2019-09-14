@@ -159,7 +159,6 @@ func TestAddProxySQL(t *testing.T) {
 					ServiceID:  serviceID,
 					PMMAgentID: pmmAgentID,
 					Username:   "username",
-					Password:   "password",
 				},
 			},
 		}, *listAgents.Payload)

@@ -160,7 +160,6 @@ func TestAddMongoDB(t *testing.T) {
 					ServiceID:  serviceID,
 					PMMAgentID: pmmAgentID,
 					Username:   "username",
-					Password:   "password",
 				},
 			},
 			QANMongodbProfilerAgent: []*agents.QANMongodbProfilerAgentItems0{
@@ -169,7 +168,6 @@ func TestAddMongoDB(t *testing.T) {
 					ServiceID:  serviceID,
 					PMMAgentID: pmmAgentID,
 					Username:   "username",
-					Password:   "password",
 				},
 			},
 		}, *listAgents.Payload)
