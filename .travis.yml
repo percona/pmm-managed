@@ -6,6 +6,7 @@ services:
 
 go:
   - 1.12.x
+  # - TODO 1.13.x
   # - TODO master
 
 matrix:
@@ -27,18 +28,17 @@ env:
 
   matrix:
     # what we currently use in PMM
-    # TODO replace "perconalab/pmm-server:dev-latest" with "percona/pmm-server:2.0.0" after 2.0.0 GA
+    # TODO replace "percona/pmm-server:2.0.0-rc2" with "percona/pmm-server:2.0.0" after 2.0.0 GA
     - PROMETHEUS_IMAGE=prom/prometheus:v2.12.0
       GRAFANA_IMAGE=grafana/grafana:6.3.5
       POSTGRES_IMAGE=postgres:11
-      PMM_SERVER_IMAGE=perconalab/pmm-server:dev-latest
+      PMM_SERVER_IMAGE=percona/pmm-server:2.0.0-rc2
 
     # latest released version
-    # TODO replace "perconalab/pmm-server:dev-latest" with "percona/pmm-server:2.0.0-rc3" after rc3
     - PROMETHEUS_IMAGE=prom/prometheus:latest
       GRAFANA_IMAGE=grafana/grafana:latest
       POSTGRES_IMAGE=postgres:latest
-      PMM_SERVER_IMAGE=perconalab/pmm-server:dev-latest
+      PMM_SERVER_IMAGE=percona/pmm-server:2
 
     # current master
     - PROMETHEUS_IMAGE=prom/prometheus:master
