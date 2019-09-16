@@ -146,7 +146,6 @@ func TestAgents(t *testing.T) {
 	})
 
 	t.Run("TwoOrMoreFilters", func(t *testing.T) {
-		t.Skip("Will think about this later :)")
 		t.Parallel()
 
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
@@ -165,7 +164,7 @@ func TestAgents(t *testing.T) {
 			},
 			Context: pmmapitests.Context,
 		})
-		assert.Error(t, err)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "expected at most one param: pmm_agent_id, node_id or service_id")
 		assert.Nil(t, res)
 	})
 }
@@ -405,7 +404,7 @@ func TestNodeExporter(t *testing.T) {
 			Body: agents.ChangeNodeExporterBody{
 				AgentID: agentID,
 				Common: &agents.ChangeNodeExporterParamsBodyCommon{
-					Disabled:           true,
+					Disable:            true,
 					RemoveCustomLabels: true,
 				},
 			},
@@ -426,7 +425,7 @@ func TestNodeExporter(t *testing.T) {
 			Body: agents.ChangeNodeExporterBody{
 				AgentID: agentID,
 				Common: &agents.ChangeNodeExporterParamsBodyCommon{
-					Enabled: true,
+					Enable: true,
 					CustomLabels: map[string]string{
 						"new_label": "node_exporter",
 					},
@@ -539,7 +538,7 @@ func TestMySQLdExporter(t *testing.T) {
 			Body: agents.ChangeMySQLdExporterBody{
 				AgentID: agentID,
 				Common: &agents.ChangeMySQLdExporterParamsBodyCommon{
-					Disabled:           true,
+					Disable:            true,
 					RemoveCustomLabels: true,
 				},
 			},
@@ -562,7 +561,7 @@ func TestMySQLdExporter(t *testing.T) {
 			Body: agents.ChangeMySQLdExporterBody{
 				AgentID: agentID,
 				Common: &agents.ChangeMySQLdExporterParamsBodyCommon{
-					Enabled: true,
+					Enable: true,
 					CustomLabels: map[string]string{
 						"new_label": "mysql_exporter",
 					},
@@ -763,7 +762,7 @@ func TestMongoDBExporter(t *testing.T) {
 			Body: agents.ChangeMongoDBExporterBody{
 				AgentID: agentID,
 				Common: &agents.ChangeMongoDBExporterParamsBodyCommon{
-					Disabled:           true,
+					Disable:            true,
 					RemoveCustomLabels: true,
 				},
 			},
@@ -786,7 +785,7 @@ func TestMongoDBExporter(t *testing.T) {
 			Body: agents.ChangeMongoDBExporterBody{
 				AgentID: agentID,
 				Common: &agents.ChangeMongoDBExporterParamsBodyCommon{
-					Enabled: true,
+					Enable: true,
 					CustomLabels: map[string]string{
 						"new_label": "mongodb_exporter",
 					},
@@ -987,7 +986,7 @@ func TestQanAgentExporter(t *testing.T) {
 			Body: agents.ChangeQANMySQLPerfSchemaAgentBody{
 				AgentID: agentID,
 				Common: &agents.ChangeQANMySQLPerfSchemaAgentParamsBodyCommon{
-					Disabled:           true,
+					Disable:            true,
 					RemoveCustomLabels: true,
 				},
 			},
@@ -1010,7 +1009,7 @@ func TestQanAgentExporter(t *testing.T) {
 			Body: agents.ChangeQANMySQLPerfSchemaAgentBody{
 				AgentID: agentID,
 				Common: &agents.ChangeQANMySQLPerfSchemaAgentParamsBodyCommon{
-					Enabled: true,
+					Enable: true,
 					CustomLabels: map[string]string{
 						"new_label": "QANMysqlPerfschemaAgent",
 					},
@@ -1213,7 +1212,7 @@ func TestPostgresExporter(t *testing.T) {
 			Body: agents.ChangePostgresExporterBody{
 				AgentID: agentID,
 				Common: &agents.ChangePostgresExporterParamsBodyCommon{
-					Disabled:           true,
+					Disable:            true,
 					RemoveCustomLabels: true,
 				},
 			},
@@ -1236,7 +1235,7 @@ func TestPostgresExporter(t *testing.T) {
 			Body: agents.ChangePostgresExporterBody{
 				AgentID: agentID,
 				Common: &agents.ChangePostgresExporterParamsBodyCommon{
-					Enabled: true,
+					Enable: true,
 					CustomLabels: map[string]string{
 						"new_label": "postgres_exporter",
 					},
@@ -1437,7 +1436,7 @@ func TestProxySQLExporter(t *testing.T) {
 			Body: agents.ChangeProxySQLExporterBody{
 				AgentID: agentID,
 				Common: &agents.ChangeProxySQLExporterParamsBodyCommon{
-					Disabled:           true,
+					Disable:            true,
 					RemoveCustomLabels: true,
 				},
 			},
@@ -1460,7 +1459,7 @@ func TestProxySQLExporter(t *testing.T) {
 			Body: agents.ChangeProxySQLExporterBody{
 				AgentID: agentID,
 				Common: &agents.ChangeProxySQLExporterParamsBodyCommon{
-					Enabled: true,
+					Enable: true,
 					CustomLabels: map[string]string{
 						"new_label": "proxysql_exporter",
 					},
@@ -1661,7 +1660,7 @@ func TestPostgreSQLQanAgentExporter(t *testing.T) {
 			Body: agents.ChangeQANPostgreSQLPgStatementsAgentBody{
 				AgentID: agentID,
 				Common: &agents.ChangeQANPostgreSQLPgStatementsAgentParamsBodyCommon{
-					Disabled:           true,
+					Disable:            true,
 					RemoveCustomLabels: true,
 				},
 			},
@@ -1684,7 +1683,7 @@ func TestPostgreSQLQanAgentExporter(t *testing.T) {
 			Body: agents.ChangeQANPostgreSQLPgStatementsAgentBody{
 				AgentID: agentID,
 				Common: &agents.ChangeQANPostgreSQLPgStatementsAgentParamsBodyCommon{
-					Enabled: true,
+					Enable: true,
 					CustomLabels: map[string]string{
 						"new_label": "QANPostgreSQLPgStatementsAgent",
 					},
