@@ -161,7 +161,7 @@ func TestUpdate(t *testing.T) {
 			if !statusRes.Payload.Done {
 				retries++
 				if retries < 5 {
-					assert.InDelta(t, (30 * time.Second).Seconds(), dur.Seconds(), (3 * time.Second).Seconds())
+					assert.InDelta(t, (30 * time.Second).Seconds(), dur.Seconds(), (5 * time.Second).Seconds())
 					continue
 				}
 			}
