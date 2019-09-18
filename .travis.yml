@@ -28,11 +28,11 @@ env:
 
   matrix:
     # what we currently use in PMM
-    # TODO replace "percona/pmm-server:2.0.0-rc3" with "percona/pmm-server:2.0.0" after 2.0.0 GA
+    # TODO replace "percona/pmm-server:2.0.0-rc4" with "percona/pmm-server:2.0.0" after 2.0.1
     - PROMETHEUS_IMAGE=prom/prometheus:v2.12.0
       GRAFANA_IMAGE=grafana/grafana:6.3.5
       POSTGRES_IMAGE=postgres:11
-      PMM_SERVER_IMAGE=percona/pmm-server:2.0.0-rc3
+      PMM_SERVER_IMAGE=percona/pmm-server:2.0.0-rc4
 
     # latest released version
     - PROMETHEUS_IMAGE=prom/prometheus:latest
