@@ -42,12 +42,12 @@ func TestVersion(t *testing.T) {
 			err = json.Unmarshal(b, &res)
 			require.NoError(t, err, "response:\n%s", b)
 
-			require.True(t, strings.HasPrefix(res.Version, "2.0.0-"),
-				"version = %q must have '2.0.0-' prefix for PMM 1.x's pmm-client compatibility checking", res.Version)
+			require.True(t, strings.HasPrefix(res.Version, "2."),
+				"version = %q must have '2.' prefix for PMM 1.x's pmm-client compatibility checking", res.Version)
 
 			require.NotEmpty(t, res.Managed)
-			assert.True(t, strings.HasPrefix(res.Managed.Version, "2.0.0-"),
-				"managed.version = %q should have '2.0.0-' prefix", res.Managed.Version)
+			assert.True(t, strings.HasPrefix(res.Managed.Version, "2."),
+				"managed.version = %q should have '2.' prefix", res.Managed.Version)
 			assert.NotEmpty(t, res.Managed.FullVersion)
 			assert.NotEmpty(t, res.Managed.Timestamp)
 			ts := time.Time(res.Managed.Timestamp)
@@ -60,8 +60,8 @@ func TestVersion(t *testing.T) {
 			}
 
 			require.NotEmpty(t, res.Server)
-			assert.True(t, strings.HasPrefix(res.Server.Version, "2.0.0-"),
-				"server.version = %q should have '2.0.0-' prefix", res.Server.Version)
+			assert.True(t, strings.HasPrefix(res.Server.Version, "2."),
+				"server.version = %q should have '2.' prefix", res.Server.Version)
 			assert.NotEmpty(t, res.Server.FullVersion)
 			require.NotEmpty(t, res.Server.Timestamp)
 			ts = time.Time(res.Server.Timestamp)
