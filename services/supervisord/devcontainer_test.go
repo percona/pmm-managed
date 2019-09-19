@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -163,7 +164,7 @@ func TestDevContainer(t *testing.T) {
 	t.Run("Update", func(t *testing.T) {
 		// This test can be run only once as it breaks assumptions of other tests.
 		// It also should be the last test in devcontainer.
-		if os.Getenv("TEST_RUN_UPDATE") == "" {
+		if ok, _ := strconv.ParseBool(os.Getenv("TEST_RUN_UPDATE")); !ok {
 			t.Skip("skipping update test")
 		}
 
