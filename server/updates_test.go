@@ -54,7 +54,15 @@ func TestCheckUpdates(t *testing.T) {
 	assert.Zero(t, hour, "latest.timestamp should contain only date")
 	assert.Zero(t, min, "latest.timestamp should contain only date")
 
-	assert.Equal(t, res.Payload.Installed.FullVersion != res.Payload.Latest.FullVersion, res.Payload.UpdateAvailable)
+	if res.Payload.UpdateAvailable {
+		assert.NotEqual(t, res.Payload.Installed.FullVersion, res.Payload.Latest.FullVersion)
+		assert.NotEqual(t, res.Payload.Installed.Timestamp, res.Payload.Latest.Timestamp)
+		assert.True(t, strings.HasPrefix(res.Payload.LatestNewsURL, "https://per.co.na/pmm/2."), "%s", res.Payload.LatestNewsURL)
+	} else {
+		assert.Equal(t, res.Payload.Installed.FullVersion, res.Payload.Latest.FullVersion)
+		assert.Equal(t, res.Payload.Installed.Timestamp, res.Payload.Latest.Timestamp)
+		assert.Empty(t, res.Payload.LatestNewsURL, "latest_news_url should be empty")
+	}
 	assert.NotEmpty(t, res.Payload.LastCheck)
 
 	t.Run("HotCache", func(t *testing.T) {
