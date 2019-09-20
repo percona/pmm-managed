@@ -132,6 +132,7 @@ func TestUpdate(t *testing.T) {
 	pmmapitests.AssertAPIErrorf(t, err, 403, codes.PermissionDenied, "Invalid authentication token.")
 
 	// read log lines like UI would do, but without delays to increase a chance for race detector to spot something
+	var lastLine string
 	var retries int
 	for {
 		start := time.Now()
@@ -180,13 +181,16 @@ func TestUpdate(t *testing.T) {
 		}
 
 		retries = 0
-		assert.NotEmpty(t, statusRes.Payload.LogLines, "pmm-managed should delay response until some lines are available")
 		assert.True(t, statusRes.Payload.LogOffset > logOffset,
 			"expected statusRes.Payload.LogOffset (%d) > logOffset (%d)",
 			statusRes.Payload.LogOffset, logOffset,
 		)
+		require.NotEmpty(t, statusRes.Payload.LogLines, "pmm-managed should delay response until some lines are available")
 		logOffset = statusRes.Payload.LogOffset
+		lastLine = statusRes.Payload.LogLines[len(statusRes.Payload.LogLines)-1]
 	}
+
+	t.Logf("lastLine = %q", lastLine)
 
 	// extra check for done
 	statusRes, err := noAuthClient.Server.UpdateStatus(&server.UpdateStatusParams{
