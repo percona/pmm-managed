@@ -101,6 +101,7 @@ func init() {
 	serverURLF := flag.String("pmm.server-url", "https://admin:admin@127.0.0.1:8443/", "PMM Server URL [PMM_SERVER_URL].")
 	serverInsecureTLSF := flag.Bool("pmm.server-insecure-tls", false, "Skip PMM Server TLS certificate validation [PMM_SERVER_INSECURE_TLS].")
 	runUpdateTestF := flag.Bool("pmm.run-update-test", false, "Run PMM Server update test [PMM_RUN_UPDATE_TEST].")
+	initTestingFlags()
 	flag.Parse()
 
 	for envVar, f := range map[string]*flag.Flag{
