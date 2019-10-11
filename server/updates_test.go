@@ -191,6 +191,7 @@ func TestUpdate(t *testing.T) {
 	}
 
 	t.Logf("lastLine = %q", lastLine)
+	assert.Contains(t, lastLine, "PMM Server update finished")
 
 	// extra check for done
 	statusRes, err := noAuthClient.Server.UpdateStatus(&server.UpdateStatusParams{
@@ -216,4 +217,7 @@ func TestUpdate(t *testing.T) {
 	assert.True(t, statusRes.Payload.Done, "should be done")
 	assert.Equal(t, int(logOffset), len(strings.Join(statusRes.Payload.LogLines, "\n")+"\n"))
 	assert.Equal(t, logOffset, statusRes.Payload.LogOffset)
+	lastLine = statusRes.Payload.LogLines[len(statusRes.Payload.LogLines)-1]
+	t.Logf("lastLine = %q", lastLine)
+	assert.Contains(t, lastLine, "PMM Server update finished")
 }
