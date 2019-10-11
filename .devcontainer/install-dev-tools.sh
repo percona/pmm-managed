@@ -7,7 +7,7 @@ set -o errexit
 set -o xtrace
 
 # download (in the background) the same verison as used by PMM build process
-curl -sS https://dl.google.com/go/go1.12.9.linux-amd64.tar.gz -o /tmp/golang.tar.gz &
+curl -sS https://dl.google.com/go/go1.12.10.linux-amd64.tar.gz -o /tmp/golang.tar.gz &
 
 # use other containers for PostgreSQL, Prometheus, etc.
 supervisorctl stop all
@@ -41,7 +41,10 @@ go mod init tools
 env GOPROXY=https://proxy.golang.org go get -v \
     github.com/acroca/go-symbols \
     github.com/go-delve/delve/cmd/dlv \
+    github.com/mdempsky/gocode \
     github.com/ramya-rao-a/go-outline \
+    github.com/rogpeppe/godef \
+    github.com/uudashr/gopkgs/cmd/gopkgs \
     golang.org/x/tools/cmd/goimports \
     golang.org/x/tools/cmd/gopls &
 
