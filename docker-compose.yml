@@ -7,7 +7,6 @@ services:
     environment:
       # for tests
       - DEVCONTAINER=1
-      - PMM_SERVER_IMAGE=${PMM_SERVER_IMAGE:-perconalab/pmm-server:dev-latest}
       - PATH=/root/go/bin:$PATH
     ports:
       - 127.0.0.1:80:80
