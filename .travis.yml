@@ -27,14 +27,14 @@ env:
   global:
     - CODECOV_ENV=PROMETHEUS_IMAGE,GRAFANA_IMAGE,POSTGRES_IMAGE,PMM_SERVER_IMAGE
 
-    # pmm-managed always uses the latest pmm-update,
+    # there is no case when pmm-update is older than pmm-managed (pmm-update self-updates first),
     # so there is no need to test with old PMM Server versions
     - PMM_SERVER_IMAGE=perconalab/pmm-server:dev-latest
 
   matrix:
     # what we currently use in PMM
     - PROMETHEUS_IMAGE=prom/prometheus:v2.12.0
-      GRAFANA_IMAGE=grafana/grafana:6.3.5
+      GRAFANA_IMAGE=grafana/grafana:6.3.6
       POSTGRES_IMAGE=postgres:11
 
     # latest released version
