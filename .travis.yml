@@ -48,8 +48,8 @@ env:
       POSTGRES_IMAGE=postgres:latest
 
 before_install:
-  - docker-compose up -d
-  - docker exec --detach pmm-managed-server '/bin/bash /root/go/src/github.com/percona/pmm-managed/.devcontainer/install-dev-tools.sh &> /tmp/install-dev-tools.log'
+  - docker-compose up --detach
+  - docker exec --detach pmm-managed-server /bin/bash '/root/go/src/github.com/percona/pmm-managed/.devcontainer/install-dev-tools.sh &> /tmp/install-dev-tools.log'
 
 install:
   # ensure that vendor/ is in sync with code and Gopkg.toml/lock
