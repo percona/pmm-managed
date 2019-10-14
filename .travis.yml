@@ -49,7 +49,7 @@ env:
 
 before_install:
   - docker-compose up --detach
-  - docker exec --detach pmm-managed-server /bin/bash '/root/go/src/github.com/percona/pmm-managed/.devcontainer/install-dev-tools.sh &> /tmp/install-dev-tools.log'
+  - docker exec pmm-managed-server /root/go/src/github.com/percona/pmm-managed/.devcontainer/install-dev-tools.sh
 
 install:
   # ensure that vendor/ is in sync with code and Gopkg.toml/lock
@@ -72,7 +72,6 @@ script:
   - make test-cover
   - make test-crosscover
 
-  - docker exec pmm-managed-server tail /tmp/install-dev-tools.log
   - make devcontainer TARGET=test-race-crosscover \
                       TEST_FLAGS='-timeout=180s -v' \
                       TEST_PACKAGES=./services/supervisord \
