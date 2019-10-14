@@ -52,3 +52,5 @@ cd /root/go/src/github.com/percona/pmm-managed
 make init
 
 fg || true
+
+echo 'Done!'
