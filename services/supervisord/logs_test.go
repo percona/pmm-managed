@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -84,4 +85,30 @@ func TestDefaultLogs(t *testing.T) {
 	zr, err := zip.NewReader(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
 	require.NoError(t, err)
 	assert.Len(t, zr.File, len(defaultLogs)+6)
+}
+
+func TestReadLog(t *testing.T) {
+	f, err := ioutil.TempFile("", "pmm-managed-supervisord-tests-")
+	require.NoError(t, err)
+	for i := 0; i < 10; i++ {
+		fmt.Fprintf(f, "line #%03d\n", i) // 10 bytes
+	}
+	require.NoError(t, f.Close())
+	defer os.Remove(f.Name())
+
+	t.Run("LimitByLines", func(t *testing.T) {
+		b, err := readLog(f.Name(), 5, 500)
+		require.NoError(t, err)
+		expected := []string{"line #005", "line #006", "line #007", "line #008", "line #009"}
+		actual := strings.Split(strings.TrimSpace(string(b)), "\n")
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("LimitByBytes", func(t *testing.T) {
+		b, err := readLog(f.Name(), 500, 5)
+		require.NoError(t, err)
+		expected := []string{"#009"}
+		actual := strings.Split(strings.TrimSpace(string(b)), "\n")
+		assert.Equal(t, expected, actual)
+	})
 }

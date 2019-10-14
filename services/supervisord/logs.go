@@ -18,13 +18,15 @@ package supervisord
 
 import (
 	"archive/zip"
+	"bufio"
+	"container/ring"
 	"context"
 	"io"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"time"
 
 	"github.com/percona/pmm/utils/pdeathsig"
@@ -45,10 +47,6 @@ type fileContent struct {
 	Data []byte
 	Err  error
 }
-
-const (
-	lastLines = 1000
-)
 
 var defaultLogs = map[string]logInfo{
 	// system
@@ -130,7 +128,7 @@ func (l *Logs) files(ctx context.Context) []fileContent {
 		f := fileContent{
 			Name: name,
 		}
-		f.Data, f.Err = l.readLog(ctx, &log)
+		f.Data, f.Err = readLog(log.FilePath, 1000, 1024*1024)
 		files = append(files, f)
 	}
 
@@ -178,9 +176,39 @@ func (l *Logs) files(ctx context.Context) []fileContent {
 	return files
 }
 
-// readLog reads last lines from given log.
-func (l *Logs) readLog(ctx context.Context, log *logInfo) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, "/usr/bin/tail", "-n", strconv.Itoa(lastLines), log.FilePath) //nolint:gosec
-	pdeathsig.Set(cmd, unix.SIGKILL)
-	return cmd.CombinedOutput()
+// readLog reads last lines (up to given number of lines and bytes) from given file.
+func readLog(name string, maxLines int, maxBytes int64) ([]byte, error) {
+	f, err := os.Open(name) //nolint:gosec
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	defer f.Close() //nolint:errcheck
+
+	fi, err := f.Stat()
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if fi.Size() > maxBytes {
+		if _, err = f.Seek(-maxBytes, io.SeekEnd); err != nil {
+			return nil, errors.WithStack(err)
+		}
+	}
+
+	r := ring.New(maxLines)
+	s := bufio.NewScanner(f)
+	for s.Scan() {
+		r.Value = []byte(s.Text() + "\n")
+		r = r.Next()
+	}
+	if err = s.Err(); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	res := make([]byte, 0, maxBytes)
+	r.Do(func(v interface{}) {
+		if v != nil {
+			res = append(res, v.([]byte)...)
+		}
+	})
+	return res, nil
 }
