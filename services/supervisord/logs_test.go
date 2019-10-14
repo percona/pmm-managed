@@ -17,75 +17,17 @@
 package supervisord
 
 import (
-	"archive/zip"
-	"bytes"
-	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/percona/pmm-managed/utils/logger"
 )
 
-func TestCustomLogs(t *testing.T) {
-	ctx := logger.Set(context.Background(), t.Name())
-	dir, err := ioutil.TempDir("", t.Name())
-	require.NoError(t, err)
-
-	defer func() {
-		err := os.RemoveAll(dir)
-		require.NoError(t, err)
-	}()
-
-	logs := map[string]logInfo{
-		"test1.log": {FilePath: filepath.Join(dir, "test1.log")},
-	}
-	for name := range logs {
-		err = ioutil.WriteFile(filepath.Join(dir, name), []byte(fmt.Sprintf("%s: test\n", name)), 0600)
-		require.NoError(t, err)
-	}
-
-	l := NewLogs("1.2.3")
-	l.logs = logs
-	buf := new(bytes.Buffer)
-	err = l.Zip(ctx, buf)
-	require.NoError(t, err)
-
-	zr, err := zip.NewReader(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
-	require.NoError(t, err)
-	assert.Len(t, zr.File, len(logs)+6)
-
-	for _, zf := range zr.File {
-		if _, ok := logs[zf.Name]; !ok {
-			continue
-		}
-		r, err := zf.Open()
-		require.NoError(t, err)
-		b, err := ioutil.ReadAll(r)
-		require.NoError(t, err)
-		require.NoError(t, r.Close())
-		assert.Equal(t, fmt.Sprintf("%s: test\n", zf.Name), string(b))
-	}
-}
-
-func TestDefaultLogs(t *testing.T) {
-	ctx := logger.Set(context.Background(), t.Name())
-
-	l := NewLogs("1.2.3")
-	buf := new(bytes.Buffer)
-	err := l.Zip(ctx, buf)
-	require.NoError(t, err)
-
-	zr, err := zip.NewReader(bytes.NewReader(buf.Bytes()), int64(buf.Len()))
-	require.NoError(t, err)
-	assert.Len(t, zr.File, len(defaultLogs)+6)
-}
+// see devcontainer_test.go for more logs tests
 
 func TestReadLog(t *testing.T) {
 	f, err := ioutil.TempFile("", "pmm-managed-supervisord-tests-")
@@ -94,7 +36,7 @@ func TestReadLog(t *testing.T) {
 		fmt.Fprintf(f, "line #%03d\n", i) // 10 bytes
 	}
 	require.NoError(t, f.Close())
-	defer os.Remove(f.Name())
+	defer os.Remove(f.Name()) //nolint:errcheck
 
 	t.Run("LimitByLines", func(t *testing.T) {
 		b, err := readLog(f.Name(), 5, 500)

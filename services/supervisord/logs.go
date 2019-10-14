@@ -19,10 +19,14 @@ package supervisord
 import (
 	"archive/zip"
 	"bufio"
+	"bytes"
 	"container/ring"
 	"context"
+	"encoding/json"
 	"io"
 	"io/ioutil"
+	"mime"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -36,49 +40,16 @@ import (
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
-// logInfo represents log file information, or the way to read log.
-type logInfo struct {
-	FilePath string
-}
-
-// fileContent represents log or configuration file content.
+// fileContent represents logs.zip item.
 type fileContent struct {
 	Name string
 	Data []byte
 	Err  error
 }
 
-var defaultLogs = map[string]logInfo{
-	// system
-	"cron.log":        {"/srv/logs/cron.log"},
-	"supervisord.log": {"/srv/logs/supervisord.log"},
-
-	// storages
-	"clickhouse-server.log":     {"/srv/logs/clickhouse-server.log"},
-	"clickhouse-server.err.log": {"/srv/logs/clickhouse-server.err.log"},
-	"postgresql.log":            {"/srv/logs/postgresql.log"},
-
-	// nginx
-	"nginx.log":        {"/srv/logs/nginx.startup.log"},
-	"nginx_access.log": {"/srv/logs/nginx.access.log"},
-	"nginx_error.log":  {"/srv/logs/nginx.error.log"},
-
-	// metrics
-	"prometheus.log": {"/srv/logs/prometheus.log"},
-	"grafana.log":    {"/srv/logs/grafana.log"},
-
-	// core PMM components
-	"pmm-managed.log": {"/srv/logs/pmm-managed.log"},
-	"qan-api2.log":    {"/srv/logs/qan-api2.log"},
-
-	// upgrades
-	"dashboard-upgrade.log": {"/srv/logs/dashboard-upgrade.log"},
-}
-
 // Logs is responsible for interactions with logs.
 type Logs struct {
 	pmmVersion string
-	logs       map[string]logInfo // for testing
 }
 
 // NewLogs creates a new Logs service.
@@ -86,7 +57,6 @@ type Logs struct {
 func NewLogs(pmmVersion string) *Logs {
 	return &Logs{
 		pmmVersion: pmmVersion,
-		logs:       defaultLogs,
 	}
 }
 
@@ -122,27 +92,36 @@ func (l *Logs) Zip(ctx context.Context, w io.Writer) error {
 
 // files reads log/config files and returns content.
 func (l *Logs) files(ctx context.Context) []fileContent {
-	files := make([]fileContent, 0, len(l.logs))
+	files := make([]fileContent, 0, 20)
 
-	for name, log := range l.logs {
-		f := fileContent{
-			Name: name,
-		}
-		f.Data, f.Err = readLog(log.FilePath, 1000, 1024*1024)
-		files = append(files, f)
+	// add logs
+	logs, err := filepath.Glob("/srv/logs/*.log")
+	if err != nil {
+		logger.Get(ctx).WithField("component", "logs").Error(err)
 	}
-
-	// add PMM version
-	files = append(files, fileContent{
-		Name: "pmm-version.txt",
-		Data: []byte(l.pmmVersion + "\n"),
-	})
+	for _, f := range logs {
+		b, err := readLog(f, 1000, 1024*1024)
+		files = append(files, fileContent{
+			Name: filepath.Base(f),
+			Data: b,
+			Err:  err,
+		})
+	}
 
 	// add configs
 	for _, f := range []string{
-		"/etc/prometheus.yml",
-		"/etc/supervisord.d/pmm.ini",
+		"/etc/nginx/nginx.conf",
 		"/etc/nginx/conf.d/pmm.conf",
+		"/etc/nginx/conf.d/pmm-ssl.conf",
+
+		"/etc/prometheus.yml",
+
+		"/etc/supervisord.conf",
+		"/etc/supervisord.d/pmm.ini",
+		"/etc/supervisord.d/prometheus.ini",
+		"/etc/supervisord.d/qan-api2.ini",
+
+		"/usr/local/percona/pmm2/config/pmm-agent.yaml",
 	} {
 		b, err := ioutil.ReadFile(f) //nolint:gosec
 		files = append(files, fileContent{
@@ -152,10 +131,16 @@ func (l *Logs) files(ctx context.Context) []fileContent {
 		})
 	}
 
+	// do not use `pmm-admin summary` as it in turn calls logs.zip
+
+	// add PMM version
+	files = append(files, fileContent{
+		Name: "pmm-version.txt",
+		Data: []byte(l.pmmVersion + "\n"),
+	})
+
 	// add supervisord status
-	cmd := exec.CommandContext(ctx, "supervisorctl", "status") //nolint:gosec
-	pdeathsig.Set(cmd, unix.SIGKILL)
-	b, err := cmd.CombinedOutput() //nolint:gosec
+	b, err := readCmdOutput(ctx, "supervisorctl", "status")
 	files = append(files, fileContent{
 		Name: "supervisorctl_status.log",
 		Data: b,
@@ -163,11 +148,17 @@ func (l *Logs) files(ctx context.Context) []fileContent {
 	})
 
 	// add systemd status for OVF/AMI
-	cmd = exec.CommandContext(ctx, "systemctl", "-l", "status") //nolint:gosec
-	pdeathsig.Set(cmd, unix.SIGKILL)
-	b, err = cmd.CombinedOutput() //nolint:gosec
+	b, err = readCmdOutput(ctx, "systemctl", "-l", "status")
 	files = append(files, fileContent{
 		Name: "systemctl_status.log",
+		Data: b,
+		Err:  err,
+	})
+
+	// add Prometheus targets
+	b, err = readURL(ctx, "http://127.0.0.1:9090/prometheus/api/v1/targets")
+	files = append(files, fileContent{
+		Name: "prometheus_targets.json",
 		Data: b,
 		Err:  err,
 	})
@@ -211,4 +202,41 @@ func readLog(name string, maxLines int, maxBytes int64) ([]byte, error) {
 		}
 	})
 	return res, nil
+}
+
+// readCmdOutput reads command's combined output.
+func readCmdOutput(ctx context.Context, args ...string) ([]byte, error) {
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...) //nolint:gosec
+	pdeathsig.Set(cmd, unix.SIGKILL)
+	return cmd.CombinedOutput()
+}
+
+// readURL reads HTTP GET url response.
+func readURL(ctx context.Context, url string) ([]byte, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	req = req.WithContext(ctx)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	defer resp.Body.Close() //nolint:errcheck
+
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	// indent JSON output
+	mt, _, _ := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+	if mt == "application/json" {
+		var buf bytes.Buffer
+		if json.Indent(&buf, b, "", "  ") == nil {
+			b = buf.Bytes()
+		}
+	}
+	return b, nil
 }

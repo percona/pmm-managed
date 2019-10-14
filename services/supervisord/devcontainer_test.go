@@ -33,12 +33,57 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/utils/logger"
 )
 
 func TestDevContainer(t *testing.T) {
 	if os.Getenv("DEVCONTAINER") == "" {
 		t.Skip("can be tested only inside devcontainer")
 	}
+
+	t.Run("Logs", func(t *testing.T) {
+		l := NewLogs("2.4.5")
+		ctx := logger.Set(context.Background(), t.Name())
+		files := l.files(ctx)
+		assert.Len(t, files, 28)
+
+		names := make([]string, len(files))
+		for i, f := range files {
+			names[i] = f.Name
+			assert.NoError(t, f.Err, "name = %q", f.Name)
+		}
+		expected := []string{
+			"clickhouse-server.err.log",
+			"clickhouse-server.log",
+			"clickhouse-server.startup.log",
+			"cron.log",
+			"dashboard-upgrade.log",
+			"grafana.log",
+			"nginx.access.log",
+			"nginx.conf",
+			"nginx.error.log",
+			"nginx.startup.log",
+			"pmm-agent.log",
+			"pmm-managed.log",
+			"pmm-ssl.conf",
+			"pmm-version.txt",
+			"pmm.conf",
+			"pmm.ini",
+			"postgresql.log",
+			"postgresql.startup.log",
+			"prometheus.ini",
+			"prometheus.log",
+			"prometheus.yml",
+			"prometheus_targets.json",
+			"qan-api2.ini",
+			"qan-api2.log",
+			"supervisorctl_status.log",
+			"supervisord.conf",
+			"supervisord.log",
+			"systemctl_status.log",
+		}
+		assert.Equal(t, expected, names)
+	})
 
 	t.Run("Installed", func(t *testing.T) {
 		checker := newPMMUpdateChecker(logrus.WithField("test", t.Name()))
