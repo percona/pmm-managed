@@ -167,7 +167,7 @@ func TestDevContainer(t *testing.T) {
 		res3, resT3 := checker.checkResult()
 		assert.Equal(t, res2, res3)
 		assert.NotEqual(t, resT2, resT3, "%s", resT2)
-		assert.WithinDuration(t, resT2, resT3, 5*time.Second)
+		assert.WithinDuration(t, resT2, resT3, 10*time.Second)
 	})
 
 	t.Run("UpdateConfiguration", func(t *testing.T) {
@@ -263,17 +263,18 @@ func TestDevContainer(t *testing.T) {
 		}
 
 		t.Logf("lastLine = %q", lastLine)
+		assert.Contains(t, lastLine, "PMM Server update finished")
 
 		// extra checks that we did not miss `pmp-update -perform` self-update and restart by supervisord
-		const delay = 50 * time.Millisecond
 		const wait = 3 * time.Second
-		for i := 0; i < int(delay/wait); i++ {
-			time.Sleep(200 * time.Millisecond)
-			assert.False(t, s.UpdateRunning())
+		const delay = 200 * time.Millisecond
+		for i := 0; i < int(wait/delay); i++ {
+			time.Sleep(delay)
+			require.False(t, s.UpdateRunning())
 			lines, newOffset, err := s.UpdateLog(offset)
 			require.NoError(t, err)
-			assert.Empty(t, lines, "lines:\n%s", strings.Join(lines, "\n"))
-			assert.Equal(t, offset, newOffset, "offset = %d, newOffset = %d", offset, newOffset)
+			require.Empty(t, lines, "lines:\n%s", strings.Join(lines, "\n"))
+			require.Equal(t, offset, newOffset, "offset = %d, newOffset = %d", offset, newOffset)
 		}
 	})
 }

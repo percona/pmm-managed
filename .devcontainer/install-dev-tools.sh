@@ -9,8 +9,8 @@ set -o xtrace
 # download (in the background) the same verison as used by PMM build process
 curl -sS https://dl.google.com/go/go1.12.10.linux-amd64.tar.gz -o /tmp/golang.tar.gz &
 
-# use other containers for PostgreSQL, Prometheus, etc.
-supervisorctl stop all
+# to prevent it from accessing PostgreSQL, Prometheus, etc.
+supervisorctl stop pmm-managed
 
 # to install man pages
 sed -i '/nodocs/d' /etc/yum.conf
