@@ -243,8 +243,9 @@ func TestDevContainer(t *testing.T) {
 		// get logs as often as possible to increase a chance for race detector to spot something
 		var lastLine string
 		for {
-			running := s.UpdateRunning()
-			if running {
+			done := s.UpdateRunning()
+			if done {
+				// give supervisord a second to flush logs to file
 				time.Sleep(time.Second)
 			}
 
@@ -252,7 +253,7 @@ func TestDevContainer(t *testing.T) {
 			require.NoError(t, err)
 			if newOffset == offset {
 				assert.Empty(t, lines, "lines:\n%s", strings.Join(lines, "\n"))
-				if running {
+				if done {
 					continue
 				}
 				break
