@@ -22,6 +22,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -39,16 +40,18 @@ func TestReadLog(t *testing.T) {
 	defer os.Remove(f.Name()) //nolint:errcheck
 
 	t.Run("LimitByLines", func(t *testing.T) {
-		b, err := readLog(f.Name(), 5, 500)
+		b, m, err := readLog(f.Name(), 5, 500)
 		require.NoError(t, err)
+		assert.WithinDuration(t, time.Now(), m, 5*time.Second)
 		expected := []string{"line #005", "line #006", "line #007", "line #008", "line #009"}
 		actual := strings.Split(strings.TrimSpace(string(b)), "\n")
 		assert.Equal(t, expected, actual)
 	})
 
 	t.Run("LimitByBytes", func(t *testing.T) {
-		b, err := readLog(f.Name(), 500, 5)
+		b, m, err := readLog(f.Name(), 500, 5)
 		require.NoError(t, err)
+		assert.WithinDuration(t, time.Now(), m, 5*time.Second)
 		expected := []string{"#009"}
 		actual := strings.Split(strings.TrimSpace(string(b)), "\n")
 		assert.Equal(t, expected, actual)

@@ -17,6 +17,8 @@
 package supervisord
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"io/ioutil"
 	"os"
@@ -44,14 +46,6 @@ func TestDevContainer(t *testing.T) {
 	t.Run("Logs", func(t *testing.T) {
 		l := NewLogs("2.4.5")
 		ctx := logger.Set(context.Background(), t.Name())
-		files := l.files(ctx)
-		assert.Len(t, files, 28)
-
-		names := make([]string, len(files))
-		for i, f := range files {
-			names[i] = f.Name
-			assert.NoError(t, f.Err, "name = %q", f.Name)
-		}
 		expected := []string{
 			"clickhouse-server.err.log",
 			"clickhouse-server.log",
@@ -64,6 +58,7 @@ func TestDevContainer(t *testing.T) {
 			"nginx.error.log",
 			"nginx.startup.log",
 			"pmm-agent.log",
+			"pmm-agent.yaml",
 			"pmm-managed.log",
 			"pmm-ssl.conf",
 			"pmm-version.txt",
@@ -82,7 +77,36 @@ func TestDevContainer(t *testing.T) {
 			"supervisord.log",
 			"systemctl_status.log",
 		}
-		assert.Equal(t, expected, names)
+
+		t.Run("Files", func(t *testing.T) {
+			files := l.files(ctx)
+
+			actual := make([]string, len(files))
+			for i, f := range files {
+				actual[i] = f.Name
+				if f.Name == "systemctl_status.log" {
+					assert.EqualError(t, f.Err, "exit status 1")
+					continue
+				}
+				assert.NoError(t, f.Err, "name = %q", f.Name)
+			}
+			assert.Equal(t, expected, actual)
+		})
+
+		t.Run("Zip", func(t *testing.T) {
+			var buf bytes.Buffer
+			require.NoError(t, l.Zip(ctx, &buf))
+			reader := bytes.NewReader(buf.Bytes())
+			r, err := zip.NewReader(reader, reader.Size())
+			require.NoError(t, err)
+
+			actual := make([]string, len(r.File))
+			for i, f := range r.File {
+				actual[i] = f.Name
+				assert.NotZero(t, f.Modified)
+			}
+			assert.Equal(t, expected, actual)
+		})
 	})
 
 	t.Run("Installed", func(t *testing.T) {

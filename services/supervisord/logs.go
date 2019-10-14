@@ -42,9 +42,10 @@ import (
 
 // fileContent represents logs.zip item.
 type fileContent struct {
-	Name string
-	Data []byte
-	Err  error
+	Name     string
+	Modified time.Time
+	Data     []byte
+	Err      error
 }
 
 // Logs is responsible for interactions with logs.
@@ -64,6 +65,7 @@ func NewLogs(pmmVersion string) *Logs {
 func (l *Logs) Zip(ctx context.Context, w io.Writer) error {
 	zw := zip.NewWriter(w)
 	now := time.Now().UTC()
+
 	for _, file := range l.files(ctx) {
 		if file.Err != nil {
 			logger.Get(ctx).WithField("component", "logs").Errorf("%s: %s", file.Name, file.Err)
@@ -75,10 +77,14 @@ func (l *Logs) Zip(ctx context.Context, w io.Writer) error {
 			file.Data = append(file.Data, file.Err.Error()...)
 		}
 
+		if file.Modified.IsZero() {
+			file.Modified = now
+		}
+
 		f, err := zw.CreateHeader(&zip.FileHeader{
 			Name:     file.Name,
 			Method:   zip.Deflate,
-			Modified: now,
+			Modified: file.Modified,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create zip file header")
@@ -87,7 +93,11 @@ func (l *Logs) Zip(ctx context.Context, w io.Writer) error {
 			return errors.Wrap(err, "failed to write zip file data")
 		}
 	}
-	return errors.Wrap(zw.Close(), "failed to close zip file")
+
+	if err := zw.Close(); err != nil {
+		return errors.Wrap(err, "failed to close zip file")
+	}
+	return nil
 }
 
 // files reads log/config files and returns content.
@@ -100,11 +110,12 @@ func (l *Logs) files(ctx context.Context) []fileContent {
 		logger.Get(ctx).WithField("component", "logs").Error(err)
 	}
 	for _, f := range logs {
-		b, err := readLog(f, 1000, 1024*1024)
+		b, m, err := readLog(f, 1000, 1024*1024)
 		files = append(files, fileContent{
-			Name: filepath.Base(f),
-			Data: b,
-			Err:  err,
+			Name:     filepath.Base(f),
+			Modified: m,
+			Data:     b,
+			Err:      err,
 		})
 	}
 
@@ -123,11 +134,12 @@ func (l *Logs) files(ctx context.Context) []fileContent {
 
 		"/usr/local/percona/pmm2/config/pmm-agent.yaml",
 	} {
-		b, err := ioutil.ReadFile(f) //nolint:gosec
+		b, m, err := readFile(f)
 		files = append(files, fileContent{
-			Name: filepath.Base(f),
-			Data: b,
-			Err:  err,
+			Name:     filepath.Base(f),
+			Modified: m,
+			Data:     b,
+			Err:      err,
 		})
 	}
 
@@ -167,21 +179,24 @@ func (l *Logs) files(ctx context.Context) []fileContent {
 	return files
 }
 
-// readLog reads last lines (up to given number of lines and bytes) from given file.
-func readLog(name string, maxLines int, maxBytes int64) ([]byte, error) {
+// readLog reads last lines (up to given number of lines and bytes) from given file,
+// and returns them together with modification time.
+func readLog(name string, maxLines int, maxBytes int64) ([]byte, time.Time, error) {
+	var m time.Time
 	f, err := os.Open(name) //nolint:gosec
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, m, errors.WithStack(err)
 	}
 	defer f.Close() //nolint:errcheck
 
 	fi, err := f.Stat()
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, m, errors.WithStack(err)
 	}
+	m = fi.ModTime()
 	if fi.Size() > maxBytes {
 		if _, err = f.Seek(-maxBytes, io.SeekEnd); err != nil {
-			return nil, errors.WithStack(err)
+			return nil, m, errors.WithStack(err)
 		}
 	}
 
@@ -192,7 +207,7 @@ func readLog(name string, maxLines int, maxBytes int64) ([]byte, error) {
 		r = r.Next()
 	}
 	if err = s.Err(); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, m, errors.WithStack(err)
 	}
 
 	res := make([]byte, 0, maxBytes)
@@ -201,7 +216,21 @@ func readLog(name string, maxLines int, maxBytes int64) ([]byte, error) {
 			res = append(res, v.([]byte)...)
 		}
 	})
-	return res, nil
+	return res, m, nil
+}
+
+// readFile reads the whole file and returns content together with modification time.
+func readFile(name string) ([]byte, time.Time, error) {
+	var m time.Time
+	b, err := ioutil.ReadFile(name) //nolint:gosec
+	if err != nil {
+		return nil, m, errors.WithStack(err)
+	}
+
+	if fi, err := os.Stat(name); err == nil {
+		m = fi.ModTime()
+	}
+	return b, m, nil
 }
 
 // readCmdOutput reads command's combined output.
