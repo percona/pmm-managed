@@ -49,11 +49,12 @@ func TestVersion(t *testing.T) {
 			assert.True(t, strings.HasPrefix(res.Managed.Version, "2."),
 				"managed.version = %q should have '2.' prefix", res.Managed.Version)
 			assert.NotEmpty(t, res.Managed.FullVersion)
-			assert.NotEmpty(t, res.Managed.Timestamp)
+
+			// check that timestamp is not XX:00:00
+			require.NotEmpty(t, res.Managed.Timestamp)
 			ts := time.Time(res.Managed.Timestamp)
-			hour, min, _ := ts.Clock()
-			assert.NotZero(t, hour, "managed timestamp should not contain only date")
-			assert.NotZero(t, min, "managed timestamp should not contain only date")
+			_, min, sec := ts.Clock()
+			assert.True(t, min != 0 || sec != 0, "managed timestamp should not contain only date: %s", ts)
 
 			if res.Server == nil || res.Server.Version == "" {
 				t.Skip("skipping the rest of the test in developer's environment")
@@ -63,11 +64,12 @@ func TestVersion(t *testing.T) {
 			assert.True(t, strings.HasPrefix(res.Server.Version, "2."),
 				"server.version = %q should have '2.' prefix", res.Server.Version)
 			assert.NotEmpty(t, res.Server.FullVersion)
+
+			// check that timestamp is not XX:00:00
 			require.NotEmpty(t, res.Server.Timestamp)
 			ts = time.Time(res.Server.Timestamp)
-			hour, min, _ = ts.Clock()
-			assert.NotZero(t, hour, "server timestamp should not contain only date")
-			assert.NotZero(t, min, "server timestamp should not contain only date")
+			_, min, sec = ts.Clock()
+			assert.True(t, min != 0 || sec != 0, "server timestamp should not contain only date: %s", ts)
 		})
 	}
 }
