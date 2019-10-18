@@ -125,6 +125,10 @@ func removeServiceAgents(t *testing.T, serviceID string) {
 
 func removeAllAgentsInList(t *testing.T, listAgentsOK *agents.ListAgentsOK) {
 	t.Helper()
+
+	require.NotNil(t, listAgentsOK)
+	require.NotNil(t, listAgentsOK.Payload)
+
 	var agentIDs []string
 	for _, agent := range listAgentsOK.Payload.NodeExporter {
 		agentIDs = append(agentIDs, agent.AgentID)
@@ -156,5 +160,6 @@ func removeAllAgentsInList(t *testing.T, listAgentsOK *agents.ListAgentsOK) {
 	for _, agent := range listAgentsOK.Payload.QANPostgresqlPgstatementsAgent {
 		agentIDs = append(agentIDs, agent.AgentID)
 	}
+
 	pmmapitests.RemoveAgents(t, agentIDs...)
 }

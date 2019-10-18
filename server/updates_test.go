@@ -93,7 +93,6 @@ func TestCheckUpdates(t *testing.T) {
 	})
 }
 
-// sync test name with Makefile
 func TestUpdate(t *testing.T) {
 	// do not run this test in parallel with other tests
 
