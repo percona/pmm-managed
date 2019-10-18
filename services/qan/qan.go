@@ -57,6 +57,7 @@ func NewService(ctx context.Context, baseDir string, supervisor services.Supervi
 		supervisor: supervisor,
 		qanAPI:     new(http.Client),
 	}
+
 	return svc, nil
 }
 
@@ -85,19 +86,23 @@ func (svc *Service) ensureAgentIsRegistered(ctx context.Context) (*url.URL, erro
 
 	path = filepath.Join(svc.baseDir, "bin", "percona-qan-agent-installer")
 	args := []string{"-debug", "-hostname=pmm-server"}
+
 	if qanURL.User != nil && qanURL.User.Username() != "" {
 		args = append(args, "-server-user="+qanURL.User.Username())
 		pass, _ := qanURL.User.Password()
 		args = append(args, "-server-pass="+pass)
 	}
+
 	args = append(args, qanURL.String()) // full URL, with username and password (yes, again! that's how installer is written)
 	cmd := exec.Command(path, args...)
 	l.Debug(strings.Join(cmd.Args, " "))
 	b, err := cmd.CombinedOutput()
+
 	if err != nil {
 		l.Infof("%s", b)
 		return nil, errors.Wrap(err, "failed to register qan-agent")
 	}
+
 	l.Debugf("%s", b)
 
 	// set logging level - very useful for debugging
@@ -105,10 +110,13 @@ func (svc *Service) ensureAgentIsRegistered(ctx context.Context) (*url.URL, erro
 	if l.Level == logrus.DebugLevel {
 		logLevel = "debug"
 	}
+
 	path = filepath.Join(svc.baseDir, "config", "log.conf")
+
 	if err = ioutil.WriteFile(path, []byte(fmt.Sprintf(`{"Level":%q,"Offline":"false"}`, logLevel)), 0666); err != nil {
 		return nil, errors.Wrap(err, "failed to write log.conf")
 	}
+
 	return qanURL, nil
 }
 
@@ -133,6 +141,7 @@ func (svc *Service) ensureAgentRuns(ctx context.Context, nameForSupervisor strin
 		}
 		err = svc.supervisor.Start(ctx, config)
 	}
+
 	return err
 }
 
@@ -141,6 +150,7 @@ func (svc *Service) Restore(ctx context.Context, nameForSupervisor string, agent
 	if err := svc.restoreConfigs(ctx, agent); err != nil {
 		return err
 	}
+
 	return svc.ensureAgentRuns(ctx, nameForSupervisor, *agent.ListenPort)
 }
 
@@ -165,9 +175,12 @@ func (svc *Service) restoreConfigs(ctx context.Context, agent models.QanAgent) e
 		return errors.Wrap(err, "failed to get MySQL instance by UUID")
 	}
 
-	var osInstance proto.Instance
-	var agentInstance proto.Instance
-	var dbInstance proto.Instance
+	var (
+		osInstance proto.Instance
+		agentInstance proto.Instance
+		dbInstance proto.Instance
+	)
+
 	// look for mysql instance
 	for _, inst := range instances {
 		if inst.UUID == *agent.QANDBInstanceUUID {
@@ -181,6 +194,7 @@ func (svc *Service) restoreConfigs(ctx context.Context, agent models.QanAgent) e
 		if inst.ParentUUID == dbInstance.ParentUUID && inst.Subsystem == "os" {
 			osInstance = inst
 		}
+
 		if inst.ParentUUID == dbInstance.ParentUUID && inst.Subsystem == "agent" {
 			agentInstance = inst
 		}
@@ -190,55 +204,70 @@ func (svc *Service) restoreConfigs(ctx context.Context, agent models.QanAgent) e
 	path = filepath.Join(svc.baseDir, "instance", fmt.Sprintf("%s.json", dbInstance.UUID))
 	dbInstance.DSN = strings.Replace(dbInstance.DSN, "***", *agent.ServicePassword, 1)
 	dbInstanceJSON, err := json.MarshalIndent(dbInstance, "", "    ")
+
 	if err != nil {
 		return errors.WithStack(err)
 	}
+
 	if err = ioutil.WriteFile(path, dbInstanceJSON, 0666); err != nil {
 		return errors.Wrapf(err, "failed to write %s", path)
 	}
+
 	l.Infof("restored dbInstance: %s.", path)
 
 	// restore OS instance.
 	path = filepath.Join(svc.baseDir, "instance", fmt.Sprintf("%s.json", osInstance.UUID))
 	osInstanceJSON, err := json.MarshalIndent(osInstance, "", "    ")
+
 	if err != nil {
 		return errors.WithStack(err)
 	}
+
 	if err = ioutil.WriteFile(path, osInstanceJSON, 0666); err != nil {
 		return errors.Wrapf(err, "failed to write %s", path)
 	}
+
 	l.Infof("restored osInstance: %s.", path)
 
 	// restore Agent instance.
 	path = filepath.Join(svc.baseDir, "instance", fmt.Sprintf("%s.json", agentInstance.UUID))
 	agentInstanceJSON, err := json.MarshalIndent(agentInstance, "", "    ")
+
 	if err != nil {
 		return errors.WithStack(err)
 	}
+
 	if err = ioutil.WriteFile(path, agentInstanceJSON, 0666); err != nil {
 		return errors.Wrapf(err, "failed to write %s", path)
 	}
+
 	l.Infof("restored agentInstance: %s.", path)
 
 	path = filepath.Join(svc.baseDir, "config", "agent.conf")
 	agentConf := fmt.Sprintf(`{"UUID":"%s","ApiHostname":"127.0.0.1","ApiPath":"/qan-api/","ServerUser":"pmm"}`, agentInstance.UUID)
+
 	if err = ioutil.WriteFile(path, []byte(agentConf), 0666); err != nil {
 		return errors.Wrap(err, "failed to write agent.conf")
 	}
+
 	l.Infof("restored agent config: %s.", path)
 
 	path = filepath.Join(svc.baseDir, "config", "log.conf")
 	if err = ioutil.WriteFile(path, []byte(`{"Level":"info","Offline":"false"}`), 0666); err != nil {
 		return errors.Wrap(err, "failed to write agent.conf")
 	}
+
 	l.Infof("restored log config: %s.", path)
 
 	path = filepath.Join(svc.baseDir, "config", fmt.Sprintf("qan-%s.conf", dbInstance.UUID))
 	qanConf := fmt.Sprintf(`{ "UUID": "%s", "CollectFrom": "perfschema", "Interval": 60, "ExampleQueries": true }`, dbInstance.UUID)
+
 	if err = ioutil.WriteFile(path, []byte(qanConf), 0666); err != nil {
 		return errors.Wrap(err, "failed to write agent.conf")
 	}
+
 	l.Infof("restored qan config: %s.", path)
+
 	return nil
 }
 
@@ -249,9 +278,11 @@ func (svc *Service) getInstances(ctx context.Context, qanURL *url.URL) ([]proto.
 	// url.Path = path.Join(url.Path, "instances", UUID)
 	url.Path = path.Join(url.Path, "instances")
 	req, err := http.NewRequest("GET", url.String(), nil)
+
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+
 	rb, _ := httputil.DumpRequestOut(req, true)
 	logger.Get(ctx).WithField("component", "qan").Debugf("UUID request:\n\n%s\n", rb)
 
@@ -262,16 +293,19 @@ func (svc *Service) getInstances(ctx context.Context, qanURL *url.URL) ([]proto.
 	defer resp.Body.Close()
 
 	rb, _ = httputil.DumpResponse(resp, true)
+
 	if resp.StatusCode != 200 {
 		logger.Get(ctx).WithField("component", "qan").Errorf("UUID response:\n\n%s\n", rb)
 		return nil, errors.Errorf("unexpected QAN response status code %d", resp.StatusCode)
 	}
+
 	logger.Get(ctx).WithField("component", "qan").Debugf("UUID response:\n\n%s\n", rb)
 
 	var instances []proto.Instance
 	if err = json.NewDecoder(resp.Body).Decode(&instances); err != nil {
 		return nil, errors.WithStack(err)
 	}
+
 	return instances, nil
 }
 
@@ -280,6 +314,7 @@ func (svc *Service) getInstances(ctx context.Context, qanURL *url.URL) ([]proto.
 func (svc *Service) getAgentUUID() (string, error) {
 	path := svc.qanAgentConfigPath()
 	f, err := os.Open(path)
+
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
@@ -289,9 +324,11 @@ func (svc *Service) getAgentUUID() (string, error) {
 	if err = json.NewDecoder(f).Decode(&cfg); err != nil {
 		return "", errors.WithStack(err)
 	}
+
 	if cfg.UUID == "" {
 		err = errors.Errorf("missing agent UUID in configuration file %s", path)
 	}
+
 	return cfg.UUID, err
 }
 
@@ -300,9 +337,11 @@ func (svc *Service) getOSUUID(ctx context.Context, qanURL *url.URL, agentUUID st
 	url := *qanURL
 	url.Path = path.Join(url.Path, "instances", agentUUID)
 	req, err := http.NewRequest("GET", url.String(), nil)
+
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
+
 	rb, _ := httputil.DumpRequestOut(req, true)
 	logger.Get(ctx).WithField("component", "qan").Debugf("getOSUUID request:\n\n%s\n", rb)
 
@@ -313,16 +352,19 @@ func (svc *Service) getOSUUID(ctx context.Context, qanURL *url.URL, agentUUID st
 	defer resp.Body.Close()
 
 	rb, _ = httputil.DumpResponse(resp, true)
+
 	if resp.StatusCode != 200 {
 		logger.Get(ctx).WithField("component", "qan").Errorf("getOSUUID response:\n\n%s\n", rb)
 		return "", errors.Errorf("unexpected QAN response status code %d", resp.StatusCode)
 	}
+
 	logger.Get(ctx).WithField("component", "qan").Debugf("getOSUUID response:\n\n%s\n", rb)
 
 	var instance proto.Instance
 	if err = json.NewDecoder(resp.Body).Decode(&instance); err != nil {
 		return "", errors.WithStack(err)
 	}
+
 	return instance.ParentUUID, nil
 }
 
@@ -337,9 +379,11 @@ func (svc *Service) addInstanceToServer(ctx context.Context, qanURL *url.URL, in
 	url := *qanURL
 	url.Path = path.Join(url.Path, "instances")
 	req, err := http.NewRequest("POST", url.String(), bytes.NewReader(b))
+
 	if err != nil {
 		return errors.WithStack(err)
 	}
+
 	req.Header.Set("Content-Type", "application/json")
 	rb, _ := httputil.DumpRequestOut(req, true)
 	logger.Get(ctx).WithField("component", "qan").Debugf("addInstanceToServer request:\n\n%s\n", rb)
@@ -351,16 +395,19 @@ func (svc *Service) addInstanceToServer(ctx context.Context, qanURL *url.URL, in
 	defer resp.Body.Close()
 
 	rb, _ = httputil.DumpResponse(resp, true)
+
 	if resp.StatusCode != 201 {
 		logger.Get(ctx).WithField("component", "qan").Errorf("addInstanceToServer response:\n\n%s\n", rb)
 		return errors.Errorf("unexpected QAN response status code %d", resp.StatusCode)
 	}
+
 	logger.Get(ctx).WithField("component", "qan").Debugf("addInstanceToServer response:\n\n%s\n", rb)
 
 	// Response Location header looks like this: http://127.0.0.1/qan-api/instances/6cea8824082d4ade682b94109664e6a9
 	// Extract UUID directly from it instead of following it.
 	parts := strings.Split(resp.Header.Get("Location"), "/")
 	instance.UUID = parts[len(parts)-1]
+
 	return nil
 }
 
@@ -369,9 +416,11 @@ func (svc *Service) removeInstanceFromServer(ctx context.Context, qanURL *url.UR
 	url := *qanURL
 	url.Path = path.Join(url.Path, "instances", uuid)
 	req, err := http.NewRequest("DELETE", url.String(), nil)
+
 	if err != nil {
 		return errors.WithStack(err)
 	}
+
 	rb, _ := httputil.DumpRequestOut(req, true)
 	logger.Get(ctx).WithField("component", "qan").Debugf("removeInstanceFromServer request:\n\n%s\n", rb)
 
@@ -382,11 +431,14 @@ func (svc *Service) removeInstanceFromServer(ctx context.Context, qanURL *url.UR
 	defer resp.Body.Close()
 
 	rb, _ = httputil.DumpResponse(resp, true)
+
 	if resp.StatusCode != 204 {
 		logger.Get(ctx).WithField("component", "qan").Errorf("removeInstanceFromServer response:\n\n%s\n", rb)
 		return errors.Errorf("unexpected QAN response status code %d", resp.StatusCode)
 	}
+
 	logger.Get(ctx).WithField("component", "qan").Debugf("removeInstanceFromServer response:\n\n%s\n", rb)
+
 	return nil
 }
 
@@ -398,6 +450,7 @@ func (svc *Service) sendQANCommand(ctx context.Context, qanURL *url.URL, agentUU
 		Cmd:       command,
 		Data:      data,
 	}
+
 	b, err := json.Marshal(cmd)
 	if err != nil {
 		return errors.WithStack(err)
@@ -407,13 +460,16 @@ func (svc *Service) sendQANCommand(ctx context.Context, qanURL *url.URL, agentUU
 	// It takes a few seconds for agent to connect to QAN API once it is started via service manager.
 	// QAN API fails to start/stop unconnected agent for QAN, so we retry the request when getting 404 response.
 	const attempts = 10
+
 	url := *qanURL
 	url.Path = path.Join(url.Path, "agents", agentUUID, "cmd")
+
 	for i := 0; i < attempts; i++ {
 		req, err := http.NewRequest("PUT", url.String(), bytes.NewReader(b))
 		if err != nil {
 			return errors.WithStack(err)
 		}
+
 		req.Header.Set("Content-Type", "application/json")
 		rb, _ := httputil.DumpRequestOut(req, true)
 		logger.Get(ctx).WithField("component", "qan").Debugf("sendQANCommand request:\n\n%s\n", rb)
@@ -422,6 +478,7 @@ func (svc *Service) sendQANCommand(ctx context.Context, qanURL *url.URL, agentUU
 		if err != nil {
 			return errors.WithStack(err)
 		}
+
 		rb, _ = httputil.DumpResponse(resp, true)
 		resp.Body.Close()
 
@@ -429,13 +486,16 @@ func (svc *Service) sendQANCommand(ctx context.Context, qanURL *url.URL, agentUU
 			logger.Get(ctx).WithField("component", "qan").Debugf("sendQANCommand response:\n\n%s\n", rb)
 			return nil
 		}
+
 		if resp.StatusCode == 404 {
 			logger.Get(ctx).WithField("component", "qan").Debugf("sendQANCommand response:\n\n%s\n", rb)
 			time.Sleep(time.Second)
+
 			continue
 		}
 
 		logger.Get(ctx).WithField("component", "qan").Errorf("sendQANCommand response:\n\n%s\n", rb)
+
 		return errors.Errorf("%s: unexpected QAN API response status code %d", command, resp.StatusCode)
 	}
 
@@ -454,6 +514,7 @@ func (svc *Service) AddMySQL(ctx context.Context, nodeName string, mySQLService 
 	if err != nil {
 		return err
 	}
+
 	osUUID, err := svc.getOSUUID(ctx, qanURL, agentUUID)
 	if err != nil {
 		return err
@@ -469,15 +530,18 @@ func (svc *Service) AddMySQL(ctx context.Context, nodeName string, mySQLService 
 	if err = svc.addInstanceToServer(ctx, qanURL, instance); err != nil {
 		return err
 	}
+
 	qanAgent.QANDBInstanceUUID = pointer.ToString(instance.UUID)
 
 	// we need real DSN (with password) for qan-agent to work, and it seems to be the only way to pass it
 	path := filepath.Join(svc.baseDir, "instance", fmt.Sprintf("%s.json", instance.UUID))
 	instance.DSN = qanAgent.DSN(mySQLService)
+
 	b, err := json.MarshalIndent(instance, "", "    ")
 	if err != nil {
 		return errors.WithStack(err)
 	}
+
 	if err = ioutil.WriteFile(path, b, 0666); err != nil {
 		return errors.WithStack(err)
 	}
@@ -493,11 +557,14 @@ func (svc *Service) AddMySQL(ctx context.Context, nodeName string, mySQLService 
 		"Interval":       60,
 		"ExampleQueries": true,
 	}
+
 	b, err = json.Marshal(config)
 	if err != nil {
 		return errors.WithStack(err)
 	}
+
 	logger.Get(ctx).WithField("component", "qan").Debugf("%s %s %s", agentUUID, command, b)
+
 	return svc.sendQANCommand(ctx, qanURL, agentUUID, command, b)
 }
 
@@ -520,11 +587,11 @@ func (svc *Service) RemoveMySQL(ctx context.Context, qanAgent *models.QanAgent) 
 	command := "StopTool"
 	b := []byte(*qanAgent.QANDBInstanceUUID)
 	logger.Get(ctx).WithField("component", "qan").Debugf("%s %s %s", agentUUID, command, b)
+
 	if err = svc.sendQANCommand(ctx, qanURL, agentUUID, command, b); err != nil {
 		return err
 	}
 
-	return svc.removeInstanceFromServer(ctx, qanURL, *qanAgent.QANDBInstanceUUID)
-
 	// we do not stop qan-agent even if it has zero MySQL instances now - to be safe
+	return svc.removeInstanceFromServer(ctx, qanURL, *qanAgent.QANDBInstanceUUID)
 }
