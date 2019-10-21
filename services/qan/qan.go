@@ -203,6 +203,7 @@ func (svc *Service) restoreConfigs(ctx context.Context, agent models.QanAgent) e
 	// restore db instance.
 	path = filepath.Join(svc.baseDir, "instance", fmt.Sprintf("%s.json", dbInstance.UUID))
 	dbInstance.DSN = strings.Replace(dbInstance.DSN, "***", *agent.ServicePassword, 1)
+	dbInstance.DSN = fmt.Sprintf("%s/?timeout=5s", dbInstance.DSN)
 	dbInstanceJSON, err := json.MarshalIndent(dbInstance, "", "    ")
 
 	if err != nil {
