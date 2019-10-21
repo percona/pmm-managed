@@ -154,7 +154,7 @@ func (svc *Service) Restore(ctx context.Context, nameForSupervisor string, agent
 	return svc.ensureAgentRuns(ctx, nameForSupervisor, *agent.ListenPort)
 }
 
-func (svc *Service) restoreConfigs(ctx context.Context, agent models.QanAgent) error{
+func (svc *Service) restoreConfigs(ctx context.Context, agent models.QanAgent) error {
 	qanURL, err := getQanURL(ctx)
 	if err != nil {
 		return err
@@ -176,9 +176,9 @@ func (svc *Service) restoreConfigs(ctx context.Context, agent models.QanAgent) e
 	}
 
 	var (
-		osInstance proto.Instance
+		osInstance    proto.Instance
 		agentInstance proto.Instance
-		dbInstance proto.Instance
+		dbInstance    proto.Instance
 	)
 
 	// look for mysql instance
@@ -272,7 +272,6 @@ func (svc *Service) restoreConfigs(ctx context.Context, agent models.QanAgent) e
 	return nil
 }
 
-
 // getInstances returns all instances from the QAN API.
 func (svc *Service) getInstances(ctx context.Context, qanURL *url.URL) ([]proto.Instance, error) {
 	url := *qanURL
@@ -309,7 +308,6 @@ func (svc *Service) getInstances(ctx context.Context, qanURL *url.URL) ([]proto.
 
 	return instances, nil
 }
-
 
 // getAgentUUID returns agent UUID from the qan-agent configuration file.
 func (svc *Service) getAgentUUID() (string, error) {
