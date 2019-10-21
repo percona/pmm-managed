@@ -147,32 +147,57 @@ func (svc *Service) ensureAgentRuns(ctx context.Context, nameForSupervisor strin
 
 // Restore ensures that agent is registered and running.
 func (svc *Service) Restore(ctx context.Context, nameForSupervisor string, agent models.QanAgent) error {
-	if err := svc.restoreConfigs(ctx, agent); err != nil {
-		return err
-	}
-
-	return svc.ensureAgentRuns(ctx, nameForSupervisor, *agent.ListenPort)
-}
-
-func (svc *Service) restoreConfigs(ctx context.Context, agent models.QanAgent) error {
+	l := logger.Get(ctx).WithField("component", "qan")
 	qanURL, err := getQanURL(ctx)
 	if err != nil {
+		l.Infof("getQanURL err: %v", err)
 		return err
 	}
 
+	agentInstance, dbInstance, err := svc.restoreConfigs(ctx, agent)
+	if err != nil {
+		l.Infof("restoreConfigs err: %v", err)
+		return err
+	}
+
+	if err := svc.ensureAgentRuns(ctx, nameForSupervisor, *agent.ListenPort); err != nil {
+		return errors.WithStack(err)
+	}
+
+	command := "StartTool"
+	config := map[string]interface{}{
+		"UUID":           dbInstance.UUID,
+		"CollectFrom":    "perfschema",
+		"Interval":       60,
+		"ExampleQueries": true,
+	}
+
+	b, err := json.Marshal(config)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	l.Infof("%s %s %s", agentInstance.UUID, command, b)
+
+	return svc.sendQANCommand(ctx, qanURL, agentInstance.UUID, command, b)
+}
+
+func (svc *Service) restoreConfigs(ctx context.Context, agent models.QanAgent) (*proto.Instance, *proto.Instance, error) {
 	l := logger.Get(ctx).WithField("component", "qan")
 
-	// do not change anything if qan-agent is already registered
-	path := svc.qanAgentConfigPath()
-	if _, err = os.Stat(path); err == nil {
-		l.Debugf("qan-agent already registered (%s exists).", path)
-		return nil
+	qanURL, err := getQanURL(ctx)
+	if err != nil {
+		l.Infof("getQanURL err: %v", err)
+		return nil, nil, err
 	}
+
+	path := svc.qanAgentConfigPath()
 
 	// restore mysql instance.
 	instances, err := svc.getInstances(ctx, qanURL)
 	if err != nil {
-		return errors.Wrap(err, "failed to get MySQL instance by UUID")
+		l.Infof("getInstances err: %v", err)
+		return nil, nil, errors.Wrap(err, "failed to get MySQL instance by UUID")
 	}
 
 	var (
@@ -191,7 +216,7 @@ func (svc *Service) restoreConfigs(ctx context.Context, agent models.QanAgent) e
 
 	// look for related agent and os instances
 	for _, inst := range instances {
-		if inst.ParentUUID == dbInstance.ParentUUID && inst.Subsystem == "os" {
+		if inst.UUID == dbInstance.ParentUUID && inst.Subsystem == "os" {
 			osInstance = inst
 		}
 
@@ -200,6 +225,9 @@ func (svc *Service) restoreConfigs(ctx context.Context, agent models.QanAgent) e
 		}
 	}
 
+	// Attempt to create the directory and ignore any issues.
+	_ = os.Mkdir(filepath.Join(svc.baseDir, "instance"), 0755)
+
 	// restore db instance.
 	path = filepath.Join(svc.baseDir, "instance", fmt.Sprintf("%s.json", dbInstance.UUID))
 	dbInstance.DSN = strings.Replace(dbInstance.DSN, "***", *agent.ServicePassword, 1)
@@ -207,11 +235,11 @@ func (svc *Service) restoreConfigs(ctx context.Context, agent models.QanAgent) e
 	dbInstanceJSON, err := json.MarshalIndent(dbInstance, "", "    ")
 
 	if err != nil {
-		return errors.WithStack(err)
+		return nil, nil, errors.WithStack(err)
 	}
 
 	if err = ioutil.WriteFile(path, dbInstanceJSON, 0666); err != nil {
-		return errors.Wrapf(err, "failed to write %s", path)
+		return nil, nil, errors.Wrapf(err, "failed to write %s", path)
 	}
 
 	l.Infof("restored dbInstance: %s.", path)
@@ -221,11 +249,11 @@ func (svc *Service) restoreConfigs(ctx context.Context, agent models.QanAgent) e
 	osInstanceJSON, err := json.MarshalIndent(osInstance, "", "    ")
 
 	if err != nil {
-		return errors.WithStack(err)
+		return nil, nil, errors.WithStack(err)
 	}
 
 	if err = ioutil.WriteFile(path, osInstanceJSON, 0666); err != nil {
-		return errors.Wrapf(err, "failed to write %s", path)
+		return nil, nil, errors.Wrapf(err, "failed to write %s", path)
 	}
 
 	l.Infof("restored osInstance: %s.", path)
@@ -235,27 +263,30 @@ func (svc *Service) restoreConfigs(ctx context.Context, agent models.QanAgent) e
 	agentInstanceJSON, err := json.MarshalIndent(agentInstance, "", "    ")
 
 	if err != nil {
-		return errors.WithStack(err)
+		return nil, nil, errors.WithStack(err)
 	}
 
 	if err = ioutil.WriteFile(path, agentInstanceJSON, 0666); err != nil {
-		return errors.Wrapf(err, "failed to write %s", path)
+		return nil, nil, errors.Wrapf(err, "failed to write %s", path)
 	}
 
 	l.Infof("restored agentInstance: %s.", path)
+
+	// Attempt to create the directory and ignore any issues.
+	_ = os.Mkdir(filepath.Join(svc.baseDir, "config"), 0755)
 
 	path = filepath.Join(svc.baseDir, "config", "agent.conf")
 	agentConf := fmt.Sprintf(`{"UUID":"%s","ApiHostname":"127.0.0.1","ApiPath":"/qan-api/","ServerUser":"pmm"}`, agentInstance.UUID)
 
 	if err = ioutil.WriteFile(path, []byte(agentConf), 0666); err != nil {
-		return errors.Wrap(err, "failed to write agent.conf")
+		return nil, nil, errors.Wrap(err, "failed to write agent.conf")
 	}
 
 	l.Infof("restored agent config: %s.", path)
 
 	path = filepath.Join(svc.baseDir, "config", "log.conf")
 	if err = ioutil.WriteFile(path, []byte(`{"Level":"info","Offline":"false"}`), 0666); err != nil {
-		return errors.Wrap(err, "failed to write agent.conf")
+		return nil, nil, errors.Wrap(err, "failed to write agent.conf")
 	}
 
 	l.Infof("restored log config: %s.", path)
@@ -264,12 +295,12 @@ func (svc *Service) restoreConfigs(ctx context.Context, agent models.QanAgent) e
 	qanConf := fmt.Sprintf(`{ "UUID": "%s", "CollectFrom": "perfschema", "Interval": 60, "ExampleQueries": true }`, dbInstance.UUID)
 
 	if err = ioutil.WriteFile(path, []byte(qanConf), 0666); err != nil {
-		return errors.Wrap(err, "failed to write agent.conf")
+		return nil, nil, errors.Wrap(err, "failed to write agent.conf")
 	}
 
 	l.Infof("restored qan config: %s.", path)
 
-	return nil
+	return &agentInstance, &dbInstance, nil
 }
 
 // getInstances returns all instances from the QAN API.
