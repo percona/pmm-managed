@@ -148,6 +148,7 @@ func (svc *Service) ensureAgentRuns(ctx context.Context, nameForSupervisor strin
 // Restore ensures that agent is registered and running.
 func (svc *Service) Restore(ctx context.Context, nameForSupervisor string, agent models.QanAgent) error {
 	l := logger.Get(ctx).WithField("component", "qan")
+
 	qanURL, err := getQanURL(ctx)
 	if err != nil {
 		l.Infof("getQanURL err: %v", err)
@@ -191,8 +192,6 @@ func (svc *Service) restoreConfigs(ctx context.Context, agent models.QanAgent) (
 		return nil, nil, err
 	}
 
-	path := svc.qanAgentConfigPath()
-
 	// restore mysql instance.
 	instances, err := svc.getInstances(ctx, qanURL)
 	if err != nil {
@@ -226,10 +225,10 @@ func (svc *Service) restoreConfigs(ctx context.Context, agent models.QanAgent) (
 	}
 
 	// Attempt to create the directory and ignore any issues.
-	_ = os.Mkdir(filepath.Join(svc.baseDir, "instance"), 0755)
+	_ = os.Mkdir(filepath.Join(svc.baseDir, "instance"), 0750)
 
 	// restore db instance.
-	path = filepath.Join(svc.baseDir, "instance", fmt.Sprintf("%s.json", dbInstance.UUID))
+	path := filepath.Join(svc.baseDir, "instance", fmt.Sprintf("%s.json", dbInstance.UUID))
 	dbInstance.DSN = strings.Replace(dbInstance.DSN, "***", *agent.ServicePassword, 1)
 	dbInstance.DSN = fmt.Sprintf("%s/?timeout=5s", dbInstance.DSN)
 	dbInstanceJSON, err := json.MarshalIndent(dbInstance, "", "    ")
@@ -273,7 +272,7 @@ func (svc *Service) restoreConfigs(ctx context.Context, agent models.QanAgent) (
 	l.Infof("restored agentInstance: %s.", path)
 
 	// Attempt to create the directory and ignore any issues.
-	_ = os.Mkdir(filepath.Join(svc.baseDir, "config"), 0755)
+	_ = os.Mkdir(filepath.Join(svc.baseDir, "config"), 0750)
 
 	path = filepath.Join(svc.baseDir, "config", "agent.conf")
 	agentConf := fmt.Sprintf(`{"UUID":"%s","ApiHostname":"127.0.0.1","ApiPath":"/qan-api/","ServerUser":"pmm"}`, agentInstance.UUID)
