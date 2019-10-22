@@ -588,7 +588,7 @@ func (svc *Service) Restore(ctx context.Context, tx *reform.TX) error {
 						}
 					}
 
-					if err = svc.QAN.EnsureAgentRuns(ctx, &a); err != nil {
+					if err = svc.QAN.Restore(ctx, name, a); err != nil {
 						return err
 					}
 				}
