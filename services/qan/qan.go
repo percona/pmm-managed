@@ -279,24 +279,28 @@ func (svc *Service) restoreConfigs(ctx context.Context, agent models.QanAgent) (
 		l.Infof("restored agentInstance: %s.", path)
 	}
 
-	path = filepath.Join(svc.baseDir, "configPath")
+	path = filepath.Join(svc.baseDir, "config")
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		_ = os.Mkdir(path, 0750)
 	}
 
 	path = filepath.Join(svc.baseDir, "config", "agent.conf")
 	if _, err := os.Stat(path); os.IsNotExist(err) {
+		serverUser := "pmm"
+		if os.Getenv("SERVER_USER") != "" {
+			serverUser = os.Getenv("SERVER_USER")
+		}
 		agentConf := struct {
 			UUID           string `json:"UUID"`
 			APIHostname    string `json:"ApiHostname"`
 			APIPath        string `json:"ApiPath"`
 			ServerUser     string `json:"ServerUser"`
-			ServerPassword string `json:"ServerPassword"`
+			ServerPassword string `json:"ServerPassword,omitempty"`
 		}{
 			agentInstance.UUID,
 			"127.0.0.1",
 			"/qan-api/",
-			os.Getenv("SERVER_USER"),
+			serverUser,
 			os.Getenv("SERVER_PASSWORD"),
 		}
 
