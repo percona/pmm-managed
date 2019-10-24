@@ -290,6 +290,7 @@ func (svc *Service) restoreConfigs(ctx context.Context, agent models.QanAgent) (
 		if os.Getenv("SERVER_USER") != "" {
 			serverUser = os.Getenv("SERVER_USER")
 		}
+
 		agentConf := struct {
 			UUID           string `json:"UUID"`
 			APIHostname    string `json:"ApiHostname"`
