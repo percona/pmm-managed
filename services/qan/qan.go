@@ -286,7 +286,6 @@ func (svc *Service) restoreConfigs(ctx context.Context, agent models.QanAgent) (
 
 	path = filepath.Join(svc.baseDir, "config", "agent.conf")
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-
 		agentConf := struct {
 			UUID           string `json:"UUID"`
 			APIHostname    string `json:"ApiHostname"`
