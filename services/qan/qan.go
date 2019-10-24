@@ -224,80 +224,119 @@ func (svc *Service) restoreConfigs(ctx context.Context, agent models.QanAgent) (
 		}
 	}
 
-	// Attempt to create the directory and ignore any issues.
-	_ = os.Mkdir(filepath.Join(svc.baseDir, "instance"), 0750)
+	path := filepath.Join(svc.baseDir, "instance")
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		_ = os.Mkdir(path, 0750)
+	}
 
 	// restore db instance.
-	path := filepath.Join(svc.baseDir, "instance", fmt.Sprintf("%s.json", dbInstance.UUID))
-	dbInstance.DSN = strings.Replace(dbInstance.DSN, "***", *agent.ServicePassword, 1)
-	dbInstance.DSN = fmt.Sprintf("%s/?timeout=5s", dbInstance.DSN)
-	dbInstanceJSON, err := json.MarshalIndent(dbInstance, "", "    ")
+	path = filepath.Join(svc.baseDir, "instance", fmt.Sprintf("%s.json", dbInstance.UUID))
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		dbInstance.DSN = strings.Replace(dbInstance.DSN, "***", *agent.ServicePassword, 1)
+		dbInstance.DSN = fmt.Sprintf("%s/?timeout=5s", dbInstance.DSN)
+		dbInstanceJSON, err := json.MarshalIndent(dbInstance, "", "    ")
 
-	if err != nil {
-		return nil, nil, errors.WithStack(err)
+		if err != nil {
+			return nil, nil, errors.WithStack(err)
+		}
+
+		if err = ioutil.WriteFile(path, dbInstanceJSON, 0666); err != nil {
+			return nil, nil, errors.Wrapf(err, "failed to write %s", path)
+		}
+
+		l.Infof("restored dbInstance: %s.", path)
 	}
-
-	if err = ioutil.WriteFile(path, dbInstanceJSON, 0666); err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to write %s", path)
-	}
-
-	l.Infof("restored dbInstance: %s.", path)
 
 	// restore OS instance.
 	path = filepath.Join(svc.baseDir, "instance", fmt.Sprintf("%s.json", osInstance.UUID))
-	osInstanceJSON, err := json.MarshalIndent(osInstance, "", "    ")
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		osInstanceJSON, err := json.MarshalIndent(osInstance, "", "    ")
 
-	if err != nil {
-		return nil, nil, errors.WithStack(err)
+		if err != nil {
+			return nil, nil, errors.WithStack(err)
+		}
+
+		if err = ioutil.WriteFile(path, osInstanceJSON, 0666); err != nil {
+			return nil, nil, errors.Wrapf(err, "failed to write %s", path)
+		}
+
+		l.Infof("restored osInstance: %s.", path)
 	}
-
-	if err = ioutil.WriteFile(path, osInstanceJSON, 0666); err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to write %s", path)
-	}
-
-	l.Infof("restored osInstance: %s.", path)
 
 	// restore Agent instance.
 	path = filepath.Join(svc.baseDir, "instance", fmt.Sprintf("%s.json", agentInstance.UUID))
-	agentInstanceJSON, err := json.MarshalIndent(agentInstance, "", "    ")
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		agentInstanceJSON, err := json.MarshalIndent(agentInstance, "", "    ")
 
-	if err != nil {
-		return nil, nil, errors.WithStack(err)
+		if err != nil {
+			return nil, nil, errors.WithStack(err)
+		}
+
+		if err = ioutil.WriteFile(path, agentInstanceJSON, 0666); err != nil {
+			return nil, nil, errors.Wrapf(err, "failed to write %s", path)
+		}
+
+		l.Infof("restored agentInstance: %s.", path)
 	}
 
-	if err = ioutil.WriteFile(path, agentInstanceJSON, 0666); err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to write %s", path)
+	path = filepath.Join(svc.baseDir, "config")
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		_ = os.Mkdir(path, 0750)
 	}
-
-	l.Infof("restored agentInstance: %s.", path)
-
-	// Attempt to create the directory and ignore any issues.
-	_ = os.Mkdir(filepath.Join(svc.baseDir, "config"), 0750)
 
 	path = filepath.Join(svc.baseDir, "config", "agent.conf")
-	agentConf := fmt.Sprintf(`{"UUID":"%s","ApiHostname":"127.0.0.1","ApiPath":"/qan-api/","ServerUser":"pmm"}`, agentInstance.UUID)
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		serverUser := "pmm"
+		if os.Getenv("SERVER_USER") != "" {
+			serverUser = os.Getenv("SERVER_USER")
+		}
 
-	if err = ioutil.WriteFile(path, []byte(agentConf), 0666); err != nil {
-		return nil, nil, errors.Wrap(err, "failed to write agent.conf")
+		agentConf := struct {
+			UUID           string `json:"UUID"`
+			APIHostname    string `json:"ApiHostname"`
+			APIPath        string `json:"ApiPath"`
+			ServerUser     string `json:"ServerUser"`
+			ServerPassword string `json:"ServerPassword,omitempty"`
+		}{
+			agentInstance.UUID,
+			"127.0.0.1",
+			"/qan-api/",
+			serverUser,
+			os.Getenv("SERVER_PASSWORD"),
+		}
+
+		// agentConf := fmt.Sprintf(`{"UUID":"%s","ApiHostname":"127.0.0.1","ApiPath":"/qan-api/","ServerUser":"pmm"}`, agentInstance.UUID)
+		b, err := json.Marshal(agentConf)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed to Marshal agent.conf")
+		}
+
+		if err = ioutil.WriteFile(path, b, 0666); err != nil {
+			return nil, nil, errors.Wrap(err, "failed to write agent.conf")
+		}
+
+		l.Infof("restored agent config: %s.", path)
 	}
-
-	l.Infof("restored agent config: %s.", path)
 
 	path = filepath.Join(svc.baseDir, "config", "log.conf")
-	if err = ioutil.WriteFile(path, []byte(`{"Level":"info","Offline":"false"}`), 0666); err != nil {
-		return nil, nil, errors.Wrap(err, "failed to write agent.conf")
-	}
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		if err = ioutil.WriteFile(path, []byte(`{"Level":"info","Offline":"false"}`), 0666); err != nil {
+			return nil, nil, errors.Wrap(err, "failed to write agent.conf")
+		}
 
-	l.Infof("restored log config: %s.", path)
+		l.Infof("restored log config: %s.", path)
+	}
 
 	path = filepath.Join(svc.baseDir, "config", fmt.Sprintf("qan-%s.conf", dbInstance.UUID))
-	qanConf := fmt.Sprintf(`{ "UUID": "%s", "CollectFrom": "perfschema", "Interval": 60, "ExampleQueries": true }`, dbInstance.UUID)
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		qanConf := fmt.Sprintf(`{ "UUID": "%s", "CollectFrom": "perfschema", "Interval": 60, "ExampleQueries": true }`, dbInstance.UUID)
 
-	if err = ioutil.WriteFile(path, []byte(qanConf), 0666); err != nil {
-		return nil, nil, errors.Wrap(err, "failed to write agent.conf")
+		if err = ioutil.WriteFile(path, []byte(qanConf), 0666); err != nil {
+			return nil, nil, errors.Wrap(err, "failed to write agent.conf")
+		}
+
+		l.Infof("restored qan config: %s.", path)
 	}
-
-	l.Infof("restored qan config: %s.", path)
 
 	return &agentInstance, &dbInstance, nil
 }
