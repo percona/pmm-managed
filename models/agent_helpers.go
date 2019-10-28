@@ -339,6 +339,8 @@ type CreateAgentParams struct {
 	TLSSkipVerify         bool
 	QueryExamplesDisabled bool
 	MaxQueryLogSize       int64
+	AWSAccessKeyID        string
+	AWSSecretAccessKey    string
 }
 
 // CreateAgent creates Agent with given type.

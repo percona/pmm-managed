@@ -17,19 +17,18 @@
 package agents
 
 import (
-	"fmt"
-	"os"
 	"sort"
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
+	"gopkg.in/yaml.v2"
 
 	"github.com/percona/pmm-managed/models"
 )
 
 // rdsExporterConfig returns desired configuration of rds_exporter process.
-func rdsExporterConfig(service *models.Service, exporter *models.Agent) *agentpb.SetStateRequest_AgentProcess {
+func rdsExporterConfig(node *models.Node, service *models.Service, exporter *models.Agent) *agentpb.SetStateRequest_AgentProcess {
 	tdp := templateDelimsPair(
 		pointer.GetString(service.Address),
 		pointer.GetString(exporter.Username),
@@ -39,7 +38,7 @@ func rdsExporterConfig(service *models.Service, exporter *models.Agent) *agentpb
 
 	args := []string{
 		"--web.listen-address=:" + tdp.left + " .listen_port " + tdp.right,
-		fmt.Sprintf("--config.file=%s", os.Getenv("RDS_CONFIG")),
+		"--config.file=", tdp.left + " .config_file " + tdp.right,
 	}
 
 	if pointer.GetString(exporter.MetricsURL) != "" {
@@ -48,16 +47,27 @@ func rdsExporterConfig(service *models.Service, exporter *models.Agent) *agentpb
 
 	sort.Strings(args)
 
+	configBody := struct {
+		AWSRegion          string `yaml:"aws_region"`
+		AWSAccessKeyID     string `yaml:"aws_access_key_id"`
+		AWSSecretAccessKey string `yaml:"aws_secret_access_key"`
+	}{
+		AWSRegion:          *node.Region,
+		AWSAccessKeyID:     exporter.AWSAccessKeyID,
+		AWSSecretAccessKey: exporter.AWSSecretAccessKey,
+	}
+	buf, _ := yaml.Marshal(configBody)
+
 	return &agentpb.SetStateRequest_AgentProcess{
 		Type:               inventorypb.AgentType_RDS_EXPORTER,
 		TemplateLeftDelim:  tdp.left,
 		TemplateRightDelim: tdp.right,
 		Args:               args,
-		//TODO: get real parameters from config
+		// Since AWS credentials file is not a regular config file, I am not sure if AWS_REGION should be in the config
+		// or in th environment
 		Env: []string{
-			fmt.Sprintf("AWS_ACCESS_KEY_ID=%s", "<access_key_id_from_config>"),
-			fmt.Sprintf("AWS_SECRET_ACCESS_KEY=%s", "<secret_access_key_from_config>"),
-			fmt.Sprintf("AWS_REGION=%s", "<region_from_config>"),
+			"AWS_REGION=" + *node.Region,
 		},
+		ConfigBody: string(buf),
 	}
 }

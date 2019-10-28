@@ -373,13 +373,12 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 			continue
 		}
 
-		// in order of AgentType consts
-		switch row.AgentType {
-		case models.PMMAgentType:
-			continue
+		var err error
+		nodes := []*models.Node{}
 
-		case models.NodeExporterType:
-			nodes, err := models.FindNodesForAgentID(r.db.Querier, row.AgentID)
+		switch row.AgentType {
+		case models.NodeExporterType, models.RDSExporterType:
+			nodes, err = models.FindNodesForAgentID(r.db.Querier, row.AgentID)
 			if err != nil {
 				l.Error(err)
 				return
@@ -388,11 +387,19 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 				l.Errorf("Expected exactly one Node, got %d.", len(nodes))
 				return
 			}
+		}
+		// in order of AgentType consts
+		switch row.AgentType {
+		case models.PMMAgentType:
+			continue
+
+		case models.NodeExporterType:
 			agentProcesses[row.AgentID] = nodeExporterConfig(nodes[0], row)
 
 		// Agents with exactly one Service
 		case models.MySQLdExporterType, models.MongoDBExporterType, models.PostgresExporterType, models.ProxySQLExporterType,
-			models.QANMySQLPerfSchemaAgentType, models.QANMySQLSlowlogAgentType, models.QANMongoDBProfilerAgentType, models.QANPostgreSQLPgStatementsAgentType:
+			models.QANMySQLPerfSchemaAgentType, models.QANMySQLSlowlogAgentType, models.QANMongoDBProfilerAgentType, models.QANPostgreSQLPgStatementsAgentType,
+			models.RDSExporterType:
 
 			services, err := models.ServicesForAgent(r.db.Querier, row.AgentID)
 			if err != nil {
@@ -422,7 +429,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 			case models.QANPostgreSQLPgStatementsAgentType:
 				builtinAgents[row.AgentID] = qanPostgreSQLPgStatementsAgentConfig(services[0], row)
 			case models.RDSExporterType:
-				agentProcesses[row.AgentID] = rdsExporterConfig(services[0], row)
+				agentProcesses[row.AgentID] = rdsExporterConfig(nodes[0], services[0], row)
 			}
 
 		default:

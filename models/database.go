@@ -184,6 +184,12 @@ var databaseSchema = [][]string{
 		// e'\n' to treat \n as a newline, not as two characters
 		`UPDATE nodes SET machine_id = trim(e'\n' from machine_id) WHERE machine_id IS NOT NULL`,
 	},
+
+	6: {
+		`ALTER TABLE agents
+			ADD COLUMN aws_access_key_id VARCHAR NOT NULL DEFAULT '',
+			ADD COLUMN aws_secret_access_key VARCHAR NOT NULL DEFAULT ''`,
+	},
 }
 
 // OpenDB returns configured connection pool for PostgreSQL.
