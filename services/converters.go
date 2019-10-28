@@ -74,6 +74,17 @@ func ToAPINode(node *models.Node) (inventorypb.Node, error) {
 			Address:      node.Address,
 		}, nil
 
+	case models.RemoteRDSNodeType:
+		return &inventorypb.RemoteRDSNode{
+			NodeId:       node.NodeID,
+			NodeName:     node.NodeName,
+			NodeModel:    node.NodeModel,
+			Region:       pointer.GetString(node.Region),
+			Az:           node.AZ,
+			CustomLabels: labels,
+			Address:      node.Address,
+		}, nil
+
 	default:
 		panic(fmt.Errorf("unhandled Node type %s", node.NodeType))
 	}
@@ -293,6 +304,17 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 			CustomLabels:  labels,
 			Tls:           agent.TLS,
 			TlsSkipVerify: agent.TLSSkipVerify,
+		}, nil
+
+	case models.RDSExporterType:
+		return &inventorypb.RDSExporter{
+			AgentId:      agent.AgentID,
+			PmmAgentId:   pointer.GetString(agent.PMMAgentID),
+			ServiceId:    serviceID,
+			Disabled:     agent.Disabled,
+			Status:       inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
+			ListenPort:   uint32(pointer.GetUint16(agent.ListenPort)),
+			CustomLabels: labels,
 		}, nil
 
 	default:

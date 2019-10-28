@@ -421,6 +421,8 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 				builtinAgents[row.AgentID] = qanMongoDBProfilerAgentConfig(services[0], row)
 			case models.QANPostgreSQLPgStatementsAgentType:
 				builtinAgents[row.AgentID] = qanPostgreSQLPgStatementsAgentConfig(services[0], row)
+			case models.RDSExporterType:
+				agentProcesses[row.AgentID] = rdsExporterConfig(services[0], row)
 			}
 
 		default:

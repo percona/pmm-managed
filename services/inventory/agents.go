@@ -698,3 +698,58 @@ func (as *AgentsService) Remove(ctx context.Context, id string, force bool) erro
 
 	return nil
 }
+
+// AddRDSExporter inserts rds_exporter Agent with given parameters.
+func (as *AgentsService) AddRDSExporter(ctx context.Context, req *inventorypb.AddRDSExporterRequest) (*inventorypb.RDSExporter, error) {
+	var res *inventorypb.RDSExporter
+	e := as.db.InTransaction(func(tx *reform.TX) error {
+		params := &models.CreateAgentParams{
+			PMMAgentID:    req.PmmAgentId,
+			ServiceID:     req.ServiceId,
+			Username:      req.Username,
+			Password:      req.Password,
+			CustomLabels:  req.CustomLabels,
+			TLS:           req.Tls,
+			TLSSkipVerify: req.TlsSkipVerify,
+		}
+		row, err := models.CreateAgent(tx.Querier, models.RDSExporterType, params)
+		if err != nil {
+			return err
+		}
+		// TODO: do we have to check the RDS connection using the AWS API?
+		// if !req.SkipConnectionCheck {
+		// 	service, err := models.FindServiceByID(tx.Querier, req.ServiceId)
+		// 	if err != nil {
+		// 		return err
+		// 	}
+		// 	if err = as.r.CheckConnectionToService(ctx, service, row); err != nil {
+		// 		return err
+		// 	}
+		// }
+
+		agent, err := services.ToAPIAgent(tx.Querier, row)
+		if err != nil {
+			return err
+		}
+		res = agent.(*inventorypb.RDSExporter)
+		return nil
+	})
+	if e != nil {
+		return nil, e
+	}
+
+	as.r.SendSetStateRequest(ctx, req.PmmAgentId)
+	return res, nil
+}
+
+// ChangeRDSExporter updates rds_exporter Agent with given parameters.
+func (as *AgentsService) ChangeRDSExporter(ctx context.Context, req *inventorypb.ChangeRDSExporterRequest) (*inventorypb.RDSExporter, error) {
+	agent, err := as.changeAgent(req.AgentId, req.Common)
+	if err != nil {
+		return nil, err
+	}
+
+	res := agent.(*inventorypb.RDSExporter)
+	as.r.SendSetStateRequest(ctx, res.PmmAgentId)
+	return res, nil
+}

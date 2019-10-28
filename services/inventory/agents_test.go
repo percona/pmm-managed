@@ -214,12 +214,26 @@ func TestAgents(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, expectedPostgresExporter, actualAgent)
 
+		actualAgent, err = as.AddRDSExporter(ctx, &inventorypb.AddRDSExporterRequest{
+			PmmAgentId: pmmAgent.AgentId,
+			ServiceId:  ps.ServiceId,
+			Username:   "username",
+		})
+		require.NoError(t, err)
+		expectedRDSExporter := &inventorypb.RDSExporter{
+			AgentId:    "/agent_id/00000000-0000-4000-8000-00000000000e",
+			PmmAgentId: pmmAgent.AgentId,
+			ServiceId:  ps.ServiceId,
+			//Username:   "username",
+		}
+		assert.Equal(t, expectedRDSExporter, actualAgent)
+
 		actualAgents, err = as.List(ctx, AgentFilters{})
 		require.NoError(t, err)
 		for i, a := range actualAgents {
 			t.Logf("%d: %T %s", i, a, a)
 		}
-		require.Len(t, actualAgents, 10)
+		require.Len(t, actualAgents, 11)
 		assert.Equal(t, pmmAgent, actualAgents[3])
 		assert.Equal(t, expectedNodeExporter, actualAgents[4])
 		assert.Equal(t, expectedMySQLdExporter, actualAgents[5])
@@ -236,7 +250,7 @@ func TestAgents(t *testing.T) {
 
 		actualAgents, err = as.List(ctx, AgentFilters{PMMAgentID: pmmAgent.AgentId})
 		require.NoError(t, err)
-		require.Len(t, actualAgents, 5)
+		require.Len(t, actualAgents, 6)
 		assert.Equal(t, expectedNodeExporter, actualAgents[0])
 		assert.Equal(t, expectedMySQLdExporter, actualAgents[1])
 		assert.Equal(t, expectedMongoDBExporter, actualAgents[2])

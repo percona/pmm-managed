@@ -119,3 +119,23 @@ func (s *nodesServer) RemoveNode(ctx context.Context, req *inventorypb.RemoveNod
 
 	return new(inventorypb.RemoveNodeResponse), nil
 }
+
+// AddRemoteNode adds Remote Node.
+func (s *nodesServer) AddRemoteRDSNode(ctx context.Context, req *inventorypb.AddRemoteRDSNodeRequest) (*inventorypb.AddRemoteRDSNodeResponse, error) {
+	node, err := s.svc.AddRemoteRDSNode(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &inventorypb.AddRemoteRDSNodeResponse{Remote: node}
+	return res, nil
+}
+
+// RemoveNode removes Node.
+func (s *nodesServer) RemoveRemoteRDSNode(ctx context.Context, req *inventorypb.RemoveRemoteRDSNodeRequest) (*inventorypb.RemoveRemoteRDSNodeResponse, error) {
+	if err := s.svc.Remove(ctx, req.NodeId, req.Force); err != nil {
+		return nil, err
+	}
+
+	return new(inventorypb.RemoveRemoteRDSNodeResponse), nil
+}

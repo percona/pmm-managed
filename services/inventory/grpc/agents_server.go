@@ -374,3 +374,30 @@ func (s *agentsServer) RemoveAgent(ctx context.Context, req *inventorypb.RemoveA
 
 	return new(inventorypb.RemoveAgentResponse), nil
 }
+
+// AddRDSExporter adds rds_exporter Agent.
+func (s *agentsServer) AddRDSExporter(ctx context.Context, req *inventorypb.AddRDSExporterRequest) (*inventorypb.AddRDSExporterResponse, error) {
+	agent, err := s.s.AddRDSExporter(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &inventorypb.AddRDSExporterResponse{
+		RdsExporter: agent,
+	}
+	return res, nil
+}
+
+// ChangeRDSExporter changes disabled flag and custom labels of rds_exporter Agent.
+//nolint:lll
+func (s *agentsServer) ChangeRDSExporter(ctx context.Context, req *inventorypb.ChangeRDSExporterRequest) (*inventorypb.ChangeRDSExporterResponse, error) {
+	agent, err := s.s.ChangeRDSExporter(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &inventorypb.ChangeRDSExporterResponse{
+		RdsExporter: agent,
+	}
+	return res, nil
+}

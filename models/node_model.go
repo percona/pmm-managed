@@ -34,6 +34,7 @@ const (
 	GenericNodeType   NodeType = "generic"
 	ContainerNodeType NodeType = "container"
 	RemoteNodeType    NodeType = "remote"
+	RemoteRDSNodeType NodeType = "remote_rds"
 )
 
 // PMMServerNodeID is a special Node ID representing PMM Server Node.

@@ -30,6 +30,10 @@ func (this *RemoteNode) Validate() error {
 	// Validation of proto3 map<> fields is unsupported.
 	return nil
 }
+func (this *RemoteRDSNode) Validate() error {
+	// Validation of proto3 map<> fields is unsupported.
+	return nil
+}
 func (this *ListNodesRequest) Validate() error {
 	return nil
 }
@@ -52,6 +56,13 @@ func (this *ListNodesResponse) Validate() error {
 		if item != nil {
 			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(item); err != nil {
 				return github_com_mwitkow_go_proto_validators.FieldError("Remote", err)
+			}
+		}
+	}
+	for _, item := range this.RemoteRds {
+		if item != nil {
+			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(item); err != nil {
+				return github_com_mwitkow_go_proto_validators.FieldError("RemoteRds", err)
 			}
 		}
 	}
@@ -82,6 +93,13 @@ func (this *GetNodeResponse) Validate() error {
 		if oneOfNester.Remote != nil {
 			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.Remote); err != nil {
 				return github_com_mwitkow_go_proto_validators.FieldError("Remote", err)
+			}
+		}
+	}
+	if oneOfNester, ok := this.GetNode().(*GetNodeResponse_RemoteRds); ok {
+		if oneOfNester.RemoteRds != nil {
+			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.RemoteRds); err != nil {
+				return github_com_mwitkow_go_proto_validators.FieldError("RemoteRds", err)
 			}
 		}
 	}
@@ -148,5 +166,32 @@ func (this *RemoveNodeRequest) Validate() error {
 	return nil
 }
 func (this *RemoveNodeResponse) Validate() error {
+	return nil
+}
+func (this *AddRemoteRDSNodeRequest) Validate() error {
+	if this.NodeName == "" {
+		return github_com_mwitkow_go_proto_validators.FieldError("NodeName", fmt.Errorf(`value '%v' must not be an empty string`, this.NodeName))
+	}
+	if this.Address == "" {
+		return github_com_mwitkow_go_proto_validators.FieldError("Address", fmt.Errorf(`value '%v' must not be an empty string`, this.Address))
+	}
+	// Validation of proto3 map<> fields is unsupported.
+	return nil
+}
+func (this *AddRemoteRDSNodeResponse) Validate() error {
+	if this.Remote != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Remote); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("Remote", err)
+		}
+	}
+	return nil
+}
+func (this *RemoveRemoteRDSNodeRequest) Validate() error {
+	if this.NodeId == "" {
+		return github_com_mwitkow_go_proto_validators.FieldError("NodeId", fmt.Errorf(`value '%v' must not be an empty string`, this.NodeId))
+	}
+	return nil
+}
+func (this *RemoveRemoteRDSNodeResponse) Validate() error {
 	return nil
 }
