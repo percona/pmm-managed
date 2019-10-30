@@ -217,7 +217,6 @@ func TestAgents(t *testing.T) {
 		actualAgent, err = as.AddRDSExporter(ctx, &inventorypb.AddRDSExporterRequest{
 			PmmAgentId: pmmAgent.AgentId,
 			ServiceId:  ps.ServiceId,
-			Username:   "username",
 		})
 		require.NoError(t, err)
 		expectedRDSExporter := &inventorypb.RDSExporter{
