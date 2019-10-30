@@ -17,6 +17,7 @@
 package agents
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/AlekSi/pointer"
@@ -28,16 +29,13 @@ import (
 )
 
 // rdsExporterConfig returns desired configuration of rds_exporter process.
-func rdsExporterConfig(node *models.Node, service *models.Service, exporter *models.Agent) *agentpb.SetStateRequest_AgentProcess {
+func rdsExporterConfig(node *models.Node, exporter *models.Agent) *agentpb.SetStateRequest_AgentProcess {
 	tdp := templateDelimsPair(
-		pointer.GetString(service.Address),
-		pointer.GetString(exporter.Username),
-		pointer.GetString(exporter.Password),
-		pointer.GetString(exporter.MetricsURL),
+		fmt.Sprintf("%d", exporter.ListenPort),
 	)
 
 	args := []string{
-		"--web.listen-address=:" + tdp.left + " .listen_port " + tdp.right,
+		"--web.listen-address=" + tdp.left + " .listen_port " + tdp.right,
 		"--config.file=", tdp.left + " .config_file " + tdp.right,
 	}
 

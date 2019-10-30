@@ -373,12 +373,13 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 			continue
 		}
 
-		var err error
-		nodes := []*models.Node{}
-
+		// in order of AgentType consts
 		switch row.AgentType {
-		case models.NodeExporterType, models.RDSExporterType:
-			nodes, err = models.FindNodesForAgentID(r.db.Querier, row.AgentID)
+		case models.PMMAgentType:
+			continue
+
+		case models.NodeExporterType:
+			nodes, err := models.FindNodesForAgentID(r.db.Querier, row.AgentID)
 			if err != nil {
 				l.Error(err)
 				return
@@ -387,19 +388,16 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 				l.Errorf("Expected exactly one Node, got %d.", len(nodes))
 				return
 			}
-		}
-		// in order of AgentType consts
-		switch row.AgentType {
-		case models.PMMAgentType:
-			continue
-
-		case models.NodeExporterType:
-			agentProcesses[row.AgentID] = nodeExporterConfig(nodes[0], row)
+			switch row.AgentType {
+			case models.NodeExporterType:
+				agentProcesses[row.AgentID] = nodeExporterConfig(nodes[0], row)
+			case models.RDSExporterType:
+				agentProcesses[row.AgentID] = rdsExporterConfig(nodes[0], row)
+			}
 
 		// Agents with exactly one Service
 		case models.MySQLdExporterType, models.MongoDBExporterType, models.PostgresExporterType, models.ProxySQLExporterType,
-			models.QANMySQLPerfSchemaAgentType, models.QANMySQLSlowlogAgentType, models.QANMongoDBProfilerAgentType, models.QANPostgreSQLPgStatementsAgentType,
-			models.RDSExporterType:
+			models.QANMySQLPerfSchemaAgentType, models.QANMySQLSlowlogAgentType, models.QANMongoDBProfilerAgentType, models.QANPostgreSQLPgStatementsAgentType:
 
 			services, err := models.ServicesForAgent(r.db.Querier, row.AgentID)
 			if err != nil {
@@ -428,8 +426,6 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 				builtinAgents[row.AgentID] = qanMongoDBProfilerAgentConfig(services[0], row)
 			case models.QANPostgreSQLPgStatementsAgentType:
 				builtinAgents[row.AgentID] = qanPostgreSQLPgStatementsAgentConfig(services[0], row)
-			case models.RDSExporterType:
-				agentProcesses[row.AgentID] = rdsExporterConfig(nodes[0], services[0], row)
 			}
 
 		default:
