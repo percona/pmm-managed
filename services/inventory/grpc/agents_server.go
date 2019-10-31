@@ -69,6 +69,8 @@ func (s *agentsServer) ListAgents(ctx context.Context, req *inventorypb.ListAgen
 			res.ProxysqlExporter = append(res.ProxysqlExporter, agent)
 		case *inventorypb.QANPostgreSQLPgStatementsAgent:
 			res.QanPostgresqlPgstatementsAgent = append(res.QanPostgresqlPgstatementsAgent, agent)
+		case *inventorypb.RDSExporter:
+			res.RdsExporter = append(res.RdsExporter, agent)
 		default:
 			panic(fmt.Errorf("unhandled inventory Agent type %T", agent))
 		}
@@ -105,6 +107,8 @@ func (s *agentsServer) GetAgent(ctx context.Context, req *inventorypb.GetAgentRe
 		res.Agent = &inventorypb.GetAgentResponse_ProxysqlExporter{ProxysqlExporter: agent}
 	case *inventorypb.QANPostgreSQLPgStatementsAgent:
 		res.Agent = &inventorypb.GetAgentResponse_QanPostgresqlPgstatementsAgent{QanPostgresqlPgstatementsAgent: agent}
+	case *inventorypb.RDSExporter:
+		res.Agent = &inventorypb.GetAgentResponse_RdsExporter{RdsExporter: agent}
 	default:
 		panic(fmt.Errorf("unhandled inventory Agent type %T", agent))
 	}
