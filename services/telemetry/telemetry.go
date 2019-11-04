@@ -43,7 +43,6 @@ const (
 
 	// environment variables that affect telemetry service
 	envURL = "PERCONA_VERSION_CHECK_URL" // the same name as for the Toolkit
-	envOS  = "TELEMETRY_OS"              // set by AMI and OVF, empty for Docker image
 )
 
 // Service is responsible for interactions with Percona Call Home service.
@@ -66,12 +65,12 @@ func NewService(db *reform.DB, pmmVersion string) *Service {
 }
 
 func (s *Service) init() {
-	os, err := ioutil.ReadFile("/srv/pmm-distribution")
+	pmmDistribution, err := ioutil.ReadFile("/srv/pmm-distribution")
 	if err != nil {
 		s.l.Debugf("Failed to read /srv/pmm-distribution: %s", err)
 	}
 
-	s.os = string(os)
+	s.os = string(pmmDistribution)
 	if s.os == "" {
 		b, err := ioutil.ReadFile("/proc/version")
 		if err != nil {
@@ -168,6 +167,9 @@ func (s *Service) sendRequest(ctx context.Context, data []byte) error {
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("status code %d", resp.StatusCode)
 	}
+
+	s.l.Debugf("Reported to telemetry server the distribution type: %s.", s.os)
+
 	return nil
 }
 
