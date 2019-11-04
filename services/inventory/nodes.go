@@ -201,6 +201,8 @@ func (s *NodesService) Remove(ctx context.Context, id string, force bool) error 
 	})
 }
 
+// AddRemoteRDSNode adds a new RDS node
+//nolint:unparam
 func (s *NodesService) AddRemoteRDSNode(ctx context.Context, req *inventorypb.AddRemoteRDSNodeRequest) (*inventorypb.RemoteRDSNode, error) {
 	params := &models.CreateNodeParams{
 		NodeName:     req.NodeName,
