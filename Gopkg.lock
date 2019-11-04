@@ -243,7 +243,7 @@
 
 [[projects]]
   branch = "PMM-4474_Add_rds_exporter_agent-B"
-  digest = "1:3c846e0bcbbd8d6a73ccb65b105718765e45272bcfe0e612a400ab31670a4bf0"
+  digest = "1:f2960fd8c2e9bb631cc2ff706da5698a9f371749476cab40d0515ec2687a4bc0"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -255,7 +255,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "a52cca38e6f015467c45a28ee4c9f020b89fd41e"
+  revision = "fd8e94932da2b94e3e5d66c7b717865e12d2a8a6"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
