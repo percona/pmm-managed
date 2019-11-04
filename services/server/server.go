@@ -23,6 +23,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/user"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -491,6 +493,55 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	}
 	res.Settings.UpdatesDisabled = s.envDisableUpdates
 	return res, nil
+}
+
+// UploadSSHKey uploads public key.
+func (s *Server) UploadSSHKey(ctx context.Context, in *serverpb.UploadSSHKeyRequest) (*serverpb.UploadSSHKeyResponse, error) {
+	//TODO: validate ssh key
+	var settings *models.Settings
+	err := s.db.InTransaction(func(tx *reform.TX) error {
+		var e error
+		if settings, e = models.GetSettings(tx); e != nil {
+			return e
+		}
+
+		username := "admin"
+		usr, err := user.Lookup(username)
+		if err != nil {
+			return err
+		}
+
+		keysPath := path.Join(usr.HomeDir, ".ssh", "authorized_keys")
+
+		file, err := os.OpenFile(keysPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.FileMode(0600))
+		if err != nil {
+			return err
+		}
+
+		_, err = file.WriteString(in.SshKey)
+		if err != nil {
+			return err
+		}
+
+		uid, err := strconv.Atoi(usr.Uid)
+		if err != nil {
+			return err
+		}
+		gid, err := strconv.Atoi(usr.Gid)
+		if err != nil {
+			return err
+		}
+		err = os.Chown(keysPath, uid, gid)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return new(serverpb.UploadSSHKeyResponse), nil
 }
 
 // check interfaces
