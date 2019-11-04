@@ -66,17 +66,21 @@ func NewService(db *reform.DB, pmmVersion string) *Service {
 }
 
 func (s *Service) init() {
-	if os := os.Getenv(envOS); os != "" {
-		s.os = os
-	} else {
+	os, err := ioutil.ReadFile("/srv/pmm-distribution")
+	if err != nil {
+		s.l.Debugf("Failed to read /srv/pmm-distribution: %s", err)
+	}
+
+	s.os = string(os)
+	if s.os == "" {
 		b, err := ioutil.ReadFile("/proc/version")
 		if err != nil {
 			s.l.Debugf("Failed to read /proc/version: %s", err)
 		}
 		s.os = getLinuxDistribution(string(b))
 	}
-	s.l.Debugf("Using %q as OS.", s.os)
 
+	s.l.Debugf("Using %q as OS.", s.os)
 	if u := os.Getenv(envURL); u != "" {
 		s.url = u
 	} else {
