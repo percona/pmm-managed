@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	serverClient "github.com/percona/pmm/api/serverpb/json/client"
 	"github.com/percona/pmm/api/serverpb/json/client/server"
 	"github.com/stretchr/testify/assert"
@@ -57,7 +58,7 @@ func TestCheckUpdates(t *testing.T) {
 	if res.Payload.UpdateAvailable {
 		assert.NotEqual(t, res.Payload.Installed.FullVersion, res.Payload.Latest.FullVersion)
 		assert.NotEqual(t, res.Payload.Installed.Timestamp, res.Payload.Latest.Timestamp)
-		assert.True(t, strings.HasPrefix(res.Payload.LatestNewsURL, "https://per.co.na/pmm/2."), "%s", res.Payload.LatestNewsURL)
+		assert.True(t, strings.HasPrefix(res.Payload.LatestNewsURL, "https://per.co.na/pmm/2."), "latest_news_url = %q", res.Payload.LatestNewsURL)
 	} else {
 		assert.Equal(t, res.Payload.Installed.FullVersion, res.Payload.Latest.FullVersion)
 		assert.Equal(t, res.Payload.Installed.Timestamp, res.Payload.Latest.Timestamp)
@@ -99,6 +100,16 @@ func TestUpdate(t *testing.T) {
 	if !pmmapitests.RunUpdateTest {
 		t.Skip("skipping PMM Server update test")
 	}
+
+	// check that pmm-managed and pmm-update versions match
+	version, err := serverClient.Default.Server.Version(nil)
+	require.NoError(t, err)
+	require.NotNil(t, version.Payload)
+	t.Logf("Before update: %s", spew.Sdump(version.Payload))
+	assert.True(t, strings.HasPrefix(version.Payload.Managed.Version, version.Payload.Version),
+		"managed.version = %q should have %q prefix", version.Payload.Managed.Version, version.Payload.Version)
+	assert.True(t, strings.HasPrefix(version.Payload.Server.Version, version.Payload.Version),
+		"server.version = %q should have %q prefix", version.Payload.Server.Version, version.Payload.Version)
 
 	// make a new client without authentication
 	baseURL, err := url.Parse(pmmapitests.BaseURL.String())
@@ -219,4 +230,14 @@ func TestUpdate(t *testing.T) {
 	lastLine = statusRes.Payload.LogLines[len(statusRes.Payload.LogLines)-1]
 	t.Logf("lastLine = %q", lastLine)
 	assert.Contains(t, lastLine, "PMM Server update finished")
+
+	// check that both pmm-managed and pmm-update were updated
+	version, err = serverClient.Default.Server.Version(nil)
+	require.NoError(t, err)
+	require.NotNil(t, version.Payload)
+	t.Logf("After update: %s", spew.Sdump(version.Payload))
+	assert.True(t, strings.HasPrefix(version.Payload.Managed.Version, version.Payload.Version),
+		"managed.version = %q should have %q prefix", version.Payload.Managed.Version, version.Payload.Version)
+	assert.True(t, strings.HasPrefix(version.Payload.Server.Version, version.Payload.Version),
+		"server.version = %q should have %q prefix", version.Payload.Server.Version, version.Payload.Version)
 }

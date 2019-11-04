@@ -36,18 +36,19 @@ func TestVersion(t *testing.T) {
 			defer resp.Body.Close() //nolint:errcheck
 			b, err := ioutil.ReadAll(resp.Body)
 			require.NoError(t, err)
-			assert.Equal(t, 200, resp.StatusCode, "response:\n%s", b)
+			t.Logf("Response: %s", b)
+			assert.Equal(t, 200, resp.StatusCode)
 
 			var res server.VersionOKBody
 			err = json.Unmarshal(b, &res)
-			require.NoError(t, err, "response:\n%s", b)
+			require.NoError(t, err)
 
 			require.True(t, strings.HasPrefix(res.Version, "2."),
 				"version = %q must have '2.' prefix for PMM 1.x's pmm-client compatibility checking", res.Version)
 
 			require.NotEmpty(t, res.Managed)
-			assert.True(t, strings.HasPrefix(res.Managed.Version, "2."),
-				"managed.version = %q should have '2.' prefix", res.Managed.Version)
+			assert.True(t, strings.HasPrefix(res.Managed.Version, res.Version),
+				"managed.version = %q should have %q prefix", res.Managed.Version, res.Version)
 			assert.NotEmpty(t, res.Managed.FullVersion)
 
 			// check that timestamp is not XX:00:00
@@ -61,8 +62,8 @@ func TestVersion(t *testing.T) {
 			}
 
 			require.NotEmpty(t, res.Server)
-			assert.True(t, strings.HasPrefix(res.Server.Version, "2."),
-				"server.version = %q should have '2.' prefix", res.Server.Version)
+			assert.True(t, strings.HasPrefix(res.Server.Version, res.Version),
+				"server.version = %q should have %q prefix", res.Server.Version, res.Version)
 			assert.NotEmpty(t, res.Server.FullVersion)
 
 			// check that timestamp is not XX:00:00
