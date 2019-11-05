@@ -38,9 +38,6 @@ import (
 
 const addressLabel = model.LabelName(model.AddressLabel)
 
-// maxTablesCount is the default maximum of tables count when mysqld_exporter should not make heavy impact on performance.
-const maxTablesCount = 1000
-
 // scrapeTimeout returns default scrape timeout for given scrape interval.
 func scrapeTimeout(interval time.Duration) model.Duration {
 	switch {
@@ -257,7 +254,7 @@ func scrapeConfigsForNodeExporter(s *models.MetricsResolutions, params *scrapeCo
 func scrapeConfigsForMySQLdExporter(s *models.MetricsResolutions, params *scrapeConfigParams) ([]*config.ScrapeConfig, error) {
 	var addHeavyLoadOptions bool
 	// Add heavy load Args if tables count allow.
-	if params.agent.TablesCount <= maxTablesCount {
+	if pointer.GetInt32(params.agent.TableCount) <= models.MaxTableCount {
 		addHeavyLoadOptions = true
 	}
 

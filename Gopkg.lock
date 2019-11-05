@@ -243,7 +243,7 @@
 
 [[projects]]
   branch = "PMM-4926-add-tables"
-  digest = "1:adf14cf732cbc42ee95cfefa58e9580f08170836a3b49c48c930a28752706898"
+  digest = "1:7fb68f31304af70d1b3f0505d7e214434ff9a579504e09eba2066a5716073556"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -255,7 +255,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "2fea6442c4875e6c20ff2ccc32e859069a8ad29e"
+  revision = "22ab59dfa34747684f71d78b73425cf5358ac303"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"

@@ -187,7 +187,7 @@ var databaseSchema = [][]string{
 
 	6: {
 		`ALTER TABLE agents
-			ADD COLUMN tables_count INTEGER NOT NULL DEFAULT 0`,
+			ADD COLUMN table_count INTEGER`,
 	},
 }
 

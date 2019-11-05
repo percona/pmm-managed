@@ -28,9 +28,6 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-// maxTablesCount is the default maximum of tables count when mysqld_exporter should not make heavy impact on performance.
-const maxTablesCount = 1000
-
 // mysqldExporterConfig returns desired configuration of mysqld_exporter process.
 func mysqldExporterConfig(service *models.Service, exporter *models.Agent) *agentpb.SetStateRequest_AgentProcess {
 	tdp := templateDelimsPair(
@@ -83,7 +80,7 @@ func mysqldExporterConfig(service *models.Service, exporter *models.Agent) *agen
 	}
 
 	// Add heavy load Args if tables count allow.
-	if exporter.TablesCount <= maxTablesCount {
+	if pointer.GetInt32(exporter.TableCount) <= models.MaxTableCount {
 		heavyLoadArgs := []string{
 			// LR
 			"--collect.auto_increment.columns",

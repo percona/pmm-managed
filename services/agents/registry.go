@@ -495,8 +495,8 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, service *models
 				return errors.Wrap(err, "failed to select Agent by ID")
 			}
 
-			agent.TablesCount = resp.(*agentpb.CheckConnectionResponse).Stats.TablesCount
-			l.Infof("Save tables count: %d.", agent.TablesCount)
+			agent.TableCount = pointer.ToInt32(resp.(*agentpb.CheckConnectionResponse).GetStats().GetTableCount())
+			l.Infof("Save tables count: %d.", agent.TableCount)
 			return tx.Update(agent)
 		})
 		if err != nil {
