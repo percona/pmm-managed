@@ -28,6 +28,9 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
+// maxTablesCount is the default maximum of tables count when mysqld_exporter should not make heavy impact on performance.
+const maxTablesCount = 1000
+
 // mysqldExporterConfig returns desired configuration of mysqld_exporter process.
 func mysqldExporterConfig(service *models.Service, exporter *models.Agent) *agentpb.SetStateRequest_AgentProcess {
 	tdp := templateDelimsPair(
@@ -50,14 +53,6 @@ func mysqldExporterConfig(service *models.Service, exporter *models.Agent) *agen
 		"--collect.perf_schema.file_instances",
 		"--collect.custom_query.lr",
 
-		// LR that should be disabled automatically
-		// TODO https://jira.percona.com/browse/PMM-4535
-		"--collect.auto_increment.columns",
-		"--collect.info_schema.tables",
-		"--collect.info_schema.tablestats",
-		"--collect.perf_schema.indexiowaits",
-		"--collect.perf_schema.tableiowaits",
-
 		// MR
 		"--collect.engine_innodb_status",
 		"--collect.info_schema.innodb_cmp",
@@ -68,10 +63,6 @@ func mysqldExporterConfig(service *models.Service, exporter *models.Agent) *agen
 		"--collect.perf_schema.file_events",
 		"--collect.slave_status",
 		"--collect.custom_query.mr",
-
-		// MR that should be disabled automatically
-		// TODO https://jira.percona.com/browse/PMM-4535
-		"--collect.perf_schema.tablelocks",
 
 		// HR
 		"--collect.global_status",
@@ -89,6 +80,22 @@ func mysqldExporterConfig(service *models.Service, exporter *models.Agent) *agen
 		"--exporter.conn-max-lifetime=55s",
 		"--exporter.global-conn-pool",
 		"--web.listen-address=:" + tdp.left + " .listen_port " + tdp.right,
+	}
+
+	// Add heavy load Args if tables count allow.
+	if exporter.TablesCount <= maxTablesCount {
+		heavyLoadArgs := []string{
+			// LR
+			"--collect.auto_increment.columns",
+			"--collect.info_schema.tables",
+			"--collect.info_schema.tablestats",
+			"--collect.perf_schema.indexiowaits",
+			"--collect.perf_schema.tableiowaits",
+
+			// MR
+			"--collect.perf_schema.tablelocks",
+		}
+		args = append(args, heavyLoadArgs...)
 	}
 
 	if pointer.GetString(exporter.MetricsURL) != "" {

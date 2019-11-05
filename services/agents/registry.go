@@ -488,6 +488,22 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, service *models
 	resp := pmmAgent.channel.SendRequest(request)
 	l.Infof("CheckConnection response: %+v.", resp)
 
+	if service.ServiceType == models.MySQLServiceType {
+		err := r.db.InTransaction(func(tx *reform.TX) error {
+			agent := &models.Agent{AgentID: agent.AgentID}
+			if err := tx.Reload(agent); err != nil {
+				return errors.Wrap(err, "failed to select Agent by ID")
+			}
+
+			agent.TablesCount = resp.(*agentpb.CheckConnectionResponse).Stats.TablesCount
+			l.Infof("Save tables count: %d.", agent.TablesCount)
+			return tx.Update(agent)
+		})
+		if err != nil {
+			return err
+		}
+	}
+
 	msg := resp.(*agentpb.CheckConnectionResponse).Error
 	switch msg {
 	case "":

@@ -27,7 +27,7 @@ func (v *agentTableType) Name() string {
 
 // Columns returns a new slice of column names for that view or table in SQL database.
 func (v *agentTableType) Columns() []string {
-	return []string{"agent_id", "agent_type", "runs_on_node_id", "pmm_agent_id", "custom_labels", "created_at", "updated_at", "disabled", "status", "listen_port", "version", "username", "password", "tls", "tls_skip_verify", "query_examples_disabled", "max_query_log_size", "metrics_url"}
+	return []string{"agent_id", "agent_type", "runs_on_node_id", "pmm_agent_id", "custom_labels", "created_at", "updated_at", "disabled", "status", "listen_port", "version", "username", "password", "tls", "tls_skip_verify", "query_examples_disabled", "max_query_log_size", "metrics_url", "tables_count"}
 }
 
 // NewStruct makes a new struct for that view or table.
@@ -47,13 +47,13 @@ func (v *agentTableType) PKColumnIndex() uint {
 
 // AgentTable represents agents view or table in SQL database.
 var AgentTable = &agentTableType{
-	s: parse.StructInfo{Type: "Agent", SQLSchema: "", SQLName: "agents", Fields: []parse.FieldInfo{{Name: "AgentID", Type: "string", Column: "agent_id"}, {Name: "AgentType", Type: "AgentType", Column: "agent_type"}, {Name: "RunsOnNodeID", Type: "*string", Column: "runs_on_node_id"}, {Name: "PMMAgentID", Type: "*string", Column: "pmm_agent_id"}, {Name: "CustomLabels", Type: "[]uint8", Column: "custom_labels"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}, {Name: "Disabled", Type: "bool", Column: "disabled"}, {Name: "Status", Type: "string", Column: "status"}, {Name: "ListenPort", Type: "*uint16", Column: "listen_port"}, {Name: "Version", Type: "*string", Column: "version"}, {Name: "Username", Type: "*string", Column: "username"}, {Name: "Password", Type: "*string", Column: "password"}, {Name: "TLS", Type: "bool", Column: "tls"}, {Name: "TLSSkipVerify", Type: "bool", Column: "tls_skip_verify"}, {Name: "QueryExamplesDisabled", Type: "bool", Column: "query_examples_disabled"}, {Name: "MaxQueryLogSize", Type: "int64", Column: "max_query_log_size"}, {Name: "MetricsURL", Type: "*string", Column: "metrics_url"}}, PKFieldIndex: 0},
+	s: parse.StructInfo{Type: "Agent", SQLSchema: "", SQLName: "agents", Fields: []parse.FieldInfo{{Name: "AgentID", Type: "string", Column: "agent_id"}, {Name: "AgentType", Type: "AgentType", Column: "agent_type"}, {Name: "RunsOnNodeID", Type: "*string", Column: "runs_on_node_id"}, {Name: "PMMAgentID", Type: "*string", Column: "pmm_agent_id"}, {Name: "CustomLabels", Type: "[]uint8", Column: "custom_labels"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}, {Name: "Disabled", Type: "bool", Column: "disabled"}, {Name: "Status", Type: "string", Column: "status"}, {Name: "ListenPort", Type: "*uint16", Column: "listen_port"}, {Name: "Version", Type: "*string", Column: "version"}, {Name: "Username", Type: "*string", Column: "username"}, {Name: "Password", Type: "*string", Column: "password"}, {Name: "TLS", Type: "bool", Column: "tls"}, {Name: "TLSSkipVerify", Type: "bool", Column: "tls_skip_verify"}, {Name: "QueryExamplesDisabled", Type: "bool", Column: "query_examples_disabled"}, {Name: "MaxQueryLogSize", Type: "int64", Column: "max_query_log_size"}, {Name: "MetricsURL", Type: "*string", Column: "metrics_url"}, {Name: "TablesCount", Type: "int32", Column: "tables_count"}}, PKFieldIndex: 0},
 	z: new(Agent).Values(),
 }
 
 // String returns a string representation of this struct or record.
 func (s Agent) String() string {
-	res := make([]string, 18)
+	res := make([]string, 19)
 	res[0] = "AgentID: " + reform.Inspect(s.AgentID, true)
 	res[1] = "AgentType: " + reform.Inspect(s.AgentType, true)
 	res[2] = "RunsOnNodeID: " + reform.Inspect(s.RunsOnNodeID, true)
@@ -72,6 +72,7 @@ func (s Agent) String() string {
 	res[15] = "QueryExamplesDisabled: " + reform.Inspect(s.QueryExamplesDisabled, true)
 	res[16] = "MaxQueryLogSize: " + reform.Inspect(s.MaxQueryLogSize, true)
 	res[17] = "MetricsURL: " + reform.Inspect(s.MetricsURL, true)
+	res[18] = "TablesCount: " + reform.Inspect(s.TablesCount, true)
 	return strings.Join(res, ", ")
 }
 
@@ -97,6 +98,7 @@ func (s *Agent) Values() []interface{} {
 		s.QueryExamplesDisabled,
 		s.MaxQueryLogSize,
 		s.MetricsURL,
+		s.TablesCount,
 	}
 }
 
@@ -122,6 +124,7 @@ func (s *Agent) Pointers() []interface{} {
 		&s.QueryExamplesDisabled,
 		&s.MaxQueryLogSize,
 		&s.MetricsURL,
+		&s.TablesCount,
 	}
 }
 
