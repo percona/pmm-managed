@@ -326,7 +326,7 @@ func (r *Registry) ping(ctx context.Context, agent *agentInfo) {
 }
 
 func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRequest) error {
-	err := r.db.InTransaction(func(tx *reform.TX) error {
+	e := r.db.InTransaction(func(tx *reform.TX) error {
 		agent := &models.Agent{AgentID: req.AgentId}
 		if err := tx.Reload(agent); err != nil {
 			return errors.Wrap(err, "failed to select Agent by ID")
@@ -336,8 +336,8 @@ func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRe
 		agent.ListenPort = pointer.ToUint16(uint16(req.ListenPort))
 		return tx.Update(agent)
 	})
-	if err != nil {
-		return err
+	if e != nil {
+		return e
 	}
 
 	r.prometheus.RequestConfigurationUpdate()
@@ -489,8 +489,10 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, service *models
 	l.Infof("CheckConnection response: %+v.", resp)
 
 	if service.ServiceType == models.MySQLServiceType {
-		err := r.db.InTransaction(func(tx *reform.TX) error {
-			agent := &models.Agent{AgentID: agent.AgentID}
+		//
+		// FIXME Transaction there can't work. But why tests are not catching that?
+		//
+		e := r.db.InTransaction(func(tx *reform.TX) error {
 			if err := tx.Reload(agent); err != nil {
 				return errors.Wrap(err, "failed to select Agent by ID")
 			}
@@ -499,8 +501,8 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, service *models
 			l.Infof("Save tables count: %d.", agent.TableCount)
 			return tx.Update(agent)
 		})
-		if err != nil {
-			return err
+		if e != nil {
+			return e
 		}
 	}
 
