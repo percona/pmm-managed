@@ -184,6 +184,12 @@ var databaseSchema = [][]string{
 		// e'\n' to treat \n as a newline, not as two characters
 		`UPDATE nodes SET machine_id = trim(e'\n' from machine_id) WHERE machine_id IS NOT NULL`,
 	},
+
+	6: {
+		// add max allowed number of tables for mysql_exporter's heavy options.
+		`ALTER TABLE agents
+			ADD COLUMN max_number_of_tables INTEGER NOT NULL DEFAULT 1000`,
+	},
 }
 
 // OpenDB returns configured connection pool for PostgreSQL.

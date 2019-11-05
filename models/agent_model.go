@@ -73,6 +73,7 @@ type Agent struct {
 	TLSSkipVerify         bool    `reform:"tls_skip_verify"`
 	QueryExamplesDisabled bool    `reform:"query_examples_disabled"`
 	MaxQueryLogSize       int64   `reform:"max_query_log_size"`
+	MaxTableNumber        int64   `reform:"max_number_of_tables"`
 	MetricsURL            *string `reform:"metrics_url"`
 }
 

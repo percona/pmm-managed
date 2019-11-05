@@ -339,6 +339,7 @@ type CreateAgentParams struct {
 	TLSSkipVerify         bool
 	QueryExamplesDisabled bool
 	MaxQueryLogSize       int64
+	MaxTableNumber        int64
 }
 
 // CreateAgent creates Agent with given type.
@@ -366,6 +367,7 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 		TLSSkipVerify:         params.TLSSkipVerify,
 		QueryExamplesDisabled: params.QueryExamplesDisabled,
 		MaxQueryLogSize:       params.MaxQueryLogSize,
+		MaxTableNumber:        params.MaxTableNumber,
 	}
 	if err := row.SetCustomLabels(params.CustomLabels); err != nil {
 		return nil, err
