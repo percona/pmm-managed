@@ -253,7 +253,6 @@ func scrapeConfigsForNodeExporter(s *models.MetricsResolutions, params *scrapeCo
 // If listen port is not known yet, it returns (nil, nil).
 func scrapeConfigsForMySQLdExporter(s *models.MetricsResolutions, params *scrapeConfigParams) ([]*config.ScrapeConfig, error) {
 	var addHeavyLoadOptions bool
-	// Add heavy load Args if tables count allow.
 	if pointer.GetInt32(params.agent.TableCount) <= models.MaxTableCount {
 		addHeavyLoadOptions = true
 	}
@@ -280,8 +279,6 @@ func scrapeConfigsForMySQLdExporter(s *models.MetricsResolutions, params *scrape
 		"slave_status",
 		"custom_query.mr",
 	}
-
-	// Add heavy load opptions on small count of tables.
 	if addHeavyLoadOptions {
 		mrOptions = append(mrOptions, "perf_schema.tablelocks")
 	}
@@ -303,17 +300,14 @@ func scrapeConfigsForMySQLdExporter(s *models.MetricsResolutions, params *scrape
 		"perf_schema.file_instances",
 		"custom_query.lr",
 	}
-
-	// Add heavy load opptions.
 	if addHeavyLoadOptions {
-		heavyLoadOptions := []string{
+		lrOptions = append(lrOptions,
 			"auto_increment.columns",
 			"info_schema.tables",
 			"info_schema.tablestats",
 			"perf_schema.indexiowaits",
 			"perf_schema.tableiowaits",
-		}
-		mrOptions = append(mrOptions, heavyLoadOptions...)
+		)
 	}
 
 	lr, err := scrapeConfigForStandardExporter("lr", s.LR, params, lrOptions)
