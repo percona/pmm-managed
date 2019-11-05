@@ -203,7 +203,7 @@ func TestDatabaseUniqueIndexes(t *testing.T) {
 		// RDS aws_access_key_id and aws_secret_access_key fields test
 		_, err = db.Exec(
 			"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, disabled, status, created_at, updated_at, "+
-				"tls, tls_skip_verify, query_examples_disabled, max_query_log_size, aws_access_key_id, aws_secret_access_key) "+
+				"tls, tls_skip_verify, query_examples_disabled, max_query_log_size, aws_access_key, aws_secret_key) "+
 				"VALUES ('/agent_id/rds1', 'rds_exporter', NULL, '/agent_id/rds1', false, '', $1, $2, false, false, false, 0,"+
 				"'<access_key>', 'secret_access_key')",
 			now, now,

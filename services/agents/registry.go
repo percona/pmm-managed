@@ -392,7 +392,8 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 			case models.NodeExporterType:
 				agentProcesses[row.AgentID] = nodeExporterConfig(nodes[0], row)
 			case models.RDSExporterType:
-				agentProcesses[row.AgentID] = rdsExporterConfig(nodes[0], row)
+				agentConfigs := rdsExporterConfig(map[*models.Node]*models.Agent{nodes[0]: row})
+				agentProcesses[row.AgentID] = agentConfigs[nodes[0]]
 			}
 
 		// Agents with exactly one Service

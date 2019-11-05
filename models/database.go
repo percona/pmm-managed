@@ -187,8 +187,12 @@ var databaseSchema = [][]string{
 
 	6: {
 		`ALTER TABLE agents
-			ADD COLUMN aws_access_key_id VARCHAR NOT NULL DEFAULT '',
-			ADD COLUMN aws_secret_access_key VARCHAR NOT NULL DEFAULT ''`,
+			ADD COLUMN aws_access_key VARCHAR,
+			ADD COLUMN aws_secret_key VARCHAR`,
+
+		`ALTER TABLE agents
+			ALTER COLUMN aws_access_key DROP DEFAULT,
+			ALTER COLUMN aws_secret_key DROP DEFAULT`,
 	},
 }
 

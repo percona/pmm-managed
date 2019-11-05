@@ -29,43 +29,46 @@ import (
 )
 
 // rdsExporterConfig returns desired configuration of rds_exporter process.
-func rdsExporterConfig(node *models.Node, exporter *models.Agent) *agentpb.SetStateRequest_AgentProcess {
-	tdp := templateDelimsPair(
-		fmt.Sprintf("%d", exporter.ListenPort),
-	)
+func rdsExporterConfig(nodes map[*models.Node]*models.Agent) map[*models.Node]*agentpb.SetStateRequest_AgentProcess {
 
-	args := []string{
-		"--web.listen-address=" + tdp.left + " .listen_port " + tdp.right,
-		"--config.file=", tdp.left + " .config_file " + tdp.right,
+	configs := make(map[*models.Node]*agentpb.SetStateRequest_AgentProcess)
+
+	for node, exporter := range nodes {
+		tdp := templateDelimsPair(
+			fmt.Sprintf("%d", exporter.ListenPort),
+		)
+
+		args := []string{
+			"--web.listen-address=" + tdp.left + " .listen_port " + tdp.right,
+			"--config.file=", tdp.left + " .config_file " + tdp.right,
+		}
+
+		if pointer.GetString(exporter.MetricsURL) != "" {
+			args = append(args, "-web.telemetry-path="+*exporter.MetricsURL)
+		}
+
+		sort.Strings(args)
+
+		configBody := struct {
+			AWSRegion          string `yaml:"aws_region"`
+			AWSAccessKeyID     string `yaml:"aws_access_key_id"`
+			AWSSecretAccessKey string `yaml:"aws_secret_access_key"`
+		}{
+			AWSRegion:          *node.Region,
+			AWSAccessKeyID:     exporter.AWSAccessKey,
+			AWSSecretAccessKey: exporter.AWSSecretKey,
+		}
+		buf, _ := yaml.Marshal(configBody)
+
+		configs[node] = &agentpb.SetStateRequest_AgentProcess{
+			Type:               inventorypb.AgentType_RDS_EXPORTER,
+			TemplateLeftDelim:  tdp.left,
+			TemplateRightDelim: tdp.right,
+			Args:               args,
+			TextFiles:          map[string]string{"AWS_REGION": *node.Region},
+			ConfigBody:         string(buf),
+		}
 	}
 
-	if pointer.GetString(exporter.MetricsURL) != "" {
-		args = append(args, "-web.telemetry-path="+*exporter.MetricsURL)
-	}
-
-	sort.Strings(args)
-
-	configBody := struct {
-		AWSRegion          string `yaml:"aws_region"`
-		AWSAccessKeyID     string `yaml:"aws_access_key_id"`
-		AWSSecretAccessKey string `yaml:"aws_secret_access_key"`
-	}{
-		AWSRegion:          *node.Region,
-		AWSAccessKeyID:     exporter.AWSAccessKeyID,
-		AWSSecretAccessKey: exporter.AWSSecretAccessKey,
-	}
-	buf, _ := yaml.Marshal(configBody)
-
-	return &agentpb.SetStateRequest_AgentProcess{
-		Type:               inventorypb.AgentType_RDS_EXPORTER,
-		TemplateLeftDelim:  tdp.left,
-		TemplateRightDelim: tdp.right,
-		Args:               args,
-		// Since AWS credentials file is not a regular config file, I am not sure if AWS_REGION should be in the config
-		// or in th environment
-		Env: []string{
-			"AWS_REGION=" + *node.Region,
-		},
-		ConfigBody: string(buf),
-	}
+	return configs
 }
