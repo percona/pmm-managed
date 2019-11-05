@@ -50,6 +50,8 @@ func (s *nodesServer) ListNodes(ctx context.Context, req *inventorypb.ListNodesR
 			res.Container = append(res.Container, node)
 		case *inventorypb.RemoteNode:
 			res.Remote = append(res.Remote, node)
+		case *inventorypb.RemoteRDSNode:
+			res.RemoteRds = append(res.RemoteRds, node)
 		default:
 			panic(fmt.Errorf("unhandled inventory Node type %T", node))
 		}
@@ -72,6 +74,8 @@ func (s *nodesServer) GetNode(ctx context.Context, req *inventorypb.GetNodeReque
 		res.Node = &inventorypb.GetNodeResponse_Container{Container: node}
 	case *inventorypb.RemoteNode:
 		res.Node = &inventorypb.GetNodeResponse_Remote{Remote: node}
+	case *inventorypb.RemoteRDSNode:
+		res.Node = &inventorypb.GetNodeResponse_RemoteRds{RemoteRds: node}
 	default:
 		panic(fmt.Errorf("unhandled inventory Node type %T", node))
 	}

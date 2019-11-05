@@ -75,8 +75,8 @@ type Agent struct {
 	QueryExamplesDisabled bool    `reform:"query_examples_disabled"`
 	MaxQueryLogSize       int64   `reform:"max_query_log_size"`
 	MetricsURL            *string `reform:"metrics_url"`
-	AWSAccessKey          string  `reform:"aws_access_key"`
-	AWSSecretKey          string  `reform:"aws_secret_key"`
+	AWSAccessKey          *string `reform:"aws_access_key"`
+	AWSSecretKey          *string `reform:"aws_secret_key"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.

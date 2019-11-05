@@ -55,8 +55,8 @@ func rdsExporterConfig(nodes map[*models.Node]*models.Agent) map[*models.Node]*a
 			AWSSecretAccessKey string `yaml:"aws_secret_access_key"`
 		}{
 			AWSRegion:          *node.Region,
-			AWSAccessKeyID:     exporter.AWSAccessKey,
-			AWSSecretAccessKey: exporter.AWSSecretKey,
+			AWSAccessKeyID:     *exporter.AWSAccessKey,
+			AWSSecretAccessKey: *exporter.AWSSecretKey,
 		}
 		buf, _ := yaml.Marshal(configBody)
 

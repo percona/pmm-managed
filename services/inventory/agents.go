@@ -712,7 +712,8 @@ func (as *AgentsService) AddRDSExporter(ctx context.Context, req *inventorypb.Ad
 		if err != nil {
 			return err
 		}
-		// TODO: do we have to check the RDS connection using the AWS API?
+
+		// TODO: RDS service doesn't exists yet
 		// if !req.SkipConnectionCheck {
 		// 	service, err := models.FindServiceByID(tx.Querier, req.ServiceId)
 		// 	if err != nil {
