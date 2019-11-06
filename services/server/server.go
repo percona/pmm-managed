@@ -496,8 +496,8 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	return res, nil
 }
 
-// UploadSSHKey uploads public key.
-func (s *Server) UploadSSHKey(ctx context.Context, in *serverpb.UploadSSHKeyRequest) (*serverpb.UploadSSHKeyResponse, error) {
+// SetSSHKey uploads public key.
+func (s *Server) SetSSHKey(ctx context.Context, in *serverpb.SetSSHKeyRequest) (*serverpb.SetSSHKeyResponse, error) {
 	//TODO: validate ssh key
 	var settings *models.Settings
 	err := s.db.InTransaction(func(tx *reform.TX) error {
@@ -557,7 +557,7 @@ func (s *Server) UploadSSHKey(ctx context.Context, in *serverpb.UploadSSHKeyRequ
 	if err != nil {
 		return nil, err
 	}
-	return new(serverpb.UploadSSHKeyResponse), nil
+	return new(serverpb.SetSSHKeyResponse), nil
 }
 
 // check interfaces
