@@ -511,7 +511,28 @@ func (s *Server) UploadSSHKey(ctx context.Context, in *serverpb.UploadSSHKeyRequ
 			return err
 		}
 
-		keysPath := path.Join(usr.HomeDir, ".ssh", "authorized_keys")
+		uid, err := strconv.Atoi(usr.Uid)
+		if err != nil {
+			return err
+		}
+		gid, err := strconv.Atoi(usr.Gid)
+		if err != nil {
+			return err
+		}
+
+		sshDirPath := path.Join(usr.HomeDir, ".ssh")
+		if _, err := os.Stat(sshDirPath); os.IsNotExist(err) {
+			err := os.Mkdir(sshDirPath, os.FileMode(0700))
+			if err != nil {
+				return err
+			}
+			err = os.Chown(sshDirPath, uid, gid)
+			if err != nil {
+				return err
+			}
+		}
+
+		keysPath := path.Join(sshDirPath, "authorized_keys")
 
 		file, err := os.OpenFile(keysPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.FileMode(0600))
 		if err != nil {
@@ -523,14 +544,6 @@ func (s *Server) UploadSSHKey(ctx context.Context, in *serverpb.UploadSSHKeyRequ
 			return err
 		}
 
-		uid, err := strconv.Atoi(usr.Uid)
-		if err != nil {
-			return err
-		}
-		gid, err := strconv.Atoi(usr.Gid)
-		if err != nil {
-			return err
-		}
 		err = os.Chown(keysPath, uid, gid)
 		if err != nil {
 			return err
