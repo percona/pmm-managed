@@ -252,10 +252,7 @@ func scrapeConfigsForNodeExporter(s *models.MetricsResolutions, params *scrapeCo
 // scrapeConfigsForMySQLdExporter returns scrape config for mysqld_exporter.
 // If listen port is not known yet, it returns (nil, nil).
 func scrapeConfigsForMySQLdExporter(s *models.MetricsResolutions, params *scrapeConfigParams) ([]*config.ScrapeConfig, error) {
-	var addHeavyLoadOptions bool
-	if pointer.GetInt32(params.agent.TableCount) <= models.MaxTableCount {
-		addHeavyLoadOptions = true
-	}
+	addHeavyLoadOptions := pointer.GetInt32(params.agent.TableCount) <= models.MaxTableCount
 
 	hr, err := scrapeConfigForStandardExporter("hr", s.HR, params, []string{
 		"global_status",
