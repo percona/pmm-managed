@@ -37,6 +37,8 @@ type Settings struct {
 	MetricsResolutions MetricsResolutions `json:"metrics_resolutions"`
 
 	DataRetention time.Duration `json:"data_retention"`
+
+	SSHKey string `json:"ssh_key"`
 }
 
 // fillDefaults sets zero values to their default values.

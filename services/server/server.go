@@ -399,6 +399,7 @@ func convertSettings(s *models.Settings) *serverpb.Settings {
 			Lr: ptypes.DurationProto(s.MetricsResolutions.LR),
 		},
 		DataRetention: ptypes.DurationProto(s.DataRetention),
+		SshKey:        s.SSHKey,
 	}
 }
 
@@ -549,7 +550,9 @@ func (s *Server) UploadSSHKey(ctx context.Context, in *serverpb.UploadSSHKeyRequ
 			return err
 		}
 
-		return nil
+		settings.SSHKey = in.SshKey
+
+		return models.SaveSettings(tx, settings)
 	})
 	if err != nil {
 		return nil, err
