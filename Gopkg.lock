@@ -243,7 +243,7 @@
 
 [[projects]]
   branch = "PMM-4317-upload-ssh-key"
-  digest = "1:d9685f8eaf1562148201df0760b99d9b4aea86757143242fc419fec49e27a940"
+  digest = "1:e4afca341597898668183a4a0e913568c144b318f87a4a8621f32f46c6349a1d"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -255,7 +255,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "131ee83f893f287612cdb7c3436fb64a6c5174bb"
+  revision = "bfa622f19d72e021d0dd00b6ac2b17f743d0f8e6"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
