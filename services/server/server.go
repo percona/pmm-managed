@@ -22,7 +22,9 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"os/exec"
 	"os/user"
 	"path"
 	"path/filepath"
@@ -34,9 +36,11 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/google/uuid"
 	"github.com/percona/pmm/api/serverpb"
+	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -477,6 +481,20 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			settings.DataRetention = dr
 		}
 
+		if req.GetSshKey() != "" {
+			e = s.validateSSHKey(req.SshKey)
+			if e != nil {
+				return e
+			}
+
+			e = s.writeSSHKey(req.SshKey)
+			if e != nil {
+				return e
+			}
+
+			settings.SSHKey = req.SshKey
+		}
+
 		return models.SaveSettings(tx, settings)
 	})
 	if err != nil {
@@ -496,68 +514,65 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	return res, nil
 }
 
-// SetSSHKey uploads public key.
-func (s *Server) SetSSHKey(ctx context.Context, in *serverpb.SetSSHKeyRequest) (*serverpb.SetSSHKeyResponse, error) {
-	//TODO: validate ssh key
-	var settings *models.Settings
-	err := s.db.InTransaction(func(tx *reform.TX) error {
-		var e error
-		if settings, e = models.GetSettings(tx); e != nil {
-			return e
-		}
-
-		username := "admin"
-		usr, err := user.Lookup(username)
-		if err != nil {
-			return err
-		}
-
-		uid, err := strconv.Atoi(usr.Uid)
-		if err != nil {
-			return err
-		}
-		gid, err := strconv.Atoi(usr.Gid)
-		if err != nil {
-			return err
-		}
-
-		sshDirPath := path.Join(usr.HomeDir, ".ssh")
-		if _, err := os.Stat(sshDirPath); os.IsNotExist(err) {
-			err := os.Mkdir(sshDirPath, os.FileMode(0700))
-			if err != nil {
-				return err
-			}
-			err = os.Chown(sshDirPath, uid, gid)
-			if err != nil {
-				return err
-			}
-		}
-
-		keysPath := path.Join(sshDirPath, "authorized_keys")
-
-		file, err := os.OpenFile(keysPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.FileMode(0600))
-		if err != nil {
-			return err
-		}
-
-		_, err = file.WriteString(in.SshKey)
-		if err != nil {
-			return err
-		}
-
-		err = os.Chown(keysPath, uid, gid)
-		if err != nil {
-			return err
-		}
-
-		settings.SSHKey = in.SshKey
-
-		return models.SaveSettings(tx, settings)
-	})
+func (s *Server) validateSSHKey(sshKey string) error {
+	tempFile := path.Join(os.TempDir(), "temp_keys")
+	err := ioutil.WriteFile(tempFile, []byte(sshKey), os.FileMode(0600))
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return new(serverpb.SetSSHKeyResponse), nil
+
+	cmd := exec.Command("ssh-keygen", "-l", "-f", tempFile)
+	pdeathsig.Set(cmd, unix.SIGKILL)
+
+	err = cmd.Start()
+	if err != nil {
+		return errors.Wrap(err, "couldn't start ssh-keygen process")
+	}
+
+	err = cmd.Wait()
+	if err != nil {
+		if e, ok := err.(*exec.ExitError); ok && e.ExitCode() != 0 {
+			return status.Errorf(codes.InvalidArgument, "Invalid ssh key")
+		}
+		return err
+	}
+
+	return nil
+}
+
+func (s *Server) writeSSHKey(sshKey string) error {
+	username := "admin"
+	usr, err := user.Lookup(username)
+	if err != nil {
+		return err
+	}
+	uid, err := strconv.Atoi(usr.Uid)
+	if err != nil {
+		return err
+	}
+	gid, err := strconv.Atoi(usr.Gid)
+	if err != nil {
+		return err
+	}
+	sshDirPath := path.Join(usr.HomeDir, ".ssh")
+	err = os.Mkdir(sshDirPath, os.FileMode(0700))
+	if err != nil && !os.IsExist(err) {
+		return err
+	}
+	err = os.Chown(sshDirPath, uid, gid)
+	if err != nil {
+		return err
+	}
+	keysPath := path.Join(sshDirPath, "authorized_keys")
+	err = ioutil.WriteFile(keysPath, []byte(sshKey), os.FileMode(0600))
+	if err != nil {
+		return err
+	}
+	err = os.Chown(keysPath, uid, gid)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // check interfaces
