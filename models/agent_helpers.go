@@ -178,6 +178,7 @@ func FindPMMAgentsForService(q *reform.Querier, serviceID string) ([]*Agent, err
 		return nil, status.Errorf(codes.FailedPrecondition, "Couldn't get services by service_id, %s", serviceID)
 	}
 
+	// First, find agents with serviceID.
 	allAgents, err := q.SelectAllFrom(AgentTable, "WHERE service_id = $1", serviceID)
 	if err != nil {
 		return nil, status.Errorf(codes.FailedPrecondition, "Couldn't get all agents for service %s", serviceID)
@@ -206,27 +207,6 @@ func FindPMMAgentsForService(q *reform.Querier, serviceID string) ([]*Agent, err
 	for _, str := range pmmAgentRecords {
 		row := str.(*Agent)
 		res = append(res, row)
-	}
-
-	return res, nil
-}
-
-// FindAgentsByServiceIDAndAgentType find agents by service_id and agent_type.
-//nolint:unused
-func FindAgentsByServiceIDAndAgentType(q *reform.Querier, serviceID string, agentType AgentType) ([]*Agent, error) {
-	structs, err := q.SelectAllFrom(AgentTable, "WHERE service_id = $1 AND agent_type = $2", serviceID, agentType)
-	if err != nil {
-		return nil, status.Errorf(codes.FailedPrecondition, "Failed to select Agents, reason: %v", err)
-	}
-
-	var res []*Agent
-	for _, str := range structs {
-		row := str.(*Agent)
-		res = append(res, row)
-	}
-
-	if len(res) == 0 {
-		return nil, status.Errorf(codes.NotFound, "Couldn't found any agent")
 	}
 
 	return res, nil

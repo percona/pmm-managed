@@ -212,20 +212,6 @@ func TestAgentHelpers(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("FindAgentsByServiceIDAndAgentType", func(t *testing.T) {
-		q, teardown := setup(t)
-		defer teardown(t)
-
-		agents, err := models.FindAgentsByServiceIDAndAgentType(q, "S1", models.MySQLdExporterType)
-		require.NoError(t, err)
-		t.Log(agents, err)
-		assert.Equal(t, "A2", agents[0].AgentID)
-
-		// find with no existing pmm-agent-id
-		_, err = models.FindAgentsByServiceIDAndAgentType(q, "X1", models.MySQLdExporterType)
-		require.Error(t, err)
-	})
-
 	t.Run("CheckConstraintNotServiceIDAndNodeIDTogether", func(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)

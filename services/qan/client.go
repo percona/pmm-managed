@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/AlekSi/pointer"
-
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/qanpb"
 	"github.com/pkg/errors"
