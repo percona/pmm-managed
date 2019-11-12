@@ -74,22 +74,14 @@ func TestAgentHelpers(t *testing.T) {
 				AgentType:    models.MySQLdExporterType,
 				PMMAgentID:   pointer.ToString("A1"),
 				RunsOnNodeID: nil,
+				ServiceID:    pointer.ToString("S1"),
 			},
 			&models.Agent{
 				AgentID:      "A3",
 				AgentType:    models.NodeExporterType,
 				PMMAgentID:   pointer.ToString("A1"),
 				RunsOnNodeID: nil,
-			},
-
-			&models.AgentNode{
-				AgentID: "A3",
-				NodeID:  "N1",
-			},
-
-			&models.AgentService{
-				AgentID:   "A2",
-				ServiceID: "S1",
+				NodeID:       pointer.ToString("N1"),
 			},
 		} {
 			require.NoError(t, q.Insert(str))
@@ -114,6 +106,7 @@ func TestAgentHelpers(t *testing.T) {
 			RunsOnNodeID: nil,
 			CreatedAt:    now,
 			UpdatedAt:    now,
+			NodeID:       pointer.ToString("N1"),
 		}}
 		assert.Equal(t, expected, agents)
 	})
@@ -128,6 +121,7 @@ func TestAgentHelpers(t *testing.T) {
 			AgentID:      "A2",
 			AgentType:    models.MySQLdExporterType,
 			PMMAgentID:   pointer.ToStringOrNil("A1"),
+			ServiceID:    pointer.ToString("S1"),
 			RunsOnNodeID: nil,
 			CreatedAt:    now,
 			UpdatedAt:    now,
@@ -135,6 +129,7 @@ func TestAgentHelpers(t *testing.T) {
 			AgentID:      "A3",
 			AgentType:    models.NodeExporterType,
 			PMMAgentID:   pointer.ToStringOrNil("A1"),
+			NodeID:       pointer.ToString("N1"),
 			RunsOnNodeID: nil,
 			CreatedAt:    now,
 			UpdatedAt:    now,
@@ -152,6 +147,7 @@ func TestAgentHelpers(t *testing.T) {
 			AgentID:      "A2",
 			AgentType:    models.MySQLdExporterType,
 			PMMAgentID:   pointer.ToStringOrNil("A1"),
+			ServiceID:    pointer.ToString("S1"),
 			RunsOnNodeID: nil,
 			CreatedAt:    now,
 			UpdatedAt:    now,
@@ -228,5 +224,21 @@ func TestAgentHelpers(t *testing.T) {
 		// find with no existing pmm-agent-id
 		_, err = models.FindAgentsByServiceIDAndAgentType(q, "X1", models.MySQLdExporterType)
 		require.Error(t, err)
+	})
+
+	t.Run("CheckConstraintNotServiceIDAndNodeIDTogether", func(t *testing.T) {
+		q, teardown := setup(t)
+		defer teardown(t)
+
+		err := q.Insert(
+			&models.Agent{
+				AgentID:      "A4",
+				AgentType:    models.NodeExporterType,
+				PMMAgentID:   pointer.ToString("A1"),
+				RunsOnNodeID: nil,
+				NodeID:       pointer.ToString("N1"),
+				ServiceID:    pointer.ToString("S1"),
+			})
+		require.EqualError(t, err, `pq: new row for relation "agents" violates check constraint "not_service_id_and_node_id"`)
 	})
 }
