@@ -73,6 +73,7 @@ func NewRDSService(db *reform.DB, registry agentsRegistry) *RDSService {
 	}
 }
 
+// Discover returns a list of RDS instances from all AWS zones
 func (svc *RDSService) Discover(ctx context.Context, accessKey, secretKey string) ([]Instance, error) {
 	l := logger.Get(ctx).WithField("component", "rds")
 
@@ -144,6 +145,7 @@ func (svc *RDSService) Discover(ctx context.Context, accessKey, secretKey string
 						return err
 					}
 				}
+				// This function is running in a go-routine. We should concatenate errors from different zones.
 				return errors.WithStack(err)
 			}
 			return nil
