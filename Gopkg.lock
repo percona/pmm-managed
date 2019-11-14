@@ -114,9 +114,10 @@
   version = "v1.3.0"
 
 [[projects]]
-  digest = "1:1e21a0bbb10d73b781e87a9a123b96f6ebe08d0451e50f1b97c1213b302af46f"
+  digest = "1:c2dd4f3dbd6441a334df081ae3267c9a73f9e0b6ce75bf26e258165c39f47ba7"
   name = "github.com/golang/protobuf"
   packages = [
+    "descriptor",
     "jsonpb",
     "proto",
     "protoc-gen-go/descriptor",
@@ -162,7 +163,7 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:d28083810486cfc22acf5ca1dc2665fe29e6e9618531af2c6e4e5b9acb88926b"
+  digest = "1:0e9cbfec30fcfc81f61217ff68650703bf0d5fa10f33d59ae19415a0dffda90d"
   name = "github.com/grpc-ecosystem/grpc-gateway"
   packages = [
     "internal",
@@ -171,8 +172,8 @@
     "utilities",
   ]
   pruneopts = "NUT"
-  revision = "471f45a5a99a578de7a8638dc7ed29e245bde097"
-  version = "v1.11.1"
+  revision = "f7120437bb4f6c71f7f5076ad65a45310de2c009"
+  version = "v1.12.1"
 
 [[projects]]
   digest = "1:1f2aebae7e7c856562355ec0198d8ca2fa222fb05e5b1b66632a1fce39631885"
@@ -242,8 +243,8 @@
   version = "v0.5.0"
 
 [[projects]]
-  branch = "PMM-4317-upload-ssh-key"
-  digest = "1:6201500159896de98bf234644c3bf1d23a05d1b40cd435172b1b6d4aafcc62a6"
+  branch = "PMM-2.0"
+  digest = "1:52e6e7f5b39f3a11393984abcb88ca99d941ebb40b1f28c61c396f523138f025"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -255,7 +256,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "db6f7d47b5bac8e7fd615ffdd3024b23f95c1780"
+  revision = "bbb3b08cac64fc28f42e421bb9ffce2f5be872e0"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
@@ -463,10 +464,11 @@
   revision = "1774047e7e5133fa3573a4e51b37a586b6b0360c"
 
 [[projects]]
-  digest = "1:6827f22342f582ad2f5bed811bc0b0af781697108e52671f1a76687099015b69"
+  digest = "1:4c5d3236d086a76b51ed31ab309ac1383c4814bdc47ff8f67560688532b9116b"
   name = "google.golang.org/grpc"
   packages = [
     ".",
+    "backoff",
     "balancer",
     "balancer/base",
     "balancer/roundrobin",
@@ -484,10 +486,13 @@
     "internal/backoff",
     "internal/balancerload",
     "internal/binarylog",
+    "internal/buffer",
     "internal/channelz",
     "internal/envconfig",
     "internal/grpcrand",
     "internal/grpcsync",
+    "internal/resolver/dns",
+    "internal/resolver/passthrough",
     "internal/syscall",
     "internal/transport",
     "keepalive",
@@ -505,8 +510,8 @@
     "tap",
   ]
   pruneopts = "NUT"
-  revision = "39e8a7b072a67ca2a75f57fa2e0d50995f5b22f6"
-  version = "v1.23.1"
+  revision = "1a3960e4bd028ac0cec0a2afd27d7d8e67c11514"
+  version = "v1.25.1"
 
 [[projects]]
   digest = "1:22b2dee6f30bc8601f087449a2a819df8388e54e9547349c658f14d8f8c590f2"
