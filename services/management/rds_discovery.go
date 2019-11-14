@@ -29,9 +29,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/rds"
-	"github.com/kr/pretty"
-	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/logger"
+	"github.com/percona/pmm/api/managementpb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
@@ -51,20 +50,6 @@ type RDSService struct {
 	registry agentsRegistry
 }
 
-// InstanceID uniquely identifies RDS instance.
-// http://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Overview.DBInstance.html
-// Each DB instance has a DB instance identifier. This customer-supplied name uniquely identifies the DB instance when interacting
-// with the Amazon RDS API and AWS CLI commands. The DB instance identifier must be unique for that customer in an AWS Region.
-type InstanceID struct {
-	Region string
-	Name   string // DBInstanceIdentifier
-}
-
-type Instance struct {
-	Node    models.Node
-	Service models.Service
-}
-
 // NewRDSService creates new RDS Management Service.
 func NewRDSService(db *reform.DB, registry agentsRegistry) *RDSService {
 	return &RDSService{
@@ -74,14 +59,14 @@ func NewRDSService(db *reform.DB, registry agentsRegistry) *RDSService {
 }
 
 // Discover returns a list of RDS instances from all AWS zones
-func (svc *RDSService) Discover(ctx context.Context, accessKey, secretKey string) ([]Instance, error) {
+func (svc *RDSService) Discover(ctx context.Context, accessKey, secretKey string) (*managementpb.DiscoverRDSResponse, error) {
 	l := logger.Get(ctx).WithField("component", "rds")
 
 	// do not break our API if some AWS region is slow or down
 	ctx, cancel := context.WithTimeout(ctx, awsDiscoverTimeout)
 	defer cancel()
 	var g errgroup.Group
-	instances := make(chan Instance)
+	instances := make(chan *managementpb.RDSDiscoveryInstance)
 
 	for _, r := range endpoints.AwsPartition().Services()[endpoints.RdsServiceID].Regions() {
 		region := r.ID()
@@ -107,29 +92,17 @@ func (svc *RDSService) Discover(ctx context.Context, accessKey, secretKey string
 			err := rds.New(s).DescribeDBInstancesPagesWithContext(ctx, new(rds.DescribeDBInstancesInput),
 				func(out *rds.DescribeDBInstancesOutput, lastPage bool) bool {
 					for _, db := range out.DBInstances {
-						instances <- Instance{
-							Node: models.Node{
-								Address:   pointer.GetString(db.Endpoint.Address),
-								CreatedAt: *db.InstanceCreateTime,
-								NodeID:    *db.DbiResourceId,
-								NodeName:  *db.DBInstanceIdentifier,
-								NodeType:  models.RDSNodeType,
-								Region:    pointer.ToString(region),
-							},
-
-							Service: models.Service{
-								Address:     db.Endpoint.Address,
-								Cluster:     pointer.GetString(db.DBClusterIdentifier),
-								CreatedAt:   *db.InstanceCreateTime,
-								NodeID:      *db.DbiResourceId,
-								Port:        pointer.ToUint16(uint16(*db.Endpoint.Port)),
-								ServiceType: models.RDSServiceType,
-							},
+						instances <- &managementpb.RDSDiscoveryInstance{
+							Address:       pointer.GetString(db.Endpoint.Address),
+							Engine:        pointer.GetString(db.Engine),
+							EngineVersion: pointer.GetString(db.EngineVersion),
+							InstanceId:    *db.DbiResourceId,
+							Region:        region,
 						}
 					}
 					return lastPage
 				})
-			pretty.Println(region)
+
 			if err != nil {
 				l.Error(errors.Wrap(err, region))
 
@@ -157,16 +130,19 @@ func (svc *RDSService) Discover(ctx context.Context, accessKey, secretKey string
 		close(instances)
 	}()
 
-	// sort by region and name
-	var res []Instance
+	// sort by region and id
+	res := &managementpb.DiscoverRDSResponse{
+		RdsInstances: make([]*managementpb.RDSDiscoveryInstance, 0),
+	}
+
 	for i := range instances {
-		res = append(res, i)
+		res.RdsInstances = append(res.RdsInstances, i)
 	}
 	sort.Slice(res, func(i, j int) bool {
-		if res[i].Node.Region != res[j].Node.Region {
-			return pointer.GetString(res[i].Node.Region) < pointer.GetString(res[j].Node.Region)
+		if res.RdsInstances[i].Region != res.RdsInstances[j].Region {
+			return res.RdsInstances[i].Region < res.RdsInstances[j].Region
 		}
-		return res[i].Node.NodeName < res[j].Node.NodeName
+		return res.RdsInstances[i].InstanceId < res.RdsInstances[j].InstanceId
 	})
 	return res, g.Wait()
 }
