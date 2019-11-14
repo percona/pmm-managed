@@ -186,6 +186,11 @@ var databaseSchema = [][]string{
 	},
 
 	6: {
+		`ALTER TABLE agents
+			ADD COLUMN table_count INTEGER`,
+	},
+
+	7: {
 		// add max allowed number of tables for mysql_exporter's heavy options.
 		`ALTER TABLE agents
 			ADD COLUMN max_number_of_tables INTEGER NOT NULL DEFAULT 1000`,
