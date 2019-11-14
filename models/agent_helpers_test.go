@@ -211,20 +211,4 @@ func TestAgentHelpers(t *testing.T) {
 		_, err = models.FindPMMAgentsForService(q, "X1")
 		require.Error(t, err)
 	})
-
-	t.Run("CheckConstraintNotServiceIDAndNodeIDTogether", func(t *testing.T) {
-		q, teardown := setup(t)
-		defer teardown(t)
-
-		err := q.Insert(
-			&models.Agent{
-				AgentID:      "A4",
-				AgentType:    models.NodeExporterType,
-				PMMAgentID:   pointer.ToString("A1"),
-				RunsOnNodeID: nil,
-				NodeID:       pointer.ToString("N1"),
-				ServiceID:    pointer.ToString("S1"),
-			})
-		require.EqualError(t, err, `pq: new row for relation "agents" violates check constraint "not_service_id_and_node_id"`)
-	})
 }
