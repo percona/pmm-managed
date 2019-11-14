@@ -168,3 +168,7 @@ func TestPostgresAgentTLS(t *testing.T) {
 		})
 	}
 }
+
+func TestEnableMySQLTablestatsGroup(t *testing.T) {
+	// TODO
+}

@@ -67,14 +67,20 @@ type Agent struct {
 	ListenPort *uint16 `reform:"listen_port"`
 	Version    *string `reform:"version"`
 
-	Username              *string `reform:"username"`
-	Password              *string `reform:"password"`
-	TLS                   bool    `reform:"tls"`
-	TLSSkipVerify         bool    `reform:"tls_skip_verify"`
-	TableCount            *int32  `reform:"table_count"`
+	Username      *string `reform:"username"`
+	Password      *string `reform:"password"`
+	TLS           bool    `reform:"tls"`
+	TLSSkipVerify bool    `reform:"tls_skip_verify"`
+
+	// TableCount stores last known table count.
+	TableCount *int32 `reform:"table_count"`
+	// TableCountTablestatsLimit stores maximum number of tables allowed
+	// before tablestats group collectors are disabled.
+	// NULL - always enabled, 0 - always disabled. See EnableMySQLTablestatsGroup method.
+	TableCountTablestatsLimit *int32 `reform:"table_count_tablestats_limit"`
+
 	QueryExamplesDisabled bool    `reform:"query_examples_disabled"`
 	MaxQueryLogSize       int64   `reform:"max_query_log_size"`
-	MaxTableNumber        int64   `reform:"max_number_of_tables"`
 	MetricsURL            *string `reform:"metrics_url"`
 }
 
@@ -268,6 +274,17 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 	default:
 		panic(fmt.Errorf("unhandled AgentType %q", s.AgentType))
 	}
+}
+
+// EnableMySQLTablestatsGroup returns true if mysqld_exporter tablestats group collectors should be enabled.
+func (s *Agent) EnableMySQLTablestatsGroup() bool {
+	if s.TableCountTablestatsLimit == nil { // no limit, always enable
+		return true
+	}
+	if *s.TableCountTablestatsLimit <= 0 { // disable even if TableCount is nil (not known yet)
+		return false
+	}
+	return pointer.GetInt32(s.TableCount) <= *s.TableCountTablestatsLimit
 }
 
 // check interfaces
