@@ -37,7 +37,7 @@
   revision = "680d30ca31172657fa50e996eb82d790d1d8b96e"
 
 [[projects]]
-  digest = "1:f6a2ae2df158e019d060167042e548e8dbfaaa32f86c059ad66637169b606c48"
+  digest = "1:4bf3174ebbdcf6227fba5090fece4233927a25b075e8dd7f924a917bb100d7fc"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -71,6 +71,7 @@
     "private/protocol/rest",
     "private/protocol/xml/xmlutil",
     "service/rds",
+    "service/rds/rdsiface",
     "service/sts",
     "service/sts/stsiface",
   ]
@@ -571,6 +572,7 @@
     "github.com/aws/aws-sdk-go/aws/endpoints",
     "github.com/aws/aws-sdk-go/aws/session",
     "github.com/aws/aws-sdk-go/service/rds",
+    "github.com/aws/aws-sdk-go/service/rds/rdsiface",
     "github.com/go-sql-driver/mysql",
     "github.com/golang/protobuf/proto",
     "github.com/golang/protobuf/ptypes",

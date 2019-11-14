@@ -2,8 +2,15 @@ package management
 
 import (
 	"context"
+	"sync"
 	"testing"
+	"time"
 
+	"github.com/AlekSi/pointer"
+	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/rds"
+	"github.com/aws/aws-sdk-go/service/rds/rdsiface"
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/logger"
 	"github.com/percona/pmm-managed/utils/testdb"
@@ -12,6 +19,19 @@ import (
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 )
+
+type mockRDSClient struct {
+	rdsiface.RDSAPI
+	count func() int
+}
+
+func (m *mockRDSClient) DescribeDBInstancesPagesWithContext(ctx context.Context, input *rds.DescribeDBInstancesInput, fn func(*rds.DescribeDBInstancesOutput, bool) bool, opts ...request.Option) error {
+	if m.count() < 2 {
+		fn(getMockedInstances(), true)
+	}
+	return nil
+
+}
 
 func TestRdsServiceDiscovery(t *testing.T) {
 	ctx := logger.Set(context.Background(), t.Name())
@@ -24,6 +44,40 @@ func TestRdsServiceDiscovery(t *testing.T) {
 
 	accessKey, secretKey := tests.GetAWSKeys(t)
 	rds := NewRDSService(db, r)
-	_, err := rds.Discover(ctx, accessKey, secretKey)
+
+	l := &sync.Mutex{}
+	count := 0
+	mockedService := &mockRDSClient{
+		count: func() int {
+			l.Lock()
+			defer l.Unlock()
+			count++
+			return count
+		},
+	}
+	rds.serviceFunc = func(s *session.Session) rdsiface.RDSAPI {
+		return mockedService
+	}
+	instances, err := rds.Discover(ctx, accessKey, secretKey)
 	assert.NoError(t, err)
+	assert.Equal(t, len(instances.RdsInstances), 1)
+}
+
+func getMockedInstances() *rds.DescribeDBInstancesOutput {
+	return &rds.DescribeDBInstancesOutput{
+		DBInstances: []*rds.DBInstance{
+			&rds.DBInstance{
+				DBInstanceIdentifier: pointer.ToString("database-1"),
+				DbiResourceId:        pointer.ToString("db-instance-id-1"),
+				Endpoint: &rds.Endpoint{
+					Address:      pointer.ToString("database-1.aaaaaaaaaaaa.us-east-1.rds.amazonaws.com"),
+					HostedZoneId: pointer.ToString("aaaaaaaaaaaaaa"),
+					Port:         pointer.ToInt64(5432),
+				},
+				Engine:             pointer.ToString("postgres"),
+				EngineVersion:      pointer.ToString("10.6"),
+				InstanceCreateTime: pointer.ToTime(time.Now()),
+			},
+		},
+	}
 }
