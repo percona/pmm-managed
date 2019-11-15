@@ -5,27 +5,16 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"gopkg.in/reform.v1"
-	"gopkg.in/reform.v1/dialects/postgresql"
 
-	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/logger"
-	"github.com/percona/pmm-managed/utils/testdb"
 	"github.com/percona/pmm-managed/utils/tests"
 )
 
 func TestRdsServiceDiscoveryIntegration(t *testing.T) {
 	ctx := logger.Set(context.Background(), t.Name())
 
-	sqlDB := testdb.Open(t, models.SetupFixtures)
-	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-
-	r := new(mockAgentsRegistry)
-	r.Test(t)
-
 	accessKey, secretKey := tests.GetAWSKeys(t)
-	rds := NewRDSService(db, r)
+	rds := NewRDSService()
 
 	instances, err := rds.Discover(ctx, accessKey, secretKey)
 
@@ -34,5 +23,4 @@ func TestRdsServiceDiscoveryIntegration(t *testing.T) {
 	// Also, probably we can have more than 1 instance or none. PLEASE UPDATE THIS TESTS !
 	assert.NotNil(t, err)
 	assert.GreaterOrEqualf(t, len(instances.RdsInstances), 1, "Should have at least one instance")
-	require.NoError(t, sqlDB.Close())
 }

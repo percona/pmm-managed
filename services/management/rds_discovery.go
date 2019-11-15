@@ -35,7 +35,6 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/utils/logger"
 )
@@ -47,16 +46,11 @@ const (
 
 // RDSService RDS Management Service.
 type RDSService struct {
-	db       *reform.DB
-	registry agentsRegistry
 }
 
 // NewRDSService creates new RDS Management Service.
-func NewRDSService(db *reform.DB, registry agentsRegistry) *RDSService {
-	return &RDSService{
-		db:       db,
-		registry: registry,
-	}
+func NewRDSService() *RDSService {
+	return &RDSService{}
 }
 
 // Discover returns a list of RDS instances from all AWS zones
