@@ -29,7 +29,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/rds"
-	"github.com/aws/aws-sdk-go/service/rds/rdsiface"
 	"github.com/percona/pmm-managed/utils/logger"
 	"github.com/percona/pmm/api/managementpb"
 	"github.com/pkg/errors"
@@ -47,22 +46,16 @@ const (
 
 // RDSService RDS Management Service.
 type RDSService struct {
-	db          *reform.DB
-	registry    agentsRegistry
-	serviceFunc func(*session.Session) rdsiface.RDSAPI
+	db       *reform.DB
+	registry agentsRegistry
 }
 
 // NewRDSService creates new RDS Management Service.
 func NewRDSService(db *reform.DB, registry agentsRegistry) *RDSService {
 	return &RDSService{
-		db:          db,
-		registry:    registry,
-		serviceFunc: getRDSService,
+		db:       db,
+		registry: registry,
 	}
-}
-
-func getRDSService(s *session.Session) rdsiface.RDSAPI {
-	return rds.New(s)
 }
 
 // Discover returns a list of RDS instances from all AWS zones
@@ -96,8 +89,7 @@ func (svc *RDSService) Discover(ctx context.Context, accessKey, secretKey string
 				config.LogLevel = aws.LogLevel(aws.LogDebug)
 			}
 			s := session.Must(session.NewSession(config))
-			rdsService := svc.serviceFunc(s)
-			err := rdsService.DescribeDBInstancesPagesWithContext(ctx, new(rds.DescribeDBInstancesInput),
+			err := rds.New(s).DescribeDBInstancesPagesWithContext(ctx, new(rds.DescribeDBInstancesInput),
 				func(out *rds.DescribeDBInstancesOutput, lastPage bool) bool {
 					for _, db := range out.DBInstances {
 						instances <- &managementpb.RDSDiscoveryInstance{

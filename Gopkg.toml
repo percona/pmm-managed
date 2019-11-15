@@ -17,7 +17,3 @@ required = [
 [[constraint]]
   name = "github.com/percona/pmm"
   branch = "PMM-4475-discovery-api"
-
-[[constraint]]
-  name = "github.com/aws/aws-sdk-go"
-  version = "1.23.21"
