@@ -18,7 +18,6 @@ package management
 
 import (
 	"context"
-	"net/http"
 	"sort"
 	"time"
 
@@ -75,16 +74,17 @@ func (svc *RDSService) Discover(ctx context.Context, accessKey, secretKey string
 				CredentialsChainVerboseErrors: aws.Bool(true),
 				Credentials:                   creds,
 				Region:                        aws.String(region),
-				HTTPClient:                    new(http.Client),
-				Logger:                        aws.LoggerFunc(l.Debug),
-				EnableEndpointDiscovery:       pointer.ToBool(true),
-				DisableEndpointHostPrefix:     pointer.ToBool(true),
 			}
 			if l.Logger.GetLevel() >= logrus.DebugLevel {
 				config.LogLevel = aws.LogLevel(aws.LogDebug)
 			}
-			s := session.Must(session.NewSession(config))
-			err := rds.New(s).DescribeDBInstancesPagesWithContext(ctx, new(rds.DescribeDBInstancesInput),
+
+			s, err := session.NewSession(config)
+			if err != nil {
+				return err
+			}
+
+			err = rds.New(s).DescribeDBInstancesPagesWithContext(ctx, new(rds.DescribeDBInstancesInput),
 				func(out *rds.DescribeDBInstancesOutput, lastPage bool) bool {
 					for _, db := range out.DBInstances {
 						instances <- &managementpb.RDSDiscoveryInstance{
