@@ -240,8 +240,8 @@
   version = "v0.6.0"
 
 [[projects]]
-  branch = "PMM-4475-discovery-api"
-  digest = "1:64efbd5fdce61bddb6d2efbbdda0bbf7a4f11d36b71ed32058182a5724d10818"
+  branch = "PMM-2.0"
+  digest = "1:44141e6f8ff7d3c7d5e68ad9e3391fc97d60543e3c18dbf6adea9060b42bcf3b"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -253,7 +253,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "da9b57f0612a3559fe408afa3cf27a8dd4b02d6d"
+  revision = "bdac6c64a05a20df458ee9f524430d2a84c482ef"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
