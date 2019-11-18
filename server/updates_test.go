@@ -19,7 +19,7 @@ import (
 func TestCheckUpdates(t *testing.T) {
 	// do not run this test in parallel with other tests as it also tests timings
 
-	const fast, slow = 3 * time.Second, 60 * time.Second
+	const fast, slow = 5 * time.Second, 60 * time.Second
 
 	// that call should always be fast
 	version, err := serverClient.Default.Server.Version(server.NewVersionParamsWithTimeout(fast))
@@ -180,7 +180,7 @@ func TestUpdate(t *testing.T) {
 			if !statusRes.Payload.Done {
 				retries++
 				if retries < 5 {
-					assert.InDelta(t, (30 * time.Second).Seconds(), dur.Seconds(), (5 * time.Second).Seconds())
+					assert.InDelta(t, (30 * time.Second).Seconds(), dur.Seconds(), (7 * time.Second).Seconds())
 					continue
 				}
 			}
