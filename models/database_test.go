@@ -250,9 +250,36 @@ func TestDatabaseChecks(t *testing.T) {
 			})
 		})
 
-		t.Run("not_node_id_and_service_id", func(t *testing.T) {
+		t.Run("node_id_or_service_id_or_pmm_agent_id", func(t *testing.T) {
+			// pmm_agent_id is always set in that test - NULL is tested above
 
-			t.Run("BothNULL", func(t *testing.T) {
+			t.Run("node_id set", func(t *testing.T) {
+				tx, rollback := getTX(t, db)
+				defer rollback()
+
+				_, err = tx.Exec(
+					"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, node_id, service_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size) "+
+						"VALUES ('/agent_id/8', 'node_exporter', NULL, '/agent_id/1', '/node_id/1', NULL, false, '', $1, $2, false, false, false, 0)",
+					now, now,
+				)
+
+				assert.NoError(t, err)
+			})
+
+			t.Run("service_id set", func(t *testing.T) {
+				tx, rollback := getTX(t, db)
+				defer rollback()
+
+				_, err = tx.Exec(
+					"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, node_id, service_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size) "+
+						"VALUES ('/agent_id/8', 'mysqld_exporter', NULL, '/agent_id/1', NULL, '/service_id/1', false, '', $1, $2, false, false, false, 0)",
+					now, now,
+				)
+
+				assert.NoError(t, err)
+			})
+
+			t.Run("Both NULL", func(t *testing.T) {
 				tx, rollback := getTX(t, db)
 				defer rollback()
 
@@ -265,7 +292,7 @@ func TestDatabaseChecks(t *testing.T) {
 				assertCheckViolation(t, err, "agents", "node_id_or_service_id_or_pmm_agent_id")
 			})
 
-			t.Run("BothSet", func(t *testing.T) {
+			t.Run("Both set", func(t *testing.T) {
 				tx, rollback := getTX(t, db)
 				defer rollback()
 

@@ -204,7 +204,8 @@ var databaseSchema = [][]string{
 		`DROP TABLE agent_nodes, agent_services`,
 
 		`ALTER TABLE agents
-			ADD CONSTRAINT node_id_or_service_id_or_pmm_agent_id CHECK ((CASE WHEN node_id IS NULL THEN 0 ELSE 1 END) +
+			ADD CONSTRAINT node_id_or_service_id_or_pmm_agent_id CHECK (
+				(CASE WHEN node_id IS NULL THEN 0 ELSE 1 END) +
   				(CASE WHEN service_id IS NULL THEN 0 ELSE 1 END) +
   				(CASE WHEN pmm_agent_id IS NOT NULL THEN 0 ELSE 1 END) = 1),
 			ADD FOREIGN KEY (service_id) REFERENCES services(service_id),
