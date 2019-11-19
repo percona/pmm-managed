@@ -278,16 +278,16 @@ func CreateNodeExporter(q *reform.Querier, pmmAgentID string, customLabels map[s
 
 // CreateAgentParams params for add common exporter.
 type CreateAgentParams struct {
-	PMMAgentID            string
-	ServiceID             string
-	Username              string
-	Password              string
-	CustomLabels          map[string]string
-	TLS                   bool
-	TLSSkipVerify         bool
-	QueryExamplesDisabled bool
-	MaxQueryLogSize       int64
-	MaxTableNumber        int64
+	PMMAgentID                     string
+	ServiceID                      string
+	Username                       string
+	Password                       string
+	CustomLabels                   map[string]string
+	TLS                            bool
+	TLSSkipVerify                  bool
+	TableCountTablestatsGroupLimit int32
+	QueryExamplesDisabled          bool
+	MaxQueryLogSize                int64
 }
 
 // CreateAgent creates Agent with given type.
@@ -306,17 +306,17 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 	}
 
 	row := &Agent{
-		AgentID:               id,
-		AgentType:             agentType,
-		PMMAgentID:            &params.PMMAgentID,
-		Username:              pointer.ToStringOrNil(params.Username),
-		Password:              pointer.ToStringOrNil(params.Password),
-		TLS:                   params.TLS,
-		TLSSkipVerify:         params.TLSSkipVerify,
-		QueryExamplesDisabled: params.QueryExamplesDisabled,
-		MaxQueryLogSize:       params.MaxQueryLogSize,
-		// TableCountTablestatsLimit: pointer.ToInt32(int32(params.MaxTableNumber)),
-		ServiceID: pointer.ToStringOrNil(params.ServiceID),
+		AgentID:                        id,
+		AgentType:                      agentType,
+		PMMAgentID:                     &params.PMMAgentID,
+		Username:                       pointer.ToStringOrNil(params.Username),
+		Password:                       pointer.ToStringOrNil(params.Password),
+		TLS:                            params.TLS,
+		TLSSkipVerify:                  params.TLSSkipVerify,
+		TableCountTablestatsGroupLimit: params.TableCountTablestatsGroupLimit,
+		QueryExamplesDisabled:          params.QueryExamplesDisabled,
+		MaxQueryLogSize:                params.MaxQueryLogSize,
+		ServiceID:                      pointer.ToStringOrNil(params.ServiceID),
 	}
 	if err := row.SetCustomLabels(params.CustomLabels); err != nil {
 		return nil, err

@@ -83,7 +83,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 			Password:      req.Password,
 			TLS:           req.Tls,
 			TLSSkipVerify: req.TlsSkipVerify,
-			// MaxTableNumber: int64(req.MaxNumberOfTables),
+			// TODO TableCountTablestatsGroupLimit: req.TableCountTablestatsGroupLimit,
 		})
 		if err != nil {
 			return err
