@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -46,6 +47,9 @@ func TestSettings(t *testing.T) {
 				LR: time.Minute,
 			},
 			DataRetention: 30 * 24 * time.Hour,
+			AWSPartitions: []string{
+				endpoints.DefaultResolver().(endpoints.EnumPartitions).Partitions()[0].ID(),
+			},
 		}
 		assert.Equal(t, expected, actual)
 	})
@@ -61,8 +65,43 @@ func TestSettings(t *testing.T) {
 				LR: time.Minute,
 			},
 			DataRetention: 30 * 24 * time.Hour,
+			AWSPartitions: []string{
+				endpoints.DefaultResolver().(endpoints.EnumPartitions).Partitions()[0].ID(),
+			},
 		}
 		assert.Equal(t, expected, s)
+	})
+
+	t.Run("SaveWithValidPartitions", func(t *testing.T) {
+		s := &models.Settings{
+			AWSPartitions: []string{
+				endpoints.DefaultResolver().(endpoints.EnumPartitions).Partitions()[0].ID(),
+			},
+		}
+		err := models.SaveSettings(sqlDB, s)
+		require.NoError(t, err)
+		expected := &models.Settings{
+			MetricsResolutions: models.MetricsResolutions{
+				HR: 5 * time.Second,
+				MR: 5 * time.Second,
+				LR: time.Minute,
+			},
+			DataRetention: 30 * 24 * time.Hour,
+			AWSPartitions: []string{
+				endpoints.DefaultResolver().(endpoints.EnumPartitions).Partitions()[0].ID(),
+			},
+		}
+		assert.Equal(t, expected, s)
+	})
+	t.Run("SaveWithInvalidPartitions", func(t *testing.T) {
+		s := &models.Settings{
+			AWSPartitions: []string{
+				endpoints.DefaultResolver().(endpoints.EnumPartitions).Partitions()[0].ID(),
+				endpoints.DefaultResolver().(endpoints.EnumPartitions).Partitions()[0].ID() + "blah",
+			},
+		}
+		err := models.SaveSettings(sqlDB, s)
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Partition "awsblah" is invalid`), err)
 	})
 
 	t.Run("Validation", func(t *testing.T) {
