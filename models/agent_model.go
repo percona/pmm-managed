@@ -57,6 +57,8 @@ type Agent struct {
 	AgentID      string    `reform:"agent_id,pk"`
 	AgentType    AgentType `reform:"agent_type"`
 	RunsOnNodeID *string   `reform:"runs_on_node_id"`
+	ServiceID    *string   `reform:"service_id"`
+	NodeID       *string   `reform:"node_id"`
 	PMMAgentID   *string   `reform:"pmm_agent_id"`
 	CustomLabels []byte    `reform:"custom_labels"`
 	CreatedAt    time.Time `reform:"created_at"`
@@ -72,12 +74,14 @@ type Agent struct {
 	TLS           bool    `reform:"tls"`
 	TLSSkipVerify bool    `reform:"tls_skip_verify"`
 
-	// TableCount stores last known table count.
+	// TableCount stores last known table count. NULL if unknown.
 	TableCount *int32 `reform:"table_count"`
-	// TableCountTablestatsLimit stores maximum number of tables allowed
-	// before tablestats group collectors are disabled.
-	// NULL - always enabled, 0 - always disabled. See EnableMySQLTablestatsGroup method.
-	TableCountTablestatsLimit *int32 `reform:"table_count_tablestats_limit"`
+
+	// Configured table count limit for enabling tablestats group collectors.
+	// 0 means tablestats group collectors are always enabled (no limit).
+	// Negative value means tablestats group collectors are always disabled.
+	// See EnableMySQLTablestatsGroup method.
+	TableCountTablestatsGroupLimit int32 `reform:"table_count_tablestats_group_limit"`
 
 	QueryExamplesDisabled bool    `reform:"query_examples_disabled"`
 	MaxQueryLogSize       int64   `reform:"max_query_log_size"`
@@ -278,13 +282,20 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 
 // EnableMySQLTablestatsGroup returns true if mysqld_exporter tablestats group collectors should be enabled.
 func (s *Agent) EnableMySQLTablestatsGroup() bool {
-	if s.TableCountTablestatsLimit == nil { // no limit, always enable
+	if s.AgentType != MySQLdExporterType {
+		panic(fmt.Errorf("unhandled AgentType %q", s.AgentType))
+	}
+
+	switch {
+	case s.TableCountTablestatsGroupLimit == 0: // no limit, always enable
 		return true
-	}
-	if *s.TableCountTablestatsLimit <= 0 { // disable even if TableCount is nil (not known yet)
+	case s.TableCountTablestatsGroupLimit < 0: // always disable
 		return false
+	case s.TableCount == nil: // for compatibility with 2.0
+		return true
+	default:
+		return s.TableCountTablestatsGroupLimit <= *s.TableCount
 	}
-	return pointer.GetInt32(s.TableCount) <= *s.TableCountTablestatsLimit
 }
 
 // check interfaces

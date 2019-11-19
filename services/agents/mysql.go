@@ -79,7 +79,7 @@ func mysqldExporterConfig(service *models.Service, exporter *models.Agent) *agen
 		"--web.listen-address=:" + tdp.left + " .listen_port " + tdp.right,
 	}
 
-	if pointer.GetInt32(exporter.TableCount) <= models.MaxTableCount {
+	if exporter.EnableMySQLTablestatsGroup() {
 		// keep in sync with Prometheus scrape configs generator
 		tablestatsGroup := []string{
 			// LR
