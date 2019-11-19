@@ -213,8 +213,9 @@ var databaseSchema = [][]string{
 	},
 
 	8: {
+		// default to 1000 for soft migration from 2.1
 		`ALTER TABLE agents
-			ADD COLUMN table_count_tablestats_group_limit INTEGER NOT NULL DEFAULT 0`,
+			ADD COLUMN table_count_tablestats_group_limit INTEGER NOT NULL DEFAULT 1000`,
 
 		`ALTER TABLE agents
 			ALTER COLUMN table_count_tablestats_group_limit DROP DEFAULT`,

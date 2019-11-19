@@ -77,7 +77,7 @@ type Agent struct {
 	// TableCount stores last known table count. NULL if unknown.
 	TableCount *int32 `reform:"table_count"`
 
-	// Configured table count limit for enabling tablestats group collectors.
+	// Tablestats group collectors are disabled if there are more than that number of tables.
 	// 0 means tablestats group collectors are always enabled (no limit).
 	// Negative value means tablestats group collectors are always disabled.
 	// See EnableMySQLTablestatsGroup method.
@@ -294,7 +294,7 @@ func (s *Agent) EnableMySQLTablestatsGroup() bool {
 	case s.TableCount == nil: // for compatibility with 2.0
 		return true
 	default:
-		return s.TableCountTablestatsGroupLimit <= *s.TableCount
+		return *s.TableCount <= s.TableCountTablestatsGroupLimit
 	}
 }
 
