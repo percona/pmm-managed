@@ -241,7 +241,7 @@
 
 [[projects]]
   branch = "PMM-4809-flag-tbl-stats"
-  digest = "1:5f3c3e17fec2fbea84b2ca96883d073d3c0b00fb121d49fbe559dc1c47420500"
+  digest = "1:e1130bc81f95e1778d34507aff5426f5f6b1b854c5564a264b050888b4eab628"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -253,7 +253,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "5d2b561f5c6a45bbc04b8a0623e330c5c325e93b"
+  revision = "8b7858d51a08636b3253ca18b5d8e8415679e80c"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"

@@ -394,8 +394,9 @@ func (as *AgentsService) AddQANMySQLSlowlogAgent(ctx context.Context, req *inven
 	var res *inventorypb.QANMySQLSlowlogAgent
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 		// tweak according to API docs
-		if req.MaxSlowlogFileSize < 0 {
-			req.MaxSlowlogFileSize = 0
+		maxSlowlogFileSize := req.MaxSlowlogFileSize
+		if maxSlowlogFileSize < 0 {
+			maxSlowlogFileSize = 0
 		}
 
 		params := &models.CreateAgentParams{
@@ -407,7 +408,7 @@ func (as *AgentsService) AddQANMySQLSlowlogAgent(ctx context.Context, req *inven
 			TLS:                   req.Tls,
 			TLSSkipVerify:         req.TlsSkipVerify,
 			QueryExamplesDisabled: req.DisableQueryExamples,
-			MaxQueryLogSize:       req.MaxSlowlogFileSize,
+			MaxQueryLogSize:       maxSlowlogFileSize,
 		}
 		row, err := models.CreateAgent(tx.Querier, models.QANMySQLSlowlogAgentType, params)
 		if err != nil {
