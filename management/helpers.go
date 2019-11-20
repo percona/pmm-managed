@@ -2,7 +2,6 @@ package management
 
 import (
 	"context"
-	"testing"
 
 	inventoryClient "github.com/percona/pmm/api/inventorypb/json/client"
 	"github.com/percona/pmm/api/inventorypb/json/client/agents"
@@ -15,8 +14,9 @@ import (
 	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
 )
 
-func registerGenericNode(t *testing.T, body node.RegisterNodeBody) (string, string) {
+func registerGenericNode(t pmmapitests.TestingT, body node.RegisterNodeBody) (string, string) {
 	t.Helper()
+
 	params := node.RegisterNodeParams{
 		Context: pmmapitests.Context,
 		Body:    body,
@@ -31,8 +31,9 @@ func registerGenericNode(t *testing.T, body node.RegisterNodeBody) (string, stri
 	return registerOK.Payload.GenericNode.NodeID, registerOK.Payload.PMMAgent.AgentID
 }
 
-func registerContainerNode(t *testing.T, body node.RegisterNodeBody) (string, string) {
+func registerContainerNode(t pmmapitests.TestingT, body node.RegisterNodeBody) (string, string) {
 	t.Helper()
+
 	params := node.RegisterNodeParams{
 		Context: pmmapitests.Context,
 		Body:    body,
@@ -47,8 +48,9 @@ func registerContainerNode(t *testing.T, body node.RegisterNodeBody) (string, st
 	return registerOK.Payload.ContainerNode.NodeID, registerOK.Payload.PMMAgent.AgentID
 }
 
-func assertNodeExporterCreated(t *testing.T, pmmAgentID string) (string, bool) {
+func assertNodeExporterCreated(t pmmapitests.TestingT, pmmAgentID string) (string, bool) {
 	t.Helper()
+
 	listAgentsOK, err := inventoryClient.Default.Agents.ListAgents(&agents.ListAgentsParams{
 		Body: agents.ListAgentsBody{
 			PMMAgentID: pmmAgentID,
@@ -65,8 +67,9 @@ func assertNodeExporterCreated(t *testing.T, pmmAgentID string) (string, bool) {
 	return nodeExporterAgentID, asserted
 }
 
-func assertPMMAgentCreated(t *testing.T, nodeID string, pmmAgentID string) {
+func assertPMMAgentCreated(t pmmapitests.TestingT, nodeID string, pmmAgentID string) {
 	t.Helper()
+
 	agentOK, err := inventoryClient.Default.Agents.GetAgent(&agents.GetAgentParams{
 		Body: agents.GetAgentBody{
 			AgentID: pmmAgentID,
@@ -82,12 +85,9 @@ func assertPMMAgentCreated(t *testing.T, nodeID string, pmmAgentID string) {
 	}, *agentOK.Payload)
 }
 
-func assertNodeCreated(t assert.TestingT, nodeID string, expectedResult nodes.GetNodeOKBody) {
-	if n, ok := t.(interface {
-		Helper()
-	}); ok {
-		n.Helper()
-	}
+func assertNodeCreated(t pmmapitests.TestingT, nodeID string, expectedResult nodes.GetNodeOKBody) {
+	t.Helper()
+
 	nodeOK, err := inventoryClient.Default.Nodes.GetNode(&nodes.GetNodeParams{
 		Body: nodes.GetNodeBody{
 			NodeID: nodeID,
@@ -98,8 +98,9 @@ func assertNodeCreated(t assert.TestingT, nodeID string, expectedResult nodes.Ge
 	assert.Equal(t, expectedResult, *nodeOK.Payload)
 }
 
-func removePMMAgentWithSubAgents(t *testing.T, pmmAgentID string) {
+func removePMMAgentWithSubAgents(t pmmapitests.TestingT, pmmAgentID string) {
 	t.Helper()
+
 	listAgentsOK, err := inventoryClient.Default.Agents.ListAgents(&agents.ListAgentsParams{
 		Body: agents.ListAgentsBody{
 			PMMAgentID: pmmAgentID,
@@ -111,8 +112,9 @@ func removePMMAgentWithSubAgents(t *testing.T, pmmAgentID string) {
 	pmmapitests.RemoveAgents(t, pmmAgentID)
 }
 
-func removeServiceAgents(t *testing.T, serviceID string) {
+func removeServiceAgents(t pmmapitests.TestingT, serviceID string) {
 	t.Helper()
+
 	listAgentsOK, err := inventoryClient.Default.Agents.ListAgents(&agents.ListAgentsParams{
 		Body: agents.ListAgentsBody{
 			ServiceID: serviceID,
@@ -123,7 +125,7 @@ func removeServiceAgents(t *testing.T, serviceID string) {
 	removeAllAgentsInList(t, listAgentsOK)
 }
 
-func removeAllAgentsInList(t *testing.T, listAgentsOK *agents.ListAgentsOK) {
+func removeAllAgentsInList(t pmmapitests.TestingT, listAgentsOK *agents.ListAgentsOK) {
 	t.Helper()
 
 	require.NotNil(t, listAgentsOK)

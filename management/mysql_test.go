@@ -80,10 +80,11 @@ func TestAddMySQL(t *testing.T) {
 		assert.Equal(t, agents.ListAgentsOKBody{
 			MysqldExporter: []*agents.MysqldExporterItems0{
 				{
-					AgentID:    listAgents.Payload.MysqldExporter[0].AgentID,
-					ServiceID:  serviceID,
-					PMMAgentID: pmmAgentID,
-					Username:   "username",
+					AgentID:                   listAgents.Payload.MysqldExporter[0].AgentID,
+					ServiceID:                 serviceID,
+					PMMAgentID:                pmmAgentID,
+					Username:                  "username",
+					TablestatsGroupTableLimit: 1000,
 				},
 			},
 		}, *listAgents.Payload)
@@ -114,7 +115,8 @@ func TestAddMySQL(t *testing.T) {
 				QANMysqlSlowlog:    true,
 				QANMysqlPerfschema: true,
 
-				SkipConnectionCheck: true,
+				SkipConnectionCheck:       true,
+				TablestatsGroupTableLimit: -1,
 			},
 		}
 		addMySQLOK, err := client.Default.MySQL.AddMySQL(params)
@@ -159,10 +161,12 @@ func TestAddMySQL(t *testing.T) {
 		assert.Equal(t, agents.ListAgentsOKBody{
 			MysqldExporter: []*agents.MysqldExporterItems0{
 				{
-					AgentID:    listAgents.Payload.MysqldExporter[0].AgentID,
-					ServiceID:  serviceID,
-					PMMAgentID: pmmAgentID,
-					Username:   "username",
+					AgentID:                   listAgents.Payload.MysqldExporter[0].AgentID,
+					ServiceID:                 serviceID,
+					PMMAgentID:                pmmAgentID,
+					Username:                  "username",
+					TablestatsGroupTableLimit: -1,
+					TablestatsGroupDisabled:   true,
 				},
 			},
 			QANMysqlSlowlogAgent: []*agents.QANMysqlSlowlogAgentItems0{

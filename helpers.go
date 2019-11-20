@@ -16,25 +16,29 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
+type ErrorResponse interface {
+	Code() int
+}
+
+// A minimal subset of *testing.T that we use that is also should be implemented by *expectedFailureTestingT.
+type TestingT interface {
+	Helper()
+	Name() string
+	Errorf(format string, args ...interface{})
+	FailNow()
+}
+
 // TestString returns semi-random string that can be used as a test data.
-func TestString(t *testing.T, name string) string {
+func TestString(t TestingT, name string) string {
 	t.Helper()
 
 	n := rand.Int() //nolint:gosec
 	return fmt.Sprintf("pmm-api-tests/%s/%s/%s/%d", Hostname, t.Name(), name, n)
 }
 
-type ErrorResponse interface {
-	Code() int
-}
-
 // AssertAPIErrorf check that actual API error equals expected.
-func AssertAPIErrorf(t require.TestingT, actual error, httpStatus int, grpcCode codes.Code, format string, a ...interface{}) {
-	if n, ok := t.(interface {
-		Helper()
-	}); ok {
-		n.Helper()
-	}
+func AssertAPIErrorf(t TestingT, actual error, httpStatus int, grpcCode codes.Code, format string, a ...interface{}) {
+	t.Helper()
 
 	require.Error(t, actual)
 
@@ -58,12 +62,11 @@ func AssertAPIErrorf(t require.TestingT, actual error, httpStatus int, grpcCode 
 	assert.Equal(t, format, errorField.String())
 }
 
-func ExpectFailure(t *testing.T, link string) (failureTestingT *expectedFailureTestingT) {
-	failureTestingT = &expectedFailureTestingT{
+func ExpectFailure(t *testing.T, link string) *expectedFailureTestingT {
+	return &expectedFailureTestingT{
 		t:    t,
 		link: link,
 	}
-	return failureTestingT
 }
 
 // expectedFailureTestingT expects that test will fail.
@@ -79,17 +82,17 @@ type expectedFailureTestingT struct {
 func (tt *expectedFailureTestingT) Helper()      { tt.t.Helper() }
 func (tt *expectedFailureTestingT) Name() string { return tt.t.Name() }
 
+func (tt *expectedFailureTestingT) Errorf(format string, args ...interface{}) {
+	tt.errors = append(tt.errors, fmt.Sprintf(format, args...))
+	tt.failed = true
+}
+
 func (tt *expectedFailureTestingT) FailNow() {
 	tt.failed = true
 
 	// We have to set unexported testing.T.finished = true to make everything work,
 	// but we can't call tt.t.FailNow() as it calls Fail().
 	tt.t.SkipNow()
-}
-
-func (tt *expectedFailureTestingT) Errorf(format string, args ...interface{}) {
-	tt.errors = append(tt.errors, fmt.Sprintf(format, args...))
-	tt.failed = true
 }
 
 func (tt *expectedFailureTestingT) Check() {
@@ -106,7 +109,7 @@ func (tt *expectedFailureTestingT) Check() {
 	tt.t.Fatalf("%s expected to fail, but didn't: %s", tt.Name(), tt.link)
 }
 
-func RemoveNodes(t *testing.T, nodeIDs ...string) {
+func RemoveNodes(t TestingT, nodeIDs ...string) {
 	t.Helper()
 
 	for _, nodeID := range nodeIDs {
@@ -122,7 +125,7 @@ func RemoveNodes(t *testing.T, nodeIDs ...string) {
 	}
 }
 
-func RemoveServices(t *testing.T, serviceIDs ...string) {
+func RemoveServices(t TestingT, serviceIDs ...string) {
 	t.Helper()
 
 	for _, serviceID := range serviceIDs {
@@ -139,7 +142,7 @@ func RemoveServices(t *testing.T, serviceIDs ...string) {
 	}
 }
 
-func RemoveAgents(t *testing.T, agentIDs ...string) {
+func RemoveAgents(t TestingT, agentIDs ...string) {
 	t.Helper()
 
 	for _, agentID := range agentIDs {
@@ -159,4 +162,5 @@ func RemoveAgents(t *testing.T, agentIDs ...string) {
 var (
 	_ assert.TestingT  = (*expectedFailureTestingT)(nil)
 	_ require.TestingT = (*expectedFailureTestingT)(nil)
+	_ TestingT         = (*expectedFailureTestingT)(nil)
 )

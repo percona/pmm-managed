@@ -167,6 +167,38 @@ func TestAgents(t *testing.T) {
 		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "expected at most one param: pmm_agent_id, node_id or service_id")
 		assert.Nil(t, res)
 	})
+
+	t.Run("AddWithInvalidType", func(t *testing.T) {
+		t.Parallel()
+
+		nodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, nodeID)
+		defer pmmapitests.RemoveNodes(t, nodeID)
+
+		pmmAgentID := addPMMAgent(t, nodeID).PMMAgent.AgentID
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
+
+		serviceID := addMySQLService(t, services.AddMySQLServiceBody{
+			NodeID:      nodeID,
+			Address:     "localhost",
+			Port:        3306,
+			ServiceName: pmmapitests.TestString(t, ""),
+		}).Mysql.ServiceID
+		defer pmmapitests.RemoveServices(t, serviceID)
+
+		tt := pmmapitests.ExpectFailure(t, "https://jira.percona.com/browse/PMM-5016")
+		defer tt.Check()
+		agent := addMongoDBExporter(tt, agents.AddMongoDBExporterBody{
+			ServiceID:           serviceID,
+			Username:            "username",
+			Password:            "password",
+			PMMAgentID:          pmmAgentID,
+			SkipConnectionCheck: true,
+		})
+		if !assert.Nil(tt, agent) {
+			pmmapitests.RemoveAgents(tt, agent.MongodbExporter.AgentID)
+		}
+	})
 }
 
 func TestPMMAgent(t *testing.T) {

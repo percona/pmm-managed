@@ -25,13 +25,13 @@ func TestMongoDBExporter(t *testing.T) {
 		nodeID := node.Remote.NodeID
 		defer pmmapitests.RemoveNodes(t, nodeID)
 
-		service := addMySQLService(t, services.AddMySQLServiceBody{
+		service := addMongoDBService(t, services.AddMongoDBServiceBody{
 			NodeID:      genericNodeID,
 			Address:     "localhost",
 			Port:        3306,
-			ServiceName: pmmapitests.TestString(t, "MySQL Service for MongoDBExporter test"),
+			ServiceName: pmmapitests.TestString(t, "MongoDB Service for MongoDBExporter test"),
 		})
-		serviceID := service.Mysql.ServiceID
+		serviceID := service.Mongodb.ServiceID
 		defer pmmapitests.RemoveServices(t, serviceID)
 
 		pmmAgent := addPMMAgent(t, nodeID)
@@ -155,13 +155,13 @@ func TestMongoDBExporter(t *testing.T) {
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
-		service := addMySQLService(t, services.AddMySQLServiceBody{
+		service := addMongoDBService(t, services.AddMongoDBServiceBody{
 			NodeID:      genericNodeID,
 			Address:     "localhost",
 			Port:        3306,
-			ServiceName: pmmapitests.TestString(t, "MySQL Service for agent"),
+			ServiceName: pmmapitests.TestString(t, "MongoDB Service for agent"),
 		})
-		serviceID := service.Mysql.ServiceID
+		serviceID := service.Mongodb.ServiceID
 		defer pmmapitests.RemoveServices(t, serviceID)
 
 		res, err := client.Default.Agents.AddMongoDBExporter(&agents.AddMongoDBExporterParams{
@@ -212,13 +212,13 @@ func TestMongoDBExporter(t *testing.T) {
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
-		service := addMySQLService(t, services.AddMySQLServiceBody{
+		service := addMongoDBService(t, services.AddMongoDBServiceBody{
 			NodeID:      genericNodeID,
 			Address:     "localhost",
 			Port:        3306,
-			ServiceName: pmmapitests.TestString(t, "MySQL Service for not exists node ID"),
+			ServiceName: pmmapitests.TestString(t, "MongoDB Service for not exists node ID"),
 		})
-		serviceID := service.Mysql.ServiceID
+		serviceID := service.Mongodb.ServiceID
 		defer pmmapitests.RemoveServices(t, serviceID)
 
 		res, err := client.Default.Agents.AddMongoDBExporter(&agents.AddMongoDBExporterParams{
