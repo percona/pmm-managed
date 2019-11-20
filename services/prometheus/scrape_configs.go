@@ -276,7 +276,7 @@ func scrapeConfigsForMySQLdExporter(s *models.MetricsResolutions, params *scrape
 		"slave_status",
 		"custom_query.mr",
 	}
-	if params.agent.EnableMySQLTablestatsGroup() {
+	if params.agent.IsMySQLTablestatsGroupEnabled() {
 		mrOptions = append(mrOptions, "perf_schema.tablelocks")
 	}
 
@@ -297,7 +297,7 @@ func scrapeConfigsForMySQLdExporter(s *models.MetricsResolutions, params *scrape
 		"perf_schema.file_instances",
 		"custom_query.lr",
 	}
-	if params.agent.EnableMySQLTablestatsGroup() {
+	if params.agent.IsMySQLTablestatsGroupEnabled() {
 		lrOptions = append(lrOptions,
 			"auto_increment.columns",
 			"info_schema.tables",

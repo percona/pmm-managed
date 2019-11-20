@@ -191,7 +191,7 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 			Tls:                       agent.TLS,
 			TlsSkipVerify:             agent.TLSSkipVerify,
 			TablestatsGroupTableLimit: agent.TableCountTablestatsGroupLimit,
-			TablestatsGroupDisabled:   !agent.EnableMySQLTablestatsGroup(),
+			TablestatsGroupDisabled:   !agent.IsMySQLTablestatsGroupEnabled(),
 		}, nil
 
 	case models.MongoDBExporterType:

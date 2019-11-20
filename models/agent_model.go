@@ -80,7 +80,7 @@ type Agent struct {
 	// Tablestats group collectors are disabled if there are more than that number of tables.
 	// 0 means tablestats group collectors are always enabled (no limit).
 	// Negative value means tablestats group collectors are always disabled.
-	// See EnableMySQLTablestatsGroup method.
+	// See IsMySQLTablestatsGroupEnabled method.
 	TableCountTablestatsGroupLimit int32 `reform:"table_count_tablestats_group_limit"`
 
 	QueryExamplesDisabled bool    `reform:"query_examples_disabled"`
@@ -280,8 +280,8 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 	}
 }
 
-// EnableMySQLTablestatsGroup returns true if mysqld_exporter tablestats group collectors should be enabled.
-func (s *Agent) EnableMySQLTablestatsGroup() bool {
+// IsMySQLTablestatsGroupEnabled returns true if mysqld_exporter tablestats group collectors should be enabled.
+func (s *Agent) IsMySQLTablestatsGroupEnabled() bool {
 	if s.AgentType != MySQLdExporterType {
 		panic(fmt.Errorf("unhandled AgentType %q", s.AgentType))
 	}

@@ -170,7 +170,7 @@ func TestPostgresAgentTLS(t *testing.T) {
 	}
 }
 
-func TestEnableMySQLTablestatsGroup(t *testing.T) {
+func TestIsMySQLTablestatsGroupEnabled(t *testing.T) {
 	for _, testCase := range []struct {
 		count    *int32
 		limit    int32
@@ -196,7 +196,7 @@ func TestEnableMySQLTablestatsGroup(t *testing.T) {
 				TableCount:                     testCase.count,
 				TableCountTablestatsGroupLimit: testCase.limit,
 			}
-			assert.Equal(t, testCase.expected, agent.EnableMySQLTablestatsGroup())
+			assert.Equal(t, testCase.expected, agent.IsMySQLTablestatsGroupEnabled())
 		})
 	}
 }
