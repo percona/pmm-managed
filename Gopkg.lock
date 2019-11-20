@@ -240,8 +240,8 @@
   version = "v0.6.0"
 
 [[projects]]
-  branch = "PMM-2.0"
-  digest = "1:a598929497f36120ea1793dd1fdb56bb18a93a389856c4f2a0d413c1bb091c72"
+  branch = "PMM-4950_Add_AWS_partitions_to_settings-c"
+  digest = "1:68b282d7f4e8dd0e97a04b4f4bf95416115b98a7ae79e5b803df4c0a9742a46e"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -253,7 +253,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "40817e4f8d119582d22105db004c094ccfdabe68"
+  revision = "b563c8db72fbea85be557ed91d5b87f279705444"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
