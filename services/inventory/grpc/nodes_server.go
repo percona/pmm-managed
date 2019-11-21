@@ -115,16 +115,7 @@ func (s *nodesServer) AddRemoteNode(ctx context.Context, req *inventorypb.AddRem
 	return res, nil
 }
 
-// RemoveNode removes Node.
-func (s *nodesServer) RemoveNode(ctx context.Context, req *inventorypb.RemoveNodeRequest) (*inventorypb.RemoveNodeResponse, error) {
-	if err := s.svc.Remove(ctx, req.NodeId, req.Force); err != nil {
-		return nil, err
-	}
-
-	return new(inventorypb.RemoveNodeResponse), nil
-}
-
-// AddRemoteNode adds Remote Node.
+// AddRemoteRDSNode adds Remote RDS Node.
 func (s *nodesServer) AddRemoteRDSNode(ctx context.Context, req *inventorypb.AddRemoteRDSNodeRequest) (*inventorypb.AddRemoteRDSNodeResponse, error) {
 	node, err := s.svc.AddRemoteRDSNode(ctx, req)
 	if err != nil {
@@ -136,10 +127,10 @@ func (s *nodesServer) AddRemoteRDSNode(ctx context.Context, req *inventorypb.Add
 }
 
 // RemoveNode removes Node.
-func (s *nodesServer) RemoveRemoteRDSNode(ctx context.Context, req *inventorypb.RemoveRemoteRDSNodeRequest) (*inventorypb.RemoveRemoteRDSNodeResponse, error) {
+func (s *nodesServer) RemoveNode(ctx context.Context, req *inventorypb.RemoveNodeRequest) (*inventorypb.RemoveNodeResponse, error) {
 	if err := s.svc.Remove(ctx, req.NodeId, req.Force); err != nil {
 		return nil, err
 	}
 
-	return new(inventorypb.RemoveRemoteRDSNodeResponse), nil
+	return new(inventorypb.RemoveNodeResponse), nil
 }

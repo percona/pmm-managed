@@ -23,7 +23,6 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
-	"gopkg.in/yaml.v2"
 
 	"github.com/percona/pmm-managed/models"
 )
@@ -49,16 +48,17 @@ func rdsExporterConfig(nodes map[*models.Node]*models.Agent) map[*models.Node]*a
 
 		sort.Strings(args)
 
-		configBody := struct {
-			AWSRegion          string `yaml:"aws_region"`
-			AWSAccessKeyID     string `yaml:"aws_access_key_id"`
-			AWSSecretAccessKey string `yaml:"aws_secret_access_key"`
-		}{
-			AWSRegion:          *node.Region,
-			AWSAccessKeyID:     *exporter.AWSAccessKey,
-			AWSSecretAccessKey: *exporter.AWSSecretKey,
-		}
-		buf, _ := yaml.Marshal(configBody)
+		// TODO
+		// configBody := struct {
+		// 	AWSRegion          string `yaml:"aws_region"`
+		// 	AWSAccessKeyID     string `yaml:"aws_access_key_id"`
+		// 	AWSSecretAccessKey string `yaml:"aws_secret_access_key"`
+		// }{
+		// 	AWSRegion:          *node.Region,
+		// 	AWSAccessKeyID:     *exporter.AWSAccessKey,
+		// 	AWSSecretAccessKey: *exporter.AWSSecretKey,
+		// }
+		// buf, _ := yaml.Marshal(configBody)
 
 		configs[node] = &agentpb.SetStateRequest_AgentProcess{
 			Type:               inventorypb.AgentType_RDS_EXPORTER,
@@ -66,7 +66,7 @@ func rdsExporterConfig(nodes map[*models.Node]*models.Agent) map[*models.Node]*a
 			TemplateRightDelim: tdp.right,
 			Args:               args,
 			TextFiles:          map[string]string{"AWS_REGION": *node.Region},
-			ConfigBody:         string(buf),
+			// TODO ConfigBody:         string(buf),
 		}
 	}
 
