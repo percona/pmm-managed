@@ -58,6 +58,8 @@ type Agent struct {
 	AgentID      string    `reform:"agent_id,pk"`
 	AgentType    AgentType `reform:"agent_type"`
 	RunsOnNodeID *string   `reform:"runs_on_node_id"`
+	ServiceID    *string   `reform:"service_id"`
+	NodeID       *string   `reform:"node_id"`
 	PMMAgentID   *string   `reform:"pmm_agent_id"`
 	CustomLabels []byte    `reform:"custom_labels"`
 	CreatedAt    time.Time `reform:"created_at"`
@@ -68,15 +70,26 @@ type Agent struct {
 	ListenPort *uint16 `reform:"listen_port"`
 	Version    *string `reform:"version"`
 
-	Username              *string `reform:"username"`
-	Password              *string `reform:"password"`
-	TLS                   bool    `reform:"tls"`
-	TLSSkipVerify         bool    `reform:"tls_skip_verify"`
+	Username      *string `reform:"username"`
+	Password      *string `reform:"password"`
+	TLS           bool    `reform:"tls"`
+	TLSSkipVerify bool    `reform:"tls_skip_verify"`
+
+	AWSAccessKey *string `reform:"aws_access_key"`
+	AWSSecretKey *string `reform:"aws_secret_key"`
+
+	// TableCount stores last known table count. NULL if unknown.
+	TableCount *int32 `reform:"table_count"`
+
+	// Tablestats group collectors are disabled if there are more than that number of tables.
+	// 0 means tablestats group collectors are always enabled (no limit).
+	// Negative value means tablestats group collectors are always disabled.
+	// See IsMySQLTablestatsGroupEnabled method.
+	TableCountTablestatsGroupLimit int32 `reform:"table_count_tablestats_group_limit"`
+
 	QueryExamplesDisabled bool    `reform:"query_examples_disabled"`
 	MaxQueryLogSize       int64   `reform:"max_query_log_size"`
 	MetricsURL            *string `reform:"metrics_url"`
-	AWSAccessKey          *string `reform:"aws_access_key"`
-	AWSSecretKey          *string `reform:"aws_secret_key"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.
@@ -268,6 +281,24 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 
 	default:
 		panic(fmt.Errorf("unhandled AgentType %q", s.AgentType))
+	}
+}
+
+// IsMySQLTablestatsGroupEnabled returns true if mysqld_exporter tablestats group collectors should be enabled.
+func (s *Agent) IsMySQLTablestatsGroupEnabled() bool {
+	if s.AgentType != MySQLdExporterType {
+		panic(fmt.Errorf("unhandled AgentType %q", s.AgentType))
+	}
+
+	switch {
+	case s.TableCountTablestatsGroupLimit == 0: // no limit, always enable
+		return true
+	case s.TableCountTablestatsGroupLimit < 0: // always disable
+		return false
+	case s.TableCount == nil: // for compatibility with 2.0
+		return true
+	default:
+		return *s.TableCount <= s.TableCountTablestatsGroupLimit
 	}
 }
 
