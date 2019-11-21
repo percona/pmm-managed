@@ -29,7 +29,7 @@ import (
 )
 
 // mongodbExporterConfig returns desired configuration of mongodb_exporter process.
-func mongodbExporterConfig(service *models.Service, exporter *models.Agent) *agentpb.SetStateRequest_AgentProcess {
+func mongodbExporterConfig(service *models.Service, exporter *models.Agent, debug bool) *agentpb.SetStateRequest_AgentProcess {
 	tdp := templateDelimsPair(
 		pointer.GetString(service.Address),
 		pointer.GetString(exporter.Username),
@@ -62,6 +62,7 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent) *age
 			fmt.Sprintf("MONGODB_URI=%s", exporter.DSN(service, time.Second, "")),
 			fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.AgentID),
 		},
+		HideKeywords: exporter.HideKeywords(debug),
 	}
 }
 

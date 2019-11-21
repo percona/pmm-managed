@@ -511,7 +511,8 @@ func main() {
 
 	qanClient := getQANClient(ctx, db, *qanAPIAddrF)
 
-	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient)
+	isDebugMode := *debugF || *traceF
+	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient, isDebugMode)
 	prom.MustRegister(agentsRegistry)
 
 	grafanaClient := grafana.NewClient(*grafanaAddrF)
@@ -557,7 +558,7 @@ func main() {
 			prometheus:     prometheus,
 			server:         server,
 			agentsRegistry: agentsRegistry,
-			debug:          *debugF || *traceF,
+			debug:          isDebugMode,
 		})
 	}()
 

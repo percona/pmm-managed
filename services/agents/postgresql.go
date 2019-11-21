@@ -29,7 +29,7 @@ import (
 )
 
 // postgresExporterConfig returns desired configuration of postgres_exporter process.
-func postgresExporterConfig(service *models.Service, exporter *models.Agent) *agentpb.SetStateRequest_AgentProcess {
+func postgresExporterConfig(service *models.Service, exporter *models.Agent, debug bool) *agentpb.SetStateRequest_AgentProcess {
 	tdp := templateDelimsPair(
 		pointer.GetString(service.Address),
 		pointer.GetString(exporter.Username),
@@ -69,6 +69,7 @@ func postgresExporterConfig(service *models.Service, exporter *models.Agent) *ag
 			fmt.Sprintf("DATA_SOURCE_NAME=%s", exporter.DSN(service, time.Second, "postgres")),
 			fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.AgentID),
 		},
+		HideKeywords: exporter.HideKeywords(debug),
 	}
 }
 

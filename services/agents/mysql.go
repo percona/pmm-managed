@@ -29,7 +29,7 @@ import (
 )
 
 // mysqldExporterConfig returns desired configuration of mysqld_exporter process.
-func mysqldExporterConfig(service *models.Service, exporter *models.Agent) *agentpb.SetStateRequest_AgentProcess {
+func mysqldExporterConfig(service *models.Service, exporter *models.Agent, debug bool) *agentpb.SetStateRequest_AgentProcess {
 	tdp := templateDelimsPair(
 		pointer.GetString(service.Address),
 		pointer.GetString(exporter.Username),
@@ -110,6 +110,7 @@ func mysqldExporterConfig(service *models.Service, exporter *models.Agent) *agen
 			fmt.Sprintf("DATA_SOURCE_NAME=%s", exporter.DSN(service, time.Second, "")),
 			fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.AgentID),
 		},
+		HideKeywords: exporter.HideKeywords(debug),
 	}
 }
 

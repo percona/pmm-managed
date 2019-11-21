@@ -298,6 +298,14 @@ func (s *Agent) IsMySQLTablestatsGroupEnabled() bool {
 	}
 }
 
+func (s *Agent) HideKeywords(debug bool) []string {
+	var hideKeywords []string
+	if s.Password != nil && !debug {
+		hideKeywords = append(hideKeywords, pointer.GetString(s.Password))
+	}
+	return hideKeywords
+}
+
 // check interfaces
 var (
 	_ reform.BeforeInserter = (*Agent)(nil)

@@ -57,6 +57,7 @@ type Registry struct {
 	db         *reform.DB
 	prometheus prometheusService
 	qanClient  qanClient
+	debug      bool
 
 	rw     sync.RWMutex
 	agents map[string]*agentInfo // id -> info
@@ -69,11 +70,12 @@ type Registry struct {
 }
 
 // NewRegistry creates a new registry with given database connection.
-func NewRegistry(db *reform.DB, prometheus prometheusService, qanClient qanClient) *Registry {
+func NewRegistry(db *reform.DB, prometheus prometheusService, qanClient qanClient, debug bool) *Registry {
 	r := &Registry{
 		db:         db,
 		prometheus: prometheus,
 		qanClient:  qanClient,
+		debug:      debug,
 
 		agents: make(map[string]*agentInfo),
 
@@ -413,13 +415,13 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 
 			switch row.AgentType {
 			case models.MySQLdExporterType:
-				agentProcesses[row.AgentID] = mysqldExporterConfig(service, row)
+				agentProcesses[row.AgentID] = mysqldExporterConfig(service, row, r.debug)
 			case models.MongoDBExporterType:
-				agentProcesses[row.AgentID] = mongodbExporterConfig(service, row)
+				agentProcesses[row.AgentID] = mongodbExporterConfig(service, row, r.debug)
 			case models.PostgresExporterType:
-				agentProcesses[row.AgentID] = postgresExporterConfig(service, row)
+				agentProcesses[row.AgentID] = postgresExporterConfig(service, row, r.debug)
 			case models.ProxySQLExporterType:
-				agentProcesses[row.AgentID] = proxysqlExporterConfig(service, row)
+				agentProcesses[row.AgentID] = proxysqlExporterConfig(service, row, r.debug)
 			case models.QANMySQLPerfSchemaAgentType:
 				builtinAgents[row.AgentID] = qanMySQLPerfSchemaAgentConfig(service, row)
 			case models.QANMySQLSlowlogAgentType:
