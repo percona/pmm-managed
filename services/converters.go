@@ -22,7 +22,6 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb"
-	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -172,29 +171,27 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 		}, nil
 	}
 
-	// agents with exactly one service
-	services, err := models.ServicesForAgent(q, agent.AgentID)
+	service, err := models.FindServiceByID(q, pointer.GetString(agent.ServiceID))
 	if err != nil {
 		return nil, err
 	}
-	if len(services) != 1 {
-		return nil, errors.Errorf("expected exactly one Service, got %d", len(services))
-	}
-	serviceID := services[0].ServiceID
+	serviceID := service.ServiceID
 
 	switch agent.AgentType {
 	case models.MySQLdExporterType:
 		return &inventorypb.MySQLdExporter{
-			AgentId:       agent.AgentID,
-			PmmAgentId:    pointer.GetString(agent.PMMAgentID),
-			ServiceId:     serviceID,
-			Username:      pointer.GetString(agent.Username),
-			Disabled:      agent.Disabled,
-			Status:        inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
-			ListenPort:    uint32(pointer.GetUint16(agent.ListenPort)),
-			CustomLabels:  labels,
-			Tls:           agent.TLS,
-			TlsSkipVerify: agent.TLSSkipVerify,
+			AgentId:                   agent.AgentID,
+			PmmAgentId:                pointer.GetString(agent.PMMAgentID),
+			ServiceId:                 serviceID,
+			Username:                  pointer.GetString(agent.Username),
+			Disabled:                  agent.Disabled,
+			Status:                    inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
+			ListenPort:                uint32(pointer.GetUint16(agent.ListenPort)),
+			CustomLabels:              labels,
+			Tls:                       agent.TLS,
+			TlsSkipVerify:             agent.TLSSkipVerify,
+			TablestatsGroupTableLimit: agent.TableCountTablestatsGroupLimit,
+			TablestatsGroupDisabled:   !agent.IsMySQLTablestatsGroupEnabled(),
 		}, nil
 
 	case models.MongoDBExporterType:
