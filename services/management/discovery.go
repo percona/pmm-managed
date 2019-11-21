@@ -32,12 +32,14 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/percona/pmm/api/managementpb"
+	"github.com/percona/pmm/api/serverpb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/percona/pmm-managed/services/server"
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
@@ -48,11 +50,14 @@ const (
 
 // DiscoveryService represents instance discovery service.
 type DiscoveryService struct {
+	server *server.Server
 }
 
 // NewDiscoveryService creates new instance discovery service.
-func NewDiscoveryService() *DiscoveryService {
-	return new(DiscoveryService)
+func NewDiscoveryService(server *server.Server) *DiscoveryService {
+	return &DiscoveryService{
+		server: server,
+	}
 }
 
 var (
@@ -110,8 +115,11 @@ func (s *DiscoveryService) DiscoverRDS(ctx context.Context, req *managementpb.Di
 		return nil, errors.WithStack(err)
 	}
 
-	// TODO
-	partitions := []endpoints.Partition{endpoints.AwsPartition()}
+	resp, err := s.server.GetSettings(ctx, &serverpb.GetSettingsRequest{})
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot read the list of AWS partitions from settings")
+	}
+	settings := resp.GetSettings()
 
 	// do not break our API if some AWS region is slow or down
 	ctx, cancel := context.WithTimeout(ctx, awsDiscoverTimeout)
@@ -119,7 +127,10 @@ func (s *DiscoveryService) DiscoverRDS(ctx context.Context, req *managementpb.Di
 	var wg errgroup.Group
 	instances := make(chan *managementpb.DiscoverRDSInstance)
 
-	for _, partition := range partitions {
+	for _, partition := range endpoints.DefaultPartitions() {
+		if !paritionExists(partition.ID(), settings.GetAwsPartitions()) {
+			continue
+		}
 		for _, r := range partition.Services()[endpoints.RdsServiceID].Regions() {
 			region := r.ID()
 			wg.Go(func() error {
@@ -185,4 +196,13 @@ func (s *DiscoveryService) DiscoverRDS(ctx context.Context, req *managementpb.Di
 	}
 
 	return nil, err
+}
+
+func paritionExists(partition string, partitions []string) bool {
+	for _, p := range partitions {
+		if partition == p {
+			return true
+		}
+	}
+	return false
 }
