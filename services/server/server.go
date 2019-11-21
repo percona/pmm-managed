@@ -64,6 +64,8 @@ type Server struct {
 	envMetricsResolutionMR time.Duration
 	envMetricsResolutionLR time.Duration
 	envDataRetention       time.Duration
+
+	sshKeyRW sync.RWMutex
 }
 
 type pmmUpdateAuth struct {
@@ -482,13 +484,11 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		}
 
 		if req.GetSshKey() != "" {
-			e = s.validateSSHKey(req.SshKey)
-			if e != nil {
+			if e = s.validateSSHKey(ctx, req.SshKey); e != nil {
 				return e
 			}
 
-			e = s.writeSSHKey(req.SshKey)
-			if e != nil {
+			if e = s.writeSSHKey(req.SshKey); e != nil {
 				return e
 			}
 
@@ -514,23 +514,22 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	return res, nil
 }
 
-func (s *Server) validateSSHKey(sshKey string) error {
-	tempFile := path.Join(os.TempDir(), "temp_keys")
-	err := ioutil.WriteFile(tempFile, []byte(sshKey), os.FileMode(0600))
+func (s *Server) validateSSHKey(ctx context.Context, sshKey string) error {
+	tempFile, err := ioutil.TempFile("", "temp_keys_*")
 	if err != nil {
 		return err
 	}
-
-	cmd := exec.Command("ssh-keygen", "-l", "-f", tempFile)
-	pdeathsig.Set(cmd, unix.SIGKILL)
-
-	err = cmd.Start()
-	if err != nil {
-		return errors.Wrap(err, "couldn't start ssh-keygen process")
+	if err = ioutil.WriteFile(tempFile.Name(), []byte(sshKey), os.FileMode(0600)); err != nil {
+		return err
 	}
 
-	err = cmd.Wait()
-	if err != nil {
+	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(timeoutCtx, "ssh-keygen", "-l", "-f", tempFile.Name())
+	pdeathsig.Set(cmd, unix.SIGKILL)
+
+	if err = cmd.Run(); err != nil {
 		if e, ok := err.(*exec.ExitError); ok && e.ExitCode() != 0 {
 			return status.Errorf(codes.InvalidArgument, "Invalid ssh key")
 		}
@@ -541,11 +540,19 @@ func (s *Server) validateSSHKey(sshKey string) error {
 }
 
 func (s *Server) writeSSHKey(sshKey string) error {
+	s.sshKeyRW.Lock()
+	defer s.sshKeyRW.Unlock()
+
 	username := "admin"
 	usr, err := user.Lookup(username)
 	if err != nil {
 		return err
 	}
+	sshDirPath := path.Join(usr.HomeDir, ".ssh")
+	if err = os.MkdirAll(sshDirPath, os.FileMode(0700)); err != nil {
+		return err
+	}
+
 	uid, err := strconv.Atoi(usr.Uid)
 	if err != nil {
 		return err
@@ -554,22 +561,14 @@ func (s *Server) writeSSHKey(sshKey string) error {
 	if err != nil {
 		return err
 	}
-	sshDirPath := path.Join(usr.HomeDir, ".ssh")
-	err = os.Mkdir(sshDirPath, os.FileMode(0700))
-	if err != nil && !os.IsExist(err) {
-		return err
-	}
-	err = os.Chown(sshDirPath, uid, gid)
-	if err != nil {
+	if err = os.Chown(sshDirPath, uid, gid); err != nil {
 		return err
 	}
 	keysPath := path.Join(sshDirPath, "authorized_keys")
-	err = ioutil.WriteFile(keysPath, []byte(sshKey), os.FileMode(0600))
-	if err != nil {
+	if err = ioutil.WriteFile(keysPath, []byte(sshKey), os.FileMode(0600)); err != nil {
 		return err
 	}
-	err = os.Chown(keysPath, uid, gid)
-	if err != nil {
+	if err = os.Chown(keysPath, uid, gid); err != nil {
 		return err
 	}
 	return nil
