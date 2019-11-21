@@ -43,7 +43,7 @@ func rdsExporterConfig(nodes map[*models.Node]*models.Agent) map[*models.Node]*a
 		}
 
 		if pointer.GetString(exporter.MetricsURL) != "" {
-			args = append(args, "-web.telemetry-path="+*exporter.MetricsURL)
+			// TODO https://jira.percona.com/browse/PMM-1901
 		}
 
 		sort.Strings(args)
