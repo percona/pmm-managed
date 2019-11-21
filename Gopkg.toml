@@ -18,8 +18,7 @@ required = [
   name = "github.com/percona/pmm"
   branch = "PMM-4474_Add_rds_exporter_agent-B"
 
-# TODO Remove when v1.1.0 is released.
-# https://github.com/AlekSi/pointer/milestone/1
+# to prevent unexpected downgrades; see https://github.com/percona/exporter_shared/releases/tag/v0.6.0
 [[constraint]]
-  name = "github.com/AlekSi/pointer"
-  branch = "develop"
+  name = "github.com/percona/exporter_shared"
+  version = "0.6.0"
