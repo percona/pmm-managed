@@ -319,6 +319,8 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 		QueryExamplesDisabled:          params.QueryExamplesDisabled,
 		MaxQueryLogSize:                params.MaxQueryLogSize,
 		ServiceID:                      pointer.ToStringOrNil(params.ServiceID),
+		AWSAccessKey:                   pointer.ToStringOrNil(params.AWSAccessKey),
+		AWSSecretKey:                   pointer.ToStringOrNil(params.AWSSecretKey),
 	}
 	if err := row.SetCustomLabels(params.CustomLabels); err != nil {
 		return nil, err

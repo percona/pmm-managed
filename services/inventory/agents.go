@@ -676,33 +676,6 @@ func (as *AgentsService) ChangeQANPostgreSQLPgStatementsAgent(ctx context.Contex
 	return res, nil
 }
 
-// Remove removes Agent, and sends state update to pmm-agent, or kicks it.
-func (as *AgentsService) Remove(ctx context.Context, id string, force bool) error {
-	var removedAgent *models.Agent
-	e := as.db.InTransaction(func(tx *reform.TX) error {
-		var err error
-		mode := models.RemoveRestrict
-		if force {
-			mode = models.RemoveCascade
-		}
-		removedAgent, err = models.RemoveAgent(tx.Querier, id, mode)
-		return err
-	})
-	if e != nil {
-		return e
-	}
-
-	if pmmAgentID := pointer.GetString(removedAgent.PMMAgentID); pmmAgentID != "" {
-		as.r.SendSetStateRequest(ctx, pmmAgentID)
-	}
-
-	if removedAgent.AgentType == models.PMMAgentType {
-		as.r.Kick(ctx, id)
-	}
-
-	return nil
-}
-
 // AddRDSExporter inserts rds_exporter Agent with given parameters.
 func (as *AgentsService) AddRDSExporter(ctx context.Context, req *inventorypb.AddRDSExporterRequest) (*inventorypb.RDSExporter, error) {
 	var res *inventorypb.RDSExporter
@@ -710,6 +683,8 @@ func (as *AgentsService) AddRDSExporter(ctx context.Context, req *inventorypb.Ad
 		params := &models.CreateAgentParams{
 			PMMAgentID:   req.PmmAgentId,
 			ServiceID:    req.ServiceId,
+			AWSAccessKey: req.AwsAccessKey,
+			AWSSecretKey: req.AwsSecretKey,
 			CustomLabels: req.CustomLabels,
 		}
 		row, err := models.CreateAgent(tx.Querier, models.RDSExporterType, params)
@@ -717,16 +692,9 @@ func (as *AgentsService) AddRDSExporter(ctx context.Context, req *inventorypb.Ad
 			return err
 		}
 
-		// TODO: RDS service doesn't exists yet
-		// if !req.SkipConnectionCheck {
-		// 	service, err := models.FindServiceByID(tx.Querier, req.ServiceId)
-		// 	if err != nil {
-		// 		return err
-		// 	}
-		// 	if err = as.r.CheckConnectionToService(ctx, service, row); err != nil {
-		// 		return err
-		// 	}
-		// }
+		if !req.SkipConnectionCheck {
+			// TODO check connection to AWS: https://jira.percona.com/browse/PMM-5024
+		}
 
 		agent, err := services.ToAPIAgent(tx.Querier, row)
 		if err != nil {
@@ -753,4 +721,31 @@ func (as *AgentsService) ChangeRDSExporter(ctx context.Context, req *inventorypb
 	res := agent.(*inventorypb.RDSExporter)
 	as.r.SendSetStateRequest(ctx, res.PmmAgentId)
 	return res, nil
+}
+
+// Remove removes Agent, and sends state update to pmm-agent, or kicks it.
+func (as *AgentsService) Remove(ctx context.Context, id string, force bool) error {
+	var removedAgent *models.Agent
+	e := as.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		mode := models.RemoveRestrict
+		if force {
+			mode = models.RemoveCascade
+		}
+		removedAgent, err = models.RemoveAgent(tx.Querier, id, mode)
+		return err
+	})
+	if e != nil {
+		return e
+	}
+
+	if pmmAgentID := pointer.GetString(removedAgent.PMMAgentID); pmmAgentID != "" {
+		as.r.SendSetStateRequest(ctx, pmmAgentID)
+	}
+
+	if removedAgent.AgentType == models.PMMAgentType {
+		as.r.Kick(ctx, id)
+	}
+
+	return nil
 }
