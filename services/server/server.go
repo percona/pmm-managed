@@ -549,30 +549,30 @@ func (s *Server) writeSSHKey(sshKey string) error {
 	const username = "admin"
 	usr, err := user.Lookup(username)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	sshDirPath := path.Join(usr.HomeDir, ".ssh")
 	if err = os.MkdirAll(sshDirPath, os.FileMode(0700)); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	uid, err := strconv.Atoi(usr.Uid)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	gid, err := strconv.Atoi(usr.Gid)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	if err = os.Chown(sshDirPath, uid, gid); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	keysPath := path.Join(sshDirPath, "authorized_keys")
 	if err = ioutil.WriteFile(keysPath, []byte(sshKey), os.FileMode(0600)); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	if err = os.Chown(keysPath, uid, gid); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	return nil
 }
