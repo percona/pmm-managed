@@ -65,7 +65,7 @@ type Server struct {
 	envMetricsResolutionLR time.Duration
 	envDataRetention       time.Duration
 
-	sshKeyRW sync.RWMutex
+	sshKeyM sync.Mutex
 }
 
 type pmmUpdateAuth struct {
@@ -517,33 +517,36 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 func (s *Server) validateSSHKey(ctx context.Context, sshKey string) error {
 	tempFile, err := ioutil.TempFile("", "temp_keys_*")
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
+	tempFile.Close()                 //nolint:errcheck
+	defer os.Remove(tempFile.Name()) //nolint:errcheck
+
 	if err = ioutil.WriteFile(tempFile.Name(), []byte(sshKey), os.FileMode(0600)); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(timeoutCtx, "ssh-keygen", "-l", "-f", tempFile.Name())
+	cmd := exec.CommandContext(timeoutCtx, "ssh-keygen", "-l", "-f", tempFile.Name()) //nolint:gosec
 	pdeathsig.Set(cmd, unix.SIGKILL)
 
 	if err = cmd.Run(); err != nil {
 		if e, ok := err.(*exec.ExitError); ok && e.ExitCode() != 0 {
 			return status.Errorf(codes.InvalidArgument, "Invalid ssh key")
 		}
-		return err
+		return errors.WithStack(err)
 	}
 
 	return nil
 }
 
 func (s *Server) writeSSHKey(sshKey string) error {
-	s.sshKeyRW.Lock()
-	defer s.sshKeyRW.Unlock()
+	s.sshKeyM.Lock()
+	defer s.sshKeyM.Unlock()
 
-	username := "admin"
+	const username = "admin"
 	usr, err := user.Lookup(username)
 	if err != nil {
 		return err
