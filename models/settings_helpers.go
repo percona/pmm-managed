@@ -18,8 +18,10 @@ package models
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -70,6 +72,11 @@ func SaveSettings(q reform.DBTX, s *Settings) error {
 		return status.Error(codes.InvalidArgument, "data_retention: should be a natural number of days")
 	}
 
+	var err error
+	if s.AWSPartitions, err = ValidatePartitions(s.AWSPartitions); err != nil {
+		return status.Error(codes.InvalidArgument, err.Error())
+	}
+
 	b, err := json.Marshal(s)
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal settings")
@@ -81,4 +88,34 @@ func SaveSettings(q reform.DBTX, s *Settings) error {
 	}
 
 	return nil
+}
+
+// This function receives an []string with the partitions we want to save and returns another []string where
+// all partition names are valid and unique (a set of partitions)
+func ValidatePartitions(partitions []string) ([]string, error) {
+	partitionsMap := make(map[string]bool)
+
+	for _, p := range partitions {
+		if isValidPartition(p) {
+			partitionsMap[p] = true
+			continue
+		}
+		return nil, fmt.Errorf("Partition %q is invalid", p)
+	}
+
+	partitionsSet := make([]string, 0, len(partitionsMap))
+	for partition := range partitionsMap {
+		partitionsSet = append(partitionsSet, partition)
+	}
+
+	return partitionsSet, nil
+}
+
+func isValidPartition(partition string) bool {
+	for _, p := range endpoints.DefaultResolver().(endpoints.EnumPartitions).Partitions() {
+		if partition == p.ID() {
+			return true
+		}
+	}
+	return false
 }
