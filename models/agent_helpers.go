@@ -279,6 +279,7 @@ func CreateNodeExporter(q *reform.Querier, pmmAgentID string, customLabels map[s
 // CreateAgentParams params for add common exporter.
 type CreateAgentParams struct {
 	PMMAgentID                     string
+	NodeID                         string
 	ServiceID                      string
 	Username                       string
 	Password                       string
@@ -303,14 +304,23 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 		return nil, err
 	}
 
-	if _, err := FindServiceByID(q, params.ServiceID); err != nil {
-		return nil, err
+	if params.NodeID != "" {
+		if _, err := FindNodeByID(q, params.NodeID); err != nil {
+			return nil, err
+		}
+	}
+	if params.ServiceID != "" {
+		if _, err := FindServiceByID(q, params.ServiceID); err != nil {
+			return nil, err
+		}
 	}
 
 	row := &Agent{
 		AgentID:                        id,
 		AgentType:                      agentType,
 		PMMAgentID:                     &params.PMMAgentID,
+		ServiceID:                      pointer.ToStringOrNil(params.ServiceID),
+		NodeID:                         pointer.ToStringOrNil(params.NodeID),
 		Username:                       pointer.ToStringOrNil(params.Username),
 		Password:                       pointer.ToStringOrNil(params.Password),
 		TLS:                            params.TLS,
@@ -318,7 +328,6 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 		TableCountTablestatsGroupLimit: params.TableCountTablestatsGroupLimit,
 		QueryExamplesDisabled:          params.QueryExamplesDisabled,
 		MaxQueryLogSize:                params.MaxQueryLogSize,
-		ServiceID:                      pointer.ToStringOrNil(params.ServiceID),
 		AWSAccessKey:                   pointer.ToStringOrNil(params.AWSAccessKey),
 		AWSSecretKey:                   pointer.ToStringOrNil(params.AWSSecretKey),
 	}

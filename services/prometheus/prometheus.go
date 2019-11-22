@@ -300,6 +300,9 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 			case models.QANPostgreSQLPgStatementsAgentType:
 				continue
 
+			case models.RDSExporterType:
+				// TODO
+
 			default:
 				svc.l.Warnf("Skipping scrape config for %s.", agent)
 			}

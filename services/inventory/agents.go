@@ -682,7 +682,7 @@ func (as *AgentsService) AddRDSExporter(ctx context.Context, req *inventorypb.Ad
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 		params := &models.CreateAgentParams{
 			PMMAgentID:   req.PmmAgentId,
-			ServiceID:    req.ServiceId,
+			NodeID:       req.NodeId,
 			AWSAccessKey: req.AwsAccessKey,
 			AWSSecretKey: req.AwsSecretKey,
 			CustomLabels: req.CustomLabels,
