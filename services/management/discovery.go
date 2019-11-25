@@ -81,6 +81,10 @@ func discoverRDSRegion(ctx context.Context, sess *session.Session, region string
 			Name:   pointer.ToString("engine"),
 			Values: rdsEnginesKeys,
 		}},
+
+		// Only for testing of https://jira.percona.com/browse/PMM-3753.
+		// DO NOT MERGE!
+		MaxRecords: aws.Int64(20),
 	}
 	fn := func(out *rds.DescribeDBInstancesOutput, lastPage bool) bool {
 		res = append(res, out.DBInstances...)
