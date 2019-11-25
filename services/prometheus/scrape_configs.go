@@ -390,7 +390,7 @@ func scrapeConfigsForProxySQLExporter(s *models.MetricsResolutions, params *scra
 }
 
 func scrapeConfigsForRDSExporter(s *models.MetricsResolutions, params []*scrapeConfigParams) ([]*config.ScrapeConfig, error) {
-	// FIXME
+	// FIXME Needs more work.
 
 	var r []*config.ScrapeConfig
 	for _, p := range params {
