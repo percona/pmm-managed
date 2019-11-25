@@ -41,7 +41,7 @@ import (
 func TestAgents(t *testing.T) {
 	var ctx context.Context
 
-	setup := func(t *testing.T) (ss *ServicesService, as *AgentsService, teardown func(t *testing.T)) {
+	setup := func(t *testing.T) (ns *NodesService, ss *ServicesService, as *AgentsService, teardown func(t *testing.T)) {
 		t.Helper()
 
 		ctx = logger.Set(context.Background(), t.Name())
@@ -57,6 +57,7 @@ func TestAgents(t *testing.T) {
 			r.AssertExpectations(t)
 			require.NoError(t, sqlDB.Close())
 		}
+		ns = NewNodesService(db)
 		ss = NewServicesService(db, r)
 		as = NewAgentsService(db, r)
 
@@ -66,7 +67,7 @@ func TestAgents(t *testing.T) {
 	t.Run("Basic", func(t *testing.T) {
 		// FIXME split this test into several smaller
 
-		ss, as, teardown := setup(t)
+		_, ss, as, teardown := setup(t)
 		defer teardown(t)
 
 		as.r.(*mockAgentsRegistry).On("IsConnected", models.PMMServerAgentID).Return(true)
@@ -215,25 +216,12 @@ func TestAgents(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, expectedPostgresExporter, actualAgent)
 
-		actualAgent, err = as.AddRDSExporter(ctx, &inventorypb.AddRDSExporterRequest{
-			PmmAgentId: pmmAgent.AgentId,
-			ServiceId:  ps.ServiceId,
-		})
-		require.NoError(t, err)
-		expectedRDSExporter := &inventorypb.RDSExporter{
-			AgentId:    "/agent_id/00000000-0000-4000-8000-00000000000e",
-			PmmAgentId: pmmAgent.AgentId,
-			ServiceId:  ps.ServiceId,
-			//Username:   "username",
-		}
-		assert.Equal(t, expectedRDSExporter, actualAgent)
-
 		actualAgents, err = as.List(ctx, AgentFilters{})
 		require.NoError(t, err)
 		for i, a := range actualAgents {
 			t.Logf("%d: %T %s", i, a, a)
 		}
-		require.Len(t, actualAgents, 11)
+		require.Len(t, actualAgents, 10)
 		assert.Equal(t, pmmAgent, actualAgents[3])
 		assert.Equal(t, expectedNodeExporter, actualAgents[4])
 		assert.Equal(t, expectedMySQLdExporter, actualAgents[5])
@@ -250,7 +238,7 @@ func TestAgents(t *testing.T) {
 
 		actualAgents, err = as.List(ctx, AgentFilters{PMMAgentID: pmmAgent.AgentId})
 		require.NoError(t, err)
-		require.Len(t, actualAgents, 6)
+		require.Len(t, actualAgents, 5)
 		assert.Equal(t, expectedNodeExporter, actualAgents[0])
 		assert.Equal(t, expectedMySQLdExporter, actualAgents[1])
 		assert.Equal(t, expectedMongoDBExporter, actualAgents[2])
@@ -279,7 +267,7 @@ func TestAgents(t *testing.T) {
 	})
 
 	t.Run("GetEmptyID", func(t *testing.T) {
-		_, as, teardown := setup(t)
+		_, _, as, teardown := setup(t)
 		defer teardown(t)
 
 		actualNode, err := as.Get(ctx, "")
@@ -288,7 +276,7 @@ func TestAgents(t *testing.T) {
 	})
 
 	t.Run("AddPMMAgent", func(t *testing.T) {
-		_, as, teardown := setup(t)
+		_, _, as, teardown := setup(t)
 		defer teardown(t)
 
 		as.r.(*mockAgentsRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000005").Return(false)
@@ -317,7 +305,7 @@ func TestAgents(t *testing.T) {
 	})
 
 	t.Run("AddPmmAgentNotFound", func(t *testing.T) {
-		_, as, teardown := setup(t)
+		_, _, as, teardown := setup(t)
 		defer teardown(t)
 
 		_, err := as.AddNodeExporter(ctx, &inventorypb.AddNodeExporterRequest{
@@ -326,8 +314,52 @@ func TestAgents(t *testing.T) {
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "no-such-id" not found.`), err)
 	})
 
+	t.Run("AddRDSExporter", func(t *testing.T) {
+		ns, _, as, teardown := setup(t)
+		defer teardown(t)
+
+		node, err := ns.AddRemoteRDSNode(ctx, &inventorypb.AddRemoteRDSNodeRequest{
+			NodeName:     "rds1",
+			Address:      "rds-mysql57",
+			NodeModel:    "db.t3.micro",
+			Region:       "us-east-1",
+			Az:           "us-east-1b",
+			CustomLabels: map[string]string{"foo": "bar"},
+		})
+		require.NoError(t, err)
+		expectedNode := &inventorypb.RemoteRDSNode{
+			NodeId:       "/node_id/00000000-0000-4000-8000-000000000005",
+			NodeName:     "rds1",
+			Address:      "rds-mysql57",
+			NodeModel:    "db.t3.micro",
+			Region:       "us-east-1",
+			Az:           "us-east-1b",
+			CustomLabels: map[string]string{"foo": "bar"},
+		}
+		assert.Equal(t, expectedNode, node)
+
+		as.r.(*mockAgentsRegistry).On("SendSetStateRequest", ctx, "pmm-server")
+
+		agent, err := as.AddRDSExporter(ctx, &inventorypb.AddRDSExporterRequest{
+			PmmAgentId:   "pmm-server",
+			NodeId:       node.NodeId,
+			AwsAccessKey: "AKIAIOSFODNN7EXAMPLE",
+			AwsSecretKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+			CustomLabels: map[string]string{"baz": "qux"},
+		})
+		require.NoError(t, err)
+		expectedAgent := &inventorypb.RDSExporter{
+			AgentId:      "/agent_id/00000000-0000-4000-8000-000000000006",
+			PmmAgentId:   "pmm-server",
+			NodeId:       "/node_id/00000000-0000-4000-8000-000000000005",
+			AwsAccessKey: "AKIAIOSFODNN7EXAMPLE",
+			CustomLabels: map[string]string{"baz": "qux"},
+		}
+		assert.Equal(t, expectedAgent, agent)
+	})
+
 	t.Run("AddServiceNotFound", func(t *testing.T) {
-		_, as, teardown := setup(t)
+		_, _, as, teardown := setup(t)
 		defer teardown(t)
 
 		as.r.(*mockAgentsRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000005").Return(true)
@@ -344,7 +376,7 @@ func TestAgents(t *testing.T) {
 	})
 
 	t.Run("RemoveNotFound", func(t *testing.T) {
-		_, as, teardown := setup(t)
+		_, _, as, teardown := setup(t)
 		defer teardown(t)
 
 		err := as.Remove(ctx, "no-such-id", false)
