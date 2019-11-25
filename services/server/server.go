@@ -475,13 +475,9 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			settings.DataRetention = dr
 		}
 
-		partitions := req.GetAwsPartitions()
-		if len(partitions) != 0 {
-			validPartitions, err := models.ValidatePartitions(partitions)
-			if err != nil {
-				return status.Error(codes.InvalidArgument, err.Error())
-			}
-			settings.AWSPartitions = validPartitions
+		// absent or zero value means "do not change"
+		if p := req.GetAwsPartitions(); len(p) > 0 {
+			settings.AWSPartitions = p
 		}
 
 		return models.SaveSettings(tx, settings)

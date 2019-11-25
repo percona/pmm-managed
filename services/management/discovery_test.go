@@ -21,19 +21,26 @@ import (
 	"testing"
 	"time"
 
+	"github.com/percona/pmm/api/managementpb"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"gopkg.in/reform.v1"
+	"gopkg.in/reform.v1/dialects/postgresql"
 
-	"github.com/percona/pmm/api/managementpb"
-
+	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/logger"
+	"github.com/percona/pmm-managed/utils/testdb"
 	"github.com/percona/pmm-managed/utils/tests"
 )
 
 func TestDiscoveryService(t *testing.T) {
 	// logrus.SetLevel(logrus.DebugLevel)
-	s := NewDiscoveryService()
+
+	sqlDB := testdb.Open(t, models.SetupFixtures)
+	defer sqlDB.Close() //nolint:errcheck
+	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+	s := NewDiscoveryService(db)
 
 	t.Run("RDS", func(t *testing.T) {
 		t.Run("InvalidClientTokenId", func(t *testing.T) {

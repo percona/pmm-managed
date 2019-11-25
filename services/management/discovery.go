@@ -32,14 +32,14 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/percona/pmm/api/managementpb"
-	"github.com/percona/pmm/api/serverpb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"gopkg.in/reform.v1"
 
-	"github.com/percona/pmm-managed/services/server"
+	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
@@ -50,13 +50,13 @@ const (
 
 // DiscoveryService represents instance discovery service.
 type DiscoveryService struct {
-	server *server.Server
+	db *reform.DB
 }
 
 // NewDiscoveryService creates new instance discovery service.
-func NewDiscoveryService(server *server.Server) *DiscoveryService {
+func NewDiscoveryService(db *reform.DB) *DiscoveryService {
 	return &DiscoveryService{
-		server: server,
+		db: db,
 	}
 }
 
@@ -115,11 +115,10 @@ func (s *DiscoveryService) DiscoverRDS(ctx context.Context, req *managementpb.Di
 		return nil, errors.WithStack(err)
 	}
 
-	resp, err := s.server.GetSettings(ctx, &serverpb.GetSettingsRequest{})
+	settings, err := models.GetSettings(s.db.Querier)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot read the list of AWS partitions from settings")
+		return nil, err
 	}
-	settings := resp.GetSettings()
 
 	// do not break our API if some AWS region is slow or down
 	ctx, cancel := context.WithTimeout(ctx, awsDiscoverTimeout)
@@ -128,7 +127,7 @@ func (s *DiscoveryService) DiscoverRDS(ctx context.Context, req *managementpb.Di
 	instances := make(chan *managementpb.DiscoverRDSInstance)
 
 	for _, partition := range endpoints.DefaultPartitions() {
-		if !paritionExists(partition.ID(), settings.GetAwsPartitions()) {
+		if !paritionExists(partition.ID(), settings.AWSPartitions) {
 			continue
 		}
 		for _, r := range partition.Services()[endpoints.RdsServiceID].Regions() {
