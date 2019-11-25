@@ -245,7 +245,7 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*pmmAgentInfo, 
 
 	// do not use r.get() - r.rw is already locked
 	if agent := r.agents[agentMD.ID]; agent != nil {
-		r.roster.remove(agentMD.ID)
+		r.roster.clear(agentMD.ID)
 		close(agent.kick)
 	}
 
@@ -304,7 +304,7 @@ func (r *Registry) Kick(ctx context.Context, pmmAgentID string) {
 	}
 	l.Infof("pmm-agent with ID %q is connected, kicking.", pmmAgentID)
 	delete(r.agents, pmmAgentID)
-	r.roster.remove(pmmAgentID)
+	r.roster.clear(pmmAgentID)
 	close(agent.kick)
 }
 
@@ -359,7 +359,7 @@ func updateAgentStatus(ctx context.Context, q *reform.Querier, agentID string, s
 
 func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRequest) error {
 	e := r.db.InTransaction(func(tx *reform.TX) error {
-		agentIDs := r.roster.get(req.AgentId, rdsGroup)
+		agentIDs := r.roster.get(req.AgentId)
 		if agentIDs == nil {
 			agentIDs = []string{req.AgentId}
 		}

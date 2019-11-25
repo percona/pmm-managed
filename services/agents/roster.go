@@ -17,7 +17,10 @@
 package agents
 
 import (
+	"strings"
 	"sync"
+
+	"github.com/sirupsen/logrus"
 )
 
 type agentGroup string
@@ -26,44 +29,57 @@ const (
 	rdsGroup agentGroup = "rds"
 )
 
-// roster groups several Agent IDs from an Inventory model to a single ID, as seen by pmm-agent.
+// roster groups several Agent IDs from an Inventory model to a single Group ID, as seen by pmm-agent.
 //
 // Currently, it is used only for rds_exporter.
 // TODO Revisit it once we need it for something else.
 type roster struct {
+	l *logrus.Entry
+
 	rw sync.RWMutex
-	m  map[string]map[agentGroup][]string
+	m  map[string][]string
 }
 
 func newRoster() *roster {
 	return &roster{
-		m: make(map[string]map[agentGroup][]string),
+		l: logrus.WithField("component", "roster"),
+		m: make(map[string][]string),
 	}
 }
 
-func (r *roster) add(pmmAgentID string, group agentGroup, agentIDs []string) {
+func (r *roster) add(pmmAgentID string, group agentGroup, agentIDs []string) (groupID string) {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
-	if r.m[pmmAgentID] == nil {
-		r.m[pmmAgentID] = make(map[agentGroup][]string)
-	}
-	r.m[pmmAgentID][group] = agentIDs
+	groupID = pmmAgentID + "/" + string(group)
+	r.m[groupID] = agentIDs
+	r.l.Debugf("add: %s = %v", groupID, agentIDs)
+	return
 }
 
-func (r *roster) get(pmmAgentID string, group agentGroup) []string {
+func (r *roster) get(groupID string) (agentIDs []string) {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
-	if r.m[pmmAgentID] == nil {
-		return nil
-	}
-	return r.m[pmmAgentID][group]
+	agentIDs = r.m[groupID]
+	r.l.Debugf("get: %s = %v", groupID, agentIDs)
+	return agentIDs
 }
 
-func (r *roster) remove(pmmAgentID string) {
+func (r *roster) clear(pmmAgentID string) {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
-	delete(r.m, pmmAgentID)
+	prefix := pmmAgentID + "/"
+	var toDelete []string
+	for groupID := range r.m {
+		if strings.HasPrefix(groupID, prefix) {
+			toDelete = append(toDelete, groupID)
+		}
+	}
+	for _, groupID := range toDelete {
+		delete(r.m, groupID)
+	}
+
+	r.l.Debugf("clear: %q", pmmAgentID)
 }

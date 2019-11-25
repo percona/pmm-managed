@@ -398,15 +398,19 @@ func scrapeConfigsForRDSExporter(s *models.MetricsResolutions, params []*scrapeC
 		if err != nil {
 			return nil, err
 		}
-		mr.MetricsPath = "/enhanced"
-		r = append(r, mr)
+		if mr != nil {
+			mr.MetricsPath = "/enhanced"
+			r = append(r, mr)
+		}
 
 		lr, err := scrapeConfigForStandardExporter("lr", s.LR, p, nil)
 		if err != nil {
 			return nil, err
 		}
-		lr.MetricsPath = "/basic"
-		r = append(r, lr)
+		if lr != nil {
+			lr.MetricsPath = "/basic"
+			r = append(r, lr)
+		}
 	}
 
 	return r, nil
