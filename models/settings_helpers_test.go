@@ -20,7 +20,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -47,9 +46,7 @@ func TestSettings(t *testing.T) {
 				LR: time.Minute,
 			},
 			DataRetention: 30 * 24 * time.Hour,
-			AWSPartitions: []string{
-				endpoints.DefaultResolver().(endpoints.EnumPartitions).Partitions()[0].ID(),
-			},
+			AWSPartitions: []string{"aws"},
 		}
 		assert.Equal(t, expected, actual)
 	})
@@ -65,43 +62,9 @@ func TestSettings(t *testing.T) {
 				LR: time.Minute,
 			},
 			DataRetention: 30 * 24 * time.Hour,
-			AWSPartitions: []string{
-				endpoints.DefaultResolver().(endpoints.EnumPartitions).Partitions()[0].ID(),
-			},
+			AWSPartitions: []string{"aws"},
 		}
 		assert.Equal(t, expected, s)
-	})
-
-	t.Run("SaveWithValidPartitions", func(t *testing.T) {
-		s := &models.Settings{
-			AWSPartitions: []string{
-				endpoints.DefaultResolver().(endpoints.EnumPartitions).Partitions()[0].ID(),
-			},
-		}
-		err := models.SaveSettings(sqlDB, s)
-		require.NoError(t, err)
-		expected := &models.Settings{
-			MetricsResolutions: models.MetricsResolutions{
-				HR: 5 * time.Second,
-				MR: 5 * time.Second,
-				LR: time.Minute,
-			},
-			DataRetention: 30 * 24 * time.Hour,
-			AWSPartitions: []string{
-				endpoints.DefaultResolver().(endpoints.EnumPartitions).Partitions()[0].ID(),
-			},
-		}
-		assert.Equal(t, expected, s)
-	})
-	t.Run("SaveWithInvalidPartitions", func(t *testing.T) {
-		s := &models.Settings{
-			AWSPartitions: []string{
-				endpoints.DefaultResolver().(endpoints.EnumPartitions).Partitions()[0].ID(),
-				endpoints.DefaultResolver().(endpoints.EnumPartitions).Partitions()[0].ID() + "blah",
-			},
-		}
-		err := models.SaveSettings(sqlDB, s)
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Partition "awsblah" is invalid`), err)
 	})
 
 	t.Run("Validation", func(t *testing.T) {
@@ -135,6 +98,34 @@ func TestSettings(t *testing.T) {
 			}
 			err = models.SaveSettings(sqlDB, s)
 			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "data_retention: should be a natural number of days"), err)
+		})
+
+		t.Run("AWSPartitions", func(t *testing.T) {
+			s := &models.Settings{
+				AWSPartitions: []string{"foo"},
+			}
+			err := models.SaveSettings(sqlDB, s)
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `aws_partitions: partition "foo" is invalid`), err)
+
+			s = &models.Settings{
+				AWSPartitions: []string{"foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo"},
+			}
+			err = models.SaveSettings(sqlDB, s)
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `aws_partitions: list is too long`), err)
+
+			s = &models.Settings{
+				AWSPartitions: []string{"aws", "aws-cn", "aws-cn"},
+			}
+			err = models.SaveSettings(sqlDB, s)
+			assert.NoError(t, err)
+			assert.Equal(t, []string{"aws", "aws-cn"}, s.AWSPartitions)
+
+			s = &models.Settings{
+				AWSPartitions: []string{},
+			}
+			err = models.SaveSettings(sqlDB, s)
+			assert.NoError(t, err)
+			assert.Equal(t, []string{"aws"}, s.AWSPartitions)
 		})
 	})
 }

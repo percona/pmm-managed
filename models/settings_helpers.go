@@ -18,7 +18,7 @@ package models
 
 import (
 	"encoding/json"
-	"fmt"
+	"sort"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/endpoints"
@@ -73,8 +73,8 @@ func SaveSettings(q reform.DBTX, s *Settings) error {
 	}
 
 	var err error
-	if s.AWSPartitions, err = ValidatePartitions(s.AWSPartitions); err != nil {
-		return status.Error(codes.InvalidArgument, err.Error())
+	if s.AWSPartitions, err = validateAWSPartitions(s.AWSPartitions); err != nil {
+		return err
 	}
 
 	b, err := json.Marshal(s)
@@ -90,32 +90,32 @@ func SaveSettings(q reform.DBTX, s *Settings) error {
 	return nil
 }
 
-// This function receives an []string with the partitions we want to save and returns another []string where
-// all partition names are valid and unique (a set of partitions)
-func ValidatePartitions(partitions []string) ([]string, error) {
-	partitionsMap := make(map[string]bool)
+// validateAWSPartitions deduplicates and validates AWS partitions list.
+func validateAWSPartitions(partitions []string) ([]string, error) {
+	if len(partitions) > len(endpoints.DefaultPartitions()) {
+		return nil, status.Errorf(codes.InvalidArgument, "aws_partitions: list is too long")
+	}
 
+	set := make(map[string]struct{})
 	for _, p := range partitions {
-		if isValidPartition(p) {
-			partitionsMap[p] = true
-			continue
+		var valid bool
+		for _, vp := range endpoints.DefaultPartitions() {
+			if p == vp.ID() {
+				valid = true
+				break
+			}
 		}
-		return nil, fmt.Errorf("Partition %q is invalid", p)
-	}
-
-	partitionsSet := make([]string, 0, len(partitionsMap))
-	for partition := range partitionsMap {
-		partitionsSet = append(partitionsSet, partition)
-	}
-
-	return partitionsSet, nil
-}
-
-func isValidPartition(partition string) bool {
-	for _, p := range endpoints.DefaultResolver().(endpoints.EnumPartitions).Partitions() {
-		if partition == p.ID() {
-			return true
+		if !valid {
+			return nil, status.Errorf(codes.InvalidArgument, "aws_partitions: partition %q is invalid", p)
 		}
+		set[p] = struct{}{}
 	}
-	return false
+
+	slice := make([]string, 0, len(set))
+	for partition := range set {
+		slice = append(slice, partition)
+	}
+	sort.Strings(slice)
+
+	return slice, nil
 }

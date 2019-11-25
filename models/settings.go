@@ -63,7 +63,6 @@ func (s *Settings) fillDefaults() {
 	}
 
 	if len(s.AWSPartitions) == 0 {
-		partitions := endpoints.DefaultResolver().(endpoints.EnumPartitions).Partitions()
-		s.AWSPartitions = []string{partitions[0].ID()}
+		s.AWSPartitions = []string{endpoints.AwsPartitionID}
 	}
 }
