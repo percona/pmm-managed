@@ -146,7 +146,7 @@ func httpClientConfig(agent *models.Agent) config_util.HTTPClientConfig {
 }
 
 type scrapeConfigParams struct {
-	host    string
+	host    string // Node address where pmm-agent runs
 	node    *models.Node
 	service *models.Service
 	agent   *models.Agent
@@ -386,5 +386,26 @@ func scrapeConfigsForProxySQLExporter(s *models.MetricsResolutions, params *scra
 	if hr != nil {
 		r = append(r, hr)
 	}
+	return r, nil
+}
+
+func scrapeConfigsForRDSExporter(s *models.MetricsResolutions, params []*scrapeConfigParams) ([]*config.ScrapeConfig, error) {
+	var r []*config.ScrapeConfig
+	for _, p := range params {
+		mr, err := scrapeConfigForStandardExporter("mr", s.MR, p, nil)
+		if err != nil {
+			return nil, err
+		}
+		mr.MetricsPath = "/enhanced"
+		r = append(r, mr)
+
+		lr, err := scrapeConfigForStandardExporter("lr", s.LR, p, nil)
+		if err != nil {
+			return nil, err
+		}
+		lr.MetricsPath = "/basic"
+		r = append(r, lr)
+	}
+
 	return r, nil
 }
