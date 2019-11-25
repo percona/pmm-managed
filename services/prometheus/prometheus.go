@@ -159,6 +159,8 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 		if err != nil {
 			return errors.WithStack(err)
 		}
+
+		var rdsParams []*scrapeConfigParams
 		for _, str := range agents {
 			agent := str.(*models.Agent)
 			if agent.Disabled {
@@ -259,7 +261,13 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 				continue
 
 			case models.RDSExporterType:
-				// TODO
+				rdsParams = append(rdsParams, &scrapeConfigParams{
+					host:    paramsHost,
+					node:    paramsNode,
+					service: paramsService,
+					agent:   agent,
+				})
+				continue
 
 			default:
 				svc.l.Warnf("Skipping scrape config for %s.", agent)
@@ -272,6 +280,13 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 			}
 			cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfgs...)
 		}
+
+		scfgs, err := scrapeConfigsForRDSExporter(&s, rdsParams)
+		if err != nil {
+			panic(err) // FIXME
+		}
+		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfgs...)
+
 		return nil
 	})
 	if e != nil {
