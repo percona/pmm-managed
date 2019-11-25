@@ -93,9 +93,39 @@ func discoverRDSRegion(ctx context.Context, sess *session.Session, region string
 	return res, nil
 }
 
+// listRegions returns a list of AWS regions for given partitions.
+func listRegions(partitions []string) []string {
+	set := make(map[string]struct{})
+	for _, p := range partitions {
+		for _, partition := range endpoints.DefaultPartitions() {
+			if p != partition.ID() {
+				continue
+			}
+
+			for r := range partition.Services()[endpoints.RdsServiceID].Regions() {
+				set[r] = struct{}{}
+			}
+			break
+		}
+	}
+
+	slice := make([]string, 0, len(set))
+	for r := range set {
+		slice = append(slice, r)
+	}
+	sort.Strings(slice)
+
+	return slice
+}
+
 // DiscoverRDS returns a list of RDS instances from all regions in configured AWS partitions.
 func (s *DiscoveryService) DiscoverRDS(ctx context.Context, req *managementpb.DiscoverRDSRequest) (*managementpb.DiscoverRDSResponse, error) {
 	l := logger.Get(ctx).WithField("component", "discover/rds")
+
+	settings, err := models.GetSettings(s.db.Querier)
+	if err != nil {
+		return nil, err
+	}
 
 	// use given credentials, or default credential chain
 	var creds *credentials.Credentials
@@ -115,47 +145,37 @@ func (s *DiscoveryService) DiscoverRDS(ctx context.Context, req *managementpb.Di
 		return nil, errors.WithStack(err)
 	}
 
-	settings, err := models.GetSettings(s.db.Querier)
-	if err != nil {
-		return nil, err
-	}
-
 	// do not break our API if some AWS region is slow or down
 	ctx, cancel := context.WithTimeout(ctx, awsDiscoverTimeout)
 	defer cancel()
 	var wg errgroup.Group
 	instances := make(chan *managementpb.DiscoverRDSInstance)
 
-	for _, partition := range endpoints.DefaultPartitions() {
-		if !paritionExists(partition.ID(), settings.AWSPartitions) {
-			continue
-		}
-		for _, r := range partition.Services()[endpoints.RdsServiceID].Regions() {
-			region := r.ID()
-			wg.Go(func() error {
-				regInstances, err := discoverRDSRegion(ctx, sess, region)
-				if err != nil {
-					l.Debugf("%s: %+v", region, err)
+	for _, region := range listRegions(settings.AWSPartitions) {
+		region := region
+		wg.Go(func() error {
+			regInstances, err := discoverRDSRegion(ctx, sess, region)
+			if err != nil {
+				l.Debugf("%s: %+v", region, err)
+			}
+
+			for _, db := range regInstances {
+				l.Debugf("Discovered instance: %+v", db)
+
+				instances <- &managementpb.DiscoverRDSInstance{
+					Region:     region,
+					InstanceId: *db.DBInstanceIdentifier,
+					Address: net.JoinHostPort(
+						pointer.GetString(db.Endpoint.Address),
+						strconv.FormatInt(pointer.GetInt64(db.Endpoint.Port), 10),
+					),
+					Engine:        rdsEngines[*db.Engine],
+					EngineVersion: pointer.GetString(db.EngineVersion),
 				}
+			}
 
-				for _, db := range regInstances {
-					l.Debugf("Discovered instance: %+v", db)
-
-					instances <- &managementpb.DiscoverRDSInstance{
-						Region:     region,
-						InstanceId: *db.DBInstanceIdentifier,
-						Address: net.JoinHostPort(
-							pointer.GetString(db.Endpoint.Address),
-							strconv.FormatInt(pointer.GetInt64(db.Endpoint.Port), 10),
-						),
-						Engine:        rdsEngines[*db.Engine],
-						EngineVersion: pointer.GetString(db.EngineVersion),
-					}
-				}
-
-				return err
-			})
-		}
+			return err
+		})
 	}
 
 	go func() {
@@ -193,15 +213,5 @@ func (s *DiscoveryService) DiscoverRDS(ctx context.Context, req *managementpb.Di
 			return res, status.Error(codes.Unknown, e.Error())
 		}
 	}
-
 	return nil, err
-}
-
-func paritionExists(partition string, partitions []string) bool {
-	for _, p := range partitions {
-		if partition == p {
-			return true
-		}
-	}
-	return false
 }
