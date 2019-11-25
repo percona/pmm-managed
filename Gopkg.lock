@@ -240,7 +240,7 @@
   version = "v0.6.0"
 
 [[projects]]
-  branch = "PMM-4474-rds-inventory"
+  branch = "PMM-2.0"
   digest = "1:e8e9ede5bab68255e9c5618c547036f0181bb73058fc722b6c65d35f28458140"
   name = "github.com/percona/pmm"
   packages = [
@@ -253,7 +253,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "ff0f53af8a23e4edf6790eb0cc4db2a0980dad0c"
+  revision = "21c0f9a0ba6206b3a451167621f599f9f21a00ec"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
