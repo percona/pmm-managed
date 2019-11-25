@@ -55,7 +55,7 @@ func TestProxySQLExporterConfig(t *testing.T) {
 			"DATA_SOURCE_NAME=username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:3306)/?timeout=1s",
 			"HTTP_AUTH=pmm:agent-id",
 		},
-		HideKeywords: []string{"s3cur3 p@$$w0r4."},
+		RedactWords: []string{"s3cur3 p@$$w0r4."},
 	}
 	require.Equal(t, expected.Args, actual.Args)
 	require.Equal(t, expected.Env, actual.Env)
@@ -63,13 +63,13 @@ func TestProxySQLExporterConfig(t *testing.T) {
 
 	t.Run("EmptyPassword", func(t *testing.T) {
 		exporter.Password = nil
-		actual := proxysqlExporterConfig(proxysql, exporter, true)
+		actual := proxysqlExporterConfig(proxysql, exporter, enableDebug)
 		assert.Equal(t, "DATA_SOURCE_NAME=username@tcp(1.2.3.4:3306)/?timeout=1s", actual.Env[0])
 	})
 
 	t.Run("EmptyUsername", func(t *testing.T) {
 		exporter.Username = nil
-		actual := proxysqlExporterConfig(proxysql, exporter, true)
+		actual := proxysqlExporterConfig(proxysql, exporter, enableDebug)
 		assert.Equal(t, "DATA_SOURCE_NAME=tcp(1.2.3.4:3306)/?timeout=1s", actual.Env[0])
 	})
 }

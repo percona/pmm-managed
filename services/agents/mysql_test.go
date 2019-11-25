@@ -88,7 +88,7 @@ func TestMySQLdExporterConfig(t *testing.T) {
 			"DATA_SOURCE_NAME=username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:3306)/?timeout=1s",
 			"HTTP_AUTH=pmm:agent-id",
 		},
-		HideKeywords: []string{"s3cur3 p@$$w0r4."},
+		RedactWords: []string{"s3cur3 p@$$w0r4."},
 	}
 	requireNoDuplicateFlags(t, actual.Args)
 	require.Equal(t, expected.Args, actual.Args)

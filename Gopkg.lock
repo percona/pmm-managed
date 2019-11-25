@@ -241,7 +241,7 @@
 
 [[projects]]
   branch = "PMM-4966-filter-sensitive-info"
-  digest = "1:a26b2beb69ff15aa4b3685ecbff733ecb58c3e695b47499ec0ab7bd308c71a08"
+  digest = "1:18678bb604cf9dd5c3c93eb86ae99c02b3e652ea951f78ce4a597e54bf810c45"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -253,7 +253,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "342b5e1349a01d56d36ffdd2f5dd70b75da0182c"
+  revision = "e4bee0032d77f80d6949fedb056cf992c1de17c3"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"

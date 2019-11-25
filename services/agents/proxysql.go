@@ -29,7 +29,7 @@ import (
 )
 
 // proxysqlExporterConfig returns desired configuration of proxysql_exporter process.
-func proxysqlExporterConfig(service *models.Service, exporter *models.Agent, debug bool) *agentpb.SetStateRequest_AgentProcess {
+func proxysqlExporterConfig(service *models.Service, exporter *models.Agent, debug debugValue) *agentpb.SetStateRequest_AgentProcess {
 	tdp := templateDelimsPair(
 		pointer.GetString(service.Address),
 		pointer.GetString(exporter.Username),
@@ -60,6 +60,6 @@ func proxysqlExporterConfig(service *models.Service, exporter *models.Agent, deb
 			fmt.Sprintf("DATA_SOURCE_NAME=%s", exporter.DSN(service, time.Second, "")),
 			fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.AgentID),
 		},
-		HideKeywords: exporter.HideKeywords(debug),
+		RedactWords: redactKeywords(exporter, debug),
 	}
 }

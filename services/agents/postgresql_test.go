@@ -57,7 +57,7 @@ func TestPostgresExporterConfig(t *testing.T) {
 			"DATA_SOURCE_NAME=postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:5432/postgres?connect_timeout=1&sslmode=disable",
 			"HTTP_AUTH=pmm:agent-id",
 		},
-		HideKeywords: []string{"s3cur3 p@$$w0r4."},
+		RedactWords: []string{"s3cur3 p@$$w0r4."},
 	}
 	requireNoDuplicateFlags(t, actual.Args)
 	require.Equal(t, expected.Args, actual.Args)

@@ -56,7 +56,7 @@ func TestMongodbExporterConfig(t *testing.T) {
 			"MONGODB_URI=mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:27017/?connectTimeoutMS=1000",
 			"HTTP_AUTH=pmm:agent-id",
 		},
-		HideKeywords: []string{"s3cur3 p@$$w0r4."},
+		RedactWords: []string{"s3cur3 p@$$w0r4."},
 	}
 	requireNoDuplicateFlags(t, actual.Args)
 	require.Equal(t, expected.Args, actual.Args)

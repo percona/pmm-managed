@@ -20,6 +20,7 @@ package agents
 import (
 	"context"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"sync"
 	"time"
 
@@ -57,7 +58,6 @@ type Registry struct {
 	db         *reform.DB
 	prometheus prometheusService
 	qanClient  qanClient
-	debug      bool
 
 	rw     sync.RWMutex
 	agents map[string]*agentInfo // id -> info
@@ -70,12 +70,11 @@ type Registry struct {
 }
 
 // NewRegistry creates a new registry with given database connection.
-func NewRegistry(db *reform.DB, prometheus prometheusService, qanClient qanClient, debug bool) *Registry {
+func NewRegistry(db *reform.DB, prometheus prometheusService, qanClient qanClient) *Registry {
 	r := &Registry{
 		db:         db,
 		prometheus: prometheus,
 		qanClient:  qanClient,
-		debug:      debug,
 
 		agents: make(map[string]*agentInfo),
 
@@ -413,15 +412,20 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 				return
 			}
 
+			var debug = disableDebug
+			if logrus.GetLevel() >= logrus.DebugLevel {
+				debug = enableDebug
+			}
+
 			switch row.AgentType {
 			case models.MySQLdExporterType:
-				agentProcesses[row.AgentID] = mysqldExporterConfig(service, row, r.debug)
+				agentProcesses[row.AgentID] = mysqldExporterConfig(service, row, debug)
 			case models.MongoDBExporterType:
-				agentProcesses[row.AgentID] = mongodbExporterConfig(service, row, r.debug)
+				agentProcesses[row.AgentID] = mongodbExporterConfig(service, row, debug)
 			case models.PostgresExporterType:
-				agentProcesses[row.AgentID] = postgresExporterConfig(service, row, r.debug)
+				agentProcesses[row.AgentID] = postgresExporterConfig(service, row, debug)
 			case models.ProxySQLExporterType:
-				agentProcesses[row.AgentID] = proxysqlExporterConfig(service, row, r.debug)
+				agentProcesses[row.AgentID] = proxysqlExporterConfig(service, row, debug)
 			case models.QANMySQLPerfSchemaAgentType:
 				builtinAgents[row.AgentID] = qanMySQLPerfSchemaAgentConfig(service, row)
 			case models.QANMySQLSlowlogAgentType:
