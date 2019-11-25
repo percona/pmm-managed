@@ -355,7 +355,6 @@ func updateAgentStatus(ctx context.Context, q *reform.Querier, agentID string, s
 		return errors.Wrap(err, "failed to update Agent")
 	}
 	return nil
-
 }
 
 func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRequest) error {

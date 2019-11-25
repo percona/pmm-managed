@@ -16,46 +16,54 @@
 
 package agents
 
-import "sync"
-
-const (
-	rdsGroup = "rds"
+import (
+	"sync"
 )
 
+type agentGroup string
+
+const (
+	rdsGroup agentGroup = "rds"
+)
+
+// roster groups several Agent IDs from an Inventory model to a single ID, as seen by pmm-agent.
+//
+// Currently, it is used only for rds_exporter.
+// TODO Revisit it once we need it for something else.
 type roster struct {
 	rw sync.RWMutex
-	m  map[string]map[string][]string
+	m  map[string]map[agentGroup][]string
 }
 
 func newRoster() *roster {
 	return &roster{
-		m: make(map[string]map[string][]string),
+		m: make(map[string]map[agentGroup][]string),
 	}
 }
 
-func (r *roster) add(id string, group string, ids []string) {
+func (r *roster) add(pmmAgentID string, group agentGroup, agentIDs []string) {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
-	if r.m[id] == nil {
-		r.m[id] = make(map[string][]string)
+	if r.m[pmmAgentID] == nil {
+		r.m[pmmAgentID] = make(map[agentGroup][]string)
 	}
-	r.m[id][group] = ids
+	r.m[pmmAgentID][group] = agentIDs
 }
 
-func (r *roster) get(id string, group string) []string {
+func (r *roster) get(pmmAgentID string, group agentGroup) []string {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
-	if r.m[id] == nil {
+	if r.m[pmmAgentID] == nil {
 		return nil
 	}
-	return r.m[id][group]
+	return r.m[pmmAgentID][group]
 }
 
-func (r *roster) remove(id string) {
+func (r *roster) remove(pmmAgentID string) {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
-	delete(r.m, id)
+	delete(r.m, pmmAgentID)
 }
