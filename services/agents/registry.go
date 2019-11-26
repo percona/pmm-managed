@@ -20,7 +20,6 @@ package agents
 import (
 	"context"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"sync"
 	"time"
 
@@ -31,6 +30,7 @@ import (
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -447,20 +447,20 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 				return
 			}
 
-			var debug = disableDebug
-			if logrus.GetLevel() >= logrus.DebugLevel {
-				debug = enableDebug
+			redactMode := redactSecrets
+			if l.Logger.GetLevel() >= logrus.DebugLevel {
+				redactMode = exposeSecrets
 			}
 
 			switch row.AgentType {
 			case models.MySQLdExporterType:
-				agentProcesses[row.AgentID] = mysqldExporterConfig(service, row, debug)
+				agentProcesses[row.AgentID] = mysqldExporterConfig(service, row, redactMode)
 			case models.MongoDBExporterType:
-				agentProcesses[row.AgentID] = mongodbExporterConfig(service, row, debug)
+				agentProcesses[row.AgentID] = mongodbExporterConfig(service, row, redactMode)
 			case models.PostgresExporterType:
-				agentProcesses[row.AgentID] = postgresExporterConfig(service, row, debug)
+				agentProcesses[row.AgentID] = postgresExporterConfig(service, row, redactMode)
 			case models.ProxySQLExporterType:
-				agentProcesses[row.AgentID] = proxysqlExporterConfig(service, row, debug)
+				agentProcesses[row.AgentID] = proxysqlExporterConfig(service, row, redactMode)
 			case models.QANMySQLPerfSchemaAgentType:
 				builtinAgents[row.AgentID] = qanMySQLPerfSchemaAgentConfig(service, row)
 			case models.QANMySQLSlowlogAgentType:

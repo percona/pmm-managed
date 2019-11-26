@@ -6,17 +6,21 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-type debugValue int
+type redactMode int
 
 const (
-	enableDebug debugValue = iota
-	disableDebug
+	redactSecrets redactMode = iota
+	exposeSecrets
 )
 
-func redactKeywords(s *models.Agent, debug debugValue) []string {
-	var hideKeywords []string
-	if s.Password != nil && debug == disableDebug {
-		hideKeywords = append(hideKeywords, pointer.GetString(s.Password))
+// redactWords returns words that should be redacted from given Agent logs/output.
+func redactWords(agent *models.Agent) []string {
+	var words []string
+	if s := pointer.GetString(agent.Password); s != "" {
+		words = append(words, s)
 	}
-	return hideKeywords
+	if s := pointer.GetString(agent.AWSSecretKey); s != "" {
+		words = append(words, s)
+	}
+	return words
 }

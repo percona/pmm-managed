@@ -39,7 +39,7 @@ func TestMongodbExporterConfig(t *testing.T) {
 		Username:  pointer.ToString("username"),
 		Password:  pointer.ToString("s3cur3 p@$$w0r4."),
 	}
-	actual := mongodbExporterConfig(mongodb, exporter, false)
+	actual := mongodbExporterConfig(mongodb, exporter, redactSecrets)
 	expected := &agentpb.SetStateRequest_AgentProcess{
 		Type:               inventorypb.AgentType_MONGODB_EXPORTER,
 		TemplateLeftDelim:  "{{",
@@ -65,13 +65,13 @@ func TestMongodbExporterConfig(t *testing.T) {
 
 	t.Run("EmptyPassword", func(t *testing.T) {
 		exporter.Password = nil
-		actual := mongodbExporterConfig(mongodb, exporter, true)
+		actual := mongodbExporterConfig(mongodb, exporter, exposeSecrets)
 		assert.Equal(t, "MONGODB_URI=mongodb://username@1.2.3.4:27017/?connectTimeoutMS=1000", actual.Env[0])
 	})
 
 	t.Run("EmptyUsername", func(t *testing.T) {
 		exporter.Username = nil
-		actual := mongodbExporterConfig(mongodb, exporter, true)
+		actual := mongodbExporterConfig(mongodb, exporter, exposeSecrets)
 		assert.Equal(t, "MONGODB_URI=mongodb://1.2.3.4:27017/?connectTimeoutMS=1000", actual.Env[0])
 	})
 }

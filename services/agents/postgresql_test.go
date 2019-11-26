@@ -39,7 +39,7 @@ func TestPostgresExporterConfig(t *testing.T) {
 		Username:  pointer.ToString("username"),
 		Password:  pointer.ToString("s3cur3 p@$$w0r4."),
 	}
-	actual := postgresExporterConfig(postgresql, exporter, false)
+	actual := postgresExporterConfig(postgresql, exporter, redactSecrets)
 	expected := &agentpb.SetStateRequest_AgentProcess{
 		Type:               inventorypb.AgentType_POSTGRES_EXPORTER,
 		TemplateLeftDelim:  "{{",
@@ -66,13 +66,13 @@ func TestPostgresExporterConfig(t *testing.T) {
 
 	t.Run("EmptyPassword", func(t *testing.T) {
 		exporter.Password = nil
-		actual := postgresExporterConfig(postgresql, exporter, true)
+		actual := postgresExporterConfig(postgresql, exporter, exposeSecrets)
 		assert.Equal(t, "DATA_SOURCE_NAME=postgres://username@1.2.3.4:5432/postgres?connect_timeout=1&sslmode=disable", actual.Env[0])
 	})
 
 	t.Run("EmptyUsername", func(t *testing.T) {
 		exporter.Username = nil
-		actual := postgresExporterConfig(postgresql, exporter, true)
+		actual := postgresExporterConfig(postgresql, exporter, exposeSecrets)
 		assert.Equal(t, "DATA_SOURCE_NAME=postgres://1.2.3.4:5432/postgres?connect_timeout=1&sslmode=disable", actual.Env[0])
 	})
 }

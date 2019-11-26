@@ -29,7 +29,7 @@ import (
 )
 
 // mongodbExporterConfig returns desired configuration of mongodb_exporter process.
-func mongodbExporterConfig(service *models.Service, exporter *models.Agent, debug debugValue) *agentpb.SetStateRequest_AgentProcess {
+func mongodbExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode) *agentpb.SetStateRequest_AgentProcess {
 	tdp := templateDelimsPair(
 		pointer.GetString(service.Address),
 		pointer.GetString(exporter.Username),
@@ -53,7 +53,7 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent, debu
 
 	sort.Strings(args)
 
-	return &agentpb.SetStateRequest_AgentProcess{
+	res := &agentpb.SetStateRequest_AgentProcess{
 		Type:               inventorypb.AgentType_MONGODB_EXPORTER,
 		TemplateLeftDelim:  tdp.left,
 		TemplateRightDelim: tdp.right,
@@ -62,8 +62,11 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent, debu
 			fmt.Sprintf("MONGODB_URI=%s", exporter.DSN(service, time.Second, "")),
 			fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.AgentID),
 		},
-		RedactWords: redactKeywords(exporter, debug),
 	}
+	if redactMode != exposeSecrets {
+		res.RedactWords = redactWords(exporter)
+	}
+	return res
 }
 
 // qanMongoDBProfilerAgentConfig returns desired configuration of qan-mongodb-profiler-agent built-in agent.
