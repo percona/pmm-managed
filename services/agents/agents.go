@@ -6,10 +6,12 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-type debugValue bool
+type debugValue int
 
-var enableDebug = debugValue(true)
-var disableDebug = debugValue(false)
+const (
+	enableDebug debugValue = iota
+	disableDebug
+)
 
 func redactKeywords(s *models.Agent, debug debugValue) []string {
 	var hideKeywords []string
