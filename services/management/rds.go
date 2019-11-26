@@ -18,10 +18,8 @@ package management
 
 import (
 	"context"
-	"net"
 	"net/http"
 	"sort"
-	"strconv"
 	"time"
 
 	"github.com/AlekSi/pointer"
@@ -163,14 +161,14 @@ func (s *RDSService) DiscoverRDS(ctx context.Context, req *managementpb.Discover
 				l.Debugf("Discovered instance: %+v", db)
 
 				instances <- &managementpb.DiscoverRDSInstance{
-					Region:     region,
-					InstanceId: *db.DBInstanceIdentifier,
-					Address: net.JoinHostPort(
-						pointer.GetString(db.Endpoint.Address),
-						strconv.FormatInt(pointer.GetInt64(db.Endpoint.Port), 10),
-					),
+					Region:        region,
+					Az:            *db.AvailabilityZone,
+					InstanceId:    *db.DBInstanceIdentifier,
+					NodeModel:     *db.DBInstanceClass,
+					Address:       *db.Endpoint.Address,
+					Port:          uint32(*db.Endpoint.Port),
 					Engine:        rdsEngines[*db.Engine],
-					EngineVersion: pointer.GetString(db.EngineVersion),
+					EngineVersion: *db.EngineVersion,
 				}
 			}
 
