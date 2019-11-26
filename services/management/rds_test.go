@@ -34,13 +34,13 @@ import (
 	"github.com/percona/pmm-managed/utils/tests"
 )
 
-func TestDiscoveryService(t *testing.T) {
+func TestRDSService(t *testing.T) {
 	// logrus.SetLevel(logrus.DebugLevel)
 
 	sqlDB := testdb.Open(t, models.SetupFixtures)
 	defer sqlDB.Close() //nolint:errcheck
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-	s := NewDiscoveryService(db)
+	s := NewRDSService(db)
 
 	t.Run("RDS", func(t *testing.T) {
 		t.Run("ListRegions", func(t *testing.T) {

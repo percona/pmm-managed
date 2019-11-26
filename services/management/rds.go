@@ -48,14 +48,14 @@ const (
 	awsDiscoverTimeout = 7 * time.Second
 )
 
-// DiscoveryService represents instance discovery service.
-type DiscoveryService struct {
+// RDSService represents instance discovery service.
+type RDSService struct {
 	db *reform.DB
 }
 
-// NewDiscoveryService creates new instance discovery service.
-func NewDiscoveryService(db *reform.DB) *DiscoveryService {
-	return &DiscoveryService{
+// NewRDSService creates new instance discovery service.
+func NewRDSService(db *reform.DB) *RDSService {
+	return &RDSService{
 		db: db,
 	}
 }
@@ -118,8 +118,8 @@ func listRegions(partitions []string) []string {
 	return slice
 }
 
-// DiscoverRDS returns a list of RDS instances from all regions in configured AWS partitions.
-func (s *DiscoveryService) DiscoverRDS(ctx context.Context, req *managementpb.DiscoverRDSRequest) (*managementpb.DiscoverRDSResponse, error) {
+// DiscoverRDS discovers RDS instances.
+func (s *RDSService) DiscoverRDS(ctx context.Context, req *managementpb.DiscoverRDSRequest) (*managementpb.DiscoverRDSResponse, error) {
 	l := logger.Get(ctx).WithField("component", "discover/rds")
 
 	settings, err := models.GetSettings(s.db.Querier)
@@ -214,4 +214,9 @@ func (s *DiscoveryService) DiscoverRDS(ctx context.Context, req *managementpb.Di
 		}
 	}
 	return nil, err
+}
+
+// AddRDS adds RDS instance.
+func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest) (*managementpb.AddRDSResponse, error) {
+	panic("not implemented yet")
 }
