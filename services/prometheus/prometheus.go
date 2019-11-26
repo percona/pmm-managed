@@ -155,7 +155,7 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 			},
 		}
 
-		agents, err := tx.SelectAllFrom(models.AgentTable, "ORDER BY agent_type, agent_id")
+		agents, err := tx.SelectAllFrom(models.AgentTable, "WHERE NOT disabled ORDER BY agent_type, agent_id")
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -163,9 +163,6 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 		var rdsParams []*scrapeConfigParams
 		for _, str := range agents {
 			agent := str.(*models.Agent)
-			if agent.Disabled {
-				continue
-			}
 
 			// sanity check
 			if (agent.NodeID != nil) && (agent.ServiceID != nil) {
