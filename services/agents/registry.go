@@ -332,12 +332,18 @@ func (r *Registry) ping(ctx context.Context, agent *pmmAgentInfo) {
 }
 
 func updateAgentStatus(ctx context.Context, q *reform.Querier, agentID string, status inventorypb.AgentStatus, listenPort uint32) error {
+	l := logger.Get(ctx)
+	l.Debugf("updateAgentStatus: %s %s %d", agentID, status, listenPort)
+
 	agent := &models.Agent{AgentID: agentID}
 	err := q.Reload(agent)
 
-	// FIXME that requires more investigation
+	// TODO set ListenPort to NULL when agent is done?
+	// https://jira.percona.com/browse/PMM-4932
+
+	// FIXME that requires more investigation: https://jira.percona.com/browse/PMM-4932
 	if err == reform.ErrNoRows {
-		logger.Get(ctx).Warnf("Failed to select Agent by ID for (%s, %s).", agentID, status)
+		l.Warnf("Failed to select Agent by ID for (%s, %s).", agentID, status)
 
 		switch status {
 		case inventorypb.AgentStatus_STOPPING, inventorypb.AgentStatus_DONE:

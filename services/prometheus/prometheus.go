@@ -155,7 +155,7 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 			},
 		}
 
-		agents, err := tx.SelectAllFrom(models.AgentTable, "WHERE NOT disabled ORDER BY agent_type, agent_id")
+		agents, err := tx.SelectAllFrom(models.AgentTable, "WHERE NOT disabled AND listen_port IS NOT NULL ORDER BY agent_type, agent_id")
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -273,14 +273,13 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 
 			if err != nil {
 				svc.l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
-				continue
 			}
 			cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfgs...)
 		}
 
 		scfgs, err := scrapeConfigsForRDSExporter(&s, rdsParams)
 		if err != nil {
-			panic(err) // FIXME
+			svc.l.Warnf("Failed to add rds_exporter scrape configs: %s.", err)
 		}
 		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfgs...)
 
