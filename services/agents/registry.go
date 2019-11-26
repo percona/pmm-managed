@@ -408,6 +408,11 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		return
 	}
 
+	redactMode := redactSecrets
+	if l.Logger.GetLevel() >= logrus.DebugLevel {
+		redactMode = exposeSecrets
+	}
+
 	rdsExporters := make(map[*models.Node]*models.Agent)
 	agentProcesses := make(map[string]*agentpb.SetStateRequest_AgentProcess)
 	builtinAgents := make(map[string]*agentpb.SetStateRequest_BuiltinAgent)
@@ -447,11 +452,6 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 				return
 			}
 
-			redactMode := redactSecrets
-			if l.Logger.GetLevel() >= logrus.DebugLevel {
-				redactMode = exposeSecrets
-			}
-
 			switch row.AgentType {
 			case models.MySQLdExporterType:
 				agentProcesses[row.AgentID] = mysqldExporterConfig(service, row, redactMode)
@@ -481,9 +481,9 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		for _, rdsExporter := range rdsExporters {
 			rdsExporterIDs = append(rdsExporterIDs, rdsExporter.AgentID)
 		}
-		r.roster.add(pmmAgentID, rdsGroup, rdsExporterIDs)
 
-		agentProcesses[fmt.Sprintf("%s/%s", pmmAgentID, rdsGroup)] = rdsExporterConfig(rdsExporters)
+		groupID := r.roster.add(pmmAgentID, rdsGroup, rdsExporterIDs)
+		agentProcesses[groupID] = rdsExporterConfig(rdsExporters, redactMode)
 	}
 
 	state := &agentpb.SetStateRequest{
