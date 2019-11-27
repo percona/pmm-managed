@@ -251,11 +251,11 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 		if err != nil {
 			return err
 		}
-		apiNode, err := services.ToAPINode(node)
+		invNode, err := services.ToAPINode(node)
 		if err != nil {
 			return err
 		}
-		res.Node = apiNode.(*inventorypb.RemoteRDSNode)
+		res.Node = invNode.(*inventorypb.RemoteRDSNode)
 
 		// add RDSExporter Agent
 		rdsExporter, err := models.CreateAgent(tx.Querier, models.RDSExporterType, &models.CreateAgentParams{
@@ -267,60 +267,60 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 		if err != nil {
 			return err
 		}
-		apiRDSExporter, err := services.ToAPIAgent(tx.Querier, rdsExporter)
+		invRDSExporter, err := services.ToAPIAgent(tx.Querier, rdsExporter)
 		if err != nil {
 			return err
 		}
-		res.RdsExporter = apiRDSExporter.(*inventorypb.RDSExporter)
+		res.RdsExporter = invRDSExporter.(*inventorypb.RDSExporter)
 
 		switch req.Engine {
 		case managementpb.DiscoverRDSEngine_DISCOVER_RDS_MYSQL:
-			// MySQL Service
+			// add MySQL Service
 			service, err := models.AddNewService(tx.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
 				ServiceName:    req.ServiceName,
 				NodeID:         node.NodeID,
 				Environment:    req.Environment,
 				Cluster:        req.Cluster,
 				ReplicationSet: req.ReplicationSet,
-				Address:        pointer.ToStringOrNil(req.Address),
-				Port:           pointer.ToUint16OrNil(uint16(req.Port)),
 				CustomLabels:   req.CustomLabels,
+				Address:        &req.Address,
+				Port:           pointer.ToUint16(uint16(req.Port)),
 			})
 			if err != nil {
 				return err
 			}
-
 			invService, err := services.ToAPIService(service)
 			if err != nil {
 				return err
 			}
 			res.Mysql = invService.(*inventorypb.MySQLService)
 
-			// MySQL Exporter
-			row, err = models.CreateAgent(tx.Querier, models.MySQLdExporterType, &models.CreateAgentParams{
-				// PMMAgentID:                     req.PmmAgentId, // Don't know what's the correct value to put here
+			// add MySQL Exporter
+			mysqldExporter, err := models.CreateAgent(tx.Querier, models.MySQLdExporterType, &models.CreateAgentParams{
+				PMMAgentID:                     models.PMMServerAgentID,
 				ServiceID:                      service.ServiceID,
 				Username:                       req.Username,
 				Password:                       req.Password,
 				TLS:                            req.Tls,
 				TLSSkipVerify:                  req.TlsSkipVerify,
 				TableCountTablestatsGroupLimit: tablestatsGroupTableLimit,
+				QueryExamplesDisabled:          req.DisableQueryExamples,
 			})
 			if err != nil {
 				return err
 			}
-			mysqlAgent, err := services.ToAPIAgent(tx.Querier, row)
+			invMySQLdExporter, err := services.ToAPIAgent(tx.Querier, mysqldExporter)
 			if err != nil {
 				return err
 			}
-			res.MysqldExporter = mysqlAgent.(*inventorypb.MySQLdExporter)
+			res.MysqldExporter = invMySQLdExporter.(*inventorypb.MySQLdExporter)
 
 			if !req.SkipConnectionCheck {
-				if err = s.registry.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
+				if err = s.registry.CheckConnectionToService(ctx, tx.Querier, service, mysqldExporter); err != nil {
 					return err
 				}
 				// CheckConnectionToService updates the table count in row so, let's also update the response
-				res.TableCount = *row.TableCount
+				res.TableCount = *mysqldExporter.TableCount
 			}
 
 			// MySQL QAN exporter
