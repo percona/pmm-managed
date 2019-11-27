@@ -304,7 +304,6 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 				TLS:                            req.Tls,
 				TLSSkipVerify:                  req.TlsSkipVerify,
 				TableCountTablestatsGroupLimit: tablestatsGroupTableLimit,
-				QueryExamplesDisabled:          req.DisableQueryExamples,
 			})
 			if err != nil {
 				return err
@@ -323,10 +322,10 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 				res.TableCount = *mysqldExporter.TableCount
 			}
 
-			// MySQL QAN exporter
+			// add MySQL PerfSchema QAN Agent
 			if req.QanMysqlPerfschema {
-				row, err = models.CreateAgent(tx.Querier, models.QANMySQLPerfSchemaAgentType, &models.CreateAgentParams{
-					// PMMAgentID:            req.PmmAgentId, // Don't know what's the correct value for this field
+				qanAgent, err := models.CreateAgent(tx.Querier, models.QANMySQLPerfSchemaAgentType, &models.CreateAgentParams{
+					PMMAgentID:            models.PMMServerAgentID,
 					ServiceID:             service.ServiceID,
 					Username:              req.Username,
 					Password:              req.Password,
@@ -337,16 +336,18 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 				if err != nil {
 					return err
 				}
-
-				qanAgent, err := services.ToAPIAgent(tx.Querier, row)
+				invQANAgent, err := services.ToAPIAgent(tx.Querier, qanAgent)
 				if err != nil {
 					return err
 				}
-				res.QanMysqlPerfschema = qanAgent.(*inventorypb.QANMySQLPerfSchemaAgent)
+				res.QanMysqlPerfschema = invQANAgent.(*inventorypb.QANMySQLPerfSchemaAgent)
 			}
 
+			return nil
+
+		default:
+			return status.Errorf(codes.InvalidArgument, "Unsupported Engine type %q.", req.Engine)
 		}
-		return nil
 	}); e != nil {
 		return nil, e
 	}
