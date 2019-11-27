@@ -258,20 +258,22 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 		res.Node = invNode.(*inventorypb.RemoteRDSNode)
 
 		// add RDSExporter Agent
-		rdsExporter, err := models.CreateAgent(tx.Querier, models.RDSExporterType, &models.CreateAgentParams{
-			PMMAgentID:   models.PMMServerAgentID,
-			NodeID:       node.NodeID,
-			AWSAccessKey: req.AwsAccessKey,
-			AWSSecretKey: req.AwsSecretKey,
-		})
-		if err != nil {
-			return err
+		if req.RdsExporter {
+			rdsExporter, err := models.CreateAgent(tx.Querier, models.RDSExporterType, &models.CreateAgentParams{
+				PMMAgentID:   models.PMMServerAgentID,
+				NodeID:       node.NodeID,
+				AWSAccessKey: req.AwsAccessKey,
+				AWSSecretKey: req.AwsSecretKey,
+			})
+			if err != nil {
+				return err
+			}
+			invRDSExporter, err := services.ToAPIAgent(tx.Querier, rdsExporter)
+			if err != nil {
+				return err
+			}
+			res.RdsExporter = invRDSExporter.(*inventorypb.RDSExporter)
 		}
-		invRDSExporter, err := services.ToAPIAgent(tx.Querier, rdsExporter)
-		if err != nil {
-			return err
-		}
-		res.RdsExporter = invRDSExporter.(*inventorypb.RDSExporter)
 
 		switch req.Engine {
 		case managementpb.DiscoverRDSEngine_DISCOVER_RDS_MYSQL:
