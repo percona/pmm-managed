@@ -351,5 +351,7 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 	}); e != nil {
 		return nil, e
 	}
+
+	s.registry.SendSetStateRequest(ctx, models.PMMServerAgentID)
 	return res, nil
 }

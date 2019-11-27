@@ -49,6 +49,7 @@ func TestRDSService(t *testing.T) {
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 	r := new(mockAgentsRegistry)
 	r.Test(t)
+	defer r.AssertExpectations(t)
 	s := NewRDSService(db, r)
 
 	t.Run("DiscoverRDS", func(t *testing.T) {
@@ -157,6 +158,7 @@ func TestRDSService(t *testing.T) {
 			TablestatsGroupTableLimit: 0,
 		}
 
+		r.On("SendSetStateRequest", ctx, "pmm-server")
 		resp, err := s.AddRDS(ctx, req)
 		require.NoError(t, err)
 
