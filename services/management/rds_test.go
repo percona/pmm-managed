@@ -21,6 +21,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/protobuf/proto"
+	"github.com/google/uuid"
+	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/api/managementpb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,6 +41,9 @@ import (
 func TestRDSService(t *testing.T) {
 	// logrus.SetLevel(logrus.DebugLevel)
 
+	uuid.SetRand(new(tests.IDReader))
+	defer uuid.SetRand(nil)
+
 	sqlDB := testdb.Open(t, models.SetupFixtures)
 	defer sqlDB.Close() //nolint:errcheck
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
@@ -45,7 +51,7 @@ func TestRDSService(t *testing.T) {
 	r.Test(t)
 	s := NewRDSService(db, r)
 
-	t.Run("RDS", func(t *testing.T) {
+	t.Run("DiscoverRDS", func(t *testing.T) {
 		t.Run("ListRegions", func(t *testing.T) {
 			expected := []string{
 				"ap-east-1",
@@ -121,46 +127,79 @@ func TestRDSService(t *testing.T) {
 			t.Logf("%+v", instances)
 			assert.GreaterOrEqualf(t, len(instances.RdsInstances), 1, "Should have at least one instance")
 		})
-
-		t.Run("AddMySQL", func(t *testing.T) {
-			ctx := logger.Set(context.Background(), t.Name())
-			accessKey, secretKey := tests.GetAWSKeys(t)
-			reqParams := &managementpb.AddRDSRequest{
-				Region:                    "region",
-				Az:                        "az",
-				InstanceId:                "example-instance-id",
-				NodeModel:                 "model",
-				Address:                   "my.instance.xxxx.mmmm",
-				Port:                      3306,
-				Engine:                    managementpb.DiscoverRDSEngine_DISCOVER_RDS_MYSQL,
-				NodeName:                  "node",
-				ServiceName:               "service-name-123",
-				Environment:               "env",
-				Cluster:                   "cluster-01",
-				ReplicationSet:            "rs-01",
-				Username:                  "username",
-				Password:                  "password",
-				AwsAccessKey:              accessKey,
-				AwsSecretKey:              secretKey,
-				RdsExporter:               true,
-				QanMysqlPerfschema:        true,
-				SkipConnectionCheck:       true,
-				Tls:                       false,
-				TlsSkipVerify:             true,
-				DisableQueryExamples:      false,
-				TablestatsGroupTableLimit: 2000,
-			}
-
-			resp, err := s.AddRDS(ctx, reqParams)
-
-			assert.NoError(t, err)
-			assert.NotNil(t, resp.Node)
-			assert.NotNil(t, resp.RdsExporter)
-			assert.NotNil(t, resp.Mysql)
-			assert.NotNil(t, resp.MysqldExporter)
-			assert.NotNil(t, resp.QanMysqlPerfschema)
-		})
 	})
 
-	require.NoError(t, sqlDB.Close())
+	t.Run("AddMySQL", func(t *testing.T) {
+		ctx := logger.Set(context.Background(), t.Name())
+		accessKey, secretKey := "AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" //nolint:gosec
+
+		req := &managementpb.AddRDSRequest{
+			Region:                    "us-east-1",
+			Az:                        "us-east-1b",
+			InstanceId:                "rds-mysql57",
+			NodeModel:                 "db.t3.micro",
+			Address:                   "rds-mysql57-renaming.xyzzy.us-east-1.rds.amazonaws.com",
+			Port:                      3306,
+			Engine:                    managementpb.DiscoverRDSEngine_DISCOVER_RDS_MYSQL,
+			Environment:               "production",
+			Cluster:                   "c-01",
+			ReplicationSet:            "rs-01",
+			Username:                  "username",
+			Password:                  "password",
+			AwsAccessKey:              accessKey,
+			AwsSecretKey:              secretKey,
+			RdsExporter:               true,
+			QanMysqlPerfschema:        true,
+			SkipConnectionCheck:       true,
+			Tls:                       false,
+			TlsSkipVerify:             false,
+			DisableQueryExamples:      true,
+			TablestatsGroupTableLimit: 0,
+		}
+
+		resp, err := s.AddRDS(ctx, req)
+		require.NoError(t, err)
+
+		expected := &managementpb.AddRDSResponse{
+			Node: &inventorypb.RemoteRDSNode{
+				NodeId:    "/node_id/00000000-0000-4000-8000-000000000005",
+				NodeName:  "rds-mysql57",
+				Address:   "rds-mysql57",
+				NodeModel: "db.t3.micro",
+				Region:    "us-east-1",
+				Az:        "us-east-1b",
+			},
+			RdsExporter: &inventorypb.RDSExporter{
+				AgentId:      "/agent_id/00000000-0000-4000-8000-000000000006",
+				PmmAgentId:   "pmm-server",
+				NodeId:       "/node_id/00000000-0000-4000-8000-000000000005",
+				AwsAccessKey: "AKIAIOSFODNN7EXAMPLE",
+			},
+			Mysql: &inventorypb.MySQLService{
+				ServiceId:      "/service_id/00000000-0000-4000-8000-000000000007",
+				NodeId:         "/node_id/00000000-0000-4000-8000-000000000005",
+				Address:        "rds-mysql57-renaming.xyzzy.us-east-1.rds.amazonaws.com",
+				Port:           3306,
+				Environment:    "production",
+				Cluster:        "c-01",
+				ReplicationSet: "rs-01",
+				ServiceName:    "rds-mysql57",
+			},
+			MysqldExporter: &inventorypb.MySQLdExporter{
+				AgentId:                   "/agent_id/00000000-0000-4000-8000-000000000008",
+				PmmAgentId:                "pmm-server",
+				ServiceId:                 "/service_id/00000000-0000-4000-8000-000000000007",
+				Username:                  "username",
+				TablestatsGroupTableLimit: 1000,
+			},
+			QanMysqlPerfschema: &inventorypb.QANMySQLPerfSchemaAgent{
+				AgentId:               "/agent_id/00000000-0000-4000-8000-000000000009",
+				PmmAgentId:            "pmm-server",
+				ServiceId:             "/service_id/00000000-0000-4000-8000-000000000007",
+				Username:              "username",
+				QueryExamplesDisabled: true,
+			},
+		}
+		assert.Equal(t, proto.MarshalTextString(expected), proto.MarshalTextString(resp)) // for better diffs
+	})
 }
