@@ -29,6 +29,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/rds"
+	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/api/managementpb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -38,6 +39,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services"
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
@@ -48,13 +50,15 @@ const (
 
 // RDSService represents instance discovery service.
 type RDSService struct {
-	db *reform.DB
+	db       *reform.DB
+	registry agentsRegistry
 }
 
 // NewRDSService creates new instance discovery service.
-func NewRDSService(db *reform.DB) *RDSService {
+func NewRDSService(db *reform.DB, registry agentsRegistry) *RDSService {
 	return &RDSService{
-		db: db,
+		db:       db,
+		registry: registry,
 	}
 }
 
@@ -216,5 +220,129 @@ func (s *RDSService) DiscoverRDS(ctx context.Context, req *managementpb.Discover
 
 // AddRDS adds RDS instance.
 func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest) (*managementpb.AddRDSResponse, error) {
-	panic("not implemented yet")
+	res := new(managementpb.AddRDSResponse)
+
+	if e := s.db.InTransaction(func(tx *reform.TX) error {
+		// tweak according to API docs
+		tablestatsGroupTableLimit := req.TablestatsGroupTableLimit
+		if tablestatsGroupTableLimit == 0 {
+			tablestatsGroupTableLimit = defaultTablestatsGroupTableLimit
+		}
+		if tablestatsGroupTableLimit < 0 {
+			tablestatsGroupTableLimit = -1
+		}
+
+		node, err := models.CreateNode(tx.Querier, models.RemoteRDSNodeType, &models.CreateNodeParams{
+			NodeName:  req.NodeName,
+			MachineID: pointer.ToStringOrNil(req.InstanceId),
+			//Distro:        req.Distro,
+			NodeModel:     req.NodeModel,
+			AZ:            req.Az,
+			ContainerID:   pointer.ToStringOrNil(req.InstanceId),
+			ContainerName: pointer.ToStringOrNil(req.InstanceId),
+			CustomLabels:  req.CustomLabels,
+			Address:       req.Address,
+			Region:        pointer.ToStringOrNil(req.Region),
+		})
+		if err != nil {
+			return err
+		}
+
+		switch req.Engine {
+		case managementpb.DiscoverRDSEngine_DISCOVER_RDS_MYSQL:
+			// MySQL Service
+			service, err := models.AddNewService(tx.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
+				ServiceName:    req.ServiceName,
+				NodeID:         node.NodeID,
+				Environment:    req.Environment,
+				Cluster:        req.Cluster,
+				ReplicationSet: req.ReplicationSet,
+				Address:        pointer.ToStringOrNil(req.Address),
+				Port:           pointer.ToUint16OrNil(uint16(req.Port)),
+				CustomLabels:   req.CustomLabels,
+			})
+			if err != nil {
+				return err
+			}
+
+			invService, err := services.ToAPIService(service)
+			if err != nil {
+				return err
+			}
+			res.Mysql = invService.(*inventorypb.MySQLService)
+
+			// RDS Exporter
+			row, err := models.CreateAgent(tx.Querier, models.RDSExporterType, &models.CreateAgentParams{
+				// PMMAgentID:                     req.PmmAgentId, // Don't know what's the correct value to put here
+				ServiceID:                      service.ServiceID,
+				Username:                       req.Username,
+				Password:                       req.Password,
+				TLS:                            req.Tls,
+				TLSSkipVerify:                  req.TlsSkipVerify,
+				TableCountTablestatsGroupLimit: tablestatsGroupTableLimit,
+			})
+			if err != nil {
+				return err
+			}
+			rdsAgent, err := services.ToAPIAgent(tx.Querier, row)
+			if err != nil {
+				return err
+			}
+			res.RdsExporter = rdsAgent.(*inventorypb.RDSExporter)
+
+			// MySQL Exporter
+			row, err = models.CreateAgent(tx.Querier, models.MySQLdExporterType, &models.CreateAgentParams{
+				// PMMAgentID:                     req.PmmAgentId, // Don't know what's the correct value to put here
+				ServiceID:                      service.ServiceID,
+				Username:                       req.Username,
+				Password:                       req.Password,
+				TLS:                            req.Tls,
+				TLSSkipVerify:                  req.TlsSkipVerify,
+				TableCountTablestatsGroupLimit: tablestatsGroupTableLimit,
+			})
+			if err != nil {
+				return err
+			}
+			mysqlAgent, err := services.ToAPIAgent(tx.Querier, row)
+			if err != nil {
+				return err
+			}
+			res.MysqldExporter = mysqlAgent.(*inventorypb.MySQLdExporter)
+
+			if !req.SkipConnectionCheck {
+				if err = s.registry.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
+					return err
+				}
+				// CheckConnectionToService updates the table count in row so, let's also update the response
+				res.TableCount = *row.TableCount
+			}
+
+			// MySQL QAN exporter
+			if req.QanMysqlPerfschema {
+				row, err = models.CreateAgent(tx.Querier, models.QANMySQLPerfSchemaAgentType, &models.CreateAgentParams{
+					// PMMAgentID:            req.PmmAgentId, // Don't know what's the correct value for this field
+					ServiceID:             service.ServiceID,
+					Username:              req.Username,
+					Password:              req.Password,
+					TLS:                   req.Tls,
+					TLSSkipVerify:         req.TlsSkipVerify,
+					QueryExamplesDisabled: req.DisableQueryExamples,
+				})
+				if err != nil {
+					return err
+				}
+
+				qanAgent, err := services.ToAPIAgent(tx.Querier, row)
+				if err != nil {
+					return err
+				}
+				res.QanMysqlPerfschema = qanAgent.(*inventorypb.QANMySQLPerfSchemaAgent)
+			}
+
+		}
+		return nil
+	}); e != nil {
+		return nil, e
+	}
+	return res, nil
 }

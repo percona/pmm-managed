@@ -23,6 +23,7 @@ import (
 
 	"github.com/percona/pmm/api/managementpb"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -40,7 +41,9 @@ func TestRDSService(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SetupFixtures)
 	defer sqlDB.Close() //nolint:errcheck
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-	s := NewRDSService(db)
+	r := new(mockAgentsRegistry)
+	r.Test(t)
+	s := NewRDSService(db, r)
 
 	t.Run("RDS", func(t *testing.T) {
 		t.Run("ListRegions", func(t *testing.T) {
@@ -118,5 +121,46 @@ func TestRDSService(t *testing.T) {
 			t.Logf("%+v", instances)
 			assert.GreaterOrEqualf(t, len(instances.RdsInstances), 1, "Should have at least one instance")
 		})
+
+		t.Run("AddMySQL", func(t *testing.T) {
+			ctx := logger.Set(context.Background(), t.Name())
+			accessKey, secretKey := tests.GetAWSKeys(t)
+			reqParams := &managementpb.AddRDSRequest{
+				Region:                    "region",
+				Az:                        "az",
+				InstanceId:                "example-instance-id",
+				NodeModel:                 "model",
+				Address:                   "my.instance.xxxx.mmmm",
+				Port:                      3306,
+				Engine:                    managementpb.DiscoverRDSEngine_DISCOVER_RDS_MYSQL,
+				NodeName:                  "node",
+				ServiceName:               "service-name-123",
+				Environment:               "env",
+				Cluster:                   "cluster-01",
+				ReplicationSet:            "rs-01",
+				Username:                  "username",
+				Password:                  "password",
+				AwsAccessKey:              accessKey,
+				AwsSecretKey:              secretKey,
+				RdsExporter:               true,
+				QanMysqlPerfschema:        true,
+				SkipConnectionCheck:       true,
+				Tls:                       false,
+				TlsSkipVerify:             true,
+				DisableQueryExamples:      false,
+				TablestatsGroupTableLimit: 2000,
+			}
+
+			resp, err := s.AddRDS(ctx, reqParams)
+
+			assert.NoError(t, err)
+			assert.NotNil(t, resp.Node)
+			assert.NotNil(t, resp.RdsExporter)
+			assert.NotNil(t, resp.Mysql)
+			assert.NotNil(t, resp.MysqldExporter)
+			assert.NotNil(t, resp.QanMysqlPerfschema)
+		})
 	})
+
+	require.NoError(t, sqlDB.Close())
 }
