@@ -240,17 +240,38 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 			tablestatsGroupTableLimit = -1
 		}
 
+		// add RemoteRDS Node
 		node, err := models.CreateNode(tx.Querier, models.RemoteRDSNodeType, &models.CreateNodeParams{
-			NodeName:     req.NodeName,
-			NodeModel:    req.NodeModel,
-			AZ:           req.Az,
-			CustomLabels: req.CustomLabels,
-			Address:      req.InstanceId,
-			Region:       &req.Region,
+			NodeName:  req.NodeName,
+			NodeModel: req.NodeModel,
+			AZ:        req.Az,
+			Address:   req.InstanceId,
+			Region:    &req.Region,
 		})
 		if err != nil {
 			return err
 		}
+		apiNode, err := services.ToAPINode(node)
+		if err != nil {
+			return err
+		}
+		res.Node = apiNode.(*inventorypb.RemoteRDSNode)
+
+		// add RDSExporter Agent
+		rdsExporter, err := models.CreateAgent(tx.Querier, models.RDSExporterType, &models.CreateAgentParams{
+			PMMAgentID:   models.PMMServerAgentID,
+			NodeID:       node.NodeID,
+			AWSAccessKey: req.AwsAccessKey,
+			AWSSecretKey: req.AwsSecretKey,
+		})
+		if err != nil {
+			return err
+		}
+		apiRDSExporter, err := services.ToAPIAgent(tx.Querier, rdsExporter)
+		if err != nil {
+			return err
+		}
+		res.RdsExporter = apiRDSExporter.(*inventorypb.RDSExporter)
 
 		switch req.Engine {
 		case managementpb.DiscoverRDSEngine_DISCOVER_RDS_MYSQL:
@@ -274,25 +295,6 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 				return err
 			}
 			res.Mysql = invService.(*inventorypb.MySQLService)
-
-			// RDS Exporter
-			row, err := models.CreateAgent(tx.Querier, models.RDSExporterType, &models.CreateAgentParams{
-				// PMMAgentID:                     req.PmmAgentId, // Don't know what's the correct value to put here
-				ServiceID:                      service.ServiceID,
-				Username:                       req.Username,
-				Password:                       req.Password,
-				TLS:                            req.Tls,
-				TLSSkipVerify:                  req.TlsSkipVerify,
-				TableCountTablestatsGroupLimit: tablestatsGroupTableLimit,
-			})
-			if err != nil {
-				return err
-			}
-			rdsAgent, err := services.ToAPIAgent(tx.Querier, row)
-			if err != nil {
-				return err
-			}
-			res.RdsExporter = rdsAgent.(*inventorypb.RDSExporter)
 
 			// MySQL Exporter
 			row, err = models.CreateAgent(tx.Querier, models.MySQLdExporterType, &models.CreateAgentParams{
