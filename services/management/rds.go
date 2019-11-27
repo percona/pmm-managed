@@ -224,6 +224,14 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 
 	if e := s.db.InTransaction(func(tx *reform.TX) error {
 		// tweak according to API docs
+		if req.NodeName == "" {
+			req.NodeName = req.InstanceId
+		}
+		if req.ServiceName == "" {
+			req.ServiceName = req.InstanceId
+		}
+
+		// tweak according to API docs
 		tablestatsGroupTableLimit := req.TablestatsGroupTableLimit
 		if tablestatsGroupTableLimit == 0 {
 			tablestatsGroupTableLimit = defaultTablestatsGroupTableLimit
@@ -233,16 +241,12 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 		}
 
 		node, err := models.CreateNode(tx.Querier, models.RemoteRDSNodeType, &models.CreateNodeParams{
-			NodeName:  req.NodeName,
-			MachineID: pointer.ToStringOrNil(req.InstanceId),
-			//Distro:        req.Distro,
-			NodeModel:     req.NodeModel,
-			AZ:            req.Az,
-			ContainerID:   pointer.ToStringOrNil(req.InstanceId),
-			ContainerName: pointer.ToStringOrNil(req.InstanceId),
-			CustomLabels:  req.CustomLabels,
-			Address:       req.Address,
-			Region:        pointer.ToStringOrNil(req.Region),
+			NodeName:     req.NodeName,
+			NodeModel:    req.NodeModel,
+			AZ:           req.Az,
+			CustomLabels: req.CustomLabels,
+			Address:      req.InstanceId,
+			Region:       &req.Region,
 		})
 		if err != nil {
 			return err
