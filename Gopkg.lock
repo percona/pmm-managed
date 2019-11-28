@@ -182,8 +182,8 @@
   version = "v1.1.2"
 
 [[projects]]
-  branch = "PMM-2.0"
-  digest = "1:683525325bf85e94b71c287a5d1a4e06e749bebed431ea17b19f8a62d3c919fb"
+  branch = "PMM-4949-management"
+  digest = "1:bffb3a0abb471bb47c6181747dc404eb42726bdffc5395a0d495d953e8c18b52"
   name = "github.com/percona/pmm"
   packages = [
     "api/inventorypb/json/client",
@@ -192,19 +192,19 @@
     "api/inventorypb/json/client/services",
     "api/managementpb/json/client",
     "api/managementpb/json/client/actions",
-    "api/managementpb/json/client/discovery",
     "api/managementpb/json/client/mongo_db",
     "api/managementpb/json/client/my_sql",
     "api/managementpb/json/client/node",
     "api/managementpb/json/client/postgre_sql",
     "api/managementpb/json/client/proxy_sql",
+    "api/managementpb/json/client/rds",
     "api/managementpb/json/client/service",
     "api/serverpb/json/client",
     "api/serverpb/json/client/server",
     "utils/tlsconfig",
   ]
   pruneopts = "NUT"
-  revision = "653838086b9ada131fbef748d6418543d8a44862"
+  revision = "160a6952967d3822103de2483c9caa90a52957e6"
 
 [[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
@@ -321,12 +321,12 @@
     "github.com/percona/pmm/api/inventorypb/json/client/services",
     "github.com/percona/pmm/api/managementpb/json/client",
     "github.com/percona/pmm/api/managementpb/json/client/actions",
-    "github.com/percona/pmm/api/managementpb/json/client/discovery",
     "github.com/percona/pmm/api/managementpb/json/client/mongo_db",
     "github.com/percona/pmm/api/managementpb/json/client/my_sql",
     "github.com/percona/pmm/api/managementpb/json/client/node",
     "github.com/percona/pmm/api/managementpb/json/client/postgre_sql",
     "github.com/percona/pmm/api/managementpb/json/client/proxy_sql",
+    "github.com/percona/pmm/api/managementpb/json/client/rds",
     "github.com/percona/pmm/api/managementpb/json/client/service",
     "github.com/percona/pmm/api/serverpb/json/client",
     "github.com/percona/pmm/api/serverpb/json/client/server",
