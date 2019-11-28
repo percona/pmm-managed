@@ -124,6 +124,60 @@ func TestMySQLdExporter(t *testing.T) {
 		}, changeMySQLdExporterOK.Payload)
 	})
 
+	t.Run("WithRealPMMAgent", func(t *testing.T) {
+		t.Skip("Skipping until we know there are connected agents in the new environment")
+		t.Parallel()
+
+		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+
+		node := addRemoteNode(t, pmmapitests.TestString(t, "Remote node for Node exporter"))
+		nodeID := node.Remote.NodeID
+		defer pmmapitests.RemoveNodes(t, nodeID)
+
+		service := addMySQLService(t, services.AddMySQLServiceBody{
+			NodeID:      genericNodeID,
+			Address:     "localhost",
+			Port:        3306,
+			ServiceName: pmmapitests.TestString(t, "MySQL Service for MySQLdExporter test"),
+		})
+		serviceID := service.Mysql.ServiceID
+		defer pmmapitests.RemoveServices(t, serviceID)
+
+		res, err := client.Default.Agents.ListAgents(&agents.ListAgentsParams{Context: pmmapitests.Context})
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		require.NotZerof(t, len(res.Payload.PMMAgent), "There should be at least one service")
+
+		pmmAgentID := ""
+		for _, agent := range res.Payload.PMMAgent {
+			if agent.Connected {
+				pmmAgentID = agent.AgentID
+				break
+			}
+		}
+		if pmmAgentID == "" {
+			t.Skip("There are no connected agents")
+		}
+
+		mySqldExporter := addMySQLdExporter(t, agents.AddMySQLdExporterBody{
+			ServiceID:  serviceID,
+			Username:   "pmm-agent",          // from pmm-agent docker-compose.yml
+			Password:   "pmm-agent-password", // from pmm-agent docker-compose.yml
+			PMMAgentID: pmmAgentID,
+			CustomLabels: map[string]string{
+				"custom_label_mysql_exporter": "mysql_exporter",
+			},
+
+			TablestatsGroupTableLimit: 2000,
+		})
+		assert.Greater(t, mySqldExporter.TableCount, int32(0))
+		assert.EqualValues(t, 2000, mySqldExporter.MysqldExporter.TablestatsGroupTableLimit)
+		agentID := mySqldExporter.MysqldExporter.AgentID
+		defer pmmapitests.RemoveAgents(t, agentID)
+	})
+
 	t.Run("AddServiceIDEmpty", func(t *testing.T) {
 		t.Parallel()
 
