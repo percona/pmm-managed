@@ -43,6 +43,8 @@ type Settings struct {
 	AWSPartitions []string `json:"aws_partitions"`
 
 	AWSInstanceIDChecked bool `json:"aws_instance_id_checked"`
+
+	SSHKey string `json:"ssh_key"`
 }
 
 // fillDefaults sets zero values to their default values.
@@ -69,4 +71,5 @@ func (s *Settings) fillDefaults() {
 	}
 
 	// AWSInstanceIDChecked is false by default
+	// SSHKey is empty by default
 }
