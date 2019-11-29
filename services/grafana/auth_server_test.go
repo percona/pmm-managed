@@ -44,9 +44,14 @@ func TestNextPrefix(t *testing.T) {
 func TestAuthServer(t *testing.T) {
 	// logrus.SetLevel(logrus.TraceLevel)
 
+	checker := new(mockChecker)
+	checker.Test(t)
+	defer checker.AssertExpectations(t)
+	// checker.On("AlreadyChecked").Return(true)
+
 	ctx := context.Background()
 	c := NewClient("127.0.0.1:3000")
-	s := NewAuthServer(c)
+	s := NewAuthServer(c, checker)
 
 	req, err := http.NewRequest("GET", "/dummy", nil)
 	require.NoError(t, err)

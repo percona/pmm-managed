@@ -36,18 +36,20 @@ var rules = map[string]role{
 	// TODO https://jira.percona.com/browse/PMM-4420
 	"/agent.Agent/Connect": none,
 
-	"/inventory.":                 admin,
-	"/management.":                admin,
-	"/management.Actions/":        viewer,
-	"/server.Server/CheckUpdates": viewer,
-	"/server.Server/UpdateStatus": none, // special token-based auth
-	"/server.":                    admin,
+	"/inventory.":                     admin,
+	"/management.":                    admin,
+	"/management.Actions/":            viewer,
+	"/server.Server/CheckUpdates":     viewer,
+	"/server.Server/UpdateStatus":     none, // special token-based auth
+	"/server.Server/AWSInstanceCheck": none, // special case
+	"/server.":                        admin,
 
 	"/v1/inventory/":          admin,
 	"/v1/management/":         admin,
 	"/v1/management/Actions/": viewer,
 	"/v1/Updates/Check":       viewer,
 	"/v1/Updates/Status":      none, // special token-based auth
+	"/v1/AWSInstanceCheck":    none, // special case
 	"/v1/Updates/":            admin,
 	"/v1/Settings/":           admin,
 
@@ -61,9 +63,10 @@ var rules = map[string]role{
 
 	"/v0/qan/": viewer,
 
-	// not rules for /qan and /swagger UIs as there are no auth_request for them in nginx configuration
-
 	"/prometheus/": admin,
+	"/graph/":      none,
+	"/qan/":        none,
+	"/swagger/":    none,
 
 	// "/" is a special case
 }
@@ -76,17 +79,19 @@ type authError struct {
 
 // AuthServer authenticates incoming requests via Grafana API.
 type AuthServer struct {
-	c *Client
-	l *logrus.Entry
+	c       *Client
+	checker checker
+	l       *logrus.Entry
 
 	// TODO server metrics should be provided by middleware https://jira.percona.com/browse/PMM-4326
 }
 
 // NewAuthServer creates new AuthServer.
-func NewAuthServer(c *Client) *AuthServer {
+func NewAuthServer(c *Client, checker checker) *AuthServer {
 	return &AuthServer{
-		c: c,
-		l: logrus.WithField("component", "grafana/auth"),
+		c:       c,
+		checker: checker,
+		l:       logrus.WithField("component", "grafana/auth"),
 	}
 }
 
@@ -95,6 +100,10 @@ func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// fail-safe
 	ctx, cancel := context.WithTimeout(req.Context(), 3*time.Second)
 	defer cancel()
+
+	if s.checker.NeedsCheck() {
+		s.l.Warnf("Needs check")
+	}
 
 	if err := s.authenticate(ctx, req); err != nil {
 		// nginx completely ignores auth_request subrequest response body;
@@ -161,7 +170,6 @@ func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) *authE
 	}
 
 	// fallback to Grafana admin if there is no explicit rule
-	// TODO https://jira.percona.com/browse/PMM-4338
 	minRole, ok := rules[prefix]
 	if ok {
 		l = l.WithField("prefix", prefix)

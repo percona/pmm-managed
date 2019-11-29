@@ -41,6 +41,8 @@ type Settings struct {
 	DataRetention time.Duration `json:"data_retention"`
 
 	AWSPartitions []string `json:"aws_partitions"`
+
+	AWSInstanceIDChecked bool `json:"aws_instance_id_checked"`
 }
 
 // fillDefaults sets zero values to their default values.
@@ -65,4 +67,6 @@ func (s *Settings) fillDefaults() {
 	if len(s.AWSPartitions) == 0 {
 		s.AWSPartitions = []string{endpoints.AwsPartitionID}
 	}
+
+	// AWSInstanceIDChecked is false by default
 }
