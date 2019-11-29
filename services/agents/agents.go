@@ -14,27 +14,29 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package grpc
+package agents
 
 import (
-	"context"
+	"github.com/AlekSi/pointer"
 
-	"github.com/percona/pmm/api/managementpb"
-
-	"github.com/percona/pmm-managed/services/management"
+	"github.com/percona/pmm-managed/models"
 )
 
-// TODO merge into ../mongodb.go
-type mongoDBServer struct {
-	svc *management.MongoDBService
-}
+type redactMode int
 
-// NewManagementMongoDBServer creates Management MongoDB Server.
-func NewManagementMongoDBServer(s *management.MongoDBService) managementpb.MongoDBServer {
-	return &mongoDBServer{svc: s}
-}
+const (
+	redactSecrets redactMode = iota
+	exposeSecrets
+)
 
-// AddMongoDB adds "MongoDB Service", "MongoDB Exporter Agent" and "QAN MongoDB Profiler".
-func (s *mongoDBServer) AddMongoDB(ctx context.Context, req *managementpb.AddMongoDBRequest) (*managementpb.AddMongoDBResponse, error) {
-	return s.svc.Add(ctx, req)
+// redactWords returns words that should be redacted from given Agent logs/output.
+func redactWords(agent *models.Agent) []string {
+	var words []string
+	if s := pointer.GetString(agent.Password); s != "" {
+		words = append(words, s)
+	}
+	if s := pointer.GetString(agent.AWSSecretKey); s != "" {
+		words = append(words, s)
+	}
+	return words
 }
