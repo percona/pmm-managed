@@ -191,24 +191,18 @@ func scrapeConfigForStandardExporter(intervalName string, interval time.Duration
 	return cfg, nil
 }
 
-// scrapeConfigForRDSExporter returns scrape config for endpoint with given parameters.
-func scrapeConfigForRDSExporter(intervalName string, interval time.Duration, params *scrapeConfigParams, collect []string) (*config.ScrapeConfig, error) {
+// scrapeConfigForRDSExporter returns scrape config for RDS exporter with given parameters.
+func scrapeConfigForRDSExporter(intervalName string, interval time.Duration, params *scrapeConfigParams, metricsPath string) (*config.ScrapeConfig, error) {
 	port := int(*params.agent.ListenPort)
 
 	cfg := &config.ScrapeConfig{
 		JobName:        fmt.Sprintf("%s_%s_%d_%s-%s", params.agent.AgentType, strings.Replace(pointer.GetString(params.agent.PMMAgentID), "/", "_", -1), port, intervalName, interval),
 		ScrapeInterval: model.Duration(interval),
 		ScrapeTimeout:  scrapeTimeout(interval),
-		MetricsPath:    "/metrics",
+		MetricsPath:    metricsPath,
 		HonorLabels:    true,
 	}
 
-	if len(collect) > 0 {
-		sort.Strings(collect)
-		cfg.Params = url.Values{
-			"collect[]": collect,
-		}
-	}
 	hostport := net.JoinHostPort(params.host, strconv.Itoa(port))
 	target := model.LabelSet{addressLabel: model.LabelValue(hostport)}
 	if err := target.Validate(); err != nil {
@@ -433,21 +427,19 @@ func scrapeConfigsForRDSExporter(s *models.MetricsResolutions, params []*scrapeC
 	var r []*config.ScrapeConfig
 	if len(groups) > 0 {
 		for _, p := range groups {
-			mr, err := scrapeConfigForRDSExporter("mr", s.MR, p, nil)
+			mr, err := scrapeConfigForRDSExporter("mr", s.MR, p, "/enhanced")
 			if err != nil {
 				return nil, err
 			}
 			if mr != nil {
-				mr.MetricsPath = "/enhanced"
 				r = append(r, mr)
 			}
 
-			lr, err := scrapeConfigForRDSExporter("lr", s.LR, p, nil)
+			lr, err := scrapeConfigForRDSExporter("lr", s.LR, p, "/basic")
 			if err != nil {
 				return nil, err
 			}
 			if lr != nil {
-				lr.MetricsPath = "/basic"
 				r = append(r, lr)
 			}
 		}
