@@ -813,59 +813,67 @@ func TestScrapeConfig(t *testing.T) {
 				AWSSecretKey: pointer.ToString("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"),
 				ListenPort:   pointer.ToUint16(12345),
 			}
+			agent2 := &models.Agent{
+				AgentID:      "/agent_id/agent2",
+				AgentType:    models.RDSExporterType,
+				PMMAgentID:   pointer.ToString("pmm-server"),
+				NodeID:       pointer.ToString("/node_id/node1"),
+				AWSAccessKey: pointer.ToString("AKIAIOSFODNN7EXAMPLE"),
+				AWSSecretKey: pointer.ToString("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"),
+				ListenPort:   pointer.ToUint16(12345),
+			}
+			agent3 := &models.Agent{
+				AgentID:      "/agent_id/agent3",
+				AgentType:    models.RDSExporterType,
+				PMMAgentID:   pointer.ToString("pmm-server"),
+				NodeID:       pointer.ToString("/node_id/node1"),
+				AWSAccessKey: pointer.ToString("AKIAIOSFODNN7EXAMPLE"),
+				AWSSecretKey: pointer.ToString("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"),
+				ListenPort:   pointer.ToUint16(12346),
+			}
 
 			expected := []*config.ScrapeConfig{{
-				JobName:        "rds_exporter_agent_id_agent1_mr-5s",
+				JobName:        "rds_exporter_pmm-server_12345_mr-5s",
 				ScrapeInterval: model.Duration(s.MR),
 				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/enhanced",
-				HTTPClientConfig: config_util.HTTPClientConfig{
-					BasicAuth: &config_util.BasicAuth{
-						Username: "pmm",
-						Password: "/agent_id/agent1",
-					},
-				},
+				HonorLabels:    true,
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
 						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
-						Labels: model.LabelSet{
-							"agent_id":   "/agent_id/agent1",
-							"agent_type": "rds_exporter",
-							"az":         "us-east-1b",
-							"instance":   "/agent_id/agent1",
-							"node_id":    "/node_id/node1",
-							"node_model": "db.t3.micro",
-							"node_name":  "rds1",
-							"node_type":  "remote_rds",
-							"region":     "us-east-1",
-						},
 					}},
 				},
 			}, {
-				JobName:        "rds_exporter_agent_id_agent1_lr-1m0s",
+				JobName:        "rds_exporter_pmm-server_12345_lr-1m0s",
 				ScrapeInterval: model.Duration(s.LR),
 				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/basic",
-				HTTPClientConfig: config_util.HTTPClientConfig{
-					BasicAuth: &config_util.BasicAuth{
-						Username: "pmm",
-						Password: "/agent_id/agent1",
-					},
-				},
+				HonorLabels:    true,
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
 						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
-						Labels: model.LabelSet{
-							"agent_id":   "/agent_id/agent1",
-							"agent_type": "rds_exporter",
-							"az":         "us-east-1b",
-							"instance":   "/agent_id/agent1",
-							"node_id":    "/node_id/node1",
-							"node_model": "db.t3.micro",
-							"node_name":  "rds1",
-							"node_type":  "remote_rds",
-							"region":     "us-east-1",
-						},
+					}},
+				},
+			}, {
+				JobName:        "rds_exporter_pmm-server_12346_mr-5s",
+				ScrapeInterval: model.Duration(s.MR),
+				ScrapeTimeout:  scrapeTimeout(s.MR),
+				MetricsPath:    "/enhanced",
+				HonorLabels:    true,
+				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
+					StaticConfigs: []*targetgroup.Group{{
+						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12346"}},
+					}},
+				},
+			}, {
+				JobName:        "rds_exporter_pmm-server_12346_lr-1m0s",
+				ScrapeInterval: model.Duration(s.LR),
+				ScrapeTimeout:  scrapeTimeout(s.LR),
+				MetricsPath:    "/basic",
+				HonorLabels:    true,
+				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
+					StaticConfigs: []*targetgroup.Group{{
+						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12346"}},
 					}},
 				},
 			}}
@@ -874,6 +882,14 @@ func TestScrapeConfig(t *testing.T) {
 				host:  "1.2.3.4",
 				node:  node1,
 				agent: agent1,
+			}, {
+				host:  "1.2.3.4",
+				node:  node1,
+				agent: agent2,
+			}, {
+				host:  "1.2.3.4",
+				node:  node1,
+				agent: agent3,
 			}}
 
 			actual, err := scrapeConfigsForRDSExporter(s, params)

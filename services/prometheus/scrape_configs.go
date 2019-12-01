@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"
 	"github.com/prometheus/common/model"
 
@@ -184,6 +185,39 @@ func scrapeConfigForStandardExporter(intervalName string, interval time.Duration
 		StaticConfigs: []*targetgroup.Group{{
 			Targets: []model.LabelSet{target},
 			Labels:  labels,
+		}},
+	}
+
+	return cfg, nil
+}
+
+// scrapeConfigForRDSExporter returns scrape config for endpoint with given parameters.
+func scrapeConfigForRDSExporter(intervalName string, interval time.Duration, params *scrapeConfigParams, collect []string) (*config.ScrapeConfig, error) {
+	port := int(*params.agent.ListenPort)
+
+	cfg := &config.ScrapeConfig{
+		JobName:        fmt.Sprintf("%s_%s_%d_%s-%s", params.agent.AgentType, strings.Replace(pointer.GetString(params.agent.PMMAgentID), "/", "_", -1), port, intervalName, interval),
+		ScrapeInterval: model.Duration(interval),
+		ScrapeTimeout:  scrapeTimeout(interval),
+		MetricsPath:    "/metrics",
+		HonorLabels:    true,
+	}
+
+	if len(collect) > 0 {
+		sort.Strings(collect)
+		cfg.Params = url.Values{
+			"collect[]": collect,
+		}
+	}
+	hostport := net.JoinHostPort(params.host, strconv.Itoa(port))
+	target := model.LabelSet{addressLabel: model.LabelValue(hostport)}
+	if err := target.Validate(); err != nil {
+		return nil, errors.Wrap(err, "failed to set targets")
+	}
+
+	cfg.ServiceDiscoveryConfig = sd_config.ServiceDiscoveryConfig{
+		StaticConfigs: []*targetgroup.Group{{
+			Targets: []model.LabelSet{target},
 		}},
 	}
 
@@ -384,28 +418,36 @@ func scrapeConfigsForProxySQLExporter(s *models.MetricsResolutions, params *scra
 }
 
 func scrapeConfigsForRDSExporter(s *models.MetricsResolutions, params []*scrapeConfigParams) ([]*config.ScrapeConfig, error) {
-	// FIXME Needs more work.
-	// Return just two scrape configs for all agents.
-	// Group by params.host + params.agent.ListenPort
+	groups := make(map[string]*scrapeConfigParams)
+
+	for _, p := range params {
+		port := int(*p.agent.ListenPort)
+		hostport := net.JoinHostPort(p.host, strconv.Itoa(port))
+		if _, ok := groups[hostport]; !ok {
+			groups[hostport] = p
+		}
+	}
 
 	var r []*config.ScrapeConfig
-	for _, p := range params {
-		mr, err := scrapeConfigForStandardExporter("mr", s.MR, p, nil)
-		if err != nil {
-			return nil, err
-		}
-		if mr != nil {
-			mr.MetricsPath = "/enhanced"
-			r = append(r, mr)
-		}
+	if len(groups) > 0 {
+		for _, p := range groups {
+			mr, err := scrapeConfigForRDSExporter("mr", s.MR, p, nil)
+			if err != nil {
+				return nil, err
+			}
+			if mr != nil {
+				mr.MetricsPath = "/enhanced"
+				r = append(r, mr)
+			}
 
-		lr, err := scrapeConfigForStandardExporter("lr", s.LR, p, nil)
-		if err != nil {
-			return nil, err
-		}
-		if lr != nil {
-			lr.MetricsPath = "/basic"
-			r = append(r, lr)
+			lr, err := scrapeConfigForRDSExporter("lr", s.LR, p, nil)
+			if err != nil {
+				return nil, err
+			}
+			if lr != nil {
+				lr.MetricsPath = "/basic"
+				r = append(r, lr)
+			}
 		}
 	}
 
