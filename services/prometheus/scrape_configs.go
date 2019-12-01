@@ -194,7 +194,6 @@ func scrapeConfigForStandardExporter(intervalName string, interval time.Duration
 // scrapeConfigForRDSExporter returns scrape config for RDS exporter with given parameters.
 func scrapeConfigForRDSExporter(intervalName string, interval time.Duration, params *scrapeConfigParams, metricsPath string) (*config.ScrapeConfig, error) {
 	port := int(*params.agent.ListenPort)
-
 	cfg := &config.ScrapeConfig{
 		JobName:        fmt.Sprintf("%s_%s_%d_%s-%s", params.agent.AgentType, strings.Replace(pointer.GetString(params.agent.PMMAgentID), "/", "_", -1), port, intervalName, interval),
 		ScrapeInterval: model.Duration(interval),
@@ -212,6 +211,10 @@ func scrapeConfigForRDSExporter(intervalName string, interval time.Duration, par
 	cfg.ServiceDiscoveryConfig = sd_config.ServiceDiscoveryConfig{
 		StaticConfigs: []*targetgroup.Group{{
 			Targets: []model.LabelSet{target},
+			Labels: model.LabelSet{
+				"node_type":  model.LabelValue(params.node.NodeType),
+				"agent_type": model.LabelValue(params.agent.AgentType),
+			},
 		}},
 	}
 
