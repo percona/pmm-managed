@@ -418,13 +418,15 @@ func scrapeConfigsForProxySQLExporter(s *models.MetricsResolutions, params *scra
 }
 
 func scrapeConfigsForRDSExporter(s *models.MetricsResolutions, params []*scrapeConfigParams) ([]*config.ScrapeConfig, error) {
-	groups := make(map[string]*scrapeConfigParams)
+	var groups []*scrapeConfigParams
+	added := make(map[string]bool)
 
 	for _, p := range params {
 		port := int(*p.agent.ListenPort)
 		hostport := net.JoinHostPort(p.host, strconv.Itoa(port))
-		if _, ok := groups[hostport]; !ok {
-			groups[hostport] = p
+		if _, ok := added[hostport]; !ok {
+			added[hostport] = true
+			groups = append(groups, p)
 		}
 	}
 

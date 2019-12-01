@@ -799,7 +799,34 @@ func TestScrapeConfig(t *testing.T) {
 				NodeID:    "/node_id/node1",
 				NodeType:  models.RemoteRDSNodeType,
 				NodeName:  "rds1",
-				Address:   "rds-mysql57",
+				Address:   "rds-mysql57-1",
+				NodeModel: "db.t3.micro",
+				Region:    pointer.ToString("us-east-1"),
+				AZ:        "us-east-1b",
+			}
+			node2 := &models.Node{
+				NodeID:    "/node_id/node2",
+				NodeType:  models.RemoteRDSNodeType,
+				NodeName:  "rds2",
+				Address:   "rds-mysql57-2",
+				NodeModel: "db.t3.micro",
+				Region:    pointer.ToString("us-east-2"),
+				AZ:        "us-east-1b",
+			}
+			node3 := &models.Node{
+				NodeID:    "/node_id/node3",
+				NodeType:  models.RemoteRDSNodeType,
+				NodeName:  "rds3",
+				Address:   "rds-mysql57-3",
+				NodeModel: "db.t3.micro",
+				Region:    pointer.ToString("us-east-1"),
+				AZ:        "us-east-1b",
+			}
+			node4 := &models.Node{
+				NodeID:    "/node_id/node4",
+				NodeType:  models.RemoteRDSNodeType,
+				NodeName:  "rds3",
+				Address:   "rds-mysql57-4",
 				NodeModel: "db.t3.micro",
 				Region:    pointer.ToString("us-east-1"),
 				AZ:        "us-east-1b",
@@ -817,7 +844,7 @@ func TestScrapeConfig(t *testing.T) {
 				AgentID:      "/agent_id/agent2",
 				AgentType:    models.RDSExporterType,
 				PMMAgentID:   pointer.ToString("pmm-server"),
-				NodeID:       pointer.ToString("/node_id/node1"),
+				NodeID:       pointer.ToString("/node_id/node2"),
 				AWSAccessKey: pointer.ToString("AKIAIOSFODNN7EXAMPLE"),
 				AWSSecretKey: pointer.ToString("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"),
 				ListenPort:   pointer.ToUint16(12345),
@@ -826,7 +853,16 @@ func TestScrapeConfig(t *testing.T) {
 				AgentID:      "/agent_id/agent3",
 				AgentType:    models.RDSExporterType,
 				PMMAgentID:   pointer.ToString("pmm-server"),
-				NodeID:       pointer.ToString("/node_id/node1"),
+				NodeID:       pointer.ToString("/node_id/node3"),
+				AWSAccessKey: pointer.ToString("AKIAIOSFODNN7EXAMPLE"),
+				AWSSecretKey: pointer.ToString("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"),
+				ListenPort:   pointer.ToUint16(12346),
+			}
+			agent4 := &models.Agent{
+				AgentID:      "/agent_id/agent4",
+				AgentType:    models.RDSExporterType,
+				PMMAgentID:   pointer.ToString("pmm-server-2"),
+				NodeID:       pointer.ToString("/node_id/node4"),
 				AWSAccessKey: pointer.ToString("AKIAIOSFODNN7EXAMPLE"),
 				AWSSecretKey: pointer.ToString("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"),
 				ListenPort:   pointer.ToUint16(12346),
@@ -876,6 +912,28 @@ func TestScrapeConfig(t *testing.T) {
 						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12346"}},
 					}},
 				},
+			}, {
+				JobName:        "rds_exporter_pmm-server-2_12346_mr-5s",
+				ScrapeInterval: model.Duration(s.MR),
+				ScrapeTimeout:  scrapeTimeout(s.MR),
+				MetricsPath:    "/enhanced",
+				HonorLabels:    true,
+				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
+					StaticConfigs: []*targetgroup.Group{{
+						Targets: []model.LabelSet{{"__address__": "1.2.3.5:12346"}},
+					}},
+				},
+			}, {
+				JobName:        "rds_exporter_pmm-server-2_12346_lr-1m0s",
+				ScrapeInterval: model.Duration(s.LR),
+				ScrapeTimeout:  scrapeTimeout(s.LR),
+				MetricsPath:    "/basic",
+				HonorLabels:    true,
+				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
+					StaticConfigs: []*targetgroup.Group{{
+						Targets: []model.LabelSet{{"__address__": "1.2.3.5:12346"}},
+					}},
+				},
 			}}
 
 			params := []*scrapeConfigParams{{
@@ -884,12 +942,16 @@ func TestScrapeConfig(t *testing.T) {
 				agent: agent1,
 			}, {
 				host:  "1.2.3.4",
-				node:  node1,
+				node:  node2,
 				agent: agent2,
 			}, {
 				host:  "1.2.3.4",
-				node:  node1,
+				node:  node3,
 				agent: agent3,
+			}, {
+				host:  "1.2.3.5",
+				node:  node4,
+				agent: agent4,
 			}}
 
 			actual, err := scrapeConfigsForRDSExporter(s, params)
