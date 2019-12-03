@@ -60,23 +60,23 @@ func checkUniqueNodeName(q *reform.Querier, name string) error {
 	}
 }
 
-func checkUniqueNodeInstanceRegion(q *reform.Querier, instance, region string) error {
+func checkUniqueNodeInstanceRegion(q *reform.Querier, instance, region string) (*Node, error) {
 	if instance == "" {
-		return status.Error(codes.InvalidArgument, "Empty Node instance.")
+		return nil, status.Error(codes.InvalidArgument, "Empty Node instance.")
 	}
 	if region == "" {
-		return status.Error(codes.InvalidArgument, "Empty Node region.")
+		return nil, status.Error(codes.InvalidArgument, "Empty Node region.")
 	}
 
 	tail := fmt.Sprintf("WHERE address = %s AND region = %s LIMIT 1", q.Placeholder(1), q.Placeholder(2)) //nolint:gosec
-	_, err := q.SelectOneFrom(NodeTable, tail, instance, region)
+	node, err := q.SelectOneFrom(NodeTable, tail, instance, region)
 	switch err {
 	case nil:
-		return status.Errorf(codes.AlreadyExists, "Node with instance %q and region %q already exists.", instance, region)
+		return node.(*Node), status.Errorf(codes.AlreadyExists, "Node with instance %q and region %q already exists.", instance, region)
 	case reform.ErrNoRows:
-		return nil
+		return nil, nil
 	default:
-		return errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 }
 
@@ -141,6 +141,7 @@ type CreateNodeParams struct {
 	CustomLabels  map[string]string
 	Address       string
 	Region        *string
+	ReRegister    bool
 }
 
 // createNodeWithID creates a Node with given ID.
@@ -162,8 +163,14 @@ func createNodeWithID(q *reform.Querier, id string, nodeType NodeType, params *C
 	}
 
 	if params.Region != nil {
-		if err := checkUniqueNodeInstanceRegion(q, params.Address, *params.Region); err != nil {
-			return nil, err
+		if node, err := checkUniqueNodeInstanceRegion(q, params.Address, *params.Region); err != nil {
+			if status.Code(err) == codes.AlreadyExists && params.ReRegister {
+				if e := RemoveNode(q, node.NodeID, RemoveCascade); e != nil {
+					return nil, e
+				}
+			} else {
+				return nil, err
+			}
 		}
 	}
 

@@ -110,6 +110,26 @@ func TestNodeService(t *testing.T) {
 				assert.Equal(t, expected, res)
 				assert.NoError(t, err)
 			})
+			t.Run("Reregister-force", func(t *testing.T) {
+				res, err = s.Register(ctx, &managementpb.RegisterNodeRequest{
+					NodeType:   inventorypb.NodeType_GENERIC_NODE,
+					NodeName:   "node-name-new",
+					Reregister: true,
+				})
+				expected := &managementpb.RegisterNodeResponse{
+					GenericNode: &inventorypb.GenericNode{
+						NodeId:   "/node_id/00000000-0000-4000-8000-00000000000b",
+						NodeName: "node-name-new",
+					},
+					ContainerNode: (*inventorypb.ContainerNode)(nil),
+					PmmAgent: &inventorypb.PMMAgent{
+						AgentId:      "/agent_id/00000000-0000-4000-8000-00000000000c",
+						RunsOnNodeId: "/node_id/00000000-0000-4000-8000-00000000000b",
+					},
+				}
+				assert.Equal(t, expected, res)
+				assert.NoError(t, err)
+			})
 		})
 	})
 }

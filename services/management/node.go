@@ -78,6 +78,7 @@ func (s *NodeService) Register(ctx context.Context, req *managementpb.RegisterNo
 			CustomLabels:  req.CustomLabels,
 			Address:       req.Address,
 			Region:        pointer.ToStringOrNil(req.Region),
+			ReRegister:    req.Reregister,
 		})
 		if err != nil {
 			return err
