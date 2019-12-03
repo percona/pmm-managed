@@ -211,10 +211,6 @@ func scrapeConfigForRDSExporter(intervalName string, interval time.Duration, par
 	cfg.ServiceDiscoveryConfig = sd_config.ServiceDiscoveryConfig{
 		StaticConfigs: []*targetgroup.Group{{
 			Targets: []model.LabelSet{target},
-			Labels: model.LabelSet{
-				"node_type":  model.LabelValue(params.node.NodeType),
-				"agent_type": model.LabelValue(params.agent.AgentType),
-			},
 		}},
 	}
 

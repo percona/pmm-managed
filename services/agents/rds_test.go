@@ -31,9 +31,14 @@ import (
 func TestRDSExporterConfig(t *testing.T) {
 	pairs := map[*models.Node]*models.Agent{
 		{
-			Region:  pointer.ToString("region"),
-			Address: "instance",
+			Region:   pointer.ToString("region"),
+			Address:  "instance",
+			NodeID:   "/node_id/node1",
+			NodeType: models.RemoteRDSNodeType,
 		}: {
+			AgentID:      "/agent_id/agent1",
+			AgentType:    models.RDSExporterType,
+			NodeID:       pointer.ToString("/node_id/node1"),
 			AWSAccessKey: pointer.ToString("access_key"),
 			AWSSecretKey: pointer.ToString("secret_key"),
 		},
@@ -56,6 +61,11 @@ instances:
   instance: instance
   aws_access_key: access_key
   aws_secret_key: secret_key
+  labels:
+    agent_id: /agent_id/agent1
+    agent_type: rds_exporter
+    node_id: /node_id/node1
+    node_type: remote_rds
 			`) + "\n",
 		},
 		RedactWords: []string{"secret_key"},

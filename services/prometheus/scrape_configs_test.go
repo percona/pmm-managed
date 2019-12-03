@@ -877,10 +877,6 @@ func TestScrapeConfig(t *testing.T) {
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
 						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
-						Labels: model.LabelSet{
-							"node_type":  model.LabelValue(models.RemoteRDSNodeType),
-							"agent_type": model.LabelValue(models.RDSExporterType),
-						},
 					}},
 				},
 			}, {
@@ -892,10 +888,6 @@ func TestScrapeConfig(t *testing.T) {
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
 						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
-						Labels: model.LabelSet{
-							"node_type":  model.LabelValue(models.RemoteRDSNodeType),
-							"agent_type": model.LabelValue(models.RDSExporterType),
-						},
 					}},
 				},
 			}, {
@@ -907,10 +899,6 @@ func TestScrapeConfig(t *testing.T) {
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
 						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12346"}},
-						Labels: model.LabelSet{
-							"node_type":  model.LabelValue(models.RemoteRDSNodeType),
-							"agent_type": model.LabelValue(models.RDSExporterType),
-						},
 					}},
 				},
 			}, {
@@ -922,10 +910,6 @@ func TestScrapeConfig(t *testing.T) {
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
 						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12346"}},
-						Labels: model.LabelSet{
-							"node_type":  model.LabelValue(models.RemoteRDSNodeType),
-							"agent_type": model.LabelValue(models.RDSExporterType),
-						},
 					}},
 				},
 			}, {
@@ -937,10 +921,6 @@ func TestScrapeConfig(t *testing.T) {
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
 						Targets: []model.LabelSet{{"__address__": "1.2.3.5:12346"}},
-						Labels: model.LabelSet{
-							"node_type":  model.LabelValue(models.RemoteRDSNodeType),
-							"agent_type": model.LabelValue(models.RDSExporterType),
-						},
 					}},
 				},
 			}, {
@@ -952,10 +932,6 @@ func TestScrapeConfig(t *testing.T) {
 				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 					StaticConfigs: []*targetgroup.Group{{
 						Targets: []model.LabelSet{{"__address__": "1.2.3.5:12346"}},
-						Labels: model.LabelSet{
-							"node_type":  model.LabelValue(models.RemoteRDSNodeType),
-							"agent_type": model.LabelValue(models.RDSExporterType),
-						},
 					}},
 				},
 			}}
