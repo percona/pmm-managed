@@ -19,6 +19,9 @@ package server
 import (
 	"sync"
 
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -76,9 +79,16 @@ func (c *Checker) NeedsCheck() bool {
 }
 
 func (c *Checker) CheckInstanceID(instanceID string) error {
-	// FIXME real implementation
+	sess, err := session.NewSession()
+	if err != nil {
+		return err
+	}
+	doc, err := ec2metadata.New(sess).GetInstanceIdentityDocument()
+	if err != nil {
+		return errors.Wrap(err, "cannot get Instance Identity Document to validate the instance ID")
+	}
 
-	if instanceID == "123" {
+	if instanceID == doc.InstanceID {
 		return nil
 	}
 
