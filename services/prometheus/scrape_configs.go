@@ -242,6 +242,7 @@ func scrapeConfigsForNodeExporter(s *models.MetricsResolutions, params *scrapeCo
 	}
 
 	mr, err := scrapeConfigForStandardExporter("mr", s.MR, params, []string{
+		"hwmon",
 		"textfile.mr",
 	})
 	if err != nil {
