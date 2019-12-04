@@ -25,7 +25,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"
 	"github.com/prometheus/common/model"
 
@@ -132,8 +131,18 @@ func mergeLabels(node *models.Node, service *models.Service, agent *models.Agent
 	return res, nil
 }
 
+// jobNameMapping replaces runes that can't be present in Prometheus job name with '_'.
+func jobNameMapping(r rune) rune {
+	switch r {
+	case '/', ':', '.':
+		return '_'
+	default:
+		return r
+	}
+}
+
 func jobName(agent *models.Agent, intervalName string, interval time.Duration) string {
-	return fmt.Sprintf("%s%s_%s-%s", agent.AgentType, strings.Replace(agent.AgentID, "/", "_", -1), intervalName, interval)
+	return fmt.Sprintf("%s%s_%s-%s", agent.AgentType, strings.Map(jobNameMapping, agent.AgentID), intervalName, interval)
 }
 
 func httpClientConfig(agent *models.Agent) config_util.HTTPClientConfig {
@@ -191,18 +200,17 @@ func scrapeConfigForStandardExporter(intervalName string, interval time.Duration
 	return cfg, nil
 }
 
-// scrapeConfigForRDSExporter returns scrape config for RDS exporter with given parameters.
-func scrapeConfigForRDSExporter(intervalName string, interval time.Duration, params *scrapeConfigParams, metricsPath string) (*config.ScrapeConfig, error) {
-	port := int(*params.agent.ListenPort)
+// scrapeConfigForRDSExporter returns scrape config for single rds_exporter configuration.
+func scrapeConfigForRDSExporter(intervalName string, interval time.Duration, hostport string, metricsPath string) (*config.ScrapeConfig, error) {
+	jobName := fmt.Sprintf("rds_exporter_%s_%s-%s", strings.Map(jobNameMapping, hostport), intervalName, interval)
 	cfg := &config.ScrapeConfig{
-		JobName:        fmt.Sprintf("%s_%s_%d_%s-%s", params.agent.AgentType, strings.Replace(pointer.GetString(params.agent.PMMAgentID), "/", "_", -1), port, intervalName, interval),
+		JobName:        jobName,
 		ScrapeInterval: model.Duration(interval),
 		ScrapeTimeout:  scrapeTimeout(interval),
 		MetricsPath:    metricsPath,
 		HonorLabels:    true,
 	}
 
-	hostport := net.JoinHostPort(params.host, strconv.Itoa(port))
 	target := model.LabelSet{addressLabel: model.LabelValue(hostport)}
 	if err := target.Validate(); err != nil {
 		return nil, errors.Wrap(err, "failed to set targets")
@@ -412,36 +420,35 @@ func scrapeConfigsForProxySQLExporter(s *models.MetricsResolutions, params *scra
 }
 
 func scrapeConfigsForRDSExporter(s *models.MetricsResolutions, params []*scrapeConfigParams) ([]*config.ScrapeConfig, error) {
-	var groups []*scrapeConfigParams
-	added := make(map[string]bool)
-
+	hostportSet := make(map[string]struct{}, len(params))
 	for _, p := range params {
 		port := int(*p.agent.ListenPort)
 		hostport := net.JoinHostPort(p.host, strconv.Itoa(port))
-		if _, ok := added[hostport]; !ok {
-			added[hostport] = true
-			groups = append(groups, p)
-		}
+		hostportSet[hostport] = struct{}{}
 	}
 
-	var r []*config.ScrapeConfig
-	if len(groups) > 0 {
-		for _, p := range groups {
-			mr, err := scrapeConfigForRDSExporter("mr", s.MR, p, "/enhanced")
-			if err != nil {
-				return nil, err
-			}
-			if mr != nil {
-				r = append(r, mr)
-			}
+	hostports := make([]string, 0, len(hostportSet))
+	for hostport := range hostportSet {
+		hostports = append(hostports, hostport)
+	}
+	sort.Strings(hostports)
 
-			lr, err := scrapeConfigForRDSExporter("lr", s.LR, p, "/basic")
-			if err != nil {
-				return nil, err
-			}
-			if lr != nil {
-				r = append(r, lr)
-			}
+	var r []*config.ScrapeConfig
+	for _, hostport := range hostports {
+		mr, err := scrapeConfigForRDSExporter("mr", s.MR, hostport, "/enhanced")
+		if err != nil {
+			return nil, err
+		}
+		if mr != nil {
+			r = append(r, mr)
+		}
+
+		lr, err := scrapeConfigForRDSExporter("lr", s.LR, hostport, "/basic")
+		if err != nil {
+			return nil, err
+		}
+		if lr != nil {
+			r = append(r, lr)
 		}
 	}
 
