@@ -240,7 +240,7 @@
   version = "v0.6.0"
 
 [[projects]]
-  branch = "PMM-4949-custom-labels"
+  branch = "PMM-2.0"
   digest = "1:192a6cddcf8d671cc08674043f2193ce19903a42b412ae9aa1d03b6ccd5ba214"
   name = "github.com/percona/pmm"
   packages = [
@@ -253,7 +253,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "09e205442d09f6c0b8bf047fcfe3c978f994a6a7"
+  revision = "06d7c99ff02d1a7cb64bb9d5d4c7792d2ab94538"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
