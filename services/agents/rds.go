@@ -62,7 +62,8 @@ func mergeLabels(node *models.Node, agent *models.Agent) (model.LabelSet, error)
 		res[model.LabelName(name)] = model.LabelValue(value)
 	}
 
-	delete(res, model.LabelName("region"))
+	// added to labels anyway
+	delete(res, "region")
 
 	if err = res.Validate(); err != nil {
 		return nil, errors.Wrap(err, "failed to merge labels")
@@ -72,10 +73,12 @@ func mergeLabels(node *models.Node, agent *models.Agent) (model.LabelSet, error)
 
 // rdsExporterConfig returns desired configuration of rds_exporter process.
 func rdsExporterConfig(pairs map[*models.Node]*models.Agent, redactMode redactMode) *agentpb.SetStateRequest_AgentProcess {
-	var config rdsExporterConfigFile
-	var words []string
+	config := rdsExporterConfigFile{
+		Instances: make([]rdsInstance, 0, len(pairs)),
+	}
+	wordsSet := make(map[string]struct{}, len(pairs))
 	for node, exporter := range pairs {
-		labels, _ := mergeLabels(node, exporter) //TODO: add labels for service. Should we do it?
+		labels, _ := mergeLabels(node, exporter)
 		config.Instances = append(config.Instances, rdsInstance{
 			Region:       pointer.GetString(node.Region),
 			Instance:     node.Address,
@@ -85,9 +88,25 @@ func rdsExporterConfig(pairs map[*models.Node]*models.Agent, redactMode redactMo
 		})
 
 		if redactMode != exposeSecrets {
-			words = redactWords(exporter)
+			for _, word := range redactWords(exporter) {
+				wordsSet[word] = struct{}{}
+			}
 		}
 	}
+
+	// sort by region and id
+	sort.Slice(config.Instances, func(i, j int) bool {
+		if config.Instances[i].Region != config.Instances[j].Region {
+			return config.Instances[i].Region < config.Instances[j].Region
+		}
+		return config.Instances[i].Instance < config.Instances[j].Instance
+	})
+
+	words := make([]string, 0, len(wordsSet))
+	for w := range wordsSet {
+		words = append(words, w)
+	}
+	sort.Strings(words)
 
 	tdp := templateDelimsPair()
 
