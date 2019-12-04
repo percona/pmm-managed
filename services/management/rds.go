@@ -257,9 +257,6 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 		}
 		res.Node = invNode.(*inventorypb.RemoteRDSNode)
 
-		// FIXME remove this once https://jira.percona.com/browse/PMM-5059 is fixed
-		req.RdsExporter = true
-
 		// add RDSExporter Agent
 		if req.RdsExporter {
 			rdsExporter, err := models.CreateAgent(tx.Querier, models.RDSExporterType, &models.CreateAgentParams{
