@@ -72,13 +72,17 @@ func mergeLabels(node *models.Node, agent *models.Agent) (model.LabelSet, error)
 }
 
 // rdsExporterConfig returns desired configuration of rds_exporter process.
-func rdsExporterConfig(pairs map[*models.Node]*models.Agent, redactMode redactMode) *agentpb.SetStateRequest_AgentProcess {
+func rdsExporterConfig(pairs map[*models.Node]*models.Agent, redactMode redactMode) (*agentpb.SetStateRequest_AgentProcess, error) {
 	config := rdsExporterConfigFile{
 		Instances: make([]rdsInstance, 0, len(pairs)),
 	}
 	wordsSet := make(map[string]struct{}, len(pairs))
 	for node, exporter := range pairs {
-		labels, _ := mergeLabels(node, exporter)
+		labels, err := mergeLabels(node, exporter)
+		if err != nil {
+			return nil, err
+		}
+
 		config.Instances = append(config.Instances, rdsInstance{
 			Region:       pointer.GetString(node.Region),
 			Instance:     node.Address,
@@ -116,7 +120,10 @@ func rdsExporterConfig(pairs map[*models.Node]*models.Agent, redactMode redactMo
 	}
 	sort.Strings(args)
 
-	b, _ := yaml.Marshal(config)
+	b, err := yaml.Marshal(config)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 
 	return &agentpb.SetStateRequest_AgentProcess{
 		Type:               inventorypb.AgentType_RDS_EXPORTER,
@@ -127,5 +134,5 @@ func rdsExporterConfig(pairs map[*models.Node]*models.Agent, redactMode redactMo
 			"config": "---\n" + string(b),
 		},
 		RedactWords: words,
-	}
+	}, nil
 }

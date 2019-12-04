@@ -75,7 +75,8 @@ func TestRDSExporterConfig(t *testing.T) {
 		node2: agent2,
 		node1: agent1,
 	}
-	actual := rdsExporterConfig(pairs, redactSecrets)
+	actual, err := rdsExporterConfig(pairs, redactSecrets)
+	require.NoError(t, err)
 	expected := &agentpb.SetStateRequest_AgentProcess{
 		Type:               inventorypb.AgentType_RDS_EXPORTER,
 		TemplateLeftDelim:  "{{",
