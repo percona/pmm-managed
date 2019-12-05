@@ -25,7 +25,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -67,13 +66,14 @@ var rules = map[string]role{
 	"/graph/":      none,
 	"/qan/":        none,
 	"/swagger/":    none,
+	"/setup/":      none,
 
 	// "/" is a special case
 }
 
 // clientError contains authentication error response details.
 type authError struct {
-	code    codes.Code
+	code    codes.Code // error code for API client; not mapped to HTTP status code
 	message string
 }
 
@@ -97,13 +97,28 @@ func NewAuthServer(c *Client, checker checker) *AuthServer {
 
 // ServeHTTP serves internal location /auth_request.
 func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	if s.l.Logger.GetLevel() >= logrus.DebugLevel {
+		b, err := httputil.DumpRequest(req, true)
+		if err != nil {
+			s.l.Errorf("Failed to dump request: %v.", err)
+		}
+		s.l.Debugf("Request:\n%s", b)
+	}
+
+	if s.checker.NeedsCheck() {
+		s.l.Warn("Needs check.")
+
+		// rw.Header().Set("Location", "/setup")
+		// rw.WriteHeader(401)
+		// return
+
+		// rw.WriteHeader(303) // temporary, not cacheable, always GET
+		// return
+	}
+
 	// fail-safe
 	ctx, cancel := context.WithTimeout(req.Context(), 3*time.Second)
 	defer cancel()
-
-	if s.checker.NeedsCheck() {
-		s.l.Warnf("Needs check")
-	}
 
 	if err := s.authenticate(ctx, req); err != nil {
 		// nginx completely ignores auth_request subrequest response body;
@@ -117,7 +132,12 @@ func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			"message": err.message,
 		}
 		rw.Header().Set("Content-Type", "application/json")
-		rw.WriteHeader(runtime.HTTPStatusFromCode(err.code))
+
+		rw.WriteHeader(401) // special code from nginx config
+		// codes.Unauthenticated
+		// http.StatusUnauthorized
+		// 401
+
 		if err := json.NewEncoder(rw).Encode(m); err != nil {
 			s.l.Warnf("%s", err)
 		}
@@ -138,14 +158,6 @@ func nextPrefix(path string) string {
 func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) *authError {
 	// TODO l := logger.Get(ctx) once we have it after https://jira.percona.com/browse/PMM-4326
 	l := s.l
-
-	if l.Logger.GetLevel() >= logrus.DebugLevel {
-		b, err := httputil.DumpRequest(req, true)
-		if err != nil {
-			l.Errorf("Failed to dump request: %v.", err)
-		}
-		l.Debugf("Request:\n%s", b)
-	}
 
 	if req.URL.Path != "/auth_request" {
 		l.Errorf("Unexpected path %s.", req.URL.Path)
