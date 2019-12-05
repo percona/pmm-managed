@@ -241,7 +241,7 @@
 
 [[projects]]
   branch = "PMM-4767-ami-check-api"
-  digest = "1:3c0c6e00897ddb75f2bddcfd2c5dc15b48b9b52c88b66f77468d9dba55efe185"
+  digest = "1:f1a38acbd1d3eab63777e87577106fd8f39ba1440fd415f80d58c78ec58d13bd"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -253,7 +253,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "3c42b640a6df4d3249a8f3857b4e6340b20db840"
+  revision = "e79ca823985f59d9c004488c3a63c50a1d89929b"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
@@ -553,6 +553,7 @@
     "github.com/aws/aws-sdk-go/aws",
     "github.com/aws/aws-sdk-go/aws/awserr",
     "github.com/aws/aws-sdk-go/aws/credentials",
+    "github.com/aws/aws-sdk-go/aws/ec2metadata",
     "github.com/aws/aws-sdk-go/aws/endpoints",
     "github.com/aws/aws-sdk-go/aws/session",
     "github.com/aws/aws-sdk-go/service/rds",
