@@ -17,10 +17,12 @@
 package server
 
 import (
+	"crypto/subtle"
 	"sync"
 
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/percona/pmm/api/serverpb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -30,7 +32,8 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-type Checker struct {
+// AWSInstanceChecker checks AWS EC2 instance ID for AMI.
+type AWSInstanceChecker struct {
 	db               *reform.DB
 	telemetryService telemetryService
 	l                *logrus.Entry
@@ -39,16 +42,18 @@ type Checker struct {
 	checked bool
 }
 
-func NewChecker(db *reform.DB, telemetryService telemetryService) *Checker {
-	return &Checker{
+// NewAWSInstanceChecker creates a new AWSInstanceChecker.
+func NewAWSInstanceChecker(db *reform.DB, telemetryService telemetryService) *AWSInstanceChecker {
+	return &AWSInstanceChecker{
 		db:               db,
 		telemetryService: telemetryService,
 		l:                logrus.WithField("component", "server/checker"),
 	}
 }
 
-func (c *Checker) NeedsCheck() bool {
-	// fast-path
+// MustCheck returns true if instance ID must be checked: this is AMI, and it wasn't checked already.
+func (c *AWSInstanceChecker) MustCheck() bool {
+	// fast-path without hitting database
 	c.rw.RLock()
 	checked := c.checked
 	c.rw.RUnlock()
@@ -59,18 +64,17 @@ func (c *Checker) NeedsCheck() bool {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 
-	// TODO
-	// if c.telemetryService.DistributionMethod() != serverpb.DistributionMethod_AMI {
-	// 	c.checked = true
-	// 	return false
-	// }
+	if c.telemetryService.DistributionMethod() != serverpb.DistributionMethod_AMI {
+		c.checked = true
+		return false
+	}
 
 	settings, err := models.GetSettings(c.db.Querier)
 	if err != nil {
 		c.l.Error(err)
 		return true
 	}
-	if settings.AWSInstanceIDChecked {
+	if settings.AWSInstanceChecked {
 		c.checked = true
 		return false
 	}
@@ -78,19 +82,29 @@ func (c *Checker) NeedsCheck() bool {
 	return true
 }
 
-func (c *Checker) CheckInstanceID(instanceID string) error {
+// check performs instance ID check and stores successful result flag in settings.
+func (c *AWSInstanceChecker) check(instanceID string) error {
+	// do not check if check is actually required - just for easier testing
+
 	sess, err := session.NewSession()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "cannot create AWS session")
 	}
 	doc, err := ec2metadata.New(sess).GetInstanceIdentityDocument()
 	if err != nil {
 		return errors.Wrap(err, "cannot get Instance Identity Document to validate the instance ID")
 	}
-
-	if instanceID == doc.InstanceID {
-		return nil
+	if subtle.ConstantTimeCompare([]byte(instanceID), []byte(doc.InstanceID)) == 0 {
+		return status.Error(codes.InvalidArgument, "invalid instance ID")
 	}
 
-	return status.Error(codes.InvalidArgument, "invalid instance ID")
+	return c.db.InTransaction(func(tx *reform.TX) error {
+		settings, err := models.GetSettings(tx.Querier)
+		if err != nil {
+			return err
+		}
+
+		settings.AWSInstanceChecked = true
+		return models.SaveSettings(tx.Querier, settings)
+	})
 }

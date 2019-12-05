@@ -16,10 +16,10 @@
 
 package grafana
 
-//go:generate mockery -name=checker -case=snake -inpkg -testonly
+//go:generate mockery -name=awsInstanceChecker -case=snake -inpkg -testonly
 
-// checker is a subset of methods of server.Checker used by this package.
+// checker is a subset of methods of server.AWSInstanceChecker used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
-type checker interface {
-	NeedsCheck() bool
+type awsInstanceChecker interface {
+	MustCheck() bool
 }

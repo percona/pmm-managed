@@ -476,7 +476,7 @@ func main() {
 	logs := supervisord.NewLogs(version.FullInfo())
 	supervisord := supervisord.New(*supervisordConfigDirF)
 	telemetry := telemetry.NewService(db, version.Version)
-	checker := server.NewChecker(db, telemetry)
+	checker := server.NewAWSInstanceChecker(db, telemetry)
 	server, err := server.NewServer(db, prometheus, supervisord, telemetry, checker)
 	if err != nil {
 		l.Panicf("Server problem: %+v", err)

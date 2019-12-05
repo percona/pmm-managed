@@ -19,7 +19,9 @@ package grafana
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -41,13 +43,83 @@ func TestNextPrefix(t *testing.T) {
 	}
 }
 
-func TestAuthServer(t *testing.T) {
+func TestAuthServerMustSetup(t *testing.T) {
+	t.Run("MustCheck", func(t *testing.T) {
+		req, err := http.NewRequest("GET", "/dummy", nil)
+		require.NoError(t, err)
+
+		checker := new(mockAwsInstanceChecker)
+		checker.Test(t)
+		defer checker.AssertExpectations(t)
+
+		s := NewAuthServer(nil, checker)
+
+		t.Run("Subrequest", func(t *testing.T) {
+			checker.On("MustCheck").Return(true)
+			rw := httptest.NewRecorder()
+			assert.True(t, s.mustSetup(rw, req))
+
+			resp := rw.Result()
+			defer resp.Body.Close() //nolint:errcheck
+			assert.Equal(t, 401, resp.StatusCode)
+			assert.Equal(t, "1", resp.Header.Get("X-Must-Setup"))
+			assert.Equal(t, "", resp.Header.Get("Location"))
+			b, err := ioutil.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.Empty(t, b)
+		})
+
+		t.Run("Request", func(t *testing.T) {
+			req.Header.Set("X-Must-Setup", "1")
+
+			checker.On("MustCheck").Return(true)
+			rw := httptest.NewRecorder()
+			assert.True(t, s.mustSetup(rw, req))
+
+			resp := rw.Result()
+			defer resp.Body.Close() //nolint:errcheck
+			assert.Equal(t, 303, resp.StatusCode)
+			assert.Equal(t, "", resp.Header.Get("X-Must-Setup"))
+			assert.Equal(t, "/setup", resp.Header.Get("Location"))
+			b, err := ioutil.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.Empty(t, b)
+		})
+	})
+
+	t.Run("MustNotCheck", func(t *testing.T) {
+		req, err := http.NewRequest("GET", "/dummy", nil)
+		require.NoError(t, err)
+
+		checker := new(mockAwsInstanceChecker)
+		checker.Test(t)
+		defer checker.AssertExpectations(t)
+
+		s := NewAuthServer(nil, checker)
+
+		t.Run("Subrequest", func(t *testing.T) {
+			checker.On("MustCheck").Return(false)
+			rw := httptest.NewRecorder()
+			assert.False(t, s.mustSetup(rw, req))
+
+			resp := rw.Result()
+			defer resp.Body.Close() //nolint:errcheck
+			assert.Equal(t, 200, resp.StatusCode)
+			assert.Equal(t, "", resp.Header.Get("X-Must-Setup"))
+			assert.Equal(t, "", resp.Header.Get("Location"))
+			b, err := ioutil.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.Empty(t, b)
+		})
+	})
+}
+
+func TestAuthServerAuthenticate(t *testing.T) {
 	// logrus.SetLevel(logrus.TraceLevel)
 
-	checker := new(mockChecker)
+	checker := new(mockAwsInstanceChecker)
 	checker.Test(t)
 	defer checker.AssertExpectations(t)
-	// checker.On("AlreadyChecked").Return(true)
 
 	ctx := context.Background()
 	c := NewClient("127.0.0.1:3000")
@@ -101,6 +173,7 @@ func TestAuthServer(t *testing.T) {
 		"/server.Server/CheckUpdates":                         viewer,
 		"/server.Server/StartUpdate":                          admin,
 		"/server.Server/UpdateStatus":                         none,
+		"/server.Server/AWSInstanceCheck":                     none,
 
 		"/v1/inventory/Nodes/List":                         admin,
 		"/v1/management/Actions/StartMySQLShowTableStatus": viewer,
@@ -108,6 +181,7 @@ func TestAuthServer(t *testing.T) {
 		"/v1/Updates/Check":                                viewer,
 		"/v1/Updates/Start":                                admin,
 		"/v1/Updates/Status":                               none,
+		"/v1/AWSInstanceCheck":                             none,
 
 		"/v1/readyz": none,
 		"/ping":      none,

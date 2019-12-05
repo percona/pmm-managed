@@ -66,10 +66,17 @@ var rules = map[string]role{
 	"/graph/":      none,
 	"/qan/":        none,
 	"/swagger/":    none,
-	"/setup/":      none,
 
-	// "/" is a special case
+	// "/auth_request" and "/setup" are special cases
+
+	// "/" is a special case in this code
 }
+
+// nginx auth_request directive supports only 401 and 403 - every other code results in 500.
+// Our APIs can return codes.PermissionDenied which maps to 403 / http.StatusForbidden.
+// Our APIs MUST NOT return codes.Unauthenticated which maps to 401 / http.StatusUnauthorized
+// as this code is reserved for auth_request.
+const authenticationErrorCode = 401
 
 // clientError contains authentication error response details.
 type authError struct {
@@ -80,14 +87,14 @@ type authError struct {
 // AuthServer authenticates incoming requests via Grafana API.
 type AuthServer struct {
 	c       *Client
-	checker checker
+	checker awsInstanceChecker
 	l       *logrus.Entry
 
 	// TODO server metrics should be provided by middleware https://jira.percona.com/browse/PMM-4326
 }
 
 // NewAuthServer creates new AuthServer.
-func NewAuthServer(c *Client, checker checker) *AuthServer {
+func NewAuthServer(c *Client, checker awsInstanceChecker) *AuthServer {
 	return &AuthServer{
 		c:       c,
 		checker: checker,
@@ -95,7 +102,8 @@ func NewAuthServer(c *Client, checker checker) *AuthServer {
 	}
 }
 
-// ServeHTTP serves internal location /auth_request.
+// ServeHTTP serves internal location /auth_request for both authentication subrequests
+// and subsequent normal requests.
 func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if s.l.Logger.GetLevel() >= logrus.DebugLevel {
 		b, err := httputil.DumpRequest(req, true)
@@ -105,15 +113,8 @@ func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		s.l.Debugf("Request:\n%s", b)
 	}
 
-	if s.checker.NeedsCheck() {
-		s.l.Warn("Needs check.")
-
-		// rw.Header().Set("Location", "/setup")
-		// rw.WriteHeader(401)
-		// return
-
-		// rw.WriteHeader(303) // temporary, not cacheable, always GET
-		// return
+	if s.mustSetup(rw, req) {
+		return
 	}
 
 	// fail-safe
@@ -121,9 +122,9 @@ func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	defer cancel()
 
 	if err := s.authenticate(ctx, req); err != nil {
-		// nginx completely ignores auth_request subrequest response body;
-		// out nginx configuration then sends the same request as a normal request
-		// and returns response body to the client
+		// nginx completely ignores auth_request subrequest response body.
+		// We respond with 401 (authenticationErrorCode); our nginx configuration then sends
+		// the same request as a normal request to the same location and returns response body to the client.
 
 		// copy grpc-gateway behavior: set correct codes, set both "error" and "message"
 		m := map[string]interface{}{
@@ -133,15 +134,43 @@ func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		}
 		rw.Header().Set("Content-Type", "application/json")
 
-		rw.WriteHeader(401) // special code from nginx config
-		// codes.Unauthenticated
-		// http.StatusUnauthorized
-		// 401
-
+		rw.WriteHeader(authenticationErrorCode)
 		if err := json.NewEncoder(rw).Encode(m); err != nil {
 			s.l.Warnf("%s", err)
 		}
 	}
+}
+
+// mustSetup returns true if AWS instance ID must be checked.
+func (s *AuthServer) mustSetup(rw http.ResponseWriter, req *http.Request) bool {
+	// This header is used to pass information that setup is required from auth_request subrequest
+	// to normal request to return redirect with location - something that auth_request can't do.
+	const mustSetupHeader = "X-Must-Setup"
+
+	if req.Header.Get(mustSetupHeader) != "" {
+		const redirectCode = 303 // temporary, not cacheable, always GET
+		s.l.Warnf("AWS instance ID must be checked, returning %d with Location.", redirectCode)
+		rw.Header().Set("Location", "/setup")
+		rw.WriteHeader(redirectCode)
+		return true
+	}
+
+	// Use X-Test-Setup header for testing.
+	// There is no way to skip check, only to enforce it.
+	mustCheck := s.checker.MustCheck()
+	if req.Header.Get("X-Test-Setup") != "" {
+		s.l.Debug("X-Test-Setup is present, enforcing AWS instance ID check.")
+		mustCheck = true
+	}
+
+	if mustCheck {
+		s.l.Warnf("AWS instance ID must be checked, returning %d with %s.", authenticationErrorCode, mustSetupHeader)
+		rw.Header().Set(mustSetupHeader, "1") // any non-empty value is ok
+		rw.WriteHeader(authenticationErrorCode)
+		return true
+	}
+
+	return false
 }
 
 // nextPrefix returns path's prefix, stopping on slashes and dots:
