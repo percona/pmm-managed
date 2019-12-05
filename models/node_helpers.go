@@ -141,7 +141,6 @@ type CreateNodeParams struct {
 	CustomLabels  map[string]string
 	Address       string
 	Region        *string
-	ReRegister    bool
 }
 
 // createNodeWithID creates a Node with given ID.
@@ -159,6 +158,12 @@ func createNodeWithID(q *reform.Querier, id string, nodeType NodeType, params *C
 	if nodeType == RemoteRDSNodeType {
 		if strings.Contains(params.Address, ".") {
 			return nil, status.Error(codes.InvalidArgument, "DB instance identifier should not contain dot.")
+		}
+	}
+
+	if params.Region != nil {
+		if _, err := CheckUniqueNodeInstanceRegion(q, params.Address, *params.Region); err != nil {
+			return nil, err
 		}
 	}
 
