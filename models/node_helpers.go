@@ -60,7 +60,7 @@ func checkUniqueNodeName(q *reform.Querier, name string) error {
 	}
 }
 
-func checkUniqueNodeInstanceRegion(q *reform.Querier, instance, region string) (*Node, error) {
+func CheckUniqueNodeInstanceRegion(q *reform.Querier, instance, region string) (*Node, error) {
 	if instance == "" {
 		return nil, status.Error(codes.InvalidArgument, "Empty Node instance.")
 	}
@@ -159,18 +159,6 @@ func createNodeWithID(q *reform.Querier, id string, nodeType NodeType, params *C
 	if nodeType == RemoteRDSNodeType {
 		if strings.Contains(params.Address, ".") {
 			return nil, status.Error(codes.InvalidArgument, "DB instance identifier should not contain dot.")
-		}
-	}
-
-	if params.Region != nil {
-		if node, err := checkUniqueNodeInstanceRegion(q, params.Address, *params.Region); err != nil {
-			if status.Code(err) == codes.AlreadyExists && params.ReRegister {
-				if e := RemoveNode(q, node.NodeID, RemoveCascade); e != nil {
-					return nil, e
-				}
-			} else {
-				return nil, err
-			}
 		}
 	}
 
