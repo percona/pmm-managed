@@ -64,12 +64,13 @@ func (s *NodeService) Register(ctx context.Context, req *managementpb.RegisterNo
 		}
 
 		if node, err := models.CheckUniqueNodeInstanceRegion(tx.Querier, req.Address, req.Region); err != nil {
-			if status.Code(err) == codes.AlreadyExists && req.Reregister {
-				if err := models.RemoveNode(tx.Querier, node.NodeID, models.RemoveCascade); err != nil {
-					return err
-				}
-				// the node was removed due to the re-register param and it should continue with the normal register flow.
-			} else {
+			if status.Code(err) != codes.AlreadyExists {
+				return err
+			}
+			if !req.Reregister {
+				return err
+			}
+			if err = models.RemoveNode(tx.Querier, node.NodeID, models.RemoveCascade); err != nil {
 				return err
 			}
 		}
