@@ -64,19 +64,21 @@ func checkUniqueNodeName(q *reform.Querier, name string) error {
 // This function not only return an error in case of finding an existing node with those paramenters but
 // also returns the Node itself if there is any, because if we are recreating the instance (--force in pmm-admin)
 // we need to know the Node.ID to remove it and its dependencies.
-func CheckUniqueNodeInstanceRegion(q *reform.Querier, instance, region string) (*Node, error) {
+// This check only applies is region is not empty.
+func CheckUniqueNodeInstanceRegion(q *reform.Querier, instance string, region *string) (*Node, error) {
+	if region == nil || *region == "" {
+		return nil, nil
+	}
+
 	if instance == "" {
 		return nil, status.Error(codes.InvalidArgument, "Empty Node instance.")
-	}
-	if region == "" {
-		return nil, status.Error(codes.InvalidArgument, "Empty Node region.")
 	}
 
 	tail := fmt.Sprintf("WHERE address = %s AND region = %s LIMIT 1", q.Placeholder(1), q.Placeholder(2)) //nolint:gosec
 	node, err := q.SelectOneFrom(NodeTable, tail, instance, region)
 	switch err {
 	case nil:
-		return node.(*Node), status.Errorf(codes.AlreadyExists, "Node with instance %q and region %q already exists.", instance, region)
+		return node.(*Node), status.Errorf(codes.AlreadyExists, "Node with instance %q and region %q already exists.", instance, *region)
 	case reform.ErrNoRows:
 		return nil, nil
 	default:
@@ -165,10 +167,8 @@ func createNodeWithID(q *reform.Querier, id string, nodeType NodeType, params *C
 		}
 	}
 
-	if params.Region != nil {
-		if _, err := CheckUniqueNodeInstanceRegion(q, params.Address, *params.Region); err != nil {
-			return nil, err
-		}
+	if _, err := CheckUniqueNodeInstanceRegion(q, params.Address, params.Region); err != nil {
+		return nil, err
 	}
 
 	// Trim trailing \n received from broken 2.0.0 clients.
