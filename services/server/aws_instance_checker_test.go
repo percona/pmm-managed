@@ -33,13 +33,21 @@ import (
 )
 
 func TestAWSInstanceChecker(t *testing.T) {
-	sqlDB := testdb.Open(t, models.SkipFixtures)
-	defer func() {
-		require.NoError(t, sqlDB.Close())
-	}()
-	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+	setup := func(t *testing.T) (db *reform.DB, teardown func()) {
+		sqlDB := testdb.Open(t, models.SkipFixtures)
+		db = reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+
+		teardown = func() {
+			require.NoError(t, sqlDB.Close())
+		}
+
+		return
+	}
 
 	t.Run("Docker", func(t *testing.T) {
+		db, teardown := setup(t)
+		defer teardown()
+
 		telemetry := new(mockTelemetryService)
 		telemetry.Test(t)
 		telemetry.On("DistributionMethod").Return(serverpb.DistributionMethod_DOCKER)
@@ -51,6 +59,9 @@ func TestAWSInstanceChecker(t *testing.T) {
 	})
 
 	t.Run("AMI", func(t *testing.T) {
+		db, teardown := setup(t)
+		defer teardown()
+
 		telemetry := new(mockTelemetryService)
 		telemetry.Test(t)
 		telemetry.On("DistributionMethod").Return(serverpb.DistributionMethod_AMI)
@@ -59,5 +70,25 @@ func TestAWSInstanceChecker(t *testing.T) {
 		checker := NewAWSInstanceChecker(db, telemetry)
 		assert.True(t, checker.MustCheck())
 		tests.AssertGRPCError(t, status.New(codes.Unavailable, `cannot get instance metadata`), checker.check("foo"))
+	})
+
+	t.Run("AMI/Checked", func(t *testing.T) {
+		db, teardown := setup(t)
+		defer teardown()
+
+		settings, err := models.GetSettings(db.Querier)
+		require.NoError(t, err)
+		settings.AWSInstanceChecked = true
+		err = models.SaveSettings(db.Querier, settings)
+		require.NoError(t, err)
+
+		telemetry := new(mockTelemetryService)
+		telemetry.Test(t)
+		telemetry.On("DistributionMethod").Return(serverpb.DistributionMethod_AMI)
+		defer telemetry.AssertExpectations(t)
+
+		checker := NewAWSInstanceChecker(db, telemetry)
+		assert.False(t, checker.MustCheck())
+		assert.NoError(t, checker.check("foo"))
 	})
 }
