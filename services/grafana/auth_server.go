@@ -40,7 +40,7 @@ var rules = map[string]role{
 	"/management.Actions/":            viewer,
 	"/server.Server/CheckUpdates":     viewer,
 	"/server.Server/UpdateStatus":     none, // special token-based auth
-	"/server.Server/AWSInstanceCheck": none, // special case for mustSetup
+	"/server.Server/AWSInstanceCheck": none, // special case - used before Grafana can be accessed
 	"/server.":                        admin,
 
 	"/v1/inventory/":          admin,
@@ -48,7 +48,7 @@ var rules = map[string]role{
 	"/v1/management/Actions/": viewer,
 	"/v1/Updates/Check":       viewer,
 	"/v1/Updates/Status":      none, // special token-based auth
-	"/v1/AWSInstanceCheck":    none, // special case for mustSetup
+	"/v1/AWSInstanceCheck":    none, // special case - used before Grafana can be accessed
 	"/v1/Updates/":            admin,
 	"/v1/Settings/":           admin,
 
@@ -70,6 +70,16 @@ var rules = map[string]role{
 	// "/auth_request" and "/setup" have auth_request disabled in nginx config
 
 	// "/" is a special case in this code
+}
+
+// Only UI is blocked by setup wizard; APIs can be used.
+// Critically, AWSInstanceCheck must be available for the setup wizard itself to work;
+// and /agent.Agent/Connect and Management APIs should be available for pmm-agent on PMM Server registration.
+var mustSetupRules = []string{
+	"/prometheus",
+	"/graph",
+	"/qan",
+	"/swagger",
 }
 
 // nginx auth_request directive supports only 401 and 403 - every other code results in 500.
@@ -156,8 +166,15 @@ func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 // mustSetup returns true if AWS instance ID must be checked.
 func (s *AuthServer) mustSetup(rw http.ResponseWriter, req *http.Request, l *logrus.Entry) bool {
-	// /setup page uses this API.
-	if req.URL.Path == "/server.Server/AWSInstanceCheck" || req.URL.Path == "/v1/AWSInstanceCheck" {
+	// Only UI is blocked by setup wizard; APIs can be used.
+	var found bool
+	for _, r := range mustSetupRules {
+		if strings.HasPrefix(req.URL.Path, r) {
+			found = true
+			break
+		}
+	}
+	if !found {
 		return false
 	}
 

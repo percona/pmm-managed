@@ -46,7 +46,7 @@ func TestNextPrefix(t *testing.T) {
 
 func TestAuthServerMustSetup(t *testing.T) {
 	t.Run("MustCheck", func(t *testing.T) {
-		req, err := http.NewRequest("GET", "/dummy", nil)
+		req, err := http.NewRequest("GET", "/graph", nil)
 		require.NoError(t, err)
 
 		checker := new(mockAwsInstanceChecker)
@@ -89,7 +89,7 @@ func TestAuthServerMustSetup(t *testing.T) {
 	})
 
 	t.Run("MustNotCheck", func(t *testing.T) {
-		req, err := http.NewRequest("GET", "/dummy", nil)
+		req, err := http.NewRequest("GET", "/graph", nil)
 		require.NoError(t, err)
 
 		checker := new(mockAwsInstanceChecker)
@@ -100,6 +100,31 @@ func TestAuthServerMustSetup(t *testing.T) {
 
 		t.Run("Subrequest", func(t *testing.T) {
 			checker.On("MustCheck").Return(false)
+			rw := httptest.NewRecorder()
+			assert.False(t, s.mustSetup(rw, req, logrus.WithField("test", t.Name())))
+
+			resp := rw.Result()
+			defer resp.Body.Close() //nolint:errcheck
+			assert.Equal(t, 200, resp.StatusCode)
+			assert.Equal(t, "", resp.Header.Get("X-Must-Setup"))
+			assert.Equal(t, "", resp.Header.Get("Location"))
+			b, err := ioutil.ReadAll(resp.Body)
+			assert.NoError(t, err)
+			assert.Empty(t, b)
+		})
+	})
+
+	t.Run("SkipNonUI", func(t *testing.T) {
+		req, err := http.NewRequest("GET", "/dummy", nil)
+		require.NoError(t, err)
+
+		checker := new(mockAwsInstanceChecker)
+		checker.Test(t)
+		defer checker.AssertExpectations(t)
+
+		s := NewAuthServer(nil, checker)
+
+		t.Run("Subrequest", func(t *testing.T) {
 			rw := httptest.NewRecorder()
 			assert.False(t, s.mustSetup(rw, req, logrus.WithField("test", t.Name())))
 
