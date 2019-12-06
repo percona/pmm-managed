@@ -240,7 +240,7 @@
   version = "v0.6.0"
 
 [[projects]]
-  branch = "PMM-4767-ami-check-api"
+  branch = "PMM-2.0"
   digest = "1:f1a38acbd1d3eab63777e87577106fd8f39ba1440fd415f80d58c78ec58d13bd"
   name = "github.com/percona/pmm"
   packages = [
@@ -253,7 +253,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "8f23b23dc2da431764677e9d92dafff21edafe0c"
+  revision = "3926907b6196bcf6a5acc2e96249a2a5fe73e910"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
