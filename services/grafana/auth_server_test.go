@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -57,7 +58,7 @@ func TestAuthServerMustSetup(t *testing.T) {
 		t.Run("Subrequest", func(t *testing.T) {
 			checker.On("MustCheck").Return(true)
 			rw := httptest.NewRecorder()
-			assert.True(t, s.mustSetup(rw, req))
+			assert.True(t, s.mustSetup(rw, req, logrus.WithField("test", t.Name())))
 
 			resp := rw.Result()
 			defer resp.Body.Close() //nolint:errcheck
@@ -74,7 +75,7 @@ func TestAuthServerMustSetup(t *testing.T) {
 
 			checker.On("MustCheck").Return(true)
 			rw := httptest.NewRecorder()
-			assert.True(t, s.mustSetup(rw, req))
+			assert.True(t, s.mustSetup(rw, req, logrus.WithField("test", t.Name())))
 
 			resp := rw.Result()
 			defer resp.Body.Close() //nolint:errcheck
@@ -100,7 +101,7 @@ func TestAuthServerMustSetup(t *testing.T) {
 		t.Run("Subrequest", func(t *testing.T) {
 			checker.On("MustCheck").Return(false)
 			rw := httptest.NewRecorder()
-			assert.False(t, s.mustSetup(rw, req))
+			assert.False(t, s.mustSetup(rw, req, logrus.WithField("test", t.Name())))
 
 			resp := rw.Result()
 			defer resp.Body.Close() //nolint:errcheck
@@ -133,35 +134,22 @@ func TestAuthServerAuthenticate(t *testing.T) {
 	t.Run("GrafanaAdminFallback", func(t *testing.T) {
 		t.Parallel()
 
-		req, err := http.NewRequest("GET", "/auth_request", nil)
+		req, err := http.NewRequest("GET", "/foo", nil)
 		require.NoError(t, err)
 		req.SetBasicAuth("admin", "admin")
-		req.Header.Set("X-Original-Uri", "/foo")
 
-		res := s.authenticate(ctx, req)
+		res := s.authenticate(ctx, req, logrus.WithField("test", t.Name()))
 		assert.Nil(t, res)
 	})
 
 	t.Run("NoAnonymousAccess", func(t *testing.T) {
 		t.Parallel()
 
-		req, err := http.NewRequest("GET", "/auth_request", nil)
+		req, err := http.NewRequest("GET", "/foo", nil)
 		require.NoError(t, err)
-		req.Header.Set("X-Original-Uri", "/foo")
 
-		res := s.authenticate(ctx, req)
+		res := s.authenticate(ctx, req, logrus.WithField("test", t.Name()))
 		assert.Equal(t, &authError{code: codes.Unauthenticated, message: "Unauthorized"}, res)
-	})
-
-	t.Run("EmptyOriginalUri", func(t *testing.T) {
-		t.Parallel()
-
-		req, err := http.NewRequest("GET", "/auth_request", nil)
-		require.NoError(t, err)
-		req.SetBasicAuth("admin", "admin")
-
-		res := s.authenticate(ctx, req)
-		assert.Equal(t, &authError{code: codes.Internal, message: "Internal server error."}, res)
 	})
 
 	for uri, minRole := range map[string]role{
@@ -213,12 +201,11 @@ func TestAuthServerAuthenticate(t *testing.T) {
 					}()
 				}
 
-				req, err := http.NewRequest("GET", "/auth_request", nil)
+				req, err := http.NewRequest("GET", uri, nil)
 				require.NoError(t, err)
 				req.SetBasicAuth(login, login)
-				req.Header.Set("X-Original-Uri", uri)
 
-				res := s.authenticate(ctx, req)
+				res := s.authenticate(ctx, req, logrus.WithField("test", t.Name()))
 				if minRole <= role {
 					assert.Nil(t, res)
 				} else {

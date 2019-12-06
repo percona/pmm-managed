@@ -40,7 +40,7 @@ var rules = map[string]role{
 	"/management.Actions/":            viewer,
 	"/server.Server/CheckUpdates":     viewer,
 	"/server.Server/UpdateStatus":     none, // special token-based auth
-	"/server.Server/AWSInstanceCheck": none, // special case
+	"/server.Server/AWSInstanceCheck": none, // special case for mustSetup
 	"/server.":                        admin,
 
 	"/v1/inventory/":          admin,
@@ -48,7 +48,7 @@ var rules = map[string]role{
 	"/v1/management/Actions/": viewer,
 	"/v1/Updates/Check":       viewer,
 	"/v1/Updates/Status":      none, // special token-based auth
-	"/v1/AWSInstanceCheck":    none, // special case
+	"/v1/AWSInstanceCheck":    none, // special case for mustSetup
 	"/v1/Updates/":            admin,
 	"/v1/Settings/":           admin,
 
@@ -67,7 +67,7 @@ var rules = map[string]role{
 	"/qan/":        none,
 	"/swagger/":    none,
 
-	// "/auth_request" and "/setup" are special cases
+	// "/auth_request" and "/setup" have auth_request disabled in nginx config
 
 	// "/" is a special case in this code
 }
@@ -113,7 +113,20 @@ func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		s.l.Debugf("Request:\n%s", b)
 	}
 
-	if s.mustSetup(rw, req) {
+	origMethod, origURI := req.Header.Get("X-Original-Method"), req.Header.Get("X-Original-Uri")
+	if origMethod == "" {
+		s.l.Panic("X-Original-Method")
+	}
+	if origURI == "" {
+		s.l.Panic("Empty X-Original-Uri.")
+	}
+	req.Method = origMethod
+	req.URL.Path = origURI
+	l := s.l.WithField("req", fmt.Sprintf("%s %s", origMethod, origURI))
+
+	// TODO l := logger.Get(ctx) once we have it after https://jira.percona.com/browse/PMM-4326
+
+	if s.mustSetup(rw, req, l) {
 		return
 	}
 
@@ -121,7 +134,7 @@ func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithTimeout(req.Context(), 3*time.Second)
 	defer cancel()
 
-	if err := s.authenticate(ctx, req); err != nil {
+	if err := s.authenticate(ctx, req, l); err != nil {
 		// nginx completely ignores auth_request subrequest response body.
 		// We respond with 401 (authenticationErrorCode); our nginx configuration then sends
 		// the same request as a normal request to the same location and returns response body to the client.
@@ -136,35 +149,41 @@ func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 		rw.WriteHeader(authenticationErrorCode)
 		if err := json.NewEncoder(rw).Encode(m); err != nil {
-			s.l.Warnf("%s", err)
+			l.Warnf("%s", err)
 		}
 	}
 }
 
 // mustSetup returns true if AWS instance ID must be checked.
-func (s *AuthServer) mustSetup(rw http.ResponseWriter, req *http.Request) bool {
+func (s *AuthServer) mustSetup(rw http.ResponseWriter, req *http.Request, l *logrus.Entry) bool {
+	// /setup page uses this API.
+	if req.URL.Path == "/server.Server/AWSInstanceCheck" || req.URL.Path == "/v1/AWSInstanceCheck" {
+		return false
+	}
+
 	// This header is used to pass information that setup is required from auth_request subrequest
 	// to normal request to return redirect with location - something that auth_request can't do.
 	const mustSetupHeader = "X-Must-Setup"
 
+	// Redirect to /setup page.
 	if req.Header.Get(mustSetupHeader) != "" {
 		const redirectCode = 303 // temporary, not cacheable, always GET
-		s.l.Warnf("AWS instance ID must be checked, returning %d with Location.", redirectCode)
+		l.Warnf("AWS instance ID must be checked, returning %d with Location.", redirectCode)
 		rw.Header().Set("Location", "/setup")
 		rw.WriteHeader(redirectCode)
 		return true
 	}
 
-	// Use X-Test-Setup header for testing.
+	// Use X-Test-Must-Setup header for testing.
 	// There is no way to skip check, only to enforce it.
 	mustCheck := s.checker.MustCheck()
-	if req.Header.Get("X-Test-Setup") != "" {
-		s.l.Debug("X-Test-Setup is present, enforcing AWS instance ID check.")
+	if req.Header.Get("X-Test-Must-Setup") != "" {
+		l.Debug("X-Test-Must-Setup is present, enforcing AWS instance ID check.")
 		mustCheck = true
 	}
 
 	if mustCheck {
-		s.l.Warnf("AWS instance ID must be checked, returning %d with %s.", authenticationErrorCode, mustSetupHeader)
+		l.Warnf("AWS instance ID must be checked, returning %d with %s.", authenticationErrorCode, mustSetupHeader)
 		rw.Header().Set(mustSetupHeader, "1") // any non-empty value is ok
 		rw.WriteHeader(authenticationErrorCode)
 		return true
@@ -184,25 +203,10 @@ func nextPrefix(path string) string {
 	return path
 }
 
-func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) *authError {
-	// TODO l := logger.Get(ctx) once we have it after https://jira.percona.com/browse/PMM-4326
-	l := s.l
-
-	if req.URL.Path != "/auth_request" {
-		l.Errorf("Unexpected path %s.", req.URL.Path)
-		return &authError{code: codes.Internal, message: "Internal server error."}
-	}
-
-	origURI := req.Header.Get("X-Original-Uri")
-	if origURI == "" {
-		l.Errorf("Empty X-Original-Uri.")
-		return &authError{code: codes.Internal, message: "Internal server error."}
-	}
-	l = l.WithField("req", fmt.Sprintf("%s %s", req.Header.Get("X-Original-Method"), origURI))
-
+func (s *AuthServer) authenticate(ctx context.Context, req *http.Request, l *logrus.Entry) *authError {
 	// find the longest prefix present in rules, stopping on slashes and dots:
 	// /foo.Bar/Baz -> /foo.Bar/ -> /foo. -> /
-	prefix := origURI
+	prefix := req.URL.Path
 	for prefix != "/" {
 		if _, ok := rules[prefix]; ok {
 			break
@@ -215,7 +219,7 @@ func (s *AuthServer) authenticate(ctx context.Context, req *http.Request) *authE
 	if ok {
 		l = l.WithField("prefix", prefix)
 	} else {
-		l.Warnf("No explicit rule for %q, falling back to Grafana admin.", origURI)
+		l.Warn("No explicit rule, falling back to Grafana admin.")
 		minRole = grafanaAdmin
 	}
 
