@@ -125,7 +125,7 @@ func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	origMethod, origURI := req.Header.Get("X-Original-Method"), req.Header.Get("X-Original-Uri")
 	if origMethod == "" {
-		s.l.Panic("X-Original-Method")
+		s.l.Panic("Empty X-Original-Method.")
 	}
 	if origURI == "" {
 		s.l.Panic("Empty X-Original-Uri.")
