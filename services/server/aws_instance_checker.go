@@ -84,7 +84,10 @@ func (c *AWSInstanceChecker) MustCheck() bool {
 
 // check performs instance ID check and stores successful result flag in settings.
 func (c *AWSInstanceChecker) check(instanceID string) error {
-	// do not check if check is actually required - just for easier testing
+	// do not allow more AWS API calls if instance is already checked
+	if !c.MustCheck() {
+		return nil
+	}
 
 	sess, err := session.NewSession()
 	if err != nil {
@@ -92,13 +95,14 @@ func (c *AWSInstanceChecker) check(instanceID string) error {
 	}
 	doc, err := ec2metadata.New(sess).GetInstanceIdentityDocument()
 	if err != nil {
-		return errors.Wrap(err, "cannot get Instance Identity Document to validate the instance ID")
+		c.l.Error(err)
+		return status.Error(codes.Unavailable, "cannot get instance metadata")
 	}
 	if subtle.ConstantTimeCompare([]byte(instanceID), []byte(doc.InstanceID)) == 0 {
 		return status.Error(codes.InvalidArgument, "invalid instance ID")
 	}
 
-	return c.db.InTransaction(func(tx *reform.TX) error {
+	if e := c.db.InTransaction(func(tx *reform.TX) error {
 		settings, err := models.GetSettings(tx.Querier)
 		if err != nil {
 			return err
@@ -106,5 +110,13 @@ func (c *AWSInstanceChecker) check(instanceID string) error {
 
 		settings.AWSInstanceChecked = true
 		return models.SaveSettings(tx.Querier, settings)
-	})
+	}); e != nil {
+		return e
+	}
+
+	c.rw.Lock()
+	c.checked = true
+	c.rw.Unlock()
+
+	return nil
 }

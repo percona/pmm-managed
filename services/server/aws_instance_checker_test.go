@@ -22,11 +22,14 @@ import (
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/testdb"
+	"github.com/percona/pmm-managed/utils/tests"
 )
 
 func TestAWSInstanceChecker(t *testing.T) {
@@ -44,7 +47,7 @@ func TestAWSInstanceChecker(t *testing.T) {
 
 		checker := NewAWSInstanceChecker(db, telemetry)
 		assert.False(t, checker.MustCheck())
-		assert.Error(t, checker.check("foo"))
+		assert.NoError(t, checker.check("foo"))
 	})
 
 	t.Run("AMI", func(t *testing.T) {
@@ -55,6 +58,6 @@ func TestAWSInstanceChecker(t *testing.T) {
 
 		checker := NewAWSInstanceChecker(db, telemetry)
 		assert.True(t, checker.MustCheck())
-		assert.Error(t, checker.check("foo"))
+		tests.AssertGRPCError(t, status.New(codes.Unavailable, `cannot get instance metadata`), checker.check("foo"))
 	})
 }
