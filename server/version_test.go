@@ -47,8 +47,8 @@ func TestVersion(t *testing.T) {
 				"version = %q must have '2.' prefix for PMM 1.x's pmm-client compatibility checking", res.Version)
 
 			require.NotEmpty(t, res.Managed)
-			assert.True(t, strings.HasPrefix(res.Managed.Version, res.Version),
-				"managed.version = %q should have %q prefix", res.Managed.Version, res.Version)
+			assert.True(t, strings.HasPrefix(res.Managed.Version, "2."),
+				"managed.version = %q must have '2.' prefix ", res.Managed.Version)
 			assert.NotEmpty(t, res.Managed.FullVersion)
 
 			// check that timestamp is not XX:00:00
