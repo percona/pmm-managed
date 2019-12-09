@@ -107,7 +107,6 @@ type gRPCServerDeps struct {
 	prometheus     *prometheus.Service
 	server         *server.Server
 	agentsRegistry *agents.Registry
-	debug          bool
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -152,8 +151,9 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterPostgreSQLServer(gRPCServer, managementgrpc.NewManagementPostgreSQLServer(postgresqlSvc))
 	managementpb.RegisterProxySQLServer(gRPCServer, managementgrpc.NewManagementProxySQLServer(proxysqlSvc))
 	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(deps.agentsRegistry, deps.db))
+	managementpb.RegisterRDSServer(gRPCServer, management.NewRDSService(deps.db, deps.agentsRegistry))
 
-	if deps.debug {
+	if l.Logger.GetLevel() >= logrus.DebugLevel {
 		l.Debug("Reflection and channelz are enabled.")
 		reflection.Register(gRPCServer)
 		channelz.RegisterChannelzServiceToServer(gRPCServer)
@@ -224,6 +224,7 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 		managementpb.RegisterPostgreSQLHandlerFromEndpoint,
 		managementpb.RegisterProxySQLHandlerFromEndpoint,
 		managementpb.RegisterActionsHandlerFromEndpoint,
+		managementpb.RegisterRDSHandlerFromEndpoint,
 	} {
 		if err := r(ctx, proxyMux, gRPCAddr, opts); err != nil {
 			l.Panic(err)
@@ -474,7 +475,9 @@ func main() {
 
 	logs := supervisord.NewLogs(version.FullInfo())
 	supervisord := supervisord.New(*supervisordConfigDirF)
-	server, err := server.NewServer(db, prometheus, supervisord)
+	telemetry := telemetry.NewService(db, version.Version)
+	checker := server.NewAWSInstanceChecker(db, telemetry)
+	server, err := server.NewServer(db, prometheus, supervisord, telemetry, checker)
 	if err != nil {
 		l.Panicf("Server problem: %+v", err)
 	}
@@ -516,7 +519,7 @@ func main() {
 
 	grafanaClient := grafana.NewClient(*grafanaAddrF)
 	prom.MustRegister(grafanaClient)
-	authServer := grafana.NewAuthServer(grafanaClient)
+	authServer := grafana.NewAuthServer(grafanaClient, checker)
 
 	var wg sync.WaitGroup
 
@@ -546,7 +549,7 @@ func main() {
 			return
 		}
 
-		telemetry.NewService(db, version.Version).Run(ctx)
+		telemetry.Run(ctx)
 	}()
 
 	wg.Add(1)
@@ -557,7 +560,6 @@ func main() {
 			prometheus:     prometheus,
 			server:         server,
 			agentsRegistry: agentsRegistry,
-			debug:          *debugF || *traceF,
 		})
 	}()
 

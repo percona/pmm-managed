@@ -127,6 +127,7 @@ func TestScrapeConfig(t *testing.T) {
 					}},
 				},
 				Params: url.Values{"collect[]": []string{
+					"hwmon",
 					"textfile.mr",
 				}},
 			}, {
@@ -342,10 +343,11 @@ func TestScrapeConfig(t *testing.T) {
 				Address:   pointer.ToString("5.6.7.8"),
 			}
 			agent := &models.Agent{
-				AgentID:    "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
-				AgentType:  models.MySQLdExporterType,
-				ListenPort: pointer.ToUint16(12345),
-				TableCount: pointer.ToInt32(100500),
+				AgentID:                        "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
+				AgentType:                      models.MySQLdExporterType,
+				ListenPort:                     pointer.ToUint16(12345),
+				TableCount:                     pointer.ToInt32(100500),
+				TableCountTablestatsGroupLimit: 1000,
 			}
 
 			expected := []*config.ScrapeConfig{{
@@ -789,6 +791,107 @@ func TestScrapeConfig(t *testing.T) {
 				agent:   agent,
 			})
 			require.EqualError(t, err, "failed to decode custom labels: unexpected end of JSON input")
+		})
+	})
+
+	t.Run("scrapeConfigsForRDSExporter", func(t *testing.T) {
+		t.Run("Normal", func(t *testing.T) {
+			params := []*scrapeConfigParams{
+				// two RDS configs on the same host/port combination: single pmm-agent, single rds_exporter process
+				{
+					host:  "1.1.1.1",
+					agent: &models.Agent{ListenPort: pointer.ToUint16(12345)},
+				},
+				{
+					host:  "1.1.1.1",
+					agent: &models.Agent{ListenPort: pointer.ToUint16(12345)},
+				},
+
+				// two RDS configs on the same host, different ports: two pmm-agents, two rds_exporter processes
+				{
+					host:  "2.2.2.2",
+					agent: &models.Agent{ListenPort: pointer.ToUint16(12345)},
+				},
+				{
+					host:  "2.2.2.2",
+					agent: &models.Agent{ListenPort: pointer.ToUint16(12346)},
+				},
+			}
+
+			expected := []*config.ScrapeConfig{{
+				JobName:        "rds_exporter_1_1_1_1_12345_mr-5s",
+				ScrapeInterval: model.Duration(s.MR),
+				ScrapeTimeout:  scrapeTimeout(s.MR),
+				MetricsPath:    "/enhanced",
+				HonorLabels:    true,
+				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
+					StaticConfigs: []*targetgroup.Group{{
+						Targets: []model.LabelSet{{"__address__": "1.1.1.1:12345"}},
+					}},
+				},
+			}, {
+				JobName:        "rds_exporter_1_1_1_1_12345_lr-1m0s",
+				ScrapeInterval: model.Duration(s.LR),
+				ScrapeTimeout:  scrapeTimeout(s.LR),
+				MetricsPath:    "/basic",
+				HonorLabels:    true,
+				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
+					StaticConfigs: []*targetgroup.Group{{
+						Targets: []model.LabelSet{{"__address__": "1.1.1.1:12345"}},
+					}},
+				},
+			}, {
+				JobName:        "rds_exporter_2_2_2_2_12345_mr-5s",
+				ScrapeInterval: model.Duration(s.MR),
+				ScrapeTimeout:  scrapeTimeout(s.MR),
+				MetricsPath:    "/enhanced",
+				HonorLabels:    true,
+				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
+					StaticConfigs: []*targetgroup.Group{{
+						Targets: []model.LabelSet{{"__address__": "2.2.2.2:12345"}},
+					}},
+				},
+			}, {
+				JobName:        "rds_exporter_2_2_2_2_12345_lr-1m0s",
+				ScrapeInterval: model.Duration(s.LR),
+				ScrapeTimeout:  scrapeTimeout(s.LR),
+				MetricsPath:    "/basic",
+				HonorLabels:    true,
+				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
+					StaticConfigs: []*targetgroup.Group{{
+						Targets: []model.LabelSet{{"__address__": "2.2.2.2:12345"}},
+					}},
+				},
+			}, {
+				JobName:        "rds_exporter_2_2_2_2_12346_mr-5s",
+				ScrapeInterval: model.Duration(s.MR),
+				ScrapeTimeout:  scrapeTimeout(s.MR),
+				MetricsPath:    "/enhanced",
+				HonorLabels:    true,
+				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
+					StaticConfigs: []*targetgroup.Group{{
+						Targets: []model.LabelSet{{"__address__": "2.2.2.2:12346"}},
+					}},
+				},
+			}, {
+				JobName:        "rds_exporter_2_2_2_2_12346_lr-1m0s",
+				ScrapeInterval: model.Duration(s.LR),
+				ScrapeTimeout:  scrapeTimeout(s.LR),
+				MetricsPath:    "/basic",
+				HonorLabels:    true,
+				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
+					StaticConfigs: []*targetgroup.Group{{
+						Targets: []model.LabelSet{{"__address__": "2.2.2.2:12346"}},
+					}},
+				},
+			}}
+
+			actual, err := scrapeConfigsForRDSExporter(s, params)
+			require.NoError(t, err)
+			require.Len(t, actual, len(expected))
+			for i := 0; i < len(expected); i++ {
+				assertScrapeConfigsEqual(t, expected[i], actual[i])
+			}
 		})
 	})
 }

@@ -25,7 +25,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"
 	"github.com/prometheus/common/model"
 
@@ -132,8 +131,18 @@ func mergeLabels(node *models.Node, service *models.Service, agent *models.Agent
 	return res, nil
 }
 
+// jobNameMapping replaces runes that can't be present in Prometheus job name with '_'.
+func jobNameMapping(r rune) rune {
+	switch r {
+	case '/', ':', '.':
+		return '_'
+	default:
+		return r
+	}
+}
+
 func jobName(agent *models.Agent, intervalName string, interval time.Duration) string {
-	return fmt.Sprintf("%s%s_%s-%s", agent.AgentType, strings.Replace(agent.AgentID, "/", "_", -1), intervalName, interval)
+	return fmt.Sprintf("%s%s_%s-%s", agent.AgentType, strings.Map(jobNameMapping, agent.AgentID), intervalName, interval)
 }
 
 func httpClientConfig(agent *models.Agent) config_util.HTTPClientConfig {
@@ -146,14 +155,13 @@ func httpClientConfig(agent *models.Agent) config_util.HTTPClientConfig {
 }
 
 type scrapeConfigParams struct {
-	host    string
+	host    string // Node address where pmm-agent runs
 	node    *models.Node
 	service *models.Service
 	agent   *models.Agent
 }
 
 // scrapeConfigForStandardExporter returns scrape config for endpoint with given parameters.
-// If listen port is not known yet, it returns (nil, nil).
 func scrapeConfigForStandardExporter(intervalName string, interval time.Duration, params *scrapeConfigParams, collect []string) (*config.ScrapeConfig, error) {
 	labels, err := mergeLabels(params.node, params.service, params.agent)
 	if err != nil {
@@ -175,11 +183,8 @@ func scrapeConfigForStandardExporter(intervalName string, interval time.Duration
 		}
 	}
 
-	port := pointer.GetUint16(params.agent.ListenPort)
-	if port == 0 {
-		return nil, nil
-	}
-	hostport := net.JoinHostPort(params.host, strconv.Itoa(int(port)))
+	port := int(*params.agent.ListenPort)
+	hostport := net.JoinHostPort(params.host, strconv.Itoa(port))
 	target := model.LabelSet{addressLabel: model.LabelValue(hostport)}
 	if err = target.Validate(); err != nil {
 		return nil, errors.Wrap(err, "failed to set targets")
@@ -189,6 +194,31 @@ func scrapeConfigForStandardExporter(intervalName string, interval time.Duration
 		StaticConfigs: []*targetgroup.Group{{
 			Targets: []model.LabelSet{target},
 			Labels:  labels,
+		}},
+	}
+
+	return cfg, nil
+}
+
+// scrapeConfigForRDSExporter returns scrape config for single rds_exporter configuration.
+func scrapeConfigForRDSExporter(intervalName string, interval time.Duration, hostport string, metricsPath string) (*config.ScrapeConfig, error) {
+	jobName := fmt.Sprintf("rds_exporter_%s_%s-%s", strings.Map(jobNameMapping, hostport), intervalName, interval)
+	cfg := &config.ScrapeConfig{
+		JobName:        jobName,
+		ScrapeInterval: model.Duration(interval),
+		ScrapeTimeout:  scrapeTimeout(interval),
+		MetricsPath:    metricsPath,
+		HonorLabels:    true,
+	}
+
+	target := model.LabelSet{addressLabel: model.LabelValue(hostport)}
+	if err := target.Validate(); err != nil {
+		return nil, errors.Wrap(err, "failed to set targets")
+	}
+
+	cfg.ServiceDiscoveryConfig = sd_config.ServiceDiscoveryConfig{
+		StaticConfigs: []*targetgroup.Group{{
+			Targets: []model.LabelSet{target},
 		}},
 	}
 
@@ -220,6 +250,7 @@ func scrapeConfigsForNodeExporter(s *models.MetricsResolutions, params *scrapeCo
 	}
 
 	mr, err := scrapeConfigForStandardExporter("mr", s.MR, params, []string{
+		"hwmon",
 		"textfile.mr",
 	})
 	if err != nil {
@@ -250,9 +281,8 @@ func scrapeConfigsForNodeExporter(s *models.MetricsResolutions, params *scrapeCo
 }
 
 // scrapeConfigsForMySQLdExporter returns scrape config for mysqld_exporter.
-// If listen port is not known yet, it returns (nil, nil).
 func scrapeConfigsForMySQLdExporter(s *models.MetricsResolutions, params *scrapeConfigParams) ([]*config.ScrapeConfig, error) {
-	addHeavyLoadOptions := pointer.GetInt32(params.agent.TableCount) <= models.MaxTableCount
+	// keep in sync with mysqld_exporter Agent flags generator
 
 	hr, err := scrapeConfigForStandardExporter("hr", s.HR, params, []string{
 		"global_status",
@@ -276,7 +306,7 @@ func scrapeConfigsForMySQLdExporter(s *models.MetricsResolutions, params *scrape
 		"slave_status",
 		"custom_query.mr",
 	}
-	if addHeavyLoadOptions {
+	if params.agent.IsMySQLTablestatsGroupEnabled() {
 		mrOptions = append(mrOptions, "perf_schema.tablelocks")
 	}
 
@@ -297,7 +327,7 @@ func scrapeConfigsForMySQLdExporter(s *models.MetricsResolutions, params *scrape
 		"perf_schema.file_instances",
 		"custom_query.lr",
 	}
-	if addHeavyLoadOptions {
+	if params.agent.IsMySQLTablestatsGroupEnabled() {
 		lrOptions = append(lrOptions,
 			"auto_increment.columns",
 			"info_schema.tables",
@@ -386,5 +416,41 @@ func scrapeConfigsForProxySQLExporter(s *models.MetricsResolutions, params *scra
 	if hr != nil {
 		r = append(r, hr)
 	}
+	return r, nil
+}
+
+func scrapeConfigsForRDSExporter(s *models.MetricsResolutions, params []*scrapeConfigParams) ([]*config.ScrapeConfig, error) {
+	hostportSet := make(map[string]struct{}, len(params))
+	for _, p := range params {
+		port := int(*p.agent.ListenPort)
+		hostport := net.JoinHostPort(p.host, strconv.Itoa(port))
+		hostportSet[hostport] = struct{}{}
+	}
+
+	hostports := make([]string, 0, len(hostportSet))
+	for hostport := range hostportSet {
+		hostports = append(hostports, hostport)
+	}
+	sort.Strings(hostports)
+
+	var r []*config.ScrapeConfig
+	for _, hostport := range hostports {
+		mr, err := scrapeConfigForRDSExporter("mr", s.MR, hostport, "/enhanced")
+		if err != nil {
+			return nil, err
+		}
+		if mr != nil {
+			r = append(r, mr)
+		}
+
+		lr, err := scrapeConfigForRDSExporter("lr", s.LR, hostport, "/basic")
+		if err != nil {
+			return nil, err
+		}
+		if lr != nil {
+			r = append(r, lr)
+		}
+	}
+
 	return r, nil
 }

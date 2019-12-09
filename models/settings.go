@@ -18,11 +18,9 @@ package models
 
 import (
 	"time"
-)
 
-// MaxTableCount is the default maximum table count when mysqld_exporter should not make heavy impact on performance.
-// FIXME Make it configurable. https://jira.percona.com/browse/PMM-4535
-const MaxTableCount = 1000
+	"github.com/aws/aws-sdk-go/aws/endpoints"
+)
 
 // MetricsResolutions contains standard Prometheus metrics resolutions.
 type MetricsResolutions struct {
@@ -41,6 +39,12 @@ type Settings struct {
 	MetricsResolutions MetricsResolutions `json:"metrics_resolutions"`
 
 	DataRetention time.Duration `json:"data_retention"`
+
+	AWSPartitions []string `json:"aws_partitions"`
+
+	AWSInstanceChecked bool `json:"aws_instance_checked"`
+
+	SSHKey string `json:"ssh_key"`
 }
 
 // fillDefaults sets zero values to their default values.
@@ -61,4 +65,11 @@ func (s *Settings) fillDefaults() {
 	if s.DataRetention == 0 {
 		s.DataRetention = 30 * 24 * time.Hour
 	}
+
+	if len(s.AWSPartitions) == 0 {
+		s.AWSPartitions = []string{endpoints.AwsPartitionID}
+	}
+
+	// AWSInstanceChecked is false by default
+	// SSHKey is empty by default
 }
