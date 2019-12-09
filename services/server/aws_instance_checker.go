@@ -22,7 +22,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/percona/pmm/api/serverpb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -64,10 +63,11 @@ func (c *AWSInstanceChecker) MustCheck() bool {
 	c.rw.Lock()
 	defer c.rw.Unlock()
 
-	if c.telemetryService.DistributionMethod() != serverpb.DistributionMethod_AMI {
-		c.checked = true
-		return false
-	}
+	// FIXME DO NOT MERGE
+	// if c.telemetryService.DistributionMethod() != serverpb.DistributionMethod_AMI {
+	// 	c.checked = true
+	// 	return false
+	// }
 
 	settings, err := models.GetSettings(c.db.Querier)
 	if err != nil {
@@ -86,6 +86,11 @@ func (c *AWSInstanceChecker) MustCheck() bool {
 func (c *AWSInstanceChecker) check(instanceID string) error {
 	// do not allow more AWS API calls if instance is already checked
 	if !c.MustCheck() {
+		return nil
+	}
+
+	// FIXME DO NOT MERGE
+	if instanceID == "112708" {
 		return nil
 	}
 
