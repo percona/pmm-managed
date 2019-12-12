@@ -38,8 +38,7 @@ func nodeID(tx *reform.TX, nodeID, nodeName string, addNodeParams *managementpb.
 		if err != nil {
 			return "", err
 		}
-		err = validateExistNodeType(node)
-		if err != nil {
+		if err = validateExistingNodeType(node); err != nil {
 			return "", err
 		}
 		return node.NodeID, err
@@ -48,8 +47,7 @@ func nodeID(tx *reform.TX, nodeID, nodeName string, addNodeParams *managementpb.
 		if err != nil {
 			return "", err
 		}
-		err = validateExistNodeType(node)
-		if err != nil {
+		if err = validateExistingNodeType(node); err != nil {
 			return "", err
 		}
 		return node.NodeID, err
@@ -67,7 +65,7 @@ func nodeID(tx *reform.TX, nodeID, nodeName string, addNodeParams *managementpb.
 	}
 }
 
-func validateExistNodeType(node *models.Node) error {
+func validateExistingNodeType(node *models.Node) error {
 	switch node.NodeType {
 	case models.GenericNodeType, models.ContainerNodeType:
 		return nil
