@@ -42,6 +42,39 @@ func addRemoteNode(t pmmapitests.TestingT, nodeName string) *nodes.AddRemoteNode
 	res, err := client.Default.Nodes.AddRemoteNode(params)
 	assert.NoError(t, err)
 	require.NotNil(t, res)
+
+	return res.Payload
+}
+
+func addRemoteRDSNode(t pmmapitests.TestingT, nodeName string) *nodes.AddRemoteRDSNodeOKBody {
+	t.Helper()
+
+	params := &nodes.AddRemoteRDSNodeParams{
+		Body: nodes.AddRemoteRDSNodeBody{
+			NodeName: nodeName,
+			Address:  "some-address",
+			Region:   "region",
+		},
+
+		Context: pmmapitests.Context,
+	}
+	res, err := client.Default.Nodes.AddRemoteRDSNode(params)
+	assert.NoError(t, err)
+	require.NotNil(t, res)
+
+	return res.Payload
+}
+
+func addRDSExporter(t pmmapitests.TestingT, body agents.AddRDSExporterBody) *agents.AddRDSExporterOKBody {
+	t.Helper()
+
+	res, err := client.Default.Agents.AddRDSExporter(&agents.AddRDSExporterParams{
+		Body:    body,
+		Context: pmmapitests.Context,
+	})
+	assert.NoError(t, err)
+	require.NotNil(t, res)
+
 	return res.Payload
 }
 
