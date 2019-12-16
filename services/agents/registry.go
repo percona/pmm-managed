@@ -20,6 +20,7 @@ package agents
 import (
 	"context"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -261,23 +262,23 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*pmmAgentInfo, 
 
 func authenticate(md *agentpb.AgentConnectMetadata, q *reform.Querier) (string, error) { //nolint:unused
 	if md.ID == "" {
-		return "", status.Error(codes.Unauthenticated, "Empty Agent ID.")
+		return "", status.Error(codes.PermissionDenied, "Empty Agent ID.")
 	}
 
 	agent, err := models.FindAgentByID(q, md.ID)
 	if err != nil {
 		if status.Code(err) == codes.NotFound {
-			return "", status.Errorf(codes.Unauthenticated, "No Agent with ID %q.", md.ID)
+			return "", status.Errorf(codes.PermissionDenied, "No Agent with ID %q.", md.ID)
 		}
 		return "", errors.Wrap(err, "failed to find agent")
 	}
 
 	if agent.AgentType != models.PMMAgentType {
-		return "", status.Errorf(codes.Unauthenticated, "No pmm-agent with ID %q.", md.ID)
+		return "", status.Errorf(codes.PermissionDenied, "No pmm-agent with ID %q.", md.ID)
 	}
 
 	if pointer.GetString(agent.RunsOnNodeID) == "" {
-		return "", status.Errorf(codes.Unauthenticated, "Can't get 'runs_on_node_id' for pmm-agent with ID %q.", md.ID)
+		return "", status.Errorf(codes.PermissionDenied, "Can't get 'runs_on_node_id' for pmm-agent with ID %q.", md.ID)
 	}
 
 	agent.Version = &md.Version
@@ -481,9 +482,15 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		for _, rdsExporter := range rdsExporters {
 			rdsExporterIDs = append(rdsExporterIDs, rdsExporter.AgentID)
 		}
+		sort.Strings(rdsExporterIDs)
 
 		groupID := r.roster.add(pmmAgentID, rdsGroup, rdsExporterIDs)
-		agentProcesses[groupID] = rdsExporterConfig(rdsExporters, redactMode)
+		c, err := rdsExporterConfig(rdsExporters, redactMode)
+		if err == nil {
+			agentProcesses[groupID] = c
+		} else {
+			l.Errorf("%+v", err)
+		}
 	}
 
 	state := &agentpb.SetStateRequest{
