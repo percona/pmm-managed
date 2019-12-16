@@ -63,7 +63,7 @@ func (s *NodeService) Register(ctx context.Context, req *managementpb.RegisterNo
 			return err
 		}
 
-		if node, err := models.CheckUniqueNodeInstanceRegion(tx.Querier, req.Address, &req.Region); err != nil {
+		if node, err = models.CheckUniqueNodeInstanceRegion(tx.Querier, req.Address, &req.Region); err != nil {
 			if status.Code(err) != codes.AlreadyExists {
 				return err
 			}
