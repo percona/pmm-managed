@@ -11,6 +11,13 @@ matrix:
   allow_failures:
     - go: master
 
+# skip non-trunk PMM-XXXX branch builds, but still build pull requests
+branches:
+  except:
+    - /^PMM\-\d{4}/
+
+go_import_path: github.com/Percona-Lab/pmm-api-tests
+
 before_cache:
   - go clean -testcache
 
