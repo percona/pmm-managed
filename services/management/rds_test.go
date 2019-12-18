@@ -18,6 +18,7 @@ package management
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -126,7 +127,7 @@ func TestRDSService(t *testing.T) {
 				AwsSecretKey: secretKey,
 			})
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, len(instances.RdsInstances), 2, "Should have two instances")
 			assert.Equal(t, []*managementpb.DiscoverRDSInstance{
 				{
@@ -164,11 +165,10 @@ func TestRDSService(t *testing.T) {
 			{"us-east-1", []instance{{"us-east-1a", "autotest-aurora-mysql-56"}}},
 			{"us-west-2", []instance{{"us-west-2c", "autotest-mysql-57"}}},
 		} {
-			t.Run("discoverRDSRegion", func(t *testing.T) {
+			t.Run(fmt.Sprintf("discoverRDSRegion %s", tt.region), func(t *testing.T) {
 				ctx := logger.Set(context.Background(), t.Name())
 				accessKey, secretKey := tests.GetAWSKeys(t)
 
-				// use given credentials, or default credential chain
 				creds := credentials.NewStaticCredentials(accessKey, secretKey, "")
 				cfg := &aws.Config{
 					CredentialsChainVerboseErrors: aws.Bool(true),
@@ -184,8 +184,9 @@ func TestRDSService(t *testing.T) {
 
 				instances, err := discoverRDSRegion(ctx, sess, tt.region)
 
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				require.Equal(t, len(instances), len(tt.instances), "Should have one instance")
+				// we compare instances this way because there are too much fields that we don't need to compare.
 				for i, instance := range tt.instances {
 					assert.Equal(t, instance.az, pointer.GetString(instances[i].AvailabilityZone))
 					assert.Equal(t, instance.instanceID, pointer.GetString(instances[i].DBInstanceIdentifier))
