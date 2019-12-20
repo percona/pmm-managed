@@ -278,6 +278,151 @@ func TestAddPostgreSQL(t *testing.T) {
 		pmmapitests.AssertAPIErrorf(t, err, 409, codes.AlreadyExists, `Service with name %q already exists.`, serviceName)
 	})
 
+	t.Run("With add_node block", func(t *testing.T) {
+		nodeName := pmmapitests.TestString(t, "node-for-basic-name")
+		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+			NodeName: nodeName,
+			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
+		})
+		defer pmmapitests.RemoveNodes(t, nodeID)
+		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+
+		nodeNameAddNode := pmmapitests.TestString(t, "node-for-add-node-name")
+		serviceName := pmmapitests.TestString(t, "service-name-for-basic-name")
+
+		params := &postgresql.AddPostgreSQLParams{
+			Context: pmmapitests.Context,
+			Body: postgresql.AddPostgreSQLBody{
+				AddNode: &postgresql.AddPostgreSQLParamsBodyAddNode{
+					NodeType: pointer.ToString(postgresql.AddPostgreSQLParamsBodyAddNodeNodeTypeGENERICNODE),
+					NodeName: nodeNameAddNode,
+				},
+				PMMAgentID:  pmmAgentID,
+				ServiceName: serviceName,
+				Address:     "10.10.10.10",
+				Port:        27017,
+
+				SkipConnectionCheck: true,
+			},
+		}
+		addPostgreSQLOK, err := client.Default.PostgreSQL.AddPostgreSQL(params)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "add_node structure can be used only for remote nodes")
+
+		params = &postgresql.AddPostgreSQLParams{
+			Context: pmmapitests.Context,
+			Body: postgresql.AddPostgreSQLBody{
+				AddNode: &postgresql.AddPostgreSQLParamsBodyAddNode{
+					NodeType: pointer.ToString(postgresql.AddPostgreSQLParamsBodyAddNodeNodeTypeREMOTERDSNODE),
+					NodeName: nodeNameAddNode,
+				},
+				PMMAgentID:  pmmAgentID,
+				ServiceName: serviceName,
+				Address:     "10.10.10.10",
+				Port:        27017,
+
+				SkipConnectionCheck: true,
+			},
+		}
+		addPostgreSQLOK, err = client.Default.PostgreSQL.AddPostgreSQL(params)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "add_node structure can be used only for remote nodes")
+
+		params = &postgresql.AddPostgreSQLParams{
+			Context: pmmapitests.Context,
+			Body: postgresql.AddPostgreSQLBody{
+				AddNode: &postgresql.AddPostgreSQLParamsBodyAddNode{
+					NodeType: pointer.ToString(postgresql.AddPostgreSQLParamsBodyAddNodeNodeTypeREMOTENODE),
+					NodeName: nodeNameAddNode,
+				},
+				PMMAgentID:  pmmAgentID,
+				ServiceName: serviceName,
+				Address:     "10.10.10.10",
+				Port:        27017,
+
+				SkipConnectionCheck: true,
+			},
+		}
+		addPostgreSQLOK, err = client.Default.PostgreSQL.AddPostgreSQL(params)
+		require.NoError(t, err)
+		require.NotNil(t, addPostgreSQLOK)
+		require.NotNil(t, addPostgreSQLOK.Payload.Service)
+		serviceID := addPostgreSQLOK.Payload.Service.ServiceID
+
+		newNodeID := addPostgreSQLOK.Payload.Service.NodeID
+		require.NotEqual(t, nodeID, newNodeID)
+		defer pmmapitests.RemoveNodes(t, newNodeID)
+		defer pmmapitests.RemoveServices(t, serviceID)
+		defer removeServiceAgents(t, serviceID)
+
+		// Check that service is created and its fields.
+		serviceOK, err := inventoryClient.Default.Services.GetService(&services.GetServiceParams{
+			Body: services.GetServiceBody{
+				ServiceID: serviceID,
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		require.NotNil(t, serviceOK)
+		assert.Equal(t, services.GetServiceOKBody{
+			Mongodb: &services.GetServiceOKBodyMongodb{
+				ServiceID:   serviceID,
+				NodeID:      newNodeID,
+				ServiceName: serviceName,
+				Address:     "10.10.10.10",
+				Port:        27017,
+			},
+		}, *serviceOK.Payload)
+
+		// Check that postgresql exporter is added by default.
+		listAgents, err := inventoryClient.Default.Agents.ListAgents(&agents.ListAgentsParams{
+			Context: pmmapitests.Context,
+			Body: agents.ListAgentsBody{
+				ServiceID: serviceID,
+			},
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, agents.ListAgentsOKBody{
+			MongodbExporter: []*agents.MongodbExporterItems0{
+				{
+					AgentID:    listAgents.Payload.MongodbExporter[0].AgentID,
+					ServiceID:  serviceID,
+					PMMAgentID: pmmAgentID,
+				},
+			},
+		}, *listAgents.Payload)
+		defer removeAllAgentsInList(t, listAgents)
+	})
+
+	t.Run("With Wrong Node Type", func(t *testing.T) {
+		nodeName := pmmapitests.TestString(t, "generic-node-for-wrong-node-type")
+		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+			NodeName: nodeName,
+			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
+		})
+		defer pmmapitests.RemoveNodes(t, nodeID)
+		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+
+		remoteNodeOKBody := pmmapitests.AddRemoteNode(t, pmmapitests.TestString(t, "Remote Node for wrong type test"))
+		remoteNodeID := remoteNodeOKBody.Remote.NodeID
+		defer pmmapitests.RemoveNodes(t, remoteNodeID)
+
+		serviceName := pmmapitests.TestString(t, "service-name")
+		params := &postgresql.AddPostgreSQLParams{
+			Context: pmmapitests.Context,
+			Body: postgresql.AddPostgreSQLBody{
+				NodeID:      remoteNodeID,
+				ServiceName: serviceName,
+				Address:     "10.10.10.10",
+				Port:        3306,
+				PMMAgentID:  pmmAgentID,
+
+				SkipConnectionCheck: true,
+			},
+		}
+		addPostgreSQLOK, err := client.Default.PostgreSQL.AddPostgreSQL(params)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "node_id or node_name can be used only for generic nodes or container nodes")
+		assert.Nil(t, addPostgreSQLOK)
+	})
+
 	t.Run("Empty Service Name", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-name")
 		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{

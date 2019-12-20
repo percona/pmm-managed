@@ -158,6 +158,36 @@ func RemoveAgents(t TestingT, agentIDs ...string) {
 	}
 }
 
+func AddRemoteNode(t TestingT, nodeName string) *nodes.AddRemoteNodeOKBody {
+	t.Helper()
+
+	params := &nodes.AddRemoteNodeParams{
+		Body: nodes.AddRemoteNodeBody{
+			NodeName: nodeName,
+			Address:  "10.10.10.10",
+		},
+		Context: Context,
+	}
+	res, err := client.Default.Nodes.AddRemoteNode(params)
+	assert.NoError(t, err)
+	require.NotNil(t, res)
+	return res.Payload
+}
+
+func AddPMMAgent(t TestingT, nodeID string) *agents.AddPMMAgentOKBody {
+	t.Helper()
+
+	res, err := client.Default.Agents.AddPMMAgent(&agents.AddPMMAgentParams{
+		Body: agents.AddPMMAgentBody{
+			RunsOnNodeID: nodeID,
+		},
+		Context: Context,
+	})
+	assert.NoError(t, err)
+	require.NotNil(t, res)
+	return res.Payload
+}
+
 // check interfaces
 var (
 	_ assert.TestingT  = (*expectedFailureTestingT)(nil)

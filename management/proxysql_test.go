@@ -273,6 +273,151 @@ func TestAddProxySQL(t *testing.T) {
 		pmmapitests.AssertAPIErrorf(t, err, 409, codes.AlreadyExists, `Service with name %q already exists.`, serviceName)
 	})
 
+	t.Run("With add_node block", func(t *testing.T) {
+		nodeName := pmmapitests.TestString(t, "node-for-basic-name")
+		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+			NodeName: nodeName,
+			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
+		})
+		defer pmmapitests.RemoveNodes(t, nodeID)
+		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+
+		nodeNameAddNode := pmmapitests.TestString(t, "node-for-add-node-name")
+		serviceName := pmmapitests.TestString(t, "service-name-for-basic-name")
+
+		params := &proxysql.AddProxySQLParams{
+			Context: pmmapitests.Context,
+			Body: proxysql.AddProxySQLBody{
+				AddNode: &proxysql.AddProxySQLParamsBodyAddNode{
+					NodeType: pointer.ToString(proxysql.AddProxySQLParamsBodyAddNodeNodeTypeGENERICNODE),
+					NodeName: nodeNameAddNode,
+				},
+				PMMAgentID:  pmmAgentID,
+				ServiceName: serviceName,
+				Address:     "10.10.10.10",
+				Port:        27017,
+
+				SkipConnectionCheck: true,
+			},
+		}
+		addProxySQLOK, err := client.Default.ProxySQL.AddProxySQL(params)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "add_node structure can be used only for remote nodes")
+
+		params = &proxysql.AddProxySQLParams{
+			Context: pmmapitests.Context,
+			Body: proxysql.AddProxySQLBody{
+				AddNode: &proxysql.AddProxySQLParamsBodyAddNode{
+					NodeType: pointer.ToString(proxysql.AddProxySQLParamsBodyAddNodeNodeTypeREMOTERDSNODE),
+					NodeName: nodeNameAddNode,
+				},
+				PMMAgentID:  pmmAgentID,
+				ServiceName: serviceName,
+				Address:     "10.10.10.10",
+				Port:        27017,
+
+				SkipConnectionCheck: true,
+			},
+		}
+		addProxySQLOK, err = client.Default.ProxySQL.AddProxySQL(params)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "add_node structure can be used only for remote nodes")
+
+		params = &proxysql.AddProxySQLParams{
+			Context: pmmapitests.Context,
+			Body: proxysql.AddProxySQLBody{
+				AddNode: &proxysql.AddProxySQLParamsBodyAddNode{
+					NodeType: pointer.ToString(proxysql.AddProxySQLParamsBodyAddNodeNodeTypeREMOTENODE),
+					NodeName: nodeNameAddNode,
+				},
+				PMMAgentID:  pmmAgentID,
+				ServiceName: serviceName,
+				Address:     "10.10.10.10",
+				Port:        27017,
+
+				SkipConnectionCheck: true,
+			},
+		}
+		addProxySQLOK, err = client.Default.ProxySQL.AddProxySQL(params)
+		require.NoError(t, err)
+		require.NotNil(t, addProxySQLOK)
+		require.NotNil(t, addProxySQLOK.Payload.Service)
+		serviceID := addProxySQLOK.Payload.Service.ServiceID
+
+		newNodeID := addProxySQLOK.Payload.Service.NodeID
+		require.NotEqual(t, nodeID, newNodeID)
+		defer pmmapitests.RemoveNodes(t, newNodeID)
+		defer pmmapitests.RemoveServices(t, serviceID)
+		defer removeServiceAgents(t, serviceID)
+
+		// Check that service is created and its fields.
+		serviceOK, err := inventoryClient.Default.Services.GetService(&services.GetServiceParams{
+			Body: services.GetServiceBody{
+				ServiceID: serviceID,
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		require.NotNil(t, serviceOK)
+		assert.Equal(t, services.GetServiceOKBody{
+			Mongodb: &services.GetServiceOKBodyMongodb{
+				ServiceID:   serviceID,
+				NodeID:      newNodeID,
+				ServiceName: serviceName,
+				Address:     "10.10.10.10",
+				Port:        27017,
+			},
+		}, *serviceOK.Payload)
+
+		// Check that proxysql exporter is added by default.
+		listAgents, err := inventoryClient.Default.Agents.ListAgents(&agents.ListAgentsParams{
+			Context: pmmapitests.Context,
+			Body: agents.ListAgentsBody{
+				ServiceID: serviceID,
+			},
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, agents.ListAgentsOKBody{
+			MongodbExporter: []*agents.MongodbExporterItems0{
+				{
+					AgentID:    listAgents.Payload.MongodbExporter[0].AgentID,
+					ServiceID:  serviceID,
+					PMMAgentID: pmmAgentID,
+				},
+			},
+		}, *listAgents.Payload)
+		defer removeAllAgentsInList(t, listAgents)
+	})
+
+	t.Run("With Wrong Node Type", func(t *testing.T) {
+		nodeName := pmmapitests.TestString(t, "generic-node-for-wrong-node-type")
+		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+			NodeName: nodeName,
+			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
+		})
+		defer pmmapitests.RemoveNodes(t, nodeID)
+		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+
+		remoteNodeOKBody := pmmapitests.AddRemoteNode(t, pmmapitests.TestString(t, "Remote Node for wrong type test"))
+		remoteNodeID := remoteNodeOKBody.Remote.NodeID
+		defer pmmapitests.RemoveNodes(t, remoteNodeID)
+
+		serviceName := pmmapitests.TestString(t, "service-name")
+		params := &proxysql.AddProxySQLParams{
+			Context: pmmapitests.Context,
+			Body: proxysql.AddProxySQLBody{
+				NodeID:      remoteNodeID,
+				ServiceName: serviceName,
+				Address:     "10.10.10.10",
+				Port:        3306,
+				PMMAgentID:  pmmAgentID,
+
+				SkipConnectionCheck: true,
+			},
+		}
+		addProxySQLOK, err := client.Default.ProxySQL.AddProxySQL(params)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "node_id or node_name can be used only for generic nodes or container nodes")
+		assert.Nil(t, addProxySQLOK)
+	})
+
 	t.Run("Empty Service Name", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-name")
 		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{

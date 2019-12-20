@@ -21,7 +21,7 @@ func TestPostgresExporter(t *testing.T) {
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
-		node := addRemoteNode(t, pmmapitests.TestString(t, "Remote node for Node exporter"))
+		node := pmmapitests.AddRemoteNode(t, pmmapitests.TestString(t, "Remote node for Node exporter"))
 		nodeID := node.Remote.NodeID
 		defer pmmapitests.RemoveNodes(t, nodeID)
 
@@ -34,7 +34,7 @@ func TestPostgresExporter(t *testing.T) {
 		serviceID := service.Postgresql.ServiceID
 		defer pmmapitests.RemoveServices(t, serviceID)
 
-		pmmAgent := addPMMAgent(t, nodeID)
+		pmmAgent := pmmapitests.AddPMMAgent(t, nodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
 		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
@@ -131,7 +131,7 @@ func TestPostgresExporter(t *testing.T) {
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
-		pmmAgent := addPMMAgent(t, genericNodeID)
+		pmmAgent := pmmapitests.AddPMMAgent(t, genericNodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
 		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
@@ -186,7 +186,7 @@ func TestPostgresExporter(t *testing.T) {
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
-		pmmAgent := addPMMAgent(t, genericNodeID)
+		pmmAgent := pmmapitests.AddPMMAgent(t, genericNodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
 		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 

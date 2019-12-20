@@ -24,7 +24,7 @@ func TestRDSExporter(t *testing.T) {
 		nodeID := node.RemoteRDS.NodeID
 		defer pmmapitests.RemoveNodes(t, nodeID)
 
-		pmmAgent := addPMMAgent(t, genericNodeID)
+		pmmAgent := pmmapitests.AddPMMAgent(t, genericNodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
 		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
@@ -116,7 +116,7 @@ func TestRDSExporter(t *testing.T) {
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
-		pmmAgent := addPMMAgent(t, genericNodeID)
+		pmmAgent := pmmapitests.AddPMMAgent(t, genericNodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
 		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
@@ -140,7 +140,7 @@ func TestRDSExporter(t *testing.T) {
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
-		pmmAgent := addPMMAgent(t, genericNodeID)
+		pmmAgent := pmmapitests.AddPMMAgent(t, genericNodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
 		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 

@@ -22,7 +22,7 @@ func TestServices(t *testing.T) {
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
-		remoteNodeOKBody := addRemoteNode(t, pmmapitests.TestString(t, "Remote node for services test"))
+		remoteNodeOKBody := pmmapitests.AddRemoteNode(t, pmmapitests.TestString(t, "Remote node for services test"))
 		remoteNodeID := remoteNodeOKBody.Remote.NodeID
 		defer pmmapitests.RemoveNodes(t, remoteNodeID)
 
@@ -59,7 +59,7 @@ func TestServices(t *testing.T) {
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
-		remoteNodeOKBody := addRemoteNode(t, pmmapitests.TestString(t, "Remote node to check services filter"))
+		remoteNodeOKBody := pmmapitests.AddRemoteNode(t, pmmapitests.TestString(t, "Remote node to check services filter"))
 		remoteNodeID := remoteNodeOKBody.Remote.NodeID
 		defer pmmapitests.RemoveNodes(t, remoteNodeID)
 
@@ -123,7 +123,7 @@ func TestRemoveService(t *testing.T) {
 	t.Run("Basic", func(t *testing.T) {
 		t.Parallel()
 
-		node := addRemoteNode(t, pmmapitests.TestString(t, "Remote node for agents list"))
+		node := pmmapitests.AddRemoteNode(t, pmmapitests.TestString(t, "Remote node for agents list"))
 		nodeID := node.Remote.NodeID
 		defer pmmapitests.RemoveNodes(t, nodeID)
 
@@ -149,7 +149,7 @@ func TestRemoveService(t *testing.T) {
 	t.Run("Has agents", func(t *testing.T) {
 		t.Parallel()
 
-		node := addRemoteNode(t, pmmapitests.TestString(t, "Remote node for agents list"))
+		node := pmmapitests.AddRemoteNode(t, pmmapitests.TestString(t, "Remote node for agents list"))
 		nodeID := node.Remote.NodeID
 		defer pmmapitests.RemoveNodes(t, nodeID)
 
@@ -161,7 +161,7 @@ func TestRemoveService(t *testing.T) {
 		})
 		serviceID := service.Mysql.ServiceID
 
-		pmmAgent := addPMMAgent(t, nodeID)
+		pmmAgent := pmmapitests.AddPMMAgent(t, nodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
 		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 

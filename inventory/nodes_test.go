@@ -19,7 +19,7 @@ func TestNodes(t *testing.T) {
 	t.Run("List", func(t *testing.T) {
 		t.Parallel()
 
-		remoteNode := addRemoteNode(t, pmmapitests.TestString(t, "Test Remote Node for List"))
+		remoteNode := pmmapitests.AddRemoteNode(t, pmmapitests.TestString(t, "Test Remote Node for List"))
 		remoteNodeID := remoteNode.Remote.NodeID
 		defer pmmapitests.RemoveNodes(t, remoteNodeID)
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for List")).NodeID
@@ -394,7 +394,7 @@ func TestRemoveNode(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "Generic Node for remove test")
 		node := addGenericNode(t, nodeName)
 
-		_ = addPMMAgent(t, node.NodeID)
+		_ = pmmapitests.AddPMMAgent(t, node.NodeID)
 
 		removeResp, err := client.Default.Nodes.RemoveNode(&nodes.RemoveNodeParams{
 			Body: nodes.RemoveNodeBody{

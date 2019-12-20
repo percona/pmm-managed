@@ -29,23 +29,6 @@ func addGenericNode(t pmmapitests.TestingT, nodeName string) *nodes.AddGenericNo
 	return res.Payload.Generic
 }
 
-func addRemoteNode(t pmmapitests.TestingT, nodeName string) *nodes.AddRemoteNodeOKBody {
-	t.Helper()
-
-	params := &nodes.AddRemoteNodeParams{
-		Body: nodes.AddRemoteNodeBody{
-			NodeName: nodeName,
-			Address:  "10.10.10.10",
-		},
-		Context: pmmapitests.Context,
-	}
-	res, err := client.Default.Nodes.AddRemoteNode(params)
-	assert.NoError(t, err)
-	require.NotNil(t, res)
-
-	return res.Payload
-}
-
 func addRemoteRDSNode(t pmmapitests.TestingT, nodeName string) *nodes.AddRemoteRDSNodeOKBody {
 	t.Helper()
 
@@ -125,20 +108,6 @@ func addProxySQLService(t pmmapitests.TestingT, body services.AddProxySQLService
 		Context: pmmapitests.Context,
 	}
 	res, err := client.Default.Services.AddProxySQLService(params)
-	assert.NoError(t, err)
-	require.NotNil(t, res)
-	return res.Payload
-}
-
-func addPMMAgent(t pmmapitests.TestingT, nodeID string) *agents.AddPMMAgentOKBody {
-	t.Helper()
-
-	res, err := client.Default.Agents.AddPMMAgent(&agents.AddPMMAgentParams{
-		Body: agents.AddPMMAgentBody{
-			RunsOnNodeID: nodeID,
-		},
-		Context: pmmapitests.Context,
-	})
 	assert.NoError(t, err)
 	require.NotNil(t, res)
 	return res.Payload

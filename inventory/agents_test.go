@@ -22,7 +22,7 @@ func TestAgents(t *testing.T) {
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
-		node := addRemoteNode(t, pmmapitests.TestString(t, "Remote node for agents list"))
+		node := pmmapitests.AddRemoteNode(t, pmmapitests.TestString(t, "Remote node for agents list"))
 		nodeID := node.Remote.NodeID
 		defer pmmapitests.RemoveNodes(t, nodeID)
 
@@ -35,7 +35,7 @@ func TestAgents(t *testing.T) {
 		serviceID := service.Mysql.ServiceID
 		defer pmmapitests.RemoveServices(t, serviceID)
 
-		pmmAgent := addPMMAgent(t, nodeID)
+		pmmAgent := pmmapitests.AddPMMAgent(t, nodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
 		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
@@ -66,7 +66,7 @@ func TestAgents(t *testing.T) {
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
-		node := addRemoteNode(t, pmmapitests.TestString(t, "Remote node for agents filters"))
+		node := pmmapitests.AddRemoteNode(t, pmmapitests.TestString(t, "Remote node for agents filters"))
 		nodeID := node.Remote.NodeID
 		defer pmmapitests.RemoveNodes(t, nodeID)
 
@@ -79,7 +79,7 @@ func TestAgents(t *testing.T) {
 		serviceID := service.Mysql.ServiceID
 		defer pmmapitests.RemoveServices(t, serviceID)
 
-		pmmAgent := addPMMAgent(t, nodeID)
+		pmmAgent := pmmapitests.AddPMMAgent(t, nodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
 		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
@@ -152,7 +152,7 @@ func TestAgents(t *testing.T) {
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
-		pmmAgent := addPMMAgent(t, genericNodeID)
+		pmmAgent := pmmapitests.AddPMMAgent(t, genericNodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
 		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
@@ -175,7 +175,7 @@ func TestAgents(t *testing.T) {
 		require.NotEmpty(t, nodeID)
 		defer pmmapitests.RemoveNodes(t, nodeID)
 
-		pmmAgentID := addPMMAgent(t, nodeID).PMMAgent.AgentID
+		pmmAgentID := pmmapitests.AddPMMAgent(t, nodeID).PMMAgent.AgentID
 		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
 		serviceID := addMySQLService(t, services.AddMySQLServiceBody{
@@ -205,11 +205,11 @@ func TestPMMAgent(t *testing.T) {
 	t.Run("Basic", func(t *testing.T) {
 		t.Parallel()
 
-		node := addRemoteNode(t, pmmapitests.TestString(t, "Remote node for PMM-agent"))
+		node := pmmapitests.AddRemoteNode(t, pmmapitests.TestString(t, "Remote node for PMM-agent"))
 		nodeID := node.Remote.NodeID
 		defer pmmapitests.RemoveNodes(t, nodeID)
 
-		res := addPMMAgent(t, nodeID)
+		res := pmmapitests.AddPMMAgent(t, nodeID)
 		require.Equal(t, nodeID, res.PMMAgent.RunsOnNodeID)
 		agentID := res.PMMAgent.AgentID
 
@@ -267,7 +267,7 @@ func TestPMMAgent(t *testing.T) {
 		serviceID := service.Mysql.ServiceID
 		defer pmmapitests.RemoveServices(t, serviceID)
 
-		pmmAgentOKBody := addPMMAgent(t, nodeID)
+		pmmAgentOKBody := pmmapitests.AddPMMAgent(t, nodeID)
 		require.Equal(t, nodeID, pmmAgentOKBody.PMMAgent.RunsOnNodeID)
 		pmmAgentID := pmmAgentOKBody.PMMAgent.AgentID
 
@@ -412,7 +412,7 @@ func TestQanAgentExporter(t *testing.T) {
 		serviceID := service.Mysql.ServiceID
 		defer pmmapitests.RemoveServices(t, serviceID)
 
-		pmmAgent := addPMMAgent(t, genericNodeID)
+		pmmAgent := pmmapitests.AddPMMAgent(t, genericNodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
 		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
@@ -513,7 +513,7 @@ func TestQanAgentExporter(t *testing.T) {
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
-		pmmAgent := addPMMAgent(t, genericNodeID)
+		pmmAgent := pmmapitests.AddPMMAgent(t, genericNodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
 		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
@@ -572,7 +572,7 @@ func TestQanAgentExporter(t *testing.T) {
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
-		pmmAgent := addPMMAgent(t, genericNodeID)
+		pmmAgent := pmmapitests.AddPMMAgent(t, genericNodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
 		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
@@ -638,7 +638,7 @@ func TestPostgreSQLQanAgentExporter(t *testing.T) {
 		serviceID := service.Postgresql.ServiceID
 		defer pmmapitests.RemoveServices(t, serviceID)
 
-		pmmAgent := addPMMAgent(t, genericNodeID)
+		pmmAgent := pmmapitests.AddPMMAgent(t, genericNodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
 		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
@@ -739,7 +739,7 @@ func TestPostgreSQLQanAgentExporter(t *testing.T) {
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
-		pmmAgent := addPMMAgent(t, genericNodeID)
+		pmmAgent := pmmapitests.AddPMMAgent(t, genericNodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
 		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
@@ -798,7 +798,7 @@ func TestPostgreSQLQanAgentExporter(t *testing.T) {
 		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
-		pmmAgent := addPMMAgent(t, genericNodeID)
+		pmmAgent := pmmapitests.AddPMMAgent(t, genericNodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
 		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 

@@ -16,11 +16,11 @@ func TestNodeExporter(t *testing.T) {
 	t.Run("Basic", func(t *testing.T) {
 		t.Parallel()
 
-		node := addRemoteNode(t, pmmapitests.TestString(t, "Remote node for Node exporter"))
+		node := pmmapitests.AddRemoteNode(t, pmmapitests.TestString(t, "Remote node for Node exporter"))
 		nodeID := node.Remote.NodeID
 		defer pmmapitests.RemoveNodes(t, nodeID)
 
-		pmmAgent := addPMMAgent(t, nodeID)
+		pmmAgent := pmmapitests.AddPMMAgent(t, nodeID)
 		pmmAgentID := pmmAgent.PMMAgent.AgentID
 		defer pmmapitests.RemoveAgents(t, pmmAgentID)
 
