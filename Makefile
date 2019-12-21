@@ -19,21 +19,21 @@ LD_FLAGS = -ldflags " \
 			-X 'github.com/percona/pmm-managed/vendor/github.com/percona/pmm/version.Branch=$(PMM_RELEASE_BRANCH)' \
 			"
 
+env-up:                         ## Start development environment.
+	docker-compose up --force-recreate --abort-on-container-exit --renew-anon-volumes --remove-orphans
+
+env-down:                       ## Stop development environment.
+	docker-compose down --volumes --remove-orphans
+
+devcontainer:                   ## Run TARGET in devcontainer.
+	docker exec -it pmm-managed-server env \
+		TEST_FLAGS='$(TEST_FLAGS)' \
+		TEST_PACKAGES='$(TEST_PACKAGES)' \
+		TEST_RUN_UPDATE=$(TEST_RUN_UPDATE) \
+		make -C /root/go/src/github.com/percona/pmm-managed $(TARGET)
+
 release:                        ## Build pmm-managed release binary.
 	env CGO_ENABLED=0 go build -v $(LD_FLAGS) -o $(PMM_RELEASE_PATH)/pmm-managed
-
-init:                           ## Installs tools to $GOPATH/bin (which is expected to be in $PATH).
-	curl https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOPATH)/bin
-
-	go install ./vendor/github.com/BurntSushi/go-sumtype \
-				./vendor/github.com/vektra/mockery/cmd/mockery \
-				./vendor/golang.org/x/tools/cmd/goimports \
-				./vendor/gopkg.in/reform.v1/reform
-
-	go get -u github.com/prometheus/prometheus/cmd/promtool
-
-	go test -i ./...
-	go test -race -i ./...
 
 gen:                            ## Generate files.
 	rm -f models/*_reform.go
@@ -95,21 +95,5 @@ run-race-cover: install-race    ## Run pmm-managed with race detector and collec
 _run:
 	pmm-managed $(RUN_FLAGS)
 
-devcontainer:                   ## Run TARGET in devcontainer.
-	docker exec pmm-managed-server env \
-		TEST_FLAGS='$(TEST_FLAGS)' \
-		TEST_PACKAGES='$(TEST_PACKAGES)' \
-		TEST_RUN_UPDATE=$(TEST_RUN_UPDATE) \
-		make -C /root/go/src/github.com/percona/pmm-managed $(TARGET)
-
-env-up:                         ## Start development environment.
-	docker-compose up --force-recreate --abort-on-container-exit --renew-anon-volumes --remove-orphans
-
-env-down:                       ## Stop development environment.
-	docker-compose down --volumes --remove-orphans
-
-env-psql:                       ## Open psql shell.
-	env PGPASSWORD=pmm-managed psql -h 127.0.0.1 -p 5432 -U pmm-managed pmm-managed-dev
-
-clean:                          ## Removes generated artifacts.
-	rm -Rf ./bin
+psql:                           ## Open psql shell.
+	env PGPASSWORD=pmm-managed psql -U pmm-managed pmm-managed-dev

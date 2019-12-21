@@ -39,10 +39,6 @@ import (
 )
 
 func TestDevContainer(t *testing.T) {
-	if os.Getenv("DEVCONTAINER") == "" {
-		t.Skip("can be tested only inside devcontainer")
-	}
-
 	t.Run("Logs", func(t *testing.T) {
 		l := NewLogs("2.4.5")
 		ctx := logger.Set(context.Background(), t.Name())
