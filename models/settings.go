@@ -45,6 +45,8 @@ type Settings struct {
 	AWSInstanceChecked bool `json:"aws_instance_checked"`
 
 	SSHKey string `json:"ssh_key"`
+
+	AlertManagerAddress string `json:"alert_manager_address"`
 }
 
 // fillDefaults sets zero values to their default values.

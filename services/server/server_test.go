@@ -95,3 +95,28 @@ func TestServer(t *testing.T) {
 		})
 	})
 }
+
+func TestPrometheusRulesValidation(t *testing.T) {
+	t.Run("Valid Prometheus rules", func(t *testing.T) {
+		content := `groups:
+- name: example
+  rules:
+  - alert: HighRequestLatency
+    expr: job:request_latency_seconds:mean5m{job="myjob"} > 0.5
+    for: 10m
+    labels:
+      severity: page
+    annotations:
+      summary: High request latency`
+		err := validateRulesFile(content)
+		assert.NoError(t, err)
+	})
+	t.Run("Invalid Prometheus rules", func(t *testing.T) {
+		content := `roups:
+- name: example
+  rules:`
+		err := validateRulesFile(content)
+		assert.Error(t, err)
+	})
+
+}

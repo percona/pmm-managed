@@ -48,6 +48,10 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
+const (
+	defaultAlertsManagerFile = "/srv/prometheus/rules/pmm.rules.yml"
+)
+
 // Server represents service for checking PMM Server status and changing settings.
 type Server struct {
 	db               *reform.DB
@@ -69,6 +73,9 @@ type Server struct {
 	envDataRetention       time.Duration
 
 	sshKeyM sync.Mutex
+
+	// to make is testeable
+	alertsManagerFile string
 }
 
 type pmmUpdateAuth struct {
@@ -91,6 +98,7 @@ func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervis
 		checker:           checker,
 		l:                 logrus.WithField("component", "server"),
 		pmmUpdateAuthFile: path,
+		alertsManagerFile: defaultAlertsManagerFile,
 	}
 	return s, nil
 }
@@ -411,9 +419,10 @@ func convertSettings(s *models.Settings) *serverpb.Settings {
 			Mr: ptypes.DurationProto(s.MetricsResolutions.MR),
 			Lr: ptypes.DurationProto(s.MetricsResolutions.LR),
 		},
-		DataRetention: ptypes.DurationProto(s.DataRetention),
-		AwsPartitions: s.AWSPartitions,
-		SshKey:        s.SSHKey,
+		DataRetention:       ptypes.DurationProto(s.DataRetention),
+		AwsPartitions:       s.AWSPartitions,
+		SshKey:              s.SSHKey,
+		AlertManagerAddress: s.AlertManagerAddress,
 	}
 }
 
@@ -430,6 +439,11 @@ func (s *Server) GetSettings(ctx context.Context, req *serverpb.GetSettingsReque
 		Settings: convertSettings(settings),
 	}
 	res.Settings.UpdatesDisabled = s.envDisableUpdates
+	alertManagerRules, err := loadAlertManagerRules(s.alertsManagerFile)
+	if err != nil {
+		s.l.Warnf("cannot load alert manager rules: %s", err)
+	}
+	res.Settings.AlertManagerRules = string(alertManagerRules)
 	return res, nil
 }
 
@@ -508,6 +522,24 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			settings.SSHKey = req.SshKey
 		}
 
+		if req.AlertManagerRules != "" && !req.ClearAlerManagerRules {
+			if e := validateRulesFile(req.AlertManagerRules); e != nil {
+				return e
+			}
+			if e := ioutil.WriteFile(s.alertsManagerFile, []byte(req.AlertManagerRules), os.ModePerm); e != nil {
+				return e
+			}
+			if e := os.Chmod(s.alertsManagerFile, 0644); e != nil {
+				s.l.Warn(e)
+			}
+		}
+
+		if req.ClearAlerManagerRules {
+			if e := os.Remove(s.alertsManagerFile); e != nil {
+				s.l.Warn(e)
+			}
+		}
+
 		return models.SaveSettings(tx, settings)
 	})
 	if err != nil {
@@ -525,6 +557,32 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	}
 	res.Settings.UpdatesDisabled = s.envDisableUpdates
 	return res, nil
+}
+
+func loadAlertManagerRules(filename string) ([]byte, error) {
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		return nil, nil
+	}
+	return ioutil.ReadFile(filename)
+}
+
+func validateRulesFile(rules string) error {
+	tmpfile, err := ioutil.TempFile("", "alter_mgr_test_rules.*.yml")
+	if err != nil {
+		return err
+	}
+
+	defer os.Remove(tmpfile.Name())
+
+	if _, err := tmpfile.WriteString(rules); err != nil {
+		return err
+	}
+
+	if err := tmpfile.Close(); err != nil {
+		return err
+	}
+
+	return exec.Command("promtool", "check", "rules", tmpfile.Name()).Run()
 }
 
 func (s *Server) validateSSHKey(ctx context.Context, sshKey string) error {
