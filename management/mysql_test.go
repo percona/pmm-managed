@@ -321,6 +321,7 @@ func TestAddMySQL(t *testing.T) {
 				ServiceName: serviceName,
 				Address:     "10.10.10.10",
 				Port:        27017,
+				Username:    "username",
 
 				SkipConnectionCheck: true,
 			},
@@ -339,6 +340,7 @@ func TestAddMySQL(t *testing.T) {
 				ServiceName: serviceName,
 				Address:     "10.10.10.10",
 				Port:        27017,
+				Username:    "username",
 
 				SkipConnectionCheck: true,
 			},
@@ -357,6 +359,7 @@ func TestAddMySQL(t *testing.T) {
 				ServiceName: serviceName,
 				Address:     "10.10.10.10",
 				Port:        27017,
+				Username:    "username",
 
 				SkipConnectionCheck: true,
 			},
@@ -383,7 +386,7 @@ func TestAddMySQL(t *testing.T) {
 		assert.NoError(t, err)
 		require.NotNil(t, serviceOK)
 		assert.Equal(t, services.GetServiceOKBody{
-			Mongodb: &services.GetServiceOKBodyMongodb{
+			Mysql: &services.GetServiceOKBodyMysql{
 				ServiceID:   serviceID,
 				NodeID:      newNodeID,
 				ServiceName: serviceName,
@@ -401,11 +404,13 @@ func TestAddMySQL(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		assert.Equal(t, agents.ListAgentsOKBody{
-			MongodbExporter: []*agents.MongodbExporterItems0{
+			MysqldExporter: []*agents.MysqldExporterItems0{
 				{
-					AgentID:    listAgents.Payload.MongodbExporter[0].AgentID,
-					ServiceID:  serviceID,
-					PMMAgentID: pmmAgentID,
+					AgentID:                   listAgents.Payload.MysqldExporter[0].AgentID,
+					ServiceID:                 serviceID,
+					PMMAgentID:                pmmAgentID,
+					Username:                  "username",
+					TablestatsGroupTableLimit: 1000,
 				},
 			},
 		}, *listAgents.Payload)
@@ -434,6 +439,7 @@ func TestAddMySQL(t *testing.T) {
 				Address:     "10.10.10.10",
 				Port:        3306,
 				PMMAgentID:  pmmAgentID,
+				Username:    "username",
 
 				SkipConnectionCheck: true,
 			},

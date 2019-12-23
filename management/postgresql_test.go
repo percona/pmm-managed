@@ -301,6 +301,7 @@ func TestAddPostgreSQL(t *testing.T) {
 				ServiceName: serviceName,
 				Address:     "10.10.10.10",
 				Port:        27017,
+				Username:    "username",
 
 				SkipConnectionCheck: true,
 			},
@@ -319,6 +320,7 @@ func TestAddPostgreSQL(t *testing.T) {
 				ServiceName: serviceName,
 				Address:     "10.10.10.10",
 				Port:        27017,
+				Username:    "username",
 
 				SkipConnectionCheck: true,
 			},
@@ -337,6 +339,7 @@ func TestAddPostgreSQL(t *testing.T) {
 				ServiceName: serviceName,
 				Address:     "10.10.10.10",
 				Port:        27017,
+				Username:    "username",
 
 				SkipConnectionCheck: true,
 			},
@@ -363,7 +366,7 @@ func TestAddPostgreSQL(t *testing.T) {
 		assert.NoError(t, err)
 		require.NotNil(t, serviceOK)
 		assert.Equal(t, services.GetServiceOKBody{
-			Mongodb: &services.GetServiceOKBodyMongodb{
+			Postgresql: &services.GetServiceOKBodyPostgresql{
 				ServiceID:   serviceID,
 				NodeID:      newNodeID,
 				ServiceName: serviceName,
@@ -381,11 +384,12 @@ func TestAddPostgreSQL(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		assert.Equal(t, agents.ListAgentsOKBody{
-			MongodbExporter: []*agents.MongodbExporterItems0{
+			PostgresExporter: []*agents.PostgresExporterItems0{
 				{
-					AgentID:    listAgents.Payload.MongodbExporter[0].AgentID,
+					AgentID:    listAgents.Payload.PostgresExporter[0].AgentID,
 					ServiceID:  serviceID,
 					PMMAgentID: pmmAgentID,
+					Username:   "username",
 				},
 			},
 		}, *listAgents.Payload)
@@ -414,6 +418,7 @@ func TestAddPostgreSQL(t *testing.T) {
 				Address:     "10.10.10.10",
 				Port:        3306,
 				PMMAgentID:  pmmAgentID,
+				Username:    "username",
 
 				SkipConnectionCheck: true,
 			},
