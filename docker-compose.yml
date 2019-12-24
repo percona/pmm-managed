@@ -12,6 +12,6 @@ services:
       - 127.0.0.1:443:443
     volumes:
       - .:/root/go/src/github.com/percona/pmm-managed
-      - ./testdata/prometheus/prometheus.yml:/etc/prometheus.yml
+      # - ./testdata/prometheus/prometheus.yml:/etc/prometheus.yml
       - ./testdata/supervisord.d/prometheus.ini:/etc/supervisord.d/prometheus.ini
       - ./testdata/supervisord.d/qan-api2.ini:/etc/supervisord.d/qan-api2.ini
