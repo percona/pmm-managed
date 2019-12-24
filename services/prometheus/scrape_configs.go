@@ -103,7 +103,7 @@ func scrapeConfigForQANAPI2(interval time.Duration) *config.ScrapeConfig {
 		ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 			StaticConfigs: []*targetgroup.Group{{
 				Targets: []model.LabelSet{{addressLabel: "127.0.0.1:9933"}},
-				Labels:  model.LabelSet{"instance": "qan-api2"},
+				Labels:  model.LabelSet{"instance": "pmm-server"},
 			}},
 		},
 	}

@@ -220,7 +220,7 @@ scrape_configs:
   - targets:
     - 127.0.0.1:9933
     labels:
-      instance: qan-api2
+      instance: pmm-server
 - job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-5s
   params:
     collect[]:
