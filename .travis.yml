@@ -4,11 +4,6 @@ language: minimal
 services:
   - docker
 
-matrix:
-  fast_finish: true
-  # allow_failures:
-  #   - go: master
-
 # skip non-trunk PMM-XXXX branch builds, but still build pull requests
 branches:
   except:
@@ -50,6 +45,9 @@ env:
 
     # the latest pre-release version
     - GO_VERSION=go1.14beta1
+
+matrix:
+  fast_finish: true
 
 install:
   - env
