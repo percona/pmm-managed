@@ -23,12 +23,13 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/agentpb"
+	"github.com/percona/pmm/api/inventorypb"
 
 	"github.com/percona/pmm-managed/models"
 )
 
 // mysqldExporterConfig returns desired configuration of mysqld_exporter process.
-func mysqldExporterConfig(service *models.Service, exporter *models.Agent) *agentpb.SetStateRequest_AgentProcess {
+func mysqldExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode) *agentpb.SetStateRequest_AgentProcess {
 	tdp := templateDelimsPair(
 		pointer.GetString(service.Address),
 		pointer.GetString(exporter.Username),
@@ -37,59 +38,100 @@ func mysqldExporterConfig(service *models.Service, exporter *models.Agent) *agen
 	)
 
 	args := []string{
-		"-collect.binlog_size",
-		"-collect.global_status",
-		"-collect.global_variables",
-		"-collect.info_schema.innodb_cmp",
-		"-collect.info_schema.innodb_cmpmem",
-		"-collect.info_schema.innodb_metrics",
-		"-collect.info_schema.processlist",
-		"-collect.info_schema.query_response_time",
-		"-collect.info_schema.userstats",
-		"-collect.perf_schema.eventswaits",
-		"-collect.perf_schema.file_events",
-		"-collect.slave_status",
-		"-web.listen-address=:" + tdp.left + " .listen_port " + tdp.right,
+		// LR
+		"--collect.binlog_size",
+		"--collect.engine_tokudb_status",
+		"--collect.global_variables",
+		"--collect.heartbeat",
+		"--collect.info_schema.clientstats",
+		"--collect.info_schema.innodb_tablespaces",
+		"--collect.info_schema.userstats",
+		"--collect.perf_schema.eventsstatements",
+		"--collect.perf_schema.file_instances",
+		"--collect.custom_query.lr",
+
+		// MR
+		"--collect.engine_innodb_status",
+		"--collect.info_schema.innodb_cmp",
+		"--collect.info_schema.innodb_cmpmem",
+		"--collect.info_schema.processlist",
+		"--collect.info_schema.query_response_time",
+		"--collect.perf_schema.eventswaits",
+		"--collect.perf_schema.file_events",
+		"--collect.slave_status",
+		"--collect.custom_query.mr",
+
+		// HR
+		"--collect.global_status",
+		"--collect.info_schema.innodb_metrics",
+		"--collect.custom_query.hr",
+		"--collect.standard.go",
+		"--collect.standard.process",
+
+		"--collect.custom_query.lr.directory=/usr/local/percona/pmm2/collectors/custom-queries/mysql/low-resolution",
+		"--collect.custom_query.mr.directory=/usr/local/percona/pmm2/collectors/custom-queries/mysql/medium-resolution",
+		"--collect.custom_query.hr.directory=/usr/local/percona/pmm2/collectors/custom-queries/mysql/high-resolution",
+
+		"--exporter.max-idle-conns=3",
+		"--exporter.max-open-conns=3",
+		"--exporter.conn-max-lifetime=55s",
+		"--exporter.global-conn-pool",
+		"--web.listen-address=:" + tdp.left + " .listen_port " + tdp.right,
 	}
 
-	// TODO Make it configurable.
-	args = append(args, "-collect.auto_increment.columns")
-	args = append(args, "-collect.info_schema.tables")
-	args = append(args, "-collect.info_schema.tablestats")
-	args = append(args, "-collect.perf_schema.indexiowaits")
-	args = append(args, "-collect.perf_schema.tableiowaits")
-	args = append(args, "-collect.perf_schema.tablelocks")
-	args = append(args, "-collect.custom_query=false")
+	if exporter.IsMySQLTablestatsGroupEnabled() {
+		// keep in sync with Prometheus scrape configs generator
+		tablestatsGroup := []string{
+			// LR
+			"--collect.auto_increment.columns",
+			"--collect.info_schema.tables",
+			"--collect.info_schema.tablestats",
+			"--collect.perf_schema.indexiowaits",
+			"--collect.perf_schema.tableiowaits",
+
+			// MR
+			"--collect.perf_schema.tablelocks",
+		}
+		args = append(args, tablestatsGroup...)
+	}
 
 	if pointer.GetString(exporter.MetricsURL) != "" {
-		args = append(args, "-web.telemetry-path="+*exporter.MetricsURL)
+		args = append(args, "--web.telemetry-path="+*exporter.MetricsURL)
 	}
 
 	sort.Strings(args)
 
-	return &agentpb.SetStateRequest_AgentProcess{
-		Type:               agentpb.Type_MYSQLD_EXPORTER,
+	res := &agentpb.SetStateRequest_AgentProcess{
+		Type:               inventorypb.AgentType_MYSQLD_EXPORTER,
 		TemplateLeftDelim:  tdp.left,
 		TemplateRightDelim: tdp.right,
 		Args:               args,
 		Env: []string{
 			fmt.Sprintf("DATA_SOURCE_NAME=%s", exporter.DSN(service, time.Second, "")),
+			fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.AgentID),
 		},
 	}
+	if redactMode != exposeSecrets {
+		res.RedactWords = redactWords(exporter)
+	}
+	return res
 }
 
 // qanMySQLPerfSchemaAgentConfig returns desired configuration of qan-mysql-perfschema built-in agent.
 func qanMySQLPerfSchemaAgentConfig(service *models.Service, agent *models.Agent) *agentpb.SetStateRequest_BuiltinAgent {
 	return &agentpb.SetStateRequest_BuiltinAgent{
-		Type: agentpb.Type_QAN_MYSQL_PERFSCHEMA_AGENT,
-		Dsn:  agent.DSN(service, time.Second, ""),
+		Type:                 inventorypb.AgentType_QAN_MYSQL_PERFSCHEMA_AGENT,
+		Dsn:                  agent.DSN(service, time.Second, ""),
+		DisableQueryExamples: agent.QueryExamplesDisabled,
 	}
 }
 
 // qanMySQLSlowlogAgentConfig returns desired configuration of qan-mysql-slowlog built-in agent.
 func qanMySQLSlowlogAgentConfig(service *models.Service, agent *models.Agent) *agentpb.SetStateRequest_BuiltinAgent {
 	return &agentpb.SetStateRequest_BuiltinAgent{
-		Type: agentpb.Type_QAN_MYSQL_SLOWLOG_AGENT,
-		Dsn:  agent.DSN(service, time.Second, ""),
+		Type:                 inventorypb.AgentType_QAN_MYSQL_SLOWLOG_AGENT,
+		Dsn:                  agent.DSN(service, time.Second, ""),
+		DisableQueryExamples: agent.QueryExamplesDisabled,
+		MaxQueryLogSize:      agent.MaxQueryLogSize,
 	}
 }

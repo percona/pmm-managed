@@ -31,11 +31,11 @@ const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 type NodeType int32
 
 const (
-	NodeType_NODE_TYPE_INVALID      NodeType = 0
-	NodeType_GENERIC_NODE           NodeType = 1
-	NodeType_CONTAINER_NODE         NodeType = 2
-	NodeType_REMOTE_NODE            NodeType = 3
-	NodeType_REMOTE_AMAZON_RDS_NODE NodeType = 4
+	NodeType_NODE_TYPE_INVALID NodeType = 0
+	NodeType_GENERIC_NODE      NodeType = 1
+	NodeType_CONTAINER_NODE    NodeType = 2
+	NodeType_REMOTE_NODE       NodeType = 3
+	NodeType_REMOTE_RDS_NODE   NodeType = 4
 )
 
 var NodeType_name = map[int32]string{
@@ -43,15 +43,15 @@ var NodeType_name = map[int32]string{
 	1: "GENERIC_NODE",
 	2: "CONTAINER_NODE",
 	3: "REMOTE_NODE",
-	4: "REMOTE_AMAZON_RDS_NODE",
+	4: "REMOTE_RDS_NODE",
 }
 
 var NodeType_value = map[string]int32{
-	"NODE_TYPE_INVALID":      0,
-	"GENERIC_NODE":           1,
-	"CONTAINER_NODE":         2,
-	"REMOTE_NODE":            3,
-	"REMOTE_AMAZON_RDS_NODE": 4,
+	"NODE_TYPE_INVALID": 0,
+	"GENERIC_NODE":      1,
+	"CONTAINER_NODE":    2,
+	"REMOTE_NODE":       3,
+	"REMOTE_RDS_NODE":   4,
 }
 
 func (x NodeType) String() string {
@@ -64,28 +64,27 @@ func (NodeType) EnumDescriptor() ([]byte, []int) {
 
 // GenericNode represents a bare metal server or virtual machine.
 type GenericNode struct {
-	// Unique randomly generated instance identifier. Can't be changed.
+	// Unique randomly generated instance identifier.
 	NodeId string `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
-	// Unique across all Nodes user-defined name. Can't be changed.
+	// Unique across all Nodes user-defined name.
 	NodeName string `protobuf:"bytes,2,opt,name=node_name,json=nodeName,proto3" json:"node_name,omitempty"`
-	// Linux machine-id. Auto-detected and auto-updated.
-	// Must be unique across all Generic Nodes if specified.
-	MachineId string `protobuf:"bytes,3,opt,name=machine_id,json=machineId,proto3" json:"machine_id,omitempty"`
-	// Linux distribution name and version. Auto-detected and auto-updated.
-	Distro string `protobuf:"bytes,4,opt,name=distro,proto3" json:"distro,omitempty"`
-	// Node model. Auto-detected and auto-updated.
-	NodeModel string `protobuf:"bytes,5,opt,name=node_model,json=nodeModel,proto3" json:"node_model,omitempty"`
-	// Node region. Auto-detected and auto-updated.
-	Region string `protobuf:"bytes,6,opt,name=region,proto3" json:"region,omitempty"`
-	// Node availability zone. Auto-detected and auto-updated.
-	Az string `protobuf:"bytes,7,opt,name=az,proto3" json:"az,omitempty"`
-	// Custom user-assigned labels. Can be changed.
-	CustomLabels map[string]string `protobuf:"bytes,8,rep,name=custom_labels,json=customLabels,proto3" json:"custom_labels,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	// Address FIXME https://jira.percona.com/browse/PMM-3786
-	Address              string   `protobuf:"bytes,42,opt,name=address,proto3" json:"address,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	// Node address (DNS name or IP).
+	Address string `protobuf:"bytes,3,opt,name=address,proto3" json:"address,omitempty"`
+	// Linux machine-id.
+	MachineId string `protobuf:"bytes,4,opt,name=machine_id,json=machineId,proto3" json:"machine_id,omitempty"`
+	// Linux distribution name and version.
+	Distro string `protobuf:"bytes,5,opt,name=distro,proto3" json:"distro,omitempty"`
+	// Node model.
+	NodeModel string `protobuf:"bytes,6,opt,name=node_model,json=nodeModel,proto3" json:"node_model,omitempty"`
+	// Node region.
+	Region string `protobuf:"bytes,7,opt,name=region,proto3" json:"region,omitempty"`
+	// Node availability zone.
+	Az string `protobuf:"bytes,8,opt,name=az,proto3" json:"az,omitempty"`
+	// Custom user-assigned labels.
+	CustomLabels         map[string]string `protobuf:"bytes,9,rep,name=custom_labels,json=customLabels,proto3" json:"custom_labels,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
+	XXX_unrecognized     []byte            `json:"-"`
+	XXX_sizecache        int32             `json:"-"`
 }
 
 func (m *GenericNode) Reset()         { *m = GenericNode{} }
@@ -123,6 +122,13 @@ func (m *GenericNode) GetNodeId() string {
 func (m *GenericNode) GetNodeName() string {
 	if m != nil {
 		return m.NodeName
+	}
+	return ""
+}
+
+func (m *GenericNode) GetAddress() string {
+	if m != nil {
+		return m.Address
 	}
 	return ""
 }
@@ -169,40 +175,31 @@ func (m *GenericNode) GetCustomLabels() map[string]string {
 	return nil
 }
 
-func (m *GenericNode) GetAddress() string {
-	if m != nil {
-		return m.Address
-	}
-	return ""
-}
-
 // ContainerNode represents a Docker container.
 type ContainerNode struct {
-	// Unique randomly generated instance identifier. Can't be changed.
+	// Unique randomly generated instance identifier.
 	NodeId string `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
-	// Unique across all Nodes user-defined name. Can't be changed.
+	// Unique across all Nodes user-defined name.
 	NodeName string `protobuf:"bytes,2,opt,name=node_name,json=nodeName,proto3" json:"node_name,omitempty"`
-	// Linux machine-id of the Generic Node where this Container Node runs. Auto-detected and auto-updated.
-	// If defined, Generic Node with that machine_id must exist.
-	MachineId string `protobuf:"bytes,3,opt,name=machine_id,json=machineId,proto3" json:"machine_id,omitempty"`
+	// Node address (DNS name or IP).
+	Address string `protobuf:"bytes,3,opt,name=address,proto3" json:"address,omitempty"`
+	// Linux machine-id of the Generic Node where this Container Node runs.
+	MachineId string `protobuf:"bytes,4,opt,name=machine_id,json=machineId,proto3" json:"machine_id,omitempty"`
 	// Container identifier. If specified, must be a unique Docker container identifier.
-	// Auto-detected and auto-updated.
-	ContainerId string `protobuf:"bytes,4,opt,name=container_id,json=containerId,proto3" json:"container_id,omitempty"`
-	// Container name. Auto-detected and auto-updated.
-	ContainerName string `protobuf:"bytes,5,opt,name=container_name,json=containerName,proto3" json:"container_name,omitempty"`
-	// Node model. Auto-detected and auto-updated.
-	NodeModel string `protobuf:"bytes,6,opt,name=node_model,json=nodeModel,proto3" json:"node_model,omitempty"`
-	// Node region. Auto-detected and auto-updated.
-	Region string `protobuf:"bytes,7,opt,name=region,proto3" json:"region,omitempty"`
-	// Node availability zone. Auto-detected and auto-updated.
-	Az string `protobuf:"bytes,8,opt,name=az,proto3" json:"az,omitempty"`
+	ContainerId string `protobuf:"bytes,5,opt,name=container_id,json=containerId,proto3" json:"container_id,omitempty"`
+	// Container name.
+	ContainerName string `protobuf:"bytes,6,opt,name=container_name,json=containerName,proto3" json:"container_name,omitempty"`
+	// Node model.
+	NodeModel string `protobuf:"bytes,7,opt,name=node_model,json=nodeModel,proto3" json:"node_model,omitempty"`
+	// Node region.
+	Region string `protobuf:"bytes,8,opt,name=region,proto3" json:"region,omitempty"`
+	// Node availability zone.
+	Az string `protobuf:"bytes,9,opt,name=az,proto3" json:"az,omitempty"`
 	// Custom user-assigned labels.
-	CustomLabels map[string]string `protobuf:"bytes,9,rep,name=custom_labels,json=customLabels,proto3" json:"custom_labels,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	// Address FIXME https://jira.percona.com/browse/PMM-3786
-	Address              string   `protobuf:"bytes,42,opt,name=address,proto3" json:"address,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	CustomLabels         map[string]string `protobuf:"bytes,10,rep,name=custom_labels,json=customLabels,proto3" json:"custom_labels,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
+	XXX_unrecognized     []byte            `json:"-"`
+	XXX_sizecache        int32             `json:"-"`
 }
 
 func (m *ContainerNode) Reset()         { *m = ContainerNode{} }
@@ -240,6 +237,13 @@ func (m *ContainerNode) GetNodeId() string {
 func (m *ContainerNode) GetNodeName() string {
 	if m != nil {
 		return m.NodeName
+	}
+	return ""
+}
+
+func (m *ContainerNode) GetAddress() string {
+	if m != nil {
+		return m.Address
 	}
 	return ""
 }
@@ -293,21 +297,22 @@ func (m *ContainerNode) GetCustomLabels() map[string]string {
 	return nil
 }
 
-func (m *ContainerNode) GetAddress() string {
-	if m != nil {
-		return m.Address
-	}
-	return ""
-}
-
 // RemoteNode represents generic remote Node. Agents can't run on Remote Nodes.
 type RemoteNode struct {
-	// Unique randomly generated instance identifier. Can't be changed.
+	// Unique randomly generated instance identifier.
 	NodeId string `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
-	// Unique across all Nodes user-defined name. Can't be changed.
+	// Unique across all Nodes user-defined name.
 	NodeName string `protobuf:"bytes,2,opt,name=node_name,json=nodeName,proto3" json:"node_name,omitempty"`
-	// Custom user-assigned labels. Can be changed.
-	CustomLabels         map[string]string `protobuf:"bytes,10,rep,name=custom_labels,json=customLabels,proto3" json:"custom_labels,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	// Node address (DNS name or IP).
+	Address string `protobuf:"bytes,3,opt,name=address,proto3" json:"address,omitempty"`
+	// Node model.
+	NodeModel string `protobuf:"bytes,4,opt,name=node_model,json=nodeModel,proto3" json:"node_model,omitempty"`
+	// Node region.
+	Region string `protobuf:"bytes,5,opt,name=region,proto3" json:"region,omitempty"`
+	// Node availability zone.
+	Az string `protobuf:"bytes,6,opt,name=az,proto3" json:"az,omitempty"`
+	// Custom user-assigned labels.
+	CustomLabels         map[string]string `protobuf:"bytes,7,rep,name=custom_labels,json=customLabels,proto3" json:"custom_labels,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
 	XXX_unrecognized     []byte            `json:"-"`
 	XXX_sizecache        int32             `json:"-"`
@@ -352,6 +357,34 @@ func (m *RemoteNode) GetNodeName() string {
 	return ""
 }
 
+func (m *RemoteNode) GetAddress() string {
+	if m != nil {
+		return m.Address
+	}
+	return ""
+}
+
+func (m *RemoteNode) GetNodeModel() string {
+	if m != nil {
+		return m.NodeModel
+	}
+	return ""
+}
+
+func (m *RemoteNode) GetRegion() string {
+	if m != nil {
+		return m.Region
+	}
+	return ""
+}
+
+func (m *RemoteNode) GetAz() string {
+	if m != nil {
+		return m.Az
+	}
+	return ""
+}
+
 func (m *RemoteNode) GetCustomLabels() map[string]string {
 	if m != nil {
 		return m.CustomLabels
@@ -359,77 +392,95 @@ func (m *RemoteNode) GetCustomLabels() map[string]string {
 	return nil
 }
 
-// RemoteAmazonRDSNode represents a Remote Node for Amazon RDS. Agents can't run on Remote Nodes.
-type RemoteAmazonRDSNode struct {
-	// Unique randomly generated instance identifier. Can't be changed.
+// RemoteRDSNode represents remote RDS Node. Agents can't run on Remote Nodes.
+type RemoteRDSNode struct {
+	// Unique randomly generated instance identifier.
 	NodeId string `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
-	// Unique across all Nodes user-defined name. Can't be changed.
+	// Unique across all Nodes user-defined name.
 	NodeName string `protobuf:"bytes,2,opt,name=node_name,json=nodeName,proto3" json:"node_name,omitempty"`
-	// DB instance identifier. Unique across all RemoteAmazonRDS Nodes in combination with region. Can be changed.
-	Instance string `protobuf:"bytes,3,opt,name=instance,proto3" json:"instance,omitempty"`
-	// Unique across all RemoteAmazonRDS Nodes in combination with instance. Can't be changed.
-	Region string `protobuf:"bytes,4,opt,name=region,proto3" json:"region,omitempty"`
-	// Custom user-assigned labels. Can be changed.
-	CustomLabels         map[string]string `protobuf:"bytes,10,rep,name=custom_labels,json=customLabels,proto3" json:"custom_labels,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	// DB instance identifier.
+	Address string `protobuf:"bytes,3,opt,name=address,proto3" json:"address,omitempty"`
+	// Node model.
+	NodeModel string `protobuf:"bytes,4,opt,name=node_model,json=nodeModel,proto3" json:"node_model,omitempty"`
+	// Node region.
+	Region string `protobuf:"bytes,5,opt,name=region,proto3" json:"region,omitempty"`
+	// Node availability zone.
+	Az string `protobuf:"bytes,6,opt,name=az,proto3" json:"az,omitempty"`
+	// Custom user-assigned labels.
+	CustomLabels         map[string]string `protobuf:"bytes,7,rep,name=custom_labels,json=customLabels,proto3" json:"custom_labels,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
 	XXX_unrecognized     []byte            `json:"-"`
 	XXX_sizecache        int32             `json:"-"`
 }
 
-func (m *RemoteAmazonRDSNode) Reset()         { *m = RemoteAmazonRDSNode{} }
-func (m *RemoteAmazonRDSNode) String() string { return proto.CompactTextString(m) }
-func (*RemoteAmazonRDSNode) ProtoMessage()    {}
-func (*RemoteAmazonRDSNode) Descriptor() ([]byte, []int) {
+func (m *RemoteRDSNode) Reset()         { *m = RemoteRDSNode{} }
+func (m *RemoteRDSNode) String() string { return proto.CompactTextString(m) }
+func (*RemoteRDSNode) ProtoMessage()    {}
+func (*RemoteRDSNode) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0c30c43e719d1341, []int{3}
 }
 
-func (m *RemoteAmazonRDSNode) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_RemoteAmazonRDSNode.Unmarshal(m, b)
+func (m *RemoteRDSNode) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_RemoteRDSNode.Unmarshal(m, b)
 }
-func (m *RemoteAmazonRDSNode) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_RemoteAmazonRDSNode.Marshal(b, m, deterministic)
+func (m *RemoteRDSNode) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_RemoteRDSNode.Marshal(b, m, deterministic)
 }
-func (m *RemoteAmazonRDSNode) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RemoteAmazonRDSNode.Merge(m, src)
+func (m *RemoteRDSNode) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_RemoteRDSNode.Merge(m, src)
 }
-func (m *RemoteAmazonRDSNode) XXX_Size() int {
-	return xxx_messageInfo_RemoteAmazonRDSNode.Size(m)
+func (m *RemoteRDSNode) XXX_Size() int {
+	return xxx_messageInfo_RemoteRDSNode.Size(m)
 }
-func (m *RemoteAmazonRDSNode) XXX_DiscardUnknown() {
-	xxx_messageInfo_RemoteAmazonRDSNode.DiscardUnknown(m)
+func (m *RemoteRDSNode) XXX_DiscardUnknown() {
+	xxx_messageInfo_RemoteRDSNode.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_RemoteAmazonRDSNode proto.InternalMessageInfo
+var xxx_messageInfo_RemoteRDSNode proto.InternalMessageInfo
 
-func (m *RemoteAmazonRDSNode) GetNodeId() string {
+func (m *RemoteRDSNode) GetNodeId() string {
 	if m != nil {
 		return m.NodeId
 	}
 	return ""
 }
 
-func (m *RemoteAmazonRDSNode) GetNodeName() string {
+func (m *RemoteRDSNode) GetNodeName() string {
 	if m != nil {
 		return m.NodeName
 	}
 	return ""
 }
 
-func (m *RemoteAmazonRDSNode) GetInstance() string {
+func (m *RemoteRDSNode) GetAddress() string {
 	if m != nil {
-		return m.Instance
+		return m.Address
 	}
 	return ""
 }
 
-func (m *RemoteAmazonRDSNode) GetRegion() string {
+func (m *RemoteRDSNode) GetNodeModel() string {
+	if m != nil {
+		return m.NodeModel
+	}
+	return ""
+}
+
+func (m *RemoteRDSNode) GetRegion() string {
 	if m != nil {
 		return m.Region
 	}
 	return ""
 }
 
-func (m *RemoteAmazonRDSNode) GetCustomLabels() map[string]string {
+func (m *RemoteRDSNode) GetAz() string {
+	if m != nil {
+		return m.Az
+	}
+	return ""
+}
+
+func (m *RemoteRDSNode) GetCustomLabels() map[string]string {
 	if m != nil {
 		return m.CustomLabels
 	}
@@ -468,13 +519,13 @@ func (m *ListNodesRequest) XXX_DiscardUnknown() {
 var xxx_messageInfo_ListNodesRequest proto.InternalMessageInfo
 
 type ListNodesResponse struct {
-	Generic              []*GenericNode         `protobuf:"bytes,1,rep,name=generic,proto3" json:"generic,omitempty"`
-	Container            []*ContainerNode       `protobuf:"bytes,2,rep,name=container,proto3" json:"container,omitempty"`
-	Remote               []*RemoteNode          `protobuf:"bytes,3,rep,name=remote,proto3" json:"remote,omitempty"`
-	RemoteAmazonRds      []*RemoteAmazonRDSNode `protobuf:"bytes,4,rep,name=remote_amazon_rds,json=remoteAmazonRds,proto3" json:"remote_amazon_rds,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}               `json:"-"`
-	XXX_unrecognized     []byte                 `json:"-"`
-	XXX_sizecache        int32                  `json:"-"`
+	Generic              []*GenericNode   `protobuf:"bytes,1,rep,name=generic,proto3" json:"generic,omitempty"`
+	Container            []*ContainerNode `protobuf:"bytes,2,rep,name=container,proto3" json:"container,omitempty"`
+	Remote               []*RemoteNode    `protobuf:"bytes,3,rep,name=remote,proto3" json:"remote,omitempty"`
+	RemoteRds            []*RemoteRDSNode `protobuf:"bytes,4,rep,name=remote_rds,json=remoteRds,proto3" json:"remote_rds,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}         `json:"-"`
+	XXX_unrecognized     []byte           `json:"-"`
+	XXX_sizecache        int32            `json:"-"`
 }
 
 func (m *ListNodesResponse) Reset()         { *m = ListNodesResponse{} }
@@ -523,9 +574,9 @@ func (m *ListNodesResponse) GetRemote() []*RemoteNode {
 	return nil
 }
 
-func (m *ListNodesResponse) GetRemoteAmazonRds() []*RemoteAmazonRDSNode {
+func (m *ListNodesResponse) GetRemoteRds() []*RemoteRDSNode {
 	if m != nil {
-		return m.RemoteAmazonRds
+		return m.RemoteRds
 	}
 	return nil
 }
@@ -575,7 +626,7 @@ type GetNodeResponse struct {
 	//	*GetNodeResponse_Generic
 	//	*GetNodeResponse_Container
 	//	*GetNodeResponse_Remote
-	//	*GetNodeResponse_RemoteAmazonRds
+	//	*GetNodeResponse_RemoteRds
 	Node                 isGetNodeResponse_Node `protobuf_oneof:"node"`
 	XXX_NoUnkeyedLiteral struct{}               `json:"-"`
 	XXX_unrecognized     []byte                 `json:"-"`
@@ -623,8 +674,8 @@ type GetNodeResponse_Remote struct {
 	Remote *RemoteNode `protobuf:"bytes,3,opt,name=remote,proto3,oneof"`
 }
 
-type GetNodeResponse_RemoteAmazonRds struct {
-	RemoteAmazonRds *RemoteAmazonRDSNode `protobuf:"bytes,4,opt,name=remote_amazon_rds,json=remoteAmazonRds,proto3,oneof"`
+type GetNodeResponse_RemoteRds struct {
+	RemoteRds *RemoteRDSNode `protobuf:"bytes,4,opt,name=remote_rds,json=remoteRds,proto3,oneof"`
 }
 
 func (*GetNodeResponse_Generic) isGetNodeResponse_Node() {}
@@ -633,7 +684,7 @@ func (*GetNodeResponse_Container) isGetNodeResponse_Node() {}
 
 func (*GetNodeResponse_Remote) isGetNodeResponse_Node() {}
 
-func (*GetNodeResponse_RemoteAmazonRds) isGetNodeResponse_Node() {}
+func (*GetNodeResponse_RemoteRds) isGetNodeResponse_Node() {}
 
 func (m *GetNodeResponse) GetNode() isGetNodeResponse_Node {
 	if m != nil {
@@ -663,9 +714,9 @@ func (m *GetNodeResponse) GetRemote() *RemoteNode {
 	return nil
 }
 
-func (m *GetNodeResponse) GetRemoteAmazonRds() *RemoteAmazonRDSNode {
-	if x, ok := m.GetNode().(*GetNodeResponse_RemoteAmazonRds); ok {
-		return x.RemoteAmazonRds
+func (m *GetNodeResponse) GetRemoteRds() *RemoteRDSNode {
+	if x, ok := m.GetNode().(*GetNodeResponse_RemoteRds); ok {
+		return x.RemoteRds
 	}
 	return nil
 }
@@ -676,31 +727,30 @@ func (*GetNodeResponse) XXX_OneofWrappers() []interface{} {
 		(*GetNodeResponse_Generic)(nil),
 		(*GetNodeResponse_Container)(nil),
 		(*GetNodeResponse_Remote)(nil),
-		(*GetNodeResponse_RemoteAmazonRds)(nil),
+		(*GetNodeResponse_RemoteRds)(nil),
 	}
 }
 
 type AddGenericNodeRequest struct {
-	// Unique across all Nodes user-defined name. Can't be changed.
-	NodeName string `protobuf:"bytes,2,opt,name=node_name,json=nodeName,proto3" json:"node_name,omitempty"`
-	// Linux machine-id. Auto-detected and auto-updated.
-	// Must be unique across all Generic Nodes if specified.
+	// Unique across all Nodes user-defined name.
+	NodeName string `protobuf:"bytes,1,opt,name=node_name,json=nodeName,proto3" json:"node_name,omitempty"`
+	// Node address (DNS name or IP).
+	Address string `protobuf:"bytes,2,opt,name=address,proto3" json:"address,omitempty"`
+	// Linux machine-id.
 	MachineId string `protobuf:"bytes,3,opt,name=machine_id,json=machineId,proto3" json:"machine_id,omitempty"`
-	// Linux distribution name and version. Auto-detected and auto-updated.
+	// Linux distribution name and version.
 	Distro string `protobuf:"bytes,4,opt,name=distro,proto3" json:"distro,omitempty"`
-	// Node model. Auto-detected and auto-updated.
+	// Node model.
 	NodeModel string `protobuf:"bytes,5,opt,name=node_model,json=nodeModel,proto3" json:"node_model,omitempty"`
-	// Node region. Auto-detected and auto-updated.
+	// Node region.
 	Region string `protobuf:"bytes,6,opt,name=region,proto3" json:"region,omitempty"`
-	// Node availability zone. Auto-detected and auto-updated.
+	// Node availability zone.
 	Az string `protobuf:"bytes,7,opt,name=az,proto3" json:"az,omitempty"`
 	// Custom user-assigned labels.
-	CustomLabels map[string]string `protobuf:"bytes,8,rep,name=custom_labels,json=customLabels,proto3" json:"custom_labels,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	// Address FIXME https://jira.percona.com/browse/PMM-3786
-	Address              string   `protobuf:"bytes,42,opt,name=address,proto3" json:"address,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	CustomLabels         map[string]string `protobuf:"bytes,8,rep,name=custom_labels,json=customLabels,proto3" json:"custom_labels,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
+	XXX_unrecognized     []byte            `json:"-"`
+	XXX_sizecache        int32             `json:"-"`
 }
 
 func (m *AddGenericNodeRequest) Reset()         { *m = AddGenericNodeRequest{} }
@@ -731,6 +781,13 @@ var xxx_messageInfo_AddGenericNodeRequest proto.InternalMessageInfo
 func (m *AddGenericNodeRequest) GetNodeName() string {
 	if m != nil {
 		return m.NodeName
+	}
+	return ""
+}
+
+func (m *AddGenericNodeRequest) GetAddress() string {
+	if m != nil {
+		return m.Address
 	}
 	return ""
 }
@@ -777,13 +834,6 @@ func (m *AddGenericNodeRequest) GetCustomLabels() map[string]string {
 	return nil
 }
 
-func (m *AddGenericNodeRequest) GetAddress() string {
-	if m != nil {
-		return m.Address
-	}
-	return ""
-}
-
 type AddGenericNodeResponse struct {
 	Generic              *GenericNode `protobuf:"bytes,1,opt,name=generic,proto3" json:"generic,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
@@ -824,28 +874,27 @@ func (m *AddGenericNodeResponse) GetGeneric() *GenericNode {
 }
 
 type AddContainerNodeRequest struct {
-	// Unique across all Nodes user-defined name. Can't be changed.
-	NodeName string `protobuf:"bytes,2,opt,name=node_name,json=nodeName,proto3" json:"node_name,omitempty"`
-	// Linux machine-id of the Generic Node where this Container Node runs. Auto-detected and auto-updated.
-	// If defined, Generic Node with that machine_id must exist.
+	// Unique across all Nodes user-defined name.
+	NodeName string `protobuf:"bytes,1,opt,name=node_name,json=nodeName,proto3" json:"node_name,omitempty"`
+	// Node address (DNS name or IP).
+	Address string `protobuf:"bytes,2,opt,name=address,proto3" json:"address,omitempty"`
+	// Linux machine-id of the Generic Node where this Container Node runs.
 	MachineId string `protobuf:"bytes,3,opt,name=machine_id,json=machineId,proto3" json:"machine_id,omitempty"`
 	// Container identifier. If specified, must be a unique Docker container identifier.
 	ContainerId string `protobuf:"bytes,4,opt,name=container_id,json=containerId,proto3" json:"container_id,omitempty"`
 	// Container name.
 	ContainerName string `protobuf:"bytes,5,opt,name=container_name,json=containerName,proto3" json:"container_name,omitempty"`
-	// Node model. Auto-detected and auto-updated.
+	// Node model.
 	NodeModel string `protobuf:"bytes,6,opt,name=node_model,json=nodeModel,proto3" json:"node_model,omitempty"`
-	// Node region. Auto-detected and auto-updated.
+	// Node region.
 	Region string `protobuf:"bytes,7,opt,name=region,proto3" json:"region,omitempty"`
-	// Node availability zone. Auto-detected and auto-updated.
+	// Node availability zone.
 	Az string `protobuf:"bytes,8,opt,name=az,proto3" json:"az,omitempty"`
 	// Custom user-assigned labels.
-	CustomLabels map[string]string `protobuf:"bytes,9,rep,name=custom_labels,json=customLabels,proto3" json:"custom_labels,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	// Address FIXME https://jira.percona.com/browse/PMM-3786
-	Address              string   `protobuf:"bytes,42,opt,name=address,proto3" json:"address,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	CustomLabels         map[string]string `protobuf:"bytes,9,rep,name=custom_labels,json=customLabels,proto3" json:"custom_labels,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
+	XXX_unrecognized     []byte            `json:"-"`
+	XXX_sizecache        int32             `json:"-"`
 }
 
 func (m *AddContainerNodeRequest) Reset()         { *m = AddContainerNodeRequest{} }
@@ -876,6 +925,13 @@ var xxx_messageInfo_AddContainerNodeRequest proto.InternalMessageInfo
 func (m *AddContainerNodeRequest) GetNodeName() string {
 	if m != nil {
 		return m.NodeName
+	}
+	return ""
+}
+
+func (m *AddContainerNodeRequest) GetAddress() string {
+	if m != nil {
+		return m.Address
 	}
 	return ""
 }
@@ -929,13 +985,6 @@ func (m *AddContainerNodeRequest) GetCustomLabels() map[string]string {
 	return nil
 }
 
-func (m *AddContainerNodeRequest) GetAddress() string {
-	if m != nil {
-		return m.Address
-	}
-	return ""
-}
-
 type AddContainerNodeResponse struct {
 	Container            *ContainerNode `protobuf:"bytes,1,opt,name=container,proto3" json:"container,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
@@ -976,10 +1025,18 @@ func (m *AddContainerNodeResponse) GetContainer() *ContainerNode {
 }
 
 type AddRemoteNodeRequest struct {
-	// Unique across all Nodes user-defined name. Can't be changed.
-	NodeName string `protobuf:"bytes,2,opt,name=node_name,json=nodeName,proto3" json:"node_name,omitempty"`
+	// Unique across all Nodes user-defined name.
+	NodeName string `protobuf:"bytes,1,opt,name=node_name,json=nodeName,proto3" json:"node_name,omitempty"`
+	// Node address (DNS name or IP).
+	Address string `protobuf:"bytes,2,opt,name=address,proto3" json:"address,omitempty"`
+	// Node model.
+	NodeModel string `protobuf:"bytes,3,opt,name=node_model,json=nodeModel,proto3" json:"node_model,omitempty"`
+	// Node region.
+	Region string `protobuf:"bytes,4,opt,name=region,proto3" json:"region,omitempty"`
+	// Node availability zone.
+	Az string `protobuf:"bytes,5,opt,name=az,proto3" json:"az,omitempty"`
 	// Custom user-assigned labels.
-	CustomLabels         map[string]string `protobuf:"bytes,10,rep,name=custom_labels,json=customLabels,proto3" json:"custom_labels,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	CustomLabels         map[string]string `protobuf:"bytes,6,rep,name=custom_labels,json=customLabels,proto3" json:"custom_labels,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
 	XXX_unrecognized     []byte            `json:"-"`
 	XXX_sizecache        int32             `json:"-"`
@@ -1013,6 +1070,34 @@ var xxx_messageInfo_AddRemoteNodeRequest proto.InternalMessageInfo
 func (m *AddRemoteNodeRequest) GetNodeName() string {
 	if m != nil {
 		return m.NodeName
+	}
+	return ""
+}
+
+func (m *AddRemoteNodeRequest) GetAddress() string {
+	if m != nil {
+		return m.Address
+	}
+	return ""
+}
+
+func (m *AddRemoteNodeRequest) GetNodeModel() string {
+	if m != nil {
+		return m.NodeModel
+	}
+	return ""
+}
+
+func (m *AddRemoteNodeRequest) GetRegion() string {
+	if m != nil {
+		return m.Region
+	}
+	return ""
+}
+
+func (m *AddRemoteNodeRequest) GetAz() string {
+	if m != nil {
+		return m.Az
 	}
 	return ""
 }
@@ -1063,108 +1148,126 @@ func (m *AddRemoteNodeResponse) GetRemote() *RemoteNode {
 	return nil
 }
 
-type AddRemoteAmazonRDSNodeRequest struct {
-	// Unique across all Nodes user-defined name. Can't be changed.
-	NodeName string `protobuf:"bytes,2,opt,name=node_name,json=nodeName,proto3" json:"node_name,omitempty"`
-	// DB instance identifier. Unique across all RemoteAmazonRDS Nodes in combination with region.
-	Instance string `protobuf:"bytes,3,opt,name=instance,proto3" json:"instance,omitempty"`
-	// Unique across all RemoteAmazonRDS Nodes in combination with instance.
+type AddRemoteRDSNodeRequest struct {
+	// Unique across all Nodes user-defined name.
+	NodeName string `protobuf:"bytes,1,opt,name=node_name,json=nodeName,proto3" json:"node_name,omitempty"`
+	// DB instance identifier.
+	Address string `protobuf:"bytes,2,opt,name=address,proto3" json:"address,omitempty"`
+	// Node model.
+	NodeModel string `protobuf:"bytes,3,opt,name=node_model,json=nodeModel,proto3" json:"node_model,omitempty"`
+	// Node region.
 	Region string `protobuf:"bytes,4,opt,name=region,proto3" json:"region,omitempty"`
+	// Node availability zone.
+	Az string `protobuf:"bytes,5,opt,name=az,proto3" json:"az,omitempty"`
 	// Custom user-assigned labels.
-	CustomLabels         map[string]string `protobuf:"bytes,10,rep,name=custom_labels,json=customLabels,proto3" json:"custom_labels,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	CustomLabels         map[string]string `protobuf:"bytes,6,rep,name=custom_labels,json=customLabels,proto3" json:"custom_labels,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
 	XXX_unrecognized     []byte            `json:"-"`
 	XXX_sizecache        int32             `json:"-"`
 }
 
-func (m *AddRemoteAmazonRDSNodeRequest) Reset()         { *m = AddRemoteAmazonRDSNodeRequest{} }
-func (m *AddRemoteAmazonRDSNodeRequest) String() string { return proto.CompactTextString(m) }
-func (*AddRemoteAmazonRDSNodeRequest) ProtoMessage()    {}
-func (*AddRemoteAmazonRDSNodeRequest) Descriptor() ([]byte, []int) {
+func (m *AddRemoteRDSNodeRequest) Reset()         { *m = AddRemoteRDSNodeRequest{} }
+func (m *AddRemoteRDSNodeRequest) String() string { return proto.CompactTextString(m) }
+func (*AddRemoteRDSNodeRequest) ProtoMessage()    {}
+func (*AddRemoteRDSNodeRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0c30c43e719d1341, []int{14}
 }
 
-func (m *AddRemoteAmazonRDSNodeRequest) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_AddRemoteAmazonRDSNodeRequest.Unmarshal(m, b)
+func (m *AddRemoteRDSNodeRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_AddRemoteRDSNodeRequest.Unmarshal(m, b)
 }
-func (m *AddRemoteAmazonRDSNodeRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_AddRemoteAmazonRDSNodeRequest.Marshal(b, m, deterministic)
+func (m *AddRemoteRDSNodeRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_AddRemoteRDSNodeRequest.Marshal(b, m, deterministic)
 }
-func (m *AddRemoteAmazonRDSNodeRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_AddRemoteAmazonRDSNodeRequest.Merge(m, src)
+func (m *AddRemoteRDSNodeRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AddRemoteRDSNodeRequest.Merge(m, src)
 }
-func (m *AddRemoteAmazonRDSNodeRequest) XXX_Size() int {
-	return xxx_messageInfo_AddRemoteAmazonRDSNodeRequest.Size(m)
+func (m *AddRemoteRDSNodeRequest) XXX_Size() int {
+	return xxx_messageInfo_AddRemoteRDSNodeRequest.Size(m)
 }
-func (m *AddRemoteAmazonRDSNodeRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_AddRemoteAmazonRDSNodeRequest.DiscardUnknown(m)
+func (m *AddRemoteRDSNodeRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_AddRemoteRDSNodeRequest.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_AddRemoteAmazonRDSNodeRequest proto.InternalMessageInfo
+var xxx_messageInfo_AddRemoteRDSNodeRequest proto.InternalMessageInfo
 
-func (m *AddRemoteAmazonRDSNodeRequest) GetNodeName() string {
+func (m *AddRemoteRDSNodeRequest) GetNodeName() string {
 	if m != nil {
 		return m.NodeName
 	}
 	return ""
 }
 
-func (m *AddRemoteAmazonRDSNodeRequest) GetInstance() string {
+func (m *AddRemoteRDSNodeRequest) GetAddress() string {
 	if m != nil {
-		return m.Instance
+		return m.Address
 	}
 	return ""
 }
 
-func (m *AddRemoteAmazonRDSNodeRequest) GetRegion() string {
+func (m *AddRemoteRDSNodeRequest) GetNodeModel() string {
+	if m != nil {
+		return m.NodeModel
+	}
+	return ""
+}
+
+func (m *AddRemoteRDSNodeRequest) GetRegion() string {
 	if m != nil {
 		return m.Region
 	}
 	return ""
 }
 
-func (m *AddRemoteAmazonRDSNodeRequest) GetCustomLabels() map[string]string {
+func (m *AddRemoteRDSNodeRequest) GetAz() string {
+	if m != nil {
+		return m.Az
+	}
+	return ""
+}
+
+func (m *AddRemoteRDSNodeRequest) GetCustomLabels() map[string]string {
 	if m != nil {
 		return m.CustomLabels
 	}
 	return nil
 }
 
-type AddRemoteAmazonRDSNodeResponse struct {
-	RemoteAmazonRds      *RemoteAmazonRDSNode `protobuf:"bytes,1,opt,name=remote_amazon_rds,json=remoteAmazonRds,proto3" json:"remote_amazon_rds,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
-	XXX_unrecognized     []byte               `json:"-"`
-	XXX_sizecache        int32                `json:"-"`
+type AddRemoteRDSNodeResponse struct {
+	RemoteRds            *RemoteRDSNode `protobuf:"bytes,1,opt,name=remote_rds,json=remoteRds,proto3" json:"remote_rds,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
 }
 
-func (m *AddRemoteAmazonRDSNodeResponse) Reset()         { *m = AddRemoteAmazonRDSNodeResponse{} }
-func (m *AddRemoteAmazonRDSNodeResponse) String() string { return proto.CompactTextString(m) }
-func (*AddRemoteAmazonRDSNodeResponse) ProtoMessage()    {}
-func (*AddRemoteAmazonRDSNodeResponse) Descriptor() ([]byte, []int) {
+func (m *AddRemoteRDSNodeResponse) Reset()         { *m = AddRemoteRDSNodeResponse{} }
+func (m *AddRemoteRDSNodeResponse) String() string { return proto.CompactTextString(m) }
+func (*AddRemoteRDSNodeResponse) ProtoMessage()    {}
+func (*AddRemoteRDSNodeResponse) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0c30c43e719d1341, []int{15}
 }
 
-func (m *AddRemoteAmazonRDSNodeResponse) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_AddRemoteAmazonRDSNodeResponse.Unmarshal(m, b)
+func (m *AddRemoteRDSNodeResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_AddRemoteRDSNodeResponse.Unmarshal(m, b)
 }
-func (m *AddRemoteAmazonRDSNodeResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_AddRemoteAmazonRDSNodeResponse.Marshal(b, m, deterministic)
+func (m *AddRemoteRDSNodeResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_AddRemoteRDSNodeResponse.Marshal(b, m, deterministic)
 }
-func (m *AddRemoteAmazonRDSNodeResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_AddRemoteAmazonRDSNodeResponse.Merge(m, src)
+func (m *AddRemoteRDSNodeResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AddRemoteRDSNodeResponse.Merge(m, src)
 }
-func (m *AddRemoteAmazonRDSNodeResponse) XXX_Size() int {
-	return xxx_messageInfo_AddRemoteAmazonRDSNodeResponse.Size(m)
+func (m *AddRemoteRDSNodeResponse) XXX_Size() int {
+	return xxx_messageInfo_AddRemoteRDSNodeResponse.Size(m)
 }
-func (m *AddRemoteAmazonRDSNodeResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_AddRemoteAmazonRDSNodeResponse.DiscardUnknown(m)
+func (m *AddRemoteRDSNodeResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_AddRemoteRDSNodeResponse.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_AddRemoteAmazonRDSNodeResponse proto.InternalMessageInfo
+var xxx_messageInfo_AddRemoteRDSNodeResponse proto.InternalMessageInfo
 
-func (m *AddRemoteAmazonRDSNodeResponse) GetRemoteAmazonRds() *RemoteAmazonRDSNode {
+func (m *AddRemoteRDSNodeResponse) GetRemoteRds() *RemoteRDSNode {
 	if m != nil {
-		return m.RemoteAmazonRds
+		return m.RemoteRds
 	}
 	return nil
 }
@@ -1257,8 +1360,8 @@ func init() {
 	proto.RegisterMapType((map[string]string)(nil), "inventory.ContainerNode.CustomLabelsEntry")
 	proto.RegisterType((*RemoteNode)(nil), "inventory.RemoteNode")
 	proto.RegisterMapType((map[string]string)(nil), "inventory.RemoteNode.CustomLabelsEntry")
-	proto.RegisterType((*RemoteAmazonRDSNode)(nil), "inventory.RemoteAmazonRDSNode")
-	proto.RegisterMapType((map[string]string)(nil), "inventory.RemoteAmazonRDSNode.CustomLabelsEntry")
+	proto.RegisterType((*RemoteRDSNode)(nil), "inventory.RemoteRDSNode")
+	proto.RegisterMapType((map[string]string)(nil), "inventory.RemoteRDSNode.CustomLabelsEntry")
 	proto.RegisterType((*ListNodesRequest)(nil), "inventory.ListNodesRequest")
 	proto.RegisterType((*ListNodesResponse)(nil), "inventory.ListNodesResponse")
 	proto.RegisterType((*GetNodeRequest)(nil), "inventory.GetNodeRequest")
@@ -1272,9 +1375,9 @@ func init() {
 	proto.RegisterType((*AddRemoteNodeRequest)(nil), "inventory.AddRemoteNodeRequest")
 	proto.RegisterMapType((map[string]string)(nil), "inventory.AddRemoteNodeRequest.CustomLabelsEntry")
 	proto.RegisterType((*AddRemoteNodeResponse)(nil), "inventory.AddRemoteNodeResponse")
-	proto.RegisterType((*AddRemoteAmazonRDSNodeRequest)(nil), "inventory.AddRemoteAmazonRDSNodeRequest")
-	proto.RegisterMapType((map[string]string)(nil), "inventory.AddRemoteAmazonRDSNodeRequest.CustomLabelsEntry")
-	proto.RegisterType((*AddRemoteAmazonRDSNodeResponse)(nil), "inventory.AddRemoteAmazonRDSNodeResponse")
+	proto.RegisterType((*AddRemoteRDSNodeRequest)(nil), "inventory.AddRemoteRDSNodeRequest")
+	proto.RegisterMapType((map[string]string)(nil), "inventory.AddRemoteRDSNodeRequest.CustomLabelsEntry")
+	proto.RegisterType((*AddRemoteRDSNodeResponse)(nil), "inventory.AddRemoteRDSNodeResponse")
 	proto.RegisterType((*RemoveNodeRequest)(nil), "inventory.RemoveNodeRequest")
 	proto.RegisterType((*RemoveNodeResponse)(nil), "inventory.RemoveNodeResponse")
 }
@@ -1282,89 +1385,88 @@ func init() {
 func init() { proto.RegisterFile("inventorypb/nodes.proto", fileDescriptor_0c30c43e719d1341) }
 
 var fileDescriptor_0c30c43e719d1341 = []byte{
-	// 1307 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xcc, 0x58, 0xcf, 0x4f, 0xe3, 0xc6,
-	0x17, 0xc7, 0x4e, 0x36, 0x3f, 0x1e, 0x0b, 0x1b, 0xe6, 0xbb, 0x0b, 0xfe, 0x7a, 0xf9, 0x91, 0x35,
-	0x62, 0x9b, 0xcd, 0x96, 0x18, 0x68, 0xb5, 0x5a, 0x71, 0x69, 0x03, 0xa4, 0x10, 0x0a, 0xa1, 0xf2,
-	0xd2, 0x6d, 0x77, 0xa5, 0x2a, 0x32, 0xf1, 0x90, 0xb5, 0x48, 0x3c, 0xa9, 0x6d, 0x40, 0xa0, 0x1e,
-	0xaa, 0x1e, 0xaa, 0x9e, 0xdb, 0x43, 0xaf, 0xed, 0x7f, 0x50, 0xf5, 0x3f, 0xa9, 0x7a, 0xeb, 0xa5,
-	0x52, 0xd5, 0x5b, 0xff, 0x81, 0x4a, 0xed, 0xa1, 0x9a, 0x19, 0xc7, 0xb1, 0x13, 0x27, 0x01, 0xb1,
-	0xb4, 0x9c, 0xc8, 0xbc, 0x79, 0x6f, 0x3e, 0xef, 0x7d, 0xde, 0x9b, 0xf7, 0x06, 0xc3, 0x94, 0x69,
-	0x9d, 0x60, 0xcb, 0x25, 0xf6, 0x59, 0xeb, 0x40, 0xb5, 0x88, 0x81, 0x9d, 0x42, 0xcb, 0x26, 0x2e,
-	0x41, 0x69, 0x7f, 0x43, 0x7e, 0x52, 0x37, 0xdd, 0x57, 0xc7, 0x07, 0x85, 0x1a, 0x69, 0xaa, 0xcd,
-	0x53, 0xd3, 0x3d, 0x22, 0xa7, 0x6a, 0x9d, 0x2c, 0x32, 0xbd, 0xc5, 0x13, 0xbd, 0x61, 0x1a, 0xba,
-	0x4b, 0x6c, 0x47, 0xf5, 0x7f, 0xf2, 0x23, 0xe4, 0xe9, 0x3a, 0x21, 0xf5, 0x06, 0x56, 0xf5, 0x96,
-	0xa9, 0xea, 0x96, 0x45, 0x5c, 0xdd, 0x35, 0x89, 0xe5, 0x01, 0xc8, 0x6f, 0xb2, 0x3f, 0xb5, 0xc5,
-	0x3a, 0xb6, 0x16, 0x9d, 0x53, 0xbd, 0x5e, 0xc7, 0xb6, 0x4a, 0x5a, 0x4c, 0xa3, 0x57, 0x5b, 0xf9,
-	0x43, 0x84, 0xd1, 0x4d, 0x6c, 0x61, 0xdb, 0xac, 0x55, 0x88, 0x81, 0xd1, 0x14, 0x24, 0xa9, 0xb7,
-	0x55, 0xd3, 0x90, 0x84, 0xac, 0x90, 0x4b, 0x6b, 0x09, 0xba, 0x2c, 0x1b, 0xe8, 0x3e, 0xa4, 0xd9,
-	0x86, 0xa5, 0x37, 0xb1, 0x24, 0xb2, 0xad, 0x14, 0x15, 0x54, 0xf4, 0x26, 0x46, 0x33, 0x00, 0x4d,
-	0xbd, 0xf6, 0xca, 0xb4, 0x98, 0x61, 0x8c, 0xed, 0xa6, 0x3d, 0x49, 0xd9, 0x40, 0x93, 0x90, 0x30,
-	0x4c, 0xc7, 0xb5, 0x89, 0x14, 0xe7, 0x67, 0xf2, 0x15, 0x35, 0x63, 0x67, 0x36, 0x89, 0x81, 0x1b,
-	0xd2, 0x2d, 0x6e, 0x46, 0x25, 0xbb, 0x54, 0x40, 0xcd, 0x6c, 0x5c, 0x37, 0x89, 0x25, 0x25, 0xb8,
-	0x19, 0x5f, 0xa1, 0x71, 0x10, 0xf5, 0x73, 0x29, 0xc9, 0x64, 0xa2, 0x7e, 0x8e, 0x76, 0x61, 0xac,
-	0x76, 0xec, 0xb8, 0xa4, 0x59, 0x6d, 0xe8, 0x07, 0xb8, 0xe1, 0x48, 0xa9, 0x6c, 0x2c, 0x37, 0xba,
-	0x92, 0x2b, 0xf8, 0x54, 0x17, 0x02, 0x21, 0x16, 0xd6, 0x99, 0xee, 0x0e, 0x53, 0x2d, 0x59, 0xae,
-	0x7d, 0xa6, 0xdd, 0xae, 0x05, 0x44, 0x48, 0x82, 0xa4, 0x6e, 0x18, 0x36, 0x76, 0x1c, 0x29, 0xcf,
-	0x30, 0xda, 0x4b, 0xf9, 0x1d, 0x98, 0xe8, 0x31, 0x46, 0x19, 0x88, 0x1d, 0xe1, 0x33, 0x8f, 0x2d,
-	0xfa, 0x13, 0xdd, 0x85, 0x5b, 0x27, 0x7a, 0xe3, 0xb8, 0x4d, 0x13, 0x5f, 0xac, 0x8a, 0x4f, 0x05,
-	0xe5, 0xfb, 0x18, 0x8c, 0xad, 0x13, 0xcb, 0xd5, 0x4d, 0x0b, 0xdb, 0xd7, 0xc7, 0xf7, 0x03, 0xb8,
-	0x5d, 0x6b, 0xa3, 0x50, 0x05, 0xce, 0xfa, 0xa8, 0x2f, 0x2b, 0x1b, 0x68, 0x01, 0xc6, 0x3b, 0x2a,
-	0x0c, 0x83, 0xd3, 0x3f, 0xe6, 0x4b, 0xdb, 0x40, 0x81, 0x0c, 0x25, 0xfa, 0x67, 0x28, 0x19, 0x91,
-	0xa1, 0x94, 0x9f, 0xa1, 0xbd, 0xee, 0x0c, 0xa5, 0x59, 0x86, 0xf2, 0x81, 0x0c, 0x85, 0x68, 0xf9,
-	0x2f, 0x73, 0xf4, 0x93, 0x00, 0xa0, 0xe1, 0x26, 0x71, 0xf1, 0x15, 0x12, 0xb4, 0xd3, 0x1d, 0x30,
-	0xb0, 0x80, 0xdf, 0x08, 0x04, 0xdc, 0xc1, 0x18, 0x16, 0xed, 0xd5, 0x63, 0xfa, 0x56, 0x84, 0xff,
-	0x71, 0xbc, 0x62, 0x53, 0x3f, 0x27, 0x96, 0xb6, 0xf1, 0xec, 0x0a, 0xc1, 0xc9, 0x90, 0x32, 0x2d,
-	0xc7, 0xd5, 0xad, 0x1a, 0xf6, 0x6a, 0xcf, 0x5f, 0x07, 0x2a, 0x22, 0x1e, 0xaa, 0x88, 0x0f, 0xa3,
-	0x09, 0x59, 0xea, 0x21, 0x24, 0xe4, 0xe0, 0xf5, 0x33, 0x83, 0x20, 0xb3, 0x63, 0x3a, 0x2e, 0x05,
-	0x73, 0x34, 0xfc, 0xe9, 0x31, 0x76, 0x5c, 0xe5, 0x4f, 0x01, 0x26, 0x02, 0x42, 0xa7, 0x45, 0x2c,
-	0x07, 0xa3, 0x25, 0x48, 0xd6, 0x79, 0x17, 0x91, 0x04, 0xe6, 0xfb, 0x64, 0x74, 0x7f, 0xd1, 0xda,
-	0x6a, 0xe8, 0x09, 0xa4, 0xfd, 0xdb, 0x24, 0x89, 0xcc, 0x46, 0xea, 0x57, 0xf1, 0x5a, 0x47, 0x15,
-	0x2d, 0x52, 0x0e, 0x29, 0x17, 0x52, 0x8c, 0x19, 0xdd, 0x8b, 0xac, 0x1a, 0xcd, 0x53, 0x42, 0xdb,
-	0x30, 0xc1, 0x7f, 0x55, 0x75, 0xc6, 0x5d, 0xd5, 0x36, 0x1c, 0x29, 0xce, 0x2c, 0x67, 0x07, 0xd3,
-	0xab, 0xdd, 0xb1, 0x83, 0x42, 0xc3, 0x51, 0x96, 0x61, 0x7c, 0x13, 0xb3, 0xc0, 0x3d, 0x32, 0xd0,
-	0x5c, 0x57, 0x89, 0xac, 0x25, 0x7e, 0xfb, 0x75, 0x4e, 0xfc, 0x58, 0x68, 0x97, 0x8a, 0xf2, 0xa5,
-	0x08, 0x77, 0x7c, 0x1b, 0x8f, 0xab, 0x95, 0x20, 0x57, 0x42, 0x7f, 0xae, 0xb6, 0x46, 0x3a, 0x6c,
-	0x3d, 0x0d, 0xb3, 0x25, 0x0c, 0x62, 0x6b, 0x6b, 0x24, 0xc8, 0x97, 0x1a, 0xe0, 0x4b, 0xe8, 0xcb,
-	0xd7, 0xd6, 0x88, 0xcf, 0xd8, 0x4e, 0x34, 0x63, 0xc2, 0x70, 0xc6, 0xb6, 0x46, 0x7a, 0x38, 0x5b,
-	0x4b, 0x40, 0x9c, 0x52, 0xa1, 0xfc, 0x2d, 0xc2, 0xbd, 0xa2, 0x61, 0x04, 0x4b, 0xc1, 0xe3, 0x70,
-	0xbe, 0xe7, 0x36, 0xf9, 0x2c, 0xde, 0x94, 0x19, 0xfa, 0x51, 0xf4, 0x0c, 0x5d, 0x09, 0xd0, 0x11,
-	0x19, 0xdb, 0xd0, 0x4e, 0x9d, 0xed, 0xea, 0xd4, 0x7e, 0xe4, 0xaf, 0xad, 0x63, 0x6f, 0xc7, 0x53,
-	0x42, 0x46, 0x54, 0xb6, 0x61, 0xb2, 0xdb, 0xc3, 0xa8, 0x9b, 0x2b, 0x5c, 0xe0, 0xe6, 0x2a, 0x3f,
-	0xc6, 0x60, 0xaa, 0x68, 0x18, 0xe1, 0x1b, 0xfa, 0x1a, 0x93, 0x79, 0xe3, 0x06, 0xf4, 0x8b, 0xe8,
-	0x01, 0xfd, 0x76, 0x38, 0xfd, 0x51, 0x7c, 0xdc, 0x9c, 0x02, 0xd0, 0x40, 0xea, 0xf5, 0xd1, 0x2b,
-	0x81, 0x50, 0x2b, 0x16, 0x06, 0x37, 0x97, 0x40, 0x6b, 0x51, 0x7e, 0x11, 0xe0, 0x6e, 0xd1, 0x30,
-	0x02, 0x5d, 0xf7, 0x32, 0x55, 0xf0, 0x3c, 0x7a, 0xe8, 0x2d, 0x87, 0x59, 0xed, 0x39, 0xfc, 0xda,
-	0xa7, 0x9e, 0x47, 0xd8, 0x7b, 0xac, 0x5f, 0x05, 0xe1, 0x3d, 0xb6, 0x3a, 0x03, 0x48, 0x18, 0xd0,
-	0x50, 0xdb, 0xed, 0x54, 0xf9, 0x41, 0x84, 0x19, 0xff, 0xa0, 0xf0, 0x80, 0xb9, 0x0c, 0x5b, 0x4a,
-	0xf7, 0xb3, 0xa2, 0xa3, 0xe3, 0x3f, 0x2f, 0x66, 0xc3, 0xcf, 0x8b, 0xce, 0x30, 0xf2, 0xea, 0xba,
-	0x1a, 0xcd, 0xf8, 0x6a, 0x14, 0xe3, 0x51, 0x9e, 0xfe, 0x5b, 0xd4, 0x37, 0x60, 0xb6, 0x9f, 0x1f,
-	0x5e, 0x0e, 0x22, 0xa7, 0xba, 0x70, 0x91, 0x19, 0xd5, 0x3b, 0xd5, 0xb7, 0x61, 0x82, 0xea, 0x9d,
-	0xe0, 0xcb, 0x0c, 0x76, 0x1a, 0xc3, 0x21, 0xb1, 0x6b, 0x3c, 0x86, 0x94, 0xc6, 0x17, 0xca, 0x5d,
-	0x40, 0xc1, 0xb3, 0xb8, 0xb7, 0x79, 0x17, 0x52, 0x74, 0xbd, 0x7f, 0xd6, 0xc2, 0xe8, 0x1e, 0x4c,
-	0x54, 0xf6, 0x36, 0x4a, 0xd5, 0xfd, 0x17, 0x1f, 0x94, 0xaa, 0xe5, 0xca, 0xf3, 0xe2, 0x4e, 0x79,
-	0x23, 0x33, 0x82, 0x32, 0x70, 0x7b, 0xb3, 0x54, 0x29, 0x69, 0xe5, 0xf5, 0x2a, 0xdd, 0xce, 0x08,
-	0x08, 0xc1, 0xf8, 0xfa, 0x5e, 0x65, 0xbf, 0x58, 0xae, 0x94, 0x34, 0x2e, 0x13, 0xd1, 0x1d, 0x18,
-	0xd5, 0x4a, 0xbb, 0x7b, 0xfb, 0x25, 0x2e, 0x88, 0x21, 0x19, 0x26, 0x3d, 0x41, 0x71, 0xb7, 0xf8,
-	0x72, 0xaf, 0x52, 0xd5, 0x36, 0x9e, 0xf1, 0xbd, 0xf8, 0xca, 0x5f, 0x09, 0xb8, 0xc5, 0x1e, 0x69,
-	0xe8, 0x08, 0xd2, 0xfe, 0x8b, 0x0d, 0xdd, 0x0f, 0xf0, 0xd3, 0xfd, 0xb8, 0x93, 0xa7, 0xa3, 0x37,
-	0x79, 0x1c, 0xca, 0xfc, 0x17, 0x3f, 0xff, 0xfe, 0x8d, 0x38, 0xa3, 0x48, 0xea, 0xc9, 0x92, 0xea,
-	0x2b, 0xaa, 0x4c, 0x49, 0xa5, 0xea, 0xab, 0x42, 0x1e, 0x19, 0x90, 0xf4, 0x1e, 0x3c, 0xe8, 0xff,
-	0xa1, 0x49, 0x12, 0x7c, 0x38, 0xc9, 0x72, 0xd4, 0x96, 0x07, 0xa3, 0x30, 0x98, 0x69, 0x65, 0x2a,
-	0x0a, 0x66, 0x13, 0x33, 0x94, 0xcf, 0x05, 0x18, 0x0f, 0x0f, 0x34, 0x94, 0x1d, 0x36, 0x8d, 0xe5,
-	0x07, 0x03, 0x34, 0x3c, 0xec, 0x47, 0x0c, 0x7b, 0x5e, 0x99, 0x8d, 0xc2, 0xee, 0xd8, 0x50, 0x17,
-	0xbe, 0x12, 0x20, 0xd3, 0xdd, 0x52, 0x91, 0x32, 0x7c, 0x26, 0xc8, 0xf3, 0x03, 0x75, 0x3c, 0x47,
-	0x1e, 0x33, 0x47, 0x16, 0x94, 0x6c, 0x1f, 0x47, 0x7c, 0x2b, 0xea, 0xca, 0x67, 0x30, 0x16, 0xea,
-	0x55, 0x68, 0x6e, 0x48, 0x13, 0x95, 0xb3, 0xfd, 0x15, 0x3c, 0x07, 0x72, 0xcc, 0x01, 0x45, 0x99,
-	0xe9, 0xe3, 0x00, 0x37, 0xa1, 0xe8, 0xdf, 0x09, 0xec, 0x71, 0x11, 0xf5, 0x2f, 0x54, 0xee, 0xa2,
-	0xad, 0x45, 0x7e, 0x74, 0x01, 0x4d, 0xcf, 0xb3, 0x65, 0xe6, 0xd9, 0x63, 0xe5, 0xe1, 0x40, 0xcf,
-	0x7c, 0x5b, 0xea, 0x62, 0x8b, 0xff, 0xd7, 0xca, 0xef, 0x25, 0x9a, 0xee, 0x6a, 0x11, 0xa1, 0xab,
-	0x2f, 0xcf, 0xf4, 0xd9, 0xf5, 0xd0, 0x17, 0x18, 0xfa, 0x9c, 0x22, 0x47, 0xa1, 0x73, 0xfd, 0x55,
-	0x21, 0xbf, 0xf6, 0xc9, 0xd7, 0xc5, 0x5d, 0xed, 0x7d, 0x48, 0x1a, 0xf8, 0x50, 0x3f, 0x6e, 0xb8,
-	0xe8, 0x5d, 0x40, 0x45, 0x2b, 0x8b, 0x6d, 0x9b, 0xd8, 0x59, 0xdb, 0x3b, 0xab, 0x80, 0xf2, 0x90,
-	0x93, 0x1f, 0xce, 0xab, 0x06, 0x3e, 0x34, 0x2d, 0x93, 0x7f, 0x85, 0x0a, 0x7c, 0x1a, 0x2b, 0x51,
-	0xed, 0x36, 0xf0, 0xcb, 0xd1, 0xc0, 0xce, 0x41, 0x82, 0x7d, 0xa0, 0x7a, 0xeb, 0x9f, 0x00, 0x00,
-	0x00, 0xff, 0xff, 0x34, 0x26, 0xb4, 0x89, 0x4a, 0x13, 0x00, 0x00,
+	// 1289 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xcc, 0x58, 0x4f, 0x73, 0xdb, 0x44,
+	0x14, 0x8f, 0xe4, 0xff, 0x2f, 0x4d, 0xea, 0x2c, 0x6d, 0x23, 0xd4, 0xa4, 0x71, 0x95, 0x29, 0x04,
+	0x43, 0x2c, 0x12, 0x3a, 0xa5, 0xe4, 0x02, 0x4e, 0x62, 0x12, 0x97, 0xc4, 0x61, 0x94, 0x4c, 0x21,
+	0xcc, 0x30, 0x1e, 0xc5, 0xda, 0xb8, 0x9a, 0xd8, 0x92, 0x91, 0x94, 0x64, 0xd2, 0xe1, 0xc0, 0x70,
+	0xe2, 0x0c, 0x9f, 0x80, 0x3b, 0x27, 0x4e, 0x5c, 0xf8, 0x04, 0x1c, 0xf9, 0x00, 0xcc, 0xf0, 0xe7,
+	0xc4, 0x91, 0x19, 0xce, 0xcc, 0xee, 0xca, 0xf2, 0x4a, 0x96, 0xec, 0xc2, 0xe0, 0xc2, 0x29, 0xde,
+	0xb7, 0xef, 0xe9, 0xf7, 0xf6, 0xf7, 0xd3, 0x7b, 0x6f, 0x23, 0x98, 0x37, 0xad, 0x0b, 0x6c, 0x79,
+	0xb6, 0x73, 0xd5, 0x3b, 0x51, 0x2d, 0xdb, 0xc0, 0x6e, 0xa5, 0xe7, 0xd8, 0x9e, 0x8d, 0x0a, 0xc1,
+	0x86, 0xfc, 0xa0, 0x6d, 0x7a, 0x4f, 0xce, 0x4f, 0x2a, 0x2d, 0xbb, 0xab, 0x76, 0x2f, 0x4d, 0xef,
+	0xcc, 0xbe, 0x54, 0xdb, 0xf6, 0x2a, 0xf5, 0x5b, 0xbd, 0xd0, 0x3b, 0xa6, 0xa1, 0x7b, 0xb6, 0xe3,
+	0xaa, 0xc1, 0x4f, 0xf6, 0x08, 0x79, 0xa1, 0x6d, 0xdb, 0xed, 0x0e, 0x56, 0xf5, 0x9e, 0xa9, 0xea,
+	0x96, 0x65, 0x7b, 0xba, 0x67, 0xda, 0x96, 0x0f, 0x20, 0xbf, 0x46, 0xff, 0xb4, 0x56, 0xdb, 0xd8,
+	0x5a, 0x75, 0x2f, 0xf5, 0x76, 0x1b, 0x3b, 0xaa, 0xdd, 0xa3, 0x1e, 0xc3, 0xde, 0xca, 0xef, 0x22,
+	0x4c, 0xef, 0x60, 0x0b, 0x3b, 0x66, 0xab, 0x61, 0x1b, 0x18, 0xcd, 0x43, 0x8e, 0x64, 0xdb, 0x34,
+	0x0d, 0x49, 0x28, 0x09, 0x2b, 0x05, 0x2d, 0x4b, 0x96, 0x75, 0x03, 0xdd, 0x86, 0x02, 0xdd, 0xb0,
+	0xf4, 0x2e, 0x96, 0x44, 0xba, 0x95, 0x27, 0x86, 0x86, 0xde, 0xc5, 0x48, 0x82, 0x9c, 0x6e, 0x18,
+	0x0e, 0x76, 0x5d, 0x29, 0x45, 0xb7, 0xfa, 0x4b, 0xb4, 0x08, 0xd0, 0xd5, 0x5b, 0x4f, 0x4c, 0x8b,
+	0x3e, 0x32, 0x4d, 0x37, 0x0b, 0xbe, 0xa5, 0x6e, 0xa0, 0x5b, 0x90, 0x35, 0x4c, 0xd7, 0x73, 0x6c,
+	0x29, 0xc3, 0xd0, 0xd8, 0x8a, 0x84, 0x51, 0xb4, 0xae, 0x6d, 0xe0, 0x8e, 0x94, 0x65, 0x61, 0xc4,
+	0xb2, 0x4f, 0x0c, 0x24, 0xcc, 0xc1, 0x6d, 0xd3, 0xb6, 0xa4, 0x1c, 0x0b, 0x63, 0x2b, 0x34, 0x0b,
+	0xa2, 0xfe, 0x54, 0xca, 0x53, 0x9b, 0xa8, 0x3f, 0x45, 0xfb, 0x30, 0xd3, 0x3a, 0x77, 0x3d, 0xbb,
+	0xdb, 0xec, 0xe8, 0x27, 0xb8, 0xe3, 0x4a, 0x85, 0x52, 0x6a, 0x65, 0x7a, 0x7d, 0xa5, 0x12, 0x88,
+	0x50, 0xe1, 0x0e, 0x5f, 0xd9, 0xa2, 0xbe, 0x7b, 0xd4, 0xb5, 0x66, 0x79, 0xce, 0x95, 0x76, 0xad,
+	0xc5, 0x99, 0xe4, 0xb7, 0x61, 0x6e, 0xc8, 0x05, 0x15, 0x21, 0x75, 0x86, 0xaf, 0x7c, 0xb6, 0xc8,
+	0x4f, 0x74, 0x03, 0x32, 0x17, 0x7a, 0xe7, 0xbc, 0x4f, 0x13, 0x5b, 0x6c, 0x88, 0x0f, 0x05, 0xe5,
+	0xeb, 0x14, 0xcc, 0x6c, 0xd9, 0x96, 0xa7, 0x9b, 0x16, 0x76, 0xfe, 0x0b, 0xbe, 0xef, 0xc2, 0xb5,
+	0x56, 0x1f, 0x9f, 0x38, 0x30, 0xd6, 0xa7, 0x03, 0x5b, 0xdd, 0x40, 0xf7, 0x60, 0x76, 0xe0, 0x42,
+	0xd1, 0x19, 0xfd, 0x33, 0x81, 0x95, 0xa6, 0x10, 0x56, 0x28, 0x97, 0xac, 0x50, 0x3e, 0x46, 0xa1,
+	0x42, 0xa0, 0xd0, 0x41, 0x54, 0x21, 0xa0, 0x0a, 0x95, 0x39, 0x85, 0x42, 0x84, 0x4d, 0x5e, 0xa3,
+	0x6f, 0x45, 0x00, 0x0d, 0x77, 0x6d, 0x0f, 0x4f, 0x4a, 0x20, 0x8e, 0xb7, 0x74, 0x32, 0x6f, 0x99,
+	0x18, 0xde, 0xb2, 0x01, 0x6f, 0x7b, 0x51, 0xde, 0x72, 0x94, 0xb7, 0x97, 0x39, 0xde, 0x06, 0x87,
+	0x98, 0x3c, 0x69, 0xdf, 0x89, 0x30, 0xc3, 0xf0, 0xb4, 0xed, 0xc3, 0xff, 0x33, 0x6f, 0x07, 0xf1,
+	0xbc, 0x95, 0x87, 0x78, 0xf3, 0xcf, 0x31, 0x79, 0xea, 0x10, 0x14, 0xf7, 0x4c, 0xd7, 0x23, 0x60,
+	0xae, 0x86, 0x3f, 0x39, 0xc7, 0xae, 0xa7, 0xfc, 0x26, 0xc0, 0x1c, 0x67, 0x74, 0x7b, 0xb6, 0xe5,
+	0x62, 0xf4, 0x3a, 0xe4, 0xda, 0xac, 0x5b, 0x49, 0x02, 0xcd, 0xfa, 0x56, 0x7c, 0x1f, 0xd3, 0xfa,
+	0x6e, 0xe8, 0x01, 0x14, 0x82, 0xaa, 0x95, 0x44, 0x1a, 0x23, 0x25, 0x55, 0x96, 0x36, 0x70, 0x45,
+	0xab, 0x84, 0x4d, 0xc2, 0x82, 0x94, 0xa2, 0x41, 0x37, 0x63, 0x5f, 0x2b, 0xcd, 0x77, 0x42, 0x6f,
+	0x02, 0xb0, 0x5f, 0x4d, 0xc7, 0x70, 0xa5, 0xf4, 0x10, 0x4e, 0x88, 0x51, 0xad, 0xc0, 0x7c, 0x35,
+	0xc3, 0x55, 0xd6, 0x60, 0x76, 0x07, 0xd3, 0x53, 0xfa, 0x27, 0x47, 0x4b, 0x91, 0xd7, 0x66, 0x33,
+	0xfb, 0xf3, 0x4f, 0x4b, 0xe2, 0x87, 0x42, 0xff, 0xf5, 0x51, 0xfe, 0x10, 0xe0, 0x7a, 0x10, 0xe3,
+	0x13, 0xb3, 0xce, 0x13, 0x23, 0x24, 0x13, 0xb3, 0x3b, 0x35, 0xa0, 0xe6, 0x61, 0x98, 0x1a, 0x61,
+	0x14, 0x35, 0xbb, 0x53, 0x3c, 0x39, 0x2a, 0x47, 0x8e, 0x90, 0x48, 0xce, 0xee, 0x54, 0x40, 0xcf,
+	0x5b, 0x11, 0x7a, 0x84, 0x51, 0xf4, 0x10, 0xac, 0x80, 0xa0, 0xcd, 0x2c, 0xa4, 0xc9, 0xb9, 0x95,
+	0x3f, 0x45, 0xb8, 0x59, 0x35, 0x0c, 0x5e, 0x64, 0x9f, 0xb0, 0x65, 0xbe, 0x9c, 0xc2, 0x94, 0x0d,
+	0xca, 0xaa, 0x34, 0x28, 0x2b, 0x31, 0xe4, 0x92, 0x30, 0x37, 0x52, 0xc9, 0x73, 0x3a, 0x3d, 0x62,
+	0x4e, 0x67, 0x92, 0xab, 0x32, 0x1b, 0x53, 0x95, 0xb9, 0xa0, 0x2a, 0x3f, 0x88, 0x56, 0x65, 0x9e,
+	0xbe, 0x43, 0xeb, 0x1c, 0x49, 0xb1, 0xa7, 0x9f, 0x7c, 0x75, 0x3e, 0x82, 0x5b, 0x51, 0xe4, 0xb8,
+	0x6a, 0x14, 0x9e, 0xa1, 0x1a, 0x95, 0x6f, 0x52, 0x30, 0x5f, 0x35, 0x8c, 0x70, 0xd5, 0x3d, 0x57,
+	0x19, 0xa3, 0xe3, 0x3f, 0xfd, 0x2c, 0xe3, 0x3f, 0x33, 0x7e, 0xfc, 0xff, 0xe3, 0x0b, 0xda, 0x71,
+	0xfc, 0x05, 0xed, 0x7e, 0x58, 0xf8, 0x38, 0xc6, 0x26, 0x2f, 0xbd, 0x06, 0xd2, 0x30, 0xb6, 0x2f,
+	0x7e, 0xa8, 0xb1, 0x0a, 0xa3, 0xbb, 0x07, 0xd7, 0x3b, 0x94, 0xef, 0x45, 0xb8, 0x51, 0x35, 0x0c,
+	0xae, 0x87, 0xfe, 0xeb, 0xfa, 0x73, 0xb2, 0xa4, 0x92, 0x65, 0x49, 0xc7, 0xc8, 0x92, 0x09, 0x64,
+	0x79, 0x1c, 0x95, 0x25, 0x4b, 0x65, 0x59, 0x0b, 0xcb, 0x32, 0x74, 0x8a, 0xc9, 0x6b, 0xf2, 0x2e,
+	0x6d, 0x83, 0x3c, 0xb0, 0x2f, 0xc8, 0x60, 0x62, 0x09, 0x23, 0x9a, 0x72, 0xbf, 0x25, 0x2b, 0x3f,
+	0x88, 0xb4, 0x14, 0xc3, 0x83, 0xe9, 0xb9, 0x4a, 0x71, 0x27, 0x2c, 0xc5, 0x60, 0xce, 0x25, 0x48,
+	0x72, 0x1c, 0x2f, 0xc9, 0xfd, 0x38, 0x49, 0xc2, 0x07, 0x9a, 0xbc, 0x2a, 0x87, 0xb4, 0x52, 0x22,
+	0xd8, 0xbe, 0x30, 0xe1, 0xbb, 0x81, 0x30, 0x7a, 0xf8, 0xf1, 0x77, 0x83, 0x47, 0x30, 0x47, 0xf6,
+	0x2e, 0xf0, 0xdf, 0xb9, 0x1e, 0x90, 0x24, 0x4f, 0x6d, 0xa7, 0xc5, 0x92, 0xcc, 0x6b, 0x6c, 0xa1,
+	0xdc, 0x00, 0xc4, 0x3f, 0x8b, 0xa5, 0x56, 0xee, 0x42, 0x9e, 0xac, 0x8f, 0xae, 0x7a, 0x18, 0xdd,
+	0x84, 0xb9, 0xc6, 0xc1, 0x76, 0xad, 0x79, 0x74, 0xfc, 0x7e, 0xad, 0x59, 0x6f, 0x3c, 0xae, 0xee,
+	0xd5, 0xb7, 0x8b, 0x53, 0xa8, 0x08, 0xd7, 0x76, 0x6a, 0x8d, 0x9a, 0x56, 0xdf, 0x6a, 0x92, 0xed,
+	0xa2, 0x80, 0x10, 0xcc, 0x6e, 0x1d, 0x34, 0x8e, 0xaa, 0xf5, 0x46, 0x4d, 0x63, 0x36, 0x11, 0x5d,
+	0x87, 0x69, 0xad, 0xb6, 0x7f, 0x70, 0x54, 0x63, 0x86, 0x14, 0x7a, 0x01, 0xae, 0xfb, 0x06, 0x6d,
+	0xfb, 0x90, 0x19, 0xd3, 0xeb, 0xbf, 0x64, 0x21, 0x43, 0x2f, 0x74, 0xe8, 0x0c, 0x0a, 0xc1, 0xed,
+	0x0e, 0xdd, 0xe6, 0xc8, 0x88, 0x5e, 0x04, 0xe5, 0x85, 0xf8, 0x4d, 0x76, 0x00, 0x65, 0xf9, 0xf3,
+	0x1f, 0x7f, 0xfd, 0x4a, 0x5c, 0x54, 0x24, 0xf5, 0x62, 0x4d, 0x0d, 0x1c, 0x55, 0xea, 0xa4, 0x12,
+	0xf7, 0x0d, 0xa1, 0x8c, 0x0c, 0xc8, 0xf9, 0xf7, 0x25, 0xf4, 0x62, 0x68, 0x42, 0xf1, 0xf7, 0x2e,
+	0x59, 0x8e, 0xdb, 0xf2, 0x61, 0x14, 0x0a, 0xb3, 0xa0, 0xcc, 0xc7, 0xc1, 0xec, 0x60, 0x8a, 0xf2,
+	0x99, 0x00, 0xb3, 0xe1, 0x41, 0x89, 0x4a, 0xe3, 0xa6, 0xb7, 0x7c, 0x77, 0x84, 0x87, 0x8f, 0xfd,
+	0x0a, 0xc5, 0x5e, 0x56, 0xee, 0xc4, 0x61, 0x0f, 0x62, 0x48, 0x0a, 0x5f, 0x08, 0x50, 0x8c, 0x36,
+	0x6c, 0xa4, 0x8c, 0x9f, 0x24, 0xf2, 0xf2, 0x48, 0x1f, 0x3f, 0x91, 0x57, 0x69, 0x22, 0xf7, 0x94,
+	0x52, 0x42, 0x22, 0x41, 0x14, 0x49, 0xe5, 0x53, 0x98, 0x09, 0xb5, 0x29, 0xb4, 0x34, 0xa6, 0x73,
+	0xca, 0xa5, 0x64, 0x07, 0x3f, 0x81, 0x15, 0x9a, 0x80, 0xa2, 0x2c, 0x26, 0x24, 0xc0, 0x42, 0x38,
+	0x22, 0xc2, 0xff, 0x8f, 0x29, 0xe3, 0x1b, 0x45, 0x94, 0x88, 0xd8, 0x82, 0x1e, 0x4b, 0x44, 0x10,
+	0x45, 0x52, 0xe9, 0xb1, 0xff, 0xa5, 0x59, 0xe1, 0xa1, 0x85, 0x48, 0xdd, 0x87, 0x6a, 0x5b, 0x5e,
+	0x4c, 0xd8, 0xf5, 0x71, 0xef, 0x51, 0xdc, 0x25, 0x45, 0x8e, 0xc3, 0x65, 0xfe, 0x1b, 0x42, 0x79,
+	0xf3, 0xe3, 0x2f, 0xab, 0xfb, 0xda, 0x7b, 0x90, 0x33, 0xf0, 0xa9, 0x7e, 0xde, 0xf1, 0xd0, 0x3b,
+	0x80, 0xaa, 0x56, 0x09, 0x3b, 0x8e, 0xed, 0x94, 0x1c, 0xff, 0x59, 0x15, 0x54, 0x86, 0x15, 0xf9,
+	0xa5, 0x65, 0xd5, 0xc0, 0xa7, 0xa6, 0x65, 0xb2, 0x6f, 0x63, 0xdc, 0x07, 0xbb, 0x1a, 0xf1, 0xee,
+	0x03, 0x7f, 0x34, 0xcd, 0xed, 0x9c, 0x64, 0xe9, 0x67, 0xb3, 0x37, 0xfe, 0x0a, 0x00, 0x00, 0xff,
+	0xff, 0x01, 0x69, 0xe4, 0xbd, 0xe0, 0x13, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1389,8 +1491,8 @@ type NodesClient interface {
 	AddContainerNode(ctx context.Context, in *AddContainerNodeRequest, opts ...grpc.CallOption) (*AddContainerNodeResponse, error)
 	// AddRemoteNode adds remote Node.
 	AddRemoteNode(ctx context.Context, in *AddRemoteNodeRequest, opts ...grpc.CallOption) (*AddRemoteNodeResponse, error)
-	// AddRemoteAmazonRDSNode adds Amazon (AWS) RDS remote Node.
-	AddRemoteAmazonRDSNode(ctx context.Context, in *AddRemoteAmazonRDSNodeRequest, opts ...grpc.CallOption) (*AddRemoteAmazonRDSNodeResponse, error)
+	// AddRemoteRDSNode adds remote RDS Node.
+	AddRemoteRDSNode(ctx context.Context, in *AddRemoteRDSNodeRequest, opts ...grpc.CallOption) (*AddRemoteRDSNodeResponse, error)
 	// RemoveNode removes Node.
 	RemoveNode(ctx context.Context, in *RemoveNodeRequest, opts ...grpc.CallOption) (*RemoveNodeResponse, error)
 }
@@ -1448,9 +1550,9 @@ func (c *nodesClient) AddRemoteNode(ctx context.Context, in *AddRemoteNodeReques
 	return out, nil
 }
 
-func (c *nodesClient) AddRemoteAmazonRDSNode(ctx context.Context, in *AddRemoteAmazonRDSNodeRequest, opts ...grpc.CallOption) (*AddRemoteAmazonRDSNodeResponse, error) {
-	out := new(AddRemoteAmazonRDSNodeResponse)
-	err := c.cc.Invoke(ctx, "/inventory.Nodes/AddRemoteAmazonRDSNode", in, out, opts...)
+func (c *nodesClient) AddRemoteRDSNode(ctx context.Context, in *AddRemoteRDSNodeRequest, opts ...grpc.CallOption) (*AddRemoteRDSNodeResponse, error) {
+	out := new(AddRemoteRDSNodeResponse)
+	err := c.cc.Invoke(ctx, "/inventory.Nodes/AddRemoteRDSNode", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1478,8 +1580,8 @@ type NodesServer interface {
 	AddContainerNode(context.Context, *AddContainerNodeRequest) (*AddContainerNodeResponse, error)
 	// AddRemoteNode adds remote Node.
 	AddRemoteNode(context.Context, *AddRemoteNodeRequest) (*AddRemoteNodeResponse, error)
-	// AddRemoteAmazonRDSNode adds Amazon (AWS) RDS remote Node.
-	AddRemoteAmazonRDSNode(context.Context, *AddRemoteAmazonRDSNodeRequest) (*AddRemoteAmazonRDSNodeResponse, error)
+	// AddRemoteRDSNode adds remote RDS Node.
+	AddRemoteRDSNode(context.Context, *AddRemoteRDSNodeRequest) (*AddRemoteRDSNodeResponse, error)
 	// RemoveNode removes Node.
 	RemoveNode(context.Context, *RemoveNodeRequest) (*RemoveNodeResponse, error)
 }
@@ -1503,8 +1605,8 @@ func (*UnimplementedNodesServer) AddContainerNode(ctx context.Context, req *AddC
 func (*UnimplementedNodesServer) AddRemoteNode(ctx context.Context, req *AddRemoteNodeRequest) (*AddRemoteNodeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddRemoteNode not implemented")
 }
-func (*UnimplementedNodesServer) AddRemoteAmazonRDSNode(ctx context.Context, req *AddRemoteAmazonRDSNodeRequest) (*AddRemoteAmazonRDSNodeResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AddRemoteAmazonRDSNode not implemented")
+func (*UnimplementedNodesServer) AddRemoteRDSNode(ctx context.Context, req *AddRemoteRDSNodeRequest) (*AddRemoteRDSNodeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddRemoteRDSNode not implemented")
 }
 func (*UnimplementedNodesServer) RemoveNode(ctx context.Context, req *RemoveNodeRequest) (*RemoveNodeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RemoveNode not implemented")
@@ -1604,20 +1706,20 @@ func _Nodes_AddRemoteNode_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Nodes_AddRemoteAmazonRDSNode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AddRemoteAmazonRDSNodeRequest)
+func _Nodes_AddRemoteRDSNode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddRemoteRDSNodeRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(NodesServer).AddRemoteAmazonRDSNode(ctx, in)
+		return srv.(NodesServer).AddRemoteRDSNode(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/inventory.Nodes/AddRemoteAmazonRDSNode",
+		FullMethod: "/inventory.Nodes/AddRemoteRDSNode",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NodesServer).AddRemoteAmazonRDSNode(ctx, req.(*AddRemoteAmazonRDSNodeRequest))
+		return srv.(NodesServer).AddRemoteRDSNode(ctx, req.(*AddRemoteRDSNodeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1665,8 +1767,8 @@ var _Nodes_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Nodes_AddRemoteNode_Handler,
 		},
 		{
-			MethodName: "AddRemoteAmazonRDSNode",
-			Handler:    _Nodes_AddRemoteAmazonRDSNode_Handler,
+			MethodName: "AddRemoteRDSNode",
+			Handler:    _Nodes_AddRemoteRDSNode_Handler,
 		},
 		{
 			MethodName: "RemoveNode",

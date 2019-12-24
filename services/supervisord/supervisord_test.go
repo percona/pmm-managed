@@ -17,23 +17,52 @@
 package supervisord
 
 import (
-	"context"
+	"io/ioutil"
+	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/AlekSi/pointer"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/percona/pmm-managed/models"
 )
 
-func TestService(t *testing.T) {
+func TestConfig(t *testing.T) {
 	t.Parallel()
 
-	s := New()
-	if s.supervisorctlPath == "" {
-		t.Skip("supervisorctl not found, skipping test")
+	configDir := filepath.Join("..", "..", "testdata", "supervisord.d")
+	s := New(configDir)
+	settings := &models.Settings{
+		DataRetention: 30 * 24 * time.Hour,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	go s.Run(ctx)
-	assert.Equal(t, false, s.PMMUpdateRunning())
+	for _, tmpl := range templates.Templates() {
+		if tmpl.Name() == "" {
+			continue
+		}
+
+		tmpl := tmpl
+		t.Run(tmpl.Name(), func(t *testing.T) {
+			expected, err := ioutil.ReadFile(filepath.Join(configDir, tmpl.Name()+".ini")) //nolint:gosec
+			require.NoError(t, err)
+			actual, err := s.marshalConfig(tmpl, settings)
+			require.NoError(t, err)
+			assert.Equal(t, string(expected), string(actual))
+		})
+	}
+}
+
+func TestParseStatus(t *testing.T) {
+	t.Parallel()
+
+	for str, expected := range map[string]*bool{
+		`pmm-agent                        STOPPED   Sep 20 08:55 AM`:         pointer.ToBool(false),
+		`pmm-managed                      RUNNING   pid 826, uptime 0:19:36`: pointer.ToBool(true),
+		`pmm-update-perform               EXITED    Sep 20 07:42 AM`:         nil,
+		`pmm-update-perform               STARTING`:                          pointer.ToBool(true), // no last column in that case
+	} {
+		assert.Equal(t, expected, parseStatus(str), "%q", str)
+	}
 }

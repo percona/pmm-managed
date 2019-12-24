@@ -36,18 +36,17 @@ type AgentType string
 
 // Agent types (in the same order as in agents.proto).
 const (
-	PMMAgentType         AgentType = "pmm-agent"
-	NodeExporterType     AgentType = "node_exporter"
-	MySQLdExporterType   AgentType = "mysqld_exporter"
-	MongoDBExporterType  AgentType = "mongodb_exporter"
-	PostgresExporterType AgentType = "postgres_exporter"
-	ProxySQLExporterType AgentType = "proxysql_exporter"
-	// TODO RDSExporterType                    AgentType = "rds_exporter"
+	PMMAgentType                       AgentType = "pmm-agent"
+	NodeExporterType                   AgentType = "node_exporter"
+	MySQLdExporterType                 AgentType = "mysqld_exporter"
+	MongoDBExporterType                AgentType = "mongodb_exporter"
+	PostgresExporterType               AgentType = "postgres_exporter"
+	ProxySQLExporterType               AgentType = "proxysql_exporter"
+	RDSExporterType                    AgentType = "rds_exporter"
 	QANMySQLPerfSchemaAgentType        AgentType = "qan-mysql-perfschema-agent"
 	QANMySQLSlowlogAgentType           AgentType = "qan-mysql-slowlog-agent"
 	QANMongoDBProfilerAgentType        AgentType = "qan-mongodb-profiler-agent"
 	QANPostgreSQLPgStatementsAgentType AgentType = "qan-postgresql-pgstatements-agent"
-	// TODO ExternalExporterType               AgentType = "external_exporter"
 )
 
 // PMMServerAgentID is a special Agent ID representing pmm-agent on PMM Server.
@@ -59,6 +58,8 @@ type Agent struct {
 	AgentID      string    `reform:"agent_id,pk"`
 	AgentType    AgentType `reform:"agent_type"`
 	RunsOnNodeID *string   `reform:"runs_on_node_id"`
+	ServiceID    *string   `reform:"service_id"`
+	NodeID       *string   `reform:"node_id"`
 	PMMAgentID   *string   `reform:"pmm_agent_id"`
 	CustomLabels []byte    `reform:"custom_labels"`
 	CreatedAt    time.Time `reform:"created_at"`
@@ -69,9 +70,26 @@ type Agent struct {
 	ListenPort *uint16 `reform:"listen_port"`
 	Version    *string `reform:"version"`
 
-	Username   *string `reform:"username"`
-	Password   *string `reform:"password"`
-	MetricsURL *string `reform:"metrics_url"`
+	Username      *string `reform:"username"`
+	Password      *string `reform:"password"`
+	TLS           bool    `reform:"tls"`
+	TLSSkipVerify bool    `reform:"tls_skip_verify"`
+
+	AWSAccessKey *string `reform:"aws_access_key"`
+	AWSSecretKey *string `reform:"aws_secret_key"`
+
+	// TableCount stores last known table count. NULL if unknown.
+	TableCount *int32 `reform:"table_count"`
+
+	// Tablestats group collectors are disabled if there are more than that number of tables.
+	// 0 means tablestats group collectors are always enabled (no limit).
+	// Negative value means tablestats group collectors are always disabled.
+	// See IsMySQLTablestatsGroupEnabled method.
+	TableCountTablestatsGroupLimit int32 `reform:"table_count_tablestats_group_limit"`
+
+	QueryExamplesDisabled bool    `reform:"query_examples_disabled"`
+	MaxQueryLogSize       int64   `reform:"max_query_log_size"`
+	MetricsURL            *string `reform:"metrics_url"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.
@@ -144,8 +162,6 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 
 	switch s.AgentType {
 	case MySQLdExporterType, ProxySQLExporterType:
-		// TODO TLSConfig: "true", https://jira.percona.com/browse/PMM-1727
-
 		cfg := mysql.NewConfig()
 		cfg.User = username
 		cfg.Passwd = password
@@ -153,6 +169,16 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		cfg.Addr = net.JoinHostPort(host, strconv.Itoa(int(port)))
 		cfg.Timeout = dialTimeout
 		cfg.DBName = database
+		cfg.Params = make(map[string]string)
+		if s.TLS {
+			// TODO: how certs and other parameters are going to be specified? We need to implement calling RegisterTLSConfig
+			// See https://godoc.org/github.com/go-sql-driver/mysql#RegisterTLSConfig
+			if s.TLSSkipVerify {
+				cfg.Params["tls"] = "skip-verify"
+			} else {
+				cfg.Params["tls"] = "true"
+			}
+		}
 
 		// MultiStatements must not be used as it enables SQL injections (in particular, in pmm-agent's Actions)
 		cfg.MultiStatements = false
@@ -160,8 +186,6 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		return cfg.FormatDSN()
 
 	case QANMySQLPerfSchemaAgentType, QANMySQLSlowlogAgentType:
-		// TODO TLSConfig: "true", https://jira.percona.com/browse/PMM-1727
-
 		cfg := mysql.NewConfig()
 		cfg.User = username
 		cfg.Passwd = password
@@ -169,6 +193,16 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		cfg.Addr = net.JoinHostPort(host, strconv.Itoa(int(port)))
 		cfg.Timeout = dialTimeout
 		cfg.DBName = database
+		cfg.Params = make(map[string]string)
+		if s.TLS {
+			// TODO: how certs and other parameters are going to be specified? We need to implement calling RegisterTLSConfig
+			// See https://godoc.org/github.com/go-sql-driver/mysql#RegisterTLSConfig
+			if s.TLSSkipVerify {
+				cfg.Params["tls"] = "skip-verify"
+			} else {
+				cfg.Params["tls"] = "true"
+			}
+		}
 
 		// MultiStatements must not be used as it enables SQL injections (in particular, in pmm-agent's Actions)
 		cfg.MultiStatements = false
@@ -193,6 +227,13 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			path = "/"
 		}
 
+		if s.TLS {
+			q.Add("ssl", "true")
+			if s.TLSSkipVerify {
+				q.Add("tlsInsecure", "true")
+			}
+		}
+
 		u := &url.URL{
 			Scheme:   "mongodb",
 			Host:     net.JoinHostPort(host, strconv.Itoa(int(port))),
@@ -209,7 +250,17 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 
 	case PostgresExporterType, QANPostgreSQLPgStatementsAgentType:
 		q := make(url.Values)
-		q.Set("sslmode", "disable") // TODO: make it configurable
+
+		sslmode := "disable"
+		if s.TLS {
+			if s.TLSSkipVerify {
+				sslmode = "require"
+			} else {
+				sslmode = "verify-full"
+			}
+		}
+		q.Set("sslmode", sslmode)
+
 		if dialTimeout != 0 {
 			q.Set("connect_timeout", strconv.Itoa(int(dialTimeout.Seconds())))
 		}
@@ -230,6 +281,24 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 
 	default:
 		panic(fmt.Errorf("unhandled AgentType %q", s.AgentType))
+	}
+}
+
+// IsMySQLTablestatsGroupEnabled returns true if mysqld_exporter tablestats group collectors should be enabled.
+func (s *Agent) IsMySQLTablestatsGroupEnabled() bool {
+	if s.AgentType != MySQLdExporterType {
+		panic(fmt.Errorf("unhandled AgentType %q", s.AgentType))
+	}
+
+	switch {
+	case s.TableCountTablestatsGroupLimit == 0: // no limit, always enable
+		return true
+	case s.TableCountTablestatsGroupLimit < 0: // always disable
+		return false
+	case s.TableCount == nil: // for compatibility with 2.0
+		return true
+	default:
+		return *s.TableCount <= s.TableCountTablestatsGroupLimit
 	}
 }
 

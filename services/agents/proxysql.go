@@ -23,12 +23,13 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/agentpb"
+	"github.com/percona/pmm/api/inventorypb"
 
 	"github.com/percona/pmm-managed/models"
 )
 
 // proxysqlExporterConfig returns desired configuration of proxysql_exporter process.
-func proxysqlExporterConfig(service *models.Service, exporter *models.Agent) *agentpb.SetStateRequest_AgentProcess {
+func proxysqlExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode) *agentpb.SetStateRequest_AgentProcess {
 	tdp := templateDelimsPair(
 		pointer.GetString(service.Address),
 		pointer.GetString(exporter.Username),
@@ -37,9 +38,10 @@ func proxysqlExporterConfig(service *models.Service, exporter *models.Agent) *ag
 	)
 
 	args := []string{
-		"-collect.mysql_connection_pool",
 		"-collect.mysql_connection_list",
+		"-collect.mysql_connection_pool",
 		"-collect.mysql_status",
+		"-collect.stats_memory_metrics",
 		"-web.listen-address=:" + tdp.left + " .listen_port " + tdp.right,
 	}
 
@@ -49,13 +51,18 @@ func proxysqlExporterConfig(service *models.Service, exporter *models.Agent) *ag
 
 	sort.Strings(args)
 
-	return &agentpb.SetStateRequest_AgentProcess{
-		Type:               agentpb.Type_PROXYSQL_EXPORTER,
+	res := &agentpb.SetStateRequest_AgentProcess{
+		Type:               inventorypb.AgentType_PROXYSQL_EXPORTER,
 		TemplateLeftDelim:  tdp.left,
 		TemplateRightDelim: tdp.right,
 		Args:               args,
 		Env: []string{
 			fmt.Sprintf("DATA_SOURCE_NAME=%s", exporter.DSN(service, time.Second, "")),
+			fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.AgentID),
 		},
 	}
+	if redactMode != exposeSecrets {
+		res.RedactWords = redactWords(exporter)
+	}
+	return res
 }

@@ -9,6 +9,7 @@ import (
 	_ "github.com/golang/protobuf/ptypes/duration"
 	_ "github.com/golang/protobuf/ptypes/timestamp"
 	_ "github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger/options"
+	_ "github.com/mwitkow/go-proto-validators"
 	github_com_mwitkow_go_proto_validators "github.com/mwitkow/go-proto-validators"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	math "math"
@@ -106,6 +107,11 @@ func (this *Settings) Validate() error {
 			return github_com_mwitkow_go_proto_validators.FieldError("MetricsResolutions", err)
 		}
 	}
+	if this.DataRetention != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.DataRetention); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("DataRetention", err)
+		}
+	}
 	return nil
 }
 func (this *GetSettingsRequest) Validate() error {
@@ -125,6 +131,11 @@ func (this *ChangeSettingsRequest) Validate() error {
 			return github_com_mwitkow_go_proto_validators.FieldError("MetricsResolutions", err)
 		}
 	}
+	if this.DataRetention != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.DataRetention); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("DataRetention", err)
+		}
+	}
 	return nil
 }
 func (this *ChangeSettingsResponse) Validate() error {
@@ -133,5 +144,14 @@ func (this *ChangeSettingsResponse) Validate() error {
 			return github_com_mwitkow_go_proto_validators.FieldError("Settings", err)
 		}
 	}
+	return nil
+}
+func (this *AWSInstanceCheckRequest) Validate() error {
+	if this.InstanceId == "" {
+		return github_com_mwitkow_go_proto_validators.FieldError("InstanceId", fmt.Errorf(`value '%v' must not be an empty string`, this.InstanceId))
+	}
+	return nil
+}
+func (this *AWSInstanceCheckResponse) Validate() error {
 	return nil
 }

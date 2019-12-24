@@ -28,6 +28,11 @@ import (
 	"github.com/percona/pmm-managed/services"
 )
 
+const (
+	defaultTablestatsGroupTableLimit = 1000
+	defaultMaxSlowlogFileSize        = 1 << 30 // 1 GB
+)
+
 // MySQLService MySQL Management Service.
 type MySQLService struct {
 	db       *reform.DB
@@ -44,9 +49,31 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 	res := new(managementpb.AddMySQLResponse)
 
 	if e := s.db.InTransaction(func(tx *reform.TX) error {
+		// tweak according to API docs
+		tablestatsGroupTableLimit := req.TablestatsGroupTableLimit
+		if tablestatsGroupTableLimit == 0 {
+			tablestatsGroupTableLimit = defaultTablestatsGroupTableLimit
+		}
+		if tablestatsGroupTableLimit < 0 {
+			tablestatsGroupTableLimit = -1
+		}
+
+		// tweak according to API docs
+		maxSlowlogFileSize := req.MaxSlowlogFileSize
+		if maxSlowlogFileSize == 0 {
+			maxSlowlogFileSize = defaultMaxSlowlogFileSize
+		}
+		if maxSlowlogFileSize < 0 {
+			maxSlowlogFileSize = 0
+		}
+
+		nodeID, err := nodeID(tx, req.NodeId, req.NodeName, req.AddNode, req.Address)
+		if err != nil {
+			return err
+		}
 		service, err := models.AddNewService(tx.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
 			ServiceName:    req.ServiceName,
-			NodeID:         req.NodeId,
+			NodeID:         nodeID,
 			Environment:    req.Environment,
 			Cluster:        req.Cluster,
 			ReplicationSet: req.ReplicationSet,
@@ -65,18 +92,23 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 		res.Service = invService.(*inventorypb.MySQLService)
 
 		row, err := models.CreateAgent(tx.Querier, models.MySQLdExporterType, &models.CreateAgentParams{
-			PMMAgentID: req.PmmAgentId,
-			ServiceID:  service.ServiceID,
-			Username:   req.Username,
-			Password:   req.Password,
+			PMMAgentID:                     req.PmmAgentId,
+			ServiceID:                      service.ServiceID,
+			Username:                       req.Username,
+			Password:                       req.Password,
+			TLS:                            req.Tls,
+			TLSSkipVerify:                  req.TlsSkipVerify,
+			TableCountTablestatsGroupLimit: tablestatsGroupTableLimit,
 		})
 		if err != nil {
 			return err
 		}
 		if !req.SkipConnectionCheck {
-			if err = s.registry.CheckConnectionToService(ctx, service, row); err != nil {
+			if err = s.registry.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
 				return err
 			}
+			// CheckConnectionToService updates the table count in row so, let's also update the response
+			res.TableCount = *row.TableCount
 		}
 
 		agent, err := services.ToAPIAgent(tx.Querier, row)
@@ -87,10 +119,13 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 
 		if req.QanMysqlPerfschema {
 			row, err = models.CreateAgent(tx.Querier, models.QANMySQLPerfSchemaAgentType, &models.CreateAgentParams{
-				PMMAgentID: req.PmmAgentId,
-				ServiceID:  service.ServiceID,
-				Username:   req.Username,
-				Password:   req.Password,
+				PMMAgentID:            req.PmmAgentId,
+				ServiceID:             service.ServiceID,
+				Username:              req.Username,
+				Password:              req.Password,
+				TLS:                   req.Tls,
+				TLSSkipVerify:         req.TlsSkipVerify,
+				QueryExamplesDisabled: req.DisableQueryExamples,
 			})
 			if err != nil {
 				return err
@@ -105,10 +140,14 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 
 		if req.QanMysqlSlowlog {
 			row, err = models.CreateAgent(tx.Querier, models.QANMySQLSlowlogAgentType, &models.CreateAgentParams{
-				PMMAgentID: req.PmmAgentId,
-				ServiceID:  service.ServiceID,
-				Username:   req.Username,
-				Password:   req.Password,
+				PMMAgentID:            req.PmmAgentId,
+				ServiceID:             service.ServiceID,
+				Username:              req.Username,
+				Password:              req.Password,
+				TLS:                   req.Tls,
+				TLSSkipVerify:         req.TlsSkipVerify,
+				QueryExamplesDisabled: req.DisableQueryExamples,
+				MaxQueryLogSize:       maxSlowlogFileSize,
 			})
 			if err != nil {
 				return err

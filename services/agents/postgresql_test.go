@@ -21,7 +21,9 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/agentpb"
+	"github.com/percona/pmm/api/inventorypb"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/percona/pmm-managed/models"
 )
@@ -32,35 +34,45 @@ func TestPostgresExporterConfig(t *testing.T) {
 		Port:    pointer.ToUint16(5432),
 	}
 	exporter := &models.Agent{
+		AgentID:   "agent-id",
 		AgentType: models.PostgresExporterType,
 		Username:  pointer.ToString("username"),
 		Password:  pointer.ToString("s3cur3 p@$$w0r4."),
 	}
-	actual := postgresExporterConfig(postgresql, exporter)
+	actual := postgresExporterConfig(postgresql, exporter, redactSecrets)
 	expected := &agentpb.SetStateRequest_AgentProcess{
-		Type:               agentpb.Type_POSTGRES_EXPORTER,
+		Type:               inventorypb.AgentType_POSTGRES_EXPORTER,
 		TemplateLeftDelim:  "{{",
 		TemplateRightDelim: "}}",
 		Args: []string{
+			"--collect.custom_query.hr",
+			"--collect.custom_query.hr.directory=/usr/local/percona/pmm2/collectors/custom-queries/postgresql/high-resolution",
+			"--collect.custom_query.lr",
+			"--collect.custom_query.lr.directory=/usr/local/percona/pmm2/collectors/custom-queries/postgresql/low-resolution",
+			"--collect.custom_query.mr",
+			"--collect.custom_query.mr.directory=/usr/local/percona/pmm2/collectors/custom-queries/postgresql/medium-resolution",
 			"--web.listen-address=:{{ .listen_port }}",
 		},
 		Env: []string{
 			"DATA_SOURCE_NAME=postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:5432/postgres?connect_timeout=1&sslmode=disable",
+			"HTTP_AUTH=pmm:agent-id",
 		},
+		RedactWords: []string{"s3cur3 p@$$w0r4."},
 	}
-	assert.Equal(t, expected.Args, actual.Args)
-	assert.Equal(t, expected.Env, actual.Env)
-	assert.Equal(t, expected, actual)
+	requireNoDuplicateFlags(t, actual.Args)
+	require.Equal(t, expected.Args, actual.Args)
+	require.Equal(t, expected.Env, actual.Env)
+	require.Equal(t, expected, actual)
 
 	t.Run("EmptyPassword", func(t *testing.T) {
 		exporter.Password = nil
-		actual := postgresExporterConfig(postgresql, exporter)
+		actual := postgresExporterConfig(postgresql, exporter, exposeSecrets)
 		assert.Equal(t, "DATA_SOURCE_NAME=postgres://username@1.2.3.4:5432/postgres?connect_timeout=1&sslmode=disable", actual.Env[0])
 	})
 
 	t.Run("EmptyUsername", func(t *testing.T) {
 		exporter.Username = nil
-		actual := postgresExporterConfig(postgresql, exporter)
+		actual := postgresExporterConfig(postgresql, exporter, exposeSecrets)
 		assert.Equal(t, "DATA_SOURCE_NAME=postgres://1.2.3.4:5432/postgres?connect_timeout=1&sslmode=disable", actual.Env[0])
 	})
 }

@@ -8,9 +8,10 @@
 
 	"name": "pmm-managed",
 	"extensions": [
-		"ms-vscode.go",
-		"laurenttreguier.rpm-spec",
 		"bungcip.better-toml",
+		"laurenttreguier.rpm-spec",
+		"ms-vscode.go",
+		"streetsidesoftware.code-spell-checker",
 		"vscoss.vscode-ansible"
 	],
 	"settings": {
@@ -25,7 +26,7 @@
 		},
 		"gopls": {
 			"usePlaceholders": true
-		},
+		}
 	},
-	"postCreateCommand": ".devcontainer/install-dev-tools.sh"
+	"postCreateCommand": "time .devcontainer/install-dev-tools.sh"
 }

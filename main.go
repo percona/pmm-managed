@@ -21,7 +21,6 @@ import (
 	"context"
 	"database/sql"
 	_ "expvar" // register /debug/vars
-	"flag"
 	"fmt"
 	"html/template"
 	"log"
@@ -30,6 +29,9 @@ import (
 	_ "net/http/pprof" // register /debug/pprof
 	"os"
 	"os/signal"
+	"path/filepath"
+	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -37,7 +39,7 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_validator "github.com/grpc-ecosystem/go-grpc-middleware/validator"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	grpc_gateway "github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/api/managementpb"
@@ -51,6 +53,8 @@ import (
 	channelz "google.golang.org/grpc/channelz/service"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
+	"gopkg.in/alecthomas/kingpin.v2"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
@@ -77,24 +81,6 @@ const (
 	gRPCAddr  = "127.0.0.1:7771"
 	http1Addr = "127.0.0.1:7772"
 	debugAddr = "127.0.0.1:7773"
-)
-
-var (
-	// TODO Switch to kingpin for flags parsing: https://jira.percona.com/browse/PMM-3259
-	prometheusConfigF = flag.String("prometheus-config", "", "Prometheus configuration file path")
-	prometheusURLF    = flag.String("prometheus-url", "http://127.0.0.1:9090/prometheus/", "Prometheus base URL")
-	promtoolF         = flag.String("promtool", "promtool", "promtool path")
-
-	grafanaAddrF = flag.String("grafana-addr", "127.0.0.1:3000", "Grafana HTTP API address")
-	qanAPIAddrF  = flag.String("qan-api-addr", "127.0.0.1:9911", "QAN API gRPC API address")
-
-	postgresAddrF       = flag.String("postgres-addr", "127.0.0.1:5432", "PostgreSQL address")
-	postgresDBNameF     = flag.String("postgres-name", "", "PostgreSQL database name")
-	postgresDBUsernameF = flag.String("postgres-username", "pmm-managed", "PostgreSQL database username")
-	postgresDBPasswordF = flag.String("postgres-password", "pmm-managed", "PostgreSQL database password")
-
-	debugF = flag.Bool("debug", false, "Enable debug logging")
-	traceF = flag.Bool("trace", false, "Enable trace logging")
 )
 
 func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
@@ -165,14 +151,17 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterPostgreSQLServer(gRPCServer, managementgrpc.NewManagementPostgreSQLServer(postgresqlSvc))
 	managementpb.RegisterProxySQLServer(gRPCServer, managementgrpc.NewManagementProxySQLServer(proxysqlSvc))
 	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(deps.agentsRegistry, deps.db))
+	managementpb.RegisterRDSServer(gRPCServer, management.NewRDSService(deps.db, deps.agentsRegistry))
 
-	if *debugF {
+	if l.Logger.GetLevel() >= logrus.DebugLevel {
 		l.Debug("Reflection and channelz are enabled.")
 		reflection.Register(gRPCServer)
 		channelz.RegisterChannelzServiceToServer(gRPCServer)
+
+		l.Debug("RPC response latency histogram enabled.")
+		grpc_prometheus.EnableHandlingTimeHistogram()
 	}
 
-	grpc_prometheus.EnableHandlingTimeHistogram()
 	grpc_prometheus.Register(gRPCServer)
 
 	// run server until it is stopped gracefully or not
@@ -214,13 +203,13 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 	l := logrus.WithField("component", "JSON")
 	l.Infof("Starting server on http://%s/ ...", http1Addr)
 
-	proxyMux := runtime.NewServeMux()
+	proxyMux := grpc_gateway.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithInsecure()}
 
 	// TODO switch from RegisterXXXHandlerFromEndpoint to RegisterXXXHandler to avoid extra dials
 	// (even if they dial to localhost)
 	// https://jira.percona.com/browse/PMM-4326
-	type registrar func(context.Context, *runtime.ServeMux, string, []grpc.DialOption) error
+	type registrar func(context.Context, *grpc_gateway.ServeMux, string, []grpc.DialOption) error
 	for _, r := range []registrar{
 		serverpb.RegisterServerHandlerFromEndpoint,
 
@@ -235,6 +224,7 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 		managementpb.RegisterPostgreSQLHandlerFromEndpoint,
 		managementpb.RegisterProxySQLHandlerFromEndpoint,
 		managementpb.RegisterActionsHandlerFromEndpoint,
+		managementpb.RegisterRDSHandlerFromEndpoint,
 	} {
 		if err := r(ctx, proxyMux, gRPCAddr, opts); err != nil {
 			l.Panic(err)
@@ -327,37 +317,65 @@ func runDebugServer(ctx context.Context) {
 	cancel()
 }
 
-func setupDatabase(ctx context.Context, sqlDB *sql.DB, prometheus *prometheus.Service, server *server.Server, l *logrus.Entry) bool {
-	l.Infof("Migrating database...")
-	err := models.SetupDB(sqlDB, &models.SetupDBParams{
-		Logf:          l.Debugf,
-		Username:      *postgresDBUsernameF,
-		Password:      *postgresDBPasswordF,
+type setupDeps struct {
+	sqlDB       *sql.DB
+	dbUsername  string
+	dbPassword  string
+	supervisord *supervisord.Service
+	prometheus  *prometheus.Service
+	server      *server.Server
+	l           *logrus.Entry
+}
+
+// setup migrates database and performs other setup tasks that depend on database.
+func setup(ctx context.Context, deps *setupDeps) bool {
+	deps.l.Infof("Migrating database...")
+	db, err := models.SetupDB(deps.sqlDB, &models.SetupDBParams{
+		Logf:          deps.l.Debugf,
+		Username:      deps.dbUsername,
+		Password:      deps.dbPassword,
 		SetupFixtures: models.SetupFixtures,
 	})
 	if err != nil {
-		l.Warnf("Failed to migrate database: %s.", err)
+		deps.l.Warnf("Failed to migrate database: %s.", err)
 		return false
 	}
 
-	l.Infof("Updating settings...")
-	if err = server.UpdateSettings(); err != nil {
-		l.Warnf("Settings problem: %s.", err)
+	// log and ignore validation errors; fail on other errors
+	deps.l.Infof("Updating settings...")
+	env := os.Environ()
+	sort.Strings(env)
+	if err = deps.server.UpdateSettingsFromEnv(env); err != nil {
+		if _, ok := status.FromError(err); !ok {
+			deps.l.Warnf("Settings problem: %+v.", err)
+			return false
+		}
+		deps.l.Warnf("Failed to update settings from environment: %+v.", err)
+	}
+
+	deps.l.Infof("Updating supervisord configuration...")
+	settings, err := models.GetSettings(db.Querier)
+	if err != nil {
+		deps.l.Warnf("Failed to get settings: %+v.", err)
+		return false
+	}
+	if err = deps.supervisord.UpdateConfiguration(settings); err != nil {
+		deps.l.Warnf("Failed to update supervisord configuration: %+v.", err)
 		return false
 	}
 
-	l.Infof("Checking Prometheus...")
-	if err = prometheus.Check(ctx); err != nil {
-		l.Warnf("Prometheus problem: %s.", err)
+	deps.l.Infof("Checking Prometheus...")
+	if err = deps.prometheus.Check(ctx); err != nil {
+		deps.l.Warnf("Prometheus problem: %+v.", err)
 		return false
 	}
-	prometheus.UpdateConfiguration()
+	deps.prometheus.RequestConfigurationUpdate()
 
-	l.Info("Setup completed.")
+	deps.l.Info("Setup completed.")
 	return true
 }
 
-func getQANClient(ctx context.Context, db *reform.DB) *qan.Client {
+func getQANClient(ctx context.Context, db *reform.DB, qanAPIAddr string) *qan.Client {
 	opts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithBackoffMaxDelay(time.Second),
@@ -366,32 +384,66 @@ func getQANClient(ctx context.Context, db *reform.DB) *qan.Client {
 
 	// Without grpc.WithBlock() DialContext returns an error only if something very wrong with address or options;
 	// it does not return an error of connection failure but tries to reconnect in the background.
-	conn, err := grpc.DialContext(ctx, *qanAPIAddrF, opts...)
+	conn, err := grpc.DialContext(ctx, qanAPIAddr, opts...)
 	if err != nil {
-		logrus.Fatalf("Failed to connect QAN API %s: %s.", *qanAPIAddrF, err)
+		logrus.Fatalf("Failed to connect QAN API %s: %s.", qanAPIAddr, err)
 	}
 	return qan.NewClient(conn, db)
 }
 
 func main() {
 	log.SetFlags(0)
-	log.Print(version.FullInfo())
 	log.SetPrefix("stdlog: ")
-	flag.Parse()
 
-	if *postgresDBNameF == "" {
-		log.Fatal("-postgres-name flag must be given explicitly.")
-	}
+	kingpin.Version(version.FullInfo())
+	kingpin.HelpFlag.Short('h')
 
+	prometheusConfigF := kingpin.Flag("prometheus-config", "Prometheus configuration file path").Required().String()
+	prometheusURLF := kingpin.Flag("prometheus-url", "Prometheus base URL").Default("http://127.0.0.1:9090/prometheus/").String()
+	promtoolF := kingpin.Flag("promtool", "promtool path").Default("promtool").String()
+
+	grafanaAddrF := kingpin.Flag("grafana-addr", "Grafana HTTP API address").Default("127.0.0.1:3000").String()
+	qanAPIAddrF := kingpin.Flag("qan-api-addr", "QAN API gRPC API address").Default("127.0.0.1:9911").String()
+
+	postgresAddrF := kingpin.Flag("postgres-addr", "PostgreSQL address").Default("127.0.0.1:5432").String()
+	postgresDBNameF := kingpin.Flag("postgres-name", "PostgreSQL database name").Required().String()
+	postgresDBUsernameF := kingpin.Flag("postgres-username", "PostgreSQL database username").Default("pmm-managed").String()
+	postgresDBPasswordF := kingpin.Flag("postgres-password", "PostgreSQL database password").Default("pmm-managed").String()
+
+	supervisordConfigDirF := kingpin.Flag("supervisord-config-dir", "Supervisord configuration directory").Required().String()
+
+	debugF := kingpin.Flag("debug", "Enable debug logging").Bool()
+	traceF := kingpin.Flag("trace", "Enable trace logging (implies debug)").Bool()
+
+	kingpin.Parse()
+
+	logrus.SetFormatter(&logrus.TextFormatter{
+		// Enable multiline-friendly formatter in both development (with terminal) and production (without terminal):
+		// https://github.com/sirupsen/logrus/blob/839c75faf7f98a33d445d181f3018b5c3409a45e/text_formatter.go#L176-L178
+		ForceColors:     true,
+		FullTimestamp:   true,
+		TimestampFormat: "2006-01-02T15:04:05.000-07:00",
+
+		CallerPrettyfier: func(f *runtime.Frame) (function string, file string) {
+			_, function = filepath.Split(f.Function)
+
+			// keep a single directory name as a compromise between brevity and unambiguity
+			var dir string
+			dir, file = filepath.Split(f.File)
+			dir = filepath.Base(dir)
+			file = fmt.Sprintf("%s/%s:%d", dir, file, f.Line)
+
+			return
+		},
+	})
 	if *debugF {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
 	if *traceF {
 		logrus.SetLevel(logrus.TraceLevel)
-		logrus.SetReportCaller(true) // https://github.com/sirupsen/logrus/issues/954
 		grpclog.SetLoggerV2(&logger.GRPC{Entry: logrus.WithField("component", "grpclog")})
+		logrus.SetReportCaller(true)
 	}
-
 	logrus.Infof("Log level: %s.", logrus.GetLevel())
 
 	l := logrus.WithField("component", "main")
@@ -413,7 +465,7 @@ func main() {
 	if err != nil {
 		l.Panicf("Failed to connect to database: %+v", err)
 	}
-	defer sqlDB.Close()
+	defer sqlDB.Close() //nolint:errcheck
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
 	prometheus, err := prometheus.NewService(*prometheusConfigF, *promtoolF, db, *prometheusURLF)
@@ -421,20 +473,30 @@ func main() {
 		l.Panicf("Prometheus service problem: %+v", err)
 	}
 
-	logs := supervisord.NewLogs(version.Version)
-	supervisord := supervisord.New()
-	server, err := server.NewServer(db, prometheus, supervisord, os.Environ())
+	logs := supervisord.NewLogs(version.FullInfo())
+	supervisord := supervisord.New(*supervisordConfigDirF)
+	telemetry := telemetry.NewService(db, version.Version)
+	checker := server.NewAWSInstanceChecker(db, telemetry)
+	server, err := server.NewServer(db, prometheus, supervisord, telemetry, checker)
 	if err != nil {
 		l.Panicf("Server problem: %+v", err)
 	}
 
 	// try synchronously once, then retry in the background
-	setupL := logrus.WithField("component", "setup")
-	if !setupDatabase(ctx, sqlDB, prometheus, server, setupL) {
+	deps := &setupDeps{
+		sqlDB:       sqlDB,
+		dbUsername:  *postgresDBUsernameF,
+		dbPassword:  *postgresDBPasswordF,
+		supervisord: supervisord,
+		prometheus:  prometheus,
+		server:      server,
+		l:           logrus.WithField("component", "setup"),
+	}
+	if !setup(ctx, deps) {
 		go func() {
 			const delay = 2 * time.Second
 			for {
-				setupL.Warnf("Retrying in %s.", delay)
+				deps.l.Warnf("Retrying in %s.", delay)
 				sleepCtx, sleepCancel := context.WithTimeout(ctx, delay)
 				<-sleepCtx.Done()
 				sleepCancel()
@@ -443,21 +505,21 @@ func main() {
 					return
 				}
 
-				if setupDatabase(ctx, sqlDB, prometheus, server, setupL) {
+				if setup(ctx, deps) {
 					return
 				}
 			}
 		}()
 	}
 
-	qanClient := getQANClient(ctx, db)
+	qanClient := getQANClient(ctx, db, *qanAPIAddrF)
 
 	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient)
 	prom.MustRegister(agentsRegistry)
 
 	grafanaClient := grafana.NewClient(*grafanaAddrF)
 	prom.MustRegister(grafanaClient)
-	authServer := grafana.NewAuthServer(grafanaClient)
+	authServer := grafana.NewAuthServer(grafanaClient, checker)
 
 	var wg sync.WaitGroup
 
@@ -477,23 +539,6 @@ func main() {
 	go func() {
 		defer wg.Done()
 
-		// Do not check for updates for the first 10 minutes.
-		// That solves PMM Server building problems when we start pmm-managed.
-		// TODO https://jira.percona.com/browse/PMM-4429
-		sleepCtx, sleepCancel := context.WithTimeout(ctx, 10*time.Minute)
-		<-sleepCtx.Done()
-		sleepCancel()
-		if ctx.Err() != nil {
-			return
-		}
-
-		server.Run(ctx)
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
 		// Do not report this instance as running for the first 10 minutes.
 		// Among other things, that solves reporting during PMM Server building when we start pmm-managed.
 		// TODO https://jira.percona.com/browse/PMM-4429
@@ -504,7 +549,7 @@ func main() {
 			return
 		}
 
-		telemetry.NewService(db, version.Version).Run(ctx)
+		telemetry.Run(ctx)
 	}()
 
 	wg.Add(1)

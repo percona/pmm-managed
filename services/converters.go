@@ -22,7 +22,6 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb"
-	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -67,16 +66,22 @@ func ToAPINode(node *models.Node) (inventorypb.Node, error) {
 		return &inventorypb.RemoteNode{
 			NodeId:       node.NodeID,
 			NodeName:     node.NodeName,
+			NodeModel:    node.NodeModel,
+			Region:       pointer.GetString(node.Region),
+			Az:           node.AZ,
 			CustomLabels: labels,
+			Address:      node.Address,
 		}, nil
 
-	case models.RemoteAmazonRDSNodeType:
-		return &inventorypb.RemoteAmazonRDSNode{
+	case models.RemoteRDSNodeType:
+		return &inventorypb.RemoteRDSNode{
 			NodeId:       node.NodeID,
 			NodeName:     node.NodeName,
-			Instance:     node.Address,
+			NodeModel:    node.NodeModel,
 			Region:       pointer.GetString(node.Region),
+			Az:           node.AZ,
 			CustomLabels: labels,
+			Address:      node.Address,
 		}, nil
 
 	default:
@@ -156,7 +161,21 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 		return nil, err
 	}
 
-	// agents without services
+	var nodeID, serviceID string
+	if agent.NodeID != nil {
+		node, err := models.FindNodeByID(q, *agent.NodeID)
+		if err != nil {
+			return nil, err
+		}
+		nodeID = node.NodeID
+	}
+	if agent.ServiceID != nil {
+		service, err := models.FindServiceByID(q, *agent.ServiceID)
+		if err != nil {
+			return nil, err
+		}
+		serviceID = service.ServiceID
+	}
 
 	switch agent.AgentType {
 	case models.PMMAgentType:
@@ -175,116 +194,130 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 			ListenPort:   uint32(pointer.GetUint16(agent.ListenPort)),
 			CustomLabels: labels,
 		}, nil
-	}
 
-	// agents with exactly one service
-	services, err := models.ServicesForAgent(q, agent.AgentID)
-	if err != nil {
-		return nil, err
-	}
-	if len(services) != 1 {
-		return nil, errors.Errorf("expected exactly one Service, got %d", len(services))
-	}
-	serviceID := services[0].ServiceID
-
-	switch agent.AgentType {
 	case models.MySQLdExporterType:
 		return &inventorypb.MySQLdExporter{
-			AgentId:      agent.AgentID,
-			PmmAgentId:   pointer.GetString(agent.PMMAgentID),
-			ServiceId:    serviceID,
-			Username:     pointer.GetString(agent.Username),
-			Password:     pointer.GetString(agent.Password),
-			Disabled:     agent.Disabled,
-			Status:       inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
-			ListenPort:   uint32(pointer.GetUint16(agent.ListenPort)),
-			CustomLabels: labels,
+			AgentId:                   agent.AgentID,
+			PmmAgentId:                pointer.GetString(agent.PMMAgentID),
+			ServiceId:                 serviceID,
+			Username:                  pointer.GetString(agent.Username),
+			Disabled:                  agent.Disabled,
+			Status:                    inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
+			ListenPort:                uint32(pointer.GetUint16(agent.ListenPort)),
+			CustomLabels:              labels,
+			Tls:                       agent.TLS,
+			TlsSkipVerify:             agent.TLSSkipVerify,
+			TablestatsGroupTableLimit: agent.TableCountTablestatsGroupLimit,
+			TablestatsGroupDisabled:   !agent.IsMySQLTablestatsGroupEnabled(),
 		}, nil
 
 	case models.MongoDBExporterType:
 		return &inventorypb.MongoDBExporter{
-			AgentId:      agent.AgentID,
-			PmmAgentId:   pointer.GetString(agent.PMMAgentID),
-			ServiceId:    serviceID,
-			Username:     pointer.GetString(agent.Username),
-			Password:     pointer.GetString(agent.Password),
-			Disabled:     agent.Disabled,
-			Status:       inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
-			ListenPort:   uint32(pointer.GetUint16(agent.ListenPort)),
-			CustomLabels: labels,
+			AgentId:       agent.AgentID,
+			PmmAgentId:    pointer.GetString(agent.PMMAgentID),
+			ServiceId:     serviceID,
+			Username:      pointer.GetString(agent.Username),
+			Disabled:      agent.Disabled,
+			Status:        inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
+			ListenPort:    uint32(pointer.GetUint16(agent.ListenPort)),
+			CustomLabels:  labels,
+			Tls:           agent.TLS,
+			TlsSkipVerify: agent.TLSSkipVerify,
 		}, nil
 
 	case models.PostgresExporterType:
 		return &inventorypb.PostgresExporter{
-			AgentId:      agent.AgentID,
-			PmmAgentId:   pointer.GetString(agent.PMMAgentID),
-			ServiceId:    serviceID,
-			Username:     pointer.GetString(agent.Username),
-			Password:     pointer.GetString(agent.Password),
-			Disabled:     agent.Disabled,
-			Status:       inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
-			ListenPort:   uint32(pointer.GetUint16(agent.ListenPort)),
-			CustomLabels: labels,
+			AgentId:       agent.AgentID,
+			PmmAgentId:    pointer.GetString(agent.PMMAgentID),
+			ServiceId:     serviceID,
+			Username:      pointer.GetString(agent.Username),
+			Disabled:      agent.Disabled,
+			Status:        inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
+			ListenPort:    uint32(pointer.GetUint16(agent.ListenPort)),
+			CustomLabels:  labels,
+			Tls:           agent.TLS,
+			TlsSkipVerify: agent.TLSSkipVerify,
 		}, nil
 
 	case models.QANMySQLPerfSchemaAgentType:
 		return &inventorypb.QANMySQLPerfSchemaAgent{
-			AgentId:      agent.AgentID,
-			PmmAgentId:   pointer.GetString(agent.PMMAgentID),
-			ServiceId:    serviceID,
-			Username:     pointer.GetString(agent.Username),
-			Password:     pointer.GetString(agent.Password),
-			Disabled:     agent.Disabled,
-			Status:       inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
-			CustomLabels: labels,
+			AgentId:               agent.AgentID,
+			PmmAgentId:            pointer.GetString(agent.PMMAgentID),
+			ServiceId:             serviceID,
+			Username:              pointer.GetString(agent.Username),
+			Disabled:              agent.Disabled,
+			Status:                inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
+			CustomLabels:          labels,
+			Tls:                   agent.TLS,
+			TlsSkipVerify:         agent.TLSSkipVerify,
+			QueryExamplesDisabled: agent.QueryExamplesDisabled,
 		}, nil
 
 	case models.QANMySQLSlowlogAgentType:
 		return &inventorypb.QANMySQLSlowlogAgent{
-			AgentId:      agent.AgentID,
-			PmmAgentId:   pointer.GetString(agent.PMMAgentID),
-			ServiceId:    serviceID,
-			Username:     pointer.GetString(agent.Username),
-			Password:     pointer.GetString(agent.Password),
-			Disabled:     agent.Disabled,
-			Status:       inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
-			CustomLabels: labels,
+			AgentId:               agent.AgentID,
+			PmmAgentId:            pointer.GetString(agent.PMMAgentID),
+			ServiceId:             serviceID,
+			Username:              pointer.GetString(agent.Username),
+			Disabled:              agent.Disabled,
+			Status:                inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
+			CustomLabels:          labels,
+			Tls:                   agent.TLS,
+			TlsSkipVerify:         agent.TLSSkipVerify,
+			QueryExamplesDisabled: agent.QueryExamplesDisabled,
+			MaxSlowlogFileSize:    agent.MaxQueryLogSize,
 		}, nil
 
 	case models.QANMongoDBProfilerAgentType:
 		return &inventorypb.QANMongoDBProfilerAgent{
-			AgentId:      agent.AgentID,
-			PmmAgentId:   pointer.GetString(agent.PMMAgentID),
-			ServiceId:    serviceID,
-			Username:     pointer.GetString(agent.Username),
-			Password:     pointer.GetString(agent.Password),
-			Disabled:     agent.Disabled,
-			Status:       inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
-			CustomLabels: labels,
+			AgentId:       agent.AgentID,
+			PmmAgentId:    pointer.GetString(agent.PMMAgentID),
+			ServiceId:     serviceID,
+			Username:      pointer.GetString(agent.Username),
+			Disabled:      agent.Disabled,
+			Status:        inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
+			CustomLabels:  labels,
+			Tls:           agent.TLS,
+			TlsSkipVerify: agent.TLSSkipVerify,
+			// TODO QueryExamplesDisabled https://jira.percona.com/browse/PMM-4650
 		}, nil
 
 	case models.ProxySQLExporterType:
 		return &inventorypb.ProxySQLExporter{
-			AgentId:      agent.AgentID,
-			PmmAgentId:   pointer.GetString(agent.PMMAgentID),
-			ServiceId:    serviceID,
-			Username:     pointer.GetString(agent.Username),
-			Password:     pointer.GetString(agent.Password),
-			Disabled:     agent.Disabled,
-			Status:       inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
-			ListenPort:   uint32(pointer.GetUint16(agent.ListenPort)),
-			CustomLabels: labels,
+			AgentId:       agent.AgentID,
+			PmmAgentId:    pointer.GetString(agent.PMMAgentID),
+			ServiceId:     serviceID,
+			Username:      pointer.GetString(agent.Username),
+			Disabled:      agent.Disabled,
+			Status:        inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
+			ListenPort:    uint32(pointer.GetUint16(agent.ListenPort)),
+			CustomLabels:  labels,
+			Tls:           agent.TLS,
+			TlsSkipVerify: agent.TLSSkipVerify,
 		}, nil
 
 	case models.QANPostgreSQLPgStatementsAgentType:
 		return &inventorypb.QANPostgreSQLPgStatementsAgent{
+			AgentId:       agent.AgentID,
+			PmmAgentId:    pointer.GetString(agent.PMMAgentID),
+			ServiceId:     serviceID,
+			Username:      pointer.GetString(agent.Username),
+			Disabled:      agent.Disabled,
+			Status:        inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
+			CustomLabels:  labels,
+			Tls:           agent.TLS,
+			TlsSkipVerify: agent.TLSSkipVerify,
+		}, nil
+
+	case models.RDSExporterType:
+		return &inventorypb.RDSExporter{
 			AgentId:      agent.AgentID,
 			PmmAgentId:   pointer.GetString(agent.PMMAgentID),
-			ServiceId:    serviceID,
-			Username:     pointer.GetString(agent.Username),
-			Password:     pointer.GetString(agent.Password),
+			NodeId:       nodeID,
 			Disabled:     agent.Disabled,
+			AwsAccessKey: pointer.GetString(agent.AWSAccessKey),
 			Status:       inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
+			ListenPort:   uint32(pointer.GetUint16(agent.ListenPort)),
 			CustomLabels: labels,
 		}, nil
 

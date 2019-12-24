@@ -50,8 +50,8 @@ func (s *nodesServer) ListNodes(ctx context.Context, req *inventorypb.ListNodesR
 			res.Container = append(res.Container, node)
 		case *inventorypb.RemoteNode:
 			res.Remote = append(res.Remote, node)
-		case *inventorypb.RemoteAmazonRDSNode:
-			res.RemoteAmazonRds = append(res.RemoteAmazonRds, node)
+		case *inventorypb.RemoteRDSNode:
+			res.RemoteRds = append(res.RemoteRds, node)
 		default:
 			panic(fmt.Errorf("unhandled inventory Node type %T", node))
 		}
@@ -74,8 +74,8 @@ func (s *nodesServer) GetNode(ctx context.Context, req *inventorypb.GetNodeReque
 		res.Node = &inventorypb.GetNodeResponse_Container{Container: node}
 	case *inventorypb.RemoteNode:
 		res.Node = &inventorypb.GetNodeResponse_Remote{Remote: node}
-	case *inventorypb.RemoteAmazonRDSNode:
-		res.Node = &inventorypb.GetNodeResponse_RemoteAmazonRds{RemoteAmazonRds: node}
+	case *inventorypb.RemoteRDSNode:
+		res.Node = &inventorypb.GetNodeResponse_RemoteRds{RemoteRds: node}
 	default:
 		panic(fmt.Errorf("unhandled inventory Node type %T", node))
 	}
@@ -115,15 +115,14 @@ func (s *nodesServer) AddRemoteNode(ctx context.Context, req *inventorypb.AddRem
 	return res, nil
 }
 
-// AddRemoteAmazonRDSNode adds Amazon (AWS) RDS remote Node.
-//nolint:lll
-func (s *nodesServer) AddRemoteAmazonRDSNode(ctx context.Context, req *inventorypb.AddRemoteAmazonRDSNodeRequest) (*inventorypb.AddRemoteAmazonRDSNodeResponse, error) {
-	node, err := s.svc.AddRemoteAmazonRDSNode(ctx, req)
+// AddRemoteRDSNode adds Remote RDS Node.
+func (s *nodesServer) AddRemoteRDSNode(ctx context.Context, req *inventorypb.AddRemoteRDSNodeRequest) (*inventorypb.AddRemoteRDSNodeResponse, error) {
+	node, err := s.svc.AddRemoteRDSNode(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 
-	res := &inventorypb.AddRemoteAmazonRDSNodeResponse{RemoteAmazonRds: node}
+	res := &inventorypb.AddRemoteRDSNodeResponse{RemoteRds: node}
 	return res, nil
 }
 

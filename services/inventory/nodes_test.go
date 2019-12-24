@@ -51,6 +51,8 @@ func TestNodes(t *testing.T) {
 		r.Test(t)
 
 		teardown = func(t *testing.T) {
+			uuid.SetRand(nil)
+
 			r.AssertExpectations(t)
 			require.NoError(t, sqlDB.Close())
 		}
@@ -130,15 +132,30 @@ func TestNodes(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("AddInstanceRegionNotUnique", func(t *testing.T) {
+	/*
+		TODO
+		t.Run("AddInstanceRegionNotUnique", func(t *testing.T) {
+			ns, teardown := setup(t)
+			defer teardown(t)
+
+			_, err := ns.AddRemoteAmazonRDSNode(ctx, &inventorypb.AddRemoteAmazonRDSNodeRequest{NodeName: "test1", Instance: "test-instance", Region: "test-region"})
+			require.NoError(t, err)
+
+			_, err = ns.AddRemoteAmazonRDSNode(ctx, &inventorypb.AddRemoteAmazonRDSNodeRequest{NodeName: "test2", Instance: "test-instance", Region: "test-region"})
+			expected := status.New(codes.AlreadyExists, `Node with instance "test-instance" and region "test-region" already exists.`)
+			tests.AssertGRPCError(t, expected, err)
+		})
+	*/
+
+	t.Run("AddRemoteRDSNode", func(t *testing.T) {
 		ns, teardown := setup(t)
 		defer teardown(t)
 
-		_, err := ns.AddRemoteAmazonRDSNode(ctx, &inventorypb.AddRemoteAmazonRDSNodeRequest{NodeName: "test1", Instance: "test-instance", Region: "test-region"})
+		_, err := ns.AddRemoteRDSNode(ctx, &inventorypb.AddRemoteRDSNodeRequest{NodeName: "test1", Region: "test-region", Address: "test"})
 		require.NoError(t, err)
 
-		_, err = ns.AddRemoteAmazonRDSNode(ctx, &inventorypb.AddRemoteAmazonRDSNodeRequest{NodeName: "test2", Instance: "test-instance", Region: "test-region"})
-		expected := status.New(codes.AlreadyExists, `Node with instance "test-instance" and region "test-region" already exists.`)
+		_, err = ns.AddRemoteRDSNode(ctx, &inventorypb.AddRemoteRDSNodeRequest{NodeName: "test2", Region: "test-region", Address: "test"})
+		expected := status.New(codes.AlreadyExists, `Node with instance "test" and region "test-region" already exists.`)
 		tests.AssertGRPCError(t, expected, err)
 	})
 

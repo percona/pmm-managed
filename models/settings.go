@@ -18,6 +18,8 @@ package models
 
 import (
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 )
 
 // MetricsResolutions contains standard Prometheus metrics resolutions.
@@ -34,11 +36,15 @@ type Settings struct {
 		UUID     string `json:"uuid"`
 	} `json:"telemetry"`
 
-	Updates struct {
-		AuthToken string `json:"auth_token"`
-	} `json:"updates"`
-
 	MetricsResolutions MetricsResolutions `json:"metrics_resolutions"`
+
+	DataRetention time.Duration `json:"data_retention"`
+
+	AWSPartitions []string `json:"aws_partitions"`
+
+	AWSInstanceChecked bool `json:"aws_instance_checked"`
+
+	SSHKey string `json:"ssh_key"`
 }
 
 // fillDefaults sets zero values to their default values.
@@ -47,7 +53,7 @@ func (s *Settings) fillDefaults() {
 	// no default for Telemetry UUID - it set by telemetry service
 
 	if s.MetricsResolutions.HR == 0 {
-		s.MetricsResolutions.HR = time.Second
+		s.MetricsResolutions.HR = 5 * time.Second
 	}
 	if s.MetricsResolutions.MR == 0 {
 		s.MetricsResolutions.MR = 5 * time.Second
@@ -55,4 +61,15 @@ func (s *Settings) fillDefaults() {
 	if s.MetricsResolutions.LR == 0 {
 		s.MetricsResolutions.LR = 60 * time.Second
 	}
+
+	if s.DataRetention == 0 {
+		s.DataRetention = 30 * 24 * time.Hour
+	}
+
+	if len(s.AWSPartitions) == 0 {
+		s.AWSPartitions = []string{endpoints.AwsPartitionID}
+	}
+
+	// AWSInstanceChecked is false by default
+	// SSHKey is empty by default
 }

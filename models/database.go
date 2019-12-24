@@ -38,7 +38,7 @@ var initialCurrentTime = Now().Format(time.RFC3339)
 var databaseSchema = [][]string{
 	1: {
 		`CREATE TABLE schema_migrations (
-			id INT NOT NULL,
+			id INTEGER NOT NULL,
 			PRIMARY KEY (id)
 		)`,
 
@@ -155,9 +155,76 @@ var databaseSchema = [][]string{
 
 	2: {
 		`CREATE TABLE settings (
-			settings jsonb
+			settings JSONB
 		)`,
 		`INSERT INTO settings (settings) VALUES ('{}')`,
+	},
+
+	3: {
+		`ALTER TABLE agents
+			ADD COLUMN tls BOOLEAN NOT NULL DEFAULT false,
+			ADD COLUMN tls_skip_verify BOOLEAN NOT NULL DEFAULT false`,
+
+		`ALTER TABLE agents
+			ALTER COLUMN tls DROP DEFAULT,
+			ALTER COLUMN tls_skip_verify DROP DEFAULT`,
+	},
+
+	4: {
+		`ALTER TABLE agents
+			ADD COLUMN query_examples_disabled BOOLEAN NOT NULL DEFAULT FALSE,
+			ADD COLUMN max_query_log_size INTEGER NOT NULL DEFAULT 0`,
+
+		`ALTER TABLE agents
+			ALTER COLUMN query_examples_disabled DROP DEFAULT,
+			ALTER COLUMN max_query_log_size DROP DEFAULT`,
+	},
+
+	5: {
+		// e'\n' to treat \n as a newline, not as two characters
+		`UPDATE nodes SET machine_id = trim(e'\n' from machine_id) WHERE machine_id IS NOT NULL`,
+	},
+
+	6: {
+		`ALTER TABLE agents
+			ADD COLUMN table_count INTEGER`,
+	},
+
+	7: {
+		`ALTER TABLE agents
+			ADD COLUMN node_id VARCHAR CHECK (node_id <> ''),
+			ADD COLUMN service_id VARCHAR CHECK (service_id <> '')`,
+		`UPDATE agents SET node_id=agent_nodes.node_id
+			FROM agent_nodes
+			WHERE agent_nodes.agent_id = agents.agent_id`,
+		`UPDATE agents SET service_id=agent_services.service_id
+			FROM agent_services
+			WHERE agent_services.agent_id = agents.agent_id`,
+
+		`DROP TABLE agent_nodes, agent_services`,
+
+		`ALTER TABLE agents
+			ADD CONSTRAINT node_id_or_service_id_or_pmm_agent_id CHECK (
+				(CASE WHEN node_id IS NULL THEN 0 ELSE 1 END) +
+  				(CASE WHEN service_id IS NULL THEN 0 ELSE 1 END) +
+  				(CASE WHEN pmm_agent_id IS NOT NULL THEN 0 ELSE 1 END) = 1),
+			ADD FOREIGN KEY (service_id) REFERENCES services(service_id),
+			ADD FOREIGN KEY (node_id) REFERENCES nodes(node_id)`,
+	},
+
+	8: {
+		// default to 1000 for soft migration from 2.1
+		`ALTER TABLE agents
+			ADD COLUMN table_count_tablestats_group_limit INTEGER NOT NULL DEFAULT 1000`,
+
+		`ALTER TABLE agents
+			ALTER COLUMN table_count_tablestats_group_limit DROP DEFAULT`,
+	},
+
+	9: {
+		`ALTER TABLE agents
+			ADD COLUMN aws_access_key VARCHAR,
+			ADD COLUMN aws_secret_key VARCHAR`,
 	},
 }
 
@@ -208,7 +275,7 @@ type SetupDBParams struct {
 }
 
 // SetupDB runs PostgreSQL database migrations and optionally adds initial data.
-func SetupDB(sqlDB *sql.DB, params *SetupDBParams) error {
+func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 	var logger reform.Logger
 	if params.Logf != nil {
 		logger = reform.NewPrintfLogger(params.Logf)
@@ -222,14 +289,14 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) error {
 		err = nil
 	}
 	if err != nil {
-		return errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 	if params.Logf != nil {
 		params.Logf("Current database schema version: %d. Latest version: %d.", currentVersion, latestVersion)
 	}
 
 	// rollback all migrations if one of them fails; PostgreSQL supports DDL transactions
-	return db.InTransaction(func(tx *reform.TX) error {
+	err = db.InTransaction(func(tx *reform.TX) error {
 		for version := currentVersion + 1; version <= latestVersion; version++ {
 			if params.Logf != nil {
 				params.Logf("Migrating database to schema version %d ...", version)
@@ -266,12 +333,16 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) error {
 		}
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
 }
 
 func setupFixture1(q *reform.Querier, username, password string) error {
 	// create PMM Server Node and associated Agents
 	node, err := createNodeWithID(q, PMMServerNodeID, GenericNodeType, &CreateNodeParams{
-		NodeName: "PMM Server",
+		NodeName: "pmm-server",
 		Address:  "127.0.0.1",
 	})
 	if err != nil {
@@ -290,7 +361,7 @@ func setupFixture1(q *reform.Querier, username, password string) error {
 
 	// create PostgreSQL Service and associated Agents
 	service, err := AddNewService(q, PostgreSQLServiceType, &AddDBMSServiceParams{
-		ServiceName: "PMM Server PostgreSQL",
+		ServiceName: "pmm-server-postgresql",
 		NodeID:      node.NodeID,
 		Address:     pointer.ToString("127.0.0.1"),
 		Port:        pointer.ToUint16(5432),
