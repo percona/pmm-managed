@@ -150,6 +150,7 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 				scrapeConfigForPrometheus(s.HR),
 				scrapeConfigForGrafana(s.MR),
 				scrapeConfigForPMMManaged(s.MR),
+				scrapeConfigForQANAPI2(s.MR),
 			},
 		}
 
