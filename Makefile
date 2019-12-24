@@ -23,6 +23,7 @@ env-up:                         ## Start development environment.
 	docker-compose pull
 	docker-compose up --detach --force-recreate --renew-anon-volumes --remove-orphans
 	docker exec -it --workdir=/root/go/src/github.com/percona/pmm-managed pmm-managed-server .devcontainer/setup.py
+	docker exec pmm-managed-server env
 
 env-down:                       ## Stop development environment.
 	docker-compose down --volumes --remove-orphans

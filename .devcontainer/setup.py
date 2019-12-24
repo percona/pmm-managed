@@ -4,7 +4,9 @@ from __future__ import print_function, unicode_literals
 import multiprocessing, os, subprocess, time
 
 
-GO = 'https://dl.google.com/go/go1.12.10.linux-amd64.tar.gz'
+GO_VERSION = os.getenv("GO_VERSION")
+if GO_VERSION is None:
+    raise("GO_VERSION is not set")
 
 
 def run_commands(commands):
@@ -37,7 +39,7 @@ def install_go():
     """Installs Go toolchain."""
 
     run_commands([
-        "curl -sS {go} -o /tmp/golang.tar.gz".format(go=GO),
+        "curl -sS https://dl.google.com/go/{go_version}.linux-amd64.tar.gz -o /tmp/golang.tar.gz".format(go_version=GO_VERSION),
         "tar -C /usr/local -xzf /tmp/golang.tar.gz",
         "mkdir -p /root/go/bin",
         "update-alternatives --install '/usr/bin/go' 'go' '/usr/local/go/bin/go' 0",
@@ -87,6 +89,7 @@ def setup():
     run_commands([
         "supervisorctl stop pmm-managed",
         "psql --username=postgres --command='ALTER USER \"pmm-managed\" WITH SUPERUSER'",
+        "dep check",
     ])
 
 
@@ -108,12 +111,12 @@ def main():
     install_packages_p.join()
     make_install()
 
-    # do basic setup
-    setup()
-
     # wait for everything else to finish
     install_tools_p.join()
     install_vendored_tools_p.join()
+
+    # do basic setup
+    setup()
 
 
 MARKER = "/tmp/devcontainer-setup-done"
