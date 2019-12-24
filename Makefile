@@ -20,17 +20,19 @@ LD_FLAGS = -ldflags " \
 			"
 
 env-up:                         ## Start development environment.
-	docker-compose up --force-recreate --abort-on-container-exit --renew-anon-volumes --remove-orphans
+	docker-compose pull
+	docker-compose up --detach --force-recreate --renew-anon-volumes --remove-orphans
+	docker exec -it --workdir=/root/go/src/github.com/percona/pmm-managed pmm-managed-server .devcontainer/setup.py
 
 env-down:                       ## Stop development environment.
 	docker-compose down --volumes --remove-orphans
 
 devcontainer:                   ## Run TARGET in devcontainer.
-	docker exec -it pmm-managed-server env \
-		TEST_FLAGS='$(TEST_FLAGS)' \
-		TEST_PACKAGES='$(TEST_PACKAGES)' \
-		TEST_RUN_UPDATE=$(TEST_RUN_UPDATE) \
-		make -C /root/go/src/github.com/percona/pmm-managed $(TARGET)
+	docker exec -it --workdir=/root/go/src/github.com/percona/pmm-managed \
+		--env TEST_FLAGS='$(TEST_FLAGS)' \
+		--env TEST_PACKAGES='$(TEST_PACKAGES)' \
+		--env TEST_RUN_UPDATE=$(TEST_RUN_UPDATE) \
+		pmm-managed-server make $(TARGET)
 
 release:                        ## Build pmm-managed release binary.
 	env CGO_ENABLED=0 go build -v $(LD_FLAGS) -o $(PMM_RELEASE_PATH)/pmm-managed

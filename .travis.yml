@@ -65,8 +65,7 @@ env:
       POSTGRES_IMAGE=postgres:latest
 
 before_install:
-  - docker-compose up -d
-  - docker exec pmm-managed-server /root/go/src/github.com/percona/pmm-managed/.devcontainer/install-dev-tools.sh
+  - make env-up
 
 install:
   # ensure that vendor/ is in sync with code and Gopkg.toml/lock

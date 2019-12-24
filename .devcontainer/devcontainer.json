@@ -35,5 +35,5 @@
 		},
 		"files.eol": "\n" // formatting only supports LF line endings
 	},
-	"postCreateCommand": ".devcontainer/install-dev-tools.py"
+	"postCreateCommand": ".devcontainer/setup.py"
 }

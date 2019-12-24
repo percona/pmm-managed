@@ -1,26 +1,23 @@
 #!/usr/bin/python2
 
 from __future__ import print_function, unicode_literals
-import multiprocessing, subprocess, time
+import multiprocessing, os, subprocess, time
 
 
 GO = 'https://dl.google.com/go/go1.12.10.linux-amd64.tar.gz'
 
 
 def run_commands(commands):
+    """Runs given shell commands and checks exit codes."""
+
     for cmd in commands:
         print(">", cmd)
         subprocess.check_call(cmd, shell=True)
 
 
-def setup():
-    run_commands([
-        "supervisorctl stop pmm-managed",
-        "psql --username=postgres --command='ALTER USER \"pmm-managed\" WITH SUPERUSER'",
-    ])
-
-
 def install_packages():
+    """Installs required and useful RPM packages."""
+
     run_commands([
         # to install man pages
         "sed -i '/nodocs/d' /etc/yum.conf",
@@ -37,6 +34,8 @@ def install_packages():
 
 
 def install_go():
+    """Installs Go toolchain."""
+
     run_commands([
         "curl -sS {go} -o /tmp/golang.tar.gz".format(go=GO),
         "tar -C /usr/local -xzf /tmp/golang.tar.gz",
@@ -48,11 +47,15 @@ def install_go():
     ])
 
 def make_install():
+    """Runs make install."""
+
     run_commands([
         "make install",
     ])
 
 def install_tools():
+    """Installs Go developer tools."""
+
     run_commands([
         "curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh",
         "curl https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /root/go/bin",
@@ -68,6 +71,8 @@ def install_tools():
 
 
 def install_vendored_tools():
+    """Installs pmm-managed-specific Go tools."""
+
     run_commands([
         "go install ./vendor/github.com/BurntSushi/go-sumtype",
         "go install ./vendor/github.com/vektra/mockery/cmd/mockery",
@@ -76,29 +81,48 @@ def install_vendored_tools():
     ])
 
 
-def main():
-    setup_p = multiprocessing.Process(target=setup)
-    setup_p.start()
+def setup():
+    """Runs various setup commands."""
 
+    run_commands([
+        "supervisorctl stop pmm-managed",
+        "psql --username=postgres --command='ALTER USER \"pmm-managed\" WITH SUPERUSER'",
+    ])
+
+
+def main():
+    # install packages early as they will be required below
     install_packages_p = multiprocessing.Process(target=install_packages)
     install_packages_p.start()
 
+    # install Go and wait for it
     install_go()
 
+    # install tools (requires Go)
     install_tools_p = multiprocessing.Process(target=install_tools)
     install_tools_p.start()
-
     install_vendored_tools_p = multiprocessing.Process(target=install_vendored_tools)
     install_vendored_tools_p.start()
 
+    # make install (requires make package)
     install_packages_p.join()
     make_install()
 
-    setup_p.join()
+    # do basic setup
+    setup()
+
+    # wait for everything else to finish
     install_tools_p.join()
     install_vendored_tools_p.join()
 
 
+MARKER = "/tmp/devcontainer-setup-done"
+if os.path.exists(MARKER):
+    print(MARKER, "exists, exiting.")
+    exit(0)
+
 start = time.time()
 main()
 print("Done in", time.time() - start)
+
+open(MARKER, 'w').close()
