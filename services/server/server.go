@@ -74,7 +74,8 @@ type Server struct {
 
 	sshKeyM sync.Mutex
 
-	// to make is testeable
+	// To make this testeable. To run API tests we need to write the rules file but on dev envs
+	// there is no /srv/prometheus/rules/ directory
 	alertsManagerFile string
 }
 
@@ -90,6 +91,11 @@ func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervis
 	}
 	path = filepath.Join(path, "pmm-update.json")
 
+	alertsManagerFile := defaultAlertsManagerFile
+	if envAlertFile := os.Getenv("PMM_ALERT_MANAGER_RULES_FILE"); envAlertFile != "" {
+		alertsManagerFile = envAlertFile
+	}
+
 	s := &Server{
 		db:                db,
 		prometheus:        prometheus,
@@ -98,7 +104,7 @@ func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervis
 		checker:           checker,
 		l:                 logrus.WithField("component", "server"),
 		pmmUpdateAuthFile: path,
-		alertsManagerFile: defaultAlertsManagerFile,
+		alertsManagerFile: alertsManagerFile,
 	}
 	return s, nil
 }
@@ -540,6 +546,11 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			}
 		}
 
+		settings.AlertManagerAddress = req.AlertManagerAddress
+		if req.ClearAlertManagerAddress {
+			settings.AlertManagerAddress = ""
+		}
+
 		return models.SaveSettings(tx, settings)
 	})
 	if err != nil {
@@ -556,6 +567,9 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		Settings: convertSettings(settings),
 	}
 	res.Settings.UpdatesDisabled = s.envDisableUpdates
+
+	alertManagerRules, err := loadAlertManagerRules(s.alertsManagerFile)
+	res.Settings.AlertManagerRules = string(alertManagerRules)
 	return res, nil
 }
 

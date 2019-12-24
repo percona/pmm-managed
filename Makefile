@@ -9,6 +9,11 @@ PMM_RELEASE_VERSION ?= $(shell git describe --always --dirty | cut -b2-)
 PMM_RELEASE_TIMESTAMP ?= $(shell date '+%s')
 PMM_RELEASE_FULLCOMMIT ?= $(shell git rev-parse HEAD)
 PMM_RELEASE_BRANCH ?= $(shell git describe --always --contains --all)
+DEFAULT_ALERT_MANAGER_RULES_FILE ?= /tmp/pmm.rules.yml
+
+# To make this testeable. To run API tests we need to write the rules file but on dev envs
+# there is no /srv/prometheus/rules/ directory
+export PMM_ALERT_MANAGER_RULES_FILE=$(DEFAULT_ALERT_MANAGER_RULES_FILE)
 
 LD_FLAGS = -ldflags " \
 			-X 'github.com/percona/pmm-managed/vendor/github.com/percona/pmm/version.ProjectName=pmm-managed' \
