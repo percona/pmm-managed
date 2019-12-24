@@ -20,6 +20,7 @@ package agents
 import (
 	"context"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -30,6 +31,7 @@ import (
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -44,7 +46,7 @@ const (
 	prometheusSubsystem = "agents"
 )
 
-type agentInfo struct {
+type pmmAgentInfo struct {
 	channel *channel.Channel
 	id      string
 	kick    chan struct{}
@@ -52,14 +54,16 @@ type agentInfo struct {
 
 // Registry keeps track of all connected pmm-agents.
 //
-// TODO Split into several types?
+// TODO Split into several types https://jira.percona.com/browse/PMM-4932
 type Registry struct {
 	db         *reform.DB
 	prometheus prometheusService
 	qanClient  qanClient
 
 	rw     sync.RWMutex
-	agents map[string]*agentInfo // id -> info
+	agents map[string]*pmmAgentInfo // id -> info
+
+	roster *roster
 
 	sharedMetrics *channel.SharedChannelMetrics
 	mConnects     prom.Counter
@@ -75,7 +79,9 @@ func NewRegistry(db *reform.DB, prometheus prometheusService, qanClient qanClien
 		prometheus: prometheus,
 		qanClient:  qanClient,
 
-		agents: make(map[string]*agentInfo),
+		agents: make(map[string]*pmmAgentInfo),
+
+		roster: newRoster(),
 
 		sharedMetrics: channel.NewSharedMetrics(),
 		mConnects: prom.NewCounter(prom.CounterOpts{
@@ -137,7 +143,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 		l.Infof("Disconnecting client: %s.", disconnectReason)
 	}()
 
-	// send first SetStateRequest concurrently with ping from agent
+	// send first SetStateRequest concurrently with handling ping from agent
 	go r.SendSetStateRequest(ctx, agent.id)
 
 	ticker := time.NewTicker(10 * time.Second)
@@ -213,7 +219,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 	}
 }
 
-func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*agentInfo, error) {
+func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*pmmAgentInfo, error) {
 	ctx := stream.Context()
 	l := logger.Get(ctx)
 	agentMD, err := agentpb.ReceiveAgentConnectMetadata(stream)
@@ -241,10 +247,11 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*agentInfo, err
 
 	// do not use r.get() - r.rw is already locked
 	if agent := r.agents[agentMD.ID]; agent != nil {
+		r.roster.clear(agentMD.ID)
 		close(agent.kick)
 	}
 
-	agent := &agentInfo{
+	agent := &pmmAgentInfo{
 		channel: channel.New(stream, r.sharedMetrics),
 		id:      agentMD.ID,
 		kick:    make(chan struct{}),
@@ -255,23 +262,23 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*agentInfo, err
 
 func authenticate(md *agentpb.AgentConnectMetadata, q *reform.Querier) (string, error) { //nolint:unused
 	if md.ID == "" {
-		return "", status.Error(codes.Unauthenticated, "Empty Agent ID.")
+		return "", status.Error(codes.PermissionDenied, "Empty Agent ID.")
 	}
 
 	agent, err := models.FindAgentByID(q, md.ID)
 	if err != nil {
 		if status.Code(err) == codes.NotFound {
-			return "", status.Errorf(codes.Unauthenticated, "No Agent with ID %q.", md.ID)
+			return "", status.Errorf(codes.PermissionDenied, "No Agent with ID %q.", md.ID)
 		}
 		return "", errors.Wrap(err, "failed to find agent")
 	}
 
 	if agent.AgentType != models.PMMAgentType {
-		return "", status.Errorf(codes.Unauthenticated, "No pmm-agent with ID %q.", md.ID)
+		return "", status.Errorf(codes.PermissionDenied, "No pmm-agent with ID %q.", md.ID)
 	}
 
 	if pointer.GetString(agent.RunsOnNodeID) == "" {
-		return "", status.Errorf(codes.Unauthenticated, "Can't get 'runs_on_node_id' for pmm-agent with ID %q.", md.ID)
+		return "", status.Errorf(codes.PermissionDenied, "Can't get 'runs_on_node_id' for pmm-agent with ID %q.", md.ID)
 	}
 
 	agent.Version = &md.Version
@@ -299,11 +306,12 @@ func (r *Registry) Kick(ctx context.Context, pmmAgentID string) {
 	}
 	l.Infof("pmm-agent with ID %q is connected, kicking.", pmmAgentID)
 	delete(r.agents, pmmAgentID)
+	r.roster.clear(pmmAgentID)
 	close(agent.kick)
 }
 
 // ping sends Ping message to given Agent, waits for Pong and observes round-trip time and clock drift.
-func (r *Registry) ping(ctx context.Context, agent *agentInfo) {
+func (r *Registry) ping(ctx context.Context, agent *pmmAgentInfo) {
 	l := logger.Get(ctx)
 	start := time.Now()
 	resp := agent.channel.SendRequest(new(agentpb.Ping))
@@ -325,22 +333,57 @@ func (r *Registry) ping(ctx context.Context, agent *agentInfo) {
 	r.mClockDrift.Observe(clockDrift.Seconds())
 }
 
-func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRequest) error {
-	err := r.db.InTransaction(func(tx *reform.TX) error {
-		agent := &models.Agent{AgentID: req.AgentId}
-		if err := tx.Reload(agent); err != nil {
-			return errors.Wrap(err, "failed to select Agent by ID")
-		}
+func updateAgentStatus(ctx context.Context, q *reform.Querier, agentID string, status inventorypb.AgentStatus, listenPort uint32) error {
+	l := logger.Get(ctx)
+	l.Debugf("updateAgentStatus: %s %s %d", agentID, status, listenPort)
 
-		agent.Status = req.Status.String()
-		agent.ListenPort = pointer.ToUint16(uint16(req.ListenPort))
-		return tx.Update(agent)
-	})
-	if err != nil {
-		return err
+	agent := &models.Agent{AgentID: agentID}
+	err := q.Reload(agent)
+
+	// TODO set ListenPort to NULL when agent is done?
+	// https://jira.percona.com/browse/PMM-4932
+
+	// FIXME that requires more investigation: https://jira.percona.com/browse/PMM-4932
+	if err == reform.ErrNoRows {
+		l.Warnf("Failed to select Agent by ID for (%s, %s).", agentID, status)
+
+		switch status {
+		case inventorypb.AgentStatus_STOPPING, inventorypb.AgentStatus_DONE:
+			return nil
+		}
 	}
 
-	r.prometheus.UpdateConfiguration()
+	if err != nil {
+		return errors.Wrap(err, "failed to select Agent by ID")
+	}
+
+	agent.Status = status.String()
+	agent.ListenPort = pointer.ToUint16(uint16(listenPort))
+	if err = q.Update(agent); err != nil {
+		return errors.Wrap(err, "failed to update Agent")
+	}
+	return nil
+}
+
+func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRequest) error {
+	e := r.db.InTransaction(func(tx *reform.TX) error {
+		agentIDs := r.roster.get(req.AgentId)
+		if agentIDs == nil {
+			agentIDs = []string{req.AgentId}
+		}
+
+		for _, agentID := range agentIDs {
+			if err := updateAgentStatus(ctx, tx.Querier, agentID, req.Status, req.ListenPort); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if e != nil {
+		return e
+	}
+
+	r.prometheus.RequestConfigurationUpdate()
 	return nil
 }
 
@@ -366,6 +409,12 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		return
 	}
 
+	redactMode := redactSecrets
+	if l.Logger.GetLevel() >= logrus.DebugLevel {
+		redactMode = exposeSecrets
+	}
+
+	rdsExporters := make(map[*models.Node]*models.Agent)
 	agentProcesses := make(map[string]*agentpb.SetStateRequest_AgentProcess)
 	builtinAgents := make(map[string]*agentpb.SetStateRequest_BuiltinAgent)
 	for _, row := range agents {
@@ -379,52 +428,68 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 			continue
 
 		case models.NodeExporterType:
-			nodes, err := models.FindNodesForAgentID(r.db.Querier, row.AgentID)
+			node, err := models.FindNodeByID(r.db.Querier, pointer.GetString(row.NodeID))
 			if err != nil {
 				l.Error(err)
 				return
 			}
-			if len(nodes) != 1 {
-				l.Errorf("Expected exactly one Node, got %d.", len(nodes))
+			agentProcesses[row.AgentID] = nodeExporterConfig(node, row)
+
+		case models.RDSExporterType:
+			node, err := models.FindNodeByID(r.db.Querier, pointer.GetString(row.NodeID))
+			if err != nil {
+				l.Error(err)
 				return
 			}
-			agentProcesses[row.AgentID] = nodeExporterConfig(nodes[0], row)
+			rdsExporters[node] = row
 
 		// Agents with exactly one Service
 		case models.MySQLdExporterType, models.MongoDBExporterType, models.PostgresExporterType, models.ProxySQLExporterType,
 			models.QANMySQLPerfSchemaAgentType, models.QANMySQLSlowlogAgentType, models.QANMongoDBProfilerAgentType, models.QANPostgreSQLPgStatementsAgentType:
 
-			services, err := models.ServicesForAgent(r.db.Querier, row.AgentID)
+			service, err := models.FindServiceByID(r.db.Querier, pointer.GetString(row.ServiceID))
 			if err != nil {
 				l.Error(err)
-				return
-			}
-			if len(services) != 1 {
-				l.Errorf("Expected exactly one Service, got %d.", len(services))
 				return
 			}
 
 			switch row.AgentType {
 			case models.MySQLdExporterType:
-				agentProcesses[row.AgentID] = mysqldExporterConfig(services[0], row)
+				agentProcesses[row.AgentID] = mysqldExporterConfig(service, row, redactMode)
 			case models.MongoDBExporterType:
-				agentProcesses[row.AgentID] = mongodbExporterConfig(services[0], row)
+				agentProcesses[row.AgentID] = mongodbExporterConfig(service, row, redactMode)
 			case models.PostgresExporterType:
-				agentProcesses[row.AgentID] = postgresExporterConfig(services[0], row)
+				agentProcesses[row.AgentID] = postgresExporterConfig(service, row, redactMode)
 			case models.ProxySQLExporterType:
-				agentProcesses[row.AgentID] = proxysqlExporterConfig(services[0], row)
+				agentProcesses[row.AgentID] = proxysqlExporterConfig(service, row, redactMode)
 			case models.QANMySQLPerfSchemaAgentType:
-				builtinAgents[row.AgentID] = qanMySQLPerfSchemaAgentConfig(services[0], row)
+				builtinAgents[row.AgentID] = qanMySQLPerfSchemaAgentConfig(service, row)
 			case models.QANMySQLSlowlogAgentType:
-				builtinAgents[row.AgentID] = qanMySQLSlowlogAgentConfig(services[0], row)
+				builtinAgents[row.AgentID] = qanMySQLSlowlogAgentConfig(service, row)
 			case models.QANMongoDBProfilerAgentType:
-				builtinAgents[row.AgentID] = qanMongoDBProfilerAgentConfig(services[0], row)
+				builtinAgents[row.AgentID] = qanMongoDBProfilerAgentConfig(service, row)
 			case models.QANPostgreSQLPgStatementsAgentType:
-				builtinAgents[row.AgentID] = qanPostgreSQLPgStatementsAgentConfig(services[0], row)
+				builtinAgents[row.AgentID] = qanPostgreSQLPgStatementsAgentConfig(service, row)
 			}
 
 		default:
 			l.Panicf("unhandled Agent type %s", row.AgentType)
+		}
+	}
+
+	if len(rdsExporters) > 0 {
+		rdsExporterIDs := make([]string, 0, len(rdsExporters))
+		for _, rdsExporter := range rdsExporters {
+			rdsExporterIDs = append(rdsExporterIDs, rdsExporter.AgentID)
+		}
+		sort.Strings(rdsExporterIDs)
+
+		groupID := r.roster.add(pmmAgentID, rdsGroup, rdsExporterIDs)
+		c, err := rdsExporterConfig(rdsExporters, redactMode)
+		if err == nil {
+			agentProcesses[groupID] = c
+		} else {
+			l.Errorf("%+v", err)
 		}
 	}
 
@@ -438,8 +503,8 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 }
 
 // CheckConnectionToService sends request to pmm-agent to check connection to service.
-func (r *Registry) CheckConnectionToService(ctx context.Context, service *models.Service, agent *models.Agent) error {
-	// TODO: extract to a separate struct to keep Single Responsibility principles.
+func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Querier, service *models.Service, agent *models.Agent) error {
+	// TODO: extract to a separate struct to keep Single Responsibility principles: https://jira.percona.com/browse/PMM-4932
 	l := logger.Get(ctx)
 	start := time.Now()
 	defer func() {
@@ -458,33 +523,53 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, service *models
 	switch service.ServiceType {
 	case models.MySQLServiceType:
 		request = &agentpb.CheckConnectionRequest{
-			Type: inventorypb.ServiceType_MYSQL_SERVICE,
-			Dsn:  agent.DSN(service, 2*time.Second, ""),
+			Type:    inventorypb.ServiceType_MYSQL_SERVICE,
+			Dsn:     agent.DSN(service, 2*time.Second, ""),
+			Timeout: ptypes.DurationProto(3 * time.Second),
 		}
 	case models.PostgreSQLServiceType:
 		request = &agentpb.CheckConnectionRequest{
-			Type: inventorypb.ServiceType_POSTGRESQL_SERVICE,
-			Dsn:  agent.DSN(service, 2*time.Second, "postgres"),
+			Type:    inventorypb.ServiceType_POSTGRESQL_SERVICE,
+			Dsn:     agent.DSN(service, 2*time.Second, "postgres"),
+			Timeout: ptypes.DurationProto(3 * time.Second),
 		}
 	case models.MongoDBServiceType:
 		request = &agentpb.CheckConnectionRequest{
-			Type: inventorypb.ServiceType_MONGODB_SERVICE,
-			Dsn:  agent.DSN(service, 2*time.Second, ""),
+			Type:    inventorypb.ServiceType_MONGODB_SERVICE,
+			Dsn:     agent.DSN(service, 2*time.Second, ""),
+			Timeout: ptypes.DurationProto(3 * time.Second),
 		}
 	case models.ProxySQLServiceType:
 		request = &agentpb.CheckConnectionRequest{
-			Type: inventorypb.ServiceType_PROXYSQL_SERVICE,
-			Dsn:  agent.DSN(service, 2*time.Second, ""),
+			Type:    inventorypb.ServiceType_PROXYSQL_SERVICE,
+			Dsn:     agent.DSN(service, 2*time.Second, ""),
+			Timeout: ptypes.DurationProto(3 * time.Second),
 		}
 	default:
 		l.Panicf("unhandled Service type %s", service.ServiceType)
 	}
 
-	request.Timeout = ptypes.DurationProto(3 * time.Second)
-
 	l.Infof("CheckConnectionRequest: %+v.", request)
 	resp := pmmAgent.channel.SendRequest(request)
 	l.Infof("CheckConnection response: %+v.", resp)
+
+	switch service.ServiceType {
+	case models.MySQLServiceType:
+		tableCount := resp.(*agentpb.CheckConnectionResponse).GetStats().GetTableCount()
+		agent.TableCount = &tableCount
+		l.Debugf("Updating table count: %d.", tableCount)
+		if err = q.Update(agent); err != nil {
+			return errors.Wrap(err, "failed to update table count")
+		}
+
+	case models.PostgreSQLServiceType:
+	case models.MongoDBServiceType:
+	case models.ProxySQLServiceType:
+		// nothing yet
+
+	default:
+		l.Panicf("unhandled Service type %s", service.ServiceType)
+	}
 
 	msg := resp.(*agentpb.CheckConnectionResponse).Error
 	switch msg {
@@ -496,7 +581,7 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, service *models
 	return status.Error(codes.FailedPrecondition, fmt.Sprintf("Connection check failed: %s.", msg))
 }
 
-func (r *Registry) get(pmmAgentID string) (*agentInfo, error) {
+func (r *Registry) get(pmmAgentID string) (*pmmAgentInfo, error) {
 	r.rw.RLock()
 	pmmAgent := r.agents[pmmAgentID]
 	r.rw.RUnlock()
@@ -524,50 +609,8 @@ func (r *Registry) Collect(ch chan<- prom.Metric) {
 	r.mClockDrift.Collect(ch)
 }
 
-// StartPTSummaryAction starts pt-summary action on pmm-agent.
-// TODO: Extract it from here. Where...?
-func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID string, args []string) error {
-	aRequest := &agentpb.StartActionRequest{
-		ActionId: id,
-		Params: &agentpb.StartActionRequest_PtSummaryParams{
-			PtSummaryParams: &agentpb.StartActionRequest_ProcessParams{
-				Args: args,
-			},
-		},
-	}
-
-	agent, err := r.get(pmmAgentID)
-	if err != nil {
-		return err
-	}
-
-	agent.channel.SendRequest(aRequest)
-	return nil
-}
-
-// StartPTMySQLSummaryAction starts pt-mysql-summary action on pmm-agent.
-// TODO: Extract it from here. Where...?
-func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID string, args []string) error {
-	aRequest := &agentpb.StartActionRequest{
-		ActionId: id,
-		Params: &agentpb.StartActionRequest_PtMysqlSummaryParams{
-			PtMysqlSummaryParams: &agentpb.StartActionRequest_ProcessParams{
-				Args: args,
-			},
-		},
-	}
-
-	agent, err := r.get(pmmAgentID)
-	if err != nil {
-		return err
-	}
-
-	agent.channel.SendRequest(aRequest)
-	return nil
-}
-
 // StartMySQLExplainAction starts MySQL EXPLAIN Action on pmm-agent.
-// TODO: Extract it from here. Where...?
+// TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
 func (r *Registry) StartMySQLExplainAction(ctx context.Context, id, pmmAgentID, dsn, query string, format agentpb.MysqlExplainOutputFormat) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
@@ -590,7 +633,7 @@ func (r *Registry) StartMySQLExplainAction(ctx context.Context, id, pmmAgentID, 
 }
 
 // StartMySQLShowCreateTableAction starts mysql-show-create-table action on pmm-agent.
-// TODO: Extract it from here. Where...?
+// TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
 func (r *Registry) StartMySQLShowCreateTableAction(ctx context.Context, id, pmmAgentID, dsn, table string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
@@ -612,7 +655,7 @@ func (r *Registry) StartMySQLShowCreateTableAction(ctx context.Context, id, pmmA
 }
 
 // StartMySQLShowTableStatusAction starts mysql-show-table-status action on pmm-agent.
-// TODO: Extract it from here. Where...?
+// TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
 func (r *Registry) StartMySQLShowTableStatusAction(ctx context.Context, id, pmmAgentID, dsn, table string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
@@ -634,7 +677,7 @@ func (r *Registry) StartMySQLShowTableStatusAction(ctx context.Context, id, pmmA
 }
 
 // StartMySQLShowIndexAction starts mysql-show-index action on pmm-agent.
-// TODO: Extract it from here. Where...?
+// TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
 func (r *Registry) StartMySQLShowIndexAction(ctx context.Context, id, pmmAgentID, dsn, table string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
@@ -656,7 +699,7 @@ func (r *Registry) StartMySQLShowIndexAction(ctx context.Context, id, pmmAgentID
 }
 
 // StartPostgreSQLShowCreateTableAction starts postgresql-show-create-table action on pmm-agent.
-// TODO: Extract it from here. Where...?
+// TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
 func (r *Registry) StartPostgreSQLShowCreateTableAction(ctx context.Context, id, pmmAgentID, dsn, table string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
@@ -678,7 +721,7 @@ func (r *Registry) StartPostgreSQLShowCreateTableAction(ctx context.Context, id,
 }
 
 // StartPostgreSQLShowIndexAction starts postgresql-show-index action on pmm-agent.
-// TODO: Extract it from here. Where...?
+// TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
 func (r *Registry) StartPostgreSQLShowIndexAction(ctx context.Context, id, pmmAgentID, dsn, table string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
@@ -700,7 +743,7 @@ func (r *Registry) StartPostgreSQLShowIndexAction(ctx context.Context, id, pmmAg
 }
 
 // StopAction stops action with given given id.
-// TODO: Extract it from here. Where...?
+// TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
 func (r *Registry) StopAction(ctx context.Context, actionID string) error {
 	agent, err := r.get(actionID)
 	if err != nil {

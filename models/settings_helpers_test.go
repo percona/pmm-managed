@@ -22,9 +22,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/testdb"
+	"github.com/percona/pmm-managed/utils/tests"
 )
 
 func TestSettings(t *testing.T) {
@@ -38,10 +41,12 @@ func TestSettings(t *testing.T) {
 		require.NoError(t, err)
 		expected := &models.Settings{
 			MetricsResolutions: models.MetricsResolutions{
-				HR: time.Second,
+				HR: 5 * time.Second,
 				MR: 5 * time.Second,
 				LR: time.Minute,
 			},
+			DataRetention: 30 * 24 * time.Hour,
+			AWSPartitions: []string{"aws"},
 		}
 		assert.Equal(t, expected, actual)
 	})
@@ -52,11 +57,75 @@ func TestSettings(t *testing.T) {
 		require.NoError(t, err)
 		expected := &models.Settings{
 			MetricsResolutions: models.MetricsResolutions{
-				HR: time.Second,
+				HR: 5 * time.Second,
 				MR: 5 * time.Second,
 				LR: time.Minute,
 			},
+			DataRetention: 30 * 24 * time.Hour,
+			AWSPartitions: []string{"aws"},
 		}
 		assert.Equal(t, expected, s)
+	})
+
+	t.Run("Validation", func(t *testing.T) {
+		t.Run("MetricsResolutions", func(t *testing.T) {
+			s := &models.Settings{
+				MetricsResolutions: models.MetricsResolutions{
+					HR: 500 * time.Millisecond,
+				},
+			}
+			err := models.SaveSettings(sqlDB, s)
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "hr: minimal resolution is 1s"), err)
+
+			s = &models.Settings{
+				MetricsResolutions: models.MetricsResolutions{
+					LR: 1500 * time.Millisecond,
+				},
+			}
+			err = models.SaveSettings(sqlDB, s)
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "lr: should be a natural number of seconds"), err)
+		})
+
+		t.Run("DataRetention", func(t *testing.T) {
+			s := &models.Settings{
+				DataRetention: 12 * time.Hour,
+			}
+			err := models.SaveSettings(sqlDB, s)
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "data_retention: minimal resolution is 24h"), err)
+
+			s = &models.Settings{
+				DataRetention: 36 * time.Hour,
+			}
+			err = models.SaveSettings(sqlDB, s)
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "data_retention: should be a natural number of days"), err)
+		})
+
+		t.Run("AWSPartitions", func(t *testing.T) {
+			s := &models.Settings{
+				AWSPartitions: []string{"foo"},
+			}
+			err := models.SaveSettings(sqlDB, s)
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `aws_partitions: partition "foo" is invalid`), err)
+
+			s = &models.Settings{
+				AWSPartitions: []string{"foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo"},
+			}
+			err = models.SaveSettings(sqlDB, s)
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `aws_partitions: list is too long`), err)
+
+			s = &models.Settings{
+				AWSPartitions: []string{"aws", "aws-cn", "aws-cn"},
+			}
+			err = models.SaveSettings(sqlDB, s)
+			assert.NoError(t, err)
+			assert.Equal(t, []string{"aws", "aws-cn"}, s.AWSPartitions)
+
+			s = &models.Settings{
+				AWSPartitions: []string{},
+			}
+			err = models.SaveSettings(sqlDB, s)
+			assert.NoError(t, err)
+			assert.Equal(t, []string{"aws"}, s.AWSPartitions)
+		})
 	})
 }

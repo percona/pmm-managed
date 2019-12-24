@@ -19,8 +19,14 @@ package server
 
 import (
 	"context"
+	"crypto/subtle"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"os/exec"
+	"os/user"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -28,10 +34,13 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
+	"github.com/google/uuid"
 	"github.com/percona/pmm/api/serverpb"
+	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -39,29 +48,35 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-const updateCheckInterval = 24 * time.Hour
-
 // Server represents service for checking PMM Server status and changing settings.
 type Server struct {
-	db                    *reform.DB
-	prometheus            prometheusService
-	supervisord           supervisordService
-	l                     *logrus.Entry
-	pmmUpdate             *pmmUpdate
-	pmmUpdateProgressFile string
+	db               *reform.DB
+	prometheus       prometheusService
+	supervisord      supervisordService
+	telemetryService telemetryService
+	checker          *AWSInstanceChecker
+	l                *logrus.Entry
 
-	pmmUpdateProgressFileM sync.Mutex
+	pmmUpdateAuthFileM sync.Mutex
+	pmmUpdateAuthFile  string
 
-	envMetricsResolution time.Duration
-	envDisableTelemetry  bool
+	envRW                  sync.RWMutex
+	envDisableUpdates      bool
+	envDisableTelemetry    bool
+	envMetricsResolutionHR time.Duration
+	envMetricsResolutionMR time.Duration
+	envMetricsResolutionLR time.Duration
+	envDataRetention       time.Duration
+
+	sshKeyM sync.Mutex
 }
 
-type pmmUpdateProgress struct {
+type pmmUpdateAuth struct {
 	AuthToken string `json:"auth_token"`
 }
 
 // NewServer returns new server for Server service.
-func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervisordService, env []string) (*Server, error) {
+func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervisordService, telemetryService telemetryService, checker *AWSInstanceChecker) (*Server, error) {
 	path := os.TempDir()
 	if _, err := os.Stat(path); err != nil {
 		return nil, errors.WithStack(err)
@@ -69,83 +84,22 @@ func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervis
 	path = filepath.Join(path, "pmm-update.json")
 
 	s := &Server{
-		db:                    db,
-		prometheus:            prometheus,
-		l:                     logrus.WithField("component", "server"),
-		pmmUpdate:             newPMMUpdate(logrus.WithField("component", "server/pmm-update")),
-		pmmUpdateProgressFile: path,
+		db:                db,
+		prometheus:        prometheus,
+		supervisord:       supervisord,
+		telemetryService:  telemetryService,
+		checker:           checker,
+		l:                 logrus.WithField("component", "server"),
+		pmmUpdateAuthFile: path,
 	}
-	s.parseEnv(env)
 	return s, nil
 }
 
-func (s *Server) parseEnv(env []string) {
-	for _, e := range env {
-		p := strings.SplitN(e, "=", 2)
-		if len(p) != 2 {
-			s.l.Warnf("Failed to parse environment variable %s.", e)
-			continue
-		}
-
-		k, v := strings.ToUpper(p[0]), strings.ToLower(p[1])
-		var err error
-		switch k {
-		case "METRICS_RESOLUTION":
-			var d time.Duration
-			d, err = time.ParseDuration(v)
-			if err != nil {
-				i, _ := strconv.ParseInt(v, 10, 64)
-				if i != 0 {
-					d = time.Duration(i) * time.Second
-					err = nil
-				}
-			}
-			if d != 0 && d < time.Second {
-				s.l.Warnf("Failed to parse environment variable %s: minimal resolution is 1s.", e)
-				continue
-			}
-			if err == nil {
-				s.envMetricsResolution = d
-			}
-
-		case "DISABLE_TELEMETRY":
-			var b bool
-			b, err = strconv.ParseBool(v)
-			if err == nil {
-				s.envDisableTelemetry = b
-			}
-		}
-
-		if err != nil {
-			s.l.Warnf("Failed to parse environment variable %s: %s", e, err)
-		}
-	}
-}
-
-// Run runs check for updates loop until ctx is canceled.
-func (s *Server) Run(ctx context.Context) {
-	s.l.Info("Starting...")
-	ticker := time.NewTicker(updateCheckInterval)
-	defer ticker.Stop()
-
-	for {
-		_ = s.pmmUpdate.check()
-
-		select {
-		case <-ticker.C:
-			// continue with next loop iteration
-		case <-ctx.Done():
-			s.l.Info("Done.")
-			return
-		}
-	}
-}
-
-// UpdateSettings updates settings in the database with environment variables values.
-func (s *Server) UpdateSettings() error {
-	if s.envMetricsResolution == 0 && !s.envDisableTelemetry {
-		return nil
-	}
+// UpdateSettingsFromEnv updates settings in the database with environment variables values.
+// It returns only validation or database errors; invalid environment variables are logged and skipped.
+func (s *Server) UpdateSettingsFromEnv(env []string) error {
+	s.envRW.Lock()
+	defer s.envRW.Unlock()
 
 	return s.db.InTransaction(func(tx *reform.TX) error {
 		settings, err := models.GetSettings(tx.Querier)
@@ -153,26 +107,84 @@ func (s *Server) UpdateSettings() error {
 			return err
 		}
 
-		if s.envMetricsResolution != 0 {
-			settings.MetricsResolutions.HR = s.envMetricsResolution
-		}
-		if s.envDisableTelemetry {
-			settings.Telemetry.Disabled = true
+		for _, e := range env {
+			p := strings.SplitN(e, "=", 2)
+			if len(p) != 2 {
+				s.l.Warnf("Failed to parse environment variable %q.", e)
+				continue
+			}
+
+			k, v := strings.ToUpper(p[0]), strings.ToLower(p[1])
+			var err error
+			var value interface{}
+			switch k {
+			case "DISABLE_UPDATES":
+				var b bool
+				b, err = strconv.ParseBool(v)
+				if err == nil {
+					value = b
+					s.envDisableUpdates = b
+				}
+
+			case "DISABLE_TELEMETRY":
+				var b bool
+				b, err = strconv.ParseBool(v)
+				if err == nil {
+					value = b
+					s.envDisableTelemetry = b
+					settings.Telemetry.Disabled = b
+				}
+
+			case "METRICS_RESOLUTION", "METRICS_RESOLUTION_HR":
+				var d time.Duration
+				d, err = time.ParseDuration(v)
+				if err == nil {
+					value = d
+					s.envMetricsResolutionHR = d
+					settings.MetricsResolutions.HR = d
+				}
+
+			case "METRICS_RESOLUTION_MR":
+				var d time.Duration
+				d, err = time.ParseDuration(v)
+				if err == nil {
+					value = d
+					s.envMetricsResolutionMR = d
+					settings.MetricsResolutions.MR = d
+				}
+
+			case "METRICS_RESOLUTION_LR":
+				var d time.Duration
+				d, err = time.ParseDuration(v)
+				if err == nil {
+					value = d
+					s.envMetricsResolutionLR = d
+					settings.MetricsResolutions.LR = d
+				}
+
+			case "DATA_RETENTION":
+				var d time.Duration
+				d, err = time.ParseDuration(v)
+				if err == nil {
+					value = d
+					s.envDataRetention = d
+					settings.DataRetention = d
+				}
+
+			default:
+				s.l.Tracef("Skipping %q.", e)
+				continue
+			}
+
+			if err == nil {
+				s.l.Infof("Environment variable %q parsed: %v.", e, value)
+			} else {
+				s.l.Warnf("Failed to parse environment variable %q: %s.", e, err)
+			}
 		}
 
 		return models.SaveSettings(tx.Querier, settings)
 	})
-}
-
-func convertSettings(s *models.Settings) *serverpb.Settings {
-	return &serverpb.Settings{
-		MetricsResolutions: &serverpb.MetricsResolutions{
-			Hr: ptypes.DurationProto(s.MetricsResolutions.HR),
-			Mr: ptypes.DurationProto(s.MetricsResolutions.MR),
-			Lr: ptypes.DurationProto(s.MetricsResolutions.LR),
-		},
-		Telemetry: !s.Telemetry.Disabled,
-	}
 }
 
 // Version returns PMM Server version.
@@ -209,20 +221,22 @@ func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*se
 			Version:     version.Version,
 			FullVersion: version.FullCommit,
 		},
+
+		DistributionMethod: s.telemetryService.DistributionMethod(),
 	}
 	if t, err := version.Time(); err == nil {
 		ts, _ := ptypes.TimestampProto(t)
 		res.Managed.Timestamp = ts
 	}
 
-	if v, _ := s.pmmUpdate.checkResult(); v != nil {
-		res.Version = v.InstalledRPMNiceVersion
+	if v := s.supervisord.InstalledPMMVersion(); v != nil {
+		res.Version = v.Version
 		res.Server = &serverpb.VersionInfo{
-			Version:     v.InstalledRPMNiceVersion,
-			FullVersion: v.InstalledRPMVersion,
+			Version:     v.Version,
+			FullVersion: v.FullVersion,
 		}
-		if v.InstalledTime != nil {
-			res.Server.Timestamp, _ = ptypes.TimestampProto(*v.InstalledTime)
+		if v.BuildTime != nil {
+			res.Server.Timestamp, _ = ptypes.TimestampProto(*v.BuildTime)
 		}
 	}
 
@@ -243,35 +257,35 @@ func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) 
 // CheckUpdates checks PMM Server updates availability.
 func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesRequest) (*serverpb.CheckUpdatesResponse, error) {
 	if req.Force {
-		if err := s.pmmUpdate.check(); err != nil {
+		if err := s.supervisord.ForceCheckUpdates(); err != nil {
 			return nil, err
 		}
 	}
 
-	v, lastCheck := s.pmmUpdate.checkResult()
+	v, lastCheck := s.supervisord.LastCheckUpdatesResult()
 	if v == nil {
 		return nil, status.Error(codes.Unavailable, "failed to check for updates")
 	}
 
 	res := &serverpb.CheckUpdatesResponse{
 		Installed: &serverpb.VersionInfo{
-			Version:     v.InstalledRPMNiceVersion,
-			FullVersion: v.InstalledRPMVersion,
+			Version:     v.Installed.Version,
+			FullVersion: v.Installed.FullVersion,
 		},
 		Latest: &serverpb.VersionInfo{
-			Version:     v.LatestRPMNiceVersion,
-			FullVersion: v.LatestRPMVersion,
+			Version:     v.Latest.Version,
+			FullVersion: v.Latest.FullVersion,
 		},
 		UpdateAvailable: v.UpdateAvailable,
-		LatestNewsUrl:   "", // TODO https://jira.percona.com/browse/PMM-4444
+		LatestNewsUrl:   v.LatestNewsURL,
 	}
 	res.LastCheck, _ = ptypes.TimestampProto(lastCheck)
-	if v.InstalledTime != nil {
-		t := v.InstalledTime.UTC().Truncate(24 * time.Hour) // return only date
+	if v.Installed.BuildTime != nil {
+		t := v.Installed.BuildTime.UTC().Truncate(24 * time.Hour) // return only date
 		res.Installed.Timestamp, _ = ptypes.TimestampProto(t)
 	}
-	if v.LatestTime != nil {
-		t := v.LatestTime.UTC().Truncate(24 * time.Hour) // return only date
+	if v.Latest.BuildTime != nil {
+		t := v.Latest.BuildTime.UTC().Truncate(24 * time.Hour) // return only date
 		res.Latest.Timestamp, _ = ptypes.TimestampProto(t)
 	}
 	return res, nil
@@ -279,65 +293,135 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 
 // StartUpdate starts PMM Server update.
 func (s *Server) StartUpdate(ctx context.Context, req *serverpb.StartUpdateRequest) (*serverpb.StartUpdateResponse, error) {
-	var authToken string
+	s.envRW.RLock()
+	updatesDisabled := s.envDisableUpdates
+	s.envRW.RUnlock()
 
-	// TODO https://jira.percona.com/browse/PMM-4448
-	// e := s.db.InTransaction(func(tx *reform.TX) error {
-	// 	settings, err := models.GetSettings(tx.Querier)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	if settings.Updates.AuthToken != "" {
-	// 		return status.Error(codes.AlreadyExists, "Update is already underway.")
-	// 	}
-	// 	authToken = "/update_auth_token/" + uuid.New().String()
-	// 	settings.Updates.AuthToken = authToken
-	// 	return models.SaveSettings(tx.Querier, settings)
-	// })
-	// if e != nil {
-	// 	return nil, e
-	// }
+	if updatesDisabled {
+		return nil, status.Error(codes.FailedPrecondition, "Updates are disabled via DISABLE_UPDATES environment variable.")
+	}
+
+	offset, err := s.supervisord.StartUpdate()
+	if err != nil {
+		return nil, err
+	}
+
+	authToken := uuid.New().String()
+	if err = s.writeUpdateAuthToken(authToken); err != nil {
+		return nil, err
+	}
 
 	return &serverpb.StartUpdateResponse{
 		AuthToken: authToken,
+		LogOffset: offset,
 	}, nil
 }
 
 // UpdateStatus returns PMM Server update status.
 func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusRequest) (*serverpb.UpdateStatusResponse, error) {
-	// TODO https://jira.percona.com/browse/PMM-4448
+	token, err := s.readUpdateAuthToken()
+	if err != nil {
+		return nil, err
+	}
+	if subtle.ConstantTimeCompare([]byte(req.AuthToken), []byte(token)) == 0 {
+		return nil, status.Error(codes.PermissionDenied, "Invalid authentication token.")
+	}
 
-	// settings, err := models.GetSettings(s.db.Querier)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	// wait up to 30 seconds for new log lines
+	var lines []string
+	var newOffset uint32
+	var done bool
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	for ctx.Err() == nil {
+		done = !s.supervisord.UpdateRunning()
+		if done {
+			// give supervisord a second to flush logs to file
+			time.Sleep(time.Second)
+		}
 
-	// if subtle.ConstantTimeCompare([]byte(req.AuthToken), []byte(settings.Updates.AuthToken)) == 0 {
-	// 	return nil, status.Error(codes.PermissionDenied, "Invalid authentication token.")
-	// }
+		lines, newOffset, err = s.supervisord.UpdateLog(req.LogOffset)
+		if err != nil {
+			s.l.Warn(err)
+		}
 
-	// e := s.db.InTransaction(func(tx *reform.TX) error {
-	// 	settings, err = models.GetSettings(tx.Querier)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	settings.Updates.AuthToken = ""
-	// 	return models.SaveSettings(tx.Querier, settings)
-	// })
-	// if e != nil {
-	// 	return nil, err
-	// }
+		if len(lines) != 0 || done {
+			break
+		}
+
+		time.Sleep(200 * time.Millisecond)
+	}
 
 	return &serverpb.UpdateStatusResponse{
-		LogLines: []string{
-			"TODO",
-		},
-		Done: true,
+		LogLines:  lines,
+		LogOffset: newOffset,
+		Done:      done,
 	}, nil
+}
+
+// writeUpdateAuthToken writes authentication token for getting update status and logs to the file.
+//
+// We can't rely on Grafana for authentication or on PostgreSQL for storage as their configuration
+// is being changed during update.
+func (s *Server) writeUpdateAuthToken(token string) error {
+	s.pmmUpdateAuthFileM.Lock()
+	defer s.pmmUpdateAuthFileM.Unlock()
+
+	a := &pmmUpdateAuth{
+		AuthToken: token,
+	}
+	f, err := os.OpenFile(s.pmmUpdateAuthFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600|os.ModeExclusive)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer func() {
+		if err = f.Close(); err != nil {
+			s.l.Error(err)
+		}
+	}()
+
+	return errors.WithStack(json.NewEncoder(f).Encode(a))
+}
+
+// readUpdateAuthToken reads authentication token for getting update status and logs from the file.
+func (s *Server) readUpdateAuthToken() (string, error) {
+	s.pmmUpdateAuthFileM.Lock()
+	defer s.pmmUpdateAuthFileM.Unlock()
+
+	f, err := os.OpenFile(s.pmmUpdateAuthFile, os.O_RDONLY, os.ModeExclusive)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	defer func() {
+		if err = f.Close(); err != nil {
+			s.l.Error(err)
+		}
+	}()
+
+	var a pmmUpdateAuth
+	err = json.NewDecoder(f).Decode(&a)
+	return a.AuthToken, errors.WithStack(err)
+}
+
+func convertSettings(s *models.Settings) *serverpb.Settings {
+	return &serverpb.Settings{
+		TelemetryEnabled: !s.Telemetry.Disabled,
+		MetricsResolutions: &serverpb.MetricsResolutions{
+			Hr: ptypes.DurationProto(s.MetricsResolutions.HR),
+			Mr: ptypes.DurationProto(s.MetricsResolutions.MR),
+			Lr: ptypes.DurationProto(s.MetricsResolutions.LR),
+		},
+		DataRetention: ptypes.DurationProto(s.DataRetention),
+		AwsPartitions: s.AWSPartitions,
+		SshKey:        s.SSHKey,
+	}
 }
 
 // GetSettings returns current PMM Server settings.
 func (s *Server) GetSettings(ctx context.Context, req *serverpb.GetSettingsRequest) (*serverpb.GetSettingsResponse, error) {
+	s.envRW.RLock()
+	defer s.envRW.RUnlock()
+
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		return nil, err
@@ -345,11 +429,15 @@ func (s *Server) GetSettings(ctx context.Context, req *serverpb.GetSettingsReque
 	res := &serverpb.GetSettingsResponse{
 		Settings: convertSettings(settings),
 	}
+	res.Settings.UpdatesDisabled = s.envDisableUpdates
 	return res, nil
 }
 
 // ChangeSettings changes PMM Server settings.
 func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSettingsRequest) (*serverpb.ChangeSettingsResponse, error) {
+	s.envRW.RLock()
+	defer s.envRW.RUnlock()
+
 	if req.EnableTelemetry && req.DisableTelemetry {
 		return nil, status.Error(codes.InvalidArgument, "Both enable_telemetry and disable_telemetry are present.")
 	}
@@ -359,31 +447,6 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		var e error
 		if settings, e = models.GetSettings(tx); e != nil {
 			return e
-		}
-
-		// absent or zero resolution value means "do not change"
-		if res := req.MetricsResolutions; res != nil {
-			if hr, e := ptypes.Duration(res.Hr); e == nil && hr != 0 {
-				if s.envMetricsResolution != 0 {
-					return status.Error(codes.FailedPrecondition, "High resolution for metrics is set via METRICS_RESOLUTION environment variable.")
-				}
-				if hr < time.Second {
-					return status.Error(codes.FailedPrecondition, "Minimal resolution is 1s.")
-				}
-				settings.MetricsResolutions.HR = hr
-			}
-			if mr, e := ptypes.Duration(res.Mr); e == nil && mr != 0 {
-				if mr < time.Second {
-					return status.Error(codes.FailedPrecondition, "Minimal resolution is 1s.")
-				}
-				settings.MetricsResolutions.MR = mr
-			}
-			if lr, e := ptypes.Duration(res.Lr); e == nil && lr != 0 {
-				if lr < time.Second {
-					return status.Error(codes.FailedPrecondition, "Minimal resolution is 1s.")
-				}
-				settings.MetricsResolutions.LR = lr
-			}
 		}
 
 		if s.envDisableTelemetry && (req.EnableTelemetry || req.DisableTelemetry) {
@@ -396,18 +459,143 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			settings.Telemetry.Disabled = true
 		}
 
+		// absent or zero value means "do not change"
+		res := req.GetMetricsResolutions()
+		if hr, e := ptypes.Duration(res.GetHr()); e == nil && hr != 0 {
+			if s.envMetricsResolutionHR != 0 {
+				return status.Error(codes.FailedPrecondition,
+					"High resolution for metrics is set via METRICS_RESOLUTION_HR (or METRICS_RESOLUTION) environment variable.")
+			}
+			settings.MetricsResolutions.HR = hr
+		}
+		if mr, e := ptypes.Duration(res.GetMr()); e == nil && mr != 0 {
+			if s.envMetricsResolutionMR != 0 {
+				return status.Error(codes.FailedPrecondition,
+					"Medium resolution for metrics is set via METRICS_RESOLUTION_MR environment variable.")
+			}
+			settings.MetricsResolutions.MR = mr
+		}
+		if lr, e := ptypes.Duration(res.GetLr()); e == nil && lr != 0 {
+			if s.envMetricsResolutionLR != 0 {
+				return status.Error(codes.FailedPrecondition,
+					"Low resolution for metrics is set via METRICS_RESOLUTION_LR environment variable.")
+			}
+			settings.MetricsResolutions.LR = lr
+		}
+
+		// absent or zero value means "do not change"
+		if dr, e := ptypes.Duration(req.GetDataRetention()); e == nil && dr != 0 {
+			if s.envDataRetention != 0 {
+				return status.Error(codes.FailedPrecondition, "Data retention for queries is set via DATA_RETENTION environment variable.")
+			}
+			settings.DataRetention = dr
+		}
+
+		// absent or zero value means "do not change"
+		if p := req.GetAwsPartitions(); len(p) > 0 {
+			settings.AWSPartitions = p
+		}
+
+		if req.GetSshKey() != "" {
+			if e = s.validateSSHKey(ctx, req.SshKey); e != nil {
+				return e
+			}
+
+			if e = s.writeSSHKey(req.SshKey); e != nil {
+				return e
+			}
+
+			settings.SSHKey = req.SshKey
+		}
+
 		return models.SaveSettings(tx, settings)
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	s.prometheus.UpdateConfiguration()
+	err = s.supervisord.UpdateConfiguration(settings)
+	s.prometheus.RequestConfigurationUpdate()
+	if err != nil {
+		return nil, err
+	}
 
 	res := &serverpb.ChangeSettingsResponse{
 		Settings: convertSettings(settings),
 	}
+	res.Settings.UpdatesDisabled = s.envDisableUpdates
 	return res, nil
+}
+
+func (s *Server) validateSSHKey(ctx context.Context, sshKey string) error {
+	tempFile, err := ioutil.TempFile("", "temp_keys_*")
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	tempFile.Close()                 //nolint:errcheck
+	defer os.Remove(tempFile.Name()) //nolint:errcheck
+
+	if err = ioutil.WriteFile(tempFile.Name(), []byte(sshKey), os.FileMode(0600)); err != nil {
+		return errors.WithStack(err)
+	}
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(timeoutCtx, "ssh-keygen", "-l", "-f", tempFile.Name()) //nolint:gosec
+	pdeathsig.Set(cmd, unix.SIGKILL)
+
+	if err = cmd.Run(); err != nil {
+		if e, ok := err.(*exec.ExitError); ok && e.ExitCode() != 0 {
+			return status.Errorf(codes.InvalidArgument, "Invalid ssh key")
+		}
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
+func (s *Server) writeSSHKey(sshKey string) error {
+	s.sshKeyM.Lock()
+	defer s.sshKeyM.Unlock()
+
+	const username = "admin"
+	usr, err := user.Lookup(username)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	sshDirPath := path.Join(usr.HomeDir, ".ssh")
+	if err = os.MkdirAll(sshDirPath, os.FileMode(0700)); err != nil {
+		return errors.WithStack(err)
+	}
+
+	uid, err := strconv.Atoi(usr.Uid)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	gid, err := strconv.Atoi(usr.Gid)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	if err = os.Chown(sshDirPath, uid, gid); err != nil {
+		return errors.WithStack(err)
+	}
+	keysPath := path.Join(sshDirPath, "authorized_keys")
+	if err = ioutil.WriteFile(keysPath, []byte(sshKey), os.FileMode(0600)); err != nil {
+		return errors.WithStack(err)
+	}
+	if err = os.Chown(keysPath, uid, gid); err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
+// AWSInstanceCheck checks AWS EC2 instance ID.
+func (s *Server) AWSInstanceCheck(ctx context.Context, req *serverpb.AWSInstanceCheckRequest) (*serverpb.AWSInstanceCheckResponse, error) {
+	if err := s.checker.check(req.InstanceId); err != nil {
+		return nil, err
+	}
+	return &serverpb.AWSInstanceCheckResponse{}, nil
 }
 
 // check interfaces

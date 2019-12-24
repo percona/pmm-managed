@@ -90,13 +90,13 @@ func (s *NodesService) Get(ctx context.Context, req *inventorypb.GetNodeRequest)
 func (s *NodesService) AddGenericNode(ctx context.Context, req *inventorypb.AddGenericNodeRequest) (*inventorypb.GenericNode, error) {
 	params := &models.CreateNodeParams{
 		NodeName:     req.NodeName,
+		Address:      req.Address,
 		MachineID:    pointer.ToStringOrNil(req.MachineId),
 		Distro:       req.Distro,
 		NodeModel:    req.NodeModel,
 		Region:       pointer.ToStringOrNil(req.Region),
 		AZ:           req.Az,
 		CustomLabels: req.CustomLabels,
-		Address:      req.Address,
 	}
 
 	node := new(models.Node)
@@ -125,6 +125,7 @@ func (s *NodesService) AddGenericNode(ctx context.Context, req *inventorypb.AddG
 func (s *NodesService) AddContainerNode(ctx context.Context, req *inventorypb.AddContainerNodeRequest) (*inventorypb.ContainerNode, error) {
 	params := &models.CreateNodeParams{
 		NodeName:      req.NodeName,
+		Address:       req.Address,
 		MachineID:     pointer.ToStringOrNil(req.MachineId),
 		ContainerID:   pointer.ToStringOrNil(req.ContainerId),
 		ContainerName: pointer.ToStringOrNil(req.ContainerName),
@@ -132,7 +133,6 @@ func (s *NodesService) AddContainerNode(ctx context.Context, req *inventorypb.Ad
 		Region:        pointer.ToStringOrNil(req.Region),
 		AZ:            req.Az,
 		CustomLabels:  req.CustomLabels,
-		Address:       req.Address,
 	}
 
 	node := new(models.Node)
@@ -161,6 +161,10 @@ func (s *NodesService) AddContainerNode(ctx context.Context, req *inventorypb.Ad
 func (s *NodesService) AddRemoteNode(ctx context.Context, req *inventorypb.AddRemoteNodeRequest) (*inventorypb.RemoteNode, error) {
 	params := &models.CreateNodeParams{
 		NodeName:     req.NodeName,
+		Address:      req.Address,
+		NodeModel:    req.NodeModel,
+		Region:       pointer.ToStringOrNil(req.Region),
+		AZ:           req.Az,
 		CustomLabels: req.CustomLabels,
 	}
 
@@ -185,20 +189,34 @@ func (s *NodesService) AddRemoteNode(ctx context.Context, req *inventorypb.AddRe
 	return invNode.(*inventorypb.RemoteNode), nil
 }
 
-// AddRemoteAmazonRDSNode adds Amazon (AWS) RDS remote Node.
-//nolint:lll,unparam
-func (s *NodesService) AddRemoteAmazonRDSNode(ctx context.Context, req *inventorypb.AddRemoteAmazonRDSNodeRequest) (*inventorypb.RemoteAmazonRDSNode, error) {
+// Remove removes Node without any Agents and Services.
+//nolint:unparam
+func (s *NodesService) Remove(ctx context.Context, id string, force bool) error {
+	return s.db.InTransaction(func(tx *reform.TX) error {
+		mode := models.RemoveRestrict
+		if force {
+			mode = models.RemoveCascade
+		}
+		return models.RemoveNode(tx.Querier, id, mode)
+	})
+}
+
+// AddRemoteRDSNode adds a new RDS node
+//nolint:unparam
+func (s *NodesService) AddRemoteRDSNode(ctx context.Context, req *inventorypb.AddRemoteRDSNodeRequest) (*inventorypb.RemoteRDSNode, error) {
 	params := &models.CreateNodeParams{
 		NodeName:     req.NodeName,
-		Address:      req.Instance,
-		Region:       &req.Region,
+		Address:      req.Address,
+		NodeModel:    req.NodeModel,
+		Region:       pointer.ToStringOrNil(req.Region),
+		AZ:           req.Az,
 		CustomLabels: req.CustomLabels,
 	}
 
 	node := new(models.Node)
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
-		node, err = models.CreateNode(tx.Querier, models.RemoteAmazonRDSNodeType, params)
+		node, err = models.CreateNode(tx.Querier, models.RemoteRDSNodeType, params)
 		if err != nil {
 			return err
 		}
@@ -213,17 +231,5 @@ func (s *NodesService) AddRemoteAmazonRDSNode(ctx context.Context, req *inventor
 		return nil, err
 	}
 
-	return invNode.(*inventorypb.RemoteAmazonRDSNode), nil
-}
-
-// Remove removes Node without any Agents and Services.
-//nolint:unparam
-func (s *NodesService) Remove(ctx context.Context, id string, force bool) error {
-	return s.db.InTransaction(func(tx *reform.TX) error {
-		mode := models.RemoveRestrict
-		if force {
-			mode = models.RemoveCascade
-		}
-		return models.RemoveNode(tx.Querier, id, mode)
-	})
+	return invNode.(*inventorypb.RemoteRDSNode), nil
 }
