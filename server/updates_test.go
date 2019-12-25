@@ -201,7 +201,7 @@ func TestUpdate(t *testing.T) {
 	}
 
 	t.Logf("lastLine = %q", lastLine)
-	assert.Contains(t, lastLine, "PMM Server update finished")
+	assert.Contains(t, lastLine, "Waiting for Grafana dashboards update to finish...")
 
 	// extra check for done
 	statusRes, err := noAuthClient.Server.UpdateStatus(&server.UpdateStatusParams{
@@ -229,7 +229,7 @@ func TestUpdate(t *testing.T) {
 	assert.Equal(t, logOffset, statusRes.Payload.LogOffset)
 	lastLine = statusRes.Payload.LogLines[len(statusRes.Payload.LogLines)-1]
 	t.Logf("lastLine = %q", lastLine)
-	assert.Contains(t, lastLine, "PMM Server update finished")
+	assert.Contains(t, lastLine, "Waiting for Grafana dashboards update to finish...")
 
 	// check that both pmm-managed and pmm-update were updated
 	version, err = serverClient.Default.Server.Version(nil)
