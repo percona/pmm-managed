@@ -13,7 +13,6 @@ services:
     volumes:
       - .:/root/go/src/github.com/percona/pmm-managed
       - ./Makefile.devcontainer:/root/go/src/github.com/percona/pmm-managed/Makefile
-      - ./Makefile:/root/go/src/github.com/percona/pmm-managed/Makefile.host
       # - ./testdata/prometheus/prometheus.yml:/etc/prometheus.yml
       - ./testdata/supervisord.d/prometheus.ini:/etc/supervisord.d/prometheus.ini
       - ./testdata/supervisord.d/qan-api2.ini:/etc/supervisord.d/qan-api2.ini

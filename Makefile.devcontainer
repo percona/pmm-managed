@@ -1,4 +1,4 @@
-# devcontainer
+# Devcontainer Makefile.
 
 help:                           ## Display this help message.
 	@echo "Please use \`make <target>\` where <target> is one of:"
