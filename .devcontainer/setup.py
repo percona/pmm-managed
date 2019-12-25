@@ -100,7 +100,8 @@ def setup():
             "UPDATE pg_database SET encoding = pg_char_to_encoding('UTF8'), datcollate = 'en_US.utf8', datctype = 'en_US.utf8' WHERE datname = 'template1';\n",
         ])
     run_commands([
-        "psql --username=postgres --file=/tmp/setup.sql"
+        "psql --username=postgres --file=/tmp/setup.sql",
+        "psql --username=postgres -l",
     ])
 
 

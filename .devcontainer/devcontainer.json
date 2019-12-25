@@ -18,6 +18,7 @@
 	"settings": {
 		"go.useLanguageServer": true,
 		"go.inferGopath": true,
+		"go.toolsGopath": "/root/go",
 		"[go]": {
 			"editor.snippetSuggestions": "none",
 			"editor.formatOnSave": true,
