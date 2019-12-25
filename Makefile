@@ -1,10 +1,5 @@
 # Host Makefile.
 
-help:                           ## Display this help message.
-	@echo "Please use \`make <target>\` where <target> is one of:"
-	@grep '^[a-zA-Z]' $(MAKEFILE_LIST) | \
-		awk -F ':.*?## ' 'NF==2 {printf "  %-26s%s\n", $$1, $$2}'
-
 # `cut` is used to remove first `v` from `git describe` output
 PMM_RELEASE_PATH ?= bin
 PMM_RELEASE_VERSION ?= $(shell git describe --always --dirty | cut -b2-)
@@ -20,6 +15,11 @@ PMM_LD_FLAGS = -ldflags " \
 			-X 'github.com/percona/pmm-managed/vendor/github.com/percona/pmm/version.FullCommit=$(PMM_RELEASE_FULLCOMMIT)' \
 			-X 'github.com/percona/pmm-managed/vendor/github.com/percona/pmm/version.Branch=$(PMM_RELEASE_BRANCH)' \
 			"
+
+help:                           ## Display this help message.
+	@echo "Please use \`make <target>\` where <target> is one of:"
+	@grep '^[a-zA-Z]' $(MAKEFILE_LIST) | \
+		awk -F ':.*?## ' 'NF==2 {printf "  %-26s%s\n", $$1, $$2}'
 
 env-up:                         ## Start devcontainer.
 	docker-compose pull
