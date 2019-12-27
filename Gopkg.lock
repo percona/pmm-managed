@@ -240,7 +240,7 @@
   version = "v0.6.0"
 
 [[projects]]
-  branch = "PMM-5223-sql-metrics"
+  branch = "PMM-2.0"
   digest = "1:5ecbd9b5168cc4e8da232aa14c71d61150511ce8bb1a8aa2a74d2118183d8d98"
   name = "github.com/percona/pmm"
   packages = [
@@ -254,7 +254,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "8b393f25c81cf745cedbc20f916c19db162faed6"
+  revision = "559f6ba1560b492cc6d06f73dc75013208378ca6"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
