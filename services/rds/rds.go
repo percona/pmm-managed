@@ -493,7 +493,7 @@ func (svc *Service) mysqlExporterCfg(agent *models.MySQLdExporter, dsn string) *
 	}
 }
 
-func (svc *Service) updateRDSExporterConfig(tx *reform.TX, service *models.RDSService) (*rdsExporterConfig, error) {
+func (svc *Service) updateRDSExporterConfig(tx *reform.TX) (*rdsExporterConfig, error) {
 	// collect all RDS nodes
 	var config rdsExporterConfig
 	nodes, err := tx.FindAllFrom(models.RDSNodeTable, "type", models.RDSNodeType)
@@ -502,6 +502,12 @@ func (svc *Service) updateRDSExporterConfig(tx *reform.TX, service *models.RDSSe
 	}
 	for _, n := range nodes {
 		node := n.(*models.RDSNode)
+
+		service := &models.RDSService{}
+		if e := tx.SelectOneTo(service, "WHERE node_id = ?", node.ID); e != nil {
+			return nil, errors.WithStack(e)
+		}
+
 		instance := rdsExporterInstance{
 			Region:       node.Region,
 			Instance:     node.Name,
@@ -572,7 +578,7 @@ func (svc *Service) addRDSExporter(ctx context.Context, tx *reform.TX, service *
 
 	if svc.RDSExporterPath != "" {
 		// update rds_exporter configuration
-		if _, err = svc.updateRDSExporterConfig(tx, service); err != nil {
+		if _, err = svc.updateRDSExporterConfig(tx); err != nil {
 			return err
 		}
 
@@ -799,7 +805,7 @@ func (svc *Service) Remove(ctx context.Context, id *InstanceID) error {
 				}
 				if svc.RDSExporterPath != "" {
 					// update rds_exporter configuration
-					config, err := svc.updateRDSExporterConfig(tx, &service)
+					config, err := svc.updateRDSExporterConfig(tx)
 					if err != nil {
 						return err
 					}
@@ -895,7 +901,7 @@ func (svc *Service) Restore(ctx context.Context, tx *reform.TX) error {
 					return errors.WithStack(err)
 				}
 				if svc.RDSExporterPath != "" {
-					config, err := svc.updateRDSExporterConfig(tx, service)
+					config, err := svc.updateRDSExporterConfig(tx)
 					if err != nil {
 						return err
 					}
