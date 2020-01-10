@@ -31,6 +31,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/percona/pmm/utils/pdeathsig"
@@ -92,6 +93,10 @@ func (l *Logs) Zip(ctx context.Context, w io.Writer) error {
 		if _, err = f.Write(file.Data); err != nil {
 			return errors.Wrap(err, "failed to write zip file data")
 		}
+	}
+
+	if err := addAdminSummary(ctx, zw); err != nil {
+		return errors.Wrap(err, "cannot add pmm-admin summary logs")
 	}
 
 	if err := zw.Close(); err != nil {
@@ -268,4 +273,129 @@ func readURL(ctx context.Context, url string) ([]byte, error) {
 		}
 	}
 	return b, nil
+}
+
+func addAdminSummary(ctx context.Context, archive *zip.Writer) error {
+	tmpfile, err := ioutil.TempFile("", "*-pmm-admin-summary.zip")
+	if err != nil {
+		return err
+	}
+	if err := tmpfile.Close(); err != nil {
+		return err
+	}
+
+	cmd := exec.CommandContext(ctx, "pmm-admin", "--summary", "--skip-server", "--filename", tmpfile.Name())
+	pdeathsig.Set(cmd, unix.SIGKILL)
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+
+	tmpDir, err := ioutil.TempDir("", "pmm-admin-summary")
+	if err != nil {
+		return err
+	}
+
+	if err := unzip(tmpfile.Name(), tmpDir); err != nil {
+		return err
+	}
+
+	clientDir := filepath.Join(tmpDir, "client")
+
+	if err := addToZip(clientDir, archive); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func unzip(archive, target string) error {
+	reader, err := zip.OpenReader(archive)
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(target, os.ModePerm); err != nil {
+		return err
+	}
+
+	for _, file := range reader.File {
+		path := filepath.Join(target, file.Name)
+		if file.FileInfo().IsDir() {
+			if err := os.MkdirAll(path, file.Mode()); err != nil {
+				return err
+			}
+			continue
+		}
+
+		fileReader, err := file.Open()
+		if err != nil {
+			return err
+		}
+
+		targetFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
+		if err != nil {
+			return err
+		}
+
+		if _, err := io.Copy(targetFile, fileReader); err != nil {
+			return err
+		}
+
+		fileReader.Close() //nolint:errcheck
+		targetFile.Close() //nolint:errcheck
+	}
+
+	return nil
+}
+
+func addToZip(source string, archive zip.Writer) error {
+	info, err := os.Stat(source)
+	if err != nil {
+		return nil
+	}
+
+	var baseDir string
+	if info.IsDir() {
+		baseDir = filepath.Base(source)
+	}
+
+	err = filepath.Walk(source, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		header, err := zip.FileInfoHeader(info)
+		if err != nil {
+			return err
+		}
+
+		if baseDir != "" {
+			header.Name = filepath.Join(baseDir, strings.TrimPrefix(path, source))
+		}
+
+		if info.IsDir() {
+			header.Name += "/"
+		} else {
+			header.Method = zip.Deflate
+		}
+
+		writer, err := archive.CreateHeader(header)
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer file.Close() //nolint:errcheck
+		_, err = io.Copy(writer, file)
+		return err
+	})
+
+	return err
 }
