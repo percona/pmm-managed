@@ -528,7 +528,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			settings.SSHKey = req.SshKey
 		}
 
-		if req.AlertManagerRules != "" && !req.ClearAlerManagerRules {
+		if req.AlertManagerRules != "" && !req.RemoveAlertManagerRules {
 			if e := validateRulesFile(req.AlertManagerRules); e != nil {
 				return e
 			}
@@ -540,14 +540,14 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			}
 		}
 
-		if req.ClearAlerManagerRules {
+		if req.RemoveAlertManagerRules {
 			if e := os.Remove(s.alertsManagerFile); e != nil {
 				s.l.Warn(e)
 			}
 		}
 
 		settings.AlertManagerAddress = req.AlertManagerAddress
-		if req.ClearAlertManagerAddress {
+		if req.RemoveAlertManagerAddress {
 			settings.AlertManagerAddress = ""
 		}
 
