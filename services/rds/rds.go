@@ -503,7 +503,7 @@ func (svc *Service) updateRDSExporterConfig(tx *reform.TX) (*rdsExporterConfig, 
 	for _, n := range nodes {
 		node := n.(*models.RDSNode)
 
-		var service models.RDSSeree
+		var service models.RDSService
 		if e := tx.FindOneTo(&service, "node_id", node.ID); e != nil {
 			return nil, errors.WithStack(e)
 		}
