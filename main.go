@@ -473,8 +473,10 @@ func main() {
 		l.Panicf("Prometheus service problem: %+v", err)
 	}
 
-	logs := supervisord.NewLogs(version.FullInfo())
-	supervisord := supervisord.New(*supervisordConfigDirF)
+	pmmUpdateCheck := supervisord.NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker"))
+
+	logs := supervisord.NewLogs(version.FullInfo(), pmmUpdateCheck)
+	supervisord := supervisord.New(*supervisordConfigDirF, pmmUpdateCheck)
 	telemetry := telemetry.NewService(db, version.Version)
 	checker := server.NewAWSInstanceChecker(db, telemetry)
 	server, err := server.NewServer(db, prometheus, supervisord, telemetry, checker)

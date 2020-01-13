@@ -43,8 +43,10 @@ func TestDevContainer(t *testing.T) {
 		t.Skip("can be tested only inside devcontainer")
 	}
 
+	pmmUpdateCheck := NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker_logs"))
+
 	t.Run("Logs", func(t *testing.T) {
-		l := NewLogs("2.4.5")
+		l := NewLogs("2.4.5", pmmUpdateCheck)
 		ctx := logger.Set(context.Background(), t.Name())
 		expected := []string{
 			"clickhouse-server.err.log",
@@ -112,9 +114,9 @@ func TestDevContainer(t *testing.T) {
 	gaReleaseDate := time.Date(2019, 9, 18, 0, 0, 0, 0, time.UTC)
 
 	t.Run("Installed", func(t *testing.T) {
-		checker := newPMMUpdateChecker(logrus.WithField("test", t.Name()))
+		checker := NewPMMUpdateChecker(logrus.WithField("test", t.Name()))
 
-		info := checker.installed()
+		info := checker.Installed()
 		require.NotNil(t, info)
 
 		assert.True(t, strings.HasPrefix(info.Version, "2."), "%s", info.Version)
@@ -123,12 +125,12 @@ func TestDevContainer(t *testing.T) {
 		assert.True(t, info.BuildTime.After(gaReleaseDate), "BuildTime = %s", info.BuildTime)
 		assert.Equal(t, "local", info.Repo)
 
-		info2 := checker.installed()
+		info2 := checker.Installed()
 		assert.Equal(t, info, info2)
 	})
 
 	t.Run("Check", func(t *testing.T) {
-		checker := newPMMUpdateChecker(logrus.WithField("test", t.Name()))
+		checker := NewPMMUpdateChecker(logrus.WithField("test", t.Name()))
 
 		res, resT := checker.checkResult()
 		assert.WithinDuration(t, time.Now(), resT, time.Second)
@@ -175,7 +177,7 @@ func TestDevContainer(t *testing.T) {
 	t.Run("UpdateConfiguration", func(t *testing.T) {
 		// logrus.SetLevel(logrus.DebugLevel)
 
-		s := New("/etc/supervisord.d")
+		s := New("/etc/supervisord.d", pmmUpdateCheck)
 		require.NotEmpty(t, s.supervisorctlPath)
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -224,7 +226,7 @@ func TestDevContainer(t *testing.T) {
 
 		// logrus.SetLevel(logrus.DebugLevel)
 
-		s := New("/etc/supervisord.d")
+		s := New("/etc/supervisord.d", pmmUpdateCheck)
 		require.NotEmpty(t, s.supervisorctlPath)
 
 		ctx, cancel := context.WithCancel(context.Background())

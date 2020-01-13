@@ -51,14 +51,16 @@ type fileContent struct {
 
 // Logs is responsible for interactions with logs.
 type Logs struct {
-	pmmVersion string
+	pmmVersion       string
+	pmmUpdateChecker *PMMUpdateChecker
 }
 
 // NewLogs creates a new Logs service.
 // n is a number of last lines of log to read.
-func NewLogs(pmmVersion string) *Logs {
+func NewLogs(pmmVersion string, pmmUpdateChecker *PMMUpdateChecker) *Logs {
 	return &Logs{
-		pmmVersion: pmmVersion,
+		pmmVersion:       pmmVersion,
+		pmmUpdateChecker: pmmUpdateChecker,
 	}
 }
 
@@ -176,6 +178,14 @@ func (l *Logs) files(ctx context.Context) []fileContent {
 	b, err = readURL(ctx, "http://127.0.0.1:9090/prometheus/api/v1/targets")
 	files = append(files, fileContent{
 		Name: "prometheus_targets.json",
+		Data: b,
+		Err:  err,
+	})
+
+	// update checker installed info
+	b, err = json.Marshal(l.pmmUpdateChecker.Installed())
+	files = append(files, fileContent{
+		Name: "installed.json",
 		Data: b,
 		Err:  err,
 	})
@@ -348,7 +358,7 @@ func unzip(archive, target string) error {
 	return nil
 }
 
-func addToZip(source string, archive zip.Writer) error {
+func addToZip(source string, archive *zip.Writer) error {
 	info, err := os.Stat(source)
 	if err != nil {
 		return nil
