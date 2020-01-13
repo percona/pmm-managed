@@ -504,8 +504,8 @@ func (svc *Service) updateRDSExporterConfig(tx *reform.TX) (*rdsExporterConfig, 
 		node := n.(*models.RDSNode)
 
 		var service models.RDSService
-		if e := tx.FindOneTo(&service, "node_id", node.ID); e != nil {
-			return nil, errors.WithStack(e)
+		if err = tx.FindOneTo(&service, "node_id", node.ID); err != nil {
+			return nil, errors.WithStack(err)
 		}
 
 		instance := rdsExporterInstance{
