@@ -17,7 +17,9 @@
 package tests
 
 import (
-	"crypto/sha1"
+	// go-fuzz uses SHA1 for non-cryptographic hashing
+	"crypto/sha1" //nolint:gosec
+
 	"fmt"
 	"io/ioutil"
 	"os"
