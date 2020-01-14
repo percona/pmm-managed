@@ -129,7 +129,7 @@ func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		s.l.Debugf("Request:\n%s", b)
 	}
 
-	if err := parseRequest(req); err != nil {
+	if err := extractOriginalRequest(req); err != nil {
 		s.l.Warnf("Failed to parse request: %s.", err)
 		rw.WriteHeader(400)
 		return
@@ -166,8 +166,9 @@ func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// parseRequest extracts information from request and returns error if there is something unexpected.
-func parseRequest(req *http.Request) error {
+// extractOriginalRequest replaces req.Method and req.URL.Path with values from original request.
+// Error is returned if original request information is missing or invalid.
+func extractOriginalRequest(req *http.Request) error {
 	origMethod, origURI := req.Header.Get("X-Original-Method"), req.Header.Get("X-Original-Uri")
 
 	if origMethod == "" {
