@@ -182,13 +182,13 @@ func (l *Logs) files(ctx context.Context) []fileContent {
 		Err:  err,
 	})
 
-	// update checker installed info
-	b, err = json.Marshal(l.pmmUpdateChecker.Installed())
-	files = append(files, fileContent{
-		Name: "installed.json",
-		Data: b,
-		Err:  err,
-	})
+	// // update checker installed info
+	// b, err = json.Marshal(l.pmmUpdateChecker.Installed())
+	// files = append(files, fileContent{
+	// 	Name: "installed.json",
+	// 	Data: b,
+	// 	Err:  err,
+	// })
 
 	sort.Slice(files, func(i, j int) bool { return files[i].Name < files[j].Name })
 	return files
@@ -294,10 +294,10 @@ func addAdminSummary(ctx context.Context, archive *zip.Writer) error {
 		return err
 	}
 
-	cmd := exec.CommandContext(ctx, "pmm-admin", "--summary", "--skip-server", "--filename", tmpfile.Name())
+	cmd := exec.CommandContext(ctx, "pmm-admin", "summary", "--skip-server", "--filename", tmpfile.Name())
 	pdeathsig.Set(cmd, unix.SIGKILL)
 	if err := cmd.Run(); err != nil {
-		return err
+		return errors.Wrap(err, "cannot run pmm-admin summary")
 	}
 
 	tmpDir, err := ioutil.TempDir("", "pmm-admin-summary")
@@ -310,6 +310,9 @@ func addAdminSummary(ctx context.Context, archive *zip.Writer) error {
 	}
 
 	clientDir := filepath.Join(tmpDir, "client")
+	if _, err := os.Stat(clientDir); err != nil {
+		return err
+	}
 
 	if err := addToZip(clientDir, archive); err != nil {
 		return err
@@ -330,6 +333,13 @@ func unzip(archive, target string) error {
 
 	for _, file := range reader.File {
 		path := filepath.Join(target, file.Name)
+		dir := filepath.Dir(path)
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+				return err
+			}
+		}
+
 		if file.FileInfo().IsDir() {
 			if err := os.MkdirAll(path, file.Mode()); err != nil {
 				return err

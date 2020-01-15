@@ -92,10 +92,16 @@ func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
 		ctx, cancel := context.WithTimeout(req.Context(), 10*time.Second)
 		defer cancel()
 
-		filename := fmt.Sprintf("pmm-server_%s.zip", time.Now().UTC().Format("2006-01-02_15-04"))
 		rw.Header().Set(`Access-Control-Allow-Origin`, `*`)
 		rw.Header().Set(`Content-Type`, `application/zip`)
-		rw.Header().Set(`Content-Disposition`, `attachment; filename="`+filename+`"`)
+
+		// This is to make it testeable via api-tests.
+		// If the request has the Accept: application/zip, we won't force the browser's file download dialog
+		if req.Header.Get("Accept") != "application/zip" {
+			filename := fmt.Sprintf("pmm-server_%s.zip", time.Now().UTC().Format("2006-01-02_15-04"))
+			rw.Header().Set(`Content-Disposition`, `attachment; filename="`+filename+`"`)
+		}
+
 		ctx = logger.Set(ctx, "logs")
 		if err := logs.Zip(ctx, rw); err != nil {
 			l.Error(err)
