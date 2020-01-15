@@ -21,7 +21,6 @@ import (
 	"time"
 
 	prom "github.com/prometheus/client_golang/prometheus"
-	"github.com/sirupsen/logrus"
 	"gopkg.in/reform.v1"
 )
 
@@ -30,6 +29,8 @@ const (
 	subsystem = "reform"
 )
 
+// Reform is a SQL logger with metrics.
+//
 // TODO https://jira.percona.com/browse/PMM-5302 Move to percona/pmm utils and use in pmm-agent and qan-api2.
 type Reform struct {
 	l          *reform.PrintfLogger
@@ -37,14 +38,15 @@ type Reform struct {
 	mResponses *prom.SummaryVec
 }
 
-func NewReform(driver, dbName string, l *logrus.Entry) *Reform {
+// NewReform creates a new logger with given parameters.
+func NewReform(driver, dbName string, printf reform.Printf) *Reform {
 	constLabels := prom.Labels{
 		"driver": driver,
 		"db":     dbName,
 	}
 
 	return &Reform{
-		l: reform.NewPrintfLogger(l.Tracef),
+		l: reform.NewPrintfLogger(printf),
 		mRequests: prom.NewCounterVec(prom.CounterOpts{
 			Namespace:   namespace,
 			Subsystem:   subsystem,
