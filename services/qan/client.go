@@ -19,6 +19,7 @@ package qan
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"github.com/AlekSi/pointer"
@@ -83,6 +84,7 @@ func setToSlice(set map[string]struct{}) []string {
 	for k := range set {
 		res = append(res, k)
 	}
+	sort.Strings(res)
 	return res
 }
 
