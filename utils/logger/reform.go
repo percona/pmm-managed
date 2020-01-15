@@ -113,6 +113,14 @@ func (r *Reform) Requests() int {
 	return int(atomic.LoadInt64(&r.requests))
 }
 
+// Reset sets all metrics to 0.
+func (r *Reform) Reset() {
+	atomic.StoreInt64(&r.requests, 0)
+
+	r.mRequests.Reset()
+	r.mResponses.Reset()
+}
+
 // check interfaces
 var (
 	_ reform.Logger  = (*Reform)(nil)

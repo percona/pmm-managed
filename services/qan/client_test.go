@@ -18,6 +18,7 @@ package qan
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -122,10 +123,12 @@ func TestClient(t *testing.T) {
 	t.Run("Test MySQL Metrics conversion", func(t *testing.T) {
 		c := new(mockQanCollectorClient)
 		c.Test(t)
-		client := Client{
+		defer c.AssertExpectations(t)
+
+		client := &Client{
 			c:  c,
 			db: db,
-			l:  logrus.WithField("component", "qan-test"),
+			l:  logrus.WithField("test", t.Name()),
 		}
 		c.On("Collect", ctx, mock.AnythingOfType(reflect.TypeOf(&qanpb.CollectRequest{}).String())).Return(&qanpb.CollectResponse{}, nil)
 		metricsBuckets := []*agentpb.MetricsBucket{
@@ -208,10 +211,12 @@ func TestClient(t *testing.T) {
 	t.Run("Test MongoDB Metrics conversion", func(t *testing.T) {
 		c := new(mockQanCollectorClient)
 		c.Test(t)
-		client := Client{
+		defer c.AssertExpectations(t)
+
+		client := &Client{
 			c:  c,
 			db: db,
-			l:  logrus.WithField("component", "qan-test"),
+			l:  logrus.WithField("test", t.Name()),
 		}
 		c.On("Collect", ctx, mock.AnythingOfType(reflect.TypeOf(&qanpb.CollectRequest{}).String())).Return(&qanpb.CollectResponse{}, nil)
 		metricsBuckets := []*agentpb.MetricsBucket{
@@ -268,10 +273,12 @@ func TestClient(t *testing.T) {
 	t.Run("Test PostgreSQL Metrics conversion", func(t *testing.T) {
 		c := new(mockQanCollectorClient)
 		c.Test(t)
-		client := Client{
+		defer c.AssertExpectations(t)
+
+		client := &Client{
 			c:  c,
 			db: db,
-			l:  logrus.WithField("component", "qan-test"),
+			l:  logrus.WithField("test", t.Name()),
 		}
 		c.On("Collect", ctx, mock.AnythingOfType(reflect.TypeOf(&qanpb.CollectRequest{}).String())).Return(&qanpb.CollectResponse{}, nil)
 		metricsBuckets := []*agentpb.MetricsBucket{
@@ -340,10 +347,12 @@ func TestClient(t *testing.T) {
 	t.Run("Test conversion skips bad buckets", func(t *testing.T) {
 		c := new(mockQanCollectorClient)
 		c.Test(t)
-		client := Client{
+		defer c.AssertExpectations(t)
+
+		client := &Client{
 			c:  c,
 			db: db,
-			l:  logrus.WithField("component", "qan-test"),
+			l:  logrus.WithField("test", t.Name()),
 		}
 		c.On("Collect", ctx, mock.AnythingOfType(reflect.TypeOf(&qanpb.CollectRequest{}).String())).Return(&qanpb.CollectResponse{}, nil)
 		metricsBuckets := []*agentpb.MetricsBucket{
@@ -359,4 +368,84 @@ func TestClient(t *testing.T) {
 		expectedRequest := &qanpb.CollectRequest{MetricsBucket: []*qanpb.MetricsBucket{}}
 		c.AssertCalled(t, "Collect", ctx, expectedRequest)
 	})
+}
+
+func TestClientPerformance(t *testing.T) {
+	sqlDB := testdb.Open(t, models.SetupFixtures)
+	reformL := logger.NewReform("test", "test", t.Logf)
+	db := reform.NewDB(sqlDB, postgresql.Dialect, reformL)
+	defer func() {
+		assert.NoError(t, sqlDB.Close())
+	}()
+
+	for _, str := range []reform.Struct{
+		&models.Service{
+			ServiceID:    "/service_id/0d350868-4d85-4884-b972-dff130129c23",
+			ServiceType:  models.MySQLServiceType,
+			ServiceName:  "test-mysql",
+			NodeID:       "pmm-server",
+			Address:      pointer.ToString("5.6.7.8"),
+			CustomLabels: []byte(`{"_service_label": "bar"}`),
+		},
+
+		&models.Agent{
+			AgentID:      "/agent_id/6b74c6bf-642d-43f0-bee1-0faddd1a2e28",
+			AgentType:    models.QANMySQLPerfSchemaAgentType,
+			ServiceID:    pointer.ToString("/service_id/0d350868-4d85-4884-b972-dff130129c23"),
+			PMMAgentID:   pointer.ToString("pmm-server"),
+			CustomLabels: []byte(`{"_agent_label": "baz"}`),
+			ListenPort:   pointer.ToUint16(12345),
+		},
+	} {
+		require.NoError(t, db.Insert(str), "%+v", str)
+	}
+
+	ctx := logger.Set(context.Background(), t.Name())
+	c := new(mockQanCollectorClient)
+	c.Test(t)
+	c.On("Collect", ctx, mock.AnythingOfType(reflect.TypeOf(&qanpb.CollectRequest{}).String())).Return(&qanpb.CollectResponse{}, nil)
+	defer c.AssertExpectations(t)
+
+	reformL.Reset()
+	defer func() {
+		assert.Equal(t, 3, reformL.Requests())
+	}()
+
+	client := &Client{
+		c:  c,
+		db: db,
+		l:  logrus.WithField("test", t.Name()),
+	}
+
+	const bucketsN = 1000
+	metricsBuckets := make([]*agentpb.MetricsBucket, bucketsN)
+	for i := range metricsBuckets {
+		metricsBuckets[i] = &agentpb.MetricsBucket{
+			Common: &agentpb.MetricsBucket_Common{
+				Queryid: fmt.Sprintf("bucket %d", i),
+				AgentId: "/agent_id/6b74c6bf-642d-43f0-bee1-0faddd1a2e28",
+			},
+		}
+	}
+	err := client.Collect(ctx, metricsBuckets)
+	require.NoError(t, err)
+
+	expectedBuckets := make([]*qanpb.MetricsBucket, bucketsN)
+	for i := range expectedBuckets {
+		expectedBuckets[i] = &qanpb.MetricsBucket{
+			Queryid:     fmt.Sprintf("bucket %d", i),
+			ServiceName: "test-mysql",
+			NodeId:      "pmm-server",
+			NodeName:    "pmm-server",
+			NodeType:    "generic",
+			ServiceId:   "/service_id/0d350868-4d85-4884-b972-dff130129c23",
+			ServiceType: "mysql",
+			AgentId:     "/agent_id/6b74c6bf-642d-43f0-bee1-0faddd1a2e28",
+			Labels: map[string]string{
+				"_agent_label":   "baz",
+				"_service_label": "bar",
+			},
+		}
+	}
+	c.AssertCalled(t, "Collect", ctx, &qanpb.CollectRequest{MetricsBucket: expectedBuckets})
 }
