@@ -11,10 +11,6 @@ PMM_RELEASE_FULLCOMMIT ?= $(shell git rev-parse HEAD)
 PMM_RELEASE_BRANCH ?= $(shell git describe --always --contains --all)
 DEFAULT_ALERT_MANAGER_RULES_FILE ?= /tmp/pmm.rules.yml
 
-# To make this testeable. To run API tests we need to write the rules file but on dev envs
-# there is no /srv/prometheus/rules/ directory
-export PMM_ALERT_MANAGER_RULES_FILE=$(DEFAULT_ALERT_MANAGER_RULES_FILE)
-
 LD_FLAGS = -ldflags " \
 			-X 'github.com/percona/pmm-managed/vendor/github.com/percona/pmm/version.ProjectName=pmm-managed' \
 			-X 'github.com/percona/pmm-managed/vendor/github.com/percona/pmm/version.Version=$(PMM_RELEASE_VERSION)' \
@@ -90,7 +86,8 @@ format:                         ## Format source code.
 RUN_FLAGS = --debug \
 			--prometheus-config=testdata/prometheus/prometheus.yml \
 			--postgres-name=pmm-managed-dev \
-			--supervisord-config-dir=testdata/supervisord.d
+			--supervisord-config-dir=testdata/supervisord.d \
+			--alert-manager-rules-file=${DEFAULT_ALERT_MANAGER_RULES_FILE}
 
 run: install _run               ## Run pmm-managed.
 

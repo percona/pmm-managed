@@ -17,6 +17,7 @@
 package server
 
 import (
+	"io/ioutil"
 	"testing"
 	"time"
 
@@ -35,9 +36,14 @@ func TestServer(t *testing.T) {
 		require.NoError(t, sqlDB.Close())
 	}()
 
+	rulesFile, err := ioutil.TempFile("", "rules.*.yml")
+	assert.NoError(t, err)
+	assert.NoError(t, rulesFile.Close())
+
 	t.Run("UpdateSettingsFromEnv", func(t *testing.T) {
 		t.Run("Typical", func(t *testing.T) {
-			s, err := NewServer(reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)), nil, nil, nil, nil)
+			s, err := NewServer(reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
+				nil, nil, nil, nil, rulesFile.Name())
 			require.NoError(t, err)
 
 			err = s.UpdateSettingsFromEnv([]string{
@@ -58,7 +64,8 @@ func TestServer(t *testing.T) {
 		})
 
 		t.Run("Untypical", func(t *testing.T) {
-			s, err := NewServer(reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)), nil, nil, nil, nil)
+			s, err := NewServer(reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
+				nil, nil, nil, nil, rulesFile.Name())
 			require.NoError(t, err)
 
 			err = s.UpdateSettingsFromEnv([]string{
@@ -73,7 +80,8 @@ func TestServer(t *testing.T) {
 		})
 
 		t.Run("NoValue", func(t *testing.T) {
-			s, err := NewServer(reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)), nil, nil, nil, nil)
+			s, err := NewServer(reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
+				nil, nil, nil, nil, rulesFile.Name())
 			require.NoError(t, err)
 
 			err = s.UpdateSettingsFromEnv([]string{
@@ -84,7 +92,8 @@ func TestServer(t *testing.T) {
 		})
 
 		t.Run("InvalidValue", func(t *testing.T) {
-			s, err := NewServer(reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)), nil, nil, nil, nil)
+			s, err := NewServer(reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
+				nil, nil, nil, nil, rulesFile.Name())
 			require.NoError(t, err)
 
 			err = s.UpdateSettingsFromEnv([]string{
@@ -108,14 +117,14 @@ func TestPrometheusRulesValidation(t *testing.T) {
       severity: page
     annotations:
       summary: High request latency`
-		err := validateRulesFile(content)
+		err := validateAlertManagerRulesFile(content)
 		assert.NoError(t, err)
 	})
 	t.Run("Invalid Prometheus rules", func(t *testing.T) {
 		content := `roups:
 - name: example
   rules:`
-		err := validateRulesFile(content)
+		err := validateAlertManagerRulesFile(content)
 		assert.Error(t, err)
 	})
 

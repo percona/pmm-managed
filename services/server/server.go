@@ -48,10 +48,6 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-const (
-	defaultAlertsManagerFile = "/srv/prometheus/rules/pmm.rules.yml"
-)
-
 // Server represents service for checking PMM Server status and changing settings.
 type Server struct {
 	db               *reform.DB
@@ -84,17 +80,13 @@ type pmmUpdateAuth struct {
 }
 
 // NewServer returns new server for Server service.
-func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervisordService, telemetryService telemetryService, checker *AWSInstanceChecker) (*Server, error) {
+func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervisordService,
+	telemetryService telemetryService, checker *AWSInstanceChecker, alertsManagerFile string) (*Server, error) {
 	path := os.TempDir()
 	if _, err := os.Stat(path); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	path = filepath.Join(path, "pmm-update.json")
-
-	alertsManagerFile := defaultAlertsManagerFile
-	if envAlertFile := os.Getenv("PMM_ALERT_MANAGER_RULES_FILE"); envAlertFile != "" {
-		alertsManagerFile = envAlertFile
-	}
 
 	s := &Server{
 		db:                db,
@@ -529,7 +521,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		}
 
 		if req.AlertManagerRules != "" && !req.RemoveAlertManagerRules {
-			if e := validateRulesFile(req.AlertManagerRules); e != nil {
+			if e := validateAlertManagerRulesFile(req.AlertManagerRules); e != nil {
 				return e
 			}
 			if e := ioutil.WriteFile(s.alertsManagerFile, []byte(req.AlertManagerRules), os.ModePerm); e != nil {
@@ -546,7 +538,10 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			}
 		}
 
-		settings.AlertManagerAddress = req.AlertManagerAddress
+		if req.AlertManagerAddress != "" && !req.RemoveAlertManagerAddress {
+			settings.AlertManagerAddress = req.AlertManagerAddress
+		}
+
 		if req.RemoveAlertManagerAddress {
 			settings.AlertManagerAddress = ""
 		}
@@ -569,6 +564,10 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	res.Settings.UpdatesDisabled = s.envDisableUpdates
 
 	alertManagerRules, err := loadAlertManagerRules(s.alertsManagerFile)
+	if err != nil {
+		return nil, err
+	}
+
 	res.Settings.AlertManagerRules = string(alertManagerRules)
 	return res, nil
 }
@@ -580,13 +579,13 @@ func loadAlertManagerRules(filename string) ([]byte, error) {
 	return ioutil.ReadFile(filename)
 }
 
-func validateRulesFile(rules string) error {
+func validateAlertManagerRulesFile(rules string) error {
 	tmpfile, err := ioutil.TempFile("", "alter_mgr_test_rules.*.yml")
 	if err != nil {
 		return err
 	}
 
-	defer os.Remove(tmpfile.Name())
+	defer os.Remove(tmpfile.Name()) //nolint:errcheck
 
 	if _, err := tmpfile.WriteString(rules); err != nil {
 		return err
