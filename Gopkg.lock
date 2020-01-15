@@ -250,10 +250,11 @@
     "api/qanpb",
     "api/serverpb",
     "utils/pdeathsig",
+    "utils/sqlmetrics",
     "version",
   ]
   pruneopts = "NUT"
-  revision = "a6b897c0e038f9d12f93ac2454929089d67d5523"
+  revision = "dedd5b424302a424c69b8769297a424f791be6c7"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
@@ -574,6 +575,7 @@
     "github.com/percona/pmm/api/qanpb",
     "github.com/percona/pmm/api/serverpb",
     "github.com/percona/pmm/utils/pdeathsig",
+    "github.com/percona/pmm/utils/sqlmetrics",
     "github.com/percona/pmm/version",
     "github.com/pkg/errors",
     "github.com/pmezard/go-difflib/difflib",
