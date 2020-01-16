@@ -121,9 +121,16 @@ func TestPrometheusRulesValidation(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	t.Run("Invalid Prometheus rules", func(t *testing.T) {
-		content := `roups:
+		content := `groups:
 - name: example
-  rules:`
+  rules:
+- alert: HighRequestLatency
+    expr: job:request_latency_seconds:mean5m{job="myjob"} > 0.5
+    for: 10m
+    labels:
+      severity: page
+    annotations:
+      summary: High request latency`
 		err := validateAlertManagerRulesFile(content)
 		assert.Error(t, err)
 	})
