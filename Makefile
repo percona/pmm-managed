@@ -25,12 +25,17 @@ release:                        ## Build pmm-managed release binary.
 init:                           ## Installs tools to $GOPATH/bin (which is expected to be in $PATH).
 	curl https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOPATH)/bin
 
+	# install the same version as a version of Prometheus
+	mkdir -p /tmp/promtool
+	-wget -O /tmp/promtool/prometheus.tar.gz -nc https://github.com/prometheus/prometheus/releases/download/v2.12.0/prometheus-2.12.0.$(shell go env GOOS)-amd64.tar.gz
+	tar xvjf /tmp/promtool/prometheus.tar.gz --strip-components 1 --cd /tmp/promtool/
+	mv /tmp/promtool/promtool $(GOPATH)/bin
+	promtool --version
+
 	go install ./vendor/github.com/BurntSushi/go-sumtype \
 				./vendor/github.com/vektra/mockery/cmd/mockery \
 				./vendor/golang.org/x/tools/cmd/goimports \
 				./vendor/gopkg.in/reform.v1/reform
-
-	go get -u github.com/prometheus/prometheus/cmd/promtool
 
 	go test -i ./...
 	go test -race -i ./...
