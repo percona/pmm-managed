@@ -561,6 +561,7 @@
     "github.com/go-sql-driver/mysql",
     "github.com/golang/protobuf/proto",
     "github.com/golang/protobuf/ptypes",
+    "github.com/golang/protobuf/ptypes/duration",
     "github.com/google/uuid",
     "github.com/grpc-ecosystem/go-grpc-middleware",
     "github.com/grpc-ecosystem/go-grpc-middleware/validator",
