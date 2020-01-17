@@ -29,7 +29,7 @@ services:
       - ./testdata/prometheus:/etc/prometheus
 
   grafana:
-    image: ${GRAFANA_IMAGE:-grafana/grafana:6.4.4}
+    image: ${GRAFANA_IMAGE:-grafana/grafana:6.5.1}
     ports:
       - 127.0.0.1:3000:3000
     volumes:
