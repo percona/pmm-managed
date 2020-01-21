@@ -83,7 +83,7 @@ const (
 	http1Addr = "127.0.0.1:7772"
 	debugAddr = "127.0.0.1:7773"
 
-	defaultAlertsManagerFile = "/srv/prometheus/rules/pmm.rules.yml"
+	defaultAlertManagerFile = "/srv/prometheus/rules/pmm.rules.yml"
 )
 
 func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
@@ -422,8 +422,8 @@ func main() {
 
 	supervisordConfigDirF := kingpin.Flag("supervisord-config-dir", "Supervisord configuration directory").Required().String()
 
-	alertManagerRulesFileF := kingpin.Flag("alert-manager-rules-file", "Path to the Alerts Manager Rules file").
-		Default(defaultAlertsManagerFile).String()
+	alertManagerRulesFileF := kingpin.Flag("alert-manager-rules-file", "Path to the Alert Manager Rules file").
+		Default(defaultAlertManagerFile).String()
 
 	debugF := kingpin.Flag("debug", "Enable debug logging").Bool()
 	traceF := kingpin.Flag("trace", "Enable trace logging (implies debug)").Bool()

@@ -72,7 +72,7 @@ type Server struct {
 
 	// To make this testeable. To run API tests we need to write the rules file but on dev envs
 	// there is no /srv/prometheus/rules/ directory
-	alertsManagerFile string
+	alertManagerFile string
 }
 
 type pmmUpdateAuth struct {
@@ -81,7 +81,7 @@ type pmmUpdateAuth struct {
 
 // NewServer returns new server for Server service.
 func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervisordService,
-	telemetryService telemetryService, checker *AWSInstanceChecker, alertsManagerFile string) (*Server, error) {
+	telemetryService telemetryService, checker *AWSInstanceChecker, alertManagerFile string) (*Server, error) {
 	path := os.TempDir()
 	if _, err := os.Stat(path); err != nil {
 		return nil, errors.WithStack(err)
@@ -96,7 +96,7 @@ func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervis
 		checker:           checker,
 		l:                 logrus.WithField("component", "server"),
 		pmmUpdateAuthFile: path,
-		alertsManagerFile: alertsManagerFile,
+		alertManagerFile:  alertManagerFile,
 	}
 	return s, nil
 }
@@ -437,7 +437,7 @@ func (s *Server) GetSettings(ctx context.Context, req *serverpb.GetSettingsReque
 		Settings: convertSettings(settings),
 	}
 	res.Settings.UpdatesDisabled = s.envDisableUpdates
-	alertManagerRules, err := loadAlertManagerRules(s.alertsManagerFile)
+	alertManagerRules, err := loadAlertManagerRules(s.alertManagerFile)
 	if err != nil {
 		s.l.Warnf("cannot load alert manager rules: %s", err)
 	}
@@ -524,16 +524,16 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			if e := validateAlertManagerRulesFile(req.AlertManagerRules); e != nil {
 				return e
 			}
-			if e := ioutil.WriteFile(s.alertsManagerFile, []byte(req.AlertManagerRules), os.ModePerm); e != nil {
+			if e := ioutil.WriteFile(s.alertManagerFile, []byte(req.AlertManagerRules), os.ModePerm); e != nil {
 				return e
 			}
-			if e := os.Chmod(s.alertsManagerFile, 0644); e != nil {
+			if e := os.Chmod(s.alertManagerFile, 0644); e != nil {
 				s.l.Warn(e)
 			}
 		}
 
 		if req.RemoveAlertManagerRules {
-			if e := os.Remove(s.alertsManagerFile); e != nil {
+			if e := os.Remove(s.alertManagerFile); e != nil {
 				s.l.Warn(e)
 			}
 		}
@@ -563,7 +563,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	}
 	res.Settings.UpdatesDisabled = s.envDisableUpdates
 
-	alertManagerRules, err := loadAlertManagerRules(s.alertsManagerFile)
+	alertManagerRules, err := loadAlertManagerRules(s.alertManagerFile)
 	if err != nil {
 		return nil, err
 	}
