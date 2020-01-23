@@ -293,22 +293,31 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 
 		if settings.AlertManagerURL != "" {
 			u, err := url.Parse(settings.AlertManagerURL)
+			if err == nil && (u.Opaque != "" || u.Host == "") {
+				err = errors.Errorf("parsed incorrectly as %#v", u)
+			}
+
 			if err == nil {
-				password, _ := u.User.Password()
+				var httpClientConfig config_util.HTTPClientConfig
+				if username := u.User.Username(); username != "" {
+					password, _ := u.User.Password()
+					httpClientConfig = config_util.HTTPClientConfig{
+						BasicAuth: &config_util.BasicAuth{
+							Username: u.User.Username(),
+							Password: password,
+						},
+					}
+				}
+
 				cfg.AlertingConfig.AlertmanagerConfigs = []*config.AlertmanagerConfig{{
 					ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 						StaticConfigs: []*targetgroup.Group{{
 							Targets: []model.LabelSet{{addressLabel: model.LabelValue(u.Host)}},
 						}},
 					},
-					HTTPClientConfig: config_util.HTTPClientConfig{
-						BasicAuth: &config_util.BasicAuth{
-							Username: u.User.Username(),
-							Password: password,
-						},
-					},
-					Scheme:     u.Scheme,
-					PathPrefix: u.Path,
+					HTTPClientConfig: httpClientConfig,
+					Scheme:           u.Scheme,
+					PathPrefix:       u.Path,
 				}}
 			} else {
 				svc.l.Errorf("Failed to parse Alert Manager URL %q: %s.", settings.AlertManagerURL, err)

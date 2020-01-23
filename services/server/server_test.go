@@ -103,6 +103,29 @@ func TestServer(t *testing.T) {
 	t.Run("ValidateChangeSettingsRequest", func(t *testing.T) {
 		s := newServer()
 
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid alert_manager_url: mailto:hello@example.com - missing protocol scheme."),
+			s.validateChangeSettingsRequest(&serverpb.ChangeSettingsRequest{
+				AlertManagerUrl: "mailto:hello@example.com",
+			}))
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid alert_manager_url: 1.2.3.4:1234 - missing protocol scheme."),
+			s.validateChangeSettingsRequest(&serverpb.ChangeSettingsRequest{
+				AlertManagerUrl: "1.2.3.4:1234",
+			}))
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid alert_manager_url: 1.2.3.4 - missing protocol scheme."),
+			s.validateChangeSettingsRequest(&serverpb.ChangeSettingsRequest{
+				AlertManagerUrl: "1.2.3.4",
+			}))
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid alert_manager_url: https:// - missing host."),
+			s.validateChangeSettingsRequest(&serverpb.ChangeSettingsRequest{
+				AlertManagerUrl: "https://",
+			}))
+		assert.NoError(t, s.validateChangeSettingsRequest(&serverpb.ChangeSettingsRequest{
+			AlertManagerUrl: "https://1.2.3.4",
+		}))
+		assert.NoError(t, s.validateChangeSettingsRequest(&serverpb.ChangeSettingsRequest{
+			AlertManagerUrl: "https://1.2.3.4:1234/",
+		}))
+
 		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Both alert_manager_rules and remove_alert_manager_rules are present."),
 			s.validateChangeSettingsRequest(&serverpb.ChangeSettingsRequest{
 				AlertManagerRules:       "something",

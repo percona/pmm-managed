@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"os/exec"
 	"os/user"
@@ -460,18 +461,34 @@ func (s *Server) validateChangeSettingsRequest(req *serverpb.ChangeSettingsReque
 	metricsRes := req.MetricsResolutions
 
 	// check request parameters
+
 	if req.EnableTelemetry && req.DisableTelemetry {
 		return status.Error(codes.InvalidArgument, "Both enable_telemetry and disable_telemetry are present.")
 	}
-	if req.AlertManagerUrl != "" && req.RemoveAlertManagerUrl {
-		return status.Error(codes.InvalidArgument, "Both alert_manager_url and remove_alert_manager_url are present.")
-	}
 
-	// FIXME parse URL to check it
+	if req.AlertManagerUrl != "" {
+		if req.RemoveAlertManagerUrl {
+			return status.Error(codes.InvalidArgument, "Both alert_manager_url and remove_alert_manager_url are present.")
+		}
+
+		// custom validation for typical error that is not handled well by url.Parse
+		if !strings.Contains(req.AlertManagerUrl, "//") {
+			return status.Errorf(codes.InvalidArgument, "Invalid alert_manager_url: %s - missing protocol scheme.", req.AlertManagerUrl)
+		}
+		u, err := url.Parse(req.AlertManagerUrl)
+		if err != nil {
+			return status.Errorf(codes.InvalidArgument, "Invalid alert_manager_url: %s.", err)
+		}
+		if u.Host == "" {
+			return status.Errorf(codes.InvalidArgument, "Invalid alert_manager_url: %s - missing host.", req.AlertManagerUrl)
+		}
+		s.l.Debugf("AlertManagerUrl %q is parsed as %#v.", req.AlertManagerUrl, u)
+	}
 
 	if req.AlertManagerRules != "" && req.RemoveAlertManagerRules {
 		return status.Error(codes.InvalidArgument, "Both alert_manager_rules and remove_alert_manager_rules are present.")
 	}
+
 	if getDuration(metricsRes.GetHr()) < 0 {
 		return status.Error(codes.InvalidArgument, "metrics_resolutions.hr can't be negative.")
 	}
@@ -481,14 +498,17 @@ func (s *Server) validateChangeSettingsRequest(req *serverpb.ChangeSettingsReque
 	if getDuration(metricsRes.GetLr()) < 0 {
 		return status.Error(codes.InvalidArgument, "metrics_resolutions.lr can't be negative.")
 	}
+
 	if getDuration(req.DataRetention) < 0 {
 		return status.Error(codes.InvalidArgument, "data_retention can't be negative.")
 	}
 
 	// check request parameters compatibility with environment variables
+
 	if (req.EnableTelemetry || req.DisableTelemetry) && s.envDisableTelemetry {
 		return status.Error(codes.FailedPrecondition, "Telemetry is disabled via DISABLE_TELEMETRY environment variable.")
 	}
+
 	if getDuration(metricsRes.GetHr()) != 0 && s.envMetricsResolutionHR != 0 {
 		return status.Error(codes.FailedPrecondition, "High resolution for metrics is set via METRICS_RESOLUTION_HR (or METRICS_RESOLUTION) environment variable.")
 	}
@@ -498,6 +518,7 @@ func (s *Server) validateChangeSettingsRequest(req *serverpb.ChangeSettingsReque
 	if getDuration(metricsRes.GetLr()) != 0 && s.envMetricsResolutionLR != 0 {
 		return status.Error(codes.FailedPrecondition, "Low resolution for metrics is set via METRICS_RESOLUTION_LR environment variable.")
 	}
+
 	if getDuration(req.DataRetention) != 0 && s.envDataRetention != 0 {
 		return status.Error(codes.FailedPrecondition, "Data retention for queries is set via DATA_RETENTION environment variable.")
 	}
