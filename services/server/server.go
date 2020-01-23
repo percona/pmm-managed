@@ -421,10 +421,10 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 			Mr: ptypes.DurationProto(settings.MetricsResolutions.MR),
 			Lr: ptypes.DurationProto(settings.MetricsResolutions.LR),
 		},
-		DataRetention:       ptypes.DurationProto(settings.DataRetention),
-		SshKey:              settings.SSHKey,
-		AwsPartitions:       settings.AWSPartitions,
-		AlertManagerAddress: settings.AlertManagerAddress,
+		DataRetention:   ptypes.DurationProto(settings.DataRetention),
+		SshKey:          settings.SSHKey,
+		AwsPartitions:   settings.AWSPartitions,
+		AlertManagerUrl: settings.AlertManagerURL,
 	}
 
 	b, err := ioutil.ReadFile(s.alertManagerFile)
@@ -463,9 +463,12 @@ func (s *Server) validateChangeSettingsRequest(req *serverpb.ChangeSettingsReque
 	if req.EnableTelemetry && req.DisableTelemetry {
 		return status.Error(codes.InvalidArgument, "Both enable_telemetry and disable_telemetry are present.")
 	}
-	if req.AlertManagerAddress != "" && req.RemoveAlertManagerAddress {
-		return status.Error(codes.InvalidArgument, "Both alert_manager_address and remove_alert_manager_address are present.")
+	if req.AlertManagerUrl != "" && req.RemoveAlertManagerUrl {
+		return status.Error(codes.InvalidArgument, "Both alert_manager_url and remove_alert_manager_url are present.")
 	}
+
+	// FIXME parse URL to check it
+
 	if req.AlertManagerRules != "" && req.RemoveAlertManagerRules {
 		return status.Error(codes.InvalidArgument, "Both alert_manager_rules and remove_alert_manager_rules are present.")
 	}
@@ -560,11 +563,11 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		}
 
 		// absent value means "do not change"
-		if req.AlertManagerAddress != "" {
-			settings.AlertManagerAddress = req.AlertManagerAddress
+		if req.AlertManagerUrl != "" {
+			settings.AlertManagerURL = req.AlertManagerUrl
 		}
-		if req.RemoveAlertManagerAddress {
-			settings.AlertManagerAddress = ""
+		if req.RemoveAlertManagerUrl {
+			settings.AlertManagerURL = ""
 		}
 
 		// absent value means "do not change"
