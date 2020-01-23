@@ -528,10 +528,10 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			settings.MetricsResolutions.HR = hr
 		}
 		if mr := getDuration(metricsRes.GetMr()); mr != 0 {
-			settings.MetricsResolutions.HR = mr
+			settings.MetricsResolutions.MR = mr
 		}
 		if lr := getDuration(metricsRes.GetLr()); lr != 0 {
-			settings.MetricsResolutions.HR = lr
+			settings.MetricsResolutions.LR = lr
 		}
 
 		// absent or zero value means "do not change"
