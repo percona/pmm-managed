@@ -463,6 +463,9 @@ func (s *Server) validateChangeSettingsRequest(req *serverpb.ChangeSettingsReque
 	if req.EnableTelemetry && req.DisableTelemetry {
 		return status.Error(codes.InvalidArgument, "Both enable_telemetry and disable_telemetry are present.")
 	}
+	if req.AlertManagerAddress != "" && req.RemoveAlertManagerAddress {
+		return status.Error(codes.InvalidArgument, "Both alert_manager_address and remove_alert_manager_address are present.")
+	}
 	if req.AlertManagerRules != "" && req.RemoveAlertManagerRules {
 		return status.Error(codes.InvalidArgument, "Both alert_manager_rules and remove_alert_manager_rules are present.")
 	}
@@ -554,6 +557,14 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		// absent or empty value means "do not change"
 		if p := req.AwsPartitions; len(p) > 0 {
 			settings.AWSPartitions = p
+		}
+
+		// absent value means "do not change"
+		if req.AlertManagerAddress != "" {
+			settings.AlertManagerAddress = req.AlertManagerAddress
+		}
+		if req.RemoveAlertManagerAddress {
+			settings.AlertManagerAddress = ""
 		}
 
 		// absent value means "do not change"
