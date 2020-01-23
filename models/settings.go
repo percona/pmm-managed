@@ -74,4 +74,5 @@ func (s *Settings) fillDefaults() {
 
 	// AWSInstanceChecked is false by default
 	// SSHKey is empty by default
+	// AlertManagerAddress is empty by default
 }

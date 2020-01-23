@@ -17,17 +17,22 @@
 package server
 
 import (
-	"io/ioutil"
+	"context"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/percona/pmm/api/serverpb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/testdb"
+	"github.com/percona/pmm-managed/utils/tests"
 )
 
 func TestServer(t *testing.T) {
@@ -36,17 +41,17 @@ func TestServer(t *testing.T) {
 		require.NoError(t, sqlDB.Close())
 	}()
 
-	rulesFile, err := ioutil.TempFile("", "rules.*.yml")
-	assert.NoError(t, err)
-	assert.NoError(t, rulesFile.Close())
+	newServer := func() *Server {
+		s, err := NewServer(reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
+			nil, nil, nil, nil, "")
+		require.NoError(t, err)
+		return s
+	}
 
 	t.Run("UpdateSettingsFromEnv", func(t *testing.T) {
 		t.Run("Typical", func(t *testing.T) {
-			s, err := NewServer(reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
-				nil, nil, nil, nil, rulesFile.Name())
-			require.NoError(t, err)
-
-			err = s.UpdateSettingsFromEnv([]string{
+			s := newServer()
+			err := s.UpdateSettingsFromEnv([]string{
 				"DISABLE_UPDATES=true",
 				"DISABLE_TELEMETRY=1",
 				"METRICS_RESOLUTION_HR=1s",
@@ -64,11 +69,8 @@ func TestServer(t *testing.T) {
 		})
 
 		t.Run("Untypical", func(t *testing.T) {
-			s, err := NewServer(reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
-				nil, nil, nil, nil, rulesFile.Name())
-			require.NoError(t, err)
-
-			err = s.UpdateSettingsFromEnv([]string{
+			s := newServer()
+			err := s.UpdateSettingsFromEnv([]string{
 				"DISABLE_TELEMETRY=TrUe",
 				"METRICS_RESOLUTION=3S",
 				"DATA_RETENTION=360H",
@@ -80,11 +82,8 @@ func TestServer(t *testing.T) {
 		})
 
 		t.Run("NoValue", func(t *testing.T) {
-			s, err := NewServer(reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
-				nil, nil, nil, nil, rulesFile.Name())
-			require.NoError(t, err)
-
-			err = s.UpdateSettingsFromEnv([]string{
+			s := newServer()
+			err := s.UpdateSettingsFromEnv([]string{
 				"DISABLE_TELEMETRY",
 			})
 			require.NoError(t, err)
@@ -92,22 +91,31 @@ func TestServer(t *testing.T) {
 		})
 
 		t.Run("InvalidValue", func(t *testing.T) {
-			s, err := NewServer(reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
-				nil, nil, nil, nil, rulesFile.Name())
-			require.NoError(t, err)
-
-			err = s.UpdateSettingsFromEnv([]string{
+			s := newServer()
+			err := s.UpdateSettingsFromEnv([]string{
 				"DISABLE_TELEMETRY=",
 			})
 			require.NoError(t, err)
 			assert.Equal(t, false, s.envDisableTelemetry)
 		})
 	})
-}
 
-func TestPrometheusRulesValidation(t *testing.T) {
-	t.Run("Valid Prometheus rules", func(t *testing.T) {
-		content := `groups:
+	t.Run("ValidateChangeSettingsRequest", func(t *testing.T) {
+		s := newServer()
+
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Both alert_manager_rules and remove_alert_manager_rules are present."),
+			s.validateChangeSettingsRequest(&serverpb.ChangeSettingsRequest{
+				AlertManagerRules:       "something",
+				RemoveAlertManagerRules: true,
+			}))
+	})
+
+	t.Run("ValidateAlertManagerRules", func(t *testing.T) {
+		s := newServer()
+
+		t.Run("Valid", func(t *testing.T) {
+			rules := strings.TrimSpace(`
+groups:
 - name: example
   rules:
   - alert: HighRequestLatency
@@ -116,23 +124,41 @@ func TestPrometheusRulesValidation(t *testing.T) {
     labels:
       severity: page
     annotations:
-      summary: High request latency`
-		err := validateAlertManagerRulesFile(content)
-		assert.NoError(t, err)
-	})
-	t.Run("Invalid Prometheus rules", func(t *testing.T) {
-		content := `groups:
+      summary: High request latency
+			`) + "\n"
+			err := s.validateAlertManagerRules(context.Background(), rules)
+			assert.NoError(t, err)
+		})
+
+		t.Run("Zero", func(t *testing.T) {
+			rules := strings.TrimSpace(`
+groups:
+- name: example
+rules:
+- alert: HighRequestLatency
+expr: job:request_latency_seconds:mean5m{job="myjob"} > 0.5
+for: 10m
+labels:
+severity: page
+annotations:
+summary: High request latency
+			`) + "\n"
+			err := s.validateAlertManagerRules(context.Background(), rules)
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid Alert Manager rules."), err)
+
+			// TODO that will work once we update promtool
+			// tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Zero Alert Manager rules found."), err)
+		})
+
+		t.Run("Invalid", func(t *testing.T) {
+			rules := strings.TrimSpace(`
+groups:
 - name: example
   rules:
-- alert: HighRequestLatency
-    expr: job:request_latency_seconds:mean5m{job="myjob"} > 0.5
-    for: 10m
-    labels:
-      severity: page
-    annotations:
-      summary: High request latency`
-		err := validateAlertManagerRulesFile(content)
-		assert.Error(t, err)
+  - alert: HighRequestLatency
+			`) + "\n"
+			err := s.validateAlertManagerRules(context.Background(), rules)
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid Alert Manager rules."), err)
+		})
 	})
-
 }
