@@ -9,7 +9,6 @@ PMM_RELEASE_VERSION ?= $(shell git describe --always --dirty | cut -b2-)
 PMM_RELEASE_TIMESTAMP ?= $(shell date '+%s')
 PMM_RELEASE_FULLCOMMIT ?= $(shell git rev-parse HEAD)
 PMM_RELEASE_BRANCH ?= $(shell git describe --always --contains --all)
-DEFAULT_ALERT_MANAGER_RULES_FILE ?= /tmp/pmm.rules.yml
 
 LD_FLAGS = -ldflags " \
 			-X 'github.com/percona/pmm-managed/vendor/github.com/percona/pmm/version.ProjectName=pmm-managed' \
@@ -94,7 +93,7 @@ RUN_FLAGS = --debug \
 			--prometheus-config=testdata/prometheus/prometheus.yml \
 			--postgres-name=pmm-managed-dev \
 			--supervisord-config-dir=testdata/supervisord.d \
-			--alert-manager-rules-file=${DEFAULT_ALERT_MANAGER_RULES_FILE}
+			--alert-manager-rules-file=/tmp/pmm.rules.yml
 
 run: install _run               ## Run pmm-managed.
 
