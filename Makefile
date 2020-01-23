@@ -27,10 +27,12 @@ init:                           ## Installs tools to $GOPATH/bin (which is expec
 	curl https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOPATH)/bin
 
 	# install the same version as a version of Prometheus
+	-promtool --version
 	mkdir -p /tmp/promtool
 	-cd /tmp/promtool && curl -L -O -J https://github.com/prometheus/prometheus/releases/download/v2.12.0/prometheus-2.12.0.$(shell go env GOOS)-amd64.tar.gz
 	cd /tmp/promtool/ && tar xvf prometheus-2.12.0.$(shell go env GOOS)-amd64.tar.gz --strip-components 1
 	mv /tmp/promtool/promtool $(GOPATH)/bin
+	which -a promtool
 	promtool --version
 
 	go install ./vendor/github.com/BurntSushi/go-sumtype \
