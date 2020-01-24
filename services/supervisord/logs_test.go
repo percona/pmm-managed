@@ -69,14 +69,11 @@ func TestZipFunctions(t *testing.T) {
 	clientDir := filepath.Join(tmpDir, "client")
 	assert.NoError(t, os.Mkdir(clientDir, os.ModePerm))
 
-	// create some random files to put inside a zip
-	files := make([]string, 0, 3)
 	for i := 0; i < 3; i++ {
 		tmpfile, err := ioutil.TempFile(clientDir, "*-test.txt")
 		assert.NoError(t, err)
 		assert.NoError(t, tmpfile.Close())
 
-		files = append(files, tmpfile.Name())
 		buf := []byte(strings.Repeat(fmt.Sprintf("%d", i), 10))
 
 		err = ioutil.WriteFile(tmpfile.Name(), buf, os.ModePerm)
@@ -84,6 +81,7 @@ func TestZipFunctions(t *testing.T) {
 	}
 
 	zipfile, err := ioutil.TempFile("", "*-test.zip")
+	assert.NoError(t, err)
 	zw := zip.NewWriter(zipfile)
 
 	err = addToZip(tmpDir, zw)
@@ -91,6 +89,7 @@ func TestZipFunctions(t *testing.T) {
 	assert.NoError(t, zw.Close())
 
 	outTmpDir, err := ioutil.TempDir("", "pmm-admin-summary")
+	assert.NoError(t, err)
 	err = unzip(zipfile.Name(), outTmpDir)
 	assert.NoError(t, err)
 }
@@ -103,7 +102,7 @@ func TestAddAdminSummary(t *testing.T) {
 	err = addAdminSummary(context.Background(), zw)
 	assert.NoError(t, err)
 
-	zw.Close()
+	assert.NoError(t, zw.Close())
 
 	reader, err := zip.OpenReader(zipfile.Name())
 	assert.NoError(t, err)

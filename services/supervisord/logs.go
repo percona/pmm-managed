@@ -41,6 +41,10 @@ import (
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
+const (
+	maxLogReadBytes = 1024 * 1024
+)
+
 // fileContent represents logs.zip item.
 type fileContent struct {
 	Name     string
@@ -117,7 +121,7 @@ func (l *Logs) files(ctx context.Context) []fileContent {
 		logger.Get(ctx).WithField("component", "logs").Error(err)
 	}
 	for _, f := range logs {
-		b, m, err := readLog(f, 1000, 1024*1024)
+		b, m, err := readLog(f, 1000, maxLogReadBytes)
 		files = append(files, fileContent{
 			Name:     filepath.Base(f),
 			Modified: m,
@@ -294,7 +298,7 @@ func addAdminSummary(ctx context.Context, archive *zip.Writer) error {
 		return err
 	}
 
-	cmd := exec.CommandContext(ctx, "pmm-admin", "summary", "--skip-server", "--filename", tmpfile.Name())
+	cmd := exec.CommandContext(ctx, "pmm-admin", "summary", "--skip-server", "--filename", tmpfile.Name()) // nolint
 	pdeathsig.Set(cmd, unix.SIGKILL)
 	if err := cmd.Run(); err != nil {
 		return errors.Wrap(err, "cannot run pmm-admin summary")
@@ -332,7 +336,7 @@ func unzip(archive, target string) error {
 	}
 
 	for _, file := range reader.File {
-		path := filepath.Join(target, file.Name)
+		path := filepath.Join(target, filepath.Clean(file.Name))
 		dir := filepath.Dir(path)
 		if _, err := os.Stat(dir); os.IsNotExist(err) {
 			if err := os.MkdirAll(dir, os.ModePerm); err != nil {
@@ -408,7 +412,9 @@ func addToZip(source string, archive *zip.Writer) error {
 			return nil
 		}
 
-		file, err := os.Open(path)
+		// filepath.Clean is no really needed here since path comes from Walk.
+		// Added to make linters happy without using // nolint
+		file, err := os.Open(filepath.Clean(path))
 		if err != nil {
 			return err
 		}
