@@ -298,9 +298,23 @@ func addAdminSummary(ctx context.Context, archive *zip.Writer) error {
 		return err
 	}
 
-	cmd := exec.CommandContext(ctx, "pmm-admin", "summary", "--skip-server", "--filename", tmpfile.Name()) // nolint
-	pdeathsig.Set(cmd, unix.SIGKILL)
-	if err := cmd.Run(); err != nil {
+	adminArgs := [][]string{
+		{"summary", "--filename", tmpfile.Name(), "--skip-server"},
+		{"summary", "--filename", tmpfile.Name()},
+	}
+
+	// Try with and without --skip-server just in case the installed pmm-admin version doesn't support it
+	for _, args := range adminArgs {
+		cmd := exec.CommandContext(ctx, "pmm-admin", args...) // nolint
+		pdeathsig.Set(cmd, unix.SIGKILL)
+		err = cmd.Run()
+		if err != nil {
+			continue
+		}
+		break
+	}
+
+	if err != nil {
 		return errors.Wrap(err, "cannot run pmm-admin summary")
 	}
 
