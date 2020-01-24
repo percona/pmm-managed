@@ -69,7 +69,7 @@ func NewLogs(pmmVersion string, pmmUpdateChecker *PMMUpdateChecker) *Logs {
 }
 
 // Zip creates .zip archive with all logs.
-func (l *Logs) Zip(ctx context.Context, w io.Writer) error {
+func (l *Logs) Zip(ctx context.Context, w io.Writer, serverOnly bool) error {
 	zw := zip.NewWriter(w)
 	now := time.Now().UTC()
 

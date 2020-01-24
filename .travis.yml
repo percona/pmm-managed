@@ -92,7 +92,8 @@ script:
   - make devcontainer TARGET=test-race-crosscover \
                       TEST_FLAGS='-timeout=180s -v' \
                       TEST_PACKAGES=./services/supervisord \
-                      TEST_RUN_UPDATE=1
+                      TEST_RUN_UPDATE=1 \
+                      PMM_SERVER_IMAGE=perconalab/pmm-server-fb:PR-650-171ad41
 
   - make check
 
