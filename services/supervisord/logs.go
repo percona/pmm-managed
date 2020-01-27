@@ -308,7 +308,7 @@ func addAdminSummary(ctx context.Context, archive *zip.Writer) error {
 	for _, args := range adminArgs {
 		cmd := exec.CommandContext(ctx, "pmm-admin", args...) // nolint
 		pdeathsig.Set(cmd, unix.SIGKILL)
-		out := make([]byte, 0, 0)
+		var out []byte
 		out, err = cmd.CombinedOutput()
 
 		if err != nil {
