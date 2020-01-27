@@ -597,12 +597,12 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 				return e
 			}
 			if e = ioutil.WriteFile(s.alertManagerFile, []byte(req.AlertManagerRules), 0644); e != nil {
-				return e
+				return errors.WithStack(e)
 			}
 		}
 		if req.RemoveAlertManagerRules {
-			if e = os.Remove(s.alertManagerFile); e != nil {
-				return e
+			if e = os.Remove(s.alertManagerFile); e != nil && !os.IsNotExist(e) {
+				return errors.WithStack(e)
 			}
 		}
 
