@@ -310,9 +310,9 @@ func addAdminSummary(ctx context.Context, archive *zip.Writer) error {
 		pdeathsig.Set(cmd, unix.SIGKILL)
 		var out []byte
 		out, err = cmd.CombinedOutput()
+		log.Println(string(out))
 
 		if err != nil {
-			log.Println(string(out))
 			continue
 		}
 		break
