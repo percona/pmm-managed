@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	"log"
 	"mime"
 	"net/http"
 	"os"
@@ -307,8 +308,11 @@ func addAdminSummary(ctx context.Context, archive *zip.Writer) error {
 	for _, args := range adminArgs {
 		cmd := exec.CommandContext(ctx, "pmm-admin", args...) // nolint
 		pdeathsig.Set(cmd, unix.SIGKILL)
-		err = cmd.Run()
+		out := make([]byte, 0, 0)
+		out, err = cmd.CombinedOutput()
+
 		if err != nil {
+			log.Println(string(out))
 			continue
 		}
 		break
