@@ -61,39 +61,6 @@ func TestReadLog(t *testing.T) {
 	})
 }
 
-func TestZipFunctions(t *testing.T) {
-	tmpDir, err := ioutil.TempDir("", "pmm-admin-summary")
-	assert.NoError(t, err)
-
-	// create a "client" dir to emulate the output of pmm-admin-summary
-	clientDir := filepath.Join(tmpDir, "client")
-	assert.NoError(t, os.Mkdir(clientDir, os.ModePerm))
-
-	for i := 0; i < 3; i++ {
-		tmpfile, err := ioutil.TempFile(clientDir, "*-test.txt")
-		assert.NoError(t, err)
-		assert.NoError(t, tmpfile.Close())
-
-		buf := []byte(strings.Repeat(fmt.Sprintf("%d", i), 10))
-
-		err = ioutil.WriteFile(tmpfile.Name(), buf, os.ModePerm)
-		assert.NoError(t, err)
-	}
-
-	zipfile, err := ioutil.TempFile("", "*-test.zip")
-	assert.NoError(t, err)
-	zw := zip.NewWriter(zipfile)
-
-	err = addToZip(tmpDir, zw)
-	assert.NoError(t, err)
-	assert.NoError(t, zw.Close())
-
-	outTmpDir, err := ioutil.TempDir("", "pmm-admin-summary")
-	assert.NoError(t, err)
-	err = unzip(zipfile.Name(), outTmpDir)
-	assert.NoError(t, err)
-}
-
 func TestAddAdminSummary(t *testing.T) {
 	if os.Getenv("DEVCONTAINER") == "" {
 		t.Skip("can be tested only inside devcontainer")

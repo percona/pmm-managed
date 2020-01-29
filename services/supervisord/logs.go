@@ -29,7 +29,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"sort"
 	"time"
@@ -315,7 +314,7 @@ func addAdminSummary(ctx context.Context, zw *zip.Writer) error {
 
 	for _, file := range zr.File {
 		fw, err := zw.CreateHeader(&zip.FileHeader{
-			Name:     path.Join("client", file.Name),
+			Name:     file.Name,
 			Method:   zip.Deflate,
 			Modified: file.Modified,
 		})
