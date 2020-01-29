@@ -38,7 +38,7 @@ env:
     # so there is no need to test with old PMM Server versions
     # - PMM_SERVER_IMAGE=perconalab/pmm-server:dev-latest
     # FIXME
-    - PMM_SERVER_IMAGE=perconalab/pmm-server-fb:PR-650-171ad41
+    - PMM_SERVER_IMAGE=perconalab/pmm-server-fb:PR-650-4304cab
 
     # AWS - PMM Autotest account.
     # Travis secrets are not exposed to pull requests from forks: https://docs.travis-ci.com/user/pull-requests#pull-requests-and-security-restrictions
