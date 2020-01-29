@@ -36,7 +36,9 @@ env:
 
     # there is no case when pmm-update is older than pmm-managed (pmm-update self-updates first),
     # so there is no need to test with old PMM Server versions
-    - PMM_SERVER_IMAGE=perconalab/pmm-server:dev-latest
+    # - PMM_SERVER_IMAGE=perconalab/pmm-server:dev-latest
+    # FIXME
+    - PMM_SERVER_IMAGE=perconalab/pmm-server-fb:PR-650-171ad41
 
     # AWS - PMM Autotest account.
     # Travis secrets are not exposed to pull requests from forks: https://docs.travis-ci.com/user/pull-requests#pull-requests-and-security-restrictions
@@ -92,8 +94,7 @@ script:
   - make devcontainer TARGET=test-race-crosscover \
                       TEST_FLAGS='-timeout=180s -v' \
                       TEST_PACKAGES=./services/supervisord \
-                      TEST_RUN_UPDATE=1 \
-                      PMM_SERVER_IMAGE=perconalab/pmm-server-fb:PR-650-171ad41
+                      TEST_RUN_UPDATE=1
 
   - make check
 
