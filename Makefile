@@ -107,7 +107,6 @@ _run:
 	pmm-managed $(RUN_FLAGS)
 
 devcontainer:                   ## Run TARGET in devcontainer.
-	docker exec pmm-managed-server pmm-admin config --server-url http://admin:admin@127.0.0.1:8443
 	docker exec pmm-managed-server env \
 		TEST_FLAGS='$(TEST_FLAGS)' \
 		TEST_PACKAGES='$(TEST_PACKAGES)' \
