@@ -67,8 +67,8 @@ def install_tools():
             cd /tmp/tools && \
             go mod init tools && \
             env GOPROXY=https://proxy.golang.org go get -v \
-                github.com/go-delve/delve/cmd/dlv \
-                golang.org/x/tools/cmd/gopls"
+                github.com/go-delve/delve/cmd/dlv@latest \
+                golang.org/x/tools/gopls@latest"
     ])
 
 
