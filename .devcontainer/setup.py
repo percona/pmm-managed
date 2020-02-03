@@ -39,13 +39,23 @@ def install_go():
     """Installs Go toolchain."""
 
     run_commands([
-        "curl -sS https://dl.google.com/go/{go_version}.linux-amd64.tar.gz -o /tmp/golang.tar.gz".format(go_version=GO_VERSION),
-        "tar -C /usr/local -xzf /tmp/golang.tar.gz",
-        "mkdir -p /root/go/bin",
+        "curl -sS https://raw.githubusercontent.com/travis-ci/gimme/v1.5.3/gimme -o /usr/local/bin/gimme",
+        "chmod +x /usr/local/bin/gimme"
+    ])
+
+    go_version = subprocess.check_output("gimme -r " + GO_VERSION, shell=True).strip()
+
+    run_commands([
+        "gimme " + go_version,
+        "rm -fr /usr/local/go",
+        "mv -f /root/.gimme/versions/go{go_version}.linux.amd64 /usr/local/go".format(go_version=go_version),
         "update-alternatives --install '/usr/bin/go' 'go' '/usr/local/go/bin/go' 0",
         "update-alternatives --set go /usr/local/go/bin/go",
         "update-alternatives --install '/usr/bin/gofmt' 'gofmt' '/usr/local/go/bin/gofmt' 0",
         "update-alternatives --set gofmt /usr/local/go/bin/gofmt",
+        "mkdir -p /root/go/bin",
+        "go version",
+        "go env"
     ])
 
 def make_install():

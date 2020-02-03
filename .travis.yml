@@ -7,7 +7,7 @@ services:
 # skip non-trunk PMM-XXXX branch builds, but still build pull requests
 branches:
   except:
-    - /^PMM\-\d{4}/
+    - /^PMM\-\d{3,5}/
 
 # cache:
 #   directories:
@@ -38,13 +38,13 @@ env:
 
   matrix:
     # what we used for the latest PMM release
-    - GO_VERSION=go1.12.10
+    - GO_VERSION=1.12.x
 
     # the latest released version
-    - GO_VERSION=go1.13.7
+    - GO_VERSION=1.13.x
 
     # the latest pre-release version
-    - GO_VERSION=go1.14beta1
+    - GO_VERSION=1.14beta1
 
 matrix:
   fast_finish: true
