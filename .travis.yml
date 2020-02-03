@@ -9,14 +9,13 @@ branches:
   except:
     - /^PMM\-\d{3,5}/
 
-# cache:
-#   directories:
-#     - /home/travis/.cache/go-build
-#     # - /home/travis/gopath/pkg
+cache:
+  directories:
+    - /home/travis/go-build
 
-# before_cache:
-#   - go clean -testcache
-#   # - go clean -cache
+before_cache:
+  - docker exec pmm-managed-server go clean -testcache
+  - docker cp pmm-managed-server:/root/.cache/go-build /home/travis/go-build
 
 env:
   global:
@@ -52,6 +51,7 @@ matrix:
 install:
   - env
   - make env-up
+  - docker cp /home/travis/go-build pmm-managed-server:/root/.cache/go-build
 
 before_script:
   # ensure that generated files are not changed
