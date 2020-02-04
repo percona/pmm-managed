@@ -14,6 +14,9 @@ PMM_LD_FLAGS = -ldflags " \
 			-X 'github.com/percona/pmm-managed/vendor/github.com/percona/pmm/version.Branch=$(PMM_RELEASE_BRANCH)' \
 			"
 
+release:                        ## Build pmm-managed release binary.
+	env CGO_ENABLED=0 go build -v $(PMM_LD_FLAGS) -o $(PMM_RELEASE_PATH)/pmm-managed
+
 help:                           ## Display this help message.
 	@echo "Please use \`make <target>\` where <target> is one of:"
 	@grep -h '^[a-zA-Z]' $(MAKEFILE_LIST) | \
