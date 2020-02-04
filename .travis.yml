@@ -43,7 +43,7 @@ env:
     - GO_VERSION=1.13.x
 
     # the latest pre-release version
-    - GO_VERSION=1.14beta1
+    # - GO_VERSION=1.14beta1
 
 matrix:
   fast_finish: true
@@ -66,18 +66,18 @@ script:
   - make devcontainer TARGET=test-crosscover
 
   - make devcontainer TARGET=test-race-crosscover \
-                      TEST_FLAGS='-timeout=180s -v' \
-                      TEST_PACKAGES=./services/supervisord \
-                      TEST_RUN_UPDATE=1
+                      PMM_TEST_FLAGS='-timeout=180s -v' \
+                      PMM_TEST_PACKAGES=./services/supervisord \
+                      PMM_TEST_RUN_UPDATE=1
 
   - make devcontainer TARGET=check
 
 after_success:
   - curl https://codecov.io/bash > codecov
   - chmod +x codecov
-  - ./codecov -f race-crosscover.out -F devcontainer,crosscover -X fix
-  - ./codecov -f cover.out -F normal,cover -X fix
-  - ./codecov -f crosscover.out -F normal,crosscover -X fix
+  - ./codecov -f cover.out -F all,cover -X fix
+  - ./codecov -f crosscover.out -F all,crosscover -X fix
+  - ./codecov -f race-crosscover.out -F update,crosscover -X fix
 
 notifications:
   slack:
