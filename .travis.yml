@@ -53,8 +53,10 @@ matrix:
 
 install:
   - env
-  - make env-up
+  - make env-compose-up
   - docker cp /home/travis/go-build pmm-managed-server:/root/.cache/go-build
+  - docker exec pmm-managed-server ls -al /root/.cache/go-build
+  - make env-devcontainer
 
 before_script:
   # ensure that generated files are not changed
