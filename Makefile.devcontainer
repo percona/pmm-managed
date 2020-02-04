@@ -75,3 +75,10 @@ run-race-cover: install-race    ## Run pmm-managed with race detector and collec
 
 psql:                           ## Open psql shell.
 	env PGPASSWORD=pmm-managed psql -U pmm-managed pmm-managed-dev
+
+travis: test-race test-cover test-crosscover
+	env PMM_TEST_FLAGS='-timeout=180s -v' \
+		PMM_TEST_PACKAGES=./services/supervisord \
+		PMM_TEST_RUN_UPDATE=1 \
+		make test-race-crosscover
+	make check

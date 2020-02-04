@@ -16,6 +16,7 @@ cache:
 before_cache:
   - docker exec pmm-managed-server go clean -testcache
   - rm -fr /home/travis/go-build
+  - docker exec pmm-managed-server ls -al /root/.cache/go-build
   - docker cp pmm-managed-server:/root/.cache/go-build /home/travis/go-build
   - ls -al /home/travis/go-build /home/travis/go-build/go-build
 
@@ -63,16 +64,7 @@ before_script:
   - git diff --exit-code
 
 script:
-  - make devcontainer TARGET=test-race
-  - make devcontainer TARGET=test-cover
-  - make devcontainer TARGET=test-crosscover
-
-  - make devcontainer TARGET=test-race-crosscover \
-                      PMM_TEST_FLAGS='-timeout=180s -v' \
-                      PMM_TEST_PACKAGES=./services/supervisord \
-                      PMM_TEST_RUN_UPDATE=1
-
-  - make devcontainer TARGET=check
+  - make devcontainer TARGET=travis
 
 after_success:
   - curl https://codecov.io/bash > codecov
