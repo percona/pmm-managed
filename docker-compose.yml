@@ -7,12 +7,16 @@ services:
     environment:
       - PATH=/root/go/bin:$PATH
       - GO_VERSION=${GO_VERSION:-1.13.x}
+
+    # for delve
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+
     ports:
       - 127.0.0.1:80:80
       - 127.0.0.1:443:443
     volumes:
       - .:/root/go/src/github.com/percona/pmm-managed
       - ./Makefile.devcontainer:/root/go/src/github.com/percona/pmm-managed/Makefile
-      # - ./testdata/prometheus/prometheus.yml:/etc/prometheus.yml
-      - ./testdata/supervisord.d/prometheus.ini:/etc/supervisord.d/prometheus.ini
-      - ./testdata/supervisord.d/qan-api2.ini:/etc/supervisord.d/qan-api2.ini

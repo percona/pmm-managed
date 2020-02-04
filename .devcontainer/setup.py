@@ -112,6 +112,7 @@ def setup():
     run_commands([
         "psql --username=postgres --file=/tmp/setup.sql",
         "psql --username=postgres -l",
+        "supervisorctl start pmm-managed",
     ])
 
 

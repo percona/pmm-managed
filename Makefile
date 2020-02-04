@@ -19,5 +19,5 @@ env-down:                                   ## Stop devcontainer.
 
 TARGET ?= _bash
 
-devcontainer:                               ## Run `make TARGET` in devcontainer (`make devcontainer TARGET=test`); TARGET defaults to bash.
+devcontainer:                               ## Run `make TARGET` in devcontainer (`make devcontainer TARGET=help`); TARGET defaults to bash.
 	docker exec -it --workdir=/root/go/src/github.com/percona/pmm-managed pmm-managed-server make $(TARGET)

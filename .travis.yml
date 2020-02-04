@@ -14,10 +14,9 @@ cache:
     - /home/travis/go-build
 
 before_cache:
-  # - docker exec pmm-managed-server go clean -testcache
+  - docker exec pmm-managed-server go clean -testcache
   - rm -fr /home/travis/go-build
   - docker cp pmm-managed-server:/root/.cache/go-build /home/travis/go-build
-  - ls /home/travis/go-build
 
 env:
   global:
@@ -53,6 +52,8 @@ matrix:
 before_install:
   - env
   - make env-compose-up
+
+  # restore Go build cache
   - docker cp /home/travis/go-build pmm-managed-server:/root/.cache/go-build
   - docker exec pmm-managed-server ls /root/.cache/go-build
 

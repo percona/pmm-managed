@@ -54,24 +54,21 @@ format:                         ## Format source code.
 	gofmt -w -s $(FILES)
 	goimports -local github.com/percona/pmm-managed -l -w $(FILES)
 
-RUN_FLAGS = --debug \
-			--prometheus-config=testdata/prometheus/prometheus.yml \
-			--postgres-name=pmm-managed-dev \
-			--supervisord-config-dir=testdata/supervisord.d
-
 _run:
-	pmm-managed $(RUN_FLAGS)
+	cp $(shell go env GOPATH)/bin /usr/sbin/pmm-managed
+	supervisorctl restart pmm-managed
 
 run: install _run               ## Run pmm-managed.
 
 run-race: install-race _run     ## Run pmm-managed with race detector.
 
-run-race-cover: install-race    ## Run pmm-managed with race detector and collect coverage information.
-	go test -coverpkg="github.com/percona/pmm-managed/..." \
-			-tags maincover \
-			$(PMM_LD_FLAGS) \
-			-race -c -o bin/pmm-managed.test
-	bin/pmm-managed.test -test.coverprofile=cover.out -test.run=TestMainCover $(RUN_FLAGS)
+# TODO
+# run-race-cover: install-race    ## Run pmm-managed with race detector and collect coverage information.
+# 	go test -coverpkg="github.com/percona/pmm-managed/..." \
+# 			-tags maincover \
+# 			$(PMM_LD_FLAGS) \
+# 			-race -c -o bin/pmm-managed.test
+# 	bin/pmm-managed.test -test.coverprofile=cover.out -test.run=TestMainCover $(RUN_FLAGS)
 
 psql:                           ## Open psql shell.
 	env PGPASSWORD=pmm-managed psql -U pmm-managed pmm-managed-dev
