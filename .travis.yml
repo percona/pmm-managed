@@ -14,7 +14,7 @@ cache:
     - /home/travis/go-build
 
 before_cache:
-  - docker exec pmm-managed-server go clean -cache
+  - docker exec pmm-managed-server go clean -testcache
   - rm -fr /home/travis/go-build
   - docker cp pmm-managed-server:/root/.cache/go-build /home/travis/go-build
   - ls -al /home/travis/go-build /home/travis/go-build/go-build
