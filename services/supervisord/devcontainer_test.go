@@ -55,6 +55,7 @@ func TestDevContainer(t *testing.T) {
 			"cron.log",
 			"dashboard-upgrade.log",
 			"grafana.log",
+			"installed.json",
 			"nginx.access.log",
 			"nginx.conf",
 			"nginx.error.log",
