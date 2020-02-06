@@ -399,7 +399,7 @@ func getQANClient(ctx context.Context, sqlDB *sql.DB, dbName, qanAPIAddr string)
 	}
 
 	l := logrus.WithField("component", "reform/qan")
-	reformL := logger.NewReform("postgres", dbName+"/qan", l.Tracef)
+	reformL := sqlmetrics.NewReform("postgres", dbName+"/qan", l.Tracef)
 	prom.MustRegister(reformL)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reformL)
 	return qan.NewClient(conn, db)
@@ -481,7 +481,7 @@ func main() {
 	}
 	defer sqlDB.Close() //nolint:errcheck
 	prom.MustRegister(sqlmetrics.NewCollector("postgres", *postgresDBNameF, sqlDB))
-	reformL := logger.NewReform("postgres", *postgresDBNameF, logrus.WithField("component", "reform").Tracef)
+	reformL := sqlmetrics.NewReform("postgres", *postgresDBNameF, logrus.WithField("component", "reform").Tracef)
 	prom.MustRegister(reformL)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reformL)
 
