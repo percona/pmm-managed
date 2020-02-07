@@ -132,6 +132,11 @@ func (svc *Service) reload() error {
 	return errors.Errorf("%d: %s", resp.StatusCode, b)
 }
 
+func (svc *Service) loadBaseConfig() *config.Config {
+	// TODO https://jira.percona.com/browse/PMM-3387
+	return new(config.Config)
+}
+
 // addScrapeConfigs adds Prometheus scrape configs to cfg for all Agents.
 func (svc *Service) addScrapeConfigs(cfg *config.Config, q *reform.Querier, s *models.MetricsResolutions) error {
 	agents, err := q.SelectAllFrom(models.AgentTable, "WHERE NOT disabled AND listen_port IS NOT NULL ORDER BY agent_type, agent_id")
@@ -266,7 +271,8 @@ func (svc *Service) addScrapeConfigs(cfg *config.Config, q *reform.Querier, s *m
 
 // marshalConfig marshals Prometheus configuration.
 func (svc *Service) marshalConfig() ([]byte, error) {
-	var cfg *config.Config
+	cfg := svc.loadBaseConfig()
+
 	e := svc.db.InTransaction(func(tx *reform.TX) error {
 		settings, err := models.GetSettings(tx)
 		if err != nil {
@@ -274,22 +280,24 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 		}
 		s := settings.MetricsResolutions
 
-		cfg = &config.Config{
-			GlobalConfig: config.GlobalConfig{
-				ScrapeInterval:     model.Duration(s.LR),
-				ScrapeTimeout:      scrapeTimeout(s.LR),
-				EvaluationInterval: model.Duration(s.LR),
-			},
-			RuleFiles: []string{
-				"/srv/prometheus/rules/*.rules.yml",
-			},
-			ScrapeConfigs: []*config.ScrapeConfig{
-				scrapeConfigForPrometheus(s.HR),
-				scrapeConfigForGrafana(s.MR),
-				scrapeConfigForPMMManaged(s.MR),
-				scrapeConfigForQANAPI2(s.MR),
-			},
+		if cfg.GlobalConfig.ScrapeInterval == 0 {
+			cfg.GlobalConfig.ScrapeInterval = model.Duration(s.LR)
 		}
+		if cfg.GlobalConfig.ScrapeTimeout == 0 {
+			cfg.GlobalConfig.ScrapeTimeout = scrapeTimeout(s.LR)
+		}
+		if cfg.GlobalConfig.EvaluationInterval == 0 {
+			cfg.GlobalConfig.EvaluationInterval = model.Duration(s.LR)
+		}
+
+		cfg.RuleFiles = append(cfg.RuleFiles, "/srv/prometheus/rules/*.rules.yml")
+
+		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs,
+			scrapeConfigForPrometheus(s.HR),
+			scrapeConfigForGrafana(s.MR),
+			scrapeConfigForPMMManaged(s.MR),
+			scrapeConfigForQANAPI2(s.MR),
+		)
 
 		if settings.AlertManagerURL != "" {
 			u, err := url.Parse(settings.AlertManagerURL)
@@ -309,7 +317,7 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 					}
 				}
 
-				cfg.AlertingConfig.AlertmanagerConfigs = []*config.AlertmanagerConfig{{
+				cfg.AlertingConfig.AlertmanagerConfigs = append(cfg.AlertingConfig.AlertmanagerConfigs, &config.AlertmanagerConfig{
 					ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 						StaticConfigs: []*targetgroup.Group{{
 							Targets: []model.LabelSet{{addressLabel: model.LabelValue(u.Host)}},
@@ -318,7 +326,7 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 					HTTPClientConfig: httpClientConfig,
 					Scheme:           u.Scheme,
 					PathPrefix:       u.Path,
-				}}
+				})
 			} else {
 				svc.l.Errorf("Failed to parse Alert Manager URL %q: %s.", settings.AlertManagerURL, err)
 			}
