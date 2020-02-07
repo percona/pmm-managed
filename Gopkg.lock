@@ -240,8 +240,8 @@
   version = "v0.6.0"
 
 [[projects]]
-  branch = "PMM-5064_alert_manager_initial_support"
-  digest = "1:68a83e2b947c033fa7231f5a8a329c78b221f202bce5e7ee892f1264583d05b5"
+  branch = "PMM-2.0"
+  digest = "1:adfc5a3844fc9846bbb53136c46bf7dc72b1bb8a761fbdaf617a2015bb61e8f3"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -254,7 +254,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "13aa6e9e9481535b4599af5e4a8c12ccc7c621ab"
+  revision = "62c3a2fe46f50aa04138964dbf79edd057823ffc"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
