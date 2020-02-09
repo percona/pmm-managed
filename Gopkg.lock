@@ -114,7 +114,7 @@
   version = "v1.3.1"
 
 [[projects]]
-  digest = "1:c1d3f945cf852aefbd54f7d77140b5a6cf6ab4dab88d02f8d734ea452586427d"
+  digest = "1:8ebe051a4e858b5b020a62e2b1454c746c81000bdd73005fdd4416b2cd151433"
   name = "github.com/golang/protobuf"
   packages = [
     "descriptor",
@@ -129,8 +129,8 @@
     "ptypes/wrappers",
   ]
   pruneopts = "NUT"
-  revision = "6c65a5562fc06764971b7c5d05c76c75e84bdbf7"
-  version = "v1.3.2"
+  revision = "d23c5127dc24889085f8ccea5c9d560a57a879d8"
+  version = "v1.3.3"
 
 [[projects]]
   digest = "1:ab3ec1fe3e39bac4b3ab63390767766622be35b7cab03f47f787f9ec60522a53"
@@ -160,7 +160,7 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:0e9cbfec30fcfc81f61217ff68650703bf0d5fa10f33d59ae19415a0dffda90d"
+  digest = "1:a0aaaf3b716956ad0ee091533c277fe3a8eb2f6bd5f1647803d73f0040bdbf12"
   name = "github.com/grpc-ecosystem/grpc-gateway"
   packages = [
     "internal",
@@ -169,8 +169,8 @@
     "utilities",
   ]
   pruneopts = "NUT"
-  revision = "f7120437bb4f6c71f7f5076ad65a45310de2c009"
-  version = "v1.12.1"
+  revision = "e16fcd495a18ea01dbc6f5b6ac2956a94e1981a2"
+  version = "v1.12.2"
 
 [[projects]]
   digest = "1:1f2aebae7e7c856562355ec0198d8ca2fa222fb05e5b1b66632a1fce39631885"
@@ -240,8 +240,8 @@
   version = "v0.6.0"
 
 [[projects]]
-  branch = "PMM-2.0"
-  digest = "1:adfc5a3844fc9846bbb53136c46bf7dc72b1bb8a761fbdaf617a2015bb61e8f3"
+  branch = "PMM-5345-telemetry-v2"
+  digest = "1:084436e3da8db4770583bf001e415f6eaba7cddc171a0705bfef97a45e9129a3"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -249,12 +249,14 @@
     "api/managementpb",
     "api/qanpb",
     "api/serverpb",
+    "api/telemetrypb",
     "utils/pdeathsig",
     "utils/sqlmetrics",
+    "utils/tlsconfig",
     "version",
   ]
   pruneopts = "NUT"
-  revision = "62c3a2fe46f50aa04138964dbf79edd057823ffc"
+  revision = "d825f6ab1bc8b69c9c84effce21066996a6d1ec7"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
@@ -463,10 +465,11 @@
   revision = "83cc0476cb11ea0da33dacd4c6354ab192de6fe6"
 
 [[projects]]
-  digest = "1:67f75ba614a831d72be6218ec5fea66ef86957631ff84e11bf1a30b024e70477"
+  digest = "1:e0c24777dd6afea52d7e0ddde80da46d6d08a3420a7622c0643be92f92f44dba"
   name = "google.golang.org/grpc"
   packages = [
     ".",
+    "attributes",
     "backoff",
     "balancer",
     "balancer/base",
@@ -507,8 +510,8 @@
     "tap",
   ]
   pruneopts = "NUT"
-  revision = "1a3960e4bd028ac0cec0a2afd27d7d8e67c11514"
-  version = "v1.25.1"
+  revision = "f495f5b15ae7ccda3b38c53a1bfcde4c1a58a2bc"
+  version = "v1.27.1"
 
 [[projects]]
   digest = "1:22b2dee6f30bc8601f087449a2a819df8388e54e9547349c658f14d8f8c590f2"
@@ -575,8 +578,10 @@
     "github.com/percona/pmm/api/managementpb",
     "github.com/percona/pmm/api/qanpb",
     "github.com/percona/pmm/api/serverpb",
+    "github.com/percona/pmm/api/telemetrypb",
     "github.com/percona/pmm/utils/pdeathsig",
     "github.com/percona/pmm/utils/sqlmetrics",
+    "github.com/percona/pmm/utils/tlsconfig",
     "github.com/percona/pmm/version",
     "github.com/pkg/errors",
     "github.com/pmezard/go-difflib/difflib",
@@ -594,6 +599,7 @@
     "google.golang.org/grpc",
     "google.golang.org/grpc/channelz/service",
     "google.golang.org/grpc/codes",
+    "google.golang.org/grpc/credentials",
     "google.golang.org/grpc/grpclog",
     "google.golang.org/grpc/reflection",
     "google.golang.org/grpc/status",

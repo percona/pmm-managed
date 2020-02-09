@@ -25,7 +25,7 @@ import (
 func TestMakePayload(t *testing.T) {
 	s := NewService(nil, "1.3.1")
 	expected := "ECAB81E4C47D456CA9EC20AEBF91AB44;OS;\nECAB81E4C47D456CA9EC20AEBF91AB44;PMM;1.3.1\n"
-	assert.Equal(t, expected, string(s.makePayload("ECAB81E4C47D456CA9EC20AEBF91AB44"))) // \n are important
+	assert.Equal(t, expected, string(s.makeV1Payload("ECAB81E4C47D456CA9EC20AEBF91AB44"))) // \n are important
 }
 
 func TestGetLinuxDistribution(t *testing.T) {

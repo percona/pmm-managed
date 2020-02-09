@@ -20,8 +20,10 @@ package telemetry
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"regexp"
@@ -29,22 +31,35 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/google/uuid"
 	"github.com/percona/pmm/api/serverpb"
+	"github.com/percona/pmm/api/telemetrypb"
+	"github.com/percona/pmm/utils/tlsconfig"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
 )
 
 const (
-	interval   = 24 * time.Hour
-	timeout    = 5 * time.Second
-	defaultURL = "https://v.percona.com/"
+	// FIXME
+	interval     = 1 * time.Minute
+	defaultV1URL = ""
+
+	// interval      = 24 * time.Hour
+	timeout = 5 * time.Second
+	// defaultV1URL  = "https://v.percona.com/"
+	defaultV2Host = "callhome-staging.percona.com:443" // protocol is always https
 
 	// environment variables that affect telemetry service
-	envURL = "PERCONA_VERSION_CHECK_URL" // the same name as for the Toolkit
+	envV1URL  = "PERCONA_VERSION_CHECK_URL" // the same name as for the Toolkit
+	envV2Host = "PERCONA_TELEMETRY_HOST"
 )
 
 // Service is responsible for interactions with Percona Call Home service.
@@ -52,11 +67,14 @@ type Service struct {
 	db         *reform.DB
 	pmmVersion string
 	l          *logrus.Entry
+	start      time.Time
 
-	initOnce           sync.Once
-	distributionMethod serverpb.DistributionMethod
-	v1OS               string
-	url                string
+	initOnce            sync.Once
+	v1OS                string
+	sDistributionMethod serverpb.DistributionMethod
+	tDistributionMethod telemetrypb.DistributionMethod
+	v1URL               string
+	v2Host              string
 }
 
 // NewService creates a new service with given UUID and PMM version.
@@ -65,6 +83,7 @@ func NewService(db *reform.DB, pmmVersion string) *Service {
 		db:         db,
 		pmmVersion: pmmVersion,
 		l:          logrus.WithField("component", "telemetry"),
+		start:      time.Now(),
 	}
 }
 
@@ -77,35 +96,42 @@ func (s *Service) init() {
 	b = bytes.ToLower(bytes.TrimSpace(b))
 	switch string(b) {
 	case "ovf":
-		s.distributionMethod = serverpb.DistributionMethod_OVF
 		s.v1OS = "ovf"
+		s.sDistributionMethod = serverpb.DistributionMethod_OVF
+		s.tDistributionMethod = telemetrypb.DistributionMethod_OVF
 	case "ami":
-		s.distributionMethod = serverpb.DistributionMethod_AMI
 		s.v1OS = "ami"
+		s.sDistributionMethod = serverpb.DistributionMethod_AMI
+		s.tDistributionMethod = telemetrypb.DistributionMethod_AMI
 	case "docker", "": // /srv/pmm-distribution does not exist in PMM 2.0.
-		s.distributionMethod = serverpb.DistributionMethod_DOCKER
-
-		// TODO Re-visit this for new Telemetry/CallHome implementation.
 		b, err = ioutil.ReadFile("/proc/version")
 		if err != nil {
 			s.l.Debugf("Failed to read /proc/version: %s", err)
 		}
 		s.v1OS = getLinuxDistribution(string(b))
+
+		s.sDistributionMethod = serverpb.DistributionMethod_DOCKER
+		s.tDistributionMethod = telemetrypb.DistributionMethod_DOCKER
 	}
 
-	if u := os.Getenv(envURL); u != "" {
-		s.url = u
-	} else {
-		s.url = defaultURL
+	s.v1URL = defaultV1URL
+	if u := os.Getenv(envV1URL); u != "" {
+		s.v1URL = u
 	}
 
-	s.l.Debugf("Telemetry settings: v1OS=%q, distributionMethod=%q, url=%q.", s.v1OS, s.distributionMethod, s.url)
+	s.v2Host = defaultV2Host
+	if u := os.Getenv(envV2Host); u != "" {
+		s.v2Host = u
+	}
+
+	s.l.Debugf("Telemetry settings: v1OS=%q, sDistributionMethod=%q, v1URL=%q, v2Host=%q.",
+		s.v1OS, s.sDistributionMethod, s.v1URL, s.v2Host)
 }
 
 // DistributionMethod returns PMM Server distribution method where this pmm-managed runs.
 func (s *Service) DistributionMethod() serverpb.DistributionMethod {
 	s.initOnce.Do(s.init)
-	return s.distributionMethod
+	return s.sDistributionMethod
 }
 
 // Run runs telemetry service, sending data every interval until context is canceled.
@@ -116,9 +142,11 @@ func (s *Service) Run(ctx context.Context) {
 	defer ticker.Stop()
 
 	for {
-		if err := s.sendOnce(ctx); err != nil {
+		sendOnceCtx, sendOnceCancel := context.WithTimeout(ctx, 5*time.Second)
+		if err := s.sendOnce(sendOnceCtx); err != nil {
 			s.l.Debugf("Telemetry info not send: %s.", err)
 		}
+		sendOnceCancel()
 
 		select {
 		case <-ticker.C:
@@ -153,20 +181,40 @@ func (s *Service) sendOnce(ctx context.Context) error {
 		return err
 	}
 
-	payload := s.makePayload(settings.Telemetry.UUID)
-	return s.sendRequest(ctx, payload)
+	var wg errgroup.Group
+
+	wg.Go(func() error {
+		payload := s.makeV1Payload(settings.Telemetry.UUID)
+		return s.sendV1Request(ctx, payload)
+	})
+
+	wg.Go(func() error {
+		req, err := s.makeV2Payload(settings.Telemetry.UUID)
+		if err != nil {
+			return err
+		}
+		err = s.sendV2Request(ctx, req)
+		s.l.Debugf("sendV2Request: %+v", err)
+		return err
+	})
+
+	return wg.Wait()
 }
 
-func (s *Service) makePayload(uuid string) []byte {
+func (s *Service) makeV1Payload(uuid string) []byte {
 	var w bytes.Buffer
 	fmt.Fprintf(&w, "%s;%s;%s\n", uuid, "OS", s.v1OS)
 	fmt.Fprintf(&w, "%s;%s;%s\n", uuid, "PMM", s.pmmVersion)
 	return w.Bytes()
 }
 
-func (s *Service) sendRequest(ctx context.Context, data []byte) error {
+func (s *Service) sendV1Request(ctx context.Context, data []byte) error {
+	if s.v1URL == "" {
+		return errors.New("v1 telemetry disabled via the empty URL")
+	}
+
 	body := bytes.NewReader(data)
-	req, err := http.NewRequest("POST", s.url, body)
+	req, err := http.NewRequest("POST", s.v1URL, body)
 	if err != nil {
 		return err
 	}
@@ -186,6 +234,79 @@ func (s *Service) sendRequest(ctx context.Context, data []byte) error {
 
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("status code %d", resp.StatusCode)
+	}
+	return nil
+}
+
+func (s *Service) makeV2Payload(serverUUID string) (*telemetrypb.ReportRequest, error) {
+	serverID, err := hex.DecodeString(serverUUID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to decode UUID %q", serverUUID)
+	}
+
+	event := &telemetrypb.ServerUptimeEvent{
+		Id:                 serverID,
+		Version:            s.pmmVersion,
+		UpDuration:         ptypes.DurationProto(time.Since(s.start)),
+		DistributionMethod: s.tDistributionMethod,
+	}
+	if err = event.Validate(); err != nil {
+		// log and ignore
+		s.l.Debugf("Failed to validate event: %s.", err)
+	}
+	eventB, err := proto.Marshal(event)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to marshal event %+v", event)
+	}
+
+	id := uuid.New()
+	req := &telemetrypb.ReportRequest{
+		Events: []*telemetrypb.Event{{
+			Id:   id[:],
+			Time: ptypes.TimestampNow(),
+			Event: &telemetrypb.Any{
+				TypeUrl: proto.MessageName(event),
+				Binary:  eventB,
+			},
+		}},
+	}
+	s.l.Debugf("Request: %+v", req)
+	if err = req.Validate(); err != nil {
+		// log and ignore
+		s.l.Debugf("Failed to validate request: %s.", err)
+	}
+
+	return req, nil
+}
+
+func (s *Service) sendV2Request(ctx context.Context, req *telemetrypb.ReportRequest) error {
+	if s.v2Host == "" {
+		return errors.New("v2 telemetry disabled via the empty host")
+	}
+
+	host, _, err := net.SplitHostPort(s.v2Host)
+	if err != nil {
+		host = s.v2Host
+	}
+	tlsConfig := tlsconfig.Get()
+	tlsConfig.ServerName = host
+
+	opts := []grpc.DialOption{
+		// replacement is marked as experimental
+		grpc.WithBackoffMaxDelay(time.Second), //nolint:staticcheck
+
+		grpc.WithBlock(),
+		grpc.WithUserAgent("pmm-managed/" + s.pmmVersion),
+		grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
+	}
+	cc, err := grpc.DialContext(ctx, s.v2Host, opts...)
+	if err != nil {
+		return errors.Wrap(err, "failed to dial")
+	}
+	defer cc.Close() //nolint:errcheck
+
+	if _, err = telemetrypb.NewCallhomeAPIClient(cc).Report(ctx, req); err != nil {
+		return errors.Wrap(err, "failed to report")
 	}
 	return nil
 }
