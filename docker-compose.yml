@@ -2,14 +2,11 @@
 version: '3'
 services:
   pmm-managed-server:
-    # FIXME: revert once pmm-admin summary is merged
-    # image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server:dev-latest}
-    image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server-fb:PR-650-77cd872}
+    image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server:dev-latest}
     container_name: pmm-managed-server
     environment:
       # for tests
       - DEVCONTAINER=1
-      - FEATURE_BRANCH=1 # FIXME: remove once pmm-admin summary is merged
       - PATH=/root/go/bin:$PATH
     ports:
       - 127.0.0.1:80:80
