@@ -21,6 +21,8 @@ LD_FLAGS = -ldflags " \
 
 release:                        ## Build pmm-managed release binary.
 	env CGO_ENABLED=0 go build -v $(LD_FLAGS) -o $(PMM_RELEASE_PATH)/pmm-managed
+	env CGO_ENABLED=0 go build -v $(LD_FLAGS) -o $(PMM_RELEASE_PATH)/pmm-managed-init cmd/pmm-managed-init/main.go
+
 
 init:                           ## Installs tools to $GOPATH/bin (which is expected to be in $PATH).
 	curl https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOPATH)/bin
