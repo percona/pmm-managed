@@ -20,6 +20,7 @@ import (
 	"os"
 
 	"github.com/percona/pmm-managed/utils/validators"
+
 	"github.com/sirupsen/logrus"
 )
 
