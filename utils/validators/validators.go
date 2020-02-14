@@ -26,12 +26,12 @@ import (
 
 // EnvVarValidator validates given environment variables.
 // Returns two lists with errors and warnings.
-func EnvVarValidator(env []string) (envVars map[string]string, errs []error, warns []string) {
+func EnvVarValidator(envs []string) (envVars map[string]string, errs []error, warns []string) {
 	envVars = make(map[string]string)
-	for _, e := range env {
-		p := strings.SplitN(e, "=", 2)
+	for _, env := range envs {
+		p := strings.SplitN(env, "=", 2)
 		if len(p) != 2 {
-			errs = append(errs, fmt.Errorf("failed to parse environment variable %q", e))
+			errs = append(errs, fmt.Errorf("failed to parse environment variable %q", env))
 			continue
 		}
 
@@ -40,26 +40,32 @@ func EnvVarValidator(env []string) (envVars map[string]string, errs []error, war
 		case "PATH", "HOSTNAME", "TERM", "HOME":
 		case "DISABLE_UPDATES":
 			if _, err := strconv.ParseBool(v); err != nil {
-				errs = append(errs, fmt.Errorf("invalid environment variable %q", e))
+				errs = append(errs, fmt.Errorf("invalid environment variable %q", env))
+				continue
 			}
 		case "DISABLE_TELEMETRY":
 			if _, err := strconv.ParseBool(v); err != nil {
-				errs = append(errs, fmt.Errorf("invalid environment variable %q", e))
+				errs = append(errs, fmt.Errorf("invalid environment variable %q", env))
+				continue
 			}
 		case "METRICS_RESOLUTION", "METRICS_RESOLUTION_HR", "METRICS_RESOLUTION_MR", "METRICS_RESOLUTION_LR":
 			if _, err := time.ParseDuration(v); err != nil {
-				errs = append(errs, fmt.Errorf("invalid environment variable %q", e))
+				errs = append(errs, fmt.Errorf("invalid environment variable %q", env))
+				continue
 			}
 		case "DATA_RETENTION":
 			d, err := time.ParseDuration(v)
+			h := int64(d.Hours())
 			if err != nil {
-				errs = append(errs, fmt.Errorf("invalid environment variable %q", e))
-			} else if d < 24*time.Hour {
-				warns = append(warns, fmt.Sprintf("retention period with the value less than a day can be wrong (%q)", e))
+				errs = append(errs, fmt.Errorf("invalid environment variable %q", env))
+				continue
+			} else if !(d.Truncate(time.Hour) == d && h >= 24 && h%24 == 0) {
+				errs = append(errs, fmt.Errorf("retention period must be the count of full days (%q)", env))
+				continue
 			}
 		default:
 			if !strings.HasPrefix(k, "GF_") {
-				warns = append(warns, fmt.Sprintf("unknown environment variable %q", e))
+				warns = append(warns, fmt.Sprintf("unknown environment variable %q", env))
 			}
 		}
 		envVars[k] = v

@@ -66,34 +66,6 @@ func TestEnvVarValidator(t *testing.T) {
 			},
 		},
 		{
-			"Invalid env variables values",
-			args{[]string{
-				"DISABLE_UPDATES=5",
-				"DISABLE_TELEMETRY=X",
-				"METRICS_RESOLUTION=5f",
-				"METRICS_RESOLUTION_HR=s5",
-				"METRICS_RESOLUTION_LR=1hour",
-				"DATA_RETENTION=keep one week",
-			}},
-			map[string]string{
-				"DATA_RETENTION":        "keep one week",
-				"DISABLE_TELEMETRY":     "x",
-				"DISABLE_UPDATES":       "5",
-				"METRICS_RESOLUTION":    "5f",
-				"METRICS_RESOLUTION_HR": "s5",
-				"METRICS_RESOLUTION_LR": "1hour",
-			},
-			[]error{
-				errors.New(`invalid environment variable "DISABLE_UPDATES=5"`),
-				errors.New(`invalid environment variable "DISABLE_TELEMETRY=X"`),
-				errors.New(`invalid environment variable "METRICS_RESOLUTION=5f"`),
-				errors.New(`invalid environment variable "METRICS_RESOLUTION_HR=s5"`),
-				errors.New(`invalid environment variable "METRICS_RESOLUTION_LR=1hour"`),
-				errors.New(`invalid environment variable "DATA_RETENTION=keep one week"`),
-			},
-			nil,
-		},
-		{
 			"Default env vars",
 			args{[]string{
 				"PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
@@ -108,6 +80,27 @@ func TestEnvVarValidator(t *testing.T) {
 				"TERM":     "xterm-256color",
 			},
 			nil,
+			nil,
+		},
+		{
+			"Invalid env variables values",
+			args{[]string{
+				"DISABLE_UPDATES=5",
+				"DISABLE_TELEMETRY=X",
+				"METRICS_RESOLUTION=5f",
+				"METRICS_RESOLUTION_HR=s5",
+				"METRICS_RESOLUTION_LR=1hour",
+				"DATA_RETENTION=keep one week",
+			}},
+			map[string]string{},
+			[]error{
+				errors.New(`invalid environment variable "DISABLE_UPDATES=5"`),
+				errors.New(`invalid environment variable "DISABLE_TELEMETRY=X"`),
+				errors.New(`invalid environment variable "METRICS_RESOLUTION=5f"`),
+				errors.New(`invalid environment variable "METRICS_RESOLUTION_HR=s5"`),
+				errors.New(`invalid environment variable "METRICS_RESOLUTION_LR=1hour"`),
+				errors.New(`invalid environment variable "DATA_RETENTION=keep one week"`),
+			},
 			nil,
 		},
 		{
@@ -134,19 +127,6 @@ func TestEnvVarValidator(t *testing.T) {
 			},
 			nil,
 			nil,
-		},
-		{
-			"Warnings",
-			args{[]string{
-				"DATA_RETENTION=72m",
-			}},
-			map[string]string{
-				"DATA_RETENTION": "72m",
-			},
-			nil,
-			[]string{
-				`retention period with the value less than a day can be wrong ("DATA_RETENTION=72m")`,
-			},
 		},
 	}
 	for _, tt := range tests {

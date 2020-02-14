@@ -19,9 +19,9 @@ package main
 import (
 	"os"
 
-	"github.com/percona/pmm-managed/utils/validators"
-
 	"github.com/sirupsen/logrus"
+
+	"github.com/percona/pmm-managed/utils/validators"
 )
 
 func main() {
