@@ -70,5 +70,5 @@ func EnvVarValidator(envs []string) (envVars map[string]string, errs []error, wa
 		}
 		envVars[k] = v
 	}
-	return
+	return envVars, errs, warns
 }
