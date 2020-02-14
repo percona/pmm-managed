@@ -54,13 +54,9 @@ func EnvVarValidator(envs []string) (envVars map[string]string, errs []error, wa
 				continue
 			}
 		case "DATA_RETENTION":
-			d, err := time.ParseDuration(v)
-			h := int64(d.Hours())
+			_, err := time.ParseDuration(v)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("invalid environment variable %q", env))
-				continue
-			} else if !(d.Truncate(time.Hour) == d && h >= 24 && h%24 == 0) {
-				errs = append(errs, fmt.Errorf("retention period must be the count of full days (%q)", env))
 				continue
 			}
 		default:
