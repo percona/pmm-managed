@@ -24,10 +24,24 @@ import (
 	"time"
 )
 
+// MetricsResolutions contains standard Prometheus metrics resolutions.
+type MetricsResolutions struct {
+	HR time.Duration
+	MR time.Duration
+	LR time.Duration
+}
+
+// EnvSettings contains PMM Server settings.
+type EnvSettings struct {
+	DisableUpdates     bool
+	DisableTelemetry   bool
+	MetricsResolutions MetricsResolutions
+	DataRetention      time.Duration
+}
+
 // EnvVarValidator validates given environment variables.
 // Returns two lists with errors and warnings.
-func EnvVarValidator(envs []string) (envVars map[string]string, errs []error, warns []string) {
-	envVars = make(map[string]string)
+func EnvVarValidator(envs []string) (envSettings EnvSettings, errs []error, warns []string) {
 	for _, env := range envs {
 		p := strings.SplitN(env, "=", 2)
 		if len(p) != 2 {
@@ -39,32 +53,56 @@ func EnvVarValidator(envs []string) (envVars map[string]string, errs []error, wa
 		switch k {
 		case "PATH", "HOSTNAME", "TERM", "HOME":
 		case "DISABLE_UPDATES":
-			if _, err := strconv.ParseBool(v); err != nil {
-				errs = append(errs, fmt.Errorf("invalid environment variable %q", env))
-				continue
-			}
-		case "DISABLE_TELEMETRY":
-			if _, err := strconv.ParseBool(v); err != nil {
-				errs = append(errs, fmt.Errorf("invalid environment variable %q", env))
-				continue
-			}
-		case "METRICS_RESOLUTION", "METRICS_RESOLUTION_HR", "METRICS_RESOLUTION_MR", "METRICS_RESOLUTION_LR":
-			if _, err := time.ParseDuration(v); err != nil {
-				errs = append(errs, fmt.Errorf("invalid environment variable %q", env))
-				continue
-			}
-		case "DATA_RETENTION":
-			_, err := time.ParseDuration(v)
+			b, err := strconv.ParseBool(v)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("invalid environment variable %q", env))
 				continue
+			}
+			envSettings.DisableUpdates = b
+		case "DISABLE_TELEMETRY":
+			b, err := strconv.ParseBool(v)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("invalid environment variable %q", env))
+				continue
+			}
+			envSettings.DisableTelemetry = b
+		case "METRICS_RESOLUTION", "METRICS_RESOLUTION_HR":
+			d, err := time.ParseDuration(v)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("invalid environment variable %q", env))
+				continue
+			}
+			envSettings.MetricsResolutions.HR = d
+		case "METRICS_RESOLUTION_MR":
+			d, err := time.ParseDuration(v)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("invalid environment variable %q", env))
+				continue
+			}
+			envSettings.MetricsResolutions.MR = d
+		case "METRICS_RESOLUTION_LR":
+			d, err := time.ParseDuration(v)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("invalid environment variable %q", env))
+				continue
+			}
+			envSettings.MetricsResolutions.LR = d
+		case "DATA_RETENTION":
+			d, err := time.ParseDuration(v)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("invalid environment variable %q", env))
+			} else if d < 24*time.Hour {
+				errs = append(errs, fmt.Errorf("data_retention: minimal resolution is 24h. received: %q", env))
+			} else if d.Truncate(24*time.Hour) != d {
+				errs = append(errs, fmt.Errorf("data_retention: should be a natural number of days. received: %q", env))
+			} else {
+				envSettings.DataRetention = d
 			}
 		default:
 			if !strings.HasPrefix(k, "GF_") {
 				warns = append(warns, fmt.Sprintf("unknown environment variable %q", env))
 			}
 		}
-		envVars[k] = v
 	}
-	return envVars, errs, warns
+	return envSettings, errs, warns
 }

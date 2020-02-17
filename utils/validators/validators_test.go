@@ -20,6 +20,7 @@ package validators
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -30,17 +31,19 @@ func TestEnvVarValidator(t *testing.T) {
 			"DISABLE_UPDATES=True",
 			"DISABLE_TELEMETRY=False",
 			"METRICS_RESOLUTION=5m",
-			"METRICS_RESOLUTION_HR=5s",
+			"METRICS_RESOLUTION_MR=5s",
 			"METRICS_RESOLUTION_LR=1h",
 			"DATA_RETENTION=72h",
 		}
-		expectedEnvVars := map[string]string{
-			"DATA_RETENTION":        "72h",
-			"DISABLE_TELEMETRY":     "false",
-			"DISABLE_UPDATES":       "true",
-			"METRICS_RESOLUTION":    "5m",
-			"METRICS_RESOLUTION_HR": "5s",
-			"METRICS_RESOLUTION_LR": "1h",
+		expectedEnvVars := EnvSettings{
+			DataRetention:    72 * time.Hour,
+			DisableTelemetry: false,
+			DisableUpdates:   true,
+			MetricsResolutions: MetricsResolutions{
+				HR: 5 * time.Minute,
+				MR: 5 * time.Second,
+				LR: time.Hour,
+			},
 		}
 
 		gotEnvVars, gotErrs, gotWarns := EnvVarValidator(envs)
@@ -51,7 +54,7 @@ func TestEnvVarValidator(t *testing.T) {
 
 	t.Run("Unknown env variables", func(t *testing.T) {
 		envs := []string{"UNKNOWN_VAR=VAL", "ANOTHER_UNKNOWN_VAR=VAL"}
-		expectedEnvVars := map[string]string{"ANOTHER_UNKNOWN_VAR": "val", "UNKNOWN_VAR": "val"}
+		expectedEnvVars := EnvSettings{}
 		expectedWarns := []string{
 			`unknown environment variable "UNKNOWN_VAR=VAL"`,
 			`unknown environment variable "ANOTHER_UNKNOWN_VAR=VAL"`,
@@ -70,11 +73,7 @@ func TestEnvVarValidator(t *testing.T) {
 			"TERM=xterm-256color",
 			"HOME=/home/user/",
 		}
-		expectedEnvVars := map[string]string{"HOME": "/home/user/",
-			"HOSTNAME": "host",
-			"PATH":     "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
-			"TERM":     "xterm-256color",
-		}
+		expectedEnvVars := EnvSettings{}
 
 		gotEnvVars, gotErrs, gotWarns := EnvVarValidator(envs)
 		assert.Equal(t, gotEnvVars, expectedEnvVars)
@@ -91,7 +90,7 @@ func TestEnvVarValidator(t *testing.T) {
 			"METRICS_RESOLUTION_LR=1hour",
 			"DATA_RETENTION=keep one week",
 		}
-		expectedEnvVars := map[string]string{}
+		expectedEnvVars := EnvSettings{}
 		expectedErrs := []error{
 			fmt.Errorf("invalid environment variable %q", "DISABLE_UPDATES=5"),
 			fmt.Errorf("invalid environment variable %q", "DISABLE_TELEMETRY=X"),
@@ -118,16 +117,7 @@ func TestEnvVarValidator(t *testing.T) {
 			`GF_PATHS_PLUGINS="/var/lib/grafana/plugins"`,
 			`GF_PATHS_PROVISIONING="/etc/grafana/provisioning"`,
 		}
-		expectedEnvVars := map[string]string{
-			"GF_AUTH_GENERIC_OAUTH_ALLOWED_DOMAINS": "'example.com'",
-			"GF_AUTH_GENERIC_OAUTH_ENABLED":         "'true'",
-			"GF_PATHS_CONFIG":                       `"/etc/grafana/grafana.ini"`,
-			"GF_PATHS_DATA":                         `"/var/lib/grafana"`,
-			"GF_PATHS_HOME":                         `"/usr/share/grafana"`,
-			"GF_PATHS_LOGS":                         `"/var/log/grafana"`,
-			"GF_PATHS_PLUGINS":                      `"/var/lib/grafana/plugins"`,
-			"GF_PATHS_PROVISIONING":                 `"/etc/grafana/provisioning"`,
-		}
+		expectedEnvVars := EnvSettings{}
 
 		gotEnvVars, gotErrs, gotWarns := EnvVarValidator(envs)
 		assert.Equal(t, gotEnvVars, expectedEnvVars)

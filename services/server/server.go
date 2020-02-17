@@ -49,6 +49,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/utils/validators"
 )
 
 // Server represents service for checking PMM Server status and changing settings.
@@ -116,81 +117,34 @@ func (s *Server) UpdateSettingsFromEnv(env []string) error {
 			return err
 		}
 
-		for _, e := range env {
-			p := strings.SplitN(e, "=", 2)
-			if len(p) != 2 {
-				s.l.Warnf("Failed to parse environment variable %q.", e)
-				continue
-			}
-
-			k, v := strings.ToUpper(p[0]), strings.ToLower(p[1])
-			var err error
-			var value interface{}
-			switch k {
-			case "DISABLE_UPDATES":
-				var b bool
-				b, err = strconv.ParseBool(v)
-				if err == nil {
-					value = b
-					s.envDisableUpdates = b
-				}
-
-			case "DISABLE_TELEMETRY":
-				var b bool
-				b, err = strconv.ParseBool(v)
-				if err == nil {
-					value = b
-					s.envDisableTelemetry = b
-					settings.Telemetry.Disabled = b
-				}
-
-			case "METRICS_RESOLUTION", "METRICS_RESOLUTION_HR":
-				var d time.Duration
-				d, err = time.ParseDuration(v)
-				if err == nil {
-					value = d
-					s.envMetricsResolutionHR = d
-					settings.MetricsResolutions.HR = d
-				}
-
-			case "METRICS_RESOLUTION_MR":
-				var d time.Duration
-				d, err = time.ParseDuration(v)
-				if err == nil {
-					value = d
-					s.envMetricsResolutionMR = d
-					settings.MetricsResolutions.MR = d
-				}
-
-			case "METRICS_RESOLUTION_LR":
-				var d time.Duration
-				d, err = time.ParseDuration(v)
-				if err == nil {
-					value = d
-					s.envMetricsResolutionLR = d
-					settings.MetricsResolutions.LR = d
-				}
-
-			case "DATA_RETENTION":
-				var d time.Duration
-				d, err = time.ParseDuration(v)
-				if err == nil {
-					value = d
-					s.envDataRetention = d
-					settings.DataRetention = d
-				}
-
-			default:
-				s.l.Tracef("Skipping %q.", e)
-				continue
-			}
-
-			if err == nil {
-				s.l.Infof("Environment variable %q parsed: %v.", e, value)
-			} else {
-				s.l.Warnf("Failed to parse environment variable %q: %s.", e, err)
-			}
+		envSettings, errs, warns := validators.EnvVarValidator(env)
+		for _, w := range warns {
+			s.l.Warnln(w)
 		}
+
+		if len(errs) > 0 {
+			for _, e := range errs {
+				s.l.Errorln(e)
+			}
+			return errors.New("validation error of environment variables")
+		}
+
+		s.envDisableUpdates = envSettings.DisableUpdates
+
+		s.envDisableTelemetry = envSettings.DisableTelemetry
+		settings.Telemetry.Disabled = envSettings.DisableTelemetry
+
+		s.envMetricsResolutionHR = envSettings.MetricsResolutions.HR
+		settings.MetricsResolutions.HR = envSettings.MetricsResolutions.HR
+
+		s.envMetricsResolutionMR = envSettings.MetricsResolutions.MR
+		settings.MetricsResolutions.MR = envSettings.MetricsResolutions.MR
+
+		s.envMetricsResolutionLR = envSettings.MetricsResolutions.LR
+		settings.MetricsResolutions.LR = envSettings.MetricsResolutions.LR
+
+		s.envDataRetention = envSettings.DataRetention
+		settings.DataRetention = envSettings.DataRetention
 
 		return models.SaveSettings(tx.Querier, settings)
 	})

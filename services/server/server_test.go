@@ -86,7 +86,7 @@ func TestServer(t *testing.T) {
 			err := s.UpdateSettingsFromEnv([]string{
 				"DISABLE_TELEMETRY",
 			})
-			require.NoError(t, err)
+			require.Errorf(t, err, "validation error of environment variables")
 			assert.Equal(t, false, s.envDisableTelemetry)
 		})
 
@@ -95,7 +95,7 @@ func TestServer(t *testing.T) {
 			err := s.UpdateSettingsFromEnv([]string{
 				"DISABLE_TELEMETRY=",
 			})
-			require.NoError(t, err)
+			require.Errorf(t, err, "validation error of environment variables")
 			assert.Equal(t, false, s.envDisableTelemetry)
 		})
 	})
