@@ -60,13 +60,13 @@ install:
 
 before_script:
   # ensure that generated files are not changed
-  - make devcontainer TARGET=gen
-  - make devcontainer TARGET=format
+  - make env TARGET=gen
+  - make env TARGET=format
   - git status
   - git diff --exit-code
 
 script:
-  - make devcontainer TARGET=travis
+  - make env TARGET=travis
 
 after_success:
   - curl https://codecov.io/bash > codecov

@@ -20,4 +20,4 @@ services:
       - 127.0.0.1:443:443
     volumes:
       - .:/root/go/src/github.com/percona/pmm-managed
-      - ./Makefile.devcontainer:/root/go/src/github.com/percona/pmm-managed/Makefile
+      - ./Makefile.devcontainer:/root/go/src/github.com/percona/pmm-managed/Makefile:ro
