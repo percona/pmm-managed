@@ -38,6 +38,7 @@ import (
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
+// TODO move tests to other files and remove this one.
 func TestDevContainer(t *testing.T) {
 	t.Run("Logs", func(t *testing.T) {
 		l := NewLogs("2.4.5")
