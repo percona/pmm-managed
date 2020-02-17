@@ -1,5 +1,7 @@
 #!/usr/bin/python2
 
+# See CONTRIBUTING.md.
+
 from __future__ import print_function, unicode_literals
 import multiprocessing, os, subprocess, time
 

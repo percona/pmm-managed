@@ -1,3 +1,5 @@
+default: help
+
 # `cut` is used to remove first `v` from `git describe` output
 PMM_RELEASE_PATH ?= bin
 PMM_RELEASE_VERSION ?= $(shell git describe --always --dirty | cut -b2-)
@@ -15,8 +17,8 @@ PMM_LD_FLAGS = -ldflags " \
 			"
 
 release:                        ## Build pmm-managed and pmm-managed-init release binaries.
- 	env CGO_ENABLED=0 go build -v $(LD_FLAGS) -o $(PMM_RELEASE_PATH)/pmm-managed
- 	env CGO_ENABLED=0 go build -v $(LD_FLAGS) -o $(PMM_RELEASE_PATH)/pmm-managed-init ./cmd/pmm-managed-init
+	env CGO_ENABLED=0 go build -v $(LD_FLAGS) -o $(PMM_RELEASE_PATH)/pmm-managed
+	env CGO_ENABLED=0 go build -v $(LD_FLAGS) -o $(PMM_RELEASE_PATH)/pmm-managed-init ./cmd/pmm-managed-init
 
 help:                           ## Display this help message.
 	@echo "Please use \`make <target>\` where <target> is one of:"
