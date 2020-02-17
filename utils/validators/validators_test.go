@@ -86,7 +86,7 @@ func TestEnvVarValidator(t *testing.T) {
 			"DISABLE_UPDATES=5",
 			"DISABLE_TELEMETRY=X",
 			"METRICS_RESOLUTION=5f",
-			"METRICS_RESOLUTION_HR=s5",
+			"METRICS_RESOLUTION_MR=s5",
 			"METRICS_RESOLUTION_LR=1hour",
 			"DATA_RETENTION=keep one week",
 		}
@@ -95,7 +95,7 @@ func TestEnvVarValidator(t *testing.T) {
 			fmt.Errorf("invalid environment variable %q", "DISABLE_UPDATES=5"),
 			fmt.Errorf("invalid environment variable %q", "DISABLE_TELEMETRY=X"),
 			fmt.Errorf("invalid environment variable %q", "METRICS_RESOLUTION=5f"),
-			fmt.Errorf("invalid environment variable %q", "METRICS_RESOLUTION_HR=s5"),
+			fmt.Errorf("invalid environment variable %q", "METRICS_RESOLUTION_MR=s5"),
 			fmt.Errorf("invalid environment variable %q", "METRICS_RESOLUTION_LR=1hour"),
 			fmt.Errorf("invalid environment variable %q", "DATA_RETENTION=keep one week"),
 		}
@@ -122,6 +122,34 @@ func TestEnvVarValidator(t *testing.T) {
 		gotEnvVars, gotErrs, gotWarns := EnvVarValidator(envs)
 		assert.Equal(t, gotEnvVars, expectedEnvVars)
 		assert.Nil(t, gotErrs)
+		assert.Nil(t, gotWarns)
+	})
+
+	t.Run("Data retention less then a day", func(t *testing.T) {
+		envs := []string{
+			"DATA_RETENTION=1h",
+		}
+		expectedEnvVars := EnvSettings{}
+		expectedErrs := []error{
+			fmt.Errorf("data_retention: minimal resolution is 24h. received: %q", "DATA_RETENTION=1h"),
+		}
+		gotEnvVars, gotErrs, gotWarns := EnvVarValidator(envs)
+		assert.Equal(t, gotEnvVars, expectedEnvVars)
+		assert.Equal(t, gotErrs, expectedErrs)
+		assert.Nil(t, gotWarns)
+	})
+
+	t.Run("Data retention is not a natural number of days", func(t *testing.T) {
+		envs := []string{
+			"DATA_RETENTION=30h",
+		}
+		expectedEnvVars := EnvSettings{}
+		expectedErrs := []error{
+			fmt.Errorf("data_retention: should be a natural number of days. received: %q", "DATA_RETENTION=30h"),
+		}
+		gotEnvVars, gotErrs, gotWarns := EnvVarValidator(envs)
+		assert.Equal(t, gotEnvVars, expectedEnvVars)
+		assert.Equal(t, gotErrs, expectedErrs)
 		assert.Nil(t, gotWarns)
 	})
 }
