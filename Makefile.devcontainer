@@ -62,7 +62,7 @@ run: install _run               ## Run pmm-managed.
 
 run-race: install-race _run     ## Run pmm-managed with race detector.
 
-# TODO
+# TODO https://jira.percona.com/browse/PMM-3484, see maincover_test.go
 # run-race-cover: install-race    ## Run pmm-managed with race detector and collect coverage information.
 # 	go test -coverpkg="github.com/percona/pmm-managed/..." \
 # 			-tags maincover \

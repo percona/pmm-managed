@@ -43,6 +43,8 @@ go test -timeout=30s -p 1 ./...
 ...
 ```
 
+`run` and `run-race` targets replace `/usr/sbin/pmm-managed` and restart pmm-managed with `supervisorctl`. As a result, it will use normal filesystem locations (`/etc/prometheus.yml`, `/etc/supervisord.d`, etc.) and `pmm-managed` PostgreSQL database. Other locations (inside `testdata`) and `pmm-managed-dev` database are used for unit tests.
+
 
 ## VSCode
 
