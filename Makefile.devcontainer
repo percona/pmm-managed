@@ -13,10 +13,10 @@ gen:                            ## Generate files.
 	make format
 
 install:                        ## Install pmm-managed binary.
-	go install $(PMM_LD_FLAGS) ./...
+	go install $(PMM_LD_FLAGS) -v ./...
 
 install-race:                   ## Install pmm-managed binary with race detector.
-	go install $(PMM_LD_FLAGS) -race ./...
+	go install $(PMM_LD_FLAGS) -v -race ./...
 
 PMM_TEST_PACKAGES ?= ./...
 PMM_TEST_FLAGS ?= -timeout=30s
@@ -55,8 +55,10 @@ format:                         ## Format source code.
 	goimports -local github.com/percona/pmm-managed -l -w $(FILES)
 
 _run:
-	cp $(shell go env GOPATH)/bin /usr/sbin/pmm-managed
-	supervisorctl restart pmm-managed
+	supervisorctl stop pmm-managed
+	cp $(shell go env GOPATH)/bin/pmm-managed /usr/sbin/pmm-managed
+	supervisorctl start pmm-managed &
+	supervisorctl tail -f pmm-managed
 
 run: install _run               ## Run pmm-managed.
 
