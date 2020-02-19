@@ -31,11 +31,12 @@ import (
 	"sync"
 	"time"
 
+	pmmv1beta1 "github.com/Percona-Platform/saas/gen/telemetry/events/pmm"
+	reporterv1beta1 "github.com/Percona-Platform/saas/gen/telemetry/reporter"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/google/uuid"
 	"github.com/percona/pmm/api/serverpb"
-	"github.com/percona/pmm/api/telemetrypb"
 	"github.com/percona/pmm/utils/tlsconfig"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -72,7 +73,7 @@ type Service struct {
 	initOnce            sync.Once
 	v1OS                string
 	sDistributionMethod serverpb.DistributionMethod
-	tDistributionMethod telemetrypb.DistributionMethod
+	tDistributionMethod pmmv1beta1.DistributionMethod
 	v1URL               string
 	v2Host              string
 }
@@ -98,11 +99,11 @@ func (s *Service) init() {
 	case "ovf":
 		s.v1OS = "ovf"
 		s.sDistributionMethod = serverpb.DistributionMethod_OVF
-		s.tDistributionMethod = telemetrypb.DistributionMethod_OVF
+		s.tDistributionMethod = pmmv1beta1.DistributionMethod_OVF
 	case "ami":
 		s.v1OS = "ami"
 		s.sDistributionMethod = serverpb.DistributionMethod_AMI
-		s.tDistributionMethod = telemetrypb.DistributionMethod_AMI
+		s.tDistributionMethod = pmmv1beta1.DistributionMethod_AMI
 	case "docker", "": // /srv/pmm-distribution does not exist in PMM 2.0.
 		b, err = ioutil.ReadFile("/proc/version")
 		if err != nil {
@@ -111,7 +112,7 @@ func (s *Service) init() {
 		s.v1OS = getLinuxDistribution(string(b))
 
 		s.sDistributionMethod = serverpb.DistributionMethod_DOCKER
-		s.tDistributionMethod = telemetrypb.DistributionMethod_DOCKER
+		s.tDistributionMethod = pmmv1beta1.DistributionMethod_DOCKER
 	}
 
 	s.v1URL = defaultV1URL
@@ -238,13 +239,13 @@ func (s *Service) sendV1Request(ctx context.Context, data []byte) error {
 	return nil
 }
 
-func (s *Service) makeV2Payload(serverUUID string) (*telemetrypb.ReportRequest, error) {
+func (s *Service) makeV2Payload(serverUUID string) (*reporterv1beta1.ReportRequest, error) {
 	serverID, err := hex.DecodeString(serverUUID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to decode UUID %q", serverUUID)
 	}
 
-	event := &telemetrypb.ServerUptimeEvent{
+	event := &pmmv1beta1.ServerUptimeEvent{
 		Id:                 serverID,
 		Version:            s.pmmVersion,
 		UpDuration:         ptypes.DurationProto(time.Since(s.start)),
@@ -260,11 +261,11 @@ func (s *Service) makeV2Payload(serverUUID string) (*telemetrypb.ReportRequest, 
 	}
 
 	id := uuid.New()
-	req := &telemetrypb.ReportRequest{
-		Events: []*telemetrypb.Event{{
+	req := &reporterv1beta1.ReportRequest{
+		Events: []*reporterv1beta1.Event{{
 			Id:   id[:],
 			Time: ptypes.TimestampNow(),
-			Event: &telemetrypb.Any{
+			Event: &reporterv1beta1.AnyEvent{
 				TypeUrl: proto.MessageName(event),
 				Binary:  eventB,
 			},
@@ -279,7 +280,7 @@ func (s *Service) makeV2Payload(serverUUID string) (*telemetrypb.ReportRequest, 
 	return req, nil
 }
 
-func (s *Service) sendV2Request(ctx context.Context, req *telemetrypb.ReportRequest) error {
+func (s *Service) sendV2Request(ctx context.Context, req *reporterv1beta1.ReportRequest) error {
 	if s.v2Host == "" {
 		return errors.New("v2 telemetry disabled via the empty host")
 	}
@@ -305,7 +306,7 @@ func (s *Service) sendV2Request(ctx context.Context, req *telemetrypb.ReportRequ
 	}
 	defer cc.Close() //nolint:errcheck
 
-	if _, err = telemetrypb.NewCallhomeAPIClient(cc).Report(ctx, req); err != nil {
+	if _, err = reporterv1beta1.NewReporterAPIClient(cc).Report(ctx, req); err != nil {
 		return errors.Wrap(err, "failed to report")
 	}
 	return nil

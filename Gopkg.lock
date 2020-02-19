@@ -19,6 +19,17 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:5dd563d76963609194a4926b4abb4ad5dd1753697a3536a82dff4a782b0d8d6e"
+  name = "github.com/Percona-Platform/saas"
+  packages = [
+    "gen/telemetry/events/pmm",
+    "gen/telemetry/reporter",
+  ]
+  pruneopts = "NUT"
+  revision = "a535c882f7bb6b348592ddd959188f6dc27292ed"
+
+[[projects]]
+  branch = "master"
   digest = "1:f3793f8a708522400cef1dba23385e901aede5519f68971fd69938ef330b07a1"
   name = "github.com/alecthomas/template"
   packages = [
@@ -240,8 +251,8 @@
   version = "v0.6.0"
 
 [[projects]]
-  branch = "PMM-5345-telemetry-v2"
-  digest = "1:084436e3da8db4770583bf001e415f6eaba7cddc171a0705bfef97a45e9129a3"
+  branch = "PMM-2.0"
+  digest = "1:2f57cc44de581696f927891f92aa2fbb2a2b8cf915f4d60135693adb246ae7f4"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -249,14 +260,13 @@
     "api/managementpb",
     "api/qanpb",
     "api/serverpb",
-    "api/telemetrypb",
     "utils/pdeathsig",
     "utils/sqlmetrics",
     "utils/tlsconfig",
     "version",
   ]
   pruneopts = "NUT"
-  revision = "d825f6ab1bc8b69c9c84effce21066996a6d1ec7"
+  revision = "35ec9c64bb206c7ed01125963dd07402ba63dbdf"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
@@ -554,6 +564,8 @@
   input-imports = [
     "github.com/AlekSi/pointer",
     "github.com/BurntSushi/go-sumtype",
+    "github.com/Percona-Platform/saas/gen/telemetry/events/pmm",
+    "github.com/Percona-Platform/saas/gen/telemetry/reporter",
     "github.com/aws/aws-sdk-go/aws",
     "github.com/aws/aws-sdk-go/aws/awserr",
     "github.com/aws/aws-sdk-go/aws/credentials",
@@ -578,7 +590,6 @@
     "github.com/percona/pmm/api/managementpb",
     "github.com/percona/pmm/api/qanpb",
     "github.com/percona/pmm/api/serverpb",
-    "github.com/percona/pmm/api/telemetrypb",
     "github.com/percona/pmm/utils/pdeathsig",
     "github.com/percona/pmm/utils/sqlmetrics",
     "github.com/percona/pmm/utils/tlsconfig",
