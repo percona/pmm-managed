@@ -68,38 +68,6 @@ func TestSettings(t *testing.T) {
 	})
 
 	t.Run("Validation", func(t *testing.T) {
-		t.Run("MetricsResolutions", func(t *testing.T) {
-			s := &models.Settings{
-				MetricsResolutions: models.MetricsResolutions{
-					HR: 500 * time.Millisecond,
-				},
-			}
-			err := models.SaveSettings(sqlDB, s)
-			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "hr: minimal resolution is 1s"), err)
-
-			s = &models.Settings{
-				MetricsResolutions: models.MetricsResolutions{
-					LR: 1500 * time.Millisecond,
-				},
-			}
-			err = models.SaveSettings(sqlDB, s)
-			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "lr: should be a natural number of seconds"), err)
-		})
-
-		t.Run("DataRetention", func(t *testing.T) {
-			s := &models.Settings{
-				DataRetention: 12 * time.Hour,
-			}
-			err := models.SaveSettings(sqlDB, s)
-			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "data_retention: minimal resolution is 24h"), err)
-
-			s = &models.Settings{
-				DataRetention: 36 * time.Hour,
-			}
-			err = models.SaveSettings(sqlDB, s)
-			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "data_retention: should be a natural number of days"), err)
-		})
-
 		t.Run("AWSPartitions", func(t *testing.T) {
 			s := &models.Settings{
 				AWSPartitions: []string{"foo"},
