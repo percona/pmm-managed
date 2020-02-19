@@ -27,7 +27,7 @@ import (
 func main() {
 	l := logrus.WithField("component", "pmm-managed-init")
 	envVars := os.Environ()
-	_, errs, warns := validators.EnvVarValidator(envVars)
+	_, errs, warns := validators.ValidateEnvVars(envVars)
 	for _, warn := range warns {
 		l.Warnln(warn)
 	}

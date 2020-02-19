@@ -111,40 +111,39 @@ func (s *Server) UpdateSettingsFromEnv(env []string) error {
 	s.envRW.Lock()
 	defer s.envRW.Unlock()
 
+	envSettings, errs, warns := validators.ValidateEnvVars(env)
+	for _, w := range warns {
+		s.l.Warnln(w)
+	}
+
+	// This should be impossible in the normal workflow.
+	// An invalid environment variable must be caught with pmm-managed-init
+	// and the docker run must be terminated.
+	if len(errs) > 0 {
+		for _, e := range errs {
+			s.l.Errorln(e)
+		}
+		return errors.New("validation error of environment variables")
+	}
+
+	s.envDisableUpdates = envSettings.DisableUpdates
+	s.envDisableTelemetry = envSettings.DisableTelemetry
+	s.envMetricsResolutionHR = envSettings.MetricsResolutions.HR
+	s.envMetricsResolutionMR = envSettings.MetricsResolutions.MR
+	s.envMetricsResolutionLR = envSettings.MetricsResolutions.LR
+	s.envDataRetention = envSettings.DataRetention
+
 	return s.db.InTransaction(func(tx *reform.TX) error {
 		settings, err := models.GetSettings(tx.Querier)
 		if err != nil {
 			return err
 		}
 
-		envSettings, errs, warns := validators.EnvVarValidator(env)
-		for _, w := range warns {
-			s.l.Warnln(w)
-		}
-
-		if len(errs) > 0 {
-			for _, e := range errs {
-				s.l.Errorln(e)
-			}
-			return errors.New("validation error of environment variables")
-		}
-
-		s.envDisableUpdates = envSettings.DisableUpdates
-
-		s.envDisableTelemetry = envSettings.DisableTelemetry
-		settings.Telemetry.Disabled = envSettings.DisableTelemetry
-
-		s.envMetricsResolutionHR = envSettings.MetricsResolutions.HR
-		settings.MetricsResolutions.HR = envSettings.MetricsResolutions.HR
-
-		s.envMetricsResolutionMR = envSettings.MetricsResolutions.MR
-		settings.MetricsResolutions.MR = envSettings.MetricsResolutions.MR
-
-		s.envMetricsResolutionLR = envSettings.MetricsResolutions.LR
-		settings.MetricsResolutions.LR = envSettings.MetricsResolutions.LR
-
-		s.envDataRetention = envSettings.DataRetention
-		settings.DataRetention = envSettings.DataRetention
+		settings.Telemetry.Disabled = s.envDisableTelemetry
+		settings.MetricsResolutions.HR = s.envMetricsResolutionHR
+		settings.MetricsResolutions.MR = s.envMetricsResolutionMR
+		settings.MetricsResolutions.LR = s.envMetricsResolutionLR
+		settings.DataRetention = s.envDataRetention
 
 		return models.SaveSettings(tx.Querier, settings)
 	})

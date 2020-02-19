@@ -87,7 +87,6 @@ func TestServer(t *testing.T) {
 				"DISABLE_TELEMETRY",
 			})
 			require.Errorf(t, err, "validation error of environment variables")
-			assert.Equal(t, false, s.envDisableTelemetry)
 		})
 
 		t.Run("InvalidValue", func(t *testing.T) {

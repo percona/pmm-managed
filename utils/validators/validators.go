@@ -39,9 +39,21 @@ type EnvSettings struct {
 	DataRetention      time.Duration
 }
 
-// EnvVarValidator validates given environment variables.
-// Returns two lists with errors and warnings.
-func EnvVarValidator(envs []string) (envSettings EnvSettings, errs []error, warns []string) {
+// ValidateEnvVars validates given environment variables.
+//
+// Returns valid setting and two lists with errors and warnings.
+// This function is mainly used in pmm-managed-init to early validate passed
+// environment variables, and provide user warnings about unknown variables.
+// In case of error, the docker run terminates.
+// Short description of environment variables:
+//  - PATH, HOSTNAME, TERM, HOME are default environment variables that will be ignored;
+//  - DISABLE_UPDATES is a boolean flag to enable or disable pmm-server update;
+//  - DISABLE_TELEMETRY is a boolean flag to enable or disable pmm telemetry;
+//  - METRICS_RESOLUTION, METRICS_RESOLUTION, METRICS_RESOLUTION_HR,
+// METRICS_RESOLUTION_LR are durations of metrics resolution;
+//  - DATA_RETENTION is the duration of how long keep time-series data in ClickHouse;
+//  - the environment variables prefixed with GF_ passed as related to Grafana.
+func ValidateEnvVars(envs []string) (envSettings EnvSettings, errs []error, warns []string) {
 	for _, env := range envs {
 		p := strings.SplitN(env, "=", 2)
 		if len(p) != 2 {
@@ -49,60 +61,49 @@ func EnvVarValidator(envs []string) (envSettings EnvSettings, errs []error, warn
 			continue
 		}
 
+		var err error
 		k, v := strings.ToUpper(p[0]), strings.ToLower(p[1])
 		switch k {
+		// Skip default environment variables.
 		case "PATH", "HOSTNAME", "TERM", "HOME":
 		case "DISABLE_UPDATES":
-			b, err := strconv.ParseBool(v)
+			envSettings.DisableUpdates, err = strconv.ParseBool(v)
 			if err != nil {
-				errs = append(errs, fmt.Errorf("invalid environment variable %q", env))
-				continue
+				err = fmt.Errorf("invalid environment variable %q", env)
 			}
-			envSettings.DisableUpdates = b
 		case "DISABLE_TELEMETRY":
-			b, err := strconv.ParseBool(v)
+			envSettings.DisableTelemetry, err = strconv.ParseBool(v)
 			if err != nil {
-				errs = append(errs, fmt.Errorf("invalid environment variable %q", env))
-				continue
+				err = fmt.Errorf("invalid environment variable %q", env)
 			}
-			envSettings.DisableTelemetry = b
 		case "METRICS_RESOLUTION", "METRICS_RESOLUTION_HR":
-			d, err := time.ParseDuration(v)
-			if err != nil {
-				errs = append(errs, fmt.Errorf("invalid environment variable %q", env))
-				continue
-			}
-			envSettings.MetricsResolutions.HR = d
+			envSettings.MetricsResolutions.HR, err = validateDuration(v, env, time.Second, time.Second)
 		case "METRICS_RESOLUTION_MR":
-			d, err := time.ParseDuration(v)
-			if err != nil {
-				errs = append(errs, fmt.Errorf("invalid environment variable %q", env))
-				continue
-			}
-			envSettings.MetricsResolutions.MR = d
+			envSettings.MetricsResolutions.MR, err = validateDuration(v, env, time.Second, time.Second)
 		case "METRICS_RESOLUTION_LR":
-			d, err := time.ParseDuration(v)
-			if err != nil {
-				errs = append(errs, fmt.Errorf("invalid environment variable %q", env))
-				continue
-			}
-			envSettings.MetricsResolutions.LR = d
+			envSettings.MetricsResolutions.LR, err = validateDuration(v, env, time.Second, time.Second)
 		case "DATA_RETENTION":
-			d, err := time.ParseDuration(v)
-			if err != nil {
-				errs = append(errs, fmt.Errorf("invalid environment variable %q", env))
-			} else if d < 24*time.Hour {
-				errs = append(errs, fmt.Errorf("data_retention: minimal resolution is 24h. received: %q", env))
-			} else if d.Truncate(24*time.Hour) != d {
-				errs = append(errs, fmt.Errorf("data_retention: should be a natural number of days. received: %q", env))
-			} else {
-				envSettings.DataRetention = d
-			}
+			envSettings.DataRetention, err = validateDuration(v, env, 24*time.Hour, 24*time.Hour)
 		default:
 			if !strings.HasPrefix(k, "GF_") {
 				warns = append(warns, fmt.Sprintf("unknown environment variable %q", env))
 			}
 		}
+		if err != nil {
+			errs = append(errs, err)
+		}
 	}
 	return envSettings, errs, warns
+}
+
+func validateDuration(value, env string, min, multipleOf time.Duration) (time.Duration, error) {
+	d, err := time.ParseDuration(value)
+	if err != nil {
+		return 0, fmt.Errorf("environment variable %q has invalid duration %v", env, value)
+	} else if d < min {
+		return 0, fmt.Errorf("environment variable %q cannot be less then %s", env, min)
+	} else if d.Truncate(multipleOf) != d {
+		return 0, fmt.Errorf("environment variable %q should be a natural number of %s", env, multipleOf)
+	}
+	return d, nil
 }

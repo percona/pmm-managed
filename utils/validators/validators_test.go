@@ -46,7 +46,7 @@ func TestEnvVarValidator(t *testing.T) {
 			},
 		}
 
-		gotEnvVars, gotErrs, gotWarns := EnvVarValidator(envs)
+		gotEnvVars, gotErrs, gotWarns := ValidateEnvVars(envs)
 		assert.Equal(t, gotEnvVars, expectedEnvVars)
 		assert.Nil(t, gotErrs)
 		assert.Nil(t, gotWarns)
@@ -60,7 +60,7 @@ func TestEnvVarValidator(t *testing.T) {
 			`unknown environment variable "ANOTHER_UNKNOWN_VAR=VAL"`,
 		}
 
-		gotEnvVars, gotErrs, gotWarns := EnvVarValidator(envs)
+		gotEnvVars, gotErrs, gotWarns := ValidateEnvVars(envs)
 		assert.Equal(t, gotEnvVars, expectedEnvVars)
 		assert.Nil(t, gotErrs)
 		assert.Equal(t, expectedWarns, gotWarns)
@@ -75,7 +75,7 @@ func TestEnvVarValidator(t *testing.T) {
 		}
 		expectedEnvVars := EnvSettings{}
 
-		gotEnvVars, gotErrs, gotWarns := EnvVarValidator(envs)
+		gotEnvVars, gotErrs, gotWarns := ValidateEnvVars(envs)
 		assert.Equal(t, gotEnvVars, expectedEnvVars)
 		assert.Nil(t, gotErrs)
 		assert.Nil(t, gotWarns)
@@ -94,13 +94,13 @@ func TestEnvVarValidator(t *testing.T) {
 		expectedErrs := []error{
 			fmt.Errorf("invalid environment variable %q", "DISABLE_UPDATES=5"),
 			fmt.Errorf("invalid environment variable %q", "DISABLE_TELEMETRY=X"),
-			fmt.Errorf("invalid environment variable %q", "METRICS_RESOLUTION=5f"),
-			fmt.Errorf("invalid environment variable %q", "METRICS_RESOLUTION_MR=s5"),
-			fmt.Errorf("invalid environment variable %q", "METRICS_RESOLUTION_LR=1hour"),
-			fmt.Errorf("invalid environment variable %q", "DATA_RETENTION=keep one week"),
+			fmt.Errorf("environment variable %q has invalid duration 5f", "METRICS_RESOLUTION=5f"),
+			fmt.Errorf("environment variable %q has invalid duration s5", "METRICS_RESOLUTION_MR=s5"),
+			fmt.Errorf("environment variable %q has invalid duration 1hour", "METRICS_RESOLUTION_LR=1hour"),
+			fmt.Errorf("environment variable %q has invalid duration keep one week", "DATA_RETENTION=keep one week"),
 		}
 
-		gotEnvVars, gotErrs, gotWarns := EnvVarValidator(envs)
+		gotEnvVars, gotErrs, gotWarns := ValidateEnvVars(envs)
 		assert.Equal(t, gotEnvVars, expectedEnvVars)
 		assert.Equal(t, gotErrs, expectedErrs)
 		assert.Nil(t, gotWarns)
@@ -119,7 +119,7 @@ func TestEnvVarValidator(t *testing.T) {
 		}
 		expectedEnvVars := EnvSettings{}
 
-		gotEnvVars, gotErrs, gotWarns := EnvVarValidator(envs)
+		gotEnvVars, gotErrs, gotWarns := ValidateEnvVars(envs)
 		assert.Equal(t, gotEnvVars, expectedEnvVars)
 		assert.Nil(t, gotErrs)
 		assert.Nil(t, gotWarns)
@@ -131,9 +131,9 @@ func TestEnvVarValidator(t *testing.T) {
 		}
 		expectedEnvVars := EnvSettings{}
 		expectedErrs := []error{
-			fmt.Errorf("data_retention: minimal resolution is 24h. received: %q", "DATA_RETENTION=1h"),
+			fmt.Errorf("environment variable %q cannot be less then 24h0m0s", "DATA_RETENTION=1h"),
 		}
-		gotEnvVars, gotErrs, gotWarns := EnvVarValidator(envs)
+		gotEnvVars, gotErrs, gotWarns := ValidateEnvVars(envs)
 		assert.Equal(t, gotEnvVars, expectedEnvVars)
 		assert.Equal(t, gotErrs, expectedErrs)
 		assert.Nil(t, gotWarns)
@@ -145,9 +145,9 @@ func TestEnvVarValidator(t *testing.T) {
 		}
 		expectedEnvVars := EnvSettings{}
 		expectedErrs := []error{
-			fmt.Errorf("data_retention: should be a natural number of days. received: %q", "DATA_RETENTION=30h"),
+			fmt.Errorf("environment variable %q should be a natural number of 24h0m0s", "DATA_RETENTION=30h"),
 		}
-		gotEnvVars, gotErrs, gotWarns := EnvVarValidator(envs)
+		gotEnvVars, gotErrs, gotWarns := ValidateEnvVars(envs)
 		assert.Equal(t, gotEnvVars, expectedEnvVars)
 		assert.Equal(t, gotErrs, expectedErrs)
 		assert.Nil(t, gotWarns)
