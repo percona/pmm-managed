@@ -18,6 +18,7 @@ install-race:                   ## Install pmm-managed and pmm-managed-init bina
 	go install -race -v $(PMM_LD_FLAGS) ./...
 
 	# move binaries like release target
+	mkdir -p $(PMM_RELEASE_PATH)
 	mv $(shell go env GOPATH)/bin/pmm-managed $(PMM_RELEASE_PATH)/pmm-managed
 	mv $(shell go env GOPATH)/bin/pmm-managed-init $(PMM_RELEASE_PATH)/pmm-managed-init
 
