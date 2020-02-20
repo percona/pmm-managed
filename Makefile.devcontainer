@@ -13,7 +13,7 @@ gen:                            ## Generate files.
 	make format
 
 install:                        ## Install pmm-managed and pmm-managed-init binaries.
-	install -v $(PMM_LD_FLAGS) ./...
+	go install -v $(PMM_LD_FLAGS) ./...
 
 	make release
 
