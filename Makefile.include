@@ -17,6 +17,10 @@ PMM_LD_FLAGS = -ldflags " \
 			"
 
 release:                        ## Build pmm-managed and pmm-managed-init release binaries.
+	pwd
+	ls -al
+	env
+
 	# build and install all packages as a separate step; required for other make targets
 	env CGO_ENABLED=0 go install -v $(PMM_LD_FLAGS) ./...
 
