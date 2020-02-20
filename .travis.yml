@@ -21,10 +21,13 @@ before_cache:
 
 env:
   global:
-    - CODECOV_ENV=GO_VERSION
+    - CODECOV_ENV=GO_VERSION,PMM_SERVER_IMAGE
 
-    # there is no case when pmm-update is older than pmm-managed (pmm-update self-updates first),
-    # so there is no need to test with old PMM Server versions
+    # There is no case when pmm-update is older than pmm-managed (pmm-update self-updates first),
+    # so there is no need to test with old PMM Server versions.
+    # However, there may be a need to use a different devcontainer image once
+    # https://jira.percona.com/browse/PMM-5451 is implemented.
+    - PMM_SERVER_IMAGE=perconalab/pmm-server:dev-latest
 
     # AWS - PMM Autotest account.
     # Travis secrets are not exposed to pull requests from forks: https://docs.travis-ci.com/user/pull-requests#pull-requests-and-security-restrictions
