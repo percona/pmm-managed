@@ -12,11 +12,14 @@ gen:                            ## Generate files.
 	go generate ./...
 	make format
 
-install:                        ## Install pmm-managed binary.
-	go install $(PMM_LD_FLAGS) -v ./...
+install: release                ## Install pmm-managed and pmm-managed-init binaries.
 
-install-race:                   ## Install pmm-managed binary with race detector.
-	go install $(PMM_LD_FLAGS) -v -race ./...
+install-race:                   ## Install pmm-managed and pmm-managed-init binaries with race detector.
+	go install -race -v $(PMM_LD_FLAGS) ./...
+
+	# move binaries like release target
+	mv $(shell go env GOPATH)/bin/pmm-managed $(PMM_RELEASE_PATH)/pmm-managed
+	mv $(shell go env GOPATH)/bin/pmm-managed-init $(PMM_RELEASE_PATH)/pmm-managed-init
 
 PMM_TEST_PACKAGES ?= ./...
 PMM_TEST_FLAGS ?= -timeout=30s
@@ -56,7 +59,7 @@ format:                         ## Format source code.
 
 _run:
 	supervisorctl stop pmm-managed
-	cp $(shell go env GOPATH)/bin/pmm-managed /usr/sbin/pmm-managed
+	cp $(PMM_RELEASE_PATH)/pmm-managed /usr/sbin/pmm-managed
 	supervisorctl start pmm-managed &
 	supervisorctl tail -f pmm-managed
 

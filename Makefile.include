@@ -17,8 +17,12 @@ PMM_LD_FLAGS = -ldflags " \
 			"
 
 release:                        ## Build pmm-managed and pmm-managed-init release binaries.
-	env CGO_ENABLED=0 go build -v $(PMM_LD_FLAGS) -o $(PMM_RELEASE_PATH)/pmm-managed
-	env CGO_ENABLED=0 go build -v $(PMM_LD_FLAGS) -o $(PMM_RELEASE_PATH)/pmm-managed-init ./cmd/pmm-managed-init
+	# build and install all packages as a separate step; required for other make targets
+	env CGO_ENABLED=0 go install -v $(PMM_LD_FLAGS) ./...
+
+	# move release binaries
+	mv $(shell go env GOPATH)/bin/pmm-managed $(PMM_RELEASE_PATH)/pmm-managed
+	mv $(shell go env GOPATH)/bin/pmm-managed-init $(PMM_RELEASE_PATH)/pmm-managed-init
 
 help:                           ## Display this help message.
 	@echo "Please use \`make <target>\` where <target> is one of:"
