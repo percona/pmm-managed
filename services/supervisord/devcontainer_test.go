@@ -28,6 +28,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/percona/pmm/version"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -56,6 +57,7 @@ func TestDevContainer(t *testing.T) {
 			"cron.log",
 			"dashboard-upgrade.log",
 			"grafana.log",
+			"installed.json",
 			"nginx.access.log",
 			"nginx.conf",
 			"nginx.error.log",
@@ -121,7 +123,8 @@ func TestDevContainer(t *testing.T) {
 		require.NotNil(t, info)
 
 		assert.True(t, strings.HasPrefix(info.Version, "2."), "%s", info.Version)
-		assert.True(t, strings.HasPrefix(info.FullVersion, "2."), "%s", info.FullVersion)
+		fullVersion := normalizeFullversion(info)
+		assert.True(t, strings.HasPrefix(fullVersion, "2."), "%s", fullVersion)
 		require.NotEmpty(t, info.BuildTime)
 		assert.True(t, info.BuildTime.After(gaReleaseDate), "BuildTime = %s", info.BuildTime)
 		assert.Equal(t, "local", info.Repo)
@@ -137,13 +140,15 @@ func TestDevContainer(t *testing.T) {
 		assert.WithinDuration(t, time.Now(), resT, time.Second)
 
 		assert.True(t, strings.HasPrefix(res.Installed.Version, "2."), "%s", res.Installed.Version)
-		assert.True(t, strings.HasPrefix(res.Installed.FullVersion, "2."), "%s", res.Installed.FullVersion)
+		installedFullVersion := normalizeFullversion(&res.Installed)
+		assert.True(t, strings.HasPrefix(installedFullVersion, "2."), "%s", installedFullVersion)
 		require.NotEmpty(t, res.Installed.BuildTime)
 		assert.True(t, res.Installed.BuildTime.After(gaReleaseDate), "Installed.BuildTime = %s", res.Installed.BuildTime)
 		assert.Equal(t, "local", res.Installed.Repo)
 
 		assert.True(t, strings.HasPrefix(res.Latest.Version, "2."), "%s", res.Latest.Version)
-		assert.True(t, strings.HasPrefix(res.Latest.FullVersion, "2."), "%s", res.Latest.FullVersion)
+		latestFullVersion := normalizeFullversion(&res.Latest)
+		assert.True(t, strings.HasPrefix(latestFullVersion, "2."), "%s", latestFullVersion)
 		require.NotEmpty(t, res.Latest.BuildTime)
 		assert.True(t, res.Latest.BuildTime.After(gaReleaseDate), "Latest.BuildTime = %s", res.Latest.BuildTime)
 		assert.NotEmpty(t, res.Latest.Repo)
@@ -288,4 +293,12 @@ func TestDevContainer(t *testing.T) {
 			require.Equal(t, offset, newOffset, "offset = %d, newOffset = %d", offset, newOffset)
 		}
 	})
+}
+
+func normalizeFullversion(info *version.PackageInfo) string {
+	fullVersion := info.FullVersion
+	if os.Getenv("FEATURE_BRANCH") != "" {
+		fullVersion = strings.TrimPrefix(fullVersion, "1:") // Just to remove epoch
+	}
+	return fullVersion
 }

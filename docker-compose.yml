@@ -2,9 +2,7 @@
 version: '3.7'
 services:
   pmm-managed-server:
-    # FIXME
-    # image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server:dev-latest}
-    image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server-fb:PR-650-4304cab}
+    image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server:dev-latest}
     container_name: pmm-managed-server
     hostname: pmm-managed-server
     environment:
