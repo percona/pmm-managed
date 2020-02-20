@@ -47,9 +47,13 @@ import (
 	"github.com/percona/pmm-managed/services/prometheus/internal/prometheus/discovery/targetgroup"
 )
 
-const updateBatchDelay = 3 * time.Second
+const (
+	updateBatchDelay          = 3 * time.Second
+	defaultPrometheusRulesDir = "/srv/prometheus/rules/*.rules.yml"
+)
 
 var checkFailedRE = regexp.MustCompile(`FAILED: parsing YAML file \S+: (.+)\n`)
+var basePrometheusConfig = "/srv/prometheus/prometheus.base.yml"
 
 // Service is responsible for interactions with Prometheus.
 // It assumes the following:
@@ -264,9 +268,41 @@ func (svc *Service) addScrapeConfigs(cfg *config.Config, q *reform.Querier, s *m
 	return nil
 }
 
+func (svc *Service) baseConfig(filename string, s models.MetricsResolutions) *config.Config {
+	cfg := &config.Config{
+		GlobalConfig: config.GlobalConfig{
+			// these values will be overwriten if they exit in the base config gfile
+			ScrapeInterval:     model.Duration(s.LR),
+			ScrapeTimeout:      scrapeTimeout(s.LR),
+			EvaluationInterval: model.Duration(s.LR),
+		},
+	}
+
+	buf, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return cfg
+	}
+
+	if err := yaml.Unmarshal(buf, cfg); err != nil {
+		svc.l.Warnf("Failed to parse base prometheus config %s: %s.", basePrometheusConfig, err)
+	}
+
+	return cfg
+}
+
+func inSlice(slice []string, val string) bool {
+	for _, elem := range slice {
+		if elem == val {
+			return true
+		}
+	}
+	return false
+}
+
 // marshalConfig marshals Prometheus configuration.
 func (svc *Service) marshalConfig() ([]byte, error) {
-	var cfg *config.Config
+	cfg := &config.Config{}
+
 	e := svc.db.InTransaction(func(tx *reform.TX) error {
 		settings, err := models.GetSettings(tx)
 		if err != nil {
@@ -274,22 +310,14 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 		}
 		s := settings.MetricsResolutions
 
-		cfg = &config.Config{
-			GlobalConfig: config.GlobalConfig{
-				ScrapeInterval:     model.Duration(s.LR),
-				ScrapeTimeout:      scrapeTimeout(s.LR),
-				EvaluationInterval: model.Duration(s.LR),
-			},
-			RuleFiles: []string{
-				"/srv/prometheus/rules/*.rules.yml",
-			},
-			ScrapeConfigs: []*config.ScrapeConfig{
-				scrapeConfigForPrometheus(s.HR),
-				scrapeConfigForGrafana(s.MR),
-				scrapeConfigForPMMManaged(s.MR),
-				scrapeConfigForQANAPI2(s.MR),
-			},
+		cfg = svc.baseConfig(basePrometheusConfig, s)
+		if !inSlice(cfg.RuleFiles, defaultPrometheusRulesDir) {
+			cfg.RuleFiles = append(cfg.RuleFiles, defaultPrometheusRulesDir)
 		}
+		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scrapeConfigForPrometheus(s.HR))
+		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scrapeConfigForGrafana(s.MR))
+		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scrapeConfigForPMMManaged(s.MR))
+		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scrapeConfigForQANAPI2(s.MR))
 
 		if settings.AlertManagerURL != "" {
 			u, err := url.Parse(settings.AlertManagerURL)

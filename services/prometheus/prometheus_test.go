@@ -17,9 +17,12 @@
 package prometheus
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"io/ioutil"
+	"log"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -516,5 +519,41 @@ scrape_configs:
 		actual, err := ioutil.ReadFile(configPath) //nolint:gosec
 		require.NoError(t, err)
 		assert.Equal(t, expected, string(actual), "actual:\n%s", actual)
+	})
+}
+
+func TestBasePrometheusConfig(t *testing.T) {
+	t.Run("Default", func(t *testing.T) {
+		db, svc, original := setup(t)
+		defer teardown(t, db, svc, original)
+
+		assert.NoError(t, svc.updateConfiguration())
+		tmpfile, err := ioutil.TempFile("", "mock_base_config.yml")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		defer os.Remove(tmpfile.Name())
+		oldBasePrometheusConfig := basePrometheusConfig
+		basePrometheusConfig = tmpfile.Name()
+		cfg := []byte(`# Managed by pmm-managed. DO NOT EDIT.
+---
+global:
+  scrape_interval: 9m
+  scrape_timeout: 19s
+  evaluation_interval: 9m
+rule_files:
+- /srv/prometheus/rules/fake_first.rules.yml`)
+
+		assert.NoError(t, ioutil.WriteFile(basePrometheusConfig, cfg, os.ModePerm))
+
+		newcfg, err := svc.marshalConfig()
+		assert.NoError(t, err)
+
+		assert.True(t, bytes.Contains(newcfg, cfg))
+		// Check that the default rule files dir was also included in the config
+		assert.True(t, bytes.Contains(newcfg, []byte(defaultPrometheusRulesDir)))
+
+		basePrometheusConfig = oldBasePrometheusConfig
 	})
 }
