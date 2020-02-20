@@ -21,6 +21,7 @@ release:                        ## Build pmm-managed and pmm-managed-init releas
 	env CGO_ENABLED=0 go install -v $(PMM_LD_FLAGS) ./...
 
 	# move release binaries
+	mkdir -p $(PMM_RELEASE_PATH)
 	mv $(shell go env GOPATH)/bin/pmm-managed $(PMM_RELEASE_PATH)/pmm-managed
 	mv $(shell go env GOPATH)/bin/pmm-managed-init $(PMM_RELEASE_PATH)/pmm-managed-init
 
