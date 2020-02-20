@@ -17,14 +17,8 @@ PMM_LD_FLAGS = -ldflags " \
 			"
 
 release:                        ## Build pmm-managed and pmm-managed-init release binaries.
-	# build and install all packages as a separate step; required for other make targets
-	env CGO_ENABLED=0 go install -v $(PMM_LD_FLAGS) ./...
-
-	# move release binaries
-	# FIXME `cp -fb` is used instead of `mv` to avoid "are the same file" error; see https://jira.percona.com/browse/PMM-5452
-	mkdir -p $(PMM_RELEASE_PATH)
-	cp -fb $(shell go env GOPATH)/bin/pmm-managed $(PMM_RELEASE_PATH)/pmm-managed
-	cp -fb $(shell go env GOPATH)/bin/pmm-managed-init $(PMM_RELEASE_PATH)/pmm-managed-init
+	env CGO_ENABLED=0 go build -v $(PMM_LD_FLAGS) -o $(PMM_RELEASE_PATH)/pmm-managed
+	env CGO_ENABLED=0 go build -v $(PMM_LD_FLAGS) -o $(PMM_RELEASE_PATH)/pmm-managed-init ./cmd/pmm-managed-init
 
 help:                           ## Display this help message.
 	@echo "Please use \`make <target>\` where <target> is one of:"
