@@ -41,12 +41,6 @@ import (
 
 // TODO move tests to other files and remove this one.
 func TestDevContainer(t *testing.T) {
-	if os.Getenv("DEVCONTAINER") == "" {
-		t.Skip("can be tested only inside devcontainer")
-	}
-
-	pmmUpdateCheck := NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker_logs"))
-
 	t.Run("Logs", func(t *testing.T) {
 		l := NewLogs("2.4.5", pmmUpdateCheck)
 		ctx := logger.Set(context.Background(), t.Name())
