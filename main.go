@@ -36,9 +36,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/grpc-ecosystem/go-grpc-middleware"
-	"github.com/grpc-ecosystem/go-grpc-middleware/validator"
-	"github.com/grpc-ecosystem/go-grpc-prometheus"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_validator "github.com/grpc-ecosystem/go-grpc-middleware/validator"
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	grpc_gateway "github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
