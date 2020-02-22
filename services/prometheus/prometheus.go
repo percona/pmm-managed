@@ -57,30 +57,32 @@ var checkFailedRE = regexp.MustCompile(`FAILED: parsing YAML file \S+: (.+)\n`)
 //   * Prometheus configuration and rule files are accessible;
 //   * promtool is available.
 type Service struct {
-	configPath   string
-	promtoolPath string
-	db           *reform.DB
-	baseURL      *url.URL
-	client       *http.Client
+	configPath     string
+	baseConfigPath string
+	promtoolPath   string
+	db             *reform.DB
+	baseURL        *url.URL
+	client         *http.Client
 
 	l    *logrus.Entry
 	sema chan struct{}
 }
 
 // NewService creates new service.
-func NewService(configPath string, promtoolPath string, db *reform.DB, baseURL string) (*Service, error) {
+func NewService(configPath, baseConfigPath string, promtoolPath string, db *reform.DB, baseURL string) (*Service, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return &Service{
-		configPath:   configPath,
-		promtoolPath: promtoolPath,
-		db:           db,
-		baseURL:      u,
-		client:       new(http.Client),
-		l:            logrus.WithField("component", "prometheus"),
-		sema:         make(chan struct{}, 1),
+		configPath:     configPath,
+		baseConfigPath: baseConfigPath,
+		promtoolPath:   promtoolPath,
+		db:             db,
+		baseURL:        u,
+		client:         new(http.Client),
+		l:              logrus.WithField("component", "prometheus"),
+		sema:           make(chan struct{}, 1),
 	}, nil
 }
 
@@ -133,8 +135,21 @@ func (svc *Service) reload() error {
 }
 
 func (svc *Service) loadBaseConfig() *config.Config {
-	// TODO https://jira.percona.com/browse/PMM-3387
-	return new(config.Config)
+	buf, err := ioutil.ReadFile(svc.baseConfigPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			svc.l.Errorf("Failed to load base prometheus config %s: %s", svc.baseConfigPath, err)
+		}
+		return new(config.Config)
+	}
+
+	cfg := &config.Config{}
+	if err := yaml.Unmarshal(buf, cfg); err != nil {
+		svc.l.Errorf("Failed to parse base prometheus config %s: %s.", svc.baseConfigPath, err)
+		return new(config.Config)
+	}
+
+	return cfg
 }
 
 // addScrapeConfigs adds Prometheus scrape configs to cfg for all Agents.
