@@ -410,7 +410,7 @@ func main() {
 	kingpin.HelpFlag.Short('h')
 
 	prometheusConfigF := kingpin.Flag("prometheus-config", "Prometheus configuration file path").Required().String()
-	prometheusURLF := kingpin.Flag("prometheus-url", "Prometheus base URL").Default("http://127.0.0.1:9091/prometheus/").String()
+	prometheusURLF := kingpin.Flag("prometheus-url", "Prometheus base URL").Default("http://127.0.0.1:9090/prometheus/").String()
 	promtoolF := kingpin.Flag("promtool", "promtool path").Default("promtool").String()
 
 	grafanaAddrF := kingpin.Flag("grafana-addr", "Grafana HTTP API address").Default("127.0.0.1:3000").String()

@@ -57,7 +57,7 @@ func scrapeConfigForPrometheus(interval time.Duration) *config.ScrapeConfig {
 		MetricsPath:    "/prometheus/metrics",
 		ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
 			StaticConfigs: []*targetgroup.Group{{
-				Targets: []model.LabelSet{{addressLabel: "127.0.0.1:9091"}},
+				Targets: []model.LabelSet{{addressLabel: "127.0.0.1:9090"}},
 				Labels:  model.LabelSet{"instance": "pmm-server"},
 			}},
 		},
