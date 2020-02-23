@@ -41,7 +41,7 @@ func setup(t *testing.T) (*reform.DB, *Service, []byte) {
 	sqlDB := testdb.Open(t, models.SkipFixtures)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	svc, err := NewService(configPath, "", "promtool", db, "http://127.0.0.1:9090/prometheus/")
+	svc, err := NewService(configPath, "", "promtool", db, "http://127.0.0.1:9091/prometheus/")
 	require.NoError(t, err)
 
 	original, err := ioutil.ReadFile(configPath) //nolint:gosec
@@ -191,7 +191,7 @@ scrape_configs:
   metrics_path: /prometheus/metrics
   static_configs:
   - targets:
-    - 127.0.0.1:9090
+    - 127.0.0.1:9091
     labels:
       instance: pmm-server
 - job_name: grafana
@@ -573,7 +573,7 @@ scrape_configs:
   metrics_path: /prometheus/metrics
   static_configs:
   - targets:
-    - 127.0.0.1:9090
+    - 127.0.0.1:9091
     labels:
       instance: pmm-server
 - job_name: grafana

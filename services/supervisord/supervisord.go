@@ -496,8 +496,8 @@ command =
 		--web.console.templates=/usr/share/prometheus/consoles
 		--web.enable-admin-api
 		--web.enable-lifecycle
-		--web.external-url=http://localhost:9090/prometheus/
-		--web.listen-address=:9090
+		--web.external-url=http://localhost:9091/prometheus/
+		--web.listen-address=:9091
 user = pmm
 autorestart = true
 autostart = true
