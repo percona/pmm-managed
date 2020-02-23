@@ -69,7 +69,7 @@ type Service struct {
 }
 
 // NewService creates new service.
-func NewService(configPath, baseConfigPath string, promtoolPath string, db *reform.DB, baseURL string) (*Service, error) {
+func NewService(configPath, baseConfigPath, promtoolPath string, db *reform.DB, baseURL string) (*Service, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, errors.WithStack(err)
