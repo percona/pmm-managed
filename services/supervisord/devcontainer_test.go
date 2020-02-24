@@ -100,6 +100,9 @@ func TestDevContainer(t *testing.T) {
 			r, err := zip.NewReader(reader, reader.Size())
 			require.NoError(t, err)
 
+			// zip file includes client files
+			expected = append(expected, "client/status.json", "client/pmm-admin-version.txt",
+				"client/pmm-agent-version.txt", "client/pmm-agent.yaml", "client/list.txt")
 			actual := make([]string, len(r.File))
 			for i, f := range r.File {
 				actual[i] = f.Name
