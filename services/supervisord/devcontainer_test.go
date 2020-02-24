@@ -76,11 +76,6 @@ func TestDevContainer(t *testing.T) {
 			"supervisord.conf",
 			"supervisord.log",
 			"systemctl_status.log",
-			"client/status.json",
-			"client/pmm-admin-version.txt",
-			"client/pmm-agent-version.txt",
-			"client/pmm-agent.yaml",
-			"client/list.txt",
 		}
 
 		t.Run("Files", func(t *testing.T) {
