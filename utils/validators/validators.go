@@ -65,7 +65,7 @@ func ValidateEnvVars(envs []string) (envSettings EnvSettings, errs []error, warn
 		k, v := strings.ToUpper(p[0]), strings.ToLower(p[1])
 		switch k {
 		// Skip default environment variables.
-		case "PATH", "HOSTNAME", "TERM", "HOME":
+		case "PATH", "HOSTNAME", "TERM", "HOME", "PWD", "SHLVL", "_":
 		case "DISABLE_UPDATES":
 			envSettings.DisableUpdates, err = strconv.ParseBool(v)
 			if err != nil {
@@ -100,10 +100,14 @@ func validateDuration(value, env string, min, multipleOf time.Duration) (time.Du
 	d, err := time.ParseDuration(value)
 	if err != nil {
 		return 0, fmt.Errorf("environment variable %q has invalid duration %v", env, value)
-	} else if d < min {
+	}
+
+	if d < min {
 		return 0, fmt.Errorf("environment variable %q cannot be less then %s", env, min)
-	} else if d.Truncate(multipleOf) != d {
-		return 0, fmt.Errorf("environment variable %q should be a natural number of %s", env, multipleOf)
+	}
+
+	if d.Truncate(multipleOf) != d {
+		return 0, fmt.Errorf("environment variable %q should be a multiple of %s", env, multipleOf)
 	}
 	return d, nil
 }
