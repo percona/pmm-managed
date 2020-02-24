@@ -135,21 +135,22 @@ func (svc *Service) reload() error {
 }
 
 func (svc *Service) loadBaseConfig() *config.Config {
+	var cfg config.Config
+
 	buf, err := ioutil.ReadFile(svc.baseConfigPath)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			svc.l.Errorf("Failed to load base prometheus config %s: %s", svc.baseConfigPath, err)
 		}
-		return new(config.Config)
+		return &cfg
 	}
 
-	cfg := &config.Config{}
-	if err := yaml.Unmarshal(buf, cfg); err != nil {
+	if err := yaml.Unmarshal(buf, &cfg); err != nil {
 		svc.l.Errorf("Failed to parse base prometheus config %s: %s.", svc.baseConfigPath, err)
-		return new(config.Config)
+		return &config.Config{}
 	}
 
-	return cfg
+	return &cfg
 }
 
 // addScrapeConfigs adds Prometheus scrape configs to cfg for all Agents.
