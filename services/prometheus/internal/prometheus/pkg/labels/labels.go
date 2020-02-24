@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Original file: https://github.com/prometheus/prometheus/blob/v2.7.1/pkg/labels/labels.go
+// Original file: https://github.com/prometheus/prometheus/blob/v2.12.0/pkg/labels/labels.go
 // Hash calculation code was removed.
 
 // Copyright 2017 The Prometheus Authors
@@ -203,19 +203,32 @@ func Compare(a, b Labels) int {
 	return len(a) - len(b)
 }
 
-// Builder allows modifiying Labels.
+// Builder allows modifying Labels.
 type Builder struct {
 	base Labels
 	del  []string
 	add  []Label
 }
 
-// NewBuilder returns a new LabelsBuilder
+// NewBuilder returns a new LabelsBuilder.
 func NewBuilder(base Labels) *Builder {
-	return &Builder{
-		base: base,
-		del:  make([]string, 0, 5),
-		add:  make([]Label, 0, 5),
+	b := &Builder{
+		del: make([]string, 0, 5),
+		add: make([]Label, 0, 5),
+	}
+	b.Reset(base)
+	return b
+}
+
+// Reset clears all current state for the builder.
+func (b *Builder) Reset(base Labels) {
+	b.base = base
+	b.del = b.del[:0]
+	b.add = b.add[:0]
+	for _, l := range b.base {
+		if l.Value == "" {
+			b.del = append(b.del, l.Name)
+		}
 	}
 }
 
@@ -234,6 +247,10 @@ func (b *Builder) Del(ns ...string) *Builder {
 
 // Set the name/value pair as a label.
 func (b *Builder) Set(n, v string) *Builder {
+	if v == "" {
+		// Empty labels are the same as missing labels.
+		return b.Del(n)
+	}
 	for i, a := range b.add {
 		if a.Name == n {
 			b.add[i].Value = v

@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Original file: https://github.com/prometheus/prometheus/blob/v2.7.1/config/config.go
+// Original file: https://github.com/prometheus/prometheus/blob/v2.12.0/config/config.go
 
 // Copyright 2015 The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,11 +40,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prometheus/common/model"
 	"gopkg.in/yaml.v2"
 
 	config_util "github.com/percona/pmm-managed/services/prometheus/internal/common/config"
 	sd_config "github.com/percona/pmm-managed/services/prometheus/internal/prometheus/discovery/config"
+	"github.com/percona/pmm-managed/services/prometheus/internal/prometheus/pkg/labels"
 	"github.com/percona/pmm-managed/services/prometheus/internal/prometheus/pkg/relabel"
 )
 
@@ -76,7 +78,7 @@ func LoadFile(filename string) (*Config, error) {
 	}
 	cfg, err := Load(string(content))
 	if err != nil {
-		return nil, fmt.Errorf("parsing YAML file %s: %v", filename, err)
+		return nil, errors.Wrapf(err, "parsing YAML file %s", filename)
 	}
 	resolveFilepaths(filepath.Dir(filename), cfg)
 	return cfg, nil
@@ -100,15 +102,17 @@ var (
 	DefaultScrapeConfig = ScrapeConfig{
 		// ScrapeTimeout and ScrapeInterval default to the
 		// configured globals.
-		MetricsPath: "/metrics",
-		Scheme:      "http",
-		HonorLabels: false,
+		MetricsPath:     "/metrics",
+		Scheme:          "http",
+		HonorLabels:     false,
+		HonorTimestamps: true,
 	}
 
 	// DefaultAlertmanagerConfig is the default alertmanager configuration.
 	DefaultAlertmanagerConfig = AlertmanagerConfig{
-		Scheme:  "http",
-		Timeout: model.Duration(10 * time.Second),
+		Scheme:     "http",
+		Timeout:    model.Duration(10 * time.Second),
+		APIVersion: AlertmanagerAPIVersionV1,
 	}
 
 	// DefaultRemoteWriteConfig is the default remote write configuration.
@@ -125,13 +129,13 @@ var (
 		MinShards:         1,
 		MaxSamplesPerSend: 100,
 
-		// By default, buffer 100 batches, which at 100ms per batch is 10s. At
-		// 1000 shards, this will buffer 10M samples total.
-		Capacity:          100 * 100,
+		// Each shard will have a max of 500 samples pending in it's channel, plus the pending
+		// samples that have been enqueued. Theoretically we should only ever have about 600 samples
+		// per shard pending. At 1000 shards that's 600k.
+		Capacity:          500,
 		BatchSendDeadline: model.Duration(5 * time.Second),
 
-		// Max number of times to retry a batch on recoverable errors.
-		MaxRetries: 3,
+		// Backoff times for retrying a batch of samples on recoverable errors.
 		MinBackoff: model.Duration(30 * time.Millisecond),
 		MaxBackoff: model.Duration(100 * time.Millisecond),
 	}
@@ -170,11 +174,17 @@ func resolveFilepaths(baseDir string, cfg *Config) {
 		cfg.RuleFiles[i] = join(rf)
 	}
 
+	tlsPaths := func(cfg *config_util.TLSConfig) {
+		cfg.CAFile = join(cfg.CAFile)
+		cfg.CertFile = join(cfg.CertFile)
+		cfg.KeyFile = join(cfg.KeyFile)
+	}
 	clientPaths := func(scfg *config_util.HTTPClientConfig) {
+		if scfg.BasicAuth != nil {
+			scfg.BasicAuth.PasswordFile = join(scfg.BasicAuth.PasswordFile)
+		}
 		scfg.BearerTokenFile = join(scfg.BearerTokenFile)
-		scfg.TLSConfig.CAFile = join(scfg.TLSConfig.CAFile)
-		scfg.TLSConfig.CertFile = join(scfg.TLSConfig.CertFile)
-		scfg.TLSConfig.KeyFile = join(scfg.TLSConfig.KeyFile)
+		tlsPaths(&scfg.TLSConfig)
 	}
 	sdPaths := func(cfg *sd_config.ServiceDiscoveryConfig) {
 		// code removed
@@ -187,6 +197,12 @@ func resolveFilepaths(baseDir string, cfg *Config) {
 	for _, cfg := range cfg.AlertingConfig.AlertmanagerConfigs {
 		clientPaths(&cfg.HTTPClientConfig)
 		sdPaths(&cfg.ServiceDiscoveryConfig)
+	}
+	for _, cfg := range cfg.RemoteReadConfigs {
+		clientPaths(&cfg.HTTPClientConfig)
+	}
+	for _, cfg := range cfg.RemoteWriteConfigs {
+		clientPaths(&cfg.HTTPClientConfig)
 	}
 }
 
@@ -217,14 +233,14 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	for _, rf := range c.RuleFiles {
 		if !patRulePath.MatchString(rf) {
-			return fmt.Errorf("invalid rule file path %q", rf)
+			return errors.Errorf("invalid rule file path %q", rf)
 		}
 	}
 	// Do global overrides and validate unique names.
 	jobNames := map[string]struct{}{}
 	for _, scfg := range c.ScrapeConfigs {
 		if scfg == nil {
-			return fmt.Errorf("empty or null scrape config section")
+			return errors.New("empty or null scrape config section")
 		}
 		// First set the correct scrape interval, then check that the timeout
 		// (inferred or explicit) is not greater than that.
@@ -232,7 +248,7 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			scfg.ScrapeInterval = c.GlobalConfig.ScrapeInterval
 		}
 		if scfg.ScrapeTimeout > scfg.ScrapeInterval {
-			return fmt.Errorf("scrape timeout greater than scrape interval for scrape config with job name %q", scfg.JobName)
+			return errors.Errorf("scrape timeout greater than scrape interval for scrape config with job name %q", scfg.JobName)
 		}
 		if scfg.ScrapeTimeout == 0 {
 			if c.GlobalConfig.ScrapeTimeout > scfg.ScrapeInterval {
@@ -243,18 +259,18 @@ func (c *Config) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		}
 
 		if _, ok := jobNames[scfg.JobName]; ok {
-			return fmt.Errorf("found multiple scrape configs with job name %q", scfg.JobName)
+			return errors.Errorf("found multiple scrape configs with job name %q", scfg.JobName)
 		}
 		jobNames[scfg.JobName] = struct{}{}
 	}
 	for _, rwcfg := range c.RemoteWriteConfigs {
 		if rwcfg == nil {
-			return fmt.Errorf("empty or null remote write config section")
+			return errors.New("empty or null remote write config section")
 		}
 	}
 	for _, rrcfg := range c.RemoteReadConfigs {
 		if rrcfg == nil {
-			return fmt.Errorf("empty or null remote read config section")
+			return errors.New("empty or null remote read config section")
 		}
 	}
 	return nil
@@ -270,7 +286,7 @@ type GlobalConfig struct {
 	// How frequently to evaluate rules by default.
 	EvaluationInterval model.Duration `yaml:"evaluation_interval,omitempty"`
 	// The labels to add to any timeseries that this Prometheus instance scrapes.
-	ExternalLabels model.LabelSet `yaml:"external_labels,omitempty"`
+	ExternalLabels labels.Labels `yaml:"external_labels,omitempty"`
 }
 
 // UnmarshalYAML implements the yaml.Unmarshaler interface.
@@ -283,13 +299,22 @@ func (c *GlobalConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
+	for _, l := range gc.ExternalLabels {
+		if !model.LabelName(l.Name).IsValid() {
+			return errors.Errorf("%q is not a valid label name", l.Name)
+		}
+		if !model.LabelValue(l.Value).IsValid() {
+			return errors.Errorf("%q is not a valid label value", l.Value)
+		}
+	}
+
 	// First set the correct scrape interval, then check that the timeout
 	// (inferred or explicit) is not greater than that.
 	if gc.ScrapeInterval == 0 {
 		gc.ScrapeInterval = DefaultGlobalConfig.ScrapeInterval
 	}
 	if gc.ScrapeTimeout > gc.ScrapeInterval {
-		return fmt.Errorf("global scrape timeout greater than scrape interval")
+		return errors.New("global scrape timeout greater than scrape interval")
 	}
 	if gc.ScrapeTimeout == 0 {
 		if DefaultGlobalConfig.ScrapeTimeout > gc.ScrapeInterval {
@@ -319,6 +344,8 @@ type ScrapeConfig struct {
 	JobName string `yaml:"job_name"`
 	// Indicator whether the scraped metrics should remain unmodified.
 	HonorLabels bool `yaml:"honor_labels,omitempty"`
+	// Indicator whether the scraped timestamps should be respected.
+	HonorTimestamps bool `yaml:"honor_timestamps"`
 	// A set of query parameters with which the target is scraped.
 	Params url.Values `yaml:"params,omitempty"`
 	// How frequently to scrape the targets of this scrape config.
@@ -353,7 +380,7 @@ func (c *ScrapeConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 	if len(c.JobName) == 0 {
-		return fmt.Errorf("job_name is empty")
+		return errors.New("job_name is empty")
 	}
 
 	// The UnmarshalYAML method of HTTPClientConfig is not being called because it's not a pointer.
@@ -383,12 +410,12 @@ func (c *ScrapeConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	for _, rlcfg := range c.RelabelConfigs {
 		if rlcfg == nil {
-			return fmt.Errorf("empty or null target relabeling rule in scrape config")
+			return errors.New("empty or null target relabeling rule in scrape config")
 		}
 	}
 	for _, rlcfg := range c.MetricRelabelConfigs {
 		if rlcfg == nil {
-			return fmt.Errorf("empty or null metric relabeling rule in scrape config")
+			return errors.New("empty or null metric relabeling rule in scrape config")
 		}
 	}
 
@@ -419,10 +446,44 @@ func (c *AlertingConfig) UnmarshalYAML(unmarshal func(interface{}) error) error 
 
 	for _, rlcfg := range c.AlertRelabelConfigs {
 		if rlcfg == nil {
-			return fmt.Errorf("empty or null alert relabeling rule")
+			return errors.New("empty or null alert relabeling rule")
 		}
 	}
 	return nil
+}
+
+// AlertmanagerAPIVersion represents a version of the
+// github.com/prometheus/alertmanager/api, e.g. 'v1' or 'v2'.
+type AlertmanagerAPIVersion string
+
+// UnmarshalYAML implements the yaml.Unmarshaler interface.
+func (v *AlertmanagerAPIVersion) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	*v = AlertmanagerAPIVersion("")
+	type plain AlertmanagerAPIVersion
+	if err := unmarshal((*plain)(v)); err != nil {
+		return err
+	}
+
+	for _, supportedVersion := range SupportedAlertmanagerAPIVersions {
+		if *v == supportedVersion {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("expected Alertmanager api version to be one of %v but got %v", SupportedAlertmanagerAPIVersions, *v)
+}
+
+const (
+	// AlertmanagerAPIVersionV1 represents
+	// github.com/prometheus/alertmanager/api/v1.
+	AlertmanagerAPIVersionV1 AlertmanagerAPIVersion = "v1"
+	// AlertmanagerAPIVersionV2 represents
+	// github.com/prometheus/alertmanager/api/v2.
+	AlertmanagerAPIVersionV2 AlertmanagerAPIVersion = "v2"
+)
+
+var SupportedAlertmanagerAPIVersions = []AlertmanagerAPIVersion{
+	AlertmanagerAPIVersionV1, AlertmanagerAPIVersionV2,
 }
 
 // AlertmanagerConfig configures how Alertmanagers can be discovered and communicated with.
@@ -439,6 +500,9 @@ type AlertmanagerConfig struct {
 	PathPrefix string `yaml:"path_prefix,omitempty"`
 	// The timeout used when sending alerts.
 	Timeout model.Duration `yaml:"timeout,omitempty"`
+
+	// The api version of Alertmanager.
+	APIVersion AlertmanagerAPIVersion `yaml:"api_version"`
 
 	// List of Alertmanager relabel configurations.
 	RelabelConfigs []*relabel.Config `yaml:"relabel_configs,omitempty"`
@@ -479,7 +543,7 @@ func (c *AlertmanagerConfig) UnmarshalYAML(unmarshal func(interface{}) error) er
 
 	for _, rlcfg := range c.RelabelConfigs {
 		if rlcfg == nil {
-			return fmt.Errorf("empty or null Alertmanager target relabeling rule")
+			return errors.New("empty or null Alertmanager target relabeling rule")
 		}
 	}
 
@@ -496,7 +560,7 @@ func (c *AlertmanagerConfig) UnmarshalYAML(unmarshal func(interface{}) error) er
 func CheckTargetAddress(address model.LabelValue) error {
 	// For now check for a URL, we may want to expand this later.
 	if strings.Contains(string(address), "/") {
-		return fmt.Errorf("%q is not a valid hostname", address)
+		return errors.Errorf("%q is not a valid hostname", address)
 	}
 	return nil
 }
@@ -533,11 +597,11 @@ func (c *RemoteWriteConfig) UnmarshalYAML(unmarshal func(interface{}) error) err
 		return err
 	}
 	if c.URL == nil {
-		return fmt.Errorf("url for remote_write is empty")
+		return errors.New("url for remote_write is empty")
 	}
 	for _, rlcfg := range c.WriteRelabelConfigs {
 		if rlcfg == nil {
-			return fmt.Errorf("empty or null relabeling rule in remote write config")
+			return errors.New("empty or null relabeling rule in remote write config")
 		}
 	}
 
@@ -550,7 +614,8 @@ func (c *RemoteWriteConfig) UnmarshalYAML(unmarshal func(interface{}) error) err
 // QueueConfig is the configuration for the queue used to write to remote
 // storage.
 type QueueConfig struct {
-	// Number of samples to buffer per shard before we start dropping them.
+	// Number of samples to buffer per shard before we block. Defaults to
+	// MaxSamplesPerSend.
 	Capacity int `yaml:"capacity,omitempty"`
 
 	// Max number of shards, i.e. amount of concurrency.
@@ -564,9 +629,6 @@ type QueueConfig struct {
 
 	// Maximum time sample will wait in buffer.
 	BatchSendDeadline model.Duration `yaml:"batch_send_deadline,omitempty"`
-
-	// Max number of times to retry a batch on recoverable errors.
-	MaxRetries int `yaml:"max_retries,omitempty"`
 
 	// On recoverable errors, backoff exponentially.
 	MinBackoff model.Duration `yaml:"min_backoff,omitempty"`
@@ -595,7 +657,7 @@ func (c *RemoteReadConfig) UnmarshalYAML(unmarshal func(interface{}) error) erro
 		return err
 	}
 	if c.URL == nil {
-		return fmt.Errorf("url for remote_read is empty")
+		return errors.New("url for remote_read is empty")
 	}
 	// The UnmarshalYAML method of HTTPClientConfig is not being called because it's not a pointer.
 	// We cannot make it a pointer as the parser panics for inlined pointer structs.

@@ -42,6 +42,8 @@ import (
 type ServiceDiscoveryConfig struct {
 	// List of labeled target groups for this job.
 	StaticConfigs []*targetgroup.Group `yaml:"static_configs,omitempty"`
+
+	// code removed
 }
 
 // Validate validates the ServiceDiscoveryConfig.
