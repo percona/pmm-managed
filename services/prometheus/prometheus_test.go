@@ -186,6 +186,7 @@ rule_files:
 - /srv/prometheus/rules/*.rules.yml
 scrape_configs:
 - job_name: prometheus
+  honor_timestamps: false
   scrape_interval: 5s
   scrape_timeout: 4s
   metrics_path: /prometheus/metrics
@@ -195,6 +196,7 @@ scrape_configs:
     labels:
       instance: pmm-server
 - job_name: grafana
+  honor_timestamps: false
   scrape_interval: 5s
   scrape_timeout: 4s
   metrics_path: /metrics
@@ -204,6 +206,7 @@ scrape_configs:
     labels:
       instance: pmm-server
 - job_name: pmm-managed
+  honor_timestamps: false
   scrape_interval: 5s
   scrape_timeout: 4s
   metrics_path: /debug/metrics
@@ -213,6 +216,7 @@ scrape_configs:
     labels:
       instance: pmm-server
 - job_name: qan-api2
+  honor_timestamps: false
   scrape_interval: 5s
   scrape_timeout: 4s
   metrics_path: /debug/metrics
@@ -222,6 +226,7 @@ scrape_configs:
     labels:
       instance: pmm-server
 - job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-5s
+  honor_timestamps: false
   params:
     collect[]:
     - custom_query.hr
@@ -252,6 +257,7 @@ scrape_configs:
     username: pmm
     password: /agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd
 - job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr-5s
+  honor_timestamps: false
   params:
     collect[]:
     - custom_query.mr
@@ -287,6 +293,7 @@ scrape_configs:
     username: pmm
     password: /agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd
 - job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_lr-1m0s
+  honor_timestamps: false
   params:
     collect[]:
     - auto_increment.columns
@@ -327,6 +334,7 @@ scrape_configs:
     username: pmm
     password: /agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd
 - job_name: mysqld_exporter_agent_id_f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a_hr-5s
+  honor_timestamps: false
   params:
     collect[]:
     - custom_query.hr
@@ -357,6 +365,7 @@ scrape_configs:
     username: pmm
     password: /agent_id/f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a
 - job_name: mysqld_exporter_agent_id_f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a_mr-5s
+  honor_timestamps: false
   params:
     collect[]:
     - custom_query.mr
@@ -392,6 +401,7 @@ scrape_configs:
     username: pmm
     password: /agent_id/f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a
 - job_name: mysqld_exporter_agent_id_f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a_lr-1m0s
+  honor_timestamps: false
   params:
     collect[]:
     - auto_increment.columns
@@ -432,6 +442,7 @@ scrape_configs:
     username: pmm
     password: /agent_id/f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a
 - job_name: postgres_exporter_agent_id_29e14468-d479-4b4d-bfb7-4ac2fb865bac_hr-5s
+  honor_timestamps: false
   params:
     collect[]:
     - custom_query.hr
@@ -461,6 +472,7 @@ scrape_configs:
     username: pmm
     password: /agent_id/29e14468-d479-4b4d-bfb7-4ac2fb865bac
 - job_name: postgres_exporter_agent_id_29e14468-d479-4b4d-bfb7-4ac2fb865bac_mr-5s
+  honor_timestamps: false
   params:
     collect[]:
     - custom_query.mr
@@ -487,6 +499,7 @@ scrape_configs:
     username: pmm
     password: /agent_id/29e14468-d479-4b4d-bfb7-4ac2fb865bac
 - job_name: postgres_exporter_agent_id_29e14468-d479-4b4d-bfb7-4ac2fb865bac_lr-1m0s
+  honor_timestamps: false
   params:
     collect[]:
     - custom_query.lr
@@ -536,38 +549,19 @@ rule_files:
 - /srv/prometheus/rules/test.rules.yml
 - /srv/prometheus/rules/*.rules.yml
 scrape_configs:
-- job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-5s
-  params:
-    collect[]:
-    - custom_query.hr
-    - global_status
-    - info_schema.innodb_metrics
-    - standard.go
-    - standard.process
+- job_name: victoria-metrics
+  honor_timestamps: true
   scrape_interval: 5s
   scrape_timeout: 4s
   metrics_path: /metrics
   scheme: http
   static_configs:
   - targets:
-    - 1.2.3.4:12345
+    - 127.0.0.1:8428
     labels:
-      _agent_label: baz
-      _node_label: foo
-      _service_label: bar
-      agent_id: /agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd
-      agent_type: mysqld_exporter
-      instance: /agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd
-      node_id: /node_id/cc663f36-18ca-40a1-aea9-c6310bb4738d
-      node_name: test-generic-node
-      node_type: generic
-      service_id: /service_id/014647c3-b2f5-44eb-94f4-d943260a968c
-      service_name: test-mysql
-      service_type: mysql
-  basic_auth:
-    username: pmm
-    password: /agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd
+      instance: pmm-server
 - job_name: prometheus
+  honor_timestamps: false
   scrape_interval: 5s
   scrape_timeout: 4s
   metrics_path: /prometheus/metrics
@@ -577,6 +571,7 @@ scrape_configs:
     labels:
       instance: pmm-server
 - job_name: grafana
+  honor_timestamps: false
   scrape_interval: 5s
   scrape_timeout: 4s
   metrics_path: /metrics
@@ -586,6 +581,7 @@ scrape_configs:
     labels:
       instance: pmm-server
 - job_name: pmm-managed
+  honor_timestamps: false
   scrape_interval: 5s
   scrape_timeout: 4s
   metrics_path: /debug/metrics
@@ -595,6 +591,7 @@ scrape_configs:
     labels:
       instance: pmm-server
 - job_name: qan-api2
+  honor_timestamps: false
   scrape_interval: 5s
   scrape_timeout: 4s
   metrics_path: /debug/metrics
@@ -603,6 +600,17 @@ scrape_configs:
     - 127.0.0.1:9933
     labels:
       instance: pmm-server
+remote_write:
+- url: http://127.0.0.1:8428/api/v1/write
+  remote_timeout: 30s
+  queue_config:
+    capacity: 500
+    max_shards: 1000
+    min_shards: 1
+    max_samples_per_send: 100
+    batch_send_deadline: 5s
+    min_backoff: 30ms
+    max_backoff: 100ms
 `
 		newcfg, err := svc.marshalConfig()
 		assert.NoError(t, err)
