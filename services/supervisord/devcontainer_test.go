@@ -42,7 +42,8 @@ import (
 // TODO move tests to other files and remove this one.
 func TestDevContainer(t *testing.T) {
 	t.Run("Logs", func(t *testing.T) {
-		l := NewLogs("2.4.5", pmmUpdateCheck)
+		checker := NewPMMUpdateChecker(logrus.WithField("test", t.Name()))
+		l := NewLogs("2.4.5", checker)
 		ctx := logger.Set(context.Background(), t.Name())
 		expected := []string{
 			"clickhouse-server.err.log",
@@ -176,8 +177,9 @@ func TestDevContainer(t *testing.T) {
 
 	t.Run("UpdateConfiguration", func(t *testing.T) {
 		// logrus.SetLevel(logrus.DebugLevel)
+		checker := NewPMMUpdateChecker(logrus.WithField("test", t.Name()))
 
-		s := New("/etc/supervisord.d", pmmUpdateCheck)
+		s := New("/etc/supervisord.d", checker)
 		require.NotEmpty(t, s.supervisorctlPath)
 
 		ctx, cancel := context.WithCancel(context.Background())
@@ -225,8 +227,9 @@ func TestDevContainer(t *testing.T) {
 		}
 
 		// logrus.SetLevel(logrus.DebugLevel)
+		checker := NewPMMUpdateChecker(logrus.WithField("test", t.Name()))
 
-		s := New("/etc/supervisord.d", pmmUpdateCheck)
+		s := New("/etc/supervisord.d", checker)
 		require.NotEmpty(t, s.supervisorctlPath)
 
 		ctx, cancel := context.WithCancel(context.Background())
