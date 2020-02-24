@@ -62,9 +62,6 @@ func TestReadLog(t *testing.T) {
 }
 
 func TestAddAdminSummary(t *testing.T) {
-	if os.Getenv("DEVCONTAINER") == "" {
-		t.Skip("can be tested only inside devcontainer")
-	}
 	zipfile, err := ioutil.TempFile("", "*-test.zip")
 	assert.NoError(t, err)
 
