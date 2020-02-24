@@ -296,7 +296,7 @@ func addAdminSummary(ctx context.Context, zw *zip.Writer) error {
 	if err := sf.Close(); err != nil {
 		return errors.WithStack(err)
 	}
-	defer os.Remove(sf.Name())
+	defer os.Remove(sf.Name()) //nolint:errcheck
 
 	cmd := exec.CommandContext(ctx, "pmm-admin", "summary", "--skip-server", "--filename", sf.Name()) //nolint:gosec
 	pdeathsig.Set(cmd, unix.SIGKILL)
@@ -310,7 +310,7 @@ func addAdminSummary(ctx context.Context, zw *zip.Writer) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	defer zr.Close()
+	defer zr.Close() //nolint:errcheck
 
 	for _, file := range zr.File {
 		fw, err := zw.CreateHeader(&zip.FileHeader{
@@ -328,7 +328,7 @@ func addAdminSummary(ctx context.Context, zw *zip.Writer) error {
 		}
 
 		if _, err = io.Copy(fw, fr); err != nil {
-			fr.Close()
+			fr.Close() //nolint:errcheck
 			return errors.WithStack(err)
 		}
 
