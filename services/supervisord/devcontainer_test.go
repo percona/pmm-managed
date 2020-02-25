@@ -101,8 +101,42 @@ func TestDevContainer(t *testing.T) {
 			require.NoError(t, err)
 
 			// zip file includes client files
-			expected = append(expected, "client/status.json", "client/pmm-admin-version.txt",
-				"client/pmm-agent-version.txt", "client/pmm-agent.yaml", "client/list.txt")
+			expected := []string{"clickhouse-server.err.log",
+				"clickhouse-server.log",
+				"clickhouse-server.startup.log",
+				"cron.log",
+				"dashboard-upgrade.log",
+				"grafana.log",
+				"installed.json",
+				"nginx.access.log",
+				"nginx.conf",
+				"nginx.error.log",
+				"nginx.startup.log",
+				"pmm-agent.log",
+				"pmm-agent.yaml",
+				"pmm-managed.log",
+				"pmm-ssl.conf",
+				"pmm-version.txt",
+				"pmm.conf",
+				"pmm.ini",
+				"postgresql.log",
+				"postgresql.startup.log",
+				"prometheus.ini",
+				"prometheus.log",
+				"prometheus.yml",
+				"prometheus_targets.json",
+				"qan-api2.ini",
+				"qan-api2.log",
+				"supervisorctl_status.log",
+				"supervisord.conf",
+				"supervisord.log",
+				"systemctl_status.log",
+				"client/status.json",
+				"client/pmm-agent-version.txt",
+				"client/pmm-admin-version.txt",
+				"client/pmm-agent-config.yaml",
+				"client/list.txt",
+			}
 			actual := make([]string, len(r.File))
 			for i, f := range r.File {
 				actual[i] = f.Name
