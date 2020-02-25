@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Original file: https://github.com/prometheus/prometheus/blob/v2.12.0/pkg/relabel/relabel.go
+// Original file: https://github.com/prometheus/prometheus/blob/v2.16.0/pkg/relabel/relabel.go
 
 // Copyright 2015 The Prometheus Authors
 // Licensed under the Apache License, Version 2.0 (the "License");

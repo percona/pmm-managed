@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Original file: https://github.com/prometheus/prometheus/blob/v2.12.0/discovery/config/config.go
+// Original file: https://github.com/prometheus/prometheus/blob/v2.16.0/discovery/config/config.go
 // Only static_configs were kept, everything else was removed.
 
 // Copyright 2016 The Prometheus Authors
@@ -33,7 +33,7 @@
 package config
 
 import (
-	"fmt"
+	"github.com/pkg/errors"
 
 	"github.com/percona/pmm-managed/services/prometheus/internal/prometheus/discovery/targetgroup"
 )
@@ -50,7 +50,7 @@ type ServiceDiscoveryConfig struct {
 func (c *ServiceDiscoveryConfig) Validate() error {
 	for _, cfg := range c.StaticConfigs {
 		if cfg == nil {
-			return fmt.Errorf("empty or null section in static_configs")
+			return errors.New("empty or null section in static_configs")
 		}
 	}
 	return nil
