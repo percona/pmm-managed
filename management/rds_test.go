@@ -7,11 +7,12 @@ import (
 	"time"
 
 	"github.com/AlekSi/pointer"
-	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
 	"github.com/percona/pmm/api/managementpb/json/client"
 	"github.com/percona/pmm/api/managementpb/json/client/rds"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
 )
 
 func TestRDSDiscovery(t *testing.T) {

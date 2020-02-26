@@ -162,6 +162,7 @@ func init() {
 	}
 
 	transport := Transport(BaseURL, *serverInsecureTLSF)
+	transport.Consumers["application/zip"] = runtime.ByteStreamConsumer()
 	inventoryClient.Default = inventoryClient.New(transport, nil)
 	managementClient.Default = managementClient.New(transport, nil)
 	serverClient.Default = serverClient.New(transport, nil)
