@@ -31,11 +31,11 @@ import (
 	"sync"
 	"time"
 
-	pmmv1beta1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
-	reporterv1beta1 "github.com/percona-platform/saas/gen/telemetry/reporter"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/google/uuid"
+	"github.com/percona-platform/saas/gen/telemetry/events/pmm"
+	"github.com/percona-platform/saas/gen/telemetry/reporter"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/utils/tlsconfig"
 	"github.com/pkg/errors"
@@ -73,7 +73,7 @@ type Service struct {
 	initOnce            sync.Once
 	v1OS                string
 	sDistributionMethod serverpb.DistributionMethod
-	tDistributionMethod pmmv1beta1.DistributionMethod
+	tDistributionMethod pmmv1.DistributionMethod
 	v1URL               string
 	v2Host              string
 }
@@ -99,11 +99,11 @@ func (s *Service) init() {
 	case "ovf":
 		s.v1OS = "ovf"
 		s.sDistributionMethod = serverpb.DistributionMethod_OVF
-		s.tDistributionMethod = pmmv1beta1.DistributionMethod_OVF
+		s.tDistributionMethod = pmmv1.DistributionMethod_OVF
 	case "ami":
 		s.v1OS = "ami"
 		s.sDistributionMethod = serverpb.DistributionMethod_AMI
-		s.tDistributionMethod = pmmv1beta1.DistributionMethod_AMI
+		s.tDistributionMethod = pmmv1.DistributionMethod_AMI
 	case "docker", "": // /srv/pmm-distribution does not exist in PMM 2.0.
 		b, err = ioutil.ReadFile("/proc/version")
 		if err != nil {
@@ -112,7 +112,7 @@ func (s *Service) init() {
 		s.v1OS = getLinuxDistribution(string(b))
 
 		s.sDistributionMethod = serverpb.DistributionMethod_DOCKER
-		s.tDistributionMethod = pmmv1beta1.DistributionMethod_DOCKER
+		s.tDistributionMethod = pmmv1.DistributionMethod_DOCKER
 	}
 
 	s.v1URL = defaultV1URL
@@ -136,14 +136,20 @@ func (s *Service) DistributionMethod() serverpb.DistributionMethod {
 }
 
 // Run runs telemetry service, sending data every interval until context is canceled.
-func (s *Service) Run(ctx context.Context) {
+func (s *Service) Run(ctx context.Context, delay time.Duration) {
 	s.initOnce.Do(s.init)
+
+	if delay != 0 {
+		sleepCtx, sleepCancel := context.WithTimeout(ctx, delay)
+		<-sleepCtx.Done()
+		sleepCancel()
+	}
 
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	for {
-		sendOnceCtx, sendOnceCancel := context.WithTimeout(ctx, 5*time.Second)
+		sendOnceCtx, sendOnceCancel := context.WithTimeout(ctx, timeout)
 		if err := s.sendOnce(sendOnceCtx); err != nil {
 			s.l.Debugf("Telemetry info not send: %s.", err)
 		}
@@ -239,13 +245,13 @@ func (s *Service) sendV1Request(ctx context.Context, data []byte) error {
 	return nil
 }
 
-func (s *Service) makeV2Payload(serverUUID string) (*reporterv1beta1.ReportRequest, error) {
+func (s *Service) makeV2Payload(serverUUID string) (*reporterv1.ReportRequest, error) {
 	serverID, err := hex.DecodeString(serverUUID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to decode UUID %q", serverUUID)
 	}
 
-	event := &pmmv1beta1.ServerUptimeEvent{
+	event := &pmmv1.ServerUptimeEvent{
 		Id:                 serverID,
 		Version:            s.pmmVersion,
 		UpDuration:         ptypes.DurationProto(time.Since(s.start)),
@@ -261,11 +267,11 @@ func (s *Service) makeV2Payload(serverUUID string) (*reporterv1beta1.ReportReque
 	}
 
 	id := uuid.New()
-	req := &reporterv1beta1.ReportRequest{
-		Events: []*reporterv1beta1.Event{{
+	req := &reporterv1.ReportRequest{
+		Events: []*reporterv1.Event{{
 			Id:   id[:],
 			Time: ptypes.TimestampNow(),
-			Event: &reporterv1beta1.AnyEvent{
+			Event: &reporterv1.AnyEvent{
 				TypeUrl: proto.MessageName(event),
 				Binary:  eventB,
 			},
@@ -280,7 +286,7 @@ func (s *Service) makeV2Payload(serverUUID string) (*reporterv1beta1.ReportReque
 	return req, nil
 }
 
-func (s *Service) sendV2Request(ctx context.Context, req *reporterv1beta1.ReportRequest) error {
+func (s *Service) sendV2Request(ctx context.Context, req *reporterv1.ReportRequest) error {
 	if s.v2Host == "" {
 		return errors.New("v2 telemetry disabled via the empty host")
 	}
@@ -306,7 +312,7 @@ func (s *Service) sendV2Request(ctx context.Context, req *reporterv1beta1.Report
 	}
 	defer cc.Close() //nolint:errcheck
 
-	if _, err = reporterv1beta1.NewReporterAPIClient(cc).Report(ctx, req); err != nil {
+	if _, err = reporterv1.NewReporterAPIClient(cc).Report(ctx, req); err != nil {
 		return errors.Wrap(err, "failed to report")
 	}
 	return nil
