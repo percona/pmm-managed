@@ -122,13 +122,15 @@ func TestFiles(t *testing.T) {
 		"supervisorctl_status.log",
 		"supervisord.conf",
 		"supervisord.log",
-		"systemctl_status.log",
 	}
 
 	files := l.files(ctx)
-	actual := make([]string, len(files))
-	for i, f := range files {
-		actual[i] = f.Name
+	actual := make([]string, 0, len(files))
+	for _, f := range files {
+		// present only after update
+		if f.Name == "pmm-update-perform.log" {
+			continue
+		}
 
 		if f.Name == "systemctl_status.log" {
 			assert.EqualError(t, f.Err, "exit status 1")
@@ -136,6 +138,8 @@ func TestFiles(t *testing.T) {
 		}
 
 		assert.NoError(t, f.Err, "name = %q", f.Name)
+
+		actual = append(actual, f.Name)
 	}
 
 	sort.Strings(actual)
@@ -192,10 +196,16 @@ func TestZip(t *testing.T) {
 		"systemctl_status.log",
 	}
 
-	actual := make([]string, len(r.File))
-	for i, f := range r.File {
-		actual[i] = f.Name
+	actual := make([]string, 0, len(r.File))
+	for _, f := range r.File {
+		// present only after update
+		if f.Name == "pmm-update-perform.log" {
+			continue
+		}
+
 		assert.NotZero(t, f.Modified)
+
+		actual = append(actual, f.Name)
 	}
 
 	sort.Strings(actual)
