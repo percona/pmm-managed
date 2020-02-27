@@ -148,5 +148,4 @@ func TestEnvVarValidator(t *testing.T) {
 		assert.Equal(t, gotErrs, expectedErrs)
 		assert.Nil(t, gotWarns)
 	})
-
 }
