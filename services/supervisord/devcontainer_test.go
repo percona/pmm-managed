@@ -17,8 +17,6 @@
 package supervisord
 
 import (
-	"archive/zip"
-	"bytes"
 	"context"
 	"io/ioutil"
 	"os"
@@ -36,116 +34,10 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/utils/logger"
 )
 
 // TODO move tests to other files and remove this one.
 func TestDevContainer(t *testing.T) {
-	t.Run("Logs", func(t *testing.T) {
-		checker := NewPMMUpdateChecker(logrus.WithField("test", t.Name()))
-		l := NewLogs("2.4.5", checker)
-		ctx := logger.Set(context.Background(), t.Name())
-		expected := []string{
-			"clickhouse-server.err.log",
-			"clickhouse-server.log",
-			"clickhouse-server.startup.log",
-			"cron.log",
-			"dashboard-upgrade.log",
-			"grafana.log",
-			"installed.json",
-			"nginx.access.log",
-			"nginx.conf",
-			"nginx.error.log",
-			"nginx.startup.log",
-			"pmm-agent.log",
-			"pmm-agent.yaml",
-			"pmm-managed.log",
-			"pmm-ssl.conf",
-			"pmm-version.txt",
-			"pmm.conf",
-			"pmm.ini",
-			"postgresql.log",
-			"postgresql.startup.log",
-			"prometheus.ini",
-			"prometheus.log",
-			"prometheus.yml",
-			"prometheus_targets.json",
-			"qan-api2.ini",
-			"qan-api2.log",
-			"supervisorctl_status.log",
-			"supervisord.conf",
-			"supervisord.log",
-			"systemctl_status.log",
-		}
-
-		t.Run("Files", func(t *testing.T) {
-			files := l.files(ctx)
-
-			actual := make([]string, len(files))
-			for i, f := range files {
-				actual[i] = f.Name
-				if f.Name == "systemctl_status.log" {
-					assert.EqualError(t, f.Err, "exit status 1")
-					continue
-				}
-				assert.NoError(t, f.Err, "name = %q", f.Name)
-			}
-			assert.Equal(t, expected, actual)
-		})
-
-		t.Run("Zip", func(t *testing.T) {
-			var buf bytes.Buffer
-			require.NoError(t, l.Zip(ctx, &buf))
-			reader := bytes.NewReader(buf.Bytes())
-			r, err := zip.NewReader(reader, reader.Size())
-			require.NoError(t, err)
-
-			// zip file includes client files
-			expected := []string{"clickhouse-server.err.log",
-				"clickhouse-server.log",
-				"clickhouse-server.startup.log",
-				"cron.log",
-				"dashboard-upgrade.log",
-				"grafana.log",
-				"installed.json",
-				"nginx.access.log",
-				"nginx.conf",
-				"nginx.error.log",
-				"nginx.startup.log",
-				"pmm-agent.log",
-				"pmm-agent.yaml",
-				"pmm-managed.log",
-				"pmm-ssl.conf",
-				"pmm-version.txt",
-				"pmm.conf",
-				"pmm.ini",
-				"postgresql.log",
-				"postgresql.startup.log",
-				"prometheus.ini",
-				"prometheus.log",
-				"prometheus.yml",
-				"prometheus_targets.json",
-				"qan-api2.ini",
-				"qan-api2.log",
-				"supervisorctl_status.log",
-				"supervisord.conf",
-				"supervisord.log",
-				"systemctl_status.log",
-				"client/status.json",
-				"client/pmm-agent-version.txt",
-				"client/pmm-admin-version.txt",
-				"client/pmm-agent-config.yaml",
-				"client/list.txt",
-			}
-			actual := make([]string, len(r.File))
-			for i, f := range r.File {
-				actual[i] = f.Name
-				assert.NotZero(t, f.Modified)
-			}
-			assert.Equal(t, expected, actual)
-		})
-	})
-
 	gaReleaseDate := time.Date(2019, 9, 18, 0, 0, 0, 0, time.UTC)
 
 	t.Run("Installed", func(t *testing.T) {
