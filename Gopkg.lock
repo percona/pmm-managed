@@ -234,14 +234,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:5dd563d76963609194a4926b4abb4ad5dd1753697a3536a82dff4a782b0d8d6e"
+  digest = "1:62313834d59737921fb7f74448eb24e9d9f567e5b575d8622575e3f213722284"
   name = "github.com/percona-platform/saas"
   packages = [
     "gen/telemetry/events/pmm",
     "gen/telemetry/reporter",
   ]
   pruneopts = "NUT"
-  revision = "a535c882f7bb6b348592ddd959188f6dc27292ed"
+  revision = "bba3673993d3aed799b81fbd165a70605415028b"
 
 [[projects]]
   digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
