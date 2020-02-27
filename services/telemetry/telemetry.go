@@ -31,8 +31,8 @@ import (
 	"sync"
 	"time"
 
-	pmmv1beta1 "github.com/Percona-Platform/saas/gen/telemetry/events/pmm"
-	reporterv1beta1 "github.com/Percona-Platform/saas/gen/telemetry/reporter"
+	pmmv1beta1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
+	reporterv1beta1 "github.com/percona-platform/saas/gen/telemetry/reporter"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/google/uuid"
