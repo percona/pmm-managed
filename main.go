@@ -556,10 +556,10 @@ func main() {
 	go func() {
 		defer wg.Done()
 
-		// Do not report this instance as running for the first 10 minutes.
+		// Do not report this instance as running for the first 24 hours.
 		// Among other things, that solves reporting during PMM Server building when we start pmm-managed.
 		// TODO https://jira.percona.com/browse/PMM-4429
-		sleepCtx, sleepCancel := context.WithTimeout(ctx, 10*time.Minute)
+		sleepCtx, sleepCancel := context.WithTimeout(ctx, 24*time.Hour)
 		<-sleepCtx.Done()
 		sleepCancel()
 		if ctx.Err() != nil {
