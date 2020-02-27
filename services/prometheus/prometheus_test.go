@@ -20,7 +20,6 @@ import (
 	"context"
 	"database/sql"
 	"io/ioutil"
-	"path/filepath"
 	"testing"
 
 	"github.com/AlekSi/pointer"
@@ -33,7 +32,8 @@ import (
 	"github.com/percona/pmm-managed/utils/testdb"
 )
 
-var configPath = filepath.Join("..", "..", "testdata", "prometheus", "prometheus.yml")
+const configPath = "../../testdata/prometheus/prometheus.yml"
+const baseConfigPath = "../../testdata/prometheus/prometheus.base.yml"
 
 func setup(t *testing.T) (*reform.DB, *Service, []byte) {
 	t.Helper()
@@ -41,7 +41,7 @@ func setup(t *testing.T) (*reform.DB, *Service, []byte) {
 	sqlDB := testdb.Open(t, models.SkipFixtures)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	svc, err := NewService(configPath, "promtool", db, "http://127.0.0.1:9090/prometheus/")
+	svc, err := NewService(configPath, "", "promtool", db, "http://127.0.0.1:9090/prometheus/")
 	require.NoError(t, err)
 
 	original, err := ioutil.ReadFile(configPath) //nolint:gosec
@@ -66,7 +66,7 @@ func TestPrometheus(t *testing.T) {
 		db, svc, original := setup(t)
 		defer teardown(t, db, svc, original)
 
-		assert.NoError(t, svc.updateConfiguration())
+		require.NoError(t, svc.updateConfiguration())
 
 		actual, err := ioutil.ReadFile(configPath) //nolint:gosec
 		require.NoError(t, err)
@@ -76,6 +76,11 @@ func TestPrometheus(t *testing.T) {
 	t.Run("Normal", func(t *testing.T) {
 		db, svc, original := setup(t)
 		defer teardown(t, db, svc, original)
+
+		err := models.SaveSettings(db.Querier, &models.Settings{
+			AlertManagerURL: "http://127.0.0.1:9093/",
+		})
+		require.NoError(t, err)
 
 		for _, str := range []reform.Struct{
 			&models.Node{
@@ -174,7 +179,7 @@ func TestPrometheus(t *testing.T) {
 			require.NoError(t, db.Insert(str), "%+v", str)
 		}
 
-		assert.NoError(t, svc.updateConfiguration())
+		require.NoError(t, svc.updateConfiguration())
 
 		expected := `# Managed by pmm-managed. DO NOT EDIT.
 ---
@@ -182,10 +187,19 @@ global:
   scrape_interval: 1m
   scrape_timeout: 10s
   evaluation_interval: 1m
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets:
+      - 127.0.0.1:9093
+    scheme: http
+    path_prefix: /
+    api_version: v2
 rule_files:
 - /srv/prometheus/rules/*.rules.yml
 scrape_configs:
 - job_name: prometheus
+  honor_timestamps: false
   scrape_interval: 5s
   scrape_timeout: 4s
   metrics_path: /prometheus/metrics
@@ -195,6 +209,7 @@ scrape_configs:
     labels:
       instance: pmm-server
 - job_name: grafana
+  honor_timestamps: false
   scrape_interval: 5s
   scrape_timeout: 4s
   metrics_path: /metrics
@@ -204,6 +219,7 @@ scrape_configs:
     labels:
       instance: pmm-server
 - job_name: pmm-managed
+  honor_timestamps: false
   scrape_interval: 5s
   scrape_timeout: 4s
   metrics_path: /debug/metrics
@@ -213,6 +229,7 @@ scrape_configs:
     labels:
       instance: pmm-server
 - job_name: qan-api2
+  honor_timestamps: false
   scrape_interval: 5s
   scrape_timeout: 4s
   metrics_path: /debug/metrics
@@ -222,6 +239,7 @@ scrape_configs:
     labels:
       instance: pmm-server
 - job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-5s
+  honor_timestamps: false
   params:
     collect[]:
     - custom_query.hr
@@ -252,6 +270,7 @@ scrape_configs:
     username: pmm
     password: /agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd
 - job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr-5s
+  honor_timestamps: false
   params:
     collect[]:
     - custom_query.mr
@@ -287,6 +306,7 @@ scrape_configs:
     username: pmm
     password: /agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd
 - job_name: mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_lr-1m0s
+  honor_timestamps: false
   params:
     collect[]:
     - auto_increment.columns
@@ -327,6 +347,7 @@ scrape_configs:
     username: pmm
     password: /agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd
 - job_name: mysqld_exporter_agent_id_f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a_hr-5s
+  honor_timestamps: false
   params:
     collect[]:
     - custom_query.hr
@@ -357,6 +378,7 @@ scrape_configs:
     username: pmm
     password: /agent_id/f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a
 - job_name: mysqld_exporter_agent_id_f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a_mr-5s
+  honor_timestamps: false
   params:
     collect[]:
     - custom_query.mr
@@ -392,6 +414,7 @@ scrape_configs:
     username: pmm
     password: /agent_id/f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a
 - job_name: mysqld_exporter_agent_id_f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a_lr-1m0s
+  honor_timestamps: false
   params:
     collect[]:
     - auto_increment.columns
@@ -432,6 +455,7 @@ scrape_configs:
     username: pmm
     password: /agent_id/f9ab9f7b-5e53-4952-a2e7-ff25fb90fe6a
 - job_name: postgres_exporter_agent_id_29e14468-d479-4b4d-bfb7-4ac2fb865bac_hr-5s
+  honor_timestamps: false
   params:
     collect[]:
     - custom_query.hr
@@ -461,6 +485,7 @@ scrape_configs:
     username: pmm
     password: /agent_id/29e14468-d479-4b4d-bfb7-4ac2fb865bac
 - job_name: postgres_exporter_agent_id_29e14468-d479-4b4d-bfb7-4ac2fb865bac_mr-5s
+  honor_timestamps: false
   params:
     collect[]:
     - custom_query.mr
@@ -487,6 +512,7 @@ scrape_configs:
     username: pmm
     password: /agent_id/29e14468-d479-4b4d-bfb7-4ac2fb865bac
 - job_name: postgres_exporter_agent_id_29e14468-d479-4b4d-bfb7-4ac2fb865bac_lr-1m0s
+  honor_timestamps: false
   params:
     collect[]:
     - custom_query.lr
@@ -516,5 +542,91 @@ scrape_configs:
 		actual, err := ioutil.ReadFile(configPath) //nolint:gosec
 		require.NoError(t, err)
 		assert.Equal(t, expected, string(actual), "actual:\n%s", actual)
+	})
+}
+
+func TestBasePrometheusConfig(t *testing.T) {
+	t.Run("Default", func(t *testing.T) {
+		db, svc, original := setup(t)
+		defer teardown(t, db, svc, original)
+
+		svc.baseConfigPath = baseConfigPath
+
+		expected := `# Managed by pmm-managed. DO NOT EDIT.
+---
+global:
+  scrape_interval: 9m
+  scrape_timeout: 19s
+  evaluation_interval: 9m
+rule_files:
+- /srv/prometheus/rules/test.rules.yml
+- /srv/prometheus/rules/*.rules.yml
+scrape_configs:
+- job_name: victoria-metrics
+  honor_timestamps: true
+  scrape_interval: 5s
+  scrape_timeout: 4s
+  metrics_path: /metrics
+  scheme: http
+  static_configs:
+  - targets:
+    - 127.0.0.1:8428
+    labels:
+      instance: pmm-server
+- job_name: prometheus
+  honor_timestamps: false
+  scrape_interval: 5s
+  scrape_timeout: 4s
+  metrics_path: /prometheus/metrics
+  static_configs:
+  - targets:
+    - 127.0.0.1:9090
+    labels:
+      instance: pmm-server
+- job_name: grafana
+  honor_timestamps: false
+  scrape_interval: 5s
+  scrape_timeout: 4s
+  metrics_path: /metrics
+  static_configs:
+  - targets:
+    - 127.0.0.1:3000
+    labels:
+      instance: pmm-server
+- job_name: pmm-managed
+  honor_timestamps: false
+  scrape_interval: 5s
+  scrape_timeout: 4s
+  metrics_path: /debug/metrics
+  static_configs:
+  - targets:
+    - 127.0.0.1:7773
+    labels:
+      instance: pmm-server
+- job_name: qan-api2
+  honor_timestamps: false
+  scrape_interval: 5s
+  scrape_timeout: 4s
+  metrics_path: /debug/metrics
+  static_configs:
+  - targets:
+    - 127.0.0.1:9933
+    labels:
+      instance: pmm-server
+remote_write:
+- url: http://127.0.0.1:8428/api/v1/write
+  remote_timeout: 30s
+  queue_config:
+    capacity: 500
+    max_shards: 1000
+    min_shards: 1
+    max_samples_per_send: 100
+    batch_send_deadline: 5s
+    min_backoff: 30ms
+    max_backoff: 100ms
+`
+		newcfg, err := svc.marshalConfig()
+		assert.NoError(t, err)
+		assert.Equal(t, expected, string(newcfg), "actual:\n%s", newcfg)
 	})
 }
