@@ -466,6 +466,10 @@ func (s *Server) validateChangeSettingsRequest(req *serverpb.ChangeSettingsReque
 		{req.DataRetention, "data_retention", validators.ValidateDataRetention, validators.DataRetentionMultipleOf},
 	}
 	for _, v := range checkCases {
+		if v.Dur == nil {
+			continue
+		}
+
 		if _, err := v.validator(getDuration(v.Dur)); err != nil {
 			switch err.(type) {
 			case validators.AliquotDurationError:
