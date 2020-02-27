@@ -442,18 +442,28 @@ func (s *Server) validateChangeSettingsRequest(req *serverpb.ChangeSettingsReque
 		return status.Error(codes.InvalidArgument, "Both alert_manager_rules and remove_alert_manager_rules are present.")
 	}
 
-	if getDuration(metricsRes.GetHr()) < 0 {
-		return status.Error(codes.InvalidArgument, "metrics_resolutions.hr can't be negative.")
+	checkCases := []struct {
+		Dur        *duration.Duration
+		FieldName  string
+		validator  func(time.Duration) (time.Duration, error)
+		MultipleOf time.Duration
+	}{
+		{metricsRes.GetHr(), "metrics_resolutions.hr", validators.ValidateMetricResolution, validators.MetricsResolutionMultipleOf},
+		{metricsRes.GetMr(), "metrics_resolutions.mr", validators.ValidateMetricResolution, validators.MetricsResolutionMultipleOf},
+		{metricsRes.GetLr(), "metrics_resolutions.lr", validators.ValidateMetricResolution, validators.MetricsResolutionMultipleOf},
+		{req.DataRetention, "data_retention", validators.ValidateDataRetention, validators.DataRetentionMultipleOf},
 	}
-	if getDuration(metricsRes.GetMr()) < 0 {
-		return status.Error(codes.InvalidArgument, "metrics_resolutions.mr can't be negative.")
-	}
-	if getDuration(metricsRes.GetLr()) < 0 {
-		return status.Error(codes.InvalidArgument, "metrics_resolutions.lr can't be negative.")
-	}
-
-	if getDuration(req.DataRetention) < 0 {
-		return status.Error(codes.InvalidArgument, "data_retention can't be negative.")
+	for _, v := range checkCases {
+		if _, err := v.validator(getDuration(v.Dur)); err != nil {
+			switch err.(type) {
+			case validators.AliquotDurationError:
+				return status.Error(codes.InvalidArgument, fmt.Sprintf("%s should be a multiple of %s.", v.FieldName, v.MultipleOf))
+			case validators.MinDurationError:
+				return status.Error(codes.InvalidArgument, fmt.Sprintf("%s can't be negative.", v.FieldName))
+			default:
+				return status.Error(codes.InvalidArgument, fmt.Sprintf("unknown error for %s.", v.FieldName))
+			}
+		}
 	}
 
 	// check request parameters compatibility with environment variables

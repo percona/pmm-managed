@@ -22,6 +22,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 // MetricsResolutions contains standard Prometheus metrics resolutions.
@@ -38,6 +40,32 @@ type EnvSettings struct {
 	MetricsResolutions MetricsResolutions
 	DataRetention      time.Duration
 }
+
+const (
+	// MetricsResolutionMin is the smallest value metric resolution can accept.
+	MetricsResolutionMin = time.Second
+	// MetricsResolutionMultipleOf is value metrics resolution should be multiple of.
+	MetricsResolutionMultipleOf = time.Second
+	// DataRetentionMin is the smallest value data retention can accept.
+	DataRetentionMin = 24 * time.Hour
+	// DataRetentionMultipleOf is a value of data retention should be multiple of.
+	DataRetentionMultipleOf = 24 * time.Hour
+)
+
+// InvalidDurationError invalid duration error.
+type InvalidDurationError string
+
+func (e InvalidDurationError) Error() string { return string(e) }
+
+// MinDurationError minimum allowed duration error.
+type MinDurationError string
+
+func (e MinDurationError) Error() string { return string(e) }
+
+// AliquotDurationError multiple of duration allowed error.
+type AliquotDurationError string
+
+func (e AliquotDurationError) Error() string { return string(e) }
 
 // ValidateEnvVars validates given environment variables.
 //
@@ -62,6 +90,7 @@ func ValidateEnvVars(envs []string) (envSettings EnvSettings, errs []error, warn
 		}
 
 		var err error
+
 		k, v := strings.ToUpper(p[0]), strings.ToLower(p[1])
 		switch k {
 		// Skip default environment variables.
@@ -77,13 +106,21 @@ func ValidateEnvVars(envs []string) (envSettings EnvSettings, errs []error, warn
 				err = fmt.Errorf("invalid environment variable %q", env)
 			}
 		case "METRICS_RESOLUTION", "METRICS_RESOLUTION_HR":
-			envSettings.MetricsResolutions.HR, err = validateDuration(v, env, time.Second, time.Second)
+			if envSettings.MetricsResolutions.HR, err = ValidateStringMetricResolution(v); err != nil {
+				err = formatEnvVariableError(err, env, v, MetricsResolutionMin, MetricsResolutionMultipleOf)
+			}
 		case "METRICS_RESOLUTION_MR":
-			envSettings.MetricsResolutions.MR, err = validateDuration(v, env, time.Second, time.Second)
+			if envSettings.MetricsResolutions.MR, err = ValidateStringMetricResolution(v); err != nil {
+				err = formatEnvVariableError(err, env, v, MetricsResolutionMin, MetricsResolutionMultipleOf)
+			}
 		case "METRICS_RESOLUTION_LR":
-			envSettings.MetricsResolutions.LR, err = validateDuration(v, env, time.Second, time.Second)
+			if envSettings.MetricsResolutions.LR, err = ValidateStringMetricResolution(v); err != nil {
+				err = formatEnvVariableError(err, env, v, MetricsResolutionMin, MetricsResolutionMultipleOf)
+			}
 		case "DATA_RETENTION":
-			envSettings.DataRetention, err = validateDuration(v, env, 24*time.Hour, 24*time.Hour)
+			if envSettings.DataRetention, err = ValidateStringDataRetention(v); err != nil {
+				err = formatEnvVariableError(err, env, v, DataRetentionMin, DataRetentionMultipleOf)
+			}
 		default:
 			if !strings.HasPrefix(k, "GF_") {
 				warns = append(warns, fmt.Sprintf("unknown environment variable %q", env))
@@ -96,18 +133,58 @@ func ValidateEnvVars(envs []string) (envSettings EnvSettings, errs []error, warn
 	return envSettings, errs, warns
 }
 
-func validateDuration(value, env string, min, multipleOf time.Duration) (time.Duration, error) {
+func formatEnvVariableError(err error, env, value string, min, multipleOf time.Duration) error {
+	switch e := err.(type) {
+	case InvalidDurationError:
+		return fmt.Errorf("environment variable %q has invalid duration %s", env, value)
+	case MinDurationError:
+		return fmt.Errorf("environment variable %q cannot be less then %s", env, min)
+	case AliquotDurationError:
+		fmt.Printf("")
+		return fmt.Errorf("environment variable %q should be a multiple of %s", env, multipleOf)
+	default:
+		return errors.Wrap(e, "unknown error")
+	}
+}
+
+// ValidateStringDuration validate duration as string value.
+func ValidateStringDuration(value string, min, multipleOf time.Duration) (time.Duration, error) {
 	d, err := time.ParseDuration(value)
 	if err != nil {
-		return 0, fmt.Errorf("environment variable %q has invalid duration %v", env, value)
+		return d, InvalidDurationError("invalid duration error")
 	}
 
+	return ValidateDuration(d, min, multipleOf)
+}
+
+// ValidateDuration validate duration.
+func ValidateDuration(d, min, multipleOf time.Duration) (time.Duration, error) {
 	if d < min {
-		return 0, fmt.Errorf("environment variable %q cannot be less then %s", env, min)
+		return d, MinDurationError("min duration error")
 	}
 
 	if d.Truncate(multipleOf) != d {
-		return 0, fmt.Errorf("environment variable %q should be a multiple of %s", env, multipleOf)
+		return d, AliquotDurationError("aliquot	duration error")
 	}
 	return d, nil
+}
+
+// ValidateStringMetricResolution validate metric resolution.
+func ValidateStringMetricResolution(value string) (time.Duration, error) {
+	return ValidateStringDuration(value, MetricsResolutionMin, MetricsResolutionMultipleOf)
+}
+
+// ValidateMetricResolution validate metric resolution.
+func ValidateMetricResolution(value time.Duration) (time.Duration, error) {
+	return ValidateDuration(value, MetricsResolutionMin, MetricsResolutionMultipleOf)
+}
+
+// ValidateStringDataRetention validate metric resolution.
+func ValidateStringDataRetention(value string) (time.Duration, error) {
+	return ValidateStringDuration(value, DataRetentionMin, DataRetentionMultipleOf)
+}
+
+// ValidateDataRetention validate metric resolution.
+func ValidateDataRetention(value time.Duration) (time.Duration, error) {
+	return ValidateDuration(value, DataRetentionMin, DataRetentionMultipleOf)
 }

@@ -129,12 +129,10 @@ func TestEnvVarValidator(t *testing.T) {
 		envs := []string{
 			"DATA_RETENTION=1h",
 		}
-		expectedEnvVars := EnvSettings{}
 		expectedErrs := []error{
 			fmt.Errorf("environment variable %q cannot be less then 24h0m0s", "DATA_RETENTION=1h"),
 		}
-		gotEnvVars, gotErrs, gotWarns := ValidateEnvVars(envs)
-		assert.Equal(t, gotEnvVars, expectedEnvVars)
+		_, gotErrs, gotWarns := ValidateEnvVars(envs)
 		assert.Equal(t, gotErrs, expectedErrs)
 		assert.Nil(t, gotWarns)
 	})
@@ -143,13 +141,12 @@ func TestEnvVarValidator(t *testing.T) {
 		envs := []string{
 			"DATA_RETENTION=30h",
 		}
-		expectedEnvVars := EnvSettings{}
 		expectedErrs := []error{
-			fmt.Errorf("environment variable %q should be a natural number of 24h0m0s", "DATA_RETENTION=30h"),
+			fmt.Errorf("environment variable %q should be a multiple of 24h0m0s", "DATA_RETENTION=30h"),
 		}
-		gotEnvVars, gotErrs, gotWarns := ValidateEnvVars(envs)
-		assert.Equal(t, gotEnvVars, expectedEnvVars)
+		_, gotErrs, gotWarns := ValidateEnvVars(envs)
 		assert.Equal(t, gotErrs, expectedErrs)
 		assert.Nil(t, gotWarns)
 	})
+
 }
