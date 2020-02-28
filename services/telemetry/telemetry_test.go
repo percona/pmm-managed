@@ -25,11 +25,12 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"
-	"github.com/percona-platform/saas/gen/telemetry/events/pmm"
+	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+//nolint:lll
 func TestMakeV1Payload(t *testing.T) {
 	s := NewService(nil, "")
 
@@ -40,12 +41,9 @@ func TestMakeV1Payload(t *testing.T) {
 	}
 
 	for expected, p := range map[string]param{
-		"ACAB81E4C47D456CA9EC20AEBF91AB44;OS;linux\nACAB81E4C47D456CA9EC20AEBF91AB44;PMM;1.3.1\n":
-		{os: "linux", uuid: "ACAB81E4C47D456CA9EC20AEBF91AB44", version: "1.3.1"},
-		"BCAB81E4C47D456CA9EC20AEBF91AB44;OS;ovf\nBCAB81E4C47D456CA9EC20AEBF91AB44;PMM;1.3.2\n":
-		{os: "ovf", uuid: "BCAB81E4C47D456CA9EC20AEBF91AB44", version: "1.3.2"},
-		"CCAB81E4C47D456CA9EC20AEBF91AB44;OS;ami\nCCAB81E4C47D456CA9EC20AEBF91AB44;PMM;1.3.3\n":
-		{os: "ami", uuid: "CCAB81E4C47D456CA9EC20AEBF91AB44", version: "1.3.3"},
+		"ACAB81E4C47D456CA9EC20AEBF91AB44;OS;linux\nACAB81E4C47D456CA9EC20AEBF91AB44;PMM;1.3.1\n": {os: "linux", uuid: "ACAB81E4C47D456CA9EC20AEBF91AB44", version: "1.3.1"},
+		"BCAB81E4C47D456CA9EC20AEBF91AB44;OS;ovf\nBCAB81E4C47D456CA9EC20AEBF91AB44;PMM;1.3.2\n":   {os: "ovf", uuid: "BCAB81E4C47D456CA9EC20AEBF91AB44", version: "1.3.2"},
+		"CCAB81E4C47D456CA9EC20AEBF91AB44;OS;ami\nCCAB81E4C47D456CA9EC20AEBF91AB44;PMM;1.3.3\n":   {os: "ami", uuid: "CCAB81E4C47D456CA9EC20AEBF91AB44", version: "1.3.3"},
 	} {
 		s.os = p.os
 		s.pmmVersion = p.version
@@ -79,7 +77,6 @@ func TestMakeV2Payload(t *testing.T) {
 	assert.GreaterOrEqual(t, float64(uEv.UpDuration.Seconds), delay.Seconds())
 	assert.Equal(t, u, hex.EncodeToString(uEv.Id))
 }
-
 
 func TestSendV2Request(t *testing.T) {
 	os.Setenv(envV2Host, "callhome-staging.percona.com:443")
@@ -121,7 +118,7 @@ func isValidUUID(t *testing.T, b []byte) bool {
 	return true
 }
 
-//nolint[:lll]
+//nolint:lll
 func TestGetLinuxDistribution(t *testing.T) {
 	for expected, procVersion := range map[string][]string{
 		// cat /proc/version

@@ -556,7 +556,7 @@ func main() {
 	go func() {
 		defer wg.Done()
 		// Telemetry service start sending data after 24 hours servers uptime.
-		telemetry.Run(ctx, 24 * time.Hour)
+		telemetry.Run(ctx, 24*time.Hour)
 	}()
 
 	wg.Add(1)
