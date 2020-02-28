@@ -17,7 +17,9 @@
 package telemetry
 
 import (
+	"context"
 	"encoding/hex"
+	"os"
 	"testing"
 	"time"
 
@@ -76,6 +78,37 @@ func TestMakeV2Payload(t *testing.T) {
 	assert.LessOrEqual(t, float64(uEv.UpDuration.Seconds), (delay + 2*time.Second).Seconds())
 	assert.GreaterOrEqual(t, float64(uEv.UpDuration.Seconds), delay.Seconds())
 	assert.Equal(t, u, hex.EncodeToString(uEv.Id))
+}
+
+
+func TestSendV2Request(t *testing.T) {
+	os.Setenv(envV2Host, "callhome-staging.percona.com:443")
+
+	// TODO check tests
+
+	t.Run("Normal", func(t *testing.T) {
+		s := NewService(nil, "2.3.0")
+		u, err := generateUUID()
+		require.NoError(t, err)
+		payload, err := s.makeV2Payload(u)
+		require.NoError(t, err)
+
+		err = s.sendV2Request(context.Background(), payload)
+		assert.NoError(t, err)
+	})
+
+	t.Run("Empty host", func(t *testing.T) {
+		s := NewService(nil, "2.3.0")
+		s.v2Host = ""
+		u, err := generateUUID()
+		require.NoError(t, err)
+		req, err := s.makeV2Payload(u)
+		require.NoError(t, err)
+
+		err = s.sendV2Request(context.Background(), req)
+		require.Error(t, err)
+		assert.Equal(t, "v2 telemetry disabled via the empty host", err.Error())
+	})
 }
 
 func isValidUUID(t *testing.T, b []byte) bool {
