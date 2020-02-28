@@ -17,17 +17,78 @@
 package telemetry
 
 import (
+	"encoding/hex"
 	"testing"
+	"time"
 
+	"github.com/golang/protobuf/proto"
+	"github.com/google/uuid"
+	"github.com/percona-platform/saas/gen/telemetry/events/pmm"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestMakePayload(t *testing.T) {
-	s := NewService(nil, "1.3.1")
-	expected := "ECAB81E4C47D456CA9EC20AEBF91AB44;OS;\nECAB81E4C47D456CA9EC20AEBF91AB44;PMM;1.3.1\n"
-	assert.Equal(t, expected, string(s.makeV1Payload("ECAB81E4C47D456CA9EC20AEBF91AB44"))) // \n are important
+func TestMakeV1Payload(t *testing.T) {
+	s := NewService(nil, "")
+
+	type param struct {
+		os      string
+		uuid    string
+		version string
+	}
+
+	for expected, p := range map[string]param{
+		"ACAB81E4C47D456CA9EC20AEBF91AB44;OS;linux\nACAB81E4C47D456CA9EC20AEBF91AB44;PMM;1.3.1\n":
+		{os: "linux", uuid: "ACAB81E4C47D456CA9EC20AEBF91AB44", version: "1.3.1"},
+		"BCAB81E4C47D456CA9EC20AEBF91AB44;OS;ovf\nBCAB81E4C47D456CA9EC20AEBF91AB44;PMM;1.3.2\n":
+		{os: "ovf", uuid: "BCAB81E4C47D456CA9EC20AEBF91AB44", version: "1.3.2"},
+		"CCAB81E4C47D456CA9EC20AEBF91AB44;OS;ami\nCCAB81E4C47D456CA9EC20AEBF91AB44;PMM;1.3.3\n":
+		{os: "ami", uuid: "CCAB81E4C47D456CA9EC20AEBF91AB44", version: "1.3.3"},
+	} {
+		s.os = p.os
+		s.pmmVersion = p.version
+		actual := s.makeV1Payload(p.uuid)
+		assert.Equal(t, expected, string(actual)) // \n are important
+	}
 }
 
+func TestMakeV2Payload(t *testing.T) {
+	s := NewService(nil, "2.3.0")
+	delay := 6 * time.Hour
+	s.start = time.Now().Add(-delay)
+	s.tDistributionMethod = pmmv1.DistributionMethod_DOCKER
+	u, err := generateUUID()
+	require.NoError(t, err)
+
+	r, err := s.makeV2Payload(u)
+	require.NoError(t, err)
+	assert.Len(t, r.Events, 1)
+
+	ev := r.Events[0]
+	assert.True(t, isValidUUID(t, ev.Id))
+
+	var uEv pmmv1.ServerUptimeEvent
+	err = proto.Unmarshal(r.Events[0].Event.Binary, &uEv)
+	require.NoError(t, err)
+
+	assert.Equal(t, uEv.Version, "2.3.0")
+	assert.Equal(t, uEv.DistributionMethod, pmmv1.DistributionMethod_DOCKER)
+	assert.LessOrEqual(t, float64(uEv.UpDuration.Seconds), (delay + 2*time.Second).Seconds())
+	assert.GreaterOrEqual(t, float64(uEv.UpDuration.Seconds), delay.Seconds())
+	assert.Equal(t, u, hex.EncodeToString(uEv.Id))
+}
+
+func isValidUUID(t *testing.T, b []byte) bool {
+	var u uuid.UUID
+	if err := u.UnmarshalBinary(b); err != nil {
+		t.Log(err)
+		return false
+	}
+
+	return true
+}
+
+//nolint[:lll]
 func TestGetLinuxDistribution(t *testing.T) {
 	for expected, procVersion := range map[string][]string{
 		// cat /proc/version
