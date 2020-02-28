@@ -53,14 +53,10 @@ const (
 	interval = 1 * time.Minute
 	timeout  = 5 * time.Second
 
-	defaultV1URLProd = "https://v.percona.com/"
-	defaultV1URLDev  = ""
-
-	defaultV2HostProd = "check.percona.com:443"
-	defaultV2HostDev  = "callhome-staging.percona.com:443" // protocol is always https
+	defaultV1URL  = "https://v.percona.com/"
+	defaultV2Host = "check.percona.com:443" // protocol is always https
 
 	// environment variables that affect telemetry service
-	envDev    = "PERCONA_TELEMETRY_DEV"
 	envV1URL  = "PERCONA_VERSION_CHECK_URL" // the same name as for the Toolkit
 	envV2Host = "PERCONA_TELEMETRY_HOST"
 )
@@ -69,7 +65,6 @@ const (
 type Service struct {
 	db         *reform.DB
 	pmmVersion string
-	l          *logrus.Entry
 	start      time.Time
 
 	v1URL  string
@@ -91,7 +86,6 @@ func NewService(db *reform.DB, pmmVersion string) *Service {
 	return &Service{
 		db:                  db,
 		pmmVersion:          pmmVersion,
-		l:                   l,
 		start:               time.Now(),
 		sDistributionMethod: sDistMethod,
 		tDistributionMethod: tDistMethod,
@@ -125,15 +119,8 @@ func getDistributionMethodAndOS() (serverpb.DistributionMethod, pmmv1.Distributi
 
 // getTelemetryHosts returns telemetry host for v1 and v1 API
 func getTelemetryHosts() (string, string) {
-	var v1URL, v2Host string
-
-	if e := os.Getenv(envDev); e == "true" {
-		v1URL = defaultV1URLDev
-		v2Host = defaultV2HostDev
-	} else {
-		v1URL = defaultV1URLProd
-		v2Host = defaultV2HostProd
-	}
+	v1URL := defaultV1URL
+	v2Host := defaultV2Host
 
 	if u := os.Getenv(envV1URL); u != "" {
 		v1URL = u
@@ -165,7 +152,7 @@ func (s *Service) Run(ctx context.Context, delay time.Duration) {
 	for {
 		sendOnceCtx, sendOnceCancel := context.WithTimeout(ctx, timeout)
 		if err := s.sendOnce(sendOnceCtx); err != nil {
-			s.l.Debugf("Telemetry info not send: %s.", err)
+			l.Debugf("Telemetry info not send: %s.", err)
 		}
 		sendOnceCancel()
 
@@ -215,7 +202,7 @@ func (s *Service) sendOnce(ctx context.Context) error {
 			return err
 		}
 		err = s.sendV2Request(ctx, req)
-		s.l.Debugf("sendV2Request: %+v", err)
+		l.Debugf("sendV2Request: %+v", err)
 		return err
 	})
 
@@ -273,7 +260,7 @@ func (s *Service) makeV2Payload(serverUUID string) (*reporterv1.ReportRequest, e
 	}
 	if err = event.Validate(); err != nil {
 		// log and ignore
-		s.l.Debugf("Failed to validate event: %s.", err)
+		l.Debugf("Failed to validate event: %s.", err)
 	}
 	eventB, err := proto.Marshal(event)
 	if err != nil {
@@ -291,10 +278,10 @@ func (s *Service) makeV2Payload(serverUUID string) (*reporterv1.ReportRequest, e
 			},
 		}},
 	}
-	s.l.Debugf("Request: %+v", req)
+	l.Debugf("Request: %+v", req)
 	if err = req.Validate(); err != nil {
 		// log and ignore
-		s.l.Debugf("Failed to validate request: %s.", err)
+		l.Debugf("Failed to validate request: %s.", err)
 	}
 
 	return req, nil
@@ -304,6 +291,8 @@ func (s *Service) sendV2Request(ctx context.Context, req *reporterv1.ReportReque
 	if s.v2Host == "" {
 		return errors.New("v2 telemetry disabled via the empty host")
 	}
+
+	l.Debugf("Use %s as telemetry host.", s.v2Host)
 
 	host, _, err := net.SplitHostPort(s.v2Host)
 	if err != nil {

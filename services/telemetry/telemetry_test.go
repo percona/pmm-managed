@@ -62,13 +62,13 @@ func TestMakeV2Payload(t *testing.T) {
 
 	r, err := s.makeV2Payload(u)
 	require.NoError(t, err)
-	assert.Len(t, r.Events, 1)
+	require.Len(t, r.Events, 1)
 
 	ev := r.Events[0]
 	assert.True(t, isValidUUID(t, ev.Id))
 
 	var uEv pmmv1.ServerUptimeEvent
-	err = proto.Unmarshal(r.Events[0].Event.Binary, &uEv)
+	err = proto.Unmarshal(ev.Event.Binary, &uEv)
 	require.NoError(t, err)
 
 	assert.Equal(t, uEv.Version, "2.3.0")
