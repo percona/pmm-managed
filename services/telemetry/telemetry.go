@@ -28,7 +28,6 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -47,6 +46,8 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 )
+
+var l = logrus.WithField("component", "telemetry")
 
 const (
 	interval = 1 * time.Minute
@@ -71,81 +72,87 @@ type Service struct {
 	l          *logrus.Entry
 	start      time.Time
 
-	initOnce            sync.Once
-	v1OS                string
+	v1URL  string
+	v2Host string
+
+	os                  string
 	sDistributionMethod serverpb.DistributionMethod
 	tDistributionMethod pmmv1.DistributionMethod
-	v1URL               string
-	v2Host              string
 }
 
 // NewService creates a new service with given UUID and PMM version.
 func NewService(db *reform.DB, pmmVersion string) *Service {
+	sDistMethod, tDistMethod, oSys := getDistributionMethodAndOS()
+	v1URL, v2Host := getTelemetryHosts()
+
+	l.Debugf("Telemetry settings: os=%q, sDistributionMethod=%q, v1URL=%q, v2Host=%q.",
+		oSys, sDistMethod, v1URL, v2Host)
+
 	return &Service{
-		db:         db,
-		pmmVersion: pmmVersion,
-		l:          logrus.WithField("component", "telemetry"),
-		start:      time.Now(),
+		db:                  db,
+		pmmVersion:          pmmVersion,
+		l:                   l,
+		start:               time.Now(),
+		sDistributionMethod: sDistMethod,
+		tDistributionMethod: tDistMethod,
+		os:                  oSys,
+		v1URL:               v1URL,
+		v2Host:              v2Host,
 	}
 }
 
-func (s *Service) init() {
+func getDistributionMethodAndOS() (serverpb.DistributionMethod, pmmv1.DistributionMethod, string) {
 	b, err := ioutil.ReadFile("/srv/pmm-distribution")
 	if err != nil {
-		s.l.Debugf("Failed to read /srv/pmm-distribution: %s", err)
+		l.Debugf("Failed to read /srv/pmm-distribution: %s", err)
 	}
 
 	b = bytes.ToLower(bytes.TrimSpace(b))
 	switch string(b) {
 	case "ovf":
-		s.v1OS = "ovf"
-		s.sDistributionMethod = serverpb.DistributionMethod_OVF
-		s.tDistributionMethod = pmmv1.DistributionMethod_OVF
+		return serverpb.DistributionMethod_OVF, pmmv1.DistributionMethod_OVF, "ovf"
 	case "ami":
-		s.v1OS = "ami"
-		s.sDistributionMethod = serverpb.DistributionMethod_AMI
-		s.tDistributionMethod = pmmv1.DistributionMethod_AMI
+		return serverpb.DistributionMethod_AMI, pmmv1.DistributionMethod_AMI, "ami"
 	case "docker", "": // /srv/pmm-distribution does not exist in PMM 2.0.
-		b, err = ioutil.ReadFile("/proc/version")
-		if err != nil {
-			s.l.Debugf("Failed to read /proc/version: %s", err)
+		if b, err = ioutil.ReadFile("/proc/version"); err != nil {
+			l.Debugf("Failed to read /proc/version: %s", err)
 		}
-		s.v1OS = getLinuxDistribution(string(b))
-
-		s.sDistributionMethod = serverpb.DistributionMethod_DOCKER
-		s.tDistributionMethod = pmmv1.DistributionMethod_DOCKER
+		return serverpb.DistributionMethod_DOCKER, pmmv1.DistributionMethod_DOCKER, getLinuxDistribution(string(b))
+	default:
+		return serverpb.DistributionMethod_DISTRIBUTION_METHOD_INVALID, pmmv1.DistributionMethod_DISTRIBUTION_METHOD_INVALID, ""
 	}
+}
+
+// getTelemetryHosts returns telemetry host for v1 and v1 API
+func getTelemetryHosts() (string, string) {
+	var v1URL, v2Host string
 
 	if e := os.Getenv(envDev); e == "true" {
-		s.v1URL = defaultV1URLDev
-		s.v2Host = defaultV2HostDev
+		v1URL = defaultV1URLDev
+		v2Host = defaultV2HostDev
 	} else {
-		s.v1URL = defaultV1URLProd
-		s.v2Host = defaultV2HostProd
+		v1URL = defaultV1URLProd
+		v2Host = defaultV2HostProd
 	}
 
 	if u := os.Getenv(envV1URL); u != "" {
-		s.v1URL = u
+		v1URL = u
 	}
 
 	if u := os.Getenv(envV2Host); u != "" {
-		s.v2Host = u
+		v2Host = u
 	}
 
-	s.l.Debugf("Telemetry settings: v1OS=%q, sDistributionMethod=%q, v1URL=%q, v2Host=%q.",
-		s.v1OS, s.sDistributionMethod, s.v1URL, s.v2Host)
+	return v1URL, v2Host
 }
 
 // DistributionMethod returns PMM Server distribution method where this pmm-managed runs.
 func (s *Service) DistributionMethod() serverpb.DistributionMethod {
-	s.initOnce.Do(s.init)
 	return s.sDistributionMethod
 }
 
-// Run runs telemetry service, sending data every interval until context is canceled.
+// Run runs telemetry service after delay, sending data every interval until context is canceled.
 func (s *Service) Run(ctx context.Context, delay time.Duration) {
-	s.initOnce.Do(s.init)
-
 	if delay != 0 {
 		sleepCtx, sleepCancel := context.WithTimeout(ctx, delay)
 		<-sleepCtx.Done()
@@ -217,8 +224,8 @@ func (s *Service) sendOnce(ctx context.Context) error {
 
 func (s *Service) makeV1Payload(uuid string) []byte {
 	var w bytes.Buffer
-	fmt.Fprintf(&w, "%s;%s;%s\n", uuid, "OS", s.v1OS)
-	fmt.Fprintf(&w, "%s;%s;%s\n", uuid, "PMM", s.pmmVersion)
+	_, _ = fmt.Fprintf(&w, "%s;%s;%s\n", uuid, "OS", s.os)
+	_, _ = fmt.Fprintf(&w, "%s;%s;%s\n", uuid, "PMM", s.pmmVersion)
 	return w.Bytes()
 }
 
