@@ -58,14 +58,20 @@ type InvalidDurationError string
 func (e InvalidDurationError) Error() string { return string(e) }
 
 // MinDurationError minimum allowed duration error.
-type MinDurationError string
+type MinDurationError struct {
+	Msg string
+	Min time.Duration
+}
 
-func (e MinDurationError) Error() string { return string(e) }
+func (e MinDurationError) Error() string { return e.Msg }
 
 // AliquotDurationError multiple of duration allowed error.
-type AliquotDurationError string
+type AliquotDurationError struct {
+	Msg        string
+	MultipleOf time.Duration
+}
 
-func (e AliquotDurationError) Error() string { return string(e) }
+func (e AliquotDurationError) Error() string { return e.Msg }
 
 // ValidateEnvVars validates given environment variables.
 //
@@ -107,19 +113,19 @@ func ValidateEnvVars(envs []string) (envSettings EnvSettings, errs []error, warn
 			}
 		case "METRICS_RESOLUTION", "METRICS_RESOLUTION_HR":
 			if envSettings.MetricsResolutions.HR, err = ValidateStringMetricResolution(v); err != nil {
-				err = formatEnvVariableError(err, env, v, MetricsResolutionMin, MetricsResolutionMultipleOf)
+				err = formatEnvVariableError(err, env, v)
 			}
 		case "METRICS_RESOLUTION_MR":
 			if envSettings.MetricsResolutions.MR, err = ValidateStringMetricResolution(v); err != nil {
-				err = formatEnvVariableError(err, env, v, MetricsResolutionMin, MetricsResolutionMultipleOf)
+				err = formatEnvVariableError(err, env, v)
 			}
 		case "METRICS_RESOLUTION_LR":
 			if envSettings.MetricsResolutions.LR, err = ValidateStringMetricResolution(v); err != nil {
-				err = formatEnvVariableError(err, env, v, MetricsResolutionMin, MetricsResolutionMultipleOf)
+				err = formatEnvVariableError(err, env, v)
 			}
 		case "DATA_RETENTION":
 			if envSettings.DataRetention, err = ValidateStringDataRetention(v); err != nil {
-				err = formatEnvVariableError(err, env, v, DataRetentionMin, DataRetentionMultipleOf)
+				err = formatEnvVariableError(err, env, v)
 			}
 		default:
 			if !strings.HasPrefix(k, "GF_") {
@@ -133,15 +139,14 @@ func ValidateEnvVars(envs []string) (envSettings EnvSettings, errs []error, warn
 	return envSettings, errs, warns
 }
 
-func formatEnvVariableError(err error, env, value string, min, multipleOf time.Duration) error {
+func formatEnvVariableError(err error, env, value string) error {
 	switch e := err.(type) {
 	case InvalidDurationError:
 		return fmt.Errorf("environment variable %q has invalid duration %s", env, value)
 	case MinDurationError:
-		return fmt.Errorf("environment variable %q cannot be less then %s", env, min)
+		return fmt.Errorf("environment variable %q cannot be less then %s", env, e.Min)
 	case AliquotDurationError:
-		fmt.Printf("")
-		return fmt.Errorf("environment variable %q should be a multiple of %s", env, multipleOf)
+		return fmt.Errorf("environment variable %q should be a multiple of %s", env, e.MultipleOf)
 	default:
 		return errors.Wrap(e, "unknown error")
 	}
@@ -160,11 +165,11 @@ func ValidateStringDuration(value string, min, multipleOf time.Duration) (time.D
 // ValidateDuration validate duration.
 func ValidateDuration(d, min, multipleOf time.Duration) (time.Duration, error) {
 	if d < min {
-		return d, MinDurationError("min duration error")
+		return d, MinDurationError{"min duration error", min}
 	}
 
 	if d.Truncate(multipleOf) != d {
-		return d, AliquotDurationError("aliquot	duration error")
+		return d, AliquotDurationError{"aliquot	duration error", multipleOf}
 	}
 	return d, nil
 }

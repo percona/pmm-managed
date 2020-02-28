@@ -455,29 +455,40 @@ func (s *Server) validateChangeSettingsRequest(req *serverpb.ChangeSettingsReque
 	}
 
 	checkCases := []struct {
-		Dur        *duration.Duration
-		FieldName  string
-		validator  func(time.Duration) (time.Duration, error)
-		MultipleOf time.Duration
+		dur       *duration.Duration
+		fieldName string
+		validator func(time.Duration) (time.Duration, error)
 	}{
-		{metricsRes.GetHr(), "metrics_resolutions.hr", validators.ValidateMetricResolution, validators.MetricsResolutionMultipleOf},
-		{metricsRes.GetMr(), "metrics_resolutions.mr", validators.ValidateMetricResolution, validators.MetricsResolutionMultipleOf},
-		{metricsRes.GetLr(), "metrics_resolutions.lr", validators.ValidateMetricResolution, validators.MetricsResolutionMultipleOf},
-		{req.DataRetention, "data_retention", validators.ValidateDataRetention, validators.DataRetentionMultipleOf},
+		{metricsRes.GetHr(), "hr", validators.ValidateMetricResolution},
+		{metricsRes.GetMr(), "mr", validators.ValidateMetricResolution},
+		{metricsRes.GetLr(), "lr", validators.ValidateMetricResolution},
 	}
 	for _, v := range checkCases {
-		if v.Dur == nil {
+		if v.dur == nil {
 			continue
 		}
 
-		if _, err := v.validator(getDuration(v.Dur)); err != nil {
+		if _, err := v.validator(getDuration(v.dur)); err != nil {
 			switch err.(type) {
 			case validators.AliquotDurationError:
-				return status.Error(codes.InvalidArgument, fmt.Sprintf("%s should be a multiple of %s.", v.FieldName, v.MultipleOf))
+				return status.Error(codes.InvalidArgument, fmt.Sprintf("%s: should be a natural number of seconds", v.fieldName))
 			case validators.MinDurationError:
-				return status.Error(codes.InvalidArgument, fmt.Sprintf("%s can't be negative.", v.FieldName))
+				return status.Error(codes.InvalidArgument, fmt.Sprintf("%s: minimal resolution is 1s", v.fieldName))
 			default:
-				return status.Error(codes.InvalidArgument, fmt.Sprintf("unknown error for %s.", v.FieldName))
+				return status.Error(codes.InvalidArgument, fmt.Sprintf("%s: unknown error for", v.fieldName))
+			}
+		}
+	}
+
+	if req.DataRetention != nil {
+		if _, err := validators.ValidateDataRetention(getDuration(req.DataRetention)); err != nil {
+			switch err.(type) {
+			case validators.AliquotDurationError:
+				return status.Error(codes.InvalidArgument, "data_retention: should be a natural number of days")
+			case validators.MinDurationError:
+				return status.Error(codes.InvalidArgument, "data_retention: minimal resolution is 24h")
+			default:
+				return status.Error(codes.InvalidArgument, "data_retention: unknown error")
 			}
 		}
 	}
