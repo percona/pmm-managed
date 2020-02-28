@@ -49,16 +49,17 @@ import (
 )
 
 const (
-	// FIXME
-	interval     = 1 * time.Minute
-	defaultV1URL = ""
+	interval = 1 * time.Minute
+	timeout  = 5 * time.Second
 
-	// interval      = 24 * time.Hour
-	timeout = 5 * time.Second
-	// defaultV1URL  = "https://v.percona.com/"
-	defaultV2Host = "callhome-staging.percona.com:443" // protocol is always https
+	defaultV1URLProd = "https://v.percona.com/"
+	defaultV1URLDev  = ""
+
+	defaultV2HostProd = "check.percona.com:443"
+	defaultV2HostDev  = "callhome-staging.percona.com:443" // protocol is always https
 
 	// environment variables that affect telemetry service
+	envDev    = "PERCONA_TELEMETRY_DEV"
 	envV1URL  = "PERCONA_VERSION_CHECK_URL" // the same name as for the Toolkit
 	envV2Host = "PERCONA_TELEMETRY_HOST"
 )
@@ -115,12 +116,18 @@ func (s *Service) init() {
 		s.tDistributionMethod = pmmv1.DistributionMethod_DOCKER
 	}
 
-	s.v1URL = defaultV1URL
+	if e := os.Getenv(envDev); e == "true" {
+		s.v1URL = defaultV1URLDev
+		s.v2Host = defaultV2HostDev
+	} else {
+		s.v1URL = defaultV1URLProd
+		s.v2Host = defaultV2HostProd
+	}
+
 	if u := os.Getenv(envV1URL); u != "" {
 		s.v1URL = u
 	}
 
-	s.v2Host = defaultV2Host
 	if u := os.Getenv(envV2Host); u != "" {
 		s.v2Host = u
 	}
