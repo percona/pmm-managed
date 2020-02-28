@@ -253,7 +253,7 @@ func (s *Service) sendV1Request(ctx context.Context, data []byte) error {
 	}
 	defer resp.Body.Close() //nolint:errcheck
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("status code %d", resp.StatusCode)
 	}
 	return nil
