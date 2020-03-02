@@ -33,8 +33,8 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/google/uuid"
-	"github.com/percona-platform/saas/gen/telemetry/events/pmm"
-	"github.com/percona-platform/saas/gen/telemetry/reporter"
+	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
+	reporterv1 "github.com/percona-platform/saas/gen/telemetry/reporter"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/utils/tlsconfig"
 	"github.com/pkg/errors"
@@ -399,7 +399,7 @@ func (s *Service) runRetries(ctx context.Context) {
 }
 
 func (s *Service) waitAndRetry(ctx context.Context, task *retryTask) error {
-	d := time.Now().Sub(task.t)
+	d := time.Since(task.t)
 	t := time.NewTimer(d)
 	defer t.Stop()
 
@@ -420,13 +420,12 @@ func (s *Service) retry(ctx context.Context, task *retryTask) {
 	err := s.sendV2Request(rCtx, task.req)
 	if err != nil {
 		l.Debugf("sendV2Request: %+v", err)
-		fmt.Println(err)
 		if task.cnt >= retryCnt {
 			l.Debugf("Retry count exceeded, limit: %d", retryCnt)
 			return
 		}
 
-		task.cnt ++
+		task.cnt++
 		task.t = time.Now().Add(backoff)
 
 		s.tryToPushToQueue(task)
@@ -445,7 +444,7 @@ func (s *Service) tryToPushToQueue(task *retryTask) bool {
 
 func (s *Service) queueToRetry(req *reporterv1.ReportRequest) {
 	s.tryToPushToQueue(&retryTask{
-		cnt: 1,
+		cnt: 1, // nolint:mnd
 		t:   time.Now().Add(backoff),
 		req: req,
 	})

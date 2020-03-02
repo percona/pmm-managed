@@ -25,8 +25,8 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"
-	"github.com/percona-platform/saas/gen/telemetry/events/pmm"
-	"github.com/percona-platform/saas/gen/telemetry/reporter"
+	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
+	reporterv1 "github.com/percona-platform/saas/gen/telemetry/reporter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -91,7 +91,7 @@ func TestSendV2Request(t *testing.T) {
 		payload, err := s.makeV2Payload(u)
 		require.NoError(t, err)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 5 *time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
 		err = s.sendV2Request(ctx, payload)
@@ -106,7 +106,7 @@ func TestSendV2Request(t *testing.T) {
 		req, err := s.makeV2Payload(u)
 		require.NoError(t, err)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 5 *time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
 		err = s.sendV2Request(ctx, req)
@@ -219,7 +219,7 @@ func TestRetry(t *testing.T) {
 		case v := <-s.ch:
 			assert.Equal(t, task.req, req)
 			assert.Equal(t, task.cnt, int32(2))
-			assert.LessOrEqual(t, v.t.UnixNano(), time.Now().Add(backoff).Add(2 * time.Second).UnixNano())
+			assert.LessOrEqual(t, v.t.UnixNano(), time.Now().Add(backoff).Add(2*time.Second).UnixNano())
 			assert.GreaterOrEqual(t, v.t.UnixNano(), time.Now().Add(backoff).Add(-2*time.Second).UnixNano())
 		default:
 			t.Error("Request missed")
@@ -247,10 +247,7 @@ func TestRetry(t *testing.T) {
 			t.Error("Receive bad task") // TODO better message
 		default:
 		}
-
-		t.Error()
 	})
-
 }
 
 func TestQueueToRetry(t *testing.T) {
@@ -267,7 +264,6 @@ func TestQueueToRetry(t *testing.T) {
 	default:
 		t.Error("Request missed")
 	}
-
 }
 
 func TestRetryQueueOverflow(t *testing.T) {
@@ -278,7 +274,7 @@ func TestRetryQueueOverflow(t *testing.T) {
 	})
 
 	t.Run("Overflow", func(t *testing.T) {
-		s.ch = make(chan *retryTask, 0)
+		s.ch = make(chan *retryTask)
 		assert.False(t, s.tryToPushToQueue(&retryTask{}))
 	})
 }
