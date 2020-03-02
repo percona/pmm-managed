@@ -59,7 +59,7 @@ func TestServiceHelpers(t *testing.T) {
 
 			&models.Service{
 				ServiceID:   "S1",
-				ServiceType: models.MySQLServiceType,
+				ServiceType: models.MongoDBServiceType,
 				ServiceName: "Service without Agents",
 				NodeID:      "N1",
 			},
@@ -90,6 +90,16 @@ func TestServiceHelpers(t *testing.T) {
 		}
 		return
 	}
+
+	t.Run("FindAllServices", func(t *testing.T) {
+		q, teardown := setup(t)
+		defer teardown(t)
+
+		services, err := models.FindAllServices(q, nil)
+		assert.NoError(t, err)
+
+		assert.Equal(t, 2, len(services))
+	})
 
 	t.Run("RemoveService", func(t *testing.T) {
 		q, teardown := setup(t)

@@ -44,6 +44,8 @@ func NewServicesService(db *reform.DB, r agentsRegistry) *ServicesService {
 type ServiceFilters struct {
 	// Return only Services runs on that Node.
 	NodeID string
+	// Return only Services with provided type.
+	ServiceType *models.ServiceType
 }
 
 // List selects all Services in a stable order.
@@ -54,9 +56,9 @@ func (ss *ServicesService) List(ctx context.Context, filters ServiceFilters) ([]
 		var err error
 		switch {
 		case filters.NodeID != "":
-			servicesM, err = models.ServicesForNode(tx.Querier, filters.NodeID)
+			servicesM, err = models.ServicesForNode(tx.Querier, filters.NodeID, filters.ServiceType)
 		default:
-			servicesM, err = models.FindAllServices(tx.Querier)
+			servicesM, err = models.FindAllServices(tx.Querier, filters.ServiceType)
 		}
 		return err
 	})

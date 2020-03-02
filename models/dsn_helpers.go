@@ -46,14 +46,14 @@ func FindDSNByServiceIDandPMMAgentID(q *reform.Querier, serviceID, pmmAgentID, d
 		return "", status.Errorf(codes.FailedPrecondition, "Couldn't resolve dsn, as service is unsupported")
 	}
 
-	exporters, err := FindAgentsForService(q, serviceID)
+	exporters, err := FindAgentsForService(q, serviceID, &agentType)
 	if err != nil {
 		return "", err
 	}
 
 	fexp := make([]*Agent, 0)
 	for _, e := range exporters {
-		if pointer.GetString(e.PMMAgentID) == pmmAgentID && e.AgentType == agentType {
+		if pointer.GetString(e.PMMAgentID) == pmmAgentID {
 			fexp = append(fexp, e)
 		}
 	}

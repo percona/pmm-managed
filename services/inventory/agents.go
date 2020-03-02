@@ -96,6 +96,8 @@ type AgentFilters struct {
 	NodeID string
 	// Return only Agents that provide insights for that Service.
 	ServiceID string
+	// Return Agents with provided type.
+	AgentType *models.AgentType
 }
 
 // List selects all Agents in a stable order for a given service.
@@ -121,13 +123,13 @@ func (as *AgentsService) List(ctx context.Context, filters AgentFilters) ([]inve
 		var err error
 		switch {
 		case filters.PMMAgentID != "":
-			agents, err = models.FindAgentsRunningByPMMAgent(tx.Querier, filters.PMMAgentID)
+			agents, err = models.FindAgentsRunningByPMMAgent(tx.Querier, filters.PMMAgentID, filters.AgentType)
 		case filters.NodeID != "":
-			agents, err = models.FindAgentsForNode(tx.Querier, filters.NodeID)
+			agents, err = models.FindAgentsForNode(tx.Querier, filters.NodeID, filters.AgentType)
 		case filters.ServiceID != "":
-			agents, err = models.FindAgentsForService(tx.Querier, filters.ServiceID)
+			agents, err = models.FindAgentsForService(tx.Querier, filters.ServiceID, filters.AgentType)
 		default:
-			agents, err = models.FindAllAgents(tx.Querier)
+			agents, err = models.FindAllAgents(tx.Querier, filters.AgentType)
 		}
 		if err != nil {
 			return err

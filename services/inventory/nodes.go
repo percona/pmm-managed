@@ -38,13 +38,19 @@ func NewNodesService(db *reform.DB) *NodesService {
 	}
 }
 
+// NodeFilters represents filters for nodes list.
+type NodeFilters struct {
+	// Return Nodes with provided type.
+	NodeType *models.NodeType
+}
+
 // List returns a list of all Nodes.
 //nolint:unparam
-func (s *NodesService) List(ctx context.Context, req *inventorypb.ListNodesRequest) ([]inventorypb.Node, error) {
+func (s *NodesService) List(ctx context.Context, filters NodeFilters) ([]inventorypb.Node, error) {
 	var nodes []*models.Node
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
-		nodes, err = models.FindAllNodes(tx.Querier)
+		nodes, err = models.FindAllNodes(tx.Querier, filters.NodeType)
 		return err
 	})
 	if e != nil {

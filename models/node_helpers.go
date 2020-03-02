@@ -81,8 +81,14 @@ func checkUniqueNodeInstanceRegion(q *reform.Querier, instance, region string) e
 }
 
 // FindAllNodes returns all Nodes.
-func FindAllNodes(q *reform.Querier) ([]*Node, error) {
-	structs, err := q.SelectAllFrom(NodeTable, "ORDER BY node_id")
+func FindAllNodes(q *reform.Querier, nodeType *NodeType) ([]*Node, error) {
+	var conditions []string
+	var args []interface{}
+	if nodeType != nil {
+		conditions = append(conditions, "WHERE node_type = $1")
+		args = append(args, nodeType)
+	}
+	structs, err := q.SelectAllFrom(NodeTable, fmt.Sprintf("%s ORDER BY node_id", strings.Join(conditions, " AND ")), args...)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

@@ -56,8 +56,14 @@ func checkServiceUniqueName(q *reform.Querier, name string) error {
 }
 
 // FindAllServices returns all Services.
-func FindAllServices(q *reform.Querier) ([]*Service, error) {
-	structs, err := q.SelectAllFrom(ServiceTable, "ORDER BY service_id")
+func FindAllServices(q *reform.Querier, serviceType *ServiceType) ([]*Service, error) {
+	var conditions []string
+	var args []interface{}
+	if serviceType != nil {
+		conditions = append(conditions, "WHERE service_type = $1")
+		args = append(args, serviceType)
+	}
+	structs, err := q.SelectAllFrom(ServiceTable, fmt.Sprintf("%s ORDER BY service_id", strings.Join(conditions, " AND ")), args...)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -130,9 +136,17 @@ func FindServiceByName(q *reform.Querier, name string) (*Service, error) {
 }
 
 // ServicesForNode returns all Services for Node with given ID.
-func ServicesForNode(q *reform.Querier, nodeID string) ([]*Service, error) {
-	tail := fmt.Sprintf("WHERE node_id = %s ORDER BY service_id", q.Placeholder(1)) //nolint:gosec
-	structs, err := q.SelectAllFrom(ServiceTable, tail, nodeID)
+func ServicesForNode(q *reform.Querier, nodeID string, serviceType *ServiceType) ([]*Service, error) {
+	conditions := []string{
+		"node_id = $1",
+	}
+	args := []interface{}{nodeID}
+	if serviceType != nil {
+		conditions = append(conditions, "service_type = $2")
+		args = append(args, serviceType)
+	}
+	tail := fmt.Sprintf("WHERE %s ORDER BY service_id", strings.Join(conditions, " AND ")) //nolint:gosec
+	structs, err := q.SelectAllFrom(ServiceTable, tail, args...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select Services")
 	}
