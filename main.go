@@ -83,7 +83,8 @@ const (
 	http1Addr = "127.0.0.1:7772"
 	debugAddr = "127.0.0.1:7773"
 
-	defaultAlertManagerFile = "/srv/prometheus/rules/pmm.rules.yml"
+	defaultAlertManagerFile  = "/srv/prometheus/rules/pmm.rules.yml"
+	prometheusBaseConfigFile = "/srv/prometheus/prometheus.base.yml"
 )
 
 func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
@@ -98,6 +99,7 @@ func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
 		rw.Header().Set(`Access-Control-Allow-Origin`, `*`)
 		rw.Header().Set(`Content-Type`, `application/zip`)
 		rw.Header().Set(`Content-Disposition`, `attachment; filename="`+filename+`"`)
+
 		ctx = logger.Set(ctx, "logs")
 		if err := logs.Zip(ctx, rw); err != nil {
 			l.Error(err)
@@ -484,13 +486,15 @@ func main() {
 	prom.MustRegister(reformL)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reformL)
 
-	prometheus, err := prometheus.NewService(*prometheusConfigF, *promtoolF, db, *prometheusURLF)
+	prometheus, err := prometheus.NewService(*prometheusConfigF, prometheusBaseConfigFile, *promtoolF, db, *prometheusURLF)
 	if err != nil {
 		l.Panicf("Prometheus service problem: %+v", err)
 	}
 
-	logs := supervisord.NewLogs(version.FullInfo())
-	supervisord := supervisord.New(*supervisordConfigDirF)
+	pmmUpdateCheck := supervisord.NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker"))
+
+	logs := supervisord.NewLogs(version.FullInfo(), pmmUpdateCheck)
+	supervisord := supervisord.New(*supervisordConfigDirF, pmmUpdateCheck)
 	telemetry := telemetry.NewService(db, version.Version)
 	checker := server.NewAWSInstanceChecker(db, telemetry)
 	server, err := server.NewServer(db, prometheus, supervisord, telemetry, checker, *alertManagerRulesFileF)
