@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -97,6 +98,22 @@ func TestServer(t *testing.T) {
 			require.Errorf(t, err, "validation error of environment variables")
 			assert.Equal(t, false, s.envDisableTelemetry)
 		})
+
+		t.Run("MetricsLessThenMin", func(t *testing.T) {
+			s := newServer()
+			err := s.UpdateSettingsFromEnv([]string{
+				"METRICS_RESOLUTION=5ns",
+			})
+			require.Errorf(t, err, "validation error of environment variables")
+		})
+
+		t.Run("DataRetentionLessThenMin", func(t *testing.T) {
+			s := newServer()
+			err := s.UpdateSettingsFromEnv([]string{
+				"DATA_RETENTION=12h",
+			})
+			require.Errorf(t, err, "validation error of environment variables")
+		})
 	})
 
 	t.Run("ValidateChangeSettingsRequest", func(t *testing.T) {
@@ -130,6 +147,32 @@ func TestServer(t *testing.T) {
 				AlertManagerRules:       "something",
 				RemoveAlertManagerRules: true,
 			}))
+
+		mr := &serverpb.MetricsResolutions{Mr: &duration.Duration{Seconds: 0, Nanos: 5e+8}} // 0.5s
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "mr: minimal resolution is 1s"),
+			s.validateChangeSettingsRequest(&serverpb.ChangeSettingsRequest{
+				MetricsResolutions: mr,
+			})
+		)
+
+		mr = &serverpb.MetricsResolutions{Mr: &duration.Duration{Seconds: 2, Nanos: 5e8}} // 2.5s
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "mr: should be a natural number of seconds"),
+			s.validateChangeSettingsRequest(&serverpb.ChangeSettingsRequest{
+				MetricsResolutions: mr,
+			})
+		)
+
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "data_retention: should be a natural number of days"),
+			s.validateChangeSettingsRequest(&serverpb.ChangeSettingsRequest{
+				DataRetention: &duration.Duration{Seconds: 90000, Nanos: 0}, // 25h
+			})
+		)
+
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "data_retention: minimal resolution is 24h"),
+			s.validateChangeSettingsRequest(&serverpb.ChangeSettingsRequest{
+				DataRetention: &duration.Duration{Seconds: 43200, Nanos: 0}, // 12h
+			})
+		)
 	})
 
 	t.Run("ValidateAlertManagerRules", func(t *testing.T) {
