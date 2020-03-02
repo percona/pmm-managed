@@ -91,7 +91,10 @@ func TestSendV2Request(t *testing.T) {
 		payload, err := s.makeV2Payload(u)
 		require.NoError(t, err)
 
-		err = s.sendV2Request(context.Background(), payload)
+		ctx, cancel := context.WithTimeout(context.Background(), 5 *time.Second)
+		defer cancel()
+
+		err = s.sendV2Request(ctx, payload)
 		assert.NoError(t, err)
 	})
 
@@ -103,7 +106,10 @@ func TestSendV2Request(t *testing.T) {
 		req, err := s.makeV2Payload(u)
 		require.NoError(t, err)
 
-		err = s.sendV2Request(context.Background(), req)
+		ctx, cancel := context.WithTimeout(context.Background(), 5 *time.Second)
+		defer cancel()
+
+		err = s.sendV2Request(ctx, req)
 		require.Error(t, err)
 		assert.Equal(t, "v2 telemetry disabled via the empty host", err.Error())
 	})
