@@ -63,16 +63,18 @@ func (s *NodeService) Register(ctx context.Context, req *managementpb.RegisterNo
 			return err
 		}
 
-		if node, err = models.CheckUniqueNodeInstanceRegion(tx.Querier, req.Address, &req.Region); err != nil {
-			if status.Code(err) != codes.AlreadyExists {
-				return err
-			}
+		node, err = models.CheckUniqueNodeInstanceRegion(tx.Querier, req.Address, &req.Region)
+		switch status.Code(err) {
+		case codes.OK:
+			// nothing
+		case codes.AlreadyExists:
 			if !req.Reregister {
 				return err
 			}
-			if err = models.RemoveNode(tx.Querier, node.NodeID, models.RemoveCascade); err != nil {
-				return err
-			}
+			err = models.RemoveNode(tx.Querier, node.NodeID, models.RemoveCascade)
+		}
+		if err != nil {
+			return err
 		}
 
 		nodeType, err := nodeType(req.NodeType)
