@@ -33,8 +33,8 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/google/uuid"
-	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
-	reporterv1 "github.com/percona-platform/saas/gen/telemetry/reporter"
+	"github.com/percona-platform/saas/gen/telemetry/events/pmm"
+	"github.com/percona-platform/saas/gen/telemetry/reporter"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/utils/tlsconfig"
 	"github.com/pkg/errors"
@@ -52,6 +52,8 @@ var l = logrus.WithField("component", "telemetry")
 const (
 	interval = 1 * time.Minute
 	timeout  = 5 * time.Second
+	backoff  = time.Hour
+	retryCnt = 20
 
 	defaultV1URL  = "https://v.percona.com/"
 	defaultV2Host = "check.percona.com:443" // protocol is always https
@@ -70,6 +72,10 @@ type Service struct {
 	v1URL  string
 	v2Host string
 
+	ch       chan *retryTask
+	backoff  time.Duration
+	retryCnt int32
+
 	os                  string
 	sDistributionMethod serverpb.DistributionMethod
 	tDistributionMethod pmmv1.DistributionMethod
@@ -83,6 +89,9 @@ func NewService(db *reform.DB, pmmVersion string) *Service {
 	l.Debugf("Telemetry settings: os=%q, sDistributionMethod=%q, v1URL=%q, v2Host=%q.",
 		oSys, sDistMethod, v1URL, v2Host)
 
+	// TODO comment
+	rChanSize := int64(backoff.Minutes() * retryCnt / interval.Minutes() * 1.5)
+
 	return &Service{
 		db:                  db,
 		pmmVersion:          pmmVersion,
@@ -92,6 +101,9 @@ func NewService(db *reform.DB, pmmVersion string) *Service {
 		os:                  oSys,
 		v1URL:               v1URL,
 		v2Host:              v2Host,
+		backoff:             backoff,
+		retryCnt:            retryCnt,
+		ch:                  make(chan *retryTask, rChanSize),
 	}
 }
 
@@ -145,6 +157,8 @@ func (s *Service) Run(ctx context.Context, delay time.Duration) {
 		<-sleepCtx.Done()
 		sleepCancel()
 	}
+
+	s.runRetries(ctx)
 
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -201,9 +215,12 @@ func (s *Service) sendOnce(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		err = s.sendV2Request(ctx, req)
-		l.Debugf("sendV2Request: %+v", err)
-		return err
+
+		if err = s.sendV2Request(ctx, req); err != nil {
+			s.queueToRetry(req)
+		}
+
+		return nil
 	})
 
 	return wg.Wait()
@@ -364,4 +381,78 @@ func getLinuxDistribution(procVersion string) string {
 		}
 	}
 	return "unknown"
+}
+
+func (s *Service) runRetries(ctx context.Context) {
+	go func() {
+		for {
+			select {
+			case task := <-s.ch:
+				if err := s.waitAndRetry(ctx, task); err != nil {
+					return
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+}
+
+func (s *Service) waitAndRetry(ctx context.Context, task *retryTask) error {
+	d := time.Now().Sub(task.t)
+	t := time.NewTimer(d)
+	defer t.Stop()
+
+	select {
+	case <-t.C:
+		s.retry(ctx, task)
+	case <-ctx.Done():
+		return errors.New("context is done")
+	}
+
+	return nil
+}
+
+func (s *Service) retry(ctx context.Context, task *retryTask) {
+	rCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	err := s.sendV2Request(rCtx, task.req)
+	if err != nil {
+		l.Debugf("sendV2Request: %+v", err)
+		fmt.Println(err)
+		if task.cnt >= retryCnt {
+			l.Debugf("Retry count exceeded, limit: %d", retryCnt)
+			return
+		}
+
+		task.cnt ++
+		task.t = time.Now().Add(backoff)
+
+		s.tryToPushToQueue(task)
+	}
+}
+
+func (s *Service) tryToPushToQueue(task *retryTask) bool {
+	select {
+	case s.ch <- task:
+		return true
+	default:
+		l.Debugf("Fail to add task to retry queue, length: %d, capacity: %d.", len(s.ch), cap(s.ch))
+		return false
+	}
+}
+
+func (s *Service) queueToRetry(req *reporterv1.ReportRequest) {
+	s.tryToPushToQueue(&retryTask{
+		cnt: 1,
+		t:   time.Now().Add(backoff),
+		req: req,
+	})
+}
+
+type retryTask struct {
+	cnt int32
+	t   time.Time
+	req *reporterv1.ReportRequest
 }

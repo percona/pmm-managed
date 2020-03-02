@@ -25,7 +25,8 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"
-	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
+	"github.com/percona-platform/saas/gen/telemetry/events/pmm"
+	"github.com/percona-platform/saas/gen/telemetry/reporter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -185,4 +186,93 @@ func TestGetLinuxDistribution(t *testing.T) {
 			assert.Equal(t, expected, actual)
 		}
 	}
+}
+
+func TestRetry(t *testing.T) {
+	os.Setenv(envV2Host, "example.example")
+	//os.Setenv(envV2Host, "callhome-staging.percona.com:443")
+
+	s := NewService(nil, "")
+
+	t.Run("Normal retry", func(t *testing.T) {
+		u, err := generateUUID()
+		require.NoError(t, err)
+
+		req, err := s.makeV2Payload(u)
+		require.NoError(t, err)
+
+		task := &retryTask{
+			cnt: 1,
+			t:   time.Now(),
+			req: req,
+		}
+
+		s.retry(context.Background(), task)
+
+		select {
+		case v := <-s.ch:
+			assert.Equal(t, task.req, req)
+			assert.Equal(t, task.cnt, int32(2))
+			assert.LessOrEqual(t, v.t.UnixNano(), time.Now().Add(backoff).Add(2 * time.Second).UnixNano())
+			assert.GreaterOrEqual(t, v.t.UnixNano(), time.Now().Add(backoff).Add(-2*time.Second).UnixNano())
+		default:
+			t.Error("Request missed")
+		}
+
+	})
+
+	t.Run("Exceeded retry count", func(t *testing.T) {
+		u, err := generateUUID()
+		require.NoError(t, err)
+
+		req, err := s.makeV2Payload(u)
+		require.NoError(t, err)
+
+		task := &retryTask{
+			cnt: retryCnt,
+			t:   time.Now(),
+			req: req,
+		}
+
+		s.retry(context.Background(), task)
+
+		select {
+		case <-s.ch:
+			t.Error("Receive bad task") // TODO better message
+		default:
+		}
+
+		t.Error()
+	})
+
+}
+
+func TestQueueToRetry(t *testing.T) {
+	s := NewService(nil, "")
+
+	req := &reporterv1.ReportRequest{}
+
+	s.queueToRetry(req)
+
+	select {
+	case v := <-s.ch:
+		assert.Equal(t, v.req, req)
+		assert.Equal(t, v.cnt, int32(1))
+	default:
+		t.Error("Request missed")
+	}
+
+}
+
+func TestRetryQueueOverflow(t *testing.T) {
+	s := NewService(nil, "")
+
+	t.Run("Normal", func(t *testing.T) {
+		assert.True(t, s.tryToPushToQueue(&retryTask{}))
+	})
+
+	t.Run("Overflow", func(t *testing.T) {
+		s.ch = make(chan *retryTask, 0)
+		assert.False(t, s.tryToPushToQueue(&retryTask{}))
+	})
 }
