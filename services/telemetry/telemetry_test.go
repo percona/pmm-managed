@@ -31,6 +31,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const devTelemetryHost = "callhome-staging.percona.com:443"
+
 //nolint:lll
 func TestMakeV1Payload(t *testing.T) {
 	s := NewService(nil, "")
@@ -80,7 +82,7 @@ func TestMakeV2Payload(t *testing.T) {
 }
 
 func TestSendV2Request(t *testing.T) {
-	os.Setenv(envV2Host, "callhome-staging.percona.com:443")
+	os.Setenv(envV2Host, devTelemetryHost)
 
 	// TODO check tests
 
@@ -194,13 +196,10 @@ func TestGetLinuxDistribution(t *testing.T) {
 	}
 }
 
-func TestRetry(t *testing.T) {
-	os.Setenv(envV2Host, "example.example")
-	//os.Setenv(envV2Host, "callhome-staging.percona.com:443")
-
-	s := NewService(nil, "")
-
-	t.Run("Normal retry", func(t *testing.T) {
+func TestWaitAndRetry(t *testing.T) {
+	t.Run("Normal", func(t *testing.T) {
+		os.Setenv(envV2Host, "localhost") // Used as nowhere
+		s := NewService(nil, "2.3.0")
 		u, err := generateUUID()
 		require.NoError(t, err)
 
@@ -213,21 +212,100 @@ func TestRetry(t *testing.T) {
 			req: req,
 		}
 
-		s.retry(context.Background(), task)
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+
+		err = s.waitAndRetry(ctx, task)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("Context timeout exceeded", func(t *testing.T) {
+		os.Setenv(envV2Host, devTelemetryHost)
+		s := NewService(nil, "2.3.0")
+		u, err := generateUUID()
+		require.NoError(t, err)
+
+		req, err := s.makeV2Payload(u)
+		require.NoError(t, err)
+
+		task := &retryTask{
+			cnt: 1,
+			t:   time.Now().Add(time.Hour),
+			req: req,
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		err = s.waitAndRetry(ctx, task)
+
+		assert.Equal(t, context.DeadlineExceeded, err)
+	})
+}
+
+func TestRetry(t *testing.T) {
+	t.Run("Normal retry", func(t *testing.T) {
+		os.Setenv(envV2Host, devTelemetryHost)
+		s := NewService(nil, "2.3.0")
+		u, err := generateUUID()
+		require.NoError(t, err)
+
+		req, err := s.makeV2Payload(u)
+		require.NoError(t, err)
+
+		task := &retryTask{
+			cnt: 1,
+			t:   time.Now(),
+			req: req,
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		s.retry(ctx, task)
+
+		select {
+		case <-s.ch:
+			t.Error("Receive retry task, but shouldn't")
+		default:
+		}
+	})
+
+	t.Run("Normal re-retry", func(t *testing.T) {
+		os.Setenv(envV2Host, "localhost") // Used as nowhere
+		s := NewService(nil, "2.3.0")
+		u, err := generateUUID()
+		require.NoError(t, err)
+
+		req, err := s.makeV2Payload(u)
+		require.NoError(t, err)
+
+		task := &retryTask{
+			cnt: 1,
+			t:   time.Now(),
+			req: req,
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		s.retry(ctx, task)
 
 		select {
 		case v := <-s.ch:
 			assert.Equal(t, task.req, req)
 			assert.Equal(t, task.cnt, int32(2))
-			assert.LessOrEqual(t, v.t.UnixNano(), time.Now().Add(backoff).Add(2*time.Second).UnixNano())
-			assert.GreaterOrEqual(t, v.t.UnixNano(), time.Now().Add(backoff).Add(-2*time.Second).UnixNano())
+			assert.LessOrEqual(t, v.t.UnixNano(), time.Now().Add(retryBackoff).Add(2*time.Second).UnixNano())
+			assert.GreaterOrEqual(t, v.t.UnixNano(), time.Now().Add(retryBackoff).Add(-2*time.Second).UnixNano())
 		default:
 			t.Error("Request missed")
 		}
-
 	})
 
 	t.Run("Exceeded retry count", func(t *testing.T) {
+		os.Setenv(envV2Host, devTelemetryHost)
+		s := NewService(nil, "2.3.0")
 		u, err := generateUUID()
 		require.NoError(t, err)
 
@@ -240,11 +318,14 @@ func TestRetry(t *testing.T) {
 			req: req,
 		}
 
-		s.retry(context.Background(), task)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		s.retry(ctx, task)
 
 		select {
 		case <-s.ch:
-			t.Error("Receive bad task") // TODO better message
+			t.Error("Receive retry task, but shouldn't")
 		default:
 		}
 	})
