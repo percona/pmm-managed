@@ -229,7 +229,8 @@ var databaseSchema = [][]string{
 
 	10: {
 		`UPDATE settings SET 
-		 settings = settings || '{"metrics_resolutions":{"hr": 5000000000, "lr": 60000000000, "mr": 10000000000}}'`,
+		 settings = settings || '{"metrics_resolutions":{"hr": 5000000000, "lr": 60000000000, "mr": 10000000000}}' 
+		 WHERE settings->>'metrics_resolutions' = '{"hr": 5000000000, "lr": 60000000000, "mr": 5000000000}'`,
 	},
 }
 
