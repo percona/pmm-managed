@@ -156,6 +156,10 @@ func (s *Service) Run(ctx context.Context, delay time.Duration) {
 		sleepCancel()
 	}
 
+	if ctx.Err() != nil {
+		return
+	}
+
 	s.runRetries(ctx)
 
 	ticker := time.NewTicker(interval)
