@@ -33,8 +33,8 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/google/uuid"
-	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
-	reporterv1 "github.com/percona-platform/saas/gen/telemetry/reporter"
+	events "github.com/percona-platform/saas/gen/telemetry/events/pmm"
+	reporter "github.com/percona-platform/saas/gen/telemetry/reporter"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/utils/tlsconfig"
 	"github.com/pkg/errors"
@@ -79,7 +79,7 @@ type Service struct {
 
 	os                  string
 	sDistributionMethod serverpb.DistributionMethod
-	tDistributionMethod pmmv1.DistributionMethod
+	tDistributionMethod events.DistributionMethod
 }
 
 // NewService creates a new service with given UUID and PMM version.
@@ -105,7 +105,7 @@ func NewService(db *reform.DB, pmmVersion string) *Service {
 	}
 }
 
-func getDistributionMethodAndOS() (serverpb.DistributionMethod, pmmv1.DistributionMethod, string) {
+func getDistributionMethodAndOS() (serverpb.DistributionMethod, events.DistributionMethod, string) {
 	b, err := ioutil.ReadFile("/srv/pmm-distribution")
 	if err != nil {
 		l.Debugf("Failed to read /srv/pmm-distribution: %s", err)
@@ -114,16 +114,16 @@ func getDistributionMethodAndOS() (serverpb.DistributionMethod, pmmv1.Distributi
 	b = bytes.ToLower(bytes.TrimSpace(b))
 	switch string(b) {
 	case "ovf":
-		return serverpb.DistributionMethod_OVF, pmmv1.DistributionMethod_OVF, "ovf"
+		return serverpb.DistributionMethod_OVF, events.DistributionMethod_OVF, "ovf"
 	case "ami":
-		return serverpb.DistributionMethod_AMI, pmmv1.DistributionMethod_AMI, "ami"
+		return serverpb.DistributionMethod_AMI, events.DistributionMethod_AMI, "ami"
 	case "docker", "": // /srv/pmm-distribution does not exist in PMM 2.0.
 		if b, err = ioutil.ReadFile("/proc/version"); err != nil {
 			l.Debugf("Failed to read /proc/version: %s", err)
 		}
-		return serverpb.DistributionMethod_DOCKER, pmmv1.DistributionMethod_DOCKER, getLinuxDistribution(string(b))
+		return serverpb.DistributionMethod_DOCKER, events.DistributionMethod_DOCKER, getLinuxDistribution(string(b))
 	default:
-		return serverpb.DistributionMethod_DISTRIBUTION_METHOD_INVALID, pmmv1.DistributionMethod_DISTRIBUTION_METHOD_INVALID, ""
+		return serverpb.DistributionMethod_DISTRIBUTION_METHOD_INVALID, events.DistributionMethod_DISTRIBUTION_METHOD_INVALID, ""
 	}
 }
 
@@ -262,13 +262,13 @@ func (s *Service) sendV1Request(ctx context.Context, data []byte) error {
 	return nil
 }
 
-func (s *Service) makeV2Payload(serverUUID string) (*reporterv1.ReportRequest, error) {
+func (s *Service) makeV2Payload(serverUUID string) (*reporter.ReportRequest, error) {
 	serverID, err := hex.DecodeString(serverUUID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to decode UUID %q", serverUUID)
 	}
 
-	event := &pmmv1.ServerUptimeEvent{
+	event := &events.ServerUptimeEvent{
 		Id:                 serverID,
 		Version:            s.pmmVersion,
 		UpDuration:         ptypes.DurationProto(time.Since(s.start)),
@@ -284,11 +284,11 @@ func (s *Service) makeV2Payload(serverUUID string) (*reporterv1.ReportRequest, e
 	}
 
 	id := uuid.New()
-	req := &reporterv1.ReportRequest{
-		Events: []*reporterv1.Event{{
+	req := &reporter.ReportRequest{
+		Events: []*reporter.Event{{
 			Id:   id[:],
 			Time: ptypes.TimestampNow(),
-			Event: &reporterv1.AnyEvent{
+			Event: &reporter.AnyEvent{
 				TypeUrl: proto.MessageName(event),
 				Binary:  eventB,
 			},
@@ -303,7 +303,7 @@ func (s *Service) makeV2Payload(serverUUID string) (*reporterv1.ReportRequest, e
 	return req, nil
 }
 
-func (s *Service) sendV2Request(ctx context.Context, req *reporterv1.ReportRequest) error {
+func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest) error {
 	if s.v2Host == "" {
 		return errors.New("v2 telemetry disabled via the empty host")
 	}
@@ -331,7 +331,7 @@ func (s *Service) sendV2Request(ctx context.Context, req *reporterv1.ReportReque
 	}
 	defer cc.Close() //nolint:errcheck
 
-	if _, err = reporterv1.NewReporterAPIClient(cc).Report(ctx, req); err != nil {
+	if _, err = reporter.NewReporterAPIClient(cc).Report(ctx, req); err != nil {
 		return errors.Wrap(err, "failed to report")
 	}
 	return nil
@@ -444,7 +444,7 @@ func (s *Service) tryToPushToQueue(task *retryTask) bool {
 	}
 }
 
-func (s *Service) queueToRetry(req *reporterv1.ReportRequest) {
+func (s *Service) queueToRetry(req *reporter.ReportRequest) {
 	s.tryToPushToQueue(&retryTask{
 		cnt: 1, // nolint:mnd
 		t:   time.Now().Add(retryBackoff),
@@ -455,5 +455,5 @@ func (s *Service) queueToRetry(req *reporterv1.ReportRequest) {
 type retryTask struct {
 	cnt int32
 	t   time.Time
-	req *reporterv1.ReportRequest
+	req *reporter.ReportRequest
 }
