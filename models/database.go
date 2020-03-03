@@ -226,6 +226,11 @@ var databaseSchema = [][]string{
 			ADD COLUMN aws_access_key VARCHAR,
 			ADD COLUMN aws_secret_key VARCHAR`,
 	},
+
+	10: {
+		`UPDATE settings SET 
+		 settings = settings || '{"metrics_resolutions":{"hr": 5000000000, "lr": 60000000000, "mr": 10000000000}}'`,
+	},
 }
 
 // OpenDB returns configured connection pool for PostgreSQL.
