@@ -160,7 +160,7 @@ func (s *Service) Run(ctx context.Context, delay time.Duration) {
 		return
 	}
 
-	s.runRetries(ctx)
+	s.startRetries(ctx)
 
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -386,7 +386,7 @@ func getLinuxDistribution(procVersion string) string {
 	return "unknown"
 }
 
-func (s *Service) runRetries(ctx context.Context) {
+func (s *Service) startRetries(ctx context.Context) {
 	l.Debug("Start telemetry retries goroutine")
 
 	go func() {
