@@ -82,9 +82,7 @@ func TestMakeV2Payload(t *testing.T) {
 }
 
 func TestSendV2Request(t *testing.T) {
-	os.Setenv(envV2Host, devTelemetryHost)
-
-	// TODO check tests
+	os.Setenv(envV2Host, devTelemetryHost) //nolint:errcheck
 
 	t.Run("Normal", func(t *testing.T) {
 		s := NewService(nil, "2.3.0")
@@ -196,6 +194,7 @@ func TestGetLinuxDistribution(t *testing.T) {
 	}
 }
 
+//nolint:errcheck
 func TestWaitAndRetry(t *testing.T) {
 	t.Run("Normal", func(t *testing.T) {
 		os.Setenv(envV2Host, "localhost") // Used as nowhere
@@ -244,6 +243,7 @@ func TestWaitAndRetry(t *testing.T) {
 	})
 }
 
+//nolint:errcheck
 func TestRetry(t *testing.T) {
 	t.Run("Normal retry", func(t *testing.T) {
 		os.Setenv(envV2Host, devTelemetryHost)
