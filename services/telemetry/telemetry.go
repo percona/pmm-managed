@@ -73,9 +73,9 @@ type Service struct {
 	v1URL  string
 	v2Host string
 
-	ch       chan *retryTask
-	backoff  time.Duration
-	retryCnt int32
+	ch           chan *retryTask
+	retryBackoff time.Duration
+	retryCnt     int32
 
 	os                  string
 	sDistributionMethod serverpb.DistributionMethod
@@ -99,7 +99,7 @@ func NewService(db *reform.DB, pmmVersion string) *Service {
 		os:                  oSys,
 		v1URL:               v1URL,
 		v2Host:              v2Host,
-		backoff:             retryBackoff,
+		retryBackoff:        retryBackoff,
 		retryCnt:            retryCnt,
 		ch:                  make(chan *retryTask, retryQueueSize),
 	}
@@ -227,8 +227,8 @@ func (s *Service) sendOnce(ctx context.Context) error {
 
 func (s *Service) makeV1Payload(uuid string) []byte {
 	var w bytes.Buffer
-	_, _ = fmt.Fprintf(&w, "%s;%s;%s\n", uuid, "OS", s.os)
-	_, _ = fmt.Fprintf(&w, "%s;%s;%s\n", uuid, "PMM", s.pmmVersion)
+	fmt.Fprintf(&w, "%s;%s;%s\n", uuid, "OS", s.os)
+	fmt.Fprintf(&w, "%s;%s;%s\n", uuid, "PMM", s.pmmVersion)
 	return w.Bytes()
 }
 
