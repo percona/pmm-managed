@@ -241,7 +241,7 @@
     "gen/telemetry/reporter",
   ]
   pruneopts = "NUT"
-  revision = "bba3673993d3aed799b81fbd165a70605415028b"
+  revision = "a03fe569e6a843f9039e87e9f6eeeec4df8101a2"
 
 [[projects]]
   digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
