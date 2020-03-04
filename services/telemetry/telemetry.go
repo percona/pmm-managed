@@ -397,11 +397,11 @@ func (s *Service) runWaitAndRetry(ctx context.Context, req *reporter.ReportReque
 			return
 		case <-ctx.Done():
 			l.Debugf("Wait and retry exit due: %+v", ctx.Err())
+			return
 		}
 	}
 
 	l.Debugf("Retry count exceeded, limit: %d, request: %s", retryCnt, req)
-	return
 }
 
 func (s *Service) retry(ctx context.Context, req *reporter.ReportRequest) error {
