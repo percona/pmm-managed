@@ -25,20 +25,18 @@ import (
 )
 
 func main() {
-
 	logrus.SetFormatter(&logrus.TextFormatter{
 		ForceColors:     true,
 		FullTimestamp:   true,
 		TimestampFormat: "2006-01-02T15:04:05.000-07:00",
 	})
-	l := logrus.WithField("component", "pmm-managed-init")
-	envVars := os.Environ()
-	_, errs, warns := validators.ValidateEnvVars(envVars)
+
+	_, errs, warns := validators.ValidateEnvVars(os.Environ())
 	for _, warn := range warns {
-		l.Warnln(warn)
+		logrus.Warnf("Configuration warning: %s.", warn)
 	}
 	for _, err := range errs {
-		l.Errorln(err)
+		logrus.Errorf("Configuration error: %s.", err)
 	}
 
 	if len(errs) > 0 {
