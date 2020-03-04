@@ -26,7 +26,7 @@ func TestSettings(t *testing.T) {
 		assert.True(t, res.Payload.Settings.TelemetryEnabled)
 		expected := &server.GetSettingsOKBodySettingsMetricsResolutions{
 			Hr: "5s",
-			Mr: "5s",
+			Mr: "10s",
 			Lr: "60s",
 		}
 		assert.Equal(t, expected, res.Payload.Settings.MetricsResolutions)
