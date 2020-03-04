@@ -50,11 +50,10 @@ import (
 var l = logrus.WithField("component", "telemetry")
 
 const (
-	interval       = 1 * time.Minute
-	timeout        = 5 * time.Second
-	retryBackoff   = time.Hour
-	retryCnt       = 20
-	retryQueueSize = 2000 // Should be greater than (retryBackoff * retryCnt / interval).
+	interval     = 10 * time.Second
+	timeout      = 5 * time.Second
+	retryBackoff = time.Hour
+	retryCnt     = 20
 
 	defaultV1URL  = "https://v.percona.com/"
 	defaultV2Host = "check.percona.com:443" // protocol is always https
@@ -73,7 +72,6 @@ type Service struct {
 	v1URL  string
 	v2Host string
 
-	ch           chan *retryTask
 	retryBackoff time.Duration
 	retryCnt     int32
 
@@ -101,7 +99,6 @@ func NewService(db *reform.DB, pmmVersion string) *Service {
 		v2Host:              v2Host,
 		retryBackoff:        retryBackoff,
 		retryCnt:            retryCnt,
-		ch:                  make(chan *retryTask, retryQueueSize),
 	}
 }
 
@@ -160,17 +157,13 @@ func (s *Service) Run(ctx context.Context, delay time.Duration) {
 		return
 	}
 
-	s.startRetries(ctx)
-
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	for {
-		sendOnceCtx, sendOnceCancel := context.WithTimeout(ctx, timeout)
-		if err := s.sendOnce(sendOnceCtx); err != nil {
+		if err := s.sendOnce(ctx); err != nil {
 			l.Debugf("Telemetry info not send: %s.", err)
 		}
-		sendOnceCancel()
 
 		select {
 		case <-ticker.C:
@@ -182,6 +175,8 @@ func (s *Service) Run(ctx context.Context, delay time.Duration) {
 }
 
 func (s *Service) sendOnce(ctx context.Context) error {
+	sendOnceCtx, sendOnceCancel := context.WithTimeout(ctx, timeout)
+	defer sendOnceCancel()
 	var settings *models.Settings
 	err := s.db.InTransaction(func(tx *reform.TX) error {
 		var e error
@@ -209,7 +204,7 @@ func (s *Service) sendOnce(ctx context.Context) error {
 
 	wg.Go(func() error {
 		payload := s.makeV1Payload(settings.Telemetry.UUID)
-		return s.sendV1Request(ctx, payload)
+		return s.sendV1Request(sendOnceCtx, payload)
 	})
 
 	wg.Go(func() error {
@@ -218,9 +213,9 @@ func (s *Service) sendOnce(ctx context.Context) error {
 			return err
 		}
 
-		if err = s.sendV2Request(ctx, req); err != nil {
+		if err = s.sendV2Request(sendOnceCtx, req); err != nil {
 			l.Debugf("Fail to send telemetry v2, add request to retry queue: %s", req)
-			s.queueToRetry(req)
+			go s.runWaitAndRetry(ctx, req)
 		}
 
 		return nil
@@ -386,78 +381,38 @@ func getLinuxDistribution(procVersion string) string {
 	return "unknown"
 }
 
-func (s *Service) startRetries(ctx context.Context) {
-	l.Debug("Start telemetry retries goroutine")
-
-	go func() {
-		for {
-			select {
-			case task := <-s.ch:
-				if err := s.waitAndRetry(ctx, task); err != nil {
-					return
-				}
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
-}
-
-func (s *Service) waitAndRetry(ctx context.Context, task *retryTask) error {
-	d := time.Until(task.t)
-	t := time.NewTimer(d)
+func (s *Service) runWaitAndRetry(ctx context.Context, req *reporter.ReportRequest) {
+	t := time.NewTimer(retryBackoff)
 	defer t.Stop()
 
-	select {
-	case <-t.C:
-		s.retry(ctx, task)
-	case <-ctx.Done():
-		return ctx.Err()
+	for i := 0; i < retryCnt; i++ {
+		select {
+		case <-t.C:
+			if err := s.retry(ctx, req); err != nil {
+				l.Debugf("Fail to retry send telemetry request: %s, error%+v", req, err)
+				t.Reset(retryBackoff)
+				continue
+			}
+
+			return
+		case <-ctx.Done():
+			l.Debugf("Wait and retry exit due: %+v", ctx.Err())
+		}
 	}
 
-	return nil
+	l.Debugf("Retry count exceeded, limit: %d, request: %s", retryCnt, req)
+	return
 }
 
-func (s *Service) retry(ctx context.Context, task *retryTask) {
+func (s *Service) retry(ctx context.Context, req *reporter.ReportRequest) error {
 	rCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	l.Debugf("Retry send telemetry request: %s", task.req)
-	err := s.sendV2Request(rCtx, task.req)
+	l.Debugf("Retry send telemetry request: %s", req)
+	err := s.sendV2Request(rCtx, req)
 	if err != nil {
-		l.Debugf("sendV2Request: %+v", err)
-		if task.cnt >= retryCnt {
-			l.Debugf("Retry count exceeded, limit: %d, req: %s", retryCnt, task.req)
-			return
-		}
-
-		task.cnt++
-		task.t = time.Now().Add(retryBackoff)
-
-		s.tryToPushToQueue(task)
+		return err
 	}
-}
 
-func (s *Service) tryToPushToQueue(task *retryTask) bool {
-	select {
-	case s.ch <- task:
-		return true
-	default:
-		l.Debugf("Retry queue overflow, throw away request: %s.", task.req)
-		return false
-	}
-}
-
-func (s *Service) queueToRetry(req *reporter.ReportRequest) {
-	s.tryToPushToQueue(&retryTask{
-		cnt: 1, // nolint:mnd
-		t:   time.Now().Add(retryBackoff),
-		req: req,
-	})
-}
-
-type retryTask struct {
-	cnt int32
-	t   time.Time
-	req *reporter.ReportRequest
+	return nil
 }

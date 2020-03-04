@@ -26,7 +26,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"
 	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
-	reporterv1 "github.com/percona-platform/saas/gen/telemetry/reporter"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -195,55 +194,6 @@ func TestGetLinuxDistribution(t *testing.T) {
 }
 
 //nolint:errcheck
-func TestWaitAndRetry(t *testing.T) {
-	t.Run("Normal", func(t *testing.T) {
-		os.Setenv(envV2Host, "localhost") // Used as nowhere
-		s := NewService(nil, "2.3.0")
-		u, err := generateUUID()
-		require.NoError(t, err)
-
-		req, err := s.makeV2Payload(u)
-		require.NoError(t, err)
-
-		task := &retryTask{
-			cnt: 1,
-			t:   time.Now(),
-			req: req,
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-		defer cancel()
-
-		err = s.waitAndRetry(ctx, task)
-
-		assert.NoError(t, err)
-	})
-
-	t.Run("Context timeout exceeded", func(t *testing.T) {
-		os.Setenv(envV2Host, devTelemetryHost)
-		s := NewService(nil, "2.3.0")
-		u, err := generateUUID()
-		require.NoError(t, err)
-
-		req, err := s.makeV2Payload(u)
-		require.NoError(t, err)
-
-		task := &retryTask{
-			cnt: 1,
-			t:   time.Now().Add(time.Hour),
-			req: req,
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		defer cancel()
-
-		err = s.waitAndRetry(ctx, task)
-
-		assert.Equal(t, context.DeadlineExceeded, err)
-	})
-}
-
-//nolint:errcheck
 func TestRetry(t *testing.T) {
 	t.Run("Normal retry", func(t *testing.T) {
 		os.Setenv(envV2Host, devTelemetryHost)
@@ -254,25 +204,11 @@ func TestRetry(t *testing.T) {
 		req, err := s.makeV2Payload(u)
 		require.NoError(t, err)
 
-		task := &retryTask{
-			cnt: 1,
-			t:   time.Now(),
-			req: req,
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		s.retry(ctx, task)
-
-		select {
-		case <-s.ch:
-			t.Error("Receive retry task, but shouldn't")
-		default:
-		}
+		err = s.retry(context.Background(), req)
+		assert.NoError(t, err)
 	})
 
-	t.Run("Normal re-retry", func(t *testing.T) {
+	t.Run("Failed retry", func(t *testing.T) {
 		os.Setenv(envV2Host, "localhost") // Used as nowhere
 		s := NewService(nil, "2.3.0")
 		u, err := generateUUID()
@@ -281,81 +217,7 @@ func TestRetry(t *testing.T) {
 		req, err := s.makeV2Payload(u)
 		require.NoError(t, err)
 
-		task := &retryTask{
-			cnt: 1,
-			t:   time.Now(),
-			req: req,
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		s.retry(ctx, task)
-
-		select {
-		case v := <-s.ch:
-			assert.Equal(t, task.req, req)
-			assert.Equal(t, task.cnt, int32(2))
-			assert.LessOrEqual(t, v.t.UnixNano(), time.Now().Add(retryBackoff).Add(2*time.Second).UnixNano())
-			assert.GreaterOrEqual(t, v.t.UnixNano(), time.Now().Add(retryBackoff).Add(-2*time.Second).UnixNano())
-		default:
-			t.Error("Request missed")
-		}
-	})
-
-	t.Run("Exceeded retry count", func(t *testing.T) {
-		os.Setenv(envV2Host, devTelemetryHost)
-		s := NewService(nil, "2.3.0")
-		u, err := generateUUID()
-		require.NoError(t, err)
-
-		req, err := s.makeV2Payload(u)
-		require.NoError(t, err)
-
-		task := &retryTask{
-			cnt: retryCnt,
-			t:   time.Now(),
-			req: req,
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		s.retry(ctx, task)
-
-		select {
-		case <-s.ch:
-			t.Error("Receive retry task, but shouldn't")
-		default:
-		}
-	})
-}
-
-func TestQueueToRetry(t *testing.T) {
-	s := NewService(nil, "")
-
-	req := &reporterv1.ReportRequest{}
-
-	s.queueToRetry(req)
-
-	select {
-	case v := <-s.ch:
-		assert.Equal(t, v.req, req)
-		assert.Equal(t, v.cnt, int32(1))
-	default:
-		t.Error("Request missed")
-	}
-}
-
-func TestRetryQueueOverflow(t *testing.T) {
-	s := NewService(nil, "")
-
-	t.Run("Normal", func(t *testing.T) {
-		assert.True(t, s.tryToPushToQueue(&retryTask{}))
-	})
-
-	t.Run("Overflow", func(t *testing.T) {
-		s.ch = make(chan *retryTask)
-		assert.False(t, s.tryToPushToQueue(&retryTask{}))
+		err = s.retry(context.Background(), req)
+		assert.Error(t, err)
 	})
 }
