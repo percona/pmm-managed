@@ -92,12 +92,12 @@ func TestEnvVarValidator(t *testing.T) {
 		}
 		expectedEnvVars := EnvSettings{}
 		expectedErrs := []error{
-			fmt.Errorf("invalid environment variable %q", "DISABLE_UPDATES=5"),
-			fmt.Errorf("invalid environment variable %q", "DISABLE_TELEMETRY=X"),
-			fmt.Errorf("environment variable %q has invalid duration 5f", "METRICS_RESOLUTION=5f"),
-			fmt.Errorf("environment variable %q has invalid duration s5", "METRICS_RESOLUTION_MR=s5"),
-			fmt.Errorf("environment variable %q has invalid duration 1hour", "METRICS_RESOLUTION_LR=1hour"),
-			fmt.Errorf("environment variable %q has invalid duration keep one week", "DATA_RETENTION=keep one week"),
+			fmt.Errorf(`invalid value "5" for environment variable "DISABLE_UPDATES"`),
+			fmt.Errorf(`invalid value "x" for environment variable "DISABLE_TELEMETRY"`),
+			fmt.Errorf(`environment variable "METRICS_RESOLUTION=5f" has invalid duration 5f`),
+			fmt.Errorf(`environment variable "METRICS_RESOLUTION_MR=s5" has invalid duration s5`),
+			fmt.Errorf(`environment variable "METRICS_RESOLUTION_LR=1hour" has invalid duration 1hour`),
+			fmt.Errorf(`environment variable "DATA_RETENTION=keep one week" has invalid duration keep one week`),
 		}
 
 		gotEnvVars, gotErrs, gotWarns := ValidateEnvVars(envs)

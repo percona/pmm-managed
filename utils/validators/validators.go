@@ -96,35 +96,34 @@ func ValidateEnvVars(envs []string) (envSettings EnvSettings, errs []error, warn
 		}
 
 		var err error
-
 		k, v := strings.ToUpper(p[0]), strings.ToLower(p[1])
 		switch k {
-		// Skip default environment variables.
 		case "PATH", "HOSTNAME", "TERM", "HOME", "PWD", "SHLVL", "_":
+			// skip default environment variables
 		case "DISABLE_UPDATES":
 			envSettings.DisableUpdates, err = strconv.ParseBool(v)
 			if err != nil {
-				err = fmt.Errorf("invalid environment variable %q", env)
+				err = fmt.Errorf("invalid value %q for environment variable %q", v, k)
 			}
 		case "DISABLE_TELEMETRY":
 			envSettings.DisableTelemetry, err = strconv.ParseBool(v)
 			if err != nil {
-				err = fmt.Errorf("invalid environment variable %q", env)
+				err = fmt.Errorf("invalid value %q for environment variable %q", v, k)
 			}
 		case "METRICS_RESOLUTION", "METRICS_RESOLUTION_HR":
-			if envSettings.MetricsResolutions.HR, err = ValidateStringMetricResolution(v); err != nil {
+			if envSettings.MetricsResolutions.HR, err = validateStringMetricResolution(v); err != nil {
 				err = formatEnvVariableError(err, env, v)
 			}
 		case "METRICS_RESOLUTION_MR":
-			if envSettings.MetricsResolutions.MR, err = ValidateStringMetricResolution(v); err != nil {
+			if envSettings.MetricsResolutions.MR, err = validateStringMetricResolution(v); err != nil {
 				err = formatEnvVariableError(err, env, v)
 			}
 		case "METRICS_RESOLUTION_LR":
-			if envSettings.MetricsResolutions.LR, err = ValidateStringMetricResolution(v); err != nil {
+			if envSettings.MetricsResolutions.LR, err = validateStringMetricResolution(v); err != nil {
 				err = formatEnvVariableError(err, env, v)
 			}
 		case "DATA_RETENTION":
-			if envSettings.DataRetention, err = ValidateStringDataRetention(v); err != nil {
+			if envSettings.DataRetention, err = validateStringDataRetention(v); err != nil {
 				err = formatEnvVariableError(err, env, v)
 			}
 		default:
@@ -153,17 +152,17 @@ func formatEnvVariableError(err error, env, value string) error {
 }
 
 // ValidateStringDuration validate duration as string value.
-func ValidateStringDuration(value string, min, multipleOf time.Duration) (time.Duration, error) {
+func validateStringDuration(value string, min, multipleOf time.Duration) (time.Duration, error) {
 	d, err := time.ParseDuration(value)
 	if err != nil {
 		return d, InvalidDurationError("invalid duration error")
 	}
 
-	return ValidateDuration(d, min, multipleOf)
+	return validateDuration(d, min, multipleOf)
 }
 
 // ValidateDuration validate duration.
-func ValidateDuration(d, min, multipleOf time.Duration) (time.Duration, error) {
+func validateDuration(d, min, multipleOf time.Duration) (time.Duration, error) {
 	if d < min {
 		return d, MinDurationError{"min duration error", min}
 	}
@@ -175,21 +174,21 @@ func ValidateDuration(d, min, multipleOf time.Duration) (time.Duration, error) {
 }
 
 // ValidateStringMetricResolution validate metric resolution.
-func ValidateStringMetricResolution(value string) (time.Duration, error) {
-	return ValidateStringDuration(value, MetricsResolutionMin, MetricsResolutionMultipleOf)
+func validateStringMetricResolution(value string) (time.Duration, error) {
+	return validateStringDuration(value, MetricsResolutionMin, MetricsResolutionMultipleOf)
 }
 
 // ValidateMetricResolution validate metric resolution.
 func ValidateMetricResolution(value time.Duration) (time.Duration, error) {
-	return ValidateDuration(value, MetricsResolutionMin, MetricsResolutionMultipleOf)
+	return validateDuration(value, MetricsResolutionMin, MetricsResolutionMultipleOf)
 }
 
 // ValidateStringDataRetention validate metric resolution.
-func ValidateStringDataRetention(value string) (time.Duration, error) {
-	return ValidateStringDuration(value, DataRetentionMin, DataRetentionMultipleOf)
+func validateStringDataRetention(value string) (time.Duration, error) {
+	return validateStringDuration(value, DataRetentionMin, DataRetentionMultipleOf)
 }
 
 // ValidateDataRetention validate metric resolution.
 func ValidateDataRetention(value time.Duration) (time.Duration, error) {
-	return ValidateDuration(value, DataRetentionMin, DataRetentionMultipleOf)
+	return validateDuration(value, DataRetentionMin, DataRetentionMultipleOf)
 }
