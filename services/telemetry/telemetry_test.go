@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const devTelemetryHost = "callhome-staging.percona.com:443"
+const devTelemetryHost = "check-dev.percona.com:443"
 
 //nolint:lll
 func TestMakeV1Payload(t *testing.T) {
