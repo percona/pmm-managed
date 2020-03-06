@@ -68,7 +68,6 @@ func FindServices(q *reform.Querier, filters ServiceFilters) ([]*Service, error)
 	if filters.NodeID != "" {
 		conditions = append(conditions, fmt.Sprintf("node_id = %s", q.Placeholder(idx)))
 		args = append(args, filters.NodeID)
-		idx++
 	}
 	var whereClause string
 	if len(conditions) != 0 {

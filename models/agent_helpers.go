@@ -67,7 +67,6 @@ func FindAgents(q *reform.Querier, filters AgentFilters) ([]*Agent, error) {
 	if filters.PMMAgentID != "" {
 		conditions = append(conditions, fmt.Sprintf("pmm_agent_id = %s", q.Placeholder(idx)))
 		args = append(args, filters.PMMAgentID)
-		idx++
 	}
 
 	var whereClause string

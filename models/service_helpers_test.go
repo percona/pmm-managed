@@ -131,7 +131,7 @@ func TestServiceHelpers(t *testing.T) {
 
 		services, err = models.FindServices(q, models.ServiceFilters{NodeID: "N1", ServiceType: pointerToServiceType(models.MySQLServiceType)})
 		assert.NoError(t, err)
-		assert.Equal(t, 2, len(services))
+		assert.Equal(t, 1, len(services))
 		assert.Equal(t, services, []*models.Service{{
 			ServiceID:   "S2",
 			ServiceType: models.MySQLServiceType,
