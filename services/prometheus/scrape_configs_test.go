@@ -29,10 +29,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/percona/pmm-managed/models"
-	config_util "github.com/percona/pmm-managed/services/prometheus/internal/common/config"
-	"github.com/percona/pmm-managed/services/prometheus/internal/prometheus/config"
-	sd_config "github.com/percona/pmm-managed/services/prometheus/internal/prometheus/discovery/config"
-	"github.com/percona/pmm-managed/services/prometheus/internal/prometheus/discovery/targetgroup"
+	"github.com/percona/pmm-managed/services/prometheus/internal/config"
 )
 
 func TestScrapeConfig(t *testing.T) {
@@ -62,16 +59,16 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeInterval: model.Duration(s.HR),
 				ScrapeTimeout:  scrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
-				HTTPClientConfig: config_util.HTTPClientConfig{
-					BasicAuth: &config_util.BasicAuth{
+				HTTPClientConfig: config.HTTPClientConfig{
+					BasicAuth: &config.BasicAuth{
 						Username: "pmm",
 						Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
 					},
 				},
-				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
-					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
-						Labels: model.LabelSet{
+				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+					StaticConfigs: []*config.Group{{
+						Targets: []string{"1.2.3.4:12345"},
+						Labels: map[string]string{
 							"_some_agent_label": "baz",
 							"_some_node_label":  "foo",
 							"agent_id":          "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
@@ -106,16 +103,16 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeInterval: model.Duration(s.MR),
 				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/metrics",
-				HTTPClientConfig: config_util.HTTPClientConfig{
-					BasicAuth: &config_util.BasicAuth{
+				HTTPClientConfig: config.HTTPClientConfig{
+					BasicAuth: &config.BasicAuth{
 						Username: "pmm",
 						Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
 					},
 				},
-				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
-					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
-						Labels: model.LabelSet{
+				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+					StaticConfigs: []*config.Group{{
+						Targets: []string{"1.2.3.4:12345"},
+						Labels: map[string]string{
 							"_some_agent_label": "baz",
 							"_some_node_label":  "foo",
 							"agent_id":          "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
@@ -135,16 +132,16 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeInterval: model.Duration(s.LR),
 				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/metrics",
-				HTTPClientConfig: config_util.HTTPClientConfig{
-					BasicAuth: &config_util.BasicAuth{
+				HTTPClientConfig: config.HTTPClientConfig{
+					BasicAuth: &config.BasicAuth{
 						Username: "pmm",
 						Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
 					},
 				},
-				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
-					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
-						Labels: model.LabelSet{
+				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+					StaticConfigs: []*config.Group{{
+						Targets: []string{"1.2.3.4:12345"},
+						Labels: map[string]string{
 							"_some_agent_label": "baz",
 							"_some_node_label":  "foo",
 							"agent_id":          "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
@@ -196,16 +193,16 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeInterval: model.Duration(s.HR),
 				ScrapeTimeout:  scrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
-				HTTPClientConfig: config_util.HTTPClientConfig{
-					BasicAuth: &config_util.BasicAuth{
+				HTTPClientConfig: config.HTTPClientConfig{
+					BasicAuth: &config.BasicAuth{
 						Username: "pmm",
 						Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
 					},
 				},
-				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
-					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "1.2.3.4:12345"}},
-						Labels: model.LabelSet{
+				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+					StaticConfigs: []*config.Group{{
+						Targets: []string{"1.2.3.4:12345"},
+						Labels: map[string]string{
 							"_some_agent_label": "baz",
 							"_some_node_label":  "foo",
 							"agent_id":          "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
@@ -267,16 +264,16 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeInterval: model.Duration(s.HR),
 				ScrapeTimeout:  scrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
-				HTTPClientConfig: config_util.HTTPClientConfig{
-					BasicAuth: &config_util.BasicAuth{
+				HTTPClientConfig: config.HTTPClientConfig{
+					BasicAuth: &config.BasicAuth{
 						Username: "pmm",
 						Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
 					},
 				},
-				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
-					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
-						Labels: model.LabelSet{
+				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+					StaticConfigs: []*config.Group{{
+						Targets: []string{"4.5.6.7:12345"},
+						Labels: map[string]string{
 							"_some_agent_label":   "baz",
 							"_some_node_label":    "foo",
 							"_some_service_label": "bar",
@@ -301,16 +298,16 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeInterval: model.Duration(s.MR),
 				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/metrics",
-				HTTPClientConfig: config_util.HTTPClientConfig{
-					BasicAuth: &config_util.BasicAuth{
+				HTTPClientConfig: config.HTTPClientConfig{
+					BasicAuth: &config.BasicAuth{
 						Username: "pmm",
 						Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
 					},
 				},
-				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
-					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
-						Labels: model.LabelSet{
+				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+					StaticConfigs: []*config.Group{{
+						Targets: []string{ "4.5.6.7:12345"},
+						Labels: map[string]string{
 							"_some_agent_label":   "baz",
 							"_some_node_label":    "foo",
 							"_some_service_label": "bar",
@@ -340,16 +337,16 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeInterval: model.Duration(s.LR),
 				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/metrics",
-				HTTPClientConfig: config_util.HTTPClientConfig{
-					BasicAuth: &config_util.BasicAuth{
+				HTTPClientConfig: config.HTTPClientConfig{
+					BasicAuth: &config.BasicAuth{
 						Username: "pmm",
 						Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
 					},
 				},
-				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
-					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
-						Labels: model.LabelSet{
+				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+					StaticConfigs: []*config.Group{{
+						Targets: []string{"4.5.6.7:12345"},
+						Labels: map[string]string{
 							"_some_agent_label":   "baz",
 							"_some_node_label":    "foo",
 							"_some_service_label": "bar",
@@ -418,16 +415,16 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeInterval: model.Duration(s.HR),
 				ScrapeTimeout:  scrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
-				HTTPClientConfig: config_util.HTTPClientConfig{
-					BasicAuth: &config_util.BasicAuth{
+				HTTPClientConfig: config.HTTPClientConfig{
+					BasicAuth: &config.BasicAuth{
 						Username: "pmm",
 						Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
 					},
 				},
-				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
-					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
-						Labels: model.LabelSet{
+				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+					StaticConfigs: []*config.Group{{
+						Targets: []string{"4.5.6.7:12345"},
+						Labels: map[string]string{
 							"agent_id":   "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
 							"agent_type": "mysqld_exporter",
 							"instance":   "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
@@ -449,16 +446,16 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeInterval: model.Duration(s.MR),
 				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/metrics",
-				HTTPClientConfig: config_util.HTTPClientConfig{
-					BasicAuth: &config_util.BasicAuth{
+				HTTPClientConfig: config.HTTPClientConfig{
+					BasicAuth: &config.BasicAuth{
 						Username: "pmm",
 						Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
 					},
 				},
-				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
-					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
-						Labels: model.LabelSet{
+				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+					StaticConfigs: []*config.Group{{
+						Targets: []string{"4.5.6.7:12345"},
+						Labels: map[string]string{
 							"agent_id":   "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
 							"agent_type": "mysqld_exporter",
 							"instance":   "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
@@ -484,16 +481,16 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeInterval: model.Duration(s.LR),
 				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/metrics",
-				HTTPClientConfig: config_util.HTTPClientConfig{
-					BasicAuth: &config_util.BasicAuth{
+				HTTPClientConfig: config.HTTPClientConfig{
+					BasicAuth: &config.BasicAuth{
 						Username: "pmm",
 						Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
 					},
 				},
-				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
-					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
-						Labels: model.LabelSet{
+				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+					StaticConfigs: []*config.Group{{
+						Targets: []string{"4.5.6.7:12345"},
+						Labels: map[string]string{
 							"agent_id":   "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
 							"agent_type": "mysqld_exporter",
 							"instance":   "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
@@ -574,16 +571,16 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeInterval: model.Duration(s.HR),
 				ScrapeTimeout:  scrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
-				HTTPClientConfig: config_util.HTTPClientConfig{
-					BasicAuth: &config_util.BasicAuth{
+				HTTPClientConfig: config.HTTPClientConfig{
+					BasicAuth: &config.BasicAuth{
 						Username: "pmm",
 						Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
 					},
 				},
-				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
-					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
-						Labels: model.LabelSet{
+				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+					StaticConfigs: []*config.Group{{
+						Targets: []string{"4.5.6.7:12345"},
+						Labels: map[string]string{
 							"_some_agent_label":   "baz",
 							"_some_node_label":    "foo",
 							"_some_service_label": "bar",
@@ -655,16 +652,16 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeInterval: model.Duration(s.HR),
 				ScrapeTimeout:  scrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
-				HTTPClientConfig: config_util.HTTPClientConfig{
-					BasicAuth: &config_util.BasicAuth{
+				HTTPClientConfig: config.HTTPClientConfig{
+					BasicAuth: &config.BasicAuth{
 						Username: "pmm",
 						Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
 					},
 				},
-				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
-					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
-						Labels: model.LabelSet{
+				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+					StaticConfigs: []*config.Group{{
+						Targets: []string{"4.5.6.7:12345"},
+						Labels: map[string]string{
 							"_some_agent_label":   "baz",
 							"_some_node_label":    "foo",
 							"_some_service_label": "bar",
@@ -688,16 +685,16 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeInterval: model.Duration(s.MR),
 				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/metrics",
-				HTTPClientConfig: config_util.HTTPClientConfig{
-					BasicAuth: &config_util.BasicAuth{
+				HTTPClientConfig: config.HTTPClientConfig{
+					BasicAuth: &config.BasicAuth{
 						Username: "pmm",
 						Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
 					},
 				},
-				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
-					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
-						Labels: model.LabelSet{
+				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+					StaticConfigs: []*config.Group{{
+						Targets: []string{"4.5.6.7:12345"},
+						Labels: map[string]string{
 							"_some_agent_label":   "baz",
 							"_some_node_label":    "foo",
 							"_some_service_label": "bar",
@@ -718,16 +715,16 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeInterval: model.Duration(s.LR),
 				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/metrics",
-				HTTPClientConfig: config_util.HTTPClientConfig{
-					BasicAuth: &config_util.BasicAuth{
+				HTTPClientConfig: config.HTTPClientConfig{
+					BasicAuth: &config.BasicAuth{
 						Username: "pmm",
 						Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
 					},
 				},
-				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
-					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
-						Labels: model.LabelSet{
+				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+					StaticConfigs: []*config.Group{{
+						Targets: []string{"4.5.6.7:12345"},
+						Labels: map[string]string{
 							"_some_agent_label":   "baz",
 							"_some_node_label":    "foo",
 							"_some_service_label": "bar",
@@ -802,16 +799,16 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeInterval: model.Duration(s.HR),
 				ScrapeTimeout:  scrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
-				HTTPClientConfig: config_util.HTTPClientConfig{
-					BasicAuth: &config_util.BasicAuth{
+				HTTPClientConfig: config.HTTPClientConfig{
+					BasicAuth: &config.BasicAuth{
 						Username: "pmm",
 						Password: "/agent_id/75bb30d3-ef4a-4147-97a8-621a996611dd",
 					},
 				},
-				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
-					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "4.5.6.7:12345"}},
-						Labels: model.LabelSet{
+				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+					StaticConfigs: []*config.Group{{
+						Targets: []string{"4.5.6.7:12345"},
+						Labels: map[string]string{
 							"_some_agent_label":   "baz",
 							"_some_node_label":    "foo",
 							"_some_service_label": "bar",
@@ -887,9 +884,9 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/enhanced",
 				HonorLabels:    true,
-				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
-					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "1.1.1.1:12345"}},
+				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+					StaticConfigs: []*config.Group{{
+						Targets: []string{"1.1.1.1:12345"},
 					}},
 				},
 			}, {
@@ -898,9 +895,9 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/basic",
 				HonorLabels:    true,
-				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
-					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "1.1.1.1:12345"}},
+				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+					StaticConfigs: []*config.Group{{
+						Targets: []string{"1.1.1.1:12345"},
 					}},
 				},
 			}, {
@@ -909,9 +906,9 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/enhanced",
 				HonorLabels:    true,
-				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
-					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "2.2.2.2:12345"}},
+				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+					StaticConfigs: []*config.Group{{
+						Targets: []string{"2.2.2.2:12345"},
 					}},
 				},
 			}, {
@@ -920,9 +917,9 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/basic",
 				HonorLabels:    true,
-				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
-					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "2.2.2.2:12345"}},
+				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+					StaticConfigs: []*config.Group{{
+						Targets: []string{"2.2.2.2:12345"},
 					}},
 				},
 			}, {
@@ -931,9 +928,9 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/enhanced",
 				HonorLabels:    true,
-				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
-					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "2.2.2.2:12346"}},
+				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+					StaticConfigs: []*config.Group{{
+						Targets: []string{"2.2.2.2:12346"},
 					}},
 				},
 			}, {
@@ -942,9 +939,9 @@ func TestScrapeConfig(t *testing.T) {
 				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/basic",
 				HonorLabels:    true,
-				ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
-					StaticConfigs: []*targetgroup.Group{{
-						Targets: []model.LabelSet{{"__address__": "2.2.2.2:12346"}},
+				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+					StaticConfigs: []*config.Group{{
+						Targets: []string{"2.2.2.2:12346"},
 					}},
 				},
 			}}

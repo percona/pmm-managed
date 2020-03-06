@@ -41,10 +41,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/percona/pmm-managed/models"
-	config_util "github.com/percona/pmm-managed/services/prometheus/internal/common/config"
-	"github.com/percona/pmm-managed/services/prometheus/internal/prometheus/config"
-	sd_config "github.com/percona/pmm-managed/services/prometheus/internal/prometheus/discovery/config"
-	"github.com/percona/pmm-managed/services/prometheus/internal/prometheus/discovery/targetgroup"
+	"github.com/percona/pmm-managed/services/prometheus/internal/config"
 )
 
 const updateBatchDelay = 3 * time.Second
@@ -322,11 +319,11 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 			}
 
 			if err == nil {
-				var httpClientConfig config_util.HTTPClientConfig
+				var httpClientConfig config.HTTPClientConfig
 				if username := u.User.Username(); username != "" {
 					password, _ := u.User.Password()
-					httpClientConfig = config_util.HTTPClientConfig{
-						BasicAuth: &config_util.BasicAuth{
+					httpClientConfig = config.HTTPClientConfig{
+						BasicAuth: &config.BasicAuth{
 							Username: u.User.Username(),
 							Password: password,
 						},
@@ -334,9 +331,9 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 				}
 
 				cfg.AlertingConfig.AlertmanagerConfigs = append(cfg.AlertingConfig.AlertmanagerConfigs, &config.AlertmanagerConfig{
-					ServiceDiscoveryConfig: sd_config.ServiceDiscoveryConfig{
-						StaticConfigs: []*targetgroup.Group{{
-							Targets: []model.LabelSet{{addressLabel: model.LabelValue(u.Host)}},
+					ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+						StaticConfigs: []*config.Group{{
+							Targets: []string{u.Host},
 						}},
 					},
 					HTTPClientConfig: httpClientConfig,
