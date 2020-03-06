@@ -55,15 +55,26 @@ func checkServiceUniqueName(q *reform.Querier, name string) error {
 	}
 }
 
-// FindAllServices returns all Services.
-func FindAllServices(q *reform.Querier, serviceType *ServiceType) ([]*Service, error) {
+// FindServices returns Services by filters.
+func FindServices(q *reform.Querier, filters ServiceFilters) ([]*Service, error) {
 	var conditions []string
 	var args []interface{}
-	if serviceType != nil {
-		conditions = append(conditions, "WHERE service_type = $1")
-		args = append(args, serviceType)
+	idx := 1
+	if filters.ServiceType != nil {
+		conditions = append(conditions, fmt.Sprintf("service_type = %s", q.Placeholder(idx)))
+		args = append(args, filters.ServiceType)
+		idx++
 	}
-	structs, err := q.SelectAllFrom(ServiceTable, fmt.Sprintf("%s ORDER BY service_id", strings.Join(conditions, " AND ")), args...)
+	if filters.NodeID != "" {
+		conditions = append(conditions, fmt.Sprintf("node_id = %s", q.Placeholder(idx)))
+		args = append(args, filters.NodeID)
+		idx++
+	}
+	var whereClause string
+	if len(conditions) != 0 {
+		whereClause = fmt.Sprintf("WHERE %s", strings.Join(conditions, " AND "))
+	}
+	structs, err := q.SelectAllFrom(ServiceTable, fmt.Sprintf("%s ORDER BY service_id", whereClause), args...)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -133,29 +144,6 @@ func FindServiceByName(q *reform.Querier, name string) (*Service, error) {
 	default:
 		return nil, errors.WithStack(err)
 	}
-}
-
-// ServicesForNode returns all Services for Node with given ID.
-func ServicesForNode(q *reform.Querier, nodeID string, serviceType *ServiceType) ([]*Service, error) {
-	conditions := []string{
-		"node_id = $1",
-	}
-	args := []interface{}{nodeID}
-	if serviceType != nil {
-		conditions = append(conditions, "service_type = $2")
-		args = append(args, serviceType)
-	}
-	tail := fmt.Sprintf("WHERE %s ORDER BY service_id", strings.Join(conditions, " AND ")) //nolint:gosec
-	structs, err := q.SelectAllFrom(ServiceTable, tail, args...)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to select Services")
-	}
-
-	res := make([]*Service, len(structs))
-	for i, s := range structs {
-		res[i] = s.(*Service)
-	}
-	return res, nil
 }
 
 // AddDBMSServiceParams contains parameters for adding DBMS (MySQL, PostgreSQL, MongoDB) Services.
@@ -233,4 +221,12 @@ func RemoveService(q *reform.Querier, id string, mode RemoveMode) error {
 	}
 
 	return errors.Wrap(q.Delete(s), "failed to delete Service")
+}
+
+// ServiceFilters represents filters for services list.
+type ServiceFilters struct {
+	// Return only Services runs on that Node.
+	NodeID string
+	// Return only Services with provided type.
+	ServiceType *ServiceType
 }

@@ -44,7 +44,7 @@ func checkUniqueAgentID(q *reform.Querier, id string) error {
 	}
 }
 
-// FindAgents returns Agents by passed filters.
+// FindAgents returns Agents by filters.
 func FindAgents(q *reform.Querier, filters AgentFilters) ([]*Agent, error) {
 	var conditions []string
 	var args []interface{}

@@ -52,7 +52,7 @@ func nodeType(nodeType inventorypb.NodeType) *models.NodeType {
 
 // ListNodes returns a list of all Nodes.
 func (s *nodesServer) ListNodes(ctx context.Context, req *inventorypb.ListNodesRequest) (*inventorypb.ListNodesResponse, error) {
-	filters := inventory.NodeFilters{
+	filters := models.NodeFilters{
 		NodeType: nodeType(req.NodeType),
 	}
 	nodes, err := s.svc.List(ctx, filters)

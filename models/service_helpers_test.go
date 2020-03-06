@@ -56,6 +56,11 @@ func TestServiceHelpers(t *testing.T) {
 				NodeType: models.GenericNodeType,
 				NodeName: "Node",
 			},
+			&models.Node{
+				NodeID:   "N2",
+				NodeType: models.GenericNodeType,
+				NodeName: "Node 2",
+			},
 
 			&models.Service{
 				ServiceID:   "S1",
@@ -68,6 +73,12 @@ func TestServiceHelpers(t *testing.T) {
 				ServiceType: models.MySQLServiceType,
 				ServiceName: "Service with Agents",
 				NodeID:      "N1",
+			},
+			&models.Service{
+				ServiceID:   "S3",
+				ServiceType: models.MySQLServiceType,
+				ServiceName: "Third service",
+				NodeID:      "N2",
 			},
 
 			&models.Agent{
@@ -91,14 +102,44 @@ func TestServiceHelpers(t *testing.T) {
 		return
 	}
 
-	t.Run("FindAllServices", func(t *testing.T) {
+	t.Run("FindServices", func(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
 
-		services, err := models.FindAllServices(q, nil)
+		services, err := models.FindServices(q, models.ServiceFilters{})
 		assert.NoError(t, err)
+		assert.Equal(t, 3, len(services))
 
+		services, err = models.FindServices(q, models.ServiceFilters{NodeID: "N1"})
+		assert.NoError(t, err)
 		assert.Equal(t, 2, len(services))
+		assert.Equal(t, services, []*models.Service{{
+			ServiceID:   "S1",
+			ServiceType: models.MongoDBServiceType,
+			ServiceName: "Service without Agents",
+			NodeID:      "N1",
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		}, {
+			ServiceID:   "S2",
+			ServiceType: models.MySQLServiceType,
+			ServiceName: "Service with Agents",
+			NodeID:      "N1",
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		}})
+
+		services, err = models.FindServices(q, models.ServiceFilters{NodeID: "N1", ServiceType: pointerToServiceType(models.MySQLServiceType)})
+		assert.NoError(t, err)
+		assert.Equal(t, 2, len(services))
+		assert.Equal(t, services, []*models.Service{{
+			ServiceID:   "S2",
+			ServiceType: models.MySQLServiceType,
+			ServiceName: "Service with Agents",
+			NodeID:      "N1",
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		}})
 	})
 
 	t.Run("RemoveService", func(t *testing.T) {
@@ -128,4 +169,8 @@ func TestServiceHelpers(t *testing.T) {
 		_, err = models.FindServiceByID(q, "S2")
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "S2" not found.`), err)
 	})
+}
+
+func pointerToServiceType(serviceType models.ServiceType) *models.ServiceType {
+	return &serviceType
 }
