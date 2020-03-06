@@ -398,20 +398,6 @@ func (c *ScrapeConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return errors.New("job_name is empty")
 	}
 
-	// The UnmarshalYAML method of HTTPClientConfig is not being called because it's not a pointer.
-	// We cannot make it a pointer as the parser panics for inlined pointer structs.
-	// Thus we just do its validation here.
-	if err := c.HTTPClientConfig.Validate(); err != nil {
-		return err
-	}
-
-	// The UnmarshalYAML method of ServiceDiscoveryConfig is not being called because it's not a pointer.
-	// We cannot make it a pointer as the parser panics for inlined pointer structs.
-	// Thus we just do its validation here.
-	if err := c.ServiceDiscoveryConfig.Validate(); err != nil {
-		return err
-	}
-
 	// Check for users putting URLs in target groups.
 	if len(c.RelabelConfigs) == 0 {
 		for _, tg := range c.ServiceDiscoveryConfig.StaticConfigs {
@@ -543,20 +529,6 @@ func (c *AlertmanagerConfig) UnmarshalYAML(unmarshal func(interface{}) error) er
 		return err
 	}
 
-	// The UnmarshalYAML method of HTTPClientConfig is not being called because it's not a pointer.
-	// We cannot make it a pointer as the parser panics for inlined pointer structs.
-	// Thus we just do its validation here.
-	if err := c.HTTPClientConfig.Validate(); err != nil {
-		return err
-	}
-
-	// The UnmarshalYAML method of ServiceDiscoveryConfig is not being called because it's not a pointer.
-	// We cannot make it a pointer as the parser panics for inlined pointer structs.
-	// Thus we just do its validation here.
-	if err := c.ServiceDiscoveryConfig.Validate(); err != nil {
-		return err
-	}
-
 	// Check for users putting URLs in target groups.
 	if len(c.RelabelConfigs) == 0 {
 		for _, tg := range c.ServiceDiscoveryConfig.StaticConfigs {
@@ -594,8 +566,8 @@ func CheckTargetAddress(address model.LabelValue) error {
 
 // ClientCert contains client cert credentials.
 type ClientCert struct {
-	Cert string             `yaml:"cert"`
-	Key  config_util.Secret `yaml:"key"`
+	Cert string `yaml:"cert"`
+	Key  string `yaml:"key"`
 }
 
 // FileSDConfig is the configuration for file based discovery.
@@ -606,7 +578,7 @@ type FileSDConfig struct {
 
 // RemoteWriteConfig is the configuration for writing to remote storage.
 type RemoteWriteConfig struct {
-	URL                 *config_util.URL  `yaml:"url"`
+	URL                 string            `yaml:"url"`
 	RemoteTimeout       model.Duration    `yaml:"remote_timeout,omitempty"`
 	WriteRelabelConfigs []*relabel.Config `yaml:"write_relabel_configs,omitempty"`
 	Name                string            `yaml:"name,omitempty"`
@@ -624,7 +596,7 @@ func (c *RemoteWriteConfig) UnmarshalYAML(unmarshal func(interface{}) error) err
 	if err := unmarshal((*plain)(c)); err != nil {
 		return err
 	}
-	if c.URL == nil {
+	if c.URL == "" {
 		return errors.New("url for remote_write is empty")
 	}
 	for _, rlcfg := range c.WriteRelabelConfigs {
@@ -633,10 +605,7 @@ func (c *RemoteWriteConfig) UnmarshalYAML(unmarshal func(interface{}) error) err
 		}
 	}
 
-	// The UnmarshalYAML method of HTTPClientConfig is not being called because it's not a pointer.
-	// We cannot make it a pointer as the parser panics for inlined pointer structs.
-	// Thus we just do its validation here.
-	return c.HTTPClientConfig.Validate()
+	return nil
 }
 
 // QueueConfig is the configuration for the queue used to write to remote
@@ -665,10 +634,10 @@ type QueueConfig struct {
 
 // RemoteReadConfig is the configuration for reading from remote storage.
 type RemoteReadConfig struct {
-	URL           *config_util.URL `yaml:"url"`
-	RemoteTimeout model.Duration   `yaml:"remote_timeout,omitempty"`
-	ReadRecent    bool             `yaml:"read_recent,omitempty"`
-	Name          string           `yaml:"name,omitempty"`
+	URL           string         `yaml:"url"`
+	RemoteTimeout model.Duration `yaml:"remote_timeout,omitempty"`
+	ReadRecent    bool           `yaml:"read_recent,omitempty"`
+	Name          string         `yaml:"name,omitempty"`
 
 	// We cannot do proper Go type embedding below as the parser will then parse
 	// values arbitrarily into the overflow maps of further-down types.
@@ -686,11 +655,8 @@ func (c *RemoteReadConfig) UnmarshalYAML(unmarshal func(interface{}) error) erro
 	if err := unmarshal((*plain)(c)); err != nil {
 		return err
 	}
-	if c.URL == nil {
+	if c.URL == "" {
 		return errors.New("url for remote_read is empty")
 	}
-	// The UnmarshalYAML method of HTTPClientConfig is not being called because it's not a pointer.
-	// We cannot make it a pointer as the parser panics for inlined pointer structs.
-	// Thus we just do its validation here.
-	return c.HTTPClientConfig.Validate()
+	return nil
 }
