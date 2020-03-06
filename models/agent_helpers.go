@@ -55,16 +55,25 @@ func FindAgents(q *reform.Querier, filters AgentFilters) ([]*Agent, error) {
 		idx++
 	}
 	if filters.NodeID != "" {
+		if _, err := FindNodeByID(q, filters.NodeID); err != nil {
+			return nil, err
+		}
 		conditions = append(conditions, fmt.Sprintf("node_id = %s", q.Placeholder(idx)))
 		args = append(args, filters.NodeID)
 		idx++
 	}
 	if filters.ServiceID != "" {
+		if _, err := FindServiceByID(q, filters.ServiceID); err != nil {
+			return nil, err
+		}
 		conditions = append(conditions, fmt.Sprintf("service_id = %s", q.Placeholder(idx)))
 		args = append(args, filters.ServiceID)
 		idx++
 	}
 	if filters.PMMAgentID != "" {
+		if _, err := FindAgentByID(q, filters.PMMAgentID); err != nil {
+			return nil, err
+		}
 		conditions = append(conditions, fmt.Sprintf("pmm_agent_id = %s", q.Placeholder(idx)))
 		args = append(args, filters.PMMAgentID)
 	}
