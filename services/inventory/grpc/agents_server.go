@@ -19,9 +19,10 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"github.com/percona/pmm-managed/models"
+
 	"github.com/percona/pmm/api/inventorypb"
 
+	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/inventory"
 )
 
@@ -58,7 +59,7 @@ func agentType(req *inventorypb.ListAgentsRequest) *models.AgentType {
 
 // ListAgents returns a list of Agents for a given filters.
 func (s *agentsServer) ListAgents(ctx context.Context, req *inventorypb.ListAgentsRequest) (*inventorypb.ListAgentsResponse, error) {
-	filters := inventory.AgentFilters{
+	filters := models.AgentFilters{
 		PMMAgentID: req.GetPmmAgentId(),
 		NodeID:     req.GetNodeId(),
 		ServiceID:  req.GetServiceId(),

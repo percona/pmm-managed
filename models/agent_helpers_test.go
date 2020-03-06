@@ -97,7 +97,7 @@ func TestAgentHelpers(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
 
-		agents, err := models.FindAgentsForNode(q, "N1", nil)
+		agents, err := models.FindAgents(q, models.AgentFilters{NodeID: "N1"})
 		require.NoError(t, err)
 		expected := []*models.Agent{{
 			AgentID:      "A3",
@@ -115,7 +115,7 @@ func TestAgentHelpers(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
 
-		agents, err := models.FindAgentsRunningByPMMAgent(q, "A1", nil)
+		agents, err := models.FindAgents(q, models.AgentFilters{PMMAgentID: "A1"})
 		require.NoError(t, err)
 		expected := []*models.Agent{{
 			AgentID:      "A2",
@@ -141,7 +141,7 @@ func TestAgentHelpers(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
 
-		agents, err := models.FindAgentsRunningByPMMAgent(q, "A1", pointerToAgentType(models.MySQLdExporterType))
+		agents, err := models.FindAgents(q, models.AgentFilters{PMMAgentID: "A1", AgentType: pointerToAgentType(models.MySQLdExporterType)})
 		require.NoError(t, err)
 		expected := []*models.Agent{{
 			AgentID:      "A2",
@@ -159,25 +159,7 @@ func TestAgentHelpers(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
 
-		agents, err := models.FindAgentsForService(q, "S1", nil)
-		require.NoError(t, err)
-		expected := []*models.Agent{{
-			AgentID:      "A2",
-			AgentType:    models.MySQLdExporterType,
-			PMMAgentID:   pointer.ToStringOrNil("A1"),
-			ServiceID:    pointer.ToString("S1"),
-			RunsOnNodeID: nil,
-			CreatedAt:    now,
-			UpdatedAt:    now,
-		}}
-		assert.Equal(t, expected, agents)
-	})
-
-	t.Run("AgentsForService", func(t *testing.T) {
-		q, teardown := setup(t)
-		defer teardown(t)
-
-		agents, err := models.FindAgentsForService(q, "S1", pointerToAgentType(models.MySQLdExporterType))
+		agents, err := models.FindAgents(q, models.AgentFilters{ServiceID: "S1"})
 		require.NoError(t, err)
 		expected := []*models.Agent{{
 			AgentID:      "A2",
@@ -190,7 +172,20 @@ func TestAgentHelpers(t *testing.T) {
 		}}
 		assert.Equal(t, expected, agents)
 
-		agents, err = models.FindAgentsForService(q, "S1", pointerToAgentType(models.MongoDBExporterType))
+		agents, err = models.FindAgents(q, models.AgentFilters{ServiceID: "S1", AgentType: pointerToAgentType(models.MySQLdExporterType)})
+		require.NoError(t, err)
+		expected = []*models.Agent{{
+			AgentID:      "A2",
+			AgentType:    models.MySQLdExporterType,
+			PMMAgentID:   pointer.ToStringOrNil("A1"),
+			ServiceID:    pointer.ToString("S1"),
+			RunsOnNodeID: nil,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		}}
+		assert.Equal(t, expected, agents)
+
+		agents, err = models.FindAgents(q, models.AgentFilters{ServiceID: "S1", AgentType: pointerToAgentType(models.MongoDBExporterType)})
 		require.NoError(t, err)
 		assert.Equal(t, []*models.Agent{}, agents)
 	})

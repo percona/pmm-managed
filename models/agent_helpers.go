@@ -44,15 +44,37 @@ func checkUniqueAgentID(q *reform.Querier, id string) error {
 	}
 }
 
-// FindAllAgents returns all Agents.
-func FindAllAgents(q *reform.Querier, agentType *AgentType) ([]*Agent, error) {
+// FindAgents returns Agents by passed filters.
+func FindAgents(q *reform.Querier, filters AgentFilters) ([]*Agent, error) {
 	var conditions []string
 	var args []interface{}
-	if agentType != nil {
-		conditions = append(conditions, "WHERE agent_type = $1")
-		args = append(args, agentType)
+	idx := 1
+	if filters.AgentType != nil {
+		conditions = append(conditions, fmt.Sprintf("agent_type = %s", q.Placeholder(idx)))
+		args = append(args, *filters.AgentType)
+		idx++
 	}
-	structs, err := q.SelectAllFrom(AgentTable, fmt.Sprintf("%s ORDER BY agent_id", strings.Join(conditions, " AND ")), args...)
+	if filters.NodeID != "" {
+		conditions = append(conditions, fmt.Sprintf("node_id = %s", q.Placeholder(idx)))
+		args = append(args, filters.NodeID)
+		idx++
+	}
+	if filters.ServiceID != "" {
+		conditions = append(conditions, fmt.Sprintf("service_id = %s", q.Placeholder(idx)))
+		args = append(args, filters.ServiceID)
+		idx++
+	}
+	if filters.PMMAgentID != "" {
+		conditions = append(conditions, fmt.Sprintf("pmm_agent_id = %s", q.Placeholder(idx)))
+		args = append(args, filters.PMMAgentID)
+		idx++
+	}
+
+	var whereClause string
+	if len(conditions) != 0 {
+		whereClause = fmt.Sprintf("WHERE %s", strings.Join(conditions, " AND "))
+	}
+	structs, err := q.SelectAllFrom(AgentTable, fmt.Sprintf("%s ORDER BY agent_id", whereClause), args...)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -95,86 +117,6 @@ func FindAgentsByIDs(q *reform.Querier, ids []string) ([]*Agent, error) {
 		args[i] = id
 	}
 	structs, err := q.SelectAllFrom(AgentTable, tail, args...)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	res := make([]*Agent, len(structs))
-	for i, s := range structs {
-		res[i] = s.(*Agent)
-	}
-	return res, nil
-}
-
-// FindAgentsForNode returns all Agents providing insights for given Node.
-func FindAgentsForNode(q *reform.Querier, nodeID string, agentType *AgentType) ([]*Agent, error) {
-	if _, err := FindNodeByID(q, nodeID); err != nil {
-		return nil, err
-	}
-
-	conditions := []string{
-		"node_id = $1",
-	}
-	args := []interface{}{nodeID}
-	if agentType != nil {
-		conditions = append(conditions, "agent_type = $2")
-		args = append(args, agentType)
-	}
-	structs, err := q.SelectAllFrom(AgentTable, fmt.Sprintf("WHERE %s ORDER BY agent_id", strings.Join(conditions, " AND ")), args...)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	res := make([]*Agent, len(structs))
-	for i, s := range structs {
-		res[i] = s.(*Agent)
-	}
-
-	return res, nil
-}
-
-// FindAgentsForService returns all Agents providing insights for given Service.
-func FindAgentsForService(q *reform.Querier, serviceID string, agentType *AgentType) ([]*Agent, error) {
-	if _, err := FindServiceByID(q, serviceID); err != nil {
-		return nil, err
-	}
-
-	conditions := []string{
-		"service_id = $1",
-	}
-	args := []interface{}{serviceID}
-	if agentType != nil {
-		conditions = append(conditions, "agent_type = $2")
-		args = append(args, agentType)
-	}
-	structs, err := q.SelectAllFrom(AgentTable, fmt.Sprintf("WHERE %s ORDER BY agent_id", strings.Join(conditions, " AND ")), args...)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	res := make([]*Agent, len(structs))
-	for i, s := range structs {
-		res[i] = s.(*Agent)
-	}
-
-	return res, nil
-}
-
-// FindAgentsRunningByPMMAgent returns all Agents running by PMMAgent.
-func FindAgentsRunningByPMMAgent(q *reform.Querier, pmmAgentID string, agentType *AgentType) ([]*Agent, error) {
-	if _, err := FindAgentByID(q, pmmAgentID); err != nil {
-		return nil, err
-	}
-
-	conditions := []string{
-		"pmm_agent_id = $1",
-	}
-	args := []interface{}{pmmAgentID}
-	if agentType != nil {
-		conditions = append(conditions, "agent_type = $2")
-		args = append(args, agentType)
-	}
-	structs, err := q.SelectAllFrom(AgentTable, fmt.Sprintf("WHERE %s ORDER BY agent_id", strings.Join(conditions, " AND ")), args...)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -448,4 +390,16 @@ func RemoveAgent(q *reform.Querier, id string, mode RemoveMode) (*Agent, error) 
 	}
 
 	return a, nil
+}
+
+// AgentFilters represents filters for agents list.
+type AgentFilters struct {
+	// Return only Agents started by this pmm-agent.
+	PMMAgentID string
+	// Return only Agents that provide insights for that Node.
+	NodeID string
+	// Return only Agents that provide insights for that Service.
+	ServiceID string
+	// Return Agents with provided type.
+	AgentType *AgentType
 }
