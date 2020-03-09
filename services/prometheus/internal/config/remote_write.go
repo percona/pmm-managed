@@ -1,8 +1,6 @@
 package config
 
-import (
-	"github.com/prometheus/common/model"
-)
+import "github.com/prometheus/common/model"
 
 // RemoteWriteConfig is the configuration for writing to remote storage.
 type RemoteWriteConfig struct {
@@ -16,7 +14,6 @@ type RemoteWriteConfig struct {
 	HTTPClientConfig HTTPClientConfig `yaml:",inline"`
 	QueueConfig      QueueConfig      `yaml:"queue_config,omitempty"`
 }
-
 
 // QueueConfig is the configuration for the queue used to write to remote
 // storage.
@@ -41,5 +38,3 @@ type QueueConfig struct {
 	MinBackoff model.Duration `yaml:"min_backoff,omitempty"`
 	MaxBackoff model.Duration `yaml:"max_backoff,omitempty"`
 }
-
-

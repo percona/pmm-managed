@@ -306,7 +306,7 @@ func TestScrapeConfig(t *testing.T) {
 				},
 				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
 					StaticConfigs: []*config.Group{{
-						Targets: []string{ "4.5.6.7:12345"},
+						Targets: []string{"4.5.6.7:12345"},
 						Labels: map[string]string{
 							"_some_agent_label":   "baz",
 							"_some_node_label":    "foo",

@@ -22,7 +22,7 @@ type AlertmanagerConfig struct {
 	// values arbitrarily into the overflow maps of further-down types.
 
 	ServiceDiscoveryConfig ServiceDiscoveryConfig `yaml:",inline"`
-	HTTPClientConfig       HTTPClientConfig     `yaml:",inline"`
+	HTTPClientConfig       HTTPClientConfig       `yaml:",inline"`
 
 	// The URL scheme to use when talking to Alertmanagers.
 	Scheme string `yaml:"scheme,omitempty"`

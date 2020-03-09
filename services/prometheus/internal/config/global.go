@@ -1,8 +1,6 @@
 package config
 
-import (
-	"github.com/prometheus/common/model"
-)
+import "github.com/prometheus/common/model"
 
 // GlobalConfig configures values that are used across other configuration
 // objects.
