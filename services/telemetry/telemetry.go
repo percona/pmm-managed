@@ -58,7 +58,8 @@ const (
 
 	// environment variables that affect telemetry service
 	envV1URL  = "PERCONA_VERSION_CHECK_URL" // the same name as for the Toolkit
-	envV2Host = "PERCONA_TELEMETRY_HOST"
+	envV2Host = "PERCONA_TEST_TELEMETRY_HOST"
+	envDelay  = "PERCONA_TEST_TELEMETRY_DELAY"
 )
 
 // Service is responsible for interactions with Percona Check / Telemetry service.
@@ -145,6 +146,11 @@ func (s *Service) DistributionMethod() serverpb.DistributionMethod {
 
 // Run runs telemetry service after delay, sending data every interval until context is canceled.
 func (s *Service) Run(ctx context.Context, delay time.Duration) {
+	if d, _ := time.ParseDuration(os.Getenv(envDelay)); 0 < d && d < delay {
+		s.l.Warnf("Telemetry delay reduced by %s environment variable to %s.", envDelay, d)
+		delay = d
+	}
+
 	if delay != 0 {
 		sleepCtx, sleepCancel := context.WithTimeout(ctx, delay)
 		<-sleepCtx.Done()
