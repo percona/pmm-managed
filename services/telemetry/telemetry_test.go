@@ -32,8 +32,8 @@ import (
 
 const devTelemetryHost = "check-dev.percona.com:443"
 
-func TestRetryFrequency(t *testing.T) {
-	assert.True(t, interval > retryCnt * retryBackoff)
+func TestRetryAndIntervalConstantsSync(t *testing.T) {
+	assert.True(t, interval > retryCnt*retryBackoff)
 }
 
 //nolint:lll
