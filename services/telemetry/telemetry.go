@@ -219,7 +219,7 @@ func (s *Service) sendOnce(ctx context.Context) error {
 
 		if err = s.sendV2Request(sendOnceCtx, req); err != nil {
 			s.l.Debugf("Fail to send telemetry v2, add request to retry queue: %s", req)
-			go s.runWaitAndRetry(ctx, req)
+			s.waitAndRetry(ctx, req)
 		}
 
 		return nil
@@ -385,7 +385,7 @@ func getLinuxDistribution(procVersion string) string {
 	return "unknown"
 }
 
-func (s *Service) runWaitAndRetry(ctx context.Context, req *reporter.ReportRequest) {
+func (s *Service) waitAndRetry(ctx context.Context, req *reporter.ReportRequest) {
 	t := time.NewTicker(retryBackoff)
 	defer t.Stop()
 
