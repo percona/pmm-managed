@@ -386,7 +386,7 @@ func getLinuxDistribution(procVersion string) string {
 }
 
 func (s *Service) runWaitAndRetry(ctx context.Context, req *reporter.ReportRequest) {
-	t := time.NewTimer(retryBackoff)
+	t := time.NewTicker(retryBackoff)
 	defer t.Stop()
 
 	for i := 0; i < retryCnt; i++ {
@@ -394,7 +394,6 @@ func (s *Service) runWaitAndRetry(ctx context.Context, req *reporter.ReportReque
 		case <-t.C:
 			if err := s.retry(ctx, req); err != nil {
 				s.l.Debugf("Fail to retry send telemetry request: %s, error%+v", req, err)
-				t.Reset(retryBackoff)
 				continue
 			}
 
