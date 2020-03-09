@@ -24,7 +24,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/url"
 	"os"
 	"os/exec"
 	"os/user"
@@ -49,7 +48,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/utils/validators"
+	"github.com/percona/pmm-managed/utils/envvars"
 )
 
 // Server represents service for checking PMM Server status and changing settings.
@@ -111,7 +110,7 @@ func (s *Server) UpdateSettingsFromEnv(env []string) error {
 	s.envRW.Lock()
 	defer s.envRW.Unlock()
 
-	envSettings, errs, warns := validators.ValidateEnvVars(env)
+	envSettings, errs, warns := envvars.ParseEnvVars(env)
 	for _, w := range warns {
 		s.l.Warnln(w)
 	}
@@ -134,18 +133,21 @@ func (s *Server) UpdateSettingsFromEnv(env []string) error {
 	s.envDataRetention = envSettings.DataRetention
 
 	return s.db.InTransaction(func(tx *reform.TX) error {
-		settings, err := models.GetSettings(tx.Querier)
+		params := models.ChangeSettingsParams{
+			DisableTelemetry: s.envDisableTelemetry,
+			MetricsResolutions: models.MetricsResolutions{
+				HR: s.envMetricsResolutionHR,
+				MR: s.envMetricsResolutionMR,
+				LR: s.envMetricsResolutionLR,
+			},
+			DataRetention: s.envDataRetention,
+		}
+		_, err := models.UpdateSettings(tx.Querier, params)
 		if err != nil {
 			return err
 		}
 
-		settings.Telemetry.Disabled = s.envDisableTelemetry
-		settings.MetricsResolutions.HR = s.envMetricsResolutionHR
-		settings.MetricsResolutions.MR = s.envMetricsResolutionMR
-		settings.MetricsResolutions.LR = s.envMetricsResolutionLR
-		settings.DataRetention = s.envDataRetention
-
-		return models.SaveSettings(tx.Querier, settings)
+		return nil
 	})
 }
 
@@ -422,74 +424,23 @@ func getDuration(p *duration.Duration) time.Duration {
 	return d
 }
 
-func (s *Server) validateChangeSettingsRequest(req *serverpb.ChangeSettingsRequest) error {
+func (s *Server) validateChangeSettingsRequest(ctx context.Context, req *serverpb.ChangeSettingsRequest) error {
 	metricsRes := req.MetricsResolutions
 
 	// check request parameters
 
-	if req.EnableTelemetry && req.DisableTelemetry {
-		return status.Error(codes.InvalidArgument, "Both enable_telemetry and disable_telemetry are present.")
-	}
-
-	if req.AlertManagerUrl != "" {
-		if req.RemoveAlertManagerUrl {
-			return status.Error(codes.InvalidArgument, "Both alert_manager_url and remove_alert_manager_url are present.")
-		}
-
-		// custom validation for typical error that is not handled well by url.Parse
-		if !strings.Contains(req.AlertManagerUrl, "//") {
-			return status.Errorf(codes.InvalidArgument, "Invalid alert_manager_url: %s - missing protocol scheme.", req.AlertManagerUrl)
-		}
-		u, err := url.Parse(req.AlertManagerUrl)
-		if err != nil {
-			return status.Errorf(codes.InvalidArgument, "Invalid alert_manager_url: %s.", err)
-		}
-		if u.Host == "" {
-			return status.Errorf(codes.InvalidArgument, "Invalid alert_manager_url: %s - missing host.", req.AlertManagerUrl)
-		}
-		s.l.Debugf("AlertManagerUrl %q is parsed as %#v.", req.AlertManagerUrl, u)
-	}
-
 	if req.AlertManagerRules != "" && req.RemoveAlertManagerRules {
 		return status.Error(codes.InvalidArgument, "Both alert_manager_rules and remove_alert_manager_rules are present.")
 	}
-
-	checkCases := []struct {
-		dur       *duration.Duration
-		fieldName string
-		validator func(time.Duration) (time.Duration, error)
-	}{
-		{metricsRes.GetHr(), "hr", validators.ValidateMetricResolution},
-		{metricsRes.GetMr(), "mr", validators.ValidateMetricResolution},
-		{metricsRes.GetLr(), "lr", validators.ValidateMetricResolution},
-	}
-	for _, v := range checkCases {
-		if v.dur == nil {
-			continue
-		}
-
-		if _, err := v.validator(getDuration(v.dur)); err != nil {
-			switch err.(type) {
-			case validators.AliquotDurationError:
-				return status.Error(codes.InvalidArgument, fmt.Sprintf("%s: should be a natural number of seconds", v.fieldName))
-			case validators.MinDurationError:
-				return status.Error(codes.InvalidArgument, fmt.Sprintf("%s: minimal resolution is 1s", v.fieldName))
-			default:
-				return status.Error(codes.InvalidArgument, fmt.Sprintf("%s: unknown error for", v.fieldName))
-			}
+	if req.SshKey != "" {
+		if err := s.validateSSHKey(ctx, req.SshKey); err != nil {
+			return err
 		}
 	}
 
-	if req.DataRetention != nil {
-		if _, err := validators.ValidateDataRetention(getDuration(req.DataRetention)); err != nil {
-			switch err.(type) {
-			case validators.AliquotDurationError:
-				return status.Error(codes.InvalidArgument, "data_retention: should be a natural number of days")
-			case validators.MinDurationError:
-				return status.Error(codes.InvalidArgument, "data_retention: minimal resolution is 24h")
-			default:
-				return status.Error(codes.InvalidArgument, "data_retention: unknown error")
-			}
+	if req.AlertManagerRules != "" {
+		if err := s.validateAlertManagerRules(ctx, req.AlertManagerRules); err != nil {
+			return err
 		}
 	}
 
@@ -521,71 +472,42 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	s.envRW.RLock()
 	defer s.envRW.RUnlock()
 
-	if err := s.validateChangeSettingsRequest(req); err != nil {
+	if err := s.validateChangeSettingsRequest(ctx, req); err != nil {
 		return nil, err
 	}
 
 	var settings *models.Settings
 	err := s.db.InTransaction(func(tx *reform.TX) error {
-		var e error
-		if settings, e = models.GetSettings(tx); e != nil {
-			return e
-		}
-
-		if req.EnableTelemetry {
-			settings.Telemetry.Disabled = false
-		}
-		if req.DisableTelemetry {
-			settings.Telemetry.Disabled = true
-		}
-
-		// absent or zero value means "do not change"
 		metricsRes := req.MetricsResolutions
-		if hr := getDuration(metricsRes.GetHr()); hr != 0 {
-			settings.MetricsResolutions.HR = hr
-		}
-		if mr := getDuration(metricsRes.GetMr()); mr != 0 {
-			settings.MetricsResolutions.MR = mr
-		}
-		if lr := getDuration(metricsRes.GetLr()); lr != 0 {
-			settings.MetricsResolutions.LR = lr
+		settingsParams := models.ChangeSettingsParams{
+			DisableTelemetry: req.DisableTelemetry,
+			EnableTelemetry:  req.EnableTelemetry,
+			MetricsResolutions: models.MetricsResolutions{
+				HR: getDuration(metricsRes.GetHr()),
+				MR: getDuration(metricsRes.GetMr()),
+				LR: getDuration(metricsRes.GetLr()),
+			},
+			DataRetention:         getDuration(req.DataRetention),
+			AWSPartitions:         req.AwsPartitions,
+			AlertManagerURL:       req.AlertManagerUrl,
+			RemoveAlertManagerUrl: req.RemoveAlertManagerUrl,
+			SSHKey:                req.SshKey,
 		}
 
-		// absent or zero value means "do not change"
-		if dr := getDuration(req.DataRetention); dr != 0 {
-			settings.DataRetention = dr
+		var e error
+		if settings, e = models.UpdateSettings(tx, settingsParams); e != nil {
+			return e
 		}
 
 		// absent value means "do not change"
 		if req.SshKey != "" {
-			if e = s.validateSSHKey(ctx, req.SshKey); e != nil {
-				return e
-			}
 			if e = s.writeSSHKey(req.SshKey); e != nil {
-				return e
+				return errors.WithStack(e)
 			}
-
-			settings.SSHKey = req.SshKey
-		}
-
-		// absent or empty value means "do not change"
-		if p := req.AwsPartitions; len(p) > 0 {
-			settings.AWSPartitions = p
-		}
-
-		// absent value means "do not change"
-		if req.AlertManagerUrl != "" {
-			settings.AlertManagerURL = req.AlertManagerUrl
-		}
-		if req.RemoveAlertManagerUrl {
-			settings.AlertManagerURL = ""
 		}
 
 		// absent value means "do not change"
 		if req.AlertManagerRules != "" {
-			if e = s.validateAlertManagerRules(ctx, req.AlertManagerRules); e != nil {
-				return e
-			}
 			if e = ioutil.WriteFile(s.alertManagerFile, []byte(req.AlertManagerRules), 0644); e != nil {
 				return errors.WithStack(e)
 			}
@@ -595,8 +517,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 				return errors.WithStack(e)
 			}
 		}
-
-		return models.SaveSettings(tx, settings)
+		return nil
 	})
 	if err != nil {
 		return nil, err

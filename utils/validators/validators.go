@@ -14,32 +14,16 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package validators contains environment variables validator.
+// Package validators contains settings validators.
 package validators
 
 import (
-	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
-
-// MetricsResolutions contains standard Prometheus metrics resolutions.
-type MetricsResolutions struct {
-	HR time.Duration
-	MR time.Duration
-	LR time.Duration
-}
-
-// EnvSettings contains PMM Server settings.
-type EnvSettings struct {
-	DisableUpdates     bool
-	DisableTelemetry   bool
-	MetricsResolutions MetricsResolutions
-	DataRetention      time.Duration
-}
 
 const (
 	// MetricsResolutionMin is the smallest value metric resolution can accept.
@@ -51,11 +35,6 @@ const (
 	// DataRetentionMultipleOf is a value of data retention should be multiple of.
 	DataRetentionMultipleOf = 24 * time.Hour
 )
-
-// InvalidDurationError invalid duration error.
-type InvalidDurationError string
-
-func (e InvalidDurationError) Error() string { return string(e) }
 
 // MinDurationError minimum allowed duration error.
 type MinDurationError struct {
@@ -73,94 +52,6 @@ type AliquotDurationError struct {
 
 func (e AliquotDurationError) Error() string { return e.Msg }
 
-// ValidateEnvVars validates given environment variables.
-//
-// Returns valid setting and two lists with errors and warnings.
-// This function is mainly used in pmm-managed-init to early validate passed
-// environment variables, and provide user warnings about unknown variables.
-// In case of error, the docker run terminates.
-// Short description of environment variables:
-//  - PATH, HOSTNAME, TERM, HOME are default environment variables that will be ignored;
-//  - DISABLE_UPDATES is a boolean flag to enable or disable pmm-server update;
-//  - DISABLE_TELEMETRY is a boolean flag to enable or disable pmm telemetry;
-//  - METRICS_RESOLUTION, METRICS_RESOLUTION, METRICS_RESOLUTION_HR,
-// METRICS_RESOLUTION_LR are durations of metrics resolution;
-//  - DATA_RETENTION is the duration of how long keep time-series data in ClickHouse;
-//  - the environment variables prefixed with GF_ passed as related to Grafana.
-func ValidateEnvVars(envs []string) (envSettings EnvSettings, errs []error, warns []string) {
-	for _, env := range envs {
-		p := strings.SplitN(env, "=", 2)
-		if len(p) != 2 {
-			errs = append(errs, fmt.Errorf("failed to parse environment variable %q", env))
-			continue
-		}
-
-		var err error
-		k, v := strings.ToUpper(p[0]), strings.ToLower(p[1])
-		switch k {
-		case "PATH", "HOSTNAME", "TERM", "HOME", "PWD", "SHLVL", "_":
-			// skip default environment variables
-		case "DISABLE_UPDATES":
-			envSettings.DisableUpdates, err = strconv.ParseBool(v)
-			if err != nil {
-				err = fmt.Errorf("invalid value %q for environment variable %q", v, k)
-			}
-		case "DISABLE_TELEMETRY":
-			envSettings.DisableTelemetry, err = strconv.ParseBool(v)
-			if err != nil {
-				err = fmt.Errorf("invalid value %q for environment variable %q", v, k)
-			}
-		case "METRICS_RESOLUTION", "METRICS_RESOLUTION_HR":
-			if envSettings.MetricsResolutions.HR, err = validateStringMetricResolution(v); err != nil {
-				err = formatEnvVariableError(err, env, v)
-			}
-		case "METRICS_RESOLUTION_MR":
-			if envSettings.MetricsResolutions.MR, err = validateStringMetricResolution(v); err != nil {
-				err = formatEnvVariableError(err, env, v)
-			}
-		case "METRICS_RESOLUTION_LR":
-			if envSettings.MetricsResolutions.LR, err = validateStringMetricResolution(v); err != nil {
-				err = formatEnvVariableError(err, env, v)
-			}
-		case "DATA_RETENTION":
-			if envSettings.DataRetention, err = validateStringDataRetention(v); err != nil {
-				err = formatEnvVariableError(err, env, v)
-			}
-		default:
-			if !strings.HasPrefix(k, "GF_") {
-				warns = append(warns, fmt.Sprintf("unknown environment variable %q", env))
-			}
-		}
-		if err != nil {
-			errs = append(errs, err)
-		}
-	}
-	return envSettings, errs, warns
-}
-
-func formatEnvVariableError(err error, env, value string) error {
-	switch e := err.(type) {
-	case InvalidDurationError:
-		return fmt.Errorf("environment variable %q has invalid duration %s", env, value)
-	case MinDurationError:
-		return fmt.Errorf("environment variable %q cannot be less then %s", env, e.Min)
-	case AliquotDurationError:
-		return fmt.Errorf("environment variable %q should be a multiple of %s", env, e.MultipleOf)
-	default:
-		return errors.Wrap(e, "unknown error")
-	}
-}
-
-// ValidateStringDuration validate duration as string value.
-func validateStringDuration(value string, min, multipleOf time.Duration) (time.Duration, error) {
-	d, err := time.ParseDuration(value)
-	if err != nil {
-		return d, InvalidDurationError("invalid duration error")
-	}
-
-	return validateDuration(d, min, multipleOf)
-}
-
 // ValidateDuration validate duration.
 func validateDuration(d, min, multipleOf time.Duration) (time.Duration, error) {
 	if d < min {
@@ -173,22 +64,34 @@ func validateDuration(d, min, multipleOf time.Duration) (time.Duration, error) {
 	return d, nil
 }
 
-// ValidateStringMetricResolution validate metric resolution.
-func validateStringMetricResolution(value string) (time.Duration, error) {
-	return validateStringDuration(value, MetricsResolutionMin, MetricsResolutionMultipleOf)
-}
-
 // ValidateMetricResolution validate metric resolution.
 func ValidateMetricResolution(value time.Duration) (time.Duration, error) {
 	return validateDuration(value, MetricsResolutionMin, MetricsResolutionMultipleOf)
 }
 
-// ValidateStringDataRetention validate metric resolution.
-func validateStringDataRetention(value string) (time.Duration, error) {
-	return validateStringDuration(value, DataRetentionMin, DataRetentionMultipleOf)
-}
-
 // ValidateDataRetention validate metric resolution.
 func ValidateDataRetention(value time.Duration) (time.Duration, error) {
 	return validateDuration(value, DataRetentionMin, DataRetentionMultipleOf)
+}
+
+// ValidateAWSPartitions validates AWS partitions list.
+func ValidateAWSPartitions(partitions []string) error {
+	if len(partitions) > len(endpoints.DefaultPartitions()) {
+		return status.Errorf(codes.InvalidArgument, "aws_partitions: list is too long")
+	}
+
+	for _, p := range partitions {
+		var valid bool
+		for _, vp := range endpoints.DefaultPartitions() {
+			if p == vp.ID() {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return status.Errorf(codes.InvalidArgument, "aws_partitions: partition %q is invalid", p)
+		}
+	}
+
+	return nil
 }

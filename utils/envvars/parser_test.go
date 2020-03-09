@@ -15,7 +15,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Package validators contains environment variables validator.
-package validators
+package envvars
 
 import (
 	"fmt"
@@ -46,7 +46,7 @@ func TestEnvVarValidator(t *testing.T) {
 			},
 		}
 
-		gotEnvVars, gotErrs, gotWarns := ValidateEnvVars(envs)
+		gotEnvVars, gotErrs, gotWarns := ParseEnvVars(envs)
 		assert.Equal(t, gotEnvVars, expectedEnvVars)
 		assert.Nil(t, gotErrs)
 		assert.Nil(t, gotWarns)
@@ -60,7 +60,7 @@ func TestEnvVarValidator(t *testing.T) {
 			`unknown environment variable "ANOTHER_UNKNOWN_VAR=VAL"`,
 		}
 
-		gotEnvVars, gotErrs, gotWarns := ValidateEnvVars(envs)
+		gotEnvVars, gotErrs, gotWarns := ParseEnvVars(envs)
 		assert.Equal(t, gotEnvVars, expectedEnvVars)
 		assert.Nil(t, gotErrs)
 		assert.Equal(t, expectedWarns, gotWarns)
@@ -75,7 +75,7 @@ func TestEnvVarValidator(t *testing.T) {
 		}
 		expectedEnvVars := EnvSettings{}
 
-		gotEnvVars, gotErrs, gotWarns := ValidateEnvVars(envs)
+		gotEnvVars, gotErrs, gotWarns := ParseEnvVars(envs)
 		assert.Equal(t, gotEnvVars, expectedEnvVars)
 		assert.Nil(t, gotErrs)
 		assert.Nil(t, gotWarns)
@@ -100,7 +100,7 @@ func TestEnvVarValidator(t *testing.T) {
 			fmt.Errorf(`environment variable "DATA_RETENTION=keep one week" has invalid duration keep one week`),
 		}
 
-		gotEnvVars, gotErrs, gotWarns := ValidateEnvVars(envs)
+		gotEnvVars, gotErrs, gotWarns := ParseEnvVars(envs)
 		assert.Equal(t, gotEnvVars, expectedEnvVars)
 		assert.Equal(t, gotErrs, expectedErrs)
 		assert.Nil(t, gotWarns)
@@ -119,33 +119,9 @@ func TestEnvVarValidator(t *testing.T) {
 		}
 		expectedEnvVars := EnvSettings{}
 
-		gotEnvVars, gotErrs, gotWarns := ValidateEnvVars(envs)
+		gotEnvVars, gotErrs, gotWarns := ParseEnvVars(envs)
 		assert.Equal(t, gotEnvVars, expectedEnvVars)
 		assert.Nil(t, gotErrs)
-		assert.Nil(t, gotWarns)
-	})
-
-	t.Run("Data retention less then a day", func(t *testing.T) {
-		envs := []string{
-			"DATA_RETENTION=1h",
-		}
-		expectedErrs := []error{
-			fmt.Errorf("environment variable %q cannot be less then 24h0m0s", "DATA_RETENTION=1h"),
-		}
-		_, gotErrs, gotWarns := ValidateEnvVars(envs)
-		assert.Equal(t, gotErrs, expectedErrs)
-		assert.Nil(t, gotWarns)
-	})
-
-	t.Run("Data retention is not a natural number of days", func(t *testing.T) {
-		envs := []string{
-			"DATA_RETENTION=30h",
-		}
-		expectedErrs := []error{
-			fmt.Errorf("environment variable %q should be a multiple of 24h0m0s", "DATA_RETENTION=30h"),
-		}
-		_, gotErrs, gotWarns := ValidateEnvVars(envs)
-		assert.Equal(t, gotErrs, expectedErrs)
 		assert.Nil(t, gotWarns)
 	})
 }

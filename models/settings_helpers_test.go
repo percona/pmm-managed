@@ -69,31 +69,91 @@ func TestSettings(t *testing.T) {
 
 	t.Run("Validation", func(t *testing.T) {
 		t.Run("AWSPartitions", func(t *testing.T) {
-			s := &models.Settings{
+			s := models.ChangeSettingsParams{
 				AWSPartitions: []string{"foo"},
 			}
-			err := models.SaveSettings(sqlDB, s)
+			settings, err := models.UpdateSettings(sqlDB, s)
 			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `aws_partitions: partition "foo" is invalid`), err)
 
-			s = &models.Settings{
+			s = models.ChangeSettingsParams{
 				AWSPartitions: []string{"foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo"},
 			}
-			err = models.SaveSettings(sqlDB, s)
+			settings, err = models.UpdateSettings(sqlDB, s)
 			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `aws_partitions: list is too long`), err)
 
-			s = &models.Settings{
+			s = models.ChangeSettingsParams{
 				AWSPartitions: []string{"aws", "aws-cn", "aws-cn"},
 			}
-			err = models.SaveSettings(sqlDB, s)
+			settings, err = models.UpdateSettings(sqlDB, s)
 			assert.NoError(t, err)
-			assert.Equal(t, []string{"aws", "aws-cn"}, s.AWSPartitions)
+			assert.Equal(t, []string{"aws", "aws-cn"}, settings.AWSPartitions)
 
-			s = &models.Settings{
+			s = models.ChangeSettingsParams{
 				AWSPartitions: []string{},
 			}
-			err = models.SaveSettings(sqlDB, s)
+			settings, err = models.UpdateSettings(sqlDB, s)
 			assert.NoError(t, err)
-			assert.Equal(t, []string{"aws"}, s.AWSPartitions)
+			assert.Equal(t, []string{"aws", "aws-cn"}, settings.AWSPartitions)
+
+			settings = &models.Settings{AWSPartitions: []string{}}
+			err = models.SaveSettings(sqlDB, settings)
+			assert.NoError(t, err)
+			assert.Equal(t, []string{"aws"}, settings.AWSPartitions)
+		})
+
+		t.Run("AlertManagerURL", func(t *testing.T) {
+			_, err := models.UpdateSettings(sqlDB, models.ChangeSettingsParams{
+				AlertManagerURL: "mailto:hello@example.com",
+			})
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid alert_manager_url: mailto:hello@example.com - missing protocol scheme."),
+				err)
+			_, err = models.UpdateSettings(sqlDB, models.ChangeSettingsParams{
+				AlertManagerURL: "1.2.3.4:1234",
+			})
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid alert_manager_url: 1.2.3.4:1234 - missing protocol scheme."),
+				err)
+			_, err = models.UpdateSettings(sqlDB, models.ChangeSettingsParams{
+				AlertManagerURL: "1.2.3.4",
+			})
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid alert_manager_url: 1.2.3.4 - missing protocol scheme."),
+				err)
+			_, err = models.UpdateSettings(sqlDB, models.ChangeSettingsParams{
+				AlertManagerURL: "https://",
+			})
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid alert_manager_url: https:// - missing host."),
+				err)
+			_, err = models.UpdateSettings(sqlDB, models.ChangeSettingsParams{
+				AlertManagerURL: "https://1.2.3.4",
+			})
+			assert.NoError(t, err)
+			_, err = models.UpdateSettings(sqlDB, models.ChangeSettingsParams{
+				AlertManagerURL: "https://1.2.3.4:1234/",
+			})
+			assert.NoError(t, err)
+		})
+
+		t.Run("", func(t *testing.T) {
+			mr := models.MetricsResolutions{MR: 5e+8 * time.Nanosecond} // 0.5s
+			_, err := models.UpdateSettings(sqlDB, models.ChangeSettingsParams{
+				MetricsResolutions: mr,
+			})
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "mr: minimal resolution is 1s"), err)
+
+			mr = models.MetricsResolutions{MR: 2*time.Second + 5e8*time.Nanosecond} // 2.5s
+			_, err = models.UpdateSettings(sqlDB, models.ChangeSettingsParams{
+				MetricsResolutions: mr,
+			})
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "mr: should be a natural number of seconds"), err)
+
+			_, err = models.UpdateSettings(sqlDB, models.ChangeSettingsParams{
+				DataRetention: 90000 * time.Second, // 25h
+			})
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "data_retention: should be a natural number of days"), err)
+
+			_, err = models.UpdateSettings(sqlDB, models.ChangeSettingsParams{
+				DataRetention: 43200 * time.Second, // 12h
+			})
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "data_retention: minimal resolution is 24h"), err)
 		})
 	})
 }

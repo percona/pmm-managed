@@ -22,7 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -114,65 +113,26 @@ func TestServer(t *testing.T) {
 			})
 			require.Errorf(t, err, "validation error of environment variables")
 		})
+
+		t.Run("Data retention is not a natural number of days", func(t *testing.T) {
+			s := newServer()
+			err := s.UpdateSettingsFromEnv([]string{
+				"DATA_RETENTION=30h",
+			})
+			require.Errorf(t, err, "environment variable %q should be a multiple of 24h0m0s")
+		})
 	})
 
 	t.Run("ValidateChangeSettingsRequest", func(t *testing.T) {
 		s := newServer()
 
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid alert_manager_url: mailto:hello@example.com - missing protocol scheme."),
-			s.validateChangeSettingsRequest(&serverpb.ChangeSettingsRequest{
-				AlertManagerUrl: "mailto:hello@example.com",
-			}))
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid alert_manager_url: 1.2.3.4:1234 - missing protocol scheme."),
-			s.validateChangeSettingsRequest(&serverpb.ChangeSettingsRequest{
-				AlertManagerUrl: "1.2.3.4:1234",
-			}))
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid alert_manager_url: 1.2.3.4 - missing protocol scheme."),
-			s.validateChangeSettingsRequest(&serverpb.ChangeSettingsRequest{
-				AlertManagerUrl: "1.2.3.4",
-			}))
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid alert_manager_url: https:// - missing host."),
-			s.validateChangeSettingsRequest(&serverpb.ChangeSettingsRequest{
-				AlertManagerUrl: "https://",
-			}))
-		assert.NoError(t, s.validateChangeSettingsRequest(&serverpb.ChangeSettingsRequest{
-			AlertManagerUrl: "https://1.2.3.4",
-		}))
-		assert.NoError(t, s.validateChangeSettingsRequest(&serverpb.ChangeSettingsRequest{
-			AlertManagerUrl: "https://1.2.3.4:1234/",
-		}))
+		ctx := context.TODO()
 
 		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Both alert_manager_rules and remove_alert_manager_rules are present."),
-			s.validateChangeSettingsRequest(&serverpb.ChangeSettingsRequest{
+			s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
 				AlertManagerRules:       "something",
 				RemoveAlertManagerRules: true,
 			}))
-
-		mr := &serverpb.MetricsResolutions{Mr: &duration.Duration{Seconds: 0, Nanos: 5e+8}} // 0.5s
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "mr: minimal resolution is 1s"),
-			s.validateChangeSettingsRequest(&serverpb.ChangeSettingsRequest{
-				MetricsResolutions: mr,
-			}),
-		)
-
-		mr = &serverpb.MetricsResolutions{Mr: &duration.Duration{Seconds: 2, Nanos: 5e8}} // 2.5s
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "mr: should be a natural number of seconds"),
-			s.validateChangeSettingsRequest(&serverpb.ChangeSettingsRequest{
-				MetricsResolutions: mr,
-			}),
-		)
-
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "data_retention: should be a natural number of days"),
-			s.validateChangeSettingsRequest(&serverpb.ChangeSettingsRequest{
-				DataRetention: &duration.Duration{Seconds: 90000, Nanos: 0}, // 25h
-			}),
-		)
-
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "data_retention: minimal resolution is 24h"),
-			s.validateChangeSettingsRequest(&serverpb.ChangeSettingsRequest{
-				DataRetention: &duration.Duration{Seconds: 43200, Nanos: 0}, // 12h
-			}),
-		)
 	})
 
 	t.Run("ValidateAlertManagerRules", func(t *testing.T) {

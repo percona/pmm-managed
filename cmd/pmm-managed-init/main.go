@@ -17,11 +17,12 @@
 package main
 
 import (
+	"github.com/percona/pmm-managed/models"
 	"os"
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/percona/pmm-managed/utils/validators"
+	"github.com/percona/pmm-managed/utils/envvars"
 )
 
 func main() {
@@ -31,12 +32,27 @@ func main() {
 		TimestampFormat: "2006-01-02T15:04:05.000-07:00",
 	})
 
-	_, errs, warns := validators.ValidateEnvVars(os.Environ())
+	envSettings, errs, warns := envvars.ParseEnvVars(os.Environ())
 	for _, warn := range warns {
 		logrus.Warnf("Configuration warning: %s.", warn)
 	}
 	for _, err := range errs {
 		logrus.Errorf("Configuration error: %s.", err)
+	}
+
+	params := models.ChangeSettingsParams{
+		DisableTelemetry: envSettings.DisableTelemetry,
+		MetricsResolutions: models.MetricsResolutions{
+			HR: envSettings.MetricsResolutions.HR,
+			MR: envSettings.MetricsResolutions.MR,
+			LR: envSettings.MetricsResolutions.LR,
+		},
+		DataRetention: envSettings.DataRetention,
+	}
+	err := models.ValidateSettings(params)
+	if err != nil {
+		logrus.Errorf("Configuration error: %s.", err)
+		os.Exit(1)
 	}
 
 	if len(errs) > 0 {

@@ -18,13 +18,18 @@ package models
 
 import (
 	"encoding/json"
+	"fmt"
+	"net/url"
 	"sort"
+	"strings"
+	"time"
 
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
+
+	"github.com/percona/pmm-managed/utils/validators"
 )
 
 // GetSettings returns current PMM Server settings.
@@ -43,15 +48,145 @@ func GetSettings(q reform.DBTX) (*Settings, error) {
 	return &s, nil
 }
 
+type ChangeSettingsParams struct {
+	DisableTelemetry bool
+	EnableTelemetry  bool
+
+	MetricsResolutions MetricsResolutions
+
+	DataRetention time.Duration
+
+	AWSPartitions []string
+
+	SSHKey string
+
+	// not url.URL to keep username and password
+	AlertManagerURL       string
+	RemoveAlertManagerUrl bool
+}
+
+func UpdateSettings(q reform.DBTX, params ChangeSettingsParams) (*Settings, error) {
+	err := ValidateSettings(params)
+	if err != nil {
+		return nil, err
+	}
+	settings, err := GetSettings(q)
+	if err != nil {
+		return nil, err
+	}
+	if params.DisableTelemetry {
+		settings.Telemetry.Disabled = true
+	}
+	if params.EnableTelemetry {
+		settings.Telemetry.Disabled = false
+	}
+	if params.MetricsResolutions.LR != 0 {
+		settings.MetricsResolutions.LR = params.MetricsResolutions.LR
+	}
+	if params.MetricsResolutions.MR != 0 {
+		settings.MetricsResolutions.MR = params.MetricsResolutions.MR
+	}
+	if params.MetricsResolutions.HR != 0 {
+		settings.MetricsResolutions.HR = params.MetricsResolutions.HR
+	}
+	if params.DataRetention != 0 {
+		settings.DataRetention = params.DataRetention
+	}
+
+	if len(params.AWSPartitions) != 0 {
+		settings.AWSPartitions = deduplicateAWSPartitions(params.AWSPartitions)
+	}
+	if params.SSHKey != "" {
+		settings.SSHKey = params.SSHKey
+	}
+	if params.AlertManagerURL != "" {
+		settings.AlertManagerURL = params.AlertManagerURL
+	}
+	if params.RemoveAlertManagerUrl {
+		settings.AlertManagerURL = ""
+	}
+
+	err = SaveSettings(q, settings)
+	if err != nil {
+		return nil, err
+	}
+	return settings, nil
+}
+
+func ValidateSettings(params ChangeSettingsParams) error {
+	if params.EnableTelemetry && params.DisableTelemetry {
+		return status.Error(codes.InvalidArgument, "Both enable_telemetry and disable_telemetry are present.")
+	}
+
+	checkCases := []struct {
+		dur       time.Duration
+		fieldName string
+		validator func(time.Duration) (time.Duration, error)
+	}{
+		{params.MetricsResolutions.HR, "hr", validators.ValidateMetricResolution},
+		{params.MetricsResolutions.MR, "mr", validators.ValidateMetricResolution},
+		{params.MetricsResolutions.LR, "lr", validators.ValidateMetricResolution},
+	}
+	for _, v := range checkCases {
+		if v.dur == 0 {
+			continue
+		}
+
+		if _, err := v.validator(v.dur); err != nil {
+			switch err.(type) {
+			case validators.AliquotDurationError:
+				return status.Error(codes.InvalidArgument, fmt.Sprintf("%s: should be a natural number of seconds", v.fieldName))
+			case validators.MinDurationError:
+				return status.Error(codes.InvalidArgument, fmt.Sprintf("%s: minimal resolution is 1s", v.fieldName))
+			default:
+				return status.Error(codes.InvalidArgument, fmt.Sprintf("%s: unknown error for", v.fieldName))
+			}
+		}
+	}
+
+	if params.DataRetention != 0 {
+		if _, err := validators.ValidateDataRetention(params.DataRetention); err != nil {
+			switch err.(type) {
+			case validators.AliquotDurationError:
+				return status.Error(codes.InvalidArgument, "data_retention: should be a natural number of days")
+			case validators.MinDurationError:
+				return status.Error(codes.InvalidArgument, "data_retention: minimal resolution is 24h")
+			default:
+				return status.Error(codes.InvalidArgument, "data_retention: unknown error")
+			}
+		}
+	}
+
+	var err error
+	if err = validators.ValidateAWSPartitions(params.AWSPartitions); err != nil {
+		return err
+	}
+
+	if params.AlertManagerURL != "" {
+		if params.RemoveAlertManagerUrl {
+			return status.Error(codes.InvalidArgument, "Both alert_manager_url and remove_alert_manager_url are present.")
+		}
+
+		// custom validation for typical error that is not handled well by url.Parse
+		if !strings.Contains(params.AlertManagerURL, "//") {
+			return status.Errorf(codes.InvalidArgument, "Invalid alert_manager_url: %s - missing protocol scheme.", params.AlertManagerURL)
+		}
+		u, err := url.Parse(params.AlertManagerURL)
+		if err != nil {
+			return status.Errorf(codes.InvalidArgument, "Invalid alert_manager_url: %s.", err)
+		}
+		if u.Host == "" {
+			return status.Errorf(codes.InvalidArgument, "Invalid alert_manager_url: %s - missing host.", params.AlertManagerURL)
+		}
+	}
+
+	return nil
+}
+
 // SaveSettings saves PMM Server settings.
 // It may modify passed settings to fill defaults.
 func SaveSettings(q reform.DBTX, s *Settings) error {
 	s.fillDefaults()
-
-	var err error
-	if s.AWSPartitions, err = validateAWSPartitions(s.AWSPartitions); err != nil {
-		return err
-	}
 
 	b, err := json.Marshal(s)
 	if err != nil {
@@ -66,24 +201,10 @@ func SaveSettings(q reform.DBTX, s *Settings) error {
 	return nil
 }
 
-// validateAWSPartitions deduplicates and validates AWS partitions list.
-func validateAWSPartitions(partitions []string) ([]string, error) {
-	if len(partitions) > len(endpoints.DefaultPartitions()) {
-		return nil, status.Errorf(codes.InvalidArgument, "aws_partitions: list is too long")
-	}
-
+// deduplicateAWSPartitions deduplicates AWS partitions list.
+func deduplicateAWSPartitions(partitions []string) []string {
 	set := make(map[string]struct{})
 	for _, p := range partitions {
-		var valid bool
-		for _, vp := range endpoints.DefaultPartitions() {
-			if p == vp.ID() {
-				valid = true
-				break
-			}
-		}
-		if !valid {
-			return nil, status.Errorf(codes.InvalidArgument, "aws_partitions: partition %q is invalid", p)
-		}
 		set[p] = struct{}{}
 	}
 
@@ -93,5 +214,5 @@ func validateAWSPartitions(partitions []string) ([]string, error) {
 	}
 	sort.Strings(slice)
 
-	return slice, nil
+	return slice
 }
