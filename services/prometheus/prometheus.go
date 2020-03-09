@@ -121,7 +121,7 @@ func (svc *Service) reload() error {
 	}
 	defer resp.Body.Close() //nolint:errcheck
 
-	if resp.StatusCode == http.StatusOK {
+	if resp.StatusCode == 200 {
 		return nil
 	}
 	b, err := ioutil.ReadAll(resp.Body)
