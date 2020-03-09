@@ -48,7 +48,7 @@ import (
 )
 
 const (
-	interval     = 10 * time.Second
+	interval     = 24 * time.Hour
 	timeout      = 5 * time.Second
 	retryBackoff = time.Hour
 	retryCnt     = 20

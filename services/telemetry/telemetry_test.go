@@ -32,6 +32,10 @@ import (
 
 const devTelemetryHost = "check-dev.percona.com:443"
 
+func TestRetryFrequency(t *testing.T) {
+	assert.True(t, interval > retryCnt * retryBackoff)
+}
+
 //nolint:lll
 func TestMakeV1Payload(t *testing.T) {
 	s := NewService(nil, "")
