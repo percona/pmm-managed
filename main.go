@@ -54,7 +54,6 @@ import (
 	channelz "google.golang.org/grpc/channelz/service"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/reflection"
-	"google.golang.org/grpc/status"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
@@ -353,11 +352,8 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 	env := os.Environ()
 	sort.Strings(env)
 	if err = deps.server.UpdateSettingsFromEnv(env); err != nil {
-		if _, ok := status.FromError(err); !ok {
-			deps.l.Warnf("Settings problem: %+v.", err)
-			return false
-		}
 		deps.l.Warnf("Failed to update settings from environment: %+v.", err)
+		return false
 	}
 
 	deps.l.Infof("Updating supervisord configuration...")
