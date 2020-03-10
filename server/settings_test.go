@@ -37,33 +37,37 @@ func TestSettings(t *testing.T) {
 			teardown := func(t *testing.T) {
 				t.Helper()
 
+				require.NoError(t, err)
+				bodySettings := res.Payload.Settings
 				res, err := serverClient.Default.Server.ChangeSettings(&server.ChangeSettingsParams{
 					Body: server.ChangeSettingsBody{
-						EnableTelemetry: true,
+						EnableTelemetry: bodySettings.TelemetryEnabled,
 						MetricsResolutions: &server.ChangeSettingsParamsBodyMetricsResolutions{
-							Hr: "5s",
-							Mr: "5s",
-							Lr: "60s",
+							Hr: bodySettings.MetricsResolutions.Hr,
+							Mr: bodySettings.MetricsResolutions.Mr,
+							Lr: bodySettings.MetricsResolutions.Lr,
 						},
-						DataRetention:           "720h",
-						AWSPartitions:           []string{"aws"},
-						RemoveAlertManagerURL:   true,
-						RemoveAlertManagerRules: true,
+						DataRetention:           bodySettings.DataRetention,
+						AWSPartitions:           bodySettings.AWSPartitions,
+						AlertManagerURL:         bodySettings.AlertManagerURL,
+						RemoveAlertManagerURL:   bodySettings.AlertManagerURL == "",
+						AlertManagerRules:       bodySettings.AlertManagerRules,
+						RemoveAlertManagerRules: bodySettings.AlertManagerRules == "",
 					},
 					Context: pmmapitests.Context,
 				})
 				require.NoError(t, err)
-				assert.True(t, res.Payload.Settings.TelemetryEnabled)
+				assert.Equal(t, bodySettings.TelemetryEnabled, res.Payload.Settings.TelemetryEnabled)
 				expected := &server.ChangeSettingsOKBodySettingsMetricsResolutions{
-					Hr: "5s",
-					Mr: "5s",
-					Lr: "60s",
+					Hr: bodySettings.MetricsResolutions.Hr,
+					Mr: bodySettings.MetricsResolutions.Mr,
+					Lr: bodySettings.MetricsResolutions.Lr,
 				}
 				assert.Equal(t, expected, res.Payload.Settings.MetricsResolutions)
-				assert.Equal(t, "2592000s", res.Payload.Settings.DataRetention)
-				assert.Equal(t, []string{"aws"}, res.Payload.Settings.AWSPartitions)
-				assert.Empty(t, res.Payload.Settings.AlertManagerURL)
-				assert.Empty(t, res.Payload.Settings.AlertManagerRules)
+				assert.Equal(t, bodySettings.DataRetention, res.Payload.Settings.DataRetention)
+				assert.Equal(t, bodySettings.AWSPartitions, res.Payload.Settings.AWSPartitions)
+				assert.Equal(t, bodySettings.AlertManagerURL, res.Payload.Settings.AlertManagerURL)
+				assert.Equal(t, bodySettings.AlertManagerRules, res.Payload.Settings.AlertManagerRules)
 			}
 
 			defer teardown(t)
