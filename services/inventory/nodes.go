@@ -44,7 +44,7 @@ func (s *NodesService) List(ctx context.Context, filters models.NodeFilters) ([]
 	var nodes []*models.Node
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
-		nodes, err = models.FindNodes(tx.Querier, filters.NodeType)
+		nodes, err = models.FindNodes(tx.Querier, filters)
 		return err
 	})
 	if e != nil {

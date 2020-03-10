@@ -158,7 +158,7 @@ func TestNodeHelpers(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
 
-		nodes, err := models.FindNodes(q, nil)
+		nodes, err := models.FindNodes(q, models.NodeFilters{})
 		require.NoError(t, err)
 
 		expected := []*models.Node{{
@@ -195,7 +195,7 @@ func TestNodeHelpers(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
 
-		nodes, err := models.FindNodes(q, pointerToNodeType(models.ContainerNodeType))
+		nodes, err := models.FindNodes(q, models.NodeFilters{NodeType: pointerToNodeType(models.ContainerNodeType)})
 		require.NoError(t, err)
 
 		expected := []*models.Node{{
@@ -237,7 +237,7 @@ func TestNodeHelpers(t *testing.T) {
 		err = models.RemoveNode(q, "MySQLNode", models.RemoveCascade)
 		assert.NoError(t, err)
 
-		nodes, err := models.FindNodes(q, nil)
+		nodes, err := models.FindNodes(q, models.NodeFilters{})
 		assert.NoError(t, err)
 		require.Len(t, nodes, 0)
 	})

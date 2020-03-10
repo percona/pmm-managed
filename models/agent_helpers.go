@@ -44,14 +44,29 @@ func checkUniqueAgentID(q *reform.Querier, id string) error {
 	}
 }
 
+// AgentFilters represents filters for agents list.
+type AgentFilters struct {
+	// Return only Agents started by this pmm-agent.
+	PMMAgentID string
+	// Return only Agents that provide insights for that Node.
+	NodeID string
+	// Return only Agents that provide insights for that Service.
+	ServiceID string
+	// Return Agents with provided type.
+	AgentType *AgentType
+}
+
 // FindAgents returns Agents by filters.
 func FindAgents(q *reform.Querier, filters AgentFilters) ([]*Agent, error) {
 	var conditions []string
 	var args []interface{}
 	idx := 1
-	if filters.AgentType != nil {
-		conditions = append(conditions, fmt.Sprintf("agent_type = %s", q.Placeholder(idx)))
-		args = append(args, *filters.AgentType)
+	if filters.PMMAgentID != "" {
+		if _, err := FindAgentByID(q, filters.PMMAgentID); err != nil {
+			return nil, err
+		}
+		conditions = append(conditions, fmt.Sprintf("pmm_agent_id = %s", q.Placeholder(idx)))
+		args = append(args, filters.PMMAgentID)
 		idx++
 	}
 	if filters.NodeID != "" {
@@ -70,12 +85,9 @@ func FindAgents(q *reform.Querier, filters AgentFilters) ([]*Agent, error) {
 		args = append(args, filters.ServiceID)
 		idx++
 	}
-	if filters.PMMAgentID != "" {
-		if _, err := FindAgentByID(q, filters.PMMAgentID); err != nil {
-			return nil, err
-		}
-		conditions = append(conditions, fmt.Sprintf("pmm_agent_id = %s", q.Placeholder(idx)))
-		args = append(args, filters.PMMAgentID)
+	if filters.AgentType != nil {
+		conditions = append(conditions, fmt.Sprintf("agent_type = %s", q.Placeholder(idx)))
+		args = append(args, *filters.AgentType)
 	}
 
 	var whereClause string
@@ -398,16 +410,4 @@ func RemoveAgent(q *reform.Querier, id string, mode RemoveMode) (*Agent, error) 
 	}
 
 	return a, nil
-}
-
-// AgentFilters represents filters for agents list.
-type AgentFilters struct {
-	// Return only Agents started by this pmm-agent.
-	PMMAgentID string
-	// Return only Agents that provide insights for that Node.
-	NodeID string
-	// Return only Agents that provide insights for that Service.
-	ServiceID string
-	// Return Agents with provided type.
-	AgentType *AgentType
 }

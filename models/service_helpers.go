@@ -55,19 +55,27 @@ func checkServiceUniqueName(q *reform.Querier, name string) error {
 	}
 }
 
+// ServiceFilters represents filters for services list.
+type ServiceFilters struct {
+	// Return only Services runs on that Node.
+	NodeID string
+	// Return only Services with provided type.
+	ServiceType *ServiceType
+}
+
 // FindServices returns Services by filters.
 func FindServices(q *reform.Querier, filters ServiceFilters) ([]*Service, error) {
 	var conditions []string
 	var args []interface{}
 	idx := 1
-	if filters.ServiceType != nil {
-		conditions = append(conditions, fmt.Sprintf("service_type = %s", q.Placeholder(idx)))
-		args = append(args, filters.ServiceType)
-		idx++
-	}
 	if filters.NodeID != "" {
 		conditions = append(conditions, fmt.Sprintf("node_id = %s", q.Placeholder(idx)))
 		args = append(args, filters.NodeID)
+		idx++
+	}
+	if filters.ServiceType != nil {
+		conditions = append(conditions, fmt.Sprintf("service_type = %s", q.Placeholder(idx)))
+		args = append(args, filters.ServiceType)
 	}
 	var whereClause string
 	if len(conditions) != 0 {
@@ -220,12 +228,4 @@ func RemoveService(q *reform.Querier, id string, mode RemoveMode) error {
 	}
 
 	return errors.Wrap(q.Delete(s), "failed to delete Service")
-}
-
-// ServiceFilters represents filters for services list.
-type ServiceFilters struct {
-	// Return only Services runs on that Node.
-	NodeID string
-	// Return only Services with provided type.
-	ServiceType *ServiceType
 }
