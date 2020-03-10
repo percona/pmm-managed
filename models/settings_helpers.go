@@ -62,9 +62,10 @@ type ChangeSettingsParams struct {
 
 	// not url.URL to keep username and password
 	AlertManagerURL       string
-	RemoveAlertManagerUrl bool
+	RemoveAlertManagerURL bool
 }
 
+// UpdateSettings updates only non-zero, non-empty values.
 func UpdateSettings(q reform.DBTX, params ChangeSettingsParams) (*Settings, error) {
 	err := ValidateSettings(params)
 	if err != nil {
@@ -102,7 +103,7 @@ func UpdateSettings(q reform.DBTX, params ChangeSettingsParams) (*Settings, erro
 	if params.AlertManagerURL != "" {
 		settings.AlertManagerURL = params.AlertManagerURL
 	}
-	if params.RemoveAlertManagerUrl {
+	if params.RemoveAlertManagerURL {
 		settings.AlertManagerURL = ""
 	}
 
@@ -113,6 +114,7 @@ func UpdateSettings(q reform.DBTX, params ChangeSettingsParams) (*Settings, erro
 	return settings, nil
 }
 
+// ValidateSettings validates settings changes.
 func ValidateSettings(params ChangeSettingsParams) error {
 	if params.EnableTelemetry && params.DisableTelemetry {
 		return status.Error(codes.InvalidArgument, "Both enable_telemetry and disable_telemetry are present.")
@@ -134,7 +136,7 @@ func ValidateSettings(params ChangeSettingsParams) error {
 
 		if _, err := v.validator(v.dur); err != nil {
 			switch err.(type) {
-			case validators.AliquotDurationError:
+			case validators.DurationNotAllowedError:
 				return status.Error(codes.InvalidArgument, fmt.Sprintf("%s: should be a natural number of seconds", v.fieldName))
 			case validators.MinDurationError:
 				return status.Error(codes.InvalidArgument, fmt.Sprintf("%s: minimal resolution is 1s", v.fieldName))
@@ -147,7 +149,7 @@ func ValidateSettings(params ChangeSettingsParams) error {
 	if params.DataRetention != 0 {
 		if _, err := validators.ValidateDataRetention(params.DataRetention); err != nil {
 			switch err.(type) {
-			case validators.AliquotDurationError:
+			case validators.DurationNotAllowedError:
 				return status.Error(codes.InvalidArgument, "data_retention: should be a natural number of days")
 			case validators.MinDurationError:
 				return status.Error(codes.InvalidArgument, "data_retention: minimal resolution is 24h")
@@ -163,7 +165,7 @@ func ValidateSettings(params ChangeSettingsParams) error {
 	}
 
 	if params.AlertManagerURL != "" {
-		if params.RemoveAlertManagerUrl {
+		if params.RemoveAlertManagerURL {
 			return status.Error(codes.InvalidArgument, "Both alert_manager_url and remove_alert_manager_url are present.")
 		}
 

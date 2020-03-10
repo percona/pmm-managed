@@ -490,7 +490,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			DataRetention:         getDuration(req.DataRetention),
 			AWSPartitions:         req.AwsPartitions,
 			AlertManagerURL:       req.AlertManagerUrl,
-			RemoveAlertManagerUrl: req.RemoveAlertManagerUrl,
+			RemoveAlertManagerURL: req.RemoveAlertManagerUrl,
 			SSHKey:                req.SshKey,
 		}
 

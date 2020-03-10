@@ -18,6 +18,7 @@
 package validators
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/endpoints"
@@ -44,22 +45,21 @@ type MinDurationError struct {
 
 func (e MinDurationError) Error() string { return e.Msg }
 
-// AliquotDurationError multiple of duration allowed error.
-type AliquotDurationError struct {
-	Msg        string
-	MultipleOf time.Duration
+// DurationNotAllowedError duration not allowed error.
+type DurationNotAllowedError struct {
+	Msg string
 }
 
-func (e AliquotDurationError) Error() string { return e.Msg }
+func (e DurationNotAllowedError) Error() string { return e.Msg }
 
-// ValidateDuration validate duration.
+// ValidateDuration validates duration.
 func validateDuration(d, min, multipleOf time.Duration) (time.Duration, error) {
 	if d < min {
 		return d, MinDurationError{"min duration error", min}
 	}
 
 	if d.Truncate(multipleOf) != d {
-		return d, AliquotDurationError{"aliquot	duration error", multipleOf}
+		return d, DurationNotAllowedError{fmt.Sprintf("%v is not multiple of %v", d, multipleOf)}
 	}
 	return d, nil
 }

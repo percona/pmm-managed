@@ -17,11 +17,11 @@
 package main
 
 import (
-	"github.com/percona/pmm-managed/models"
 	"os"
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/envvars"
 )
 
