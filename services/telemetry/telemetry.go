@@ -48,18 +48,19 @@ import (
 )
 
 const (
-	interval     = 24 * time.Hour
-	timeout      = 5 * time.Second
-	retryBackoff = time.Hour
-	retryCnt     = 20
+	defaultV1URL        = "https://v.percona.com/"
+	defaultV2Host       = "check.percona.com:443" // protocol is always https
+	defaultInterval     = 24 * time.Hour
+	defaultRetryBackoff = time.Hour
+	defaultRetryCount   = 20
 
-	defaultV1URL  = "https://v.percona.com/"
-	defaultV2Host = "check.percona.com:443" // protocol is always https
+	// Environment variables that affect telemetry service; only for testing.
+	// DISABLE_TELEMETRY environment variable is handled elsewere.
+	envV1URL    = "PERCONA_VERSION_CHECK_URL" // the same name as for the Toolkit
+	envV2Host   = "PERCONA_TEST_TELEMETRY_HOST"
+	envInterval = "PERCONA_TEST_TELEMETRY_INTERVAL"
 
-	// environment variables that affect telemetry service
-	envV1URL  = "PERCONA_VERSION_CHECK_URL" // the same name as for the Toolkit
-	envV2Host = "PERCONA_TEST_TELEMETRY_HOST"
-	envDelay  = "PERCONA_TEST_TELEMETRY_DELAY"
+	timeout = 5 * time.Second
 )
 
 // Service is responsible for interactions with Percona Check / Telemetry service.
@@ -69,11 +70,11 @@ type Service struct {
 	start      time.Time
 	l          *logrus.Entry
 
-	v1URL  string
-	v2Host string
-
+	v1URL        string
+	v2Host       string
+	interval     time.Duration
 	retryBackoff time.Duration
-	retryCnt     int32
+	retryCount   int
 
 	os                  string
 	sDistributionMethod serverpb.DistributionMethod
@@ -88,15 +89,30 @@ func NewService(db *reform.DB, pmmVersion string) *Service {
 		pmmVersion:   pmmVersion,
 		start:        time.Now(),
 		l:            l,
-		retryBackoff: retryBackoff,
-		retryCnt:     retryCnt,
+		v1URL:        defaultV1URL,
+		v2Host:       defaultV2Host,
+		interval:     defaultInterval,
+		retryBackoff: defaultRetryBackoff,
+		retryCount:   defaultRetryCount,
 	}
 
 	s.sDistributionMethod, s.tDistributionMethod, s.os = getDistributionMethodAndOS(l)
-	s.v1URL, s.v2Host = getTelemetryHosts()
 
-	s.l.Debugf("Telemetry settings: os=%q, sDistributionMethod=%q, v1URL=%q, v2Host=%q.",
-		s.os, s.sDistributionMethod, s.v1URL, s.v2Host)
+	if u := os.Getenv(envV1URL); u != "" {
+		l.Warnf("v1URL changed to %q.", u)
+		s.v1URL = u
+	}
+	if h := os.Getenv(envV2Host); h != "" {
+		l.Warnf("v2Host changed to %q.", h)
+		s.v2Host = h
+	}
+	if d, err := time.ParseDuration(os.Getenv(envInterval)); err == nil && d > 0 {
+		l.Warnf("Interval changed to %s.", d)
+		s.interval = d
+	}
+
+	s.l.Debugf("Telemetry settings: os=%q, sDistributionMethod=%q, tDistributionMethod=%q.",
+		s.os, s.sDistributionMethod, s.tDistributionMethod)
 
 	return s
 }
@@ -123,57 +139,27 @@ func getDistributionMethodAndOS(l *logrus.Entry) (serverpb.DistributionMethod, e
 	}
 }
 
-// getTelemetryHosts returns telemetry host for v1 and v1 API
-func getTelemetryHosts() (string, string) {
-	v1URL := defaultV1URL
-	v2Host := defaultV2Host
-
-	if u := os.Getenv(envV1URL); u != "" {
-		v1URL = u
-	}
-
-	if u := os.Getenv(envV2Host); u != "" {
-		v2Host = u
-	}
-
-	return v1URL, v2Host
-}
-
 // DistributionMethod returns PMM Server distribution method where this pmm-managed runs.
 func (s *Service) DistributionMethod() serverpb.DistributionMethod {
 	return s.sDistributionMethod
 }
 
 // Run runs telemetry service after delay, sending data every interval until context is canceled.
-func (s *Service) Run(ctx context.Context, delay time.Duration) {
-	if d, _ := time.ParseDuration(os.Getenv(envDelay)); 0 < d && d < delay {
-		s.l.Warnf("Telemetry delay reduced by %s environment variable to %s.", envDelay, d)
-		delay = d
-	}
-
-	if delay != 0 {
-		sleepCtx, sleepCancel := context.WithTimeout(ctx, delay)
-		<-sleepCtx.Done()
-		sleepCancel()
-	}
-
-	if ctx.Err() != nil {
-		return
-	}
-
-	ticker := time.NewTicker(interval)
+func (s *Service) Run(ctx context.Context) {
+	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
 
+	// delay the very first report too to let users opt-out
 	for {
-		if err := s.sendOnce(ctx); err != nil {
-			s.l.Debugf("Telemetry info not send: %s.", err)
-		}
-
 		select {
 		case <-ticker.C:
 			// continue with next loop iteration
 		case <-ctx.Done():
 			return
+		}
+
+		if err := s.sendOnce(ctx); err != nil {
+			s.l.Debugf("Telemetry info not send: %s.", err)
 		}
 	}
 }
@@ -181,6 +167,7 @@ func (s *Service) Run(ctx context.Context, delay time.Duration) {
 func (s *Service) sendOnce(ctx context.Context) error {
 	sendOnceCtx, sendOnceCancel := context.WithTimeout(ctx, timeout)
 	defer sendOnceCancel()
+
 	var settings *models.Settings
 	err := s.db.InTransaction(func(tx *reform.TX) error {
 		var e error
@@ -217,12 +204,7 @@ func (s *Service) sendOnce(ctx context.Context) error {
 			return err
 		}
 
-		if err = s.sendV2Request(sendOnceCtx, req); err != nil {
-			s.l.Debugf("Fail to send telemetry v2, add request to retry queue: %s", req)
-			s.waitAndRetry(ctx, req)
-		}
-
-		return nil
+		return s.sendV2RequestWithRetries(sendOnceCtx, req)
 	})
 
 	return wg.Wait()
@@ -306,12 +288,36 @@ func (s *Service) makeV2Payload(serverUUID string) (*reporter.ReportRequest, err
 	return req, nil
 }
 
-func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest) error {
+func (s *Service) sendV2RequestWithRetries(ctx context.Context, req *reporter.ReportRequest) error {
 	if s.v2Host == "" {
 		return errors.New("v2 telemetry disabled via the empty host")
 	}
 
-	s.l.Debugf("Use %s as telemetry host.", s.v2Host)
+	var err error
+	var attempt int
+	for {
+		if err = s.sendV2Request(ctx, req); err == nil {
+			return nil
+		}
+
+		attempt++
+		if attempt >= s.retryCount {
+			s.l.Debugf("Failed to send v2 event, will not retry: %s.", err)
+			return err
+		}
+
+		retryCtx, retryCancel := context.WithTimeout(ctx, s.retryBackoff)
+		<-retryCtx.Done()
+		retryCancel()
+		if err = retryCtx.Err(); err != nil {
+			s.l.Debugf("Will not retry sending v2 event: %s.", err)
+			return err
+		}
+	}
+}
+
+func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest) error {
+	s.l.Debugf("Using %s as telemetry host.", s.v2Host)
 
 	host, _, err := net.SplitHostPort(s.v2Host)
 	if err != nil {
@@ -322,7 +328,7 @@ func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest
 
 	opts := []grpc.DialOption{
 		// replacement is marked as experimental
-		grpc.WithBackoffMaxDelay(time.Second), //nolint:staticcheck
+		grpc.WithBackoffMaxDelay(timeout), //nolint:staticcheck
 
 		grpc.WithBlock(),
 		grpc.WithUserAgent("pmm-managed/" + s.pmmVersion),
@@ -383,39 +389,4 @@ func getLinuxDistribution(procVersion string) string {
 		}
 	}
 	return "unknown"
-}
-
-func (s *Service) waitAndRetry(ctx context.Context, req *reporter.ReportRequest) {
-	t := time.NewTicker(retryBackoff)
-	defer t.Stop()
-
-	for i := 0; i < retryCnt; i++ {
-		select {
-		case <-t.C:
-			if err := s.retry(ctx, req); err != nil {
-				s.l.Debugf("Fail to retry send telemetry request: %s, error%+v", req, err)
-				continue
-			}
-
-			return
-		case <-ctx.Done():
-			s.l.Debugf("Wait and retry exit due: %+v", ctx.Err())
-			return
-		}
-	}
-
-	s.l.Debugf("Retry count exceeded, limit: %d, request: %s", retryCnt, req)
-}
-
-func (s *Service) retry(ctx context.Context, req *reporter.ReportRequest) error {
-	rCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-
-	s.l.Debugf("Retry send telemetry request: %s", req)
-	err := s.sendV2Request(rCtx, req)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

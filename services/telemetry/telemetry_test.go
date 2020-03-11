@@ -19,12 +19,10 @@ package telemetry
 import (
 	"context"
 	"encoding/hex"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/google/uuid"
 	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,7 +31,7 @@ import (
 const devTelemetryHost = "check-dev.percona.com:443"
 
 func TestRetryAndIntervalConstantsSync(t *testing.T) {
-	assert.True(t, interval > retryCnt*retryBackoff)
+	assert.True(t, defaultInterval > defaultRetryCount*defaultRetryBackoff)
 }
 
 //nolint:lll
@@ -49,7 +47,7 @@ func TestMakeV1Payload(t *testing.T) {
 	for expected, p := range map[string]param{
 		"ACAB81E4C47D456CA9EC20AEBF91AB44;OS;linux\nACAB81E4C47D456CA9EC20AEBF91AB44;PMM;1.3.1\n": {os: "linux", uuid: "ACAB81E4C47D456CA9EC20AEBF91AB44", version: "1.3.1"},
 		"BCAB81E4C47D456CA9EC20AEBF91AB44;OS;ovf\nBCAB81E4C47D456CA9EC20AEBF91AB44;PMM;2.0.2\n":   {os: "ovf", uuid: "BCAB81E4C47D456CA9EC20AEBF91AB44", version: "2.0.2"},
-		"CCAB81E4C47D456CA9EC20AEBF91AB44;OS;ami\nCCAB81E4C47D456CA9EC20AEBF91AB44;PMM;2.3.0\n":   {os: "ami", uuid: "CCAB81E4C47D456CA9EC20AEBF91AB44", version: "2.3.0"},
+		"CCAB81E4C47D456CA9EC20AEBF91AB44;OS;ami\nCCAB81E4C47D456CA9EC20AEBF91AB44;PMM;2.4.0\n":   {os: "ami", uuid: "CCAB81E4C47D456CA9EC20AEBF91AB44", version: "2.4.0"},
 	} {
 		s.os = p.os
 		s.pmmVersion = p.version
@@ -59,7 +57,7 @@ func TestMakeV1Payload(t *testing.T) {
 }
 
 func TestMakeV2Payload(t *testing.T) {
-	s := NewService(nil, "2.3.0")
+	s := NewService(nil, "2.4.0")
 	delay := 6 * time.Hour
 	s.start = time.Now().Add(-delay)
 	s.tDistributionMethod = pmmv1.DistributionMethod_DOCKER
@@ -68,16 +66,17 @@ func TestMakeV2Payload(t *testing.T) {
 
 	r, err := s.makeV2Payload(u)
 	require.NoError(t, err)
+	assert.NoError(t, r.Validate())
 	require.Len(t, r.Events, 1)
 
 	ev := r.Events[0]
-	assert.True(t, isValidUUID(t, ev.Id))
+	assert.NoError(t, ev.Validate())
 
 	var uEv pmmv1.ServerUptimeEvent
 	err = proto.Unmarshal(ev.Event.Binary, &uEv)
 	require.NoError(t, err)
 
-	assert.Equal(t, uEv.Version, "2.3.0")
+	assert.Equal(t, uEv.Version, "2.4.0")
 	assert.Equal(t, uEv.DistributionMethod, pmmv1.DistributionMethod_DOCKER)
 	assert.LessOrEqual(t, float64(uEv.UpDuration.Seconds), (delay + 2*time.Second).Seconds())
 	assert.GreaterOrEqual(t, float64(uEv.UpDuration.Seconds), delay.Seconds())
@@ -85,47 +84,38 @@ func TestMakeV2Payload(t *testing.T) {
 }
 
 func TestSendV2Request(t *testing.T) {
-	os.Setenv(envV2Host, devTelemetryHost) //nolint:errcheck
-
 	t.Run("Normal", func(t *testing.T) {
-		s := NewService(nil, "2.3.0")
+		s := NewService(nil, "2.4.0")
+		s.v2Host = devTelemetryHost
+
 		u, err := generateUUID()
 		require.NoError(t, err)
 		payload, err := s.makeV2Payload(u)
 		require.NoError(t, err)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
-		err = s.sendV2Request(ctx, payload)
+		err = s.sendV2RequestWithRetries(ctx, payload)
 		assert.NoError(t, err)
 	})
 
 	t.Run("Empty host", func(t *testing.T) {
-		s := NewService(nil, "2.3.0")
+		s := NewService(nil, "2.4.0")
 		s.v2Host = ""
+
 		u, err := generateUUID()
 		require.NoError(t, err)
 		req, err := s.makeV2Payload(u)
 		require.NoError(t, err)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
-		err = s.sendV2Request(ctx, req)
+		err = s.sendV2RequestWithRetries(ctx, req)
 		require.Error(t, err)
 		assert.Equal(t, "v2 telemetry disabled via the empty host", err.Error())
 	})
-}
-
-func isValidUUID(t *testing.T, b []byte) bool {
-	var u uuid.UUID
-	if err := u.UnmarshalBinary(b); err != nil {
-		t.Log(err)
-		return false
-	}
-
-	return true
 }
 
 //nolint:lll
@@ -195,33 +185,4 @@ func TestGetLinuxDistribution(t *testing.T) {
 			assert.Equal(t, expected, actual)
 		}
 	}
-}
-
-//nolint:errcheck
-func TestRetry(t *testing.T) {
-	t.Run("Normal retry", func(t *testing.T) {
-		os.Setenv(envV2Host, devTelemetryHost)
-		s := NewService(nil, "2.3.0")
-		u, err := generateUUID()
-		require.NoError(t, err)
-
-		req, err := s.makeV2Payload(u)
-		require.NoError(t, err)
-
-		err = s.retry(context.Background(), req)
-		assert.NoError(t, err)
-	})
-
-	t.Run("Failed retry", func(t *testing.T) {
-		os.Setenv(envV2Host, "localhost") // Used as nowhere
-		s := NewService(nil, "2.3.0")
-		u, err := generateUUID()
-		require.NoError(t, err)
-
-		req, err := s.makeV2Payload(u)
-		require.NoError(t, err)
-
-		err = s.retry(context.Background(), req)
-		assert.Error(t, err)
-	})
 }

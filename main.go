@@ -558,9 +558,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-
-		// telemetry service starts sending data only after 24 hours have passed
-		telemetry.Run(ctx, 24*time.Hour) //nolint:mnd
+		telemetry.Run(ctx)
 	}()
 
 	wg.Add(1)
