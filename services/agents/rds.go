@@ -31,13 +31,13 @@ import (
 
 // rdsInstance represents a single RDS instance information from configuration file.
 type rdsInstance struct {
-	Region       string         `yaml:"region"`
-	Instance     string         `yaml:"instance"`
-	AWSAccessKey string         `yaml:"aws_access_key,omitempty"`
-	AWSSecretKey string         `yaml:"aws_secret_key,omitempty"`
-	Labels       model.LabelSet `yaml:"labels,omitempty"`
-        DisableBasicMetrics bool `yaml:"disable_basic_metrics"`
-        DisableEnhancedMetrics bool `yaml:"disable_enhanced_metrics"`
+	Region                 string         `yaml:"region"`
+	Instance               string         `yaml:"instance"`
+	AWSAccessKey           string         `yaml:"aws_access_key,omitempty"`
+	AWSSecretKey           string         `yaml:"aws_secret_key,omitempty"`
+	Labels                 model.LabelSet `yaml:"labels,omitempty"`
+	DisableBasicMetrics    bool           `yaml:"disable_basic_metrics"`
+	DisableEnhancedMetrics bool           `yaml:"disable_enhanced_metrics"`
 }
 
 // Config contains configuration file information.

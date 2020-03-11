@@ -228,6 +228,13 @@ var databaseSchema = [][]string{
 	},
 
 	10: {
+		// update 5/5/60 to 5/10/60 for 2.4 only if defaults were not changed
+		`UPDATE settings SET
+			settings = settings || '{"metrics_resolutions": {"hr": 5000000000, "mr": 10000000000, "lr": 60000000000}}'
+			WHERE settings->>'metrics_resolutions' =       '{"hr": 5000000000, "mr": 5000000000,  "lr": 60000000000}'`,
+	},
+
+	11: {
 		`ALTER TABLE agents
 			ADD COLUMN rds_basic_metrics_disabled BOOLEAN NOT NULL DEFAULT FALSE,
 			ADD COLUMN rds_enhanced_metrics_disabled BOOLEAN NOT NULL DEFAULT FALSE`,
