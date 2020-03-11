@@ -686,8 +686,8 @@ func (as *AgentsService) AddRDSExporter(ctx context.Context, req *inventorypb.Ad
 			AWSAccessKey:               req.AwsAccessKey,
 			AWSSecretKey:               req.AwsSecretKey,
 			CustomLabels:               req.CustomLabels,
-			RDSBasicMetricsDisabled:    req.BasicMetricsDisabled,
-			RDSEnhancedMetricsDisabled: req.EnhancedMetricsDisabled,
+			RDSBasicMetricsDisabled:    req.DisableBasicMetrics,
+			RDSEnhancedMetricsDisabled: req.DisableEnhancedMetrics,
 		}
 		row, err := models.CreateAgent(tx.Querier, models.RDSExporterType, params)
 		if err != nil {

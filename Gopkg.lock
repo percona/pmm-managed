@@ -160,7 +160,7 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:a0aaaf3b716956ad0ee091533c277fe3a8eb2f6bd5f1647803d73f0040bdbf12"
+  digest = "1:b20b63e236be8e58c3ddb97b59e0008419a02e2cff3d507bb4aa39fe18f48dce"
   name = "github.com/grpc-ecosystem/grpc-gateway"
   packages = [
     "internal",
@@ -169,8 +169,8 @@
     "utilities",
   ]
   pruneopts = "NUT"
-  revision = "e16fcd495a18ea01dbc6f5b6ac2956a94e1981a2"
-  version = "v1.12.2"
+  revision = "4c2cec4158f65aebe0290d3bee883b13f7b07c6f"
+  version = "v1.13.0"
 
 [[projects]]
   digest = "1:1f2aebae7e7c856562355ec0198d8ca2fa222fb05e5b1b66632a1fce39631885"
@@ -241,7 +241,7 @@
 
 [[projects]]
   branch = "PMM-4145-rds-disable-metric-collection"
-  digest = "1:bfed177d60c6356ca566267502c3fad5c7a4b486194151ad20f299214712064c"
+  digest = "1:b1280134737a80b6ff43054ffa84ea980adf1199d88bcb9fbe258372fe6e53f5"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -254,7 +254,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "a60c468e1577cc9047c97cb32211af2ff706c5b8"
+  revision = "5b1493b59bd64aa30b3053f936e7157dfa991c53"
 
 [[projects]]
   digest = "1:14715f705ff5dfe0ffd6571d7d201dd8e921030f8070321a79380d8ca4ec1a24"
