@@ -19,11 +19,12 @@ package envvars
 
 import (
 	"fmt"
-	"github.com/percona/pmm-managed/models"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/percona/pmm-managed/models"
 )
 
 func TestEnvVarValidator(t *testing.T) {
