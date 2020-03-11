@@ -93,6 +93,8 @@ instances:
   instance: rds-mysql56
   aws_access_key: access_key1
   aws_secret_key: secret_key1
+  disable_basic_metrics: false
+  disable_enhanced_metrics: false
   labels:
     agent_id: /agent_id/agent1
     agent_type: rds_exporter
@@ -106,6 +108,8 @@ instances:
   instance: rds-mysql57
   aws_access_key: access_key2
   aws_secret_key: secret_key2
+  disable_basic_metrics: false
+  disable_enhanced_metrics: false
   labels:
     agent_id: /agent_id/agent2
     agent_type: rds_exporter
