@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb/json/client"
 	"github.com/percona/pmm/api/inventorypb/json/client/agents"
 	"github.com/percona/pmm/api/inventorypb/json/client/nodes"
@@ -46,6 +47,31 @@ func TestNodes(t *testing.T) {
 			}
 			return false
 		}, "There should be remote node with id `%s`", remoteNodeID)
+
+		res, err = client.Default.Nodes.ListNodes(&nodes.ListNodesParams{
+			Body: nodes.ListNodesBody{
+				NodeType: pointer.ToString(nodes.ListNodesBodyNodeTypeGENERICNODE),
+			},
+			Context: pmmapitests.Context,
+		})
+		require.NoError(t, err)
+		require.NotZerof(t, len(res.Payload.Generic), "There should be at least one generic node")
+		require.Conditionf(t, func() (success bool) {
+			for _, v := range res.Payload.Generic {
+				if v.NodeID == genericNodeID {
+					return true
+				}
+			}
+			return false
+		}, "There should be generic node with id `%s`", genericNodeID)
+		require.Conditionf(t, func() (success bool) {
+			for _, v := range res.Payload.Remote {
+				if v.NodeID == remoteNodeID {
+					return false
+				}
+			}
+			return true
+		}, "There shouldn't be remote node with id `%s`", remoteNodeID)
 	})
 }
 

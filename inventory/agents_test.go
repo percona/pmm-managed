@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb/json/client"
 	"github.com/percona/pmm/api/inventorypb/json/client/agents"
 	"github.com/percona/pmm/api/inventorypb/json/client/services"
@@ -135,6 +136,18 @@ func TestAgents(t *testing.T) {
 		// Filter by service ID.
 		res, err = client.Default.Agents.ListAgents(&agents.ListAgentsParams{
 			Body:    agents.ListAgentsBody{ServiceID: serviceID},
+			Context: pmmapitests.Context,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		require.NotZerof(t, len(res.Payload.MysqldExporter), "There should be at least one mysql exporter")
+		assertMySQLExporterExists(t, res, mySqldExporterID)
+		assertPMMAgentNotExists(t, res, pmmAgentID)
+		assertNodeExporterNotExists(t, res, nodeExporterID)
+
+		// Filter by service ID.
+		res, err = client.Default.Agents.ListAgents(&agents.ListAgentsParams{
+			Body:    agents.ListAgentsBody{AgentType: pointer.ToString(agents.ListAgentsBodyAgentTypeMYSQLDEXPORTER)},
 			Context: pmmapitests.Context,
 		})
 		require.NoError(t, err)

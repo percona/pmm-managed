@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb/json/client"
 	"github.com/percona/pmm/api/inventorypb/json/client/agents"
 	"github.com/percona/pmm/api/inventorypb/json/client/services"
@@ -44,12 +45,53 @@ func TestServices(t *testing.T) {
 		remoteServiceID := remoteService.Mysql.ServiceID
 		defer pmmapitests.RemoveServices(t, remoteServiceID)
 
+		postgreSQLService := addPostgreSQLService(t, services.AddPostgreSQLServiceBody{
+			NodeID:      genericNodeID,
+			Address:     "localhost",
+			Port:        5432,
+			ServiceName: pmmapitests.TestString(t, "Some MySQL Service on remote Node"),
+		})
+		postgreSQLServiceID := postgreSQLService.Postgresql.ServiceID
+		defer pmmapitests.RemoveServices(t, postgreSQLServiceID)
+
 		res, err := client.Default.Services.ListServices(&services.ListServicesParams{Context: pmmapitests.Context})
 		assert.NoError(t, err)
 		require.NotNil(t, res)
-		assert.NotZerof(t, len(res.Payload.Mysql), "There should be at least one node")
+		assert.NotZerof(t, len(res.Payload.Mysql), "There should be at least one MySQL service")
+		assert.NotZerof(t, len(res.Payload.Postgresql), "There should be at least one PostgreSQL service")
 		assertMySQLServiceExists(t, res, serviceID)
 		assertMySQLServiceExists(t, res, remoteServiceID)
+		assertPostgreSQLServiceExists(t, res, postgreSQLServiceID)
+
+		// Filter by node ID.
+		res, err = client.Default.Services.ListServices(&services.ListServicesParams{
+			Body: services.ListServicesBody{
+				NodeID:      genericNodeID,
+				ServiceType: nil,
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		require.NotNil(t, res)
+		assert.NotZerof(t, len(res.Payload.Mysql), "There should be at least one MySQL service")
+		assert.NotZerof(t, len(res.Payload.Postgresql), "There should be at least one PostgreSQL service")
+		assertMySQLServiceExists(t, res, serviceID)
+		assertMySQLServiceNotExist(t, res, remoteServiceID)
+		assertPostgreSQLServiceExists(t, res, postgreSQLServiceID)
+
+		// Filter by service type.
+		res, err = client.Default.Services.ListServices(&services.ListServicesParams{
+			Body: services.ListServicesBody{
+				ServiceType: pointer.ToString(services.ListServicesBodyServiceTypePOSTGRESQLSERVICE),
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		require.NotNil(t, res)
+		assert.NotZerof(t, len(res.Payload.Postgresql), "There should be at least one PostgreSQL service")
+		assertMySQLServiceNotExist(t, res, serviceID)
+		assertMySQLServiceNotExist(t, res, remoteServiceID)
+		assertPostgreSQLServiceExists(t, res, postgreSQLServiceID)
 	})
 
 	t.Run("FilterList", func(t *testing.T) {

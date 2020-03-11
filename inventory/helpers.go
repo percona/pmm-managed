@@ -176,6 +176,19 @@ func addProxySQLExporter(t pmmapitests.TestingT, body agents.AddProxySQLExporter
 	return res.Payload
 }
 
+func assertPostgreSQLServiceExists(t pmmapitests.TestingT, res *services.ListServicesOK, serviceID string) bool {
+	t.Helper()
+
+	return assert.Conditionf(t, func() bool {
+		for _, v := range res.Payload.Postgresql {
+			if v.ServiceID == serviceID {
+				return true
+			}
+		}
+		return false
+	}, "There should be PostgreSQL service with id `%s`", serviceID)
+}
+
 func assertMySQLServiceExists(t pmmapitests.TestingT, res *services.ListServicesOK, serviceID string) bool {
 	t.Helper()
 
