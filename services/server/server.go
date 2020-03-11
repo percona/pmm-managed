@@ -63,13 +63,8 @@ type Server struct {
 	pmmUpdateAuthFileM sync.Mutex
 	pmmUpdateAuthFile  string
 
-	envRW                  sync.RWMutex
-	envDisableUpdates      bool
-	envDisableTelemetry    bool
-	envMetricsResolutionHR time.Duration
-	envMetricsResolutionMR time.Duration
-	envMetricsResolutionLR time.Duration
-	envDataRetention       time.Duration
+	envRW       sync.RWMutex
+	envSettings *models.ChangeSettingsParams
 
 	sshKeyM sync.Mutex
 
@@ -100,13 +95,14 @@ func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervis
 		l:                 logrus.WithField("component", "server"),
 		pmmUpdateAuthFile: path,
 		alertManagerFile:  alertManagerFile,
+		envSettings:       new(models.ChangeSettingsParams),
 	}
 	return s, nil
 }
 
 // UpdateSettingsFromEnv updates settings in the database with environment variables values.
 // It returns only validation or database errors; invalid environment variables are logged and skipped.
-func (s *Server) UpdateSettingsFromEnv(env []string) error {
+func (s *Server) UpdateSettingsFromEnv(env []string) []error {
 	s.envRW.Lock()
 	defer s.envRW.Unlock()
 
@@ -114,41 +110,19 @@ func (s *Server) UpdateSettingsFromEnv(env []string) error {
 	for _, w := range warns {
 		s.l.Warnln(w)
 	}
-
-	// This should be impossible in the normal workflow.
-	// An invalid environment variable must be caught with pmm-managed-init
-	// and the docker run must be terminated.
 	if len(errs) > 0 {
-		for _, e := range errs {
-			s.l.Errorln(e)
-		}
-		return errors.New("validation error of environment variables")
+		return errs
 	}
 
-	s.envDisableUpdates = envSettings.DisableUpdates
-	s.envDisableTelemetry = envSettings.DisableTelemetry
-	s.envMetricsResolutionHR = envSettings.MetricsResolutions.HR
-	s.envMetricsResolutionMR = envSettings.MetricsResolutions.MR
-	s.envMetricsResolutionLR = envSettings.MetricsResolutions.LR
-	s.envDataRetention = envSettings.DataRetention
-
-	return s.db.InTransaction(func(tx *reform.TX) error {
-		params := models.ChangeSettingsParams{
-			DisableTelemetry: s.envDisableTelemetry,
-			MetricsResolutions: models.MetricsResolutions{
-				HR: s.envMetricsResolutionHR,
-				MR: s.envMetricsResolutionMR,
-				LR: s.envMetricsResolutionLR,
-			},
-			DataRetention: s.envDataRetention,
-		}
-		_, err := models.UpdateSettings(tx.Querier, params)
-		if err != nil {
-			return err
-		}
-
-		return nil
+	err := s.db.InTransaction(func(tx *reform.TX) error {
+		_, err := models.UpdateSettings(tx.Querier, envSettings)
+		return err
 	})
+	if err != nil {
+		return []error{err}
+	}
+	s.envSettings = envSettings
+	return nil
 }
 
 // Version returns PMM Server version.
@@ -221,7 +195,7 @@ func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) 
 // CheckUpdates checks PMM Server updates availability.
 func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesRequest) (*serverpb.CheckUpdatesResponse, error) {
 	s.envRW.RLock()
-	updatesDisabled := s.envDisableUpdates
+	updatesDisabled := s.envSettings.DisableUpdates
 	s.envRW.RUnlock()
 
 	if req.Force {
@@ -270,7 +244,7 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 // StartUpdate starts PMM Server update.
 func (s *Server) StartUpdate(ctx context.Context, req *serverpb.StartUpdateRequest) (*serverpb.StartUpdateResponse, error) {
 	s.envRW.RLock()
-	updatesDisabled := s.envDisableUpdates
+	updatesDisabled := s.envSettings.DisableUpdates
 	s.envRW.RUnlock()
 
 	if updatesDisabled {
@@ -382,7 +356,7 @@ func (s *Server) readUpdateAuthToken() (string, error) {
 // convertSettings merges database settings and settings from environment variables into API response.
 func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 	res := &serverpb.Settings{
-		UpdatesDisabled:  s.envDisableUpdates,
+		UpdatesDisabled:  s.envSettings.DisableUpdates,
 		TelemetryEnabled: !settings.Telemetry.Disabled,
 		MetricsResolutions: &serverpb.MetricsResolutions{
 			Hr: ptypes.DurationProto(settings.MetricsResolutions.HR),
@@ -446,21 +420,21 @@ func (s *Server) validateChangeSettingsRequest(ctx context.Context, req *serverp
 
 	// check request parameters compatibility with environment variables
 
-	if (req.EnableTelemetry || req.DisableTelemetry) && s.envDisableTelemetry {
+	if (req.EnableTelemetry || req.DisableTelemetry) && s.envSettings.DisableUpdates {
 		return status.Error(codes.FailedPrecondition, "Telemetry is disabled via DISABLE_TELEMETRY environment variable.")
 	}
 
-	if getDuration(metricsRes.GetHr()) != 0 && s.envMetricsResolutionHR != 0 {
+	if getDuration(metricsRes.GetHr()) != 0 && s.envSettings.MetricsResolutions.HR != 0 {
 		return status.Error(codes.FailedPrecondition, "High resolution for metrics is set via METRICS_RESOLUTION_HR (or METRICS_RESOLUTION) environment variable.")
 	}
-	if getDuration(metricsRes.GetMr()) != 0 && s.envMetricsResolutionMR != 0 {
+	if getDuration(metricsRes.GetMr()) != 0 && s.envSettings.MetricsResolutions.MR != 0 {
 		return status.Error(codes.FailedPrecondition, "Medium resolution for metrics is set via METRICS_RESOLUTION_MR environment variable.")
 	}
-	if getDuration(metricsRes.GetLr()) != 0 && s.envMetricsResolutionLR != 0 {
+	if getDuration(metricsRes.GetLr()) != 0 && s.envSettings.MetricsResolutions.LR != 0 {
 		return status.Error(codes.FailedPrecondition, "Low resolution for metrics is set via METRICS_RESOLUTION_LR environment variable.")
 	}
 
-	if getDuration(req.DataRetention) != 0 && s.envDataRetention != 0 {
+	if getDuration(req.DataRetention) != 0 && s.envSettings.DataRetention != 0 {
 		return status.Error(codes.FailedPrecondition, "Data retention for queries is set via DATA_RETENTION environment variable.")
 	}
 
@@ -479,7 +453,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	var settings *models.Settings
 	err := s.db.InTransaction(func(tx *reform.TX) error {
 		metricsRes := req.MetricsResolutions
-		settingsParams := models.ChangeSettingsParams{
+		settingsParams := &models.ChangeSettingsParams{
 			DisableTelemetry: req.DisableTelemetry,
 			EnableTelemetry:  req.EnableTelemetry,
 			MetricsResolutions: models.MetricsResolutions{
@@ -496,7 +470,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 
 		var e error
 		if settings, e = models.UpdateSettings(tx, settingsParams); e != nil {
-			return e
+			return status.Error(codes.InvalidArgument, e.Error())
 		}
 
 		// absent value means "do not change"

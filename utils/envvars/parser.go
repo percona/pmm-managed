@@ -24,27 +24,14 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+
+	"github.com/percona/pmm-managed/models"
 )
 
 // InvalidDurationError invalid duration error.
 type InvalidDurationError string
 
 func (e InvalidDurationError) Error() string { return string(e) }
-
-// MetricsResolutions contains standard Prometheus metrics resolutions.
-type MetricsResolutions struct {
-	HR time.Duration
-	MR time.Duration
-	LR time.Duration
-}
-
-// EnvSettings contains PMM Server settings.
-type EnvSettings struct {
-	DisableUpdates     bool
-	DisableTelemetry   bool
-	MetricsResolutions MetricsResolutions
-	DataRetention      time.Duration
-}
 
 // ParseEnvVars parses given environment variables.
 //
@@ -60,7 +47,8 @@ type EnvSettings struct {
 // METRICS_RESOLUTION_LR are durations of metrics resolution;
 //  - DATA_RETENTION is the duration of how long keep time-series data in ClickHouse;
 //  - the environment variables prefixed with GF_ passed as related to Grafana.
-func ParseEnvVars(envs []string) (envSettings EnvSettings, errs []error, warns []string) {
+func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs []error, warns []string) {
+	envSettings = new(models.ChangeSettingsParams)
 	for _, env := range envs {
 		p := strings.SplitN(env, "=", 2)
 		if len(p) != 2 {

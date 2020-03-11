@@ -25,8 +25,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/utils/validators"
@@ -49,6 +47,9 @@ func GetSettings(q reform.DBTX) (*Settings, error) {
 }
 
 type ChangeSettingsParams struct {
+	// We don't save it to db
+	DisableUpdates bool
+
 	DisableTelemetry bool
 	EnableTelemetry  bool
 
@@ -66,7 +67,7 @@ type ChangeSettingsParams struct {
 }
 
 // UpdateSettings updates only non-zero, non-empty values.
-func UpdateSettings(q reform.DBTX, params ChangeSettingsParams) (*Settings, error) {
+func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, error) {
 	err := ValidateSettings(params)
 	if err != nil {
 		return nil, err
@@ -115,9 +116,9 @@ func UpdateSettings(q reform.DBTX, params ChangeSettingsParams) (*Settings, erro
 }
 
 // ValidateSettings validates settings changes.
-func ValidateSettings(params ChangeSettingsParams) error {
+func ValidateSettings(params *ChangeSettingsParams) error {
 	if params.EnableTelemetry && params.DisableTelemetry {
-		return status.Error(codes.InvalidArgument, "Both enable_telemetry and disable_telemetry are present.")
+		return errors.New("Both enable_telemetry and disable_telemetry are present.")
 	}
 
 	checkCases := []struct {
@@ -137,11 +138,11 @@ func ValidateSettings(params ChangeSettingsParams) error {
 		if _, err := v.validator(v.dur); err != nil {
 			switch err.(type) {
 			case validators.DurationNotAllowedError:
-				return status.Error(codes.InvalidArgument, fmt.Sprintf("%s: should be a natural number of seconds", v.fieldName))
+				return errors.New(fmt.Sprintf("%s: should be a natural number of seconds", v.fieldName))
 			case validators.MinDurationError:
-				return status.Error(codes.InvalidArgument, fmt.Sprintf("%s: minimal resolution is 1s", v.fieldName))
+				return errors.New(fmt.Sprintf("%s: minimal resolution is 1s", v.fieldName))
 			default:
-				return status.Error(codes.InvalidArgument, fmt.Sprintf("%s: unknown error for", v.fieldName))
+				return errors.New(fmt.Sprintf("%s: unknown error for", v.fieldName))
 			}
 		}
 	}
@@ -150,11 +151,11 @@ func ValidateSettings(params ChangeSettingsParams) error {
 		if _, err := validators.ValidateDataRetention(params.DataRetention); err != nil {
 			switch err.(type) {
 			case validators.DurationNotAllowedError:
-				return status.Error(codes.InvalidArgument, "data_retention: should be a natural number of days")
+				return errors.New("data_retention: should be a natural number of days")
 			case validators.MinDurationError:
-				return status.Error(codes.InvalidArgument, "data_retention: minimal resolution is 24h")
+				return errors.New("data_retention: minimal resolution is 24h")
 			default:
-				return status.Error(codes.InvalidArgument, "data_retention: unknown error")
+				return errors.New("data_retention: unknown error")
 			}
 		}
 	}
@@ -166,19 +167,19 @@ func ValidateSettings(params ChangeSettingsParams) error {
 
 	if params.AlertManagerURL != "" {
 		if params.RemoveAlertManagerURL {
-			return status.Error(codes.InvalidArgument, "Both alert_manager_url and remove_alert_manager_url are present.")
+			return errors.New("Both alert_manager_url and remove_alert_manager_url are present.")
 		}
 
 		// custom validation for typical error that is not handled well by url.Parse
 		if !strings.Contains(params.AlertManagerURL, "//") {
-			return status.Errorf(codes.InvalidArgument, "Invalid alert_manager_url: %s - missing protocol scheme.", params.AlertManagerURL)
+			return fmt.Errorf("Invalid alert_manager_url: %s - missing protocol scheme.", params.AlertManagerURL)
 		}
 		u, err := url.Parse(params.AlertManagerURL)
 		if err != nil {
-			return status.Errorf(codes.InvalidArgument, "Invalid alert_manager_url: %s.", err)
+			return fmt.Errorf("Invalid alert_manager_url: %s.", err)
 		}
 		if u.Host == "" {
-			return status.Errorf(codes.InvalidArgument, "Invalid alert_manager_url: %s - missing host.", params.AlertManagerURL)
+			return fmt.Errorf("Invalid alert_manager_url: %s - missing host.", params.AlertManagerURL)
 		}
 	}
 

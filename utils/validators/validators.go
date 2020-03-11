@@ -22,8 +22,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/endpoints"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 const (
@@ -77,7 +75,7 @@ func ValidateDataRetention(value time.Duration) (time.Duration, error) {
 // ValidateAWSPartitions validates AWS partitions list.
 func ValidateAWSPartitions(partitions []string) error {
 	if len(partitions) > len(endpoints.DefaultPartitions()) {
-		return status.Errorf(codes.InvalidArgument, "aws_partitions: list is too long")
+		return fmt.Errorf("aws_partitions: list is too long")
 	}
 
 	for _, p := range partitions {
@@ -89,7 +87,7 @@ func ValidateAWSPartitions(partitions []string) error {
 			}
 		}
 		if !valid {
-			return status.Errorf(codes.InvalidArgument, "aws_partitions: partition %q is invalid", p)
+			return fmt.Errorf("aws_partitions: partition %q is invalid", p)
 		}
 	}
 

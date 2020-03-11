@@ -51,7 +51,7 @@ func TestServer(t *testing.T) {
 	t.Run("UpdateSettingsFromEnv", func(t *testing.T) {
 		t.Run("Typical", func(t *testing.T) {
 			s := newServer()
-			err := s.UpdateSettingsFromEnv([]string{
+			errs := s.UpdateSettingsFromEnv([]string{
 				"DISABLE_UPDATES=true",
 				"DISABLE_TELEMETRY=1",
 				"METRICS_RESOLUTION_HR=1s",
@@ -59,67 +59,76 @@ func TestServer(t *testing.T) {
 				"METRICS_RESOLUTION_LR=3s",
 				"DATA_RETENTION=240h",
 			})
-			require.NoError(t, err)
-			assert.Equal(t, true, s.envDisableUpdates)
-			assert.Equal(t, true, s.envDisableTelemetry)
-			assert.Equal(t, time.Second, s.envMetricsResolutionHR)
-			assert.Equal(t, 2*time.Second, s.envMetricsResolutionMR)
-			assert.Equal(t, 3*time.Second, s.envMetricsResolutionLR)
-			assert.Equal(t, 10*24*time.Hour, s.envDataRetention)
+			require.Empty(t, errs)
+			assert.Equal(t, true, s.envSettings.DisableUpdates)
+			assert.Equal(t, true, s.envSettings.DisableTelemetry)
+			assert.Equal(t, time.Second, s.envSettings.MetricsResolutions.HR)
+			assert.Equal(t, 2*time.Second, s.envSettings.MetricsResolutions.MR)
+			assert.Equal(t, 3*time.Second, s.envSettings.MetricsResolutions.LR)
+			assert.Equal(t, 10*24*time.Hour, s.envSettings.DataRetention)
 		})
 
 		t.Run("Untypical", func(t *testing.T) {
 			s := newServer()
-			err := s.UpdateSettingsFromEnv([]string{
+			errs := s.UpdateSettingsFromEnv([]string{
 				"DISABLE_TELEMETRY=TrUe",
 				"METRICS_RESOLUTION=3S",
 				"DATA_RETENTION=360H",
 			})
-			require.NoError(t, err)
-			assert.Equal(t, true, s.envDisableTelemetry)
-			assert.Equal(t, 3*time.Second, s.envMetricsResolutionHR)
-			assert.Equal(t, 15*24*time.Hour, s.envDataRetention)
+			require.Empty(t, errs)
+			assert.Equal(t, true, s.envSettings.DisableTelemetry)
+			assert.Equal(t, 3*time.Second, s.envSettings.MetricsResolutions.HR)
+			assert.Equal(t, 15*24*time.Hour, s.envSettings.DataRetention)
 		})
 
 		t.Run("NoValue", func(t *testing.T) {
 			s := newServer()
-			err := s.UpdateSettingsFromEnv([]string{
+			errs := s.UpdateSettingsFromEnv([]string{
 				"DISABLE_TELEMETRY",
 			})
-			require.Errorf(t, err, "validation error of environment variables")
+			require.Len(t, errs, 1)
+			require.EqualError(t, errs[0], `failed to parse environment variable "DISABLE_TELEMETRY"`)
+			assert.False(t, s.envSettings.DisableTelemetry)
 		})
 
 		t.Run("InvalidValue", func(t *testing.T) {
 			s := newServer()
-			err := s.UpdateSettingsFromEnv([]string{
+			errs := s.UpdateSettingsFromEnv([]string{
 				"DISABLE_TELEMETRY=",
 			})
-			require.Errorf(t, err, "validation error of environment variables")
-			assert.Equal(t, false, s.envDisableTelemetry)
+			require.Len(t, errs, 1)
+			require.EqualError(t, errs[0], `invalid value "" for environment variable "DISABLE_TELEMETRY"`)
+			assert.False(t, s.envSettings.DisableTelemetry)
 		})
 
 		t.Run("MetricsLessThenMin", func(t *testing.T) {
 			s := newServer()
-			err := s.UpdateSettingsFromEnv([]string{
+			errs := s.UpdateSettingsFromEnv([]string{
 				"METRICS_RESOLUTION=5ns",
 			})
-			require.Errorf(t, err, "validation error of environment variables")
+			require.Len(t, errs, 1)
+			require.EqualError(t, errs[0], `hr: minimal resolution is 1s`)
+			assert.Zero(t, s.envSettings.MetricsResolutions.HR)
 		})
 
 		t.Run("DataRetentionLessThenMin", func(t *testing.T) {
 			s := newServer()
-			err := s.UpdateSettingsFromEnv([]string{
+			errs := s.UpdateSettingsFromEnv([]string{
 				"DATA_RETENTION=12h",
 			})
-			require.Errorf(t, err, "validation error of environment variables")
+			require.Len(t, errs, 1)
+			require.EqualError(t, errs[0], `data_retention: minimal resolution is 24h`)
+			assert.Zero(t, s.envSettings.DataRetention)
 		})
 
 		t.Run("Data retention is not a natural number of days", func(t *testing.T) {
 			s := newServer()
-			err := s.UpdateSettingsFromEnv([]string{
+			errs := s.UpdateSettingsFromEnv([]string{
 				"DATA_RETENTION=30h",
 			})
-			require.Errorf(t, err, "environment variable %q should be a multiple of 24h0m0s")
+			require.Len(t, errs, 1)
+			require.EqualError(t, errs[0], `data_retention: should be a natural number of days`)
+			assert.Zero(t, s.envSettings.DataRetention)
 		})
 	})
 

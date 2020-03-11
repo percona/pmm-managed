@@ -19,6 +19,7 @@ package envvars
 
 import (
 	"fmt"
+	"github.com/percona/pmm-managed/models"
 	"testing"
 	"time"
 
@@ -35,11 +36,11 @@ func TestEnvVarValidator(t *testing.T) {
 			"METRICS_RESOLUTION_LR=1h",
 			"DATA_RETENTION=72h",
 		}
-		expectedEnvVars := EnvSettings{
+		expectedEnvVars := &models.ChangeSettingsParams{
 			DataRetention:    72 * time.Hour,
 			DisableTelemetry: false,
 			DisableUpdates:   true,
-			MetricsResolutions: MetricsResolutions{
+			MetricsResolutions: models.MetricsResolutions{
 				HR: 5 * time.Minute,
 				MR: 5 * time.Second,
 				LR: time.Hour,
@@ -54,7 +55,7 @@ func TestEnvVarValidator(t *testing.T) {
 
 	t.Run("Unknown env variables", func(t *testing.T) {
 		envs := []string{"UNKNOWN_VAR=VAL", "ANOTHER_UNKNOWN_VAR=VAL"}
-		expectedEnvVars := EnvSettings{}
+		expectedEnvVars := &models.ChangeSettingsParams{}
 		expectedWarns := []string{
 			`unknown environment variable "UNKNOWN_VAR=VAL"`,
 			`unknown environment variable "ANOTHER_UNKNOWN_VAR=VAL"`,
@@ -73,7 +74,7 @@ func TestEnvVarValidator(t *testing.T) {
 			"TERM=xterm-256color",
 			"HOME=/home/user/",
 		}
-		expectedEnvVars := EnvSettings{}
+		expectedEnvVars := &models.ChangeSettingsParams{}
 
 		gotEnvVars, gotErrs, gotWarns := ParseEnvVars(envs)
 		assert.Equal(t, gotEnvVars, expectedEnvVars)
@@ -90,7 +91,7 @@ func TestEnvVarValidator(t *testing.T) {
 			"METRICS_RESOLUTION_LR=1hour",
 			"DATA_RETENTION=keep one week",
 		}
-		expectedEnvVars := EnvSettings{}
+		expectedEnvVars := &models.ChangeSettingsParams{}
 		expectedErrs := []error{
 			fmt.Errorf(`invalid value "5" for environment variable "DISABLE_UPDATES"`),
 			fmt.Errorf(`invalid value "x" for environment variable "DISABLE_TELEMETRY"`),
@@ -117,7 +118,7 @@ func TestEnvVarValidator(t *testing.T) {
 			`GF_PATHS_PLUGINS="/var/lib/grafana/plugins"`,
 			`GF_PATHS_PROVISIONING="/etc/grafana/provisioning"`,
 		}
-		expectedEnvVars := EnvSettings{}
+		expectedEnvVars := &models.ChangeSettingsParams{}
 
 		gotEnvVars, gotErrs, gotWarns := ParseEnvVars(envs)
 		assert.Equal(t, gotEnvVars, expectedEnvVars)

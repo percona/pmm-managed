@@ -39,23 +39,13 @@ func main() {
 	for _, err := range errs {
 		logrus.Errorf("Configuration error: %s.", err)
 	}
-
-	params := models.ChangeSettingsParams{
-		DisableTelemetry: envSettings.DisableTelemetry,
-		MetricsResolutions: models.MetricsResolutions{
-			HR: envSettings.MetricsResolutions.HR,
-			MR: envSettings.MetricsResolutions.MR,
-			LR: envSettings.MetricsResolutions.LR,
-		},
-		DataRetention: envSettings.DataRetention,
-	}
-	err := models.ValidateSettings(params)
-	if err != nil {
-		logrus.Errorf("Configuration error: %s.", err)
+	if len(errs) > 0 {
 		os.Exit(1)
 	}
 
-	if len(errs) > 0 {
+	err := models.ValidateSettings(envSettings)
+	if err != nil {
+		logrus.Errorf("Configuration error: %s.", err)
 		os.Exit(1)
 	}
 }

@@ -22,12 +22,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/testdb"
-	"github.com/percona/pmm-managed/utils/tests"
 )
 
 func TestSettings(t *testing.T) {
@@ -69,26 +66,26 @@ func TestSettings(t *testing.T) {
 
 	t.Run("Validation", func(t *testing.T) {
 		t.Run("AWSPartitions", func(t *testing.T) {
-			s := models.ChangeSettingsParams{
+			s := &models.ChangeSettingsParams{
 				AWSPartitions: []string{"foo"},
 			}
 			settings, err := models.UpdateSettings(sqlDB, s)
-			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `aws_partitions: partition "foo" is invalid`), err)
+			assert.EqualError(t, err, `aws_partitions: partition "foo" is invalid`)
 
-			s = models.ChangeSettingsParams{
+			s = &models.ChangeSettingsParams{
 				AWSPartitions: []string{"foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo"},
 			}
 			settings, err = models.UpdateSettings(sqlDB, s)
-			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `aws_partitions: list is too long`), err)
+			assert.EqualError(t, err, `aws_partitions: list is too long`)
 
-			s = models.ChangeSettingsParams{
+			s = &models.ChangeSettingsParams{
 				AWSPartitions: []string{"aws", "aws-cn", "aws-cn"},
 			}
 			settings, err = models.UpdateSettings(sqlDB, s)
 			assert.NoError(t, err)
 			assert.Equal(t, []string{"aws", "aws-cn"}, settings.AWSPartitions)
 
-			s = models.ChangeSettingsParams{
+			s = &models.ChangeSettingsParams{
 				AWSPartitions: []string{},
 			}
 			settings, err = models.UpdateSettings(sqlDB, s)
@@ -102,31 +99,27 @@ func TestSettings(t *testing.T) {
 		})
 
 		t.Run("AlertManagerURL", func(t *testing.T) {
-			_, err := models.UpdateSettings(sqlDB, models.ChangeSettingsParams{
+			_, err := models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				AlertManagerURL: "mailto:hello@example.com",
 			})
-			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid alert_manager_url: mailto:hello@example.com - missing protocol scheme."),
-				err)
-			_, err = models.UpdateSettings(sqlDB, models.ChangeSettingsParams{
+			assert.EqualError(t, err, `Invalid alert_manager_url: mailto:hello@example.com - missing protocol scheme.`)
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				AlertManagerURL: "1.2.3.4:1234",
 			})
-			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid alert_manager_url: 1.2.3.4:1234 - missing protocol scheme."),
-				err)
-			_, err = models.UpdateSettings(sqlDB, models.ChangeSettingsParams{
+			assert.EqualError(t, err, `Invalid alert_manager_url: 1.2.3.4:1234 - missing protocol scheme.`)
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				AlertManagerURL: "1.2.3.4",
 			})
-			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid alert_manager_url: 1.2.3.4 - missing protocol scheme."),
-				err)
-			_, err = models.UpdateSettings(sqlDB, models.ChangeSettingsParams{
+			assert.EqualError(t, err, `Invalid alert_manager_url: 1.2.3.4 - missing protocol scheme.`)
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				AlertManagerURL: "https://",
 			})
-			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid alert_manager_url: https:// - missing host."),
-				err)
-			_, err = models.UpdateSettings(sqlDB, models.ChangeSettingsParams{
+			assert.EqualError(t, err, `Invalid alert_manager_url: https:// - missing host.`)
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				AlertManagerURL: "https://1.2.3.4",
 			})
 			assert.NoError(t, err)
-			_, err = models.UpdateSettings(sqlDB, models.ChangeSettingsParams{
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				AlertManagerURL: "https://1.2.3.4:1234/",
 			})
 			assert.NoError(t, err)
@@ -134,26 +127,26 @@ func TestSettings(t *testing.T) {
 
 		t.Run("", func(t *testing.T) {
 			mr := models.MetricsResolutions{MR: 5e+8 * time.Nanosecond} // 0.5s
-			_, err := models.UpdateSettings(sqlDB, models.ChangeSettingsParams{
+			_, err := models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				MetricsResolutions: mr,
 			})
-			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "mr: minimal resolution is 1s"), err)
+			assert.EqualError(t, err, `mr: minimal resolution is 1s`)
 
 			mr = models.MetricsResolutions{MR: 2*time.Second + 5e8*time.Nanosecond} // 2.5s
-			_, err = models.UpdateSettings(sqlDB, models.ChangeSettingsParams{
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				MetricsResolutions: mr,
 			})
-			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "mr: should be a natural number of seconds"), err)
+			assert.EqualError(t, err, `mr: should be a natural number of seconds`)
 
-			_, err = models.UpdateSettings(sqlDB, models.ChangeSettingsParams{
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				DataRetention: 90000 * time.Second, // 25h
 			})
-			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "data_retention: should be a natural number of days"), err)
+			assert.EqualError(t, err, `data_retention: should be a natural number of days`)
 
-			_, err = models.UpdateSettings(sqlDB, models.ChangeSettingsParams{
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				DataRetention: 43200 * time.Second, // 12h
 			})
-			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "data_retention: minimal resolution is 24h"), err)
+			assert.EqualError(t, err, `data_retention: minimal resolution is 24h`)
 		})
 	})
 }
