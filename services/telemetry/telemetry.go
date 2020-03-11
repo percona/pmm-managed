@@ -158,7 +158,10 @@ func (s *Service) Run(ctx context.Context) {
 			return
 		}
 
-		if err := s.sendOnce(ctx); err != nil {
+		err := s.sendOnce(ctx)
+		if err == nil {
+			s.l.Debug("Telemetry info send.")
+		} else {
 			s.l.Debugf("Telemetry info not send: %s.", err)
 		}
 	}
