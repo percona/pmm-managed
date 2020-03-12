@@ -56,9 +56,10 @@ const (
 
 	// Environment variables that affect telemetry service; only for testing.
 	// DISABLE_TELEMETRY environment variable is handled elsewere.
-	envV1URL    = "PERCONA_VERSION_CHECK_URL" // the same name as for the Toolkit
-	envV2Host   = "PERCONA_TEST_TELEMETRY_HOST"
-	envInterval = "PERCONA_TEST_TELEMETRY_INTERVAL"
+	envV1URL        = "PERCONA_VERSION_CHECK_URL" // the same name as for the Toolkit
+	envV2Host       = "PERCONA_TEST_TELEMETRY_HOST"
+	envInterval     = "PERCONA_TEST_TELEMETRY_INTERVAL"
+	envRetryBackoff = "PERCONA_TEST_TELEMETRY_RETRY_BACKOFF"
 
 	timeout = 5 * time.Second
 )
@@ -110,6 +111,10 @@ func NewService(db *reform.DB, pmmVersion string) *Service {
 		l.Warnf("Interval changed to %s.", d)
 		s.interval = d
 	}
+	if d, err := time.ParseDuration(os.Getenv(envRetryBackoff)); err == nil && d > 0 {
+		l.Warnf("Retry backoff changed to %s.", d)
+		s.retryBackoff = d
+	}
 
 	s.l.Debugf("Telemetry settings: os=%q, sDistributionMethod=%q, tDistributionMethod=%q.",
 		s.os, s.sDistributionMethod, s.tDistributionMethod)
@@ -158,7 +163,7 @@ func (s *Service) Run(ctx context.Context) {
 			return
 		}
 
-		err := s.sendOnce(ctx)
+		err := s.sendOneEvent(ctx)
 		if err == nil {
 			s.l.Debug("Telemetry info send.")
 		} else {
@@ -167,9 +172,9 @@ func (s *Service) Run(ctx context.Context) {
 	}
 }
 
-func (s *Service) sendOnce(ctx context.Context) error {
-	sendOnceCtx, sendOnceCancel := context.WithTimeout(ctx, timeout)
-	defer sendOnceCancel()
+func (s *Service) sendOneEvent(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, s.interval)
+	defer cancel()
 
 	var settings *models.Settings
 	err := s.db.InTransaction(func(tx *reform.TX) error {
@@ -198,7 +203,7 @@ func (s *Service) sendOnce(ctx context.Context) error {
 
 	wg.Go(func() error {
 		payload := s.makeV1Payload(settings.Telemetry.UUID)
-		return s.sendV1Request(sendOnceCtx, payload)
+		return s.sendV1Request(ctx, payload)
 	})
 
 	wg.Go(func() error {
@@ -207,7 +212,7 @@ func (s *Service) sendOnce(ctx context.Context) error {
 			return err
 		}
 
-		return s.sendV2RequestWithRetries(sendOnceCtx, req)
+		return s.sendV2RequestWithRetries(ctx, req)
 	})
 
 	return wg.Wait()
@@ -337,6 +342,9 @@ func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest
 		grpc.WithUserAgent("pmm-managed/" + s.pmmVersion),
 		grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 	cc, err := grpc.DialContext(ctx, s.v2Host, opts...)
 	if err != nil {
 		return errors.Wrap(err, "failed to dial")
