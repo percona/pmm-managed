@@ -305,21 +305,22 @@ func (s *Service) sendV2RequestWithRetries(ctx context.Context, req *reporter.Re
 	var attempt int
 	for {
 		err = s.sendV2Request(ctx, req)
-		s.l.Debugf("sendV2Request result: %v", err)
+		attempt++
+		s.l.Debugf("sendV2Request (attempt %d/%d) result: %v", attempt, s.retryCount, err)
 		if err == nil {
 			return nil
 		}
 
-		attempt++
 		if attempt >= s.retryCount {
-			s.l.Debugf("Failed to send v2 event, will not retry (too much attempts): %s.", err)
+			s.l.Debug("Failed to send v2 event, will not retry (too much attempts).")
 			return err
 		}
 
 		retryCtx, retryCancel := context.WithTimeout(ctx, s.retryBackoff)
 		<-retryCtx.Done()
 		retryCancel()
-		if err = retryCtx.Err(); err != nil {
+
+		if err = ctx.Err(); err != nil {
 			s.l.Debugf("Will not retry sending v2 event: %s.", err)
 			return err
 		}
