@@ -304,7 +304,7 @@ func (s *Service) sendV2RequestWithRetries(ctx context.Context, req *reporter.Re
 	var err error
 	var attempt int
 	for {
-		if err = s.sendV2Request(ctx, req)
+		err = s.sendV2Request(ctx, req)
 		s.l.Debugf("sendV2Request result: %v", err)
 		if err == nil {
 			return nil
