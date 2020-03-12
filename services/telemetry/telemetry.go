@@ -331,7 +331,7 @@ func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest
 
 	host, _, err := net.SplitHostPort(s.v2Host)
 	if err != nil {
-		host = s.v2Host
+		return errors.Wrap(err, "failed to set telemetry host")
 	}
 	tlsConfig := tlsconfig.Get()
 	tlsConfig.ServerName = host
