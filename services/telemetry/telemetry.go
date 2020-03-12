@@ -304,13 +304,15 @@ func (s *Service) sendV2RequestWithRetries(ctx context.Context, req *reporter.Re
 	var err error
 	var attempt int
 	for {
-		if err = s.sendV2Request(ctx, req); err == nil {
+		if err = s.sendV2Request(ctx, req)
+		s.l.Debugf("sendV2Request result: %v", err)
+		if err == nil {
 			return nil
 		}
 
 		attempt++
 		if attempt >= s.retryCount {
-			s.l.Debugf("Failed to send v2 event, will not retry: %s.", err)
+			s.l.Debugf("Failed to send v2 event, will not retry (too much attempts): %s.", err)
 			return err
 		}
 
