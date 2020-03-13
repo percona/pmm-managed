@@ -27,6 +27,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -350,6 +351,52 @@ func (c *Client) findAnnotations(ctx context.Context, from, to time.Time) ([]ann
 		response[i] = r
 	}
 	return response, nil
+}
+
+type grafanaHealthResponse struct {
+	Commit   string `json:"commit"`
+	Database string `json:"database"`
+	Version  string `json:"version"`
+}
+
+// Check calls Grafana API to check its status
+func (c Client) Check(ctx context.Context) error {
+	u := &url.URL{
+		Scheme: "http",
+		Host:   c.addr,
+		Path:   "/api/health",
+	}
+
+	resp, err := c.http.Get(u.String())
+	if err != nil {
+		return fmt.Errorf("cannot contact Grafana API (Grafana is down)")
+	}
+	defer resp.Body.Close() //nolint:errcheck
+
+	if resp.StatusCode != http.StatusOK {
+		switch resp.StatusCode {
+		case http.StatusServiceUnavailable:
+			return fmt.Errorf("grafana service is not available")
+		default:
+			return fmt.Errorf("unknown Grafana service status: %d", resp.StatusCode)
+		}
+	}
+
+	buf, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("cannot read Grafana Health API response")
+	}
+
+	var status grafanaHealthResponse
+	if err := json.Unmarshal(buf, &status); err != nil {
+		return fmt.Errorf("cannot parse Grafana Health API response: %s", err)
+	}
+
+	if strings.ToLower(status.Database) != "ok" {
+		return fmt.Errorf("grafana is up but the database is not ok. Database status is %s", status.Database)
+	}
+
+	return nil
 }
 
 // check interfaces

@@ -62,6 +62,7 @@ type Server struct {
 
 	pmmUpdateAuthFileM sync.Mutex
 	pmmUpdateAuthFile  string
+	grafanaClient      Checker
 
 	envRW                  sync.RWMutex
 	envDisableUpdates      bool
@@ -84,7 +85,8 @@ type pmmUpdateAuth struct {
 
 // NewServer returns new server for Server service.
 func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervisordService,
-	telemetryService telemetryService, checker *AWSInstanceChecker, alertManagerFile string) (*Server, error) {
+	telemetryService telemetryService, checker *AWSInstanceChecker, alertManagerFile string,
+	grafanaClient Checker) (*Server, error) {
 	path := os.TempDir()
 	if _, err := os.Stat(path); err != nil {
 		return nil, errors.WithStack(err)
@@ -100,6 +102,7 @@ func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervis
 		l:                 logrus.WithField("component", "server"),
 		pmmUpdateAuthFile: path,
 		alertManagerFile:  alertManagerFile,
+		grafanaClient:     grafanaClient,
 	}
 	return s, nil
 }
@@ -255,11 +258,27 @@ func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*se
 // Readiness returns an error when some PMM Server component is not ready yet or is being restarted.
 // It can be used as for Docker health check or Kubernetes readiness probe.
 func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) (*serverpb.ReadinessResponse, error) {
-	// TODO https://jira.percona.com/browse/PMM-1962
 
-	if err := s.prometheus.Check(ctx); err != nil {
+	errs := make([]error, 0)
+	errs = append(errs, s.prometheus.Check(ctx))
+	errs = append(errs, s.grafanaClient.Check(ctx))
+
+	var err error
+	// concat the errors so the client will receive all the errors at once
+	for _, e := range errs {
+		if e != nil {
+			if err == nil {
+				err = e
+				continue
+			}
+			err = fmt.Errorf("%s, %w", err, e)
+		}
+	}
+
+	if err != nil {
 		return nil, err
 	}
+
 	return &serverpb.ReadinessResponse{}, nil
 }
 

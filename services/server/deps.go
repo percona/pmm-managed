@@ -30,11 +30,17 @@ import (
 //go:generate mockery -name=supervisordService -case=snake -inpkg -testonly
 //go:generate mockery -name=telemetryService -case=snake -inpkg -testonly
 
+// Checker interface wraps all services that implements the Check method to report the
+// service health for the Readiness check
+type Checker interface {
+	Check(ctx context.Context) error
+}
+
 // prometheusService is a subset of methods of prometheus.Service used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
 type prometheusService interface {
 	RequestConfigurationUpdate()
-	Check(ctx context.Context) error
+	Checker
 }
 
 // supervisordService is a subset of methods of supervisord.Service used by this package.

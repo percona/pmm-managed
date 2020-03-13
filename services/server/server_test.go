@@ -35,6 +35,10 @@ import (
 	"github.com/percona/pmm-managed/utils/tests"
 )
 
+type checkerMock struct{}
+
+func (c checkerMock) Check(ctx context.Context) error { return nil }
+
 func TestServer(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures)
 	defer func() {
@@ -43,7 +47,7 @@ func TestServer(t *testing.T) {
 
 	newServer := func() *Server {
 		s, err := NewServer(reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
-			nil, nil, nil, nil, "")
+			nil, nil, nil, nil, "", checkerMock{})
 		require.NoError(t, err)
 		return s
 	}
