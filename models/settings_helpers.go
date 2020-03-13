@@ -46,6 +46,7 @@ func GetSettings(q reform.DBTX) (*Settings, error) {
 	return &s, nil
 }
 
+// ChangeSettingsParams contains values to change data in settings table.
 type ChangeSettingsParams struct {
 	// We don't save it to db
 	DisableUpdates bool

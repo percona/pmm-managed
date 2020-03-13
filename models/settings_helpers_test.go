@@ -69,19 +69,19 @@ func TestSettings(t *testing.T) {
 			s := &models.ChangeSettingsParams{
 				AWSPartitions: []string{"foo"},
 			}
-			settings, err := models.UpdateSettings(sqlDB, s)
+			_, err := models.UpdateSettings(sqlDB, s)
 			assert.EqualError(t, err, `aws_partitions: partition "foo" is invalid`)
 
 			s = &models.ChangeSettingsParams{
 				AWSPartitions: []string{"foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo", "foo"},
 			}
-			settings, err = models.UpdateSettings(sqlDB, s)
+			_, err = models.UpdateSettings(sqlDB, s)
 			assert.EqualError(t, err, `aws_partitions: list is too long`)
 
 			s = &models.ChangeSettingsParams{
 				AWSPartitions: []string{"aws", "aws-cn", "aws-cn"},
 			}
-			settings, err = models.UpdateSettings(sqlDB, s)
+			settings, err := models.UpdateSettings(sqlDB, s)
 			assert.NoError(t, err)
 			assert.Equal(t, []string{"aws", "aws-cn"}, settings.AWSPartitions)
 
