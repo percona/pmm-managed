@@ -49,6 +49,7 @@ func Open(tb testing.TB, setupFixtures models.SetupFixturesMode, migrationVersio
 	return db
 }
 
+// SetupDB runs PostgreSQL database migrations and optionally adds initial data for testing DB.
 func SetupDB(tb testing.TB, db *sql.DB, setupFixtures models.SetupFixturesMode, migrationVersion *int) {
 	_, err := models.SetupDB(db, &models.SetupDBParams{
 		// Uncomment to see all setup queries:

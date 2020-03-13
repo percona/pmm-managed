@@ -19,12 +19,13 @@ package models_test
 import (
 	"database/sql"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/AlekSi/pointer"
 	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/testdb"

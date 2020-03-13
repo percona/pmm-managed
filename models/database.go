@@ -231,7 +231,9 @@ var databaseSchema = [][]string{
 		// update 5/5/60 to 5/10/60 for 2.4 only if defaults were not changed
 		`UPDATE settings SET
 			settings = settings || '{"metrics_resolutions":{"hr": 5000000000, "mr": 10000000000, "lr": 60000000000}}'
-			WHERE settings->'metrics_resolutions'->>'hr' = '5000000000' AND settings->'metrics_resolutions'->>'mr' = '5000000000' AND settings->'metrics_resolutions'->>'lr' = '60000000000';`,
+			WHERE settings->'metrics_resolutions'->>'hr' = '5000000000' 
+			AND settings->'metrics_resolutions'->>'mr' = '5000000000'
+			AND settings->'metrics_resolutions'->>'lr' = '60000000000';`,
 	},
 }
 
