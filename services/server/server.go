@@ -420,7 +420,7 @@ func (s *Server) validateChangeSettingsRequest(ctx context.Context, req *serverp
 
 	// check request parameters compatibility with environment variables
 
-	if (req.EnableTelemetry || req.DisableTelemetry) && s.envSettings.DisableUpdates {
+	if (req.EnableTelemetry || req.DisableTelemetry) && s.envSettings.DisableTelemetry {
 		return status.Error(codes.FailedPrecondition, "Telemetry is disabled via DISABLE_TELEMETRY environment variable.")
 	}
 

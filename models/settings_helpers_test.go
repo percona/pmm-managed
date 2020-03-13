@@ -112,6 +112,10 @@ func TestSettings(t *testing.T) {
 			})
 			assert.EqualError(t, err, `Invalid alert_manager_url: 1.2.3.4 - missing protocol scheme.`)
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
+				AlertManagerURL: "1.2.3.4//",
+			})
+			assert.EqualError(t, err, `Invalid alert_manager_url: 1.2.3.4// - missing protocol scheme.`)
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				AlertManagerURL: "https://",
 			})
 			assert.EqualError(t, err, `Invalid alert_manager_url: https:// - missing host.`)

@@ -124,18 +124,17 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 	checkCases := []struct {
 		dur       time.Duration
 		fieldName string
-		validator func(time.Duration) (time.Duration, error)
 	}{
-		{params.MetricsResolutions.HR, "hr", validators.ValidateMetricResolution},
-		{params.MetricsResolutions.MR, "mr", validators.ValidateMetricResolution},
-		{params.MetricsResolutions.LR, "lr", validators.ValidateMetricResolution},
+		{params.MetricsResolutions.HR, "hr"},
+		{params.MetricsResolutions.MR, "mr"},
+		{params.MetricsResolutions.LR, "lr"},
 	}
 	for _, v := range checkCases {
 		if v.dur == 0 {
 			continue
 		}
 
-		if _, err := v.validator(v.dur); err != nil {
+		if _, err := validators.ValidateMetricResolution(v.dur); err != nil {
 			switch err.(type) {
 			case validators.DurationNotAllowedError:
 				return errors.New(fmt.Sprintf("%s: should be a natural number of seconds", v.fieldName))
@@ -177,6 +176,9 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 		u, err := url.Parse(params.AlertManagerURL)
 		if err != nil {
 			return fmt.Errorf("Invalid alert_manager_url: %s.", err)
+		}
+		if u.Scheme == "" {
+			return fmt.Errorf("Invalid alert_manager_url: %s - missing protocol scheme.", params.AlertManagerURL)
 		}
 		if u.Host == "" {
 			return fmt.Errorf("Invalid alert_manager_url: %s - missing host.", params.AlertManagerURL)
