@@ -130,6 +130,16 @@ func TestServer(t *testing.T) {
 			require.EqualError(t, errs[0], `data_retention: should be a natural number of days`)
 			assert.Zero(t, s.envSettings.DataRetention)
 		})
+
+		t.Run("Data retention without suffix", func(t *testing.T) {
+			s := newServer()
+			errs := s.UpdateSettingsFromEnv([]string{
+				"DATA_RETENTION=30",
+			})
+			require.Len(t, errs, 1)
+			require.EqualError(t, errs[0], `environment variable "DATA_RETENTION=30" has invalid duration 30`)
+			assert.Zero(t, s.envSettings.DataRetention)
+		})
 	})
 
 	t.Run("ValidateChangeSettingsRequest", func(t *testing.T) {
