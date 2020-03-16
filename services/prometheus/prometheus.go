@@ -57,6 +57,7 @@ var checkFailedRE = regexp.MustCompile(`FAILED: parsing YAML file \S+: (.+)\n`)
 //   * Prometheus configuration and rule files are accessible;
 //   * promtool is available.
 type Service struct {
+	alertManager   *AlertManager
 	configPath     string
 	baseConfigPath string
 	promtoolPath   string
@@ -66,15 +67,18 @@ type Service struct {
 
 	l    *logrus.Entry
 	sema chan struct{}
+
+	cachedAlertManagerRules string
 }
 
 // NewService creates new service.
-func NewService(configPath, baseConfigPath, promtoolPath string, db *reform.DB, baseURL string) (*Service, error) {
+func NewService(alertManager *AlertManager, configPath, baseConfigPath, promtoolPath string, db *reform.DB, baseURL string) (*Service, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return &Service{
+		alertManager:   alertManager,
 		configPath:     configPath,
 		baseConfigPath: baseConfigPath,
 		promtoolPath:   promtoolPath,
@@ -376,8 +380,12 @@ func (svc *Service) saveConfigAndReload(cfg []byte) error {
 		return errors.WithStack(err)
 	}
 
+	alertManagerRules, err := svc.alertManager.ReadRules()
+	if err != nil {
+		svc.l.Warnf("Cannot load Alert Manager rules: %s", err)
+	}
 	// compare with new config
-	if reflect.DeepEqual(cfg, oldCfg) {
+	if reflect.DeepEqual(cfg, oldCfg) && alertManagerRules == svc.cachedAlertManagerRules {
 		svc.l.Infof("Configuration not changed, doing nothing.")
 		return nil
 	}
@@ -438,6 +446,7 @@ func (svc *Service) saveConfigAndReload(cfg []byte) error {
 	}
 	svc.l.Infof("Configuration reloaded.")
 	restore = false
+	svc.cachedAlertManagerRules = alertManagerRules
 	return nil
 }
 

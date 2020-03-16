@@ -18,7 +18,6 @@
 package server
 
 import (
-	"bytes"
 	"context"
 	"crypto/subtle"
 	"encoding/json"
@@ -55,6 +54,7 @@ import (
 type Server struct {
 	db               *reform.DB
 	prometheus       prometheusService
+	alertManager     alertManagerService
 	supervisord      supervisordService
 	telemetryService telemetryService
 	checker          *AWSInstanceChecker
@@ -67,10 +67,6 @@ type Server struct {
 	envSettings *models.ChangeSettingsParams
 
 	sshKeyM sync.Mutex
-
-	// To make this testeable. To run API tests we need to write the rules file but on dev envs
-	// there is no /srv/prometheus/rules/ directory
-	alertManagerFile string
 }
 
 type pmmUpdateAuth struct {
@@ -79,7 +75,7 @@ type pmmUpdateAuth struct {
 
 // NewServer returns new server for Server service.
 func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervisordService,
-	telemetryService telemetryService, checker *AWSInstanceChecker, alertManagerFile string) (*Server, error) {
+	telemetryService telemetryService, checker *AWSInstanceChecker, alertManager alertManagerService) (*Server, error) {
 	path := os.TempDir()
 	if _, err := os.Stat(path); err != nil {
 		return nil, errors.WithStack(err)
@@ -94,7 +90,7 @@ func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervis
 		checker:           checker,
 		l:                 logrus.WithField("component", "server"),
 		pmmUpdateAuthFile: path,
-		alertManagerFile:  alertManagerFile,
+		alertManager:      alertManager,
 		envSettings:       new(models.ChangeSettingsParams),
 	}
 	return s, nil
@@ -369,11 +365,11 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 		AlertManagerUrl: settings.AlertManagerURL,
 	}
 
-	b, err := ioutil.ReadFile(s.alertManagerFile)
-	if err != nil && !os.IsNotExist(err) {
+	b, err := s.alertManager.ReadRules()
+	if err != nil {
 		s.l.Warnf("Cannot load Alert Manager rules: %s", err)
 	}
-	res.AlertManagerRules = string(b)
+	res.AlertManagerRules = b
 
 	return res
 }
@@ -413,7 +409,7 @@ func (s *Server) validateChangeSettingsRequest(ctx context.Context, req *serverp
 	}
 
 	if req.AlertManagerRules != "" {
-		if err := s.validateAlertManagerRules(ctx, req.AlertManagerRules); err != nil {
+		if err := s.alertManager.ValidateRules(ctx, req.AlertManagerRules); err != nil {
 			return err
 		}
 	}
@@ -482,12 +478,12 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 
 		// absent value means "do not change"
 		if req.AlertManagerRules != "" {
-			if e = ioutil.WriteFile(s.alertManagerFile, []byte(req.AlertManagerRules), 0644); e != nil {
+			if e = s.alertManager.WriteRules(req.AlertManagerRules); e != nil {
 				return errors.WithStack(e)
 			}
 		}
 		if req.RemoveAlertManagerRules {
-			if e = os.Remove(s.alertManagerFile); e != nil && !os.IsNotExist(e) {
+			if e = s.alertManager.RemoveRulesFile(); e != nil && !os.IsNotExist(e) {
 				return errors.WithStack(e)
 			}
 		}
@@ -506,41 +502,6 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	return &serverpb.ChangeSettingsResponse{
 		Settings: s.convertSettings(settings),
 	}, nil
-}
-
-func (s *Server) validateAlertManagerRules(ctx context.Context, rules string) error {
-	tempFile, err := ioutil.TempFile("", "temp_rules_*.yml")
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	tempFile.Close()                 //nolint:errcheck
-	defer os.Remove(tempFile.Name()) //nolint:errcheck
-
-	if err = ioutil.WriteFile(tempFile.Name(), []byte(rules), 0644); err != nil {
-		return errors.WithStack(err)
-	}
-
-	timeoutCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-
-	cmd := exec.CommandContext(timeoutCtx, "promtool", "check", "rules", tempFile.Name()) //nolint:gosec
-	pdeathsig.Set(cmd, unix.SIGKILL)
-
-	b, err := cmd.CombinedOutput()
-	if err != nil {
-		if e, ok := err.(*exec.ExitError); ok && e.ExitCode() != 0 {
-			s.l.Infof("%s: %s\n%s", strings.Join(cmd.Args, " "), e, b)
-			return status.Errorf(codes.InvalidArgument, "Invalid Alert Manager rules.")
-		}
-		return errors.WithStack(err)
-	}
-
-	if bytes.Contains(b, []byte("SUCCESS: 0 rules found")) {
-		return status.Errorf(codes.InvalidArgument, "Zero Alert Manager rules found.")
-	}
-
-	s.l.Debugf("%q check passed.", strings.Join(cmd.Args, " "))
-	return nil
 }
 
 func (s *Server) validateSSHKey(ctx context.Context, sshKey string) error {

@@ -27,6 +27,7 @@ import (
 )
 
 //go:generate mockery -name=prometheusService -case=snake -inpkg -testonly
+//go:generate mockery -name=alertManagerService -case=snake -inpkg -testonly
 //go:generate mockery -name=supervisordService -case=snake -inpkg -testonly
 //go:generate mockery -name=telemetryService -case=snake -inpkg -testonly
 
@@ -35,6 +36,15 @@ import (
 type prometheusService interface {
 	RequestConfigurationUpdate()
 	Check(ctx context.Context) error
+}
+
+// alertManagerService is a subset of methods of prometheus.AlertManager used by this package.
+// We use it instead of real type for testing and to avoid dependency cycle.
+type alertManagerService interface {
+	ValidateRules(ctx context.Context, rules string) error
+	ReadRules() (string, error)
+	RemoveRulesFile() error
+	WriteRules(rules string) error
 }
 
 // supervisordService is a subset of methods of supervisord.Service used by this package.

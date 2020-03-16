@@ -488,7 +488,9 @@ func main() {
 	prom.MustRegister(reformL)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reformL)
 
-	prometheus, err := prometheus.NewService(*prometheusConfigF, prometheusBaseConfigFile, *promtoolF, db, *prometheusURLF)
+	alertManager := prometheus.NewAlertManager(*alertManagerRulesFileF)
+
+	prometheus, err := prometheus.NewService(alertManager, *prometheusConfigF, prometheusBaseConfigFile, *promtoolF, db, *prometheusURLF)
 	if err != nil {
 		l.Panicf("Prometheus service problem: %+v", err)
 	}
@@ -499,7 +501,7 @@ func main() {
 	supervisord := supervisord.New(*supervisordConfigDirF, pmmUpdateCheck)
 	telemetry := telemetry.NewService(db, version.Version)
 	checker := server.NewAWSInstanceChecker(db, telemetry)
-	server, err := server.NewServer(db, prometheus, supervisord, telemetry, checker, *alertManagerRulesFileF)
+	server, err := server.NewServer(db, prometheus, supervisord, telemetry, checker, alertManager)
 	if err != nil {
 		l.Panicf("Server problem: %+v", err)
 	}
