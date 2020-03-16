@@ -229,6 +229,24 @@ func (s *actionsServer) StartPostgreSQLShowIndexAction(ctx context.Context, req 
 	}, nil
 }
 
+// StartPostgreSQLShowIndexAction starts PostgreSQL SHOW INDEX Action.
+func (s *actionsServer) StartMongoDBExplainAction(ctx context.Context, req *managementpb.StartMongoDBExplainActionRequest) (*managementpb.StartMongoDBExplainActionResponse, error) {
+	res, dsn, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.r.StartPostgreSQLShowIndexAction(ctx, res.ID, res.PMMAgentID, dsn, req.TableName)
+	if err != nil {
+		return nil, err
+	}
+
+	return &managementpb.StartPostgreSQLShowIndexActionResponse{
+		PmmAgentId: req.PmmAgentId,
+		ActionId:   res.ID,
+	}, nil
+}
+
 // CancelAction stops an Action.
 func (s *actionsServer) CancelAction(ctx context.Context, req *managementpb.CancelActionRequest) (*managementpb.CancelActionResponse, error) {
 	ar, err := models.FindActionResultByID(s.db.Querier, req.ActionId)
