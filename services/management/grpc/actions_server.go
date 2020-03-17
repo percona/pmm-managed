@@ -230,18 +230,19 @@ func (s *actionsServer) StartPostgreSQLShowIndexAction(ctx context.Context, req 
 }
 
 // StartPostgreSQLShowIndexAction starts PostgreSQL SHOW INDEX Action.
-func (s *actionsServer) StartMongoDBExplainAction(ctx context.Context, req *managementpb.StartMongoDBExplainActionRequest) (*managementpb.StartMongoDBExplainActionResponse, error) {
+func (s *actionsServer) StartMongoDBExplainAction(ctx context.Context, req *managementpb.StartMongoDBExplainActionRequest) (
+	*managementpb.StartMongoDBExplainActionResponse, error) {
 	res, dsn, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.r.StartPostgreSQLShowIndexAction(ctx, res.ID, res.PMMAgentID, dsn, req.TableName)
+	err = s.r.StartMongoDBExplainAction(ctx, res.ID, res.PMMAgentID, dsn, req.Query)
 	if err != nil {
 		return nil, err
 	}
 
-	return &managementpb.StartPostgreSQLShowIndexActionResponse{
+	return &managementpb.StartMongoDBExplainActionResponse{
 		PmmAgentId: req.PmmAgentId,
 		ActionId:   res.ID,
 	}, nil
