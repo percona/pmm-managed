@@ -134,9 +134,6 @@ func mergeLabels(node *models.Node, service *models.Service, agent *models.Agent
 
 	res["instance"] = agent.AgentID
 
-	//if err = res.Validate(); err != nil { //TODO !!!!!
-	//	return nil, errors.Wrap(err, "failed to merge labels")
-	//}
 	return res, nil
 }
 
@@ -194,10 +191,6 @@ func scrapeConfigForStandardExporter(intervalName string, interval time.Duration
 
 	port := int(*params.agent.ListenPort)
 	hostport := net.JoinHostPort(params.host, strconv.Itoa(port))
-	//target := map[string]string{addressLabel: hostport}
-	//if err = target.Validate(); err != nil { //TODO !!!!
-	//	return nil, errors.Wrap(err, "failed to set targets")
-	//}
 
 	cfg.ServiceDiscoveryConfig = config.ServiceDiscoveryConfig{
 		StaticConfigs: []*config.Group{{
@@ -219,10 +212,6 @@ func scrapeConfigForRDSExporter(intervalName string, interval time.Duration, hos
 		MetricsPath:    metricsPath,
 		HonorLabels:    true,
 	}
-
-	//if err := target.Validate(); err != nil { //TODO !!!!!!!
-	//	return nil, errors.Wrap(err, "failed to set targets")
-	//}
 
 	cfg.ServiceDiscoveryConfig = config.ServiceDiscoveryConfig{
 		StaticConfigs: []*config.Group{{
