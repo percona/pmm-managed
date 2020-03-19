@@ -269,7 +269,7 @@ func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) 
 	}
 
 	if len(fs) > 0 {
-		return nil, fmt.Errorf("Failing services: %s", strings.Join(fs, ", "))
+		return nil, fmt.Errorf("failing services: %s", strings.Join(fs, ", "))
 	}
 
 	return &serverpb.ReadinessResponse{}, nil
