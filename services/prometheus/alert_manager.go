@@ -1,3 +1,18 @@
+// pmm-managed
+// Copyright (C) 2017 Percona LLC
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 package prometheus
 
 import (
@@ -36,12 +51,13 @@ func (s *AlertManager) ValidateRules(ctx context.Context, rules string) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	tempFile.Close()                 //nolint:errcheck
 	defer os.Remove(tempFile.Name()) //nolint:errcheck
 
-	if err = ioutil.WriteFile(tempFile.Name(), []byte(rules), 0644); err != nil {
+	if _, err = tempFile.Write([]byte(rules)); err != nil {
+		tempFile.Close() //nolint:errcheck
 		return errors.WithStack(err)
 	}
+	tempFile.Close() //nolint:errcheck
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()

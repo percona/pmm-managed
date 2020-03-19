@@ -95,6 +95,12 @@ func (svc *Service) Run(ctx context.Context) {
 	svc.l.Info("Starting...")
 	defer svc.l.Info("Done.")
 
+	alertManagerRules, err := svc.alertManager.ReadRules()
+	if err != nil {
+		svc.l.Warnf("Cannot load Alert Manager rules: %s", err)
+	}
+	svc.cachedAlertManagerRules = alertManagerRules
+
 	for {
 		select {
 		case <-ctx.Done():
