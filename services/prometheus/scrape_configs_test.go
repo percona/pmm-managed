@@ -22,14 +22,13 @@ import (
 	"time"
 
 	"github.com/AlekSi/pointer"
+	config "github.com/percona/promconfig"
 	"github.com/pmezard/go-difflib/difflib"
-	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/prometheus/internal/config"
 )
 
 func TestScrapeConfig(t *testing.T) {
@@ -56,7 +55,7 @@ func TestScrapeConfig(t *testing.T) {
 
 			expected := []*config.ScrapeConfig{{
 				JobName:        "node_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-5s",
-				ScrapeInterval: model.Duration(s.HR),
+				ScrapeInterval: config.Duration(s.HR),
 				ScrapeTimeout:  scrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
@@ -100,7 +99,7 @@ func TestScrapeConfig(t *testing.T) {
 				}},
 			}, {
 				JobName:        "node_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr-5s",
-				ScrapeInterval: model.Duration(s.MR),
+				ScrapeInterval: config.Duration(s.MR),
 				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
@@ -129,7 +128,7 @@ func TestScrapeConfig(t *testing.T) {
 				}},
 			}, {
 				JobName:        "node_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_lr-1m0s",
-				ScrapeInterval: model.Duration(s.LR),
+				ScrapeInterval: config.Duration(s.LR),
 				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
@@ -190,7 +189,7 @@ func TestScrapeConfig(t *testing.T) {
 
 			expected := []*config.ScrapeConfig{{
 				JobName:        "node_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-5s",
-				ScrapeInterval: model.Duration(s.HR),
+				ScrapeInterval: config.Duration(s.HR),
 				ScrapeTimeout:  scrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
@@ -261,7 +260,7 @@ func TestScrapeConfig(t *testing.T) {
 
 			expected := []*config.ScrapeConfig{{
 				JobName:        "mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-5s",
-				ScrapeInterval: model.Duration(s.HR),
+				ScrapeInterval: config.Duration(s.HR),
 				ScrapeTimeout:  scrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
@@ -295,7 +294,7 @@ func TestScrapeConfig(t *testing.T) {
 				}},
 			}, {
 				JobName:        "mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr-5s",
-				ScrapeInterval: model.Duration(s.MR),
+				ScrapeInterval: config.Duration(s.MR),
 				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
@@ -334,7 +333,7 @@ func TestScrapeConfig(t *testing.T) {
 				}},
 			}, {
 				JobName:        "mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_lr-1m0s",
-				ScrapeInterval: model.Duration(s.LR),
+				ScrapeInterval: config.Duration(s.LR),
 				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
@@ -412,7 +411,7 @@ func TestScrapeConfig(t *testing.T) {
 
 			expected := []*config.ScrapeConfig{{
 				JobName:        "mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-5s",
-				ScrapeInterval: model.Duration(s.HR),
+				ScrapeInterval: config.Duration(s.HR),
 				ScrapeTimeout:  scrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
@@ -443,7 +442,7 @@ func TestScrapeConfig(t *testing.T) {
 				}},
 			}, {
 				JobName:        "mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr-5s",
-				ScrapeInterval: model.Duration(s.MR),
+				ScrapeInterval: config.Duration(s.MR),
 				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
@@ -478,7 +477,7 @@ func TestScrapeConfig(t *testing.T) {
 				}},
 			}, {
 				JobName:        "mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_lr-1m0s",
-				ScrapeInterval: model.Duration(s.LR),
+				ScrapeInterval: config.Duration(s.LR),
 				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
@@ -568,7 +567,7 @@ func TestScrapeConfig(t *testing.T) {
 
 			expected := []*config.ScrapeConfig{{
 				JobName:        "mongodb_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-5s",
-				ScrapeInterval: model.Duration(s.HR),
+				ScrapeInterval: config.Duration(s.HR),
 				ScrapeTimeout:  scrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
@@ -649,7 +648,7 @@ func TestScrapeConfig(t *testing.T) {
 
 			expected := []*config.ScrapeConfig{{
 				JobName:        "postgres_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-5s",
-				ScrapeInterval: model.Duration(s.HR),
+				ScrapeInterval: config.Duration(s.HR),
 				ScrapeTimeout:  scrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
@@ -682,7 +681,7 @@ func TestScrapeConfig(t *testing.T) {
 				}},
 			}, {
 				JobName:        "postgres_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr-5s",
-				ScrapeInterval: model.Duration(s.MR),
+				ScrapeInterval: config.Duration(s.MR),
 				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
@@ -712,7 +711,7 @@ func TestScrapeConfig(t *testing.T) {
 				}},
 			}, {
 				JobName:        "postgres_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_lr-1m0s",
-				ScrapeInterval: model.Duration(s.LR),
+				ScrapeInterval: config.Duration(s.LR),
 				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
@@ -796,7 +795,7 @@ func TestScrapeConfig(t *testing.T) {
 
 			expected := []*config.ScrapeConfig{{
 				JobName:        "proxysql_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-5s",
-				ScrapeInterval: model.Duration(s.HR),
+				ScrapeInterval: config.Duration(s.HR),
 				ScrapeTimeout:  scrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
@@ -880,7 +879,7 @@ func TestScrapeConfig(t *testing.T) {
 
 			expected := []*config.ScrapeConfig{{
 				JobName:        "rds_exporter_1_1_1_1_12345_mr-5s",
-				ScrapeInterval: model.Duration(s.MR),
+				ScrapeInterval: config.Duration(s.MR),
 				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/enhanced",
 				HonorLabels:    true,
@@ -891,7 +890,7 @@ func TestScrapeConfig(t *testing.T) {
 				},
 			}, {
 				JobName:        "rds_exporter_1_1_1_1_12345_lr-1m0s",
-				ScrapeInterval: model.Duration(s.LR),
+				ScrapeInterval: config.Duration(s.LR),
 				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/basic",
 				HonorLabels:    true,
@@ -902,7 +901,7 @@ func TestScrapeConfig(t *testing.T) {
 				},
 			}, {
 				JobName:        "rds_exporter_2_2_2_2_12345_mr-5s",
-				ScrapeInterval: model.Duration(s.MR),
+				ScrapeInterval: config.Duration(s.MR),
 				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/enhanced",
 				HonorLabels:    true,
@@ -913,7 +912,7 @@ func TestScrapeConfig(t *testing.T) {
 				},
 			}, {
 				JobName:        "rds_exporter_2_2_2_2_12345_lr-1m0s",
-				ScrapeInterval: model.Duration(s.LR),
+				ScrapeInterval: config.Duration(s.LR),
 				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/basic",
 				HonorLabels:    true,
@@ -924,7 +923,7 @@ func TestScrapeConfig(t *testing.T) {
 				},
 			}, {
 				JobName:        "rds_exporter_2_2_2_2_12346_mr-5s",
-				ScrapeInterval: model.Duration(s.MR),
+				ScrapeInterval: config.Duration(s.MR),
 				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/enhanced",
 				HonorLabels:    true,
@@ -935,7 +934,7 @@ func TestScrapeConfig(t *testing.T) {
 				},
 			}, {
 				JobName:        "rds_exporter_2_2_2_2_12346_lr-1m0s",
-				ScrapeInterval: model.Duration(s.LR),
+				ScrapeInterval: config.Duration(s.LR),
 				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/basic",
 				HonorLabels:    true,

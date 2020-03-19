@@ -25,28 +25,27 @@ import (
 	"strings"
 	"time"
 
-	"github.com/prometheus/common/model"
+	config "github.com/percona/promconfig"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/prometheus/internal/config"
 )
 
 // scrapeTimeout returns default scrape timeout for given scrape interval.
-func scrapeTimeout(interval time.Duration) model.Duration {
+func scrapeTimeout(interval time.Duration) config.Duration {
 	switch {
 	case interval <= 2*time.Second:
-		return model.Duration(time.Second)
+		return config.Duration(time.Second)
 	case interval <= 10*time.Second:
-		return model.Duration(interval - time.Second)
+		return config.Duration(interval - time.Second)
 	default:
-		return model.Duration(10 * time.Second)
+		return config.Duration(10 * time.Second)
 	}
 }
 
 func scrapeConfigForPrometheus(interval time.Duration) *config.ScrapeConfig {
 	return &config.ScrapeConfig{
 		JobName:        "prometheus",
-		ScrapeInterval: model.Duration(interval),
+		ScrapeInterval: config.Duration(interval),
 		ScrapeTimeout:  scrapeTimeout(interval),
 		MetricsPath:    "/prometheus/metrics",
 		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
@@ -61,7 +60,7 @@ func scrapeConfigForPrometheus(interval time.Duration) *config.ScrapeConfig {
 func scrapeConfigForGrafana(interval time.Duration) *config.ScrapeConfig {
 	return &config.ScrapeConfig{
 		JobName:        "grafana",
-		ScrapeInterval: model.Duration(interval),
+		ScrapeInterval: config.Duration(interval),
 		ScrapeTimeout:  scrapeTimeout(interval),
 		MetricsPath:    "/metrics",
 		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
@@ -76,7 +75,7 @@ func scrapeConfigForGrafana(interval time.Duration) *config.ScrapeConfig {
 func scrapeConfigForPMMManaged(interval time.Duration) *config.ScrapeConfig {
 	return &config.ScrapeConfig{
 		JobName:        "pmm-managed",
-		ScrapeInterval: model.Duration(interval),
+		ScrapeInterval: config.Duration(interval),
 		ScrapeTimeout:  scrapeTimeout(interval),
 		MetricsPath:    "/debug/metrics",
 		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
@@ -91,7 +90,7 @@ func scrapeConfigForPMMManaged(interval time.Duration) *config.ScrapeConfig {
 func scrapeConfigForQANAPI2(interval time.Duration) *config.ScrapeConfig {
 	return &config.ScrapeConfig{
 		JobName:        "qan-api2",
-		ScrapeInterval: model.Duration(interval),
+		ScrapeInterval: config.Duration(interval),
 		ScrapeTimeout:  scrapeTimeout(interval),
 		MetricsPath:    "/debug/metrics",
 		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
@@ -179,7 +178,7 @@ func scrapeConfigForStandardExporter(intervalName string, interval time.Duration
 
 	cfg := &config.ScrapeConfig{
 		JobName:          jobName(params.agent, intervalName, interval),
-		ScrapeInterval:   model.Duration(interval),
+		ScrapeInterval:   config.Duration(interval),
 		ScrapeTimeout:    scrapeTimeout(interval),
 		MetricsPath:      "/metrics",
 		HTTPClientConfig: httpClientConfig(params.agent),
@@ -214,7 +213,7 @@ func scrapeConfigForRDSExporter(intervalName string, interval time.Duration, hos
 	jobName := fmt.Sprintf("rds_exporter_%s_%s-%s", strings.Map(jobNameMapping, hostport), intervalName, interval)
 	cfg := &config.ScrapeConfig{
 		JobName:        jobName,
-		ScrapeInterval: model.Duration(interval),
+		ScrapeInterval: config.Duration(interval),
 		ScrapeTimeout:  scrapeTimeout(interval),
 		MetricsPath:    metricsPath,
 		HonorLabels:    true,

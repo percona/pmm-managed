@@ -256,6 +256,14 @@
   revision = "b43e75ad8095ad5ac6d79cae4b7fe4eb5ac9cfbc"
 
 [[projects]]
+  digest = "1:1e38d8f6796fabbf419aa2040dc196927690a1de7fe14af25fbd29c6ed44b4da"
+  name = "github.com/percona/promconfig"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "afeb252ecfe360d21c16fafe748bbccb04c6e48d"
+  version = "v0.1.0"
+
+[[projects]]
   digest = "1:4047c378584616813d610c9f993bf90dd0d07aed8d94bd3bc299cd35ececdcba"
   name = "github.com/pkg/errors"
   packages = ["."]
@@ -593,6 +601,7 @@
     "github.com/percona/pmm/utils/sqlmetrics",
     "github.com/percona/pmm/utils/tlsconfig",
     "github.com/percona/pmm/version",
+    "github.com/percona/promconfig",
     "github.com/pkg/errors",
     "github.com/pmezard/go-difflib/difflib",
     "github.com/prometheus/client_golang/prometheus",

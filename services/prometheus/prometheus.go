@@ -31,8 +31,8 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/utils/pdeathsig"
+	config "github.com/percona/promconfig"
 	"github.com/pkg/errors"
-	"github.com/prometheus/common/model"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc/codes"
@@ -41,7 +41,6 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/prometheus/internal/config"
 )
 
 const updateBatchDelay = 3 * time.Second
@@ -294,13 +293,13 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 		s := settings.MetricsResolutions
 
 		if cfg.GlobalConfig.ScrapeInterval == 0 {
-			cfg.GlobalConfig.ScrapeInterval = model.Duration(s.LR)
+			cfg.GlobalConfig.ScrapeInterval = config.Duration(s.LR)
 		}
 		if cfg.GlobalConfig.ScrapeTimeout == 0 {
 			cfg.GlobalConfig.ScrapeTimeout = scrapeTimeout(s.LR)
 		}
 		if cfg.GlobalConfig.EvaluationInterval == 0 {
-			cfg.GlobalConfig.EvaluationInterval = model.Duration(s.LR)
+			cfg.GlobalConfig.EvaluationInterval = config.Duration(s.LR)
 		}
 
 		cfg.RuleFiles = append(cfg.RuleFiles, "/srv/prometheus/rules/*.rules.yml")
