@@ -60,29 +60,47 @@ func checkUniqueNodeName(q *reform.Querier, name string) error {
 	}
 }
 
-func checkUniqueNodeInstanceRegion(q *reform.Querier, instance, region string) error {
-	if instance == "" {
-		return status.Error(codes.InvalidArgument, "Empty Node instance.")
-	}
-	if region == "" {
-		return status.Error(codes.InvalidArgument, "Empty Node region.")
+// CheckUniqueNodeInstanceRegion checks for uniqueness of instance address and region.
+// This function not only return an error in case of finding an existing node with those paramenters but
+// also returns the Node itself if there is any, because if we are recreating the instance (--force in pmm-admin)
+// we need to know the Node.ID to remove it and its dependencies.
+// This check only applies is region is not empty.
+func CheckUniqueNodeInstanceRegion(q *reform.Querier, instance string, region *string) (*Node, error) {
+	if pointer.GetString(region) == "" {
+		return nil, nil
 	}
 
-	tail := fmt.Sprintf("WHERE address = %s AND region = %s LIMIT 1", q.Placeholder(1), q.Placeholder(2)) //nolint:gosec
-	_, err := q.SelectOneFrom(NodeTable, tail, instance, region)
+	if instance == "" {
+		return nil, status.Error(codes.InvalidArgument, "Empty Node instance.")
+	}
+
+	var node Node
+	err := q.SelectOneTo(&node, "WHERE address = $1 AND region = $2 LIMIT 1", instance, region)
 	switch err {
 	case nil:
-		return status.Errorf(codes.AlreadyExists, "Node with instance %q and region %q already exists.", instance, region)
+		return &node, status.Errorf(codes.AlreadyExists, "Node with instance %q and region %q already exists.", instance, *region)
 	case reform.ErrNoRows:
-		return nil
+		return nil, nil
 	default:
-		return errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 }
 
-// FindAllNodes returns all Nodes.
-func FindAllNodes(q *reform.Querier) ([]*Node, error) {
-	structs, err := q.SelectAllFrom(NodeTable, "ORDER BY node_id")
+// NodeFilters represents filters for nodes list.
+type NodeFilters struct {
+	// Return Nodes with provided type.
+	NodeType *NodeType
+}
+
+// FindNodes returns Nodes by filters.
+func FindNodes(q *reform.Querier, filters NodeFilters) ([]*Node, error) {
+	var whereClause string
+	var args []interface{}
+	if filters.NodeType != nil {
+		whereClause = "WHERE node_type = $1"
+		args = append(args, *filters.NodeType)
+	}
+	structs, err := q.SelectAllFrom(NodeTable, fmt.Sprintf("%s ORDER BY node_id", whereClause), args...)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -185,10 +203,8 @@ func createNodeWithID(q *reform.Querier, id string, nodeType NodeType, params *C
 		}
 	}
 
-	if params.Region != nil {
-		if err := checkUniqueNodeInstanceRegion(q, params.Address, *params.Region); err != nil {
-			return nil, err
-		}
+	if _, err := CheckUniqueNodeInstanceRegion(q, params.Address, params.Region); err != nil {
+		return nil, err
 	}
 
 	// Trim trailing \n received from broken 2.0.0 clients.
