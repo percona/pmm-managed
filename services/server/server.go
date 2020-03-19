@@ -258,25 +258,18 @@ func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*se
 // Readiness returns an error when some PMM Server component is not ready yet or is being restarted.
 // It can be used as for Docker health check or Kubernetes readiness probe.
 func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) (*serverpb.ReadinessResponse, error) {
+	fs := make([]string, 0) // fs: failing services. A list of failing service names to return in error msg
 
-	errs := make([]error, 0)
-	errs = append(errs, s.prometheus.Check(ctx))
-	errs = append(errs, s.grafanaClient.Check(ctx))
-
-	var err error
-	// concat the errors so the client will receive all the errors at once
-	for _, e := range errs {
-		if e != nil {
-			if err == nil {
-				err = e
-				continue
-			}
-			err = fmt.Errorf("%s, %w", err, e)
-		}
+	if err := s.prometheus.Check(ctx); err != nil {
+		fs = append(fs, "Prometheus")
 	}
 
-	if err != nil {
-		return nil, err
+	if err := s.grafanaClient.Check(ctx); err != nil {
+		fs = append(fs, "Grafana")
+	}
+
+	if len(fs) > 0 {
+		return nil, fmt.Errorf("Failing services: %s", strings.Join(fs, ", "))
 	}
 
 	return &serverpb.ReadinessResponse{}, nil

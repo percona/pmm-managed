@@ -361,39 +361,13 @@ type grafanaHealthResponse struct {
 
 // Check calls Grafana API to check its status
 func (c Client) Check(ctx context.Context) error {
-	u := &url.URL{
-		Scheme: "http",
-		Host:   c.addr,
-		Path:   "/api/health",
-	}
-
-	resp, err := c.http.Get(u.String())
-	if err != nil {
-		return fmt.Errorf("cannot contact Grafana API (Grafana is down)")
-	}
-	defer resp.Body.Close() //nolint:errcheck
-
-	if resp.StatusCode != http.StatusOK {
-		switch resp.StatusCode {
-		case http.StatusServiceUnavailable:
-			return fmt.Errorf("grafana service is not available")
-		default:
-			return fmt.Errorf("unknown Grafana service status: %d", resp.StatusCode)
-		}
-	}
-
-	buf, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("cannot read Grafana Health API response")
-	}
-
 	var status grafanaHealthResponse
-	if err := json.Unmarshal(buf, &status); err != nil {
-		return fmt.Errorf("cannot parse Grafana Health API response: %s", err)
+	if err := c.do(ctx, "GET", "/api/health", http.Header{}, nil, &status); err != nil {
+		return fmt.Errorf("error calling Grafana API: %s", err)
 	}
 
 	if strings.ToLower(status.Database) != "ok" {
-		return fmt.Errorf("grafana is up but the database is not ok. Database status is %s", status.Database)
+		logrus.Errorf("grafana is up but the database is not ok. Database status is %s", status.Database)
 	}
 
 	return nil

@@ -169,4 +169,9 @@ func TestClient(t *testing.T) {
 			assert.Fail(t, "annotation not found", "%s", annotations)
 		})
 	})
+
+	t.Run("Check", func(t *testing.T) {
+		err := c.Check(ctx)
+		require.NoError(t, err)
+	})
 }
