@@ -26,14 +26,14 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
+//go:generate mockery -name=Checker -case=snake -inpkg -testonly
 //go:generate mockery -name=prometheusService -case=snake -inpkg -testonly
 //go:generate mockery -name=supervisordService -case=snake -inpkg -testonly
 //go:generate mockery -name=telemetryService -case=snake -inpkg -testonly
-//go:generate mockery -name=Checker -case=snake -inpkg -testonly
 
 // Checker interface wraps all services that implements the Check method to report the
 // service health for the Readiness check
-type Checker interface {
+type checker interface {
 	Check(ctx context.Context) error
 }
 
@@ -41,7 +41,7 @@ type Checker interface {
 // We use it instead of real type for testing and to avoid dependency cycle.
 type prometheusService interface {
 	RequestConfigurationUpdate()
-	Checker
+	checker
 }
 
 // supervisordService is a subset of methods of supervisord.Service used by this package.

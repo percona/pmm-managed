@@ -62,7 +62,7 @@ type Server struct {
 
 	pmmUpdateAuthFileM sync.Mutex
 	pmmUpdateAuthFile  string
-	grafanaClient      Checker
+	grafanaClient      checker
 
 	envRW                  sync.RWMutex
 	envDisableUpdates      bool
@@ -86,7 +86,7 @@ type pmmUpdateAuth struct {
 // NewServer returns new server for Server service.
 func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervisordService,
 	telemetryService telemetryService, checker *AWSInstanceChecker, alertManagerFile string,
-	grafanaClient Checker) (*Server, error) {
+	grafanaClient checker) (*Server, error) {
 	path := os.TempDir()
 	if _, err := os.Stat(path); err != nil {
 		return nil, errors.WithStack(err)
