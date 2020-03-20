@@ -229,10 +229,11 @@ func (s *actionsServer) StartPostgreSQLShowIndexAction(ctx context.Context, req 
 	}, nil
 }
 
-// StartPostgreSQLShowIndexAction starts PostgreSQL SHOW INDEX Action.
+// StartMongoDBExplainAction starts MongoDB Explain action
 func (s *actionsServer) StartMongoDBExplainAction(ctx context.Context, req *managementpb.StartMongoDBExplainActionRequest) (
 	*managementpb.StartMongoDBExplainActionResponse, error) {
-	res, dsn, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
+	// Explain action must be executed against the admin database
+	res, dsn, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, "admin")
 	if err != nil {
 		return nil, err
 	}
