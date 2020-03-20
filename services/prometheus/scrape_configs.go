@@ -459,7 +459,6 @@ func scrapeConfigsForRDSExporter(s *models.MetricsResolutions, params []*scrapeC
 
 	var r []*config.ScrapeConfig
 	for _, hostport := range hostports {
-		// TODO(askomorokhov): looks like we need to keep them both.
 		mr, err := scrapeConfigForRDSExporter("mr", s.MR, hostport, "/enhanced")
 		if err != nil {
 			return nil, err
