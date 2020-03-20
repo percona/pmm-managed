@@ -194,6 +194,7 @@ func (s *actionsServer) StartMySQLShowIndexAction(ctx context.Context, req *mana
 }
 
 // StartPostgreSQLShowCreateTableAction starts PostgreSQL SHOW CREATE TABLE Action.
+//nolint:lll
 func (s *actionsServer) StartPostgreSQLShowCreateTableAction(ctx context.Context, req *managementpb.StartPostgreSQLShowCreateTableActionRequest) (*managementpb.StartPostgreSQLShowCreateTableActionResponse, error) {
 	res, dsn, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
@@ -212,6 +213,7 @@ func (s *actionsServer) StartPostgreSQLShowCreateTableAction(ctx context.Context
 }
 
 // StartPostgreSQLShowIndexAction starts PostgreSQL SHOW INDEX Action.
+//nolint:lll
 func (s *actionsServer) StartPostgreSQLShowIndexAction(ctx context.Context, req *managementpb.StartPostgreSQLShowIndexActionRequest) (*managementpb.StartPostgreSQLShowIndexActionResponse, error) {
 	res, dsn, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
@@ -230,6 +232,7 @@ func (s *actionsServer) StartPostgreSQLShowIndexAction(ctx context.Context, req 
 }
 
 // StartMongoDBExplainAction starts MongoDB Explain action
+//nolint:lll
 func (s *actionsServer) StartMongoDBExplainAction(ctx context.Context, req *managementpb.StartMongoDBExplainActionRequest) (
 	*managementpb.StartMongoDBExplainActionResponse, error) {
 	// Explain action must be executed against the admin database
