@@ -106,6 +106,31 @@ func TestServiceService(t *testing.T) {
 			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `wrong service type`), err)
 		})
 
+		t.Run("MySQL Conflict socket and address", func(t *testing.T) {
+			_, s, teardown := setup(t)
+			defer teardown(t)
+
+			_, err := models.AddNewService(s.db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
+				ServiceName: "test-mysql-socket-address",
+				NodeID:      models.PMMServerNodeID,
+				Address:     pointer.ToString("127.0.0.1"),
+				Port:        pointer.ToUint16(3306),
+				Socket:      pointer.ToString("/var/run/mysqld/mysqld.sock"),
+			})
+			require.EqualError(t, err, "Setting both address (with port) and socket in once is disallowed.")
+		})
+
+		t.Run("MySQL empty connection", func(t *testing.T) {
+			_, s, teardown := setup(t)
+			defer teardown(t)
+
+			_, err := models.AddNewService(s.db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
+				ServiceName: "test-mysql-socket-address",
+				NodeID:      models.PMMServerNodeID,
+			})
+			require.EqualError(t, err, "Address (with port) or socket is required.")
+		})
+
 		t.Run("Basic", func(t *testing.T) {
 			ctx, s, teardown := setup(t)
 			defer teardown(t)

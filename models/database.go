@@ -235,6 +235,11 @@ var databaseSchema = [][]string{
 			AND settings->'metrics_resolutions'->>'mr' = '5000000000'
 			AND settings->'metrics_resolutions'->>'lr' = '60000000000';`,
 	},
+
+	11: {
+		`ALTER TABLE services
+			ADD COLUMN socket VARCHAR CHECK (socket <> '')`,
+	},
 }
 
 // OpenDB returns configured connection pool for PostgreSQL.

@@ -105,6 +105,7 @@ func (s *servicesServer) GetService(ctx context.Context, req *inventorypb.GetSer
 
 // AddMySQLService adds MySQL Service.
 func (s *servicesServer) AddMySQLService(ctx context.Context, req *inventorypb.AddMySQLServiceRequest) (*inventorypb.AddMySQLServiceResponse, error) {
+
 	service, err := s.s.AddMySQL(ctx, &models.AddDBMSServiceParams{
 		ServiceName:    req.ServiceName,
 		NodeID:         req.NodeId,
@@ -113,6 +114,7 @@ func (s *servicesServer) AddMySQLService(ctx context.Context, req *inventorypb.A
 		ReplicationSet: req.ReplicationSet,
 		Address:        pointer.ToStringOrNil(req.Address),
 		Port:           pointer.ToUint16OrNil(uint16(req.Port)),
+		Socket:         pointer.ToStringOrNil(req.Socket),
 		CustomLabels:   req.CustomLabels,
 	})
 	if err != nil {

@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/percona/pmm-managed/utils/validators"
+
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -163,6 +165,7 @@ type AddDBMSServiceParams struct {
 	CustomLabels   map[string]string
 	Address        *string
 	Port           *uint16
+	Socket         *string
 }
 
 // AddNewService adds new service to storage.
@@ -179,6 +182,10 @@ func AddNewService(q *reform.Querier, serviceType ServiceType, params *AddDBMSSe
 		return nil, err
 	}
 
+	if err := validators.ValidateMySQLConnectionOptions(params.Socket, params.Address, params.Port); err != nil {
+		return nil, err
+	}
+
 	row := &Service{
 		ServiceID:      id,
 		ServiceType:    serviceType,
@@ -189,6 +196,7 @@ func AddNewService(q *reform.Querier, serviceType ServiceType, params *AddDBMSSe
 		ReplicationSet: params.ReplicationSet,
 		Address:        params.Address,
 		Port:           params.Port,
+		Socket:         params.Socket,
 	}
 	if err := row.SetCustomLabels(params.CustomLabels); err != nil {
 		return nil, err
