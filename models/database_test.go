@@ -176,8 +176,8 @@ func TestDatabaseChecks(t *testing.T) {
 		)
 		require.NoError(t, err)
 		_, err = db.Exec(
-			"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size, table_count_tablestats_group_limit) "+
-				"VALUES ('/agent_id/1', 'pmm-agent', '/node_id/1', NULL, false, '', $1, $2, false, false, false, 0, 0)",
+			"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size, table_count_tablestats_group_limit, rds_basic_metrics_disabled, rds_enhanced_metrics_disabled) "+
+				"VALUES ('/agent_id/1', 'pmm-agent', '/node_id/1', NULL, false, '', $1, $2, false, false, false, 0, 0, true, true)",
 			now, now,
 		)
 		require.NoError(t, err)
@@ -188,14 +188,14 @@ func TestDatabaseChecks(t *testing.T) {
 				defer rollback()
 
 				_, err = tx.Exec(
-					"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size, table_count_tablestats_group_limit) "+
-						"VALUES ('/agent_id/2', 'pmm-agent', '/node_id/1', NULL, false, '', $1, $2, false, false, false, 0, 0)",
+					"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size, table_count_tablestats_group_limit, rds_basic_metrics_disabled, rds_enhanced_metrics_disabled) "+
+						"VALUES ('/agent_id/2', 'pmm-agent', '/node_id/1', NULL, false, '', $1, $2, false, false, false, 0, 0, false, false)",
 					now, now,
 				)
 				require.NoError(t, err)
 				_, err = tx.Exec(
-					"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, node_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size, table_count_tablestats_group_limit) "+
-						"VALUES ('/agent_id/3', 'mysqld_exporter', NULL, '/agent_id/1', '/node_id/1', false, '', $1, $2, false, false, false, 0, 0)",
+					"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, node_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size, table_count_tablestats_group_limit, rds_basic_metrics_disabled, rds_enhanced_metrics_disabled) "+
+						"VALUES ('/agent_id/3', 'mysqld_exporter', NULL, '/agent_id/1', '/node_id/1', false, '', $1, $2, false, false, false, 0, 0, false, false)",
 					now, now,
 				)
 				require.NoError(t, err)
@@ -206,8 +206,8 @@ func TestDatabaseChecks(t *testing.T) {
 				defer rollback()
 
 				_, err = tx.Exec(
-					"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size, table_count_tablestats_group_limit) "+
-						"VALUES ('/agent_id/4', 'mysqld_exporter', NULL, NULL, false, '', $1, $2, false, false, false, 0, 0)",
+					"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size, table_count_tablestats_group_limit, rds_basic_metrics_disabled, rds_enhanced_metrics_disabled) "+
+						"VALUES ('/agent_id/4', 'mysqld_exporter', NULL, NULL, false, '', $1, $2, false, false, false, 0, 0, false, false)",
 					now, now,
 				)
 				assertCheckViolation(t, err, "agents", "runs_on_node_id_xor_pmm_agent_id")
@@ -218,8 +218,8 @@ func TestDatabaseChecks(t *testing.T) {
 				defer rollback()
 
 				_, err = tx.Exec(
-					"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, node_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size, table_count_tablestats_group_limit) "+
-						"VALUES ('/agent_id/5', 'pmm-agent', '/node_id/1', '/agent_id/1', '/node_id/1', false, '', $1, $2, false, false, false, 0, 0)",
+					"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, node_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size, table_count_tablestats_group_limit, rds_basic_metrics_disabled, rds_enhanced_metrics_disabled) "+
+						"VALUES ('/agent_id/5', 'pmm-agent', '/node_id/1', '/agent_id/1', '/node_id/1', false, '', $1, $2, false, false, false, 0, 0, false, false)",
 					now, now,
 				)
 				assertCheckViolation(t, err, "agents", "runs_on_node_id_xor_pmm_agent_id")
@@ -232,8 +232,8 @@ func TestDatabaseChecks(t *testing.T) {
 				defer rollback()
 
 				_, err = tx.Exec(
-					"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size, table_count_tablestats_group_limit) "+
-						"VALUES ('/agent_id/6', 'mysqld_exporter', '/node_id/1', NULL, false, '', $1, $2, false, false, false, 0, 0)",
+					"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size, table_count_tablestats_group_limit, rds_basic_metrics_disabled, rds_enhanced_metrics_disabled) "+
+						"VALUES ('/agent_id/6', 'mysqld_exporter', '/node_id/1', NULL, false, '', $1, $2, false, false, false, 0, 0, false, false)",
 					now, now,
 				)
 				assertCheckViolation(t, err, "agents", "runs_on_node_id_only_for_pmm_agent")
@@ -244,8 +244,8 @@ func TestDatabaseChecks(t *testing.T) {
 				defer rollback()
 
 				_, err = tx.Exec(
-					"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, node_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size, table_count_tablestats_group_limit) "+
-						"VALUES ('/agent_id/7', 'pmm-agent', NULL, '/agent_id/1', '/node_id/1', false, '', $1, $2, false, false, false, 0, 0)",
+					"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, node_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size, table_count_tablestats_group_limit, rds_basic_metrics_disabled, rds_enhanced_metrics_disabled) "+
+						"VALUES ('/agent_id/7', 'pmm-agent', NULL, '/agent_id/1', '/node_id/1', false, '', $1, $2, false, false, false, 0, 0, false, false)",
 					now, now,
 				)
 				assertCheckViolation(t, err, "agents", "runs_on_node_id_only_for_pmm_agent")
@@ -260,8 +260,8 @@ func TestDatabaseChecks(t *testing.T) {
 				defer rollback()
 
 				_, err = tx.Exec(
-					"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, node_id, service_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size, table_count_tablestats_group_limit) "+
-						"VALUES ('/agent_id/8', 'node_exporter', NULL, '/agent_id/1', '/node_id/1', NULL, false, '', $1, $2, false, false, false, 0, 0)",
+					"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, node_id, service_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size, table_count_tablestats_group_limit, rds_basic_metrics_disabled, rds_enhanced_metrics_disabled) "+
+						"VALUES ('/agent_id/8', 'node_exporter', NULL, '/agent_id/1', '/node_id/1', NULL, false, '', $1, $2, false, false, false, 0, 0, false, false)",
 					now, now,
 				)
 
@@ -273,8 +273,8 @@ func TestDatabaseChecks(t *testing.T) {
 				defer rollback()
 
 				_, err = tx.Exec(
-					"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, node_id, service_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size, table_count_tablestats_group_limit) "+
-						"VALUES ('/agent_id/8', 'mysqld_exporter', NULL, '/agent_id/1', NULL, '/service_id/1', false, '', $1, $2, false, false, false, 0, 0)",
+					"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, node_id, service_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size, table_count_tablestats_group_limit, rds_basic_metrics_disabled, rds_enhanced_metrics_disabled) "+
+						"VALUES ('/agent_id/8', 'mysqld_exporter', NULL, '/agent_id/1', NULL, '/service_id/1', false, '', $1, $2, false, false, false, 0, 0, false, false)",
 					now, now,
 				)
 
@@ -286,8 +286,8 @@ func TestDatabaseChecks(t *testing.T) {
 				defer rollback()
 
 				_, err = tx.Exec(
-					"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, node_id, service_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size, table_count_tablestats_group_limit) "+
-						"VALUES ('/agent_id/8', 'mysqld_exporter', NULL, '/agent_id/1', NULL, NULL, false, '', $1, $2, false, false, false, 0, 0)",
+					"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, node_id, service_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size, table_count_tablestats_group_limit, rds_basic_metrics_disabled, rds_enhanced_metrics_disabled) "+
+						"VALUES ('/agent_id/8', 'mysqld_exporter', NULL, '/agent_id/1', NULL, NULL, false, '', $1, $2, false, false, false, 0, 0, false, false)",
 					now, now,
 				)
 
@@ -299,8 +299,8 @@ func TestDatabaseChecks(t *testing.T) {
 				defer rollback()
 
 				_, err = tx.Exec(
-					"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, node_id, service_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size, table_count_tablestats_group_limit) "+
-						"VALUES ('/agent_id/8', 'mysqld_exporter', NULL, '/agent_id/1', '/node_id/1', '/service_id/1', false, '', $1, $2, false, false, false, 0, 0)",
+					"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, node_id, service_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size, table_count_tablestats_group_limit, rds_basic_metrics_disabled, rds_enhanced_metrics_disabled) "+
+						"VALUES ('/agent_id/8', 'mysqld_exporter', NULL, '/agent_id/1', '/node_id/1', '/service_id/1', false, '', $1, $2, false, false, false, 0, 0, false, false)",
 					now, now,
 				)
 				assertCheckViolation(t, err, "agents", "node_id_or_service_id_or_pmm_agent_id")
