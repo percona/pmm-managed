@@ -155,7 +155,7 @@ func TestServices(t *testing.T) {
 			Port:        pointer.ToUint16(3306),
 			Socket:      pointer.ToString("/var/run/mysqld/mysqld.sock"),
 		})
-		require.EqualError(t, err, "Setting both address (with port) and socket in once is disallowed.")
+		require.EqualError(t, err, "rpc error: code = InvalidArgument desc = setting both address and socket in once is disallowed")
 	})
 
 	t.Run("BasicMongoDB", func(t *testing.T) {

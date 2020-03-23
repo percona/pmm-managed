@@ -18,21 +18,32 @@
 package validators
 
 import (
-	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // ValidateMySQLConnectionOptions validates MySQL connection options.
 func ValidateMySQLConnectionOptions(socket, host *string, port *uint16) error {
-	if (host == nil || port == nil) && socket == nil {
-		return errors.New("Address (with port) or socket is required.")
+	if host == nil && socket == nil {
+		return status.Error(codes.InvalidArgument, "address or socket is required")
 	}
 
-	if (host != nil || port != nil) && socket != nil {
-		return errors.New("Setting both address (with port) and socket in once is disallowed.")
-	}
+	if host != nil {
+		if socket != nil {
+			return status.Error(codes.InvalidArgument, "setting both address and socket in once is disallowed")
+		}
 
-	if host != nil && port == nil {
-		return errors.New("Port is required.")
+		if port == nil {
+			return status.Error(codes.InvalidArgument, "port is required with non empty host")
+		}
+
+		if int(*port) <= 0 {
+			return status.Errorf(codes.InvalidArgument, "invalid field Port: value '%d' must be greater than '0'", port)
+		}
+
+		if int(*port) > 65535 {
+			return status.Errorf(codes.InvalidArgument, "invalid field Port: value '%d' must be less than '65535'", port)
+		}
 	}
 
 	return nil
