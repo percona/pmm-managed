@@ -41,7 +41,7 @@ func TestServer(t *testing.T) {
 		require.NoError(t, sqlDB.Close())
 	}()
 
-	// use a mockup to avoid impor test to fail since this is the server pkg and not server_test
+	// use a mockup to avoid import test to fail since this is the server pkg and not server_test
 	// so if we use grafana pkg here it will be reported as imported
 	grafanaClient := new(mockChecker)
 	newServer := func() *Server {
