@@ -238,7 +238,9 @@ var databaseSchema = [][]string{
 
 	11: {
 		`ALTER TABLE services
-			ADD COLUMN socket VARCHAR CHECK (socket <> '')`,
+			ADD COLUMN socket VARCHAR CONSTRAINT address_socket_check CHECK (
+				(CASE WHEN socket IS NULL THEN 0 ELSE 1 END) +
+				(CASE WHEN address IS NULL THEN 0 ELSE 1 END) = 1 )`,
 	},
 }
 

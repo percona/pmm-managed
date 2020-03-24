@@ -117,7 +117,7 @@ func TestServiceService(t *testing.T) {
 				Port:        pointer.ToUint16(3306),
 				Socket:      pointer.ToString("/var/run/mysqld/mysqld.sock"),
 			})
-			require.EqualError(t, err, "rpc error: code = InvalidArgument desc = setting both address and socket in once is disallowed")
+			require.EqualError(t, err, `pq: new row for relation "services" violates check constraint "address_socket_check"`)
 		})
 
 		t.Run("MySQL empty connection", func(t *testing.T) {
@@ -128,7 +128,7 @@ func TestServiceService(t *testing.T) {
 				ServiceName: "test-mysql-socket-address",
 				NodeID:      models.PMMServerNodeID,
 			})
-			require.EqualError(t, err, "rpc error: code = InvalidArgument desc = address or socket is required")
+			require.EqualError(t, err, `pq: new row for relation "services" violates check constraint "address_socket_check"`)
 		})
 
 		t.Run("Basic", func(t *testing.T) {

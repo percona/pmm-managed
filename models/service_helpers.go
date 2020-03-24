@@ -20,8 +20,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/percona/pmm-managed/utils/validators"
-
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -179,10 +177,6 @@ func AddNewService(q *reform.Querier, serviceType ServiceType, params *AddDBMSSe
 	}
 
 	if _, err := FindNodeByID(q, params.NodeID); err != nil {
-		return nil, err
-	}
-
-	if err := validators.ValidateMySQLConnectionOptions(params.Socket, params.Address, params.Port); err != nil {
 		return nil, err
 	}
 

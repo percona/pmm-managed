@@ -34,10 +34,6 @@ func ValidateMySQLConnectionOptions(socket, host *string, port *uint16) error {
 		}
 
 		if port == nil {
-			return status.Error(codes.InvalidArgument, "port is required with non empty host")
-		}
-
-		if int(*port) <= 0 {
 			return status.Errorf(codes.InvalidArgument, "invalid field Port: value '%d' must be greater than '0'", port)
 		}
 
