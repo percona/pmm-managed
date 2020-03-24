@@ -33,7 +33,7 @@ import (
 
 // Checker interface wraps all services that implements the Check method to report the
 // service health for the Readiness check
-type checker interface {
+type serviceChecker interface {
 	Check(ctx context.Context) error
 }
 
@@ -41,7 +41,7 @@ type checker interface {
 // We use it instead of real type for testing and to avoid dependency cycle.
 type prometheusService interface {
 	RequestConfigurationUpdate()
-	checker
+	serviceChecker
 }
 
 // supervisordService is a subset of methods of supervisord.Service used by this package.

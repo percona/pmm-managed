@@ -45,8 +45,16 @@ func TestServer(t *testing.T) {
 	// so if we use grafana pkg here it will be reported as imported
 	grafanaClient := new(mockChecker)
 	newServer := func() *Server {
-		s, err := NewServer(reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
-			nil, nil, nil, nil, "", grafanaClient)
+		serverParams := InServerParams{
+			DB:               reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
+			Prometheus:       nil,
+			Supervisord:      nil,
+			TelemetryService: nil,
+			Checker:          nil,
+			AlertManagerFile: "",
+			GrafanaClient:    grafanaClient,
+		}
+		s, err := NewServer(serverParams)
 		require.NoError(t, err)
 		return s
 	}

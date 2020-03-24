@@ -360,14 +360,17 @@ type grafanaHealthResponse struct {
 }
 
 // Check calls Grafana API to check its status
-func (c Client) Check(ctx context.Context) error {
+func (c *Client) Check(ctx context.Context) error {
 	var status grafanaHealthResponse
-	if err := c.do(ctx, "GET", "/api/health", http.Header{}, nil, &status); err != nil {
-		return fmt.Errorf("error calling Grafana API: %s", err)
+	if err := c.do(ctx, "GET", "/api/health", nil, nil, &status); err != nil {
+		// since we don't return the error to the user, log it to help debugging
+		logrus.Errorf("grafana status check failed: %s", err)
+		return fmt.Errorf("cannot reach Grafana API")
 	}
 
 	if strings.ToLower(status.Database) != "ok" {
 		logrus.Errorf("grafana is up but the database is not ok. Database status is %s", status.Database)
+		return fmt.Errorf("grafana is running with errors")
 	}
 
 	return nil

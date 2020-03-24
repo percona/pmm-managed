@@ -498,7 +498,18 @@ func main() {
 	telemetry := telemetry.NewService(db, version.Version)
 	checker := server.NewAWSInstanceChecker(db, telemetry)
 	grafanaClient := grafana.NewClient(*grafanaAddrF)
-	server, err := server.NewServer(db, prometheus, supervisord, telemetry, checker, *alertManagerRulesFileF, *grafanaClient)
+	prom.MustRegister(grafanaClient)
+
+	serverParams := server.InServerParams{
+		DB:               db,
+		Prometheus:       prometheus,
+		Supervisord:      supervisord,
+		TelemetryService: telemetry,
+		Checker:          checker,
+		AlertManagerFile: *alertManagerRulesFileF,
+		GrafanaClient:    grafanaClient,
+	}
+	server, err := server.NewServer(serverParams)
 	if err != nil {
 		l.Panicf("Server problem: %+v", err)
 	}
@@ -538,7 +549,6 @@ func main() {
 	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient)
 	prom.MustRegister(agentsRegistry)
 
-	prom.MustRegister(grafanaClient)
 	authServer := grafana.NewAuthServer(grafanaClient, checker)
 
 	var wg sync.WaitGroup

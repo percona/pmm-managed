@@ -62,7 +62,7 @@ type Server struct {
 
 	pmmUpdateAuthFileM sync.Mutex
 	pmmUpdateAuthFile  string
-	grafanaClient      checker
+	grafanaClient      serviceChecker
 
 	envRW                  sync.RWMutex
 	envDisableUpdates      bool
@@ -83,10 +83,19 @@ type pmmUpdateAuth struct {
 	AuthToken string `json:"auth_token"`
 }
 
+// InServerParams holds the parameters needed to create a new service
+type InServerParams struct {
+	DB               *reform.DB
+	Prometheus       prometheusService
+	Supervisord      supervisordService
+	TelemetryService telemetryService
+	Checker          *AWSInstanceChecker
+	AlertManagerFile string
+	GrafanaClient    serviceChecker
+}
+
 // NewServer returns new server for Server service.
-func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervisordService,
-	telemetryService telemetryService, checker *AWSInstanceChecker, alertManagerFile string,
-	grafanaClient checker) (*Server, error) {
+func NewServer(in InServerParams) (*Server, error) {
 	path := os.TempDir()
 	if _, err := os.Stat(path); err != nil {
 		return nil, errors.WithStack(err)
@@ -94,15 +103,15 @@ func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervis
 	path = filepath.Join(path, "pmm-update.json")
 
 	s := &Server{
-		db:                db,
-		prometheus:        prometheus,
-		supervisord:       supervisord,
-		telemetryService:  telemetryService,
-		checker:           checker,
+		db:                in.DB,
+		prometheus:        in.Prometheus,
+		supervisord:       in.Supervisord,
+		telemetryService:  in.TelemetryService,
+		checker:           in.Checker,
 		l:                 logrus.WithField("component", "server"),
 		pmmUpdateAuthFile: path,
-		alertManagerFile:  alertManagerFile,
-		grafanaClient:     grafanaClient,
+		alertManagerFile:  in.AlertManagerFile,
+		grafanaClient:     in.GrafanaClient,
 	}
 	return s, nil
 }
