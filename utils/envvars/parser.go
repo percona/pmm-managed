@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 
 	"github.com/percona/pmm-managed/models"
 )
@@ -51,19 +52,24 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 	envSettings = new(models.ChangeSettingsParams)
 	for _, env := range envs {
 		p := strings.SplitN(env, "=", 2)
+		k, v := strings.ToUpper(p[0]), strings.ToLower(p[1])
+		logrus.Tracef("ParseEnvVars: %#q: k=%#q v=%#q", env, k, v)
+
 		if len(p) != 2 {
 			errs = append(errs, fmt.Errorf("failed to parse environment variable %q", env))
 			continue
 		}
 
-		var err error
-		k, v := strings.ToUpper(p[0]), strings.ToLower(p[1])
 		if strings.HasPrefix(k, "GF_") {
+			// skip Grafana's environment variables
 			continue
 		}
+
+		var err error
 		switch k {
 		case "PATH", "HOSTNAME", "TERM", "HOME", "PWD", "SHLVL", "_":
 			// skip default environment variables
+			continue
 		case "DISABLE_UPDATES":
 			envSettings.DisableUpdates, err = strconv.ParseBool(v)
 			if err != nil {

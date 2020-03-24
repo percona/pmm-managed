@@ -429,8 +429,8 @@ func main() {
 	alertManagerRulesFileF := kingpin.Flag("alert-manager-rules-file", "Path to the Alert Manager Rules file").
 		Default(defaultAlertManagerFile).String()
 
-	debugF := kingpin.Flag("debug", "Enable debug logging").Bool()
-	traceF := kingpin.Flag("trace", "Enable trace logging (implies debug)").Bool()
+	debugF := kingpin.Flag("debug", "Enable debug logging").Envar("PMM_DEBUG").Bool()
+	traceF := kingpin.Flag("trace", "Enable trace logging (implies debug)").Envar("PMM_TRACE").Bool()
 
 	kingpin.Parse()
 
