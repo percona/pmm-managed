@@ -52,13 +52,14 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 	envSettings = new(models.ChangeSettingsParams)
 	for _, env := range envs {
 		p := strings.SplitN(env, "=", 2)
-		k, v := strings.ToUpper(p[0]), strings.ToLower(p[1])
-		logrus.Tracef("ParseEnvVars: %#q: k=%#q v=%#q", env, k, v)
 
 		if len(p) != 2 {
 			errs = append(errs, fmt.Errorf("failed to parse environment variable %q", env))
 			continue
 		}
+
+		k, v := strings.ToUpper(p[0]), strings.ToLower(p[1])
+		logrus.Tracef("ParseEnvVars: %#q: k=%#q v=%#q", env, k, v)
 
 		if strings.HasPrefix(k, "GF_") {
 			// skip Grafana's environment variables
