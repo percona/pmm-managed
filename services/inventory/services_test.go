@@ -152,10 +152,26 @@ func TestServices(t *testing.T) {
 			ServiceName: "test-mysql-socket-conflict",
 			NodeID:      models.PMMServerNodeID,
 			Address:     pointer.ToString("127.0.0.1"),
-			Port:        pointer.ToUint16(3306),
 			Socket:      pointer.ToString("/var/run/mysqld/mysqld.sock"),
 		})
 		require.EqualError(t, err, "rpc error: code = InvalidArgument desc = setting both address and socket in once is disallowed")
+	})
+
+	t.Run("MySQLSocketAndPort", func(t *testing.T) {
+		ss, teardown := setup(t)
+		defer teardown(t)
+
+		actualServices, err := ss.List(ctx, models.ServiceFilters{})
+		require.NoError(t, err)
+		require.Len(t, actualServices, 1) // PMM Server PostgreSQL
+
+		_, err = ss.AddMySQL(ctx, &models.AddDBMSServiceParams{
+			ServiceName: "test-mysql-invalid-port",
+			NodeID:      models.PMMServerNodeID,
+			Port:        pointer.ToUint16(3306),
+			Socket:      pointer.ToString("/var/run/mysqld/mysqld.sock"),
+		})
+		require.EqualError(t, err, "rpc error: code = InvalidArgument desc = port is only allowed with address")
 	})
 
 	t.Run("BasicMongoDB", func(t *testing.T) {
