@@ -41,9 +41,6 @@ func TestServer(t *testing.T) {
 		require.NoError(t, sqlDB.Close())
 	}()
 
-	// use a mockup to avoid import test to fail since this is the server pkg and not server_test
-	// so if we use grafana pkg here it will be reported as imported
-	grafanaClient := new(mockChecker)
 	newServer := func() *Server {
 		serverParams := InServerParams{
 			DB:               reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
@@ -52,7 +49,7 @@ func TestServer(t *testing.T) {
 			TelemetryService: nil,
 			Checker:          nil,
 			AlertManagerFile: "",
-			GrafanaClient:    grafanaClient,
+			GrafanaClient:    nil,
 		}
 		s, err := NewServer(serverParams)
 		require.NoError(t, err)

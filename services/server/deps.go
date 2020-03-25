@@ -26,7 +26,7 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-//go:generate mockery -name=checker -case=snake -inpkg -testonly
+//go:generate mockery -name=serviceChecker -case=snake -inpkg -testonly
 //go:generate mockery -name=prometheusService -case=snake -inpkg -testonly
 //go:generate mockery -name=supervisordService -case=snake -inpkg -testonly
 //go:generate mockery -name=telemetryService -case=snake -inpkg -testonly
