@@ -239,7 +239,7 @@
 
 [[projects]]
   branch = "PMM-5042-socket"
-  digest = "1:61f439745850d612fe8c8590b0fdd5f1846e851e4d96a7512221c5435f6cb868"
+  digest = "1:ced94ec3d0a971ca5dd4e6d55ac53c15c4db10354fae465ddf5f563a689fa21a"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -253,7 +253,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "18a5c9b839947b7f8a76f702cd3f25e648429b03"
+  revision = "155c8e852bd0200cbaf22767e259f08fab063b91"
 
 [[projects]]
   digest = "1:1e38d8f6796fabbf419aa2040dc196927690a1de7fe14af25fbd29c6ed44b4da"

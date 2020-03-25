@@ -180,6 +180,31 @@ func TestServiceHelpers(t *testing.T) {
 		_, err = models.FindServiceByID(q, "S2")
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "S2" not found.`), err)
 	})
+
+	t.Run("MySQL Conflict socket and address", func(t *testing.T) {
+		q, teardown := setup(t)
+		defer teardown(t)
+
+		_, err := models.AddNewService(q, models.MySQLServiceType, &models.AddDBMSServiceParams{
+			ServiceName: "test-mysql-socket-address",
+			NodeID:      "N1",
+			Address:     pointer.ToString("127.0.0.1"),
+			Port:        pointer.ToUint16(3306),
+			Socket:      pointer.ToString("/var/run/mysqld/mysqld.sock"),
+		})
+		require.EqualError(t, err, `pq: new row for relation "services" violates check constraint "address_socket_check"`)
+	})
+
+	t.Run("MySQL empty connection", func(t *testing.T) {
+		q, teardown := setup(t)
+		defer teardown(t)
+
+		_, err := models.AddNewService(q, models.MySQLServiceType, &models.AddDBMSServiceParams{
+			ServiceName: "test-mysql-socket-address",
+			NodeID:      "N1",
+		})
+		require.EqualError(t, err, `pq: new row for relation "services" violates check constraint "address_socket_check"`)
+	})
 }
 
 func pointerToServiceType(serviceType models.ServiceType) *models.ServiceType {
