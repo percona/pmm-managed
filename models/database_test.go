@@ -173,6 +173,21 @@ func TestDatabaseChecks(t *testing.T) {
 		)
 		require.Error(t, err, `pq: new row for relation "services" violates check constraint "address_socket_check"`)
 
+		// Try to insert both address and socket empty
+		_, err = db.Exec(
+			"INSERT INTO services (service_id, service_type, service_name, node_id, environment, cluster, replication_set, address, port, socket, created_at, updated_at) "+
+				"VALUES ('/service_id/1', 'mysql', 'name', '/node_id/1', '', '', '', NULL, NULL, NULL, $1, $2)",
+			now, now,
+		)
+		require.Error(t, err, `pq: new row for relation "services" violates check constraint "address_socket_check"`)
+
+		// Try to insert invalid port
+		_, err = db.Exec(
+			"INSERT INTO services (service_id, service_type, service_name, node_id, environment, cluster, replication_set, address, port, socket, created_at, updated_at) "+
+				"VALUES ('/service_id/1', 'mysql', 'name', '/node_id/1', '', '', '', '10.10.10.10', 999999, NULL, $1, $2)",
+			now, now,
+		)
+		require.Error(t, err, `pq: new row for relation "services" violates check constraint "port_check"`)
 	})
 
 	t.Run("Agents", func(t *testing.T) {

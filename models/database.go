@@ -239,8 +239,16 @@ var databaseSchema = [][]string{
 	11: {
 		`ALTER TABLE services
 			ADD COLUMN socket VARCHAR CONSTRAINT address_socket_check CHECK (
-				(CASE WHEN socket IS NULL THEN 0 ELSE 1 END) +
-				(CASE WHEN address IS NULL THEN 0 ELSE 1 END) = 1 )`,
+				(address IS NOT NULL AND socket IS NULL) OR (address IS NULL AND socket IS NOT NULL)
+			);`,
+
+		`ALTER TABLE services
+			ADD CONSTRAINT address_port_check CHECK (
+				(address IS NULL AND port IS NULL) OR (address IS NOT NULL AND port IS NOT NULL)
+			),
+			ADD CONSTRAINT port_check CHECK (
+				port IS NULL OR (port > 0 AND port < 65535)
+			);`,
 	},
 }
 

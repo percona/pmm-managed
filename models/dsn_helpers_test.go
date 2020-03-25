@@ -110,4 +110,14 @@ func TestFindDSNByServiceID(t *testing.T) {
 		expected := "pmm-user@tcp(127.0.0.1:3306)/test?timeout=1s"
 		assert.Equal(t, expected, dsn)
 	})
+
+	t.Run("FindDSNWithSocketByServiceIDandPMMAgentID", func(t *testing.T) {
+		q, teardown := setup(t)
+		defer teardown(t)
+
+		dsn, err := models.FindDSNByServiceIDandPMMAgentID(q, "S1", "PA1", "test")
+		require.NoError(t, err)
+		expected := "unix(/var/run/mysqld/mysqld.sock)/test?timeout=1s"
+		assert.Equal(t, expected, dsn)
+	})
 }
