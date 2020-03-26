@@ -168,7 +168,7 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		cfg.Passwd = password
 		cfg.Net = "unix"
 		cfg.Addr = socket
-		if cfg.Addr == "" {
+		if socket == "" {
 			cfg.Net = "tcp"
 			cfg.Addr = net.JoinHostPort(host, strconv.Itoa(int(port)))
 		}
@@ -196,7 +196,7 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		cfg.Passwd = password
 		cfg.Net = "unix"
 		cfg.Addr = socket
-		if cfg.Addr == "" {
+		if socket == "" {
 			cfg.Net = "tcp"
 			cfg.Addr = net.JoinHostPort(host, strconv.Itoa(int(port)))
 		}
