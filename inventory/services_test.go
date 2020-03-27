@@ -394,6 +394,74 @@ func TestMySQLService(t *testing.T) {
 		}
 	})
 
+	t.Run("AddAddressSocketConflict", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+
+		params := &services.AddMySQLServiceParams{
+			Body: services.AddMySQLServiceBody{
+				NodeID:      genericNodeID,
+				Address:     "localhost",
+				Port:        3306,
+				Socket:      "/var/run/mysqld/mysqld.sock",
+				ServiceName: pmmapitests.TestString(t, "MySQL Service with address and socket conflict"),
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err := client.Default.Services.AddMySQLService(params)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "setting both address and socket in once is disallowed")
+		if !assert.Nil(t, res) {
+			pmmapitests.RemoveServices(t, res.Payload.Mysql.ServiceID)
+		}
+	})
+
+	t.Run("AddPortWithNoAddress", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+
+		params := &services.AddMySQLServiceParams{
+			Body: services.AddMySQLServiceBody{
+				NodeID:      genericNodeID,
+				ServiceName: pmmapitests.TestString(t, "MySQL Service with port and socket"),
+				Port:        3306,
+				Socket:      "/var/run/mysqld/mysqld.sock",
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err := client.Default.Services.AddMySQLService(params)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "port is only allowed with address")
+		if !assert.Nil(t, res) {
+			pmmapitests.RemoveServices(t, res.Payload.Mysql.ServiceID)
+		}
+	})
+
+	t.Run("AddEpmtyAddressAndSocket", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+
+		params := &services.AddMySQLServiceParams{
+			Body: services.AddMySQLServiceBody{
+				NodeID:      genericNodeID,
+				ServiceName: pmmapitests.TestString(t, "MySQL Service with empty address and socket"),
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err := client.Default.Services.AddMySQLService(params)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "address or socket is required")
+		if !assert.Nil(t, res) {
+			pmmapitests.RemoveServices(t, res.Payload.Mysql.ServiceID)
+		}
+	})
+
 	t.Run("AddServiceNameEmpty", func(t *testing.T) {
 		t.Parallel()
 

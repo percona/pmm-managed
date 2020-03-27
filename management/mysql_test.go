@@ -467,7 +467,7 @@ func TestAddMySQL(t *testing.T) {
 		assert.Nil(t, addMySQLOK)
 	})
 
-	t.Run("Empty Address", func(t *testing.T) {
+	t.Run("Empty Address And Socket", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-name")
 		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
@@ -480,12 +480,15 @@ func TestAddMySQL(t *testing.T) {
 		params := &mysql.AddMySQLParams{
 			Context: pmmapitests.Context,
 			Body: mysql.AddMySQLBody{
+				PMMAgentID:  pmmAgentID,
+				Username:    "username",
+				Password:    "password",
 				NodeID:      nodeID,
 				ServiceName: serviceName,
 			},
 		}
 		addMySQLOK, err := client.Default.MySQL.AddMySQL(params)
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Address: value '' must not be an empty string")
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "address or socket is required")
 		assert.Nil(t, addMySQLOK)
 	})
 
@@ -502,6 +505,9 @@ func TestAddMySQL(t *testing.T) {
 		params := &mysql.AddMySQLParams{
 			Context: pmmapitests.Context,
 			Body: mysql.AddMySQLBody{
+				PMMAgentID:  pmmAgentID,
+				Username:    "username",
+				Password:    "password",
 				NodeID:      nodeID,
 				ServiceName: serviceName,
 				Address:     "10.10.10.10",
@@ -509,6 +515,34 @@ func TestAddMySQL(t *testing.T) {
 		}
 		addMySQLOK, err := client.Default.MySQL.AddMySQL(params)
 		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Port: value '0' must be greater than '0'")
+		assert.Nil(t, addMySQLOK)
+	})
+
+	t.Run("Address And Socket Conflict.", func(t *testing.T) {
+		nodeName := pmmapitests.TestString(t, "node-name")
+		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+			NodeName: nodeName,
+			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
+		})
+		defer pmmapitests.RemoveNodes(t, nodeID)
+		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+
+		serviceName := pmmapitests.TestString(t, "service-name")
+		params := &mysql.AddMySQLParams{
+			Context: pmmapitests.Context,
+			Body: mysql.AddMySQLBody{
+				PMMAgentID:  pmmAgentID,
+				Username:    "username",
+				Password:    "password",
+				NodeID:      nodeID,
+				ServiceName: serviceName,
+				Address:     "10.10.10.10",
+				Port:        3306,
+				Socket:      "/var/run/mysqld/mysqld.sock",
+			},
+		}
+		addMySQLOK, err := client.Default.MySQL.AddMySQL(params)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "setting both address and socket in once is disallowed")
 		assert.Nil(t, addMySQLOK)
 	})
 
