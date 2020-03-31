@@ -237,6 +237,21 @@ var databaseSchema = [][]string{
 	},
 
 	11: {
+		`ALTER TABLE services
+			ADD COLUMN socket VARCHAR CONSTRAINT address_socket_check CHECK (
+				(address IS NOT NULL AND socket IS NULL) OR (address IS NULL AND socket IS NOT NULL)
+			);`,
+
+		`ALTER TABLE services
+			ADD CONSTRAINT address_port_check CHECK (
+				(address IS NULL AND port IS NULL) OR (address IS NOT NULL AND port IS NOT NULL)
+			),
+			ADD CONSTRAINT port_check CHECK (
+				port IS NULL OR (port > 0 AND port < 65535)
+			);`,
+	},
+
+	12: {
 		`ALTER TABLE agents
 			ADD COLUMN rds_basic_metrics_disabled BOOLEAN NOT NULL DEFAULT FALSE,
 			ADD COLUMN rds_enhanced_metrics_disabled BOOLEAN NOT NULL DEFAULT FALSE`,
@@ -246,9 +261,9 @@ var databaseSchema = [][]string{
 			ALTER COLUMN rds_enhanced_metrics_disabled DROP DEFAULT`,
 	},
 
-	// ^^^ Avoid default values in schema definition. ^^^
-	// aleksi: Go's zero values and non-zero default values in database do play nicely together in INSERTs and UPDATEs.
 }
+// ^^^ Avoid default values in schema definition. ^^^
+// aleksi: Go's zero values and non-zero default values in database do play nicely together in INSERTs and UPDATEs.
 
 // OpenDB returns configured connection pool for PostgreSQL.
 func OpenDB(address, name, username, password string) (*sql.DB, error) {
