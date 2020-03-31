@@ -260,8 +260,8 @@ var databaseSchema = [][]string{
 			ALTER COLUMN rds_basic_metrics_disabled DROP DEFAULT,
 			ALTER COLUMN rds_enhanced_metrics_disabled DROP DEFAULT`,
 	},
-
 }
+
 // ^^^ Avoid default values in schema definition. ^^^
 // aleksi: Go's zero values and non-zero default values in database do play nicely together in INSERTs and UPDATEs.
 
