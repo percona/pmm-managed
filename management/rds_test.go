@@ -68,6 +68,8 @@ func TestAddRds(t *testing.T) {
 				TLSSkipVerify:             false,
 				DisableQueryExamples:      false,
 				TablestatsGroupTableLimit: 2000,
+				DisableBasicMetrics:       true,
+				DisableEnhancedMetrics:    true,
 			},
 			Context: pmmapitests.Context,
 		}
@@ -76,6 +78,9 @@ func TestAddRds(t *testing.T) {
 		require.NotNil(t, addRDSOK.Payload)
 
 		body := addRDSOK.Payload
+		assert.True(t, body.RDSExporter.BasicMetricsDisabled)
+		assert.True(t, body.RDSExporter.EnhancedMetricsDisabled)
+
 		pmmapitests.RemoveAgents(t, body.MysqldExporter.AgentID)
 		pmmapitests.RemoveAgents(t, body.QANMysqlPerfschema.AgentID)
 		pmmapitests.RemoveAgents(t, body.RDSExporter.AgentID)

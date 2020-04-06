@@ -34,8 +34,9 @@ func TestRDSExporter(t *testing.T) {
 			CustomLabels: map[string]string{
 				"custom_label_rds_exporter": "rds_exporter",
 			},
-
-			SkipConnectionCheck: true,
+			SkipConnectionCheck:    true,
+			DisableBasicMetrics:    true,
+			DisableEnhancedMetrics: true,
 		})
 		agentID := rdsExporter.RDSExporter.AgentID
 		defer pmmapitests.RemoveAgents(t, agentID)
@@ -45,6 +46,7 @@ func TestRDSExporter(t *testing.T) {
 			Context: pmmapitests.Context,
 		})
 		require.NoError(t, err)
+
 		assert.Equal(t, &agents.GetAgentOK{
 			Payload: &agents.GetAgentOKBody{
 				RDSExporter: &agents.GetAgentOKBodyRDSExporter{
@@ -54,6 +56,8 @@ func TestRDSExporter(t *testing.T) {
 					CustomLabels: map[string]string{
 						"custom_label_rds_exporter": "rds_exporter",
 					},
+					BasicMetricsDisabled:    true,
+					EnhancedMetricsDisabled: true,
 				},
 			},
 		}, getAgentRes)
@@ -73,10 +77,12 @@ func TestRDSExporter(t *testing.T) {
 		assert.Equal(t, &agents.ChangeRDSExporterOK{
 			Payload: &agents.ChangeRDSExporterOKBody{
 				RDSExporter: &agents.ChangeRDSExporterOKBodyRDSExporter{
-					NodeID:     nodeID,
-					AgentID:    agentID,
-					PMMAgentID: pmmAgentID,
-					Disabled:   true,
+					NodeID:                  nodeID,
+					AgentID:                 agentID,
+					PMMAgentID:              pmmAgentID,
+					Disabled:                true,
+					BasicMetricsDisabled:    true,
+					EnhancedMetricsDisabled: true,
 				},
 			},
 		}, changeRDSExporterOK)
@@ -104,6 +110,8 @@ func TestRDSExporter(t *testing.T) {
 					CustomLabels: map[string]string{
 						"new_label": "rds_exporter",
 					},
+					BasicMetricsDisabled:    true,
+					EnhancedMetricsDisabled: true,
 				},
 			},
 		}, changeRDSExporterOK)
