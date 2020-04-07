@@ -104,6 +104,7 @@ func ToAPIService(service *models.Service) (inventorypb.Service, error) {
 			NodeId:         service.NodeID,
 			Address:        pointer.GetString(service.Address),
 			Port:           uint32(pointer.GetUint16(service.Port)),
+			Socket:         pointer.GetString(service.Socket),
 			Environment:    service.Environment,
 			Cluster:        service.Cluster,
 			ReplicationSet: service.ReplicationSet,
@@ -311,14 +312,16 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 
 	case models.RDSExporterType:
 		return &inventorypb.RDSExporter{
-			AgentId:      agent.AgentID,
-			PmmAgentId:   pointer.GetString(agent.PMMAgentID),
-			NodeId:       nodeID,
-			Disabled:     agent.Disabled,
-			AwsAccessKey: pointer.GetString(agent.AWSAccessKey),
-			Status:       inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
-			ListenPort:   uint32(pointer.GetUint16(agent.ListenPort)),
-			CustomLabels: labels,
+			AgentId:                 agent.AgentID,
+			PmmAgentId:              pointer.GetString(agent.PMMAgentID),
+			NodeId:                  nodeID,
+			Disabled:                agent.Disabled,
+			AwsAccessKey:            pointer.GetString(agent.AWSAccessKey),
+			Status:                  inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
+			ListenPort:              uint32(pointer.GetUint16(agent.ListenPort)),
+			CustomLabels:            labels,
+			BasicMetricsDisabled:    agent.RDSBasicMetricsDisabled,
+			EnhancedMetricsDisabled: agent.RDSEnhancedMetricsDisabled,
 		}, nil
 
 	default:

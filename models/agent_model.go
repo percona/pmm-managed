@@ -90,6 +90,9 @@ type Agent struct {
 	QueryExamplesDisabled bool    `reform:"query_examples_disabled"`
 	MaxQueryLogSize       int64   `reform:"max_query_log_size"`
 	MetricsURL            *string `reform:"metrics_url"`
+
+	RDSBasicMetricsDisabled    bool `reform:"rds_basic_metrics_disabled"`
+	RDSEnhancedMetricsDisabled bool `reform:"rds_enhanced_metrics_disabled"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.
@@ -157,6 +160,7 @@ func (s *Agent) UnifiedLabels() (map[string]string, error) {
 func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string) string {
 	host := pointer.GetString(service.Address)
 	port := pointer.GetUint16(service.Port)
+	socket := pointer.GetString(service.Socket)
 	username := pointer.GetString(s.Username)
 	password := pointer.GetString(s.Password)
 
@@ -165,8 +169,12 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		cfg := mysql.NewConfig()
 		cfg.User = username
 		cfg.Passwd = password
-		cfg.Net = "tcp"
-		cfg.Addr = net.JoinHostPort(host, strconv.Itoa(int(port)))
+		cfg.Net = "unix"
+		cfg.Addr = socket
+		if socket == "" {
+			cfg.Net = "tcp"
+			cfg.Addr = net.JoinHostPort(host, strconv.Itoa(int(port)))
+		}
 		cfg.Timeout = dialTimeout
 		cfg.DBName = database
 		cfg.Params = make(map[string]string)
@@ -189,8 +197,12 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		cfg := mysql.NewConfig()
 		cfg.User = username
 		cfg.Passwd = password
-		cfg.Net = "tcp"
-		cfg.Addr = net.JoinHostPort(host, strconv.Itoa(int(port)))
+		cfg.Net = "unix"
+		cfg.Addr = socket
+		if socket == "" {
+			cfg.Net = "tcp"
+			cfg.Addr = net.JoinHostPort(host, strconv.Itoa(int(port)))
+		}
 		cfg.Timeout = dialTimeout
 		cfg.DBName = database
 		cfg.Params = make(map[string]string)
