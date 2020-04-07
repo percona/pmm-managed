@@ -58,11 +58,11 @@ type Server struct {
 	supervisord      supervisordService
 	telemetryService telemetryService
 	checker          *AWSInstanceChecker
+	grafanaClient    serviceChecker
 	l                *logrus.Entry
 
 	pmmUpdateAuthFileM sync.Mutex
 	pmmUpdateAuthFile  string
-	grafanaClient      serviceChecker
 
 	envRW                  sync.RWMutex
 	envDisableUpdates      bool
@@ -90,8 +90,8 @@ type InServerParams struct {
 	Supervisord      supervisordService
 	TelemetryService telemetryService
 	Checker          *AWSInstanceChecker
-	AlertManagerFile string
 	GrafanaClient    serviceChecker
+	AlertManagerFile string
 }
 
 // NewServer returns new server for Server service.
@@ -108,10 +108,10 @@ func NewServer(in InServerParams) (*Server, error) {
 		supervisord:       in.Supervisord,
 		telemetryService:  in.TelemetryService,
 		checker:           in.Checker,
+		grafanaClient:     in.GrafanaClient,
 		l:                 logrus.WithField("component", "server"),
 		pmmUpdateAuthFile: path,
 		alertManagerFile:  in.AlertManagerFile,
-		grafanaClient:     in.GrafanaClient,
 	}
 	return s, nil
 }
