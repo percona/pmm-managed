@@ -131,7 +131,8 @@ func (c *Client) do(ctx context.Context, method, path string, headers http.Heade
 			Code:   resp.StatusCode,
 			Body:   string(b),
 		}
-		_ = json.Unmarshal(b, cErr) // add ErrorMessage
+		_ = json.Unmarshal(b, cErr)     // add ErrorMessage
+		_ = json.Unmarshal(b, respBody) // add ErrorMessage
 		return errors.WithStack(cErr)
 	}
 
@@ -304,37 +305,29 @@ func (c *Client) CreateAnnotation(ctx context.Context, tags []string, text, auth
 	}
 
 	if err := c.do(ctx, "POST", "/api/annotations", headers, []byte(buf.String()), &response); err != nil {
-		return "", err
+		logrus.Errorln(err)
+		return response.Message, err
 	}
 
 	return response.Message, nil
 }
 
-func (c *Client) findAnnotations(ctx context.Context, from, to time.Time) ([]annotation, error) {
+func (c *Client) findAnnotations(ctx context.Context, from, to time.Time, authorization string) ([]annotation, error) {
 	// http://docs.grafana.org/http_api/annotations/#find-annotations
 
-	u := &url.URL{
-		Scheme: "http",
-		Host:   c.addr,
-		Path:   "/api/annotations",
-		RawQuery: url.Values{
-			"from": []string{strconv.FormatInt(from.UnixNano()/int64(time.Millisecond), 10)},
-			"to":   []string{strconv.FormatInt(to.UnixNano()/int64(time.Millisecond), 10)},
-		}.Encode(),
-	}
+	var headers = make(http.Header)
+	headers.Add("authorization", authorization)
 
-	// TODO should be updated to use c.do
-
-	resp, err := c.http.Get(u.String())
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to make request")
-	}
-	defer resp.Body.Close() //nolint:errcheck
+	params := url.Values{
+		"from": []string{strconv.FormatInt(from.UnixNano()/int64(time.Millisecond), 10)},
+		"to":   []string{strconv.FormatInt(to.UnixNano()/int64(time.Millisecond), 10)},
+	}.Encode()
 
 	var response []annotation
-	if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return nil, errors.Wrap(err, "failed to decode JSON response")
+	if err := c.do(ctx, "GET", "/api/annotations", headers, []byte(params), &response); err != nil {
+		return nil, err
 	}
+
 	for i, r := range response {
 		r.decode()
 		response[i] = r
