@@ -302,7 +302,7 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 			cfg.GlobalConfig.EvaluationInterval = config.Duration(s.LR)
 		}
 
-		cfg.RuleFiles = append(cfg.RuleFiles, "/srv/prometheus/rules/*.rules.yml")
+		cfg.RuleFiles = append(cfg.RuleFiles, "/srv/prometheus/rules/*.rules.yml", "/srv/prometheus/rules/*.stt.yml")
 
 		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs,
 			scrapeConfigForPrometheus(s.HR),
@@ -310,6 +310,16 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 			scrapeConfigForPMMManaged(s.MR),
 			scrapeConfigForQANAPI2(s.MR),
 		)
+
+		cfg.AlertingConfig.AlertmanagerConfigs = append(cfg.AlertingConfig.AlertmanagerConfigs, &config.AlertmanagerConfig{
+			ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+				StaticConfigs: []*config.Group{{
+					Targets: []string{"127.0.0.1:9093"},
+				}},
+			},
+			Scheme:     "http",
+			APIVersion: config.AlertmanagerAPIVersionV2,
+		})
 
 		if settings.AlertManagerURL != "" {
 			u, err := url.Parse(settings.AlertManagerURL)

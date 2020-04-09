@@ -450,7 +450,7 @@ func (s *Service) saveConfigAndReload(name string, cfg []byte) (bool, error) {
 	return true, nil
 }
 
-// UpdateConfiguration updates Prometheus and qan-api2 configurations, restarting them if needed.
+// UpdateConfiguration updates Prometheus, Alertmanager, and qan-api2 configurations, restarting them if needed.
 func (s *Service) UpdateConfiguration(settings *models.Settings) error {
 	if s.supervisorctlPath == "" {
 		s.l.Errorf("supervisorctl not found, configuration updates are disabled.")
@@ -459,6 +459,13 @@ func (s *Service) UpdateConfiguration(settings *models.Settings) error {
 
 	s.supervisordConfigsM.Lock()
 	defer s.supervisordConfigsM.Unlock()
+
+	// TODO that's a temporary measure until we start generating /etc/alertmanager.yml
+	// using /srv/alertmanager/alertmanager.base.yml as a base
+	const path = "/srv/alertmanager/alertmanager.base.yml"
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		_ = ioutil.WriteFile(path, []byte("---\n"), 0644)
+	}
 
 	var err error
 	for _, tmpl := range templates.Templates() {
@@ -506,6 +513,30 @@ startsecs = 1
 stopsignal = TERM
 stopwaitsecs = 300
 stdout_logfile = /srv/logs/prometheus.log
+stdout_logfile_maxbytes = 10MB
+stdout_logfile_backups = 3
+redirect_stderr = true
+{{end}}
+
+{{define "alertmanager"}}
+[program:alertmanager]
+priority = 8
+command =
+	/usr/sbin/alertmanager
+		--config.file=/srv/alertmanager/alertmanager.base.yml
+		--storage.path=/srv/alertmanager/data
+		--data.retention={{ .DataRetentionDays }}d
+		--web.external-url=http://localhost:9093/alertmanager/
+		--web.listen-address=:9093
+		--cluster.listen-address=""
+user = pmm
+autorestart = true
+autostart = true
+startretries = 1000
+startsecs = 1
+stopsignal = TERM
+stopwaitsecs = 10
+stdout_logfile = /srv/logs/alertmanager.log
 stdout_logfile_maxbytes = 10MB
 stdout_logfile_backups = 3
 redirect_stderr = true
