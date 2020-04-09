@@ -18,7 +18,6 @@ package grpc
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/percona/pmm/api/managementpb"
@@ -42,9 +41,6 @@ func NewAnnotationServer(grafanaClient *grafana.Client) *AnnotationServer {
 
 // AddAnnotation adds annotation to Grafana.
 func (as *AnnotationServer) AddAnnotation(ctx context.Context, req *managementpb.AddAnnotationRequest) (*managementpb.AddAnnotationResponse, error) {
-	if req.Text == "" {
-		return nil, errors.New("annotation text is requred")
-	}
 	headers, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return nil, fmt.Errorf("cannot get headers from metadata %v", headers)
