@@ -284,9 +284,8 @@ func (a *annotation) decode() {
 
 // CreateAnnotation creates annotation with given text and tags ("pmm_annotation" is added automatically)
 // and returns Grafana's response text which is typically "Annotation added" or "Failed to save annotation".
-func (c *Client) CreateAnnotation(ctx context.Context, tags []string, text string) (string, error) {
+func (c *Client) CreateAnnotation(ctx context.Context, tags []string, text, authorization string) (string, error) {
 	// http://docs.grafana.org/http_api/annotations/#create-annotation
-
 	request := &annotation{
 		Tags: append([]string{"pmm_annotation"}, tags...),
 		Text: text,
@@ -297,26 +296,17 @@ func (c *Client) CreateAnnotation(ctx context.Context, tags []string, text strin
 		return "", errors.Wrap(err, "failed to marhal request")
 	}
 
-	u := url.URL{
-		Scheme: "http",
-		Host:   c.addr,
-		Path:   "/api/annotations",
-	}
-
-	// TODO should be updated to use c.do
-
-	resp, err := c.http.Post(u.String(), "application/json", &buf)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to make request")
-	}
-	defer resp.Body.Close() //nolint:errcheck
+	var headers = make(http.Header)
+	headers.Add("authorization", authorization)
 
 	var response struct {
 		Message string `json:"message"`
 	}
-	if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return "", errors.Wrap(err, "failed to decode JSON response")
+
+	if err := c.do(ctx, "POST", "/api/annotations", headers, []byte(buf.String()), &response); err != nil {
+		return "", err
 	}
+
 	return response.Message, nil
 }
 
