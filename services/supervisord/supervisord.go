@@ -394,7 +394,8 @@ func (s *Service) reload(name string) error {
 // marshalConfig marshals supervisord program configuration.
 func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settings) ([]byte, error) {
 	templateParams := map[string]interface{}{
-		"DataRetentionDays": int(settings.DataRetention.Hours() / 24),
+		"DataRetentionHours": int(settings.DataRetention.Hours()),
+		"DataRetentionDays":  int(settings.DataRetention.Hours() / 24),
 	}
 
 	var buf bytes.Buffer
@@ -525,7 +526,7 @@ command =
 	/usr/sbin/alertmanager
 		--config.file=/srv/alertmanager/alertmanager.base.yml
 		--storage.path=/srv/alertmanager/data
-		--data.retention={{ .DataRetentionDays }}d
+		--data.retention={{ .DataRetentionHours }}h
 		--web.external-url=http://localhost:9093/alertmanager/
 		--web.listen-address=:9093
 		--cluster.listen-address=""
