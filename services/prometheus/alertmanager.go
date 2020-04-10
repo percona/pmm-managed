@@ -32,7 +32,7 @@ route:
 
 receivers:
   - name: empty
-`)
+`) + "\n"
 		_ = ioutil.WriteFile(path, []byte(defaultBase), 0644)
 	}
 
