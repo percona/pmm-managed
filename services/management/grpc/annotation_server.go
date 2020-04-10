@@ -24,7 +24,9 @@ import (
 
 	"github.com/percona/pmm-managed/services/grafana"
 
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 // AnnotationServer is a server for making annotations in Grafana.
@@ -46,10 +48,18 @@ func (as *AnnotationServer) AddAnnotation(ctx context.Context, req *managementpb
 		return nil, fmt.Errorf("cannot get headers from metadata %v", headers)
 	}
 	// get authorization from headers.
+	if val, ok := headers["authorization"]; !ok || len(val) == 0 {
+		return nil, status.Error(codes.Unauthenticated, "Authorization error.")
+	}
 	authorization := headers["authorization"][0]
+
+	if req.Text == "" {
+		return nil, status.Error(codes.InvalidArgument, "Annotation text is required.")
+	}
+
 	message, err := as.grafanaClient.CreateAnnotation(ctx, req.Tags, req.Text, authorization)
 	if err != nil {
-		return nil, err
+		return &managementpb.AddAnnotationResponse{Message: message}, status.Error(codes.Unknown, err.Error())
 	}
 	return &managementpb.AddAnnotationResponse{Message: message}, nil
 }
