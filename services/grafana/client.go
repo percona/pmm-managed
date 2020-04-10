@@ -304,7 +304,7 @@ func (c *Client) CreateAnnotation(ctx context.Context, tags []string, text, auth
 		Message string `json:"message"`
 	}
 
-	if err := c.do(ctx, "POST", "/api/annotations", headers, []byte(buf.String()), &response); err != nil {
+	if err := c.do(ctx, "POST", "/api/annotations", headers, buf.Bytes(), &response); err != nil {
 		logrus.Errorln(err)
 		return response.Message, err
 	}
