@@ -82,9 +82,6 @@ const (
 	gRPCAddr  = "127.0.0.1:7771"
 	http1Addr = "127.0.0.1:7772"
 	debugAddr = "127.0.0.1:7773"
-
-	defaultAlertManagerFile  = "/srv/prometheus/rules/pmm.rules.yml"
-	prometheusBaseConfigFile = "/srv/prometheus/prometheus.base.yml"
 )
 
 func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
@@ -325,13 +322,14 @@ func runDebugServer(ctx context.Context) {
 }
 
 type setupDeps struct {
-	sqlDB       *sql.DB
-	dbUsername  string
-	dbPassword  string
-	supervisord *supervisord.Service
-	prometheus  *prometheus.Service
-	server      *server.Server
-	l           *logrus.Entry
+	sqlDB        *sql.DB
+	dbUsername   string
+	dbPassword   string
+	supervisord  *supervisord.Service
+	alertmanager *prometheus.Alertmanager
+	prometheus   *prometheus.Service
+	server       *server.Server
+	l            *logrus.Entry
 }
 
 // setup migrates database and performs other setup tasks that depend on database.
@@ -410,9 +408,8 @@ func main() {
 	kingpin.Version(version.FullInfo())
 	kingpin.HelpFlag.Short('h')
 
-	prometheusConfigF := kingpin.Flag("prometheus-config", "Prometheus configuration file path").Required().String()
+	prometheusConfigF := kingpin.Flag("prometheus-config", "Prometheus configuration file path").Default("/etc/prometheus.yml").String()
 	prometheusURLF := kingpin.Flag("prometheus-url", "Prometheus base URL").Default("http://127.0.0.1:9090/prometheus/").String()
-	promtoolF := kingpin.Flag("promtool", "promtool path").Default("promtool").String()
 
 	grafanaAddrF := kingpin.Flag("grafana-addr", "Grafana HTTP API address").Default("127.0.0.1:3000").String()
 	qanAPIAddrF := kingpin.Flag("qan-api-addr", "QAN API gRPC API address").Default("127.0.0.1:9911").String()
@@ -423,9 +420,6 @@ func main() {
 	postgresDBPasswordF := kingpin.Flag("postgres-password", "PostgreSQL database password").Default("pmm-managed").String()
 
 	supervisordConfigDirF := kingpin.Flag("supervisord-config-dir", "Supervisord configuration directory").Required().String()
-
-	alertManagerRulesFileF := kingpin.Flag("alert-manager-rules-file", "Path to the Alert Manager Rules file").
-		Default(defaultAlertManagerFile).String()
 
 	debugF := kingpin.Flag("debug", "Enable debug logging").Bool()
 	traceF := kingpin.Flag("trace", "Enable trace logging (implies debug)").Bool()
@@ -486,7 +480,8 @@ func main() {
 	prom.MustRegister(reformL)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reformL)
 
-	prometheus, err := prometheus.NewService(*prometheusConfigF, prometheusBaseConfigFile, *promtoolF, db, *prometheusURLF)
+	alertmanager := prometheus.NewAlertmanager()
+	prometheus, err := prometheus.NewService(*prometheusConfigF, db, *prometheusURLF)
 	if err != nil {
 		l.Panicf("Prometheus service problem: %+v", err)
 	}
@@ -497,20 +492,21 @@ func main() {
 	supervisord := supervisord.New(*supervisordConfigDirF, pmmUpdateCheck)
 	telemetry := telemetry.NewService(db, version.Version)
 	checker := server.NewAWSInstanceChecker(db, telemetry)
-	server, err := server.NewServer(db, prometheus, supervisord, telemetry, checker, *alertManagerRulesFileF)
+	server, err := server.NewServer(db, prometheus, supervisord, telemetry, checker)
 	if err != nil {
 		l.Panicf("Server problem: %+v", err)
 	}
 
 	// try synchronously once, then retry in the background
 	deps := &setupDeps{
-		sqlDB:       sqlDB,
-		dbUsername:  *postgresDBUsernameF,
-		dbPassword:  *postgresDBPasswordF,
-		supervisord: supervisord,
-		prometheus:  prometheus,
-		server:      server,
-		l:           logrus.WithField("component", "setup"),
+		sqlDB:        sqlDB,
+		dbUsername:   *postgresDBUsernameF,
+		dbPassword:   *postgresDBPasswordF,
+		supervisord:  supervisord,
+		alertmanager: alertmanager,
+		prometheus:   prometheus,
+		server:       server,
+		l:            logrus.WithField("component", "setup"),
 	}
 	if !setup(ctx, deps) {
 		go func() {
@@ -542,6 +538,12 @@ func main() {
 	authServer := grafana.NewAuthServer(grafanaClient, checker)
 
 	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		alertmanager.Run(ctx)
+	}()
 
 	wg.Add(1)
 	go func() {

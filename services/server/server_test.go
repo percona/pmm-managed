@@ -43,7 +43,7 @@ func TestServer(t *testing.T) {
 
 	newServer := func() *Server {
 		s, err := NewServer(reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
-			nil, nil, nil, nil, "")
+			nil, nil, nil, nil)
 		require.NoError(t, err)
 		return s
 	}

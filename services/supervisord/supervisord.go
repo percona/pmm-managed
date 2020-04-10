@@ -461,13 +461,6 @@ func (s *Service) UpdateConfiguration(settings *models.Settings) error {
 	s.supervisordConfigsM.Lock()
 	defer s.supervisordConfigsM.Unlock()
 
-	// TODO that's a temporary measure until we start generating /etc/alertmanager.yml
-	// using /srv/alertmanager/alertmanager.base.yml as a base
-	const path = "/srv/alertmanager/alertmanager.base.yml"
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		_ = ioutil.WriteFile(path, []byte("---\n"), 0644)
-	}
-
 	var err error
 	for _, tmpl := range templates.Templates() {
 		if tmpl.Name() == "" {
@@ -488,6 +481,9 @@ func (s *Service) UpdateConfiguration(settings *models.Settings) error {
 	}
 	return err
 }
+
+// TODO switch from /srv/alertmanager/alertmanager.base.yml to /etc/alertmanager.yml
+// once we start generating it
 
 var templates = template.Must(template.New("").Option("missingkey=error").Parse(`
 {{define "prometheus"}}

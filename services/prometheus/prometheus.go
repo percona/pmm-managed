@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package prometheus contains business logic of working with Prometheus.
+// Package prometheus contains business logic of working with Prometheus and Alertmanager.
 package prometheus
 
 import (
@@ -53,30 +53,29 @@ var checkFailedRE = regexp.MustCompile(`FAILED: parsing YAML file \S+: (.+)\n`)
 //   * Prometheus configuration and rule files are accessible;
 //   * promtool is available.
 type Service struct {
-	configPath     string
-	baseConfigPath string
-	promtoolPath   string
-	db             *reform.DB
-	baseURL        *url.URL
-	client         *http.Client
+	configPath string
+	db         *reform.DB
+	baseURL    *url.URL
+	client     *http.Client
+
+	baseConfigPath string // for testing
 
 	l    *logrus.Entry
 	sema chan struct{}
 }
 
 // NewService creates new service.
-func NewService(configPath, baseConfigPath, promtoolPath string, db *reform.DB, baseURL string) (*Service, error) {
+func NewService(configPath string, db *reform.DB, baseURL string) (*Service, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return &Service{
 		configPath:     configPath,
-		baseConfigPath: baseConfigPath,
-		promtoolPath:   promtoolPath,
 		db:             db,
 		baseURL:        u,
 		client:         new(http.Client),
+		baseConfigPath: "/srv/prometheus/prometheus.base.yml",
 		l:              logrus.WithField("component", "prometheus"),
 		sema:           make(chan struct{}, 1),
 	}, nil
@@ -318,6 +317,7 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 				}},
 			},
 			Scheme:     "http",
+			PathPrefix: "/",
 			APIVersion: config.AlertmanagerAPIVersionV2,
 		})
 
@@ -419,7 +419,7 @@ func (svc *Service) saveConfigAndReload(cfg []byte) error {
 		_ = os.Remove(f.Name())
 	}()
 	args := []string{"check", "config", f.Name()}
-	cmd := exec.Command(svc.promtoolPath, args...) //nolint:gosec
+	cmd := exec.Command("promtool", args...) //nolint:gosec
 	pdeathsig.Set(cmd, unix.SIGKILL)
 	b, err := cmd.CombinedOutput()
 	if err != nil {
@@ -491,7 +491,7 @@ func (svc *Service) Check(ctx context.Context) error {
 	}
 
 	// check promtool version
-	b, err = exec.CommandContext(ctx, svc.promtoolPath, "--version").CombinedOutput() //nolint:gosec
+	b, err = exec.CommandContext(ctx, "promtool", "--version").CombinedOutput() //nolint:gosec
 	if err != nil {
 		return errors.Wrap(err, string(b))
 	}

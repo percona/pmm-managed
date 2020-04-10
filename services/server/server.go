@@ -51,6 +51,8 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
+const alertingRulesFile = "/srv/prometheus/rules/pmm.rules.yml"
+
 // Server represents service for checking PMM Server status and changing settings.
 type Server struct {
 	db               *reform.DB
@@ -72,10 +74,6 @@ type Server struct {
 	envDataRetention       time.Duration
 
 	sshKeyM sync.Mutex
-
-	// To make this testeable. To run API tests we need to write the rules file but on dev envs
-	// there is no /srv/prometheus/rules/ directory
-	alertManagerFile string
 }
 
 type pmmUpdateAuth struct {
@@ -84,7 +82,7 @@ type pmmUpdateAuth struct {
 
 // NewServer returns new server for Server service.
 func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervisordService,
-	telemetryService telemetryService, checker *AWSInstanceChecker, alertManagerFile string) (*Server, error) {
+	telemetryService telemetryService, checker *AWSInstanceChecker) (*Server, error) {
 	path := os.TempDir()
 	if _, err := os.Stat(path); err != nil {
 		return nil, errors.WithStack(err)
@@ -99,7 +97,6 @@ func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervis
 		checker:           checker,
 		l:                 logrus.WithField("component", "server"),
 		pmmUpdateAuthFile: path,
-		alertManagerFile:  alertManagerFile,
 	}
 	return s, nil
 }
@@ -440,7 +437,7 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 		AlertManagerUrl: settings.AlertManagerURL,
 	}
 
-	b, err := ioutil.ReadFile(s.alertManagerFile)
+	b, err := ioutil.ReadFile(alertingRulesFile)
 	if err != nil && !os.IsNotExist(err) {
 		s.l.Warnf("Cannot load Alert Manager rules: %s", err)
 	}
@@ -608,12 +605,12 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			if e = s.validateAlertManagerRules(ctx, req.AlertManagerRules); e != nil {
 				return e
 			}
-			if e = ioutil.WriteFile(s.alertManagerFile, []byte(req.AlertManagerRules), 0644); e != nil {
+			if e = ioutil.WriteFile(alertingRulesFile, []byte(req.AlertManagerRules), 0644); e != nil {
 				return errors.WithStack(e)
 			}
 		}
 		if req.RemoveAlertManagerRules {
-			if e = os.Remove(s.alertManagerFile); e != nil && !os.IsNotExist(e) {
+			if e = os.Remove(alertingRulesFile); e != nil && !os.IsNotExist(e) {
 				return errors.WithStack(e)
 			}
 		}
