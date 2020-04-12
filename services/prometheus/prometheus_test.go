@@ -197,7 +197,7 @@ alerting:
     - targets:
       - 127.0.0.1:9093
     scheme: http
-    path_prefix: /
+    path_prefix: /alertmanager/
     api_version: v2
   - static_configs:
     - targets:
@@ -575,7 +575,7 @@ alerting:
     - targets:
       - 127.0.0.1:9093
     scheme: http
-    path_prefix: /
+    path_prefix: /alertmanager/
     api_version: v2
 rule_files:
 - /srv/prometheus/rules/test.rules.yml

@@ -317,7 +317,7 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 				}},
 			},
 			Scheme:     "http",
-			PathPrefix: "/",
+			PathPrefix: "/alertmanager/",
 			APIVersion: config.AlertmanagerAPIVersionV2,
 		})
 
