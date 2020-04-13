@@ -131,8 +131,7 @@ func (c *Client) do(ctx context.Context, method, path string, headers http.Heade
 			Code:   resp.StatusCode,
 			Body:   string(b),
 		}
-		_ = json.Unmarshal(b, cErr)     // add ErrorMessage
-		_ = json.Unmarshal(b, respBody) // add ErrorMessage
+		_ = json.Unmarshal(b, cErr) // add ErrorMessage
 		return errors.WithStack(cErr)
 	}
 
@@ -298,7 +297,7 @@ func (c *Client) CreateAnnotation(ctx context.Context, tags []string, text, auth
 	}
 
 	var headers = make(http.Header)
-	headers.Add("authorization", authorization)
+	headers.Add("Authorization", authorization)
 
 	var response struct {
 		Message string `json:"message"`
@@ -306,7 +305,7 @@ func (c *Client) CreateAnnotation(ctx context.Context, tags []string, text, auth
 
 	if err := c.do(ctx, "POST", "/api/annotations", headers, buf.Bytes(), &response); err != nil {
 		logrus.Errorln(err)
-		return response.Message, err
+		return "", errors.Wrap(err, "failed to do request")
 	}
 
 	return response.Message, nil

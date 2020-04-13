@@ -150,9 +150,8 @@ func TestClient(t *testing.T) {
 		})
 
 		t.Run("Empty", func(t *testing.T) {
-			msg, err := c.CreateAnnotation(ctx, nil, "", authorization)
+			_, err := c.CreateAnnotation(ctx, nil, "", authorization)
 			require.Error(t, err)
-			assert.Equal(t, "Failed to save annotation", msg)
 		})
 
 		t.Run("No tags", func(t *testing.T) {

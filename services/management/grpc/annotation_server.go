@@ -49,18 +49,18 @@ func (as *AnnotationServer) AddAnnotation(ctx context.Context, req *managementpb
 		return nil, fmt.Errorf("cannot get headers from metadata %v", headers)
 	}
 	// get authorization from headers.
-	if val, ok := headers["authorization"]; !ok || len(val) == 0 {
+	authorizationHeaders := headers.Get("Authorization")
+	if len(authorizationHeaders) == 0 {
 		return nil, status.Error(codes.Unauthenticated, "Authorization error.")
 	}
-	authorization := headers["authorization"][0]
 
 	if req.Text == "" {
 		return nil, status.Error(codes.InvalidArgument, "Annotation text is required.")
 	}
 
-	message, err := as.grafanaClient.CreateAnnotation(ctx, req.Tags, req.Text, authorization)
+	_, err := as.grafanaClient.CreateAnnotation(ctx, req.Tags, req.Text, authorizationHeaders[0])
 	if err != nil {
-		return &managementpb.AddAnnotationResponse{Message: message}, status.Error(codes.Unknown, err.Error())
+		return nil, status.Error(codes.Unknown, err.Error())
 	}
-	return &managementpb.AddAnnotationResponse{Message: message}, nil
+	return &managementpb.AddAnnotationResponse{}, nil
 }
