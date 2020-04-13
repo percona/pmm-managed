@@ -206,8 +206,7 @@ alerting:
     path_prefix: /
     api_version: v2
 rule_files:
-- /srv/prometheus/rules/*.rules.yml
-- /srv/prometheus/rules/*.stt.yml
+- /srv/prometheus/rules/*.yml
 scrape_configs:
 - job_name: prometheus
   honor_timestamps: false
@@ -579,8 +578,7 @@ alerting:
     api_version: v2
 rule_files:
 - /srv/prometheus/rules/test.rules.yml
-- /srv/prometheus/rules/*.rules.yml
-- /srv/prometheus/rules/*.stt.yml
+- /srv/prometheus/rules/*.yml
 scrape_configs:
 - job_name: victoria-metrics
   honor_timestamps: true
