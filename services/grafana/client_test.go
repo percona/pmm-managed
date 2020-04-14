@@ -170,5 +170,13 @@ func TestClient(t *testing.T) {
 			}
 			assert.Fail(t, "annotation not found", "%s", annotations)
 		})
+
+		t.Run("Auth error", func(t *testing.T) {
+			req, err := http.NewRequest("GET", "/dummy", nil)
+			req.SetBasicAuth("nouser", "wrongpassword")
+			authorization := req.Header.Get("Authorization")
+			_, err = c.CreateAnnotation(ctx, nil, "", authorization)
+			require.EqualError(t, err, `failed to create annotation: clientError: POST http://127.0.0.1:3000/api/annotations -> 401 {"message":"Invalid username or password"}`)
+		})
 	})
 }

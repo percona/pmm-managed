@@ -54,10 +54,6 @@ func (as *AnnotationServer) AddAnnotation(ctx context.Context, req *managementpb
 		return nil, status.Error(codes.Unauthenticated, "Authorization error.")
 	}
 
-	if req.Text == "" {
-		return nil, status.Error(codes.InvalidArgument, "Annotation text is required.")
-	}
-
 	_, err := as.grafanaClient.CreateAnnotation(ctx, req.Tags, req.Text, authorizationHeaders[0])
 	if err != nil {
 		return nil, status.Error(codes.Unknown, err.Error())

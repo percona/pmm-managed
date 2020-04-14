@@ -305,7 +305,7 @@ func (c *Client) CreateAnnotation(ctx context.Context, tags []string, text, auth
 
 	if err := c.do(ctx, "POST", "/api/annotations", headers, buf.Bytes(), &response); err != nil {
 		logrus.Errorln(err)
-		return "", errors.Wrap(err, "failed to do request")
+		return "", errors.Wrap(err, "failed to create annotation")
 	}
 
 	return response.Message, nil
@@ -315,7 +315,7 @@ func (c *Client) findAnnotations(ctx context.Context, from, to time.Time, author
 	// http://docs.grafana.org/http_api/annotations/#find-annotations
 
 	var headers = make(http.Header)
-	headers.Add("authorization", authorization)
+	headers.Add("Authorization", authorization)
 
 	params := url.Values{
 		"from": []string{strconv.FormatInt(from.UnixNano()/int64(time.Millisecond), 10)},
