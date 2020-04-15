@@ -62,6 +62,7 @@ import (
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/agents"
 	agentgrpc "github.com/percona/pmm-managed/services/agents/grpc"
+	"github.com/percona/pmm-managed/services/alertmanager"
 	"github.com/percona/pmm-managed/services/grafana"
 	"github.com/percona/pmm-managed/services/inventory"
 	inventorygrpc "github.com/percona/pmm-managed/services/inventory/grpc"
@@ -326,8 +327,8 @@ type setupDeps struct {
 	dbUsername   string
 	dbPassword   string
 	supervisord  *supervisord.Service
-	alertmanager *prometheus.Alertmanager
 	prometheus   *prometheus.Service
+	alertmanager *alertmanager.Service
 	server       *server.Server
 	l            *logrus.Entry
 }
@@ -402,6 +403,11 @@ func getQANClient(ctx context.Context, sqlDB *sql.DB, dbName, qanAPIAddr string)
 }
 
 func main() {
+	// empty version breaks much of pmm-managed logic
+	if version.Version == "" {
+		panic("pmm-managed version is not set during build.")
+	}
+
 	log.SetFlags(0)
 	log.SetPrefix("stdlog: ")
 
@@ -480,10 +486,19 @@ func main() {
 	prom.MustRegister(reformL)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reformL)
 
-	alertmanager := prometheus.NewAlertmanager()
 	prometheus, err := prometheus.NewService(*prometheusConfigF, db, *prometheusURLF)
 	if err != nil {
 		l.Panicf("Prometheus service problem: %+v", err)
+	}
+
+	qanClient := getQANClient(ctx, sqlDB, *postgresDBNameF, *qanAPIAddrF)
+
+	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient)
+	prom.MustRegister(agentsRegistry)
+
+	alertmanager, err := alertmanager.New(db, version.Version, agentsRegistry)
+	if err != nil {
+		l.Panicf("Alertmanager service problem: %+v", err)
 	}
 
 	pmmUpdateCheck := supervisord.NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker"))
@@ -503,8 +518,8 @@ func main() {
 		dbUsername:   *postgresDBUsernameF,
 		dbPassword:   *postgresDBPasswordF,
 		supervisord:  supervisord,
-		alertmanager: alertmanager,
 		prometheus:   prometheus,
+		alertmanager: alertmanager,
 		server:       server,
 		l:            logrus.WithField("component", "setup"),
 	}
@@ -528,11 +543,6 @@ func main() {
 		}()
 	}
 
-	qanClient := getQANClient(ctx, sqlDB, *postgresDBNameF, *qanAPIAddrF)
-
-	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient)
-	prom.MustRegister(agentsRegistry)
-
 	grafanaClient := grafana.NewClient(*grafanaAddrF)
 	prom.MustRegister(grafanaClient)
 	authServer := grafana.NewAuthServer(grafanaClient, checker)
@@ -542,13 +552,13 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		alertmanager.Run(ctx)
+		prometheus.Run(ctx)
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		prometheus.Run(ctx)
+		alertmanager.Run(ctx)
 	}()
 
 	wg.Add(1)

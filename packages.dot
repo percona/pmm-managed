@@ -2,6 +2,7 @@ digraph packages {
 	"/" -> "/models";
 	"/" -> "/services/agents";
 	"/" -> "/services/agents/grpc";
+	"/" -> "/services/alertmanager";
 	"/" -> "/services/grafana";
 	"/" -> "/services/inventory";
 	"/" -> "/services/inventory/grpc";
