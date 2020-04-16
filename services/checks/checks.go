@@ -1,3 +1,20 @@
+// pmm-managed
+// Copyright (C) 2017 Percona LLC
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+// Package checks provides security checks functionality.
 package checks
 
 import (
@@ -28,6 +45,7 @@ const (
 	timeout = 5 * time.Second
 )
 
+// Service is responsible for interactions with Percona Check service.
 type Service struct {
 	l          *logrus.Entry
 	pmmVersion string
@@ -39,6 +57,7 @@ type Service struct {
 	checks []check.Check
 }
 
+// New returns Service with given PMM version.
 func New(pmmVersion string) *Service {
 	l := logrus.WithField("component", "check")
 	s := &Service{
@@ -65,6 +84,7 @@ func New(pmmVersion string) *Service {
 	return s
 }
 
+// Run runs telemetry service that grabs checks from Percona Checks service every interval until context is canceled.
 func (s *Service) Run(ctx context.Context) {
 	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
@@ -83,6 +103,7 @@ func (s *Service) Run(ctx context.Context) {
 	}
 }
 
+// Checks returns available checks
 func (s *Service) Checks() []check.Check {
 	s.m.RLock()
 	defer s.m.RUnlock()
