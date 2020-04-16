@@ -19,7 +19,6 @@ package alertmanager
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -30,18 +29,19 @@ import (
 	"github.com/percona/pmm/api/alertmanager/amclient"
 	"github.com/percona/pmm/api/alertmanager/amclient/alert"
 	"github.com/percona/pmm/api/alertmanager/amclient/general"
-	"github.com/percona/pmm/api/alertmanager/ammodels"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
-	"github.com/prometheus/common/model"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
 )
 
-// TODO change to smaller value
-const resendInterval = 5 * time.Second
+// TODO change to smaller values
+const (
+	resendInterval   = 5 * time.Second
+	delayForInterval = 10 * time.Second
+)
 
 // FIXME remove completely
 const test = true
@@ -51,6 +51,7 @@ type Service struct {
 	db             *reform.DB
 	serverVersion  *version.Parsed
 	agentsRegistry agentsRegistry
+	r              *registry
 	l              *logrus.Entry
 }
 
@@ -65,8 +66,23 @@ func New(db *reform.DB, v string, agentsRegistry agentsRegistry) (*Service, erro
 		db:             db,
 		serverVersion:  serverVersion,
 		agentsRegistry: agentsRegistry,
+		r:              newRegistry(),
 		l:              logrus.WithField("component", "alertmanager"),
 	}, nil
+}
+
+func (svc *Service) AddAlert(id string, delayFor time.Duration, params *AlertParams) error {
+	alert, err := makeAlert(params)
+	if err != nil {
+		return err
+	}
+
+	svc.r.Add(id, delayFor, alert)
+	return nil
+}
+
+func (svc *Service) RemoveAlert(id string) {
+	svc.r.Remove(id)
 }
 
 // Run runs Alertmanager configuration update loop until ctx is canceled.
@@ -80,9 +96,8 @@ func (svc *Service) Run(ctx context.Context) {
 	defer t.Stop()
 
 	for {
-		if err := svc.sendAlerts(ctx); err != nil {
-			svc.l.Error(err)
-		}
+		svc.updateInventoryAlerts(ctx)
+		svc.sendAlerts(ctx)
 
 		select {
 		case <-ctx.Done():
@@ -115,73 +130,8 @@ receivers:
 	}
 }
 
-func mergeLabels(name, severity string, labels map[string]string) map[string]string {
-	res := make(map[string]string, len(labels)+2)
-	for k, v := range labels {
-		res[k] = v
-	}
-	res[model.AlertNameLabel] = name
-	res["severity"] = severity
-	return res
-}
-
-func (svc *Service) alertsForPMMAgent(agent *models.Agent, nodes map[string]*models.Node) []*ammodels.PostableAlert {
-	node := nodes[pointer.GetString(agent.RunsOnNodeID)]
-	if node == nil {
-		svc.l.Errorf("Node with ID %v not found.", agent.RunsOnNodeID)
-		return nil
-	}
-
-	labels, err := models.MergeLabels(node, nil, agent)
-	if err != nil {
-		svc.l.Error(err)
-		return nil
-	}
-
-	var res []*ammodels.PostableAlert
-
-	if test {
-		// to make this real, we should support a feature similar to Prometheus' `for` in alerting rules
-		// to avoid alerts fluctuations
-
-		if !svc.agentsRegistry.IsConnected(agent.AgentID) {
-			res = append(res, &ammodels.PostableAlert{
-				Alert: ammodels.Alert{
-					// GeneratorURL: "/graph/d/pmm-inventory/pmm-inventory",
-					Labels: mergeLabels("pmm_agent_not_connected", "warning", labels),
-				},
-				Annotations: map[string]string{
-					"summary":     "pmm-agent is not connected to PMM Server",
-					"description": fmt.Sprintf("Node name: %s", node.NodeName),
-				},
-			})
-		}
-	}
-
-	agentVersion, err := version.Parse(pointer.GetString(agent.Version))
-	if err != nil {
-		svc.l.Error(err)
-	}
-	if agentVersion != nil && (test || agentVersion.Less(svc.serverVersion)) {
-		res = append(res, &ammodels.PostableAlert{
-			Alert: ammodels.Alert{
-				// GeneratorURL: "/graph/d/pmm-inventory/pmm-inventory",
-				Labels: mergeLabels("pmm_agent_outdated", "info", labels),
-			},
-			Annotations: map[string]string{
-				"summary": "pmm-agent is outdated",
-				"description": fmt.Sprintf(
-					"Node name: %s\npmm-agent version: %s\nPMM Server version: %s",
-					node.NodeName, agentVersion.String(), svc.serverVersion.String(),
-				),
-			},
-		})
-	}
-
-	return res
-}
-
-func (svc *Service) sendAlerts(ctx context.Context) error {
+// updateInventoryAlerts adds/updates alerts for inventory information in the registry.
+func (svc *Service) updateInventoryAlerts(ctx context.Context) {
 	var nodes []*models.Node
 	var agents []*models.Agent
 	err := svc.db.InTransaction(func(t *reform.TX) error {
@@ -195,7 +145,8 @@ func (svc *Service) sendAlerts(ctx context.Context) error {
 		return e
 	})
 	if err != nil {
-		return err
+		svc.l.Error(err)
+		return
 	}
 
 	nodesMap := make(map[string]*models.Node, len(nodes))
@@ -203,26 +154,62 @@ func (svc *Service) sendAlerts(ctx context.Context) error {
 		nodesMap[n.NodeID] = n
 	}
 
-	var alerts []*ammodels.PostableAlert
+	svc.r.RemovePrefix("inventory/")
+
 	for _, agent := range agents {
 		switch agent.AgentType {
 		case models.PMMAgentType:
-			if a := svc.alertsForPMMAgent(agent, nodesMap); a != nil {
-				alerts = append(alerts, a...)
-			}
+			svc.updateInventoryAlertsForPMMAgent(agent, nodesMap[pointer.GetString(agent.RunsOnNodeID)])
+		}
+	}
+}
+
+func (svc *Service) updateInventoryAlertsForPMMAgent(agent *models.Agent, node *models.Node) {
+	if node == nil {
+		svc.l.Errorf("Node with ID %v not found.", agent.RunsOnNodeID)
+		return
+	}
+
+	prefix := "inventory/" + agent.AgentID + "/"
+
+	if test || !svc.agentsRegistry.IsConnected(agent.AgentID) {
+		name, alert, err := makeAlertPMMAgentNotConnected(agent, node)
+		if err == nil {
+			svc.r.Add(prefix+name, delayForInterval, alert)
+		} else {
+			svc.l.Error(err)
 		}
 	}
 
+	agentVersion, err := version.Parse(pointer.GetString(agent.Version))
+	if err != nil {
+		svc.l.Error(err)
+	}
+	if agentVersion != nil && (test || agentVersion.Less(svc.serverVersion)) {
+		name, alert, err := makeAlertPMMAgentIsOutdated(agent, node, svc.serverVersion.String())
+		if err == nil {
+			svc.r.Add(prefix+name, delayForInterval, alert)
+		} else {
+			svc.l.Error(err)
+		}
+	}
+}
+
+// sendAlerts sends alerts collected in the registry.
+func (svc *Service) sendAlerts(ctx context.Context) {
+	alerts := svc.r.Collect()
 	if len(alerts) == 0 {
-		return nil
+		return
 	}
 
 	svc.l.Infof("Sending %d alerts...", len(alerts))
-	_, err = amclient.Default.Alert.PostAlerts(&alert.PostAlertsParams{
-		Alerts:  ammodels.PostableAlerts(alerts),
+	_, err := amclient.Default.Alert.PostAlerts(&alert.PostAlertsParams{
+		Alerts:  alerts,
 		Context: ctx,
 	})
-	return err
+	if err != nil {
+		svc.l.Error(err)
+	}
 }
 
 // Check verifies that Alertmanager works.
