@@ -220,14 +220,23 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:62313834d59737921fb7f74448eb24e9d9f567e5b575d8622575e3f213722284"
+  digest = "1:41cb2c3baf12f1630517ff4a64ba6e7b5976c22dff4bc947dd92c1ae309856b0"
+  name = "github.com/percona-platform/platform"
+  packages = ["gen/checked"]
+  pruneopts = "NUT"
+  revision = "02507274863e4fd9dc3ede39f8134a9e03f220f5"
+
+[[projects]]
+  branch = "master"
+  digest = "1:5ad2cf834ac19c00f0f573115f16ab79882ef1c838d5b86f35995470134dbac3"
   name = "github.com/percona-platform/saas"
   packages = [
     "gen/telemetry/events/pmm",
     "gen/telemetry/reporter",
+    "pkg/check",
   ]
   pruneopts = "NUT"
-  revision = "a03fe569e6a843f9039e87e9f6eeeec4df8101a2"
+  revision = "7c17c4948444694a09bf4b3084d07f47390543ae"
 
 [[projects]]
   digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
@@ -566,6 +575,14 @@
   revision = "53403b58ad1b561927d19068c655246f2db79d48"
   version = "v2.2.8"
 
+[[projects]]
+  branch = "v3"
+  digest = "1:2719dacdf70ad8b19e0db9b7716ef948e7a554a73eb28332fdda04f6571eb9f1"
+  name = "gopkg.in/yaml.v3"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "9f266ea9e77c4c7aab4cf02650570e7c7b3031a5"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
@@ -589,8 +606,10 @@
     "github.com/grpc-ecosystem/go-grpc-prometheus",
     "github.com/grpc-ecosystem/grpc-gateway/runtime",
     "github.com/lib/pq",
+    "github.com/percona-platform/platform/gen/checked",
     "github.com/percona-platform/saas/gen/telemetry/events/pmm",
     "github.com/percona-platform/saas/gen/telemetry/reporter",
+    "github.com/percona-platform/saas/pkg/check",
     "github.com/percona/exporter_shared/helpers",
     "github.com/percona/pmm/api/agentpb",
     "github.com/percona/pmm/api/inventorypb",
