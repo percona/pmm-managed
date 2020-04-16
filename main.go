@@ -62,6 +62,7 @@ import (
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/agents"
 	agentgrpc "github.com/percona/pmm-managed/services/agents/grpc"
+	"github.com/percona/pmm-managed/services/checks"
 	"github.com/percona/pmm-managed/services/grafana"
 	"github.com/percona/pmm-managed/services/inventory"
 	inventorygrpc "github.com/percona/pmm-managed/services/inventory/grpc"
@@ -496,8 +497,9 @@ func main() {
 	logs := supervisord.NewLogs(version.FullInfo(), pmmUpdateCheck)
 	supervisord := supervisord.New(*supervisordConfigDirF, pmmUpdateCheck)
 	telemetry := telemetry.NewService(db, version.Version)
-	checker := server.NewAWSInstanceChecker(db, telemetry)
-	server, err := server.NewServer(db, prometheus, supervisord, telemetry, checker, *alertManagerRulesFileF)
+	checks := checks.New(version.Version)
+	instanceChecker := server.NewAWSInstanceChecker(db, telemetry)
+	server, err := server.NewServer(db, prometheus, supervisord, telemetry, checks, instanceChecker, *alertManagerRulesFileF)
 	if err != nil {
 		l.Panicf("Server problem: %+v", err)
 	}
@@ -539,7 +541,7 @@ func main() {
 
 	grafanaClient := grafana.NewClient(*grafanaAddrF)
 	prom.MustRegister(grafanaClient)
-	authServer := grafana.NewAuthServer(grafanaClient, checker)
+	authServer := grafana.NewAuthServer(grafanaClient, instanceChecker)
 
 	var wg sync.WaitGroup
 
@@ -559,6 +561,12 @@ func main() {
 	go func() {
 		defer wg.Done()
 		telemetry.Run(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		checks.Run(ctx)
 	}()
 
 	wg.Add(1)

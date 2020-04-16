@@ -57,7 +57,8 @@ type Server struct {
 	prometheus       prometheusService
 	supervisord      supervisordService
 	telemetryService telemetryService
-	checker          *AWSInstanceChecker
+	checksService    checksService
+	instanceChecker  *AWSInstanceChecker
 	l                *logrus.Entry
 
 	pmmUpdateAuthFileM sync.Mutex
@@ -84,7 +85,7 @@ type pmmUpdateAuth struct {
 
 // NewServer returns new server for Server service.
 func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervisordService,
-	telemetryService telemetryService, checker *AWSInstanceChecker, alertManagerFile string) (*Server, error) {
+	telemetryService telemetryService, checksService checksService, instanceChecker *AWSInstanceChecker, alertManagerFile string) (*Server, error) {
 	path := os.TempDir()
 	if _, err := os.Stat(path); err != nil {
 		return nil, errors.WithStack(err)
@@ -96,7 +97,8 @@ func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervis
 		prometheus:        prometheus,
 		supervisord:       supervisord,
 		telemetryService:  telemetryService,
-		checker:           checker,
+		checksService:     checksService,
+		instanceChecker:   instanceChecker,
 		l:                 logrus.WithField("component", "server"),
 		pmmUpdateAuthFile: path,
 		alertManagerFile:  alertManagerFile,
@@ -735,7 +737,7 @@ func (s *Server) writeSSHKey(sshKey string) error {
 
 // AWSInstanceCheck checks AWS EC2 instance ID.
 func (s *Server) AWSInstanceCheck(ctx context.Context, req *serverpb.AWSInstanceCheckRequest) (*serverpb.AWSInstanceCheckResponse, error) {
-	if err := s.checker.check(req.InstanceId); err != nil {
+	if err := s.instanceChecker.check(req.InstanceId); err != nil {
 		return nil, err
 	}
 	return &serverpb.AWSInstanceCheckResponse{}, nil

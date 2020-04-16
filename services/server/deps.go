@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/percona-platform/saas/pkg/check"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/version"
 
@@ -55,4 +56,10 @@ type supervisordService interface {
 // We use it instead of real type for testing and to avoid dependency cycle.
 type telemetryService interface {
 	DistributionMethod() serverpb.DistributionMethod
+}
+
+// checksService is a subset of methods of checks.Service used by this package.
+// We use it instead of real type for testing and to avoid dependency cycle.
+type checksService interface {
+	Checks() []check.Check
 }
