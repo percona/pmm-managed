@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	api "github.com/percona-platform/platform/gen/checked"
+	api "github.com/percona-platform/saas/gen/checked"
 	"github.com/percona-platform/saas/pkg/check"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"

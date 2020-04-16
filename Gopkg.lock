@@ -220,23 +220,16 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:41cb2c3baf12f1630517ff4a64ba6e7b5976c22dff4bc947dd92c1ae309856b0"
-  name = "github.com/percona-platform/platform"
-  packages = ["gen/checked"]
-  pruneopts = "NUT"
-  revision = "02507274863e4fd9dc3ede39f8134a9e03f220f5"
-
-[[projects]]
-  branch = "master"
-  digest = "1:5ad2cf834ac19c00f0f573115f16ab79882ef1c838d5b86f35995470134dbac3"
+  digest = "1:b7f0c1b025e7ae0d34c5070656de6e18d3992cd1b9788bda5abbfdb23c837c34"
   name = "github.com/percona-platform/saas"
   packages = [
+    "gen/checked",
     "gen/telemetry/events/pmm",
     "gen/telemetry/reporter",
     "pkg/check",
   ]
   pruneopts = "NUT"
-  revision = "7c17c4948444694a09bf4b3084d07f47390543ae"
+  revision = "7def7d8a18fa6b211aafc993ad9fbe82da1de5d7"
 
 [[projects]]
   digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
@@ -606,7 +599,7 @@
     "github.com/grpc-ecosystem/go-grpc-prometheus",
     "github.com/grpc-ecosystem/grpc-gateway/runtime",
     "github.com/lib/pq",
-    "github.com/percona-platform/platform/gen/checked",
+    "github.com/percona-platform/saas/gen/checked",
     "github.com/percona-platform/saas/gen/telemetry/events/pmm",
     "github.com/percona-platform/saas/gen/telemetry/reporter",
     "github.com/percona-platform/saas/pkg/check",
