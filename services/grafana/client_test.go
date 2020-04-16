@@ -170,8 +170,8 @@ func TestClient(t *testing.T) {
 		})
 	})
 
-	t.Run("Check", func(t *testing.T) {
-		err := c.Check(ctx)
+	t.Run("IsReady", func(t *testing.T) {
+		err := c.IsReady(ctx)
 		require.NoError(t, err)
 	})
 }

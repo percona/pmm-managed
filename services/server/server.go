@@ -53,13 +53,13 @@ import (
 
 // Server represents service for checking PMM Server status and changing settings.
 type Server struct {
-	db               *reform.DB
-	prometheus       prometheusService
-	supervisord      supervisordService
-	telemetryService telemetryService
-	checker          *AWSInstanceChecker
-	grafanaClient    serviceChecker
-	l                *logrus.Entry
+	db                 *reform.DB
+	prometheus         prometheusService
+	supervisord        supervisordService
+	telemetryService   telemetryService
+	awsInstanceChecker *AWSInstanceChecker
+	grafanaClient      grafanaClient
+	l                  *logrus.Entry
 
 	pmmUpdateAuthFileM sync.Mutex
 	pmmUpdateAuthFile  string
@@ -85,13 +85,13 @@ type pmmUpdateAuth struct {
 
 // InServerParams holds the parameters needed to create a new service
 type InServerParams struct {
-	DB               *reform.DB
-	Prometheus       prometheusService
-	Supervisord      supervisordService
-	TelemetryService telemetryService
-	Checker          *AWSInstanceChecker
-	GrafanaClient    serviceChecker
-	AlertManagerFile string
+	DB                 *reform.DB
+	Prometheus         prometheusService
+	Supervisord        supervisordService
+	TelemetryService   telemetryService
+	AwsInstanceChecker *AWSInstanceChecker
+	GrafanaClient      grafanaClient
+	AlertManagerFile   string
 }
 
 // NewServer returns new server for Server service.
@@ -103,15 +103,15 @@ func NewServer(in InServerParams) (*Server, error) {
 	path = filepath.Join(path, "pmm-update.json")
 
 	s := &Server{
-		db:                in.DB,
-		prometheus:        in.Prometheus,
-		supervisord:       in.Supervisord,
-		telemetryService:  in.TelemetryService,
-		checker:           in.Checker,
-		grafanaClient:     in.GrafanaClient,
-		l:                 logrus.WithField("component", "server"),
-		pmmUpdateAuthFile: path,
-		alertManagerFile:  in.AlertManagerFile,
+		db:                 in.DB,
+		prometheus:         in.Prometheus,
+		supervisord:        in.Supervisord,
+		telemetryService:   in.TelemetryService,
+		awsInstanceChecker: in.AwsInstanceChecker,
+		grafanaClient:      in.GrafanaClient,
+		l:                  logrus.WithField("component", "server"),
+		pmmUpdateAuthFile:  path,
+		alertManagerFile:   in.AlertManagerFile,
 	}
 	return s, nil
 }
@@ -269,11 +269,11 @@ func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*se
 func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) (*serverpb.ReadinessResponse, error) {
 	fs := make([]string, 0) // fs: failing services. A list of failing service names to return in error msg
 
-	if err := s.prometheus.Check(ctx); err != nil {
+	if err := s.prometheus.IsReady(ctx); err != nil {
 		fs = append(fs, "Prometheus")
 	}
 
-	if err := s.grafanaClient.Check(ctx); err != nil {
+	if err := s.grafanaClient.IsReady(ctx); err != nil {
 		fs = append(fs, "Grafana")
 	}
 
@@ -756,7 +756,7 @@ func (s *Server) writeSSHKey(sshKey string) error {
 
 // AWSInstanceCheck checks AWS EC2 instance ID.
 func (s *Server) AWSInstanceCheck(ctx context.Context, req *serverpb.AWSInstanceCheckRequest) (*serverpb.AWSInstanceCheckResponse, error) {
-	if err := s.checker.check(req.InstanceId); err != nil {
+	if err := s.awsInstanceChecker.check(req.InstanceId); err != nil {
 		return nil, err
 	}
 	return &serverpb.AWSInstanceCheckResponse{}, nil

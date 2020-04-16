@@ -359,8 +359,8 @@ type grafanaHealthResponse struct {
 	Version  string `json:"version"`
 }
 
-// Check calls Grafana API to check its status
-func (c *Client) Check(ctx context.Context) error {
+// IsReady calls Grafana API to check its status
+func (c *Client) IsReady(ctx context.Context) error {
 	var status grafanaHealthResponse
 	if err := c.do(ctx, "GET", "/api/health", nil, nil, &status); err != nil {
 		// since we don't return the error to the user, log it to help debugging

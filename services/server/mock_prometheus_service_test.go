@@ -13,8 +13,8 @@ type mockPrometheusService struct {
 	mock.Mock
 }
 
-// Check provides a mock function with given fields: ctx
-func (_m *mockPrometheusService) Check(ctx context.Context) error {
+// IsReady provides a mock function with given fields: ctx
+func (_m *mockPrometheusService) IsReady(ctx context.Context) error {
 	ret := _m.Called(ctx)
 
 	var r0 error
