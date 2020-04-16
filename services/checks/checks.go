@@ -88,11 +88,7 @@ func (s *Service) Checks() []check.Check {
 	defer s.m.RUnlock()
 
 	r := make([]check.Check, 0, len(s.checks))
-	for _, c := range s.checks {
-		r = append(r, c)
-	}
-
-	return r
+	return append(r, s.checks...)
 }
 
 func (s *Service) downloadChecks(ctx context.Context) error {
