@@ -160,6 +160,10 @@ func (s *Service) downloadChecks(ctx context.Context) error {
 }
 
 func (s *Service) verifySignatures(resp *api.GetAllChecksResponse) error {
+	if len(resp.Signatures) == 0 {
+		return errors.New("checks service response hasn't any signatures")
+	}
+
 	var err error
 	for _, sign := range resp.Signatures {
 		for _, key := range s.publicKeys {

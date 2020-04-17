@@ -18,6 +18,8 @@ package checks
 
 import (
 	"context"
+	api "github.com/percona-platform/saas/gen/checked"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -42,5 +44,53 @@ func TestDownloadChecks(t *testing.T) {
 		err := s.downloadChecks(ctx)
 		require.NoError(t, err)
 		assert.NotEmpty(t, s.Checks())
+	})
+}
+
+func TestVerifySignatures(t *testing.T) {
+	t.Run("normal", func(t *testing.T) {
+		s := New("2.5.0")
+		s.host = devChecksHost
+
+		validKey := "RWSdGihBPffV2c4IysqHAIxc5c5PLfmQStbRPkuLXDr3igJOqFWt7aml"
+		invalidKey := "RWSdGihBPffV2c4IysqHAIxc5c5PLfmQStbRPkuLXDr3igJO+INVALID"
+
+		s.publicKeys = []string{invalidKey, validKey}
+
+		validSign := strings.TrimSpace(`
+untrusted comment: signature from minisign secret key
+RWSdGihBPffV2W/zvmIiTLh8UnocoF3OcwmczGdZ+zM13eRnm2Qq9YxfQ9cLzAp1dA5w7C5a3Cp5D7jlYiydu5hqZhJUxJt/ugg=
+trusted comment: some comment
+uEF33ScMPYpvHvBKv8+yBkJ9k4+DCfV4nDs6kKYwGhalvkkqwWkyfJffO+KW7a1m3y42WHpOnzBxLJeU/AuzDw==
+`)
+
+		invalidSign := strings.TrimSpace(`
+untrusted comment: signature from minisign secret key
+RWSdGihBPffV2W/zvmIiTLh8UnocoF3OcwmczGdZ+zM13eRnm2Qq9YxfQ9cLzAp1dA5w7C5a3Cp5D7jlYiydu5hqZhJ+INVALID=
+trusted comment: some comment
+uEF33ScMPYpvHvBKv8+yBkJ9k4+DCfV4nDs6kKYwGhalvkkqwWkyfJffO+KW7a1m3y42WHpOnzBxLJ+INVALID==
+`)
+
+		resp := api.GetAllChecksResponse{
+			File:       "random data",
+			Signatures: []string{invalidSign, validSign},
+		}
+
+		err := s.verifySignatures(&resp)
+		assert.NoError(t, err)
+	})
+
+	t.Run("empty signatures", func(t *testing.T) {
+		s := New("2.5.0")
+		s.host = devChecksHost
+		s.publicKeys = []string{"RWSdGihBPffV2c4IysqHAIxc5c5PLfmQStbRPkuLXDr3igJOqFWt7aml"}
+
+		resp := api.GetAllChecksResponse{
+			File:       "random data",
+			Signatures: []string{},
+		}
+
+		err := s.verifySignatures(&resp)
+		assert.EqualError(t, err, "checks service response hasn't any signatures")
 	})
 }
