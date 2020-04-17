@@ -19,6 +19,7 @@ package checks
 
 import (
 	"context"
+	"net"
 	"os"
 	"strings"
 	"sync"
@@ -26,6 +27,7 @@ import (
 
 	api "github.com/percona-platform/saas/gen/checked"
 	"github.com/percona-platform/saas/pkg/check"
+	"github.com/percona/pmm/utils/tlsconfig"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -115,12 +117,19 @@ func (s *Service) Checks() []check.Check {
 func (s *Service) downloadChecks(ctx context.Context) error {
 	s.l.Infof("Download checks from: %s", s.host)
 
+	host, _, err := net.SplitHostPort(s.host)
+	if err != nil {
+		return errors.Wrap(err, "failed to set telemetry host")
+	}
+	tlsConfig := tlsconfig.Get()
+	tlsConfig.ServerName = host
+
 	opts := []grpc.DialOption{
 		// replacement is marked as experimental
 		grpc.WithBackoffMaxDelay(timeout), //nolint:staticcheck
 		grpc.WithBlock(),
 		grpc.WithUserAgent("pmm-managed/" + s.pmmVersion),
-		grpc.WithTransportCredentials(credentials.NewTLS(nil)),
+		grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, timeout)
