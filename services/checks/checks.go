@@ -105,7 +105,7 @@ func (s *Service) Run(ctx context.Context) {
 	}
 }
 
-// Checks returns available checks
+// Checks returns available checks.
 func (s *Service) Checks() []check.Check {
 	s.m.RLock()
 	defer s.m.RUnlock()
