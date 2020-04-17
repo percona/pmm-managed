@@ -146,10 +146,6 @@ func (s *Service) downloadChecks(ctx context.Context) error {
 		return errors.Wrap(err, "failed to request checks service")
 	}
 
-	if len(resp.Signatures) != 1 {
-		return errors.Errorf("wrong checks signatures number, expect one signature, received %d", len(resp.Signatures))
-	}
-
 	if err = s.verifySignatures(resp); err != nil {
 		return err
 	}
