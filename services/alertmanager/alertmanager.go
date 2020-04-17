@@ -111,7 +111,7 @@ func (svc *Service) Run(ctx context.Context) {
 // generateBaseConfig generates /srv/alertmanager/alertmanager.base.yml if it is not present.
 //
 // TODO That's a temporary measure until we start generating /etc/alertmanager.yml
-// using /srv/alertmanager/alertmanager.base.yml as a base.
+// using /srv/alertmanager/alertmanager.base.yml as a base. See supervisord config.
 func generateBaseConfig() {
 	const path = "/srv/alertmanager/alertmanager.base.yml"
 	if _, err := os.Stat(path); os.IsNotExist(err) {

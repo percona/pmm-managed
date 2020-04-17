@@ -1,10 +1,10 @@
 package alertmanager
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/percona/pmm/api/alertmanager/ammodels"
+	"github.com/pkg/errors"
 	"github.com/prometheus/common/model"
 
 	"github.com/percona/pmm-managed/models"

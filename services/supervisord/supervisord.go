@@ -482,8 +482,8 @@ func (s *Service) UpdateConfiguration(settings *models.Settings) error {
 	return err
 }
 
-// TODO switch from /srv/alertmanager/alertmanager.base.yml to /etc/alertmanager.yml
-// once we start generating it
+// TODO Switch from /srv/alertmanager/alertmanager.base.yml to /etc/alertmanager.yml
+// once we start generating it. See alertmanager service.
 
 var templates = template.Must(template.New("").Option("missingkey=error").Parse(`
 {{define "prometheus"}}
