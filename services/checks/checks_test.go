@@ -33,7 +33,7 @@ func TestDownloadChecks(t *testing.T) {
 	t.Run("normal", func(t *testing.T) {
 		s := New("2.5.0")
 		s.host = devChecksHost
-		s.publicKey = devChecksPublicKey
+		s.publicKeys = []string{devChecksPublicKey}
 
 		assert.Empty(t, s.Checks())
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)

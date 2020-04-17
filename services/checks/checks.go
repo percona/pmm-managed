@@ -35,9 +35,8 @@ import (
 )
 
 const (
-	defaultHost      = "check.percona.com"
-	defaultPublicKey = "RWSKCHyoLDYxJ1k0qeayKu3/fsXVS1z8M+0deAClryiHWP99Sr4R/gPP"
-	defaultInterval  = 24 * time.Hour
+	defaultHost     = "check.percona.com"
+	defaultInterval = 24 * time.Hour
 
 	// Environment variables that affect checks service; only for testing.
 	envHost      = "PERCONA_TEST_CHECKS_HOST"
@@ -47,12 +46,14 @@ const (
 	timeout = 5 * time.Second
 )
 
+var defaultPublicKeys = []string{"RWSKCHyoLDYxJ1k0qeayKu3/fsXVS1z8M+0deAClryiHWP99Sr4R/gPP"}
+
 // Service is responsible for interactions with Percona Check service.
 type Service struct {
 	l          *logrus.Entry
 	pmmVersion string
 	host       string
-	publicKey  string
+	publicKeys []string
 	interval   time.Duration
 
 	m      sync.RWMutex
@@ -66,7 +67,7 @@ func New(pmmVersion string) *Service {
 		l:          l,
 		pmmVersion: pmmVersion,
 		host:       defaultHost,
-		publicKey:  defaultPublicKey,
+		publicKeys: defaultPublicKeys,
 		interval:   defaultInterval,
 	}
 
@@ -75,12 +76,12 @@ func New(pmmVersion string) *Service {
 		s.host = h
 	}
 	if k := os.Getenv(envPublicKey); k != "" {
+		s.publicKeys = strings.Split(k, ",")
 		l.Warnf("Public key changed to %s.", k)
-		s.publicKey = k
 	}
-	if i := os.Getenv(envInterval); i != "" {
-		l.Warnf("Interval changed to %s.", i)
-		s.publicKey = i
+	if d, err := time.ParseDuration(os.Getenv(envInterval)); err == nil && d > 0 {
+		l.Warnf("Interval changed to %s.", d)
+		s.interval = d
 	}
 
 	return s
@@ -149,8 +150,8 @@ func (s *Service) downloadChecks(ctx context.Context) error {
 		return errors.Errorf("wrong checks signatures number, expect one signature, received %d", len(resp.Signatures))
 	}
 
-	if err = check.Verify([]byte(resp.File), s.publicKey, resp.Signatures[0]); err != nil {
-		return errors.Wrap(err, "failed to verify checks signature")
+	if err = s.verifySignatures(resp); err != nil {
+		return err
 	}
 
 	checks, err := check.Parse(strings.NewReader(resp.File))
@@ -160,6 +161,20 @@ func (s *Service) downloadChecks(ctx context.Context) error {
 
 	s.updateChecks(checks)
 	return nil
+}
+
+func (s *Service) verifySignatures(resp *api.GetAllChecksResponse) error {
+	var err error
+	for _, sign := range resp.Signatures {
+		for _, key := range s.publicKeys {
+			if err = check.Verify([]byte(resp.File), key, sign); err == nil {
+				return nil
+			}
+			logrus.Debugf("Key %s doesn't match signature %s, reason: %v", key, sign, err)
+		}
+	}
+
+	return errors.New("checks signatures don't match any known percona public key")
 }
 
 func (s *Service) updateChecks(checks []check.Check) {
