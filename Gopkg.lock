@@ -382,8 +382,8 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "SAAS-30-alertmanager-client"
-  digest = "1:938fcb3d69f5595a057e7b4766ad2e62636bc24b88665ecfbde1a2927f09efff"
+  branch = "PMM-2.0"
+  digest = "1:a86abdb41830f5c57c245be19ab683b4fafc113252e56e2385f262dac7d4f132"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -404,7 +404,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "4bc53ad314ecab8a5980671852563aba11848eb2"
+  revision = "5e83693102eb6f1bed64f9191683869c98a72cda"
 
 [[projects]]
   digest = "1:1e38d8f6796fabbf419aa2040dc196927690a1de7fe14af25fbd29c6ed44b4da"
