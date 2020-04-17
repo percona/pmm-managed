@@ -84,7 +84,7 @@ func New(pmmVersion string) *Service {
 	return s
 }
 
-// Run runs telemetry service that grabs checks from Percona Checks service every interval until context is canceled.
+// Run runs checks service that grabs checks from Percona Checks service every interval until context is canceled.
 func (s *Service) Run(ctx context.Context) {
 	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
