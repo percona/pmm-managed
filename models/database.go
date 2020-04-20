@@ -260,6 +260,16 @@ var databaseSchema = [][]string{
 			ALTER COLUMN rds_basic_metrics_disabled DROP DEFAULT,
 			ALTER COLUMN rds_enhanced_metrics_disabled DROP DEFAULT`,
 	},
+
+	13: {
+		`ALTER TABLE services
+			DROP CONSTRAINT port_check;`,
+
+		`ALTER TABLE services
+			ADD CONSTRAINT port_check CHECK (
+				port IS NULL OR (port > 0 AND port < 65536)
+			);`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^

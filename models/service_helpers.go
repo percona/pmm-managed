@@ -168,6 +168,24 @@ type AddDBMSServiceParams struct {
 
 // AddNewService adds new service to storage.
 func AddNewService(q *reform.Querier, serviceType ServiceType, params *AddDBMSServiceParams) (*Service, error) {
+	if params.Address == nil && params.Socket == nil {
+		return nil, status.Error(codes.InvalidArgument, "Address or socket is required.")
+	}
+
+	if params.Address != nil {
+		if params.Socket != nil {
+			return nil, status.Error(codes.InvalidArgument, "Setting both address and socket in once is disallowed.")
+		}
+
+		if params.Port == nil || *params.Port <= uint16(0) || *params.Port > uint16(65535) {
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid port value %q.", params.Port)
+		}
+	}
+
+	if params.Socket != nil && params.Port != nil {
+		return nil, status.Error(codes.InvalidArgument, "Port is only allowed with address.")
+	}
+
 	id := "/service_id/" + uuid.New().String()
 	if err := checkServiceUniqueID(q, id); err != nil {
 		return nil, err
