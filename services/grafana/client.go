@@ -292,8 +292,9 @@ func (c *Client) CreateAnnotation(ctx context.Context, tags []string, text, auth
 		Text: text,
 	}
 	request.encode()
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(request); err != nil {
+
+	b, err := json.Marshal(request)
+	if err != nil {
 		return "", errors.Wrap(err, "failed to marhal request")
 	}
 
@@ -304,8 +305,7 @@ func (c *Client) CreateAnnotation(ctx context.Context, tags []string, text, auth
 		Message string `json:"message"`
 	}
 
-	if err := c.do(ctx, "POST", "/api/annotations", headers, buf.Bytes(), &response); err != nil {
-		logrus.Errorln(err)
+	if err := c.do(ctx, "POST", "/api/annotations", headers, b, &response); err != nil {
 		return "", errors.Wrap(err, "failed to create annotation")
 	}
 

@@ -55,7 +55,7 @@ func (as *AnnotationServer) AddAnnotation(ctx context.Context, req *managementpb
 
 	_, err := as.grafanaClient.CreateAnnotation(ctx, req.Tags, req.Text, authorizationHeaders[0])
 	if err != nil {
-		return nil, status.Error(codes.Unknown, err.Error())
+		return nil, err
 	}
 	return &managementpb.AddAnnotationResponse{}, nil
 }

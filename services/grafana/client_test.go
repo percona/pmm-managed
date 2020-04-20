@@ -172,7 +172,7 @@ func TestClient(t *testing.T) {
 		})
 
 		t.Run("Auth error", func(t *testing.T) {
-			req, err := http.NewRequest("GET", "/dummy", nil)
+			req, _ := http.NewRequest("GET", "/dummy", nil)
 			req.SetBasicAuth("nouser", "wrongpassword")
 			authorization := req.Header.Get("Authorization")
 			_, err = c.CreateAnnotation(ctx, nil, "", authorization)
