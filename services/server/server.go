@@ -57,7 +57,6 @@ type Server struct {
 	prometheus         prometheusService
 	supervisord        supervisordService
 	telemetryService   telemetryService
-	checksService      checksService
 	awsInstanceChecker *AWSInstanceChecker
 	grafanaClient      grafanaClient
 	l                  *logrus.Entry
@@ -85,7 +84,6 @@ type ServerParams struct {
 	Prometheus         prometheusService
 	Supervisord        supervisordService
 	TelemetryService   telemetryService
-	ChecksService      checksService
 	AwsInstanceChecker *AWSInstanceChecker
 	GrafanaClient      grafanaClient
 	AlertManagerFile   string
@@ -104,7 +102,6 @@ func NewServer(params *ServerParams) (*Server, error) {
 		prometheus:         params.Prometheus,
 		supervisord:        params.Supervisord,
 		telemetryService:   params.TelemetryService,
-		checksService:      params.ChecksService,
 		awsInstanceChecker: params.AwsInstanceChecker,
 		grafanaClient:      params.GrafanaClient,
 		l:                  logrus.WithField("component", "server"),
