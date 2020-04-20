@@ -768,6 +768,109 @@ func (r *Registry) StartMongoDBExplainAction(ctx context.Context, id, pmmAgentID
 	return nil
 }
 
+// StartMySQLQueryShowAction starts mySQL show query action on pmm-agent.
+func (r *Registry) StartMySQLQueryShowAction(ctx context.Context, id, pmmAgentID, dsn, query string) error {
+	aRequest := &agentpb.StartActionRequest{
+		ActionId: id,
+		Params: &agentpb.StartActionRequest_MysqlQueryShowParams{
+			MysqlQueryShowParams: &agentpb.StartActionRequest_MySQLQueryShowParams{
+				Dsn:   dsn,
+				Query: query,
+			},
+		},
+	}
+
+	agent, err := r.get(pmmAgentID)
+	if err != nil {
+		return err
+	}
+
+	agent.channel.SendRequest(aRequest)
+	return nil
+}
+
+// StartMySQLQuerySelectAction starts mySQL select query action on pmm-agent.
+func (r *Registry) StartMySQLQuerySelectAction(ctx context.Context, id, pmmAgentID, dsn, query string) error {
+	aRequest := &agentpb.StartActionRequest{
+		ActionId: id,
+		Params: &agentpb.StartActionRequest_MysqlQuerySelectParams{
+			MysqlQuerySelectParams: &agentpb.StartActionRequest_MySQLQuerySelectParams{
+				Dsn:   dsn,
+				Query: query,
+			},
+		},
+	}
+
+	agent, err := r.get(pmmAgentID)
+	if err != nil {
+		return err
+	}
+
+	agent.channel.SendRequest(aRequest)
+	return nil
+}
+
+// StartPostgreSQLQueryShowAction starts postgreSQL show query action on pmm-agent.
+func (r *Registry) StartPostgreSQLQueryShowAction(ctx context.Context, id, pmmAgentID, dsn string) error {
+	aRequest := &agentpb.StartActionRequest{
+		ActionId: id,
+		Params: &agentpb.StartActionRequest_PostgresqlQueryShowParams{
+			PostgresqlQueryShowParams: &agentpb.StartActionRequest_PostgreSQLQueryShowParams{
+				Dsn: dsn,
+			},
+		},
+	}
+
+	agent, err := r.get(pmmAgentID)
+	if err != nil {
+		return err
+	}
+
+	agent.channel.SendRequest(aRequest)
+	return nil
+}
+
+// StartPostgreSQLQuerySelectAction starts postgreSQL select query action on pmm-agent.
+func (r *Registry) StartPostgreSQLQuerySelectAction(ctx context.Context, id, pmmAgentID, dsn, query string) error {
+	aRequest := &agentpb.StartActionRequest{
+		ActionId: id,
+		Params: &agentpb.StartActionRequest_PostgresqlQuerySelectParams{
+			PostgresqlQuerySelectParams: &agentpb.StartActionRequest_PostgreSQLQuerySelectParams{
+				Dsn:   dsn,
+				Query: query,
+			},
+		},
+	}
+
+	agent, err := r.get(pmmAgentID)
+	if err != nil {
+		return err
+	}
+
+	agent.channel.SendRequest(aRequest)
+	return nil
+}
+
+// StartMongoDBQueryGetParameterAction starts MongoDB get parameter query action on pmm-agent.
+func (r *Registry) StartMongoDBQueryGetParameterAction(ctx context.Context, id, pmmAgentID, dsn string) error {
+	aRequest := &agentpb.StartActionRequest{
+		ActionId: id,
+		Params: &agentpb.StartActionRequest_MongodbQueryGetparameterParams{
+			MongodbQueryGetparameterParams: &agentpb.StartActionRequest_MongoDBQueryGetParameterParams{
+				Dsn: dsn,
+			},
+		},
+	}
+
+	agent, err := r.get(pmmAgentID)
+	if err != nil {
+		return err
+	}
+
+	agent.channel.SendRequest(aRequest)
+	return nil
+}
+
 // StopAction stops action with given given id.
 // TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
 func (r *Registry) StopAction(ctx context.Context, actionID string) error {
