@@ -551,7 +551,6 @@ func main() {
 	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient)
 	prom.MustRegister(agentsRegistry)
 
-	prom.MustRegister(grafanaClient)
 	authServer := grafana.NewAuthServer(grafanaClient, awsInstanceChecker)
 
 	var wg sync.WaitGroup
