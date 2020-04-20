@@ -295,7 +295,7 @@ func (c *Client) CreateAnnotation(ctx context.Context, tags []string, text, auth
 
 	b, err := json.Marshal(request)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to marhal request")
+		return "", errors.Wrap(err, "failed to marshal request")
 	}
 
 	var headers = make(http.Header)
