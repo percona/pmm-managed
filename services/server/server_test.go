@@ -42,8 +42,17 @@ func TestServer(t *testing.T) {
 	}()
 
 	newServer := func() *Server {
-		s, err := NewServer(reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
-			nil, nil, nil, nil, nil, "")
+		params := &ServerParams{
+			DB:                 reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
+			Prometheus:         nil,
+			Supervisord:        nil,
+			TelemetryService:   nil,
+			ChecksService:      nil,
+			AwsInstanceChecker: nil,
+			AlertManagerFile:   "",
+			GrafanaClient:      nil,
+		}
+		s, err := NewServer(params)
 		require.NoError(t, err)
 		return s
 	}
