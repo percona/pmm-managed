@@ -57,13 +57,13 @@ func TestImports(t *testing.T) {
 	// services should be independent
 	for _, service := range []string{
 		"github.com/percona/pmm-managed/services/agents",
+		"github.com/percona/pmm-managed/services/checks",
 		"github.com/percona/pmm-managed/services/grafana",
 		"github.com/percona/pmm-managed/services/prometheus",
 		"github.com/percona/pmm-managed/services/qan",
 		"github.com/percona/pmm-managed/services/server",
 		"github.com/percona/pmm-managed/services/supervisord",
 		"github.com/percona/pmm-managed/services/telemetry",
-		"github.com/percona/pmm-managed/services/checks",
 	} {
 		constraints[service] = constraint{
 			blacklistPrefixes: []string{

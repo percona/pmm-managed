@@ -141,7 +141,7 @@ func (s *Service) downloadChecks(ctx context.Context) error {
 
 	host, _, err := net.SplitHostPort(s.host)
 	if err != nil {
-		return errors.Wrap(err, "failed to set telemetry host")
+		return errors.Wrap(err, "failed to set checks host")
 	}
 	tlsConfig := tlsconfig.Get()
 	tlsConfig.ServerName = host

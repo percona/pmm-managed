@@ -47,7 +47,6 @@ func TestServer(t *testing.T) {
 			Prometheus:         nil,
 			Supervisord:        nil,
 			TelemetryService:   nil,
-			ChecksService:      nil,
 			AwsInstanceChecker: nil,
 			AlertManagerFile:   "",
 			GrafanaClient:      nil,
