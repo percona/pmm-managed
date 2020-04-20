@@ -42,7 +42,7 @@ func TestServer(t *testing.T) {
 	}()
 
 	newServer := func() *Server {
-		serverParams := InServerParams{
+		params := &ServerParams{
 			DB:                 reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
 			Prometheus:         nil,
 			Supervisord:        nil,
@@ -51,7 +51,7 @@ func TestServer(t *testing.T) {
 			AlertManagerFile:   "",
 			GrafanaClient:      nil,
 		}
-		s, err := NewServer(serverParams)
+		s, err := NewServer(params)
 		require.NoError(t, err)
 		return s
 	}

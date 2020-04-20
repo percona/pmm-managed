@@ -83,8 +83,8 @@ type pmmUpdateAuth struct {
 	AuthToken string `json:"auth_token"`
 }
 
-// InServerParams holds the parameters needed to create a new service
-type InServerParams struct {
+// ServerParams holds the parameters needed to create a new service.
+type ServerParams struct {
 	DB                 *reform.DB
 	Prometheus         prometheusService
 	Supervisord        supervisordService
@@ -95,7 +95,7 @@ type InServerParams struct {
 }
 
 // NewServer returns new server for Server service.
-func NewServer(in InServerParams) (*Server, error) {
+func NewServer(params *ServerParams) (*Server, error) {
 	path := os.TempDir()
 	if _, err := os.Stat(path); err != nil {
 		return nil, errors.WithStack(err)
@@ -103,15 +103,15 @@ func NewServer(in InServerParams) (*Server, error) {
 	path = filepath.Join(path, "pmm-update.json")
 
 	s := &Server{
-		db:                 in.DB,
-		prometheus:         in.Prometheus,
-		supervisord:        in.Supervisord,
-		telemetryService:   in.TelemetryService,
-		awsInstanceChecker: in.AwsInstanceChecker,
-		grafanaClient:      in.GrafanaClient,
+		db:                 params.DB,
+		prometheus:         params.Prometheus,
+		supervisord:        params.Supervisord,
+		telemetryService:   params.TelemetryService,
+		awsInstanceChecker: params.AwsInstanceChecker,
+		grafanaClient:      params.GrafanaClient,
 		l:                  logrus.WithField("component", "server"),
 		pmmUpdateAuthFile:  path,
-		alertManagerFile:   in.AlertManagerFile,
+		alertManagerFile:   params.AlertManagerFile,
 	}
 	return s, nil
 }
