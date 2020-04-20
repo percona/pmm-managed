@@ -22,12 +22,11 @@ import (
 	"fmt"
 
 	"github.com/percona/pmm/api/managementpb"
-
-	"github.com/percona/pmm-managed/services/grafana"
-
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+
+	"github.com/percona/pmm-managed/services/grafana"
 )
 
 // AnnotationServer is a server for making annotations in Grafana.
