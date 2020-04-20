@@ -179,4 +179,9 @@ func TestClient(t *testing.T) {
 			require.EqualError(t, err, `failed to create annotation: clientError: POST http://127.0.0.1:3000/api/annotations -> 401 {"message":"Invalid username or password"}`)
 		})
 	})
+
+	t.Run("IsReady", func(t *testing.T) {
+		err := c.IsReady(ctx)
+		require.NoError(t, err)
+	})
 }
