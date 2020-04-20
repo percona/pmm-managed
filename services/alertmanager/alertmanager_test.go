@@ -35,5 +35,5 @@ func TestAlertmanager(t *testing.T) {
 	svc, err := New(db, "2.6.0", nil)
 	require.NoError(t, err)
 
-	require.NoError(t, svc.Check(context.Background()))
+	require.NoError(t, svc.IsReady(context.Background()))
 }

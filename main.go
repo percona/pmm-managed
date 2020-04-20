@@ -379,6 +379,12 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 	}
 	deps.prometheus.RequestConfigurationUpdate()
 
+	deps.l.Infof("Checking Alertmanager...")
+	if err = deps.alertmanager.IsReady(ctx); err != nil {
+		deps.l.Warnf("Alertmanager problem: %+v.", err)
+		return false
+	}
+
 	deps.l.Info("Setup completed.")
 	return true
 }
@@ -516,6 +522,7 @@ func main() {
 	serverParams := &server.ServerParams{
 		DB:                 db,
 		Prometheus:         prometheus,
+		Alertmanager:       alertmanager,
 		Supervisord:        supervisord,
 		TelemetryService:   telemetry,
 		AwsInstanceChecker: awsInstanceChecker,

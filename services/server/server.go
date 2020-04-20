@@ -57,6 +57,7 @@ const alertingRulesFile = "/srv/prometheus/rules/pmm.rules.yml"
 type Server struct {
 	db                 *reform.DB
 	prometheus         prometheusService
+	alertmanager       alertmanagerService
 	supervisord        supervisordService
 	telemetryService   telemetryService
 	awsInstanceChecker *AWSInstanceChecker
@@ -80,6 +81,7 @@ type pmmUpdateAuth struct {
 type ServerParams struct {
 	DB                 *reform.DB
 	Prometheus         prometheusService
+	Alertmanager       alertmanagerService
 	Supervisord        supervisordService
 	TelemetryService   telemetryService
 	AwsInstanceChecker *AWSInstanceChecker
@@ -192,18 +194,20 @@ func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*se
 // Readiness returns an error when some PMM Server component is not ready yet or is being restarted.
 // It can be used as for Docker health check or Kubernetes readiness probe.
 func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) (*serverpb.ReadinessResponse, error) {
-	fs := make([]string, 0) // fs: failing services. A list of failing service names to return in error msg
-
-	if err := s.prometheus.IsReady(ctx); err != nil {
-		fs = append(fs, "Prometheus")
+	var notReady bool
+	for n, svc := range map[string]healthChecker{
+		"prometheus":   s.prometheus,
+		"alertmanager": s.alertmanager,
+		"grafana":      s.grafanaClient,
+	} {
+		if err := svc.IsReady(ctx); err != nil {
+			s.l.Errorf("%s readiness check failed: %+v", n, err)
+			notReady = true
+		}
 	}
 
-	if err := s.grafanaClient.IsReady(ctx); err != nil {
-		fs = append(fs, "Grafana")
-	}
-
-	if len(fs) > 0 {
-		return nil, fmt.Errorf("failing services: %s", strings.Join(fs, ", "))
+	if notReady {
+		return nil, status.Error(codes.Internal, "PMM Server is not ready yet.")
 	}
 
 	return &serverpb.ReadinessResponse{}, nil

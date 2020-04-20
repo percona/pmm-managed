@@ -212,8 +212,8 @@ func (svc *Service) sendAlerts(ctx context.Context) {
 	}
 }
 
-// Check verifies that Alertmanager works.
-func (svc *Service) Check(ctx context.Context) error {
+// IsReady verifies that Alertmanager works.
+func (svc *Service) IsReady(ctx context.Context) error {
 	_, err := amclient.Default.General.GetStatus(&general.GetStatusParams{
 		Context: ctx,
 	})
