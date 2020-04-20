@@ -37,14 +37,13 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-// TODO change to smaller values
-const (
-	resendInterval   = 5 * time.Second
-	delayForInterval = 10 * time.Second
-)
+const resendInterval = 30 * time.Second
 
-// FIXME remove completely
-const test = true
+// FIXME remove completely before release
+const (
+	addTestingAlerts   = false
+	testingAlertsDelay = time.Second
+)
 
 // Service is responsible for interactions with Prometheus.
 type Service struct {
@@ -170,12 +169,16 @@ func (svc *Service) updateInventoryAlertsForPMMAgent(agent *models.Agent, node *
 		return
 	}
 
+	if !addTestingAlerts {
+		return
+	}
+
 	prefix := "inventory/" + agent.AgentID + "/"
 
-	if test || !svc.agentsRegistry.IsConnected(agent.AgentID) {
+	if !svc.agentsRegistry.IsConnected(agent.AgentID) {
 		name, alert, err := makeAlertPMMAgentNotConnected(agent, node)
 		if err == nil {
-			svc.r.Add(prefix+name, delayForInterval, alert)
+			svc.r.Add(prefix+name, testingAlertsDelay, alert)
 		} else {
 			svc.l.Error(err)
 		}
@@ -185,10 +188,10 @@ func (svc *Service) updateInventoryAlertsForPMMAgent(agent *models.Agent, node *
 	if err != nil {
 		svc.l.Error(err)
 	}
-	if agentVersion != nil && (test || agentVersion.Less(svc.serverVersion)) {
+	if agentVersion != nil && agentVersion.Less(svc.serverVersion) {
 		name, alert, err := makeAlertPMMAgentIsOutdated(agent, node, svc.serverVersion.String())
 		if err == nil {
-			svc.r.Add(prefix+name, delayForInterval, alert)
+			svc.r.Add(prefix+name, testingAlertsDelay, alert)
 		} else {
 			svc.l.Error(err)
 		}
