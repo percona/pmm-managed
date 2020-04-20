@@ -34,6 +34,10 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"gopkg.in/reform.v1"
+
+	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/agents"
 )
 
 const (
@@ -63,6 +67,9 @@ type Service struct {
 
 	m      sync.RWMutex
 	checks []check.Check
+
+	r  *agents.Registry
+	db *reform.DB
 }
 
 // New returns Service with given PMM version.
@@ -94,30 +101,19 @@ func New(pmmVersion string) *Service {
 
 // Run runs checks service that grabs checks from Percona Checks service every interval until context is canceled.
 func (s *Service) Run(ctx context.Context) {
-	if f := os.Getenv(envCheckFile); f != "" {
-		s.l.Warnf("Using local test checks file: %s", f)
-
-		data, err := ioutil.ReadFile(f) //nolint:gosec
-		if err != nil {
-			s.l.Errorf("Failed to read test checks file: %s.", err)
-			return
-		}
-		checks, err := check.Parse(bytes.NewReader(data))
-		if err != nil {
-			s.l.Errorf("Failed to parse test checks file: %s.", err)
-			return
-		}
-
-		s.updateChecks(checks)
-		return
-	}
-
 	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
 
 	for {
-		if err := s.downloadChecks(ctx); err != nil {
-			s.l.Errorf("Failed to download checks: %v", err)
+		if f := os.Getenv(envCheckFile); f != "" {
+			s.l.Warnf("Use local test checks file: %s", f)
+			if err := s.loadLocalChecks(f); err != nil {
+				s.l.WithError(err).Error("Failed to load local checks file")
+			}
+		} else {
+			if err := s.downloadChecks(ctx); err != nil {
+				s.l.Errorf("Failed to download checks: %v", err)
+			}
 		}
 
 		select {
@@ -136,6 +132,116 @@ func (s *Service) Checks() []check.Check {
 
 	r := make([]check.Check, 0, len(s.checks))
 	return append(r, s.checks...)
+}
+
+func (s *Service) executeChecks() error {
+	mySQLChecks, postgreSQLChecks, mongoChecks := groupChecksByDB(s.checks)
+
+	mySQLRes, err := s.executeMySQLChecks(mySQLChecks)
+	if err != nil {
+		s.l.WithError(err).Error() //TODO Write some message
+	}
+
+	return nil
+}
+
+func (s *Service) executeMySQLChecks(checks []check.Check) ([]string, error) {
+	var res []string
+	var agents []*models.Agent
+	var services []*models.Service
+	e := s.db.InTransaction(func(t *reform.TX) error {
+		var err error
+		typ := models.MySQLdExporterType
+		if agents, err = models.FindAgents(s.db.Querier, models.AgentFilters{AgentType: &typ}); err != nil {
+			return err
+		}
+		if services, err = models.FindServicesByIDs(s.db.Querier, getServicesIDs(agents)); err != nil {
+			return err
+		}
+		return nil
+	})
+	if e != nil {
+		return nil, e
+	}
+
+	sMap := servicesToMap(services)
+	for _, agent := range agents {
+		r, err := models.CreateActionResult(s.db.Querier, *agent.PMMAgentID)
+		if err != nil {
+			s.l.WithError(err).Error("") // TODO Write some message
+			continue
+		}
+		dsn := agent.DSN(sMap[*agent.ServiceID], 2*time.Second, "") // TODO Do we need DB name for some checks?
+
+		for _, c := range checks {
+			switch c.Type {
+			case check.MySQLShow:
+				if err := s.r.StartMySQLQueryShowAction(context.Background(), r.ID, *agent.PMMAgentID, dsn, c.Query); err != nil {
+					s.l.WithError(err).Error("") // TODO Write some message
+				}
+				res = append(res, r.ID)
+			}
+		}
+	}
+
+	return res, nil
+}
+
+func servicesToMap(services []*models.Service) map[string]*models.Service {
+	res := make(map[string]*models.Service, len(services))
+	for _, service := range services {
+		res[service.ServiceID] = service
+	}
+
+	return res
+}
+
+func getServicesIDs(agents []*models.Agent) []string {
+	res := make([]string, len(agents))
+	for i, agent := range agents {
+		res[i] = *agent.ServiceID
+	}
+
+	return res
+}
+
+func groupChecksByDB(checks []check.Check) ([]check.Check, []check.Check, []check.Check) {
+	var mySQLChecks []check.Check
+	var postgreSQLChecks []check.Check
+	var mongoChecks []check.Check
+
+	for _, c := range checks {
+		switch c.Type {
+		case check.MySQLSelect:
+			fallthrough
+		case check.MySQLShow:
+			mySQLChecks = append(mySQLChecks, c)
+
+		case check.PostgreSQLSelect:
+			fallthrough
+		case check.PostgreSQLShow:
+			postgreSQLChecks = append(postgreSQLChecks, c)
+
+		case check.MongoDBGetParameter:
+			mongoChecks = append(mongoChecks, c)
+		}
+	}
+
+	return mySQLChecks, postgreSQLChecks, mongoChecks
+}
+
+func (s *Service) loadLocalChecks(file string) error {
+	data, err := ioutil.ReadFile(file)
+	if err != nil {
+		errors.Wrap(err, "failed to read test checks file")
+	}
+	checks, err := check.Parse(bytes.NewReader(data))
+	if err != nil {
+		errors.Wrap(err, "failed to parse test checks file")
+	}
+
+	s.updateChecks(checks)
+	return nil
 }
 
 func (s *Service) downloadChecks(ctx context.Context) error {
