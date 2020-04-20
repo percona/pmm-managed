@@ -18,7 +18,9 @@
 package checks
 
 import (
+	"bytes"
 	"context"
+	"io/ioutil"
 	"net"
 	"os"
 	"strings"
@@ -42,6 +44,7 @@ const (
 	envHost      = "PERCONA_TEST_CHECKS_HOST"
 	envPublicKey = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
 	envInterval  = "PERCONA_TEST_CHECKS_INTERVAL"
+	envCheckFile = "PERCONA_TEST_CHECKS_FILE"
 
 	timeout = 5 * time.Second
 )
@@ -89,6 +92,24 @@ func New(pmmVersion string) *Service {
 
 // Run runs checks service that grabs checks from Percona Checks service every interval until context is canceled.
 func (s *Service) Run(ctx context.Context) {
+	if f := os.Getenv(envCheckFile); f != "" {
+		s.l.Warnf("Use local test checks file: %s", f)
+
+		data, err := ioutil.ReadFile(f)
+		if err != nil {
+			s.l.WithError(err).Error("Failed to read test checks file")
+			return
+		}
+		checks, err := check.Parse(bytes.NewReader(data))
+		if err != nil {
+			s.l.WithError(err).Error("Failed to parse test checks file")
+			return
+		}
+
+		s.updateChecks(checks)
+		return
+	}
+
 	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
 
