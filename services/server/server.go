@@ -537,8 +537,8 @@ func (s *Server) validateAlertManagerRules(ctx context.Context, rules string) er
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	tempFile.Close()                 // nolint:errcheck
-	defer os.Remove(tempFile.Name()) // nolint:errcheck
+	tempFile.Close()                 //nolint:errcheck
+	defer os.Remove(tempFile.Name()) //nolint:errcheck
 
 	if err = ioutil.WriteFile(tempFile.Name(), []byte(rules), 0644); err != nil {
 		return errors.WithStack(err)
@@ -547,7 +547,7 @@ func (s *Server) validateAlertManagerRules(ctx context.Context, rules string) er
 	timeoutCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(timeoutCtx, "promtool", "check", "rules", tempFile.Name()) // nolint:gosec
+	cmd := exec.CommandContext(timeoutCtx, "promtool", "check", "rules", tempFile.Name()) //nolint:gosec
 	pdeathsig.Set(cmd, unix.SIGKILL)
 
 	b, err := cmd.CombinedOutput()
@@ -572,8 +572,8 @@ func (s *Server) validateSSHKey(ctx context.Context, sshKey string) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	tempFile.Close()                 // nolint:errcheck
-	defer os.Remove(tempFile.Name()) // nolint:errcheck
+	tempFile.Close()                 //nolint:errcheck
+	defer os.Remove(tempFile.Name()) //nolint:errcheck
 
 	if err = ioutil.WriteFile(tempFile.Name(), []byte(sshKey), 0600); err != nil {
 		return errors.WithStack(err)
@@ -582,7 +582,7 @@ func (s *Server) validateSSHKey(ctx context.Context, sshKey string) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(timeoutCtx, "ssh-keygen", "-l", "-f", tempFile.Name()) // nolint:gosec
+	cmd := exec.CommandContext(timeoutCtx, "ssh-keygen", "-l", "-f", tempFile.Name()) //nolint:gosec
 	pdeathsig.Set(cmd, unix.SIGKILL)
 
 	if err = cmd.Run(); err != nil {
