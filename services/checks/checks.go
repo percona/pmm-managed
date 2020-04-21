@@ -20,6 +20,7 @@ package checks
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
@@ -41,7 +42,7 @@ import (
 )
 
 const (
-	defaultHost     = "check.percona.com"
+	defaultHost     = "check.percona.com:443"
 	defaultInterval = 24 * time.Hour
 
 	// Environment variables that affect checks service; only for testing.
@@ -73,7 +74,7 @@ type Service struct {
 }
 
 // New returns Service with given PMM version.
-func New(pmmVersion string) *Service {
+func New(r *agents.Registry, db *reform.DB, pmmVersion string) *Service {
 	l := logrus.WithField("component", "check")
 	s := &Service{
 		l:          l,
@@ -81,6 +82,8 @@ func New(pmmVersion string) *Service {
 		host:       defaultHost,
 		publicKeys: defaultPublicKeys,
 		interval:   defaultInterval,
+		r: r,
+		db: db,
 	}
 
 	if h := os.Getenv(envHost); h != "" {
@@ -101,6 +104,7 @@ func New(pmmVersion string) *Service {
 
 // Run runs checks service that grabs checks from Percona Checks service every interval until context is canceled.
 func (s *Service) Run(ctx context.Context) {
+	time.Sleep(5 * time.Second) // TODO to let agents connect/reconnect
 	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
 
@@ -112,8 +116,12 @@ func (s *Service) Run(ctx context.Context) {
 			}
 		} else {
 			if err := s.downloadChecks(ctx); err != nil {
-				s.l.Errorf("Failed to download checks: %v", err)
+				s.l.WithError(err).Error("Failed to download checks")
 			}
+		}
+
+		if err := s.executeChecks(); err != nil {
+			s.l.WithError(err).Error("Failed to execute security checks")
 		}
 
 		select {
@@ -135,12 +143,14 @@ func (s *Service) Checks() []check.Check {
 }
 
 func (s *Service) executeChecks() error {
-	mySQLChecks, postgreSQLChecks, mongoChecks := groupChecksByDB(s.checks)
+	mySQLChecks, _, _ := groupChecksByDB(s.checks)
 
 	mySQLRes, err := s.executeMySQLChecks(mySQLChecks)
 	if err != nil {
-		s.l.WithError(err).Error() //TODO Write some message
+		s.l.WithError(err).Error("Failed to execute mySQL checks")
 	}
+
+	fmt.Println(mySQLRes) // TODO debug
 
 	return nil
 }
@@ -168,7 +178,7 @@ func (s *Service) executeMySQLChecks(checks []check.Check) ([]string, error) {
 	for _, agent := range agents {
 		r, err := models.CreateActionResult(s.db.Querier, *agent.PMMAgentID)
 		if err != nil {
-			s.l.WithError(err).Error("") // TODO Write some message
+			s.l.WithError(err).Errorf("Failed to prepare action result for agent %s", *agent.PMMAgentID) // TODO agentID vs pmmAgentID?
 			continue
 		}
 		dsn := agent.DSN(sMap[*agent.ServiceID], 2*time.Second, "") // TODO Do we need DB name for some checks?
@@ -177,7 +187,8 @@ func (s *Service) executeMySQLChecks(checks []check.Check) ([]string, error) {
 			switch c.Type {
 			case check.MySQLShow:
 				if err := s.r.StartMySQLQueryShowAction(context.Background(), r.ID, *agent.PMMAgentID, dsn, c.Query); err != nil {
-					s.l.WithError(err).Error("") // TODO Write some message
+					s.l.WithError(err).Error("Failed to start mySQL action")
+					continue
 				}
 				res = append(res, r.ID)
 			}
