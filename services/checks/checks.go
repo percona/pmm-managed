@@ -38,7 +38,6 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/agents"
 )
 
 const (
@@ -69,12 +68,12 @@ type Service struct {
 	m      sync.RWMutex
 	checks []check.Check
 
-	r  *agents.Registry
+	r  registryService
 	db *reform.DB
 }
 
 // New returns Service with given PMM version.
-func New(r *agents.Registry, db *reform.DB, pmmVersion string) *Service {
+func New(r registryService, db *reform.DB, pmmVersion string) *Service {
 	l := logrus.WithField("component", "check")
 	s := &Service{
 		l:          l,
