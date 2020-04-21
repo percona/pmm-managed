@@ -192,7 +192,7 @@ func TestServiceHelpers(t *testing.T) {
 			Port:        pointer.ToUint16(3306),
 			Socket:      pointer.ToString("/var/run/mysqld/mysqld.sock"),
 		})
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Socket and address cannot be specified together`), err)
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Socket and address cannot be specified together.`), err)
 	})
 
 	t.Run("MySQL empty connection", func(t *testing.T) {
@@ -203,7 +203,7 @@ func TestServiceHelpers(t *testing.T) {
 			ServiceName: "test-mysql-socket-address",
 			NodeID:      "N1",
 		})
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Neither socket nor address passed`), err)
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Neither socket nor address passed.`), err)
 	})
 }
 
