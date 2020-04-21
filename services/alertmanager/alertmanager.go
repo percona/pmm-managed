@@ -70,20 +70,6 @@ func New(db *reform.DB, v string, agentsRegistry agentsRegistry) (*Service, erro
 	}, nil
 }
 
-func (svc *Service) AddAlert(id string, delayFor time.Duration, params *AlertParams) error {
-	alert, err := makeAlert(params)
-	if err != nil {
-		return err
-	}
-
-	svc.r.Add(id, delayFor, alert)
-	return nil
-}
-
-func (svc *Service) RemoveAlert(id string) {
-	svc.r.Remove(id)
-}
-
 // Run runs Alertmanager configuration update loop until ctx is canceled.
 func (svc *Service) Run(ctx context.Context) {
 	svc.l.Info("Starting...")
@@ -132,9 +118,9 @@ receivers:
 	}
 }
 
-// updateInventoryAlerts adds/updates alerts for inventory information in the registry.
-func (svc *Service) updateInventoryAlerts(ctx context.Context) {
+func (svc *Service) getInventoryData(ctx context.Context) (map[string]*models.Node, map[string]*models.Service, map[string]*models.Agent, error) {
 	var nodes []*models.Node
+	var services []*models.Service
 	var agents []*models.Agent
 	err := svc.db.InTransaction(func(t *reform.TX) error {
 		var e error
@@ -143,41 +129,101 @@ func (svc *Service) updateInventoryAlerts(ctx context.Context) {
 			return e
 		}
 
+		services, e = models.FindServices(t.Querier, models.ServiceFilters{})
+		if e != nil {
+			return e
+		}
+
 		agents, e = models.FindAgents(t.Querier, models.AgentFilters{})
 		return e
 	})
 	if err != nil {
-		svc.l.Error(err)
-		return
+		return nil, nil, nil, err
 	}
 
 	nodesMap := make(map[string]*models.Node, len(nodes))
 	for _, n := range nodes {
 		nodesMap[n.NodeID] = n
 	}
+	servicesMap := make(map[string]*models.Service, len(services))
+	for _, s := range services {
+		servicesMap[s.ServiceID] = s
+	}
+	agentsMap := make(map[string]*models.Agent, len(agents))
+	for _, a := range agents {
+		agentsMap[a.AgentID] = a
+	}
 
-	svc.r.RemovePrefix("inventory/")
+	return nodesMap, servicesMap, agentsMap, nil
+}
+
+// updateInventoryAlerts adds/updates alerts for inventory information in the registry.
+func (svc *Service) updateInventoryAlerts(ctx context.Context) {
+	nodes, services, agents, err := svc.getInventoryData(ctx)
+	if err != nil {
+		svc.l.Error(err)
+		return
+	}
+
+	var createdIDs []string
+
+	for _, service := range services {
+		switch service.ServiceType {
+		case models.PostgreSQLServiceType:
+			createdIDs = append(createdIDs, svc.updateInventoryAlertsForPostgreSQL(nodes[service.NodeID], service)...)
+		}
+	}
 
 	for _, agent := range agents {
 		switch agent.AgentType {
 		case models.PMMAgentType:
-			svc.updateInventoryAlertsForPMMAgent(agent, nodesMap[pointer.GetString(agent.RunsOnNodeID)])
+			createdIDs = append(createdIDs, svc.updateInventoryAlertsForPMMAgent(agent, nodes[pointer.GetString(agent.RunsOnNodeID)])...)
 		}
 	}
+
+	keepIDs := make(map[string]struct{})
+	for _, id := range createdIDs {
+		keepIDs[id] = struct{}{}
+	}
+	svc.r.RemovePrefix("inventory/", keepIDs)
 }
 
-func (svc *Service) updateInventoryAlertsForPMMAgent(agent *models.Agent, node *models.Node) {
+func (svc *Service) updateInventoryAlertsForPostgreSQL(node *models.Node, service *models.Service) []string {
 	if node == nil {
-		svc.l.Errorf("Node with ID %v not found.", agent.RunsOnNodeID)
-		return
+		svc.l.Error("Node not found.")
+		return nil
+	}
+
+	prefix := "inventory/" + service.ServiceID + "/"
+	var createdIDs []string
+
+	name, alert, err := makeAlertPostgreSQLIsOutdated(node, service)
+	if err == nil {
+		id := prefix + name
+		svc.r.Add(id, testingAlertsDelay, alert)
+		createdIDs = append(createdIDs, id)
+	} else {
+		svc.l.Error(err)
+	}
+
+	return createdIDs
+}
+
+func (svc *Service) updateInventoryAlertsForPMMAgent(agent *models.Agent, node *models.Node) []string {
+	if node == nil {
+		svc.l.Error("Node not found.")
+		return nil
 	}
 
 	prefix := "inventory/" + agent.AgentID + "/"
+	var createdIDs []string
 
 	if !svc.agentsRegistry.IsConnected(agent.AgentID) {
 		name, alert, err := makeAlertPMMAgentNotConnected(agent, node)
 		if err == nil {
-			svc.r.Add(prefix+name, testingAlertsDelay, alert)
+			id := prefix + name
+			svc.r.Add(id, testingAlertsDelay, alert)
+			createdIDs = append(createdIDs, id)
 		} else {
 			svc.l.Error(err)
 		}
@@ -190,11 +236,15 @@ func (svc *Service) updateInventoryAlertsForPMMAgent(agent *models.Agent, node *
 	if agentVersion != nil && agentVersion.Less(svc.serverVersion) {
 		name, alert, err := makeAlertPMMAgentIsOutdated(agent, node, svc.serverVersion.String())
 		if err == nil {
+			id := prefix + name
 			svc.r.Add(prefix+name, testingAlertsDelay, alert)
+			createdIDs = append(createdIDs, id)
 		} else {
 			svc.l.Error(err)
 		}
 	}
+
+	return createdIDs
 }
 
 // sendAlerts sends alerts collected in the registry.

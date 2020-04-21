@@ -136,3 +136,24 @@ func makeAlertPMMAgentIsOutdated(agent *models.Agent, node *models.Node, serverV
 	}
 	return name, alert, nil
 }
+
+// makeAlertPostgreSQLIsOutdated makes postgresql_outdated alert.
+func makeAlertPostgreSQLIsOutdated(node *models.Node, service *models.Service) (string, *ammodels.PostableAlert, error) {
+	name := "postgresql_outdated"
+	alert, err := makeAlert(&AlertParams{
+		Name:    name,
+		Summary: "PostgreSQL is outdated",
+		Description: fmt.Sprintf(
+			"Node name: %s\nCurrent version: %s\nLatest version: %s",
+			node.NodeName, "Fake", "Bogus",
+		),
+		Severity: Info,
+
+		Node:    node,
+		Service: service,
+	})
+	if err != nil {
+		return "", nil, err
+	}
+	return name, alert, nil
+}

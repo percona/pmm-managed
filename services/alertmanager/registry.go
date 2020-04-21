@@ -53,21 +53,15 @@ func (r *registry) Add(id string, delayFor time.Duration, alert *ammodels.Postab
 	}
 }
 
-// Remove removes alert by ID.
-func (r *registry) Remove(id string) {
-	r.rw.Lock()
-	defer r.rw.Unlock()
-
-	delete(r.alerts, id)
-	delete(r.times, id)
-}
-
-// RemovePrefix removes all alerts with given ID prefix.
-func (r *registry) RemovePrefix(prefix string) {
+// RemovePrefix removes all alerts with given ID prefix except a given list of IDs.
+func (r *registry) RemovePrefix(prefix string, keepIDs map[string]struct{}) {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
 	for id := range r.alerts {
+		if _, ok := keepIDs[id]; ok {
+			continue
+		}
 		if strings.HasPrefix(id, prefix) {
 			delete(r.alerts, id)
 			delete(r.times, id)
