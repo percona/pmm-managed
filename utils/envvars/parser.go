@@ -67,7 +67,7 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 		}
 
 		if strings.Contains(k, "TEST") {
-			warns = append(warns, fmt.Sprintf("DON'T USE TEST VARIABLES, IT'S ONLY FOR DEVELOPMENT PURPOSES AND CAN LEAD TO " +
+			warns = append(warns, fmt.Sprintf("DON'T USE TEST VARIABLES, IT'S ONLY FOR DEVELOPMENT PURPOSES AND CAN LEAD TO "+
 				"UNPREDICTABLE BEHAVIOR ON PRODUCTION STAGES: %s", env))
 			// skip test environment variables
 			continue
