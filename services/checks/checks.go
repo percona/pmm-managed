@@ -191,7 +191,7 @@ func (s *Service) verifySignatures(resp *api.GetAllChecksResponse) error {
 			if err = check.Verify([]byte(resp.File), key, sign); err == nil {
 				return nil
 			}
-			logrus.Debugf("Key %s doesn't match signature %s, reason: %v", key, sign, err)
+			s.l.Debugf("Key %s doesn't match signature %s, reason: %v", key, sign, err)
 		}
 	}
 
