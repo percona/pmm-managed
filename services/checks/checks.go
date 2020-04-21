@@ -82,8 +82,8 @@ func New(r *agents.Registry, db *reform.DB, pmmVersion string) *Service {
 		host:       defaultHost,
 		publicKeys: defaultPublicKeys,
 		interval:   defaultInterval,
-		r: r,
-		db: db,
+		r:          r,
+		db:         db,
 	}
 
 	if h := os.Getenv(envHost); h != "" {
