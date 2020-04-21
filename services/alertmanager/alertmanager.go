@@ -94,8 +94,6 @@ func (svc *Service) Run(ctx context.Context) {
 	t := time.NewTicker(resendInterval)
 	defer t.Stop()
 
-	// TODO add stt_check=1 label to STT alerts
-
 	for {
 		svc.updateInventoryAlerts(ctx)
 		svc.sendAlerts(ctx)

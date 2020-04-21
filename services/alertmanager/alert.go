@@ -80,6 +80,7 @@ func makeAlert(params *AlertParams) (*ammodels.PostableAlert, error) {
 
 	labels[model.AlertNameLabel] = params.Name
 	labels["severity"] = string(params.Severity)
+	labels["stt_check"] = "1"
 
 	return &ammodels.PostableAlert{
 		Alert: ammodels.Alert{
