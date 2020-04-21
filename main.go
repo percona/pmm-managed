@@ -379,15 +379,11 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 	}
 	deps.prometheus.RequestConfigurationUpdate()
 
-	//
-	// FIXME Enable after https://github.com/percona/pmm-managed/pull/365 is merged
-	//
-
-	// deps.l.Infof("Checking Alertmanager...")
-	// if err = deps.alertmanager.IsReady(ctx); err != nil {
-	// 	deps.l.Warnf("Alertmanager problem: %+v.", err)
-	// 	return false
-	// }
+	deps.l.Infof("Checking Alertmanager...")
+	if err = deps.alertmanager.IsReady(ctx); err != nil {
+		deps.l.Warnf("Alertmanager problem: %+v.", err)
+		return false
+	}
 
 	deps.l.Info("Setup completed.")
 	return true

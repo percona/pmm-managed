@@ -41,7 +41,7 @@ const resendInterval = 30 * time.Second
 
 // FIXME remove completely before release
 const (
-	addTestingAlerts   = false
+	addTestingAlerts   = true
 	testingAlertsDelay = time.Second
 )
 

@@ -27,6 +27,7 @@ import (
 )
 
 // Severity defines alert severity.
+// TODO Move to saas package: https://jira.percona.com/browse/SAAS-84
 type Severity string
 
 // severities
