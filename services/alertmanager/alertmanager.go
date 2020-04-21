@@ -95,7 +95,10 @@ func (svc *Service) Run(ctx context.Context) {
 	defer t.Stop()
 
 	for {
-		svc.updateInventoryAlerts(ctx)
+		if addTestingAlerts {
+			svc.updateInventoryAlerts(ctx)
+		}
+
 		svc.sendAlerts(ctx)
 
 		select {
@@ -166,10 +169,6 @@ func (svc *Service) updateInventoryAlerts(ctx context.Context) {
 func (svc *Service) updateInventoryAlertsForPMMAgent(agent *models.Agent, node *models.Node) {
 	if node == nil {
 		svc.l.Errorf("Node with ID %v not found.", agent.RunsOnNodeID)
-		return
-	}
-
-	if !addTestingAlerts {
 		return
 	}
 
