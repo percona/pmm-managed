@@ -54,7 +54,6 @@ import (
 	channelz "google.golang.org/grpc/channelz/service"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/reflection"
-	"google.golang.org/grpc/status"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
@@ -352,12 +351,15 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 	deps.l.Infof("Updating settings...")
 	env := os.Environ()
 	sort.Strings(env)
-	if err = deps.server.UpdateSettingsFromEnv(env); err != nil {
-		if _, ok := status.FromError(err); !ok {
-			deps.l.Warnf("Settings problem: %+v.", err)
-			return false
+	if errs := deps.server.UpdateSettingsFromEnv(env); len(errs) != 0 {
+		// This should be impossible in the normal workflow.
+		// An invalid environment variable must be caught with pmm-managed-init
+		// and the docker run must be terminated.
+		deps.l.Errorln("Failed to update settings from environment:")
+		for _, e := range errs {
+			deps.l.Errorln(e)
 		}
-		deps.l.Warnf("Failed to update settings from environment: %+v.", err)
+		return false
 	}
 
 	deps.l.Infof("Updating supervisord configuration...")
@@ -372,7 +374,7 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 	}
 
 	deps.l.Infof("Checking Prometheus...")
-	if err = deps.prometheus.Check(ctx); err != nil {
+	if err = deps.prometheus.IsReady(ctx); err != nil {
 		deps.l.Warnf("Prometheus problem: %+v.", err)
 		return false
 	}
@@ -427,8 +429,8 @@ func main() {
 	alertManagerRulesFileF := kingpin.Flag("alert-manager-rules-file", "Path to the Alert Manager Rules file").
 		Default(defaultAlertManagerFile).String()
 
-	debugF := kingpin.Flag("debug", "Enable debug logging").Bool()
-	traceF := kingpin.Flag("trace", "Enable trace logging (implies debug)").Bool()
+	debugF := kingpin.Flag("debug", "Enable debug logging").Envar("PMM_DEBUG").Bool()
+	traceF := kingpin.Flag("trace", "Enable trace logging (implies debug)").Envar("PMM_TRACE").Bool()
 
 	kingpin.Parse()
 
@@ -496,8 +498,20 @@ func main() {
 	logs := supervisord.NewLogs(version.FullInfo(), pmmUpdateCheck)
 	supervisord := supervisord.New(*supervisordConfigDirF, pmmUpdateCheck)
 	telemetry := telemetry.NewService(db, version.Version)
-	checker := server.NewAWSInstanceChecker(db, telemetry)
-	server, err := server.NewServer(db, prometheus, supervisord, telemetry, checker, *alertManagerRulesFileF)
+	awsInstanceChecker := server.NewAWSInstanceChecker(db, telemetry)
+	grafanaClient := grafana.NewClient(*grafanaAddrF)
+	prom.MustRegister(grafanaClient)
+
+	serverParams := &server.ServerParams{
+		DB:                 db,
+		Prometheus:         prometheus,
+		Supervisord:        supervisord,
+		TelemetryService:   telemetry,
+		AwsInstanceChecker: awsInstanceChecker,
+		AlertManagerFile:   *alertManagerRulesFileF,
+		GrafanaClient:      grafanaClient,
+	}
+	server, err := server.NewServer(serverParams)
 	if err != nil {
 		l.Panicf("Server problem: %+v", err)
 	}
@@ -537,9 +551,7 @@ func main() {
 	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient)
 	prom.MustRegister(agentsRegistry)
 
-	grafanaClient := grafana.NewClient(*grafanaAddrF)
-	prom.MustRegister(grafanaClient)
-	authServer := grafana.NewAuthServer(grafanaClient, checker)
+	authServer := grafana.NewAuthServer(grafanaClient, awsInstanceChecker)
 
 	var wg sync.WaitGroup
 
