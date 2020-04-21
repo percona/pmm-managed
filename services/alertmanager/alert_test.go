@@ -47,6 +47,7 @@ func TestMakeAlert(t *testing.T) {
 				"node_id":   "/node_id/456",
 				"node_name": "nodename",
 				"severity":  "warning",
+				"stt_check": "1",
 			},
 		},
 		Annotations: ammodels.LabelSet{
