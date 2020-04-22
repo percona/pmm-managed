@@ -30,6 +30,7 @@ import (
 
 	api "github.com/percona-platform/saas/gen/checked"
 	"github.com/percona-platform/saas/pkg/check"
+	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/utils/tlsconfig"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -42,7 +43,7 @@ import (
 
 const (
 	defaultHost     = "check.percona.com:443"
-	defaultInterval = 24 * time.Hour
+	defaultInterval = 10 * time.Second // TODO Debug value
 
 	// Environment variables that affect checks service; only for testing.
 	envHost      = "PERCONA_TEST_CHECKS_HOST"
@@ -68,8 +69,17 @@ type Service struct {
 	m      sync.RWMutex
 	checks []check.Check
 
+	rm      sync.Mutex
+	results map[string]result
+
 	r  registryService
 	db *reform.DB
+}
+
+type result struct {
+	id         string
+	pmmAgentID string
+	serviceIS  string
 }
 
 // New returns Service with given PMM version.
@@ -83,6 +93,7 @@ func New(r registryService, db *reform.DB, pmmVersion string) *Service {
 		interval:   defaultInterval,
 		r:          r,
 		db:         db,
+		results:    make(map[string]result),
 	}
 
 	if h := os.Getenv(envHost); h != "" {
@@ -106,6 +117,8 @@ func (s *Service) Run(ctx context.Context) {
 	time.Sleep(5 * time.Second) // TODO to let agents connect/reconnect
 	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
+
+	go s.checkResults(ctx)
 
 	for {
 		if f := os.Getenv(envCheckFile); f != "" {
@@ -141,6 +154,75 @@ func (s *Service) Checks() []check.Check {
 	return append(r, s.checks...)
 }
 
+func (s *Service) checkResults(ctx context.Context) {
+	tic := time.NewTicker(30 * time.Second) // TODO Scan interval
+
+	for {
+		select {
+		case <-tic.C:
+			// continue with next loop iteration
+		case <-ctx.Done():
+			return
+		}
+
+		for id := range s.getResults() {
+			res, err := models.FindActionResultByID(s.db.Querier, id)
+			if err != nil {
+				s.l.Error(err)
+			}
+
+			if !res.Done {
+				continue
+			}
+
+			if res.Error != "" {
+				s.l.Warn("Action %s failed: %s", id, res.Error) // TODO better log message
+				s.removeResult(id)
+				continue
+			}
+
+			rr, err := agentpb.UnmarshalActionQueryResult([]byte(res.Output))
+			if err != nil {
+				s.l.Error(err) // TODO log message
+			}
+
+			// TODO Execute script against returned data
+			// TODO Throw away results with expired TTL (they probably should have TTL)
+			fmt.Println(rr)
+			s.removeResult(id)
+		}
+
+	}
+}
+
+func (s *Service) addResults(res []result) {
+	s.rm.Lock()
+	defer s.rm.Unlock()
+
+	for _, r := range res {
+		s.results[r.id] = r
+	}
+}
+
+func (s *Service) removeResult(id string) {
+	s.rm.Lock()
+	defer s.rm.Unlock()
+
+	delete(s.results, id)
+}
+
+func (s *Service) getResults() map[string]result {
+	s.rm.Lock()
+	defer s.rm.Unlock()
+
+	res := make(map[string]result, len(s.results))
+	for k, v := range s.results {
+		res[k] = v
+	}
+
+	return res
+}
+
 func (s *Service) executeChecks() error {
 	mySQLChecks, _, _ := groupChecksByDB(s.checks)
 
@@ -148,16 +230,15 @@ func (s *Service) executeChecks() error {
 	if err != nil {
 		s.l.WithError(err).Error("Failed to execute mySQL checks")
 	}
-
-	fmt.Println(mySQLRes) // TODO debug
-
+	s.addResults(mySQLRes)
 	return nil
 }
 
-func (s *Service) executeMySQLChecks(checks []check.Check) ([]string, error) {
-	var res []string
+func (s *Service) executeMySQLChecks(checks []check.Check) ([]result, error) {
+	var res []result
 	var agents []*models.Agent
 	var services []*models.Service
+
 	e := s.db.InTransaction(func(t *reform.TX) error {
 		var err error
 		typ := models.MySQLdExporterType
@@ -189,7 +270,7 @@ func (s *Service) executeMySQLChecks(checks []check.Check) ([]string, error) {
 					s.l.WithError(err).Error("Failed to start mySQL action")
 					continue
 				}
-				res = append(res, r.ID)
+				res = append(res, result{id: r.ID, pmmAgentID: *agent.PMMAgentID, serviceIS: *agent.ServiceID})
 			}
 		}
 	}
