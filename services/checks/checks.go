@@ -123,7 +123,7 @@ func (s *Service) Run(ctx context.Context) {
 
 	for {
 		if f := os.Getenv(envCheckFile); f != "" {
-			s.l.Warnf("Use local test checks file: %s", f)
+			s.l.Warnf("Use local test checks file: %s.", f)
 			if err := s.loadLocalChecks(f); err != nil {
 				s.l.Error("Failed to load local checks file: %s.", err)
 			}
@@ -177,7 +177,7 @@ func (s *Service) checkResults(ctx context.Context) {
 			}
 
 			if res.Error != "" {
-				s.l.Warn("Action %s failed: %s", id, res.Error) // TODO better log message
+				s.l.Warn("Action %s failed: %s.", id, res.Error) // TODO better log message
 				s.removeResult(id)
 				continue
 			}
