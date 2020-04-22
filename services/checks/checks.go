@@ -124,16 +124,16 @@ func (s *Service) Run(ctx context.Context) {
 		if f := os.Getenv(envCheckFile); f != "" {
 			s.l.Warnf("Use local test checks file: %s", f)
 			if err := s.loadLocalChecks(f); err != nil {
-				s.l.WithError(err).Error("Failed to load local checks file")
+				s.l.Error("Failed to load local checks file: %s.", err)
 			}
 		} else {
 			if err := s.downloadChecks(ctx); err != nil {
-				s.l.WithError(err).Error("Failed to download checks")
+				s.l.Error("Failed to download checks, %s.", err)
 			}
 		}
 
 		if err := s.executeChecks(); err != nil {
-			s.l.WithError(err).Error("Failed to execute security checks")
+			s.l.Error("Failed to execute security checks: %s.", err)
 		}
 
 		select {
@@ -228,7 +228,7 @@ func (s *Service) executeChecks() error {
 
 	mySQLRes, err := s.executeMySQLChecks(mySQLChecks)
 	if err != nil {
-		s.l.WithError(err).Error("Failed to execute mySQL checks")
+		s.l.Error("Failed to execute mySQL checks: %s.", err)
 	}
 	s.addResults(mySQLRes)
 	return nil
@@ -258,7 +258,7 @@ func (s *Service) executeMySQLChecks(checks []check.Check) ([]result, error) {
 	for _, agent := range agents {
 		r, err := models.CreateActionResult(s.db.Querier, *agent.PMMAgentID)
 		if err != nil {
-			s.l.WithError(err).Errorf("Failed to prepare action result for agent %s", *agent.PMMAgentID) // TODO agentID vs pmmAgentID?
+			s.l.Errorf("Failed to prepare action result for agent %s: %s.", *agent.PMMAgentID, err) // TODO agentID vs pmmAgentID?
 			continue
 		}
 		dsn := agent.DSN(sMap[*agent.ServiceID], 2*time.Second, "") // TODO Do we need DB name for some checks?
@@ -267,7 +267,7 @@ func (s *Service) executeMySQLChecks(checks []check.Check) ([]result, error) {
 			switch c.Type {
 			case check.MySQLShow:
 				if err := s.r.StartMySQLQueryShowAction(context.Background(), r.ID, *agent.PMMAgentID, dsn, c.Query); err != nil {
-					s.l.WithError(err).Error("Failed to start mySQL action")
+					s.l.Error("Failed to start mySQL action: %s.", err)
 					continue
 				}
 				res = append(res, result{id: r.ID, pmmAgentID: *agent.PMMAgentID, serviceIS: *agent.ServiceID})
