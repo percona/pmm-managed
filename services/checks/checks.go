@@ -125,16 +125,16 @@ func (s *Service) Run(ctx context.Context) {
 		if f := os.Getenv(envCheckFile); f != "" {
 			s.l.Warnf("Use local test checks file: %s.", f)
 			if err := s.loadLocalChecks(f); err != nil {
-				s.l.Error("Failed to load local checks file: %s.", err)
+				s.l.Errorf("Failed to load local checks file: %s.", err)
 			}
 		} else {
 			if err := s.downloadChecks(ctx); err != nil {
-				s.l.Error("Failed to download checks, %s.", err)
+				s.l.Errorf("Failed to download checks, %s.", err)
 			}
 		}
 
 		if err := s.executeChecks(); err != nil {
-			s.l.Error("Failed to execute security checks: %s.", err)
+			s.l.Errorf("Failed to execute security checks: %s.", err)
 		}
 
 		select {
@@ -177,7 +177,7 @@ func (s *Service) checkResults(ctx context.Context) {
 			}
 
 			if res.Error != "" {
-				s.l.Warn("Action %s failed: %s.", id, res.Error) // TODO better log message
+				s.l.Warnf("Action %s failed: %s.", id, res.Error) // TODO better log message
 				s.removeResult(id)
 				continue
 			}
@@ -225,11 +225,11 @@ func (s *Service) getResults() map[string]checkTask {
 }
 
 func (s *Service) executeChecks() error {
-	mySQLChecks, _, _ := groupChecksByDB(s.checks)
+	mySQLChecks, _, _ := s.groupChecksByDB(s.checks)
 
 	mySQLRes, err := s.executeMySQLChecks(mySQLChecks)
 	if err != nil {
-		s.l.Error("Failed to execute mySQL checks: %s.", err)
+		s.l.Errorf("Failed to execute mySQL checks: %s.", err)
 	}
 	s.addResults(mySQLRes)
 	return nil
@@ -257,9 +257,10 @@ func (s *Service) executeMySQLChecks(checks []check.Check) ([]checkTask, error) 
 
 	sMap := servicesToMap(services)
 	for _, agent := range agents {
-		r, err := models.CreateActionResult(s.db.Querier, *agent.PMMAgentID)
+		pmmAgentID := *agent.PMMAgentID
+		r, err := models.CreateActionResult(s.db.Querier, pmmAgentID)
 		if err != nil {
-			s.l.Errorf("Failed to prepare action result for agent %s: %s.", *agent.PMMAgentID, err)
+			s.l.Errorf("Failed to prepare action result for agent %s: %s.", pmmAgentID, err)
 			continue
 		}
 		dsn := agent.DSN(sMap[*agent.ServiceID], 2*time.Second, "") // TODO Do we need DB name for some checks?
@@ -267,13 +268,13 @@ func (s *Service) executeMySQLChecks(checks []check.Check) ([]checkTask, error) 
 		for _, c := range checks {
 			switch c.Type {
 			case check.MySQLShow:
-				if err := s.registry.StartMySQLQueryShowAction(context.Background(), r.ID, *agent.PMMAgentID, dsn, c.Query); err != nil {
-					s.l.Error("Failed to start mySQL action: %s.", err)
+				if err := s.registry.StartMySQLQueryShowAction(context.Background(), r.ID, pmmAgentID, dsn, c.Query); err != nil {
+					s.l.Errorf("Failed to start mySQL action for agent %s, reason: %s.", pmmAgentID, err)
 					continue
 				}
 				res = append(res, checkTask{
 					resultID:   r.ID,
-					pmmAgentID: *agent.PMMAgentID,
+					pmmAgentID: pmmAgentID,
 					serviceID:  *agent.ServiceID,
 					check:      &c})
 			}
@@ -283,10 +284,8 @@ func (s *Service) executeMySQLChecks(checks []check.Check) ([]checkTask, error) 
 	return res, nil
 }
 
-func groupChecksByDB(checks []check.Check) ([]check.Check, []check.Check, []check.Check) {
-	var mySQLChecks []check.Check
-	var postgreSQLChecks []check.Check
-	var mongoChecks []check.Check
+func (s *Service) groupChecksByDB(checks []check.Check) ([]check.Check, []check.Check, []check.Check) {
+	var mySQLChecks, postgreSQLChecks, mongoChecks []check.Check
 
 	for _, c := range checks {
 		switch c.Type {
@@ -302,6 +301,9 @@ func groupChecksByDB(checks []check.Check) ([]check.Check, []check.Check, []chec
 
 		case check.MongoDBGetParameter:
 			mongoChecks = append(mongoChecks, c)
+
+		default:
+			s.l.Warnf("Unknown check type %s, skip it.", c.Type)
 		}
 	}
 
