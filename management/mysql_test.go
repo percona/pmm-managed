@@ -488,7 +488,7 @@ func TestAddMySQL(t *testing.T) {
 			},
 		}
 		addMySQLOK, err := client.Default.MySQL.AddMySQL(params)
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "address or socket is required")
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Neither socket nor address passed.")
 		assert.Nil(t, addMySQLOK)
 	})
 
@@ -514,7 +514,7 @@ func TestAddMySQL(t *testing.T) {
 			},
 		}
 		addMySQLOK, err := client.Default.MySQL.AddMySQL(params)
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Port: value '0' must be greater than '0'")
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Port are expected to be passed with address.")
 		assert.Nil(t, addMySQLOK)
 	})
 
@@ -542,7 +542,7 @@ func TestAddMySQL(t *testing.T) {
 			},
 		}
 		addMySQLOK, err := client.Default.MySQL.AddMySQL(params)
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "setting both address and socket in once is disallowed")
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Socket and address cannot be specified together.")
 		assert.Nil(t, addMySQLOK)
 	})
 

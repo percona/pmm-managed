@@ -10,6 +10,9 @@ build:
 	go test -c -v ./management
 	go test -c -v ./server
 
+dev-test:
+	go test -count=1 -p 1 -v ./... -pmm.server-insecure-tls
+
 run:
 	go test -count=1 -p 1 -v ./... 2>&1 | tee pmm-api-tests-output.txt
 	cat pmm-api-tests-output.txt | go-junit-report > pmm-api-tests-junit-report.xml
