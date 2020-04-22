@@ -26,6 +26,7 @@ func TestDownloadLogs(t *testing.T) {
 	assert.NoError(t, err)
 
 	expected := []string{
+		"alertmanager.log",
 		"clickhouse-server.err.log",
 		"clickhouse-server.log",
 		"clickhouse-server.startup.log",
