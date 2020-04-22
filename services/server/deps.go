@@ -20,7 +20,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/percona-platform/saas/pkg/check"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/version"
 
@@ -32,7 +31,6 @@ import (
 //go:generate mockery -name=alertmanagerService -case=snake -inpkg -testonly
 //go:generate mockery -name=supervisordService -case=snake -inpkg -testonly
 //go:generate mockery -name=telemetryService -case=snake -inpkg -testonly
-//go:generate mockery -name=securityChecksService -case=snake -inpkg -testonly
 
 // healthChecker interface wraps all services that implements the IsReady method to report the
 // service health for the Readiness check
@@ -77,10 +75,4 @@ type supervisordService interface {
 // We use it instead of real type for testing and to avoid dependency cycle.
 type telemetryService interface {
 	DistributionMethod() serverpb.DistributionMethod
-}
-
-// securityChecksService is a subset of methods of checks.Service used by this package.
-// We use it instead of real type for testing and to avoid dependency cycle.
-type securityChecksService interface {
-	Checks() []check.Check
 }
