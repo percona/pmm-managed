@@ -49,7 +49,9 @@ const (
 	timeout = 5 * time.Second
 )
 
-var defaultPublicKeys = []string{"RWSKCHyoLDYxJ1k0qeayKu3/fsXVS1z8M+0deAClryiHWP99Sr4R/gPP"}
+var defaultPublicKeys = []string{
+	"RWSKCHyoLDYxJ1k0qeayKu3/fsXVS1z8M+0deAClryiHWP99Sr4R/gPP", // PMM 2.6
+}
 
 // Service is responsible for interactions with Percona Check service.
 type Service struct {
@@ -80,7 +82,7 @@ func New(pmmVersion string) *Service {
 	}
 	if k := os.Getenv(envPublicKey); k != "" {
 		s.publicKeys = strings.Split(k, ",")
-		l.Warnf("Public key changed to %s.", k)
+		l.Warnf("Public keys changed to %q.", k)
 	}
 	if d, err := time.ParseDuration(os.Getenv(envInterval)); err == nil && d > 0 {
 		l.Warnf("Interval changed to %s.", d)
@@ -93,16 +95,16 @@ func New(pmmVersion string) *Service {
 // Run runs checks service that grabs checks from Percona Checks service every interval until context is canceled.
 func (s *Service) Run(ctx context.Context) {
 	if f := os.Getenv(envCheckFile); f != "" {
-		s.l.Warnf("Use local test checks file: %s", f)
+		s.l.Warnf("Using local test checks file: %s", f)
 
-		data, err := ioutil.ReadFile(f)
+		data, err := ioutil.ReadFile(f) //nolint:gosec
 		if err != nil {
-			s.l.WithError(err).Error("Failed to read test checks file")
+			s.l.Errorf("Failed to read test checks file: %s.", err)
 			return
 		}
 		checks, err := check.Parse(bytes.NewReader(data))
 		if err != nil {
-			s.l.WithError(err).Error("Failed to parse test checks file")
+			s.l.Errorf("Failed to parse test checks file: %s.", err)
 			return
 		}
 
@@ -137,7 +139,7 @@ func (s *Service) Checks() []check.Check {
 }
 
 func (s *Service) downloadChecks(ctx context.Context) error {
-	s.l.Infof("Download checks from: %s", s.host)
+	s.l.Infof("Downloading checks from %s ...", s.host)
 
 	host, _, err := net.SplitHostPort(s.host)
 	if err != nil {
@@ -182,7 +184,7 @@ func (s *Service) downloadChecks(ctx context.Context) error {
 
 func (s *Service) verifySignatures(resp *api.GetAllChecksResponse) error {
 	if len(resp.Signatures) == 0 {
-		return errors.New("checks service response hasn't any signatures")
+		return errors.New("zero signatures received")
 	}
 
 	var err error
@@ -191,11 +193,11 @@ func (s *Service) verifySignatures(resp *api.GetAllChecksResponse) error {
 			if err = check.Verify([]byte(resp.File), key, sign); err == nil {
 				return nil
 			}
-			s.l.Debugf("Key %s doesn't match signature %s, reason: %v", key, sign, err)
+			s.l.Debugf("Key %q doesn't match signature %q: %s.", key, sign, err)
 		}
 	}
 
-	return errors.New("checks signatures don't match any known percona public key")
+	return errors.New("no verified signatures")
 }
 
 func (s *Service) updateChecks(checks []check.Check) {

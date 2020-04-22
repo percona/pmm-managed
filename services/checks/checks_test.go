@@ -91,6 +91,6 @@ uEF33ScMPYpvHvBKv8+yBkJ9k4+DCfV4nDs6kKYwGhalvkkqwWkyfJffO+KW7a1m3y42WHpOnzBxLJ+I
 		}
 
 		err := s.verifySignatures(&resp)
-		assert.EqualError(t, err, "checks service response hasn't any signatures")
+		assert.EqualError(t, err, "zero signatures received")
 	})
 }
