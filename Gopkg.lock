@@ -384,8 +384,8 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-2.0"
-  digest = "1:3b16cd6f07cf0799ea2529d5607b07cf7133e2fa55d7fcb3dd3c5ee91adbf491"
+  branch = "SAAS-20-query-api"
+  digest = "1:665dc6780e2ce93dc4217bced1229718ea0b1b78074c84407b3132f4d7e5782f"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -406,7 +406,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "23d41db7e7d2282aef710e18cd8712fb86a1230e"
+  revision = "f7cf6d68bc443dee4c515a65d4438082ff42edb5"
 
 [[projects]]
   digest = "1:1e38d8f6796fabbf419aa2040dc196927690a1de7fe14af25fbd29c6ed44b4da"
