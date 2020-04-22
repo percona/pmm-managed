@@ -66,24 +66,25 @@ type Service struct {
 	publicKeys []string
 	interval   time.Duration
 
-	m      sync.RWMutex
+	cm     sync.Mutex
 	checks []check.Check
 
-	rm      sync.Mutex
-	results map[string]result
+	tm    sync.Mutex
+	tasks map[string]checkTask
 
-	r  registryService
-	db *reform.DB
+	registry registryService
+	db       *reform.DB
 }
 
-type result struct {
-	id         string
+type checkTask struct {
+	resultID   string
 	pmmAgentID string
-	serviceIS  string
+	serviceID  string
+	check      *check.Check
 }
 
 // New returns Service with given PMM version.
-func New(r registryService, db *reform.DB, pmmVersion string) *Service {
+func New(registry registryService, db *reform.DB, pmmVersion string) *Service {
 	l := logrus.WithField("component", "check")
 	s := &Service{
 		l:          l,
@@ -91,9 +92,9 @@ func New(r registryService, db *reform.DB, pmmVersion string) *Service {
 		host:       defaultHost,
 		publicKeys: defaultPublicKeys,
 		interval:   defaultInterval,
-		r:          r,
+		registry:   registry,
 		db:         db,
-		results:    make(map[string]result),
+		tasks:      make(map[string]checkTask),
 	}
 
 	if h := os.Getenv(envHost); h != "" {
@@ -147,8 +148,8 @@ func (s *Service) Run(ctx context.Context) {
 
 // Checks returns available checks.
 func (s *Service) Checks() []check.Check {
-	s.m.RLock()
-	defer s.m.RUnlock()
+	s.cm.Lock()
+	defer s.cm.Unlock()
 
 	r := make([]check.Check, 0, len(s.checks))
 	return append(r, s.checks...)
@@ -195,28 +196,28 @@ func (s *Service) checkResults(ctx context.Context) {
 	}
 }
 
-func (s *Service) addResults(res []result) {
-	s.rm.Lock()
-	defer s.rm.Unlock()
+func (s *Service) addResults(res []checkTask) {
+	s.tm.Lock()
+	defer s.tm.Unlock()
 
 	for _, r := range res {
-		s.results[r.id] = r
+		s.tasks[r.resultID] = r
 	}
 }
 
 func (s *Service) removeResult(id string) {
-	s.rm.Lock()
-	defer s.rm.Unlock()
+	s.tm.Lock()
+	defer s.tm.Unlock()
 
-	delete(s.results, id)
+	delete(s.tasks, id)
 }
 
-func (s *Service) getResults() map[string]result {
-	s.rm.Lock()
-	defer s.rm.Unlock()
+func (s *Service) getResults() map[string]checkTask {
+	s.tm.Lock()
+	defer s.tm.Unlock()
 
-	res := make(map[string]result, len(s.results))
-	for k, v := range s.results {
+	res := make(map[string]checkTask, len(s.tasks))
+	for k, v := range s.tasks {
 		res[k] = v
 	}
 
@@ -234,8 +235,8 @@ func (s *Service) executeChecks() error {
 	return nil
 }
 
-func (s *Service) executeMySQLChecks(checks []check.Check) ([]result, error) {
-	var res []result
+func (s *Service) executeMySQLChecks(checks []check.Check) ([]checkTask, error) {
+	var res []checkTask
 	var agents []*models.Agent
 	var services []*models.Service
 
@@ -258,7 +259,7 @@ func (s *Service) executeMySQLChecks(checks []check.Check) ([]result, error) {
 	for _, agent := range agents {
 		r, err := models.CreateActionResult(s.db.Querier, *agent.PMMAgentID)
 		if err != nil {
-			s.l.Errorf("Failed to prepare action result for agent %s: %s.", *agent.PMMAgentID, err) // TODO agentID vs pmmAgentID?
+			s.l.Errorf("Failed to prepare action result for agent %s: %s.", *agent.PMMAgentID, err)
 			continue
 		}
 		dsn := agent.DSN(sMap[*agent.ServiceID], 2*time.Second, "") // TODO Do we need DB name for some checks?
@@ -266,34 +267,20 @@ func (s *Service) executeMySQLChecks(checks []check.Check) ([]result, error) {
 		for _, c := range checks {
 			switch c.Type {
 			case check.MySQLShow:
-				if err := s.r.StartMySQLQueryShowAction(context.Background(), r.ID, *agent.PMMAgentID, dsn, c.Query); err != nil {
+				if err := s.registry.StartMySQLQueryShowAction(context.Background(), r.ID, *agent.PMMAgentID, dsn, c.Query); err != nil {
 					s.l.Error("Failed to start mySQL action: %s.", err)
 					continue
 				}
-				res = append(res, result{id: r.ID, pmmAgentID: *agent.PMMAgentID, serviceIS: *agent.ServiceID})
+				res = append(res, checkTask{
+					resultID:   r.ID,
+					pmmAgentID: *agent.PMMAgentID,
+					serviceID:  *agent.ServiceID,
+					check:      &c})
 			}
 		}
 	}
 
 	return res, nil
-}
-
-func servicesToMap(services []*models.Service) map[string]*models.Service {
-	res := make(map[string]*models.Service, len(services))
-	for _, service := range services {
-		res[service.ServiceID] = service
-	}
-
-	return res
-}
-
-func getServicesIDs(agents []*models.Agent) []string {
-	res := make([]string, len(agents))
-	for i, agent := range agents {
-		res[i] = *agent.ServiceID
-	}
-
-	return res
 }
 
 func groupChecksByDB(checks []check.Check) ([]check.Check, []check.Check, []check.Check) {
@@ -324,11 +311,11 @@ func groupChecksByDB(checks []check.Check) ([]check.Check, []check.Check, []chec
 func (s *Service) loadLocalChecks(file string) error {
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
-		errors.Wrap(err, "failed to read test checks file")
+		return errors.Wrap(err, "failed to read test checks file")
 	}
 	checks, err := check.Parse(bytes.NewReader(data))
 	if err != nil {
-		errors.Wrap(err, "failed to parse test checks file")
+		return errors.Wrap(err, "failed to parse test checks file")
 	}
 
 	s.updateChecks(checks)
@@ -379,6 +366,13 @@ func (s *Service) downloadChecks(ctx context.Context) error {
 	return nil
 }
 
+func (s *Service) updateChecks(checks []check.Check) {
+	s.cm.Lock()
+	defer s.cm.Unlock()
+
+	s.checks = checks
+}
+
 func (s *Service) verifySignatures(resp *api.GetAllChecksResponse) error {
 	if len(resp.Signatures) == 0 {
 		return errors.New("zero signatures received")
@@ -397,9 +391,20 @@ func (s *Service) verifySignatures(resp *api.GetAllChecksResponse) error {
 	return errors.New("no verified signatures")
 }
 
-func (s *Service) updateChecks(checks []check.Check) {
-	s.m.Lock()
-	defer s.m.Unlock()
+func servicesToMap(services []*models.Service) map[string]*models.Service {
+	res := make(map[string]*models.Service, len(services))
+	for _, service := range services {
+		res[service.ServiceID] = service
+	}
 
-	s.checks = checks
+	return res
+}
+
+func getServicesIDs(agents []*models.Agent) []string {
+	res := make([]string, len(agents))
+	for i, agent := range agents {
+		res[i] = *agent.ServiceID
+	}
+
+	return res
 }
