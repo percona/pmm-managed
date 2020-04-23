@@ -133,9 +133,7 @@ func (s *Service) Run(ctx context.Context) {
 			}
 		}
 
-		if err := s.executeChecks(); err != nil {
-			s.l.Errorf("Failed to execute security checks: %s.", err)
-		}
+		s.executeChecks()
 
 		select {
 		case <-ticker.C:
@@ -224,15 +222,26 @@ func (s *Service) getResults() map[string]checkTask {
 	return res
 }
 
-func (s *Service) executeChecks() error {
-	mySQLChecks, _, _ := s.groupChecksByDB(s.checks)
+func (s *Service) executeChecks() {
+	mySQLChecks, postgreSQLChecks, mongoDBChecks := s.groupChecksByDB(s.checks)
 
 	mySQLRes, err := s.executeMySQLChecks(mySQLChecks)
 	if err != nil {
 		s.l.Errorf("Failed to execute mySQL checks: %s.", err)
 	}
 	s.addResults(mySQLRes)
-	return nil
+
+	postgreSQLRes, err := s.executePostgreSQLChecks(postgreSQLChecks)
+	if err != nil {
+		s.l.Errorf("Failed to execute postgreSQL checks: %s.", err)
+	}
+	s.addResults(postgreSQLRes)
+
+	mongoDBRes, err := s.executeMongoChecks(mongoDBChecks)
+	if err != nil {
+		s.l.Errorf("Failed to execute mongoDB checks: %s.", err)
+	}
+	s.addResults(mongoDBRes)
 }
 
 func (s *Service) executeMySQLChecks(checks []check.Check) ([]checkTask, error) {
@@ -269,15 +278,133 @@ func (s *Service) executeMySQLChecks(checks []check.Check) ([]checkTask, error) 
 			switch c.Type {
 			case check.MySQLShow:
 				if err := s.registry.StartMySQLQueryShowAction(context.Background(), r.ID, pmmAgentID, dsn, c.Query); err != nil {
-					s.l.Errorf("Failed to start mySQL action for agent %s, reason: %s.", pmmAgentID, err)
+					s.l.Errorf("Failed to start mySQL show action for agent %s, reason: %s.", pmmAgentID, err)
 					continue
 				}
-				res = append(res, checkTask{
-					resultID:   r.ID,
-					pmmAgentID: pmmAgentID,
-					serviceID:  *agent.ServiceID,
-					check:      &c})
+			case check.MySQLSelect:
+				if err := s.registry.StartMySQLQuerySelectAction(context.Background(), r.ID, pmmAgentID, dsn, c.Query); err != nil {
+					s.l.Errorf("Failed to start mySQL select action for agent %s, reason: %s.", pmmAgentID, err)
+					continue
+				}
+			default:
+				s.l.Errorf("Unknown mySQL check type: %s.", c.Type)
+				continue
 			}
+
+			res = append(res, checkTask{
+				resultID:   r.ID,
+				pmmAgentID: pmmAgentID,
+				serviceID:  *agent.ServiceID,
+				check:      &c})
+		}
+	}
+
+	return res, nil
+}
+
+func (s *Service) executePostgreSQLChecks(checks []check.Check) ([]checkTask, error) {
+	var res []checkTask
+	var agents []*models.Agent
+	var services []*models.Service
+
+	e := s.db.InTransaction(func(t *reform.TX) error {
+		var err error
+		typ := models.PostgresExporterType
+		if agents, err = models.FindAgents(s.db.Querier, models.AgentFilters{AgentType: &typ}); err != nil {
+			return err
+		}
+		if services, err = models.FindServicesByIDs(s.db.Querier, getServicesIDs(agents)); err != nil {
+			return err
+		}
+		return nil
+	})
+	if e != nil {
+		return nil, e
+	}
+
+	sMap := servicesToMap(services)
+	for _, agent := range agents {
+		pmmAgentID := *agent.PMMAgentID
+		r, err := models.CreateActionResult(s.db.Querier, pmmAgentID)
+		if err != nil {
+			s.l.Errorf("Failed to prepare action result for agent %s: %s.", pmmAgentID, err)
+			continue
+		}
+		dsn := agent.DSN(sMap[*agent.ServiceID], 2*time.Second, "") // TODO Do we need DB name for some checks?
+
+		for _, c := range checks {
+			switch c.Type {
+			case check.PostgreSQLShow:
+				if err := s.registry.StartPostgreSQLQueryShowAction(context.Background(), r.ID, pmmAgentID, dsn); err != nil {
+					s.l.Errorf("Failed to start postgreSQL show action for agent %s, reason: %s.", pmmAgentID, err)
+					continue
+				}
+			case check.PostgreSQLSelect:
+				if err := s.registry.StartPostgreSQLQuerySelectAction(context.Background(), r.ID, pmmAgentID, dsn, c.Query); err != nil {
+					s.l.Errorf("Failed to start postgreSQL select action for agent %s, reason: %s.", pmmAgentID, err)
+					continue
+				}
+			default:
+				s.l.Errorf("Unknown postgresSQL check type: %s.", c.Type)
+				continue
+			}
+			res = append(res, checkTask{
+				resultID:   r.ID,
+				pmmAgentID: pmmAgentID,
+				serviceID:  *agent.ServiceID,
+				check:      &c})
+		}
+	}
+
+	return res, nil
+}
+
+func (s *Service) executeMongoChecks(checks []check.Check) ([]checkTask, error) {
+	var res []checkTask
+	var agents []*models.Agent
+	var services []*models.Service
+
+	e := s.db.InTransaction(func(t *reform.TX) error {
+		var err error
+		typ := models.MongoDBExporterType
+		if agents, err = models.FindAgents(s.db.Querier, models.AgentFilters{AgentType: &typ}); err != nil {
+			return err
+		}
+		if services, err = models.FindServicesByIDs(s.db.Querier, getServicesIDs(agents)); err != nil {
+			return err
+		}
+		return nil
+	})
+	if e != nil {
+		return nil, e
+	}
+
+	sMap := servicesToMap(services)
+	for _, agent := range agents {
+		pmmAgentID := *agent.PMMAgentID
+		r, err := models.CreateActionResult(s.db.Querier, pmmAgentID)
+		if err != nil {
+			s.l.Errorf("Failed to prepare action result for agent %s: %s.", pmmAgentID, err)
+			continue
+		}
+		dsn := agent.DSN(sMap[*agent.ServiceID], 2*time.Second, "") // TODO Do we need DB name for some checks?
+
+		for _, c := range checks {
+			switch c.Type {
+			case check.MongoDBGetParameter:
+				if err := s.registry.StartMongoDBQueryGetParameterAction(context.Background(), r.ID, pmmAgentID, dsn); err != nil {
+					s.l.Errorf("Failed to start mongoDB get parameter action for agent %s, reason: %s.", pmmAgentID, err)
+					continue
+				}
+			default:
+				s.l.Errorf("Unknown mongoDB check type: %s.", c.Type)
+				continue
+			}
+			res = append(res, checkTask{
+				resultID:   r.ID,
+				pmmAgentID: pmmAgentID,
+				serviceID:  *agent.ServiceID,
+				check:      &c})
 		}
 	}
 
