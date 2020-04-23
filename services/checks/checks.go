@@ -20,7 +20,6 @@ package checks
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
@@ -167,7 +166,7 @@ func (s *Service) checkResults(ctx context.Context) {
 		for id := range s.getResults() {
 			res, err := models.FindActionResultByID(s.db.Querier, id)
 			if err != nil {
-				s.l.Error("Can't find acion result: %s.", err)
+				s.l.Errorf("Can't find acion result: %s.", err)
 			}
 
 			if !res.Done {
@@ -180,7 +179,7 @@ func (s *Service) checkResults(ctx context.Context) {
 				continue
 			}
 
-			rr, err := agentpb.UnmarshalActionQueryResult([]byte(res.Output))
+			_, err = agentpb.UnmarshalActionQueryResult([]byte(res.Output))
 			if err != nil {
 				s.l.Errorf("Failed to parse action result with id: %s, reason: %s.", id, err)
 				s.removeResult(id)
@@ -189,7 +188,7 @@ func (s *Service) checkResults(ctx context.Context) {
 
 			// TODO Execute script against returned data
 			// TODO Throw away results with expired TTL (they probably should have TTL)
-			fmt.Println(rr)
+			//fmt.Println(rr)
 			s.removeResult(id)
 		}
 

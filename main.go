@@ -62,7 +62,6 @@ import (
 	"github.com/percona/pmm-managed/services/agents"
 	agentgrpc "github.com/percona/pmm-managed/services/agents/grpc"
 	"github.com/percona/pmm-managed/services/alertmanager"
-	"github.com/percona/pmm-managed/services/checks"
 	"github.com/percona/pmm-managed/services/grafana"
 	"github.com/percona/pmm-managed/services/inventory"
 	inventorygrpc "github.com/percona/pmm-managed/services/inventory/grpc"
@@ -572,7 +571,6 @@ func main() {
 		}()
 	}
 
-	checks := checks.New(agentsRegistry, db, version.Version)
 	authServer := grafana.NewAuthServer(grafanaClient, awsInstanceChecker)
 
 	var wg sync.WaitGroup
@@ -626,12 +624,6 @@ func main() {
 	go func() {
 		defer wg.Done()
 		runDebugServer(ctx)
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		checks.Run(ctx)
 	}()
 
 	wg.Wait()
