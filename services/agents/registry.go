@@ -589,7 +589,6 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 func (r *Registry) get(pmmAgentID string) (*pmmAgentInfo, error) {
 	r.rw.RLock()
 	pmmAgent := r.agents[pmmAgentID]
-	fmt.Println(r.agents)
 	r.rw.RUnlock()
 	if pmmAgent == nil {
 		return nil, status.Errorf(codes.FailedPrecondition, "pmm-agent with ID %q is not currently connected", pmmAgentID)
