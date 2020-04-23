@@ -246,25 +246,12 @@ func (s *Service) executeChecks() {
 
 func (s *Service) executeMySQLChecks(checks []check.Check) ([]checkTask, error) {
 	var res []checkTask
-	var agents []*models.Agent
-	var services []*models.Service
 
-	e := s.db.InTransaction(func(t *reform.TX) error {
-		var err error
-		typ := models.MySQLdExporterType
-		if agents, err = models.FindAgents(s.db.Querier, models.AgentFilters{AgentType: &typ}); err != nil {
-			return err
-		}
-		if services, err = models.FindServicesByIDs(s.db.Querier, getServicesIDs(agents)); err != nil {
-			return err
-		}
-		return nil
-	})
-	if e != nil {
-		return nil, e
+	agents, services, err := s.findAgentsAndServices(models.MySQLdExporterType)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to find proper agents and services")
 	}
 
-	sMap := servicesToMap(services)
 	for _, agent := range agents {
 		pmmAgentID := *agent.PMMAgentID
 		r, err := models.CreateActionResult(s.db.Querier, pmmAgentID)
@@ -272,7 +259,7 @@ func (s *Service) executeMySQLChecks(checks []check.Check) ([]checkTask, error) 
 			s.l.Errorf("Failed to prepare action result for agent %s: %s.", pmmAgentID, err)
 			continue
 		}
-		dsn := agent.DSN(sMap[*agent.ServiceID], 2*time.Second, "") // TODO Do we need DB name for some checks?
+		dsn := agent.DSN(services[*agent.ServiceID], 2*time.Second, "") // TODO Do we need DB name for some checks?
 
 		for _, c := range checks {
 			switch c.Type {
@@ -304,25 +291,12 @@ func (s *Service) executeMySQLChecks(checks []check.Check) ([]checkTask, error) 
 
 func (s *Service) executePostgreSQLChecks(checks []check.Check) ([]checkTask, error) {
 	var res []checkTask
-	var agents []*models.Agent
-	var services []*models.Service
 
-	e := s.db.InTransaction(func(t *reform.TX) error {
-		var err error
-		typ := models.PostgresExporterType
-		if agents, err = models.FindAgents(s.db.Querier, models.AgentFilters{AgentType: &typ}); err != nil {
-			return err
-		}
-		if services, err = models.FindServicesByIDs(s.db.Querier, getServicesIDs(agents)); err != nil {
-			return err
-		}
-		return nil
-	})
-	if e != nil {
-		return nil, e
+	agents, services, err := s.findAgentsAndServices(models.PostgresExporterType)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to find proper agents and services")
 	}
 
-	sMap := servicesToMap(services)
 	for _, agent := range agents {
 		pmmAgentID := *agent.PMMAgentID
 		r, err := models.CreateActionResult(s.db.Querier, pmmAgentID)
@@ -330,7 +304,7 @@ func (s *Service) executePostgreSQLChecks(checks []check.Check) ([]checkTask, er
 			s.l.Errorf("Failed to prepare action result for agent %s: %s.", pmmAgentID, err)
 			continue
 		}
-		dsn := agent.DSN(sMap[*agent.ServiceID], 2*time.Second, "") // TODO Do we need DB name for some checks?
+		dsn := agent.DSN(services[*agent.ServiceID], 2*time.Second, "") // TODO Do we need DB name for some checks?
 
 		for _, c := range checks {
 			switch c.Type {
@@ -361,25 +335,12 @@ func (s *Service) executePostgreSQLChecks(checks []check.Check) ([]checkTask, er
 
 func (s *Service) executeMongoChecks(checks []check.Check) ([]checkTask, error) {
 	var res []checkTask
-	var agents []*models.Agent
-	var services []*models.Service
 
-	e := s.db.InTransaction(func(t *reform.TX) error {
-		var err error
-		typ := models.MongoDBExporterType
-		if agents, err = models.FindAgents(s.db.Querier, models.AgentFilters{AgentType: &typ}); err != nil {
-			return err
-		}
-		if services, err = models.FindServicesByIDs(s.db.Querier, getServicesIDs(agents)); err != nil {
-			return err
-		}
-		return nil
-	})
-	if e != nil {
-		return nil, e
+	agents, services, err := s.findAgentsAndServices(models.MongoDBExporterType)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to find proper agents and services")
 	}
 
-	sMap := servicesToMap(services)
 	for _, agent := range agents {
 		pmmAgentID := *agent.PMMAgentID
 		r, err := models.CreateActionResult(s.db.Querier, pmmAgentID)
@@ -387,7 +348,7 @@ func (s *Service) executeMongoChecks(checks []check.Check) ([]checkTask, error) 
 			s.l.Errorf("Failed to prepare action result for agent %s: %s.", pmmAgentID, err)
 			continue
 		}
-		dsn := agent.DSN(sMap[*agent.ServiceID], 2*time.Second, "") // TODO Do we need DB name for some checks?
+		dsn := agent.DSN(services[*agent.ServiceID], 2*time.Second, "") // TODO Do we need DB name for some checks?
 
 		for _, c := range checks {
 			switch c.Type {
@@ -409,6 +370,27 @@ func (s *Service) executeMongoChecks(checks []check.Check) ([]checkTask, error) 
 	}
 
 	return res, nil
+}
+
+func (s *Service) findAgentsAndServices(agentType models.AgentType) ([]*models.Agent, map[string]*models.Service, error) {
+	var agents []*models.Agent
+	var services []*models.Service
+
+	e := s.db.InTransaction(func(t *reform.TX) error {
+		var err error
+		if agents, err = models.FindAgents(s.db.Querier, models.AgentFilters{AgentType: &agentType}); err != nil {
+			return err
+		}
+		if services, err = models.FindServicesByIDs(s.db.Querier, getServicesIDs(agents)); err != nil {
+			return err
+		}
+		return nil
+	})
+	if e != nil {
+		return nil, nil, e
+	}
+
+	return agents, servicesToMap(services), nil
 }
 
 func (s *Service) groupChecksByDB(checks []check.Check) ([]check.Check, []check.Check, []check.Check) {
