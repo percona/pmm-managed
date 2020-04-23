@@ -167,7 +167,7 @@ func (s *Service) checkResults(ctx context.Context) {
 		for id := range s.getResults() {
 			res, err := models.FindActionResultByID(s.db.Querier, id)
 			if err != nil {
-				s.l.Error(err)
+				s.l.Error("Can't find acion result: %s.", err)
 			}
 
 			if !res.Done {
@@ -175,14 +175,16 @@ func (s *Service) checkResults(ctx context.Context) {
 			}
 
 			if res.Error != "" {
-				s.l.Warnf("Action %s failed: %s.", id, res.Error) // TODO better log message
+				s.l.Errorf("Action %s failed: %s.", id, res.Error)
 				s.removeResult(id)
 				continue
 			}
 
 			rr, err := agentpb.UnmarshalActionQueryResult([]byte(res.Output))
 			if err != nil {
-				s.l.Error(err) // TODO log message
+				s.l.Errorf("Failed to parse action result with id: %s, reason: %s.", id, err)
+				s.removeResult(id)
+				continue
 			}
 
 			// TODO Execute script against returned data
@@ -259,7 +261,7 @@ func (s *Service) executeMySQLChecks(checks []check.Check) ([]checkTask, error) 
 			s.l.Errorf("Failed to prepare action result for agent %s: %s.", pmmAgentID, err)
 			continue
 		}
-		dsn := agent.DSN(services[*agent.ServiceID], 2*time.Second, "") // TODO Do we need DB name for some checks?
+		dsn := agent.DSN(services[*agent.ServiceID], 2*time.Second, "")
 
 		for _, c := range checks {
 			switch c.Type {
@@ -304,7 +306,7 @@ func (s *Service) executePostgreSQLChecks(checks []check.Check) ([]checkTask, er
 			s.l.Errorf("Failed to prepare action result for agent %s: %s.", pmmAgentID, err)
 			continue
 		}
-		dsn := agent.DSN(services[*agent.ServiceID], 2*time.Second, "") // TODO Do we need DB name for some checks?
+		dsn := agent.DSN(services[*agent.ServiceID], 2*time.Second, "")
 
 		for _, c := range checks {
 			switch c.Type {
@@ -348,7 +350,7 @@ func (s *Service) executeMongoChecks(checks []check.Check) ([]checkTask, error) 
 			s.l.Errorf("Failed to prepare action result for agent %s: %s.", pmmAgentID, err)
 			continue
 		}
-		dsn := agent.DSN(services[*agent.ServiceID], 2*time.Second, "") // TODO Do we need DB name for some checks?
+		dsn := agent.DSN(services[*agent.ServiceID], 2*time.Second, "")
 
 		for _, c := range checks {
 			switch c.Type {
