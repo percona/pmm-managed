@@ -42,7 +42,7 @@ import (
 
 const (
 	defaultHost     = "check.percona.com:443"
-	defaultInterval = 10 * time.Second // TODO Debug value
+	defaultInterval = 24 * time.Hour
 
 	// Environment variables that affect checks service; only for testing.
 	envHost      = "PERCONA_TEST_CHECKS_HOST"
@@ -114,7 +114,6 @@ func New(registry registryService, db *reform.DB, pmmVersion string) *Service {
 
 // Run runs checks service that grabs checks from Percona Checks service every interval until context is canceled.
 func (s *Service) Run(ctx context.Context) {
-	time.Sleep(5 * time.Second) // TODO to let agents connect/reconnect
 	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
 
@@ -153,11 +152,11 @@ func (s *Service) Checks() []check.Check {
 }
 
 func (s *Service) checkResults(ctx context.Context) {
-	tic := time.NewTicker(30 * time.Second) // TODO Scan interval
+	ticker := time.NewTicker(time.Minute)
 
 	for {
 		select {
-		case <-tic.C:
+		case <-ticker.C:
 			// continue with next loop iteration
 		case <-ctx.Done():
 			return
@@ -191,7 +190,6 @@ func (s *Service) checkResults(ctx context.Context) {
 			//fmt.Println(rr)
 			s.removeResult(id)
 		}
-
 	}
 }
 
