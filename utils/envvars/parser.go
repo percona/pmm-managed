@@ -50,6 +50,7 @@ func (e InvalidDurationError) Error() string { return string(e) }
 //  - the environment variables prefixed with GF_ passed as related to Grafana.
 func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs []error, warns []string) {
 	envSettings = new(models.ChangeSettingsParams)
+
 	for _, env := range envs {
 		p := strings.SplitN(env, "=", 2)
 

@@ -178,15 +178,15 @@ func TestSettings(t *testing.T) {
 			assert.NoError(t, err)
 
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
-				EnableSTT:        true,
-				DisableTelemetry: true,
-			})
-			assert.EqualError(t, err, `cannot enable STT while telemetry is disabled`)
-
-			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				DisableTelemetry: true,
 			})
 			assert.EqualError(t, err, `cannot disable telemetry while STT is enabled`)
+
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
+				EnableSTT:        true,
+				DisableTelemetry: true,
+			})
+			assert.EqualError(t, err, `cannot enable STT while disabling telemetry`)
 
 			// Restore default states
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{

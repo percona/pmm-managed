@@ -50,9 +50,9 @@ type Settings struct {
 	AlertManagerURL string `json:"alert_manager_url"`
 
 	// Saas config options
-	Saas struct {
+	SaaS struct {
 		// Security Threat Tool enabled
-		STTDisabled bool `json:"stt_disabled"`
+		STTEnabled bool `json:"stt_enabled"`
 	} `json:"sass"`
 }
 
@@ -82,5 +82,5 @@ func (s *Settings) fillDefaults() {
 	// AWSInstanceChecked is false by default
 	// SSHKey is empty by default
 	// AlertManagerURL is empty by default
-	// Saas.STTDisabled is false by default
+	// STTEnabled is false by default
 }

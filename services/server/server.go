@@ -389,7 +389,7 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 		SshKey:          settings.SSHKey,
 		AwsPartitions:   settings.AWSPartitions,
 		AlertManagerUrl: settings.AlertManagerURL,
-		EnableStt:       settings.EnableSTT,
+		SttEnabled:      !settings.SaaS.STTEnabled,
 	}
 
 	b, err := ioutil.ReadFile(alertingRulesFile)
