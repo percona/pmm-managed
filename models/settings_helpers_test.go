@@ -160,6 +160,17 @@ func TestSettings(t *testing.T) {
 			})
 			assert.EqualError(t, err, `enable STT and disable STT cannot be both true`)
 
+			// Ensure telemetry is disabled
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
+				DisableTelemetry: true,
+			})
+			assert.NoError(t, err)
+
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
+				EnableSTT: true,
+			})
+			assert.EqualError(t, err, `cannot enable STT while telemetry is disabled`)
+
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				EnableSTT:       true,
 				EnableTelemetry: true,
@@ -167,16 +178,22 @@ func TestSettings(t *testing.T) {
 			assert.NoError(t, err)
 
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
-				EnableSTT:       true,
-				EnableTelemetry: false,
-			})
-			assert.EqualError(t, err, `cannot enable STT while telemetry is disabled`)
-
-			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				EnableSTT:        true,
 				DisableTelemetry: true,
 			})
 			assert.EqualError(t, err, `cannot enable STT while telemetry is disabled`)
+
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
+				DisableTelemetry: true,
+			})
+			assert.EqualError(t, err, `cannot disable telemetry while STT is enabled`)
+
+			// Restore default states
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
+				DisableSTT:      true,
+				EnableTelemetry: true,
+			})
+			assert.NoError(t, err)
 		})
 	})
 }

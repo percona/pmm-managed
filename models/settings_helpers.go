@@ -73,14 +73,15 @@ type ChangeSettingsParams struct {
 
 // UpdateSettings updates only non-zero, non-empty values.
 func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, error) {
-	err := ValidateSettings(params)
-	if err != nil {
-		return nil, err
-	}
 	settings, err := GetSettings(q)
 	if err != nil {
 		return nil, err
 	}
+	err = ValidateSettings(params, settings)
+	if err != nil {
+		return nil, err
+	}
+
 	if params.DisableTelemetry {
 		settings.Telemetry.Disabled = true
 	}
@@ -113,8 +114,12 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 		settings.AlertManagerURL = ""
 	}
 
-	// because of validation, both variables cannot be true at the same time
-	settings.EnableSTT = params.EnableSTT && !params.DisableSTT
+	if params.DisableSTT {
+		settings.Saas.STTDisabled = true
+	}
+	if params.EnableSTT {
+		settings.Saas.STTDisabled = false
+	}
 
 	err = SaveSettings(q, settings)
 	if err != nil {
@@ -124,7 +129,7 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 }
 
 // ValidateSettings validates settings changes.
-func ValidateSettings(params *ChangeSettingsParams) error {
+func ValidateSettings(params *ChangeSettingsParams, settings *Settings) error {
 	if params.EnableTelemetry && params.DisableTelemetry {
 		return errors.New("Both enable_telemetry and disable_telemetry are present.")
 	}
@@ -196,8 +201,18 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 	if params.DisableSTT && params.EnableSTT {
 		return fmt.Errorf("enable STT and disable STT cannot be both true")
 	}
-	if params.EnableSTT && !params.EnableTelemetry {
+	if params.EnableSTT && (!params.EnableTelemetry || !settings.Telemetry.Disabled) {
 		return fmt.Errorf("cannot enable STT while telemetry is disabled")
+	}
+	if params.EnableSTT && params.DisableTelemetry {
+		return fmt.Errorf("cannot enable STT while disabling telemetry")
+	}
+
+	if params.DisableTelemetry && (!params.DisableSTT || settings.Saas.STTDisabled) {
+		return fmt.Errorf("cannot disable telemetry while STT is enabled")
+	}
+	if params.DisableTelemetry && params.EnableSTT {
+		return fmt.Errorf("cannot disable telemetry while enabling STT")
 	}
 
 	return nil
