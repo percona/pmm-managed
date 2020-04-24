@@ -48,6 +48,9 @@ type Settings struct {
 
 	// not url.URL to keep username and password
 	AlertManagerURL string `json:"alert_manager_url"`
+
+	// Enable/Disable Security Threat Tool
+	EnableSTT bool `json:"enable_stt"`
 }
 
 // fillDefaults sets zero values to their default values.
@@ -76,4 +79,5 @@ func (s *Settings) fillDefaults() {
 	// AWSInstanceChecked is false by default
 	// SSHKey is empty by default
 	// AlertManagerURL is empty by default
+	// EnableSTT is false by default
 }

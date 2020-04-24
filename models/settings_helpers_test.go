@@ -152,5 +152,31 @@ func TestSettings(t *testing.T) {
 			})
 			assert.EqualError(t, err, `data_retention: minimal resolution is 24h`)
 		})
+
+		t.Run("STT validation", func(t *testing.T) {
+			_, err := models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
+				EnableSTT:  true,
+				DisableSTT: true,
+			})
+			assert.EqualError(t, err, `enable STT and disable STT cannot be both true`)
+
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
+				EnableSTT:       true,
+				EnableTelemetry: true,
+			})
+			assert.NoError(t, err)
+
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
+				EnableSTT:       true,
+				EnableTelemetry: false,
+			})
+			assert.EqualError(t, err, `cannot enable STT while telemetry is disabled`)
+
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
+				EnableSTT:        true,
+				DisableTelemetry: true,
+			})
+			assert.EqualError(t, err, `cannot enable STT while telemetry is disabled`)
+		})
 	})
 }

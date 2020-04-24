@@ -65,6 +65,10 @@ type ChangeSettingsParams struct {
 	// not url.URL to keep username and password
 	AlertManagerURL       string
 	RemoveAlertManagerURL bool
+
+	// Enable/Disable Security Threat Tool
+	EnableSTT  bool
+	DisableSTT bool
 }
 
 // UpdateSettings updates only non-zero, non-empty values.
@@ -108,6 +112,9 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 	if params.RemoveAlertManagerURL {
 		settings.AlertManagerURL = ""
 	}
+
+	// because of validation, both variables cannot be true at the same time
+	settings.EnableSTT = params.EnableSTT && !params.DisableSTT
 
 	err = SaveSettings(q, settings)
 	if err != nil {
@@ -184,6 +191,13 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 		if u.Host == "" {
 			return fmt.Errorf("Invalid alert_manager_url: %s - missing host.", params.AlertManagerURL)
 		}
+	}
+
+	if params.DisableSTT && params.EnableSTT {
+		return fmt.Errorf("enable STT and disable STT cannot be both true")
+	}
+	if params.EnableSTT && !params.EnableTelemetry {
+		return fmt.Errorf("cannot enable STT while telemetry is disabled")
 	}
 
 	return nil

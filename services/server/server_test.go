@@ -155,6 +155,24 @@ func TestServer(t *testing.T) {
 			}))
 	})
 
+	t.Run("ValidateChangeSettingsSTT", func(t *testing.T) {
+		s := newServer()
+
+		ctx := context.TODO()
+
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Enable STT and disable STT cannot be both true"),
+			s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
+				EnableStt:  true,
+				DisableStt: true,
+			}))
+
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Cannot enable STT while telemetry is disabled"),
+			s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
+				EnableStt:        true,
+				DisableTelemetry: true,
+			}))
+	})
+
 	t.Run("ValidateAlertManagerRules", func(t *testing.T) {
 		s := newServer()
 
