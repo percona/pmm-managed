@@ -264,12 +264,12 @@ func (s *Service) executeMySQLChecks(checks []check.Check) ([]checkTask, error) 
 			switch c.Type {
 			case check.MySQLShow:
 				if err := s.registry.StartMySQLQueryShowAction(context.Background(), r.ID, pmmAgentID, dsn, c.Query); err != nil {
-					s.l.Errorf("Failed to start mySQL show action for agent %s, reason: %s.", pmmAgentID, err)
+					s.l.Errorf("Failed to start mySQL show query action for agent %s, reason: %s.", pmmAgentID, err)
 					continue
 				}
 			case check.MySQLSelect:
 				if err := s.registry.StartMySQLQuerySelectAction(context.Background(), r.ID, pmmAgentID, dsn, c.Query); err != nil {
-					s.l.Errorf("Failed to start mySQL select action for agent %s, reason: %s.", pmmAgentID, err)
+					s.l.Errorf("Failed to start mySQL select query action for agent %s, reason: %s.", pmmAgentID, err)
 					continue
 				}
 			default:
@@ -309,12 +309,12 @@ func (s *Service) executePostgreSQLChecks(checks []check.Check) ([]checkTask, er
 			switch c.Type {
 			case check.PostgreSQLShow:
 				if err := s.registry.StartPostgreSQLQueryShowAction(context.Background(), r.ID, pmmAgentID, dsn); err != nil {
-					s.l.Errorf("Failed to start postgreSQL show action for agent %s, reason: %s.", pmmAgentID, err)
+					s.l.Errorf("Failed to start postgreSQL show query action for agent %s, reason: %s.", pmmAgentID, err)
 					continue
 				}
 			case check.PostgreSQLSelect:
 				if err := s.registry.StartPostgreSQLQuerySelectAction(context.Background(), r.ID, pmmAgentID, dsn, c.Query); err != nil {
-					s.l.Errorf("Failed to start postgreSQL select action for agent %s, reason: %s.", pmmAgentID, err)
+					s.l.Errorf("Failed to start postgreSQL select query action for agent %s, reason: %s.", pmmAgentID, err)
 					continue
 				}
 			default:
@@ -353,9 +353,15 @@ func (s *Service) executeMongoChecks(checks []check.Check) ([]checkTask, error) 
 			switch c.Type {
 			case check.MongoDBGetParameter:
 				if err := s.registry.StartMongoDBQueryGetParameterAction(context.Background(), r.ID, pmmAgentID, dsn); err != nil {
-					s.l.Errorf("Failed to start mongoDB get parameter action for agent %s, reason: %s.", pmmAgentID, err)
+					s.l.Errorf("Failed to start mongoDB get parameter query action for agent %s, reason: %s.", pmmAgentID, err)
 					continue
 				}
+			case check.MongoDBBuildInfo:
+				if err := s.registry.StartMongoDBQueryBuildInfoAction(context.Background(), r.ID, pmmAgentID, dsn); err != nil {
+					s.l.Errorf("Failed to start mongoDB build info query action for agent %s, reason: %s.", pmmAgentID, err)
+					continue
+				}
+
 			default:
 				s.l.Errorf("Unknown mongoDB check type: %s.", c.Type)
 				continue
@@ -408,6 +414,8 @@ func (s *Service) groupChecksByDB(checks []check.Check) ([]check.Check, []check.
 			postgreSQLChecks = append(postgreSQLChecks, c)
 
 		case check.MongoDBGetParameter:
+			fallthrough
+		case check.MongoDBBuildInfo:
 			mongoChecks = append(mongoChecks, c)
 
 		default:

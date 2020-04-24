@@ -28,4 +28,5 @@ type registryService interface {
 	StartPostgreSQLQueryShowAction(ctx context.Context, id, pmmAgentID, dsn string) error
 	StartPostgreSQLQuerySelectAction(ctx context.Context, id, pmmAgentID, dsn, query string) error
 	StartMongoDBQueryGetParameterAction(ctx context.Context, id, pmmAgentID, dsn string) error
+	StartMongoDBQueryBuildInfoAction(ctx context.Context, id, pmmAgentID, dsn string) error
 }
