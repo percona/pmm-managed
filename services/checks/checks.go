@@ -115,7 +115,7 @@ func (s *Service) Run(ctx context.Context) {
 	defer ticker.Stop()
 
 	for {
-		s.grabNewChecks(ctx)
+		s.grabChecks(ctx)
 		s.executeChecks()
 
 		select {
@@ -134,19 +134,6 @@ func (s *Service) Checks() []check.Check {
 
 	r := make([]check.Check, 0, len(s.checks))
 	return append(r, s.checks...)
-}
-
-func (s *Service) grabNewChecks(ctx context.Context) {
-	if f := os.Getenv(envCheckFile); f != "" {
-		s.l.Warnf("Use local test checks file: %s.", f)
-		if err := s.loadLocalChecks(f); err != nil {
-			s.l.Errorf("Failed to load local checks file: %s.", err)
-		}
-	} else {
-		if err := s.downloadChecks(ctx); err != nil {
-			s.l.Errorf("Failed to download checks, %s.", err)
-		}
-	}
 }
 
 func (s *Service) processTasks(ctx context.Context, tasks []task) {
@@ -409,6 +396,19 @@ func (s *Service) groupChecksByDB(checks []check.Check) ([]check.Check, []check.
 	}
 
 	return mySQLChecks, postgreSQLChecks, mongoChecks
+}
+
+func (s *Service) grabChecks(ctx context.Context) {
+	if f := os.Getenv(envCheckFile); f != "" {
+		s.l.Warnf("Use local test checks file: %s.", f)
+		if err := s.loadLocalChecks(f); err != nil {
+			s.l.Errorf("Failed to load local checks file: %s.", err)
+		}
+	} else {
+		if err := s.downloadChecks(ctx); err != nil {
+			s.l.Errorf("Failed to download checks, %s.", err)
+		}
+	}
 }
 
 func (s *Service) loadLocalChecks(file string) error {
