@@ -120,17 +120,7 @@ func (s *Service) Run(ctx context.Context) {
 	go s.checkResults(ctx)
 
 	for {
-		if f := os.Getenv(envCheckFile); f != "" {
-			s.l.Warnf("Use local test checks file: %s.", f)
-			if err := s.loadLocalChecks(f); err != nil {
-				s.l.Errorf("Failed to load local checks file: %s.", err)
-			}
-		} else {
-			if err := s.downloadChecks(ctx); err != nil {
-				s.l.Errorf("Failed to download checks, %s.", err)
-			}
-		}
-
+		s.grabNewChecks(ctx)
 		s.executeChecks()
 
 		select {
@@ -149,6 +139,19 @@ func (s *Service) Checks() []check.Check {
 
 	r := make([]check.Check, 0, len(s.checks))
 	return append(r, s.checks...)
+}
+
+func (s *Service) grabNewChecks(ctx context.Context) {
+	if f := os.Getenv(envCheckFile); f != "" {
+		s.l.Warnf("Use local test checks file: %s.", f)
+		if err := s.loadLocalChecks(f); err != nil {
+			s.l.Errorf("Failed to load local checks file: %s.", err)
+		}
+	} else {
+		if err := s.downloadChecks(ctx); err != nil {
+			s.l.Errorf("Failed to download checks, %s.", err)
+		}
+	}
 }
 
 func (s *Service) checkResults(ctx context.Context) {
@@ -187,7 +190,7 @@ func (s *Service) checkResults(ctx context.Context) {
 
 			// TODO Execute script against returned data
 			// TODO Throw away results with expired TTL (they probably should have TTL)
-			//fmt.Println(rr)
+			// fmt.Println(rr)
 			s.removeResult(id)
 		}
 	}
@@ -258,7 +261,7 @@ func (s *Service) executeMySQLChecks(checks []check.Check) ([]checkTask, error) 
 			s.l.Errorf("Failed to prepare action result for agent %s: %s.", pmmAgentID, err)
 			continue
 		}
-		dsn := agent.DSN(services[*agent.ServiceID], 2*time.Second, "")
+		dsn := agent.DSN(services[*agent.ServiceID], timeout, "")
 
 		for _, c := range checks {
 			switch c.Type {
@@ -281,7 +284,8 @@ func (s *Service) executeMySQLChecks(checks []check.Check) ([]checkTask, error) 
 				resultID:   r.ID,
 				pmmAgentID: pmmAgentID,
 				serviceID:  *agent.ServiceID,
-				check:      &c})
+				check:      &c,
+			})
 		}
 	}
 
@@ -303,7 +307,7 @@ func (s *Service) executePostgreSQLChecks(checks []check.Check) ([]checkTask, er
 			s.l.Errorf("Failed to prepare action result for agent %s: %s.", pmmAgentID, err)
 			continue
 		}
-		dsn := agent.DSN(services[*agent.ServiceID], 2*time.Second, "")
+		dsn := agent.DSN(services[*agent.ServiceID], timeout, "")
 
 		for _, c := range checks {
 			switch c.Type {
@@ -325,7 +329,8 @@ func (s *Service) executePostgreSQLChecks(checks []check.Check) ([]checkTask, er
 				resultID:   r.ID,
 				pmmAgentID: pmmAgentID,
 				serviceID:  *agent.ServiceID,
-				check:      &c})
+				check:      &c,
+			})
 		}
 	}
 
@@ -347,7 +352,7 @@ func (s *Service) executeMongoChecks(checks []check.Check) ([]checkTask, error) 
 			s.l.Errorf("Failed to prepare action result for agent %s: %s.", pmmAgentID, err)
 			continue
 		}
-		dsn := agent.DSN(services[*agent.ServiceID], 2*time.Second, "")
+		dsn := agent.DSN(services[*agent.ServiceID], timeout, "")
 
 		for _, c := range checks {
 			switch c.Type {
@@ -370,7 +375,8 @@ func (s *Service) executeMongoChecks(checks []check.Check) ([]checkTask, error) 
 				resultID:   r.ID,
 				pmmAgentID: pmmAgentID,
 				serviceID:  *agent.ServiceID,
-				check:      &c})
+				check:      &c,
+			})
 		}
 	}
 
