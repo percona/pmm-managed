@@ -50,7 +50,8 @@ const (
 	envInterval  = "PERCONA_TEST_CHECKS_INTERVAL"
 	envCheckFile = "PERCONA_TEST_CHECKS_FILE"
 
-	timeout = 5 * time.Second
+	resultsTimeout = defaultInterval - time.Hour
+	timeout        = 5 * time.Second
 )
 
 var defaultPublicKeys = []string{
@@ -68,14 +69,11 @@ type Service struct {
 	cm     sync.Mutex
 	checks []check.Check
 
-	tm    sync.Mutex
-	tasks map[string]checkTask
-
 	registry registryService
 	db       *reform.DB
 }
 
-type checkTask struct {
+type task struct {
 	resultID   string
 	pmmAgentID string
 	serviceID  string
@@ -93,7 +91,6 @@ func New(registry registryService, db *reform.DB, pmmVersion string) *Service {
 		interval:   defaultInterval,
 		registry:   registry,
 		db:         db,
-		tasks:      make(map[string]checkTask),
 	}
 
 	if h := os.Getenv(envHost); h != "" {
@@ -116,8 +113,6 @@ func New(registry registryService, db *reform.DB, pmmVersion string) *Service {
 func (s *Service) Run(ctx context.Context) {
 	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
-
-	go s.checkResults(ctx)
 
 	for {
 		s.grabNewChecks(ctx)
@@ -154,10 +149,15 @@ func (s *Service) grabNewChecks(ctx context.Context) {
 	}
 }
 
-func (s *Service) checkResults(ctx context.Context) {
+func (s *Service) processTasks(ctx context.Context, tasks []task) {
 	ticker := time.NewTicker(time.Minute)
 
 	for {
+		if len(tasks) == 0 {
+			break
+		}
+
+		var retry []task
 		select {
 		case <-ticker.C:
 			// continue with next loop iteration
@@ -165,89 +165,68 @@ func (s *Service) checkResults(ctx context.Context) {
 			return
 		}
 
-		for id := range s.getResults() {
-			res, err := models.FindActionResultByID(s.db.Querier, id)
+		for _, t := range tasks {
+			res, err := models.FindActionResultByID(s.db.Querier, t.resultID)
 			if err != nil {
-				s.l.Errorf("Can't find acion result: %s.", err)
+				s.l.Errorf("Can't find action result: %s.", err)
+				continue
 			}
 
 			if !res.Done {
+				retry = append(retry, t)
 				continue
 			}
 
 			if res.Error != "" {
-				s.l.Errorf("Action %s failed: %s.", id, res.Error)
-				s.removeResult(id)
+				s.l.Errorf("Action %s failed: %s.", t.resultID, res.Error)
 				continue
 			}
 
 			_, err = agentpb.UnmarshalActionQueryResult([]byte(res.Output))
 			if err != nil {
-				s.l.Errorf("Failed to parse action result with id: %s, reason: %s.", id, err)
-				s.removeResult(id)
+				s.l.Errorf("Failed to parse action result with id: %s, reason: %s.", t.resultID, err)
 				continue
 			}
 
 			// TODO Execute script against returned data
-			// TODO Throw away results with expired TTL (they probably should have TTL)
 			// fmt.Println(rr)
-			s.removeResult(id)
 		}
+
+		tasks = retry
 	}
-}
-
-func (s *Service) addResults(res []checkTask) {
-	s.tm.Lock()
-	defer s.tm.Unlock()
-
-	for _, r := range res {
-		s.tasks[r.resultID] = r
-	}
-}
-
-func (s *Service) removeResult(id string) {
-	s.tm.Lock()
-	defer s.tm.Unlock()
-
-	delete(s.tasks, id)
-}
-
-func (s *Service) getResults() map[string]checkTask {
-	s.tm.Lock()
-	defer s.tm.Unlock()
-
-	res := make(map[string]checkTask, len(s.tasks))
-	for k, v := range s.tasks {
-		res[k] = v
-	}
-
-	return res
 }
 
 func (s *Service) executeChecks() {
 	mySQLChecks, postgreSQLChecks, mongoDBChecks := s.groupChecksByDB(s.checks)
 
-	mySQLRes, err := s.executeMySQLChecks(mySQLChecks)
+	var tasks []task
+	mySQLTasks, err := s.executeMySQLChecks(mySQLChecks)
 	if err != nil {
 		s.l.Errorf("Failed to execute MySQL checks: %s.", err)
 	}
-	s.addResults(mySQLRes)
+	tasks = append(tasks, mySQLTasks...)
 
-	postgreSQLRes, err := s.executePostgreSQLChecks(postgreSQLChecks)
+	postgreSQLTasks, err := s.executePostgreSQLChecks(postgreSQLChecks)
 	if err != nil {
 		s.l.Errorf("Failed to execute PostgreSQL checks: %s.", err)
 	}
-	s.addResults(postgreSQLRes)
+	tasks = append(tasks, postgreSQLTasks...)
 
-	mongoDBRes, err := s.executeMongoChecks(mongoDBChecks)
+	mongoDBTasks, err := s.executeMongoChecks(mongoDBChecks)
 	if err != nil {
 		s.l.Errorf("Failed to execute MongoDB checks: %s.", err)
 	}
-	s.addResults(mongoDBRes)
+	tasks = append(tasks, mongoDBTasks...)
+
+	ctx, cancel := context.WithTimeout(context.Background(), resultsTimeout)
+	defer cancel()
+
+	s.processTasks(ctx, tasks)
+
 }
 
-func (s *Service) executeMySQLChecks(checks []check.Check) ([]checkTask, error) {
-	var res []checkTask
+func (s *Service) executeMySQLChecks(checks []check.Check) ([]task, error) {
+	var res []task
 
 	agents, services, err := s.findAgentsAndServices(models.MySQLdExporterType)
 	if err != nil {
@@ -280,7 +259,7 @@ func (s *Service) executeMySQLChecks(checks []check.Check) ([]checkTask, error) 
 				continue
 			}
 
-			res = append(res, checkTask{
+			res = append(res, task{
 				resultID:   r.ID,
 				pmmAgentID: pmmAgentID,
 				serviceID:  *agent.ServiceID,
@@ -292,8 +271,8 @@ func (s *Service) executeMySQLChecks(checks []check.Check) ([]checkTask, error) 
 	return res, nil
 }
 
-func (s *Service) executePostgreSQLChecks(checks []check.Check) ([]checkTask, error) {
-	var res []checkTask
+func (s *Service) executePostgreSQLChecks(checks []check.Check) ([]task, error) {
+	var res []task
 
 	agents, services, err := s.findAgentsAndServices(models.PostgresExporterType)
 	if err != nil {
@@ -325,7 +304,7 @@ func (s *Service) executePostgreSQLChecks(checks []check.Check) ([]checkTask, er
 				s.l.Errorf("Unknown PostgresSQL check type: %s.", c.Type)
 				continue
 			}
-			res = append(res, checkTask{
+			res = append(res, task{
 				resultID:   r.ID,
 				pmmAgentID: pmmAgentID,
 				serviceID:  *agent.ServiceID,
@@ -337,8 +316,8 @@ func (s *Service) executePostgreSQLChecks(checks []check.Check) ([]checkTask, er
 	return res, nil
 }
 
-func (s *Service) executeMongoChecks(checks []check.Check) ([]checkTask, error) {
-	var res []checkTask
+func (s *Service) executeMongoChecks(checks []check.Check) ([]task, error) {
+	var res []task
 
 	agents, services, err := s.findAgentsAndServices(models.MongoDBExporterType)
 	if err != nil {
@@ -371,7 +350,7 @@ func (s *Service) executeMongoChecks(checks []check.Check) ([]checkTask, error) 
 				s.l.Errorf("Unknown MongoDB check type: %s.", c.Type)
 				continue
 			}
-			res = append(res, checkTask{
+			res = append(res, task{
 				resultID:   r.ID,
 				pmmAgentID: pmmAgentID,
 				serviceID:  *agent.ServiceID,
