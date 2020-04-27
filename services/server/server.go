@@ -496,6 +496,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			RemoveAlertManagerURL: req.RemoveAlertManagerUrl,
 			SSHKey:                req.SshKey,
 			EnableSTT:             req.EnableStt,
+			DisableSTT:            req.DisableStt,
 		}
 
 		var e error
