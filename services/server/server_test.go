@@ -24,6 +24,7 @@ import (
 
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/stretchr/testify/assert"
+	mock "github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -40,10 +41,17 @@ func TestServer(t *testing.T) {
 	defer func() {
 		require.NoError(t, sqlDB.Close())
 	}()
+	r := new(mockSupervisordService)
+	r.On("UpdateConfiguration", mock.Anything).Return(nil)
+
+	mp := new(mockPrometheusService)
+	mp.On("RequestConfigurationUpdate").Return(nil)
 
 	newServer := func() *Server {
 		s, err := NewServer(&ServerParams{
-			DB: reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
+			DB:          reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
+			Supervisord: r,
+			Prometheus:  mp,
 		})
 		require.NoError(t, err)
 		return s
@@ -171,6 +179,24 @@ func TestServer(t *testing.T) {
 				EnableStt:        true,
 				DisableTelemetry: true,
 			}))
+	})
+
+	t.Run("UpdateSettingsSTT", func(t *testing.T) {
+		s := newServer()
+
+		ctx := context.TODO()
+
+		resp, err := s.ChangeSettings(ctx, &serverpb.ChangeSettingsRequest{
+			EnableTelemetry: true,
+		})
+		assert.NoError(t, err)
+		assert.True(t, resp.Settings.TelemetryEnabled)
+
+		resp, err = s.ChangeSettings(ctx, &serverpb.ChangeSettingsRequest{
+			EnableStt: true,
+		})
+		assert.NoError(t, err)
+		assert.True(t, resp.Settings.SttEnabled)
 	})
 
 	t.Run("ValidateAlertManagerRules", func(t *testing.T) {
