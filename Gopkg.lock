@@ -364,14 +364,16 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:647367baff80d320de4ba2607b3d49bbacdd15bdaf147fa5e227f00604fba52f"
+  digest = "1:076c50f2c01eb906303be89e6ea54146b18f36090835beb9752ff1dc1986099e"
   name = "github.com/percona-platform/saas"
   packages = [
+    "gen/checked",
     "gen/telemetry/events/pmm",
     "gen/telemetry/reporter",
+    "pkg/check",
   ]
   pruneopts = "NUT"
-  revision = "7def7d8a18fa6b211aafc993ad9fbe82da1de5d7"
+  revision = "c057af62c99492bd2f10c64804e82b348ed60628"
 
 [[projects]]
   digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
@@ -383,7 +385,7 @@
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:3b16cd6f07cf0799ea2529d5607b07cf7133e2fa55d7fcb3dd3c5ee91adbf491"
+  digest = "1:caa26b58cdb1d711967e476156a88bab4e68996a142b52ea24d5cb1d48420c47"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -404,7 +406,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "23d41db7e7d2282aef710e18cd8712fb86a1230e"
+  revision = "6ffe4e0fcaf010df15f60bc264ad3290e40734ff"
 
 [[projects]]
   digest = "1:1e38d8f6796fabbf419aa2040dc196927690a1de7fe14af25fbd29c6ed44b4da"
@@ -734,6 +736,14 @@
   revision = "53403b58ad1b561927d19068c655246f2db79d48"
   version = "v2.2.8"
 
+[[projects]]
+  branch = "v3"
+  digest = "1:2719dacdf70ad8b19e0db9b7716ef948e7a554a73eb28332fdda04f6571eb9f1"
+  name = "gopkg.in/yaml.v3"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "9f266ea9e77c4c7aab4cf02650570e7c7b3031a5"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
@@ -758,8 +768,10 @@
     "github.com/grpc-ecosystem/go-grpc-prometheus",
     "github.com/grpc-ecosystem/grpc-gateway/runtime",
     "github.com/lib/pq",
+    "github.com/percona-platform/saas/gen/checked",
     "github.com/percona-platform/saas/gen/telemetry/events/pmm",
     "github.com/percona-platform/saas/gen/telemetry/reporter",
+    "github.com/percona-platform/saas/pkg/check",
     "github.com/percona/exporter_shared/helpers",
     "github.com/percona/pmm/api/agentpb",
     "github.com/percona/pmm/api/alertmanager/amclient",
@@ -793,6 +805,7 @@
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/credentials",
     "google.golang.org/grpc/grpclog",
+    "google.golang.org/grpc/metadata",
     "google.golang.org/grpc/reflection",
     "google.golang.org/grpc/status",
     "gopkg.in/alecthomas/kingpin.v2",
