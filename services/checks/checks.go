@@ -178,7 +178,7 @@ func (s *Service) processTasks(ctx context.Context, tasks []task) {
 			}
 
 			// TODO Execute script against returned data
-			// fmt.Println(rr)
+			// fmt.Println(res.Output)
 		}
 
 		tasks = retry
@@ -187,7 +187,6 @@ func (s *Service) processTasks(ctx context.Context, tasks []task) {
 
 func (s *Service) executeChecks() {
 	mySQLChecks, postgreSQLChecks, mongoDBChecks := s.groupChecksByDB(s.checks)
-
 	var tasks []task
 	mySQLTasks, err := s.executeMySQLChecks(mySQLChecks)
 	if err != nil {
@@ -216,30 +215,29 @@ func (s *Service) executeChecks() {
 func (s *Service) executeMySQLChecks(checks []check.Check) ([]task, error) {
 	var res []task
 
-	agents, services, err := s.findAgentsAndServices(models.MySQLdExporterType)
+	targets, err := s.findTargets(models.MySQLServiceType)
+
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to find proper agents and services")
 	}
 
-	for _, agent := range agents {
-		pmmAgentID := *agent.PMMAgentID
-		r, err := models.CreateActionResult(s.db.Querier, pmmAgentID)
+	for _, target := range targets {
+		r, err := models.CreateActionResult(s.db.Querier, target.agentID)
 		if err != nil {
-			s.l.Errorf("Failed to prepare action result for agent %s: %s.", pmmAgentID, err)
+			s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agentID, err)
 			continue
 		}
-		dsn := agent.DSN(services[*agent.ServiceID], actionDialTimeout, "")
 
 		for _, c := range checks {
 			switch c.Type {
 			case check.MySQLShow:
-				if err := s.registry.StartMySQLQueryShowAction(context.Background(), r.ID, pmmAgentID, dsn, c.Query); err != nil {
-					s.l.Errorf("Failed to start MySQL show query action for agent %s, reason: %s.", pmmAgentID, err)
+				if err := s.registry.StartMySQLQueryShowAction(context.Background(), r.ID, target.agentID, target.dsn, c.Query); err != nil {
+					s.l.Errorf("Failed to start MySQL show query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 			case check.MySQLSelect:
-				if err := s.registry.StartMySQLQuerySelectAction(context.Background(), r.ID, pmmAgentID, dsn, c.Query); err != nil {
-					s.l.Errorf("Failed to start MySQL select query action for agent %s, reason: %s.", pmmAgentID, err)
+				if err := s.registry.StartMySQLQuerySelectAction(context.Background(), r.ID, target.agentID, target.dsn, c.Query); err != nil {
+					s.l.Errorf("Failed to start MySQL select query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 			default:
@@ -249,8 +247,8 @@ func (s *Service) executeMySQLChecks(checks []check.Check) ([]task, error) {
 
 			res = append(res, task{
 				resultID:   r.ID,
-				pmmAgentID: pmmAgentID,
-				serviceID:  *agent.ServiceID,
+				pmmAgentID: target.agentID,
+				serviceID:  target.serviceID,
 				check:      &c,
 			})
 		}
@@ -262,30 +260,28 @@ func (s *Service) executeMySQLChecks(checks []check.Check) ([]task, error) {
 func (s *Service) executePostgreSQLChecks(checks []check.Check) ([]task, error) {
 	var res []task
 
-	agents, services, err := s.findAgentsAndServices(models.PostgresExporterType)
+	targets, err := s.findTargets(models.PostgreSQLServiceType)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to find proper agents and services")
 	}
 
-	for _, agent := range agents {
-		pmmAgentID := *agent.PMMAgentID
-		r, err := models.CreateActionResult(s.db.Querier, pmmAgentID)
+	for _, target := range targets {
+		r, err := models.CreateActionResult(s.db.Querier, target.agentID)
 		if err != nil {
-			s.l.Errorf("Failed to prepare action result for agent %s: %s.", pmmAgentID, err)
+			s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agentID, err)
 			continue
 		}
-		dsn := agent.DSN(services[*agent.ServiceID], actionDialTimeout, "")
 
 		for _, c := range checks {
 			switch c.Type {
 			case check.PostgreSQLShow:
-				if err := s.registry.StartPostgreSQLQueryShowAction(context.Background(), r.ID, pmmAgentID, dsn); err != nil {
-					s.l.Errorf("Failed to start PostgreSQL show query action for agent %s, reason: %s.", pmmAgentID, err)
+				if err := s.registry.StartPostgreSQLQueryShowAction(context.Background(), r.ID, target.agentID, target.dsn); err != nil {
+					s.l.Errorf("Failed to start PostgreSQL show query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 			case check.PostgreSQLSelect:
-				if err := s.registry.StartPostgreSQLQuerySelectAction(context.Background(), r.ID, pmmAgentID, dsn, c.Query); err != nil {
-					s.l.Errorf("Failed to start PostgreSQL select query action for agent %s, reason: %s.", pmmAgentID, err)
+				if err := s.registry.StartPostgreSQLQuerySelectAction(context.Background(), r.ID, target.agentID, target.dsn, c.Query); err != nil {
+					s.l.Errorf("Failed to start PostgreSQL select query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 			default:
@@ -294,8 +290,8 @@ func (s *Service) executePostgreSQLChecks(checks []check.Check) ([]task, error) 
 			}
 			res = append(res, task{
 				resultID:   r.ID,
-				pmmAgentID: pmmAgentID,
-				serviceID:  *agent.ServiceID,
+				pmmAgentID: target.agentID,
+				serviceID:  target.serviceID,
 				check:      &c,
 			})
 		}
@@ -307,30 +303,28 @@ func (s *Service) executePostgreSQLChecks(checks []check.Check) ([]task, error) 
 func (s *Service) executeMongoChecks(checks []check.Check) ([]task, error) {
 	var res []task
 
-	agents, services, err := s.findAgentsAndServices(models.MongoDBExporterType)
+	targets, err := s.findTargets(models.MongoDBServiceType)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to find proper agents and services")
 	}
 
-	for _, agent := range agents {
-		pmmAgentID := *agent.PMMAgentID
-		r, err := models.CreateActionResult(s.db.Querier, pmmAgentID)
+	for _, target := range targets {
+		r, err := models.CreateActionResult(s.db.Querier, target.agentID)
 		if err != nil {
-			s.l.Errorf("Failed to prepare action result for agent %s: %s.", pmmAgentID, err)
+			s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agentID, err)
 			continue
 		}
-		dsn := agent.DSN(services[*agent.ServiceID], actionDialTimeout, "")
 
 		for _, c := range checks {
 			switch c.Type {
 			case check.MongoDBGetParameter:
-				if err := s.registry.StartMongoDBQueryGetParameterAction(context.Background(), r.ID, pmmAgentID, dsn); err != nil {
-					s.l.Errorf("Failed to start MongoDB get parameter query action for agent %s, reason: %s.", pmmAgentID, err)
+				if err := s.registry.StartMongoDBQueryGetParameterAction(context.Background(), r.ID, target.agentID, target.dsn); err != nil {
+					s.l.Errorf("Failed to start MongoDB get parameter query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 			case check.MongoDBBuildInfo:
-				if err := s.registry.StartMongoDBQueryBuildInfoAction(context.Background(), r.ID, pmmAgentID, dsn); err != nil {
-					s.l.Errorf("Failed to start MongoDB build info query action for agent %s, reason: %s.", pmmAgentID, err)
+				if err := s.registry.StartMongoDBQueryBuildInfoAction(context.Background(), r.ID, target.agentID, target.dsn); err != nil {
+					s.l.Errorf("Failed to start MongoDB build info query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 
@@ -340,8 +334,8 @@ func (s *Service) executeMongoChecks(checks []check.Check) ([]task, error) {
 			}
 			res = append(res, task{
 				resultID:   r.ID,
-				pmmAgentID: pmmAgentID,
-				serviceID:  *agent.ServiceID,
+				pmmAgentID: target.agentID,
+				serviceID:  target.serviceID,
 				check:      &c,
 			})
 		}
@@ -350,25 +344,42 @@ func (s *Service) executeMongoChecks(checks []check.Check) ([]task, error) {
 	return res, nil
 }
 
-func (s *Service) findAgentsAndServices(agentType models.AgentType) ([]*models.Agent, map[string]*models.Service, error) {
-	var agents []*models.Agent
-	var services []*models.Service
+type target struct {
+	agentID   string
+	serviceID string
+	dsn       string
+}
 
-	e := s.db.InTransaction(func(t *reform.TX) error {
-		var err error
-		if agents, err = models.FindAgents(s.db.Querier, models.AgentFilters{AgentType: &agentType}); err != nil {
-			return err
-		}
-		if services, err = models.FindServicesByIDs(s.db.Querier, getServicesIDs(agents)); err != nil {
-			return err
-		}
-		return nil
-	})
-	if e != nil {
-		return nil, nil, e
+func (s *Service) findTargets(serviceType models.ServiceType) ([]target, error) {
+	var targets []target
+	services, err := models.FindServices(s.db.Querier, models.ServiceFilters{ServiceType: &serviceType})
+	if err != nil {
+		return nil, err
 	}
 
-	return agents, servicesToMap(services), nil
+	for _, service := range services {
+		e := s.db.InTransaction(func(tx *reform.TX) error {
+			a, err := models.FindPMMAgentsForService(s.db.Querier, service.ServiceID)
+			if err != nil {
+				return err
+			}
+			if len(a) == 0 {
+				return errors.Errorf("No available pmm agents for service %s", service.ServiceID)
+			}
+
+			dsn, err := models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, service.ServiceID, a[0].AgentID, "")
+			if err != nil {
+				return err
+			}
+			targets = append(targets, target{agentID: a[0].AgentID, serviceID: service.ServiceID, dsn: dsn})
+			return nil
+		})
+		if e != nil {
+			s.l.Error("Failed to find agents for service %s, reason: %s", service.ServiceID, err)
+		}
+	}
+
+	return targets, nil
 }
 
 func (s *Service) groupChecksByDB(checks []check.Check) ([]check.Check, []check.Check, []check.Check) {
@@ -494,22 +505,4 @@ func (s *Service) verifySignatures(resp *api.GetAllChecksResponse) error {
 	}
 
 	return errors.New("no verified signatures")
-}
-
-func servicesToMap(services []*models.Service) map[string]*models.Service {
-	res := make(map[string]*models.Service, len(services))
-	for _, service := range services {
-		res[service.ServiceID] = service
-	}
-
-	return res
-}
-
-func getServicesIDs(agents []*models.Agent) []string {
-	res := make([]string, len(agents))
-	for i, agent := range agents {
-		res[i] = *agent.ServiceID
-	}
-
-	return res
 }
