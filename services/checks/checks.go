@@ -133,6 +133,7 @@ func (s *Service) Checks() []check.Check {
 	return append(r, s.checks...)
 }
 
+// waitForResult periodically checks result state and returns it when complete.
 func (s *Service) waitForResult(ctx context.Context, resultID string) (*models.ActionResult, error) {
 	ticker := time.NewTicker(resultCheckInterval)
 	defer ticker.Stop()
@@ -166,6 +167,7 @@ func (s *Service) waitForResult(ctx context.Context, resultID string) (*models.A
 	}
 }
 
+// executeChecks runs all available checks for all reachable services.
 func (s *Service) executeChecks(ctx context.Context) {
 	mySQLChecks, postgreSQLChecks, mongoDBChecks := s.groupChecksByDB(s.checks)
 
@@ -177,11 +179,12 @@ func (s *Service) executeChecks(ctx context.Context) {
 		s.l.Errorf("Failed to execute PostgreSQL checks: %s.", err)
 	}
 
-	if err := s.executeMongoChecks(ctx, mongoDBChecks); err != nil {
+	if err := s.executeMongoDBChecks(ctx, mongoDBChecks); err != nil {
 		s.l.Errorf("Failed to execute MongoDB checks: %s.", err)
 	}
 }
 
+// executeMySQLChecks runs MySQL checks for available MySQL services.
 func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) error {
 	targets, err := s.findTargets(models.MySQLServiceType)
 	if err != nil {
@@ -227,6 +230,7 @@ func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) 
 	return nil
 }
 
+// executePostgreSQLChecks runs PostgreSQL checks for available PostgreSQL services.
 func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Check) error {
 	targets, err := s.findTargets(models.PostgreSQLServiceType)
 	if err != nil {
@@ -272,7 +276,8 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Ch
 	return nil
 }
 
-func (s *Service) executeMongoChecks(ctx context.Context, checks []check.Check) error {
+// executeMongoDBChecks runs MongoDB checks for available MongoDB services.
+func (s *Service) executeMongoDBChecks(ctx context.Context, checks []check.Check) error {
 	targets, err := s.findTargets(models.MongoDBServiceType)
 	if err != nil {
 		return errors.Wrap(err, "failed to find proper agents and services")
@@ -318,12 +323,14 @@ func (s *Service) executeMongoChecks(ctx context.Context, checks []check.Check) 
 	return nil
 }
 
+// target contains required info about check target
 type target struct {
 	agentID   string
 	serviceID string
 	dsn       string
 }
 
+// findTargets returns slice of available targets for specified service type.
 func (s *Service) findTargets(serviceType models.ServiceType) ([]target, error) {
 	var targets []target
 	services, err := models.FindServices(s.db.Querier, models.ServiceFilters{ServiceType: &serviceType})
@@ -356,6 +363,7 @@ func (s *Service) findTargets(serviceType models.ServiceType) ([]target, error) 
 	return targets, nil
 }
 
+// groupChecksByDB splits provided checks by database and returns three slices: for MySQL, for PostgreSQL and for MongoDB.
 func (s *Service) groupChecksByDB(checks []check.Check) ([]check.Check, []check.Check, []check.Check) {
 	var mySQLChecks, postgreSQLChecks, mongoChecks []check.Check
 
@@ -384,6 +392,7 @@ func (s *Service) groupChecksByDB(checks []check.Check) ([]check.Check, []check.
 	return mySQLChecks, postgreSQLChecks, mongoChecks
 }
 
+// grabChecks loads checks list.
 func (s *Service) grabChecks(ctx context.Context) {
 	if f := os.Getenv(envCheckFile); f != "" {
 		s.l.Warnf("Use local test checks file: %s.", f)
@@ -397,6 +406,7 @@ func (s *Service) grabChecks(ctx context.Context) {
 	}
 }
 
+// loadLocalCheck loads checks form local file.
 func (s *Service) loadLocalChecks(file string) error {
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -411,6 +421,7 @@ func (s *Service) loadLocalChecks(file string) error {
 	return nil
 }
 
+// downloadChecks downloads checks form percona service endpoint.
 func (s *Service) downloadChecks(ctx context.Context) error {
 	s.l.Infof("Downloading checks from %s ...", s.host)
 
@@ -456,6 +467,7 @@ func (s *Service) downloadChecks(ctx context.Context) error {
 	return nil
 }
 
+// updateChecks update service checks filed value under mutex.
 func (s *Service) updateChecks(checks []check.Check) {
 	s.cm.Lock()
 	defer s.cm.Unlock()
@@ -463,6 +475,7 @@ func (s *Service) updateChecks(checks []check.Check) {
 	s.checks = checks
 }
 
+// verifySignatures verifies checks signatures and returns error in case of verification problem.
 func (s *Service) verifySignatures(resp *api.GetAllChecksResponse) error {
 	if len(resp.Signatures) == 0 {
 		return errors.New("zero signatures received")
