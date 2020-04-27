@@ -50,9 +50,10 @@ const (
 	envInterval  = "PERCONA_TEST_CHECKS_INTERVAL"
 	envCheckFile = "PERCONA_TEST_CHECKS_FILE"
 
-	downloadTimeout   = 10 * time.Second
-	actionDialTimeout = 5 * time.Second
-	resultsTimeout    = time.Minute
+	checksTimeout       = time.Hour
+	downloadTimeout     = 10 * time.Second
+	resultTimeout       = 10 * time.Second
+	resultCheckInterval = time.Second
 )
 
 var defaultPublicKeys = []string{
@@ -72,13 +73,6 @@ type Service struct {
 
 	registry registryService
 	db       *reform.DB
-}
-
-type task struct {
-	resultID   string
-	pmmAgentID string
-	serviceID  string
-	check      *check.Check
 }
 
 // New returns Service with given PMM version.
@@ -116,8 +110,10 @@ func (s *Service) Run(ctx context.Context) {
 	defer ticker.Stop()
 
 	for {
-		s.grabChecks(ctx)
-		s.executeChecks()
+		nCtx, cancel := context.WithTimeout(ctx, checksTimeout)
+		s.grabChecks(nCtx)
+		s.executeChecks(nCtx)
+		cancel()
 
 		select {
 		case <-ticker.C:
@@ -137,88 +133,59 @@ func (s *Service) Checks() []check.Check {
 	return append(r, s.checks...)
 }
 
-func (s *Service) processTasks(ctx context.Context, tasks []task) {
-	ticker := time.NewTicker(time.Minute)
+func (s *Service) waitForResult(ctx context.Context, resultID string) (*models.ActionResult, error) {
+	ticker := time.NewTicker(resultCheckInterval)
 	defer ticker.Stop()
 
 	for {
-		if len(tasks) == 0 {
-			break
-		}
-
-		var retry []task
 		select {
 		case <-ticker.C:
-			// continue with next loop iteration
 		case <-ctx.Done():
-			return
+			return nil, ctx.Err()
 		}
 
-		for _, t := range tasks {
-			res, err := models.FindActionResultByID(s.db.Querier, t.resultID)
-			if err != nil {
-				s.l.Errorf("Can't find action result: %s.", err)
-				continue
-			}
-
-			if !res.Done {
-				retry = append(retry, t)
-				continue
-			}
-
-			if res.Error != "" {
-				s.l.Errorf("Action %s failed: %s.", t.resultID, res.Error)
-				continue
-			}
-
-			_, err = agentpb.UnmarshalActionQueryResult([]byte(res.Output))
-			if err != nil {
-				s.l.Errorf("Failed to parse action result with id: %s, reason: %s.", t.resultID, err)
-				continue
-			}
-
-			// TODO Execute script against returned data
-			// fmt.Println(res.Output)
+		res, err := models.FindActionResultByID(s.db.Querier, resultID)
+		if err != nil {
+			return nil, errors.Errorf("Can't find action result: %s.", err)
 		}
 
-		tasks = retry
+		if !res.Done {
+			continue
+		}
+
+		if res.Error != "" {
+			return nil, errors.Errorf("Action %s failed: %s.", resultID, res.Error)
+		}
+
+		_, err = agentpb.UnmarshalActionQueryResult([]byte(res.Output))
+		if err != nil {
+			return nil, errors.Errorf("Failed to parse action result : %s.", err)
+		}
+
+		return res, nil
 	}
 }
 
-func (s *Service) executeChecks() {
+func (s *Service) executeChecks(ctx context.Context) {
 	mySQLChecks, postgreSQLChecks, mongoDBChecks := s.groupChecksByDB(s.checks)
-	var tasks []task
-	mySQLTasks, err := s.executeMySQLChecks(mySQLChecks)
-	if err != nil {
+
+	if err := s.executeMySQLChecks(ctx, mySQLChecks); err != nil {
 		s.l.Errorf("Failed to execute MySQL checks: %s.", err)
 	}
-	tasks = append(tasks, mySQLTasks...)
 
-	postgreSQLTasks, err := s.executePostgreSQLChecks(postgreSQLChecks)
-	if err != nil {
+	if err := s.executePostgreSQLChecks(ctx, postgreSQLChecks); err != nil {
 		s.l.Errorf("Failed to execute PostgreSQL checks: %s.", err)
 	}
-	tasks = append(tasks, postgreSQLTasks...)
 
-	mongoDBTasks, err := s.executeMongoChecks(mongoDBChecks)
-	if err != nil {
+	if err := s.executeMongoChecks(ctx, mongoDBChecks); err != nil {
 		s.l.Errorf("Failed to execute MongoDB checks: %s.", err)
 	}
-	tasks = append(tasks, mongoDBTasks...)
-
-	ctx, cancel := context.WithTimeout(context.Background(), resultsTimeout)
-	defer cancel()
-
-	s.processTasks(ctx, tasks)
 }
 
-func (s *Service) executeMySQLChecks(checks []check.Check) ([]task, error) {
-	var res []task
-
+func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) error {
 	targets, err := s.findTargets(models.MySQLServiceType)
-
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to find proper agents and services")
+		return errors.Wrap(err, "failed to find proper agents and services")
 	}
 
 	for _, target := range targets {
@@ -231,12 +198,12 @@ func (s *Service) executeMySQLChecks(checks []check.Check) ([]task, error) {
 		for _, c := range checks {
 			switch c.Type {
 			case check.MySQLShow:
-				if err := s.registry.StartMySQLQueryShowAction(context.Background(), r.ID, target.agentID, target.dsn, c.Query); err != nil {
+				if err := s.registry.StartMySQLQueryShowAction(ctx, r.ID, target.agentID, target.dsn, c.Query); err != nil {
 					s.l.Errorf("Failed to start MySQL show query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 			case check.MySQLSelect:
-				if err := s.registry.StartMySQLQuerySelectAction(context.Background(), r.ID, target.agentID, target.dsn, c.Query); err != nil {
+				if err := s.registry.StartMySQLQuerySelectAction(ctx, r.ID, target.agentID, target.dsn, c.Query); err != nil {
 					s.l.Errorf("Failed to start MySQL select query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
@@ -245,24 +212,25 @@ func (s *Service) executeMySQLChecks(checks []check.Check) ([]task, error) {
 				continue
 			}
 
-			res = append(res, task{
-				resultID:   r.ID,
-				pmmAgentID: target.agentID,
-				serviceID:  target.serviceID,
-				check:      &c,
-			})
+			nCtx, cancel := context.WithTimeout(ctx, resultTimeout)
+			_, err := s.waitForResult(nCtx, r.ID) // TODO returns result
+			cancel()
+			if err != nil {
+				s.l.Errorf("failed to get check result: %s", err)
+				continue
+			}
+
+			// TODO process result
 		}
 	}
 
-	return res, nil
+	return nil
 }
 
-func (s *Service) executePostgreSQLChecks(checks []check.Check) ([]task, error) {
-	var res []task
-
+func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Check) error {
 	targets, err := s.findTargets(models.PostgreSQLServiceType)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to find proper agents and services")
+		return errors.Wrap(err, "failed to find proper agents and services")
 	}
 
 	for _, target := range targets {
@@ -275,12 +243,12 @@ func (s *Service) executePostgreSQLChecks(checks []check.Check) ([]task, error) 
 		for _, c := range checks {
 			switch c.Type {
 			case check.PostgreSQLShow:
-				if err := s.registry.StartPostgreSQLQueryShowAction(context.Background(), r.ID, target.agentID, target.dsn); err != nil {
+				if err := s.registry.StartPostgreSQLQueryShowAction(ctx, r.ID, target.agentID, target.dsn); err != nil {
 					s.l.Errorf("Failed to start PostgreSQL show query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 			case check.PostgreSQLSelect:
-				if err := s.registry.StartPostgreSQLQuerySelectAction(context.Background(), r.ID, target.agentID, target.dsn, c.Query); err != nil {
+				if err := s.registry.StartPostgreSQLQuerySelectAction(ctx, r.ID, target.agentID, target.dsn, c.Query); err != nil {
 					s.l.Errorf("Failed to start PostgreSQL select query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
@@ -288,24 +256,26 @@ func (s *Service) executePostgreSQLChecks(checks []check.Check) ([]task, error) 
 				s.l.Errorf("Unknown PostgresSQL check type: %s.", c.Type)
 				continue
 			}
-			res = append(res, task{
-				resultID:   r.ID,
-				pmmAgentID: target.agentID,
-				serviceID:  target.serviceID,
-				check:      &c,
-			})
+
+			nCtx, cancel := context.WithTimeout(ctx, resultTimeout)
+			_, err := s.waitForResult(nCtx, r.ID) // TODO returns result
+			cancel()
+			if err != nil {
+				s.l.Errorf("failed to get check result: %s", err)
+				continue
+			}
+
+			// TODO process result
 		}
 	}
 
-	return res, nil
+	return nil
 }
 
-func (s *Service) executeMongoChecks(checks []check.Check) ([]task, error) {
-	var res []task
-
+func (s *Service) executeMongoChecks(ctx context.Context, checks []check.Check) error {
 	targets, err := s.findTargets(models.MongoDBServiceType)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to find proper agents and services")
+		return errors.Wrap(err, "failed to find proper agents and services")
 	}
 
 	for _, target := range targets {
@@ -332,16 +302,20 @@ func (s *Service) executeMongoChecks(checks []check.Check) ([]task, error) {
 				s.l.Errorf("Unknown MongoDB check type: %s.", c.Type)
 				continue
 			}
-			res = append(res, task{
-				resultID:   r.ID,
-				pmmAgentID: target.agentID,
-				serviceID:  target.serviceID,
-				check:      &c,
-			})
+
+			nCtx, cancel := context.WithTimeout(ctx, resultTimeout)
+			_, err := s.waitForResult(nCtx, r.ID) // TODO returns result
+			cancel()
+			if err != nil {
+				s.l.Errorf("failed to get check result: %s", err)
+				continue
+			}
+
+			// TODO process result
 		}
 	}
 
-	return res, nil
+	return nil
 }
 
 type target struct {
@@ -375,7 +349,7 @@ func (s *Service) findTargets(serviceType models.ServiceType) ([]target, error) 
 			return nil
 		})
 		if e != nil {
-			s.l.Error("Failed to find agents for service %s, reason: %s", service.ServiceID, err)
+			s.l.Errorf("Failed to find agents for service %s, reason: %s", service.ServiceID, err)
 		}
 	}
 
