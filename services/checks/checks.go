@@ -345,7 +345,7 @@ func (s *Service) findTargets(serviceType models.ServiceType) ([]target, error) 
 				return err
 			}
 			if len(a) == 0 {
-				return errors.Errorf("No available pmm agents for service %s", service.ServiceID)
+				return errors.New("no available pmm agents")
 			}
 
 			dsn, err := models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, service.ServiceID, a[0].AgentID, "")
@@ -365,7 +365,7 @@ func (s *Service) findTargets(serviceType models.ServiceType) ([]target, error) 
 
 // groupChecksByDB splits provided checks by database and returns three slices: for MySQL, for PostgreSQL and for MongoDB.
 func (s *Service) groupChecksByDB(checks []check.Check) ([]check.Check, []check.Check, []check.Check) {
-	var mySQLChecks, postgreSQLChecks, mongoChecks []check.Check
+	var mySQLChecks, postgreSQLChecks, mongoDBChecks []check.Check
 
 	for _, c := range checks {
 		switch c.Type {
@@ -382,14 +382,14 @@ func (s *Service) groupChecksByDB(checks []check.Check) ([]check.Check, []check.
 		case check.MongoDBGetParameter:
 			fallthrough
 		case check.MongoDBBuildInfo:
-			mongoChecks = append(mongoChecks, c)
+			mongoDBChecks = append(mongoDBChecks, c)
 
 		default:
 			s.l.Warnf("Unknown check type %s, skip it.", c.Type)
 		}
 	}
 
-	return mySQLChecks, postgreSQLChecks, mongoChecks
+	return mySQLChecks, postgreSQLChecks, mongoDBChecks
 }
 
 // grabChecks loads checks list.
