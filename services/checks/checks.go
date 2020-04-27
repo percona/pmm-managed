@@ -50,8 +50,9 @@ const (
 	envInterval  = "PERCONA_TEST_CHECKS_INTERVAL"
 	envCheckFile = "PERCONA_TEST_CHECKS_FILE"
 
-	resultsTimeout = defaultInterval - time.Hour
-	timeout        = 5 * time.Second
+	downloadTimeout   = 10 * time.Second
+	actionDialTimeout = 5 * time.Second
+	resultsTimeout    = time.Minute
 )
 
 var defaultPublicKeys = []string{
@@ -209,7 +210,6 @@ func (s *Service) executeChecks() {
 	defer cancel()
 
 	s.processTasks(ctx, tasks)
-
 }
 
 func (s *Service) executeMySQLChecks(checks []check.Check) ([]task, error) {
@@ -227,7 +227,7 @@ func (s *Service) executeMySQLChecks(checks []check.Check) ([]task, error) {
 			s.l.Errorf("Failed to prepare action result for agent %s: %s.", pmmAgentID, err)
 			continue
 		}
-		dsn := agent.DSN(services[*agent.ServiceID], timeout, "")
+		dsn := agent.DSN(services[*agent.ServiceID], actionDialTimeout, "")
 
 		for _, c := range checks {
 			switch c.Type {
@@ -273,7 +273,7 @@ func (s *Service) executePostgreSQLChecks(checks []check.Check) ([]task, error) 
 			s.l.Errorf("Failed to prepare action result for agent %s: %s.", pmmAgentID, err)
 			continue
 		}
-		dsn := agent.DSN(services[*agent.ServiceID], timeout, "")
+		dsn := agent.DSN(services[*agent.ServiceID], actionDialTimeout, "")
 
 		for _, c := range checks {
 			switch c.Type {
@@ -318,7 +318,7 @@ func (s *Service) executeMongoChecks(checks []check.Check) ([]task, error) {
 			s.l.Errorf("Failed to prepare action result for agent %s: %s.", pmmAgentID, err)
 			continue
 		}
-		dsn := agent.DSN(services[*agent.ServiceID], timeout, "")
+		dsn := agent.DSN(services[*agent.ServiceID], actionDialTimeout, "")
 
 		for _, c := range checks {
 			switch c.Type {
@@ -437,13 +437,14 @@ func (s *Service) downloadChecks(ctx context.Context) error {
 
 	opts := []grpc.DialOption{
 		// replacement is marked as experimental
-		grpc.WithBackoffMaxDelay(timeout), //nolint:staticcheck
+		grpc.WithBackoffMaxDelay(downloadTimeout), //nolint:staticcheck
+
 		grpc.WithBlock(),
 		grpc.WithUserAgent("pmm-managed/" + s.pmmVersion),
 		grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, timeout)
+	ctx, cancel := context.WithTimeout(ctx, downloadTimeout)
 	defer cancel()
 	cc, err := grpc.DialContext(ctx, s.host, opts...)
 	if err != nil {

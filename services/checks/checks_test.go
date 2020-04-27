@@ -38,7 +38,7 @@ func TestDownloadChecks(t *testing.T) {
 		s.publicKeys = []string{devChecksPublicKey}
 
 		assert.Empty(t, s.Checks())
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := context.WithTimeout(context.Background(), downloadTimeout)
 		defer cancel()
 
 		err := s.downloadChecks(ctx)
