@@ -166,7 +166,7 @@ func TestServer(t *testing.T) {
 				DisableStt: true,
 			}))
 
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Cannot enable STT while telemetry is disabled"),
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Cannot enable STT while disabling telemetry"),
 			s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
 				EnableStt:        true,
 				DisableTelemetry: true,

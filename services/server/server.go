@@ -389,7 +389,7 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 		SshKey:          settings.SSHKey,
 		AwsPartitions:   settings.AWSPartitions,
 		AlertManagerUrl: settings.AlertManagerURL,
-		SttEnabled:      !settings.SaaS.STTEnabled,
+		SttEnabled:      settings.SaaS.STTEnabled,
 	}
 
 	b, err := ioutil.ReadFile(alertingRulesFile)
@@ -464,8 +464,8 @@ func (s *Server) validateChangeSettingsRequest(ctx context.Context, req *serverp
 	if req.DisableStt && req.EnableStt {
 		return status.Error(codes.InvalidArgument, "Enable STT and disable STT cannot be both true")
 	}
-	if req.EnableStt && !req.EnableTelemetry {
-		return status.Errorf(codes.InvalidArgument, "Cannot enable STT while telemetry is disabled")
+	if req.EnableStt && req.DisableTelemetry {
+		return status.Errorf(codes.InvalidArgument, "Cannot enable STT while disabling telemetry")
 	}
 	return nil
 }
