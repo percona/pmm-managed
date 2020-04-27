@@ -139,6 +139,7 @@ func (s *Service) Checks() []check.Check {
 
 func (s *Service) processTasks(ctx context.Context, tasks []task) {
 	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
 
 	for {
 		if len(tasks) == 0 {
