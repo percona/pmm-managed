@@ -768,7 +768,7 @@ func (r *Registry) StartMongoDBExplainAction(ctx context.Context, id, pmmAgentID
 	return nil
 }
 
-// StartMySQLQueryShowAction starts mySQL show query action on pmm-agent.
+// StartMySQLQueryShowAction starts MySQL SHOW query action on pmm-agent.
 func (r *Registry) StartMySQLQueryShowAction(ctx context.Context, id, pmmAgentID, dsn, query string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
@@ -789,7 +789,7 @@ func (r *Registry) StartMySQLQueryShowAction(ctx context.Context, id, pmmAgentID
 	return nil
 }
 
-// StartMySQLQuerySelectAction starts mySQL select query action on pmm-agent.
+// StartMySQLQuerySelectAction starts MySQL SELECT query action on pmm-agent.
 func (r *Registry) StartMySQLQuerySelectAction(ctx context.Context, id, pmmAgentID, dsn, query string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
@@ -810,7 +810,7 @@ func (r *Registry) StartMySQLQuerySelectAction(ctx context.Context, id, pmmAgent
 	return nil
 }
 
-// StartPostgreSQLQueryShowAction starts postgreSQL show query action on pmm-agent.
+// StartPostgreSQLQueryShowAction starts PostgreSQL SHOW query action on pmm-agent.
 func (r *Registry) StartPostgreSQLQueryShowAction(ctx context.Context, id, pmmAgentID, dsn string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
@@ -830,7 +830,7 @@ func (r *Registry) StartPostgreSQLQueryShowAction(ctx context.Context, id, pmmAg
 	return nil
 }
 
-// StartPostgreSQLQuerySelectAction starts postgreSQL select query action on pmm-agent.
+// StartPostgreSQLQuerySelectAction starts PostgreSQL SELECT query action on pmm-agent.
 func (r *Registry) StartPostgreSQLQuerySelectAction(ctx context.Context, id, pmmAgentID, dsn, query string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
@@ -851,7 +851,7 @@ func (r *Registry) StartPostgreSQLQuerySelectAction(ctx context.Context, id, pmm
 	return nil
 }
 
-// StartMongoDBQueryGetParameterAction starts MongoDB get parameter query action on pmm-agent.
+// StartMongoDBQueryGetParameterAction starts MongoDB getParameter query action on pmm-agent.
 func (r *Registry) StartMongoDBQueryGetParameterAction(ctx context.Context, id, pmmAgentID, dsn string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
@@ -871,7 +871,7 @@ func (r *Registry) StartMongoDBQueryGetParameterAction(ctx context.Context, id, 
 	return nil
 }
 
-// StartMongoDBQueryBuildInfoAction starts MongoDB build info query action on pmm-agent.
+// StartMongoDBQueryBuildInfoAction starts MongoDB buildInfo query action on pmm-agent.
 func (r *Registry) StartMongoDBQueryBuildInfoAction(ctx context.Context, id, pmmAgentID, dsn string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
