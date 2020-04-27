@@ -154,7 +154,6 @@ func TestSettings(t *testing.T) {
 		})
 
 		t.Run("STT validation", func(t *testing.T) {
-			// By default, telemetry is enabled
 			_, err := models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				EnableSTT:  true,
 				DisableSTT: true,
