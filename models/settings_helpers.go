@@ -43,6 +43,7 @@ func GetSettings(q reform.DBTX) (*Settings, error) {
 		return nil, errors.Wrap(err, "failed to unmarshal settings")
 	}
 
+	s.fillDefaults()
 	return &s, nil
 }
 
@@ -74,11 +75,12 @@ type ChangeSettingsParams struct {
 
 // UpdateSettings updates only non-zero, non-empty values.
 func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, error) {
-	settings, err := GetSettings(q)
+	err := ValidateSettings(params)
 	if err != nil {
 		return nil, err
 	}
-	err = ValidateSettings(params)
+
+	settings, err := GetSettings(q)
 	if err != nil {
 		return nil, err
 	}
