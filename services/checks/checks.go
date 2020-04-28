@@ -145,16 +145,21 @@ func (s *Service) waitForResult(ctx context.Context, resultID string) (*models.A
 		select {
 		case <-ticker.C:
 		case <-ctx.Done():
-			return nil, ctx.Err()
+			return nil, errors.WithStack(ctx.Err())
 		}
 
 		res, err := models.FindActionResultByID(s.db.Querier, resultID)
 		if err != nil {
-			return nil, errors.Errorf("Can't find action result: %s.", err)
+			return nil, err
 		}
 
 		if !res.Done {
 			continue
+		}
+
+		// FIXME we still need to delete old result - they may never be done: https://jira.percona.com/browse/PMM-5840
+		if err = s.db.Delete(res); err != nil {
+			s.l.Warnf("Failed to delete action result %s: %s.", resultID, err)
 		}
 
 		if res.Error != "" {
@@ -398,20 +403,21 @@ func (s *Service) groupChecksByDB(checks []check.Check) ([]check.Check, []check.
 // grabChecks loads checks list.
 func (s *Service) grabChecks(ctx context.Context) {
 	if f := os.Getenv(envCheckFile); f != "" {
-		s.l.Warnf("Use local test checks file: %s.", f)
+		s.l.Warnf("Using local test checks file: %s.", f)
 		if err := s.loadLocalChecks(f); err != nil {
 			s.l.Errorf("Failed to load local checks file: %s.", err)
 		}
-	} else {
-		if err := s.downloadChecks(ctx); err != nil {
-			s.l.Errorf("Failed to download checks, %s.", err)
-		}
+		return
+	}
+
+	if err := s.downloadChecks(ctx); err != nil {
+		s.l.Errorf("Failed to download checks: %s.", err)
 	}
 }
 
 // loadLocalCheck loads checks form local file.
 func (s *Service) loadLocalChecks(file string) error {
-	data, err := ioutil.ReadFile(file)
+	data, err := ioutil.ReadFile(file) //nolint:gosec
 	if err != nil {
 		return errors.Wrap(err, "failed to read test checks file")
 	}
