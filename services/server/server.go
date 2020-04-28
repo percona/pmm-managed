@@ -441,6 +441,13 @@ func (s *Server) validateChangeSettingsRequest(ctx context.Context, req *serverp
 		}
 	}
 
+	if req.DisableStt && req.EnableStt {
+		return status.Error(codes.InvalidArgument, "Enable STT and disable STT cannot be both true")
+	}
+	if req.EnableStt && req.DisableTelemetry {
+		return status.Errorf(codes.InvalidArgument, "Cannot enable STT while disabling telemetry")
+	}
+
 	// check request parameters compatibility with environment variables
 
 	if (req.EnableTelemetry || req.DisableTelemetry) && s.envSettings.DisableTelemetry {
@@ -461,12 +468,6 @@ func (s *Server) validateChangeSettingsRequest(ctx context.Context, req *serverp
 		return status.Error(codes.FailedPrecondition, "Data retention for queries is set via DATA_RETENTION environment variable.")
 	}
 
-	if req.DisableStt && req.EnableStt {
-		return status.Error(codes.InvalidArgument, "Enable STT and disable STT cannot be both true")
-	}
-	if req.EnableStt && req.DisableTelemetry {
-		return status.Errorf(codes.InvalidArgument, "Cannot enable STT while disabling telemetry")
-	}
 	return nil
 }
 

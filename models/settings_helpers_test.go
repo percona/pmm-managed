@@ -161,10 +161,11 @@ func TestSettings(t *testing.T) {
 			assert.EqualError(t, err, `enable STT and disable STT cannot be both true`)
 
 			// Check we can enable STT while telemetry is enabled
-			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
+			ns, err := models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				EnableSTT: true,
 			})
 			assert.NoError(t, err)
+			assert.True(t, ns.SaaS.STTEnabled)
 
 			// Re-disable STT for the next tests
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
