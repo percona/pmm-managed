@@ -41,6 +41,7 @@ var serviceTypes = map[inventorypb.ServiceType]models.ServiceType{
 	inventorypb.ServiceType_MONGODB_SERVICE:    models.MongoDBServiceType,
 	inventorypb.ServiceType_POSTGRESQL_SERVICE: models.PostgreSQLServiceType,
 	inventorypb.ServiceType_PROXYSQL_SERVICE:   models.ProxySQLServiceType,
+	inventorypb.ServiceType_EXTERNAL_SERVICE:   models.ExternalServiceType,
 }
 
 func serviceType(serviceType inventorypb.ServiceType) *models.ServiceType {
