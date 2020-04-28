@@ -52,7 +52,7 @@ const (
 
 	checksTimeout       = time.Hour
 	downloadTimeout     = 10 * time.Second
-	resultTimeout       = 10 * time.Second
+	resultTimeout       = 15 * time.Second
 	resultCheckInterval = time.Second
 )
 
@@ -110,10 +110,13 @@ func (s *Service) Run(ctx context.Context) {
 	defer ticker.Stop()
 
 	for {
-		nCtx, cancel := context.WithTimeout(ctx, checksTimeout)
-		s.grabChecks(nCtx)
-		s.executeChecks(nCtx)
-		cancel()
+		// FIXME do that only if STT is enabled in settings https://jira.percona.com/browse/SAAS-30
+		if true {
+			nCtx, cancel := context.WithTimeout(ctx, checksTimeout)
+			s.grabChecks(nCtx)
+			s.executeChecks(nCtx)
+			cancel()
+		}
 
 		select {
 		case <-ticker.C:
