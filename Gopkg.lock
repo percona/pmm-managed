@@ -385,7 +385,7 @@
 
 [[projects]]
   branch = "PMM-5819_settings-for-stt-enable"
-  digest = "1:9617b104e170c97125ecf2ffcb1f8762c916a16e40b7f8705810d926592edb49"
+  digest = "1:d625f1b95e2d06faa2f3fc9c67dde08c2b286f0b82081ad1c7b94174171f55c3"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -406,7 +406,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "3f7ce4b7fe32b3f323ed15b454356e10a3b0d7cb"
+  revision = "9d118d9530ac050318f1e27bc65978b4fb79b2cb"
 
 [[projects]]
   digest = "1:1e38d8f6796fabbf419aa2040dc196927690a1de7fe14af25fbd29c6ed44b4da"
