@@ -364,7 +364,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:b7f0c1b025e7ae0d34c5070656de6e18d3992cd1b9788bda5abbfdb23c837c34"
+  digest = "1:076c50f2c01eb906303be89e6ea54146b18f36090835beb9752ff1dc1986099e"
   name = "github.com/percona-platform/saas"
   packages = [
     "gen/checked",
@@ -373,7 +373,7 @@
     "pkg/check",
   ]
   pruneopts = "NUT"
-  revision = "7def7d8a18fa6b211aafc993ad9fbe82da1de5d7"
+  revision = "c057af62c99492bd2f10c64804e82b348ed60628"
 
 [[projects]]
   digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
@@ -406,7 +406,11 @@
     "version",
   ]
   pruneopts = "NUT"
+<<<<<<< HEAD
   revision = "9d118d9530ac050318f1e27bc65978b4fb79b2cb"
+=======
+  revision = "db7a94d3e8b41915ab277ead4294913537865778"
+>>>>>>> PMM-2.0
 
 [[projects]]
   digest = "1:1e38d8f6796fabbf419aa2040dc196927690a1de7fe14af25fbd29c6ed44b4da"
