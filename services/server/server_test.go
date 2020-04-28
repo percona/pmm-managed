@@ -48,7 +48,7 @@ func TestServer(t *testing.T) {
 	mp.On("RequestConfigurationUpdate").Return(nil)
 
 	newServer := func() *Server {
-		s, err := NewServer(&ServerParams{
+		s, err := NewServer(&Params{
 			DB:          reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
 			Supervisord: r,
 			Prometheus:  mp,
