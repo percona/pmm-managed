@@ -113,6 +113,19 @@ func addProxySQLService(t pmmapitests.TestingT, body services.AddProxySQLService
 	return res.Payload
 }
 
+func addExternalService(t pmmapitests.TestingT, body services.AddExternalServiceBody) *services.AddExternalServiceOKBody {
+	t.Helper()
+
+	params := &services.AddExternalServiceParams{
+		Body:    body,
+		Context: pmmapitests.Context,
+	}
+	res, err := client.Default.Services.AddExternalService(params)
+	assert.NoError(t, err)
+	require.NotNil(t, res)
+	return res.Payload
+}
+
 func addNodeExporter(t pmmapitests.TestingT, pmmAgentID string, customLabels map[string]string) *agents.AddNodeExporterOK {
 	res, err := client.Default.Agents.AddNodeExporter(&agents.AddNodeExporterParams{
 		Body: agents.AddNodeExporterBody{
@@ -213,6 +226,32 @@ func assertMySQLServiceNotExist(t pmmapitests.TestingT, res *services.ListServic
 		}
 		return true
 	}, "There should not be MySQL service with id `%s`", serviceID)
+}
+
+func assertExternalServiceExists(t pmmapitests.TestingT, res *services.ListServicesOK, serviceID string) bool {
+	t.Helper()
+
+	return assert.Conditionf(t, func() bool {
+		for _, v := range res.Payload.External {
+			if v.ServiceID == serviceID {
+				return true
+			}
+		}
+		return false
+	}, "There should be External service with id `%s`", serviceID)
+}
+
+func assertExternalServiceNotExist(t pmmapitests.TestingT, res *services.ListServicesOK, serviceID string) bool {
+	t.Helper()
+
+	return assert.Conditionf(t, func() bool {
+		for _, v := range res.Payload.External {
+			if v.ServiceID == serviceID {
+				return false
+			}
+		}
+		return true
+	}, "There should not be External service with id `%s`", serviceID)
 }
 
 func assertMySQLExporterExists(t pmmapitests.TestingT, res *agents.ListAgentsOK, mySqldExporterID string) bool {

@@ -54,6 +54,13 @@ func TestServices(t *testing.T) {
 		postgreSQLServiceID := postgreSQLService.Postgresql.ServiceID
 		defer pmmapitests.RemoveServices(t, postgreSQLServiceID)
 
+		externalService := addExternalService(t, services.AddExternalServiceBody{
+			NodeID:      genericNodeID,
+			ServiceName: pmmapitests.TestString(t, "Some External Service on remote Node"),
+		})
+		externalServiceID := externalService.External.ServiceID
+		defer pmmapitests.RemoveServices(t, externalServiceID)
+
 		res, err := client.Default.Services.ListServices(&services.ListServicesParams{Context: pmmapitests.Context})
 		assert.NoError(t, err)
 		require.NotNil(t, res)
@@ -62,6 +69,7 @@ func TestServices(t *testing.T) {
 		assertMySQLServiceExists(t, res, serviceID)
 		assertMySQLServiceExists(t, res, remoteServiceID)
 		assertPostgreSQLServiceExists(t, res, postgreSQLServiceID)
+		assertExternalServiceExists(t, res, externalServiceID)
 
 		// Filter by node ID.
 		res, err = client.Default.Services.ListServices(&services.ListServicesParams{
@@ -78,6 +86,7 @@ func TestServices(t *testing.T) {
 		assertMySQLServiceExists(t, res, serviceID)
 		assertMySQLServiceNotExist(t, res, remoteServiceID)
 		assertPostgreSQLServiceExists(t, res, postgreSQLServiceID)
+		assertExternalServiceExists(t, res, externalServiceID)
 
 		// Filter by service type.
 		res, err = client.Default.Services.ListServices(&services.ListServicesParams{
@@ -91,6 +100,7 @@ func TestServices(t *testing.T) {
 		assert.NotZerof(t, len(res.Payload.Postgresql), "There should be at least one PostgreSQL service")
 		assertMySQLServiceNotExist(t, res, serviceID)
 		assertMySQLServiceNotExist(t, res, remoteServiceID)
+		assertExternalServiceNotExist(t, res, externalServiceID)
 		assertPostgreSQLServiceExists(t, res, postgreSQLServiceID)
 	})
 
@@ -858,6 +868,108 @@ func TestProxySQLService(t *testing.T) {
 		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field ServiceName: value '' must not be an empty string")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveServices(t, res.Payload.Proxysql.ServiceID)
+		}
+	})
+}
+
+func TestExternalService(t *testing.T) {
+	t.Run("Basic", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+
+		serviceName := pmmapitests.TestString(t, "Basic External Service")
+		params := &services.AddExternalServiceParams{
+			Body: services.AddExternalServiceBody{
+				NodeID:      genericNodeID,
+				ServiceName: serviceName,
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err := client.Default.Services.AddExternalService(params)
+		assert.NoError(t, err)
+		require.NotNil(t, res)
+		serviceID := res.Payload.External.ServiceID
+		assert.Equal(t, &services.AddExternalServiceOK{
+			Payload: &services.AddExternalServiceOKBody{
+				External: &services.AddExternalServiceOKBodyExternal{
+					ServiceID:   serviceID,
+					NodeID:      genericNodeID,
+					ServiceName: serviceName,
+				},
+			},
+		}, res)
+		defer pmmapitests.RemoveServices(t, serviceID)
+
+		// Check if the service saved in pmm-managed.
+		serviceRes, err := client.Default.Services.GetService(&services.GetServiceParams{
+			Body:    services.GetServiceBody{ServiceID: serviceID},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, serviceRes)
+		assert.Equal(t, &services.GetServiceOK{
+			Payload: &services.GetServiceOKBody{
+				External: &services.GetServiceOKBodyExternal{
+					ServiceID:   serviceID,
+					NodeID:      genericNodeID,
+					ServiceName: serviceName,
+				},
+			},
+		}, serviceRes)
+
+		// Check duplicates.
+		params = &services.AddExternalServiceParams{
+			Body: services.AddExternalServiceBody{
+				NodeID:      genericNodeID,
+				ServiceName: serviceName,
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err = client.Default.Services.AddExternalService(params)
+		pmmapitests.AssertAPIErrorf(t, err, 409, codes.AlreadyExists, "Service with name %q already exists.", serviceName)
+		if !assert.Nil(t, res) {
+			pmmapitests.RemoveServices(t, res.Payload.External.ServiceID)
+		}
+	})
+
+	t.Run("AddNodeIDEmpty", func(t *testing.T) {
+		t.Parallel()
+
+		params := &services.AddExternalServiceParams{
+			Body: services.AddExternalServiceBody{
+				NodeID:      "",
+				ServiceName: pmmapitests.TestString(t, "External Service with empty node id"),
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err := client.Default.Services.AddExternalService(params)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field NodeId: value '' must not be an empty string")
+		if !assert.Nil(t, res) {
+			pmmapitests.RemoveServices(t, res.Payload.External.ServiceID)
+		}
+	})
+
+	t.Run("AddServiceNameEmpty", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+
+		params := &services.AddExternalServiceParams{
+			Body: services.AddExternalServiceBody{
+				NodeID:      genericNodeID,
+				ServiceName: "",
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err := client.Default.Services.AddExternalService(params)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field ServiceName: value '' must not be an empty string")
+		if !assert.Nil(t, res) {
+			pmmapitests.RemoveServices(t, res.Payload.External.ServiceID)
 		}
 	})
 }
