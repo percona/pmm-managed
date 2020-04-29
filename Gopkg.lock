@@ -384,7 +384,7 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-5776-inv-ex-service"
+  branch = "PMM-2.0"
   digest = "1:adec3b8cb9578aa278df84a704ad431d995d356f51d0e197bb26ac453e93f99e"
   name = "github.com/percona/pmm"
   packages = [
@@ -406,7 +406,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "d3c2fbbf7f6160bf84c2efee4252b1a2d0e201b7"
+  revision = "0738149f2e34c59732033298211be15119cbb362"
 
 [[projects]]
   digest = "1:1e38d8f6796fabbf419aa2040dc196927690a1de7fe14af25fbd29c6ed44b4da"
