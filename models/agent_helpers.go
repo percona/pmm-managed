@@ -273,6 +273,51 @@ func CreateNodeExporter(q *reform.Querier, pmmAgentID string, customLabels map[s
 	return row, nil
 }
 
+type CreateExternalExporterParams struct {
+	RunsOnNodeID string
+	ServiceID    string
+	Username     string
+	Password     string
+	Scheme       string
+	MetricPath   string
+	ListenPort   uint32
+	CustomLabels map[string]string
+}
+
+func CreateExternalExporter(q *reform.Querier, params *CreateExternalExporterParams) (*Agent, error) {
+	id := "/agent_id/" + uuid.New().String()
+	if err := checkUniqueAgentID(q, id); err != nil {
+		return nil, err
+	}
+
+	if _, err := FindNodeByID(q, params.RunsOnNodeID); err != nil {
+		return nil, err
+	}
+	if _, err := FindServiceByID(q, params.ServiceID); err != nil {
+		return nil, err
+	}
+
+	row := &Agent{
+		AgentID:       id,
+		AgentType:     ExternalExporterType,
+		RunsOnNodeID:  &params.RunsOnNodeID,
+		ServiceID:     pointer.ToStringOrNil(params.ServiceID),
+		Username:      pointer.ToStringOrNil(params.Username),
+		Password:      pointer.ToStringOrNil(params.Password),
+		MetricsScheme: pointer.ToStringOrNil(params.Scheme),
+		MetricsPath:   pointer.ToStringOrNil(params.MetricPath),
+		ListenPort:    pointer.ToUint16OrNil(uint16(params.ListenPort)),
+	}
+	if err := row.SetCustomLabels(params.CustomLabels); err != nil {
+		return nil, err
+	}
+	if err := q.Insert(row); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return row, nil
+}
+
 // CreateAgentParams params for add common exporter.
 type CreateAgentParams struct {
 	PMMAgentID                     string

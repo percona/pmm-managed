@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlekSi/pointer"
 	config "github.com/percona/promconfig"
 
 	"github.com/percona/pmm-managed/models"
@@ -436,4 +437,46 @@ func scrapeConfigsForRDSExporter(s *models.MetricsResolutions, params []*scrapeC
 	}
 
 	return r, nil
+}
+
+func scrapeConfigsForExternalExporter(s *models.MetricsResolutions, params *scrapeConfigParams) ([]*config.ScrapeConfig, error) {
+	labels, err := mergeLabels(params.node, params.service, params.agent)
+	if err != nil {
+		return nil, err
+	}
+
+	jobName := fmt.Sprintf("external_exporter%s_mr-%s", strings.Map(jobNameMapping, params.agent.AgentID), s.MR)
+
+	metricsPath := "/metrics"
+	if params.agent.MetricsPath != nil {
+		metricsPath = *params.agent.MetricsPath
+	}
+	cfg := &config.ScrapeConfig{
+		JobName:        jobName,
+		ScrapeInterval: config.Duration(s.MR),
+		ScrapeTimeout:  scrapeTimeout(s.MR),
+		Scheme:         pointer.GetString(params.agent.MetricsScheme),
+		MetricsPath:    metricsPath,
+	}
+
+	if pointer.GetString(params.agent.Username) != "" {
+		cfg.HTTPClientConfig = config.HTTPClientConfig{
+			BasicAuth: &config.BasicAuth{
+				Username: pointer.GetString(params.agent.Username),
+				Password: pointer.GetString(params.agent.Password),
+			},
+		}
+	}
+
+	port := int(*params.agent.ListenPort)
+	hostport := net.JoinHostPort(params.host, strconv.Itoa(port))
+
+	cfg.ServiceDiscoveryConfig = config.ServiceDiscoveryConfig{
+		StaticConfigs: []*config.Group{{
+			Targets: []string{hostport},
+			Labels:  labels,
+		}},
+	}
+
+	return []*config.ScrapeConfig{cfg}, nil
 }

@@ -192,15 +192,23 @@ func (svc *Service) addScrapeConfigs(cfg *config.Config, q *reform.Querier, s *m
 
 		// find Node address where pmm-agent runs
 		var paramsHost string
-		pmmAgent, err := models.FindAgentByID(q, *agent.PMMAgentID)
-		if err != nil {
-			return errors.WithStack(err)
+		if agent.AgentType == models.ExternalExporterType {
+			externalExporterNode := &models.Node{NodeID: pointer.GetString(agent.RunsOnNodeID)}
+			if err = q.Reload(externalExporterNode); err != nil {
+				return errors.WithStack(err)
+			}
+			paramsHost = externalExporterNode.Address
+		} else {
+			pmmAgent, err := models.FindAgentByID(q, *agent.PMMAgentID)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			pmmAgentNode := &models.Node{NodeID: pointer.GetString(pmmAgent.RunsOnNodeID)}
+			if err = q.Reload(pmmAgentNode); err != nil {
+				return errors.WithStack(err)
+			}
+			paramsHost = pmmAgentNode.Address
 		}
-		pmmAgentNode := &models.Node{NodeID: pointer.GetString(pmmAgent.RunsOnNodeID)}
-		if err = q.Reload(pmmAgentNode); err != nil {
-			return errors.WithStack(err)
-		}
-		paramsHost = pmmAgentNode.Address
 
 		var scfgs []*config.ScrapeConfig
 		switch agent.AgentType {
@@ -259,6 +267,14 @@ func (svc *Service) addScrapeConfigs(cfg *config.Config, q *reform.Querier, s *m
 				agent:   agent,
 			})
 			continue
+
+		case models.ExternalExporterType:
+			scfgs, err = scrapeConfigsForExternalExporter(s, &scrapeConfigParams{
+				host:    paramsHost,
+				node:    paramsNode,
+				service: paramsService,
+				agent:   agent,
+			})
 
 		default:
 			svc.l.Warnf("Skipping scrape config for %s.", agent)

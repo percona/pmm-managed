@@ -260,6 +260,19 @@ var databaseSchema = [][]string{
 			ALTER COLUMN rds_basic_metrics_disabled DROP DEFAULT,
 			ALTER COLUMN rds_enhanced_metrics_disabled DROP DEFAULT`,
 	},
+
+	13: {
+		`ALTER TABLE agents
+			DROP CONSTRAINT node_id_or_service_id_or_pmm_agent_id,
+			DROP CONSTRAINT runs_on_node_id_only_for_pmm_agent`,
+		`ALTER TABLE agents
+			ADD CONSTRAINT node_id_or_service_id_or_pmm_agent_id CHECK (
+				(node_id IS NULL) <> (service_id IS NULL) OR (agent_type = '` + string(PMMAgentType) + `')),
+			ADD CONSTRAINT runs_on_node_id_only_for_pmm_agent_and_external CHECK ((runs_on_node_id IS NULL) <> (agent_type='` + string(PMMAgentType) + `' OR agent_type='` + string(ExternalExporterType) + `' ))
+`,
+		`ALTER TABLE agents RENAME COLUMN metrics_url TO metrics_path`,
+		`ALTER TABLE agents ADD COLUMN metrics_scheme VARCHAR`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^

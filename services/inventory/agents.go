@@ -704,6 +704,48 @@ func (as *AgentsService) ChangeRDSExporter(ctx context.Context, req *inventorypb
 	return res, nil
 }
 
+func (as *AgentsService) ChangeExternalExporter(ctx context.Context, req *inventorypb.ChangeExternalExporterRequest) (*inventorypb.ExternalExporter, error) {
+	agent, err := as.changeAgent(req.AgentId, req.Common)
+	if err != nil {
+		return nil, err
+	}
+
+	res := agent.(*inventorypb.ExternalExporter)
+	return res, nil
+}
+
+func (as *AgentsService) AddExternalExporter(ctx context.Context, req *inventorypb.AddExternalExporterRequest) (*inventorypb.ExternalExporter, error) {
+	var res *inventorypb.ExternalExporter
+	e := as.db.InTransaction(func(tx *reform.TX) error {
+		params := &models.CreateExternalExporterParams{
+			RunsOnNodeID: req.RunsOnNodeId,
+			ServiceID:    req.ServiceId,
+			Username:     req.Username,
+			Password:     req.Password,
+			Scheme:       req.Scheme,
+			MetricPath:   req.MetricPath,
+			ListenPort:   req.ListenPort,
+			CustomLabels: req.CustomLabels,
+		}
+		row, err := models.CreateExternalExporter(tx.Querier, params)
+		if err != nil {
+			return err
+		}
+
+		agent, err := services.ToAPIAgent(tx.Querier, row)
+		if err != nil {
+			return err
+		}
+		res = agent.(*inventorypb.ExternalExporter)
+		return nil
+	})
+	if e != nil {
+		return nil, e
+	}
+
+	return res, nil
+}
+
 // Remove removes Agent, and sends state update to pmm-agent, or kicks it.
 func (as *AgentsService) Remove(ctx context.Context, id string, force bool) error {
 	var removedAgent *models.Agent
