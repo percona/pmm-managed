@@ -262,6 +262,16 @@ var databaseSchema = [][]string{
 	},
 
 	13: {
+		`ALTER TABLE services
+			DROP CONSTRAINT address_socket_check`,
+
+		`ALTER TABLE services
+			ADD CONSTRAINT address_socket_check CHECK (
+				(address IS NOT NULL AND socket IS NULL) OR (address IS NULL AND socket IS NOT NULL) OR (address IS NULL AND socket IS NULL)
+			);`,
+	},
+
+	14: {
 		`ALTER TABLE agents
 			DROP CONSTRAINT node_id_or_service_id_or_pmm_agent_id,
 			DROP CONSTRAINT runs_on_node_id_only_for_pmm_agent`,
