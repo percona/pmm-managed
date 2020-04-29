@@ -976,10 +976,9 @@ func TestScrapeConfig(t *testing.T) {
 			}
 
 			expected := []*config.ScrapeConfig{{
-				JobName:        "external_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr-5s",
+				JobName:        "external-exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr-5s",
 				ScrapeInterval: config.Duration(s.HR),
 				ScrapeTimeout:  scrapeTimeout(s.HR),
-				MetricsPath:    "/metrics",
 				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
 					StaticConfigs: []*config.Group{{
 						Targets: []string{"4.5.6.7:12345"},
@@ -1024,7 +1023,7 @@ func TestScrapeConfig(t *testing.T) {
 			}
 
 			expected := []*config.ScrapeConfig{{
-				JobName:        "external_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr-5s",
+				JobName:        "external-exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr-5s",
 				ScrapeInterval: config.Duration(s.HR),
 				ScrapeTimeout:  scrapeTimeout(s.HR),
 				MetricsPath:    "/some-metric-path",
