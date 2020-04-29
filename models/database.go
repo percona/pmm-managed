@@ -263,11 +263,15 @@ var databaseSchema = [][]string{
 
 	13: {
 		`ALTER TABLE services
-			DROP CONSTRAINT port_check;`,
+			ADD CONSTRAINT address_socket_check CHECK (
+				(address IS NOT NULL AND socket IS NULL) OR (address IS NULL AND socket IS NOT NULL) OR (address IS NULL AND socket IS NULL)
+			);`,
+	},
 
+	14: {
 		`ALTER TABLE services
-			ADD CONSTRAINT port_check CHECK (
-				port IS NULL OR (port > 0 AND port < 65536)
+			ADD CONSTRAINT address_socket_check CHECK (
+				(address IS NOT NULL AND socket IS NULL) OR (address IS NULL AND socket IS NOT NULL) OR (address IS NULL AND socket IS NULL)
 			);`,
 	},
 }
