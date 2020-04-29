@@ -445,18 +445,13 @@ func scrapeConfigsForExternalExporter(s *models.MetricsResolutions, params *scra
 		return nil, err
 	}
 
-	jobName := fmt.Sprintf("external_exporter%s_mr-%s", strings.Map(jobNameMapping, params.agent.AgentID), s.MR)
-
-	metricsPath := "/metrics"
-	if params.agent.MetricsPath != nil {
-		metricsPath = *params.agent.MetricsPath
-	}
+	interval := s.MR
 	cfg := &config.ScrapeConfig{
-		JobName:        jobName,
-		ScrapeInterval: config.Duration(s.MR),
-		ScrapeTimeout:  scrapeTimeout(s.MR),
+		JobName:        jobName(params.agent, "mr", interval),
+		ScrapeInterval: config.Duration(interval),
+		ScrapeTimeout:  scrapeTimeout(interval),
 		Scheme:         pointer.GetString(params.agent.MetricsScheme),
-		MetricsPath:    metricsPath,
+		MetricsPath:    pointer.GetString(params.agent.MetricsPath),
 	}
 
 	if pointer.GetString(params.agent.Username) != "" {
