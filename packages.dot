@@ -2,6 +2,7 @@ digraph packages {
 	"/" -> "/models";
 	"/" -> "/services/agents";
 	"/" -> "/services/agents/grpc";
+	"/" -> "/services/alertmanager";
 	"/" -> "/services/grafana";
 	"/" -> "/services/inventory";
 	"/" -> "/services/inventory/grpc";
@@ -16,6 +17,8 @@ digraph packages {
 	"/services/agents" -> "/models";
 	"/services/agents" -> "/services/agents/channel";
 	"/services/agents/grpc" -> "/services/agents";
+	"/services/alertmanager" -> "/models";
+	"/services/checks" -> "/models";
 	"/services/inventory" -> "/models";
 	"/services/inventory" -> "/services";
 	"/services/inventory/grpc" -> "/models";
@@ -24,6 +27,7 @@ digraph packages {
 	"/services/management" -> "/services";
 	"/services/management/grpc" -> "/models";
 	"/services/management/grpc" -> "/services/agents";
+	"/services/management/grpc" -> "/services/grafana";
 	"/services/management/grpc" -> "/services/management";
 	"/services/prometheus" -> "/models";
 	"/services/qan" -> "/models";
