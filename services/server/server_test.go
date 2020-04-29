@@ -24,7 +24,7 @@ import (
 
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/stretchr/testify/assert"
-	mock "github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -197,6 +197,28 @@ func TestServer(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		assert.True(t, resp.Settings.SttEnabled)
+
+		_, err = s.ChangeSettings(ctx, &serverpb.ChangeSettingsRequest{
+			DisableTelemetry: true,
+		})
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "cannot disable telemetry while STT is enabled"), err)
+
+		_, err = s.ChangeSettings(ctx, &serverpb.ChangeSettingsRequest{
+			DisableTelemetry: true,
+			DisableStt:       true,
+		})
+		assert.NoError(t, err)
+
+		_, err = s.ChangeSettings(ctx, &serverpb.ChangeSettingsRequest{
+			EnableStt: true,
+		})
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "cannot enable STT while telemetry is disabled"), err)
+
+		_, err = s.ChangeSettings(ctx, &serverpb.ChangeSettingsRequest{
+			EnableStt:  true,
+			DisableStt: true,
+		})
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Enable STT and disable STT cannot be both true"), err)
 	})
 
 	t.Run("ValidateAlertManagerRules", func(t *testing.T) {

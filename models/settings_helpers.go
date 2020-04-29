@@ -85,7 +85,7 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 		return nil, err
 	}
 
-	if err := ValidateSettingsConflicts(params, settings); err != nil {
+	if err := validateSettingsConflicts(params, settings); err != nil {
 		return nil, err
 	}
 
@@ -208,7 +208,7 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 	return nil
 }
 
-func ValidateSettingsConflicts(params *ChangeSettingsParams, settings *Settings) error {
+func validateSettingsConflicts(params *ChangeSettingsParams, settings *Settings) error {
 	if params.DisableSTT && params.EnableSTT {
 		return fmt.Errorf("enable STT and disable STT cannot be both true")
 	}
