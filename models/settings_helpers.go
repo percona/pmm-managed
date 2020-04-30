@@ -213,13 +213,13 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 
 func validateSettingsConflicts(params *ChangeSettingsParams, settings *Settings) error {
 	if params.EnableSTT && !params.EnableTelemetry && settings.Telemetry.Disabled {
-		return fmt.Errorf("cannot enable STT while telemetry is disabled")
+		return fmt.Errorf("Cannot enable STT while telemetry is disabled.")
 	}
 	if params.EnableSTT && params.DisableTelemetry {
-		return fmt.Errorf("cannot enable STT while disabling telemetry")
+		return fmt.Errorf("Cannot enable STT while disabling telemetry.")
 	}
 	if params.DisableTelemetry && !params.DisableSTT && settings.SaaS.STTEnabled {
-		return fmt.Errorf("cannot disable telemetry while STT is enabled")
+		return fmt.Errorf("Cannot disable telemetry while STT is enabled.")
 	}
 
 	return nil
