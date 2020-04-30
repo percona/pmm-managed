@@ -138,7 +138,10 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 // ValidateSettings validates settings changes.
 func ValidateSettings(params *ChangeSettingsParams) error {
 	if params.EnableTelemetry && params.DisableTelemetry {
-		return errors.New("Both enable_telemetry and disable_telemetry are present.")
+		return fmt.Errorf("Both enable_telemetry and disable_telemetry are present.")
+	}
+	if params.EnableSTT && params.DisableSTT {
+		return fmt.Errorf("Both enable_stt and disable_stt are present.")
 	}
 
 	checkCases := []struct {
@@ -157,11 +160,11 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 		if _, err := validators.ValidateMetricResolution(v.dur); err != nil {
 			switch err.(type) {
 			case validators.DurationNotAllowedError:
-				return errors.New(fmt.Sprintf("%s: should be a natural number of seconds", v.fieldName))
+				return fmt.Errorf("%s: should be a natural number of seconds", v.fieldName)
 			case validators.MinDurationError:
-				return errors.New(fmt.Sprintf("%s: minimal resolution is 1s", v.fieldName))
+				return fmt.Errorf("%s: minimal resolution is 1s", v.fieldName)
 			default:
-				return errors.New(fmt.Sprintf("%s: unknown error for", v.fieldName))
+				return fmt.Errorf("%s: unknown error for", v.fieldName)
 			}
 		}
 	}
@@ -170,11 +173,11 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 		if _, err := validators.ValidateDataRetention(params.DataRetention); err != nil {
 			switch err.(type) {
 			case validators.DurationNotAllowedError:
-				return errors.New("data_retention: should be a natural number of days")
+				return fmt.Errorf("data_retention: should be a natural number of days")
 			case validators.MinDurationError:
-				return errors.New("data_retention: minimal resolution is 24h")
+				return fmt.Errorf("data_retention: minimal resolution is 24h")
 			default:
-				return errors.New("data_retention: unknown error")
+				return fmt.Errorf("data_retention: unknown error")
 			}
 		}
 	}
@@ -186,7 +189,7 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 
 	if params.AlertManagerURL != "" {
 		if params.RemoveAlertManagerURL {
-			return errors.New("Both alert_manager_url and remove_alert_manager_url are present.")
+			return fmt.Errorf("Both alert_manager_url and remove_alert_manager_url are present.")
 		}
 
 		// custom validation for typical error that is not handled well by url.Parse
@@ -209,21 +212,14 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 }
 
 func validateSettingsConflicts(params *ChangeSettingsParams, settings *Settings) error {
-	if params.DisableSTT && params.EnableSTT {
-		return fmt.Errorf("enable STT and disable STT cannot be both true")
-	}
 	if params.EnableSTT && !params.EnableTelemetry && settings.Telemetry.Disabled {
 		return fmt.Errorf("cannot enable STT while telemetry is disabled")
 	}
 	if params.EnableSTT && params.DisableTelemetry {
 		return fmt.Errorf("cannot enable STT while disabling telemetry")
 	}
-
 	if params.DisableTelemetry && !params.DisableSTT && settings.SaaS.STTEnabled {
 		return fmt.Errorf("cannot disable telemetry while STT is enabled")
-	}
-	if params.DisableTelemetry && params.EnableSTT {
-		return fmt.Errorf("cannot disable telemetry while enabling STT")
 	}
 
 	return nil
