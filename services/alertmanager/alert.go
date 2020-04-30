@@ -19,6 +19,7 @@ package alertmanager
 import (
 	"fmt"
 
+	"github.com/percona-platform/saas/pkg/check"
 	"github.com/percona/pmm/api/alertmanager/ammodels"
 	"github.com/pkg/errors"
 	"github.com/prometheus/common/model"
@@ -26,23 +27,12 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-// Severity defines alert severity.
-// TODO Move to saas package: https://jira.percona.com/browse/SAAS-84
-type Severity string
-
-// severities
-const (
-	Error   = Severity("error")
-	Warning = Severity("warning")
-	Info    = Severity("info")
-)
-
 // AlertParams defines alert parameters.
 type AlertParams struct {
 	Name        string
 	Summary     string
 	Description string
-	Severity    Severity
+	Severity    check.Severity
 
 	Node    *models.Node
 	Service *models.Service
@@ -61,10 +51,13 @@ func (ap *AlertParams) validate() error {
 		return errors.New("empty Description")
 	}
 
-	if ap.Severity == "" {
-		ap.Severity = Info
+	if ap.Severity < check.Emergency || ap.Severity > check.Debug {
+		return errors.Errorf("invalid severity level: %s", ap.Severity)
 	}
 
+	if ap.Severity == check.Unknown {
+		ap.Severity = check.Info
+	}
 	return nil
 }
 
@@ -80,7 +73,7 @@ func makeAlert(params *AlertParams) (*ammodels.PostableAlert, error) {
 	}
 
 	labels[model.AlertNameLabel] = params.Name
-	labels["severity"] = string(params.Severity)
+	labels["severity"] = params.Severity.String()
 	labels["stt_check"] = "1"
 
 	return &ammodels.PostableAlert{
@@ -105,7 +98,7 @@ func makeAlertPMMAgentNotConnected(agent *models.Agent, node *models.Node) (stri
 		Name:        name,
 		Summary:     "pmm-agent is not connected to PMM Server",
 		Description: fmt.Sprintf("Node name: %s", node.NodeName),
-		Severity:    Warning,
+		Severity:    check.Warning,
 
 		Node:  node,
 		Agent: agent,
@@ -126,7 +119,7 @@ func makeAlertPMMAgentIsOutdated(agent *models.Agent, node *models.Node, serverV
 			"Node name: %s\npmm-agent version: %s\nPMM Server version: %s",
 			node.NodeName, *agent.Version, serverVersion,
 		),
-		Severity: Info,
+		Severity: check.Info,
 
 		Node:  node,
 		Agent: agent,
@@ -147,7 +140,7 @@ func makeAlertPostgreSQLIsOutdated(node *models.Node, service *models.Service) (
 			"Node name: %s\nCurrent version: %s\nLatest version: %s",
 			node.NodeName, "Fake", "Bogus",
 		),
-		Severity: Info,
+		Severity: check.Info,
 
 		Node:    node,
 		Service: service,
