@@ -53,15 +53,19 @@ func TestAgents(t *testing.T) {
 		r := new(mockAgentsRegistry)
 		r.Test(t)
 
+		p := new(mockPrometheusService)
+		p.Test(t)
+
 		teardown = func(t *testing.T) {
 			uuid.SetRand(nil)
 
 			r.AssertExpectations(t)
+			p.AssertExpectations(t)
 			require.NoError(t, sqlDB.Close())
 		}
 		ns = NewNodesService(db)
 		ss = NewServicesService(db, r)
-		as = NewAgentsService(db, r, nil)
+		as = NewAgentsService(db, r, p)
 
 		return
 	}
@@ -83,6 +87,8 @@ func TestAgents(t *testing.T) {
 			mock.AnythingOfType(reflect.TypeOf(&reform.TX{}).Name()),
 			mock.AnythingOfType(reflect.TypeOf(&models.Service{}).Name()),
 			mock.AnythingOfType(reflect.TypeOf(&models.Agent{}).Name())).Return(nil)
+		as.p.(*mockPrometheusService).On("RequestConfigurationUpdate").Return()
+
 		pmmAgent, err := as.AddPMMAgent(ctx, &inventorypb.AddPMMAgentRequest{
 			RunsOnNodeId: models.PMMServerNodeID,
 		})
@@ -232,10 +238,6 @@ func TestAgents(t *testing.T) {
 		}
 		assert.Equal(t, expectedExternalExporter, actualAgent)
 
-		actualAgent, err = as.Get(ctx, "/agent_id/00000000-0000-4000-8000-00000000000e")
-		require.NoError(t, err)
-		assert.Equal(t, expectedExternalExporter, actualAgent)
-
 		actualAgents, err = as.List(ctx, models.AgentFilters{})
 		require.NoError(t, err)
 		for i, a := range actualAgents {
@@ -383,6 +385,38 @@ func TestAgents(t *testing.T) {
 			CustomLabels: map[string]string{"baz": "qux"},
 		}
 		assert.Equal(t, expectedAgent, agent)
+	})
+
+	t.Run("AddExternalExporter", func(t *testing.T) {
+		_, ss, as, teardown := setup(t)
+		defer teardown(t)
+
+		as.p.(*mockPrometheusService).On("RequestConfigurationUpdate").Return()
+
+		service, err := ss.AddExternalService(ctx, &models.AddDBMSServiceParams{
+			ServiceName: "External service",
+			NodeID:      models.PMMServerNodeID,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, service)
+
+		agent, err := as.AddExternalExporter(ctx, &inventorypb.AddExternalExporterRequest{
+			RunsOnNodeId: models.PMMServerNodeID,
+			ServiceId:    service.ServiceId,
+			Username:     "username",
+		})
+		require.NoError(t, err)
+		expectedExternalExporter := &inventorypb.ExternalExporter{
+			AgentId:      "/agent_id/00000000-0000-4000-8000-000000000006",
+			RunsOnNodeId: models.PMMServerNodeID,
+			ServiceId:    service.ServiceId,
+			Username:     "username",
+		}
+		assert.Equal(t, expectedExternalExporter, agent)
+
+		actualAgent, err := as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000006")
+		require.NoError(t, err)
+		assert.Equal(t, expectedExternalExporter, actualAgent)
 	})
 
 	t.Run("AddServiceNotFound", func(t *testing.T) {
