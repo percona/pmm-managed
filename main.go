@@ -72,6 +72,7 @@ import (
 	"github.com/percona/pmm-managed/services/server"
 	"github.com/percona/pmm-managed/services/supervisord"
 	"github.com/percona/pmm-managed/services/telemetry"
+	"github.com/percona/pmm-managed/utils/clean"
 	"github.com/percona/pmm-managed/utils/interceptors"
 	"github.com/percona/pmm-managed/utils/logger"
 )
@@ -501,6 +502,8 @@ func main() {
 	prom.MustRegister(reformL)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reformL)
 
+	cleaner := clean.New(db)
+
 	prometheus, err := prometheus.NewService(*prometheusConfigF, db, *prometheusURLF)
 	if err != nil {
 		l.Panicf("Prometheus service problem: %+v", err)
@@ -624,6 +627,12 @@ func main() {
 	go func() {
 		defer wg.Done()
 		runDebugServer(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		cleaner.Run(ctx, 10*time.Minute)
 	}()
 
 	wg.Wait()
