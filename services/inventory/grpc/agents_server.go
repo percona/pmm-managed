@@ -428,7 +428,7 @@ func (s *agentsServer) ChangeRDSExporter(ctx context.Context, req *inventorypb.C
 }
 
 func (s *agentsServer) AddExternalExporter(ctx context.Context, req *inventorypb.AddExternalExporterRequest) (*inventorypb.AddExternalExporterResponse, error) {
-	agent, err := s.s.AddExternalExporter(ctx, req)
+	agent, err := s.s.AddExternalExporter(req)
 	if err != nil {
 		return nil, err
 	}
@@ -440,7 +440,7 @@ func (s *agentsServer) AddExternalExporter(ctx context.Context, req *inventorypb
 }
 
 func (s *agentsServer) ChangeExternalExporter(ctx context.Context, req *inventorypb.ChangeExternalExporterRequest) (*inventorypb.ChangeExternalExporterResponse, error) {
-	agent, err := s.s.ChangeExternalExporter(ctx, req)
+	agent, err := s.s.ChangeExternalExporter(req)
 	if err != nil {
 		return nil, err
 	}

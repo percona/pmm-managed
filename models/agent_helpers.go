@@ -273,6 +273,7 @@ func CreateNodeExporter(q *reform.Querier, pmmAgentID string, customLabels map[s
 	return row, nil
 }
 
+// CreateExternalExporterParams params for add external exporter.
 type CreateExternalExporterParams struct {
 	RunsOnNodeID string
 	ServiceID    string
@@ -284,6 +285,7 @@ type CreateExternalExporterParams struct {
 	CustomLabels map[string]string
 }
 
+// CreateExternalExporter creates ExternalExporter.
 func CreateExternalExporter(q *reform.Querier, params *CreateExternalExporterParams) (*Agent, error) {
 	id := "/agent_id/" + uuid.New().String()
 	if err := checkUniqueAgentID(q, id); err != nil {

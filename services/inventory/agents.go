@@ -706,17 +706,8 @@ func (as *AgentsService) ChangeRDSExporter(ctx context.Context, req *inventorypb
 	return res, nil
 }
 
-func (as *AgentsService) ChangeExternalExporter(ctx context.Context, req *inventorypb.ChangeExternalExporterRequest) (*inventorypb.ExternalExporter, error) {
-	agent, err := as.changeAgent(req.AgentId, req.Common)
-	if err != nil {
-		return nil, err
-	}
-
-	res := agent.(*inventorypb.ExternalExporter)
-	return res, nil
-}
-
-func (as *AgentsService) AddExternalExporter(ctx context.Context, req *inventorypb.AddExternalExporterRequest) (*inventorypb.ExternalExporter, error) {
+// AddExternalExporter inserts external-exporter Agent with given parameters.
+func (as *AgentsService) AddExternalExporter(req *inventorypb.AddExternalExporterRequest) (*inventorypb.ExternalExporter, error) {
 	var res *inventorypb.ExternalExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 		params := &models.CreateExternalExporterParams{
@@ -747,6 +738,17 @@ func (as *AgentsService) AddExternalExporter(ctx context.Context, req *inventory
 
 	as.p.RequestConfigurationUpdate()
 
+	return res, nil
+}
+
+// ChangeExternalExporter updates external-exporter Agent with given parameters.
+func (as *AgentsService) ChangeExternalExporter(req *inventorypb.ChangeExternalExporterRequest) (*inventorypb.ExternalExporter, error) {
+	agent, err := as.changeAgent(req.AgentId, req.Common)
+	if err != nil {
+		return nil, err
+	}
+
+	res := agent.(*inventorypb.ExternalExporter)
 	return res, nil
 }
 

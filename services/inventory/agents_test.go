@@ -224,7 +224,7 @@ func TestAgents(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, expectedPostgresExporter, actualAgent)
 
-		actualAgent, err = as.AddExternalExporter(ctx, &inventorypb.AddExternalExporterRequest{
+		actualAgent, err = as.AddExternalExporter(&inventorypb.AddExternalExporterRequest{
 			RunsOnNodeId: models.PMMServerNodeID,
 			ServiceId:    ps.ServiceId,
 			Username:     "username",
@@ -400,7 +400,7 @@ func TestAgents(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, service)
 
-		agent, err := as.AddExternalExporter(ctx, &inventorypb.AddExternalExporterRequest{
+		agent, err := as.AddExternalExporter(&inventorypb.AddExternalExporterRequest{
 			RunsOnNodeId: models.PMMServerNodeID,
 			ServiceId:    service.ServiceId,
 			Username:     "username",
