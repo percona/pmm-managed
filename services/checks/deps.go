@@ -23,12 +23,12 @@ import (
 	"github.com/percona/pmm/api/alertmanager/ammodels"
 )
 
-//go:generate mockery -name=registryService -case=snake -inpkg -testonly
+//go:generate mockery -name=agentsRegistry -case=snake -inpkg -testonly
 //go:generate mockery -name=alertRegistry -case=snake -inpkg -testonly
 
-// registryService is a subset of methods of agents.Registry used by this package.
+// agentsRegistry is a subset of methods of agents.Registry used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
-type registryService interface {
+type agentsRegistry interface {
 	StartMySQLQueryShowAction(ctx context.Context, id, pmmAgentID, dsn, query string) error
 	StartMySQLQuerySelectAction(ctx context.Context, id, pmmAgentID, dsn, query string) error
 	StartPostgreSQLQueryShowAction(ctx context.Context, id, pmmAgentID, dsn string) error

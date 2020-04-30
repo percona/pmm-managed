@@ -71,23 +71,23 @@ type Service struct {
 	cm     sync.Mutex
 	checks []check.Check
 
-	registry registryService
-	alert    alertRegistry
-	db       *reform.DB
+	agentsRegistry agentsRegistry
+	alertsRegistry alertRegistry
+	db             *reform.DB
 }
 
 // New returns Service with given PMM version.
-func New(registry registryService, alert alertRegistry, db *reform.DB, pmmVersion string) *Service {
+func New(agentsRegistry agentsRegistry, alertsRegistry alertRegistry, db *reform.DB, pmmVersion string) *Service {
 	l := logrus.WithField("component", "check")
 	s := &Service{
-		l:          l,
-		pmmVersion: pmmVersion,
-		host:       defaultHost,
-		publicKeys: defaultPublicKeys,
-		interval:   defaultInterval,
-		registry:   registry,
-		alert:      alert,
-		db:         db,
+		l:              l,
+		pmmVersion:     pmmVersion,
+		host:           defaultHost,
+		publicKeys:     defaultPublicKeys,
+		interval:       defaultInterval,
+		agentsRegistry: agentsRegistry,
+		alertsRegistry: alertsRegistry,
+		db:             db,
 	}
 
 	if h := os.Getenv(envHost); h != "" {
@@ -211,12 +211,12 @@ func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) 
 		for _, c := range checks {
 			switch c.Type {
 			case check.MySQLShow:
-				if err := s.registry.StartMySQLQueryShowAction(ctx, r.ID, target.agentID, target.dsn, c.Query); err != nil {
+				if err := s.agentsRegistry.StartMySQLQueryShowAction(ctx, r.ID, target.agentID, target.dsn, c.Query); err != nil {
 					s.l.Errorf("Failed to start MySQL show query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 			case check.MySQLSelect:
-				if err := s.registry.StartMySQLQuerySelectAction(ctx, r.ID, target.agentID, target.dsn, c.Query); err != nil {
+				if err := s.agentsRegistry.StartMySQLQuerySelectAction(ctx, r.ID, target.agentID, target.dsn, c.Query); err != nil {
 					s.l.Errorf("Failed to start MySQL select query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
@@ -257,12 +257,12 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Ch
 		for _, c := range checks {
 			switch c.Type {
 			case check.PostgreSQLShow:
-				if err := s.registry.StartPostgreSQLQueryShowAction(ctx, r.ID, target.agentID, target.dsn); err != nil {
+				if err := s.agentsRegistry.StartPostgreSQLQueryShowAction(ctx, r.ID, target.agentID, target.dsn); err != nil {
 					s.l.Errorf("Failed to start PostgreSQL show query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 			case check.PostgreSQLSelect:
-				if err := s.registry.StartPostgreSQLQuerySelectAction(ctx, r.ID, target.agentID, target.dsn, c.Query); err != nil {
+				if err := s.agentsRegistry.StartPostgreSQLQuerySelectAction(ctx, r.ID, target.agentID, target.dsn, c.Query); err != nil {
 					s.l.Errorf("Failed to start PostgreSQL select query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
@@ -303,12 +303,12 @@ func (s *Service) executeMongoDBChecks(ctx context.Context, checks []check.Check
 		for _, c := range checks {
 			switch c.Type {
 			case check.MongoDBGetParameter:
-				if err := s.registry.StartMongoDBQueryGetParameterAction(context.Background(), r.ID, target.agentID, target.dsn); err != nil {
+				if err := s.agentsRegistry.StartMongoDBQueryGetParameterAction(context.Background(), r.ID, target.agentID, target.dsn); err != nil {
 					s.l.Errorf("Failed to start MongoDB get parameter query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 			case check.MongoDBBuildInfo:
-				if err := s.registry.StartMongoDBQueryBuildInfoAction(context.Background(), r.ID, target.agentID, target.dsn); err != nil {
+				if err := s.agentsRegistry.StartMongoDBQueryBuildInfoAction(context.Background(), r.ID, target.agentID, target.dsn); err != nil {
 					s.l.Errorf("Failed to start MongoDB build info query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
