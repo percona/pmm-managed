@@ -27,7 +27,7 @@ import (
 	"sync"
 	"time"
 
-	api "github.com/percona-platform/saas/gen/retrieval"
+	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/percona-platform/saas/pkg/check"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/utils/tlsconfig"

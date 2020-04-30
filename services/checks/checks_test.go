@@ -21,7 +21,7 @@ import (
 	"strings"
 	"testing"
 
-	api "github.com/percona-platform/saas/gen/retrieval"
+	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
