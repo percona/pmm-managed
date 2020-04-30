@@ -364,13 +364,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:2d0dc5aefd5d9bad2ccc6de8210b486563eeab9b03343bf535811146534db7e5"
+  digest = "1:33777f1b9f1c7b94d6c57af334953f1826c6ac3b3b8e779933feb0be576a3a2c"
   name = "github.com/percona-platform/saas"
   packages = [
     "gen/check/retrieval",
     "gen/telemetry/events/pmm",
     "gen/telemetry/reporter",
     "pkg/check",
+    "pkg/starlark",
   ]
   pruneopts = "NUT"
   revision = "6e2617701cb96c3c2f9baf4b2eefab3201901f7a"
@@ -530,6 +531,20 @@
   pruneopts = "NUT"
   revision = "dbe9cee06654c7d19e291eb74b9da49b4c6a0fd4"
   version = "v1.3.2"
+
+[[projects]]
+  branch = "master"
+  digest = "1:0ba6cff23e0079fb8876b3f540b17663a502374a1f141803a1c5e353e99b83e4"
+  name = "go.starlark.net"
+  packages = [
+    "internal/compile",
+    "internal/spell",
+    "resolve",
+    "starlark",
+    "syntax",
+  ]
+  pruneopts = "NUT"
+  revision = "be5394c419b6941c14d194a98925a71512f8f979"
 
 [[projects]]
   digest = "1:467bb8fb8fa786448b8d486cd0bb7c1a5577dcd7310441aa02a20110cd9f727d"
@@ -772,6 +787,7 @@
     "github.com/percona-platform/saas/gen/telemetry/events/pmm",
     "github.com/percona-platform/saas/gen/telemetry/reporter",
     "github.com/percona-platform/saas/pkg/check",
+    "github.com/percona-platform/saas/pkg/starlark",
     "github.com/percona/exporter_shared/helpers",
     "github.com/percona/pmm/api/agentpb",
     "github.com/percona/pmm/api/alertmanager/amclient",
