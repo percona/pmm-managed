@@ -156,69 +156,29 @@ func TestServer(t *testing.T) {
 
 		ctx := context.TODO()
 
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Both alert_manager_rules and remove_alert_manager_rules are present."),
-			s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
-				AlertManagerRules:       "something",
-				RemoveAlertManagerRules: true,
-			}))
-	})
+		expected := status.New(codes.InvalidArgument, "Both alert_manager_rules and remove_alert_manager_rules are present.")
+		tests.AssertGRPCError(t, expected, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
+			AlertManagerRules:       "something",
+			RemoveAlertManagerRules: true,
+		}))
 
-	t.Run("ValidateChangeSettingsSTT", func(t *testing.T) {
-		s := newServer()
+		s.envSettings.DisableTelemetry = true
 
-		ctx := context.TODO()
-
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Enable STT and disable STT cannot be both true"),
-			s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
-				EnableStt:  true,
-				DisableStt: true,
-			}))
-
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Cannot enable STT while disabling telemetry"),
-			s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
-				EnableStt:        true,
-				DisableTelemetry: true,
-			}))
-	})
-
-	t.Run("UpdateSettingsSTT", func(t *testing.T) {
-		s := newServer()
-
-		ctx := context.TODO()
-
-		resp, err := s.ChangeSettings(ctx, &serverpb.ChangeSettingsRequest{
+		expected = status.New(codes.FailedPrecondition, "Telemetry is disabled via DISABLE_TELEMETRY environment variable.")
+		tests.AssertGRPCError(t, expected, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
 			EnableTelemetry: true,
-		})
-		assert.NoError(t, err)
-		assert.True(t, resp.Settings.TelemetryEnabled)
-
-		resp, err = s.ChangeSettings(ctx, &serverpb.ChangeSettingsRequest{
-			EnableStt: true,
-		})
-		assert.NoError(t, err)
-		assert.True(t, resp.Settings.SttEnabled)
-
-		_, err = s.ChangeSettings(ctx, &serverpb.ChangeSettingsRequest{
+		}))
+		assert.NoError(t, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
 			DisableTelemetry: true,
-		})
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "cannot disable telemetry while STT is enabled"), err)
+		}))
 
-		_, err = s.ChangeSettings(ctx, &serverpb.ChangeSettingsRequest{
-			DisableTelemetry: true,
-			DisableStt:       true,
-		})
-		assert.NoError(t, err)
-
-		_, err = s.ChangeSettings(ctx, &serverpb.ChangeSettingsRequest{
+		expected = status.New(codes.FailedPrecondition, "STT cannot be enabled because telemetry is disabled via DISABLE_TELEMETRY environment variable.")
+		tests.AssertGRPCError(t, expected, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
 			EnableStt: true,
-		})
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "cannot enable STT while telemetry is disabled"), err)
-
-		_, err = s.ChangeSettings(ctx, &serverpb.ChangeSettingsRequest{
-			EnableStt:  true,
+		}))
+		assert.NoError(t, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
 			DisableStt: true,
-		})
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Enable STT and disable STT cannot be both true"), err)
+		}))
 	})
 
 	t.Run("ValidateAlertManagerRules", func(t *testing.T) {

@@ -441,17 +441,14 @@ func (s *Server) validateChangeSettingsRequest(ctx context.Context, req *serverp
 		}
 	}
 
-	if req.DisableStt && req.EnableStt {
-		return status.Error(codes.InvalidArgument, "Enable STT and disable STT cannot be both true")
-	}
-	if req.EnableStt && req.DisableTelemetry {
-		return status.Errorf(codes.InvalidArgument, "Cannot enable STT while disabling telemetry")
-	}
-
 	// check request parameters compatibility with environment variables
 
-	if (req.EnableTelemetry || req.DisableTelemetry) && s.envSettings.DisableTelemetry {
+	// ignore req.DisableTelemetry and req.DisableStt even if they are present since that will not change anything
+	if req.EnableTelemetry && s.envSettings.DisableTelemetry {
 		return status.Error(codes.FailedPrecondition, "Telemetry is disabled via DISABLE_TELEMETRY environment variable.")
+	}
+	if req.EnableStt && s.envSettings.DisableTelemetry {
+		return status.Error(codes.FailedPrecondition, "STT cannot be enabled because telemetry is disabled via DISABLE_TELEMETRY environment variable.")
 	}
 
 	if getDuration(metricsRes.GetHr()) != 0 && s.envSettings.MetricsResolutions.HR != 0 {
