@@ -61,7 +61,7 @@ func TestAgents(t *testing.T) {
 		}
 		ns = NewNodesService(db)
 		ss = NewServicesService(db, r)
-		as = NewAgentsService(db, r)
+		as = NewAgentsService(db, r, nil)
 
 		return
 	}

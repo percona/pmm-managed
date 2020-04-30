@@ -32,13 +32,15 @@ import (
 // AgentsService works with inventory API Agents.
 type AgentsService struct {
 	r  agentsRegistry
+	p  prometheusService
 	db *reform.DB
 }
 
 // NewAgentsService creates new AgentsService
-func NewAgentsService(db *reform.DB, r agentsRegistry) *AgentsService {
+func NewAgentsService(db *reform.DB, r agentsRegistry, prometheus prometheusService) *AgentsService {
 	return &AgentsService{
 		r:  r,
+		p:  prometheus,
 		db: db,
 	}
 }
@@ -743,6 +745,8 @@ func (as *AgentsService) AddExternalExporter(ctx context.Context, req *inventory
 		return nil, e
 	}
 
+	as.p.RequestConfigurationUpdate()
+
 	return res, nil
 }
 
@@ -764,6 +768,8 @@ func (as *AgentsService) Remove(ctx context.Context, id string, force bool) erro
 
 	if pmmAgentID := pointer.GetString(removedAgent.PMMAgentID); pmmAgentID != "" {
 		as.r.SendSetStateRequest(ctx, pmmAgentID)
+	} else {
+		as.p.RequestConfigurationUpdate()
 	}
 
 	if removedAgent.AgentType == models.PMMAgentType {
