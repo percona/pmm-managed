@@ -82,7 +82,7 @@ func makeAlert(params *AlertParams) (*ammodels.PostableAlert, error) {
 			Labels: labels,
 		},
 
-		// StartsAt and EndAt can't be added there without changes in registry
+		// StartsAt and EndAt can't be added there without changes in Registry
 
 		Annotations: map[string]string{
 			"summary":     params.Summary,

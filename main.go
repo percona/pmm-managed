@@ -62,6 +62,7 @@ import (
 	"github.com/percona/pmm-managed/services/agents"
 	agentgrpc "github.com/percona/pmm-managed/services/agents/grpc"
 	"github.com/percona/pmm-managed/services/alertmanager"
+	"github.com/percona/pmm-managed/services/checks"
 	"github.com/percona/pmm-managed/services/grafana"
 	"github.com/percona/pmm-managed/services/inventory"
 	inventorygrpc "github.com/percona/pmm-managed/services/inventory/grpc"
@@ -507,7 +508,8 @@ func main() {
 	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient)
 	prom.MustRegister(agentsRegistry)
 
-	alertmanager, err := alertmanager.New(db, version.Version, agentsRegistry)
+	alertsRegistry := alertmanager.NewRegistry()
+	alertmanager, err := alertmanager.New(db, version.Version, agentsRegistry, alertsRegistry)
 	if err != nil {
 		l.Panicf("Alertmanager service problem: %+v", err)
 	}
@@ -568,7 +570,7 @@ func main() {
 	}
 
 	authServer := grafana.NewAuthServer(grafanaClient, awsInstanceChecker)
-
+	checksService := checks.New(agentsRegistry, alertsRegistry, db, version.Version)
 	var wg sync.WaitGroup
 
 	wg.Add(1)
@@ -620,6 +622,12 @@ func main() {
 	go func() {
 		defer wg.Done()
 		runDebugServer(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		checksService.Run(ctx)
 	}()
 
 	wg.Wait()

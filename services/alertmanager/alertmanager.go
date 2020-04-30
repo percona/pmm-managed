@@ -50,12 +50,12 @@ type Service struct {
 	db             *reform.DB
 	serverVersion  *version.Parsed
 	agentsRegistry agentsRegistry
-	r              *registry
+	r              *Registry
 	l              *logrus.Entry
 }
 
 // New creates new service.
-func New(db *reform.DB, v string, agentsRegistry agentsRegistry) (*Service, error) {
+func New(db *reform.DB, v string, agentsRegistry agentsRegistry, alertsRegistry *Registry) (*Service, error) {
 	serverVersion, err := version.Parse(v)
 	if err != nil {
 		return nil, err
@@ -65,7 +65,7 @@ func New(db *reform.DB, v string, agentsRegistry agentsRegistry) (*Service, erro
 		db:             db,
 		serverVersion:  serverVersion,
 		agentsRegistry: agentsRegistry,
-		r:              newRegistry(),
+		r:              alertsRegistry,
 		l:              logrus.WithField("component", "alertmanager"),
 	}, nil
 }
@@ -157,7 +157,7 @@ func (svc *Service) getInventoryData(ctx context.Context) (map[string]*models.No
 	return nodesMap, servicesMap, agentsMap, nil
 }
 
-// updateInventoryAlerts adds/updates alerts for inventory information in the registry.
+// updateInventoryAlerts adds/updates alerts for inventory information in the Registry.
 func (svc *Service) updateInventoryAlerts(ctx context.Context) {
 	nodes, services, agents, err := svc.getInventoryData(ctx)
 	if err != nil {
@@ -247,7 +247,7 @@ func (svc *Service) updateInventoryAlertsForPMMAgent(agent *models.Agent, node *
 	return createdIDs
 }
 
-// sendAlerts sends alerts collected in the registry.
+// sendAlerts sends alerts collected in the Registry.
 func (svc *Service) sendAlerts(ctx context.Context) {
 	alerts := svc.r.Collect()
 	if len(alerts) == 0 {
