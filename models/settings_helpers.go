@@ -67,9 +67,9 @@ type ChangeSettingsParams struct {
 	AlertManagerURL       string
 	RemoveAlertManagerURL bool
 
-	// Enable Secutiry Threat Tool
+	// Enable Security Threat Tool
 	EnableSTT bool
-	// Disable Secutiry Threat Tool
+	// Disable Security Threat Tool
 	DisableSTT bool
 }
 

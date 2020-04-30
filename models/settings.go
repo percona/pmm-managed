@@ -82,5 +82,5 @@ func (s *Settings) fillDefaults() {
 	// AWSInstanceChecked is false by default
 	// SSHKey is empty by default
 	// AlertManagerURL is empty by default
-	// STTEnabled is false by default
+	// SaaS.STTEnabled is false by default
 }
