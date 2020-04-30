@@ -77,7 +77,7 @@ func (r *Registry) Collect() ammodels.PostableAlerts {
 	var res ammodels.PostableAlerts
 	now := time.Now()
 	for id, t := range r.times {
-		if t.After(now) {
+		if t.Before(now) {
 			res = append(res, r.alerts[id])
 		}
 	}

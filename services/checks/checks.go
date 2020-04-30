@@ -29,9 +29,12 @@ import (
 
 	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/percona-platform/saas/pkg/check"
+	"github.com/percona-platform/saas/pkg/starlark"
 	"github.com/percona/pmm/api/agentpb"
+	"github.com/percona/pmm/api/alertmanager/ammodels"
 	"github.com/percona/pmm/utils/tlsconfig"
 	"github.com/pkg/errors"
+	"github.com/prometheus/common/model"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -139,7 +142,7 @@ func (s *Service) Checks() []check.Check {
 }
 
 // waitForResult periodically checks result state and returns it when complete.
-func (s *Service) waitForResult(ctx context.Context, resultID string) (*models.ActionResult, error) {
+func (s *Service) waitForResult(ctx context.Context, resultID string) ([]map[string]interface{}, error) {
 	ticker := time.NewTicker(resultCheckInterval)
 	defer ticker.Stop()
 
@@ -168,12 +171,12 @@ func (s *Service) waitForResult(ctx context.Context, resultID string) (*models.A
 			return nil, errors.Errorf("Action %s failed: %s.", resultID, res.Error)
 		}
 
-		_, err = agentpb.UnmarshalActionQueryResult([]byte(res.Output))
+		out, err := agentpb.UnmarshalActionQueryResult([]byte(res.Output))
 		if err != nil {
 			return nil, errors.Errorf("Failed to parse action result : %s.", err)
 		}
 
-		return res, nil
+		return out, nil
 	}
 }
 
@@ -202,22 +205,22 @@ func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) 
 	}
 
 	for _, target := range targets {
-		r, err := models.CreateActionResult(s.db.Querier, target.agentID)
+		r, err := models.CreateActionResult(s.db.Querier, target.agent.AgentID)
 		if err != nil {
-			s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agentID, err)
+			s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agent.AgentID, err)
 			continue
 		}
 
 		for _, c := range checks {
 			switch c.Type {
 			case check.MySQLShow:
-				if err := s.agentsRegistry.StartMySQLQueryShowAction(ctx, r.ID, target.agentID, target.dsn, c.Query); err != nil {
-					s.l.Errorf("Failed to start MySQL show query action for agent %s, reason: %s.", target.agentID, err)
+				if err := s.agentsRegistry.StartMySQLQueryShowAction(ctx, r.ID, target.agent.AgentID, target.dsn, c.Query); err != nil {
+					s.l.Errorf("Failed to start MySQL show query action for agent %s, reason: %s.", target.agent.AgentID, err)
 					continue
 				}
 			case check.MySQLSelect:
-				if err := s.agentsRegistry.StartMySQLQuerySelectAction(ctx, r.ID, target.agentID, target.dsn, c.Query); err != nil {
-					s.l.Errorf("Failed to start MySQL select query action for agent %s, reason: %s.", target.agentID, err)
+				if err := s.agentsRegistry.StartMySQLQuerySelectAction(ctx, r.ID, target.agent.AgentID, target.dsn, c.Query); err != nil {
+					s.l.Errorf("Failed to start MySQL select query action for agent %s, reason: %s.", target.agent.AgentID, err)
 					continue
 				}
 			default:
@@ -226,14 +229,28 @@ func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) 
 			}
 
 			nCtx, cancel := context.WithTimeout(ctx, resultTimeout)
-			_, err := s.waitForResult(nCtx, r.ID) // TODO returns result
+			r, err := s.waitForResult(nCtx, r.ID)
 			cancel()
 			if err != nil {
 				s.l.Errorf("failed to get check result: %s", err)
 				continue
 			}
 
-			// TODO process result
+			results, err := starlark.Run(c.Name, c.Script, r)
+			if err != nil {
+				s.l.Errorf("failed to execute script: %s", err)
+				continue
+			}
+
+			for _, result := range results {
+				alert, err := makeAlert(c.Name, target, &result)
+				if err != nil {
+					s.l.Errorf("failed to create alert: %s", err)
+					continue
+				}
+
+				s.alertsRegistry.Add(c.Name, time.Second, alert)
+			}
 		}
 	}
 
@@ -248,22 +265,22 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Ch
 	}
 
 	for _, target := range targets {
-		r, err := models.CreateActionResult(s.db.Querier, target.agentID)
+		r, err := models.CreateActionResult(s.db.Querier, target.agent.AgentID)
 		if err != nil {
-			s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agentID, err)
+			s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agent.AgentID, err)
 			continue
 		}
 
 		for _, c := range checks {
 			switch c.Type {
 			case check.PostgreSQLShow:
-				if err := s.agentsRegistry.StartPostgreSQLQueryShowAction(ctx, r.ID, target.agentID, target.dsn); err != nil {
-					s.l.Errorf("Failed to start PostgreSQL show query action for agent %s, reason: %s.", target.agentID, err)
+				if err := s.agentsRegistry.StartPostgreSQLQueryShowAction(ctx, r.ID, target.agent.AgentID, target.dsn); err != nil {
+					s.l.Errorf("Failed to start PostgreSQL show query action for agent %s, reason: %s.", target.agent.AgentID, err)
 					continue
 				}
 			case check.PostgreSQLSelect:
-				if err := s.agentsRegistry.StartPostgreSQLQuerySelectAction(ctx, r.ID, target.agentID, target.dsn, c.Query); err != nil {
-					s.l.Errorf("Failed to start PostgreSQL select query action for agent %s, reason: %s.", target.agentID, err)
+				if err := s.agentsRegistry.StartPostgreSQLQuerySelectAction(ctx, r.ID, target.agent.AgentID, target.dsn, c.Query); err != nil {
+					s.l.Errorf("Failed to start PostgreSQL select query action for agent %s, reason: %s.", target.agent.AgentID, err)
 					continue
 				}
 			default:
@@ -272,14 +289,27 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Ch
 			}
 
 			nCtx, cancel := context.WithTimeout(ctx, resultTimeout)
-			_, err := s.waitForResult(nCtx, r.ID) // TODO returns result
+			r, err := s.waitForResult(nCtx, r.ID)
 			cancel()
 			if err != nil {
 				s.l.Errorf("failed to get check result: %s", err)
 				continue
 			}
 
-			// TODO process result
+			results, err := starlark.Run(c.Name, c.Script, r)
+			if err != nil {
+				s.l.Errorf("failed to execute script: %s", err)
+				continue
+			}
+
+			for _, result := range results {
+				alert, err := makeAlert(c.Name, target, &result)
+				if err != nil {
+					s.l.Errorf("failed to create alert: %s", err)
+				}
+
+				s.alertsRegistry.Add("", 0, alert)
+			}
 		}
 	}
 
@@ -294,22 +324,22 @@ func (s *Service) executeMongoDBChecks(ctx context.Context, checks []check.Check
 	}
 
 	for _, target := range targets {
-		r, err := models.CreateActionResult(s.db.Querier, target.agentID)
+		r, err := models.CreateActionResult(s.db.Querier, target.agent.AgentID)
 		if err != nil {
-			s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agentID, err)
+			s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agent.AgentID, err)
 			continue
 		}
 
 		for _, c := range checks {
 			switch c.Type {
 			case check.MongoDBGetParameter:
-				if err := s.agentsRegistry.StartMongoDBQueryGetParameterAction(context.Background(), r.ID, target.agentID, target.dsn); err != nil {
-					s.l.Errorf("Failed to start MongoDB get parameter query action for agent %s, reason: %s.", target.agentID, err)
+				if err := s.agentsRegistry.StartMongoDBQueryGetParameterAction(context.Background(), r.ID, target.agent.AgentID, target.dsn); err != nil {
+					s.l.Errorf("Failed to start MongoDB get parameter query action for agent %s, reason: %s.", target.agent.AgentID, err)
 					continue
 				}
 			case check.MongoDBBuildInfo:
-				if err := s.agentsRegistry.StartMongoDBQueryBuildInfoAction(context.Background(), r.ID, target.agentID, target.dsn); err != nil {
-					s.l.Errorf("Failed to start MongoDB build info query action for agent %s, reason: %s.", target.agentID, err)
+				if err := s.agentsRegistry.StartMongoDBQueryBuildInfoAction(context.Background(), r.ID, target.agent.AgentID, target.dsn); err != nil {
+					s.l.Errorf("Failed to start MongoDB build info query action for agent %s, reason: %s.", target.agent.AgentID, err)
 					continue
 				}
 
@@ -319,25 +349,64 @@ func (s *Service) executeMongoDBChecks(ctx context.Context, checks []check.Check
 			}
 
 			nCtx, cancel := context.WithTimeout(ctx, resultTimeout)
-			_, err := s.waitForResult(nCtx, r.ID) // TODO returns result
+			r, err := s.waitForResult(nCtx, r.ID)
 			cancel()
 			if err != nil {
 				s.l.Errorf("failed to get check result: %s", err)
 				continue
 			}
 
-			// TODO process result
+			results, err := starlark.Run(c.Name, c.Script, r)
+			if err != nil {
+				s.l.Errorf("failed to execute script: %s", err)
+				continue
+			}
+
+			for _, result := range results {
+				alert, err := makeAlert(c.Name, target, &result)
+				if err != nil {
+					s.l.Errorf("failed to create alert: %s", err)
+				}
+
+				s.alertsRegistry.Add("", 0, alert)
+			}
 		}
 	}
 
 	return nil
 }
 
+func makeAlert(name string, target target, result *check.Result) (*ammodels.PostableAlert, error) {
+	labels, err := models.MergeLabels(target.node, target.service, target.agent)
+	if err != nil {
+		return nil, err
+	}
+
+	labels[model.AlertNameLabel] = name
+	labels["severity"] = result.Severity.String()
+	labels["stt_check"] = "1"
+
+	return &ammodels.PostableAlert{
+		Alert: ammodels.Alert{
+			// GeneratorURL: "TODO",
+			Labels: labels,
+		},
+
+		// StartsAt and EndAt can't be added there without changes in Registry
+
+		Annotations: map[string]string{
+			"summary":     result.Summary,
+			"description": result.Description,
+		},
+	}, nil
+}
+
 // target contains required info about check target
 type target struct {
-	agentID   string
-	serviceID string
-	dsn       string
+	agent   *models.Agent
+	service *models.Service
+	node    *models.Node
+	dsn     string
 }
 
 // findTargets returns slice of available targets for specified service type.
@@ -362,7 +431,20 @@ func (s *Service) findTargets(serviceType models.ServiceType) ([]target, error) 
 			if err != nil {
 				return err
 			}
-			targets = append(targets, target{agentID: a[0].AgentID, serviceID: service.ServiceID, dsn: dsn})
+
+			n, err := models.FindNodeByID(s.db.Querier, service.NodeID)
+			if err != nil {
+				return err
+			}
+
+			targets = append(targets,
+				target{
+					agent:   a[0],
+					service: service,
+					node:    n,
+					dsn:     dsn,
+				},
+			)
 			return nil
 		})
 		if e != nil {
