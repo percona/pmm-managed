@@ -72,11 +72,12 @@ type Service struct {
 	checks []check.Check
 
 	registry registryService
+	alert    alertRegistry
 	db       *reform.DB
 }
 
 // New returns Service with given PMM version.
-func New(registry registryService, db *reform.DB, pmmVersion string) *Service {
+func New(registry registryService, alert alertRegistry, db *reform.DB, pmmVersion string) *Service {
 	l := logrus.WithField("component", "check")
 	s := &Service{
 		l:          l,
@@ -85,6 +86,7 @@ func New(registry registryService, db *reform.DB, pmmVersion string) *Service {
 		publicKeys: defaultPublicKeys,
 		interval:   defaultInterval,
 		registry:   registry,
+		alert:      alert,
 		db:         db,
 	}
 
