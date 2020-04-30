@@ -28,7 +28,7 @@ import (
 
 const (
 	devChecksHost      = "check-dev.percona.com:443"
-	devChecksPublicKey = "RWS69zYk2LOS7gWnSQNgnPRbBEwaoG3N/ITwDqfowUItfHvrpfQ++D0g"
+	devChecksPublicKey = "RWTg+ZmCCjt7O8eWeAmTLAqW+1ozUbpRSKSwNTmO+exlS5KEIPYWuYdX"
 )
 
 func TestDownloadChecks(t *testing.T) {
