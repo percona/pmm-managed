@@ -626,7 +626,7 @@ func (m *PostgresExporter) GetListenPort() uint32 {
 	return 0
 }
 
-// ProxySQLExporter runs on Generic or Container Node and exposes MySQL Service metrics.
+// ProxySQLExporter runs on Generic or Container Node and exposes ProxySQL Service metrics.
 type ProxySQLExporter struct {
 	// Unique randomly generated instance identifier.
 	AgentId string `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
@@ -1349,13 +1349,13 @@ func (m *RDSExporter) GetEnhancedMetricsDisabled() bool {
 	return false
 }
 
-// ExternalExporter runs on any Node.
+// ExternalExporter runs on any Node type, including Remote Node.
 type ExternalExporter struct {
 	// Unique randomly generated instance identifier.
 	AgentId string `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
 	// Node identifier where this instance runs.
 	RunsOnNodeId string `protobuf:"bytes,2,opt,name=runs_on_node_id,json=runsOnNodeId,proto3" json:"runs_on_node_id,omitempty"`
-	// Desired status for collecting metrics: enabled (false) or disabled (true).
+	// If disabled, metrics from this exporter will not be collected.
 	Disabled bool `protobuf:"varint,3,opt,name=disabled,proto3" json:"disabled,omitempty"`
 	// Service identifier.
 	ServiceId string `protobuf:"bytes,4,opt,name=service_id,json=serviceId,proto3" json:"service_id,omitempty"`
@@ -5058,9 +5058,9 @@ type AgentsClient interface {
 	AddRDSExporter(ctx context.Context, in *AddRDSExporterRequest, opts ...grpc.CallOption) (*AddRDSExporterResponse, error)
 	// ChangeRDSExporter changes rds_exporter Agent.
 	ChangeRDSExporter(ctx context.Context, in *ChangeRDSExporterRequest, opts ...grpc.CallOption) (*ChangeRDSExporterResponse, error)
-	// AddExternalExporter adds rds_exporter Agent.
+	// AddExternalExporter adds external_exporter Agent.
 	AddExternalExporter(ctx context.Context, in *AddExternalExporterRequest, opts ...grpc.CallOption) (*AddExternalExporterResponse, error)
-	// ChangeExternalExporter changes rds_exporter Agent.
+	// ChangeExternalExporter changes external_exporter Agent.
 	ChangeExternalExporter(ctx context.Context, in *ChangeExternalExporterRequest, opts ...grpc.CallOption) (*ChangeExternalExporterResponse, error)
 	// RemoveAgent removes Agent.
 	RemoveAgent(ctx context.Context, in *RemoveAgentRequest, opts ...grpc.CallOption) (*RemoveAgentResponse, error)
@@ -5356,9 +5356,9 @@ type AgentsServer interface {
 	AddRDSExporter(context.Context, *AddRDSExporterRequest) (*AddRDSExporterResponse, error)
 	// ChangeRDSExporter changes rds_exporter Agent.
 	ChangeRDSExporter(context.Context, *ChangeRDSExporterRequest) (*ChangeRDSExporterResponse, error)
-	// AddExternalExporter adds rds_exporter Agent.
+	// AddExternalExporter adds external_exporter Agent.
 	AddExternalExporter(context.Context, *AddExternalExporterRequest) (*AddExternalExporterResponse, error)
-	// ChangeExternalExporter changes rds_exporter Agent.
+	// ChangeExternalExporter changes external_exporter Agent.
 	ChangeExternalExporter(context.Context, *ChangeExternalExporterRequest) (*ChangeExternalExporterResponse, error)
 	// RemoveAgent removes Agent.
 	RemoveAgent(context.Context, *RemoveAgentRequest) (*RemoveAgentResponse, error)

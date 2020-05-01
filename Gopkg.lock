@@ -385,7 +385,7 @@
 
 [[projects]]
   branch = "PMM-5777-inventory-add-external-exporter"
-  digest = "1:ed4dbdb35723165b166264af545a23fd6217157ff1916d8f48fb38aea46862f2"
+  digest = "1:735d58d042c8fb1961a477a7778b6d621c7e02742c9bb20fea2d07eaeccc8068"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -406,7 +406,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "553aaa4610742e1d728c7933c23c046ee7b6093c"
+  revision = "2b5ebd6c2cb1d7019fa4581802a5364f3fdbbb73"
 
 [[projects]]
   digest = "1:1e38d8f6796fabbf419aa2040dc196927690a1de7fe14af25fbd29c6ed44b4da"
