@@ -17,9 +17,22 @@
 package checks
 
 import (
+	"github.com/percona-platform/saas/pkg/starlark"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 )
+
+func getFuncsForVersion(version uint32) (map[string]starlark.GoFunc, error) {
+	switch version {
+	case 1:
+		return map[string]starlark.GoFunc{
+			"parse_version":      parseVersion,
+			"format_version_num": formatVersionNum,
+		}, nil
+	default:
+		return nil, errors.Errorf("unsupported check version: %d", version)
+	}
+}
 
 // parseVersion accepts a single string argument (version), and returns map[string]interface{}
 // with keys: major, minor, patch (int64), num (MMmmpp, int64), and rest (string).

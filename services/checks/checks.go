@@ -327,7 +327,12 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 		return errors.Wrap(err, "failed to get check result")
 	}
 
-	env, err := starlark.NewEnv(check.Name, check.Script, nil)
+	funcs, err := getFuncsForVersion(check.Version)
+	if err != nil {
+		return err
+	}
+
+	env, err := starlark.NewEnv(check.Name, check.Script, funcs)
 	if err != nil {
 		return errors.Wrap(err, "failed to prepare starlark environment")
 	}
