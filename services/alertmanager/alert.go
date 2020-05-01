@@ -55,9 +55,6 @@ func (ap *AlertParams) validate() error {
 		return errors.Errorf("invalid severity level: %s", ap.Severity)
 	}
 
-	if ap.Severity == check.Unknown {
-		ap.Severity = check.Notice // TODO temporary fix
-	}
 	return nil
 }
 
