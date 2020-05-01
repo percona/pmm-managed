@@ -287,6 +287,9 @@ type CreateExternalExporterParams struct {
 
 // CreateExternalExporter creates ExternalExporter.
 func CreateExternalExporter(q *reform.Querier, params *CreateExternalExporterParams) (*Agent, error) {
+	if !(params.ListenPort > 0 && params.ListenPort < 65536) {
+		return nil, status.Errorf(codes.InvalidArgument, "Listen port should be between 1 and 65535.")
+	}
 	id := "/agent_id/" + uuid.New().String()
 	if err := checkUniqueAgentID(q, id); err != nil {
 		return nil, err

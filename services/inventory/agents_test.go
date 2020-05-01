@@ -228,6 +228,7 @@ func TestAgents(t *testing.T) {
 			RunsOnNodeId: models.PMMServerNodeID,
 			ServiceId:    ps.ServiceId,
 			Username:     "username",
+			ListenPort:   9222,
 		})
 		require.NoError(t, err)
 		expectedExternalExporter := &inventorypb.ExternalExporter{
@@ -235,6 +236,9 @@ func TestAgents(t *testing.T) {
 			RunsOnNodeId: models.PMMServerNodeID,
 			ServiceId:    ps.ServiceId,
 			Username:     "username",
+			Scheme:       "http",
+			MetricPath:   "/metrics",
+			ListenPort:   9222,
 		}
 		assert.Equal(t, expectedExternalExporter, actualAgent)
 
@@ -404,6 +408,7 @@ func TestAgents(t *testing.T) {
 			RunsOnNodeId: models.PMMServerNodeID,
 			ServiceId:    service.ServiceId,
 			Username:     "username",
+			ListenPort:   12345,
 		})
 		require.NoError(t, err)
 		expectedExternalExporter := &inventorypb.ExternalExporter{
@@ -411,6 +416,9 @@ func TestAgents(t *testing.T) {
 			RunsOnNodeId: models.PMMServerNodeID,
 			ServiceId:    service.ServiceId,
 			Username:     "username",
+			Scheme:       "http",
+			MetricPath:   "/metrics",
+			ListenPort:   12345,
 		}
 		assert.Equal(t, expectedExternalExporter, agent)
 

@@ -338,7 +338,7 @@ func TestDatabaseChecks(t *testing.T) {
 					now, now,
 				)
 
-				assertCheckViolation(t, err, "agents", "node_id_or_service_id_or_pmm_agent_id")
+				assertCheckViolation(t, err, "agents", "node_id_or_service_id_for_non_pmm_agent")
 			})
 
 			t.Run("Both set", func(t *testing.T) {
@@ -350,7 +350,7 @@ func TestDatabaseChecks(t *testing.T) {
 						"VALUES ('/agent_id/8', 'mysqld_exporter', NULL, '/agent_id/1', '/node_id/1', '/service_id/1', false, '', $1, $2, false, false, false, 0, 0, false, false)",
 					now, now,
 				)
-				assertCheckViolation(t, err, "agents", "node_id_or_service_id_or_pmm_agent_id")
+				assertCheckViolation(t, err, "agents", "node_id_or_service_id_for_non_pmm_agent")
 			})
 		})
 	})
