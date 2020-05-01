@@ -364,7 +364,15 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:33777f1b9f1c7b94d6c57af334953f1826c6ac3b3b8e779933feb0be576a3a2c"
+  digest = "1:4b473f05eb74d2978f85275d3f69bfedd1044dbd719b1d60917ee395d7818651"
+  name = "github.com/percona-platform/platform"
+  packages = ["pkg/fuzz"]
+  pruneopts = "NUT"
+  revision = "10731d5e62fe4c83df49ff70bd90577c6c21db20"
+
+[[projects]]
+  branch = "master"
+  digest = "1:f2db717ca8b8476cd0867e71dc46181c5e5b69fdd6b33be85c82bfd5109f2a93"
   name = "github.com/percona-platform/saas"
   packages = [
     "gen/check/retrieval",
@@ -374,7 +382,7 @@
     "pkg/starlark",
   ]
   pruneopts = "NUT"
-  revision = "6e2617701cb96c3c2f9baf4b2eefab3201901f7a"
+  revision = "fe24e442f3211e84b57259486d22241e0b9805b0"
 
 [[projects]]
   digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"

@@ -236,7 +236,13 @@ func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) 
 				continue
 			}
 
-			results, err := starlark.Run(c.Name, c.Script, r)
+			env, err := starlark.NewEnv(c.Name, c.Script, nil)
+			if err != nil {
+				s.l.Errorf("failed to prepare starlark environment: %s", err)
+				continue
+			}
+
+			results, err := env.Run(c.Name, r, s.l.Debug)
 			if err != nil {
 				s.l.Errorf("failed to execute script: %s", err)
 				continue
@@ -296,7 +302,13 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Ch
 				continue
 			}
 
-			results, err := starlark.Run(c.Name, c.Script, r)
+			env, err := starlark.NewEnv(c.Name, c.Script, nil)
+			if err != nil {
+				s.l.Errorf("failed to prepare starlark environment: %s", err)
+				continue
+			}
+
+			results, err := env.Run(c.Name, r, s.l.Debug)
 			if err != nil {
 				s.l.Errorf("failed to execute script: %s", err)
 				continue
@@ -356,7 +368,13 @@ func (s *Service) executeMongoDBChecks(ctx context.Context, checks []check.Check
 				continue
 			}
 
-			results, err := starlark.Run(c.Name, c.Script, r)
+			env, err := starlark.NewEnv(c.Name, c.Script, nil)
+			if err != nil {
+				s.l.Errorf("failed to prepare starlark environment: %s", err)
+				continue
+			}
+
+			results, err := env.Run(c.Name, r, s.l.Debug)
 			if err != nil {
 				s.l.Errorf("failed to execute script: %s", err)
 				continue
