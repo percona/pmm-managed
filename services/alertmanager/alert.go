@@ -56,7 +56,7 @@ func (ap *AlertParams) validate() error {
 	}
 
 	if ap.Severity == check.Unknown {
-		ap.Severity = check.Info
+		ap.Severity = check.Notice // TODO temporary fix
 	}
 	return nil
 }
