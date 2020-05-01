@@ -749,6 +749,9 @@ func (as *AgentsService) ChangeExternalExporter(req *inventorypb.ChangeExternalE
 		return nil, err
 	}
 
+	// It's required to regenerate prometheus config file.
+	as.p.RequestConfigurationUpdate()
+
 	res := agent.(*inventorypb.ExternalExporter)
 	return res, nil
 }
