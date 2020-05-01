@@ -30,9 +30,9 @@ func TestVersion(t *testing.T) {
 	script := strings.TrimSpace(`
 def check(rows):
     v = parse_version(rows[0].get("version"))
-    f = format_version(v)
+    s = format_version_num(v["num"])
     return [{
-		"summary": f,
+		"summary": s,
 		"severity": "warning",
         "labels": {
             "major": str(v["major"]),
@@ -44,8 +44,8 @@ def check(rows):
     }]
 	`)
 	funcs := map[string]starlark.GoFunc{
-		"parse_version":  parseVersion,
-		"format_version": formatVersion,
+		"parse_version":      parseVersion,
+		"format_version_num": formatVersionNum,
 	}
 	env, err := starlark.NewEnv(t.Name(), script, funcs)
 	require.NoError(t, err)
@@ -82,7 +82,7 @@ Traceback (most recent call last):
 	res, err = env.Run("valid", input, nil)
 	require.NoError(t, err)
 	expected := []check.Result{{
-		Summary:  "8.0.19-10",
+		Summary:  "8.0.19",
 		Severity: check.Warning,
 		Labels: map[string]string{
 			"major": "8",

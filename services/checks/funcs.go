@@ -21,6 +21,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+// parseVersion accepts a single string argument (version), and returns map[string]interface{}
+// with keys: major, minor, patch (int64), num (MMmmpp, int64), and rest (string).
 func parseVersion(args ...interface{}) (interface{}, error) {
 	if l := len(args); l != 1 {
 		return nil, errors.Errorf("expected 1 argument, got %d", l)
@@ -45,23 +47,22 @@ func parseVersion(args ...interface{}) (interface{}, error) {
 	}, nil
 }
 
-func formatVersion(args ...interface{}) (interface{}, error) {
+// formatVersionNum accepts a single int64 argument (version num MMmmpp), and returns
+// MM.mm.pp as a string.
+func formatVersionNum(args ...interface{}) (interface{}, error) {
 	if l := len(args); l != 1 {
 		return nil, errors.Errorf("expected 1 argument, got %d", l)
 	}
 
-	d, ok := args[0].(map[string]interface{})
+	num, ok := args[0].(int64)
 	if !ok {
-		return nil, errors.Errorf("expected dict argument, got %[1]T (%[1]v)", args[0])
+		return nil, errors.Errorf("expected int64 argument, got %[1]T (%[1]v)", args[0])
 	}
 
-	// FIXME handle type assertion panics
 	p := &version.Parsed{
-		Major: int(d["major"].(int64)),
-		Minor: int(d["minor"].(int64)),
-		Patch: int(d["patch"].(int64)),
-		Rest:  d["rest"].(string),
-		Num:   int(d["num"].(int64)),
+		Major: int(num / 10000),
+		Minor: int(num / 100 % 100),
+		Patch: int(num % 10000),
 	}
 	return p.String(), nil
 }
