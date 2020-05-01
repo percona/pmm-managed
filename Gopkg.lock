@@ -364,7 +364,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:da8ddf6d5937192867b550dc9f01511df73e5e6a8d31539cb64cc6b79f66a08a"
+  digest = "1:dc33dfd1dbb51eabe170046ec6d080f9037250be00a3bac3021010207eeccfb5"
   name = "github.com/percona-platform/saas"
   packages = [
     "gen/retrieval",
@@ -373,7 +373,7 @@
     "pkg/check",
   ]
   pruneopts = "NUT"
-  revision = "5e777ac33f614ed09228ca41384d7be50de1e6cf"
+  revision = "a1b38fd6caeed4675341adfdfc884dca163c330c"
 
 [[projects]]
   digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
@@ -385,7 +385,7 @@
 
 [[projects]]
   branch = "PMM-5257-ProxySQL-socket-connection"
-  digest = "1:37d6b85e146370b58a63b20e8eae2a8df6efca6bba102e70ced61ce60c444efa"
+  digest = "1:de3ed674aa5f79cef297632be47ca6a71c98560546ec4ca7f88be3ab9f812c64"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -406,7 +406,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "be3c7d763984e88245a7afe75aabc5da1cffb650"
+  revision = "c8600293a874e7740b7c9dcd8070d35ea1223bac"
 
 [[projects]]
   digest = "1:1e38d8f6796fabbf419aa2040dc196927690a1de7fe14af25fbd29c6ed44b4da"
