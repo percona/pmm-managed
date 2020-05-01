@@ -736,6 +736,7 @@ func (as *AgentsService) AddExternalExporter(req *inventorypb.AddExternalExporte
 		return nil, e
 	}
 
+	// It's required to regenerate prometheus config file.
 	as.p.RequestConfigurationUpdate()
 
 	return res, nil
@@ -771,6 +772,7 @@ func (as *AgentsService) Remove(ctx context.Context, id string, force bool) erro
 	if pmmAgentID := pointer.GetString(removedAgent.PMMAgentID); pmmAgentID != "" {
 		as.r.SendSetStateRequest(ctx, pmmAgentID)
 	} else {
+		// It's required to regenerate prometheus config file for the agents which aren't run by pmm-agent.
 		as.p.RequestConfigurationUpdate()
 	}
 

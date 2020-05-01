@@ -299,6 +299,14 @@ func CreateExternalExporter(q *reform.Querier, params *CreateExternalExporterPar
 		return nil, err
 	}
 
+	scheme := params.Scheme
+	if scheme == "" {
+		scheme = "http"
+	}
+	metricPath := params.MetricPath
+	if metricPath == "" {
+		metricPath = "/metrics"
+	}
 	row := &Agent{
 		AgentID:       id,
 		AgentType:     ExternalExporterType,
@@ -306,9 +314,9 @@ func CreateExternalExporter(q *reform.Querier, params *CreateExternalExporterPar
 		ServiceID:     pointer.ToStringOrNil(params.ServiceID),
 		Username:      pointer.ToStringOrNil(params.Username),
 		Password:      pointer.ToStringOrNil(params.Password),
-		MetricsScheme: pointer.ToStringOrNil(params.Scheme),
-		MetricsPath:   pointer.ToStringOrNil(params.MetricPath),
-		ListenPort:    pointer.ToUint16OrNil(uint16(params.ListenPort)),
+		MetricsScheme: &scheme,
+		MetricsPath:   &metricPath,
+		ListenPort:    pointer.ToUint16(uint16(params.ListenPort)),
 	}
 	if err := row.SetCustomLabels(params.CustomLabels); err != nil {
 		return nil, err

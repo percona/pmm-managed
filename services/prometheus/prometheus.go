@@ -190,15 +190,11 @@ func (svc *Service) addScrapeConfigs(cfg *config.Config, q *reform.Querier, s *m
 			return err
 		}
 
-		// find Node address where pmm-agent runs
+		// find Node address where the agent runs
 		var paramsHost string
-		if agent.AgentType == models.ExternalExporterType {
-			externalExporterNode := &models.Node{NodeID: pointer.GetString(agent.RunsOnNodeID)}
-			if err = q.Reload(externalExporterNode); err != nil {
-				return errors.WithStack(err)
-			}
-			paramsHost = externalExporterNode.Address
-		} else {
+		switch {
+		case agent.PMMAgentID != nil:
+			// extract node address through pmm-agent
 			pmmAgent, err := models.FindAgentByID(q, *agent.PMMAgentID)
 			if err != nil {
 				return errors.WithStack(err)
@@ -208,6 +204,15 @@ func (svc *Service) addScrapeConfigs(cfg *config.Config, q *reform.Querier, s *m
 				return errors.WithStack(err)
 			}
 			paramsHost = pmmAgentNode.Address
+		case agent.RunsOnNodeID != nil:
+			externalExporterNode := &models.Node{NodeID: pointer.GetString(agent.RunsOnNodeID)}
+			if err = q.Reload(externalExporterNode); err != nil {
+				return errors.WithStack(err)
+			}
+			paramsHost = externalExporterNode.Address
+		default:
+			svc.l.Warnf("It's not possible to get host, skipping scrape config for %s.", agent)
+			continue
 		}
 
 		var scfgs []*config.ScrapeConfig

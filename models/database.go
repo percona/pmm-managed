@@ -274,13 +274,14 @@ var databaseSchema = [][]string{
 	14: {
 		`ALTER TABLE agents
 			DROP CONSTRAINT node_id_or_service_id_or_pmm_agent_id,
-			DROP CONSTRAINT runs_on_node_id_only_for_pmm_agent`,
+			DROP CONSTRAINT runs_on_node_id_only_for_pmm_agent,
+			DROP CONSTRAINT agents_metrics_url_check`,
 		`ALTER TABLE agents
-			ADD CONSTRAINT node_id_or_service_id_or_pmm_agent_id CHECK (
+			ADD CONSTRAINT node_id_or_service_id_for_non_pmm_agent CHECK (
 				(node_id IS NULL) <> (service_id IS NULL) OR (agent_type = '` + string(PMMAgentType) + `')),
 			ADD CONSTRAINT runs_on_node_id_only_for_pmm_agent_and_external 
 				CHECK ((runs_on_node_id IS NULL) <> (agent_type='` + string(PMMAgentType) + `' OR agent_type='` + string(ExternalExporterType) + `' ))
-`,
+			ADD CONSTRAINT agents_metrics_path_check CHECK (metrics_path <> '')`,
 		`ALTER TABLE agents RENAME COLUMN metrics_url TO metrics_path`,
 		`ALTER TABLE agents ADD COLUMN metrics_scheme VARCHAR`,
 	},
