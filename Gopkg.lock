@@ -393,7 +393,7 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "SAAS-30-tweaks"
+  branch = "PMM-2.0"
   digest = "1:93873423f6e66c9867c1c959d83d2324e595e4b324d461dee9cd778f44681896"
   name = "github.com/percona/pmm"
   packages = [
@@ -415,7 +415,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "8aa16198f5a64d8b71dae365d8629a4854ebac1c"
+  revision = "9d73153a9b492014763cc5b115993ce6568f50b0"
 
 [[projects]]
   digest = "1:1e38d8f6796fabbf419aa2040dc196927690a1de7fe14af25fbd29c6ed44b4da"
