@@ -394,7 +394,7 @@
 
 [[projects]]
   branch = "SAAS-30-functions"
-  digest = "1:93873423f6e66c9867c1c959d83d2324e595e4b324d461dee9cd778f44681896"
+  digest = "1:19dc9865d6827124aef5b15e17d254c26b41906930b43b3c43021c30e1300d51"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -415,7 +415,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "b3b9e307173d60f0f3464736727eceac68cf8135"
+  revision = "4ada51c81ba15454e26960607dcdef62414a2bcc"
 
 [[projects]]
   digest = "1:1e38d8f6796fabbf419aa2040dc196927690a1de7fe14af25fbd29c6ed44b4da"
