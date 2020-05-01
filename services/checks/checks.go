@@ -228,34 +228,8 @@ func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) 
 				continue
 			}
 
-			nCtx, cancel := context.WithTimeout(ctx, resultTimeout)
-			r, err := s.waitForResult(nCtx, r.ID)
-			cancel()
-			if err != nil {
-				s.l.Errorf("failed to get check result: %s", err)
-				continue
-			}
-
-			env, err := starlark.NewEnv(c.Name, c.Script, nil)
-			if err != nil {
-				s.l.Errorf("failed to prepare starlark environment: %s", err)
-				continue
-			}
-
-			results, err := env.Run(c.Name, r, s.l.Debug)
-			if err != nil {
-				s.l.Errorf("failed to execute script: %s", err)
-				continue
-			}
-
-			for _, result := range results {
-				alert, err := makeAlert(c.Name, target, &result)
-				if err != nil {
-					s.l.Errorf("failed to create alert: %s", err)
-					continue
-				}
-
-				s.alertsRegistry.Add(c.Name, time.Second, alert)
+			if err = s.processResults(ctx, c, target, r.ID); err != nil {
+				s.l.Errorf("failed to process action result: %s", err)
 			}
 		}
 	}
@@ -294,33 +268,8 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Ch
 				continue
 			}
 
-			nCtx, cancel := context.WithTimeout(ctx, resultTimeout)
-			r, err := s.waitForResult(nCtx, r.ID)
-			cancel()
-			if err != nil {
-				s.l.Errorf("failed to get check result: %s", err)
-				continue
-			}
-
-			env, err := starlark.NewEnv(c.Name, c.Script, nil)
-			if err != nil {
-				s.l.Errorf("failed to prepare starlark environment: %s", err)
-				continue
-			}
-
-			results, err := env.Run(c.Name, r, s.l.Debug)
-			if err != nil {
-				s.l.Errorf("failed to execute script: %s", err)
-				continue
-			}
-
-			for _, result := range results {
-				alert, err := makeAlert(c.Name, target, &result)
-				if err != nil {
-					s.l.Errorf("failed to create alert: %s", err)
-				}
-
-				s.alertsRegistry.Add("", 0, alert)
+			if err = s.processResults(ctx, c, target, r.ID); err != nil {
+				s.l.Errorf("failed to process action result: %s", err)
 			}
 		}
 	}
@@ -360,35 +309,41 @@ func (s *Service) executeMongoDBChecks(ctx context.Context, checks []check.Check
 				continue
 			}
 
-			nCtx, cancel := context.WithTimeout(ctx, resultTimeout)
-			r, err := s.waitForResult(nCtx, r.ID)
-			cancel()
-			if err != nil {
-				s.l.Errorf("failed to get check result: %s", err)
-				continue
-			}
-
-			env, err := starlark.NewEnv(c.Name, c.Script, nil)
-			if err != nil {
-				s.l.Errorf("failed to prepare starlark environment: %s", err)
-				continue
-			}
-
-			results, err := env.Run(c.Name, r, s.l.Debug)
-			if err != nil {
-				s.l.Errorf("failed to execute script: %s", err)
-				continue
-			}
-
-			for _, result := range results {
-				alert, err := makeAlert(c.Name, target, &result)
-				if err != nil {
-					s.l.Errorf("failed to create alert: %s", err)
-				}
-
-				s.alertsRegistry.Add("", 0, alert)
+			if err = s.processResults(ctx, c, target, r.ID); err != nil {
+				s.l.Errorf("failed to process action result: %s", err)
 			}
 		}
+	}
+
+	return nil
+}
+
+// TODO find better name
+func (s *Service) processResults(ctx context.Context, check check.Check, target target, resID string) error {
+	nCtx, cancel := context.WithTimeout(ctx, resultTimeout)
+	r, err := s.waitForResult(nCtx, resID)
+	cancel()
+	if err != nil {
+		return errors.Wrap(err, "failed to get check result")
+	}
+
+	env, err := starlark.NewEnv(check.Name, check.Script, nil)
+	if err != nil {
+		return errors.Wrap(err, "failed to prepare starlark environment")
+	}
+
+	results, err := env.Run(check.Name, r, s.l.Debug)
+	if err != nil {
+		return errors.Wrap(err, "failed to execute script")
+	}
+
+	for _, result := range results {
+		alert, err := makeAlert(check.Name, target, &result)
+		if err != nil {
+			return errors.Wrap(err, "failed to create alert")
+		}
+
+		s.alertsRegistry.Add(check.Name, time.Second, alert)
 	}
 
 	return nil
