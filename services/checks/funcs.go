@@ -37,11 +37,11 @@ func parseVersion(args ...interface{}) (interface{}, error) {
 	}
 
 	return map[string]interface{}{
-		"major": p.Major,
-		"minor": p.Minor,
-		"patch": p.Patch,
+		"major": int64(p.Major),
+		"minor": int64(p.Minor),
+		"patch": int64(p.Patch),
 		"rest":  p.Rest,
-		"num":   p.Num,
+		"num":   int64(p.Num),
 	}, nil
 }
 
@@ -57,11 +57,11 @@ func formatVersion(args ...interface{}) (interface{}, error) {
 
 	// FIXME handle type assertion panics
 	p := &version.Parsed{
-		Major: d["major"].(int64),
-		Minor: d["minor"].(int64),
-		Patch: d["patch"].(int64),
+		Major: int(d["major"].(int64)),
+		Minor: int(d["minor"].(int64)),
+		Patch: int(d["patch"].(int64)),
 		Rest:  d["rest"].(string),
-		Num:   d["num"].(int64),
+		Num:   int(d["num"].(int64)),
 	}
 	return p.String(), nil
 }
