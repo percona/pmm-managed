@@ -81,7 +81,7 @@ type Service struct {
 
 // New returns Service with given PMM version.
 func New(agentsRegistry agentsRegistry, alertsRegistry alertRegistry, db *reform.DB, pmmVersion string) *Service {
-	l := logrus.WithField("component", "check")
+	l := logrus.WithField("component", "checks")
 	s := &Service{
 		l:              l,
 		pmmVersion:     pmmVersion,
@@ -115,12 +115,22 @@ func (s *Service) Run(ctx context.Context) {
 	defer ticker.Stop()
 
 	for {
-		// FIXME do that only if STT is enabled in settings https://jira.percona.com/browse/SAAS-30
-		if true {
+		var sttEnabled bool
+		settings, err := models.GetSettings(s.db)
+		if err != nil {
+			s.l.Error(err)
+		}
+		if settings != nil && settings.SaaS.STTEnabled {
+			sttEnabled = true
+		}
+
+		if sttEnabled {
 			nCtx, cancel := context.WithTimeout(ctx, checksTimeout)
 			s.grabChecks(nCtx)
 			s.executeChecks(nCtx)
 			cancel()
+		} else {
+			s.l.Info("STT is not enabled, doing nothing.")
 		}
 
 		select {
