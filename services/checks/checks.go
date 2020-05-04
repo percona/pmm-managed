@@ -56,6 +56,7 @@ const (
 	envInterval  = "PERCONA_TEST_CHECKS_INTERVAL"
 	envCheckFile = "PERCONA_TEST_CHECKS_FILE"
 
+	startTimeout        = time.Minute
 	checksTimeout       = time.Hour
 	downloadTimeout     = 10 * time.Second
 	resultTimeout       = 15 * time.Second
@@ -118,6 +119,16 @@ func New(agentsRegistry agentsRegistry, alertsRegistry alertRegistry, db *reform
 
 // Run runs checks service that grabs checks from Percona Checks service every interval until context is canceled.
 func (s *Service) Run(ctx context.Context) {
+	// delay for the first run to allow all agents to connect
+	timer := time.NewTimer(startTimeout)
+	defer timer.Stop()
+
+	select {
+	case <-timer.C:
+	case <-ctx.Done():
+		return
+	}
+
 	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
 
