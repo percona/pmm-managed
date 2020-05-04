@@ -97,14 +97,14 @@ func TestServiceHelpers(t *testing.T) {
 				ServiceName: "Fifth service",
 				NodeID:      "N1",
 				Address:     pointer.ToString("127.0.0.1"),
-				Port:        pointer.ToUint16OrNil(6033),
+				Port:        pointer.ToUint16OrNil(6032),
 			},
 			&models.Service{
 				ServiceID:   "S6",
 				ServiceType: models.ProxySQLServiceType,
 				ServiceName: "Sixth service",
 				NodeID:      "N2",
-				Socket:      pointer.ToStringOrNil("/tmp/proxysql.sock"),
+				Socket:      pointer.ToStringOrNil("/tmp/proxysql_admin.sock"),
 			},
 
 			&models.Agent{
@@ -163,7 +163,7 @@ func TestServiceHelpers(t *testing.T) {
 			ServiceName: "Fifth service",
 			NodeID:      "N1",
 			Address:     pointer.ToString("127.0.0.1"),
-			Port:        pointer.ToUint16OrNil(6033),
+			Port:        pointer.ToUint16OrNil(6032),
 			CreatedAt:   now,
 			UpdatedAt:   now,
 		}})
@@ -201,7 +201,7 @@ func TestServiceHelpers(t *testing.T) {
 			ServiceID:   "S6",
 			ServiceType: models.ProxySQLServiceType,
 			ServiceName: "Sixth service",
-			Socket:      pointer.ToStringOrNil("/tmp/proxysql.sock"),
+			Socket:      pointer.ToStringOrNil("/tmp/proxysql_admin.sock"),
 			NodeID:      "N2",
 			CreatedAt:   now,
 			UpdatedAt:   now,
@@ -269,8 +269,8 @@ func TestServiceHelpers(t *testing.T) {
 			ServiceName: "test-proxysql-socket-address",
 			NodeID:      "N1",
 			Address:     pointer.ToString("127.0.0.1"),
-			Port:        pointer.ToUint16(6033),
-			Socket:      pointer.ToString("/tmp/proxysql.sock"),
+			Port:        pointer.ToUint16(6032),
+			Socket:      pointer.ToString("/tmp/proxysql_admin.sock"),
 		})
 		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Socket and address cannot be specified together.`), err)
 	})
