@@ -40,6 +40,7 @@ func New(db *reform.DB) *CleanResults {
 // Run starts the clean process.
 func (c *CleanResults) Run(ctx context.Context, interval time.Duration) {
 	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
 	l := logrus.WithField("component", "cleaner")
 
 	for {
@@ -52,11 +53,6 @@ func (c *CleanResults) Run(ctx context.Context, interval time.Duration) {
 
 		select {
 		case <-ctx.Done():
-			ticker.Stop()
-			select {
-			case <-ticker.C:
-			default:
-			}
 			return
 		case <-ticker.C:
 		}
