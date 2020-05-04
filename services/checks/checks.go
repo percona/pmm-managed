@@ -248,21 +248,21 @@ func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) 
 	var res []string
 	for _, target := range targets {
 		for _, c := range checks {
-			r, err := models.CreateActionResult(s.db.Querier, target.agent.AgentID)
+			r, err := models.CreateActionResult(s.db.Querier, target.agentID)
 			if err != nil {
-				s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agent.AgentID, err)
+				s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agentID, err)
 				continue
 			}
 
 			switch c.Type {
 			case check.MySQLShow:
-				if err := s.agentsRegistry.StartMySQLQueryShowAction(ctx, r.ID, target.agent.AgentID, target.dsn, c.Query); err != nil {
-					s.l.Errorf("Failed to start MySQL show query action for agent %s, reason: %s.", target.agent.AgentID, err)
+				if err := s.agentsRegistry.StartMySQLQueryShowAction(ctx, r.ID, target.agentID, target.dsn, c.Query); err != nil {
+					s.l.Errorf("Failed to start MySQL show query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 			case check.MySQLSelect:
-				if err := s.agentsRegistry.StartMySQLQuerySelectAction(ctx, r.ID, target.agent.AgentID, target.dsn, c.Query); err != nil {
-					s.l.Errorf("Failed to start MySQL select query action for agent %s, reason: %s.", target.agent.AgentID, err)
+				if err := s.agentsRegistry.StartMySQLQuerySelectAction(ctx, r.ID, target.agentID, target.dsn, c.Query); err != nil {
+					s.l.Errorf("Failed to start MySQL select query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 			default:
@@ -291,21 +291,21 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Ch
 	var res []string
 	for _, target := range targets {
 		for _, c := range checks {
-			r, err := models.CreateActionResult(s.db.Querier, target.agent.AgentID)
+			r, err := models.CreateActionResult(s.db.Querier, target.agentID)
 			if err != nil {
-				s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agent.AgentID, err)
+				s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agentID, err)
 				continue
 			}
 
 			switch c.Type {
 			case check.PostgreSQLShow:
-				if err := s.agentsRegistry.StartPostgreSQLQueryShowAction(ctx, r.ID, target.agent.AgentID, target.dsn); err != nil {
-					s.l.Errorf("Failed to start PostgreSQL show query action for agent %s, reason: %s.", target.agent.AgentID, err)
+				if err := s.agentsRegistry.StartPostgreSQLQueryShowAction(ctx, r.ID, target.agentID, target.dsn); err != nil {
+					s.l.Errorf("Failed to start PostgreSQL show query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 			case check.PostgreSQLSelect:
-				if err := s.agentsRegistry.StartPostgreSQLQuerySelectAction(ctx, r.ID, target.agent.AgentID, target.dsn, c.Query); err != nil {
-					s.l.Errorf("Failed to start PostgreSQL select query action for agent %s, reason: %s.", target.agent.AgentID, err)
+				if err := s.agentsRegistry.StartPostgreSQLQuerySelectAction(ctx, r.ID, target.agentID, target.dsn, c.Query); err != nil {
+					s.l.Errorf("Failed to start PostgreSQL select query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 			default:
@@ -334,21 +334,21 @@ func (s *Service) executeMongoDBChecks(ctx context.Context, checks []check.Check
 	var res []string
 	for _, target := range targets {
 		for _, c := range checks {
-			r, err := models.CreateActionResult(s.db.Querier, target.agent.AgentID)
+			r, err := models.CreateActionResult(s.db.Querier, target.agentID)
 			if err != nil {
-				s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agent.AgentID, err)
+				s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agentID, err)
 				continue
 			}
 
 			switch c.Type {
 			case check.MongoDBGetParameter:
-				if err := s.agentsRegistry.StartMongoDBQueryGetParameterAction(context.Background(), r.ID, target.agent.AgentID, target.dsn); err != nil {
-					s.l.Errorf("Failed to start MongoDB get parameter query action for agent %s, reason: %s.", target.agent.AgentID, err)
+				if err := s.agentsRegistry.StartMongoDBQueryGetParameterAction(context.Background(), r.ID, target.agentID, target.dsn); err != nil {
+					s.l.Errorf("Failed to start MongoDB get parameter query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 			case check.MongoDBBuildInfo:
-				if err := s.agentsRegistry.StartMongoDBQueryBuildInfoAction(context.Background(), r.ID, target.agent.AgentID, target.dsn); err != nil {
-					s.l.Errorf("Failed to start MongoDB build info query action for agent %s, reason: %s.", target.agent.AgentID, err)
+				if err := s.agentsRegistry.StartMongoDBQueryBuildInfoAction(context.Background(), r.ID, target.agentID, target.dsn); err != nil {
+					s.l.Errorf("Failed to start MongoDB build info query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 
@@ -394,12 +394,8 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 
 	alertsIDs := make([]string, len(results))
 	for i, result := range results {
-		id := alertsPrefix + hash(target.service.ServiceID+result.Summary)
-		alert, err := makeAlert(id, target, &result)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to create alert")
-		}
-
+		id := alertsPrefix + hash(target.serviceID+result.Summary)
+		alert := makeAlert(id, target, &result)
 		s.alertsRegistry.Add(id, time.Second, alert)
 		alertsIDs[i] = id
 	}
@@ -412,10 +408,10 @@ func hash(s string) string {
 	return base64.StdEncoding.EncodeToString(data[:])
 }
 
-func makeAlert(name string, target target, result *check.Result) (*ammodels.PostableAlert, error) {
-	labels, err := models.MergeLabels(target.node, target.service, target.agent)
-	if err != nil {
-		return nil, err
+func makeAlert(name string, target target, result *check.Result) *ammodels.PostableAlert {
+	labels := make(map[string]string, len(target.labels)+3) //nolint:gomnd
+	for k, v := range target.labels {
+		labels[k] = v
 	}
 
 	labels[model.AlertNameLabel] = name
@@ -434,15 +430,15 @@ func makeAlert(name string, target target, result *check.Result) (*ammodels.Post
 			"summary":     result.Summary,
 			"description": result.Description,
 		},
-	}, nil
+	}
 }
 
-// target contains required info about check target
+// target contains required info about check target.
 type target struct {
-	agent   *models.Agent
-	service *models.Service
-	node    *models.Node
-	dsn     string
+	agentID   string
+	serviceID string
+	labels    map[string]string
+	dsn       string
 }
 
 // findTargets returns slice of available targets for specified service type.
@@ -462,23 +458,29 @@ func (s *Service) findTargets(serviceType models.ServiceType) ([]target, error) 
 			if len(a) == 0 {
 				return errors.New("no available pmm agents")
 			}
+			agent := a[0]
 
 			dsn, err := models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, service.ServiceID, a[0].AgentID, "")
 			if err != nil {
 				return err
 			}
 
-			n, err := models.FindNodeByID(s.db.Querier, service.NodeID)
+			node, err := models.FindNodeByID(s.db.Querier, service.NodeID)
+			if err != nil {
+				return err
+			}
+
+			labels, err := models.MergeLabels(node, service, agent)
 			if err != nil {
 				return err
 			}
 
 			targets = append(targets,
 				target{
-					agent:   a[0],
-					service: service,
-					node:    n,
-					dsn:     dsn,
+					agentID:   agent.AgentID,
+					serviceID: service.ServiceID,
+					labels:    labels,
+					dsn:       dsn,
 				},
 			)
 			return nil
