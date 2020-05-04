@@ -220,13 +220,13 @@ func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) 
 	}
 
 	for _, target := range targets {
-		r, err := models.CreateActionResult(s.db.Querier, target.agent.AgentID)
-		if err != nil {
-			s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agent.AgentID, err)
-			continue
-		}
-
 		for _, c := range checks {
+			r, err := models.CreateActionResult(s.db.Querier, target.agent.AgentID)
+			if err != nil {
+				s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agent.AgentID, err)
+				continue
+			}
+
 			switch c.Type {
 			case check.MySQLShow:
 				if err := s.agentsRegistry.StartMySQLQueryShowAction(ctx, r.ID, target.agent.AgentID, target.dsn, c.Query); err != nil {
@@ -260,13 +260,13 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Ch
 	}
 
 	for _, target := range targets {
-		r, err := models.CreateActionResult(s.db.Querier, target.agent.AgentID)
-		if err != nil {
-			s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agent.AgentID, err)
-			continue
-		}
-
 		for _, c := range checks {
+			r, err := models.CreateActionResult(s.db.Querier, target.agent.AgentID)
+			if err != nil {
+				s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agent.AgentID, err)
+				continue
+			}
+
 			switch c.Type {
 			case check.PostgreSQLShow:
 				if err := s.agentsRegistry.StartPostgreSQLQueryShowAction(ctx, r.ID, target.agent.AgentID, target.dsn); err != nil {
@@ -300,13 +300,13 @@ func (s *Service) executeMongoDBChecks(ctx context.Context, checks []check.Check
 	}
 
 	for _, target := range targets {
-		r, err := models.CreateActionResult(s.db.Querier, target.agent.AgentID)
-		if err != nil {
-			s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agent.AgentID, err)
-			continue
-		}
-
 		for _, c := range checks {
+			r, err := models.CreateActionResult(s.db.Querier, target.agent.AgentID)
+			if err != nil {
+				s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agent.AgentID, err)
+				continue
+			}
+
 			switch c.Type {
 			case check.MongoDBGetParameter:
 				if err := s.agentsRegistry.StartMongoDBQueryGetParameterAction(context.Background(), r.ID, target.agent.AgentID, target.dsn); err != nil {
