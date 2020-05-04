@@ -20,10 +20,11 @@ package checks
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"io/ioutil"
 	"net"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -358,9 +359,9 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 		return errors.Wrap(err, "failed to execute script")
 	}
 
-	prefix := "stt" + target.service.ServiceID + "/" + check.Name + "/"
-	for i, result := range results {
-		id := prefix + strconv.Itoa(i)
+	prefix := "stt/"
+	for _, result := range results {
+		id := prefix + hash(target.service.ServiceID+result.Summary)
 		alert, err := makeAlert(id, target, &result)
 		if err != nil {
 			return errors.Wrap(err, "failed to create alert")
@@ -370,6 +371,11 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 	}
 
 	return nil
+}
+
+func hash(s string) string {
+	data := sha256.Sum256([]byte(s))
+	return base64.StdEncoding.EncodeToString(data[:])
 }
 
 func makeAlert(name string, target target, result *check.Result) (*ammodels.PostableAlert, error) {
