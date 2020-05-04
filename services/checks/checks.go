@@ -358,12 +358,12 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 	}
 
 	for _, result := range results {
-		alert, err := makeAlert(check.Name, target, &result)
+		alert, err := makeAlert(result.Summary, target, &result)
 		if err != nil {
 			return errors.Wrap(err, "failed to create alert")
 		}
 
-		s.alertsRegistry.Add(check.Name, time.Second, alert)
+		s.alertsRegistry.Add(result.Summary, time.Second, alert)
 	}
 
 	return nil
