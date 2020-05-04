@@ -50,14 +50,10 @@ func TestActionHelpers(t *testing.T) {
 		require.NoError(t, err)
 		q = tx.Querier
 
-		for _, str := range []reform.Struct{
-			&models.ActionResult{
-				ID:         "A1",
-				PMMAgentID: "A2",
-			},
-		} {
-			require.NoError(t, q.Insert(str))
-		}
+		require.NoError(t, q.Insert(&models.ActionResult{
+			ID:         "A1",
+			PMMAgentID: "A2",
+		}))
 
 		teardown = func(t *testing.T) {
 			require.NoError(t, tx.Rollback())
@@ -104,5 +100,13 @@ func TestActionHelpers(t *testing.T) {
 		_, err = models.FindPmmAgentIDToRunAction("", a2)
 		require.Error(t, err)
 		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Couldn't find pmm-agent-id to run action"), err)
+	})
+
+	t.Run("QueryActionBinaryData", func(t *testing.T) {
+		q, teardown := setup(t)
+		defer teardown(t)
+
+		err := models.ChangeActionResult(q, "A1", "A2", "", "\x00\x01\xfe\xff", true)
+		require.NoError(t, err)
 	})
 }
