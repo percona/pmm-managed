@@ -34,6 +34,7 @@ import (
 	"github.com/percona/pmm/api/alertmanager/ammodels"
 	"github.com/percona/pmm/utils/tlsconfig"
 	"github.com/pkg/errors"
+	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/model"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
@@ -57,6 +58,9 @@ const (
 	downloadTimeout     = 10 * time.Second
 	resultTimeout       = 15 * time.Second
 	resultCheckInterval = time.Second
+
+	prometheusNamespace = "pmm_managed"
+	prometheusSubsystem = "checks"
 )
 
 var defaultPublicKeys = []string{
@@ -65,32 +69,33 @@ var defaultPublicKeys = []string{
 
 // Service is responsible for interactions with Percona Check service.
 type Service struct {
+	agentsRegistry agentsRegistry
+	alertsRegistry alertRegistry
+	db             *reform.DB
+	pmmVersion     string
+
 	l          *logrus.Entry
-	pmmVersion string
 	host       string
 	publicKeys []string
 	interval   time.Duration
 
 	cm     sync.Mutex
 	checks []check.Check
-
-	agentsRegistry agentsRegistry
-	alertsRegistry alertRegistry
-	db             *reform.DB
 }
 
 // New returns Service with given PMM version.
 func New(agentsRegistry agentsRegistry, alertsRegistry alertRegistry, db *reform.DB, pmmVersion string) *Service {
 	l := logrus.WithField("component", "checks")
 	s := &Service{
-		l:              l,
-		pmmVersion:     pmmVersion,
-		host:           defaultHost,
-		publicKeys:     defaultPublicKeys,
-		interval:       defaultInterval,
 		agentsRegistry: agentsRegistry,
 		alertsRegistry: alertsRegistry,
 		db:             db,
+		pmmVersion:     pmmVersion,
+
+		l:          l,
+		host:       defaultHost,
+		publicKeys: defaultPublicKeys,
+		interval:   defaultInterval,
 	}
 
 	if h := os.Getenv(envHost); h != "" {
@@ -574,3 +579,18 @@ func (s *Service) verifySignatures(resp *api.GetAllChecksResponse) error {
 
 	return errors.New("no verified signatures")
 }
+
+// Describe implements prom.Collector.
+func (s *Service) Describe(ch chan<- *prom.Desc) {
+	// TODO
+}
+
+// Collect implements prom.Collector.
+func (s *Service) Collect(ch chan<- prom.Metric) {
+	// TODO
+}
+
+// check interfaces
+var (
+	_ prom.Collector = (*Service)(nil)
+)

@@ -570,7 +570,10 @@ func main() {
 	}
 
 	authServer := grafana.NewAuthServer(grafanaClient, awsInstanceChecker)
+
 	checksService := checks.New(agentsRegistry, alertsRegistry, db, version.Version)
+	prom.MustRegister(checksService)
+
 	var wg sync.WaitGroup
 
 	wg.Add(1)
