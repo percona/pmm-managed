@@ -88,6 +88,7 @@ func (e ExternalService) AddExternal(ctx context.Context, req *managementpb.AddE
 		return nil, e
 	}
 
+	// It's required to regenerate prometheus config file.
 	e.prometheus.RequestConfigurationUpdate()
 	return res, nil
 }
