@@ -64,6 +64,8 @@ const (
 
 	prometheusNamespace = "pmm_managed"
 	prometheusSubsystem = "checks"
+
+	alertsPrefix = "stt/"
 )
 
 var defaultPublicKeys = []string{
@@ -212,26 +214,38 @@ func (s *Service) waitForResult(ctx context.Context, resultID string) ([]map[str
 func (s *Service) executeChecks(ctx context.Context) {
 	mySQLChecks, postgreSQLChecks, mongoDBChecks := s.groupChecksByDB(s.checks)
 
-	if err := s.executeMySQLChecks(ctx, mySQLChecks); err != nil {
+	var alertsIDs []string
+
+	mySQLAlertsIDs, err := s.executeMySQLChecks(ctx, mySQLChecks)
+	if err != nil {
 		s.l.Errorf("Failed to execute MySQL checks: %s.", err)
 	}
+	alertsIDs = append(alertsIDs, mySQLAlertsIDs...)
 
-	if err := s.executePostgreSQLChecks(ctx, postgreSQLChecks); err != nil {
+	postgreSQLAlertsIDs, err := s.executePostgreSQLChecks(ctx, postgreSQLChecks)
+	if err != nil {
 		s.l.Errorf("Failed to execute PostgreSQL checks: %s.", err)
 	}
+	alertsIDs = append(alertsIDs, postgreSQLAlertsIDs...)
 
-	if err := s.executeMongoDBChecks(ctx, mongoDBChecks); err != nil {
+	mongoDBAlertsIDs, err := s.executeMongoDBChecks(ctx, mongoDBChecks)
+	if err != nil {
 		s.l.Errorf("Failed to execute MongoDB checks: %s.", err)
 	}
+	alertsIDs = append(alertsIDs, mongoDBAlertsIDs...)
+
+	// removing old STT alerts except created during current run
+	s.alertsRegistry.RemovePrefix(alertsPrefix, sliceToSet(alertsIDs))
 }
 
 // executeMySQLChecks runs MySQL checks for available MySQL services.
-func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) error {
+func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) ([]string, error) {
 	targets, err := s.findTargets(models.MySQLServiceType)
 	if err != nil {
-		return errors.Wrap(err, "failed to find proper agents and services")
+		return nil, errors.Wrap(err, "failed to find proper agents and services")
 	}
 
+	var res []string
 	for _, target := range targets {
 		for _, c := range checks {
 			r, err := models.CreateActionResult(s.db.Querier, target.agent.AgentID)
@@ -256,22 +270,25 @@ func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) 
 				continue
 			}
 
-			if err = s.processResults(ctx, c, target, r.ID); err != nil {
+			alerts, err := s.processResults(ctx, c, target, r.ID)
+			if err != nil {
 				s.l.Errorf("failed to process action result: %s", err)
 			}
+			res = append(res, alerts...)
 		}
 	}
 
-	return nil
+	return res, nil
 }
 
 // executePostgreSQLChecks runs PostgreSQL checks for available PostgreSQL services.
-func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Check) error {
+func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Check) ([]string, error) {
 	targets, err := s.findTargets(models.PostgreSQLServiceType)
 	if err != nil {
-		return errors.Wrap(err, "failed to find proper agents and services")
+		return nil, errors.Wrap(err, "failed to find proper agents and services")
 	}
 
+	var res []string
 	for _, target := range targets {
 		for _, c := range checks {
 			r, err := models.CreateActionResult(s.db.Querier, target.agent.AgentID)
@@ -296,22 +313,25 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Ch
 				continue
 			}
 
-			if err = s.processResults(ctx, c, target, r.ID); err != nil {
+			alerts, err := s.processResults(ctx, c, target, r.ID)
+			if err != nil {
 				s.l.Errorf("failed to process action result: %s", err)
 			}
+			res = append(res, alerts...)
 		}
 	}
 
-	return nil
+	return res, nil
 }
 
 // executeMongoDBChecks runs MongoDB checks for available MongoDB services.
-func (s *Service) executeMongoDBChecks(ctx context.Context, checks []check.Check) error {
+func (s *Service) executeMongoDBChecks(ctx context.Context, checks []check.Check) ([]string, error) {
 	targets, err := s.findTargets(models.MongoDBServiceType)
 	if err != nil {
-		return errors.Wrap(err, "failed to find proper agents and services")
+		return nil, errors.Wrap(err, "failed to find proper agents and services")
 	}
 
+	var res []string
 	for _, target := range targets {
 		for _, c := range checks {
 			r, err := models.CreateActionResult(s.db.Querier, target.agent.AgentID)
@@ -337,51 +357,54 @@ func (s *Service) executeMongoDBChecks(ctx context.Context, checks []check.Check
 				continue
 			}
 
-			if err = s.processResults(ctx, c, target, r.ID); err != nil {
+			alerts, err := s.processResults(ctx, c, target, r.ID)
+			if err != nil {
 				s.l.Errorf("failed to process action result: %s", err)
 			}
+			res = append(res, alerts...)
 		}
 	}
 
-	return nil
+	return res, nil
 }
 
 // TODO find better name
-func (s *Service) processResults(ctx context.Context, check check.Check, target target, resID string) error {
+func (s *Service) processResults(ctx context.Context, check check.Check, target target, resID string) ([]string, error) {
 	nCtx, cancel := context.WithTimeout(ctx, resultTimeout)
 	r, err := s.waitForResult(nCtx, resID)
 	cancel()
 	if err != nil {
-		return errors.Wrap(err, "failed to get check result")
+		return nil, errors.Wrap(err, "failed to get check result")
 	}
 
 	funcs, err := getFuncsForVersion(check.Version)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	env, err := starlark.NewEnv(check.Name, check.Script, funcs)
 	if err != nil {
-		return errors.Wrap(err, "failed to prepare starlark environment")
+		return nil, errors.Wrap(err, "failed to prepare starlark environment")
 	}
 
 	results, err := env.Run(check.Name, r, s.l.Debug)
 	if err != nil {
-		return errors.Wrap(err, "failed to execute script")
+		return nil, errors.Wrap(err, "failed to execute script")
 	}
 
-	prefix := "stt/"
-	for _, result := range results {
-		id := prefix + hash(target.service.ServiceID+result.Summary)
+	alertsIDs := make([]string, len(results))
+	for i, result := range results {
+		id := alertsPrefix + hash(target.service.ServiceID+result.Summary)
 		alert, err := makeAlert(id, target, &result)
 		if err != nil {
-			return errors.Wrap(err, "failed to create alert")
+			return nil, errors.Wrap(err, "failed to create alert")
 		}
 
 		s.alertsRegistry.Add(id, time.Second, alert)
+		alertsIDs[i] = id
 	}
 
-	return nil
+	return alertsIDs, nil
 }
 
 func hash(s string) string {
@@ -601,6 +624,15 @@ func (s *Service) verifySignatures(resp *api.GetAllChecksResponse) error {
 	}
 
 	return errors.New("no verified signatures")
+}
+
+func sliceToSet(slice []string) map[string]struct{} {
+	m := make(map[string]struct{}, len(slice))
+	for _, str := range slice {
+		m[str] = struct{}{}
+	}
+
+	return m
 }
 
 // Describe implements prom.Collector.

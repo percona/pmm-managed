@@ -18,3 +18,8 @@ type mockAlertRegistry struct {
 func (_m *mockAlertRegistry) Add(id string, delayFor time.Duration, alert *ammodels.PostableAlert) {
 	_m.Called(id, delayFor, alert)
 }
+
+// RemovePrefix provides a mock function with given fields: prefix, keepIDs
+func (_m *mockAlertRegistry) RemovePrefix(prefix string, keepIDs map[string]struct{}) {
+	_m.Called(prefix, keepIDs)
+}
