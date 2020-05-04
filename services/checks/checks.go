@@ -479,6 +479,9 @@ func (s *Service) groupChecksByDB(checks []check.Check) ([]check.Check, []check.
 
 // grabChecks loads checks list.
 func (s *Service) grabChecks(ctx context.Context) {
+	// TODO once checks are collected, filter out unknown versions
+	// collectCheck(ctx context.Context) ([]check.Check, error) might be a good function signature
+
 	if f := os.Getenv(envCheckFile); f != "" {
 		s.l.Warnf("Using local test checks file: %s.", f)
 		if err := s.loadLocalChecks(f); err != nil {
