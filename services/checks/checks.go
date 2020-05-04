@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -357,13 +358,15 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 		return errors.Wrap(err, "failed to execute script")
 	}
 
-	for _, result := range results {
-		alert, err := makeAlert(result.Summary, target, &result)
+	prefix := "stt" + target.service.ServiceID + "/" + check.Name + "/"
+	for i, result := range results {
+		id := prefix + strconv.Itoa(i)
+		alert, err := makeAlert(id, target, &result)
 		if err != nil {
 			return errors.Wrap(err, "failed to create alert")
 		}
 
-		s.alertsRegistry.Add(result.Summary, time.Second, alert)
+		s.alertsRegistry.Add(id, time.Second, alert)
 	}
 
 	return nil
