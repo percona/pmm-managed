@@ -24,6 +24,11 @@ import (
 	"github.com/percona/pmm/api/alertmanager/ammodels"
 )
 
+// for tests
+var now = func() time.Time {
+	return time.Now()
+}
+
 // Registry stores alerts and delay information by IDs.
 type Registry struct {
 	rw     sync.RWMutex
@@ -49,7 +54,7 @@ func (r *Registry) Add(id string, delayFor time.Duration, alert *ammodels.Postab
 
 	r.alerts[id] = alert
 	if r.times[id].IsZero() {
-		r.times[id] = time.Now().Add(delayFor)
+		r.times[id] = now().Add(delayFor)
 	}
 }
 
@@ -75,7 +80,7 @@ func (r *Registry) Collect() ammodels.PostableAlerts {
 	defer r.rw.RUnlock()
 
 	var res ammodels.PostableAlerts
-	now := time.Now()
+	now := now()
 	for id, t := range r.times {
 		if t.Before(now) {
 			res = append(res, r.alerts[id])
