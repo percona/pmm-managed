@@ -97,7 +97,7 @@ func (e *clientError) Error() string {
 // do makes HTTP request with given parameters, and decodes JSON response with 200 OK status
 // to respBody. It returns wrapped clientError on any other status, or other fatal errors.
 // ctx is used only for cancelation.
-func (c *Client) do(ctx context.Context, method, path string, headers http.Header, body []byte, rawQuery string, respBody interface{}) error {
+func (c *Client) do(ctx context.Context, method, path, rawQuery string, headers http.Header, body []byte, respBody interface{}) error {
 	u := url.URL{
 		Scheme:   "http",
 		Host:     c.addr,
@@ -181,7 +181,7 @@ func (r role) String() string {
 func (c *Client) getRole(ctx context.Context, authHeaders http.Header) (role, error) {
 	// https://grafana.com/docs/http_api/user/#actual-user - works with any authentication
 	var m map[string]interface{}
-	if err := c.do(ctx, "GET", "/api/user", authHeaders, nil, "", &m); err == nil {
+	if err := c.do(ctx, "GET", "/api/user", "", authHeaders, nil, &m); err == nil {
 		if a, _ := m["isGrafanaAdmin"].(bool); a {
 			return grafanaAdmin, nil
 		}
@@ -189,7 +189,7 @@ func (c *Client) getRole(ctx context.Context, authHeaders http.Header) (role, er
 
 	// https://grafana.com/docs/http_api/user/#organizations-of-the-actual-user - works with any authentication
 	var s []interface{}
-	if err := c.do(ctx, "GET", "/api/user/orgs", authHeaders, nil, "", &s); err != nil {
+	if err := c.do(ctx, "GET", "/api/user/orgs", "", authHeaders, nil, &s); err != nil {
 		return none, err
 	}
 
@@ -230,7 +230,7 @@ func (c *Client) testCreateUser(ctx context.Context, login string, role role, au
 		return 0, errors.WithStack(err)
 	}
 	var m map[string]interface{}
-	if err = c.do(ctx, "POST", "/api/admin/users", authHeaders, b, "", &m); err != nil {
+	if err = c.do(ctx, "POST", "/api/admin/users", "", authHeaders, b, &m); err != nil {
 		return 0, err
 	}
 	userID := int(m["id"].(float64))
@@ -247,7 +247,7 @@ func (c *Client) testCreateUser(ctx context.Context, login string, role role, au
 	if err != nil {
 		return 0, errors.WithStack(err)
 	}
-	if err = c.do(ctx, "PATCH", "/api/org/users/"+strconv.Itoa(userID), authHeaders, b, "", nil); err != nil {
+	if err = c.do(ctx, "PATCH", "/api/org/users/"+strconv.Itoa(userID), "", authHeaders, b, nil); err != nil {
 		return 0, err
 	}
 	return userID, nil
@@ -255,7 +255,7 @@ func (c *Client) testCreateUser(ctx context.Context, login string, role role, au
 
 func (c *Client) testDeleteUser(ctx context.Context, userID int, authHeaders http.Header) error {
 	// https://grafana.com/docs/http_api/admin/#delete-global-user
-	return c.do(ctx, "DELETE", "/api/admin/users/"+strconv.Itoa(userID), authHeaders, nil, "", nil)
+	return c.do(ctx, "DELETE", "/api/admin/users/"+strconv.Itoa(userID), "", authHeaders, nil, nil)
 }
 
 type annotation struct {
@@ -299,7 +299,6 @@ func (c *Client) CreateAnnotation(ctx context.Context, tags []string, from time.
 	if err != nil {
 		return "", errors.Wrap(err, "failed to marshal request")
 	}
-	fmt.Println(string(b))
 
 	var headers = make(http.Header)
 	headers.Add("Authorization", authorization)
@@ -308,7 +307,7 @@ func (c *Client) CreateAnnotation(ctx context.Context, tags []string, from time.
 		Message string `json:"message"`
 	}
 
-	if err := c.do(ctx, "POST", "/api/annotations", headers, b, "", &response); err != nil {
+	if err := c.do(ctx, "POST", "/api/annotations", "", headers, b, &response); err != nil {
 		return "", errors.Wrap(err, "failed to create annotation")
 	}
 
@@ -326,16 +325,13 @@ func (c *Client) findAnnotations(ctx context.Context, from, to time.Time, author
 		"to":   []string{strconv.FormatInt(to.UnixNano()/int64(time.Millisecond), 10)},
 	}.Encode()
 
-	fmt.Println(params)
-
 	var response []annotation
-	if err := c.do(ctx, "GET", "/api/annotations", headers, nil, params, &response); err != nil {
+	if err := c.do(ctx, "GET", "/api/annotations", params, headers, nil, &response); err != nil {
 		return nil, err
 	}
 
 	for i, r := range response {
 		r.decode()
-		fmt.Println(r.TimeInt)
 		response[i] = r
 	}
 	return response, nil
@@ -350,7 +346,7 @@ type grafanaHealthResponse struct {
 // IsReady calls Grafana API to check its status
 func (c *Client) IsReady(ctx context.Context) error {
 	var status grafanaHealthResponse
-	if err := c.do(ctx, "GET", "/api/health", nil, nil, "", &status); err != nil {
+	if err := c.do(ctx, "GET", "/api/health", "", nil, nil, &status); err != nil {
 		// since we don't return the error to the user, log it to help debugging
 		logrus.Errorf("grafana status check failed: %s", err)
 		return fmt.Errorf("cannot reach Grafana API")
