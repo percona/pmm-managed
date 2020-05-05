@@ -20,8 +20,8 @@ package checks
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/base64"
+	"crypto/sha1" //nolint:gosec
+	"encoding/hex"
 	"io/ioutil"
 	"net"
 	"os"
@@ -407,23 +407,27 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 
 	alertsIDs := make([]string, len(results))
 	for i, result := range results {
-		id := alertsPrefix + hash(target.serviceID+result.Summary)
-		alert := makeAlert(id, target, &result)
-		s.alertsRegistry.Add(id, time.Second, alert)
+		id := alertsPrefix + hashID(target.serviceID+result.Summary)
+		alert := makeAlert(check.Name, target, &result)
+		s.alertsRegistry.Add(id, 0, alert)
 		alertsIDs[i] = id
 	}
 
 	return alertsIDs, nil
 }
 
-func hash(s string) string {
-	data := sha256.Sum256([]byte(s))
-	return base64.StdEncoding.EncodeToString(data[:])
+// non-cryptographic hash
+func hashID(s string) string {
+	data := sha1.Sum([]byte(s)) //nolint:gosec
+	return hex.EncodeToString(data[:])
 }
 
 func makeAlert(name string, target target, result *check.Result) *ammodels.PostableAlert {
-	labels := make(map[string]string, len(target.labels)+3) //nolint:gomnd
+	labels := make(map[string]string, len(target.labels)+len(result.Labels)+3) //nolint:gomnd
 	for k, v := range target.labels {
+		labels[k] = v
+	}
+	for k, v := range result.Labels {
 		labels[k] = v
 	}
 
