@@ -591,6 +591,12 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		checksService.Run(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		supervisord.Run(ctx)
 	}()
 
@@ -625,12 +631,6 @@ func main() {
 	go func() {
 		defer wg.Done()
 		runDebugServer(ctx)
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		checksService.Run(ctx)
 	}()
 
 	wg.Wait()
