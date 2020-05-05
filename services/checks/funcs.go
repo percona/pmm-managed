@@ -22,6 +22,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// getFuncsForVersion returns predefined functions for specified check version.
 func getFuncsForVersion(version uint32) (map[string]starlark.GoFunc, error) {
 	switch version {
 	case 1:

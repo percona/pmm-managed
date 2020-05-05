@@ -610,6 +610,7 @@ func (s *Service) downloadChecks(ctx context.Context) ([]check.Check, error) {
 	return checks, nil
 }
 
+// filterSupportedChecks returns supported checks and prints warning log messages about unsupported.
 func (s *Service) filterSupportedChecks(checks []check.Check) []check.Check {
 	res := make([]check.Check, 0, len(checks))
 	for _, c := range checks {
