@@ -47,8 +47,9 @@ import (
 )
 
 const (
-	defaultHost     = "check.percona.com:443"
-	defaultInterval = 24 * time.Hour
+	defaultHost       = "check.percona.com:443"
+	defaultInterval   = 24 * time.Hour
+	defaultStartDelay = time.Minute
 
 	// Environment variables that affect checks service; only for testing.
 	envHost      = "PERCONA_TEST_CHECKS_HOST"
@@ -56,14 +57,14 @@ const (
 	envInterval  = "PERCONA_TEST_CHECKS_INTERVAL"
 	envCheckFile = "PERCONA_TEST_CHECKS_FILE"
 
-	startTimeout        = time.Minute
 	checksTimeout       = time.Hour
 	downloadTimeout     = 10 * time.Second
 	resultTimeout       = 15 * time.Second
 	resultCheckInterval = time.Second
 
-	prometheusNamespace = "pmm_managed"
-	prometheusSubsystem = "checks"
+	// TODO https://jira.percona.com/browse/SAAS-104
+	// prometheusNamespace = "pmm_managed"
+	// prometheusSubsystem = "checks"
 
 	alertsPrefix        = "stt/"
 	maxSupportedVersion = 1
@@ -84,6 +85,7 @@ type Service struct {
 	host       string
 	publicKeys []string
 	interval   time.Duration
+	startDelay time.Duration
 
 	cm     sync.Mutex
 	checks []check.Check
@@ -102,6 +104,7 @@ func New(agentsRegistry agentsRegistry, alertsRegistry alertRegistry, db *reform
 		host:       defaultHost,
 		publicKeys: defaultPublicKeys,
 		interval:   defaultInterval,
+		startDelay: defaultStartDelay,
 	}
 
 	if h := os.Getenv(envHost); h != "" {
@@ -113,8 +116,9 @@ func New(agentsRegistry agentsRegistry, alertsRegistry alertRegistry, db *reform
 		l.Warnf("Public keys changed to %q.", k)
 	}
 	if d, err := time.ParseDuration(os.Getenv(envInterval)); err == nil && d > 0 {
-		l.Warnf("Interval changed to %s.", d)
+		l.Warnf("Interval changed to %s; start delay disabled.", d)
 		s.interval = d
+		s.startDelay = 0
 	}
 
 	return s
@@ -123,12 +127,10 @@ func New(agentsRegistry agentsRegistry, alertsRegistry alertRegistry, db *reform
 // Run runs checks service that grabs checks from Percona Checks service every interval until context is canceled.
 func (s *Service) Run(ctx context.Context) {
 	// delay for the first run to allow all agents to connect
-	timer := time.NewTimer(startTimeout)
-	defer timer.Stop()
-
-	select {
-	case <-timer.C:
-	case <-ctx.Done():
+	startCtx, cancel := context.WithTimeout(ctx, s.startDelay)
+	<-startCtx.Done()
+	cancel()
+	if ctx.Err() != nil { // check main context, not startCtx
 		return
 	}
 
@@ -675,12 +677,12 @@ func sliceToSet(slice []string) map[string]struct{} {
 
 // Describe implements prom.Collector.
 func (s *Service) Describe(ch chan<- *prom.Desc) {
-	// TODO
+	// TODO https://jira.percona.com/browse/SAAS-104
 }
 
 // Collect implements prom.Collector.
 func (s *Service) Collect(ch chan<- prom.Metric) {
-	// TODO
+	// TODO https://jira.percona.com/browse/SAAS-104
 }
 
 // check interfaces
