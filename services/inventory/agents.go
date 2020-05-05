@@ -716,7 +716,7 @@ func (as *AgentsService) AddExternalExporter(req *inventorypb.AddExternalExporte
 			Username:     req.Username,
 			Password:     req.Password,
 			Scheme:       req.Scheme,
-			MetricPath:   req.MetricPath,
+			MetricsPath:  req.MetricsPath,
 			ListenPort:   req.ListenPort,
 			CustomLabels: req.CustomLabels,
 		}
@@ -748,6 +748,9 @@ func (as *AgentsService) ChangeExternalExporter(req *inventorypb.ChangeExternalE
 	if err != nil {
 		return nil, err
 	}
+
+	// It's required to regenerate prometheus config file.
+	as.p.RequestConfigurationUpdate()
 
 	res := agent.(*inventorypb.ExternalExporter)
 	return res, nil
