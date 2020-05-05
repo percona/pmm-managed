@@ -215,6 +215,8 @@ func (s *Service) waitForResult(ctx context.Context, resultID string) ([]map[str
 
 // executeChecks runs all available checks for all reachable services.
 func (s *Service) executeChecks(ctx context.Context) {
+	s.l.Info("Executing checks...")
+
 	mySQLChecks, postgreSQLChecks, mongoDBChecks := s.groupChecksByDB(s.checks)
 
 	var alertsIDs []string
@@ -395,12 +397,12 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 		"id":         resID,
 		"service_id": target.serviceID,
 	})
-	l.Debugf("Running check with: %+v", r)
+	l.Debugf("Running check script with: %+v", r)
 	results, err := env.Run(check.Name, r, l.Debug)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to execute script")
 	}
-	l.Infof("Check returned %d results.", len(results))
+	l.Infof("Check script returned %d results.", len(results))
 	l.Debugf("Results: %+v", results)
 
 	alertsIDs := make([]string, len(results))
