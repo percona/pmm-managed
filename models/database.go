@@ -233,14 +233,14 @@ var databaseSchema = [][]string{
 			settings = settings || '{"metrics_resolutions":{"hr": 5000000000, "mr": 10000000000, "lr": 60000000000}}'
 			WHERE settings->'metrics_resolutions'->>'hr' = '5000000000' 
 			AND settings->'metrics_resolutions'->>'mr' = '5000000000'
-			AND settings->'metrics_resolutions'->>'lr' = '60000000000';`,
+			AND settings->'metrics_resolutions'->>'lr' = '60000000000'`,
 	},
 
 	11: {
 		`ALTER TABLE services
 			ADD COLUMN socket VARCHAR CONSTRAINT address_socket_check CHECK (
 				(address IS NOT NULL AND socket IS NULL) OR (address IS NULL AND socket IS NOT NULL)
-			);`,
+			)`,
 
 		`ALTER TABLE services
 			ADD CONSTRAINT address_port_check CHECK (
@@ -248,7 +248,7 @@ var databaseSchema = [][]string{
 			),
 			ADD CONSTRAINT port_check CHECK (
 				port IS NULL OR (port > 0 AND port < 65535)
-			);`,
+			)`,
 	},
 
 	12: {
@@ -263,22 +263,22 @@ var databaseSchema = [][]string{
 
 	13: {
 		`ALTER TABLE services
-			DROP CONSTRAINT address_socket_check;`,
+			DROP CONSTRAINT address_socket_check`,
 
 		`ALTER TABLE services
 			ADD CONSTRAINT address_socket_check CHECK (
 				(address IS NOT NULL AND socket IS NULL) OR (address IS NULL AND socket IS NOT NULL) OR (address IS NULL AND socket IS NULL)
-			);`,
+			)`,
 	},
 
 	14: {
 		`ALTER TABLE services
-			DROP CONSTRAINT port_check;`,
+			DROP CONSTRAINT port_check`,
 
 		`ALTER TABLE services
 			ADD CONSTRAINT port_check CHECK (
 				port IS NULL OR (port > 0 AND port < 65536)
-			);`,
+			)`,
 	},
 }
 
