@@ -385,7 +385,7 @@
 
 [[projects]]
   branch = "PMM-5728-management-add-external"
-  digest = "1:828a2a82e54417dce74b90843af40faf4af7d972232626d55da5aeef97598e76"
+  digest = "1:401e8d8e4962ffdc02ec09ca3415c94e7264565faa0b080b09ffb370d5b97ba5"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -406,7 +406,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "bf814918d12bb89f187719980fd3ca8c8e586ecf"
+  revision = "a398e4b71724e72acb1943bb796438de0aeb0161"
 
 [[projects]]
   digest = "1:1e38d8f6796fabbf419aa2040dc196927690a1de7fe14af25fbd29c6ed44b4da"
