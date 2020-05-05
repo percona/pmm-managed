@@ -38,19 +38,19 @@ func TestRegistry(t *testing.T) {
 		r := NewRegistry()
 		alert := new(ammodels.PostableAlert)
 		r.Add("test", time.Minute, alert)
-		assert.Empty(t, r.Collect())
+		assert.Empty(t, r.collect())
 
 		// 1 second before
 		nowValue = nowValue.Add(59 * time.Second)
-		assert.Empty(t, r.Collect())
+		assert.Empty(t, r.collect())
 
 		// exactly that time
 		nowValue = nowValue.Add(time.Second)
-		assert.Empty(t, r.Collect())
+		assert.Empty(t, r.collect())
 
 		// 1 second after
 		nowValue = nowValue.Add(time.Second)
-		alerts := r.Collect()
+		alerts := r.collect()
 		require.Len(t, alerts, 1)
 		assert.Equal(t, alert, alerts[0])
 	})

@@ -36,7 +36,7 @@ import (
 
 const resendInterval = 30 * time.Second
 
-// Service is responsible for interactions with Prometheus.
+// Service is responsible for interactions with Alertmanager.
 type Service struct {
 	db            *reform.DB
 	serverVersion *version.Parsed
@@ -45,17 +45,11 @@ type Service struct {
 }
 
 // New creates new service.
-func New(db *reform.DB, v string, alertsRegistry *Registry) (*Service, error) {
-	serverVersion, err := version.Parse(v)
-	if err != nil {
-		return nil, err
-	}
-
+func New(db *reform.DB, alertsRegistry *Registry) (*Service, error) {
 	return &Service{
-		db:            db,
-		serverVersion: serverVersion,
-		r:             alertsRegistry,
-		l:             logrus.WithField("component", "alertmanager"),
+		db: db,
+		r:  alertsRegistry,
+		l:  logrus.WithField("component", "alertmanager"),
 	}, nil
 }
 
@@ -105,7 +99,7 @@ receivers:
 
 // sendAlerts sends alerts collected in the Registry.
 func (svc *Service) sendAlerts(ctx context.Context) {
-	alerts := svc.r.Collect()
+	alerts := svc.r.collect()
 	if len(alerts) == 0 {
 		return
 	}

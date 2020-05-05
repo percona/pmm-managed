@@ -509,7 +509,7 @@ func main() {
 	prom.MustRegister(agentsRegistry)
 
 	alertsRegistry := alertmanager.NewRegistry()
-	alertmanager, err := alertmanager.New(db, version.Version, alertsRegistry)
+	alertmanager, err := alertmanager.New(db, alertsRegistry)
 	if err != nil {
 		l.Panicf("Alertmanager service problem: %+v", err)
 	}

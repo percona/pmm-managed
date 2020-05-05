@@ -74,8 +74,8 @@ func (r *Registry) RemovePrefix(prefix string, keepIDs map[string]struct{}) {
 	}
 }
 
-// Collect returns all firing alerts.
-func (r *Registry) Collect() ammodels.PostableAlerts {
+// collect returns all firing alerts.
+func (r *Registry) collect() ammodels.PostableAlerts {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
