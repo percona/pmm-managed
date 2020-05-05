@@ -66,7 +66,7 @@ const (
 	// prometheusNamespace = "pmm_managed"
 	// prometheusSubsystem = "checks"
 
-	alertsPrefix        = "stt/"
+	alertsPrefix        = "/stt/"
 	maxSupportedVersion = 1
 )
 
@@ -407,8 +407,8 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 
 	alertsIDs := make([]string, len(results))
 	for i, result := range results {
-		id := alertsPrefix + hashID(target.serviceID+result.Summary)
-		alert := makeAlert(check.Name, target, &result)
+		id := alertsPrefix + hashID(target.serviceID+"/"+result.Summary)
+		alert := makeAlert(id, check.Name, target, &result)
 		s.alertsRegistry.Add(id, 0, alert)
 		alertsIDs[i] = id
 	}
@@ -422,8 +422,8 @@ func hashID(s string) string {
 	return hex.EncodeToString(data[:])
 }
 
-func makeAlert(name string, target target, result *check.Result) *ammodels.PostableAlert {
-	labels := make(map[string]string, len(target.labels)+len(result.Labels)+3) //nolint:gomnd
+func makeAlert(id, name string, target target, result *check.Result) *ammodels.PostableAlert {
+	labels := make(map[string]string, len(target.labels)+len(result.Labels)+4) //nolint:gomnd
 	for k, v := range target.labels {
 		labels[k] = v
 	}
@@ -434,6 +434,7 @@ func makeAlert(name string, target target, result *check.Result) *ammodels.Posta
 	labels[model.AlertNameLabel] = name
 	labels["severity"] = result.Severity.String()
 	labels["stt_check"] = "1"
+	labels["alert_id"] = id
 
 	return &ammodels.PostableAlert{
 		Alert: ammodels.Alert{
