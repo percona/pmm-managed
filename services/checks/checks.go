@@ -401,6 +401,7 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 		return nil, errors.Wrap(err, "failed to execute script")
 	}
 	l.Infof("Check returned %d results.", len(results))
+	l.Debugf("Results: %+v", results)
 
 	alertsIDs := make([]string, len(results))
 	for i, result := range results {
