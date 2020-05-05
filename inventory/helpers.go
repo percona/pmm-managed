@@ -189,6 +189,18 @@ func addProxySQLExporter(t pmmapitests.TestingT, body agents.AddProxySQLExporter
 	return res.Payload
 }
 
+func addExternalExporter(t pmmapitests.TestingT, body agents.AddExternalExporterBody) *agents.AddExternalExporterOKBody {
+	t.Helper()
+
+	res, err := client.Default.Agents.AddExternalExporter(&agents.AddExternalExporterParams{
+		Body:    body,
+		Context: pmmapitests.Context,
+	})
+	assert.NoError(t, err)
+	require.NotNil(t, res)
+	return res.Payload
+}
+
 func assertPostgreSQLServiceExists(t pmmapitests.TestingT, res *services.ListServicesOK, serviceID string) bool {
 	t.Helper()
 
