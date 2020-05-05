@@ -28,7 +28,6 @@ import (
 	"github.com/percona/pmm/api/alertmanager/amclient"
 	"github.com/percona/pmm/api/alertmanager/amclient/alert"
 	"github.com/percona/pmm/api/alertmanager/amclient/general"
-	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/reform.v1"
@@ -38,10 +37,9 @@ const resendInterval = 30 * time.Second
 
 // Service is responsible for interactions with Alertmanager.
 type Service struct {
-	db            *reform.DB
-	serverVersion *version.Parsed
-	r             *Registry
-	l             *logrus.Entry
+	db *reform.DB
+	r  *Registry
+	l  *logrus.Entry
 }
 
 // New creates new service.
