@@ -68,7 +68,7 @@ func (e ExternalService) AddExternal(ctx context.Context, req *managementpb.AddE
 			Username:     req.Username,
 			Password:     req.Password,
 			Scheme:       req.Scheme,
-			MetricPath:   req.MetricPath,
+			MetricsPath:  req.MetricsPath,
 			ListenPort:   req.ListenPort,
 			CustomLabels: req.CustomLabels,
 		}
