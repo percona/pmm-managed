@@ -315,7 +315,7 @@
   version = "v1.0.2"
 
 [[projects]]
-  digest = "1:16ead65b45fd4467e7ec30a112ce42e6c3ab1cb3b9c038edeb4921663a59501a"
+  digest = "1:c093221d65ee6361ee442c427b6af0d463630abaa5f6e0de0cde1f4f2e51acbb"
   name = "github.com/lib/pq"
   packages = [
     ".",
@@ -323,8 +323,8 @@
     "scram",
   ]
   pruneopts = "NUT"
-  revision = "99274577be97ac9b1d95a2d61d566dc9b7cc6a54"
-  version = "v1.3.0"
+  revision = "c904eabba4136fb97e44adefd2f4f979131242c7"
+  version = "v1.5.1"
 
 [[projects]]
   digest = "1:7bbccd3dd7998f2a180264ec1d12e362ed8e02f55ea7b82ac0d0f48ffa2d8888"
