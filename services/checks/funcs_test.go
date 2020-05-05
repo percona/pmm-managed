@@ -30,10 +30,14 @@ func TestVersion(t *testing.T) {
 	script := strings.TrimSpace(`
 def check(rows):
     v = parse_version(rows[0].get("version"))
+    print("v =", v)
+
     s = format_version_num(v["num"])
+    print("s =", s)
+
     return [{
-		"summary": s,
-		"severity": "warning",
+        "summary": s,
+        "severity": "warning",
         "labels": {
             "major": str(v["major"]),
             "minor": str(v["minor"]),
@@ -43,17 +47,15 @@ def check(rows):
         }
     }]
 	`)
-	funcs := map[string]starlark.GoFunc{
-		"parse_version":      parseVersion,
-		"format_version_num": formatVersionNum,
-	}
+	funcs, err := getFuncsForVersion(1)
+	require.NoError(t, err)
 	env, err := starlark.NewEnv(t.Name(), script, funcs)
 	require.NoError(t, err)
 
 	input := []map[string]interface{}{
 		{"version": int64(1)},
 	}
-	res, err := env.Run("type", input, nil)
+	res, err := env.Run("type", input, t.Log)
 	expectedErr := strings.TrimSpace(`
 thread type: failed to execute function check: parse_version: expected string argument, got int64 (1)
 Traceback (most recent call last):
@@ -66,7 +68,7 @@ Traceback (most recent call last):
 	input = []map[string]interface{}{
 		{"version": "foo"},
 	}
-	res, err = env.Run("foo", input, nil)
+	res, err = env.Run("foo", input, t.Log)
 	expectedErr = strings.TrimSpace(`
 thread foo: failed to execute function check: parse_version: failed to parse "foo"
 Traceback (most recent call last):
@@ -77,19 +79,19 @@ Traceback (most recent call last):
 	assert.Empty(t, res)
 
 	input = []map[string]interface{}{
-		{"version": "8.0.19-10"},
+		{"version": "5.7.20-19-log"},
 	}
-	res, err = env.Run("valid", input, nil)
+	res, err = env.Run("valid", input, t.Log)
 	require.NoError(t, err)
 	expected := []check.Result{{
-		Summary:  "8.0.19",
+		Summary:  "5.7.20",
 		Severity: check.Warning,
 		Labels: map[string]string{
-			"major": "8",
-			"minor": "0",
-			"patch": "19",
-			"rest":  "-10",
-			"num":   "80019",
+			"major": "5",
+			"minor": "7",
+			"patch": "20",
+			"rest":  "-19-log",
+			"num":   "50720",
 		},
 	}}
 	assert.Equal(t, expected, res)
