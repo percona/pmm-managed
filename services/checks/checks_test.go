@@ -41,9 +41,9 @@ func TestDownloadChecks(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), downloadTimeout)
 		defer cancel()
 
-		err := s.downloadChecks(ctx)
+		checks, err := s.downloadChecks(ctx)
 		require.NoError(t, err)
-		assert.NotEmpty(t, s.Checks())
+		assert.NotEmpty(t, checks)
 	})
 }
 

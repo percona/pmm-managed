@@ -65,7 +65,8 @@ const (
 	prometheusNamespace = "pmm_managed"
 	prometheusSubsystem = "checks"
 
-	alertsPrefix = "stt/"
+	alertsPrefix        = "stt/"
+	maxSupportedVersion = 1
 )
 
 var defaultPublicKeys = []string{
@@ -146,7 +147,7 @@ func (s *Service) Run(ctx context.Context) {
 
 		if sttEnabled {
 			nCtx, cancel := context.WithTimeout(ctx, checksTimeout)
-			s.grabChecks(nCtx)
+			s.collectChecks(nCtx)
 			s.executeChecks(nCtx)
 			cancel()
 		} else {
@@ -529,46 +530,48 @@ func (s *Service) groupChecksByDB(checks []check.Check) ([]check.Check, []check.
 	return mySQLChecks, postgreSQLChecks, mongoDBChecks
 }
 
-// grabChecks loads checks list.
-func (s *Service) grabChecks(ctx context.Context) {
-	// TODO once checks are collected, filter out unknown versions
-	// collectCheck(ctx context.Context) ([]check.Check, error) might be a good function signature
-
+// collectChecks loads checks list.
+func (s *Service) collectChecks(ctx context.Context) {
+	var checks []check.Check
+	var err error
 	if f := os.Getenv(envCheckFile); f != "" {
 		s.l.Warnf("Using local test checks file: %s.", f)
-		if err := s.loadLocalChecks(f); err != nil {
+		checks, err = s.loadLocalChecks(f)
+		if err != nil {
 			s.l.Errorf("Failed to load local checks file: %s.", err)
 		}
-		return
+	} else {
+		checks, err = s.downloadChecks(ctx)
+		if err != nil {
+			s.l.Errorf("Failed to download checks: %s.", err)
+		}
 	}
 
-	if err := s.downloadChecks(ctx); err != nil {
-		s.l.Errorf("Failed to download checks: %s.", err)
-	}
+	checks = s.filterSupportedChecks(checks)
+	s.updateChecks(checks)
 }
 
 // loadLocalCheck loads checks form local file.
-func (s *Service) loadLocalChecks(file string) error {
+func (s *Service) loadLocalChecks(file string) ([]check.Check, error) {
 	data, err := ioutil.ReadFile(file) //nolint:gosec
 	if err != nil {
-		return errors.Wrap(err, "failed to read test checks file")
+		return nil, errors.Wrap(err, "failed to read test checks file")
 	}
 	checks, err := check.Parse(bytes.NewReader(data))
 	if err != nil {
-		return errors.Wrap(err, "failed to parse test checks file")
+		return nil, errors.Wrap(err, "failed to parse test checks file")
 	}
 
-	s.updateChecks(checks)
-	return nil
+	return checks, nil
 }
 
 // downloadChecks downloads checks form percona service endpoint.
-func (s *Service) downloadChecks(ctx context.Context) error {
+func (s *Service) downloadChecks(ctx context.Context) ([]check.Check, error) {
 	s.l.Infof("Downloading checks from %s ...", s.host)
 
 	host, _, err := net.SplitHostPort(s.host)
 	if err != nil {
-		return errors.Wrap(err, "failed to set checks host")
+		return nil, errors.Wrap(err, "failed to set checks host")
 	}
 	tlsConfig := tlsconfig.Get()
 	tlsConfig.ServerName = host
@@ -586,26 +589,51 @@ func (s *Service) downloadChecks(ctx context.Context) error {
 	defer cancel()
 	cc, err := grpc.DialContext(ctx, s.host, opts...)
 	if err != nil {
-		return errors.Wrap(err, "failed to dial")
+		return nil, errors.Wrap(err, "failed to dial")
 	}
 	defer cc.Close() //nolint:errcheck
 
 	resp, err := api.NewRetrievalAPIClient(cc).GetAllChecks(ctx, &api.GetAllChecksRequest{})
 	if err != nil {
-		return errors.Wrap(err, "failed to request checks service")
+		return nil, errors.Wrap(err, "failed to request checks service")
 	}
 
 	if err = s.verifySignatures(resp); err != nil {
-		return err
+		return nil, err
 	}
 
 	checks, err := check.Parse(strings.NewReader(resp.File))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	s.updateChecks(checks)
-	return nil
+	return checks, nil
+}
+
+func (s *Service) filterSupportedChecks(checks []check.Check) []check.Check {
+	res := make([]check.Check, 0, len(checks))
+	for _, c := range checks {
+		if c.Version > maxSupportedVersion {
+			s.l.Warnf("Unsupported checks version: %d, max supported version: %d", c.Version, maxSupportedVersion)
+			continue
+		}
+
+		switch c.Type {
+		case check.MySQLShow:
+		case check.MySQLSelect:
+		case check.PostgreSQLShow:
+		case check.PostgreSQLSelect:
+		case check.MongoDBGetParameter:
+		case check.MongoDBBuildInfo:
+		default:
+			s.l.Warnf("Unsupported checks type: %s", c.Type)
+			continue
+		}
+
+		res = append(res, c)
+	}
+
+	return res
 }
 
 // updateChecks update service checks filed value under mutex.
