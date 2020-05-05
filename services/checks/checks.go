@@ -387,10 +387,17 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 		return nil, errors.Wrap(err, "failed to prepare starlark environment")
 	}
 
-	results, err := env.Run(check.Name, r, s.l.Debug)
+	l := s.l.WithFields(logrus.Fields{
+		"name":       check.Name,
+		"id":         resID,
+		"service_id": target.serviceID,
+	})
+	l.Debugf("Running check with: %+v", r)
+	results, err := env.Run(check.Name, r, l.Debug)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to execute script")
 	}
+	l.Infof("Check returned %d results.", len(results))
 
 	alertsIDs := make([]string, len(results))
 	for i, result := range results {
