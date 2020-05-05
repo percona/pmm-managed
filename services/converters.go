@@ -343,7 +343,7 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 			Username:     pointer.GetString(agent.Username),
 			Disabled:     agent.Disabled,
 			Scheme:       pointer.GetString(agent.MetricsScheme),
-			MetricPath:   pointer.GetString(agent.MetricsPath),
+			MetricsPath:  pointer.GetString(agent.MetricsPath),
 			ListenPort:   uint32(pointer.GetUint16(agent.ListenPort)),
 			CustomLabels: labels,
 		}, nil

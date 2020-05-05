@@ -716,7 +716,7 @@ func (as *AgentsService) AddExternalExporter(req *inventorypb.AddExternalExporte
 			Username:     req.Username,
 			Password:     req.Password,
 			Scheme:       req.Scheme,
-			MetricPath:   req.MetricPath,
+			MetricsPath:  req.MetricsPath,
 			ListenPort:   req.ListenPort,
 			CustomLabels: req.CustomLabels,
 		}

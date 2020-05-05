@@ -237,7 +237,7 @@ func TestAgents(t *testing.T) {
 			ServiceId:    ps.ServiceId,
 			Username:     "username",
 			Scheme:       "http",
-			MetricPath:   "/metrics",
+			MetricsPath:  "/metrics",
 			ListenPort:   9222,
 		}
 		assert.Equal(t, expectedExternalExporter, actualAgent)
@@ -417,7 +417,7 @@ func TestAgents(t *testing.T) {
 			ServiceId:    service.ServiceId,
 			Username:     "username",
 			Scheme:       "http",
-			MetricPath:   "/metrics",
+			MetricsPath:  "/metrics",
 			ListenPort:   12345,
 		}
 		assert.Equal(t, expectedExternalExporter, agent)
