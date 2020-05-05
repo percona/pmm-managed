@@ -86,7 +86,7 @@ func TestCleaner(t *testing.T) {
 
 		c := New(db)
 		go func() {
-			c.Run(ctx, 5*time.Second) // delete rows older that 5 seconds
+			c.Run(ctx, 5*time.Second, 5*time.Second) // delete rows older that 5 seconds
 		}()
 		// give the cleaner the chance to run
 		time.Sleep(100 * time.Millisecond)

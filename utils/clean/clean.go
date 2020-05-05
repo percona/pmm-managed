@@ -38,16 +38,14 @@ func New(db *reform.DB) *CleanResults {
 }
 
 // Run starts the clean process.
-func (c *CleanResults) Run(ctx context.Context, interval time.Duration) {
+func (c *CleanResults) Run(ctx context.Context, interval time.Duration, olderThan time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	l := logrus.WithField("component", "cleaner")
 
 	for {
-		// if this query runs every minute, it will clean results older than 1 minute,
-		// if it runs every 10 minutes, it will clean results older than 10 minutes.
-		olderThan := models.Now().Add(-1 * interval)
-		if err := models.CleanupOldResults(c.db.Querier, olderThan); err != nil {
+		olderThanTs := models.Now().Add(-1 * olderThan)
+		if err := models.CleanupOldResults(c.db.Querier, olderThanTs); err != nil {
 			l.Error(err)
 		}
 

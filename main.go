@@ -632,7 +632,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		cleaner.Run(ctx, 10*time.Minute)
+		cleaner.Run(ctx, 10*time.Minute, 30*time.Minute)
 	}()
 
 	wg.Wait()
