@@ -127,9 +127,9 @@ func New(agentsRegistry agentsRegistry, alertsRegistry alertRegistry, db *reform
 // Run runs checks service that grabs checks from Percona Checks service every interval until context is canceled.
 func (s *Service) Run(ctx context.Context) {
 	// delay for the first run to allow all agents to connect
-	startCtx, cancel := context.WithTimeout(ctx, s.startDelay)
+	startCtx, startCancel := context.WithTimeout(ctx, s.startDelay)
 	<-startCtx.Done()
-	cancel()
+	startCancel()
 	if ctx.Err() != nil { // check main context, not startCtx
 		return
 	}
@@ -165,8 +165,8 @@ func (s *Service) Run(ctx context.Context) {
 	}
 }
 
-// Checks returns available checks.
-func (s *Service) Checks() []check.Check {
+// getChecks returns available checks.
+func (s *Service) getChecks() []check.Check {
 	s.cm.Lock()
 	defer s.cm.Unlock()
 
@@ -217,7 +217,7 @@ func (s *Service) waitForResult(ctx context.Context, resultID string) ([]map[str
 func (s *Service) executeChecks(ctx context.Context) {
 	s.l.Info("Executing checks...")
 
-	mySQLChecks, postgreSQLChecks, mongoDBChecks := s.groupChecksByDB(s.checks)
+	mySQLChecks, postgreSQLChecks, mongoDBChecks := s.groupChecksByDB()
 
 	var alertsIDs []string
 
@@ -488,14 +488,12 @@ func (s *Service) findTargets(serviceType models.ServiceType) ([]target, error) 
 				return err
 			}
 
-			targets = append(targets,
-				target{
-					agentID:   agent.AgentID,
-					serviceID: service.ServiceID,
-					labels:    labels,
-					dsn:       dsn,
-				},
-			)
+			targets = append(targets, target{
+				agentID:   agent.AgentID,
+				serviceID: service.ServiceID,
+				labels:    labels,
+				dsn:       dsn,
+			})
 			return nil
 		})
 		if e != nil {
@@ -507,10 +505,8 @@ func (s *Service) findTargets(serviceType models.ServiceType) ([]target, error) 
 }
 
 // groupChecksByDB splits provided checks by database and returns three slices: for MySQL, for PostgreSQL and for MongoDB.
-func (s *Service) groupChecksByDB(checks []check.Check) ([]check.Check, []check.Check, []check.Check) {
-	var mySQLChecks, postgreSQLChecks, mongoDBChecks []check.Check
-
-	for _, c := range checks {
+func (s *Service) groupChecksByDB() (mySQLChecks, postgreSQLChecks, mongoDBChecks []check.Check) {
+	for _, c := range s.getChecks() {
 		switch c.Type {
 		case check.MySQLSelect:
 			fallthrough
@@ -532,10 +528,10 @@ func (s *Service) groupChecksByDB(checks []check.Check) ([]check.Check, []check.
 		}
 	}
 
-	return mySQLChecks, postgreSQLChecks, mongoDBChecks
+	return
 }
 
-// collectChecks loads checks list.
+// collectChecks loads checks from file or SaaS, and stores versions this pmm-managed can handle.
 func (s *Service) collectChecks(ctx context.Context) {
 	var checks []check.Check
 	var err error
