@@ -32,34 +32,30 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/reform.v1"
-
-	"github.com/percona/pmm-managed/models"
 )
 
 const resendInterval = 30 * time.Second
 
 // Service is responsible for interactions with Prometheus.
 type Service struct {
-	db             *reform.DB
-	serverVersion  *version.Parsed
-	agentsRegistry agentsRegistry
-	r              *Registry
-	l              *logrus.Entry
+	db            *reform.DB
+	serverVersion *version.Parsed
+	r             *Registry
+	l             *logrus.Entry
 }
 
 // New creates new service.
-func New(db *reform.DB, v string, agentsRegistry agentsRegistry, alertsRegistry *Registry) (*Service, error) {
+func New(db *reform.DB, v string, alertsRegistry *Registry) (*Service, error) {
 	serverVersion, err := version.Parse(v)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Service{
-		db:             db,
-		serverVersion:  serverVersion,
-		agentsRegistry: agentsRegistry,
-		r:              alertsRegistry,
-		l:              logrus.WithField("component", "alertmanager"),
+		db:            db,
+		serverVersion: serverVersion,
+		r:             alertsRegistry,
+		l:             logrus.WithField("component", "alertmanager"),
 	}, nil
 }
 
@@ -105,45 +101,6 @@ receivers:
 `) + "\n"
 		_ = ioutil.WriteFile(path, []byte(defaultBase), 0644)
 	}
-}
-
-func (svc *Service) getInventoryData(ctx context.Context) (map[string]*models.Node, map[string]*models.Service, map[string]*models.Agent, error) {
-	var nodes []*models.Node
-	var services []*models.Service
-	var agents []*models.Agent
-	err := svc.db.InTransaction(func(t *reform.TX) error {
-		var e error
-		nodes, e = models.FindNodes(t.Querier, models.NodeFilters{})
-		if e != nil {
-			return e
-		}
-
-		services, e = models.FindServices(t.Querier, models.ServiceFilters{})
-		if e != nil {
-			return e
-		}
-
-		agents, e = models.FindAgents(t.Querier, models.AgentFilters{})
-		return e
-	})
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	nodesMap := make(map[string]*models.Node, len(nodes))
-	for _, n := range nodes {
-		nodesMap[n.NodeID] = n
-	}
-	servicesMap := make(map[string]*models.Service, len(services))
-	for _, s := range services {
-		servicesMap[s.ServiceID] = s
-	}
-	agentsMap := make(map[string]*models.Agent, len(agents))
-	for _, a := range agents {
-		agentsMap[a.AgentID] = a
-	}
-
-	return nodesMap, servicesMap, agentsMap, nil
 }
 
 // sendAlerts sends alerts collected in the Registry.
