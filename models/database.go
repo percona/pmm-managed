@@ -272,16 +272,6 @@ var databaseSchema = [][]string{
 	},
 
 	14: {
-		`ALTER TABLE services
-			DROP CONSTRAINT port_check`,
-
-		`ALTER TABLE services
-			ADD CONSTRAINT port_check CHECK (
-				port IS NULL OR (port > 0 AND port < 65536)
-			)`,
-	},
-
-	14: {
 		`ALTER TABLE agents
 			DROP CONSTRAINT node_id_or_service_id_or_pmm_agent_id,
 			DROP CONSTRAINT runs_on_node_id_only_for_pmm_agent,
@@ -289,10 +279,10 @@ var databaseSchema = [][]string{
 		`ALTER TABLE agents
 			ADD CONSTRAINT node_id_or_service_id_for_non_pmm_agent CHECK (
 				(node_id IS NULL) <> (service_id IS NULL) OR (agent_type = '` + string(PMMAgentType) + `')),
-			ADD CONSTRAINT runs_on_node_id_only_for_pmm_agent_and_external 
+			ADD CONSTRAINT runs_on_node_id_only_for_pmm_agent_and_external
 				CHECK ((runs_on_node_id IS NULL) <> (agent_type='` + string(PMMAgentType) + `' OR agent_type='` + string(ExternalExporterType) + `' ))`,
 		`ALTER TABLE agents RENAME COLUMN metrics_url TO metrics_path`,
-		`ALTER TABLE agents 
+		`ALTER TABLE agents
 			ADD CONSTRAINT agents_metrics_path_check CHECK (metrics_path <> '')`,
 		`ALTER TABLE agents ADD COLUMN metrics_scheme VARCHAR`,
 	},
@@ -302,6 +292,16 @@ var databaseSchema = [][]string{
 		`ALTER TABLE action_results
 			DROP COLUMN output,
 			ADD COLUMN output bytea`,
+	},
+
+	16: {
+		`ALTER TABLE services
+			DROP CONSTRAINT port_check`,
+
+		`ALTER TABLE services
+			ADD CONSTRAINT port_check CHECK (
+				port IS NULL OR (port > 0 AND port < 65536)
+			)`,
 	},
 }
 
