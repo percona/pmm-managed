@@ -56,7 +56,7 @@ func (svc *Service) Run(ctx context.Context) {
 	svc.l.Info("Starting...")
 	defer svc.l.Info("Done.")
 
-	generateBaseConfig()
+	svc.generateBaseConfig()
 
 	t := time.NewTicker(resendInterval)
 	defer t.Stop()
@@ -77,9 +77,12 @@ func (svc *Service) Run(ctx context.Context) {
 //
 // TODO That's a temporary measure until we start generating /etc/alertmanager.yml
 // using /srv/alertmanager/alertmanager.base.yml as a base. See supervisord config.
-func generateBaseConfig() {
+func (svc *Service) generateBaseConfig() {
 	const path = "/srv/alertmanager/alertmanager.base.yml"
-	if _, err := os.Stat(path); os.IsNotExist(err) {
+	_, err := os.Stat(path)
+	svc.l.Debugf("%s status: %v", path, err)
+
+	if os.IsNotExist(err) {
 		defaultBase := strings.TrimSpace(`
 ---
 # You can edit this file; changes will be preserved.
@@ -91,7 +94,8 @@ route:
 receivers:
   - name: empty
 `) + "\n"
-		_ = ioutil.WriteFile(path, []byte(defaultBase), 0644)
+		err = ioutil.WriteFile(path, []byte(defaultBase), 0644) //nolint:gosec
+		svc.l.Infof("%s created: %v.", path, err)
 	}
 }
 

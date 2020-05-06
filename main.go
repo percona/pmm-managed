@@ -145,7 +145,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	inventorypb.RegisterAgentsServer(gRPCServer, inventorygrpc.NewAgentsServer(agentsSvc))
 
 	nodeSvc := management.NewNodeService(deps.db, deps.agentsRegistry)
-	serviceSvc := management.NewServiceService(deps.db, deps.agentsRegistry)
+	serviceSvc := management.NewServiceService(deps.db, deps.agentsRegistry, deps.prometheus)
 	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsRegistry)
 	mongodbSvc := management.NewMongoDBService(deps.db, deps.agentsRegistry)
 	postgresqlSvc := management.NewPostgreSQLService(deps.db, deps.agentsRegistry)
@@ -159,6 +159,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterProxySQLServer(gRPCServer, managementgrpc.NewManagementProxySQLServer(proxysqlSvc))
 	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(deps.agentsRegistry, deps.db))
 	managementpb.RegisterRDSServer(gRPCServer, management.NewRDSService(deps.db, deps.agentsRegistry))
+	managementpb.RegisterExternalServer(gRPCServer, management.NewExternalService(deps.db, deps.prometheus))
 	managementpb.RegisterAnnotationServer(gRPCServer, managementgrpc.NewAnnotationServer(deps.grafanaClient))
 
 	if l.Logger.GetLevel() >= logrus.DebugLevel {
@@ -233,6 +234,7 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 		managementpb.RegisterProxySQLHandlerFromEndpoint,
 		managementpb.RegisterActionsHandlerFromEndpoint,
 		managementpb.RegisterRDSHandlerFromEndpoint,
+		managementpb.RegisterExternalHandlerFromEndpoint,
 		managementpb.RegisterAnnotationHandlerFromEndpoint,
 	} {
 		if err := r(ctx, proxyMux, gRPCAddr, opts); err != nil {
@@ -577,6 +579,7 @@ func main() {
 	checksService := checks.New(agentsRegistry, alertsRegistry, db, version.Version)
 	prom.MustRegister(checksService)
 
+	l.Info("Starting services...")
 	var wg sync.WaitGroup
 
 	wg.Add(1)
