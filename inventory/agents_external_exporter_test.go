@@ -18,7 +18,7 @@ func TestExternalExporter(t *testing.T) {
 	t.Run("Basic", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
@@ -63,7 +63,7 @@ func TestExternalExporter(t *testing.T) {
 	t.Run("Advanced", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
@@ -171,7 +171,7 @@ func TestExternalExporter(t *testing.T) {
 	t.Run("AddServiceIDEmpty", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
@@ -192,7 +192,7 @@ func TestExternalExporter(t *testing.T) {
 	t.Run("AddListenPortEmpty", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
@@ -219,7 +219,7 @@ func TestExternalExporter(t *testing.T) {
 	t.Run("AddRunsOnNodeIDEmpty", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
@@ -247,7 +247,7 @@ func TestExternalExporter(t *testing.T) {
 	t.Run("NotExistServiceID", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
@@ -268,7 +268,7 @@ func TestExternalExporter(t *testing.T) {
 	t.Run("NotExistNodeID", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 

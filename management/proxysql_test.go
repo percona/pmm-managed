@@ -69,7 +69,7 @@ func TestAddProxySQL(t *testing.T) {
 			},
 		}, *serviceOK.Payload)
 
-		// Check that proxysqld exporter is added by default.
+		// Check that proxysql exporter is added by default.
 		listAgents, err := inventoryClient.Default.Agents.ListAgents(&agents.ListAgentsParams{
 			Context: pmmapitests.Context,
 			Body: agents.ListAgentsBody{

@@ -23,7 +23,7 @@ func TestNodes(t *testing.T) {
 		remoteNode := pmmapitests.AddRemoteNode(t, pmmapitests.TestString(t, "Test Remote Node for List"))
 		remoteNodeID := remoteNode.Remote.NodeID
 		defer pmmapitests.RemoveNodes(t, remoteNodeID)
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for List")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for List")).NodeID
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
@@ -80,7 +80,7 @@ func TestGetNode(t *testing.T) {
 		t.Parallel()
 
 		nodeName := pmmapitests.TestString(t, "TestGenericNode")
-		nodeID := addGenericNode(t, nodeName).NodeID
+		nodeID := pmmapitests.AddGenericNode(t, nodeName).NodeID
 		require.NotEmpty(t, nodeID)
 		defer pmmapitests.RemoveNodes(t, nodeID)
 
@@ -320,7 +320,7 @@ func TestRemoveNode(t *testing.T) {
 		t.Parallel()
 
 		nodeName := pmmapitests.TestString(t, "Generic Node for basic remove test")
-		node := addGenericNode(t, nodeName)
+		node := pmmapitests.AddGenericNode(t, nodeName)
 		nodeID := node.NodeID
 
 		removeResp, err := client.Default.Nodes.RemoveNode(&nodes.RemoveNodeParams{
@@ -337,7 +337,7 @@ func TestRemoveNode(t *testing.T) {
 		t.Parallel()
 
 		nodeName := pmmapitests.TestString(t, "Generic Node for remove test")
-		node := addGenericNode(t, nodeName)
+		node := pmmapitests.AddGenericNode(t, nodeName)
 
 		serviceName := pmmapitests.TestString(t, "MySQL Service for agent")
 		service := addMySQLService(t, services.AddMySQLServiceBody{
@@ -418,7 +418,7 @@ func TestRemoveNode(t *testing.T) {
 		t.Parallel()
 
 		nodeName := pmmapitests.TestString(t, "Generic Node for remove test")
-		node := addGenericNode(t, nodeName)
+		node := pmmapitests.AddGenericNode(t, nodeName)
 
 		_ = pmmapitests.AddPMMAgent(t, node.NodeID)
 

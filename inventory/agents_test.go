@@ -19,7 +19,7 @@ func TestAgents(t *testing.T) {
 	t.Run("List", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Generic node for agents list")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "Generic node for agents list")).NodeID
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
@@ -63,7 +63,7 @@ func TestAgents(t *testing.T) {
 	t.Run("FilterList", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Generic node for agents filters")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "Generic node for agents filters")).NodeID
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
@@ -161,7 +161,7 @@ func TestAgents(t *testing.T) {
 	t.Run("TwoOrMoreFilters", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
@@ -184,7 +184,7 @@ func TestAgents(t *testing.T) {
 	t.Run("AddWithInvalidType", func(t *testing.T) {
 		t.Parallel()
 
-		nodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		nodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, nodeID)
 		defer pmmapitests.RemoveNodes(t, nodeID)
 
@@ -267,7 +267,7 @@ func TestPMMAgent(t *testing.T) {
 	t.Run("Remove pmm-agent with agents", func(t *testing.T) {
 		t.Parallel()
 
-		node := addGenericNode(t, pmmapitests.TestString(t, "Generic node for PMM-agent"))
+		node := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "Generic node for PMM-agent"))
 		nodeID := node.NodeID
 		defer pmmapitests.RemoveNodes(t, nodeID)
 
@@ -413,7 +413,7 @@ func TestQanAgentExporter(t *testing.T) {
 	t.Run("Basic", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		service := addMySQLService(t, services.AddMySQLServiceBody{
@@ -523,7 +523,7 @@ func TestQanAgentExporter(t *testing.T) {
 	t.Run("AddServiceIDEmpty", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		pmmAgent := pmmapitests.AddPMMAgent(t, genericNodeID)
@@ -550,7 +550,7 @@ func TestQanAgentExporter(t *testing.T) {
 	t.Run("AddPMMAgentIDEmpty", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		service := addMySQLService(t, services.AddMySQLServiceBody{
@@ -582,7 +582,7 @@ func TestQanAgentExporter(t *testing.T) {
 	t.Run("NotExistServiceID", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		pmmAgent := pmmapitests.AddPMMAgent(t, genericNodeID)
@@ -607,7 +607,7 @@ func TestQanAgentExporter(t *testing.T) {
 	t.Run("NotExistPMMAgentID", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		service := addMySQLService(t, services.AddMySQLServiceBody{
@@ -639,7 +639,7 @@ func TestPostgreSQLQanAgentExporter(t *testing.T) {
 	t.Run("Basic", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan PostgreSQL Agent")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan PostgreSQL Agent")).NodeID
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		service := addPostgreSQLService(t, services.AddPostgreSQLServiceBody{
@@ -749,7 +749,7 @@ func TestPostgreSQLQanAgentExporter(t *testing.T) {
 	t.Run("AddServiceIDEmpty", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		pmmAgent := pmmapitests.AddPMMAgent(t, genericNodeID)
@@ -776,7 +776,7 @@ func TestPostgreSQLQanAgentExporter(t *testing.T) {
 	t.Run("AddPMMAgentIDEmpty", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		service := addPostgreSQLService(t, services.AddPostgreSQLServiceBody{
@@ -808,7 +808,7 @@ func TestPostgreSQLQanAgentExporter(t *testing.T) {
 	t.Run("NotExistServiceID", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		pmmAgent := pmmapitests.AddPMMAgent(t, genericNodeID)
@@ -833,7 +833,7 @@ func TestPostgreSQLQanAgentExporter(t *testing.T) {
 	t.Run("NotExistPMMAgentID", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "Test Generic Node for Qan Agent")).NodeID
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
 		service := addPostgreSQLService(t, services.AddPostgreSQLServiceBody{

@@ -17,7 +17,7 @@ func TestMySQLdExporter(t *testing.T) {
 	t.Run("Basic", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
@@ -128,7 +128,7 @@ func TestMySQLdExporter(t *testing.T) {
 		t.Skip("Skipping until we know there are connected agents in the new environment")
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
@@ -181,7 +181,7 @@ func TestMySQLdExporter(t *testing.T) {
 	t.Run("AddServiceIDEmpty", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
@@ -205,7 +205,7 @@ func TestMySQLdExporter(t *testing.T) {
 	t.Run("AddPMMAgentIDEmpty", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
@@ -236,7 +236,7 @@ func TestMySQLdExporter(t *testing.T) {
 	t.Run("NotExistServiceID", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
@@ -262,7 +262,7 @@ func TestMySQLdExporter(t *testing.T) {
 	t.Run("NotExistPMMAgentID", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 

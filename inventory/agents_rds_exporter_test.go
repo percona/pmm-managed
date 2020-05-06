@@ -16,7 +16,7 @@ func TestRDSExporter(t *testing.T) {
 	t.Run("Basic", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
@@ -120,7 +120,7 @@ func TestRDSExporter(t *testing.T) {
 	t.Run("AddNodeIDEmpty", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
@@ -144,7 +144,7 @@ func TestRDSExporter(t *testing.T) {
 	t.Run("NotExistNodeID", func(t *testing.T) {
 		t.Parallel()
 
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
@@ -167,7 +167,7 @@ func TestRDSExporter(t *testing.T) {
 
 	t.Run("NotExistPMMAgentID", func(t *testing.T) {
 		t.Parallel()
-		genericNodeID := addGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
 		require.NotEmpty(t, genericNodeID)
 		defer pmmapitests.RemoveNodes(t, genericNodeID)
 
