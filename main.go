@@ -83,6 +83,9 @@ const (
 	gRPCAddr  = "127.0.0.1:7771"
 	http1Addr = "127.0.0.1:7772"
 	debugAddr = "127.0.0.1:7773"
+
+	cleanInterval  = 10 * time.Minute
+	cleanOlderThan = 30 * time.Minute
 )
 
 func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
@@ -632,7 +635,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		cleaner.Run(ctx, 10*time.Minute, 30*time.Minute)
+		cleaner.Run(ctx, cleanInterval, cleanOlderThan)
 	}()
 
 	wg.Wait()
