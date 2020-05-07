@@ -62,6 +62,7 @@ import (
 	"github.com/percona/pmm-managed/services/agents"
 	agentgrpc "github.com/percona/pmm-managed/services/agents/grpc"
 	"github.com/percona/pmm-managed/services/alertmanager"
+	"github.com/percona/pmm-managed/services/checks"
 	"github.com/percona/pmm-managed/services/grafana"
 	"github.com/percona/pmm-managed/services/inventory"
 	inventorygrpc "github.com/percona/pmm-managed/services/inventory/grpc"
@@ -140,14 +141,14 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 
 	nodesSvc := inventory.NewNodesService(deps.db)
 	servicesSvc := inventory.NewServicesService(deps.db, deps.agentsRegistry)
-	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry)
+	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry, deps.prometheus)
 
 	inventorypb.RegisterNodesServer(gRPCServer, inventorygrpc.NewNodesServer(nodesSvc))
 	inventorypb.RegisterServicesServer(gRPCServer, inventorygrpc.NewServicesServer(servicesSvc))
 	inventorypb.RegisterAgentsServer(gRPCServer, inventorygrpc.NewAgentsServer(agentsSvc))
 
 	nodeSvc := management.NewNodeService(deps.db, deps.agentsRegistry)
-	serviceSvc := management.NewServiceService(deps.db, deps.agentsRegistry)
+	serviceSvc := management.NewServiceService(deps.db, deps.agentsRegistry, deps.prometheus)
 	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsRegistry)
 	mongodbSvc := management.NewMongoDBService(deps.db, deps.agentsRegistry)
 	postgresqlSvc := management.NewPostgreSQLService(deps.db, deps.agentsRegistry)
@@ -161,6 +162,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterProxySQLServer(gRPCServer, managementgrpc.NewManagementProxySQLServer(proxysqlSvc))
 	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(deps.agentsRegistry, deps.db))
 	managementpb.RegisterRDSServer(gRPCServer, management.NewRDSService(deps.db, deps.agentsRegistry))
+	managementpb.RegisterExternalServer(gRPCServer, management.NewExternalService(deps.db, deps.prometheus))
 	managementpb.RegisterAnnotationServer(gRPCServer, managementgrpc.NewAnnotationServer(deps.grafanaClient))
 
 	if l.Logger.GetLevel() >= logrus.DebugLevel {
@@ -235,6 +237,7 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 		managementpb.RegisterProxySQLHandlerFromEndpoint,
 		managementpb.RegisterActionsHandlerFromEndpoint,
 		managementpb.RegisterRDSHandlerFromEndpoint,
+		managementpb.RegisterExternalHandlerFromEndpoint,
 		managementpb.RegisterAnnotationHandlerFromEndpoint,
 	} {
 		if err := r(ctx, proxyMux, gRPCAddr, opts); err != nil {
@@ -386,15 +389,11 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 	}
 	deps.prometheus.RequestConfigurationUpdate()
 
-	//
-	// FIXME Enable after https://github.com/percona/pmm-managed/pull/365 is merged
-	//
-
-	// deps.l.Infof("Checking Alertmanager...")
-	// if err = deps.alertmanager.IsReady(ctx); err != nil {
-	// 	deps.l.Warnf("Alertmanager problem: %+v.", err)
-	// 	return false
-	// }
+	deps.l.Infof("Checking Alertmanager...")
+	if err = deps.alertmanager.IsReady(ctx); err != nil {
+		deps.l.Warnf("Alertmanager problem: %+v.", err)
+		return false
+	}
 
 	deps.l.Info("Setup completed.")
 	return true
@@ -517,7 +516,8 @@ func main() {
 	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient)
 	prom.MustRegister(agentsRegistry)
 
-	alertmanager, err := alertmanager.New(db, version.Version, agentsRegistry)
+	alertsRegistry := alertmanager.NewRegistry()
+	alertmanager, err := alertmanager.New(db, alertsRegistry)
 	if err != nil {
 		l.Panicf("Alertmanager service problem: %+v", err)
 	}
@@ -579,6 +579,10 @@ func main() {
 
 	authServer := grafana.NewAuthServer(grafanaClient, awsInstanceChecker)
 
+	checksService := checks.New(agentsRegistry, alertsRegistry, db, version.Version)
+	prom.MustRegister(checksService)
+
+	l.Info("Starting services...")
 	var wg sync.WaitGroup
 
 	wg.Add(1)
@@ -591,6 +595,12 @@ func main() {
 	go func() {
 		defer wg.Done()
 		alertmanager.Run(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		checksService.Run(ctx)
 	}()
 
 	wg.Add(1)

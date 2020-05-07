@@ -58,11 +58,22 @@ func Verify(data []byte, publicKey, sig string) error {
 	return nil
 }
 
+// ParseParams represents optional Parse function parameters.
+type ParseParams struct {
+	DisallowUnknownFields bool // if true, return errors for unexpected YAML fields
+	DisallowInvalidChecks bool // if true, return errors for invalid checks instead of skipping them
+}
+
 // Parse returns a slice of validated checks parsed from YAML passed via a reader.
 // It can handle multi-document YAMLs: parsing result will be a single slice
 // that contains checks form every parsed document.
-func Parse(reader io.Reader) ([]Check, error) {
+func Parse(reader io.Reader, params *ParseParams) ([]Check, error) {
+	if params == nil {
+		params = new(ParseParams)
+	}
+
 	d := yaml.NewDecoder(reader)
+	d.KnownFields(params.DisallowUnknownFields)
 
 	type checks struct {
 		Checks []Check `yaml:"checks"`
@@ -80,8 +91,13 @@ func Parse(reader io.Reader) ([]Check, error) {
 
 		for _, check := range c.Checks {
 			if err := check.validate(); err != nil {
-				return nil, err
+				if params.DisallowInvalidChecks {
+					return nil, err
+				}
+
+				continue // skip invalid check
 			}
+
 			res = append(res, check)
 		}
 	}
@@ -102,8 +118,8 @@ const (
 
 // Check represents security check structure.
 type Check struct {
-	Name    string `yaml:"name"`
 	Version uint32 `yaml:"version"`
+	Name    string `yaml:"name"`
 	Type    Type   `yaml:"type"`
 	Query   string `yaml:"query"`
 	Script  string `yaml:"script"`
@@ -115,6 +131,10 @@ var nameRE = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
 
 // validate validates check for minimal correctness.
 func (c *Check) validate() error {
+	if c.Version != 1 {
+		return errors.Errorf("unexpected version %d", c.Version)
+	}
+
 	if !nameRE.MatchString(c.Name) {
 		return errors.New("invalid check name")
 	}
@@ -185,81 +205,4 @@ func (c *Check) validateType() error {
 	default:
 		return errors.Errorf("unknown check type: %s", c.Type)
 	}
-}
-
-//go:generate ../../bin/stringer -type=Severity -linecomment
-
-// Severity represents severity level.
-type Severity int
-
-// Supported severity levels.
-const (
-	Unknown   Severity = iota // unknown
-	Emergency                 // emergency
-	Alert                     // alert
-	Critical                  // critical
-	Error                     // error
-	Warning                   // warning
-	Notice                    // notice
-	Info                      // info
-	Debug                     // debug
-)
-
-// StrToSeverity casts string to Severity.
-func StrToSeverity(s string) Severity {
-	switch strings.TrimSpace(strings.ToLower(s)) {
-	case "emergency":
-		return Emergency
-	case "alert":
-		return Alert
-	case "critical":
-		return Critical
-	case "error":
-		return Error
-	case "warning":
-		return Warning
-	case "notice":
-		return Notice
-	case "info":
-		return Info
-	case "debug":
-		return Debug
-	default:
-		return Unknown
-	}
-}
-
-// Result represents a single check script result that is used to generate alert.
-type Result struct {
-	Summary     string
-	Description string
-	Severity    Severity
-	Labels      map[string]string
-}
-
-// Validate validates check result for minimal correctness.
-func (r *Result) Validate() error {
-	if err := r.validateSeverity(); err != nil {
-		return err
-	}
-
-	if r.Summary == "" {
-		return errors.New("summary is empty")
-	}
-
-	return nil
-}
-
-// validateSeverity validates check result severity level.
-func (r *Result) validateSeverity() error {
-	if r.Severity < Emergency || r.Severity > Debug {
-		return errors.Errorf("unknown result severity: %s", r.Severity)
-	}
-
-	if r.Severity < Error || r.Severity > Notice {
-		// until UI is ready to support more severities
-		return errors.Errorf("unhandled result severity: %s", r.Severity)
-	}
-
-	return nil
 }
