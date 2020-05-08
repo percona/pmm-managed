@@ -54,12 +54,12 @@ var checkFailedRE = regexp.MustCompile(`FAILED: parsing YAML file \S+: (.+)\n`)
 //   * promtool is available.
 type Service struct {
 	alertManager   *AlertManager
-	configPath     string
-	baseConfigPath string
-	promtoolPath   string
-	db             *reform.DB
-	baseURL        *url.URL
-	client         *http.Client
+	configPath string
+	db         *reform.DB
+	baseURL    *url.URL
+	client     *http.Client
+
+	baseConfigPath string // for testing
 
 	l    *logrus.Entry
 	sema chan struct{}
@@ -68,7 +68,7 @@ type Service struct {
 }
 
 // NewService creates new service.
-func NewService(alertManager *AlertManager, configPath, baseConfigPath, promtoolPath string, db *reform.DB, baseURL string) (*Service, error) {
+func NewService(alertManager *AlertManager, configPath string, db *reform.DB, baseURL string) (*Service, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -76,11 +76,10 @@ func NewService(alertManager *AlertManager, configPath, baseConfigPath, promtool
 	return &Service{
 		alertManager:   alertManager,
 		configPath:     configPath,
-		baseConfigPath: baseConfigPath,
-		promtoolPath:   promtoolPath,
 		db:             db,
 		baseURL:        u,
 		client:         new(http.Client),
+		baseConfigPath: "/srv/prometheus/prometheus.base.yml",
 		l:              logrus.WithField("component", "prometheus"),
 		sema:           make(chan struct{}, 1),
 	}, nil
@@ -201,17 +200,30 @@ func (svc *Service) addScrapeConfigs(cfg *config.Config, q *reform.Querier, s *m
 			return err
 		}
 
-		// find Node address where pmm-agent runs
+		// find Node address where the agent runs
 		var paramsHost string
-		pmmAgent, err := models.FindAgentByID(q, *agent.PMMAgentID)
-		if err != nil {
-			return errors.WithStack(err)
+		switch {
+		case agent.PMMAgentID != nil:
+			// extract node address through pmm-agent
+			pmmAgent, err := models.FindAgentByID(q, *agent.PMMAgentID)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			pmmAgentNode := &models.Node{NodeID: pointer.GetString(pmmAgent.RunsOnNodeID)}
+			if err = q.Reload(pmmAgentNode); err != nil {
+				return errors.WithStack(err)
+			}
+			paramsHost = pmmAgentNode.Address
+		case agent.RunsOnNodeID != nil:
+			externalExporterNode := &models.Node{NodeID: pointer.GetString(agent.RunsOnNodeID)}
+			if err = q.Reload(externalExporterNode); err != nil {
+				return errors.WithStack(err)
+			}
+			paramsHost = externalExporterNode.Address
+		default:
+			svc.l.Warnf("It's not possible to get host, skipping scrape config for %s.", agent)
+			continue
 		}
-		pmmAgentNode := &models.Node{NodeID: pointer.GetString(pmmAgent.RunsOnNodeID)}
-		if err = q.Reload(pmmAgentNode); err != nil {
-			return errors.WithStack(err)
-		}
-		paramsHost = pmmAgentNode.Address
 
 		var scfgs []*config.ScrapeConfig
 		switch agent.AgentType {
@@ -271,6 +283,14 @@ func (svc *Service) addScrapeConfigs(cfg *config.Config, q *reform.Querier, s *m
 			})
 			continue
 
+		case models.ExternalExporterType:
+			scfgs, err = scrapeConfigsForExternalExporter(s, &scrapeConfigParams{
+				host:    paramsHost,
+				node:    paramsNode,
+				service: paramsService,
+				agent:   agent,
+			})
+
 		default:
 			svc.l.Warnf("Skipping scrape config for %s.", agent)
 			continue
@@ -312,14 +332,33 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 			cfg.GlobalConfig.EvaluationInterval = config.Duration(s.LR)
 		}
 
-		cfg.RuleFiles = append(cfg.RuleFiles, "/srv/prometheus/rules/*.rules.yml")
+		cfg.RuleFiles = append(
+			cfg.RuleFiles,
+
+			// That covers all .yml files, including:
+			// pmm.rules.yml managed by pmm-managed;
+			// user-supplied files.
+			"/srv/prometheus/rules/*.yml",
+		)
 
 		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs,
 			scrapeConfigForPrometheus(s.HR),
+			scrapeConfigForAlertmanager(s.MR),
 			scrapeConfigForGrafana(s.MR),
 			scrapeConfigForPMMManaged(s.MR),
 			scrapeConfigForQANAPI2(s.MR),
 		)
+
+		cfg.AlertingConfig.AlertmanagerConfigs = append(cfg.AlertingConfig.AlertmanagerConfigs, &config.AlertmanagerConfig{
+			ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+				StaticConfigs: []*config.Group{{
+					Targets: []string{"127.0.0.1:9093"},
+				}},
+			},
+			Scheme:     "http",
+			PathPrefix: "/alertmanager/",
+			APIVersion: config.AlertmanagerAPIVersionV2,
+		})
 
 		if settings.AlertManagerURL != "" {
 			u, err := url.Parse(settings.AlertManagerURL)
@@ -423,7 +462,7 @@ func (svc *Service) saveConfigAndReload(cfg []byte) error {
 		_ = os.Remove(f.Name())
 	}()
 	args := []string{"check", "config", f.Name()}
-	cmd := exec.Command(svc.promtoolPath, args...) //nolint:gosec
+	cmd := exec.Command("promtool", args...) //nolint:gosec
 	pdeathsig.Set(cmd, unix.SIGKILL)
 	b, err := cmd.CombinedOutput()
 	if err != nil {
@@ -476,8 +515,8 @@ func (svc *Service) RequestConfigurationUpdate() {
 	}
 }
 
-// Check verifies that Prometheus works.
-func (svc *Service) Check(ctx context.Context) error {
+// IsReady verifies that Prometheus works.
+func (svc *Service) IsReady(ctx context.Context) error {
 	// check Prometheus /version API and log version
 	u := *svc.baseURL
 	u.Path = path.Join(u.Path, "version")
@@ -496,7 +535,7 @@ func (svc *Service) Check(ctx context.Context) error {
 	}
 
 	// check promtool version
-	b, err = exec.CommandContext(ctx, svc.promtoolPath, "--version").CombinedOutput() //nolint:gosec
+	b, err = exec.CommandContext(ctx, "promtool", "--version").CombinedOutput() //nolint:gosec
 	if err != nil {
 		return errors.Wrap(err, string(b))
 	}

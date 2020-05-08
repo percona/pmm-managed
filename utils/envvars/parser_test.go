@@ -31,7 +31,7 @@ func TestEnvVarValidator(t *testing.T) {
 	t.Run("Valid env variables", func(t *testing.T) {
 		envs := []string{
 			"DISABLE_UPDATES=True",
-			"DISABLE_TELEMETRY=False",
+			"DISABLE_TELEMETRY=True",
 			"METRICS_RESOLUTION=5m",
 			"METRICS_RESOLUTION_MR=5s",
 			"METRICS_RESOLUTION_LR=1h",
@@ -39,7 +39,8 @@ func TestEnvVarValidator(t *testing.T) {
 		}
 		expectedEnvVars := &models.ChangeSettingsParams{
 			DataRetention:    72 * time.Hour,
-			DisableTelemetry: false,
+			DisableTelemetry: true,
+			DisableSTT:       true, // special case
 			DisableUpdates:   true,
 			MetricsResolutions: models.MetricsResolutions{
 				HR: 5 * time.Minute,
@@ -85,6 +86,8 @@ func TestEnvVarValidator(t *testing.T) {
 
 	t.Run("Invalid env variables values", func(t *testing.T) {
 		envs := []string{
+			"DISABLE_UPDATES",
+			"DISABLE_TELEMETRY",
 			"DISABLE_UPDATES=5",
 			"DISABLE_TELEMETRY=X",
 			"METRICS_RESOLUTION=5f",
@@ -94,6 +97,8 @@ func TestEnvVarValidator(t *testing.T) {
 		}
 		expectedEnvVars := &models.ChangeSettingsParams{}
 		expectedErrs := []error{
+			fmt.Errorf(`failed to parse environment variable "DISABLE_UPDATES"`),
+			fmt.Errorf(`failed to parse environment variable "DISABLE_TELEMETRY"`),
 			fmt.Errorf(`invalid value "5" for environment variable "DISABLE_UPDATES"`),
 			fmt.Errorf(`invalid value "x" for environment variable "DISABLE_TELEMETRY"`),
 			fmt.Errorf(`environment variable "METRICS_RESOLUTION=5f" has invalid duration 5f`),

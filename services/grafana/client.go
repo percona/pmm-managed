@@ -27,10 +27,11 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
+	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
 	"github.com/percona/pmm-managed/utils/irt"
@@ -40,7 +41,7 @@ import (
 type Client struct {
 	addr string
 	http *http.Client
-	irtm prometheus.Collector
+	irtm prom.Collector
 }
 
 // NewClient creates a new client for given Grafana address.
@@ -70,12 +71,12 @@ func NewClient(addr string) *Client {
 }
 
 // Describe implements prometheus.Collector.
-func (c *Client) Describe(ch chan<- *prometheus.Desc) {
+func (c *Client) Describe(ch chan<- *prom.Desc) {
 	c.irtm.Describe(ch)
 }
 
 // Collect implements prometheus.Collector.
-func (c *Client) Collect(ch chan<- prometheus.Metric) {
+func (c *Client) Collect(ch chan<- prom.Metric) {
 	c.irtm.Collect(ch)
 }
 
@@ -96,11 +97,12 @@ func (e *clientError) Error() string {
 // do makes HTTP request with given parameters, and decodes JSON response with 200 OK status
 // to respBody. It returns wrapped clientError on any other status, or other fatal errors.
 // ctx is used only for cancelation.
-func (c *Client) do(ctx context.Context, method, path string, headers http.Header, body []byte, respBody interface{}) error {
+func (c *Client) do(ctx context.Context, method, path, rawQuery string, headers http.Header, body []byte, respBody interface{}) error {
 	u := url.URL{
-		Scheme: "http",
-		Host:   c.addr,
-		Path:   path,
+		Scheme:   "http",
+		Host:     c.addr,
+		Path:     path,
+		RawQuery: rawQuery,
 	}
 	req, err := http.NewRequest(method, u.String(), bytes.NewReader(body))
 	if err != nil {
@@ -179,7 +181,7 @@ func (r role) String() string {
 func (c *Client) getRole(ctx context.Context, authHeaders http.Header) (role, error) {
 	// https://grafana.com/docs/http_api/user/#actual-user - works with any authentication
 	var m map[string]interface{}
-	if err := c.do(ctx, "GET", "/api/user", authHeaders, nil, &m); err == nil {
+	if err := c.do(ctx, "GET", "/api/user", "", authHeaders, nil, &m); err == nil {
 		if a, _ := m["isGrafanaAdmin"].(bool); a {
 			return grafanaAdmin, nil
 		}
@@ -187,7 +189,7 @@ func (c *Client) getRole(ctx context.Context, authHeaders http.Header) (role, er
 
 	// https://grafana.com/docs/http_api/user/#organizations-of-the-actual-user - works with any authentication
 	var s []interface{}
-	if err := c.do(ctx, "GET", "/api/user/orgs", authHeaders, nil, &s); err != nil {
+	if err := c.do(ctx, "GET", "/api/user/orgs", "", authHeaders, nil, &s); err != nil {
 		return none, err
 	}
 
@@ -228,7 +230,7 @@ func (c *Client) testCreateUser(ctx context.Context, login string, role role, au
 		return 0, errors.WithStack(err)
 	}
 	var m map[string]interface{}
-	if err = c.do(ctx, "POST", "/api/admin/users", authHeaders, b, &m); err != nil {
+	if err = c.do(ctx, "POST", "/api/admin/users", "", authHeaders, b, &m); err != nil {
 		return 0, err
 	}
 	userID := int(m["id"].(float64))
@@ -245,7 +247,7 @@ func (c *Client) testCreateUser(ctx context.Context, login string, role role, au
 	if err != nil {
 		return 0, errors.WithStack(err)
 	}
-	if err = c.do(ctx, "PATCH", "/api/org/users/"+strconv.Itoa(userID), authHeaders, b, nil); err != nil {
+	if err = c.do(ctx, "PATCH", "/api/org/users/"+strconv.Itoa(userID), "", authHeaders, b, nil); err != nil {
 		return 0, err
 	}
 	return userID, nil
@@ -253,7 +255,7 @@ func (c *Client) testCreateUser(ctx context.Context, login string, role role, au
 
 func (c *Client) testDeleteUser(ctx context.Context, userID int, authHeaders http.Header) error {
 	// https://grafana.com/docs/http_api/admin/#delete-global-user
-	return c.do(ctx, "DELETE", "/api/admin/users/"+strconv.Itoa(userID), authHeaders, nil, nil)
+	return c.do(ctx, "DELETE", "/api/admin/users/"+strconv.Itoa(userID), "", authHeaders, nil, nil)
 }
 
 type annotation struct {
@@ -284,67 +286,50 @@ func (a *annotation) decode() {
 
 // CreateAnnotation creates annotation with given text and tags ("pmm_annotation" is added automatically)
 // and returns Grafana's response text which is typically "Annotation added" or "Failed to save annotation".
-func (c *Client) CreateAnnotation(ctx context.Context, tags []string, text string) (string, error) {
+func (c *Client) CreateAnnotation(ctx context.Context, tags []string, from time.Time, text, authorization string) (string, error) {
 	// http://docs.grafana.org/http_api/annotations/#create-annotation
-
 	request := &annotation{
 		Tags: append([]string{"pmm_annotation"}, tags...),
 		Text: text,
+		Time: from,
 	}
 	request.encode()
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(request); err != nil {
-		return "", errors.Wrap(err, "failed to marhal request")
-	}
 
-	u := url.URL{
-		Scheme: "http",
-		Host:   c.addr,
-		Path:   "/api/annotations",
-	}
-
-	// TODO should be updated to use c.do
-
-	resp, err := c.http.Post(u.String(), "application/json", &buf)
+	b, err := json.Marshal(request)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to make request")
+		return "", errors.Wrap(err, "failed to marshal request")
 	}
-	defer resp.Body.Close() //nolint:errcheck
+
+	var headers = make(http.Header)
+	headers.Add("Authorization", authorization)
 
 	var response struct {
 		Message string `json:"message"`
 	}
-	if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return "", errors.Wrap(err, "failed to decode JSON response")
+
+	if err := c.do(ctx, "POST", "/api/annotations", "", headers, b, &response); err != nil {
+		return "", errors.Wrap(err, "failed to create annotation")
 	}
+
 	return response.Message, nil
 }
 
-func (c *Client) findAnnotations(ctx context.Context, from, to time.Time) ([]annotation, error) {
+func (c *Client) findAnnotations(ctx context.Context, from, to time.Time, authorization string) ([]annotation, error) {
 	// http://docs.grafana.org/http_api/annotations/#find-annotations
 
-	u := &url.URL{
-		Scheme: "http",
-		Host:   c.addr,
-		Path:   "/api/annotations",
-		RawQuery: url.Values{
-			"from": []string{strconv.FormatInt(from.UnixNano()/int64(time.Millisecond), 10)},
-			"to":   []string{strconv.FormatInt(to.UnixNano()/int64(time.Millisecond), 10)},
-		}.Encode(),
-	}
+	var headers = make(http.Header)
+	headers.Add("Authorization", authorization)
 
-	// TODO should be updated to use c.do
-
-	resp, err := c.http.Get(u.String())
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to make request")
-	}
-	defer resp.Body.Close() //nolint:errcheck
+	params := url.Values{
+		"from": []string{strconv.FormatInt(from.UnixNano()/int64(time.Millisecond), 10)},
+		"to":   []string{strconv.FormatInt(to.UnixNano()/int64(time.Millisecond), 10)},
+	}.Encode()
 
 	var response []annotation
-	if err = json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return nil, errors.Wrap(err, "failed to decode JSON response")
+	if err := c.do(ctx, "GET", "/api/annotations", params, headers, nil, &response); err != nil {
+		return nil, err
 	}
+
 	for i, r := range response {
 		r.decode()
 		response[i] = r
@@ -352,9 +337,32 @@ func (c *Client) findAnnotations(ctx context.Context, from, to time.Time) ([]ann
 	return response, nil
 }
 
+type grafanaHealthResponse struct {
+	Commit   string `json:"commit"`
+	Database string `json:"database"`
+	Version  string `json:"version"`
+}
+
+// IsReady calls Grafana API to check its status
+func (c *Client) IsReady(ctx context.Context) error {
+	var status grafanaHealthResponse
+	if err := c.do(ctx, "GET", "/api/health", "", nil, nil, &status); err != nil {
+		// since we don't return the error to the user, log it to help debugging
+		logrus.Errorf("grafana status check failed: %s", err)
+		return fmt.Errorf("cannot reach Grafana API")
+	}
+
+	if strings.ToLower(status.Database) != "ok" {
+		logrus.Errorf("grafana is up but the database is not ok. Database status is %s", status.Database)
+		return fmt.Errorf("grafana is running with errors")
+	}
+
+	return nil
+}
+
 // check interfaces
 var (
-	_ prometheus.Collector = (*Client)(nil)
-	_ error                = (*clientError)(nil)
-	_ fmt.Stringer         = role(0)
+	_ prom.Collector = (*Client)(nil)
+	_ error          = (*clientError)(nil)
+	_ fmt.Stringer   = role(0)
 )

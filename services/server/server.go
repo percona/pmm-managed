@@ -50,15 +50,19 @@ import (
 	"github.com/percona/pmm-managed/utils/envvars"
 )
 
+const alertingRulesFile = "/srv/prometheus/rules/pmm.rules.yml"
+
 // Server represents service for checking PMM Server status and changing settings.
 type Server struct {
-	db               *reform.DB
-	prometheus       prometheusService
+	db                 *reform.DB
+	prometheus         prometheusService
 	alertManager     alertManagerService
-	supervisord      supervisordService
-	telemetryService telemetryService
-	checker          *AWSInstanceChecker
-	l                *logrus.Entry
+	alertmanager       alertmanagerService
+	supervisord        supervisordService
+	telemetryService   telemetryService
+	awsInstanceChecker *AWSInstanceChecker
+	grafanaClient      grafanaClient
+	l                  *logrus.Entry
 
 	pmmUpdateAuthFileM sync.Mutex
 	pmmUpdateAuthFile  string
@@ -73,9 +77,19 @@ type pmmUpdateAuth struct {
 	AuthToken string `json:"auth_token"`
 }
 
+// Params holds the parameters needed to create a new service.
+type Params struct {
+	DB                 *reform.DB
+	Prometheus         prometheusService
+	Alertmanager       alertmanagerService
+	Supervisord        supervisordService
+	TelemetryService   telemetryService
+	AwsInstanceChecker *AWSInstanceChecker
+	GrafanaClient      grafanaClient
+}
+
 // NewServer returns new server for Server service.
-func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervisordService,
-	telemetryService telemetryService, checker *AWSInstanceChecker, alertManager alertManagerService) (*Server, error) {
+func NewServer(params *Params) (*Server, error) {
 	path := os.TempDir()
 	if _, err := os.Stat(path); err != nil {
 		return nil, errors.WithStack(err)
@@ -83,15 +97,17 @@ func NewServer(db *reform.DB, prometheus prometheusService, supervisord supervis
 	path = filepath.Join(path, "pmm-update.json")
 
 	s := &Server{
-		db:                db,
-		prometheus:        prometheus,
-		supervisord:       supervisord,
-		telemetryService:  telemetryService,
-		checker:           checker,
-		l:                 logrus.WithField("component", "server"),
-		pmmUpdateAuthFile: path,
-		alertManager:      alertManager,
-		envSettings:       new(models.ChangeSettingsParams),
+		db:                 params.DB,
+		prometheus:         params.Prometheus,
+		alertmanager:       params.Alertmanager,
+		alertManager:       params.AlertManager,
+		supervisord:        params.Supervisord,
+		telemetryService:   params.TelemetryService,
+		awsInstanceChecker: params.AwsInstanceChecker,
+		grafanaClient:      params.GrafanaClient,
+		l:                  logrus.WithField("component", "server"),
+		pmmUpdateAuthFile:  path,
+		envSettings:        new(models.ChangeSettingsParams),
 	}
 	return s, nil
 }
@@ -180,11 +196,22 @@ func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*se
 // Readiness returns an error when some PMM Server component is not ready yet or is being restarted.
 // It can be used as for Docker health check or Kubernetes readiness probe.
 func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) (*serverpb.ReadinessResponse, error) {
-	// TODO https://jira.percona.com/browse/PMM-1962
-
-	if err := s.prometheus.Check(ctx); err != nil {
-		return nil, err
+	var notReady bool
+	for n, svc := range map[string]healthChecker{
+		"prometheus":   s.prometheus,
+		"alertmanager": s.alertmanager,
+		"grafana":      s.grafanaClient,
+	} {
+		if err := svc.IsReady(ctx); err != nil {
+			s.l.Errorf("%s readiness check failed: %+v", n, err)
+			notReady = true
+		}
 	}
+
+	if notReady {
+		return nil, status.Error(codes.Internal, "PMM Server is not ready yet.")
+	}
+
 	return &serverpb.ReadinessResponse{}, nil
 }
 
@@ -363,6 +390,7 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 		SshKey:          settings.SSHKey,
 		AwsPartitions:   settings.AWSPartitions,
 		AlertManagerUrl: settings.AlertManagerURL,
+		SttEnabled:      settings.SaaS.STTEnabled,
 	}
 
 	b, err := s.alertManager.ReadRules()
@@ -416,8 +444,12 @@ func (s *Server) validateChangeSettingsRequest(ctx context.Context, req *serverp
 
 	// check request parameters compatibility with environment variables
 
-	if (req.EnableTelemetry || req.DisableTelemetry) && s.envSettings.DisableTelemetry {
+	// ignore req.DisableTelemetry and req.DisableStt even if they are present since that will not change anything
+	if req.EnableTelemetry && s.envSettings.DisableTelemetry {
 		return status.Error(codes.FailedPrecondition, "Telemetry is disabled via DISABLE_TELEMETRY environment variable.")
+	}
+	if req.EnableStt && s.envSettings.DisableTelemetry {
+		return status.Error(codes.FailedPrecondition, "STT cannot be enabled because telemetry is disabled via DISABLE_TELEMETRY environment variable.")
 	}
 
 	if getDuration(metricsRes.GetHr()) != 0 && s.envSettings.MetricsResolutions.HR != 0 {
@@ -462,6 +494,8 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			AlertManagerURL:       req.AlertManagerUrl,
 			RemoveAlertManagerURL: req.RemoveAlertManagerUrl,
 			SSHKey:                req.SshKey,
+			EnableSTT:             req.EnableStt,
+			DisableSTT:            req.DisableStt,
 		}
 
 		var e error
@@ -569,7 +603,7 @@ func (s *Server) writeSSHKey(sshKey string) error {
 
 // AWSInstanceCheck checks AWS EC2 instance ID.
 func (s *Server) AWSInstanceCheck(ctx context.Context, req *serverpb.AWSInstanceCheckRequest) (*serverpb.AWSInstanceCheckResponse, error) {
-	if err := s.checker.check(req.InstanceId); err != nil {
+	if err := s.awsInstanceChecker.check(req.InstanceId); err != nil {
 		return nil, err
 	}
 	return &serverpb.AWSInstanceCheckResponse{}, nil

@@ -47,6 +47,7 @@ const (
 	QANMySQLSlowlogAgentType           AgentType = "qan-mysql-slowlog-agent"
 	QANMongoDBProfilerAgentType        AgentType = "qan-mongodb-profiler-agent"
 	QANPostgreSQLPgStatementsAgentType AgentType = "qan-postgresql-pgstatements-agent"
+	ExternalExporterType               AgentType = "external-exporter"
 )
 
 // PMMServerAgentID is a special Agent ID representing pmm-agent on PMM Server.
@@ -89,7 +90,8 @@ type Agent struct {
 
 	QueryExamplesDisabled bool    `reform:"query_examples_disabled"`
 	MaxQueryLogSize       int64   `reform:"max_query_log_size"`
-	MetricsURL            *string `reform:"metrics_url"`
+	MetricsPath           *string `reform:"metrics_path"`
+	MetricsScheme         *string `reform:"metrics_scheme"`
 
 	RDSBasicMetricsDisabled    bool `reform:"rds_basic_metrics_disabled"`
 	RDSEnhancedMetricsDisabled bool `reform:"rds_enhanced_metrics_disabled"`

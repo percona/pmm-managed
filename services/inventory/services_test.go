@@ -154,7 +154,7 @@ func TestServices(t *testing.T) {
 			Address:     pointer.ToString("127.0.0.1"),
 			Socket:      pointer.ToString("/var/run/mysqld/mysqld.sock"),
 		})
-		require.EqualError(t, err, "rpc error: code = InvalidArgument desc = setting both address and socket in once is disallowed")
+		require.EqualError(t, err, "rpc error: code = InvalidArgument desc = Socket and address cannot be specified together.")
 	})
 
 	t.Run("MySQLSocketAndPort", func(t *testing.T) {
@@ -171,7 +171,7 @@ func TestServices(t *testing.T) {
 			Port:        pointer.ToUint16(3306),
 			Socket:      pointer.ToString("/var/run/mysqld/mysqld.sock"),
 		})
-		require.EqualError(t, err, "rpc error: code = InvalidArgument desc = port is only allowed with address")
+		require.EqualError(t, err, "rpc error: code = InvalidArgument desc = Socket and port cannot be specified together.")
 	})
 
 	t.Run("BasicMongoDB", func(t *testing.T) {
@@ -285,6 +285,42 @@ func TestServices(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, actualServices, 2)
 		assert.Equal(t, expectedProxySQLService, actualServices[1])
+
+		err = ss.Remove(ctx, "/service_id/00000000-0000-4000-8000-000000000005", false)
+		require.NoError(t, err)
+		actualService, err = ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000005")
+		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "/service_id/00000000-0000-4000-8000-000000000005" not found.`), err)
+		assert.Nil(t, actualService)
+	})
+
+	t.Run("BasicExternalService", func(t *testing.T) {
+		ss, teardown := setup(t)
+		defer teardown(t)
+
+		actualServices, err := ss.List(ctx, models.ServiceFilters{})
+		require.NoError(t, err)
+		require.Len(t, actualServices, 1) // PMM Server PostgreSQL
+
+		actualExternalService, err := ss.AddExternalService(ctx, &models.AddDBMSServiceParams{
+			ServiceName: "test-external-service",
+			NodeID:      models.PMMServerNodeID,
+		})
+		require.NoError(t, err)
+		expectedExternalService := &inventorypb.ExternalService{
+			ServiceId:   "/service_id/00000000-0000-4000-8000-000000000005",
+			ServiceName: "test-external-service",
+			NodeId:      models.PMMServerNodeID,
+		}
+		assert.Equal(t, expectedExternalService, actualExternalService)
+
+		actualService, err := ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000005")
+		require.NoError(t, err)
+		assert.Equal(t, expectedExternalService, actualService)
+
+		actualServices, err = ss.List(ctx, models.ServiceFilters{NodeID: models.PMMServerNodeID})
+		require.NoError(t, err)
+		require.Len(t, actualServices, 2)
+		assert.Equal(t, expectedExternalService, actualServices[1])
 
 		err = ss.Remove(ctx, "/service_id/00000000-0000-4000-8000-000000000005", false)
 		require.NoError(t, err)

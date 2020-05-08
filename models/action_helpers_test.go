@@ -50,14 +50,10 @@ func TestActionHelpers(t *testing.T) {
 		require.NoError(t, err)
 		q = tx.Querier
 
-		for _, str := range []reform.Struct{
-			&models.ActionResult{
-				ID:         "A1",
-				PMMAgentID: "A2",
-			},
-		} {
-			require.NoError(t, q.Insert(str))
-		}
+		require.NoError(t, q.Insert(&models.ActionResult{
+			ID:         "A1",
+			PMMAgentID: "A2",
+		}))
 
 		teardown = func(t *testing.T) {
 			require.NoError(t, tx.Rollback())
@@ -76,16 +72,48 @@ func TestActionHelpers(t *testing.T) {
 		_, err = models.FindActionResultByID(q, "A2")
 		require.Error(t, err)
 	})
+
+	t.Run("FindPmmAgentIDToRunAction", func(t *testing.T) {
+		a := []*models.Agent{
+			{AgentID: "A1", AgentType: models.PMMAgentType},
+			{AgentID: "A2", AgentType: models.MySQLdExporterType, PMMAgentID: pointer.ToString("A1")},
+		}
+
+		id, err := models.FindPmmAgentIDToRunAction("A1", a)
+		require.NoError(t, err)
+		assert.Equal(t, "A1", id)
+
+		a2 := []*models.Agent{
+			{AgentID: "A1", AgentType: models.PMMAgentType},
+			{AgentID: "A2", AgentType: models.MySQLdExporterType, PMMAgentID: pointer.ToString("A1")},
+			{AgentID: "A3", AgentType: models.MySQLdExporterType, PMMAgentID: pointer.ToString("A1")},
+		}
+
+		id, err = models.FindPmmAgentIDToRunAction("A3", a2)
+		require.NoError(t, err)
+		assert.Equal(t, "A3", id)
+
+		_, err = models.FindPmmAgentIDToRunAction("A4", a2)
+		require.Error(t, err)
+		tests.AssertGRPCError(t, status.New(codes.FailedPrecondition, "Couldn't find pmm-agent-id to run action"), err)
+
+		_, err = models.FindPmmAgentIDToRunAction("", a2)
+		require.Error(t, err)
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Couldn't find pmm-agent-id to run action"), err)
+	})
+
+	t.Run("QueryActionBinaryData", func(t *testing.T) {
+		q, teardown := setup(t)
+		defer teardown(t)
+
+		err := models.ChangeActionResult(q, "A1", "A2", "", "\x00\x01\xfe\xff", true)
+		require.NoError(t, err)
+	})
 }
 
-func TestFindPmmAgentIDToRunAction(t *testing.T) {
-	now, origNowF := models.Now(), models.Now
-	models.Now = func() time.Time {
-		return now
-	}
+func TestCleanupResults(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	defer func() {
-		models.Now = origNowF
 		require.NoError(t, sqlDB.Close())
 	}()
 
@@ -94,15 +122,35 @@ func TestFindPmmAgentIDToRunAction(t *testing.T) {
 		tx, err := db.Begin()
 		require.NoError(t, err)
 		q = tx.Querier
+		now, origNowF := models.Now(), models.Now
+		models.Now = func() time.Time {
+			return now.Add(-10 * time.Second)
+		}
 
 		for _, str := range []reform.Struct{
 			&models.ActionResult{
 				ID:         "A1",
-				PMMAgentID: "A2",
+				PMMAgentID: "A1",
+			},
+			&models.ActionResult{
+				ID:         "A2",
+				PMMAgentID: "A1",
+			},
+			&models.ActionResult{
+				ID:         "A3",
+				PMMAgentID: "A1",
 			},
 		} {
 			require.NoError(t, q.Insert(str))
 		}
+
+		// This row is to have something that won't be deleted
+		models.Now = origNowF
+		str := &models.ActionResult{
+			ID:         "A4",
+			PMMAgentID: "A1",
+		}
+		require.NoError(t, q.Insert(str))
 
 		teardown = func(t *testing.T) {
 			require.NoError(t, tx.Rollback())
@@ -110,33 +158,24 @@ func TestFindPmmAgentIDToRunAction(t *testing.T) {
 		return
 	}
 
-	_, teardown := setup(t)
-	defer teardown(t)
+	t.Run("CheckActionResultByID", func(t *testing.T) {
+		q, teardown := setup(t)
+		defer teardown(t)
 
-	a := []*models.Agent{
-		{AgentID: "A1", AgentType: models.PMMAgentType},
-		{AgentID: "A2", AgentType: models.MySQLdExporterType, PMMAgentID: pointer.ToString("A1")},
-	}
+		err := models.CleanupOldResults(q, models.Now().Add(-1*time.Second))
+		assert.NoError(t, err)
 
-	id, err := models.FindPmmAgentIDToRunAction("A1", a)
-	require.NoError(t, err)
-	assert.Equal(t, "A1", id)
+		_, err = models.FindActionResultByID(q, "A1")
+		require.Error(t, err)
 
-	a2 := []*models.Agent{
-		{AgentID: "A1", AgentType: models.PMMAgentType},
-		{AgentID: "A2", AgentType: models.MySQLdExporterType, PMMAgentID: pointer.ToString("A1")},
-		{AgentID: "A3", AgentType: models.MySQLdExporterType, PMMAgentID: pointer.ToString("A1")},
-	}
+		_, err = models.FindActionResultByID(q, "A2")
+		require.Error(t, err)
 
-	id, err = models.FindPmmAgentIDToRunAction("A3", a2)
-	require.NoError(t, err)
-	assert.Equal(t, "A3", id)
+		_, err = models.FindActionResultByID(q, "A3")
+		require.Error(t, err)
 
-	_, err = models.FindPmmAgentIDToRunAction("A4", a2)
-	require.Error(t, err)
-	tests.AssertGRPCError(t, status.New(codes.FailedPrecondition, "Couldn't find pmm-agent-id to run action"), err)
-
-	_, err = models.FindPmmAgentIDToRunAction("", a2)
-	require.Error(t, err)
-	tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Couldn't find pmm-agent-id to run action"), err)
+		a, err := models.FindActionResultByID(q, "A4")
+		require.NoError(t, err)
+		assert.NotEmpty(t, a.ID)
+	})
 }

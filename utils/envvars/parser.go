@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 
 	"github.com/percona/pmm-managed/models"
 )
@@ -42,28 +43,49 @@ func (e InvalidDurationError) Error() string { return string(e) }
 // Short description of environment variables:
 //  - PATH, HOSTNAME, TERM, HOME are default environment variables that will be ignored;
 //  - DISABLE_UPDATES is a boolean flag to enable or disable pmm-server update;
-//  - DISABLE_TELEMETRY is a boolean flag to enable or disable pmm telemetry;
+//  - DISABLE_TELEMETRY is a boolean flag to enable or disable pmm telemetry (and disable STT if telemetry is disabled);
 //  - METRICS_RESOLUTION, METRICS_RESOLUTION, METRICS_RESOLUTION_HR,
 // METRICS_RESOLUTION_LR are durations of metrics resolution;
 //  - DATA_RETENTION is the duration of how long keep time-series data in ClickHouse;
 //  - the environment variables prefixed with GF_ passed as related to Grafana.
 func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs []error, warns []string) {
 	envSettings = new(models.ChangeSettingsParams)
+
 	for _, env := range envs {
 		p := strings.SplitN(env, "=", 2)
+
 		if len(p) != 2 {
 			errs = append(errs, fmt.Errorf("failed to parse environment variable %q", env))
 			continue
 		}
 
-		var err error
 		k, v := strings.ToUpper(p[0]), strings.ToLower(p[1])
+		logrus.Tracef("ParseEnvVars: %#q: k=%#q v=%#q", env, k, v)
+
+		// skip Grafana's environment variables
 		if strings.HasPrefix(k, "GF_") {
 			continue
 		}
+
+		// skip supervisord environment variables
+		if strings.HasPrefix(k, "SUPERVISOR_") {
+			continue
+		}
+
+		// skip test environment variables that are handled elsewere with a big warning
+		if strings.HasPrefix(k, "PERCONA_TEST_") {
+			warns = append(warns, fmt.Sprintf("environment variable %q IS NOT SUPPORTED and WILL BE REMOVED IN THE FUTURE", k))
+			continue
+		}
+
+		var err error
 		switch k {
 		case "PATH", "HOSTNAME", "TERM", "HOME", "PWD", "SHLVL", "_":
 			// skip default environment variables
+			continue
+		case "PMM_DEBUG", "PMM_TRACE":
+			// skip cross-component environment variables that are already handled by kingpin
+			continue
 		case "DISABLE_UPDATES":
 			envSettings.DisableUpdates, err = strconv.ParseBool(v)
 			if err != nil {
@@ -73,6 +95,9 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 			envSettings.DisableTelemetry, err = strconv.ParseBool(v)
 			if err != nil {
 				err = fmt.Errorf("invalid value %q for environment variable %q", v, k)
+			} else if envSettings.DisableTelemetry {
+				// special case
+				envSettings.DisableSTT = true
 			}
 		case "METRICS_RESOLUTION", "METRICS_RESOLUTION_HR":
 			if envSettings.MetricsResolutions.HR, err = parseStringDuration(v); err != nil {

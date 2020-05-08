@@ -61,6 +61,8 @@ import (
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/agents"
 	agentgrpc "github.com/percona/pmm-managed/services/agents/grpc"
+	"github.com/percona/pmm-managed/services/alertmanager"
+	"github.com/percona/pmm-managed/services/checks"
 	"github.com/percona/pmm-managed/services/grafana"
 	"github.com/percona/pmm-managed/services/inventory"
 	inventorygrpc "github.com/percona/pmm-managed/services/inventory/grpc"
@@ -71,6 +73,7 @@ import (
 	"github.com/percona/pmm-managed/services/server"
 	"github.com/percona/pmm-managed/services/supervisord"
 	"github.com/percona/pmm-managed/services/telemetry"
+	"github.com/percona/pmm-managed/utils/clean"
 	"github.com/percona/pmm-managed/utils/interceptors"
 	"github.com/percona/pmm-managed/utils/logger"
 )
@@ -82,8 +85,8 @@ const (
 	http1Addr = "127.0.0.1:7772"
 	debugAddr = "127.0.0.1:7773"
 
-	defaultAlertManagerFile  = "/srv/prometheus/rules/pmm.rules.yml"
-	prometheusBaseConfigFile = "/srv/prometheus/prometheus.base.yml"
+	cleanInterval  = 10 * time.Minute
+	cleanOlderThan = 30 * time.Minute
 )
 
 func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
@@ -111,6 +114,7 @@ type gRPCServerDeps struct {
 	prometheus     *prometheus.Service
 	server         *server.Server
 	agentsRegistry *agents.Registry
+	grafanaClient  *grafana.Client
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -137,14 +141,14 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 
 	nodesSvc := inventory.NewNodesService(deps.db)
 	servicesSvc := inventory.NewServicesService(deps.db, deps.agentsRegistry)
-	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry)
+	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry, deps.prometheus)
 
 	inventorypb.RegisterNodesServer(gRPCServer, inventorygrpc.NewNodesServer(nodesSvc))
 	inventorypb.RegisterServicesServer(gRPCServer, inventorygrpc.NewServicesServer(servicesSvc))
 	inventorypb.RegisterAgentsServer(gRPCServer, inventorygrpc.NewAgentsServer(agentsSvc))
 
 	nodeSvc := management.NewNodeService(deps.db, deps.agentsRegistry)
-	serviceSvc := management.NewServiceService(deps.db, deps.agentsRegistry)
+	serviceSvc := management.NewServiceService(deps.db, deps.agentsRegistry, deps.prometheus)
 	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsRegistry)
 	mongodbSvc := management.NewMongoDBService(deps.db, deps.agentsRegistry)
 	postgresqlSvc := management.NewPostgreSQLService(deps.db, deps.agentsRegistry)
@@ -158,6 +162,8 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterProxySQLServer(gRPCServer, managementgrpc.NewManagementProxySQLServer(proxysqlSvc))
 	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(deps.agentsRegistry, deps.db))
 	managementpb.RegisterRDSServer(gRPCServer, management.NewRDSService(deps.db, deps.agentsRegistry))
+	managementpb.RegisterExternalServer(gRPCServer, management.NewExternalService(deps.db, deps.prometheus))
+	managementpb.RegisterAnnotationServer(gRPCServer, managementgrpc.NewAnnotationServer(deps.grafanaClient))
 
 	if l.Logger.GetLevel() >= logrus.DebugLevel {
 		l.Debug("Reflection and channelz are enabled.")
@@ -231,6 +237,8 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 		managementpb.RegisterProxySQLHandlerFromEndpoint,
 		managementpb.RegisterActionsHandlerFromEndpoint,
 		managementpb.RegisterRDSHandlerFromEndpoint,
+		managementpb.RegisterExternalHandlerFromEndpoint,
+		managementpb.RegisterAnnotationHandlerFromEndpoint,
 	} {
 		if err := r(ctx, proxyMux, gRPCAddr, opts); err != nil {
 			l.Panic(err)
@@ -324,13 +332,14 @@ func runDebugServer(ctx context.Context) {
 }
 
 type setupDeps struct {
-	sqlDB       *sql.DB
-	dbUsername  string
-	dbPassword  string
-	supervisord *supervisord.Service
-	prometheus  *prometheus.Service
-	server      *server.Server
-	l           *logrus.Entry
+	sqlDB        *sql.DB
+	dbUsername   string
+	dbPassword   string
+	supervisord  *supervisord.Service
+	prometheus   *prometheus.Service
+	alertmanager *alertmanager.Service
+	server       *server.Server
+	l            *logrus.Entry
 }
 
 // setup migrates database and performs other setup tasks that depend on database.
@@ -374,11 +383,17 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 	}
 
 	deps.l.Infof("Checking Prometheus...")
-	if err = deps.prometheus.Check(ctx); err != nil {
+	if err = deps.prometheus.IsReady(ctx); err != nil {
 		deps.l.Warnf("Prometheus problem: %+v.", err)
 		return false
 	}
 	deps.prometheus.RequestConfigurationUpdate()
+
+	deps.l.Infof("Checking Alertmanager...")
+	if err = deps.alertmanager.IsReady(ctx); err != nil {
+		deps.l.Warnf("Alertmanager problem: %+v.", err)
+		return false
+	}
 
 	deps.l.Info("Setup completed.")
 	return true
@@ -406,15 +421,19 @@ func getQANClient(ctx context.Context, sqlDB *sql.DB, dbName, qanAPIAddr string)
 }
 
 func main() {
+	// empty version breaks much of pmm-managed logic
+	if version.Version == "" {
+		panic("pmm-managed version is not set during build.")
+	}
+
 	log.SetFlags(0)
 	log.SetPrefix("stdlog: ")
 
 	kingpin.Version(version.FullInfo())
 	kingpin.HelpFlag.Short('h')
 
-	prometheusConfigF := kingpin.Flag("prometheus-config", "Prometheus configuration file path").Required().String()
+	prometheusConfigF := kingpin.Flag("prometheus-config", "Prometheus configuration file path").Default("/etc/prometheus.yml").String()
 	prometheusURLF := kingpin.Flag("prometheus-url", "Prometheus base URL").Default("http://127.0.0.1:9090/prometheus/").String()
-	promtoolF := kingpin.Flag("promtool", "promtool path").Default("promtool").String()
 
 	grafanaAddrF := kingpin.Flag("grafana-addr", "Grafana HTTP API address").Default("127.0.0.1:3000").String()
 	qanAPIAddrF := kingpin.Flag("qan-api-addr", "QAN API gRPC API address").Default("127.0.0.1:9911").String()
@@ -426,11 +445,8 @@ func main() {
 
 	supervisordConfigDirF := kingpin.Flag("supervisord-config-dir", "Supervisord configuration directory").Required().String()
 
-	alertManagerRulesFileF := kingpin.Flag("alert-manager-rules-file", "Path to the Alert Manager Rules file").
-		Default(defaultAlertManagerFile).String()
-
-	debugF := kingpin.Flag("debug", "Enable debug logging").Bool()
-	traceF := kingpin.Flag("trace", "Enable trace logging (implies debug)").Bool()
+	debugF := kingpin.Flag("debug", "Enable debug logging").Envar("PMM_DEBUG").Bool()
+	traceF := kingpin.Flag("trace", "Enable trace logging (implies debug)").Envar("PMM_TRACE").Bool()
 
 	kingpin.Parse()
 
@@ -488,11 +504,24 @@ func main() {
 	prom.MustRegister(reformL)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reformL)
 
+	cleaner := clean.New(db)
 	alertManager := prometheus.NewAlertManager(*alertManagerRulesFileF)
 
-	prometheus, err := prometheus.NewService(alertManager, *prometheusConfigF, prometheusBaseConfigFile, *promtoolF, db, *prometheusURLF)
+	prometheus, err := prometheus.NewService(alertManager, *prometheusConfigF, db, *prometheusURLF)
+
 	if err != nil {
 		l.Panicf("Prometheus service problem: %+v", err)
+	}
+
+	qanClient := getQANClient(ctx, sqlDB, *postgresDBNameF, *qanAPIAddrF)
+
+	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient)
+	prom.MustRegister(agentsRegistry)
+
+	alertsRegistry := alertmanager.NewRegistry()
+	alertmanager, err := alertmanager.New(db, alertsRegistry)
+	if err != nil {
+		l.Panicf("Alertmanager service problem: %+v", err)
 	}
 
 	pmmUpdateCheck := supervisord.NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker"))
@@ -500,21 +529,36 @@ func main() {
 	logs := supervisord.NewLogs(version.FullInfo(), pmmUpdateCheck)
 	supervisord := supervisord.New(*supervisordConfigDirF, pmmUpdateCheck)
 	telemetry := telemetry.NewService(db, version.Version)
-	checker := server.NewAWSInstanceChecker(db, telemetry)
-	server, err := server.NewServer(db, prometheus, supervisord, telemetry, checker, alertManager)
+
+	awsInstanceChecker := server.NewAWSInstanceChecker(db, telemetry)
+	grafanaClient := grafana.NewClient(*grafanaAddrF)
+	prom.MustRegister(grafanaClient)
+
+	serverParams := &server.Params{
+		DB:                 db,
+		Prometheus:         prometheus,
+		Alertmanager:       alertmanager,
+		Supervisord:        supervisord,
+		TelemetryService:   telemetry,
+		AwsInstanceChecker: awsInstanceChecker,
+		GrafanaClient:      grafanaClient,
+		AlertManager: 		alertManager,
+	}
+	server, err := server.NewServer(serverParams)
 	if err != nil {
 		l.Panicf("Server problem: %+v", err)
 	}
 
 	// try synchronously once, then retry in the background
 	deps := &setupDeps{
-		sqlDB:       sqlDB,
-		dbUsername:  *postgresDBUsernameF,
-		dbPassword:  *postgresDBPasswordF,
-		supervisord: supervisord,
-		prometheus:  prometheus,
-		server:      server,
-		l:           logrus.WithField("component", "setup"),
+		sqlDB:        sqlDB,
+		dbUsername:   *postgresDBUsernameF,
+		dbPassword:   *postgresDBPasswordF,
+		supervisord:  supervisord,
+		prometheus:   prometheus,
+		alertmanager: alertmanager,
+		server:       server,
+		l:            logrus.WithField("component", "setup"),
 	}
 	if !setup(ctx, deps) {
 		go func() {
@@ -536,21 +580,30 @@ func main() {
 		}()
 	}
 
-	qanClient := getQANClient(ctx, sqlDB, *postgresDBNameF, *qanAPIAddrF)
+	authServer := grafana.NewAuthServer(grafanaClient, awsInstanceChecker)
 
-	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient)
-	prom.MustRegister(agentsRegistry)
+	checksService := checks.New(agentsRegistry, alertsRegistry, db, version.Version)
+	prom.MustRegister(checksService)
 
-	grafanaClient := grafana.NewClient(*grafanaAddrF)
-	prom.MustRegister(grafanaClient)
-	authServer := grafana.NewAuthServer(grafanaClient, checker)
-
+	l.Info("Starting services...")
 	var wg sync.WaitGroup
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		prometheus.Run(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		alertmanager.Run(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		checksService.Run(ctx)
 	}()
 
 	wg.Add(1)
@@ -573,6 +626,7 @@ func main() {
 			prometheus:     prometheus,
 			server:         server,
 			agentsRegistry: agentsRegistry,
+			grafanaClient:  grafanaClient,
 		})
 	}()
 
@@ -589,6 +643,12 @@ func main() {
 	go func() {
 		defer wg.Done()
 		runDebugServer(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		cleaner.Run(ctx, cleanInterval, cleanOlderThan)
 	}()
 
 	wg.Wait()

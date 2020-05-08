@@ -55,6 +55,27 @@ func checkServiceUniqueName(q *reform.Querier, name string) error {
 	}
 }
 
+func validateDBConnectionOptions(socket, host *string, port *uint16) error {
+	if host == nil && socket == nil {
+		return status.Error(codes.InvalidArgument, "Neither socket nor address passed.")
+	}
+
+	if host != nil {
+		if socket != nil {
+			return status.Error(codes.InvalidArgument, "Socket and address cannot be specified together.")
+		}
+
+		if port == nil {
+			return status.Errorf(codes.InvalidArgument, "Port are expected to be passed with address.")
+		}
+	}
+
+	if socket != nil && port != nil {
+		return status.Error(codes.InvalidArgument, "Socket and port cannot be specified together.")
+	}
+	return nil
+}
+
 // ServiceFilters represents filters for services list.
 type ServiceFilters struct {
 	// Return only Services runs on that Node.
@@ -153,7 +174,7 @@ func FindServiceByName(q *reform.Querier, name string) (*Service, error) {
 	}
 }
 
-// AddDBMSServiceParams contains parameters for adding DBMS (MySQL, PostgreSQL, MongoDB) Services.
+// AddDBMSServiceParams contains parameters for adding DBMS (MySQL, PostgreSQL, MongoDB, External) Services.
 type AddDBMSServiceParams struct {
 	ServiceName    string
 	NodeID         string
@@ -168,6 +189,17 @@ type AddDBMSServiceParams struct {
 
 // AddNewService adds new service to storage.
 func AddNewService(q *reform.Querier, serviceType ServiceType, params *AddDBMSServiceParams) (*Service, error) {
+	switch serviceType {
+	case MySQLServiceType, MongoDBServiceType, PostgreSQLServiceType, ProxySQLServiceType:
+		if err := validateDBConnectionOptions(params.Socket, params.Address, params.Port); err != nil {
+			return nil, err
+		}
+	case ExternalServiceType:
+		// nothing to validate for now.
+	default:
+		return nil, status.Errorf(codes.InvalidArgument, "Unknown service type: %q.", serviceType)
+	}
+
 	id := "/service_id/" + uuid.New().String()
 	if err := checkServiceUniqueID(q, id); err != nil {
 		return nil, err

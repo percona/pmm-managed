@@ -18,6 +18,7 @@ package main
 
 import (
 	"os"
+	"strconv"
 
 	"github.com/sirupsen/logrus"
 
@@ -31,6 +32,12 @@ func main() {
 		FullTimestamp:   true,
 		TimestampFormat: "2006-01-02T15:04:05.000-07:00",
 	})
+	if on, _ := strconv.ParseBool(os.Getenv("PMM_DEBUG")); on {
+		logrus.SetLevel(logrus.DebugLevel)
+	}
+	if on, _ := strconv.ParseBool(os.Getenv("PMM_TRACE")); on {
+		logrus.SetLevel(logrus.TraceLevel)
+	}
 
 	envSettings, errs, warns := envvars.ParseEnvVars(os.Environ())
 	for _, warn := range warns {

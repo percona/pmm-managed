@@ -35,20 +35,23 @@ var (
 		inventorypb.ServiceType_MONGODB_SERVICE:    models.MongoDBServiceType,
 		inventorypb.ServiceType_POSTGRESQL_SERVICE: models.PostgreSQLServiceType,
 		inventorypb.ServiceType_PROXYSQL_SERVICE:   models.ProxySQLServiceType,
+		inventorypb.ServiceType_EXTERNAL_SERVICE:   models.ExternalServiceType,
 	}
 )
 
 // ServiceService represents service for working with services.
 type ServiceService struct {
-	db       *reform.DB
-	registry agentsRegistry
+	db         *reform.DB
+	registry   agentsRegistry
+	prometheus prometheusService
 }
 
 // NewServiceService creates ServiceService instance.
-func NewServiceService(db *reform.DB, registry agentsRegistry) *ServiceService {
+func NewServiceService(db *reform.DB, registry agentsRegistry, prometheus prometheusService) *ServiceService {
 	return &ServiceService{
-		db:       db,
-		registry: registry,
+		db:         db,
+		registry:   registry,
+		prometheus: prometheus,
 	}
 }
 
@@ -59,6 +62,7 @@ func (s *ServiceService) RemoveService(ctx context.Context, req *managementpb.Re
 		return nil, err
 	}
 	pmmAgentIDs := make(map[string]bool)
+	var reloadPrometheusConfig bool
 
 	if e := s.db.InTransaction(func(tx *reform.TX) error {
 		var service *models.Service
@@ -90,6 +94,8 @@ func (s *ServiceService) RemoveService(ctx context.Context, req *managementpb.Re
 			}
 			if agent.PMMAgentID != nil {
 				pmmAgentIDs[pointer.GetString(agent.PMMAgentID)] = true
+			} else {
+				reloadPrometheusConfig = true
 			}
 		}
 		err = models.RemoveService(s.db.Querier, service.ServiceID, models.RemoveCascade)
@@ -102,6 +108,10 @@ func (s *ServiceService) RemoveService(ctx context.Context, req *managementpb.Re
 	}
 	for agentID := range pmmAgentIDs {
 		s.registry.SendSetStateRequest(ctx, agentID)
+	}
+	if reloadPrometheusConfig {
+		// It's required to regenerate prometheus config file for the agents which aren't run by pmm-agent.
+		s.prometheus.RequestConfigurationUpdate()
 	}
 	return &managementpb.RemoveServiceResponse{}, nil
 }

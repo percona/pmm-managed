@@ -194,6 +194,7 @@ func TestAuthServerAuthenticate(t *testing.T) {
 		"/inventory.Nodes/ListNodes":                          admin,
 		"/management.Actions/StartMySQLShowTableStatusAction": viewer,
 		"/management.Service/RemoveService":                   admin,
+		"/management.Annotation/AddAnnotation":                admin,
 		"/server.Server/CheckUpdates":                         viewer,
 		"/server.Server/StartUpdate":                          admin,
 		"/server.Server/UpdateStatus":                         none,
@@ -215,7 +216,8 @@ func TestAuthServerAuthenticate(t *testing.T) {
 
 		"/v0/qan/ObjectDetails/GetQueryExample": viewer,
 
-		"/prometheus/": admin,
+		"/prometheus/":   admin,
+		"/alertmanager/": admin,
 	} {
 		for _, role := range []role{viewer, editor, admin} {
 			uri := uri

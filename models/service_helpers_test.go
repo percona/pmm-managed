@@ -85,6 +85,12 @@ func TestServiceHelpers(t *testing.T) {
 				NodeID:      "N2",
 				Socket:      pointer.ToStringOrNil("/var/run/mysqld/mysqld.sock"),
 			},
+			&models.Service{
+				ServiceID:   "S4",
+				ServiceType: models.ExternalServiceType,
+				ServiceName: "Fourth service",
+				NodeID:      "N2",
+			},
 
 			&models.Agent{
 				AgentID:      "A1",
@@ -113,7 +119,7 @@ func TestServiceHelpers(t *testing.T) {
 
 		services, err := models.FindServices(q, models.ServiceFilters{})
 		assert.NoError(t, err)
-		assert.Equal(t, 3, len(services))
+		assert.Equal(t, 4, len(services))
 
 		services, err = models.FindServices(q, models.ServiceFilters{NodeID: "N1"})
 		assert.NoError(t, err)
@@ -148,6 +154,18 @@ func TestServiceHelpers(t *testing.T) {
 			NodeID:      "N1",
 			Address:     pointer.ToString("127.0.0.1"),
 			Port:        pointer.ToUint16OrNil(3306),
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		}})
+
+		services, err = models.FindServices(q, models.ServiceFilters{NodeID: "N2", ServiceType: pointerToServiceType(models.ExternalServiceType)})
+		assert.NoError(t, err)
+		assert.Equal(t, 1, len(services))
+		assert.Equal(t, services, []*models.Service{{
+			ServiceID:   "S4",
+			ServiceType: models.ExternalServiceType,
+			ServiceName: "Fourth service",
+			NodeID:      "N2",
 			CreatedAt:   now,
 			UpdatedAt:   now,
 		}})
@@ -192,7 +210,7 @@ func TestServiceHelpers(t *testing.T) {
 			Port:        pointer.ToUint16(3306),
 			Socket:      pointer.ToString("/var/run/mysqld/mysqld.sock"),
 		})
-		require.EqualError(t, err, `pq: new row for relation "services" violates check constraint "address_socket_check"`)
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Socket and address cannot be specified together.`), err)
 	})
 
 	t.Run("MySQL empty connection", func(t *testing.T) {
@@ -203,7 +221,7 @@ func TestServiceHelpers(t *testing.T) {
 			ServiceName: "test-mysql-socket-address",
 			NodeID:      "N1",
 		})
-		require.EqualError(t, err, `pq: new row for relation "services" violates check constraint "address_socket_check"`)
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Neither socket nor address passed.`), err)
 	})
 }
 
