@@ -223,6 +223,31 @@ func TestServiceHelpers(t *testing.T) {
 		})
 		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Neither socket nor address passed.`), err)
 	})
+
+	t.Run("MongoDB conflict socket and address", func(t *testing.T) {
+		q, teardown := setup(t)
+		defer teardown(t)
+
+		_, err := models.AddNewService(q, models.MongoDBServiceType, &models.AddDBMSServiceParams{
+			ServiceName: "test-mongodb-socket-address",
+			NodeID:      "N1",
+			Address:     pointer.ToString("127.0.0.1"),
+			Port:        pointer.ToUint16(27017),
+			Socket:      pointer.ToString("/tmp/mongodb-27017.sock"),
+		})
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Socket and address cannot be specified together.`), err)
+	})
+
+	t.Run("MongoDB empty connection", func(t *testing.T) {
+		q, teardown := setup(t)
+		defer teardown(t)
+
+		_, err := models.AddNewService(q, models.MongoDBServiceType, &models.AddDBMSServiceParams{
+			ServiceName: "test-mongodb-socket-address",
+			NodeID:      "N1",
+		})
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Neither socket nor address passed.`), err)
+	})
 }
 
 func pointerToServiceType(serviceType models.ServiceType) *models.ServiceType {
