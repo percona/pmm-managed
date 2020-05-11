@@ -269,6 +269,7 @@ func TestRemoveExternal(t *testing.T) {
 				ServiceName:  serviceName,
 				Username:     "username",
 				Password:     "password",
+				ListenPort:   12345,
 			},
 		}
 		addExternalOK, err := client.Default.External.AddExternal(params)

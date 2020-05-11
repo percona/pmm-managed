@@ -132,7 +132,7 @@ func RemoveServices(t TestingT, serviceIDs ...string) {
 		params := &services.RemoveServiceParams{
 			Body: services.RemoveServiceBody{
 				ServiceID: serviceID,
-				//Force:     true,
+				Force:     true,
 			},
 			Context: context.Background(),
 		}
