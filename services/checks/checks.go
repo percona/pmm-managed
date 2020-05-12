@@ -87,8 +87,10 @@ type Service struct {
 	interval   time.Duration
 	startDelay time.Duration
 
-	cm     sync.Mutex
-	checks []check.Check
+	cm               sync.Mutex
+	mySQLChecks      []check.Check
+	postgreSQLChecks []check.Check
+	mongoDBChecks    []check.Check
 }
 
 // New returns Service with given PMM version.
@@ -165,13 +167,31 @@ func (s *Service) Run(ctx context.Context) {
 	}
 }
 
-// getChecks returns available checks.
-func (s *Service) getChecks() []check.Check {
+// getChecks returns available MySQL checks.
+func (s *Service) getMySQLChecks() []check.Check {
 	s.cm.Lock()
 	defer s.cm.Unlock()
 
-	r := make([]check.Check, 0, len(s.checks))
-	return append(r, s.checks...)
+	r := make([]check.Check, 0, len(s.mySQLChecks))
+	return append(r, s.mySQLChecks...)
+}
+
+// getChecks returns available PostgreSQL checks.
+func (s *Service) getPostgreSQLChecks() []check.Check {
+	s.cm.Lock()
+	defer s.cm.Unlock()
+
+	r := make([]check.Check, 0, len(s.postgreSQLChecks))
+	return append(r, s.postgreSQLChecks...)
+}
+
+// getChecks returns available MongoDB checks.
+func (s *Service) getMongoDBChecks() []check.Check {
+	s.cm.Lock()
+	defer s.cm.Unlock()
+
+	r := make([]check.Check, 0, len(s.mongoDBChecks))
+	return append(r, s.mongoDBChecks...)
 }
 
 // waitForResult periodically checks result state and returns it when complete.
@@ -217,23 +237,21 @@ func (s *Service) waitForResult(ctx context.Context, resultID string) ([]map[str
 func (s *Service) executeChecks(ctx context.Context) {
 	s.l.Info("Executing checks...")
 
-	mySQLChecks, postgreSQLChecks, mongoDBChecks := s.groupChecksByDB()
-
 	var alertsIDs []string
 
-	mySQLAlertsIDs, err := s.executeMySQLChecks(ctx, mySQLChecks)
+	mySQLAlertsIDs, err := s.executeMySQLChecks(ctx)
 	if err != nil {
 		s.l.Errorf("Failed to execute MySQL checks: %s.", err)
 	}
 	alertsIDs = append(alertsIDs, mySQLAlertsIDs...)
 
-	postgreSQLAlertsIDs, err := s.executePostgreSQLChecks(ctx, postgreSQLChecks)
+	postgreSQLAlertsIDs, err := s.executePostgreSQLChecks(ctx)
 	if err != nil {
 		s.l.Errorf("Failed to execute PostgreSQL checks: %s.", err)
 	}
 	alertsIDs = append(alertsIDs, postgreSQLAlertsIDs...)
 
-	mongoDBAlertsIDs, err := s.executeMongoDBChecks(ctx, mongoDBChecks)
+	mongoDBAlertsIDs, err := s.executeMongoDBChecks(ctx)
 	if err != nil {
 		s.l.Errorf("Failed to execute MongoDB checks: %s.", err)
 	}
@@ -244,7 +262,7 @@ func (s *Service) executeChecks(ctx context.Context) {
 }
 
 // executeMySQLChecks runs MySQL checks for available MySQL services.
-func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) ([]string, error) {
+func (s *Service) executeMySQLChecks(ctx context.Context) ([]string, error) {
 	targets, err := s.findTargets(models.MySQLServiceType)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to find proper agents and services")
@@ -252,7 +270,7 @@ func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) 
 
 	var res []string
 	for _, target := range targets {
-		for _, c := range checks {
+		for _, c := range s.getMySQLChecks() {
 			r, err := models.CreateActionResult(s.db.Querier, target.agentID)
 			if err != nil {
 				s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agentID, err)
@@ -287,7 +305,7 @@ func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) 
 }
 
 // executePostgreSQLChecks runs PostgreSQL checks for available PostgreSQL services.
-func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Check) ([]string, error) {
+func (s *Service) executePostgreSQLChecks(ctx context.Context) ([]string, error) {
 	targets, err := s.findTargets(models.PostgreSQLServiceType)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to find proper agents and services")
@@ -295,7 +313,7 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Ch
 
 	var res []string
 	for _, target := range targets {
-		for _, c := range checks {
+		for _, c := range s.getPostgreSQLChecks() {
 			r, err := models.CreateActionResult(s.db.Querier, target.agentID)
 			if err != nil {
 				s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agentID, err)
@@ -330,7 +348,7 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Ch
 }
 
 // executeMongoDBChecks runs MongoDB checks for available MongoDB services.
-func (s *Service) executeMongoDBChecks(ctx context.Context, checks []check.Check) ([]string, error) {
+func (s *Service) executeMongoDBChecks(ctx context.Context) ([]string, error) {
 	targets, err := s.findTargets(models.MongoDBServiceType)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to find proper agents and services")
@@ -338,7 +356,7 @@ func (s *Service) executeMongoDBChecks(ctx context.Context, checks []check.Check
 
 	var res []string
 	for _, target := range targets {
-		for _, c := range checks {
+		for _, c := range s.mongoDBChecks {
 			r, err := models.CreateActionResult(s.db.Querier, target.agentID)
 			if err != nil {
 				s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agentID, err)
@@ -510,8 +528,8 @@ func (s *Service) findTargets(serviceType models.ServiceType) ([]target, error) 
 }
 
 // groupChecksByDB splits provided checks by database and returns three slices: for MySQL, for PostgreSQL and for MongoDB.
-func (s *Service) groupChecksByDB() (mySQLChecks, postgreSQLChecks, mongoDBChecks []check.Check) {
-	for _, c := range s.getChecks() {
+func (s *Service) groupChecksByDB(checks []check.Check) (mySQLChecks, postgreSQLChecks, mongoDBChecks []check.Check) {
+	for _, c := range checks {
 		switch c.Type {
 		case check.MySQLSelect:
 			fallthrough
@@ -554,7 +572,9 @@ func (s *Service) collectChecks(ctx context.Context) {
 	}
 
 	checks = s.filterSupportedChecks(checks)
-	s.updateChecks(checks)
+	mySQLChecks, postgreSQLChecks, mongoDBChecks := s.groupChecksByDB(checks)
+
+	s.updateChecks(mySQLChecks, postgreSQLChecks, mongoDBChecks)
 }
 
 // loadLocalCheck loads checks form local file.
@@ -655,11 +675,13 @@ func (s *Service) filterSupportedChecks(checks []check.Check) []check.Check {
 }
 
 // updateChecks update service checks filed value under mutex.
-func (s *Service) updateChecks(checks []check.Check) {
+func (s *Service) updateChecks(mySQLChecks, postgreSQLChecks, mongoDBChecks []check.Check) {
 	s.cm.Lock()
 	defer s.cm.Unlock()
 
-	s.checks = checks
+	s.mySQLChecks = mySQLChecks
+	s.postgreSQLChecks = postgreSQLChecks
+	s.mongoDBChecks = mongoDBChecks
 }
 
 // verifySignatures verifies checks signatures and returns error in case of verification problem.

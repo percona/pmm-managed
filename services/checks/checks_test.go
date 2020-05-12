@@ -37,7 +37,9 @@ func TestDownloadChecks(t *testing.T) {
 		s.host = devChecksHost
 		s.publicKeys = []string{devChecksPublicKey}
 
-		assert.Empty(t, s.getChecks())
+		assert.Empty(t, s.getMySQLChecks())
+		assert.Empty(t, s.getPostgreSQLChecks())
+		assert.Empty(t, s.getMongoDBChecks())
 		ctx, cancel := context.WithTimeout(context.Background(), downloadTimeout)
 		defer cancel()
 
