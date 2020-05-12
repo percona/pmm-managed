@@ -33,21 +33,22 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type AlertManager struct {
-	// To make this testeable. To run API tests we need to write the rules file but on dev envs
-	// there is no /srv/prometheus/rules/ directory
-	alertManagerFile string
-	l                *logrus.Entry
+const alertingRulesFile = "/srv/prometheus/rules/pmm.rules.yml"
+
+// AlertManagerRulesConfigurator contains all logic related to alert manager rules files.
+type AlertManagerRulesConfigurator struct {
+	l *logrus.Entry
 }
 
-func NewAlertManager(alertManagerFile string) *AlertManager {
-	return &AlertManager{
-		alertManagerFile: alertManagerFile,
-		l:                logrus.WithField("component", "alert_manager"),
+// NewAlertManagerRulesConfigurator creates new AlertManagerRulesConfigurator instance.
+func NewAlertManagerRulesConfigurator() *AlertManagerRulesConfigurator {
+	return &AlertManagerRulesConfigurator{
+		l: logrus.WithField("component", "alert_manager"),
 	}
 }
 
-func (s *AlertManager) ValidateRules(ctx context.Context, rules string) error {
+// ValidateRules validates alert manager rules.
+func (s *AlertManagerRulesConfigurator) ValidateRules(ctx context.Context, rules string) error {
 	tempFile, err := ioutil.TempFile("", "temp_rules_*.yml")
 	if err != nil {
 		return errors.WithStack(err)
@@ -83,18 +84,21 @@ func (s *AlertManager) ValidateRules(ctx context.Context, rules string) error {
 	return nil
 }
 
-func (s *AlertManager) ReadRules() (string, error) {
-	b, err := ioutil.ReadFile(s.alertManagerFile)
+// ReadRules reads current rules from FS.
+func (s *AlertManagerRulesConfigurator) ReadRules() (string, error) {
+	b, err := ioutil.ReadFile(alertingRulesFile)
 	if err != nil && !os.IsNotExist(err) {
 		return "", err
 	}
-	return string(b), err
+	return string(b), nil
 }
 
-func (s *AlertManager) RemoveRulesFile() error {
-	return os.Remove(s.alertManagerFile)
+// RemoveRulesFile removes rules file from FS.
+func (s *AlertManagerRulesConfigurator) RemoveRulesFile() error {
+	return os.Remove(alertingRulesFile)
 }
 
-func (s *AlertManager) WriteRules(rules string) error {
-	return ioutil.WriteFile(s.alertManagerFile, []byte(rules), 0644)
+// WriteRules writes rules to file.
+func (s *AlertManagerRulesConfigurator) WriteRules(rules string) error {
+	return ioutil.WriteFile(alertingRulesFile, []byte(rules), 0644)
 }

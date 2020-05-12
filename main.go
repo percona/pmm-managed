@@ -389,9 +389,9 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 	}
 	deps.prometheus.RequestConfigurationUpdate()
 
-	deps.l.Infof("Checking Alertmanager...")
+	deps.l.Infof("Checking AlertManagerAPIService...")
 	if err = deps.alertmanager.IsReady(ctx); err != nil {
-		deps.l.Warnf("Alertmanager problem: %+v.", err)
+		deps.l.Warnf("AlertManagerAPIService problem: %+v.", err)
 		return false
 	}
 
@@ -505,7 +505,7 @@ func main() {
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reformL)
 
 	cleaner := clean.New(db)
-	alertManager := prometheus.NewAlertManager(*alertManagerRulesFileF)
+	alertManager := prometheus.NewAlertManagerRulesConfigurator()
 
 	prometheus, err := prometheus.NewService(alertManager, *prometheusConfigF, db, *prometheusURLF)
 
@@ -521,7 +521,7 @@ func main() {
 	alertsRegistry := alertmanager.NewRegistry()
 	alertmanager, err := alertmanager.New(db, alertsRegistry)
 	if err != nil {
-		l.Panicf("Alertmanager service problem: %+v", err)
+		l.Panicf("AlertManagerAPIService service problem: %+v", err)
 	}
 
 	pmmUpdateCheck := supervisord.NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker"))
@@ -535,14 +535,14 @@ func main() {
 	prom.MustRegister(grafanaClient)
 
 	serverParams := &server.Params{
-		DB:                 db,
-		Prometheus:         prometheus,
-		Alertmanager:       alertmanager,
-		Supervisord:        supervisord,
-		TelemetryService:   telemetry,
-		AwsInstanceChecker: awsInstanceChecker,
-		GrafanaClient:      grafanaClient,
-		AlertManager: 		alertManager,
+		DB:                            db,
+		Prometheus:                    prometheus,
+		AlertManagerAPIService:        alertmanager,
+		Supervisord:                   supervisord,
+		TelemetryService:              telemetry,
+		AwsInstanceChecker:            awsInstanceChecker,
+		GrafanaClient:                 grafanaClient,
+		AlertManagerRulesConfigurator: alertManager,
 	}
 	server, err := server.NewServer(serverParams)
 	if err != nil {

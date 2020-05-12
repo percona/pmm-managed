@@ -50,19 +50,17 @@ import (
 	"github.com/percona/pmm-managed/utils/envvars"
 )
 
-const alertingRulesFile = "/srv/prometheus/rules/pmm.rules.yml"
-
 // Server represents service for checking PMM Server status and changing settings.
 type Server struct {
-	db                 *reform.DB
-	prometheus         prometheusService
-	alertManager     alertManagerService
-	alertmanager       alertmanagerService
-	supervisord        supervisordService
-	telemetryService   telemetryService
-	awsInstanceChecker *AWSInstanceChecker
-	grafanaClient      grafanaClient
-	l                  *logrus.Entry
+	db                  *reform.DB
+	prometheus          prometheusService
+	amRulesConfigurator alertManagerRulesConfigurator
+	amAPIService        alertManagerAPIService
+	supervisord         supervisordService
+	telemetryService    telemetryService
+	awsInstanceChecker  *AWSInstanceChecker
+	grafanaClient       grafanaClient
+	l                   *logrus.Entry
 
 	pmmUpdateAuthFileM sync.Mutex
 	pmmUpdateAuthFile  string
@@ -79,13 +77,14 @@ type pmmUpdateAuth struct {
 
 // Params holds the parameters needed to create a new service.
 type Params struct {
-	DB                 *reform.DB
-	Prometheus         prometheusService
-	Alertmanager       alertmanagerService
-	Supervisord        supervisordService
-	TelemetryService   telemetryService
-	AwsInstanceChecker *AWSInstanceChecker
-	GrafanaClient      grafanaClient
+	DB                            *reform.DB
+	Prometheus                    prometheusService
+	AlertManagerAPIService        alertManagerAPIService
+	AlertManagerRulesConfigurator alertManagerRulesConfigurator
+	Supervisord                   supervisordService
+	TelemetryService              telemetryService
+	AwsInstanceChecker            *AWSInstanceChecker
+	GrafanaClient                 grafanaClient
 }
 
 // NewServer returns new server for Server service.
@@ -97,17 +96,17 @@ func NewServer(params *Params) (*Server, error) {
 	path = filepath.Join(path, "pmm-update.json")
 
 	s := &Server{
-		db:                 params.DB,
-		prometheus:         params.Prometheus,
-		alertmanager:       params.Alertmanager,
-		alertManager:       params.AlertManager,
-		supervisord:        params.Supervisord,
-		telemetryService:   params.TelemetryService,
-		awsInstanceChecker: params.AwsInstanceChecker,
-		grafanaClient:      params.GrafanaClient,
-		l:                  logrus.WithField("component", "server"),
-		pmmUpdateAuthFile:  path,
-		envSettings:        new(models.ChangeSettingsParams),
+		db:                  params.DB,
+		prometheus:          params.Prometheus,
+		amAPIService:        params.AlertManagerAPIService,
+		amRulesConfigurator: params.AlertManagerRulesConfigurator,
+		supervisord:         params.Supervisord,
+		telemetryService:    params.TelemetryService,
+		awsInstanceChecker:  params.AwsInstanceChecker,
+		grafanaClient:       params.GrafanaClient,
+		l:                   logrus.WithField("component", "server"),
+		pmmUpdateAuthFile:   path,
+		envSettings:         new(models.ChangeSettingsParams),
 	}
 	return s, nil
 }
@@ -199,7 +198,7 @@ func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) 
 	var notReady bool
 	for n, svc := range map[string]healthChecker{
 		"prometheus":   s.prometheus,
-		"alertmanager": s.alertmanager,
+		"alertmanager": s.amAPIService,
 		"grafana":      s.grafanaClient,
 	} {
 		if err := svc.IsReady(ctx); err != nil {
@@ -393,7 +392,7 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 		SttEnabled:      settings.SaaS.STTEnabled,
 	}
 
-	b, err := s.alertManager.ReadRules()
+	b, err := s.amRulesConfigurator.ReadRules()
 	if err != nil {
 		s.l.Warnf("Cannot load Alert Manager rules: %s", err)
 	}
@@ -437,7 +436,7 @@ func (s *Server) validateChangeSettingsRequest(ctx context.Context, req *serverp
 	}
 
 	if req.AlertManagerRules != "" {
-		if err := s.alertManager.ValidateRules(ctx, req.AlertManagerRules); err != nil {
+		if err := s.amRulesConfigurator.ValidateRules(ctx, req.AlertManagerRules); err != nil {
 			return err
 		}
 	}
@@ -512,12 +511,12 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 
 		// absent value means "do not change"
 		if req.AlertManagerRules != "" {
-			if e = s.alertManager.WriteRules(req.AlertManagerRules); e != nil {
+			if e = s.amRulesConfigurator.WriteRules(req.AlertManagerRules); e != nil {
 				return errors.WithStack(e)
 			}
 		}
 		if req.RemoveAlertManagerRules {
-			if e = s.alertManager.RemoveRulesFile(); e != nil && !os.IsNotExist(e) {
+			if e = s.amRulesConfigurator.RemoveRulesFile(); e != nil && !os.IsNotExist(e) {
 				return errors.WithStack(e)
 			}
 		}

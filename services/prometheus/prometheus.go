@@ -53,11 +53,11 @@ var checkFailedRE = regexp.MustCompile(`FAILED: parsing YAML file \S+: (.+)\n`)
 //   * Prometheus configuration and rule files are accessible;
 //   * promtool is available.
 type Service struct {
-	alertManager   *AlertManager
-	configPath string
-	db         *reform.DB
-	baseURL    *url.URL
-	client     *http.Client
+	alertManager *AlertManagerRulesConfigurator
+	configPath   string
+	db           *reform.DB
+	baseURL      *url.URL
+	client       *http.Client
 
 	baseConfigPath string // for testing
 
@@ -68,7 +68,7 @@ type Service struct {
 }
 
 // NewService creates new service.
-func NewService(alertManager *AlertManager, configPath string, db *reform.DB, baseURL string) (*Service, error) {
+func NewService(alertManager *AlertManagerRulesConfigurator, configPath string, db *reform.DB, baseURL string) (*Service, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, errors.WithStack(err)
