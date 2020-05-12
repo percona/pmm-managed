@@ -232,7 +232,7 @@ func TestServiceHelpers(t *testing.T) {
 			ServiceName: "test-postgresql-socket-address",
 			NodeID:      "N1",
 			Address:     pointer.ToString("127.0.0.1"),
-			Port:        pointer.ToUint16(27017),
+			Port:        pointer.ToUint16(5432),
 			Socket:      pointer.ToString("/var/run/postgresql"),
 		})
 		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Socket and address cannot be specified together.`), err)
