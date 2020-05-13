@@ -22,6 +22,8 @@ import (
 	"time"
 
 	"github.com/percona/pmm/api/alertmanager/ammodels"
+
+	"github.com/percona/pmm-managed/services"
 )
 
 // for tests
@@ -44,11 +46,22 @@ func NewRegistry() *Registry {
 	}
 }
 
-// Add adds or replaces alert with given ID. If that ID wasn't present before,
-// alert is added in the pending state. It we be transitioned to the firing state after delayFor interval.
-// This is similar to `for` field of Prometheus alerting rule:
+// CreateAlert creates alert from given AlertParams and adds or replaces alert with given ID in registry.
+// If that ID wasn't present before, alert is added in the pending state. It we be transitioned to the firing
+// state after delayFor interval. This is similar to `for` field of Prometheus alerting rule:
 // https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/
-func (r *Registry) Add(id string, delayFor time.Duration, alert *ammodels.PostableAlert) {
+func (r *Registry) CreateAlert(alertParams *services.AlertParams, delayFor time.Duration) {
+	alert := &ammodels.PostableAlert{
+		Alert: ammodels.Alert{
+			// GeneratorURL: "TODO",
+			Labels: alertParams.Labels,
+		},
+
+		// StartsAt and EndAt can't be added there without changes in Registry
+		Annotations: alertParams.Annotations,
+	}
+	id := alertParams.ID
+
 	r.rw.Lock()
 	defer r.rw.Unlock()
 

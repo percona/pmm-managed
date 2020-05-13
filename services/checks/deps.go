@@ -20,7 +20,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/percona/pmm/api/alertmanager/ammodels"
+	"github.com/percona/pmm-managed/services"
 )
 
 //go:generate mockery -name=agentsRegistry -case=snake -inpkg -testonly
@@ -39,6 +39,6 @@ type agentsRegistry interface {
 
 // alertRegistry is is a subset of methods of alertmanager.registry used by this package.
 type alertRegistry interface {
-	Add(id string, delayFor time.Duration, alert *ammodels.PostableAlert)
+	CreateAlert(alertParams *services.AlertParams, delayFor time.Duration)
 	RemovePrefix(prefix string, keepIDs map[string]struct{})
 }

@@ -44,6 +44,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services"
 )
 
 const (
@@ -426,8 +427,8 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 	alertsIDs := make([]string, len(results))
 	for i, result := range results {
 		id := alertsPrefix + hashID(target.serviceID+"/"+result.Summary)
-		alert := makeAlert(id, check.Name, target, &result)
-		s.alertsRegistry.Add(id, 0, alert)
+		alertParams := makeAlertParams(id, check.Name, target, &result)
+		s.alertsRegistry.CreateAlert(alertParams, 0)
 		alertsIDs[i] = id
 	}
 
@@ -438,6 +439,30 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 func hashID(s string) string {
 	data := sha1.Sum([]byte(s)) //nolint:gosec
 	return hex.EncodeToString(data[:])
+}
+
+func makeAlertParams(id, name string, target target, result *check.Result) *services.AlertParams {
+	labels := make(map[string]string, len(target.labels)+len(result.Labels)+4) //nolint:gomnd
+	annotations := make(map[string]string, 2)
+	for k, v := range target.labels {
+		labels[k] = v
+	}
+	for k, v := range result.Labels {
+		labels[k] = v
+	}
+	labels[model.AlertNameLabel] = name
+	labels["severity"] = result.Severity.String()
+	labels["stt_check"] = "1"
+	labels["alert_id"] = id
+
+	annotations["summary"] = result.Summary
+	annotations["description"] = result.Description
+
+	return &services.AlertParams{
+		ID:          id,
+		Labels:      labels,
+		Annotations: annotations,
+	}
 }
 
 func makeAlert(id, name string, target target, result *check.Result) *ammodels.PostableAlert {
