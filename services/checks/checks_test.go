@@ -158,7 +158,6 @@ uEF33ScMPYpvHvBKv8+yBkJ9k4+DCfV4nDs6kKYwGhalvkkqwWkyfJffO+KW7a1m3y42WHpOnzBxLJ+I
 
 func TestFilterChecks(t *testing.T) {
 	valid := []check.Check{
-		{Name: "supported version", Version: 1, Type: check.MySQLShow},
 		{Name: "MySQLShow", Version: 1, Type: check.MySQLShow},
 		{Name: "MySQLSelect", Version: 1, Type: check.MySQLSelect},
 		{Name: "PostgreSQLShow", Version: 1, Type: check.PostgreSQLShow},
