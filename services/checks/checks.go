@@ -33,7 +33,6 @@ import (
 	"github.com/percona-platform/saas/pkg/check"
 	"github.com/percona-platform/saas/pkg/starlark"
 	"github.com/percona/pmm/api/agentpb"
-	"github.com/percona/pmm/api/alertmanager/ammodels"
 	"github.com/percona/pmm/utils/tlsconfig"
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
@@ -269,9 +268,11 @@ func (s *Service) executeMySQLChecks(ctx context.Context) ([]string, error) {
 		return nil, errors.Wrap(err, "failed to find proper agents and services")
 	}
 
+	checks := s.getMySQLChecks()
+
 	var res []string
 	for _, target := range targets {
-		for _, c := range s.getMySQLChecks() {
+		for _, c := range checks {
 			r, err := models.CreateActionResult(s.db.Querier, target.agentID)
 			if err != nil {
 				s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agentID, err)
@@ -312,9 +313,11 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context) ([]string, error)
 		return nil, errors.Wrap(err, "failed to find proper agents and services")
 	}
 
+	checks := s.getPostgreSQLChecks()
+
 	var res []string
 	for _, target := range targets {
-		for _, c := range s.getPostgreSQLChecks() {
+		for _, c := range checks {
 			r, err := models.CreateActionResult(s.db.Querier, target.agentID)
 			if err != nil {
 				s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agentID, err)
@@ -355,9 +358,11 @@ func (s *Service) executeMongoDBChecks(ctx context.Context) ([]string, error) {
 		return nil, errors.Wrap(err, "failed to find proper agents and services")
 	}
 
+	checks := s.getMongoDBChecks()
+
 	var res []string
 	for _, target := range targets {
-		for _, c := range s.mongoDBChecks {
+		for _, c := range checks {
 			r, err := models.CreateActionResult(s.db.Querier, target.agentID)
 			if err != nil {
 				s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agentID, err)
@@ -392,7 +397,6 @@ func (s *Service) executeMongoDBChecks(ctx context.Context) ([]string, error) {
 	return res, nil
 }
 
-// TODO find better name
 func (s *Service) processResults(ctx context.Context, check check.Check, target target, resID string) ([]string, error) {
 	nCtx, cancel := context.WithTimeout(ctx, resultTimeout)
 	r, err := s.waitForResult(nCtx, resID)
@@ -462,35 +466,6 @@ func makeAlertParams(id, name string, target target, result *check.Result) *serv
 		ID:          id,
 		Labels:      labels,
 		Annotations: annotations,
-	}
-}
-
-func makeAlert(id, name string, target target, result *check.Result) *ammodels.PostableAlert {
-	labels := make(map[string]string, len(target.labels)+len(result.Labels)+4) //nolint:gomnd
-	for k, v := range target.labels {
-		labels[k] = v
-	}
-	for k, v := range result.Labels {
-		labels[k] = v
-	}
-
-	labels[model.AlertNameLabel] = name
-	labels["severity"] = result.Severity.String()
-	labels["stt_check"] = "1"
-	labels["alert_id"] = id
-
-	return &ammodels.PostableAlert{
-		Alert: ammodels.Alert{
-			// GeneratorURL: "TODO",
-			Labels: labels,
-		},
-
-		// StartsAt and EndAt can't be added there without changes in Registry
-
-		Annotations: map[string]string{
-			"summary":     result.Summary,
-			"description": result.Description,
-		},
 	}
 }
 
