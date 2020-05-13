@@ -3,8 +3,9 @@
 package checks
 
 import (
-	ammodels "github.com/percona/pmm/api/alertmanager/ammodels"
 	mock "github.com/stretchr/testify/mock"
+
+	services "github.com/percona/pmm-managed/services"
 
 	time "time"
 )
@@ -14,9 +15,9 @@ type mockAlertRegistry struct {
 	mock.Mock
 }
 
-// Add provides a mock function with given fields: id, delayFor, alert
-func (_m *mockAlertRegistry) Add(id string, delayFor time.Duration, alert *ammodels.PostableAlert) {
-	_m.Called(id, delayFor, alert)
+// CreateAlert provides a mock function with given fields: alertParams, delayFor
+func (_m *mockAlertRegistry) CreateAlert(alertParams *services.AlertParams, delayFor time.Duration) {
+	_m.Called(alertParams, delayFor)
 }
 
 // RemovePrefix provides a mock function with given fields: prefix, keepIDs
