@@ -26,6 +26,8 @@ import (
 	"github.com/percona/pmm-managed/utils/envvars"
 )
 
+const alertmanagerDataDir = "/srv/alertmanager/data"
+
 func main() {
 	logrus.SetFormatter(&logrus.TextFormatter{
 		ForceColors:     true,
@@ -54,5 +56,12 @@ func main() {
 	if err != nil {
 		logrus.Errorf("Configuration error: %s.", err)
 		os.Exit(1)
+	}
+
+	if _, err := os.Stat(alertmanagerDataDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(alertmanagerDataDir, 755); err != nil {
+			logrus.Errorf("Cannot create datadir for AlertManager %v.", err)
+			os.Exit(1)
+		}
 	}
 }
