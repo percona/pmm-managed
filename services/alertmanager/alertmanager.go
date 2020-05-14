@@ -21,7 +21,10 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
+	"os/user"
+	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	httptransport "github.com/go-openapi/runtime/client"
@@ -60,6 +63,7 @@ func (svc *Service) Run(ctx context.Context) {
 	svc.l.Info("Starting...")
 	defer svc.l.Info("Done.")
 
+	svc.createDataDir()
 	svc.generateBaseConfig()
 
 	t := time.NewTicker(resendInterval)
@@ -77,19 +81,49 @@ func (svc *Service) Run(ctx context.Context) {
 	}
 }
 
+// createDataDir creates alert manager directories if not exists in the persistent volume.
+func (svc *Service) createDataDir() {
+	group, err := user.Lookup("pmm")
+	if err != nil {
+		svc.l.Errorf("error looking up pmm user user info %v.", err)
+		return
+	}
+
+	uid, _ := strconv.Atoi(group.Uid)
+	gid, _ := strconv.Atoi(group.Gid)
+
+	stat, err := os.Stat(alertmanagerDataDir)
+	if os.IsNotExist(err) {
+		svc.l.Infof("Creating %q", alertmanagerDataDir)
+		if err := os.MkdirAll(alertmanagerDataDir, 0775); err != nil {
+			svc.l.Errorf("Cannot create datadir for AlertManager %v.", err)
+			return
+		}
+		if err := os.Chown(alertmanagerDataDir, uid, gid); err != nil {
+			svc.l.Errorf("Cannot chown datadir for AlertManager %v.", err)
+			return
+		}
+	}
+
+	if stat.Mode().Perm() != 0775 {
+		if err := os.Chmod(alertmanagerDataDir, 0775); err != nil {
+			svc.l.Errorf("Cannot chmod datadir for AlertManager %v.", err)
+		}
+	}
+
+	systat := stat.Sys().(*syscall.Stat_t)
+	if systat.Uid != uint32(uid) || systat.Gid != uint32(gid) {
+		if err := os.Chown(alertmanagerDataDir, uid, gid); err != nil {
+			svc.l.Errorf("Cannot chown datadir for AlertManager %v.", err)
+		}
+	}
+}
+
 // generateBaseConfig generates /srv/alertmanager/alertmanager.base.yml if it is not present.
 //
 // TODO That's a temporary measure until we start generating /etc/alertmanager.yml
 // using /srv/alertmanager/alertmanager.base.yml as a base. See supervisord config.
 func (svc *Service) generateBaseConfig() {
-	// create alert manager directories if not exists in the persistent volume.
-	if _, err := os.Stat(alertmanagerDataDir); os.IsNotExist(err) {
-		svc.l.Infof("Creating %q", alertmanagerDataDir)
-		if err := os.MkdirAll(alertmanagerDataDir, os.ModePerm); err != nil {
-			svc.l.Errorf("Cannot create datadir for AlertManager %v.", err)
-			os.Exit(1)
-		}
-	}
 
 	_, err := os.Stat(path)
 	svc.l.Debugf("%s status: %v", path, err)
