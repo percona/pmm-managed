@@ -33,7 +33,11 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-const resendInterval = 30 * time.Second
+const (
+	resendInterval      = 30 * time.Second
+	alertmanagerDataDir = "/srv/alertmanager/data"
+	path                = "/srv/alertmanager/alertmanager.base.yml"
+)
 
 // Service is responsible for interactions with Alertmanager.
 type Service struct {
@@ -78,7 +82,15 @@ func (svc *Service) Run(ctx context.Context) {
 // TODO That's a temporary measure until we start generating /etc/alertmanager.yml
 // using /srv/alertmanager/alertmanager.base.yml as a base. See supervisord config.
 func (svc *Service) generateBaseConfig() {
-	const path = "/srv/alertmanager/alertmanager.base.yml"
+	// create alert manager directories if not exists in the persistent volume.
+	if _, err := os.Stat(alertmanagerDataDir); os.IsNotExist(err) {
+		svc.l.Infof("Creating %q", alertmanagerDataDir)
+		if err := os.MkdirAll(alertmanagerDataDir, os.ModePerm); err != nil {
+			svc.l.Errorf("Cannot create datadir for AlertManager %v.", err)
+			os.Exit(1)
+		}
+	}
+
 	_, err := os.Stat(path)
 	svc.l.Debugf("%s status: %v", path, err)
 

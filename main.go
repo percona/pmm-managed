@@ -87,8 +87,6 @@ const (
 
 	cleanInterval  = 10 * time.Minute
 	cleanOlderThan = 30 * time.Minute
-
-	alertmanagerDataDir = "/srv/alertmanager/data"
 )
 
 func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
@@ -495,15 +493,6 @@ func main() {
 		logrus.Warnf("Got %s, shutting down...", unix.SignalName(s.(unix.Signal)))
 		cancel()
 	}()
-
-	// create alert manager directories if not exists in the persistent volume.
-	if _, err := os.Stat(alertmanagerDataDir); os.IsNotExist(err) {
-		l.Infof("Creating %q", alertmanagerDataDir)
-		if err := os.MkdirAll(alertmanagerDataDir, os.ModePerm); err != nil {
-			l.Errorf("Cannot create datadir for AlertManager %v.", err)
-			os.Exit(1)
-		}
-	}
 
 	sqlDB, err := models.OpenDB(*postgresAddrF, *postgresDBNameF, *postgresDBUsernameF, *postgresDBPasswordF)
 	if err != nil {
