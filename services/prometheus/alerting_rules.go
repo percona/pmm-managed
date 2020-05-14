@@ -35,20 +35,20 @@ import (
 
 const alertingRulesFile = "/srv/prometheus/rules/pmm.rules.yml"
 
-// AlertManagerRulesConfigurator contains all logic related to alert manager rules files.
-type AlertManagerRulesConfigurator struct {
+// AlertingRules contains all logic related to alerting rules files.
+type AlertingRules struct {
 	l *logrus.Entry
 }
 
-// NewAlertManagerRulesConfigurator creates new AlertManagerRulesConfigurator instance.
-func NewAlertManagerRulesConfigurator() *AlertManagerRulesConfigurator {
-	return &AlertManagerRulesConfigurator{
+// NewAlertingRules creates new AlertingRules instance.
+func NewAlertingRules() *AlertingRules {
+	return &AlertingRules{
 		l: logrus.WithField("component", "alert_manager"),
 	}
 }
 
-// ValidateRules validates alert manager rules.
-func (s *AlertManagerRulesConfigurator) ValidateRules(ctx context.Context, rules string) error {
+// ValidateRules validates alerting rules.
+func (s *AlertingRules) ValidateRules(ctx context.Context, rules string) error {
 	tempFile, err := ioutil.TempFile("", "temp_rules_*.yml")
 	if err != nil {
 		return errors.WithStack(err)
@@ -85,7 +85,7 @@ func (s *AlertManagerRulesConfigurator) ValidateRules(ctx context.Context, rules
 }
 
 // ReadRules reads current rules from FS.
-func (s *AlertManagerRulesConfigurator) ReadRules() (string, error) {
+func (s *AlertingRules) ReadRules() (string, error) {
 	b, err := ioutil.ReadFile(alertingRulesFile)
 	if err != nil && !os.IsNotExist(err) {
 		return "", err
@@ -94,11 +94,11 @@ func (s *AlertManagerRulesConfigurator) ReadRules() (string, error) {
 }
 
 // RemoveRulesFile removes rules file from FS.
-func (s *AlertManagerRulesConfigurator) RemoveRulesFile() error {
+func (s *AlertingRules) RemoveRulesFile() error {
 	return os.Remove(alertingRulesFile)
 }
 
 // WriteRules writes rules to file.
-func (s *AlertManagerRulesConfigurator) WriteRules(rules string) error {
+func (s *AlertingRules) WriteRules(rules string) error {
 	return ioutil.WriteFile(alertingRulesFile, []byte(rules), 0644)
 }

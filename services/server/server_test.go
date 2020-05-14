@@ -46,15 +46,15 @@ func TestServer(t *testing.T) {
 	mp := new(mockPrometheusService)
 	mp.On("RequestConfigurationUpdate").Return(nil)
 
-	am := new(mockAlertManagerRulesConfigurator)
+	am := new(mockAlertingRulesService)
 	am.Test(t)
 
 	newServer := func() *Server {
 		s, err := NewServer(&Params{
-			DB:                            reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
-			Supervisord:                   r,
-			Prometheus:                    mp,
-			AlertManagerRulesConfigurator: am,
+			DB:            reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
+			Supervisord:   r,
+			Prometheus:    mp,
+			AlertingRules: am,
 		})
 		require.NoError(t, err)
 		return s

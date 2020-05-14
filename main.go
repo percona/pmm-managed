@@ -389,9 +389,9 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 	}
 	deps.prometheus.RequestConfigurationUpdate()
 
-	deps.l.Infof("Checking AlertManagerAPIService...")
+	deps.l.Infof("Checking Alertmanager...")
 	if err = deps.alertmanager.IsReady(ctx); err != nil {
-		deps.l.Warnf("AlertManagerAPIService problem: %+v.", err)
+		deps.l.Warnf("Alertmanager problem: %+v.", err)
 		return false
 	}
 
@@ -505,9 +505,9 @@ func main() {
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reformL)
 
 	cleaner := clean.New(db)
-	alertManager := prometheus.NewAlertManagerRulesConfigurator()
+	alertingRules := prometheus.NewAlertingRules()
 
-	prometheus, err := prometheus.NewService(alertManager, *prometheusConfigF, db, *prometheusURLF)
+	prometheus, err := prometheus.NewService(alertingRules, *prometheusConfigF, db, *prometheusURLF)
 
 	if err != nil {
 		l.Panicf("Prometheus service problem: %+v", err)
@@ -521,7 +521,7 @@ func main() {
 	alertsRegistry := alertmanager.NewRegistry()
 	alertmanager, err := alertmanager.New(db, alertsRegistry)
 	if err != nil {
-		l.Panicf("AlertManagerAPIService service problem: %+v", err)
+		l.Panicf("Alertmanager service problem: %+v", err)
 	}
 
 	pmmUpdateCheck := supervisord.NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker"))
@@ -535,14 +535,14 @@ func main() {
 	prom.MustRegister(grafanaClient)
 
 	serverParams := &server.Params{
-		DB:                            db,
-		Prometheus:                    prometheus,
-		AlertManagerAPIService:        alertmanager,
-		Supervisord:                   supervisord,
-		TelemetryService:              telemetry,
-		AwsInstanceChecker:            awsInstanceChecker,
-		GrafanaClient:                 grafanaClient,
-		AlertManagerRulesConfigurator: alertManager,
+		DB:                 db,
+		Prometheus:         prometheus,
+		AlertManager:       alertmanager,
+		Supervisord:        supervisord,
+		TelemetryService:   telemetry,
+		AwsInstanceChecker: awsInstanceChecker,
+		GrafanaClient:      grafanaClient,
+		AlertingRules:      alertingRules,
 	}
 	server, err := server.NewServer(serverParams)
 	if err != nil {
