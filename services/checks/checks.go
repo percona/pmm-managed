@@ -148,10 +148,7 @@ func (s *Service) Run(ctx context.Context) {
 		}
 
 		if sttEnabled {
-			nCtx, cancel := context.WithTimeout(ctx, checksTimeout)
-			s.collectChecks(nCtx)
-			s.executeChecks(nCtx)
-			cancel()
+			s.StartChecks(ctx)
 		} else {
 			s.l.Info("STT is not enabled, doing nothing.")
 		}
@@ -163,6 +160,14 @@ func (s *Service) Run(ctx context.Context) {
 			return
 		}
 	}
+}
+
+func (s *Service) StartChecks(ctx context.Context) {
+	nCtx, cancel := context.WithTimeout(ctx, checksTimeout)
+	defer cancel()
+
+	s.collectChecks(nCtx)
+	s.executeChecks(nCtx)
 }
 
 // getChecks returns available checks.

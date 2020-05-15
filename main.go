@@ -532,12 +532,16 @@ func main() {
 	grafanaClient := grafana.NewClient(*grafanaAddrF)
 	prom.MustRegister(grafanaClient)
 
+	checksService := checks.New(agentsRegistry, alertsRegistry, db, version.Version)
+	prom.MustRegister(checksService)
+
 	serverParams := &server.Params{
 		DB:                 db,
 		Prometheus:         prometheus,
 		Alertmanager:       alertmanager,
 		Supervisord:        supervisord,
 		TelemetryService:   telemetry,
+		ChecksService:      checksService,
 		AwsInstanceChecker: awsInstanceChecker,
 		GrafanaClient:      grafanaClient,
 	}
@@ -578,9 +582,6 @@ func main() {
 	}
 
 	authServer := grafana.NewAuthServer(grafanaClient, awsInstanceChecker)
-
-	checksService := checks.New(agentsRegistry, alertsRegistry, db, version.Version)
-	prom.MustRegister(checksService)
 
 	l.Info("Starting services...")
 	var wg sync.WaitGroup

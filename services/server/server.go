@@ -60,6 +60,7 @@ type Server struct {
 	alertmanager       alertmanagerService
 	supervisord        supervisordService
 	telemetryService   telemetryService
+	checksService      checksService
 	awsInstanceChecker *AWSInstanceChecker
 	grafanaClient      grafanaClient
 	l                  *logrus.Entry
@@ -84,6 +85,7 @@ type Params struct {
 	Alertmanager       alertmanagerService
 	Supervisord        supervisordService
 	TelemetryService   telemetryService
+	ChecksService      checksService
 	AwsInstanceChecker *AWSInstanceChecker
 	GrafanaClient      grafanaClient
 }
@@ -102,6 +104,7 @@ func NewServer(params *Params) (*Server, error) {
 		alertmanager:       params.Alertmanager,
 		supervisord:        params.Supervisord,
 		telemetryService:   params.TelemetryService,
+		checksService:      params.ChecksService,
 		awsInstanceChecker: params.AwsInstanceChecker,
 		grafanaClient:      params.GrafanaClient,
 		l:                  logrus.WithField("component", "server"),
@@ -329,6 +332,12 @@ func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusReq
 		LogOffset: newOffset,
 		Done:      done,
 	}, nil
+}
+
+func (s *Server) StartSecurityChecks(ctx context.Context, request *serverpb.StartSecurityChecksRequest) (*serverpb.StartSecurityChecksResponse, error) {
+	s.checksService.StartChecks(ctx)
+
+	return &serverpb.StartSecurityChecksResponse{}, nil
 }
 
 // writeUpdateAuthToken writes authentication token for getting update status and logs to the file.
