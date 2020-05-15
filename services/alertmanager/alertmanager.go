@@ -80,11 +80,11 @@ func (svc *Service) Run(ctx context.Context) {
 	}
 }
 
-// createDataDir creates alert manager directories if not exists in the persistent volume.
+// createDataDir creates Alertmanager directories if not exists in the persistent volume.
 func (svc *Service) createDataDir() {
-	// try to create alertmanager data dir if not exists.
+	// try to create Alertmanager data dir if not exists.
 	if err := os.MkdirAll(alertmanagerDataDir, 0775); err != nil {
-		svc.l.Errorf("Cannot create datadir for AlertManager %v.", err)
+		svc.l.Errorf("Cannot create datadir for Alertmanager %v.", err)
 		return
 	}
 
@@ -97,7 +97,7 @@ func (svc *Service) createDataDir() {
 	// Check and fix permissions.
 	if alertmanagerDataDirStat.Mode()&os.ModePerm != os.FileMode(0775) {
 		if err := os.Chmod(alertmanagerDataDir, 0775); err != nil {
-			svc.l.Errorf("Cannot chmod datadir for AlertManager %v.", err)
+			svc.l.Errorf("Cannot chmod datadir for Alertmanager %v.", err)
 		}
 	}
 
@@ -115,7 +115,7 @@ func (svc *Service) createDataDir() {
 	// Chown user and group as Prometheus has if they are not same.
 	if aUID != pUID || aGID != pGID {
 		if err := os.Chown(alertmanagerDataDir, pUID, pGID); err != nil {
-			svc.l.Errorf("Cannot chown datadir for AlertManager %v.", err)
+			svc.l.Errorf("Cannot chown datadir for Alertmanager %v.", err)
 		}
 	}
 }
@@ -125,7 +125,6 @@ func (svc *Service) createDataDir() {
 // TODO That's a temporary measure until we start generating /etc/alertmanager.yml
 // using /srv/alertmanager/alertmanager.base.yml as a base. See supervisord config.
 func (svc *Service) generateBaseConfig() {
-
 	_, err := os.Stat(path)
 	svc.l.Debugf("%s status: %v", path, err)
 
