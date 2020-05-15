@@ -21,8 +21,6 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
-	"os/user"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -39,6 +37,7 @@ import (
 const (
 	resendInterval      = 30 * time.Second
 	alertmanagerDataDir = "/srv/alertmanager/data"
+	prometheusDir       = "/srv/prometheus"
 	path                = "/srv/alertmanager/alertmanager.base.yml"
 )
 
@@ -83,37 +82,47 @@ func (svc *Service) Run(ctx context.Context) {
 
 // createDataDir creates alert manager directories if not exists in the persistent volume.
 func (svc *Service) createDataDir() {
-	group, err := user.Lookup("pmm")
+	prometheusDirStat, err := os.Stat(prometheusDir)
 	if err != nil {
-		svc.l.Errorf("error looking up pmm user user info %v.", err)
+		svc.l.Errorf("Cannot get stat of %q: %v.", prometheusDir, err)
 		return
 	}
 
-	uid, _ := strconv.Atoi(group.Uid)
-	gid, _ := strconv.Atoi(group.Gid)
+	prometheusDirSysStat := prometheusDirStat.Sys().(*syscall.Stat_t)
+	pUID, pGID := int(prometheusDirSysStat.Uid), int(prometheusDirSysStat.Gid)
 
-	stat, err := os.Stat(alertmanagerDataDir)
+	alertmanagerDataDirStat, err := os.Stat(alertmanagerDataDir)
+	if err != nil && !os.IsNotExist(err) {
+		svc.l.Errorf("Cannot get stat of %q: %v.", alertmanagerDataDir, err)
+		return
+	}
+
 	if os.IsNotExist(err) {
 		svc.l.Infof("Creating %q", alertmanagerDataDir)
 		if err := os.MkdirAll(alertmanagerDataDir, 0775); err != nil {
 			svc.l.Errorf("Cannot create datadir for AlertManager %v.", err)
 			return
 		}
-		if err := os.Chown(alertmanagerDataDir, uid, gid); err != nil {
+
+		// Chown same user and grop as Prometheus has.
+		if err := os.Chown(alertmanagerDataDir, pUID, pGID); err != nil {
 			svc.l.Errorf("Cannot chown datadir for AlertManager %v.", err)
 			return
 		}
 	}
 
-	if stat.Mode().Perm() != 0775 {
+	// Check and fix permissions.
+	if alertmanagerDataDirStat.Mode()&os.ModePerm != os.FileMode(0775) {
 		if err := os.Chmod(alertmanagerDataDir, 0775); err != nil {
 			svc.l.Errorf("Cannot chmod datadir for AlertManager %v.", err)
 		}
 	}
 
-	systat := stat.Sys().(*syscall.Stat_t)
-	if systat.Uid != uint32(uid) || systat.Gid != uint32(gid) {
-		if err := os.Chown(alertmanagerDataDir, uid, gid); err != nil {
+	alertmanagerDataDirSysStat := alertmanagerDataDirStat.Sys().(*syscall.Stat_t)
+	aUID, aGID := int(alertmanagerDataDirSysStat.Uid), int(alertmanagerDataDirSysStat.Gid)
+	// Chown user and grop as Prometheus has if they are not same.
+	if aUID != pUID || aGID != pGID {
+		if err := os.Chown(alertmanagerDataDir, pUID, pGID); err != nil {
 			svc.l.Errorf("Cannot chown datadir for AlertManager %v.", err)
 		}
 	}
