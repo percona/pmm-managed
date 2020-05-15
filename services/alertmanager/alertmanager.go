@@ -82,33 +82,16 @@ func (svc *Service) Run(ctx context.Context) {
 
 // createDataDir creates alert manager directories if not exists in the persistent volume.
 func (svc *Service) createDataDir() {
-	prometheusDirStat, err := os.Stat(prometheusDir)
-	if err != nil {
-		svc.l.Errorf("Cannot get stat of %q: %v.", prometheusDir, err)
+	// try to create alertmanager data dir if not exists.
+	if err := os.MkdirAll(alertmanagerDataDir, 0775); err != nil {
+		svc.l.Errorf("Cannot create datadir for AlertManager %v.", err)
 		return
 	}
-
-	prometheusDirSysStat := prometheusDirStat.Sys().(*syscall.Stat_t)
-	pUID, pGID := int(prometheusDirSysStat.Uid), int(prometheusDirSysStat.Gid)
 
 	alertmanagerDataDirStat, err := os.Stat(alertmanagerDataDir)
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil {
 		svc.l.Errorf("Cannot get stat of %q: %v.", alertmanagerDataDir, err)
 		return
-	}
-
-	if os.IsNotExist(err) {
-		svc.l.Infof("Creating %q", alertmanagerDataDir)
-		if err := os.MkdirAll(alertmanagerDataDir, 0775); err != nil {
-			svc.l.Errorf("Cannot create datadir for AlertManager %v.", err)
-			return
-		}
-
-		// Chown same user and grop as Prometheus has.
-		if err := os.Chown(alertmanagerDataDir, pUID, pGID); err != nil {
-			svc.l.Errorf("Cannot chown datadir for AlertManager %v.", err)
-			return
-		}
 	}
 
 	// Check and fix permissions.
@@ -120,7 +103,16 @@ func (svc *Service) createDataDir() {
 
 	alertmanagerDataDirSysStat := alertmanagerDataDirStat.Sys().(*syscall.Stat_t)
 	aUID, aGID := int(alertmanagerDataDirSysStat.Uid), int(alertmanagerDataDirSysStat.Gid)
-	// Chown user and grop as Prometheus has if they are not same.
+
+	prometheusDirStat, err := os.Stat(prometheusDir)
+	if err != nil {
+		svc.l.Errorf("Cannot get stat of %q: %v.", prometheusDir, err)
+		return
+	}
+
+	prometheusDirSysStat := prometheusDirStat.Sys().(*syscall.Stat_t)
+	pUID, pGID := int(prometheusDirSysStat.Uid), int(prometheusDirSysStat.Gid)
+	// Chown user and group as Prometheus has if they are not same.
 	if aUID != pUID || aGID != pGID {
 		if err := os.Chown(alertmanagerDataDir, pUID, pGID); err != nil {
 			svc.l.Errorf("Cannot chown datadir for AlertManager %v.", err)
