@@ -63,7 +63,7 @@ annotations:
 summary: High request latency
 			`) + "\n"
 			err := s.ValidateRules(context.Background(), rules)
-			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Zero Alert Manager rules found."), err)
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Zero alerting rules found."), err)
 		})
 
 		t.Run("Invalid", func(t *testing.T) {
@@ -74,7 +74,7 @@ groups:
   - alert: HighRequestLatency
 			`) + "\n"
 			err := s.ValidateRules(context.Background(), rules)
-			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid Alert Manager rules."), err)
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid alerting rules."), err)
 		})
 	})
 }

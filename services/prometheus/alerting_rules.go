@@ -43,7 +43,7 @@ type AlertingRules struct {
 // NewAlertingRules creates new AlertingRules instance.
 func NewAlertingRules() *AlertingRules {
 	return &AlertingRules{
-		l: logrus.WithField("component", "alert_manager"),
+		l: logrus.WithField("component", "alerting_rules"),
 	}
 }
 
@@ -53,13 +53,12 @@ func (s *AlertingRules) ValidateRules(ctx context.Context, rules string) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	tempFile.Close()                 //nolint:errcheck
 	defer os.Remove(tempFile.Name()) //nolint:errcheck
 
-	if _, err = tempFile.Write([]byte(rules)); err != nil {
-		tempFile.Close() //nolint:errcheck
+	if err = ioutil.WriteFile(tempFile.Name(), []byte(rules), 0644); err != nil {
 		return errors.WithStack(err)
 	}
-	tempFile.Close() //nolint:errcheck
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
@@ -71,13 +70,13 @@ func (s *AlertingRules) ValidateRules(ctx context.Context, rules string) error {
 	if err != nil {
 		if e, ok := err.(*exec.ExitError); ok && e.ExitCode() != 0 {
 			s.l.Infof("%s: %s\n%s", strings.Join(cmd.Args, " "), e, b)
-			return status.Errorf(codes.InvalidArgument, "Invalid Alert Manager rules.")
+			return status.Errorf(codes.InvalidArgument, "Invalid alerting rules.")
 		}
 		return errors.WithStack(err)
 	}
 
 	if bytes.Contains(b, []byte("SUCCESS: 0 rules found")) {
-		return status.Errorf(codes.InvalidArgument, "Zero Alert Manager rules found.")
+		return status.Errorf(codes.InvalidArgument, "Zero alerting rules found.")
 	}
 
 	s.l.Debugf("%q check passed.", strings.Join(cmd.Args, " "))

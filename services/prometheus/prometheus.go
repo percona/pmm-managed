@@ -92,7 +92,7 @@ func (svc *Service) Run(ctx context.Context) {
 
 	alertingRules, err := svc.alertingRules.ReadRules()
 	if err != nil {
-		svc.l.Warnf("Cannot load Alert Manager rules: %s", err)
+		svc.l.Warnf("Cannot load alerting rules: %s", err)
 	}
 	svc.cachedAlertingRules = alertingRules
 
@@ -423,7 +423,7 @@ func (svc *Service) saveConfigAndReload(cfg []byte) error {
 
 	alertingRules, err := svc.alertingRules.ReadRules()
 	if err != nil {
-		svc.l.Warnf("Cannot load Alert Manager rules: %s", err)
+		svc.l.Warnf("Cannot load alerting rules: %s", err)
 	}
 	// compare with new config
 	if reflect.DeepEqual(cfg, oldCfg) && alertingRules == svc.cachedAlertingRules {

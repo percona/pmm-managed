@@ -535,14 +535,14 @@ func main() {
 	prom.MustRegister(grafanaClient)
 
 	serverParams := &server.Params{
-		DB:                 db,
-		Prometheus:         prometheus,
-		AlertManager:       alertmanager,
-		Supervisord:        supervisord,
-		TelemetryService:   telemetry,
-		AwsInstanceChecker: awsInstanceChecker,
-		GrafanaClient:      grafanaClient,
-		AlertingRules:      alertingRules,
+		DB:                      db,
+		Prometheus:              prometheus,
+		Alertmanager:            alertmanager,
+		Supervisord:             supervisord,
+		TelemetryService:        telemetry,
+		AwsInstanceChecker:      awsInstanceChecker,
+		GrafanaClient:           grafanaClient,
+		PrometheusAlertingRules: alertingRules,
 	}
 	server, err := server.NewServer(serverParams)
 	if err != nil {
