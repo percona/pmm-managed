@@ -58,6 +58,9 @@ before_install:
   - docker cp /home/travis/go-build pmm-managed-server:/root/.cache/go-build
   - docker exec pmm-managed-server ls /root/.cache/go-build
 
+  # install reviewdog
+  - curl -sfL https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh| sh -s -- -b ~/bin
+
 install:
   - make env-devcontainer
 
@@ -69,6 +72,7 @@ before_script:
   - git diff --exit-code
 
 script:
+  - golangci-lint run -c=.golangci.yml --out-format=line-number | env REVIEWDOG_GITHUB_API_TOKEN=${{ secrets.GITHUB_TOKEN }}  bin/reviewdog -f=golangci-lint -level=error -reporter=github-pr-check
   - make env TARGET=travis
 
 after_success:
