@@ -71,8 +71,7 @@ before_install:
 
 before_script:
   # static analyze
-  - echo $CI_REPO_NAME
-  - bin/golangci-lint run -c=.golangci.yml --out-format=line-number | bin/reviewdog -f=golangci-lint -level=error -reporter=github-pr-check
+  - bin/golangci-lint run -c=.golangci.yml --out-format=line-number | env CI_REPO_NAME=pmm-managed bin/reviewdog -f=golangci-lint -level=error -reporter=github-pr-check
   # ensure that generated files are not changed
   - make env TARGET=gen
   - make env TARGET=format
