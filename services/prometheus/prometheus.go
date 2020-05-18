@@ -64,7 +64,7 @@ type Service struct {
 	sema chan struct{}
 }
 
-func NewPrometheusServiceToCheckReviewDog() {
+func NewPrometheusServiceToCheckReviewDogShouldBeRemoved() {
 }
 
 // NewService creates new service.
