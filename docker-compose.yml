@@ -8,12 +8,6 @@ services:
     environment:
       - PATH=/root/go/bin:$PATH
       - GO_VERSION=${GO_VERSION:-1.13.x}
-      - CI_REPO_OWNER=${CI_REPO_OWNER}
-      - CI_REPO_NAME=${CI_REPO_NAME}
-      - CI_PULL_REQUEST=${CI_PULL_REQUEST}
-      - CI_COMMIT=${CI_COMMIT}
-      - CI_BRANCH=${CI_BRANCH}
-      - REVIEWDOG_GITHUB_API_TOKEN=${REVIEWDOG_GITHUB_API_TOKEN}
 
     # for delve
     cap_add:
