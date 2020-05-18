@@ -238,7 +238,7 @@ func TestSettings(t *testing.T) {
 				DisableTelemetry: true,
 			})
 			require.NoError(t, err)
-			assert.Equal(t, "", ns.Telemetry.UUID)
+			assert.Empty(t, ns.Telemetry.UUID)
 		})
 	})
 }
