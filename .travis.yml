@@ -52,6 +52,8 @@ env:
 matrix:
   fast_finish: true
 
+go_import_path: github.com/percona/pmm-managed
+
 before_install:
   - env
   - make env-compose-up
