@@ -52,7 +52,7 @@ matrix:
 
 before_install:
   - env
-  - make env-compose-up
+  - env REVIEWDOG_GITHUB_API_TOKEN= ${{ secrets.GITHUB_TOKEN }} make env-compose-up
 
   # restore Go build cache
   - docker cp /home/travis/go-build pmm-managed-server:/root/.cache/go-build
