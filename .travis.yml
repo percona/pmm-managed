@@ -67,6 +67,7 @@ install:
 
 before_script:
   # static analyze
+  - bin/golangci-lint run -c=.golangci.yml --out-format=line-number | env REVIEWDOG_GITHUB_API_TOKEN=${{ secrets.GITHUB_TOKEN }}  bin/reviewdog -f=golangci-lint -level=error -reporter=github-pr-check
   - make env TARGET=reviewdog
   # ensure that generated files are not changed
   - make env TARGET=gen
