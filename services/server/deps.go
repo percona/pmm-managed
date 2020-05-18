@@ -78,5 +78,5 @@ type telemetryService interface {
 }
 
 type checksService interface {
-	StartChecks(ctx context.Context)
+	StartChecks(ctx context.Context) error
 }

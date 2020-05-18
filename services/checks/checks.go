@@ -44,6 +44,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services"
 )
 
 const (
@@ -138,19 +139,12 @@ func (s *Service) Run(ctx context.Context) {
 	defer ticker.Stop()
 
 	for {
-		var sttEnabled bool
-		settings, err := models.GetSettings(s.db)
-		if err != nil {
-			s.l.Error(err)
-		}
-		if settings != nil && settings.SaaS.STTEnabled {
-			sttEnabled = true
-		}
-
-		if sttEnabled {
-			s.StartChecks(ctx)
-		} else {
-			s.l.Info("STT is not enabled, doing nothing.")
+		if err := s.StartChecks(ctx); err != nil {
+			if err == services.STTDisabledError {
+				s.l.Info("STT is not enabled, doing nothing.")
+			} else {
+				s.l.Error(err)
+			}
 		}
 
 		select {
@@ -162,12 +156,26 @@ func (s *Service) Run(ctx context.Context) {
 	}
 }
 
-func (s *Service) StartChecks(ctx context.Context) {
+func (s *Service) StartChecks(ctx context.Context) error {
+	var sttEnabled bool
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return err
+	}
+	if settings != nil && settings.SaaS.STTEnabled {
+		sttEnabled = true
+	}
+
+	if !sttEnabled {
+		return services.STTDisabledError
+	}
+
 	nCtx, cancel := context.WithTimeout(ctx, checksTimeout)
 	defer cancel()
 
 	s.collectChecks(nCtx)
 	s.executeChecks(nCtx)
+	return nil
 }
 
 // getChecks returns available checks.

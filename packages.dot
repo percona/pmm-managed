@@ -20,6 +20,7 @@ digraph packages {
 	"/services/agents/grpc" -> "/services/agents";
 	"/services/alertmanager" -> "/models";
 	"/services/checks" -> "/models";
+	"/services/checks" -> "/services";
 	"/services/inventory" -> "/models";
 	"/services/inventory" -> "/services";
 	"/services/inventory/grpc" -> "/models";
@@ -33,6 +34,7 @@ digraph packages {
 	"/services/prometheus" -> "/models";
 	"/services/qan" -> "/models";
 	"/services/server" -> "/models";
+	"/services/server" -> "/services";
 	"/services/supervisord" -> "/models";
 	"/services/telemetry" -> "/models";
 }

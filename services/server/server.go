@@ -48,6 +48,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services"
 	"github.com/percona/pmm-managed/utils/envvars"
 )
 
@@ -335,7 +336,15 @@ func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusReq
 }
 
 func (s *Server) StartSecurityChecks(ctx context.Context, request *serverpb.StartSecurityChecksRequest) (*serverpb.StartSecurityChecksResponse, error) {
-	s.checksService.StartChecks(ctx)
+
+	err := s.checksService.StartChecks(ctx)
+	if err != nil {
+		if err == services.STTDisabledError {
+			return nil, status.Error(codes.FailedPrecondition, "STT is disabled.")
+		}
+
+		return nil, status.Error(codes.Internal, "Failed to start security checks.")
+	}
 
 	return &serverpb.StartSecurityChecksResponse{}, nil
 }

@@ -77,6 +77,10 @@ func TestImports(t *testing.T) {
 	for _, service := range []string{
 		"github.com/percona/pmm-managed/services/inventory",
 		"github.com/percona/pmm-managed/services/management",
+
+		// or common errors
+		"github.com/percona/pmm-managed/services/server",
+		"github.com/percona/pmm-managed/services/checks",
 	} {
 		constraints[service] = constraint{
 			blacklistPrefixes: []string{
