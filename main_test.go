@@ -73,12 +73,11 @@ func TestImports(t *testing.T) {
 		}
 	}
 
-	// those services should be independent too, but import converters
 	for _, service := range []string{
+		// those services should be independent too, but has some common code
+		// as converters, errors of param structures
 		"github.com/percona/pmm-managed/services/inventory",
 		"github.com/percona/pmm-managed/services/management",
-
-		// or common errors
 		"github.com/percona/pmm-managed/services/server",
 		"github.com/percona/pmm-managed/services/checks",
 	} {
