@@ -64,6 +64,9 @@ type Service struct {
 	sema chan struct{}
 }
 
+func NewPrometheusServiceForReviewDogCheck() {
+}
+
 // NewService creates new service.
 func NewService(configPath string, db *reform.DB, baseURL string) (*Service, error) {
 	u, err := url.Parse(baseURL)
