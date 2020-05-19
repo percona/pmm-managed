@@ -231,7 +231,7 @@ var databaseSchema = [][]string{
 		// update 5/5/60 to 5/10/60 for 2.4 only if defaults were not changed
 		`UPDATE settings SET
 			settings = settings || '{"metrics_resolutions":{"hr": 5000000000, "mr": 10000000000, "lr": 60000000000}}'
-			WHERE settings->'metrics_resolutions'->>'hr' = '5000000000' 
+			WHERE settings->'metrics_resolutions'->>'hr' = '5000000000'
 			AND settings->'metrics_resolutions'->>'mr' = '5000000000'
 			AND settings->'metrics_resolutions'->>'lr' = '60000000000'`,
 	},
@@ -272,6 +272,29 @@ var databaseSchema = [][]string{
 	},
 
 	14: {
+		`ALTER TABLE agents
+			DROP CONSTRAINT node_id_or_service_id_or_pmm_agent_id,
+			DROP CONSTRAINT runs_on_node_id_only_for_pmm_agent,
+			DROP CONSTRAINT agents_metrics_url_check`,
+		`ALTER TABLE agents
+			ADD CONSTRAINT node_id_or_service_id_for_non_pmm_agent CHECK (
+				(node_id IS NULL) <> (service_id IS NULL) OR (agent_type = '` + string(PMMAgentType) + `')),
+			ADD CONSTRAINT runs_on_node_id_only_for_pmm_agent_and_external
+				CHECK ((runs_on_node_id IS NULL) <> (agent_type='` + string(PMMAgentType) + `' OR agent_type='` + string(ExternalExporterType) + `' ))`,
+		`ALTER TABLE agents RENAME COLUMN metrics_url TO metrics_path`,
+		`ALTER TABLE agents
+			ADD CONSTRAINT agents_metrics_path_check CHECK (metrics_path <> '')`,
+		`ALTER TABLE agents ADD COLUMN metrics_scheme VARCHAR`,
+	},
+
+	15: {
+		// query action results are binary data
+		`ALTER TABLE action_results
+			DROP COLUMN output,
+			ADD COLUMN output bytea`,
+	},
+
+	16: {
 		`ALTER TABLE services
 			DROP CONSTRAINT port_check`,
 
