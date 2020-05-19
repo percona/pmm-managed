@@ -337,7 +337,6 @@ func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusReq
 
 // StartSecurityChecks starts STT checks execution.
 func (s *Server) StartSecurityChecks(ctx context.Context, request *serverpb.StartSecurityChecksRequest) (*serverpb.StartSecurityChecksResponse, error) {
-
 	err := s.checksService.StartChecks(ctx)
 	if err != nil {
 		if err == services.STTDisabledError {
