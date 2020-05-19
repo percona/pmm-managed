@@ -547,7 +547,7 @@ func TestSettings(t *testing.T) {
 						},
 						Context: pmmapitests.Context,
 					})
-					pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `Invalid Alert Manager rules.`)
+					pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `Invalid alerting rules.`)
 
 					gets, err := serverClient.Default.Server.GetSettings(nil)
 					require.NoError(t, err)
