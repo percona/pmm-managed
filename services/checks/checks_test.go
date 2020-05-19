@@ -23,7 +23,14 @@ import (
 
 	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/reform.v1"
+	"gopkg.in/reform.v1/dialects/postgresql"
+
+	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services"
+	"github.com/percona/pmm-managed/utils/testdb"
 )
 
 const (
@@ -92,5 +99,43 @@ uEF33ScMPYpvHvBKv8+yBkJ9k4+DCfV4nDs6kKYwGhalvkkqwWkyfJffO+KW7a1m3y42WHpOnzBxLJ+I
 
 		err := s.verifySignatures(&resp)
 		assert.EqualError(t, err, "zero signatures received")
+	})
+}
+
+func TestStartChecks(t *testing.T) {
+	t.Run("stt disabled", func(t *testing.T) {
+		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
+
+		defer func() {
+			require.NoError(t, sqlDB.Close())
+		}()
+
+		s := New(nil, nil, db, "2.5.0")
+		err := s.StartChecks(context.Background())
+		assert.EqualError(t, err, services.STTDisabledError.Error())
+	})
+
+	t.Run("stt enabled", func(t *testing.T) {
+		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
+
+		defer func() {
+			require.NoError(t, sqlDB.Close())
+		}()
+
+		ar := &mockAlertRegistry{}
+		ar.On("RemovePrefix", mock.Anything, mock.Anything).Return()
+
+		s := New(nil, ar, db, "2.5.0")
+		settings, err := models.GetSettings(db)
+		require.NoError(t, err)
+
+		settings.SaaS.STTEnabled = true
+		err = models.SaveSettings(db, settings)
+		require.NoError(t, err)
+
+		err = s.StartChecks(context.Background())
+		require.NoError(t, err)
 	})
 }
