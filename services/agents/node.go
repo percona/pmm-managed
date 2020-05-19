@@ -39,7 +39,7 @@ func nodeExporterConfig(node *models.Node, exporter *models.Agent) *agentpb.SetS
 
 		"--web.disable-exporter-metrics", // we enable them as a part of HR metrics
 
-		"--web.listen-address=:" + tdp.left + " .listen_port " + tdp.right,
+		"--web.listen-address=" + tdp.left + " .listen_address " + tdp.right + ":" + tdp.left + " .listen_port " + tdp.right,
 	}
 
 	// do not tweak collectors on macOS as many (but not) of them are Linux-specific
