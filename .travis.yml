@@ -66,10 +66,11 @@ before_install:
   - docker exec pmm-managed-server ls /root/.cache/go-build
 
 install:
-  - make env-devcontainer
   # install reviewdog and golangci-lin
   - curl -sfL https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh| sh -s
   - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s latest
+  # install devcontainer
+  - make env-devcontainer
 
 before_script:
   # static analyze
