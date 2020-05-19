@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"syscall"
 	"time"
 
 	httptransport "github.com/go-openapi/runtime/client"
@@ -33,7 +34,12 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-const resendInterval = 30 * time.Second
+const (
+	resendInterval      = 30 * time.Second
+	alertmanagerDataDir = "/srv/alertmanager/data"
+	prometheusDir       = "/srv/prometheus"
+	path                = "/srv/alertmanager/alertmanager.base.yml"
+)
 
 // Service is responsible for interactions with Alertmanager.
 type Service struct {
@@ -56,7 +62,8 @@ func (svc *Service) Run(ctx context.Context) {
 	svc.l.Info("Starting...")
 	defer svc.l.Info("Done.")
 
-	generateBaseConfig()
+	svc.createDataDir()
+	svc.generateBaseConfig()
 
 	t := time.NewTicker(resendInterval)
 	defer t.Stop()
@@ -73,13 +80,55 @@ func (svc *Service) Run(ctx context.Context) {
 	}
 }
 
+// createDataDir creates Alertmanager directories if not exists in the persistent volume.
+func (svc *Service) createDataDir() {
+	// try to create Alertmanager data dir if not exists.
+	if err := os.MkdirAll(alertmanagerDataDir, 0775); err != nil {
+		svc.l.Errorf("Cannot create datadir for Alertmanager %v.", err)
+		return
+	}
+
+	alertmanagerDataDirStat, err := os.Stat(alertmanagerDataDir)
+	if err != nil {
+		svc.l.Errorf("Cannot get stat of %q: %v.", alertmanagerDataDir, err)
+		return
+	}
+
+	// Check and fix permissions.
+	if alertmanagerDataDirStat.Mode()&os.ModePerm != os.FileMode(0775) {
+		if err := os.Chmod(alertmanagerDataDir, 0775); err != nil {
+			svc.l.Errorf("Cannot chmod datadir for Alertmanager %v.", err)
+		}
+	}
+
+	alertmanagerDataDirSysStat := alertmanagerDataDirStat.Sys().(*syscall.Stat_t)
+	aUID, aGID := int(alertmanagerDataDirSysStat.Uid), int(alertmanagerDataDirSysStat.Gid)
+
+	prometheusDirStat, err := os.Stat(prometheusDir)
+	if err != nil {
+		svc.l.Errorf("Cannot get stat of %q: %v.", prometheusDir, err)
+		return
+	}
+
+	prometheusDirSysStat := prometheusDirStat.Sys().(*syscall.Stat_t)
+	pUID, pGID := int(prometheusDirSysStat.Uid), int(prometheusDirSysStat.Gid)
+	// Chown user and group as Prometheus has if they are not same.
+	if aUID != pUID || aGID != pGID {
+		if err := os.Chown(alertmanagerDataDir, pUID, pGID); err != nil {
+			svc.l.Errorf("Cannot chown datadir for Alertmanager %v.", err)
+		}
+	}
+}
+
 // generateBaseConfig generates /srv/alertmanager/alertmanager.base.yml if it is not present.
 //
 // TODO That's a temporary measure until we start generating /etc/alertmanager.yml
 // using /srv/alertmanager/alertmanager.base.yml as a base. See supervisord config.
-func generateBaseConfig() {
-	const path = "/srv/alertmanager/alertmanager.base.yml"
-	if _, err := os.Stat(path); os.IsNotExist(err) {
+func (svc *Service) generateBaseConfig() {
+	_, err := os.Stat(path)
+	svc.l.Debugf("%s status: %v", path, err)
+
+	if os.IsNotExist(err) {
 		defaultBase := strings.TrimSpace(`
 ---
 # You can edit this file; changes will be preserved.
@@ -91,7 +140,8 @@ route:
 receivers:
   - name: empty
 `) + "\n"
-		_ = ioutil.WriteFile(path, []byte(defaultBase), 0644)
+		err = ioutil.WriteFile(path, []byte(defaultBase), 0644) //nolint:gosec
+		svc.l.Infof("%s created: %v.", path, err)
 	}
 }
 
