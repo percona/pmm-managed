@@ -291,7 +291,7 @@ func TestServices(t *testing.T) {
 		assert.Nil(t, actualService)
 	})
 
-	t.Run("BasicPostgreSQLWithSocketAddressConflict", func(t *testing.T) {
+	t.Run("PostgreSQLWithSocketAddressConflict", func(t *testing.T) {
 		ss, teardown := setup(t)
 		defer teardown(t)
 
@@ -310,7 +310,7 @@ func TestServices(t *testing.T) {
 		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Socket and address cannot be specified together."), err)
 	})
 
-	t.Run("BasicPostgreSQLWithSocketAndPort", func(t *testing.T) {
+	t.Run("PostgreSQLWithSocketAndPort", func(t *testing.T) {
 		ss, teardown := setup(t)
 		defer teardown(t)
 

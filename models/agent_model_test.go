@@ -58,7 +58,7 @@ func TestAgent(t *testing.T) {
 			QANMySQLSlowlogAgentType:    "username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:12345)/database?clientFoundRows=true&parseTime=true&timeout=1s",
 			MongoDBExporterType:         "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000",
 			QANMongoDBProfilerAgentType: "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000",
-			PostgresExporterType:        "postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connect_timeout=1&sslmode=disable",
+			PostgresExporterType:        "dbname=database sslmode=disable connect_timeout=1 host=1.2.3.4 port=12345 user=username password=s3cur3 p@$$w0r4.",
 		} {
 			t.Run(string(typ), func(t *testing.T) {
 				agent.AgentType = typ
@@ -112,7 +112,7 @@ func TestAgent(t *testing.T) {
 			QANMySQLSlowlogAgentType:    "username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:12345)/database?clientFoundRows=true&parseTime=true&timeout=1s&tls=true",
 			MongoDBExporterType:         "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000&ssl=true",
 			QANMongoDBProfilerAgentType: "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000&ssl=true",
-			PostgresExporterType:        "postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connect_timeout=1&sslmode=verify-full",
+			PostgresExporterType:        "dbname=database sslmode=verify-full connect_timeout=1 host=1.2.3.4 port=12345 user=username password=s3cur3 p@$$w0r4.",
 		} {
 			t.Run(string(typ), func(t *testing.T) {
 				agent.AgentType = typ
@@ -127,6 +127,7 @@ func TestAgent(t *testing.T) {
 			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?ssl=true", agent.DSN(service, 0, ""))
 		})
 	})
+
 	t.Run("DSN ssl-skip-verify", func(t *testing.T) {
 		agent := &Agent{
 			Username:      pointer.ToString("username"),
@@ -145,7 +146,7 @@ func TestAgent(t *testing.T) {
 			QANMySQLSlowlogAgentType:    "username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:12345)/database?clientFoundRows=true&parseTime=true&timeout=1s&tls=skip-verify",
 			MongoDBExporterType:         "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000&ssl=true&tlsInsecure=true",
 			QANMongoDBProfilerAgentType: "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000&ssl=true&tlsInsecure=true",
-			PostgresExporterType:        "postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connect_timeout=1&sslmode=require",
+			PostgresExporterType:        "dbname=database sslmode=require connect_timeout=1 host=1.2.3.4 port=12345 user=username password=s3cur3 p@$$w0r4.",
 		} {
 			t.Run(string(typ), func(t *testing.T) {
 				agent.AgentType = typ
@@ -178,10 +179,10 @@ func TestPostgresAgentTLS(t *testing.T) {
 		tlsSkipVerify bool
 		expected      string
 	}{
-		{false, false, "postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connect_timeout=1&sslmode=disable"},
-		{false, true, "postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connect_timeout=1&sslmode=disable"},
-		{true, false, "postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connect_timeout=1&sslmode=verify-full"},
-		{true, true, "postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connect_timeout=1&sslmode=require"},
+		{false, false, "dbname=database sslmode=disable connect_timeout=1 host=1.2.3.4 port=12345 user=username password=s3cur3 p@$$w0r4."},
+		{false, true, "dbname=database sslmode=disable connect_timeout=1 host=1.2.3.4 port=12345 user=username password=s3cur3 p@$$w0r4."},
+		{true, false, "dbname=database sslmode=verify-full connect_timeout=1 host=1.2.3.4 port=12345 user=username password=s3cur3 p@$$w0r4."},
+		{true, true, "dbname=database sslmode=require connect_timeout=1 host=1.2.3.4 port=12345 user=username password=s3cur3 p@$$w0r4."},
 	} {
 		name := fmt.Sprintf("TLS:%v/TLSSkipVerify:%v", testCase.tls, testCase.tlsSkipVerify)
 		t.Run(name, func(t *testing.T) {
