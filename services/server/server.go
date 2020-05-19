@@ -53,6 +53,9 @@ import (
 
 const alertingRulesFile = "/srv/prometheus/rules/pmm.rules.yml"
 
+type Prometheus struct {
+}
+
 // Server represents service for checking PMM Server status and changing settings.
 type Server struct {
 	db                 *reform.DB
