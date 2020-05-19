@@ -441,7 +441,7 @@ func TestAddProxySQL(t *testing.T) {
 		assert.Nil(t, addProxySQLOK)
 	})
 
-	t.Run("Empty Address", func(t *testing.T) {
+	t.Run("Empty Address And Socket", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-name")
 		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
@@ -456,10 +456,12 @@ func TestAddProxySQL(t *testing.T) {
 			Body: proxysql.AddProxySQLBody{
 				NodeID:      nodeID,
 				ServiceName: serviceName,
+				PMMAgentID:  pmmAgentID,
+				Username:    "username",
 			},
 		}
 		addProxySQLOK, err := client.Default.ProxySQL.AddProxySQL(params)
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Address: value '' must not be an empty string")
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Neither socket nor address passed.")
 		assert.Nil(t, addProxySQLOK)
 	})
 
@@ -478,11 +480,41 @@ func TestAddProxySQL(t *testing.T) {
 			Body: proxysql.AddProxySQLBody{
 				NodeID:      nodeID,
 				ServiceName: serviceName,
+				PMMAgentID:  pmmAgentID,
+				Username:    "username",
 				Address:     "10.10.10.10",
 			},
 		}
 		addProxySQLOK, err := client.Default.ProxySQL.AddProxySQL(params)
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Port: value '0' must be greater than '0'")
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Port are expected to be passed with address.")
+		assert.Nil(t, addProxySQLOK)
+	})
+
+	t.Run("Address And Socket Conflict.", func(t *testing.T) {
+		nodeName := pmmapitests.TestString(t, "node-name")
+		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+			NodeName: nodeName,
+			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
+		})
+		defer pmmapitests.RemoveNodes(t, nodeID)
+		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+
+		serviceName := pmmapitests.TestString(t, "service-name")
+		params := &proxysql.AddProxySQLParams{
+			Context: pmmapitests.Context,
+			Body: proxysql.AddProxySQLBody{
+				PMMAgentID:  pmmAgentID,
+				Username:    "username",
+				Password:    "password",
+				NodeID:      nodeID,
+				ServiceName: serviceName,
+				Address:     "10.10.10.10",
+				Port:        6032,
+				Socket:      "/tmp/proxysql_admin.sock",
+			},
+		}
+		addProxySQLOK, err := client.Default.ProxySQL.AddProxySQL(params)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Socket and address cannot be specified together.")
 		assert.Nil(t, addProxySQLOK)
 	})
 

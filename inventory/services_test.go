@@ -844,7 +844,75 @@ func TestProxySQLService(t *testing.T) {
 			Context: pmmapitests.Context,
 		}
 		res, err := client.Default.Services.AddProxySQLService(params)
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Port: value '0' must be greater than '0'")
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Port are expected to be passed with address.")
+		if !assert.Nil(t, res) {
+			pmmapitests.RemoveServices(t, res.Payload.Proxysql.ServiceID)
+		}
+	})
+
+	t.Run("AddAddressSocketConflict", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+
+		params := &services.AddProxySQLServiceParams{
+			Body: services.AddProxySQLServiceBody{
+				NodeID:      genericNodeID,
+				Address:     "localhost",
+				Port:        6032,
+				Socket:      "/tmp/proxysql_admin.sock",
+				ServiceName: pmmapitests.TestString(t, "ProxySQL Service with address and socket conflict"),
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err := client.Default.Services.AddProxySQLService(params)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Socket and address cannot be specified together.")
+		if !assert.Nil(t, res) {
+			pmmapitests.RemoveServices(t, res.Payload.Proxysql.ServiceID)
+		}
+	})
+
+	t.Run("AddPortWithNoAddress", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+
+		params := &services.AddProxySQLServiceParams{
+			Body: services.AddProxySQLServiceBody{
+				NodeID:      genericNodeID,
+				ServiceName: pmmapitests.TestString(t, "ProxySQL Service with port and socket"),
+				Port:        6032,
+				Socket:      "/tmp/proxysql_admin.sock",
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err := client.Default.Services.AddProxySQLService(params)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Socket and port cannot be specified together.")
+		if !assert.Nil(t, res) {
+			pmmapitests.RemoveServices(t, res.Payload.Proxysql.ServiceID)
+		}
+	})
+
+	t.Run("AddEpmtyAddressAndSocket", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+
+		params := &services.AddProxySQLServiceParams{
+			Body: services.AddProxySQLServiceBody{
+				NodeID:      genericNodeID,
+				ServiceName: pmmapitests.TestString(t, "ProxySQL Service with empty address and socket"),
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err := client.Default.Services.AddProxySQLService(params)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Neither socket nor address passed.")
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveServices(t, res.Payload.Proxysql.ServiceID)
 		}
