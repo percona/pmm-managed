@@ -40,7 +40,6 @@ func TestRegistry(t *testing.T) {
 		labels := map[string]string{"label": "demo"}
 		annotations := map[string]string{"annotation": "test"}
 
-
 		r.CreateAlert(id, labels, annotations, time.Minute)
 		assert.Empty(t, r.collect())
 
