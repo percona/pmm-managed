@@ -124,10 +124,10 @@ func TestStartChecks(t *testing.T) {
 			require.NoError(t, sqlDB.Close())
 		}()
 
-		ar := &mockAlertRegistry{}
+		var ar mockAlertRegistry
 		ar.On("RemovePrefix", mock.Anything, mock.Anything).Return()
 
-		s := New(nil, ar, db, "2.5.0")
+		s := New(nil, &ar, db, "2.5.0")
 		settings, err := models.GetSettings(db)
 		require.NoError(t, err)
 
