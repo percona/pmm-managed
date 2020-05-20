@@ -58,7 +58,7 @@ func TestAgent(t *testing.T) {
 			QANMySQLSlowlogAgentType:    "username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:12345)/database?clientFoundRows=true&parseTime=true&timeout=1s",
 			MongoDBExporterType:         "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000",
 			QANMongoDBProfilerAgentType: "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000",
-			PostgresExporterType:        "dbname=database sslmode=disable connect_timeout=1 host=1.2.3.4 port=12345 user=username password=s3cur3 p@$$w0r4.",
+			PostgresExporterType:        "postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connect_timeout=1&sslmode=disable",
 		} {
 			t.Run(string(typ), func(t *testing.T) {
 				agent.AgentType = typ
@@ -112,7 +112,7 @@ func TestAgent(t *testing.T) {
 			QANMySQLSlowlogAgentType:    "username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:12345)/database?clientFoundRows=true&parseTime=true&timeout=1s&tls=true",
 			MongoDBExporterType:         "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000&ssl=true",
 			QANMongoDBProfilerAgentType: "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000&ssl=true",
-			PostgresExporterType:        "dbname=database sslmode=verify-full connect_timeout=1 host=1.2.3.4 port=12345 user=username password=s3cur3 p@$$w0r4.",
+			PostgresExporterType:        "postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connect_timeout=1&sslmode=verify-full",
 		} {
 			t.Run(string(typ), func(t *testing.T) {
 				agent.AgentType = typ
@@ -146,7 +146,7 @@ func TestAgent(t *testing.T) {
 			QANMySQLSlowlogAgentType:    "username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:12345)/database?clientFoundRows=true&parseTime=true&timeout=1s&tls=skip-verify",
 			MongoDBExporterType:         "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000&ssl=true&tlsInsecure=true",
 			QANMongoDBProfilerAgentType: "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000&ssl=true&tlsInsecure=true",
-			PostgresExporterType:        "dbname=database sslmode=require connect_timeout=1 host=1.2.3.4 port=12345 user=username password=s3cur3 p@$$w0r4.",
+			PostgresExporterType:        "postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connect_timeout=1&sslmode=require",
 		} {
 			t.Run(string(typ), func(t *testing.T) {
 				agent.AgentType = typ
@@ -179,10 +179,10 @@ func TestPostgresAgentTLS(t *testing.T) {
 		tlsSkipVerify bool
 		expected      string
 	}{
-		{false, false, "dbname=database sslmode=disable connect_timeout=1 host=1.2.3.4 port=12345 user=username password=s3cur3 p@$$w0r4."},
-		{false, true, "dbname=database sslmode=disable connect_timeout=1 host=1.2.3.4 port=12345 user=username password=s3cur3 p@$$w0r4."},
-		{true, false, "dbname=database sslmode=verify-full connect_timeout=1 host=1.2.3.4 port=12345 user=username password=s3cur3 p@$$w0r4."},
-		{true, true, "dbname=database sslmode=require connect_timeout=1 host=1.2.3.4 port=12345 user=username password=s3cur3 p@$$w0r4."},
+		{false, false, "postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connect_timeout=1&sslmode=disable"},
+		{false, true, "postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connect_timeout=1&sslmode=disable"},
+		{true, false, "postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connect_timeout=1&sslmode=verify-full"},
+		{true, true, "postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connect_timeout=1&sslmode=require"},
 	} {
 		name := fmt.Sprintf("TLS:%v/TLSSkipVerify:%v", testCase.tls, testCase.tlsSkipVerify)
 		t.Run(name, func(t *testing.T) {
@@ -191,6 +191,44 @@ func TestPostgresAgentTLS(t *testing.T) {
 			assert.Equal(t, testCase.expected, agent.DSN(service, time.Second, "database"))
 		})
 	}
+}
+
+func TestPostgresWithSocket(t *testing.T) {
+	t.Run("empty-passowrd", func(t *testing.T) {
+		agent := &Agent{
+			Username:      pointer.ToString("username"),
+			AgentType:     PostgresExporterType,
+			TLS:           true,
+			TLSSkipVerify: false,
+		}
+		service := &Service{
+			Socket: pointer.ToString("/var/run/postgres"),
+		}
+		expect := "postgres://username@unixsocket/database?connect_timeout=1&host=%2Fvar%2Frun%2Fpostgres&sslmode=verify-full"
+		assert.Equal(t, expect, agent.DSN(service, time.Second, "database"))
+	})
+
+	t.Run("empty-user-passowrd", func(t *testing.T) {
+		agent := &Agent{
+			AgentType: PostgresExporterType,
+		}
+		service := &Service{
+			Socket: pointer.ToString("/var/run/postgres"),
+		}
+		expect := "postgres://unixsocket/database?connect_timeout=1&host=%2Fvar%2Frun%2Fpostgres&sslmode=disable"
+		assert.Equal(t, expect, agent.DSN(service, time.Second, "database"))
+	})
+
+	t.Run("dir-with-symbols", func(t *testing.T) {
+		agent := &Agent{
+			AgentType: PostgresExporterType,
+		}
+		service := &Service{
+			Socket: pointer.ToString(`/tmp/123\ A0m\%\$\@\8\,\+\-`),
+		}
+		expect := "postgres://unixsocket/database?connect_timeout=1&host=%2Ftmp%2F123%5C+A0m%5C%25%5C%24%5C%40%5C8%5C%2C%5C%2B%5C-&sslmode=disable"
+		assert.Equal(t, expect, agent.DSN(service, time.Second, "database"))
+	})
 }
 
 func TestIsMySQLTablestatsGroupEnabled(t *testing.T) {

@@ -386,7 +386,7 @@
 
 [[projects]]
   branch = "PMM-5243-PostgreSQL-socket-conn"
-  digest = "1:fca01d8043c06b0ad2936525d0323122e308bb6cf30f3cede289181bed186b95"
+  digest = "1:814a0f4ca10905bc802cd4900855989bb8050c7b0dd7f9d6028647e391981fa7"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -407,7 +407,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "cad36e4398e264597659b658430b516b0d021567"
+  revision = "3bd7b3dfe53cafe2046e37ab8f45b36c836ce705"
 
 [[projects]]
   digest = "1:1e38d8f6796fabbf419aa2040dc196927690a1de7fe14af25fbd29c6ed44b4da"

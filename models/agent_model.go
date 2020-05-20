@@ -21,7 +21,6 @@ import (
 	"net"
 	"net/url"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/AlekSi/pointer"
@@ -264,9 +263,7 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		return u.String()
 
 	case PostgresExporterType, QANPostgreSQLPgStatementsAgentType:
-		var pgCon []string
-
-		pgCon = append(pgCon, fmt.Sprintf("dbname=%s", database))
+		q := make(url.Values)
 
 		sslmode := "disable"
 		if s.TLS {
@@ -276,25 +273,32 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 				sslmode = "verify-full"
 			}
 		}
-		pgCon = append(pgCon, fmt.Sprintf("sslmode=%s", sslmode))
+		q.Set("sslmode", sslmode)
 
 		if dialTimeout != 0 {
-			pgCon = append(pgCon, fmt.Sprintf("connect_timeout=%d", int(dialTimeout.Seconds())))
+			q.Set("connect_timeout", strconv.Itoa(int(dialTimeout.Seconds())))
 		}
 
+		address := "unixsocket"
 		if socket == "" {
-			pgCon = append(pgCon, fmt.Sprintf("host=%s port=%d", host, int(port)))
+			address = net.JoinHostPort(host, strconv.Itoa(int(port)))
 		} else {
-			pgCon = append(pgCon, fmt.Sprintf("host=%s", socket))
+			q.Set("host", socket)
 		}
 
+		u := &url.URL{
+			Scheme:   "postgres",
+			Host:     address,
+			Path:     database,
+			RawQuery: q.Encode(),
+		}
 		switch {
 		case password != "":
-			pgCon = append(pgCon, fmt.Sprintf("user=%s password=%s", username, password))
+			u.User = url.UserPassword(username, password)
 		case username != "":
-			pgCon = append(pgCon, fmt.Sprintf("user=%s", username))
+			u.User = url.User(username)
 		}
-		return strings.Join(pgCon, " ")
+		return u.String()
 
 	default:
 		panic(fmt.Errorf("unhandled AgentType %q", s.AgentType))
