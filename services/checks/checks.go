@@ -43,7 +43,6 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services"
 )
 
 const (
@@ -431,8 +430,7 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 	alertsIDs := make([]string, len(results))
 	for i, result := range results {
 		id := alertsPrefix + hashID(target.serviceID+"/"+result.Summary)
-		alertParams := makeAlertParams(id, check.Name, target, &result)
-		s.alertsRegistry.CreateAlert(alertParams, 0)
+		s.createAlert(id, check.Name, target, &result)
 		alertsIDs[i] = id
 	}
 
@@ -445,7 +443,7 @@ func hashID(s string) string {
 	return hex.EncodeToString(data[:])
 }
 
-func makeAlertParams(id, name string, target target, result *check.Result) *services.AlertParams {
+func (s *Service) createAlert(id, name string, target target, result *check.Result) {
 	labels := make(map[string]string, len(target.labels)+len(result.Labels)+4) //nolint:gomnd
 	annotations := make(map[string]string, 2)
 	for k, v := range target.labels {
@@ -462,11 +460,7 @@ func makeAlertParams(id, name string, target target, result *check.Result) *serv
 	annotations["summary"] = result.Summary
 	annotations["description"] = result.Description
 
-	return &services.AlertParams{
-		ID:          id,
-		Labels:      labels,
-		Annotations: annotations,
-	}
+	s.alertsRegistry.CreateAlert(id, labels, annotations, 0)
 }
 
 // target contains required info about check target.

@@ -23,8 +23,6 @@ import (
 	"github.com/percona/pmm/api/alertmanager/ammodels"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/percona/pmm-managed/services"
 )
 
 func TestRegistry(t *testing.T) {
@@ -38,8 +36,12 @@ func TestRegistry(t *testing.T) {
 
 	t.Run("DelayFor", func(t *testing.T) {
 		r := NewRegistry()
-		alertParams := new(services.AlertParams)
-		r.CreateAlert(alertParams, time.Minute)
+		id := "1234567890"
+		labels := map[string]string{"label": "demo"}
+		annotations := map[string]string{"annotation": "test"}
+
+
+		r.CreateAlert(id, labels, annotations, time.Minute)
 		assert.Empty(t, r.collect())
 
 		// 1 second before
@@ -51,9 +53,9 @@ func TestRegistry(t *testing.T) {
 		assert.Empty(t, r.collect())
 
 		expected := &ammodels.PostableAlert{
-			Annotations: alertParams.Annotations,
+			Annotations: annotations,
 			Alert: ammodels.Alert{
-				Labels: alertParams.Labels,
+				Labels: labels,
 			},
 		}
 
