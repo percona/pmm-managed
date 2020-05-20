@@ -130,7 +130,7 @@ func TestNodeExporterConfig(t *testing.T) {
 				"--collector.textfile.directory.lr=/usr/local/percona/pmm2/collectors/textfile-collector/low-resolution",
 				"--collector.textfile.directory.mr=/usr/local/percona/pmm2/collectors/textfile-collector/medium-resolution",
 				"--web.disable-exporter-metrics",
-				"--web.listen-address=:{{ .listen_port }}",
+				"--web.listen-address={{ .listen_address }}:{{ .listen_port }}",
 			},
 			Env: []string{
 				"HTTP_AUTH=pmm:agent-id",
