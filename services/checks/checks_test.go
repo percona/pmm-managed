@@ -80,7 +80,7 @@ func TestCollectChecks(t *testing.T) {
 	t.Run("collect local checks", func(t *testing.T) {
 		err := os.Setenv("PERCONA_TEST_CHECKS_FILE", "../../testdata/checks/checks.yml")
 		require.NoError(t, err)
-		defer os.Unsetenv("PERCONA_TEST_CHECKS_FILE")
+		defer os.Unsetenv("PERCONA_TEST_CHECKS_FILE") //nolint:errcheck
 
 		s := New(nil, nil, nil, "2.5.0")
 		s.collectChecks(context.Background())

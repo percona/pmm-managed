@@ -428,7 +428,8 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 	l.Debugf("Results: %+v", results)
 
 	alertsIDs := make([]string, len(results))
-	for i, result := range results {
+	for i, r := range results {
+		result := r
 		id := alertsPrefix + hashID(target.serviceID+"/"+result.Summary)
 		s.createAlert(id, check.Name, target, &result)
 		alertsIDs[i] = id
