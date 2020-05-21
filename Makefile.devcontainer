@@ -89,6 +89,9 @@ travis: test-race test-cover test-crosscover
 		make test-race-crosscover
 	make check
 
+check-lint:
+	golangci-lint run -c=.golangci.yml --new-from-rev=PMM-2.0
+
 ci-reviewdog:
 	golangci-lint run -c=.golangci-required.yml --out-format=line-number | reviewdog -f=golangci-lint -level=error -reporter=github-pr-check
 	golangci-lint run -c=.golangci.yml --out-format=line-number | reviewdog -f=golangci-lint -level=error -reporter=github-pr-review
