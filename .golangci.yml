@@ -31,6 +31,7 @@ linters:
     - gochecknoglobals  # mostly useless
     - wsl               # too annoying
     - gomodguard        # we are not using modules
+    - goerr113          # we use different approach for errors
 
 run:
   skip-dirs:
@@ -41,7 +42,6 @@ issues:
   exclude-use-default: false
   exclude:
     - 'G104: Errors unhandled'                   # gas: duplicated errcheck checks
-    - 'err113: do not compare errors directly'   # we don't use errors.As/Is functions, there are differences between them and errors.Cause
   exclude-rules:
     - path: _test\.go
       linters:
