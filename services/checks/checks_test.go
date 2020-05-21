@@ -113,7 +113,7 @@ func TestStartChecks(t *testing.T) {
 
 		s := New(nil, nil, db, "2.5.0")
 		err := s.StartChecks(context.Background())
-		assert.EqualError(t, err, services.STTDisabledError.Error())
+		assert.EqualError(t, err, services.ErrSTTDisabled.Error())
 	})
 
 	t.Run("stt enabled", func(t *testing.T) {

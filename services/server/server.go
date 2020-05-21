@@ -339,7 +339,7 @@ func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusReq
 func (s *Server) StartSecurityChecks(ctx context.Context, request *serverpb.StartSecurityChecksRequest) (*serverpb.StartSecurityChecksResponse, error) {
 	err := s.checksService.StartChecks(ctx)
 	if err != nil {
-		if err == services.STTDisabledError {
+		if errors.Is(err, services.ErrSTTDisabled) {
 			return nil, status.Error(codes.FailedPrecondition, "STT is disabled.")
 		}
 

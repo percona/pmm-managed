@@ -140,7 +140,7 @@ func (s *Service) Run(ctx context.Context) {
 
 	for {
 		if err := s.StartChecks(ctx); err != nil {
-			if err == services.STTDisabledError {
+			if errors.Is(err, services.ErrSTTDisabled) {
 				s.l.Info("STT is not enabled, doing nothing.")
 			} else {
 				s.l.Error(err)
@@ -156,7 +156,7 @@ func (s *Service) Run(ctx context.Context) {
 	}
 }
 
-// StartChecks triggers STT checks downloading and execution. It returns services.STTDisabledError if STT is disabled.
+// StartChecks triggers STT checks downloading and execution. It returns services.ErrSTTDisabled if STT is disabled.
 func (s *Service) StartChecks(ctx context.Context) error {
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
@@ -164,7 +164,7 @@ func (s *Service) StartChecks(ctx context.Context) error {
 	}
 
 	if !settings.SaaS.STTEnabled {
-		return services.STTDisabledError
+		return services.ErrSTTDisabled
 	}
 
 	nCtx, cancel := context.WithTimeout(ctx, checksTimeout)
