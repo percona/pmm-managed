@@ -20,9 +20,6 @@ before_cache:
   - rm -fr /home/travis/go-build
   - docker cp pmm-managed-server:/root/.cache/go-build /home/travis/go-build
 
-go:
-  - 1.13.x
-
 env:
   global:
     - CODECOV_ENV=GO_VERSION,PMM_SERVER_IMAGE
