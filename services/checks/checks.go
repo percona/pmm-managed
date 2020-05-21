@@ -140,7 +140,7 @@ func (s *Service) Run(ctx context.Context) {
 
 	for {
 		if err := s.StartChecks(ctx); err != nil {
-			if errors.Is(err, services.ErrSTTDisabled) {
+			if err == services.ErrSTTDisabled {
 				s.l.Info("STT is not enabled, doing nothing.")
 			} else {
 				s.l.Error(err)
