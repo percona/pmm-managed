@@ -9,7 +9,10 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/percona/pmm/api/alertmanager/amclient"
+	"github.com/percona/pmm/api/alertmanager/amclient/alert"
 	serverClient "github.com/percona/pmm/api/serverpb/json/client"
 	"github.com/percona/pmm/api/serverpb/json/client/server"
 	"github.com/stretchr/testify/assert"
@@ -192,6 +195,61 @@ func TestSettings(t *testing.T) {
 				assert.True(t, resg.Payload.Settings.SttEnabled)
 			})
 
+			t.Run("VerifyFailedChecksInAlertmanager", func(t *testing.T) {
+				if !pmmapitests.RunSTTTests {
+					t.Skip("skipping STT tests")
+				}
+
+				defer restoreDefaults(t)
+
+				// Enabling STT
+				res, err := serverClient.Default.Server.ChangeSettings(&server.ChangeSettingsParams{
+					Body: server.ChangeSettingsBody{
+						EnableStt: true,
+					},
+					Context: pmmapitests.Context,
+				})
+				require.NoError(t, err)
+				assert.True(t, res.Payload.Settings.TelemetryEnabled)
+
+				// 120 sec ping for failed checks alerts to appear in alertmanager
+				var alertsCount int
+				for i := 0; i < 120; i++ {
+					res, err := amclient.Default.Alert.GetAlerts(&alert.GetAlertsParams{
+						Filter:  []string{"stt_check=1"},
+						Context: pmmapitests.Context,
+					})
+					require.NoError(t, err)
+					if len(res.Payload) == 0 {
+						time.Sleep(1 * time.Second)
+						continue
+					}
+
+					for _, v := range res.Payload {
+						t.Logf("%+v", v)
+
+						assert.Contains(t, v.Annotations, "summary")
+
+						assert.Equal(t, "1", v.Labels["stt_check"])
+
+						assert.Contains(t, v.Labels, "agent_id")
+						assert.Contains(t, v.Labels, "agent_type")
+						assert.Contains(t, v.Labels, "alert_id")
+						assert.Contains(t, v.Labels, "alertname")
+						assert.Contains(t, v.Labels, "node_id")
+						assert.Contains(t, v.Labels, "node_name")
+						assert.Contains(t, v.Labels, "node_type")
+						assert.Contains(t, v.Labels, "service_id")
+						assert.Contains(t, v.Labels, "service_name")
+						assert.Contains(t, v.Labels, "service_type")
+						assert.Contains(t, v.Labels, "severity")
+					}
+					alertsCount = len(res.Payload)
+					break
+				}
+				assert.Greater(t, alertsCount, 0, "No alerts met")
+			})
+
 			t.Run("DisableSTTWhileItIsDisabled", func(t *testing.T) {
 				defer restoreDefaults(t)
 
@@ -210,6 +268,7 @@ func TestSettings(t *testing.T) {
 				assert.True(t, resg.Payload.Settings.TelemetryEnabled)
 				assert.False(t, resg.Payload.Settings.SttEnabled)
 			})
+
 			t.Run("STTEnabledState", func(t *testing.T) {
 				defer restoreDefaults(t)
 

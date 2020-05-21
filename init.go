@@ -13,10 +13,12 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"testing"
 	"time"
 
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
+	"github.com/percona/pmm/api/alertmanager/amclient"
 	inventoryClient "github.com/percona/pmm/api/inventorypb/json/client"
 	managementClient "github.com/percona/pmm/api/managementpb/json/client"
 	serverClient "github.com/percona/pmm/api/serverpb/json/client"
@@ -41,6 +43,9 @@ var (
 
 	// RunUpdateTest is true if PMM Server update should be tested.
 	RunUpdateTest bool
+
+	// RunSTTTests is true if STT tests should be run.
+	RunSTTTests bool
 )
 
 // ErrFromNginx is an error type for nginx HTML response.
@@ -101,7 +106,11 @@ func init() {
 	serverURLF := flag.String("pmm.server-url", "https://admin:admin@127.0.0.1:443/", "PMM Server URL [PMM_SERVER_URL].")
 	serverInsecureTLSF := flag.Bool("pmm.server-insecure-tls", false, "Skip PMM Server TLS certificate validation [PMM_SERVER_INSECURE_TLS].")
 	runUpdateTestF := flag.Bool("pmm.run-update-test", false, "Run PMM Server update test [PMM_RUN_UPDATE_TEST].")
-	initTestingFlags()
+
+	// FIXME we should rethink it once https://jira.percona.com/browse/PMM-5106 is implemented
+	runSTTTestsF := flag.Bool("pmm.run-stt-tests", false, "Run STT tests that require connected clients [PMM_RUN_STT_TESTS].")
+
+	testing.Init()
 	flag.Parse()
 
 	for envVar, f := range map[string]*flag.Flag{
@@ -110,6 +119,7 @@ func init() {
 		"PMM_SERVER_URL":          flag.Lookup("pmm.server-url"),
 		"PMM_SERVER_INSECURE_TLS": flag.Lookup("pmm.server-insecure-tls"),
 		"PMM_RUN_UPDATE_TEST":     flag.Lookup("pmm.run-update-test"),
+		"PMM_RUN_STT_TESTS":       flag.Lookup("pmm.run-stt-tests"),
 	} {
 		env, ok := os.LookupEnv(envVar)
 		if ok {
@@ -129,6 +139,7 @@ func init() {
 	}
 	Debug = *debugF || *traceF
 	RunUpdateTest = *runUpdateTestF
+	RunSTTTests = *runSTTTestsF
 
 	var cancel context.CancelFunc
 	Context, cancel = context.WithCancel(context.Background())
@@ -162,10 +173,13 @@ func init() {
 	}
 
 	transport := Transport(BaseURL, *serverInsecureTLSF)
+	alertmanagerTransport := Transport(BaseURL, *serverInsecureTLSF)
+	alertmanagerTransport.BasePath = "/alertmanager/api/v2"
 	transport.Consumers["application/zip"] = runtime.ByteStreamConsumer()
 	inventoryClient.Default = inventoryClient.New(transport, nil)
 	managementClient.Default = managementClient.New(transport, nil)
 	serverClient.Default = serverClient.New(transport, nil)
+	amclient.Default = amclient.New(alertmanagerTransport, nil)
 
 	// do not run tests if server is not available
 	_, err = serverClient.Default.Server.Readiness(nil)

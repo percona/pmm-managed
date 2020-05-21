@@ -183,9 +183,16 @@
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:b385c4f33a491bc97176558d4bbecb83cf22958422cf463a8f4eee8da97abd2a"
+  digest = "1:3b97d03f08fa80e6eba3b3152edc438ea330223326cdc7c7c35651719e902557"
   name = "github.com/percona/pmm"
   packages = [
+    "api/alertmanager/amclient",
+    "api/alertmanager/amclient/alert",
+    "api/alertmanager/amclient/alertgroup",
+    "api/alertmanager/amclient/general",
+    "api/alertmanager/amclient/receiver",
+    "api/alertmanager/amclient/silence",
+    "api/alertmanager/ammodels",
     "api/inventorypb/json/client",
     "api/inventorypb/json/client/agents",
     "api/inventorypb/json/client/nodes",
@@ -318,6 +325,8 @@
     "github.com/go-openapi/runtime",
     "github.com/go-openapi/runtime/client",
     "github.com/jstemmer/go-junit-report",
+    "github.com/percona/pmm/api/alertmanager/amclient",
+    "github.com/percona/pmm/api/alertmanager/amclient/alert",
     "github.com/percona/pmm/api/inventorypb/json/client",
     "github.com/percona/pmm/api/inventorypb/json/client/agents",
     "github.com/percona/pmm/api/inventorypb/json/client/nodes",

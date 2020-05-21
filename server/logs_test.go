@@ -6,11 +6,12 @@ import (
 	"sort"
 	"testing"
 
-	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
 	serverClient "github.com/percona/pmm/api/serverpb/json/client"
 	"github.com/percona/pmm/api/serverpb/json/client/server"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
 )
 
 func TestDownloadLogs(t *testing.T) {
