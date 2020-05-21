@@ -204,7 +204,7 @@ func TestPostgresWithSocket(t *testing.T) {
 		service := &Service{
 			Socket: pointer.ToString("/var/run/postgres"),
 		}
-		expect := "postgres://username@unixsocket/database?connect_timeout=1&host=%2Fvar%2Frun%2Fpostgres&sslmode=verify-full"
+		expect := "postgres://username@/database?connect_timeout=1&host=%2Fvar%2Frun%2Fpostgres&sslmode=verify-full"
 		assert.Equal(t, expect, agent.DSN(service, time.Second, "database"))
 	})
 
@@ -215,7 +215,7 @@ func TestPostgresWithSocket(t *testing.T) {
 		service := &Service{
 			Socket: pointer.ToString("/var/run/postgres"),
 		}
-		expect := "postgres://unixsocket/database?connect_timeout=1&host=%2Fvar%2Frun%2Fpostgres&sslmode=disable"
+		expect := "postgres:///database?connect_timeout=1&host=%2Fvar%2Frun%2Fpostgres&sslmode=disable"
 		assert.Equal(t, expect, agent.DSN(service, time.Second, "database"))
 	})
 
@@ -226,7 +226,7 @@ func TestPostgresWithSocket(t *testing.T) {
 		service := &Service{
 			Socket: pointer.ToString(`/tmp/123\ A0m\%\$\@\8\,\+\-`),
 		}
-		expect := "postgres://unixsocket/database?connect_timeout=1&host=%2Ftmp%2F123%5C+A0m%5C%25%5C%24%5C%40%5C8%5C%2C%5C%2B%5C-&sslmode=disable"
+		expect := "postgres:///database?connect_timeout=1&host=%2Ftmp%2F123%5C+A0m%5C%25%5C%24%5C%40%5C8%5C%2C%5C%2B%5C-&sslmode=disable"
 		assert.Equal(t, expect, agent.DSN(service, time.Second, "database"))
 	})
 }
