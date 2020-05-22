@@ -33,11 +33,6 @@ linters:
     - gomodguard        # we are not using modules
     - goerr113          # we use different approach for errors
 
-run:
-  skip-dirs:
-    # skip files copied from Prometheus
-    - services/prometheus/internal
-
 issues:
   exclude-use-default: false
   exclude:
