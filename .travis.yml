@@ -52,8 +52,6 @@ env:
 matrix:
   fast_finish: true
 
-go_import_path: github.com/percona/pmm-managed
-
 before_install:
   - env
   - make env-compose-up
@@ -67,8 +65,6 @@ install:
   - make env-devcontainer
 
 before_script:
-  # static analyze
-  - make env TARGET=ci-reviewdog
   # ensure that generated files are not changed
   - make env TARGET=gen
   - make env TARGET=format
