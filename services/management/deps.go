@@ -41,3 +41,7 @@ type agentsRegistry interface {
 type prometheusService interface {
 	RequestConfigurationUpdate()
 }
+
+type checksService interface {
+	StartChecks(ctx context.Context) error
+}

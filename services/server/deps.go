@@ -86,7 +86,3 @@ type supervisordService interface {
 type telemetryService interface {
 	DistributionMethod() serverpb.DistributionMethod
 }
-
-type checksService interface {
-	StartChecks(ctx context.Context) error
-}

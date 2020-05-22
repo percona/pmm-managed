@@ -47,7 +47,6 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services"
 	"github.com/percona/pmm-managed/utils/envvars"
 )
 
@@ -59,7 +58,6 @@ type Server struct {
 	alertmanager            alertmanagerService
 	supervisord             supervisordService
 	telemetryService        telemetryService
-	checksService           checksService
 	awsInstanceChecker      *AWSInstanceChecker
 	grafanaClient           grafanaClient
 	l                       *logrus.Entry
@@ -85,7 +83,6 @@ type Params struct {
 	PrometheusAlertingRules prometheusAlertingRules
 	Supervisord             supervisordService
 	TelemetryService        telemetryService
-	ChecksService           checksService
 	AwsInstanceChecker      *AWSInstanceChecker
 	GrafanaClient           grafanaClient
 }
@@ -105,7 +102,6 @@ func NewServer(params *Params) (*Server, error) {
 		prometheusAlertingRules: params.PrometheusAlertingRules,
 		supervisord:             params.Supervisord,
 		telemetryService:        params.TelemetryService,
-		checksService:           params.ChecksService,
 		awsInstanceChecker:      params.AwsInstanceChecker,
 		grafanaClient:           params.GrafanaClient,
 		l:                       logrus.WithField("component", "server"),
@@ -333,20 +329,6 @@ func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusReq
 		LogOffset: newOffset,
 		Done:      done,
 	}, nil
-}
-
-// StartSecurityChecks starts STT checks execution.
-func (s *Server) StartSecurityChecks(ctx context.Context, request *serverpb.StartSecurityChecksRequest) (*serverpb.StartSecurityChecksResponse, error) {
-	err := s.checksService.StartChecks(ctx)
-	if err != nil {
-		if err == services.ErrSTTDisabled {
-			return nil, status.Error(codes.FailedPrecondition, "STT is disabled.")
-		}
-
-		return nil, status.Error(codes.Internal, "Failed to start security checks.")
-	}
-
-	return &serverpb.StartSecurityChecksResponse{}, nil
 }
 
 // writeUpdateAuthToken writes authentication token for getting update status and logs to the file.
