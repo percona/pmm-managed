@@ -65,8 +65,6 @@ install:
   - make env-devcontainer
 
 before_script:
-  # static analyze
-  - make env TARGET=ci-reviewdog
   # ensure that generated files are not changed
   - make env TARGET=gen
   - make env TARGET=format
