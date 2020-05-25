@@ -459,12 +459,14 @@ func TestAddPostgreSQL(t *testing.T) {
 		params := &postgresql.AddPostgreSQLParams{
 			Context: pmmapitests.Context,
 			Body: postgresql.AddPostgreSQLBody{
+				PMMAgentID:  pmmAgentID,
 				NodeID:      nodeID,
 				ServiceName: serviceName,
+				Username:    "username",
 			},
 		}
 		addPostgreSQLOK, err := client.Default.PostgreSQL.AddPostgreSQL(params)
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Address: value '' must not be an empty string")
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Neither socket nor address passed.")
 		assert.Nil(t, addPostgreSQLOK)
 	})
 
@@ -483,11 +485,13 @@ func TestAddPostgreSQL(t *testing.T) {
 			Body: postgresql.AddPostgreSQLBody{
 				NodeID:      nodeID,
 				ServiceName: serviceName,
+				PMMAgentID:  pmmAgentID,
+				Username:    "username",
 				Address:     "10.10.10.10",
 			},
 		}
 		addPostgreSQLOK, err := client.Default.PostgreSQL.AddPostgreSQL(params)
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Port: value '0' must be greater than '0'")
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Port are expected to be passed with address.")
 		assert.Nil(t, addPostgreSQLOK)
 	})
 
@@ -513,6 +517,34 @@ func TestAddPostgreSQL(t *testing.T) {
 		addPostgreSQLOK, err := client.Default.PostgreSQL.AddPostgreSQL(params)
 		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field PmmAgentId: value '' must not be an empty string")
 		assert.Nil(t, addPostgreSQLOK)
+	})
+
+	t.Run("Address And Socket Conflict.", func(t *testing.T) {
+		nodeName := pmmapitests.TestString(t, "node-name")
+		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+			NodeName: nodeName,
+			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
+		})
+		defer pmmapitests.RemoveNodes(t, nodeID)
+		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+
+		serviceName := pmmapitests.TestString(t, "service-name")
+		params := &postgresql.AddPostgreSQLParams{
+			Context: pmmapitests.Context,
+			Body: postgresql.AddPostgreSQLBody{
+				PMMAgentID:  pmmAgentID,
+				Username:    "username",
+				Password:    "password",
+				NodeID:      nodeID,
+				ServiceName: serviceName,
+				Address:     "10.10.10.10",
+				Port:        5432,
+				Socket:      "/var/run/postgresql",
+			},
+		}
+		addProxySQLOK, err := client.Default.PostgreSQL.AddPostgreSQL(params)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Socket and address cannot be specified together.")
+		assert.Nil(t, addProxySQLOK)
 	})
 }
 
