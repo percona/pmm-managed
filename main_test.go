@@ -75,7 +75,7 @@ func TestImports(t *testing.T) {
 
 	for _, service := range []string{
 		// those services should be independent too, but has some common code
-		// as converters, errors of param structures
+		// as converters, errors, ...
 		"github.com/percona/pmm-managed/services/inventory",
 		"github.com/percona/pmm-managed/services/management",
 		"github.com/percona/pmm-managed/services/server",
