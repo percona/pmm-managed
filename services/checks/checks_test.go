@@ -256,8 +256,6 @@ func TestIsSystem(t *testing.T) {
 		},
 	}
 
-	s := New(nil, nil, nil, "2.5.0")
-
 	for _, test := range tests {
 		test := test
 
