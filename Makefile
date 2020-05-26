@@ -1,6 +1,7 @@
 all: build
 
-init:
+init:           ## Installs tools to $GOPATH/bin (which is expected to be in $PATH).
+	curl https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOPATH)/bin
 	go install ./vendor/github.com/jstemmer/go-junit-report
 
 build:
@@ -30,3 +31,10 @@ format:                         ## Format source code.
 clean:
 	rm -f ./pmm-api-tests-output.txt
 	rm -f ./pmm-api-tests-junit-report.xml
+
+check-all:              ## Run golang ci linter to check new changes from master.
+	golangci-lint run -c=.golangci.yml --new-from-rev=master
+
+ci-reviewdog:           ## Runs reviewdog checks.
+	golangci-lint run -c=.golangci-required.yml --out-format=line-number | bin/reviewdog -f=golangci-lint -level=error -reporter=github-pr-check
+	golangci-lint run -c=.golangci.yml --out-format=line-number | bin/reviewdog -f=golangci-lint -level=error -reporter=github-pr-review
