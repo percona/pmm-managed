@@ -480,6 +480,11 @@ func (s *Service) findTargets(serviceType models.ServiceType) ([]target, error) 
 	}
 
 	for _, service := range services {
+		// skip pmm system services
+		if s.isSystem(service) {
+			continue
+		}
+
 		e := s.db.InTransaction(func(tx *reform.TX) error {
 			a, err := models.FindPMMAgentsForService(s.db.Querier, service.ServiceID)
 			if err != nil {
@@ -519,6 +524,18 @@ func (s *Service) findTargets(serviceType models.ServiceType) ([]target, error) 
 	}
 
 	return targets, nil
+}
+
+// isSystem returns true if provided service is system
+func (s *Service) isSystem(service *models.Service) bool {
+	if service.ServiceType == models.PostgreSQLServiceType &&
+		service.NodeID == models.PMMServerNodeID &&
+		service.ServiceName == models.PMMPostgreSQLServiceName {
+		s.l.Debugf("Skip system service, name: %s, type: %s", service.ServiceName, service.ServiceType)
+		return true
+	}
+
+	return false
 }
 
 // groupChecksByDB splits provided checks by database and returns three slices: for MySQL, for PostgreSQL and for MongoDB.

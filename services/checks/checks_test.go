@@ -26,6 +26,8 @@ import (
 	"github.com/percona-platform/saas/pkg/check"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/percona/pmm-managed/models"
 )
 
 const (
@@ -208,4 +210,60 @@ func TestGroupChecksByDB(t *testing.T) {
 
 	assert.Equal(t, check.MongoDBGetParameter, mongoDBChecks[0].Type)
 	assert.Equal(t, check.MongoDBBuildInfo, mongoDBChecks[1].Type)
+}
+
+func TestIsSystem(t *testing.T) {
+	tests := []struct {
+		name    string
+		service *models.Service
+		result  bool
+	}{
+		{
+			name: "system postgreSQL",
+			service: &models.Service{
+				ServiceType: models.PostgreSQLServiceType,
+				ServiceName: models.PMMPostgreSQLServiceName,
+				NodeID:      models.PMMServerNodeID,
+			},
+			result: true,
+		},
+		{
+			name: "different node",
+			service: &models.Service{
+				ServiceType: models.PostgreSQLServiceType,
+				ServiceName: models.PMMPostgreSQLServiceName,
+				NodeID:      "test_node",
+			},
+			result: false,
+		},
+		{
+			name: "different name",
+			service: &models.Service{
+				ServiceType: models.PostgreSQLServiceType,
+				ServiceName: "test_database",
+				NodeID:      models.PMMServerNodeID,
+			},
+			result: false,
+		},
+		{
+			name: "different type",
+			service: &models.Service{
+				ServiceType: models.MySQLServiceType,
+				ServiceName: models.PMMPostgreSQLServiceName,
+				NodeID:      models.PMMServerNodeID,
+			},
+			result: false,
+		},
+	}
+
+	s := New(nil, nil, nil, "2.5.0")
+
+	for _, test := range tests {
+		test := test
+
+		t.Run(test.name, func(t *testing.T) {
+			res := s.isSystem(test.service)
+			assert.Equal(t, test.result, res)
+		})
+	}
 }
