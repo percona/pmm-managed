@@ -12,17 +12,18 @@ gen:                            ## Generate files.
 	go generate ./...
 	make format
 
-install:                        ## Install pmm-managed and pmm-managed-init binaries.
+install:                        ## Install pmm-managed binaries.
 	go install -v $(PMM_LD_FLAGS) ./...
 
 	make release
 
-install-race:                   ## Install pmm-managed and pmm-managed-init binaries with race detector.
+install-race:                   ## Install pmm-managed binaries with race detector.
 	go install -race -v $(PMM_LD_FLAGS) ./...
 
 	# like make release, but with -race (and cgo is required for -race)
 	go build -race -v $(PMM_LD_FLAGS) -o $(PMM_RELEASE_PATH)/pmm-managed
 	go build -race -v $(PMM_LD_FLAGS) -o $(PMM_RELEASE_PATH)/pmm-managed-init ./cmd/pmm-managed-init
+	go build -race -v $(PMM_LD_FLAGS) -o $(PMM_RELEASE_PATH)/pmm-managed-starlark ./cmd/pmm-managed-starlark
 
 PMM_TEST_PACKAGES ?= ./...
 PMM_TEST_FLAGS ?= -timeout=60s
@@ -54,6 +55,9 @@ check:                          ## Run required checkers and linters.
 	dep check
 	go-sumtype ./vendor/... ./...
 
+check-all: check                ## Run all linters for new code.
+	golangci-lint run -c=.golangci.yml --new-from-rev=PMM-2.0
+
 FILES = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
 
 format:                         ## Format source code.
@@ -81,9 +85,13 @@ run-race: install-race _run     ## Run pmm-managed with race detector.
 psql:                           ## Open psql shell.
 	env PGPASSWORD=pmm-managed psql -U pmm-managed pmm-managed-dev
 
-travis: test-race test-cover test-crosscover
+travis: ci-reviewdog test-race test-cover test-crosscover
 	env PMM_TEST_FLAGS='-timeout=180s -v' \
 		PMM_TEST_PACKAGES=./services/supervisord \
 		PMM_TEST_RUN_UPDATE=1 \
 		make test-race-crosscover
 	make check
+
+ci-reviewdog:
+	golangci-lint run -c=.golangci-required.yml --out-format=line-number | reviewdog -f=golangci-lint -level=error -reporter=github-pr-check
+	golangci-lint run -c=.golangci.yml --out-format=line-number | reviewdog -f=golangci-lint -level=error -reporter=github-pr-review

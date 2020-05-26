@@ -386,7 +386,7 @@
 
 [[projects]]
   branch = "PMM-5256-MongoDB-socket-conn"
-  digest = "1:b548fcc209788922b57a00edf3aba160f3caea58e6bea934fe8ca379aa1c1af6"
+  digest = "1:db9a17ae1a40ffbf7646f75a61663ac8f88b9611f49698729fd2ec9ca73ad0a5"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -407,7 +407,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "da9c00edc51b4de99db5985f374aab5869d255f7"
+  revision = "048f6582b79ce3ed6ad5d0c69655695c027a8417"
 
 [[projects]]
   digest = "1:1e38d8f6796fabbf419aa2040dc196927690a1de7fe14af25fbd29c6ed44b4da"
