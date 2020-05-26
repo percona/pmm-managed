@@ -481,7 +481,8 @@ func (s *Service) findTargets(serviceType models.ServiceType) ([]target, error) 
 
 	for _, service := range services {
 		// skip pmm system services
-		if s.isSystem(service) {
+		if isSystem(service) {
+			s.l.Debugf("Skip system service, name: %s, type: %s", service.ServiceName, service.ServiceType)
 			continue
 		}
 
@@ -527,11 +528,10 @@ func (s *Service) findTargets(serviceType models.ServiceType) ([]target, error) 
 }
 
 // isSystem returns true if provided service is system
-func (s *Service) isSystem(service *models.Service) bool {
+func isSystem(service *models.Service) bool {
 	if service.ServiceType == models.PostgreSQLServiceType &&
 		service.NodeID == models.PMMServerNodeID &&
 		service.ServiceName == models.PMMPostgreSQLServiceName {
-		s.l.Debugf("Skip system service, name: %s, type: %s", service.ServiceName, service.ServiceType)
 		return true
 	}
 

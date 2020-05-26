@@ -262,7 +262,7 @@ func TestIsSystem(t *testing.T) {
 		test := test
 
 		t.Run(test.name, func(t *testing.T) {
-			res := s.isSystem(test.service)
+			res := isSystem(test.service)
 			assert.Equal(t, test.result, res)
 		})
 	}
