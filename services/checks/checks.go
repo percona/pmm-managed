@@ -166,7 +166,7 @@ func (s *Service) Run(ctx context.Context) {
 	}
 }
 
-// getChecks returns available MySQL checks.
+// getMySQLChecks returns available MySQL checks.
 func (s *Service) getMySQLChecks() []check.Check {
 	s.cm.Lock()
 	defer s.cm.Unlock()
@@ -175,7 +175,7 @@ func (s *Service) getMySQLChecks() []check.Check {
 	return append(r, s.mySQLChecks...)
 }
 
-// getChecks returns available PostgreSQL checks.
+// getPostgreSQLChecks returns available PostgreSQL checks.
 func (s *Service) getPostgreSQLChecks() []check.Check {
 	s.cm.Lock()
 	defer s.cm.Unlock()
@@ -184,7 +184,7 @@ func (s *Service) getPostgreSQLChecks() []check.Check {
 	return append(r, s.postgreSQLChecks...)
 }
 
-// getChecks returns available MongoDB checks.
+// getMongoDBChecks returns available MongoDB checks.
 func (s *Service) getMongoDBChecks() []check.Check {
 	s.cm.Lock()
 	defer s.cm.Unlock()
