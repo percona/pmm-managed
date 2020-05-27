@@ -531,7 +531,7 @@ func (s *Service) findTargets(serviceType models.ServiceType) ([]target, error) 
 func isSystem(service *models.Service) bool {
 	if service.ServiceType == models.PostgreSQLServiceType &&
 		service.NodeID == models.PMMServerNodeID &&
-		service.ServiceName == models.PMMPostgreSQLServiceName {
+		service.ServiceName == models.PMMServerPostgreSQLServiceName {
 		return true
 	}
 

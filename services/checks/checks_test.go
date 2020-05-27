@@ -222,7 +222,7 @@ func TestIsSystem(t *testing.T) {
 			name: "system postgreSQL",
 			service: &models.Service{
 				ServiceType: models.PostgreSQLServiceType,
-				ServiceName: models.PMMPostgreSQLServiceName,
+				ServiceName: models.PMMServerPostgreSQLServiceName,
 				NodeID:      models.PMMServerNodeID,
 			},
 			result: true,
@@ -231,7 +231,7 @@ func TestIsSystem(t *testing.T) {
 			name: "different node",
 			service: &models.Service{
 				ServiceType: models.PostgreSQLServiceType,
-				ServiceName: models.PMMPostgreSQLServiceName,
+				ServiceName: models.PMMServerPostgreSQLServiceName,
 				NodeID:      "test_node",
 			},
 			result: false,
@@ -249,7 +249,7 @@ func TestIsSystem(t *testing.T) {
 			name: "different type",
 			service: &models.Service{
 				ServiceType: models.MySQLServiceType,
-				ServiceName: models.PMMPostgreSQLServiceName,
+				ServiceName: models.PMMServerPostgreSQLServiceName,
 				NodeID:      models.PMMServerNodeID,
 			},
 			result: false,
