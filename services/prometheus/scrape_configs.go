@@ -415,7 +415,7 @@ func scrapeConfigsForProxySQLExporter(s *models.MetricsResolutions, params *scra
 	return r, nil
 }
 
-func scrapeConfigsForRDSExporter(s *models.MetricsResolutions, params []*scrapeConfigParams) ([]*config.ScrapeConfig, error) {
+func scrapeConfigsForRDSExporter(s *models.MetricsResolutions, params []*scrapeConfigParams) []*config.ScrapeConfig {
 	hostportSet := make(map[string]struct{}, len(params))
 	for _, p := range params {
 		port := int(*p.agent.ListenPort)
@@ -429,14 +429,14 @@ func scrapeConfigsForRDSExporter(s *models.MetricsResolutions, params []*scrapeC
 	}
 	sort.Strings(hostports)
 
-	var r []*config.ScrapeConfig
+	r := make([]*config.ScrapeConfig, 0, len(hostports)*2)
 	for _, hostport := range hostports {
 		mr := scrapeConfigForRDSExporter("mr", s.MR, hostport, "/enhanced")
 		lr := scrapeConfigForRDSExporter("lr", s.LR, hostport, "/basic")
 		r = append(r, mr, lr)
 	}
 
-	return r, nil
+	return r
 }
 
 func scrapeConfigsForExternalExporter(s *models.MetricsResolutions, params *scrapeConfigParams) ([]*config.ScrapeConfig, error) {

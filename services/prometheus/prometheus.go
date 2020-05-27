@@ -302,10 +302,7 @@ func (svc *Service) addScrapeConfigs(cfg *config.Config, q *reform.Querier, s *m
 		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfgs...)
 	}
 
-	scfgs, err := scrapeConfigsForRDSExporter(s, rdsParams)
-	if err != nil {
-		svc.l.Warnf("Failed to add rds_exporter scrape configs: %s.", err)
-	}
+	scfgs := scrapeConfigsForRDSExporter(s, rdsParams)
 	cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfgs...)
 
 	return nil

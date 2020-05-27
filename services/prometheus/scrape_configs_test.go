@@ -945,8 +945,7 @@ func TestScrapeConfig(t *testing.T) {
 				},
 			}}
 
-			actual, err := scrapeConfigsForRDSExporter(s, params)
-			require.NoError(t, err)
+			actual := scrapeConfigsForRDSExporter(s, params)
 			require.Len(t, actual, len(expected))
 			for i := 0; i < len(expected); i++ {
 				assertScrapeConfigsEqual(t, expected[i], actual[i])
