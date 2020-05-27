@@ -130,7 +130,7 @@ func FindAgentsByIDs(q *reform.Querier, ids []string) ([]*Agent, error) {
 		return []*Agent{}, nil
 	}
 
-	p := strings.Join(q.Placeholders(1, len(ids)), ", ")               //nolint:gomnd
+	p := strings.Join(q.Placeholders(1, len(ids)), ", ")
 	tail := fmt.Sprintf("WHERE agent_id IN (%s) ORDER BY agent_id", p) //nolint:gosec
 	args := make([]interface{}, len(ids))
 	for i, id := range ids {

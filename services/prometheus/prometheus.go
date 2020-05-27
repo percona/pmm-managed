@@ -535,7 +535,7 @@ func (svc *Service) IsReady(ctx context.Context) error {
 	}
 
 	// check promtool version
-	b, err = exec.CommandContext(ctx, "promtool", "--version").CombinedOutput() //nolint:gosec
+	b, err = exec.CommandContext(ctx, "promtool", "--version").CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, string(b))
 	}
