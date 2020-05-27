@@ -17,7 +17,6 @@
 package checks
 
 import (
-	"context"
 	"time"
 )
 
@@ -27,12 +26,12 @@ import (
 // agentsRegistry is a subset of methods of agents.Registry used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
 type agentsRegistry interface {
-	StartMySQLQueryShowAction(ctx context.Context, id, pmmAgentID, dsn, query string) error
-	StartMySQLQuerySelectAction(ctx context.Context, id, pmmAgentID, dsn, query string) error
-	StartPostgreSQLQueryShowAction(ctx context.Context, id, pmmAgentID, dsn string) error
-	StartPostgreSQLQuerySelectAction(ctx context.Context, id, pmmAgentID, dsn, query string) error
-	StartMongoDBQueryGetParameterAction(ctx context.Context, id, pmmAgentID, dsn string) error
-	StartMongoDBQueryBuildInfoAction(ctx context.Context, id, pmmAgentID, dsn string) error
+	StartMySQLQueryShowAction(id, pmmAgentID, dsn, query string) error
+	StartMySQLQuerySelectAction(id, pmmAgentID, dsn, query string) error
+	StartPostgreSQLQueryShowAction(id, pmmAgentID, dsn string) error
+	StartPostgreSQLQuerySelectAction(id, pmmAgentID, dsn, query string) error
+	StartMongoDBQueryGetParameterAction(id, pmmAgentID, dsn string) error
+	StartMongoDBQueryBuildInfoAction(id, pmmAgentID, dsn string) error
 }
 
 // alertRegistry is is a subset of methods of alertmanager.registry used by this package.

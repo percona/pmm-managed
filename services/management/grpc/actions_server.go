@@ -87,7 +87,7 @@ func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *manage
 		return nil, err
 	}
 
-	err = s.r.StartMySQLExplainAction(ctx, res.ID, res.PMMAgentID, dsn, req.Query, agentpb.MysqlExplainOutputFormat_MYSQL_EXPLAIN_OUTPUT_FORMAT_DEFAULT)
+	err = s.r.StartMySQLExplainAction(res.ID, res.PMMAgentID, dsn, req.Query, agentpb.MysqlExplainOutputFormat_MYSQL_EXPLAIN_OUTPUT_FORMAT_DEFAULT)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *ma
 		return nil, err
 	}
 
-	err = s.r.StartMySQLExplainAction(ctx, res.ID, res.PMMAgentID, dsn, req.Query, agentpb.MysqlExplainOutputFormat_MYSQL_EXPLAIN_OUTPUT_FORMAT_JSON)
+	err = s.r.StartMySQLExplainAction(res.ID, res.PMMAgentID, dsn, req.Query, agentpb.MysqlExplainOutputFormat_MYSQL_EXPLAIN_OUTPUT_FORMAT_JSON)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +125,7 @@ func (s *actionsServer) StartMySQLExplainTraditionalJSONAction(ctx context.Conte
 		return nil, err
 	}
 
-	err = s.r.StartMySQLExplainAction(ctx, res.ID, res.PMMAgentID, dsn, req.Query, agentpb.MysqlExplainOutputFormat_MYSQL_EXPLAIN_OUTPUT_FORMAT_TRADITIONAL_JSON)
+	err = s.r.StartMySQLExplainAction(res.ID, res.PMMAgentID, dsn, req.Query, agentpb.MysqlExplainOutputFormat_MYSQL_EXPLAIN_OUTPUT_FORMAT_TRADITIONAL_JSON)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +144,7 @@ func (s *actionsServer) StartMySQLShowCreateTableAction(ctx context.Context, req
 		return nil, err
 	}
 
-	err = s.r.StartMySQLShowCreateTableAction(ctx, res.ID, res.PMMAgentID, dsn, req.TableName)
+	err = s.r.StartMySQLShowCreateTableAction(res.ID, res.PMMAgentID, dsn, req.TableName)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ func (s *actionsServer) StartMySQLShowTableStatusAction(ctx context.Context, req
 		return nil, err
 	}
 
-	err = s.r.StartMySQLShowTableStatusAction(ctx, res.ID, res.PMMAgentID, dsn, req.TableName)
+	err = s.r.StartMySQLShowTableStatusAction(res.ID, res.PMMAgentID, dsn, req.TableName)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +182,7 @@ func (s *actionsServer) StartMySQLShowIndexAction(ctx context.Context, req *mana
 		return nil, err
 	}
 
-	err = s.r.StartMySQLShowIndexAction(ctx, res.ID, res.PMMAgentID, dsn, req.TableName)
+	err = s.r.StartMySQLShowIndexAction(res.ID, res.PMMAgentID, dsn, req.TableName)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +201,7 @@ func (s *actionsServer) StartPostgreSQLShowCreateTableAction(ctx context.Context
 		return nil, err
 	}
 
-	err = s.r.StartPostgreSQLShowCreateTableAction(ctx, res.ID, res.PMMAgentID, dsn, req.TableName)
+	err = s.r.StartPostgreSQLShowCreateTableAction(res.ID, res.PMMAgentID, dsn, req.TableName)
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +220,7 @@ func (s *actionsServer) StartPostgreSQLShowIndexAction(ctx context.Context, req 
 		return nil, err
 	}
 
-	err = s.r.StartPostgreSQLShowIndexAction(ctx, res.ID, res.PMMAgentID, dsn, req.TableName)
+	err = s.r.StartPostgreSQLShowIndexAction(res.ID, res.PMMAgentID, dsn, req.TableName)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +241,7 @@ func (s *actionsServer) StartMongoDBExplainAction(ctx context.Context, req *mana
 		return nil, err
 	}
 
-	err = s.r.StartMongoDBExplainAction(ctx, res.ID, res.PMMAgentID, dsn, req.Query)
+	err = s.r.StartMongoDBExplainAction(res.ID, res.PMMAgentID, dsn, req.Query)
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +259,7 @@ func (s *actionsServer) CancelAction(ctx context.Context, req *managementpb.Canc
 		return nil, err
 	}
 
-	err = s.r.StopAction(ctx, ar.ID)
+	err = s.r.StopAction(ar.ID)
 	if err != nil {
 		return nil, err
 	}

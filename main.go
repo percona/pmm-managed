@@ -519,7 +519,7 @@ func main() {
 	prom.MustRegister(agentsRegistry)
 
 	alertsRegistry := alertmanager.NewRegistry()
-	alertmanager:= alertmanager.New(db, alertsRegistry)
+	alertmanager := alertmanager.New(db, alertsRegistry)
 
 	pmmUpdateCheck := supervisord.NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker"))
 

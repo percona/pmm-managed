@@ -155,7 +155,7 @@ func FindPMMAgentsRunningOnNode(q *reform.Querier, nodeID string) ([]*Agent, err
 		return nil, status.Errorf(codes.FailedPrecondition, "Couldn't get agents by runs_on_node_id, %s", nodeID)
 	}
 
-	res :=  make([]*Agent, 0, len(structs))
+	res := make([]*Agent, 0, len(structs))
 	for _, str := range structs {
 		row := str.(*Agent)
 		res = append(res, row)
