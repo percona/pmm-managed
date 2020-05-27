@@ -5,6 +5,10 @@ go:
   - 1.13.x
   # - master
 
+env:
+  global:
+    secure: "ACdUU1foPIsNHrVYmUybEYHAoruj/RcoFE1gAVDELg6Ab0V2vZsF1aroHvA4PZSfqd3y8/2Mh4ybSp2J7z7VPoLtwEsTyZoao6HigAIgVy53BXKrhDA3WAef/D6wWX/UHDPY/1Iqo8j7dCpX2HsHtwB22hNAyyJvsbbmnwmsKQ0rs6kHM40/naOCjG9Pakwn+TM5eRaGUJdXSM4H68lBg9CIq8cZnNjhL3h2//tnPB29DGRuKM1A8v9OtH2E1iaeQy+4nKOY/Z9Wh3uZ1n5lVO6fRgaiL9D3DgXZynmFkEsCLbHBOloPArMDq3xgM4p5ERvHzsbT0a8AwP53UNhtUubFg/BbbwzFUMwcVjVvv3avTM7jS/SCuZwEWx75agdj8EeZJIgbtKq+jKNxhV7/2FuG9tZfHZhLz/7ZkjteVBUBIXLQhjUuVXp4kZ4Tfzr1cUC/f1kixi6ZfAqoudi1udp+LQNQ07pH1pFEQyDvrv7fjrJjkI1qut5o5piWq8JeKOSwurjJDKoRUYFL+1upsRITjVt3NeskRk+XSxVYWMwaE3zfNJNnbfA6ZefXhwkUgoQk0MgGdxp/1bv6aAFjCGOaIRhVrKsb4XIx8SxSgxythBeYPEWWrQdtJqPy00YeWrcpnmYkQ0LHemYW4msXEcX1BHHHP9/1wjFszr+baHk="
+
 matrix:
   fast_finish: true
   allow_failures:

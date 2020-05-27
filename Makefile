@@ -32,9 +32,9 @@ clean:
 	rm -f ./pmm-api-tests-output.txt
 	rm -f ./pmm-api-tests-junit-report.xml
 
-check-all:              ## Run golang ci linter to check new changes from master.
+check-all:                      ## Run golang ci linter to check new changes from master.
 	golangci-lint run -c=.golangci.yml --new-from-rev=master
 
-ci-reviewdog:           ## Runs reviewdog checks.
+ci-reviewdog:                   ## Runs reviewdog checks.
 	golangci-lint run -c=.golangci-required.yml --out-format=line-number | bin/reviewdog -f=golangci-lint -level=error -reporter=github-pr-check
 	golangci-lint run -c=.golangci.yml --out-format=line-number | bin/reviewdog -f=golangci-lint -level=error -reporter=github-pr-review
