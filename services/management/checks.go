@@ -41,7 +41,7 @@ func (s *ChecksAPIService) StartSecurityChecks(ctx context.Context, request *man
 	err := s.checksService.StartChecks(ctx)
 	if err != nil {
 		if err == services.ErrSTTDisabled {
-			return nil, status.Error(codes.FailedPrecondition, "STT is disabled.")
+			return nil, status.Errorf(codes.FailedPrecondition,"%v.", err)
 		}
 
 		return nil, status.Error(codes.Internal, "Failed to start security checks.")

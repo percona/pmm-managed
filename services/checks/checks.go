@@ -140,12 +140,14 @@ func (s *Service) Run(ctx context.Context) {
 	defer ticker.Stop()
 
 	for {
-		if err := s.StartChecks(ctx); err != nil {
-			if err == services.ErrSTTDisabled {
-				s.l.Info("STT is not enabled, doing nothing.")
-			} else {
-				s.l.Error(err)
-			}
+		err := s.StartChecks(ctx)
+		switch err {
+		case nil:
+			// nothing, continue
+		case services.ErrSTTDisabled:
+			s.l.Info("STT is not enabled, doing nothing.")
+		default:
+			s.l.Error(err)
 		}
 
 		select {
