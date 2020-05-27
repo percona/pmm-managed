@@ -196,23 +196,20 @@ func scrapeConfigForStandardExporter(intervalName string, interval time.Duration
 }
 
 // scrapeConfigForRDSExporter returns scrape config for single rds_exporter configuration.
-func scrapeConfigForRDSExporter(intervalName string, interval time.Duration, hostport string, metricsPath string) (*config.ScrapeConfig, error) {
+func scrapeConfigForRDSExporter(intervalName string, interval time.Duration, hostport string, metricsPath string) *config.ScrapeConfig {
 	jobName := fmt.Sprintf("rds_exporter_%s_%s-%s", strings.Map(jobNameMapping, hostport), intervalName, interval)
-	cfg := &config.ScrapeConfig{
+	return &config.ScrapeConfig{
 		JobName:        jobName,
 		ScrapeInterval: config.Duration(interval),
 		ScrapeTimeout:  scrapeTimeout(interval),
 		MetricsPath:    metricsPath,
 		HonorLabels:    true,
+		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+			StaticConfigs: []*config.Group{{
+				Targets: []string{hostport},
+			}},
+		},
 	}
-
-	cfg.ServiceDiscoveryConfig = config.ServiceDiscoveryConfig{
-		StaticConfigs: []*config.Group{{
-			Targets: []string{hostport},
-		}},
-	}
-
-	return cfg, nil
 }
 
 func scrapeConfigsForNodeExporter(s *models.MetricsResolutions, params *scrapeConfigParams) ([]*config.ScrapeConfig, error) {
@@ -434,21 +431,9 @@ func scrapeConfigsForRDSExporter(s *models.MetricsResolutions, params []*scrapeC
 
 	var r []*config.ScrapeConfig
 	for _, hostport := range hostports {
-		mr, err := scrapeConfigForRDSExporter("mr", s.MR, hostport, "/enhanced")
-		if err != nil {
-			return nil, err
-		}
-		if mr != nil {
-			r = append(r, mr)
-		}
-
-		lr, err := scrapeConfigForRDSExporter("lr", s.LR, hostport, "/basic")
-		if err != nil {
-			return nil, err
-		}
-		if lr != nil {
-			r = append(r, lr)
-		}
+		mr := scrapeConfigForRDSExporter("mr", s.MR, hostport, "/enhanced")
+		lr := scrapeConfigForRDSExporter("lr", s.LR, hostport, "/basic")
+		r = append(r, mr, lr)
 	}
 
 	return r, nil

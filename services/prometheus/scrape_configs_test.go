@@ -1082,7 +1082,7 @@ func TestScrapeConfig(t *testing.T) {
 	})
 }
 
-func assertScrapeConfigsEqual(t *testing.T, expected, actual *config.ScrapeConfig) bool {
+func assertScrapeConfigsEqual(t *testing.T, expected, actual *config.ScrapeConfig) {
 	t.Helper()
 
 	if !assert.Equal(t, expected, actual) {
@@ -1100,7 +1100,5 @@ func assertScrapeConfigsEqual(t *testing.T, expected, actual *config.ScrapeConfi
 		})
 		require.NoError(t, err)
 		t.Logf("Diff:\n%s", diff)
-		return false
 	}
-	return true
 }

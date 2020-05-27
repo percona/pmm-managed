@@ -155,7 +155,7 @@ func FindPMMAgentsRunningOnNode(q *reform.Querier, nodeID string) ([]*Agent, err
 		return nil, status.Errorf(codes.FailedPrecondition, "Couldn't get agents by runs_on_node_id, %s", nodeID)
 	}
 
-	var res []*Agent
+	res :=  make([]*Agent, 0, len(structs))
 	for _, str := range structs {
 		row := str.(*Agent)
 		res = append(res, row)
@@ -200,7 +200,7 @@ func FindPMMAgentsForService(q *reform.Querier, serviceID string) ([]*Agent, err
 	if err != nil {
 		return nil, status.Errorf(codes.FailedPrecondition, "Couldn't get pmm-agents for service %s", serviceID)
 	}
-	var res []*Agent
+	res := make([]*Agent, 0, len(pmmAgentRecords))
 	for _, str := range pmmAgentRecords {
 		row := str.(*Agent)
 		res = append(res, row)
