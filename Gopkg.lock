@@ -385,7 +385,7 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-5256-MongoDB-socket-conn"
+  branch = "PMM-2.0"
   digest = "1:db9a17ae1a40ffbf7646f75a61663ac8f88b9611f49698729fd2ec9ca73ad0a5"
   name = "github.com/percona/pmm"
   packages = [
@@ -407,7 +407,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "048f6582b79ce3ed6ad5d0c69655695c027a8417"
+  revision = "08b8f17f58f21d2173bc255df8e02f7272ed4c9d"
 
 [[projects]]
   digest = "1:1e38d8f6796fabbf419aa2040dc196927690a1de7fe14af25fbd29c6ed44b4da"
