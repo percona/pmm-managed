@@ -447,6 +447,10 @@ func RemoveAgent(q *reform.Querier, id string, mode RemoveMode) (*Agent, error) 
 		return nil, err
 	}
 
+	if id == PMMServerAgentID {
+		return nil, status.Error(codes.PermissionDenied, "PMM Server agent can't be removed.")
+	}
+
 	structs, err := q.SelectAllFrom(AgentTable, "WHERE pmm_agent_id = $1", id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select Agents")

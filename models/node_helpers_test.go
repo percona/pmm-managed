@@ -127,7 +127,7 @@ func TestNodeHelpers(t *testing.T) {
 			machineID := "/machine_id/GenericNode"
 			_, err := models.CreateNode(q, models.GenericNodeType, &models.CreateNodeParams{
 				NodeName:  t.Name(),
-				MachineID: pointer.ToString(machineID + "\n"),
+				MachineID: pointer.ToString(machineID),
 			})
 			assert.NoError(t, err)
 
@@ -214,9 +214,13 @@ func TestNodeHelpers(t *testing.T) {
 	t.Run("RemoveNode", func(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
+		testdb.SetupDB(t, sqlDB, models.SetupFixtures, nil) // Setup fixtures
 
 		err := models.RemoveNode(q, "", models.RemoveRestrict)
 		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Empty Node ID.`), err)
+
+		err = models.RemoveNode(q, models.PMMServerNodeID, models.RemoveRestrict)
+		tests.AssertGRPCError(t, status.New(codes.PermissionDenied, `PMM Server node can't be removed.`), err)
 
 		err = models.RemoveNode(q, "NoSuchNode", models.RemoveRestrict)
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Node with ID "NoSuchNode" not found.`), err)
@@ -240,7 +244,7 @@ func TestNodeHelpers(t *testing.T) {
 
 		nodes, err := models.FindNodes(q, models.NodeFilters{})
 		assert.NoError(t, err)
-		require.Len(t, nodes, 0)
+		require.Len(t, nodes, 1) // PMM Server
 	})
 }
 

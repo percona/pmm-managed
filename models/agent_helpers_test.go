@@ -195,10 +195,15 @@ func TestAgentHelpers(t *testing.T) {
 	t.Run("RemoveAgent", func(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
+		testdb.SetupDB(t, sqlDB, models.SetupFixtures, nil) // Setup fixtures
 
 		agent, err := models.RemoveAgent(q, "", models.RemoveRestrict)
 		assert.Nil(t, agent)
 		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Empty Agent ID.`), err)
+
+		agent, err = models.RemoveAgent(q, models.PMMServerAgentID, models.RemoveRestrict)
+		assert.Nil(t, agent)
+		tests.AssertGRPCError(t, status.New(codes.PermissionDenied, `PMM Server agent can't be removed.`), err)
 
 		agent, err = models.RemoveAgent(q, "A0", models.RemoveRestrict)
 		assert.Nil(t, agent)
