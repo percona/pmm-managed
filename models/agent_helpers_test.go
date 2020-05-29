@@ -203,7 +203,7 @@ func TestAgentHelpers(t *testing.T) {
 
 		agent, err = models.RemoveAgent(q, models.PMMServerAgentID, models.RemoveRestrict)
 		assert.Nil(t, agent)
-		tests.AssertGRPCError(t, status.New(codes.PermissionDenied, `PMM Server agent can't be removed.`), err)
+		tests.AssertGRPCError(t, status.New(codes.PermissionDenied, `Removing pmm-agent on PMM Server prevents remote monitoring.`), err)
 
 		agent, err = models.RemoveAgent(q, "A0", models.RemoveRestrict)
 		assert.Nil(t, agent)

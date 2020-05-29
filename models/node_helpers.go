@@ -248,7 +248,7 @@ func RemoveNode(q *reform.Querier, id string, mode RemoveMode) error {
 	}
 
 	if id == PMMServerNodeID {
-		return status.Error(codes.PermissionDenied, "PMM Server node can't be removed.")
+		return status.Error(codes.PermissionDenied, "Removing pmm-server node prevents remote monitoring.")
 	}
 
 	// check/remove Agents

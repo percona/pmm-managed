@@ -220,7 +220,7 @@ func TestNodeHelpers(t *testing.T) {
 		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Empty Node ID.`), err)
 
 		err = models.RemoveNode(q, models.PMMServerNodeID, models.RemoveRestrict)
-		tests.AssertGRPCError(t, status.New(codes.PermissionDenied, `PMM Server node can't be removed.`), err)
+		tests.AssertGRPCError(t, status.New(codes.PermissionDenied, `Removing pmm-server node prevents remote monitoring.`), err)
 
 		err = models.RemoveNode(q, "NoSuchNode", models.RemoveRestrict)
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Node with ID "NoSuchNode" not found.`), err)
