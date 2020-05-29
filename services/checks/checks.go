@@ -529,13 +529,9 @@ func (s *Service) findTargets(serviceType models.ServiceType) ([]target, error) 
 
 // isSystem returns true if provided service is system
 func isSystem(service *models.Service) bool {
-	if service.ServiceType == models.PostgreSQLServiceType &&
+	return service.ServiceType == models.PostgreSQLServiceType &&
 		service.NodeID == models.PMMServerNodeID &&
-		service.ServiceName == models.PMMServerPostgreSQLServiceName {
-		return true
-	}
-
-	return false
+		service.ServiceName == models.PMMServerPostgreSQLServiceName
 }
 
 // groupChecksByDB splits provided checks by database and returns three slices: for MySQL, for PostgreSQL and for MongoDB.
