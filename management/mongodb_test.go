@@ -456,10 +456,11 @@ func TestAddMongoDB(t *testing.T) {
 			Body: mongodb.AddMongoDBBody{
 				NodeID:      nodeID,
 				ServiceName: serviceName,
+				PMMAgentID:  pmmAgentID,
 			},
 		}
 		addMongoDBOK, err := client.Default.MongoDB.AddMongoDB(params)
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Address: value '' must not be an empty string")
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Neither socket nor address passed.")
 		assert.Nil(t, addMongoDBOK)
 	})
 
@@ -479,10 +480,11 @@ func TestAddMongoDB(t *testing.T) {
 				NodeID:      nodeID,
 				ServiceName: serviceName,
 				Address:     "10.10.10.10",
+				PMMAgentID:  pmmAgentID,
 			},
 		}
 		addMongoDBOK, err := client.Default.MongoDB.AddMongoDB(params)
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Port: value '0' must be greater than '0'")
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Port are expected to be passed with address.")
 		assert.Nil(t, addMongoDBOK)
 	})
 
@@ -508,6 +510,101 @@ func TestAddMongoDB(t *testing.T) {
 		addMongoDBOK, err := client.Default.MongoDB.AddMongoDB(params)
 		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field PmmAgentId: value '' must not be an empty string")
 		assert.Nil(t, addMongoDBOK)
+	})
+
+	t.Run("Address And Socket Conflict.", func(t *testing.T) {
+		nodeName := pmmapitests.TestString(t, "node-name")
+		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+			NodeName: nodeName,
+			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
+		})
+		defer pmmapitests.RemoveNodes(t, nodeID)
+		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+
+		serviceName := pmmapitests.TestString(t, "service-name")
+		params := &mongodb.AddMongoDBParams{
+			Context: pmmapitests.Context,
+			Body: mongodb.AddMongoDBBody{
+				PMMAgentID:  pmmAgentID,
+				Username:    "username",
+				Password:    "password",
+				NodeID:      nodeID,
+				ServiceName: serviceName,
+				Address:     "10.10.10.10",
+				Port:        27017,
+				Socket:      "/tmp/mongodb-27017.sock",
+			},
+		}
+		addProxySQLOK, err := client.Default.MongoDB.AddMongoDB(params)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Socket and address cannot be specified together.")
+		assert.Nil(t, addProxySQLOK)
+	})
+
+	t.Run("Socket", func(t *testing.T) {
+		nodeName := pmmapitests.TestString(t, "node-for-mongo-socket-name")
+		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+			NodeName: nodeName,
+			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
+		})
+		defer pmmapitests.RemoveNodes(t, nodeID)
+		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+
+		serviceName := pmmapitests.TestString(t, "service-name-for-mongo-socket-name")
+
+		params := &mongodb.AddMongoDBParams{
+			Context: pmmapitests.Context,
+			Body: mongodb.AddMongoDBBody{
+				NodeID:      nodeID,
+				PMMAgentID:  pmmAgentID,
+				ServiceName: serviceName,
+				Socket:      "/tmp/mongodb-27017.sock",
+
+				SkipConnectionCheck: true,
+			},
+		}
+		addMongoDBOK, err := client.Default.MongoDB.AddMongoDB(params)
+		require.NoError(t, err)
+		require.NotNil(t, addMongoDBOK)
+		require.NotNil(t, addMongoDBOK.Payload.Service)
+		serviceID := addMongoDBOK.Payload.Service.ServiceID
+		defer pmmapitests.RemoveServices(t, serviceID)
+
+		// Check that service is created and its fields.
+		serviceOK, err := inventoryClient.Default.Services.GetService(&services.GetServiceParams{
+			Body: services.GetServiceBody{
+				ServiceID: serviceID,
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		require.NotNil(t, serviceOK)
+		assert.Equal(t, services.GetServiceOKBody{
+			Mongodb: &services.GetServiceOKBodyMongodb{
+				ServiceID:   serviceID,
+				NodeID:      nodeID,
+				ServiceName: serviceName,
+				Socket:      "/tmp/mongodb-27017.sock",
+			},
+		}, *serviceOK.Payload)
+
+		// Check that mongodb exporter is added by default.
+		listAgents, err := inventoryClient.Default.Agents.ListAgents(&agents.ListAgentsParams{
+			Context: pmmapitests.Context,
+			Body: agents.ListAgentsBody{
+				ServiceID: serviceID,
+			},
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, agents.ListAgentsOKBody{
+			MongodbExporter: []*agents.MongodbExporterItems0{
+				{
+					AgentID:    listAgents.Payload.MongodbExporter[0].AgentID,
+					ServiceID:  serviceID,
+					PMMAgentID: pmmAgentID,
+				},
+			},
+		}, *listAgents.Payload)
+		defer removeAllAgentsInList(t, listAgents)
 	})
 }
 

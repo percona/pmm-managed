@@ -602,6 +602,107 @@ func TestMongoDBService(t *testing.T) {
 			pmmapitests.RemoveServices(t, res.Payload.Mongodb.ServiceID)
 		}
 	})
+
+	t.Run("AddAddressSocketConflict", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+
+		params := &services.AddMongoDBServiceParams{
+			Body: services.AddMongoDBServiceBody{
+				NodeID:      genericNodeID,
+				Address:     "localhost",
+				Port:        27017,
+				Socket:      "/tmp/mongodb-27017.sock",
+				ServiceName: pmmapitests.TestString(t, "MongoDB Service with address and socket conflict"),
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err := client.Default.Services.AddMongoDBService(params)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Socket and address cannot be specified together.")
+		if !assert.Nil(t, res) {
+			pmmapitests.RemoveServices(t, res.Payload.Mongodb.ServiceID)
+		}
+	})
+
+	t.Run("AddPortWithNoAddress", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+
+		params := &services.AddMongoDBServiceParams{
+			Body: services.AddMongoDBServiceBody{
+				NodeID:      genericNodeID,
+				ServiceName: pmmapitests.TestString(t, "MongoDB Service with port and socket"),
+				Port:        27017,
+				Socket:      "/tmp/mongodb-27017.sock",
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err := client.Default.Services.AddMongoDBService(params)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Socket and port cannot be specified together.")
+		if !assert.Nil(t, res) {
+			pmmapitests.RemoveServices(t, res.Payload.Mongodb.ServiceID)
+		}
+	})
+
+	t.Run("AddEpmtyAddressAndSocket", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+
+		params := &services.AddMongoDBServiceParams{
+			Body: services.AddMongoDBServiceBody{
+				NodeID:      genericNodeID,
+				ServiceName: pmmapitests.TestString(t, "MongoDB Service with empty address and socket"),
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err := client.Default.Services.AddMongoDBService(params)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Neither socket nor address passed.")
+		if !assert.Nil(t, res) {
+			pmmapitests.RemoveServices(t, res.Payload.Mongodb.ServiceID)
+		}
+	})
+
+	t.Run("Socket", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+		require.NotEmpty(t, genericNodeID)
+
+		serviceName := pmmapitests.TestString(t, "Mongo with Socket Service")
+		params := &services.AddMongoDBServiceParams{
+			Body: services.AddMongoDBServiceBody{
+				NodeID:      genericNodeID,
+				ServiceName: serviceName,
+				Socket:      "/tmp/mongodb-27017.sock",
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err := client.Default.Services.AddMongoDBService(params)
+		assert.NoError(t, err)
+		require.NotNil(t, res)
+		serviceID := res.Payload.Mongodb.ServiceID
+		defer pmmapitests.RemoveServices(t, serviceID)
+		assert.Equal(t, &services.AddMongoDBServiceOK{
+			Payload: &services.AddMongoDBServiceOKBody{
+				Mongodb: &services.AddMongoDBServiceOKBodyMongodb{
+					ServiceID:   serviceID,
+					NodeID:      genericNodeID,
+					ServiceName: serviceName,
+					Socket:      "/tmp/mongodb-27017.sock",
+				},
+			},
+		}, res)
+	})
 }
 
 func TestPostgreSQLService(t *testing.T) {

@@ -183,7 +183,7 @@
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:8c4302b889f07b4aed27561103102be14f814bda691477f555836976212c797d"
+  digest = "1:29a7b48bb085943d12a64eff4637334cd8e004a6b43fcc6d235ac79395799384"
   name = "github.com/percona/pmm"
   packages = [
     "api/alertmanager/amclient",
@@ -213,7 +213,7 @@
     "utils/tlsconfig",
   ]
   pruneopts = "NUT"
-  revision = "2bd5206ec72308de837f1ab909cf5334292c93c6"
+  revision = "08b8f17f58f21d2173bc255df8e02f7272ed4c9d"
 
 [[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
