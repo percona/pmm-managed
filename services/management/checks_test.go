@@ -29,7 +29,6 @@ import (
 )
 
 func TestStartSecurityChecks(t *testing.T) {
-
 	t.Run("internal error", func(t *testing.T) {
 		var checksService mockChecksService
 		checksService.On("StartChecks", mock.Anything).Return(errors.New("random error"))
@@ -51,5 +50,4 @@ func TestStartSecurityChecks(t *testing.T) {
 		assert.EqualError(t, err, "rpc error: code = FailedPrecondition desc = STT is disabled.")
 		assert.Nil(t, resp)
 	})
-
 }
