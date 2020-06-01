@@ -619,7 +619,7 @@ func (r *Registry) Collect(ch chan<- prom.Metric) {
 
 // StartMySQLExplainAction starts MySQL EXPLAIN Action on pmm-agent.
 // TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
-func (r *Registry) StartMySQLExplainAction(id, pmmAgentID, dsn, query string, format agentpb.MysqlExplainOutputFormat) error {
+func (r *Registry) StartMySQLExplainAction(ctx context.Context, id, pmmAgentID, dsn, query string, format agentpb.MysqlExplainOutputFormat) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_MysqlExplainParams{
@@ -642,7 +642,7 @@ func (r *Registry) StartMySQLExplainAction(id, pmmAgentID, dsn, query string, fo
 
 // StartMySQLShowCreateTableAction starts mysql-show-create-table action on pmm-agent.
 // TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
-func (r *Registry) StartMySQLShowCreateTableAction(id, pmmAgentID, dsn, table string) error {
+func (r *Registry) StartMySQLShowCreateTableAction(ctx context.Context, id, pmmAgentID, dsn, table string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_MysqlShowCreateTableParams{
@@ -664,7 +664,7 @@ func (r *Registry) StartMySQLShowCreateTableAction(id, pmmAgentID, dsn, table st
 
 // StartMySQLShowTableStatusAction starts mysql-show-table-status action on pmm-agent.
 // TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
-func (r *Registry) StartMySQLShowTableStatusAction(id, pmmAgentID, dsn, table string) error {
+func (r *Registry) StartMySQLShowTableStatusAction(ctx context.Context, id, pmmAgentID, dsn, table string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_MysqlShowTableStatusParams{
@@ -686,7 +686,7 @@ func (r *Registry) StartMySQLShowTableStatusAction(id, pmmAgentID, dsn, table st
 
 // StartMySQLShowIndexAction starts mysql-show-index action on pmm-agent.
 // TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
-func (r *Registry) StartMySQLShowIndexAction(id, pmmAgentID, dsn, table string) error {
+func (r *Registry) StartMySQLShowIndexAction(ctx context.Context, id, pmmAgentID, dsn, table string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_MysqlShowIndexParams{
@@ -708,7 +708,7 @@ func (r *Registry) StartMySQLShowIndexAction(id, pmmAgentID, dsn, table string) 
 
 // StartPostgreSQLShowCreateTableAction starts postgresql-show-create-table action on pmm-agent.
 // TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
-func (r *Registry) StartPostgreSQLShowCreateTableAction(id, pmmAgentID, dsn, table string) error {
+func (r *Registry) StartPostgreSQLShowCreateTableAction(ctx context.Context, id, pmmAgentID, dsn, table string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_PostgresqlShowCreateTableParams{
@@ -730,7 +730,7 @@ func (r *Registry) StartPostgreSQLShowCreateTableAction(id, pmmAgentID, dsn, tab
 
 // StartPostgreSQLShowIndexAction starts postgresql-show-index action on pmm-agent.
 // TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
-func (r *Registry) StartPostgreSQLShowIndexAction(id, pmmAgentID, dsn, table string) error {
+func (r *Registry) StartPostgreSQLShowIndexAction(ctx context.Context, id, pmmAgentID, dsn, table string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_PostgresqlShowIndexParams{
@@ -751,7 +751,7 @@ func (r *Registry) StartPostgreSQLShowIndexAction(id, pmmAgentID, dsn, table str
 }
 
 // StartMongoDBExplainAction starts MongoDB query explain action on pmm-agent.
-func (r *Registry) StartMongoDBExplainAction(id, pmmAgentID, dsn, query string) error {
+func (r *Registry) StartMongoDBExplainAction(ctx context.Context, id, pmmAgentID, dsn, query string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_MongodbExplainParams{
@@ -772,7 +772,7 @@ func (r *Registry) StartMongoDBExplainAction(id, pmmAgentID, dsn, query string) 
 }
 
 // StartMySQLQueryShowAction starts MySQL SHOW query action on pmm-agent.
-func (r *Registry) StartMySQLQueryShowAction(id, pmmAgentID, dsn, query string) error {
+func (r *Registry) StartMySQLQueryShowAction(ctx context.Context, id, pmmAgentID, dsn, query string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_MysqlQueryShowParams{
@@ -793,7 +793,7 @@ func (r *Registry) StartMySQLQueryShowAction(id, pmmAgentID, dsn, query string) 
 }
 
 // StartMySQLQuerySelectAction starts MySQL SELECT query action on pmm-agent.
-func (r *Registry) StartMySQLQuerySelectAction(id, pmmAgentID, dsn, query string) error {
+func (r *Registry) StartMySQLQuerySelectAction(ctx context.Context, id, pmmAgentID, dsn, query string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_MysqlQuerySelectParams{
@@ -814,7 +814,7 @@ func (r *Registry) StartMySQLQuerySelectAction(id, pmmAgentID, dsn, query string
 }
 
 // StartPostgreSQLQueryShowAction starts PostgreSQL SHOW query action on pmm-agent.
-func (r *Registry) StartPostgreSQLQueryShowAction(id, pmmAgentID, dsn string) error {
+func (r *Registry) StartPostgreSQLQueryShowAction(ctx context.Context, id, pmmAgentID, dsn string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_PostgresqlQueryShowParams{
@@ -834,7 +834,7 @@ func (r *Registry) StartPostgreSQLQueryShowAction(id, pmmAgentID, dsn string) er
 }
 
 // StartPostgreSQLQuerySelectAction starts PostgreSQL SELECT query action on pmm-agent.
-func (r *Registry) StartPostgreSQLQuerySelectAction(id, pmmAgentID, dsn, query string) error {
+func (r *Registry) StartPostgreSQLQuerySelectAction(ctx context.Context, id, pmmAgentID, dsn, query string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_PostgresqlQuerySelectParams{
@@ -855,7 +855,7 @@ func (r *Registry) StartPostgreSQLQuerySelectAction(id, pmmAgentID, dsn, query s
 }
 
 // StartMongoDBQueryGetParameterAction starts MongoDB getParameter query action on pmm-agent.
-func (r *Registry) StartMongoDBQueryGetParameterAction(id, pmmAgentID, dsn string) error {
+func (r *Registry) StartMongoDBQueryGetParameterAction(ctx context.Context, id, pmmAgentID, dsn string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_MongodbQueryGetparameterParams{
@@ -875,7 +875,7 @@ func (r *Registry) StartMongoDBQueryGetParameterAction(id, pmmAgentID, dsn strin
 }
 
 // StartMongoDBQueryBuildInfoAction starts MongoDB buildInfo query action on pmm-agent.
-func (r *Registry) StartMongoDBQueryBuildInfoAction(id, pmmAgentID, dsn string) error {
+func (r *Registry) StartMongoDBQueryBuildInfoAction(ctx context.Context, id, pmmAgentID, dsn string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_MongodbQueryBuildinfoParams{
@@ -896,7 +896,7 @@ func (r *Registry) StartMongoDBQueryBuildInfoAction(id, pmmAgentID, dsn string) 
 
 // StopAction stops action with given given id.
 // TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
-func (r *Registry) StopAction(actionID string) error {
+func (r *Registry) StopAction(ctx context.Context, actionID string) error {
 	agent, err := r.get(actionID)
 	if err != nil {
 		return err
