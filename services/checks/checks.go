@@ -480,9 +480,9 @@ func (s *Service) findTargets(serviceType models.ServiceType) ([]target, error) 
 	}
 
 	for _, service := range services {
-		// skip pmm system services
-		if isSystem(service) {
-			s.l.Debugf("Skip system service, name: %s, type: %s", service.ServiceName, service.ServiceType)
+		// skip pmm own services
+		if service.NodeID == models.PMMServerNodeID {
+			s.l.Debugf("Skip PMM service, name: %s, type: %s", service.ServiceName, service.ServiceType)
 			continue
 		}
 
@@ -525,13 +525,6 @@ func (s *Service) findTargets(serviceType models.ServiceType) ([]target, error) 
 	}
 
 	return targets, nil
-}
-
-// isSystem returns true if provided service is system
-func isSystem(service *models.Service) bool {
-	return service.ServiceType == models.PostgreSQLServiceType &&
-		service.NodeID == models.PMMServerNodeID &&
-		service.ServiceName == models.PMMServerPostgreSQLServiceName
 }
 
 // groupChecksByDB splits provided checks by database and returns three slices: for MySQL, for PostgreSQL and for MongoDB.
