@@ -379,6 +379,11 @@ func (s *Service) executeMongoDBChecks(ctx context.Context) ([]string, error) {
 					s.l.Errorf("Failed to start MongoDB build info query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
+			case check.MongoDBGetCmdLineOpts:
+				if err := s.agentsRegistry.StartMongoDBQueryGetCmdLineOptsAction(context.Background(), r.ID, target.agentID, target.dsn); err != nil {
+					s.l.Errorf("Failed to start MongoDB getCmdLineOpts query action for agent %s, reason: %s.", target.agentID, err)
+					continue
+				}
 
 			default:
 				s.l.Errorf("Unknown MongoDB check type: %s.", c.Type)
@@ -538,6 +543,8 @@ func (s *Service) groupChecksByDB(checks []check.Check) (mySQLChecks, postgreSQL
 		case check.MongoDBGetParameter:
 			fallthrough
 		case check.MongoDBBuildInfo:
+			fallthrough
+		case check.MongoDBGetCmdLineOpts:
 			mongoDBChecks = append(mongoDBChecks, c)
 
 		default:
@@ -657,6 +664,7 @@ func (s *Service) filterSupportedChecks(checks []check.Check) []check.Check {
 		case check.PostgreSQLSelect:
 		case check.MongoDBGetParameter:
 		case check.MongoDBBuildInfo:
+		case check.MongoDBGetCmdLineOpts:
 		default:
 			s.l.Warnf("Unsupported checks type: %s", c.Type)
 			continue
