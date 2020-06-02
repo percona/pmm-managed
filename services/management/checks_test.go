@@ -24,8 +24,11 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/percona/pmm-managed/services"
+	"github.com/percona/pmm-managed/utils/tests"
 )
 
 func TestStartSecurityChecks(t *testing.T) {
@@ -36,7 +39,7 @@ func TestStartSecurityChecks(t *testing.T) {
 		s := NewChecksAPIService(&checksService)
 
 		resp, err := s.StartSecurityChecks(context.Background(), &managementpb.StartSecurityChecksRequest{})
-		assert.EqualError(t, err, "rpc error: code = Internal desc = Failed to start security checks.")
+		tests.AssertGRPCError(t, status.New(codes.Internal, "Failed to start security checks."), err)
 		assert.Nil(t, resp)
 	})
 
@@ -47,7 +50,7 @@ func TestStartSecurityChecks(t *testing.T) {
 		s := NewChecksAPIService(&checksService)
 
 		resp, err := s.StartSecurityChecks(context.Background(), &managementpb.StartSecurityChecksRequest{})
-		assert.EqualError(t, err, "rpc error: code = FailedPrecondition desc = STT is disabled.")
+		tests.AssertGRPCError(t, status.New(codes.FailedPrecondition, "STT is disabled."), err)
 		assert.Nil(t, resp)
 	})
 }
