@@ -16,7 +16,7 @@ required = [
 
 [[constraint]]
   name = "github.com/percona/pmm"
-  branch = "SAAS-67-stt-api"
+  branch = "PMM-2.0"
 
 # to prevent unexpected downgrades; see https://github.com/percona/exporter_shared/releases/tag/v0.6.0
 [[constraint]]

@@ -385,7 +385,7 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "SAAS-67-stt-api"
+  branch = "PMM-2.0"
   digest = "1:a71437f0657101cd51a51feb694966f7ab31ecf052e8c7010554ec67c1d67312"
   name = "github.com/percona/pmm"
   packages = [
@@ -407,7 +407,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "863bb67d67182bb81bcfdfeabcc832295ee6863a"
+  revision = "541bf266167a665a07fbc25d2cb824cf0d1b200d"
 
 [[projects]]
   digest = "1:1e38d8f6796fabbf419aa2040dc196927690a1de7fe14af25fbd29c6ed44b4da"
