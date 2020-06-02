@@ -38,7 +38,7 @@ func TestAgentHelpers(t *testing.T) {
 	models.Now = func() time.Time {
 		return now
 	}
-	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+	sqlDB := testdb.Open(t, models.SetupFixtures, nil)
 	defer func() {
 		models.Now = origNowF
 		require.NoError(t, sqlDB.Close())
@@ -195,7 +195,6 @@ func TestAgentHelpers(t *testing.T) {
 	t.Run("RemoveAgent", func(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
-		testdb.SetupDB(t, sqlDB, models.SetupFixtures, nil) // Setup fixtures
 
 		agent, err := models.RemoveAgent(q, "", models.RemoveRestrict)
 		assert.Nil(t, agent)
@@ -203,7 +202,7 @@ func TestAgentHelpers(t *testing.T) {
 
 		agent, err = models.RemoveAgent(q, models.PMMServerAgentID, models.RemoveRestrict)
 		assert.Nil(t, agent)
-		tests.AssertGRPCError(t, status.New(codes.PermissionDenied, `Removing pmm-agent on PMM Server prevents remote monitoring.`), err)
+		tests.AssertGRPCError(t, status.New(codes.PermissionDenied, `pmm-agent on PMM Server can't be removed.`), err)
 
 		agent, err = models.RemoveAgent(q, "A0", models.RemoveRestrict)
 		assert.Nil(t, agent)
