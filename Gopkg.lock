@@ -183,7 +183,7 @@
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:29a7b48bb085943d12a64eff4637334cd8e004a6b43fcc6d235ac79395799384"
+  digest = "1:bb507515d3e97dd1c43af2045b36d0254dddc37c4e801f3f7577b9e24162fda1"
   name = "github.com/percona/pmm"
   packages = [
     "api/alertmanager/amclient",
@@ -207,13 +207,14 @@
     "api/managementpb/json/client/postgre_sql",
     "api/managementpb/json/client/proxy_sql",
     "api/managementpb/json/client/rds",
+    "api/managementpb/json/client/security_checks",
     "api/managementpb/json/client/service",
     "api/serverpb/json/client",
     "api/serverpb/json/client/server",
     "utils/tlsconfig",
   ]
   pruneopts = "NUT"
-  revision = "08b8f17f58f21d2173bc255df8e02f7272ed4c9d"
+  revision = "541bf266167a665a07fbc25d2cb824cf0d1b200d"
 
 [[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
