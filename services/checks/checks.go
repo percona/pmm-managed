@@ -406,7 +406,7 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 	r, err := s.waitForResult(nCtx, resID)
 	cancel()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get check result")
+		return nil, errors.Wrap(err, "failed to get action result")
 	}
 
 	funcs, err := getFuncsForVersion(check.Version)
