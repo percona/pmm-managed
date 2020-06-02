@@ -538,7 +538,10 @@ func main() {
 	grafanaClient := grafana.NewClient(*grafanaAddrF)
 	prom.MustRegister(grafanaClient)
 
-	checksService := checks.New(agentsRegistry, alertsRegistry, db, version.Version)
+	checksService, err := checks.New(agentsRegistry, alertsRegistry, db, version.Version)
+	if err != nil {
+		l.Panicf("Checks service problem: %+v", err)
+	}
 	prom.MustRegister(checksService)
 
 	serverParams := &server.Params{

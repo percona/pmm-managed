@@ -34,6 +34,7 @@ import (
 	"github.com/percona-platform/saas/pkg/starlark"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/utils/tlsconfig"
+	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/model"
@@ -79,7 +80,7 @@ type Service struct {
 	agentsRegistry agentsRegistry
 	alertsRegistry alertRegistry
 	db             *reform.DB
-	pmmVersion     string
+	pmmVersion     *version.Parsed
 
 	l          *logrus.Entry
 	host       string
@@ -94,13 +95,19 @@ type Service struct {
 }
 
 // New returns Service with given PMM version.
-func New(agentsRegistry agentsRegistry, alertsRegistry alertRegistry, db *reform.DB, pmmVersion string) *Service {
+func New(agentsRegistry agentsRegistry, alertsRegistry alertRegistry, db *reform.DB, pmmVersion string) (*Service, error) {
 	l := logrus.WithField("component", "checks")
+
+	v, err := version.Parse(pmmVersion)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to parse pmm-managed version")
+	}
+
 	s := &Service{
 		agentsRegistry: agentsRegistry,
 		alertsRegistry: alertsRegistry,
 		db:             db,
-		pmmVersion:     pmmVersion,
+		pmmVersion:     v,
 
 		l:          l,
 		host:       defaultHost,
@@ -123,7 +130,7 @@ func New(agentsRegistry agentsRegistry, alertsRegistry alertRegistry, db *reform
 		s.startDelay = 0
 	}
 
-	return s
+	return s, nil
 }
 
 // Run runs checks service that grabs checks from Percona Checks service every interval until context is canceled.
@@ -498,16 +505,32 @@ func (s *Service) findTargets(serviceType models.ServiceType) ([]target, error) 
 
 	for _, service := range services {
 		e := s.db.InTransaction(func(tx *reform.TX) error {
-			a, err := models.FindPMMAgentsForService(s.db.Querier, service.ServiceID)
+			agents, err := models.FindPMMAgentsForService(s.db.Querier, service.ServiceID)
 			if err != nil {
 				return err
 			}
-			if len(a) == 0 {
+			if len(agents) == 0 {
 				return errors.New("no available pmm agents")
 			}
-			agent := a[0]
 
-			dsn, err := models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, service.ServiceID, a[0].AgentID, "")
+			var agent *models.Agent
+			for _, a := range agents {
+				agentVersion, err := version.Parse(*a.Version)
+				if err != nil {
+					return errors.Wrap(err, "failed to checks agent version")
+				}
+
+				if !s.pmmVersion.Less(agentVersion) {
+					agent = a
+					break
+				}
+			}
+
+			if agent == nil {
+				return errors.New("all available agents are outdated")
+			}
+
+			dsn, err := models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, service.ServiceID, agents[0].AgentID, "")
 			if err != nil {
 				return err
 			}
@@ -531,7 +554,7 @@ func (s *Service) findTargets(serviceType models.ServiceType) ([]target, error) 
 			return nil
 		})
 		if e != nil {
-			s.l.Errorf("Failed to find agents for service %s, reason: %s", service.ServiceID, err)
+			s.l.Errorf("Failed to find agents for service %s, reason: %s", service.ServiceID, e)
 		}
 	}
 
@@ -626,7 +649,7 @@ func (s *Service) downloadChecks(ctx context.Context) ([]check.Check, error) {
 		grpc.WithBackoffMaxDelay(downloadTimeout), //nolint:staticcheck
 
 		grpc.WithBlock(),
-		grpc.WithUserAgent("pmm-managed/" + s.pmmVersion),
+		grpc.WithUserAgent("pmm-managed/" + s.pmmVersion.String()),
 		grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
 	}
 
