@@ -407,6 +407,20 @@ func TestPMMAgent(t *testing.T) {
 		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field AgentId: value '' must not be an empty string")
 		assert.Nil(t, removeResp)
 	})
+
+	t.Run("Remove pmm-agent on PMM Server", func(t *testing.T) {
+		t.Parallel()
+
+		removeResp, err := client.Default.Agents.RemoveAgent(&agents.RemoveAgentParams{
+			Body: agents.RemoveAgentBody{
+				AgentID: "pmm-server",
+				Force:   true,
+			},
+			Context: context.Background(),
+		})
+		pmmapitests.AssertAPIErrorf(t, err, 403, codes.PermissionDenied, "pmm-agent on PMM Server can't be removed.")
+		assert.Nil(t, removeResp)
+	})
 }
 
 func TestQanAgentExporter(t *testing.T) {
