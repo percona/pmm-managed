@@ -279,19 +279,19 @@ func (s *Service) executeChecks(ctx context.Context) {
 
 	mySQLAlertsIDs, err := s.executeMySQLChecks(ctx)
 	if err != nil {
-		s.l.Errorf("Failed to execute MySQL checks: %s.", err)
+		s.l.Warnf("Failed to execute MySQL checks: %s.", err)
 	}
 	alertsIDs = append(alertsIDs, mySQLAlertsIDs...)
 
 	postgreSQLAlertsIDs, err := s.executePostgreSQLChecks(ctx)
 	if err != nil {
-		s.l.Errorf("Failed to execute PostgreSQL checks: %s.", err)
+		s.l.Warnf("Failed to execute PostgreSQL checks: %s.", err)
 	}
 	alertsIDs = append(alertsIDs, postgreSQLAlertsIDs...)
 
 	mongoDBAlertsIDs, err := s.executeMongoDBChecks(ctx)
 	if err != nil {
-		s.l.Errorf("Failed to execute MongoDB checks: %s.", err)
+		s.l.Warnf("Failed to execute MongoDB checks: %s.", err)
 	}
 	alertsIDs = append(alertsIDs, mongoDBAlertsIDs...)
 
@@ -307,42 +307,42 @@ func (s *Service) executeMySQLChecks(ctx context.Context) ([]string, error) {
 	for _, c := range checks {
 		minAgentVersion, err := getMinAgentVersionForCheckType(c.Type)
 		if err != nil {
-			s.l.Errorf("failed to get min agents version for type %s, reason: %s", c.Type, err)
+			s.l.Warnf("failed to get min agents version for type %s, reason: %s", c.Type, err)
 			continue
 		}
 
 		targets, err := s.findTargets(models.MySQLServiceType, minAgentVersion)
 		if err != nil {
-			s.l.Errorf("failed to find proper agents and services for check type: %s, reason: %s", c.Type, err)
+			s.l.Warnf("failed to find proper agents and services for check type: %s, reason: %s", c.Type, err)
 			continue
 		}
 
 		for _, target := range targets {
 			r, err := models.CreateActionResult(s.db.Querier, target.agentID)
 			if err != nil {
-				s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agentID, err)
+				s.l.Warnf("Failed to prepare action result for agent %s: %s.", target.agentID, err)
 				continue
 			}
 
 			switch c.Type {
 			case check.MySQLShow:
 				if err := s.agentsRegistry.StartMySQLQueryShowAction(ctx, r.ID, target.agentID, target.dsn, c.Query); err != nil {
-					s.l.Errorf("Failed to start MySQL show query action for agent %s, reason: %s.", target.agentID, err)
+					s.l.Warnf("Failed to start MySQL show query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 			case check.MySQLSelect:
 				if err := s.agentsRegistry.StartMySQLQuerySelectAction(ctx, r.ID, target.agentID, target.dsn, c.Query); err != nil {
-					s.l.Errorf("Failed to start MySQL select query action for agent %s, reason: %s.", target.agentID, err)
+					s.l.Warnf("Failed to start MySQL select query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 			default:
-				s.l.Errorf("Unknown MySQL check type: %s.", c.Type)
+				s.l.Warnf("Unknown MySQL check type: %s.", c.Type)
 				continue
 			}
 
 			alerts, err := s.processResults(ctx, c, target, r.ID)
 			if err != nil {
-				s.l.Errorf("failed to process action result: %s", err)
+				s.l.Warnf("failed to process action result: %s", err)
 			}
 			res = append(res, alerts...)
 		}
@@ -359,13 +359,13 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context) ([]string, error)
 	for _, c := range checks {
 		minAgentVersion, err := getMinAgentVersionForCheckType(c.Type)
 		if err != nil {
-			s.l.Errorf("failed to get min agents version for type %s, reason: %s", c.Type, err)
+			s.l.Warnf("failed to get min agents version for type %s, reason: %s", c.Type, err)
 			continue
 		}
 
 		targets, err := s.findTargets(models.PostgreSQLServiceType, minAgentVersion)
 		if err != nil {
-			s.l.Errorf("failed to find proper agents and services for check type: %s and "+
+			s.l.Warnf("failed to find proper agents and services for check type: %s and "+
 				"min version: %s, reason: %s", c.Type, minAgentVersion.String(), err)
 			continue
 		}
@@ -373,29 +373,29 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context) ([]string, error)
 		for _, target := range targets {
 			r, err := models.CreateActionResult(s.db.Querier, target.agentID)
 			if err != nil {
-				s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agentID, err)
+				s.l.Warnf("Failed to prepare action result for agent %s: %s.", target.agentID, err)
 				continue
 			}
 
 			switch c.Type {
 			case check.PostgreSQLShow:
 				if err := s.agentsRegistry.StartPostgreSQLQueryShowAction(ctx, r.ID, target.agentID, target.dsn); err != nil {
-					s.l.Errorf("Failed to start PostgreSQL show query action for agent %s, reason: %s.", target.agentID, err)
+					s.l.Warnf("Failed to start PostgreSQL show query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 			case check.PostgreSQLSelect:
 				if err := s.agentsRegistry.StartPostgreSQLQuerySelectAction(ctx, r.ID, target.agentID, target.dsn, c.Query); err != nil {
-					s.l.Errorf("Failed to start PostgreSQL select query action for agent %s, reason: %s.", target.agentID, err)
+					s.l.Warnf("Failed to start PostgreSQL select query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 			default:
-				s.l.Errorf("Unknown PostgresSQL check type: %s.", c.Type)
+				s.l.Warnf("Unknown PostgresSQL check type: %s.", c.Type)
 				continue
 			}
 
 			alerts, err := s.processResults(ctx, c, target, r.ID)
 			if err != nil {
-				s.l.Errorf("failed to process action result: %s", err)
+				s.l.Warnf("failed to process action result: %s", err)
 			}
 			res = append(res, alerts...)
 		}
@@ -412,48 +412,48 @@ func (s *Service) executeMongoDBChecks(ctx context.Context) ([]string, error) {
 	for _, c := range checks {
 		minAgentVersion, err := getMinAgentVersionForCheckType(c.Type)
 		if err != nil {
-			s.l.Errorf("failed to get min agents version for type %s, reason: %s", c.Type, err)
+			s.l.Warnf("failed to get min agents version for type %s, reason: %s", c.Type, err)
 			continue
 		}
 
 		targets, err := s.findTargets(models.MongoDBServiceType, minAgentVersion)
 		if err != nil {
-			s.l.Errorf("failed to find proper agents and services for check type: %s, reason: %s", c.Type, err)
+			s.l.Warnf("failed to find proper agents and services for check type: %s, reason: %s", c.Type, err)
 			continue
 		}
 
 		for _, target := range targets {
 			r, err := models.CreateActionResult(s.db.Querier, target.agentID)
 			if err != nil {
-				s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agentID, err)
+				s.l.Warnf("Failed to prepare action result for agent %s: %s.", target.agentID, err)
 				continue
 			}
 
 			switch c.Type {
 			case check.MongoDBGetParameter:
 				if err := s.agentsRegistry.StartMongoDBQueryGetParameterAction(context.Background(), r.ID, target.agentID, target.dsn); err != nil {
-					s.l.Errorf("Failed to start MongoDB get parameter query action for agent %s, reason: %s.", target.agentID, err)
+					s.l.Warnf("Failed to start MongoDB get parameter query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 			case check.MongoDBBuildInfo:
 				if err := s.agentsRegistry.StartMongoDBQueryBuildInfoAction(context.Background(), r.ID, target.agentID, target.dsn); err != nil {
-					s.l.Errorf("Failed to start MongoDB build info query action for agent %s, reason: %s.", target.agentID, err)
+					s.l.Warnf("Failed to start MongoDB build info query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 			case check.MongoDBGetCmdLineOpts:
 				if err := s.agentsRegistry.StartMongoDBQueryGetCmdLineOptsAction(context.Background(), r.ID, target.agentID, target.dsn); err != nil {
-					s.l.Errorf("Failed to start MongoDB getCmdLineOpts query action for agent %s, reason: %s.", target.agentID, err)
+					s.l.Warnf("Failed to start MongoDB getCmdLineOpts query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 
 			default:
-				s.l.Errorf("Unknown MongoDB check type: %s.", c.Type)
+				s.l.Warnf("Unknown MongoDB check type: %s.", c.Type)
 				continue
 			}
 
 			alerts, err := s.processResults(ctx, c, target, r.ID)
 			if err != nil {
-				s.l.Errorf("failed to process action result: %s", err)
+				s.l.Warnf("failed to process action result: %s", err)
 			}
 			res = append(res, alerts...)
 		}
