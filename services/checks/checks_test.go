@@ -269,7 +269,7 @@ func TestFindTargets(t *testing.T) {
 
 	s := New(nil, nil, db, "2.5.0")
 
-	targets, err := s.findTargets(models.PostgreSQLServiceType)
+	targets, err := s.findTargets(models.PostgreSQLServiceType, nil)
 	require.NoError(t, err)
 	assert.Len(t, targets, 0)
 }
