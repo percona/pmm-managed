@@ -80,6 +80,11 @@ var defaultPublicKeys = []string{
 	"RWTfyQTP3R7VzZggYY7dzuCbuCQWqTiGCqOvWRRAMVEiw0eSxHMVBBE5", // PMM 2.6
 }
 
+func init() { //nolint:gochecknoinits
+	pmmAgentVersionTwoDotSix = mustParseVersion("2.6.0")
+	pmmAgentVersionTwoDotSeven = mustParseVersion("2.7.0")
+}
+
 // Service is responsible for interactions with Percona Check service.
 type Service struct {
 	agentsRegistry agentsRegistry
@@ -102,9 +107,6 @@ type Service struct {
 // New returns Service with given PMM version.
 func New(agentsRegistry agentsRegistry, alertsRegistry alertRegistry, db *reform.DB, pmmVersion string) *Service {
 	l := logrus.WithField("component", "checks")
-
-	pmmAgentVersionTwoDotSix = mustParseVersion("2.6.0")
-	pmmAgentVersionTwoDotSeven = mustParseVersion("2.7.0")
 
 	s := &Service{
 		agentsRegistry: agentsRegistry,
