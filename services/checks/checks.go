@@ -315,13 +315,13 @@ func (s *Service) executeMySQLChecks(ctx context.Context) ([]string, error) {
 	for _, c := range checks {
 		minAgentVersion := getMinAgentVersionForCheckType(c.Type)
 		if minAgentVersion == nil {
-			s.l.Warnf("missing min agent version for check type: %s", c.Type)
+			s.l.Warnf("missing min agent version for check type: %s.", c.Type)
 			continue
 		}
 
 		targets, err := s.findTargets(models.MySQLServiceType, minAgentVersion)
 		if err != nil {
-			s.l.Warnf("failed to find proper agents and services for check type: %s, reason: %s", c.Type, err)
+			s.l.Warnf("failed to find proper agents and services for check type: %s, reason: %s.", c.Type, err)
 			continue
 		}
 
@@ -368,14 +368,14 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context) ([]string, error)
 	for _, c := range checks {
 		minAgentVersion := getMinAgentVersionForCheckType(c.Type)
 		if minAgentVersion == nil {
-			s.l.Warnf("missing min agent version for check type: %s", c.Type)
+			s.l.Warnf("missing min agent version for check type: %s.", c.Type)
 			continue
 		}
 
 		targets, err := s.findTargets(models.PostgreSQLServiceType, minAgentVersion)
 		if err != nil {
 			s.l.Warnf("failed to find proper agents and services for check type: %s and "+
-				"min version: %s, reason: %s", c.Type, minAgentVersion.String(), err)
+				"min version: %s, reason: %s.", c.Type, minAgentVersion.String(), err)
 			continue
 		}
 
@@ -422,13 +422,13 @@ func (s *Service) executeMongoDBChecks(ctx context.Context) ([]string, error) {
 	for _, c := range checks {
 		minAgentVersion := getMinAgentVersionForCheckType(c.Type)
 		if minAgentVersion == nil {
-			s.l.Warnf("missing min agent version for check type: %s", c.Type)
+			s.l.Warnf("missing min agent version for check type: %s.", c.Type)
 			continue
 		}
 
 		targets, err := s.findTargets(models.MongoDBServiceType, minAgentVersion)
 		if err != nil {
-			s.l.Warnf("failed to find proper agents and services for check type: %s, reason: %s", c.Type, err)
+			s.l.Warnf("failed to find proper agents and services for check type: %s, reason: %s.", c.Type, err)
 			continue
 		}
 
@@ -559,7 +559,7 @@ func (s *Service) findTargets(serviceType models.ServiceType, minAgentVersion *v
 	for _, service := range services {
 		// skip pmm own services
 		if service.NodeID == models.PMMServerNodeID {
-			s.l.Debugf("Skip PMM service, name: %s, type: %s", service.ServiceName, service.ServiceType)
+			s.l.Debugf("Skip PMM service, name: %s, type: %s.", service.ServiceName, service.ServiceType)
 			continue
 		}
 
@@ -601,7 +601,7 @@ func (s *Service) findTargets(serviceType models.ServiceType, minAgentVersion *v
 			return nil
 		})
 		if e != nil {
-			s.l.Errorf("Failed to find agents with min version %s for service %s, reason: %s",
+			s.l.Errorf("Failed to find agents with min version %s for service %s, reason: %s.",
 				minAgentVersion, service.ServiceID, e)
 		}
 	}
@@ -621,7 +621,7 @@ func (s *Service) getAgentWithVersion(agents []*models.Agent, v *version.Parsed)
 
 		agentVersion, err := version.Parse(*a.Version)
 		if err != nil {
-			s.l.Warnf("failed to parse agent version: %s", err)
+			s.l.Warnf("Failed to parse agent version: %s.", err)
 		}
 
 		if !agentVersion.Less(v) {
@@ -759,7 +759,7 @@ func (s *Service) filterSupportedChecks(checks []check.Check) []check.Check {
 	res := make([]check.Check, 0, len(checks))
 	for _, c := range checks {
 		if c.Version > maxSupportedVersion {
-			s.l.Warnf("Unsupported checks version: %d, max supported version: %d", c.Version, maxSupportedVersion)
+			s.l.Warnf("Unsupported checks version: %d, max supported version: %d.", c.Version, maxSupportedVersion)
 			continue
 		}
 
@@ -772,7 +772,7 @@ func (s *Service) filterSupportedChecks(checks []check.Check) []check.Check {
 		case check.MongoDBBuildInfo:
 		case check.MongoDBGetCmdLineOpts:
 		default:
-			s.l.Warnf("Unsupported checks type: %s", c.Type)
+			s.l.Warnf("Unsupported checks type: %s.", c.Type)
 			continue
 		}
 
