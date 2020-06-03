@@ -107,7 +107,6 @@ func TestCollectChecks(t *testing.T) {
 
 	t.Run("download checks", func(t *testing.T) {
 		s := New(nil, nil, nil, "2.5.0")
-
 		s.collectChecks(context.Background())
 
 		assert.NotEmpty(t, s.mySQLChecks)
@@ -119,7 +118,6 @@ func TestCollectChecks(t *testing.T) {
 func TestVerifySignatures(t *testing.T) {
 	t.Run("normal", func(t *testing.T) {
 		s := New(nil, nil, nil, "2.5.0")
-
 		s.host = devChecksHost
 
 		validKey := "RWSdGihBPffV2c4IysqHAIxc5c5PLfmQStbRPkuLXDr3igJOqFWt7aml"
@@ -175,7 +173,6 @@ func TestStartChecks(t *testing.T) {
 		}()
 
 		s := New(nil, nil, db, "2.5.0")
-
 		err := s.StartChecks(context.Background())
 		assert.EqualError(t, err, services.ErrSTTDisabled.Error())
 	})
@@ -192,7 +189,6 @@ func TestStartChecks(t *testing.T) {
 		ar.On("RemovePrefix", mock.Anything, mock.Anything).Return()
 
 		s := New(nil, &ar, db, "2.5.0")
-
 		settings, err := models.GetSettings(db)
 		require.NoError(t, err)
 
@@ -243,7 +239,6 @@ func TestGroupChecksByDB(t *testing.T) {
 	}
 
 	s := New(nil, nil, nil, "2.5.0")
-
 	mySQLChecks, postgreSQLChecks, mongoDBChecks := s.groupChecksByDB(checks)
 
 	require.Len(t, mySQLChecks, 2)
