@@ -80,7 +80,7 @@ type Service struct {
 	agentsRegistry agentsRegistry
 	alertsRegistry alertRegistry
 	db             *reform.DB
-	pmmVersion     *version.Parsed
+	pmmVersion     string
 
 	l          *logrus.Entry
 	host       string
@@ -95,19 +95,14 @@ type Service struct {
 }
 
 // New returns Service with given PMM version.
-func New(agentsRegistry agentsRegistry, alertsRegistry alertRegistry, db *reform.DB, pmmVersion string) (*Service, error) {
+func New(agentsRegistry agentsRegistry, alertsRegistry alertRegistry, db *reform.DB, pmmVersion string) *Service {
 	l := logrus.WithField("component", "checks")
-
-	v, err := version.Parse(pmmVersion)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse pmm-managed version")
-	}
 
 	s := &Service{
 		agentsRegistry: agentsRegistry,
 		alertsRegistry: alertsRegistry,
 		db:             db,
-		pmmVersion:     v,
+		pmmVersion:     pmmVersion,
 
 		l:          l,
 		host:       defaultHost,
@@ -130,7 +125,7 @@ func New(agentsRegistry agentsRegistry, alertsRegistry alertRegistry, db *reform
 		s.startDelay = 0
 	}
 
-	return s, nil
+	return s
 }
 
 // Run runs checks service that grabs checks from Percona Checks service every interval until context is canceled.
@@ -251,6 +246,31 @@ func (s *Service) waitForResult(ctx context.Context, resultID string) ([]map[str
 	}
 }
 
+// getMinAgentVersionForCheckType returns minimum version that pmm-agent
+// should has to be able process action of passed type.
+func getMinAgentVersionForCheckType(t check.Type) (*version.Parsed, error) {
+	switch t {
+	case check.MySQLSelect:
+		fallthrough
+	case check.MySQLShow:
+		fallthrough
+	case check.PostgreSQLSelect:
+		fallthrough
+	case check.PostgreSQLShow:
+		fallthrough
+	case check.MongoDBBuildInfo:
+		fallthrough
+	case check.MongoDBGetParameter:
+		return version.Parse("2.6.0")
+
+	case check.MongoDBGetCmdLineOpts:
+		return version.Parse("2.6.0")
+
+	default:
+		return nil, errors.Errorf("missing min agent version for check type: %s", t)
+	}
+}
+
 // executeChecks runs all available checks for all reachable services.
 func (s *Service) executeChecks(ctx context.Context) {
 	s.l.Info("Executing checks...")
@@ -281,16 +301,23 @@ func (s *Service) executeChecks(ctx context.Context) {
 
 // executeMySQLChecks runs MySQL checks for available MySQL services.
 func (s *Service) executeMySQLChecks(ctx context.Context) ([]string, error) {
-	targets, err := s.findTargets(models.MySQLServiceType)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to find proper agents and services")
-	}
-
 	checks := s.getMySQLChecks()
 
 	var res []string
-	for _, target := range targets {
-		for _, c := range checks {
+	for _, c := range checks {
+		minAgentVersion, err := getMinAgentVersionForCheckType(c.Type)
+		if err != nil {
+			s.l.Errorf("failed to get min agents version for type %s, reason: %s", c.Type, err)
+			continue
+		}
+
+		targets, err := s.findTargets(models.MySQLServiceType, minAgentVersion)
+		if err != nil {
+			s.l.Errorf("failed to find proper agents and services for check type: %s, reason: %s", c.Type, err)
+			continue
+		}
+
+		for _, target := range targets {
 			r, err := models.CreateActionResult(s.db.Querier, target.agentID)
 			if err != nil {
 				s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agentID, err)
@@ -326,16 +353,24 @@ func (s *Service) executeMySQLChecks(ctx context.Context) ([]string, error) {
 
 // executePostgreSQLChecks runs PostgreSQL checks for available PostgreSQL services.
 func (s *Service) executePostgreSQLChecks(ctx context.Context) ([]string, error) {
-	targets, err := s.findTargets(models.PostgreSQLServiceType)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to find proper agents and services")
-	}
-
 	checks := s.getPostgreSQLChecks()
 
 	var res []string
-	for _, target := range targets {
-		for _, c := range checks {
+	for _, c := range checks {
+		minAgentVersion, err := getMinAgentVersionForCheckType(c.Type)
+		if err != nil {
+			s.l.Errorf("failed to get min agents version for type %s, reason: %s", c.Type, err)
+			continue
+		}
+
+		targets, err := s.findTargets(models.PostgreSQLServiceType, minAgentVersion)
+		if err != nil {
+			s.l.Errorf("failed to find proper agents and services for check type: %s and "+
+				"min version: %s, reason: %s", c.Type, minAgentVersion.String(), err)
+			continue
+		}
+
+		for _, target := range targets {
 			r, err := models.CreateActionResult(s.db.Querier, target.agentID)
 			if err != nil {
 				s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agentID, err)
@@ -371,16 +406,23 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context) ([]string, error)
 
 // executeMongoDBChecks runs MongoDB checks for available MongoDB services.
 func (s *Service) executeMongoDBChecks(ctx context.Context) ([]string, error) {
-	targets, err := s.findTargets(models.MongoDBServiceType)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to find proper agents and services")
-	}
-
 	checks := s.getMongoDBChecks()
 
 	var res []string
-	for _, target := range targets {
-		for _, c := range checks {
+	for _, c := range checks {
+		minAgentVersion, err := getMinAgentVersionForCheckType(c.Type)
+		if err != nil {
+			s.l.Errorf("failed to get min agents version for type %s, reason: %s", c.Type, err)
+			continue
+		}
+
+		targets, err := s.findTargets(models.MongoDBServiceType, minAgentVersion)
+		if err != nil {
+			s.l.Errorf("failed to find proper agents and services for check type: %s, reason: %s", c.Type, err)
+			continue
+		}
+
+		for _, target := range targets {
 			r, err := models.CreateActionResult(s.db.Querier, target.agentID)
 			if err != nil {
 				s.l.Errorf("Failed to prepare action result for agent %s: %s.", target.agentID, err)
@@ -496,7 +538,7 @@ type target struct {
 }
 
 // findTargets returns slice of available targets for specified service type.
-func (s *Service) findTargets(serviceType models.ServiceType) ([]target, error) {
+func (s *Service) findTargets(serviceType models.ServiceType, minAgentVersion *version.Parsed) ([]target, error) {
 	var targets []target
 	services, err := models.FindServices(s.db.Querier, models.ServiceFilters{ServiceType: &serviceType})
 	if err != nil {
@@ -520,7 +562,7 @@ func (s *Service) findTargets(serviceType models.ServiceType) ([]target, error) 
 					return errors.Wrap(err, "failed to checks agent version")
 				}
 
-				if !s.pmmVersion.Less(agentVersion) {
+				if !agentVersion.Less(minAgentVersion) {
 					agent = a
 					break
 				}
@@ -554,7 +596,8 @@ func (s *Service) findTargets(serviceType models.ServiceType) ([]target, error) 
 			return nil
 		})
 		if e != nil {
-			s.l.Errorf("Failed to find agents for service %s, reason: %s", service.ServiceID, e)
+			s.l.Errorf("Failed to find agents with min version %s for service %s, reason: %s",
+				minAgentVersion, service.ServiceID, e)
 		}
 	}
 
@@ -649,7 +692,7 @@ func (s *Service) downloadChecks(ctx context.Context) ([]check.Check, error) {
 		grpc.WithBackoffMaxDelay(downloadTimeout), //nolint:staticcheck
 
 		grpc.WithBlock(),
-		grpc.WithUserAgent("pmm-managed/" + s.pmmVersion.String()),
+		grpc.WithUserAgent("pmm-managed/" + s.pmmVersion),
 		grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
 	}
 

@@ -42,9 +42,7 @@ const (
 
 func TestDownloadChecks(t *testing.T) {
 	t.Run("normal", func(t *testing.T) {
-		s, err := New(nil, nil, nil, "2.5.0")
-		require.NoError(t, err)
-
+		s := New(nil, nil, nil, "2.5.0")
 		s.host = devChecksHost
 		s.publicKeys = []string{devChecksPublicKey}
 
@@ -61,8 +59,7 @@ func TestDownloadChecks(t *testing.T) {
 }
 
 func TestLoadLocalChecks(t *testing.T) {
-	s, err := New(nil, nil, nil, "2.5.0")
-	require.NoError(t, err)
+	s := New(nil, nil, nil, "2.5.0")
 
 	checks, err := s.loadLocalChecks("../../testdata/checks/checks.yml")
 	require.NoError(t, err)
@@ -92,9 +89,7 @@ func TestCollectChecks(t *testing.T) {
 		require.NoError(t, err)
 		defer os.Unsetenv("PERCONA_TEST_CHECKS_FILE") //nolint:errcheck
 
-		s, err := New(nil, nil, nil, "2.5.0")
-		require.NoError(t, err)
-
+		s := New(nil, nil, nil, "2.5.0")
 		s.collectChecks(context.Background())
 
 		mySQLChecks := s.getMySQLChecks()
@@ -111,8 +106,7 @@ func TestCollectChecks(t *testing.T) {
 	})
 
 	t.Run("download checks", func(t *testing.T) {
-		s, err := New(nil, nil, nil, "2.5.0")
-		require.NoError(t, err)
+		s := New(nil, nil, nil, "2.5.0")
 
 		s.collectChecks(context.Background())
 
@@ -124,8 +118,7 @@ func TestCollectChecks(t *testing.T) {
 
 func TestVerifySignatures(t *testing.T) {
 	t.Run("normal", func(t *testing.T) {
-		s, err := New(nil, nil, nil, "2.5.0")
-		require.NoError(t, err)
+		s := New(nil, nil, nil, "2.5.0")
 
 		s.host = devChecksHost
 
@@ -153,14 +146,12 @@ uEF33ScMPYpvHvBKv8+yBkJ9k4+DCfV4nDs6kKYwGhalvkkqwWkyfJffO+KW7a1m3y42WHpOnzBxLJ+I
 			Signatures: []string{invalidSign, validSign},
 		}
 
-		err = s.verifySignatures(&resp)
+		err := s.verifySignatures(&resp)
 		assert.NoError(t, err)
 	})
 
 	t.Run("empty signatures", func(t *testing.T) {
-		s, err := New(nil, nil, nil, "2.5.0")
-		require.NoError(t, err)
-
+		s := New(nil, nil, nil, "2.5.0")
 		s.host = devChecksHost
 		s.publicKeys = []string{"RWSdGihBPffV2c4IysqHAIxc5c5PLfmQStbRPkuLXDr3igJOqFWt7aml"}
 
@@ -169,7 +160,7 @@ uEF33ScMPYpvHvBKv8+yBkJ9k4+DCfV4nDs6kKYwGhalvkkqwWkyfJffO+KW7a1m3y42WHpOnzBxLJ+I
 			Signatures: []string{},
 		}
 
-		err = s.verifySignatures(&resp)
+		err := s.verifySignatures(&resp)
 		assert.EqualError(t, err, "zero signatures received")
 	})
 }
@@ -183,10 +174,9 @@ func TestStartChecks(t *testing.T) {
 			require.NoError(t, sqlDB.Close())
 		}()
 
-		s, err := New(nil, nil, db, "2.5.0")
-		require.NoError(t, err)
+		s := New(nil, nil, db, "2.5.0")
 
-		err = s.StartChecks(context.Background())
+		err := s.StartChecks(context.Background())
 		assert.EqualError(t, err, services.ErrSTTDisabled.Error())
 	})
 
@@ -201,8 +191,7 @@ func TestStartChecks(t *testing.T) {
 		var ar mockAlertRegistry
 		ar.On("RemovePrefix", mock.Anything, mock.Anything).Return()
 
-		s, err := New(nil, &ar, db, "2.5.0")
-		require.NoError(t, err)
+		s := New(nil, &ar, db, "2.5.0")
 
 		settings, err := models.GetSettings(db)
 		require.NoError(t, err)
@@ -234,8 +223,7 @@ func TestFilterChecks(t *testing.T) {
 
 	checks := append(valid, invalid...)
 
-	s, err := New(nil, nil, nil, "2.5.0")
-	require.NoError(t, err)
+	s := New(nil, nil, nil, "2.5.0")
 
 	actual := s.filterSupportedChecks(checks)
 
@@ -254,8 +242,7 @@ func TestGroupChecksByDB(t *testing.T) {
 		{Name: "missing type", Version: 1},
 	}
 
-	s, err := New(nil, nil, nil, "2.5.0")
-	require.NoError(t, err)
+	s := New(nil, nil, nil, "2.5.0")
 
 	mySQLChecks, postgreSQLChecks, mongoDBChecks := s.groupChecksByDB(checks)
 
