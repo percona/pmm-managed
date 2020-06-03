@@ -343,6 +343,7 @@ func (s *Service) executeMySQLChecks(ctx context.Context) ([]string, error) {
 			alerts, err := s.processResults(ctx, c, target, r.ID)
 			if err != nil {
 				s.l.Warnf("failed to process action result: %s", err)
+				continue
 			}
 			res = append(res, alerts...)
 		}
@@ -396,6 +397,7 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context) ([]string, error)
 			alerts, err := s.processResults(ctx, c, target, r.ID)
 			if err != nil {
 				s.l.Warnf("failed to process action result: %s", err)
+				continue
 			}
 			res = append(res, alerts...)
 		}
@@ -454,6 +456,7 @@ func (s *Service) executeMongoDBChecks(ctx context.Context) ([]string, error) {
 			alerts, err := s.processResults(ctx, c, target, r.ID)
 			if err != nil {
 				s.l.Warnf("failed to process action result: %s", err)
+				continue
 			}
 			res = append(res, alerts...)
 		}
