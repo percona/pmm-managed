@@ -264,7 +264,7 @@ func getMinAgentVersionForCheckType(t check.Type) (*version.Parsed, error) {
 		return version.Parse("2.6.0")
 
 	case check.MongoDBGetCmdLineOpts:
-		return version.Parse("2.6.0")
+		return version.Parse("2.7.0")
 
 	default:
 		return nil, errors.Errorf("missing min agent version for check type: %s", t)
