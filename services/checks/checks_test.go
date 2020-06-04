@@ -313,7 +313,6 @@ func TestFindTargets(t *testing.T) {
 			assert.Len(t, targets, test.count)
 		})
 	}
-
 }
 
 func TestPickPMMAgent(t *testing.T) {

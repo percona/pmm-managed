@@ -72,7 +72,7 @@ const (
 	maxSupportedVersion = 1
 )
 
-// pmm-agent versions with known changes in Query Actions
+// pmm-agent versions with known changes in Query Actions.
 var (
 	pmmAgent260     = mustParseVersion("2.6.0")
 	pmmAgent270     = mustParseVersion("2.7.0")
