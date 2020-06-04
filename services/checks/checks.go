@@ -313,7 +313,8 @@ func (s *Service) executeMySQLChecks(ctx context.Context) ([]string, error) {
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
 		targets, err := s.findTargets(models.MySQLServiceType, pmmAgentVersion)
 		if err != nil {
-			s.l.Warnf("Failed to find proper agents and services for check type: %s, reason: %s.", c.Type, err)
+			s.l.Warnf("Failed to find proper agents and services for check type: %s and "+
+				"min version: %s, reason: %s.", c.Type, pmmAgentVersion, err)
 			continue
 		}
 
@@ -410,7 +411,8 @@ func (s *Service) executeMongoDBChecks(ctx context.Context) ([]string, error) {
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
 		targets, err := s.findTargets(models.MongoDBServiceType, pmmAgentVersion)
 		if err != nil {
-			s.l.Warnf("Failed to find proper agents and services for check type: %s, reason: %s.", c.Type, err)
+			s.l.Warnf("Failed to find proper agents and services for check type: %s and "+
+				"min version: %s, reason: %s.", c.Type, pmmAgentVersion, err)
 			continue
 		}
 
@@ -583,8 +585,7 @@ func (s *Service) findTargets(serviceType models.ServiceType, minPMMAgentVersion
 			return nil
 		})
 		if e != nil {
-			s.l.Errorf("Failed to find agents with min version %s for service %s, reason: %s.",
-				minPMMAgentVersion, service.ServiceID, e)
+			s.l.Errorf("Failed to find agents for service %s, reason: %s.", service.ServiceID, e)
 		}
 	}
 
