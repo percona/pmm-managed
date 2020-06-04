@@ -269,7 +269,7 @@ func TestFindTargets(t *testing.T) {
 		assert.Len(t, targets, 0)
 	})
 
-	t.Run("", func(t *testing.T) {
+	t.Run("different pmm agent versions", func(t *testing.T) {
 		node, err := models.CreateNode(db.Querier, models.GenericNodeType, &models.CreateNodeParams{
 			NodeName: "test-node",
 		})
@@ -291,6 +291,7 @@ func TestFindTargets(t *testing.T) {
 			{"version 2.6.0", mustParseVersion("2.6.0"), 3},
 			{"version 2.6.1", mustParseVersion("2.6.1"), 2},
 			{"version 2.7.0", mustParseVersion("2.7.0"), 1},
+			{"version 2.9.0", mustParseVersion("2.9.0"), 0},
 		}
 
 		for _, test := range tests {
