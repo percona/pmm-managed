@@ -358,3 +358,46 @@ func TestPickPMMAgent(t *testing.T) {
 	agent = s.pickPMMAgent(agents, mustParseVersion("2.42.777"))
 	assert.Nil(t, agent)
 }
+
+func TestMustParseVersion(t *testing.T) {
+	t.Run("normal", func(t *testing.T) {
+		expected, err := version.Parse("2.6.0")
+		require.NoError(t, err)
+
+		actual := mustParseVersion("2.6.0")
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("empty string", func(t *testing.T) {
+		f := func() {
+			mustParseVersion("")
+		}
+		assert.Panics(t, f)
+	})
+
+	t.Run("invalid version", func(t *testing.T) {
+		f := func() {
+			mustParseVersion("invalid version")
+		}
+		assert.Panics(t, f)
+	})
+}
+
+func TestSliceToSet(t *testing.T) {
+	slice := []string{"a", "b", "b", "c", "a", "c", "d", "", ""}
+	actual := sliceToSet(slice)
+
+	expected := map[string]struct{}{
+		"a": {},
+		"b": {},
+		"c": {},
+		"d": {},
+		"":  {},
+	}
+
+	assert.Len(t, actual, 5)
+
+	for k, v := range expected {
+		assert.Equal(t, v, actual[k])
+	}
+}
