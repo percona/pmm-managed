@@ -90,7 +90,6 @@ type Service struct {
 	agentsRegistry agentsRegistry
 	alertsRegistry alertRegistry
 	db             *reform.DB
-	pmmVersion     string
 
 	l          *logrus.Entry
 	host       string
@@ -105,14 +104,13 @@ type Service struct {
 }
 
 // New returns Service with given PMM version.
-func New(agentsRegistry agentsRegistry, alertsRegistry alertRegistry, db *reform.DB, pmmVersion string) *Service {
+func New(agentsRegistry agentsRegistry, alertsRegistry alertRegistry, db *reform.DB) *Service {
 	l := logrus.WithField("component", "checks")
 
 	s := &Service{
 		agentsRegistry: agentsRegistry,
 		alertsRegistry: alertsRegistry,
 		db:             db,
-		pmmVersion:     pmmVersion,
 
 		l:          l,
 		host:       defaultHost,
@@ -722,7 +720,7 @@ func (s *Service) downloadChecks(ctx context.Context) ([]check.Check, error) {
 		grpc.WithBackoffMaxDelay(downloadTimeout), //nolint:staticcheck
 
 		grpc.WithBlock(),
-		grpc.WithUserAgent("pmm-managed/" + s.pmmVersion),
+		grpc.WithUserAgent("pmm-managed/" + version.Version),
 		grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
 	}
 

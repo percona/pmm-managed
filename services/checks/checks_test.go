@@ -42,7 +42,7 @@ const (
 
 func TestDownloadChecks(t *testing.T) {
 	t.Run("normal", func(t *testing.T) {
-		s := New(nil, nil, nil, "2.5.0")
+		s := New(nil, nil, nil)
 		s.host = devChecksHost
 		s.publicKeys = []string{devChecksPublicKey}
 
@@ -59,7 +59,7 @@ func TestDownloadChecks(t *testing.T) {
 }
 
 func TestLoadLocalChecks(t *testing.T) {
-	s := New(nil, nil, nil, "2.5.0")
+	s := New(nil, nil, nil)
 
 	checks, err := s.loadLocalChecks("../../testdata/checks/checks.yml")
 	require.NoError(t, err)
@@ -89,7 +89,7 @@ func TestCollectChecks(t *testing.T) {
 		require.NoError(t, err)
 		defer os.Unsetenv("PERCONA_TEST_CHECKS_FILE") //nolint:errcheck
 
-		s := New(nil, nil, nil, "2.5.0")
+		s := New(nil, nil, nil)
 		s.collectChecks(context.Background())
 
 		mySQLChecks := s.getMySQLChecks()
@@ -106,7 +106,7 @@ func TestCollectChecks(t *testing.T) {
 	})
 
 	t.Run("download checks", func(t *testing.T) {
-		s := New(nil, nil, nil, "2.5.0")
+		s := New(nil, nil, nil)
 		s.collectChecks(context.Background())
 
 		assert.NotEmpty(t, s.mySQLChecks)
@@ -117,7 +117,7 @@ func TestCollectChecks(t *testing.T) {
 
 func TestVerifySignatures(t *testing.T) {
 	t.Run("normal", func(t *testing.T) {
-		s := New(nil, nil, nil, "2.5.0")
+		s := New(nil, nil, nil)
 		s.host = devChecksHost
 
 		validKey := "RWSdGihBPffV2c4IysqHAIxc5c5PLfmQStbRPkuLXDr3igJOqFWt7aml"
@@ -149,7 +149,7 @@ uEF33ScMPYpvHvBKv8+yBkJ9k4+DCfV4nDs6kKYwGhalvkkqwWkyfJffO+KW7a1m3y42WHpOnzBxLJ+I
 	})
 
 	t.Run("empty signatures", func(t *testing.T) {
-		s := New(nil, nil, nil, "2.5.0")
+		s := New(nil, nil, nil)
 		s.host = devChecksHost
 		s.publicKeys = []string{"RWSdGihBPffV2c4IysqHAIxc5c5PLfmQStbRPkuLXDr3igJOqFWt7aml"}
 
@@ -172,7 +172,7 @@ func TestStartChecks(t *testing.T) {
 			require.NoError(t, sqlDB.Close())
 		}()
 
-		s := New(nil, nil, db, "2.5.0")
+		s := New(nil, nil, db)
 		err := s.StartChecks(context.Background())
 		assert.EqualError(t, err, services.ErrSTTDisabled.Error())
 	})
@@ -188,7 +188,7 @@ func TestStartChecks(t *testing.T) {
 		var ar mockAlertRegistry
 		ar.On("RemovePrefix", mock.Anything, mock.Anything).Return()
 
-		s := New(nil, &ar, db, "2.5.0")
+		s := New(nil, &ar, db)
 		settings, err := models.GetSettings(db)
 		require.NoError(t, err)
 
@@ -219,10 +219,8 @@ func TestFilterChecks(t *testing.T) {
 
 	checks := append(valid, invalid...)
 
-	s := New(nil, nil, nil, "2.5.0")
-
+	s := New(nil, nil, nil)
 	actual := s.filterSupportedChecks(checks)
-
 	assert.ElementsMatch(t, valid, actual)
 }
 
@@ -238,7 +236,7 @@ func TestGroupChecksByDB(t *testing.T) {
 		{Name: "missing type", Version: 1},
 	}
 
-	s := New(nil, nil, nil, "2.5.0")
+	s := New(nil, nil, nil)
 	mySQLChecks, postgreSQLChecks, mongoDBChecks := s.groupChecksByDB(checks)
 
 	require.Len(t, mySQLChecks, 2)
@@ -262,8 +260,7 @@ func TestFindTargets(t *testing.T) {
 	}()
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	s := New(nil, nil, db, "2.5.0")
-
+	s := New(nil, nil, db)
 	targets, err := s.findTargets(models.PostgreSQLServiceType, nil)
 	require.NoError(t, err)
 	assert.Len(t, targets, 0)
