@@ -211,6 +211,7 @@ func TestFilterChecks(t *testing.T) {
 		{Name: "PostgreSQLSelect", Version: 1, Type: check.PostgreSQLSelect},
 		{Name: "MongoDBGetParameter", Version: 1, Type: check.MongoDBGetParameter},
 		{Name: "MongoDBBuildInfo", Version: 1, Type: check.MongoDBBuildInfo},
+		{Name: "MongoDBGetCmdLineOpts", Version: 1, Type: check.MongoDBGetCmdLineOpts},
 	}
 
 	invalid := []check.Check{
@@ -234,6 +235,7 @@ func TestGroupChecksByDB(t *testing.T) {
 		{Name: "PostgreSQLSelect", Version: 1, Type: check.PostgreSQLSelect},
 		{Name: "MongoDBGetParameter", Version: 1, Type: check.MongoDBGetParameter},
 		{Name: "MongoDBBuildInfo", Version: 1, Type: check.MongoDBBuildInfo},
+		{Name: "MongoDBGetCmdLineOpts", Version: 1, Type: check.MongoDBGetCmdLineOpts},
 		{Name: "unsupported type", Version: 1, Type: check.Type("RedisInfo")},
 		{Name: "missing type", Version: 1},
 	}
@@ -243,7 +245,7 @@ func TestGroupChecksByDB(t *testing.T) {
 
 	require.Len(t, mySQLChecks, 2)
 	require.Len(t, postgreSQLChecks, 2)
-	require.Len(t, mongoDBChecks, 2)
+	require.Len(t, mongoDBChecks, 3)
 
 	assert.Equal(t, check.MySQLShow, mySQLChecks[0].Type)
 	assert.Equal(t, check.MySQLSelect, mySQLChecks[1].Type)
@@ -253,6 +255,7 @@ func TestGroupChecksByDB(t *testing.T) {
 
 	assert.Equal(t, check.MongoDBGetParameter, mongoDBChecks[0].Type)
 	assert.Equal(t, check.MongoDBBuildInfo, mongoDBChecks[1].Type)
+	assert.Equal(t, check.MongoDBGetCmdLineOpts, mongoDBChecks[2].Type)
 }
 
 func TestFindTargets(t *testing.T) {
