@@ -25,6 +25,7 @@ import (
 	"github.com/AlekSi/pointer"
 	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/percona-platform/saas/pkg/check"
+	"github.com/percona/pmm/version"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -260,59 +261,71 @@ func TestFindTargets(t *testing.T) {
 		require.NoError(t, sqlDB.Close())
 	}()
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-
 	s := New(nil, nil, db)
-	targets, err := s.findTargets(models.PostgreSQLServiceType, nil)
-	require.NoError(t, err)
-	assert.Len(t, targets, 0)
 
-	node, err := models.CreateNode(db.Querier, models.GenericNodeType, &models.CreateNodeParams{
-		NodeName: "test-node",
+	t.Run("unknown service", func(t *testing.T) {
+		targets, err := s.findTargets(models.PostgreSQLServiceType, nil)
+		require.NoError(t, err)
+		assert.Len(t, targets, 0)
 	})
+
+	t.Run("", func(t *testing.T) {
+		node, err := models.CreateNode(db.Querier, models.GenericNodeType, &models.CreateNodeParams{
+			NodeName: "test-node",
+		})
+		require.NoError(t, err)
+
+		setup(t, db, "mysql1", node.NodeID, "")
+		setup(t, db, "mysql2", node.NodeID, "2.5.0")
+		setup(t, db, "mysql3", node.NodeID, "2.6.0")
+		setup(t, db, "mysql4", node.NodeID, "2.6.1")
+		setup(t, db, "mysql5", node.NodeID, "2.7.0")
+
+		tests := []struct {
+			name               string
+			minRequiredVersion *version.Parsed
+			count              int
+		}{
+			{"without version", nil, 5},
+			{"version 2.5.0", mustParseVersion("2.5.0"), 4},
+			{"version 2.6.0", mustParseVersion("2.6.0"), 3},
+			{"version 2.6.1", mustParseVersion("2.6.1"), 2},
+			{"version 2.7.0", mustParseVersion("2.7.0"), 1},
+		}
+
+		for _, test := range tests {
+			test := test
+
+			t.Run(test.name, func(t *testing.T) {
+				targets, err := s.findTargets(models.MySQLServiceType, test.minRequiredVersion)
+				require.NoError(t, err)
+				assert.Len(t, targets, test.count)
+			})
+		}
+	})
+}
+
+func setup(t *testing.T, db *reform.DB, serviceName, nodeID, pmmAgentVersion string) {
+	pmmAgent, err := models.CreatePMMAgent(db.Querier, nodeID, nil)
+	require.NoError(t, err)
+
+	pmmAgent.Version = pointer.ToStringOrNil(pmmAgentVersion)
+	err = db.Update(pmmAgent)
 	require.NoError(t, err)
 
 	mysql, err := models.AddNewService(db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
-		ServiceName: "mysql",
-		NodeID:      node.NodeID,
+		ServiceName: serviceName,
+		NodeID:      nodeID,
 		Address:     pointer.ToString("127.0.0.1"),
 		Port:        pointer.ToUint16(3306),
 	})
 	require.NoError(t, err)
 
 	_, err = models.CreateAgent(db.Querier, models.MySQLdExporterType, &models.CreateAgentParams{
-		PMMAgentID: models.PMMServerAgentID,
+		PMMAgentID: pmmAgent.AgentID,
 		ServiceID:  mysql.ServiceID,
 	})
 	require.NoError(t, err)
-
-	tests := []struct {
-		name               string
-		pmmVersion         string
-		minRequiredVersion string
-		count              int
-	}{
-		{"new pmm agent", "2.6.0", "2.5.0", 1},
-		{"same version", "2.6.0", "2.6.0", 1},
-		{"outdated pmm agent for patch", "2.6.0", "2.6.1", 0},
-		{"outdated pmm agent for minor", "2.6.0", "2.7.0", 0},
-	}
-
-	pmmAgent, err := models.FindAgentByID(db.Querier, models.PMMServerAgentID)
-	require.NoError(t, err)
-
-	for _, test := range tests {
-		test := test
-
-		t.Run(test.name, func(t *testing.T) {
-			pmmAgent.Version = pointer.ToStringOrNil(test.pmmVersion)
-			err = db.Update(pmmAgent)
-			require.NoError(t, err)
-
-			targets, err = s.findTargets(models.MySQLServiceType, mustParseVersion(test.minRequiredVersion))
-			require.NoError(t, err)
-			assert.Len(t, targets, test.count)
-		})
-	}
 }
 
 func TestPickPMMAgent(t *testing.T) {
