@@ -22,6 +22,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/AlekSi/pointer"
 	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/percona-platform/saas/pkg/check"
 	"github.com/stretchr/testify/assert"
@@ -264,4 +265,51 @@ func TestFindTargets(t *testing.T) {
 	targets, err := s.findTargets(models.PostgreSQLServiceType, nil)
 	require.NoError(t, err)
 	assert.Len(t, targets, 0)
+
+	t.Skip("FIXME")
+
+	mysql, err := models.AddNewService(db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
+		ServiceName: "mysql",
+		NodeID:      models.PMMServerNodeID,
+		Address:     pointer.ToString("127.0.0.1"),
+		Port:        pointer.ToUint16(3306),
+	})
+	require.NoError(t, err)
+
+	_, err = models.CreateAgent(db.Querier, models.MySQLdExporterType, &models.CreateAgentParams{
+		PMMAgentID: models.PMMServerAgentID,
+		ServiceID:  mysql.ServiceID,
+	})
+	require.NoError(t, err)
+
+	targets, err = s.findTargets(models.MySQLServiceType, nil)
+	require.NoError(t, err)
+	assert.Len(t, targets, 1)
+}
+
+func TestPickPMMAgent(t *testing.T) {
+	s := New(nil, nil, nil)
+
+	agentInvalid := &models.Agent{
+		Version: pointer.ToString("invalid"),
+	}
+	agent260 := &models.Agent{
+		Version: pointer.ToString("2.6.0"),
+	}
+	agent270 := &models.Agent{
+		Version: pointer.ToString("2.7.0"),
+	}
+	agents := []*models.Agent{agentInvalid, agent260, agent270}
+
+	agent := s.pickPMMAgent(agents, nil)
+	assert.Equal(t, agentInvalid, agent)
+
+	agent = s.pickPMMAgent(agents, mustParseVersion("2.5.0"))
+	assert.Equal(t, agent260, agent)
+
+	agent = s.pickPMMAgent(agents, mustParseVersion("2.7.0"))
+	assert.Equal(t, agent270, agent)
+
+	agent = s.pickPMMAgent(agents, mustParseVersion("2.42.777"))
+	assert.Nil(t, agent)
 }

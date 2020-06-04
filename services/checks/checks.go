@@ -29,6 +29,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/AlekSi/pointer"
 	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/percona-platform/saas/pkg/check"
 	"github.com/percona-platform/saas/pkg/starlark"
@@ -71,18 +72,15 @@ const (
 	maxSupportedVersion = 1
 )
 
+// pmm-agent versions with known changes in Query Actions
 var (
-	pmmAgentVersionTwoDotSix   *version.Parsed
-	pmmAgentVersionTwoDotSeven *version.Parsed
+	pmmAgent260     = mustParseVersion("2.6.0")
+	pmmAgent270     = mustParseVersion("2.7.0")
+	pmmAgentInvalid = mustParseVersion("3.0.0-invalid")
 )
 
 var defaultPublicKeys = []string{
 	"RWTfyQTP3R7VzZggYY7dzuCbuCQWqTiGCqOvWRRAMVEiw0eSxHMVBBE5", // PMM 2.6
-}
-
-func init() { //nolint:gochecknoinits
-	pmmAgentVersionTwoDotSix = mustParseVersion("2.6.0")
-	pmmAgentVersionTwoDotSeven = mustParseVersion("2.7.0")
 }
 
 // Service is responsible for interactions with Percona Check service.
@@ -236,7 +234,6 @@ func (s *Service) waitForResult(ctx context.Context, resultID string) ([]map[str
 			continue
 		}
 
-		// FIXME we still need to delete old result - they may never be done: https://jira.percona.com/browse/PMM-5840
 		if err = s.db.Delete(res); err != nil {
 			s.l.Warnf("Failed to delete action result %s: %s.", resultID, err)
 		}
@@ -254,9 +251,8 @@ func (s *Service) waitForResult(ctx context.Context, resultID string) ([]map[str
 	}
 }
 
-// getMinAgentVersionForCheckType returns minimum version that pmm-agent
-// should has to be able process action of passed type.
-func getMinAgentVersionForCheckType(t check.Type) *version.Parsed {
+// minPMMAgentVersion returns the minimal version of pmm-agent that can handle the given check type.
+func (s *Service) minPMMAgentVersion(t check.Type) *version.Parsed {
 	switch t {
 	case check.MySQLSelect:
 		fallthrough
@@ -269,13 +265,14 @@ func getMinAgentVersionForCheckType(t check.Type) *version.Parsed {
 	case check.MongoDBBuildInfo:
 		fallthrough
 	case check.MongoDBGetParameter:
-		return pmmAgentVersionTwoDotSix
+		return pmmAgent260
 
 	case check.MongoDBGetCmdLineOpts:
-		return pmmAgentVersionTwoDotSeven
+		return pmmAgent270
 
 	default:
-		return nil
+		s.l.Warnf("minPMMAgentVersion: unhandled check type %q.", t)
+		return pmmAgentInvalid
 	}
 }
 
@@ -313,13 +310,8 @@ func (s *Service) executeMySQLChecks(ctx context.Context) ([]string, error) {
 
 	var res []string
 	for _, c := range checks {
-		minAgentVersion := getMinAgentVersionForCheckType(c.Type)
-		if minAgentVersion == nil {
-			s.l.Warnf("missing min agent version for check type: %s.", c.Type)
-			continue
-		}
-
-		targets, err := s.findTargets(models.MySQLServiceType, minAgentVersion)
+		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
+		targets, err := s.findTargets(models.MySQLServiceType, pmmAgentVersion)
 		if err != nil {
 			s.l.Warnf("failed to find proper agents and services for check type: %s, reason: %s.", c.Type, err)
 			continue
@@ -366,16 +358,11 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context) ([]string, error)
 
 	var res []string
 	for _, c := range checks {
-		minAgentVersion := getMinAgentVersionForCheckType(c.Type)
-		if minAgentVersion == nil {
-			s.l.Warnf("missing min agent version for check type: %s.", c.Type)
-			continue
-		}
-
-		targets, err := s.findTargets(models.PostgreSQLServiceType, minAgentVersion)
+		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
+		targets, err := s.findTargets(models.PostgreSQLServiceType, pmmAgentVersion)
 		if err != nil {
 			s.l.Warnf("failed to find proper agents and services for check type: %s and "+
-				"min version: %s, reason: %s.", c.Type, minAgentVersion.String(), err)
+				"min version: %s, reason: %s.", c.Type, pmmAgentVersion, err)
 			continue
 		}
 
@@ -420,13 +407,8 @@ func (s *Service) executeMongoDBChecks(ctx context.Context) ([]string, error) {
 
 	var res []string
 	for _, c := range checks {
-		minAgentVersion := getMinAgentVersionForCheckType(c.Type)
-		if minAgentVersion == nil {
-			s.l.Warnf("missing min agent version for check type: %s.", c.Type)
-			continue
-		}
-
-		targets, err := s.findTargets(models.MongoDBServiceType, minAgentVersion)
+		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
+		targets, err := s.findTargets(models.MongoDBServiceType, pmmAgentVersion)
 		if err != nil {
 			s.l.Warnf("failed to find proper agents and services for check type: %s, reason: %s.", c.Type, err)
 			continue
@@ -549,7 +531,7 @@ type target struct {
 }
 
 // findTargets returns slice of available targets for specified service type.
-func (s *Service) findTargets(serviceType models.ServiceType, minAgentVersion *version.Parsed) ([]target, error) {
+func (s *Service) findTargets(serviceType models.ServiceType, minPMMAgentVersion *version.Parsed) ([]target, error) {
 	var targets []target
 	services, err := models.FindServices(s.db.Querier, models.ServiceFilters{ServiceType: &serviceType})
 	if err != nil {
@@ -572,7 +554,7 @@ func (s *Service) findTargets(serviceType models.ServiceType, minAgentVersion *v
 				return errors.New("no available pmm agents")
 			}
 
-			agent := s.getAgentWithVersion(agents, minAgentVersion)
+			agent := s.pickPMMAgent(agents, minPMMAgentVersion)
 			if agent == nil {
 				return errors.New("all available agents are outdated")
 			}
@@ -602,31 +584,35 @@ func (s *Service) findTargets(serviceType models.ServiceType, minAgentVersion *v
 		})
 		if e != nil {
 			s.l.Errorf("Failed to find agents with min version %s for service %s, reason: %s.",
-				minAgentVersion, service.ServiceID, e)
+				minPMMAgentVersion, service.ServiceID, e)
 		}
 	}
 
 	return targets, nil
 }
 
-func (s *Service) getAgentWithVersion(agents []*models.Agent, v *version.Parsed) *models.Agent {
-	if v == nil {
+// pickPMMAgent selects the first pmm-agent with version >= minPMMAgentVersion.
+func (s *Service) pickPMMAgent(agents []*models.Agent, minPMMAgentVersion *version.Parsed) *models.Agent {
+	if len(agents) == 0 {
+		return nil
+	}
+
+	if minPMMAgentVersion == nil {
 		return agents[0]
 	}
 
 	for _, a := range agents {
-		if a.Version == nil {
+		v, err := version.Parse(pointer.GetString(a.Version))
+		if err != nil {
+			s.l.Warnf("Failed to parse pmm-agent version: %s.", err)
 			continue
 		}
 
-		agentVersion, err := version.Parse(*a.Version)
-		if err != nil {
-			s.l.Warnf("Failed to parse agent version: %s.", err)
+		if v.Less(minPMMAgentVersion) {
+			continue
 		}
 
-		if !agentVersion.Less(v) {
-			return a
-		}
+		return a
 	}
 
 	return nil
@@ -772,7 +758,7 @@ func (s *Service) filterSupportedChecks(checks []check.Check) []check.Check {
 		case check.MongoDBBuildInfo:
 		case check.MongoDBGetCmdLineOpts:
 		default:
-			s.l.Warnf("Unsupported checks type: %s.", c.Type)
+			s.l.Warnf("Unsupported check type: %s.", c.Type)
 			continue
 		}
 
