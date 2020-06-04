@@ -239,12 +239,12 @@ func (s *Service) waitForResult(ctx context.Context, resultID string) ([]map[str
 		}
 
 		if res.Error != "" {
-			return nil, errors.Errorf("Action %s failed: %s.", resultID, res.Error)
+			return nil, errors.Errorf("action %s failed: %s.", resultID, res.Error)
 		}
 
 		out, err := agentpb.UnmarshalActionQueryResult([]byte(res.Output))
 		if err != nil {
-			return nil, errors.Errorf("Failed to parse action result : %s.", err)
+			return nil, errors.Errorf("failed to parse action result : %s.", err)
 		}
 
 		return out, nil
@@ -313,7 +313,7 @@ func (s *Service) executeMySQLChecks(ctx context.Context) ([]string, error) {
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
 		targets, err := s.findTargets(models.MySQLServiceType, pmmAgentVersion)
 		if err != nil {
-			s.l.Warnf("failed to find proper agents and services for check type: %s, reason: %s.", c.Type, err)
+			s.l.Warnf("Failed to find proper agents and services for check type: %s, reason: %s.", c.Type, err)
 			continue
 		}
 
@@ -342,7 +342,7 @@ func (s *Service) executeMySQLChecks(ctx context.Context) ([]string, error) {
 
 			alerts, err := s.processResults(ctx, c, target, r.ID)
 			if err != nil {
-				s.l.Warnf("failed to process action result: %s", err)
+				s.l.Warnf("Failed to process action result: %s", err)
 				continue
 			}
 			res = append(res, alerts...)
@@ -361,7 +361,7 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context) ([]string, error)
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
 		targets, err := s.findTargets(models.PostgreSQLServiceType, pmmAgentVersion)
 		if err != nil {
-			s.l.Warnf("failed to find proper agents and services for check type: %s and "+
+			s.l.Warnf("Failed to find proper agents and services for check type: %s and "+
 				"min version: %s, reason: %s.", c.Type, pmmAgentVersion, err)
 			continue
 		}
@@ -391,7 +391,7 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context) ([]string, error)
 
 			alerts, err := s.processResults(ctx, c, target, r.ID)
 			if err != nil {
-				s.l.Warnf("failed to process action result: %s", err)
+				s.l.Warnf("Failed to process action result: %s", err)
 				continue
 			}
 			res = append(res, alerts...)
@@ -410,7 +410,7 @@ func (s *Service) executeMongoDBChecks(ctx context.Context) ([]string, error) {
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
 		targets, err := s.findTargets(models.MongoDBServiceType, pmmAgentVersion)
 		if err != nil {
-			s.l.Warnf("failed to find proper agents and services for check type: %s, reason: %s.", c.Type, err)
+			s.l.Warnf("Failed to find proper agents and services for check type: %s, reason: %s.", c.Type, err)
 			continue
 		}
 
@@ -445,7 +445,7 @@ func (s *Service) executeMongoDBChecks(ctx context.Context) ([]string, error) {
 
 			alerts, err := s.processResults(ctx, c, target, r.ID)
 			if err != nil {
-				s.l.Warnf("failed to process action result: %s", err)
+				s.l.Warnf("Failed to process action result: %s", err)
 				continue
 			}
 			res = append(res, alerts...)
