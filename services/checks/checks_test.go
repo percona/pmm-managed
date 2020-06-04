@@ -266,11 +266,14 @@ func TestFindTargets(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, targets, 0)
 
-	t.Skip("FIXME")
+	node, err := models.CreateNode(db.Querier, models.GenericNodeType, &models.CreateNodeParams{
+		NodeName: "test-node",
+	})
+	require.NoError(t, err)
 
 	mysql, err := models.AddNewService(db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
 		ServiceName: "mysql",
-		NodeID:      models.PMMServerNodeID,
+		NodeID:      node.NodeID,
 		Address:     pointer.ToString("127.0.0.1"),
 		Port:        pointer.ToUint16(3306),
 	})
@@ -282,9 +285,35 @@ func TestFindTargets(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	targets, err = s.findTargets(models.MySQLServiceType, nil)
+	tests := []struct {
+		name               string
+		pmmVersion         string
+		minRequiredVersion string
+		count              int
+	}{
+		{"new pmm agent", "2.6.0", "2.5.0", 1},
+		{"same version", "2.6.0", "2.6.0", 1},
+		{"outdated pmm agent for patch", "2.6.0", "2.6.1", 0},
+		{"outdated pmm agent for minor", "2.6.0", "2.7.0", 0},
+	}
+
+	pmmAgent, err := models.FindAgentByID(db.Querier, models.PMMServerAgentID)
 	require.NoError(t, err)
-	assert.Len(t, targets, 1)
+
+	for _, test := range tests {
+		test := test
+
+		t.Run(test.name, func(t *testing.T) {
+			pmmAgent.Version = pointer.ToStringOrNil(test.pmmVersion)
+			err = db.Update(pmmAgent)
+			require.NoError(t, err)
+
+			targets, err = s.findTargets(models.MySQLServiceType, mustParseVersion(test.minRequiredVersion))
+			require.NoError(t, err)
+			assert.Len(t, targets, test.count)
+		})
+	}
+
 }
 
 func TestPickPMMAgent(t *testing.T) {
