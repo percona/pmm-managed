@@ -83,6 +83,25 @@ func (ss *ServicesService) Get(ctx context.Context, id string) (inventorypb.Serv
 	return services.ToAPIService(service)
 }
 
+// Check if service exists.
+//nolint:unparam
+func (ss *ServicesService) Check(ctx context.Context, id string) (bool, error) {
+	e := ss.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		_, err = models.FindServiceByID(tx.Querier, id)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if e != nil {
+		return false, e
+	}
+
+	return true, nil
+}
+
 // AddMySQL inserts MySQL Service with given parameters.
 //nolint:dupl,unparam
 func (ss *ServicesService) AddMySQL(ctx context.Context, params *models.AddDBMSServiceParams) (*inventorypb.MySQLService, error) {
