@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-openapi/strfmt"
 	"github.com/percona/pmm/api/alertmanager/ammodels"
 )
 
@@ -55,6 +56,7 @@ func (r *Registry) CreateAlert(id string, labels, annotations map[string]string,
 			Labels: labels,
 		},
 
+		EndsAt: strfmt.DateTime(now().Add(resolveTimeoutFactor * resendInterval)),
 		// StartsAt and EndAt can't be added there without changes in Registry
 		Annotations: annotations,
 	}

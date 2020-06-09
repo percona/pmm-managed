@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-openapi/strfmt"
 	"github.com/percona/pmm/api/alertmanager/ammodels"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,6 +28,7 @@ import (
 
 func TestRegistry(t *testing.T) {
 	nowValue, origNow := now(), now
+	nowValueCopy := nowValue
 	now = func() time.Time {
 		return nowValue
 	}
@@ -53,6 +55,7 @@ func TestRegistry(t *testing.T) {
 
 		expected := &ammodels.PostableAlert{
 			Annotations: annotations,
+			EndsAt:      strfmt.DateTime(nowValueCopy.Add(resolveTimeoutFactor * resendInterval)),
 			Alert: ammodels.Alert{
 				Labels: labels,
 			},
