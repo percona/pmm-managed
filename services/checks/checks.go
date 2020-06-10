@@ -37,6 +37,7 @@ import (
 	"github.com/percona/pmm/utils/tlsconfig"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/model"
 	"github.com/sirupsen/logrus"
@@ -64,9 +65,8 @@ const (
 	resultTimeout       = 15 * time.Second
 	resultCheckInterval = time.Second
 
-	// TODO https://jira.percona.com/browse/SAAS-104
-	// prometheusNamespace = "pmm_managed"
-	// prometheusSubsystem = "checks"
+	prometheusNamespace = "pmm_managed"
+	prometheusSubsystem = "checks"
 
 	alertsPrefix        = "/stt/"
 	maxSupportedVersion = 1
@@ -99,6 +99,9 @@ type Service struct {
 	mySQLChecks      []check.Check
 	postgreSQLChecks []check.Check
 	mongoDBChecks    []check.Check
+
+	mExecutedScripts *prom.CounterVec
+	mGeneratedAlerts *prom.CounterVec
 }
 
 // New returns Service with given PMM version.
@@ -115,6 +118,20 @@ func New(agentsRegistry agentsRegistry, alertsRegistry alertRegistry, db *reform
 		publicKeys: defaultPublicKeys,
 		interval:   defaultInterval,
 		startDelay: defaultStartDelay,
+
+		mExecutedScripts: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: prometheusNamespace,
+			Subsystem: prometheusSubsystem,
+			Name:      "check_script_executed_",
+			Help:      "Counter of check scripts executed per service type",
+		}, []string{"service_type"}),
+
+		mGeneratedAlerts: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: prometheusNamespace,
+			Subsystem: prometheusSubsystem,
+			Name:      "request_rewrite_type_total",
+			Help:      "Counter of request type rewrites",
+		}, []string{"service_type", "check_type"}),
 	}
 
 	if h := os.Getenv(envHost); h != "" {
@@ -346,6 +363,9 @@ func (s *Service) executeMySQLChecks(ctx context.Context) ([]string, error) {
 				s.l.Warnf("Failed to process action result: %s", err)
 				continue
 			}
+			// record metrics
+			s.mExecutedScripts.WithLabelValues(string(models.MySQLServiceType)).Inc()
+			s.mGeneratedAlerts.WithLabelValues(string(models.MySQLServiceType), string(c.Type)).Inc()
 			res = append(res, alerts...)
 		}
 	}
@@ -395,6 +415,9 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context) ([]string, error)
 				s.l.Warnf("Failed to process action result: %s", err)
 				continue
 			}
+			// record metrics
+			s.mExecutedScripts.WithLabelValues(string(models.PostgreSQLServiceType)).Inc()
+			s.mGeneratedAlerts.WithLabelValues(string(models.PostgreSQLServiceType), string(c.Type)).Inc()
 			res = append(res, alerts...)
 		}
 	}
@@ -450,6 +473,9 @@ func (s *Service) executeMongoDBChecks(ctx context.Context) ([]string, error) {
 				s.l.Warnf("Failed to process action result: %s", err)
 				continue
 			}
+			// record metrics
+			s.mExecutedScripts.WithLabelValues(string(models.MongoDBServiceType)).Inc()
+			s.mGeneratedAlerts.WithLabelValues(string(models.MongoDBServiceType), string(c.Type)).Inc()
 			res = append(res, alerts...)
 		}
 	}
@@ -818,12 +844,14 @@ func mustParseVersion(v string) *version.Parsed {
 
 // Describe implements prom.Collector.
 func (s *Service) Describe(ch chan<- *prom.Desc) {
-	// TODO https://jira.percona.com/browse/SAAS-104
+	s.mExecutedScripts.Describe(ch)
+	s.mGeneratedAlerts.Describe(ch)
 }
 
 // Collect implements prom.Collector.
 func (s *Service) Collect(ch chan<- prom.Metric) {
-	// TODO https://jira.percona.com/browse/SAAS-104
+	s.mExecutedScripts.Collect(ch)
+	s.mGeneratedAlerts.Collect(ch)
 }
 
 // check interfaces
