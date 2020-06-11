@@ -236,6 +236,8 @@ func (s *NodesService) AddRemoteRDSNode(ctx context.Context, req *inventorypb.Ad
 	return invNode.(*inventorypb.RemoteRDSNode), nil
 }
 
+// Check if node exists.
+//nolint:unparam
 func (s *NodesService) Check(ctx context.Context, req *inventorypb.CheckNodeRequest) (*inventorypb.CheckNodeResponse, error) {
 	if req.NodeName == "" {
 		return nil, status.Error(codes.InvalidArgument, "node_name is empty")
