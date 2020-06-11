@@ -21,6 +21,8 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -83,24 +85,6 @@ func (s *NodesService) Get(ctx context.Context, req *inventorypb.GetNodeRequest)
 	}
 
 	return node, nil
-}
-
-// Check if node exists.
-//nolint:unparam
-func (s *NodesService) Check(ctx context.Context, req *inventorypb.GetNodeRequest) (bool, error) {
-	e := s.db.InTransaction(func(tx *reform.TX) error {
-		var err error
-		_, err = models.FindNodeByID(tx.Querier, req.NodeId)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if e != nil {
-		return false, e
-	}
-
-	return true, nil
 }
 
 // AddGenericNode adds Generic Node.
@@ -250,4 +234,25 @@ func (s *NodesService) AddRemoteRDSNode(ctx context.Context, req *inventorypb.Ad
 	}
 
 	return invNode.(*inventorypb.RemoteRDSNode), nil
+}
+
+func (s *NodesService) Check(ctx context.Context, req *inventorypb.CheckNodeRequest) (*inventorypb.CheckNodeResponse, error) {
+	if req.NodeName == "" {
+		return nil, status.Error(codes.InvalidArgument, "node_name is empty")
+	}
+
+	if e := s.db.InTransaction(func(tx *reform.TX) error {
+		service, err := models.FindServiceByName(s.db.Querier, req.NodeName)
+		if service != nil {
+			return nil
+		}
+
+		return err
+	}); e == nil {
+		return &inventorypb.CheckNodeResponse{
+			Exists: true,
+		}, e
+	}
+
+	return nil, nil
 }

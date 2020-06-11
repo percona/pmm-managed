@@ -20,6 +20,8 @@ import (
 	"context"
 
 	"github.com/percona/pmm/api/inventorypb"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -81,25 +83,6 @@ func (ss *ServicesService) Get(ctx context.Context, id string) (inventorypb.Serv
 	}
 
 	return services.ToAPIService(service)
-}
-
-// Check if service exists.
-//nolint:unparam
-func (ss *ServicesService) Check(ctx context.Context, id string) (bool, error) {
-	e := ss.db.InTransaction(func(tx *reform.TX) error {
-		var err error
-		_, err = models.FindServiceByID(tx.Querier, id)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-
-	if e != nil {
-		return false, e
-	}
-
-	return true, nil
 }
 
 // AddMySQL inserts MySQL Service with given parameters.
@@ -224,4 +207,27 @@ func (ss *ServicesService) Remove(ctx context.Context, id string, force bool) er
 		}
 		return models.RemoveService(tx.Querier, id, mode)
 	})
+}
+
+// Check if service exists.
+//nolint:unparam
+func (ss *ServicesService) Check(ctx context.Context, req *inventorypb.CheckServiceRequest) (*inventorypb.CheckServiceResponse, error) {
+	if req.ServiceName == "" {
+		return nil, status.Error(codes.InvalidArgument, "service_name is empty")
+	}
+
+	if e := ss.db.InTransaction(func(tx *reform.TX) error {
+		service, err := models.FindServiceByName(ss.db.Querier, req.ServiceName)
+		if service != nil {
+			return nil
+		}
+
+		return err
+	}); e == nil {
+		return &inventorypb.CheckServiceResponse{
+			Exists: true,
+		}, e
+	}
+
+	return nil, nil
 }
