@@ -20,8 +20,6 @@ import (
 	"context"
 
 	"github.com/percona/pmm/api/inventorypb"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -207,27 +205,4 @@ func (ss *ServicesService) Remove(ctx context.Context, id string, force bool) er
 		}
 		return models.RemoveService(tx.Querier, id, mode)
 	})
-}
-
-// Check if service exists.
-//nolint:unparam
-func (ss *ServicesService) Check(ctx context.Context, serviceName string) error {
-	if serviceName == "" {
-		return status.Error(codes.InvalidArgument, "service_name is empty")
-	}
-
-	err := ss.db.InTransaction(func(tx *reform.TX) error {
-		service, err := models.FindServiceByName(ss.db.Querier, serviceName)
-		if service != nil {
-			return nil
-		}
-
-		return err
-	})
-
-	if err == nil {
-		return nil
-	}
-
-	return err
 }

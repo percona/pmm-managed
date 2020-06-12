@@ -54,6 +54,43 @@ func (as *AnnotationServer) AddAnnotation(ctx context.Context, req *managementpb
 		return nil, status.Error(codes.Unauthenticated, "Authorization error.")
 	}
 
+	switch "" {
+	case "service":
+		break
+	case "node":
+		break
+	default:
+		break
+	}
+
+	_, err := as.grafanaClient.CreateAnnotation(ctx, req.Tags, time.Now(), req.Text, authorizationHeaders[0])
+	if err != nil {
+		return nil, err
+	}
+	return &managementpb.AddAnnotationResponse{}, nil
+}
+
+// AddAnnotationNode adds annotation to Grafana.
+func (as *AnnotationServer) AddAnnotationNode(ctx context.Context, req *managementpb.AddAnnotationRequest) (*managementpb.AddAnnotationResponse, error) {
+	headers, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("cannot get headers from metadata %v", headers)
+	}
+	// get authorization from headers.
+	authorizationHeaders := headers.Get("Authorization")
+	if len(authorizationHeaders) == 0 {
+		return nil, status.Error(codes.Unauthenticated, "Authorization error.")
+	}
+
+	switch "" {
+	case "service":
+		break
+	case "node":
+		break
+	default:
+		break
+	}
+
 	_, err := as.grafanaClient.CreateAnnotation(ctx, req.Tags, time.Now(), req.Text, authorizationHeaders[0])
 	if err != nil {
 		return nil, err

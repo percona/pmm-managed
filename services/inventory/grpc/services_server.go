@@ -224,12 +224,3 @@ func (s *servicesServer) RemoveService(ctx context.Context, req *inventorypb.Rem
 
 	return new(inventorypb.RemoveServiceResponse), nil
 }
-
-// CheckService check if Service exists.
-func (s *servicesServer) CheckService(ctx context.Context, req *inventorypb.CheckServiceRequest) (*inventorypb.CheckServiceResponse, error) {
-	if err := s.s.Check(ctx, req.ServiceName); err != nil {
-		return nil, err
-	}
-
-	return new(inventorypb.CheckServiceResponse), nil
-}

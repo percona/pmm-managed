@@ -21,8 +21,6 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -234,27 +232,4 @@ func (s *NodesService) AddRemoteRDSNode(ctx context.Context, req *inventorypb.Ad
 	}
 
 	return invNode.(*inventorypb.RemoteRDSNode), nil
-}
-
-// Check if node exists.
-//nolint:unparam
-func (s *NodesService) Check(ctx context.Context, nodeName string) error {
-	if nodeName == "" {
-		return status.Error(codes.InvalidArgument, "node_name is empty")
-	}
-
-	err := s.db.InTransaction(func(tx *reform.TX) error {
-		node, err := models.FindNodeByName(s.db.Querier, nodeName)
-		if node != nil {
-			return nil
-		}
-
-		return err
-	})
-
-	if err == nil {
-		return nil
-	}
-
-	return err
 }
