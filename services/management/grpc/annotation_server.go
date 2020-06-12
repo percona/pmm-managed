@@ -82,13 +82,20 @@ func (as *AnnotationServer) AddAnnotationNode(ctx context.Context, req *manageme
 		return nil, status.Error(codes.Unauthenticated, "Authorization error.")
 	}
 
-	switch "" {
-	case "service":
-		break
-	case "node":
-		break
-	default:
-		break
+	for _, s := range req.ServiceName {
+		text := fmt.Sprintf("%s (Service Name: %s)", req.Text, s)
+		_, err := as.grafanaClient.CreateAnnotation(ctx, req.Tags, time.Now(), text, authorizationHeaders[0])
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if req.NodeName != "" {
+		text := fmt.Sprintf("%s (Node Name: %s)", req.Text, req.NodeName)
+		_, err := as.grafanaClient.CreateAnnotation(ctx, req.Tags, time.Now(), text, authorizationHeaders[0])
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	_, err := as.grafanaClient.CreateAnnotation(ctx, req.Tags, time.Now(), req.Text, authorizationHeaders[0])

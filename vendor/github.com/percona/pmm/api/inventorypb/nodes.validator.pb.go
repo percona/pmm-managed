@@ -189,3 +189,9 @@ func (this *RemoveNodeRequest) Validate() error {
 func (this *RemoveNodeResponse) Validate() error {
 	return nil
 }
+func (this *CheckNodeRequest) Validate() error {
+	return nil
+}
+func (this *CheckNodeResponse) Validate() error {
+	return nil
+}

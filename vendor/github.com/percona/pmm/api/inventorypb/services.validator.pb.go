@@ -222,3 +222,9 @@ func (this *RemoveServiceRequest) Validate() error {
 func (this *RemoveServiceResponse) Validate() error {
 	return nil
 }
+func (this *CheckServiceRequest) Validate() error {
+	return nil
+}
+func (this *CheckServiceResponse) Validate() error {
+	return nil
+}
