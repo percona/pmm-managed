@@ -26,18 +26,22 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"gopkg.in/reform.v1"
 
+	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/grafana"
 )
 
 // AnnotationServer is a server for making annotations in Grafana.
 type AnnotationServer struct {
+	db            *reform.DB
 	grafanaClient *grafana.Client
 }
 
 // NewAnnotationServer creates Annotation Server.
-func NewAnnotationServer(grafanaClient *grafana.Client) *AnnotationServer {
+func NewAnnotationServer(db *reform.DB, grafanaClient *grafana.Client) *AnnotationServer {
 	return &AnnotationServer{
+		db:            db,
 		grafanaClient: grafanaClient,
 	}
 }
@@ -54,38 +58,22 @@ func (as *AnnotationServer) AddAnnotation(ctx context.Context, req *managementpb
 		return nil, status.Error(codes.Unauthenticated, "Authorization error.")
 	}
 
-	switch "" {
-	case "service":
-		break
-	case "node":
-		break
-	default:
-		break
-	}
-
-	_, err := as.grafanaClient.CreateAnnotation(ctx, req.Tags, time.Now(), req.Text, authorizationHeaders[0])
-	if err != nil {
-		return nil, err
-	}
-	return &managementpb.AddAnnotationResponse{}, nil
-}
-
-// AddAnnotationNode adds annotation to Grafana.
-func (as *AnnotationServer) AddAnnotationNode(ctx context.Context, req *managementpb.AddAnnotationRequest) (*managementpb.AddAnnotationResponse, error) {
-	headers, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		return nil, fmt.Errorf("cannot get headers from metadata %v", headers)
-	}
-	// get authorization from headers.
-	authorizationHeaders := headers.Get("Authorization")
-	if len(authorizationHeaders) == 0 {
-		return nil, status.Error(codes.Unauthenticated, "Authorization error.")
-	}
-
 	if len(req.ServiceName) > 0 {
-		for _, s := range req.ServiceName {
-			text := fmt.Sprintf("%s (Service Name: %s)", req.Text, s)
-			_, err := as.grafanaClient.CreateAnnotation(ctx, req.Tags, time.Now(), text, authorizationHeaders[0])
+		for _, sn := range req.ServiceName {
+			err := as.db.InTransaction(func(tx *reform.TX) error {
+				var err error
+				_, err = models.FindServiceByName(tx.Querier, sn)
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			text := fmt.Sprintf("%s (Service Name: %s)", req.Text, sn)
+			_, err = as.grafanaClient.CreateAnnotation(ctx, req.Tags, time.Now(), text, authorizationHeaders[0])
 			if err != nil {
 				return nil, err
 			}
@@ -93,8 +81,20 @@ func (as *AnnotationServer) AddAnnotationNode(ctx context.Context, req *manageme
 	}
 
 	if req.NodeName != "" {
+		err := as.db.InTransaction(func(tx *reform.TX) error {
+			var err error
+			_, err = models.FindNodeByName(tx.Querier, req.NodeName)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+
 		text := fmt.Sprintf("%s (Node Name: %s)", req.Text, req.NodeName)
-		_, err := as.grafanaClient.CreateAnnotation(ctx, req.Tags, time.Now(), text, authorizationHeaders[0])
+		_, err = as.grafanaClient.CreateAnnotation(ctx, req.Tags, time.Now(), text, authorizationHeaders[0])
 		if err != nil {
 			return nil, err
 		}
