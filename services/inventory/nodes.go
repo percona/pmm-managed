@@ -238,23 +238,23 @@ func (s *NodesService) AddRemoteRDSNode(ctx context.Context, req *inventorypb.Ad
 
 // Check if node exists.
 //nolint:unparam
-func (s *NodesService) Check(ctx context.Context, req *inventorypb.CheckNodeRequest) (*inventorypb.CheckNodeResponse, error) {
-	if req.NodeName == "" {
-		return nil, status.Error(codes.InvalidArgument, "node_name is empty")
+func (s *NodesService) Check(ctx context.Context, nodeName string) error {
+	if nodeName == "" {
+		return status.Error(codes.InvalidArgument, "node_name is empty")
 	}
 
-	if e := s.db.InTransaction(func(tx *reform.TX) error {
-		service, err := models.FindServiceByName(s.db.Querier, req.NodeName)
-		if service != nil {
+	err := s.db.InTransaction(func(tx *reform.TX) error {
+		node, err := models.FindNodeByName(s.db.Querier, nodeName)
+		if node != nil {
 			return nil
 		}
 
 		return err
-	}); e == nil {
-		return &inventorypb.CheckNodeResponse{
-			Exists: true,
-		}, e
+	})
+
+	if err == nil {
+		return nil
 	}
 
-	return nil, nil
+	return err
 }

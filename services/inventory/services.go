@@ -211,23 +211,23 @@ func (ss *ServicesService) Remove(ctx context.Context, id string, force bool) er
 
 // Check if service exists.
 //nolint:unparam
-func (ss *ServicesService) Check(ctx context.Context, req *inventorypb.CheckServiceRequest) (*inventorypb.CheckServiceResponse, error) {
-	if req.ServiceName == "" {
-		return nil, status.Error(codes.InvalidArgument, "service_name is empty")
+func (ss *ServicesService) Check(ctx context.Context, serviceName string) error {
+	if serviceName == "" {
+		return status.Error(codes.InvalidArgument, "service_name is empty")
 	}
 
-	if e := ss.db.InTransaction(func(tx *reform.TX) error {
-		service, err := models.FindServiceByName(ss.db.Querier, req.ServiceName)
+	err := ss.db.InTransaction(func(tx *reform.TX) error {
+		service, err := models.FindServiceByName(ss.db.Querier, serviceName)
 		if service != nil {
 			return nil
 		}
 
 		return err
-	}); e == nil {
-		return &inventorypb.CheckServiceResponse{
-			Exists: true,
-		}, e
+	})
+
+	if err == nil {
+		return nil
 	}
 
-	return nil, nil
+	return err
 }

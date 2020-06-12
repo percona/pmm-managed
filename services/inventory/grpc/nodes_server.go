@@ -153,3 +153,12 @@ func (s *nodesServer) RemoveNode(ctx context.Context, req *inventorypb.RemoveNod
 
 	return new(inventorypb.RemoveNodeResponse), nil
 }
+
+// CheckNode check if Node exists.
+func (s *nodesServer) CheckNode(ctx context.Context, req *inventorypb.CheckNodeRequest) (*inventorypb.CheckNodeResponse, error) {
+	if err := s.s.Check(ctx, req.NodeName); err != nil {
+		return nil, err
+	}
+
+	return new(inventorypb.CheckNodeResponse), nil
+}
