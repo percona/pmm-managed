@@ -58,53 +58,88 @@ func (as *AnnotationServer) AddAnnotation(ctx context.Context, req *managementpb
 		return nil, status.Error(codes.Unauthenticated, "Authorization error.")
 	}
 
+	var service, node bool
+	var serviceErr, nodeErr error
 	if len(req.ServiceName) > 0 {
-		for _, sn := range req.ServiceName {
-			err := as.db.InTransaction(func(tx *reform.TX) error {
-				var err error
-				_, err = models.FindServiceByName(tx.Querier, sn)
-				if err != nil {
-					return err
-				}
-				return nil
-			})
-			if err != nil {
-				return nil, err
-			}
-
-			text := fmt.Sprintf("%s (Service Name: %s)", req.Text, sn)
-			_, err = as.grafanaClient.CreateAnnotation(ctx, req.Tags, time.Now(), text, authorizationHeaders[0])
-			if err != nil {
-				return nil, err
-			}
-		}
+		service = true
 	}
-
 	if req.NodeName != "" {
-		err := as.db.InTransaction(func(tx *reform.TX) error {
-			var err error
-			_, err = models.FindNodeByName(tx.Querier, req.NodeName)
-			if err != nil {
-				return err
-			}
-			return nil
-		})
-		if err != nil {
-			return nil, err
-		}
+		node = true
+	}
 
+	if service {
+		serviceErr = findService(as.db, req.ServiceName)
+	}
+
+	if node {
+		nodeErr = findNode(as.db, req.NodeName)
+	}
+
+	if serviceErr != nil && nodeErr != nil || serviceErr != nil {
+		return nil, serviceErr
+	}
+
+	if nodeErr != nil {
+		return nil, nodeErr
+	}
+
+	if service {
+		for _, sn := range req.ServiceName {
+			text := fmt.Sprintf("%s (Service Name: %s)", req.Text, sn)
+			_, err := as.grafanaClient.CreateAnnotation(ctx, req.Tags, time.Now(), text, authorizationHeaders[0])
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if node {
 		text := fmt.Sprintf("%s (Node Name: %s)", req.Text, req.NodeName)
-		_, err = as.grafanaClient.CreateAnnotation(ctx, req.Tags, time.Now(), text, authorizationHeaders[0])
+		_, err := as.grafanaClient.CreateAnnotation(ctx, req.Tags, time.Now(), text, authorizationHeaders[0])
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if req.NodeName == "" && len(req.ServiceName) == 0 {
+	if !node && !service {
 		_, err := as.grafanaClient.CreateAnnotation(ctx, req.Tags, time.Now(), req.Text, authorizationHeaders[0])
 		if err != nil {
 			return nil, err
 		}
 	}
 	return &managementpb.AddAnnotationResponse{}, nil
+}
+
+func findService(db *reform.DB, serviceName []string) error {
+	for _, sn := range serviceName {
+		err := db.InTransaction(func(tx *reform.TX) error {
+			var err error
+			_, err = models.FindServiceByName(tx.Querier, sn)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func findNode(db *reform.DB, nodeName string) error {
+	err := db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		_, err = models.FindNodeByName(tx.Querier, nodeName)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
