@@ -19,8 +19,6 @@ package checks
 import (
 	"context"
 	"time"
-
-	"github.com/percona/pmm/api/alertmanager/ammodels"
 )
 
 //go:generate mockery -name=agentsRegistry -case=snake -inpkg -testonly
@@ -35,10 +33,11 @@ type agentsRegistry interface {
 	StartPostgreSQLQuerySelectAction(ctx context.Context, id, pmmAgentID, dsn, query string) error
 	StartMongoDBQueryGetParameterAction(ctx context.Context, id, pmmAgentID, dsn string) error
 	StartMongoDBQueryBuildInfoAction(ctx context.Context, id, pmmAgentID, dsn string) error
+	StartMongoDBQueryGetCmdLineOptsAction(ctx context.Context, id, pmmAgentID, dsn string) error
 }
 
 // alertRegistry is is a subset of methods of alertmanager.registry used by this package.
 type alertRegistry interface {
-	Add(id string, delayFor time.Duration, alert *ammodels.PostableAlert)
+	CreateAlert(id string, labels, annotations map[string]string, delayFor time.Duration)
 	RemovePrefix(prefix string, keepIDs map[string]struct{})
 }

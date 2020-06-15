@@ -248,9 +248,14 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			}
 		}
 
+		address := socket
+		if socket == "" {
+			address = net.JoinHostPort(host, strconv.Itoa(int(port)))
+		}
+
 		u := &url.URL{
 			Scheme:   "mongodb",
-			Host:     net.JoinHostPort(host, strconv.Itoa(int(port))),
+			Host:     address,
 			Path:     path,
 			RawQuery: q.Encode(),
 		}
@@ -279,9 +284,19 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			q.Set("connect_timeout", strconv.Itoa(int(dialTimeout.Seconds())))
 		}
 
+		address := ""
+		if socket == "" {
+			address = net.JoinHostPort(host, strconv.Itoa(int(port)))
+		} else {
+			// Set socket dirrectory as host URI parameter.
+			q.Set("host", socket)
+			// In case of empty url.URL.Host we need to identify a start of a path (database name).
+			database = "/" + database
+		}
+
 		u := &url.URL{
 			Scheme:   "postgres",
-			Host:     net.JoinHostPort(host, strconv.Itoa(int(port))),
+			Host:     address,
 			Path:     database,
 			RawQuery: q.Encode(),
 		}
