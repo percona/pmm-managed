@@ -141,6 +141,7 @@ func TestAnnotations(t *testing.T) {
 		_, err := models.CreateNode(s.db.Querier, models.GenericNodeType, &models.CreateNodeParams{
 			NodeName: "node-test",
 		})
+		require.NoError(t, err)
 
 		_, err = s.AddAnnotation(ctx, autorization, &managementpb.AddAnnotationRequest{
 			Text:     "Some text",
