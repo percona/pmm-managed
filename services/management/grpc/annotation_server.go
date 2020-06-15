@@ -87,7 +87,7 @@ func (as *AnnotationServer) AddAnnotation(ctx context.Context, req *managementpb
 	}
 
 	if len(postfix) > 0 {
-		req.Text += "(" + strings.Join(postfix, ",") + ")"
+		req.Text += " (" + strings.Join(postfix, ", ") + ")"
 	}
 
 	_, err := as.grafanaClient.CreateAnnotation(ctx, tags, time.Now(), req.Text, authorizationHeaders[0])
