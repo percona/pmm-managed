@@ -5,7 +5,7 @@
 - [ ] Links to other linked pull requests (optional).
 ---
 - [ ] Tests passed.
-- [ ] Feature build pass
+- [ ] Feature build pass.
 - [ ] (Re)requested review.
 - [ ] Fix conflicts with target branch.
 - [ ] Update API dependency.
