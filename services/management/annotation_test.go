@@ -74,7 +74,6 @@ func TestAnnotations(t *testing.T) {
 			Text:         "Some text",
 			ServiceNames: []string{"no-service"},
 		})
-
 		require.Error(t, err)
 	})
 
@@ -88,12 +87,12 @@ func TestAnnotations(t *testing.T) {
 			Address:     pointer.ToString("127.0.0.1"),
 			Port:        pointer.ToUint16(3306),
 		})
+		require.NoError(t, err)
 
 		_, err = s.AddAnnotation(ctx, autorization, &managementpb.AddAnnotationRequest{
 			Text:         "Some text",
 			ServiceNames: []string{"service-test"},
 		})
-
 		require.NoError(t, err)
 	})
 
@@ -107,6 +106,7 @@ func TestAnnotations(t *testing.T) {
 			Address:     pointer.ToString("127.0.0.1"),
 			Port:        pointer.ToUint16(3306),
 		})
+		require.NoError(t, err)
 
 		_, err = models.AddNewService(s.db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
 			ServiceName: "service-test2",
@@ -114,12 +114,12 @@ func TestAnnotations(t *testing.T) {
 			Address:     pointer.ToString("127.0.0.1"),
 			Port:        pointer.ToUint16(3306),
 		})
+		require.NoError(t, err)
 
 		_, err = s.AddAnnotation(ctx, autorization, &managementpb.AddAnnotationRequest{
 			Text:         "Some text",
 			ServiceNames: []string{"service-test1", "service-test2"},
 		})
-
 		require.NoError(t, err)
 	})
 
@@ -131,7 +131,6 @@ func TestAnnotations(t *testing.T) {
 			Text:         "Some text",
 			ServiceNames: []string{"no-node"},
 		})
-
 		require.Error(t, err)
 	})
 
@@ -147,7 +146,6 @@ func TestAnnotations(t *testing.T) {
 			Text:     "Some text",
 			NodeName: "node-test",
 		})
-
 		require.NoError(t, err)
 	})
 
@@ -161,13 +159,13 @@ func TestAnnotations(t *testing.T) {
 			Address:     pointer.ToString("127.0.0.1"),
 			Port:        pointer.ToUint16(3306),
 		})
+		require.NoError(t, err)
 
 		_, err = s.AddAnnotation(ctx, autorization, &managementpb.AddAnnotationRequest{
 			Text:         "Some text",
 			ServiceNames: []string{"service-test"},
 			NodeName:     "node-test",
 		})
-
 		require.Error(t, err)
 	})
 }
