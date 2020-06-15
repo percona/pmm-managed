@@ -289,7 +289,7 @@ func (a *annotation) decode() {
 func (c *Client) CreateAnnotation(ctx context.Context, tags []string, from time.Time, text, authorization string) (string, error) {
 	// http://docs.grafana.org/http_api/annotations/#create-annotation
 	request := &annotation{
-		Tags: append([]string{"pmm_annotation"}, tags...),
+		Tags: tags,
 		Text: text,
 		Time: from,
 	}
