@@ -30,7 +30,7 @@ import (
 )
 
 func TestPackages(t *testing.T) {
-	cmd := exec.Command("pmm-managed", "-h") //nolint:gosec
+	cmd := exec.Command("pmm-managed", "-h")
 	b, err := cmd.CombinedOutput()
 	require.NoError(t, err, "%s", b)
 
@@ -73,10 +73,13 @@ func TestImports(t *testing.T) {
 		}
 	}
 
-	// those services should be independent too, but import converters
 	for _, service := range []string{
+		// those services should be independent too, but has some common code
+		// as converters, errors, ...
 		"github.com/percona/pmm-managed/services/inventory",
 		"github.com/percona/pmm-managed/services/management",
+		"github.com/percona/pmm-managed/services/server",
+		"github.com/percona/pmm-managed/services/checks",
 	} {
 		constraints[service] = constraint{
 			blacklistPrefixes: []string{

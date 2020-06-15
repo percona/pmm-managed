@@ -53,24 +53,28 @@ var checkFailedRE = regexp.MustCompile(`FAILED: parsing YAML file \S+: (.+)\n`)
 //   * Prometheus configuration and rule files are accessible;
 //   * promtool is available.
 type Service struct {
-	configPath string
-	db         *reform.DB
-	baseURL    *url.URL
-	client     *http.Client
+	alertingRules *AlertingRules
+	configPath    string
+	db            *reform.DB
+	baseURL       *url.URL
+	client        *http.Client
 
 	baseConfigPath string // for testing
 
 	l    *logrus.Entry
 	sema chan struct{}
+
+	cachedAlertingRules string
 }
 
 // NewService creates new service.
-func NewService(configPath string, db *reform.DB, baseURL string) (*Service, error) {
+func NewService(alertingRules *AlertingRules, configPath string, db *reform.DB, baseURL string) (*Service, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return &Service{
+		alertingRules:  alertingRules,
 		configPath:     configPath,
 		db:             db,
 		baseURL:        u,
@@ -85,6 +89,12 @@ func NewService(configPath string, db *reform.DB, baseURL string) (*Service, err
 func (svc *Service) Run(ctx context.Context) {
 	svc.l.Info("Starting...")
 	defer svc.l.Info("Done.")
+
+	alertingRules, err := svc.alertingRules.ReadRules()
+	if err != nil {
+		svc.l.Warnf("Cannot load alerting rules: %s", err)
+	}
+	svc.cachedAlertingRules = alertingRules
 
 	for {
 		select {
@@ -292,10 +302,7 @@ func (svc *Service) addScrapeConfigs(cfg *config.Config, q *reform.Querier, s *m
 		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfgs...)
 	}
 
-	scfgs, err := scrapeConfigsForRDSExporter(s, rdsParams)
-	if err != nil {
-		svc.l.Warnf("Failed to add rds_exporter scrape configs: %s.", err)
-	}
+	scfgs := scrapeConfigsForRDSExporter(s, rdsParams)
 	cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfgs...)
 
 	return nil
@@ -411,8 +418,12 @@ func (svc *Service) saveConfigAndReload(cfg []byte) error {
 		return errors.WithStack(err)
 	}
 
+	alertingRules, err := svc.alertingRules.ReadRules()
+	if err != nil {
+		svc.l.Warnf("Cannot load alerting rules: %s", err)
+	}
 	// compare with new config
-	if reflect.DeepEqual(cfg, oldCfg) {
+	if reflect.DeepEqual(cfg, oldCfg) && alertingRules == svc.cachedAlertingRules {
 		svc.l.Infof("Configuration not changed, doing nothing.")
 		return nil
 	}
@@ -473,6 +484,7 @@ func (svc *Service) saveConfigAndReload(cfg []byte) error {
 	}
 	svc.l.Infof("Configuration reloaded.")
 	restore = false
+	svc.cachedAlertingRules = alertingRules
 	return nil
 }
 
@@ -520,7 +532,7 @@ func (svc *Service) IsReady(ctx context.Context) error {
 	}
 
 	// check promtool version
-	b, err = exec.CommandContext(ctx, "promtool", "--version").CombinedOutput() //nolint:gosec
+	b, err = exec.CommandContext(ctx, "promtool", "--version").CombinedOutput()
 	if err != nil {
 		return errors.Wrap(err, string(b))
 	}

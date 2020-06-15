@@ -130,7 +130,7 @@ func FindAgentsByIDs(q *reform.Querier, ids []string) ([]*Agent, error) {
 		return []*Agent{}, nil
 	}
 
-	p := strings.Join(q.Placeholders(1, len(ids)), ", ")               //nolint:gomnd
+	p := strings.Join(q.Placeholders(1, len(ids)), ", ")
 	tail := fmt.Sprintf("WHERE agent_id IN (%s) ORDER BY agent_id", p) //nolint:gosec
 	args := make([]interface{}, len(ids))
 	for i, id := range ids {
@@ -155,7 +155,7 @@ func FindPMMAgentsRunningOnNode(q *reform.Querier, nodeID string) ([]*Agent, err
 		return nil, status.Errorf(codes.FailedPrecondition, "Couldn't get agents by runs_on_node_id, %s", nodeID)
 	}
 
-	var res []*Agent
+	res := make([]*Agent, 0, len(structs))
 	for _, str := range structs {
 		row := str.(*Agent)
 		res = append(res, row)
@@ -200,7 +200,7 @@ func FindPMMAgentsForService(q *reform.Querier, serviceID string) ([]*Agent, err
 	if err != nil {
 		return nil, status.Errorf(codes.FailedPrecondition, "Couldn't get pmm-agents for service %s", serviceID)
 	}
-	var res []*Agent
+	res := make([]*Agent, 0, len(pmmAgentRecords))
 	for _, str := range pmmAgentRecords {
 		row := str.(*Agent)
 		res = append(res, row)
@@ -445,6 +445,10 @@ func RemoveAgent(q *reform.Querier, id string, mode RemoveMode) (*Agent, error) 
 	a, err := FindAgentByID(q, id)
 	if err != nil {
 		return nil, err
+	}
+
+	if id == PMMServerAgentID {
+		return nil, status.Error(codes.PermissionDenied, "pmm-agent on PMM Server can't be removed.")
 	}
 
 	structs, err := q.SelectAllFrom(AgentTable, "WHERE pmm_agent_id = $1", id)

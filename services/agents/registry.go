@@ -265,7 +265,7 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*pmmAgentInfo, 
 	return agent, nil
 }
 
-func authenticate(md *agentpb.AgentConnectMetadata, q *reform.Querier) (string, error) { //nolint:unused
+func authenticate(md *agentpb.AgentConnectMetadata, q *reform.Querier) (string, error) {
 	if md.ID == "" {
 		return "", status.Error(codes.PermissionDenied, "Empty Agent ID.")
 	}
@@ -880,6 +880,26 @@ func (r *Registry) StartMongoDBQueryBuildInfoAction(ctx context.Context, id, pmm
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_MongodbQueryBuildinfoParams{
 			MongodbQueryBuildinfoParams: &agentpb.StartActionRequest_MongoDBQueryBuildInfoParams{
+				Dsn: dsn,
+			},
+		},
+	}
+
+	agent, err := r.get(pmmAgentID)
+	if err != nil {
+		return err
+	}
+
+	agent.channel.SendRequest(aRequest)
+	return nil
+}
+
+// StartMongoDBQueryGetCmdLineOptsAction starts MongoDB getCmdLineOpts query action on pmm-agent.
+func (r *Registry) StartMongoDBQueryGetCmdLineOptsAction(ctx context.Context, id, pmmAgentID, dsn string) error {
+	aRequest := &agentpb.StartActionRequest{
+		ActionId: id,
+		Params: &agentpb.StartActionRequest_MongodbQueryGetcmdlineoptsParams{
+			MongodbQueryGetcmdlineoptsParams: &agentpb.StartActionRequest_MongoDBQueryGetCmdLineOptsParams{
 				Dsn: dsn,
 			},
 		},
