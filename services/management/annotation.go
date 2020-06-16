@@ -27,16 +27,13 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-type grafanaClient interface {
-	CreateAnnotation(context.Context, []string, time.Time, string, string) (string, error)
-}
-
-// AnnotationService ....
+// AnnotationService Annotation Service.
 type AnnotationService struct {
 	db            *reform.DB
 	grafanaClient grafanaClient
 }
 
+// NewAnnotationService create new Annotation Service
 func NewAnnotationService(db *reform.DB, grafanaClient grafanaClient) *AnnotationService {
 	return &AnnotationService{
 		db:            db,
@@ -44,6 +41,7 @@ func NewAnnotationService(db *reform.DB, grafanaClient grafanaClient) *Annotatio
 	}
 }
 
+// AddAnnotation create annotation in grafana
 func (as *AnnotationService) AddAnnotation(ctx context.Context, authorizationHeaders []string, req *managementpb.AddAnnotationRequest) (*managementpb.AddAnnotationResponse, error) {
 	tags := req.Tags
 	if len(req.ServiceNames) == 0 && req.NodeName == "" {
