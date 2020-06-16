@@ -22,6 +22,7 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/google/uuid"
+	"github.com/percona/pmm/api/managementpb"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -32,8 +33,6 @@ import (
 	"github.com/percona/pmm-managed/utils/logger"
 	"github.com/percona/pmm-managed/utils/testdb"
 	"github.com/percona/pmm-managed/utils/tests"
-
-	"github.com/percona/pmm/api/managementpb"
 )
 
 func TestAnnotations(t *testing.T) {
