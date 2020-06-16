@@ -22,7 +22,6 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/reform.v1"
@@ -143,7 +142,6 @@ func TestAnnotations(t *testing.T) {
 		ctx, db, teardown := setup(t)
 		defer teardown(t)
 		var grafanaClient mockGrafanaClient
-		grafanaClient.On("StartGrafana", mock.Anything).Return(errors.New("Annotation failed"))
 		s := NewAnnotationService(db, &grafanaClient)
 
 		_, err := models.CreateNode(s.db.Querier, models.GenericNodeType, &models.CreateNodeParams{
@@ -164,7 +162,6 @@ func TestAnnotations(t *testing.T) {
 		ctx, db, teardown := setup(t)
 		defer teardown(t)
 		var grafanaClient mockGrafanaClient
-		grafanaClient.On("StartGrafana", mock.Anything).Return(errors.New("Annotation failed"))
 		s := NewAnnotationService(db, &grafanaClient)
 
 		_, err := models.AddNewService(s.db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
