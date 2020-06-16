@@ -28,7 +28,6 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/services/grafana"
-
 	"github.com/percona/pmm-managed/services/management"
 )
 

@@ -22,6 +22,7 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/reform.v1"
@@ -59,22 +60,23 @@ func TestAnnotations(t *testing.T) {
 	t.Run("Non-existing service", func(t *testing.T) {
 		ctx, db, teardown := setup(t)
 		defer teardown(t)
-		var grafanaClient mockGrafanaClient
-		s := NewAnnotationService(db, &grafanaClient)
+		var grafanaClient = new(mockGrafanaClient)
+		s := NewAnnotationService(db, grafanaClient)
 
 		_, err := s.AddAnnotation(ctx, autorization, &managementpb.AddAnnotationRequest{
 			Text:         "Some text",
 			ServiceNames: []string{"no-service"},
 		})
-		require.Error(t, err)
+		require.EqualError(t, errors.New("rpc error: code = NotFound desc = Service with name \"no-service\" not found."), err.Error())
+
+		grafanaClient.AssertExpectations(t)
 	})
 
 	t.Run("Existing service", func(t *testing.T) {
 		ctx, db, teardown := setup(t)
 		defer teardown(t)
-		var grafanaClient mockGrafanaClient
-
-		s := NewAnnotationService(db, &grafanaClient)
+		var grafanaClient = new(mockGrafanaClient)
+		s := NewAnnotationService(db, grafanaClient)
 
 		_, err := models.AddNewService(s.db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
 			ServiceName: "service-test",
@@ -84,20 +86,23 @@ func TestAnnotations(t *testing.T) {
 		})
 		require.NoError(t, err)
 
+		expectedTags := []string{"service-test"}
 		expectedText := "Some text (Service Name: service-test)"
-		grafanaClient.On("CreateAnnotation", ctx, mock.Anything, mock.Anything, expectedText, mock.Anything).Return("", nil)
+		grafanaClient.On("CreateAnnotation", ctx, expectedTags, mock.Anything, expectedText, autorization[0]).Return("", nil)
 		_, err = s.AddAnnotation(ctx, autorization, &managementpb.AddAnnotationRequest{
 			Text:         "Some text",
 			ServiceNames: []string{"service-test"},
 		})
 		require.NoError(t, err)
+
+		grafanaClient.AssertExpectations(t)
 	})
 
 	t.Run("Two services", func(t *testing.T) {
 		ctx, db, teardown := setup(t)
 		defer teardown(t)
-		var grafanaClient mockGrafanaClient
-		s := NewAnnotationService(db, &grafanaClient)
+		var grafanaClient = new(mockGrafanaClient)
+		s := NewAnnotationService(db, grafanaClient)
 
 		_, err := models.AddNewService(s.db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
 			ServiceName: "service-test1",
@@ -115,54 +120,61 @@ func TestAnnotations(t *testing.T) {
 		})
 		require.NoError(t, err)
 
+		expectedTags := []string{"service-test1", "service-test2"}
 		expectedText := "Some text (Service Name: service-test1,service-test2)"
-		grafanaClient.On("CreateAnnotation", ctx, mock.Anything, mock.Anything, expectedText, mock.Anything).Return("", nil)
+		grafanaClient.On("CreateAnnotation", ctx, expectedTags, mock.Anything, expectedText, autorization[0]).Return("", nil)
 		_, err = s.AddAnnotation(ctx, autorization, &managementpb.AddAnnotationRequest{
 			Text:         "Some text",
 			ServiceNames: []string{"service-test1", "service-test2"},
 		})
 		require.NoError(t, err)
+
+		grafanaClient.AssertExpectations(t)
 	})
 
 	t.Run("Non-existing node", func(t *testing.T) {
 		ctx, db, teardown := setup(t)
 		defer teardown(t)
-		var grafanaClient mockGrafanaClient
-		grafanaClient.On(mock.Anything).Return()
-		s := NewAnnotationService(db, &grafanaClient)
+		var grafanaClient = new(mockGrafanaClient)
+		s := NewAnnotationService(db, grafanaClient)
 
 		_, err := s.AddAnnotation(ctx, autorization, &managementpb.AddAnnotationRequest{
-			Text:         "Some text",
-			ServiceNames: []string{"no-node"},
+			Text:     "Some text",
+			NodeName: "no-node",
 		})
-		require.Error(t, err)
+		require.EqualError(t, errors.New("rpc error: code = NotFound desc = Node with name \"no-node\" not found."), err.Error())
+
+		grafanaClient.AssertExpectations(t)
 	})
 
 	t.Run("Existing node", func(t *testing.T) {
 		ctx, db, teardown := setup(t)
 		defer teardown(t)
-		var grafanaClient mockGrafanaClient
-		s := NewAnnotationService(db, &grafanaClient)
+		var grafanaClient = new(mockGrafanaClient)
+		s := NewAnnotationService(db, grafanaClient)
 
 		_, err := models.CreateNode(s.db.Querier, models.GenericNodeType, &models.CreateNodeParams{
 			NodeName: "node-test",
 		})
 		require.NoError(t, err)
 
+		expectedTags := []string{"node-test"}
 		expectedText := "Some text (Node Name: node-test)"
-		grafanaClient.On("CreateAnnotation", ctx, mock.Anything, mock.Anything, expectedText, mock.Anything).Return("", nil)
+		grafanaClient.On("CreateAnnotation", ctx, expectedTags, mock.Anything, expectedText, autorization[0]).Return("", nil)
 		_, err = s.AddAnnotation(ctx, autorization, &managementpb.AddAnnotationRequest{
 			Text:     "Some text",
 			NodeName: "node-test",
 		})
 		require.NoError(t, err)
+
+		grafanaClient.AssertExpectations(t)
 	})
 
 	t.Run("Existing service and non-existing node", func(t *testing.T) {
 		ctx, db, teardown := setup(t)
 		defer teardown(t)
-		var grafanaClient mockGrafanaClient
-		s := NewAnnotationService(db, &grafanaClient)
+		var grafanaClient = new(mockGrafanaClient)
+		s := NewAnnotationService(db, grafanaClient)
 
 		_, err := models.AddNewService(s.db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
 			ServiceName: "service-test",
@@ -177,6 +189,8 @@ func TestAnnotations(t *testing.T) {
 			ServiceNames: []string{"service-test"},
 			NodeName:     "node-test",
 		})
-		require.Error(t, err)
+		require.EqualError(t, errors.New("rpc error: code = NotFound desc = Node with name \"node-test\" not found."), err.Error())
+
+		grafanaClient.AssertExpectations(t)
 	})
 }
