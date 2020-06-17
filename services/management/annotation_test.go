@@ -189,7 +189,7 @@ func TestAnnotations(t *testing.T) {
 			ServiceNames: []string{"service-test"},
 			NodeName:     "node-test",
 		})
-		tests.AssertGRPCError(t, status.New(codes.NotFound, `Node with name "node-test" not found`), err)
+		tests.AssertGRPCError(t, status.New(codes.NotFound, `Node with name "node-test" not found.`), err)
 
 		grafanaClient.AssertExpectations(t)
 	})
