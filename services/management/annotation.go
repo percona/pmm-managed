@@ -33,7 +33,7 @@ type AnnotationService struct {
 	grafanaClient grafanaClient
 }
 
-// NewAnnotationService create new Annotation Service
+// NewAnnotationService create new Annotation Service.
 func NewAnnotationService(db *reform.DB, grafanaClient grafanaClient) *AnnotationService {
 	return &AnnotationService{
 		db:            db,
@@ -41,8 +41,13 @@ func NewAnnotationService(db *reform.DB, grafanaClient grafanaClient) *Annotatio
 	}
 }
 
-// AddAnnotation create annotation in grafana
-func (as *AnnotationService) AddAnnotation(ctx context.Context, authorizationHeaders []string, req *managementpb.AddAnnotationRequest) (*managementpb.AddAnnotationResponse, error) {
+// AddAnnotation create annotation in grafana.
+// nolint: unparam
+func (as *AnnotationService) AddAnnotation(
+	ctx context.Context,
+	authorizationHeaders []string,
+	req *managementpb.AddAnnotationRequest,
+) (*managementpb.AddAnnotationResponse, error) {
 	tags := req.Tags
 	if len(req.ServiceNames) == 0 && req.NodeName == "" {
 		tags = append([]string{"pmm_annotation"}, tags...)

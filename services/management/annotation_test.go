@@ -23,9 +23,10 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/google/uuid"
 	"github.com/percona/pmm/api/managementpb"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
@@ -66,7 +67,7 @@ func TestAnnotations(t *testing.T) {
 			Text:         "Some text",
 			ServiceNames: []string{"no-service"},
 		})
-		require.EqualError(t, errors.New("rpc error: code = NotFound desc = Service with name \"no-service\" not found."), err.Error())
+		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with name "no-service" not found.`), err)
 
 		grafanaClient.AssertExpectations(t)
 	})
@@ -141,7 +142,7 @@ func TestAnnotations(t *testing.T) {
 			Text:     "Some text",
 			NodeName: "no-node",
 		})
-		require.EqualError(t, errors.New("rpc error: code = NotFound desc = Node with name \"no-node\" not found."), err.Error())
+		tests.AssertGRPCError(t, status.New(codes.NotFound, `Node with name "no-node" not found.`), err)
 
 		grafanaClient.AssertExpectations(t)
 	})
@@ -188,7 +189,7 @@ func TestAnnotations(t *testing.T) {
 			ServiceNames: []string{"service-test"},
 			NodeName:     "node-test",
 		})
-		require.EqualError(t, errors.New("rpc error: code = NotFound desc = Node with name \"node-test\" not found."), err.Error())
+		tests.AssertGRPCError(t, status.New(codes.NotFound, `Node with name "node-test" not found`), err)
 
 		grafanaClient.AssertExpectations(t)
 	})
