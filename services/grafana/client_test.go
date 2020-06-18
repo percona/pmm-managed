@@ -136,7 +136,7 @@ func TestClient(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, "Annotation added", msg)
 
-			annotations, err := c.findAnnotations(ctx, from, from.Add(time.Second), authorization)
+			annotations, err := c.FindAnnotations(ctx, from, from.Add(time.Second), authorization)
 			require.NoError(t, err)
 			for _, a := range annotations {
 				if a.Text == "Normal" {
@@ -159,7 +159,7 @@ func TestClient(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, "Annotation added", msg)
 
-			annotations, err := c.findAnnotations(ctx, from, from.Add(time.Second), authorization)
+			annotations, err := c.FindAnnotations(ctx, from, from.Add(time.Second), authorization)
 			require.NoError(t, err)
 			for _, a := range annotations {
 				if a.Text == "No tags" {
