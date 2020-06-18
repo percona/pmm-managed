@@ -18,15 +18,19 @@ package management
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
 	"github.com/AlekSi/pointer"
-	"github.com/google/uuid"
+	"github.com/percona/pmm-managed/services/grafana"
+	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/api/managementpb"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
@@ -55,142 +59,91 @@ func TestAnnotations(t *testing.T) {
 		return
 	}
 
-	autorization := []string{"admin:admin"}
+	ctx, db, teardown := setup(t)
+	defer teardown(t)
+
+	r := new(mockAgentsRegistry)
+	r.Test(t)
+	p := new(mockPrometheusService)
+	p.Test(t)
+
+	n := NewNodeService(db, r)
+	s := NewServiceService(db, r, p)
+
+	_, err := n.Register(ctx, &managementpb.RegisterNodeRequest{
+		NodeType: inventorypb.NodeType_GENERIC_NODE,
+		NodeName: "test-node",
+		Address:  "some.address.org",
+		Region:   "region",
+	})
+	require.NoError(t, err)
+
+	_, err = models.AddNewService(s.db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
+		ServiceName: "test-service-mysql",
+		NodeID:      models.PMMServerNodeID,
+		Address:     pointer.ToString("127.0.0.1"),
+		Port:        pointer.ToUint16(3306),
+	})
+	require.NoError(t, err)
+
+	c := grafana.NewClient("127.0.0.1:3000")
+	req, err := http.NewRequest("GET", "/dummy", nil)
+	require.NoError(t, err)
+	req.SetBasicAuth("admin", "admin")
+	authorization := []string{req.Header.Get("Authorization")}
 
 	t.Run("Non-existing service", func(t *testing.T) {
-		ctx, db, teardown := setup(t)
-		defer teardown(t)
-		var grafanaClient = new(mockGrafanaClient)
-		s := NewAnnotationService(db, grafanaClient)
-
-		_, err := s.AddAnnotation(ctx, autorization, &managementpb.AddAnnotationRequest{
+		a := NewAnnotationService(db, c)
+		_, err := a.AddAnnotation(ctx, authorization, &managementpb.AddAnnotationRequest{
 			Text:         "Some text",
 			ServiceNames: []string{"no-service"},
 		})
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with name "no-service" not found.`), err)
-
-		grafanaClient.AssertExpectations(t)
-	})
-
-	t.Run("Existing service", func(t *testing.T) {
-		ctx, db, teardown := setup(t)
-		defer teardown(t)
-		var grafanaClient = new(mockGrafanaClient)
-		s := NewAnnotationService(db, grafanaClient)
-
-		_, err := models.AddNewService(s.db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
-			ServiceName: "service-test",
-			NodeID:      models.PMMServerNodeID,
-			Address:     pointer.ToString("127.0.0.1"),
-			Port:        pointer.ToUint16(3306),
-		})
-		require.NoError(t, err)
-
-		expectedTags := []string{"service-test"}
-		expectedText := "Some text (Service Name: service-test)"
-		grafanaClient.On("CreateAnnotation", ctx, expectedTags, mock.Anything, expectedText, autorization[0]).Return("", nil)
-		_, err = s.AddAnnotation(ctx, autorization, &managementpb.AddAnnotationRequest{
-			Text:         "Some text",
-			ServiceNames: []string{"service-test"},
-		})
-		require.NoError(t, err)
-
-		grafanaClient.AssertExpectations(t)
-	})
-
-	t.Run("Two services", func(t *testing.T) {
-		ctx, db, teardown := setup(t)
-		defer teardown(t)
-		var grafanaClient = new(mockGrafanaClient)
-		s := NewAnnotationService(db, grafanaClient)
-
-		_, err := models.AddNewService(s.db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
-			ServiceName: "service-test1",
-			NodeID:      models.PMMServerNodeID,
-			Address:     pointer.ToString("127.0.0.1"),
-			Port:        pointer.ToUint16(3306),
-		})
-		require.NoError(t, err)
-
-		_, err = models.AddNewService(s.db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
-			ServiceName: "service-test2",
-			NodeID:      models.PMMServerNodeID,
-			Address:     pointer.ToString("127.0.0.1"),
-			Port:        pointer.ToUint16(3306),
-		})
-		require.NoError(t, err)
-
-		expectedTags := []string{"service-test1", "service-test2"}
-		expectedText := "Some text (Service Name: service-test1,service-test2)"
-		grafanaClient.On("CreateAnnotation", ctx, expectedTags, mock.Anything, expectedText, autorization[0]).Return("", nil)
-		_, err = s.AddAnnotation(ctx, autorization, &managementpb.AddAnnotationRequest{
-			Text:         "Some text",
-			ServiceNames: []string{"service-test1", "service-test2"},
-		})
-		require.NoError(t, err)
-
-		grafanaClient.AssertExpectations(t)
 	})
 
 	t.Run("Non-existing node", func(t *testing.T) {
-		ctx, db, teardown := setup(t)
-		defer teardown(t)
-		var grafanaClient = new(mockGrafanaClient)
-		s := NewAnnotationService(db, grafanaClient)
-
-		_, err := s.AddAnnotation(ctx, autorization, &managementpb.AddAnnotationRequest{
-			Text:     "Some text",
-			NodeName: "no-node",
+		a := NewAnnotationService(db, c)
+		_, err := a.AddAnnotation(ctx, authorization, &managementpb.AddAnnotationRequest{
+			Text:         "Some text",
+			ServiceNames: []string{"no-node"},
 		})
-		tests.AssertGRPCError(t, status.New(codes.NotFound, `Node with name "no-node" not found.`), err)
+		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with name "no-node" not found.`), err)
+	})
 
-		grafanaClient.AssertExpectations(t)
+	t.Run("Existing service", func(t *testing.T) {
+		a := NewAnnotationService(db, c)
+		_, err := a.AddAnnotation(ctx, authorization, &managementpb.AddAnnotationRequest{
+			Text:         "Some text",
+			ServiceNames: []string{"test-service-mysql"},
+		})
+		assert.NoError(t, err)
 	})
 
 	t.Run("Existing node", func(t *testing.T) {
-		ctx, db, teardown := setup(t)
-		defer teardown(t)
-		var grafanaClient = new(mockGrafanaClient)
-		s := NewAnnotationService(db, grafanaClient)
-
-		_, err := models.CreateNode(s.db.Querier, models.GenericNodeType, &models.CreateNodeParams{
-			NodeName: "node-test",
-		})
-		require.NoError(t, err)
-
-		expectedTags := []string{"node-test"}
-		expectedText := "Some text (Node Name: node-test)"
-		grafanaClient.On("CreateAnnotation", ctx, expectedTags, mock.Anything, expectedText, autorization[0]).Return("", nil)
-		_, err = s.AddAnnotation(ctx, autorization, &managementpb.AddAnnotationRequest{
+		a := NewAnnotationService(db, c)
+		_, err := a.AddAnnotation(ctx, authorization, &managementpb.AddAnnotationRequest{
 			Text:     "Some text",
-			NodeName: "node-test",
+			NodeName: "test-node",
 		})
-		require.NoError(t, err)
-
-		grafanaClient.AssertExpectations(t)
+		assert.NoError(t, err)
 	})
 
-	t.Run("Existing service and non-existing node", func(t *testing.T) {
-		ctx, db, teardown := setup(t)
-		defer teardown(t)
-		var grafanaClient = new(mockGrafanaClient)
-		s := NewAnnotationService(db, grafanaClient)
-
-		_, err := models.AddNewService(s.db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
-			ServiceName: "service-test",
-			NodeID:      models.PMMServerNodeID,
-			Address:     pointer.ToString("127.0.0.1"),
-			Port:        pointer.ToUint16(3306),
-		})
-		require.NoError(t, err)
-
-		_, err = s.AddAnnotation(ctx, autorization, &managementpb.AddAnnotationRequest{
+	t.Run("More services, one non-existing", func(t *testing.T) {
+		a := NewAnnotationService(db, c)
+		_, err := a.AddAnnotation(ctx, authorization, &managementpb.AddAnnotationRequest{
 			Text:         "Some text",
-			ServiceNames: []string{"service-test"},
-			NodeName:     "node-test",
+			ServiceNames: []string{"test-service-mysql", "no-service"},
 		})
-		tests.AssertGRPCError(t, status.New(codes.NotFound, `Node with name "node-test" not found.`), err)
+		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with name "no-service" not found.`), err)
+	})
 
-		grafanaClient.AssertExpectations(t)
+	t.Run("Existing service, existing node", func(t *testing.T) {
+		a := NewAnnotationService(db, c)
+		_, err := a.AddAnnotation(ctx, authorization, &managementpb.AddAnnotationRequest{
+			Text:         "Some text",
+			NodeName:     "test-node",
+			ServiceNames: []string{"test-service-mysql", "test-service-mysql"},
+		})
+		assert.NoError(t, err)
 	})
 }
