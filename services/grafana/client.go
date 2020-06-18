@@ -294,7 +294,7 @@ func (c *Client) CreateAnnotation(ctx context.Context, tags []string, from time.
 		Text: text,
 		Time: from,
 	}
-	request.encode()
+	request.Encode()
 
 	b, err := json.Marshal(request)
 	if err != nil {
