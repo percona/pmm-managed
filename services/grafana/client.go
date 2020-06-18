@@ -267,8 +267,8 @@ type Annotation struct {
 	TimeInt int64 `json:"time,omitempty"`
 }
 
-// encode annotation before sending request.
-func (a *Annotation) encode() {
+// Encode annotation before sending request.
+func (a *Annotation) Encode() {
 	var t int64
 	if !a.Time.IsZero() {
 		t = a.Time.UnixNano() / int64(time.Millisecond)
@@ -276,8 +276,8 @@ func (a *Annotation) encode() {
 	a.TimeInt = t
 }
 
-// decode annotation after receiving response.
-func (a *Annotation) decode() {
+// Decode annotation after receiving response.
+func (a *Annotation) Decode() {
 	var t time.Time
 	if a.TimeInt != 0 {
 		t = time.Unix(0, a.TimeInt*int64(time.Millisecond))
@@ -333,7 +333,7 @@ func (c *Client) FindAnnotations(ctx context.Context, from, to time.Time, author
 	}
 
 	for i, r := range response {
-		r.decode()
+		r.Decode()
 		response[i] = r
 	}
 	return response, nil
