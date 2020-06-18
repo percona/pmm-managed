@@ -179,6 +179,7 @@ func TestAnnotations(t *testing.T) {
 			Text:         "Some text",
 			ServiceNames: []string{"test-service-mysql", "test-service-mysql2"},
 		})
+		assert.NoError(t, err)
 
 		annotations, err := c.FindAnnotations(ctx, from, to, authorization[0])
 		require.NoError(t, err)
