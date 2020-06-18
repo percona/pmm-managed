@@ -267,8 +267,8 @@ type Annotation struct {
 	TimeInt int64 `json:"time,omitempty"`
 }
 
-// Encode annotation before sending request.
-func (a *Annotation) Encode() {
+// encode annotation before sending request.
+func (a *Annotation) encode() {
 	var t int64
 	if !a.Time.IsZero() {
 		t = a.Time.UnixNano() / int64(time.Millisecond)
@@ -294,7 +294,7 @@ func (c *Client) CreateAnnotation(ctx context.Context, tags []string, from time.
 		Text: text,
 		Time: from,
 	}
-	request.Encode()
+	request.encode()
 
 	b, err := json.Marshal(request)
 	if err != nil {
