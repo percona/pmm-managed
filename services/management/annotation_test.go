@@ -84,6 +84,13 @@ func TestAnnotations(t *testing.T) {
 		Port:        pointer.ToUint16(3306),
 	})
 	require.NoError(t, err)
+	_, err = models.AddNewService(s.db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
+		ServiceName: "test-service-mysql2",
+		NodeID:      models.PMMServerNodeID,
+		Address:     pointer.ToString("127.0.0.1"),
+		Port:        pointer.ToUint16(3306),
+	})
+	require.NoError(t, err)
 
 	c := grafana.NewClient("127.0.0.1:3000")
 	req, err := http.NewRequest("GET", "/dummy", nil)
@@ -162,6 +169,28 @@ func TestAnnotations(t *testing.T) {
 			ServiceNames: []string{"test-service-mysql", "no-service"},
 		})
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with name "no-service" not found.`), err)
+	})
+
+	t.Run("More services, both existing", func(t *testing.T) {
+		from := time.Now()
+		to := from.Add(time.Second)
+		a := NewAnnotationService(db, c)
+		_, err := a.AddAnnotation(ctx, authorization, &managementpb.AddAnnotationRequest{
+			Text:         "Some text",
+			ServiceNames: []string{"test-service-mysql", "test-service-mysql2"},
+		})
+
+		annotations, err := c.FindAnnotations(ctx, from, to, authorization[0])
+		require.NoError(t, err)
+		for _, a := range annotations {
+			if a.Text == "Some text (Service Name: test-service-mysql,test-service-mysql2)" {
+				assert.Equal(t, []string{"test-service-mysql", "test-service-mysql2"}, a.Tags)
+				assert.InDelta(t, from.Unix(), a.Time.Unix(), 1)
+				return
+			}
+		}
+
+		assert.Fail(t, "annotation not found", "%s", annotations)
 	})
 
 	t.Run("Non-existing service, non-existing node", func(t *testing.T) {
