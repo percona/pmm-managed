@@ -20,6 +20,7 @@ import (
 	"context"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb"
@@ -64,12 +65,7 @@ func TestAnnotations(t *testing.T) {
 
 	r := new(mockAgentsRegistry)
 	r.Test(t)
-	p := new(mockPrometheusService)
-	p.Test(t)
-
 	n := NewNodeService(db, r)
-	s := NewServiceService(db, r, p)
-
 	_, err := n.Register(ctx, &managementpb.RegisterNodeRequest{
 		NodeType: inventorypb.NodeType_GENERIC_NODE,
 		NodeName: "test-node",
@@ -78,6 +74,9 @@ func TestAnnotations(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	p := new(mockPrometheusService)
+	p.Test(t)
+	s := NewServiceService(db, r, p)
 	_, err = models.AddNewService(s.db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
 		ServiceName: "test-service-mysql",
 		NodeID:      models.PMMServerNodeID,
@@ -111,21 +110,49 @@ func TestAnnotations(t *testing.T) {
 	})
 
 	t.Run("Existing service", func(t *testing.T) {
+		from := time.Now()
+		to := from.Add(time.Second)
 		a := NewAnnotationService(db, c)
 		_, err := a.AddAnnotation(ctx, authorization, &managementpb.AddAnnotationRequest{
 			Text:         "Some text",
 			ServiceNames: []string{"test-service-mysql"},
 		})
 		assert.NoError(t, err)
+
+		annotations, err := c.FindAnnotations(ctx, from, to, authorization[0])
+		require.NoError(t, err)
+		for _, a := range annotations {
+			if a.Text == "Some text (Service Name: test-service-mysql)" {
+				assert.Equal(t, []string{"test-service-mysql"}, a.Tags)
+				assert.InDelta(t, from.Unix(), a.Time.Unix(), 1)
+				return
+			}
+		}
+
+		assert.Fail(t, "annotation not found", "%s", annotations)
 	})
 
 	t.Run("Existing node", func(t *testing.T) {
+		from := time.Now()
+		to := from.Add(time.Second)
 		a := NewAnnotationService(db, c)
 		_, err := a.AddAnnotation(ctx, authorization, &managementpb.AddAnnotationRequest{
 			Text:     "Some text",
 			NodeName: "test-node",
 		})
 		assert.NoError(t, err)
+
+		annotations, err := c.FindAnnotations(ctx, from, to, authorization[0])
+		require.NoError(t, err)
+		for _, a := range annotations {
+			if a.Text == "Some text (Node Name: test-node)" {
+				assert.Equal(t, []string{"test-node"}, a.Tags)
+				assert.InDelta(t, from.Unix(), a.Time.Unix(), 1)
+				return
+			}
+		}
+
+		assert.Fail(t, "annotation not found", "%s", annotations)
 	})
 
 	t.Run("More services, one non-existing", func(t *testing.T) {
@@ -148,12 +175,26 @@ func TestAnnotations(t *testing.T) {
 	})
 
 	t.Run("Existing service, existing node", func(t *testing.T) {
+		from := time.Now()
+		to := from.Add(time.Second)
 		a := NewAnnotationService(db, c)
 		_, err := a.AddAnnotation(ctx, authorization, &managementpb.AddAnnotationRequest{
 			Text:         "Some text",
 			NodeName:     "test-node",
-			ServiceNames: []string{"test-service-mysql", "test-service-mysql"},
+			ServiceNames: []string{"test-service-mysql"},
 		})
 		assert.NoError(t, err)
+
+		annotations, err := c.FindAnnotations(ctx, from, to, authorization[0])
+		require.NoError(t, err)
+		for _, a := range annotations {
+			if a.Text == "Some text (Service Name: test-service-mysql, Node Name: test-node)" {
+				assert.Equal(t, []string{"test-service-mysql", "test-node"}, a.Tags)
+				assert.InDelta(t, from.Unix(), a.Time.Unix(), 1)
+				return
+			}
+		}
+
+		assert.Fail(t, "annotation not found", "%s", annotations)
 	})
 }
