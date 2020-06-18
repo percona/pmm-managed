@@ -258,7 +258,7 @@ func (c *Client) testDeleteUser(ctx context.Context, userID int, authHeaders htt
 	return c.do(ctx, "DELETE", "/api/admin/users/"+strconv.Itoa(userID), "", authHeaders, nil, nil)
 }
 
-type annotation struct {
+type Annotation struct {
 	Time time.Time `json:"-"`
 	Tags []string  `json:"tags,omitempty"`
 	Text string    `json:"text,omitempty"`
@@ -267,7 +267,7 @@ type annotation struct {
 }
 
 // encode annotation before sending request.
-func (a *annotation) encode() {
+func (a *Annotation) encode() {
 	var t int64
 	if !a.Time.IsZero() {
 		t = a.Time.UnixNano() / int64(time.Millisecond)
@@ -276,7 +276,7 @@ func (a *annotation) encode() {
 }
 
 // decode annotation after receiving response.
-func (a *annotation) decode() {
+func (a *Annotation) decode() {
 	var t time.Time
 	if a.TimeInt != 0 {
 		t = time.Unix(0, a.TimeInt*int64(time.Millisecond))
@@ -288,7 +288,7 @@ func (a *annotation) decode() {
 // and returns Grafana's response text which is typically "Annotation added" or "Failed to save annotation".
 func (c *Client) CreateAnnotation(ctx context.Context, tags []string, from time.Time, text, authorization string) (string, error) {
 	// http://docs.grafana.org/http_api/annotations/#create-annotation
-	request := &annotation{
+	request := &Annotation{
 		Tags: tags,
 		Text: text,
 		Time: from,
@@ -314,7 +314,8 @@ func (c *Client) CreateAnnotation(ctx context.Context, tags []string, from time.
 	return response.Message, nil
 }
 
-func (c *Client) FindAnnotations(ctx context.Context, from, to time.Time, authorization string) ([]annotation, error) {
+// FindAnnotations find annotations in time range and return array of them.
+func (c *Client) FindAnnotations(ctx context.Context, from, to time.Time, authorization string) ([]Annotation, error) {
 	// http://docs.grafana.org/http_api/annotations/#find-annotations
 
 	var headers = make(http.Header)
@@ -325,7 +326,7 @@ func (c *Client) FindAnnotations(ctx context.Context, from, to time.Time, author
 		"to":   []string{strconv.FormatInt(to.UnixNano()/int64(time.Millisecond), 10)},
 	}.Encode()
 
-	var response []annotation
+	var response []Annotation
 	if err := c.do(ctx, "GET", "/api/annotations", params, headers, nil, &response); err != nil {
 		return nil, err
 	}
