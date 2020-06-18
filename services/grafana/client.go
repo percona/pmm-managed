@@ -276,8 +276,8 @@ func (a *Annotation) Encode() {
 	a.TimeInt = t
 }
 
-// Decode annotation after receiving response.
-func (a *Annotation) Decode() {
+// decode annotation after receiving response.
+func (a *Annotation) decode() {
 	var t time.Time
 	if a.TimeInt != 0 {
 		t = time.Unix(0, a.TimeInt*int64(time.Millisecond))
@@ -333,7 +333,7 @@ func (c *Client) FindAnnotations(ctx context.Context, from, to time.Time, author
 	}
 
 	for i, r := range response {
-		r.Decode()
+		r.decode()
 		response[i] = r
 	}
 	return response, nil
