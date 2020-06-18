@@ -137,6 +137,16 @@ func TestAnnotations(t *testing.T) {
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with name "no-service" not found.`), err)
 	})
 
+	t.Run("Non-existing service, non-existing node", func(t *testing.T) {
+		a := NewAnnotationService(db, c)
+		_, err := a.AddAnnotation(ctx, authorization, &managementpb.AddAnnotationRequest{
+			Text:         "Some text",
+			NodeName:     "test-node",
+			ServiceNames: []string{"no-service", "no-node"},
+		})
+		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with name "no-service" not found.`), err)
+	})
+
 	t.Run("Existing service, existing node", func(t *testing.T) {
 		a := NewAnnotationService(db, c)
 		_, err := a.AddAnnotation(ctx, authorization, &managementpb.AddAnnotationRequest{
