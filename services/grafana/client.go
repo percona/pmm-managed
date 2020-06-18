@@ -314,6 +314,7 @@ func (c *Client) CreateAnnotation(ctx context.Context, tags []string, from time.
 	return response.Message, nil
 }
 
+// FindAnnotations find annotations in time range and return array of them.
 func (c *Client) FindAnnotations(ctx context.Context, from, to time.Time, authorization string) ([]annotation, error) {
 	// http://docs.grafana.org/http_api/annotations/#find-annotations
 
