@@ -259,7 +259,7 @@ func (c *Client) testDeleteUser(ctx context.Context, userID int, authHeaders htt
 }
 
 // Annotation contains grafana annotation response.
-type Annotation struct {
+type annotation struct {
 	Time time.Time `json:"-"`
 	Tags []string  `json:"tags,omitempty"`
 	Text string    `json:"text,omitempty"`
@@ -268,7 +268,7 @@ type Annotation struct {
 }
 
 // encode annotation before sending request.
-func (a *Annotation) encode() {
+func (a *annotation) encode() {
 	var t int64
 	if !a.Time.IsZero() {
 		t = a.Time.UnixNano() / int64(time.Millisecond)
@@ -277,7 +277,7 @@ func (a *Annotation) encode() {
 }
 
 // decode annotation after receiving response.
-func (a *Annotation) decode() {
+func (a *annotation) decode() {
 	var t time.Time
 	if a.TimeInt != 0 {
 		t = time.Unix(0, a.TimeInt*int64(time.Millisecond))
@@ -289,7 +289,7 @@ func (a *Annotation) decode() {
 // and returns Grafana's response text which is typically "Annotation added" or "Failed to save annotation".
 func (c *Client) CreateAnnotation(ctx context.Context, tags []string, from time.Time, text, authorization string) (string, error) {
 	// http://docs.grafana.org/http_api/annotations/#create-annotation
-	request := &Annotation{
+	request := &annotation{
 		Tags: tags,
 		Text: text,
 		Time: from,
@@ -315,8 +315,7 @@ func (c *Client) CreateAnnotation(ctx context.Context, tags []string, from time.
 	return response.Message, nil
 }
 
-// FindAnnotations find annotations in time range and return array of them.
-func (c *Client) FindAnnotations(ctx context.Context, from, to time.Time, authorization string) ([]Annotation, error) {
+func (c *Client) findAnnotations(ctx context.Context, from, to time.Time, authorization string) ([]annotation, error) {
 	// http://docs.grafana.org/http_api/annotations/#find-annotations
 
 	var headers = make(http.Header)
@@ -327,7 +326,7 @@ func (c *Client) FindAnnotations(ctx context.Context, from, to time.Time, author
 		"to":   []string{strconv.FormatInt(to.UnixNano()/int64(time.Millisecond), 10)},
 	}.Encode()
 
-	var response []Annotation
+	var response []annotation
 	if err := c.do(ctx, "GET", "/api/annotations", params, headers, nil, &response); err != nil {
 		return nil, err
 	}

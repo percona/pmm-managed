@@ -25,17 +25,16 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/grafana"
 )
 
 // AnnotationService Annotation Service.
 type AnnotationService struct {
 	db            *reform.DB
-	grafanaClient *grafana.Client
+	grafanaClient grafanaClient
 }
 
 // NewAnnotationService create new Annotation Service.
-func NewAnnotationService(db *reform.DB, grafanaClient *grafana.Client) *AnnotationService {
+func NewAnnotationService(db *reform.DB, grafanaClient grafanaClient) *AnnotationService {
 	return &AnnotationService{
 		db:            db,
 		grafanaClient: grafanaClient,
