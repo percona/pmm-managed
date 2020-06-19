@@ -23,14 +23,12 @@ import (
 	"time"
 
 	"github.com/AlekSi/pointer"
-	"github.com/percona/pmm/api/inventorypb"
-	"github.com/percona/pmm/api/managementpb"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/google/uuid"
+	"github.com/percona/pmm/api/managementpb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
@@ -51,8 +49,32 @@ func TestAnnotations(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SetupFixtures, nil)
 		db = reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
+		node, err := models.CreateNode(db.Querier, models.GenericNodeType, &models.CreateNodeParams{
+			NodeName: "test-node",
+			Address:  "some.address.org",
+		})
+		require.NoError(t, err)
+
+		_, err = models.AddNewService(db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
+			ServiceName: "test-service-mysql",
+			NodeID:      node.NodeID,
+			Address:     pointer.ToString("127.0.0.1"),
+			Port:        pointer.ToUint16(3306),
+		})
+		require.NoError(t, err)
+		_, err = models.AddNewService(db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
+			ServiceName: "test-service-mysql2",
+			NodeID:      node.NodeID,
+			Address:     pointer.ToString("127.0.0.1"),
+			Port:        pointer.ToUint16(3306),
+		})
+		require.NoError(t, err)
+
 		teardown = func(t *testing.T) {
 			uuid.SetRand(nil)
+
+			err = models.RemoveNode(db.Querier, node.NodeID, models.RemoveCascade)
+			assert.NoError(t, err)
 
 			require.NoError(t, sqlDB.Close())
 		}
@@ -63,44 +85,16 @@ func TestAnnotations(t *testing.T) {
 	ctx, db, teardown := setup(t)
 	defer teardown(t)
 
-	r := new(mockAgentsRegistry)
-	r.Test(t)
-	n := NewNodeService(db, r)
-	_, err := n.Register(ctx, &managementpb.RegisterNodeRequest{
-		NodeType: inventorypb.NodeType_GENERIC_NODE,
-		NodeName: "test-node",
-		Address:  "some.address.org",
-		Region:   "region",
-	})
-	require.NoError(t, err)
-
-	p := new(mockPrometheusService)
-	p.Test(t)
-	s := NewServiceService(db, r, p)
-	_, err = models.AddNewService(s.db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
-		ServiceName: "test-service-mysql",
-		NodeID:      models.PMMServerNodeID,
-		Address:     pointer.ToString("127.0.0.1"),
-		Port:        pointer.ToUint16(3306),
-	})
-	require.NoError(t, err)
-	_, err = models.AddNewService(s.db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
-		ServiceName: "test-service-mysql2",
-		NodeID:      models.PMMServerNodeID,
-		Address:     pointer.ToString("127.0.0.1"),
-		Port:        pointer.ToUint16(3306),
-	})
-	require.NoError(t, err)
-
 	c := grafana.NewClient("127.0.0.1:3000")
 	req, err := http.NewRequest("GET", "/dummy", nil)
 	require.NoError(t, err)
 	req.SetBasicAuth("admin", "admin")
-	authorization := []string{req.Header.Get("Authorization")}
+	authorization := req.Header.Get("Authorization")
+	authorizationHeaders := []string{authorization}
 
 	t.Run("Non-existing service", func(t *testing.T) {
 		a := NewAnnotationService(db, c)
-		_, err := a.AddAnnotation(ctx, authorization, &managementpb.AddAnnotationRequest{
+		_, err := a.AddAnnotation(ctx, authorizationHeaders, &managementpb.AddAnnotationRequest{
 			Text:         "Some text",
 			ServiceNames: []string{"no-service"},
 		})
@@ -109,7 +103,7 @@ func TestAnnotations(t *testing.T) {
 
 	t.Run("Non-existing node", func(t *testing.T) {
 		a := NewAnnotationService(db, c)
-		_, err := a.AddAnnotation(ctx, authorization, &managementpb.AddAnnotationRequest{
+		_, err := a.AddAnnotation(ctx, authorizationHeaders, &managementpb.AddAnnotationRequest{
 			Text:         "Some text",
 			ServiceNames: []string{"no-node"},
 		})
@@ -120,13 +114,13 @@ func TestAnnotations(t *testing.T) {
 		from := time.Now()
 		to := from.Add(time.Second)
 		a := NewAnnotationService(db, c)
-		_, err := a.AddAnnotation(ctx, authorization, &managementpb.AddAnnotationRequest{
+		_, err := a.AddAnnotation(ctx, authorizationHeaders, &managementpb.AddAnnotationRequest{
 			Text:         "Some text",
 			ServiceNames: []string{"test-service-mysql"},
 		})
 		assert.NoError(t, err)
 
-		annotations, err := c.FindAnnotations(ctx, from, to, authorization[0])
+		annotations, err := c.FindAnnotations(ctx, from, to, authorization)
 		require.NoError(t, err)
 		for _, a := range annotations {
 			if a.Text == "Some text (Service Name: test-service-mysql)" {
@@ -143,13 +137,13 @@ func TestAnnotations(t *testing.T) {
 		from := time.Now()
 		to := from.Add(time.Second)
 		a := NewAnnotationService(db, c)
-		_, err := a.AddAnnotation(ctx, authorization, &managementpb.AddAnnotationRequest{
+		_, err := a.AddAnnotation(ctx, authorizationHeaders, &managementpb.AddAnnotationRequest{
 			Text:     "Some text",
 			NodeName: "test-node",
 		})
 		assert.NoError(t, err)
 
-		annotations, err := c.FindAnnotations(ctx, from, to, authorization[0])
+		annotations, err := c.FindAnnotations(ctx, from, to, authorization)
 		require.NoError(t, err)
 		for _, a := range annotations {
 			if a.Text == "Some text (Node Name: test-node)" {
@@ -164,7 +158,7 @@ func TestAnnotations(t *testing.T) {
 
 	t.Run("More services, one non-existing", func(t *testing.T) {
 		a := NewAnnotationService(db, c)
-		_, err := a.AddAnnotation(ctx, authorization, &managementpb.AddAnnotationRequest{
+		_, err := a.AddAnnotation(ctx, authorizationHeaders, &managementpb.AddAnnotationRequest{
 			Text:         "Some text",
 			ServiceNames: []string{"test-service-mysql", "no-service"},
 		})
@@ -175,13 +169,13 @@ func TestAnnotations(t *testing.T) {
 		from := time.Now()
 		to := from.Add(time.Second)
 		a := NewAnnotationService(db, c)
-		_, err := a.AddAnnotation(ctx, authorization, &managementpb.AddAnnotationRequest{
+		_, err := a.AddAnnotation(ctx, authorizationHeaders, &managementpb.AddAnnotationRequest{
 			Text:         "Some text",
 			ServiceNames: []string{"test-service-mysql", "test-service-mysql2"},
 		})
 		assert.NoError(t, err)
 
-		annotations, err := c.FindAnnotations(ctx, from, to, authorization[0])
+		annotations, err := c.FindAnnotations(ctx, from, to, authorization)
 		require.NoError(t, err)
 		for _, a := range annotations {
 			if a.Text == "Some text (Service Name: test-service-mysql,test-service-mysql2)" {
@@ -196,7 +190,7 @@ func TestAnnotations(t *testing.T) {
 
 	t.Run("Non-existing service, non-existing node", func(t *testing.T) {
 		a := NewAnnotationService(db, c)
-		_, err := a.AddAnnotation(ctx, authorization, &managementpb.AddAnnotationRequest{
+		_, err := a.AddAnnotation(ctx, authorizationHeaders, &managementpb.AddAnnotationRequest{
 			Text:         "Some text",
 			NodeName:     "test-node",
 			ServiceNames: []string{"no-service", "no-node"},
@@ -208,14 +202,14 @@ func TestAnnotations(t *testing.T) {
 		from := time.Now()
 		to := from.Add(time.Second)
 		a := NewAnnotationService(db, c)
-		_, err := a.AddAnnotation(ctx, authorization, &managementpb.AddAnnotationRequest{
+		_, err := a.AddAnnotation(ctx, authorizationHeaders, &managementpb.AddAnnotationRequest{
 			Text:         "Some text",
 			NodeName:     "test-node",
 			ServiceNames: []string{"test-service-mysql"},
 		})
 		assert.NoError(t, err)
 
-		annotations, err := c.FindAnnotations(ctx, from, to, authorization[0])
+		annotations, err := c.FindAnnotations(ctx, from, to, authorization)
 		require.NoError(t, err)
 		for _, a := range annotations {
 			if a.Text == "Some text (Service Name: test-service-mysql, Node Name: test-node)" {
