@@ -52,7 +52,7 @@ func (as *AnnotationService) AddAnnotation(
 	if len(req.ServiceNames) == 0 && req.NodeName == "" {
 		tags = append([]string{"pmm_annotation"}, tags...)
 	}
-	postfix := []string{}
+	var postfix []string
 	if len(req.ServiceNames) > 0 {
 		for _, sn := range req.ServiceNames {
 			_, err := models.FindServiceByName(as.db.Querier, sn)
@@ -62,7 +62,7 @@ func (as *AnnotationService) AddAnnotation(
 		}
 
 		tags = append(tags, req.ServiceNames...)
-		postfix = append(postfix, "Service Name: "+strings.Join(req.ServiceNames, ","))
+		postfix = append(postfix, "Service Name: "+strings.Join(req.ServiceNames, ", "))
 	}
 
 	if req.NodeName != "" {
@@ -76,7 +76,7 @@ func (as *AnnotationService) AddAnnotation(
 	}
 
 	if len(postfix) > 0 {
-		req.Text += " (" + strings.Join(postfix, ", ") + ")"
+		req.Text += " (" + strings.Join(postfix, ". ") + ")"
 	}
 
 	_, err := as.grafanaClient.CreateAnnotation(ctx, tags, time.Now(), req.Text, authorizationHeaders[0])
