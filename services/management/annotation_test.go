@@ -196,7 +196,7 @@ func TestAnnotations(t *testing.T) {
 		require.NoError(t, err)
 
 		expectedTags := []string{"service-test", "node-test"}
-		expectedText := "Some text (Service Name: service-test, Node Name: node-test)"
+		expectedText := "Some text (Service Name: service-test. Node Name: node-test)"
 		grafanaClient.On("CreateAnnotation", ctx, expectedTags, mock.Anything, expectedText, authorization).Return("", nil)
 		_, err = s.AddAnnotation(ctx, authorizationHeaders, &managementpb.AddAnnotationRequest{
 			Text:         "Some text",
@@ -231,7 +231,7 @@ func TestAnnotations(t *testing.T) {
 		require.NoError(t, err)
 
 		expectedTags := []string{"service-test", "service-test2"}
-		expectedText := "Some text (Service Name: service-test,service-test2)"
+		expectedText := "Some text (Service Name: service-test, service-test2)"
 		grafanaClient.On("CreateAnnotation", ctx, expectedTags, mock.Anything, expectedText, authorization).Return("", nil)
 		_, err = s.AddAnnotation(ctx, authorizationHeaders, &managementpb.AddAnnotationRequest{
 			Text:         "Some text",
