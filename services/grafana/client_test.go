@@ -162,7 +162,7 @@ func TestClient(t *testing.T) {
 			annotations, err := c.findAnnotations(ctx, from, from.Add(time.Second), authorization)
 			require.NoError(t, err)
 			for _, a := range annotations {
-				if a.Text == "No tags" {
+				if len(a.Tags) == 0 {
 					assert.Equal(t, []string{}, a.Tags)
 					assert.InDelta(t, from.Unix(), a.Time.Unix(), 1)
 					return

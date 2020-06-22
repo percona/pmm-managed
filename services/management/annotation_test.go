@@ -152,6 +152,22 @@ func TestAnnotations(t *testing.T) {
 		grafanaClient.AssertExpectations(t)
 	})
 
+	t.Run("Empty service and empty node", func(t *testing.T) {
+		ctx, db, teardown := setup(t)
+		defer teardown(t)
+		var grafanaClient = new(mockGrafanaClient)
+		s := NewAnnotationService(db, grafanaClient)
+
+		_, err := s.AddAnnotation(ctx, authorizationHeaders, &managementpb.AddAnnotationRequest{
+			Text:         "Some text",
+			NodeName:     "",
+			ServiceNames: []string{""},
+		})
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Empty Service Name.`), err)
+
+		grafanaClient.AssertExpectations(t)
+	})
+
 	t.Run("Existing service and non-existing node", func(t *testing.T) {
 		ctx, db, teardown := setup(t)
 		defer teardown(t)
