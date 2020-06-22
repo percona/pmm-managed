@@ -158,12 +158,13 @@ func TestAnnotations(t *testing.T) {
 		var grafanaClient = new(mockGrafanaClient)
 		s := NewAnnotationService(db, grafanaClient)
 
+		expectedTags := []string{"pmm_annotation"}
+		expectedText := "Some text"
+		grafanaClient.On("CreateAnnotation", ctx, expectedTags, mock.Anything, expectedText, authorization).Return("", nil)
 		_, err := s.AddAnnotation(ctx, authorizationHeaders, &managementpb.AddAnnotationRequest{
-			Text:         "Some text",
-			NodeName:     "",
-			ServiceNames: []string{""},
+			Text: "Some text",
 		})
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, `Empty Service Name.`), err)
+		require.NoError(t, err)
 
 		grafanaClient.AssertExpectations(t)
 	})
