@@ -150,6 +150,7 @@ func New(agentsRegistry agentsRegistry, alertsRegistry alertRegistry, db *reform
 	s.mScriptsExecuted.WithLabelValues(string(models.MySQLServiceType))
 	s.mScriptsExecuted.WithLabelValues(string(models.PostgreSQLServiceType))
 	s.mScriptsExecuted.WithLabelValues(string(models.MongoDBServiceType))
+
 	s.mAlertsGenerated.WithLabelValues(string(models.MySQLServiceType), string(check.MySQLShow))
 	s.mAlertsGenerated.WithLabelValues(string(models.MySQLServiceType), string(check.MySQLSelect))
 	s.mAlertsGenerated.WithLabelValues(string(models.PostgreSQLServiceType), string(check.PostgreSQLShow))
