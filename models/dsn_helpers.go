@@ -66,7 +66,7 @@ func FindDSNByServiceIDandPMMAgentID(q *reform.Querier, serviceID, pmmAgentID, d
 	}
 
 	if len(fexp) == 0 {
-		return "", status.Errorf(codes.FailedPrecondition, "Couldn't resolve dsn, as there should be only one exporter 1")
+		return "", status.Errorf(codes.FailedPrecondition, "Couldn't resolve dsn, as there should be only one exporter")
 	}
 
 	return fexp[0].DSN(svc, time.Second, db), nil
