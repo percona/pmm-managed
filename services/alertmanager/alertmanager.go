@@ -35,13 +35,9 @@ import (
 )
 
 const (
-	// Environment variable to overwrite resendInterval during testing
-	envInterval = "PERCONA_TEST_ALERTMANAGER_INTERVAL"
-
-	resolveTimeoutFactor = 3
-	alertmanagerDataDir  = "/srv/alertmanager/data"
-	prometheusDir        = "/srv/prometheus"
-	path                 = "/srv/alertmanager/alertmanager.base.yml"
+	alertmanagerDataDir = "/srv/alertmanager/data"
+	prometheusDir       = "/srv/prometheus"
+	path                = "/srv/alertmanager/alertmanager.base.yml"
 )
 
 var resendInterval = 30 * time.Second
@@ -55,13 +51,6 @@ type Service struct {
 
 // New creates new service.
 func New(db *reform.DB, alertsRegistry *Registry) *Service {
-	l := logrus.WithField("component", "alertmanager")
-
-	if d, err := time.ParseDuration(os.Getenv(envInterval)); err == nil && d > 0 {
-		l.Warnf("Interval changed to %s.", d)
-		resendInterval = d
-	}
-
 	return &Service{
 		db: db,
 		r:  alertsRegistry,

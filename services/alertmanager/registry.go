@@ -17,12 +17,20 @@
 package alertmanager
 
 import (
+	"os"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/percona/pmm/api/alertmanager/ammodels"
+	"github.com/sirupsen/logrus"
+)
+
+const (
+	// Environment variable to overwrite resendInterval during testing
+	envResendInterval    = "PERCONA_TEST_ALERTMANAGER_RESEND_INTERVAL"
+	resolveTimeoutFactor = 3
 )
 
 // for tests
@@ -32,16 +40,28 @@ var now = func() time.Time {
 
 // Registry stores alerts and delay information by IDs.
 type Registry struct {
-	rw     sync.RWMutex
-	alerts map[string]*ammodels.PostableAlert
-	times  map[string]time.Time
+	rw             sync.RWMutex
+	alerts         map[string]*ammodels.PostableAlert
+	times          map[string]time.Time
+	resendInterval time.Duration
 }
 
 // NewRegistry creates a new Registry.
 func NewRegistry() *Registry {
+	l := logrus.WithField("component", "alertmanager")
+
+	var resendInterval time.Duration
+	if d, err := time.ParseDuration(os.Getenv(envResendInterval)); err == nil && d > 0 {
+		l.Warnf("Interval changed to %s.", d)
+		resendInterval = d
+	} else {
+		resendInterval = 30 * time.Second
+	}
+
 	return &Registry{
-		alerts: make(map[string]*ammodels.PostableAlert),
-		times:  make(map[string]time.Time),
+		alerts:         make(map[string]*ammodels.PostableAlert),
+		times:          make(map[string]time.Time),
+		resendInterval: resendInterval,
 	}
 }
 
@@ -56,7 +76,7 @@ func (r *Registry) CreateAlert(id string, labels, annotations map[string]string,
 			Labels: labels,
 		},
 
-		EndsAt: strfmt.DateTime(now().Add(resolveTimeoutFactor * resendInterval)),
+		EndsAt: strfmt.DateTime(now().Add(resolveTimeoutFactor * r.resendInterval)),
 		// StartsAt and EndAt can't be added there without changes in Registry
 		Annotations: annotations,
 	}
