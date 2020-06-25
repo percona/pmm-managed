@@ -40,22 +40,55 @@ func FindDSNByServiceIDandPMMAgentID(q *reform.Querier, serviceID, pmmAgentID, d
 		return "", err
 	}
 
-	agent, err := FindPMMAgentsForService(q, serviceID)
-	if err != nil {
-		return "", err
-	}
-
-	fexp, err := FindAgents(q, AgentFilters{
+	agents, err := FindAgents(q, AgentFilters{
 		ServiceID:  serviceID,
-		PMMAgentID: agent[0].AgentID,
+		PMMAgentID: pmmAgentID,
 	})
 	if err != nil {
 		return "", err
 	}
 
-	if len(fexp) == 0 {
-		return "", status.Errorf(codes.FailedPrecondition, "Couldn't resolve dsn, as there should be only one exporter")
+	types := make(map[AgentType]*Agent)
+	for _, a := range agents {
+		if _, ok := types[a.AgentType]; ok {
+			return "", status.Errorf(codes.FailedPrecondition, "Couldn't resolve dsn, as there should be only one agent of %s type", a.AgentType)
+		}
+
+		types[a.AgentType] = a
 	}
 
-	return fexp[0].DSN(svc, time.Second, db), nil
+	switch svc.ServiceType {
+	case MySQLServiceType:
+		if _, ok := types[QANMySQLSlowlogAgentType]; ok {
+			return types[QANMySQLSlowlogAgentType].DSN(svc, time.Second, db), nil
+		}
+		if _, ok := types[QANMySQLPerfSchemaAgentType]; ok {
+			return types[QANMySQLPerfSchemaAgentType].DSN(svc, time.Second, db), nil
+		}
+		if _, ok := types[MySQLdExporterType]; ok {
+			return types[MySQLdExporterType].DSN(svc, time.Second, db), nil
+		}
+	case MongoDBServiceType:
+		if _, ok := types[QANMongoDBProfilerAgentType]; ok {
+			return types[QANMongoDBProfilerAgentType].DSN(svc, time.Second, db), nil
+		}
+		if _, ok := types[MongoDBExporterType]; ok {
+			return types[MongoDBExporterType].DSN(svc, time.Second, db), nil
+		}
+	case PostgreSQLServiceType:
+		if _, ok := types[QANPostgreSQLPgStatementsAgentType]; ok {
+			return types[QANPostgreSQLPgStatementsAgentType].DSN(svc, time.Second, db), nil
+		}
+		if _, ok := types[MongoDBExporterType]; ok {
+			return types[MongoDBExporterType].DSN(svc, time.Second, db), nil
+		}
+	}
+
+	if len(types) > 0 {
+		for _, t := range types {
+			return t.DSN(svc, time.Second, db), nil
+		}
+	}
+
+	return "", status.Errorf(codes.FailedPrecondition, "Couldn't resolve dsn, as service is unsupported")
 }
