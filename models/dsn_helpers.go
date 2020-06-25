@@ -40,18 +40,6 @@ func FindDSNByServiceIDandPMMAgentID(q *reform.Querier, serviceID, pmmAgentID, d
 		return "", err
 	}
 
-	// var agentType AgentType
-	// switch svc.ServiceType {
-	// case MySQLServiceType:
-	// 	agentType = MySQLdExporterType
-	// case MongoDBServiceType:
-	// 	agentType = MongoDBExporterType
-	// case PostgreSQLServiceType:
-	// 	agentType = PostgresExporterType
-	// default:
-	// 	return "", status.Errorf(codes.FailedPrecondition, "Couldn't resolve dsn, as service is unsupported")
-	// }
-
 	agent, err := FindPMMAgentsForService(q, serviceID)
 	if err != nil {
 		return "", err
