@@ -55,7 +55,7 @@ func TestRegistry(t *testing.T) {
 
 		expected := &ammodels.PostableAlert{
 			Annotations: annotations,
-			EndsAt:      strfmt.DateTime(nowValueCopy.Add(resolveTimeoutFactor * resendInterval)),
+			EndsAt:      strfmt.DateTime(nowValueCopy.Add(resolveTimeoutFactor * defaultResendInterval)),
 			Alert: ammodels.Alert{
 				Labels: labels,
 			},

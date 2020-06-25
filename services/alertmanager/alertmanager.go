@@ -40,22 +40,37 @@ const (
 	path                = "/srv/alertmanager/alertmanager.base.yml"
 )
 
-var resendInterval = 30 * time.Second
+// Environment variable to overwrite resend interval during testing
+const envResendInterval = "PERCONA_TEST_ALERTMANAGER_RESEND_INTERVAL"
+
+const defaultResendInterval = 30 * time.Second
 
 // Service is responsible for interactions with Alertmanager.
 type Service struct {
 	db *reform.DB
 	r  *Registry
 	l  *logrus.Entry
+
+	resendInterval time.Duration
 }
 
 // New creates new service.
 func New(db *reform.DB, alertsRegistry *Registry) *Service {
-	return &Service{
-		db: db,
-		r:  alertsRegistry,
-		l:  logrus.WithField("component", "alertmanager"),
+	l := logrus.WithField("component", "alertmanager")
+
+	s := &Service{
+		db:             db,
+		r:              alertsRegistry,
+		l:              l,
+		resendInterval: defaultResendInterval,
 	}
+
+	if d, err := time.ParseDuration(os.Getenv(envResendInterval)); err == nil && d > 0 {
+		s.resendInterval = d
+		l.Warnf("Resend interval changed to %s.", d)
+	}
+
+	return s
 }
 
 // Run runs Alertmanager configuration update loop until ctx is canceled.
@@ -66,7 +81,7 @@ func (svc *Service) Run(ctx context.Context) {
 	svc.createDataDir()
 	svc.generateBaseConfig()
 
-	t := time.NewTicker(resendInterval)
+	t := time.NewTicker(defaultResendInterval)
 	defer t.Stop()
 
 	for {

@@ -27,11 +27,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const (
-	// Environment variable to overwrite resendInterval during testing
-	envResendInterval    = "PERCONA_TEST_ALERTMANAGER_RESEND_INTERVAL"
-	resolveTimeoutFactor = 3
-)
+const resolveTimeoutFactor = 3
 
 // for tests
 var now = func() time.Time {
@@ -40,29 +36,28 @@ var now = func() time.Time {
 
 // Registry stores alerts and delay information by IDs.
 type Registry struct {
-	rw             sync.RWMutex
-	alerts         map[string]*ammodels.PostableAlert
-	times          map[string]time.Time
-	resendInterval time.Duration
+	rw       sync.RWMutex
+	alerts   map[string]*ammodels.PostableAlert
+	times    map[string]time.Time
+	alertTTL time.Duration
 }
 
 // NewRegistry creates a new Registry.
 func NewRegistry() *Registry {
-	l := logrus.WithField("component", "alertmanager")
+	l := logrus.WithField("component", "registry")
 
-	var resendInterval time.Duration
+	r := &Registry{
+		alerts:   make(map[string]*ammodels.PostableAlert),
+		times:    make(map[string]time.Time),
+		alertTTL: resolveTimeoutFactor * defaultResendInterval,
+	}
+
 	if d, err := time.ParseDuration(os.Getenv(envResendInterval)); err == nil && d > 0 {
-		l.Warnf("Interval changed to %s.", d)
-		resendInterval = d
-	} else {
-		resendInterval = 30 * time.Second
+		r.alertTTL = resolveTimeoutFactor * d
+		l.Warnf("Alert TTL changed to %s.", r.alertTTL)
 	}
 
-	return &Registry{
-		alerts:         make(map[string]*ammodels.PostableAlert),
-		times:          make(map[string]time.Time),
-		resendInterval: resendInterval,
-	}
+	return r
 }
 
 // CreateAlert creates alert from given AlertParams and adds or replaces alert with given ID in registry.
@@ -76,7 +71,7 @@ func (r *Registry) CreateAlert(id string, labels, annotations map[string]string,
 			Labels: labels,
 		},
 
-		EndsAt: strfmt.DateTime(now().Add(resolveTimeoutFactor * r.resendInterval)),
+		EndsAt: strfmt.DateTime(now().Add(r.alertTTL)),
 		// StartsAt and EndAt can't be added there without changes in Registry
 		Annotations: annotations,
 	}
