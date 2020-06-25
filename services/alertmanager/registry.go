@@ -65,9 +65,6 @@ func NewRegistry() *Registry {
 // state after delayFor interval. This is similar to `for` field of Prometheus alerting rule:
 // https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/
 func (r *Registry) CreateAlert(id string, labels, annotations map[string]string, delayFor time.Duration) {
-	r.rw.Lock()
-	defer r.rw.Unlock()
-
 	alert := &ammodels.PostableAlert{
 		Alert: ammodels.Alert{
 			// GeneratorURL: "TODO",
@@ -77,6 +74,9 @@ func (r *Registry) CreateAlert(id string, labels, annotations map[string]string,
 		// StartsAt and EndAt can't be added there without changes in Registry
 		Annotations: annotations,
 	}
+
+	r.rw.Lock()
+	defer r.rw.Unlock()
 
 	r.alerts[id] = alert
 	if r.times[id].IsZero() {
