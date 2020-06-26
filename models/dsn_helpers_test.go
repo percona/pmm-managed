@@ -118,7 +118,7 @@ func TestFindDSNByServiceID(t *testing.T) {
 
 		dsn, err := models.FindDSNByServiceIDandPMMAgentID(q, "S2", "PA1", "test")
 		require.NoError(t, err)
-		expected := "pmm-user@tcp(127.0.0.1:3306)/test?timeout=1s"
+		expected := "tcp(127.0.0.1:3306)/test?clientFoundRows=true&parseTime=true&timeout=1s"
 		assert.Equal(t, expected, dsn)
 	})
 
