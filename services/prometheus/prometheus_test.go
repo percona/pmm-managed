@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/AlekSi/pointer"
+	config "github.com/percona/promconfig"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/reform.v1"
@@ -657,4 +658,24 @@ remote_write:
 	newcfg, err := svc.marshalConfig()
 	assert.NoError(t, err)
 	assert.Equal(t, expected, string(newcfg), "actual:\n%s", newcfg)
+}
+
+func TestParseAlertmanagerConfigFromURL(t *testing.T) {
+	db, svc, original := setup(t)
+	defer teardown(t, db, svc, original)
+
+	expected := &config.AlertmanagerConfig{
+		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+			StaticConfigs: []*config.Group{{
+				Targets: []string{"127.0.0.1:9093"},
+			}},
+		},
+		Scheme:     "http",
+		PathPrefix: "/alertmanager/",
+		APIVersion: config.AlertmanagerAPIVersionV2,
+	}
+
+	actual, err := svc.parseAlertmanagerConfigFromURL("http://127.0.0.1:9093/alertmanager/")
+	require.NoError(t, err)
+	assert.Equal(t, expected, actual)
 }
