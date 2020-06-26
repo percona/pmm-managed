@@ -429,7 +429,7 @@ func scrapeConfigsForRDSExporter(s *models.MetricsResolutions, params []*scrapeC
 	}
 	sort.Strings(hostports)
 
-	r := make([]*config.ScrapeConfig, 0, len(hostports)*2)
+	r := make([]*config.ScrapeConfig, 0, len(hostports)*2) //nolint:gomnd
 	for _, hostport := range hostports {
 		mr := scrapeConfigForRDSExporter("mr", s.MR, hostport, "/enhanced")
 		lr := scrapeConfigForRDSExporter("lr", s.LR, hostport, "/basic")
