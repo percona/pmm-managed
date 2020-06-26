@@ -251,12 +251,14 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 	res.LastCheck, _ = ptypes.TimestampProto(lastCheck)
 
 	if v.Installed.BuildTime != nil {
-		t := v.Installed.BuildTime.UTC().Truncate(24 * time.Hour) // return only date
+		// return only date
+		t := v.Installed.BuildTime.UTC().Truncate(24 * time.Hour) //nolint:gomnd
 		res.Installed.Timestamp, _ = ptypes.TimestampProto(t)
 	}
 
 	if v.Latest.BuildTime != nil {
-		t := v.Latest.BuildTime.UTC().Truncate(24 * time.Hour) // return only date
+		// return only date
+		t := v.Latest.BuildTime.UTC().Truncate(24 * time.Hour) //nolint:gomnd
 		res.Latest.Timestamp, _ = ptypes.TimestampProto(t)
 	}
 
@@ -342,7 +344,7 @@ func (s *Server) writeUpdateAuthToken(token string) error {
 	a := &pmmUpdateAuth{
 		AuthToken: token,
 	}
-	f, err := os.OpenFile(s.pmmUpdateAuthFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600|os.ModeExclusive)
+	f, err := os.OpenFile(s.pmmUpdateAuthFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600|os.ModeExclusive) //nolint:gomnd
 	if err != nil {
 		return errors.WithStack(err)
 	}
