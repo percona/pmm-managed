@@ -53,7 +53,6 @@ func TestFindDSNByServiceID(t *testing.T) {
 				NodeType: models.GenericNodeType,
 				NodeName: "Node with Service",
 			},
-
 			&models.Service{
 				ServiceID:   "S1",
 				ServiceType: models.MySQLServiceType,
@@ -61,13 +60,11 @@ func TestFindDSNByServiceID(t *testing.T) {
 				NodeID:      "N1",
 				Socket:      pointer.ToStringOrNil("/var/run/mysqld/mysqld.sock"),
 			},
-
 			&models.Agent{
 				AgentID:      "PA1",
 				AgentType:    models.PMMAgentType,
 				RunsOnNodeID: pointer.ToString("N1"),
 			},
-
 			&models.Service{
 				ServiceID:   "S2",
 				ServiceType: models.MySQLServiceType,
@@ -89,6 +86,20 @@ func TestFindDSNByServiceID(t *testing.T) {
 				PMMAgentID:   pointer.ToString("PA1"),
 				RunsOnNodeID: nil,
 				Username:     pointer.ToString("pmm-user"),
+				ServiceID:    pointer.ToString("S2"),
+			},
+			&models.Agent{
+				AgentID:      "A3",
+				AgentType:    models.QANMySQLSlowlogAgentType,
+				PMMAgentID:   pointer.ToString("PA1"),
+				RunsOnNodeID: nil,
+				ServiceID:    pointer.ToString("S2"),
+			},
+			&models.Agent{
+				AgentID:      "A4",
+				AgentType:    models.QANMySQLPerfSchemaAgentType,
+				PMMAgentID:   pointer.ToString("PA1"),
+				RunsOnNodeID: nil,
 				ServiceID:    pointer.ToString("S2"),
 			},
 		} {
