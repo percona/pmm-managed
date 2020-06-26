@@ -93,6 +93,7 @@ func TestFindDSNByServiceID(t *testing.T) {
 				AgentType:    models.QANMySQLSlowlogAgentType,
 				PMMAgentID:   pointer.ToString("PA1"),
 				RunsOnNodeID: nil,
+				Username:     pointer.ToString("pmm-user"),
 				ServiceID:    pointer.ToString("S2"),
 			},
 			&models.Agent{
@@ -118,7 +119,7 @@ func TestFindDSNByServiceID(t *testing.T) {
 
 		dsn, err := models.FindDSNByServiceIDandPMMAgentID(q, "S2", "PA1", "test")
 		require.NoError(t, err)
-		expected := "tcp(127.0.0.1:3306)/test?clientFoundRows=true&parseTime=true&timeout=1s"
+		expected := "pmm-user@tcp(127.0.0.1:3306)/test?clientFoundRows=true&parseTime=true&timeout=1s"
 		assert.Equal(t, expected, dsn)
 	})
 
