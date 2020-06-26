@@ -60,7 +60,7 @@ func (s *AlertingRules) ValidateRules(ctx context.Context, rules string) error {
 		return errors.WithStack(err)
 	}
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 3*time.Second) //nolint:gomnd
 	defer cancel()
 
 	cmd := exec.CommandContext(timeoutCtx, "promtool", "check", "rules", tempFile.Name()) //nolint:gosec

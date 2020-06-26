@@ -102,14 +102,14 @@ func NewRegistry(db *reform.DB, prometheus prometheusService, qanClient qanClien
 			Subsystem:  prometheusSubsystem,
 			Name:       "round_trip_seconds",
 			Help:       "Round-trip time.",
-			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001}, //nolint:gomnd
 		}),
 		mClockDrift: prom.NewSummary(prom.SummaryOpts{
 			Namespace:  prometheusNamespace,
 			Subsystem:  prometheusSubsystem,
 			Name:       "clock_drift_seconds",
 			Help:       "Clock drift.",
-			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001}, //nolint:gomnd
 		}),
 	}
 
@@ -147,7 +147,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 	// send first SetStateRequest concurrently with handling ping from agent
 	go r.SendSetStateRequest(ctx, agent.id)
 
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(10 * time.Second) //nolint:gomnd
 	defer ticker.Stop()
 	for {
 		select {
@@ -329,7 +329,7 @@ func (r *Registry) ping(ctx context.Context, agent *pmmAgentInfo) {
 		l.Errorf("Failed to decode Pong.current_time: %s.", err)
 		return
 	}
-	clockDrift := agentTime.Sub(start) - roundtrip/2
+	clockDrift := agentTime.Sub(start) - roundtrip/2 //nolint:gomnd
 	if clockDrift < 0 {
 		clockDrift = -clockDrift
 	}
@@ -532,26 +532,26 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 	case models.MySQLServiceType:
 		request = &agentpb.CheckConnectionRequest{
 			Type:    inventorypb.ServiceType_MYSQL_SERVICE,
-			Dsn:     agent.DSN(service, 2*time.Second, ""),
-			Timeout: ptypes.DurationProto(3 * time.Second),
+			Dsn:     agent.DSN(service, 2*time.Second, ""), //nolint:gomnd
+			Timeout: ptypes.DurationProto(3 * time.Second), //nolint:gomnd
 		}
 	case models.PostgreSQLServiceType:
 		request = &agentpb.CheckConnectionRequest{
 			Type:    inventorypb.ServiceType_POSTGRESQL_SERVICE,
-			Dsn:     agent.DSN(service, 2*time.Second, "postgres"),
-			Timeout: ptypes.DurationProto(3 * time.Second),
+			Dsn:     agent.DSN(service, 2*time.Second, "postgres"), //nolint:gomnd
+			Timeout: ptypes.DurationProto(3 * time.Second),         //nolint:gomnd
 		}
 	case models.MongoDBServiceType:
 		request = &agentpb.CheckConnectionRequest{
 			Type:    inventorypb.ServiceType_MONGODB_SERVICE,
-			Dsn:     agent.DSN(service, 2*time.Second, ""),
-			Timeout: ptypes.DurationProto(3 * time.Second),
+			Dsn:     agent.DSN(service, 2*time.Second, ""), //nolint:gomnd
+			Timeout: ptypes.DurationProto(3 * time.Second), //nolint:gomnd
 		}
 	case models.ProxySQLServiceType:
 		request = &agentpb.CheckConnectionRequest{
 			Type:    inventorypb.ServiceType_PROXYSQL_SERVICE,
-			Dsn:     agent.DSN(service, 2*time.Second, ""),
-			Timeout: ptypes.DurationProto(3 * time.Second),
+			Dsn:     agent.DSN(service, 2*time.Second, ""), //nolint:gomnd
+			Timeout: ptypes.DurationProto(3 * time.Second), //nolint:gomnd
 		}
 	default:
 		l.Panicf("unhandled Service type %s", service.ServiceType)

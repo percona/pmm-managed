@@ -331,8 +331,8 @@ func OpenDB(address, name, username, password string) (*sql.DB, error) {
 	}
 
 	db.SetConnMaxLifetime(0)
-	db.SetMaxIdleConns(5)
-	db.SetMaxOpenConns(10)
+	db.SetMaxIdleConns(5)  //nolint:gomnd
+	db.SetMaxOpenConns(10) //nolint:gomnd
 
 	return db, nil
 }
@@ -449,7 +449,7 @@ func setupFixture1(q *reform.Querier, username, password string) error {
 		ServiceName: PMMServerPostgreSQLServiceName,
 		NodeID:      node.NodeID,
 		Address:     pointer.ToString("127.0.0.1"),
-		Port:        pointer.ToUint16(5432),
+		Port:        pointer.ToUint16(5432), //nolint:gomnd
 	})
 	if err != nil {
 		return err

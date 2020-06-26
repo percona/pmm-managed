@@ -145,7 +145,7 @@ func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// fail-safe
-	ctx, cancel := context.WithTimeout(req.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(req.Context(), 3*time.Second) //nolint:gomnd
 	defer cancel()
 
 	if err := s.authenticate(ctx, req, l); err != nil {

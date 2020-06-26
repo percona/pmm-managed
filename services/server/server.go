@@ -305,7 +305,7 @@ func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusReq
 	var lines []string
 	var newOffset uint32
 	var done bool
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second) //nolint:gomnd
 	defer cancel()
 	for ctx.Err() == nil {
 		done = !s.supervisord.UpdateRunning()
@@ -323,7 +323,7 @@ func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusReq
 			break
 		}
 
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(200 * time.Millisecond) //nolint:gomnd
 	}
 
 	return &serverpb.UpdateStatusResponse{
@@ -551,7 +551,7 @@ func (s *Server) validateSSHKey(ctx context.Context, sshKey string) error {
 		return errors.WithStack(err)
 	}
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 3*time.Second) //nolint:gomnd
 	defer cancel()
 
 	cmd := exec.CommandContext(timeoutCtx, "ssh-keygen", "-l", "-f", tempFile.Name()) //nolint:gosec

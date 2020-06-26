@@ -48,11 +48,11 @@ type Client struct {
 func NewClient(addr string) *Client {
 	var t http.RoundTripper = &http.Transport{
 		DialContext: (&net.Dialer{
-			Timeout:   3 * time.Second,
-			KeepAlive: 30 * time.Second,
+			Timeout:   3 * time.Second,  //nolint:gomnd
+			KeepAlive: 30 * time.Second, //nolint:gomnd
 		}).DialContext,
-		MaxIdleConns:          50,
-		IdleConnTimeout:       90 * time.Second,
+		MaxIdleConns:          50,               //nolint:gomnd
+		IdleConnTimeout:       90 * time.Second, //nolint:gomnd
 		ExpectContinueTimeout: 1 * time.Second,
 	}
 

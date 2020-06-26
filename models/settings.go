@@ -62,17 +62,17 @@ func (s *Settings) fillDefaults() {
 	// no default for Telemetry UUID - it set by telemetry service
 
 	if s.MetricsResolutions.HR == 0 {
-		s.MetricsResolutions.HR = 5 * time.Second
+		s.MetricsResolutions.HR = 5 * time.Second //nolint:gomnd
 	}
 	if s.MetricsResolutions.MR == 0 {
-		s.MetricsResolutions.MR = 10 * time.Second
+		s.MetricsResolutions.MR = 10 * time.Second //nolint:gomnd
 	}
 	if s.MetricsResolutions.LR == 0 {
-		s.MetricsResolutions.LR = 60 * time.Second
+		s.MetricsResolutions.LR = 60 * time.Second //nolint:gomnd
 	}
 
 	if s.DataRetention == 0 {
-		s.DataRetention = 30 * 24 * time.Hour
+		s.DataRetention = 30 * 24 * time.Hour //nolint:gomnd
 	}
 
 	if len(s.AWSPartitions) == 0 {
