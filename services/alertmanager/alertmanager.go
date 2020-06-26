@@ -40,8 +40,6 @@ const (
 	path                = "/srv/alertmanager/alertmanager.base.yml"
 )
 
-var resendInterval = 30 * time.Second
-
 // Service is responsible for interactions with Alertmanager.
 type Service struct {
 	db *reform.DB
@@ -66,7 +64,7 @@ func (svc *Service) Run(ctx context.Context) {
 	svc.createDataDir()
 	svc.generateBaseConfig()
 
-	t := time.NewTicker(resendInterval)
+	t := time.NewTicker(svc.r.resendInterval)
 	defer t.Stop()
 
 	for {

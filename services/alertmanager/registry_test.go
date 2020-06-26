@@ -28,7 +28,6 @@ import (
 
 func TestRegistry(t *testing.T) {
 	nowValue, origNow := now(), now
-	nowValueCopy := nowValue
 	now = func() time.Time {
 		return nowValue
 	}
@@ -53,16 +52,17 @@ func TestRegistry(t *testing.T) {
 		nowValue = nowValue.Add(time.Second)
 		assert.Empty(t, r.collect())
 
+		// 1 second after
+		nowValue = nowValue.Add(time.Second)
+
 		expected := &ammodels.PostableAlert{
 			Annotations: annotations,
-			EndsAt:      strfmt.DateTime(nowValueCopy.Add(resolveTimeoutFactor * resendInterval)),
+			EndsAt:      strfmt.DateTime(nowValue.Add(resolveTimeoutFactor * r.resendInterval)),
 			Alert: ammodels.Alert{
 				Labels: labels,
 			},
 		}
 
-		// 1 second after
-		nowValue = nowValue.Add(time.Second)
 		alerts := r.collect()
 		require.Len(t, alerts, 1)
 		assert.Equal(t, expected, alerts[0])

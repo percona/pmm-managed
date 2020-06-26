@@ -29,8 +29,9 @@ import (
 
 const (
 	// Environment variable to overwrite resendInterval during testing
-	envResendInterval    = "PERCONA_TEST_ALERTMANAGER_RESEND_INTERVAL"
-	resolveTimeoutFactor = 3
+	envResendInterval     = "PERCONA_TEST_ALERTMANAGER_RESEND_INTERVAL"
+	resolveTimeoutFactor  = 3
+	defaultResendInterval = 30 * time.Second
 )
 
 // for tests
@@ -55,7 +56,7 @@ func NewRegistry() *Registry {
 		l.Warnf("Interval changed to %s.", d)
 		resendInterval = d
 	} else {
-		resendInterval = 30 * time.Second
+		resendInterval = defaultResendInterval
 	}
 
 	return &Registry{
@@ -76,7 +77,6 @@ func (r *Registry) CreateAlert(id string, labels, annotations map[string]string,
 			Labels: labels,
 		},
 
-		EndsAt: strfmt.DateTime(now().Add(resolveTimeoutFactor * r.resendInterval)),
 		// StartsAt and EndAt can't be added there without changes in Registry
 		Annotations: annotations,
 	}
@@ -115,7 +115,9 @@ func (r *Registry) collect() ammodels.PostableAlerts {
 	now := now()
 	for id, t := range r.times {
 		if t.Before(now) {
-			res = append(res, r.alerts[id])
+			alert := r.alerts[id]
+			alert.EndsAt = strfmt.DateTime(now.Add(resolveTimeoutFactor * r.resendInterval))
+			res = append(res, alert)
 		}
 	}
 	return res
