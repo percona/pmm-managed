@@ -129,7 +129,7 @@ func (svc *Service) reload() error {
 	}
 	defer resp.Body.Close() //nolint:errcheck
 
-	if resp.StatusCode == 200 { //nolint:gomnd
+	if resp.StatusCode == 200 {
 		return nil
 	}
 	b, err := ioutil.ReadAll(resp.Body)
@@ -474,7 +474,7 @@ func (svc *Service) saveConfigAndReload(cfg []byte) error {
 
 		// return typed error if possible
 		s := string(b)
-		if m := checkFailedRE.FindStringSubmatch(s); len(m) == 2 { //nolint:gomnd
+		if m := checkFailedRE.FindStringSubmatch(s); len(m) == 2 {
 			return status.Error(codes.Aborted, m[1])
 		}
 		return errors.Wrap(err, s)
@@ -534,7 +534,7 @@ func (svc *Service) IsReady(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if resp.StatusCode != 200 { //nolint:gomnd
+	if resp.StatusCode != 200 {
 		return errors.Errorf("expected 200, got %d", resp.StatusCode)
 	}
 

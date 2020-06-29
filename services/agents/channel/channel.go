@@ -153,7 +153,7 @@ func (c *Channel) send(msg *agentpb.ServerMessage) {
 
 	// do not use default compact representation for large/complex messages
 	l := logger.Get(c.s.Context())
-	if size := proto.Size(msg); size < 100 { //nolint:gomnd
+	if size := proto.Size(msg); size < 100 {
 		l.Debugf("Sending message (%d bytes): %s.", size, msg)
 	} else {
 		l.Debugf("Sending message (%d bytes):\n%s\n", size, proto.MarshalTextString(msg))
@@ -185,7 +185,7 @@ func (c *Channel) runReceiver() {
 		c.metrics.mRecv.Inc()
 
 		// do not use default compact representation for large/complex messages
-		if size := proto.Size(msg); size < 100 { //nolint:gomnd
+		if size := proto.Size(msg); size < 100 {
 			l.Debugf("Received message (%d bytes): %s.", size, msg)
 		} else {
 			l.Debugf("Received message (%d bytes):\n%s\n", size, proto.MarshalTextString(msg))

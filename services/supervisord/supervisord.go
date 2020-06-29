@@ -95,7 +95,7 @@ func (s *Service) Run(ctx context.Context) {
 		// Do not check for updates for the first 10 minutes.
 		// That solves PMM Server building problems when we start pmm-managed.
 		// TODO https://jira.percona.com/browse/PMM-4429
-		sleepCtx, sleepCancel := context.WithTimeout(ctx, 10*time.Minute) //nolint:gomnd
+		sleepCtx, sleepCancel := context.WithTimeout(ctx, 10*time.Minute)
 		<-sleepCtx.Done()
 		sleepCancel()
 		if ctx.Err() != nil {
@@ -395,7 +395,7 @@ func (s *Service) reload(name string) error {
 func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settings) ([]byte, error) {
 	templateParams := map[string]interface{}{
 		"DataRetentionHours": int(settings.DataRetention.Hours()),
-		"DataRetentionDays":  int(settings.DataRetention.Hours() / 24), //nolint:gomnd
+		"DataRetentionDays":  int(settings.DataRetention.Hours() / 24),
 	}
 
 	var buf bytes.Buffer

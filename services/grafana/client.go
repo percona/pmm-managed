@@ -48,11 +48,11 @@ type Client struct {
 func NewClient(addr string) *Client {
 	var t http.RoundTripper = &http.Transport{
 		DialContext: (&net.Dialer{
-			Timeout:   3 * time.Second,  //nolint:gomnd
-			KeepAlive: 30 * time.Second, //nolint:gomnd
+			Timeout:   3 * time.Second,
+			KeepAlive: 30 * time.Second,
 		}).DialContext,
-		MaxIdleConns:          50,               //nolint:gomnd
-		IdleConnTimeout:       90 * time.Second, //nolint:gomnd
+		MaxIdleConns:          50,
+		IdleConnTimeout:       90 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 	}
 
@@ -126,7 +126,7 @@ func (c *Client) do(ctx context.Context, method, path, rawQuery string, headers 
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	if resp.StatusCode != 200 { //nolint:gomnd
+	if resp.StatusCode != 200 {
 		cErr := &clientError{
 			Method: req.Method,
 			URL:    req.URL.String(),

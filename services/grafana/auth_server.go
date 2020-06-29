@@ -133,7 +133,7 @@ func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	if err := extractOriginalRequest(req); err != nil {
 		s.l.Warnf("Failed to parse request: %s.", err)
-		rw.WriteHeader(400) //nolint:gomnd
+		rw.WriteHeader(400)
 		return
 	}
 
@@ -145,7 +145,7 @@ func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// fail-safe
-	ctx, cancel := context.WithTimeout(req.Context(), 3*time.Second) //nolint:gomnd
+	ctx, cancel := context.WithTimeout(req.Context(), 3*time.Second)
 	defer cancel()
 
 	if err := s.authenticate(ctx, req, l); err != nil {

@@ -252,13 +252,13 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 
 	if v.Installed.BuildTime != nil {
 		// return only date
-		t := v.Installed.BuildTime.UTC().Truncate(24 * time.Hour) //nolint:gomnd
+		t := v.Installed.BuildTime.UTC().Truncate(24 * time.Hour)
 		res.Installed.Timestamp, _ = ptypes.TimestampProto(t)
 	}
 
 	if v.Latest.BuildTime != nil {
 		// return only date
-		t := v.Latest.BuildTime.UTC().Truncate(24 * time.Hour) //nolint:gomnd
+		t := v.Latest.BuildTime.UTC().Truncate(24 * time.Hour)
 		res.Latest.Timestamp, _ = ptypes.TimestampProto(t)
 	}
 
@@ -305,7 +305,7 @@ func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusReq
 	var lines []string
 	var newOffset uint32
 	var done bool
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second) //nolint:gomnd
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	for ctx.Err() == nil {
 		done = !s.supervisord.UpdateRunning()
@@ -323,7 +323,7 @@ func (s *Server) UpdateStatus(ctx context.Context, req *serverpb.UpdateStatusReq
 			break
 		}
 
-		time.Sleep(200 * time.Millisecond) //nolint:gomnd
+		time.Sleep(200 * time.Millisecond)
 	}
 
 	return &serverpb.UpdateStatusResponse{
@@ -344,7 +344,7 @@ func (s *Server) writeUpdateAuthToken(token string) error {
 	a := &pmmUpdateAuth{
 		AuthToken: token,
 	}
-	f, err := os.OpenFile(s.pmmUpdateAuthFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600|os.ModeExclusive) //nolint:gomnd
+	f, err := os.OpenFile(s.pmmUpdateAuthFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600|os.ModeExclusive)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -551,7 +551,7 @@ func (s *Server) validateSSHKey(ctx context.Context, sshKey string) error {
 		return errors.WithStack(err)
 	}
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, 3*time.Second) //nolint:gomnd
+	timeoutCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
 	cmd := exec.CommandContext(timeoutCtx, "ssh-keygen", "-l", "-f", tempFile.Name()) //nolint:gosec

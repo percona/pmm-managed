@@ -533,7 +533,7 @@ func hashID(s string) string {
 }
 
 func (s *Service) createAlert(id, name string, target target, result *check.Result) {
-	labels := make(map[string]string, len(target.labels)+len(result.Labels)+4) //nolint:gomnd
+	labels := make(map[string]string, len(target.labels)+len(result.Labels)+4)
 	annotations := make(map[string]string, 2)
 	for k, v := range target.labels {
 		labels[k] = v

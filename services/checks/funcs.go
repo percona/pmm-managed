@@ -74,9 +74,9 @@ func formatVersionNum(args ...interface{}) (interface{}, error) {
 	}
 
 	p := &version.Parsed{
-		Major: int(num / 10000),     //nolint:gomnd
-		Minor: int(num / 100 % 100), //nolint:gomnd
-		Patch: int(num % 100),       //nolint:gomnd
+		Major: int(num / 10000),
+		Minor: int(num / 100 % 100),
+		Patch: int(num % 100),
 	}
 	return p.String(), nil
 }

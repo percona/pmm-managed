@@ -30,7 +30,7 @@ type IDReader struct {
 
 // Read returns non-random data for ID/UUID generation.
 func (t *IDReader) Read(b []byte) (int, error) {
-	if len(b) != 16 { //nolint:gomnd
+	if len(b) != 16 {
 		panic(fmt.Errorf("unexpected read of length %d", b))
 	}
 

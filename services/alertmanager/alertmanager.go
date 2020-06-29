@@ -95,7 +95,7 @@ func (svc *Service) createDataDir() {
 	}
 
 	// Check and fix permissions.
-	if alertmanagerDataDirStat.Mode()&os.ModePerm != os.FileMode(0775) { //nolint:gomnd
+	if alertmanagerDataDirStat.Mode()&os.ModePerm != os.FileMode(0775) {
 		if err := os.Chmod(alertmanagerDataDir, 0775); err != nil {
 			svc.l.Errorf("Cannot chmod datadir for Alertmanager %v.", err)
 		}
