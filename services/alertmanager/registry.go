@@ -45,6 +45,7 @@ type Registry struct {
 	alerts         map[string]*ammodels.PostableAlert
 	times          map[string]time.Time
 	resendInterval time.Duration
+	alertTTL       time.Duration
 }
 
 // NewRegistry creates a new Registry.
@@ -63,6 +64,7 @@ func NewRegistry() *Registry {
 		alerts:         make(map[string]*ammodels.PostableAlert),
 		times:          make(map[string]time.Time),
 		resendInterval: resendInterval,
+		alertTTL:       resolveTimeoutFactor * resendInterval,
 	}
 }
 
@@ -116,7 +118,7 @@ func (r *Registry) collect() ammodels.PostableAlerts {
 	for id, t := range r.times {
 		if t.Before(now) {
 			alert := r.alerts[id]
-			alert.EndsAt = strfmt.DateTime(now.Add(resolveTimeoutFactor * r.resendInterval))
+			alert.EndsAt = strfmt.DateTime(now.Add(r.alertTTL))
 			res = append(res, alert)
 		}
 	}
