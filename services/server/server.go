@@ -251,14 +251,12 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 	res.LastCheck, _ = ptypes.TimestampProto(lastCheck)
 
 	if v.Installed.BuildTime != nil {
-		// return only date
-		t := v.Installed.BuildTime.UTC().Truncate(24 * time.Hour)
+		t := v.Installed.BuildTime.UTC().Truncate(24 * time.Hour) // return only date
 		res.Installed.Timestamp, _ = ptypes.TimestampProto(t)
 	}
 
 	if v.Latest.BuildTime != nil {
-		// return only date
-		t := v.Latest.BuildTime.UTC().Truncate(24 * time.Hour)
+		t := v.Latest.BuildTime.UTC().Truncate(24 * time.Hour) // return only date
 		res.Latest.Timestamp, _ = ptypes.TimestampProto(t)
 	}
 
