@@ -139,10 +139,10 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 // ValidateSettings validates settings changes.
 func ValidateSettings(params *ChangeSettingsParams) error {
 	if params.EnableTelemetry && params.DisableTelemetry {
-		return errors.New("Both enable_telemetry and disable_telemetry are present.")
+		return fmt.Errorf("Both enable_telemetry and disable_telemetry are present.")
 	}
 	if params.EnableSTT && params.DisableSTT {
-		return errors.New("Both enable_stt and disable_stt are present.")
+		return fmt.Errorf("Both enable_stt and disable_stt are present.")
 	}
 
 	checkCases := []struct {
@@ -190,7 +190,7 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 
 	if params.AlertManagerURL != "" {
 		if params.RemoveAlertManagerURL {
-			return errors.New("Both alert_manager_url and remove_alert_manager_url are present.")
+			return fmt.Errorf("Both alert_manager_url and remove_alert_manager_url are present.")
 		}
 
 		// custom validation for typical error that is not handled well by url.Parse
@@ -214,13 +214,13 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 
 func validateSettingsConflicts(params *ChangeSettingsParams, settings *Settings) error {
 	if params.EnableSTT && !params.EnableTelemetry && settings.Telemetry.Disabled {
-		return errors.New("Cannot enable STT while telemetry is disabled.")
+		return fmt.Errorf("Cannot enable STT while telemetry is disabled.")
 	}
 	if params.EnableSTT && params.DisableTelemetry {
-		return errors.New("Cannot enable STT while disabling telemetry.")
+		return fmt.Errorf("Cannot enable STT while disabling telemetry.")
 	}
 	if params.DisableTelemetry && !params.DisableSTT && settings.SaaS.STTEnabled {
-		return errors.New("Cannot disable telemetry while STT is enabled.")
+		return fmt.Errorf("Cannot disable telemetry while STT is enabled.")
 	}
 
 	return nil
