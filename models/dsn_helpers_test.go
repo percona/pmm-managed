@@ -142,6 +142,15 @@ func TestFindDSNByServiceID(t *testing.T) {
 		return
 	}
 
+	t.Run("FindDSNByServiceIDandPMMAgentIDWithNoAgent", func(t *testing.T) {
+		q, teardown := setup(t)
+		defer teardown(t)
+
+		_, err := models.FindDSNByServiceIDandPMMAgentID(q, "S3", "PA1", "test")
+		require.Error(t, err)
+		tests.AssertGRPCError(t, status.New(codes.FailedPrecondition, "Couldn't resolve dsn, as there should be one agent"), err)
+	})
+
 	t.Run("FindDSNByServiceIDandPMMAgentID", func(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
