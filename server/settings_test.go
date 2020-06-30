@@ -164,7 +164,7 @@ func TestSettings(t *testing.T) {
 
 			t.Run("VerifyFailedChecksInAlertmanager", func(t *testing.T) {
 				if !pmmapitests.RunSTTTests {
-					t.Skip("skipping STT tests")
+					t.Skip("Skipping STT tests until we have environment: https://jira.percona.com/browse/PMM-5106")
 				}
 
 				defer restoreSettingsDefaults(t)

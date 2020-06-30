@@ -16,10 +16,11 @@ import (
 )
 
 func TestSTTMetrics(t *testing.T) {
-	t.Run("StartSTTChecksAndRecordMetrics", func(t *testing.T) {
-		// TODO: Remove this once the test environment has been setup properly
-		t.Skip("Skip STT Metrics test")
+	if !pmmapitests.RunSTTTests {
+		t.Skip("Skipping STT tests until we have environment: https://jira.percona.com/browse/PMM-5106")
+	}
 
+	t.Run("StartSTTChecksAndRecordMetrics", func(t *testing.T) {
 		client, err := api.NewClient(api.Config{
 			Address: pmmapitests.BaseURL.ResolveReference(&url.URL{
 				Path: "/prometheus",
