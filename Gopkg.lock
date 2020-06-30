@@ -142,6 +142,14 @@
   version = "v1.8.0"
 
 [[projects]]
+  digest = "1:db3c1b3d1e843b1aecfb29f4922b6496b4fc494518e9016bb531c14573b14278"
+  name = "github.com/json-iterator/go"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "a1ca0830781e007c66b225121d2cdb3a649421f6"
+  version = "v1.1.10"
+
+[[projects]]
   digest = "1:2aee2c81817d3334cf3e85e99ffe9515315b4cb35e90b45ae2164c3b68fd7dcf"
   name = "github.com/jstemmer/go-junit-report"
   packages = [
@@ -180,6 +188,22 @@
   pruneopts = "NUT"
   revision = "3536a929edddb9a5b34bd6861dc4a9647cb459fe"
   version = "v1.1.2"
+
+[[projects]]
+  digest = "1:2f42fa12d6911c7b7659738758631bec870b7e9b4c6be5444f963cdcfccc191f"
+  name = "github.com/modern-go/concurrent"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94"
+  version = "1.0.3"
+
+[[projects]]
+  digest = "1:c6aca19413b13dc59c220ad7430329e2ec454cc310bc6d8de2c7e2b93c18a0f6"
+  name = "github.com/modern-go/reflect2"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "4b7aa43c6742a2c18fdef89dd197aaae7dac7ccd"
+  version = "1.0.1"
 
 [[projects]]
   branch = "PMM-2.0"
@@ -223,6 +247,25 @@
   pruneopts = "NUT"
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
   version = "v1.0.0"
+
+[[projects]]
+  digest = "1:c7659849cc81257181511cbf247fd26f6ac0ab92c2e57f971a9c933eca16648a"
+  name = "github.com/prometheus/client_golang"
+  packages = [
+    "api",
+    "api/prometheus/v1",
+  ]
+  pruneopts = "NUT"
+  revision = "b05e50c9298cbadd2b4be3f1527f5c1b178acb55"
+  version = "v1.7.0"
+
+[[projects]]
+  digest = "1:42420f20bc55231c262f4c9a4a526bad737f694d8f980b3eb7ffea95befe8462"
+  name = "github.com/prometheus/common"
+  packages = ["model"]
+  pruneopts = "NUT"
+  revision = "6162074431988128c0a63a91ed22b11685777868"
+  version = "v0.10.0"
 
 [[projects]]
   digest = "1:f4aaa07a6c33f2b354726d0571acbc8ca118837c75709f6353203ae1a3f8eeab"
@@ -346,6 +389,8 @@
     "github.com/percona/pmm/api/serverpb/json/client",
     "github.com/percona/pmm/api/serverpb/json/client/server",
     "github.com/percona/pmm/utils/tlsconfig",
+    "github.com/prometheus/client_golang/api",
+    "github.com/prometheus/client_golang/api/prometheus/v1",
     "github.com/sirupsen/logrus",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
