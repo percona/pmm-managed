@@ -27,25 +27,25 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-// Service has unexported fields for the results cleanup function.
-type Service struct {
+// CleanResults has unexported fields for the results cleanup function.
+type CleanResults struct {
 	db *reform.DB
 }
 
-// New returns a new Service instance.
-func New(db *reform.DB) *Service {
-	return &Service{db: db}
+// New returns a new CleanResults instance.
+func New(db *reform.DB) *CleanResults {
+	return &CleanResults{db: db}
 }
 
 // Run starts the clean process.
-func (s *Service) Run(ctx context.Context, interval time.Duration, olderThan time.Duration) {
+func (c *CleanResults) Run(ctx context.Context, interval time.Duration, olderThan time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	l := logrus.WithField("component", "cleaner")
 
 	for {
 		olderThanTS := models.Now().Add(-1 * olderThan)
-		if err := models.CleanupOldResults(s.db.Querier, olderThanTS); err != nil {
+		if err := models.CleanupOldResults(c.db.Querier, olderThanTS); err != nil {
 			l.Error(err)
 		}
 
