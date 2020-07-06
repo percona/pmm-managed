@@ -32,7 +32,6 @@ import (
 )
 
 // scrapeTimeout returns default scrape timeout for given scrape interval.
-
 func scrapeTimeout(interval time.Duration) config.Duration {
 	switch {
 	case interval <= 2*time.Second:
