@@ -346,17 +346,46 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 			scrapeConfigForQANAPI2(s.MR),
 		)
 
-		conf, err := svc.parseAlertmanagerConfigFromURL("http://127.0.0.1:9093/alertmanager/")
-		if err == nil {
-			cfg.AlertingConfig.AlertmanagerConfigs = append(cfg.AlertingConfig.AlertmanagerConfigs, conf)
-		} else {
-			svc.l.Errorf("Failed to parse Alert Manager URL %q: %s.", settings.AlertManagerURL, err)
-		}
+		cfg.AlertingConfig.AlertmanagerConfigs = append(cfg.AlertingConfig.AlertmanagerConfigs, &config.AlertmanagerConfig{
+			ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+				StaticConfigs: []*config.Group{{
+					Targets: []string{"127.0.0.1:9093"},
+				}},
+			},
+			Scheme:     "http",
+			PathPrefix: "/alertmanager/",
+			APIVersion: config.AlertmanagerAPIVersionV2,
+		})
 
 		if settings.AlertManagerURL != "" {
-			conf, err := svc.parseAlertmanagerConfigFromURL(settings.AlertManagerURL)
+			u, err := url.Parse(settings.AlertManagerURL)
+			if err == nil && (u.Opaque != "" || u.Host == "") {
+				err = errors.Errorf("parsed incorrectly as %#v", u)
+			}
+
 			if err == nil {
-				cfg.AlertingConfig.AlertmanagerConfigs = append(cfg.AlertingConfig.AlertmanagerConfigs, conf)
+				var httpClientConfig config.HTTPClientConfig
+				if username := u.User.Username(); username != "" {
+					password, _ := u.User.Password()
+					httpClientConfig = config.HTTPClientConfig{
+						BasicAuth: &config.BasicAuth{
+							Username: u.User.Username(),
+							Password: password,
+						},
+					}
+				}
+
+				cfg.AlertingConfig.AlertmanagerConfigs = append(cfg.AlertingConfig.AlertmanagerConfigs, &config.AlertmanagerConfig{
+					ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+						StaticConfigs: []*config.Group{{
+							Targets: []string{u.Host},
+						}},
+					},
+					HTTPClientConfig: httpClientConfig,
+					Scheme:           u.Scheme,
+					PathPrefix:       u.Path,
+					APIVersion:       config.AlertmanagerAPIVersionV2,
+				})
 			} else {
 				svc.l.Errorf("Failed to parse Alert Manager URL %q: %s.", settings.AlertManagerURL, err)
 			}
@@ -378,42 +407,6 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 
 	b = append([]byte("# Managed by pmm-managed. DO NOT EDIT.\n---\n"), b...)
 	return b, nil
-}
-
-func (svc *Service) parseAlertmanagerConfigFromURL(s string) (*config.AlertmanagerConfig, error) {
-	u, err := url.Parse(s)
-	if err == nil && (u.Opaque != "" || u.Host == "") {
-		return nil, errors.Errorf("parsed incorrectly as %#v", u)
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	var httpClientConfig config.HTTPClientConfig
-	if username := u.User.Username(); username != "" {
-		password, _ := u.User.Password()
-		httpClientConfig = config.HTTPClientConfig{
-			BasicAuth: &config.BasicAuth{
-				Username: u.User.Username(),
-				Password: password,
-			},
-		}
-	}
-
-	conf := &config.AlertmanagerConfig{
-		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
-			StaticConfigs: []*config.Group{{
-				Targets: []string{u.Host},
-			}},
-		},
-		HTTPClientConfig: httpClientConfig,
-		Scheme:           u.Scheme,
-		PathPrefix:       u.Path,
-		APIVersion:       config.AlertmanagerAPIVersionV2,
-	}
-
-	return conf, nil
 }
 
 // saveConfigAndReload saves given Prometheus configuration to file and reloads Prometheus.
