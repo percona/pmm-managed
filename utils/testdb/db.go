@@ -45,6 +45,11 @@ func Open(tb testing.TB, setupFixtures models.SetupFixturesMode, migrationVersio
 
 	db, err = models.OpenDB("127.0.0.1:5432", testDatabase, username, password)
 	require.NoError(tb, err)
+	tb.Cleanup(func() {
+		// ignore error to let test close database by itself
+		_ = db.Close()
+	})
+
 	SetupDB(tb, db, setupFixtures, migrationVersion)
 	return db
 }
