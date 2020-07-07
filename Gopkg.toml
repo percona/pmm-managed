@@ -18,6 +18,10 @@ required = [
   name = "github.com/percona/pmm"
   branch = "PMM-2.0"
 
+[[constraint]]
+  name = "github.com/percona/promconfig"
+  branch = "PMM-5812-fix-relabeling"
+
 # to prevent unexpected downgrades; see https://github.com/percona/exporter_shared/releases/tag/v0.6.0
 [[constraint]]
   name = "github.com/percona/exporter_shared"
