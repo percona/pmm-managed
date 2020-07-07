@@ -28,7 +28,6 @@ import (
 	"github.com/percona/pmm/version"
 	promtest "github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
@@ -215,10 +214,7 @@ func TestStartChecks(t *testing.T) {
 			require.NoError(t, sqlDB.Close())
 		}()
 
-		var ar mockAlertRegistry
-		ar.On("RemovePrefix", mock.Anything, mock.Anything).Return()
-
-		s := New(nil, &ar, db)
+		s := New(nil, nil, db)
 		settings, err := models.GetSettings(db)
 		require.NoError(t, err)
 

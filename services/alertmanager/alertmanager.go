@@ -23,12 +23,12 @@ import (
 	"os"
 	"strings"
 	"syscall"
-	"time"
 
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/percona/pmm/api/alertmanager/amclient"
 	"github.com/percona/pmm/api/alertmanager/amclient/alert"
 	"github.com/percona/pmm/api/alertmanager/amclient/general"
+	"github.com/percona/pmm/api/alertmanager/ammodels"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/reform.v1"
@@ -37,21 +37,21 @@ import (
 const (
 	alertmanagerDataDir = "/srv/alertmanager/data"
 	prometheusDir       = "/srv/prometheus"
-	path                = "/srv/alertmanager/alertmanager.base.yml"
+	dirPerm             = os.FileMode(0775)
+
+	path = "/srv/alertmanager/alertmanager.base.yml"
 )
 
 // Service is responsible for interactions with Alertmanager.
 type Service struct {
 	db *reform.DB
-	r  *Registry
 	l  *logrus.Entry
 }
 
 // New creates new service.
-func New(db *reform.DB, alertsRegistry *Registry) *Service {
+func New(db *reform.DB) *Service {
 	return &Service{
 		db: db,
-		r:  alertsRegistry,
 		l:  logrus.WithField("component", "alertmanager"),
 	}
 }
@@ -64,54 +64,40 @@ func (svc *Service) Run(ctx context.Context) {
 	svc.createDataDir()
 	svc.generateBaseConfig()
 
-	t := time.NewTicker(svc.r.resendInterval)
-	defer t.Stop()
-
-	for {
-		svc.sendAlerts(ctx)
-
-		select {
-		case <-ctx.Done():
-			return
-		case <-t.C:
-			// nothing, continue for loop
-		}
-	}
+	// we don't have "configuration update loop" yet, so do nothing
+	<-ctx.Done()
 }
 
-// createDataDir creates Alertmanager directories if not exists in the persistent volume.
+// createDataDir creates Alertmanager directory and fixes permissions.
 func (svc *Service) createDataDir() {
-	// try to create Alertmanager data dir if not exists.
-	if err := os.MkdirAll(alertmanagerDataDir, 0775); err != nil {
+	// try to create Alertmanager data directory
+	if err := os.MkdirAll(alertmanagerDataDir, dirPerm); err != nil {
 		svc.l.Errorf("Cannot create datadir for Alertmanager %v.", err)
 		return
 	}
 
+	// check and fix directory permissions
 	alertmanagerDataDirStat, err := os.Stat(alertmanagerDataDir)
 	if err != nil {
 		svc.l.Errorf("Cannot get stat of %q: %v.", alertmanagerDataDir, err)
 		return
 	}
-
-	// Check and fix permissions.
-	if alertmanagerDataDirStat.Mode()&os.ModePerm != os.FileMode(0775) {
-		if err := os.Chmod(alertmanagerDataDir, 0775); err != nil {
+	if alertmanagerDataDirStat.Mode()&os.ModePerm != dirPerm {
+		if err := os.Chmod(alertmanagerDataDir, dirPerm); err != nil {
 			svc.l.Errorf("Cannot chmod datadir for Alertmanager %v.", err)
 		}
 	}
 
+	// use the same user and group as for prometheus directory
 	alertmanagerDataDirSysStat := alertmanagerDataDirStat.Sys().(*syscall.Stat_t)
 	aUID, aGID := int(alertmanagerDataDirSysStat.Uid), int(alertmanagerDataDirSysStat.Gid)
-
 	prometheusDirStat, err := os.Stat(prometheusDir)
 	if err != nil {
 		svc.l.Errorf("Cannot get stat of %q: %v.", prometheusDir, err)
 		return
 	}
-
 	prometheusDirSysStat := prometheusDirStat.Sys().(*syscall.Stat_t)
 	pUID, pGID := int(prometheusDirSysStat.Uid), int(prometheusDirSysStat.Gid)
-	// Chown user and group as Prometheus has if they are not same.
 	if aUID != pUID || aGID != pGID {
 		if err := os.Chown(alertmanagerDataDir, pUID, pGID); err != nil {
 			svc.l.Errorf("Cannot chown datadir for Alertmanager %v.", err)
@@ -144,9 +130,10 @@ receivers:
 	}
 }
 
-// sendAlerts sends alerts collected in the Registry.
-func (svc *Service) sendAlerts(ctx context.Context) {
-	alerts := svc.r.collect()
+// SendAlerts sends given alerts.
+//
+// The caller is responsible for calling this method ofthen.
+func (svc *Service) SendAlerts(ctx context.Context, alerts ammodels.PostableAlerts) {
 	if len(alerts) == 0 {
 		return
 	}

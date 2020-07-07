@@ -84,9 +84,10 @@ var defaultPublicKeys = []string{
 
 // Service is responsible for interactions with Percona Check service.
 type Service struct {
-	agentsRegistry agentsRegistry
-	alertsRegistry alertRegistry
-	db             *reform.DB
+	agentsRegistry      agentsRegistry
+	alertmanagerService alertmanagerService
+	db                  *reform.DB
+	alertsRegistry      *registry
 
 	l          *logrus.Entry
 	host       string
@@ -104,13 +105,14 @@ type Service struct {
 }
 
 // New returns Service with given PMM version.
-func New(agentsRegistry agentsRegistry, alertsRegistry alertRegistry, db *reform.DB) *Service {
+func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService, db *reform.DB) *Service {
 	l := logrus.WithField("component", "checks")
 
 	s := &Service{
-		agentsRegistry: agentsRegistry,
-		alertsRegistry: alertsRegistry,
-		db:             db,
+		agentsRegistry:      agentsRegistry,
+		alertmanagerService: alertmanagerService,
+		db:                  db,
+		alertsRegistry:      newRegistry(),
 
 		l:          l,
 		host:       defaultHost,
@@ -320,7 +322,7 @@ func (s *Service) executeChecks(ctx context.Context) {
 	alertsIDs = append(alertsIDs, mongoDBAlertsIDs...)
 
 	// removing old STT alerts except created during current run
-	s.alertsRegistry.RemovePrefix(alertsPrefix, sliceToSet(alertsIDs))
+	s.alertsRegistry.removePrefix(alertsPrefix, sliceToSet(alertsIDs))
 }
 
 // executeMySQLChecks runs MySQL checks for available MySQL services.
@@ -549,7 +551,7 @@ func (s *Service) createAlert(id, name string, target target, result *check.Resu
 	annotations["summary"] = result.Summary
 	annotations["description"] = result.Description
 
-	s.alertsRegistry.CreateAlert(id, labels, annotations, 0)
+	s.alertsRegistry.createAlert(id, labels, annotations, 0)
 }
 
 // target contains required info about check target.

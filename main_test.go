@@ -58,7 +58,6 @@ func TestImports(t *testing.T) {
 	for _, service := range []string{
 		"github.com/percona/pmm-managed/services/agents",
 		"github.com/percona/pmm-managed/services/alertmanager",
-		"github.com/percona/pmm-managed/services/checks",
 		"github.com/percona/pmm-managed/services/grafana",
 		"github.com/percona/pmm-managed/services/prometheus",
 		"github.com/percona/pmm-managed/services/qan",
@@ -76,10 +75,10 @@ func TestImports(t *testing.T) {
 	for _, service := range []string{
 		// those services should be independent too, but has some common code
 		// as converters, errors, ...
+		"github.com/percona/pmm-managed/services/checks",
 		"github.com/percona/pmm-managed/services/inventory",
 		"github.com/percona/pmm-managed/services/management",
 		"github.com/percona/pmm-managed/services/server",
-		"github.com/percona/pmm-managed/services/checks",
 	} {
 		constraints[service] = constraint{
 			blacklistPrefixes: []string{
