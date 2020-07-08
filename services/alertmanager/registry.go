@@ -29,7 +29,9 @@ import (
 
 const (
 	// Environment variable to overwrite resendInterval during testing
-	envResendInterval     = "PERCONA_TEST_ALERTMANAGER_RESEND_INTERVAL"
+	envResendInterval = "PERCONA_TEST_ALERTMANAGER_RESEND_INTERVAL"
+
+	// sync with API tests
 	resolveTimeoutFactor  = 3
 	defaultResendInterval = 2 * time.Second
 )
