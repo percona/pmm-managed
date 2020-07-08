@@ -34,9 +34,6 @@ const (
 	defaultResendInterval = 30 * time.Second
 )
 
-// for tests
-var now = time.Now
-
 // Registry stores alerts and delay information by IDs.
 type Registry struct {
 	rw             sync.RWMutex
@@ -44,6 +41,7 @@ type Registry struct {
 	times          map[string]time.Time
 	resendInterval time.Duration
 	alertTTL       time.Duration
+	nowF           func() time.Time // for tests
 }
 
 // NewRegistry creates a new Registry.
@@ -63,6 +61,7 @@ func NewRegistry() *Registry {
 		times:          make(map[string]time.Time),
 		resendInterval: resendInterval,
 		alertTTL:       resolveTimeoutFactor * resendInterval,
+		nowF:           time.Now,
 	}
 }
 
@@ -86,7 +85,7 @@ func (r *Registry) CreateAlert(id string, labels, annotations map[string]string,
 
 	r.alerts[id] = alert
 	if r.times[id].IsZero() {
-		r.times[id] = now().Add(delayFor)
+		r.times[id] = r.nowF().Add(delayFor)
 	}
 }
 
@@ -112,7 +111,7 @@ func (r *Registry) collect() ammodels.PostableAlerts {
 	defer r.rw.RUnlock()
 
 	var res ammodels.PostableAlerts
-	now := now()
+	now := r.nowF()
 	for id, t := range r.times {
 		if t.Before(now) {
 			alert := r.alerts[id]

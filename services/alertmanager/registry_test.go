@@ -27,16 +27,12 @@ import (
 )
 
 func TestRegistry(t *testing.T) {
-	nowValue, origNow := now(), now
-	now = func() time.Time {
-		return nowValue
-	}
-	defer func() {
-		now = origNow
-	}()
-
 	t.Run("DelayFor", func(t *testing.T) {
 		r := NewRegistry()
+
+		nowValue := time.Now()
+		r.nowF = func() time.Time { return nowValue }
+
 		id := "1234567890"
 		labels := map[string]string{"label": "demo"}
 		annotations := map[string]string{"annotation": "test"}
