@@ -31,7 +31,7 @@ const (
 	// Environment variable to overwrite resendInterval during testing
 	envResendInterval     = "PERCONA_TEST_ALERTMANAGER_RESEND_INTERVAL"
 	resolveTimeoutFactor  = 3
-	defaultResendInterval = 5 * time.Second
+	defaultResendInterval = 2 * time.Second
 )
 
 // Registry stores alerts and delay information by IDs.
