@@ -37,7 +37,7 @@ const (
 // Registry stores alerts and delay information by IDs.
 type Registry struct {
 	rw             sync.RWMutex
-	alerts         map[string]*ammodels.PostableAlert
+	alerts         map[string]ammodels.PostableAlert
 	times          map[string]time.Time
 	resendInterval time.Duration
 	alertTTL       time.Duration
@@ -57,7 +57,7 @@ func NewRegistry() *Registry {
 	}
 
 	return &Registry{
-		alerts:         make(map[string]*ammodels.PostableAlert),
+		alerts:         make(map[string]ammodels.PostableAlert),
 		times:          make(map[string]time.Time),
 		resendInterval: resendInterval,
 		alertTTL:       resolveTimeoutFactor * resendInterval,
@@ -70,7 +70,7 @@ func NewRegistry() *Registry {
 // state after delayFor interval. This is similar to `for` field of Prometheus alerting rule:
 // https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/
 func (r *Registry) CreateAlert(id string, labels, annotations map[string]string, delayFor time.Duration) {
-	alert := &ammodels.PostableAlert{
+	alert := ammodels.PostableAlert{
 		Alert: ammodels.Alert{
 			// GeneratorURL: "TODO",
 			Labels: labels,
@@ -116,7 +116,7 @@ func (r *Registry) collect() ammodels.PostableAlerts {
 		if t.Before(now) {
 			alert := r.alerts[id]
 			alert.EndsAt = strfmt.DateTime(now.Add(r.alertTTL))
-			res = append(res, alert)
+			res = append(res, &alert)
 		}
 	}
 	return res
