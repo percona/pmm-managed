@@ -384,7 +384,7 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "update-deps"
+  branch = "PMM-6251-update-deps"
   digest = "1:12e60c46506a5f5bc8e0ceaa982b9ecd305f72bc2fb0a8aa0aba4dee242e9af3"
   name = "github.com/percona/pmm"
   packages = [
