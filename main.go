@@ -62,6 +62,7 @@ import (
 	"github.com/percona/pmm-managed/services/agents"
 	agentgrpc "github.com/percona/pmm-managed/services/agents/grpc"
 	"github.com/percona/pmm-managed/services/alertmanager"
+	"github.com/percona/pmm-managed/services/auth"
 	"github.com/percona/pmm-managed/services/checks"
 	"github.com/percona/pmm-managed/services/grafana"
 	"github.com/percona/pmm-managed/services/inventory"
@@ -538,12 +539,15 @@ func main() {
 	checksService := checks.New(agentsRegistry, alertsRegistry, db)
 	prom.MustRegister(checksService)
 
+	authService := auth.New(db)
+
 	serverParams := &server.Params{
 		DB:                      db,
 		Prometheus:              prometheus,
 		Alertmanager:            alertmanager,
 		Supervisord:             supervisord,
 		TelemetryService:        telemetry,
+		AuthService:             authService,
 		AwsInstanceChecker:      awsInstanceChecker,
 		GrafanaClient:           grafanaClient,
 		PrometheusAlertingRules: alertingRules,

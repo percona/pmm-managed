@@ -71,6 +71,8 @@ type ChangeSettingsParams struct {
 	EnableSTT bool
 	// Disable Security Threat Tool
 	DisableSTT bool
+
+	SessionID string
 }
 
 // UpdateSettings updates only non-zero, non-empty values.
@@ -127,6 +129,10 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 	}
 	if params.EnableSTT {
 		settings.SaaS.STTEnabled = true
+	}
+
+	if params.SessionID != "" {
+		settings.SessionID = params.SessionID
 	}
 
 	err = SaveSettings(q, settings)

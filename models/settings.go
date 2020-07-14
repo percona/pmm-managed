@@ -54,6 +54,8 @@ type Settings struct {
 		// Security Threat Tool enabled
 		STTEnabled bool `json:"stt_enabled"`
 	} `json:"sass"`
+
+	SessionID string `json:"session_id"`
 }
 
 // fillDefaults sets zero values to their default values.

@@ -58,6 +58,7 @@ type Server struct {
 	alertmanager            alertmanagerService
 	supervisord             supervisordService
 	telemetryService        telemetryService
+	authService             authService
 	awsInstanceChecker      *AWSInstanceChecker
 	grafanaClient           grafanaClient
 	l                       *logrus.Entry
@@ -83,6 +84,7 @@ type Params struct {
 	PrometheusAlertingRules prometheusAlertingRules
 	Supervisord             supervisordService
 	TelemetryService        telemetryService
+	AuthService             authService
 	AwsInstanceChecker      *AWSInstanceChecker
 	GrafanaClient           grafanaClient
 }
@@ -102,6 +104,7 @@ func NewServer(params *Params) (*Server, error) {
 		prometheusAlertingRules: params.PrometheusAlertingRules,
 		supervisord:             params.Supervisord,
 		telemetryService:        params.TelemetryService,
+		authService:             params.AuthService,
 		awsInstanceChecker:      params.AwsInstanceChecker,
 		grafanaClient:           params.GrafanaClient,
 		l:                       logrus.WithField("component", "server"),
@@ -606,6 +609,33 @@ func (s *Server) AWSInstanceCheck(ctx context.Context, req *serverpb.AWSInstance
 		return nil, err
 	}
 	return &serverpb.AWSInstanceCheckResponse{}, nil
+}
+
+// SignUp creates new user with given email and password.
+func (s *Server) SignUp(ctx context.Context, request *serverpb.SignUpRequest) (*serverpb.SignUpResponse, error) {
+	if err := s.authService.SignUp(ctx, request.Email, request.Password); err != nil {
+		return nil, err
+	}
+
+	return &serverpb.SignUpResponse{}, nil
+}
+
+// SignIn creates new session for user with given email and password.
+func (s *Server) SignIn(ctx context.Context, request *serverpb.SignInRequest) (*serverpb.SignInResponse, error) {
+	if err := s.authService.SignIn(ctx, request.Email, request.Password); err != nil {
+		return nil, err
+	}
+
+	return &serverpb.SignInResponse{}, nil
+}
+
+// RefreshSession resets session timeout.
+func (s *Server) RefreshSession(ctx context.Context, request *serverpb.RefreshSessionRequest) (*serverpb.RefreshSessionResponse, error) {
+	if err := s.authService.RefreshSession(ctx); err != nil {
+		return nil, err
+	}
+
+	return &serverpb.RefreshSessionResponse{}, nil
 }
 
 // check interfaces
