@@ -219,10 +219,10 @@ func (s *Service) StartChecks(ctx context.Context) error {
 		defer t.Stop()
 
 		for {
-			s.alertmanagerService.SendAlerts(nCtx, s.alertsRegistry.collect())
+			s.alertmanagerService.SendAlerts(ctx, s.alertsRegistry.collect())
 
 			select {
-			case <-nCtx.Done():
+			case <-ctx.Done():
 				return
 			case <-t.C:
 				// nothing, continue for loop
