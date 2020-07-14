@@ -23,7 +23,7 @@ import (
 )
 
 //go:generate mockery -name=agentsRegistry -case=snake -inpkg -testonly
-//go:generate mockery -name=alertmanagerService-case=snake -inpkg -testonly
+//go:generate mockery -name=alertmanagerService -case=snake -inpkg -testonly
 
 // agentsRegistry is a subset of methods of agents.Registry used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
