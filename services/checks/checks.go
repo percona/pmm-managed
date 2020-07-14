@@ -214,7 +214,21 @@ func (s *Service) StartChecks(ctx context.Context) error {
 	s.collectChecks(nCtx)
 	s.executeChecks(nCtx)
 
-	go s.alertmanagerService.SendAlerts(nCtx, s.alertsRegistry.collect())
+	go func() {
+		t := time.NewTicker(s.alertsRegistry.resendInterval)
+		defer t.Stop()
+
+		for {
+			s.alertmanagerService.SendAlerts(nCtx, s.alertsRegistry.collect())
+
+			select {
+			case <-nCtx.Done():
+				return
+			case <-t.C:
+				// nothing, continue for loop
+			}
+		}
+	}()
 
 	return nil
 }
