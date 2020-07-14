@@ -45,11 +45,14 @@ env:
   matrix:
     # what we used for the latest PMM release
     - GO_VERSION=1.14.x
+
     # the latest HEAD
-    - GO_VERSION=tip TEST_GROUP=canFail
+    - GO_VERSION=tip
 
 matrix:
   fast_finish: true
+  allow_failures:
+    - env: GO_VERSION=tip
 
 before_install:
   - env
