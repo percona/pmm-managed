@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package alertmanager
+package checks
 
 import (
 	"os"
@@ -29,15 +29,15 @@ import (
 
 const (
 	// Environment variable to overwrite resendInterval during testing
-	envResendInterval = "PERCONA_TEST_ALERTMANAGER_RESEND_INTERVAL"
+	envResendInterval = "PERCONA_TEST_CHECKS_RESEND_INTERVAL"
 
 	// sync with API tests
 	resolveTimeoutFactor  = 3
 	defaultResendInterval = 2 * time.Second
 )
 
-// Registry stores alerts and delay information by IDs.
-type Registry struct {
+// registry stores alerts and delay information by IDs.
+type registry struct {
 	rw             sync.RWMutex
 	alerts         map[string]ammodels.PostableAlert
 	times          map[string]time.Time
@@ -46,9 +46,9 @@ type Registry struct {
 	nowF           func() time.Time // for tests
 }
 
-// NewRegistry creates a new Registry.
-func NewRegistry() *Registry {
-	l := logrus.WithField("component", "alertmanager")
+// newRegistry creates a new registry.
+func newRegistry() *registry {
+	l := logrus.WithField("component", "checks/registry")
 
 	var resendInterval time.Duration
 	if d, err := time.ParseDuration(os.Getenv(envResendInterval)); err == nil && d > 0 {
@@ -58,7 +58,7 @@ func NewRegistry() *Registry {
 		resendInterval = defaultResendInterval
 	}
 
-	return &Registry{
+	return &registry{
 		alerts:         make(map[string]ammodels.PostableAlert),
 		times:          make(map[string]time.Time),
 		resendInterval: resendInterval,
@@ -67,18 +67,18 @@ func NewRegistry() *Registry {
 	}
 }
 
-// CreateAlert creates alert from given AlertParams and adds or replaces alert with given ID in registry.
+// createAlert creates alert from given AlertParams and adds or replaces alert with given ID in registry.
 // If that ID wasn't present before, alert is added in the pending state. It we be transitioned to the firing
 // state after delayFor interval. This is similar to `for` field of Prometheus alerting rule:
 // https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/
-func (r *Registry) CreateAlert(id string, labels, annotations map[string]string, delayFor time.Duration) {
+func (r *registry) createAlert(id string, labels, annotations map[string]string, delayFor time.Duration) {
 	alert := ammodels.PostableAlert{
 		Alert: ammodels.Alert{
 			// GeneratorURL: "TODO",
 			Labels: labels,
 		},
 
-		// StartsAt and EndAt can't be added there without changes in Registry
+		// StartsAt and EndAt can't be added there without changes in registry
 		Annotations: annotations,
 	}
 
@@ -91,8 +91,8 @@ func (r *Registry) CreateAlert(id string, labels, annotations map[string]string,
 	}
 }
 
-// RemovePrefix removes all alerts with given ID prefix except a given list of IDs.
-func (r *Registry) RemovePrefix(prefix string, keepIDs map[string]struct{}) {
+// removePrefix removes all alerts with given ID prefix except a given list of IDs.
+func (r *registry) removePrefix(prefix string, keepIDs map[string]struct{}) {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
@@ -108,7 +108,7 @@ func (r *Registry) RemovePrefix(prefix string, keepIDs map[string]struct{}) {
 }
 
 // collect returns all firing alerts.
-func (r *Registry) collect() ammodels.PostableAlerts {
+func (r *registry) collect() ammodels.PostableAlerts {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 

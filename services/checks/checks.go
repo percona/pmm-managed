@@ -84,9 +84,10 @@ var defaultPublicKeys = []string{
 
 // Service is responsible for interactions with Percona Check service.
 type Service struct {
-	agentsRegistry agentsRegistry
-	alertsRegistry alertRegistry
-	db             *reform.DB
+	agentsRegistry      agentsRegistry
+	alertmanagerService alertmanagerService
+	db                  *reform.DB
+	alertsRegistry      *registry
 
 	l          *logrus.Entry
 	host       string
@@ -104,13 +105,14 @@ type Service struct {
 }
 
 // New returns Service with given PMM version.
-func New(agentsRegistry agentsRegistry, alertsRegistry alertRegistry, db *reform.DB) *Service {
+func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService, db *reform.DB) *Service {
 	l := logrus.WithField("component", "checks")
 
 	s := &Service{
-		agentsRegistry: agentsRegistry,
-		alertsRegistry: alertsRegistry,
-		db:             db,
+		agentsRegistry:      agentsRegistry,
+		alertmanagerService: alertmanagerService,
+		db:                  db,
+		alertsRegistry:      newRegistry(),
 
 		l:          l,
 		host:       defaultHost,
@@ -211,6 +213,9 @@ func (s *Service) StartChecks(ctx context.Context) error {
 
 	s.collectChecks(nCtx)
 	s.executeChecks(nCtx)
+
+	go s.alertmanagerService.SendAlerts(nCtx, s.alertsRegistry.collect())
+
 	return nil
 }
 
@@ -308,26 +313,32 @@ func (s *Service) minPMMAgentVersion(t check.Type) *version.Parsed {
 func (s *Service) executeChecks(ctx context.Context) {
 	s.l.Info("Executing checks...")
 
-	var alertsIDs []string
+	var checkResults []sttCheckResult
 
 	mySQLAlertsIDs := s.executeMySQLChecks(ctx)
-	alertsIDs = append(alertsIDs, mySQLAlertsIDs...)
+	checkResults = append(checkResults, mySQLAlertsIDs...)
 
 	postgreSQLAlertsIDs := s.executePostgreSQLChecks(ctx)
-	alertsIDs = append(alertsIDs, postgreSQLAlertsIDs...)
+	checkResults = append(checkResults, postgreSQLAlertsIDs...)
 
 	mongoDBAlertsIDs := s.executeMongoDBChecks(ctx)
-	alertsIDs = append(alertsIDs, mongoDBAlertsIDs...)
+	checkResults = append(checkResults, mongoDBAlertsIDs...)
+
+	var alertsIDs []string
+	for _, result := range checkResults {
+		alertsIDs = append(alertsIDs, result.alertID)
+		s.createAlert(result.alertID, result.checkName, result.target, &result.result)
+	}
 
 	// removing old STT alerts except created during current run
-	s.alertsRegistry.RemovePrefix(alertsPrefix, sliceToSet(alertsIDs))
+	s.alertsRegistry.removePrefix(alertsPrefix, sliceToSet(alertsIDs))
 }
 
 // executeMySQLChecks runs MySQL checks for available MySQL services.
-func (s *Service) executeMySQLChecks(ctx context.Context) []string {
+func (s *Service) executeMySQLChecks(ctx context.Context) []sttCheckResult {
 	checks := s.getMySQLChecks()
 
-	var res []string
+	var res []sttCheckResult
 	for _, c := range checks {
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
 		targets, err := s.findTargets(models.MySQLServiceType, pmmAgentVersion)
@@ -376,10 +387,10 @@ func (s *Service) executeMySQLChecks(ctx context.Context) []string {
 }
 
 // executePostgreSQLChecks runs PostgreSQL checks for available PostgreSQL services.
-func (s *Service) executePostgreSQLChecks(ctx context.Context) []string {
+func (s *Service) executePostgreSQLChecks(ctx context.Context) []sttCheckResult {
 	checks := s.getPostgreSQLChecks()
 
-	var res []string
+	var res []sttCheckResult
 	for _, c := range checks {
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
 		targets, err := s.findTargets(models.PostgreSQLServiceType, pmmAgentVersion)
@@ -428,10 +439,10 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context) []string {
 }
 
 // executeMongoDBChecks runs MongoDB checks for available MongoDB services.
-func (s *Service) executeMongoDBChecks(ctx context.Context) []string {
+func (s *Service) executeMongoDBChecks(ctx context.Context) []sttCheckResult {
 	checks := s.getMongoDBChecks()
 
-	var res []string
+	var res []sttCheckResult
 	for _, c := range checks {
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
 		targets, err := s.findTargets(models.MongoDBServiceType, pmmAgentVersion)
@@ -485,7 +496,14 @@ func (s *Service) executeMongoDBChecks(ctx context.Context) []string {
 	return res
 }
 
-func (s *Service) processResults(ctx context.Context, check check.Check, target target, resID string) ([]string, error) {
+type sttCheckResult struct {
+	checkName string
+	target    target
+	result    check.Result
+	alertID   string
+}
+
+func (s *Service) processResults(ctx context.Context, check check.Check, target target, resID string) ([]sttCheckResult, error) {
 	nCtx, cancel := context.WithTimeout(ctx, resultTimeout)
 	r, err := s.waitForResult(nCtx, resID)
 	cancel()
@@ -516,14 +534,19 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 	l.Infof("Check script returned %d results.", len(results))
 	l.Debugf("Results: %+v.", results)
 
-	alertsIDs := make([]string, len(results))
+	checkResults := make([]sttCheckResult, len(results))
 	for i, result := range results {
 		id := alertsPrefix + hashID(target.serviceID+"/"+result.Summary)
-		s.createAlert(id, check.Name, target, &result)
-		alertsIDs[i] = id
+
+		checkResults[i] = sttCheckResult{
+			checkName: check.Name,
+			target:    target,
+			result:    result,
+			alertID:   id,
+		}
 	}
 
-	return alertsIDs, nil
+	return checkResults, nil
 }
 
 // non-cryptographic hash
@@ -549,7 +572,7 @@ func (s *Service) createAlert(id, name string, target target, result *check.Resu
 	annotations["summary"] = result.Summary
 	annotations["description"] = result.Description
 
-	s.alertsRegistry.CreateAlert(id, labels, annotations, 0)
+	s.alertsRegistry.createAlert(id, labels, annotations, 0)
 }
 
 // target contains required info about check target.

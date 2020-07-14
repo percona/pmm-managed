@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package alertmanager
+package checks
 
 import (
 	"testing"
@@ -28,7 +28,7 @@ import (
 
 func TestRegistry(t *testing.T) {
 	t.Run("DelayFor", func(t *testing.T) {
-		r := NewRegistry()
+		r := newRegistry()
 
 		nowValue := time.Now()
 		r.nowF = func() time.Time { return nowValue }
@@ -37,7 +37,7 @@ func TestRegistry(t *testing.T) {
 		labels := map[string]string{"label": "demo"}
 		annotations := map[string]string{"annotation": "test"}
 
-		r.CreateAlert(id, labels, annotations, time.Minute)
+		r.createAlert(id, labels, annotations, time.Minute)
 		assert.Empty(t, r.collect())
 
 		// 1 second before
