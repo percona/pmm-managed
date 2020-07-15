@@ -114,6 +114,17 @@
   version = "v1.0.1"
 
 [[projects]]
+  digest = "1:3d407aad561cc061f31acbafd2236ab70c7a570cb0b1e4ce8c921cf672a0fd17"
+  name = "github.com/brianvoe/gofakeit"
+  packages = [
+    ".",
+    "data",
+  ]
+  pruneopts = "NUT"
+  revision = "19b40d7d6241163eba8b06ddec1041a36db06c54"
+  version = "v3.20.2"
+
+[[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -774,6 +785,7 @@
     "github.com/aws/aws-sdk-go/aws/endpoints",
     "github.com/aws/aws-sdk-go/aws/session",
     "github.com/aws/aws-sdk-go/service/rds",
+    "github.com/brianvoe/gofakeit",
     "github.com/go-openapi/runtime/client",
     "github.com/go-openapi/strfmt",
     "github.com/go-sql-driver/mysql",
