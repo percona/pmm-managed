@@ -338,7 +338,7 @@ func (s *Service) executeChecks(ctx context.Context) {
 	mongoDBAlertsIDs := s.executeMongoDBChecks(ctx)
 	checkResults = append(checkResults, mongoDBAlertsIDs...)
 
-	var alertsIDs []string
+	alertsIDs := make([]string, len(checkResults))
 	for _, result := range checkResults {
 		alertsIDs = append(alertsIDs, result.alertID)
 		s.createAlert(result.alertID, result.checkName, result.target, &result.result)
@@ -385,15 +385,15 @@ func (s *Service) executeMySQLChecks(ctx context.Context) []sttCheckResult {
 				continue
 			}
 
-			alerts, err := s.processResults(ctx, c, target, r.ID)
+			checkResults, err := s.processResults(ctx, c, target, r.ID)
 			if err != nil {
 				s.l.Warnf("Failed to process action result: %s.", err)
 				continue
 			}
 
 			s.mScriptsExecuted.WithLabelValues(string(models.MySQLServiceType)).Inc()
-			s.mAlertsGenerated.WithLabelValues(string(models.MySQLServiceType), string(c.Type)).Add(float64(len(alerts)))
-			res = append(res, alerts...)
+			s.mAlertsGenerated.WithLabelValues(string(models.MySQLServiceType), string(c.Type)).Add(float64(len(checkResults)))
+			res = append(res, checkResults...)
 		}
 	}
 
@@ -437,15 +437,15 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context) []sttCheckResult 
 				continue
 			}
 
-			alerts, err := s.processResults(ctx, c, target, r.ID)
+			checkResults, err := s.processResults(ctx, c, target, r.ID)
 			if err != nil {
 				s.l.Warnf("Failed to process action result: %s", err)
 				continue
 			}
 
 			s.mScriptsExecuted.WithLabelValues(string(models.PostgreSQLServiceType)).Inc()
-			s.mAlertsGenerated.WithLabelValues(string(models.PostgreSQLServiceType), string(c.Type)).Add(float64(len(alerts)))
-			res = append(res, alerts...)
+			s.mAlertsGenerated.WithLabelValues(string(models.PostgreSQLServiceType), string(c.Type)).Add(float64(len(checkResults)))
+			res = append(res, checkResults...)
 		}
 	}
 
@@ -495,15 +495,15 @@ func (s *Service) executeMongoDBChecks(ctx context.Context) []sttCheckResult {
 				continue
 			}
 
-			alerts, err := s.processResults(ctx, c, target, r.ID)
+			checkResults, err := s.processResults(ctx, c, target, r.ID)
 			if err != nil {
 				s.l.Warnf("Failed to process action result: %s", err)
 				continue
 			}
 
 			s.mScriptsExecuted.WithLabelValues(string(models.MongoDBServiceType)).Inc()
-			s.mAlertsGenerated.WithLabelValues(string(models.MongoDBServiceType), string(c.Type)).Add(float64(len(alerts)))
-			res = append(res, alerts...)
+			s.mAlertsGenerated.WithLabelValues(string(models.MongoDBServiceType), string(c.Type)).Add(float64(len(checkResults)))
+			res = append(res, checkResults...)
 		}
 	}
 
