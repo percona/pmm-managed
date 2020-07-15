@@ -629,15 +629,6 @@ func (s *Server) SignIn(ctx context.Context, request *serverpb.SignInRequest) (*
 	return &serverpb.SignInResponse{}, nil
 }
 
-// RefreshSession resets session timeout.
-func (s *Server) RefreshSession(ctx context.Context, request *serverpb.RefreshSessionRequest) (*serverpb.RefreshSessionResponse, error) {
-	if err := s.authService.RefreshSession(ctx); err != nil {
-		return nil, err
-	}
-
-	return &serverpb.RefreshSessionResponse{}, nil
-}
-
 // check interfaces
 var (
 	_ serverpb.ServerServer = (*Server)(nil)

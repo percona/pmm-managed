@@ -387,7 +387,7 @@
 
 [[projects]]
   branch = "SAAS-175-auth-api"
-  digest = "1:4414194e5eadc6a4b69a95a74e6373698569046267f2fcebb369ede12a2a7a32"
+  digest = "1:49c44c80a51a8afde0d5312268cb336fd93228e702b65c9416717f6aba022043"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -408,7 +408,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "fe97b2bcef3e7347192efd78b87f06654d87a801"
+  revision = "c25c053b31f05c7af7aadd817640f67efbacaea3"
 
 [[projects]]
   digest = "1:dbee7dc52291bb149388085eeb20561d4cb3c2044e0fa6ffa8d342c6b305f4bf"
