@@ -19,6 +19,7 @@ package auth
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"gopkg.in/reform.v1"
@@ -65,4 +66,8 @@ func TestAuth(t *testing.T) {
 	// RefreshSession test
 	err = s.RefreshSession(context.Background())
 	require.NoError(t, err)
+}
+
+func init() {
+	gofakeit.Seed(time.Now().UnixNano())
 }
