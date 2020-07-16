@@ -21,11 +21,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brianvoe/gofakeit"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
-
-	"github.com/brianvoe/gofakeit"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/testdb"
