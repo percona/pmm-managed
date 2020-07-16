@@ -329,23 +329,19 @@ func (s *Service) executeChecks(ctx context.Context) {
 
 	var checkResults []sttCheckResult
 
-	mySQLAlertsIDs := s.executeMySQLChecks(ctx)
-	checkResults = append(checkResults, mySQLAlertsIDs...)
+	mySQLCheckResults := s.executeMySQLChecks(ctx)
+	checkResults = append(checkResults, mySQLCheckResults...)
 
-	postgreSQLAlertsIDs := s.executePostgreSQLChecks(ctx)
-	checkResults = append(checkResults, postgreSQLAlertsIDs...)
+	postgreSQLCheckResults := s.executePostgreSQLChecks(ctx)
+	checkResults = append(checkResults, postgreSQLCheckResults...)
 
-	mongoDBAlertsIDs := s.executeMongoDBChecks(ctx)
-	checkResults = append(checkResults, mongoDBAlertsIDs...)
+	mongoDBCheckResults := s.executeMongoDBChecks(ctx)
+	checkResults = append(checkResults, mongoDBCheckResults...)
 
-	alertsIDs := make([]string, len(checkResults))
+	s.alertsRegistry.clean()
 	for _, result := range checkResults {
-		alertsIDs = append(alertsIDs, result.alertID)
 		s.createAlert(result.alertID, result.checkName, result.target, &result.result)
 	}
-
-	// removing old STT alerts except created during current run
-	s.alertsRegistry.removePrefix(alertsPrefix, sliceToSet(alertsIDs))
 }
 
 // executeMySQLChecks runs MySQL checks for available MySQL services.

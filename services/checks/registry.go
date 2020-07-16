@@ -18,7 +18,6 @@ package checks
 
 import (
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -92,18 +91,13 @@ func (r *registry) createAlert(id string, labels, annotations map[string]string,
 }
 
 // removePrefix removes all alerts with given ID prefix except a given list of IDs.
-func (r *registry) removePrefix(prefix string, keepIDs map[string]struct{}) {
+func (r *registry) clean() {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
 	for id := range r.alerts {
-		if _, ok := keepIDs[id]; ok {
-			continue
-		}
-		if strings.HasPrefix(id, prefix) {
-			delete(r.alerts, id)
-			delete(r.times, id)
-		}
+		delete(r.alerts, id)
+		delete(r.times, id)
 	}
 }
 
