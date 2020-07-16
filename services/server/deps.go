@@ -90,5 +90,4 @@ type telemetryService interface {
 type authService interface {
 	SignUp(ctx context.Context, email, password string) error
 	SignIn(ctx context.Context, email, password string) error
-	RefreshSession(ctx context.Context) error
 }
