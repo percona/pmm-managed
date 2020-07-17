@@ -187,11 +187,16 @@ func (s *Service) Run(ctx context.Context) {
 		default:
 			s.l.Error(err)
 		}
+		// launch resend alerts loop
+		resendCtx, resendCancel := context.WithCancel(context.Background())
+		s.resendAlerts(resendCtx)
 
 		select {
 		case <-ticker.C:
-			// continue with next loop iteration
+			// continue with next loop iteration and cleanup resendAlerts goroutine
+			resendCancel()
 		case <-ctx.Done():
+			resendCancel()
 			return
 		}
 	}
