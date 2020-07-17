@@ -342,7 +342,7 @@ func (s *Service) executeChecks(ctx context.Context) {
 
 	s.alertsRegistry.clean()
 	for _, result := range checkResults {
-		s.createAlert(result.alertID, result.checkName, result.target, &result.result)
+		s.createAlert(result.checkName, result.target, &result.result)
 	}
 }
 
@@ -512,7 +512,6 @@ type sttCheckResult struct {
 	checkName string
 	target    target
 	result    check.Result
-	alertID   string
 }
 
 func (s *Service) processResults(ctx context.Context, check check.Check, target target, resID string) ([]sttCheckResult, error) {
@@ -548,13 +547,10 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 
 	checkResults := make([]sttCheckResult, len(results))
 	for i, result := range results {
-		id := alertsPrefix + hashID(target.serviceID+"/"+result.Summary)
-
 		checkResults[i] = sttCheckResult{
 			checkName: check.Name,
 			target:    target,
 			result:    result,
-			alertID:   id,
 		}
 	}
 
@@ -567,7 +563,7 @@ func hashID(s string) string {
 	return hex.EncodeToString(data[:])
 }
 
-func (s *Service) createAlert(id, name string, target target, result *check.Result) {
+func (s *Service) createAlert(name string, target target, result *check.Result) {
 	labels := make(map[string]string, len(target.labels)+len(result.Labels)+4)
 	annotations := make(map[string]string, 2)
 	for k, v := range target.labels {
@@ -576,6 +572,9 @@ func (s *Service) createAlert(id, name string, target target, result *check.Resu
 	for k, v := range result.Labels {
 		labels[k] = v
 	}
+
+	id := alertsPrefix + hashID(target.serviceID+"/"+result.Summary)
+
 	labels[model.AlertNameLabel] = name
 	labels["severity"] = result.Severity.String()
 	labels["stt_check"] = "1"
