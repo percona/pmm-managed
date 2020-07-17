@@ -67,10 +67,7 @@ func newRegistry() *registry {
 }
 
 // createAlert creates alert from given AlertParams and adds or replaces alert with given ID in registry.
-// If that ID wasn't present before, alert is added in the pending state. It we be transitioned to the firing
-// state after delayFor interval. This is similar to `for` field of Prometheus alerting rule:
-// https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/
-func (r *registry) createAlert(id string, labels, annotations map[string]string, delayFor time.Duration) {
+func (r *registry) createAlert(id string, labels, annotations map[string]string) {
 	alert := ammodels.PostableAlert{
 		Alert: ammodels.Alert{
 			// GeneratorURL: "TODO",
@@ -86,19 +83,17 @@ func (r *registry) createAlert(id string, labels, annotations map[string]string,
 
 	r.alerts[id] = alert
 	if r.times[id].IsZero() {
-		r.times[id] = r.nowF().Add(delayFor)
+		r.times[id] = r.nowF()
 	}
 }
 
-// removePrefix removes all alerts with given ID prefix except a given list of IDs.
+// clean clears all alerts from the registry
 func (r *registry) clean() {
 	r.rw.Lock()
 	defer r.rw.Unlock()
+	r.alerts = make(map[string]ammodels.PostableAlert)
+	r.times = make(map[string]time.Time)
 
-	for id := range r.alerts {
-		delete(r.alerts, id)
-		delete(r.times, id)
-	}
 }
 
 // collect returns all firing alerts.

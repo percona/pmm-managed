@@ -39,7 +39,7 @@ const (
 	prometheusDir       = "/srv/prometheus"
 	dirPerm             = os.FileMode(0775)
 
-	path = "/srv/alertmanager/alertmanager.base.yml"
+	alertmanagerBaseConfigPath = "/srv/alertmanager/alertmanager.base.yml"
 )
 
 // Service is responsible for interactions with Alertmanager.
@@ -112,8 +112,8 @@ func (svc *Service) createDataDir() {
 // TODO That's a temporary measure until we start generating /etc/alertmanager.yml
 // using /srv/alertmanager/alertmanager.base.yml as a base. See supervisord config.
 func (svc *Service) generateBaseConfig() {
-	_, err := os.Stat(path)
-	svc.l.Debugf("%s status: %v", path, err)
+	_, err := os.Stat(alertmanagerBaseConfigPath)
+	svc.l.Debugf("%s status: %v", alertmanagerBaseConfigPath, err)
 
 	if os.IsNotExist(err) {
 		defaultBase := strings.TrimSpace(`
@@ -127,12 +127,13 @@ route:
 receivers:
   - name: empty
 `) + "\n"
-		err = ioutil.WriteFile(path, []byte(defaultBase), 0644) //nolint:gosec
-		svc.l.Infof("%s created: %v.", path, err)
+		err = ioutil.WriteFile(alertmanagerBaseConfigPath, []byte(defaultBase), 0644) //nolint:gosec
+		svc.l.Infof("%s created: %v.", alertmanagerBaseConfigPath, err)
 	}
 }
 
-// SendAlerts sends given alerts
+// SendAlerts sends given alerts. It is the caller's responsibility
+// to call this method every now and then.
 func (svc *Service) SendAlerts(ctx context.Context, alerts ammodels.PostableAlerts) {
 	if len(alerts) == 0 {
 		return

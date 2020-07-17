@@ -213,14 +213,18 @@ func (s *Service) StartChecks(ctx context.Context) error {
 
 	s.collectChecks(nCtx)
 	s.executeChecks(nCtx)
+	s.alertmanagerService.SendAlerts(ctx, s.alertsRegistry.collect())
 
+	return nil
+}
+
+// resendAlerts can be used for manually triggerring a SendAlerts loop
+func (s *Service) resendAlerts(ctx context.Context) {
 	go func() {
 		t := time.NewTicker(s.alertsRegistry.resendInterval)
 		defer t.Stop()
 
 		for {
-			s.alertmanagerService.SendAlerts(ctx, s.alertsRegistry.collect())
-
 			select {
 			case <-ctx.Done():
 				return
@@ -229,8 +233,6 @@ func (s *Service) StartChecks(ctx context.Context) error {
 			}
 		}
 	}()
-
-	return nil
 }
 
 // getMySQLChecks returns available MySQL checks.
@@ -582,7 +584,7 @@ func (s *Service) createAlert(id, name string, target target, result *check.Resu
 	annotations["summary"] = result.Summary
 	annotations["description"] = result.Description
 
-	s.alertsRegistry.createAlert(id, labels, annotations, 0)
+	s.alertsRegistry.createAlert(id, labels, annotations)
 }
 
 // target contains required info about check target.

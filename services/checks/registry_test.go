@@ -37,15 +37,7 @@ func TestRegistry(t *testing.T) {
 		labels := map[string]string{"label": "demo"}
 		annotations := map[string]string{"annotation": "test"}
 
-		r.createAlert(id, labels, annotations, time.Minute)
-		assert.Empty(t, r.collect())
-
-		// 1 second before
-		nowValue = nowValue.Add(59 * time.Second)
-		assert.Empty(t, r.collect())
-
-		// exactly that time
-		nowValue = nowValue.Add(time.Second)
+		r.createAlert(id, labels, annotations)
 		assert.Empty(t, r.collect())
 
 		// 1 second after
