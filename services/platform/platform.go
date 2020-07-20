@@ -135,7 +135,8 @@ func (s *Service) SignIn(ctx context.Context, email, password string) error {
 	}
 
 	err = s.db.InTransaction(func(tx *reform.TX) error {
-		_, err := models.UpdateSettings(tx.Querier, &models.ChangeSettingsParams{SessionID: resp.SessionId})
+		params := models.ChangeSettingsParams{SessionID: resp.SessionId, Email: email}
+		_, err := models.UpdateSettings(tx.Querier, &params)
 		return err
 	})
 	if err != nil {

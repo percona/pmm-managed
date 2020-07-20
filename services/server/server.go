@@ -393,6 +393,7 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 		AwsPartitions:   settings.AWSPartitions,
 		AlertManagerUrl: settings.AlertManagerURL,
 		SttEnabled:      settings.SaaS.STTEnabled,
+		PlatformEmail:   settings.SaaS.Email,
 	}
 
 	b, err := s.prometheusAlertingRules.ReadRules()

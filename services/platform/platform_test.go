@@ -54,6 +54,7 @@ func TestAuth(t *testing.T) {
 	settings, err := models.GetSettings(s.db)
 	require.NoError(t, err)
 	require.Empty(t, settings.SaaS.SessionID)
+	require.Empty(t, settings.SaaS.Email)
 
 	err = s.SignIn(context.Background(), login, password)
 	require.NoError(t, err)
@@ -61,6 +62,7 @@ func TestAuth(t *testing.T) {
 	settings, err = models.GetSettings(s.db)
 	require.NoError(t, err)
 	require.NotEmpty(t, settings.SaaS.SessionID)
+	require.Equal(t, login, settings.SaaS.Email)
 
 	// RefreshSession test
 	err = s.RefreshSession(context.Background())
