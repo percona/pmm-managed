@@ -611,22 +611,22 @@ func (s *Server) AWSInstanceCheck(ctx context.Context, req *serverpb.AWSInstance
 	return &serverpb.AWSInstanceCheckResponse{}, nil
 }
 
-// SignUp creates new user with given email and password.
-func (s *Server) SignUp(ctx context.Context, request *serverpb.SignUpRequest) (*serverpb.SignUpResponse, error) {
+// PlatformSignUp creates new Percona Platform user with given email and password.
+func (s *Server) PlatformSignUp(ctx context.Context, request *serverpb.PlatformSignUpRequest) (*serverpb.PlatformSignUpResponse, error) {
 	if err := s.authService.SignUp(ctx, request.Email, request.Password); err != nil {
 		return nil, err
 	}
 
-	return &serverpb.SignUpResponse{}, nil
+	return &serverpb.PlatformSignUpResponse{}, nil
 }
 
-// SignIn creates new session for user with given email and password.
-func (s *Server) SignIn(ctx context.Context, request *serverpb.SignInRequest) (*serverpb.SignInResponse, error) {
+// PlatformSignIn links that PMM instance to Percona Platform user and created new session.
+func (s *Server) PlatformSignIn(ctx context.Context, request *serverpb.PlatformSignInRequest) (*serverpb.PlatformSignInResponse, error) {
 	if err := s.authService.SignIn(ctx, request.Email, request.Password); err != nil {
 		return nil, err
 	}
 
-	return &serverpb.SignInResponse{}, nil
+	return &serverpb.PlatformSignInResponse{}, nil
 }
 
 // check interfaces
