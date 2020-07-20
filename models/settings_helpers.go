@@ -72,6 +72,7 @@ type ChangeSettingsParams struct {
 	// Disable Security Threat Tool
 	DisableSTT bool
 
+	// Percona Platform session Id
 	SessionID string
 }
 

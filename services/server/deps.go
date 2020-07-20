@@ -87,7 +87,7 @@ type telemetryService interface {
 	DistributionMethod() serverpb.DistributionMethod
 }
 
-type authService interface {
+type platformService interface {
 	SignUp(ctx context.Context, email, password string) error
 	SignIn(ctx context.Context, email, password string) error
 }

@@ -15,7 +15,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Package auth provides authentication/authorization functionality.
-package auth
+package platform
 
 import (
 	"context"
@@ -42,14 +42,14 @@ const (
 	timeout     = 5 * time.Second
 )
 
-// Service is responsible for interactions with Percona authentication service.
+// Service is responsible for interactions with Percona platform.
 type Service struct {
 	db   *reform.DB
 	host string
 	l    *logrus.Entry
 }
 
-// New returns auth Service.
+// New returns platform Service.
 func New(db *reform.DB) *Service {
 	l := logrus.WithField("component", "auth")
 
@@ -67,7 +67,7 @@ func New(db *reform.DB) *Service {
 	return &s
 }
 
-// SignUp creates new user with given email and password.
+// SignUp creates new Percona Platform user with given email and password.
 func (s *Service) SignUp(ctx context.Context, email, password string) error {
 	cc, err := s.getConnection(ctx)
 	if err != nil {
@@ -83,7 +83,7 @@ func (s *Service) SignUp(ctx context.Context, email, password string) error {
 	return nil
 }
 
-// SignIn creates new session for user with given email and password.
+// SignIn checks Percona Platform user authentication and creates session.
 func (s *Service) SignIn(ctx context.Context, email, password string) error {
 	cc, err := s.getConnection(ctx)
 	if err != nil {

@@ -62,13 +62,13 @@ import (
 	"github.com/percona/pmm-managed/services/agents"
 	agentgrpc "github.com/percona/pmm-managed/services/agents/grpc"
 	"github.com/percona/pmm-managed/services/alertmanager"
-	"github.com/percona/pmm-managed/services/auth"
 	"github.com/percona/pmm-managed/services/checks"
 	"github.com/percona/pmm-managed/services/grafana"
 	"github.com/percona/pmm-managed/services/inventory"
 	inventorygrpc "github.com/percona/pmm-managed/services/inventory/grpc"
 	"github.com/percona/pmm-managed/services/management"
 	managementgrpc "github.com/percona/pmm-managed/services/management/grpc"
+	"github.com/percona/pmm-managed/services/platform"
 	"github.com/percona/pmm-managed/services/prometheus"
 	"github.com/percona/pmm-managed/services/qan"
 	"github.com/percona/pmm-managed/services/server"
@@ -539,7 +539,7 @@ func main() {
 	checksService := checks.New(agentsRegistry, alertsRegistry, db)
 	prom.MustRegister(checksService)
 
-	authService := auth.New(db)
+	platformService := platform.New(db)
 
 	serverParams := &server.Params{
 		DB:                      db,
@@ -547,7 +547,7 @@ func main() {
 		Alertmanager:            alertmanager,
 		Supervisord:             supervisord,
 		TelemetryService:        telemetry,
-		AuthService:             authService,
+		PlatformService:         platformService,
 		AwsInstanceChecker:      awsInstanceChecker,
 		GrafanaClient:           grafanaClient,
 		PrometheusAlertingRules: alertingRules,

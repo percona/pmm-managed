@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package auth
+package platform
 
 import (
 	"context"
@@ -53,14 +53,14 @@ func TestAuth(t *testing.T) {
 	// SignIn test
 	settings, err := models.GetSettings(s.db)
 	require.NoError(t, err)
-	require.Empty(t, settings.SessionID)
+	require.Empty(t, settings.SaaS.SessionID)
 
 	err = s.SignIn(context.Background(), login, password)
 	require.NoError(t, err)
 
 	settings, err = models.GetSettings(s.db)
 	require.NoError(t, err)
-	require.NotEmpty(t, settings.SessionID)
+	require.NotEmpty(t, settings.SaaS.SessionID)
 
 	// RefreshSession test
 	err = s.RefreshSession(context.Background())

@@ -58,7 +58,7 @@ type Server struct {
 	alertmanager            alertmanagerService
 	supervisord             supervisordService
 	telemetryService        telemetryService
-	authService             authService
+	platformService         platformService
 	awsInstanceChecker      *AWSInstanceChecker
 	grafanaClient           grafanaClient
 	l                       *logrus.Entry
@@ -84,7 +84,7 @@ type Params struct {
 	PrometheusAlertingRules prometheusAlertingRules
 	Supervisord             supervisordService
 	TelemetryService        telemetryService
-	AuthService             authService
+	PlatformService         platformService
 	AwsInstanceChecker      *AWSInstanceChecker
 	GrafanaClient           grafanaClient
 }
@@ -104,7 +104,7 @@ func NewServer(params *Params) (*Server, error) {
 		prometheusAlertingRules: params.PrometheusAlertingRules,
 		supervisord:             params.Supervisord,
 		telemetryService:        params.TelemetryService,
-		authService:             params.AuthService,
+		platformService:         params.PlatformService,
 		awsInstanceChecker:      params.AwsInstanceChecker,
 		grafanaClient:           params.GrafanaClient,
 		l:                       logrus.WithField("component", "server"),
@@ -613,7 +613,7 @@ func (s *Server) AWSInstanceCheck(ctx context.Context, req *serverpb.AWSInstance
 
 // PlatformSignUp creates new Percona Platform user with given email and password.
 func (s *Server) PlatformSignUp(ctx context.Context, request *serverpb.PlatformSignUpRequest) (*serverpb.PlatformSignUpResponse, error) {
-	if err := s.authService.SignUp(ctx, request.Email, request.Password); err != nil {
+	if err := s.platformService.SignUp(ctx, request.Email, request.Password); err != nil {
 		return nil, err
 	}
 
@@ -622,7 +622,7 @@ func (s *Server) PlatformSignUp(ctx context.Context, request *serverpb.PlatformS
 
 // PlatformSignIn links that PMM instance to Percona Platform user and created new session.
 func (s *Server) PlatformSignIn(ctx context.Context, request *serverpb.PlatformSignInRequest) (*serverpb.PlatformSignInResponse, error) {
-	if err := s.authService.SignIn(ctx, request.Email, request.Password); err != nil {
+	if err := s.platformService.SignIn(ctx, request.Email, request.Password); err != nil {
 		return nil, err
 	}
 
