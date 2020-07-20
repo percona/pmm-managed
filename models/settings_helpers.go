@@ -132,7 +132,7 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 	}
 
 	if params.SessionID != "" {
-		settings.SessionID = params.SessionID
+		settings.SaaS.SessionID = params.SessionID
 	}
 
 	err = SaveSettings(q, settings)

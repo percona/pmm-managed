@@ -53,9 +53,9 @@ type Settings struct {
 	SaaS struct {
 		// Security Threat Tool enabled
 		STTEnabled bool `json:"stt_enabled"`
+		// Percona platform session Id
+		SessionID string `json:"session_id"`
 	} `json:"sass"`
-
-	SessionID string `json:"session_id"`
 }
 
 // fillDefaults sets zero values to their default values.

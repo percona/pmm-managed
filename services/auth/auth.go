@@ -114,7 +114,7 @@ func (s *Service) RefreshSession(ctx context.Context) error {
 		return err
 	}
 
-	if settings.SessionID == "" {
+	if settings.SaaS.SessionID == "" {
 		return errors.New("no active sessions")
 	}
 
@@ -124,7 +124,7 @@ func (s *Service) RefreshSession(ctx context.Context) error {
 	}
 	defer cc.Close() //nolint:errcheck
 
-	md := metadata.New(map[string]string{"authorization": "PP-v1beta1 " + settings.SessionID})
+	md := metadata.New(map[string]string{"authorization": "PP-v1beta1 " + settings.SaaS.SessionID})
 	_, err = api.NewAuthAPIClient(cc).RefreshSession(metadata.NewOutgoingContext(ctx, md), &api.RefreshSessionRequest{})
 	if err != nil {
 		return errors.Wrap(err, "failed to refresh session")
