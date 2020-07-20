@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package auth provides authentication/authorization functionality.
+// Package platform provides authentication/authorization functionality.
 package platform
 
 import (
@@ -37,17 +37,25 @@ import (
 )
 
 const (
-	defaultHost = "check.percona.com:443"
-	envHost     = "PERCONA_TEST_AUTH_HOST"
-	timeout     = 5 * time.Second
-	authType    = "PP-v1beta1" // TODO Change to PP-1 after auth API release
+	defaultHost            = "check.percona.com:443"
+	defaultRefreshInterval = 24 * time.Hour
+	timeout                = 5 * time.Second
+
+	envHost            = "PERCONA_TEST_AUTH_HOST"
+	envRefreshInterval = "PERCONA_TEST_REFRESH_INTERVAL"
+
+	authType = "PP-v1beta1" // TODO Change to PP-1 after auth API release
+
 )
+
+var ErrNoActiveSessions = errors.New("no active sessions") //nolint:golint
 
 // Service is responsible for interactions with Percona platform.
 type Service struct {
-	db   *reform.DB
-	host string
-	l    *logrus.Entry
+	db              *reform.DB
+	host            string
+	refreshInterval time.Duration
+	l               *logrus.Entry
 }
 
 // New returns platform Service.
@@ -55,9 +63,10 @@ func New(db *reform.DB) *Service {
 	l := logrus.WithField("component", "auth")
 
 	s := Service{
-		host: defaultHost,
-		db:   db,
-		l:    l,
+		host:            defaultHost,
+		refreshInterval: defaultRefreshInterval,
+		db:              db,
+		l:               l,
 	}
 
 	if h := os.Getenv(envHost); h != "" {
@@ -65,7 +74,35 @@ func New(db *reform.DB) *Service {
 		s.host = h
 	}
 
+	if d, err := time.ParseDuration(os.Getenv(envRefreshInterval)); err == nil && d > 0 {
+		l.Warnf("Refresh interval changed to %s.", d)
+		s.refreshInterval = d
+	}
+
 	return &s
+}
+
+// Run refreshes Percona Platform session every interval until context is canceled.
+func (s *Service) Run(ctx context.Context) {
+	ticker := time.NewTicker(s.refreshInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+		// continue with next loop iteration
+		case <-ctx.Done():
+			return
+		}
+
+		err := s.RefreshSession(ctx)
+		if err != nil {
+			s.l.Warn(err)
+		}
+		if err != nil && err != ErrNoActiveSessions {
+			s.l.Warnf("Failed to refresh session, reason: %+v.", err)
+		}
+	}
 }
 
 // SignUp creates new Percona Platform user with given email and password.
@@ -116,7 +153,7 @@ func (s *Service) RefreshSession(ctx context.Context) error {
 	}
 
 	if settings.SaaS.SessionID == "" {
-		return errors.New("no active sessions")
+		return ErrNoActiveSessions
 	}
 
 	cc, err := s.getConnection(ctx)

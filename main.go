@@ -614,6 +614,12 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		platformService.Run(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		supervisord.Run(ctx)
 	}()
 
