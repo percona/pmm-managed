@@ -44,7 +44,7 @@ func TestAuth(t *testing.T) {
 	s.host = devAuthHost
 
 	login := gofakeit.Email()
-	password := "Password12345"
+	password := gofakeit.Password(true, true, true, false, false, 14)
 
 	// SignUp test
 	err := s.SignUp(context.Background(), login, password)
