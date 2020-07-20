@@ -40,6 +40,7 @@ const (
 	defaultHost = "check.percona.com:443"
 	envHost     = "PERCONA_TEST_AUTH_HOST"
 	timeout     = 5 * time.Second
+	authType    = "PP-v1beta1" // TODO Change to PP-1 after auth API release
 )
 
 // Service is responsible for interactions with Percona platform.
@@ -124,7 +125,7 @@ func (s *Service) RefreshSession(ctx context.Context) error {
 	}
 	defer cc.Close() //nolint:errcheck
 
-	md := metadata.New(map[string]string{"authorization": "PP-v1beta1 " + settings.SaaS.SessionID})
+	md := metadata.New(map[string]string{"authorization": authType + " " + settings.SaaS.SessionID})
 	_, err = api.NewAuthAPIClient(cc).RefreshSession(metadata.NewOutgoingContext(ctx, md), &api.RefreshSessionRequest{})
 	if err != nil {
 		return errors.Wrap(err, "failed to refresh session")
