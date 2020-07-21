@@ -37,12 +37,12 @@ import (
 )
 
 const (
-	defaultHost            = "check.percona.com:443"
-	defaultRefreshInterval = 24 * time.Hour
-	timeout                = 5 * time.Second
+	defaultHost                   = "check.percona.com:443"
+	defaultSessionRefreshInterval = 24 * time.Hour
+	timeout                       = 5 * time.Second
 
-	envHost            = "PERCONA_TEST_AUTH_HOST"
-	envRefreshInterval = "PERCONA_TEST_REFRESH_INTERVAL"
+	envHost                   = "PERCONA_TEST_AUTH_HOST"
+	envSessionRefreshInterval = "PERCONA_TEST_SESSION_REFRESH_INTERVAL"
 
 	authType = "PP-v1beta1" // TODO Change to PP-1 after auth API release
 
@@ -52,10 +52,10 @@ var ErrNoActiveSessions = errors.New("no active sessions") //nolint:golint
 
 // Service is responsible for interactions with Percona platform.
 type Service struct {
-	db              *reform.DB
-	host            string
-	refreshInterval time.Duration
-	l               *logrus.Entry
+	db                     *reform.DB
+	host                   string
+	sessionRefreshInterval time.Duration
+	l                      *logrus.Entry
 }
 
 // New returns platform Service.
@@ -63,10 +63,10 @@ func New(db *reform.DB) *Service {
 	l := logrus.WithField("component", "auth")
 
 	s := Service{
-		host:            defaultHost,
-		refreshInterval: defaultRefreshInterval,
-		db:              db,
-		l:               l,
+		host:                   defaultHost,
+		sessionRefreshInterval: defaultSessionRefreshInterval,
+		db:                     db,
+		l:                      l,
 	}
 
 	if h := os.Getenv(envHost); h != "" {
@@ -74,9 +74,9 @@ func New(db *reform.DB) *Service {
 		s.host = h
 	}
 
-	if d, err := time.ParseDuration(os.Getenv(envRefreshInterval)); err == nil && d > 0 {
-		l.Warnf("Refresh interval changed to %s.", d)
-		s.refreshInterval = d
+	if d, err := time.ParseDuration(os.Getenv(envSessionRefreshInterval)); err == nil && d > 0 {
+		l.Warnf("Session refresh interval changed to %s.", d)
+		s.sessionRefreshInterval = d
 	}
 
 	return &s
@@ -84,7 +84,7 @@ func New(db *reform.DB) *Service {
 
 // Run refreshes Percona Platform session every interval until context is canceled.
 func (s *Service) Run(ctx context.Context) {
-	ticker := time.NewTicker(s.refreshInterval)
+	ticker := time.NewTicker(s.sessionRefreshInterval)
 	defer ticker.Stop()
 
 	for {
