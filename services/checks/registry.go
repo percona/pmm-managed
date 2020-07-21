@@ -39,7 +39,6 @@ const (
 type registry struct {
 	rw             sync.RWMutex
 	alerts         map[string]ammodels.PostableAlert
-	times          map[string]time.Time
 	resendInterval time.Duration
 	alertTTL       time.Duration
 	nowF           func() time.Time // for tests
@@ -59,7 +58,6 @@ func newRegistry() *registry {
 
 	return &registry{
 		alerts:         make(map[string]ammodels.PostableAlert),
-		times:          make(map[string]time.Time),
 		resendInterval: resendInterval,
 		alertTTL:       resolveTimeoutFactor * resendInterval,
 		nowF:           time.Now,
@@ -82,9 +80,6 @@ func (r *registry) createAlert(id string, labels, annotations map[string]string)
 	defer r.rw.Unlock()
 
 	r.alerts[id] = alert
-	if r.times[id].IsZero() {
-		r.times[id] = r.nowF()
-	}
 }
 
 // clean clears all alerts from the registry
@@ -92,7 +87,6 @@ func (r *registry) clean() {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 	r.alerts = make(map[string]ammodels.PostableAlert)
-	r.times = make(map[string]time.Time)
 
 }
 
@@ -103,12 +97,10 @@ func (r *registry) collect() ammodels.PostableAlerts {
 
 	var res ammodels.PostableAlerts
 	now := r.nowF()
-	for id, t := range r.times {
-		if t.Before(now) {
-			alert := r.alerts[id]
-			alert.EndsAt = strfmt.DateTime(now.Add(r.alertTTL))
-			res = append(res, &alert)
-		}
+	for _, alert := range r.alerts {
+		alert.EndsAt = strfmt.DateTime(now.Add(r.alertTTL))
+		res = append(res, &alert)
+
 	}
 	return res
 }

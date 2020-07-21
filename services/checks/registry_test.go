@@ -27,7 +27,7 @@ import (
 )
 
 func TestRegistry(t *testing.T) {
-	t.Run("DelayFor", func(t *testing.T) {
+	t.Run("Collect Alerts", func(t *testing.T) {
 		r := newRegistry()
 
 		nowValue := time.Now()
@@ -38,10 +38,6 @@ func TestRegistry(t *testing.T) {
 		annotations := map[string]string{"annotation": "test"}
 
 		r.createAlert(id, labels, annotations)
-		assert.Empty(t, r.collect())
-
-		// 1 second after
-		nowValue = nowValue.Add(time.Second)
 
 		expected := &ammodels.PostableAlert{
 			Annotations: annotations,
