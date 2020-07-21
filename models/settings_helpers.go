@@ -76,6 +76,8 @@ type ChangeSettingsParams struct {
 	Email string
 	// Percona Platform session Id
 	SessionID string
+	// LogOut user from Percona Platform, i.e. remove user email and session id
+	LogOut bool
 }
 
 // UpdateSettings updates only non-zero, non-empty values.
@@ -132,6 +134,10 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 	}
 	if params.EnableSTT {
 		settings.SaaS.STTEnabled = true
+	}
+	if params.LogOut {
+		settings.SaaS.SessionID = ""
+		settings.SaaS.Email = ""
 	}
 
 	if params.SessionID != "" {
@@ -234,6 +240,10 @@ func validateSettingsConflicts(params *ChangeSettingsParams, settings *Settings)
 	}
 	if params.DisableTelemetry && !params.DisableSTT && settings.SaaS.STTEnabled {
 		return fmt.Errorf("Cannot disable telemetry while STT is enabled.")
+	}
+
+	if params.LogOut && (params.Email != "" || params.SessionID != "") {
+		return fmt.Errorf("Cannot loguot while updating Percona Platform user data.")
 	}
 
 	return nil
