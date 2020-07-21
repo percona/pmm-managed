@@ -95,7 +95,7 @@ func (r *registry) collect() ammodels.PostableAlerts {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
-	res := make(ammodels.PostableAlerts, len(r.alerts))
+	var res ammodels.PostableAlerts
 	now := r.nowF()
 	for _, alert := range r.alerts {
 		alert.EndsAt = strfmt.DateTime(now.Add(r.alertTTL))
