@@ -48,7 +48,7 @@ const (
 
 )
 
-var ErrNoActiveSessions = errors.New("no active sessions") //nolint:golint
+var errNoActiveSessions = errors.New("no active sessions")
 
 // Service is responsible for interactions with Percona Platform.
 type Service struct {
@@ -96,7 +96,7 @@ func (s *Service) Run(ctx context.Context) {
 		}
 
 		err := s.RefreshSession(ctx)
-		if err != nil && err != ErrNoActiveSessions {
+		if err != nil && err != errNoActiveSessions {
 			s.l.Warnf("Failed to refresh session, reason: %+v.", err)
 		}
 	}
@@ -151,7 +151,7 @@ func (s *Service) RefreshSession(ctx context.Context) error {
 	}
 
 	if settings.SaaS.SessionID == "" {
-		return ErrNoActiveSessions
+		return errNoActiveSessions
 	}
 
 	cc, err := s.getConnection(ctx)
