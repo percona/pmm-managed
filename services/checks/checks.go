@@ -164,8 +164,11 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 	return s
 }
 
-// Run runs checks service that grabs checks from Percona Checks service every interval until context is canceled.
+// Run runs main service loops.
 func (s *Service) Run(ctx context.Context) {
+	s.l.Info("Starting...")
+	defer s.l.Info("Done.")
+
 	// delay for the first run to allow all agents to connect
 	startCtx, startCancel := context.WithTimeout(ctx, s.startDelay)
 	<-startCtx.Done()
@@ -174,8 +177,44 @@ func (s *Service) Run(ctx context.Context) {
 		return
 	}
 
-	ticker := time.NewTicker(s.interval)
-	defer ticker.Stop()
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		s.resendAlerts(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		s.restartChecks(ctx)
+	}()
+
+	wg.Wait()
+}
+
+// resendAlerts resends collected alerts until ctx is canceled.
+func (s *Service) resendAlerts(ctx context.Context) {
+	t := time.NewTicker(s.alertsRegistry.resendInterval)
+	defer t.Stop()
+
+	for {
+		s.alertmanagerService.SendAlerts(ctx, s.alertsRegistry.collect())
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			// nothing, continue for loop
+		}
+	}
+}
+
+// restartChecks restart checks until ctx is canceled.
+func (s *Service) restartChecks(ctx context.Context) {
+	t := time.NewTicker(s.interval)
+	defer t.Stop()
 
 	for {
 		err := s.StartChecks(ctx)
@@ -187,17 +226,12 @@ func (s *Service) Run(ctx context.Context) {
 		default:
 			s.l.Error(err)
 		}
-		// launch resend alerts loop
-		resendCtx, resendCancel := context.WithCancel(context.Background())
-		s.resendAlerts(resendCtx)
 
 		select {
-		case <-ticker.C:
-			// continue with next loop iteration and cleanup resendAlerts goroutine
-			resendCancel()
 		case <-ctx.Done():
-			resendCancel()
 			return
+		case <-t.C:
+			// nothing, continue for loop
 		}
 	}
 }
@@ -221,25 +255,6 @@ func (s *Service) StartChecks(ctx context.Context) error {
 	s.alertmanagerService.SendAlerts(ctx, s.alertsRegistry.collect())
 
 	return nil
-}
-
-// resendAlerts can be used for manually triggering a SendAlerts loop.
-func (s *Service) resendAlerts(ctx context.Context) {
-	go func() {
-		t := time.NewTicker(s.alertsRegistry.resendInterval)
-		defer t.Stop()
-
-		for {
-			s.alertmanagerService.SendAlerts(ctx, s.alertsRegistry.collect())
-
-			select {
-			case <-ctx.Done():
-				return
-			case <-t.C:
-				// nothing, continue for loop
-			}
-		}
-	}()
 }
 
 // getMySQLChecks returns available MySQL checks.
