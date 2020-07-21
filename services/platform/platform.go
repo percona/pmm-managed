@@ -50,7 +50,7 @@ const (
 
 var ErrNoActiveSessions = errors.New("no active sessions") //nolint:golint
 
-// Service is responsible for interactions with Percona platform.
+// Service is responsible for interactions with Percona Platform.
 type Service struct {
 	db                     *reform.DB
 	host                   string

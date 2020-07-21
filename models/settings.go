@@ -51,9 +51,9 @@ type Settings struct {
 
 	// Saas config options
 	SaaS struct {
-		// Platform user email
+		// Percona Platform user email
 		Email string `json:"email"`
-		// Percona platform session Id
+		// Percona Platform session Id
 		SessionID string `json:"session_id"`
 		// Security Threat Tool enabled
 		STTEnabled bool `json:"stt_enabled"`
