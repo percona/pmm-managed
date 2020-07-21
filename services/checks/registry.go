@@ -82,12 +82,11 @@ func (r *registry) createAlert(id string, labels, annotations map[string]string)
 	r.alerts[id] = alert
 }
 
-// clean clears all alerts from the registry
+// clean clears all alerts from the registry.
 func (r *registry) clean() {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 	r.alerts = make(map[string]ammodels.PostableAlert)
-
 }
 
 // collect returns all firing alerts.
@@ -98,6 +97,7 @@ func (r *registry) collect() ammodels.PostableAlerts {
 	var res ammodels.PostableAlerts
 	now := r.nowF()
 	for _, alert := range r.alerts {
+		alert := alert
 		alert.EndsAt = strfmt.DateTime(now.Add(r.alertTTL))
 		res = append(res, &alert)
 	}

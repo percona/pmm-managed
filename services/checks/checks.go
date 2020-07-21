@@ -223,7 +223,7 @@ func (s *Service) StartChecks(ctx context.Context) error {
 	return nil
 }
 
-// resendAlerts can be used for manually triggerring a SendAlerts loop
+// resendAlerts can be used for manually triggering a SendAlerts loop.
 func (s *Service) resendAlerts(ctx context.Context) {
 	go func() {
 		t := time.NewTicker(s.alertsRegistry.resendInterval)
