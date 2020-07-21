@@ -256,21 +256,21 @@ func TestSettings(t *testing.T) {
 			assert.Equal(t, sessionID, ns.SaaS.SessionID)
 
 			// Logout with email update
-			ns, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				LogOut: true,
 				Email:  gofakeit.Email(),
 			})
 			assert.Error(t, err, "Cannot logout while updating Percona Platform user data.")
 
 			// Logout with session ID update
-			ns, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				LogOut:    true,
 				SessionID: gofakeit.UUID(),
 			})
 			assert.Error(t, err, "Cannot logout while updating Percona Platform user data.")
 
 			// Logout with email and session ID update
-			ns, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				LogOut:    true,
 				Email:     gofakeit.Email(),
 				SessionID: gofakeit.UUID(),
