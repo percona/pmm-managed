@@ -96,9 +96,6 @@ func (s *Service) Run(ctx context.Context) {
 		}
 
 		err := s.RefreshSession(ctx)
-		if err != nil {
-			s.l.Warn(err)
-		}
 		if err != nil && err != ErrNoActiveSessions {
 			s.l.Warnf("Failed to refresh session, reason: %+v.", err)
 		}
