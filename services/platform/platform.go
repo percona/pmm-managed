@@ -90,7 +90,7 @@ func (s *Service) Run(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-		// continue with next loop iteration
+			// continue with next loop iteration
 		case <-ctx.Done():
 			return
 		}
