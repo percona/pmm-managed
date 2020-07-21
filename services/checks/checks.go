@@ -230,6 +230,8 @@ func (s *Service) resendAlerts(ctx context.Context) {
 		defer t.Stop()
 
 		for {
+			s.alertmanagerService.SendAlerts(ctx, s.alertsRegistry.collect())
+
 			select {
 			case <-ctx.Done():
 				return
