@@ -741,11 +741,13 @@ func (s *Service) collectChecks(ctx context.Context) {
 		checks, err = s.loadLocalChecks(f)
 		if err != nil {
 			s.l.Errorf("Failed to load local checks file: %s.", err)
+			return // keep previously loaded checks
 		}
 	} else {
 		checks, err = s.downloadChecks(ctx)
 		if err != nil {
 			s.l.Errorf("Failed to download checks: %s.", err)
+			return // keep previously downloaded checks
 		}
 	}
 
