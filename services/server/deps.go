@@ -32,9 +32,10 @@ import (
 //go:generate mockery -name=prometheusAlertingRules -case=snake -inpkg -testonly
 //go:generate mockery -name=supervisordService -case=snake -inpkg -testonly
 //go:generate mockery -name=telemetryService -case=snake -inpkg -testonly
+//go:generate mockery -name=platformService -case=snake -inpkg -testonly
 
 // healthChecker interface wraps all services that implements the IsReady method to report the
-// service health for the Readiness check
+// service health for the Readiness check.
 type healthChecker interface {
 	IsReady(ctx context.Context) error
 }
