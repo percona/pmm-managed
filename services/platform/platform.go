@@ -106,7 +106,7 @@ func (s *Service) Run(ctx context.Context) {
 
 // SignUp creates new Percona Platform user with given email and password.
 func (s *Service) SignUp(ctx context.Context, email, password string) error {
-	cc, err := s.getConnection(ctx)
+	cc, err := dial(ctx, s.host)
 	if err != nil {
 		return errors.Wrap(err, "failed establish connection with Percona")
 	}
@@ -122,7 +122,7 @@ func (s *Service) SignUp(ctx context.Context, email, password string) error {
 
 // SignIn checks Percona Platform user authentication and creates session.
 func (s *Service) SignIn(ctx context.Context, email, password string) error {
-	cc, err := s.getConnection(ctx)
+	cc, err := dial(ctx, s.host)
 	if err != nil {
 		return errors.Wrap(err, "failed establish connection with Percona")
 	}
@@ -156,7 +156,7 @@ func (s *Service) refreshSession(ctx context.Context) error {
 		return errNoActiveSessions
 	}
 
-	cc, err := s.getConnection(ctx)
+	cc, err := dial(ctx, s.host)
 	if err != nil {
 		return errors.Wrap(err, "failed establish connection with Percona")
 	}
@@ -171,8 +171,8 @@ func (s *Service) refreshSession(ctx context.Context) error {
 	return nil
 }
 
-func (s *Service) getConnection(ctx context.Context) (*grpc.ClientConn, error) {
-	host, _, err := net.SplitHostPort(s.host)
+func dial(ctx context.Context, fullHost string) (*grpc.ClientConn, error) {
+	host, _, err := net.SplitHostPort(fullHost)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to set checks host")
 	}
@@ -190,7 +190,7 @@ func (s *Service) getConnection(ctx context.Context) (*grpc.ClientConn, error) {
 
 	ctx, cancel := context.WithTimeout(ctx, dialTimeout)
 	defer cancel()
-	cc, err := grpc.DialContext(ctx, s.host, opts...)
+	cc, err := grpc.DialContext(ctx, fullHost, opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to dial")
 	}
