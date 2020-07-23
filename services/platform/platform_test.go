@@ -60,8 +60,8 @@ func TestAuth(t *testing.T) {
 	require.NotEmpty(t, settings.SaaS.SessionID)
 	require.Equal(t, login, settings.SaaS.Email)
 
-	// RefreshSession test
-	err = s.RefreshSession(context.Background())
+	// refreshSession test
+	err = s.refreshSession(context.Background())
 	require.NoError(t, err)
 }
 

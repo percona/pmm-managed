@@ -39,7 +39,7 @@ import (
 const (
 	defaultHost                   = "check.percona.com:443"
 	defaultSessionRefreshInterval = 24 * time.Hour
-	timeout                       = 5 * time.Second
+	dialTimeout                   = 5 * time.Second
 
 	envHost                   = "PERCONA_TEST_AUTH_HOST"
 	envSessionRefreshInterval = "PERCONA_TEST_SESSION_REFRESH_INTERVAL"
@@ -96,7 +96,7 @@ func (s *Service) Run(ctx context.Context) {
 		}
 
 		nCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		err := s.RefreshSession(nCtx)
+		err := s.refreshSession(nCtx)
 		if err != nil && err != errNoActiveSessions {
 			s.l.Warnf("Failed to refresh session, reason: %+v.", err)
 		}
@@ -145,8 +145,8 @@ func (s *Service) SignIn(ctx context.Context, email, password string) error {
 	return nil
 }
 
-// RefreshSession resets session timeout.
-func (s *Service) RefreshSession(ctx context.Context) error {
+// refreshSession resets session timeout.
+func (s *Service) refreshSession(ctx context.Context) error {
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		return err
@@ -181,14 +181,14 @@ func (s *Service) getConnection(ctx context.Context) (*grpc.ClientConn, error) {
 
 	opts := []grpc.DialOption{
 		// replacement is marked as experimental
-		grpc.WithBackoffMaxDelay(timeout), //nolint:staticcheck
+		grpc.WithBackoffMaxDelay(dialTimeout), //nolint:staticcheck
 
 		grpc.WithBlock(),
 		grpc.WithUserAgent("pmm-managed/" + version.Version),
 		grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, timeout)
+	ctx, cancel := context.WithTimeout(ctx, dialTimeout)
 	defer cancel()
 	cc, err := grpc.DialContext(ctx, s.host, opts...)
 	if err != nil {
