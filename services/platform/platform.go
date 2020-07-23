@@ -171,6 +171,22 @@ func (s *Service) refreshSession(ctx context.Context) error {
 	return nil
 }
 
+// ResetPassword initiates password reset procedure for user with given email.
+func (s *Service) ResetPassword(ctx context.Context, email string) error {
+	cc, err := dial(ctx, s.host)
+	if err != nil {
+		return errors.Wrap(err, "failed establish connection with Percona")
+	}
+	defer cc.Close() //nolint:errcheck
+
+	_, err = api.NewAuthAPIClient(cc).ResetPassword(ctx, &api.ResetPasswordRequest{Email: email})
+	if err != nil {
+		return errors.Wrap(err, "failed to reset password")
+	}
+
+	return nil
+}
+
 func dial(ctx context.Context, fullHost string) (*grpc.ClientConn, error) {
 	host, _, err := net.SplitHostPort(fullHost)
 	if err != nil {

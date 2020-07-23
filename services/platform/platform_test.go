@@ -82,6 +82,17 @@ func TestPlatformService(t *testing.T) {
 		err = s.refreshSession(context.Background())
 		assert.NoError(t, err)
 	})
+
+	t.Run("ResetPassword", func(t *testing.T) {
+		login := gofakeit.Email()
+		password := gofakeit.Password(true, true, true, false, false, 14)
+
+		err := s.SignUp(context.Background(), login, password)
+		require.NoError(t, err)
+
+		err = s.ResetPassword(context.Background(), login)
+		assert.NoError(t, err)
+	})
 }
 
 func init() { //nolint:gochecknoinits
