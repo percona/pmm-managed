@@ -95,7 +95,7 @@ func (s *Service) Run(ctx context.Context) {
 			return
 		}
 
-		nCtx, cancel := context.WithTimeout(ctx, timeout)
+		nCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		err := s.RefreshSession(nCtx)
 		if err != nil && err != errNoActiveSessions {
 			s.l.Warnf("Failed to refresh session, reason: %+v.", err)

@@ -50,6 +50,8 @@ import (
 	"github.com/percona/pmm-managed/utils/envvars"
 )
 
+const timeout = 10 * time.Second
+
 // Server represents service for checking PMM Server status and changing settings.
 type Server struct {
 	db                      *reform.DB
@@ -614,7 +616,9 @@ func (s *Server) AWSInstanceCheck(ctx context.Context, req *serverpb.AWSInstance
 
 // PlatformSignUp creates new Percona Platform user with given email and password.
 func (s *Server) PlatformSignUp(ctx context.Context, request *serverpb.PlatformSignUpRequest) (*serverpb.PlatformSignUpResponse, error) {
-	if err := s.platformService.SignUp(ctx, request.Email, request.Password); err != nil {
+	nCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	if err := s.platformService.SignUp(nCtx, request.Email, request.Password); err != nil {
 		return nil, err
 	}
 
@@ -623,7 +627,9 @@ func (s *Server) PlatformSignUp(ctx context.Context, request *serverpb.PlatformS
 
 // PlatformSignIn links that PMM instance to Percona Platform user and created new session.
 func (s *Server) PlatformSignIn(ctx context.Context, request *serverpb.PlatformSignInRequest) (*serverpb.PlatformSignInResponse, error) {
-	if err := s.platformService.SignIn(ctx, request.Email, request.Password); err != nil {
+	nCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	if err := s.platformService.SignIn(nCtx, request.Email, request.Password); err != nil {
 		return nil, err
 	}
 
