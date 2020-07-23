@@ -615,10 +615,10 @@ func (s *Server) AWSInstanceCheck(ctx context.Context, req *serverpb.AWSInstance
 }
 
 // PlatformSignUp creates new Percona Platform user with given email and password.
-func (s *Server) PlatformSignUp(ctx context.Context, request *serverpb.PlatformSignUpRequest) (*serverpb.PlatformSignUpResponse, error) {
+func (s *Server) PlatformSignUp(ctx context.Context, req *serverpb.PlatformSignUpRequest) (*serverpb.PlatformSignUpResponse, error) {
 	nCtx, cancel := context.WithTimeout(ctx, platformAPITimeout)
 	defer cancel()
-	if err := s.platformService.SignUp(nCtx, request.Email, request.Password); err != nil {
+	if err := s.platformService.SignUp(nCtx, req.Email, req.Password); err != nil {
 		return nil, err
 	}
 
@@ -626,14 +626,25 @@ func (s *Server) PlatformSignUp(ctx context.Context, request *serverpb.PlatformS
 }
 
 // PlatformSignIn links that PMM instance to Percona Platform user and created new session.
-func (s *Server) PlatformSignIn(ctx context.Context, request *serverpb.PlatformSignInRequest) (*serverpb.PlatformSignInResponse, error) {
+func (s *Server) PlatformSignIn(ctx context.Context, req *serverpb.PlatformSignInRequest) (*serverpb.PlatformSignInResponse, error) {
 	nCtx, cancel := context.WithTimeout(ctx, platformAPITimeout)
 	defer cancel()
-	if err := s.platformService.SignIn(nCtx, request.Email, request.Password); err != nil {
+	if err := s.platformService.SignIn(nCtx, req.Email, req.Password); err != nil {
 		return nil, err
 	}
 
 	return &serverpb.PlatformSignInResponse{}, nil
+}
+
+// PlatformResetPassword initiates Percona Platform user's password reset procedure.
+func (s *Server) PlatformResetPassword(ctx context.Context, req *serverpb.PlatformResetPasswordRequest) (*serverpb.PlatformResetPasswordResponse, error) {
+	nCtx, cancel := context.WithTimeout(ctx, platformAPITimeout)
+	defer cancel()
+	if err := s.platformService.ResetPassword(nCtx, req.Email); err != nil {
+		return nil, err
+	}
+
+	return &serverpb.PlatformResetPasswordResponse{}, nil
 }
 
 // check interfaces

@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/brianvoe/gofakeit"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
@@ -32,37 +33,66 @@ import (
 
 const devAuthHost = "check-dev.percona.com:443"
 
-func TestAuth(t *testing.T) {
+func TestPlatformService(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
 	s := New(db)
 	s.host = devAuthHost
 
-	login := gofakeit.Email()
-	password := gofakeit.Password(true, true, true, false, false, 14)
+	t.Run("SignUp", func(t *testing.T) {
+		login := gofakeit.Email()
+		password := gofakeit.Password(true, true, true, false, false, 14)
 
-	// SignUp test
-	err := s.SignUp(context.Background(), login, password)
-	require.NoError(t, err)
+		err := s.SignUp(context.Background(), login, password)
+		require.NoError(t, err)
+	})
 
-	// SignIn test
-	settings, err := models.GetSettings(s.db)
-	require.NoError(t, err)
-	require.Empty(t, settings.SaaS.SessionID)
-	require.Empty(t, settings.SaaS.Email)
+	t.Run("SignIn", func(t *testing.T) {
+		login := gofakeit.Email()
+		password := gofakeit.Password(true, true, true, false, false, 14)
 
-	err = s.SignIn(context.Background(), login, password)
-	require.NoError(t, err)
+		err := s.SignUp(context.Background(), login, password)
+		require.NoError(t, err)
 
-	settings, err = models.GetSettings(s.db)
-	require.NoError(t, err)
-	require.NotEmpty(t, settings.SaaS.SessionID)
-	require.Equal(t, login, settings.SaaS.Email)
+		settings, err := models.GetSettings(s.db)
+		require.NoError(t, err)
+		require.Empty(t, settings.SaaS.SessionID)
+		require.Empty(t, settings.SaaS.Email)
 
-	// refreshSession test
-	err = s.refreshSession(context.Background())
-	require.NoError(t, err)
+		err = s.SignIn(context.Background(), login, password)
+		require.NoError(t, err)
+
+		settings, err = models.GetSettings(s.db)
+		require.NoError(t, err)
+		assert.NotEmpty(t, settings.SaaS.SessionID)
+		assert.Equal(t, login, settings.SaaS.Email)
+	})
+
+	t.Run("refreshSession", func(t *testing.T) {
+		login := gofakeit.Email()
+		password := gofakeit.Password(true, true, true, false, false, 14)
+
+		err := s.SignUp(context.Background(), login, password)
+		require.NoError(t, err)
+
+		err = s.SignIn(context.Background(), login, password)
+		require.NoError(t, err)
+
+		err = s.refreshSession(context.Background())
+		assert.NoError(t, err)
+	})
+
+	t.Run("ResetPassword", func(t *testing.T) {
+		login := gofakeit.Email()
+		password := gofakeit.Password(true, true, true, false, false, 14)
+
+		err := s.SignUp(context.Background(), login, password)
+		require.NoError(t, err)
+
+		err = s.ResetPassword(context.Background(), login)
+		assert.NoError(t, err)
+	})
 }
 
 func init() { //nolint:gochecknoinits
