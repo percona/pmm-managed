@@ -534,7 +534,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:250e4c1b2f476b5b5000e7a43f50f05fddefe36269310228e43899e9a4d7421d"
+  digest = "1:0ba6cff23e0079fb8876b3f540b17663a502374a1f141803a1c5e353e99b83e4"
   name = "go.starlark.net"
   packages = [
     "internal/compile",
@@ -544,7 +544,7 @@
     "syntax",
   ]
   pruneopts = "NUT"
-  revision = "d7bb082fbf309d949e496a9af5e569a1a0faacdd"
+  revision = "be5394c419b6941c14d194a98925a71512f8f979"
 
 [[projects]]
   digest = "1:467bb8fb8fa786448b8d486cd0bb7c1a5577dcd7310441aa02a20110cd9f727d"

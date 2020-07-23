@@ -1027,8 +1027,7 @@ func tupleRepeat(elems Tuple, n Int) (Tuple, error) {
 	// Inv: i > 0, len > 0
 	sz := len(elems) * i
 	if sz < 0 || sz >= maxAlloc { // sz < 0 => overflow
-		// Don't print sz.
-		return nil, fmt.Errorf("excessive repeat (%d * %d elements)", len(elems), i)
+		return nil, fmt.Errorf("excessive repeat (%d elements)", sz)
 	}
 	res := make([]Value, sz)
 	// copy elems into res, doubling each time
@@ -1054,8 +1053,7 @@ func stringRepeat(s String, n Int) (String, error) {
 	// Inv: i > 0, len > 0
 	sz := len(s) * i
 	if sz < 0 || sz >= maxAlloc { // sz < 0 => overflow
-		// Don't print sz.
-		return "", fmt.Errorf("excessive repeat (%d * %d elements)", len(s), i)
+		return "", fmt.Errorf("excessive repeat (%d elements)", sz)
 	}
 	return String(strings.Repeat(string(s), i)), nil
 }
