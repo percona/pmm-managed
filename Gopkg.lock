@@ -374,8 +374,8 @@
   version = "v0.3.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:086700c7fb8dda563672e1fa55813fffc554207d420eb07dc904702bb657b2f8"
+  branch = "SAAS-174-password-reset"
+  digest = "1:2714d746450774d9f17a10da1263f85eddb6f6c0489b7e3d0bfaebf59c5454d2"
   name = "github.com/percona-platform/saas"
   packages = [
     "gen/auth/external",
@@ -386,7 +386,7 @@
     "pkg/starlark",
   ]
   pruneopts = "NUT"
-  revision = "8022331ca5013c149d4b0d4326b6726287d29011"
+  revision = "7c439ef12064566f5e39cf4ae6d0b5d20c85658e"
 
 [[projects]]
   digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
