@@ -36,10 +36,6 @@ func TestAuth(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
-	defer func() {
-		require.NoError(t, sqlDB.Close())
-	}()
-
 	s := New(db)
 	s.host = devAuthHost
 
