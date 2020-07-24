@@ -17,76 +17,49 @@
 package checks
 
 import (
-	"os"
 	"sync"
 	"time"
 
 	"github.com/go-openapi/strfmt"
 	"github.com/percona/pmm/api/alertmanager/ammodels"
-	"github.com/sirupsen/logrus"
-)
-
-const (
-	// Environment variable to overwrite resendInterval during testing
-	envResendInterval = "PERCONA_TEST_CHECKS_RESEND_INTERVAL"
-
-	// sync with API tests
-	resolveTimeoutFactor  = 3
-	defaultResendInterval = 2 * time.Second
 )
 
 // registry stores alerts and delay information by IDs.
 type registry struct {
-	rw             sync.RWMutex
-	alerts         map[string]ammodels.PostableAlert
-	resendInterval time.Duration
-	alertTTL       time.Duration
-	nowF           func() time.Time // for tests
+	rw     sync.RWMutex
+	alerts map[string]ammodels.PostableAlert
+	nowF   func() time.Time // for tests
 }
 
 // newRegistry creates a new registry.
 func newRegistry() *registry {
-	l := logrus.WithField("component", "checks/registry")
-
-	var resendInterval time.Duration
-	if d, err := time.ParseDuration(os.Getenv(envResendInterval)); err == nil && d > 0 {
-		l.Warnf("Interval changed to %s.", d)
-		resendInterval = d
-	} else {
-		resendInterval = defaultResendInterval
-	}
-
 	return &registry{
-		alerts:         make(map[string]ammodels.PostableAlert),
-		resendInterval: resendInterval,
-		alertTTL:       resolveTimeoutFactor * resendInterval,
-		nowF:           time.Now,
+		alerts: make(map[string]ammodels.PostableAlert),
+		nowF:   time.Now,
 	}
 }
 
-// createAlert creates alert from given AlertParams and adds or replaces alert with given ID in registry.
-func (r *registry) createAlert(id string, labels, annotations map[string]string) {
-	alert := ammodels.PostableAlert{
+// createAlert creates alert from given AlertParams
+func (r *registry) createAlert(labels, annotations map[string]string, alertTTL time.Duration) ammodels.PostableAlert {
+	return ammodels.PostableAlert{
 		Alert: ammodels.Alert{
 			// GeneratorURL: "TODO",
 			Labels: labels,
 		},
-
-		// StartsAt and EndAt can't be added there without changes in registry
+		EndsAt:      strfmt.DateTime(r.nowF().Add(alertTTL)),
 		Annotations: annotations,
 	}
-
-	r.rw.Lock()
-	defer r.rw.Unlock()
-
-	r.alerts[id] = alert
 }
 
-// clean clears all alerts from the registry.
-func (r *registry) clean() {
+// set clears the previous alerts and sets a new slice of alerts in the registry
+func (r *registry) set(alerts []alertWithID) {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 	r.alerts = make(map[string]ammodels.PostableAlert)
+
+	for _, alert := range alerts {
+		r.alerts[alert.id] = alert.alert
+	}
 }
 
 // collect returns all firing alerts.
@@ -95,10 +68,8 @@ func (r *registry) collect() ammodels.PostableAlerts {
 	defer r.rw.RUnlock()
 
 	var res ammodels.PostableAlerts
-	now := r.nowF()
 	for _, alert := range r.alerts {
 		alert := alert
-		alert.EndsAt = strfmt.DateTime(now.Add(r.alertTTL))
 		res = append(res, &alert)
 	}
 	return res

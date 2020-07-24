@@ -33,22 +33,27 @@ func TestRegistry(t *testing.T) {
 		nowValue := time.Now()
 		r.nowF = func() time.Time { return nowValue }
 
-		id := "1234567890"
 		labels := map[string]string{"label": "demo"}
 		annotations := map[string]string{"annotation": "test"}
-
-		r.createAlert(id, labels, annotations)
+		alertTTL := resolveTimeoutFactor * defaultResendInterval
 
 		expected := &ammodels.PostableAlert{
 			Annotations: annotations,
-			EndsAt:      strfmt.DateTime(nowValue.Add(resolveTimeoutFactor * r.resendInterval)),
+			EndsAt:      strfmt.DateTime(nowValue.Add(alertTTL)),
 			Alert: ammodels.Alert{
 				Labels: labels,
 			},
 		}
 
-		alerts := r.collect()
-		require.Len(t, alerts, 1)
-		assert.Equal(t, expected, alerts[0])
+		var alerts []alertWithID
+		alerts = append(alerts, alertWithID{
+			id:    "1234567890",
+			alert: r.createAlert(labels, annotations, alertTTL),
+		})
+		r.set(alerts)
+
+		collectedAlerts := r.collect()
+		require.Len(t, collectedAlerts, 1)
+		assert.Equal(t, expected, collectedAlerts[0])
 	})
 }

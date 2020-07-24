@@ -34,6 +34,7 @@ import (
 	"github.com/percona-platform/saas/pkg/check"
 	"github.com/percona-platform/saas/pkg/starlark"
 	"github.com/percona/pmm/api/agentpb"
+	"github.com/percona/pmm/api/alertmanager/ammodels"
 	"github.com/percona/pmm/utils/tlsconfig"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
@@ -54,15 +55,20 @@ const (
 	defaultStartDelay = time.Minute
 
 	// Environment variables that affect checks service; only for testing.
-	envHost      = "PERCONA_TEST_CHECKS_HOST"
-	envPublicKey = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
-	envInterval  = "PERCONA_TEST_CHECKS_INTERVAL"
-	envCheckFile = "PERCONA_TEST_CHECKS_FILE"
+	envHost           = "PERCONA_TEST_CHECKS_HOST"
+	envPublicKey      = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
+	envInterval       = "PERCONA_TEST_CHECKS_INTERVAL"
+	envCheckFile      = "PERCONA_TEST_CHECKS_FILE"
+	envResendInterval = "PERCONA_TEST_CHECKS_RESEND_INTERVAL"
 
 	checksTimeout       = time.Hour
 	downloadTimeout     = 10 * time.Second
 	resultTimeout       = 15 * time.Second
 	resultCheckInterval = time.Second
+
+	// sync with API tests
+	resolveTimeoutFactor  = 3
+	defaultResendInterval = 2 * time.Second
 
 	prometheusNamespace = "pmm_managed"
 	prometheusSubsystem = "checks"
@@ -89,11 +95,13 @@ type Service struct {
 	db                  *reform.DB
 	alertsRegistry      *registry
 
-	l          *logrus.Entry
-	host       string
-	publicKeys []string
-	interval   time.Duration
-	startDelay time.Duration
+	l              *logrus.Entry
+	host           string
+	publicKeys     []string
+	interval       time.Duration
+	startDelay     time.Duration
+	resendInterval time.Duration
+	alertTTL       time.Duration
 
 	cm               sync.Mutex
 	mySQLChecks      []check.Check
@@ -108,17 +116,27 @@ type Service struct {
 func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService, db *reform.DB) *Service {
 	l := logrus.WithField("component", "checks")
 
+	var resendInterval time.Duration
+	if d, err := time.ParseDuration(os.Getenv(envResendInterval)); err == nil && d > 0 {
+		l.Warnf("Interval changed to %s.", d)
+		resendInterval = d
+	} else {
+		resendInterval = defaultResendInterval
+	}
+
 	s := &Service{
 		agentsRegistry:      agentsRegistry,
 		alertmanagerService: alertmanagerService,
 		db:                  db,
 		alertsRegistry:      newRegistry(),
 
-		l:          l,
-		host:       defaultHost,
-		publicKeys: defaultPublicKeys,
-		interval:   defaultInterval,
-		startDelay: defaultStartDelay,
+		l:              l,
+		host:           defaultHost,
+		publicKeys:     defaultPublicKeys,
+		interval:       defaultInterval,
+		startDelay:     defaultStartDelay,
+		resendInterval: resendInterval,
+		alertTTL:       resolveTimeoutFactor * resendInterval,
 
 		mScriptsExecuted: prom.NewCounterVec(prom.CounterOpts{
 			Namespace: prometheusNamespace,
@@ -196,7 +214,7 @@ func (s *Service) Run(ctx context.Context) {
 
 // resendAlerts resends collected alerts until ctx is canceled.
 func (s *Service) resendAlerts(ctx context.Context) {
-	t := time.NewTicker(s.alertsRegistry.resendInterval)
+	t := time.NewTicker(s.resendInterval)
 	defer t.Stop()
 
 	for {
@@ -362,9 +380,9 @@ func (s *Service) executeChecks(ctx context.Context) {
 	mongoDBCheckResults := s.executeMongoDBChecks(ctx)
 	checkResults = append(checkResults, mongoDBCheckResults...)
 
-	s.alertsRegistry.clean()
+	alerts := make([]alertWithID, len(checkResults))
 	for _, result := range checkResults {
-		s.createAlert(result.checkName, result.target, &result.result)
+		alerts = append(alerts, s.createAlert(result.checkName, result.target, &result.result))
 	}
 }
 
@@ -585,7 +603,12 @@ func hashID(s string) string {
 	return hex.EncodeToString(data[:])
 }
 
-func (s *Service) createAlert(name string, target target, result *check.Result) {
+type alertWithID struct {
+	alert ammodels.PostableAlert
+	id    string
+}
+
+func (s *Service) createAlert(name string, target target, result *check.Result) alertWithID {
 	labels := make(map[string]string, len(target.labels)+len(result.Labels)+4)
 	annotations := make(map[string]string, 2)
 	for k, v := range target.labels {
@@ -605,7 +628,10 @@ func (s *Service) createAlert(name string, target target, result *check.Result) 
 	annotations["summary"] = result.Summary
 	annotations["description"] = result.Description
 
-	s.alertsRegistry.createAlert(id, labels, annotations)
+	return alertWithID{
+		id:    id,
+		alert: s.alertsRegistry.createAlert(labels, annotations, s.alertTTL),
+	}
 }
 
 // target contains required info about check target.
