@@ -384,6 +384,7 @@ func (s *Service) executeChecks(ctx context.Context) {
 	for _, result := range checkResults {
 		alerts = append(alerts, s.createAlert(result.checkName, result.target, &result.result))
 	}
+	s.alertsRegistry.set(alerts)
 }
 
 // executeMySQLChecks runs MySQL checks for available MySQL services.
