@@ -22,6 +22,7 @@ import (
 	"context"
 	"crypto/sha1" //nolint:gosec
 	"encoding/hex"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
@@ -382,7 +383,7 @@ func (s *Service) executeChecks(ctx context.Context) {
 
 	alerts := make([]alertWithID, len(checkResults))
 	for _, result := range checkResults {
-		alerts = append(alerts, s.createAlert(result.checkName, result.target, &result.result))
+		alerts = append(alerts, s.createAlert(result.checkName, &result.target, &result.result))
 	}
 	s.alertsRegistry.set(alerts)
 }
@@ -598,10 +599,14 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 	return checkResults, nil
 }
 
-// non-cryptographic hash
-func hashID(s string) string {
-	data := sha1.Sum([]byte(s)) //nolint:gosec
-	return hex.EncodeToString(data[:])
+// makeID creates an ID for STT check alert.
+func makeID(target *target, result *check.Result) string {
+	s := sha1.New() //nolint:gosec
+	fmt.Fprintf(s, "%s\n", target.serviceID)
+	fmt.Fprintf(s, "%s\n", result.Summary)
+	fmt.Fprintf(s, "%s\n", result.Description)
+	fmt.Fprintf(s, "%v\n", result.Severity)
+	return alertsPrefix + hex.EncodeToString(s.Sum(nil))
 }
 
 type alertWithID struct {
@@ -609,7 +614,7 @@ type alertWithID struct {
 	id    string
 }
 
-func (s *Service) createAlert(name string, target target, result *check.Result) alertWithID {
+func (s *Service) createAlert(name string, target *target, result *check.Result) alertWithID {
 	labels := make(map[string]string, len(target.labels)+len(result.Labels)+4)
 	annotations := make(map[string]string, 2)
 	for k, v := range target.labels {
@@ -619,7 +624,7 @@ func (s *Service) createAlert(name string, target target, result *check.Result) 
 		labels[k] = v
 	}
 
-	id := alertsPrefix + hashID(target.serviceID+"/"+result.Summary)
+	id := makeID(target, result)
 
 	labels[model.AlertNameLabel] = name
 	labels["severity"] = result.Severity.String()
