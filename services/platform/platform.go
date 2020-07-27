@@ -114,7 +114,7 @@ func (s *Service) SignUp(ctx context.Context, email, password string) error {
 
 	_, err = api.NewAuthAPIClient(cc).SignUp(ctx, &api.SignUpRequest{Email: email, Password: password})
 	if err != nil {
-		return errors.Wrap(err, "failed to sign up user")
+		return err
 	}
 
 	return nil
@@ -130,7 +130,7 @@ func (s *Service) SignIn(ctx context.Context, email, password string) error {
 
 	resp, err := api.NewAuthAPIClient(cc).SignIn(ctx, &api.SignInRequest{Email: email, Password: password})
 	if err != nil {
-		return errors.Wrap(err, "failed to sign in user")
+		return err
 	}
 
 	err = s.db.InTransaction(func(tx *reform.TX) error {
@@ -140,6 +140,22 @@ func (s *Service) SignIn(ctx context.Context, email, password string) error {
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to save session id")
+	}
+
+	return nil
+}
+
+// ResetPassword initiates password reset procedure for user with given email.
+func (s *Service) ResetPassword(ctx context.Context, email string) error {
+	cc, err := dial(ctx, s.host)
+	if err != nil {
+		return errors.Wrap(err, "failed establish connection with Percona")
+	}
+	defer cc.Close() //nolint:errcheck
+
+	_, err = api.NewAuthAPIClient(cc).ResetPassword(ctx, &api.ResetPasswordRequest{Email: email})
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -166,22 +182,6 @@ func (s *Service) refreshSession(ctx context.Context) error {
 	_, err = api.NewAuthAPIClient(cc).RefreshSession(metadata.NewOutgoingContext(ctx, md), &api.RefreshSessionRequest{})
 	if err != nil {
 		return errors.Wrap(err, "failed to refresh session")
-	}
-
-	return nil
-}
-
-// ResetPassword initiates password reset procedure for user with given email.
-func (s *Service) ResetPassword(ctx context.Context, email string) error {
-	cc, err := dial(ctx, s.host)
-	if err != nil {
-		return errors.Wrap(err, "failed establish connection with Percona")
-	}
-	defer cc.Close() //nolint:errcheck
-
-	_, err = api.NewAuthAPIClient(cc).ResetPassword(ctx, &api.ResetPasswordRequest{Email: email})
-	if err != nil {
-		return errors.Wrap(err, "failed to reset password")
 	}
 
 	return nil
