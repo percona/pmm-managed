@@ -397,7 +397,7 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "SAAS-174-password-reset"
+  branch = "SAAS-175-auth-api"
   digest = "1:b354884041ff0c411625fdd40096457afe9eb1dc2a06e42de0a4df7a2952b632"
   name = "github.com/percona/pmm"
   packages = [
@@ -419,7 +419,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "a55804bb4d60ac50e64aeaa74c4faa79abe18b03"
+  revision = "c3ff56dd58aa231681c6f73bf85b9031392f7383"
 
 [[projects]]
   digest = "1:dbee7dc52291bb149388085eeb20561d4cb3c2044e0fa6ffa8d342c6b305f4bf"
