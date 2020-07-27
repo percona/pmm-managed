@@ -93,4 +93,5 @@ type telemetryService interface {
 type platformService interface {
 	SignUp(ctx context.Context, email, password string) error
 	SignIn(ctx context.Context, email, password string) error
+	ResetPassword(ctx context.Context, email string) error
 }
