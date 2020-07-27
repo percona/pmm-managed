@@ -37,8 +37,14 @@ env:
     - GO_VERSION=1.14.x
 
   matrix:
+    # There is no case when pmm-update is older than pmm-managed (pmm-update self-updates first),
+    # so there is no need to test with old PMM Server versions.
+    # However, there may be a need to use a different devcontainer image once
+    # https://jira.percona.com/browse/PMM-5451 is implemented.
     - PMM_SERVER_IMAGE=perconalab/pmm-server:dev-latest
-    - PMM_SERVER_IMAGE=perconalab/pmm-server-fb:PR-974-9277911
+
+    # To test with some feature build
+    # - PMM_SERVER_IMAGE=perconalab/pmm-server-fb:PR-123-4567890
 
 matrix:
   fast_finish: true
