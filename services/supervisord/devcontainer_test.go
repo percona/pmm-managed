@@ -226,9 +226,12 @@ func TestDevContainer(t *testing.T) {
 
 func normalizeFullversion(info *version.PackageInfo) (version string, isFeatureBranch bool) {
 	fullVersion := info.FullVersion
-	isFeatureBranch = os.Getenv("FEATURE_BRANCH") != "" || strings.HasPrefix(fullVersion, "1:")
+
+	epochPrefix := "1:" // set by RPM_EPOCH in PMM Server build scripts
+	isFeatureBranch = strings.HasPrefix(fullVersion, epochPrefix)
 	if isFeatureBranch {
-		fullVersion = strings.TrimPrefix(fullVersion, "1:") // Just to remove epoch
+		fullVersion = strings.TrimPrefix(fullVersion, epochPrefix)
 	}
+
 	return fullVersion, isFeatureBranch
 }
