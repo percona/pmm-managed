@@ -56,9 +56,9 @@ func (r *registry) set(alerts []alert) {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
-	alertSet := make([]ammodels.PostableAlert, len(alerts))
+	var alertSet []ammodels.PostableAlert
 	for _, alert := range alerts {
-		alertSet = append(r.alerts, alert.alert)
+		alertSet = append(alertSet, alert.alert)
 	}
 
 	r.alerts = alertSet
