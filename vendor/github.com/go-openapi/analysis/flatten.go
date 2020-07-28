@@ -850,7 +850,7 @@ func importExternalReferences(opts *FlattenOpts) (bool, error) {
 				enums:      enumAnalysis{},
 			}
 			partialAnalyzer.reset()
-			partialAnalyzer.analyzeSchema("", *sch, "/")
+			partialAnalyzer.analyzeSchema("", sch, "/")
 
 			// now rewrite those refs with rebase
 			for key, ref := range partialAnalyzer.references.allRefs {
