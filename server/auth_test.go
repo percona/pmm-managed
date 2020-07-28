@@ -220,7 +220,7 @@ func TestSwagger(t *testing.T) {
 	}
 }
 
-func TestPermissionsForSTTChecksPage(t *testing.T) {
+func TestPermissions(t *testing.T) {
 	ts := strconv.FormatInt(time.Now().Unix(), 10)
 	none := "none-" + ts
 	viewer := "viewer-" + ts
@@ -239,40 +239,66 @@ func TestPermissionsForSTTChecksPage(t *testing.T) {
 	adminID := createUserWithRole(t, admin, "Admin")
 	defer deleteUser(t, adminID)
 
-	tests := []struct {
-		name       string
-		url        string
-		method     string
+	type userCase struct {
+		userType   string
 		login      string
 		statusCode int
+	}
+
+	tests := []struct {
+		name     string
+		url      string
+		method   string
+		userCase []userCase
 	}{
-		{name: "settings-default", url: "/v1/Settings/Get", method: "POST", login: none, statusCode: 401},
-		{name: "settings-viewer", url: "/v1/Settings/Get", method: "POST", login: viewer, statusCode: 401},
-		{name: "settings-editor", url: "/v1/Settings/Get", method: "POST", login: editor, statusCode: 401},
-		{name: "settings-admin", url: "/v1/Settings/Get", method: "POST", login: admin, statusCode: 200},
-		{name: "alerts-default", url: "/alertmanager/api/v2/alerts", method: "GET", login: none, statusCode: 401},
-		{name: "alerts-viewer", url: "/alertmanager/api/v2/alerts", method: "GET", login: viewer, statusCode: 401},
-		{name: "alerts-editor", url: "/alertmanager/api/v2/alerts", method: "GET", login: editor, statusCode: 401},
-		{name: "alerts-admin", url: "/alertmanager/api/v2/alerts", method: "GET", login: admin, statusCode: 200},
+		{name: "settings", url: "/v1/Settings/Get", method: "POST", userCase: []userCase{
+			{userType: "default", login: none, statusCode: 401},
+			{userType: "viewer", login: viewer, statusCode: 401},
+			{userType: "editor", login: editor, statusCode: 401},
+			{userType: "admin", login: admin, statusCode: 200},
+		}},
+		{name: "alerts-default", url: "/alertmanager/api/v2/alerts", method: "GET", userCase: []userCase{
+			{userType: "default", login: none, statusCode: 401},
+			{userType: "viewer", login: viewer, statusCode: 401},
+			{userType: "editor", login: editor, statusCode: 401},
+			{userType: "admin", login: admin, statusCode: 200},
+		}},
+		{name: "platform-sign-up", url: "/v1/Platform/SignUp", method: "POST", userCase: []userCase{
+			{userType: "default", login: none, statusCode: 401},
+			{userType: "viewer", login: viewer, statusCode: 401},
+			{userType: "editor", login: editor, statusCode: 401},
+			{userType: "admin", login: admin, statusCode: 400}, // We send bad request, but have access to endpoint
+		}},
+		{name: "platform-sign-in", url: "/v1/Platform/SignIn", method: "POST", userCase: []userCase{
+			{userType: "default", login: none, statusCode: 401},
+			{userType: "viewer", login: viewer, statusCode: 401},
+			{userType: "editor", login: editor, statusCode: 401},
+			{userType: "admin", login: admin, statusCode: 400}, // We send bad request, but have access to endpoint
+		}},
 	}
 
 	for _, test := range tests {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
-			// make a BaseURL without authentication
-			u, err := url.Parse(pmmapitests.BaseURL.String())
-			require.NoError(t, err)
-			u.User = url.UserPassword(test.login, test.login)
-			u.Path = test.url
+			for _, user := range test.userCase {
+				user := user
+				t.Run(user.userType, func(t *testing.T) {
+					// make a BaseURL without authentication
+					u, err := url.Parse(pmmapitests.BaseURL.String())
+					require.NoError(t, err)
+					u.User = url.UserPassword(user.login, user.login)
+					u.Path = test.url
 
-			req, err := http.NewRequest(test.method, u.String(), nil)
-			require.NoError(t, err)
+					req, err := http.NewRequestWithContext(pmmapitests.Context, test.method, u.String(), nil)
+					require.NoError(t, err)
 
-			resp, err := http.DefaultClient.Do(req)
-			require.NoError(t, err)
-			defer resp.Body.Close() //nolint:errcheck
+					resp, err := http.DefaultClient.Do(req)
+					require.NoError(t, err)
+					defer resp.Body.Close() //nolint:errcheck
 
-			assert.Equal(t, test.statusCode, resp.StatusCode)
+					assert.Equal(t, user.statusCode, resp.StatusCode)
+				})
+			}
 		})
 	}
 }

@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/brianvoe/gofakeit"
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/percona/pmm/api/alertmanager/amclient"
@@ -99,7 +100,9 @@ func Transport(baseURL *url.URL, insecureTLS bool) *httptransport.Runtime {
 
 //nolint:gochecknoinits
 func init() {
-	rand.Seed(time.Now().UnixNano())
+	seed := time.Now().UnixNano()
+	rand.Seed(seed)
+	gofakeit.Seed(seed)
 
 	debugF := flag.Bool("pmm.debug", false, "Enable debug output [PMM_DEBUG].")
 	traceF := flag.Bool("pmm.trace", false, "Enable trace output [PMM_TRACE].")

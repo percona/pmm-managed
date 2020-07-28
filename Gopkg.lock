@@ -34,6 +34,17 @@
   version = "v10"
 
 [[projects]]
+  digest = "1:3d407aad561cc061f31acbafd2236ab70c7a570cb0b1e4ce8c921cf672a0fd17"
+  name = "github.com/brianvoe/gofakeit"
+  packages = [
+    ".",
+    "data",
+  ]
+  pruneopts = "NUT"
+  revision = "19b40d7d6241163eba8b06ddec1041a36db06c54"
+  version = "v3.20.2"
+
+[[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -207,7 +218,7 @@
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:5964602a83f3a3a4767011dfaad01fdf7f111bc0ef09c950dda74d68f01b75e2"
+  digest = "1:3fb7d13ce8ea1ea169eaef1436e820150a4e6ddfe1c817bb47c93c4bbd2ecc1e"
   name = "github.com/percona/pmm"
   packages = [
     "api/alertmanager/amclient",
@@ -238,7 +249,7 @@
     "utils/tlsconfig",
   ]
   pruneopts = "NUT"
-  revision = "0e4ce72c3f89996e3a4bd613520dbd6218909a16"
+  revision = "c538a89c38d8ab0fcaebd2c1ff02c581106f7bca"
 
 [[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
@@ -376,6 +387,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/AlekSi/pointer",
+    "github.com/brianvoe/gofakeit",
     "github.com/davecgh/go-spew/spew",
     "github.com/go-openapi/runtime",
     "github.com/go-openapi/runtime/client",

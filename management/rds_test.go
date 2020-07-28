@@ -1,10 +1,8 @@
 package management
 
 import (
-	"math/rand"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/managementpb/json/client"
@@ -40,7 +38,6 @@ func TestRDSDiscovery(t *testing.T) {
 }
 
 func TestAddRds(t *testing.T) {
-	rand.Seed(time.Now().UnixNano())
 	t.Run("BasicAddRDS", func(t *testing.T) {
 		params := &rds.AddRDSParams{
 			Body: rds.AddRDSBody{
