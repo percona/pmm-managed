@@ -381,7 +381,7 @@ func (s *Service) executeChecks(ctx context.Context) {
 	mongoDBCheckResults := s.executeMongoDBChecks(ctx)
 	checkResults = append(checkResults, mongoDBCheckResults...)
 
-	alerts := make([]alertWithID, len(checkResults))
+	alerts := make([]alert, len(checkResults))
 	for _, result := range checkResults {
 		alerts = append(alerts, s.createAlert(result.checkName, &result.target, &result.result))
 	}
@@ -609,12 +609,12 @@ func makeID(target *target, result *check.Result) string {
 	return alertsPrefix + hex.EncodeToString(s.Sum(nil))
 }
 
-type alertWithID struct {
+type alert struct {
 	alert ammodels.PostableAlert
 	id    string
 }
 
-func (s *Service) createAlert(name string, target *target, result *check.Result) alertWithID {
+func (s *Service) createAlert(name string, target *target, result *check.Result) alert {
 	labels := make(map[string]string, len(target.labels)+len(result.Labels)+4)
 	annotations := make(map[string]string, 2)
 	for k, v := range target.labels {
@@ -634,7 +634,7 @@ func (s *Service) createAlert(name string, target *target, result *check.Result)
 	annotations["summary"] = result.Summary
 	annotations["description"] = result.Description
 
-	return alertWithID{
+	return alert{
 		id:    id,
 		alert: s.alertsRegistry.createAlert(labels, annotations, s.alertTTL),
 	}
@@ -914,15 +914,6 @@ func (s *Service) verifySignatures(resp *api.GetAllChecksResponse) error {
 	}
 
 	return errors.New("no verified signatures")
-}
-
-func sliceToSet(slice []string) map[string]struct{} {
-	m := make(map[string]struct{}, len(slice))
-	for _, str := range slice {
-		m[str] = struct{}{}
-	}
-
-	return m
 }
 
 func mustParseVersion(v string) *version.Parsed {

@@ -410,22 +410,3 @@ func TestMustParseVersion(t *testing.T) {
 		assert.Panics(t, f)
 	})
 }
-
-func TestSliceToSet(t *testing.T) {
-	slice := []string{"a", "b", "b", "c", "a", "c", "d", "", ""}
-	actual := sliceToSet(slice)
-
-	expected := map[string]struct{}{
-		"a": {},
-		"b": {},
-		"c": {},
-		"d": {},
-		"":  {},
-	}
-
-	assert.Len(t, actual, 5)
-
-	for k, v := range expected {
-		assert.Equal(t, v, actual[k])
-	}
-}

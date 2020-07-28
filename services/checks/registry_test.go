@@ -45,14 +45,18 @@ func TestRegistry(t *testing.T) {
 			},
 		}
 
-		var alerts []alertWithID
-		alerts = append(alerts, alertWithID{
+		var alerts []alert
+		alerts = append(alerts, alert{
 			id:    "1234567890",
 			alert: r.createAlert(labels, annotations, alertTTL),
 		})
 		r.set(alerts)
 
 		collectedAlerts := r.collect()
+		for _, al := range collectedAlerts {
+			t.Log(*al)
+		}
+
 		require.Len(t, collectedAlerts, 1)
 		assert.Equal(t, expected, collectedAlerts[0])
 	})
