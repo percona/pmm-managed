@@ -58,3 +58,12 @@ func (this *RefreshSessionResponse) Validate() error {
 	}
 	return nil
 }
+func (this *ResetPasswordRequest) Validate() error {
+	if this.Email == "" {
+		return github_com_mwitkow_go_proto_validators.FieldError("Email", fmt.Errorf(`value '%v' must not be an empty string`, this.Email))
+	}
+	return nil
+}
+func (this *ResetPasswordResponse) Validate() error {
+	return nil
+}
