@@ -396,7 +396,7 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "SAAS-175-auth-api"
+  branch = "PMM-2.0"
   digest = "1:868e091ba3675c51dc9aceb41f5090c4f93119fbd1eb32f3c8e1f25d7e27d17f"
   name = "github.com/percona/pmm"
   packages = [
@@ -418,7 +418,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "a25b4652b3f7463342fd142a9bfb67495dff0aa7"
+  revision = "c538a89c38d8ab0fcaebd2c1ff02c581106f7bca"
 
 [[projects]]
   digest = "1:dbee7dc52291bb149388085eeb20561d4cb3c2044e0fa6ffa8d342c6b305f4bf"
