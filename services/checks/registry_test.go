@@ -53,10 +53,6 @@ func TestRegistry(t *testing.T) {
 		r.set(alerts)
 
 		collectedAlerts := r.collect()
-		for _, al := range collectedAlerts {
-			t.Log(*al)
-		}
-
 		require.Len(t, collectedAlerts, 1)
 		assert.Equal(t, expected, collectedAlerts[0])
 	})
