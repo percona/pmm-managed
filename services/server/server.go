@@ -636,17 +636,6 @@ func (s *Server) PlatformSignIn(ctx context.Context, req *serverpb.PlatformSignI
 	return &serverpb.PlatformSignInResponse{}, nil
 }
 
-// PlatformResetPassword initiates Percona Platform user's password reset procedure.
-func (s *Server) PlatformResetPassword(ctx context.Context, req *serverpb.PlatformResetPasswordRequest) (*serverpb.PlatformResetPasswordResponse, error) {
-	nCtx, cancel := context.WithTimeout(ctx, platformAPITimeout)
-	defer cancel()
-	if err := s.platformService.ResetPassword(nCtx, req.Email); err != nil {
-		return nil, err
-	}
-
-	return &serverpb.PlatformResetPasswordResponse{}, nil
-}
-
 // check interfaces
 var (
 	_ serverpb.ServerServer = (*Server)(nil)

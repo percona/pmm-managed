@@ -145,22 +145,6 @@ func (s *Service) SignIn(ctx context.Context, email, password string) error {
 	return nil
 }
 
-// ResetPassword initiates password reset procedure for user with given email.
-func (s *Service) ResetPassword(ctx context.Context, email string) error {
-	cc, err := dial(ctx, s.host)
-	if err != nil {
-		return errors.Wrap(err, "failed establish connection with Percona")
-	}
-	defer cc.Close() //nolint:errcheck
-
-	_, err = api.NewAuthAPIClient(cc).ResetPassword(ctx, &api.ResetPasswordRequest{Email: email})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // refreshSession resets session timeout.
 func (s *Service) refreshSession(ctx context.Context) error {
 	settings, err := models.GetSettings(s.db)
