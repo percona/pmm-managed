@@ -384,7 +384,7 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-6251-update-deps"
+  branch = "PMM-2.0"
   digest = "1:2f6f42e1a0358ce8b91091a8951bcf007289a8742648de3369ae3d9b29b31855"
   name = "github.com/percona/pmm"
   packages = [
@@ -406,7 +406,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "bd74a39291f0dcad73a6ba32567c7e98e5b16715"
+  revision = "0e4ce72c3f89996e3a4bd613520dbd6218909a16"
 
 [[projects]]
   digest = "1:dbee7dc52291bb149388085eeb20561d4cb3c2044e0fa6ffa8d342c6b305f4bf"
@@ -725,47 +725,6 @@
   pruneopts = "NUT"
   revision = "1f47ba4663831f2a9c28a62a7de3ff8bc45078f0"
   version = "v1.30.0"
-
-[[projects]]
-  digest = "1:4c0fcd4f09137a1595374e72ad4a1d15fadfd95565294758f54884a6c08a6edf"
-  name = "google.golang.org/protobuf"
-  packages = [
-    "encoding/protojson",
-    "encoding/prototext",
-    "encoding/protowire",
-    "internal/descfmt",
-    "internal/descopts",
-    "internal/detrand",
-    "internal/encoding/defval",
-    "internal/encoding/json",
-    "internal/encoding/messageset",
-    "internal/encoding/tag",
-    "internal/encoding/text",
-    "internal/errors",
-    "internal/fieldsort",
-    "internal/filedesc",
-    "internal/filetype",
-    "internal/flags",
-    "internal/genid",
-    "internal/impl",
-    "internal/mapsort",
-    "internal/pragma",
-    "internal/set",
-    "internal/strs",
-    "internal/version",
-    "proto",
-    "reflect/protodesc",
-    "reflect/protoreflect",
-    "reflect/protoregistry",
-    "runtime/protoiface",
-    "runtime/protoimpl",
-    "types/descriptorpb",
-    "types/known/fieldmaskpb",
-    "types/known/wrapperspb",
-  ]
-  pruneopts = "NUT"
-  revision = "3f7a61f89bb6813f89d981d1870ed68da0b3c3f1"
-  version = "v1.25.0"
 
 [[projects]]
   digest = "1:22b2dee6f30bc8601f087449a2a819df8388e54e9547349c658f14d8f8c590f2"
