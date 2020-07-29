@@ -30,7 +30,7 @@ func TestRegistry(t *testing.T) {
 	t.Run("Collect Alerts", func(t *testing.T) {
 		r := newRegistry()
 
-		nowValue := time.Now()
+		nowValue := time.Now().UTC().Round(0) // strip a monotonic clock reading
 		r.nowF = func() time.Time { return nowValue }
 
 		labels := map[string]string{"label": "demo"}
@@ -52,6 +52,7 @@ func TestRegistry(t *testing.T) {
 
 		collectedAlerts := r.collect()
 		require.Len(t, collectedAlerts, 1)
+		require.Equal(t, 1, cap(collectedAlerts))
 		assert.Equal(t, expected, collectedAlerts[0])
 	})
 }

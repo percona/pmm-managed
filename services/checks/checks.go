@@ -602,6 +602,7 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 // makeID creates an ID for STT check alert.
 func makeID(target *target, result *check.Result) string {
 	s := sha1.New() //nolint:gosec
+	fmt.Fprintf(s, "%s\n", target.agentID)
 	fmt.Fprintf(s, "%s\n", target.serviceID)
 	fmt.Fprintf(s, "%s\n", result.Summary)
 	fmt.Fprintf(s, "%s\n", result.Description)
@@ -619,12 +620,10 @@ func (s *Service) createAlert(name string, target *target, result *check.Result)
 		labels[k] = v
 	}
 
-	id := makeID(target, result)
-
 	labels[model.AlertNameLabel] = name
 	labels["severity"] = result.Severity.String()
 	labels["stt_check"] = "1"
-	labels["alert_id"] = id
+	labels["alert_id"] = makeID(target, result)
 
 	annotations["summary"] = result.Summary
 	annotations["description"] = result.Description

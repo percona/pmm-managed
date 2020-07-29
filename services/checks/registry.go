@@ -40,12 +40,13 @@ func newRegistry() *registry {
 
 // createAlert creates alert from given AlertParams.
 func (r *registry) createAlert(labels, annotations map[string]string, alertTTL time.Duration) *ammodels.PostableAlert {
+	endsAt := r.nowF().Add(alertTTL).UTC().Round(0) // strip a monotonic clock reading
 	return &ammodels.PostableAlert{
 		Alert: ammodels.Alert{
 			// GeneratorURL: "TODO",
 			Labels: labels,
 		},
-		EndsAt:      strfmt.DateTime(r.nowF().Add(alertTTL)),
+		EndsAt:      strfmt.DateTime(endsAt),
 		Annotations: annotations,
 	}
 }

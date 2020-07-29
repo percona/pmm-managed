@@ -21,10 +21,13 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/AlekSi/pointer"
+	"github.com/go-openapi/strfmt"
 	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/percona-platform/saas/pkg/check"
+	"github.com/percona/pmm/api/alertmanager/ammodels"
 	"github.com/percona/pmm/version"
 	promtest "github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
@@ -409,4 +412,45 @@ func TestMustParseVersion(t *testing.T) {
 		}
 		assert.Panics(t, f)
 	})
+}
+
+func TestCreateAlert(t *testing.T) {
+	s := New(nil, nil, nil)
+	nowValue := time.Now().UTC().Round(0) // strip a monotonic clock reading
+	s.alertsRegistry.nowF = func() time.Time { return nowValue }
+
+	target := &target{
+		agentID:   "/agent_id/123",
+		serviceID: "/service_id/123",
+		labels: map[string]string{
+			"foo": "bar",
+		},
+	}
+	result := &check.Result{
+		Summary:     "check summary",
+		Description: "check description",
+		Severity:    check.Warning,
+		Labels: map[string]string{
+			"baz": "qux",
+		},
+	}
+	actual := s.createAlert("name", target, result)
+	expected := &ammodels.PostableAlert{
+		Annotations: map[string]string{
+			"summary":     "check summary",
+			"description": "check description",
+		},
+		EndsAt: strfmt.DateTime(nowValue.Add(s.alertTTL)),
+		Alert: ammodels.Alert{
+			Labels: map[string]string{
+				"alert_id":  "/stt/3293a1002b32c425dbda851406bf1428dced74cd",
+				"alertname": "name",
+				"baz":       "qux",
+				"foo":       "bar",
+				"severity":  "warning",
+				"stt_check": "1",
+			},
+		},
+	}
+	assert.Equal(t, expected, actual)
 }
