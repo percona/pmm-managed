@@ -45,11 +45,9 @@ func TestRegistry(t *testing.T) {
 			},
 		}
 
-		var alerts []alert
-		alerts = append(alerts, alert{
-			id:    "1234567890",
-			alert: r.createAlert(labels, annotations, alertTTL),
-		})
+		alerts := ammodels.PostableAlerts{
+			r.createAlert(labels, annotations, alertTTL),
+		}
 		r.set(alerts)
 
 		collectedAlerts := r.collect()

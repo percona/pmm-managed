@@ -27,21 +27,20 @@ import (
 // registry stores alerts and delay information by IDs.
 type registry struct {
 	rw     sync.RWMutex
-	alerts []ammodels.PostableAlert
+	alerts ammodels.PostableAlerts
 	nowF   func() time.Time // for tests
 }
 
 // newRegistry creates a new registry.
 func newRegistry() *registry {
 	return &registry{
-		alerts: []ammodels.PostableAlert{},
-		nowF:   time.Now,
+		nowF: time.Now,
 	}
 }
 
 // createAlert creates alert from given AlertParams.
-func (r *registry) createAlert(labels, annotations map[string]string, alertTTL time.Duration) ammodels.PostableAlert {
-	return ammodels.PostableAlert{
+func (r *registry) createAlert(labels, annotations map[string]string, alertTTL time.Duration) *ammodels.PostableAlert {
+	return &ammodels.PostableAlert{
 		Alert: ammodels.Alert{
 			// GeneratorURL: "TODO",
 			Labels: labels,
@@ -51,28 +50,22 @@ func (r *registry) createAlert(labels, annotations map[string]string, alertTTL t
 	}
 }
 
-// set clears the previous alerts and sets a new slice of alerts in the registry.
-func (r *registry) set(alerts []alert) {
+// set replaces stored alerts with a copy of given ones.
+func (r *registry) set(alerts ammodels.PostableAlerts) {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
-	alertSet := make([]ammodels.PostableAlert, 0, len(alerts))
-	for _, alert := range alerts {
-		alertSet = append(alertSet, alert.alert)
-	}
-
-	r.alerts = alertSet
+	r.alerts = make(ammodels.PostableAlerts, len(alerts))
+	copy(r.alerts, alerts)
 }
 
-// collect returns all firing alerts.
+// collect returns a copy of stored alerts.
 func (r *registry) collect() ammodels.PostableAlerts {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
-	var res ammodels.PostableAlerts
-	for _, alert := range r.alerts {
-		alert := alert
-		res = append(res, &alert)
-	}
-	return res
+	alerts := make(ammodels.PostableAlerts, len(r.alerts))
+	copy(alerts, r.alerts)
+
+	return alerts
 }

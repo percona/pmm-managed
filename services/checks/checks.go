@@ -381,9 +381,9 @@ func (s *Service) executeChecks(ctx context.Context) {
 	mongoDBCheckResults := s.executeMongoDBChecks(ctx)
 	checkResults = append(checkResults, mongoDBCheckResults...)
 
-	alerts := make([]alert, len(checkResults))
-	for _, result := range checkResults {
-		alerts = append(alerts, s.createAlert(result.checkName, &result.target, &result.result))
+	alerts := make(ammodels.PostableAlerts, len(checkResults))
+	for i, result := range checkResults {
+		alerts[i] = s.createAlert(result.checkName, &result.target, &result.result)
 	}
 	s.alertsRegistry.set(alerts)
 }
@@ -609,12 +609,7 @@ func makeID(target *target, result *check.Result) string {
 	return alertsPrefix + hex.EncodeToString(s.Sum(nil))
 }
 
-type alert struct {
-	alert ammodels.PostableAlert
-	id    string
-}
-
-func (s *Service) createAlert(name string, target *target, result *check.Result) alert {
+func (s *Service) createAlert(name string, target *target, result *check.Result) *ammodels.PostableAlert {
 	labels := make(map[string]string, len(target.labels)+len(result.Labels)+4)
 	annotations := make(map[string]string, 2)
 	for k, v := range target.labels {
@@ -634,10 +629,7 @@ func (s *Service) createAlert(name string, target *target, result *check.Result)
 	annotations["summary"] = result.Summary
 	annotations["description"] = result.Description
 
-	return alert{
-		id:    id,
-		alert: s.alertsRegistry.createAlert(labels, annotations, s.alertTTL),
-	}
+	return s.alertsRegistry.createAlert(labels, annotations, s.alertTTL)
 }
 
 // target contains required info about check target.
