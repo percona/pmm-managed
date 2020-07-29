@@ -373,8 +373,8 @@
   version = "v0.3.0"
 
 [[projects]]
-  branch = "main"
-  digest = "1:086700c7fb8dda563672e1fa55813fffc554207d420eb07dc904702bb657b2f8"
+  branch = "SAAS-174-password-reset"
+  digest = "1:2714d746450774d9f17a10da1263f85eddb6f6c0489b7e3d0bfaebf59c5454d2"
   name = "github.com/percona-platform/saas"
   packages = [
     "gen/auth/external",
@@ -385,7 +385,7 @@
     "pkg/starlark",
   ]
   pruneopts = "NUT"
-  revision = "32e145816e310c554d8bbfcebbe82ff2b640a371"
+  revision = "7c439ef12064566f5e39cf4ae6d0b5d20c85658e"
 
 [[projects]]
   digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
@@ -396,8 +396,8 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-2.0"
-  digest = "1:868e091ba3675c51dc9aceb41f5090c4f93119fbd1eb32f3c8e1f25d7e27d17f"
+  branch = "SAAS-174-password-reset"
+  digest = "1:7af057d51ff381601cbc5df562f11beba3210bc9b1ca59d4c2e39781de2dacbd"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -418,7 +418,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "c538a89c38d8ab0fcaebd2c1ff02c581106f7bca"
+  revision = "608eee5a2eef3c33a7051f08535d8c8d6b92cc30"
 
 [[projects]]
   digest = "1:dbee7dc52291bb149388085eeb20561d4cb3c2044e0fa6ffa8d342c6b305f4bf"
