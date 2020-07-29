@@ -17,18 +17,23 @@
 package checks
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/go-openapi/strfmt"
+	"github.com/percona-platform/saas/pkg/check"
 	"github.com/percona/pmm/api/alertmanager/ammodels"
+	"github.com/prometheus/common/model"
 )
 
 // registry stores alerts and delay information by IDs.
 type registry struct {
-	rw     sync.RWMutex
-	alerts ammodels.PostableAlerts
-	nowF   func() time.Time // for tests
+	rw           sync.RWMutex
+	checkResults []sttCheckResult
+	nowF         func() time.Time // for tests
 }
 
 // newRegistry creates a new registry.
@@ -38,8 +43,45 @@ func newRegistry() *registry {
 	}
 }
 
-// createAlert creates alert from given AlertParams.
-func (r *registry) createAlert(labels, annotations map[string]string, alertTTL time.Duration) *ammodels.PostableAlert {
+// set replaces stored checkResults with a copy of given ones.
+func (r *registry) set(checkResults []sttCheckResult) {
+	r.rw.Lock()
+	defer r.rw.Unlock()
+
+	r.checkResults = make([]sttCheckResult, len(checkResults))
+	copy(r.checkResults, checkResults)
+}
+
+// collect returns a slice of alerts created from the stored check results.
+func (r *registry) collect(alertTTL time.Duration) ammodels.PostableAlerts {
+	r.rw.RLock()
+	defer r.rw.RUnlock()
+
+	alerts := make(ammodels.PostableAlerts, len(r.checkResults))
+	for i, checkResult := range r.checkResults {
+		alerts[i] = r.createAlert(checkResult.checkName, &checkResult.target, &checkResult.result, alertTTL)
+	}
+	return alerts
+}
+
+func (r *registry) createAlert(name string, target *target, result *check.Result, alertTTL time.Duration) *ammodels.PostableAlert {
+	labels := make(map[string]string, len(target.labels)+len(result.Labels)+4)
+	annotations := make(map[string]string, 2)
+	for k, v := range target.labels {
+		labels[k] = v
+	}
+	for k, v := range result.Labels {
+		labels[k] = v
+	}
+
+	labels[model.AlertNameLabel] = name
+	labels["severity"] = result.Severity.String()
+	labels["stt_check"] = "1"
+	labels["alert_id"] = makeID(target, result)
+
+	annotations["summary"] = result.Summary
+	annotations["description"] = result.Description
+
 	endsAt := r.nowF().Add(alertTTL).UTC().Round(0) // strip a monotonic clock reading
 	return &ammodels.PostableAlert{
 		Alert: ammodels.Alert{
@@ -51,22 +93,13 @@ func (r *registry) createAlert(labels, annotations map[string]string, alertTTL t
 	}
 }
 
-// set replaces stored alerts with a copy of given ones.
-func (r *registry) set(alerts ammodels.PostableAlerts) {
-	r.rw.Lock()
-	defer r.rw.Unlock()
-
-	r.alerts = make(ammodels.PostableAlerts, len(alerts))
-	copy(r.alerts, alerts)
-}
-
-// collect returns a copy of stored alerts.
-func (r *registry) collect() ammodels.PostableAlerts {
-	r.rw.RLock()
-	defer r.rw.RUnlock()
-
-	alerts := make(ammodels.PostableAlerts, len(r.alerts))
-	copy(alerts, r.alerts)
-
-	return alerts
+// makeID creates an ID for STT check alert.
+func makeID(target *target, result *check.Result) string {
+	s := sha1.New() //nolint:gosec
+	fmt.Fprintf(s, "%s\n", target.agentID)
+	fmt.Fprintf(s, "%s\n", target.serviceID)
+	fmt.Fprintf(s, "%s\n", result.Summary)
+	fmt.Fprintf(s, "%s\n", result.Description)
+	fmt.Fprintf(s, "%v\n", result.Severity)
+	return alertsPrefix + hex.EncodeToString(s.Sum(nil))
 }

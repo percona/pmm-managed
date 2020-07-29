@@ -19,10 +19,7 @@ package checks
 
 import (
 	"bytes"
-	"context"
-	"crypto/sha1" //nolint:gosec
-	"encoding/hex"
-	"fmt"
+	"context" //nolint:gosec
 	"io/ioutil"
 	"net"
 	"os"
@@ -35,12 +32,10 @@ import (
 	"github.com/percona-platform/saas/pkg/check"
 	"github.com/percona-platform/saas/pkg/starlark"
 	"github.com/percona/pmm/api/agentpb"
-	"github.com/percona/pmm/api/alertmanager/ammodels"
 	"github.com/percona/pmm/utils/tlsconfig"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/model"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -219,7 +214,7 @@ func (s *Service) resendAlerts(ctx context.Context) {
 	defer t.Stop()
 
 	for {
-		s.alertmanagerService.SendAlerts(ctx, s.alertsRegistry.collect())
+		s.alertmanagerService.SendAlerts(ctx, s.alertsRegistry.collect(s.alertTTL))
 
 		select {
 		case <-ctx.Done():
@@ -271,7 +266,7 @@ func (s *Service) StartChecks(ctx context.Context) error {
 
 	s.collectChecks(nCtx)
 	s.executeChecks(nCtx)
-	s.alertmanagerService.SendAlerts(ctx, s.alertsRegistry.collect())
+	s.alertmanagerService.SendAlerts(ctx, s.alertsRegistry.collect(s.alertTTL))
 
 	return nil
 }
@@ -381,11 +376,7 @@ func (s *Service) executeChecks(ctx context.Context) {
 	mongoDBCheckResults := s.executeMongoDBChecks(ctx)
 	checkResults = append(checkResults, mongoDBCheckResults...)
 
-	alerts := make(ammodels.PostableAlerts, len(checkResults))
-	for i, result := range checkResults {
-		alerts[i] = s.createAlert(result.checkName, &result.target, &result.result)
-	}
-	s.alertsRegistry.set(alerts)
+	s.alertsRegistry.set(checkResults)
 }
 
 // executeMySQLChecks runs MySQL checks for available MySQL services.
@@ -597,38 +588,6 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 	}
 
 	return checkResults, nil
-}
-
-// makeID creates an ID for STT check alert.
-func makeID(target *target, result *check.Result) string {
-	s := sha1.New() //nolint:gosec
-	fmt.Fprintf(s, "%s\n", target.agentID)
-	fmt.Fprintf(s, "%s\n", target.serviceID)
-	fmt.Fprintf(s, "%s\n", result.Summary)
-	fmt.Fprintf(s, "%s\n", result.Description)
-	fmt.Fprintf(s, "%v\n", result.Severity)
-	return alertsPrefix + hex.EncodeToString(s.Sum(nil))
-}
-
-func (s *Service) createAlert(name string, target *target, result *check.Result) *ammodels.PostableAlert {
-	labels := make(map[string]string, len(target.labels)+len(result.Labels)+4)
-	annotations := make(map[string]string, 2)
-	for k, v := range target.labels {
-		labels[k] = v
-	}
-	for k, v := range result.Labels {
-		labels[k] = v
-	}
-
-	labels[model.AlertNameLabel] = name
-	labels["severity"] = result.Severity.String()
-	labels["stt_check"] = "1"
-	labels["alert_id"] = makeID(target, result)
-
-	annotations["summary"] = result.Summary
-	annotations["description"] = result.Description
-
-	return s.alertsRegistry.createAlert(labels, annotations, s.alertTTL)
 }
 
 // target contains required info about check target.
