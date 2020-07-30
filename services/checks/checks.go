@@ -19,7 +19,7 @@ package checks
 
 import (
 	"bytes"
-	"context" //nolint:gosec
+	"context"
 	"io/ioutil"
 	"net"
 	"os"
@@ -97,7 +97,6 @@ type Service struct {
 	interval       time.Duration
 	startDelay     time.Duration
 	resendInterval time.Duration
-	alertTTL       time.Duration
 
 	cm               sync.Mutex
 	mySQLChecks      []check.Check
@@ -124,7 +123,7 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 		agentsRegistry:      agentsRegistry,
 		alertmanagerService: alertmanagerService,
 		db:                  db,
-		alertsRegistry:      newRegistry(),
+		alertsRegistry:      newRegistry(resolveTimeoutFactor * resendInterval),
 
 		l:              l,
 		host:           defaultHost,
@@ -132,7 +131,6 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 		interval:       defaultInterval,
 		startDelay:     defaultStartDelay,
 		resendInterval: resendInterval,
-		alertTTL:       resolveTimeoutFactor * resendInterval,
 
 		mScriptsExecuted: prom.NewCounterVec(prom.CounterOpts{
 			Namespace: prometheusNamespace,
@@ -214,7 +212,7 @@ func (s *Service) resendAlerts(ctx context.Context) {
 	defer t.Stop()
 
 	for {
-		s.alertmanagerService.SendAlerts(ctx, s.alertsRegistry.collect(s.alertTTL))
+		s.alertmanagerService.SendAlerts(ctx, s.alertsRegistry.collect())
 
 		select {
 		case <-ctx.Done():
@@ -266,7 +264,7 @@ func (s *Service) StartChecks(ctx context.Context) error {
 
 	s.collectChecks(nCtx)
 	s.executeChecks(nCtx)
-	s.alertmanagerService.SendAlerts(ctx, s.alertsRegistry.collect(s.alertTTL))
+	s.alertmanagerService.SendAlerts(ctx, s.alertsRegistry.collect())
 
 	return nil
 }

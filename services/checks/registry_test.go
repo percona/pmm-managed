@@ -29,11 +29,11 @@ import (
 
 func TestRegistry(t *testing.T) {
 	t.Run("Create and Collect Alerts", func(t *testing.T) {
-		r := newRegistry()
+		alertTTL := resolveTimeoutFactor * defaultResendInterval
+		r := newRegistry(alertTTL)
 
 		nowValue := time.Now().UTC().Round(0) // strip a monotonic clock reading
 		r.nowF = func() time.Time { return nowValue }
-		alertTTL := resolveTimeoutFactor * defaultResendInterval
 		checkResults := []sttCheckResult{
 			{
 				checkName: "name",
@@ -75,7 +75,7 @@ func TestRegistry(t *testing.T) {
 			},
 		}
 
-		collectedAlerts := r.collect(alertTTL)
+		collectedAlerts := r.collect()
 		require.Len(t, collectedAlerts, 1)
 		require.Equal(t, 1, cap(collectedAlerts))
 		assert.Equal(t, expectedAlert, collectedAlerts[0])

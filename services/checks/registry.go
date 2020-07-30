@@ -17,7 +17,7 @@
 package checks
 
 import (
-	"crypto/sha1"
+	"crypto/sha1" //nolint:gosec
 	"encoding/hex"
 	"fmt"
 	"sync"
@@ -33,13 +33,15 @@ import (
 type registry struct {
 	rw           sync.RWMutex
 	checkResults []sttCheckResult
+	alertTTL     time.Duration
 	nowF         func() time.Time // for tests
 }
 
 // newRegistry creates a new registry.
-func newRegistry() *registry {
+func newRegistry(alertTTL time.Duration) *registry {
 	return &registry{
-		nowF: time.Now,
+		alertTTL: alertTTL,
+		nowF:     time.Now,
 	}
 }
 
@@ -53,13 +55,13 @@ func (r *registry) set(checkResults []sttCheckResult) {
 }
 
 // collect returns a slice of alerts created from the stored check results.
-func (r *registry) collect(alertTTL time.Duration) ammodels.PostableAlerts {
+func (r *registry) collect() ammodels.PostableAlerts {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
 	alerts := make(ammodels.PostableAlerts, len(r.checkResults))
 	for i, checkResult := range r.checkResults {
-		alerts[i] = r.createAlert(checkResult.checkName, &checkResult.target, &checkResult.result, alertTTL)
+		alerts[i] = r.createAlert(checkResult.checkName, &checkResult.target, &checkResult.result, r.alertTTL)
 	}
 	return alerts
 }
