@@ -46,16 +46,16 @@ import (
 )
 
 const (
-	defaultHost       = "check.percona.com:443"
-	defaultInterval   = 24 * time.Hour
-	defaultStartDelay = time.Minute
+	defaultHost            = "check.percona.com:443"
+	defaultRestartInterval = 24 * time.Hour
+	defaultStartDelay      = time.Minute
 
 	// Environment variables that affect checks service; only for testing.
-	envHost           = "PERCONA_TEST_CHECKS_HOST"
-	envPublicKey      = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
-	envInterval       = "PERCONA_TEST_CHECKS_INTERVAL"
-	envCheckFile      = "PERCONA_TEST_CHECKS_FILE"
-	envResendInterval = "PERCONA_TEST_CHECKS_RESEND_INTERVAL"
+	envHost            = "PERCONA_TEST_CHECKS_HOST"
+	envPublicKey       = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
+	envRestartInterval = "PERCONA_TEST_CHECKS_INTERVAL" // not "restart" in the value - name is fixed
+	envCheckFile       = "PERCONA_TEST_CHECKS_FILE"
+	envResendInterval  = "PERCONA_TEST_CHECKS_RESEND_INTERVAL"
 
 	checksTimeout       = time.Hour
 	downloadTimeout     = 10 * time.Second
@@ -91,12 +91,12 @@ type Service struct {
 	db                  *reform.DB
 	alertsRegistry      *registry
 
-	l              *logrus.Entry
-	host           string
-	publicKeys     []string
-	interval       time.Duration
-	startDelay     time.Duration
-	resendInterval time.Duration
+	l               *logrus.Entry
+	host            string
+	publicKeys      []string
+	restartInterval time.Duration
+	startDelay      time.Duration
+	resendInterval  time.Duration
 
 	cm               sync.Mutex
 	mySQLChecks      []check.Check
@@ -125,12 +125,12 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 		db:                  db,
 		alertsRegistry:      newRegistry(resolveTimeoutFactor * resendInterval),
 
-		l:              l,
-		host:           defaultHost,
-		publicKeys:     defaultPublicKeys,
-		interval:       defaultInterval,
-		startDelay:     defaultStartDelay,
-		resendInterval: resendInterval,
+		l:               l,
+		host:            defaultHost,
+		publicKeys:      defaultPublicKeys,
+		restartInterval: defaultRestartInterval,
+		startDelay:      defaultStartDelay,
+		resendInterval:  resendInterval,
 
 		mScriptsExecuted: prom.NewCounterVec(prom.CounterOpts{
 			Namespace: prometheusNamespace,
@@ -155,9 +155,9 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 		s.publicKeys = strings.Split(k, ",")
 		l.Warnf("Public keys changed to %q.", k)
 	}
-	if d, err := time.ParseDuration(os.Getenv(envInterval)); err == nil && d > 0 {
+	if d, err := time.ParseDuration(os.Getenv(envRestartInterval)); err == nil && d > 0 {
 		l.Warnf("Interval changed to %s; start delay disabled.", d)
-		s.interval = d
+		s.restartInterval = d
 		s.startDelay = 0
 	}
 
@@ -223,9 +223,9 @@ func (s *Service) resendAlerts(ctx context.Context) {
 	}
 }
 
-// restartChecks restart checks until ctx is canceled.
+// restartChecks restarts checks until ctx is canceled.
 func (s *Service) restartChecks(ctx context.Context) {
-	t := time.NewTicker(s.interval)
+	t := time.NewTicker(s.restartInterval)
 	defer t.Stop()
 
 	for {
