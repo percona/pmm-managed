@@ -37,7 +37,7 @@ import (
 const (
 	alertmanagerDataDir = "/srv/alertmanager/data"
 	prometheusDir       = "/srv/prometheus"
-	dirPerm             = os.FileMode(0775)
+	dirPerm             = os.FileMode(0o775)
 
 	alertmanagerBaseConfigPath = "/srv/alertmanager/alertmanager.base.yml"
 )
@@ -136,10 +136,11 @@ receivers:
 // to call this method every now and then.
 func (svc *Service) SendAlerts(ctx context.Context, alerts ammodels.PostableAlerts) {
 	if len(alerts) == 0 {
+		svc.l.Debug("0 alerts to send, exiting.")
 		return
 	}
 
-	svc.l.Infof("Sending %d alerts...", len(alerts))
+	svc.l.Debugf("Sending %d alerts...", len(alerts))
 	_, err := amclient.Default.Alert.PostAlerts(&alert.PostAlertsParams{
 		Alerts:  alerts,
 		Context: ctx,
