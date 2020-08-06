@@ -20,10 +20,12 @@ import (
 	"context"
 	"testing"
 
+	"github.com/percona-platform/saas/pkg/check"
 	"github.com/percona/pmm/api/managementpb"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -52,5 +54,47 @@ func TestStartSecurityChecks(t *testing.T) {
 		resp, err := s.StartSecurityChecks(context.Background(), &managementpb.StartSecurityChecksRequest{})
 		tests.AssertGRPCError(t, status.New(codes.FailedPrecondition, "STT is disabled."), err)
 		assert.Nil(t, resp)
+	})
+}
+
+func TestGetSecurityCheckResults(t *testing.T) {
+	t.Run("Check results not found error", func(t *testing.T) {
+		var checksService mockChecksService
+		checksService.On("GetSecurityCheckResults", mock.Anything).Return(nil, services.ErrNoCheckResults)
+
+		s := NewChecksAPIService(&checksService)
+
+		resp, err := s.GetSecurityCheckResults(context.Background(), &managementpb.GetSecurityCheckResultsRequest{})
+		tests.AssertGRPCError(t, status.New(codes.Internal, services.ErrNoCheckResults.Error()), err)
+		assert.Nil(t, resp)
+	})
+
+	t.Run("STT disabled error", func(t *testing.T) {
+		checkResult := []check.Result{
+			{
+				Summary:     "Check summary",
+				Description: "Check Description",
+				Severity:    1,
+				Labels:      map[string]string{"label_key": "label_value"},
+			},
+		}
+		response := &managementpb.GetSecurityCheckResultsResponse{
+			Results: []*managementpb.STTCheckResult{
+				{
+					Summary:     "Check summary",
+					Description: "Check Description",
+					Severity:    1,
+					Labels:      map[string]string{"label_key": "label_value"},
+				},
+			},
+		}
+		var checksService mockChecksService
+		checksService.On("GetSecurityCheckResults", mock.Anything).Return(checkResult, nil)
+
+		s := NewChecksAPIService(&checksService)
+
+		resp, err := s.GetSecurityCheckResults(context.Background(), &managementpb.GetSecurityCheckResultsRequest{})
+		require.NoError(t, err)
+		assert.Equal(t, resp, response)
 	})
 }

@@ -49,3 +49,23 @@ func (s *ChecksAPIService) StartSecurityChecks(ctx context.Context, request *man
 
 	return &managementpb.StartSecurityChecksResponse{}, nil
 }
+
+// GetSecurityCheckResults returns the results of the STT checks that were run.
+func (s *ChecksAPIService) GetSecurityCheckResults(ctx context.Context, request *managementpb.GetSecurityCheckResultsRequest) (*managementpb.GetSecurityCheckResultsResponse, error) {
+	results, err := s.checksService.GetSecurityCheckResults(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	var checkResults []*managementpb.STTCheckResult
+	for _, result := range results {
+		checkResults = append(checkResults, &managementpb.STTCheckResult{
+			Summary:     result.Summary,
+			Description: result.Description,
+			Severity:    int32(result.Severity),
+			Labels:      result.Labels,
+		})
+	}
+
+	return &managementpb.GetSecurityCheckResultsResponse{Results: checkResults}, nil
+}

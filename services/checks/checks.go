@@ -248,6 +248,20 @@ func (s *Service) restartChecks(ctx context.Context) {
 	}
 }
 
+// GetSecurityCheckResults returns the results of the STT checks that were run.
+func (s *Service) GetSecurityCheckResults(ctx context.Context) ([]check.Result, error) {
+	var checkResults []check.Result
+	for _, result := range s.alertsRegistry.getCheckResults() {
+		checkResults = append(checkResults, result.result)
+	}
+
+	if len(checkResults) == 0 {
+		return nil, services.ErrNoCheckResults
+	}
+
+	return checkResults, nil
+}
+
 // StartChecks triggers STT checks downloading and execution. It returns services.ErrSTTDisabled if STT is disabled.
 func (s *Service) StartChecks(ctx context.Context) error {
 	settings, err := models.GetSettings(s.db)

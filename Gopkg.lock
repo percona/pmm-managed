@@ -396,8 +396,8 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-2.0"
-  digest = "1:868e091ba3675c51dc9aceb41f5090c4f93119fbd1eb32f3c8e1f25d7e27d17f"
+  branch = "SAAS-237-Check-Results-API"
+  digest = "1:4f2231bf21dcdeb71025d4321ead7105fdd9b48496bc23b228ce53fea793fc65"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -418,7 +418,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "c55b52e7141dd3bc074ad7c11b920a6fbeac05d9"
+  revision = "3d70ae6016948f0172161a704ee7b88662dcbfc1"
 
 [[projects]]
   digest = "1:dbee7dc52291bb149388085eeb20561d4cb3c2044e0fa6ffa8d342c6b305f4bf"

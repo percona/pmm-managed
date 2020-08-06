@@ -37,3 +37,8 @@ func NewChecksServer(s *management.ChecksAPIService) managementpb.SecurityChecks
 func (s *checksServer) StartSecurityChecks(ctx context.Context, request *managementpb.StartSecurityChecksRequest) (*managementpb.StartSecurityChecksResponse, error) {
 	return s.svc.StartSecurityChecks(ctx, request)
 }
+
+//  GetSecurityCheckResults returns the results of the STT checks that were run.
+func (s *checksServer) GetSecurityCheckResults(ctx context.Context, request *managementpb.GetSecurityCheckResultsRequest) (*managementpb.GetSecurityCheckResultsResponse, error) {
+	return s.svc.GetSecurityCheckResults(ctx, request)
+}
