@@ -16,7 +16,7 @@ type mockChecksService struct {
 }
 
 // GetSecurityCheckResults provides a mock function with given fields: ctx
-func (_m *mockChecksService) GetSecurityCheckResults(ctx context.Context) ([]check.Result, error) {
+func (_m *mockChecksService) GetSecurityCheckResults(ctx context.Context) []check.Result {
 	ret := _m.Called(ctx)
 
 	var r0 []check.Result
@@ -28,14 +28,7 @@ func (_m *mockChecksService) GetSecurityCheckResults(ctx context.Context) ([]che
 		}
 	}
 
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
+	return r0
 }
 
 // StartChecks provides a mock function with given fields: ctx

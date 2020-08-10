@@ -194,7 +194,7 @@ uEF33ScMPYpvHvBKv8+yBkJ9k4+DCfV4nDs6kKYwGhalvkkqwWkyfJffO+KW7a1m3y42WHpOnzBxLJ+I
 }
 
 func TestGetSecurityCheckResults(t *testing.T) {
-	t.Run("Check results not found error", func(t *testing.T) {
+	t.Run("Check results are empty", func(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
@@ -203,8 +203,7 @@ func TestGetSecurityCheckResults(t *testing.T) {
 		}()
 
 		s := New(nil, nil, db)
-		results, err := s.GetSecurityCheckResults(context.Background())
-		assert.EqualError(t, err, services.ErrNoCheckResults.Error())
+		results := s.GetSecurityCheckResults(context.Background())
 		assert.Empty(t, results)
 	})
 }

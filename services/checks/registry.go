@@ -67,6 +67,9 @@ func (r *registry) collect() ammodels.PostableAlerts {
 }
 
 func (r *registry) getCheckResults() []sttCheckResult {
+	r.rw.RLock()
+	defer r.rw.RUnlock()
+
 	return r.checkResults
 }
 
