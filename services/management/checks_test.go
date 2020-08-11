@@ -58,18 +58,29 @@ func TestStartSecurityChecks(t *testing.T) {
 }
 
 func TestGetSecurityCheckResults(t *testing.T) {
-	t.Run("Check results are empty", func(t *testing.T) {
+	t.Run("internal error", func(t *testing.T) {
 		var checksService mockChecksService
-		checksService.On("GetSecurityCheckResults", mock.Anything).Return(nil)
+		checksService.On("GetSecurityCheckResults", mock.Anything).Return(nil, errors.New("random error"))
 
 		s := NewChecksAPIService(&checksService)
 
-		resp, err := s.GetSecurityCheckResults(context.Background(), &managementpb.GetSecurityCheckResultsRequest{})
-		tests.AssertGRPCError(t, status.New(codes.Internal, "Failed to get check results."), err)
+		resp, err := s.GetSecurityCheckResults(&managementpb.GetSecurityCheckResultsRequest{})
+		tests.AssertGRPCError(t, status.New(codes.Internal, "Failed to start security checks."), err)
 		assert.Nil(t, resp)
 	})
 
-	t.Run("Check results are not empty", func(t *testing.T) {
+	t.Run("STT disabled error", func(t *testing.T) {
+		var checksService mockChecksService
+		checksService.On("GetSecurityCheckResults", mock.Anything).Return(nil, services.ErrSTTDisabled)
+
+		s := NewChecksAPIService(&checksService)
+
+		resp, err := s.GetSecurityCheckResults(&managementpb.GetSecurityCheckResultsRequest{})
+		tests.AssertGRPCError(t, status.New(codes.FailedPrecondition, "STT is disabled."), err)
+		assert.Nil(t, resp)
+	})
+
+	t.Run("STT enabled", func(t *testing.T) {
 		checkResult := []check.Result{
 			{
 				Summary:     "Check summary",
@@ -79,7 +90,7 @@ func TestGetSecurityCheckResults(t *testing.T) {
 			},
 		}
 		response := &managementpb.GetSecurityCheckResultsResponse{
-			Results: []*managementpb.STTCheckResult{
+			Results: []*managementpb.SecurityCheckResult{
 				{
 					Summary:     "Check summary",
 					Description: "Check Description",
@@ -93,7 +104,7 @@ func TestGetSecurityCheckResults(t *testing.T) {
 
 		s := NewChecksAPIService(&checksService)
 
-		resp, err := s.GetSecurityCheckResults(context.Background(), &managementpb.GetSecurityCheckResultsRequest{})
+		resp, err := s.GetSecurityCheckResults(&managementpb.GetSecurityCheckResultsRequest{})
 		require.NoError(t, err)
 		assert.Equal(t, resp, response)
 	})

@@ -51,7 +51,7 @@ type prometheusService interface {
 // We use it instead of real type for testing and to avoid dependency cycle.
 type checksService interface {
 	StartChecks(ctx context.Context) error
-	GetSecurityCheckResults(ctx context.Context) []check.Result
+	GetSecurityCheckResults() ([]check.Result, error)
 }
 
 // grafanaClient is a subset of methods of grafana.Client used by this package.

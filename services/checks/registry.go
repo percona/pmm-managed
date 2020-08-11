@@ -70,7 +70,12 @@ func (r *registry) getCheckResults() []sttCheckResult {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
-	return r.checkResults
+	checkResults := make([]sttCheckResult, 0, len(r.checkResults))
+	for _, result := range r.checkResults {
+		checkResults = append(checkResults, result)
+	}
+
+	return checkResults
 }
 
 func (r *registry) createAlert(name string, target *target, result *check.Result, alertTTL time.Duration) *ammodels.PostableAlert {

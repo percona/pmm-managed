@@ -194,17 +194,31 @@ uEF33ScMPYpvHvBKv8+yBkJ9k4+DCfV4nDs6kKYwGhalvkkqwWkyfJffO+KW7a1m3y42WHpOnzBxLJ+I
 }
 
 func TestGetSecurityCheckResults(t *testing.T) {
-	t.Run("Check results are empty", func(t *testing.T) {
+	t.Run("STT disabled", func(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
-		defer func() {
-			require.NoError(t, sqlDB.Close())
-		}()
+		s := New(nil, nil, db)
+		results, err := s.GetSecurityCheckResults()
+		assert.Nil(t, results)
+		assert.EqualError(t, err, services.ErrSTTDisabled.Error())
+	})
+
+	t.Run("STT enabled", func(t *testing.T) {
+		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
 		s := New(nil, nil, db)
-		results := s.GetSecurityCheckResults(context.Background())
+		settings, err := models.GetSettings(db)
+		require.NoError(t, err)
+
+		settings.SaaS.STTEnabled = true
+		err = models.SaveSettings(db, settings)
+		require.NoError(t, err)
+
+		results, err := s.GetSecurityCheckResults()
 		assert.Empty(t, results)
+		require.NoError(t, err)
 	})
 }
 
