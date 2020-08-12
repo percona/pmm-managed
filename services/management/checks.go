@@ -58,7 +58,7 @@ func (s *ChecksAPIService) GetSecurityCheckResults(request *managementpb.GetSecu
 			return nil, status.Errorf(codes.FailedPrecondition, "%v.", err)
 		}
 
-		return nil, status.Error(codes.Internal, "Failed to get security checks results.")
+		return nil, status.Error(codes.Internal, "Failed to get security check results.")
 	}
 
 	checkResults := make([]*managementpb.SecurityCheckResult, 0, len(results))

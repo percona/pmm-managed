@@ -65,7 +65,7 @@ func TestGetSecurityCheckResults(t *testing.T) {
 		s := NewChecksAPIService(&checksService)
 
 		resp, err := s.GetSecurityCheckResults(&managementpb.GetSecurityCheckResultsRequest{})
-		tests.AssertGRPCError(t, status.New(codes.Internal, "Failed to start security checks."), err)
+		tests.AssertGRPCError(t, status.New(codes.Internal, "Failed to get security checks results."), err)
 		assert.Nil(t, resp)
 	})
 
