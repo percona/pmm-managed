@@ -259,8 +259,9 @@ func (s *Service) GetSecurityCheckResults() ([]check.Result, error) {
 		return nil, services.ErrSTTDisabled
 	}
 
-	checkResults := make([]check.Result, 0)
-	for _, result := range s.alertsRegistry.getCheckResults() {
+	results := s.alertsRegistry.getCheckResults()
+	checkResults := make([]check.Result, 0, len(results))
+	for _, result := range results {
 		checkResults = append(checkResults, result.result)
 	}
 
