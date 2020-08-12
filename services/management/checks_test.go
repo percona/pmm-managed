@@ -40,7 +40,7 @@ func TestStartSecurityChecks(t *testing.T) {
 
 		s := NewChecksAPIService(&checksService)
 
-		resp, err := s.StartSecurityChecks(context.Background(), &managementpb.StartSecurityChecksRequest{})
+		resp, err := s.StartSecurityChecks(context.Background())
 		tests.AssertGRPCError(t, status.New(codes.Internal, "Failed to start security checks."), err)
 		assert.Nil(t, resp)
 	})
@@ -51,7 +51,7 @@ func TestStartSecurityChecks(t *testing.T) {
 
 		s := NewChecksAPIService(&checksService)
 
-		resp, err := s.StartSecurityChecks(context.Background(), &managementpb.StartSecurityChecksRequest{})
+		resp, err := s.StartSecurityChecks(context.Background())
 		tests.AssertGRPCError(t, status.New(codes.FailedPrecondition, "STT is disabled."), err)
 		assert.Nil(t, resp)
 	})
@@ -64,7 +64,7 @@ func TestGetSecurityCheckResults(t *testing.T) {
 
 		s := NewChecksAPIService(&checksService)
 
-		resp, err := s.GetSecurityCheckResults(&managementpb.GetSecurityCheckResultsRequest{})
+		resp, err := s.GetSecurityCheckResults()
 		tests.AssertGRPCError(t, status.New(codes.Internal, "Failed to get security check results."), err)
 		assert.Nil(t, resp)
 	})
@@ -75,7 +75,7 @@ func TestGetSecurityCheckResults(t *testing.T) {
 
 		s := NewChecksAPIService(&checksService)
 
-		resp, err := s.GetSecurityCheckResults(&managementpb.GetSecurityCheckResultsRequest{})
+		resp, err := s.GetSecurityCheckResults()
 		tests.AssertGRPCError(t, status.New(codes.FailedPrecondition, "STT is disabled."), err)
 		assert.Nil(t, resp)
 	})
@@ -104,7 +104,7 @@ func TestGetSecurityCheckResults(t *testing.T) {
 
 		s := NewChecksAPIService(&checksService)
 
-		resp, err := s.GetSecurityCheckResults(&managementpb.GetSecurityCheckResultsRequest{})
+		resp, err := s.GetSecurityCheckResults()
 		require.NoError(t, err)
 		assert.Equal(t, resp, response)
 	})

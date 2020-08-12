@@ -37,7 +37,7 @@ func NewChecksAPIService(checksService checksService) *ChecksAPIService {
 }
 
 // StartSecurityChecks starts STT checks execution.
-func (s *ChecksAPIService) StartSecurityChecks(ctx context.Context, request *managementpb.StartSecurityChecksRequest) (*managementpb.StartSecurityChecksResponse, error) {
+func (s *ChecksAPIService) StartSecurityChecks(ctx context.Context) (*managementpb.StartSecurityChecksResponse, error) {
 	err := s.checksService.StartChecks(ctx)
 	if err != nil {
 		if err == services.ErrSTTDisabled {
@@ -51,7 +51,7 @@ func (s *ChecksAPIService) StartSecurityChecks(ctx context.Context, request *man
 }
 
 // GetSecurityCheckResults returns the results of the STT checks that were run.
-func (s *ChecksAPIService) GetSecurityCheckResults(request *managementpb.GetSecurityCheckResultsRequest) (*managementpb.GetSecurityCheckResultsResponse, error) {
+func (s *ChecksAPIService) GetSecurityCheckResults() (*managementpb.GetSecurityCheckResultsResponse, error) {
 	results, err := s.checksService.GetSecurityCheckResults()
 	if err != nil {
 		if err == services.ErrSTTDisabled {
