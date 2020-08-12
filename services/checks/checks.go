@@ -264,8 +264,6 @@ func (s *Service) GetSecurityCheckResults() ([]check.Result, error) {
 		checkResults = append(checkResults, result.result)
 	}
 
-	s.l.Error("\n\nCHECKS ===>\n", s.alertsRegistry.getCheckResults())
-
 	return checkResults, nil
 }
 

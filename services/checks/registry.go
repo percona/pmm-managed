@@ -71,9 +71,7 @@ func (r *registry) getCheckResults() []sttCheckResult {
 	defer r.rw.RUnlock()
 
 	checkResults := make([]sttCheckResult, 0, len(r.checkResults))
-	for _, result := range r.checkResults {
-		checkResults = append(checkResults, result)
-	}
+	checkResults = append(checkResults, r.checkResults...)
 
 	return checkResults
 }
