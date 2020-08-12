@@ -16,7 +16,7 @@ required = [
 
 [[constraint]]
   name = "github.com/percona/pmm"
-  branch = "SAAS-237-Check-Results-API"
+  branch = "PMM-2.0"
 
 [[constraint]]
   name = "github.com/percona-platform/saas"
