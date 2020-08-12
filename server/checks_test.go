@@ -56,3 +56,51 @@ func TestStartChecks(t *testing.T) {
 		assert.Nil(t, resp)
 	})
 }
+
+func TestGetSecurityCheckResults(t *testing.T) {
+	if !pmmapitests.RunSTTTests {
+		t.Skip("Skipping STT tests until we have environment: https://jira.percona.com/browse/PMM-5106")
+	}
+
+	client := serverClient.Default.Server
+
+	t.Run("GetSecurityCheckResultsWithDisabledSTT", func(t *testing.T) {
+		defer restoreSettingsDefaults(t)
+		// Disabled STT
+		res, err := client.ChangeSettings(&server.ChangeSettingsParams{
+			Body: server.ChangeSettingsBody{
+				DisableStt: true,
+			},
+			Context: pmmapitests.Context,
+		})
+		require.NoError(t, err)
+		assert.False(t, res.Payload.Settings.SttEnabled)
+		assert.Empty(t, err)
+
+		results, err := managementClient.Default.SecurityChecks.GetSecurityCheckResults(nil)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.FailedPrecondition, `STT is disabled.`)
+		assert.Nil(t, results)
+	})
+
+	t.Run("GetSecurityCheckResultsWithEnabledSTT", func(t *testing.T) {
+		defer restoreSettingsDefaults(t)
+		// Enabled STT
+		res, err := client.ChangeSettings(&server.ChangeSettingsParams{
+			Body: server.ChangeSettingsBody{
+				EnableStt: true,
+			},
+			Context: pmmapitests.Context,
+		})
+		require.NoError(t, err)
+		assert.True(t, res.Payload.Settings.SttEnabled)
+		assert.Empty(t, err)
+
+		resp, err := managementClient.Default.SecurityChecks.StartSecurityChecks(nil)
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+
+		results, err := managementClient.Default.SecurityChecks.GetSecurityCheckResults(nil)
+		require.NoError(t, err)
+		assert.NotNil(t, results)
+	})
+}
