@@ -23,7 +23,7 @@ import (
 	"os"
 	"time"
 
-	api "github.com/percona-platform/saas/gen/auth/external"
+	api "github.com/percona-platform/saas/gen/auth"
 	"github.com/percona/pmm/utils/tlsconfig"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
