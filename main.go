@@ -22,6 +22,7 @@ import (
 	"database/sql"
 	_ "expvar" // register /debug/vars
 	"fmt"
+	"github.com/percona/pmm-managed/services/management/dbaas"
 	"html/template"
 	"log"
 	"net"
@@ -43,6 +44,7 @@ import (
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/api/managementpb"
+	"github.com/percona/pmm/api/managementpb/dbaas"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/utils/sqlmetrics"
 	"github.com/percona/pmm/version"
@@ -168,6 +170,8 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterExternalServer(gRPCServer, management.NewExternalService(deps.db, deps.prometheus))
 	managementpb.RegisterAnnotationServer(gRPCServer, managementgrpc.NewAnnotationServer(deps.db, deps.grafanaClient))
 	managementpb.RegisterSecurityChecksServer(gRPCServer, managementgrpc.NewChecksServer(checksSvc))
+
+	dbaasv1beta1.RegisterKubernetesServer(gRPCServer, dbaas.NewKubernetesServer(deps.db))
 
 	if l.Logger.GetLevel() >= logrus.DebugLevel {
 		l.Debug("Reflection and channelz are enabled.")

@@ -396,8 +396,8 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-2.0"
-  digest = "1:08ba434ef6352b8cf9985910d0177a9238fcdb7b6f1f1ec80fd3f53c95f989a7"
+  branch = "PMM-6130-dbaas-controller-api"
+  digest = "1:1d4df3d00c1976b6205c2687ac78b8ba6b37db153cc92d89b26537993ecc7d0e"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -410,6 +410,7 @@
     "api/alertmanager/ammodels",
     "api/inventorypb",
     "api/managementpb",
+    "api/managementpb/dbaas",
     "api/qanpb",
     "api/serverpb",
     "utils/pdeathsig",
@@ -418,7 +419,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "53ad2941a42de320587d5a1172c18a0858c58cfc"
+  revision = "5c29a0ca50697a52a9ff8899eaa01afe9bd30bc0"
 
 [[projects]]
   digest = "1:dbee7dc52291bb149388085eeb20561d4cb3c2044e0fa6ffa8d342c6b305f4bf"
@@ -821,6 +822,7 @@
     "github.com/percona/pmm/api/alertmanager/ammodels",
     "github.com/percona/pmm/api/inventorypb",
     "github.com/percona/pmm/api/managementpb",
+    "github.com/percona/pmm/api/managementpb/dbaas",
     "github.com/percona/pmm/api/qanpb",
     "github.com/percona/pmm/api/serverpb",
     "github.com/percona/pmm/utils/pdeathsig",

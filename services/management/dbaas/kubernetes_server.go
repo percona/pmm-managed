@@ -1,0 +1,75 @@
+// pmm-managed
+// Copyright (C) 2017 Percona LLC
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+package dbaas
+
+import (
+	"context"
+
+	"github.com/percona/pmm-managed/models"
+	"gopkg.in/reform.v1"
+
+	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
+)
+
+type kubernetesServer struct {
+	db *reform.DB
+}
+
+// NewKubernetesServer creates Kubernetes Server.
+func NewKubernetesServer(db *reform.DB) dbaasv1beta1.KubernetesServer {
+	return &kubernetesServer{db: db}
+}
+
+func (k kubernetesServer) ListKubernetesClusters(ctx context.Context, req *dbaasv1beta1.ListKubernetesClustersRequest) (*dbaasv1beta1.ListKubernetesClustersResponse, error) {
+	kubernetesClusters, err := models.FindAllKubernetesClusters(k.db.Querier)
+	if err != nil {
+		return nil, err
+	}
+
+	clusters := make([]*dbaasv1beta1.KubernetesCluster, len(kubernetesClusters))
+	for i, cluster := range kubernetesClusters {
+		clusters[i] = &dbaasv1beta1.KubernetesCluster{
+			KubernetesClusterName: cluster.Name,
+		}
+	}
+	return &dbaasv1beta1.ListKubernetesClustersResponse{KubernetesClusters: clusters}, nil
+}
+
+func (k kubernetesServer) RegisterKubernetesCluster(ctx context.Context, req *dbaasv1beta1.RegisterKubernetesClusterRequest) (*dbaasv1beta1.RegisterKubernetesClusterResponse, error) {
+	err := k.db.InTransaction(func(t *reform.TX) error {
+		_, err := models.CreateKubernetesCluster(k.db.Querier, models.CreateKubernetesClusterParams{
+			Name:       req.KubernetesClusterName,
+			KubeConfig: req.KubeAuth.Kubeconfig,
+		})
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &dbaasv1beta1.RegisterKubernetesClusterResponse{}, nil
+}
+
+func (k kubernetesServer) UnregisterKubernetesCluster(ctx context.Context, req *dbaasv1beta1.UnregisterKubernetesClusterRequest) (*dbaasv1beta1.UnregisterKubernetesClusterResponse, error) {
+	err := k.db.InTransaction(func(t *reform.TX) error {
+		err := models.RemoveKubernetesCluster(k.db.Querier, req.KubernetesClusterName)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &dbaasv1beta1.UnregisterKubernetesClusterResponse{}, nil
+}
