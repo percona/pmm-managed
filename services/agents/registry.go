@@ -408,6 +408,17 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		return
 	}
 
+	pmmAgent, err := models.FindAgentByID(r.db.Querier, pmmAgentID)
+	if err != nil {
+		l.Errorf("Failed to get PMM Agent: %s.", err)
+		return
+	}
+	pmmAgentVersion, err := version.Parse(*pmmAgent.Version)
+	if err != nil {
+		l.Errorf("Failed to collect agents: %s.", err)
+		return
+	}
+
 	agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{PMMAgentID: pmmAgentID})
 	if err != nil {
 		l.Errorf("Failed to collect agents: %s.", err)
@@ -462,7 +473,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 			case models.MySQLdExporterType:
 				agentProcesses[row.AgentID] = mysqldExporterConfig(service, row, redactMode)
 			case models.MongoDBExporterType:
-				agentProcesses[row.AgentID] = mongodbExporterConfig(service, row, redactMode)
+				agentProcesses[row.AgentID] = mongodbExporterConfig(service, row, redactMode, pmmAgentVersion)
 			case models.PostgresExporterType:
 				agentProcesses[row.AgentID] = postgresExporterConfig(service, row, redactMode)
 			case models.ProxySQLExporterType:

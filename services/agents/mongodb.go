@@ -26,10 +26,20 @@ import (
 	"github.com/percona/pmm/api/inventorypb"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm/version"
 )
 
 // mongodbExporterConfig returns desired configuration of mongodb_exporter process.
-func mongodbExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode) *agentpb.SetStateRequest_AgentProcess {
+func mongodbExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode, v *version.Parsed) *agentpb.SetStateRequest_AgentProcess {
+	pmmNewVersion, _ := version.Parse("2.9.9")
+	if v.Less(pmmNewVersion) {
+		return mongodbExporterV1Config(service, exporter, redactMode)
+	}
+
+	return mongodbExporterV2Config(service, exporter, redactMode)
+}
+
+func mongodbExporterV1Config(service *models.Service, exporter *models.Agent, redactMode redactMode) *agentpb.SetStateRequest_AgentProcess {
 	tdp := templateDelimsPair(
 		pointer.GetString(service.Address),
 		pointer.GetString(exporter.Username),
@@ -62,6 +72,38 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent, reda
 			fmt.Sprintf("MONGODB_URI=%s", exporter.DSN(service, time.Second, "")),
 			fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.AgentID),
 		},
+	}
+	if redactMode != exposeSecrets {
+		res.RedactWords = redactWords(exporter)
+	}
+	return res
+}
+
+func mongodbExporterV2Config(service *models.Service, exporter *models.Agent, redactMode redactMode) *agentpb.SetStateRequest_AgentProcess {
+	tdp := templateDelimsPair(
+		pointer.GetString(service.Address),
+		pointer.GetString(exporter.Username),
+		pointer.GetString(exporter.Password),
+		pointer.GetString(exporter.MetricsPath),
+	)
+
+	args := []string{
+		"--mongodb.dsn=" + exporter.DSN(service, time.Second, ""),
+		"--expose-port=" + tdp.left + " .listen_port " + tdp.right,
+	}
+
+	if pointer.GetString(exporter.MetricsPath) != "" {
+		args = append(args, "--expose-path="+*exporter.MetricsPath)
+	}
+
+	sort.Strings(args)
+
+	res := &agentpb.SetStateRequest_AgentProcess{
+		Type:               inventorypb.AgentType_MONGODB_EXPORTER,
+		TemplateLeftDelim:  tdp.left,
+		TemplateRightDelim: tdp.right,
+		Args:               args,
+		Env:                []string{},
 	}
 	if redactMode != exposeSecrets {
 		res.RedactWords = redactWords(exporter)
