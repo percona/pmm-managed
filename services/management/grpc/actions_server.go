@@ -270,7 +270,7 @@ func (s *actionsServer) CancelAction(ctx context.Context, req *managementpb.Canc
 // StartPTSummaryAction starts pt-summary action.
 //nolint:lll,dupl
 func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
-	ag, err := models.FindPMMAgentsForNode(s.db.Querier, req.NodeId)
+	ag, err := models.FindAgents(s.db.Querier, models.AgentFilters{NodeID: req.NodeId})
 	if err != nil {
 		return nil, err
 	}
