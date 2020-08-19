@@ -32,7 +32,8 @@ import (
 
 // mongodbExporterConfig returns desired configuration of mongodb_exporter process.
 func mongodbExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode, v *version.Parsed) *agentpb.SetStateRequest_AgentProcess {
-	pmmNewVersion, _ := version.Parse("2.9.9")
+	// New MongoDB Exporter will be released with PMM agent v2.10.0
+	pmmNewVersion, _ := version.Parse("2.10.0")
 	if v.Less(pmmNewVersion) {
 		return mongodbExporterV1Config(service, exporter, redactMode)
 	}
@@ -89,6 +90,7 @@ func mongodbExporterV2Config(service *models.Service, exporter *models.Agent, re
 	)
 
 	args := []string{
+		"--compatible-mode",
 		"--mongodb.dsn=" + exporter.DSN(service, time.Second, ""),
 		"--expose-port=" + tdp.left + " .listen_port " + tdp.right,
 	}

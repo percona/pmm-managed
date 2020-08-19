@@ -98,6 +98,7 @@ func TestNewMongodbExporterConfig(t *testing.T) {
 		TemplateLeftDelim:  "{{",
 		TemplateRightDelim: "}}",
 		Args: []string{
+			"--compatible-mode",
 			"--expose-port={{ .listen_port }}",
 			"--mongodb.dsn=mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:27017/?connectTimeoutMS=1000",
 		},
@@ -112,12 +113,12 @@ func TestNewMongodbExporterConfig(t *testing.T) {
 	t.Run("EmptyPassword", func(t *testing.T) {
 		exporter.Password = nil
 		actual := mongodbExporterConfig(mongodb, exporter, exposeSecrets, pmmAgentVersion)
-		assert.Equal(t, "--mongodb.dsn=mongodb://username@1.2.3.4:27017/?connectTimeoutMS=1000", actual.Args[1])
+		assert.Equal(t, "--mongodb.dsn=mongodb://username@1.2.3.4:27017/?connectTimeoutMS=1000", actual.Args[2])
 	})
 
 	t.Run("EmptyUsername", func(t *testing.T) {
 		exporter.Username = nil
 		actual := mongodbExporterConfig(mongodb, exporter, exposeSecrets, pmmAgentVersion)
-		assert.Equal(t, "--mongodb.dsn=mongodb://1.2.3.4:27017/?connectTimeoutMS=1000", actual.Args[1])
+		assert.Equal(t, "--mongodb.dsn=mongodb://1.2.3.4:27017/?connectTimeoutMS=1000", actual.Args[2])
 	})
 }
