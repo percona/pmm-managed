@@ -43,7 +43,7 @@ func (k kubernetesServer) ListKubernetesClusters(ctx context.Context, req *dbaas
 	clusters := make([]*dbaasv1beta1.KubernetesCluster, len(kubernetesClusters))
 	for i, cluster := range kubernetesClusters {
 		clusters[i] = &dbaasv1beta1.KubernetesCluster{
-			KubernetesClusterName: cluster.Name,
+			KubernetesClusterName: cluster.KubernetesClusterName,
 		}
 	}
 	return &dbaasv1beta1.ListKubernetesClustersResponse{KubernetesClusters: clusters}, nil
@@ -52,8 +52,8 @@ func (k kubernetesServer) ListKubernetesClusters(ctx context.Context, req *dbaas
 func (k kubernetesServer) RegisterKubernetesCluster(ctx context.Context, req *dbaasv1beta1.RegisterKubernetesClusterRequest) (*dbaasv1beta1.RegisterKubernetesClusterResponse, error) {
 	err := k.db.InTransaction(func(t *reform.TX) error {
 		_, err := models.CreateKubernetesCluster(k.db.Querier, models.CreateKubernetesClusterParams{
-			Name:       req.KubernetesClusterName,
-			KubeConfig: req.KubeAuth.Kubeconfig,
+			KubernetesClusterName: req.KubernetesClusterName,
+			KubeConfig:            req.KubeAuth.Kubeconfig,
 		})
 		return err
 	})

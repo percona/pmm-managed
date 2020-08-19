@@ -27,11 +27,11 @@ import (
 // KubernetesCluster represents a kubernetes cluster as stored in database.
 //reform:kubernetes_clusters
 type KubernetesCluster struct {
-	ID         string    `reform:"id,pk"`
-	Name       string    `reform:"name"`
-	KubeConfig string    `reform:"kube_config"`
-	CreatedAt  time.Time `reform:"created_at"`
-	UpdatedAt  time.Time `reform:"updated_at"`
+	ID                    string    `reform:"id,pk"`
+	KubernetesClusterName string    `reform:"kubernetes_cluster_name"`
+	KubeConfig            string    `reform:"kube_config"`
+	CreatedAt             time.Time `reform:"created_at"`
+	UpdatedAt             time.Time `reform:"updated_at"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.

@@ -27,7 +27,7 @@ func (v *kubernetesClusterTableType) Name() string {
 
 // Columns returns a new slice of column names for that view or table in SQL database.
 func (v *kubernetesClusterTableType) Columns() []string {
-	return []string{"id", "name", "kube_config", "created_at", "updated_at"}
+	return []string{"id", "kubernetes_cluster_name", "kube_config", "created_at", "updated_at"}
 }
 
 // NewStruct makes a new struct for that view or table.
@@ -47,7 +47,7 @@ func (v *kubernetesClusterTableType) PKColumnIndex() uint {
 
 // KubernetesClusterTable represents kubernetes_clusters view or table in SQL database.
 var KubernetesClusterTable = &kubernetesClusterTableType{
-	s: parse.StructInfo{Type: "KubernetesCluster", SQLSchema: "", SQLName: "kubernetes_clusters", Fields: []parse.FieldInfo{{Name: "ID", Type: "string", Column: "id"}, {Name: "Name", Type: "string", Column: "name"}, {Name: "KubeConfig", Type: "string", Column: "kube_config"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}}, PKFieldIndex: 0},
+	s: parse.StructInfo{Type: "KubernetesCluster", SQLSchema: "", SQLName: "kubernetes_clusters", Fields: []parse.FieldInfo{{Name: "ID", Type: "string", Column: "id"}, {Name: "KubernetesClusterName", Type: "string", Column: "kubernetes_cluster_name"}, {Name: "KubeConfig", Type: "string", Column: "kube_config"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}}, PKFieldIndex: 0},
 	z: new(KubernetesCluster).Values(),
 }
 
@@ -55,7 +55,7 @@ var KubernetesClusterTable = &kubernetesClusterTableType{
 func (s KubernetesCluster) String() string {
 	res := make([]string, 5)
 	res[0] = "ID: " + reform.Inspect(s.ID, true)
-	res[1] = "Name: " + reform.Inspect(s.Name, true)
+	res[1] = "KubernetesClusterName: " + reform.Inspect(s.KubernetesClusterName, true)
 	res[2] = "KubeConfig: " + reform.Inspect(s.KubeConfig, true)
 	res[3] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
 	res[4] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
@@ -67,7 +67,7 @@ func (s KubernetesCluster) String() string {
 func (s *KubernetesCluster) Values() []interface{} {
 	return []interface{}{
 		s.ID,
-		s.Name,
+		s.KubernetesClusterName,
 		s.KubeConfig,
 		s.CreatedAt,
 		s.UpdatedAt,
@@ -79,7 +79,7 @@ func (s *KubernetesCluster) Values() []interface{} {
 func (s *KubernetesCluster) Pointers() []interface{} {
 	return []interface{}{
 		&s.ID,
-		&s.Name,
+		&s.KubernetesClusterName,
 		&s.KubeConfig,
 		&s.CreatedAt,
 		&s.UpdatedAt,

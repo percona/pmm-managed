@@ -55,25 +55,24 @@ func FindAllKubernetesClusters(q *reform.Querier) ([]*KubernetesCluster, error) 
 	return clusters, nil
 }
 
-func FindKubernetesClusterByID(q *reform.Querier, id string) (*KubernetesCluster, error) {
-	if id == "" {
-		return nil, status.Error(codes.InvalidArgument, "Empty Kubernetes Cluster ID.")
+func FindKubernetesClusterByName(q *reform.Querier, name string) (*KubernetesCluster, error) {
+	if name == "" {
+		return nil, status.Error(codes.InvalidArgument, "Empty Kubernetes Cluster Name.")
 	}
 
-	cluster := &KubernetesCluster{ID: id}
-	switch err := q.Reload(cluster); err {
+	switch cluster, err := q.FindOneFrom(KubernetesClusterTable, "kubernetes_cluster_name", name); err {
 	case nil:
-		return cluster, nil
+		return cluster.(*KubernetesCluster), nil
 	case reform.ErrNoRows:
-		return nil, status.Errorf(codes.NotFound, "Cluster with ID %q not found.", id)
+		return nil, status.Errorf(codes.NotFound, "Cluster with name %q not found.", name)
 	default:
 		return nil, errors.WithStack(err)
 	}
 }
 
 type CreateKubernetesClusterParams struct {
-	Name       string
-	KubeConfig string
+	KubernetesClusterName string
+	KubeConfig            string
 }
 
 func CreateKubernetesCluster(q *reform.Querier, params CreateKubernetesClusterParams) (*KubernetesCluster, error) {
@@ -83,9 +82,9 @@ func CreateKubernetesCluster(q *reform.Querier, params CreateKubernetesClusterPa
 	}
 
 	row := &KubernetesCluster{
-		ID:         id,
-		Name:       params.Name,
-		KubeConfig: params.KubeConfig,
+		ID:                    id,
+		KubernetesClusterName: params.KubernetesClusterName,
+		KubeConfig:            params.KubeConfig,
 	}
 	if err := q.Insert(row); err != nil {
 		return nil, errors.WithStack(err)
@@ -94,8 +93,8 @@ func CreateKubernetesCluster(q *reform.Querier, params CreateKubernetesClusterPa
 	return row, nil
 }
 
-func RemoveKubernetesCluster(q *reform.Querier, id string) error {
-	c, err := FindKubernetesClusterByID(q, id)
+func RemoveKubernetesCluster(q *reform.Querier, name string) error {
+	c, err := FindKubernetesClusterByName(q, name)
 	if err != nil {
 		return err
 	}
