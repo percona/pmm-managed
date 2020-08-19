@@ -266,3 +266,61 @@ func (s *actionsServer) CancelAction(ctx context.Context, req *managementpb.Canc
 
 	return &managementpb.CancelActionResponse{}, nil
 }
+
+// StartPTSummaryAction starts pt-summary action.
+//nolint:lll,dupl
+func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
+	ag, err := models.FindPMMAgentsForNode(s.db.Querier, req.NodeId)
+	if err != nil {
+		return nil, err
+	}
+
+	req.PmmAgentId, err = models.FindPmmAgentIDToRunAction(req.PmmAgentId, ag)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := models.CreateActionResult(s.db.Querier, req.PmmAgentId)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.r.StartPTSummaryAction(ctx, res.ID, req.PmmAgentId, []string{})
+	if err != nil {
+		return nil, err
+	}
+
+	return &managementpb.StartPTSummaryActionResponse{
+		PmmAgentId: req.PmmAgentId,
+		ActionId:   res.ID,
+	}, nil
+}
+
+// StartPTMySQLSummaryAction starts pt-mysql-summary action.
+//nolint:lll,dupl
+func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
+	ag, err := models.FindPMMAgentsForService(s.db.Querier, req.ServiceId)
+	if err != nil {
+		return nil, err
+	}
+
+	req.PmmAgentId, err = models.FindPmmAgentIDToRunAction(req.PmmAgentId, ag)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := models.CreateActionResult(s.db.Querier, req.PmmAgentId)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.r.StartPTMySQLSummaryAction(ctx, res.ID, req.PmmAgentId, []string{})
+	if err != nil {
+		return nil, err
+	}
+
+	return &managementpb.StartPTMySQLSummaryActionResponse{
+		PmmAgentId: req.PmmAgentId,
+		ActionId:   res.ID,
+	}, nil
+}
