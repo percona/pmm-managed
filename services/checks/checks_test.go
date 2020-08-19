@@ -26,6 +26,7 @@ import (
 	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/percona-platform/saas/pkg/check"
 	"github.com/percona/pmm/version"
+	promtest "github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -117,6 +118,33 @@ func TestCollectChecks(t *testing.T) {
 	})
 }
 
+// A proper unit test could not be written due
+// to problems with the code responsible for locating agents
+// Once it is fixed rewrite this test to actually run `executeChecks`
+// method and test for recorded metrics.
+func TestSTTMetrics(t *testing.T) {
+	t.Run("check for recorded metrics", func(t *testing.T) {
+		s := New(nil, nil, nil)
+		expected := strings.NewReader(`
+		    # HELP pmm_managed_checks_alerts_generated_total Counter of alerts generated per service type per check type
+		    # TYPE pmm_managed_checks_alerts_generated_total counter
+		    pmm_managed_checks_alerts_generated_total{check_type="MONGODB_BUILDINFO",service_type="mongodb"} 0
+		    pmm_managed_checks_alerts_generated_total{check_type="MONGODB_GETCMDLINEOPTS",service_type="mongodb"} 0
+		    pmm_managed_checks_alerts_generated_total{check_type="MONGODB_GETPARAMETER",service_type="mongodb"} 0
+		    pmm_managed_checks_alerts_generated_total{check_type="MYSQL_SELECT",service_type="mysql"} 0
+		    pmm_managed_checks_alerts_generated_total{check_type="MYSQL_SHOW",service_type="mysql"} 0
+		    pmm_managed_checks_alerts_generated_total{check_type="POSTGRESQL_SELECT",service_type="postgresql"} 0
+		    pmm_managed_checks_alerts_generated_total{check_type="POSTGRESQL_SHOW",service_type="postgresql"} 0
+		    # HELP pmm_managed_checks_scripts_executed_total Counter of check scripts executed per service type
+		    # TYPE pmm_managed_checks_scripts_executed_total counter
+		    pmm_managed_checks_scripts_executed_total{service_type="mongodb"} 0
+		    pmm_managed_checks_scripts_executed_total{service_type="mysql"} 0
+		    pmm_managed_checks_scripts_executed_total{service_type="postgresql"} 0
+		`)
+		assert.NoError(t, promtest.CollectAndCompare(s, expected))
+	})
+}
+
 func TestVerifySignatures(t *testing.T) {
 	t.Run("normal", func(t *testing.T) {
 		s := New(nil, nil, nil)
@@ -165,6 +193,35 @@ uEF33ScMPYpvHvBKv8+yBkJ9k4+DCfV4nDs6kKYwGhalvkkqwWkyfJffO+KW7a1m3y42WHpOnzBxLJ+I
 	})
 }
 
+func TestGetSecurityCheckResults(t *testing.T) {
+	t.Run("STT disabled", func(t *testing.T) {
+		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
+
+		s := New(nil, nil, db)
+		results, err := s.GetSecurityCheckResults()
+		assert.Nil(t, results)
+		assert.EqualError(t, err, services.ErrSTTDisabled.Error())
+	})
+
+	t.Run("STT enabled", func(t *testing.T) {
+		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
+
+		s := New(nil, nil, db)
+		settings, err := models.GetSettings(db)
+		require.NoError(t, err)
+
+		settings.SaaS.STTEnabled = true
+		err = models.SaveSettings(db, settings)
+		require.NoError(t, err)
+
+		results, err := s.GetSecurityCheckResults()
+		assert.Empty(t, results)
+		require.NoError(t, err)
+	})
+}
+
 func TestStartChecks(t *testing.T) {
 	t.Run("stt disabled", func(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
@@ -187,10 +244,10 @@ func TestStartChecks(t *testing.T) {
 			require.NoError(t, sqlDB.Close())
 		}()
 
-		var ar mockAlertRegistry
-		ar.On("RemovePrefix", mock.Anything, mock.Anything).Return()
+		var ams mockAlertmanagerService
+		ams.On("SendAlerts", mock.Anything, mock.Anything).Return()
 
-		s := New(nil, &ar, db)
+		s := New(nil, &ams, db)
 		settings, err := models.GetSettings(db)
 		require.NoError(t, err)
 
@@ -258,6 +315,29 @@ func TestGroupChecksByDB(t *testing.T) {
 	assert.Equal(t, check.MongoDBGetCmdLineOpts, mongoDBChecks[2].Type)
 }
 
+func setup(t *testing.T, db *reform.DB, serviceName, nodeID, pmmAgentVersion string) {
+	pmmAgent, err := models.CreatePMMAgent(db.Querier, nodeID, nil)
+	require.NoError(t, err)
+
+	pmmAgent.Version = pointer.ToStringOrNil(pmmAgentVersion)
+	err = db.Update(pmmAgent)
+	require.NoError(t, err)
+
+	mysql, err := models.AddNewService(db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
+		ServiceName: serviceName,
+		NodeID:      nodeID,
+		Address:     pointer.ToString("127.0.0.1"),
+		Port:        pointer.ToUint16(3306),
+	})
+	require.NoError(t, err)
+
+	_, err = models.CreateAgent(db.Querier, models.MySQLdExporterType, &models.CreateAgentParams{
+		PMMAgentID: pmmAgent.AgentID,
+		ServiceID:  mysql.ServiceID,
+	})
+	require.NoError(t, err)
+}
+
 func TestFindTargets(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SetupFixtures, nil)
 	defer func() {
@@ -309,29 +389,6 @@ func TestFindTargets(t *testing.T) {
 	})
 }
 
-func setup(t *testing.T, db *reform.DB, serviceName, nodeID, pmmAgentVersion string) {
-	pmmAgent, err := models.CreatePMMAgent(db.Querier, nodeID, nil)
-	require.NoError(t, err)
-
-	pmmAgent.Version = pointer.ToStringOrNil(pmmAgentVersion)
-	err = db.Update(pmmAgent)
-	require.NoError(t, err)
-
-	mysql, err := models.AddNewService(db.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
-		ServiceName: serviceName,
-		NodeID:      nodeID,
-		Address:     pointer.ToString("127.0.0.1"),
-		Port:        pointer.ToUint16(3306),
-	})
-	require.NoError(t, err)
-
-	_, err = models.CreateAgent(db.Querier, models.MySQLdExporterType, &models.CreateAgentParams{
-		PMMAgentID: pmmAgent.AgentID,
-		ServiceID:  mysql.ServiceID,
-	})
-	require.NoError(t, err)
-}
-
 func TestPickPMMAgent(t *testing.T) {
 	s := New(nil, nil, nil)
 
@@ -381,23 +438,4 @@ func TestMustParseVersion(t *testing.T) {
 		}
 		assert.Panics(t, f)
 	})
-}
-
-func TestSliceToSet(t *testing.T) {
-	slice := []string{"a", "b", "b", "c", "a", "c", "d", "", ""}
-	actual := sliceToSet(slice)
-
-	expected := map[string]struct{}{
-		"a": {},
-		"b": {},
-		"c": {},
-		"d": {},
-		"":  {},
-	}
-
-	assert.Len(t, actual, 5)
-
-	for k, v := range expected {
-		assert.Equal(t, v, actual[k])
-	}
 }

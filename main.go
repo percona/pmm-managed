@@ -68,6 +68,7 @@ import (
 	inventorygrpc "github.com/percona/pmm-managed/services/inventory/grpc"
 	"github.com/percona/pmm-managed/services/management"
 	managementgrpc "github.com/percona/pmm-managed/services/management/grpc"
+	"github.com/percona/pmm-managed/services/platform"
 	"github.com/percona/pmm-managed/services/prometheus"
 	"github.com/percona/pmm-managed/services/qan"
 	"github.com/percona/pmm-managed/services/server"
@@ -104,7 +105,7 @@ func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
 
 		ctx = logger.Set(ctx, "logs")
 		if err := logs.Zip(ctx, rw); err != nil {
-			l.Error(err)
+			l.Errorf("%+v", err)
 		}
 	})
 }
@@ -124,7 +125,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	l.Infof("Starting server on http://%s/ ...", gRPCAddr)
 
 	gRPCServer := grpc.NewServer(
-		grpc.MaxRecvMsgSize(10*1024*1024), //nolint:gomnd
+		grpc.MaxRecvMsgSize(10*1024*1024),
 
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			interceptors.Unary,
@@ -165,7 +166,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(deps.agentsRegistry, deps.db))
 	managementpb.RegisterRDSServer(gRPCServer, management.NewRDSService(deps.db, deps.agentsRegistry))
 	managementpb.RegisterExternalServer(gRPCServer, management.NewExternalService(deps.db, deps.prometheus))
-	managementpb.RegisterAnnotationServer(gRPCServer, managementgrpc.NewAnnotationServer(deps.grafanaClient))
+	managementpb.RegisterAnnotationServer(gRPCServer, managementgrpc.NewAnnotationServer(deps.db, deps.grafanaClient))
 	managementpb.RegisterSecurityChecksServer(gRPCServer, managementgrpc.NewChecksServer(checksSvc))
 
 	if l.Logger.GetLevel() >= logrus.DebugLevel {
@@ -522,8 +523,7 @@ func main() {
 	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient)
 	prom.MustRegister(agentsRegistry)
 
-	alertsRegistry := alertmanager.NewRegistry()
-	alertmanager := alertmanager.New(db, alertsRegistry)
+	alertmanager := alertmanager.New(db)
 
 	pmmUpdateCheck := supervisord.NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker"))
 
@@ -535,8 +535,10 @@ func main() {
 	grafanaClient := grafana.NewClient(*grafanaAddrF)
 	prom.MustRegister(grafanaClient)
 
-	checksService := checks.New(agentsRegistry, alertsRegistry, db)
+	checksService := checks.New(agentsRegistry, alertmanager, db)
 	prom.MustRegister(checksService)
+
+	platformService := platform.New(db)
 
 	serverParams := &server.Params{
 		DB:                      db,
@@ -544,6 +546,7 @@ func main() {
 		Alertmanager:            alertmanager,
 		Supervisord:             supervisord,
 		TelemetryService:        telemetry,
+		PlatformService:         platformService,
 		AwsInstanceChecker:      awsInstanceChecker,
 		GrafanaClient:           grafanaClient,
 		PrometheusAlertingRules: alertingRules,
@@ -605,6 +608,12 @@ func main() {
 	go func() {
 		defer wg.Done()
 		checksService.Run(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		platformService.Run(ctx)
 	}()
 
 	wg.Add(1)

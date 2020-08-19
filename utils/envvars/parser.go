@@ -54,7 +54,7 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 	for _, env := range envs {
 		p := strings.SplitN(env, "=", 2)
 
-		if len(p) != 2 { //nolint:gomnd
+		if len(p) != 2 {
 			errs = append(errs, fmt.Errorf("failed to parse environment variable %q", env))
 			continue
 		}
@@ -80,7 +80,7 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 
 		var err error
 		switch k {
-		case "PATH", "HOSTNAME", "TERM", "HOME", "PWD", "SHLVL", "_":
+		case "_", "HOME", "HOSTNAME", "LANG", "PATH", "PWD", "SHLVL", "TERM":
 			// skip default environment variables
 			continue
 		case "PMM_DEBUG", "PMM_TRACE":

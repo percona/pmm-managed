@@ -20,8 +20,6 @@ package checks
 import (
 	"bytes"
 	"context"
-	"crypto/sha1" //nolint:gosec
-	"encoding/hex"
 	"io/ioutil"
 	"net"
 	"os"
@@ -38,7 +36,6 @@ import (
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/model"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -49,24 +46,28 @@ import (
 )
 
 const (
-	defaultHost       = "check.percona.com:443"
-	defaultInterval   = 24 * time.Hour
-	defaultStartDelay = time.Minute
+	defaultHost            = "check.percona.com:443"
+	defaultRestartInterval = 24 * time.Hour
+	defaultStartDelay      = time.Minute
 
 	// Environment variables that affect checks service; only for testing.
-	envHost      = "PERCONA_TEST_CHECKS_HOST"
-	envPublicKey = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
-	envInterval  = "PERCONA_TEST_CHECKS_INTERVAL"
-	envCheckFile = "PERCONA_TEST_CHECKS_FILE"
+	envHost            = "PERCONA_TEST_CHECKS_HOST"
+	envPublicKey       = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
+	envRestartInterval = "PERCONA_TEST_CHECKS_INTERVAL" // not "restart" in the value - name is fixed
+	envCheckFile       = "PERCONA_TEST_CHECKS_FILE"
+	envResendInterval  = "PERCONA_TEST_CHECKS_RESEND_INTERVAL"
 
 	checksTimeout       = time.Hour
 	downloadTimeout     = 10 * time.Second
 	resultTimeout       = 15 * time.Second
 	resultCheckInterval = time.Second
 
-	// TODO https://jira.percona.com/browse/SAAS-104
-	// prometheusNamespace = "pmm_managed"
-	// prometheusSubsystem = "checks"
+	// sync with API tests
+	resolveTimeoutFactor  = 3
+	defaultResendInterval = 2 * time.Second
+
+	prometheusNamespace = "pmm_managed"
+	prometheusSubsystem = "checks"
 
 	alertsPrefix        = "/stt/"
 	maxSupportedVersion = 1
@@ -85,36 +86,65 @@ var defaultPublicKeys = []string{
 
 // Service is responsible for interactions with Percona Check service.
 type Service struct {
-	agentsRegistry agentsRegistry
-	alertsRegistry alertRegistry
-	db             *reform.DB
+	agentsRegistry      agentsRegistry
+	alertmanagerService alertmanagerService
+	db                  *reform.DB
+	alertsRegistry      *registry
 
-	l          *logrus.Entry
-	host       string
-	publicKeys []string
-	interval   time.Duration
-	startDelay time.Duration
+	l               *logrus.Entry
+	host            string
+	publicKeys      []string
+	restartInterval time.Duration
+	startDelay      time.Duration
+	resendInterval  time.Duration
 
 	cm               sync.Mutex
 	mySQLChecks      []check.Check
 	postgreSQLChecks []check.Check
 	mongoDBChecks    []check.Check
+
+	mScriptsExecuted *prom.CounterVec
+	mAlertsGenerated *prom.CounterVec
 }
 
 // New returns Service with given PMM version.
-func New(agentsRegistry agentsRegistry, alertsRegistry alertRegistry, db *reform.DB) *Service {
+func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService, db *reform.DB) *Service {
 	l := logrus.WithField("component", "checks")
 
-	s := &Service{
-		agentsRegistry: agentsRegistry,
-		alertsRegistry: alertsRegistry,
-		db:             db,
+	var resendInterval time.Duration
+	if d, err := time.ParseDuration(os.Getenv(envResendInterval)); err == nil && d > 0 {
+		l.Warnf("Interval changed to %s.", d)
+		resendInterval = d
+	} else {
+		resendInterval = defaultResendInterval
+	}
 
-		l:          l,
-		host:       defaultHost,
-		publicKeys: defaultPublicKeys,
-		interval:   defaultInterval,
-		startDelay: defaultStartDelay,
+	s := &Service{
+		agentsRegistry:      agentsRegistry,
+		alertmanagerService: alertmanagerService,
+		db:                  db,
+		alertsRegistry:      newRegistry(resolveTimeoutFactor * resendInterval),
+
+		l:               l,
+		host:            defaultHost,
+		publicKeys:      defaultPublicKeys,
+		restartInterval: defaultRestartInterval,
+		startDelay:      defaultStartDelay,
+		resendInterval:  resendInterval,
+
+		mScriptsExecuted: prom.NewCounterVec(prom.CounterOpts{
+			Namespace: prometheusNamespace,
+			Subsystem: prometheusSubsystem,
+			Name:      "scripts_executed_total",
+			Help:      "Counter of check scripts executed per service type",
+		}, []string{"service_type"}),
+
+		mAlertsGenerated: prom.NewCounterVec(prom.CounterOpts{
+			Namespace: prometheusNamespace,
+			Subsystem: prometheusSubsystem,
+			Name:      "alerts_generated_total",
+			Help:      "Counter of alerts generated per service type per check type",
+		}, []string{"service_type", "check_type"}),
 	}
 
 	if h := os.Getenv(envHost); h != "" {
@@ -125,17 +155,32 @@ func New(agentsRegistry agentsRegistry, alertsRegistry alertRegistry, db *reform
 		s.publicKeys = strings.Split(k, ",")
 		l.Warnf("Public keys changed to %q.", k)
 	}
-	if d, err := time.ParseDuration(os.Getenv(envInterval)); err == nil && d > 0 {
+	if d, err := time.ParseDuration(os.Getenv(envRestartInterval)); err == nil && d > 0 {
 		l.Warnf("Interval changed to %s; start delay disabled.", d)
-		s.interval = d
+		s.restartInterval = d
 		s.startDelay = 0
 	}
+
+	s.mScriptsExecuted.WithLabelValues(string(models.MySQLServiceType))
+	s.mScriptsExecuted.WithLabelValues(string(models.PostgreSQLServiceType))
+	s.mScriptsExecuted.WithLabelValues(string(models.MongoDBServiceType))
+
+	s.mAlertsGenerated.WithLabelValues(string(models.MySQLServiceType), string(check.MySQLShow))
+	s.mAlertsGenerated.WithLabelValues(string(models.MySQLServiceType), string(check.MySQLSelect))
+	s.mAlertsGenerated.WithLabelValues(string(models.PostgreSQLServiceType), string(check.PostgreSQLShow))
+	s.mAlertsGenerated.WithLabelValues(string(models.PostgreSQLServiceType), string(check.PostgreSQLSelect))
+	s.mAlertsGenerated.WithLabelValues(string(models.MongoDBServiceType), string(check.MongoDBBuildInfo))
+	s.mAlertsGenerated.WithLabelValues(string(models.MongoDBServiceType), string(check.MongoDBGetCmdLineOpts))
+	s.mAlertsGenerated.WithLabelValues(string(models.MongoDBServiceType), string(check.MongoDBGetParameter))
 
 	return s
 }
 
-// Run runs checks service that grabs checks from Percona Checks service every interval until context is canceled.
+// Run runs main service loops.
 func (s *Service) Run(ctx context.Context) {
+	s.l.Info("Starting...")
+	defer s.l.Info("Done.")
+
 	// delay for the first run to allow all agents to connect
 	startCtx, startCancel := context.WithTimeout(ctx, s.startDelay)
 	<-startCtx.Done()
@@ -144,8 +189,44 @@ func (s *Service) Run(ctx context.Context) {
 		return
 	}
 
-	ticker := time.NewTicker(s.interval)
-	defer ticker.Stop()
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		s.resendAlerts(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		s.restartChecks(ctx)
+	}()
+
+	wg.Wait()
+}
+
+// resendAlerts resends collected alerts until ctx is canceled.
+func (s *Service) resendAlerts(ctx context.Context) {
+	t := time.NewTicker(s.resendInterval)
+	defer t.Stop()
+
+	for {
+		s.alertmanagerService.SendAlerts(ctx, s.alertsRegistry.collect())
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			// nothing, continue for loop
+		}
+	}
+}
+
+// restartChecks restarts checks until ctx is canceled.
+func (s *Service) restartChecks(ctx context.Context) {
+	t := time.NewTicker(s.restartInterval)
+	defer t.Stop()
 
 	for {
 		err := s.StartChecks(ctx)
@@ -159,12 +240,32 @@ func (s *Service) Run(ctx context.Context) {
 		}
 
 		select {
-		case <-ticker.C:
-			// continue with next loop iteration
 		case <-ctx.Done():
 			return
+		case <-t.C:
+			// nothing, continue for loop
 		}
 	}
+}
+
+// GetSecurityCheckResults returns the results of the STT checks that were run. It returns services.ErrSTTDisabled if STT is disabled.
+func (s *Service) GetSecurityCheckResults() ([]check.Result, error) {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	if !settings.SaaS.STTEnabled {
+		return nil, services.ErrSTTDisabled
+	}
+
+	results := s.alertsRegistry.getCheckResults()
+	checkResults := make([]check.Result, 0, len(results))
+	for _, result := range results {
+		checkResults = append(checkResults, result.result)
+	}
+
+	return checkResults, nil
 }
 
 // StartChecks triggers STT checks downloading and execution. It returns services.ErrSTTDisabled if STT is disabled.
@@ -183,6 +284,8 @@ func (s *Service) StartChecks(ctx context.Context) error {
 
 	s.collectChecks(nCtx)
 	s.executeChecks(nCtx)
+	s.alertmanagerService.SendAlerts(ctx, s.alertsRegistry.collect())
+
 	return nil
 }
 
@@ -239,12 +342,12 @@ func (s *Service) waitForResult(ctx context.Context, resultID string) ([]map[str
 		}
 
 		if res.Error != "" {
-			return nil, errors.Errorf("action %s failed: %s.", resultID, res.Error)
+			return nil, errors.Errorf("action %s failed: %s", resultID, res.Error)
 		}
 
 		out, err := agentpb.UnmarshalActionQueryResult([]byte(res.Output))
 		if err != nil {
-			return nil, errors.Errorf("failed to parse action result : %s.", err)
+			return nil, errors.Errorf("failed to parse action result: %s", err)
 		}
 
 		return out, nil
@@ -280,35 +383,25 @@ func (s *Service) minPMMAgentVersion(t check.Type) *version.Parsed {
 func (s *Service) executeChecks(ctx context.Context) {
 	s.l.Info("Executing checks...")
 
-	var alertsIDs []string
+	var checkResults []sttCheckResult
 
-	mySQLAlertsIDs, err := s.executeMySQLChecks(ctx)
-	if err != nil {
-		s.l.Warnf("Failed to execute MySQL checks: %s.", err)
-	}
-	alertsIDs = append(alertsIDs, mySQLAlertsIDs...)
+	mySQLCheckResults := s.executeMySQLChecks(ctx)
+	checkResults = append(checkResults, mySQLCheckResults...)
 
-	postgreSQLAlertsIDs, err := s.executePostgreSQLChecks(ctx)
-	if err != nil {
-		s.l.Warnf("Failed to execute PostgreSQL checks: %s.", err)
-	}
-	alertsIDs = append(alertsIDs, postgreSQLAlertsIDs...)
+	postgreSQLCheckResults := s.executePostgreSQLChecks(ctx)
+	checkResults = append(checkResults, postgreSQLCheckResults...)
 
-	mongoDBAlertsIDs, err := s.executeMongoDBChecks(ctx)
-	if err != nil {
-		s.l.Warnf("Failed to execute MongoDB checks: %s.", err)
-	}
-	alertsIDs = append(alertsIDs, mongoDBAlertsIDs...)
+	mongoDBCheckResults := s.executeMongoDBChecks(ctx)
+	checkResults = append(checkResults, mongoDBCheckResults...)
 
-	// removing old STT alerts except created during current run
-	s.alertsRegistry.RemovePrefix(alertsPrefix, sliceToSet(alertsIDs))
+	s.alertsRegistry.set(checkResults)
 }
 
 // executeMySQLChecks runs MySQL checks for available MySQL services.
-func (s *Service) executeMySQLChecks(ctx context.Context) ([]string, error) {
+func (s *Service) executeMySQLChecks(ctx context.Context) []sttCheckResult {
 	checks := s.getMySQLChecks()
 
-	var res []string
+	var res []sttCheckResult
 	for _, c := range checks {
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
 		targets, err := s.findTargets(models.MySQLServiceType, pmmAgentVersion)
@@ -341,23 +434,26 @@ func (s *Service) executeMySQLChecks(ctx context.Context) ([]string, error) {
 				continue
 			}
 
-			alerts, err := s.processResults(ctx, c, target, r.ID)
+			checkResults, err := s.processResults(ctx, c, target, r.ID)
 			if err != nil {
-				s.l.Warnf("Failed to process action result: %s", err)
+				s.l.Warnf("Failed to process action result: %s.", err)
 				continue
 			}
-			res = append(res, alerts...)
+
+			s.mScriptsExecuted.WithLabelValues(string(models.MySQLServiceType)).Inc()
+			s.mAlertsGenerated.WithLabelValues(string(models.MySQLServiceType), string(c.Type)).Add(float64(len(checkResults)))
+			res = append(res, checkResults...)
 		}
 	}
 
-	return res, nil
+	return res
 }
 
 // executePostgreSQLChecks runs PostgreSQL checks for available PostgreSQL services.
-func (s *Service) executePostgreSQLChecks(ctx context.Context) ([]string, error) {
+func (s *Service) executePostgreSQLChecks(ctx context.Context) []sttCheckResult {
 	checks := s.getPostgreSQLChecks()
 
-	var res []string
+	var res []sttCheckResult
 	for _, c := range checks {
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
 		targets, err := s.findTargets(models.PostgreSQLServiceType, pmmAgentVersion)
@@ -390,23 +486,26 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context) ([]string, error)
 				continue
 			}
 
-			alerts, err := s.processResults(ctx, c, target, r.ID)
+			checkResults, err := s.processResults(ctx, c, target, r.ID)
 			if err != nil {
 				s.l.Warnf("Failed to process action result: %s", err)
 				continue
 			}
-			res = append(res, alerts...)
+
+			s.mScriptsExecuted.WithLabelValues(string(models.PostgreSQLServiceType)).Inc()
+			s.mAlertsGenerated.WithLabelValues(string(models.PostgreSQLServiceType), string(c.Type)).Add(float64(len(checkResults)))
+			res = append(res, checkResults...)
 		}
 	}
 
-	return res, nil
+	return res
 }
 
 // executeMongoDBChecks runs MongoDB checks for available MongoDB services.
-func (s *Service) executeMongoDBChecks(ctx context.Context) ([]string, error) {
+func (s *Service) executeMongoDBChecks(ctx context.Context) []sttCheckResult {
 	checks := s.getMongoDBChecks()
 
-	var res []string
+	var res []sttCheckResult
 	for _, c := range checks {
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
 		targets, err := s.findTargets(models.MongoDBServiceType, pmmAgentVersion)
@@ -445,19 +544,28 @@ func (s *Service) executeMongoDBChecks(ctx context.Context) ([]string, error) {
 				continue
 			}
 
-			alerts, err := s.processResults(ctx, c, target, r.ID)
+			checkResults, err := s.processResults(ctx, c, target, r.ID)
 			if err != nil {
 				s.l.Warnf("Failed to process action result: %s", err)
 				continue
 			}
-			res = append(res, alerts...)
+
+			s.mScriptsExecuted.WithLabelValues(string(models.MongoDBServiceType)).Inc()
+			s.mAlertsGenerated.WithLabelValues(string(models.MongoDBServiceType), string(c.Type)).Add(float64(len(checkResults)))
+			res = append(res, checkResults...)
 		}
 	}
 
-	return res, nil
+	return res
 }
 
-func (s *Service) processResults(ctx context.Context, check check.Check, target target, resID string) ([]string, error) {
+type sttCheckResult struct {
+	checkName string
+	target    target
+	result    check.Result
+}
+
+func (s *Service) processResults(ctx context.Context, check check.Check, target target, resID string) ([]sttCheckResult, error) {
 	nCtx, cancel := context.WithTimeout(ctx, resultTimeout)
 	r, err := s.waitForResult(nCtx, resID)
 	cancel()
@@ -480,48 +588,24 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 		"id":         resID,
 		"service_id": target.serviceID,
 	})
-	l.Debugf("Running check script with: %+v", r)
+	l.Debugf("Running check script with: %+v.", r)
 	results, err := env.Run(check.Name, r, l.Debugln)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to execute script")
 	}
 	l.Infof("Check script returned %d results.", len(results))
-	l.Debugf("Results: %+v", results)
+	l.Debugf("Results: %+v.", results)
 
-	alertsIDs := make([]string, len(results))
+	checkResults := make([]sttCheckResult, len(results))
 	for i, result := range results {
-		id := alertsPrefix + hashID(target.serviceID+"/"+result.Summary)
-		s.createAlert(id, check.Name, target, &result)
-		alertsIDs[i] = id
+		checkResults[i] = sttCheckResult{
+			checkName: check.Name,
+			target:    target,
+			result:    result,
+		}
 	}
 
-	return alertsIDs, nil
-}
-
-// non-cryptographic hash
-func hashID(s string) string {
-	data := sha1.Sum([]byte(s)) //nolint:gosec
-	return hex.EncodeToString(data[:])
-}
-
-func (s *Service) createAlert(id, name string, target target, result *check.Result) {
-	labels := make(map[string]string, len(target.labels)+len(result.Labels)+4) //nolint:gomnd
-	annotations := make(map[string]string, 2)
-	for k, v := range target.labels {
-		labels[k] = v
-	}
-	for k, v := range result.Labels {
-		labels[k] = v
-	}
-	labels[model.AlertNameLabel] = name
-	labels["severity"] = result.Severity.String()
-	labels["stt_check"] = "1"
-	labels["alert_id"] = id
-
-	annotations["summary"] = result.Summary
-	annotations["description"] = result.Description
-
-	s.alertsRegistry.CreateAlert(id, labels, annotations, 0)
+	return checkResults, nil
 }
 
 // target contains required info about check target.
@@ -657,11 +741,13 @@ func (s *Service) collectChecks(ctx context.Context) {
 		checks, err = s.loadLocalChecks(f)
 		if err != nil {
 			s.l.Errorf("Failed to load local checks file: %s.", err)
+			return // keep previously loaded checks
 		}
 	} else {
 		checks, err = s.downloadChecks(ctx)
 		if err != nil {
 			s.l.Errorf("Failed to download checks: %s.", err)
+			return // keep previously downloaded checks
 		}
 	}
 
@@ -798,15 +884,6 @@ func (s *Service) verifySignatures(resp *api.GetAllChecksResponse) error {
 	return errors.New("no verified signatures")
 }
 
-func sliceToSet(slice []string) map[string]struct{} {
-	m := make(map[string]struct{}, len(slice))
-	for _, str := range slice {
-		m[str] = struct{}{}
-	}
-
-	return m
-}
-
 func mustParseVersion(v string) *version.Parsed {
 	p, err := version.Parse(v)
 	if err != nil {
@@ -818,12 +895,14 @@ func mustParseVersion(v string) *version.Parsed {
 
 // Describe implements prom.Collector.
 func (s *Service) Describe(ch chan<- *prom.Desc) {
-	// TODO https://jira.percona.com/browse/SAAS-104
+	s.mScriptsExecuted.Describe(ch)
+	s.mAlertsGenerated.Describe(ch)
 }
 
 // Collect implements prom.Collector.
 func (s *Service) Collect(ch chan<- prom.Metric) {
-	// TODO https://jira.percona.com/browse/SAAS-104
+	s.mScriptsExecuted.Collect(ch)
+	s.mAlertsGenerated.Collect(ch)
 }
 
 // check interfaces
