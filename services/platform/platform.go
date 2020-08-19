@@ -44,8 +44,7 @@ const (
 	envHost                   = "PERCONA_TEST_AUTH_HOST"
 	envSessionRefreshInterval = "PERCONA_TEST_SESSION_REFRESH_INTERVAL"
 
-	authType = "PP-v1beta1" // TODO Change to PP-1 after auth API release
-
+	authType = "PP-1"
 )
 
 var errNoActiveSessions = errors.New("no active sessions")
