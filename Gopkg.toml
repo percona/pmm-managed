@@ -16,11 +16,11 @@ required = [
 
 [[constraint]]
   name = "github.com/percona/pmm"
-  branch = "PMM-2.0"
+  branch = "SAAS-266-sign-out"
 
 [[constraint]]
   name = "github.com/percona-platform/saas"
-  branch = "main"
+  branch = "SAAS-266-sign-out"
 
 # to prevent unexpected downgrades; see https://github.com/percona/exporter_shared/releases/tag/v0.6.0
 [[constraint]]
