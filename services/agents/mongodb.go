@@ -30,18 +30,13 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
+var (
+	// New MongoDB Exporter will be released with PMM agent v2.10.0
+	pmmNewVersion, _ = version.Parse("2.10.0")
+)
+
 // mongodbExporterConfig returns desired configuration of mongodb_exporter process.
 func mongodbExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode, v *version.Parsed) *agentpb.SetStateRequest_AgentProcess {
-	// New MongoDB Exporter will be released with PMM agent v2.10.0
-	pmmNewVersion, _ := version.Parse("2.10.0")
-	if v.Less(pmmNewVersion) {
-		return mongodbExporterV1Config(service, exporter, redactMode)
-	}
-
-	return mongodbExporterV2Config(service, exporter, redactMode)
-}
-
-func mongodbExporterV1Config(service *models.Service, exporter *models.Agent, redactMode redactMode) *agentpb.SetStateRequest_AgentProcess {
 	tdp := templateDelimsPair(
 		pointer.GetString(service.Address),
 		pointer.GetString(exporter.Username),
@@ -49,13 +44,36 @@ func mongodbExporterV1Config(service *models.Service, exporter *models.Agent, re
 		pointer.GetString(exporter.MetricsPath),
 	)
 
+	var args, env []string
+	switch {
+	case v.Less(pmmNewVersion):
+		args = mongodbExporterV1ConfigArgs(tdp, exporter)
+		env = mongodbExporterV1ConfigEnv(service, exporter)
+	default:
+		args = mongodbExporterV2ConfigArgs(tdp, service, exporter)
+		env = []string{}
+	}
+
+	res := &agentpb.SetStateRequest_AgentProcess{
+		Type:               inventorypb.AgentType_MONGODB_EXPORTER,
+		TemplateLeftDelim:  tdp.left,
+		TemplateRightDelim: tdp.right,
+		Args:               args,
+		Env:                env,
+	}
+	if redactMode != exposeSecrets {
+		res.RedactWords = redactWords(exporter)
+	}
+	return res
+}
+
+func mongodbExporterV1ConfigArgs(tdp pair, exporter *models.Agent) []string {
 	args := []string{
 		"--collect.collection",
 		"--collect.database",
 		"--collect.topmetrics",
 		"--no-collect.connpoolstats",
 		"--no-collect.indexusage",
-
 		"--web.listen-address=:" + tdp.left + " .listen_port " + tdp.right,
 	}
 
@@ -64,31 +82,17 @@ func mongodbExporterV1Config(service *models.Service, exporter *models.Agent, re
 	}
 
 	sort.Strings(args)
-
-	res := &agentpb.SetStateRequest_AgentProcess{
-		Type:               inventorypb.AgentType_MONGODB_EXPORTER,
-		TemplateLeftDelim:  tdp.left,
-		TemplateRightDelim: tdp.right,
-		Args:               args,
-		Env: []string{
-			fmt.Sprintf("MONGODB_URI=%s", exporter.DSN(service, time.Second, "")),
-			fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.AgentID),
-		},
-	}
-	if redactMode != exposeSecrets {
-		res.RedactWords = redactWords(exporter)
-	}
-	return res
+	return args
 }
 
-func mongodbExporterV2Config(service *models.Service, exporter *models.Agent, redactMode redactMode) *agentpb.SetStateRequest_AgentProcess {
-	tdp := templateDelimsPair(
-		pointer.GetString(service.Address),
-		pointer.GetString(exporter.Username),
-		pointer.GetString(exporter.Password),
-		pointer.GetString(exporter.MetricsPath),
-	)
+func mongodbExporterV1ConfigEnv(service *models.Service, exporter *models.Agent) []string {
+	return []string{
+		fmt.Sprintf("MONGODB_URI=%s", exporter.DSN(service, time.Second, "")),
+		fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.AgentID),
+	}
+}
 
+func mongodbExporterV2ConfigArgs(tdp pair, service *models.Service, exporter *models.Agent) []string {
 	args := []string{
 		"--compatible-mode",
 		"--mongodb.dsn=" + exporter.DSN(service, time.Second, ""),
@@ -100,18 +104,7 @@ func mongodbExporterV2Config(service *models.Service, exporter *models.Agent, re
 	}
 
 	sort.Strings(args)
-
-	res := &agentpb.SetStateRequest_AgentProcess{
-		Type:               inventorypb.AgentType_MONGODB_EXPORTER,
-		TemplateLeftDelim:  tdp.left,
-		TemplateRightDelim: tdp.right,
-		Args:               args,
-		Env:                []string{},
-	}
-	if redactMode != exposeSecrets {
-		res.RedactWords = redactWords(exporter)
-	}
-	return res
+	return args
 }
 
 // qanMongoDBProfilerAgentConfig returns desired configuration of qan-mongodb-profiler-agent built-in agent.
