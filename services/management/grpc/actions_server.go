@@ -270,7 +270,7 @@ func (s *actionsServer) CancelAction(ctx context.Context, req *managementpb.Canc
 // StartPTSummaryAction starts pt-summary action.
 //nolint:lll,dupl
 func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
-	ag, err := models.FindAgents(s.db.Querier, models.AgentFilters{NodeID: req.NodeId})
+	ag, err := models.FindAgents(s.db.Querier, models.AgentFilters{PMMAgentID: req.PmmAgentId, NodeID: req.NodeId})
 	if err != nil {
 		return nil, err
 	}
@@ -292,6 +292,7 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 
 	return &managementpb.StartPTSummaryActionResponse{
 		PmmAgentId: req.PmmAgentId,
+		NodeId:     req.NodeId,
 		ActionId:   res.ID,
 	}, nil
 }
@@ -321,6 +322,7 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 
 	return &managementpb.StartPTMySQLSummaryActionResponse{
 		PmmAgentId: req.PmmAgentId,
+		ServiceId:  req.ServiceId,
 		ActionId:   res.ID,
 	}, nil
 }
