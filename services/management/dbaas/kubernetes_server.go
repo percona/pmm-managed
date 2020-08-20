@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+// Package dbaas contains all logic related to dbaas services.
 package dbaas
 
 import (
@@ -34,7 +35,8 @@ func NewKubernetesServer(db *reform.DB) dbaasv1beta1.KubernetesServer {
 	return &kubernetesServer{db: db}
 }
 
-func (k kubernetesServer) ListKubernetesClusters(ctx context.Context, req *dbaasv1beta1.ListKubernetesClustersRequest) (*dbaasv1beta1.ListKubernetesClustersResponse, error) {
+// ListKubernetesClusters returns a list of all registered Kubernetes clusters.
+func (k kubernetesServer) ListKubernetesClusters(ctx context.Context, _ *dbaasv1beta1.ListKubernetesClustersRequest) (*dbaasv1beta1.ListKubernetesClustersResponse, error) {
 	kubernetesClusters, err := models.FindAllKubernetesClusters(k.db.Querier)
 	if err != nil {
 		return nil, err
@@ -49,6 +51,7 @@ func (k kubernetesServer) ListKubernetesClusters(ctx context.Context, req *dbaas
 	return &dbaasv1beta1.ListKubernetesClustersResponse{KubernetesClusters: clusters}, nil
 }
 
+// RegisterKubernetesCluster registers an existing Kubernetes cluster in PMM.
 func (k kubernetesServer) RegisterKubernetesCluster(ctx context.Context, req *dbaasv1beta1.RegisterKubernetesClusterRequest) (*dbaasv1beta1.RegisterKubernetesClusterResponse, error) {
 	err := k.db.InTransaction(func(t *reform.TX) error {
 		_, err := models.CreateKubernetesCluster(k.db.Querier, models.CreateKubernetesClusterParams{
@@ -60,9 +63,11 @@ func (k kubernetesServer) RegisterKubernetesCluster(ctx context.Context, req *db
 	if err != nil {
 		return nil, err
 	}
+
 	return &dbaasv1beta1.RegisterKubernetesClusterResponse{}, nil
 }
 
+// UnregisterKubernetesCluster removes a registered Kubernetes cluster from PMM.
 func (k kubernetesServer) UnregisterKubernetesCluster(ctx context.Context, req *dbaasv1beta1.UnregisterKubernetesClusterRequest) (*dbaasv1beta1.UnregisterKubernetesClusterResponse, error) {
 	err := k.db.InTransaction(func(t *reform.TX) error {
 		err := models.RemoveKubernetesCluster(k.db.Querier, req.KubernetesClusterName)
@@ -71,5 +76,6 @@ func (k kubernetesServer) UnregisterKubernetesCluster(ctx context.Context, req *
 	if err != nil {
 		return nil, err
 	}
+
 	return &dbaasv1beta1.UnregisterKubernetesClusterResponse{}, nil
 }

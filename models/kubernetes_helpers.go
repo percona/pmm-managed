@@ -55,6 +55,7 @@ func FindAllKubernetesClusters(q *reform.Querier) ([]*KubernetesCluster, error) 
 	return clusters, nil
 }
 
+// FindKubernetesClusterByName finds a kubernetes cluster with provided name.
 func FindKubernetesClusterByName(q *reform.Querier, name string) (*KubernetesCluster, error) {
 	if name == "" {
 		return nil, status.Error(codes.InvalidArgument, "Empty Kubernetes Cluster Name.")
@@ -70,11 +71,13 @@ func FindKubernetesClusterByName(q *reform.Querier, name string) (*KubernetesClu
 	}
 }
 
+// CreateKubernetesClusterParams contains all params required to create kubernetes cluster.
 type CreateKubernetesClusterParams struct {
 	KubernetesClusterName string
 	KubeConfig            string
 }
 
+// CreateKubernetesCluster creates kubernetes cluster with provided params.
 func CreateKubernetesCluster(q *reform.Querier, params CreateKubernetesClusterParams) (*KubernetesCluster, error) {
 	id := "/kubernetes_cluster_id/" + uuid.New().String()
 	if err := checkUniqueKubernetesClusterID(q, id); err != nil {
@@ -93,6 +96,7 @@ func CreateKubernetesCluster(q *reform.Querier, params CreateKubernetesClusterPa
 	return row, nil
 }
 
+// RemoveKubernetesCluster removes kubernetes cluster with provided name.
 func RemoveKubernetesCluster(q *reform.Querier, name string) error {
 	c, err := FindKubernetesClusterByName(q, name)
 	if err != nil {
