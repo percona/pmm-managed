@@ -19,10 +19,10 @@ package dbaas
 import (
 	"context"
 
-	"github.com/percona/pmm-managed/models"
+	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
 	"gopkg.in/reform.v1"
 
-	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
+	"github.com/percona/pmm-managed/models"
 )
 
 type kubernetesServer struct {
