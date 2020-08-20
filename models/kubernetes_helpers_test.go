@@ -22,11 +22,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/testdb"
+	"github.com/percona/pmm-managed/utils/tests"
 )
 
 func TestKubernetesHelpers(t *testing.T) {
@@ -119,7 +122,7 @@ func TestKubernetesHelpers(t *testing.T) {
 				KubernetesClusterName: "",
 				KubeConfig:            "{}",
 			})
-			require.EqualError(t, err, `pq: new row for relation "kubernetes_clusters" violates check constraint "kubernetes_clusters_kubernetes_cluster_name_check"`)
+			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "empty Kubernetes Cluster Name."), err)
 			require.Nil(t, cluster)
 		})
 
@@ -131,6 +134,18 @@ func TestKubernetesHelpers(t *testing.T) {
 				KubeConfig:            "",
 			})
 			require.EqualError(t, err, `pq: new row for relation "kubernetes_clusters" violates check constraint "kubernetes_clusters_kube_config_check"`)
+			require.Nil(t, cluster)
+		})
+
+		t.Run("AlreadyExist", func(t *testing.T) {
+			q, teardown := setup(t)
+			defer teardown(t)
+			cluster, err := models.CreateKubernetesCluster(q, models.CreateKubernetesClusterParams{
+				KubernetesClusterName: "Kubernetes Cluster 1",
+				KubeConfig:            `{}`,
+			})
+
+			tests.AssertGRPCError(t, status.New(codes.AlreadyExists, "Cluster with Name \"Kubernetes Cluster 1\" already exists."), err)
 			require.Nil(t, cluster)
 		})
 	})
@@ -146,7 +161,7 @@ func TestKubernetesHelpers(t *testing.T) {
 			q, teardown := setup(t)
 			defer teardown(t)
 			err := models.RemoveKubernetesCluster(q, "test-cluster")
-			assert.EqualError(t, err, "")
+			tests.AssertGRPCError(t, status.New(codes.NotFound, `Cluster with name "test-cluster" not found.`), err)
 		})
 	})
 }

@@ -40,6 +40,21 @@ func checkUniqueKubernetesClusterID(q *reform.Querier, id string) error {
 	}
 }
 
+func checkUniqueKubernetesClusterName(q *reform.Querier, name string) error {
+	if name == "" {
+		return status.Error(codes.InvalidArgument, "empty Kubernetes Cluster Name.")
+	}
+
+	switch _, err := q.FindOneFrom(KubernetesClusterTable, "kubernetes_cluster_name", name); err {
+	case nil:
+		return status.Errorf(codes.AlreadyExists, "Cluster with Name %q already exists.", name)
+	case reform.ErrNoRows:
+		return nil
+	default:
+		return errors.WithStack(err)
+	}
+}
+
 // FindAllKubernetesClusters returns all kubernetes clusters.
 func FindAllKubernetesClusters(q *reform.Querier) ([]*KubernetesCluster, error) {
 	structs, err := q.SelectAllFrom(KubernetesClusterTable, "ORDER BY id")
@@ -81,6 +96,9 @@ type CreateKubernetesClusterParams struct {
 func CreateKubernetesCluster(q *reform.Querier, params CreateKubernetesClusterParams) (*KubernetesCluster, error) {
 	id := "/kubernetes_cluster_id/" + uuid.New().String()
 	if err := checkUniqueKubernetesClusterID(q, id); err != nil {
+		return nil, err
+	}
+	if err := checkUniqueKubernetesClusterName(q, params.KubernetesClusterName); err != nil {
 		return nil, err
 	}
 

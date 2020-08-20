@@ -71,6 +71,10 @@ func TestKubernetesServer(t *testing.T) {
 		clusters, err = ks.ListKubernetesClusters(ctx, new(dbaasv1beta1.ListKubernetesClustersRequest))
 		assert.NoError(t, err)
 		assert.Equal(t, 1, len(clusters.KubernetesClusters))
+		expected := []*dbaasv1beta1.KubernetesCluster{
+			{KubernetesClusterName: kubernetesClusterName},
+		}
+		assert.Equal(t, expected, clusters.KubernetesClusters)
 
 		unregisterKubernetesClusterResponse, err := ks.UnregisterKubernetesCluster(ctx, &dbaasv1beta1.UnregisterKubernetesClusterRequest{
 			KubernetesClusterName: kubernetesClusterName,
