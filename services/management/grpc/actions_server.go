@@ -285,7 +285,7 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 		return nil, err
 	}
 
-	err = s.r.StartPTSummaryAction(ctx, res.ID, req.PmmAgentId, []string{})
+	err = s.r.StartPTSummaryAction(ctx, res.ID, req.PmmAgentId, req.NodeId)
 	if err != nil {
 		return nil, err
 	}
@@ -314,7 +314,7 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 		return nil, err
 	}
 
-	err = s.r.StartPTMySQLSummaryAction(ctx, res.ID, req.PmmAgentId, []string{})
+	err = s.r.StartPTMySQLSummaryAction(ctx, res.ID, req.PmmAgentId, req.ServiceId)
 	if err != nil {
 		return nil, err
 	}

@@ -915,12 +915,13 @@ func (r *Registry) StartMongoDBQueryGetCmdLineOptsAction(ctx context.Context, id
 }
 
 // StartPTSummaryAction starts pt-summary action on pmm-agent.
-func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID string, args []string) error {
+func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID, nodeID string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_PtSummaryParams{
-			PtSummaryParams: &agentpb.StartActionRequest_ProcessParams{
-				Args: args,
+			PtSummaryParams: &agentpb.StartActionRequest_PTSummaryParams{
+				PmmAgentId: pmmAgentID,
+				NodeId:     nodeID,
 			},
 		},
 	}
@@ -935,12 +936,13 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID stri
 }
 
 // StartPTMySQLSummaryAction starts pt-mysql-summary action on pmm-agent.
-func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID string, args []string) error {
+func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID, serviceID string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_PtMysqlSummaryParams{
-			PtMysqlSummaryParams: &agentpb.StartActionRequest_ProcessParams{
-				Args: args,
+			PtMysqlSummaryParams: &agentpb.StartActionRequest_PTMySQLSummaryParams{
+				PmmAgentId: pmmAgentID,
+				ServiceId:  serviceID,
 			},
 		},
 	}
