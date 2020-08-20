@@ -137,7 +137,7 @@ func (s *actionsServer) StartMySQLExplainTraditionalJSONAction(ctx context.Conte
 }
 
 // StartMySQLShowCreateTableAction starts MySQL SHOW CREATE TABLE Action.
-//nolint:lll
+//nolint:lll,unparam
 func (s *actionsServer) StartMySQLShowCreateTableAction(ctx context.Context, req *managementpb.StartMySQLShowCreateTableActionRequest) (*managementpb.StartMySQLShowCreateTableActionResponse, error) {
 	res, dsn, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
@@ -156,7 +156,7 @@ func (s *actionsServer) StartMySQLShowCreateTableAction(ctx context.Context, req
 }
 
 // StartMySQLShowTableStatusAction starts MySQL SHOW TABLE STATUS Action.
-//nolint:lll
+//nolint:lll,unparam
 func (s *actionsServer) StartMySQLShowTableStatusAction(ctx context.Context, req *managementpb.StartMySQLShowTableStatusActionRequest) (*managementpb.StartMySQLShowTableStatusActionResponse, error) {
 	res, dsn, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
