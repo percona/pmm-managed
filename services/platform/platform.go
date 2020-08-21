@@ -49,7 +49,7 @@ const (
 	authType = "PP-1"
 )
 
-var errNoActiveSessions = errors.New("no active sessions")
+var errNoActiveSessions = status.Error(codes.FailedPrecondition, "No active sessions.")
 
 // Service is responsible for interactions with Percona Platform.
 type Service struct {
