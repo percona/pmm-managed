@@ -30,7 +30,7 @@ import (
 )
 
 func TestMongodbExporterConfig(t *testing.T) {
-	pmmAgentVersion, _ := version.Parse("0.9.9")
+	pmmAgentVersion, _ := version.Parse("2.0.0")
 
 	mongodb := &models.Service{
 		Address: pointer.ToString("1.2.3.4"),
@@ -80,7 +80,7 @@ func TestMongodbExporterConfig(t *testing.T) {
 }
 
 func TestNewMongodbExporterConfig(t *testing.T) {
-	pmmAgentVersion, _ := version.Parse("3.9.9")
+	pmmAgentVersion, _ := version.Parse("2.10.0")
 
 	mongodb := &models.Service{
 		Address: pointer.ToString("1.2.3.4"),
