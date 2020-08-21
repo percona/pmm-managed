@@ -96,7 +96,7 @@ func ValidateAWSPartitions(partitions []string) error {
 }
 
 // TODO: This function should be moved to the pmm repo.
-// MustParseVersion parses a version string and panics if there is an error
+// MustParseVersion parses a version string and panics if there is an error.
 func MustParseVersion(v string) *version.Parsed {
 	p, err := version.Parse(v)
 	if err != nil {
