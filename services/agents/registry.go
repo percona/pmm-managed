@@ -415,8 +415,9 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 	}
 	pmmAgentVersion, err := version.Parse(*pmmAgent.Version)
 	if err != nil {
-		l.Errorf("Failed to collect agents: %s.", err)
-		return
+		// if there is no version, assume 2.x version and use original MongoDB exporter used
+		// before PMM v2.10.0. PMM 2.10.0 implements the new MongoDB exporter
+		pmmAgentVersion, _ = version.Parse("2.0.0")
 	}
 
 	agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{PMMAgentID: pmmAgentID})
