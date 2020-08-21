@@ -935,27 +935,6 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID, nod
 	return nil
 }
 
-// StartPTMySQLSummaryAction starts pt-mysql-summary action on pmm-agent.
-func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID, serviceID string) error {
-	aRequest := &agentpb.StartActionRequest{
-		ActionId: id,
-		Params: &agentpb.StartActionRequest_PtMysqlSummaryParams{
-			PtMysqlSummaryParams: &agentpb.StartActionRequest_PTMySQLSummaryParams{
-				PmmAgentId: pmmAgentID,
-				ServiceId:  serviceID,
-			},
-		},
-	}
-
-	agent, err := r.get(pmmAgentID)
-	if err != nil {
-		return err
-	}
-
-	agent.channel.SendRequest(aRequest)
-	return nil
-}
-
 // StopAction stops action with given given id.
 // TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
 func (r *Registry) StopAction(ctx context.Context, actionID string) error {

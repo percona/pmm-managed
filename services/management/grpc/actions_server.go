@@ -18,6 +18,7 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/managementpb"
@@ -270,14 +271,12 @@ func (s *actionsServer) CancelAction(ctx context.Context, req *managementpb.Canc
 // StartPTSummaryAction starts pt-summary action.
 //nolint:lll,dupl
 func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
-	ag, err := models.FindAgents(s.db.Querier, models.AgentFilters{PMMAgentID: req.PmmAgentId, NodeID: req.NodeId})
+	agent, err := models.FindAgentByID(s.db.Querier, req.PmmAgentId)
 	if err != nil {
 		return nil, err
 	}
-
-	req.PmmAgentId, err = models.FindPmmAgentIDToRunAction(req.PmmAgentId, ag)
-	if err != nil {
-		return nil, err
+	if agent.RunsOnNodeID != &req.NodeId {
+		return nil, fmt.Errorf("node %s does not running on pmm agent %s", req.NodeId, req.PmmAgentId)
 	}
 
 	res, err := models.CreateActionResult(s.db.Querier, req.PmmAgentId)
@@ -293,36 +292,6 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 	return &managementpb.StartPTSummaryActionResponse{
 		PmmAgentId: req.PmmAgentId,
 		NodeId:     req.NodeId,
-		ActionId:   res.ID,
-	}, nil
-}
-
-// StartPTMySQLSummaryAction starts pt-mysql-summary action.
-//nolint:lll,dupl
-func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
-	ag, err := models.FindPMMAgentsForService(s.db.Querier, req.ServiceId)
-	if err != nil {
-		return nil, err
-	}
-
-	req.PmmAgentId, err = models.FindPmmAgentIDToRunAction(req.PmmAgentId, ag)
-	if err != nil {
-		return nil, err
-	}
-
-	res, err := models.CreateActionResult(s.db.Querier, req.PmmAgentId)
-	if err != nil {
-		return nil, err
-	}
-
-	err = s.r.StartPTMySQLSummaryAction(ctx, res.ID, req.PmmAgentId, req.ServiceId)
-	if err != nil {
-		return nil, err
-	}
-
-	return &managementpb.StartPTMySQLSummaryActionResponse{
-		PmmAgentId: req.PmmAgentId,
-		ServiceId:  req.ServiceId,
 		ActionId:   res.ID,
 	}, nil
 }
