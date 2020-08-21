@@ -275,8 +275,11 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 	if err != nil {
 		return nil, err
 	}
+	if agent.AgentID != req.PmmAgentId {
+		return nil, fmt.Errorf("pmm-agent has id %s not %s", agent.AgentID, req.PmmAgentId)
+	}
 	if agent.RunsOnNodeID != &req.NodeId {
-		return nil, fmt.Errorf("node %s does not running on pmm agent %s", req.NodeId, req.PmmAgentId)
+		return nil, fmt.Errorf("pmm-agent %s does not running on node %s", req.PmmAgentId, req.NodeId)
 	}
 
 	res, err := models.CreateActionResult(s.db.Querier, req.PmmAgentId)
@@ -291,7 +294,6 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 
 	return &managementpb.StartPTSummaryActionResponse{
 		PmmAgentId: req.PmmAgentId,
-		NodeId:     req.NodeId,
 		ActionId:   res.ID,
 	}, nil
 }

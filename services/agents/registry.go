@@ -918,12 +918,6 @@ func (r *Registry) StartMongoDBQueryGetCmdLineOptsAction(ctx context.Context, id
 func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID, nodeID string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
-		Params: &agentpb.StartActionRequest_PtSummaryParams{
-			PtSummaryParams: &agentpb.StartActionRequest_PTSummaryParams{
-				PmmAgentId: pmmAgentID,
-				NodeId:     nodeID,
-			},
-		},
 	}
 
 	agent, err := r.get(pmmAgentID)
