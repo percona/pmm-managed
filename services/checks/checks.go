@@ -43,6 +43,7 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services"
+	"github.com/percona/pmm-managed/utils/validators"
 )
 
 const (
@@ -75,9 +76,9 @@ const (
 
 // pmm-agent versions with known changes in Query Actions.
 var (
-	pmmAgent260     = mustParseVersion("2.6.0")
-	pmmAgent270     = mustParseVersion("2.7.0")
-	pmmAgentInvalid = mustParseVersion("3.0.0-invalid")
+	pmmAgent260     = validators.MustParseVersion("2.6.0")
+	pmmAgent270     = validators.MustParseVersion("2.7.0")
+	pmmAgentInvalid = validators.MustParseVersion("3.0.0-invalid")
 )
 
 var defaultPublicKeys = []string{
@@ -882,15 +883,6 @@ func (s *Service) verifySignatures(resp *api.GetAllChecksResponse) error {
 	}
 
 	return errors.New("no verified signatures")
-}
-
-func mustParseVersion(v string) *version.Parsed {
-	p, err := version.Parse(v)
-	if err != nil {
-		panic(err)
-	}
-
-	return p
 }
 
 // Describe implements prom.Collector.

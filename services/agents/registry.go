@@ -40,6 +40,7 @@ import (
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/agents/channel"
 	"github.com/percona/pmm-managed/utils/logger"
+	"github.com/percona/pmm-managed/utils/validators"
 )
 
 const (
@@ -413,12 +414,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		l.Errorf("Failed to get PMM Agent: %s.", err)
 		return
 	}
-	pmmAgentVersion, err := version.Parse(*pmmAgent.Version)
-	if err != nil {
-		// if there is no version, assume 2.x version and use original MongoDB exporter used
-		// before PMM v2.10.0. PMM 2.10.0 implements the new MongoDB exporter
-		pmmAgentVersion, _ = version.Parse("2.0.0")
-	}
+	pmmAgentVersion := validators.MustParseVersion(*pmmAgent.Version)
 
 	agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{PMMAgentID: pmmAgentID})
 	if err != nil {
