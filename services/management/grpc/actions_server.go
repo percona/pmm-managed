@@ -275,8 +275,8 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 	if err != nil {
 		return nil, err
 	}
-	if agent.AgentID != req.PmmAgentId {
-		return nil, fmt.Errorf("pmm-agent has id %s not %s", agent.AgentID, req.PmmAgentId)
+	if agent.AgentType != models.PMMAgentType {
+		return nil, fmt.Errorf("pmm-agent has type %s not %s", agent.AgentType, models.PMMAgentType)
 	}
 	if agent.RunsOnNodeID != &req.NodeId {
 		return nil, fmt.Errorf("pmm-agent %s does not running on node %s", req.PmmAgentId, req.NodeId)
