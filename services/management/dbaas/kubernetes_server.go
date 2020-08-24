@@ -42,9 +42,9 @@ func (k kubernetesServer) ListKubernetesClusters(ctx context.Context, _ *dbaasv1
 		return nil, err
 	}
 
-	clusters := make([]*dbaasv1beta1.ListKubernetesClustersResponse_KubernetesCluster, len(kubernetesClusters))
+	clusters := make([]*dbaasv1beta1.ListKubernetesClustersResponse_Cluster, len(kubernetesClusters))
 	for i, cluster := range kubernetesClusters {
-		clusters[i] = &dbaasv1beta1.ListKubernetesClustersResponse_KubernetesCluster{
+		clusters[i] = &dbaasv1beta1.ListKubernetesClustersResponse_Cluster{
 			KubernetesClusterName: cluster.KubernetesClusterName,
 		}
 	}
