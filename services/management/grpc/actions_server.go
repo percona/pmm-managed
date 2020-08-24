@@ -138,7 +138,7 @@ func (s *actionsServer) StartMySQLExplainTraditionalJSONAction(ctx context.Conte
 }
 
 // StartMySQLShowCreateTableAction starts MySQL SHOW CREATE TABLE Action.
-//nolint:lll,unparam
+//nolint:lll
 func (s *actionsServer) StartMySQLShowCreateTableAction(ctx context.Context, req *managementpb.StartMySQLShowCreateTableActionRequest) (*managementpb.StartMySQLShowCreateTableActionResponse, error) {
 	res, dsn, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
@@ -157,7 +157,7 @@ func (s *actionsServer) StartMySQLShowCreateTableAction(ctx context.Context, req
 }
 
 // StartMySQLShowTableStatusAction starts MySQL SHOW TABLE STATUS Action.
-//nolint:lll,unparam
+//nolint:lll
 func (s *actionsServer) StartMySQLShowTableStatusAction(ctx context.Context, req *managementpb.StartMySQLShowTableStatusActionRequest) (*managementpb.StartMySQLShowTableStatusActionResponse, error) {
 	res, dsn, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
@@ -269,7 +269,7 @@ func (s *actionsServer) CancelAction(ctx context.Context, req *managementpb.Canc
 }
 
 // StartPTSummaryAction starts pt-summary action.
-//nolint:lll,unparam
+//nolint:lll
 func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
 	agent, err := models.FindAgentByID(s.db.Querier, req.PmmAgentId)
 	if err != nil {
