@@ -47,8 +47,10 @@ const (
 	prometheusSubsystem = "agents"
 )
 
-var defaultActionTimeout = ptypes.DurationProto(10 * time.Second)
-var defaultQueryActionTimeout = ptypes.DurationProto(15 * time.Second)
+var (
+	defaultActionTimeout      = ptypes.DurationProto(10 * time.Second)
+	defaultQueryActionTimeout = ptypes.DurationProto(15 * time.Second) // should be less than checks.resultTimeout
+)
 
 type pmmAgentInfo struct {
 	channel *channel.Channel
@@ -813,7 +815,7 @@ func (r *Registry) StartMySQLQuerySelectAction(ctx context.Context, id, pmmAgent
 				Query: query,
 			},
 		},
-		Timeout: defaultActionTimeout,
+		Timeout: defaultQueryActionTimeout,
 	}
 
 	agent, err := r.get(pmmAgentID)
