@@ -18,6 +18,7 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/percona/pmm/api/agentpb"
@@ -276,7 +277,7 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 		return nil, err
 	}
 	if agent.AgentType != models.PMMAgentType {
-		return nil, fmt.Errorf("pmm-agent has type %s not %s", agent.AgentType, models.PMMAgentType)
+		return nil, errors.New("couldn't find pmm-agent to run action")
 	}
 	if agent.RunsOnNodeID != &req.NodeId {
 		return nil, fmt.Errorf("pmm-agent %s does not running on node %s", req.PmmAgentId, req.NodeId)
