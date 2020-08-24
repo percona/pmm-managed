@@ -287,7 +287,7 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 		return nil, err
 	}
 
-	err = s.r.StartPTSummaryAction(ctx, res.ID, req.PmmAgentId, req.NodeId)
+	err = s.r.StartPTSummaryAction(ctx, res.ID, req.PmmAgentId)
 	if err != nil {
 		return nil, err
 	}

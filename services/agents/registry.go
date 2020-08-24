@@ -915,7 +915,7 @@ func (r *Registry) StartMongoDBQueryGetCmdLineOptsAction(ctx context.Context, id
 }
 
 // StartPTSummaryAction starts pt-summary action on pmm-agent.
-func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID, nodeID string) error {
+func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params:   &agentpb.StartActionRequest_PtSummaryParams{},
