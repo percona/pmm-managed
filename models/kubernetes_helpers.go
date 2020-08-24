@@ -26,7 +26,7 @@ import (
 
 func checkUniqueKubernetesClusterID(q *reform.Querier, id string) error {
 	if id == "" {
-		panic("empty Kubernetes Cluster ID")
+		return status.Error(codes.InvalidArgument, "empty Kubernetes Cluster ID")
 	}
 
 	cluster := &KubernetesCluster{ID: id}
