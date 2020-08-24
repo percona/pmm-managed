@@ -16,7 +16,7 @@ required = [
 
 [[constraint]]
   name = "github.com/percona/pmm"
-  branch = "PMM-2.0"
+  branch = "revert-567-revert-566-SAAS-266-sign-out"
 
 [[constraint]]
   name = "github.com/percona-platform/saas"

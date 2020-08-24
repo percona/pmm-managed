@@ -396,7 +396,7 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-2.0"
+  branch = "revert-567-revert-566-SAAS-266-sign-out"
   digest = "1:4a65cb88491e75a131fe6f04d5206e534b99c207cb37b183f9208547d656aaf3"
   name = "github.com/percona/pmm"
   packages = [
@@ -418,7 +418,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "cd9c2946a969636bceff9c42be33ca636574373d"
+  revision = "0137c7d71a3bacbe922a43b63f8302fdce355a67"
 
 [[projects]]
   digest = "1:dbee7dc52291bb149388085eeb20561d4cb3c2044e0fa6ffa8d342c6b305f4bf"
