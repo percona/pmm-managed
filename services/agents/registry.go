@@ -40,7 +40,6 @@ import (
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/agents/channel"
 	"github.com/percona/pmm-managed/utils/logger"
-	"github.com/percona/pmm-managed/utils/validators"
 )
 
 const (
@@ -414,7 +413,11 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		l.Errorf("Failed to get PMM Agent: %s.", err)
 		return
 	}
-	pmmAgentVersion := validators.MustParseVersion(*pmmAgent.Version)
+	pmmAgentVersion, err := version.Parse(*pmmAgent.Version)
+	if err != nil {
+		l.Errorf("Failed to parse PMM agent version %q: %s", *pmmAgent.Version, err)
+		return
+	}
 
 	agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{PMMAgentID: pmmAgentID})
 	if err != nil {
