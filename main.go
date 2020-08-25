@@ -68,6 +68,7 @@ import (
 	inventorygrpc "github.com/percona/pmm-managed/services/inventory/grpc"
 	"github.com/percona/pmm-managed/services/management"
 	managementgrpc "github.com/percona/pmm-managed/services/management/grpc"
+	"github.com/percona/pmm-managed/services/platform"
 	"github.com/percona/pmm-managed/services/prometheus"
 	"github.com/percona/pmm-managed/services/qan"
 	"github.com/percona/pmm-managed/services/server"
@@ -104,7 +105,7 @@ func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
 
 		ctx = logger.Set(ctx, "logs")
 		if err := logs.Zip(ctx, rw); err != nil {
-			l.Error(err)
+			l.Errorf("%+v", err)
 		}
 	})
 }
@@ -115,6 +116,7 @@ type gRPCServerDeps struct {
 	server         *server.Server
 	agentsRegistry *agents.Registry
 	grafanaClient  *grafana.Client
+	checksService  *checks.Service
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -123,7 +125,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	l.Infof("Starting server on http://%s/ ...", gRPCAddr)
 
 	gRPCServer := grpc.NewServer(
-		grpc.MaxRecvMsgSize(10*1024*1024), //nolint:gomnd
+		grpc.MaxRecvMsgSize(10*1024*1024),
 
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			interceptors.Unary,
@@ -153,6 +155,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	mongodbSvc := management.NewMongoDBService(deps.db, deps.agentsRegistry)
 	postgresqlSvc := management.NewPostgreSQLService(deps.db, deps.agentsRegistry)
 	proxysqlSvc := management.NewProxySQLService(deps.db, deps.agentsRegistry)
+	checksSvc := management.NewChecksAPIService(deps.checksService)
 
 	managementpb.RegisterNodeServer(gRPCServer, managementgrpc.NewManagementNodeServer(nodeSvc))
 	managementpb.RegisterServiceServer(gRPCServer, managementgrpc.NewManagementServiceServer(serviceSvc))
@@ -163,7 +166,8 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(deps.agentsRegistry, deps.db))
 	managementpb.RegisterRDSServer(gRPCServer, management.NewRDSService(deps.db, deps.agentsRegistry))
 	managementpb.RegisterExternalServer(gRPCServer, management.NewExternalService(deps.db, deps.prometheus))
-	managementpb.RegisterAnnotationServer(gRPCServer, managementgrpc.NewAnnotationServer(deps.grafanaClient))
+	managementpb.RegisterAnnotationServer(gRPCServer, managementgrpc.NewAnnotationServer(deps.db, deps.grafanaClient))
+	managementpb.RegisterSecurityChecksServer(gRPCServer, managementgrpc.NewChecksServer(checksSvc))
 
 	if l.Logger.GetLevel() >= logrus.DebugLevel {
 		l.Debug("Reflection and channelz are enabled.")
@@ -239,6 +243,7 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 		managementpb.RegisterRDSHandlerFromEndpoint,
 		managementpb.RegisterExternalHandlerFromEndpoint,
 		managementpb.RegisterAnnotationHandlerFromEndpoint,
+		managementpb.RegisterSecurityChecksHandlerFromEndpoint,
 	} {
 		if err := r(ctx, proxyMux, gRPCAddr, opts); err != nil {
 			l.Panic(err)
@@ -308,7 +313,7 @@ func runDebugServer(ctx context.Context) {
 		l.Panic(err)
 	}
 	http.HandleFunc("/debug", func(rw http.ResponseWriter, req *http.Request) {
-		rw.Write(buf.Bytes())
+		rw.Write(buf.Bytes()) //nolint:errcheck
 	})
 	l.Infof("Starting server on http://%s/debug\nRegistered handlers:\n\t%s", debugAddr, strings.Join(handlers, "\n\t"))
 
@@ -518,11 +523,7 @@ func main() {
 	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient)
 	prom.MustRegister(agentsRegistry)
 
-	alertsRegistry := alertmanager.NewRegistry()
-	alertmanager, err := alertmanager.New(db, alertsRegistry)
-	if err != nil {
-		l.Panicf("Alertmanager service problem: %+v", err)
-	}
+	alertmanager := alertmanager.New(db)
 
 	pmmUpdateCheck := supervisord.NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker"))
 
@@ -534,12 +535,18 @@ func main() {
 	grafanaClient := grafana.NewClient(*grafanaAddrF)
 	prom.MustRegister(grafanaClient)
 
+	checksService := checks.New(agentsRegistry, alertmanager, db)
+	prom.MustRegister(checksService)
+
+	platformService := platform.New(db)
+
 	serverParams := &server.Params{
 		DB:                      db,
 		Prometheus:              prometheus,
 		Alertmanager:            alertmanager,
 		Supervisord:             supervisord,
 		TelemetryService:        telemetry,
+		PlatformService:         platformService,
 		AwsInstanceChecker:      awsInstanceChecker,
 		GrafanaClient:           grafanaClient,
 		PrometheusAlertingRules: alertingRules,
@@ -582,9 +589,6 @@ func main() {
 
 	authServer := grafana.NewAuthServer(grafanaClient, awsInstanceChecker)
 
-	checksService := checks.New(agentsRegistry, alertsRegistry, db, version.Version)
-	prom.MustRegister(checksService)
-
 	l.Info("Starting services...")
 	var wg sync.WaitGroup
 
@@ -609,6 +613,12 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		platformService.Run(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		supervisord.Run(ctx)
 	}()
 
@@ -627,6 +637,7 @@ func main() {
 			server:         server,
 			agentsRegistry: agentsRegistry,
 			grafanaClient:  grafanaClient,
+			checksService:  checksService,
 		})
 	}()
 

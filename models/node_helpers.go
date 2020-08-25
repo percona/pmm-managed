@@ -136,7 +136,7 @@ func FindNodesByIDs(q *reform.Querier, ids []string) ([]*Node, error) {
 		return []*Node{}, nil
 	}
 
-	p := strings.Join(q.Placeholders(1, len(ids)), ", ")             //nolint:gomnd
+	p := strings.Join(q.Placeholders(1, len(ids)), ", ")
 	tail := fmt.Sprintf("WHERE node_id IN (%s) ORDER BY node_id", p) //nolint:gosec
 	args := make([]interface{}, len(ids))
 	for i, id := range ids {
@@ -245,6 +245,10 @@ func RemoveNode(q *reform.Querier, id string, mode RemoveMode) error {
 	n, err := FindNodeByID(q, id)
 	if err != nil {
 		return err
+	}
+
+	if id == PMMServerNodeID {
+		return status.Error(codes.PermissionDenied, "PMM Server node can't be removed.")
 	}
 
 	// check/remove Agents

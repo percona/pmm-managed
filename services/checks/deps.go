@@ -18,13 +18,12 @@ package checks
 
 import (
 	"context"
-	"time"
 
 	"github.com/percona/pmm/api/alertmanager/ammodels"
 )
 
 //go:generate mockery -name=agentsRegistry -case=snake -inpkg -testonly
-//go:generate mockery -name=alertRegistry -case=snake -inpkg -testonly
+//go:generate mockery -name=alertmanagerService -case=snake -inpkg -testonly
 
 // agentsRegistry is a subset of methods of agents.Registry used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
@@ -35,10 +34,11 @@ type agentsRegistry interface {
 	StartPostgreSQLQuerySelectAction(ctx context.Context, id, pmmAgentID, dsn, query string) error
 	StartMongoDBQueryGetParameterAction(ctx context.Context, id, pmmAgentID, dsn string) error
 	StartMongoDBQueryBuildInfoAction(ctx context.Context, id, pmmAgentID, dsn string) error
+	StartMongoDBQueryGetCmdLineOptsAction(ctx context.Context, id, pmmAgentID, dsn string) error
 }
 
-// alertRegistry is is a subset of methods of alertmanager.registry used by this package.
-type alertRegistry interface {
-	Add(id string, delayFor time.Duration, alert *ammodels.PostableAlert)
-	RemovePrefix(prefix string, keepIDs map[string]struct{})
+// alertmanagerService is is a subset of methods of alertmanager.Service used by this package.
+// We use it instead of real type for testing and to avoid dependency cycle.
+type alertmanagerService interface {
+	SendAlerts(ctx context.Context, alerts ammodels.PostableAlerts)
 }

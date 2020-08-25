@@ -41,7 +41,7 @@ def install_go():
     """Installs Go toolchain."""
 
     run_commands([
-        "curl -sS https://raw.githubusercontent.com/travis-ci/gimme/v1.5.3/gimme -o /usr/local/bin/gimme",
+        "curl -sS https://raw.githubusercontent.com/travis-ci/gimme/v1.5.4/gimme -o /usr/local/bin/gimme",
         "chmod +x /usr/local/bin/gimme"
     ])
 
@@ -81,7 +81,9 @@ def install_tools():
             go mod init tools && \
             env GOPROXY=https://proxy.golang.org go get -v \
                 github.com/go-delve/delve/cmd/dlv@latest \
-                golang.org/x/tools/gopls@latest"
+                golang.org/x/tools/gopls@latest \
+                mvdan.cc/gofumpt@latest \
+                mvdan.cc/gofumpt/gofumports"
     ])
 
 

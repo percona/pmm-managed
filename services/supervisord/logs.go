@@ -41,6 +41,7 @@ import (
 )
 
 const (
+	maxLogReadLines = 1000
 	maxLogReadBytes = 1024 * 1024
 )
 
@@ -69,13 +70,27 @@ func NewLogs(pmmVersion string, pmmUpdateChecker *PMMUpdateChecker) *Logs {
 
 // Zip creates .zip archive with all logs.
 func (l *Logs) Zip(ctx context.Context, w io.Writer) error {
+	start := time.Now()
 	log := logger.Get(ctx).WithField("component", "logs")
+	log.WithField("d", time.Since(start).Seconds()).Info("Starting...")
+	defer func() {
+		log.WithField("d", time.Since(start).Seconds()).Info("Done.")
+	}()
+
 	zw := zip.NewWriter(w)
 	now := time.Now().UTC()
 
-	for _, file := range l.files(ctx) {
+	files := l.files(ctx)
+	log.WithField("d", time.Since(start).Seconds()).Infof("Collected %d files.", len(files))
+
+	for _, file := range files {
+		if ctx.Err() != nil {
+			log.WithField("d", time.Since(start).Seconds()).Warnf("%s; skipping the rest of the files", ctx.Err())
+			break
+		}
+
 		if file.Err != nil {
-			log.Errorf("%s: %s", file.Name, file.Err)
+			log.WithField("d", time.Since(start).Seconds()).Errorf("%s: %s", file.Name, file.Err)
 
 			// do not let a single error break the whole archive
 			if len(file.Data) > 0 {
@@ -103,7 +118,7 @@ func (l *Logs) Zip(ctx context.Context, w io.Writer) error {
 
 	if err := addAdminSummary(ctx, zw); err != nil {
 		// do not let it break the whole archive
-		log.Errorf("addAdminSummary: %+v", err)
+		log.WithField("d", time.Since(start).Seconds()).Errorf("addAdminSummary: %+v", err)
 	}
 
 	if err := zw.Close(); err != nil {
@@ -122,7 +137,7 @@ func (l *Logs) files(ctx context.Context) []fileContent {
 		logger.Get(ctx).WithField("component", "logs").Error(err)
 	}
 	for _, f := range logs {
-		b, m, err := readLog(f, 1000, maxLogReadBytes)
+		b, m, err := readLog(f, maxLogReadLines, maxLogReadBytes)
 		files = append(files, fileContent{
 			Name:     filepath.Base(f),
 			Modified: m,
