@@ -54,7 +54,7 @@ func (k kubernetesServer) ListKubernetesClusters(ctx context.Context, _ *dbaasv1
 // RegisterKubernetesCluster registers an existing Kubernetes cluster in PMM.
 func (k kubernetesServer) RegisterKubernetesCluster(ctx context.Context, req *dbaasv1beta1.RegisterKubernetesClusterRequest) (*dbaasv1beta1.RegisterKubernetesClusterResponse, error) {
 	err := k.db.InTransaction(func(t *reform.TX) error {
-		_, err := models.CreateKubernetesCluster(k.db.Querier, models.CreateKubernetesClusterParams{
+		_, err := models.CreateKubernetesCluster(k.db.Querier, &models.CreateKubernetesClusterParams{
 			KubernetesClusterName: req.KubernetesClusterName,
 			KubeConfig:            req.KubeAuth.Kubeconfig,
 		})

@@ -40,7 +40,6 @@ func TestKubernetesHelpers(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SetupFixtures, nil)
 	defer func() {
 		models.Now = origNowF
-		require.NoError(t, sqlDB.Close())
 	}()
 
 	setup := func(t *testing.T) (q *reform.Querier, teardown func(t *testing.T)) {
@@ -100,7 +99,7 @@ func TestKubernetesHelpers(t *testing.T) {
 		t.Run("Basic", func(t *testing.T) {
 			q, teardown := setup(t)
 			defer teardown(t)
-			cluster, err := models.CreateKubernetesCluster(q, models.CreateKubernetesClusterParams{
+			cluster, err := models.CreateKubernetesCluster(q, &models.CreateKubernetesClusterParams{
 				KubernetesClusterName: "Kubernetes Cluster 3",
 				KubeConfig:            "{}",
 			})
@@ -118,7 +117,7 @@ func TestKubernetesHelpers(t *testing.T) {
 		t.Run("EmptyKubernetesClusterName", func(t *testing.T) {
 			q, teardown := setup(t)
 			defer teardown(t)
-			cluster, err := models.CreateKubernetesCluster(q, models.CreateKubernetesClusterParams{
+			cluster, err := models.CreateKubernetesCluster(q, &models.CreateKubernetesClusterParams{
 				KubernetesClusterName: "",
 				KubeConfig:            "{}",
 			})
@@ -129,7 +128,7 @@ func TestKubernetesHelpers(t *testing.T) {
 		t.Run("EmptyKubeConfig", func(t *testing.T) {
 			q, teardown := setup(t)
 			defer teardown(t)
-			cluster, err := models.CreateKubernetesCluster(q, models.CreateKubernetesClusterParams{
+			cluster, err := models.CreateKubernetesCluster(q, &models.CreateKubernetesClusterParams{
 				KubernetesClusterName: "Kubernetes Cluster without config",
 				KubeConfig:            "",
 			})
@@ -140,7 +139,7 @@ func TestKubernetesHelpers(t *testing.T) {
 		t.Run("AlreadyExist", func(t *testing.T) {
 			q, teardown := setup(t)
 			defer teardown(t)
-			cluster, err := models.CreateKubernetesCluster(q, models.CreateKubernetesClusterParams{
+			cluster, err := models.CreateKubernetesCluster(q, &models.CreateKubernetesClusterParams{
 				KubernetesClusterName: "Kubernetes Cluster 1",
 				KubeConfig:            `{}`,
 			})

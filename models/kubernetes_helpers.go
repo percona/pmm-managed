@@ -32,7 +32,7 @@ func checkUniqueKubernetesClusterID(q *reform.Querier, id string) error {
 	cluster := &KubernetesCluster{ID: id}
 	switch err := q.Reload(cluster); err {
 	case nil:
-		return status.Errorf(codes.AlreadyExists, "Cluster with ID %q already exists.", id)
+		return status.Errorf(codes.AlreadyExists, "Kubernetes Cluster with ID %q already exists.", id)
 	case reform.ErrNoRows:
 		return nil
 	default:
@@ -47,7 +47,7 @@ func checkUniqueKubernetesClusterName(q *reform.Querier, name string) error {
 
 	switch _, err := q.FindOneFrom(KubernetesClusterTable, "kubernetes_cluster_name", name); err {
 	case nil:
-		return status.Errorf(codes.AlreadyExists, "Cluster with Name %q already exists.", name)
+		return status.Errorf(codes.AlreadyExists, "Kubernetes Cluster with Name %q already exists.", name)
 	case reform.ErrNoRows:
 		return nil
 	default:
@@ -55,7 +55,7 @@ func checkUniqueKubernetesClusterName(q *reform.Querier, name string) error {
 	}
 }
 
-// FindAllKubernetesClusters returns all kubernetes clusters.
+// FindAllKubernetesClusters returns all Kubernetes clusters.
 func FindAllKubernetesClusters(q *reform.Querier) ([]*KubernetesCluster, error) {
 	structs, err := q.SelectAllFrom(KubernetesClusterTable, "ORDER BY id")
 	if err != nil {
@@ -70,7 +70,7 @@ func FindAllKubernetesClusters(q *reform.Querier) ([]*KubernetesCluster, error) 
 	return clusters, nil
 }
 
-// FindKubernetesClusterByName finds a kubernetes cluster with provided name.
+// FindKubernetesClusterByName finds a Kubernetes cluster with provided name.
 func FindKubernetesClusterByName(q *reform.Querier, name string) (*KubernetesCluster, error) {
 	if name == "" {
 		return nil, status.Error(codes.InvalidArgument, "Empty Kubernetes Cluster Name.")
@@ -80,20 +80,20 @@ func FindKubernetesClusterByName(q *reform.Querier, name string) (*KubernetesClu
 	case nil:
 		return cluster.(*KubernetesCluster), nil
 	case reform.ErrNoRows:
-		return nil, status.Errorf(codes.NotFound, "Cluster with name %q not found.", name)
+		return nil, status.Errorf(codes.NotFound, "Kubernetes Cluster with name %q not found.", name)
 	default:
 		return nil, errors.WithStack(err)
 	}
 }
 
-// CreateKubernetesClusterParams contains all params required to create kubernetes cluster.
+// CreateKubernetesClusterParams contains all params required to create Kubernetes cluster.
 type CreateKubernetesClusterParams struct {
 	KubernetesClusterName string
 	KubeConfig            string
 }
 
-// CreateKubernetesCluster creates kubernetes cluster with provided params.
-func CreateKubernetesCluster(q *reform.Querier, params CreateKubernetesClusterParams) (*KubernetesCluster, error) {
+// CreateKubernetesCluster creates Kubernetes cluster with provided params.
+func CreateKubernetesCluster(q *reform.Querier, params *CreateKubernetesClusterParams) (*KubernetesCluster, error) {
 	id := "/kubernetes_cluster_id/" + uuid.New().String()
 	if err := checkUniqueKubernetesClusterID(q, id); err != nil {
 		return nil, err
@@ -114,7 +114,7 @@ func CreateKubernetesCluster(q *reform.Querier, params CreateKubernetesClusterPa
 	return row, nil
 }
 
-// RemoveKubernetesCluster removes kubernetes cluster with provided name.
+// RemoveKubernetesCluster removes Kubernetes cluster with provided name.
 func RemoveKubernetesCluster(q *reform.Querier, name string) error {
 	c, err := FindKubernetesClusterByName(q, name)
 	if err != nil {

@@ -24,7 +24,7 @@ import (
 
 //go:generate reform
 
-// KubernetesCluster represents a kubernetes cluster as stored in database.
+// KubernetesCluster represents a Kubernetes cluster as stored in database.
 //reform:kubernetes_clusters
 type KubernetesCluster struct {
 	ID                    string    `reform:"id,pk"`
@@ -60,7 +60,7 @@ func (s *KubernetesCluster) AfterFind() error { //nolint:unparam
 
 // check interfaces.
 var (
-	_ reform.BeforeInserter = (*ActionResult)(nil)
-	_ reform.BeforeUpdater  = (*ActionResult)(nil)
-	_ reform.AfterFinder    = (*ActionResult)(nil)
+	_ reform.BeforeInserter = (*KubernetesCluster)(nil)
+	_ reform.BeforeUpdater  = (*KubernetesCluster)(nil)
+	_ reform.AfterFinder    = (*KubernetesCluster)(nil)
 )

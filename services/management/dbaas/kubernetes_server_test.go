@@ -45,8 +45,6 @@ func TestKubernetesServer(t *testing.T) {
 
 		teardown = func(t *testing.T) {
 			uuid.SetRand(nil)
-
-			require.NoError(t, sqlDB.Close())
 		}
 
 		return
