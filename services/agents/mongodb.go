@@ -45,28 +45,6 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent, reda
 		pointer.GetString(exporter.MetricsPath),
 	)
 
-	var args, env []string
-	switch {
-	case pmmAgentVersion.Less(newMongoExporterPMMVersion):
-		args, env = mongodbExporterV1ArgsEnv(tdp, service, exporter)
-	default:
-		args, env = mongodbExporterV2ArgsEnv(tdp, service, exporter)
-	}
-
-	res := &agentpb.SetStateRequest_AgentProcess{
-		Type:               inventorypb.AgentType_MONGODB_EXPORTER,
-		TemplateLeftDelim:  tdp.left,
-		TemplateRightDelim: tdp.right,
-		Args:               args,
-		Env:                env,
-	}
-	if redactMode != exposeSecrets {
-		res.RedactWords = redactWords(exporter)
-	}
-	return res
-}
-
-func mongodbExporterV1ArgsEnv(tdp pair, service *models.Service, exporter *models.Agent) ([]string, []string) {
 	args := []string{
 		"--collect.collection",
 		"--collect.database",
@@ -76,32 +54,37 @@ func mongodbExporterV1ArgsEnv(tdp pair, service *models.Service, exporter *model
 		"--web.listen-address=:" + tdp.left + " .listen_port " + tdp.right,
 	}
 
-	if pointer.GetString(exporter.MetricsPath) != "" {
-		args = append(args, "--web.telemetry-path="+*exporter.MetricsPath)
-	}
-
-	sort.Strings(args)
 	env := []string{
 		fmt.Sprintf("MONGODB_URI=%s", exporter.DSN(service, time.Second, "")),
 		fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.AgentID),
 	}
 
-	return args, env
-}
-
-func mongodbExporterV2ArgsEnv(tdp pair, service *models.Service, exporter *models.Agent) ([]string, []string) {
-	args := []string{
-		"--compatible-mode",
-		"--mongodb.dsn=" + exporter.DSN(service, time.Second, ""),
-		"--expose-port=" + tdp.left + " .listen_port " + tdp.right,
+	// Starting with PMM 2.10.0, we are shipping the new mongodb_exporter
+	if !pmmAgentVersion.Less(newMongoExporterPMMVersion) {
+		args = []string{
+			"--compatible-mode",
+			"--web.listen-address=:" + tdp.left + " .listen_port " + tdp.right,
+		}
 	}
 
 	if pointer.GetString(exporter.MetricsPath) != "" {
-		args = append(args, "--expose-path="+*exporter.MetricsPath)
+		args = append(args, "--web.telemetry-path="+*exporter.MetricsPath)
 	}
 
 	sort.Strings(args)
-	return args, []string{}
+
+	res := &agentpb.SetStateRequest_AgentProcess{
+		Type:               inventorypb.AgentType_MONGODB_EXPORTER,
+		TemplateLeftDelim:  tdp.left,
+		TemplateRightDelim: tdp.right,
+		Args:               args,
+		Env:                env,
+	}
+
+	if redactMode != exposeSecrets {
+		res.RedactWords = redactWords(exporter)
+	}
+	return res
 }
 
 // qanMongoDBProfilerAgentConfig returns desired configuration of qan-mongodb-profiler-agent built-in agent.

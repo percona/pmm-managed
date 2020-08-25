@@ -99,10 +99,12 @@ func TestNewMongodbExporterConfig(t *testing.T) {
 		TemplateRightDelim: "}}",
 		Args: []string{
 			"--compatible-mode",
-			"--expose-port={{ .listen_port }}",
-			"--mongodb.dsn=mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:27017/?connectTimeoutMS=1000",
+			"--web.listen-address=:{{ .listen_port }}",
 		},
-		Env:         []string{},
+		Env: []string{
+			"MONGODB_URI=mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:27017/?connectTimeoutMS=1000",
+			"HTTP_AUTH=pmm:agent-id",
+		},
 		RedactWords: []string{"s3cur3 p@$$w0r4."},
 	}
 	requireNoDuplicateFlags(t, actual.Args)
@@ -113,12 +115,12 @@ func TestNewMongodbExporterConfig(t *testing.T) {
 	t.Run("EmptyPassword", func(t *testing.T) {
 		exporter.Password = nil
 		actual := mongodbExporterConfig(mongodb, exporter, exposeSecrets, pmmAgentVersion)
-		assert.Equal(t, "--mongodb.dsn=mongodb://username@1.2.3.4:27017/?connectTimeoutMS=1000", actual.Args[2])
+		assert.Equal(t, "MONGODB_URI=mongodb://username@1.2.3.4:27017/?connectTimeoutMS=1000", actual.Env[0])
 	})
 
 	t.Run("EmptyUsername", func(t *testing.T) {
 		exporter.Username = nil
 		actual := mongodbExporterConfig(mongodb, exporter, exposeSecrets, pmmAgentVersion)
-		assert.Equal(t, "--mongodb.dsn=mongodb://1.2.3.4:27017/?connectTimeoutMS=1000", actual.Args[2])
+		assert.Equal(t, "MONGODB_URI=mongodb://1.2.3.4:27017/?connectTimeoutMS=1000", actual.Env[0])
 	})
 }
