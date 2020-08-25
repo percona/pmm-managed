@@ -35,7 +35,7 @@ type KubernetesCluster struct {
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.
-func (s *KubernetesCluster) BeforeInsert() error { //nolint:unparam
+func (s *KubernetesCluster) BeforeInsert() error {
 	now := Now()
 	s.CreatedAt = now
 	s.UpdatedAt = now
@@ -44,14 +44,14 @@ func (s *KubernetesCluster) BeforeInsert() error { //nolint:unparam
 }
 
 // BeforeUpdate implements reform.BeforeUpdater interface.
-func (s *KubernetesCluster) BeforeUpdate() error { //nolint:unparam
+func (s *KubernetesCluster) BeforeUpdate() error {
 	s.UpdatedAt = Now()
 
 	return nil
 }
 
 // AfterFind implements reform.AfterFinder interface.
-func (s *KubernetesCluster) AfterFind() error { //nolint:unparam
+func (s *KubernetesCluster) AfterFind() error {
 	s.CreatedAt = s.CreatedAt.UTC()
 	s.UpdatedAt = s.UpdatedAt.UTC()
 
