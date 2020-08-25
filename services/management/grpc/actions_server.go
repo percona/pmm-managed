@@ -277,11 +277,11 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 	if err != nil {
 		return nil, err
 	}
-	if agent.AgentType != models.PMMAgentType {
+	if agent.AgentType != models.NodeExporterType {
 		return nil, fmt.Errorf("couldn't find pmm-agent to run action")
 	}
-	if pointer.GetString(agent.RunsOnNodeID) != req.NodeId {
-		return nil, fmt.Errorf("pmm-agent %s does not running on node %s", req.PmmAgentId, req.NodeId)
+	if pointer.GetString(agent.NodeID) != req.NodeId {
+		return nil, fmt.Errorf("pmm-agent %s does not running on node %s", pointer.GetString(agent.NodeID), req.NodeId)
 	}
 
 	res, err := models.CreateActionResult(s.db.Querier, req.PmmAgentId)
