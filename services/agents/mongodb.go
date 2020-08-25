@@ -27,12 +27,11 @@ import (
 	"github.com/percona/pmm/version"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/utils/validators"
 )
 
 var (
 	// New MongoDB Exporter will be released with PMM agent v2.10.0
-	newMongoExporterPMMVersion = validators.MustParseVersion("2.10.0")
+	newMongoExporterPMMVersion = version.MustParse("2.10.0")
 )
 
 // mongodbExporterConfig returns desired configuration of mongodb_exporter process.

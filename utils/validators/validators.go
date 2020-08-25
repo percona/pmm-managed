@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/endpoints"
-	"github.com/percona/pmm/version"
 )
 
 const (
@@ -93,15 +92,4 @@ func ValidateAWSPartitions(partitions []string) error {
 	}
 
 	return nil
-}
-
-// TODO: This function should be moved to the pmm repo.
-// MustParseVersion parses a version string and panics if there is an error.
-func MustParseVersion(v string) *version.Parsed {
-	p, err := version.Parse(v)
-	if err != nil {
-		panic(err)
-	}
-
-	return p
 }
