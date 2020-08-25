@@ -918,7 +918,10 @@ func (r *Registry) StartMongoDBQueryGetCmdLineOptsAction(ctx context.Context, id
 func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
-		Params:   &agentpb.StartActionRequest_PtSummaryParams{},
+		// Need pass params, even empty, because othervise request's marshal fail.
+		Params: &agentpb.StartActionRequest_PtSummaryParams{
+			PtSummaryParams: &agentpb.StartActionRequest_PTSummaryParams{},
+		},
 	}
 
 	agent, err := r.get(pmmAgentID)
