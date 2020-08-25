@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/AlekSi/pointer"
+
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/managementpb"
 	"gopkg.in/reform.v1"
@@ -278,7 +280,7 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 	if agent.AgentType != models.PMMAgentType {
 		return nil, fmt.Errorf("couldn't find pmm-agent to run action")
 	}
-	if agent.RunsOnNodeID != &req.NodeId {
+	if pointer.GetString(agent.RunsOnNodeID) != req.NodeId {
 		return nil, fmt.Errorf("pmm-agent %s does not running on node %s", req.PmmAgentId, req.NodeId)
 	}
 
