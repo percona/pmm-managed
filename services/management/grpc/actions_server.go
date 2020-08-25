@@ -18,9 +18,6 @@ package grpc
 
 import (
 	"context"
-	"fmt"
-
-	"github.com/AlekSi/pointer"
 
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/managementpb"
@@ -255,6 +252,35 @@ func (s *actionsServer) StartMongoDBExplainAction(ctx context.Context, req *mana
 	}, nil
 }
 
+// StartPTSummaryAction starts pt-summary action.
+//nolint:lll
+func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
+	agents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, req.NodeId)
+	if err != nil {
+		return nil, err
+	}
+
+	agentID, err := models.FindPmmAgentIDToRunAction(req.PmmAgentId, agents)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := models.CreateActionResult(s.db.Querier, agentID)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.r.StartPTSummaryAction(ctx, res.ID, agentID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &managementpb.StartPTSummaryActionResponse{
+		PmmAgentId: agentID,
+		ActionId:   res.ID,
+	}, nil
+}
+
 // CancelAction stops an Action.
 func (s *actionsServer) CancelAction(ctx context.Context, req *managementpb.CancelActionRequest) (*managementpb.CancelActionResponse, error) {
 	ar, err := models.FindActionResultByID(s.db.Querier, req.ActionId)
@@ -268,34 +294,4 @@ func (s *actionsServer) CancelAction(ctx context.Context, req *managementpb.Canc
 	}
 
 	return &managementpb.CancelActionResponse{}, nil
-}
-
-// StartPTSummaryAction starts pt-summary action.
-//nolint:lll
-func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
-	agent, err := models.FindAgentByID(s.db.Querier, req.PmmAgentId)
-	if err != nil {
-		return nil, err
-	}
-	if agent.AgentType != models.NodeExporterType {
-		return nil, fmt.Errorf("couldn't find pmm-agent to run action")
-	}
-	if pointer.GetString(agent.NodeID) != req.NodeId {
-		return nil, fmt.Errorf("pmm-agent %s does not running on node %s", pointer.GetString(agent.NodeID), req.NodeId)
-	}
-
-	res, err := models.CreateActionResult(s.db.Querier, req.PmmAgentId)
-	if err != nil {
-		return nil, err
-	}
-
-	err = s.r.StartPTSummaryAction(ctx, res.ID, req.PmmAgentId)
-	if err != nil {
-		return nil, err
-	}
-
-	return &managementpb.StartPTSummaryActionResponse{
-		PmmAgentId: req.PmmAgentId,
-		ActionId:   res.ID,
-	}, nil
 }
