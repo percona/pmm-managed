@@ -146,7 +146,7 @@ func (s *Service) SignIn(ctx context.Context, email, password string) error {
 	return nil
 }
 
-// SignOut logouts that instance form Percona Platform account and removes session id.
+// SignOut logouts that instance from Percona Platform account and removes session id.
 func (s *Service) SignOut(ctx context.Context) error {
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
