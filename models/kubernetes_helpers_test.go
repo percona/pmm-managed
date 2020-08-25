@@ -144,7 +144,7 @@ func TestKubernetesHelpers(t *testing.T) {
 				KubeConfig:            `{}`,
 			})
 
-			tests.AssertGRPCError(t, status.New(codes.AlreadyExists, "Cluster with Name \"Kubernetes Cluster 1\" already exists."), err)
+			tests.AssertGRPCError(t, status.New(codes.AlreadyExists, "Kubernetes Cluster with Name \"Kubernetes Cluster 1\" already exists."), err)
 			require.Nil(t, cluster)
 		})
 	})
@@ -160,7 +160,7 @@ func TestKubernetesHelpers(t *testing.T) {
 			q, teardown := setup(t)
 			defer teardown(t)
 			err := models.RemoveKubernetesCluster(q, "test-cluster")
-			tests.AssertGRPCError(t, status.New(codes.NotFound, `Cluster with name "test-cluster" not found.`), err)
+			tests.AssertGRPCError(t, status.New(codes.NotFound, `Kubernetes Cluster with name "test-cluster" not found.`), err)
 		})
 	})
 }
