@@ -397,7 +397,7 @@
 
 [[projects]]
   branch = "revert-567-revert-566-SAAS-266-sign-out"
-  digest = "1:4a65cb88491e75a131fe6f04d5206e534b99c207cb37b183f9208547d656aaf3"
+  digest = "1:1989db8836c3527927b934b786e1bb6a131f791f93e4635d63860e66aa210088"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -418,7 +418,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "0137c7d71a3bacbe922a43b63f8302fdce355a67"
+  revision = "c72c1ea5ec64340b7b98673f2e4b0c8db2905e70"
 
 [[projects]]
   digest = "1:dbee7dc52291bb149388085eeb20561d4cb3c2044e0fa6ffa8d342c6b305f4bf"
