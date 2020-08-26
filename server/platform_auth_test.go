@@ -142,4 +142,49 @@ func TestPlatform(t *testing.T) {
 			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Password: value '' must not be an empty string")
 		})
 	})
+
+	t.Run("signOut", func(t *testing.T) {
+		email := gofakeit.Email()
+		password := gofakeit.Password(true, true, true, false, false, 14)
+
+		_, err := client.PlatformSignUp(&server.PlatformSignUpParams{
+			Body: server.PlatformSignUpBody{
+				Email:    email,
+				Password: password,
+			},
+			Context: pmmapitests.Context,
+		})
+		require.NoError(t, err)
+
+		t.Run("normal", func(t *testing.T) {
+			_, err = client.PlatformSignIn(&server.PlatformSignInParams{
+				Body: server.PlatformSignInBody{
+					Email:    email,
+					Password: password,
+				},
+				Context: pmmapitests.Context,
+			})
+			require.NoError(t, err)
+
+			_, err = client.PlatformSignOut(&server.PlatformSignOutParams{
+				Body: server.PlatformSignInBody{
+					Email:    email,
+					Password: password,
+				},
+				Context: pmmapitests.Context,
+			})
+			require.NoError(t, err)
+		})
+
+		t.Run("no active session", func(t *testing.T) {
+			_, err = client.PlatformSignOut(&server.PlatformSignOutParams{
+				Body: server.PlatformSignInBody{
+					Email:    email,
+					Password: password,
+				},
+				Context: pmmapitests.Context,
+			})
+			pmmapitests.AssertAPIErrorf(t, err, 400, codes.FailedPrecondition, "No active sessions.")
+		})
+	})
 }
