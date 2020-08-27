@@ -18,10 +18,11 @@ package grpc
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/managementpb"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -258,7 +259,7 @@ func (s *actionsServer) StartMongoDBExplainAction(ctx context.Context, req *mana
 func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
 	agents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, req.NodeId)
 	if err != nil {
-		return nil, fmt.Errorf("No agent running on this node")
+		return nil, status.Errorf(codes.NotFound, "No pmm-agent running on this node")
 	}
 
 	agentID, err := models.FindPmmAgentIDToRunAction(req.PmmAgentId, agents)
