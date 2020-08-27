@@ -17,7 +17,9 @@
 package grpc
 
 import (
+	"github.com/percona/pmm/api/inventorypb/json/client/nodes"
 	"context"
+	"fmt"
 
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/managementpb"
@@ -256,8 +258,9 @@ func (s *actionsServer) StartMongoDBExplainAction(ctx context.Context, req *mana
 //nolint:lll
 func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
 	agents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, req.NodeId)
+	models.
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("No agent running on this node")
 	}
 
 	agentID, err := models.FindPmmAgentIDToRunAction(req.PmmAgentId, agents)
