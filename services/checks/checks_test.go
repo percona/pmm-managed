@@ -415,27 +415,3 @@ func TestPickPMMAgent(t *testing.T) {
 	agent = s.pickPMMAgent(agents, version.MustParse("2.42.777"))
 	assert.Nil(t, agent)
 }
-
-func TestMustParseVersion(t *testing.T) {
-	t.Run("normal", func(t *testing.T) {
-		expected, err := version.Parse("2.6.0")
-		require.NoError(t, err)
-
-		actual := version.MustParse("2.6.0")
-		assert.Equal(t, expected, actual)
-	})
-
-	t.Run("empty string", func(t *testing.T) {
-		f := func() {
-			version.MustParse("")
-		}
-		assert.Panics(t, f)
-	})
-
-	t.Run("invalid version", func(t *testing.T) {
-		f := func() {
-			version.MustParse("invalid version")
-		}
-		assert.Panics(t, f)
-	})
-}
