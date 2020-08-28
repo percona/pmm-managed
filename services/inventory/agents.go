@@ -32,15 +32,15 @@ import (
 // AgentsService works with inventory API Agents.
 type AgentsService struct {
 	r  agentsRegistry
-	p  prometheusService
+	ss []prometheusService
 	db *reform.DB
 }
 
 // NewAgentsService creates new AgentsService
-func NewAgentsService(db *reform.DB, r agentsRegistry, prometheus prometheusService) *AgentsService {
+func NewAgentsService(db *reform.DB, r agentsRegistry, scrapeServices ...prometheusService) *AgentsService {
 	return &AgentsService{
 		r:  r,
-		p:  prometheus,
+		ss: scrapeServices,
 		db: db,
 	}
 }
@@ -737,7 +737,9 @@ func (as *AgentsService) AddExternalExporter(req *inventorypb.AddExternalExporte
 	}
 
 	// It's required to regenerate prometheus config file.
-	as.p.RequestConfigurationUpdate()
+	for _, svc := range as.ss {
+		svc.RequestConfigurationUpdate()
+	}
 
 	return res, nil
 }
@@ -750,7 +752,9 @@ func (as *AgentsService) ChangeExternalExporter(req *inventorypb.ChangeExternalE
 	}
 
 	// It's required to regenerate prometheus config file.
-	as.p.RequestConfigurationUpdate()
+	for _, svc := range as.ss {
+		svc.RequestConfigurationUpdate()
+	}
 
 	res := agent.(*inventorypb.ExternalExporter)
 	return res, nil
@@ -776,7 +780,9 @@ func (as *AgentsService) Remove(ctx context.Context, id string, force bool) erro
 		as.r.SendSetStateRequest(ctx, pmmAgentID)
 	} else {
 		// It's required to regenerate prometheus config file for the agents which aren't run by pmm-agent.
-		as.p.RequestConfigurationUpdate()
+		for _, svc := range as.ss {
+			svc.RequestConfigurationUpdate()
+		}
 	}
 
 	if removedAgent.AgentType == models.PMMAgentType {

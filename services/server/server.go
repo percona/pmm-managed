@@ -55,7 +55,7 @@ const platformAPITimeout = 10 * time.Second
 // Server represents service for checking PMM Server status and changing settings.
 type Server struct {
 	db                      *reform.DB
-	prometheus              prometheusService
+	scrapeServices          map[string]prometheusService
 	prometheusAlertingRules prometheusAlertingRules
 	alertmanager            alertmanagerService
 	supervisord             supervisordService
@@ -82,6 +82,7 @@ type pmmUpdateAuth struct {
 type Params struct {
 	DB                      *reform.DB
 	Prometheus              prometheusService
+	VictoriaMetrics         prometheusService
 	Alertmanager            alertmanagerService
 	PrometheusAlertingRules prometheusAlertingRules
 	Supervisord             supervisordService
@@ -100,8 +101,11 @@ func NewServer(params *Params) (*Server, error) {
 	path = filepath.Join(path, "pmm-update.json")
 
 	s := &Server{
-		db:                      params.DB,
-		prometheus:              params.Prometheus,
+		db: params.DB,
+		scrapeServices: map[string]prometheusService{
+			"prometheus":      params.Prometheus,
+			"victoriametrics": params.VictoriaMetrics,
+		},
 		alertmanager:            params.Alertmanager,
 		prometheusAlertingRules: params.PrometheusAlertingRules,
 		supervisord:             params.Supervisord,
@@ -201,11 +205,15 @@ func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*se
 // It can be used as for Docker health check or Kubernetes readiness probe.
 func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) (*serverpb.ReadinessResponse, error) {
 	var notReady bool
-	for n, svc := range map[string]healthChecker{
-		"prometheus":   s.prometheus,
+	healthChecks := map[string]healthChecker{
 		"alertmanager": s.alertmanager,
 		"grafana":      s.grafanaClient,
-	} {
+	}
+	for n, c := range s.scrapeServices {
+		healthChecks[n] = c
+	}
+
+	for n, svc := range healthChecks {
 		if err := svc.IsReady(ctx); err != nil {
 			s.l.Errorf("%s readiness check failed: %+v", n, err)
 			notReady = true
@@ -533,7 +541,9 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	}
 
 	err = s.supervisord.UpdateConfiguration(settings)
-	s.prometheus.RequestConfigurationUpdate()
+	for _, svc := range s.scrapeServices {
+		svc.RequestConfigurationUpdate()
+	}
 	if err != nil {
 		return nil, err
 	}

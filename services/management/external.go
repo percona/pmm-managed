@@ -30,13 +30,13 @@ import (
 // ExternalService External Management Service.
 //nolint:unused
 type ExternalService struct {
-	db         *reform.DB
-	prometheus prometheusService
+	db             *reform.DB
+	scrapeServices []prometheusService
 }
 
 // NewExternalService creates new External Management Service.
-func NewExternalService(db *reform.DB, prometheus prometheusService) *ExternalService {
-	return &ExternalService{db, prometheus}
+func NewExternalService(db *reform.DB, scrapeServices ...prometheusService) *ExternalService {
+	return &ExternalService{db: db, scrapeServices: scrapeServices}
 }
 
 func (e ExternalService) AddExternal(ctx context.Context, req *managementpb.AddExternalRequest) (*managementpb.AddExternalResponse, error) {
@@ -87,7 +87,9 @@ func (e ExternalService) AddExternal(ctx context.Context, req *managementpb.AddE
 		return nil, e
 	}
 
-	// It's required to regenerate prometheus config file.
-	e.prometheus.RequestConfigurationUpdate()
+	// It's required to regenerate scrapeServices config file.
+	for _, svc := range e.scrapeServices {
+		svc.RequestConfigurationUpdate()
+	}
 	return res, nil
 }

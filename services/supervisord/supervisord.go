@@ -23,6 +23,7 @@ import (
 	"context"
 	"io"
 	"io/ioutil"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -58,6 +59,8 @@ type Service struct {
 
 	pmmUpdatePerformLogM sync.Mutex
 	supervisordConfigsM  sync.Mutex
+
+	isVMEnabled bool // for testing purpose
 }
 
 type sub struct {
@@ -73,7 +76,7 @@ const (
 )
 
 // New creates new service.
-func New(configDir string, pmmUpdateCheck *PMMUpdateChecker) *Service {
+func New(configDir string, pmmUpdateCheck *PMMUpdateChecker, isVMEnabled bool) *Service {
 	path, _ := exec.LookPath("supervisorctl")
 	return &Service{
 		configDir:         configDir,
@@ -82,6 +85,7 @@ func New(configDir string, pmmUpdateCheck *PMMUpdateChecker) *Service {
 		pmmUpdateCheck:    pmmUpdateCheck,
 		subs:              make(map[chan *event]sub),
 		lastEvents:        make(map[string]eventType),
+		isVMEnabled:       isVMEnabled,
 	}
 }
 
@@ -393,9 +397,15 @@ func (s *Service) reload(name string) error {
 
 // marshalConfig marshals supervisord program configuration.
 func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settings) ([]byte, error) {
+	var retentionMonths = int(math.Ceil(settings.DataRetention.Hours() / 24 / 30))
+	if retentionMonths <= 0 {
+		retentionMonths = 1
+	}
 	templateParams := map[string]interface{}{
 		"DataRetentionHours": int(settings.DataRetention.Hours()),
 		"DataRetentionDays":  int(settings.DataRetention.Hours() / 24),
+		"DataRetentionMonth": retentionMonths,
+		"IsVMEnabled":        s.isVMEnabled,
 	}
 
 	var buf bytes.Buffer
@@ -466,7 +476,6 @@ func (s *Service) UpdateConfiguration(settings *models.Settings) error {
 		if tmpl.Name() == "" {
 			continue
 		}
-
 		b, e := s.marshalConfig(tmpl, settings)
 		if e != nil {
 			s.l.Errorf("Failed to marshal config: %s.", e)
@@ -483,6 +492,7 @@ func (s *Service) UpdateConfiguration(settings *models.Settings) error {
 }
 
 // TODO Switch from /srv/alertmanager/alertmanager.base.yml to /etc/alertmanager.yml
+// todo (valayla) - what are we going todo with default memory usage and ` -memory.allowedPercent`.
 // once we start generating it. See alertmanager service.
 
 var templates = template.Must(template.New("").Option("missingkey=error").Parse(`
@@ -510,6 +520,28 @@ startsecs = 1
 stopsignal = TERM
 stopwaitsecs = 300
 stdout_logfile = /srv/logs/prometheus.log
+stdout_logfile_maxbytes = 10MB
+stdout_logfile_backups = 3
+redirect_stderr = true
+{{end}}
+
+{{define "victoriametrics"}}
+[program:victoriametrics]
+priority = 7
+command =
+	/usr/sbin/victoria-metrics
+		--promscrape.config=/etc/victoriametrics-promscrape.yml
+		--retentionPeriod={{ .DataRetentionMonth }}
+		--storageDataPath=/srv/victoriametrics/data
+		--httpListenAddr=127.0.0.1:8428
+user = pmm
+autorestart = {{ .IsVMEnabled }}
+autostart = {{ .IsVMEnabled }}
+startretries = 10
+startsecs = 1
+stopsignal = INT
+stopwaitsecs = 300
+stdout_logfile = /srv/logs/victoriametrics.log
 stdout_logfile_maxbytes = 10MB
 stdout_logfile_backups = 3
 redirect_stderr = true

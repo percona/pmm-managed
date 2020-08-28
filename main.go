@@ -74,6 +74,7 @@ import (
 	"github.com/percona/pmm-managed/services/server"
 	"github.com/percona/pmm-managed/services/supervisord"
 	"github.com/percona/pmm-managed/services/telemetry"
+	"github.com/percona/pmm-managed/services/victoriametrics"
 	"github.com/percona/pmm-managed/utils/clean"
 	"github.com/percona/pmm-managed/utils/interceptors"
 	"github.com/percona/pmm-managed/utils/logger"
@@ -113,6 +114,7 @@ func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
 type gRPCServerDeps struct {
 	db             *reform.DB
 	prometheus     *prometheus.Service
+	vmdb           *victoriametrics.VictoriaMetrics
 	server         *server.Server
 	agentsRegistry *agents.Registry
 	grafanaClient  *grafana.Client
@@ -143,14 +145,14 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 
 	nodesSvc := inventory.NewNodesService(deps.db)
 	servicesSvc := inventory.NewServicesService(deps.db, deps.agentsRegistry)
-	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry, deps.prometheus)
+	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry, deps.prometheus, deps.vmdb)
 
 	inventorypb.RegisterNodesServer(gRPCServer, inventorygrpc.NewNodesServer(nodesSvc))
 	inventorypb.RegisterServicesServer(gRPCServer, inventorygrpc.NewServicesServer(servicesSvc))
 	inventorypb.RegisterAgentsServer(gRPCServer, inventorygrpc.NewAgentsServer(agentsSvc))
 
 	nodeSvc := management.NewNodeService(deps.db, deps.agentsRegistry)
-	serviceSvc := management.NewServiceService(deps.db, deps.agentsRegistry, deps.prometheus)
+	serviceSvc := management.NewServiceService(deps.db, deps.agentsRegistry, deps.prometheus, deps.vmdb)
 	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsRegistry)
 	mongodbSvc := management.NewMongoDBService(deps.db, deps.agentsRegistry)
 	postgresqlSvc := management.NewPostgreSQLService(deps.db, deps.agentsRegistry)
@@ -165,7 +167,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterProxySQLServer(gRPCServer, managementgrpc.NewManagementProxySQLServer(proxysqlSvc))
 	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(deps.agentsRegistry, deps.db))
 	managementpb.RegisterRDSServer(gRPCServer, management.NewRDSService(deps.db, deps.agentsRegistry))
-	managementpb.RegisterExternalServer(gRPCServer, management.NewExternalService(deps.db, deps.prometheus))
+	managementpb.RegisterExternalServer(gRPCServer, management.NewExternalService(deps.db, deps.prometheus, deps.vmdb))
 	managementpb.RegisterAnnotationServer(gRPCServer, managementgrpc.NewAnnotationServer(deps.db, deps.grafanaClient))
 	managementpb.RegisterSecurityChecksServer(gRPCServer, managementgrpc.NewChecksServer(checksSvc))
 
@@ -440,6 +442,9 @@ func main() {
 	prometheusConfigF := kingpin.Flag("prometheus-config", "Prometheus configuration file path").Default("/etc/prometheus.yml").String()
 	prometheusURLF := kingpin.Flag("prometheus-url", "Prometheus base URL").Default("http://127.0.0.1:9090/prometheus/").String()
 
+	victoriaMetricsURLF := kingpin.Flag("victoriametrics-url", "VictoriaMetrics base URL").Default("http://127.0.0.1:8428/").String()
+	victoriaMetricsConfigF := kingpin.Flag("victoriametrics-config", "VictoriaMetrics scape configuration file path").Default("/etc/victoriametrics-promscrape.yml").String()
+
 	grafanaAddrF := kingpin.Flag("grafana-addr", "Grafana HTTP API address").Default("127.0.0.1:3000").String()
 	qanAPIAddrF := kingpin.Flag("qan-api-addr", "QAN API gRPC API address").Default("127.0.0.1:9911").String()
 
@@ -513,14 +518,17 @@ func main() {
 	alertingRules := prometheus.NewAlertingRules()
 
 	prometheus, err := prometheus.NewService(alertingRules, *prometheusConfigF, db, *prometheusURLF)
-
 	if err != nil {
 		l.Panicf("Prometheus service problem: %+v", err)
+	}
+	vmdb, err := victoriametrics.NewVictoriaMetrics(*victoriaMetricsConfigF, db, *victoriaMetricsURLF)
+	if err != nil {
+		l.Panicf("VictoriaMetrics service problem: %+v", err)
 	}
 
 	qanClient := getQANClient(ctx, sqlDB, *postgresDBNameF, *qanAPIAddrF)
 
-	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient)
+	agentsRegistry := agents.NewRegistry(db, qanClient, prometheus, vmdb)
 	prom.MustRegister(agentsRegistry)
 
 	alertmanager := alertmanager.New(db)
@@ -528,7 +536,7 @@ func main() {
 	pmmUpdateCheck := supervisord.NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker"))
 
 	logs := supervisord.NewLogs(version.FullInfo(), pmmUpdateCheck)
-	supervisord := supervisord.New(*supervisordConfigDirF, pmmUpdateCheck)
+	supervisord := supervisord.New(*supervisordConfigDirF, pmmUpdateCheck, victoriametrics.Enabled())
 	telemetry := telemetry.NewService(db, version.Version)
 
 	awsInstanceChecker := server.NewAWSInstanceChecker(db, telemetry)
@@ -543,6 +551,7 @@ func main() {
 	serverParams := &server.Params{
 		DB:                      db,
 		Prometheus:              prometheus,
+		VictoriaMetrics:         vmdb,
 		Alertmanager:            alertmanager,
 		Supervisord:             supervisord,
 		TelemetryService:        telemetry,
@@ -601,6 +610,11 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		vmdb.Run(ctx)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		alertmanager.Run(ctx)
 	}()
 
@@ -634,6 +648,7 @@ func main() {
 		runGRPCServer(ctx, &gRPCServerDeps{
 			db:             db,
 			prometheus:     prometheus,
+			vmdb:           vmdb,
 			server:         server,
 			agentsRegistry: agentsRegistry,
 			grafanaClient:  grafanaClient,

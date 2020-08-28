@@ -56,7 +56,7 @@ func TestScrapeConfig(t *testing.T) {
 			expected := []*config.ScrapeConfig{{
 				JobName:        "node_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-5s",
 				ScrapeInterval: config.Duration(s.HR),
-				ScrapeTimeout:  scrapeTimeout(s.HR),
+				ScrapeTimeout:  ScrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
 					BasicAuth: &config.BasicAuth{
@@ -100,7 +100,7 @@ func TestScrapeConfig(t *testing.T) {
 			}, {
 				JobName:        "node_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr-5s",
 				ScrapeInterval: config.Duration(s.MR),
-				ScrapeTimeout:  scrapeTimeout(s.MR),
+				ScrapeTimeout:  ScrapeTimeout(s.MR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
 					BasicAuth: &config.BasicAuth{
@@ -129,7 +129,7 @@ func TestScrapeConfig(t *testing.T) {
 			}, {
 				JobName:        "node_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_lr-1m0s",
 				ScrapeInterval: config.Duration(s.LR),
-				ScrapeTimeout:  scrapeTimeout(s.LR),
+				ScrapeTimeout:  ScrapeTimeout(s.LR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
 					BasicAuth: &config.BasicAuth{
@@ -190,7 +190,7 @@ func TestScrapeConfig(t *testing.T) {
 			expected := []*config.ScrapeConfig{{
 				JobName:        "node_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-5s",
 				ScrapeInterval: config.Duration(s.HR),
-				ScrapeTimeout:  scrapeTimeout(s.HR),
+				ScrapeTimeout:  ScrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
 					BasicAuth: &config.BasicAuth{
@@ -261,7 +261,7 @@ func TestScrapeConfig(t *testing.T) {
 			expected := []*config.ScrapeConfig{{
 				JobName:        "mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-5s",
 				ScrapeInterval: config.Duration(s.HR),
-				ScrapeTimeout:  scrapeTimeout(s.HR),
+				ScrapeTimeout:  ScrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
 					BasicAuth: &config.BasicAuth{
@@ -295,7 +295,7 @@ func TestScrapeConfig(t *testing.T) {
 			}, {
 				JobName:        "mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr-5s",
 				ScrapeInterval: config.Duration(s.MR),
-				ScrapeTimeout:  scrapeTimeout(s.MR),
+				ScrapeTimeout:  ScrapeTimeout(s.MR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
 					BasicAuth: &config.BasicAuth{
@@ -334,7 +334,7 @@ func TestScrapeConfig(t *testing.T) {
 			}, {
 				JobName:        "mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_lr-1m0s",
 				ScrapeInterval: config.Duration(s.LR),
-				ScrapeTimeout:  scrapeTimeout(s.LR),
+				ScrapeTimeout:  ScrapeTimeout(s.LR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
 					BasicAuth: &config.BasicAuth{
@@ -412,7 +412,7 @@ func TestScrapeConfig(t *testing.T) {
 			expected := []*config.ScrapeConfig{{
 				JobName:        "mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-5s",
 				ScrapeInterval: config.Duration(s.HR),
-				ScrapeTimeout:  scrapeTimeout(s.HR),
+				ScrapeTimeout:  ScrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
 					BasicAuth: &config.BasicAuth{
@@ -443,7 +443,7 @@ func TestScrapeConfig(t *testing.T) {
 			}, {
 				JobName:        "mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr-5s",
 				ScrapeInterval: config.Duration(s.MR),
-				ScrapeTimeout:  scrapeTimeout(s.MR),
+				ScrapeTimeout:  ScrapeTimeout(s.MR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
 					BasicAuth: &config.BasicAuth{
@@ -478,7 +478,7 @@ func TestScrapeConfig(t *testing.T) {
 			}, {
 				JobName:        "mysqld_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_lr-1m0s",
 				ScrapeInterval: config.Duration(s.LR),
-				ScrapeTimeout:  scrapeTimeout(s.LR),
+				ScrapeTimeout:  ScrapeTimeout(s.LR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
 					BasicAuth: &config.BasicAuth{
@@ -568,7 +568,7 @@ func TestScrapeConfig(t *testing.T) {
 			expected := []*config.ScrapeConfig{{
 				JobName:        "mongodb_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-5s",
 				ScrapeInterval: config.Duration(s.HR),
-				ScrapeTimeout:  scrapeTimeout(s.HR),
+				ScrapeTimeout:  ScrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
 					BasicAuth: &config.BasicAuth{
@@ -649,7 +649,7 @@ func TestScrapeConfig(t *testing.T) {
 			expected := []*config.ScrapeConfig{{
 				JobName:        "postgres_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-5s",
 				ScrapeInterval: config.Duration(s.HR),
-				ScrapeTimeout:  scrapeTimeout(s.HR),
+				ScrapeTimeout:  ScrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
 					BasicAuth: &config.BasicAuth{
@@ -682,7 +682,7 @@ func TestScrapeConfig(t *testing.T) {
 			}, {
 				JobName:        "postgres_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr-5s",
 				ScrapeInterval: config.Duration(s.MR),
-				ScrapeTimeout:  scrapeTimeout(s.MR),
+				ScrapeTimeout:  ScrapeTimeout(s.MR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
 					BasicAuth: &config.BasicAuth{
@@ -712,7 +712,7 @@ func TestScrapeConfig(t *testing.T) {
 			}, {
 				JobName:        "postgres_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_lr-1m0s",
 				ScrapeInterval: config.Duration(s.LR),
-				ScrapeTimeout:  scrapeTimeout(s.LR),
+				ScrapeTimeout:  ScrapeTimeout(s.LR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
 					BasicAuth: &config.BasicAuth{
@@ -796,7 +796,7 @@ func TestScrapeConfig(t *testing.T) {
 			expected := []*config.ScrapeConfig{{
 				JobName:        "proxysql_exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_hr-5s",
 				ScrapeInterval: config.Duration(s.HR),
-				ScrapeTimeout:  scrapeTimeout(s.HR),
+				ScrapeTimeout:  ScrapeTimeout(s.HR),
 				MetricsPath:    "/metrics",
 				HTTPClientConfig: config.HTTPClientConfig{
 					BasicAuth: &config.BasicAuth{
@@ -880,7 +880,7 @@ func TestScrapeConfig(t *testing.T) {
 			expected := []*config.ScrapeConfig{{
 				JobName:        "rds_exporter_1_1_1_1_12345_mr-5s",
 				ScrapeInterval: config.Duration(s.MR),
-				ScrapeTimeout:  scrapeTimeout(s.MR),
+				ScrapeTimeout:  ScrapeTimeout(s.MR),
 				MetricsPath:    "/enhanced",
 				HonorLabels:    true,
 				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
@@ -891,7 +891,7 @@ func TestScrapeConfig(t *testing.T) {
 			}, {
 				JobName:        "rds_exporter_1_1_1_1_12345_lr-1m0s",
 				ScrapeInterval: config.Duration(s.LR),
-				ScrapeTimeout:  scrapeTimeout(s.LR),
+				ScrapeTimeout:  ScrapeTimeout(s.LR),
 				MetricsPath:    "/basic",
 				HonorLabels:    true,
 				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
@@ -902,7 +902,7 @@ func TestScrapeConfig(t *testing.T) {
 			}, {
 				JobName:        "rds_exporter_2_2_2_2_12345_mr-5s",
 				ScrapeInterval: config.Duration(s.MR),
-				ScrapeTimeout:  scrapeTimeout(s.MR),
+				ScrapeTimeout:  ScrapeTimeout(s.MR),
 				MetricsPath:    "/enhanced",
 				HonorLabels:    true,
 				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
@@ -913,7 +913,7 @@ func TestScrapeConfig(t *testing.T) {
 			}, {
 				JobName:        "rds_exporter_2_2_2_2_12345_lr-1m0s",
 				ScrapeInterval: config.Duration(s.LR),
-				ScrapeTimeout:  scrapeTimeout(s.LR),
+				ScrapeTimeout:  ScrapeTimeout(s.LR),
 				MetricsPath:    "/basic",
 				HonorLabels:    true,
 				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
@@ -924,7 +924,7 @@ func TestScrapeConfig(t *testing.T) {
 			}, {
 				JobName:        "rds_exporter_2_2_2_2_12346_mr-5s",
 				ScrapeInterval: config.Duration(s.MR),
-				ScrapeTimeout:  scrapeTimeout(s.MR),
+				ScrapeTimeout:  ScrapeTimeout(s.MR),
 				MetricsPath:    "/enhanced",
 				HonorLabels:    true,
 				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
@@ -935,7 +935,7 @@ func TestScrapeConfig(t *testing.T) {
 			}, {
 				JobName:        "rds_exporter_2_2_2_2_12346_lr-1m0s",
 				ScrapeInterval: config.Duration(s.LR),
-				ScrapeTimeout:  scrapeTimeout(s.LR),
+				ScrapeTimeout:  ScrapeTimeout(s.LR),
 				MetricsPath:    "/basic",
 				HonorLabels:    true,
 				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
@@ -977,7 +977,7 @@ func TestScrapeConfig(t *testing.T) {
 			expected := []*config.ScrapeConfig{{
 				JobName:        "external-exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr-5s",
 				ScrapeInterval: config.Duration(s.HR),
-				ScrapeTimeout:  scrapeTimeout(s.HR),
+				ScrapeTimeout:  ScrapeTimeout(s.HR),
 				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
 					StaticConfigs: []*config.Group{{
 						Targets: []string{"4.5.6.7:12345"},
@@ -1024,7 +1024,7 @@ func TestScrapeConfig(t *testing.T) {
 			expected := []*config.ScrapeConfig{{
 				JobName:        "external-exporter_agent_id_75bb30d3-ef4a-4147-97a8-621a996611dd_mr-5s",
 				ScrapeInterval: config.Duration(s.HR),
-				ScrapeTimeout:  scrapeTimeout(s.HR),
+				ScrapeTimeout:  ScrapeTimeout(s.HR),
 				MetricsPath:    "/some-metric-path",
 				Scheme:         "https",
 				HTTPClientConfig: config.HTTPClientConfig{

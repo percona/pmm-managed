@@ -27,12 +27,15 @@ import (
 
 	"github.com/AlekSi/pointer"
 	config "github.com/percona/promconfig"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
 )
 
-// scrapeTimeout returns default scrape timeout for given scrape interval.
-func scrapeTimeout(interval time.Duration) config.Duration {
+// ScrapeTimeout returns default scrape timeout for given scrape interval.
+func ScrapeTimeout(interval time.Duration) config.Duration {
 	switch {
 	case interval <= 2*time.Second:
 		return config.Duration(time.Second)
@@ -47,7 +50,7 @@ func scrapeConfigForPrometheus(interval time.Duration) *config.ScrapeConfig {
 	return &config.ScrapeConfig{
 		JobName:        "prometheus",
 		ScrapeInterval: config.Duration(interval),
-		ScrapeTimeout:  scrapeTimeout(interval),
+		ScrapeTimeout:  ScrapeTimeout(interval),
 		MetricsPath:    "/prometheus/metrics",
 		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
 			StaticConfigs: []*config.Group{{
@@ -62,7 +65,7 @@ func scrapeConfigForAlertmanager(interval time.Duration) *config.ScrapeConfig {
 	return &config.ScrapeConfig{
 		JobName:        "alertmanager",
 		ScrapeInterval: config.Duration(interval),
-		ScrapeTimeout:  scrapeTimeout(interval),
+		ScrapeTimeout:  ScrapeTimeout(interval),
 		MetricsPath:    "/alertmanager/metrics",
 		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
 			StaticConfigs: []*config.Group{{
@@ -77,7 +80,7 @@ func scrapeConfigForGrafana(interval time.Duration) *config.ScrapeConfig {
 	return &config.ScrapeConfig{
 		JobName:        "grafana",
 		ScrapeInterval: config.Duration(interval),
-		ScrapeTimeout:  scrapeTimeout(interval),
+		ScrapeTimeout:  ScrapeTimeout(interval),
 		MetricsPath:    "/metrics",
 		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
 			StaticConfigs: []*config.Group{{
@@ -92,7 +95,7 @@ func scrapeConfigForPMMManaged(interval time.Duration) *config.ScrapeConfig {
 	return &config.ScrapeConfig{
 		JobName:        "pmm-managed",
 		ScrapeInterval: config.Duration(interval),
-		ScrapeTimeout:  scrapeTimeout(interval),
+		ScrapeTimeout:  ScrapeTimeout(interval),
 		MetricsPath:    "/debug/metrics",
 		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
 			StaticConfigs: []*config.Group{{
@@ -107,7 +110,7 @@ func scrapeConfigForQANAPI2(interval time.Duration) *config.ScrapeConfig {
 	return &config.ScrapeConfig{
 		JobName:        "qan-api2",
 		ScrapeInterval: config.Duration(interval),
-		ScrapeTimeout:  scrapeTimeout(interval),
+		ScrapeTimeout:  ScrapeTimeout(interval),
 		MetricsPath:    "/debug/metrics",
 		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
 			StaticConfigs: []*config.Group{{
@@ -169,7 +172,7 @@ func scrapeConfigForStandardExporter(intervalName string, interval time.Duration
 	cfg := &config.ScrapeConfig{
 		JobName:          jobName(params.agent, intervalName, interval),
 		ScrapeInterval:   config.Duration(interval),
-		ScrapeTimeout:    scrapeTimeout(interval),
+		ScrapeTimeout:    ScrapeTimeout(interval),
 		MetricsPath:      "/metrics",
 		HTTPClientConfig: httpClientConfig(params.agent),
 	}
@@ -200,7 +203,7 @@ func scrapeConfigForRDSExporter(intervalName string, interval time.Duration, hos
 	return &config.ScrapeConfig{
 		JobName:        jobName,
 		ScrapeInterval: config.Duration(interval),
-		ScrapeTimeout:  scrapeTimeout(interval),
+		ScrapeTimeout:  ScrapeTimeout(interval),
 		MetricsPath:    metricsPath,
 		HonorLabels:    true,
 		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
@@ -448,7 +451,7 @@ func scrapeConfigsForExternalExporter(s *models.MetricsResolutions, params *scra
 	cfg := &config.ScrapeConfig{
 		JobName:        jobName(params.agent, "mr", interval),
 		ScrapeInterval: config.Duration(interval),
-		ScrapeTimeout:  scrapeTimeout(interval),
+		ScrapeTimeout:  ScrapeTimeout(interval),
 		Scheme:         pointer.GetString(params.agent.MetricsScheme),
 		MetricsPath:    pointer.GetString(params.agent.MetricsPath),
 	}
@@ -473,4 +476,169 @@ func scrapeConfigsForExternalExporter(s *models.MetricsResolutions, params *scra
 	}
 
 	return []*config.ScrapeConfig{cfg}, nil
+}
+
+// PopulateScrapeConfigs populates scrape configs for basic running service and agents.
+func PopulateScrapeConfigs(cfg *config.Config, l *logrus.Entry, q *reform.Querier, s *models.MetricsResolutions) error {
+	agentConfigs, err := agentScrapeConfigs(l, q, s)
+	if err != nil {
+		return err
+	}
+	cfg.ScrapeConfigs = append(cfg.ScrapeConfigs,
+		scrapeConfigForAlertmanager(s.MR),
+		scrapeConfigForGrafana(s.MR),
+		scrapeConfigForPMMManaged(s.MR),
+		scrapeConfigForQANAPI2(s.MR),
+	)
+	cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, agentConfigs...)
+
+	return nil
+}
+
+// agentScrapeConfigs generates Prometheus scrape configs for all Agents.
+func agentScrapeConfigs(l *logrus.Entry, q *reform.Querier, s *models.MetricsResolutions) ([]*config.ScrapeConfig, error) {
+	agents, err := q.SelectAllFrom(models.AgentTable, "WHERE NOT disabled AND listen_port IS NOT NULL ORDER BY agent_type, agent_id")
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	var configs []*config.ScrapeConfig
+	var rdsParams []*scrapeConfigParams
+	for _, str := range agents {
+		agent := str.(*models.Agent)
+
+		if agent.AgentType == models.PMMAgentType {
+			// TODO https://jira.percona.com/browse/PMM-4087
+			continue
+		}
+
+		// sanity check
+		if (agent.NodeID != nil) && (agent.ServiceID != nil) {
+			l.Panicf("Both agent.NodeID and agent.ServiceID are present: %s", agent)
+		}
+
+		// find Service for this Agent
+		var paramsService *models.Service
+		if agent.ServiceID != nil {
+			paramsService, err = models.FindServiceByID(q, pointer.GetString(agent.ServiceID))
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		// find Node for this Agent or Service
+		var paramsNode *models.Node
+		switch {
+		case agent.NodeID != nil:
+			paramsNode, err = models.FindNodeByID(q, pointer.GetString(agent.NodeID))
+		case paramsService != nil:
+			paramsNode, err = models.FindNodeByID(q, paramsService.NodeID)
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		// find Node address where the agent runs
+		var paramsHost string
+		switch {
+		case agent.PMMAgentID != nil:
+			// extract node address through pmm-agent
+			pmmAgent, err := models.FindAgentByID(q, *agent.PMMAgentID)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			pmmAgentNode := &models.Node{NodeID: pointer.GetString(pmmAgent.RunsOnNodeID)}
+			if err = q.Reload(pmmAgentNode); err != nil {
+				return nil, errors.WithStack(err)
+			}
+			paramsHost = pmmAgentNode.Address
+		case agent.RunsOnNodeID != nil:
+			externalExporterNode := &models.Node{NodeID: pointer.GetString(agent.RunsOnNodeID)}
+			if err = q.Reload(externalExporterNode); err != nil {
+				return nil, errors.WithStack(err)
+			}
+			paramsHost = externalExporterNode.Address
+		default:
+			l.Warnf("It's not possible to get host, skipping scrape config for %s.", agent)
+
+			continue
+		}
+
+		var scfgs []*config.ScrapeConfig
+		switch agent.AgentType {
+		case models.NodeExporterType:
+			scfgs, err = scrapeConfigsForNodeExporter(s, &scrapeConfigParams{
+				host:    paramsHost,
+				node:    paramsNode,
+				service: nil,
+				agent:   agent,
+			})
+
+		case models.MySQLdExporterType:
+			scfgs, err = scrapeConfigsForMySQLdExporter(s, &scrapeConfigParams{
+				host:    paramsHost,
+				node:    paramsNode,
+				service: paramsService,
+				agent:   agent,
+			})
+
+		case models.MongoDBExporterType:
+			scfgs, err = scrapeConfigsForMongoDBExporter(s, &scrapeConfigParams{
+				host:    paramsHost,
+				node:    paramsNode,
+				service: paramsService,
+				agent:   agent,
+			})
+
+		case models.PostgresExporterType:
+			scfgs, err = scrapeConfigsForPostgresExporter(s, &scrapeConfigParams{
+				host:    paramsHost,
+				node:    paramsNode,
+				service: paramsService,
+				agent:   agent,
+			})
+
+		case models.ProxySQLExporterType:
+			scfgs, err = scrapeConfigsForProxySQLExporter(s, &scrapeConfigParams{
+				host:    paramsHost,
+				node:    paramsNode,
+				service: paramsService,
+				agent:   agent,
+			})
+
+		case models.QANMySQLPerfSchemaAgentType, models.QANMySQLSlowlogAgentType:
+			continue
+		case models.QANMongoDBProfilerAgentType:
+			continue
+		case models.QANPostgreSQLPgStatementsAgentType:
+			continue
+
+		case models.RDSExporterType:
+			rdsParams = append(rdsParams, &scrapeConfigParams{
+				host:    paramsHost,
+				node:    paramsNode,
+				service: paramsService,
+				agent:   agent,
+			})
+			continue
+
+		case models.ExternalExporterType:
+			scfgs, err = scrapeConfigsForExternalExporter(s, &scrapeConfigParams{
+				host:    paramsHost,
+				node:    paramsNode,
+				service: paramsService,
+				agent:   agent,
+			})
+
+		default:
+			l.Warnf("Skipping scrape config for %s.", agent)
+			continue
+		}
+
+		if err != nil {
+			l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
+		}
+		configs = append(configs, scfgs...)
+	}
+
+	return append(configs, scrapeConfigsForRDSExporter(s, rdsParams)...), nil
 }

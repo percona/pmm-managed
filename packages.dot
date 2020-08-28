@@ -15,6 +15,7 @@ digraph packages {
 	"/" -> "/services/server";
 	"/" -> "/services/supervisord";
 	"/" -> "/services/telemetry";
+	"/" -> "/services/victoriametrics";
 	"/models" -> "/models";
 	"/services/agents" -> "/models";
 	"/services/agents" -> "/services/agents/channel";

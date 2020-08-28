@@ -35,12 +35,12 @@ func TestConfig(t *testing.T) {
 
 	pmmUpdateCheck := NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker_logs"))
 	configDir := filepath.Join("..", "..", "testdata", "supervisord.d")
-	s := New(configDir, pmmUpdateCheck)
+	s := New(configDir, pmmUpdateCheck, false)
 	settings := &models.Settings{
 		DataRetention: 30 * 24 * time.Hour,
 	}
 
-	for _, tmpl := range templates.Templates() {
+	for _, tmpl := range s.getTemplates() {
 		if tmpl.Name() == "" {
 			continue
 		}

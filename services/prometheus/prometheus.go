@@ -29,7 +29,6 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/utils/pdeathsig"
 	config "github.com/percona/promconfig"
 	"github.com/pkg/errors"
@@ -158,156 +157,6 @@ func (svc *Service) loadBaseConfig() *config.Config {
 	return &cfg
 }
 
-// addScrapeConfigs adds Prometheus scrape configs to cfg for all Agents.
-func (svc *Service) addScrapeConfigs(cfg *config.Config, q *reform.Querier, s *models.MetricsResolutions) error {
-	agents, err := q.SelectAllFrom(models.AgentTable, "WHERE NOT disabled AND listen_port IS NOT NULL ORDER BY agent_type, agent_id")
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	var rdsParams []*scrapeConfigParams
-	for _, str := range agents {
-		agent := str.(*models.Agent)
-
-		if agent.AgentType == models.PMMAgentType {
-			// TODO https://jira.percona.com/browse/PMM-4087
-			continue
-		}
-
-		// sanity check
-		if (agent.NodeID != nil) && (agent.ServiceID != nil) {
-			svc.l.Panicf("Both agent.NodeID and agent.ServiceID are present: %s", agent)
-		}
-
-		// find Service for this Agent
-		var paramsService *models.Service
-		if agent.ServiceID != nil {
-			paramsService, err = models.FindServiceByID(q, pointer.GetString(agent.ServiceID))
-			if err != nil {
-				return err
-			}
-		}
-
-		// find Node for this Agent or Service
-		var paramsNode *models.Node
-		switch {
-		case agent.NodeID != nil:
-			paramsNode, err = models.FindNodeByID(q, pointer.GetString(agent.NodeID))
-		case paramsService != nil:
-			paramsNode, err = models.FindNodeByID(q, paramsService.NodeID)
-		}
-		if err != nil {
-			return err
-		}
-
-		// find Node address where the agent runs
-		var paramsHost string
-		switch {
-		case agent.PMMAgentID != nil:
-			// extract node address through pmm-agent
-			pmmAgent, err := models.FindAgentByID(q, *agent.PMMAgentID)
-			if err != nil {
-				return errors.WithStack(err)
-			}
-			pmmAgentNode := &models.Node{NodeID: pointer.GetString(pmmAgent.RunsOnNodeID)}
-			if err = q.Reload(pmmAgentNode); err != nil {
-				return errors.WithStack(err)
-			}
-			paramsHost = pmmAgentNode.Address
-		case agent.RunsOnNodeID != nil:
-			externalExporterNode := &models.Node{NodeID: pointer.GetString(agent.RunsOnNodeID)}
-			if err = q.Reload(externalExporterNode); err != nil {
-				return errors.WithStack(err)
-			}
-			paramsHost = externalExporterNode.Address
-		default:
-			svc.l.Warnf("It's not possible to get host, skipping scrape config for %s.", agent)
-			continue
-		}
-
-		var scfgs []*config.ScrapeConfig
-		switch agent.AgentType {
-		case models.NodeExporterType:
-			scfgs, err = scrapeConfigsForNodeExporter(s, &scrapeConfigParams{
-				host:    paramsHost,
-				node:    paramsNode,
-				service: nil,
-				agent:   agent,
-			})
-
-		case models.MySQLdExporterType:
-			scfgs, err = scrapeConfigsForMySQLdExporter(s, &scrapeConfigParams{
-				host:    paramsHost,
-				node:    paramsNode,
-				service: paramsService,
-				agent:   agent,
-			})
-
-		case models.MongoDBExporterType:
-			scfgs, err = scrapeConfigsForMongoDBExporter(s, &scrapeConfigParams{
-				host:    paramsHost,
-				node:    paramsNode,
-				service: paramsService,
-				agent:   agent,
-			})
-
-		case models.PostgresExporterType:
-			scfgs, err = scrapeConfigsForPostgresExporter(s, &scrapeConfigParams{
-				host:    paramsHost,
-				node:    paramsNode,
-				service: paramsService,
-				agent:   agent,
-			})
-
-		case models.ProxySQLExporterType:
-			scfgs, err = scrapeConfigsForProxySQLExporter(s, &scrapeConfigParams{
-				host:    paramsHost,
-				node:    paramsNode,
-				service: paramsService,
-				agent:   agent,
-			})
-
-		case models.QANMySQLPerfSchemaAgentType, models.QANMySQLSlowlogAgentType:
-			continue
-		case models.QANMongoDBProfilerAgentType:
-			continue
-		case models.QANPostgreSQLPgStatementsAgentType:
-			continue
-
-		case models.RDSExporterType:
-			rdsParams = append(rdsParams, &scrapeConfigParams{
-				host:    paramsHost,
-				node:    paramsNode,
-				service: paramsService,
-				agent:   agent,
-			})
-			continue
-
-		case models.ExternalExporterType:
-			scfgs, err = scrapeConfigsForExternalExporter(s, &scrapeConfigParams{
-				host:    paramsHost,
-				node:    paramsNode,
-				service: paramsService,
-				agent:   agent,
-			})
-
-		default:
-			svc.l.Warnf("Skipping scrape config for %s.", agent)
-			continue
-		}
-
-		if err != nil {
-			svc.l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
-		}
-		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfgs...)
-	}
-
-	scfgs := scrapeConfigsForRDSExporter(s, rdsParams)
-	cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfgs...)
-
-	return nil
-}
-
 // marshalConfig marshals Prometheus configuration.
 func (svc *Service) marshalConfig() ([]byte, error) {
 	cfg := svc.loadBaseConfig()
@@ -323,7 +172,7 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 			cfg.GlobalConfig.ScrapeInterval = config.Duration(s.LR)
 		}
 		if cfg.GlobalConfig.ScrapeTimeout == 0 {
-			cfg.GlobalConfig.ScrapeTimeout = scrapeTimeout(s.LR)
+			cfg.GlobalConfig.ScrapeTimeout = ScrapeTimeout(s.LR)
 		}
 		if cfg.GlobalConfig.EvaluationInterval == 0 {
 			cfg.GlobalConfig.EvaluationInterval = config.Duration(s.LR)
@@ -336,14 +185,6 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 			// pmm.rules.yml managed by pmm-managed;
 			// user-supplied files.
 			"/srv/prometheus/rules/*.yml",
-		)
-
-		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs,
-			scrapeConfigForPrometheus(s.HR),
-			scrapeConfigForAlertmanager(s.MR),
-			scrapeConfigForGrafana(s.MR),
-			scrapeConfigForPMMManaged(s.MR),
-			scrapeConfigForQANAPI2(s.MR),
 		)
 
 		cfg.AlertingConfig.AlertmanagerConfigs = append(cfg.AlertingConfig.AlertmanagerConfigs, &config.AlertmanagerConfig{
@@ -390,8 +231,9 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 				svc.l.Errorf("Failed to parse Alert Manager URL %q: %s.", settings.AlertManagerURL, err)
 			}
 		}
+		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scrapeConfigForPrometheus(s.HR))
 
-		return svc.addScrapeConfigs(cfg, tx.Querier, &s)
+		return PopulateScrapeConfigs(cfg, svc.l, tx.Querier, &s)
 	})
 	if e != nil {
 		return nil, e
