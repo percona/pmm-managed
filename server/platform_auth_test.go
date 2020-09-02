@@ -1,6 +1,9 @@
 package server
 
 import (
+	"os"
+	"os/user"
+	"strings"
 	"testing"
 
 	"github.com/brianvoe/gofakeit"
@@ -19,10 +22,11 @@ func TestPlatform(t *testing.T) {
 
 	t.Run("signUp", func(t *testing.T) {
 		t.Run("normal", func(t *testing.T) {
+			email, password := genCredentials(t)
 			_, err := client.PlatformSignUp(&server.PlatformSignUpParams{
 				Body: server.PlatformSignUpBody{
-					Email:    gofakeit.Email(),
-					Password: gofakeit.Password(true, true, true, false, false, 14),
+					Email:    email,
+					Password: password,
 				},
 				Context: pmmapitests.Context,
 			})
@@ -30,10 +34,11 @@ func TestPlatform(t *testing.T) {
 		})
 
 		t.Run("invalid email", func(t *testing.T) {
+			_, password := genCredentials(t)
 			_, err := client.PlatformSignUp(&server.PlatformSignUpParams{
 				Body: server.PlatformSignUpBody{
 					Email:    "not-email",
-					Password: gofakeit.Password(true, true, true, false, false, 14),
+					Password: password,
 				},
 				Context: pmmapitests.Context,
 			})
@@ -41,9 +46,10 @@ func TestPlatform(t *testing.T) {
 		})
 
 		t.Run("invalid password", func(t *testing.T) {
+			email, _ := genCredentials(t)
 			_, err := client.PlatformSignUp(&server.PlatformSignUpParams{
 				Body: server.PlatformSignUpBody{
-					Email:    gofakeit.Email(),
+					Email:    email,
 					Password: "weak-pass",
 				},
 				Context: pmmapitests.Context,
@@ -52,10 +58,11 @@ func TestPlatform(t *testing.T) {
 		})
 
 		t.Run("empty email", func(t *testing.T) {
+			_, password := genCredentials(t)
 			_, err := client.PlatformSignUp(&server.PlatformSignUpParams{
 				Body: server.PlatformSignUpBody{
 					Email:    "",
-					Password: gofakeit.Password(true, true, true, false, false, 14),
+					Password: password,
 				},
 				Context: pmmapitests.Context,
 			})
@@ -63,9 +70,10 @@ func TestPlatform(t *testing.T) {
 		})
 
 		t.Run("empty password", func(t *testing.T) {
+			email, _ := genCredentials(t)
 			_, err := client.PlatformSignUp(&server.PlatformSignUpParams{
 				Body: server.PlatformSignUpBody{
-					Email:    gofakeit.Email(),
+					Email:    email,
 					Password: "",
 				},
 				Context: pmmapitests.Context,
@@ -75,8 +83,7 @@ func TestPlatform(t *testing.T) {
 	})
 
 	t.Run("signIn", func(t *testing.T) {
-		email := gofakeit.Email()
-		password := gofakeit.Password(true, true, true, false, false, 14)
+		email, password := genCredentials(t)
 
 		_, err := client.PlatformSignUp(&server.PlatformSignUpParams{
 			Body: server.PlatformSignUpBody{
@@ -144,8 +151,7 @@ func TestPlatform(t *testing.T) {
 	})
 
 	t.Run("signOut", func(t *testing.T) {
-		email := gofakeit.Email()
-		password := gofakeit.Password(true, true, true, false, false, 14)
+		email, password := genCredentials(t)
 
 		_, err := client.PlatformSignUp(&server.PlatformSignUpParams{
 			Body: server.PlatformSignUpBody{
@@ -187,4 +193,17 @@ func TestPlatform(t *testing.T) {
 			pmmapitests.AssertAPIErrorf(t, err, 400, codes.FailedPrecondition, "No active sessions.")
 		})
 	})
+}
+
+// genCredentials creates test user email and password.
+func genCredentials(t *testing.T) (string, string) {
+	hostname, err := os.Hostname()
+	require.NoError(t, err)
+
+	u, err := user.Current()
+	require.NoError(t, err)
+
+	email := strings.Join([]string{u.Username, hostname, gofakeit.Email(), "test"}, ".")
+	password := gofakeit.Password(true, true, true, false, false, 14)
+	return email, password
 }
