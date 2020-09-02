@@ -17,10 +17,16 @@
 package main
 
 import (
+	"encoding/gob"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
 
+	"github.com/percona-platform/saas/pkg/starlark"
+	"github.com/percona/pmm-managed/services/checks"
+
+	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/version"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -46,4 +52,25 @@ func main() {
 	if on, _ := strconv.ParseBool(os.Getenv("PMM_TRACE")); on {
 		logrus.SetLevel(logrus.TraceLevel)
 	}
+
+	gobDecoder := gob.NewDecoder(os.Stdin)
+	var data checks.StarlarkScriptData
+	gobDecoder.Decode(&data)
+
+	env, err := starlark.NewEnv(data.CheckName, data.Script, data.Funcs)
+	if err != nil {
+		os.Exit(1)
+	}
+
+	scriptInput, err := agentpb.UnmarshalActionQueryResult(data.ScriptInput)
+	if err != nil {
+		os.Exit(1)
+	}
+
+	results, err := env.Run(data.CheckName, scriptInput, data.PrintFn)
+	if err != nil {
+		os.Exit(1)
+	}
+
+	fmt.Print(results)
 }

@@ -20,11 +20,14 @@ package checks
 import (
 	"bytes"
 	"context"
+	"encoding/gob"
 	"io/ioutil"
 	"net"
 	"os"
+	"os/exec"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/AlekSi/pointer"
@@ -37,6 +40,7 @@ import (
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"gopkg.in/reform.v1"
@@ -565,6 +569,14 @@ type sttCheckResult struct {
 	result    check.Result
 }
 
+type StarlarkScriptData struct {
+	CheckName   string
+	Script      string
+	Funcs       map[string]starlark.GoFunc
+	PrintFn     starlark.PrintFunc
+	ScriptInput []byte
+}
+
 func (s *Service) processResults(ctx context.Context, check check.Check, target target, resID string) ([]sttCheckResult, error) {
 	nCtx, cancel := context.WithTimeout(ctx, resultTimeout)
 	r, err := s.waitForResult(nCtx, resID)
@@ -578,23 +590,63 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 		return nil, err
 	}
 
-	env, err := starlark.NewEnv(check.Name, check.Script, funcs)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to prepare starlark environment")
-	}
-
 	l := s.l.WithFields(logrus.Fields{
 		"name":       check.Name,
 		"id":         resID,
 		"service_id": target.serviceID,
 	})
+
+	scriptInput, err := agentpb.MarshalActionQueryDocsResult(r)
+	if err != nil {
+		return nil, err
+	}
+
+	input := &StarlarkScriptData{
+		CheckName:   check.Name,
+		Script:      check.Script,
+		Funcs:       funcs,
+		PrintFn:     l.Debugln,
+		ScriptInput: scriptInput,
+	}
+
+	process := exec.Command("./bin/pmm-managed-starlark")
+	process.SysProcAttr = &syscall.SysProcAttr{
+		Pdeathsig: syscall.SIGTERM,
+	}
+	_ = unix.Setrlimit(unix.RLIMIT_CPU, &unix.Rlimit{Cur: 4, Max: 4})
+	_ = unix.Setrlimit(unix.RLIMIT_DATA, &unix.Rlimit{Cur: 100000000, Max: 100000000})
+
+	pipe, err := process.StdinPipe()
+	defer pipe.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	encoder := gob.NewEncoder(pipe)
+	// send the starlark script data to STDIN
+	encoder.Encode(input)
+
+	scriptresults, err := process.Output()
+	if err != nil {
+		l.Error("Failed to process script output, ", err)
+		return nil, err
+	}
+	l.Debug(scriptresults)
+
+	// TODO: Remove this
+	env, err := starlark.NewEnv(check.Name, check.Script, funcs)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to prepare starlark environment")
+	}
+
 	l.Debugf("Running check script with: %+v.", r)
 	results, err := env.Run(check.Name, r, l.Debugln)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to execute script")
 	}
-	l.Infof("Check script returned %d results.", len(results))
-	l.Debugf("Results: %+v.", results)
+
+	//l.Infof("Check script returned %d results.", len(results))
+	//l.Debugf("Results: %+v.", results)
 
 	checkResults := make([]sttCheckResult, len(results))
 	for i, result := range results {
