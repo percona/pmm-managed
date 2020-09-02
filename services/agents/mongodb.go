@@ -30,7 +30,7 @@ import (
 )
 
 // New MongoDB Exporter will be released with PMM agent v2.10.0.
-var newMongoExporterPMMVersion = version.MustParse("2.10.0")
+var newMongoExporterPMMVersion = version.MustParse("2.9.99")
 
 // mongodbExporterConfig returns desired configuration of mongodb_exporter process.
 func mongodbExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode,
