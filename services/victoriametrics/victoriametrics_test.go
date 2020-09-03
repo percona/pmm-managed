@@ -86,7 +86,6 @@ func TestVictoriaMetrics(t *testing.T) {
 		check := require.New(t)
 		db, svc, original := setup(t)
 		defer teardown(t, db, svc, original)
-
 		err := models.SaveSettings(db.Querier, &models.Settings{})
 		check.NoError(err)
 
@@ -207,6 +206,7 @@ scrape_configs:
   static_configs:
   - targets:
     - 127.0.0.1:8428
+    - 127.0.0.1:8880
     labels:
       instance: pmm-server
 - job_name: alertmanager
@@ -578,6 +578,7 @@ scrape_configs:
   static_configs:
   - targets:
     - 127.0.0.1:8428
+    - 127.0.0.1:8880
     labels:
       instance: pmm-server
 - job_name: victoriametrics
@@ -588,6 +589,7 @@ scrape_configs:
   static_configs:
   - targets:
     - 127.0.0.1:8428
+    - 127.0.0.1:8880
     labels:
       instance: pmm-server
 - job_name: alertmanager

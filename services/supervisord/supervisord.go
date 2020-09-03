@@ -24,6 +24,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -402,10 +403,34 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 		retentionMonths = 1
 	}
 	templateParams := map[string]interface{}{
-		"DataRetentionHours": int(settings.DataRetention.Hours()),
-		"DataRetentionDays":  int(settings.DataRetention.Hours() / 24),
-		"DataRetentionMonth": retentionMonths,
-		"IsVMEnabled":        s.isVMEnabled,
+		"DataRetentionHours":   int(settings.DataRetention.Hours()),
+		"DataRetentionDays":    int(settings.DataRetention.Hours() / 24),
+		"DataRetentionMonth":   retentionMonths,
+		"IsVMEnabled":          s.isVMEnabled,
+		"AlertmanagerURL":      settings.AlertManagerURL,
+		"AlertManagerUser":     "",
+		"AlertManagerPassword": "",
+	}
+	u, err := url.Parse(settings.AlertManagerURL)
+	if err == nil && (u.Opaque != "" || u.Host == "") {
+		err = errors.Errorf("parsed incorrectly as %#v", u)
+	}
+
+	if err == nil {
+		if username := u.User.Username(); username != "" {
+			if password, ok := u.User.Password(); ok {
+				n := url.URL{
+					Scheme:   u.Scheme,
+					Host:     u.Host,
+					Path:     u.Path,
+					RawQuery: u.RawQuery,
+					Fragment: u.Fragment,
+				}
+				templateParams["AlertManagerUser"] = username
+				templateParams["AlertManagerPassword"] = password
+				templateParams["AlertmanagerURL"] = n.String()
+			}
+		}
 	}
 
 	var buf bytes.Buffer
@@ -529,7 +554,7 @@ redirect_stderr = true
 [program:victoriametrics]
 priority = 7
 command =
-	/usr/sbin/victoria-metrics
+	/usr/sbin/victoriametrics
 		--promscrape.config=/etc/victoriametrics-promscrape.yml
 		--retentionPeriod={{ .DataRetentionMonth }}
 		--storageDataPath=/srv/victoriametrics/data
@@ -542,6 +567,35 @@ startsecs = 1
 stopsignal = INT
 stopwaitsecs = 300
 stdout_logfile = /srv/logs/victoriametrics.log
+stdout_logfile_maxbytes = 10MB
+stdout_logfile_backups = 3
+redirect_stderr = true
+{{end}}
+
+{{define "vmalert"}}
+[program:vmalert]
+priority = 7
+command =
+	/usr/sbin/vmalert
+        --notifier.url="http://127.0.0.1:9093/alertmanager,{{ .AlertmanagerURL }}"
+{{- if and  .AlertManagerUser .AlertManagerPassword}}
+        --notifier.basicAuth.password=",{{.AlertManagerPassword}}"
+        --notifier.basicAuth.username=",{{.AlertManagerUser}}"
+{{- end }}
+        --external.url=http://localhost:9093/alertmanager/
+        --datasource.url=http://127.0.0.1:8428
+        --remoteRead.url=http://127.0.0.1:8428
+        --remoteWrite.url=http://127.0.0.1:8428
+        --rule=/srv/prometheus/rules/pmm.rules.yml
+        --httpListenAddr=127.0.0.1:8880
+user = pmm
+autorestart = {{ .IsVMEnabled }}
+autostart = {{ .IsVMEnabled }}
+startretries = 10
+startsecs = 1
+stopsignal = INT
+stopwaitsecs = 300
+stdout_logfile = /srv/logs/vmalert.log
 stdout_logfile_maxbytes = 10MB
 stdout_logfile_backups = 3
 redirect_stderr = true

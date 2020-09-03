@@ -443,6 +443,7 @@ func main() {
 	prometheusURLF := kingpin.Flag("prometheus-url", "Prometheus base URL").Default("http://127.0.0.1:9090/prometheus/").String()
 
 	victoriaMetricsURLF := kingpin.Flag("victoriametrics-url", "VictoriaMetrics base URL").Default("http://127.0.0.1:8428/").String()
+	victoriaMetricsVMAlertURLF := kingpin.Flag("victoriametrics-vmalert-url", "VictoriaMetrics VMAlert base URL").Default("http://127.0.0.1:8880/").String()
 	victoriaMetricsConfigF := kingpin.Flag("victoriametrics-config", "VictoriaMetrics scape configuration file path").Default("/etc/victoriametrics-promscrape.yml").String()
 
 	grafanaAddrF := kingpin.Flag("grafana-addr", "Grafana HTTP API address").Default("127.0.0.1:3000").String()
@@ -525,6 +526,10 @@ func main() {
 	if err != nil {
 		l.Panicf("VictoriaMetrics service problem: %+v", err)
 	}
+	vmalert, err := victoriametrics.NewVMAlert(alertingRules, *victoriaMetricsVMAlertURLF)
+	if err != nil {
+		l.Panicf("VictoriaMetrics VMAlert service problem: %+v", err)
+	}
 
 	qanClient := getQANClient(ctx, sqlDB, *postgresDBNameF, *qanAPIAddrF)
 
@@ -552,6 +557,7 @@ func main() {
 		DB:                      db,
 		Prometheus:              prometheus,
 		VictoriaMetrics:         vmdb,
+		VMAlert:                 vmalert,
 		Alertmanager:            alertmanager,
 		Supervisord:             supervisord,
 		TelemetryService:        telemetry,
@@ -605,6 +611,12 @@ func main() {
 	go func() {
 		defer wg.Done()
 		prometheus.Run(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		vmalert.Run(ctx)
 	}()
 
 	wg.Add(1)

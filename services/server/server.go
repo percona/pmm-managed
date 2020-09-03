@@ -83,6 +83,7 @@ type Params struct {
 	DB                      *reform.DB
 	Prometheus              prometheusService
 	VictoriaMetrics         prometheusService
+	VMAlert                 prometheusService
 	Alertmanager            alertmanagerService
 	PrometheusAlertingRules prometheusAlertingRules
 	Supervisord             supervisordService
@@ -105,6 +106,7 @@ func NewServer(params *Params) (*Server, error) {
 		scrapeServices: map[string]prometheusService{
 			"prometheus":      params.Prometheus,
 			"victoriametrics": params.VictoriaMetrics,
+			"vmalert":         params.VMAlert,
 		},
 		alertmanager:            params.Alertmanager,
 		prometheusAlertingRules: params.PrometheusAlertingRules,

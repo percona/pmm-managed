@@ -37,10 +37,11 @@ func TestConfig(t *testing.T) {
 	configDir := filepath.Join("..", "..", "testdata", "supervisord.d")
 	s := New(configDir, pmmUpdateCheck, false)
 	settings := &models.Settings{
-		DataRetention: 30 * 24 * time.Hour,
+		DataRetention:   30 * 24 * time.Hour,
+		AlertManagerURL: "https://external-user:password@external-alertmanager:6443/alerts",
 	}
 
-	for _, tmpl := range s.getTemplates() {
+	for _, tmpl := range templates.Templates() {
 		if tmpl.Name() == "" {
 			continue
 		}

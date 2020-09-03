@@ -45,7 +45,7 @@ import (
 const updateBatchDelay = 3 * time.Second
 
 var (
-	enabled       = os.Getenv("PERCONA_TEST_VM") == "1" || os.Getenv("PERCONA_TEST_VM") == "true    "
+	enabled       = os.Getenv("PERCONA_TEST_VM") == "1" || os.Getenv("PERCONA_TEST_VM") == "true"
 	checkFailedRE = regexp.MustCompile(`FAILED: parsing YAML file \S+: (.+)\n`)
 )
 
@@ -167,12 +167,7 @@ func (svc *VictoriaMetrics) IsReady(ctx context.Context) error {
 		return errors.Errorf("expected 200, got %d", resp.StatusCode)
 	}
 
-	// check promtool version
-	b, err = exec.CommandContext(ctx, "promtool", "--version").CombinedOutput()
-	if err != nil {
-		return errors.Wrap(err, string(b))
-	}
-	svc.l.Debugf("%s", b)
+
 	return nil
 }
 
@@ -256,10 +251,12 @@ func scrapeConfigForVictoriaMetrics(interval time.Duration) *config.ScrapeConfig
 		ScrapeTimeout:  prometheus.ScrapeTimeout(interval),
 		MetricsPath:    "/metrics",
 		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
-			StaticConfigs: []*config.Group{{
-				Targets: []string{"127.0.0.1:8428"},
+			StaticConfigs: []*config.Group{
+				{
+				Targets: []string{"127.0.0.1:8428","127.0.0.1:8880"},
 				Labels:  map[string]string{"instance": "pmm-server"},
-			}},
+			},
+			},
 		},
 	}
 }
