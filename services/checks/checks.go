@@ -612,10 +612,10 @@ func (s *Service) processResults(ctx context.Context, sttCheck check.Check, targ
 	if err != nil {
 		l.Warn("Failed to limit CPU usage: ", err)
 	}
-	//err = unix.Setrlimit(unix.RLIMIT_DATA, &unix.Rlimit{Cur: memoryLimit, Max: memoryLimit})
-	//if err != nil {
-	//	l.Warn("Failed to limit memory usage: ", err)
-	//}
+	err = unix.Setrlimit(unix.RLIMIT_DATA, &unix.Rlimit{Cur: memoryLimit, Max: memoryLimit})
+	if err != nil {
+		l.Warn("Failed to limit memory usage: ", err)
+	}
 
 	pipe, err := process.StdinPipe()
 	defer pipe.Close()
