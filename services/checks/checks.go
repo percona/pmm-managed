@@ -624,10 +624,6 @@ func (s *Service) processResults(ctx context.Context, sttCheck check.Check, targ
 	}
 
 	encoder := json.NewEncoder(pipe)
-<<<<<<< HEAD
-=======
-	// send the starlark script data to STDIN
->>>>>>> origin/SAAS-63-Better-Starlark-Sandbox
 	err = encoder.Encode(input)
 	if err != nil {
 		l.Error("Error encoding data to STDIN, ", err)
