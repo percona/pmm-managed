@@ -20,7 +20,7 @@ required = [
 
 [[constraint]]
   name = "github.com/percona-platform/saas"
-  branch = "main"
+  branch = "SAAS-63-Better-Starlark-Sandbox"
 
 # to prevent unexpected downgrades; see https://github.com/percona/exporter_shared/releases/tag/v0.6.0
 [[constraint]]

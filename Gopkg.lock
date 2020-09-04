@@ -373,8 +373,8 @@
   version = "v0.3.0"
 
 [[projects]]
-  branch = "main"
-  digest = "1:39301fbb779dc956a0466e89299040e894274ff7589b8bbf84b8170fe3600a51"
+  branch = "SAAS-63-Better-Starlark-Sandbox"
+  digest = "1:cf6f7cb91f3283bbab38ae295453c1333249716cab07b3338a47545f135f4f2b"
   name = "github.com/percona-platform/saas"
   packages = [
     "gen/auth",
@@ -385,7 +385,7 @@
     "pkg/starlark",
   ]
   pruneopts = "NUT"
-  revision = "bdbd592a7ac3387a87615280f5a10128db620c6b"
+  revision = "1fb878287a431146d26f3ee870b0324440518014"
 
 [[projects]]
   digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
