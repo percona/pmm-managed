@@ -17,7 +17,7 @@
 package main
 
 import (
-	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -26,7 +26,6 @@ import (
 	"github.com/percona-platform/saas/pkg/starlark"
 	"github.com/percona/pmm-managed/services/checks"
 
-	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/version"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -53,24 +52,38 @@ func main() {
 		logrus.SetLevel(logrus.TraceLevel)
 	}
 
-	gobDecoder := gob.NewDecoder(os.Stdin)
+	l := logrus.WithField("component", "pmm-managed-starlark")
+
+	decoder := json.NewDecoder(os.Stdin)
 	var data checks.StarlarkScriptData
-	gobDecoder.Decode(&data)
-
-	env, err := starlark.NewEnv(data.CheckName, data.Script, data.Funcs)
+	err := decoder.Decode(&data)
 	if err != nil {
+		l.Error("Error decoding json data: ", err)
 		os.Exit(1)
 	}
 
-	scriptInput, err := agentpb.UnmarshalActionQueryResult(data.ScriptInput)
+	funcs, err := checks.GetFuncsForVersion(data.CheckVersion)
 	if err != nil {
+		l.Error("Error getting funcs: ", err)
 		os.Exit(1)
 	}
 
-	results, err := env.Run(data.CheckName, scriptInput, data.PrintFn)
+	env, err := starlark.NewEnv(data.CheckName, data.Script, funcs)
 	if err != nil {
+		l.Error("Error initializing starlark env: ", err)
 		os.Exit(1)
 	}
 
-	fmt.Print(results)
+	results, err := env.Run(data.CheckName, data.ScriptInput, l.Debugln)
+	if err != nil {
+		l.Error("Error running starlark env: ", err)
+		os.Exit(1)
+	}
+
+	jsonResults, err := json.Marshal(results)
+	if err != nil {
+		l.Error("Error marshalling JSON: ", err)
+		os.Exit(1)
+	}
+	fmt.Println(string(jsonResults))
 }

@@ -20,7 +20,7 @@ package checks
 import (
 	"bytes"
 	"context"
-	"encoding/gob"
+	"encoding/json"
 	"io/ioutil"
 	"net"
 	"os"
@@ -33,8 +33,8 @@ import (
 	"github.com/AlekSi/pointer"
 	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/percona-platform/saas/pkg/check"
-	"github.com/percona-platform/saas/pkg/starlark"
 	"github.com/percona/pmm/api/agentpb"
+	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/percona/pmm/utils/tlsconfig"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
@@ -75,6 +75,11 @@ const (
 
 	alertsPrefix        = "/stt/"
 	maxSupportedVersion = 1
+
+	// limits for running pmm-managed-starlark
+	cpuLimit      = 4         // 4 seconds of CPU time
+	memoryLimit   = 100000000 // 100MB of memory in bytes
+	scriptTimeout = 5 * time.Second
 )
 
 // pmm-agent versions with known changes in Query Actions.
@@ -569,15 +574,15 @@ type sttCheckResult struct {
 	result    check.Result
 }
 
+// StarlarkScriptData represents the data we need to pass to the binary to run starlark scripts.
 type StarlarkScriptData struct {
-	CheckName   string
-	Script      string
-	Funcs       map[string]starlark.GoFunc
-	PrintFn     starlark.PrintFunc
-	ScriptInput []byte
+	CheckName    string                   `json:"name"`
+	Script       string                   `json:"script"`
+	CheckVersion uint32                   `json:"version"`
+	ScriptInput  []map[string]interface{} `json:"input"`
 }
 
-func (s *Service) processResults(ctx context.Context, check check.Check, target target, resID string) ([]sttCheckResult, error) {
+func (s *Service) processResults(ctx context.Context, sttCheck check.Check, target target, resID string) ([]sttCheckResult, error) {
 	nCtx, cancel := context.WithTimeout(ctx, resultTimeout)
 	r, err := s.waitForResult(nCtx, resID)
 	cancel()
@@ -585,36 +590,32 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 		return nil, errors.Wrap(err, "failed to get action result")
 	}
 
-	funcs, err := getFuncsForVersion(check.Version)
-	if err != nil {
-		return nil, err
-	}
-
 	l := s.l.WithFields(logrus.Fields{
-		"name":       check.Name,
+		"name":       sttCheck.Name,
 		"id":         resID,
 		"service_id": target.serviceID,
 	})
 
-	scriptInput, err := agentpb.MarshalActionQueryDocsResult(r)
-	if err != nil {
-		return nil, err
-	}
-
 	input := &StarlarkScriptData{
-		CheckName:   check.Name,
-		Script:      check.Script,
-		Funcs:       funcs,
-		PrintFn:     l.Debugln,
-		ScriptInput: scriptInput,
+		CheckName:    sttCheck.Name,
+		Script:       sttCheck.Script,
+		CheckVersion: sttCheck.Version,
+		ScriptInput:  r,
 	}
 
-	process := exec.Command("./bin/pmm-managed-starlark")
-	process.SysProcAttr = &syscall.SysProcAttr{
-		Pdeathsig: syscall.SIGTERM,
+	cmdCtx, cancel := context.WithTimeout(ctx, scriptTimeout)
+	defer cancel()
+
+	process := exec.CommandContext(cmdCtx, "pmm-managed-starlark")
+	pdeathsig.Set(process, syscall.SIGTERM)
+	err = unix.Setrlimit(unix.RLIMIT_CPU, &unix.Rlimit{Cur: cpuLimit, Max: cpuLimit})
+	if err != nil {
+		l.Warn("Failed to limit CPU usage: ", err)
 	}
-	_ = unix.Setrlimit(unix.RLIMIT_CPU, &unix.Rlimit{Cur: 4, Max: 4})
-	_ = unix.Setrlimit(unix.RLIMIT_DATA, &unix.Rlimit{Cur: 100000000, Max: 100000000})
+	//err = unix.Setrlimit(unix.RLIMIT_DATA, &unix.Rlimit{Cur: memoryLimit, Max: memoryLimit})
+	//if err != nil {
+	//	l.Warn("Failed to limit memory usage: ", err)
+	//}
 
 	pipe, err := process.StdinPipe()
 	defer pipe.Close()
@@ -622,41 +623,35 @@ func (s *Service) processResults(ctx context.Context, check check.Check, target 
 		return nil, err
 	}
 
-	encoder := gob.NewEncoder(pipe)
+	encoder := json.NewEncoder(pipe)
 	// send the starlark script data to STDIN
-	encoder.Encode(input)
-
-	scriptresults, err := process.Output()
+	err = encoder.Encode(input)
 	if err != nil {
-		l.Error("Failed to process script output, ", err)
+		l.Error("Error encoding data to STDIN, ", err)
 		return nil, err
 	}
-	l.Debug(scriptresults)
 
-	// TODO: Remove this
-	env, err := starlark.NewEnv(check.Name, check.Script, funcs)
+	procOut, err := process.CombinedOutput()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to prepare starlark environment")
+		l.Error("Error processing script output, ", err)
+		return nil, err
 	}
 
-	l.Debugf("Running check script with: %+v.", r)
-	results, err := env.Run(check.Name, r, l.Debugln)
+	var results []check.Result
+	err = json.Unmarshal(procOut, &results)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to execute script")
+		l.Error("Error processing json output, ", err)
+		return nil, err
 	}
-
-	//l.Infof("Check script returned %d results.", len(results))
-	//l.Debugf("Results: %+v.", results)
 
 	checkResults := make([]sttCheckResult, len(results))
 	for i, result := range results {
 		checkResults[i] = sttCheckResult{
-			checkName: check.Name,
+			checkName: sttCheck.Name,
 			target:    target,
 			result:    result,
 		}
 	}
-
 	return checkResults, nil
 }
 
