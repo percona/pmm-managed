@@ -110,7 +110,7 @@ func (svc *VictoriaMetrics) Run(ctx context.Context) {
 				return
 			}
 
-			if err := svc.updateConfiguration(); err != nil {
+			if err := svc.updateConfiguration(ctx); err != nil {
 				svc.l.Errorf("Failed to update configuration, will retry: %+v.", err)
 				svc.RequestConfigurationUpdate()
 			}
@@ -119,7 +119,7 @@ func (svc *VictoriaMetrics) Run(ctx context.Context) {
 }
 
 // updateConfiguration updates Prometheus configuration.
-func (svc *VictoriaMetrics) updateConfiguration() error {
+func (svc *VictoriaMetrics) updateConfiguration(ctx context.Context) error {
 	start := time.Now()
 	defer func() {
 		if dur := time.Since(start); dur > time.Second {
@@ -131,31 +131,40 @@ func (svc *VictoriaMetrics) updateConfiguration() error {
 	if err != nil {
 		return err
 	}
-	return svc.configAndReload(cfg)
+	return svc.configAndReload(ctx, cfg)
 }
 
-// RequestConfigurationUpdate requests Prometheus configuration update.
+// RequestConfigurationUpdate requests VictoriaMetrics configuration update.
 func (svc *VictoriaMetrics) RequestConfigurationUpdate() {
 	if !Enabled() {
 		return
 	}
 	select {
 	case svc.sema <- struct{}{}:
+		err := svc.updateConfiguration(context.Background())
+		if err != nil {
+			svc.l.WithError(err).Errorf("cannot reload configuration")
+		}
+
 	default:
 	}
 }
 
 // IsReady verifies that Prometheus works.
-func (svc *VictoriaMetrics) IsReady(_ context.Context) error {
+func (svc *VictoriaMetrics) IsReady(ctx context.Context) error {
 	if !Enabled() {
 		return nil
 	}
 	// check VictoriaMetrics /health API and log version
 	u := *svc.baseURL
 	u.Path = path.Join(u.Path, "health")
-	resp, err := svc.client.Get(u.String())
+	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
+	}
+	resp, err := svc.client.Do(req)
+	if err != nil {
+		return errors.WithStack(err)
 	}
 	defer resp.Body.Close() //nolint:errcheck
 	b, err := ioutil.ReadAll(resp.Body)
@@ -171,10 +180,15 @@ func (svc *VictoriaMetrics) IsReady(_ context.Context) error {
 }
 
 // reload asks VictoriaMetrics to reload configuration.
-func (svc *VictoriaMetrics) reload() error {
+func (svc *VictoriaMetrics) reload(ctx context.Context) error {
 	u := *svc.baseURL
 	u.Path = path.Join(u.Path, "-", "reload")
-	resp, err := svc.client.Post(u.String(), "", nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	resp, err := svc.client.Do(req)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -230,9 +244,6 @@ func (svc *VictoriaMetrics) marshalConfig() ([]byte, error) {
 		return nil, e
 	}
 
-	// TODO Add comments to each cfg.ScrapeConfigs element.
-	// https://jira.percona.com/browse/PMM-3601
-
 	b, err := yaml.Marshal(cfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't marshal VictoriaMetrics configuration file")
@@ -262,8 +273,7 @@ func scrapeConfigForVictoriaMetrics(interval time.Duration) *config.ScrapeConfig
 
 // configAndReload saves given VictoriaMetrics configuration to file and reloads VictoriaMetrics.
 // If configuration can't be reloaded for some reason, old file is restored, and configuration is reloaded again.
-func (svc *VictoriaMetrics) configAndReload(cfg []byte) error {
-	// read existing content
+func (svc *VictoriaMetrics) configAndReload(ctx context.Context, cfg []byte) error {
 	oldCfg, err := ioutil.ReadFile(svc.scrapeConfigPath)
 	if err != nil {
 		return errors.WithStack(err)
@@ -281,7 +291,7 @@ func (svc *VictoriaMetrics) configAndReload(cfg []byte) error {
 			if err = ioutil.WriteFile(svc.scrapeConfigPath, oldCfg, fi.Mode()); err != nil {
 				svc.l.Error(err)
 			}
-			if err = svc.reload(); err != nil {
+			if err = svc.reload(ctx); err != nil {
 				svc.l.Error(err)
 			}
 		}
@@ -300,13 +310,11 @@ func (svc *VictoriaMetrics) configAndReload(cfg []byte) error {
 		_ = os.Remove(f.Name())
 	}()
 	args := []string{"check", "config", f.Name()}
-	cmd := exec.Command("promtool", args...) //nolint:gosec
+	cmd := exec.CommandContext(ctx, "promtool", args...) //nolint:gosec
 	pdeathsig.Set(cmd, unix.SIGKILL)
 	b, err := cmd.CombinedOutput()
 	if err != nil {
 		svc.l.Errorf("%s", b)
-
-		// return typed error if possible
 		s := string(b)
 		if m := checkFailedRE.FindStringSubmatch(s); len(m) == 2 {
 			return status.Error(codes.Aborted, m[1])
@@ -315,12 +323,11 @@ func (svc *VictoriaMetrics) configAndReload(cfg []byte) error {
 	}
 	svc.l.Debugf("%s", b)
 
-	// write to permanent location and reload
 	restore = true
 	if err = ioutil.WriteFile(svc.scrapeConfigPath, cfg, fi.Mode()); err != nil {
 		return errors.WithStack(err)
 	}
-	if err = svc.reload(); err != nil {
+	if err = svc.reload(ctx); err != nil {
 		return err
 	}
 	svc.l.Infof("Configuration reloaded.")

@@ -64,7 +64,7 @@ func teardown(t *testing.T, db *reform.DB, svc *VictoriaMetrics, original []byte
 	check := assert.New(t)
 
 	check.NoError(ioutil.WriteFile(configPath, original, 0644))
-	check.NoError(svc.reload())
+	check.NoError(svc.reload(context.Background()))
 
 	check.NoError(db.DBInterface().(*sql.DB).Close())
 }
@@ -75,7 +75,7 @@ func TestVictoriaMetrics(t *testing.T) {
 		db, svc, original := setup(t)
 		defer teardown(t, db, svc, original)
 
-		check.NoError(svc.updateConfiguration())
+		check.NoError(svc.updateConfiguration(context.Background()))
 
 		actual, err := ioutil.ReadFile(configPath)
 		check.NoError(err)
@@ -189,7 +189,7 @@ func TestVictoriaMetrics(t *testing.T) {
 			check.NoError(db.Insert(str), "%+v", str)
 		}
 
-		check.NoError(svc.updateConfiguration())
+		check.NoError(svc.updateConfiguration(context.Background()))
 
 		expected := strings.TrimSpace(`
 # Managed by pmm-managed. DO NOT EDIT.

@@ -448,9 +448,12 @@ func main() {
 	prometheusConfigF := kingpin.Flag("prometheus-config", "Prometheus configuration file path").Default("/etc/prometheus.yml").String()
 	prometheusURLF := kingpin.Flag("prometheus-url", "Prometheus base URL").Default("http://127.0.0.1:9090/prometheus/").String()
 
-	victoriaMetricsURLF := kingpin.Flag("victoriametrics-url", "VictoriaMetrics base URL").Default("http://127.0.0.1:8428/").String()
-	victoriaMetricsVMAlertURLF := kingpin.Flag("victoriametrics-vmalert-url", "VictoriaMetrics VMAlert base URL").Default("http://127.0.0.1:8880/").String()
-	victoriaMetricsConfigF := kingpin.Flag("victoriametrics-config", "VictoriaMetrics scape configuration file path").Default("/etc/victoriametrics-promscrape.yml").String()
+	victoriaMetricsURLF := kingpin.Flag("victoriametrics-url", "VictoriaMetrics base URL").
+		Default("http://127.0.0.1:8428/").String()
+	victoriaMetricsVMAlertURLF := kingpin.Flag("victoriametrics-vmalert-url", "VictoriaMetrics VMAlert base URL").
+		Default("http://127.0.0.1:8880/").String()
+	victoriaMetricsConfigF := kingpin.Flag("victoriametrics-config", "VictoriaMetrics scape configuration file path").
+		Default("/etc/victoriametrics-promscrape.yml").String()
 
 	grafanaAddrF := kingpin.Flag("grafana-addr", "Grafana HTTP API address").Default("127.0.0.1:3000").String()
 	qanAPIAddrF := kingpin.Flag("qan-api-addr", "QAN API gRPC API address").Default("127.0.0.1:9911").String()

@@ -89,7 +89,7 @@ func (svc *VMAlert) Run(ctx context.Context) {
 				return
 			}
 
-			if err := svc.updateConfiguration(); err != nil {
+			if err := svc.updateConfiguration(ctx); err != nil {
 				svc.l.Errorf("Failed to update configuration, will retry: %+v.", err)
 				svc.RequestConfigurationUpdate()
 			}
@@ -104,7 +104,7 @@ func (svc *VMAlert) RequestConfigurationUpdate() {
 	}
 	select {
 	case svc.sema <- struct{}{}:
-		err := svc.updateConfiguration()
+		err := svc.updateConfiguration(context.Background())
 		if err != nil {
 			svc.l.WithError(err).Errorf("cannot reload configuration")
 		}
@@ -113,16 +113,20 @@ func (svc *VMAlert) RequestConfigurationUpdate() {
 }
 
 // IsReady verifies that VMAlert works.
-func (svc *VMAlert) IsReady(_ context.Context) error {
+func (svc *VMAlert) IsReady(ctx context.Context) error {
 	if !Enabled() {
 		return nil
 	}
 	// check VMAlert /health API and log version
 	u := *svc.baseURL
 	u.Path = path.Join(u.Path, "health")
-	resp, err := svc.client.Get(u.String())
+	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
+	}
+	resp, err := svc.client.Do(req)
+	if err != nil {
+		return errors.WithStack(err)
 	}
 	defer resp.Body.Close() //nolint:errcheck
 	b, err := ioutil.ReadAll(resp.Body)
@@ -139,10 +143,14 @@ func (svc *VMAlert) IsReady(_ context.Context) error {
 }
 
 // reload asks VMAlert to reload configuration.
-func (svc *VMAlert) reload() error {
+func (svc *VMAlert) reload(ctx context.Context) error {
 	u := *svc.baseURL
 	u.Path = path.Join(u.Path, "-", "reload")
-	resp, err := svc.client.Post(u.String(), "", nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	resp, err := svc.client.Do(req)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -160,7 +168,7 @@ func (svc *VMAlert) reload() error {
 
 // updateConfiguration reads alerts configuration from file
 // compares it with cached and replace if needed
-func (svc *VMAlert) updateConfiguration() error {
+func (svc *VMAlert) updateConfiguration(ctx context.Context) error {
 	start := time.Now()
 	defer func() {
 		if dur := time.Since(start); dur > time.Second {
@@ -179,7 +187,7 @@ func (svc *VMAlert) updateConfiguration() error {
 		svc.l.Infof("Configuration not changed, doing nothing.")
 		return nil
 	}
-	err = svc.reload()
+	err = svc.reload(ctx)
 	if err != nil {
 		return errors.WithStack(err)
 	}

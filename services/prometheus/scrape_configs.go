@@ -538,28 +538,12 @@ func agentScrapeConfigs(l *logrus.Entry, q *reform.Querier, s *models.MetricsRes
 		}
 
 		// find Node address where the agent runs
-		var paramsHost string
-		switch {
-		case agent.PMMAgentID != nil:
-			// extract node address through pmm-agent
-			pmmAgent, err := models.FindAgentByID(q, *agent.PMMAgentID)
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
-			pmmAgentNode := &models.Node{NodeID: pointer.GetString(pmmAgent.RunsOnNodeID)}
-			if err = q.Reload(pmmAgentNode); err != nil {
-				return nil, errors.WithStack(err)
-			}
-			paramsHost = pmmAgentNode.Address
-		case agent.RunsOnNodeID != nil:
-			externalExporterNode := &models.Node{NodeID: pointer.GetString(agent.RunsOnNodeID)}
-			if err = q.Reload(externalExporterNode); err != nil {
-				return nil, errors.WithStack(err)
-			}
-			paramsHost = externalExporterNode.Address
-		default:
+		paramsHost, err := paramHostForAgent(agent, q)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		if paramsHost == "" {
 			l.Warnf("It's not possible to get host, skipping scrape config for %s.", agent)
-
 			continue
 		}
 
@@ -572,7 +556,6 @@ func agentScrapeConfigs(l *logrus.Entry, q *reform.Querier, s *models.MetricsRes
 				service: nil,
 				agent:   agent,
 			})
-
 		case models.MySQLdExporterType:
 			scfgs, err = scrapeConfigsForMySQLdExporter(s, &scrapeConfigParams{
 				host:    paramsHost,
@@ -580,7 +563,6 @@ func agentScrapeConfigs(l *logrus.Entry, q *reform.Querier, s *models.MetricsRes
 				service: paramsService,
 				agent:   agent,
 			})
-
 		case models.MongoDBExporterType:
 			scfgs, err = scrapeConfigsForMongoDBExporter(s, &scrapeConfigParams{
 				host:    paramsHost,
@@ -588,7 +570,6 @@ func agentScrapeConfigs(l *logrus.Entry, q *reform.Querier, s *models.MetricsRes
 				service: paramsService,
 				agent:   agent,
 			})
-
 		case models.PostgresExporterType:
 			scfgs, err = scrapeConfigsForPostgresExporter(s, &scrapeConfigParams{
 				host:    paramsHost,
@@ -596,7 +577,6 @@ func agentScrapeConfigs(l *logrus.Entry, q *reform.Querier, s *models.MetricsRes
 				service: paramsService,
 				agent:   agent,
 			})
-
 		case models.ProxySQLExporterType:
 			scfgs, err = scrapeConfigsForProxySQLExporter(s, &scrapeConfigParams{
 				host:    paramsHost,
@@ -604,14 +584,6 @@ func agentScrapeConfigs(l *logrus.Entry, q *reform.Querier, s *models.MetricsRes
 				service: paramsService,
 				agent:   agent,
 			})
-
-		case models.QANMySQLPerfSchemaAgentType, models.QANMySQLSlowlogAgentType:
-			continue
-		case models.QANMongoDBProfilerAgentType:
-			continue
-		case models.QANPostgreSQLPgStatementsAgentType:
-			continue
-
 		case models.RDSExporterType:
 			rdsParams = append(rdsParams, &scrapeConfigParams{
 				host:    paramsHost,
@@ -620,7 +592,6 @@ func agentScrapeConfigs(l *logrus.Entry, q *reform.Querier, s *models.MetricsRes
 				agent:   agent,
 			})
 			continue
-
 		case models.ExternalExporterType:
 			scfgs, err = scrapeConfigsForExternalExporter(s, &scrapeConfigParams{
 				host:    paramsHost,
@@ -629,16 +600,41 @@ func agentScrapeConfigs(l *logrus.Entry, q *reform.Querier, s *models.MetricsRes
 				agent:   agent,
 			})
 
+		case models.QANMySQLPerfSchemaAgentType, models.QANMySQLSlowlogAgentType,
+			models.QANPostgreSQLPgStatementsAgentType, models.QANMongoDBProfilerAgentType:
+			continue
 		default:
 			l.Warnf("Skipping scrape config for %s.", agent)
 			continue
 		}
-
 		if err != nil {
 			l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 		}
 		configs = append(configs, scfgs...)
 	}
-
 	return append(configs, scrapeConfigsForRDSExporter(s, rdsParams)...), nil
+}
+
+func paramHostForAgent(agent *models.Agent, q *reform.Querier) (string, error) {
+	var paramsHost string
+	switch {
+	case agent.PMMAgentID != nil:
+		// extract node address through pmm-agent
+		pmmAgent, err := models.FindAgentByID(q, *agent.PMMAgentID)
+		if err != nil {
+			return "", errors.WithStack(err)
+		}
+		pmmAgentNode := &models.Node{NodeID: pointer.GetString(pmmAgent.RunsOnNodeID)}
+		if err = q.Reload(pmmAgentNode); err != nil {
+			return "", errors.WithStack(err)
+		}
+		paramsHost = pmmAgentNode.Address
+	case agent.RunsOnNodeID != nil:
+		externalExporterNode := &models.Node{NodeID: pointer.GetString(agent.RunsOnNodeID)}
+		if err := q.Reload(externalExporterNode); err != nil {
+			return "", errors.WithStack(err)
+		}
+		paramsHost = externalExporterNode.Address
+	}
+	return paramsHost, nil
 }

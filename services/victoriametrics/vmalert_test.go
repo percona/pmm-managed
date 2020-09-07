@@ -60,14 +60,14 @@ func TestVMAlert(t *testing.T) {
 		check := require.New(t)
 		db, rules, svc := setupVMAlert(t)
 		defer teardownVMAlert(t, rules, db)
-		check.NoError(svc.updateConfiguration())
+		check.NoError(svc.updateConfiguration(context.Background()))
 	})
 
 	t.Run("Normal", func(t *testing.T) {
 		check := require.New(t)
 		db, rules, svc := setupVMAlert(t)
 		defer teardownVMAlert(t, rules, db)
-		check.NoError(svc.updateConfiguration())
+		check.NoError(svc.updateConfiguration(context.Background()))
 		check.NoError(rules.WriteRules(strings.TrimSpace(`
 groups:
 - name: example
@@ -80,7 +80,7 @@ groups:
     annotations:
       summary: High request latency
 			`)))
-		check.NoError(svc.updateConfiguration())
+		check.NoError(svc.updateConfiguration(context.Background()))
 
 	})
 }
