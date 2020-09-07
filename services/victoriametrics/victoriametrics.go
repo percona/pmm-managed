@@ -131,7 +131,7 @@ func (svc *VictoriaMetrics) updateConfiguration() error {
 	if err != nil {
 		return err
 	}
-	return svc.saveConfigAndReload(cfg)
+	return svc.configAndReload(cfg)
 }
 
 // RequestConfigurationUpdate requests Prometheus configuration update.
@@ -146,7 +146,7 @@ func (svc *VictoriaMetrics) RequestConfigurationUpdate() {
 }
 
 // IsReady verifies that Prometheus works.
-func (svc *VictoriaMetrics) IsReady(ctx context.Context) error {
+func (svc *VictoriaMetrics) IsReady(_ context.Context) error {
 	if !Enabled() {
 		return nil
 	}
@@ -260,9 +260,9 @@ func scrapeConfigForVictoriaMetrics(interval time.Duration) *config.ScrapeConfig
 	}
 }
 
-// saveConfigAndReload saves given VictoriaMetrics configuration to file and reloads VictoriaMetrics.
+// configAndReload saves given VictoriaMetrics configuration to file and reloads VictoriaMetrics.
 // If configuration can't be reloaded for some reason, old file is restored, and configuration is reloaded again.
-func (svc *VictoriaMetrics) saveConfigAndReload(cfg []byte) error {
+func (svc *VictoriaMetrics) configAndReload(cfg []byte) error {
 	// read existing content
 	oldCfg, err := ioutil.ReadFile(svc.scrapeConfigPath)
 	if err != nil {

@@ -501,7 +501,7 @@ func agentScrapeConfigs(l *logrus.Entry, q *reform.Querier, s *models.MetricsRes
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	var configs []*config.ScrapeConfig
+	configs := make([]*config.ScrapeConfig, 0, len(agents))
 	var rdsParams []*scrapeConfigParams
 	for _, str := range agents {
 		agent := str.(*models.Agent)

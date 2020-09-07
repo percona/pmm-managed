@@ -398,7 +398,7 @@ func (s *Service) reload(name string) error {
 
 // marshalConfig marshals supervisord program configuration.
 func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settings) ([]byte, error) {
-	var retentionMonths = int(math.Ceil(settings.DataRetention.Hours() / 24 / 30))
+	retentionMonths := int(math.Ceil(settings.DataRetention.Hours() / 24 / 30))
 	if retentionMonths <= 0 {
 		retentionMonths = 1
 	}

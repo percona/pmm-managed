@@ -113,7 +113,7 @@ func (svc *VMAlert) RequestConfigurationUpdate() {
 }
 
 // IsReady verifies that VMAlert works.
-func (svc *VMAlert) IsReady(ctx context.Context) error {
+func (svc *VMAlert) IsReady(_ context.Context) error {
 	if !Enabled() {
 		return nil
 	}
