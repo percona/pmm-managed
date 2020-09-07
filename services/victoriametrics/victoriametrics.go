@@ -167,7 +167,6 @@ func (svc *VictoriaMetrics) IsReady(ctx context.Context) error {
 		return errors.Errorf("expected 200, got %d", resp.StatusCode)
 	}
 
-
 	return nil
 }
 
@@ -253,9 +252,9 @@ func scrapeConfigForVictoriaMetrics(interval time.Duration) *config.ScrapeConfig
 		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
 			StaticConfigs: []*config.Group{
 				{
-				Targets: []string{"127.0.0.1:8428","127.0.0.1:8880"},
-				Labels:  map[string]string{"instance": "pmm-server"},
-			},
+					Targets: []string{"127.0.0.1:8428", "127.0.0.1:8880"},
+					Labels:  map[string]string{"instance": "pmm-server"},
+				},
 			},
 		},
 	}

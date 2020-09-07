@@ -125,7 +125,6 @@ func TestFiles(t *testing.T) {
 		"supervisord.log",
 		"victoriametrics.log",
 		"vmalert.log",
-
 	}
 
 	files := l.files(ctx)
