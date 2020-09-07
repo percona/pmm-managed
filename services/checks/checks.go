@@ -40,7 +40,6 @@ import (
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"gopkg.in/reform.v1"
@@ -76,10 +75,7 @@ const (
 	alertsPrefix        = "/stt/"
 	maxSupportedVersion = 1
 
-	// limits for running pmm-managed-starlark
-	cpuLimit      = 4         // 4 seconds of CPU time
-	memoryLimit   = 100000000 // 100MB of memory in bytes
-	scriptTimeout = 5 * time.Second
+	scriptTimeout = 5 * time.Second // time limit for running pmm-managed-starlark
 )
 
 // pmm-agent versions with known changes in Query Actions.
@@ -608,14 +604,6 @@ func (s *Service) processResults(ctx context.Context, sttCheck check.Check, targ
 
 	process := exec.CommandContext(cmdCtx, "pmm-managed-starlark")
 	pdeathsig.Set(process, syscall.SIGTERM)
-	err = unix.Setrlimit(unix.RLIMIT_CPU, &unix.Rlimit{Cur: cpuLimit, Max: cpuLimit})
-	if err != nil {
-		l.Warn("Failed to limit CPU usage: ", err)
-	}
-	err = unix.Setrlimit(unix.RLIMIT_DATA, &unix.Rlimit{Cur: memoryLimit, Max: memoryLimit})
-	if err != nil {
-		l.Warn("Failed to limit memory usage: ", err)
-	}
 
 	pipe, err := process.StdinPipe()
 	defer pipe.Close()

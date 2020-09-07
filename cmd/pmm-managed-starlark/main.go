@@ -25,10 +25,16 @@ import (
 
 	"github.com/percona-platform/saas/pkg/starlark"
 	"github.com/percona/pmm-managed/services/checks"
+	"golang.org/x/sys/unix"
 
 	"github.com/percona/pmm/version"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
+)
+
+const (
+	cpuLimit    = 4                 // 4 seconds of CPU time
+	memoryLimit = 100 * 1024 * 1024 // 100MB of memory in bytes
 )
 
 func main() {
@@ -54,9 +60,18 @@ func main() {
 
 	l := logrus.WithField("component", "pmm-managed-starlark")
 
+	err := unix.Setrlimit(unix.RLIMIT_CPU, &unix.Rlimit{Cur: cpuLimit, Max: cpuLimit})
+	if err != nil {
+		l.Warn("Failed to limit CPU usage: ", err)
+	}
+	err = unix.Setrlimit(unix.RLIMIT_DATA, &unix.Rlimit{Cur: memoryLimit, Max: memoryLimit})
+	if err != nil {
+		l.Warn("Failed to limit memory usage: ", err)
+	}
+
 	decoder := json.NewDecoder(os.Stdin)
 	var data checks.StarlarkScriptData
-	err := decoder.Decode(&data)
+	err = decoder.Decode(&data)
 	if err != nil {
 		l.Error("Error decoding json data: ", err)
 		os.Exit(1)
