@@ -63,12 +63,14 @@ func TestRunChecks(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		err := runChecks(l, tc.data)
-		if tc.err {
-			require.Error(t, err)
-		} else {
-			require.NoError(t, err)
-		}
-		t.Log(err)
+		t.Run(tc.data.CheckName, func(t *testing.T) {
+			err := runChecks(l, tc.data)
+			if tc.err {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+			t.Log(err)
+		})
 	}
 }
