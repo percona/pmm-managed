@@ -18,17 +18,17 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"strconv"
 
 	"github.com/percona-platform/saas/pkg/starlark"
 	"github.com/percona/pmm-managed/services/checks"
-	"golang.org/x/sys/unix"
-
+	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/version"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -62,43 +62,54 @@ func main() {
 
 	err := unix.Setrlimit(unix.RLIMIT_CPU, &unix.Rlimit{Cur: cpuLimit, Max: cpuLimit})
 	if err != nil {
-		l.Warn("Failed to limit CPU usage: ", err)
+		l.Warnf("Failed to limit CPU usage: %s", err)
 	}
 	err = unix.Setrlimit(unix.RLIMIT_DATA, &unix.Rlimit{Cur: memoryLimit, Max: memoryLimit})
 	if err != nil {
-		l.Warn("Failed to limit memory usage: ", err)
+		l.Warnf("Failed to limit memory usage: %s", err)
 	}
 
 	decoder := json.NewDecoder(os.Stdin)
 	var data checks.StarlarkScriptData
 	err = decoder.Decode(&data)
 	if err != nil {
-		l.Error("Error decoding json data: ", err)
+		l.Errorf("Error decoding json data: %s", err)
 		os.Exit(1)
 	}
 
+	err = runChecks(l, data)
+	if err != nil {
+		l.Error(err)
+		os.Exit(1)
+	}
+}
+
+func runChecks(l *logrus.Entry, data checks.StarlarkScriptData) error {
 	funcs, err := checks.GetFuncsForVersion(data.CheckVersion)
 	if err != nil {
-		l.Error("Error getting funcs: ", err)
-		os.Exit(1)
+		return errors.Wrap(err, "error getting funcs")
 	}
 
 	env, err := starlark.NewEnv(data.CheckName, data.Script, funcs)
 	if err != nil {
-		l.Error("Error initializing starlark env: ", err)
-		os.Exit(1)
+		return errors.Wrap(err, "error initializing starlark env")
 	}
 
-	results, err := env.Run(data.CheckName, data.ScriptInput, l.Debugln)
+	input, err := agentpb.UnmarshalActionQueryResult([]byte(data.QueryActionResult))
 	if err != nil {
-		l.Error("Error running starlark env: ", err)
-		os.Exit(1)
+		return errors.Wrap(err, "error unmarshalling query action result")
 	}
 
-	jsonResults, err := json.Marshal(results)
+	results, err := env.Run(data.CheckName, input, l.Debugln)
 	if err != nil {
-		l.Error("Error marshalling JSON: ", err)
-		os.Exit(1)
+		return errors.Wrap(err, "error running starlark env")
 	}
-	fmt.Println(string(jsonResults))
+
+	encoder := json.NewEncoder(os.Stdout)
+	err = encoder.Encode(results)
+	if err != nil {
+		return errors.Wrap(err, "error marshalling JSON")
+	}
+
+	return nil
 }
