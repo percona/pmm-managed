@@ -104,7 +104,9 @@ func (svc *VMAlert) RequestConfigurationUpdate() {
 	}
 	select {
 	case svc.sema <- struct{}{}:
-		err := svc.updateConfiguration(context.Background())
+		ctx, cancel := context.WithTimeout(context.Background(), configurationUpdateTimeout)
+		defer cancel()
+		err := svc.updateConfiguration(ctx)
 		if err != nil {
 			svc.l.WithError(err).Errorf("cannot reload configuration")
 		}
@@ -117,7 +119,7 @@ func (svc *VMAlert) IsReady(ctx context.Context) error {
 	if !Enabled() {
 		return nil
 	}
-	// check VMAlert /health API and log version
+	// check VMAlert /health API
 	u := *svc.baseURL
 	u.Path = path.Join(u.Path, "health")
 	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)

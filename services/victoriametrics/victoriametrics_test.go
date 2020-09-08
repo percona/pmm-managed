@@ -37,7 +37,9 @@ import (
 const configPath = "../../testdata/victoriametrics/promscrape.yml"
 
 func TestMain(m *testing.M) {
-	enabled = true
+	loadEnabled.Do(func() {
+		enabled = true
+	})
 	os.Exit(m.Run())
 }
 
@@ -206,6 +208,15 @@ scrape_configs:
   static_configs:
   - targets:
     - 127.0.0.1:8428
+    labels:
+      instance: pmm-server
+- job_name: vmalert
+  honor_timestamps: false
+  scrape_interval: 5s
+  scrape_timeout: 4s
+  metrics_path: /metrics
+  static_configs:
+  - targets:
     - 127.0.0.1:8880
     labels:
       instance: pmm-server
@@ -578,7 +589,6 @@ scrape_configs:
   static_configs:
   - targets:
     - 127.0.0.1:8428
-    - 127.0.0.1:8880
     labels:
       instance: pmm-server
 - job_name: victoriametrics
@@ -589,6 +599,15 @@ scrape_configs:
   static_configs:
   - targets:
     - 127.0.0.1:8428
+    labels:
+      instance: pmm-server
+- job_name: vmalert
+  honor_timestamps: false
+  scrape_interval: 5s
+  scrape_timeout: 4s
+  metrics_path: /metrics
+  static_configs:
+  - targets:
     - 127.0.0.1:8880
     labels:
       instance: pmm-server

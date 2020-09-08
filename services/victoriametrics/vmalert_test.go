@@ -81,6 +81,5 @@ groups:
       summary: High request latency
 			`)))
 		check.NoError(svc.updateConfiguration(context.Background()))
-
 	})
 }

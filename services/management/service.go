@@ -41,17 +41,19 @@ var (
 
 // ServiceService represents service for working with services.
 type ServiceService struct {
-	db             *reform.DB
-	registry       agentsRegistry
-	scrapeServices []prometheusService
+	db         *reform.DB
+	registry   agentsRegistry
+	prometheus prometheusService
+	vmdb       prometheusService
 }
 
 // NewServiceService creates ServiceService instance.
-func NewServiceService(db *reform.DB, registry agentsRegistry, scrapeServices ...prometheusService) *ServiceService {
+func NewServiceService(db *reform.DB, registry agentsRegistry, prometheus, vmdb prometheusService) *ServiceService {
 	return &ServiceService{
-		db:             db,
-		registry:       registry,
-		scrapeServices: scrapeServices,
+		db:         db,
+		registry:   registry,
+		prometheus: prometheus,
+		vmdb:       vmdb,
 	}
 }
 
@@ -110,10 +112,9 @@ func (s *ServiceService) RemoveService(ctx context.Context, req *managementpb.Re
 		s.registry.SendSetStateRequest(ctx, agentID)
 	}
 	if reloadPrometheusConfig {
-		// It's required to regenerate scrapeServices config file for the agents which aren't run by pmm-agent.
-		for _, svc := range s.scrapeServices {
-			svc.RequestConfigurationUpdate()
-		}
+		// It's required to regenerate prometheus config file for the agents which aren't run by pmm-agent.
+		s.prometheus.RequestConfigurationUpdate()
+		s.vmdb.RequestConfigurationUpdate()
 	}
 	return &managementpb.RemoveServiceResponse{}, nil
 }

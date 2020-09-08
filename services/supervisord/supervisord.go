@@ -427,7 +427,7 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 					Fragment: u.Fragment,
 				}
 				templateParams["AlertManagerUser"] = username
-				templateParams["AlertManagerPassword"] = password
+				templateParams["AlertManagerPassword"] = strconv.Quote(password)
 				templateParams["AlertmanagerURL"] = n.String()
 			}
 		}
@@ -501,6 +501,7 @@ func (s *Service) UpdateConfiguration(settings *models.Settings) error {
 		if tmpl.Name() == "" {
 			continue
 		}
+
 		b, e := s.marshalConfig(tmpl, settings)
 		if e != nil {
 			s.l.Errorf("Failed to marshal config: %s.", e)
@@ -517,7 +518,6 @@ func (s *Service) UpdateConfiguration(settings *models.Settings) error {
 }
 
 // TODO Switch from /srv/alertmanager/alertmanager.base.yml to /etc/alertmanager.yml
-// todo (valayla) - what are we going todo with default memory usage and ` -memory.allowedPercent`.
 // once we start generating it. See alertmanager service.
 
 var templates = template.Must(template.New("").Option("missingkey=error").Parse(`
@@ -579,7 +579,7 @@ command =
 	/usr/sbin/vmalert
         --notifier.url="http://127.0.0.1:9093/alertmanager,{{ .AlertmanagerURL }}"
 {{- if and  .AlertManagerUser .AlertManagerPassword}}
-        --notifier.basicAuth.password=",{{.AlertManagerPassword}}"
+        --notifier.basicAuth.password=',{{.AlertManagerPassword }}'
         --notifier.basicAuth.username=",{{.AlertManagerUser}}"
 {{- end }}
         --external.url=http://localhost:9093/alertmanager/

@@ -19,6 +19,7 @@ package victoriametrics
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -26,6 +27,8 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
+	"strconv"
+	"sync"
 	"time"
 
 	"github.com/percona/pmm/utils/pdeathsig"
@@ -39,18 +42,31 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/prometheus"
 )
 
-const updateBatchDelay = 3 * time.Second
+const (
+	updateBatchDelay           = 3 * time.Second
+	configurationUpdateTimeout = 2 * time.Second
+)
 
 var (
-	enabled       = os.Getenv("PERCONA_TEST_VM") == "1" || os.Getenv("PERCONA_TEST_VM") == "true"
+	enabled       bool
+	loadEnabled   = sync.Once{}
 	checkFailedRE = regexp.MustCompile(`FAILED: parsing YAML file \S+: (.+)\n`)
 )
 
 // Enabled indicates whether VictoriaMetrics enabled or not.
 func Enabled() bool {
+	loadEnabled.Do(func() {
+		if enabledVar := os.Getenv("PERCONA_TEST_VM"); enabledVar != "" {
+			parsedBool, err := strconv.ParseBool(enabledVar)
+			if err != nil {
+				panic(fmt.Sprintf("cannot parse PERCONA_TEST_VM, as bool, value: %s", enabledVar))
+			}
+			enabled = parsedBool
+		}
+		enabled = false
+	})
 	return enabled
 }
 
@@ -141,7 +157,9 @@ func (svc *VictoriaMetrics) RequestConfigurationUpdate() {
 	}
 	select {
 	case svc.sema <- struct{}{}:
-		err := svc.updateConfiguration(context.Background())
+		ctx, cancel := context.WithTimeout(context.Background(), configurationUpdateTimeout)
+		defer cancel()
+		err := svc.updateConfiguration(ctx)
 		if err != nil {
 			svc.l.WithError(err).Errorf("cannot reload configuration")
 		}
@@ -150,12 +168,12 @@ func (svc *VictoriaMetrics) RequestConfigurationUpdate() {
 	}
 }
 
-// IsReady verifies that Prometheus works.
+// IsReady verifies that VictoriaMetrics works.
 func (svc *VictoriaMetrics) IsReady(ctx context.Context) error {
 	if !Enabled() {
 		return nil
 	}
-	// check VictoriaMetrics /health API and log version
+	// check VictoriaMetrics /health API
 	u := *svc.baseURL
 	u.Path = path.Join(u.Path, "health")
 	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
@@ -234,11 +252,9 @@ func (svc *VictoriaMetrics) marshalConfig() ([]byte, error) {
 			cfg.GlobalConfig.ScrapeInterval = config.Duration(s.LR)
 		}
 		if cfg.GlobalConfig.ScrapeTimeout == 0 {
-			cfg.GlobalConfig.ScrapeTimeout = prometheus.ScrapeTimeout(s.LR)
+			cfg.GlobalConfig.ScrapeTimeout = scrapeTimeout(s.LR)
 		}
-
-		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scrapeConfigForVictoriaMetrics(s.HR))
-		return prometheus.PopulateScrapeConfigs(cfg, svc.l, tx.Querier, &s)
+		return buildScrapeConfigs(cfg, svc.l, tx.Querier, &s)
 	})
 	if e != nil {
 		return nil, e
@@ -251,24 +267,6 @@ func (svc *VictoriaMetrics) marshalConfig() ([]byte, error) {
 
 	b = append([]byte("# Managed by pmm-managed. DO NOT EDIT.\n---\n"), b...)
 	return b, nil
-}
-
-// scrapeConfigForVictoriaMetrics returns scrape config for Victoria Metrics in Prometheus format.
-func scrapeConfigForVictoriaMetrics(interval time.Duration) *config.ScrapeConfig {
-	return &config.ScrapeConfig{
-		JobName:        "victoriametrics",
-		ScrapeInterval: config.Duration(interval),
-		ScrapeTimeout:  prometheus.ScrapeTimeout(interval),
-		MetricsPath:    "/metrics",
-		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
-			StaticConfigs: []*config.Group{
-				{
-					Targets: []string{"127.0.0.1:8428", "127.0.0.1:8880"},
-					Labels:  map[string]string{"instance": "pmm-server"},
-				},
-			},
-		},
-	}
 }
 
 // configAndReload saves given VictoriaMetrics configuration to file and reloads VictoriaMetrics.

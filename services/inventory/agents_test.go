@@ -55,17 +55,20 @@ func TestAgents(t *testing.T) {
 
 		p := new(mockPrometheusService)
 		p.Test(t)
+		vmdb := new(mockPrometheusService)
+		vmdb.Test(t)
 
 		teardown = func(t *testing.T) {
 			uuid.SetRand(nil)
 
 			r.AssertExpectations(t)
 			p.AssertExpectations(t)
+			vmdb.AssertExpectations(t)
 			require.NoError(t, sqlDB.Close())
 		}
 		ns = NewNodesService(db)
 		ss = NewServicesService(db, r)
-		as = NewAgentsService(db, r, p)
+		as = NewAgentsService(db, r, p, vmdb)
 
 		return
 	}
@@ -87,7 +90,8 @@ func TestAgents(t *testing.T) {
 			mock.AnythingOfType(reflect.TypeOf(&reform.TX{}).Name()),
 			mock.AnythingOfType(reflect.TypeOf(&models.Service{}).Name()),
 			mock.AnythingOfType(reflect.TypeOf(&models.Agent{}).Name())).Return(nil)
-		as.ss[0].(*mockPrometheusService).On("RequestConfigurationUpdate").Return()
+		as.p.(*mockPrometheusService).On("RequestConfigurationUpdate").Return()
+		as.vmdb.(*mockPrometheusService).On("RequestConfigurationUpdate").Return()
 
 		pmmAgent, err := as.AddPMMAgent(ctx, &inventorypb.AddPMMAgentRequest{
 			RunsOnNodeId: models.PMMServerNodeID,
@@ -395,7 +399,8 @@ func TestAgents(t *testing.T) {
 		_, ss, as, teardown := setup(t)
 		defer teardown(t)
 
-		as.ss[0].(*mockPrometheusService).On("RequestConfigurationUpdate").Return()
+		as.p.(*mockPrometheusService).On("RequestConfigurationUpdate").Return()
+		as.vmdb.(*mockPrometheusService).On("RequestConfigurationUpdate").Return()
 
 		service, err := ss.AddExternalService(ctx, &models.AddDBMSServiceParams{
 			ServiceName: "External service",
