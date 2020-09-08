@@ -33,7 +33,6 @@ import (
 	"github.com/AlekSi/pointer"
 	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/percona-platform/saas/pkg/check"
-	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/percona/pmm/utils/tlsconfig"
 	"github.com/percona/pmm/version"
@@ -322,7 +321,7 @@ func (s *Service) getMongoDBChecks() []check.Check {
 }
 
 // waitForResult periodically checks result state and returns it when complete.
-func (s *Service) waitForResult(ctx context.Context, resultID string) ([]map[string]interface{}, error) {
+func (s *Service) waitForResult(ctx context.Context, resultID string) (*models.ActionResult, error) {
 	ticker := time.NewTicker(resultCheckInterval)
 	defer ticker.Stop()
 
@@ -350,12 +349,7 @@ func (s *Service) waitForResult(ctx context.Context, resultID string) ([]map[str
 			return nil, errors.Errorf("action %s failed: %s", resultID, res.Error)
 		}
 
-		out, err := agentpb.UnmarshalActionQueryResult([]byte(res.Output))
-		if err != nil {
-			return nil, errors.Errorf("failed to parse action result: %s", err)
-		}
-
-		return out, nil
+		return res, nil
 	}
 }
 
@@ -572,10 +566,10 @@ type sttCheckResult struct {
 
 // StarlarkScriptData represents the data we need to pass to the binary to run starlark scripts.
 type StarlarkScriptData struct {
-	CheckName    string                   `json:"name"`
-	Script       string                   `json:"script"`
-	CheckVersion uint32                   `json:"version"`
-	ScriptInput  []map[string]interface{} `json:"input"`
+	CheckName         string `json:"name"`
+	Script            string `json:"script"`
+	CheckVersion      uint32 `json:"version"`
+	QueryActionResult string `json:"result"`
 }
 
 func (s *Service) processResults(ctx context.Context, sttCheck check.Check, target target, resID string) ([]sttCheckResult, error) {
@@ -593,43 +587,43 @@ func (s *Service) processResults(ctx context.Context, sttCheck check.Check, targ
 	})
 
 	input := &StarlarkScriptData{
-		CheckName:    sttCheck.Name,
-		Script:       sttCheck.Script,
-		CheckVersion: sttCheck.Version,
-		ScriptInput:  r,
+		CheckName:         sttCheck.Name,
+		Script:            sttCheck.Script,
+		CheckVersion:      sttCheck.Version,
+		QueryActionResult: r.Output,
 	}
 
 	cmdCtx, cancel := context.WithTimeout(ctx, scriptTimeout)
 	defer cancel()
 
 	process := exec.CommandContext(cmdCtx, "pmm-managed-starlark")
-	pdeathsig.Set(process, syscall.SIGTERM)
+	pdeathsig.Set(process, syscall.SIGKILL)
 
-	pipe, err := process.StdinPipe()
-	defer pipe.Close()
-	if err != nil {
-		return nil, err
-	}
+	var stdin bytes.Buffer
+	process.Stdin = &stdin
 
-	encoder := json.NewEncoder(pipe)
+	encoder := json.NewEncoder(&stdin)
 	err = encoder.Encode(input)
 	if err != nil {
-		l.Error("Error encoding data to STDIN, ", err)
-		return nil, err
+		return nil, errors.Wrap(err, "error encoding data to STDIN")
 	}
 
-	procOut, err := process.CombinedOutput()
+	procOut, err := process.Output()
 	if err != nil {
-		l.Error("Error processing script output, ", err)
+		if exitError, ok := err.(*exec.ExitError); ok {
+			return nil, exitError
+		}
 		return nil, err
 	}
 
 	var results []check.Result
-	err = json.Unmarshal(procOut, &results)
+	decoder := json.NewDecoder(bytes.NewReader(procOut))
+	err = decoder.Decode(&results)
 	if err != nil {
-		l.Error("Error processing json output, ", err)
-		return nil, err
+		return nil, errors.Wrap(err, "error processing json output")
 	}
+	l.Infof("Check script returned %d results.", len(results))
+	l.Debugf("Results: %+v.", results)
 
 	checkResults := make([]sttCheckResult, len(results))
 	for i, result := range results {
