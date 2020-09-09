@@ -72,13 +72,18 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 			continue
 		}
 
+		var err error
 		// skip test environment variables that are handled elsewere with a big warning
 		if strings.HasPrefix(k, "PERCONA_TEST_") {
 			warns = append(warns, fmt.Sprintf("environment variable %q IS NOT SUPPORTED and WILL BE REMOVED IN THE FUTURE", k))
+			if k == "PERCONA_TEST_DBAAS" {
+				envSettings.EnableDBaaS, err = strconv.ParseBool(v)
+				if err != nil {
+					err = fmt.Errorf("invalid value %q for environment variable %q", v, k)
+				}
+			}
 			continue
 		}
-
-		var err error
 		switch k {
 		case "_", "HOME", "HOSTNAME", "LANG", "PATH", "PWD", "SHLVL", "TERM":
 			// skip default environment variables
