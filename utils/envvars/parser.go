@@ -34,6 +34,11 @@ type InvalidDurationError string
 
 func (e InvalidDurationError) Error() string { return string(e) }
 
+// InvalidIntegerError invalid integer error.
+type InvalidIntegerError string
+
+func (e InvalidIntegerError) Error() string { return string(e) }
+
 // ParseEnvVars parses given environment variables.
 //
 // Returns valid setting and two lists with errors and warnings.
@@ -47,6 +52,7 @@ func (e InvalidDurationError) Error() string { return string(e) }
 //  - METRICS_RESOLUTION, METRICS_RESOLUTION, METRICS_RESOLUTION_HR,
 // METRICS_RESOLUTION_LR are durations of metrics resolution;
 //  - DATA_RETENTION is the duration of how long keep time-series data in ClickHouse;
+//  - DATA_RETENTION_MONTHS is the duration of how long keep time-series data in VictoriaMetrics;
 //  - the environment variables prefixed with GF_ passed as related to Grafana.
 func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs []error, warns []string) {
 	envSettings = new(models.ChangeSettingsParams)
@@ -139,6 +145,8 @@ func formatEnvVariableError(err error, env, value string) error {
 	switch e := err.(type) {
 	case InvalidDurationError:
 		return fmt.Errorf("environment variable %q has invalid duration %s", env, value)
+	case InvalidIntegerError:
+		return fmt.Errorf("environment variable %q has invalid integer %s", env, value)
 	default:
 		return errors.Wrap(e, "unknown error")
 	}

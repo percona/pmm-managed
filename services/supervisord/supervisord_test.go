@@ -35,9 +35,10 @@ func TestConfig(t *testing.T) {
 
 	pmmUpdateCheck := NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker_logs"))
 	configDir := filepath.Join("..", "..", "testdata", "supervisord.d")
-	s := New(configDir, pmmUpdateCheck)
+	s := New(configDir, pmmUpdateCheck, true)
 	settings := &models.Settings{
-		DataRetention: 30 * 24 * time.Hour,
+		DataRetention:   30 * 24 * time.Hour,
+		AlertManagerURL: "https://external-user:passw!,ord@external-alertmanager:6443/alerts",
 	}
 
 	for _, tmpl := range templates.Templates() {

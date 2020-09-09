@@ -158,8 +158,13 @@ func (svc *Service) loadBaseConfig() *config.Config {
 	return &cfg
 }
 
+// AddScrapeConfigs wraps addScrapeConfigs for victoriametrics package.
+func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s *models.MetricsResolutions) error {
+	return addScrapeConfigs(l, cfg, q, s)
+}
+
 // addScrapeConfigs adds Prometheus scrape configs to cfg for all Agents.
-func (svc *Service) addScrapeConfigs(cfg *config.Config, q *reform.Querier, s *models.MetricsResolutions) error {
+func addScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s *models.MetricsResolutions) error {
 	agents, err := q.SelectAllFrom(models.AgentTable, "WHERE NOT disabled AND listen_port IS NOT NULL ORDER BY agent_type, agent_id")
 	if err != nil {
 		return errors.WithStack(err)
@@ -176,7 +181,7 @@ func (svc *Service) addScrapeConfigs(cfg *config.Config, q *reform.Querier, s *m
 
 		// sanity check
 		if (agent.NodeID != nil) && (agent.ServiceID != nil) {
-			svc.l.Panicf("Both agent.NodeID and agent.ServiceID are present: %s", agent)
+			l.Panicf("Both agent.NodeID and agent.ServiceID are present: %s", agent)
 		}
 
 		// find Service for this Agent
@@ -221,7 +226,8 @@ func (svc *Service) addScrapeConfigs(cfg *config.Config, q *reform.Querier, s *m
 			}
 			paramsHost = externalExporterNode.Address
 		default:
-			svc.l.Warnf("It's not possible to get host, skipping scrape config for %s.", agent)
+			l.Warnf("It's not possible to get host, skipping scrape config for %s.", agent)
+
 			continue
 		}
 
@@ -281,6 +287,7 @@ func (svc *Service) addScrapeConfigs(cfg *config.Config, q *reform.Querier, s *m
 				service: paramsService,
 				agent:   agent,
 			})
+
 			continue
 
 		case models.ExternalExporterType:
@@ -292,12 +299,13 @@ func (svc *Service) addScrapeConfigs(cfg *config.Config, q *reform.Querier, s *m
 			})
 
 		default:
-			svc.l.Warnf("Skipping scrape config for %s.", agent)
+			l.Warnf("Skipping scrape config for %s.", agent)
+
 			continue
 		}
 
 		if err != nil {
-			svc.l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
+			l.Warnf("Failed to add %s %q, skipping: %s.", agent.AgentType, agent.AgentID, err)
 		}
 		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scfgs...)
 	}
@@ -338,13 +346,7 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 			"/srv/prometheus/rules/*.yml",
 		)
 
-		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs,
-			scrapeConfigForPrometheus(s.HR),
-			scrapeConfigForAlertmanager(s.MR),
-			scrapeConfigForGrafana(s.MR),
-			scrapeConfigForPMMManaged(s.MR),
-			scrapeConfigForQANAPI2(s.MR),
-		)
+		AddInternalServiceToScrape(cfg, s)
 
 		cfg.AlertingConfig.AlertmanagerConfigs = append(cfg.AlertingConfig.AlertmanagerConfigs, &config.AlertmanagerConfig{
 			ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
@@ -391,7 +393,7 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 			}
 		}
 
-		return svc.addScrapeConfigs(cfg, tx.Querier, &s)
+		return addScrapeConfigs(svc.l, cfg, tx.Querier, &s)
 	})
 	if e != nil {
 		return nil, e
@@ -407,6 +409,17 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 
 	b = append([]byte("# Managed by pmm-managed. DO NOT EDIT.\n---\n"), b...)
 	return b, nil
+}
+
+// AddInternalServiceToScrape adds internal services metrics to scrape targets.
+func AddInternalServiceToScrape(cfg *config.Config, s models.MetricsResolutions) {
+	cfg.ScrapeConfigs = append(cfg.ScrapeConfigs,
+		scrapeConfigForPrometheus(s.HR),
+		scrapeConfigForAlertmanager(s.MR),
+		scrapeConfigForGrafana(s.MR),
+		scrapeConfigForPMMManaged(s.MR),
+		scrapeConfigForQANAPI2(s.MR),
+	)
 }
 
 // saveConfigAndReload saves given Prometheus configuration to file and reloads Prometheus.
