@@ -485,6 +485,15 @@ func setupFixture1(q *reform.Querier, username, password string) error {
 	if err != nil {
 		return err
 	}
+	_, err = CreateAgent(q, QANPostgreSQLPgStatMonitorAgentType, &CreateAgentParams{
+		PMMAgentID: PMMServerAgentID,
+		ServiceID:  service.ServiceID,
+		Username:   username,
+		Password:   password,
+	})
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
