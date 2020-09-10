@@ -70,7 +70,7 @@ func main() {
 
 	err = runChecks(l, data)
 	if err != nil {
-		l.Error(err)
+		l.Errorf("Error running starlark script: %s", err)
 		os.Exit(1)
 	}
 }
@@ -95,7 +95,7 @@ func runChecks(l *logrus.Entry, data checks.StarlarkScriptData) error {
 		return errors.Wrap(err, "error initializing starlark env")
 	}
 
-	input, err := agentpb.UnmarshalActionQueryResult([]byte(data.QueryActionResult))
+	input, err := agentpb.UnmarshalActionQueryResult(data.QueryActionResult)
 	if err != nil {
 		return errors.Wrap(err, "error unmarshalling query action result")
 	}

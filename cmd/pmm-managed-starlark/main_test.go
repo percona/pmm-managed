@@ -1,84 +1,104 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"os/exec"
 	"testing"
 
 	"github.com/percona/pmm-managed/services/checks"
-	"github.com/sirupsen/logrus"
+	"github.com/percona/pmm/api/agentpb"
 	"github.com/stretchr/testify/require"
 )
 
-func TestRunChecks(t *testing.T) {
-	l := logrus.WithField("component", "pmm-managed-starlark")
+var (
+	validQueryActionResult = []map[string]interface{}{
+		{"Value": "5.7.30-33-log", "Variable_name": "version"},
+		{"Value": "Percona Server (GPL), Release 33, Revision 6517692", "Variable_name": "version_comment"},
+		{"Value": "x86_64", "Variable_name": "version_compile_machine"},
+		{"Value": "Linux", "Variable_name": "version_compile_os"},
+		{"Value": "-log", "Variable_name": "version_suffix"},
+	}
 
+	invalidQueryActionResult = []map[string]interface{}{
+		{"key-1": "val-1", "key-2": "val-2"},
+	}
+)
+
+func TestRunChecks(t *testing.T) {
 	testCases := []struct {
-		data   checks.StarlarkScriptData
-		err    bool
-		panics bool
+		name    string
+		script  string
+		version uint32
+		result  []map[string]interface{}
+		err     bool
 	}{
 		{
-			data: checks.StarlarkScriptData{
-				CheckName:         "invalid version",
-				Script:            "def check(): return []",
-				CheckVersion:      5,
-				QueryActionResult: "some result",
-			},
-			err:    true,
-			panics: false,
+			name:    "invalid version",
+			script:  "def check(): return []",
+			version: 5,
+			result:  invalidQueryActionResult,
+			err:     true,
 		},
 		{
-			data: checks.StarlarkScriptData{
-				CheckName:         "invalid starlark syntax",
-				Script:            "@ + @",
-				CheckVersion:      1,
-				QueryActionResult: "some result",
-			},
-			err:    true,
-			panics: false,
+			name:    "invalid starlark syntax",
+			script:  "@ + @",
+			version: 1,
+			result:  invalidQueryActionResult,
+			err:     true,
 		},
 		{
-			data: checks.StarlarkScriptData{
-				CheckName:         "invalid query action result",
-				Script:            "def check(): return []",
-				CheckVersion:      1,
-				QueryActionResult: "some result",
-			},
-			err:    true,
-			panics: false,
+			name:    "invalid query action result",
+			script:  "def check(): return []",
+			version: 1,
+			result:  invalidQueryActionResult,
+			err:     true,
 		},
 		{
-			data: checks.StarlarkScriptData{
-				CheckName:         "bad starlark script",
-				Script:            "def check(rows): return [1] * (1 << 30-1)",
-				CheckVersion:      1,
-				QueryActionResult: "\n\rVariable_name\n\x05Value\x12\x1c\n\t2\aversion\n\x0f2\r5.7.30-33-log\x12I\n\x112\x0fversion_comment\n422Percona Server (GPL), Release 33, Revision 6517692\x12%\n\x192\x17version_compile_machine\n\b2\x06x86_64\x12\x1f\n\x142\x12version_compile_os\n\a2\x05Linux\x12\x1a\n\x102\x0eversion_suffix\n\x062\x04-log",
-			},
-			err:    true,
-			panics: true,
+			name:    "bad starlark script",
+			script:  "def check(rows): return [1] * (1 << 30-1)",
+			version: 1,
+			result:  validQueryActionResult,
+			err:     true,
 		},
 		{
-			data: checks.StarlarkScriptData{
-				CheckName:         "valid starlark script",
-				Script:            "def check(rows): return []",
-				CheckVersion:      1,
-				QueryActionResult: "\n\rVariable_name\n\x05Value\x12\x1c\n\t2\aversion\n\x0f2\r5.7.30-33-log\x12I\n\x112\x0fversion_comment\n422Percona Server (GPL), Release 33, Revision 6517692\x12%\n\x192\x17version_compile_machine\n\b2\x06x86_64\x12\x1f\n\x142\x12version_compile_os\n\a2\x05Linux\x12\x1a\n\x102\x0eversion_suffix\n\x062\x04-log",
-			},
-			err:    false,
-			panics: false,
+			name:    "valid starlark script",
+			script:  "def check(rows): return []",
+			version: 1,
+			result:  validQueryActionResult,
+			err:     false,
 		},
 	}
 
+	err := exec.Command("/bin/sh", "-c", "cd ../../; make release").Run()
+	require.NoError(t, err)
+
 	for _, tc := range testCases {
-		t.Run(tc.data.CheckName, func(t *testing.T) {
-			if tc.panics {
-				require.Panics(t, func() { runChecks(l, tc.data) })
+		result, err := agentpb.MarshalActionQueryDocsResult(tc.result)
+		require.NoError(t, err)
+
+		data := checks.StarlarkScriptData{
+			CheckName:         tc.name,
+			CheckVersion:      tc.version,
+			Script:            tc.script,
+			QueryActionResult: result,
+		}
+
+		t.Run(tc.name, func(t *testing.T) {
+			cmd := exec.Command("./../../bin/pmm-managed-starlark")
+
+			var stdin bytes.Buffer
+			cmd.Stdin = &stdin
+
+			encoder := json.NewEncoder(&stdin)
+			err = encoder.Encode(data)
+			require.NoError(t, err)
+
+			err = cmd.Run()
+			if tc.err {
+				require.Error(t, err)
 			} else {
-				err := runChecks(l, tc.data)
-				if tc.err {
-					require.Error(t, err)
-				} else {
-					require.NoError(t, err)
-				}
+				require.NoError(t, err)
 			}
 		})
 	}

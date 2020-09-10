@@ -321,7 +321,7 @@ func (s *Service) getMongoDBChecks() []check.Check {
 }
 
 // waitForResult periodically checks result state and returns it when complete.
-func (s *Service) waitForResult(ctx context.Context, resultID string) (*models.ActionResult, error) {
+func (s *Service) waitForResult(ctx context.Context, resultID string) ([]byte, error) {
 	ticker := time.NewTicker(resultCheckInterval)
 	defer ticker.Stop()
 
@@ -349,7 +349,7 @@ func (s *Service) waitForResult(ctx context.Context, resultID string) (*models.A
 			return nil, errors.Errorf("action %s failed: %s", resultID, res.Error)
 		}
 
-		return res, nil
+		return []byte(res.Output), nil
 	}
 }
 
@@ -569,7 +569,7 @@ type StarlarkScriptData struct {
 	CheckName         string `json:"name"`
 	Script            string `json:"script"`
 	CheckVersion      uint32 `json:"version"`
-	QueryActionResult string `json:"result"`
+	QueryActionResult []byte `json:"result"`
 }
 
 func (s *Service) processResults(ctx context.Context, sttCheck check.Check, target target, resID string) ([]sttCheckResult, error) {
@@ -590,7 +590,7 @@ func (s *Service) processResults(ctx context.Context, sttCheck check.Check, targ
 		CheckName:         sttCheck.Name,
 		Script:            sttCheck.Script,
 		CheckVersion:      sttCheck.Version,
-		QueryActionResult: r.Output,
+		QueryActionResult: r,
 	}
 
 	cmdCtx, cancel := context.WithTimeout(ctx, scriptTimeout)
