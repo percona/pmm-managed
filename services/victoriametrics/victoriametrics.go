@@ -59,14 +59,15 @@ var (
 // Enabled indicates whether VictoriaMetrics enabled or not.
 func Enabled() bool {
 	loadEnabled.Do(func() {
-		if enabledVar := os.Getenv("PERCONA_TEST_VM"); enabledVar != "" {
-			parsedBool, err := strconv.ParseBool(enabledVar)
-			if err != nil {
-				panic(fmt.Sprintf("cannot parse PERCONA_TEST_VM, as bool, value: %s", enabledVar))
-			}
-			enabled = parsedBool
+		enabledVar := os.Getenv("PERCONA_TEST_VM")
+		if enabledVar == "" {
+			return
 		}
-		enabled = false
+		parsedBool, err := strconv.ParseBool(enabledVar)
+		if err != nil {
+			panic(fmt.Sprintf("cannot parse PERCONA_TEST_VM, as bool, value: %s", enabledVar))
+		}
+		enabled = parsedBool
 	})
 
 	return enabled
