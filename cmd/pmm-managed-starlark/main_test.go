@@ -6,9 +6,10 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/percona/pmm-managed/services/checks"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/stretchr/testify/require"
+
+	"github.com/percona/pmm-managed/services/checks"
 )
 
 var (

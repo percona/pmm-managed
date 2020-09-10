@@ -23,13 +23,14 @@ import (
 	"strconv"
 
 	"github.com/percona-platform/saas/pkg/starlark"
-	"github.com/percona/pmm-managed/services/checks"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/percona/pmm-managed/services/checks"
 )
 
 const (
