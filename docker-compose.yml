@@ -2,7 +2,7 @@
 version: '3.7'
 services:
   pmm-managed-server:
-#    image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server:dev-latest}
+# REPLACE IT BEFORE MERGE    image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server:dev-latest}
     image: perconalab/pmm-server-fb:PR-1020-1a8e2cd
     container_name: pmm-managed-server
     hostname: pmm-managed-server
