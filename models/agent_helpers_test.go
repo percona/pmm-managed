@@ -289,7 +289,7 @@ func TestAgentHelpers(t *testing.T) {
 		})
 	})
 
-	t.Run("TestPickPMMAgent", func(t *testing.T) {
+	t.Run("TestFindPMMAgentsForVersion", func(t *testing.T) {
 		l := logrus.WithField("component", "test")
 		agentInvalid := &models.Agent{
 			Version: pointer.ToString("invalid"),
