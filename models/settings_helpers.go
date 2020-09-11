@@ -138,9 +138,7 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 	if params.EnableSTT {
 		settings.SaaS.STTEnabled = true
 	}
-	if params.EnableDBaaS {
-		settings.DBaaS.DBaaSEnabled = true
-	}
+	settings.DBaaS.Enabled = params.EnableDBaaS
 	if params.LogOut {
 		settings.SaaS.SessionID = ""
 		settings.SaaS.Email = ""

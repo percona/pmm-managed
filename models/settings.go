@@ -61,7 +61,7 @@ type Settings struct {
 
 	// DBaaS config options
 	DBaaS struct {
-		DBaaSEnabled bool `json:"dbaas_enabled"`
+		Enabled bool `json:"enabled"`
 	} `json:"dbaas"`
 }
 
