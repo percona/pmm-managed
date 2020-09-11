@@ -73,15 +73,15 @@ func TestNodeService(t *testing.T) {
 			})
 			expected := &managementpb.RegisterNodeResponse{
 				GenericNode: &inventorypb.GenericNode{
-					NodeId:   "/node_id/00000000-0000-4000-8000-000000000005",
+					NodeId:   "/node_id/00000000-0000-4000-8000-000000000006",
 					NodeName: "node",
 					Address:  "some.address.org",
 					Region:   "region",
 				},
 				ContainerNode: (*inventorypb.ContainerNode)(nil),
 				PmmAgent: &inventorypb.PMMAgent{
-					AgentId:      "/agent_id/00000000-0000-4000-8000-000000000006",
-					RunsOnNodeId: "/node_id/00000000-0000-4000-8000-000000000005",
+					AgentId:      "/agent_id/00000000-0000-4000-8000-000000000007",
+					RunsOnNodeId: "/node_id/00000000-0000-4000-8000-000000000006",
 				},
 			}
 			assert.Equal(t, expected, res)
@@ -106,15 +106,15 @@ func TestNodeService(t *testing.T) {
 				})
 				expected := &managementpb.RegisterNodeResponse{
 					GenericNode: &inventorypb.GenericNode{
-						NodeId:   "/node_id/00000000-0000-4000-8000-000000000008",
+						NodeId:   "/node_id/00000000-0000-4000-8000-000000000009",
 						NodeName: "node",
 						Address:  "some.address.org",
 						Region:   "region",
 					},
 					ContainerNode: (*inventorypb.ContainerNode)(nil),
 					PmmAgent: &inventorypb.PMMAgent{
-						AgentId:      "/agent_id/00000000-0000-4000-8000-000000000009",
-						RunsOnNodeId: "/node_id/00000000-0000-4000-8000-000000000008",
+						AgentId:      "/agent_id/00000000-0000-4000-8000-00000000000a",
+						RunsOnNodeId: "/node_id/00000000-0000-4000-8000-000000000009",
 					},
 				}
 				assert.Equal(t, expected, res)
@@ -130,15 +130,15 @@ func TestNodeService(t *testing.T) {
 				})
 				expected := &managementpb.RegisterNodeResponse{
 					GenericNode: &inventorypb.GenericNode{
-						NodeId:   "/node_id/00000000-0000-4000-8000-00000000000b",
+						NodeId:   "/node_id/00000000-0000-4000-8000-00000000000c",
 						NodeName: "node-name-new",
 						Address:  "some.address.org",
 						Region:   "region",
 					},
 					ContainerNode: (*inventorypb.ContainerNode)(nil),
 					PmmAgent: &inventorypb.PMMAgent{
-						AgentId:      "/agent_id/00000000-0000-4000-8000-00000000000c",
-						RunsOnNodeId: "/node_id/00000000-0000-4000-8000-00000000000b",
+						AgentId:      "/agent_id/00000000-0000-4000-8000-00000000000d",
+						RunsOnNodeId: "/node_id/00000000-0000-4000-8000-00000000000c",
 					},
 				}
 				assert.Equal(t, expected, res)
