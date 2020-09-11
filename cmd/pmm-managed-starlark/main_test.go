@@ -28,46 +28,46 @@ var (
 
 func TestRunChecks(t *testing.T) {
 	testCases := []struct {
+		err     bool
+		version uint32
 		name    string
 		script  string
-		version uint32
 		result  []map[string]interface{}
-		err     bool
 	}{
 		{
+			err:     true,
+			version: 5,
 			name:    "invalid version",
 			script:  "def check(): return []",
-			version: 5,
 			result:  invalidQueryActionResult,
-			err:     true,
 		},
 		{
+			err:     true,
+			version: 1,
 			name:    "invalid starlark syntax",
 			script:  "@ + @",
-			version: 1,
 			result:  invalidQueryActionResult,
-			err:     true,
 		},
 		{
+			err:     true,
+			version: 1,
 			name:    "invalid query action result",
 			script:  "def check(): return []",
-			version: 1,
 			result:  invalidQueryActionResult,
-			err:     true,
 		},
 		{
+			err:     true,
+			version: 1,
 			name:    "bad starlark script",
 			script:  "def check(rows): return [1] * (1 << 30-1)",
-			version: 1,
 			result:  validQueryActionResult,
-			err:     true,
 		},
 		{
+			err:     false,
+			version: 1,
 			name:    "valid starlark script",
 			script:  "def check(rows): return []",
-			version: 1,
 			result:  validQueryActionResult,
-			err:     false,
 		},
 	}
 
