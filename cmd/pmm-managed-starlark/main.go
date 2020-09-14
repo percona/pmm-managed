@@ -22,6 +22,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/percona-platform/saas/pkg/check"
 	"github.com/percona-platform/saas/pkg/starlark"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/version"
@@ -34,8 +35,8 @@ import (
 )
 
 const (
-	cpuLimit    = 4                 // 4 seconds of CPU time
-	memoryLimit = 100 * 1024 * 1024 // 100MB of memory in bytes
+	cpuLimit         = 4 // 4 seconds of CPU time
+	memoryLimitBytes = 100 * 1024 * 1024
 )
 
 func main() {
@@ -69,48 +70,49 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = runChecks(l, data)
+	results, err := runChecks(l, &data)
 	if err != nil {
 		l.Errorf("Error running starlark script: %s", err)
 		os.Exit(1)
 	}
+
+	encoder := json.NewEncoder(os.Stdout)
+	err = encoder.Encode(results)
+	if err != nil {
+		l.Errorf("error marshalling JSON results: %s", err)
+		os.Exit(1)
+	}
 }
 
-func runChecks(l *logrus.Entry, data checks.StarlarkScriptData) error {
+func runChecks(l *logrus.Entry, data *checks.StarlarkScriptData) ([]check.Result, error) {
 	err := unix.Setrlimit(unix.RLIMIT_CPU, &unix.Rlimit{Cur: cpuLimit, Max: cpuLimit})
 	if err != nil {
 		l.Warnf("Failed to limit CPU usage: %s", err)
 	}
-	err = unix.Setrlimit(unix.RLIMIT_DATA, &unix.Rlimit{Cur: memoryLimit, Max: memoryLimit})
+	err = unix.Setrlimit(unix.RLIMIT_DATA, &unix.Rlimit{Cur: memoryLimitBytes, Max: memoryLimitBytes})
 	if err != nil {
 		l.Warnf("Failed to limit memory usage: %s", err)
 	}
 
 	funcs, err := checks.GetFuncsForVersion(data.CheckVersion)
 	if err != nil {
-		return errors.Wrap(err, "error getting funcs")
+		return nil, errors.Wrap(err, "error getting funcs")
 	}
 
 	env, err := starlark.NewEnv(data.CheckName, data.Script, funcs)
 	if err != nil {
-		return errors.Wrap(err, "error initializing starlark env")
+		return nil, errors.Wrap(err, "error initializing starlark env")
 	}
 
 	input, err := agentpb.UnmarshalActionQueryResult(data.QueryActionResult)
 	if err != nil {
-		return errors.Wrap(err, "error unmarshalling query action result")
+		return nil, errors.Wrap(err, "error unmarshalling query action result")
 	}
 
 	results, err := env.Run(data.CheckName, input, l.Debugln)
 	if err != nil {
-		return errors.Wrap(err, "error running starlark env")
+		return nil, errors.Wrap(err, "error running starlark env")
 	}
 
-	encoder := json.NewEncoder(os.Stdout)
-	err = encoder.Encode(results)
-	if err != nil {
-		return errors.Wrap(err, "error marshalling JSON")
-	}
-
-	return nil
+	return results, nil
 }

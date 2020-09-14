@@ -52,13 +52,6 @@ func TestRunChecks(t *testing.T) {
 	}{
 		{
 			err:     true,
-			version: 5,
-			name:    "invalid version",
-			script:  "def check(): return []",
-			result:  invalidQueryActionResult,
-		},
-		{
-			err:     true,
 			version: 1,
 			name:    "invalid starlark syntax",
 			script:  "@ + @",
@@ -87,7 +80,8 @@ func TestRunChecks(t *testing.T) {
 		},
 	}
 
-	err := exec.Command("/bin/sh", "-c", "cd ../../; make release").Run()
+	// since run the binary as a child process to test it, we need to build it first.
+	err := exec.Command("make", "-C", "../..", "release").Run()
 	require.NoError(t, err)
 
 	for _, tc := range testCases {
