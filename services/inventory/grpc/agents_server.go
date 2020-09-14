@@ -405,6 +405,32 @@ func (s *agentsServer) ChangeQANPostgreSQLPgStatementsAgent(ctx context.Context,
 	return res, nil
 }
 
+// AddQANPostgreSQLPgStatMonitorAgent adds PostgreSQL Pg stat monitor QAN Agent.
+func (s *agentsServer) AddQANPostgreSQLPgStatMonitorAgent(ctx context.Context, req *inventorypb.AddQANPostgreSQLPgStatMonitorAgentRequest) (*inventorypb.AddQANPostgreSQLPgStatMonitorAgentResponse, error) {
+	agent, err := s.s.AddQANPostgreSQLPgStatMonitorAgent(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &inventorypb.AddQANPostgreSQLPgStatMonitorAgentResponse{
+		QanPostgresqlPgstatmonitorAgent: agent,
+	}
+	return res, nil
+}
+
+// ChangeQANPostgreSQLPgStatMonitorAgent changes disabled flag and custom labels of PostgreSQL Pg stat monitor QAN Agent.
+func (s *agentsServer) ChangeQANPostgreSQLPgStatMonitorAgent(ctx context.Context, req *inventorypb.ChangeQANPostgreSQLPgStatMonitorAgentRequest) (*inventorypb.ChangeQANPostgreSQLPgStatMonitorAgentResponse, error) {
+	agent, err := s.s.ChangeQANPostgreSQLPgStatMonitorAgent(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &inventorypb.ChangeQANPostgreSQLPgStatMonitorAgentResponse{
+		QanPostgresqlPgstatmonitorAgent: agent,
+	}
+	return res, nil
+}
+
 // AddRDSExporter adds rds_exporter Agent.
 func (s *agentsServer) AddRDSExporter(ctx context.Context, req *inventorypb.AddRDSExporterRequest) (*inventorypb.AddRDSExporterResponse, error) {
 	agent, err := s.s.AddRDSExporter(ctx, req)
