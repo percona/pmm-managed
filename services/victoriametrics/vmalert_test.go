@@ -39,7 +39,7 @@ func setupVMAlert(t *testing.T) (*reform.DB, *prometheus.AlertingRules, *VMAlert
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
 	rules := prometheus.NewAlertingRules()
-	svc, err := NewVMAlert(rules, "http://127.0.0.1:8880/")
+	svc, err := NewVMAlert(rules, "http://127.0.0.1:8880/", true)
 	check.NoError(err)
 
 	check.NoError(svc.IsReady(context.Background()))

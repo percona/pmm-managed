@@ -454,6 +454,8 @@ func main() {
 		Default("http://127.0.0.1:8880/").String()
 	victoriaMetricsConfigF := kingpin.Flag("victoriametrics-config", "VictoriaMetrics scape configuration file path").
 		Default("/etc/victoriametrics-promscrape.yml").String()
+	victoriaMetricsBaseConfigF := kingpin.Flag("victoriametrics-baseconfig", "VictoriaMetrics basic configuration file, can be mounted to container").
+		Default("/srv/prometheus/prometheus.base.yml").String()
 
 	grafanaAddrF := kingpin.Flag("grafana-addr", "Grafana HTTP API address").Default("127.0.0.1:3000").String()
 	qanAPIAddrF := kingpin.Flag("qan-api-addr", "QAN API gRPC API address").Default("127.0.0.1:9911").String()
@@ -531,11 +533,15 @@ func main() {
 	if err != nil {
 		l.Panicf("Prometheus service problem: %+v", err)
 	}
-	vmdb, err := victoriametrics.NewVictoriaMetrics(*victoriaMetricsConfigF, db, *victoriaMetricsURLF)
+	vmParams, err := models.NewVictoriaMetricsParams(*victoriaMetricsBaseConfigF)
+	if err != nil {
+		l.Panicf("cannot load victoriametrics params")
+	}
+	vmdb, err := victoriametrics.NewVictoriaMetrics(*victoriaMetricsConfigF, db, *victoriaMetricsURLF, vmParams.Enabled)
 	if err != nil {
 		l.Panicf("VictoriaMetrics service problem: %+v", err)
 	}
-	vmalert, err := victoriametrics.NewVMAlert(alertingRules, *victoriaMetricsVMAlertURLF)
+	vmalert, err := victoriametrics.NewVMAlert(alertingRules, *victoriaMetricsVMAlertURLF, vmParams.Enabled)
 	if err != nil {
 		l.Panicf("VictoriaMetrics VMAlert service problem: %+v", err)
 	}
@@ -550,7 +556,7 @@ func main() {
 	pmmUpdateCheck := supervisord.NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker"))
 
 	logs := supervisord.NewLogs(version.FullInfo(), pmmUpdateCheck)
-	supervisord := supervisord.New(*supervisordConfigDirF, pmmUpdateCheck, victoriametrics.Enabled())
+	supervisord := supervisord.New(*supervisordConfigDirF, pmmUpdateCheck, vmParams)
 	telemetry := telemetry.NewService(db, version.Version)
 
 	awsInstanceChecker := server.NewAWSInstanceChecker(db, telemetry)

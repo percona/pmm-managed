@@ -61,7 +61,7 @@ type Service struct {
 	pmmUpdatePerformLogM sync.Mutex
 	supervisordConfigsM  sync.Mutex
 
-	isVMEnabled bool // for testing purpose
+	vmParams *models.VictoriaMetricsParams
 }
 
 type sub struct {
@@ -77,7 +77,7 @@ const (
 )
 
 // New creates new service.
-func New(configDir string, pmmUpdateCheck *PMMUpdateChecker, isVMEnabled bool) *Service {
+func New(configDir string, pmmUpdateCheck *PMMUpdateChecker, vmParams *models.VictoriaMetricsParams) *Service {
 	path, _ := exec.LookPath("supervisorctl")
 	return &Service{
 		configDir:         configDir,
@@ -86,7 +86,7 @@ func New(configDir string, pmmUpdateCheck *PMMUpdateChecker, isVMEnabled bool) *
 		pmmUpdateCheck:    pmmUpdateCheck,
 		subs:              make(map[chan *event]sub),
 		lastEvents:        make(map[string]eventType),
-		isVMEnabled:       isVMEnabled,
+		vmParams:          vmParams,
 	}
 }
 
@@ -406,10 +406,12 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 		"DataRetentionHours":   int(settings.DataRetention.Hours()),
 		"DataRetentionDays":    int(settings.DataRetention.Hours() / 24),
 		"DataRetentionMonth":   retentionMonths,
-		"IsVMEnabled":          s.isVMEnabled,
+		"IsVMEnabled":          s.vmParams.Enabled,
 		"AlertmanagerURL":      settings.AlertManagerURL,
 		"AlertManagerUser":     "",
 		"AlertManagerPassword": "",
+		"VMAlertParams":        s.vmParams.VMAlert,
+		"VMDBParams":           s.vmParams.VMDB,
 	}
 	u, err := url.Parse(settings.AlertManagerURL)
 	if err == nil && (u.Opaque != "" || u.Host == "") {
@@ -432,6 +434,7 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 			}
 		}
 	}
+	// vm configuration
 
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, templateParams); err != nil {
@@ -497,6 +500,11 @@ func (s *Service) UpdateConfiguration(settings *models.Settings) error {
 	defer s.supervisordConfigsM.Unlock()
 
 	var err error
+
+	err = s.vmParams.UpdateParams()
+	if err != nil {
+		return err
+	}
 	for _, tmpl := range templates.Templates() {
 		if tmpl.Name() == "" {
 			continue
@@ -559,6 +567,9 @@ command =
 		--retentionPeriod={{ .DataRetentionMonth }}
 		--storageDataPath=/srv/victoriametrics/data
 		--httpListenAddr=127.0.0.1:8428
+{{- range $index, $param := .VMDBParams}}
+		{{$param}}
+{{- end}}
 user = pmm
 autorestart = {{ .IsVMEnabled }}
 autostart = {{ .IsVMEnabled }}
@@ -577,17 +588,21 @@ redirect_stderr = true
 priority = 7
 command =
 	/usr/sbin/vmalert
-        --notifier.url="http://127.0.0.1:9093/alertmanager,{{ .AlertmanagerURL }}"
+        --notifier.url="http://127.0.0.1:9093/alertmanager{{- if .AlertmanagerURL }},{{ .AlertmanagerURL }}{{- end }}"
 {{- if and  .AlertManagerUser .AlertManagerPassword}}
         --notifier.basicAuth.password=',{{.AlertManagerPassword }}'
         --notifier.basicAuth.username=",{{.AlertManagerUser}}"
 {{- end }}
-        --external.url=http://localhost:9093/alertmanager/
+        --external.url=http://localhost/graph
+        --external.alert.source='explore?orgId=1&left=["now-1h","now","Prometheus",{"expr": "{{"{{"}}$expr|quotesEscape|pathEscape{{"}}"}}"},{"mode":"Metrics"},{"ui":[true,true,true,"none"]}]'
         --datasource.url=http://127.0.0.1:8428
         --remoteRead.url=http://127.0.0.1:8428
         --remoteWrite.url=http://127.0.0.1:8428
         --rule=/srv/prometheus/rules/*.yml
         --httpListenAddr=127.0.0.1:8880
+{{- range $index, $param := .VMAlertParams}}
+        {{$param}}
+{{- end}}
 user = pmm
 autorestart = {{ .IsVMEnabled }}
 autostart = {{ .IsVMEnabled }}

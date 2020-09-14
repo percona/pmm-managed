@@ -19,7 +19,6 @@ package victoriametrics
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -27,8 +26,6 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
-	"strconv"
-	"sync"
 	"time"
 
 	"github.com/percona/pmm/utils/pdeathsig"
@@ -51,30 +48,12 @@ const (
 )
 
 var (
-	enabled       bool
-	loadEnabled   = sync.Once{}
 	checkFailedRE = regexp.MustCompile(`FAILED: parsing YAML file \S+: (.+)\n`)
 )
 
-// Enabled indicates whether VictoriaMetrics enabled or not.
-func Enabled() bool {
-	loadEnabled.Do(func() {
-		enabledVar := os.Getenv("PERCONA_TEST_VM")
-		if enabledVar == "" {
-			return
-		}
-		parsedBool, err := strconv.ParseBool(enabledVar)
-		if err != nil {
-			panic(fmt.Sprintf("cannot parse PERCONA_TEST_VM, as bool, value: %s", enabledVar))
-		}
-		enabled = parsedBool
-	})
-
-	return enabled
-}
-
 // VictoriaMetrics is responsible for interactions with victoria metrics.
 type VictoriaMetrics struct {
+	enabled          bool
 	scrapeConfigPath string
 	db               *reform.DB
 	baseURL          *url.URL
@@ -87,8 +66,8 @@ type VictoriaMetrics struct {
 }
 
 // NewVictoriaMetrics creates new Victoria Metrics service.
-func NewVictoriaMetrics(scrapeConfigPath string, db *reform.DB, baseURL string) (*VictoriaMetrics, error) {
-	if !Enabled() {
+func NewVictoriaMetrics(scrapeConfigPath string, db *reform.DB, baseURL string, enabled bool) (*VictoriaMetrics, error) {
+	if !enabled {
 		return &VictoriaMetrics{}, nil
 	}
 	u, err := url.Parse(baseURL)
@@ -97,11 +76,12 @@ func NewVictoriaMetrics(scrapeConfigPath string, db *reform.DB, baseURL string) 
 	}
 
 	return &VictoriaMetrics{
+		enabled:          enabled,
 		scrapeConfigPath: scrapeConfigPath,
 		db:               db,
 		baseURL:          u,
 		client:           new(http.Client),
-		baseConfigPath:   "/srv/victoriametrics/promscrape.base.yml",
+		baseConfigPath:   "/srv/prometheus/prometheus.base.yml",
 		l:                logrus.WithField("component", "victoriametrics"),
 		sema:             make(chan struct{}, 1),
 	}, nil
@@ -109,7 +89,7 @@ func NewVictoriaMetrics(scrapeConfigPath string, db *reform.DB, baseURL string) 
 
 // Run runs VictoriaMetrics configuration update loop until ctx is canceled.
 func (svc *VictoriaMetrics) Run(ctx context.Context) {
-	if !Enabled() {
+	if !svc.enabled {
 		return
 	}
 	svc.l.Info("Starting...")
@@ -156,7 +136,7 @@ func (svc *VictoriaMetrics) updateConfiguration(ctx context.Context) error {
 
 // RequestConfigurationUpdate requests VictoriaMetrics configuration update.
 func (svc *VictoriaMetrics) RequestConfigurationUpdate() {
-	if !Enabled() {
+	if !svc.enabled {
 		return
 	}
 	select {
@@ -174,7 +154,7 @@ func (svc *VictoriaMetrics) RequestConfigurationUpdate() {
 
 // IsReady verifies that VictoriaMetrics works.
 func (svc *VictoriaMetrics) IsReady(ctx context.Context) error {
-	if !Enabled() {
+	if !svc.enabled {
 		return nil
 	}
 	// check VictoriaMetrics /health API

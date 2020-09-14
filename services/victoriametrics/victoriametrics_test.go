@@ -20,7 +20,6 @@ import (
 	"context"
 	"database/sql"
 	"io/ioutil"
-	"os"
 	"strings"
 	"testing"
 
@@ -36,13 +35,6 @@ import (
 
 const configPath = "../../testdata/victoriametrics/promscrape.yml"
 
-func TestMain(m *testing.M) {
-	loadEnabled.Do(func() {
-		enabled = true
-	})
-	os.Exit(m.Run())
-}
-
 func setup(t *testing.T) (*reform.DB, *VictoriaMetrics, []byte) {
 	t.Helper()
 	check := require.New(t)
@@ -50,7 +42,7 @@ func setup(t *testing.T) (*reform.DB, *VictoriaMetrics, []byte) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	svc, err := NewVictoriaMetrics(configPath, db, "http://127.0.0.1:8428/")
+	svc, err := NewVictoriaMetrics(configPath, db, "http://127.0.0.1:8428/", true)
 	check.NoError(err)
 
 	original, err := ioutil.ReadFile(configPath)
