@@ -410,8 +410,8 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 		"AlertmanagerURL":      settings.AlertManagerURL,
 		"AlertManagerUser":     "",
 		"AlertManagerPassword": "",
-		"VMAlertParams":        s.vmParams.VMAlert,
-		"VMDBParams":           s.vmParams.VMDB,
+		"VMAlertParams":        s.vmParams.VMAlertFlags,
+		"VMDBParams":           s.vmParams.VMDBFlags,
 	}
 	u, err := url.Parse(settings.AlertManagerURL)
 	if err == nil && (u.Opaque != "" || u.Host == "") {
@@ -593,8 +593,7 @@ command =
         --notifier.basicAuth.password=',{{.AlertManagerPassword }}'
         --notifier.basicAuth.username=",{{.AlertManagerUser}}"
 {{- end }}
-        --external.url=http://localhost/graph
-        --external.alert.source='explore?orgId=1&left=["now-1h","now","Prometheus",{"expr": "{{"{{"}}$expr|quotesEscape|pathEscape{{"}}"}}"},{"mode":"Metrics"},{"ui":[true,true,true,"none"]}]'
+        --external.url=http://localhost:9090/prometheus
         --datasource.url=http://127.0.0.1:8428
         --remoteRead.url=http://127.0.0.1:8428
         --remoteWrite.url=http://127.0.0.1:8428

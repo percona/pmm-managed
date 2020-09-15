@@ -36,7 +36,7 @@ func TestConfig(t *testing.T) {
 
 	pmmUpdateCheck := NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker_logs"))
 	configDir := filepath.Join("..", "..", "testdata", "supervisord.d")
-	vmParams := &models.VictoriaMetricsParams{Enabled: true, VMDB: []string{fmt.Sprintf("--search.disableCache=%t", true)}, VMAlert: []string{}}
+	vmParams := &models.VictoriaMetricsParams{Enabled: true, VMDBFlags: []string{fmt.Sprintf("--search.disableCache=%t", true)}}
 	s := New(configDir, pmmUpdateCheck, vmParams)
 	settings := &models.Settings{
 		DataRetention:   30 * 24 * time.Hour,

@@ -43,7 +43,12 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-const updateBatchDelay = 3 * time.Second
+const (
+	updateBatchDelay = 3 * time.Second
+	// BasePrometheusConfigPath - basic path with prometheus config,
+	// that user can mount to container.
+	BasePrometheusConfigPath = "/srv/prometheus/prometheus.base.yml"
+)
 
 var checkFailedRE = regexp.MustCompile(`FAILED: parsing YAML file \S+: (.+)\n`)
 
@@ -79,7 +84,7 @@ func NewService(alertingRules *AlertingRules, configPath string, db *reform.DB, 
 		db:             db,
 		baseURL:        u,
 		client:         new(http.Client),
-		baseConfigPath: "/srv/prometheus/prometheus.base.yml",
+		baseConfigPath: BasePrometheusConfigPath,
 		l:              logrus.WithField("component", "prometheus"),
 		sema:           make(chan struct{}, 1),
 	}, nil

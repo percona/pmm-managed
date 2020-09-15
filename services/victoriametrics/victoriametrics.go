@@ -66,8 +66,8 @@ type VictoriaMetrics struct {
 }
 
 // NewVictoriaMetrics creates new Victoria Metrics service.
-func NewVictoriaMetrics(scrapeConfigPath string, db *reform.DB, baseURL string, enabled bool) (*VictoriaMetrics, error) {
-	if !enabled {
+func NewVictoriaMetrics(scrapeConfigPath string, db *reform.DB, baseURL string, params *models.VictoriaMetricsParams) (*VictoriaMetrics, error) {
+	if !params.Enabled {
 		return &VictoriaMetrics{}, nil
 	}
 	u, err := url.Parse(baseURL)
@@ -76,12 +76,12 @@ func NewVictoriaMetrics(scrapeConfigPath string, db *reform.DB, baseURL string, 
 	}
 
 	return &VictoriaMetrics{
-		enabled:          enabled,
+		enabled:          params.Enabled,
 		scrapeConfigPath: scrapeConfigPath,
 		db:               db,
 		baseURL:          u,
 		client:           new(http.Client),
-		baseConfigPath:   "/srv/prometheus/prometheus.base.yml",
+		baseConfigPath:   params.BaseConfigPath,
 		l:                logrus.WithField("component", "victoriametrics"),
 		sema:             make(chan struct{}, 1),
 	}, nil

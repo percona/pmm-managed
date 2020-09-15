@@ -25,10 +25,10 @@ import (
 	"path"
 	"time"
 
+	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/prometheus"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-
-	"github.com/percona/pmm-managed/services/prometheus"
 )
 
 // VMAlert is responsible for interactions with victoria metrics.
@@ -44,8 +44,8 @@ type VMAlert struct {
 }
 
 // NewVMAlert creates new Victoria Metrics Alert service.
-func NewVMAlert(alertRules *prometheus.AlertingRules, baseURL string, enabled bool) (*VMAlert, error) {
-	if !enabled {
+func NewVMAlert(alertRules *prometheus.AlertingRules, baseURL string, params *models.VictoriaMetricsParams) (*VMAlert, error) {
+	if !params.Enabled {
 		return &VMAlert{}, nil
 	}
 	u, err := url.Parse(baseURL)
@@ -54,7 +54,7 @@ func NewVMAlert(alertRules *prometheus.AlertingRules, baseURL string, enabled bo
 	}
 
 	return &VMAlert{
-		enabled:       enabled,
+		enabled:       params.Enabled,
 		alertingRules: alertRules,
 		baseURL:       u,
 		client:        new(http.Client),

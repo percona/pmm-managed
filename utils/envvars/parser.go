@@ -34,11 +34,6 @@ type InvalidDurationError string
 
 func (e InvalidDurationError) Error() string { return string(e) }
 
-// InvalidIntegerError invalid integer error.
-type InvalidIntegerError string
-
-func (e InvalidIntegerError) Error() string { return string(e) }
-
 // ParseEnvVars parses given environment variables.
 //
 // Returns valid setting and two lists with errors and warnings.
@@ -145,8 +140,6 @@ func formatEnvVariableError(err error, env, value string) error {
 	switch e := err.(type) {
 	case InvalidDurationError:
 		return fmt.Errorf("environment variable %q has invalid duration %s", env, value)
-	case InvalidIntegerError:
-		return fmt.Errorf("environment variable %q has invalid integer %s", env, value)
 	default:
 		return errors.Wrap(e, "unknown error")
 	}
