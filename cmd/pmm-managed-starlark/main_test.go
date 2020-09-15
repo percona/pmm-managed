@@ -19,6 +19,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -39,43 +40,50 @@ var validQueryActionResult = []map[string]interface{}{
 
 func TestRunChecks(t *testing.T) {
 	testCases := []struct {
-		err          bool
-		version      uint32
-		name         string
-		script       string
-		errorMessage string
-		result       []map[string]interface{}
+		err           bool
+		version       uint32
+		name          string
+		script        string
+		errorMessage  string
+		stdErrContent string // first line of the stack trace
+		result        []map[string]interface{}
 	}{
 		{
-			err:          true,
-			version:      1,
-			name:         "memory consuming starlark script",
-			script:       "def check(rows): return [1] * (1 << 30-1)",
-			errorMessage: "fatal error: runtime: out of memory",
-			result:       validQueryActionResult,
+			err:           true,
+			version:       1,
+			name:          "memory consuming starlark script",
+			script:        "def check(rows): return [1] * (1 << 30-1)",
+			errorMessage:  "exit status 2",
+			stdErrContent: "fatal error: runtime: out of memory",
+			result:        validQueryActionResult,
 		},
 		{
 			err:     true,
 			version: 1,
 			name:    "cpu consuming starlark script",
 			script: `def check(rows):
-						for x in range(10000000):
+						while True:
 							pass`,
-			errorMessage: "fatal error: runtime: cannot allocate memory",
-			result:       validQueryActionResult,
+			errorMessage:  "signal: killed",
+			stdErrContent: "",
+			result:        validQueryActionResult,
 		},
 		{
-			err:          false,
-			version:      1,
-			name:         "valid starlark script",
-			script:       "def check(rows): return []",
-			errorMessage: "",
-			result:       validQueryActionResult,
+			err:           false,
+			version:       1,
+			name:          "valid starlark script",
+			script:        "def check(rows): return []",
+			errorMessage:  "",
+			stdErrContent: "",
+			result:        validQueryActionResult,
 		},
 	}
 
-	// since run the binary as a child process to test it, we need to build it first.
+	// since we run the binary as a child process to test it we need to build it first.
 	err := exec.Command("make", "-C", "../..", "release").Run()
+	require.NoError(t, err)
+
+	err = os.Setenv("PERCONA_TEST_STARLARK_ALLOW_RECURSION", "true")
 	require.NoError(t, err)
 
 	for _, tc := range testCases {
@@ -101,10 +109,11 @@ func TestRunChecks(t *testing.T) {
 			require.NoError(t, err)
 
 			err = cmd.Run()
-			errLog := strings.Split(stderr.String(), "\n")
+			stdErrContent := strings.Split(stderr.String(), "\n")
 			if tc.err {
 				require.Error(t, err)
-				require.Equal(t, tc.errorMessage, errLog[0])
+				require.Equal(t, tc.errorMessage, err.Error())
+				require.Equal(t, tc.stdErrContent, stdErrContent[0])
 			} else {
 				require.NoError(t, err)
 			}

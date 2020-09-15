@@ -28,6 +28,7 @@ import (
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"go.starlark.net/resolve"
 	"golang.org/x/sys/unix"
 	"gopkg.in/alecthomas/kingpin.v2"
 
@@ -37,6 +38,9 @@ import (
 const (
 	cpuLimit         = 4 // 4 seconds of CPU time
 	memoryLimitBytes = 100 * 1024 * 1024
+
+	// only used for testing
+	starlarkRecursionFlag = "PERCONA_TEST_STARLARK_ALLOW_RECURSION"
 )
 
 func main() {
@@ -58,6 +62,9 @@ func main() {
 	}
 	if on, _ := strconv.ParseBool(os.Getenv("PMM_TRACE")); on {
 		logrus.SetLevel(logrus.TraceLevel)
+	}
+	if on, _ := strconv.ParseBool(os.Getenv(starlarkRecursionFlag)); on {
+		resolve.AllowRecursion = true
 	}
 
 	l := logrus.WithField("component", "pmm-managed-starlark")
