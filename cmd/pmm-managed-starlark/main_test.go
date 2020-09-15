@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/percona/pmm/api/agentpb"
@@ -28,55 +29,48 @@ import (
 	"github.com/percona/pmm-managed/services/checks"
 )
 
-var (
-	validQueryActionResult = []map[string]interface{}{
-		{"Value": "5.7.30-33-log", "Variable_name": "version"},
-		{"Value": "Percona Server (GPL), Release 33, Revision 6517692", "Variable_name": "version_comment"},
-		{"Value": "x86_64", "Variable_name": "version_compile_machine"},
-		{"Value": "Linux", "Variable_name": "version_compile_os"},
-		{"Value": "-log", "Variable_name": "version_suffix"},
-	}
-
-	invalidQueryActionResult = []map[string]interface{}{
-		{"key-1": "val-1", "key-2": "val-2"},
-	}
-)
+var validQueryActionResult = []map[string]interface{}{
+	{"Value": "5.7.30-33-log", "Variable_name": "version"},
+	{"Value": "Percona Server (GPL), Release 33, Revision 6517692", "Variable_name": "version_comment"},
+	{"Value": "x86_64", "Variable_name": "version_compile_machine"},
+	{"Value": "Linux", "Variable_name": "version_compile_os"},
+	{"Value": "-log", "Variable_name": "version_suffix"},
+}
 
 func TestRunChecks(t *testing.T) {
 	testCases := []struct {
-		err     bool
-		version uint32
-		name    string
-		script  string
-		result  []map[string]interface{}
+		err          bool
+		version      uint32
+		name         string
+		script       string
+		errorMessage string
+		result       []map[string]interface{}
 	}{
 		{
-			err:     true,
-			version: 1,
-			name:    "invalid starlark syntax",
-			script:  "@ + @",
-			result:  invalidQueryActionResult,
+			err:          true,
+			version:      1,
+			name:         "memory consuming starlark script",
+			script:       "def check(rows): return [1] * (1 << 30-1)",
+			errorMessage: "fatal error: runtime: out of memory",
+			result:       validQueryActionResult,
 		},
 		{
 			err:     true,
 			version: 1,
-			name:    "invalid query action result",
-			script:  "def check(): return []",
-			result:  invalidQueryActionResult,
+			name:    "cpu consuming starlark script",
+			script: `def check(rows):
+						for x in range(10000000):
+							pass`,
+			errorMessage: "fatal error: runtime: cannot allocate memory",
+			result:       validQueryActionResult,
 		},
 		{
-			err:     true,
-			version: 1,
-			name:    "bad starlark script",
-			script:  "def check(rows): return [1] * (1 << 30-1)",
-			result:  validQueryActionResult,
-		},
-		{
-			err:     false,
-			version: 1,
-			name:    "valid starlark script",
-			script:  "def check(rows): return []",
-			result:  validQueryActionResult,
+			err:          false,
+			version:      1,
+			name:         "valid starlark script",
+			script:       "def check(rows): return []",
+			errorMessage: "",
+			result:       validQueryActionResult,
 		},
 	}
 
@@ -98,16 +92,19 @@ func TestRunChecks(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cmd := exec.Command("./../../bin/pmm-managed-starlark")
 
-			var stdin bytes.Buffer
+			var stdin, stderr bytes.Buffer
 			cmd.Stdin = &stdin
+			cmd.Stderr = &stderr
 
 			encoder := json.NewEncoder(&stdin)
 			err = encoder.Encode(data)
 			require.NoError(t, err)
 
 			err = cmd.Run()
+			errLog := strings.Split(stderr.String(), "\n")
 			if tc.err {
 				require.Error(t, err)
+				require.Equal(t, tc.errorMessage, errLog[0])
 			} else {
 				require.NoError(t, err)
 			}
