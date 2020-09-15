@@ -47,7 +47,6 @@ func (e InvalidDurationError) Error() string { return string(e) }
 //  - METRICS_RESOLUTION, METRICS_RESOLUTION, METRICS_RESOLUTION_HR,
 // METRICS_RESOLUTION_LR are durations of metrics resolution;
 //  - DATA_RETENTION is the duration of how long keep time-series data in ClickHouse;
-//  - DATA_RETENTION_MONTHS is the duration of how long keep time-series data in VictoriaMetrics;
 //  - the environment variables prefixed with GF_ passed as related to Grafana.
 func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs []error, warns []string) {
 	envSettings = new(models.ChangeSettingsParams)
@@ -65,6 +64,11 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 
 		// skip Grafana's environment variables
 		if strings.HasPrefix(k, "GF_") {
+			continue
+		}
+
+		// skip VictoriaMetrics's environment variables
+		if strings.HasPrefix(k, "VM_") {
 			continue
 		}
 

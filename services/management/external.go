@@ -36,7 +36,7 @@ type ExternalService struct {
 }
 
 // NewExternalService creates new External Management Service.
-func NewExternalService(db *reform.DB, prometheus prometheusService, vmdb prometheusService) *ExternalService {
+func NewExternalService(db *reform.DB, prometheus, vmdb prometheusService) *ExternalService {
 	return &ExternalService{db: db, prometheus: prometheus, vmdb: vmdb}
 }
 

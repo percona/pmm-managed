@@ -25,12 +25,12 @@ import (
 
 func TestVictoriaMetricsParams(t *testing.T) {
 	testConf := "../testdata/victoriametrics/prometheus.external.yml"
-	t.Run("read bad baseConf file", func(t *testing.T) {
+	t.Run("read non exist baseConfigFile", func(t *testing.T) {
 		_ = os.Setenv(vmTestEnableEnv, "true")
 		defer func() {
 			_ = os.Unsetenv(vmTestEnableEnv)
 		}()
-		vmp, err := NewVictoriaMetricsParams("badBaseConfigPath.yml")
+		vmp, err := NewVictoriaMetricsParams("nonExistConfigFile.yml")
 		require.NoError(t, err)
 		require.Equal(t, true, vmp.Enabled)
 	})

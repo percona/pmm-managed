@@ -55,14 +55,13 @@ func NewVictoriaMetricsParams(basePath string) (*VictoriaMetricsParams, error) {
 	if enabledVar := os.Getenv(vmTestEnableEnv); enabledVar != "" {
 		parsedBool, err := strconv.ParseBool(enabledVar)
 		if err != nil {
-			return vmp, errors.Wrap(err, "cannot parse VM_TEST_ENABLE as bool")
+			return vmp, errors.Wrapf(err, "cannot parse %s as bool", vmCacheEnableEnv)
 		}
 		vmp.Enabled = parsedBool
 	}
 
-	err := vmp.UpdateParams()
-	if err != nil {
-		return vmp, errors.Wrap(err, "cannot load VictoriaMetricsParams")
+	if err := vmp.UpdateParams(); err != nil {
+		return vmp, err
 	}
 
 	return vmp, nil
@@ -112,7 +111,7 @@ func (vmp *VictoriaMetricsParams) loadVMDBParams() error {
 	if cacheEnable := os.Getenv(vmCacheEnableEnv); cacheEnable != "" {
 		parsedBool, err := strconv.ParseBool(os.Getenv(vmCacheEnableEnv))
 		if err != nil {
-			return errors.Wrap(err, "failed to parse vmCacheEnableEnv as bool")
+			return errors.Wrapf(err, "failed to parse %s as bool", vmCacheEnableEnv)
 		}
 		// we have to invert parsed variable
 		cacheDisabled = !parsedBool

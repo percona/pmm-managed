@@ -403,38 +403,16 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 		retentionMonths = 1
 	}
 	templateParams := map[string]interface{}{
-		"DataRetentionHours":   int(settings.DataRetention.Hours()),
-		"DataRetentionDays":    int(settings.DataRetention.Hours() / 24),
-		"DataRetentionMonth":   retentionMonths,
-		"IsVMEnabled":          s.vmParams.Enabled,
-		"AlertmanagerURL":      settings.AlertManagerURL,
-		"AlertManagerUser":     "",
-		"AlertManagerPassword": "",
-		"VMAlertParams":        s.vmParams.VMAlertFlags,
-		"VMDBParams":           s.vmParams.VMDBFlags,
+		"DataRetentionHours":  int(settings.DataRetention.Hours()),
+		"DataRetentionDays":   int(settings.DataRetention.Hours() / 24),
+		"DataRetentionMonths": retentionMonths,
+		"IsVMEnabled":         s.vmParams.Enabled,
+		"VMAlertParams":       s.vmParams.VMAlertFlags,
+		"VMDBParams":          s.vmParams.VMDBFlags,
 	}
-	u, err := url.Parse(settings.AlertManagerURL)
-	if err == nil && (u.Opaque != "" || u.Host == "") {
-		err = errors.Errorf("parsed incorrectly as %#v", u)
+	if err := addAlertManagerParam(settings.AlertManagerURL, templateParams); err != nil {
+		return nil, errors.Wrap(err, "cannot add AlertManagerParams to supervisor template")
 	}
-
-	if err == nil {
-		if username := u.User.Username(); username != "" {
-			if password, ok := u.User.Password(); ok {
-				n := url.URL{
-					Scheme:   u.Scheme,
-					Host:     u.Host,
-					Path:     u.Path,
-					RawQuery: u.RawQuery,
-					Fragment: u.Fragment,
-				}
-				templateParams["AlertManagerUser"] = username
-				templateParams["AlertManagerPassword"] = strconv.Quote(password)
-				templateParams["AlertmanagerURL"] = n.String()
-			}
-		}
-	}
-	// vm configuration
 
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, templateParams); err != nil {
@@ -442,6 +420,45 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 	}
 	b := append([]byte("; Managed by pmm-managed. DO NOT EDIT.\n"), buf.Bytes()...)
 	return b, nil
+}
+
+// addAlertManagerParam parses alertManagerURL
+// and extracts username and password from it to templateParams.
+func addAlertManagerParam(alertManagerURL string, templateParams map[string]interface{}) error {
+	templateParams["AlertmanagerURL"] = alertManagerURL
+	templateParams["AlertManagerUser"] = ""
+	templateParams["AlertManagerPassword"] = ""
+	if alertManagerURL == "" {
+		return nil
+	}
+	u, err := url.Parse(alertManagerURL)
+	if err != nil {
+		templateParams["AlertmanagerURL"] = ""
+
+		return errors.Wrap(err, "cannot parse AlertManagerURL")
+	}
+
+	if u.Opaque != "" || u.Host == "" {
+		templateParams["AlertmanagerURL"] = ""
+
+		return errors.Errorf("AlertmanagerURL parsed incorrectly as %#v", u)
+	}
+	if username := u.User.Username(); username != "" {
+		if password, ok := u.User.Password(); ok {
+			n := url.URL{
+				Scheme:   u.Scheme,
+				Host:     u.Host,
+				Path:     u.Path,
+				RawQuery: u.RawQuery,
+				Fragment: u.Fragment,
+			}
+			templateParams["AlertManagerUser"] = username
+			templateParams["AlertManagerPassword"] = strconv.Quote(password)
+			templateParams["AlertmanagerURL"] = n.String()
+		}
+	}
+
+	return nil
 }
 
 // saveConfigAndReload saves given supervisord program configuration to file and reloads it.
@@ -564,7 +581,7 @@ priority = 7
 command =
 	/usr/sbin/victoriametrics
 		--promscrape.config=/etc/victoriametrics-promscrape.yml
-		--retentionPeriod={{ .DataRetentionMonth }}
+		--retentionPeriod={{ .DataRetentionMonths }}
 		--storageDataPath=/srv/victoriametrics/data
 		--httpListenAddr=127.0.0.1:8428
 {{- range $index, $param := .VMDBParams}}

@@ -288,7 +288,7 @@ func (svc *VictoriaMetrics) configAndReload(ctx context.Context, cfg []byte) err
 	}()
 
 	// write new content to temporary file, check it
-	f, err := ioutil.TempFile("", "pmm-managed-config-")
+	f, err := ioutil.TempFile("", "pmm-managed-config-victoriametrics-")
 	if err != nil {
 		return errors.WithStack(err)
 	}

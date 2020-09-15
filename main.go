@@ -529,7 +529,7 @@ func main() {
 
 	vmParams, err := models.NewVictoriaMetricsParams(prometheus.BasePrometheusConfigPath)
 	if err != nil {
-		l.Panicf("cannot load victoriametrics params")
+		l.Panicf("cannot load victoriametrics params problem: %+v", err)
 	}
 	prometheus, err := prometheus.NewService(alertingRules, *prometheusConfigF, db, *prometheusURLF)
 	if err != nil {

@@ -292,7 +292,6 @@ func addScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s 
 				service: paramsService,
 				agent:   agent,
 			})
-
 			continue
 
 		case models.ExternalExporterType:
@@ -305,7 +304,6 @@ func addScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s 
 
 		default:
 			l.Warnf("Skipping scrape config for %s.", agent)
-
 			continue
 		}
 
