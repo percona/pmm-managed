@@ -406,7 +406,7 @@ func (s *agentsServer) ChangeQANPostgreSQLPgStatementsAgent(ctx context.Context,
 }
 
 // AddQANPostgreSQLPgStatMonitorAgent adds PostgreSQL Pg stat monitor QAN Agent.
-func (s *agentsServer) AddQANPostgreSQLPgStatMonitorAgent(ctx context.Context, req *inventorypb.AddQANPostgreSQLPgStatMonitorAgentRequest) (*inventorypb.AddQANPostgreSQLPgStatMonitorAgentResponse, error) {
+func (s *agentsServer) AddQANPostgreSQLPgStatMonitorAgent(ctx context.Context, req *inventorypb.AddQANPostgreSQLPgStatMonitorAgentRequest) (*inventorypb.AddQANPostgreSQLPgStatMonitorAgentResponse, error) { //nolint:lll
 	agent, err := s.s.AddQANPostgreSQLPgStatMonitorAgent(ctx, req)
 	if err != nil {
 		return nil, err
@@ -419,7 +419,7 @@ func (s *agentsServer) AddQANPostgreSQLPgStatMonitorAgent(ctx context.Context, r
 }
 
 // ChangeQANPostgreSQLPgStatMonitorAgent changes disabled flag and custom labels of PostgreSQL Pg stat monitor QAN Agent.
-func (s *agentsServer) ChangeQANPostgreSQLPgStatMonitorAgent(ctx context.Context, req *inventorypb.ChangeQANPostgreSQLPgStatMonitorAgentRequest) (*inventorypb.ChangeQANPostgreSQLPgStatMonitorAgentResponse, error) {
+func (s *agentsServer) ChangeQANPostgreSQLPgStatMonitorAgent(ctx context.Context, req *inventorypb.ChangeQANPostgreSQLPgStatMonitorAgentRequest) (*inventorypb.ChangeQANPostgreSQLPgStatMonitorAgentResponse, error) { //nolint:lll
 	agent, err := s.s.ChangeQANPostgreSQLPgStatMonitorAgent(ctx, req)
 	if err != nil {
 		return nil, err
