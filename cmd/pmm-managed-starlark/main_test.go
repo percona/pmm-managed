@@ -19,43 +19,73 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"os"
 	"os/exec"
 	"strings"
 	"testing"
 
 	"github.com/percona/pmm/api/agentpb"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/percona/pmm-managed/services/checks"
 )
 
-var validQueryActionResult = []map[string]interface{}{
-	{"Value": "5.7.30-33-log", "Variable_name": "version"},
-	{"Value": "Percona Server (GPL), Release 33, Revision 6517692", "Variable_name": "version_comment"},
-	{"Value": "x86_64", "Variable_name": "version_compile_machine"},
-	{"Value": "Linux", "Variable_name": "version_compile_os"},
-	{"Value": "-log", "Variable_name": "version_suffix"},
-}
+const (
+	invalidStarlarkScriptStderr = "Error running starlark script: thread invalid starlark script: failed to execute function check: function check accepts no arguments (1 given)"
+	invalidVersionStderr        = "Error running starlark script: unsupported check version: 5"
+	memoryConsumingScriptStderr = "fatal error: runtime: out of memory"
+)
+
+var (
+	validQueryActionResult = []map[string]interface{}{
+		{"Value": "5.7.30-33-log", "Variable_name": "version"},
+		{"Value": "Percona Server (GPL), Release 33, Revision 6517692", "Variable_name": "version_comment"},
+		{"Value": "x86_64", "Variable_name": "version_compile_machine"},
+		{"Value": "Linux", "Variable_name": "version_compile_os"},
+		{"Value": "-log", "Variable_name": "version_suffix"},
+	}
+)
 
 func TestRunChecks(t *testing.T) {
 	testCases := []struct {
-		err           bool
-		version       uint32
-		name          string
-		script        string
-		errorMessage  string
-		stdErrContent string // first line of the stack trace
-		result        []map[string]interface{}
+		err          bool
+		version      uint32
+		name         string
+		script       string
+		errorMessage string
+		stderr       string
+		stdout       string
+		result       []map[string]interface{}
 	}{
 		{
-			err:           true,
-			version:       1,
-			name:          "memory consuming starlark script",
-			script:        "def check(rows): return [1] * (1 << 30-1)",
-			errorMessage:  "exit status 2",
-			stdErrContent: "fatal error: runtime: out of memory",
-			result:        validQueryActionResult,
+			err:          true,
+			version:      1,
+			name:         "invalid starlark script",
+			errorMessage: "exit status 1",
+			stderr:       invalidStarlarkScriptStderr,
+			stdout:       "",
+			script:       "def check(): return []",
+			result:       validQueryActionResult,
+		},
+		{
+			err:          true,
+			version:      5,
+			name:         "invalid version",
+			errorMessage: "exit status 1",
+			stderr:       invalidVersionStderr,
+			stdout:       "",
+			script:       "def check(): return []",
+			result:       validQueryActionResult,
+		},
+		{
+			err:          true,
+			version:      1,
+			name:         "memory consuming starlark script",
+			script:       "def check(rows): return [1] * (1 << 30-1)",
+			errorMessage: "exit status 2",
+			stderr:       memoryConsumingScriptStderr,
+			stdout:       "",
+			result:       validQueryActionResult,
 		},
 		{
 			err:     true,
@@ -64,26 +94,32 @@ func TestRunChecks(t *testing.T) {
 			script: `def check(rows):
 						while True:
 							pass`,
-			errorMessage:  "signal: killed",
-			stdErrContent: "",
-			result:        validQueryActionResult,
+			errorMessage: "signal: killed",
+			stderr:       "",
+			stdout:       "",
+			result:       validQueryActionResult,
 		},
 		{
-			err:           false,
-			version:       1,
-			name:          "valid starlark script",
-			script:        "def check(rows): return []",
-			errorMessage:  "",
-			stdErrContent: "",
-			result:        validQueryActionResult,
+			err:     false,
+			version: 1,
+			name:    "valid starlark script",
+			script: `def check(rows):
+						results = []
+						results.append({
+							"summary": "Fake check",
+							"description": "Fake check description",
+							"severity": "warning",
+						})
+						return results`,
+			errorMessage: "",
+			stderr:       "",
+			stdout:       "[{\"summary\":\"Fake check\",\"description\":\"Fake check description\",\"severity\":5,\"labels\":null}]\n",
+			result:       validQueryActionResult,
 		},
 	}
 
 	// since we run the binary as a child process to test it we need to build it first.
 	err := exec.Command("make", "-C", "../..", "release").Run()
-	require.NoError(t, err)
-
-	err = os.Setenv("PERCONA_TEST_STARLARK_ALLOW_RECURSION", "true")
 	require.NoError(t, err)
 
 	for _, tc := range testCases {
@@ -103,19 +139,25 @@ func TestRunChecks(t *testing.T) {
 			var stdin, stderr bytes.Buffer
 			cmd.Stdin = &stdin
 			cmd.Stderr = &stderr
+			cmd.Env = []string{"PERCONA_TEST_STARLARK_ALLOW_RECURSION=true"}
 
 			encoder := json.NewEncoder(&stdin)
 			err = encoder.Encode(data)
 			require.NoError(t, err)
 
-			err = cmd.Run()
-			stdErrContent := strings.Split(stderr.String(), "\n")
+			stdout, err := cmd.Output()
+			stderrContent := stderr.String()
 			if tc.err {
 				require.Error(t, err)
+				require.Empty(t, tc.stdout)
 				require.Equal(t, tc.errorMessage, err.Error())
-				require.Equal(t, tc.stdErrContent, stdErrContent[0])
+				assert.True(t, strings.Contains(stderrContent, tc.stderr))
+				// make sure that the limits were set
+				assert.False(t, strings.Contains(stderrContent, cpuUsageWarning))
+				assert.False(t, strings.Contains(stderrContent, memoryUsageWarning))
 			} else {
 				require.NoError(t, err)
+				require.Equal(t, tc.stdout, string(stdout))
 			}
 		})
 	}

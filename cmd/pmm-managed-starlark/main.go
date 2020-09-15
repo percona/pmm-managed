@@ -41,6 +41,10 @@ const (
 
 	// only used for testing
 	starlarkRecursionFlag = "PERCONA_TEST_STARLARK_ALLOW_RECURSION"
+
+	// warning messages
+	cpuUsageWarning    = "Failed to limit CPU usage"
+	memoryUsageWarning = "Failed to limit memory usage"
 )
 
 func main() {
@@ -79,7 +83,7 @@ func main() {
 
 	results, err := runChecks(l, &data)
 	if err != nil {
-		l.Errorf("Error running starlark script: %s", err)
+		l.Errorf("Error running starlark script: %+v", err)
 		os.Exit(1)
 	}
 
@@ -94,11 +98,11 @@ func main() {
 func runChecks(l *logrus.Entry, data *checks.StarlarkScriptData) ([]check.Result, error) {
 	err := unix.Setrlimit(unix.RLIMIT_CPU, &unix.Rlimit{Cur: cpuLimit, Max: cpuLimit})
 	if err != nil {
-		l.Warnf("Failed to limit CPU usage: %s", err)
+		l.Warnf("%s: %s", cpuUsageWarning, err)
 	}
 	err = unix.Setrlimit(unix.RLIMIT_DATA, &unix.Rlimit{Cur: memoryLimitBytes, Max: memoryLimitBytes})
 	if err != nil {
-		l.Warnf("Failed to limit memory usage: %s", err)
+		l.Warnf("%s: %s", memoryUsageWarning, err)
 	}
 
 	funcs, err := checks.GetFuncsForVersion(data.CheckVersion)
