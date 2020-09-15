@@ -25,10 +25,11 @@ import (
 	"path"
 	"time"
 
-	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/prometheus"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+
+	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/prometheus"
 )
 
 // VMAlert is responsible for interactions with victoria metrics.
