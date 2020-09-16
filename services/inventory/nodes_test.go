@@ -72,12 +72,12 @@ func TestNodes(t *testing.T) {
 		addNodeResponse, err := ns.AddGenericNode(ctx, &inventorypb.AddGenericNodeRequest{NodeName: "test-bm"})
 		require.NoError(t, err)
 		expectedNode := &inventorypb.GenericNode{
-			NodeId:   "/node_id/00000000-0000-4000-8000-000000000005",
+			NodeId:   "/node_id/00000000-0000-4000-8000-000000000006",
 			NodeName: "test-bm",
 		}
 		assert.Equal(t, expectedNode, addNodeResponse)
 
-		getNodeResponse, err := ns.Get(ctx, &inventorypb.GetNodeRequest{NodeId: "/node_id/00000000-0000-4000-8000-000000000005"})
+		getNodeResponse, err := ns.Get(ctx, &inventorypb.GetNodeRequest{NodeId: "/node_id/00000000-0000-4000-8000-000000000006"})
 		require.NoError(t, err)
 		assert.Equal(t, expectedNode, getNodeResponse)
 
@@ -86,10 +86,10 @@ func TestNodes(t *testing.T) {
 		require.Len(t, nodesResponse, 2)
 		assert.Equal(t, expectedNode, nodesResponse[0])
 
-		err = ns.Remove(ctx, "/node_id/00000000-0000-4000-8000-000000000005", false)
+		err = ns.Remove(ctx, "/node_id/00000000-0000-4000-8000-000000000006", false)
 		require.NoError(t, err)
-		getNodeResponse, err = ns.Get(ctx, &inventorypb.GetNodeRequest{NodeId: "/node_id/00000000-0000-4000-8000-000000000005"})
-		tests.AssertGRPCError(t, status.New(codes.NotFound, `Node with ID "/node_id/00000000-0000-4000-8000-000000000005" not found.`), err)
+		getNodeResponse, err = ns.Get(ctx, &inventorypb.GetNodeRequest{NodeId: "/node_id/00000000-0000-4000-8000-000000000006"})
+		tests.AssertGRPCError(t, status.New(codes.NotFound, `Node with ID "/node_id/00000000-0000-4000-8000-000000000006" not found.`), err)
 		assert.Nil(t, getNodeResponse)
 	})
 

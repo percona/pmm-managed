@@ -234,7 +234,7 @@ func TestRDSService(t *testing.T) {
 
 		expected := &managementpb.AddRDSResponse{
 			Node: &inventorypb.RemoteRDSNode{
-				NodeId:    "/node_id/00000000-0000-4000-8000-000000000005",
+				NodeId:    "/node_id/00000000-0000-4000-8000-000000000006",
 				NodeName:  "rds-mysql57",
 				Address:   "rds-mysql57",
 				NodeModel: "db.t3.micro",
@@ -245,14 +245,14 @@ func TestRDSService(t *testing.T) {
 				},
 			},
 			RdsExporter: &inventorypb.RDSExporter{
-				AgentId:      "/agent_id/00000000-0000-4000-8000-000000000006",
+				AgentId:      "/agent_id/00000000-0000-4000-8000-000000000007",
 				PmmAgentId:   "pmm-server",
-				NodeId:       "/node_id/00000000-0000-4000-8000-000000000005",
+				NodeId:       "/node_id/00000000-0000-4000-8000-000000000006",
 				AwsAccessKey: "AKIAIOSFODNN7EXAMPLE",
 			},
 			Mysql: &inventorypb.MySQLService{
-				ServiceId:      "/service_id/00000000-0000-4000-8000-000000000007",
-				NodeId:         "/node_id/00000000-0000-4000-8000-000000000005",
+				ServiceId:      "/service_id/00000000-0000-4000-8000-000000000008",
+				NodeId:         "/node_id/00000000-0000-4000-8000-000000000006",
 				Address:        "rds-mysql57-renaming.xyzzy.us-east-1.rds.amazonaws.com",
 				Port:           3306,
 				Environment:    "production",
@@ -264,16 +264,16 @@ func TestRDSService(t *testing.T) {
 				},
 			},
 			MysqldExporter: &inventorypb.MySQLdExporter{
-				AgentId:                   "/agent_id/00000000-0000-4000-8000-000000000008",
+				AgentId:                   "/agent_id/00000000-0000-4000-8000-000000000009",
 				PmmAgentId:                "pmm-server",
-				ServiceId:                 "/service_id/00000000-0000-4000-8000-000000000007",
+				ServiceId:                 "/service_id/00000000-0000-4000-8000-000000000008",
 				Username:                  "username",
 				TablestatsGroupTableLimit: 1000,
 			},
 			QanMysqlPerfschema: &inventorypb.QANMySQLPerfSchemaAgent{
-				AgentId:               "/agent_id/00000000-0000-4000-8000-000000000009",
+				AgentId:               "/agent_id/00000000-0000-4000-8000-00000000000a",
 				PmmAgentId:            "pmm-server",
-				ServiceId:             "/service_id/00000000-0000-4000-8000-000000000007",
+				ServiceId:             "/service_id/00000000-0000-4000-8000-000000000008",
 				Username:              "username",
 				QueryExamplesDisabled: true,
 			},
