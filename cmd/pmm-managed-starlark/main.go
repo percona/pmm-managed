@@ -21,6 +21,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/percona-platform/saas/pkg/check"
 	"github.com/percona-platform/saas/pkg/starlark"
@@ -36,7 +37,7 @@ import (
 )
 
 const (
-	cpuLimit         = 4 // 4 seconds of CPU time
+	cpuLimit         = time.Duration(4)
 	memoryLimitBytes = 100 * 1024 * 1024
 
 	// only used for testing
@@ -90,13 +91,13 @@ func main() {
 	encoder := json.NewEncoder(os.Stdout)
 	err = encoder.Encode(results)
 	if err != nil {
-		l.Errorf("error marshalling JSON results: %s", err)
+		l.Errorf("error encoding JSON results: %s", err)
 		os.Exit(1)
 	}
 }
 
 func runChecks(l *logrus.Entry, data *checks.StarlarkScriptData) ([]check.Result, error) {
-	err := unix.Setrlimit(unix.RLIMIT_CPU, &unix.Rlimit{Cur: cpuLimit, Max: cpuLimit})
+	err := unix.Setrlimit(unix.RLIMIT_CPU, &unix.Rlimit{Cur: uint64(cpuLimit.Seconds()), Max: uint64(cpuLimit.Seconds())})
 	if err != nil {
 		l.Warnf("%s: %s", cpuUsageWarning, err)
 	}

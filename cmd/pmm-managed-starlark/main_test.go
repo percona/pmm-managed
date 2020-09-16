@@ -36,73 +36,75 @@ const (
 	memoryConsumingScriptStderr = "fatal error: runtime: out of memory"
 )
 
-var (
-	validQueryActionResult = []map[string]interface{}{
-		{"Value": "5.7.30-33-log", "Variable_name": "version"},
-		{"Value": "Percona Server (GPL), Release 33, Revision 6517692", "Variable_name": "version_comment"},
-		{"Value": "x86_64", "Variable_name": "version_compile_machine"},
-		{"Value": "Linux", "Variable_name": "version_compile_os"},
-		{"Value": "-log", "Variable_name": "version_suffix"},
-	}
-)
+var validQueryActionResult = []map[string]interface{}{
+	{"Value": "5.7.30-33-log", "Variable_name": "version"},
+	{"Value": "Percona Server (GPL), Release 33, Revision 6517692", "Variable_name": "version_comment"},
+	{"Value": "x86_64", "Variable_name": "version_compile_machine"},
+	{"Value": "Linux", "Variable_name": "version_compile_os"},
+	{"Value": "-log", "Variable_name": "version_suffix"},
+}
 
 func TestRunChecks(t *testing.T) {
 	testCases := []struct {
 		err          bool
 		version      uint32
-		name         string
-		script       string
 		errorMessage string
 		stderr       string
 		stdout       string
-		result       []map[string]interface{}
+		name         string
+		script       string
+		scriptInput  []map[string]interface{}
 	}{
+
 		{
 			err:          true,
 			version:      1,
-			name:         "invalid starlark script",
 			errorMessage: "exit status 1",
 			stderr:       invalidStarlarkScriptStderr,
 			stdout:       "",
+			name:         "invalid starlark script",
 			script:       "def check(): return []",
-			result:       validQueryActionResult,
+			scriptInput:  validQueryActionResult,
 		},
 		{
 			err:          true,
 			version:      5,
-			name:         "invalid version",
 			errorMessage: "exit status 1",
 			stderr:       invalidVersionStderr,
 			stdout:       "",
+			name:         "invalid version",
 			script:       "def check(): return []",
-			result:       validQueryActionResult,
+			scriptInput:  validQueryActionResult,
 		},
 		{
 			err:          true,
 			version:      1,
-			name:         "memory consuming starlark script",
-			script:       "def check(rows): return [1] * (1 << 30-1)",
 			errorMessage: "exit status 2",
 			stderr:       memoryConsumingScriptStderr,
 			stdout:       "",
-			result:       validQueryActionResult,
+			name:         "memory consuming starlark script",
+			script:       "def check(rows): return [1] * (1 << 30-1)",
+			scriptInput:  validQueryActionResult,
 		},
 		{
-			err:     true,
-			version: 1,
-			name:    "cpu consuming starlark script",
-			script: `def check(rows):
-						while True:
-							pass`,
+			err:          true,
+			version:      1,
 			errorMessage: "signal: killed",
 			stderr:       "",
 			stdout:       "",
-			result:       validQueryActionResult,
+			name:         "cpu consuming starlark script",
+			script: `def check(rows):
+						while True:
+							pass`,
+			scriptInput: validQueryActionResult,
 		},
 		{
-			err:     false,
-			version: 1,
-			name:    "valid starlark script",
+			err:          false,
+			version:      1,
+			errorMessage: "",
+			stderr:       "",
+			stdout:       "[{\"summary\":\"Fake check\",\"description\":\"Fake check description\",\"severity\":5,\"labels\":null}]\n",
+			name:         "valid starlark script",
 			script: `def check(rows):
 						results = []
 						results.append({
@@ -111,10 +113,7 @@ func TestRunChecks(t *testing.T) {
 							"severity": "warning",
 						})
 						return results`,
-			errorMessage: "",
-			stderr:       "",
-			stdout:       "[{\"summary\":\"Fake check\",\"description\":\"Fake check description\",\"severity\":5,\"labels\":null}]\n",
-			result:       validQueryActionResult,
+			scriptInput: validQueryActionResult,
 		},
 	}
 
@@ -123,7 +122,7 @@ func TestRunChecks(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, tc := range testCases {
-		result, err := agentpb.MarshalActionQueryDocsResult(tc.result)
+		result, err := agentpb.MarshalActionQueryDocsResult(tc.scriptInput)
 		require.NoError(t, err)
 
 		data := checks.StarlarkScriptData{
