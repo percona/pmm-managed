@@ -612,6 +612,7 @@ func (s *Service) processResults(ctx context.Context, sttCheck check.Check, targ
 		if exitError, ok := err.(*exec.ExitError); ok {
 			return nil, exitError
 		}
+
 		return nil, err
 	}
 
