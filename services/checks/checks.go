@@ -27,6 +27,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/percona/pmm-managed/utils/envvars"
+
+	"github.com/AlekSi/pointer"
 	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/percona-platform/saas/pkg/check"
 	"github.com/percona-platform/saas/pkg/starlark"
@@ -45,12 +48,10 @@ import (
 )
 
 const (
-	defaultHost            = "check.percona.com:443"
 	defaultRestartInterval = 24 * time.Hour
 	defaultStartDelay      = time.Minute
 
 	// Environment variables that affect checks service; only for testing.
-	envHost            = "PERCONA_TEST_CHECKS_HOST"
 	envPublicKey       = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
 	envRestartInterval = "PERCONA_TEST_CHECKS_INTERVAL" // not "restart" in the value - name is fixed
 	envCheckFile       = "PERCONA_TEST_CHECKS_FILE"
@@ -125,7 +126,7 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 		alertsRegistry:      newRegistry(resolveTimeoutFactor * resendInterval),
 
 		l:               l,
-		host:            defaultHost,
+		host:            "",
 		publicKeys:      defaultPublicKeys,
 		restartInterval: defaultRestartInterval,
 		startDelay:      defaultStartDelay,
@@ -146,10 +147,7 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 		}, []string{"service_type", "check_type"}),
 	}
 
-	if h := os.Getenv(envHost); h != "" {
-		l.Warnf("Host changed to %s.", h)
-		s.host = h
-	}
+	s.host = envvars.GetSAASHost()
 	if k := os.Getenv(envPublicKey); k != "" {
 		s.publicKeys = strings.Split(k, ",")
 		l.Warnf("Public keys changed to %q.", k)
@@ -639,11 +637,10 @@ func (s *Service) findTargets(serviceType models.ServiceType, minPMMAgentVersion
 				return errors.New("no available pmm agents")
 			}
 
-			agents = models.FindPMMAgentsForVersion(s.l, agents, minPMMAgentVersion)
-			if len(agents) == 0 {
+			agent := s.pickPMMAgent(agents, minPMMAgentVersion)
+			if agent == nil {
 				return errors.New("all available agents are outdated")
 			}
-			agent := agents[0]
 
 			dsn, err := models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, service.ServiceID, agents[0].AgentID, "")
 			if err != nil {
@@ -674,6 +671,33 @@ func (s *Service) findTargets(serviceType models.ServiceType, minPMMAgentVersion
 	}
 
 	return targets, nil
+}
+
+// pickPMMAgent selects the first pmm-agent with version >= minPMMAgentVersion.
+func (s *Service) pickPMMAgent(agents []*models.Agent, minPMMAgentVersion *version.Parsed) *models.Agent {
+	if len(agents) == 0 {
+		return nil
+	}
+
+	if minPMMAgentVersion == nil {
+		return agents[0]
+	}
+
+	for _, a := range agents {
+		v, err := version.Parse(pointer.GetString(a.Version))
+		if err != nil {
+			s.l.Warnf("Failed to parse pmm-agent version: %s.", err)
+			continue
+		}
+
+		if v.Less(minPMMAgentVersion) {
+			continue
+		}
+
+		return a
+	}
+
+	return nil
 }
 
 // groupChecksByDB splits provided checks by database and returns three slices: for MySQL, for PostgreSQL and for MongoDB.
