@@ -37,7 +37,7 @@ import (
 )
 
 const (
-	cpuLimit         = time.Duration(4)
+	cpuLimit         = 4 * time.Second
 	memoryLimitBytes = 100 * 1024 * 1024
 
 	// only used for testing.
