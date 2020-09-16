@@ -17,13 +17,35 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"os"
 	"strconv"
+	"time"
 
+	"github.com/percona-platform/saas/pkg/check"
+	"github.com/percona-platform/saas/pkg/starlark"
+	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/version"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"go.starlark.net/resolve"
+	"golang.org/x/sys/unix"
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/percona/pmm-managed/services/checks"
+)
+
+const (
+	cpuLimit         = time.Duration(4)
+	memoryLimitBytes = 100 * 1024 * 1024
+
+	// only used for testing.
+	starlarkRecursionFlag = "PERCONA_TEST_STARLARK_ALLOW_RECURSION"
+
+	// warning messages.
+	cpuUsageWarning    = "Failed to limit CPU usage"
+	memoryUsageWarning = "Failed to limit memory usage"
 )
 
 func main() {
@@ -46,4 +68,63 @@ func main() {
 	if on, _ := strconv.ParseBool(os.Getenv("PMM_TRACE")); on {
 		logrus.SetLevel(logrus.TraceLevel)
 	}
+	if on, _ := strconv.ParseBool(os.Getenv(starlarkRecursionFlag)); on {
+		resolve.AllowRecursion = true
+	}
+
+	l := logrus.WithField("component", "pmm-managed-starlark")
+
+	decoder := json.NewDecoder(os.Stdin)
+	var data checks.StarlarkScriptData
+	err := decoder.Decode(&data)
+	if err != nil {
+		l.Errorf("Error decoding json data: %s", err)
+		os.Exit(1)
+	}
+
+	results, err := runChecks(l, &data)
+	if err != nil {
+		l.Errorf("Error running starlark script: %+v", err)
+		os.Exit(1)
+	}
+
+	encoder := json.NewEncoder(os.Stdout)
+	err = encoder.Encode(results)
+	if err != nil {
+		l.Errorf("error encoding JSON results: %s", err)
+		os.Exit(1)
+	}
+}
+
+func runChecks(l *logrus.Entry, data *checks.StarlarkScriptData) ([]check.Result, error) {
+	err := unix.Setrlimit(unix.RLIMIT_CPU, &unix.Rlimit{Cur: uint64(cpuLimit.Seconds()), Max: uint64(cpuLimit.Seconds())})
+	if err != nil {
+		l.Warnf("%s: %s", cpuUsageWarning, err)
+	}
+	err = unix.Setrlimit(unix.RLIMIT_DATA, &unix.Rlimit{Cur: memoryLimitBytes, Max: memoryLimitBytes})
+	if err != nil {
+		l.Warnf("%s: %s", memoryUsageWarning, err)
+	}
+
+	funcs, err := checks.GetFuncsForVersion(data.CheckVersion)
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting funcs")
+	}
+
+	env, err := starlark.NewEnv(data.CheckName, data.Script, funcs)
+	if err != nil {
+		return nil, errors.Wrap(err, "error initializing starlark env")
+	}
+
+	input, err := agentpb.UnmarshalActionQueryResult(data.QueryActionResult)
+	if err != nil {
+		return nil, errors.Wrap(err, "error unmarshalling query action result")
+	}
+
+	results, err := env.Run(data.CheckName, input, l.Debugln)
+	if err != nil {
+		return nil, errors.Wrap(err, "error running starlark env")
+	}
+
+	return results, nil
 }
