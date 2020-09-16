@@ -23,6 +23,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/percona-platform/saas/pkg/check"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -47,67 +48,73 @@ var validQueryActionResult = []map[string]interface{}{
 func TestRunChecks(t *testing.T) {
 	testCases := []struct {
 		version      uint32
-		errorMessage string
-		stderr       string
-		stdout       string
 		name         string
 		script       string
-		scriptInput  []map[string]interface{}
+		exitError    string
+		stderr       string
+		checkResults []check.Result
+		exitCode     int
 	}{
-
 		{
 			version:      1,
-			errorMessage: "exit status 1",
-			stderr:       invalidStarlarkScriptStderr,
-			stdout:       "",
 			name:         "invalid starlark script",
 			script:       "def check(): return []",
-			scriptInput:  validQueryActionResult,
+			exitError:    "exit status 1",
+			stderr:       invalidStarlarkScriptStderr,
+			checkResults: nil,
+			exitCode:     1,
 		},
 		{
 			version:      5,
-			errorMessage: "exit status 1",
-			stderr:       invalidVersionStderr,
-			stdout:       "",
 			name:         "invalid version",
 			script:       "def check(): return []",
-			scriptInput:  validQueryActionResult,
+			exitError:    "exit status 1",
+			stderr:       invalidVersionStderr,
+			checkResults: nil,
+			exitCode:     1,
 		},
 		{
 			version:      1,
-			errorMessage: "exit status 2",
-			stderr:       memoryConsumingScriptStderr,
-			stdout:       "",
 			name:         "memory consuming starlark script",
 			script:       "def check(rows): return [1] * (1 << 30-1)",
-			scriptInput:  validQueryActionResult,
+			exitError:    "exit status 2",
+			stderr:       memoryConsumingScriptStderr,
+			checkResults: nil,
+			exitCode:     2,
 		},
 		{
-			version:      1,
-			errorMessage: "signal: killed",
-			stderr:       "",
-			stdout:       "",
-			name:         "cpu consuming starlark script",
+			version: 1,
+			name:    "cpu consuming starlark script",
 			script: `def check(rows):
-						while True:
-							pass`,
-			scriptInput: validQueryActionResult,
+							while True:
+								pass`,
+			exitError:    "signal: killed",
+			stderr:       "",
+			checkResults: nil,
+			exitCode:     -1,
 		},
 		{
-			version:      1,
-			errorMessage: "",
-			stderr:       "",
-			stdout:       "[{\"summary\":\"Fake check\",\"description\":\"Fake check description\",\"severity\":5,\"labels\":null}]\n",
-			name:         "valid starlark script",
+			version: 1,
+			name:    "valid starlark script",
 			script: `def check(rows):
-						results = []
-						results.append({
-							"summary": "Fake check",
-							"description": "Fake check description",
-							"severity": "warning",
-						})
-						return results`,
-			scriptInput: validQueryActionResult,
+							results = []
+							results.append({
+								"summary": "Fake check",
+								"description": "Fake check description",
+								"severity": "warning",
+							})
+							return results`,
+			exitError: "",
+			stderr:    "",
+			checkResults: []check.Result{
+				{
+					Summary:     "Fake check",
+					Description: "Fake check description",
+					Severity:    5,
+					Labels:      nil,
+				},
+			},
+			exitCode: 0,
 		},
 	}
 
@@ -116,7 +123,7 @@ func TestRunChecks(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, tc := range testCases {
-		result, err := agentpb.MarshalActionQueryDocsResult(tc.scriptInput)
+		result, err := agentpb.MarshalActionQueryDocsResult(validQueryActionResult)
 		require.NoError(t, err)
 
 		data := checks.StarlarkScriptData{
@@ -138,20 +145,26 @@ func TestRunChecks(t *testing.T) {
 			err = encoder.Encode(data)
 			require.NoError(t, err)
 
-			stdout, err := cmd.Output()
-			stderrContent := stderr.String()
-			if tc.stdout != "" {
-				require.NoError(t, err)
-				require.Equal(t, tc.stdout, string(stdout))
-			} else {
-				require.Error(t, err)
-				require.Empty(t, tc.stdout)
-				require.Equal(t, tc.errorMessage, err.Error())
-				assert.True(t, strings.Contains(stderrContent, tc.stderr))
-				// make sure that the limits were set
-				assert.False(t, strings.Contains(stderrContent, cpuUsageWarning))
-				assert.False(t, strings.Contains(stderrContent, memoryUsageWarning))
+			actualStdout, err := cmd.Output()
+			if err != nil {
+				exiterr := err.(*exec.ExitError)
+				assert.Equal(t, tc.exitError, exiterr.Error())
+				assert.Equal(t, tc.exitCode, exiterr.ExitCode())
 			}
+
+			if tc.checkResults != nil {
+				var expectedStdout bytes.Buffer
+				encoder := json.NewEncoder(&expectedStdout)
+				err = encoder.Encode(tc.checkResults)
+				require.NoError(t, err)
+				assert.Equal(t, expectedStdout.String(), string(actualStdout))
+			}
+
+			stderrContent := stderr.String()
+			assert.True(t, strings.Contains(stderrContent, tc.stderr))
+			// make sure that the limits were set
+			assert.False(t, strings.Contains(stderrContent, cpuUsageWarning))
+			assert.False(t, strings.Contains(stderrContent, memoryUsageWarning))
 		})
 	}
 }
