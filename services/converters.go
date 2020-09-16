@@ -326,15 +326,16 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 
 	case models.QANPostgreSQLPgStatMonitorAgentType:
 		return &inventorypb.QANPostgreSQLPgStatMonitorAgent{
-			AgentId:       agent.AgentID,
-			PmmAgentId:    pointer.GetString(agent.PMMAgentID),
-			ServiceId:     serviceID,
-			Username:      pointer.GetString(agent.Username),
-			Disabled:      agent.Disabled,
-			Status:        inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
-			CustomLabels:  labels,
-			Tls:           agent.TLS,
-			TlsSkipVerify: agent.TLSSkipVerify,
+			AgentId:               agent.AgentID,
+			PmmAgentId:            pointer.GetString(agent.PMMAgentID),
+			ServiceId:             serviceID,
+			Username:              pointer.GetString(agent.Username),
+			Disabled:              agent.Disabled,
+			Status:                inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
+			CustomLabels:          labels,
+			Tls:                   agent.TLS,
+			TlsSkipVerify:         agent.TLSSkipVerify,
+			QueryExamplesDisabled: agent.QueryExamplesDisabled,
 		}, nil
 
 	case models.RDSExporterType:
