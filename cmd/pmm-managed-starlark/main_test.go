@@ -46,7 +46,6 @@ var validQueryActionResult = []map[string]interface{}{
 
 func TestRunChecks(t *testing.T) {
 	testCases := []struct {
-		err          bool
 		version      uint32
 		errorMessage string
 		stderr       string
@@ -57,7 +56,6 @@ func TestRunChecks(t *testing.T) {
 	}{
 
 		{
-			err:          true,
 			version:      1,
 			errorMessage: "exit status 1",
 			stderr:       invalidStarlarkScriptStderr,
@@ -67,7 +65,6 @@ func TestRunChecks(t *testing.T) {
 			scriptInput:  validQueryActionResult,
 		},
 		{
-			err:          true,
 			version:      5,
 			errorMessage: "exit status 1",
 			stderr:       invalidVersionStderr,
@@ -77,7 +74,6 @@ func TestRunChecks(t *testing.T) {
 			scriptInput:  validQueryActionResult,
 		},
 		{
-			err:          true,
 			version:      1,
 			errorMessage: "exit status 2",
 			stderr:       memoryConsumingScriptStderr,
@@ -87,7 +83,6 @@ func TestRunChecks(t *testing.T) {
 			scriptInput:  validQueryActionResult,
 		},
 		{
-			err:          true,
 			version:      1,
 			errorMessage: "signal: killed",
 			stderr:       "",
@@ -99,7 +94,6 @@ func TestRunChecks(t *testing.T) {
 			scriptInput: validQueryActionResult,
 		},
 		{
-			err:          false,
 			version:      1,
 			errorMessage: "",
 			stderr:       "",
@@ -146,7 +140,10 @@ func TestRunChecks(t *testing.T) {
 
 			stdout, err := cmd.Output()
 			stderrContent := stderr.String()
-			if tc.err {
+			if tc.stdout != "" {
+				require.NoError(t, err)
+				require.Equal(t, tc.stdout, string(stdout))
+			} else {
 				require.Error(t, err)
 				require.Empty(t, tc.stdout)
 				require.Equal(t, tc.errorMessage, err.Error())
@@ -154,9 +151,6 @@ func TestRunChecks(t *testing.T) {
 				// make sure that the limits were set
 				assert.False(t, strings.Contains(stderrContent, cpuUsageWarning))
 				assert.False(t, strings.Contains(stderrContent, memoryUsageWarning))
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.stdout, string(stdout))
 			}
 		})
 	}
