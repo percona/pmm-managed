@@ -116,12 +116,13 @@ func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgr
 
 		if req.QanPostgresqlPgstatmonitorAgent {
 			row, err = models.CreateAgent(tx.Querier, models.QANPostgreSQLPgStatMonitorAgentType, &models.CreateAgentParams{
-				PMMAgentID:    req.PmmAgentId,
-				ServiceID:     service.ServiceID,
-				Username:      req.Username,
-				Password:      req.Password,
-				TLS:           req.Tls,
-				TLSSkipVerify: req.TlsSkipVerify,
+				PMMAgentID:            req.PmmAgentId,
+				ServiceID:             service.ServiceID,
+				Username:              req.Username,
+				Password:              req.Password,
+				QueryExamplesDisabled: req.DisableQueryExamples,
+				TLS:                   req.Tls,
+				TLSSkipVerify:         req.TlsSkipVerify,
 			})
 			if err != nil {
 				return err

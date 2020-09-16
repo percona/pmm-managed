@@ -663,13 +663,14 @@ func (as *AgentsService) AddQANPostgreSQLPgStatMonitorAgent(ctx context.Context,
 	var res *inventorypb.QANPostgreSQLPgStatMonitorAgent
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 		params := &models.CreateAgentParams{
-			PMMAgentID:    req.PmmAgentId,
-			ServiceID:     req.ServiceId,
-			Username:      req.Username,
-			Password:      req.Password,
-			CustomLabels:  req.CustomLabels,
-			TLS:           req.Tls,
-			TLSSkipVerify: req.TlsSkipVerify,
+			PMMAgentID:            req.PmmAgentId,
+			ServiceID:             req.ServiceId,
+			Username:              req.Username,
+			Password:              req.Password,
+			QueryExamplesDisabled: req.DisableQueryExamples,
+			CustomLabels:          req.CustomLabels,
+			TLS:                   req.Tls,
+			TLSSkipVerify:         req.TlsSkipVerify,
 		}
 		row, err := models.CreateAgent(tx.Querier, models.QANPostgreSQLPgStatMonitorAgentType, params)
 		if err != nil {

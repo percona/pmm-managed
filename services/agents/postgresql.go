@@ -87,7 +87,8 @@ func qanPostgreSQLPgStatementsAgentConfig(service *models.Service, agent *models
 // qanPostgreSQLPgStatMonitorAgentConfig returns desired configuration of qan-mongodb-profiler-agent built-in agent.
 func qanPostgreSQLPgStatMonitorAgentConfig(service *models.Service, agent *models.Agent) *agentpb.SetStateRequest_BuiltinAgent {
 	return &agentpb.SetStateRequest_BuiltinAgent{
-		Type: inventorypb.AgentType_QAN_POSTGRESQL_PGSTATMONITOR_AGENT,
-		Dsn:  agent.DSN(service, time.Second, "postgres"),
+		Type:                 inventorypb.AgentType_QAN_POSTGRESQL_PGSTATMONITOR_AGENT,
+		Dsn:                  agent.DSN(service, time.Second, "postgres"),
+		DisableQueryExamples: agent.QueryExamplesDisabled,
 	}
 }
