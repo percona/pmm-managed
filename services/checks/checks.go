@@ -42,15 +42,14 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services"
+	"github.com/percona/pmm-managed/utils/envvars"
 )
 
 const (
-	defaultHost            = "check.percona.com:443"
 	defaultRestartInterval = 24 * time.Hour
 	defaultStartDelay      = time.Minute
 
 	// Environment variables that affect checks service; only for testing.
-	envHost            = "PERCONA_TEST_CHECKS_HOST"
 	envPublicKey       = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
 	envRestartInterval = "PERCONA_TEST_CHECKS_INTERVAL" // not "restart" in the value - name is fixed
 	envCheckFile       = "PERCONA_TEST_CHECKS_FILE"
@@ -125,7 +124,7 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 		alertsRegistry:      newRegistry(resolveTimeoutFactor * resendInterval),
 
 		l:               l,
-		host:            defaultHost,
+		host:            "",
 		publicKeys:      defaultPublicKeys,
 		restartInterval: defaultRestartInterval,
 		startDelay:      defaultStartDelay,
@@ -146,10 +145,8 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 		}, []string{"service_type", "check_type"}),
 	}
 
-	if h := os.Getenv(envHost); h != "" {
-		l.Warnf("Host changed to %s.", h)
-		s.host = h
-	}
+	s.host = envvars.GetSAASHost()
+
 	if k := os.Getenv(envPublicKey); k != "" {
 		s.publicKeys = strings.Split(k, ",")
 		l.Warnf("Public keys changed to %q.", k)

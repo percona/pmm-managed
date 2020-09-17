@@ -36,14 +36,13 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/utils/envvars"
 )
 
 const (
-	defaultHost                   = "check.percona.com:443"
 	defaultSessionRefreshInterval = 24 * time.Hour
 	dialTimeout                   = 5 * time.Second
 
-	envHost                   = "PERCONA_TEST_AUTH_HOST"
 	envSessionRefreshInterval = "PERCONA_TEST_SESSION_REFRESH_INTERVAL"
 
 	authType = "PP-1"
@@ -64,16 +63,13 @@ func New(db *reform.DB) *Service {
 	l := logrus.WithField("component", "auth")
 
 	s := Service{
-		host:                   defaultHost,
+		host:                   "",
 		sessionRefreshInterval: defaultSessionRefreshInterval,
 		db:                     db,
 		l:                      l,
 	}
 
-	if h := os.Getenv(envHost); h != "" {
-		l.Warnf("Host changed to %s.", h)
-		s.host = h
-	}
+	s.host = envvars.GetSAASHost()
 
 	if d, err := time.ParseDuration(os.Getenv(envSessionRefreshInterval)); err == nil && d > 0 {
 		l.Warnf("Session refresh interval changed to %s.", d)

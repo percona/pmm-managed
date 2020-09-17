@@ -45,11 +45,11 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/utils/envvars"
 )
 
 const (
 	defaultV1URL        = "https://v.percona.com/"
-	defaultV2Host       = "check.percona.com:443" // protocol is always https
 	defaultInterval     = 24 * time.Hour
 	defaultRetryBackoff = time.Hour
 	defaultRetryCount   = 20
@@ -57,7 +57,6 @@ const (
 	// Environment variables that affect telemetry service; only for testing.
 	// DISABLE_TELEMETRY environment variable is handled elsewere.
 	envV1URL        = "PERCONA_VERSION_CHECK_URL" // the same name as for the Toolkit
-	envV2Host       = "PERCONA_TEST_TELEMETRY_HOST"
 	envInterval     = "PERCONA_TEST_TELEMETRY_INTERVAL"
 	envRetryBackoff = "PERCONA_TEST_TELEMETRY_RETRY_BACKOFF"
 
@@ -91,7 +90,7 @@ func NewService(db *reform.DB, pmmVersion string) *Service {
 		start:        time.Now(),
 		l:            l,
 		v1URL:        defaultV1URL,
-		v2Host:       defaultV2Host,
+		v2Host:       "",
 		interval:     defaultInterval,
 		retryBackoff: defaultRetryBackoff,
 		retryCount:   defaultRetryCount,
@@ -103,10 +102,9 @@ func NewService(db *reform.DB, pmmVersion string) *Service {
 		l.Warnf("v1URL changed to %q.", u)
 		s.v1URL = u
 	}
-	if h := os.Getenv(envV2Host); h != "" {
-		l.Warnf("v2Host changed to %q.", h)
-		s.v2Host = h
-	}
+
+	s.v2Host = envvars.GetSAASHost()
+
 	if d, err := time.ParseDuration(os.Getenv(envInterval)); err == nil && d > 0 {
 		l.Warnf("Interval changed to %s.", d)
 		s.interval = d
