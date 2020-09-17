@@ -27,8 +27,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/percona/pmm-managed/utils/envvars"
-
 	"github.com/AlekSi/pointer"
 	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/percona-platform/saas/pkg/check"
@@ -45,6 +43,7 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services"
+	"github.com/percona/pmm-managed/utils/envvars"
 )
 
 const (
@@ -687,6 +686,7 @@ func (s *Service) pickPMMAgent(agents []*models.Agent, minPMMAgentVersion *versi
 		v, err := version.Parse(pointer.GetString(a.Version))
 		if err != nil {
 			s.l.Warnf("Failed to parse pmm-agent version: %s.", err)
+
 			continue
 		}
 

@@ -23,8 +23,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/percona/pmm-managed/utils/envvars"
-
 	api "github.com/percona-platform/saas/gen/auth"
 	"github.com/percona/pmm/utils/tlsconfig"
 	"github.com/percona/pmm/version"
@@ -38,6 +36,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/utils/envvars"
 )
 
 const (

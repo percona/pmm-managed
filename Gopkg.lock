@@ -788,6 +788,7 @@
   input-imports = [
     "github.com/AlekSi/pointer",
     "github.com/BurntSushi/go-sumtype",
+    "github.com/asaskevich/govalidator",
     "github.com/aws/aws-sdk-go/aws",
     "github.com/aws/aws-sdk-go/aws/awserr",
     "github.com/aws/aws-sdk-go/aws/credentials",
