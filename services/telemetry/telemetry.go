@@ -30,8 +30,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/percona/pmm-managed/utils/envvars"
-
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/google/uuid"
@@ -47,6 +45,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/utils/envvars"
 )
 
 const (

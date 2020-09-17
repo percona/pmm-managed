@@ -149,13 +149,17 @@ func parseStringDuration(value string) (time.Duration, error) {
 	return d, nil
 }
 
+// GetSAASHost validates PERCONA_TEST_SAAS_HOST env variable.
+// returns it if it's valid, otherwise returns defaultSAASHost.
 func GetSAASHost() string {
 	h := os.Getenv(envSAASHost)
 	if govalidator.IsURL(h) {
 		logrus.Warnf("SAAS host changed to %s.", h)
+
 		return h
 	}
 	logrus.Infof("Using default SAAS host %s.", defaultSAASHost)
+
 	return defaultSAASHost
 }
 
