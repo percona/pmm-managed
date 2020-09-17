@@ -27,7 +27,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/AlekSi/pointer"
 	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/percona-platform/saas/pkg/check"
 	"github.com/percona-platform/saas/pkg/starlark"
@@ -75,9 +74,9 @@ const (
 
 // pmm-agent versions with known changes in Query Actions.
 var (
-	pmmAgent260     = mustParseVersion("2.6.0")
-	pmmAgent270     = mustParseVersion("2.7.0")
-	pmmAgentInvalid = mustParseVersion("3.0.0-invalid")
+	pmmAgent260     = version.MustParse("2.6.0")
+	pmmAgent270     = version.MustParse("2.7.0")
+	pmmAgentInvalid = version.MustParse("3.0.0-invalid")
 )
 
 var defaultPublicKeys = []string{
@@ -640,10 +639,11 @@ func (s *Service) findTargets(serviceType models.ServiceType, minPMMAgentVersion
 				return errors.New("no available pmm agents")
 			}
 
-			agent := s.pickPMMAgent(agents, minPMMAgentVersion)
-			if agent == nil {
+			agents = models.FindPMMAgentsForVersion(s.l, agents, minPMMAgentVersion)
+			if len(agents) == 0 {
 				return errors.New("all available agents are outdated")
 			}
+			agent := agents[0]
 
 			dsn, err := models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, service.ServiceID, agents[0].AgentID, "")
 			if err != nil {
@@ -674,33 +674,6 @@ func (s *Service) findTargets(serviceType models.ServiceType, minPMMAgentVersion
 	}
 
 	return targets, nil
-}
-
-// pickPMMAgent selects the first pmm-agent with version >= minPMMAgentVersion.
-func (s *Service) pickPMMAgent(agents []*models.Agent, minPMMAgentVersion *version.Parsed) *models.Agent {
-	if len(agents) == 0 {
-		return nil
-	}
-
-	if minPMMAgentVersion == nil {
-		return agents[0]
-	}
-
-	for _, a := range agents {
-		v, err := version.Parse(pointer.GetString(a.Version))
-		if err != nil {
-			s.l.Warnf("Failed to parse pmm-agent version: %s.", err)
-			continue
-		}
-
-		if v.Less(minPMMAgentVersion) {
-			continue
-		}
-
-		return a
-	}
-
-	return nil
 }
 
 // groupChecksByDB splits provided checks by database and returns three slices: for MySQL, for PostgreSQL and for MongoDB.
@@ -882,15 +855,6 @@ func (s *Service) verifySignatures(resp *api.GetAllChecksResponse) error {
 	}
 
 	return errors.New("no verified signatures")
-}
-
-func mustParseVersion(v string) *version.Parsed {
-	p, err := version.Parse(v)
-	if err != nil {
-		panic(err)
-	}
-
-	return p
 }
 
 // Describe implements prom.Collector.
