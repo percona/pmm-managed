@@ -32,8 +32,11 @@ import (
 )
 
 const (
-	defaultSAASHost = "check.percona.com:443"
-	envSAASHost     = "PERCONA_TEST_SAAS_HOST"
+	defaultSAASHost      = "check.percona.com:443"
+	envSAASHost          = "PERCONA_TEST_SAAS_HOST"
+	envSAASAuthHost      = "PERCONA_TEST_AUTH_HOST"
+	envSAASChecksHost    = "PERCONA_TEST_CHECKS_HOST"
+	envSAASTelemetryHost = "PERCONA_TEST_TELEMETRY_HOST"
 )
 
 // InvalidDurationError invalid duration error.
@@ -77,13 +80,6 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 		// skip supervisord environment variables
 		if strings.HasPrefix(k, "SUPERVISOR_") {
 			continue
-		}
-
-		// panic if environment variables are PERCONA_TEST_AUTH_HOST, PERCONA_TEST_CHECKS_HOST, PERCONA_TEST_TELEMETRY_HOST
-		if strings.Contains(k, "PERCONA_TEST_AUTH_HOST") ||
-			strings.Contains(k, "PERCONA_TEST_CHECKS_HOST") ||
-			strings.Contains(k, "PERCONA_TEST_TELEMETRY_HOST") {
-			panic(fmt.Sprintf("environment variable %q IS NOT SUPPORTED", k))
 		}
 
 		// skip test environment variables that are handled elsewere with a big warning
@@ -149,18 +145,35 @@ func parseStringDuration(value string) (time.Duration, error) {
 	return d, nil
 }
 
-// GetSAASHost validates PERCONA_TEST_SAAS_HOST env variable.
+// GetSAASHost validates SAAS host env variables.
 // returns it if it's valid, otherwise returns defaultSAASHost.
 func GetSAASHost() string {
-	h := os.Getenv(envSAASHost)
-	if govalidator.IsURL(h) {
+	switch {
+	case govalidator.IsURL(os.Getenv(envSAASAuthHost)):
+		h := os.Getenv(envSAASAuthHost)
 		logrus.Warnf("SAAS host changed to %s.", h)
 
 		return h
-	}
-	logrus.Infof("Using default SAAS host %s.", defaultSAASHost)
+	case govalidator.IsURL(os.Getenv(envSAASChecksHost)):
+		h := os.Getenv(envSAASChecksHost)
+		logrus.Warnf("SAAS host changed to %s.", h)
 
-	return defaultSAASHost
+		return h
+	case govalidator.IsURL(os.Getenv(envSAASTelemetryHost)):
+		h := os.Getenv(envSAASTelemetryHost)
+		logrus.Warnf("SAAS host changed to %s.", h)
+
+		return h
+	case govalidator.IsURL(os.Getenv(envSAASHost)):
+		h := os.Getenv(envSAASHost)
+		logrus.Warnf("SAAS host changed to %s.", h)
+
+		return h
+	default:
+		logrus.Infof("Using default SAAS host %s.", defaultSAASHost)
+
+		return defaultSAASHost
+	}
 }
 
 func formatEnvVariableError(err error, env, value string) error {
