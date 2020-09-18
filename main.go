@@ -113,12 +113,13 @@ func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
 }
 
 type gRPCServerDeps struct {
-	db             *reform.DB
-	prometheus     *prometheus.Service
-	server         *server.Server
-	agentsRegistry *agents.Registry
-	grafanaClient  *grafana.Client
-	checksService  *checks.Service
+	db                  *reform.DB
+	prometheus          *prometheus.Service
+	server              *server.Server
+	agentsRegistry      *agents.Registry
+	grafanaClient       *grafana.Client
+	checksService       *checks.Service
+	dbaasControllerConn *grpc.ClientConn
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -172,6 +173,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterSecurityChecksServer(gRPCServer, managementgrpc.NewChecksServer(checksSvc))
 
 	dbaasv1beta1.RegisterKubernetesServer(gRPCServer, dbaas.NewKubernetesServer(deps.db))
+	dbaasv1beta1.RegisterXtraDBClusterServer(gRPCServer, dbaas.NewXtraDBClusterService(deps.db, deps.dbaasControllerConn))
 
 	if l.Logger.GetLevel() >= logrus.DebugLevel {
 		l.Debug("Reflection and channelz are enabled.")
@@ -250,6 +252,7 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 		managementpb.RegisterSecurityChecksHandlerFromEndpoint,
 
 		dbaasv1beta1.RegisterKubernetesHandlerFromEndpoint,
+		dbaasv1beta1.RegisterXtraDBClusterHandlerFromEndpoint,
 	} {
 		if err := r(ctx, proxyMux, gRPCAddr, opts); err != nil {
 			l.Panic(err)
@@ -595,6 +598,13 @@ func main() {
 
 	authServer := grafana.NewAuthServer(grafanaClient, awsInstanceChecker)
 
+	// TODO:
+	dbaasControllerConn, err := grpc.Dial("127.0.0.1:20201", grpc.WithInsecure())
+	if err != nil {
+		l.Panicf("dbaas-ontroller conn problem: %+v", err)
+	}
+	defer dbaasControllerConn.Close()
+
 	l.Info("Starting services...")
 	var wg sync.WaitGroup
 
@@ -638,12 +648,13 @@ func main() {
 	go func() {
 		defer wg.Done()
 		runGRPCServer(ctx, &gRPCServerDeps{
-			db:             db,
-			prometheus:     prometheus,
-			server:         server,
-			agentsRegistry: agentsRegistry,
-			grafanaClient:  grafanaClient,
-			checksService:  checksService,
+			db:                  db,
+			prometheus:          prometheus,
+			server:              server,
+			agentsRegistry:      agentsRegistry,
+			grafanaClient:       grafanaClient,
+			checksService:       checksService,
+			dbaasControllerConn: dbaasControllerConn,
 		})
 	}()
 
