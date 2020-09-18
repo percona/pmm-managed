@@ -32,11 +32,8 @@ import (
 )
 
 const (
-	defaultSAASHost      = "check.percona.com:443"
-	envSAASHost          = "PERCONA_TEST_SAAS_HOST"
-	envSAASAuthHost      = "PERCONA_TEST_AUTH_HOST"
-	envSAASChecksHost    = "PERCONA_TEST_CHECKS_HOST"
-	envSAASTelemetryHost = "PERCONA_TEST_TELEMETRY_HOST"
+	defaultSAASHost = "check.percona.com:443"
+	envSAASHost     = "PERCONA_TEST_SAAS_HOST"
 )
 
 // InvalidDurationError invalid duration error.
@@ -145,35 +142,31 @@ func parseStringDuration(value string) (time.Duration, error) {
 	return d, nil
 }
 
-// GetSAASHost validates SAAS host env variables.
-// returns it if it's valid, otherwise returns defaultSAASHost.
-func GetSAASHost() string {
-	switch {
-	case govalidator.IsURL(os.Getenv(envSAASAuthHost)):
-		h := os.Getenv(envSAASAuthHost)
-		logrus.Warnf("SAAS host changed to %s.", h)
+// GetSAASHost returns SAAS host env variable value.
+// if it's valid, otherwise returns defaultSAASHost.
+func GetSAASHost(env string) string {
+	if v, b := os.LookupEnv(envSAASHost); b {
+		if u := govalidator.IsURL(v); u {
+			logrus.Warnf("SAAS host changed to %s.", v)
 
-		return h
-	case govalidator.IsURL(os.Getenv(envSAASChecksHost)):
-		h := os.Getenv(envSAASChecksHost)
-		logrus.Warnf("SAAS host changed to %s.", h)
-
-		return h
-	case govalidator.IsURL(os.Getenv(envSAASTelemetryHost)):
-		h := os.Getenv(envSAASTelemetryHost)
-		logrus.Warnf("SAAS host changed to %s.", h)
-
-		return h
-	case govalidator.IsURL(os.Getenv(envSAASHost)):
-		h := os.Getenv(envSAASHost)
-		logrus.Warnf("SAAS host changed to %s.", h)
-
-		return h
-	default:
-		logrus.Infof("Using default SAAS host %s.", defaultSAASHost)
-
-		return defaultSAASHost
+			return v
+		}
+		logrus.Warnf("environment variable %s has invalid format %s.", env, v)
 	}
+
+	if v, b := os.LookupEnv(env); b {
+		if u := govalidator.IsURL(v); u {
+			logrus.Warnf("environment variable %s WILL BE REMOVED SOON, please use %s instead", env, envSAASHost)
+			logrus.Warnf("SAAS host changed to %s.", v)
+
+			return v
+		}
+		logrus.Warnf("environment variable %s has invalid format: %s.", env, v)
+	}
+
+	logrus.Infof("Using default SAAS host %s.", defaultSAASHost)
+
+	return defaultSAASHost
 }
 
 func formatEnvVariableError(err error, env, value string) error {

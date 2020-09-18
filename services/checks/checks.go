@@ -50,6 +50,7 @@ const (
 	defaultStartDelay      = time.Minute
 
 	// Environment variables that affect checks service; only for testing.
+	envHost            = "PERCONA_TEST_CHECKS_HOST"
 	envPublicKey       = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
 	envRestartInterval = "PERCONA_TEST_CHECKS_INTERVAL" // not "restart" in the value - name is fixed
 	envCheckFile       = "PERCONA_TEST_CHECKS_FILE"
@@ -124,7 +125,7 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 		alertsRegistry:      newRegistry(resolveTimeoutFactor * resendInterval),
 
 		l:               l,
-		host:            envvars.GetSAASHost(),
+		host:            envvars.GetSAASHost(envHost),
 		publicKeys:      defaultPublicKeys,
 		restartInterval: defaultRestartInterval,
 		startDelay:      defaultStartDelay,

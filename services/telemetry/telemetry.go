@@ -57,6 +57,7 @@ const (
 	// Environment variables that affect telemetry service; only for testing.
 	// DISABLE_TELEMETRY environment variable is handled elsewere.
 	envV1URL        = "PERCONA_VERSION_CHECK_URL" // the same name as for the Toolkit
+	envV2Host       = "PERCONA_TEST_TELEMETRY_HOST"
 	envInterval     = "PERCONA_TEST_TELEMETRY_INTERVAL"
 	envRetryBackoff = "PERCONA_TEST_TELEMETRY_RETRY_BACKOFF"
 
@@ -90,7 +91,7 @@ func NewService(db *reform.DB, pmmVersion string) *Service {
 		start:        time.Now(),
 		l:            l,
 		v1URL:        defaultV1URL,
-		v2Host:       envvars.GetSAASHost(),
+		v2Host:       envvars.GetSAASHost(envV2Host),
 		interval:     defaultInterval,
 		retryBackoff: defaultRetryBackoff,
 		retryCount:   defaultRetryCount,

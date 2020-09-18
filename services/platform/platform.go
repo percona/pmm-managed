@@ -43,6 +43,7 @@ const (
 	defaultSessionRefreshInterval = 24 * time.Hour
 	dialTimeout                   = 5 * time.Second
 
+	envHost                   = "PERCONA_TEST_AUTH_HOST"
 	envSessionRefreshInterval = "PERCONA_TEST_SESSION_REFRESH_INTERVAL"
 
 	authType = "PP-1"
@@ -63,7 +64,7 @@ func New(db *reform.DB) *Service {
 	l := logrus.WithField("component", "auth")
 
 	s := Service{
-		host:                   envvars.GetSAASHost(),
+		host:                   envvars.GetSAASHost(envHost),
 		sessionRefreshInterval: defaultSessionRefreshInterval,
 		db:                     db,
 		l:                      l,
