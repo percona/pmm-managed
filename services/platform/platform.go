@@ -63,7 +63,7 @@ func New(db *reform.DB) *Service {
 	l := logrus.WithField("component", "auth")
 
 	s := Service{
-		host:                   "",
+		host:                   envvars.GetSAASHost(),
 		sessionRefreshInterval: defaultSessionRefreshInterval,
 		db:                     db,
 		l:                      l,
