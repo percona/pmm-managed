@@ -124,7 +124,7 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 		alertsRegistry:      newRegistry(resolveTimeoutFactor * resendInterval),
 
 		l:               l,
-		host:            "",
+		host:            envvars.GetSAASHost(),
 		publicKeys:      defaultPublicKeys,
 		restartInterval: defaultRestartInterval,
 		startDelay:      defaultStartDelay,
