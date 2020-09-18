@@ -69,8 +69,6 @@ func New(db *reform.DB) *Service {
 		l:                      l,
 	}
 
-	s.host = envvars.GetSAASHost()
-
 	if d, err := time.ParseDuration(os.Getenv(envSessionRefreshInterval)); err == nil && d > 0 {
 		l.Warnf("Session refresh interval changed to %s.", d)
 		s.sessionRefreshInterval = d

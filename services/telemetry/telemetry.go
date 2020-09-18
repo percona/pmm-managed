@@ -103,8 +103,6 @@ func NewService(db *reform.DB, pmmVersion string) *Service {
 		s.v1URL = u
 	}
 
-	s.v2Host = envvars.GetSAASHost()
-
 	if d, err := time.ParseDuration(os.Getenv(envInterval)); err == nil && d > 0 {
 		l.Warnf("Interval changed to %s.", d)
 		s.interval = d
