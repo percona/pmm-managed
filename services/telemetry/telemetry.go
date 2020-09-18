@@ -90,7 +90,7 @@ func NewService(db *reform.DB, pmmVersion string) *Service {
 		start:        time.Now(),
 		l:            l,
 		v1URL:        defaultV1URL,
-		v2Host:       "",
+		v2Host:       envvars.GetSAASHost(),
 		interval:     defaultInterval,
 		retryBackoff: defaultRetryBackoff,
 		retryCount:   defaultRetryCount,
