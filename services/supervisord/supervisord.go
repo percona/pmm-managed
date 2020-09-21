@@ -486,6 +486,21 @@ func (s *Service) UpdateConfiguration(settings *models.Settings) error {
 // once we start generating it. See alertmanager service.
 
 var templates = template.Must(template.New("").Option("missingkey=error").Parse(`
+{{define "dbaas"}}
+[program:dbaas]
+priority = 7
+command = /usr/sbin/dbaas
+user = pmm
+startretries = 10
+startsecs = 1
+stopsignal = INT
+stopwaitsecs = 300
+stdout_logfile = /srv/logs/dbaas.log
+stdout_logfile_maxbytes = 10MB
+stdout_logfile_backups = 3
+redirect_stderr = true
+{{end}}
+
 {{define "prometheus"}}
 [program:prometheus]
 priority = 7
