@@ -18,6 +18,7 @@ package supervisord
 
 import (
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -42,6 +43,10 @@ func TestConfig(t *testing.T) {
 
 	for _, tmpl := range templates.Templates() {
 		if tmpl.Name() == "" {
+			continue
+		}
+
+		if tmpl.Name() == "dbaas-controller" && os.Getenv("PERCONA_TEST_DBAAS") != "1" {
 			continue
 		}
 
