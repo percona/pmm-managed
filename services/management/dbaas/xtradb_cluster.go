@@ -24,8 +24,9 @@ import (
 	"google.golang.org/grpc"
 	"gopkg.in/reform.v1"
 
-	"github.com/percona/pmm-managed/models"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
+
+	"github.com/percona/pmm-managed/models"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 )
