@@ -50,18 +50,4 @@ func TestVictoriaMetricsParams(t *testing.T) {
 		require.Equal(t, []string{"--rule=/srv/external_rules/rul1.yml", "--rule=/srv/external_rules/rule2.yml", "--evaluationInterval=10s"}, vmp.VMAlertFlags)
 	})
 
-	t.Run("check cache enable for VMDB", func(t *testing.T) {
-		_ = os.Setenv(vmCacheEnableEnv, "true")
-		defer func() {
-			_ = os.Unsetenv(vmCacheEnableEnv)
-		}()
-		vmp, err := NewVictoriaMetricsParams(testConf)
-		require.NoError(t, err)
-		require.Equal(t, []string{"--search.disableCache=false"}, vmp.VMDBFlags)
-	})
-	t.Run("check default params for VMDBFlags", func(t *testing.T) {
-		vmp, err := NewVictoriaMetricsParams(testConf)
-		require.NoError(t, err)
-		require.Equal(t, []string{"--search.disableCache=true"}, vmp.VMDBFlags)
-	})
 }

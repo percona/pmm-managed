@@ -17,7 +17,6 @@
 package models
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -29,16 +28,12 @@ import (
 
 const (
 
-	// enables cache for vmdb responses.
-	vmCacheEnableEnv = "VM_CACHE_ENABLE"
 	// enables victoriametrics services at supervisor config.
-	vmTestEnableEnv = "VM_TEST_ENABLE"
+	vmTestEnableEnv = "PERCONA_TEST_ENABLE_VM"
 )
 
 // VictoriaMetricsParams - defines flags and settings for victoriametrics.
 type VictoriaMetricsParams struct {
-	// VMDBFlags defines additional flags for VictoriaMetrics DB.
-	VMDBFlags []string
 	// VMAlertFlags additional flags for VMAlert.
 	VMAlertFlags []string
 	// Enables VictoriaMetrics.
@@ -55,7 +50,7 @@ func NewVictoriaMetricsParams(basePath string) (*VictoriaMetricsParams, error) {
 	if enabledVar := os.Getenv(vmTestEnableEnv); enabledVar != "" {
 		parsedBool, err := strconv.ParseBool(enabledVar)
 		if err != nil {
-			return vmp, errors.Wrapf(err, "cannot parse %s as bool", vmCacheEnableEnv)
+			return vmp, errors.Wrapf(err, "cannot parse %s as bool", vmTestEnableEnv)
 		}
 		vmp.Enabled = parsedBool
 	}
@@ -71,9 +66,6 @@ func NewVictoriaMetricsParams(basePath string) (*VictoriaMetricsParams, error) {
 func (vmp *VictoriaMetricsParams) UpdateParams() error {
 	if err := vmp.loadVMAlertParams(); err != nil {
 		return errors.Wrap(err, "cannot update VMAlertFlags config param")
-	}
-	if err := vmp.loadVMDBParams(); err != nil {
-		return errors.Wrap(err, "cannot update VMDBFlags config param")
 	}
 
 	return nil
@@ -101,24 +93,6 @@ func (vmp *VictoriaMetricsParams) loadVMAlertParams() error {
 		vmalertFlags = append(vmalertFlags, "--evaluationInterval="+cfg.GlobalConfig.EvaluationInterval.String())
 	}
 	vmp.VMAlertFlags = vmalertFlags
-
-	return nil
-}
-
-// loadVMDBParams - flags for VictoriaMetrics database can be added here.
-func (vmp *VictoriaMetricsParams) loadVMDBParams() error {
-	cacheDisabled := true
-	if cacheEnable := os.Getenv(vmCacheEnableEnv); cacheEnable != "" {
-		parsedBool, err := strconv.ParseBool(os.Getenv(vmCacheEnableEnv))
-		if err != nil {
-			return errors.Wrapf(err, "failed to parse %s as bool", vmCacheEnableEnv)
-		}
-		// we have to invert parsed variable
-		cacheDisabled = !parsedBool
-	}
-	vmdbFlags := make([]string, 0, len(vmp.VMDBFlags))
-	vmdbFlags = append(vmdbFlags, fmt.Sprintf("--search.disableCache=%t", cacheDisabled))
-	vmp.VMDBFlags = vmdbFlags
 
 	return nil
 }

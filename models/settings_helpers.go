@@ -78,6 +78,8 @@ type ChangeSettingsParams struct {
 	SessionID string
 	// LogOut user from Percona Platform, i.e. remove user email and session id
 	LogOut bool
+
+	VMCacheEnable bool
 }
 
 // UpdateSettings updates only non-zero, non-empty values.
@@ -147,6 +149,8 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 	if params.Email != "" {
 		settings.SaaS.Email = params.Email
 	}
+
+	settings.VictoriaMetrics.CacheEnable = params.VMCacheEnable
 
 	err = SaveSettings(q, settings)
 	if err != nil {

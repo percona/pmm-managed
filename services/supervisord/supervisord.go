@@ -408,9 +408,9 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 		"DataRetentionMonths": retentionMonths,
 		"IsVMEnabled":         s.vmParams.Enabled,
 		"VMAlertParams":       s.vmParams.VMAlertFlags,
-		"VMDBParams":          s.vmParams.VMDBFlags,
+		"VMDBCacheEnable":     !settings.VictoriaMetrics.CacheEnable,
 	}
-	if err := addAlertManagerParam(settings.AlertManagerURL, templateParams); err != nil {
+	if err := addAlertManagerParams(settings.AlertManagerURL, templateParams); err != nil {
 		return nil, errors.Wrap(err, "cannot add AlertManagerParams to supervisor template")
 	}
 
@@ -422,9 +422,9 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 	return b, nil
 }
 
-// addAlertManagerParam parses alertManagerURL
-// and extracts username and password from it to templateParams.
-func addAlertManagerParam(alertManagerURL string, templateParams map[string]interface{}) error {
+// addAlertManagerParams parses alertManagerURL
+// and extracts url, username and password from it to templateParams.
+func addAlertManagerParams(alertManagerURL string, templateParams map[string]interface{}) error {
 	templateParams["AlertmanagerURL"] = alertManagerURL
 	templateParams["AlertManagerUser"] = ""
 	templateParams["AlertManagerPassword"] = ""
@@ -433,29 +433,25 @@ func addAlertManagerParam(alertManagerURL string, templateParams map[string]inte
 	}
 	u, err := url.Parse(alertManagerURL)
 	if err != nil {
-		templateParams["AlertmanagerURL"] = ""
 
 		return errors.Wrap(err, "cannot parse AlertManagerURL")
 	}
-
 	if u.Opaque != "" || u.Host == "" {
-		templateParams["AlertmanagerURL"] = ""
 
 		return errors.Errorf("AlertmanagerURL parsed incorrectly as %#v", u)
 	}
 	if username := u.User.Username(); username != "" {
-		if password, ok := u.User.Password(); ok {
-			n := url.URL{
-				Scheme:   u.Scheme,
-				Host:     u.Host,
-				Path:     u.Path,
-				RawQuery: u.RawQuery,
-				Fragment: u.Fragment,
-			}
-			templateParams["AlertManagerUser"] = username
-			templateParams["AlertManagerPassword"] = strconv.Quote(password)
-			templateParams["AlertmanagerURL"] = n.String()
+		password, _ := u.User.Password()
+		n := url.URL{
+			Scheme:   u.Scheme,
+			Host:     u.Host,
+			Path:     u.Path,
+			RawQuery: u.RawQuery,
+			Fragment: u.Fragment,
 		}
+		templateParams["AlertManagerUser"] = username
+		templateParams["AlertManagerPassword"] = strconv.Quote(password)
+		templateParams["AlertmanagerURL"] = n.String()
 	}
 
 	return nil
@@ -584,9 +580,7 @@ command =
 		--retentionPeriod={{ .DataRetentionMonths }}
 		--storageDataPath=/srv/victoriametrics/data
 		--httpListenAddr=127.0.0.1:8428
-{{- range $index, $param := .VMDBParams}}
-		{{$param}}
-{{- end}}
+		--search.disableCache={{.VMDBCacheEnable}}
 user = pmm
 autorestart = {{ .IsVMEnabled }}
 autostart = {{ .IsVMEnabled }}

@@ -29,6 +29,11 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
+// InvalidBoolError invalid duration error.
+type InvalidBoolError string
+
+func (e InvalidBoolError) Error() string { return string(e) }
+
 // InvalidDurationError invalid duration error.
 type InvalidDurationError string
 
@@ -64,11 +69,6 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 
 		// skip Grafana's environment variables
 		if strings.HasPrefix(k, "GF_") {
-			continue
-		}
-
-		// skip VictoriaMetrics's environment variables
-		if strings.HasPrefix(k, "VM_") {
 			continue
 		}
 
@@ -120,6 +120,11 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 			if envSettings.DataRetention, err = parseStringDuration(v); err != nil {
 				err = formatEnvVariableError(err, env, v)
 			}
+		case "VM_CACHE_ENABLE":
+			if envSettings.VMCacheEnable, err = parseBool(v); err != nil {
+				err = formatEnvVariableError(err, env, v)
+			}
+
 		default:
 			warns = append(warns, fmt.Sprintf("unknown environment variable %q", env))
 		}
@@ -140,10 +145,25 @@ func parseStringDuration(value string) (time.Duration, error) {
 	return d, nil
 }
 
+// parseStringDuration validate duration as string value.
+func parseBool(value string) (bool, error) {
+	if len(value) == 0 {
+		return false, nil
+	}
+	b, err := strconv.ParseBool(value)
+	if err != nil {
+		return false, InvalidDurationError("invalid duration error")
+	}
+
+	return b, nil
+}
+
 func formatEnvVariableError(err error, env, value string) error {
 	switch e := err.(type) {
 	case InvalidDurationError:
 		return fmt.Errorf("environment variable %q has invalid duration %s", env, value)
+	case InvalidBoolError:
+		return fmt.Errorf("environment variable %q has invalid bool %s", env, value)
 	default:
 		return errors.Wrap(e, "unknown error")
 	}
