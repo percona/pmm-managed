@@ -433,11 +433,9 @@ func addAlertManagerParams(alertManagerURL string, templateParams map[string]int
 	}
 	u, err := url.Parse(alertManagerURL)
 	if err != nil {
-
 		return errors.Wrap(err, "cannot parse AlertManagerURL")
 	}
 	if u.Opaque != "" || u.Host == "" {
-
 		return errors.Errorf("AlertmanagerURL parsed incorrectly as %#v", u)
 	}
 	if username := u.User.Username(); username != "" {
