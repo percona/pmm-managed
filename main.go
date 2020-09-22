@@ -538,7 +538,7 @@ func main() {
 
 	telemetry, err := telemetry.NewService(db, version.Version)
 	if err != nil {
-		l.Fatalf("could not create telemetry service. %s", err)
+		l.Fatalf("Could not create telemetry service: %s", err)
 	}
 
 	awsInstanceChecker := server.NewAWSInstanceChecker(db, telemetry)
