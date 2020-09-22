@@ -47,7 +47,6 @@ var validQueryActionResult = []map[string]interface{}{
 
 func TestStarlarkSandbox(t *testing.T) {
 	testCases := []struct {
-		version      uint32
 		name         string
 		script       string
 		exitError    string
@@ -56,7 +55,6 @@ func TestStarlarkSandbox(t *testing.T) {
 		exitCode     int
 	}{
 		{
-			version:      1,
 			name:         "invalid starlark script",
 			script:       "def check(): return []",
 			exitError:    "exit status 1",
@@ -64,15 +62,6 @@ func TestStarlarkSandbox(t *testing.T) {
 			checkResults: nil,
 			exitCode:     1,
 		}, {
-			version:      5,
-			name:         "invalid version",
-			script:       "def check(): return []",
-			exitError:    "exit status 1",
-			stderr:       invalidVersionStderr,
-			checkResults: nil,
-			exitCode:     1,
-		}, {
-			version:      1,
 			name:         "memory consuming starlark script",
 			script:       "def check(rows): return [1] * (1 << 30-1)",
 			exitError:    "exit status 2",
@@ -80,8 +69,7 @@ func TestStarlarkSandbox(t *testing.T) {
 			checkResults: nil,
 			exitCode:     2,
 		}, {
-			version: 1,
-			name:    "cpu consuming starlark script",
+			name: "cpu consuming starlark script",
 			script: `def check(rows):
 							while True:
 								pass`,
@@ -90,8 +78,7 @@ func TestStarlarkSandbox(t *testing.T) {
 			checkResults: nil,
 			exitCode:     -1,
 		}, {
-			version: 1,
-			name:    "valid starlark script",
+			name: "valid starlark script",
 			script: `def check(rows):
 							results = []
 							results.append({
@@ -127,7 +114,7 @@ func TestStarlarkSandbox(t *testing.T) {
 			require.NoError(t, err)
 
 			data := &checks.StarlarkScriptData{
-				Version:     tc.version,
+				Version:     1,
 				Name:        tc.name,
 				Script:      tc.script,
 				QueryResult: result,
