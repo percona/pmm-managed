@@ -75,6 +75,9 @@ type ChangeSettingsParams struct {
 	// Disable Security Threat Tool
 	DisableSTT bool
 
+	// Enable DBaaS features.
+	EnableDBaaS bool
+
 	// Percona Platform user email
 	Email string
 	// Percona Platform session Id
@@ -138,6 +141,7 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 	if params.EnableSTT {
 		settings.SaaS.STTEnabled = true
 	}
+	settings.DBaaS.Enabled = params.EnableDBaaS
 	if params.LogOut {
 		settings.SaaS.SessionID = ""
 		settings.SaaS.Email = ""
