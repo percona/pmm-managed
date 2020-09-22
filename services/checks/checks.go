@@ -595,11 +595,12 @@ func (s *Service) processResults(ctx context.Context, sttCheck check.Check, targ
 	cmdCtx, cancel := context.WithTimeout(ctx, scriptTimeout)
 	defer cancel()
 
-	process := exec.CommandContext(cmdCtx, "pmm-managed-starlark")
-	pdeathsig.Set(process, syscall.SIGKILL)
+	cmd := exec.CommandContext(cmdCtx, "pmm-managed-starlark")
+	pdeathsig.Set(cmd, syscall.SIGKILL)
 
-	var stdin bytes.Buffer
-	process.Stdin = &stdin
+	var stdin, stderr bytes.Buffer
+	cmd.Stdin = &stdin
+	cmd.Stderr = &stderr
 
 	encoder := json.NewEncoder(&stdin)
 	err = encoder.Encode(input)
@@ -607,12 +608,9 @@ func (s *Service) processResults(ctx context.Context, sttCheck check.Check, targ
 		return nil, errors.Wrap(err, "error encoding data to STDIN")
 	}
 
-	procOut, err := process.Output()
+	procOut, err := cmd.Output()
 	if err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
-			return nil, exitError
-		}
-
+		l.Errorf("Check script failed:\n%s", stderr.String())
 		return nil, err
 	}
 

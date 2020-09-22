@@ -45,7 +45,7 @@ var validQueryActionResult = []map[string]interface{}{
 	{"Value": "-log", "Variable_name": "version_suffix"},
 }
 
-func TestRunChecks(t *testing.T) {
+func TestStarlarkSandbox(t *testing.T) {
 	testCases := []struct {
 		version      uint32
 		name         string
@@ -63,8 +63,7 @@ func TestRunChecks(t *testing.T) {
 			stderr:       invalidStarlarkScriptStderr,
 			checkResults: nil,
 			exitCode:     1,
-		},
-		{
+		}, {
 			version:      5,
 			name:         "invalid version",
 			script:       "def check(): return []",
@@ -72,8 +71,7 @@ func TestRunChecks(t *testing.T) {
 			stderr:       invalidVersionStderr,
 			checkResults: nil,
 			exitCode:     1,
-		},
-		{
+		}, {
 			version:      1,
 			name:         "memory consuming starlark script",
 			script:       "def check(rows): return [1] * (1 << 30-1)",
@@ -81,8 +79,7 @@ func TestRunChecks(t *testing.T) {
 			stderr:       memoryConsumingScriptStderr,
 			checkResults: nil,
 			exitCode:     2,
-		},
-		{
+		}, {
 			version: 1,
 			name:    "cpu consuming starlark script",
 			script: `def check(rows):
@@ -92,8 +89,7 @@ func TestRunChecks(t *testing.T) {
 			stderr:       "",
 			checkResults: nil,
 			exitCode:     -1,
-		},
-		{
+		}, {
 			version: 1,
 			name:    "valid starlark script",
 			script: `def check(rows):
@@ -128,6 +124,8 @@ func TestRunChecks(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			data := &checks.StarlarkScriptData{
 				Version:     tc.version,
 				Name:        tc.name,
@@ -163,9 +161,10 @@ func TestRunChecks(t *testing.T) {
 
 			stderrContent := stderr.String()
 			assert.True(t, strings.Contains(stderrContent, tc.stderr))
+
 			// make sure that the limits were set
-			assert.False(t, strings.Contains(stderrContent, cpuUsageWarning))
-			assert.False(t, strings.Contains(stderrContent, memoryUsageWarning))
+			assert.NotContains(t, stderrContent, cpuUsageWarning)
+			assert.NotContains(t, stderrContent, memoryUsageWarning)
 		})
 	}
 }
