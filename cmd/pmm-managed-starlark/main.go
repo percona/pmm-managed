@@ -91,7 +91,7 @@ func main() {
 	encoder := json.NewEncoder(os.Stdout)
 	err = encoder.Encode(results)
 	if err != nil {
-		l.Errorf("error encoding JSON results: %s", err)
+		l.Errorf("Error encoding JSON results: %s", err)
 		os.Exit(1)
 	}
 }
@@ -106,22 +106,22 @@ func runChecks(l *logrus.Entry, data *checks.StarlarkScriptData) ([]check.Result
 		l.Warnf("%s: %s", memoryUsageWarning, err)
 	}
 
-	funcs, err := checks.GetFuncsForVersion(data.CheckVersion)
+	funcs, err := checks.GetFuncsForVersion(data.Version)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting funcs")
 	}
 
-	env, err := starlark.NewEnv(data.CheckName, data.Script, funcs)
+	env, err := starlark.NewEnv(data.Name, data.Script, funcs)
 	if err != nil {
 		return nil, errors.Wrap(err, "error initializing starlark env")
 	}
 
-	input, err := agentpb.UnmarshalActionQueryResult(data.QueryActionResult)
+	input, err := agentpb.UnmarshalActionQueryResult(data.QueryResult)
 	if err != nil {
-		return nil, errors.Wrap(err, "error unmarshalling query action result")
+		return nil, errors.Wrap(err, "error unmarshalling query result")
 	}
 
-	results, err := env.Run(data.CheckName, input, l.Debugln)
+	results, err := env.Run(data.Name, input, l.Debugln)
 	if err != nil {
 		return nil, errors.Wrap(err, "error running starlark env")
 	}

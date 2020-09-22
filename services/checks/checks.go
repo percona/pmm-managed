@@ -565,10 +565,10 @@ type sttCheckResult struct {
 
 // StarlarkScriptData represents the data we need to pass to the binary to run starlark scripts.
 type StarlarkScriptData struct {
-	CheckName         string `json:"name"`
-	Script            string `json:"script"`
-	CheckVersion      uint32 `json:"version"`
-	QueryActionResult []byte `json:"result"`
+	Version     uint32 `json:"version"`
+	Name        string `json:"name"`
+	QueryResult []byte `json:"query_result"`
+	Script      string `json:"script"`
 }
 
 func (s *Service) processResults(ctx context.Context, sttCheck check.Check, target target, resID string) ([]sttCheckResult, error) {
@@ -586,10 +586,10 @@ func (s *Service) processResults(ctx context.Context, sttCheck check.Check, targ
 	})
 
 	input := &StarlarkScriptData{
-		CheckName:         sttCheck.Name,
-		Script:            sttCheck.Script,
-		CheckVersion:      sttCheck.Version,
-		QueryActionResult: r,
+		Version:     sttCheck.Version,
+		Name:        sttCheck.Name,
+		QueryResult: r,
+		Script:      sttCheck.Script,
 	}
 
 	cmdCtx, cancel := context.WithTimeout(ctx, scriptTimeout)

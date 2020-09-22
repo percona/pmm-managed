@@ -122,18 +122,19 @@ func TestRunChecks(t *testing.T) {
 	err := exec.Command("make", "-C", "../..", "release").Run()
 	require.NoError(t, err)
 
+	result, err := agentpb.MarshalActionQueryDocsResult(validQueryActionResult)
+	require.NoError(t, err)
+
 	for _, tc := range testCases {
-		result, err := agentpb.MarshalActionQueryDocsResult(validQueryActionResult)
-		require.NoError(t, err)
-
-		data := checks.StarlarkScriptData{
-			CheckName:         tc.name,
-			CheckVersion:      tc.version,
-			Script:            tc.script,
-			QueryActionResult: result,
-		}
-
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			data := &checks.StarlarkScriptData{
+				Version:     tc.version,
+				Name:        tc.name,
+				QueryResult: result,
+				Script:      tc.script,
+			}
+
 			cmd := exec.Command("./../../bin/pmm-managed-starlark")
 
 			var stdin, stderr bytes.Buffer
