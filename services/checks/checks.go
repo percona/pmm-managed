@@ -118,6 +118,11 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 		resendInterval = defaultResendInterval
 	}
 
+	host, err := envvars.GetSAASHost(envHost)
+	if err != nil {
+		return nil, err
+	}
+
 	s := &Service{
 		agentsRegistry:      agentsRegistry,
 		alertmanagerService: alertmanagerService,
@@ -125,7 +130,7 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 		alertsRegistry:      newRegistry(resolveTimeoutFactor * resendInterval),
 
 		l:               l,
-		host:            "",
+		host:            host,
 		publicKeys:      defaultPublicKeys,
 		restartInterval: defaultRestartInterval,
 		startDelay:      defaultStartDelay,
@@ -145,13 +150,6 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 			Help:      "Counter of alerts generated per service type per check type",
 		}, []string{"service_type", "check_type"}),
 	}
-
-	u, err := envvars.GetSAASHost(envHost)
-	if err != nil {
-		return s, err
-	}
-
-	s.host = u
 
 	if k := os.Getenv(envPublicKey); k != "" {
 		s.publicKeys = strings.Split(k, ",")

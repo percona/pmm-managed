@@ -63,19 +63,17 @@ type Service struct {
 func New(db *reform.DB) (*Service, error) {
 	l := logrus.WithField("component", "auth")
 
+	host, err := envvars.GetSAASHost(envHost)
+	if err != nil {
+		return nil, err
+	}
+
 	s := Service{
-		host:                   "",
+		host:                   host,
 		sessionRefreshInterval: defaultSessionRefreshInterval,
 		db:                     db,
 		l:                      l,
 	}
-
-	u, err := envvars.GetSAASHost(envHost)
-	if err != nil {
-		return &s, err
-	}
-
-	s.host = u
 
 	if d, err := time.ParseDuration(os.Getenv(envSessionRefreshInterval)); err == nil && d > 0 {
 		l.Warnf("Session refresh interval changed to %s.", d)
