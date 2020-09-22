@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -44,6 +45,8 @@ func GetSettings(q reform.DBTX) (*Settings, error) {
 	}
 
 	s.fillDefaults()
+	s.DBaaS.Enabled = os.Getenv("PERCONA_TEST_DBAAS") == "1"
+
 	return &s, nil
 }
 

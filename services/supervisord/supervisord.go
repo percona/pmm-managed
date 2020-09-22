@@ -396,7 +396,7 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 	templateParams := map[string]interface{}{
 		"DataRetentionHours": int(settings.DataRetention.Hours()),
 		"DataRetentionDays":  int(settings.DataRetention.Hours() / 24),
-		"PerconaTestDbaas":   os.Getenv("PERCONA_TEST_DBAAS") == "1",
+		"PerconaTestDbaas":   settings.DBaaS.Enabled,
 	}
 
 	var buf bytes.Buffer
