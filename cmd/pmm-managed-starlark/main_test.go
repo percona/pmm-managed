@@ -33,7 +33,6 @@ import (
 
 const (
 	invalidStarlarkScriptStderr = "Error running starlark script: thread invalid starlark script: failed to execute function check: function check accepts no arguments (1 given)"
-	invalidVersionStderr        = "Error running starlark script: unsupported check version: 5"
 	memoryConsumingScriptStderr = "fatal error: runtime: out of memory"
 )
 
