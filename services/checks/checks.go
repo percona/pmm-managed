@@ -107,7 +107,7 @@ type Service struct {
 }
 
 // New returns Service with given PMM version.
-func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService, db *reform.DB) *Service {
+func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService, db *reform.DB) (*Service, error) {
 	l := logrus.WithField("component", "checks")
 
 	var resendInterval time.Duration
@@ -125,7 +125,7 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 		alertsRegistry:      newRegistry(resolveTimeoutFactor * resendInterval),
 
 		l:               l,
-		host:            envvars.GetSAASHost(envHost),
+		host:            "",
 		publicKeys:      defaultPublicKeys,
 		restartInterval: defaultRestartInterval,
 		startDelay:      defaultStartDelay,
@@ -145,6 +145,13 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 			Help:      "Counter of alerts generated per service type per check type",
 		}, []string{"service_type", "check_type"}),
 	}
+
+	u, err := envvars.GetSAASHost(envHost)
+	if err != nil {
+		return s, err
+	}
+
+	s.host = u
 
 	if k := os.Getenv(envPublicKey); k != "" {
 		s.publicKeys = strings.Split(k, ",")
@@ -168,7 +175,7 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 	s.mAlertsGenerated.WithLabelValues(string(models.MongoDBServiceType), string(check.MongoDBGetCmdLineOpts))
 	s.mAlertsGenerated.WithLabelValues(string(models.MongoDBServiceType), string(check.MongoDBGetParameter))
 
-	return s
+	return s, nil
 }
 
 // Run runs main service loops.

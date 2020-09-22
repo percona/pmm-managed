@@ -83,7 +83,7 @@ type Service struct {
 }
 
 // NewService creates a new service with given UUID and PMM version.
-func NewService(db *reform.DB, pmmVersion string) *Service {
+func NewService(db *reform.DB, pmmVersion string) (*Service, error) {
 	l := logrus.WithField("component", "telemetry")
 	s := &Service{
 		db:           db,
@@ -91,13 +91,20 @@ func NewService(db *reform.DB, pmmVersion string) *Service {
 		start:        time.Now(),
 		l:            l,
 		v1URL:        defaultV1URL,
-		v2Host:       envvars.GetSAASHost(envV2Host),
+		v2Host:       "",
 		interval:     defaultInterval,
 		retryBackoff: defaultRetryBackoff,
 		retryCount:   defaultRetryCount,
 	}
 
 	s.sDistributionMethod, s.tDistributionMethod, s.os = getDistributionMethodAndOS(l)
+
+	u, err := envvars.GetSAASHost(envV2Host)
+	if err != nil {
+		return s, err
+	}
+
+	s.v2Host = u
 
 	if u := os.Getenv(envV1URL); u != "" {
 		l.Warnf("v1URL changed to %q.", u)
@@ -116,7 +123,7 @@ func NewService(db *reform.DB, pmmVersion string) *Service {
 	s.l.Debugf("Telemetry settings: os=%q, sDistributionMethod=%q, tDistributionMethod=%q.",
 		s.os, s.sDistributionMethod, s.tDistributionMethod)
 
-	return s
+	return s, nil
 }
 
 func getDistributionMethodAndOS(l *logrus.Entry) (serverpb.DistributionMethod, events.DistributionMethod, string) {

@@ -60,22 +60,29 @@ type Service struct {
 }
 
 // New returns platform Service.
-func New(db *reform.DB) *Service {
+func New(db *reform.DB) (*Service, error) {
 	l := logrus.WithField("component", "auth")
 
 	s := Service{
-		host:                   envvars.GetSAASHost(envHost),
+		host:                   "",
 		sessionRefreshInterval: defaultSessionRefreshInterval,
 		db:                     db,
 		l:                      l,
 	}
+
+	u, err := envvars.GetSAASHost(envHost)
+	if err != nil {
+		return &s, err
+	}
+
+	s.host = u
 
 	if d, err := time.ParseDuration(os.Getenv(envSessionRefreshInterval)); err == nil && d > 0 {
 		l.Warnf("Session refresh interval changed to %s.", d)
 		s.sessionRefreshInterval = d
 	}
 
-	return &s
+	return &s, nil
 }
 
 // Run refreshes Percona Platform session every interval until context is canceled.

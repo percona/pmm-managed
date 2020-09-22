@@ -142,31 +142,33 @@ func parseStringDuration(value string) (time.Duration, error) {
 	return d, nil
 }
 
-// GetSAASHost returns SAAS host env variable value.
-// if it's valid, otherwise returns defaultSAASHost.
-func GetSAASHost(env string) string {
-	if v, b := os.LookupEnv(envSAASHost); b {
-		if u := govalidator.IsURL(v); u {
-			logrus.Warnf("SAAS host changed to %s.", v)
+// GetSAASHost returns SAAS host env variable value if it's valid.
+// Otherwise returns defaultSAASHost.
+func GetSAASHost(env string) (string, error) {
+	if v, ok := os.LookupEnv(envSAASHost); ok {
+		if ok := govalidator.IsURL(v); ok {
+			logrus.Warnf("SAAS host changed to %q.", v)
 
-			return v
+			return v, nil
 		}
-		logrus.Warnf("environment variable %s has invalid format %s.", env, v)
+
+		return v, fmt.Errorf("environment variable %q has invalid format %q. Expected {host}:{port}", env, v)
 	}
 
-	if v, b := os.LookupEnv(env); b {
-		if u := govalidator.IsURL(v); u {
-			logrus.Warnf("environment variable %s WILL BE REMOVED SOON, please use %s instead", env, envSAASHost)
-			logrus.Warnf("SAAS host changed to %s.", v)
+	if v, ok := os.LookupEnv(env); ok {
+		if ok := govalidator.IsURL(v); ok {
+			logrus.Warnf("Environment variable %q WILL BE REMOVED SOON, please use %q instead.", env, envSAASHost)
+			logrus.Warnf("SAAS host changed to %q.", v)
 
-			return v
+			return v, nil
 		}
-		logrus.Warnf("environment variable %s has invalid format: %s.", env, v)
+
+		return v, fmt.Errorf("environment variable %q has invalid format %q. Expected {host}:{port}", env, v)
 	}
 
-	logrus.Infof("Using default SAAS host %s.", defaultSAASHost)
+	logrus.Infof("Using default SAAS host %q.", defaultSAASHost)
 
-	return defaultSAASHost
+	return defaultSAASHost, nil
 }
 
 func formatEnvVariableError(err error, env, value string) error {
