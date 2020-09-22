@@ -118,13 +118,13 @@ func TestStarlarkSandbox(t *testing.T) {
 	err := exec.Command("make", "-C", "../..", "release").Run()
 	require.NoError(t, err)
 
-	result, err := agentpb.MarshalActionQueryDocsResult(validQueryActionResult)
-	require.NoError(t, err)
-
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
+
+			result, err := agentpb.MarshalActionQueryDocsResult(validQueryActionResult)
+			require.NoError(t, err)
 
 			data := &checks.StarlarkScriptData{
 				Version:     tc.version,
