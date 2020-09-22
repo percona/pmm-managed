@@ -49,11 +49,6 @@ type Settings struct {
 	// not url.URL to keep username and password
 	AlertManagerURL string `json:"alert_manager_url"`
 
-	// DBaaS config options
-	DBaaS struct {
-		Enabled bool `json:"enabled"`
-	}
-
 	// Saas config options
 	SaaS struct {
 		// Percona Platform user email
