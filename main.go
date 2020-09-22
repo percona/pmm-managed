@@ -547,14 +547,14 @@ func main() {
 
 	checksService, err := checks.New(agentsRegistry, alertmanager, db)
 	if err != nil {
-		l.Fatalf("could not create checks service. %s", err)
+		l.Fatalf("Could not create checks service: %s", err)
 	}
 
 	prom.MustRegister(checksService)
 
 	platformService, err := platform.New(db)
 	if err != nil {
-		l.Fatalf("could not create platform service. %s", err)
+		l.Fatalf("Could not create platform service: %s", err)
 	}
 
 	serverParams := &server.Params{

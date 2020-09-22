@@ -19,12 +19,12 @@ package envvars
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/asaskevich/govalidator"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
@@ -152,7 +152,11 @@ func parseStringDuration(value string) (time.Duration, error) {
 // Otherwise returns defaultSAASHost.
 func GetSAASHost(env string) (string, error) {
 	if v, ok := os.LookupEnv(envSAASHost); ok {
-		if ok := govalidator.IsURL(v); ok {
+		h, p, err := net.SplitHostPort(v)
+		if err != nil {
+			return v, err
+		}
+		if h != "" && p != "" {
 			logrus.Warnf("SAAS host changed to %q.", v)
 
 			return v, nil
@@ -162,7 +166,12 @@ func GetSAASHost(env string) (string, error) {
 	}
 
 	if v, ok := os.LookupEnv(env); ok {
-		if ok := govalidator.IsURL(v); ok {
+		h, p, err := net.SplitHostPort(v)
+		if err != nil {
+			return v, err
+		}
+
+		if h != "" && p != "" {
 			logrus.Warnf("Environment variable %q WILL BE REMOVED SOON, please use %q instead.", env, envSAASHost)
 			logrus.Warnf("SAAS host changed to %q.", v)
 
