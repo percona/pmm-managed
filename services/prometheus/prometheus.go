@@ -349,7 +349,7 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 			"/srv/prometheus/rules/*.yml",
 		)
 
-		AddInternalServiceToScrape(cfg, s)
+		AddInternalServicesToScrape(cfg, s)
 
 		cfg.AlertingConfig.AlertmanagerConfigs = append(cfg.AlertingConfig.AlertmanagerConfigs, &config.AlertmanagerConfig{
 			ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{

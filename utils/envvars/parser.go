@@ -145,14 +145,14 @@ func parseStringDuration(value string) (time.Duration, error) {
 	return d, nil
 }
 
-// parseStringDuration validate duration as string value.
+// parseBool validate bool as string value.
 func parseBool(value string) (bool, error) {
 	if len(value) == 0 {
 		return false, nil
 	}
 	b, err := strconv.ParseBool(value)
 	if err != nil {
-		return false, InvalidDurationError("invalid duration error")
+		return false, InvalidBoolError("invalid bool error")
 	}
 
 	return b, nil

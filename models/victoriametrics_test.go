@@ -49,5 +49,4 @@ func TestVictoriaMetricsParams(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, []string{"--rule=/srv/external_rules/rul1.yml", "--rule=/srv/external_rules/rule2.yml", "--evaluationInterval=10s"}, vmp.VMAlertFlags)
 	})
-
 }
