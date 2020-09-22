@@ -32,8 +32,8 @@ import (
 )
 
 const (
-	defaultSAASHost = "check.percona.com:443"
-	envSAASHost     = "PERCONA_TEST_SAAS_HOST"
+	defaultSaaSHost = "check.percona.com:443"
+	envSaaSHost     = "PERCONA_TEST_SAAS_HOST"
 )
 
 // InvalidDurationError invalid duration error.
@@ -148,42 +148,36 @@ func parseStringDuration(value string) (time.Duration, error) {
 	return d, nil
 }
 
-// GetSAASHost returns SAAS host env variable value if it's valid.
-// Otherwise returns defaultSAASHost.
-func GetSAASHost(env string) (string, error) {
-	if v, ok := os.LookupEnv(envSAASHost); ok {
-		h, p, err := net.SplitHostPort(v)
-		if err != nil {
-			return v, err
+// GetSAASHost returns SaaS host env variable value if it's present and valid.
+// Otherwise returns defaultSaaSHost.
+func GetSAASHost(fallbackEnv string) (string, error) {
+	name, v := envSaaSHost, os.Getenv(envSaaSHost)
+	if v == "" {
+		name, v = fallbackEnv, os.Getenv(fallbackEnv)
+		if v != "" {
+			logrus.Warnf("Environment variable %q WILL BE REMOVED SOON, please use %q instead.", fallbackEnv, envSaaSHost)
 		}
-		if h != "" && p != "" {
-			logrus.Warnf("SAAS host changed to %q.", v)
-
-			return v, nil
-		}
-
-		return v, fmt.Errorf("environment variable %q has invalid format %q. Expected {host}:{port}", env, v)
 	}
 
-	if v, ok := os.LookupEnv(env); ok {
-		h, p, err := net.SplitHostPort(v)
-		if err != nil {
-			return v, err
-		}
-
-		if h != "" && p != "" {
-			logrus.Warnf("Environment variable %q WILL BE REMOVED SOON, please use %q instead.", env, envSAASHost)
-			logrus.Warnf("SAAS host changed to %q.", v)
-
-			return v, nil
-		}
-
-		return v, fmt.Errorf("environment variable %q has invalid format %q. Expected {host}:{port}", env, v)
+	if v == "" {
+		logrus.Debugf("Using default SaaS host %q.", defaultSaaSHost)
+		return defaultSaaSHost, nil
 	}
 
-	logrus.Infof("Using default SAAS host %q.", defaultSAASHost)
+	host, port, err := net.SplitHostPort(v)
+	if err != nil {
+		return "", err
+	}
+	if host == "" {
+		return "", fmt.Errorf("environment variable %q has invalid format %q. Expected host:[port]", name, v)
+	}
+	if port == "" {
+		port = "443"
+	}
 
-	return defaultSAASHost, nil
+	v = net.JoinHostPort(host, port)
+	logrus.Infof("Using SaaS host %q.", v)
+	return v, nil
 }
 
 func formatEnvVariableError(err error, env, value string) error {
