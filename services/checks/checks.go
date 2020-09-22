@@ -567,8 +567,8 @@ type sttCheckResult struct {
 type StarlarkScriptData struct {
 	Version     uint32 `json:"version"`
 	Name        string `json:"name"`
-	QueryResult []byte `json:"query_result"`
 	Script      string `json:"script"`
+	QueryResult []byte `json:"query_result"`
 }
 
 func (s *Service) processResults(ctx context.Context, sttCheck check.Check, target target, resID string) ([]sttCheckResult, error) {
@@ -588,8 +588,8 @@ func (s *Service) processResults(ctx context.Context, sttCheck check.Check, targ
 	input := &StarlarkScriptData{
 		Version:     sttCheck.Version,
 		Name:        sttCheck.Name,
-		QueryResult: r,
 		Script:      sttCheck.Script,
+		QueryResult: r,
 	}
 
 	cmdCtx, cancel := context.WithTimeout(ctx, scriptTimeout)

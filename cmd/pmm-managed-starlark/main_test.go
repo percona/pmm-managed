@@ -131,8 +131,8 @@ func TestRunChecks(t *testing.T) {
 			data := &checks.StarlarkScriptData{
 				Version:     tc.version,
 				Name:        tc.name,
-				QueryResult: result,
 				Script:      tc.script,
+				QueryResult: result,
 			}
 
 			cmd := exec.Command("./../../bin/pmm-managed-starlark")
@@ -140,7 +140,7 @@ func TestRunChecks(t *testing.T) {
 			var stdin, stderr bytes.Buffer
 			cmd.Stdin = &stdin
 			cmd.Stderr = &stderr
-			cmd.Env = []string{"PERCONA_TEST_STARLARK_ALLOW_RECURSION=true"}
+			cmd.Env = []string{starlarkRecursionFlag + "=1"}
 
 			encoder := json.NewEncoder(&stdin)
 			err = encoder.Encode(data)

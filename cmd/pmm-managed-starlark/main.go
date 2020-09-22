@@ -74,9 +74,24 @@ func main() {
 
 	l := logrus.WithField("component", "pmm-managed-starlark")
 
+	err := unix.Setrlimit(unix.RLIMIT_CPU, &unix.Rlimit{
+		Cur: uint64(cpuLimit.Seconds()),
+		Max: uint64(cpuLimit.Seconds()),
+	})
+	if err != nil {
+		l.Warnf("%s: %s", cpuUsageWarning, err)
+	}
+	err = unix.Setrlimit(unix.RLIMIT_DATA, &unix.Rlimit{
+		Cur: memoryLimitBytes,
+		Max: memoryLimitBytes,
+	})
+	if err != nil {
+		l.Warnf("%s: %s", memoryUsageWarning, err)
+	}
+
 	decoder := json.NewDecoder(os.Stdin)
 	var data checks.StarlarkScriptData
-	err := decoder.Decode(&data)
+	err = decoder.Decode(&data)
 	if err != nil {
 		l.Errorf("Error decoding json data: %s", err)
 		os.Exit(1)
@@ -97,15 +112,6 @@ func main() {
 }
 
 func runChecks(l *logrus.Entry, data *checks.StarlarkScriptData) ([]check.Result, error) {
-	err := unix.Setrlimit(unix.RLIMIT_CPU, &unix.Rlimit{Cur: uint64(cpuLimit.Seconds()), Max: uint64(cpuLimit.Seconds())})
-	if err != nil {
-		l.Warnf("%s: %s", cpuUsageWarning, err)
-	}
-	err = unix.Setrlimit(unix.RLIMIT_DATA, &unix.Rlimit{Cur: memoryLimitBytes, Max: memoryLimitBytes})
-	if err != nil {
-		l.Warnf("%s: %s", memoryUsageWarning, err)
-	}
-
 	funcs, err := checks.GetFuncsForVersion(data.Version)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting funcs")
