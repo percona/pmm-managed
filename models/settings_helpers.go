@@ -44,7 +44,6 @@ func GetSettings(q reform.DBTX) (*Settings, error) {
 	}
 
 	s.fillDefaults()
-
 	return &s, nil
 }
 
