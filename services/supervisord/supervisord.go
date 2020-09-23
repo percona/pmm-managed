@@ -488,11 +488,12 @@ func (s *Service) UpdateConfiguration(settings *models.Settings) error {
 
 var templates = template.Must(template.New("").Option("missingkey=error").Parse(`
 {{define "dbaas-controller"}}
-{{if .PerconaTestDbaas -}}
 [program:dbaas-controller]
 priority = 7
 command = /usr/sbin/dbaas-controller
 user = pmm
+autorestart = {{ .PerconaTestDbaas }}
+autostart = {{ .PerconaTestDbaas }}
 startretries = 10
 startsecs = 1
 stopsignal = INT
@@ -502,7 +503,6 @@ stdout_logfile_maxbytes = 10MB
 stdout_logfile_backups = 3
 redirect_stderr = true
 {{end}}
-{{- end}}
 
 {{define "prometheus"}}
 [program:prometheus]
