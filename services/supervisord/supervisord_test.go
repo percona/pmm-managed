@@ -31,10 +31,6 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-type dbaas struct {
-	Enabled bool `json:"enabled"`
-}
-
 func TestConfig(t *testing.T) {
 	t.Parallel()
 
@@ -83,7 +79,9 @@ func TestDBaaSController(t *testing.T) {
 
 	for _, enabled := range tests {
 		st := models.Settings{
-			DBaaS: dbaas{
+			DBaaS: struct {
+				Enabled bool `json:"enabled"`
+			}{
 				Enabled: enabled,
 			},
 		}
