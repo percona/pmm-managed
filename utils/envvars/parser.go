@@ -19,6 +19,8 @@ package envvars
 
 import (
 	"fmt"
+	"net"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -27,6 +29,11 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/percona/pmm-managed/models"
+)
+
+const (
+	defaultSaaSHost = "check.percona.com:443"
+	envSaaSHost     = "PERCONA_TEST_SAAS_HOST"
 )
 
 // InvalidDurationError invalid duration error.
@@ -72,12 +79,6 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 			continue
 		}
 
-		// skip test environment variables that are handled elsewere with a big warning
-		if strings.HasPrefix(k, "PERCONA_TEST_") {
-			warns = append(warns, fmt.Sprintf("environment variable %q IS NOT SUPPORTED and WILL BE REMOVED IN THE FUTURE", k))
-			continue
-		}
-
 		var err error
 		switch k {
 		case "_", "HOME", "HOSTNAME", "LANG", "PATH", "PWD", "SHLVL", "TERM":
@@ -120,9 +121,22 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 			if err != nil {
 				err = fmt.Errorf("invalid value %q for environment variable %q", v, k)
 			}
-
+		case "PERCONA_TEST_AUTH_HOST", "PERCONA_TEST_CHECKS_HOST", "PERCONA_TEST_TELEMETRY_HOST": // FIXME remove https://jira.percona.com/browse/SAAS-360
+			warns = append(warns, fmt.Sprintf("Environment variable %q WILL BE REMOVED SOON, please use %q instead.", k, envSaaSHost))
 		default:
-			warns = append(warns, fmt.Sprintf("unknown environment variable %q", env))
+			// skip test environment variables that are handled here or elsewere with a big warning
+			if strings.HasPrefix(k, "PERCONA_TEST_") {
+				warns = append(warns, fmt.Sprintf("environment variable %q IS NOT SUPPORTED and WILL BE REMOVED IN THE FUTURE", k))
+				if k == "PERCONA_TEST_DBAAS" {
+					envSettings.EnableDBaaS, err = strconv.ParseBool(v)
+					if err != nil {
+						err = fmt.Errorf("invalid value %q for environment variable %q", v, k)
+						errs = append(errs, err)
+					}
+				}
+			} else {
+				warns = append(warns, fmt.Sprintf("unknown environment variable %q", env))
+			}
 		}
 		if err != nil {
 			errs = append(errs, err)
@@ -139,6 +153,34 @@ func parseStringDuration(value string) (time.Duration, error) {
 	}
 
 	return d, nil
+}
+
+// GetSAASHost returns SaaS host env variable value if it's present and valid.
+// Otherwise returns defaultSaaSHost.
+func GetSAASHost(fallbackEnv string) (string, error) {
+	name, v := envSaaSHost, os.Getenv(envSaaSHost)
+	if v == "" {
+		name, v = fallbackEnv, os.Getenv(fallbackEnv)
+	}
+	if v == "" {
+		logrus.Debugf("Using default SaaS host %q.", defaultSaaSHost)
+		return defaultSaaSHost, nil
+	}
+
+	host, port, err := net.SplitHostPort(v)
+	if err != nil {
+		return "", err
+	}
+	if host == "" {
+		return "", fmt.Errorf("environment variable %q has invalid format %q. Expected host:[port]", name, v)
+	}
+	if port == "" {
+		port = "443"
+	}
+
+	v = net.JoinHostPort(host, port)
+	logrus.Infof("Using SaaS host %q.", v)
+	return v, nil
 }
 
 func formatEnvVariableError(err error, env, value string) error {
