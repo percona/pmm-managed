@@ -489,14 +489,14 @@ func (s *Service) UpdateConfiguration(settings *models.Settings) error {
 var templates = template.Must(template.New("").Option("missingkey=error").Parse(`
 {{define "dbaas-controller"}}
 [program:dbaas-controller]
-priority = 7
+priority = 6
 command = /usr/sbin/dbaas-controller
 user = pmm
 autorestart = {{ .PerconaTestDbaas }}
 autostart = {{ .PerconaTestDbaas }}
 startretries = 10
 startsecs = 1
-stopsignal = INT
+stopsignal = TERM
 stopwaitsecs = 300
 stdout_logfile = /srv/logs/dbaas-controller.log
 stdout_logfile_maxbytes = 10MB
