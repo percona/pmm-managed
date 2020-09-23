@@ -20,40 +20,36 @@ package dbaas
 import (
 	"context"
 
+	dbaascontrollerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
+	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 	"gopkg.in/reform.v1"
 
-	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
-
 	"github.com/percona/pmm-managed/models"
-
-	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 )
 
-// xtraDBClusterService implements XtraDBClusterServer methods.
-type xtraDBClusterService struct {
+// XtraDBClusterService implements XtraDBClusterServer methods.
+type XtraDBClusterService struct {
 	db               *reform.DB
 	l                *logrus.Entry
-	controllerClient controllerv1beta1.XtraDBClusterAPIClient
+	controllerClient XtraDBClusterAPIClient
 }
 
 // NewXtraDBClusterService creates XtraDB Service.
-func NewXtraDBClusterService(db *reform.DB, conn *grpc.ClientConn) dbaasv1beta1.XtraDBClusterServer {
+func NewXtraDBClusterService(db *reform.DB, client *Client) dbaasv1beta1.XtraDBClusterServer {
 	l := logrus.WithField("component", "xtradb_cluster")
-	c := controllerv1beta1.NewXtraDBClusterAPIClient(conn)
-	return &xtraDBClusterService{db: db, l: l, controllerClient: c}
+	return &XtraDBClusterService{db: db, l: l, controllerClient: client.XtraDBClusterAPIClient}
 }
 
 // ListXtraDBClusters returns a list of all XtraDB clusters.
-func (s xtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaasv1beta1.ListXtraDBClustersRequest) (*dbaasv1beta1.ListXtraDBClustersResponse, error) {
+func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaasv1beta1.ListXtraDBClustersRequest) (*dbaasv1beta1.ListXtraDBClustersResponse, error) {
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
 	if err != nil {
 		return nil, err
 	}
 
-	in := controllerv1beta1.ListXtraDBClustersRequest{
-		KubeAuth: &controllerv1beta1.KubeAuth{
+	in := dbaascontrollerv1beta1.ListXtraDBClustersRequest{
+		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
 	}
@@ -63,7 +59,7 @@ func (s xtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 		return nil, err
 	}
 
-	clusters := make([]*dbaasv1beta1.ListXtraDBClustersResponse_Cluster, len(out.Clusters))
+	clusters := []*dbaasv1beta1.ListXtraDBClustersResponse_Cluster{}
 	for _, c := range out.Clusters {
 		cluster := dbaasv1beta1.ListXtraDBClustersResponse_Cluster{
 			Name: c.Name,
@@ -91,27 +87,28 @@ func (s xtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 }
 
 // CreateXtraDBCluster creates XtraDB cluster with given parameters.
-func (s xtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaasv1beta1.CreateXtraDBClusterRequest) (*dbaasv1beta1.CreateXtraDBClusterResponse, error) {
+//nolint:dupl
+func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaasv1beta1.CreateXtraDBClusterRequest) (*dbaasv1beta1.CreateXtraDBClusterResponse, error) {
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
 	if err != nil {
 		return nil, err
 	}
 
-	in := controllerv1beta1.CreateXtraDBClusterRequest{
-		KubeAuth: &controllerv1beta1.KubeAuth{
+	in := dbaascontrollerv1beta1.CreateXtraDBClusterRequest{
+		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
 		Name: req.Name,
-		Params: &controllerv1beta1.XtraDBClusterParams{
+		Params: &dbaascontrollerv1beta1.XtraDBClusterParams{
 			ClusterSize: req.Params.ClusterSize,
-			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
-				ComputeResources: &controllerv1beta1.ComputeResources{
+			Pxc: &dbaascontrollerv1beta1.XtraDBClusterParams_PXC{
+				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
 					CpuM:        req.Params.Pxc.ComputeResources.CpuM,
 					MemoryBytes: req.Params.Pxc.ComputeResources.MemoryBytes,
 				},
 			},
-			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
-				ComputeResources: &controllerv1beta1.ComputeResources{
+			Proxysql: &dbaascontrollerv1beta1.XtraDBClusterParams_ProxySQL{
+				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
 					CpuM:        req.Params.Proxysql.ComputeResources.CpuM,
 					MemoryBytes: req.Params.Proxysql.ComputeResources.MemoryBytes,
 				},
@@ -128,27 +125,28 @@ func (s xtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 }
 
 // UpdateXtraDBCluster updates XtraDB cluster.
-func (s xtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *dbaasv1beta1.UpdateXtraDBClusterRequest) (*dbaasv1beta1.UpdateXtraDBClusterResponse, error) {
+//nolint:dupl
+func (s XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *dbaasv1beta1.UpdateXtraDBClusterRequest) (*dbaasv1beta1.UpdateXtraDBClusterResponse, error) {
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
 	if err != nil {
 		return nil, err
 	}
 
-	in := controllerv1beta1.UpdateXtraDBClusterRequest{
-		KubeAuth: &controllerv1beta1.KubeAuth{
+	in := dbaascontrollerv1beta1.UpdateXtraDBClusterRequest{
+		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
 		Name: req.Name,
-		Params: &controllerv1beta1.XtraDBClusterParams{
+		Params: &dbaascontrollerv1beta1.XtraDBClusterParams{
 			ClusterSize: req.Params.ClusterSize,
-			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
-				ComputeResources: &controllerv1beta1.ComputeResources{
+			Pxc: &dbaascontrollerv1beta1.XtraDBClusterParams_PXC{
+				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
 					CpuM:        req.Params.Pxc.ComputeResources.CpuM,
 					MemoryBytes: req.Params.Pxc.ComputeResources.MemoryBytes,
 				},
 			},
-			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
-				ComputeResources: &controllerv1beta1.ComputeResources{
+			Proxysql: &dbaascontrollerv1beta1.XtraDBClusterParams_ProxySQL{
+				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
 					CpuM:        req.Params.Proxysql.ComputeResources.CpuM,
 					MemoryBytes: req.Params.Proxysql.ComputeResources.MemoryBytes,
 				},
@@ -165,15 +163,15 @@ func (s xtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *dbaa
 }
 
 // DeleteXtraDBCluster deletes XtraDB cluster by given name.
-func (s xtraDBClusterService) DeleteXtraDBCluster(ctx context.Context, req *dbaasv1beta1.DeleteXtraDBClusterRequest) (*dbaasv1beta1.DeleteXtraDBClusterResponse, error) {
+func (s XtraDBClusterService) DeleteXtraDBCluster(ctx context.Context, req *dbaasv1beta1.DeleteXtraDBClusterRequest) (*dbaasv1beta1.DeleteXtraDBClusterResponse, error) {
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
 	if err != nil {
 		return nil, err
 	}
 
-	in := controllerv1beta1.DeleteXtraDBClusterRequest{
+	in := dbaascontrollerv1beta1.DeleteXtraDBClusterRequest{
 		Name: req.Name,
-		KubeAuth: &controllerv1beta1.KubeAuth{
+		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
 	}

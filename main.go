@@ -119,7 +119,7 @@ type gRPCServerDeps struct {
 	agentsRegistry      *agents.Registry
 	grafanaClient       *grafana.Client
 	checksService       *checks.Service
-	dbaasControllerConn *grpc.ClientConn
+	dbaasControllerConn *dbaas.Client
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -451,6 +451,7 @@ func main() {
 
 	grafanaAddrF := kingpin.Flag("grafana-addr", "Grafana HTTP API address").Default("127.0.0.1:3000").String()
 	qanAPIAddrF := kingpin.Flag("qan-api-addr", "QAN API gRPC API address").Default("127.0.0.1:9911").String()
+	dbaasControllerAPIAddrF := kingpin.Flag("dbaas-controller-api-addr", "DBaaS Controller gRPC API address").Default("127.0.0.1:20201").String()
 
 	postgresAddrF := kingpin.Flag("postgres-addr", "PostgreSQL address").Default("127.0.0.1:5432").String()
 	postgresDBNameF := kingpin.Flag("postgres-name", "PostgreSQL database name").Required().String()
@@ -598,12 +599,10 @@ func main() {
 
 	authServer := grafana.NewAuthServer(grafanaClient, awsInstanceChecker)
 
-	// TODO:
-	dbaasControllerConn, err := grpc.Dial("127.0.0.1:20201", grpc.WithInsecure())
+	dbaasControllerClient, err := dbaas.NewClient(ctx, *dbaasControllerAPIAddrF)
 	if err != nil {
-		l.Panicf("dbaas-ontroller conn problem: %+v", err)
+		l.Errorf("dbaas client problem: %+v", err)
 	}
-	defer dbaasControllerConn.Close()
 
 	l.Info("Starting services...")
 	var wg sync.WaitGroup
@@ -654,7 +653,7 @@ func main() {
 			agentsRegistry:      agentsRegistry,
 			grafanaClient:       grafanaClient,
 			checksService:       checksService,
-			dbaasControllerConn: dbaasControllerConn,
+			dbaasControllerConn: dbaasControllerClient,
 		})
 	}()
 
