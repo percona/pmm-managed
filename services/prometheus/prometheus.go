@@ -414,7 +414,7 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 	return b, nil
 }
 
-// AddInternalServiceToScrape adds internal services metrics to scrape targets.
+// AddInternalServicesToScrape adds internal services metrics to scrape targets.
 func AddInternalServicesToScrape(cfg *config.Config, s models.MetricsResolutions) {
 	cfg.ScrapeConfigs = append(cfg.ScrapeConfigs,
 		scrapeConfigForPrometheus(s.HR),

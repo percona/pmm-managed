@@ -408,7 +408,7 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 		"DataRetentionMonths": retentionMonths,
 		"IsVMEnabled":         s.vmParams.Enabled,
 		"VMAlertParams":       s.vmParams.VMAlertFlags,
-		"VMDBCacheEnable":     !settings.VictoriaMetrics.CacheEnable,
+		"VMDBCacheDisable":    !settings.VictoriaMetrics.CacheEnable,
 	}
 	if err := addAlertManagerParams(settings.AlertManagerURL, templateParams); err != nil {
 		return nil, errors.Wrap(err, "cannot add AlertManagerParams to supervisor template")
@@ -438,19 +438,17 @@ func addAlertManagerParams(alertManagerURL string, templateParams map[string]int
 	if u.Opaque != "" || u.Host == "" {
 		return errors.Errorf("AlertmanagerURL parsed incorrectly as %#v", u)
 	}
-	if username := u.User.Username(); username != "" {
-		password, _ := u.User.Password()
-		n := url.URL{
-			Scheme:   u.Scheme,
-			Host:     u.Host,
-			Path:     u.Path,
-			RawQuery: u.RawQuery,
-			Fragment: u.Fragment,
-		}
-		templateParams["AlertManagerUser"] = username
-		templateParams["AlertManagerPassword"] = strconv.Quote(password)
-		templateParams["AlertmanagerURL"] = n.String()
+	password, _ := u.User.Password()
+	n := url.URL{
+		Scheme:   u.Scheme,
+		Host:     u.Host,
+		Path:     u.Path,
+		RawQuery: u.RawQuery,
+		Fragment: u.Fragment,
 	}
+	templateParams["AlertManagerUser"] = u.User.Username()
+	templateParams["AlertManagerPassword"] = strconv.Quote(password)
+	templateParams["AlertmanagerURL"] = n.String()
 
 	return nil
 }
@@ -578,7 +576,7 @@ command =
 		--retentionPeriod={{ .DataRetentionMonths }}
 		--storageDataPath=/srv/victoriametrics/data
 		--httpListenAddr=127.0.0.1:8428
-		--search.disableCache={{.VMDBCacheEnable}}
+		--search.disableCache={{.VMDBCacheDisable}}
 user = pmm
 autorestart = {{ .IsVMEnabled }}
 autostart = {{ .IsVMEnabled }}
@@ -598,7 +596,7 @@ priority = 7
 command =
 	/usr/sbin/vmalert
         --notifier.url="http://127.0.0.1:9093/alertmanager{{- if .AlertmanagerURL }},{{ .AlertmanagerURL }}{{- end }}"
-{{- if and  .AlertManagerUser .AlertManagerPassword}}
+{{- if .AlertManagerUser }}
         --notifier.basicAuth.password=',{{.AlertManagerPassword }}'
         --notifier.basicAuth.username=",{{.AlertManagerUser}}"
 {{- end }}

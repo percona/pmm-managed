@@ -29,11 +29,6 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-// InvalidBoolError invalid duration error.
-type InvalidBoolError string
-
-func (e InvalidBoolError) Error() string { return string(e) }
-
 // InvalidDurationError invalid duration error.
 type InvalidDurationError string
 
@@ -121,8 +116,9 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 				err = formatEnvVariableError(err, env, v)
 			}
 		case "VM_CACHE_ENABLE":
-			if envSettings.VMCacheEnable, err = parseBool(v); err != nil {
-				err = formatEnvVariableError(err, env, v)
+			envSettings.VMCacheEnable, err = strconv.ParseBool(v)
+			if err != nil {
+				err = fmt.Errorf("invalid value %q for environment variable %q", v, k)
 			}
 
 		default:
@@ -145,25 +141,10 @@ func parseStringDuration(value string) (time.Duration, error) {
 	return d, nil
 }
 
-// parseBool validate bool as string value.
-func parseBool(value string) (bool, error) {
-	if len(value) == 0 {
-		return false, nil
-	}
-	b, err := strconv.ParseBool(value)
-	if err != nil {
-		return false, InvalidBoolError("invalid bool error")
-	}
-
-	return b, nil
-}
-
 func formatEnvVariableError(err error, env, value string) error {
 	switch e := err.(type) {
 	case InvalidDurationError:
 		return fmt.Errorf("environment variable %q has invalid duration %s", env, value)
-	case InvalidBoolError:
-		return fmt.Errorf("environment variable %q has invalid bool %s", env, value)
 	default:
 		return errors.Wrap(e, "unknown error")
 	}
