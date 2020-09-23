@@ -56,9 +56,8 @@ const (
 
 	// Environment variables that affect telemetry service; only for testing.
 	// DISABLE_TELEMETRY environment variable is handled elsewere.
-	envV1URL = "PERCONA_VERSION_CHECK_URL" // the same name as for the Toolkit
-	// FIXME remove https://jira.percona.com/browse/SAAS-360
-	envV2Host       = "PERCONA_TEST_TELEMETRY_HOST"
+	envV1URL        = "PERCONA_VERSION_CHECK_URL"   // the same name as for the Toolkit
+	envV2Host       = "PERCONA_TEST_TELEMETRY_HOST" // FIXME remove https://jira.percona.com/browse/SAAS-360
 	envInterval     = "PERCONA_TEST_TELEMETRY_INTERVAL"
 	envRetryBackoff = "PERCONA_TEST_TELEMETRY_RETRY_BACKOFF"
 

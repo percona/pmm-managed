@@ -50,8 +50,7 @@ const (
 	defaultStartDelay      = time.Minute
 
 	// Environment variables that affect checks service; only for testing.
-	// FIXME remove https://jira.percona.com/browse/SAAS-360
-	envHost            = "PERCONA_TEST_CHECKS_HOST"
+	envHost            = "PERCONA_TEST_CHECKS_HOST" // FIXME remove https://jira.percona.com/browse/SAAS-360
 	envPublicKey       = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
 	envRestartInterval = "PERCONA_TEST_CHECKS_INTERVAL" // not "restart" in the value - name is fixed
 	envCheckFile       = "PERCONA_TEST_CHECKS_FILE"

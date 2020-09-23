@@ -116,8 +116,7 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 			if envSettings.DataRetention, err = parseStringDuration(v); err != nil {
 				err = formatEnvVariableError(err, env, v)
 			}
-			// FIXME remove https://jira.percona.com/browse/SAAS-360
-		case "PERCONA_TEST_AUTH_HOST", "PERCONA_TEST_CHECKS_HOST", "PERCONA_TEST_TELEMETRY_HOST":
+		case "PERCONA_TEST_AUTH_HOST", "PERCONA_TEST_CHECKS_HOST", "PERCONA_TEST_TELEMETRY_HOST": // FIXME remove https://jira.percona.com/browse/SAAS-360
 			warns = append(warns, fmt.Sprintf("Environment variable %q WILL BE REMOVED SOON, please use %q instead.", k, envSaaSHost))
 		default:
 			// skip test environment variables that are handled here or elsewere with a big warning
