@@ -69,18 +69,9 @@ func TestDBaaSController(t *testing.T) {
 	configDir := filepath.Join("..", "..", "testdata", "supervisord.d")
 	s := New(configDir, pmmUpdateCheck)
 
-	tests := []struct {
-		Name    string
-		Enabled bool
-	}{
-		{
-			Name:    "DBaaSEnabled",
-			Enabled: true,
-		},
-		{
-			Name:    "DBaaSDisabled",
-			Enabled: false,
-		},
+	tests := []bool{
+		true,
+		false,
 	}
 	var tp *template.Template
 	for _, tmpl := range templates.Templates() {
@@ -90,23 +81,21 @@ func TestDBaaSController(t *testing.T) {
 		}
 	}
 
-	for _, test := range tests {
+	for _, enabled := range tests {
 		st := models.Settings{
 			DBaaS: dbaas{
-				Enabled: test.Enabled,
+				Enabled: enabled,
 			},
 		}
 		if !st.DBaaS.Enabled {
 			continue
 		}
 
-		t.Run(test.Name, func(t *testing.T) {
-			expected, err := ioutil.ReadFile(filepath.Join(configDir, tp.Name()+".ini")) //nolint:gosec
-			require.NoError(t, err)
-			actual, err := s.marshalConfig(tp, &st)
-			require.NoError(t, err)
-			assert.Equal(t, string(expected), string(actual))
-		})
+		expected, err := ioutil.ReadFile(filepath.Join(configDir, tp.Name()+".ini")) //nolint:gosec
+		require.NoError(t, err)
+		actual, err := s.marshalConfig(tp, &st)
+		require.NoError(t, err)
+		assert.Equal(t, string(expected), string(actual))
 	}
 }
 
