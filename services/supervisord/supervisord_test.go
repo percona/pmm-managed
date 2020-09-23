@@ -32,7 +32,7 @@ import (
 )
 
 type dbaas struct {
-	Enabled bool "json:\"enabled\""
+	Enabled bool `json:"enabled"`
 }
 
 func TestConfig(t *testing.T) {
@@ -68,20 +68,20 @@ func TestDBaaSController(t *testing.T) {
 	pmmUpdateCheck := NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker_logs"))
 	configDir := filepath.Join("..", "..", "testdata", "supervisord.d")
 	s := New(configDir, pmmUpdateCheck)
-	settings := []models.Settings{
-		{},
+
+	tests := []struct {
+		Name    string
+		Enabled bool
+	}{
 		{
-			DBaaS: dbaas{
-				Enabled: true,
-			},
+			Name:    "DBaaSEnabled",
+			Enabled: true,
 		},
 		{
-			DBaaS: dbaas{
-				Enabled: false,
-			},
+			Name:    "DBaaSDisabled",
+			Enabled: false,
 		},
 	}
-
 	var tp *template.Template
 	for _, tmpl := range templates.Templates() {
 		if tmpl.Name() == "dbaas-controller" {
@@ -90,12 +90,17 @@ func TestDBaaSController(t *testing.T) {
 		}
 	}
 
-	for _, st := range settings {
+	for _, test := range tests {
+		st := models.Settings{
+			DBaaS: dbaas{
+				Enabled: test.Enabled,
+			},
+		}
 		if !st.DBaaS.Enabled {
 			continue
 		}
 
-		t.Run(tp.Name(), func(t *testing.T) {
+		t.Run(test.Name, func(t *testing.T) {
 			expected, err := ioutil.ReadFile(filepath.Join(configDir, tp.Name()+".ini")) //nolint:gosec
 			require.NoError(t, err)
 			actual, err := s.marshalConfig(tp, &st)
