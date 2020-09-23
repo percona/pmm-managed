@@ -18,9 +18,9 @@ package supervisord
 
 import (
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"testing"
+	"text/template"
 	"time"
 
 	"github.com/AlekSi/pointer"
@@ -30,6 +30,10 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 )
+
+type dbaas struct {
+	Enabled bool "json:\"enabled\""
+}
 
 func TestConfig(t *testing.T) {
 	t.Parallel()
@@ -42,11 +46,8 @@ func TestConfig(t *testing.T) {
 	}
 
 	for _, tmpl := range templates.Templates() {
-		if tmpl.Name() == "" {
-			continue
-		}
-
-		if tmpl.Name() == "dbaas-controller" && os.Getenv("PERCONA_TEST_DBAAS") != "1" {
+		n := tmpl.Name()
+		if n == "" || n == "dbaas-controller" {
 			continue
 		}
 
@@ -55,6 +56,49 @@ func TestConfig(t *testing.T) {
 			expected, err := ioutil.ReadFile(filepath.Join(configDir, tmpl.Name()+".ini")) //nolint:gosec
 			require.NoError(t, err)
 			actual, err := s.marshalConfig(tmpl, settings)
+			require.NoError(t, err)
+			assert.Equal(t, string(expected), string(actual))
+		})
+	}
+}
+
+func TestDBaaSController(t *testing.T) {
+	t.Parallel()
+
+	pmmUpdateCheck := NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker_logs"))
+	configDir := filepath.Join("..", "..", "testdata", "supervisord.d")
+	s := New(configDir, pmmUpdateCheck)
+	settings := []models.Settings{
+		{},
+		{
+			DBaaS: dbaas{
+				Enabled: true,
+			},
+		},
+		{
+			DBaaS: dbaas{
+				Enabled: false,
+			},
+		},
+	}
+
+	var tp *template.Template
+	for _, tmpl := range templates.Templates() {
+		if tmpl.Name() == "dbaas-controller" {
+			tp = tmpl
+			break
+		}
+	}
+
+	for _, st := range settings {
+		if !st.DBaaS.Enabled {
+			continue
+		}
+
+		t.Run(tp.Name(), func(t *testing.T) {
+			expected, err := ioutil.ReadFile(filepath.Join(configDir, tp.Name()+".ini")) //nolint:gosec
+			require.NoError(t, err)
+			actual, err := s.marshalConfig(tp, &st)
 			require.NoError(t, err)
 			assert.Equal(t, string(expected), string(actual))
 		})
