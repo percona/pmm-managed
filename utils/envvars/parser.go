@@ -116,6 +116,9 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 			if envSettings.DataRetention, err = parseStringDuration(v); err != nil {
 				err = formatEnvVariableError(err, env, v)
 			}
+			// FIXME remove https://jira.percona.com/browse/SAAS-360
+		case "PERCONA_TEST_AUTH_HOST", "PERCONA_TEST_CHECKS_HOST", "PERCONA_TEST_TELEMETRY_HOST":
+			warns = append(warns, fmt.Sprintf("Environment variable %q WILL BE REMOVED SOON, please use %q instead.", k, envSaaSHost))
 		default:
 			// skip test environment variables that are handled here or elsewere with a big warning
 			if strings.HasPrefix(k, "PERCONA_TEST_") {
@@ -154,11 +157,7 @@ func GetSAASHost(fallbackEnv string) (string, error) {
 	name, v := envSaaSHost, os.Getenv(envSaaSHost)
 	if v == "" {
 		name, v = fallbackEnv, os.Getenv(fallbackEnv)
-		if v != "" {
-			logrus.Warnf("Environment variable %q WILL BE REMOVED SOON, please use %q instead.", fallbackEnv, envSaaSHost)
-		}
 	}
-
 	if v == "" {
 		logrus.Debugf("Using default SaaS host %q.", defaultSaaSHost)
 		return defaultSaaSHost, nil

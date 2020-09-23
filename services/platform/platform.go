@@ -43,6 +43,7 @@ const (
 	defaultSessionRefreshInterval = 24 * time.Hour
 	dialTimeout                   = 5 * time.Second
 
+	// FIXME remove https://jira.percona.com/browse/SAAS-360
 	envHost                   = "PERCONA_TEST_AUTH_HOST"
 	envSessionRefreshInterval = "PERCONA_TEST_SESSION_REFRESH_INTERVAL"
 
