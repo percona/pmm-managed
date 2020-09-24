@@ -225,7 +225,13 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 	l := logrus.WithField("component", "JSON")
 	l.Infof("Starting server on http://%s/ ...", http1Addr)
 
-	proxyMux := grpc_gateway.NewServeMux()
+	proxyMux := grpc_gateway.NewServeMux(
+		grpc_gateway.WithMarshalerOption(grpc_gateway.MIMEWildcard, &grpc_gateway.JSONPb{
+			EmitDefaults: true,
+			Indent:       "  ",
+			OrigName:     true,
+		}),
+	)
 	opts := []grpc.DialOption{grpc.WithInsecure()}
 
 	// TODO switch from RegisterXXXHandlerFromEndpoint to RegisterXXXHandler to avoid extra dials
@@ -555,16 +561,27 @@ func main() {
 
 	logs := supervisord.NewLogs(version.FullInfo(), pmmUpdateCheck)
 	supervisord := supervisord.New(*supervisordConfigDirF, pmmUpdateCheck, vmParams)
-	telemetry := telemetry.NewService(db, version.Version)
+
+	telemetry, err := telemetry.NewService(db, version.Version)
+	if err != nil {
+		l.Fatalf("Could not create telemetry service: %s", err)
+	}
 
 	awsInstanceChecker := server.NewAWSInstanceChecker(db, telemetry)
 	grafanaClient := grafana.NewClient(*grafanaAddrF)
 	prom.MustRegister(grafanaClient)
 
-	checksService := checks.New(agentsRegistry, alertmanager, db)
+	checksService, err := checks.New(agentsRegistry, alertmanager, db)
+	if err != nil {
+		l.Fatalf("Could not create checks service: %s", err)
+	}
+
 	prom.MustRegister(checksService)
 
-	platformService := platform.New(db)
+	platformService, err := platform.New(db)
+	if err != nil {
+		l.Fatalf("Could not create platform service: %s", err)
+	}
 
 	serverParams := &server.Params{
 		DB:                      db,
