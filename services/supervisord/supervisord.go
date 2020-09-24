@@ -409,7 +409,8 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 		"IsVMEnabled":         s.vmParams.Enabled,
 		"VMAlertFlags":        s.vmParams.VMAlertFlags,
 		"VMDBCacheDisable":    !settings.VictoriaMetrics.CacheEnable,
-	}
+		"PerconaTestDbaas":   settings.DBaaS.Enabled,
+  }
 	if err := addAlertManagerParams(settings.AlertManagerURL, templateParams); err != nil {
 		return nil, errors.Wrap(err, "cannot add AlertManagerParams to supervisor template")
 	}
@@ -538,6 +539,23 @@ func (s *Service) UpdateConfiguration(settings *models.Settings) error {
 // once we start generating it. See alertmanager service.
 
 var templates = template.Must(template.New("").Option("missingkey=error").Parse(`
+{{define "dbaas-controller"}}
+[program:dbaas-controller]
+priority = 6
+command = /usr/sbin/dbaas-controller
+user = pmm
+autorestart = {{ .PerconaTestDbaas }}
+autostart = {{ .PerconaTestDbaas }}
+startretries = 10
+startsecs = 1
+stopsignal = TERM
+stopwaitsecs = 300
+stdout_logfile = /srv/logs/dbaas-controller.log
+stdout_logfile_maxbytes = 10MB
+stdout_logfile_backups = 3
+redirect_stderr = true
+{{end}}
+
 {{define "prometheus"}}
 [program:prometheus]
 priority = 7

@@ -282,7 +282,7 @@ func addScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s 
 			continue
 		case models.QANMongoDBProfilerAgentType:
 			continue
-		case models.QANPostgreSQLPgStatementsAgentType:
+		case models.QANPostgreSQLPgStatementsAgentType, models.QANPostgreSQLPgStatMonitorAgentType:
 			continue
 
 		case models.RDSExporterType:
