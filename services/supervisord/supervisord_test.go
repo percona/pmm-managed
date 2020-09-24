@@ -66,7 +66,8 @@ func TestDBaaSController(t *testing.T) {
 
 	pmmUpdateCheck := NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker_logs"))
 	configDir := filepath.Join("..", "..", "testdata", "supervisord.d")
-	s := New(configDir, pmmUpdateCheck)
+	vmParams := &models.VictoriaMetricsParams{}
+	s := New(configDir, pmmUpdateCheck, vmParams)
 
 	var tp *template.Template
 	for _, tmpl := range templates.Templates() {

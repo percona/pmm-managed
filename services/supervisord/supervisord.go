@@ -409,8 +409,8 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 		"IsVMEnabled":         s.vmParams.Enabled,
 		"VMAlertFlags":        s.vmParams.VMAlertFlags,
 		"VMDBCacheDisable":    !settings.VictoriaMetrics.CacheEnable,
-		"PerconaTestDbaas":   settings.DBaaS.Enabled,
-  }
+		"PerconaTestDbaas":    settings.DBaaS.Enabled,
+	}
 	if err := addAlertManagerParams(settings.AlertManagerURL, templateParams); err != nil {
 		return nil, errors.Wrap(err, "cannot add AlertManagerParams to supervisor template")
 	}
