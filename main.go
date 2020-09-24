@@ -569,7 +569,7 @@ func main() {
 	serverParams := &server.Params{
 		DB:                      db,
 		Prometheus:              prometheus,
-		VictoriaMetrics:         vmdb,
+		VMDB:                    vmdb,
 		VMAlert:                 vmalert,
 		Alertmanager:            alertmanager,
 		Supervisord:             supervisord,

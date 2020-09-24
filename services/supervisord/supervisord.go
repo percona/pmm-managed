@@ -407,7 +407,7 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 		"DataRetentionDays":   int(settings.DataRetention.Hours() / 24),
 		"DataRetentionMonths": retentionMonths,
 		"IsVMEnabled":         s.vmParams.Enabled,
-		"VMAlertParams":       s.vmParams.VMAlertFlags,
+		"VMAlertFlags":        s.vmParams.VMAlertFlags,
 		"VMDBCacheDisable":    !settings.VictoriaMetrics.CacheEnable,
 	}
 	if err := addAlertManagerParams(settings.AlertManagerURL, templateParams); err != nil {
@@ -606,7 +606,7 @@ command =
         --remoteWrite.url=http://127.0.0.1:8428
         --rule=/srv/prometheus/rules/*.yml
         --httpListenAddr=127.0.0.1:8880
-{{- range $index, $param := .VMAlertParams}}
+{{- range $index, $param := .VMAlertFlags}}
         {{$param}}
 {{- end}}
 user = pmm

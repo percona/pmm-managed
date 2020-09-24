@@ -84,7 +84,7 @@ type pmmUpdateAuth struct {
 type Params struct {
 	DB                      *reform.DB
 	Prometheus              prometheusService
-	VictoriaMetrics         prometheusService
+	VMDB                    prometheusService
 	VMAlert                 prometheusService
 	Alertmanager            alertmanagerService
 	PrometheusAlertingRules prometheusAlertingRules
@@ -106,7 +106,7 @@ func NewServer(params *Params) (*Server, error) {
 	s := &Server{
 		db:                      params.DB,
 		prometheus:              params.Prometheus,
-		vmdb:                    params.VictoriaMetrics,
+		vmdb:                    params.VMDB,
 		vmalert:                 params.VMAlert,
 		alertmanager:            params.Alertmanager,
 		prometheusAlertingRules: params.PrometheusAlertingRules,
