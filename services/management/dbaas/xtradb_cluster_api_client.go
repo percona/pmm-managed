@@ -33,7 +33,7 @@ const (
 
 // Client represents dbaas-controller client to use dbaas services.
 type Client struct {
-	XtraDBClusterAPIClient XtraDBClusterAPIClient
+	XtraDBClusterAPIClient XtraDBClusterAPIConnector
 }
 
 // NewClient returns new client for given gRPC connection.

@@ -23,11 +23,11 @@ import (
 	"google.golang.org/grpc"
 )
 
-//go:generate mockery -name=XtraDBClusterAPIClient  -case=snake -inpkg -testonly
+//go:generate mockery -name=XtraDBClusterAPIConnector  -case=snake -inpkg -testonly
 
-// XtraDBClusterAPIClient is a subset of methods of dbaas.XtraDBClusterAPIClient used by this package.
+// XtraDBClusterAPIConnector is a subset of methods of dbaas.XtraDBClusterAPIClient used by this package.
 // We use it instead of real type for testing.
-type XtraDBClusterAPIClient interface {
+type XtraDBClusterAPIConnector interface {
 	// ListXtraDBClusters returns a list of XtraDB clusters.
 	ListXtraDBClusters(ctx context.Context, in *controllerv1beta1.ListXtraDBClustersRequest, opts ...grpc.CallOption) (*controllerv1beta1.ListXtraDBClustersResponse, error)
 	// CreateXtraDBCluster creates a new XtraDB cluster.

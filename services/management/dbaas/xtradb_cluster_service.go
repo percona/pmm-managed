@@ -32,7 +32,7 @@ import (
 type XtraDBClusterService struct {
 	db               *reform.DB
 	l                *logrus.Entry
-	controllerClient XtraDBClusterAPIClient
+	controllerClient XtraDBClusterAPIConnector
 }
 
 // NewXtraDBClusterService creates XtraDB Service.
