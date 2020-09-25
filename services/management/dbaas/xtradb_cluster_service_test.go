@@ -105,7 +105,7 @@ func Test_XtraDBClusterService(t *testing.T) {
 	assert.NotNil(t, registerKubernetesClusterResponse)
 
 	t.Run("BasicListXtraDBClusters", func(t *testing.T) {
-		c := new(MockXtraDBClusterAPIClient)
+		c := new(MockXtraDBClusterAPIConnector)
 		c.Test(t)
 
 		defer c.AssertExpectations(t)
@@ -155,7 +155,7 @@ func Test_XtraDBClusterService(t *testing.T) {
 
 	//nolint:dupl
 	t.Run("BasicCreateXtraDBClusters", func(t *testing.T) {
-		c := new(MockXtraDBClusterAPIClient)
+		c := new(MockXtraDBClusterAPIConnector)
 		c.Test(t)
 
 		defer c.AssertExpectations(t)
@@ -217,7 +217,7 @@ func Test_XtraDBClusterService(t *testing.T) {
 
 	//nolint:dupl
 	t.Run("BasicUpdateXtraDBCluster", func(t *testing.T) {
-		c := new(MockXtraDBClusterAPIClient)
+		c := new(MockXtraDBClusterAPIConnector)
 		c.Test(t)
 
 		defer c.AssertExpectations(t)
@@ -278,7 +278,7 @@ func Test_XtraDBClusterService(t *testing.T) {
 	})
 
 	t.Run("BasicDeleteXtraDBCluster", func(t *testing.T) {
-		c := new(MockXtraDBClusterAPIClient)
+		c := new(MockXtraDBClusterAPIConnector)
 		c.Test(t)
 
 		defer c.AssertExpectations(t)
