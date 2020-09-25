@@ -404,7 +404,7 @@
 
 [[projects]]
   branch = "PMM-6457-api-db-cluster"
-  digest = "1:15f4cda8551845656086fba0bcabe5513deec774a641c8d1c57509e6d069ee4b"
+  digest = "1:e28e4f009642d979c1133d42ef466c88c4c33eb67a75a4ddffa8f1bf4c4b82f9"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -426,7 +426,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "a6962d6accba0a722c805da2a83995d6d2ca9b8d"
+  revision = "a9ccfe327b6c38afab22c2e93b99d81aca8fe738"
 
 [[projects]]
   digest = "1:dbee7dc52291bb149388085eeb20561d4cb3c2044e0fa6ffa8d342c6b305f4bf"
