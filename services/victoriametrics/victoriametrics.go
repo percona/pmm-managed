@@ -47,9 +47,7 @@ const (
 	configurationUpdateTimeout = 2 * time.Second
 )
 
-var (
-	checkFailedRE = regexp.MustCompile(`FAILED: parsing YAML file \S+: (.+)\n`)
-)
+var checkFailedRE = regexp.MustCompile(`FAILED: parsing YAML file \S+: (.+)\n`)
 
 // VictoriaMetrics is responsible for interactions with victoria metrics.
 type VictoriaMetrics struct {
