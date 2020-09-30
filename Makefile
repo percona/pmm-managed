@@ -17,4 +17,4 @@ env-down:                                   ## Stop devcontainer.
 TARGET ?= _bash
 
 env:                                        ## Run `make TARGET` in devcontainer (`make env TARGET=help`); TARGET defaults to bash.
-	docker exec -it --workdir=/root/go/src/github.com/percona/pmm-managed pmm-managed-server make $(TARGET) PMM_TEST_PACKAGES=./services/dbaas/... PERCONA_TEST_DBAAS_KUBECONFIG=$(PERCONA_TEST_DBAAS_KUBECONFIG)
+	docker exec -it --workdir=/root/go/src/github.com/percona/pmm-managed pmm-managed-server make $(TARGET)
