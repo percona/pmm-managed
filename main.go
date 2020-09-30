@@ -36,6 +36,8 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/grpc/backoff"
+
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_validator "github.com/grpc-ecosystem/go-grpc-middleware/validator"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -439,10 +441,10 @@ func getQANClient(ctx context.Context, sqlDB *sql.DB, dbName, qanAPIAddr string)
 	return qan.NewClient(conn, db)
 }
 
-func getDBaaSControllerConnection(ctx context.Context, dbaasControllerAPIAddr string) *grpc.ClientConn {
+func getDBaaSControllerClient(ctx context.Context, dbaasControllerAPIAddr string) *dbaas.Client {
 	opts := []grpc.DialOption{
 		grpc.WithInsecure(),
-		grpc.WithBackoffMaxDelay(time.Second),
+		grpc.WithConnectParams(grpc.ConnectParams{Backoff: backoff.Config{MaxDelay: time.Second}}),
 		grpc.WithUserAgent("pmm-managed/" + version.Version),
 	}
 
@@ -452,7 +454,8 @@ func getDBaaSControllerConnection(ctx context.Context, dbaasControllerAPIAddr st
 	if err != nil {
 		logrus.Fatalf("Failed to connect DBaaS Controller API %s: %s.", dbaasControllerAPIAddr, err)
 	}
-	return conn
+
+	return dbaas.NewClient(conn)
 }
 
 func main() {
@@ -629,7 +632,7 @@ func main() {
 		}()
 	}
 
-	dbaasClient := dbaas.NewClient(getDBaaSControllerConnection(ctx, *dbaasControllerAPIAddrF))
+	dbaasClient := getDBaaSControllerClient(ctx, *dbaasControllerAPIAddrF)
 
 	authServer := grafana.NewAuthServer(grafanaClient, awsInstanceChecker)
 

@@ -897,6 +897,7 @@
     "golang.org/x/sys/unix",
     "golang.org/x/tools/cmd/goimports",
     "google.golang.org/grpc",
+    "google.golang.org/grpc/backoff",
     "google.golang.org/grpc/channelz/service",
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/credentials",
