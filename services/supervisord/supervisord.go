@@ -21,6 +21,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"math"
@@ -408,7 +409,7 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 		"DataRetentionMonths": retentionMonths,
 		"IsVMEnabled":         s.vmParams.Enabled,
 		"VMAlertFlags":        s.vmParams.VMAlertFlags,
-		"VMDBCacheDisable":    !settings.VictoriaMetrics.CacheEnable,
+		"VMDBCacheDisable":    !settings.VictoriaMetrics.CacheEnabled,
 		"PerconaTestDbaas":    settings.DBaaS.Enabled,
 	}
 	if err := addAlertManagerParams(settings.AlertManagerURL, templateParams); err != nil {
@@ -426,7 +427,7 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 // addAlertManagerParams parses alertManagerURL
 // and extracts url, username and password from it to templateParams.
 func addAlertManagerParams(alertManagerURL string, templateParams map[string]interface{}) error {
-	templateParams["AlertmanagerURL"] = alertManagerURL
+	templateParams["AlertmanagerURL"] = "http://127.0.0.1:9093/alertmanager"
 	templateParams["AlertManagerUser"] = ""
 	templateParams["AlertManagerPassword"] = ""
 	if alertManagerURL == "" {
@@ -447,9 +448,9 @@ func addAlertManagerParams(alertManagerURL string, templateParams map[string]int
 		RawQuery: u.RawQuery,
 		Fragment: u.Fragment,
 	}
-	templateParams["AlertManagerUser"] = u.User.Username()
-	templateParams["AlertManagerPassword"] = strconv.Quote(password)
-	templateParams["AlertmanagerURL"] = n.String()
+	templateParams["AlertManagerUser"] = fmt.Sprintf(",%s", u.User.Username())
+	templateParams["AlertManagerPassword"] = fmt.Sprintf(",%s", strconv.Quote(password))
+	templateParams["AlertmanagerURL"] = fmt.Sprintf("http://127.0.0.1:9093/alertmanager,%s", n.String())
 
 	return nil
 }
@@ -613,11 +614,9 @@ redirect_stderr = true
 priority = 7
 command =
 	/usr/sbin/vmalert
-        --notifier.url="http://127.0.0.1:9093/alertmanager{{- if .AlertmanagerURL }},{{ .AlertmanagerURL }}{{- end }}"
-{{- if .AlertManagerUser }}
-        --notifier.basicAuth.password=',{{.AlertManagerPassword }}'
-        --notifier.basicAuth.username=",{{.AlertManagerUser}}"
-{{- end }}
+        --notifier.url="{{ .AlertmanagerURL }}"
+        --notifier.basicAuth.password='{{ .AlertManagerPassword }}'
+        --notifier.basicAuth.username="{{ .AlertManagerUser}}"
         --external.url=http://localhost:9090/prometheus
         --datasource.url=http://127.0.0.1:8428
         --remoteRead.url=http://127.0.0.1:8428

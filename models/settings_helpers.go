@@ -82,7 +82,10 @@ type ChangeSettingsParams struct {
 	// LogOut user from Percona Platform, i.e. remove user email and session id
 	LogOut bool
 
-	VMCacheEnable bool
+	// EnableVMCache enables caching for vmdb search queries
+	EnableVMCache bool
+	// DisableVMCache disables caching for vmdb search queries
+	DisableVMCache bool
 }
 
 // UpdateSettings updates only non-zero, non-empty values.
@@ -154,7 +157,13 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 		settings.SaaS.Email = params.Email
 	}
 
-	settings.VictoriaMetrics.CacheEnable = params.VMCacheEnable
+	if params.DisableVMCache {
+		settings.VictoriaMetrics.CacheEnabled = false
+	}
+
+	if params.EnableVMCache {
+		settings.VictoriaMetrics.CacheEnabled = true
+	}
 
 	err = SaveSettings(q, settings)
 	if err != nil {
@@ -170,6 +179,9 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 	}
 	if params.EnableSTT && params.DisableSTT {
 		return fmt.Errorf("Both enable_stt and disable_stt are present.") //nolint:golint,stylecheck
+	}
+	if params.EnableVMCache && params.DisableVMCache {
+		return fmt.Errorf("Both enable_vm_cache and disable_vm_cache are present.") //nolint:golint,stylecheck
 	}
 
 	checkCases := []struct {

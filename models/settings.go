@@ -50,7 +50,7 @@ type Settings struct {
 	AlertManagerURL string `json:"alert_manager_url"`
 
 	VictoriaMetrics struct {
-		CacheEnable bool `json:"cache_enable"`
+		CacheEnabled bool `json:"cache_enabled"`
 	} `json:"victoria_metrics"`
 
 	// Saas config options

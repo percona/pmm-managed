@@ -17,7 +17,6 @@
 package models
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -26,23 +25,15 @@ import (
 func TestVictoriaMetricsParams(t *testing.T) {
 	testConf := "../testdata/victoriametrics/prometheus.external.yml"
 	t.Run("read non exist baseConfigFile", func(t *testing.T) {
-		_ = os.Setenv(vmTestEnableEnv, "true")
-		defer func() {
-			_ = os.Unsetenv(vmTestEnableEnv)
-		}()
 		vmp, err := NewVictoriaMetricsParams("nonExistConfigFile.yml")
 		require.NoError(t, err)
-		require.Equal(t, true, vmp.Enabled)
+		require.Equal(t, false, vmp.Enabled)
 	})
 
 	t.Run("check VM is Enabled", func(t *testing.T) {
-		_ = os.Setenv(vmTestEnableEnv, "true")
-		defer func() {
-			_ = os.Unsetenv(vmTestEnableEnv)
-		}()
 		vmp, err := NewVictoriaMetricsParams(testConf)
 		require.NoError(t, err)
-		require.Equal(t, true, vmp.Enabled)
+		require.Equal(t, false, vmp.Enabled)
 	})
 	t.Run("check params for VMAlert", func(t *testing.T) {
 		vmp, err := NewVictoriaMetricsParams(testConf)

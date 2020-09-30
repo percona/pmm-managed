@@ -27,7 +27,6 @@ import (
 )
 
 const (
-
 	// enables victoriametrics services at supervisor config.
 	vmTestEnableEnv = "PERCONA_TEST_ENABLE_VM"
 )
@@ -36,7 +35,7 @@ const (
 type VictoriaMetricsParams struct {
 	// VMAlertFlags additional flags for VMAlert.
 	VMAlertFlags []string
-	// Enables VictoriaMetrics.
+	// Enabled VictoriaMetrics and VMAlert services.
 	Enabled bool
 	// BaseConfigPath defines path for basic prometheus config.
 	BaseConfigPath string
@@ -78,11 +77,12 @@ func (vmp *VictoriaMetricsParams) loadVMAlertParams() error {
 		if !os.IsNotExist(err) {
 			return errors.Wrap(err, "cannot read baseConfigPath for VMAlertParams")
 		}
-
+		// fast return if users configuration doesn't exists with path
+		// /srv/prometheus/prometheus.base.yml maybe mounted into container.
 		return nil
 	}
-	cfg := &config.Config{}
-	if err = yaml.Unmarshal(buf, cfg); err != nil {
+	var cfg config.Config
+	if err = yaml.Unmarshal(buf, &cfg); err != nil {
 		return errors.Wrap(err, "cannot unmarshal baseConfigPath for VMAlertFlags")
 	}
 	vmalertFlags := make([]string, 0, len(vmp.VMAlertFlags))
