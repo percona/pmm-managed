@@ -78,7 +78,8 @@ func (vmp *VictoriaMetricsParams) loadVMAlertParams() error {
 			return errors.Wrap(err, "cannot read baseConfigPath for VMAlertParams")
 		}
 		// fast return if users configuration doesn't exists with path
-		// /srv/prometheus/prometheus.base.yml maybe mounted into container.
+		// /srv/prometheus/prometheus.base.yml,
+		// its maybe mounted into container by user.
 		return nil
 	}
 	var cfg config.Config
