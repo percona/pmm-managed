@@ -159,7 +159,7 @@ func TestSetup(t *testing.T) {
 
 		resp, b := doRequest(t, client, req)
 		assert.Equal(t, 200, resp.StatusCode, "response:\n%s", b)
-		assert.Equal(t, `{}`, string(b), "response:\n%s", b)
+		assert.Equal(t, "{\n\n}", string(b), "response:\n%s", b)
 	})
 }
 
