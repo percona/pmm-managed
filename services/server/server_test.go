@@ -201,7 +201,9 @@ func TestServer(t *testing.T) {
 
 		ctx := context.TODO()
 
-		s, err := server.ChangeSettings(ctx, &serverpb.ChangeSettingsRequest{EnableStt: true})
+		s, err := server.ChangeSettings(ctx, &serverpb.ChangeSettingsRequest{
+			EnableTelemetry: true,
+		})
 		require.NoError(t, err)
 		require.NotNil(t, s)
 
