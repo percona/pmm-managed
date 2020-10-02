@@ -191,4 +191,22 @@ func TestServer(t *testing.T) {
 			DisableStt: true,
 		}))
 	})
+
+	t.Run("ChangeSettings", func(t *testing.T) {
+		server := newServer(t)
+
+		server.UpdateSettingsFromEnv([]string{
+			"PERCONA_TEST_DBAAS=1",
+		})
+
+		ctx := context.TODO()
+
+		s, err := server.ChangeSettings(ctx, &serverpb.ChangeSettingsRequest{EnableStt: true})
+		require.NoError(t, err)
+		require.NotNil(t, s)
+
+		settings, err := server.GetSettings(ctx, new(serverpb.GetSettingsRequest))
+		require.NoError(t, err)
+		assert.True(t, settings.Settings.DbaasEnabled)
+	})
 }
