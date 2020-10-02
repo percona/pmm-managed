@@ -49,6 +49,7 @@ func TestServer(t *testing.T) {
 
 		par := new(mockPrometheusAlertingRules)
 		par.Test(t)
+		par.On("ReadRules").Return("", nil)
 
 		ts := new(mockTelemetryService)
 		ts.Test(t)
