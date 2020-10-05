@@ -332,7 +332,12 @@ func (s *Service) sendV2RequestWithRetries(ctx context.Context, req *reporter.Re
 func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest) error {
 	s.l.Debugf("Using %s as telemetry host.", s.v2Host)
 
-	cc, err := dial.Dial(ctx, "", s.v2Host)
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return err
+	}
+
+	cc, err := dial.Dial(ctx, settings.SaaS.SessionID, s.v2Host)
 	if err != nil {
 		return errors.Wrap(err, "failed to dial")
 	}
