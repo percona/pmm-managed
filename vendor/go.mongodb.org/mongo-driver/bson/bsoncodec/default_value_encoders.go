@@ -252,8 +252,7 @@ func (dve DefaultValueEncoders) TimeEncodeValue(ec EncodeContext, vw bsonrw.Valu
 		return ValueEncoderError{Name: "TimeEncodeValue", Types: []reflect.Type{tTime}, Received: val}
 	}
 	tt := val.Interface().(time.Time)
-	dt := primitive.NewDateTimeFromTime(tt)
-	return vw.WriteDateTime(int64(dt))
+	return vw.WriteDateTime(tt.Unix()*1000 + int64(tt.Nanosecond()/1e6))
 }
 
 // ByteSliceEncodeValue is the ValueEncoderFunc for []byte.

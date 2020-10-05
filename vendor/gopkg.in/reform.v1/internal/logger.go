@@ -24,7 +24,7 @@ func NewLogger(prefix string, debug bool) *Logger {
 	l := log.New(os.Stderr, prefix, flags)
 	return &Logger{
 		printf: func(format string, args ...interface{}) {
-			_ = l.Output(3, fmt.Sprintf(format, args...))
+			l.Output(3, fmt.Sprintf(format, args...))
 		},
 		debug: debug,
 	}

@@ -1074,9 +1074,9 @@ func isDriverSetting(key string) bool {
 		return true
 	case "binary_parameters":
 		return true
-	case "krbsrvname":
+	case "service":
 		return true
-	case "krbspn":
+	case "spn":
 		return true
 	default:
 		return false
@@ -1168,13 +1168,13 @@ func (cn *conn) auth(r *readBuf, o values) {
 
 		var token []byte
 
-		if spn, ok := o["krbspn"]; ok {
+		if spn, ok := o["spn"]; ok {
 			// Use the supplied SPN if provided..
 			token, err = cli.GetInitTokenFromSpn(spn)
 		} else {
 			// Allow the kerberos service name to be overridden
 			service := "postgres"
-			if val, ok := o["krbsrvname"]; ok {
+			if val, ok := o["service"]; ok {
 				service = val
 			}
 

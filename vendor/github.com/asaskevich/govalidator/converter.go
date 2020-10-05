@@ -47,11 +47,11 @@ func ToInt(value interface{}) (res int64, err error) {
 				res = 0
 			}
 		} else {
-			err = fmt.Errorf("ToInt: invalid numeric format %g", value)
+			err = fmt.Errorf("math: square root of negative number %g", value)
 			res = 0
 		}
 	default:
-		err = fmt.Errorf("ToInt: unknown interface type %T", value)
+		err = fmt.Errorf("math: square root of negative number %g", value)
 		res = 0
 	}
 
