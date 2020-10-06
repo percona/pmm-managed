@@ -46,7 +46,7 @@ const kubeconfTest = `
 			{
 				"name": "percona-xtradb-cluster-operator",
 				"user": {
-					"token": "some-tocken"
+					"token": "some-token"
 				}
 			}
 		],

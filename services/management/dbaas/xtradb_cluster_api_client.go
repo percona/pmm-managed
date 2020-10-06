@@ -25,6 +25,7 @@ import (
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
 )
 
 const (
@@ -50,8 +51,9 @@ func NewClient(ctx context.Context, address string) (*Client, error) {
 
 func dial(ctx context.Context, address string) (*grpc.ClientConn, error) {
 	opts := []grpc.DialOption{
-		grpc.WithUserAgent("pmm-managed/" + version.Version),
 		grpc.WithInsecure(),
+		grpc.WithConnectParams(grpc.ConnectParams{Backoff: backoff.Config{MaxDelay: time.Second}}),
+		grpc.WithUserAgent("pmm-managed/" + version.Version),
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, dialTimeout)

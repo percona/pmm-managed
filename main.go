@@ -114,13 +114,13 @@ func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
 }
 
 type gRPCServerDeps struct {
-	db                  *reform.DB
-	prometheus          *prometheus.Service
-	server              *server.Server
-	agentsRegistry      *agents.Registry
-	grafanaClient       *grafana.Client
-	checksService       *checks.Service
-	dbaasControllerConn *dbaas.Client
+	db                    *reform.DB
+	prometheus            *prometheus.Service
+	server                *server.Server
+	agentsRegistry        *agents.Registry
+	grafanaClient         *grafana.Client
+	checksService         *checks.Service
+	dbaasControllerClient *dbaas.Client
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -174,7 +174,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterSecurityChecksServer(gRPCServer, managementgrpc.NewChecksServer(checksSvc))
 
 	dbaasv1beta1.RegisterKubernetesServer(gRPCServer, dbaas.NewKubernetesServer(deps.db))
-	dbaasv1beta1.RegisterXtraDBClusterServer(gRPCServer, dbaas.NewXtraDBClusterService(deps.db, deps.dbaasControllerConn))
+	dbaasv1beta1.RegisterXtraDBClusterServer(gRPCServer, dbaas.NewXtraDBClusterService(deps.db, deps.dbaasControllerClient))
 
 	if l.Logger.GetLevel() >= logrus.DebugLevel {
 		l.Debug("Reflection and channelz are enabled.")
@@ -674,13 +674,13 @@ func main() {
 	go func() {
 		defer wg.Done()
 		runGRPCServer(ctx, &gRPCServerDeps{
-			db:                  db,
-			prometheus:          prometheus,
-			server:              server,
-			agentsRegistry:      agentsRegistry,
-			grafanaClient:       grafanaClient,
-			checksService:       checksService,
-			dbaasControllerConn: dbaasControllerClient,
+			db:                    db,
+			prometheus:            prometheus,
+			server:                server,
+			agentsRegistry:        agentsRegistry,
+			grafanaClient:         grafanaClient,
+			checksService:         checksService,
+			dbaasControllerClient: dbaasControllerClient,
 		})
 	}()
 
