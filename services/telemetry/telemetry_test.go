@@ -94,10 +94,6 @@ func TestSendV2Request(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
-	defer func() {
-		require.NoError(t, sqlDB.Close())
-	}()
-
 	t.Run("Normal", func(t *testing.T) {
 		s, err := NewService(db, "2.4.0")
 		require.NoError(t, err)

@@ -48,10 +48,6 @@ func TestDownloadChecks(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
-	defer func() {
-		require.NoError(t, sqlDB.Close())
-	}()
-
 	s, err := New(nil, nil, db)
 	require.NoError(t, err)
 	s.host = devChecksHost
@@ -120,10 +116,6 @@ func TestCollectChecks(t *testing.T) {
 	t.Run("download checks", func(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
-
-		defer func() {
-			require.NoError(t, sqlDB.Close())
-		}()
 
 		s, err := New(nil, nil, db)
 		require.NoError(t, err)
@@ -249,10 +241,6 @@ func TestStartChecks(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
-		defer func() {
-			require.NoError(t, sqlDB.Close())
-		}()
-
 		s, err := New(nil, nil, db)
 		require.NoError(t, err)
 		err = s.StartChecks(context.Background())
@@ -262,10 +250,6 @@ func TestStartChecks(t *testing.T) {
 	t.Run("stt enabled", func(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
-
-		defer func() {
-			require.NoError(t, sqlDB.Close())
-		}()
 
 		var ams mockAlertmanagerService
 		ams.On("SendAlerts", mock.Anything, mock.Anything).Return()
@@ -366,9 +350,6 @@ func setup(t *testing.T, db *reform.DB, serviceName, nodeID, pmmAgentVersion str
 
 func TestFindTargets(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SetupFixtures, nil)
-	defer func() {
-		require.NoError(t, sqlDB.Close())
-	}()
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 	s, err := New(nil, nil, db)
 	require.NoError(t, err)
