@@ -55,7 +55,7 @@ const (
 	envCheckFile       = "PERCONA_TEST_CHECKS_FILE"
 	envResendInterval  = "PERCONA_TEST_CHECKS_RESEND_INTERVAL"
 
-	checksTimeout       = time.Hour
+	checksTimeout       = 5 * time.Minute  // timeout for checks downloading/execution
 	resultTimeout       = 20 * time.Second // should greater than agents.defaultQueryActionTimeout
 	resultCheckInterval = time.Second
 
