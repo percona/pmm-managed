@@ -20,48 +20,48 @@ package dbaas
 import (
 	"context"
 
-	dbaasController "github.com/percona-platform/dbaas-api/gen/controller"
+	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"google.golang.org/grpc"
 )
 
 // Client is a client for dbaas-controller.
 type Client struct {
-	kubernetesClient    dbaasController.KubernetesClusterAPIClient
-	xtradbClusterClient dbaasController.XtraDBClusterAPIClient
+	kubernetesClient    controllerv1beta1.KubernetesClusterAPIClient
+	xtradbClusterClient controllerv1beta1.XtraDBClusterAPIClient
 }
 
 // NewClient creates new Client object.
 func NewClient(con grpc.ClientConnInterface) *Client {
 	return &Client{
-		kubernetesClient:    dbaasController.NewKubernetesClusterAPIClient(con),
-		xtradbClusterClient: dbaasController.NewXtraDBClusterAPIClient(con),
+		kubernetesClient:    controllerv1beta1.NewKubernetesClusterAPIClient(con),
+		xtradbClusterClient: controllerv1beta1.NewXtraDBClusterAPIClient(con),
 	}
 }
 
 // CheckKubernetesClusterConnection checks connection with kubernetes cluster.
 func (c *Client) CheckKubernetesClusterConnection(ctx context.Context, kubeConfig string) error {
-	_, err := c.kubernetesClient.CheckKubernetesClusterConnection(ctx, &dbaasController.CheckKubernetesClusterConnectionRequest{
-		KubeAuth: &dbaasController.KubeAuth{Kubeconfig: kubeConfig},
+	_, err := c.kubernetesClient.CheckKubernetesClusterConnection(ctx, &controllerv1beta1.CheckKubernetesClusterConnectionRequest{
+		KubeAuth: &controllerv1beta1.KubeAuth{Kubeconfig: kubeConfig},
 	})
 	return err
 }
 
 // ListXtraDBClusters returns a list of XtraDB clusters.
-func (c *Client) ListXtraDBClusters(ctx context.Context, in *dbaasController.ListXtraDBClustersRequest, opts ...grpc.CallOption) (*dbaasController.ListXtraDBClustersResponse, error) {
+func (c *Client) ListXtraDBClusters(ctx context.Context, in *controllerv1beta1.ListXtraDBClustersRequest, opts ...grpc.CallOption) (*controllerv1beta1.ListXtraDBClustersResponse, error) {
 	return c.xtradbClusterClient.ListXtraDBClusters(ctx, in, opts...)
 }
 
 // CreateXtraDBCluster creates a new XtraDB cluster.
-func (c *Client) CreateXtraDBCluster(ctx context.Context, in *dbaasController.CreateXtraDBClusterRequest, opts ...grpc.CallOption) (*dbaasController.CreateXtraDBClusterResponse, error) {
+func (c *Client) CreateXtraDBCluster(ctx context.Context, in *controllerv1beta1.CreateXtraDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.CreateXtraDBClusterResponse, error) {
 	return c.xtradbClusterClient.CreateXtraDBCluster(ctx, in, opts...)
 }
 
 // UpdateXtraDBCluster updates existing XtraDB cluster.
-func (c *Client) UpdateXtraDBCluster(ctx context.Context, in *dbaasController.UpdateXtraDBClusterRequest, opts ...grpc.CallOption) (*dbaasController.UpdateXtraDBClusterResponse, error) {
+func (c *Client) UpdateXtraDBCluster(ctx context.Context, in *controllerv1beta1.UpdateXtraDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.UpdateXtraDBClusterResponse, error) {
 	return c.xtradbClusterClient.UpdateXtraDBCluster(ctx, in, opts...)
 }
 
 // DeleteXtraDBCluster deletes XtraDB cluster.
-func (c *Client) DeleteXtraDBCluster(ctx context.Context, in *dbaasController.DeleteXtraDBClusterRequest, opts ...grpc.CallOption) (*dbaasController.DeleteXtraDBClusterResponse, error) {
+func (c *Client) DeleteXtraDBCluster(ctx context.Context, in *controllerv1beta1.DeleteXtraDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.DeleteXtraDBClusterResponse, error) {
 	return c.xtradbClusterClient.DeleteXtraDBCluster(ctx, in, opts...)
 }

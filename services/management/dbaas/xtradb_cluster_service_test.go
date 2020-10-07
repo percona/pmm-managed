@@ -19,7 +19,7 @@ package dbaas
 
 import (
 	"context"
-	"reflect"
+	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -72,7 +72,7 @@ const kubeconfTest = `
 `
 const kubernetesClusterNameTest = "test-k8s-cluster-name"
 
-func Test_XtraDBClusterService(t *testing.T) {
+func TestXtraDBClusterService(t *testing.T) {
 	setup := func(t *testing.T) (ctx context.Context, db *reform.DB, dbaasClient *mockDbaasClient, teardown func(t *testing.T)) {
 		t.Helper()
 
@@ -129,10 +129,12 @@ func Test_XtraDBClusterService(t *testing.T) {
 			},
 		}
 
-		dbaasClient.On("ListXtraDBClusters", ctx, mock.AnythingOfType(reflect.TypeOf(&controllerv1beta1.ListXtraDBClustersRequest{}).String())).Return(&mockResp, nil)
+		dbaasClient.On("ListXtraDBClusters", ctx, mock.Anything).Return(&mockResp, nil)
 
 		resp, err := s.ListXtraDBClusters(ctx, &dbaasv1beta1.ListXtraDBClustersRequest{KubernetesClusterName: kubernetesClusterNameTest})
+		fmt.Println(resp)
 		assert.NoError(t, err)
+		require.NotNil(t, resp.Clusters[0])
 		assert.Equal(t, resp.Clusters[0].Name, "first.pxc.test.percona.com")
 		assert.Equal(t, int32(5), resp.Clusters[0].Params.ClusterSize)
 		assert.Equal(t, int32(3), resp.Clusters[0].Params.Pxc.ComputeResources.CpuM)

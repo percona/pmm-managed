@@ -60,7 +60,7 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 	}
 
 	clusters := make([]*dbaasv1beta1.ListXtraDBClustersResponse_Cluster, len(out.Clusters))
-	for _, c := range out.Clusters {
+	for i, c := range out.Clusters {
 		cluster := dbaasv1beta1.ListXtraDBClustersResponse_Cluster{
 			Name: c.Name,
 			Params: &dbaasv1beta1.XtraDBClusterParams{
@@ -80,7 +80,7 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 			},
 		}
 
-		clusters = append(clusters, &cluster)
+		clusters[i] = &cluster
 	}
 
 	return &dbaasv1beta1.ListXtraDBClustersResponse{Clusters: clusters}, nil
