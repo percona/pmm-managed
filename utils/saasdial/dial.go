@@ -29,10 +29,7 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-const (
-	platformAuthType = "PP-1"
-	dialTimeout      = 10 * time.Second
-)
+const dialTimeout = 10 * time.Second
 
 // Dial creates gRPC connection to Percona Platform
 func Dial(ctx context.Context, sessionID string, hostPort string) (*grpc.ClientConn, error) {

@@ -22,6 +22,8 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
+const platformAuthType = "PP-1"
+
 type platformAuth struct {
 	sessionID string
 }
