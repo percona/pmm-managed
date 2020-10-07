@@ -41,8 +41,8 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/utils/dial"
 	"github.com/percona/pmm-managed/utils/envvars"
+	"github.com/percona/pmm-managed/utils/saasdial"
 )
 
 const (
@@ -337,7 +337,7 @@ func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest
 		return err
 	}
 
-	cc, err := dial.Dial(ctx, settings.SaaS.SessionID, s.v2Host)
+	cc, err := saasdial.Dial(ctx, settings.SaaS.SessionID, s.v2Host)
 	if err != nil {
 		return errors.Wrap(err, "failed to dial")
 	}

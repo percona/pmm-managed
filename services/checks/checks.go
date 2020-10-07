@@ -40,8 +40,8 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services"
-	"github.com/percona/pmm-managed/utils/dial"
 	"github.com/percona/pmm-managed/utils/envvars"
+	"github.com/percona/pmm-managed/utils/saasdial"
 )
 
 const (
@@ -783,7 +783,7 @@ func (s *Service) downloadChecks(ctx context.Context) ([]check.Check, error) {
 		return nil, err
 	}
 
-	cc, err := dial.Dial(ctx, settings.SaaS.SessionID, s.host)
+	cc, err := saasdial.Dial(ctx, settings.SaaS.SessionID, s.host)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to dial")
 	}

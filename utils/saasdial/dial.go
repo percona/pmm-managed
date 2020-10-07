@@ -15,7 +15,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Package dial provides gRPC connection setup for Percona Platform.
-package dial
+package saasdial
 
 import (
 	"context"
@@ -34,32 +34,11 @@ const (
 	dialTimeout      = 10 * time.Second
 )
 
-type platformAuth struct {
-	sessionID string
-}
-
-// GetRequestMetadata implements credentials.PerRPCCredentials interface.
-func (b *platformAuth) GetRequestMetadata(ctx context.Context, uri ...string) (map[string]string, error) {
-	return map[string]string{
-		"authorization": platformAuthType + " " + b.sessionID,
-	}, nil
-}
-
-// RequireTransportSecurity implements credentials.PerRPCCredentials interface.
-func (*platformAuth) RequireTransportSecurity() bool {
-	return false
-}
-
-// check interfaces
-var (
-	_ credentials.PerRPCCredentials = (*platformAuth)(nil)
-)
-
 // Dial creates gRPC connection to Percona Platform
 func Dial(ctx context.Context, sessionID string, hostPort string) (*grpc.ClientConn, error) {
 	host, _, err := net.SplitHostPort(hostPort)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to set checks host")
+		return nil, errors.Wrap(err, "failed to set percona platform host")
 	}
 	tlsConfig := tlsconfig.Get()
 	tlsConfig.ServerName = host

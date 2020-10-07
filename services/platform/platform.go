@@ -30,8 +30,8 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/utils/dial"
 	"github.com/percona/pmm-managed/utils/envvars"
+	"github.com/percona/pmm-managed/utils/saasdial"
 )
 
 const (
@@ -99,7 +99,7 @@ func (s *Service) Run(ctx context.Context) {
 
 // SignUp creates new Percona Platform user with given email and password.
 func (s *Service) SignUp(ctx context.Context, email, password string) error {
-	cc, err := dial.Dial(ctx, "", s.host)
+	cc, err := saasdial.Dial(ctx, "", s.host)
 	if err != nil {
 		return errors.Wrap(err, "failed establish connection with Percona")
 	}
@@ -115,7 +115,7 @@ func (s *Service) SignUp(ctx context.Context, email, password string) error {
 
 // SignIn checks Percona Platform user authentication and creates session.
 func (s *Service) SignIn(ctx context.Context, email, password string) error {
-	cc, err := dial.Dial(ctx, "", s.host)
+	cc, err := saasdial.Dial(ctx, "", s.host)
 	if err != nil {
 		return errors.Wrap(err, "failed establish connection with Percona")
 	}
@@ -149,7 +149,7 @@ func (s *Service) SignOut(ctx context.Context) error {
 		return errNoActiveSessions
 	}
 
-	cc, err := dial.Dial(ctx, settings.SaaS.SessionID, s.host)
+	cc, err := saasdial.Dial(ctx, settings.SaaS.SessionID, s.host)
 	if err != nil {
 		return errors.Wrap(err, "failed establish connection with Percona")
 	}
@@ -185,7 +185,7 @@ func (s *Service) refreshSession(ctx context.Context) error {
 		return errNoActiveSessions
 	}
 
-	cc, err := dial.Dial(ctx, settings.SaaS.SessionID, s.host)
+	cc, err := saasdial.Dial(ctx, settings.SaaS.SessionID, s.host)
 	if err != nil {
 		return errors.Wrap(err, "failed establish connection with Percona")
 	}
