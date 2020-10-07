@@ -725,7 +725,7 @@ func main() {
 		runGRPCServer(ctx, &gRPCServerDeps{
 			db:                    db,
 			prometheus:            prometheus,
-			vmdb:           vmdb,
+			vmdb:                  vmdb,
 			server:                server,
 			agentsRegistry:        agentsRegistry,
 			grafanaClient:         grafanaClient,
