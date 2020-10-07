@@ -17,10 +17,23 @@
 // Package dbaas contains all APIs related to DBaaS.
 package dbaas
 
-import "context"
+import (
+	"context"
+
+	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
+	"google.golang.org/grpc"
+)
 
 //go:generate mockery -name=dbaasClient -case=snake -inpkg -testonly
 
 type dbaasClient interface {
 	CheckKubernetesClusterConnection(ctx context.Context, kubeConfig string) error
+	// ListXtraDBClusters returns a list of XtraDB clusters.
+	ListXtraDBClusters(ctx context.Context, in *controllerv1beta1.ListXtraDBClustersRequest, opts ...grpc.CallOption) (*controllerv1beta1.ListXtraDBClustersResponse, error)
+	// CreateXtraDBCluster creates a new XtraDB cluster.
+	CreateXtraDBCluster(ctx context.Context, in *controllerv1beta1.CreateXtraDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.CreateXtraDBClusterResponse, error)
+	// UpdateXtraDBCluster updates existing XtraDB cluster.
+	UpdateXtraDBCluster(ctx context.Context, in *controllerv1beta1.UpdateXtraDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.UpdateXtraDBClusterResponse, error)
+	// DeleteXtraDBCluster deletes XtraDB cluster.
+	DeleteXtraDBCluster(ctx context.Context, in *controllerv1beta1.DeleteXtraDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.DeleteXtraDBClusterResponse, error)
 }

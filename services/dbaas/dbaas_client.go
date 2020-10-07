@@ -26,13 +26,15 @@ import (
 
 // Client is a client for dbaas-controller.
 type Client struct {
-	kubernetesClient dbaasController.KubernetesClusterAPIClient
+	kubernetesClient    dbaasController.KubernetesClusterAPIClient
+	xtradbClusterClient dbaasController.XtraDBClusterAPIClient
 }
 
 // NewClient creates new Client object.
 func NewClient(con grpc.ClientConnInterface) *Client {
 	return &Client{
-		kubernetesClient: dbaasController.NewKubernetesClusterAPIClient(con),
+		kubernetesClient:    dbaasController.NewKubernetesClusterAPIClient(con),
+		xtradbClusterClient: dbaasController.NewXtraDBClusterAPIClient(con),
 	}
 }
 
@@ -42,4 +44,24 @@ func (c *Client) CheckKubernetesClusterConnection(ctx context.Context, kubeConfi
 		KubeAuth: &dbaasController.KubeAuth{Kubeconfig: kubeConfig},
 	})
 	return err
+}
+
+// ListXtraDBClusters returns a list of XtraDB clusters.
+func (c *Client) ListXtraDBClusters(ctx context.Context, in *dbaasController.ListXtraDBClustersRequest, opts ...grpc.CallOption) (*dbaasController.ListXtraDBClustersResponse, error) {
+	return c.xtradbClusterClient.ListXtraDBClusters(ctx, in, opts...)
+}
+
+// CreateXtraDBCluster creates a new XtraDB cluster.
+func (c *Client) CreateXtraDBCluster(ctx context.Context, in *dbaasController.CreateXtraDBClusterRequest, opts ...grpc.CallOption) (*dbaasController.CreateXtraDBClusterResponse, error) {
+	return c.xtradbClusterClient.CreateXtraDBCluster(ctx, in, opts...)
+}
+
+// UpdateXtraDBCluster updates existing XtraDB cluster.
+func (c *Client) UpdateXtraDBCluster(ctx context.Context, in *dbaasController.UpdateXtraDBClusterRequest, opts ...grpc.CallOption) (*dbaasController.UpdateXtraDBClusterResponse, error) {
+	return c.xtradbClusterClient.UpdateXtraDBCluster(ctx, in, opts...)
+}
+
+// DeleteXtraDBCluster deletes XtraDB cluster.
+func (c *Client) DeleteXtraDBCluster(ctx context.Context, in *dbaasController.DeleteXtraDBClusterRequest, opts ...grpc.CallOption) (*dbaasController.DeleteXtraDBClusterResponse, error) {
+	return c.xtradbClusterClient.DeleteXtraDBCluster(ctx, in, opts...)
 }
