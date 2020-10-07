@@ -37,7 +37,7 @@ func (b *platformAuth) GetRequestMetadata(ctx context.Context, uri ...string) (m
 
 // RequireTransportSecurity implements credentials.PerRPCCredentials interface.
 func (*platformAuth) RequireTransportSecurity() bool {
-	return false
+	return true
 }
 
 // check interfaces
