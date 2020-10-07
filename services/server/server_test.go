@@ -47,8 +47,17 @@ func TestServer(t *testing.T) {
 		mp.Test(t)
 		mp.On("RequestConfigurationUpdate").Return(nil)
 
+		mvmdb := new(mockPrometheusService)
+		mvmdb.Test(t)
+		mvmdb.On("RequestConfigurationUpdate").Return(nil)
+
+		mvmalert := new(mockPrometheusService)
+		mvmalert.Test(t)
+		mvmalert.On("RequestConfigurationUpdate").Return(nil)
+
 		par := new(mockPrometheusAlertingRules)
 		par.Test(t)
+		par.On("ReadRules").Return("", nil)
 
 		ts := new(mockTelemetryService)
 		ts.Test(t)
@@ -59,6 +68,8 @@ func TestServer(t *testing.T) {
 		s, err := NewServer(&Params{
 			DB:                      reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
 			Prometheus:              mp,
+			VMDB:                    mvmdb,
+			VMAlert:                 mvmalert,
 			Supervisord:             r,
 			PrometheusAlertingRules: par,
 			TelemetryService:        ts,
@@ -190,5 +201,25 @@ func TestServer(t *testing.T) {
 		assert.NoError(t, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
 			DisableStt: true,
 		}))
+	})
+
+	t.Run("ChangeSettings", func(t *testing.T) {
+		server := newServer(t)
+
+		server.UpdateSettingsFromEnv([]string{
+			"PERCONA_TEST_DBAAS=1",
+		})
+
+		ctx := context.TODO()
+
+		s, err := server.ChangeSettings(ctx, &serverpb.ChangeSettingsRequest{
+			EnableTelemetry: true,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, s)
+
+		settings, err := server.GetSettings(ctx, new(serverpb.GetSettingsRequest))
+		require.NoError(t, err)
+		assert.True(t, settings.Settings.DbaasEnabled)
 	})
 }

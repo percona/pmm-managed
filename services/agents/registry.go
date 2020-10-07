@@ -64,6 +64,7 @@ type pmmAgentInfo struct {
 type Registry struct {
 	db         *reform.DB
 	prometheus prometheusService
+	vmdb       prometheusService
 	qanClient  qanClient
 
 	rw     sync.RWMutex
@@ -79,10 +80,11 @@ type Registry struct {
 }
 
 // NewRegistry creates a new registry with given database connection.
-func NewRegistry(db *reform.DB, prometheus prometheusService, qanClient qanClient) *Registry {
+func NewRegistry(db *reform.DB, qanClient qanClient, prometheus, vmdb prometheusService) *Registry {
 	r := &Registry{
 		db:         db,
 		prometheus: prometheus,
+		vmdb:       vmdb,
 		qanClient:  qanClient,
 
 		agents: make(map[string]*pmmAgentInfo),
@@ -392,8 +394,8 @@ func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRe
 	if e != nil {
 		return e
 	}
-
 	r.prometheus.RequestConfigurationUpdate()
+	r.vmdb.RequestConfigurationUpdate()
 	return nil
 }
 
@@ -410,6 +412,17 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		l.Infof("SendSetStateRequest: %s.", err)
+		return
+	}
+
+	pmmAgent, err := models.FindAgentByID(r.db.Querier, pmmAgentID)
+	if err != nil {
+		l.Errorf("Failed to get PMM Agent: %s.", err)
+		return
+	}
+	pmmAgentVersion, err := version.Parse(*pmmAgent.Version)
+	if err != nil {
+		l.Errorf("Failed to parse PMM agent version %q: %s", *pmmAgent.Version, err)
 		return
 	}
 
@@ -455,7 +468,8 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 
 		// Agents with exactly one Service
 		case models.MySQLdExporterType, models.MongoDBExporterType, models.PostgresExporterType, models.ProxySQLExporterType,
-			models.QANMySQLPerfSchemaAgentType, models.QANMySQLSlowlogAgentType, models.QANMongoDBProfilerAgentType, models.QANPostgreSQLPgStatementsAgentType:
+			models.QANMySQLPerfSchemaAgentType, models.QANMySQLSlowlogAgentType, models.QANMongoDBProfilerAgentType, models.QANPostgreSQLPgStatementsAgentType,
+			models.QANPostgreSQLPgStatMonitorAgentType:
 
 			service, err := models.FindServiceByID(r.db.Querier, pointer.GetString(row.ServiceID))
 			if err != nil {
@@ -467,7 +481,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 			case models.MySQLdExporterType:
 				agentProcesses[row.AgentID] = mysqldExporterConfig(service, row, redactMode)
 			case models.MongoDBExporterType:
-				agentProcesses[row.AgentID] = mongodbExporterConfig(service, row, redactMode)
+				agentProcesses[row.AgentID] = mongodbExporterConfig(service, row, redactMode, pmmAgentVersion)
 			case models.PostgresExporterType:
 				agentProcesses[row.AgentID] = postgresExporterConfig(service, row, redactMode)
 			case models.ProxySQLExporterType:
@@ -480,6 +494,8 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 				builtinAgents[row.AgentID] = qanMongoDBProfilerAgentConfig(service, row)
 			case models.QANPostgreSQLPgStatementsAgentType:
 				builtinAgents[row.AgentID] = qanPostgreSQLPgStatementsAgentConfig(service, row)
+			case models.QANPostgreSQLPgStatMonitorAgentType:
+				builtinAgents[row.AgentID] = qanPostgreSQLPgStatMonitorAgentConfig(service, row)
 			}
 
 		case models.ExternalExporterType:
@@ -922,6 +938,25 @@ func (r *Registry) StartMongoDBQueryGetCmdLineOptsAction(ctx context.Context, id
 			},
 		},
 		Timeout: defaultQueryActionTimeout,
+	}
+
+	agent, err := r.get(pmmAgentID)
+	if err != nil {
+		return err
+	}
+
+	agent.channel.SendRequest(aRequest)
+	return nil
+}
+
+// StartPTSummaryAction starts pt-summary action on pmm-agent.
+func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID string) error {
+	aRequest := &agentpb.StartActionRequest{
+		ActionId: id,
+		// Need pass params, even empty, because othervise request's marshal fail.
+		Params: &agentpb.StartActionRequest_PtSummaryParams{
+			PtSummaryParams: &agentpb.StartActionRequest_PTSummaryParams{},
+		},
 	}
 
 	agent, err := r.get(pmmAgentID)

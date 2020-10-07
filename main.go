@@ -32,6 +32,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -43,6 +44,7 @@ import (
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/api/managementpb"
+	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/utils/sqlmetrics"
 	"github.com/percona/pmm/version"
@@ -67,6 +69,7 @@ import (
 	"github.com/percona/pmm-managed/services/inventory"
 	inventorygrpc "github.com/percona/pmm-managed/services/inventory/grpc"
 	"github.com/percona/pmm-managed/services/management"
+	"github.com/percona/pmm-managed/services/management/dbaas"
 	managementgrpc "github.com/percona/pmm-managed/services/management/grpc"
 	"github.com/percona/pmm-managed/services/platform"
 	"github.com/percona/pmm-managed/services/prometheus"
@@ -74,6 +77,7 @@ import (
 	"github.com/percona/pmm-managed/services/server"
 	"github.com/percona/pmm-managed/services/supervisord"
 	"github.com/percona/pmm-managed/services/telemetry"
+	"github.com/percona/pmm-managed/services/victoriametrics"
 	"github.com/percona/pmm-managed/utils/clean"
 	"github.com/percona/pmm-managed/utils/interceptors"
 	"github.com/percona/pmm-managed/utils/logger"
@@ -113,6 +117,7 @@ func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
 type gRPCServerDeps struct {
 	db             *reform.DB
 	prometheus     *prometheus.Service
+	vmdb           *victoriametrics.VictoriaMetrics
 	server         *server.Server
 	agentsRegistry *agents.Registry
 	grafanaClient  *grafana.Client
@@ -143,14 +148,14 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 
 	nodesSvc := inventory.NewNodesService(deps.db)
 	servicesSvc := inventory.NewServicesService(deps.db, deps.agentsRegistry)
-	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry, deps.prometheus)
+	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry, deps.prometheus, deps.vmdb)
 
 	inventorypb.RegisterNodesServer(gRPCServer, inventorygrpc.NewNodesServer(nodesSvc))
 	inventorypb.RegisterServicesServer(gRPCServer, inventorygrpc.NewServicesServer(servicesSvc))
 	inventorypb.RegisterAgentsServer(gRPCServer, inventorygrpc.NewAgentsServer(agentsSvc))
 
 	nodeSvc := management.NewNodeService(deps.db, deps.agentsRegistry)
-	serviceSvc := management.NewServiceService(deps.db, deps.agentsRegistry, deps.prometheus)
+	serviceSvc := management.NewServiceService(deps.db, deps.agentsRegistry, deps.prometheus, deps.vmdb)
 	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsRegistry)
 	mongodbSvc := management.NewMongoDBService(deps.db, deps.agentsRegistry)
 	postgresqlSvc := management.NewPostgreSQLService(deps.db, deps.agentsRegistry)
@@ -165,9 +170,11 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterProxySQLServer(gRPCServer, managementgrpc.NewManagementProxySQLServer(proxysqlSvc))
 	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(deps.agentsRegistry, deps.db))
 	managementpb.RegisterRDSServer(gRPCServer, management.NewRDSService(deps.db, deps.agentsRegistry))
-	managementpb.RegisterExternalServer(gRPCServer, management.NewExternalService(deps.db, deps.prometheus))
+	managementpb.RegisterExternalServer(gRPCServer, management.NewExternalService(deps.db, deps.prometheus, deps.vmdb))
 	managementpb.RegisterAnnotationServer(gRPCServer, managementgrpc.NewAnnotationServer(deps.db, deps.grafanaClient))
 	managementpb.RegisterSecurityChecksServer(gRPCServer, managementgrpc.NewChecksServer(checksSvc))
+
+	dbaasv1beta1.RegisterKubernetesServer(gRPCServer, dbaas.NewKubernetesServer(deps.db))
 
 	if l.Logger.GetLevel() >= logrus.DebugLevel {
 		l.Debug("Reflection and channelz are enabled.")
@@ -219,7 +226,22 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 	l := logrus.WithField("component", "JSON")
 	l.Infof("Starting server on http://%s/ ...", http1Addr)
 
-	proxyMux := grpc_gateway.NewServeMux()
+	marshaller := &grpc_gateway.JSONPb{
+		OrigName:     true,
+		EnumsAsInts:  false,
+		EmitDefaults: false,
+		Indent:       "  ",
+	}
+
+	// FIXME make that a default behavior: https://jira.percona.com/browse/PMM-4597
+	if nicer, _ := strconv.ParseBool(os.Getenv("PERCONA_TEST_NICER_API")); nicer {
+		l.Warn("Enabling nicer API with default/zero values in response.")
+		marshaller.EmitDefaults = true
+	}
+
+	proxyMux := grpc_gateway.NewServeMux(
+		grpc_gateway.WithMarshalerOption(grpc_gateway.MIMEWildcard, marshaller),
+	)
 	opts := []grpc.DialOption{grpc.WithInsecure()}
 
 	// TODO switch from RegisterXXXHandlerFromEndpoint to RegisterXXXHandler to avoid extra dials
@@ -244,6 +266,8 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 		managementpb.RegisterExternalHandlerFromEndpoint,
 		managementpb.RegisterAnnotationHandlerFromEndpoint,
 		managementpb.RegisterSecurityChecksHandlerFromEndpoint,
+
+		dbaasv1beta1.RegisterKubernetesHandlerFromEndpoint,
 	} {
 		if err := r(ctx, proxyMux, gRPCAddr, opts); err != nil {
 			l.Panic(err)
@@ -440,6 +464,13 @@ func main() {
 	prometheusConfigF := kingpin.Flag("prometheus-config", "Prometheus configuration file path").Default("/etc/prometheus.yml").String()
 	prometheusURLF := kingpin.Flag("prometheus-url", "Prometheus base URL").Default("http://127.0.0.1:9090/prometheus/").String()
 
+	victoriaMetricsURLF := kingpin.Flag("victoriametrics-url", "VictoriaMetrics base URL").
+		Default("http://127.0.0.1:8428/").String()
+	victoriaMetricsVMAlertURLF := kingpin.Flag("victoriametrics-vmalert-url", "VictoriaMetrics VMAlert base URL").
+		Default("http://127.0.0.1:8880/").String()
+	victoriaMetricsConfigF := kingpin.Flag("victoriametrics-config", "VictoriaMetrics scrape configuration file path").
+		Default("/etc/victoriametrics-promscrape.yml").String()
+
 	grafanaAddrF := kingpin.Flag("grafana-addr", "Grafana HTTP API address").Default("127.0.0.1:3000").String()
 	qanAPIAddrF := kingpin.Flag("qan-api-addr", "QAN API gRPC API address").Default("127.0.0.1:9911").String()
 
@@ -512,15 +543,26 @@ func main() {
 	cleaner := clean.New(db)
 	alertingRules := prometheus.NewAlertingRules()
 
+	vmParams, err := models.NewVictoriaMetricsParams(prometheus.BasePrometheusConfigPath)
+	if err != nil {
+		l.Panicf("cannot load victoriametrics params problem: %+v", err)
+	}
 	prometheus, err := prometheus.NewService(alertingRules, *prometheusConfigF, db, *prometheusURLF)
-
 	if err != nil {
 		l.Panicf("Prometheus service problem: %+v", err)
+	}
+	vmdb, err := victoriametrics.NewVictoriaMetrics(*victoriaMetricsConfigF, db, *victoriaMetricsURLF, vmParams)
+	if err != nil {
+		l.Panicf("VictoriaMetrics service problem: %+v", err)
+	}
+	vmalert, err := victoriametrics.NewVMAlert(alertingRules, *victoriaMetricsVMAlertURLF, vmParams)
+	if err != nil {
+		l.Panicf("VictoriaMetrics VMAlert service problem: %+v", err)
 	}
 
 	qanClient := getQANClient(ctx, sqlDB, *postgresDBNameF, *qanAPIAddrF)
 
-	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient)
+	agentsRegistry := agents.NewRegistry(db, qanClient, prometheus, vmdb)
 	prom.MustRegister(agentsRegistry)
 
 	alertmanager := alertmanager.New(db)
@@ -528,21 +570,34 @@ func main() {
 	pmmUpdateCheck := supervisord.NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker"))
 
 	logs := supervisord.NewLogs(version.FullInfo(), pmmUpdateCheck)
-	supervisord := supervisord.New(*supervisordConfigDirF, pmmUpdateCheck)
-	telemetry := telemetry.NewService(db, version.Version)
+	supervisord := supervisord.New(*supervisordConfigDirF, pmmUpdateCheck, vmParams)
+
+	telemetry, err := telemetry.NewService(db, version.Version)
+	if err != nil {
+		l.Fatalf("Could not create telemetry service: %s", err)
+	}
 
 	awsInstanceChecker := server.NewAWSInstanceChecker(db, telemetry)
 	grafanaClient := grafana.NewClient(*grafanaAddrF)
 	prom.MustRegister(grafanaClient)
 
-	checksService := checks.New(agentsRegistry, alertmanager, db)
+	checksService, err := checks.New(agentsRegistry, alertmanager, db)
+	if err != nil {
+		l.Fatalf("Could not create checks service: %s", err)
+	}
+
 	prom.MustRegister(checksService)
 
-	platformService := platform.New(db)
+	platformService, err := platform.New(db)
+	if err != nil {
+		l.Fatalf("Could not create platform service: %s", err)
+	}
 
 	serverParams := &server.Params{
 		DB:                      db,
 		Prometheus:              prometheus,
+		VMDB:                    vmdb,
+		VMAlert:                 vmalert,
 		Alertmanager:            alertmanager,
 		Supervisord:             supervisord,
 		TelemetryService:        telemetry,
@@ -601,6 +656,17 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		vmalert.Run(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		vmdb.Run(ctx)
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		alertmanager.Run(ctx)
 	}()
 
@@ -634,6 +700,7 @@ func main() {
 		runGRPCServer(ctx, &gRPCServerDeps{
 			db:             db,
 			prometheus:     prometheus,
+			vmdb:           vmdb,
 			server:         server,
 			agentsRegistry: agentsRegistry,
 			grafanaClient:  grafanaClient,

@@ -8,6 +8,7 @@ digraph packages {
 	"/" -> "/services/inventory";
 	"/" -> "/services/inventory/grpc";
 	"/" -> "/services/management";
+	"/" -> "/services/management/dbaas";
 	"/" -> "/services/management/grpc";
 	"/" -> "/services/platform";
 	"/" -> "/services/prometheus";
@@ -15,6 +16,8 @@ digraph packages {
 	"/" -> "/services/server";
 	"/" -> "/services/supervisord";
 	"/" -> "/services/telemetry";
+	"/cmd/pmm-managed-init" -> "/models";
+	"/cmd/pmm-managed-starlark" -> "/services/checks";
 	"/models" -> "/models";
 	"/services/agents" -> "/models";
 	"/services/agents" -> "/services/agents/channel";

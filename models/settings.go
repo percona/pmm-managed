@@ -49,6 +49,10 @@ type Settings struct {
 	// not url.URL to keep username and password
 	AlertManagerURL string `json:"alert_manager_url"`
 
+	VictoriaMetrics struct {
+		CacheEnabled bool `json:"cache_enabled"`
+	} `json:"victoria_metrics"`
+
 	// Saas config options
 	SaaS struct {
 		// Percona Platform user email
@@ -58,6 +62,11 @@ type Settings struct {
 		// Security Threat Tool enabled
 		STTEnabled bool `json:"stt_enabled"`
 	} `json:"sass"`
+
+	// DBaaS config options
+	DBaaS struct {
+		Enabled bool `json:"enabled"`
+	} `json:"dbaas"`
 }
 
 // fillDefaults sets zero values to their default values.
@@ -87,4 +96,5 @@ func (s *Settings) fillDefaults() {
 	// SSHKey is empty by default
 	// AlertManagerURL is empty by default
 	// SaaS.STTEnabled is false by default
+	// VictoriaMetrics CacheEnable is false by default
 }
