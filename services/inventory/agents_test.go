@@ -249,8 +249,7 @@ func TestAgents(t *testing.T) {
 		}
 		require.Len(t, actualAgents, 11)
 
-		// Check only AgentId equality.
-		// assert.Equal panic https://github.com/stretchr/testify/issues/480
+		// TODO: fix protobuf equality https://jira.percona.com/browse/PMM-6743
 		assert.Equal(t, pmmAgent.AgentId, actualAgents[3].(*inventorypb.PMMAgent).AgentId)
 		assert.Equal(t, expectedNodeExporter.AgentId, actualAgents[4].(*inventorypb.NodeExporter).AgentId)
 		assert.Equal(t, expectedMySQLdExporter.AgentId, actualAgents[5].(*inventorypb.MySQLdExporter).AgentId)
