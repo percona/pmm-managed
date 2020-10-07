@@ -52,7 +52,7 @@ func NewClient(ctx context.Context, address string) (*Client, error) {
 func dial(ctx context.Context, address string) (*grpc.ClientConn, error) {
 	opts := []grpc.DialOption{
 		grpc.WithInsecure(),
-		grpc.WithConnectParams(grpc.ConnectParams{Backoff: backoff.Config{MaxDelay: time.Second}}),
+		grpc.WithConnectParams(grpc.ConnectParams{Backoff: backoff.Config{MaxDelay: 2 * time.Second}, MinConnectTimeout: 10 * time.Second}),
 		grpc.WithUserAgent("pmm-managed/" + version.Version),
 	}
 
