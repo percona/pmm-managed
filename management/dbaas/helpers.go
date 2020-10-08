@@ -11,12 +11,15 @@ import (
 	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
 )
 
-func registerKubernetesCluster(t *testing.T, kubernetesClusterName string) {
+func registerKubernetesCluster(t *testing.T, kubernetesClusterName, kubeconfig string) {
+	if kubeconfig == "" {
+		kubeconfig = "{}"
+	}
 	registerKubernetesClusterResponse, err := dbaasClient.Default.Kubernetes.RegisterKubernetesCluster(
 		&kubernetes.RegisterKubernetesClusterParams{
 			Body: kubernetes.RegisterKubernetesClusterBody{
 				KubernetesClusterName: kubernetesClusterName,
-				KubeAuth:              &kubernetes.RegisterKubernetesClusterParamsBodyKubeAuth{Kubeconfig: "{}"},
+				KubeAuth:              &kubernetes.RegisterKubernetesClusterParamsBodyKubeAuth{Kubeconfig: kubeconfig},
 			},
 			Context: pmmapitests.Context,
 		},

@@ -20,7 +20,7 @@ func TestKubernetesServer(t *testing.T) {
 		require.NoError(t, err)
 		require.NotContains(t, clusters.Payload.KubernetesClusters, &kubernetes.KubernetesClustersItems0{KubernetesClusterName: kubernetesClusterName})
 
-		registerKubernetesCluster(t, kubernetesClusterName)
+		registerKubernetesCluster(t, kubernetesClusterName, "")
 
 		clusters, err = dbaasClient.Default.Kubernetes.ListKubernetesClusters(nil)
 		assert.NoError(t, err)
@@ -43,7 +43,7 @@ func TestKubernetesServer(t *testing.T) {
 
 	t.Run("DuplicateClusterName", func(t *testing.T) {
 		kubernetesClusterName := pmmapitests.TestString(t, "api-test-cluster-duplicate")
-		registerKubernetesCluster(t, kubernetesClusterName)
+		registerKubernetesCluster(t, kubernetesClusterName, "")
 		registerKubernetesClusterResponse, err := dbaasClient.Default.Kubernetes.RegisterKubernetesCluster(
 			&kubernetes.RegisterKubernetesClusterParams{
 				Body: kubernetes.RegisterKubernetesClusterBody{
