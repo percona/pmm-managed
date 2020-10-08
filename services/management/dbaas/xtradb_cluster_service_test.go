@@ -132,7 +132,6 @@ func TestXtraDBClusterService(t *testing.T) {
 		dbaasClient.On("ListXtraDBClusters", ctx, mock.Anything).Return(&mockResp, nil)
 
 		resp, err := s.ListXtraDBClusters(ctx, &dbaasv1beta1.ListXtraDBClustersRequest{KubernetesClusterName: kubernetesClusterNameTest})
-		fmt.Println(resp)
 		assert.NoError(t, err)
 		require.NotNil(t, resp.Clusters[0])
 		assert.Equal(t, resp.Clusters[0].Name, "first.pxc.test.percona.com")

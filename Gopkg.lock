@@ -403,7 +403,7 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-6457-api-db-cluster"
+  branch = "PMM-2.0"
   digest = "1:e28e4f009642d979c1133d42ef466c88c4c33eb67a75a4ddffa8f1bf4c4b82f9"
   name = "github.com/percona/pmm"
   packages = [
@@ -426,7 +426,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "33afd6b3a0fbda4a588ef8972f6032929c2376cc"
+  revision = "44fb8bd8c539384834e095889d1b22d5e82e812d"
 
 [[projects]]
   digest = "1:dbee7dc52291bb149388085eeb20561d4cb3c2044e0fa6ffa8d342c6b305f4bf"
