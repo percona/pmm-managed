@@ -127,7 +127,7 @@ func runChecks(l *logrus.Entry, data *checks.StarlarkScriptData) ([]check.Result
 		return nil, errors.Wrap(err, "error unmarshalling query result")
 	}
 
-	results, err := env.Run(data.Name, input, l.Debugln)
+	results, err := env.Run(data.Name, input, nil, l.Debugln)
 	if err != nil {
 		return nil, errors.Wrap(err, "error running starlark env")
 	}
