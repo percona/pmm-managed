@@ -24,7 +24,7 @@ required = [
 
 [[constraint]]
   name = "github.com/percona-platform/dbaas-api"
-  branch = "PMM-6433-check-kubernetes-connection"
+  branch = "main"
 
 # FIXME Remove when https://jira.percona.com/browse/PMM-6629 is done in percona/pmm.
 [[override]]

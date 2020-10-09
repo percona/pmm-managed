@@ -372,12 +372,12 @@
   version = "v0.3.0"
 
 [[projects]]
-  branch = "PMM-6433-check-kubernetes-connection"
+  branch = "main"
   digest = "1:0aaf5f8833b94f897da8e446be320b283c08ac9678f5ded5918079b9cd06b294"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "203ec38b10affb98a8fd59a74a9e1194743c3cf4"
+  revision = "f103f733767a81f021c544eadb892365c7a868fe"
 
 [[projects]]
   branch = "main"
