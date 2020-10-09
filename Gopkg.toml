@@ -22,10 +22,9 @@ required = [
   name = "github.com/percona-platform/saas"
   branch = "main"
 
-# FIXME Remove when https://jira.percona.com/browse/PMM-6629 is done in percona/pmm.
-[[override]]
-  name = "github.com/golang/protobuf"
-  version = "1.4.2"
+[[constraint]]
+  name = "github.com/percona-platform/dbaas-api"
+  branch = "main"
 
 # to prevent unexpected downgrades; see https://github.com/percona/exporter_shared/releases/tag/v0.6.0
 [[constraint]]
