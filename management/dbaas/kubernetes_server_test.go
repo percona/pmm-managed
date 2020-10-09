@@ -2,6 +2,7 @@ package dbaas
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	dbaasClient "github.com/percona/pmm/api/managementpb/dbaas/json/client"
@@ -14,14 +15,20 @@ import (
 )
 
 func TestKubernetesServer(t *testing.T) {
+	if os.Getenv("PERCONA_TEST_DBAAS") != "1" {
+		t.Skip("PERCONA_TEST_DBAAS env variable is not passed, skipping")
+	}
+	kubeConfig := os.Getenv("PERCONA_TEST_DBAAS_KUBECONFIG")
+	if kubeConfig == "" {
+		t.Skip("PERCONA_TEST_DBAAS_KUBECONFIG env variable is not provided")
+	}
 	t.Run("Basic", func(t *testing.T) {
 		kubernetesClusterName := pmmapitests.TestString(t, "api-test-cluster")
 		clusters, err := dbaasClient.Default.Kubernetes.ListKubernetesClusters(nil)
 		require.NoError(t, err)
 		require.NotContains(t, clusters.Payload.KubernetesClusters, &kubernetes.KubernetesClustersItems0{KubernetesClusterName: kubernetesClusterName})
 
-		registerKubernetesCluster(t, kubernetesClusterName, "")
-
+		registerKubernetesCluster(t, kubernetesClusterName, kubeConfig)
 		clusters, err = dbaasClient.Default.Kubernetes.ListKubernetesClusters(nil)
 		assert.NoError(t, err)
 		assert.GreaterOrEqual(t, len(clusters.Payload.KubernetesClusters), 1)
@@ -43,7 +50,8 @@ func TestKubernetesServer(t *testing.T) {
 
 	t.Run("DuplicateClusterName", func(t *testing.T) {
 		kubernetesClusterName := pmmapitests.TestString(t, "api-test-cluster-duplicate")
-		registerKubernetesCluster(t, kubernetesClusterName, "")
+
+		registerKubernetesCluster(t, kubernetesClusterName, kubeConfig)
 		registerKubernetesClusterResponse, err := dbaasClient.Default.Kubernetes.RegisterKubernetesCluster(
 			&kubernetes.RegisterKubernetesClusterParams{
 				Body: kubernetes.RegisterKubernetesClusterBody{
