@@ -53,9 +53,7 @@ func TestDownloadChecks(t *testing.T) {
 	s.host = devChecksHost
 	s.publicKeys = []string{devChecksPublicKey}
 
-	assert.Empty(t, s.getMySQLChecks())
-	assert.Empty(t, s.getPostgreSQLChecks())
-	assert.Empty(t, s.getMongoDBChecks())
+	assert.Empty(t, s.GetAllChecks())
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -103,10 +101,12 @@ func TestCollectChecks(t *testing.T) {
 		mySQLChecks := s.getMySQLChecks()
 		postgreSQLChecks := s.getPostgreSQLChecks()
 		mongoDBChecks := s.getMongoDBChecks()
+		allChecks := s.GetAllChecks()
 
 		require.Len(t, mySQLChecks, 1)
 		require.Len(t, postgreSQLChecks, 1)
 		require.Len(t, mongoDBChecks, 1)
+		require.Len(t, allChecks, 3)
 
 		assert.Equal(t, check.MySQLShow, mySQLChecks[0].Type)
 		assert.Equal(t, check.PostgreSQLSelect, postgreSQLChecks[0].Type)
@@ -124,6 +124,101 @@ func TestCollectChecks(t *testing.T) {
 		assert.NotEmpty(t, s.mySQLChecks)
 		assert.NotEmpty(t, s.postgreSQLChecks)
 		assert.NotEmpty(t, s.mongoDBChecks)
+	})
+}
+
+func TestDisableChecks(t *testing.T) {
+	err := os.Setenv("PERCONA_TEST_CHECKS_FILE", "../../testdata/checks/checks.yml")
+	require.NoError(t, err)
+	defer os.Unsetenv("PERCONA_TEST_CHECKS_FILE") //nolint:errcheck
+
+	t.Run("normal", func(t *testing.T) {
+		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
+		s, err := New(nil, nil, db)
+		require.NoError(t, err)
+		s.collectChecks(context.Background())
+
+		checks := s.GetAllChecks()
+		assert.Len(t, checks, 3)
+
+		disChecks, err := s.GetDisabledChecks()
+		require.NoError(t, err)
+		assert.Empty(t, disChecks)
+
+		err = s.DisableChecks([]string{checks[0].Name})
+		require.NoError(t, err)
+
+		disChecks, err = s.GetDisabledChecks()
+		require.NoError(t, err)
+		assert.Len(t, disChecks, 1)
+	})
+
+	t.Run("disable same check twice", func(t *testing.T) {
+		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
+		s, err := New(nil, nil, db)
+		require.NoError(t, err)
+		s.collectChecks(context.Background())
+
+		checks := s.GetAllChecks()
+		assert.Len(t, checks, 3)
+
+		disChecks, err := s.GetDisabledChecks()
+		require.NoError(t, err)
+		assert.Empty(t, disChecks)
+
+		err = s.DisableChecks([]string{checks[0].Name})
+		require.NoError(t, err)
+
+		err = s.DisableChecks([]string{checks[0].Name})
+		require.NoError(t, err)
+
+		disChecks, err = s.GetDisabledChecks()
+		require.NoError(t, err)
+		assert.Len(t, disChecks, 1)
+	})
+
+	t.Run("disable unknown check", func(t *testing.T) {
+		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
+		s, err := New(nil, nil, db)
+		require.NoError(t, err)
+		s.collectChecks(context.Background())
+
+		err = s.DisableChecks([]string{"unknown_check"})
+		require.Error(t, err)
+
+		disChecks, err := s.GetDisabledChecks()
+		require.NoError(t, err)
+		assert.Empty(t, disChecks)
+	})
+}
+
+func TestEnableChecks(t *testing.T) {
+	err := os.Setenv("PERCONA_TEST_CHECKS_FILE", "../../testdata/checks/checks.yml")
+	require.NoError(t, err)
+	defer os.Unsetenv("PERCONA_TEST_CHECKS_FILE") //nolint:errcheck
+
+	t.Run("normal", func(t *testing.T) {
+		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
+		s, err := New(nil, nil, db)
+		require.NoError(t, err)
+		s.collectChecks(context.Background())
+
+		checks := s.GetAllChecks()
+		assert.Len(t, checks, 3)
+
+		err = s.DisableChecks([]string{checks[0].Name, checks[1].Name, checks[2].Name})
+		require.NoError(t, err)
+
+		err = s.EnableChecks([]string{checks[0].Name, checks[2].Name})
+		require.NoError(t, err)
+
+		disChecks, err := s.GetDisabledChecks()
+		require.NoError(t, err)
+		assert.Equal(t, []string{checks[1].Name}, disChecks)
 	})
 }
 

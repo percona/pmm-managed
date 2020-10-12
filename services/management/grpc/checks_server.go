@@ -42,3 +42,11 @@ func (s *checksServer) StartSecurityChecks(ctx context.Context, request *managem
 func (s *checksServer) GetSecurityCheckResults(ctx context.Context, request *managementpb.GetSecurityCheckResultsRequest) (*managementpb.GetSecurityCheckResultsResponse, error) {
 	return s.svc.GetSecurityCheckResults()
 }
+
+func (s *checksServer) ListSecurityChecks(ctx context.Context, req *managementpb.ListSecurityChecksRequest) (*managementpb.ListSecurityChecksResponse, error) {
+	return s.svc.ListSecurityChecks()
+}
+
+func (s *checksServer) ToggleSecurityChecks(ctx context.Context, req *managementpb.ToggleSecurityChecksRequest) (*managementpb.ToggleSecurityChecksResponse, error) {
+	return s.svc.ToggleSecurityChecks(req)
+}

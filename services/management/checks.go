@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/percona/pmm/api/managementpb"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -29,17 +30,22 @@ import (
 // ChecksAPIService represents security checks service API.
 type ChecksAPIService struct {
 	checksService checksService
+	l             *logrus.Entry
 }
 
 // NewChecksAPIService creates new Checks API Service.
 func NewChecksAPIService(checksService checksService) *ChecksAPIService {
-	return &ChecksAPIService{checksService: checksService}
+	return &ChecksAPIService{
+		checksService: checksService,
+		l:             logrus.WithField("component", "management/checks"),
+	}
 }
 
 // StartSecurityChecks starts STT checks execution.
 func (s *ChecksAPIService) StartSecurityChecks(ctx context.Context) (*managementpb.StartSecurityChecksResponse, error) {
 	err := s.checksService.StartChecks(ctx)
 	if err != nil {
+		s.l.Errorf("Failed to start security checks: %+v", err)
 		if err == services.ErrSTTDisabled {
 			return nil, status.Errorf(codes.FailedPrecondition, "%v.", err)
 		}
@@ -54,6 +60,7 @@ func (s *ChecksAPIService) StartSecurityChecks(ctx context.Context) (*management
 func (s *ChecksAPIService) GetSecurityCheckResults() (*managementpb.GetSecurityCheckResultsResponse, error) {
 	results, err := s.checksService.GetSecurityCheckResults()
 	if err != nil {
+		s.l.Errorf("Failed to get security checks results: %+v", err)
 		if err == services.ErrSTTDisabled {
 			return nil, status.Errorf(codes.FailedPrecondition, "%v.", err)
 		}
@@ -72,4 +79,42 @@ func (s *ChecksAPIService) GetSecurityCheckResults() (*managementpb.GetSecurityC
 	}
 
 	return &managementpb.GetSecurityCheckResultsResponse{Results: checkResults}, nil
+}
+
+func (s *ChecksAPIService) ListSecurityChecks() (*managementpb.ListSecurityChecksResponse, error) {
+	disChecks, err := s.checksService.GetDisabledChecks()
+	if err != nil {
+		s.l.Errorf("Failed to get disabled security checks list: %+v", err)
+		return nil, status.Error(codes.Internal, "Failed to get disabled checks list.")
+	}
+
+	m := make(map[string]struct{}, len(disChecks))
+	for _, c := range disChecks {
+		m[c] = struct{}{}
+	}
+
+	var res []*managementpb.SecurityCheck
+	for _, c := range s.checksService.GetAllChecks() {
+		_, disabled := m[c.Name]
+		res = append(res, &managementpb.SecurityCheck{Name: c.Name, Disabled: disabled})
+	}
+
+	return &managementpb.ListSecurityChecksResponse{Checks: res}, nil
+}
+
+func (s *ChecksAPIService) ToggleSecurityChecks(req *managementpb.ToggleSecurityChecksRequest) (*managementpb.ToggleSecurityChecksResponse, error) {
+	err := s.checksService.EnableChecks(req.EnableChecks)
+	if err != nil {
+		s.l.Errorf("Failed to enable disabled security checks: %+v", err)
+		return nil, status.Error(codes.Internal, "Failed to enable disabled security checks.")
+	}
+
+	err = s.checksService.DisableChecks(req.DisableChecks)
+	if err != nil {
+		s.l.Errorf("Failed to disable security checks: %+v", err)
+
+		return nil, status.Errorf(codes.Internal, "Failed to disable security checks.")
+	}
+
+	return &managementpb.ToggleSecurityChecksResponse{}, nil
 }
