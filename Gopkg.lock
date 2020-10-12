@@ -403,8 +403,8 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-2.0"
-  digest = "1:48b332ada2c5a5166343ff8b8559625ed2cdb4dab450ca45af46e707290b8dc4"
+  branch = "SAAS-377-disable-checks-by-name"
+  digest = "1:4c1fb6cd76687a3341fa8aa9896525685661bdd01ab339d0787d863449269c73"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -426,7 +426,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "db6af09ffa6edb0ae36c25a2cc963e2a5b12625b"
+  revision = "c8d8a36ac7b8801630e6d055988c2170f6c7e37e"
 
 [[projects]]
   digest = "1:dbee7dc52291bb149388085eeb20561d4cb3c2044e0fa6ffa8d342c6b305f4bf"
