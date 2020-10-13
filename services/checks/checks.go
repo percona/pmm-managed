@@ -320,6 +320,7 @@ func (s *Service) getMongoDBChecks() []check.Check {
 	return append(r, s.mongoDBChecks...)
 }
 
+// GetAllChecks returns all available checks.
 func (s *Service) GetAllChecks() []check.Check {
 	var checks []check.Check
 	checks = append(checks, s.getMySQLChecks()...)
@@ -328,6 +329,7 @@ func (s *Service) GetAllChecks() []check.Check {
 	return checks
 }
 
+// GetDisabledChecks returns disabled checks.
 func (s *Service) GetDisabledChecks() ([]string, error) {
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
@@ -337,6 +339,7 @@ func (s *Service) GetDisabledChecks() ([]string, error) {
 	return settings.SaaS.DisabledSTTChecks, nil
 }
 
+// DisableChecks disables checks with provided names.
 func (s *Service) DisableChecks(checkNames []string) error {
 	if len(checkNames) == 0 {
 		return nil
@@ -365,6 +368,7 @@ func (s *Service) DisableChecks(checkNames []string) error {
 	return nil
 }
 
+// EnableChecks enables checks with provided names.
 func (s *Service) EnableChecks(checkNames []string) error {
 	if len(checkNames) == 0 {
 		return nil

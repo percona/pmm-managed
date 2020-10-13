@@ -81,6 +81,7 @@ func (s *ChecksAPIService) GetSecurityCheckResults() (*managementpb.GetSecurityC
 	return &managementpb.GetSecurityCheckResultsResponse{Results: checkResults}, nil
 }
 
+// ListSecurityChecks returns all available STT checks.
 func (s *ChecksAPIService) ListSecurityChecks() (*managementpb.ListSecurityChecksResponse, error) {
 	disChecks, err := s.checksService.GetDisabledChecks()
 	if err != nil {
@@ -93,8 +94,9 @@ func (s *ChecksAPIService) ListSecurityChecks() (*managementpb.ListSecurityCheck
 		m[c] = struct{}{}
 	}
 
-	var res []*managementpb.SecurityCheck
-	for _, c := range s.checksService.GetAllChecks() {
+	checks := s.checksService.GetAllChecks()
+	res := make([]*managementpb.SecurityCheck, 0, len(checks))
+	for _, c := range checks {
 		_, disabled := m[c.Name]
 		res = append(res, &managementpb.SecurityCheck{Name: c.Name, Disabled: disabled})
 	}
@@ -102,6 +104,7 @@ func (s *ChecksAPIService) ListSecurityChecks() (*managementpb.ListSecurityCheck
 	return &managementpb.ListSecurityChecksResponse{Checks: res}, nil
 }
 
+// ToggleSecurityChecks allows to disable/enable specific STT checks.
 func (s *ChecksAPIService) ToggleSecurityChecks(req *managementpb.ToggleSecurityChecksRequest) (*managementpb.ToggleSecurityChecksResponse, error) {
 	err := s.checksService.EnableChecks(req.EnableChecks)
 	if err != nil {
