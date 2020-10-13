@@ -408,6 +408,7 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 		"DataRetentionDays":   int(settings.DataRetention.Hours() / 24),
 		"DataRetentionMonths": retentionMonths,
 		"IsVMEnabled":         s.vmParams.Enabled,
+		"IsPrometheusEnabled": !s.vmParams.Enabled,
 		"VMAlertFlags":        s.vmParams.VMAlertFlags,
 		"VMDBCacheDisable":    !settings.VictoriaMetrics.CacheEnabled,
 		"PerconaTestDbaas":    settings.DBaaS.Enabled,
@@ -516,6 +517,18 @@ func (s *Service) UpdateConfiguration(settings *models.Settings) error {
 	if err != nil {
 		return err
 	}
+	// Stop Prometheus and VictoriaMetrics services before updating their configs
+	// in order to prevent possible race when opening /srv/prometheus/data
+	// from both services.
+	if _, e := s.supervisorctl("stop", "prometheus"); e != nil {
+		s.l.Errorf("Failed to stop prometheus: %s.", e)
+		err = e
+	}
+	if _, e := s.supervisorctl("stop", "victoriametrics"); e != nil {
+		s.l.Errorf("Failed to stop victoriametrics: %s.", e)
+		err = e
+	}
+
 	for _, tmpl := range templates.Templates() {
 		if tmpl.Name() == "" {
 			continue
@@ -574,8 +587,8 @@ command =
 		--web.external-url=http://localhost:9090/prometheus/
 		--web.listen-address=127.0.0.1:9090
 user = pmm
-autorestart = true
-autostart = true
+autorestart = {{ .IsPrometheusEnabled }}
+autostart = {{ .IsPrometheusEnabled }}
 startretries = 10
 startsecs = 1
 stopsignal = TERM
@@ -596,6 +609,7 @@ command =
 		--storageDataPath=/srv/victoriametrics/data
 		--httpListenAddr=127.0.0.1:8428
 		--search.disableCache={{.VMDBCacheDisable}}
+		--prometheusDataPath=/srv/prometheus/data
 user = pmm
 autorestart = {{ .IsVMEnabled }}
 autostart = {{ .IsVMEnabled }}

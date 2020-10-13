@@ -107,10 +107,10 @@ func TestDevContainer(t *testing.T) {
 		assert.WithinDuration(t, resT2, resT3, 10*time.Second)
 	})
 
-	t.Run("UpdateConfiguration", func(t *testing.T) {
+	testUpdateConfiguration := func(isVictoriaMetricsEnabled bool) {
 		// logrus.SetLevel(logrus.DebugLevel)
 		checker := NewPMMUpdateChecker(logrus.WithField("test", t.Name()))
-		vmParams := &models.VictoriaMetricsParams{Enabled: true}
+		vmParams := &models.VictoriaMetricsParams{Enabled: isVictoriaMetricsEnabled}
 
 		s := New("/etc/supervisord.d", checker, vmParams)
 		require.NotEmpty(t, s.supervisorctlPath)
@@ -150,6 +150,14 @@ func TestDevContainer(t *testing.T) {
 
 		err = s.UpdateConfiguration(settings)
 		require.NoError(t, err)
+	}
+	t.Run("UpdateConfiguration", func(t *testing.T) {
+		t.Run("victoriametrics-enabled", func(t *testing.T) {
+			testUpdateConfiguration(true)
+		})
+		t.Run("victoriametrics-disabled", func(t *testing.T) {
+			testUpdateConfiguration(false)
+		})
 	})
 
 	t.Run("Update", func(t *testing.T) {
@@ -161,7 +169,7 @@ func TestDevContainer(t *testing.T) {
 
 		// logrus.SetLevel(logrus.DebugLevel)
 		checker := NewPMMUpdateChecker(logrus.WithField("test", t.Name()))
-		vmParams := &models.VictoriaMetricsParams{Enabled: true}
+		vmParams := &models.VictoriaMetricsParams{}
 		s := New("/etc/supervisord.d", checker, vmParams)
 		require.NotEmpty(t, s.supervisorctlPath)
 

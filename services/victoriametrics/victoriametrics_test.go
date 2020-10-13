@@ -212,16 +212,6 @@ scrape_configs:
     - 127.0.0.1:8880
     labels:
       instance: pmm-server
-- job_name: prometheus
-  honor_timestamps: false
-  scrape_interval: 5s
-  scrape_timeout: 4s
-  metrics_path: /prometheus/metrics
-  static_configs:
-  - targets:
-    - 127.0.0.1:9090
-    labels:
-      instance: pmm-server
 - job_name: alertmanager
   honor_timestamps: false
   scrape_interval: 10s
@@ -611,16 +601,6 @@ scrape_configs:
   static_configs:
   - targets:
     - 127.0.0.1:8880
-    labels:
-      instance: pmm-server
-- job_name: prometheus
-  honor_timestamps: false
-  scrape_interval: 5s
-  scrape_timeout: 4s
-  metrics_path: /prometheus/metrics
-  static_configs:
-  - targets:
-    - 127.0.0.1:9090
     labels:
       instance: pmm-server
 - job_name: alertmanager
