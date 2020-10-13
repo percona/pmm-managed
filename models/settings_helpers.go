@@ -155,7 +155,7 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 	}
 
 	if len(params.EnableSTTChecks) != 0 {
-		m := make(map[string]struct{}, len(settings.SaaS.DisabledSTTChecks))
+		m := make(map[string]struct{}, len(params.EnableSTTChecks))
 		for _, p := range params.EnableSTTChecks {
 			m[p] = struct{}{}
 		}
