@@ -17,9 +17,11 @@
 package victoriametrics
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"io/ioutil"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -35,6 +37,39 @@ import (
 
 const configPath = "../../testdata/victoriametrics/promscrape.yml"
 
+// RoundTripFunc.
+type RoundTripFunc func(req *http.Request) *http.Response
+
+// RoundTrip.
+func (f RoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req), nil
+}
+
+// testClient returns *http.Client with mocked transport/
+func testClient(wantReloadCode int) *http.Client {
+	rt := func(req *http.Request) *http.Response {
+		switch req.URL.Path {
+		case "/-/reload":
+			return &http.Response{
+				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(`ok`))),
+				StatusCode: wantReloadCode,
+			}
+		case "/health":
+			return &http.Response{
+				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(`ok`))),
+				StatusCode: http.StatusOK,
+			}
+		}
+		return &http.Response{
+			Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(`Not Found`))),
+			StatusCode: http.StatusNotFound,
+		}
+	}
+	return &http.Client{
+		Transport: RoundTripFunc(rt),
+	}
+}
+
 func setup(t *testing.T) (*reform.DB, *VictoriaMetrics, []byte) {
 	t.Helper()
 	check := require.New(t)
@@ -44,6 +79,7 @@ func setup(t *testing.T) (*reform.DB, *VictoriaMetrics, []byte) {
 	vmParams := &models.VictoriaMetricsParams{Enabled: true, BaseConfigPath: "/srv/prometheus/prometheus.base.yml"}
 	svc, err := NewVictoriaMetrics(configPath, db, "http://127.0.0.1:8428/", vmParams)
 	check.NoError(err)
+	svc.client = testClient(http.StatusNoContent)
 
 	original, err := ioutil.ReadFile(configPath)
 	check.NoError(err)

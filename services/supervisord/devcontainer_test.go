@@ -133,6 +133,9 @@ func TestDevContainer(t *testing.T) {
 				err = ioutil.WriteFile(name, b, 0)
 				assert.NoError(t, err)
 			}
+			// force supervisor config update
+			_, err = s.supervisorctl("update")
+			require.NoError(t, err)
 		}()
 
 		settings := &models.Settings{
