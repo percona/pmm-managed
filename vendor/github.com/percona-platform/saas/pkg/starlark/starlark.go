@@ -24,9 +24,9 @@ type Env struct {
 }
 
 // NewEnv creates a new Starlark execution environment.
-func NewEnv(name, script string, predeclaredFuncs map[string]GoFunc) (env *Env, err error) {
-	predeclared := make(starlark.StringDict, len(predeclaredFuncs))
-	for n, f := range predeclaredFuncs {
+func NewEnv(name, script string, funcs map[string]GoFunc) (env *Env, err error) {
+	predeclared := make(starlark.StringDict, len(funcs))
+	for n, f := range funcs {
 		predeclared[n] = starlark.NewBuiltin(n, makeFunc(f))
 	}
 	predeclared.Freeze()
@@ -127,38 +127,31 @@ func (env *Env) run(funcName string, args starlark.Tuple, threadName string, pri
 	return v, nil
 }
 
-// Run executes function 'check_context' with given query results and additional funcs known as 'context'.
+// Run executes function 'check' with given query results.
 // Id is used to separate that execution from other and used only for debugging.
 // print is a user-suplied Starlark 'print' function implementation.
-func (env *Env) Run(id string, input []map[string]interface{}, contextFuncs map[string]GoFunc, print PrintFunc) ([]check.Result, error) {
+func (env *Env) Run(id string, input []map[string]interface{}, print PrintFunc) (res []check.Result, err error) {
 	var rows *starlark.List
-	rows, err := prepareInput(input)
+	rows, err = prepareInput(input)
 	if err != nil {
-		return nil, errors.Wrapf(err, "thread %s", id)
+		err = errors.Wrapf(err, "thread %s", id)
+		return
 	}
-
-	context := starlark.NewDict(len(contextFuncs))
-	for n, f := range contextFuncs {
-		err = context.SetKey(starlark.String(n), starlark.NewBuiltin(n, makeFunc(f)))
-		if err != nil {
-			return nil, errors.Wrapf(err, "thread %s", id)
-		}
-	}
-	context.Freeze()
 
 	var output starlark.Value
-	output, err = env.run("check_context", starlark.Tuple{rows, context}, id, print)
+	output, err = env.run("check", starlark.Tuple{rows}, id, print)
 	if err != nil {
 		// thread id is already present
-		return nil, err
+		return
 	}
 
-	res, err := parseOutput(output)
+	res, err = parseOutput(output)
 	if err != nil {
-		return nil, errors.Wrapf(err, "thread %s", id)
+		err = errors.Wrapf(err, "thread %s", id)
+		return
 	}
 
-	return res, nil
+	return
 }
 
 func prepareInput(input []map[string]interface{}) (*starlark.List, error) {
