@@ -34,22 +34,9 @@ import (
 func TestConfig(t *testing.T) {
 	t.Parallel()
 
-	t.Run("victoriametrics-enabled", func(t *testing.T) {
-		testConfig(t, true)
-	})
-	t.Run("victoriametrics-disabled", func(t *testing.T) {
-		testConfig(t, false)
-	})
-}
-
-func testConfig(t *testing.T, isVictoriaMetricsEnabled bool) {
 	pmmUpdateCheck := NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker_logs"))
-	vmSubdir := "victoriametrics-disabled"
-	if isVictoriaMetricsEnabled {
-		vmSubdir = "victoriametrics-enabled"
-	}
-	configDir := filepath.Join("..", "..", "testdata", "supervisord.d", vmSubdir)
-	vmParams := &models.VictoriaMetricsParams{Enabled: isVictoriaMetricsEnabled}
+	configDir := filepath.Join("..", "..", "testdata", "supervisord.d")
+	vmParams := &models.VictoriaMetricsParams{}
 	s := New(configDir, pmmUpdateCheck, vmParams)
 	settings := &models.Settings{
 		DataRetention:   30 * 24 * time.Hour,

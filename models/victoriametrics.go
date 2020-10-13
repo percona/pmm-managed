@@ -19,24 +19,16 @@ package models
 import (
 	"io/ioutil"
 	"os"
-	"strconv"
 
 	config "github.com/percona/promconfig"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
 
-const (
-	// enables victoriametrics services at supervisor config.
-	vmTestEnableEnv = "PERCONA_TEST_ENABLE_VM"
-)
-
 // VictoriaMetricsParams - defines flags and settings for victoriametrics.
 type VictoriaMetricsParams struct {
 	// VMAlertFlags additional flags for VMAlert.
 	VMAlertFlags []string
-	// Enabled VictoriaMetrics and VMAlert services.
-	Enabled bool
 	// BaseConfigPath defines path for basic prometheus config.
 	BaseConfigPath string
 }
@@ -46,14 +38,6 @@ func NewVictoriaMetricsParams(basePath string) (*VictoriaMetricsParams, error) {
 	vmp := &VictoriaMetricsParams{
 		BaseConfigPath: basePath,
 	}
-	if enabledVar := os.Getenv(vmTestEnableEnv); enabledVar != "" {
-		parsedBool, err := strconv.ParseBool(enabledVar)
-		if err != nil {
-			return vmp, errors.Wrapf(err, "cannot parse %s as bool", vmTestEnableEnv)
-		}
-		vmp.Enabled = parsedBool
-	}
-
 	if err := vmp.UpdateParams(); err != nil {
 		return vmp, err
 	}

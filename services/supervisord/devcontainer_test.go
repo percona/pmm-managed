@@ -107,10 +107,10 @@ func TestDevContainer(t *testing.T) {
 		assert.WithinDuration(t, resT2, resT3, 10*time.Second)
 	})
 
-	testUpdateConfiguration := func(isVictoriaMetricsEnabled bool) {
+	t.Run("UpdateConfiguration", func(t *testing.T) {
 		// logrus.SetLevel(logrus.DebugLevel)
 		checker := NewPMMUpdateChecker(logrus.WithField("test", t.Name()))
-		vmParams := &models.VictoriaMetricsParams{Enabled: isVictoriaMetricsEnabled}
+		vmParams := &models.VictoriaMetricsParams{}
 
 		s := New("/etc/supervisord.d", checker, vmParams)
 		require.NotEmpty(t, s.supervisorctlPath)
@@ -142,25 +142,17 @@ func TestDevContainer(t *testing.T) {
 			DataRetention: 24 * time.Hour,
 		}
 
-		b, err := s.marshalConfig(templates.Lookup("prometheus"), settings)
+		b, err := s.marshalConfig(templates.Lookup("victoriametrics"), settings)
 		require.NoError(t, err)
-		changed, err := s.saveConfigAndReload("prometheus", b)
+		changed, err := s.saveConfigAndReload("victoriametrics", b)
 		require.NoError(t, err)
 		assert.True(t, changed)
-		changed, err = s.saveConfigAndReload("prometheus", b)
+		changed, err = s.saveConfigAndReload("victoriametrics", b)
 		require.NoError(t, err)
 		assert.False(t, changed)
 
 		err = s.UpdateConfiguration(settings)
 		require.NoError(t, err)
-	}
-	t.Run("UpdateConfiguration", func(t *testing.T) {
-		t.Run("victoriametrics-enabled", func(t *testing.T) {
-			testUpdateConfiguration(true)
-		})
-		t.Run("victoriametrics-disabled", func(t *testing.T) {
-			testUpdateConfiguration(false)
-		})
 	})
 
 	t.Run("Update", func(t *testing.T) {

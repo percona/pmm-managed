@@ -70,13 +70,13 @@ func testClient(wantReloadCode int) *http.Client {
 	}
 }
 
-func setup(t *testing.T) (*reform.DB, *VictoriaMetrics, []byte) {
+func setup(t *testing.T) (*reform.DB, *Service, []byte) {
 	t.Helper()
 	check := require.New(t)
 
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-	vmParams := &models.VictoriaMetricsParams{Enabled: true, BaseConfigPath: "/srv/prometheus/prometheus.base.yml"}
+	vmParams := &models.VictoriaMetricsParams{BaseConfigPath: "/srv/prometheus/prometheus.base.yml"}
 	svc, err := NewVictoriaMetrics(configPath, db, "http://127.0.0.1:8428/", vmParams)
 	check.NoError(err)
 	svc.client = testClient(http.StatusNoContent)
@@ -89,7 +89,7 @@ func setup(t *testing.T) (*reform.DB, *VictoriaMetrics, []byte) {
 	return db, svc, original
 }
 
-func teardown(t *testing.T, db *reform.DB, svc *VictoriaMetrics, original []byte) {
+func teardown(t *testing.T, db *reform.DB, svc *Service, original []byte) {
 	t.Helper()
 	check := assert.New(t)
 

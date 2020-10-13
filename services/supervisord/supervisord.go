@@ -407,8 +407,6 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 		"DataRetentionHours":  int(settings.DataRetention.Hours()),
 		"DataRetentionDays":   int(settings.DataRetention.Hours() / 24),
 		"DataRetentionMonths": retentionMonths,
-		"IsVMEnabled":         s.vmParams.Enabled,
-		"IsPrometheusEnabled": !s.vmParams.Enabled,
 		"VMAlertFlags":        s.vmParams.VMAlertFlags,
 		"VMDBCacheDisable":    !settings.VictoriaMetrics.CacheEnabled,
 		"PerconaTestDbaas":    settings.DBaaS.Enabled,
@@ -572,31 +570,10 @@ redirect_stderr = true
 
 {{define "prometheus"}}
 [program:prometheus]
-priority = 7
-command =
-	/usr/sbin/prometheus
-		--config.file=/etc/prometheus.yml
-		--query.max-concurrency=30
-		--storage.tsdb.path=/srv/prometheus/data
-		--storage.tsdb.retention.time={{ .DataRetentionDays }}d
-		--storage.tsdb.wal-compression
-		--web.console.libraries=/usr/share/prometheus/console_libraries
-		--web.console.templates=/usr/share/prometheus/consoles
-		--web.enable-admin-api
-		--web.enable-lifecycle
-		--web.external-url=http://localhost:9090/prometheus/
-		--web.listen-address=127.0.0.1:9090
+command = /bin/echo Prometheus is substituted by VictoriaMetrics
 user = pmm
-autorestart = {{ .IsPrometheusEnabled }}
-autostart = {{ .IsPrometheusEnabled }}
-startretries = 10
-startsecs = 1
-stopsignal = TERM
-stopwaitsecs = 300
-stdout_logfile = /srv/logs/prometheus.log
-stdout_logfile_maxbytes = 10MB
-stdout_logfile_backups = 3
-redirect_stderr = true
+autorestart = false
+autostart = false
 {{end}}
 
 {{define "victoriametrics"}}
@@ -611,8 +588,8 @@ command =
 		--search.disableCache={{.VMDBCacheDisable}}
 		--prometheusDataPath=/srv/prometheus/data
 user = pmm
-autorestart = {{ .IsVMEnabled }}
-autostart = {{ .IsVMEnabled }}
+autorestart = true
+autostart = true
 startretries = 10
 startsecs = 1
 stopsignal = INT
@@ -641,8 +618,8 @@ command =
         {{$param}}
 {{- end}}
 user = pmm
-autorestart = {{ .IsVMEnabled }}
-autostart = {{ .IsVMEnabled }}
+autorestart = true
+autostart = true
 startretries = 10
 startsecs = 1
 stopsignal = INT
