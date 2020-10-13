@@ -96,3 +96,112 @@ Traceback (most recent call last):
 	}}
 	assert.Equal(t, expected, res)
 }
+
+func TestAdditionalContext(t *testing.T) {
+	funcs, err := GetFuncsForVersion(1)
+	require.NoError(t, err)
+	contextFuncs := GetAdditionalContext()
+
+	testCases := []struct {
+		name   string
+		script string
+		err    string
+		result []check.Result
+	}{
+		{
+			name: "too many args",
+			script: strings.TrimSpace(`
+def check_context(rows, context):
+    func = context.get("ip_is_private", fail)
+    print("result =", func(1, 2))
+
+    return [{
+        "summary": "IP Address Check",
+        "severity": "warning",
+    }]
+	`),
+			err: strings.TrimSpace(`
+thread too many args: failed to execute function check_context: ip_is_private: expected 1 argument, got 2
+Traceback (most recent call last):
+  TestAdditionalContext/too_many_args:3:27: in check_context
+  <builtin>: in ip_is_private
+	`) + "\n",
+			result: nil,
+		},
+		{
+			name: "invalid arg",
+			script: strings.TrimSpace(`
+def check_context(rows, context):
+    func = context.get("ip_is_private", fail)
+    print("result =", func(1))
+
+    return [{
+        "summary": "IP Address Check",
+        "severity": "warning",
+    }]
+	`),
+			err: strings.TrimSpace(`
+thread invalid arg: failed to execute function check_context: ip_is_private: expected string argument, got int64 (1)
+Traceback (most recent call last):
+  TestAdditionalContext/invalid_arg:3:27: in check_context
+  <builtin>: in ip_is_private
+		`) + "\n",
+			result: nil,
+		},
+		{
+			name: "valid argument",
+			script: strings.TrimSpace(`
+def check_context(rows, context):
+    func = context.get("ip_is_private", fail)
+
+    return [{
+        "summary": "IP Address Check",
+		"severity": "warning",
+		"description": "is_private: {}".format(func("127.0.0.1"))
+    }]
+	`),
+			err: "",
+			result: []check.Result{{
+				Summary:     "IP Address Check",
+				Severity:    check.Warning,
+				Description: "is_private: True",
+			}},
+		},
+		{
+			name: "public ip address",
+			script: strings.TrimSpace(`
+def check_context(rows, context):
+    func = context.get("ip_is_private", fail)
+
+    return [{
+        "summary": "IP Address Check",
+		"severity": "warning",
+		"description": "is_private: {}".format(func("1.1.1.1")),
+    }]
+	`),
+			err: "",
+			result: []check.Result{{
+				Summary:     "IP Address Check",
+				Severity:    check.Warning,
+				Description: "is_private: False",
+			}},
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			env, err := starlark.NewEnv(t.Name(), tc.script, funcs)
+			require.NoError(t, err)
+			res, err := env.Run(tc.name, nil, contextFuncs, t.Log)
+			if res != nil {
+				require.NoError(t, err)
+				assert.Equal(t, tc.result, res)
+			} else {
+				assert.EqualError(t, err, tc.err)
+				assert.Empty(t, res)
+			}
+		})
+	}
+}
