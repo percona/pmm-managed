@@ -111,6 +111,27 @@ func TestGetSecurityCheckResults(t *testing.T) {
 }
 
 func TestListSecurityChecks(t *testing.T) {
+	t.Run("normal", func(t *testing.T) {
+		var checksService mockChecksService
+		checksService.On("GetDisabledChecks", mock.Anything).Return([]string{"two"}, nil)
+		checksService.On("GetAllChecks", mock.Anything).
+			Return([]check.Check{{Name: "one"}, {Name: "two"}, {Name: "three"}})
+
+		s := NewChecksAPIService(&checksService)
+
+		resp, err := s.ListSecurityChecks()
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+
+		assert.ElementsMatch(t, resp.Checks,
+			[]*managementpb.SecurityCheck{
+				{Name: "one", Disabled: false},
+				{Name: "two", Disabled: true},
+				{Name: "three", Disabled: false},
+			},
+		)
+	})
+
 	t.Run("get disabled checks error", func(t *testing.T) {
 		var checksService mockChecksService
 		checksService.On("GetDisabledChecks", mock.Anything).Return(nil, errors.New("random error"))
