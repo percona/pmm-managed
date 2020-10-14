@@ -46,15 +46,15 @@ func (f RoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 // testClient returns *http.Client with mocked transport/
-func testClient(wantReloadCode int) *http.Client {
+func testClient(wantReloadCode int, pathPrefix string) *http.Client {
 	rt := func(req *http.Request) *http.Response {
 		switch req.URL.Path {
-		case "/-/reload":
+		case pathPrefix + "/-/reload":
 			return &http.Response{
 				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(`ok`))),
 				StatusCode: wantReloadCode,
 			}
-		case "/health":
+		case pathPrefix + "/health":
 			return &http.Response{
 				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(`ok`))),
 				StatusCode: http.StatusOK,
@@ -77,9 +77,9 @@ func setup(t *testing.T) (*reform.DB, *VictoriaMetrics, []byte) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 	vmParams := &models.VictoriaMetricsParams{Enabled: true, BaseConfigPath: "/srv/prometheus/prometheus.base.yml"}
-	svc, err := NewVictoriaMetrics(configPath, db, "http://127.0.0.1:8428/", vmParams)
+	svc, err := NewVictoriaMetrics(configPath, db, "http://127.0.0.1:9090/prometheus/", vmParams)
 	check.NoError(err)
-	svc.client = testClient(http.StatusNoContent)
+	svc.client = testClient(http.StatusNoContent, "/prometheus")
 
 	original, err := ioutil.ReadFile(configPath)
 	check.NoError(err)
@@ -232,10 +232,10 @@ scrape_configs:
   honor_timestamps: false
   scrape_interval: 5s
   scrape_timeout: 4s
-  metrics_path: /metrics
+  metrics_path: /prometheus/metrics
   static_configs:
   - targets:
-    - 127.0.0.1:8428
+    - 127.0.0.1:9090
     labels:
       instance: pmm-server
 - job_name: vmalert
@@ -608,7 +608,7 @@ global:
   scrape_interval: 9m
   scrape_timeout: 19s
 scrape_configs:
-- job_name: test-target
+- job_name: external-service
   honor_timestamps: true
   scrape_interval: 5s
   scrape_timeout: 4s
@@ -616,17 +616,17 @@ scrape_configs:
   scheme: http
   static_configs:
   - targets:
-    - 127.0.0.1:8428
+    - 127.0.0.1:1234
     labels:
       instance: pmm-server
 - job_name: victoriametrics
   honor_timestamps: false
   scrape_interval: 5s
   scrape_timeout: 4s
-  metrics_path: /metrics
+  metrics_path: /prometheus/metrics
   static_configs:
   - targets:
-    - 127.0.0.1:8428
+    - 127.0.0.1:9090
     labels:
       instance: pmm-server
 - job_name: vmalert

@@ -590,7 +590,7 @@ rule_files:
 - /srv/prometheus/rules/test.rules.yml
 - /srv/prometheus/rules/*.yml
 scrape_configs:
-- job_name: victoria-metrics
+- job_name: external-service
   honor_timestamps: true
   scrape_interval: 5s
   scrape_timeout: 4s
@@ -598,7 +598,7 @@ scrape_configs:
   scheme: http
   static_configs:
   - targets:
-    - 127.0.0.1:8428
+    - 127.0.0.1:1234
     labels:
       instance: pmm-server
 - job_name: prometheus
@@ -652,7 +652,7 @@ scrape_configs:
     labels:
       instance: pmm-server
 remote_write:
-- url: http://127.0.0.1:8428/api/v1/write
+- url: http://127.0.0.1:1234/api/v1/write
 `) + "\n"
 	newcfg, err := svc.marshalConfig()
 	assert.NoError(t, err)

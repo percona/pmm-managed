@@ -33,6 +33,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
@@ -88,10 +89,24 @@ func TestAddAdminSummary(t *testing.T) {
 }
 
 func TestFiles(t *testing.T) {
+	t.Run("victoriametrics-enabled", func(t *testing.T) {
+		testFiles(t, true)
+	})
+	t.Run("victoriametrics-disabled", func(t *testing.T) {
+		testFiles(t, false)
+	})
+}
+
+func testFiles(t *testing.T, isVictoriaMetricsEnabled bool) {
 	checker := NewPMMUpdateChecker(logrus.WithField("test", t.Name()))
-	l := NewLogs("2.4.5", checker)
+	vmParams := &models.VictoriaMetricsParams{Enabled: isVictoriaMetricsEnabled}
+	l := NewLogs("2.4.5", checker, vmParams)
 	ctx := logger.Set(context.Background(), t.Name())
 
+	prometheusTargetsFile := "prometheus_targets.json"
+	if isVictoriaMetricsEnabled {
+		prometheusTargetsFile = "prometheus_targets.txt"
+	}
 	expected := []string{
 		"alertmanager.log",
 		"clickhouse-server.err.log",
@@ -117,7 +132,7 @@ func TestFiles(t *testing.T) {
 		"prometheus.ini",
 		"prometheus.log",
 		"prometheus.yml",
-		"prometheus_targets.json",
+		prometheusTargetsFile,
 		"qan-api2.ini",
 		"qan-api2.log",
 		"supervisorctl_status.log",
@@ -150,8 +165,18 @@ func TestFiles(t *testing.T) {
 }
 
 func TestZip(t *testing.T) {
+	t.Run("victoriametrics-enabled", func(t *testing.T) {
+		testZip(t, true)
+	})
+	t.Run("victoriametrics-disabled", func(t *testing.T) {
+		testZip(t, false)
+	})
+}
+
+func testZip(t *testing.T, isVictoriaMetricsEnabled bool) {
 	checker := NewPMMUpdateChecker(logrus.WithField("test", t.Name()))
-	l := NewLogs("2.4.5", checker)
+	vmParams := &models.VictoriaMetricsParams{Enabled: isVictoriaMetricsEnabled}
+	l := NewLogs("2.4.5", checker, vmParams)
 	ctx := logger.Set(context.Background(), t.Name())
 
 	var buf bytes.Buffer
@@ -161,6 +186,10 @@ func TestZip(t *testing.T) {
 	require.NoError(t, err)
 
 	// zip file includes client files
+	prometheusTargetsFile := "prometheus_targets.json"
+	if isVictoriaMetricsEnabled {
+		prometheusTargetsFile = "prometheus_targets.txt"
+	}
 	expected := []string{
 		"alertmanager.log",
 		"clickhouse-server.err.log",
@@ -191,7 +220,7 @@ func TestZip(t *testing.T) {
 		"prometheus.ini",
 		"prometheus.log",
 		"prometheus.yml",
-		"prometheus_targets.json",
+		prometheusTargetsFile,
 		"qan-api2.ini",
 		"qan-api2.log",
 		"supervisorctl_status.log",

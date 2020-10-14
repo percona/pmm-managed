@@ -519,7 +519,7 @@ func (s *Service) UpdateConfiguration(settings *models.Settings) error {
 	}
 	// Stop Prometheus and VictoriaMetrics services before updating their configs
 	// in order to prevent possible race when opening /srv/prometheus/data
-	// from both services.
+	// and listening for 9090 port from both services.
 	if _, e := s.supervisorctl("stop", "prometheus"); e != nil {
 		s.l.Errorf("Failed to stop prometheus: %s.", e)
 		err = e
@@ -607,9 +607,10 @@ command =
 		--promscrape.config=/etc/victoriametrics-promscrape.yml
 		--retentionPeriod={{ .DataRetentionMonths }}
 		--storageDataPath=/srv/victoriametrics/data
-		--httpListenAddr=127.0.0.1:8428
+		--httpListenAddr=127.0.0.1:9090
 		--search.disableCache={{.VMDBCacheDisable}}
 		--prometheusDataPath=/srv/prometheus/data
+		--http.pathPrefix=/prometheus
 user = pmm
 autorestart = {{ .IsVMEnabled }}
 autostart = {{ .IsVMEnabled }}
@@ -632,9 +633,9 @@ command =
         --notifier.basicAuth.password='{{ .AlertManagerPassword }}'
         --notifier.basicAuth.username="{{ .AlertManagerUser}}"
         --external.url=http://localhost:9090/prometheus
-        --datasource.url=http://127.0.0.1:8428
-        --remoteRead.url=http://127.0.0.1:8428
-        --remoteWrite.url=http://127.0.0.1:8428
+        --datasource.url=http://127.0.0.1:9090/prometheus
+        --remoteRead.url=http://127.0.0.1:9090/prometheus
+        --remoteWrite.url=http://127.0.0.1:9090/prometheus
         --rule=/srv/prometheus/rules/*.yml
         --httpListenAddr=127.0.0.1:8880
 {{- range $index, $param := .VMAlertFlags}}

@@ -37,6 +37,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
 
+	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
@@ -57,14 +58,16 @@ type fileContent struct {
 type Logs struct {
 	pmmVersion       string
 	pmmUpdateChecker *PMMUpdateChecker
+	vmParams         *models.VictoriaMetricsParams
 }
 
 // NewLogs creates a new Logs service.
 // n is a number of last lines of log to read.
-func NewLogs(pmmVersion string, pmmUpdateChecker *PMMUpdateChecker) *Logs {
+func NewLogs(pmmVersion string, pmmUpdateChecker *PMMUpdateChecker, vmParams *models.VictoriaMetricsParams) *Logs {
 	return &Logs{
 		pmmVersion:       pmmVersion,
 		pmmUpdateChecker: pmmUpdateChecker,
+		vmParams:         vmParams,
 	}
 }
 
@@ -192,13 +195,23 @@ func (l *Logs) files(ctx context.Context) []fileContent {
 		Err:  err,
 	})
 
-	// add Prometheus targets
-	b, err = readURL(ctx, "http://127.0.0.1:9090/prometheus/api/v1/targets")
-	files = append(files, fileContent{
-		Name: "prometheus_targets.json",
-		Data: b,
-		Err:  err,
-	})
+	if !l.vmParams.Enabled {
+		// add Prometheus targets
+		b, err = readURL(ctx, "http://127.0.0.1:9090/prometheus/api/v1/targets")
+		files = append(files, fileContent{
+			Name: "prometheus_targets.json",
+			Data: b,
+			Err:  err,
+		})
+	} else {
+		// add VictoriaMetrics targets
+		b, err = readURL(ctx, "http://127.0.0.1:9090/prometheus/targets")
+		files = append(files, fileContent{
+			Name: "prometheus_targets.txt",
+			Data: b,
+			Err:  err,
+		})
+	}
 
 	// update checker installed info
 	b, err = json.Marshal(l.pmmUpdateChecker.Installed())
