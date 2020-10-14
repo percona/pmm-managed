@@ -481,6 +481,7 @@ func (s *Service) executeMySQLChecks(ctx context.Context, except []string) []stt
 	var res []sttCheckResult
 	for _, c := range checks {
 		if _, ok := m[c.Name]; ok {
+			s.l.Debugf("Skipping disabled mySQL check %s", c.Name)
 			continue
 		}
 
@@ -542,6 +543,7 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context, except []string) 
 	var res []sttCheckResult
 	for _, c := range checks {
 		if _, ok := m[c.Name]; ok {
+			s.l.Debugf("Skipping disabled postgreSQL check %s", c.Name)
 			continue
 		}
 
@@ -603,6 +605,7 @@ func (s *Service) executeMongoDBChecks(ctx context.Context, except []string) []s
 	var res []sttCheckResult
 	for _, c := range checks {
 		if _, ok := m[c.Name]; ok {
+			s.l.Debugf("Skipping disabled mongoDB check %s", c.Name)
 			continue
 		}
 
