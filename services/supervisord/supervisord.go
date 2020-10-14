@@ -515,17 +515,6 @@ func (s *Service) UpdateConfiguration(settings *models.Settings) error {
 	if err != nil {
 		return err
 	}
-	// Stop Prometheus and VictoriaMetrics services before updating their configs
-	// in order to prevent possible race when opening /srv/prometheus/data
-	// and listening for 9090 port from both services.
-	if _, e := s.supervisorctl("stop", "prometheus"); e != nil {
-		s.l.Errorf("Failed to stop prometheus: %s.", e)
-		err = e
-	}
-	if _, e := s.supervisorctl("stop", "victoriametrics"); e != nil {
-		s.l.Errorf("Failed to stop victoriametrics: %s.", e)
-		err = e
-	}
 
 	for _, tmpl := range templates.Templates() {
 		if tmpl.Name() == "" {

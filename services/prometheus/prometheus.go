@@ -33,7 +33,6 @@ const (
 	BasePrometheusConfigPath = "/srv/prometheus/prometheus.base.yml"
 )
 
-// AddScrapeConfigs adds Prometheus scrape configs to cfg for all Agents.
 func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s *models.MetricsResolutions) error {
 	agents, err := q.SelectAllFrom(models.AgentTable, "WHERE NOT disabled AND listen_port IS NOT NULL ORDER BY agent_type, agent_id")
 	if err != nil {

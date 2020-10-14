@@ -422,6 +422,13 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 	}
 	deps.vmdb.RequestConfigurationUpdate()
 
+	deps.l.Infof("Checking VictoriaMetrics...")
+	if err = deps.vmdb.IsReady(ctx); err != nil {
+		deps.l.Warnf("VictoriaMetrics problem: %+v.", err)
+		return false
+	}
+	deps.vmdb.RequestConfigurationUpdate()
+
 	deps.l.Infof("Checking Alertmanager...")
 	if err = deps.alertmanager.IsReady(ctx); err != nil {
 		deps.l.Warnf("Alertmanager problem: %+v.", err)
