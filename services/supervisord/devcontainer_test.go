@@ -133,10 +133,13 @@ func TestDevContainer(t *testing.T) {
 				err = ioutil.WriteFile(name, b, 0)
 				assert.NoError(t, err)
 			}
+			// force update supervisor config
+			_, err := s.supervisorctl("update")
+			assert.NoError(t, err)
 		}()
 
 		settings := &models.Settings{
-			DataRetention: 24 * time.Hour,
+			DataRetention: 3600 * time.Hour,
 		}
 
 		b, err := s.marshalConfig(templates.Lookup("victoriametrics"), settings)

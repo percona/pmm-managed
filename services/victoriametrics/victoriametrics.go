@@ -45,6 +45,9 @@ import (
 const (
 	updateBatchDelay           = 3 * time.Second
 	configurationUpdateTimeout = 2 * time.Second
+	// BasePrometheusConfigPath - basic path with prometheus config,
+	// that user can mount to container.
+	BasePrometheusConfigPath = "/srv/prometheus/prometheus.base.yml"
 )
 
 var checkFailedRE = regexp.MustCompile(`FAILED: parsing YAML file \S+: (.+)\n`)

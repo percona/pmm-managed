@@ -422,13 +422,6 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 	}
 	deps.vmdb.RequestConfigurationUpdate()
 
-	deps.l.Infof("Checking VictoriaMetrics...")
-	if err = deps.vmdb.IsReady(ctx); err != nil {
-		deps.l.Warnf("VictoriaMetrics problem: %+v.", err)
-		return false
-	}
-	deps.vmdb.RequestConfigurationUpdate()
-
 	deps.l.Infof("Checking Alertmanager...")
 	if err = deps.alertmanager.IsReady(ctx); err != nil {
 		deps.l.Warnf("Alertmanager problem: %+v.", err)
@@ -488,6 +481,9 @@ func main() {
 
 	kingpin.Version(version.FullInfo())
 	kingpin.HelpFlag.Short('h')
+
+	_ = kingpin.Flag("prometheus-url", "for backward capability, use -victoriametrics-url instead").String()
+	_ = kingpin.Flag("prometheus-config", "for backward capability, use -victoriametrics-config instead").String()
 
 	victoriaMetricsURLF := kingpin.Flag("victoriametrics-url", "VictoriaMetrics base URL").
 		Default("http://127.0.0.1:9090/prometheus/").String()
@@ -569,7 +565,7 @@ func main() {
 	cleaner := clean.New(db)
 	alertingRules := prometheus.NewAlertingRules()
 
-	vmParams, err := models.NewVictoriaMetricsParams(prometheus.BasePrometheusConfigPath)
+	vmParams, err := models.NewVictoriaMetricsParams(victoriametrics.BasePrometheusConfigPath)
 	if err != nil {
 		l.Panicf("cannot load victoriametrics params problem: %+v", err)
 	}
