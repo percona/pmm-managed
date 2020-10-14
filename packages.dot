@@ -4,6 +4,7 @@ digraph packages {
 	"/" -> "/services/agents/grpc";
 	"/" -> "/services/alertmanager";
 	"/" -> "/services/checks";
+	"/" -> "/services/dbaas";
 	"/" -> "/services/grafana";
 	"/" -> "/services/inventory";
 	"/" -> "/services/inventory/grpc";
@@ -16,6 +17,7 @@ digraph packages {
 	"/" -> "/services/server";
 	"/" -> "/services/supervisord";
 	"/" -> "/services/telemetry";
+	"/" -> "/services/victoriametrics";
 	"/cmd/pmm-managed-init" -> "/models";
 	"/cmd/pmm-managed-starlark" -> "/services/checks";
 	"/models" -> "/models";

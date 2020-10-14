@@ -31,6 +31,11 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
+// ScrapeTimeout - wraps scrapeTimeout and makes it public for victoriametrics package.
+func ScrapeTimeout(interval time.Duration) config.Duration {
+	return scrapeTimeout(interval)
+}
+
 // scrapeTimeout returns default scrape timeout for given scrape interval.
 func scrapeTimeout(interval time.Duration) config.Duration {
 	switch {
@@ -112,6 +117,21 @@ func scrapeConfigForQANAPI2(interval time.Duration) *config.ScrapeConfig {
 		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
 			StaticConfigs: []*config.Group{{
 				Targets: []string{"127.0.0.1:9933"},
+				Labels:  map[string]string{"instance": "pmm-server"},
+			}},
+		},
+	}
+}
+
+func scrapeConfigForDBaaSController(interval time.Duration) *config.ScrapeConfig {
+	return &config.ScrapeConfig{
+		JobName:        "dbaas-controller",
+		ScrapeInterval: config.Duration(interval),
+		ScrapeTimeout:  scrapeTimeout(interval),
+		MetricsPath:    "/debug/metrics",
+		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+			StaticConfigs: []*config.Group{{
+				Targets: []string{"127.0.0.1:20203"},
 				Labels:  map[string]string{"instance": "pmm-server"},
 			}},
 		},

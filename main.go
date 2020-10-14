@@ -53,6 +53,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
 	channelz "google.golang.org/grpc/channelz/service"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/reflection"
@@ -65,11 +66,12 @@ import (
 	agentgrpc "github.com/percona/pmm-managed/services/agents/grpc"
 	"github.com/percona/pmm-managed/services/alertmanager"
 	"github.com/percona/pmm-managed/services/checks"
+	"github.com/percona/pmm-managed/services/dbaas"
 	"github.com/percona/pmm-managed/services/grafana"
 	"github.com/percona/pmm-managed/services/inventory"
 	inventorygrpc "github.com/percona/pmm-managed/services/inventory/grpc"
 	"github.com/percona/pmm-managed/services/management"
-	"github.com/percona/pmm-managed/services/management/dbaas"
+	managementdbaas "github.com/percona/pmm-managed/services/management/dbaas"
 	managementgrpc "github.com/percona/pmm-managed/services/management/grpc"
 	"github.com/percona/pmm-managed/services/platform"
 	"github.com/percona/pmm-managed/services/prometheus"
@@ -77,6 +79,7 @@ import (
 	"github.com/percona/pmm-managed/services/server"
 	"github.com/percona/pmm-managed/services/supervisord"
 	"github.com/percona/pmm-managed/services/telemetry"
+	"github.com/percona/pmm-managed/services/victoriametrics"
 	"github.com/percona/pmm-managed/utils/clean"
 	"github.com/percona/pmm-managed/utils/interceptors"
 	"github.com/percona/pmm-managed/utils/logger"
@@ -114,12 +117,14 @@ func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
 }
 
 type gRPCServerDeps struct {
-	db             *reform.DB
-	prometheus     *prometheus.Service
-	server         *server.Server
-	agentsRegistry *agents.Registry
-	grafanaClient  *grafana.Client
-	checksService  *checks.Service
+	db                    *reform.DB
+	prometheus            *prometheus.Service
+	vmdb                  *victoriametrics.VictoriaMetrics
+	server                *server.Server
+	agentsRegistry        *agents.Registry
+	grafanaClient         *grafana.Client
+	checksService         *checks.Service
+	dbaasControllerClient *dbaas.Client
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -146,14 +151,14 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 
 	nodesSvc := inventory.NewNodesService(deps.db)
 	servicesSvc := inventory.NewServicesService(deps.db, deps.agentsRegistry)
-	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry, deps.prometheus)
+	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry, deps.prometheus, deps.vmdb)
 
 	inventorypb.RegisterNodesServer(gRPCServer, inventorygrpc.NewNodesServer(nodesSvc))
 	inventorypb.RegisterServicesServer(gRPCServer, inventorygrpc.NewServicesServer(servicesSvc))
 	inventorypb.RegisterAgentsServer(gRPCServer, inventorygrpc.NewAgentsServer(agentsSvc))
 
 	nodeSvc := management.NewNodeService(deps.db, deps.agentsRegistry)
-	serviceSvc := management.NewServiceService(deps.db, deps.agentsRegistry, deps.prometheus)
+	serviceSvc := management.NewServiceService(deps.db, deps.agentsRegistry, deps.prometheus, deps.vmdb)
 	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsRegistry)
 	mongodbSvc := management.NewMongoDBService(deps.db, deps.agentsRegistry)
 	postgresqlSvc := management.NewPostgreSQLService(deps.db, deps.agentsRegistry)
@@ -168,11 +173,12 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterProxySQLServer(gRPCServer, managementgrpc.NewManagementProxySQLServer(proxysqlSvc))
 	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(deps.agentsRegistry, deps.db))
 	managementpb.RegisterRDSServer(gRPCServer, management.NewRDSService(deps.db, deps.agentsRegistry))
-	managementpb.RegisterExternalServer(gRPCServer, management.NewExternalService(deps.db, deps.prometheus))
+	managementpb.RegisterExternalServer(gRPCServer, management.NewExternalService(deps.db, deps.prometheus, deps.vmdb))
 	managementpb.RegisterAnnotationServer(gRPCServer, managementgrpc.NewAnnotationServer(deps.db, deps.grafanaClient))
 	managementpb.RegisterSecurityChecksServer(gRPCServer, managementgrpc.NewChecksServer(checksSvc))
 
-	dbaasv1beta1.RegisterKubernetesServer(gRPCServer, dbaas.NewKubernetesServer(deps.db))
+	dbaasv1beta1.RegisterKubernetesServer(gRPCServer, managementdbaas.NewKubernetesServer(deps.db, deps.dbaasControllerClient))
+	dbaasv1beta1.RegisterXtraDBClusterServer(gRPCServer, managementdbaas.NewXtraDBClusterService(deps.db, deps.dbaasControllerClient))
 
 	if l.Logger.GetLevel() >= logrus.DebugLevel {
 		l.Debug("Reflection and channelz are enabled.")
@@ -266,6 +272,7 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 		managementpb.RegisterSecurityChecksHandlerFromEndpoint,
 
 		dbaasv1beta1.RegisterKubernetesHandlerFromEndpoint,
+		dbaasv1beta1.RegisterXtraDBClusterHandlerFromEndpoint,
 	} {
 		if err := r(ctx, proxyMux, gRPCAddr, opts); err != nil {
 			l.Panic(err)
@@ -447,6 +454,23 @@ func getQANClient(ctx context.Context, sqlDB *sql.DB, dbName, qanAPIAddr string)
 	return qan.NewClient(conn, db)
 }
 
+func getDBaaSControllerClient(ctx context.Context, dbaasControllerAPIAddr string) *dbaas.Client {
+	opts := []grpc.DialOption{
+		grpc.WithInsecure(),
+		grpc.WithConnectParams(grpc.ConnectParams{Backoff: backoff.Config{MaxDelay: 2 * time.Second}, MinConnectTimeout: 10 * time.Second}),
+		grpc.WithUserAgent("pmm-managed/" + version.Version),
+	}
+
+	// Without grpc.WithBlock() DialContext returns an error only if something very wrong with address or options;
+	// it does not return an error of connection failure but tries to reconnect in the background.
+	conn, err := grpc.DialContext(ctx, dbaasControllerAPIAddr, opts...)
+	if err != nil {
+		logrus.Fatalf("Failed to connect DBaaS Controller API %s: %s.", dbaasControllerAPIAddr, err)
+	}
+
+	return dbaas.NewClient(conn)
+}
+
 func main() {
 	// empty version breaks much of pmm-managed logic
 	if version.Version == "" {
@@ -462,8 +486,16 @@ func main() {
 	prometheusConfigF := kingpin.Flag("prometheus-config", "Prometheus configuration file path").Default("/etc/prometheus.yml").String()
 	prometheusURLF := kingpin.Flag("prometheus-url", "Prometheus base URL").Default("http://127.0.0.1:9090/prometheus/").String()
 
+	victoriaMetricsURLF := kingpin.Flag("victoriametrics-url", "VictoriaMetrics base URL").
+		Default("http://127.0.0.1:8428/").String()
+	victoriaMetricsVMAlertURLF := kingpin.Flag("victoriametrics-vmalert-url", "VictoriaMetrics VMAlert base URL").
+		Default("http://127.0.0.1:8880/").String()
+	victoriaMetricsConfigF := kingpin.Flag("victoriametrics-config", "VictoriaMetrics scrape configuration file path").
+		Default("/etc/victoriametrics-promscrape.yml").String()
+
 	grafanaAddrF := kingpin.Flag("grafana-addr", "Grafana HTTP API address").Default("127.0.0.1:3000").String()
 	qanAPIAddrF := kingpin.Flag("qan-api-addr", "QAN API gRPC API address").Default("127.0.0.1:9911").String()
+	dbaasControllerAPIAddrF := kingpin.Flag("dbaas-controller-api-addr", "DBaaS Controller gRPC API address").Default("127.0.0.1:20201").String()
 
 	postgresAddrF := kingpin.Flag("postgres-addr", "PostgreSQL address").Default("127.0.0.1:5432").String()
 	postgresDBNameF := kingpin.Flag("postgres-name", "PostgreSQL database name").Required().String()
@@ -534,15 +566,26 @@ func main() {
 	cleaner := clean.New(db)
 	alertingRules := prometheus.NewAlertingRules()
 
+	vmParams, err := models.NewVictoriaMetricsParams(prometheus.BasePrometheusConfigPath)
+	if err != nil {
+		l.Panicf("cannot load victoriametrics params problem: %+v", err)
+	}
 	prometheus, err := prometheus.NewService(alertingRules, *prometheusConfigF, db, *prometheusURLF)
-
 	if err != nil {
 		l.Panicf("Prometheus service problem: %+v", err)
+	}
+	vmdb, err := victoriametrics.NewVictoriaMetrics(*victoriaMetricsConfigF, db, *victoriaMetricsURLF, vmParams)
+	if err != nil {
+		l.Panicf("VictoriaMetrics service problem: %+v", err)
+	}
+	vmalert, err := victoriametrics.NewVMAlert(alertingRules, *victoriaMetricsVMAlertURLF, vmParams)
+	if err != nil {
+		l.Panicf("VictoriaMetrics VMAlert service problem: %+v", err)
 	}
 
 	qanClient := getQANClient(ctx, sqlDB, *postgresDBNameF, *qanAPIAddrF)
 
-	agentsRegistry := agents.NewRegistry(db, prometheus, qanClient)
+	agentsRegistry := agents.NewRegistry(db, qanClient, prometheus, vmdb)
 	prom.MustRegister(agentsRegistry)
 
 	alertmanager := alertmanager.New(db)
@@ -550,7 +593,7 @@ func main() {
 	pmmUpdateCheck := supervisord.NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker"))
 
 	logs := supervisord.NewLogs(version.FullInfo(), pmmUpdateCheck)
-	supervisord := supervisord.New(*supervisordConfigDirF, pmmUpdateCheck)
+	supervisord := supervisord.New(*supervisordConfigDirF, pmmUpdateCheck, vmParams)
 
 	telemetry, err := telemetry.NewService(db, version.Version)
 	if err != nil {
@@ -576,6 +619,8 @@ func main() {
 	serverParams := &server.Params{
 		DB:                      db,
 		Prometheus:              prometheus,
+		VMDB:                    vmdb,
+		VMAlert:                 vmalert,
 		Alertmanager:            alertmanager,
 		Supervisord:             supervisord,
 		TelemetryService:        telemetry,
@@ -620,6 +665,8 @@ func main() {
 		}()
 	}
 
+	dbaasControllerClient := getDBaaSControllerClient(ctx, *dbaasControllerAPIAddrF)
+
 	authServer := grafana.NewAuthServer(grafanaClient, awsInstanceChecker)
 
 	l.Info("Starting services...")
@@ -631,6 +678,17 @@ func main() {
 		prometheus.Run(ctx)
 	}()
 
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		vmalert.Run(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		vmdb.Run(ctx)
+	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -665,12 +723,14 @@ func main() {
 	go func() {
 		defer wg.Done()
 		runGRPCServer(ctx, &gRPCServerDeps{
-			db:             db,
-			prometheus:     prometheus,
-			server:         server,
-			agentsRegistry: agentsRegistry,
-			grafanaClient:  grafanaClient,
-			checksService:  checksService,
+			db:                    db,
+			prometheus:            prometheus,
+			vmdb:                  vmdb,
+			server:                server,
+			agentsRegistry:        agentsRegistry,
+			grafanaClient:         grafanaClient,
+			checksService:         checksService,
+			dbaasControllerClient: dbaasControllerClient,
 		})
 	}()
 

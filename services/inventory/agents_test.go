@@ -55,17 +55,20 @@ func TestAgents(t *testing.T) {
 
 		p := new(mockPrometheusService)
 		p.Test(t)
+		vmdb := new(mockPrometheusService)
+		vmdb.Test(t)
 
 		teardown = func(t *testing.T) {
 			uuid.SetRand(nil)
 
 			r.AssertExpectations(t)
 			p.AssertExpectations(t)
+			vmdb.AssertExpectations(t)
 			require.NoError(t, sqlDB.Close())
 		}
 		ns = NewNodesService(db)
 		ss = NewServicesService(db, r)
-		as = NewAgentsService(db, r, p)
+		as = NewAgentsService(db, r, p, vmdb)
 
 		return
 	}
@@ -88,6 +91,7 @@ func TestAgents(t *testing.T) {
 			mock.AnythingOfType(reflect.TypeOf(&models.Service{}).Name()),
 			mock.AnythingOfType(reflect.TypeOf(&models.Agent{}).Name())).Return(nil)
 		as.p.(*mockPrometheusService).On("RequestConfigurationUpdate").Return()
+		as.vmdb.(*mockPrometheusService).On("RequestConfigurationUpdate").Return()
 
 		pmmAgent, err := as.AddPMMAgent(ctx, &inventorypb.AddPMMAgentRequest{
 			RunsOnNodeId: models.PMMServerNodeID,
@@ -248,13 +252,15 @@ func TestAgents(t *testing.T) {
 			t.Logf("%d: %T %s", i, a, a)
 		}
 		require.Len(t, actualAgents, 11)
-		assert.Equal(t, pmmAgent, actualAgents[3])
-		assert.Equal(t, expectedNodeExporter, actualAgents[4])
-		assert.Equal(t, expectedMySQLdExporter, actualAgents[5])
-		assert.Equal(t, expectedMongoDBExporter, actualAgents[6])
-		assert.Equal(t, expectedQANMySQLSlowlogAgent, actualAgents[7])
-		assert.Equal(t, expectedPostgresExporter, actualAgents[8])
-		assert.Equal(t, expectedExternalExporter, actualAgents[9])
+
+		// TODO: fix protobuf equality https://jira.percona.com/browse/PMM-6743
+		assert.Equal(t, pmmAgent.AgentId, actualAgents[3].(*inventorypb.PMMAgent).AgentId)
+		assert.Equal(t, expectedNodeExporter.AgentId, actualAgents[4].(*inventorypb.NodeExporter).AgentId)
+		assert.Equal(t, expectedMySQLdExporter.AgentId, actualAgents[5].(*inventorypb.MySQLdExporter).AgentId)
+		assert.Equal(t, expectedMongoDBExporter.AgentId, actualAgents[6].(*inventorypb.MongoDBExporter).AgentId)
+		assert.Equal(t, expectedQANMySQLSlowlogAgent.AgentId, actualAgents[7].(*inventorypb.QANMySQLSlowlogAgent).AgentId)
+		assert.Equal(t, expectedPostgresExporter.AgentId, actualAgents[8].(*inventorypb.PostgresExporter).AgentId)
+		assert.Equal(t, expectedExternalExporter.AgentId, actualAgents[9].(*inventorypb.ExternalExporter).AgentId)
 
 		// filter by service ID
 		actualAgents, err = as.List(ctx, models.AgentFilters{ServiceID: s.ServiceId})
@@ -396,6 +402,7 @@ func TestAgents(t *testing.T) {
 		defer teardown(t)
 
 		as.p.(*mockPrometheusService).On("RequestConfigurationUpdate").Return()
+		as.vmdb.(*mockPrometheusService).On("RequestConfigurationUpdate").Return()
 
 		service, err := ss.AddExternalService(ctx, &models.AddDBMSServiceParams{
 			ServiceName: "External service",
