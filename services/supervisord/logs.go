@@ -192,10 +192,10 @@ func (l *Logs) files(ctx context.Context) []fileContent {
 		Err:  err,
 	})
 
-	// add Prometheus targets
-	b, err = readURL(ctx, "http://127.0.0.1:9090/prometheus/api/v1/targets")
+	// add VictoriaMetrics targets
+	b, err = readURL(ctx, "http://127.0.0.1:9090/prometheus/targets")
 	files = append(files, fileContent{
-		Name: "prometheus_targets.json",
+		Name: "prometheus_targets.txt",
 		Data: b,
 		Err:  err,
 	})

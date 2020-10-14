@@ -317,11 +317,11 @@ func scrapeConfigForVictoriaMetrics(interval time.Duration) *config.ScrapeConfig
 		JobName:        "victoriametrics",
 		ScrapeInterval: config.Duration(interval),
 		ScrapeTimeout:  prometheus.ScrapeTimeout(interval),
-		MetricsPath:    "/metrics",
+		MetricsPath:    "/prometheus/metrics",
 		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
 			StaticConfigs: []*config.Group{
 				{
-					Targets: []string{"127.0.0.1:8428"},
+					Targets: []string{"127.0.0.1:9090"},
 					Labels:  map[string]string{"instance": "pmm-server"},
 				},
 			},

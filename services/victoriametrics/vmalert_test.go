@@ -43,7 +43,7 @@ func setupVMAlert(t *testing.T) (*reform.DB, *prometheus.AlertingRules, *VMAlert
 	vmParams := &models.VictoriaMetricsParams{}
 	svc, err := NewVMAlert(rules, "http://127.0.0.1:8880/", vmParams)
 	check.NoError(err)
-	svc.client = testClient(http.StatusOK)
+	svc.client = testClient(http.StatusOK, "")
 
 	check.NoError(svc.IsReady(context.Background()))
 
