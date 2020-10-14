@@ -123,8 +123,8 @@ func TestListSecurityChecks(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 
-		assert.ElementsMatch(t, resp.Checks,
-			[]*managementpb.SecurityCheck{
+		assert.ElementsMatch(t, resp.ChecksStates,
+			[]*managementpb.SecurityCheckState{
 				{Name: "one", Disabled: false},
 				{Name: "two", Disabled: true},
 				{Name: "three", Disabled: false},

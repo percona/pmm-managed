@@ -95,24 +95,39 @@ func (s *ChecksAPIService) ListSecurityChecks() (*managementpb.ListSecurityCheck
 	}
 
 	checks := s.checksService.GetAllChecks()
-	res := make([]*managementpb.SecurityCheck, 0, len(checks))
+	res := make([]*managementpb.SecurityCheckState, 0, len(checks))
 	for _, c := range checks {
 		_, disabled := m[c.Name]
-		res = append(res, &managementpb.SecurityCheck{Name: c.Name, Disabled: disabled})
+		res = append(res, &managementpb.SecurityCheckState{Name: c.Name, Disabled: disabled})
 	}
 
-	return &managementpb.ListSecurityChecksResponse{Checks: res}, nil
+	return &managementpb.ListSecurityChecksResponse{ChecksStates: res}, nil
 }
 
 // ToggleSecurityChecks allows to disable/enable specific STT checks.
 func (s *ChecksAPIService) ToggleSecurityChecks(req *managementpb.ToggleSecurityChecksRequest) (*managementpb.ToggleSecurityChecksResponse, error) {
-	err := s.checksService.EnableChecks(req.EnableChecks)
+	var enableChecks, disableChecks []string
+	for _, check := range req.ChecksParams {
+		if check.Enable && check.Disable {
+			return nil, status.Errorf(codes.InvalidArgument, "Check %s has enable and disable parameters set to the true.", check.Name)
+		}
+
+		if check.Enable {
+			enableChecks = append(enableChecks, check.Name)
+		}
+
+		if check.Disable {
+			disableChecks = append(disableChecks, check.Name)
+		}
+	}
+
+	err := s.checksService.EnableChecks(enableChecks)
 	if err != nil {
 		s.l.Errorf("Failed to enable disabled security checks: %+v", err)
 		return nil, status.Error(codes.Internal, "Failed to enable disabled security checks.")
 	}
 
-	err = s.checksService.DisableChecks(req.DisableChecks)
+	err = s.checksService.DisableChecks(disableChecks)
 	if err != nil {
 		s.l.Errorf("Failed to disable security checks: %+v", err)
 
