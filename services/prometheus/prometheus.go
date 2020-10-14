@@ -58,6 +58,7 @@ var checkFailedRE = regexp.MustCompile(`FAILED: parsing YAML file \S+: (.+)\n`)
 //   * Prometheus configuration and rule files are accessible;
 //   * promtool is available.
 type Service struct {
+	enabled       bool
 	alertingRules *AlertingRules
 	configPath    string
 	db            *reform.DB
@@ -73,12 +74,13 @@ type Service struct {
 }
 
 // NewService creates new service.
-func NewService(alertingRules *AlertingRules, configPath string, db *reform.DB, baseURL string) (*Service, error) {
+func NewService(alertingRules *AlertingRules, configPath string, db *reform.DB, baseURL string, disabled bool) (*Service, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return &Service{
+		enabled:        !disabled,
 		alertingRules:  alertingRules,
 		configPath:     configPath,
 		db:             db,
@@ -92,6 +94,9 @@ func NewService(alertingRules *AlertingRules, configPath string, db *reform.DB, 
 
 // Run runs Prometheus configuration update loop until ctx is canceled.
 func (svc *Service) Run(ctx context.Context) {
+	if !svc.enabled {
+		return
+	}
 	svc.l.Info("Starting...")
 	defer svc.l.Info("Done.")
 
@@ -534,6 +539,9 @@ func (svc *Service) RequestConfigurationUpdate() {
 
 // IsReady verifies that Prometheus works.
 func (svc *Service) IsReady(ctx context.Context) error {
+	if !svc.enabled {
+		return nil
+	}
 	// check Prometheus /version API and log version
 	u := *svc.baseURL
 	u.Path = path.Join(u.Path, "version")

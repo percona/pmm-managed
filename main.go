@@ -371,6 +371,7 @@ type setupDeps struct {
 	dbPassword   string
 	supervisord  *supervisord.Service
 	prometheus   *prometheus.Service
+	vmdb         *victoriametrics.VictoriaMetrics
 	alertmanager *alertmanager.Service
 	server       *server.Server
 	l            *logrus.Entry
@@ -422,6 +423,13 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 		return false
 	}
 	deps.prometheus.RequestConfigurationUpdate()
+
+	deps.l.Infof("Checking VictoriaMetrics...")
+	if err = deps.vmdb.IsReady(ctx); err != nil {
+		deps.l.Warnf("VictoriaMetrics problem: %+v.", err)
+		return false
+	}
+	deps.vmdb.RequestConfigurationUpdate()
 
 	deps.l.Infof("Checking Alertmanager...")
 	if err = deps.alertmanager.IsReady(ctx); err != nil {
@@ -570,7 +578,7 @@ func main() {
 	if err != nil {
 		l.Panicf("cannot load victoriametrics params problem: %+v", err)
 	}
-	prometheus, err := prometheus.NewService(alertingRules, *prometheusConfigF, db, *prometheusURLF)
+	prometheus, err := prometheus.NewService(alertingRules, *prometheusConfigF, db, *prometheusURLF, vmParams.Enabled)
 	if err != nil {
 		l.Panicf("Prometheus service problem: %+v", err)
 	}
@@ -641,6 +649,7 @@ func main() {
 		dbPassword:   *postgresDBPasswordF,
 		supervisord:  supervisord,
 		prometheus:   prometheus,
+		vmdb:         vmdb,
 		alertmanager: alertmanager,
 		server:       server,
 		l:            logrus.WithField("component", "setup"),
