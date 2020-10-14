@@ -83,6 +83,7 @@ func formatVersionNum(args ...interface{}) (interface{}, error) {
 	return p.String(), nil
 }
 
+// GetAdditionalContext returns additional functions to be used in check scripts.
 func GetAdditionalContext() map[string]starlark.GoFunc {
 	return map[string]starlark.GoFunc{
 		"ip_is_private": ipIsPrivate,
