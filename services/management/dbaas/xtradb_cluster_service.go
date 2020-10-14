@@ -19,6 +19,7 @@ package dbaas
 
 import (
 	"context"
+	"fmt"
 
 	dbaascontrollerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
@@ -65,25 +66,56 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 			Name: c.Name,
 			Params: &dbaasv1beta1.XtraDBClusterParams{
 				ClusterSize: c.Params.ClusterSize,
-				Pxc: &dbaasv1beta1.XtraDBClusterParams_PXC{
-					ComputeResources: &dbaasv1beta1.ComputeResources{
-						CpuM:        c.Params.Pxc.ComputeResources.CpuM,
-						MemoryBytes: c.Params.Pxc.ComputeResources.MemoryBytes,
-					},
-				},
-				Proxysql: &dbaasv1beta1.XtraDBClusterParams_ProxySQL{
-					ComputeResources: &dbaasv1beta1.ComputeResources{
-						CpuM:        c.Params.Proxysql.ComputeResources.CpuM,
-						MemoryBytes: c.Params.Proxysql.ComputeResources.MemoryBytes,
-					},
-				},
 			},
+			State: dbaasv1beta1.XtraDBClusterState(c.State),
+		}
+
+		if c.Params.Pxc != nil {
+			cluster.Params.Pxc = &dbaasv1beta1.XtraDBClusterParams_PXC{
+				ComputeResources: &dbaasv1beta1.ComputeResources{
+					CpuM:        c.Params.Pxc.ComputeResources.CpuM,
+					MemoryBytes: c.Params.Pxc.ComputeResources.MemoryBytes,
+				},
+			}
+		}
+
+		if c.Params.Proxysql != nil {
+			cluster.Params.Proxysql = &dbaasv1beta1.XtraDBClusterParams_ProxySQL{
+				ComputeResources: &dbaasv1beta1.ComputeResources{
+					CpuM:        c.Params.Proxysql.ComputeResources.CpuM,
+					MemoryBytes: c.Params.Proxysql.ComputeResources.MemoryBytes,
+				},
+			}
 		}
 
 		clusters[i] = &cluster
 	}
 
 	return &dbaasv1beta1.ListXtraDBClustersResponse{Clusters: clusters}, nil
+}
+
+// ShowXtraDBCluster returns a XtraDB cluster.
+func (s XtraDBClusterService) ShowXtraDBCluster(ctx context.Context, req *dbaasv1beta1.ShowXtraDBClusterRequest) (*dbaasv1beta1.ShowXtraDBClusterResponse, error) {
+	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: implement on dbaas-controller side:
+	// 1. Get pxc host and status
+	//  - Ex.: kubectl get -o=json PerconaXtraDBCluster/<cluster_name>
+	// 2. Get root password:
+	//   - Ex.: kubectl get secret my-cluster-secrets -o json  | jq -r ".data.root" | base64 -d
+	_ = kubernetesCluster
+	resp := dbaasv1beta1.ShowXtraDBClusterResponse{
+		Name:     req.Name,
+		Username: "root",
+		Password: "root_password",
+		Host:     fmt.Sprintf("%s-proxysql", req.Name),
+		Port:     3306,
+	}
+
+	return &resp, nil
 }
 
 // CreateXtraDBCluster creates XtraDB cluster with given parameters.

@@ -403,8 +403,8 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-2.0"
-  digest = "1:48b332ada2c5a5166343ff8b8559625ed2cdb4dab450ca45af46e707290b8dc4"
+  branch = "PMM-6716-db-cluster-conn-creds"
+  digest = "1:ce1ba2680d8bce1476b578a6b1776265a82bcb22a07e2429e61d8fccb2a04e01"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -426,7 +426,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "f1b63881205af561c5cfccc1528588b522a17dd7"
+  revision = "14a29648b1a1613e5d226a342898c4dd9f8b8bde"
 
 [[projects]]
   digest = "1:dbee7dc52291bb149388085eeb20561d4cb3c2044e0fa6ffa8d342c6b305f4bf"
