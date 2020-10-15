@@ -133,6 +133,26 @@ Traceback (most recent call last):
 			script: strings.TrimSpace(`
 def check_context(rows, context):
     func = context.get("ip_is_private", fail)
+    print("result =", func("some-address"))
+
+    return [{
+        "summary": "IP Address Check",
+        "severity": "warning",
+    }]
+	`),
+			err: strings.TrimSpace(`
+thread invalid arg: failed to execute function check_context: ip_is_private: invalid ip address: some-address
+Traceback (most recent call last):
+  TestAdditionalContext/invalid_arg:3:27: in check_context
+  <builtin>: in ip_is_private
+		`) + "\n",
+			result: nil,
+		},
+		{
+			name: "invalid arg type",
+			script: strings.TrimSpace(`
+def check_context(rows, context):
+    func = context.get("ip_is_private", fail)
     print("result =", func(1))
 
     return [{
@@ -141,9 +161,9 @@ def check_context(rows, context):
     }]
 	`),
 			err: strings.TrimSpace(`
-thread invalid arg: failed to execute function check_context: ip_is_private: expected string argument, got int64 (1)
+thread invalid arg type: failed to execute function check_context: ip_is_private: expected string argument, got int64 (1)
 Traceback (most recent call last):
-  TestAdditionalContext/invalid_arg:3:27: in check_context
+  TestAdditionalContext/invalid_arg_type:3:27: in check_context
   <builtin>: in ip_is_private
 		`) + "\n",
 			result: nil,

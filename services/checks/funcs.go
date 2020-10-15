@@ -114,6 +114,9 @@ func ipIsPrivate(args ...interface{}) (interface{}, error) {
 	}
 
 	ipAddress := net.ParseIP(ip)
+	if ipAddress == nil {
+		return nil, errors.Errorf("invalid ip address: %s", ip)
+	}
 
 	for _, b := range privateAddressBlocks {
 		_, network, err := net.ParseCIDR(b)
