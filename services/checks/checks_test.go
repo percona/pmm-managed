@@ -311,8 +311,6 @@ func TestGetSecurityCheckResults(t *testing.T) {
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
 	t.Run("STT disabled", func(t *testing.T) {
-		t.Parallel()
-
 		s, err := New(nil, nil, db)
 		require.NoError(t, err)
 		results, err := s.GetSecurityCheckResults()
@@ -321,8 +319,6 @@ func TestGetSecurityCheckResults(t *testing.T) {
 	})
 
 	t.Run("STT enabled", func(t *testing.T) {
-		t.Parallel()
-
 		s, err := New(nil, nil, db)
 		require.NoError(t, err)
 		settings, err := models.GetSettings(db)
@@ -343,8 +339,6 @@ func TestStartChecks(t *testing.T) {
 	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 
 	t.Run("stt disabled", func(t *testing.T) {
-		t.Parallel()
-
 		s, err := New(nil, nil, db)
 		require.NoError(t, err)
 		err = s.StartChecks(context.Background())
@@ -352,8 +346,6 @@ func TestStartChecks(t *testing.T) {
 	})
 
 	t.Run("stt enabled", func(t *testing.T) {
-		t.Parallel()
-
 		var ams mockAlertmanagerService
 		ams.On("SendAlerts", mock.Anything, mock.Anything).Return()
 
