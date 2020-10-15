@@ -24,6 +24,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+// global variable to hold all private networks
+var privateCIDR []*net.IPNet
+
 // GetFuncsForVersion returns predefined functions for specified check version.
 func GetFuncsForVersion(version uint32) (map[string]starlark.GoFunc, error) {
 	switch version {
@@ -92,17 +95,6 @@ func GetAdditionalContext() map[string]starlark.GoFunc {
 	}
 }
 
-var privateAddressBlocks = []string{
-	// private blocks, see https://tools.ietf.org/html/rfc1918
-	"10.0.0.0/8",
-	"172.16.0.0/12",
-	"192.168.0.0/16",
-	// link-local block, see https://tools.ietf.org/html/rfc3927
-	"169.254.0.0/16",
-	// loop-back block, see https://tools.ietf.org/html/rfc5735
-	"127.0.0.0/8",
-}
-
 // ipIsPrivate accepts a single string argument (IP address) and
 // returns true for a private address, otherwise false.
 func ipIsPrivate(args ...interface{}) (interface{}, error) {
@@ -120,16 +112,29 @@ func ipIsPrivate(args ...interface{}) (interface{}, error) {
 		return nil, errors.Errorf("invalid ip address: %s", ip)
 	}
 
-	for _, b := range privateAddressBlocks {
-		_, network, err := net.ParseCIDR(b)
-		if err != nil {
-			return nil, errors.Errorf("unable to parse CIDR: %s, reason: %s", b, err)
-		}
-
+	for _, network := range privateCIDR {
 		if network.Contains(ipAddress) {
 			return true, nil
 		}
 	}
 
 	return false, nil
+}
+
+func init() {
+	privateAddressBlocks := []string{
+		// private blocks, see https://tools.ietf.org/html/rfc1918
+		"10.0.0.0/8",
+		"172.16.0.0/12",
+		"192.168.0.0/16",
+		// link-local block, see https://tools.ietf.org/html/rfc3927
+		"169.254.0.0/16",
+		// loop-back block, see https://tools.ietf.org/html/rfc5735
+		"127.0.0.0/8",
+	}
+
+	for _, b := range privateAddressBlocks {
+		_, network, _ := net.ParseCIDR(b)
+		privateCIDR = append(privateCIDR, network)
+	}
 }
