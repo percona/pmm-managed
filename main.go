@@ -146,6 +146,34 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	)
 
 	serverpb.RegisterServerServer(gRPCServer, deps.server)
+	if l.Logger.GetLevel() >= logrus.DebugLevel {
+		l.Debug("Reflection and channelz are enabled.")
+		reflection.Register(gRPCServer)
+		channelz.RegisterChannelzServiceToServer(gRPCServer)
+
+		l.Debug("RPC response latency histogram enabled.")
+		grpc_prometheus.EnableHandlingTimeHistogram()
+	}
+
+	grpc_prometheus.Register(gRPCServer)
+
+	// run server until it is stopped gracefully or not
+	listener, err := net.Listen("tcp", gRPCAddr)
+	if err != nil {
+		l.Panic(err)
+	}
+	go func() {
+		for {
+			err = gRPCServer.Serve(listener)
+			if err == nil || err == grpc.ErrServerStopped {
+				break
+			}
+			l.Errorf("Failed to serve: %s", err)
+		}
+		l.Info("Server stopped.")
+	}()
+
+	<-ctx.Done()
 
 	agentpb.RegisterAgentServer(gRPCServer, agentgrpc.NewAgentServer(deps.agentsRegistry))
 
@@ -179,35 +207,6 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 
 	dbaasv1beta1.RegisterKubernetesServer(gRPCServer, managementdbaas.NewKubernetesServer(deps.db, deps.dbaasControllerClient))
 	dbaasv1beta1.RegisterXtraDBClusterServer(gRPCServer, managementdbaas.NewXtraDBClusterService(deps.db, deps.dbaasControllerClient))
-
-	if l.Logger.GetLevel() >= logrus.DebugLevel {
-		l.Debug("Reflection and channelz are enabled.")
-		reflection.Register(gRPCServer)
-		channelz.RegisterChannelzServiceToServer(gRPCServer)
-
-		l.Debug("RPC response latency histogram enabled.")
-		grpc_prometheus.EnableHandlingTimeHistogram()
-	}
-
-	grpc_prometheus.Register(gRPCServer)
-
-	// run server until it is stopped gracefully or not
-	listener, err := net.Listen("tcp", gRPCAddr)
-	if err != nil {
-		l.Panic(err)
-	}
-	go func() {
-		for {
-			err = gRPCServer.Serve(listener)
-			if err == nil || err == grpc.ErrServerStopped {
-				break
-			}
-			l.Errorf("Failed to serve: %s", err)
-		}
-		l.Info("Server stopped.")
-	}()
-
-	<-ctx.Done()
 
 	// try to stop server gracefully, then not
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)

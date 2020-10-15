@@ -318,7 +318,13 @@ func addAdminSummary(ctx context.Context, zw *zip.Writer) error {
 	cmd.Stdout = os.Stderr // stdout to stderr
 	cmd.Stderr = os.Stderr
 	if err = cmd.Run(); err != nil {
-		return errors.Wrap(err, "cannot run pmm-admin summary")
+		time.Sleep(5 * time.Second)
+
+		if err = cmd.Run(); err != nil {
+			time.Sleep(5 * time.Second)
+
+			return errors.Wrap(err, "cannot run pmm-admin summary")
+		}
 	}
 
 	zr, err := zip.OpenReader(sf.Name())
