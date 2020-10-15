@@ -18,6 +18,7 @@ package checks
 
 import (
 	"net"
+	"reflect"
 
 	"github.com/percona-platform/saas/pkg/starlark"
 	"github.com/percona/pmm/version"
@@ -108,7 +109,17 @@ func ipIsPrivate(args ...interface{}) (interface{}, error) {
 
 	ipAddress := net.ParseIP(ip)
 	if ipAddress == nil {
-		return nil, errors.Errorf("invalid ip address: %s", ip)
+		// check if string was in CIDR notation
+		_, net, err := net.ParseCIDR(ip)
+		if err != nil {
+			return nil, errors.Errorf("invalid ip address: %s", ip)
+		}
+		for _, network := range privateNetworks {
+			if reflect.DeepEqual(net, network) {
+				return true, nil
+			}
+		}
+		return false, nil
 	}
 
 	for _, network := range privateNetworks {
@@ -116,7 +127,6 @@ func ipIsPrivate(args ...interface{}) (interface{}, error) {
 			return true, nil
 		}
 	}
-
 	return false, nil
 }
 

@@ -225,6 +225,44 @@ def check_context(rows, context):
 				Description: "is_private: False",
 			}},
 		},
+		{
+			name: "private network",
+			script: strings.TrimSpace(`
+def check_context(rows, context):
+    func = context.get("ip_is_private", fail)
+
+    return [{
+        "summary": "IP Address Check",
+		"severity": "warning",
+		"description": "is_private: {}".format(func("172.16.0.0/12"))
+    }]
+	`),
+			err: "",
+			result: []check.Result{{
+				Summary:     "IP Address Check",
+				Severity:    check.Warning,
+				Description: "is_private: True",
+			}},
+		},
+		{
+			name: "public network",
+			script: strings.TrimSpace(`
+def check_context(rows, context):
+    func = context.get("ip_is_private", fail)
+
+    return [{
+        "summary": "IP Address Check",
+		"severity": "warning",
+		"description": "is_private: {}".format(func("224.0.0.0/4"))
+    }]
+	`),
+			err: "",
+			result: []check.Result{{
+				Summary:     "IP Address Check",
+				Severity:    check.Warning,
+				Description: "is_private: False",
+			}},
+		},
 	}
 
 	for _, tc := range testCases {
