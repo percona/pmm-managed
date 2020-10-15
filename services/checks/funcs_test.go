@@ -112,8 +112,8 @@ func TestAdditionalContext(t *testing.T) {
 			name: "too many args",
 			script: strings.TrimSpace(`
 def check_context(rows, context):
-    func = context.get("ip_is_private", fail)
-    print("result =", func(1, 2))
+    ip_is_private = context.get("ip_is_private", fail)
+    print("result =", ip_is_private(1, 2))
 
     return [{
         "summary": "IP Address Check",
@@ -123,7 +123,7 @@ def check_context(rows, context):
 			err: strings.TrimSpace(`
 thread too many args: failed to execute function check_context: ip_is_private: expected 1 argument, got 2
 Traceback (most recent call last):
-  TestAdditionalContext/too_many_args:3:27: in check_context
+  TestAdditionalContext/too_many_args:3:36: in check_context
   <builtin>: in ip_is_private
 	`) + "\n",
 			result: nil,
@@ -132,8 +132,8 @@ Traceback (most recent call last):
 			name: "invalid arg",
 			script: strings.TrimSpace(`
 def check_context(rows, context):
-    func = context.get("ip_is_private", fail)
-    print("result =", func("some-address"))
+    ip_is_private = context.get("ip_is_private", fail)
+    print("result =", ip_is_private("some-address"))
 
     return [{
         "summary": "IP Address Check",
@@ -143,7 +143,7 @@ def check_context(rows, context):
 			err: strings.TrimSpace(`
 thread invalid arg: failed to execute function check_context: ip_is_private: invalid ip address: some-address
 Traceback (most recent call last):
-  TestAdditionalContext/invalid_arg:3:27: in check_context
+  TestAdditionalContext/invalid_arg:3:36: in check_context
   <builtin>: in ip_is_private
 		`) + "\n",
 			result: nil,
@@ -152,8 +152,8 @@ Traceback (most recent call last):
 			name: "invalid arg type",
 			script: strings.TrimSpace(`
 def check_context(rows, context):
-    func = context.get("ip_is_private", fail)
-    print("result =", func(1))
+    ip_is_private = context.get("ip_is_private", fail)
+    print("result =", ip_is_private(1))
 
     return [{
         "summary": "IP Address Check",
@@ -163,7 +163,7 @@ def check_context(rows, context):
 			err: strings.TrimSpace(`
 thread invalid arg type: failed to execute function check_context: ip_is_private: expected string argument, got int64 (1)
 Traceback (most recent call last):
-  TestAdditionalContext/invalid_arg_type:3:27: in check_context
+  TestAdditionalContext/invalid_arg_type:3:36: in check_context
   <builtin>: in ip_is_private
 		`) + "\n",
 			result: nil,
@@ -172,12 +172,12 @@ Traceback (most recent call last):
 			name: "valid argument",
 			script: strings.TrimSpace(`
 def check_context(rows, context):
-    func = context.get("ip_is_private", fail)
+    ip_is_private = context.get("ip_is_private", fail)
 
     return [{
         "summary": "IP Address Check",
 		"severity": "warning",
-		"description": "is_private: {}".format(func("127.0.0.1"))
+		"description": "is_private: {}".format(ip_is_private("127.0.0.1"))
     }]
 	`),
 			err: "",
@@ -191,12 +191,12 @@ def check_context(rows, context):
 			name: "valid ipv6 argument",
 			script: strings.TrimSpace(`
 def check_context(rows, context):
-    func = context.get("ip_is_private", fail)
+    ip_is_private = context.get("ip_is_private", fail)
 
     return [{
         "summary": "IP Address Check",
 		"severity": "warning",
-		"description": "is_private: {}".format(func("0:0:0:0:0:0:0:1"))
+		"description": "is_private: {}".format(ip_is_private("0:0:0:0:0:0:0:1"))
     }]
 	`),
 			err: "",
@@ -210,12 +210,12 @@ def check_context(rows, context):
 			name: "public ip address",
 			script: strings.TrimSpace(`
 def check_context(rows, context):
-    func = context.get("ip_is_private", fail)
+    ip_is_private = context.get("ip_is_private", fail)
 
     return [{
         "summary": "IP Address Check",
 		"severity": "warning",
-		"description": "is_private: {}".format(func("1.1.1.1")),
+		"description": "is_private: {}".format(ip_is_private("1.1.1.1")),
     }]
 	`),
 			err: "",
@@ -229,12 +229,12 @@ def check_context(rows, context):
 			name: "private network",
 			script: strings.TrimSpace(`
 def check_context(rows, context):
-    func = context.get("ip_is_private", fail)
+    ip_is_private = context.get("ip_is_private", fail)
 
     return [{
         "summary": "IP Address Check",
 		"severity": "warning",
-		"description": "is_private: {}".format(func("172.16.0.0/12"))
+		"description": "is_private: {}".format(ip_is_private("172.16.0.0/12"))
     }]
 	`),
 			err: "",
@@ -248,12 +248,12 @@ def check_context(rows, context):
 			name: "public network",
 			script: strings.TrimSpace(`
 def check_context(rows, context):
-    func = context.get("ip_is_private", fail)
+    ip_is_private = context.get("ip_is_private", fail)
 
     return [{
         "summary": "IP Address Check",
 		"severity": "warning",
-		"description": "is_private: {}".format(func("224.0.0.0/4"))
+		"description": "is_private: {}".format(ip_is_private("224.0.0.0/4"))
     }]
 	`),
 			err: "",
