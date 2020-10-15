@@ -98,7 +98,7 @@ Traceback (most recent call last):
 }
 
 func TestAdditionalContext(t *testing.T) {
-	funcs, err := GetFuncsForVersion(1)
+	predeclaredFuncs, err := GetFuncsForVersion(1)
 	require.NoError(t, err)
 	contextFuncs := GetAdditionalContext()
 
@@ -212,7 +212,7 @@ def check_context(rows, context):
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			env, err := starlark.NewEnv(t.Name(), tc.script, funcs)
+			env, err := starlark.NewEnv(t.Name(), tc.script, predeclaredFuncs)
 			require.NoError(t, err)
 			res, err := env.Run(tc.name, nil, contextFuncs, t.Log)
 			if res != nil {
