@@ -130,6 +130,7 @@ func ipIsPrivate(args ...interface{}) (interface{}, error) {
 	return false, nil
 }
 
+//nolint:gochecknoinits
 func init() {
 	// full list of reserved network addresses https://en.wikipedia.org/wiki/Reserved_IP_addresses
 	privateAddressBlocks := []string{
