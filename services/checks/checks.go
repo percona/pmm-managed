@@ -96,6 +96,7 @@ type Service struct {
 	restartInterval time.Duration
 	startDelay      time.Duration
 	resendInterval  time.Duration
+	localChecksFile string // For testing
 
 	cm               sync.Mutex
 	mySQLChecks      []check.Check
@@ -135,6 +136,7 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 		restartInterval: defaultRestartInterval,
 		startDelay:      defaultStartDelay,
 		resendInterval:  resendInterval,
+		localChecksFile: os.Getenv(envCheckFile),
 
 		mScriptsExecuted: prom.NewCounterVec(prom.CounterOpts{
 			Namespace: prometheusNamespace,
@@ -840,9 +842,9 @@ func (s *Service) groupChecksByDB(checks []check.Check) (mySQLChecks, postgreSQL
 func (s *Service) collectChecks(ctx context.Context) {
 	var checks []check.Check
 	var err error
-	if f := os.Getenv(envCheckFile); f != "" {
-		s.l.Warnf("Using local test checks file: %s.", f)
-		checks, err = s.loadLocalChecks(f)
+	if s.localChecksFile != "" {
+		s.l.Warnf("Using local test checks file: %s.", s.localChecksFile)
+		checks, err = s.loadLocalChecks(s.localChecksFile)
 		if err != nil {
 			s.l.Errorf("Failed to load local checks file: %s.", err)
 			return // keep previously loaded checks
