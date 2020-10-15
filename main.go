@@ -482,8 +482,8 @@ func main() {
 	kingpin.Version(version.FullInfo())
 	kingpin.HelpFlag.Short('h')
 
-	_ = kingpin.Flag("prometheus-url", "for backward capability, use -victoriametrics-url instead").String()
-	_ = kingpin.Flag("prometheus-config", "for backward capability, use -victoriametrics-config instead").String()
+	_ = kingpin.Flag("prometheus-url", "for backward compatibility, use -victoriametrics-url instead").String()
+	_ = kingpin.Flag("prometheus-config", "for backward compatibility, use -victoriametrics-config instead").String()
 
 	victoriaMetricsURLF := kingpin.Flag("victoriametrics-url", "VictoriaMetrics base URL").
 		Default("http://127.0.0.1:9090/prometheus/").String()
