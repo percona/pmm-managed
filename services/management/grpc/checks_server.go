@@ -43,10 +43,12 @@ func (s *checksServer) GetSecurityCheckResults(ctx context.Context, request *man
 	return s.svc.GetSecurityCheckResults()
 }
 
+// ListSecurityChecks returns all available STT checks.
 func (s *checksServer) ListSecurityChecks(ctx context.Context, req *managementpb.ListSecurityChecksRequest) (*managementpb.ListSecurityChecksResponse, error) {
 	return s.svc.ListSecurityChecks()
 }
 
+// UpdateSecurityChecks allows to change STT checks state.
 func (s *checksServer) UpdateSecurityChecks(ctx context.Context, req *managementpb.UpdateSecurityChecksRequest) (*managementpb.UpdateSecurityChecksResponse, error) {
 	return s.svc.UpdateSecurityChecks(req)
 }
