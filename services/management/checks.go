@@ -95,19 +95,19 @@ func (s *ChecksAPIService) ListSecurityChecks() (*managementpb.ListSecurityCheck
 	}
 
 	checks := s.checksService.GetAllChecks()
-	res := make([]*managementpb.SecurityCheckState, 0, len(checks))
+	res := make([]*managementpb.SecurityCheck, 0, len(checks))
 	for _, c := range checks {
 		_, disabled := m[c.Name]
-		res = append(res, &managementpb.SecurityCheckState{Name: c.Name, Disabled: disabled})
+		res = append(res, &managementpb.SecurityCheck{Name: c.Name, Disabled: disabled})
 	}
 
-	return &managementpb.ListSecurityChecksResponse{ChecksStates: res}, nil
+	return &managementpb.ListSecurityChecksResponse{Checks: res}, nil
 }
 
-// UpdateSecurityChecks allows to change STT checks state.
-func (s *ChecksAPIService) UpdateSecurityChecks(req *managementpb.UpdateSecurityChecksRequest) (*managementpb.UpdateSecurityChecksResponse, error) {
+// ChangeSecurityChecks allows to change STT checks state.
+func (s *ChecksAPIService) ChangeSecurityChecks(req *managementpb.ChangeSecurityChecksRequest) (*managementpb.ChangeSecurityChecksResponse, error) {
 	var enableChecks, disableChecks []string
-	for _, check := range req.ChecksParams {
+	for _, check := range req.Params {
 		if check.Enable && check.Disable {
 			return nil, status.Errorf(codes.InvalidArgument, "Check %s has enable and disable parameters set to the true.", check.Name)
 		}
@@ -134,5 +134,5 @@ func (s *ChecksAPIService) UpdateSecurityChecks(req *managementpb.UpdateSecurity
 		return nil, status.Errorf(codes.Internal, "Failed to disable security checks.")
 	}
 
-	return &managementpb.UpdateSecurityChecksResponse{}, nil
+	return &managementpb.ChangeSecurityChecksResponse{}, nil
 }

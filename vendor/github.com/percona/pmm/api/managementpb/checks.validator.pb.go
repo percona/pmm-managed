@@ -29,10 +29,10 @@ func (this *SecurityCheckResult) Validate() error {
 	// Validation of proto3 map<> fields is unsupported.
 	return nil
 }
-func (this *SecurityCheckState) Validate() error {
+func (this *SecurityCheck) Validate() error {
 	return nil
 }
-func (this *SecurityCheckParams) Validate() error {
+func (this *ChangeSecurityCheckParams) Validate() error {
 	return nil
 }
 func (this *GetSecurityCheckResultsResponse) Validate() error {
@@ -49,25 +49,25 @@ func (this *ListSecurityChecksRequest) Validate() error {
 	return nil
 }
 func (this *ListSecurityChecksResponse) Validate() error {
-	for _, item := range this.ChecksStates {
+	for _, item := range this.Checks {
 		if item != nil {
 			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(item); err != nil {
-				return github_com_mwitkow_go_proto_validators.FieldError("ChecksStates", err)
+				return github_com_mwitkow_go_proto_validators.FieldError("Checks", err)
 			}
 		}
 	}
 	return nil
 }
-func (this *UpdateSecurityChecksRequest) Validate() error {
-	for _, item := range this.ChecksParams {
+func (this *ChangeSecurityChecksRequest) Validate() error {
+	for _, item := range this.Params {
 		if item != nil {
 			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(item); err != nil {
-				return github_com_mwitkow_go_proto_validators.FieldError("ChecksParams", err)
+				return github_com_mwitkow_go_proto_validators.FieldError("Params", err)
 			}
 		}
 	}
 	return nil
 }
-func (this *UpdateSecurityChecksResponse) Validate() error {
+func (this *ChangeSecurityChecksResponse) Validate() error {
 	return nil
 }

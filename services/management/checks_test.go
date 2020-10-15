@@ -123,8 +123,8 @@ func TestListSecurityChecks(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 
-		assert.ElementsMatch(t, resp.ChecksStates,
-			[]*managementpb.SecurityCheckState{
+		assert.ElementsMatch(t, resp.Checks,
+			[]*managementpb.SecurityCheck{
 				{Name: "one", Disabled: false},
 				{Name: "two", Disabled: true},
 				{Name: "three", Disabled: false},
@@ -151,7 +151,7 @@ func TestUpdateSecurityChecks(t *testing.T) {
 
 		s := NewChecksAPIService(&checksService)
 
-		resp, err := s.UpdateSecurityChecks(&managementpb.UpdateSecurityChecksRequest{})
+		resp, err := s.ChangeSecurityChecks(&managementpb.ChangeSecurityChecksRequest{})
 		tests.AssertGRPCError(t, status.New(codes.Internal, "Failed to enable disabled security checks."), err)
 		assert.Nil(t, resp)
 	})
@@ -163,7 +163,7 @@ func TestUpdateSecurityChecks(t *testing.T) {
 
 		s := NewChecksAPIService(&checksService)
 
-		resp, err := s.UpdateSecurityChecks(&managementpb.UpdateSecurityChecksRequest{})
+		resp, err := s.ChangeSecurityChecks(&managementpb.ChangeSecurityChecksRequest{})
 		tests.AssertGRPCError(t, status.New(codes.Internal, "Failed to disable security checks."), err)
 		assert.Nil(t, resp)
 	})
