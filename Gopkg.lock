@@ -403,7 +403,7 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-6760-update-protobuf"
+  branch = "PMM-2.0"
   digest = "1:48b332ada2c5a5166343ff8b8559625ed2cdb4dab450ca45af46e707290b8dc4"
   name = "github.com/percona/pmm"
   packages = [
@@ -426,7 +426,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "97398adbee14317136d517ad3630cbbae47bb114"
+  revision = "f5c1d82911cf644f63bcc9b2ef720791c3db0025"
 
 [[projects]]
   digest = "1:dbee7dc52291bb149388085eeb20561d4cb3c2044e0fa6ffa8d342c6b305f4bf"
