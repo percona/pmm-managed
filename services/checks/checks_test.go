@@ -89,12 +89,9 @@ func TestLoadLocalChecks(t *testing.T) {
 }
 
 func TestCollectChecks(t *testing.T) {
-	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
-	db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
-
 	t.Run("collect local checks", func(t *testing.T) {
-		t.Parallel()
-
+		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 		s, err := New(nil, nil, db)
 		require.NoError(t, err)
 		s.localChecksFile = testChecksFile
@@ -117,8 +114,8 @@ func TestCollectChecks(t *testing.T) {
 	})
 
 	t.Run("download checks", func(t *testing.T) {
-		t.Parallel()
-
+		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
 		s, err := New(nil, nil, db)
 		require.NoError(t, err)
 		s.localChecksFile = testChecksFile
