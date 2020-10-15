@@ -144,14 +144,14 @@ func TestListSecurityChecks(t *testing.T) {
 	})
 }
 
-func TestToggleSecurityChecks(t *testing.T) {
+func TestUpdateSecurityChecks(t *testing.T) {
 	t.Run("enable security checks error", func(t *testing.T) {
 		var checksService mockChecksService
 		checksService.On("EnableChecks", mock.Anything).Return(errors.New("random error"))
 
 		s := NewChecksAPIService(&checksService)
 
-		resp, err := s.ToggleSecurityChecks(&managementpb.ToggleSecurityChecksRequest{})
+		resp, err := s.UpdateSecurityChecks(&managementpb.UpdateSecurityChecksRequest{})
 		tests.AssertGRPCError(t, status.New(codes.Internal, "Failed to enable disabled security checks."), err)
 		assert.Nil(t, resp)
 	})
@@ -163,7 +163,7 @@ func TestToggleSecurityChecks(t *testing.T) {
 
 		s := NewChecksAPIService(&checksService)
 
-		resp, err := s.ToggleSecurityChecks(&managementpb.ToggleSecurityChecksRequest{})
+		resp, err := s.UpdateSecurityChecks(&managementpb.UpdateSecurityChecksRequest{})
 		tests.AssertGRPCError(t, status.New(codes.Internal, "Failed to disable security checks."), err)
 		assert.Nil(t, resp)
 	})
