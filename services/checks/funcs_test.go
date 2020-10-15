@@ -188,6 +188,25 @@ def check_context(rows, context):
 			}},
 		},
 		{
+			name: "valid ipv6 argument",
+			script: strings.TrimSpace(`
+def check_context(rows, context):
+    func = context.get("ip_is_private", fail)
+
+    return [{
+        "summary": "IP Address Check",
+		"severity": "warning",
+		"description": "is_private: {}".format(func("0:0:0:0:0:0:0:1"))
+    }]
+	`),
+			err: "",
+			result: []check.Result{{
+				Summary:     "IP Address Check",
+				Severity:    check.Warning,
+				Description: "is_private: True",
+			}},
+		},
+		{
 			name: "public ip address",
 			script: strings.TrimSpace(`
 def check_context(rows, context):
