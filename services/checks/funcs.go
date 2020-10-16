@@ -149,7 +149,10 @@ func init() {
 	}
 
 	for _, b := range privateAddressBlocks {
-		_, network, _ := net.ParseCIDR(b)
+		_, network, err := net.ParseCIDR(b)
+		if err != nil {
+			panic(err)
+		}
 		privateNetworks = append(privateNetworks, network)
 	}
 }
