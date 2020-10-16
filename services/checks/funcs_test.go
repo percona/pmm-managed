@@ -252,7 +252,7 @@ def check_context(rows, context):
     return [{
         "summary": "IP Address Check",
 		"severity": "warning",
-		"description": "is_private: {}".format(ip_is_private("224.0.0.0/4"))
+		"description": "is_private: {}".format(ip_is_private("192.88.99.0/24"))
     }]
 	`),
 			err: "",
