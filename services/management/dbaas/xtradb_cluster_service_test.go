@@ -19,6 +19,7 @@ package dbaas
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -190,6 +191,23 @@ func TestXtraDBClusterService(t *testing.T) {
 
 		_, err := s.CreateXtraDBCluster(ctx, &in)
 		assert.NoError(t, err)
+	})
+
+	t.Run("BasicShowXtraDBCluster", func(t *testing.T) {
+		name := "third-pxc-test"
+		s := NewXtraDBClusterService(db, dbaasClient)
+		in := dbaasv1beta1.ShowXtraDBClusterRequest{
+			KubernetesClusterName: kubernetesClusterNameTest,
+			Name:                  name,
+		}
+
+		actual, err := s.ShowXtraDBCluster(ctx, &in)
+		assert.NoError(t, err)
+		assert.Equal(t, actual.Name, name)
+		assert.Equal(t, actual.Username, "root")
+		assert.Equal(t, actual.Password, "root_password")
+		assert.Equal(t, actual.Host, fmt.Sprintf("%s-proxysql", name))
+		assert.Equal(t, actual.Port, int32(3306))
 	})
 
 	//nolint:dupl
