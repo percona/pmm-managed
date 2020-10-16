@@ -17,9 +17,11 @@
 package prometheus
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"io/ioutil"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -35,6 +37,39 @@ import (
 
 const configPath = "../../testdata/prometheus/prometheus.yml"
 
+// RoundTripFunc.
+type RoundTripFunc func(req *http.Request) *http.Response
+
+// RoundTrip.
+func (f RoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req), nil
+}
+
+// testClient returns *http.Client with mocked transport
+func testClient() *http.Client {
+	rt := func(req *http.Request) *http.Response {
+		switch req.URL.Path {
+		case "/prometheus/-/reload":
+			return &http.Response{
+				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(`ok`))),
+				StatusCode: http.StatusOK,
+			}
+		case "/prometheus/version":
+			return &http.Response{
+				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(`ok`))),
+				StatusCode: http.StatusOK,
+			}
+		}
+		return &http.Response{
+			Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(`Not Found`))),
+			StatusCode: http.StatusNotFound,
+		}
+	}
+	return &http.Client{
+		Transport: RoundTripFunc(rt),
+	}
+}
+
 func setup(t *testing.T) (*reform.DB, *Service, []byte) {
 	t.Helper()
 
@@ -43,6 +78,7 @@ func setup(t *testing.T) (*reform.DB, *Service, []byte) {
 
 	svc, err := NewService(NewAlertingRules(), configPath, db, "http://127.0.0.1:9090/prometheus/", false)
 	require.NoError(t, err)
+	svc.client = testClient()
 
 	original, err := ioutil.ReadFile(configPath)
 	require.NoError(t, err)
