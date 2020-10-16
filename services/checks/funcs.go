@@ -95,8 +95,8 @@ func GetAdditionalContext() map[string]starlark.GoFunc {
 	}
 }
 
-// ipIsPrivate accepts a single string argument (IP address) and
-// returns true for a private address, otherwise false.
+// ipIsPrivate accepts a single string argument (IP address or a network) and
+// returns true for a private address, otherwise false. In case of an invalid argument nil.
 func ipIsPrivate(args ...interface{}) (interface{}, error) {
 	log := logrus.WithField("component", "checks")
 
