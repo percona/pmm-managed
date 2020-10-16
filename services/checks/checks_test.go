@@ -256,6 +256,7 @@ func TestVerifySignatures(t *testing.T) {
 
 	t.Run("normal", func(t *testing.T) {
 		t.Parallel()
+
 		s, err := New(nil, nil, nil)
 		require.NoError(t, err)
 		s.host = devChecksHost
@@ -493,6 +494,7 @@ func TestFindTargets(t *testing.T) {
 
 			t.Run(test.name, func(t *testing.T) {
 				t.Parallel()
+
 				targets, err := s.findTargets(models.MySQLServiceType, test.minRequiredVersion)
 				require.NoError(t, err)
 				assert.Len(t, targets, test.count)
