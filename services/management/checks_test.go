@@ -151,7 +151,7 @@ func TestUpdateSecurityChecks(t *testing.T) {
 
 		s := NewChecksAPIService(&checksService)
 
-		resp, err := s.ChangeSecurityChecks(&managementpb.ChangeSecurityChecksRequest{})
+		resp, err := s.ChangeSecurityCheck(&managementpb.ChangeSecurityCheckRequest{})
 		tests.AssertGRPCError(t, status.New(codes.Internal, "Failed to enable disabled security checks."), err)
 		assert.Nil(t, resp)
 	})
@@ -163,7 +163,7 @@ func TestUpdateSecurityChecks(t *testing.T) {
 
 		s := NewChecksAPIService(&checksService)
 
-		resp, err := s.ChangeSecurityChecks(&managementpb.ChangeSecurityChecksRequest{})
+		resp, err := s.ChangeSecurityCheck(&managementpb.ChangeSecurityCheckRequest{})
 		tests.AssertGRPCError(t, status.New(codes.Internal, "Failed to disable security checks."), err)
 		assert.Nil(t, resp)
 	})

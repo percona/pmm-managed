@@ -104,8 +104,8 @@ func (s *ChecksAPIService) ListSecurityChecks() (*managementpb.ListSecurityCheck
 	return &managementpb.ListSecurityChecksResponse{Checks: res}, nil
 }
 
-// ChangeSecurityChecks allows to change STT checks state.
-func (s *ChecksAPIService) ChangeSecurityChecks(req *managementpb.ChangeSecurityChecksRequest) (*managementpb.ChangeSecurityChecksResponse, error) {
+// ChangeSecurityCheck allows to change STT checks state.
+func (s *ChecksAPIService) ChangeSecurityCheck(req *managementpb.ChangeSecurityCheckRequest) (*managementpb.ChangeSecurityCheckResponse, error) {
 	var enableChecks, disableChecks []string
 	for _, check := range req.Params {
 		if check.Enable && check.Disable {
@@ -134,5 +134,5 @@ func (s *ChecksAPIService) ChangeSecurityChecks(req *managementpb.ChangeSecurity
 		return nil, status.Errorf(codes.Internal, "Failed to disable security checks.")
 	}
 
-	return &managementpb.ChangeSecurityChecksResponse{}, nil
+	return &managementpb.ChangeSecurityCheckResponse{}, nil
 }

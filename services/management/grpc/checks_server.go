@@ -48,7 +48,7 @@ func (s *checksServer) ListSecurityChecks(ctx context.Context, req *managementpb
 	return s.svc.ListSecurityChecks()
 }
 
-// ChangeSecurityChecks allows to change STT checks state.
-func (s *checksServer) ChangeSecurityChecks(ctx context.Context, req *managementpb.ChangeSecurityChecksRequest) (*managementpb.ChangeSecurityChecksResponse, error) {
-	return s.svc.ChangeSecurityChecks(req)
+// ChangeSecurityCheck allows to change STT checks state.
+func (s *checksServer) ChangeSecurityCheck(ctx context.Context, req *managementpb.ChangeSecurityCheckRequest) (*managementpb.ChangeSecurityCheckResponse, error) {
+	return s.svc.ChangeSecurityCheck(req)
 }
