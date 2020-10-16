@@ -41,7 +41,7 @@ func TestStartSecurityChecks(t *testing.T) {
 		s := NewChecksAPIService(&checksService)
 
 		resp, err := s.StartSecurityChecks(context.Background())
-		tests.AssertGRPCError(t, status.New(codes.Internal, "Failed to start security checks."), err)
+		assert.EqualError(t, err, "failed to start security checks: random error")
 		assert.Nil(t, resp)
 	})
 
@@ -65,7 +65,7 @@ func TestGetSecurityCheckResults(t *testing.T) {
 		s := NewChecksAPIService(&checksService)
 
 		resp, err := s.GetSecurityCheckResults()
-		tests.AssertGRPCError(t, status.New(codes.Internal, "Failed to get security check results."), err)
+		assert.EqualError(t, err, "failed to get security check results: random error")
 		assert.Nil(t, resp)
 	})
 
@@ -139,7 +139,7 @@ func TestListSecurityChecks(t *testing.T) {
 		s := NewChecksAPIService(&checksService)
 
 		resp, err := s.ListSecurityChecks()
-		tests.AssertGRPCError(t, status.New(codes.Internal, "Failed to get disabled checks list."), err)
+		assert.EqualError(t, err, "failed to get disabled checks list: random error")
 		assert.Nil(t, resp)
 	})
 }
@@ -152,7 +152,7 @@ func TestUpdateSecurityChecks(t *testing.T) {
 		s := NewChecksAPIService(&checksService)
 
 		resp, err := s.ChangeSecurityCheck(&managementpb.ChangeSecurityCheckRequest{})
-		tests.AssertGRPCError(t, status.New(codes.Internal, "Failed to enable disabled security checks."), err)
+		assert.EqualError(t, err, "failed to enable disabled security checks: random error")
 		assert.Nil(t, resp)
 	})
 
@@ -164,7 +164,7 @@ func TestUpdateSecurityChecks(t *testing.T) {
 		s := NewChecksAPIService(&checksService)
 
 		resp, err := s.ChangeSecurityCheck(&managementpb.ChangeSecurityCheckRequest{})
-		tests.AssertGRPCError(t, status.New(codes.Internal, "Failed to disable security checks."), err)
+		assert.EqualError(t, err, "failed to disable security checks: random error")
 		assert.Nil(t, resp)
 	})
 }
