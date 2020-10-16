@@ -115,6 +115,7 @@ func ipIsPrivate(args ...interface{}) (interface{}, error) {
 		}
 		for _, network := range privateNetworks {
 			// check if the two networks intersect
+			// https://stackoverflow.com/questions/34729158/how-to-detect-if-two-golang-net-ipnet-objects-intersect/34729915#34729915
 			if net.Contains(network.IP) || network.Contains(net.IP) {
 				return true, nil
 			}
