@@ -151,6 +151,8 @@ func init() {
 
 		"fc00::/7",
 		"fe80::/10",
+		"ffx1::/16", // multi-cast interface-local
+		"ffx2::/16", // multi-cast link-local
 		"::1/128",
 	}
 
