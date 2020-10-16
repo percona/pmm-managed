@@ -134,26 +134,17 @@ func ipIsPrivate(args ...interface{}) (interface{}, error) {
 func init() {
 	// full list of reserved network addresses https://en.wikipedia.org/wiki/Reserved_IP_addresses
 	privateAddressBlocks := []string{
-		// private blocks, see https://tools.ietf.org/html/rfc1918
 		"10.0.0.0/8",
 		"172.16.0.0/12",
 		"192.168.0.0/16",
-		// shared address space range, see https://tools.ietf.org/html/rfc6598#section-7
 		"100.64.0.0/10",
-		// IETF protocol assignments range, see https://tools.ietf.org/html/rfc5735#section-4
 		"192.0.0.0/24",
-		// see https://tools.ietf.org/html/rfc5735#section-4
 		"198.18.0.0/15",
-		// link-local block, see https://tools.ietf.org/html/rfc3927
 		"169.254.0.0/16",
-		// loop-back block, see https://tools.ietf.org/html/rfc5735
 		"127.0.0.0/8",
 
-		// IPv6 Unique Local Address prefix analogous to IPv4 private networks, see https://tools.ietf.org/html/rfc4193#section-3
 		"fc00::/7",
-		// IPv6 link-local prefix, see https://tools.ietf.org/html/rfc4291#section-2.4
 		"fe80::/10",
-		// IPv6 loop-block prefix, see https://tools.ietf.org/html/rfc4291#section-2.4
 		"::1/128",
 	}
 
