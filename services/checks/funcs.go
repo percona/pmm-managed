@@ -114,7 +114,7 @@ func ipIsPrivate(args ...interface{}) (interface{}, error) {
 		// check if string was in CIDR notation
 		_, net, err := net.ParseCIDR(ip)
 		if err != nil {
-			log.Errorf("invalid ip/network address: %s", ip)
+			log.Errorf("invalid ip/network address: %q", ip)
 			return nil, nil
 		}
 		for _, network := range privateNetworks {
