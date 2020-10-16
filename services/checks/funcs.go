@@ -22,6 +22,7 @@ import (
 	"github.com/percona-platform/saas/pkg/starlark"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 var privateNetworks []*net.IPNet
@@ -97,6 +98,8 @@ func GetAdditionalContext() map[string]starlark.GoFunc {
 // ipIsPrivate accepts a single string argument (IP address) and
 // returns true for a private address, otherwise false.
 func ipIsPrivate(args ...interface{}) (interface{}, error) {
+	log := logrus.WithField("component", "checks")
+
 	if l := len(args); l != 1 {
 		return nil, errors.Errorf("expected 1 argument, got %d", l)
 	}
@@ -111,7 +114,8 @@ func ipIsPrivate(args ...interface{}) (interface{}, error) {
 		// check if string was in CIDR notation
 		_, net, err := net.ParseCIDR(ip)
 		if err != nil {
-			return nil, errors.Errorf("invalid ip address: %s", ip)
+			log.Errorf("invalid ip/network address: %s", ip)
+			return nil, nil
 		}
 		for _, network := range privateNetworks {
 			// check if the two networks intersect
