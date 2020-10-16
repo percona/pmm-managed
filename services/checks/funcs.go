@@ -18,7 +18,6 @@ package checks
 
 import (
 	"net"
-	"reflect"
 
 	"github.com/percona-platform/saas/pkg/starlark"
 	"github.com/percona/pmm/version"
@@ -115,7 +114,8 @@ func ipIsPrivate(args ...interface{}) (interface{}, error) {
 			return nil, errors.Errorf("invalid ip address: %s", ip)
 		}
 		for _, network := range privateNetworks {
-			if reflect.DeepEqual(net, network) {
+			// check if the two networks intersect
+			if net.Contains(network.IP) || network.Contains(net.IP) {
 				return true, nil
 			}
 		}

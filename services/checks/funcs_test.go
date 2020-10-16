@@ -234,7 +234,7 @@ def check_context(rows, context):
     return [{
         "summary": "IP Address Check",
 		"severity": "warning",
-		"description": "is_private: {}".format(ip_is_private("172.16.0.0/12"))
+		"description": "is_private: {}".format(ip_is_private("10.0.0.0/9"))
     }]
 	`),
 			err: "",
