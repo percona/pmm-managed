@@ -42,21 +42,7 @@ func NewChecksAPIService(checksService checksService) *ChecksAPIService {
 	}
 }
 
-// StartSecurityChecks starts STT checks execution.
-func (s *ChecksAPIService) StartSecurityChecks(ctx context.Context) (*managementpb.StartSecurityChecksResponse, error) {
-	err := s.checksService.StartChecks(ctx)
-	if err != nil {
-		if err == services.ErrSTTDisabled {
-			return nil, status.Errorf(codes.FailedPrecondition, "%v.", err)
-		}
-
-		return nil, errors.Wrap(err, "failed to start security checks")
-	}
-
-	return &managementpb.StartSecurityChecksResponse{}, nil
-}
-
-// GetSecurityCheckResults returns the results of the STT checks that were run.
+// GetSecurityCheckResults returns Security Thread Tool's latest checks results.
 func (s *ChecksAPIService) GetSecurityCheckResults() (*managementpb.GetSecurityCheckResultsResponse, error) {
 	results, err := s.checksService.GetSecurityCheckResults()
 	if err != nil {
@@ -80,7 +66,21 @@ func (s *ChecksAPIService) GetSecurityCheckResults() (*managementpb.GetSecurityC
 	return &managementpb.GetSecurityCheckResultsResponse{Results: checkResults}, nil
 }
 
-// ListSecurityChecks returns all available STT checks.
+// StartSecurityChecks executes Security Thread Tool checks and returns when all checks are executed.
+func (s *ChecksAPIService) StartSecurityChecks(ctx context.Context) (*managementpb.StartSecurityChecksResponse, error) {
+	err := s.checksService.StartChecks(ctx)
+	if err != nil {
+		if err == services.ErrSTTDisabled {
+			return nil, status.Errorf(codes.FailedPrecondition, "%v.", err)
+		}
+
+		return nil, errors.Wrap(err, "failed to start security checks")
+	}
+
+	return &managementpb.StartSecurityChecksResponse{}, nil
+}
+
+// ListSecurityChecks returns a list of available Security Thread Tool checks and their statuses.
 func (s *ChecksAPIService) ListSecurityChecks() (*managementpb.ListSecurityChecksResponse, error) {
 	disChecks, err := s.checksService.GetDisabledChecks()
 	if err != nil {
@@ -102,8 +102,8 @@ func (s *ChecksAPIService) ListSecurityChecks() (*managementpb.ListSecurityCheck
 	return &managementpb.ListSecurityChecksResponse{Checks: res}, nil
 }
 
-// ChangeSecurityCheck allows to change STT checks state.
-func (s *ChecksAPIService) ChangeSecurityCheck(req *managementpb.ChangeSecurityCheckRequest) (*managementpb.ChangeSecurityCheckResponse, error) {
+// ChangeSecurityChecks enables/disables Security Thread Tool checks by names.
+func (s *ChecksAPIService) ChangeSecurityChecks(req *managementpb.ChangeSecurityChecksRequest) (*managementpb.ChangeSecurityChecksResponse, error) {
 	var enableChecks, disableChecks []string
 	for _, check := range req.Params {
 		if check.Enable && check.Disable {
@@ -129,5 +129,5 @@ func (s *ChecksAPIService) ChangeSecurityCheck(req *managementpb.ChangeSecurityC
 		return nil, errors.Wrap(err, "failed to disable security checks")
 	}
 
-	return &managementpb.ChangeSecurityCheckResponse{}, nil
+	return &managementpb.ChangeSecurityChecksResponse{}, nil
 }

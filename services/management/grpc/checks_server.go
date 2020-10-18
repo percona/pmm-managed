@@ -33,14 +33,14 @@ func NewChecksServer(s *management.ChecksAPIService) managementpb.SecurityChecks
 	return &checksServer{svc: s}
 }
 
-// StartSecurityChecks starts STT checks execution.
-func (s *checksServer) StartSecurityChecks(ctx context.Context, request *managementpb.StartSecurityChecksRequest) (*managementpb.StartSecurityChecksResponse, error) {
-	return s.svc.StartSecurityChecks(ctx)
-}
-
 //  GetSecurityCheckResults returns the results of the STT checks that were run.
 func (s *checksServer) GetSecurityCheckResults(ctx context.Context, request *managementpb.GetSecurityCheckResultsRequest) (*managementpb.GetSecurityCheckResultsResponse, error) {
 	return s.svc.GetSecurityCheckResults()
+}
+
+// StartSecurityChecks starts STT checks execution.
+func (s *checksServer) StartSecurityChecks(ctx context.Context, request *managementpb.StartSecurityChecksRequest) (*managementpb.StartSecurityChecksResponse, error) {
+	return s.svc.StartSecurityChecks(ctx)
 }
 
 // ListSecurityChecks returns all available STT checks.
@@ -49,6 +49,6 @@ func (s *checksServer) ListSecurityChecks(ctx context.Context, req *managementpb
 }
 
 // ChangeSecurityCheck allows to change STT checks state.
-func (s *checksServer) ChangeSecurityCheck(ctx context.Context, req *managementpb.ChangeSecurityCheckRequest) (*managementpb.ChangeSecurityCheckResponse, error) {
-	return s.svc.ChangeSecurityCheck(req)
+func (s *checksServer) ChangeSecurityChecks(ctx context.Context, req *managementpb.ChangeSecurityChecksRequest) (*managementpb.ChangeSecurityChecksResponse, error) {
+	return s.svc.ChangeSecurityChecks(req)
 }

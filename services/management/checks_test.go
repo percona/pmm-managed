@@ -151,7 +151,7 @@ func TestUpdateSecurityChecks(t *testing.T) {
 
 		s := NewChecksAPIService(&checksService)
 
-		resp, err := s.ChangeSecurityCheck(&managementpb.ChangeSecurityCheckRequest{})
+		resp, err := s.ChangeSecurityChecks(&managementpb.ChangeSecurityChecksRequest{})
 		assert.EqualError(t, err, "failed to enable disabled security checks: random error")
 		assert.Nil(t, resp)
 	})
@@ -163,7 +163,7 @@ func TestUpdateSecurityChecks(t *testing.T) {
 
 		s := NewChecksAPIService(&checksService)
 
-		resp, err := s.ChangeSecurityCheck(&managementpb.ChangeSecurityCheckRequest{})
+		resp, err := s.ChangeSecurityChecks(&managementpb.ChangeSecurityChecksRequest{})
 		assert.EqualError(t, err, "failed to disable security checks: random error")
 		assert.Nil(t, resp)
 	})
