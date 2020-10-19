@@ -101,7 +101,7 @@ func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
 
 	mux.HandleFunc("/logs.zip", func(rw http.ResponseWriter, req *http.Request) {
 		// fail-safe
-		ctx, cancel := context.WithTimeout(req.Context(), 300*time.Second)
+		ctx, cancel := context.WithTimeout(req.Context(), 10*time.Second)
 		defer cancel()
 
 		filename := fmt.Sprintf("pmm-server_%s.zip", time.Now().UTC().Format("2006-01-02_15-04"))
