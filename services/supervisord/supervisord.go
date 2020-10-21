@@ -562,7 +562,15 @@ redirect_stderr = true
 command = /bin/echo Prometheus is substituted by VictoriaMetrics
 user = pmm
 autorestart = false
-autostart = false
+autostart = true
+startretries = 10
+startsecs = 1
+stopsignal = TERM
+stopwaitsecs = 300
+stdout_logfile = /srv/logs/prometheus.log
+stdout_logfile_maxbytes = 10MB
+stdout_logfile_backups = 3
+redirect_stderr = true
 {{end}}
 
 {{define "victoriametrics"}}
