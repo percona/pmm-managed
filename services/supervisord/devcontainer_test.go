@@ -18,6 +18,7 @@ package supervisord
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -107,61 +108,59 @@ func TestDevContainer(t *testing.T) {
 		assert.WithinDuration(t, resT2, resT3, 10*time.Second)
 	})
 
-	testUpdateConfiguration := func(isVictoriaMetricsEnabled bool) {
-		// logrus.SetLevel(logrus.DebugLevel)
-		checker := NewPMMUpdateChecker(logrus.WithField("test", t.Name()))
-		vmParams := &models.VictoriaMetricsParams{Enabled: isVictoriaMetricsEnabled}
+	for _, testCase := range []struct {
+		enabled bool
+	}{
+		{true},
+		{false},
+	} {
+		name := fmt.Sprintf("UpdateConfiguration/%s:%v", "victoriametrics", testCase.enabled)
+		t.Run(name, func(t *testing.T) {
+			// logrus.SetLevel(logrus.DebugLevel)
+			checker := NewPMMUpdateChecker(logrus.WithField("test", t.Name()))
+			vmParams := &models.VictoriaMetricsParams{Enabled: testCase.enabled}
 
-		s := New("/etc/supervisord.d", checker, vmParams)
-		require.NotEmpty(t, s.supervisorctlPath)
+			s := New("/etc/supervisord.d", checker, vmParams)
+			require.NotEmpty(t, s.supervisorctlPath)
 
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		go s.Run(ctx)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			go s.Run(ctx)
 
-		// restore original files after test
-		originals := make(map[string][]byte)
-		matches, err := filepath.Glob("/etc/supervisord.d/*.ini")
-		require.NoError(t, err)
-		for _, m := range matches {
-			b, err := ioutil.ReadFile(m) //nolint:gosec
+			// restore original files after test
+			originals := make(map[string][]byte)
+			matches, err := filepath.Glob("/etc/supervisord.d/*.ini")
 			require.NoError(t, err)
-			originals[m] = b
-		}
-		defer func() {
-			for name, b := range originals {
-				err = ioutil.WriteFile(name, b, 0)
-				assert.NoError(t, err)
+			for _, m := range matches {
+				b, err := ioutil.ReadFile(m) //nolint:gosec
+				require.NoError(t, err)
+				originals[m] = b
 			}
-			// force update supervisor config
-			_, err := s.supervisorctl("update")
-			assert.NoError(t, err)
-		}()
+			defer func() {
+				for name, b := range originals {
+					err = ioutil.WriteFile(name, b, 0)
+					assert.NoError(t, err)
+				}
+			}()
 
-		settings := &models.Settings{
-			DataRetention: 24 * time.Hour,
-		}
+			settings := &models.Settings{
+				DataRetention: 24 * time.Hour,
+			}
 
-		b, err := s.marshalConfig(templates.Lookup("prometheus"), settings)
-		require.NoError(t, err)
-		changed, err := s.saveConfigAndReload("prometheus", b)
-		require.NoError(t, err)
-		assert.True(t, changed)
-		changed, err = s.saveConfigAndReload("prometheus", b)
-		require.NoError(t, err)
-		assert.False(t, changed)
+			b, err := s.marshalConfig(templates.Lookup("prometheus"), settings)
+			require.NoError(t, err)
+			changed, err := s.saveConfigAndReload("prometheus", b)
+			require.NoError(t, err)
+			assert.True(t, changed)
+			changed, err = s.saveConfigAndReload("prometheus", b)
+			require.NoError(t, err)
+			assert.False(t, changed)
 
-		err = s.UpdateConfiguration(settings)
-		require.NoError(t, err)
+			err = s.UpdateConfiguration(settings)
+			require.NoError(t, err)
+		})
+
 	}
-	t.Run("UpdateConfiguration", func(t *testing.T) {
-		t.Run("victoriametrics-enabled", func(t *testing.T) {
-			testUpdateConfiguration(true)
-		})
-		t.Run("victoriametrics-disabled", func(t *testing.T) {
-			testUpdateConfiguration(false)
-		})
-	})
 
 	t.Run("Update", func(t *testing.T) {
 		// This test can be run only once as it breaks assumptions of other tests.

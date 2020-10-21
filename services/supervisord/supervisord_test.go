@@ -17,6 +17,7 @@
 package supervisord
 
 import (
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
@@ -34,42 +35,43 @@ import (
 func TestConfig(t *testing.T) {
 	t.Parallel()
 
-	t.Run("victoriametrics-enabled", func(t *testing.T) {
-		testConfig(t, true)
-	})
-	t.Run("victoriametrics-disabled", func(t *testing.T) {
-		testConfig(t, false)
-	})
-}
+	for _, testCase := range []struct {
+		enabled bool
+	}{
+		{true},
+		{false},
+	} {
+		name := fmt.Sprintf("TestConfig/victoriametrics:%v", testCase.enabled)
+		t.Run(name, func(t *testing.T) {
+			pmmUpdateCheck := NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker_logs"))
+			vmSubdir := "victoriametrics-disabled"
+			if testCase.enabled {
+				vmSubdir = "victoriametrics-enabled"
+			}
+			configDir := filepath.Join("..", "..", "testdata", "supervisord.d", vmSubdir)
+			vmParams := &models.VictoriaMetricsParams{Enabled: testCase.enabled}
+			s := New(configDir, pmmUpdateCheck, vmParams)
+			settings := &models.Settings{
+				DataRetention:   30 * 24 * time.Hour,
+				AlertManagerURL: "https://external-user:passw!,ord@external-alertmanager:6443/alerts",
+			}
+			settings.VictoriaMetrics.CacheEnabled = false
 
-func testConfig(t *testing.T, isVictoriaMetricsEnabled bool) {
-	pmmUpdateCheck := NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker_logs"))
-	vmSubdir := "victoriametrics-disabled"
-	if isVictoriaMetricsEnabled {
-		vmSubdir = "victoriametrics-enabled"
-	}
-	configDir := filepath.Join("..", "..", "testdata", "supervisord.d", vmSubdir)
-	vmParams := &models.VictoriaMetricsParams{Enabled: isVictoriaMetricsEnabled}
-	s := New(configDir, pmmUpdateCheck, vmParams)
-	settings := &models.Settings{
-		DataRetention:   30 * 24 * time.Hour,
-		AlertManagerURL: "https://external-user:passw!,ord@external-alertmanager:6443/alerts",
-	}
-	settings.VictoriaMetrics.CacheEnabled = false
+			for _, tmpl := range templates.Templates() {
+				n := tmpl.Name()
+				if n == "" || n == "dbaas-controller" {
+					continue
+				}
 
-	for _, tmpl := range templates.Templates() {
-		n := tmpl.Name()
-		if n == "" || n == "dbaas-controller" {
-			continue
-		}
-
-		tmpl := tmpl
-		t.Run(tmpl.Name(), func(t *testing.T) {
-			expected, err := ioutil.ReadFile(filepath.Join(configDir, tmpl.Name()+".ini")) //nolint:gosec
-			require.NoError(t, err)
-			actual, err := s.marshalConfig(tmpl, settings)
-			require.NoError(t, err)
-			assert.Equal(t, string(expected), string(actual))
+				tmpl := tmpl
+				t.Run(tmpl.Name(), func(t *testing.T) {
+					expected, err := ioutil.ReadFile(filepath.Join(configDir, tmpl.Name()+".ini")) //nolint:gosec
+					require.NoError(t, err)
+					actual, err := s.marshalConfig(tmpl, settings)
+					require.NoError(t, err)
+					assert.Equal(t, string(expected), string(actual))
+				})
+			}
 		})
 	}
 }

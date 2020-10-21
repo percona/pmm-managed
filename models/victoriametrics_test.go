@@ -35,6 +35,6 @@ func TestVictoriaMetricsParams(t *testing.T) {
 	})
 	t.Run("check error for remote_write", func(t *testing.T) {
 		_, err := NewVictoriaMetricsParams("../testdata/victoriametrics/prometheus.external.remotewrite.yml")
-		require.Error(t, err)
+		require.EqualError(t, err, "cannot update VMAlertFlags config param: remote_write configs aren't supported yet")
 	})
 }
