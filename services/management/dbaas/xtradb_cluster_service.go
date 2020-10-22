@@ -134,18 +134,26 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 		Params: &dbaascontrollerv1beta1.XtraDBClusterParams{
 			ClusterSize: req.Params.ClusterSize,
 			Pxc: &dbaascontrollerv1beta1.XtraDBClusterParams_PXC{
-				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
-					CpuM:        req.Params.Pxc.ComputeResources.CpuM,
-					MemoryBytes: req.Params.Pxc.ComputeResources.MemoryBytes,
-				},
+				ComputeResources: new(dbaascontrollerv1beta1.ComputeResources),
 			},
 			Proxysql: &dbaascontrollerv1beta1.XtraDBClusterParams_ProxySQL{
-				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
-					CpuM:        req.Params.Proxysql.ComputeResources.CpuM,
-					MemoryBytes: req.Params.Proxysql.ComputeResources.MemoryBytes,
-				},
+				ComputeResources: new(dbaascontrollerv1beta1.ComputeResources),
 			},
 		},
+	}
+
+	if req.Params.Pxc.ComputeResources != nil {
+		in.Params.Pxc.ComputeResources = &dbaascontrollerv1beta1.ComputeResources{
+			CpuM:        req.Params.Pxc.ComputeResources.CpuM,
+			MemoryBytes: req.Params.Pxc.ComputeResources.MemoryBytes,
+		}
+	}
+
+	if req.Params.Proxysql.ComputeResources != nil {
+		in.Params.Proxysql.ComputeResources = &dbaascontrollerv1beta1.ComputeResources{
+			CpuM:        req.Params.Proxysql.ComputeResources.CpuM,
+			MemoryBytes: req.Params.Proxysql.ComputeResources.MemoryBytes,
+		}
 	}
 
 	_, err = s.controllerClient.CreateXtraDBCluster(ctx, &in)
