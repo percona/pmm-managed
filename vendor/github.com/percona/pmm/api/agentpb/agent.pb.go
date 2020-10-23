@@ -8,6 +8,9 @@ package agentpb
 
 import (
 	context "context"
+	reflect "reflect"
+	sync "sync"
+
 	proto "github.com/golang/protobuf/proto"
 	duration "github.com/golang/protobuf/ptypes/duration"
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
@@ -17,8 +20,6 @@ import (
 	status "google.golang.org/grpc/status"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (
@@ -1032,7 +1033,11 @@ type StartActionRequest_PtSummaryParams struct {
 	PtSummaryParams *StartActionRequest_PTSummaryParams `protobuf:"bytes,10,opt,name=pt_summary_params,json=ptSummaryParams,proto3,oneof"`
 }
 
+<<<<<<< HEAD
 type StartActionRequest_PtMysqlSummaryParams struct {
+=======
+type StartActionRequest_PtMySqlSummaryParams struct {
+>>>>>>> 0b578521 ([PMM-4172] Struct and functions for pt-mysql-summary created)
 	PtMysqlSummaryParams *StartActionRequest_PTMySqlSummaryParams `protobuf:"bytes,11,opt,name=pt_mysql_summary_params,json=ptMysqlSummaryParams,proto3,oneof"`
 }
 

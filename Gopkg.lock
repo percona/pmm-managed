@@ -417,7 +417,11 @@
 
 [[projects]]
   branch = "PMM-4172-pt-mysql-summary"
+<<<<<<< HEAD
   digest = "1:50d2e54842492584c7979eac5ff5f89b2da3fb79e4657646447a21dcd759fa76"
+=======
+  digest = "1:0f6b0606f4db7e3f4aa7c39d4d0e4bcaf83382010ecd2e68db9e16d94116f5a4"
+>>>>>>> 0b578521 ([PMM-4172] Struct and functions for pt-mysql-summary created)
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
