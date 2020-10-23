@@ -36,7 +36,7 @@ import (
 	"github.com/percona/pmm-managed/utils/tests"
 )
 
-const pxcKubeconfigTest = `
+const kubeconfTest = `
 	{
 		"apiVersion": "v1",
 		"kind": "Config",
@@ -69,9 +69,9 @@ const pxcKubeconfigTest = `
 		"current-context": "svcs-acct-context"
 	}
 `
-const pxcKubernetesClusterNameTest = "test-k8s-cluster-name"
+const kubernetesClusterNameTest = "test-k8s-cluster-name"
 
-func TestXtraDBClusterService(t *testing.T) {
+func TestPSMDBClusterService(t *testing.T) {
 	setup := func(t *testing.T) (ctx context.Context, db *reform.DB, dbaasClient *mockDbaasClient, teardown func(t *testing.T)) {
 		t.Helper()
 
@@ -94,172 +94,140 @@ func TestXtraDBClusterService(t *testing.T) {
 	defer teardown(t)
 
 	ks := NewKubernetesServer(db, dbaasClient)
-	dbaasClient.On("CheckKubernetesClusterConnection", ctx, pxcKubeconfigTest).Return(nil)
+	dbaasClient.On("CheckKubernetesClusterConnection", ctx, kubeconfTest).Return(nil)
 
 	registerKubernetesClusterResponse, err := ks.RegisterKubernetesCluster(ctx, &dbaasv1beta1.RegisterKubernetesClusterRequest{
-		KubernetesClusterName: pxcKubernetesClusterNameTest,
-		KubeAuth:              &dbaasv1beta1.KubeAuth{Kubeconfig: pxcKubeconfigTest},
+		KubernetesClusterName: kubernetesClusterNameTest,
+		KubeAuth:              &dbaasv1beta1.KubeAuth{Kubeconfig: kubeconfTest},
 	})
 	require.NoError(t, err)
 	assert.NotNil(t, registerKubernetesClusterResponse)
 
-	t.Run("BasicListXtraDBClusters", func(t *testing.T) {
-		s := NewXtraDBClusterService(db, dbaasClient)
-		mockResp := controllerv1beta1.ListXtraDBClustersResponse{
-			Clusters: []*controllerv1beta1.ListXtraDBClustersResponse_Cluster{
+	t.Run("BasicListPSMDBClusters", func(t *testing.T) {
+		s := NewPSMDBClusterService(db, dbaasClient)
+		mockResp := controllerv1beta1.ListPSMDBClustersResponse{
+			Clusters: []*controllerv1beta1.ListPSMDBClustersResponse_Cluster{
 				{
 					Name: "first.pxc.test.percona.com",
-					Params: &controllerv1beta1.XtraDBClusterParams{
+					Params: &controllerv1beta1.PSMDBClusterParams{
 						ClusterSize: 5,
-						Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
+						Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
 							ComputeResources: &controllerv1beta1.ComputeResources{
 								CpuM:        3,
 								MemoryBytes: 256,
 							},
 						},
-						Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
-							ComputeResources: &controllerv1beta1.ComputeResources{
-								CpuM:        2,
-								MemoryBytes: 124,
-							},
-						},
 					},
 				},
 			},
 		}
 
-		dbaasClient.On("ListXtraDBClusters", ctx, mock.Anything).Return(&mockResp, nil)
+		dbaasClient.On("ListPSMDBClusters", ctx, mock.Anything).Return(&mockResp, nil)
 
-		resp, err := s.ListXtraDBClusters(ctx, &dbaasv1beta1.ListXtraDBClustersRequest{KubernetesClusterName: pxcKubernetesClusterNameTest})
+		resp, err := s.ListPSMDBClusters(ctx, &dbaasv1beta1.ListPSMDBClustersRequest{KubernetesClusterName: kubernetesClusterNameTest})
 		assert.NoError(t, err)
 		require.NotNil(t, resp.Clusters[0])
 		assert.Equal(t, resp.Clusters[0].Name, "first.pxc.test.percona.com")
 		assert.Equal(t, int32(5), resp.Clusters[0].Params.ClusterSize)
-		assert.Equal(t, int32(3), resp.Clusters[0].Params.Pxc.ComputeResources.CpuM)
-		assert.Equal(t, int64(256), resp.Clusters[0].Params.Pxc.ComputeResources.MemoryBytes)
-		assert.Equal(t, int32(2), resp.Clusters[0].Params.Proxysql.ComputeResources.CpuM)
-		assert.Equal(t, int64(124), resp.Clusters[0].Params.Proxysql.ComputeResources.MemoryBytes)
+		assert.Equal(t, int32(3), resp.Clusters[0].Params.Replicaset.ComputeResources.CpuM)
+		assert.Equal(t, int64(256), resp.Clusters[0].Params.Replicaset.ComputeResources.MemoryBytes)
 	})
 
 	//nolint:dupl
-	t.Run("BasicCreateXtraDBClusters", func(t *testing.T) {
-		s := NewXtraDBClusterService(db, dbaasClient)
-		mockReq := controllerv1beta1.CreateXtraDBClusterRequest{
+	t.Run("BasicCreatePSMDBClusters", func(t *testing.T) {
+		s := NewPSMDBClusterService(db, dbaasClient)
+		mockReq := controllerv1beta1.CreatePSMDBClusterRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
-				Kubeconfig: pxcKubeconfigTest,
+				Kubeconfig: kubeconfTest,
 			},
 			Name: "third.pxc.test.percona.com",
-			Params: &controllerv1beta1.XtraDBClusterParams{
+			Params: &controllerv1beta1.PSMDBClusterParams{
 				ClusterSize: 5,
-				Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
+				Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
 					ComputeResources: &controllerv1beta1.ComputeResources{
 						CpuM:        3,
 						MemoryBytes: 256,
 					},
 				},
-				Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
-					ComputeResources: &controllerv1beta1.ComputeResources{
-						CpuM:        2,
-						MemoryBytes: 124,
-					},
-				},
 			},
 		}
 
-		dbaasClient.On("CreateXtraDBCluster", ctx, &mockReq).Return(&controllerv1beta1.CreateXtraDBClusterResponse{}, nil)
+		dbaasClient.On("CreatePSMDBCluster", ctx, &mockReq).Return(&controllerv1beta1.CreatePSMDBClusterResponse{}, nil)
 
-		in := dbaasv1beta1.CreateXtraDBClusterRequest{
-			KubernetesClusterName: pxcKubernetesClusterNameTest,
+		in := dbaasv1beta1.CreatePSMDBClusterRequest{
+			KubernetesClusterName: kubernetesClusterNameTest,
 			Name:                  "third.pxc.test.percona.com",
-			Params: &dbaasv1beta1.XtraDBClusterParams{
+			Params: &dbaasv1beta1.PSMDBClusterParams{
 				ClusterSize: 5,
-				Pxc: &dbaasv1beta1.XtraDBClusterParams_PXC{
+				Replicaset: &dbaasv1beta1.PSMDBClusterParams_ReplicaSet{
 					ComputeResources: &dbaasv1beta1.ComputeResources{
 						CpuM:        3,
 						MemoryBytes: 256,
 					},
 				},
-				Proxysql: &dbaasv1beta1.XtraDBClusterParams_ProxySQL{
-					ComputeResources: &dbaasv1beta1.ComputeResources{
-						CpuM:        2,
-						MemoryBytes: 124,
-					},
-				},
 			},
 		}
 
-		_, err := s.CreateXtraDBCluster(ctx, &in)
+		_, err := s.CreatePSMDBCluster(ctx, &in)
 		assert.NoError(t, err)
 	})
 
 	//nolint:dupl
-	t.Run("BasicUpdateXtraDBCluster", func(t *testing.T) {
-		s := NewXtraDBClusterService(db, dbaasClient)
-		mockReq := controllerv1beta1.UpdateXtraDBClusterRequest{
+	t.Run("BasicUpdatePSMDBCluster", func(t *testing.T) {
+		s := NewPSMDBClusterService(db, dbaasClient)
+		mockReq := controllerv1beta1.UpdatePSMDBClusterRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
-				Kubeconfig: pxcKubeconfigTest,
+				Kubeconfig: kubeconfTest,
 			},
 			Name: "third.pxc.test.percona.com",
-			Params: &controllerv1beta1.XtraDBClusterParams{
+			Params: &controllerv1beta1.PSMDBClusterParams{
 				ClusterSize: 8,
-				Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
+				Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
 					ComputeResources: &controllerv1beta1.ComputeResources{
 						CpuM:        1,
 						MemoryBytes: 256,
 					},
 				},
-				Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
-					ComputeResources: &controllerv1beta1.ComputeResources{
-						CpuM:        1,
-						MemoryBytes: 124,
-					},
-				},
 			},
 		}
 
-		dbaasClient.On("UpdateXtraDBCluster", ctx, &mockReq).Return(&controllerv1beta1.UpdateXtraDBClusterResponse{}, nil)
+		dbaasClient.On("UpdatePSMDBCluster", ctx, &mockReq).Return(&controllerv1beta1.UpdatePSMDBClusterResponse{}, nil)
 
-		in := dbaasv1beta1.UpdateXtraDBClusterRequest{
-			KubernetesClusterName: pxcKubernetesClusterNameTest,
+		in := dbaasv1beta1.UpdatePSMDBClusterRequest{
+			KubernetesClusterName: kubernetesClusterNameTest,
 			Name:                  "third.pxc.test.percona.com",
-			Params: &dbaasv1beta1.XtraDBClusterParams{
+			Params: &dbaasv1beta1.PSMDBClusterParams{
 				ClusterSize: 8,
-				Pxc: &dbaasv1beta1.XtraDBClusterParams_PXC{
+				Replicaset: &dbaasv1beta1.PSMDBClusterParams_ReplicaSet{
 					ComputeResources: &dbaasv1beta1.ComputeResources{
 						CpuM:        1,
 						MemoryBytes: 256,
 					},
 				},
-				Proxysql: &dbaasv1beta1.XtraDBClusterParams_ProxySQL{
-					ComputeResources: &dbaasv1beta1.ComputeResources{
-						CpuM:        1,
-						MemoryBytes: 124,
-					},
-				},
 			},
 		}
 
-		_, err := s.UpdateXtraDBCluster(ctx, &in)
+		_, err := s.UpdatePSMDBCluster(ctx, &in)
 		assert.NoError(t, err)
 	})
 
-	t.Run("BasicDeleteXtraDBCluster", func(t *testing.T) {
-		s := NewXtraDBClusterService(db, dbaasClient)
-		mockReq := controllerv1beta1.DeleteXtraDBClusterRequest{
+	t.Run("BasicDeletePSMDBCluster", func(t *testing.T) {
+		s := NewPSMDBClusterService(db, dbaasClient)
+		mockReq := controllerv1beta1.DeletePSMDBClusterRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
-				Kubeconfig: pxcKubeconfigTest,
+				Kubeconfig: kubeconfTest,
 			},
 			Name: "third.pxc.test.percona.com",
 		}
 
-		dbaasClient.On("DeleteXtraDBCluster", ctx, &mockReq).Return(&controllerv1beta1.DeleteXtraDBClusterResponse{}, nil)
+		dbaasClient.On("DeletePSMDBCluster", ctx, &mockReq).Return(&controllerv1beta1.DeletePSMDBClusterResponse{}, nil)
 
-		in := dbaasv1beta1.DeleteXtraDBClusterRequest{
-			KubernetesClusterName: pxcKubernetesClusterNameTest,
+		in := dbaasv1beta1.DeletePSMDBClusterRequest{
+			KubernetesClusterName: kubernetesClusterNameTest,
 			Name:                  "third.pxc.test.percona.com",
 		}
 
-		_, err := s.DeleteXtraDBCluster(ctx, &in)
+		_, err := s.DeletePSMDBCluster(ctx, &in)
 		assert.NoError(t, err)
 	})
 }
