@@ -403,8 +403,8 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-2.0"
-  digest = "1:48b332ada2c5a5166343ff8b8559625ed2cdb4dab450ca45af46e707290b8dc4"
+  branch = "PMM-4172-pt-mysql-summary"
+  digest = "1:0f6b0606f4db7e3f4aa7c39d4d0e4bcaf83382010ecd2e68db9e16d94116f5a4"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -426,7 +426,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "f5c1d82911cf644f63bcc9b2ef720791c3db0025"
+  revision = "e4de63522ef918d00682dd8a7f911fcb95341daf"
 
 [[projects]]
   digest = "1:dbee7dc52291bb149388085eeb20561d4cb3c2044e0fa6ffa8d342c6b305f4bf"
