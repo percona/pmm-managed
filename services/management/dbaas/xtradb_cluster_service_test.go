@@ -193,7 +193,7 @@ func TestXtraDBClusterService(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("BasicShowXtraDBCluster", func(t *testing.T) {
+	t.Run("BasicGetXtraDBCluster", func(t *testing.T) {
 		name := "third-pxc-test"
 		s := NewXtraDBClusterService(db, dbaasClient)
 		in := dbaasv1beta1.ShowXtraDBClusterRequest{
@@ -201,13 +201,12 @@ func TestXtraDBClusterService(t *testing.T) {
 			Name:                  name,
 		}
 
-		actual, err := s.ShowXtraDBCluster(ctx, &in)
+		actual, err := s.GetXtraDBCluster(ctx, &in)
 		assert.NoError(t, err)
-		assert.Equal(t, actual.Name, name)
-		assert.Equal(t, actual.Username, "root")
-		assert.Equal(t, actual.Password, "root_password")
-		assert.Equal(t, actual.Host, fmt.Sprintf("%s-proxysql", name))
-		assert.Equal(t, actual.Port, int32(3306))
+		assert.Equal(t, actual.ConnectionCredentials.Username, "root")
+		assert.Equal(t, actual.ConnectionCredentials.Password, "root_password")
+		assert.Equal(t, actual.ConnectionCredentials.Host, fmt.Sprintf("%s-proxysql", name))
+		assert.Equal(t, actual.ConnectionCredentials.Port, int32(3306))
 	})
 
 	//nolint:dupl

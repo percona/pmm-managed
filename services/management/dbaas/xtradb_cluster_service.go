@@ -94,8 +94,8 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 	return &dbaasv1beta1.ListXtraDBClustersResponse{Clusters: clusters}, nil
 }
 
-// ShowXtraDBCluster returns a XtraDB cluster.
-func (s XtraDBClusterService) ShowXtraDBCluster(ctx context.Context, req *dbaasv1beta1.ShowXtraDBClusterRequest) (*dbaasv1beta1.ShowXtraDBClusterResponse, error) {
+// GetXtraDBCluster returns a XtraDB cluster.
+func (s XtraDBClusterService) GetXtraDBCluster(ctx context.Context, req *dbaasv1beta1.ShowXtraDBClusterRequest) (*dbaasv1beta1.GetXtraDBClusterResponse, error) {
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
 	if err != nil {
 		return nil, err
@@ -107,12 +107,13 @@ func (s XtraDBClusterService) ShowXtraDBCluster(ctx context.Context, req *dbaasv
 	// 2. Get root password:
 	//   - Ex.: kubectl get secret my-cluster-secrets -o json  | jq -r ".data.root" | base64 -d
 	_ = kubernetesCluster
-	resp := dbaasv1beta1.ShowXtraDBClusterResponse{
-		Name:     req.Name,
-		Username: "root",
-		Password: "root_password",
-		Host:     fmt.Sprintf("%s-proxysql", req.Name),
-		Port:     3306,
+	resp := dbaasv1beta1.GetXtraDBClusterResponse{
+		ConnectionCredentials: &dbaasv1beta1.XtraDBClusterConnectionCredentials{
+			Username: "root",
+			Password: "root_password",
+			Host:     fmt.Sprintf("%s-proxysql", req.Name),
+			Port:     3306,
+		},
 	}
 
 	return &resp, nil
