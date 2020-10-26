@@ -23,6 +23,8 @@ import (
 	dbaascontrollerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -56,7 +58,7 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 
 	out, err := s.controllerClient.ListPSMDBClusters(ctx, &in)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Can't get list of PSMDB clusters: %s", err.Error())
 	}
 
 	clusters := make([]*dbaasv1beta1.ListPSMDBClustersResponse_Cluster, len(out.Clusters))
