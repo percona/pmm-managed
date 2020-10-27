@@ -403,7 +403,7 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-6716-db-cluster-conn-creds"
+  branch = "PMM-2.0"
   digest = "1:c9ecf52664a7f0f444ce25ed83fe8dacc16b4138a8b4ae0da9d2b1c87719a77c"
   name = "github.com/percona/pmm"
   packages = [
@@ -426,7 +426,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "83e04fd466d84c6ffefbba55eb07aab117b26b64"
+  revision = "5ba84bf674a8fa6d261e0befdb4b6ec719a6033f"
 
 [[projects]]
   digest = "1:dbee7dc52291bb149388085eeb20561d4cb3c2044e0fa6ffa8d342c6b305f4bf"
