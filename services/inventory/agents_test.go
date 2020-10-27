@@ -86,7 +86,8 @@ func TestAgents(t *testing.T) {
 		as.r.(*mockAgentsRegistry).On("CheckConnectionToService", ctx,
 			mock.AnythingOfType(reflect.TypeOf(&reform.TX{}).Name()),
 			mock.AnythingOfType(reflect.TypeOf(&models.Service{}).Name()),
-			mock.AnythingOfType(reflect.TypeOf(&models.Agent{}).Name())).Return(nil)
+			mock.AnythingOfType(reflect.TypeOf(&models.Agent{}).Name()),
+		).Return(nil)
 		as.vmdb.(*mockPrometheusService).On("RequestConfigurationUpdate").Return()
 
 		pmmAgent, err := as.AddPMMAgent(ctx, &inventorypb.AddPMMAgentRequest{

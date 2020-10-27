@@ -89,10 +89,11 @@ func (as *AgentsService) changeAgent(agentID string, common *inventorypb.ChangeC
 		}
 		agentVersion, err := models.FindAgentVersion(tx.Querier, agentID)
 		if err != nil {
-			return status.Errorf(codes.Internal, "failed to get agent version: %v", err)
+			// todo fix it
+			common.EnablePushMetrics = false
 		}
 		// agent version doesnt support push model flow
-		if agentVersion.Less(pushModeSupported) && common.EnablePushMetrics {
+		if agentVersion != nil && common.EnablePushMetrics && agentVersion.Less(pushModeSupported) {
 			return status.Errorf(codes.InvalidArgument, "pmm-agent version doesnt support push metrics mode, version: %s", agentVersion)
 		}
 
