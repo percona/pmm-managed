@@ -1082,8 +1082,8 @@ func (r *Registry) StartPTMySqlSummaryAction(ctx context.Context, id, pmmAgentID
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		// Need pass params, even empty, because othervise request's marshal fail.
-		Params: &agentpb.StartActionRequest_PtMySqlSummaryParams{
-			PtMySqlSummaryParams: &agentpb.StartActionRequest_PTMySqlSummaryParams{},
+		Params: &agentpb.StartActionRequest_PtMysqlSummaryParams{
+			PtMysqlSummaryParams: &agentpb.StartActionRequest_PTMySqlSummaryParams{},
 		},
 	}
 
