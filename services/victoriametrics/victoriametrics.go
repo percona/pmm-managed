@@ -232,7 +232,7 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scrapeConfigForVictoriaMetrics(s.HR), scrapeConfigForVMAlert(s.HR))
 		prometheus.AddInternalServicesToScrape(cfg, s, settings.DBaaS.Enabled)
 
-		return prometheus.AddScrapeConfigs(svc.l, cfg, tx.Querier, &s)
+		return prometheus.AddScrapeConfigs(svc.l, cfg, tx.Querier, &s, models.AgentFilters{})
 	})
 	if e != nil {
 		return nil, e
@@ -348,4 +348,22 @@ func scrapeConfigForVMAlert(interval time.Duration) *config.ScrapeConfig {
 			},
 		},
 	}
+}
+
+func (svc *Service) BuildScrapeConfigForAgent(pmmAgentID string) ([]byte, error) {
+	var cfg config.Config
+	e := svc.db.InTransaction(func(tx *reform.TX) error {
+		settings, err := models.GetSettings(tx)
+		if err != nil {
+			return err
+		}
+		s := settings.MetricsResolutions
+		f := models.AgentFilters{PushMetrics: true, PMMAgentID: pmmAgentID}
+		return prometheus.AddScrapeConfigs(svc.l, &cfg, tx.Querier, &s, f)
+	})
+	if e != nil {
+		return nil, e
+	}
+
+	return yaml.Marshal(cfg)
 }

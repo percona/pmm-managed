@@ -126,3 +126,9 @@ func validateNodeParamsOneOf(nodeID, nodeName string, addNodeParams *managementp
 	}
 	return nil
 }
+
+// for now only push mode enables pushMode at the server
+// later change auto to push
+func isPushMode(variant managementpb.MetricsMode) bool {
+	return variant == managementpb.MetricsMode_PUSH
+}

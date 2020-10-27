@@ -393,6 +393,14 @@ func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRe
 		return e
 	}
 	r.vmdb.RequestConfigurationUpdate()
+	agent, err := models.FindAgentByID(r.db.Querier, req.AgentId)
+	if err != nil {
+		return err
+	}
+	if agent.PMMAgentID == nil {
+		return nil
+	}
+	r.SendSetStateRequest(ctx, *agent.PMMAgentID)
 	return nil
 }
 
@@ -518,10 +526,14 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 			l.Errorf("%+v", err)
 		}
 	}
-
+	cfg, err := r.vmdb.BuildScrapeConfigForAgent(pmmAgentID)
+	if err != nil {
+		l.WithError(err).Errorf("cannot get agent scrape config for agent: %s", pmmAgentID)
+	}
 	state := &agentpb.SetStateRequest{
-		AgentProcesses: agentProcesses,
-		BuiltinAgents:  builtinAgents,
+		AgentProcesses:      agentProcesses,
+		BuiltinAgents:       builtinAgents,
+		VmagentScrapeConfig: cfg,
 	}
 	l.Infof("SendSetStateRequest: %+v.", state)
 	resp := agent.channel.SendRequest(state)

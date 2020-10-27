@@ -56,6 +56,8 @@ type AgentFilters struct {
 	ServiceID string
 	// Return Agents with provided type.
 	AgentType *AgentType
+	// Return Agents with push metrics mode enabled
+	PushMetrics bool
 }
 
 // FindAgents returns Agents by filters.
@@ -274,7 +276,7 @@ func CreatePMMAgent(q *reform.Querier, runsOnNodeID string, customLabels map[str
 }
 
 // CreateNodeExporter creates NodeExporter.
-func CreateNodeExporter(q *reform.Querier, pmmAgentID string, customLabels map[string]string) (*Agent, error) {
+func CreateNodeExporter(q *reform.Querier, pmmAgentID string, customLabels map[string]string, pushMetrics bool) (*Agent, error) {
 	// TODO merge into CreateAgent
 
 	id := "/agent_id/" + uuid.New().String()
@@ -288,10 +290,11 @@ func CreateNodeExporter(q *reform.Querier, pmmAgentID string, customLabels map[s
 	}
 
 	row := &Agent{
-		AgentID:    id,
-		AgentType:  NodeExporterType,
-		PMMAgentID: &pmmAgentID,
-		NodeID:     pmmAgent.RunsOnNodeID,
+		AgentID:     id,
+		AgentType:   NodeExporterType,
+		PMMAgentID:  &pmmAgentID,
+		NodeID:      pmmAgent.RunsOnNodeID,
+		PushMetrics: pushMetrics,
 	}
 	if err := row.SetCustomLabels(customLabels); err != nil {
 		return nil, err
@@ -378,6 +381,7 @@ type CreateAgentParams struct {
 	AWSSecretKey                   string
 	RDSBasicMetricsDisabled        bool
 	RDSEnhancedMetricsDisabled     bool
+	PushMetrics                    bool
 }
 
 // CreateAgent creates Agent with given type.
@@ -435,6 +439,7 @@ type ChangeCommonAgentParams struct {
 	Disabled           *bool // true - disable, false - enable, nil - do not change
 	CustomLabels       map[string]string
 	RemoveCustomLabels bool
+	DisablePushMetrics *bool
 }
 
 // ChangeAgent changes common parameters for given Agent.
@@ -506,4 +511,16 @@ func RemoveAgent(q *reform.Querier, id string, mode RemoveMode) (*Agent, error) 
 	}
 
 	return a, nil
+}
+
+func FindAgentVersion(q *reform.Querier, agentID string) (*version.Parsed, error) {
+	agent, err := FindAgentByID(q, agentID)
+	if err != nil {
+		return nil, err
+	}
+	pmmAgent, err := FindAgentByID(q, *agent.PMMAgentID)
+	if err != nil {
+		return nil, err
+	}
+	return version.Parse(pointer.GetString(pmmAgent.Version))
 }

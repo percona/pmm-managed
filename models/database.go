@@ -316,6 +316,10 @@ var databaseSchema = [][]string{
 			UNIQUE (kubernetes_cluster_name)
 		)`,
 	},
+	18: {
+		`ALTER TABLE agents
+			ADD COLUMN push_metrics BOOLEAN NOT NULL DEFAULT FALSE`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^
@@ -453,7 +457,7 @@ func setupFixture1(q *reform.Querier, username, password string) error {
 	if _, err = createPMMAgentWithID(q, PMMServerAgentID, node.NodeID, nil); err != nil {
 		return err
 	}
-	if _, err = CreateNodeExporter(q, PMMServerAgentID, nil); err != nil {
+	if _, err = CreateNodeExporter(q, PMMServerAgentID, nil, false); err != nil {
 		return err
 	}
 

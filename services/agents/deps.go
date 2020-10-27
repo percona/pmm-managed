@@ -26,6 +26,7 @@ import (
 // We use it instead of real type to avoid dependency cycle.
 type prometheusService interface {
 	RequestConfigurationUpdate()
+	BuildScrapeConfigForAgent(pmmAgentID string) ([]byte, error)
 }
 
 // qanClient is a subset of methods of qan.Client used by this package.

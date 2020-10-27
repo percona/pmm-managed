@@ -19,6 +19,8 @@ package inventory
 import (
 	"context"
 
+	"github.com/percona/pmm/version"
+
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb"
 	"google.golang.org/grpc/codes"
@@ -28,6 +30,8 @@ import (
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services"
 )
+
+var pushModeSupported = version.MustParse("2.12.0")
 
 // AgentsService works with inventory API Agents.
 type AgentsService struct {
@@ -78,12 +82,30 @@ func (as *AgentsService) changeAgent(agentID string, common *inventorypb.ChangeC
 		if got > 1 {
 			return status.Errorf(codes.InvalidArgument, "expected at most one param: enable or disable")
 		}
+		// cannot use both at the same time
+		if common.EnablePushMetrics && common.DisablePushMetrics {
+			return status.Errorf(codes.InvalidArgument,
+				"expected one of  param: enable_push_metrics or disable_push_metrics, got both")
+		}
+		agentVersion, err := models.FindAgentVersion(tx.Querier, agentID)
+		if err != nil {
+			return status.Errorf(codes.Internal, "failed to get agent version: %v", err)
+		}
+		// agent version doesnt support push model flow
+		if agentVersion.Less(pushModeSupported) && common.EnablePushMetrics {
+			return status.Errorf(codes.InvalidArgument, "pmm-agent version doesnt support push metrics mode, version: %s", agentVersion)
+		}
 
+		if common.EnablePushMetrics {
+			params.DisablePushMetrics = pointer.ToBool(false)
+		}
+		if common.DisablePushMetrics {
+			params.DisablePushMetrics = pointer.ToBool(true)
+		}
 		row, err := models.ChangeAgent(tx.Querier, agentID, params)
 		if err != nil {
 			return err
 		}
-
 		agent, err = toInventoryAgent(tx.Querier, row, as.r)
 		return err
 	})
@@ -167,7 +189,7 @@ func (as *AgentsService) AddPMMAgent(ctx context.Context, req *inventorypb.AddPM
 func (as *AgentsService) AddNodeExporter(ctx context.Context, req *inventorypb.AddNodeExporterRequest) (*inventorypb.NodeExporter, error) {
 	var res *inventorypb.NodeExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		row, err := models.CreateNodeExporter(tx.Querier, req.PmmAgentId, req.CustomLabels)
+		row, err := models.CreateNodeExporter(tx.Querier, req.PmmAgentId, req.CustomLabels, req.PushMetrics)
 		if err != nil {
 			return err
 		}

@@ -18,6 +18,9 @@
 package prometheus
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/AlekSi/pointer"
 	config "github.com/percona/promconfig"
 	"github.com/pkg/errors"
@@ -27,8 +30,24 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s *models.MetricsResolutions) error {
-	agents, err := q.SelectAllFrom(models.AgentTable, "WHERE NOT disabled AND listen_port IS NOT NULL ORDER BY agent_type, agent_id")
+func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s *models.MetricsResolutions, filter models.AgentFilters) error {
+	var (
+		args       []interface{}
+		conditions []string
+		idx        = 1
+	)
+	if filter.PMMAgentID != "" {
+		conditions = append(conditions, fmt.Sprintf("pmm_agent_id = %s", q.Placeholder(idx)))
+		idx++
+		args = append(args, filter.PMMAgentID)
+	}
+	conditions = append(conditions, fmt.Sprintf("push_metrics = %s", q.Placeholder(idx)))
+	idx++
+	args = append(args, filter.PushMetrics)
+	conditions = append(conditions, "NOT disabled", "listen_port IS NOT NULL")
+	whereClause := fmt.Sprintf("WHERE %s ORDER BY agent_type, agent_id ", strings.Join(conditions, " AND "))
+
+	agents, err := q.SelectAllFrom(models.AgentTable, whereClause, args...)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -71,6 +90,9 @@ func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s 
 		// find Node address where the agent runs
 		var paramsHost string
 		switch {
+		// special case
+		case filter.PushMetrics:
+			paramsHost = "127.0.0.1"
 		case agent.PMMAgentID != nil:
 			// extract node address through pmm-agent
 			pmmAgent, err := models.FindAgentByID(q, *agent.PMMAgentID)
