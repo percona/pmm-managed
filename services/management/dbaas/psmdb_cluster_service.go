@@ -74,6 +74,7 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 					},
 				},
 			},
+			State: psmdbStates()[c.State],
 		}
 
 		clusters[i] = &cluster
@@ -82,8 +83,8 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 	return &dbaasv1beta1.ListPSMDBClustersResponse{Clusters: clusters}, nil
 }
 
-// ShowPSMDBCluster returns a PSMDB cluster by name.
-func (s PSMDBClusterService) ShowPSMDBCluster(ctx context.Context, req *dbaasv1beta1.ShowPSMDBClusterRequest) (*dbaasv1beta1.ShowPSMDBClusterResponse, error) {
+// GetPSMDBCluster returns a PSMDB cluster by name.
+func (s PSMDBClusterService) GetPSMDBCluster(ctx context.Context, req *dbaasv1beta1.GetPSMDBClusterRequest) (*dbaasv1beta1.GetPSMDBClusterResponse, error) {
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
 	if err != nil {
 		return nil, err
@@ -95,12 +96,13 @@ func (s PSMDBClusterService) ShowPSMDBCluster(ctx context.Context, req *dbaasv1b
 	// 2. Get root password:
 	//   - Ex.: kubectl get secret my-cluster-name-secrets -o json  | jq -r ".data.MONGODB_USER_ADMIN_PASSWORD" | base64 -d
 	_ = kubernetesCluster
-	resp := dbaasv1beta1.ShowPSMDBClusterResponse{
-		Name:     req.Name,
-		Username: "userAdmin",
-		Password: "userAdmin123456",
-		Host:     fmt.Sprintf("%s-rs0.default.svc.cluster.local", req.Name),
-		Port:     3306,
+	resp := dbaasv1beta1.GetPSMDBClusterResponse{
+		ConnectionCredentials: &dbaasv1beta1.GetPSMDBClusterResponse_PSMDBCredentials{
+			Username: "userAdmin",
+			Password: "userAdmin123456",
+			Host:     fmt.Sprintf("%s-rs0.default.svc.cluster.local", req.Name),
+			Port:     27017,
+		},
 	}
 
 	return &resp, nil
@@ -190,4 +192,14 @@ func (s PSMDBClusterService) DeletePSMDBCluster(ctx context.Context, req *dbaasv
 	}
 
 	return &dbaasv1beta1.DeletePSMDBClusterResponse{}, nil
+}
+
+func psmdbStates() map[dbaascontrollerv1beta1.PSMDBClusterState]dbaasv1beta1.PSMDBClusterState {
+	return map[dbaascontrollerv1beta1.PSMDBClusterState]dbaasv1beta1.PSMDBClusterState{
+		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID:  dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID,
+		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING: dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING,
+		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY:    dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY,
+		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED:   dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED,
+		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING: dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING,
+	}
 }
