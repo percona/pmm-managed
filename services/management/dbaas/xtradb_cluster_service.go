@@ -95,7 +95,7 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 }
 
 // GetXtraDBCluster returns a XtraDB cluster.
-func (s XtraDBClusterService) GetXtraDBCluster(ctx context.Context, req *dbaasv1beta1.ShowXtraDBClusterRequest) (*dbaasv1beta1.GetXtraDBClusterResponse, error) {
+func (s XtraDBClusterService) GetXtraDBCluster(ctx context.Context, req *dbaasv1beta1.GetXtraDBClusterRequest) (*dbaasv1beta1.GetXtraDBClusterResponse, error) {
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
 	if err != nil {
 		return nil, err
