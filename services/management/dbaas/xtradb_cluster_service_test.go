@@ -196,7 +196,7 @@ func TestXtraDBClusterService(t *testing.T) {
 	t.Run("BasicGetXtraDBCluster", func(t *testing.T) {
 		name := "third-pxc-test"
 		s := NewXtraDBClusterService(db, dbaasClient)
-		in := dbaasv1beta1.ShowXtraDBClusterRequest{
+		in := dbaasv1beta1.GetXtraDBClusterRequest{
 			KubernetesClusterName: kubernetesClusterNameTest,
 			Name:                  name,
 		}
