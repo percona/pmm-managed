@@ -97,10 +97,11 @@ func (s PSMDBClusterService) GetPSMDBCluster(ctx context.Context, req *dbaasv1be
 	//   - Ex.: kubectl get secret my-cluster-name-secrets -o json  | jq -r ".data.MONGODB_USER_ADMIN_PASSWORD" | base64 -d
 	resp := dbaasv1beta1.GetPSMDBClusterResponse{
 		ConnectionCredentials: &dbaasv1beta1.GetPSMDBClusterResponse_PSMDBCredentials{
-			Username: "userAdmin",
-			Password: "userAdmin123456",
-			Host:     fmt.Sprintf("%s-rs0.default.svc.cluster.local", req.Name),
-			Port:     27017,
+			Username:   "userAdmin",
+			Password:   "userAdmin123456",
+			Host:       fmt.Sprintf("%s-rs0.default.svc.cluster.local", req.Name),
+			Port:       27017,
+			Replicaset: "rs0",
 		},
 	}
 
