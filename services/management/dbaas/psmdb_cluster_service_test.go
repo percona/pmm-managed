@@ -42,7 +42,7 @@ const kubeconfTest = `
 		"kind": "Config",
 		"users": [
 			{
-				"name": "percona-xtradb-cluster-operator",
+				"name": "percona-server-mongodb-operator",
 				"user": {
 					"token": "some-token"
 				}
@@ -61,7 +61,7 @@ const kubeconfTest = `
 			{
 				"context": {
 					"cluster": "self-hosted-cluster",
-					"user": "percona-xtradb-cluster-operator"
+					"user": "percona-server-mongodb-operator"
 				},
 				"name": "svcs-acct-context"
 			}
