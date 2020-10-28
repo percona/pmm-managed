@@ -108,7 +108,7 @@ func TestPSMDBClusterService(t *testing.T) {
 		mockResp := controllerv1beta1.ListPSMDBClustersResponse{
 			Clusters: []*controllerv1beta1.ListPSMDBClustersResponse_Cluster{
 				{
-					Name: "first.pxc.test.percona.com",
+					Name: "first-psmdb-test",
 					Params: &controllerv1beta1.PSMDBClusterParams{
 						ClusterSize: 5,
 						Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
@@ -127,7 +127,7 @@ func TestPSMDBClusterService(t *testing.T) {
 		resp, err := s.ListPSMDBClusters(ctx, &dbaasv1beta1.ListPSMDBClustersRequest{KubernetesClusterName: kubernetesClusterNameTest})
 		assert.NoError(t, err)
 		require.NotNil(t, resp.Clusters[0])
-		assert.Equal(t, resp.Clusters[0].Name, "first.pxc.test.percona.com")
+		assert.Equal(t, resp.Clusters[0].Name, "first-psmdb-test")
 		assert.Equal(t, int32(5), resp.Clusters[0].Params.ClusterSize)
 		assert.Equal(t, int32(3), resp.Clusters[0].Params.Replicaset.ComputeResources.CpuM)
 		assert.Equal(t, int64(256), resp.Clusters[0].Params.Replicaset.ComputeResources.MemoryBytes)
@@ -140,7 +140,7 @@ func TestPSMDBClusterService(t *testing.T) {
 			KubeAuth: &controllerv1beta1.KubeAuth{
 				Kubeconfig: kubeconfTest,
 			},
-			Name: "third.pxc.test.percona.com",
+			Name: "third-psmdb-test",
 			Params: &controllerv1beta1.PSMDBClusterParams{
 				ClusterSize: 5,
 				Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
@@ -156,7 +156,7 @@ func TestPSMDBClusterService(t *testing.T) {
 
 		in := dbaasv1beta1.CreatePSMDBClusterRequest{
 			KubernetesClusterName: kubernetesClusterNameTest,
-			Name:                  "third.pxc.test.percona.com",
+			Name:                  "third-psmdb-test",
 			Params: &dbaasv1beta1.PSMDBClusterParams{
 				ClusterSize: 5,
 				Replicaset: &dbaasv1beta1.PSMDBClusterParams_ReplicaSet{
@@ -179,7 +179,7 @@ func TestPSMDBClusterService(t *testing.T) {
 			KubeAuth: &controllerv1beta1.KubeAuth{
 				Kubeconfig: kubeconfTest,
 			},
-			Name: "third.pxc.test.percona.com",
+			Name: "third-psmdb-test",
 			Params: &controllerv1beta1.PSMDBClusterParams{
 				ClusterSize: 8,
 				Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
@@ -195,7 +195,7 @@ func TestPSMDBClusterService(t *testing.T) {
 
 		in := dbaasv1beta1.UpdatePSMDBClusterRequest{
 			KubernetesClusterName: kubernetesClusterNameTest,
-			Name:                  "third.pxc.test.percona.com",
+			Name:                  "third-psmdb-test",
 			Params: &dbaasv1beta1.PSMDBClusterParams{
 				ClusterSize: 8,
 				Replicaset: &dbaasv1beta1.PSMDBClusterParams_ReplicaSet{
@@ -217,14 +217,14 @@ func TestPSMDBClusterService(t *testing.T) {
 			KubeAuth: &controllerv1beta1.KubeAuth{
 				Kubeconfig: kubeconfTest,
 			},
-			Name: "third.pxc.test.percona.com",
+			Name: "third-psmdb-test",
 		}
 
 		dbaasClient.On("DeletePSMDBCluster", ctx, &mockReq).Return(&controllerv1beta1.DeletePSMDBClusterResponse{}, nil)
 
 		in := dbaasv1beta1.DeletePSMDBClusterRequest{
 			KubernetesClusterName: kubernetesClusterNameTest,
-			Name:                  "third.pxc.test.percona.com",
+			Name:                  "third-psmdb-test",
 		}
 
 		_, err := s.DeletePSMDBCluster(ctx, &in)
