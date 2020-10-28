@@ -35,6 +35,7 @@ import (
 const (
 	updateCheckInterval    = 24 * time.Hour
 	updateCheckResultFresh = updateCheckInterval + 10*time.Minute
+	updateDefaultTimeout   = 30 * time.Second
 )
 
 // PMMUpdateChecker wraps `pmm-update -installed` and `pmm-update -check` with caching.
@@ -45,6 +46,7 @@ type PMMUpdateChecker struct {
 	l *logrus.Entry
 
 	rw                       sync.RWMutex
+	yumMutex                 sync.Mutex
 	lastInstalledPackageInfo *version.PackageInfo
 	lastCheckResult          *version.UpdateCheckResult
 	lastCheckTime            time.Time
@@ -65,7 +67,7 @@ func (p *PMMUpdateChecker) run(ctx context.Context) {
 	defer ticker.Stop()
 
 	for {
-		_ = p.check()
+		_ = p.check(ctx)
 
 		select {
 		case <-ticker.C:
@@ -79,7 +81,7 @@ func (p *PMMUpdateChecker) run(ctx context.Context) {
 
 // Installed returns currently installed version information.
 // It is always cached since pmm-update RPM package is always updated before pmm-managed update/restart.
-func (p *PMMUpdateChecker) Installed() *version.PackageInfo {
+func (p *PMMUpdateChecker) Installed(ctx context.Context) *version.PackageInfo {
 	p.rw.RLock()
 	if p.lastInstalledPackageInfo != nil {
 		res := p.lastInstalledPackageInfo
@@ -90,13 +92,7 @@ func (p *PMMUpdateChecker) Installed() *version.PackageInfo {
 
 	// use -installed since it is much faster
 	cmdLine := "pmm-update -installed"
-	args := strings.Split(cmdLine, " ")
-	cmd := exec.Command(args[0], args[1:]...) //nolint:gosec
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	pdeathsig.Set(cmd, unix.SIGKILL)
-
-	b, err := cmd.Output()
+	b, stderr, err := p.cmdRun(ctx, cmdLine)
 	if err != nil {
 		p.l.Errorf("%s output: %s. Error: %s", cmdLine, stderr.Bytes(), err)
 		return nil
@@ -115,15 +111,30 @@ func (p *PMMUpdateChecker) Installed() *version.PackageInfo {
 	return &res.Installed
 }
 
+func (p *PMMUpdateChecker) cmdRun(ctx context.Context, cmdLine string) ([]byte, bytes.Buffer, error) {
+	args := strings.Split(cmdLine, " ")
+	p.yumMutex.Lock()
+	timeoutCtx, cancel := context.WithTimeout(ctx, updateDefaultTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(timeoutCtx, args[0], args[1:]...) //nolint:gosec
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	pdeathsig.Set(cmd, unix.SIGKILL)
+
+	b, err := cmd.Output()
+	p.yumMutex.Unlock()
+	return b, stderr, err
+}
+
 // checkResult returns last `pmm-update -check` result and check time.
 // It may force re-check if last result is empty or too old.
-func (p *PMMUpdateChecker) checkResult() (*version.UpdateCheckResult, time.Time) {
+func (p *PMMUpdateChecker) checkResult(ctx context.Context) (*version.UpdateCheckResult, time.Time) {
 	p.rw.RLock()
 	defer p.rw.RUnlock()
 
 	if time.Since(p.lastCheckTime) > updateCheckResultFresh {
 		p.rw.RUnlock()
-		_ = p.check()
+		_ = p.check(ctx)
 		p.rw.RLock()
 	}
 
@@ -131,18 +142,12 @@ func (p *PMMUpdateChecker) checkResult() (*version.UpdateCheckResult, time.Time)
 }
 
 // check calls `pmm-update -check` and fills lastInstalledPackageInfo/lastCheckResult/lastCheckTime on success.
-func (p *PMMUpdateChecker) check() error {
+func (p *PMMUpdateChecker) check(ctx context.Context) error {
 	p.rw.Lock()
 	defer p.rw.Unlock()
 
 	cmdLine := "pmm-update -check"
-	args := strings.Split(cmdLine, " ")
-	cmd := exec.Command(args[0], args[1:]...) //nolint:gosec
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	pdeathsig.Set(cmd, unix.SIGKILL)
-
-	b, err := cmd.Output()
+	b, stderr, err := p.cmdRun(ctx, cmdLine)
 	if err != nil {
 		p.l.Errorf("%s output: %s. Error: %s", cmdLine, stderr.Bytes(), err)
 		return errors.WithStack(err)
