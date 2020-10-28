@@ -45,8 +45,9 @@ const (
 type PMMUpdateChecker struct {
 	l *logrus.Entry
 
-	rw                       sync.RWMutex
-	yumMutex                 sync.Mutex
+	checkRW                  sync.RWMutex
+	installedRW              sync.RWMutex
+	cmdMutex                 sync.Mutex
 	lastInstalledPackageInfo *version.PackageInfo
 	lastCheckResult          *version.UpdateCheckResult
 	lastCheckTime            time.Time
@@ -82,13 +83,13 @@ func (p *PMMUpdateChecker) run(ctx context.Context) {
 // Installed returns currently installed version information.
 // It is always cached since pmm-update RPM package is always updated before pmm-managed update/restart.
 func (p *PMMUpdateChecker) Installed(ctx context.Context) *version.PackageInfo {
-	p.rw.RLock()
+	p.installedRW.RLock()
 	if p.lastInstalledPackageInfo != nil {
 		res := p.lastInstalledPackageInfo
-		p.rw.RUnlock()
+		p.installedRW.RUnlock()
 		return res
 	}
-	p.rw.RUnlock()
+	p.installedRW.RUnlock()
 
 	// use -installed since it is much faster
 	cmdLine := "pmm-update -installed"
@@ -104,16 +105,16 @@ func (p *PMMUpdateChecker) Installed(ctx context.Context) *version.PackageInfo {
 		return nil
 	}
 
-	p.rw.Lock()
+	p.installedRW.Lock()
 	p.lastInstalledPackageInfo = &res.Installed
-	p.rw.Unlock()
+	p.installedRW.Unlock()
 
 	return &res.Installed
 }
 
 func (p *PMMUpdateChecker) cmdRun(ctx context.Context, cmdLine string) ([]byte, bytes.Buffer, error) {
 	args := strings.Split(cmdLine, " ")
-	p.yumMutex.Lock()
+	p.cmdMutex.Lock()
 	timeoutCtx, cancel := context.WithTimeout(ctx, updateDefaultTimeout)
 	defer cancel()
 	cmd := exec.CommandContext(timeoutCtx, args[0], args[1:]...) //nolint:gosec
@@ -122,20 +123,20 @@ func (p *PMMUpdateChecker) cmdRun(ctx context.Context, cmdLine string) ([]byte, 
 	pdeathsig.Set(cmd, unix.SIGKILL)
 
 	b, err := cmd.Output()
-	p.yumMutex.Unlock()
+	p.cmdMutex.Unlock()
 	return b, stderr, err
 }
 
 // checkResult returns last `pmm-update -check` result and check time.
 // It may force re-check if last result is empty or too old.
 func (p *PMMUpdateChecker) checkResult(ctx context.Context) (*version.UpdateCheckResult, time.Time) {
-	p.rw.RLock()
-	defer p.rw.RUnlock()
+	p.checkRW.RLock()
+	defer p.checkRW.RUnlock()
 
 	if time.Since(p.lastCheckTime) > updateCheckResultFresh {
-		p.rw.RUnlock()
+		p.checkRW.RUnlock()
 		_ = p.check(ctx)
-		p.rw.RLock()
+		p.checkRW.RLock()
 	}
 
 	return p.lastCheckResult, p.lastCheckTime
@@ -143,8 +144,8 @@ func (p *PMMUpdateChecker) checkResult(ctx context.Context) (*version.UpdateChec
 
 // check calls `pmm-update -check` and fills lastInstalledPackageInfo/lastCheckResult/lastCheckTime on success.
 func (p *PMMUpdateChecker) check(ctx context.Context) error {
-	p.rw.Lock()
-	defer p.rw.Unlock()
+	p.checkRW.Lock()
+	defer p.checkRW.Unlock()
 
 	cmdLine := "pmm-update -check"
 	b, stderr, err := p.cmdRun(ctx, cmdLine)
@@ -160,7 +161,9 @@ func (p *PMMUpdateChecker) check(ctx context.Context) error {
 	}
 
 	p.l.Debugf("%s output: %s", cmdLine, stderr.Bytes())
+	p.installedRW.Lock()
 	p.lastInstalledPackageInfo = &res.Installed
+	p.installedRW.Unlock()
 	p.lastCheckResult = &res
 	p.lastCheckTime = time.Now()
 	return nil

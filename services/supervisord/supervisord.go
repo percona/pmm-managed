@@ -98,6 +98,9 @@ func (s *Service) Run(ctx context.Context) {
 	go func() {
 		defer wg.Done()
 
+		// pre-set installed packages info to cache it.
+		s.pmmUpdateCheck.Installed(ctx)
+
 		// Do not check for updates for the first 10 minutes.
 		// That solves PMM Server building problems when we start pmm-managed.
 		// TODO https://jira.percona.com/browse/PMM-4429
