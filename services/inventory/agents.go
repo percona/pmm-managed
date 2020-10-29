@@ -87,15 +87,6 @@ func (as *AgentsService) changeAgent(agentID string, common *inventorypb.ChangeC
 			return status.Errorf(codes.InvalidArgument,
 				"expected one of  param: enable_push_metrics or disable_push_metrics, got both")
 		}
-		agentVersion, err := models.FindAgentVersion(tx.Querier, agentID)
-		if err != nil {
-			// todo fix it
-			common.EnablePushMetrics = false
-		}
-		// agent version doesnt support push model flow
-		if agentVersion != nil && common.EnablePushMetrics && agentVersion.Less(pushModeSupported) {
-			return status.Errorf(codes.InvalidArgument, "pmm-agent version doesnt support push metrics mode, version: %s", agentVersion)
-		}
 
 		if common.EnablePushMetrics {
 			params.DisablePushMetrics = pointer.ToBool(false)
@@ -236,6 +227,7 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, req *inventorypb
 			TLS:                            req.Tls,
 			TLSSkipVerify:                  req.TlsSkipVerify,
 			TableCountTablestatsGroupLimit: req.TablestatsGroupTableLimit,
+			PushMetrics:                    req.PushMetrics,
 		}
 		var err error
 		row, err = models.CreateAgent(tx.Querier, models.MySQLdExporterType, params)
@@ -292,6 +284,7 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, req *inventoryp
 			CustomLabels:  req.CustomLabels,
 			TLS:           req.Tls,
 			TLSSkipVerify: req.TlsSkipVerify,
+			PushMetrics:   req.PushMetrics,
 		}
 		row, err := models.CreateAgent(tx.Querier, models.MongoDBExporterType, params)
 		if err != nil {
@@ -468,6 +461,7 @@ func (as *AgentsService) AddPostgresExporter(ctx context.Context, req *inventory
 			CustomLabels:  req.CustomLabels,
 			TLS:           req.Tls,
 			TLSSkipVerify: req.TlsSkipVerify,
+			PushMetrics:   req.PushMetrics,
 		}
 		row, err := models.CreateAgent(tx.Querier, models.PostgresExporterType, params)
 		if err != nil {

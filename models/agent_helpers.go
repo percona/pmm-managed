@@ -423,6 +423,7 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 		AWSSecretKey:                   pointer.ToStringOrNil(params.AWSSecretKey),
 		RDSBasicMetricsDisabled:        params.RDSBasicMetricsDisabled,
 		RDSEnhancedMetricsDisabled:     params.RDSEnhancedMetricsDisabled,
+		PushMetrics:                    params.PushMetrics,
 	}
 	if err := row.SetCustomLabels(params.CustomLabels); err != nil {
 		return nil, err
@@ -511,16 +512,4 @@ func RemoveAgent(q *reform.Querier, id string, mode RemoveMode) (*Agent, error) 
 	}
 
 	return a, nil
-}
-
-func FindAgentVersion(q *reform.Querier, agentID string) (*version.Parsed, error) {
-	agent, err := FindAgentByID(q, agentID)
-	if err != nil {
-		return nil, err
-	}
-	pmmAgent, err := FindAgentByID(q, *agent.PMMAgentID)
-	if err != nil {
-		return nil, err
-	}
-	return version.Parse(pointer.GetString(pmmAgent.Version))
 }
