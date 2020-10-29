@@ -457,6 +457,13 @@ func ChangeAgent(q *reform.Querier, agentID string, params *ChangeCommonAgentPar
 			row.Disabled = false
 		}
 	}
+	if params.DisablePushMetrics != nil {
+		if *params.DisablePushMetrics {
+			row.PushMetrics = false
+		} else {
+			row.PushMetrics = true
+		}
+	}
 
 	if params.RemoveCustomLabels {
 		if err = row.SetCustomLabels(nil); err != nil {
