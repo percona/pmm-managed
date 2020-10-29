@@ -19,7 +19,10 @@ package dbaas
 import (
 	"context"
 
+	dbaascontrollerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -75,8 +78,36 @@ func (k kubernetesServer) RegisterKubernetesCluster(ctx context.Context, req *db
 // UnregisterKubernetesCluster removes a registered Kubernetes cluster from PMM.
 func (k kubernetesServer) UnregisterKubernetesCluster(ctx context.Context, req *dbaasv1beta1.UnregisterKubernetesClusterRequest) (*dbaasv1beta1.UnregisterKubernetesClusterResponse, error) {
 	err := k.db.InTransaction(func(t *reform.TX) error {
-		err := models.RemoveKubernetesCluster(k.db.Querier, req.KubernetesClusterName)
-		return err
+		kubernetesCluster, err := models.FindKubernetesClusterByName(k.db.Querier, req.KubernetesClusterName)
+		if err != nil {
+			return err
+		}
+
+		xtraDBClusters, err := k.dbaasClient.ListXtraDBClusters(ctx,
+			&dbaascontrollerv1beta1.ListXtraDBClustersRequest{
+				KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
+					Kubeconfig: kubernetesCluster.KubeConfig,
+				},
+			})
+		if err != nil {
+			return err
+		}
+		if len(xtraDBClusters.Clusters) > 0 {
+			return status.Errorf(codes.FailedPrecondition, "Kubernetes cluster %s has XtraDB clusters", req.KubernetesClusterName)
+		}
+
+		psmdbClusters, err := k.dbaasClient.ListPSMDBClusters(ctx, &dbaascontrollerv1beta1.ListPSMDBClustersRequest{
+			KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
+				Kubeconfig: kubernetesCluster.KubeConfig,
+			},
+		})
+		if err != nil {
+			return err
+		}
+		if len(psmdbClusters.Clusters) > 0 {
+			return status.Errorf(codes.FailedPrecondition, "Kubernetes cluster %s has PSMDB clusters", req.KubernetesClusterName)
+		}
+		return models.RemoveKubernetesCluster(k.db.Querier, req.KubernetesClusterName)
 	})
 	if err != nil {
 		return nil, err
