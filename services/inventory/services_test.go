@@ -462,6 +462,7 @@ func TestServices(t *testing.T) {
 			ServiceId:   "/service_id/00000000-0000-4000-8000-000000000005",
 			ServiceName: "test-external-service",
 			NodeId:      models.PMMServerNodeID,
+			Group:       "external",
 		}
 		assert.Equal(t, expectedExternalService, actualExternalService)
 
