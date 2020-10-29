@@ -175,8 +175,8 @@ func TestDatabaseChecks(t *testing.T) {
 
 		// Try to insert both address and socket empty
 		_, err = db.Exec(
-			"INSERT INTO services (service_id, service_type, service_name, node_id, environment, cluster, replication_set, address, port, socket, created_at, updated_at) "+
-				"VALUES ('/service_id/1', 'mysql', 'name', '/node_id/1', '', '', '', NULL, NULL, NULL, $1, $2)",
+			"INSERT INTO services (service_id, service_type, service_name, node_id, environment, cluster, replication_set, address, port, socket, external_group, created_at, updated_at) "+
+				"VALUES ('/service_id/1', 'mysql', 'name', '/node_id/1', '', '', '', NULL, NULL, NULL, '', $1, $2)",
 			now, now,
 		)
 		require.NoError(t, err)
@@ -205,8 +205,8 @@ func TestDatabaseChecks(t *testing.T) {
 		)
 		require.NoError(t, err)
 		_, err = db.Exec(
-			"INSERT INTO services (service_id, service_type, service_name, node_id, environment, cluster, replication_set, socket, created_at, updated_at) "+
-				"VALUES ('/service_id/1', 'mysql', 'name', '/node_id/1', '', '', '', '/var/run/mysqld/mysqld.sock', $1, $2)",
+			"INSERT INTO services (service_id, service_type, service_name, node_id, environment, cluster, replication_set, socket, external_group, created_at, updated_at) "+
+				"VALUES ('/service_id/1', 'mysql', 'name', '/node_id/1', '', '', '', '/var/run/mysqld/mysqld.sock', '', $1, $2)",
 			now, now,
 		)
 		require.NoError(t, err)

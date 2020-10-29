@@ -453,8 +453,9 @@ func TestServices(t *testing.T) {
 		require.Len(t, actualServices, 1) // PMM Server PostgreSQL
 
 		actualExternalService, err := ss.AddExternalService(ctx, &models.AddDBMSServiceParams{
-			ServiceName: "test-external-service",
-			NodeID:      models.PMMServerNodeID,
+			ServiceName:   "test-external-service",
+			NodeID:        models.PMMServerNodeID,
+			ExternalGroup: "external",
 		})
 		require.NoError(t, err)
 		expectedExternalService := &inventorypb.ExternalService{

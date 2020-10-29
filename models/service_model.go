@@ -48,6 +48,7 @@ type Service struct {
 	Cluster        string      `reform:"cluster"`
 	ReplicationSet string      `reform:"replication_set"`
 	CustomLabels   []byte      `reform:"custom_labels"`
+	ExternalGroup  string      `reform:"external_group"`
 	CreatedAt      time.Time   `reform:"created_at"`
 	UpdatedAt      time.Time   `reform:"updated_at"`
 
