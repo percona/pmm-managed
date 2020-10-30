@@ -200,7 +200,8 @@ func AddNewService(q *reform.Querier, serviceType ServiceType, params *AddDBMSSe
 		}
 	case ExternalServiceType:
 		if params.ExternalGroup == "" {
-			return nil, status.Errorf(codes.InvalidArgument, "External group is required for service type: %q.", serviceType)
+			// Set default value for backward compatibility with an old pmm-admin.
+			params.ExternalGroup = "external"
 		}
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "Unknown service type: %q.", serviceType)
