@@ -19,8 +19,6 @@ package inventory
 import (
 	"context"
 
-	"github.com/percona/pmm/version"
-
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb"
 	"google.golang.org/grpc/codes"
@@ -30,8 +28,6 @@ import (
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services"
 )
-
-var pushModeSupported = version.MustParse("2.12.0")
 
 // AgentsService works with inventory API Agents.
 type AgentsService struct {

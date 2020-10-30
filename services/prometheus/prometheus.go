@@ -30,19 +30,21 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
+// AddScrapeConfigs - adds agents scrape configuration to given scrape config,
+// agent filter can be used for agents filtering.
 func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s *models.MetricsResolutions, filter models.AgentFilters) error {
 	var (
 		args       []interface{}
 		conditions []string
-		idx        = 1
+		idx        = 0
 	)
 	if filter.PMMAgentID != "" {
 		conditions = append(conditions, fmt.Sprintf("pmm_agent_id = %s", q.Placeholder(idx)))
 		idx++
 		args = append(args, filter.PMMAgentID)
 	}
-	conditions = append(conditions, fmt.Sprintf("push_metrics = %s", q.Placeholder(idx)))
 	idx++
+	conditions = append(conditions, fmt.Sprintf("push_metrics = %s", q.Placeholder(idx)))
 	args = append(args, filter.PushMetrics)
 	conditions = append(conditions, "NOT disabled", "listen_port IS NOT NULL")
 	whereClause := fmt.Sprintf("WHERE %s ORDER BY agent_type, agent_id ", strings.Join(conditions, " AND "))
@@ -90,7 +92,8 @@ func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s 
 		// find Node address where the agent runs
 		var paramsHost string
 		switch {
-		// special case
+		// special case for push metrics mode,
+		// vmagent scrapes it from localhost
 		case filter.PushMetrics:
 			paramsHost = "127.0.0.1"
 		case agent.PMMAgentID != nil:
