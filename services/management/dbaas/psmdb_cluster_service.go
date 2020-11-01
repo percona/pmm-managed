@@ -63,15 +63,19 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 
 	clusters := make([]*dbaasv1beta1.ListPSMDBClustersResponse_Cluster, len(out.Clusters))
 	for i, c := range out.Clusters {
+		var computeResources *dbaasv1beta1.ComputeResources
+		if c.Params.Replicaset != nil && c.Params.Replicaset.ComputeResources != nil {
+			computeResources = &dbaasv1beta1.ComputeResources{
+				CpuM:        c.Params.Replicaset.ComputeResources.CpuM,
+				MemoryBytes: c.Params.Replicaset.ComputeResources.MemoryBytes,
+			}
+		}
 		cluster := dbaasv1beta1.ListPSMDBClustersResponse_Cluster{
 			Name: c.Name,
 			Params: &dbaasv1beta1.PSMDBClusterParams{
 				ClusterSize: c.Params.ClusterSize,
 				Replicaset: &dbaasv1beta1.PSMDBClusterParams_ReplicaSet{
-					ComputeResources: &dbaasv1beta1.ComputeResources{
-						CpuM:        c.Params.Replicaset.ComputeResources.CpuM,
-						MemoryBytes: c.Params.Replicaset.ComputeResources.MemoryBytes,
-					},
+					ComputeResources: computeResources,
 				},
 			},
 			State: psmdbStates()[c.State],
