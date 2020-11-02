@@ -464,9 +464,6 @@ func scrapeConfigsForExternalExporter(s *models.MetricsResolutions, params *scra
 		return nil, err
 	}
 
-	// Add a group label.
-	labels["external_group"] = params.service.ExternalGroup
-
 	interval := s.MR
 	cfg := &config.ScrapeConfig{
 		JobName:        jobName(params.agent, "mr", interval),

@@ -111,6 +111,7 @@ func (s *Service) UnifiedLabels() (map[string]string, error) {
 		"environment":     s.Environment,
 		"cluster":         s.Cluster,
 		"replication_set": s.ReplicationSet,
+		"external_group":  s.ExternalGroup,
 	}
 	for name, value := range custom {
 		res[name] = value
