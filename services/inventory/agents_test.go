@@ -106,9 +106,8 @@ func TestAgents(t *testing.T) {
 		})
 		require.NoError(t, err)
 		expectedNodeExporter := &inventorypb.NodeExporter{
-			AgentId:             "/agent_id/00000000-0000-4000-8000-000000000006",
-			PmmAgentId:          "/agent_id/00000000-0000-4000-8000-000000000005",
-			PushMetricsDisabled: true,
+			AgentId:    "/agent_id/00000000-0000-4000-8000-000000000006",
+			PmmAgentId: "/agent_id/00000000-0000-4000-8000-000000000005",
 		}
 		assert.Equal(t, expectedNodeExporter, actualNodeExporter)
 
@@ -120,10 +119,9 @@ func TestAgents(t *testing.T) {
 		})
 		require.NoError(t, err)
 		expectedNodeExporter = &inventorypb.NodeExporter{
-			AgentId:             "/agent_id/00000000-0000-4000-8000-000000000006",
-			PmmAgentId:          "/agent_id/00000000-0000-4000-8000-000000000005",
-			Disabled:            true,
-			PushMetricsDisabled: true,
+			AgentId:    "/agent_id/00000000-0000-4000-8000-000000000006",
+			PmmAgentId: "/agent_id/00000000-0000-4000-8000-000000000005",
+			Disabled:   true,
 		}
 		assert.Equal(t, expectedNodeExporter, actualNodeExporter)
 
@@ -146,11 +144,10 @@ func TestAgents(t *testing.T) {
 		})
 		require.NoError(t, err)
 		expectedMySQLdExporter := &inventorypb.MySQLdExporter{
-			AgentId:             "/agent_id/00000000-0000-4000-8000-000000000008",
-			PmmAgentId:          "/agent_id/00000000-0000-4000-8000-000000000005",
-			ServiceId:           s.ServiceId,
-			Username:            "username",
-			PushMetricsDisabled: true,
+			AgentId:    "/agent_id/00000000-0000-4000-8000-000000000008",
+			PmmAgentId: "/agent_id/00000000-0000-4000-8000-000000000005",
+			ServiceId:  s.ServiceId,
+			Username:   "username",
 		}
 		assert.Equal(t, expectedMySQLdExporter, actualAgent)
 
@@ -173,11 +170,10 @@ func TestAgents(t *testing.T) {
 		})
 		require.NoError(t, err)
 		expectedMongoDBExporter := &inventorypb.MongoDBExporter{
-			AgentId:             "/agent_id/00000000-0000-4000-8000-00000000000a",
-			PmmAgentId:          pmmAgent.AgentId,
-			ServiceId:           ms.ServiceId,
-			Username:            "username",
-			PushMetricsDisabled: true,
+			AgentId:    "/agent_id/00000000-0000-4000-8000-00000000000a",
+			PmmAgentId: pmmAgent.AgentId,
+			ServiceId:  ms.ServiceId,
+			Username:   "username",
 		}
 		assert.Equal(t, expectedMongoDBExporter, actualAgent)
 
@@ -218,11 +214,10 @@ func TestAgents(t *testing.T) {
 		})
 		require.NoError(t, err)
 		expectedPostgresExporter := &inventorypb.PostgresExporter{
-			AgentId:             "/agent_id/00000000-0000-4000-8000-00000000000d",
-			PmmAgentId:          pmmAgent.AgentId,
-			ServiceId:           ps.ServiceId,
-			Username:            "username",
-			PushMetricsDisabled: true,
+			AgentId:    "/agent_id/00000000-0000-4000-8000-00000000000d",
+			PmmAgentId: pmmAgent.AgentId,
+			ServiceId:  ps.ServiceId,
+			Username:   "username",
 		}
 		assert.Equal(t, expectedPostgresExporter, actualAgent)
 
@@ -501,11 +496,11 @@ func TestAgents(t *testing.T) {
 		})
 		require.NoError(t, err)
 		expectedMongoDBExporter := &inventorypb.MongoDBExporter{
-			AgentId:             "/agent_id/00000000-0000-4000-8000-000000000007",
-			PmmAgentId:          pmmAgent.AgentId,
-			ServiceId:           ms.ServiceId,
-			Username:            "username",
-			PushMetricsDisabled: false,
+			AgentId:            "/agent_id/00000000-0000-4000-8000-000000000007",
+			PmmAgentId:         pmmAgent.AgentId,
+			ServiceId:          ms.ServiceId,
+			Username:           "username",
+			PushMetricsEnabled: true,
 		}
 		assert.Equal(t, expectedMongoDBExporter, actualAgent)
 	})
@@ -538,9 +533,9 @@ func TestAgents(t *testing.T) {
 		})
 		require.NoError(t, err)
 		expectedNodeExporter := &inventorypb.NodeExporter{
-			AgentId:             "/agent_id/00000000-0000-4000-8000-000000000006",
-			PmmAgentId:          "/agent_id/00000000-0000-4000-8000-000000000005",
-			PushMetricsDisabled: false,
+			AgentId:            "/agent_id/00000000-0000-4000-8000-000000000006",
+			PmmAgentId:         "/agent_id/00000000-0000-4000-8000-000000000005",
+			PushMetricsEnabled: true,
 		}
 		assert.Equal(t, expectedNodeExporter, actualNodeExporter)
 	})
@@ -587,11 +582,11 @@ func TestAgents(t *testing.T) {
 		})
 		require.NoError(t, err)
 		expectedPostgresExporter := &inventorypb.PostgresExporter{
-			AgentId:             "/agent_id/00000000-0000-4000-8000-000000000007",
-			PmmAgentId:          pmmAgent.AgentId,
-			ServiceId:           ps.ServiceId,
-			Username:            "username",
-			PushMetricsDisabled: false,
+			AgentId:            "/agent_id/00000000-0000-4000-8000-000000000007",
+			PmmAgentId:         pmmAgent.AgentId,
+			ServiceId:          ps.ServiceId,
+			Username:           "username",
+			PushMetricsEnabled: true,
 		}
 		assert.Equal(t, expectedPostgresExporter, actualAgent)
 	})
@@ -638,11 +633,11 @@ func TestAgents(t *testing.T) {
 		})
 		require.NoError(t, err)
 		expectedMySQLdExporter := &inventorypb.MySQLdExporter{
-			AgentId:             "/agent_id/00000000-0000-4000-8000-000000000007",
-			PmmAgentId:          "/agent_id/00000000-0000-4000-8000-000000000005",
-			ServiceId:           s.ServiceId,
-			Username:            "username",
-			PushMetricsDisabled: false,
+			AgentId:            "/agent_id/00000000-0000-4000-8000-000000000007",
+			PmmAgentId:         "/agent_id/00000000-0000-4000-8000-000000000005",
+			ServiceId:          s.ServiceId,
+			Username:           "username",
+			PushMetricsEnabled: true,
 		}
 		assert.Equal(t, expectedMySQLdExporter, actualAgent)
 	})
