@@ -78,18 +78,19 @@ func (as *AgentsService) changeAgent(agentID string, common *inventorypb.ChangeC
 		if got > 1 {
 			return status.Errorf(codes.InvalidArgument, "expected at most one param: enable or disable")
 		}
-		// cannot use both at the same time
-		if common.EnablePushMetrics && common.DisablePushMetrics {
-			return status.Errorf(codes.InvalidArgument,
-				"expected one of  param: enable_push_metrics or disable_push_metrics, got both")
-		}
-
+		got = 0
 		if common.EnablePushMetrics {
+			got++
 			params.DisablePushMetrics = pointer.ToBool(false)
 		}
 		if common.DisablePushMetrics {
+			got++
 			params.DisablePushMetrics = pointer.ToBool(true)
 		}
+		if got > 1 {
+			return status.Errorf(codes.InvalidArgument, "expected one of  param: enable_push_metrics or disable_push_metrics")
+		}
+
 		row, err := models.ChangeAgent(tx.Querier, agentID, params)
 		if err != nil {
 			return err
