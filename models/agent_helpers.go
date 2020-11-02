@@ -458,11 +458,7 @@ func ChangeAgent(q *reform.Querier, agentID string, params *ChangeCommonAgentPar
 		}
 	}
 	if params.DisablePushMetrics != nil {
-		if *params.DisablePushMetrics {
-			row.PushMetrics = false
-		} else {
-			row.PushMetrics = true
-		}
+	row.PushMetrics = !(*params.DisablePushMetrics)
 	}
 
 	if params.RemoveCustomLabels {
