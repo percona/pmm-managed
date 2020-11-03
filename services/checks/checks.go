@@ -81,6 +81,7 @@ var (
 
 var defaultPublicKeys = []string{
 	"RWTfyQTP3R7VzZggYY7dzuCbuCQWqTiGCqOvWRRAMVEiw0eSxHMVBBE5", // PMM 2.6
+	"RWTkF7Snv08FCboTne4djQfN5qbrLfAjb8SY3/wwEP+X5nUrkxCEvUDJ", // PMM 2.12
 }
 
 // Service is responsible for interactions with Percona Check service.
