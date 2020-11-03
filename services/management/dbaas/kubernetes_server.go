@@ -18,9 +18,11 @@ package dbaas
 
 import (
 	"context"
+	"regexp"
 
 	dbaascontrollerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -29,13 +31,15 @@ import (
 )
 
 type kubernetesServer struct {
+	l           *logrus.Entry
 	db          *reform.DB
 	dbaasClient dbaasClient
 }
 
 // NewKubernetesServer creates Kubernetes Server.
 func NewKubernetesServer(db *reform.DB, dbaasClient dbaasClient) dbaasv1beta1.KubernetesServer {
-	return &kubernetesServer{db: db, dbaasClient: dbaasClient}
+	l := logrus.WithField("component", "kubernetes_server")
+	return &kubernetesServer{l: l, db: db, dbaasClient: dbaasClient}
 }
 
 // ListKubernetesClusters returns a list of all registered Kubernetes clusters.
@@ -89,10 +93,12 @@ func (k kubernetesServer) UnregisterKubernetesCluster(ctx context.Context, req *
 					Kubeconfig: kubernetesCluster.KubeConfig,
 				},
 			})
-		if err != nil {
+		switch {
+		case err != nil && accessError(err):
+			k.l.Warn(err)
+		case err != nil:
 			return err
-		}
-		if len(xtraDBClusters.Clusters) > 0 {
+		case len(xtraDBClusters.Clusters) > 0:
 			return status.Errorf(codes.FailedPrecondition, "Kubernetes cluster %s has XtraDB clusters", req.KubernetesClusterName)
 		}
 
@@ -101,10 +107,12 @@ func (k kubernetesServer) UnregisterKubernetesCluster(ctx context.Context, req *
 				Kubeconfig: kubernetesCluster.KubeConfig,
 			},
 		})
-		if err != nil {
+		switch {
+		case err != nil && accessError(err):
+			k.l.Warn(err)
+		case err != nil:
 			return err
-		}
-		if len(psmdbClusters.Clusters) > 0 {
+		case len(psmdbClusters.Clusters) > 0:
 			return status.Errorf(codes.FailedPrecondition, "Kubernetes cluster %s has PSMDB clusters", req.KubernetesClusterName)
 		}
 		return models.RemoveKubernetesCluster(k.db.Querier, req.KubernetesClusterName)
@@ -114,4 +122,22 @@ func (k kubernetesServer) UnregisterKubernetesCluster(ctx context.Context, req *
 	}
 
 	return &dbaasv1beta1.UnregisterKubernetesClusterResponse{}, nil
+}
+
+func accessError(err error) bool {
+	if err == nil {
+		return false
+	}
+	accessErrors := []*regexp.Regexp{
+		regexp.MustCompile(`.*\.percona\.com is forbidden`),
+		regexp.MustCompile(`the server doesn't have a resource type "(PerconaXtraDBCluster|PerconaServerMongoDB)"`),
+	}
+
+	for _, regex := range accessErrors {
+		if regex.MatchString(err.Error()) {
+			logrus.Warn(err.Error())
+			return true
+		}
+	}
+	return false
 }
