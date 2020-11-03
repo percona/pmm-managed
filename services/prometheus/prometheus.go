@@ -36,16 +36,16 @@ func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s 
 	var (
 		args       []interface{}
 		conditions []string
-		idx        = 0
 	)
 	if filter.PMMAgentID != "" {
-		conditions = append(conditions, fmt.Sprintf("pmm_agent_id = %s", q.Placeholder(idx)))
-		idx++
+		conditions = append(conditions, fmt.Sprintf("pmm_agent_id = %s", q.Placeholder(1)))
 		args = append(args, filter.PMMAgentID)
 	}
-	idx++
-	conditions = append(conditions, fmt.Sprintf("push_metrics = %s", q.Placeholder(idx)))
-	args = append(args, filter.PushMetrics)
+	if filter.PushMetrics {
+		conditions = append(conditions, "push_metrics")
+	} else {
+		conditions = append(conditions, "NOT push_metrics")
+	}
 	conditions = append(conditions, "NOT disabled", "listen_port IS NOT NULL")
 	whereClause := fmt.Sprintf("WHERE %s ORDER BY agent_type, agent_id ", strings.Join(conditions, " AND "))
 
