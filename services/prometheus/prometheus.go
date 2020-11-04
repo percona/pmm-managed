@@ -50,7 +50,6 @@ func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s 
 	whereClause := fmt.Sprintf("WHERE %s ORDER BY agent_type, agent_id ", strings.Join(conditions, " AND "))
 
 	agents, err := q.SelectAllFrom(models.AgentTable, whereClause, args...)
-
 	if err != nil {
 		return errors.WithStack(err)
 	}
