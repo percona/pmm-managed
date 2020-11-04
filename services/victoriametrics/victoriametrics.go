@@ -351,7 +351,7 @@ func scrapeConfigForVMAlert(interval time.Duration) *config.ScrapeConfig {
 }
 
 // BuildScrapeConfigForAgent - builds scrape configuration for given pmmAgent
-func (svc *Service) BuildScrapeConfigForAgent(pmmAgentID string) ([]byte, error) {
+func (svc *Service) BuildScrapeConfigForVMAgent(pmmAgentID string) ([]byte, error) {
 	var cfg config.Config
 	e := svc.db.InTransaction(func(tx *reform.TX) error {
 		settings, err := models.GetSettings(tx)

@@ -526,7 +526,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 			l.Errorf("%+v", err)
 		}
 	}
-	cfg, err := r.vmdb.BuildScrapeConfigForAgent(pmmAgentID)
+	cfg, err := r.vmdb.BuildScrapeConfigForVMAgent(pmmAgentID)
 	if err != nil {
 		l.WithError(err).Errorf("cannot get agent scrape config for agent: %s", pmmAgentID)
 	}

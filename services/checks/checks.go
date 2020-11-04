@@ -81,6 +81,7 @@ var (
 
 var defaultPublicKeys = []string{
 	"RWTfyQTP3R7VzZggYY7dzuCbuCQWqTiGCqOvWRRAMVEiw0eSxHMVBBE5", // PMM 2.6
+	"RWRxgu1w3alvJsQf+sHVUYiF6guAdEsBWXDe8jHZuB9dXVE9b5vw7ONM", // PMM 2.12
 }
 
 // Service is responsible for interactions with Percona Check service.
@@ -968,6 +969,7 @@ func (s *Service) verifySignatures(resp *api.GetAllChecksResponse) error {
 	for _, sign := range resp.Signatures {
 		for _, key := range s.publicKeys {
 			if err = check.Verify([]byte(resp.File), key, sign); err == nil {
+				s.l.Debugf("Key %q matches signature %q.", key, sign)
 				return nil
 			}
 			s.l.Debugf("Key %q doesn't match signature %q: %s.", key, sign, err)
