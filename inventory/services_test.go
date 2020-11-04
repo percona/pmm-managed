@@ -57,6 +57,7 @@ func TestServices(t *testing.T) {
 		externalService := addExternalService(t, services.AddExternalServiceBody{
 			NodeID:      genericNodeID,
 			ServiceName: pmmapitests.TestString(t, "Some External Service on remote Node"),
+			Group:       "rabbitmq",
 		})
 		externalServiceID := externalService.External.ServiceID
 		defer pmmapitests.RemoveServices(t, externalServiceID)
@@ -1121,6 +1122,7 @@ func TestExternalService(t *testing.T) {
 			Body: services.AddExternalServiceBody{
 				NodeID:      genericNodeID,
 				ServiceName: serviceName,
+				Group:       "redis",
 			},
 			Context: pmmapitests.Context,
 		}
@@ -1134,6 +1136,7 @@ func TestExternalService(t *testing.T) {
 					ServiceID:   serviceID,
 					NodeID:      genericNodeID,
 					ServiceName: serviceName,
+					Group:       "redis",
 				},
 			},
 		}, res)
@@ -1152,6 +1155,7 @@ func TestExternalService(t *testing.T) {
 					ServiceID:   serviceID,
 					NodeID:      genericNodeID,
 					ServiceName: serviceName,
+					Group:       "redis",
 				},
 			},
 		}, serviceRes)
@@ -1161,6 +1165,7 @@ func TestExternalService(t *testing.T) {
 			Body: services.AddExternalServiceBody{
 				NodeID:      genericNodeID,
 				ServiceName: serviceName,
+				Group:       "redis",
 			},
 			Context: pmmapitests.Context,
 		}
@@ -1207,5 +1212,37 @@ func TestExternalService(t *testing.T) {
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveServices(t, res.Payload.External.ServiceID)
 		}
+	})
+
+	t.Run("AddServiceWithOutGroup", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+
+		serviceName := pmmapitests.TestString(t, "Basic External Service")
+		params := &services.AddExternalServiceParams{
+			Body: services.AddExternalServiceBody{
+				NodeID:      genericNodeID,
+				ServiceName: serviceName,
+			},
+			Context: pmmapitests.Context,
+		}
+		res, err := client.Default.Services.AddExternalService(params)
+		assert.NoError(t, err)
+		require.NotNil(t, res)
+		serviceID := res.Payload.External.ServiceID
+		assert.Equal(t, &services.AddExternalServiceOK{
+			Payload: &services.AddExternalServiceOKBody{
+				External: &services.AddExternalServiceOKBodyExternal{
+					ServiceID:   serviceID,
+					NodeID:      genericNodeID,
+					ServiceName: serviceName,
+					Group:       "external",
+				},
+			},
+		}, res)
+		defer pmmapitests.RemoveServices(t, serviceID)
 	})
 }
