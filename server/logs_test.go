@@ -53,16 +53,17 @@ func TestDownloadLogs(t *testing.T) {
 		"pmm.ini",
 		"postgresql.log",
 		"postgresql.startup.log",
-		"prometheus.ini",
-		"prometheus.log",
-		"prometheus.yml",
-		"prometheus_targets.json",
 		"qan-api2.ini",
 		"qan-api2.log",
 		"supervisorctl_status.log",
 		"supervisord.conf",
 		"supervisord.log",
 		"systemctl_status.log",
+		"victoriametrics-promscrape.yml",
+		"victoriametrics.ini",
+		"victoriametrics.log",
+		"victoriametrics_targets.txt",
+		"vmalert.log",
 	}
 
 	actual := make([]string, len(zipR.File))
