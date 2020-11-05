@@ -18,7 +18,6 @@ package grpc
 
 import (
 	"context"
-	"time"
 
 	"github.com/AlekSi/pointer"
 
@@ -297,17 +296,21 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 	}, nil
 }
 
+func pointerToAgentType(agentType models.AgentType) *models.AgentType {
+	return &agentType
+}
+
 // StartPTMySQLSummaryAction starts pt-mysql-summary action.
 //nolint:lll
 func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
-	agents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, req.NodeId)
+	service, err := models.FindServiceByID(s.db.Querier, req.ServiceId)
 	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "No pmm-agent running on this node")
+		return nil, err
 	}
 
-	agents = models.FindPMMAgentsForVersion(s.l, agents, pmmAgent2100)
-	if len(agents) == 0 {
-		return nil, status.Error(codes.NotFound, "all available agents are outdated")
+	agents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, service.NodeID)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "No pmm-agent running on this node")
 	}
 
 	agentID, err := models.FindPmmAgentIDToRunAction(req.PmmAgentId, agents)
@@ -315,18 +318,22 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 		return nil, err
 	}
 
+	mExporters, err := models.FindAgents(s.db.Querier, models.AgentFilters{AgentType: pointerToAgentType(models.MySQLdExporterType)})
+	if err != nil {
+		return nil, err
+	}
+	if len(mExporters) == 0 {
+		return nil, status.Errorf(codes.NotFound, "No mysql exporter")
+	}
+
+	mySQLExporter := mExporters[0]
+
 	res, err := models.CreateActionResult(s.db.Querier, agentID)
 	if err != nil {
 		return nil, err
 	}
 
-	agent, _ := models.FindAgentByID(s.db.Querier, agentID)
-	service, err := models.FindServiceByID(s.db.Querier, pointer.GetString(agent.ServiceID))
-	if err != nil {
-		return nil, err
-	}
-
-	err = s.r.StartPTMySQLSummaryAction(ctx, res.ID, agentID, agent.DSN(service, time.Second, ""), pointer.GetString(agent.Username), pointer.GetString(agent.Password))
+	err = s.r.StartPTMySQLSummaryAction(ctx, res.ID, agentID, pointer.GetString(service.Address), pointer.GetString(mySQLExporter.Username), pointer.GetString(mySQLExporter.Password))
 	if err != nil {
 		return nil, err
 	}
