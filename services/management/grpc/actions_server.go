@@ -294,39 +294,37 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 	}, nil
 }
 
-// StartPTMySqlSummaryAction starts pt-mysql-summary action.
+// StartPTMySQLSummaryAction starts pt-mysql-summary action.
 //nolint:lll
-func (s *actionsServer) StartPTMySqlSummaryAction(ctx context.Context, req *managementpb.StartPTMySqlSummaryActionRequest) (*managementpb.StartPTMySqlSummaryActionResponse, error) {
-	// models.FindPMMAgentsForService
+func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
+	agents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, req.NodeId)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "No pmm-agent running on this node")
+	}
 
-	// agents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, req.NodeId)
-	// if err != nil {
-	// 	return nil, status.Errorf(codes.NotFound, "No pmm-agent running on this node")
-	// }
+	agents = models.FindPMMAgentsForVersion(s.l, agents, pmmAgent2100)
+	if len(agents) == 0 {
+		return nil, status.Error(codes.NotFound, "all available agents are outdated")
+	}
 
-	// agents = models.FindPMMAgentsForVersion(s.l, agents, pmmAgent2100)
-	// if len(agents) == 0 {
-	// 	return nil, status.Error(codes.NotFound, "all available agents are outdated")
-	// }
+	agentID, err := models.FindPmmAgentIDToRunAction(req.PmmAgentId, agents)
+	if err != nil {
+		return nil, err
+	}
 
-	// agentID, err := models.FindPmmAgentIDToRunAction(req.PmmAgentId, agents)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	res, err := models.CreateActionResult(s.db.Querier, agentID)
+	if err != nil {
+		return nil, err
+	}
 
-	// res, err := models.CreateActionResult(s.db.Querier, req.NodeId)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	err = s.r.StartPTMySQLSummaryAction(ctx, res.ID, agentID)
+	if err != nil {
+		return nil, err
+	}
 
-	// err = s.r.StartPTMySqlSummaryAction(ctx, res.ID, req.NodeId)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	return &managementpb.StartPTMySqlSummaryActionResponse{
-		PmmAgentId: "x",
-		ActionId:   "y",
+	return &managementpb.StartPTMySQLSummaryActionResponse{
+		PmmAgentId: agentID,
+		ActionId:   res.ID,
 	}, nil
 }
 

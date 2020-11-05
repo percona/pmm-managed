@@ -1077,8 +1077,8 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID stri
 	return nil
 }
 
-// StartPTMySqlSummaryAction starts pt-summary action on pmm-agent.
-func (r *Registry) StartPTMySqlSummaryAction(ctx context.Context, id, pmmAgentID string) error {
+// StartPTMySQLSummaryAction starts pt-summary action on pmm-agent.
+func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		// Need pass params, even empty, because othervise request's marshal fail.
