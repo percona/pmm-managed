@@ -18,6 +18,9 @@ package grpc
 
 import (
 	"context"
+	"time"
+
+	"github.com/AlekSi/pointer"
 
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/managementpb"
@@ -317,7 +320,13 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 		return nil, err
 	}
 
-	err = s.r.StartPTMySQLSummaryAction(ctx, res.ID, agentID)
+	agent, _ := models.FindAgentByID(s.db.Querier, agentID)
+	service, err := models.FindServiceByID(s.db.Querier, pointer.GetString(agent.ServiceID))
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.r.StartPTMySQLSummaryAction(ctx, res.ID, agentID, agent.DSN(service, time.Second, ""), pointer.GetString(agent.Username), pointer.GetString(agent.Password))
 	if err != nil {
 		return nil, err
 	}
