@@ -572,6 +572,7 @@ func (as *AgentsService) AddProxySQLExporter(ctx context.Context, req *inventory
 			CustomLabels:  req.CustomLabels,
 			TLS:           req.Tls,
 			TLSSkipVerify: req.TlsSkipVerify,
+			PushMetrics:   req.PushMetrics,
 		}
 		row, err := models.CreateAgent(tx.Querier, models.ProxySQLExporterType, params)
 		if err != nil {
@@ -740,6 +741,7 @@ func (as *AgentsService) AddRDSExporter(ctx context.Context, req *inventorypb.Ad
 			CustomLabels:               req.CustomLabels,
 			RDSBasicMetricsDisabled:    req.DisableBasicMetrics,
 			RDSEnhancedMetricsDisabled: req.DisableEnhancedMetrics,
+			PushMetrics:                req.PushMetrics,
 		}
 		row, err := models.CreateAgent(tx.Querier, models.RDSExporterType, params)
 		if err != nil {
