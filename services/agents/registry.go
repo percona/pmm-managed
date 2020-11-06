@@ -1062,7 +1062,7 @@ func (r *Registry) StartMongoDBQueryGetCmdLineOptsAction(ctx context.Context, id
 func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
-		// Need pass params, even empty, because othervise request's marshal fail.
+		// Requires params to be passed, even empty, othervise request's marshal fail.
 		Params: &agentpb.StartActionRequest_PtSummaryParams{
 			PtSummaryParams: &agentpb.StartActionRequest_PTSummaryParams{},
 		},
@@ -1081,7 +1081,7 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID stri
 func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID, agentAddress, agentUsername, agentPassword string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
-		// Need pass params, even empty, because othervise request's marshal fail.
+		// Requires params to be passed, even empty, othervise request's marshal fail.
 		Params: &agentpb.StartActionRequest_PtMysqlSummaryParams{
 			PtMysqlSummaryParams: &agentpb.StartActionRequest_PTMySQLSummaryParams{
 				Address:  agentAddress,
