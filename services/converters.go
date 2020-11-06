@@ -303,16 +303,17 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 
 	case models.ProxySQLExporterType:
 		return &inventorypb.ProxySQLExporter{
-			AgentId:       agent.AgentID,
-			PmmAgentId:    pointer.GetString(agent.PMMAgentID),
-			ServiceId:     serviceID,
-			Username:      pointer.GetString(agent.Username),
-			Disabled:      agent.Disabled,
-			Status:        inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
-			ListenPort:    uint32(pointer.GetUint16(agent.ListenPort)),
-			CustomLabels:  labels,
-			Tls:           agent.TLS,
-			TlsSkipVerify: agent.TLSSkipVerify,
+			AgentId:            agent.AgentID,
+			PmmAgentId:         pointer.GetString(agent.PMMAgentID),
+			ServiceId:          serviceID,
+			Username:           pointer.GetString(agent.Username),
+			Disabled:           agent.Disabled,
+			Status:             inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
+			ListenPort:         uint32(pointer.GetUint16(agent.ListenPort)),
+			CustomLabels:       labels,
+			Tls:                agent.TLS,
+			TlsSkipVerify:      agent.TLSSkipVerify,
+			PushMetricsEnabled: agent.PushMetrics,
 		}, nil
 
 	case models.QANPostgreSQLPgStatementsAgentType:
@@ -354,6 +355,7 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 			CustomLabels:            labels,
 			BasicMetricsDisabled:    agent.RDSBasicMetricsDisabled,
 			EnhancedMetricsDisabled: agent.RDSEnhancedMetricsDisabled,
+			PushMetricsEnabled:      agent.PushMetrics,
 		}, nil
 
 	case models.ExternalExporterType:

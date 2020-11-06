@@ -641,4 +641,49 @@ func TestAgents(t *testing.T) {
 		}
 		assert.Equal(t, expectedMySQLdExporter, actualAgent)
 	})
+	t.Run("PushMetricsRdsExporter", func(t *testing.T) {
+		ns, _, as, teardown := setup(t)
+		defer teardown(t)
+
+		node, err := ns.AddRemoteRDSNode(ctx, &inventorypb.AddRemoteRDSNodeRequest{
+			NodeName:     "rds1",
+			Address:      "rds-mysql57",
+			NodeModel:    "db.t3.micro",
+			Region:       "us-east-1",
+			Az:           "us-east-1b",
+			CustomLabels: map[string]string{"foo": "bar"},
+		})
+		require.NoError(t, err)
+		expectedNode := &inventorypb.RemoteRDSNode{
+			NodeId:       "/node_id/00000000-0000-4000-8000-000000000005",
+			NodeName:     "rds1",
+			Address:      "rds-mysql57",
+			NodeModel:    "db.t3.micro",
+			Region:       "us-east-1",
+			Az:           "us-east-1b",
+			CustomLabels: map[string]string{"foo": "bar"},
+		}
+		assert.Equal(t, expectedNode, node)
+
+		as.r.(*mockAgentsRegistry).On("SendSetStateRequest", ctx, "pmm-server")
+
+		agent, err := as.AddRDSExporter(ctx, &inventorypb.AddRDSExporterRequest{
+			PmmAgentId:   "pmm-server",
+			NodeId:       node.NodeId,
+			AwsAccessKey: "AKIAIOSFODNN7EXAMPLE",
+			AwsSecretKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+			CustomLabels: map[string]string{"baz": "qux"},
+			PushMetrics:  true,
+		})
+		require.NoError(t, err)
+		expectedAgent := &inventorypb.RDSExporter{
+			AgentId:            "/agent_id/00000000-0000-4000-8000-000000000006",
+			PmmAgentId:         "pmm-server",
+			NodeId:             "/node_id/00000000-0000-4000-8000-000000000005",
+			AwsAccessKey:       "AKIAIOSFODNN7EXAMPLE",
+			CustomLabels:       map[string]string{"baz": "qux"},
+			PushMetricsEnabled: true,
+		}
+		assert.Equal(t, expectedAgent, agent)
+	})
 }
