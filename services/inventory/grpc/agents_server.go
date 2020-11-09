@@ -102,7 +102,7 @@ func (s *agentsServer) ListAgents(ctx context.Context, req *inventorypb.ListAgen
 		case *inventorypb.ExternalExporter:
 			res.ExternalExporter = append(res.ExternalExporter, agent)
 		case *inventorypb.VMAgent:
-			// skip it, fix later if needed.
+			res.VmAgent = append(res.VmAgent, agent)
 		default:
 			panic(fmt.Errorf("unhandled inventory Agent type %T", agent))
 		}
