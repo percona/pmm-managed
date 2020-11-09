@@ -303,6 +303,7 @@ var databaseSchema = [][]string{
 				port IS NULL OR (port > 0 AND port < 65536)
 			)`,
 	},
+
 	17: {
 		`CREATE TABLE kubernetes_clusters (
 			-- common
@@ -317,6 +318,23 @@ var databaseSchema = [][]string{
 		)`,
 	},
 	18: {
+		`ALTER TABLE services
+			ADD COLUMN external_group VARCHAR NOT NULL DEFAULT ''`,
+
+		`UPDATE services SET external_group = 'external' WHERE service_type = '` + string(ExternalServiceType) + `'`,
+
+		`ALTER TABLE services
+			ALTER COLUMN external_group DROP DEFAULT`,
+
+		// Only service with type external can have non empty value of group.
+		`ALTER TABLE services
+			ADD CONSTRAINT services_external_group_check CHECK (
+				(service_type <> '` + string(ExternalServiceType) + `' AND external_group = '')
+				OR
+				(service_type = '` + string(ExternalServiceType) + `' AND external_group <> '')
+			)`,
+	},
+	19: {
 		`ALTER TABLE agents
 			ADD COLUMN push_metrics BOOLEAN NOT NULL DEFAULT FALSE`,
 	},
