@@ -1077,16 +1077,20 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID stri
 	return nil
 }
 
-// StartPTMySQLSummaryAction starts pt-summary action on pmm-agent.
-func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID, agentAddress, agentUsername, agentPassword string) error {
+// StartPTMySQLSummaryAction starts pt-mysql-summary action on the pmm-agent.
+//
+// ctx			Context
+// id			Action ID
+// pmmAgentID	Agent ID
+// dsn			Passes the host, username and password required by the batch
+// return:		nil - ok, otherwise an error code
+func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID, dsn string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		// Requires params to be passed, even empty, othervise request's marshal fail.
 		Params: &agentpb.StartActionRequest_PtMysqlSummaryParams{
 			PtMysqlSummaryParams: &agentpb.StartActionRequest_PTMySQLSummaryParams{
-				Address:  agentAddress,
-				Username: agentUsername,
-				Password: agentPassword,
+				Dsn: dsn,
 			},
 		},
 	}

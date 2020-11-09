@@ -18,8 +18,7 @@ package grpc
 
 import (
 	"context"
-
-	"github.com/AlekSi/pointer"
+	"fmt"
 
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/managementpb"
@@ -318,30 +317,26 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 		return nil, err
 	}
 
-	mExporters, err := models.FindAgents(s.db.Querier, models.AgentFilters{AgentType: pointerToAgentType(models.MySQLdExporterType)})
-	if err != nil {
-		return nil, err
-	}
-	if len(mExporters) == 0 {
-		return nil, status.Errorf(codes.NotFound, "No mysql exporter")
-	}
-
-	mySQLExporter := mExporters[0]
-
 	res, err := models.CreateActionResult(s.db.Querier, agentID)
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.r.StartPTMySQLSummaryAction(ctx, res.ID, agentID, pointer.GetString(service.Address), pointer.GetString(mySQLExporter.Username), pointer.GetString(mySQLExporter.Password))
+	fmt.Println("--------------- action ID: " + res.ID)
+
+	// Gets the DSN string (containing user, password and address)
+	dsn, err := models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, req.ServiceId, agentID, "")
 	if err != nil {
 		return nil, err
 	}
 
-	return &managementpb.StartPTMySQLSummaryActionResponse{
-		PmmAgentId: agentID,
-		ActionId:   res.ID,
-	}, nil
+	// Starts the pt-mysql-summary with the DSN string
+	err = s.r.StartPTMySQLSummaryAction(ctx, res.ID, agentID, dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	return &managementpb.StartPTMySQLSummaryActionResponse{PmmAgentId: agentID, ActionId: res.ID}, nil
 }
 
 // CancelAction stops an Action.
