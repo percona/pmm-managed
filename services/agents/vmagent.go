@@ -21,12 +21,10 @@ import (
 
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
-
-	"github.com/percona/pmm-managed/models"
 )
 
 // vmAgentConfig returns desired configuration of vmagent process.
-func vmAgentConfig(exporter *models.Agent, scrapeCfg string) *agentpb.SetStateRequest_AgentProcess {
+func vmAgentConfig(scrapeCfg string) *agentpb.SetStateRequest_AgentProcess {
 
 	args := []string{
 		"-remoteWrite.url={{.server_url}}/victoriametrics/api/v1/write",

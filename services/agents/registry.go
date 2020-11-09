@@ -441,10 +441,6 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 	if l.Logger.GetLevel() >= logrus.DebugLevel {
 		redactMode = exposeSecrets
 	}
-	scrapeCfg, err := r.vmdb.BuildScrapeConfigForVMAgent(pmmAgentID)
-	if err != nil {
-		l.WithError(err).Errorf("cannot get agent scrape config for agent: %s", pmmAgentID)
-	}
 
 	rdsExporters := make(map[*models.Node]*models.Agent)
 	agentProcesses := make(map[string]*agentpb.SetStateRequest_AgentProcess)
@@ -475,7 +471,11 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 			}
 			rdsExporters[node] = row
 		case models.VMAgentType:
-			agentProcesses[row.AgentID] = vmAgentConfig(row, string(scrapeCfg))
+			scrapeCfg, err := r.vmdb.BuildScrapeConfigForVMAgent(pmmAgentID)
+			if err != nil {
+				l.WithError(err).Errorf("cannot get agent scrape config for agent: %s", pmmAgentID)
+			}
+			agentProcesses[row.AgentID] = vmAgentConfig(string(scrapeCfg))
 
 		// Agents with exactly one Service
 		case models.MySQLdExporterType, models.MongoDBExporterType, models.PostgresExporterType, models.ProxySQLExporterType,

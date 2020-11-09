@@ -38,7 +38,6 @@ func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s 
 
 	var rdsParams []*scrapeConfigParams
 	for _, agent := range agents {
-
 		if agent.AgentType == models.PMMAgentType {
 			// TODO https://jira.percona.com/browse/PMM-4087
 			continue

@@ -128,11 +128,6 @@ func (as *AgentsService) List(ctx context.Context, filters models.AgentFilters) 
 		// TODO That loop makes len(agents) SELECTs, that can be slow. Optimize when needed.
 		res = make([]inventorypb.Agent, len(agents))
 		for i, a := range agents {
-			// TODO fix it
-			// now we skip it
-			//if a.AgentType == models.VMAgentType {
-			//	continue
-			//}
 			res[i], err = toInventoryAgent(tx.Querier, a, as.r)
 			if err != nil {
 				return err

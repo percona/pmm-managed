@@ -241,7 +241,7 @@ func FindPMMAgentsForVersion(logger *logrus.Entry, agents []*Agent, minPMMAgentV
 	return result
 }
 
-// FindAgents returns Agents by filters.
+// FindAgentsForScrapeConfig returns Agents for scrape config generation by filters.
 func FindAgentsForScrapeConfig(q *reform.Querier, filters AgentFilters) ([]*Agent, error) {
 	var (
 		args       []interface{}
