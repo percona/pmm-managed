@@ -29,9 +29,11 @@ import (
 	"github.com/percona/pmm/api/alertmanager/amclient/alert"
 	"github.com/percona/pmm/api/alertmanager/amclient/general"
 	"github.com/percona/pmm/api/alertmanager/ammodels"
+	"github.com/percona/promconfig/alertmanager"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/reform.v1"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -39,6 +41,7 @@ const (
 	prometheusDir       = "/srv/prometheus"
 	dirPerm             = os.FileMode(0o775)
 
+	alertmanagerConfigPath     = "/etc/alertmanager.yml"
 	alertmanagerBaseConfigPath = "/srv/alertmanager/alertmanager.base.yml"
 )
 
@@ -107,10 +110,8 @@ func (svc *Service) createDataDir() {
 	}
 }
 
-// generateBaseConfig generates /srv/alertmanager/alertmanager.base.yml if it is not present.
-//
-// TODO That's a temporary measure until we start generating /etc/alertmanager.yml
-// using /srv/alertmanager/alertmanager.base.yml as a base. See supervisord config.
+// generateBaseConfig generates /srv/alertmanager/alertmanager.base.yml if it is not present
+// and also copies its contents to generate /etc/alertmanager.yml.
 func (svc *Service) generateBaseConfig() {
 	_, err := os.Stat(alertmanagerBaseConfigPath)
 	svc.l.Debugf("%s status: %v", alertmanagerBaseConfigPath, err)
@@ -129,6 +130,40 @@ receivers:
 `) + "\n"
 		err = ioutil.WriteFile(alertmanagerBaseConfigPath, []byte(defaultBase), 0644) //nolint:gosec
 		svc.l.Infof("%s created: %v.", alertmanagerBaseConfigPath, err)
+	}
+
+	var content []byte
+	_, err = os.Stat(alertmanagerBaseConfigPath)
+	svc.l.Debugf("%s status: %v", alertmanagerBaseConfigPath, err)
+	if err == nil {
+		svc.l.Infof("checking %s content", alertmanagerConfigPath)
+		content, err = ioutil.ReadFile(alertmanagerConfigPath)
+		if err != nil {
+			svc.l.Errorf("Failed to load alertmanager config %s: %s", alertmanagerConfigPath, err)
+		}
+	}
+
+	// copy the base config if `/etc/alertmanager.yml` is not present or
+	// is already present but does not have any config.
+	if string(content) == "---\n" || os.IsNotExist(err) {
+		var cfg alertmanager.Config
+		buf, err := ioutil.ReadFile(alertmanagerBaseConfigPath)
+		if err != nil {
+			svc.l.Errorf("Failed to load alertmanager base config %s: %s", alertmanagerBaseConfigPath, err)
+		}
+		if err := yaml.Unmarshal(buf, &cfg); err != nil {
+			svc.l.Errorf("Failed to parse alertmanager base config %s: %s.", alertmanagerBaseConfigPath, err)
+		}
+
+		// TODO add custom information to this config.
+		b, err := yaml.Marshal(cfg)
+		if err != nil {
+			svc.l.Errorf("Failed to marshal alertmanager config %s: %s.", alertmanagerConfigPath, err)
+		}
+		b = append([]byte("# Managed by pmm-managed. DO NOT EDIT.\n---\n"), b...)
+
+		err = ioutil.WriteFile(alertmanagerConfigPath, b, 0644) //nolint:gosec
+		svc.l.Infof("%s created: %v.", alertmanagerConfigPath, err)
 	}
 }
 
