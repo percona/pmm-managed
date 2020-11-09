@@ -18,9 +18,6 @@
 package prometheus
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/AlekSi/pointer"
 	config "github.com/percona/promconfig"
 	"github.com/pkg/errors"
@@ -33,30 +30,14 @@ import (
 // AddScrapeConfigs - adds agents scrape configuration to given scrape config,
 // agent filter can be used for agents filtering.
 func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s *models.MetricsResolutions, filter models.AgentFilters) error {
-	var (
-		args       []interface{}
-		conditions []string
-	)
-	if filter.PMMAgentID != "" {
-		conditions = append(conditions, fmt.Sprintf("pmm_agent_id = %s", q.Placeholder(1)))
-		args = append(args, filter.PMMAgentID)
-	}
-	if filter.PushMetrics {
-		conditions = append(conditions, "push_metrics")
-	} else {
-		conditions = append(conditions, "NOT push_metrics")
-	}
-	conditions = append(conditions, "NOT disabled", "listen_port IS NOT NULL")
-	whereClause := fmt.Sprintf("WHERE %s ORDER BY agent_type, agent_id ", strings.Join(conditions, " AND "))
 
-	agents, err := q.SelectAllFrom(models.AgentTable, whereClause, args...)
+	agents, err := models.FindAgentsForScrapeConfig(q, filter)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
 	var rdsParams []*scrapeConfigParams
-	for _, str := range agents {
-		agent := str.(*models.Agent)
+	for _, agent := range agents {
 
 		if agent.AgentType == models.PMMAgentType {
 			// TODO https://jira.percona.com/browse/PMM-4087
@@ -182,6 +163,14 @@ func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s 
 				host:    paramsHost,
 				node:    paramsNode,
 				service: paramsService,
+				agent:   agent,
+			})
+		case models.VMAgentType:
+			l.Info("adding vmagent scrape cfg")
+			scfgs, err = scrapeConfigsForVMAgent(s, &scrapeConfigParams{
+				host:    paramsHost,
+				node:    paramsNode,
+				service: nil,
 				agent:   agent,
 			})
 

@@ -441,6 +441,10 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 	if l.Logger.GetLevel() >= logrus.DebugLevel {
 		redactMode = exposeSecrets
 	}
+	scrapeCfg, err := r.vmdb.BuildScrapeConfigForVMAgent(pmmAgentID)
+	if err != nil {
+		l.WithError(err).Errorf("cannot get agent scrape config for agent: %s", pmmAgentID)
+	}
 
 	rdsExporters := make(map[*models.Node]*models.Agent)
 	agentProcesses := make(map[string]*agentpb.SetStateRequest_AgentProcess)
@@ -470,6 +474,8 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 				return
 			}
 			rdsExporters[node] = row
+		case models.VMAgentType:
+			agentProcesses[row.AgentID] = vmAgentConfig(row, string(scrapeCfg))
 
 		// Agents with exactly one Service
 		case models.MySQLdExporterType, models.MongoDBExporterType, models.PostgresExporterType, models.ProxySQLExporterType,
@@ -501,10 +507,10 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 				builtinAgents[row.AgentID] = qanPostgreSQLPgStatementsAgentConfig(service, row)
 			case models.QANPostgreSQLPgStatMonitorAgentType:
 				builtinAgents[row.AgentID] = qanPostgreSQLPgStatMonitorAgentConfig(service, row)
-			}
 
-		case models.ExternalExporterType:
-			// ignore
+			case models.ExternalExporterType:
+				// ignore
+			}
 
 		default:
 			l.Panicf("unhandled Agent type %s", row.AgentType)
@@ -526,14 +532,9 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 			l.Errorf("%+v", err)
 		}
 	}
-	cfg, err := r.vmdb.BuildScrapeConfigForVMAgent(pmmAgentID)
-	if err != nil {
-		l.WithError(err).Errorf("cannot get agent scrape config for agent: %s", pmmAgentID)
-	}
 	state := &agentpb.SetStateRequest{
-		AgentProcesses:      agentProcesses,
-		BuiltinAgents:       builtinAgents,
-		VmagentScrapeConfig: cfg,
+		AgentProcesses: agentProcesses,
+		BuiltinAgents:  builtinAgents,
 	}
 	l.Infof("SendSetStateRequest: %+v.", state)
 	resp := agent.channel.SendRequest(state)

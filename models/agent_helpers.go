@@ -241,6 +241,35 @@ func FindPMMAgentsForVersion(logger *logrus.Entry, agents []*Agent, minPMMAgentV
 	return result
 }
 
+// FindAgents returns Agents by filters.
+func FindAgentsForScrapeConfig(q *reform.Querier, filters AgentFilters) ([]*Agent, error) {
+	var (
+		args       []interface{}
+		conditions []string
+	)
+	if filters.PMMAgentID != "" {
+		conditions = append(conditions, fmt.Sprintf("pmm_agent_id = %s", q.Placeholder(1)))
+		args = append(args, filters.PMMAgentID)
+	}
+	if filters.PushMetrics {
+		conditions = append(conditions, "push_metrics")
+	} else {
+		conditions = append(conditions, "NOT push_metrics")
+	}
+	conditions = append(conditions, "NOT disabled", "listen_port IS NOT NULL")
+	whereClause := fmt.Sprintf("WHERE %s ORDER BY agent_type, agent_id ", strings.Join(conditions, " AND "))
+	allAgents, err := q.SelectAllFrom(AgentTable, whereClause, args...)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	res := make([]*Agent, len(allAgents))
+	for i, s := range allAgents {
+		res[i] = s.(*Agent)
+	}
+	return res, nil
+}
+
 // createPMMAgentWithID creates PMMAgent with given ID.
 func createPMMAgentWithID(q *reform.Querier, id, runsOnNodeID string, customLabels map[string]string) (*Agent, error) {
 	if err := checkUniqueAgentID(q, id); err != nil {
