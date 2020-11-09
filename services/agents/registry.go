@@ -50,6 +50,8 @@ const (
 var (
 	defaultActionTimeout      = ptypes.DurationProto(10 * time.Second)
 	defaultQueryActionTimeout = ptypes.DurationProto(15 * time.Second) // should be less than checks.resultTimeout
+	// vmagent with push model version will be released with PMM Agent v2.12.
+	vmagentPMMVersion = version.MustParse("2.11.99")
 )
 
 type pmmAgentInfo struct {
@@ -471,6 +473,9 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 			}
 			rdsExporters[node] = row
 		case models.VMAgentType:
+			if pmmAgentVersion.Less(vmagentPMMVersion) {
+				continue
+			}
 			scrapeCfg, err := r.vmdb.BuildScrapeConfigForVMAgent(pmmAgentID)
 			if err != nil {
 				l.WithError(err).Errorf("cannot get agent scrape config for agent: %s", pmmAgentID)
