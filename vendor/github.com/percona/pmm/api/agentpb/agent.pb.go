@@ -1032,16 +1032,8 @@ type StartActionRequest_PtSummaryParams struct {
 	PtSummaryParams *StartActionRequest_PTSummaryParams `protobuf:"bytes,10,opt,name=pt_summary_params,json=ptSummaryParams,proto3,oneof"`
 }
 
-<<<<<<< HEAD
 type StartActionRequest_PtMysqlSummaryParams struct {
-<<<<<<< HEAD
-=======
-type StartActionRequest_PtMySqlSummaryParams struct {
->>>>>>> 0b578521 ([PMM-4172] Struct and functions for pt-mysql-summary created)
-	PtMysqlSummaryParams *StartActionRequest_PTMySqlSummaryParams `protobuf:"bytes,11,opt,name=pt_mysql_summary_params,json=ptMysqlSummaryParams,proto3,oneof"`
-=======
 	PtMysqlSummaryParams *StartActionRequest_PTMySQLSummaryParams `protobuf:"bytes,11,opt,name=pt_mysql_summary_params,json=ptMysqlSummaryParams,proto3,oneof"`
->>>>>>> 5ed37c1f (PMM-4172 Deps.)
 }
 
 type StartActionRequest_MysqlQueryShowParams struct {
