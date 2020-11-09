@@ -18,7 +18,6 @@ package grpc
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/managementpb"
@@ -321,8 +320,6 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Println("--------------- action ID: " + res.ID)
 
 	// Gets the DSN string (containing user, password and address)
 	dsn, err := models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, req.ServiceId, agentID, "")
