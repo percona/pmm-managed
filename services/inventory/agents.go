@@ -780,8 +780,11 @@ func (as *AgentsService) ChangeRDSExporter(ctx context.Context, req *inventorypb
 }
 
 // AddExternalExporter inserts external-exporter Agent with given parameters.
-func (as *AgentsService) AddExternalExporter(req *inventorypb.AddExternalExporterRequest) (*inventorypb.ExternalExporter, error) {
-	var res *inventorypb.ExternalExporter
+func (as *AgentsService) AddExternalExporter(ctx context.Context, req *inventorypb.AddExternalExporterRequest) (*inventorypb.ExternalExporter, error) {
+	var (
+		res        *inventorypb.ExternalExporter
+		PMMAgentID *string
+	)
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 		params := &models.CreateExternalExporterParams{
 			RunsOnNodeID: req.RunsOnNodeId,
@@ -792,6 +795,7 @@ func (as *AgentsService) AddExternalExporter(req *inventorypb.AddExternalExporte
 			MetricsPath:  req.MetricsPath,
 			ListenPort:   req.ListenPort,
 			CustomLabels: req.CustomLabels,
+			PushMetrics:  req.PushMetrics,
 		}
 		row, err := models.CreateExternalExporter(tx.Querier, params)
 		if err != nil {
@@ -803,14 +807,19 @@ func (as *AgentsService) AddExternalExporter(req *inventorypb.AddExternalExporte
 			return err
 		}
 		res = agent.(*inventorypb.ExternalExporter)
+		PMMAgentID = row.PMMAgentID
 		return nil
 	})
 	if e != nil {
 		return nil, e
 	}
 
-	// It's required to regenerate victoriametrics config file.
-	as.vmdb.RequestConfigurationUpdate()
+	if PMMAgentID != nil {
+		as.r.SendSetStateRequest(ctx, *PMMAgentID)
+	} else {
+		// It's required to regenerate victoriametrics config file.
+		as.vmdb.RequestConfigurationUpdate()
+	}
 
 	return res, nil
 }

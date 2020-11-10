@@ -338,6 +338,9 @@ var databaseSchema = [][]string{
 		`ALTER TABLE agents
 			ADD COLUMN push_metrics BOOLEAN NOT NULL DEFAULT FALSE`,
 	},
+	20: {
+		`ALTER TABLE agents DROP CONSTRAINT runs_on_node_id_only_for_pmm_agent_and_external`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^

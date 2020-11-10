@@ -51,7 +51,8 @@ var (
 	defaultActionTimeout      = ptypes.DurationProto(10 * time.Second)
 	defaultQueryActionTimeout = ptypes.DurationProto(15 * time.Second) // should be less than checks.resultTimeout
 	// vmagent with push model version will be released with PMM Agent v2.12.
-	vmagentPMMVersion = version.MustParse("2.11.99")
+	// TODO fix it to 2.11.99 before release
+	vmagentPMMVersion = version.MustParse("2.10.99")
 )
 
 type pmmAgentInfo struct {
@@ -472,6 +473,8 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 				return
 			}
 			rdsExporters[node] = row
+		case models.ExternalExporterType:
+			// ignore
 		case models.VMAgentType:
 			if pmmAgentVersion.Less(vmagentPMMVersion) {
 				continue

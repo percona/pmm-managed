@@ -20,6 +20,8 @@ package services
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb"
 	"gopkg.in/reform.v1"
@@ -360,16 +362,26 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 		}, nil
 
 	case models.ExternalExporterType:
+		if agent.RunsOnNodeID == nil {
+			if agent.PMMAgentID != nil {
+				pmmAgent, err := models.FindAgentByID(q, *agent.PMMAgentID)
+				if err != nil {
+					return nil, errors.Wrapf(err, "cannot find pmm_agent by id: %s, for external_exporter id: %s without node_id", *agent.PMMAgentID, agent.AgentID)
+				}
+				agent.RunsOnNodeID = pmmAgent.RunsOnNodeID
+			}
+		}
 		return &inventorypb.ExternalExporter{
-			AgentId:      agent.AgentID,
-			RunsOnNodeId: pointer.GetString(agent.RunsOnNodeID),
-			ServiceId:    pointer.GetString(agent.ServiceID),
-			Username:     pointer.GetString(agent.Username),
-			Disabled:     agent.Disabled,
-			Scheme:       pointer.GetString(agent.MetricsScheme),
-			MetricsPath:  pointer.GetString(agent.MetricsPath),
-			ListenPort:   uint32(pointer.GetUint16(agent.ListenPort)),
-			CustomLabels: labels,
+			AgentId:            agent.AgentID,
+			RunsOnNodeId:       pointer.GetString(agent.RunsOnNodeID),
+			ServiceId:          pointer.GetString(agent.ServiceID),
+			Username:           pointer.GetString(agent.Username),
+			Disabled:           agent.Disabled,
+			Scheme:             pointer.GetString(agent.MetricsScheme),
+			MetricsPath:        pointer.GetString(agent.MetricsPath),
+			ListenPort:         uint32(pointer.GetUint16(agent.ListenPort)),
+			CustomLabels:       labels,
+			PushMetricsEnabled: agent.PushMetrics,
 		}, nil
 	case models.VMAgentType:
 		return &inventorypb.VMAgent{

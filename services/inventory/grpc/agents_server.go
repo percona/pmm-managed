@@ -49,6 +49,7 @@ var agentTypes = map[inventorypb.AgentType]models.AgentType{
 	inventorypb.AgentType_QAN_POSTGRESQL_PGSTATMONITOR_AGENT: models.QANPostgreSQLPgStatMonitorAgentType,
 	inventorypb.AgentType_RDS_EXPORTER:                       models.RDSExporterType,
 	inventorypb.AgentType_EXTERNAL_EXPORTER:                  models.ExternalExporterType,
+	inventorypb.AgentType_VM_AGENT:                           models.VMAgentType,
 }
 
 func agentType(req *inventorypb.ListAgentsRequest) *models.AgentType {
@@ -463,7 +464,7 @@ func (s *agentsServer) ChangeRDSExporter(ctx context.Context, req *inventorypb.C
 }
 
 func (s *agentsServer) AddExternalExporter(ctx context.Context, req *inventorypb.AddExternalExporterRequest) (*inventorypb.AddExternalExporterResponse, error) {
-	agent, err := s.s.AddExternalExporter(req)
+	agent, err := s.s.AddExternalExporter(ctx, req)
 	if err != nil {
 		return nil, err
 	}

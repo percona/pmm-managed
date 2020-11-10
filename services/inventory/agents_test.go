@@ -225,7 +225,7 @@ func TestAgents(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, expectedPostgresExporter, actualAgent)
 
-		actualAgent, err = as.AddExternalExporter(&inventorypb.AddExternalExporterRequest{
+		actualAgent, err = as.AddExternalExporter(ctx, &inventorypb.AddExternalExporterRequest{
 			RunsOnNodeId: models.PMMServerNodeID,
 			ServiceId:    ps.ServiceId,
 			Username:     "username",
@@ -408,7 +408,7 @@ func TestAgents(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, service)
 
-		agent, err := as.AddExternalExporter(&inventorypb.AddExternalExporterRequest{
+		agent, err := as.AddExternalExporter(ctx, &inventorypb.AddExternalExporterRequest{
 			RunsOnNodeId: models.PMMServerNodeID,
 			ServiceId:    service.ServiceId,
 			Username:     "username",
@@ -686,5 +686,42 @@ func TestAgents(t *testing.T) {
 			PushMetricsEnabled: true,
 		}
 		assert.Equal(t, expectedAgent, agent)
+	})
+	t.Run("PushMetricsExternalExporter", func(t *testing.T) {
+		_, ss, as, teardown := setup(t)
+		defer teardown(t)
+		as.r.(*mockAgentsRegistry).On("SendSetStateRequest", ctx, "pmm-server")
+
+		service, err := ss.AddExternalService(ctx, &models.AddDBMSServiceParams{
+			ServiceName:   "External service",
+			NodeID:        models.PMMServerNodeID,
+			ExternalGroup: "external",
+		})
+		require.NoError(t, err)
+		require.NotNil(t, service)
+
+		agent, err := as.AddExternalExporter(ctx, &inventorypb.AddExternalExporterRequest{
+			RunsOnNodeId: models.PMMServerNodeID,
+			ServiceId:    service.ServiceId,
+			Username:     "username",
+			ListenPort:   12345,
+			PushMetrics:  true,
+		})
+		require.NoError(t, err)
+		expectedExternalExporter := &inventorypb.ExternalExporter{
+			AgentId:            "/agent_id/00000000-0000-4000-8000-000000000006",
+			RunsOnNodeId:       models.PMMServerNodeID,
+			ServiceId:          service.ServiceId,
+			Username:           "username",
+			Scheme:             "http",
+			MetricsPath:        "/metrics",
+			ListenPort:         12345,
+			PushMetricsEnabled: true,
+		}
+		assert.Equal(t, expectedExternalExporter, agent)
+
+		actualAgent, err := as.Get(ctx, "/agent_id/00000000-0000-4000-8000-000000000006")
+		require.NoError(t, err)
+		assert.Equal(t, expectedExternalExporter, actualAgent)
 	})
 }

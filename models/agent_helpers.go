@@ -345,6 +345,7 @@ type CreateExternalExporterParams struct {
 	MetricsPath  string
 	ListenPort   uint32
 	CustomLabels map[string]string
+	PushMetrics  bool
 }
 
 // CreateExternalExporter creates ExternalExporter.
@@ -352,9 +353,22 @@ func CreateExternalExporter(q *reform.Querier, params *CreateExternalExporterPar
 	if !(params.ListenPort > 0 && params.ListenPort < 65536) {
 		return nil, status.Errorf(codes.InvalidArgument, "Listen port should be between 1 and 65535.")
 	}
+	var (
+		pmmAgentID *string
+	)
+	runsOnNodeID := pointer.ToString(params.RunsOnNodeID)
 	id := "/agent_id/" + uuid.New().String()
 	if err := checkUniqueAgentID(q, id); err != nil {
 		return nil, err
+	}
+	// with push metrics we have to detect pmm_agent_id for external exporter.
+	if params.PushMetrics {
+		agentIDs, err := FindPMMAgentsRunningOnNode(q, params.RunsOnNodeID)
+		if err != nil {
+			return nil, errors.Wrapf(err, "cannot find pmm_agent for external exporter with push_metrics")
+		}
+		pmmAgentID = pointer.ToString(agentIDs[0].AgentID)
+		runsOnNodeID = nil
 	}
 
 	if _, err := FindNodeByID(q, params.RunsOnNodeID); err != nil {
@@ -373,15 +387,17 @@ func CreateExternalExporter(q *reform.Querier, params *CreateExternalExporterPar
 		metricsPath = "/metrics"
 	}
 	row := &Agent{
+		PMMAgentID:    pmmAgentID,
 		AgentID:       id,
 		AgentType:     ExternalExporterType,
-		RunsOnNodeID:  &params.RunsOnNodeID,
+		RunsOnNodeID:  runsOnNodeID,
 		ServiceID:     pointer.ToStringOrNil(params.ServiceID),
 		Username:      pointer.ToStringOrNil(params.Username),
 		Password:      pointer.ToStringOrNil(params.Password),
 		MetricsScheme: &scheme,
 		MetricsPath:   &metricsPath,
 		ListenPort:    pointer.ToUint16(uint16(params.ListenPort)),
+		PushMetrics:   params.PushMetrics,
 	}
 	if err := row.SetCustomLabels(params.CustomLabels); err != nil {
 		return nil, err
