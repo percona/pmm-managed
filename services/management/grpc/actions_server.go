@@ -301,6 +301,7 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, psReq *managem
 		return nil, err
 	}
 
+	// If founds an old action record for the agent
 	if sAction, bFound := dicPtSummaryLastAction[agentID]; bFound {
 		// If the time since the last call is less than 30 s
 		if timeNow-sAction.timestamp < ptSummaryRefreshPeriod {
