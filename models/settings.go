@@ -17,9 +17,6 @@
 package models
 
 import (
-	"fmt"
-	"io/ioutil"
-	"net/http"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/endpoints"
@@ -76,29 +73,9 @@ type Settings struct {
 	} `json:"dbaas"`
 }
 
-func getPublicIP() (string, error) {
-	resp, err := http.Get("https://api.ipify.org?format=text")
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-	ip, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	return string(ip), nil
-}
-
 // fillDefaults sets zero values to their default values.
 // Used for migrating settings to the newer version.
 func (s *Settings) fillDefaults() {
-	if s.PublicAddressURL == "" {
-		ip, err := getPublicIP()
-		if err == nil {
-			s.PublicAddressURL = fmt.Sprintf("https://%s", ip)
-		}
-	}
 	// no default for Telemetry UUID - it set by telemetry service
 
 	if s.MetricsResolutions.HR == 0 {
@@ -124,4 +101,5 @@ func (s *Settings) fillDefaults() {
 	// AlertManagerURL is empty by default
 	// SaaS.STTEnabled is false by default
 	// VictoriaMetrics CacheEnable is false by default
+	// PublicAddressURL is empty by default
 }
