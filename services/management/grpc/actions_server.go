@@ -262,35 +262,43 @@ func (s *actionsServer) StartMongoDBExplainAction(ctx context.Context, req *mana
 
 // StartPTSummaryAction starts pt-summary action.
 //nolint:lll
-func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
-	agents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, req.NodeId)
+func (s *actionsServer) StartPTSummaryAction(ctx context.Context, pReq *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
+	// Gets pointers to agents running on the node
+	pAgents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, pReq.NodeId)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "No pmm-agent running on this node")
 	}
 
-	agents = models.FindPMMAgentsForVersion(s.l, agents, pmmAgent2100)
-	if len(agents) == 0 {
+	// Filte by the version
+	pAgents = models.FindPMMAgentsForVersion(s.l, pAgents, pmmAgent2100)
+
+	// No agent found
+	if len(pAgents) == 0 {
 		return nil, status.Error(codes.NotFound, "all available agents are outdated")
 	}
 
-	agentID, err := models.FindPmmAgentIDToRunAction(req.PmmAgentId, agents)
+	// Gets the agent by ID
+	agentID, err := models.FindPmmAgentIDToRunAction(pReq.PmmAgentId, pAgents)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := models.CreateActionResult(s.db.Querier, agentID)
+	// Gets a pointer to the created action result structure
+	pActRes, err := models.CreateActionResult(s.db.Querier, agentID)
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.r.StartPTSummaryAction(ctx, res.ID, agentID)
+	// PT summary action
+	err = s.r.StartPTSummaryAction(ctx, pActRes.ID, agentID)
 	if err != nil {
 		return nil, err
 	}
 
+	// Returns pointer to the action response
 	return &managementpb.StartPTSummaryActionResponse{
 		PmmAgentId: agentID,
-		ActionId:   res.ID,
+		ActionId:   pActRes.ID,
 	}, nil
 }
 
