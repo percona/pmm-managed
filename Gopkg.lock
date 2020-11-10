@@ -426,7 +426,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "8d7496546d36a522be74c82744365f902ef44983"
+  revision = "038e9df71a4924a3a176e19fc7278efd2f4b10a4"
 
 [[projects]]
   digest = "1:dbee7dc52291bb149388085eeb20561d4cb3c2044e0fa6ffa8d342c6b305f4bf"
