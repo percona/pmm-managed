@@ -18,6 +18,7 @@ package grpc
 
 import (
 	"context"
+	"time"
 
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/managementpb"
@@ -37,7 +38,20 @@ type actionsServer struct {
 	l  *logrus.Entry
 }
 
+// structure to keep id with timestamp
+type idWithTimeStamp struct {
+	id        string
+	timestamp int64
+}
+
 var pmmAgent2100 = version.MustParse("2.10.0-HEAD") // TODO: Remove HEAD later once 2.11.0 is released.
+
+// ****** TBD: Define where the period will be stored or configured
+// Period that pt_summary action in seconds is cached for. After this time the pt-summary will be refreshed again.
+const ptSummaryRefreshPeriod = 60
+
+// Dictionary that of agent_id againts a structure of action_id and timestamp
+var dicPtSummaryLastAction = make(map[string]idWithTimeStamp)
 
 // NewActionsServer creates Management Actions Server.
 func NewActionsServer(r *agents.Registry, db *reform.DB) managementpb.ActionsServer {
@@ -260,27 +274,42 @@ func (s *actionsServer) StartMongoDBExplainAction(ctx context.Context, req *mana
 	}, nil
 }
 
-// StartPTSummaryAction starts pt-summary action.
+// StartPTSummaryAction starts pt-summary action. If the time since the last successfull start of pt-summary action is lower than ptSummaryRefreshPeriod,
+// the response from the last action will be used. If the time is longer, the new pt-summary action will be called.
 //nolint:lll
-func (s *actionsServer) StartPTSummaryAction(ctx context.Context, pReq *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
+func (s *actionsServer) StartPTSummaryAction(ctx context.Context, psReq *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
+	// Gets current timestamp
+	timeNow := time.Now().Unix()
+
 	// Gets pointers to agents running on the node
-	pAgents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, pReq.NodeId)
+	psAgents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, psReq.NodeId)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "No pmm-agent running on this node")
 	}
 
-	// Filte by the version
-	pAgents = models.FindPMMAgentsForVersion(s.l, pAgents, pmmAgent2100)
+	// Filter by the version
+	psAgents = models.FindPMMAgentsForVersion(s.l, psAgents, pmmAgent2100)
 
 	// No agent found
-	if len(pAgents) == 0 {
+	if len(psAgents) == 0 {
 		return nil, status.Error(codes.NotFound, "all available agents are outdated")
 	}
 
 	// Gets the agent by ID
-	agentID, err := models.FindPmmAgentIDToRunAction(pReq.PmmAgentId, pAgents)
+	agentID, err := models.FindPmmAgentIDToRunAction(psReq.PmmAgentId, psAgents)
 	if err != nil {
 		return nil, err
+	}
+
+	if sAction, bFound := dicPtSummaryLastAction[agentID]; bFound {
+		// If the time since the last call is less than 30 s
+		if timeNow-sAction.timestamp < ptSummaryRefreshPeriod {
+			// If found the last pt-summary response
+			if _, err := models.FindActionResultByID(s.db.Querier, sAction.id); err == nil {
+				// Returns the pointer to the found action response
+				return &managementpb.StartPTSummaryActionResponse{PmmAgentId: agentID, ActionId: sAction.id}, nil
+			}
+		}
 	}
 
 	// Gets a pointer to the created action result structure
@@ -295,11 +324,11 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, pReq *manageme
 		return nil, err
 	}
 
-	// Returns pointer to the action response
-	return &managementpb.StartPTSummaryActionResponse{
-		PmmAgentId: agentID,
-		ActionId:   pActRes.ID,
-	}, nil
+	// Saves the created action_id and timestand to the particular agentID
+	dicPtSummaryLastAction[agentID] = idWithTimeStamp{pActRes.ID, timeNow}
+
+	// Returns the pointer to the action response
+	return &managementpb.StartPTSummaryActionResponse{PmmAgentId: agentID, ActionId: pActRes.ID}, nil
 }
 
 // CancelAction stops an Action.
