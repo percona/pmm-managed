@@ -274,7 +274,7 @@ func (s *actionsServer) StartMongoDBExplainAction(ctx context.Context, req *mana
 	}, nil
 }
 
-// StartPTSummaryAction starts pt-summary action. If the time since the last successfull start of pt-summary action is lower than ptSummaryRefreshPeriod,
+// StartPTSummaryAction starts pt-summary action. If the time since the last successful start of pt-summary action is lower than ptSummaryRefreshPeriod,
 // the response from the last action will be used. If the time is longer, the new pt-summary action will be called.
 //nolint:lll
 func (s *actionsServer) StartPTSummaryAction(ctx context.Context, psReq *managementpb.StartPTSummaryActionRequest) (*managementpb.StartPTSummaryActionResponse, error) {
@@ -314,22 +314,22 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, psReq *managem
 	}
 
 	// Gets a pointer to the created action result structure
-	pActRes, err := models.CreateActionResult(s.db.Querier, agentID)
+	psActRes, err := models.CreateActionResult(s.db.Querier, agentID)
 	if err != nil {
 		return nil, err
 	}
 
 	// PT summary action
-	err = s.r.StartPTSummaryAction(ctx, pActRes.ID, agentID)
+	err = s.r.StartPTSummaryAction(ctx, psActRes.ID, agentID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Saves the created action_id and timestand to the particular agentID
-	dicPtSummaryLastAction[agentID] = idWithTimeStamp{pActRes.ID, timeNow}
+	dicPtSummaryLastAction[agentID] = idWithTimeStamp{psActRes.ID, timeNow}
 
 	// Returns the pointer to the action response
-	return &managementpb.StartPTSummaryActionResponse{PmmAgentId: agentID, ActionId: pActRes.ID}, nil
+	return &managementpb.StartPTSummaryActionResponse{PmmAgentId: agentID, ActionId: psActRes.ID}, nil
 }
 
 // CancelAction stops an Action.
