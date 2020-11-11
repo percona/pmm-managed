@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"runtime/pprof"
 	"sort"
+	"strconv"
 	"sync"
 	"time"
 
@@ -1078,29 +1079,37 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID stri
 }
 
 // StartPTMySQLSummaryAction starts pt-mysql-summary action on the pmm-agent.
-//
-// ctx			Context
-// id			Action ID
-// pmmAgentID	Agent ID
-// dsn			Passes the host, username and password required by the batch
+// The pt-mysql-summary may require some of the following params:
+// addr		IP address
+// port
+// socket	unix socket
+// user
+// password
 // return:		nil - ok, otherwise an error code
-func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID, dsn string) error {
-	aRequest := &agentpb.StartActionRequest{
+func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID, addr string, port uint16, socket, user, password string) error {
+	// Action request data that'll be sent to agent
+	actionRequest := &agentpb.StartActionRequest{
 		ActionId: id,
-		// Requires params to be passed, even empty, othervise request's marshal fail.
+		// Proper params that'll will be passed to the command on the agent's side, even empty, othervise request's marshal fail.
 		Params: &agentpb.StartActionRequest_PtMysqlSummaryParams{
 			PtMysqlSummaryParams: &agentpb.StartActionRequest_PTMySQLSummaryParams{
-				Dsn: dsn,
+				Addr: addr,
+				Port: strconv.FormatUint(uint64(port), 10),
+				Sock: socket,
+				User: user,
+				Pswd: password,
 			},
 		},
 	}
 
-	agent, err := r.get(pmmAgentID)
+	// Agent which the action request will be sent to, got by the provided ID
+	pmmAgent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
 
-	agent.channel.SendRequest(aRequest)
+	pmmAgent.channel.SendRequest(actionRequest)
+
 	return nil
 }
 

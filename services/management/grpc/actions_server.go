@@ -19,6 +19,7 @@ package grpc
 import (
 	"context"
 
+	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/managementpb"
 	"github.com/percona/pmm/version"
@@ -298,9 +299,11 @@ func pointerToAgentType(agentType models.AgentType) *models.AgentType {
 	return &agentType
 }
 
-// StartPTMySQLSummaryAction starts pt-mysql-summary action.
+// StartPTMySQLSummaryAction starts pt-mysql-summary action and returns the pointer to the response message
 //nolint:lll
 func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
+	// Need to get the service id's pointer to retrieve the list of agent pointers therefrom
+	// to get the particular agentID from the request.
 	service, err := models.FindServiceByID(s.db.Querier, req.ServiceId)
 	if err != nil {
 		return nil, err
@@ -321,14 +324,24 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 		return nil, err
 	}
 
-	// Gets the DSN string (containing user, password and address)
-	dsn, err := models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, req.ServiceId, agentID, "")
+	// Need to get the mysql exporters to get the username and password therefrom
+	psExporters, err := models.FindAgents(s.db.Querier, models.AgentFilters{AgentType: pointerToAgentType(models.MySQLdExporterType)})
 	if err != nil {
 		return nil, err
 	}
 
-	// Starts the pt-mysql-summary with the DSN string
-	err = s.r.StartPTMySQLSummaryAction(ctx, res.ID, agentID, dsn)
+	// No exporters found
+	if len(psExporters) == 0 {
+		return nil, status.Errorf(codes.NotFound, "No mysql exporter")
+	}
+
+	// The first exporter's pointer will be used to retrieve the username and password
+	psMySQLExporter := psExporters[0]
+
+	// Starts the pt-mysql-summary with the host address, port, socket, mysql username and password
+	err = s.r.StartPTMySQLSummaryAction(ctx, res.ID, agentID, pointer.GetString(service.Address), pointer.GetUint16(service.Port),
+		pointer.GetString(service.Socket), pointer.GetString(psMySQLExporter.Username),
+		pointer.GetString(psMySQLExporter.Password))
 	if err != nil {
 		return nil, err
 	}
