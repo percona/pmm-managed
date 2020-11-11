@@ -403,8 +403,8 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-2.0"
-  digest = "1:0fb376aa0f0c215b6b30ae6252287c2294cad2978d60756acb9ac3f0cfcde0d7"
+  branch = "PMM-6827-db-cluster-monitoring"
+  digest = "1:27fb3cc254a2476996b616033ef9b084424bd98394de172e9018c7662f77c894"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -426,7 +426,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "bd813553d91fd9627161e583891ae9a63eadb5ca"
+  revision = "fe0cb3defd0aa55f7fc99586156eb8da940203a9"
 
 [[projects]]
   digest = "1:dbee7dc52291bb149388085eeb20561d4cb3c2044e0fa6ffa8d342c6b305f4bf"
