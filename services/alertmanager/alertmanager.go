@@ -133,10 +133,10 @@ receivers:
 	}
 
 	var content []byte
-	_, err = os.Stat(alertmanagerBaseConfigPath)
-	svc.l.Debugf("%s status: %v", alertmanagerBaseConfigPath, err)
+	_, err = os.Stat(alertmanagerConfigPath)
+	// if /etc/alertmanager.yml already exists, read its contents.
 	if err == nil {
-		svc.l.Infof("checking %s content", alertmanagerConfigPath)
+		svc.l.Infof("%s exists, checking content", alertmanagerConfigPath)
 		content, err = ioutil.ReadFile(alertmanagerConfigPath)
 		if err != nil {
 			svc.l.Errorf("Failed to load alertmanager config %s: %s", alertmanagerConfigPath, err)
@@ -145,14 +145,16 @@ receivers:
 
 	// copy the base config if `/etc/alertmanager.yml` is not present or
 	// is already present but does not have any config.
-	if string(content) == "---\n" || os.IsNotExist(err) {
+	if os.IsNotExist(err) || string(content) == "---\n" {
 		var cfg alertmanager.Config
 		buf, err := ioutil.ReadFile(alertmanagerBaseConfigPath)
 		if err != nil {
 			svc.l.Errorf("Failed to load alertmanager base config %s: %s", alertmanagerBaseConfigPath, err)
+			return
 		}
 		if err := yaml.Unmarshal(buf, &cfg); err != nil {
 			svc.l.Errorf("Failed to parse alertmanager base config %s: %s.", alertmanagerBaseConfigPath, err)
+			return
 		}
 
 		// TODO add custom information to this config.
