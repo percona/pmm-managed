@@ -65,11 +65,7 @@ func (svc *Service) Run(ctx context.Context) {
 	defer svc.l.Info("Done.")
 
 	svc.createDataDir()
-	err := svc.generateBaseConfig()
-	if err != nil {
-		svc.l.Error(err)
-		return
-	}
+	svc.generateBaseConfig()
 
 	// we don't have "configuration update loop" yet, so do nothing
 	<-ctx.Done()
@@ -116,7 +112,7 @@ func (svc *Service) createDataDir() {
 
 // generateBaseConfig generates /srv/alertmanager/alertmanager.base.yml if it is not present
 // and also copies its contents to generate /etc/alertmanager.yml.
-func (svc *Service) generateBaseConfig() error {
+func (svc *Service) generateBaseConfig() {
 	_, err := os.Stat(alertmanagerBaseConfigPath)
 	svc.l.Debugf("%s status: %v", alertmanagerBaseConfigPath, err)
 
@@ -153,26 +149,29 @@ receivers:
 		var cfg alertmanager.Config
 		buf, err := ioutil.ReadFile(alertmanagerBaseConfigPath)
 		if err != nil {
-			return errors.Errorf("Failed to load alertmanager base config %s: %s", alertmanagerBaseConfigPath, err)
+			svc.l.Errorf("Failed to load alertmanager base config %s: %s", alertmanagerBaseConfigPath, err)
+			return
 		}
 		if err := yaml.Unmarshal(buf, &cfg); err != nil {
-			return errors.Errorf("Failed to parse alertmanager base config %s: %s.", alertmanagerBaseConfigPath, err)
+			svc.l.Errorf("Failed to parse alertmanager base config %s: %s.", alertmanagerBaseConfigPath, err)
+			return
 		}
 
 		// TODO add custom information to this config.
 		b, err := yaml.Marshal(cfg)
 		if err != nil {
-			return errors.Errorf("Failed to marshal alertmanager config %s: %s.", alertmanagerConfigPath, err)
+			svc.l.Errorf("Failed to marshal alertmanager config %s: %s.", alertmanagerConfigPath, err)
+			return
 		}
 		b = append([]byte("# Managed by pmm-managed. DO NOT EDIT.\n---\n"), b...)
 
 		err = ioutil.WriteFile(alertmanagerConfigPath, b, 0644)
 		if err != nil {
-			return errors.Errorf("Failed to write alertmanager config %s: %s.", alertmanagerConfigPath, err)
+			svc.l.Errorf("Failed to write alertmanager config %s: %s.", alertmanagerConfigPath, err)
+			return
 		}
 	}
 	svc.l.Infof("%s created", alertmanagerConfigPath)
-	return nil
 }
 
 // SendAlerts sends given alerts. It is the caller's responsibility
