@@ -912,6 +912,7 @@
     "gopkg.in/reform.v1/parse",
     "gopkg.in/reform.v1/reform",
     "gopkg.in/yaml.v2",
+    "gopkg.in/yaml.v3",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
