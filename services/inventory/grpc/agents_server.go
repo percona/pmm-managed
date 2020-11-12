@@ -30,7 +30,7 @@ type agentsServer struct {
 	s *inventory.AgentsService
 }
 
-// NewAgentsServer returns Inventory API handler for managing Agents.
+// NewAgentsServer returns Inventory API handler for managing AgentsRegistry.
 func NewAgentsServer(s *inventory.AgentsService) inventorypb.AgentsServer {
 	return &agentsServer{s}
 }
@@ -60,7 +60,7 @@ func agentType(req *inventorypb.ListAgentsRequest) *models.AgentType {
 	return &agentType
 }
 
-// ListAgents returns a list of Agents for a given filters.
+// ListAgents returns a list of AgentsRegistry for a given filters.
 func (s *agentsServer) ListAgents(ctx context.Context, req *inventorypb.ListAgentsRequest) (*inventorypb.ListAgentsResponse, error) {
 	filters := models.AgentFilters{
 		PMMAgentID: req.GetPmmAgentId(),

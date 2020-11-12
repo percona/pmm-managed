@@ -341,6 +341,11 @@ var databaseSchema = [][]string{
 	20: {
 		`ALTER TABLE agents DROP CONSTRAINT runs_on_node_id_only_for_pmm_agent_and_external`,
 	},
+	21: {
+		`ALTER TABLE agents
+			ADD CONSTRAINT runs_on_node_id_only_for_pmm_agent 
+            CHECK (((runs_on_node_id IS NULL) <> (agent_type='` + string(PMMAgentType) + `'))  OR (agent_type='` + string(ExternalExporterType) + `'))`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^
@@ -463,7 +468,7 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 }
 
 func setupFixture1(q *reform.Querier, username, password string) error {
-	// create PMM Server Node and associated Agents
+	// create PMM Server Node and associated AgentsRegistry
 	node, err := createNodeWithID(q, PMMServerNodeID, GenericNodeType, &CreateNodeParams{
 		NodeName: "pmm-server",
 		Address:  "127.0.0.1",
@@ -482,7 +487,7 @@ func setupFixture1(q *reform.Querier, username, password string) error {
 		return err
 	}
 
-	// create PostgreSQL Service and associated Agents
+	// create PostgreSQL Service and associated AgentsRegistry
 	service, err := AddNewService(q, PostgreSQLServiceType, &AddDBMSServiceParams{
 		ServiceName: PMMServerPostgreSQLServiceName,
 		NodeID:      node.NodeID,

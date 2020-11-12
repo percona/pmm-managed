@@ -29,7 +29,7 @@ import (
 	"github.com/percona/pmm-managed/services"
 )
 
-// AgentsService works with inventory API Agents.
+// AgentsService works with inventory API AgentsRegistry.
 type AgentsService struct {
 	r    agentsRegistry
 	vmdb prometheusService
@@ -101,7 +101,7 @@ func (as *AgentsService) changeAgent(agentID string, common *inventorypb.ChangeC
 	return agent, e
 }
 
-// List selects all Agents in a stable order for a given service.
+// List selects all AgentsRegistry in a stable order for a given service.
 //nolint:unparam
 func (as *AgentsService) List(ctx context.Context, filters models.AgentFilters) ([]inventorypb.Agent, error) {
 	var res []inventorypb.Agent

@@ -407,6 +407,27 @@ func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRe
 	return nil
 }
 
+// UpdateAgentsState sends SetStateRequest to all pmm-agents with push metrics agents.
+func (r *Registry) UpdateAgentsState(ctx context.Context) error {
+	pmmAgents, err := models.FindPMMAgentsIDsWithPushMetrics(r.db.Querier)
+	if err != nil {
+		return errors.Wrap(err, "cannot find pmmAgentsIDs for AgentsState update")
+	}
+	var wg sync.WaitGroup
+	limiter := make(chan struct{}, 10)
+	for _, pmmAgentID := range pmmAgents {
+		wg.Add(1)
+		limiter <- struct{}{}
+		go func(pmmAgentID string) {
+			defer wg.Done()
+			r.SendSetStateRequest(ctx, pmmAgentID)
+			<-limiter
+		}(pmmAgentID)
+	}
+	wg.Wait()
+	return nil
+}
+
 // SendSetStateRequest sends SetStateRequest to pmm-agent with given ID.
 func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 	l := logger.Get(ctx)
@@ -457,6 +478,15 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		switch row.AgentType {
 		case models.PMMAgentType:
 			continue
+		case models.VMAgentType:
+			if pmmAgentVersion.Less(vmagentPMMVersion) {
+				continue
+			}
+			scrapeCfg, err := r.vmdb.BuildScrapeConfigForVMAgent(pmmAgentID)
+			if err != nil {
+				l.WithError(err).Errorf("cannot get agent scrape config for agent: %s", pmmAgentID)
+			}
+			agentProcesses[row.AgentID] = vmAgentConfig(string(scrapeCfg))
 
 		case models.NodeExporterType:
 			node, err := models.FindNodeByID(r.db.Querier, pointer.GetString(row.NodeID))
@@ -475,17 +505,8 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 			rdsExporters[node] = row
 		case models.ExternalExporterType:
 			// ignore
-		case models.VMAgentType:
-			if pmmAgentVersion.Less(vmagentPMMVersion) {
-				continue
-			}
-			scrapeCfg, err := r.vmdb.BuildScrapeConfigForVMAgent(pmmAgentID)
-			if err != nil {
-				l.WithError(err).Errorf("cannot get agent scrape config for agent: %s", pmmAgentID)
-			}
-			agentProcesses[row.AgentID] = vmAgentConfig(string(scrapeCfg))
 
-		// Agents with exactly one Service
+		// AgentsRegistry with exactly one Service
 		case models.MySQLdExporterType, models.MongoDBExporterType, models.PostgresExporterType, models.ProxySQLExporterType,
 			models.QANMySQLPerfSchemaAgentType, models.QANMySQLSlowlogAgentType, models.QANMongoDBProfilerAgentType, models.QANPostgreSQLPgStatementsAgentType,
 			models.QANPostgreSQLPgStatMonitorAgentType:
@@ -515,9 +536,6 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 				builtinAgents[row.AgentID] = qanPostgreSQLPgStatementsAgentConfig(service, row)
 			case models.QANPostgreSQLPgStatMonitorAgentType:
 				builtinAgents[row.AgentID] = qanPostgreSQLPgStatMonitorAgentConfig(service, row)
-
-			case models.ExternalExporterType:
-				// ignore
 			}
 
 		default:

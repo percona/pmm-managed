@@ -2,7 +2,7 @@
 version: '3.7'
 services:
   pmm-managed-server:
-    image: perconalab/pmm-server-fb:PR-1185-b5615b2
+    image:  perconalab/pmm-server-fb:PR-1185-fc5a7c5
     container_name: pmm-managed-server
     hostname: pmm-managed-server
     environment:
@@ -24,7 +24,7 @@ services:
 
     ports:
       - 127.0.0.1:80:80
-      - 127.0.0.1:443:443
+      - 443:443
     volumes:
       - .:/root/go/src/github.com/percona/pmm-managed
       - ./Makefile.devcontainer:/root/go/src/github.com/percona/pmm-managed/Makefile:ro

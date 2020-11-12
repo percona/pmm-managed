@@ -165,7 +165,6 @@ func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s 
 				agent:   agent,
 			})
 		case models.VMAgentType:
-			l.Info("adding vmagent scrape cfg")
 			scfgs, err = scrapeConfigsForVMAgent(s, &scrapeConfigParams{
 				host:    paramsHost,
 				node:    paramsNode,

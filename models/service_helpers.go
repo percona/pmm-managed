@@ -248,7 +248,7 @@ func RemoveService(q *reform.Querier, id string, mode RemoveMode) error {
 	if err != nil {
 		return err
 	}
-	// check/remove Agents
+	// check/remove AgentsRegistry
 	structs, err := q.FindAllFrom(AgentTable, "service_id", id)
 	if err != nil {
 		return errors.Wrap(err, "failed to select Agent IDs")

@@ -620,6 +620,7 @@ func main() {
 		DB:                      db,
 		VMDB:                    vmdb,
 		VMAlert:                 vmalert,
+		AgentsRegistry:          agentsRegistry,
 		Alertmanager:            alertmanager,
 		Supervisord:             supervisord,
 		TelemetryService:        telemetry,
@@ -628,6 +629,7 @@ func main() {
 		GrafanaClient:           grafanaClient,
 		PrometheusAlertingRules: alertingRules,
 	}
+
 	server, err := server.NewServer(serverParams)
 	if err != nil {
 		l.Panicf("Server problem: %+v", err)

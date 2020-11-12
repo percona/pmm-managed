@@ -251,7 +251,7 @@ func RemoveNode(q *reform.Querier, id string, mode RemoveMode) error {
 		return status.Error(codes.PermissionDenied, "PMM Server node can't be removed.")
 	}
 
-	// check/remove Agents
+	// check/remove AgentsRegistry
 	structs, err := q.FindAllFrom(AgentTable, "node_id", id)
 	if err != nil {
 		return errors.Wrap(err, "failed to select Agent IDs")
@@ -275,7 +275,7 @@ func RemoveNode(q *reform.Querier, id string, mode RemoveMode) error {
 	// check/remove pmm-agents
 	structs, err = q.FindAllFrom(AgentTable, "runs_on_node_id", id)
 	if err != nil {
-		return errors.Wrap(err, "failed to select Agents")
+		return errors.Wrap(err, "failed to select AgentsRegistry")
 	}
 	if len(structs) != 0 {
 		switch mode {

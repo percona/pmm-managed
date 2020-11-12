@@ -20,10 +20,9 @@ package services
 import (
 	"fmt"
 
-	"github.com/pkg/errors"
-
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb"
+	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -362,14 +361,12 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 		}, nil
 
 	case models.ExternalExporterType:
-		if agent.RunsOnNodeID == nil {
-			if agent.PMMAgentID != nil {
-				pmmAgent, err := models.FindAgentByID(q, *agent.PMMAgentID)
-				if err != nil {
-					return nil, errors.Wrapf(err, "cannot find pmm_agent by id: %s, for external_exporter id: %s without node_id", *agent.PMMAgentID, agent.AgentID)
-				}
-				agent.RunsOnNodeID = pmmAgent.RunsOnNodeID
+		if agent.RunsOnNodeID == nil && agent.PMMAgentID != nil {
+			pmmAgent, err := models.FindAgentByID(q, *agent.PMMAgentID)
+			if err != nil {
+				return nil, errors.Wrapf(err, "cannot find pmm_agent by id: %s, for external_exporter id: %s without node_id", *agent.PMMAgentID, agent.AgentID)
 			}
+			agent.RunsOnNodeID = pmmAgent.RunsOnNodeID
 		}
 		return &inventorypb.ExternalExporter{
 			AgentId:            agent.AgentID,
