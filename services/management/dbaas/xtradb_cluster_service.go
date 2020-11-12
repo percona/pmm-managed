@@ -121,7 +121,7 @@ func (s XtraDBClusterService) GetXtraDBCluster(ctx context.Context, req *dbaasv1
 
 // CreateXtraDBCluster creates XtraDB cluster with given parameters.
 //nolint:dupl
-func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaasv1beta1.CreateXtraDBClusterRequest) (*dbaasv1beta1.CreateXtraDBClusterResponse, error) {
+func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaasv1beta1.CreateXtraDBClusterRequest, settings *models.Settings) (*dbaasv1beta1.CreateXtraDBClusterResponse, error) {
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
 	if err != nil {
 		return nil, err
@@ -141,7 +141,7 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 				ComputeResources: new(dbaascontrollerv1beta1.ComputeResources),
 			},
 		},
-		PublicAddressUrl: "",
+		PublicAddressUrl: settings.PublicAddressUrl,
 	}
 
 	if req.Params.Pxc.ComputeResources != nil {

@@ -16,7 +16,7 @@ required = [
 
 [[constraint]]
   name = "github.com/percona/pmm"
-  branch = "PMM-6827-db-cluster-monitoring"
+  branch = "PMM-2.0"
 
 [[constraint]]
   name = "github.com/percona-platform/saas"
@@ -24,7 +24,7 @@ required = [
 
 [[constraint]]
   name = "github.com/percona-platform/dbaas-api"
-  branch = "main"
+  branch = "PMM-6827-db-cluster-monitoring"
 
 # to prevent unexpected downgrades; see https://github.com/percona/exporter_shared/releases/tag/v0.6.0
 [[constraint]]
