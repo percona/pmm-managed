@@ -206,7 +206,7 @@ func TestDatabaseChecks(t *testing.T) {
 		require.Error(t, err, `pq: new row for relation "services" violates check constraint "services_external_group_check"`)
 	})
 
-	t.Run("AgentsRegistry", func(t *testing.T) {
+	t.Run("Agents", func(t *testing.T) {
 		db := testdb.Open(t, models.SkipFixtures, nil)
 		defer func() {
 			require.NoError(t, db.Close())

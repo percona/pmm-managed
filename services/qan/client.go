@@ -58,7 +58,7 @@ func setToSlice(set map[string]struct{}) []string {
 	return res
 }
 
-// collectAgents returns AgentsRegistry referenced by metricsBuckets.
+// collectAgents returns Agents referenced by metricsBuckets.
 func collectAgents(q *reform.Querier, metricsBuckets []*agentpb.MetricsBucket) (map[string]*models.Agent, error) {
 	agentIDs := make(map[string]struct{})
 	for _, m := range metricsBuckets {
@@ -79,7 +79,7 @@ func collectAgents(q *reform.Querier, metricsBuckets []*agentpb.MetricsBucket) (
 	return m, nil
 }
 
-// collectServices returns Services referenced by AgentsRegistry.
+// collectServices returns Services referenced by Agents.
 func collectServices(q *reform.Querier, agents map[string]*models.Agent) (map[string]*models.Service, error) {
 	serviceIDs := make(map[string]struct{})
 	for _, a := range agents {

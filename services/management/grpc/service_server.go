@@ -34,7 +34,7 @@ func NewManagementServiceServer(s *management.ServiceService) managementpb.Servi
 	return &serviceServer{svc: s}
 }
 
-// RemoveService removes Service with AgentsRegistry.
+// RemoveService removes Service with Agents.
 func (s *serviceServer) RemoveService(ctx context.Context, req *managementpb.RemoveServiceRequest) (*managementpb.RemoveServiceResponse, error) {
 	return s.svc.RemoveService(ctx, req)
 }

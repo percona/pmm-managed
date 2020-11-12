@@ -68,7 +68,7 @@ func TestNodeHelpers(t *testing.T) {
 			&models.Node{
 				NodeID:    "GenericNode",
 				NodeType:  models.GenericNodeType,
-				NodeName:  "Node for AgentsRegistry",
+				NodeName:  "Node for Agents",
 				MachineID: pointer.ToString("/machine_id/GenericNode"),
 			},
 			&models.Agent{
@@ -137,7 +137,7 @@ func TestNodeHelpers(t *testing.T) {
 			expected := &models.Node{
 				NodeID:    "GenericNode",
 				NodeType:  models.GenericNodeType,
-				NodeName:  "Node for AgentsRegistry",
+				NodeName:  "Node for Agents",
 				MachineID: &machineID, // \n trimmed
 				CreatedAt: now,
 				UpdatedAt: now,
@@ -171,7 +171,7 @@ func TestNodeHelpers(t *testing.T) {
 		}, {
 			NodeID:    "GenericNode",
 			NodeType:  models.GenericNodeType,
-			NodeName:  "Node for AgentsRegistry",
+			NodeName:  "Node for Agents",
 			MachineID: pointer.ToString("/machine_id/GenericNode"),
 			CreatedAt: now,
 			UpdatedAt: now,

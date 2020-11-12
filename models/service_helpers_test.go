@@ -65,7 +65,7 @@ func TestServiceHelpers(t *testing.T) {
 			&models.Service{
 				ServiceID:   "S1",
 				ServiceType: models.MongoDBServiceType,
-				ServiceName: "Service without AgentsRegistry",
+				ServiceName: "Service without Agents",
 				NodeID:      "N1",
 				Address:     pointer.ToString("127.0.0.1"),
 				Port:        pointer.ToUint16OrNil(27017),
@@ -73,7 +73,7 @@ func TestServiceHelpers(t *testing.T) {
 			&models.Service{
 				ServiceID:   "S2",
 				ServiceType: models.MySQLServiceType,
-				ServiceName: "Service with AgentsRegistry",
+				ServiceName: "Service with Agents",
 				NodeID:      "N1",
 				Address:     pointer.ToString("127.0.0.1"),
 				Port:        pointer.ToUint16OrNil(3306),
@@ -143,7 +143,7 @@ func TestServiceHelpers(t *testing.T) {
 		assert.Equal(t, services, []*models.Service{{
 			ServiceID:   "S1",
 			ServiceType: models.MongoDBServiceType,
-			ServiceName: "Service without AgentsRegistry",
+			ServiceName: "Service without Agents",
 			NodeID:      "N1",
 			Address:     pointer.ToString("127.0.0.1"),
 			Port:        pointer.ToUint16OrNil(27017),
@@ -152,7 +152,7 @@ func TestServiceHelpers(t *testing.T) {
 		}, {
 			ServiceID:   "S2",
 			ServiceType: models.MySQLServiceType,
-			ServiceName: "Service with AgentsRegistry",
+			ServiceName: "Service with Agents",
 			NodeID:      "N1",
 			Address:     pointer.ToString("127.0.0.1"),
 			Port:        pointer.ToUint16OrNil(3306),
@@ -175,7 +175,7 @@ func TestServiceHelpers(t *testing.T) {
 		assert.Equal(t, services, []*models.Service{{
 			ServiceID:   "S2",
 			ServiceType: models.MySQLServiceType,
-			ServiceName: "Service with AgentsRegistry",
+			ServiceName: "Service with Agents",
 			NodeID:      "N1",
 			Address:     pointer.ToString("127.0.0.1"),
 			Port:        pointer.ToUint16OrNil(3306),

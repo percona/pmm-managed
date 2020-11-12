@@ -73,7 +73,7 @@ func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s 
 		var paramsHost string
 		switch {
 		// special case for push metrics mode,
-		// vmagent scrapes it from localhost
+		// vmagent scrapes it from localhost.
 		case filter.PushMetrics:
 			paramsHost = "127.0.0.1"
 		case agent.PMMAgentID != nil:

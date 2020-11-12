@@ -666,12 +666,12 @@ var (
 )
 
 // isAgentsStateUpdateNeeded - checks metrics resolution changes,
-// if it was changed, r state must be updated.
-func isAgentsStateUpdateNeeded(MR *serverpb.MetricsResolutions) bool {
-	if MR == nil {
+// if it was changed, agents state must be updated.
+func isAgentsStateUpdateNeeded(mr *serverpb.MetricsResolutions) bool {
+	if mr == nil {
 		return false
 	}
-	if MR.Lr == nil && MR.Hr == nil && MR.Mr == nil {
+	if mr.Lr == nil && mr.Hr == nil && mr.Mr == nil {
 		return false
 	}
 	return true

@@ -190,7 +190,7 @@ func (s *NodesService) AddRemoteNode(ctx context.Context, req *inventorypb.AddRe
 	return invNode.(*inventorypb.RemoteNode), nil
 }
 
-// Remove removes Node without any AgentsRegistry and Services.
+// Remove removes Node without any Agents and Services.
 //nolint:unparam
 func (s *NodesService) Remove(ctx context.Context, id string, force bool) error {
 	return s.db.InTransaction(func(tx *reform.TX) error {

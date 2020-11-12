@@ -55,7 +55,7 @@ func NewServiceService(db *reform.DB, registry agentsRegistry, vmdb prometheusSe
 	}
 }
 
-// RemoveService removes Service with AgentsRegistry.
+// RemoveService removes Service with Agents.
 func (s *ServiceService) RemoveService(ctx context.Context, req *managementpb.RemoveServiceRequest) (*managementpb.RemoveServiceResponse, error) {
 	err := s.validateRequest(req)
 	if err != nil {

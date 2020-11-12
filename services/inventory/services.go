@@ -195,7 +195,7 @@ func (ss *ServicesService) AddExternalService(ctx context.Context, params *model
 	return res.(*inventorypb.ExternalService), nil
 }
 
-// Remove removes Service without any AgentsRegistry.
+// Remove removes Service without any Agents.
 //nolint:unparam
 func (ss *ServicesService) Remove(ctx context.Context, id string, force bool) error {
 	return ss.db.InTransaction(func(tx *reform.TX) error {

@@ -48,19 +48,19 @@ func checkUniqueAgentID(q *reform.Querier, id string) error {
 
 // AgentFilters represents filters for agents list.
 type AgentFilters struct {
-	// Return only AgentsRegistry started by this pmm-agent.
+	// Return only Agents started by this pmm-agent.
 	PMMAgentID string
-	// Return only AgentsRegistry that provide insights for that Node.
+	// Return only Agents that provide insights for that Node.
 	NodeID string
-	// Return only AgentsRegistry that provide insights for that Service.
+	// Return only Agents that provide insights for that Service.
 	ServiceID string
-	// Return AgentsRegistry with provided type.
+	// Return Agents with provided type.
 	AgentType *AgentType
-	// Return AgentsRegistry with push metrics mode enabled
+	// Return Agents with push metrics mode enabled
 	PushMetrics bool
 }
 
-// FindAgents returns AgentsRegistry by filters.
+// FindAgents returns Agents by filters.
 func FindAgents(q *reform.Querier, filters AgentFilters) ([]*Agent, error) {
 	var conditions []string
 	var args []interface{}
@@ -128,7 +128,7 @@ func FindAgentByID(q *reform.Querier, id string) (*Agent, error) {
 	}
 }
 
-// FindAgentsByIDs finds AgentsRegistry by IDs.
+// FindAgentsByIDs finds Agents by IDs.
 func FindAgentsByIDs(q *reform.Querier, ids []string) ([]*Agent, error) {
 	if len(ids) == 0 {
 		return []*Agent{}, nil
@@ -241,7 +241,7 @@ func FindPMMAgentsForVersion(logger *logrus.Entry, agents []*Agent, minPMMAgentV
 	return result
 }
 
-// FindAgentsForScrapeConfig returns AgentsRegistry for scrape config generation by filters.
+// FindAgentsForScrapeConfig returns Agents for scrape config generation by filters.
 func FindAgentsForScrapeConfig(q *reform.Querier, filters AgentFilters) ([]*Agent, error) {
 	var (
 		args       []interface{}
@@ -503,7 +503,7 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 	return row, nil
 }
 
-// ChangeCommonAgentParams contains parameters that can be changed for all AgentsRegistry.
+// ChangeCommonAgentParams contains parameters that can be changed for all Agents.
 type ChangeCommonAgentParams struct {
 	Disabled           *bool // true - disable, false - enable, nil - do not change
 	CustomLabels       map[string]string
@@ -565,7 +565,7 @@ func RemoveAgent(q *reform.Querier, id string, mode RemoveMode) (*Agent, error) 
 
 	structs, err := q.SelectAllFrom(AgentTable, "WHERE pmm_agent_id = $1", id)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to select AgentsRegistry")
+		return nil, errors.Wrap(err, "failed to select Agents")
 	}
 	if len(structs) != 0 {
 		switch mode {
@@ -593,30 +593,26 @@ func RemoveAgent(q *reform.Querier, id string, mode RemoveMode) (*Agent, error) 
 // updateExternalExporterParams updates RunsOnNodeID and PMMAgentID params
 // for external exporter, is needed for push_metrics mode.
 func updateExternalExporterParams(q *reform.Querier, row *Agent) error {
-	if row.PushMetrics && row.AgentType == ExternalExporterType {
-		// with push metrics, external exporter must have PMMAgent id without RunsOnNodeID
-		if row.PMMAgentID == nil {
-			pmmAgent, err := FindPMMAgentsRunningOnNode(q, pointer.GetString(row.RunsOnNodeID))
-			if err != nil {
-				return err
-			}
-			row.RunsOnNodeID = nil
-			if len(pmmAgent) > 1 {
-				return errors.Errorf("bad count for pmmAgents, expected one, get: %d", len(pmmAgent))
-			}
-			row.PMMAgentID = pointer.ToString(pmmAgent[0].AgentID)
+	// with push metrics, external exporter must have PMMAgent id without RunsOnNodeID
+	if row.PushMetrics && row.PMMAgentID == nil {
+		pmmAgent, err := FindPMMAgentsRunningOnNode(q, pointer.GetString(row.RunsOnNodeID))
+		if err != nil {
+			return err
 		}
+		row.RunsOnNodeID = nil
+		if len(pmmAgent) > 1 {
+			return errors.Errorf("bad count for pmmAgents, expected one, get: %d", len(pmmAgent))
+		}
+		row.PMMAgentID = pointer.ToString(pmmAgent[0].AgentID)
 	}
-	if !row.PushMetrics && row.AgentType == ExternalExporterType {
-		// without push metrics, external exporter must have RunsOnNodeID without PMMAgentID
-		if row.RunsOnNodeID == nil {
-			pmmAgent, err := FindAgentByID(q, pointer.GetString(row.PMMAgentID))
-			if err != nil {
-				return err
-			}
-			row.RunsOnNodeID = pmmAgent.RunsOnNodeID
-			row.PMMAgentID = nil
+	// without push metrics, external exporter must have RunsOnNodeID without PMMAgentID
+	if !row.PushMetrics && row.RunsOnNodeID == nil {
+		pmmAgent, err := FindAgentByID(q, pointer.GetString(row.PMMAgentID))
+		if err != nil {
+			return err
 		}
+		row.RunsOnNodeID = pmmAgent.RunsOnNodeID
+		row.PMMAgentID = nil
 	}
 	return nil
 }

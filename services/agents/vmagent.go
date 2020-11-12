@@ -25,7 +25,6 @@ import (
 
 // vmAgentConfig returns desired configuration of vmagent process.
 func vmAgentConfig(scrapeCfg string) *agentpb.SetStateRequest_AgentProcess {
-
 	args := []string{
 		"-remoteWrite.url={{.server_url}}/victoriametrics/api/v1/write",
 		"-remoteWrite.tlsInsecureSkipVerify={{.server_insecure}}",

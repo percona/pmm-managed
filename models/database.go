@@ -468,7 +468,7 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 }
 
 func setupFixture1(q *reform.Querier, username, password string) error {
-	// create PMM Server Node and associated AgentsRegistry
+	// create PMM Server Node and associated Agents
 	node, err := createNodeWithID(q, PMMServerNodeID, GenericNodeType, &CreateNodeParams{
 		NodeName: "pmm-server",
 		Address:  "127.0.0.1",
@@ -487,7 +487,7 @@ func setupFixture1(q *reform.Querier, username, password string) error {
 		return err
 	}
 
-	// create PostgreSQL Service and associated AgentsRegistry
+	// create PostgreSQL Service and associated Agents
 	service, err := AddNewService(q, PostgreSQLServiceType, &AddDBMSServiceParams{
 		ServiceName: PMMServerPostgreSQLServiceName,
 		NodeID:      node.NodeID,
