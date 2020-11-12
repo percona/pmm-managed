@@ -76,6 +76,7 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 				ClusterSize: c.Params.ClusterSize,
 				Replicaset: &dbaasv1beta1.PSMDBClusterParams_ReplicaSet{
 					ComputeResources: computeResources,
+					DiskSize:         c.Params.Replicaset.DiskSize,
 				},
 			},
 			State: psmdbStates()[c.State],
@@ -132,6 +133,7 @@ func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv
 					CpuM:        req.Params.Replicaset.ComputeResources.CpuM,
 					MemoryBytes: req.Params.Replicaset.ComputeResources.MemoryBytes,
 				},
+				DiskSize: req.Params.Replicaset.DiskSize,
 			},
 		},
 	}
