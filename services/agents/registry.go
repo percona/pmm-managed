@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"runtime/pprof"
 	"sort"
-	"strconv"
 	"sync"
 	"time"
 
@@ -1080,24 +1079,24 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID stri
 
 // StartPTMySQLSummaryAction starts pt-mysql-summary action on the pmm-agent.
 // The pt-mysql-summary may require some of the following params:
-// addr		IP address
+// address	IP address
 // port
 // socket	unix socket
-// user
+// username
 // password
 // return:		nil - ok, otherwise an error code
-func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID, addr string, port uint16, socket, user, password string) error {
+func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID, address string, port uint16, socket, username, password string) error {
 	// Action request data that'll be sent to agent
 	actionRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		// Proper params that'll will be passed to the command on the agent's side, even empty, othervise request's marshal fail.
 		Params: &agentpb.StartActionRequest_PtMysqlSummaryParams{
 			PtMysqlSummaryParams: &agentpb.StartActionRequest_PTMySQLSummaryParams{
-				Addr: addr,
-				Port: strconv.FormatUint(uint64(port), 10),
-				Sock: socket,
-				User: user,
-				Pswd: password,
+				Address:  address,
+				Port:     uint32(port),
+				Socket:   socket,
+				Username: username,
+				Password: password,
 			},
 		},
 	}
