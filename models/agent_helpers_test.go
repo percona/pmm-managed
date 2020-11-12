@@ -58,6 +58,11 @@ func TestAgentHelpers(t *testing.T) {
 				NodeType: models.GenericNodeType,
 				NodeName: "Node with Service",
 			},
+			&models.Node{
+				NodeID:   "N2",
+				NodeType: models.GenericNodeType,
+				NodeName: "N2 with PushMetrics",
+			},
 
 			&models.Service{
 				ServiceID:   "S1",
@@ -86,6 +91,20 @@ func TestAgentHelpers(t *testing.T) {
 				PMMAgentID:   pointer.ToString("A1"),
 				RunsOnNodeID: nil,
 				NodeID:       pointer.ToString("N1"),
+			},
+			&models.Agent{
+				AgentID:      "A4",
+				AgentType:    models.PMMAgentType,
+				RunsOnNodeID: pointer.ToString("N2"),
+			},
+			&models.Agent{
+				AgentID:      "A5",
+				AgentType:    models.NodeExporterType,
+				PMMAgentID:   pointer.ToString("A4"),
+				RunsOnNodeID: nil,
+				NodeID:       pointer.ToString("N2"),
+				PushMetrics:  true,
+				ListenPort:   pointer.ToUint16(8200),
 			},
 		} {
 			require.NoError(t, q.Insert(str))
@@ -313,6 +332,30 @@ func TestAgentHelpers(t *testing.T) {
 
 		result = models.FindPMMAgentsForVersion(l, agents, version.MustParse("2.42.777"))
 		assert.Empty(t, result)
+	})
+
+	t.Run("FindAgentsForScrapeConfig", func(t *testing.T) {
+		q, teardown := setup(t)
+		defer teardown(t)
+
+		agents, err := models.FindAgentsForScrapeConfig(q, models.AgentFilters{PMMAgentID: "A4", PushMetrics: true})
+		require.NoError(t, err)
+		assert.Equal(t, "A5", agents[0].AgentID)
+
+		// find with empty response.
+		agents, err = models.FindAgentsForScrapeConfig(q, models.AgentFilters{PMMAgentID: "A1", PushMetrics: true})
+		assert.Equal(t, 0, len(agents))
+		require.NoError(t, err)
+	})
+
+	t.Run("FindPMMAgentsIDsWithPushMetrics", func(t *testing.T) {
+		q, teardown := setup(t)
+		defer teardown(t)
+
+		agents, err := models.FindPMMAgentsIDsWithPushMetrics(q)
+		require.NoError(t, err)
+		assert.Equal(t, "A4", agents[0])
+		assert.Equal(t, 1, len(agents))
 	})
 }
 

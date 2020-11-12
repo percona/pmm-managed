@@ -272,7 +272,7 @@ func FindAgentsForScrapeConfig(q *reform.Querier, filters AgentFilters) ([]*Agen
 
 // FindPMMAgentsIDsWithPushMetrics returns pmm-agents-ids with agent, that use push_metrics mode.
 func FindPMMAgentsIDsWithPushMetrics(q *reform.Querier) ([]string, error) {
-	structs, err := q.SelectAllFrom(AgentTable, "WHERE NOT disabled AND listen_port IS NOT NULL AND pmm_agent_id IS NOT NULL AND push_metrics  ORDER BY agent_id")
+	structs, err := q.SelectAllFrom(AgentTable, "WHERE NOT disabled AND pmm_agent_id IS NOT NULL AND push_metrics  ORDER BY agent_id")
 	if err != nil {
 		return nil, status.Error(codes.FailedPrecondition, "Couldn't get agents")
 	}
