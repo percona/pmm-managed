@@ -107,6 +107,7 @@ func (s PSMDBClusterService) GetPSMDBCluster(ctx context.Context, req *dbaasv1be
 			Port:       27017,
 			Replicaset: "rs0",
 		},
+		Pu
 	}
 
 	return &resp, nil
@@ -115,6 +116,11 @@ func (s PSMDBClusterService) GetPSMDBCluster(ctx context.Context, req *dbaasv1be
 // CreatePSMDBCluster creates PSMDB cluster with given parameters.
 //nolint:dupl
 func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv1beta1.CreatePSMDBClusterRequest) (*dbaasv1beta1.CreatePSMDBClusterResponse, error) {
+	settings, err := models.GetSettings(s.db.Querier)
+	if err != nil {
+		return nil, err
+	}
+
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
 	if err != nil {
 		return nil, err
@@ -134,6 +140,7 @@ func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv
 				},
 			},
 		},
+		PublicAddressUrl: settings.PublicAddressURL,
 	}
 
 	_, err = s.controllerClient.CreatePSMDBCluster(ctx, &in)
