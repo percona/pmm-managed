@@ -404,7 +404,7 @@
 
 [[projects]]
   branch = "PMM-6824-dbaas-restart"
-  digest = "1:f74088435c7fb0a90bf1be49d8663345f88cf3279dec7f187f5f65f4da82a4f3"
+  digest = "1:d1e249f932a48b0974c930efc12d714f83f7491a01e704f3878fd6aead976e06"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -426,7 +426,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "e60728e12427beaead89cabf85a26b5058b6580a"
+  revision = "4b336626ff8ee7e413609ce760b2c0a625c28bee"
 
 [[projects]]
   digest = "1:dbee7dc52291bb149388085eeb20561d4cb3c2044e0fa6ffa8d342c6b305f4bf"
