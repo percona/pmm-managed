@@ -149,7 +149,7 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 				ComputeResources: new(dbaascontrollerv1beta1.ComputeResources),
 			},
 		},
-		PublicAddressUrl: settings.PublicAddressURL,
+		PublicAddressUrl: settings.PublicAddressUrl,
 	}
 
 	if req.Params.Pxc.ComputeResources != nil {

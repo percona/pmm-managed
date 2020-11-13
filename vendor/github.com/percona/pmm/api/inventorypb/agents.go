@@ -10,7 +10,6 @@ type Agent interface {
 // in order of AgentType enum
 
 func (*PMMAgent) sealedAgent()                        {}
-func (*VMAgent) sealedAgent()                         {}
 func (*NodeExporter) sealedAgent()                    {}
 func (*MySQLdExporter) sealedAgent()                  {}
 func (*MongoDBExporter) sealedAgent()                 {}
