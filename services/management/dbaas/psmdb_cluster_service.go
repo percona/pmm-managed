@@ -107,7 +107,6 @@ func (s PSMDBClusterService) GetPSMDBCluster(ctx context.Context, req *dbaasv1be
 			Port:       27017,
 			Replicaset: "rs0",
 		},
-		Pu
 	}
 
 	return &resp, nil
@@ -119,6 +118,9 @@ func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv
 	settings, err := models.GetSettings(s.db.Querier)
 	if err != nil {
 		return nil, err
+	}
+	if settings.PublicAddressURL == "" {
+		return nil, fmt.Errorf("empty public address URL")
 	}
 
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
