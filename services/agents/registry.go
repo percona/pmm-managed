@@ -965,6 +965,39 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID stri
 	return nil
 }
 
+// StartPTPgSQLSummaryAction starts pt-pg-summary action on the pmm-agent.
+// The pt-pg-summary may require some of the following params:
+// address	IP address
+// port
+// username
+// password
+// return:		nil - ok, otherwise an error code
+func (r *Registry) StartPTPgSQLSummaryAction(ctx context.Context, id, pmmAgentID, address string, port uint16, username, password string) error {
+	// Action request data that'll be sent to agent
+	actionRequest := &agentpb.StartActionRequest{
+		ActionId: id,
+		// Proper params that'll will be passed to the command on the agent's side, even empty, othervise request's marshal fail.
+		Params: &agentpb.StartActionRequest_PtPgsqlSummaryParams{
+			PtPgsqlSummaryParams: &agentpb.StartActionRequest_PTPgSQLSummaryParams{
+				Address:  address,
+				Port:     uint32(port),
+				Username: username,
+				Password: password,
+			},
+		},
+	}
+
+	// Agent which the action request will be sent to, got by the provided ID
+	pmmAgent, err := r.get(pmmAgentID)
+	if err != nil {
+		return err
+	}
+
+	pmmAgent.channel.SendRequest(actionRequest)
+
+	return nil
+}
+
 // StopAction stops action with given given id.
 // TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
 func (r *Registry) StopAction(ctx context.Context, actionID string) error {

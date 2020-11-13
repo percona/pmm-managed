@@ -19,6 +19,7 @@ package grpc
 import (
 	"context"
 
+	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/managementpb"
 	"github.com/percona/pmm/version"
@@ -292,6 +293,64 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 		PmmAgentId: agentID,
 		ActionId:   res.ID,
 	}, nil
+}
+
+func pointerToAgentType(agentType models.AgentType) *models.AgentType {
+	return &agentType
+}
+
+// TBD: This prototype is here to allow compilation. It will be replaced by PMM-4172 content when its PR approved.
+func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
+	return nil, nil
+}
+
+// StartPTPgSQLSummaryAction starts pt-pg-summary (PostgreSQL) action and returns the pointer to the response message
+//nolint:lll
+func (s *actionsServer) StartPTPgSQLSummaryAction(ctx context.Context, req *managementpb.StartPTPgSQLSummaryActionRequest) (*managementpb.StartPTPgSQLSummaryActionResponse, error) {
+	// Need to get the service id's pointer to retrieve the list of agent pointers therefrom
+	// to get the particular agentID from the request.
+	service, err := models.FindServiceByID(s.db.Querier, req.ServiceId)
+	if err != nil {
+		return nil, err
+	}
+
+	agents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, service.NodeID)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "No pmm-agent running on this node")
+	}
+
+	agentID, err := models.FindPmmAgentIDToRunAction(req.PmmAgentId, agents)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := models.CreateActionResult(s.db.Querier, agentID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Need to get the postgreSQL exporters to get the username and password therefrom
+	psExporters, err := models.FindAgents(s.db.Querier, models.AgentFilters{AgentType: pointerToAgentType(models.PostgresExporterType)})
+	if err != nil {
+		return nil, err
+	}
+
+	// No exporters found
+	if len(psExporters) == 0 {
+		return nil, status.Errorf(codes.NotFound, "No mysql exporter")
+	}
+
+	// The first exporter's pointer will be used to retrieve the username and password
+	psPgSQLExporter := psExporters[0]
+
+	// Starts the pt-mysql-summary with the host address, port, socket, mysql username and password
+	err = s.r.StartPTPgSQLSummaryAction(ctx, res.ID, agentID, pointer.GetString(service.Address), pointer.GetUint16(service.Port),
+		pointer.GetString(psPgSQLExporter.Username), pointer.GetString(psPgSQLExporter.Password))
+	if err != nil {
+		return nil, err
+	}
+
+	return &managementpb.StartPTPgSQLSummaryActionResponse{PmmAgentId: agentID, ActionId: res.ID}, nil
 }
 
 // CancelAction stops an Action.
