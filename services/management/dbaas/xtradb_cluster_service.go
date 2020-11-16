@@ -101,7 +101,6 @@ func (s XtraDBClusterService) GetXtraDBCluster(ctx context.Context, req *dbaasv1
 		return nil, err
 	}
 
-	//x
 	// TODO: implement on dbaas-controller side:
 	// 1. Get pxc host and status
 	//  - Ex.: kubectl get -o=json PerconaXtraDBCluster/<cluster_name>
