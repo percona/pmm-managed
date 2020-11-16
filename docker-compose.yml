@@ -2,8 +2,7 @@
 version: '3.7'
 services:
   pmm-managed-server:
-    # TODO revert it before merge
-    image:  perconalab/pmm-server-fb:PR-1185-fc5a7c5
+    image:  perconalab/pmm-server:dev-latest
     container_name: pmm-managed-server
     hostname: pmm-managed-server
     environment:
@@ -25,7 +24,7 @@ services:
 
     ports:
       - 127.0.0.1:80:80
-      - 443:443
+      - 127.0.0.1:443:443
     volumes:
       - .:/root/go/src/github.com/percona/pmm-managed
       - ./Makefile.devcontainer:/root/go/src/github.com/percona/pmm-managed/Makefile:ro
