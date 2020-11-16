@@ -119,9 +119,6 @@ func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv
 	if err != nil {
 		return nil, err
 	}
-	if settings.PublicAddressURL == "" {
-		return nil, fmt.Errorf("empty public address URL")
-	}
 
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
 	if err != nil {
