@@ -9,6 +9,7 @@ import (
 	"go.starlark.net/starlark"
 
 	"github.com/percona-platform/saas/pkg/check"
+	"github.com/percona-platform/saas/pkg/common"
 )
 
 // PrintFunc represents fmt.Println-like function that is used by Starlark 'print' function implementation.
@@ -27,7 +28,7 @@ type Env struct {
 func NewEnv(name, script string, predeclaredFuncs map[string]GoFunc) (env *Env, err error) {
 	predeclared := make(starlark.StringDict, len(predeclaredFuncs))
 	for n, f := range predeclaredFuncs {
-		predeclared[n] = starlark.NewBuiltin(n, makeFunc(f))
+		predeclared[n] = starlark.NewBuiltin(n, MakeFunc(f))
 	}
 	predeclared.Freeze()
 
@@ -48,8 +49,8 @@ func NewEnv(name, script string, predeclaredFuncs map[string]GoFunc) (env *Env, 
 // starlarkFunc represent a Starlark builtin_function_or_method.
 type starlarkFunc func(*starlark.Thread, *starlark.Builtin, starlark.Tuple, []starlark.Tuple) (starlark.Value, error)
 
-// makeFunc converts GoFunc to starlarkFunc.
-func makeFunc(f GoFunc) starlarkFunc {
+// MakeFunc converts GoFunc to starlarkFunc.
+func MakeFunc(f GoFunc) starlarkFunc {
 	return func(_ *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) { //nolint:lll
 		if len(kwargs) != 0 {
 			return nil, errors.Errorf("%s: kwargs are not supported", fn.Name())
@@ -139,7 +140,7 @@ func (env *Env) Run(id string, input []map[string]interface{}, contextFuncs map[
 
 	context := starlark.NewDict(len(contextFuncs))
 	for n, f := range contextFuncs {
-		err = context.SetKey(starlark.String(n), starlark.NewBuiltin(n, makeFunc(f)))
+		err = context.SetKey(starlark.String(n), starlark.NewBuiltin(n, MakeFunc(f)))
 		if err != nil {
 			return nil, errors.Wrapf(err, "thread %s", id)
 		}
@@ -259,7 +260,7 @@ func convertResult(m map[string]interface{}) (*check.Result, error) {
 	res := &check.Result{
 		Summary:     summary,
 		Description: description,
-		Severity:    check.ParseSeverity(severity),
+		Severity:    common.ParseSeverity(severity),
 		Labels:      labels,
 	}
 	if err = res.Validate(); err != nil {
@@ -267,6 +268,31 @@ func convertResult(m map[string]interface{}) (*check.Result, error) {
 	}
 
 	return res, nil
+}
+
+// CheckGlobals checks for the presence of `check` and `check_context` functions.
+func CheckGlobals(c *check.Check, predeclaredFuncs map[string]GoFunc) error {
+	predeclared := make(starlark.StringDict, len(predeclaredFuncs))
+	for n, f := range predeclaredFuncs {
+		predeclared[n] = starlark.NewBuiltin(n, MakeFunc(f))
+	}
+	predeclared.Freeze()
+
+	var thread starlark.Thread
+	globals, err := starlark.ExecFile(&thread, "", c.Script, predeclared)
+	if err != nil {
+		return err
+	}
+
+	_, ok := globals["check"].(*starlark.Function)
+	if !ok {
+		return fmt.Errorf("%s: no `check` function found", c.Name)
+	}
+	_, ok = globals["check_context"].(*starlark.Function)
+	if !ok {
+		return fmt.Errorf("%s: no `check_context` function found", c.Name)
+	}
+	return nil
 }
 
 // modify unavoidable global state once on package initialization to avoid race conditions
