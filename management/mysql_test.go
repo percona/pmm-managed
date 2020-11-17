@@ -594,6 +594,226 @@ func TestAddMySQL(t *testing.T) {
 		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Username: value '' must not be an empty string")
 		assert.Nil(t, addMySQLOK)
 	})
+
+	t.Run("With MetricsModePush", func(t *testing.T) {
+		nodeName := pmmapitests.TestString(t, "node-for-basic-name")
+		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+			NodeName: nodeName,
+			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
+		})
+		defer pmmapitests.RemoveNodes(t, nodeID)
+		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+
+		serviceName := pmmapitests.TestString(t, "service-for-basic-name")
+
+		params := &mysql.AddMySQLParams{
+			Context: pmmapitests.Context,
+			Body: mysql.AddMySQLBody{
+				NodeID:      nodeID,
+				PMMAgentID:  pmmAgentID,
+				ServiceName: serviceName,
+				Address:     "10.10.10.10",
+				Port:        3306,
+				Username:    "username",
+
+				SkipConnectionCheck: true,
+				MetricsMode:         pointer.ToString("PUSH"),
+			},
+		}
+		addMySQLOK, err := client.Default.MySQL.AddMySQL(params)
+		require.NoError(t, err)
+		require.NotNil(t, addMySQLOK)
+		require.NotNil(t, addMySQLOK.Payload.Service)
+		serviceID := addMySQLOK.Payload.Service.ServiceID
+		defer pmmapitests.RemoveServices(t, serviceID)
+
+		// Check that service is created and its fields.
+		serviceOK, err := inventoryClient.Default.Services.GetService(&services.GetServiceParams{
+			Body: services.GetServiceBody{
+				ServiceID: serviceID,
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		require.NotNil(t, serviceOK)
+		assert.Equal(t, services.GetServiceOKBody{
+			Mysql: &services.GetServiceOKBodyMysql{
+				ServiceID:   serviceID,
+				NodeID:      nodeID,
+				ServiceName: serviceName,
+				Address:     "10.10.10.10",
+				Port:        3306,
+			},
+		}, *serviceOK.Payload)
+
+		// Check that mysqld exporter is added by default.
+		listAgents, err := inventoryClient.Default.Agents.ListAgents(&agents.ListAgentsParams{
+			Context: pmmapitests.Context,
+			Body: agents.ListAgentsBody{
+				ServiceID: serviceID,
+			},
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, agents.ListAgentsOKBody{
+			MysqldExporter: []*agents.MysqldExporterItems0{
+				{
+					AgentID:                   listAgents.Payload.MysqldExporter[0].AgentID,
+					ServiceID:                 serviceID,
+					PMMAgentID:                pmmAgentID,
+					Username:                  "username",
+					TablestatsGroupTableLimit: 1000,
+					PushMetricsEnabled:        true,
+				},
+			},
+		}, *listAgents.Payload)
+		defer removeAllAgentsInList(t, listAgents)
+	})
+
+	t.Run("With MetricsModePull", func(t *testing.T) {
+		nodeName := pmmapitests.TestString(t, "node-for-basic-name")
+		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+			NodeName: nodeName,
+			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
+		})
+		defer pmmapitests.RemoveNodes(t, nodeID)
+		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+
+		serviceName := pmmapitests.TestString(t, "service-for-basic-name")
+
+		params := &mysql.AddMySQLParams{
+			Context: pmmapitests.Context,
+			Body: mysql.AddMySQLBody{
+				NodeID:      nodeID,
+				PMMAgentID:  pmmAgentID,
+				ServiceName: serviceName,
+				Address:     "10.10.10.10",
+				Port:        3306,
+				Username:    "username",
+
+				SkipConnectionCheck: true,
+				MetricsMode:         pointer.ToString("PULL"),
+			},
+		}
+		addMySQLOK, err := client.Default.MySQL.AddMySQL(params)
+		require.NoError(t, err)
+		require.NotNil(t, addMySQLOK)
+		require.NotNil(t, addMySQLOK.Payload.Service)
+		serviceID := addMySQLOK.Payload.Service.ServiceID
+		defer pmmapitests.RemoveServices(t, serviceID)
+
+		// Check that service is created and its fields.
+		serviceOK, err := inventoryClient.Default.Services.GetService(&services.GetServiceParams{
+			Body: services.GetServiceBody{
+				ServiceID: serviceID,
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		require.NotNil(t, serviceOK)
+		assert.Equal(t, services.GetServiceOKBody{
+			Mysql: &services.GetServiceOKBodyMysql{
+				ServiceID:   serviceID,
+				NodeID:      nodeID,
+				ServiceName: serviceName,
+				Address:     "10.10.10.10",
+				Port:        3306,
+			},
+		}, *serviceOK.Payload)
+
+		// Check that mysqld exporter is added by default.
+		listAgents, err := inventoryClient.Default.Agents.ListAgents(&agents.ListAgentsParams{
+			Context: pmmapitests.Context,
+			Body: agents.ListAgentsBody{
+				ServiceID: serviceID,
+			},
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, agents.ListAgentsOKBody{
+			MysqldExporter: []*agents.MysqldExporterItems0{
+				{
+					AgentID:                   listAgents.Payload.MysqldExporter[0].AgentID,
+					ServiceID:                 serviceID,
+					PMMAgentID:                pmmAgentID,
+					Username:                  "username",
+					TablestatsGroupTableLimit: 1000,
+				},
+			},
+		}, *listAgents.Payload)
+		defer removeAllAgentsInList(t, listAgents)
+	})
+
+	t.Run("With MetricsModeAuto", func(t *testing.T) {
+		nodeName := pmmapitests.TestString(t, "node-for-basic-name")
+		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+			NodeName: nodeName,
+			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
+		})
+		defer pmmapitests.RemoveNodes(t, nodeID)
+		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+
+		serviceName := pmmapitests.TestString(t, "service-for-basic-name")
+
+		params := &mysql.AddMySQLParams{
+			Context: pmmapitests.Context,
+			Body: mysql.AddMySQLBody{
+				NodeID:      nodeID,
+				PMMAgentID:  pmmAgentID,
+				ServiceName: serviceName,
+				Address:     "10.10.10.10",
+				Port:        3306,
+				Username:    "username",
+
+				SkipConnectionCheck: true,
+				MetricsMode:         pointer.ToString("AUTO"),
+			},
+		}
+		addMySQLOK, err := client.Default.MySQL.AddMySQL(params)
+		require.NoError(t, err)
+		require.NotNil(t, addMySQLOK)
+		require.NotNil(t, addMySQLOK.Payload.Service)
+		serviceID := addMySQLOK.Payload.Service.ServiceID
+		defer pmmapitests.RemoveServices(t, serviceID)
+
+		// Check that service is created and its fields.
+		serviceOK, err := inventoryClient.Default.Services.GetService(&services.GetServiceParams{
+			Body: services.GetServiceBody{
+				ServiceID: serviceID,
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		require.NotNil(t, serviceOK)
+		assert.Equal(t, services.GetServiceOKBody{
+			Mysql: &services.GetServiceOKBodyMysql{
+				ServiceID:   serviceID,
+				NodeID:      nodeID,
+				ServiceName: serviceName,
+				Address:     "10.10.10.10",
+				Port:        3306,
+			},
+		}, *serviceOK.Payload)
+
+		// Check that mysqld exporter is added by default.
+		listAgents, err := inventoryClient.Default.Agents.ListAgents(&agents.ListAgentsParams{
+			Context: pmmapitests.Context,
+			Body: agents.ListAgentsBody{
+				ServiceID: serviceID,
+			},
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, agents.ListAgentsOKBody{
+			MysqldExporter: []*agents.MysqldExporterItems0{
+				{
+					AgentID:                   listAgents.Payload.MysqldExporter[0].AgentID,
+					ServiceID:                 serviceID,
+					PMMAgentID:                pmmAgentID,
+					Username:                  "username",
+					TablestatsGroupTableLimit: 1000,
+				},
+			},
+		}, *listAgents.Payload)
+		defer removeAllAgentsInList(t, listAgents)
+	})
 }
 
 func TestRemoveMySQL(t *testing.T) {

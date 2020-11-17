@@ -19,7 +19,7 @@ func TestRunExplain(t *testing.T) {
 	explainActionOK, err := client.Default.Actions.StartMySQLExplainAction(&actions.StartMySQLExplainActionParams{
 		Context: pmmapitests.Context,
 		Body: actions.StartMySQLExplainActionBody{
-			//PMMAgentID: "/agent_id/f235005b-9cca-4b73-bbbd-1251067c3138",
+			// PMMAgentID: "/agent_id/f235005b-9cca-4b73-bbbd-1251067c3138",
 			ServiceID: "/service_id/5a9a7aa6-7af4-47be-817c-6d88e955bff2",
 			Query:     "SELECT `t` . * FROM `test` . `key_value` `t`",
 		},

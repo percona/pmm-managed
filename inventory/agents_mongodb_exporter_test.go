@@ -235,4 +235,126 @@ func TestMongoDBExporter(t *testing.T) {
 			pmmapitests.RemoveAgents(t, res.Payload.MongodbExporter.AgentID)
 		}
 	})
+
+	t.Run("With PushMetrics", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+
+		node := pmmapitests.AddRemoteNode(t, pmmapitests.TestString(t, "Remote node for Node exporter"))
+		nodeID := node.Remote.NodeID
+		defer pmmapitests.RemoveNodes(t, nodeID)
+
+		service := addMongoDBService(t, services.AddMongoDBServiceBody{
+			NodeID:      genericNodeID,
+			Address:     "localhost",
+			Port:        3306,
+			ServiceName: pmmapitests.TestString(t, "MongoDB Service for MongoDBExporter test"),
+		})
+		serviceID := service.Mongodb.ServiceID
+		defer pmmapitests.RemoveServices(t, serviceID)
+
+		pmmAgent := pmmapitests.AddPMMAgent(t, nodeID)
+		pmmAgentID := pmmAgent.PMMAgent.AgentID
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
+
+		mongoDBExporter := addMongoDBExporter(t, agents.AddMongoDBExporterBody{
+			ServiceID:  serviceID,
+			Username:   "username",
+			Password:   "password",
+			PMMAgentID: pmmAgentID,
+			CustomLabels: map[string]string{
+				"new_label": "mongodb_exporter",
+			},
+
+			SkipConnectionCheck: true,
+			PushMetrics:         true,
+		})
+		agentID := mongoDBExporter.MongodbExporter.AgentID
+		defer pmmapitests.RemoveAgents(t, agentID)
+
+		getAgentRes, err := client.Default.Agents.GetAgent(&agents.GetAgentParams{
+			Body:    agents.GetAgentBody{AgentID: agentID},
+			Context: pmmapitests.Context,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, &agents.GetAgentOK{
+			Payload: &agents.GetAgentOKBody{
+				MongodbExporter: &agents.GetAgentOKBodyMongodbExporter{
+					AgentID:    agentID,
+					ServiceID:  serviceID,
+					Username:   "username",
+					PMMAgentID: pmmAgentID,
+					CustomLabels: map[string]string{
+						"new_label": "mongodb_exporter",
+					},
+					PushMetricsEnabled: true,
+				},
+			},
+		}, getAgentRes)
+
+		// Test change API.
+		changeMongoDBExporterOK, err := client.Default.Agents.ChangeMongoDBExporter(&agents.ChangeMongoDBExporterParams{
+			Body: agents.ChangeMongoDBExporterBody{
+				AgentID: agentID,
+				Common: &agents.ChangeMongoDBExporterParamsBodyCommon{
+					DisablePushMetrics: true,
+				},
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, &agents.ChangeMongoDBExporterOK{
+			Payload: &agents.ChangeMongoDBExporterOKBody{
+				MongodbExporter: &agents.ChangeMongoDBExporterOKBodyMongodbExporter{
+					AgentID:    agentID,
+					ServiceID:  serviceID,
+					Username:   "username",
+					PMMAgentID: pmmAgentID,
+					CustomLabels: map[string]string{
+						"new_label": "mongodb_exporter",
+					},
+				},
+			},
+		}, changeMongoDBExporterOK)
+
+		changeMongoDBExporterOK, err = client.Default.Agents.ChangeMongoDBExporter(&agents.ChangeMongoDBExporterParams{
+			Body: agents.ChangeMongoDBExporterBody{
+				AgentID: agentID,
+				Common: &agents.ChangeMongoDBExporterParamsBodyCommon{
+					EnablePushMetrics: true,
+				},
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, &agents.ChangeMongoDBExporterOK{
+			Payload: &agents.ChangeMongoDBExporterOKBody{
+				MongodbExporter: &agents.ChangeMongoDBExporterOKBodyMongodbExporter{
+					AgentID:    agentID,
+					ServiceID:  serviceID,
+					Username:   "username",
+					PMMAgentID: pmmAgentID,
+					CustomLabels: map[string]string{
+						"new_label": "mongodb_exporter",
+					},
+					PushMetricsEnabled: true,
+				},
+			},
+		}, changeMongoDBExporterOK)
+
+		_, err = client.Default.Agents.ChangeMongoDBExporter(&agents.ChangeMongoDBExporterParams{
+			Body: agents.ChangeMongoDBExporterBody{
+				AgentID: agentID,
+				Common: &agents.ChangeMongoDBExporterParamsBodyCommon{
+					EnablePushMetrics:  true,
+					DisablePushMetrics: true,
+				},
+			},
+			Context: pmmapitests.Context,
+		})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "expected one of  param: enable_push_metrics or disable_push_metrics")
+	})
 }

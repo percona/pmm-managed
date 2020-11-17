@@ -289,4 +289,129 @@ func TestMySQLdExporter(t *testing.T) {
 			pmmapitests.RemoveAgents(t, res.Payload.MysqldExporter.AgentID)
 		}
 	})
+
+	t.Run("With PushMetrics", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+
+		node := pmmapitests.AddRemoteNode(t, pmmapitests.TestString(t, "Remote node for Node exporter"))
+		nodeID := node.Remote.NodeID
+		defer pmmapitests.RemoveNodes(t, nodeID)
+
+		service := addMySQLService(t, services.AddMySQLServiceBody{
+			NodeID:      genericNodeID,
+			Address:     "localhost",
+			Port:        3306,
+			ServiceName: pmmapitests.TestString(t, "MySQL Service for MySQLdExporter test"),
+		})
+		serviceID := service.Mysql.ServiceID
+		defer pmmapitests.RemoveServices(t, serviceID)
+
+		pmmAgent := pmmapitests.AddPMMAgent(t, nodeID)
+		pmmAgentID := pmmAgent.PMMAgent.AgentID
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
+
+		mySqldExporter := addMySQLdExporter(t, agents.AddMySQLdExporterBody{
+			ServiceID:  serviceID,
+			Username:   "username",
+			Password:   "password",
+			PMMAgentID: pmmAgentID,
+			CustomLabels: map[string]string{
+				"custom_label_mysql_exporter": "mysql_exporter",
+			},
+
+			SkipConnectionCheck:       true,
+			TablestatsGroupTableLimit: 2000,
+			PushMetrics:               true,
+		})
+		assert.EqualValues(t, 0, mySqldExporter.TableCount)
+		assert.EqualValues(t, 2000, mySqldExporter.MysqldExporter.TablestatsGroupTableLimit)
+		agentID := mySqldExporter.MysqldExporter.AgentID
+		defer pmmapitests.RemoveAgents(t, agentID)
+
+		getAgentRes, err := client.Default.Agents.GetAgent(&agents.GetAgentParams{
+			Body:    agents.GetAgentBody{AgentID: agentID},
+			Context: pmmapitests.Context,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, &agents.GetAgentOKBody{
+			MysqldExporter: &agents.GetAgentOKBodyMysqldExporter{
+				AgentID:    agentID,
+				ServiceID:  serviceID,
+				Username:   "username",
+				PMMAgentID: pmmAgentID,
+				CustomLabels: map[string]string{
+					"custom_label_mysql_exporter": "mysql_exporter",
+				},
+				TablestatsGroupTableLimit: 2000,
+				PushMetricsEnabled:        true,
+			},
+		}, getAgentRes.Payload)
+
+		// Test change API.
+		changeMySQLdExporterOK, err := client.Default.Agents.ChangeMySQLdExporter(&agents.ChangeMySQLdExporterParams{
+			Body: agents.ChangeMySQLdExporterBody{
+				AgentID: agentID,
+				Common: &agents.ChangeMySQLdExporterParamsBodyCommon{
+					DisablePushMetrics: true,
+				},
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, &agents.ChangeMySQLdExporterOKBody{
+			MysqldExporter: &agents.ChangeMySQLdExporterOKBodyMysqldExporter{
+				AgentID:    agentID,
+				ServiceID:  serviceID,
+				Username:   "username",
+				PMMAgentID: pmmAgentID,
+				CustomLabels: map[string]string{
+					"custom_label_mysql_exporter": "mysql_exporter",
+				},
+				TablestatsGroupTableLimit: 2000,
+			},
+		}, changeMySQLdExporterOK.Payload)
+
+		changeMySQLdExporterOK, err = client.Default.Agents.ChangeMySQLdExporter(&agents.ChangeMySQLdExporterParams{
+			Body: agents.ChangeMySQLdExporterBody{
+				AgentID: agentID,
+				Common: &agents.ChangeMySQLdExporterParamsBodyCommon{
+					EnablePushMetrics: true,
+				},
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, &agents.ChangeMySQLdExporterOKBody{
+			MysqldExporter: &agents.ChangeMySQLdExporterOKBodyMysqldExporter{
+				AgentID:    agentID,
+				ServiceID:  serviceID,
+				Username:   "username",
+				PMMAgentID: pmmAgentID,
+				CustomLabels: map[string]string{
+					"custom_label_mysql_exporter": "mysql_exporter",
+				},
+				TablestatsGroupTableLimit: 2000,
+				PushMetricsEnabled:        true,
+			},
+		}, changeMySQLdExporterOK.Payload)
+		_, err = client.Default.Agents.ChangeMySQLdExporter(&agents.ChangeMySQLdExporterParams{
+			Body: agents.ChangeMySQLdExporterBody{
+				AgentID: agentID,
+				Common: &agents.ChangeMySQLdExporterParamsBodyCommon{
+					Enable: true,
+					CustomLabels: map[string]string{
+						"new_label": "mysql_exporter",
+					},
+					EnablePushMetrics:  true,
+					DisablePushMetrics: true,
+				},
+			},
+			Context: pmmapitests.Context,
+		})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "expected one of  param: enable_push_metrics or disable_push_metrics")
+	})
 }

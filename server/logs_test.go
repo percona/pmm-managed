@@ -62,7 +62,7 @@ func TestDownloadLogs(t *testing.T) {
 		"victoriametrics-promscrape.yml",
 		"victoriametrics.ini",
 		"victoriametrics.log",
-		"victoriametrics_targets.txt",
+		"victoriametrics_targets.json",
 		"vmalert.log",
 	}
 

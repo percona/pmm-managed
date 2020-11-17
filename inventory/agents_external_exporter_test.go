@@ -14,7 +14,6 @@ import (
 )
 
 func TestExternalExporter(t *testing.T) {
-
 	t.Run("Basic", func(t *testing.T) {
 		t.Parallel()
 
@@ -296,5 +295,118 @@ func TestExternalExporter(t *testing.T) {
 		if !assert.Nil(t, res) {
 			pmmapitests.RemoveAgents(t, res.Payload.ExternalExporter.AgentID)
 		}
+	})
+
+	t.Run("WithPushMetrics", func(t *testing.T) {
+		t.Parallel()
+
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+		pmmAgent := pmmapitests.AddPMMAgent(t, genericNodeID)
+		pmmAgentID := pmmAgent.PMMAgent.AgentID
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
+
+		service := addExternalService(t, services.AddExternalServiceBody{
+			NodeID:      genericNodeID,
+			ServiceName: pmmapitests.TestString(t, "External Service for External Exporter test"),
+		})
+		serviceID := service.External.ServiceID
+		defer pmmapitests.RemoveServices(t, serviceID)
+
+		ExternalExporter := addExternalExporter(t, agents.AddExternalExporterBody{
+			RunsOnNodeID: genericNodeID,
+			ServiceID:    serviceID,
+			ListenPort:   12345,
+			CustomLabels: map[string]string{
+				"custom_label_for_external_exporter": "external_exporter",
+			},
+			PushMetrics: true,
+		})
+		agentID := ExternalExporter.ExternalExporter.AgentID
+		defer pmmapitests.RemoveAgents(t, agentID)
+
+		getAgentRes, err := client.Default.Agents.GetAgent(&agents.GetAgentParams{
+			Body:    agents.GetAgentBody{AgentID: agentID},
+			Context: pmmapitests.Context,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, &agents.GetAgentOKBody{
+			ExternalExporter: &agents.GetAgentOKBodyExternalExporter{
+				AgentID:      agentID,
+				ServiceID:    serviceID,
+				RunsOnNodeID: genericNodeID,
+				Scheme:       "http",
+				MetricsPath:  "/metrics",
+				ListenPort:   12345,
+				CustomLabels: map[string]string{
+					"custom_label_for_external_exporter": "external_exporter",
+				},
+				PushMetricsEnabled: true,
+			},
+		}, getAgentRes.Payload)
+
+		// Test change API.
+		changeExternalExporterOK, err := client.Default.Agents.ChangeExternalExporter(&agents.ChangeExternalExporterParams{
+			Body: agents.ChangeExternalExporterBody{
+				AgentID: agentID,
+				Common: &agents.ChangeExternalExporterParamsBodyCommon{
+					DisablePushMetrics: true,
+				},
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, &agents.ChangeExternalExporterOKBody{
+			ExternalExporter: &agents.ChangeExternalExporterOKBodyExternalExporter{
+				AgentID:      agentID,
+				ServiceID:    serviceID,
+				RunsOnNodeID: genericNodeID,
+				Scheme:       "http",
+				MetricsPath:  "/metrics",
+				ListenPort:   12345,
+				CustomLabels: map[string]string{
+					"custom_label_for_external_exporter": "external_exporter",
+				},
+				PushMetricsEnabled: false,
+			},
+		}, changeExternalExporterOK.Payload)
+
+		changeExternalExporterOK, err = client.Default.Agents.ChangeExternalExporter(&agents.ChangeExternalExporterParams{
+			Body: agents.ChangeExternalExporterBody{
+				AgentID: agentID,
+				Common: &agents.ChangeExternalExporterParamsBodyCommon{
+					EnablePushMetrics: true,
+				},
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, &agents.ChangeExternalExporterOKBody{
+			ExternalExporter: &agents.ChangeExternalExporterOKBodyExternalExporter{
+				AgentID:      agentID,
+				ServiceID:    serviceID,
+				RunsOnNodeID: genericNodeID,
+				Scheme:       "http",
+				MetricsPath:  "/metrics",
+				ListenPort:   12345,
+				CustomLabels: map[string]string{
+					"custom_label_for_external_exporter": "external_exporter",
+				},
+				PushMetricsEnabled: true,
+			},
+		}, changeExternalExporterOK.Payload)
+
+		_, err = client.Default.Agents.ChangeExternalExporter(&agents.ChangeExternalExporterParams{
+			Body: agents.ChangeExternalExporterBody{
+				AgentID: agentID,
+				Common: &agents.ChangeExternalExporterParamsBodyCommon{
+					EnablePushMetrics:  true,
+					DisablePushMetrics: true,
+				},
+			},
+			Context: pmmapitests.Context,
+		})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "expected one of  param: enable_push_metrics or disable_push_metrics")
 	})
 }

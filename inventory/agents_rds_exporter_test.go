@@ -183,4 +183,116 @@ func TestRDSExporter(t *testing.T) {
 			pmmapitests.RemoveAgents(t, res.Payload.RDSExporter.AgentID)
 		}
 	})
+
+	t.Run("With PushMetrics", func(t *testing.T) {
+		genericNodeID := pmmapitests.AddGenericNode(t, pmmapitests.TestString(t, "")).NodeID
+		require.NotEmpty(t, genericNodeID)
+		defer pmmapitests.RemoveNodes(t, genericNodeID)
+
+		node := addRemoteRDSNode(t, pmmapitests.TestString(t, "Remote node for RDS exporter"))
+		nodeID := node.RemoteRDS.NodeID
+		defer pmmapitests.RemoveNodes(t, nodeID)
+
+		pmmAgent := pmmapitests.AddPMMAgent(t, genericNodeID)
+		pmmAgentID := pmmAgent.PMMAgent.AgentID
+		defer pmmapitests.RemoveAgents(t, pmmAgentID)
+
+		rdsExporter := addRDSExporter(t, agents.AddRDSExporterBody{
+			NodeID:     nodeID,
+			PMMAgentID: pmmAgentID,
+			CustomLabels: map[string]string{
+				"custom_label_rds_exporter": "rds_exporter",
+			},
+			SkipConnectionCheck:    true,
+			DisableBasicMetrics:    true,
+			DisableEnhancedMetrics: true,
+		})
+		agentID := rdsExporter.RDSExporter.AgentID
+		defer pmmapitests.RemoveAgents(t, agentID)
+
+		getAgentRes, err := client.Default.Agents.GetAgent(&agents.GetAgentParams{
+			Body:    agents.GetAgentBody{AgentID: agentID},
+			Context: pmmapitests.Context,
+		})
+		require.NoError(t, err)
+
+		assert.Equal(t, &agents.GetAgentOK{
+			Payload: &agents.GetAgentOKBody{
+				RDSExporter: &agents.GetAgentOKBodyRDSExporter{
+					NodeID:     nodeID,
+					AgentID:    agentID,
+					PMMAgentID: pmmAgentID,
+					CustomLabels: map[string]string{
+						"custom_label_rds_exporter": "rds_exporter",
+					},
+					BasicMetricsDisabled:    true,
+					EnhancedMetricsDisabled: true,
+				},
+			},
+		}, getAgentRes)
+
+		// Test change API.
+		changeRDSExporterOK, err := client.Default.Agents.ChangeRDSExporter(&agents.ChangeRDSExporterParams{
+			Body: agents.ChangeRDSExporterBody{
+				AgentID: agentID,
+				Common: &agents.ChangeRDSExporterParamsBodyCommon{
+					EnablePushMetrics: true,
+				},
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, &agents.ChangeRDSExporterOK{
+			Payload: &agents.ChangeRDSExporterOKBody{
+				RDSExporter: &agents.ChangeRDSExporterOKBodyRDSExporter{
+					NodeID:     nodeID,
+					AgentID:    agentID,
+					PMMAgentID: pmmAgentID,
+					CustomLabels: map[string]string{
+						"custom_label_rds_exporter": "rds_exporter",
+					},
+					BasicMetricsDisabled:    true,
+					EnhancedMetricsDisabled: true,
+					PushMetricsEnabled:      true,
+				},
+			},
+		}, changeRDSExporterOK)
+
+		changeRDSExporterOK, err = client.Default.Agents.ChangeRDSExporter(&agents.ChangeRDSExporterParams{
+			Body: agents.ChangeRDSExporterBody{
+				AgentID: agentID,
+				Common: &agents.ChangeRDSExporterParamsBodyCommon{
+					DisablePushMetrics: true,
+				},
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, &agents.ChangeRDSExporterOK{
+			Payload: &agents.ChangeRDSExporterOKBody{
+				RDSExporter: &agents.ChangeRDSExporterOKBodyRDSExporter{
+					NodeID:     nodeID,
+					AgentID:    agentID,
+					PMMAgentID: pmmAgentID,
+					CustomLabels: map[string]string{
+						"custom_label_rds_exporter": "rds_exporter",
+					},
+					BasicMetricsDisabled:    true,
+					EnhancedMetricsDisabled: true,
+				},
+			},
+		}, changeRDSExporterOK)
+		_, err = client.Default.Agents.ChangeRDSExporter(&agents.ChangeRDSExporterParams{
+			Body: agents.ChangeRDSExporterBody{
+				AgentID: agentID,
+				Common: &agents.ChangeRDSExporterParamsBodyCommon{
+					EnablePushMetrics:  true,
+					DisablePushMetrics: true,
+				},
+			},
+			Context: pmmapitests.Context,
+		})
+
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "expected one of  param: enable_push_metrics or disable_push_metrics")
+	})
 }

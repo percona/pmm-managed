@@ -136,6 +136,7 @@ func TestAddExternal(t *testing.T) {
 				Cluster:        "cluster-name",
 				ReplicationSet: "replication-set",
 				CustomLabels:   map[string]string{"bar": "foo"},
+
 				Group:          "redis",
 			},
 		}, *serviceOK.Payload)
