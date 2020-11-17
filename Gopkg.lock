@@ -373,11 +373,11 @@
 
 [[projects]]
   branch = "PMM-6827-db-cluster-monitoring"
-  digest = "1:f7ae39d0ff79268761690142272e60b2570a4f8b8dc4048c9d8240e3dd97bc98"
+  digest = "1:196f4a1eb167293f6b13621ce7d5f250b00574065d4f1ff2273de3cf4f7ee870"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "6104dc8828bda778fe05c935a2d247db8ece6a1f"
+  revision = "c4f385ec7b61c36aaf86516fc424f32206939d18"
 
 [[projects]]
   branch = "main"
