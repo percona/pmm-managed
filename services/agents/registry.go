@@ -52,7 +52,7 @@ var (
 	defaultQueryActionTimeout = ptypes.DurationProto(15 * time.Second) // should be less than checks.resultTimeout
 	// vmagent with push model version will be released with PMM Agent v2.12.
 	// TODO fix it to 2.11.99 before release
-	vmagentPMMVersion = version.MustParse("2.10.99")
+	vmagentPMMVersion = version.MustParse("2.11.2")
 )
 
 type pmmAgentInfo struct {

@@ -106,6 +106,15 @@ func TestAgentHelpers(t *testing.T) {
 				PushMetrics:  true,
 				ListenPort:   pointer.ToUint16(8200),
 			},
+			&models.Agent{
+				AgentID:      "A6",
+				AgentType:    models.MySQLdExporterType,
+				PMMAgentID:   pointer.ToString("A4"),
+				RunsOnNodeID: nil,
+				NodeID:       pointer.ToString("N2"),
+				PushMetrics:  false,
+				ListenPort:   pointer.ToUint16(8200),
+			},
 		} {
 			require.NoError(t, q.Insert(str))
 		}
@@ -338,16 +347,20 @@ func TestAgentHelpers(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
 
-		agents, err := models.FindAgentsForScrapeConfig(q, models.AgentFilters{PMMAgentID: "A4"}, true)
+		agents, err := models.FindAgentsForScrapeConfig(q, pointer.ToString("A4"), true)
 		require.NoError(t, err)
 		assert.Equal(t, "A5", agents[0].AgentID)
 
 		// find with empty response.
-		agents, err = models.FindAgentsForScrapeConfig(q, models.AgentFilters{PMMAgentID: "A1"}, true)
+		agents, err = models.FindAgentsForScrapeConfig(q, pointer.ToString("A1"), true)
 		assert.Equal(t, 0, len(agents))
 		require.NoError(t, err)
 
-		// TODO test with pushMetrics = false
+		// find all agents without push_metrics
+		agents, err = models.FindAgentsForScrapeConfig(q, nil, false)
+		assert.Equal(t, 1, len(agents))
+		assert.Equal(t, "A6", agents[0].AgentID)
+		require.NoError(t, err)
 	})
 
 	t.Run("FindPMMAgentsIDsWithPushMetrics", func(t *testing.T) {

@@ -28,9 +28,9 @@ import (
 )
 
 // AddScrapeConfigs - adds agents scrape configuration to given scrape config,
-// agent filter can be used for agents filtering.
-func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s *models.MetricsResolutions, filter models.AgentFilters, pushMetrics bool) error {
-	agents, err := models.FindAgentsForScrapeConfig(q, filter, pushMetrics)
+// pmm_agent_id and push_metrics used for filtering.
+func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s *models.MetricsResolutions, pmmAgentID *string, pushMetrics bool) error {
+	agents, err := models.FindAgentsForScrapeConfig(q, pmmAgentID, pushMetrics)
 	if err != nil {
 		return errors.WithStack(err)
 	}

@@ -28,6 +28,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/utils/pdeathsig"
 	config "github.com/percona/promconfig"
 	"github.com/pkg/errors"
@@ -231,8 +232,7 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 		}
 		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scrapeConfigForVictoriaMetrics(s.HR), scrapeConfigForVMAlert(s.HR))
 		prometheus.AddInternalServicesToScrape(cfg, s, settings.DBaaS.Enabled)
-		f := models.AgentFilters{}
-		return prometheus.AddScrapeConfigs(svc.l, cfg, tx.Querier, &s, f, false)
+		return prometheus.AddScrapeConfigs(svc.l, cfg, tx.Querier, &s, nil, false)
 	})
 	if e != nil {
 		return nil, e
@@ -359,8 +359,7 @@ func (svc *Service) BuildScrapeConfigForVMAgent(pmmAgentID string) ([]byte, erro
 			return err
 		}
 		s := settings.MetricsResolutions
-		f := models.AgentFilters{PMMAgentID: pmmAgentID}
-		return prometheus.AddScrapeConfigs(svc.l, &cfg, tx.Querier, &s, f, true)
+		return prometheus.AddScrapeConfigs(svc.l, &cfg, tx.Querier, &s, pointer.ToString(pmmAgentID), true)
 	})
 	if e != nil {
 		return nil, e

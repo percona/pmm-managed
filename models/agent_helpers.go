@@ -239,15 +239,15 @@ func FindPMMAgentsForVersion(logger *logrus.Entry, agents []*Agent, minPMMAgentV
 	return result
 }
 
-// FindAgentsForScrapeConfig returns Agents for scrape config generation by filters and push_metrics value.
-func FindAgentsForScrapeConfig(q *reform.Querier, filters AgentFilters, pushMetrics bool) ([]*Agent, error) {
+// FindAgentsForScrapeConfig returns Agents for scrape config generation by pmm_agent_id and push_metrics value.
+func FindAgentsForScrapeConfig(q *reform.Querier, pmmAgentID *string, pushMetrics bool) ([]*Agent, error) {
 	var (
 		args       []interface{}
 		conditions []string
 	)
-	if filters.PMMAgentID != "" {
+	if pmmAgentID != nil {
 		conditions = append(conditions, fmt.Sprintf("pmm_agent_id = %s", q.Placeholder(1)))
-		args = append(args, filters.PMMAgentID)
+		args = append(args, pointer.GetString(pmmAgentID))
 	}
 
 	if pushMetrics {
