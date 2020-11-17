@@ -492,7 +492,7 @@ func main() {
 	kingpin.Version(version.FullInfo())
 	kingpin.HelpFlag.Short('h')
 
-	publicAddressURLF := kingpin.Flag("public-address-url", "PMM server public address URL").String()
+	pmmPublicAddressURLF := kingpin.Flag("pmm-public-address-url", "PMM server public address URL").String()
 
 	victoriaMetricsURLF := kingpin.Flag("victoriametrics-url", "VictoriaMetrics base URL").
 		Default("http://127.0.0.1:9090/prometheus/").String()
@@ -671,7 +671,7 @@ func main() {
 	if err != nil {
 		l.Fatalf("Failed to get settings: %+v.", err)
 	}
-	settings.PublicAddressURL = pointer.GetString(publicAddressURLF)
+	settings.PMMPublicAddressURL = pointer.GetString(pmmPublicAddressURLF)
 
 	dbaasControllerClient := getDBaaSControllerClient(ctx, *dbaasControllerAPIAddrF, settings)
 
