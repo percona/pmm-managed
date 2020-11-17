@@ -216,18 +216,20 @@ func TestXtraDBClusterService(t *testing.T) {
 			KubeAuth: &controllerv1beta1.KubeAuth{
 				Kubeconfig: pxcKubeconfigTest,
 			},
-			Name:        "third-pxc-test",
-			ClusterSize: 8,
-			Pxc: &controllerv1beta1.UpdateXtraDBClusterRequest_PXC{
-				ComputeResources: &controllerv1beta1.ComputeResources{
-					CpuM:        1,
-					MemoryBytes: 256,
+			Name: "third-pxc-test",
+			Params: &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
+				ClusterSize: 8,
+				Pxc: &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC{
+					ComputeResources: &controllerv1beta1.ComputeResources{
+						CpuM:        1,
+						MemoryBytes: 256,
+					},
 				},
-			},
-			Proxysql: &controllerv1beta1.UpdateXtraDBClusterRequest_ProxySQL{
-				ComputeResources: &controllerv1beta1.ComputeResources{
-					CpuM:        1,
-					MemoryBytes: 124,
+				Proxysql: &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_ProxySQL{
+					ComputeResources: &controllerv1beta1.ComputeResources{
+						CpuM:        1,
+						MemoryBytes: 124,
+					},
 				},
 			},
 		}

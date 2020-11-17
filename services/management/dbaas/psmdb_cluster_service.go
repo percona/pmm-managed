@@ -156,12 +156,14 @@ func (s PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *dbaasv
 		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
-		Name:        req.Name,
-		ClusterSize: req.Params.ClusterSize,
-		Replicaset: &dbaascontrollerv1beta1.UpdatePSMDBClusterRequest_ReplicaSet{
-			ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
-				CpuM:        req.Params.Replicaset.ComputeResources.CpuM,
-				MemoryBytes: req.Params.Replicaset.ComputeResources.MemoryBytes,
+		Name: req.Name,
+		Params: &dbaascontrollerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams{
+			ClusterSize: req.Params.ClusterSize,
+			Replicaset: &dbaascontrollerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams_ReplicaSet{
+				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
+					CpuM:        req.Params.Replicaset.ComputeResources.CpuM,
+					MemoryBytes: req.Params.Replicaset.ComputeResources.MemoryBytes,
+				},
 			},
 		},
 	}
