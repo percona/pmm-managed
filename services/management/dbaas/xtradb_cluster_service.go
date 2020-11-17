@@ -127,6 +127,10 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 		return nil, err
 	}
 
+	if settings.PublicAddressURL == "" {
+		settings.PublicAddressURL = "fortest"
+	}
+
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
 	if err != nil {
 		return nil, err
