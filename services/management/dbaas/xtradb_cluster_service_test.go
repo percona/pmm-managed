@@ -94,11 +94,6 @@ func TestXtraDBClusterService(t *testing.T) {
 	ctx, db, dbaasClient, teardown := setup(t)
 	defer teardown(t)
 
-	settings, err2 := models.GetSettings(db.Querier)
-	if err2 == nil {
-		settings.PublicAddressURL = "fortest"
-	}
-
 	ks := NewKubernetesServer(db, dbaasClient)
 	dbaasClient.On("CheckKubernetesClusterConnection", ctx, pxcKubeconfigTest).Return(nil)
 
