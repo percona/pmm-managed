@@ -33,7 +33,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/reform.v1"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -66,6 +66,7 @@ func (svc *Service) Run(ctx context.Context) {
 
 	svc.createDataDir()
 	svc.generateBaseConfig()
+	svc.generateConfig()
 
 	// we don't have "configuration update loop" yet, so do nothing
 	<-ctx.Done()
@@ -110,8 +111,7 @@ func (svc *Service) createDataDir() {
 	}
 }
 
-// generateBaseConfig generates /srv/alertmanager/alertmanager.base.yml if it is not present
-// and also copies its contents to generate /etc/alertmanager.yml.
+// generateBaseConfig generates /srv/alertmanager/alertmanager.base.yml if it is not present.
 func (svc *Service) generateBaseConfig() {
 	_, err := os.Stat(alertmanagerBaseConfigPath)
 	svc.l.Debugf("%s status: %v", alertmanagerBaseConfigPath, err)
@@ -131,9 +131,12 @@ receivers:
 		err = ioutil.WriteFile(alertmanagerBaseConfigPath, []byte(defaultBase), 0644) //nolint:gosec
 		svc.l.Infof("%s created: %v.", alertmanagerBaseConfigPath, err)
 	}
+}
 
+// generateConfig copies the contents of /srv/alertmanager/alertmanager.base.yml to generate /etc/alertmanager.yml.
+func (svc *Service) generateConfig() {
 	var content []byte
-	_, err = os.Stat(alertmanagerConfigPath)
+	_, err := os.Stat(alertmanagerConfigPath)
 	// if /etc/alertmanager.yml already exists, read its contents.
 	if err == nil {
 		svc.l.Infof("%s exists, checking content", alertmanagerConfigPath)
