@@ -404,7 +404,7 @@
 
 [[projects]]
   branch = "PMM-5976_increase_cluster_size"
-  digest = "1:bead372d42d83d977dd8c72972c16fc5588b70658b75806eedb7ebd0499d242e"
+  digest = "1:6212c77345f13a2a2758f7981836542c603b0f9e680f4ce9f89669860a229ee1"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -426,7 +426,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "1b2a04374804150e92764e05e13c309b1d5f17a5"
+  revision = "7e066993219bb60795f568ad8284618dea29667e"
 
 [[projects]]
   digest = "1:dbee7dc52291bb149388085eeb20561d4cb3c2044e0fa6ffa8d342c6b305f4bf"
