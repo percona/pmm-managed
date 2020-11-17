@@ -127,10 +127,6 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 		return nil, err
 	}
 
-	if settings.PublicAddressURL == "" {
-		settings.PublicAddressURL = "fortest"
-	}
-
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
 	if err != nil {
 		return nil, err
@@ -150,7 +146,7 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 				ComputeResources: new(dbaascontrollerv1beta1.ComputeResources),
 			},
 		},
-		PublicAddressUrl: settings.PublicAddressURL,
+		PmmPublicAddressUrl: settings.PMMPublicAddressURL,
 	}
 
 	if req.Params.Pxc.ComputeResources != nil {
