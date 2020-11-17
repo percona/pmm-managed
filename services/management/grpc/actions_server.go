@@ -18,6 +18,7 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/managementpb"
@@ -292,6 +293,10 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 		PmmAgentId: agentID,
 		ActionId:   res.ID,
 	}, nil
+}
+
+func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
+	return nil, fmt.Errorf("not implemented yet")
 }
 
 // CancelAction stops an Action.

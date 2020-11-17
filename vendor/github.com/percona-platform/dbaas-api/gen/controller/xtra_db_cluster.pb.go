@@ -94,11 +94,11 @@ type XtraDBBackupState int32
 const (
 	// XTRA_DB_BACKUP_STATE_INVALID represents unknown state.
 	XtraDBBackupState_XTRA_DB_BACKUP_STATE_INVALID XtraDBBackupState = 0
-	// XTRA_DB_BACKUP_STATE_RUNNING represents running backup (Starting, Running).
+	// XTRA_DB_BACKUP_STATE_RUNNING represents running backup (Starting, Running, FIXME check it).
 	XtraDBBackupState_XTRA_DB_BACKUP_STATE_RUNNING XtraDBBackupState = 1
-	// XTRA_DB_BACKUP_STATE_SUCCEEDED represents succeeded backup (Succeeded).
+	// XTRA_DB_BACKUP_STATE_SUCCEEDED represents succeeded backup (Succeeded, FIXME check it).
 	XtraDBBackupState_XTRA_DB_BACKUP_STATE_SUCCEEDED XtraDBBackupState = 2
-	// XTRA_DB_BACKUP_STATE_FAILED represents failed backup (Failed).
+	// XTRA_DB_BACKUP_STATE_FAILED represents failed backup (Failed, FIXME check it).
 	XtraDBBackupState_XTRA_DB_BACKUP_STATE_FAILED XtraDBBackupState = 3
 )
 

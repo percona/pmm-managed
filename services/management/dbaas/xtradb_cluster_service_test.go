@@ -216,20 +216,18 @@ func TestXtraDBClusterService(t *testing.T) {
 			KubeAuth: &controllerv1beta1.KubeAuth{
 				Kubeconfig: pxcKubeconfigTest,
 			},
-			Name: "third-pxc-test",
-			Params: &controllerv1beta1.XtraDBClusterParams{
-				ClusterSize: 8,
-				Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
-					ComputeResources: &controllerv1beta1.ComputeResources{
-						CpuM:        1,
-						MemoryBytes: 256,
-					},
+			Name:        "third-pxc-test",
+			ClusterSize: 8,
+			Pxc: &controllerv1beta1.UpdateXtraDBClusterRequest_PXC{
+				ComputeResources: &controllerv1beta1.ComputeResources{
+					CpuM:        1,
+					MemoryBytes: 256,
 				},
-				Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
-					ComputeResources: &controllerv1beta1.ComputeResources{
-						CpuM:        1,
-						MemoryBytes: 124,
-					},
+			},
+			Proxysql: &controllerv1beta1.UpdateXtraDBClusterRequest_ProxySQL{
+				ComputeResources: &controllerv1beta1.ComputeResources{
+					CpuM:        1,
+					MemoryBytes: 124,
 				},
 			},
 		}
@@ -239,19 +237,17 @@ func TestXtraDBClusterService(t *testing.T) {
 		in := dbaasv1beta1.UpdateXtraDBClusterRequest{
 			KubernetesClusterName: pxcKubernetesClusterNameTest,
 			Name:                  "third-pxc-test",
-			Params: &dbaasv1beta1.XtraDBClusterParams{
-				ClusterSize: 8,
-				Pxc: &dbaasv1beta1.XtraDBClusterParams_PXC{
-					ComputeResources: &dbaasv1beta1.ComputeResources{
-						CpuM:        1,
-						MemoryBytes: 256,
-					},
+			ClusterSize:           8,
+			Pxc: &dbaasv1beta1.UpdateXtraDBClusterRequest_PXC{
+				ComputeResources: &dbaasv1beta1.ComputeResources{
+					CpuM:        1,
+					MemoryBytes: 256,
 				},
-				Proxysql: &dbaasv1beta1.XtraDBClusterParams_ProxySQL{
-					ComputeResources: &dbaasv1beta1.ComputeResources{
-						CpuM:        1,
-						MemoryBytes: 124,
-					},
+			},
+			Proxysql: &dbaasv1beta1.UpdateXtraDBClusterRequest_ProxySQL{
+				ComputeResources: &dbaasv1beta1.ComputeResources{
+					CpuM:        1,
+					MemoryBytes: 124,
 				},
 			},
 		}
