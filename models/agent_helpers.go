@@ -56,8 +56,6 @@ type AgentFilters struct {
 	ServiceID string
 	// Return Agents with provided type.
 	AgentType *AgentType
-	// Return Agents with push metrics mode enabled
-	PushMetrics bool
 }
 
 // FindAgents returns Agents by filters.
@@ -241,8 +239,8 @@ func FindPMMAgentsForVersion(logger *logrus.Entry, agents []*Agent, minPMMAgentV
 	return result
 }
 
-// FindAgentsForScrapeConfig returns Agents for scrape config generation by filters.
-func FindAgentsForScrapeConfig(q *reform.Querier, filters AgentFilters) ([]*Agent, error) {
+// FindAgentsForScrapeConfig returns Agents for scrape config generation by filters and push_metrics value.
+func FindAgentsForScrapeConfig(q *reform.Querier, filters AgentFilters, pushMetrics bool) ([]*Agent, error) {
 	var (
 		args       []interface{}
 		conditions []string
@@ -251,11 +249,13 @@ func FindAgentsForScrapeConfig(q *reform.Querier, filters AgentFilters) ([]*Agen
 		conditions = append(conditions, fmt.Sprintf("pmm_agent_id = %s", q.Placeholder(1)))
 		args = append(args, filters.PMMAgentID)
 	}
-	if filters.PushMetrics {
+
+	if pushMetrics {
 		conditions = append(conditions, "push_metrics")
 	} else {
 		conditions = append(conditions, "NOT push_metrics")
 	}
+
 	conditions = append(conditions, "NOT disabled", "listen_port IS NOT NULL")
 	whereClause := fmt.Sprintf("WHERE %s ORDER BY agent_type, agent_id ", strings.Join(conditions, " AND "))
 	allAgents, err := q.SelectAllFrom(AgentTable, whereClause, args...)

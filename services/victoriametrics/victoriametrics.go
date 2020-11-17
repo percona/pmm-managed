@@ -231,8 +231,8 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 		}
 		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scrapeConfigForVictoriaMetrics(s.HR), scrapeConfigForVMAlert(s.HR))
 		prometheus.AddInternalServicesToScrape(cfg, s, settings.DBaaS.Enabled)
-
-		return prometheus.AddScrapeConfigs(svc.l, cfg, tx.Querier, &s, models.AgentFilters{})
+		f := models.AgentFilters{}
+		return prometheus.AddScrapeConfigs(svc.l, cfg, tx.Querier, &s, f, false)
 	})
 	if e != nil {
 		return nil, e
@@ -359,8 +359,8 @@ func (svc *Service) BuildScrapeConfigForVMAgent(pmmAgentID string) ([]byte, erro
 			return err
 		}
 		s := settings.MetricsResolutions
-		f := models.AgentFilters{PushMetrics: true, PMMAgentID: pmmAgentID}
-		return prometheus.AddScrapeConfigs(svc.l, &cfg, tx.Querier, &s, f)
+		f := models.AgentFilters{PMMAgentID: pmmAgentID}
+		return prometheus.AddScrapeConfigs(svc.l, &cfg, tx.Querier, &s, f, true)
 	})
 	if e != nil {
 		return nil, e

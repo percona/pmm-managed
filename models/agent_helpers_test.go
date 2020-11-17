@@ -338,14 +338,16 @@ func TestAgentHelpers(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
 
-		agents, err := models.FindAgentsForScrapeConfig(q, models.AgentFilters{PMMAgentID: "A4", PushMetrics: true})
+		agents, err := models.FindAgentsForScrapeConfig(q, models.AgentFilters{PMMAgentID: "A4"}, true)
 		require.NoError(t, err)
 		assert.Equal(t, "A5", agents[0].AgentID)
 
 		// find with empty response.
-		agents, err = models.FindAgentsForScrapeConfig(q, models.AgentFilters{PMMAgentID: "A1", PushMetrics: true})
+		agents, err = models.FindAgentsForScrapeConfig(q, models.AgentFilters{PMMAgentID: "A1"}, true)
 		assert.Equal(t, 0, len(agents))
 		require.NoError(t, err)
+
+		// TODO test with pushMetrics = false
 	})
 
 	t.Run("FindPMMAgentsIDsWithPushMetrics", func(t *testing.T) {

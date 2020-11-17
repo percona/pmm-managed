@@ -29,9 +29,8 @@ import (
 
 // AddScrapeConfigs - adds agents scrape configuration to given scrape config,
 // agent filter can be used for agents filtering.
-func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s *models.MetricsResolutions, filter models.AgentFilters) error {
-
-	agents, err := models.FindAgentsForScrapeConfig(q, filter)
+func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s *models.MetricsResolutions, filter models.AgentFilters, pushMetrics bool) error {
+	agents, err := models.FindAgentsForScrapeConfig(q, filter, pushMetrics)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -74,7 +73,7 @@ func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s 
 		switch {
 		// special case for push metrics mode,
 		// vmagent scrapes it from localhost.
-		case filter.PushMetrics:
+		case pushMetrics:
 			paramsHost = "127.0.0.1"
 		case agent.PMMAgentID != nil:
 			// extract node address through pmm-agent
