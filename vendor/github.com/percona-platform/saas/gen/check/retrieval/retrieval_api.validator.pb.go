@@ -24,11 +24,3 @@ func (this *GetAllChecksRequest) Validate() error {
 func (this *GetAllChecksResponse) Validate() error {
 	return nil
 }
-
-func (this *GetAllAlertRuleTemplatesRequest) Validate() error {
-	return nil
-}
-
-func (this *GetAllAlertRuleTemplatesResponse) Validate() error {
-	return nil
-}
