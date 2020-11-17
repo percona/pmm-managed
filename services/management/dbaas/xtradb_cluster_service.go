@@ -66,24 +66,26 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 			Name: c.Name,
 			Params: &dbaasv1beta1.XtraDBClusterParams{
 				ClusterSize: c.Params.ClusterSize,
-				Pxc: &dbaasv1beta1.XtraDBClusterParams_PXC{
-					DiskSize: c.Params.Pxc.DiskSize,
-				},
-				Proxysql: &dbaasv1beta1.XtraDBClusterParams_ProxySQL{
-					DiskSize: c.Params.Proxysql.DiskSize,
-				},
 			},
 			State: dbaasv1beta1.XtraDBClusterState(c.State),
 		}
 
-		if c.Params.Pxc.ComputeResources != nil {
-			cluster.Params.Pxc.ComputeResources = &dbaasv1beta1.ComputeResources{
-				CpuM:        c.Params.Pxc.ComputeResources.CpuM,
-				MemoryBytes: c.Params.Pxc.ComputeResources.MemoryBytes,
+		if c.Params.Pxc != nil {
+			cluster.Params.Pxc = &dbaasv1beta1.XtraDBClusterParams_PXC{
+				DiskSize: c.Params.Pxc.DiskSize,
+			}
+			if c.Params.Pxc.ComputeResources != nil {
+				cluster.Params.Pxc.ComputeResources = &dbaasv1beta1.ComputeResources{
+					CpuM:        c.Params.Pxc.ComputeResources.CpuM,
+					MemoryBytes: c.Params.Pxc.ComputeResources.MemoryBytes,
+				}
 			}
 		}
 
 		if c.Params.Proxysql.ComputeResources != nil {
+			cluster.Params.Proxysql = &dbaasv1beta1.XtraDBClusterParams_ProxySQL{
+				DiskSize: c.Params.Proxysql.DiskSize,
+			}
 			cluster.Params.Proxysql.ComputeResources = &dbaasv1beta1.ComputeResources{
 				CpuM:        c.Params.Proxysql.ComputeResources.CpuM,
 				MemoryBytes: c.Params.Proxysql.ComputeResources.MemoryBytes,
