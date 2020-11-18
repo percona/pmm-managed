@@ -120,6 +120,11 @@ func TestListSecurityChecks(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, resp)
 	assert.NotEmpty(t, resp.Payload.Checks)
+	for _, c := range resp.Payload.Checks {
+		assert.NotEmpty(t, c.Name, "%+v", c)
+		assert.NotEmpty(t, c.Summary, "%+v", c)
+		assert.NotEmpty(t, c.Description, "%+v", c)
+	}
 }
 
 func TestChangeSecurityChecks(t *testing.T) {
