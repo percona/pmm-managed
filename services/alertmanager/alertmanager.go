@@ -66,9 +66,11 @@ func (svc *Service) Run(ctx context.Context) {
 
 	svc.createDataDir()
 	svc.generateBaseConfig()
-	svc.generateConfig()
+	svc.updateConfiguration(ctx)
 
 	// we don't have "configuration update loop" yet, so do nothing
+	// TODO implement loop similar to victoriametrics.Service.Run
+
 	<-ctx.Done()
 }
 
@@ -133,11 +135,13 @@ receivers:
 	}
 }
 
-// generateConfig copies the contents of /srv/alertmanager/alertmanager.base.yml to generate /etc/alertmanager.yml.
-func (svc *Service) generateConfig() {
+// updateConfiguration updates Alertmanager configuration.
+func (svc *Service) updateConfiguration(ctx context.Context) {
+	// TODO split into marshalConfig and configAndReload like in victoriametrics.Service
+
+	// if /etc/alertmanager.yml already exists, read its contents.
 	var content []byte
 	_, err := os.Stat(alertmanagerConfigPath)
-	// if /etc/alertmanager.yml already exists, read its contents.
 	if err == nil {
 		svc.l.Infof("%s exists, checking content", alertmanagerConfigPath)
 		content, err = ioutil.ReadFile(alertmanagerConfigPath)
