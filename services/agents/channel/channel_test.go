@@ -49,7 +49,7 @@ func (s *testServer) Connect(stream agentpb.Agent_ConnectServer) error {
 
 var _ agentpb.AgentServer = (*testServer)(nil)
 
-func setup(t *testing.T, connect func(*Channel) error, expected ...error) (agentpb.Agent_ConnectClient, *grpc.ClientConn, func(*testing.T)) {
+func setup(t *testing.T, connect func(*Channel) error, expected error) (agentpb.Agent_ConnectClient, *grpc.ClientConn, func(*testing.T)) {
 	// logrus.SetLevel(logrus.DebugLevel)
 
 	t.Parallel()
@@ -90,8 +90,7 @@ func setup(t *testing.T, connect func(*Channel) error, expected ...error) (agent
 		require.NotNil(t, channel, "Test exited before first message reached connect handler.")
 
 		err := channel.Wait()
-		assert.Contains(t, expected, errors.Cause(err), "%+v", err)
-
+		assert.Equal(t, errors.Cause(err).Error(), expected.Error())
 		server.GracefulStop()
 		cancel()
 	}
@@ -259,7 +258,7 @@ func TestServerExitsWithUnknownErrorIntercepted(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = stream.Recv()
-	assert.Equal(t, status.Error(codes.Internal, "Internal server error."), err)
+	assert.True(t, errors.Is(status.Error(codes.Internal, "Internal server error."), err))
 }
 
 func TestAgentClosesStream(t *testing.T) {
