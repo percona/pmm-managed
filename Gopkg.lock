@@ -381,13 +381,14 @@
 
 [[projects]]
   branch = "main"
-  digest = "1:85318c240c0262281eeea84cf3b12730bab87a3c62b6cf8a67bbe6edba2ff560"
+  digest = "1:4ed4e82526963c817d5eb6f3b2822f223c30d19a2ec14bda2bd258a1a0cd84b2"
   name = "github.com/percona-platform/saas"
   packages = [
     "gen/auth",
     "gen/check/retrieval",
     "gen/telemetry/events/pmm",
     "gen/telemetry/reporter",
+    "pkg/alert",
     "pkg/check",
     "pkg/common",
     "pkg/starlark",
@@ -868,6 +869,7 @@
     "github.com/percona-platform/saas/gen/check/retrieval",
     "github.com/percona-platform/saas/gen/telemetry/events/pmm",
     "github.com/percona-platform/saas/gen/telemetry/reporter",
+    "github.com/percona-platform/saas/pkg/alert",
     "github.com/percona-platform/saas/pkg/check",
     "github.com/percona-platform/saas/pkg/common",
     "github.com/percona-platform/saas/pkg/starlark",

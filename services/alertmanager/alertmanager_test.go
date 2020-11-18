@@ -18,14 +18,21 @@ package alertmanager
 
 import (
 	"context"
+	"os"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/testdb"
+)
+
+const (
+	testShippedFilePath     = "../../testdata/ia/shipped/*.yml"
+	testUserDefinedFilePath = "../../testdata/ia/userdefined/*.yml"
 )
 
 func TestAlertmanager(t *testing.T) {
@@ -35,4 +42,22 @@ func TestAlertmanager(t *testing.T) {
 	svc := New(db)
 
 	require.NoError(t, svc.IsReady(context.Background()))
+}
+
+func TestCollect(t *testing.T) {
+	err := os.Setenv("PERCONA_TEST_SHIPPED_RULE_TEMPLATE_PATH", testShippedFilePath)
+	require.NoError(t, err)
+	err = os.Setenv("PERCONA_TEST_USER_DEFINED_RULE_TEMPLATE_PATH", testUserDefinedFilePath)
+	require.NoError(t, err)
+
+	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+
+	svc := New(db)
+	svc.collectRuleTemplates()
+
+	require.NotNil(t, svc.rules)
+	require.Len(t, svc.rules, 2)
+	assert.Equal(t, svc.rules[0].Name, "shipped_rules")
+	assert.Equal(t, svc.rules[1].Name, "user_defined_rules")
 }

@@ -18,11 +18,15 @@
 package alertmanager
 
 import (
+	"bytes"
 	"context"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
+
+	saas "github.com/percona-platform/saas/pkg/alert"
 
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/percona/pmm/api/alertmanager/amclient"
@@ -43,20 +47,41 @@ const (
 
 	alertmanagerConfigPath     = "/etc/alertmanager.yml"
 	alertmanagerBaseConfigPath = "/srv/alertmanager/alertmanager.base.yml"
+
+	shippedRuleTemplatePath     = "/tmp/ia1/*.yml"
+	userDefinedRuleTemplatePath = "/tmp/ia2/*.yml"
+
+	envShippedRuleTemplatePath     = "PERCONA_TEST_SHIPPED_RULE_TEMPLATE_PATH"
+	envUserDefinedRuleTemplatePath = "PERCONA_TEST_USER_DEFINED_RULE_TEMPLATE_PATH"
 )
 
 // Service is responsible for interactions with Alertmanager.
 type Service struct {
-	db *reform.DB
-	l  *logrus.Entry
+	db                          *reform.DB
+	l                           *logrus.Entry
+	shippedRuleTemplatePath     string
+	userDefinedRuleTemplatePath string
+	rules                       []saas.Rule
 }
 
 // New creates new service.
 func New(db *reform.DB) *Service {
-	return &Service{
-		db: db,
-		l:  logrus.WithField("component", "alertmanager"),
+	s := &Service{
+		db:                          db,
+		l:                           logrus.WithField("component", "alertmanager"),
+		shippedRuleTemplatePath:     shippedRuleTemplatePath,
+		userDefinedRuleTemplatePath: userDefinedRuleTemplatePath,
 	}
+
+	if p := os.Getenv(envShippedRuleTemplatePath); p != "" {
+		s.shippedRuleTemplatePath = p
+	}
+
+	if p := os.Getenv(envUserDefinedRuleTemplatePath); p != "" {
+		s.userDefinedRuleTemplatePath = p
+	}
+
+	return s
 }
 
 // Run runs Alertmanager configuration update loop until ctx is canceled.
@@ -67,6 +92,8 @@ func (svc *Service) Run(ctx context.Context) {
 	svc.createDataDir()
 	svc.generateBaseConfig()
 	svc.updateConfiguration(ctx)
+
+	svc.collectRuleTemplates()
 
 	// we don't have "configuration update loop" yet, so do nothing
 	// TODO implement loop similar to victoriametrics.Service.Run
@@ -179,6 +206,71 @@ func (svc *Service) updateConfiguration(ctx context.Context) {
 		}
 	}
 	svc.l.Infof("%s created", alertmanagerConfigPath)
+}
+
+func (svc *Service) collectRuleTemplates() {
+	rules := make([]saas.Rule, 0)
+
+	shippedFilePaths, err := getRuleTemplateFilePaths(svc.shippedRuleTemplatePath)
+	if err != nil {
+		svc.l.Errorf("Failed to get paths of template files shipped with PMM: %s.", err)
+		return // keep previously loaded rules
+	}
+
+	for _, path := range shippedFilePaths {
+		r, err := svc.loadRuleTemplates(path)
+		if err != nil {
+			svc.l.Errorf("Failed to load shipped rule template file: %s.", err)
+			return // keep previously loaded rules
+		}
+		rules = append(rules, r...)
+	}
+
+	userDefinedFilePaths, err := getRuleTemplateFilePaths(svc.userDefinedRuleTemplatePath)
+	if err != nil {
+		svc.l.Errorf("Failed to get paths of user-defined template files: %s.", err)
+		return // keep previously loaded rules
+	}
+
+	for _, path := range userDefinedFilePaths {
+		r, err := svc.loadRuleTemplates(path)
+		if err != nil {
+			svc.l.Errorf("Failed to load user-defined rule template file: %s.", err)
+			return // keep previously loaded rules
+		}
+		rules = append(rules, r...)
+	}
+
+	// TODO add method to download templates from SAAS.
+
+	svc.rules = rules
+}
+
+func getRuleTemplateFilePaths(pattern string) ([]string, error) {
+	paths, err := filepath.Glob(pattern)
+	if err != nil {
+		return nil, err
+	}
+	return paths, nil
+}
+
+func (svc *Service) loadRuleTemplates(file string) ([]saas.Rule, error) {
+	data, err := ioutil.ReadFile(file) //nolint:gosec
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to read test rule template file")
+	}
+
+	// be strict about local files
+	params := &saas.ParseParams{
+		DisallowUnknownFields: true,
+		DisallowInvalidRules:  true,
+	}
+	rules, err := saas.Parse(bytes.NewReader(data), params)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to parse test rule template file")
+	}
+
+	return rules, nil
 }
 
 // SendAlerts sends given alerts. It is the caller's responsibility
