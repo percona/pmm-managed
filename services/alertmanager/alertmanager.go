@@ -207,6 +207,8 @@ func (svc *Service) updateConfiguration(ctx context.Context) {
 	svc.l.Infof("%s created", alertmanagerConfigPath)
 }
 
+// collectRuleTemplates collects IA rule templates from various sources like
+// templates shipped with PMM and defined by the users.
 func (svc *Service) collectRuleTemplates() {
 	rules := make([]saas.Rule, 0)
 
@@ -253,6 +255,7 @@ func getRuleTemplateFilePaths(pattern string) ([]string, error) {
 	return paths, nil
 }
 
+// loadRuleTemplates parses IA rule template files.
 func (svc *Service) loadRuleTemplates(file string) ([]saas.Rule, error) {
 	data, err := ioutil.ReadFile(file) //nolint:gosec
 	if err != nil {
