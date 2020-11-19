@@ -329,23 +329,23 @@ func (s *actionsServer) StartPTPgSQLSummaryAction(ctx context.Context, req *mana
 		return nil, err
 	}
 
-	// Need to get the postgreSQL exporters to get the username and password therefrom
-	psExporters, err := models.FindAgents(s.db.Querier, models.AgentFilters{AgentType: pointerToAgentType(models.PostgresExporterType)})
+	// Exporters to be filtered by service ID and agent type
+	agentFilterStruc := models.AgentFilters{ServiceID: req.ServiceId, AgentType: pointerToAgentType(models.PostgresExporterType)}
+
+	// Need to get the postgress exporters to get the username and password therefrom
+	pExportersStruc, err := models.FindAgents(s.db.Querier, agentFilterStruc)
 	if err != nil {
 		return nil, err
 	}
 
-	// No exporters found
-	if len(psExporters) == 0 {
-		return nil, status.Errorf(codes.NotFound, "No mysql exporter")
+	// Must be only one result
+	if len(pExportersStruc) != 1 {
+		return nil, status.Errorf(codes.NotFound, "No postgres exporter")
 	}
 
-	// The first exporter's pointer will be used to retrieve the username and password
-	psPgSQLExporter := psExporters[0]
-
-	// Starts the pt-mysql-summary with the host address, port, socket, mysql username and password
+	// Starts the pt-pg-summary with the host address, port, username and password
 	err = s.r.StartPTPgSQLSummaryAction(ctx, res.ID, agentID, pointer.GetString(service.Address), pointer.GetUint16(service.Port),
-		pointer.GetString(psPgSQLExporter.Username), pointer.GetString(psPgSQLExporter.Password))
+		pointer.GetString(pExportersStruc[0].Username), pointer.GetString(pExportersStruc[0].Password))
 	if err != nil {
 		return nil, err
 	}
