@@ -26,9 +26,8 @@ import (
 	"strings"
 	"syscall"
 
-	saas "github.com/percona-platform/saas/pkg/alert"
-
 	httptransport "github.com/go-openapi/runtime/client"
+	saas "github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona/pmm/api/alertmanager/amclient"
 	"github.com/percona/pmm/api/alertmanager/amclient/alert"
 	"github.com/percona/pmm/api/alertmanager/amclient/general"
