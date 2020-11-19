@@ -210,14 +210,13 @@ func (svc *Service) updateConfiguration(ctx context.Context) {
 // collectRuleTemplates collects IA rule templates from various sources like
 // templates shipped with PMM and defined by the users.
 func (svc *Service) collectRuleTemplates() {
-	rules := make([]saas.Rule, 0)
-
 	shippedFilePaths, err := getRuleTemplateFilepaths(svc.shippedRuleTemplatePath)
 	if err != nil {
 		svc.l.Errorf("Failed to get paths of template files shipped with PMM: %s.", err)
 		return // keep previously loaded rules
 	}
 
+	rules := make([]saas.Rule, 0, len(shippedFilePaths))
 	for _, path := range shippedFilePaths {
 		r, err := svc.loadRuleTemplates(path)
 		if err != nil {
