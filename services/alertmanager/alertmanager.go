@@ -242,7 +242,7 @@ func (svc *Service) collectRuleTemplates() {
 		rules = append(rules, r...)
 	}
 
-	// TODO add method to download templates from SAAS.
+	// TODO download templates from SAAS.
 
 	svc.rules = rules
 }
