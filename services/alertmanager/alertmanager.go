@@ -220,7 +220,7 @@ func (svc *Service) collectRuleTemplates() {
 	for _, path := range shippedFilePaths {
 		r, err := svc.loadRuleTemplates(path)
 		if err != nil {
-			svc.l.Errorf("Failed to load shipped rule template file: %s.", err)
+			svc.l.Errorf("Failed to load shipped rule template file: %s, reason: %s.", path, err)
 			return // keep previously loaded rules
 		}
 		rules = append(rules, r...)
@@ -235,7 +235,7 @@ func (svc *Service) collectRuleTemplates() {
 	for _, path := range userDefinedFilePaths {
 		r, err := svc.loadRuleTemplates(path)
 		if err != nil {
-			svc.l.Errorf("Failed to load user-defined rule template file: %s.", err)
+			svc.l.Errorf("Failed to load user-defined rule template file: %s, reason: %s.", path, err)
 			return // keep previously loaded rules
 		}
 		rules = append(rules, r...)
