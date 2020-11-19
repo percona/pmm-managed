@@ -212,7 +212,7 @@ func (svc *Service) updateConfiguration(ctx context.Context) {
 func (svc *Service) collectRuleTemplates() {
 	rules := make([]saas.Rule, 0)
 
-	shippedFilePaths, err := getRuleTemplateFilePaths(svc.shippedRuleTemplatePath)
+	shippedFilePaths, err := getRuleTemplateFilepaths(svc.shippedRuleTemplatePath)
 	if err != nil {
 		svc.l.Errorf("Failed to get paths of template files shipped with PMM: %s.", err)
 		return // keep previously loaded rules
@@ -227,7 +227,7 @@ func (svc *Service) collectRuleTemplates() {
 		rules = append(rules, r...)
 	}
 
-	userDefinedFilePaths, err := getRuleTemplateFilePaths(svc.userDefinedRuleTemplatePath)
+	userDefinedFilePaths, err := getRuleTemplateFilepaths(svc.userDefinedRuleTemplatePath)
 	if err != nil {
 		svc.l.Errorf("Failed to get paths of user-defined template files: %s.", err)
 		return // keep previously loaded rules
@@ -247,7 +247,7 @@ func (svc *Service) collectRuleTemplates() {
 	svc.rules = rules
 }
 
-func getRuleTemplateFilePaths(pattern string) ([]string, error) {
+func getRuleTemplateFilepaths(pattern string) ([]string, error) {
 	paths, err := filepath.Glob(pattern)
 	if err != nil {
 		return nil, err
