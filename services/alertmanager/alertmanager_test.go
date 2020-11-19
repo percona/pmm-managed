@@ -18,7 +18,6 @@ package alertmanager
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -45,15 +44,12 @@ func TestAlertmanager(t *testing.T) {
 }
 
 func TestCollect(t *testing.T) {
-	err := os.Setenv("PERCONA_TEST_SHIPPED_RULE_TEMPLATE_PATH", testShippedFilePath)
-	require.NoError(t, err)
-	err = os.Setenv("PERCONA_TEST_USER_DEFINED_RULE_TEMPLATE_PATH", testUserDefinedFilePath)
-	require.NoError(t, err)
-
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
 	svc := New(db)
+	svc.shippedRuleTemplatePath = testShippedFilePath
+	svc.userDefinedRuleTemplatePath = testUserDefinedFilePath
 	svc.collectRuleTemplates()
 
 	require.NotNil(t, svc.rules)
