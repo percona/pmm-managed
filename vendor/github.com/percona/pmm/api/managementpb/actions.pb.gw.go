@@ -813,6 +813,7 @@ func RegisterActionsHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 		forward_Actions_StartPTPgSQLSummaryAction_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
+
 	mux.Handle("POST", pattern_Actions_CancelAction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()

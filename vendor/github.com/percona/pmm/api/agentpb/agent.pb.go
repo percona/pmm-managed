@@ -1047,6 +1047,7 @@ type StartActionRequest_PtMysqlSummaryParams struct {
 type StartActionRequest_PtPgsqlSummaryParams struct {
 	PtPgsqlSummaryParams *StartActionRequest_PTPgSQLSummaryParams `protobuf:"bytes,12,opt,name=pt_pgsql_summary_params,json=ptPgsqlSummaryParams,proto3,oneof"`
 }
+
 type StartActionRequest_MysqlQueryShowParams struct {
 	MysqlQueryShowParams *StartActionRequest_MySQLQueryShowParams `protobuf:"bytes,50,opt,name=mysql_query_show_params,json=mysqlQueryShowParams,proto3,oneof"`
 }
@@ -1094,6 +1095,7 @@ func (*StartActionRequest_PtSummaryParams) isStartActionRequest_Params() {}
 func (*StartActionRequest_PtMysqlSummaryParams) isStartActionRequest_Params() {}
 
 func (*StartActionRequest_PtPgsqlSummaryParams) isStartActionRequest_Params() {}
+
 func (*StartActionRequest_MysqlQueryShowParams) isStartActionRequest_Params() {}
 
 func (*StartActionRequest_MysqlQuerySelectParams) isStartActionRequest_Params() {}
@@ -3586,7 +3588,6 @@ var file_agentpb_agent_proto_depIdxs = []int32{
 	24, // 3: agent.SetStateRequest.agent_processes:type_name -> agent.SetStateRequest.AgentProcessesEntry
 	26, // 4: agent.SetStateRequest.builtin_agents:type_name -> agent.SetStateRequest.BuiltinAgentsEntry
 	47, // 5: agent.QueryActionValue.timestamp:type_name -> google.protobuf.Timestamp
-
 	10, // 6: agent.QueryActionValue.slice:type_name -> agent.QueryActionSlice
 	11, // 7: agent.QueryActionValue.map:type_name -> agent.QueryActionMap
 	9,  // 8: agent.QueryActionSlice.slice:type_name -> agent.QueryActionValue
@@ -3646,7 +3647,6 @@ var file_agentpb_agent_proto_depIdxs = []int32{
 	58, // [58:58] is the sub-list for extension type_name
 	58, // [58:58] is the sub-list for extension extendee
 	0,  // [0:58] is the sub-list for field type_name
-
 }
 
 func init() { file_agentpb_agent_proto_init() }
