@@ -381,7 +381,7 @@
 
 [[projects]]
   branch = "main"
-  digest = "1:4eab89c6b1a3a627f2b213b870d8c7d542efc8a9d816f5a993aacff96fea074e"
+  digest = "1:85318c240c0262281eeea84cf3b12730bab87a3c62b6cf8a67bbe6edba2ff560"
   name = "github.com/percona-platform/saas"
   packages = [
     "gen/auth",
@@ -389,10 +389,11 @@
     "gen/telemetry/events/pmm",
     "gen/telemetry/reporter",
     "pkg/check",
+    "pkg/common",
     "pkg/starlark",
   ]
   pruneopts = "NUT"
-  revision = "3c2c6c2ec0cedb0bcfb8c5d17a1507ac8cc8cffe"
+  revision = "d9333b94126dc5359b5b946675c246c57e9b15ea"
 
 [[projects]]
   digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
@@ -429,12 +430,15 @@
   revision = "7b03777342ac05445700ee29f6ea331252971493"
 
 [[projects]]
-  digest = "1:dbee7dc52291bb149388085eeb20561d4cb3c2044e0fa6ffa8d342c6b305f4bf"
+  branch = "master"
+  digest = "1:3bd992dcc2eed2acdd3e838ae24bc1a267793b8f8ae93b86a38c720a16472ce3"
   name = "github.com/percona/promconfig"
-  packages = ["."]
+  packages = [
+    ".",
+    "alertmanager",
+  ]
   pruneopts = "NUT"
-  revision = "b6ed0406fe0b84c57801bd8ca6842f00e52cf894"
-  version = "v0.1.1"
+  revision = "a037e390f55969afa55b3011486744d612e7de60"
 
 [[projects]]
   digest = "1:4047c378584616813d610c9f993bf90dd0d07aed8d94bd3bc299cd35ececdcba"
@@ -865,6 +869,7 @@
     "github.com/percona-platform/saas/gen/telemetry/events/pmm",
     "github.com/percona-platform/saas/gen/telemetry/reporter",
     "github.com/percona-platform/saas/pkg/check",
+    "github.com/percona-platform/saas/pkg/common",
     "github.com/percona-platform/saas/pkg/starlark",
     "github.com/percona/exporter_shared/helpers",
     "github.com/percona/pmm/api/agentpb",
@@ -882,6 +887,7 @@
     "github.com/percona/pmm/utils/tlsconfig",
     "github.com/percona/pmm/version",
     "github.com/percona/promconfig",
+    "github.com/percona/promconfig/alertmanager",
     "github.com/pkg/errors",
     "github.com/pmezard/go-difflib/difflib",
     "github.com/prometheus/client_golang/prometheus",
@@ -912,6 +918,7 @@
     "gopkg.in/reform.v1/parse",
     "gopkg.in/reform.v1/reform",
     "gopkg.in/yaml.v2",
+    "gopkg.in/yaml.v3",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

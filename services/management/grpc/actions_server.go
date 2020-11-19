@@ -300,9 +300,10 @@ func pointerToAgentType(agentType models.AgentType) *models.AgentType {
 }
 
 // TBD: This prototype is here to allow compilation. It will be replaced by PMM-4172 content when its PR approved.
-func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
-	return nil, nil
-}
+// StartPTMySQLSummaryAction starts pt-mysql-summary action.
+//nolint:lll
+func (s *actionsServer) StartPTMySQLSummaryAction(context.Context, *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
+	panic("not implemented yet")
 
 // StartPTPgSQLSummaryAction starts pt-pg-summary (PostgreSQL) action and returns the pointer to the response message
 //nolint:lll
