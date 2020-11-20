@@ -52,7 +52,7 @@ var (
 	defaultQueryActionTimeout = ptypes.DurationProto(15 * time.Second) // should be less than checks.resultTimeout
 	// vmagent with push model version will be released with PMM Agent v2.12.
 	// TODO fix it to 2.11.99 before release
-	vmagentPMMVersion = version.MustParse("2.11.2")
+	vmAgentPMMVersion = version.MustParse("2.11.1")
 )
 
 type pmmAgentInfo struct {
@@ -294,12 +294,44 @@ func authenticate(md *agentpb.AgentConnectMetadata, q *reform.Querier) (string, 
 		return "", status.Errorf(codes.PermissionDenied, "Can't get 'runs_on_node_id' for pmm-agent with ID %q.", md.ID)
 	}
 
+	agentVersion, err := version.Parse(md.Version)
+	if err != nil {
+		return "", status.Errorf(codes.InvalidArgument, "Can't parse 'version' for pmm-agent with ID %q.", md.ID)
+	}
+	if !agentVersion.Less(vmAgentPMMVersion) {
+		if err := addVMAgentToPMMAgent(q, md.ID, pointer.GetString(agent.RunsOnNodeID)); err != nil {
+			return "", err
+		}
+	}
 	agent.Version = &md.Version
 	if err := q.Update(agent); err != nil {
 		return "", errors.Wrap(err, "failed to update agent")
 	}
 
 	return pointer.GetString(agent.RunsOnNodeID), nil
+}
+
+func addVMAgentToPMMAgent(q *reform.Querier, pmmAgentID, runsOnNodeID string) error {
+	// TODO remove it after fix
+	// https://jira.percona.com/browse/PMM-4420
+	if runsOnNodeID == "pmm-server" {
+		return nil
+	}
+	vmAgentType := models.VMAgentType
+	vmAgent, err := models.FindAgents(q, models.AgentFilters{PMMAgentID: pmmAgentID, AgentType: &vmAgentType})
+	if err != nil {
+		return status.Errorf(codes.Internal, "Can't get 'vmAgent' for pmm-agent with ID %q", pmmAgentID)
+	}
+	if len(vmAgent) == 0 {
+		if _, err := models.CreateAgent(q, models.VMAgentType, &models.CreateAgentParams{
+			PMMAgentID:  pmmAgentID,
+			PushMetrics: true,
+			NodeID:      runsOnNodeID,
+		}); err != nil {
+			return errors.Wrapf(err, "failed to create vmAgent for pmm-agent with ID %q", pmmAgentID)
+		}
+	}
+	return nil
 }
 
 // Kick disconnects pmm-agent with given ID.
@@ -479,14 +511,13 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		case models.PMMAgentType:
 			continue
 		case models.VMAgentType:
-			if pmmAgentVersion.Less(vmagentPMMVersion) {
-				continue
+			if !pmmAgentVersion.Less(vmAgentPMMVersion) {
+				scrapeCfg, err := r.vmdb.BuildScrapeConfigForVMAgent(pmmAgentID)
+				if err != nil {
+					l.WithError(err).Errorf("cannot get agent scrape config for agent: %s", pmmAgentID)
+				}
+				agentProcesses[row.AgentID] = vmAgentConfig(string(scrapeCfg))
 			}
-			scrapeCfg, err := r.vmdb.BuildScrapeConfigForVMAgent(pmmAgentID)
-			if err != nil {
-				l.WithError(err).Errorf("cannot get agent scrape config for agent: %s", pmmAgentID)
-			}
-			agentProcesses[row.AgentID] = vmAgentConfig(string(scrapeCfg))
 
 		case models.NodeExporterType:
 			node, err := models.FindNodeByID(r.db.Querier, pointer.GetString(row.NodeID))
