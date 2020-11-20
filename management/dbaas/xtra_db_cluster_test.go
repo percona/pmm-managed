@@ -110,6 +110,16 @@ func TestXtraDBClusterServer(t *testing.T) {
 		assert.Equal(t, xtraDBCluster.Payload.ConnectionCredentials.Host, "first-pxc-test-proxysql")
 		assert.Equal(t, xtraDBCluster.Payload.ConnectionCredentials.Port, 3306)
 
+		restartXtraDBClusterParamsParam := xtra_db_cluster.RestartXtraDBClusterParams{
+			Context: pmmapitests.Context,
+			Body: xtra_db_cluster.RestartXtraDBClusterBody{
+				KubernetesClusterName: kubernetesClusterName,
+				Name:                  "first-pxc-test",
+			},
+		}
+		_, err := dbaasClient.Default.XtraDBCluster.RestartXtraDBCluster(&restartXtraDBClusterParamsParam)
+		assert.NoError(t, err)
+
 		paramsUpdatePXC := xtra_db_cluster.UpdateXtraDBClusterParams{
 			Context: pmmapitests.Context,
 			Body: xtra_db_cluster.UpdateXtraDBClusterBody{
@@ -215,6 +225,19 @@ func TestXtraDBClusterServer(t *testing.T) {
 		}
 		_, err := dbaasClient.Default.XtraDBCluster.ListXtraDBClusters(&listXtraDBClustersParamsParam)
 		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, `Kubernetes Cluster with name "Unknown-kubernetes-cluster-name" not found.`)
+	})
+
+	t.Run("RestartUnknownXtraDBCluster", func(t *testing.T) {
+		restartXtraDBClusterParamsParam := xtra_db_cluster.RestartXtraDBClusterParams{
+			Context: pmmapitests.Context,
+			Body: xtra_db_cluster.RestartXtraDBClusterBody{
+				KubernetesClusterName: kubernetesClusterName,
+				Name:                  "Unknown-pxc-name",
+			},
+		}
+		_, err := dbaasClient.Default.XtraDBCluster.RestartXtraDBCluster(&restartXtraDBClusterParamsParam)
+		require.Error(t, err)
+		assert.Equal(t, 500, err.(pmmapitests.ErrorResponse).Code())
 	})
 
 	t.Run("DeleteUnknownXtraDBCluster", func(t *testing.T) {

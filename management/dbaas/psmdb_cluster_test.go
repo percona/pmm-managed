@@ -136,6 +136,15 @@ func TestPSMDBClusterServer(t *testing.T) {
 			Port:       27017,
 			Replicaset: "rs0",
 		}, cluster.Payload.ConnectionCredentials)
+
+		cluster, err := dbaasClient.Default.PSMDBCluster.RestartPSMDBCluster(&psmdbcluster.RestartPSMDBClusterParams{
+			Body: psmdbcluster.RestartPSMDBClusterBody{
+				KubernetesClusterName: psmdbKubernetesClusterName,
+				Name:                  "second-psmdb-test",
+			},
+			Context: pmmapitests.Context,
+		})
+		require.NoError(t, err)
 	})
 
 	t.Run("CreatePSMDBClusterEmptyName", func(t *testing.T) {
@@ -190,6 +199,19 @@ func TestPSMDBClusterServer(t *testing.T) {
 		}
 		_, err := dbaasClient.Default.PSMDBCluster.ListPSMDBClusters(&listPSMDBClustersParamsParam)
 		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, `Kubernetes Cluster with name "Unknown-kubernetes-cluster-name" not found.`)
+	})
+
+	t.Run("RestartUnknownPSMDBCluster", func(t *testing.T) {
+		restartPSMDBClusterParamsParam := psmdbcluster.RestartPSMDBClusterParams{
+			Context: pmmapitests.Context,
+			Body: psmdbcluster.RestartPSMDBClusterBody{
+				KubernetesClusterName: psmdbKubernetesClusterName,
+				Name:                  "Unknown-psmdb-name",
+			},
+		}
+		_, err := dbaasClient.Default.PSMDBCluster.RestartPSMDBCluster(&restartPSMDBClusterParamsParam)
+		require.Error(t, err)
+		assert.Equal(t, 500, err.(pmmapitests.ErrorResponse).Code())
 	})
 
 	t.Run("DeleteUnknownPSMDBCluster", func(t *testing.T) {
