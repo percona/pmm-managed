@@ -67,6 +67,7 @@ func New(db *reform.DB) *Service {
 		l:                           logrus.WithField("component", "alertmanager"),
 		shippedRuleTemplatePath:     shippedRuleTemplatePath,
 		userDefinedRuleTemplatePath: userDefinedRuleTemplatePath,
+		rules:                       make(map[string]saas.Rule),
 	}
 }
 
