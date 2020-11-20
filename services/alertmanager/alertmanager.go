@@ -210,7 +210,7 @@ func (svc *Service) updateConfiguration(ctx context.Context) {
 // collectRuleTemplates collects IA rule templates from various sources like
 // templates shipped with PMM and defined by the users.
 func (svc *Service) collectRuleTemplates() {
-	shippedFilePaths, err := getRuleTemplateFilepaths(svc.shippedRuleTemplatePath)
+	shippedFilePaths, err := filepath.Glob(svc.shippedRuleTemplatePath)
 	if err != nil {
 		svc.l.Errorf("Failed to get paths of template files shipped with PMM: %s.", err)
 		return // keep previously loaded rules
@@ -226,7 +226,7 @@ func (svc *Service) collectRuleTemplates() {
 		rules = append(rules, r...)
 	}
 
-	userDefinedFilePaths, err := getRuleTemplateFilepaths(svc.userDefinedRuleTemplatePath)
+	userDefinedFilePaths, err := filepath.Glob(svc.userDefinedRuleTemplatePath)
 	if err != nil {
 		svc.l.Errorf("Failed to get paths of user-defined template files: %s.", err)
 		return // keep previously loaded rules
@@ -244,14 +244,6 @@ func (svc *Service) collectRuleTemplates() {
 	// TODO download templates from SAAS.
 
 	svc.rules = rules
-}
-
-func getRuleTemplateFilepaths(pattern string) ([]string, error) {
-	paths, err := filepath.Glob(pattern)
-	if err != nil {
-		return nil, err
-	}
-	return paths, nil
 }
 
 // loadRuleTemplates parses IA rule template files.
