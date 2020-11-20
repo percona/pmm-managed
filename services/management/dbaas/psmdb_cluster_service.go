@@ -139,7 +139,7 @@ func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv
 				},
 			},
 		},
-		PmmPublicAddressUrl: settings.PMMPublicAddressURL,
+		PmmPublicAddressUrl: settings.PublicAddress,
 	}
 
 	_, err = s.controllerClient.CreatePSMDBCluster(ctx, &in)

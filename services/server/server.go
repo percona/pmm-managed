@@ -404,6 +404,7 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 		SttEnabled:      settings.SaaS.STTEnabled,
 		PlatformEmail:   settings.SaaS.Email,
 		DbaasEnabled:    settings.DBaaS.Enabled,
+		PublicAddress:   settings.PublicAddress,
 	}
 
 	b, err := s.prometheusAlertingRules.ReadRules()
@@ -442,6 +443,9 @@ func (s *Server) validateChangeSettingsRequest(ctx context.Context, req *serverp
 
 	if req.AlertManagerRules != "" && req.RemoveAlertManagerRules {
 		return status.Error(codes.InvalidArgument, "Both alert_manager_rules and remove_alert_manager_rules are present.")
+	}
+	if req.PmmPublicAddress != "" && req.RemovePmmPublicAddress {
+		return status.Error(codes.InvalidArgument, "Both pmm_public_address and remove_pmm_public_address are present.")
 	}
 	if req.SshKey != "" {
 		if err := s.validateSSHKey(ctx, req.SshKey); err != nil {
@@ -502,13 +506,15 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 				MR: getDuration(metricsRes.GetMr()),
 				LR: getDuration(metricsRes.GetLr()),
 			},
-			DataRetention:         getDuration(req.DataRetention),
-			AWSPartitions:         req.AwsPartitions,
-			AlertManagerURL:       req.AlertManagerUrl,
-			RemoveAlertManagerURL: req.RemoveAlertManagerUrl,
-			SSHKey:                req.SshKey,
-			EnableSTT:             req.EnableStt,
-			DisableSTT:            req.DisableStt,
+			DataRetention:          getDuration(req.DataRetention),
+			AWSPartitions:          req.AwsPartitions,
+			AlertManagerURL:        req.AlertManagerUrl,
+			RemoveAlertManagerURL:  req.RemoveAlertManagerUrl,
+			SSHKey:                 req.SshKey,
+			EnableSTT:              req.EnableStt,
+			DisableSTT:             req.DisableStt,
+			PMMPublicAddress:       req.PmmPublicAddress,
+			RemovePMMPublicAddress: req.RemovePmmPublicAddress,
 		}
 
 		var e error

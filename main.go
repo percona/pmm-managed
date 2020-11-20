@@ -37,8 +37,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/AlekSi/pointer"
-
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_validator "github.com/grpc-ecosystem/go-grpc-middleware/validator"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -492,8 +490,6 @@ func main() {
 	kingpin.Version(version.FullInfo())
 	kingpin.HelpFlag.Short('h')
 
-	pmmPublicAddressURLF := kingpin.Flag("pmm-public-address-url", "PMM server public address URL").String()
-
 	victoriaMetricsURLF := kingpin.Flag("victoriametrics-url", "VictoriaMetrics base URL").
 		Default("http://127.0.0.1:9090/prometheus/").String()
 	victoriaMetricsVMAlertURLF := kingpin.Flag("victoriametrics-vmalert-url", "VictoriaMetrics VMAlert base URL").
@@ -673,7 +669,6 @@ func main() {
 	if err != nil {
 		l.Fatalf("Failed to get settings: %+v.", err)
 	}
-	settings.PMMPublicAddressURL = pointer.GetString(pmmPublicAddressURLF)
 
 	dbaasControllerClient := getDBaaSControllerClient(ctx, *dbaasControllerAPIAddrF, settings)
 
