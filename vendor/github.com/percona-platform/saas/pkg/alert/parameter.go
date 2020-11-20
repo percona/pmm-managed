@@ -8,12 +8,12 @@ import (
 
 // Parameter represents alerting rule parameter.
 type Parameter struct {
-	Name  string        `yaml:"name"`       // required
-	Help  string        `yaml:"help"`       // required
-	Unit  string        `yaml:"unit"`       // required
-	Type  Type          `yaml:"type"`       // required
-	Range []interface{} `yaml:"range,flow"` // required
-	Value interface{}   `yaml:"value"`      // required
+	Name    string        `yaml:"name"`       // required
+	Summary string        `yaml:"summary"`    // required
+	Unit    string        `yaml:"unit"`       // required
+	Type    Type          `yaml:"type"`       // required
+	Range   []interface{} `yaml:"range,flow"` // required
+	Value   interface{}   `yaml:"value"`      // required
 }
 
 // GetValueForFloat casts parameter value to the float64.
@@ -43,8 +43,8 @@ func (p *Parameter) Validate() error {
 		return errors.New("parameter name is empty")
 	}
 
-	if p.Help == "" {
-		return errors.New("parameter help is empty")
+	if p.Summary == "" {
+		return errors.New("parameter summary is empty")
 	}
 
 	if p.Unit == "" {

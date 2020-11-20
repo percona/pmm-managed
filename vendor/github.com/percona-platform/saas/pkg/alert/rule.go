@@ -60,7 +60,7 @@ func Parse(reader io.Reader, params *ParseParams) ([]Rule, error) {
 type Rule struct {
 	Name        string              `yaml:"name"`                  // required
 	Version     uint32              `yaml:"version"`               // required
-	Help        string              `yaml:"help"`                  // required
+	Summary     string              `yaml:"summary"`               // required
 	Tiers       []common.Tier       `yaml:"tiers,flow,omitempty"`  // optional
 	Expr        string              `yaml:"expr"`                  // required
 	Params      []Parameter         `yaml:"params,omitempty"`      // optional
@@ -81,8 +81,8 @@ func (r *Rule) Validate() error {
 		return errors.New("rule name is empty")
 	}
 
-	if r.Help == "" {
-		return errors.New("rule help is empty")
+	if r.Summary == "" {
+		return errors.New("rule summary is empty")
 	}
 
 	if err = common.ValidateTiers(r.Tiers); err != nil {
