@@ -49,9 +49,6 @@ const (
 
 	shippedRuleTemplatePath     = "/tmp/ia1/*.yml"
 	userDefinedRuleTemplatePath = "/tmp/ia2/*.yml"
-
-	envShippedRuleTemplatePath     = "PERCONA_TEST_SHIPPED_RULE_TEMPLATE_PATH"
-	envUserDefinedRuleTemplatePath = "PERCONA_TEST_USER_DEFINED_RULE_TEMPLATE_PATH"
 )
 
 // Service is responsible for interactions with Alertmanager.
@@ -60,27 +57,17 @@ type Service struct {
 	l                           *logrus.Entry
 	shippedRuleTemplatePath     string
 	userDefinedRuleTemplatePath string
-	rules                       []saas.Rule
+	rules                       map[string]saas.Rule
 }
 
 // New creates new service.
 func New(db *reform.DB) *Service {
-	s := &Service{
+	return &Service{
 		db:                          db,
 		l:                           logrus.WithField("component", "alertmanager"),
 		shippedRuleTemplatePath:     shippedRuleTemplatePath,
 		userDefinedRuleTemplatePath: userDefinedRuleTemplatePath,
 	}
-
-	if p := os.Getenv(envShippedRuleTemplatePath); p != "" {
-		s.shippedRuleTemplatePath = p
-	}
-
-	if p := os.Getenv(envUserDefinedRuleTemplatePath); p != "" {
-		s.userDefinedRuleTemplatePath = p
-	}
-
-	return s
 }
 
 // Run runs Alertmanager configuration update loop until ctx is canceled.
@@ -216,14 +203,13 @@ func (svc *Service) collectRuleTemplates() {
 		return // keep previously loaded rules
 	}
 
-	rules := make([]saas.Rule, 0, len(shippedFilePaths))
 	for _, path := range shippedFilePaths {
-		r, err := svc.loadRuleTemplates(path)
+		rules, err := svc.loadRuleTemplates(path)
 		if err != nil {
 			svc.l.Errorf("Failed to load shipped rule template file: %s, reason: %s.", path, err)
 			return // keep previously loaded rules
 		}
-		rules = append(rules, r...)
+		svc.updateRules(rules)
 	}
 
 	userDefinedFilePaths, err := filepath.Glob(svc.userDefinedRuleTemplatePath)
@@ -233,17 +219,15 @@ func (svc *Service) collectRuleTemplates() {
 	}
 
 	for _, path := range userDefinedFilePaths {
-		r, err := svc.loadRuleTemplates(path)
+		rules, err := svc.loadRuleTemplates(path)
 		if err != nil {
 			svc.l.Errorf("Failed to load user-defined rule template file: %s, reason: %s.", path, err)
 			return // keep previously loaded rules
 		}
-		rules = append(rules, r...)
+		svc.updateRules(rules)
 	}
 
 	// TODO download templates from SAAS.
-
-	svc.rules = rules
 }
 
 // loadRuleTemplates parses IA rule template files.
@@ -264,6 +248,12 @@ func (svc *Service) loadRuleTemplates(file string) ([]saas.Rule, error) {
 	}
 
 	return rules, nil
+}
+
+func (svc *Service) updateRules(rules []saas.Rule) {
+	for _, r := range rules {
+		svc.rules[r.Name] = r
+	}
 }
 
 // SendAlerts sends given alerts. It is the caller's responsibility

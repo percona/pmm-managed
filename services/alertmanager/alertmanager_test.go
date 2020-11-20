@@ -68,7 +68,7 @@ func TestCollect(t *testing.T) {
 
 		require.NotEmpty(t, svc.rules)
 		require.Len(t, svc.rules, 2)
-		assert.Equal(t, svc.rules[0].Name, "shipped_rules")
-		assert.Equal(t, svc.rules[1].Name, "user_defined_rules")
+		assert.Contains(t, svc.rules, "shipped_rules")
+		assert.Contains(t, svc.rules, "user_defined_rules")
 	})
 }
