@@ -32,6 +32,7 @@ import (
 const (
 	testShippedFilePath     = "../../testdata/ia/shipped/*.yml"
 	testUserDefinedFilePath = "../../testdata/ia/userdefined/*.yml"
+	testInvalidFilePath     = "../../testdata/ia/invalid/*.yml"
 )
 
 func TestAlertmanager(t *testing.T) {
@@ -44,16 +45,30 @@ func TestAlertmanager(t *testing.T) {
 }
 
 func TestCollect(t *testing.T) {
-	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
-	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+	t.Run("invalid template paths", func(t *testing.T) {
+		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	svc := New(db)
-	svc.shippedRuleTemplatePath = testShippedFilePath
-	svc.userDefinedRuleTemplatePath = testUserDefinedFilePath
-	svc.collectRuleTemplates()
+		svc := New(db)
+		svc.shippedRuleTemplatePath = testInvalidFilePath
+		svc.userDefinedRuleTemplatePath = testInvalidFilePath
+		svc.collectRuleTemplates()
 
-	require.NotNil(t, svc.rules)
-	require.Len(t, svc.rules, 2)
-	assert.Equal(t, svc.rules[0].Name, "shipped_rules")
-	assert.Equal(t, svc.rules[1].Name, "user_defined_rules")
+		require.Empty(t, svc.rules)
+	})
+
+	t.Run("valid template paths", func(t *testing.T) {
+		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+
+		svc := New(db)
+		svc.shippedRuleTemplatePath = testShippedFilePath
+		svc.userDefinedRuleTemplatePath = testUserDefinedFilePath
+		svc.collectRuleTemplates()
+
+		require.NotEmpty(t, svc.rules)
+		require.Len(t, svc.rules, 2)
+		assert.Equal(t, svc.rules[0].Name, "shipped_rules")
+		assert.Equal(t, svc.rules[1].Name, "user_defined_rules")
+	})
 }
