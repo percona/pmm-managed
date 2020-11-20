@@ -314,7 +314,3 @@ func (s *actionsServer) CancelAction(ctx context.Context, req *managementpb.Canc
 
 	return &managementpb.CancelActionResponse{}, nil
 }
-
-func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
-	panic("implement me")
-}
