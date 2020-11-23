@@ -295,9 +295,14 @@ func authenticate(md *agentpb.AgentConnectMetadata, q *reform.Querier) (string, 
 	if err != nil {
 		return "", status.Errorf(codes.InvalidArgument, "Can't parse 'version' for pmm-agent with ID %q.", md.ID)
 	}
-	if !agentVersion.Less(models.PMMAgentWithPushMetricsSupport) {
+	if agentVersion.Less(models.PMMAgentWithPushMetricsSupport) {
+		// ensure that vmagent not exists and agents dont have push_metrics.
+		if err := removeVMAgentFromPMMAgent(q, md.ID); err != nil {
+			return "", errors.Wrap(err, "failed remove vmagent")
+		}
+	} else {
 		if err := addVMAgentToPMMAgent(q, md.ID, pointer.GetString(agent.RunsOnNodeID)); err != nil {
-			return "", err
+			return "", errors.Wrap(err, "failed create vmagent")
 		}
 	}
 	agent.Version = &md.Version
@@ -325,7 +330,36 @@ func addVMAgentToPMMAgent(q *reform.Querier, pmmAgentID, runsOnNodeID string) er
 			PushMetrics: true,
 			NodeID:      runsOnNodeID,
 		}); err != nil {
-			return errors.Wrapf(err, "failed to create vmAgent for pmm-agent with ID %q", pmmAgentID)
+			return errors.Wrapf(err, "Can't create 'vmAgent' for pmm-agent with ID %q", pmmAgentID)
+		}
+	}
+	return nil
+}
+
+func removeVMAgentFromPMMAgent(q *reform.Querier, pmmAgentID string) error {
+	vmAgentType := models.VMAgentType
+	vmAgent, err := models.FindAgents(q, models.AgentFilters{PMMAgentID: pmmAgentID, AgentType: &vmAgentType})
+	if err != nil {
+		return status.Errorf(codes.Internal, "Can't get 'vmAgent' for pmm-agent with ID %q", pmmAgentID)
+	}
+	if len(vmAgent) != 0 {
+		for _, agent := range vmAgent {
+			if _, err := models.RemoveAgent(q, agent.AgentID, models.RemoveRestrict); err != nil {
+				return errors.Wrapf(err, "Can't remove 'vmAgent' for pmm-agent with ID %q", pmmAgentID)
+			}
+		}
+	}
+	agents, err := models.FindAgents(q, models.AgentFilters{PMMAgentID: pmmAgentID})
+	if err != nil {
+		return errors.Wrapf(err, "Can't find agents for pmm-agent with ID %q", pmmAgentID)
+	}
+	for _, agent := range agents {
+		if agent.PushMetrics {
+			logrus.Warnf("disabling push_metrics for agent with unsupported version ID %q with pmm-agent ID %q", agent.AgentID, pmmAgentID)
+			agent.PushMetrics = false
+			if err := q.Update(agent); err != nil {
+				return errors.Wrapf(err, "Can't set push_metrics=false for agent %q at pmm-agent with ID %q", agent.AgentID, pmmAgentID)
+			}
 		}
 	}
 	return nil
