@@ -442,9 +442,9 @@ type CreateAgentParams struct {
 	CustomLabels                   map[string]string
 	TLS                            bool
 	TLSSkipVerify                  bool
-	TLSCertificateKeyFile          string
+	TLSCertificateKey              string
 	TLSCertificateKeyFilePassword  string
-	TLSCaFile                      string
+	TLSCa                          string
 	TableCountTablestatsGroupLimit int32
 	QueryExamplesDisabled          bool
 	MaxQueryLogSize                int64

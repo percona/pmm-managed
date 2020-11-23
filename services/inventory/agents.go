@@ -282,9 +282,9 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, req *inventoryp
 			TLS:                           req.Tls,
 			TLSSkipVerify:                 req.TlsSkipVerify,
 			PushMetrics:                   req.PushMetrics,
-			TLSCertificateKeyFile:         req.TlsCertificateKeyFile,
+			TLSCertificateKey:             req.TlsCertificateKey,
 			TLSCertificateKeyFilePassword: req.TlsCertificateKeyFilePassword,
-			TLSCaFile:                     req.TlsCaFile,
+			TLSCa:                         req.TlsCa,
 		}
 		row, err := models.CreateAgent(tx.Querier, models.MongoDBExporterType, params)
 		if err != nil {
