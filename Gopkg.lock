@@ -393,7 +393,7 @@
     "pkg/starlark",
   ]
   pruneopts = "NUT"
-  revision = "d9333b94126dc5359b5b946675c246c57e9b15ea"
+  revision = "8657f06b2badaee3980eb85fa61d7e2f7b34484b"
 
 [[projects]]
   digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
