@@ -50,9 +50,6 @@ const (
 var (
 	defaultActionTimeout      = ptypes.DurationProto(10 * time.Second)
 	defaultQueryActionTimeout = ptypes.DurationProto(15 * time.Second) // should be less than checks.resultTimeout
-	// vmagent with push model version will be released with PMM Agent v2.12.
-	// TODO fix it to 2.11.99 before release
-	vmAgentPMMVersion = version.MustParse("2.11.1")
 )
 
 type pmmAgentInfo struct {
@@ -298,7 +295,7 @@ func authenticate(md *agentpb.AgentConnectMetadata, q *reform.Querier) (string, 
 	if err != nil {
 		return "", status.Errorf(codes.InvalidArgument, "Can't parse 'version' for pmm-agent with ID %q.", md.ID)
 	}
-	if !agentVersion.Less(vmAgentPMMVersion) {
+	if !agentVersion.Less(models.PMMAgentWithPushMetricsSupport) {
 		if err := addVMAgentToPMMAgent(q, md.ID, pointer.GetString(agent.RunsOnNodeID)); err != nil {
 			return "", err
 		}
@@ -511,13 +508,11 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		case models.PMMAgentType:
 			continue
 		case models.VMAgentType:
-			if !pmmAgentVersion.Less(vmAgentPMMVersion) {
-				scrapeCfg, err := r.vmdb.BuildScrapeConfigForVMAgent(pmmAgentID)
-				if err != nil {
-					l.WithError(err).Errorf("cannot get agent scrape config for agent: %s", pmmAgentID)
-				}
-				agentProcesses[row.AgentID] = vmAgentConfig(string(scrapeCfg))
+			scrapeCfg, err := r.vmdb.BuildScrapeConfigForVMAgent(pmmAgentID)
+			if err != nil {
+				l.WithError(err).Errorf("cannot get agent scrape config for agent: %s", pmmAgentID)
 			}
+			agentProcesses[row.AgentID] = vmAgentConfig(string(scrapeCfg))
 
 		case models.NodeExporterType:
 			node, err := models.FindNodeByID(r.db.Querier, pointer.GetString(row.NodeID))
