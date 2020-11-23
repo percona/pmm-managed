@@ -20,19 +20,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/testdb"
-)
-
-const (
-	testShippedFilePath     = "../../testdata/ia/shipped/*.yml"
-	testUserDefinedFilePath = "../../testdata/ia/userdefined/*.yml"
-	testInvalidFilePath     = "../../testdata/ia/invalid/*.yml"
 )
 
 func TestAlertmanager(t *testing.T) {
@@ -42,33 +35,4 @@ func TestAlertmanager(t *testing.T) {
 	svc := New(db)
 
 	require.NoError(t, svc.IsReady(context.Background()))
-}
-
-func TestCollect(t *testing.T) {
-	t.Run("invalid template paths", func(t *testing.T) {
-		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
-		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-
-		svc := New(db)
-		svc.shippedRuleTemplatePath = testInvalidFilePath
-		svc.userDefinedRuleTemplatePath = testInvalidFilePath
-		svc.collectRuleTemplates()
-
-		require.Empty(t, svc.rules)
-	})
-
-	t.Run("valid template paths", func(t *testing.T) {
-		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
-		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-
-		svc := New(db)
-		svc.shippedRuleTemplatePath = testShippedFilePath
-		svc.userDefinedRuleTemplatePath = testUserDefinedFilePath
-		svc.collectRuleTemplates()
-
-		require.NotEmpty(t, svc.rules)
-		require.Len(t, svc.rules, 2)
-		assert.Contains(t, svc.rules, "shipped_rules")
-		assert.Contains(t, svc.rules, "user_defined_rules")
-	})
 }

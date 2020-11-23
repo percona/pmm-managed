@@ -18,16 +18,13 @@
 package alertmanager
 
 import (
-	"bytes"
 	"context"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strings"
 	"syscall"
 
 	httptransport "github.com/go-openapi/runtime/client"
-	saas "github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona/pmm/api/alertmanager/amclient"
 	"github.com/percona/pmm/api/alertmanager/amclient/alert"
 	"github.com/percona/pmm/api/alertmanager/amclient/general"
@@ -46,28 +43,19 @@ const (
 
 	alertmanagerConfigPath     = "/etc/alertmanager.yml"
 	alertmanagerBaseConfigPath = "/srv/alertmanager/alertmanager.base.yml"
-
-	shippedRuleTemplatePath     = "/tmp/ia1/*.yml"
-	userDefinedRuleTemplatePath = "/tmp/ia2/*.yml"
 )
 
 // Service is responsible for interactions with Alertmanager.
 type Service struct {
-	db                          *reform.DB
-	l                           *logrus.Entry
-	shippedRuleTemplatePath     string
-	userDefinedRuleTemplatePath string
-	rules                       map[string]saas.Rule
+	db *reform.DB
+	l  *logrus.Entry
 }
 
 // New creates new service.
 func New(db *reform.DB) *Service {
 	return &Service{
-		db:                          db,
-		l:                           logrus.WithField("component", "alertmanager"),
-		shippedRuleTemplatePath:     shippedRuleTemplatePath,
-		userDefinedRuleTemplatePath: userDefinedRuleTemplatePath,
-		rules:                       make(map[string]saas.Rule),
+		db: db,
+		l:  logrus.WithField("component", "alertmanager"),
 	}
 }
 
@@ -79,8 +67,6 @@ func (svc *Service) Run(ctx context.Context) {
 	svc.createDataDir()
 	svc.generateBaseConfig()
 	svc.updateConfiguration(ctx)
-
-	svc.collectRuleTemplates()
 
 	// we don't have "configuration update loop" yet, so do nothing
 	// TODO implement loop similar to victoriametrics.Service.Run
@@ -193,71 +179,6 @@ func (svc *Service) updateConfiguration(ctx context.Context) {
 		}
 	}
 	svc.l.Infof("%s created", alertmanagerConfigPath)
-}
-
-// collectRuleTemplates collects IA rule templates from various sources like
-// templates shipped with PMM and defined by the users.
-func (svc *Service) collectRuleTemplates() {
-	shippedFilePaths, err := filepath.Glob(svc.shippedRuleTemplatePath)
-	if err != nil {
-		svc.l.Errorf("Failed to get paths of template files shipped with PMM: %s.", err)
-		return
-	}
-
-	userDefinedFilePaths, err := filepath.Glob(svc.userDefinedRuleTemplatePath)
-	if err != nil {
-		svc.l.Errorf("Failed to get paths of user-defined template files: %s.", err)
-		return
-	}
-
-	ruleLen := len(shippedFilePaths) + len(userDefinedFilePaths)
-	rules := make([]saas.Rule, ruleLen)
-
-	for _, path := range shippedFilePaths {
-		r, err := svc.loadRuleTemplates(path)
-		if err != nil {
-			svc.l.Errorf("Failed to load shipped rule template file: %s, reason: %s.", path, err)
-			return
-		}
-		rules = append(rules, r...)
-	}
-
-	for _, path := range userDefinedFilePaths {
-		r, err := svc.loadRuleTemplates(path)
-		if err != nil {
-			svc.l.Errorf("Failed to load user-defined rule template file: %s, reason: %s.", path, err)
-			return
-		}
-		rules = append(rules, r...)
-	}
-
-	// TODO download templates from SAAS.
-
-	// replace previously stored rules with newly collected ones.
-	svc.rules = make(map[string]saas.Rule, ruleLen)
-	for _, r := range rules {
-		svc.rules[r.Name] = r
-	}
-}
-
-// loadRuleTemplates parses IA rule template files.
-func (svc *Service) loadRuleTemplates(file string) ([]saas.Rule, error) {
-	data, err := ioutil.ReadFile(file) //nolint:gosec
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read test rule template file")
-	}
-
-	// be strict about local files
-	params := &saas.ParseParams{
-		DisallowUnknownFields: true,
-		DisallowInvalidRules:  true,
-	}
-	rules, err := saas.Parse(bytes.NewReader(data), params)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse test rule template file")
-	}
-
-	return rules, nil
 }
 
 // SendAlerts sends given alerts. It is the caller's responsibility
