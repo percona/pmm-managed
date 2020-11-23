@@ -201,34 +201,43 @@ func (svc *Service) collectRuleTemplates() {
 	shippedFilePaths, err := filepath.Glob(svc.shippedRuleTemplatePath)
 	if err != nil {
 		svc.l.Errorf("Failed to get paths of template files shipped with PMM: %s.", err)
-		return // keep previously loaded rules
-	}
-
-	for _, path := range shippedFilePaths {
-		rules, err := svc.loadRuleTemplates(path)
-		if err != nil {
-			svc.l.Errorf("Failed to load shipped rule template file: %s, reason: %s.", path, err)
-			return // keep previously loaded rules
-		}
-		svc.updateRules(rules)
+		return
 	}
 
 	userDefinedFilePaths, err := filepath.Glob(svc.userDefinedRuleTemplatePath)
 	if err != nil {
 		svc.l.Errorf("Failed to get paths of user-defined template files: %s.", err)
-		return // keep previously loaded rules
+		return
+	}
+
+	ruleLen := len(shippedFilePaths) + len(userDefinedFilePaths)
+	rules := make([]saas.Rule, ruleLen)
+
+	for _, path := range shippedFilePaths {
+		r, err := svc.loadRuleTemplates(path)
+		if err != nil {
+			svc.l.Errorf("Failed to load shipped rule template file: %s, reason: %s.", path, err)
+			return
+		}
+		rules = append(rules, r...)
 	}
 
 	for _, path := range userDefinedFilePaths {
-		rules, err := svc.loadRuleTemplates(path)
+		r, err := svc.loadRuleTemplates(path)
 		if err != nil {
 			svc.l.Errorf("Failed to load user-defined rule template file: %s, reason: %s.", path, err)
-			return // keep previously loaded rules
+			return
 		}
-		svc.updateRules(rules)
+		rules = append(rules, r...)
 	}
 
 	// TODO download templates from SAAS.
+
+	// replace previously stored rules with newly collected ones.
+	svc.rules = make(map[string]saas.Rule, ruleLen)
+	for _, r := range rules {
+		svc.rules[r.Name] = r
+	}
 }
 
 // loadRuleTemplates parses IA rule template files.
@@ -249,12 +258,6 @@ func (svc *Service) loadRuleTemplates(file string) ([]saas.Rule, error) {
 	}
 
 	return rules, nil
-}
-
-func (svc *Service) updateRules(rules []saas.Rule) {
-	for _, r := range rules {
-		svc.rules[r.Name] = r
-	}
 }
 
 // SendAlerts sends given alerts. It is the caller's responsibility
