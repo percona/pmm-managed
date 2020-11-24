@@ -372,12 +372,12 @@
   version = "v0.3.0"
 
 [[projects]]
-  branch = "PMM-6827-db-cluster-monitoring"
-  digest = "1:196f4a1eb167293f6b13621ce7d5f250b00574065d4f1ff2273de3cf4f7ee870"
+  branch = "main"
+  digest = "1:ab6727c2c13553617e95eee972cf5cb16bb61043f76e3bd9649fa257fd0e349c"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "c4f385ec7b61c36aaf86516fc424f32206939d18"
+  revision = "35cb67a169d75da92106bd05ed8728a6c5bf0f01"
 
 [[projects]]
   branch = "main"
@@ -393,7 +393,7 @@
     "pkg/starlark",
   ]
   pruneopts = "NUT"
-  revision = "d9333b94126dc5359b5b946675c246c57e9b15ea"
+  revision = "8657f06b2badaee3980eb85fa61d7e2f7b34484b"
 
 [[projects]]
   digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
@@ -404,8 +404,8 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-6827-db-cluster-monitoring"
-  digest = "1:44ae0d19561d67788e4ec4c1946f17627bdaa5bb66e95703c4e5f3bd25c45852"
+  branch = "PMM-2.0"
+  digest = "1:46bfb0f310a854542b4e1ffccc5a8c1088f4055c2a0586e7d78247d604721204"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -419,6 +419,7 @@
     "api/inventorypb",
     "api/managementpb",
     "api/managementpb/dbaas",
+    "api/managementpb/ia",
     "api/qanpb",
     "api/serverpb",
     "utils/pdeathsig",
@@ -427,7 +428,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "cbf9ae34a6d3db8e8f09186f3900a169a67d99f4"
+  revision = "a91001eeaee379944aa4df4c7a7aa1d2db1f7623"
 
 [[projects]]
   branch = "master"
@@ -880,6 +881,7 @@
     "github.com/percona/pmm/api/inventorypb",
     "github.com/percona/pmm/api/managementpb",
     "github.com/percona/pmm/api/managementpb/dbaas",
+    "github.com/percona/pmm/api/managementpb/ia",
     "github.com/percona/pmm/api/qanpb",
     "github.com/percona/pmm/api/serverpb",
     "github.com/percona/pmm/utils/pdeathsig",

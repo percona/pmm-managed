@@ -117,12 +117,14 @@ func TestXtraDBClusterService(t *testing.T) {
 								CpuM:        3,
 								MemoryBytes: 256,
 							},
+							DiskSize: 1024 * 1024 * 1024,
 						},
 						Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
 							ComputeResources: &controllerv1beta1.ComputeResources{
 								CpuM:        2,
 								MemoryBytes: 124,
 							},
+							DiskSize: 1024 * 1024 * 1024,
 						},
 					},
 				},
@@ -157,12 +159,14 @@ func TestXtraDBClusterService(t *testing.T) {
 						CpuM:        3,
 						MemoryBytes: 256,
 					},
+					DiskSize: 1024 * 1024 * 1024,
 				},
 				Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
 					ComputeResources: &controllerv1beta1.ComputeResources{
 						CpuM:        2,
 						MemoryBytes: 124,
 					},
+					DiskSize: 1024 * 1024 * 1024,
 				},
 			},
 		}
@@ -179,12 +183,14 @@ func TestXtraDBClusterService(t *testing.T) {
 						CpuM:        3,
 						MemoryBytes: 256,
 					},
+					DiskSize: 1024 * 1024 * 1024,
 				},
 				Proxysql: &dbaasv1beta1.XtraDBClusterParams_ProxySQL{
 					ComputeResources: &dbaasv1beta1.ComputeResources{
 						CpuM:        2,
 						MemoryBytes: 124,
 					},
+					DiskSize: 1024 * 1024 * 1024,
 				},
 			},
 		}
@@ -257,6 +263,26 @@ func TestXtraDBClusterService(t *testing.T) {
 		}
 
 		_, err := s.UpdateXtraDBCluster(ctx, &in)
+		assert.NoError(t, err)
+	})
+
+	t.Run("BasicRestartXtraDBCluster", func(t *testing.T) {
+		s := NewXtraDBClusterService(db, dbaasClient)
+		mockReq := controllerv1beta1.RestartXtraDBClusterRequest{
+			KubeAuth: &controllerv1beta1.KubeAuth{
+				Kubeconfig: pxcKubeconfigTest,
+			},
+			Name: "third-pxc-test",
+		}
+
+		dbaasClient.On("RestartXtraDBCluster", ctx, &mockReq).Return(&controllerv1beta1.RestartXtraDBClusterResponse{}, nil)
+
+		in := dbaasv1beta1.RestartXtraDBClusterRequest{
+			KubernetesClusterName: pxcKubernetesClusterNameTest,
+			Name:                  "third-pxc-test",
+		}
+
+		_, err := s.RestartXtraDBCluster(ctx, &in)
 		assert.NoError(t, err)
 	})
 
