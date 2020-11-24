@@ -17,6 +17,7 @@
 package ia
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -40,7 +41,7 @@ func TestCollect(t *testing.T) {
 		svc := NewTemplatesService()
 		svc.builtinTemplatesPath = testMissingTemplates
 		svc.userTemplatesPath = testBadTemplates
-		svc.collectRuleTemplates()
+		svc.collectRuleTemplates(context.Background())
 
 		require.Empty(t, svc.rules)
 	})
@@ -51,7 +52,7 @@ func TestCollect(t *testing.T) {
 		svc := NewTemplatesService()
 		svc.builtinTemplatesPath = testBuiltinTemplates
 		svc.userTemplatesPath = testUserTemplates
-		svc.collectRuleTemplates()
+		svc.collectRuleTemplates(context.Background())
 
 		require.NotEmpty(t, svc.rules)
 		require.Len(t, svc.rules, 2)
@@ -60,7 +61,7 @@ func TestCollect(t *testing.T) {
 
 		// check whether map was cleared and updated on a subsequent call
 		svc.userTemplatesPath = testUser2Templates
-		svc.collectRuleTemplates()
+		svc.collectRuleTemplates(context.Background())
 
 		require.NotEmpty(t, svc.rules)
 		require.Len(t, svc.rules, 2)

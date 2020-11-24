@@ -56,17 +56,9 @@ func NewTemplatesService() *TemplatesService {
 	}
 }
 
-// Run starts the TemplatesService.
-func (svc *TemplatesService) Run() {
-	svc.l.Info("Starting...")
-	defer svc.l.Info("Done.")
-
-	svc.collectRuleTemplates()
-}
-
 // collectRuleTemplates collects IA rule templates from various sources like
 // built-in templates shipped with PMM and defined by the users.
-func (svc *TemplatesService) collectRuleTemplates() {
+func (svc *TemplatesService) collectRuleTemplates(ctx context.Context) {
 	builtinFilePaths, err := filepath.Glob(svc.builtinTemplatesPath)
 	if err != nil {
 		svc.l.Errorf("Failed to get paths of built-in templates files shipped with PMM: %s.", err)
@@ -82,7 +74,7 @@ func (svc *TemplatesService) collectRuleTemplates() {
 	rules := make([]saas.Rule, 0, len(builtinFilePaths)+len(userFilePaths))
 
 	for _, path := range builtinFilePaths {
-		r, err := svc.loadRuleTemplates(path)
+		r, err := svc.loadRuleTemplates(ctx, path)
 		if err != nil {
 			svc.l.Errorf("Failed to load shipped rule template file: %s, reason: %s.", path, err)
 			return
@@ -91,7 +83,7 @@ func (svc *TemplatesService) collectRuleTemplates() {
 	}
 
 	for _, path := range userFilePaths {
-		r, err := svc.loadRuleTemplates(path)
+		r, err := svc.loadRuleTemplates(ctx, path)
 		if err != nil {
 			svc.l.Errorf("Failed to load user-defined rule template file: %s, reason: %s.", path, err)
 			return
@@ -115,10 +107,14 @@ func (svc *TemplatesService) collectRuleTemplates() {
 }
 
 // loadRuleTemplates parses IA rule template files.
-func (svc *TemplatesService) loadRuleTemplates(file string) ([]saas.Rule, error) {
+func (svc *TemplatesService) loadRuleTemplates(ctx context.Context, file string) ([]saas.Rule, error) {
+	if ctx.Err() != nil {
+		return nil, errors.WithStack(ctx.Err())
+	}
+
 	data, err := ioutil.ReadFile(file) //nolint:gosec
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read test rule template file")
+		return nil, errors.Wrap(err, "failed to read rule template file")
 	}
 
 	// be strict about local files
@@ -128,29 +124,33 @@ func (svc *TemplatesService) loadRuleTemplates(file string) ([]saas.Rule, error)
 	}
 	rules, err := saas.Parse(bytes.NewReader(data), params)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse test rule template file")
+		return nil, errors.Wrap(err, "failed to parse rule template file")
 	}
 
 	return rules, nil
 }
 
 // ListTemplates returns a list of all collected Alert Rule Templates.
-func (svc *TemplatesService) ListTemplates(context.Context, *iav1beta1.ListTemplatesRequest) (*iav1beta1.ListTemplatesResponse, error) {
+func (svc *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.ListTemplatesRequest) (*iav1beta1.ListTemplatesResponse, error) {
+	if req.Reload {
+		svc.collectRuleTemplates(ctx)
+	}
+
 	return nil, status.Errorf(codes.Unimplemented, "method ListTemplates not implemented")
 }
 
 // CreateTemplate creates a new template.
-func (svc *TemplatesService) CreateTemplate(context.Context, *iav1beta1.CreateTemplateRequest) (*iav1beta1.CreateTemplateResponse, error) {
+func (svc *TemplatesService) CreateTemplate(ctx context.Context, req *iav1beta1.CreateTemplateRequest) (*iav1beta1.CreateTemplateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateTemplate not implemented")
 }
 
 // UpdateTemplate updates existing template, previously created via API.
-func (svc *TemplatesService) UpdateTemplate(context.Context, *iav1beta1.UpdateTemplateRequest) (*iav1beta1.UpdateTemplateResponse, error) {
+func (svc *TemplatesService) UpdateTemplate(ctx context.Context, req *iav1beta1.UpdateTemplateRequest) (*iav1beta1.UpdateTemplateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateTemplate not implemented")
 }
 
 // DeleteTemplate deletes existing, previously created via API.
-func (svc *TemplatesService) DeleteTemplate(context.Context, *iav1beta1.DeleteTemplateRequest) (*iav1beta1.DeleteTemplateResponse, error) {
+func (svc *TemplatesService) DeleteTemplate(ctx context.Context, req *iav1beta1.DeleteTemplateRequest) (*iav1beta1.DeleteTemplateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteTemplate not implemented")
 }
 
