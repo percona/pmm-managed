@@ -28,7 +28,7 @@ const (
 
 // Channel represents notification channel configuration.
 type Channel struct {
-	Id   string      `json:"name"`
+	ID   string      `json:"name"`
 	Type ChannelType `json:"type"`
 
 	EmailConfig   *EmailConfig   `json:"email_config"`
@@ -53,8 +53,8 @@ type SlackConfig struct {
 // WebHookConfig is webhook notification channel configuration.
 type WebHookConfig struct {
 	SendResolved bool        ` json:"send_resolved"`
-	Url          string      ` json:"url"`
-	HttpConfig   *HTTPConfig ` json:"http_config"`
+	URL          string      ` json:"url"`
+	HTTPConfig   *HTTPConfig ` json:"http_config"`
 	MaxAlerts    int32       ` json:"max_alerts"`
 }
 
@@ -63,8 +63,8 @@ type HTTPConfig struct {
 	BasicAuth       *HTTPBasicAuth `json:"basic_auth,omitempty"`
 	BearerToken     string         `json:"bearer_token,omitempty"`
 	BearerTokenFile string         `json:"bearer_token_file,omitempty"`
-	TlsConfig       *TLSConfig     `json:"tls_config,omitempty"`
-	ProxyUrl        string         `json:"proxy_url,omitempty"`
+	TLSConfig       *TLSConfig     `json:"tls_config,omitempty"`
+	ProxyURL        string         `json:"proxy_url,omitempty"`
 }
 
 // HTTPBasicAuth is HTTP basic authentication configuration.

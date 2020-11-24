@@ -34,7 +34,7 @@ func SaveChannel(q reform.DBTX, c *Channel) error {
 		return errors.Wrap(err, "failed to marshall notification channel")
 	}
 
-	_, err = q.Exec("INSERT INTO notification_channels (id, channel) VALUES ($1, $2)", c.Id, b)
+	_, err = q.Exec("INSERT INTO notification_channels (id, channel) VALUES ($1, $2)", c.ID, b)
 	if err != nil {
 		return errors.Wrap(err, "failed to create notifications channel")
 	}
@@ -52,7 +52,7 @@ func UpdateChannel(q reform.DBTX, c *Channel) error {
 		return errors.Wrap(err, "failed to marshall notification channel")
 	}
 
-	_, err = q.Exec("UPDATE notification_channels SET channel=$1 WHERE id=$2", b, c.Id)
+	_, err = q.Exec("UPDATE notification_channels SET channel=$1 WHERE id=$2", b, c.ID)
 	if err != nil {
 		return errors.Wrap(err, "failed to create notifications channel")
 	}
@@ -91,7 +91,7 @@ func GetChannels(q reform.DBTX) ([]Channel, error) {
 	}
 
 	if closeErr := rows.Close(); closeErr != nil {
-		return nil, errors.Wrap(err, "failed to close rows")
+		return nil, errors.Wrap(closeErr, "failed to close rows")
 	}
 
 	if err != nil {
@@ -107,7 +107,7 @@ func GetChannels(q reform.DBTX) ([]Channel, error) {
 
 // ValidateChannel validates notification channel.
 func ValidateChannel(ch *Channel) error {
-	if ch.Id == "" {
+	if ch.ID == "" {
 		return errors.New("notification channel id is empty")
 	}
 
@@ -166,7 +166,7 @@ func validateWebHookConfig(c *WebHookConfig) error {
 		return errors.New("webhook config is empty")
 	}
 
-	if c.Url == "" {
+	if c.URL == "" {
 		return errors.New("webhook url field is empty")
 	}
 

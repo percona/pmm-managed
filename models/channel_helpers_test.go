@@ -43,7 +43,7 @@ func TestNotificationChannels(t *testing.T) {
 		}()
 
 		c := models.Channel{
-			Id:   "some_id",
+			ID:   "some_id",
 			Type: models.Email,
 			EmailConfig: &models.EmailConfig{
 				To: []string{"test@test.test"},
@@ -69,7 +69,7 @@ func TestNotificationChannels(t *testing.T) {
 		}()
 
 		c := models.Channel{
-			Id:   "some_id",
+			ID:   "some_id",
 			Type: models.Email,
 			EmailConfig: &models.EmailConfig{
 				To: []string{"test@test.test"},
@@ -99,7 +99,7 @@ func TestNotificationChannels(t *testing.T) {
 		}()
 
 		c := models.Channel{
-			Id:   "some_id",
+			ID:   "some_id",
 			Type: models.Email,
 			EmailConfig: &models.EmailConfig{
 				To: []string{"test@test.test"},
@@ -110,7 +110,7 @@ func TestNotificationChannels(t *testing.T) {
 		err = models.SaveChannel(tx, &c)
 		require.NoError(t, err)
 
-		err = models.RemoveChannel(tx, c.Id)
+		err = models.RemoveChannel(tx, c.ID)
 		require.NoError(t, err)
 
 		cs, err := models.GetChannels(tx)
@@ -121,6 +121,8 @@ func TestNotificationChannels(t *testing.T) {
 }
 
 func TestChannelValidation(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		channel  models.Channel
@@ -129,7 +131,7 @@ func TestChannelValidation(t *testing.T) {
 		{
 			name: "normal",
 			channel: models.Channel{
-				Id:   "some_id",
+				ID:   "some_id",
 				Type: models.Email,
 				EmailConfig: &models.EmailConfig{
 					To: []string{"test@test.test"},
@@ -141,7 +143,7 @@ func TestChannelValidation(t *testing.T) {
 		{
 			name: "missing id",
 			channel: models.Channel{
-				Id:   "",
+				ID:   "",
 				Type: models.Email,
 				EmailConfig: &models.EmailConfig{
 					To: []string{"test@test.test"},
@@ -153,7 +155,7 @@ func TestChannelValidation(t *testing.T) {
 		{
 			name: "unknown type",
 			channel: models.Channel{
-				Id:   "some_id",
+				ID:   "some_id",
 				Type: "qwerty",
 				EmailConfig: &models.EmailConfig{
 					To: []string{"test@test.test"},
@@ -165,7 +167,7 @@ func TestChannelValidation(t *testing.T) {
 		{
 			name: "missing type",
 			channel: models.Channel{
-				Id:   "some_id",
+				ID:   "some_id",
 				Type: "",
 				EmailConfig: &models.EmailConfig{
 					To: []string{"test@test.test"},
@@ -177,7 +179,7 @@ func TestChannelValidation(t *testing.T) {
 		{
 			name: "missing email config",
 			channel: models.Channel{
-				Id:          "some_id",
+				ID:          "some_id",
 				Type:        models.Email,
 				EmailConfig: nil,
 				Disabled:    false,
@@ -187,7 +189,7 @@ func TestChannelValidation(t *testing.T) {
 		{
 			name: "missing slack config",
 			channel: models.Channel{
-				Id:       "some_id",
+				ID:       "some_id",
 				Type:     models.Slack,
 				Disabled: false,
 			},
@@ -196,7 +198,7 @@ func TestChannelValidation(t *testing.T) {
 		{
 			name: "missing webhook config",
 			channel: models.Channel{
-				Id:       "some_id",
+				ID:       "some_id",
 				Type:     models.WebHook,
 				Disabled: false,
 			},
@@ -205,7 +207,7 @@ func TestChannelValidation(t *testing.T) {
 		{
 			name: "missing to field in email configuration",
 			channel: models.Channel{
-				Id:   "some_id",
+				ID:   "some_id",
 				Type: models.Email,
 				EmailConfig: &models.EmailConfig{
 					To: nil,
@@ -217,7 +219,7 @@ func TestChannelValidation(t *testing.T) {
 		{
 			name: "missing channel in slack configuration",
 			channel: models.Channel{
-				Id:   "some_id",
+				ID:   "some_id",
 				Type: models.Slack,
 				SlackConfig: &models.SlackConfig{
 					Channel: "",
@@ -229,10 +231,10 @@ func TestChannelValidation(t *testing.T) {
 		{
 			name: "missing url in webhook configuration",
 			channel: models.Channel{
-				Id:   "some_id",
+				ID:   "some_id",
 				Type: models.WebHook,
 				WebHookConfig: &models.WebHookConfig{
-					Url: "",
+					URL: "",
 				},
 				Disabled: false,
 			},
@@ -241,7 +243,7 @@ func TestChannelValidation(t *testing.T) {
 		{
 			name: "type doesn't match actual configuration",
 			channel: models.Channel{
-				Id:   "some_id",
+				ID:   "some_id",
 				Type: models.Slack,
 				EmailConfig: &models.EmailConfig{
 					To: []string{"test@test.test"},
@@ -253,13 +255,13 @@ func TestChannelValidation(t *testing.T) {
 		{
 			name: "multiple configurations",
 			channel: models.Channel{
-				Id:   "some_id",
+				ID:   "some_id",
 				Type: models.Email,
 				EmailConfig: &models.EmailConfig{
 					To: []string{"test@test.test"},
 				},
 				WebHookConfig: &models.WebHookConfig{
-					Url: "example.com",
+					URL: "example.com",
 				},
 				Disabled: false,
 			},

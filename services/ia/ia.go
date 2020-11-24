@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// package ia implements integrated alerting logic.
+// Package ia implements integrated alerting logic.
 package ia
 
 import (
@@ -28,6 +28,7 @@ type Service struct {
 	db *reform.DB
 }
 
+// New creates new IA service.
 func New(db *reform.DB) *Service {
 	return &Service{
 		db: db,

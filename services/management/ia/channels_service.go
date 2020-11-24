@@ -50,7 +50,7 @@ func (s *ChannelsService) ListChannels(ctx context.Context, request *iav1beta1.L
 	res := make([]*iav1beta1.Channel, len(channels))
 	for i, channel := range channels {
 		c := &iav1beta1.Channel{
-			ChannelId: channel.Id,
+			ChannelId: channel.ID,
 			Disabled:  channel.Disabled,
 		}
 
@@ -76,8 +76,8 @@ func (s *ChannelsService) ListChannels(ctx context.Context, request *iav1beta1.L
 			c.Channel = &iav1beta1.Channel_WebhookConfig{
 				WebhookConfig: &iav1beta1.WebhookConfig{
 					SendResolved: config.SendResolved,
-					Url:          config.Url,
-					HttpConfig:   convertModelToHTTPConfig(config.HttpConfig),
+					Url:          config.URL,
+					HttpConfig:   convertModelToHTTPConfig(config.HTTPConfig),
 					MaxAlerts:    config.MaxAlerts,
 				},
 			}
@@ -94,7 +94,7 @@ func (s *ChannelsService) ListChannels(ctx context.Context, request *iav1beta1.L
 // AddChannel adds new notification channel.
 func (s *ChannelsService) AddChannel(ctx context.Context, req *iav1beta1.AddChannelRequest) (*iav1beta1.AddChannelResponse, error) {
 	channel := &models.Channel{
-		Id:       req.GetChannelId(),
+		ID:       req.GetChannelId(),
 		Disabled: req.GetDisabled(),
 	}
 
@@ -122,15 +122,15 @@ func (s *ChannelsService) AddChannel(ctx context.Context, req *iav1beta1.AddChan
 		channel.Type = models.WebHook
 		channel.WebHookConfig = &models.WebHookConfig{
 			SendResolved: webhookConf.SendResolved,
-			Url:          webhookConf.Url,
+			URL:          webhookConf.Url,
 			MaxAlerts:    webhookConf.MaxAlerts,
-			HttpConfig:   convertHTTPConfigToModel(webhookConf.HttpConfig),
+			HTTPConfig:   convertHTTPConfigToModel(webhookConf.HttpConfig),
 		}
 	}
 
 	err := s.ia.AddChannel(channel)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to add new notification channel")
 	}
 
 	return &iav1beta1.AddChannelResponse{}, nil
@@ -139,7 +139,7 @@ func (s *ChannelsService) AddChannel(ctx context.Context, req *iav1beta1.AddChan
 // ChangeChannel changes existing notification channel.
 func (s *ChannelsService) ChangeChannel(ctx context.Context, req *iav1beta1.ChangeChannelRequest) (*iav1beta1.ChangeChannelResponse, error) {
 	channel := &models.Channel{
-		Id:       req.GetChannelId(),
+		ID:       req.GetChannelId(),
 		Disabled: req.GetDisabled(),
 	}
 
@@ -167,15 +167,15 @@ func (s *ChannelsService) ChangeChannel(ctx context.Context, req *iav1beta1.Chan
 		channel.Type = models.WebHook
 		channel.WebHookConfig = &models.WebHookConfig{
 			SendResolved: webhookConf.SendResolved,
-			Url:          webhookConf.Url,
+			URL:          webhookConf.Url,
 			MaxAlerts:    webhookConf.MaxAlerts,
-			HttpConfig:   convertHTTPConfigToModel(webhookConf.HttpConfig),
+			HTTPConfig:   convertHTTPConfigToModel(webhookConf.HttpConfig),
 		}
 	}
 
 	err := s.ia.ChangeChannel(channel)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to change existing notification channel")
 	}
 
 	return &iav1beta1.ChangeChannelResponse{}, nil
@@ -184,7 +184,7 @@ func (s *ChannelsService) ChangeChannel(ctx context.Context, req *iav1beta1.Chan
 // RemoveChannel removes notification channel.
 func (s *ChannelsService) RemoveChannel(ctx context.Context, req *iav1beta1.RemoveChannelRequest) (*iav1beta1.RemoveChannelResponse, error) {
 	if err := s.ia.RemoveChannel(req.ChannelId); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to remove notification channel")
 	}
 
 	return &iav1beta1.RemoveChannelResponse{}, nil
@@ -196,7 +196,7 @@ func convertHTTPConfigToModel(config *iav1beta1.HTTPConfig) *models.HTTPConfig {
 		res = &models.HTTPConfig{
 			BearerToken:     config.BearerToken,
 			BearerTokenFile: config.BearerTokenFile,
-			ProxyUrl:        config.ProxyUrl,
+			ProxyURL:        config.ProxyUrl,
 		}
 
 		if basicAuthConf := config.BasicAuth; basicAuthConf != nil {
@@ -208,7 +208,7 @@ func convertHTTPConfigToModel(config *iav1beta1.HTTPConfig) *models.HTTPConfig {
 		}
 
 		if tlsConfig := config.TlsConfig; tlsConfig != nil {
-			res.TlsConfig = &models.TLSConfig{
+			res.TLSConfig = &models.TLSConfig{
 				CaFile:             tlsConfig.CaFile,
 				CertFile:           tlsConfig.CertFile,
 				KeyFile:            tlsConfig.KeyFile,
@@ -227,7 +227,7 @@ func convertModelToHTTPConfig(config *models.HTTPConfig) *iav1beta1.HTTPConfig {
 		res = &iav1beta1.HTTPConfig{
 			BearerToken:     config.BearerToken,
 			BearerTokenFile: config.BearerTokenFile,
-			ProxyUrl:        config.ProxyUrl,
+			ProxyUrl:        config.ProxyURL,
 		}
 
 		if basicAuthConf := config.BasicAuth; basicAuthConf != nil {
@@ -238,7 +238,7 @@ func convertModelToHTTPConfig(config *models.HTTPConfig) *iav1beta1.HTTPConfig {
 			}
 		}
 
-		if tlsConfig := config.TlsConfig; tlsConfig != nil {
+		if tlsConfig := config.TLSConfig; tlsConfig != nil {
 			res.TlsConfig = &iav1beta1.TLSConfig{
 				CaFile:             tlsConfig.CaFile,
 				CertFile:           tlsConfig.CertFile,
