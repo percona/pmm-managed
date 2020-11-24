@@ -346,6 +346,12 @@ var databaseSchema = [][]string{
 			ADD CONSTRAINT runs_on_node_id_only_for_pmm_agent 
             CHECK (((runs_on_node_id IS NULL) <> (agent_type='` + string(PMMAgentType) + `'))  OR (agent_type='` + string(ExternalExporterType) + `'))`,
 	},
+	22: {
+		`ALTER TABLE agents
+			ADD COLUMN tls_certificate_key VARCHAR,
+			ADD COLUMN tls_certificate_key_file_password VARCHAR,
+			ADD COLUMN tls_ca_key VARCHAR`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^
