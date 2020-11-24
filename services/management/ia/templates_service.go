@@ -21,6 +21,7 @@ import (
 	"context"
 	"io/ioutil"
 	"path/filepath"
+	"sync"
 
 	saas "github.com/percona-platform/saas/pkg/alert"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
@@ -38,6 +39,7 @@ type TemplatesService struct {
 	l                           *logrus.Entry
 	shippedRuleTemplatePath     string
 	userDefinedRuleTemplatePath string
+	mu                          sync.Mutex
 	rules                       map[string]saas.Rule
 }
 
@@ -97,10 +99,9 @@ func (svc *TemplatesService) collectRuleTemplates() {
 	// TODO download templates from SAAS.
 
 	// replace previously stored rules with newly collected ones.
-	for k := range svc.rules {
-		delete(svc.rules, k)
-	}
-
+	svc.mu.Lock()
+	defer svc.mu.Unlock()
+	svc.rules = make(map[string]saas.Rule, len(rules))
 	for _, r := range rules {
 		svc.rules[r.Name] = r
 	}
