@@ -27,6 +27,8 @@ import (
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -129,22 +131,22 @@ func (svc *TemplatesService) loadRuleTemplates(file string) ([]saas.Rule, error)
 
 // ListTemplates returns a list of all collected Alert Rule Templates.
 func (svc *TemplatesService) ListTemplates(context.Context, *iav1beta1.ListTemplatesRequest) (*iav1beta1.ListTemplatesResponse, error) {
-	panic("Unimplemented")
+	return nil, status.Errorf(codes.Unimplemented, "method ListTemplates not implemented")
 }
 
 // CreateTemplate creates a new template.
 func (svc *TemplatesService) CreateTemplate(context.Context, *iav1beta1.CreateTemplateRequest) (*iav1beta1.CreateTemplateResponse, error) {
-	panic("Unimplemented")
+	return nil, status.Errorf(codes.Unimplemented, "method CreateTemplate not implemented")
 }
 
 // UpdateTemplate updates existing template, previously created via API.
 func (svc *TemplatesService) UpdateTemplate(context.Context, *iav1beta1.UpdateTemplateRequest) (*iav1beta1.UpdateTemplateResponse, error) {
-	panic("Unimplemented")
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateTemplate not implemented")
 }
 
 // DeleteTemplate deletes existing, previously created via API.
 func (svc *TemplatesService) DeleteTemplate(context.Context, *iav1beta1.DeleteTemplateRequest) (*iav1beta1.DeleteTemplateResponse, error) {
-	panic("Unimplemented")
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteTemplate not implemented")
 }
 
 // Check interfaces.
