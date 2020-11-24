@@ -73,10 +73,13 @@ type Agent struct {
 	ListenPort *uint16 `reform:"listen_port"`
 	Version    *string `reform:"version"`
 
-	Username      *string `reform:"username"`
-	Password      *string `reform:"password"`
-	TLS           bool    `reform:"tls"`
-	TLSSkipVerify bool    `reform:"tls_skip_verify"`
+	Username                      *string `reform:"username"`
+	Password                      *string `reform:"password"`
+	TLS                           bool    `reform:"tls"`
+	TLSSkipVerify                 bool    `reform:"tls_skip_verify"`
+	TLSCertificateKey             string  `reform:"tls_certificate_key"`
+	TLSCertificateKeyFilePassword string  `reform:"tls_certificate_key_file_password"`
+	TLSCaKey                      string  `reform:"tls_ca_key"`
 
 	AWSAccessKey *string `reform:"aws_access_key"`
 	AWSSecretKey *string `reform:"aws_secret_key"`
