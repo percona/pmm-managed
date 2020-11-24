@@ -32,26 +32,27 @@ import (
 )
 
 const (
-	shippedRuleTemplatePath     = "/tmp/ia1/*.yml"
-	userDefinedRuleTemplatePath = "/tmp/ia2/*.yml"
+	builtinTemplatesPath = "/tmp/ia1/*.yml"
+	userTemplatesPath    = "/tmp/ia2/*.yml"
 )
 
 // TemplatesService is responsible for interactions with IA rule templates.
 type TemplatesService struct {
-	l                           *logrus.Entry
-	shippedRuleTemplatePath     string
-	userDefinedRuleTemplatePath string
-	mu                          sync.Mutex
-	rules                       map[string]saas.Rule
+	l                    *logrus.Entry
+	builtinTemplatesPath string
+	userTemplatesPath    string
+
+	rw    sync.RWMutex
+	rules map[string]saas.Rule
 }
 
 // NewTemplatesService creates a new TemplatesService.
 func NewTemplatesService() *TemplatesService {
 	return &TemplatesService{
-		l:                           logrus.WithField("component", "templates service"),
-		shippedRuleTemplatePath:     shippedRuleTemplatePath,
-		userDefinedRuleTemplatePath: userDefinedRuleTemplatePath,
-		rules:                       make(map[string]saas.Rule),
+		l:                    logrus.WithField("component", "management/ia/templates"),
+		builtinTemplatesPath: builtinTemplatesPath,
+		userTemplatesPath:    userTemplatesPath,
+		rules:                make(map[string]saas.Rule),
 	}
 }
 
@@ -64,23 +65,23 @@ func (svc *TemplatesService) Run() {
 }
 
 // collectRuleTemplates collects IA rule templates from various sources like
-// templates shipped with PMM and defined by the users.
+// built-in templates shipped with PMM and defined by the users.
 func (svc *TemplatesService) collectRuleTemplates() {
-	shippedFilePaths, err := filepath.Glob(svc.shippedRuleTemplatePath)
+	builtinFilePaths, err := filepath.Glob(svc.builtinTemplatesPath)
 	if err != nil {
-		svc.l.Errorf("Failed to get paths of template files shipped with PMM: %s.", err)
+		svc.l.Errorf("Failed to get paths of built-in templates files shipped with PMM: %s.", err)
 		return
 	}
 
-	userDefinedFilePaths, err := filepath.Glob(svc.userDefinedRuleTemplatePath)
+	userFilePaths, err := filepath.Glob(svc.userTemplatesPath)
 	if err != nil {
 		svc.l.Errorf("Failed to get paths of user-defined template files: %s.", err)
 		return
 	}
 
-	rules := make([]saas.Rule, 0, len(shippedFilePaths)+len(userDefinedFilePaths))
+	rules := make([]saas.Rule, 0, len(builtinFilePaths)+len(userFilePaths))
 
-	for _, path := range shippedFilePaths {
+	for _, path := range builtinFilePaths {
 		r, err := svc.loadRuleTemplates(path)
 		if err != nil {
 			svc.l.Errorf("Failed to load shipped rule template file: %s, reason: %s.", path, err)
@@ -89,7 +90,7 @@ func (svc *TemplatesService) collectRuleTemplates() {
 		rules = append(rules, r...)
 	}
 
-	for _, path := range userDefinedFilePaths {
+	for _, path := range userFilePaths {
 		r, err := svc.loadRuleTemplates(path)
 		if err != nil {
 			svc.l.Errorf("Failed to load user-defined rule template file: %s, reason: %s.", path, err)
@@ -101,10 +102,14 @@ func (svc *TemplatesService) collectRuleTemplates() {
 	// TODO download templates from SAAS.
 
 	// replace previously stored rules with newly collected ones.
-	svc.mu.Lock()
-	defer svc.mu.Unlock()
+	svc.rw.Lock()
+	defer svc.rw.Unlock()
 	svc.rules = make(map[string]saas.Rule, len(rules))
 	for _, r := range rules {
+		// TODO Check for name clashes? Allow users to re-define built-in rules?
+		// Reserve prefix for built-in or user-defined rules?
+		// https://jira.percona.com/browse/PMM-7023
+
 		svc.rules[r.Name] = r
 	}
 }

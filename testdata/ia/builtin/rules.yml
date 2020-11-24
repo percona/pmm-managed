@@ -1,6 +1,6 @@
 ---
 rules:
-    - name: user_defined_rules
+    - name: builtin_rule
       version: 1
       summary: MySQL connections in use
       tiers: [anonymous, registered]

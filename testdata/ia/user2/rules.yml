@@ -1,6 +1,6 @@
 ---
 rules:
-    - name: shipped_rules
+    - name: user2_rule
       version: 1
       summary: MySQL connections in use
       tiers: [anonymous, registered]

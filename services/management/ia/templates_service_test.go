@@ -24,43 +24,48 @@ import (
 )
 
 const (
-	testShippedFilePath     = "../../../testdata/ia/shipped/*.yml"
-	testUserDefinedFilePath = "../../../testdata/ia/userdefined/*.yml"
-	testOtherRulesFilePath  = "../../../testdata/ia/others/*.yml"
-	testBadRulesFilePath    = "../../../testdata/ia/bad/*.yml"
-	testInvalidFilePath     = "../../../testdata/ia/invalid/*.yml"
+	testBadTemplates     = "../../../testdata/ia/bad/*.yml"
+	testBuiltinTemplates = "../../../testdata/ia/builtin/*.yml"
+	testUser2Templates   = "../../../testdata/ia/user2/*.yml"
+	testUserTemplates    = "../../../testdata/ia/user/*.yml"
+	testMissingTemplates = "/no/such/path/*.yml"
 )
 
 func TestCollect(t *testing.T) {
-	t.Run("invalid paths and bad rule template", func(t *testing.T) {
+	t.Parallel()
+
+	t.Run("bad and missing template paths", func(t *testing.T) {
+		t.Parallel()
+
 		svc := NewTemplatesService()
-		svc.shippedRuleTemplatePath = testInvalidFilePath
-		svc.userDefinedRuleTemplatePath = testBadRulesFilePath
+		svc.builtinTemplatesPath = testMissingTemplates
+		svc.userTemplatesPath = testBadTemplates
 		svc.collectRuleTemplates()
 
 		require.Empty(t, svc.rules)
 	})
 
 	t.Run("valid template paths", func(t *testing.T) {
+		t.Parallel()
+
 		svc := NewTemplatesService()
-		svc.shippedRuleTemplatePath = testShippedFilePath
-		svc.userDefinedRuleTemplatePath = testUserDefinedFilePath
+		svc.builtinTemplatesPath = testBuiltinTemplates
+		svc.userTemplatesPath = testUserTemplates
 		svc.collectRuleTemplates()
 
 		require.NotEmpty(t, svc.rules)
 		require.Len(t, svc.rules, 2)
-		assert.Contains(t, svc.rules, "shipped_rules")
-		assert.Contains(t, svc.rules, "user_defined_rules")
+		assert.Contains(t, svc.rules, "builtin_rule")
+		assert.Contains(t, svc.rules, "user_rule")
 
 		// check whether map was cleared and updated on a subsequent call
-		svc.userDefinedRuleTemplatePath = testOtherRulesFilePath
+		svc.userTemplatesPath = testUser2Templates
 		svc.collectRuleTemplates()
 
 		require.NotEmpty(t, svc.rules)
 		require.Len(t, svc.rules, 2)
-		assert.NotContains(t, svc.rules, "user_defined_rules")
-		assert.Contains(t, svc.rules, "shipped_rules")
-		assert.Contains(t, svc.rules, "other_rules")
+		assert.NotContains(t, svc.rules, "user_rule")
+		assert.Contains(t, svc.rules, "builtin_rule")
+		assert.Contains(t, svc.rules, "user2_rule")
 	})
-
 }
