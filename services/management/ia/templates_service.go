@@ -18,6 +18,7 @@ package ia
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
 	"path/filepath"
 
@@ -48,6 +49,26 @@ func NewTemplatesService() *TemplatesService {
 		userDefinedRuleTemplatePath: userDefinedRuleTemplatePath,
 		rules:                       make(map[string]saas.Rule),
 	}
+}
+
+// ListTemplates returns a list of all collected Alert Rule Templates.
+func (svc *TemplatesService) ListTemplates(context.Context, *iav1beta1.ListTemplatesRequest) (*iav1beta1.ListTemplatesResponse, error) {
+	panic("Unimplemented")
+}
+
+// CreateTemplate creates a new template.
+func (svc *TemplatesService) CreateTemplate(context.Context, *iav1beta1.CreateTemplateRequest) (*iav1beta1.CreateTemplateResponse, error) {
+	panic("Unimplemented")
+}
+
+// UpdateTemplate updates existing template, previously created via API.
+func (svc *TemplatesService) UpdateTemplate(context.Context, *iav1beta1.UpdateTemplateRequest) (*iav1beta1.UpdateTemplateResponse, error) {
+	panic("Unimplemented")
+}
+
+// DeleteTemplate deletes existing, previously created via API.
+func (svc *TemplatesService) DeleteTemplate(context.Context, *iav1beta1.DeleteTemplateRequest) (*iav1beta1.DeleteTemplateResponse, error) {
+	panic("Unimplemented")
 }
 
 // Run starts collecting IA rule templates.
@@ -128,5 +149,5 @@ func (svc *TemplatesService) loadRuleTemplates(file string) ([]saas.Rule, error)
 
 // Check interfaces.
 var (
-	_ iav1beta1.ChannelsServer = (*ChannelsService)(nil)
+	_ iav1beta1.TemplatesServer = (*TemplatesService)(nil)
 )
