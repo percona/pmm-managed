@@ -188,7 +188,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 		iav1beta1.RegisterTemplatesServer(gRPCServer, ia.NewTemplatesService())
 	}
 
-	// FIXME Checking settings.DBaaS.Enabled there is not correct: that settings can be changed via API,
+	// FIXME Checking settings.DBaaS.Enabled there is not correct: that setting can be changed via API,
 	// but this code runs only once on startup.
 	if deps.settings.DBaaS.Enabled {
 		dbaasv1beta1.RegisterKubernetesServer(gRPCServer, managementdbaas.NewKubernetesServer(deps.db, deps.dbaasControllerClient))
@@ -477,7 +477,7 @@ func getQANClient(ctx context.Context, sqlDB *sql.DB, dbName, qanAPIAddr string)
 }
 
 func getDBaaSControllerClient(ctx context.Context, dbaasControllerAPIAddr string, settings *models.Settings) *dbaas.Client {
-	// FIXME Checking settings.DBaaS.Enabled there is not correct: that settings can be changed via API,
+	// FIXME Checking settings.DBaaS.Enabled there is not correct: that setting can be changed via API,
 	// but this code runs only once on startup.
 	if !settings.DBaaS.Enabled {
 		return dbaas.NewClient(nil)
