@@ -397,14 +397,14 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 			Mr: ptypes.DurationProto(settings.MetricsResolutions.MR),
 			Lr: ptypes.DurationProto(settings.MetricsResolutions.LR),
 		},
-		DataRetention:   ptypes.DurationProto(settings.DataRetention),
-		SshKey:          settings.SSHKey,
-		AwsPartitions:   settings.AWSPartitions,
-		AlertManagerUrl: settings.AlertManagerURL,
-		SttEnabled:      settings.SaaS.STTEnabled,
-		PlatformEmail:   settings.SaaS.Email,
-		DbaasEnabled:    settings.DBaaS.Enabled,
-		PublicAddress:   settings.PublicAddress,
+		DataRetention:    ptypes.DurationProto(settings.DataRetention),
+		SshKey:           settings.SSHKey,
+		AwsPartitions:    settings.AWSPartitions,
+		AlertManagerUrl:  settings.AlertManagerURL,
+		SttEnabled:       settings.SaaS.STTEnabled,
+		PlatformEmail:    settings.SaaS.Email,
+		DbaasEnabled:     settings.DBaaS.Enabled,
+		PmmPublicAddress: settings.PMMPublicAddress,
 	}
 
 	b, err := s.prometheusAlertingRules.ReadRules()

@@ -152,7 +152,7 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 				DiskSize:         req.Params.Proxysql.DiskSize,
 			},
 		},
-		PmmPublicAddressUrl: settings.PublicAddress,
+		PmmPublicAddress: settings.PMMPublicAddress,
 	}
 
 	if req.Params.Pxc.ComputeResources != nil {

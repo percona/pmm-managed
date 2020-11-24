@@ -202,10 +202,10 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 	}
 
 	if params.PMMPublicAddress != "" {
-		settings.PublicAddress = params.PMMPublicAddress
+		settings.PMMPublicAddress = params.PMMPublicAddress
 	}
 	if params.RemovePMMPublicAddress {
-		settings.PublicAddress = ""
+		settings.PMMPublicAddress = ""
 	}
 
 	err = SaveSettings(q, settings)
