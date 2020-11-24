@@ -28,6 +28,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/utils/pdeathsig"
 	config "github.com/percona/promconfig"
 	"github.com/pkg/errors"
@@ -45,13 +46,15 @@ import (
 const (
 	updateBatchDelay           = 3 * time.Second
 	configurationUpdateTimeout = 2 * time.Second
+	// BasePrometheusConfigPath - basic path with prometheus config,
+	// that user can mount to container.
+	BasePrometheusConfigPath = "/srv/prometheus/prometheus.base.yml"
 )
 
 var checkFailedRE = regexp.MustCompile(`FAILED: parsing YAML file \S+: (.+)\n`)
 
-// VictoriaMetrics is responsible for interactions with victoria metrics.
-type VictoriaMetrics struct {
-	enabled          bool
+// Service is responsible for interactions with victoria metrics.
+type Service struct {
 	scrapeConfigPath string
 	db               *reform.DB
 	baseURL          *url.URL
@@ -64,17 +67,13 @@ type VictoriaMetrics struct {
 }
 
 // NewVictoriaMetrics creates new Victoria Metrics service.
-func NewVictoriaMetrics(scrapeConfigPath string, db *reform.DB, baseURL string, params *models.VictoriaMetricsParams) (*VictoriaMetrics, error) {
-	if !params.Enabled {
-		return &VictoriaMetrics{}, nil
-	}
+func NewVictoriaMetrics(scrapeConfigPath string, db *reform.DB, baseURL string, params *models.VictoriaMetricsParams) (*Service, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	return &VictoriaMetrics{
-		enabled:          params.Enabled,
+	return &Service{
 		scrapeConfigPath: scrapeConfigPath,
 		db:               db,
 		baseURL:          u,
@@ -86,10 +85,7 @@ func NewVictoriaMetrics(scrapeConfigPath string, db *reform.DB, baseURL string, 
 }
 
 // Run runs VictoriaMetrics configuration update loop until ctx is canceled.
-func (svc *VictoriaMetrics) Run(ctx context.Context) {
-	if !svc.enabled {
-		return
-	}
+func (svc *Service) Run(ctx context.Context) {
 	svc.l.Info("Starting...")
 	defer svc.l.Info("Done.")
 	for {
@@ -116,7 +112,7 @@ func (svc *VictoriaMetrics) Run(ctx context.Context) {
 }
 
 // updateConfiguration updates Prometheus configuration.
-func (svc *VictoriaMetrics) updateConfiguration(ctx context.Context) error {
+func (svc *Service) updateConfiguration(ctx context.Context) error {
 	start := time.Now()
 	defer func() {
 		if dur := time.Since(start); dur > time.Second {
@@ -133,10 +129,7 @@ func (svc *VictoriaMetrics) updateConfiguration(ctx context.Context) error {
 }
 
 // RequestConfigurationUpdate requests VictoriaMetrics configuration update.
-func (svc *VictoriaMetrics) RequestConfigurationUpdate() {
-	if !svc.enabled {
-		return
-	}
+func (svc *Service) RequestConfigurationUpdate() {
 	select {
 	case svc.sema <- struct{}{}:
 		ctx, cancel := context.WithTimeout(context.Background(), configurationUpdateTimeout)
@@ -151,10 +144,7 @@ func (svc *VictoriaMetrics) RequestConfigurationUpdate() {
 }
 
 // IsReady verifies that VictoriaMetrics works.
-func (svc *VictoriaMetrics) IsReady(ctx context.Context) error {
-	if !svc.enabled {
-		return nil
-	}
+func (svc *Service) IsReady(ctx context.Context) error {
 	// check VictoriaMetrics /health API
 	u := *svc.baseURL
 	u.Path = path.Join(u.Path, "health")
@@ -180,7 +170,7 @@ func (svc *VictoriaMetrics) IsReady(ctx context.Context) error {
 }
 
 // reload asks VictoriaMetrics to reload configuration.
-func (svc *VictoriaMetrics) reload(ctx context.Context) error {
+func (svc *Service) reload(ctx context.Context) error {
 	u := *svc.baseURL
 	u.Path = path.Join(u.Path, "-", "reload")
 	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
@@ -205,7 +195,7 @@ func (svc *VictoriaMetrics) reload(ctx context.Context) error {
 	return errors.Errorf("%d: %s", resp.StatusCode, b)
 }
 
-func (svc *VictoriaMetrics) loadBaseConfig() *config.Config {
+func (svc *Service) loadBaseConfig() *config.Config {
 	var cfg config.Config
 	buf, err := ioutil.ReadFile(svc.baseConfigPath)
 	if err != nil {
@@ -225,7 +215,7 @@ func (svc *VictoriaMetrics) loadBaseConfig() *config.Config {
 }
 
 // marshalConfig marshals VictoriaMetrics configuration.
-func (svc *VictoriaMetrics) marshalConfig() ([]byte, error) {
+func (svc *Service) marshalConfig() ([]byte, error) {
 	cfg := svc.loadBaseConfig()
 
 	e := svc.db.InTransaction(func(tx *reform.TX) error {
@@ -241,9 +231,8 @@ func (svc *VictoriaMetrics) marshalConfig() ([]byte, error) {
 			cfg.GlobalConfig.ScrapeTimeout = prometheus.ScrapeTimeout(s.LR)
 		}
 		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scrapeConfigForVictoriaMetrics(s.HR), scrapeConfigForVMAlert(s.HR))
-		prometheus.AddInternalServicesToScrape(cfg, s)
-
-		return prometheus.AddScrapeConfigs(svc.l, cfg, tx.Querier, &s)
+		prometheus.AddInternalServicesToScrape(cfg, s, settings.DBaaS.Enabled)
+		return prometheus.AddScrapeConfigs(svc.l, cfg, tx.Querier, &s, nil, false)
 	})
 	if e != nil {
 		return nil, e
@@ -261,7 +250,7 @@ func (svc *VictoriaMetrics) marshalConfig() ([]byte, error) {
 
 // configAndReload saves given VictoriaMetrics configuration to file and reloads VictoriaMetrics.
 // If configuration can't be reloaded for some reason, old file is restored, and configuration is reloaded again.
-func (svc *VictoriaMetrics) configAndReload(ctx context.Context, cfg []byte) error {
+func (svc *Service) configAndReload(ctx context.Context, cfg []byte) error {
 	oldCfg, err := ioutil.ReadFile(svc.scrapeConfigPath)
 	if err != nil {
 		return errors.WithStack(err)
@@ -331,11 +320,11 @@ func scrapeConfigForVictoriaMetrics(interval time.Duration) *config.ScrapeConfig
 		JobName:        "victoriametrics",
 		ScrapeInterval: config.Duration(interval),
 		ScrapeTimeout:  prometheus.ScrapeTimeout(interval),
-		MetricsPath:    "/metrics",
+		MetricsPath:    "/prometheus/metrics",
 		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
 			StaticConfigs: []*config.Group{
 				{
-					Targets: []string{"127.0.0.1:8428"},
+					Targets: []string{"127.0.0.1:9090"},
 					Labels:  map[string]string{"instance": "pmm-server"},
 				},
 			},
@@ -359,4 +348,22 @@ func scrapeConfigForVMAlert(interval time.Duration) *config.ScrapeConfig {
 			},
 		},
 	}
+}
+
+// BuildScrapeConfigForAgent - builds scrape configuration for given pmmAgent
+func (svc *Service) BuildScrapeConfigForVMAgent(pmmAgentID string) ([]byte, error) {
+	var cfg config.Config
+	e := svc.db.InTransaction(func(tx *reform.TX) error {
+		settings, err := models.GetSettings(tx)
+		if err != nil {
+			return err
+		}
+		s := settings.MetricsResolutions
+		return prometheus.AddScrapeConfigs(svc.l, &cfg, tx.Querier, &s, pointer.ToString(pmmAgentID), true)
+	})
+	if e != nil {
+		return nil, e
+	}
+
+	return yaml.Marshal(cfg)
 }

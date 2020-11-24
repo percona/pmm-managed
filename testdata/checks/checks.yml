@@ -2,6 +2,8 @@
 checks:
   - version: 1
     name: good_check_pg
+    summary: Good Check PG
+    description: Good check for PostgreSQL.
     type: POSTGRESQL_SELECT
     query: rolpassword FROM pg_authid WHERE rolcanlogin
     script: |
@@ -11,20 +13,22 @@ checks:
 
   - version: 1
     name: bad_check_mysql
+    summary: Bad Check MYSQL
+    description: Bad check for MYSQL.
     type: MYSQL_SHOW
     query: VARIABLES LIKE 'version%'
     script: |
-      def check(rows):
+      def check_context(rows, context):
           results = []
 
           results.append({
-              "summary": "Fake check 1 ",
-              "description": "That checks faile each time 1111",
+              "summary": "Fake check 1",
+              "description": "That checks fails each time 1111",
               "severity": "warning",
           })
           results.append({
-              "summary": "Fake check 2 ",
-              "description": "That checks faile each time 2222",
+              "summary": "Fake check 2",
+              "description": "That checks fails each time 2222",
               "severity": "warning",
           })
 
@@ -32,6 +36,8 @@ checks:
 
   - version: 1
     name: good_check_mongo
+    summary: Good Check Mongo
+    description: Good check for MongoDB.
     type: MONGODB_BUILDINFO
     query: ""
     script: |

@@ -45,6 +45,7 @@ import (
 	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/api/managementpb"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
+	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/utils/sqlmetrics"
 	"github.com/percona/pmm/version"
@@ -53,6 +54,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
 	channelz "google.golang.org/grpc/channelz/service"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/reflection"
@@ -65,12 +67,14 @@ import (
 	agentgrpc "github.com/percona/pmm-managed/services/agents/grpc"
 	"github.com/percona/pmm-managed/services/alertmanager"
 	"github.com/percona/pmm-managed/services/checks"
+	"github.com/percona/pmm-managed/services/dbaas"
 	"github.com/percona/pmm-managed/services/grafana"
 	"github.com/percona/pmm-managed/services/inventory"
 	inventorygrpc "github.com/percona/pmm-managed/services/inventory/grpc"
 	"github.com/percona/pmm-managed/services/management"
-	"github.com/percona/pmm-managed/services/management/dbaas"
+	managementdbaas "github.com/percona/pmm-managed/services/management/dbaas"
 	managementgrpc "github.com/percona/pmm-managed/services/management/grpc"
+	"github.com/percona/pmm-managed/services/management/ia"
 	"github.com/percona/pmm-managed/services/platform"
 	"github.com/percona/pmm-managed/services/prometheus"
 	"github.com/percona/pmm-managed/services/qan"
@@ -115,13 +119,14 @@ func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
 }
 
 type gRPCServerDeps struct {
-	db             *reform.DB
-	prometheus     *prometheus.Service
-	vmdb           *victoriametrics.VictoriaMetrics
-	server         *server.Server
-	agentsRegistry *agents.Registry
-	grafanaClient  *grafana.Client
-	checksService  *checks.Service
+	db                    *reform.DB
+	vmdb                  *victoriametrics.Service
+	server                *server.Server
+	agentsRegistry        *agents.Registry
+	grafanaClient         *grafana.Client
+	checksService         *checks.Service
+	dbaasControllerClient *dbaas.Client
+	settings              *models.Settings
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -148,14 +153,14 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 
 	nodesSvc := inventory.NewNodesService(deps.db)
 	servicesSvc := inventory.NewServicesService(deps.db, deps.agentsRegistry)
-	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry, deps.prometheus, deps.vmdb)
+	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry, deps.vmdb)
 
 	inventorypb.RegisterNodesServer(gRPCServer, inventorygrpc.NewNodesServer(nodesSvc))
 	inventorypb.RegisterServicesServer(gRPCServer, inventorygrpc.NewServicesServer(servicesSvc))
 	inventorypb.RegisterAgentsServer(gRPCServer, inventorygrpc.NewAgentsServer(agentsSvc))
 
 	nodeSvc := management.NewNodeService(deps.db, deps.agentsRegistry)
-	serviceSvc := management.NewServiceService(deps.db, deps.agentsRegistry, deps.prometheus, deps.vmdb)
+	serviceSvc := management.NewServiceService(deps.db, deps.agentsRegistry, deps.vmdb)
 	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsRegistry)
 	mongodbSvc := management.NewMongoDBService(deps.db, deps.agentsRegistry)
 	postgresqlSvc := management.NewPostgreSQLService(deps.db, deps.agentsRegistry)
@@ -170,11 +175,24 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterProxySQLServer(gRPCServer, managementgrpc.NewManagementProxySQLServer(proxysqlSvc))
 	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(deps.agentsRegistry, deps.db))
 	managementpb.RegisterRDSServer(gRPCServer, management.NewRDSService(deps.db, deps.agentsRegistry))
-	managementpb.RegisterExternalServer(gRPCServer, management.NewExternalService(deps.db, deps.prometheus, deps.vmdb))
+	managementpb.RegisterExternalServer(gRPCServer, management.NewExternalService(deps.db, deps.agentsRegistry, deps.vmdb))
 	managementpb.RegisterAnnotationServer(gRPCServer, managementgrpc.NewAnnotationServer(deps.db, deps.grafanaClient))
 	managementpb.RegisterSecurityChecksServer(gRPCServer, managementgrpc.NewChecksServer(checksSvc))
 
-	dbaasv1beta1.RegisterKubernetesServer(gRPCServer, dbaas.NewKubernetesServer(deps.db))
+	// TODO remove PERCONA_TEST_IA once IA is out of beta
+	if enable, _ := strconv.ParseBool(os.Getenv("PERCONA_TEST_IA")); enable {
+		l.Warnf("Enabling experimental IA APIs.")
+		iav1beta1.RegisterAlertsServer(gRPCServer, ia.NewAlertsService())
+		iav1beta1.RegisterChannelsServer(gRPCServer, ia.NewChannelsService())
+		iav1beta1.RegisterRulesServer(gRPCServer, ia.NewRulesService())
+		iav1beta1.RegisterTemplatesServer(gRPCServer, ia.NewTemplatesService())
+	}
+
+	if deps.settings.DBaaS.Enabled {
+		dbaasv1beta1.RegisterKubernetesServer(gRPCServer, managementdbaas.NewKubernetesServer(deps.db, deps.dbaasControllerClient))
+		dbaasv1beta1.RegisterXtraDBClusterServer(gRPCServer, managementdbaas.NewXtraDBClusterService(deps.db, deps.dbaasControllerClient))
+		dbaasv1beta1.RegisterPSMDBClusterServer(gRPCServer, managementdbaas.NewPSMDBClusterService(deps.db, deps.dbaasControllerClient))
+	}
 
 	if l.Logger.GetLevel() >= logrus.DebugLevel {
 		l.Debug("Reflection and channelz are enabled.")
@@ -268,6 +286,8 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 		managementpb.RegisterSecurityChecksHandlerFromEndpoint,
 
 		dbaasv1beta1.RegisterKubernetesHandlerFromEndpoint,
+		dbaasv1beta1.RegisterXtraDBClusterHandlerFromEndpoint,
+		dbaasv1beta1.RegisterPSMDBClusterHandlerFromEndpoint,
 	} {
 		if err := r(ctx, proxyMux, gRPCAddr, opts); err != nil {
 			l.Panic(err)
@@ -365,7 +385,7 @@ type setupDeps struct {
 	dbUsername   string
 	dbPassword   string
 	supervisord  *supervisord.Service
-	prometheus   *prometheus.Service
+	vmdb         *victoriametrics.Service
 	alertmanager *alertmanager.Service
 	server       *server.Server
 	l            *logrus.Entry
@@ -411,12 +431,12 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 		return false
 	}
 
-	deps.l.Infof("Checking Prometheus...")
-	if err = deps.prometheus.IsReady(ctx); err != nil {
-		deps.l.Warnf("Prometheus problem: %+v.", err)
+	deps.l.Infof("Checking VictoriaMetrics...")
+	if err = deps.vmdb.IsReady(ctx); err != nil {
+		deps.l.Warnf("VictoriaMetrics problem: %+v.", err)
 		return false
 	}
-	deps.prometheus.RequestConfigurationUpdate()
+	deps.vmdb.RequestConfigurationUpdate()
 
 	deps.l.Infof("Checking Alertmanager...")
 	if err = deps.alertmanager.IsReady(ctx); err != nil {
@@ -449,6 +469,26 @@ func getQANClient(ctx context.Context, sqlDB *sql.DB, dbName, qanAPIAddr string)
 	return qan.NewClient(conn, db)
 }
 
+func getDBaaSControllerClient(ctx context.Context, dbaasControllerAPIAddr string, settings *models.Settings) *dbaas.Client {
+	if !settings.DBaaS.Enabled {
+		return dbaas.NewClient(nil)
+	}
+	opts := []grpc.DialOption{
+		grpc.WithInsecure(),
+		grpc.WithConnectParams(grpc.ConnectParams{Backoff: backoff.Config{MaxDelay: 10 * time.Second}, MinConnectTimeout: 10 * time.Second}),
+		grpc.WithUserAgent("pmm-managed/" + version.Version),
+	}
+
+	// Without grpc.WithBlock() DialContext returns an error only if something very wrong with address or options;
+	// it does not return an error of connection failure but tries to reconnect in the background.
+	conn, err := grpc.DialContext(ctx, dbaasControllerAPIAddr, opts...)
+	if err != nil {
+		logrus.Fatalf("Failed to connect DBaaS Controller API %s: %s.", dbaasControllerAPIAddr, err)
+	}
+
+	return dbaas.NewClient(conn)
+}
+
 func main() {
 	// empty version breaks much of pmm-managed logic
 	if version.Version == "" {
@@ -461,11 +501,8 @@ func main() {
 	kingpin.Version(version.FullInfo())
 	kingpin.HelpFlag.Short('h')
 
-	prometheusConfigF := kingpin.Flag("prometheus-config", "Prometheus configuration file path").Default("/etc/prometheus.yml").String()
-	prometheusURLF := kingpin.Flag("prometheus-url", "Prometheus base URL").Default("http://127.0.0.1:9090/prometheus/").String()
-
 	victoriaMetricsURLF := kingpin.Flag("victoriametrics-url", "VictoriaMetrics base URL").
-		Default("http://127.0.0.1:8428/").String()
+		Default("http://127.0.0.1:9090/prometheus/").String()
 	victoriaMetricsVMAlertURLF := kingpin.Flag("victoriametrics-vmalert-url", "VictoriaMetrics VMAlert base URL").
 		Default("http://127.0.0.1:8880/").String()
 	victoriaMetricsConfigF := kingpin.Flag("victoriametrics-config", "VictoriaMetrics scrape configuration file path").
@@ -473,6 +510,7 @@ func main() {
 
 	grafanaAddrF := kingpin.Flag("grafana-addr", "Grafana HTTP API address").Default("127.0.0.1:3000").String()
 	qanAPIAddrF := kingpin.Flag("qan-api-addr", "QAN API gRPC API address").Default("127.0.0.1:9911").String()
+	dbaasControllerAPIAddrF := kingpin.Flag("dbaas-controller-api-addr", "DBaaS Controller gRPC API address").Default("127.0.0.1:20201").String()
 
 	postgresAddrF := kingpin.Flag("postgres-addr", "PostgreSQL address").Default("127.0.0.1:5432").String()
 	postgresDBNameF := kingpin.Flag("postgres-name", "PostgreSQL database name").Required().String()
@@ -543,13 +581,9 @@ func main() {
 	cleaner := clean.New(db)
 	alertingRules := prometheus.NewAlertingRules()
 
-	vmParams, err := models.NewVictoriaMetricsParams(prometheus.BasePrometheusConfigPath)
+	vmParams, err := models.NewVictoriaMetricsParams(victoriametrics.BasePrometheusConfigPath)
 	if err != nil {
 		l.Panicf("cannot load victoriametrics params problem: %+v", err)
-	}
-	prometheus, err := prometheus.NewService(alertingRules, *prometheusConfigF, db, *prometheusURLF)
-	if err != nil {
-		l.Panicf("Prometheus service problem: %+v", err)
 	}
 	vmdb, err := victoriametrics.NewVictoriaMetrics(*victoriaMetricsConfigF, db, *victoriaMetricsURLF, vmParams)
 	if err != nil {
@@ -562,7 +596,7 @@ func main() {
 
 	qanClient := getQANClient(ctx, sqlDB, *postgresDBNameF, *qanAPIAddrF)
 
-	agentsRegistry := agents.NewRegistry(db, qanClient, prometheus, vmdb)
+	agentsRegistry := agents.NewRegistry(db, qanClient, vmdb)
 	prom.MustRegister(agentsRegistry)
 
 	alertmanager := alertmanager.New(db)
@@ -595,9 +629,9 @@ func main() {
 
 	serverParams := &server.Params{
 		DB:                      db,
-		Prometheus:              prometheus,
 		VMDB:                    vmdb,
 		VMAlert:                 vmalert,
+		AgentsRegistry:          agentsRegistry,
 		Alertmanager:            alertmanager,
 		Supervisord:             supervisord,
 		TelemetryService:        telemetry,
@@ -606,6 +640,7 @@ func main() {
 		GrafanaClient:           grafanaClient,
 		PrometheusAlertingRules: alertingRules,
 	}
+
 	server, err := server.NewServer(serverParams)
 	if err != nil {
 		l.Panicf("Server problem: %+v", err)
@@ -617,7 +652,7 @@ func main() {
 		dbUsername:   *postgresDBUsernameF,
 		dbPassword:   *postgresDBPasswordF,
 		supervisord:  supervisord,
-		prometheus:   prometheus,
+		vmdb:         vmdb,
 		alertmanager: alertmanager,
 		server:       server,
 		l:            logrus.WithField("component", "setup"),
@@ -641,17 +676,17 @@ func main() {
 			}
 		}()
 	}
+	settings, err := models.GetSettings(sqlDB)
+	if err != nil {
+		l.Fatalf("Failed to get settings: %+v.", err)
+	}
+
+	dbaasControllerClient := getDBaaSControllerClient(ctx, *dbaasControllerAPIAddrF, settings)
 
 	authServer := grafana.NewAuthServer(grafanaClient, awsInstanceChecker)
 
 	l.Info("Starting services...")
 	var wg sync.WaitGroup
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		prometheus.Run(ctx)
-	}()
 
 	wg.Add(1)
 	go func() {
@@ -698,13 +733,14 @@ func main() {
 	go func() {
 		defer wg.Done()
 		runGRPCServer(ctx, &gRPCServerDeps{
-			db:             db,
-			prometheus:     prometheus,
-			vmdb:           vmdb,
-			server:         server,
-			agentsRegistry: agentsRegistry,
-			grafanaClient:  grafanaClient,
-			checksService:  checksService,
+			db:                    db,
+			vmdb:                  vmdb,
+			server:                server,
+			agentsRegistry:        agentsRegistry,
+			grafanaClient:         grafanaClient,
+			checksService:         checksService,
+			dbaasControllerClient: dbaasControllerClient,
+			settings:              settings,
 		})
 	}()
 

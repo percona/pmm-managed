@@ -303,6 +303,7 @@ var databaseSchema = [][]string{
 				port IS NULL OR (port > 0 AND port < 65536)
 			)`,
 	},
+
 	17: {
 		`CREATE TABLE kubernetes_clusters (
 			-- common
@@ -315,6 +316,35 @@ var databaseSchema = [][]string{
 			PRIMARY KEY (id),
 			UNIQUE (kubernetes_cluster_name)
 		)`,
+	},
+	18: {
+		`ALTER TABLE services
+			ADD COLUMN external_group VARCHAR NOT NULL DEFAULT ''`,
+
+		`UPDATE services SET external_group = 'external' WHERE service_type = '` + string(ExternalServiceType) + `'`,
+
+		`ALTER TABLE services
+			ALTER COLUMN external_group DROP DEFAULT`,
+
+		// Only service with type external can have non empty value of group.
+		`ALTER TABLE services
+			ADD CONSTRAINT services_external_group_check CHECK (
+				(service_type <> '` + string(ExternalServiceType) + `' AND external_group = '')
+				OR
+				(service_type = '` + string(ExternalServiceType) + `' AND external_group <> '')
+			)`,
+	},
+	19: {
+		`ALTER TABLE agents
+			ADD COLUMN push_metrics BOOLEAN NOT NULL DEFAULT FALSE`,
+	},
+	20: {
+		`ALTER TABLE agents DROP CONSTRAINT runs_on_node_id_only_for_pmm_agent_and_external`,
+	},
+	21: {
+		`ALTER TABLE agents
+			ADD CONSTRAINT runs_on_node_id_only_for_pmm_agent 
+            CHECK (((runs_on_node_id IS NULL) <> (agent_type='` + string(PMMAgentType) + `'))  OR (agent_type='` + string(ExternalExporterType) + `'))`,
 	},
 }
 
@@ -453,7 +483,7 @@ func setupFixture1(q *reform.Querier, username, password string) error {
 	if _, err = createPMMAgentWithID(q, PMMServerAgentID, node.NodeID, nil); err != nil {
 		return err
 	}
-	if _, err = CreateNodeExporter(q, PMMServerAgentID, nil); err != nil {
+	if _, err = CreateNodeExporter(q, PMMServerAgentID, nil, false); err != nil {
 		return err
 	}
 

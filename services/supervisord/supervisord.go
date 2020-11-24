@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math"
 	"net/url"
 	"os"
 	"os/exec"
@@ -97,6 +96,9 @@ func (s *Service) Run(ctx context.Context) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+
+		// pre-set installed packages info to cache it.
+		s.pmmUpdateCheck.Installed(ctx)
 
 		// Do not check for updates for the first 10 minutes.
 		// That solves PMM Server building problems when we start pmm-managed.
@@ -189,18 +191,18 @@ func (s *Service) Run(ctx context.Context) {
 }
 
 // InstalledPMMVersion returns currently installed PMM version information.
-func (s *Service) InstalledPMMVersion() *version.PackageInfo {
-	return s.pmmUpdateCheck.Installed()
+func (s *Service) InstalledPMMVersion(ctx context.Context) *version.PackageInfo {
+	return s.pmmUpdateCheck.Installed(ctx)
 }
 
 // LastCheckUpdatesResult returns last PMM update check result and last check time.
-func (s *Service) LastCheckUpdatesResult() (*version.UpdateCheckResult, time.Time) {
-	return s.pmmUpdateCheck.checkResult()
+func (s *Service) LastCheckUpdatesResult(ctx context.Context) (*version.UpdateCheckResult, time.Time) {
+	return s.pmmUpdateCheck.checkResult(ctx)
 }
 
 // ForceCheckUpdates forces check for PMM updates. Result can be obtained via LastCheckUpdatesResult.
-func (s *Service) ForceCheckUpdates() error {
-	return s.pmmUpdateCheck.check()
+func (s *Service) ForceCheckUpdates(ctx context.Context) error {
+	return s.pmmUpdateCheck.check(ctx)
 }
 
 func (s *Service) subscribe(program string, eventTypes ...eventType) chan *event {
@@ -266,7 +268,7 @@ func (s *Service) StartUpdate() (uint32, error) {
 	if err = p.Signal(unix.SIGUSR2); err != nil {
 		s.l.Warnf("Failed to send SIGUSR2: %s", err)
 	}
-	s.l.Debug("Waiting for logreopen...")
+	s.l.Debug("Waiting for log reopen...")
 	<-ch
 
 	var offset uint32
@@ -399,18 +401,12 @@ func (s *Service) reload(name string) error {
 
 // marshalConfig marshals supervisord program configuration.
 func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settings) ([]byte, error) {
-	retentionMonths := int(math.Ceil(settings.DataRetention.Hours() / 24 / 30))
-	if retentionMonths <= 0 {
-		retentionMonths = 1
-	}
 	templateParams := map[string]interface{}{
-		"DataRetentionHours":  int(settings.DataRetention.Hours()),
-		"DataRetentionDays":   int(settings.DataRetention.Hours() / 24),
-		"DataRetentionMonths": retentionMonths,
-		"IsVMEnabled":         s.vmParams.Enabled,
-		"VMAlertFlags":        s.vmParams.VMAlertFlags,
-		"VMDBCacheDisable":    !settings.VictoriaMetrics.CacheEnabled,
-		"PerconaTestDbaas":    settings.DBaaS.Enabled,
+		"DataRetentionHours": int(settings.DataRetention.Hours()),
+		"DataRetentionDays":  int(settings.DataRetention.Hours() / 24),
+		"VMAlertFlags":       s.vmParams.VMAlertFlags,
+		"VMDBCacheDisable":   !settings.VictoriaMetrics.CacheEnabled,
+		"PerconaTestDbaas":   settings.DBaaS.Enabled,
 	}
 	if err := addAlertManagerParams(settings.AlertManagerURL, templateParams); err != nil {
 		return nil, errors.Wrap(err, "cannot add AlertManagerParams to supervisor template")
@@ -516,6 +512,7 @@ func (s *Service) UpdateConfiguration(settings *models.Settings) error {
 	if err != nil {
 		return err
 	}
+
 	for _, tmpl := range templates.Templates() {
 		if tmpl.Name() == "" {
 			continue
@@ -535,9 +532,6 @@ func (s *Service) UpdateConfiguration(settings *models.Settings) error {
 	}
 	return err
 }
-
-// TODO Switch from /srv/alertmanager/alertmanager.base.yml to /etc/alertmanager.yml
-// once we start generating it. See alertmanager service.
 
 var templates = template.Must(template.New("").Option("missingkey=error").Parse(`
 {{define "dbaas-controller"}}
@@ -559,23 +553,10 @@ redirect_stderr = true
 
 {{define "prometheus"}}
 [program:prometheus]
-priority = 7
-command =
-	/usr/sbin/prometheus
-		--config.file=/etc/prometheus.yml
-		--query.max-concurrency=30
-		--storage.tsdb.path=/srv/prometheus/data
-		--storage.tsdb.retention.time={{ .DataRetentionDays }}d
-		--storage.tsdb.wal-compression
-		--web.console.libraries=/usr/share/prometheus/console_libraries
-		--web.console.templates=/usr/share/prometheus/consoles
-		--web.enable-admin-api
-		--web.enable-lifecycle
-		--web.external-url=http://localhost:9090/prometheus/
-		--web.listen-address=127.0.0.1:9090
+command = /bin/echo Prometheus is substituted by VictoriaMetrics
 user = pmm
-autorestart = true
-autostart = true
+autorestart = false
+autostart = false
 startretries = 10
 startsecs = 1
 stopsignal = TERM
@@ -592,13 +573,15 @@ priority = 7
 command =
 	/usr/sbin/victoriametrics
 		--promscrape.config=/etc/victoriametrics-promscrape.yml
-		--retentionPeriod={{ .DataRetentionMonths }}
+		--retentionPeriod={{ .DataRetentionDays }}d
 		--storageDataPath=/srv/victoriametrics/data
-		--httpListenAddr=127.0.0.1:8428
-		--search.disableCache={{.VMDBCacheDisable}}
+		--httpListenAddr=127.0.0.1:9090
+		--search.disableCache={{ .VMDBCacheDisable }}
+		--prometheusDataPath=/srv/prometheus/data
+		--http.pathPrefix=/prometheus
 user = pmm
-autorestart = {{ .IsVMEnabled }}
-autostart = {{ .IsVMEnabled }}
+autorestart = true
+autostart = true
 startretries = 10
 startsecs = 1
 stopsignal = INT
@@ -614,21 +597,21 @@ redirect_stderr = true
 priority = 7
 command =
 	/usr/sbin/vmalert
-        --notifier.url="{{ .AlertmanagerURL }}"
-        --notifier.basicAuth.password='{{ .AlertManagerPassword }}'
-        --notifier.basicAuth.username="{{ .AlertManagerUser}}"
-        --external.url=http://localhost:9090/prometheus
-        --datasource.url=http://127.0.0.1:8428
-        --remoteRead.url=http://127.0.0.1:8428
-        --remoteWrite.url=http://127.0.0.1:8428
-        --rule=/srv/prometheus/rules/*.yml
-        --httpListenAddr=127.0.0.1:8880
-{{- range $index, $param := .VMAlertFlags}}
-        {{$param}}
-{{- end}}
+		--notifier.url="{{ .AlertmanagerURL }}"
+		--notifier.basicAuth.password='{{ .AlertManagerPassword }}'
+		--notifier.basicAuth.username="{{ .AlertManagerUser }}"
+		--external.url=http://localhost:9090/prometheus
+		--datasource.url=http://127.0.0.1:9090/prometheus
+		--remoteRead.url=http://127.0.0.1:9090/prometheus
+		--remoteWrite.url=http://127.0.0.1:9090/prometheus
+		--rule=/srv/prometheus/rules/*.yml
+		--httpListenAddr=127.0.0.1:8880
+{{- range $index, $param := .VMAlertFlags }}
+		{{ $param }}
+{{- end }}
 user = pmm
-autorestart = {{ .IsVMEnabled }}
-autostart = {{ .IsVMEnabled }}
+autorestart = true
+autostart = true
 startretries = 10
 startsecs = 1
 stopsignal = INT
@@ -644,7 +627,7 @@ redirect_stderr = true
 priority = 8
 command =
 	/usr/sbin/alertmanager
-		--config.file=/srv/alertmanager/alertmanager.base.yml
+		--config.file=/etc/alertmanager.yml
 		--storage.path=/srv/alertmanager/data
 		--data.retention={{ .DataRetentionHours }}h
 		--web.external-url=http://localhost:9093/alertmanager/

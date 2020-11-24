@@ -55,8 +55,8 @@ const platformAPITimeout = 10 * time.Second
 // Server represents service for checking PMM Server status and changing settings.
 type Server struct {
 	db                      *reform.DB
-	prometheus              prometheusService
 	vmdb                    prometheusService
+	r                       agentsRegistry
 	vmalert                 prometheusService
 	prometheusAlertingRules prometheusAlertingRules
 	alertmanager            alertmanagerService
@@ -83,7 +83,7 @@ type pmmUpdateAuth struct {
 // Params holds the parameters needed to create a new service.
 type Params struct {
 	DB                      *reform.DB
-	Prometheus              prometheusService
+	AgentsRegistry          agentsRegistry
 	VMDB                    prometheusService
 	VMAlert                 prometheusService
 	Alertmanager            alertmanagerService
@@ -105,8 +105,8 @@ func NewServer(params *Params) (*Server, error) {
 
 	s := &Server{
 		db:                      params.DB,
-		prometheus:              params.Prometheus,
 		vmdb:                    params.VMDB,
+		r:                       params.AgentsRegistry,
 		vmalert:                 params.VMAlert,
 		alertmanager:            params.Alertmanager,
 		prometheusAlertingRules: params.PrometheusAlertingRules,
@@ -189,7 +189,7 @@ func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*se
 		res.Managed.Timestamp = ts
 	}
 
-	if v := s.supervisord.InstalledPMMVersion(); v != nil {
+	if v := s.supervisord.InstalledPMMVersion(ctx); v != nil {
 		res.Version = v.Version
 		res.Server = &serverpb.VersionInfo{
 			Version:     v.Version,
@@ -208,7 +208,6 @@ func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*se
 func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) (*serverpb.ReadinessResponse, error) {
 	var notReady bool
 	for n, svc := range map[string]healthChecker{
-		"prometheus":      s.prometheus,
 		"alertmanager":    s.alertmanager,
 		"grafana":         s.grafanaClient,
 		"vmalert":         s.vmalert,
@@ -234,12 +233,12 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 	s.envRW.RUnlock()
 
 	if req.Force {
-		if err := s.supervisord.ForceCheckUpdates(); err != nil {
+		if err := s.supervisord.ForceCheckUpdates(ctx); err != nil {
 			return nil, err
 		}
 	}
 
-	v, lastCheck := s.supervisord.LastCheckUpdatesResult()
+	v, lastCheck := s.supervisord.LastCheckUpdatesResult(ctx)
 	if v == nil {
 		return nil, status.Error(codes.Unavailable, "failed to check for updates")
 	}
@@ -541,13 +540,16 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		return nil, err
 	}
 
-	err = s.supervisord.UpdateConfiguration(settings)
-	s.prometheus.RequestConfigurationUpdate()
-	s.vmdb.RequestConfigurationUpdate()
-	s.vmalert.RequestConfigurationUpdate()
-	if err != nil {
+	if err := s.supervisord.UpdateConfiguration(settings); err != nil {
 		return nil, err
 	}
+	if isAgentsStateUpdateNeeded(req.MetricsResolutions) {
+		if err := s.r.UpdateAgentsState(ctx); err != nil {
+			return nil, err
+		}
+	}
+	s.vmdb.RequestConfigurationUpdate()
+	s.vmalert.RequestConfigurationUpdate()
 
 	return &serverpb.ChangeSettingsResponse{
 		Settings: s.convertSettings(settings),
@@ -662,3 +664,15 @@ func (s *Server) PlatformSignOut(ctx context.Context, _ *serverpb.PlatformSignOu
 var (
 	_ serverpb.ServerServer = (*Server)(nil)
 )
+
+// isAgentsStateUpdateNeeded - checks metrics resolution changes,
+// if it was changed, agents state must be updated.
+func isAgentsStateUpdateNeeded(mr *serverpb.MetricsResolutions) bool {
+	if mr == nil {
+		return false
+	}
+	if mr.Lr == nil && mr.Hr == nil && mr.Mr == nil {
+		return false
+	}
+	return true
+}

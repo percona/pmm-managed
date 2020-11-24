@@ -167,27 +167,43 @@ func TestDatabaseChecks(t *testing.T) {
 
 		// Try to insert both address and socket
 		_, err = db.Exec(
-			"INSERT INTO services (service_id, service_type, service_name, node_id, environment, cluster, replication_set, address, port, socket, created_at, updated_at) "+
-				"VALUES ('/service_id/1', 'mysql', 'name', '/node_id/1', '', '', '', '10.10.10.10', 3306, '/var/run/mysqld/mysqld.sock', $1, $2)",
+			"INSERT INTO services (service_id, service_type, service_name, node_id, environment, cluster, replication_set, address, port, socket, external_group, created_at, updated_at) "+
+				"VALUES ('/service_id/1', 'mysql', 'name', '/node_id/1', '', '', '', '10.10.10.10', 3306, '/var/run/mysqld/mysqld.sock', '', $1, $2)",
 			now, now,
 		)
 		require.Error(t, err, `pq: new row for relation "services" violates check constraint "address_socket_check"`)
 
 		// Try to insert both address and socket empty
 		_, err = db.Exec(
-			"INSERT INTO services (service_id, service_type, service_name, node_id, environment, cluster, replication_set, address, port, socket, created_at, updated_at) "+
-				"VALUES ('/service_id/1', 'mysql', 'name', '/node_id/1', '', '', '', NULL, NULL, NULL, $1, $2)",
+			"INSERT INTO services (service_id, service_type, service_name, node_id, environment, cluster, replication_set, address, port, socket, external_group, created_at, updated_at) "+
+				"VALUES ('/service_id/1', 'mysql', 'name', '/node_id/1', '', '', '', NULL, NULL, NULL, '', $1, $2)",
 			now, now,
 		)
 		require.NoError(t, err)
 
 		// Try to insert invalid port
 		_, err = db.Exec(
-			"INSERT INTO services (service_id, service_type, service_name, node_id, environment, cluster, replication_set, address, port, socket, created_at, updated_at) "+
-				"VALUES ('/service_id/1', 'mysql', 'name', '/node_id/1', '', '', '', '10.10.10.10', 999999, NULL, $1, $2)",
+			"INSERT INTO services (service_id, service_type, service_name, node_id, environment, cluster, replication_set, address, port, socket, external_group, created_at, updated_at) "+
+				"VALUES ('/service_id/1', 'mysql', 'name', '/node_id/1', '', '', '', '10.10.10.10', 999999, NULL, '', $1, $2)",
 			now, now,
 		)
 		require.Error(t, err, `pq: new row for relation "services" violates check constraint "port_check"`)
+
+		// Try to insert empty group for external exporter
+		_, err = db.Exec(
+			"INSERT INTO services (service_id, service_type, service_name, node_id, environment, cluster, replication_set, address, port, socket, external_group, created_at, updated_at) "+
+				"VALUES ('/service_id/1', 'external', 'name', '/node_id/1', '', '', '', '10.10.10.10', 3333, NULL, '', $1, $2)",
+			now, now,
+		)
+		require.Error(t, err, `pq: new row for relation "services" violates check constraint "services_external_group_check"`)
+
+		// Try to insert non empty group for mysql exporter
+		_, err = db.Exec(
+			"INSERT INTO services (service_id, service_type, service_name, node_id, environment, cluster, replication_set, address, port, socket, external_group, created_at, updated_at) "+
+				"VALUES ('/service_id/1', 'mysql', 'name', '/node_id/1', '', '', '', '10.10.10.10', 3306, NULL, 'non empty group', $1, $2)",
+			now, now,
+		)
+		require.Error(t, err, `pq: new row for relation "services" violates check constraint "services_external_group_check"`)
 	})
 
 	t.Run("Agents", func(t *testing.T) {
@@ -205,8 +221,8 @@ func TestDatabaseChecks(t *testing.T) {
 		)
 		require.NoError(t, err)
 		_, err = db.Exec(
-			"INSERT INTO services (service_id, service_type, service_name, node_id, environment, cluster, replication_set, socket, created_at, updated_at) "+
-				"VALUES ('/service_id/1', 'mysql', 'name', '/node_id/1', '', '', '', '/var/run/mysqld/mysqld.sock', $1, $2)",
+			"INSERT INTO services (service_id, service_type, service_name, node_id, environment, cluster, replication_set, socket, external_group, created_at, updated_at) "+
+				"VALUES ('/service_id/1', 'mysql', 'name', '/node_id/1', '', '', '', '/var/run/mysqld/mysqld.sock', '', $1, $2)",
 			now, now,
 		)
 		require.NoError(t, err)
@@ -260,8 +276,7 @@ func TestDatabaseChecks(t *testing.T) {
 				assertCheckViolation(t, err, "agents", "runs_on_node_id_xor_pmm_agent_id")
 			})
 		})
-
-		t.Run("runs_on_node_id_only_for_pmm_agent_and_external", func(t *testing.T) {
+		t.Run("runs_on_node_id_only_for_pmm_agent", func(t *testing.T) {
 			t.Run("NotPMMAgent", func(t *testing.T) {
 				tx, rollback := getTX(t, db)
 				defer rollback()
@@ -271,7 +286,7 @@ func TestDatabaseChecks(t *testing.T) {
 						"VALUES ('/agent_id/6', 'mysqld_exporter', '/node_id/1', NULL, '/node_id/1', false, '', $1, $2, false, false, false, 0, 0, false, false)",
 					now, now,
 				)
-				assertCheckViolation(t, err, "agents", "runs_on_node_id_only_for_pmm_agent_and_external")
+				assertCheckViolation(t, err, "agents", "runs_on_node_id_only_for_pmm_agent")
 			})
 
 			t.Run("PMMAgent", func(t *testing.T) {
@@ -283,22 +298,9 @@ func TestDatabaseChecks(t *testing.T) {
 						"VALUES ('/agent_id/7', 'pmm-agent', NULL, '/agent_id/1', '/node_id/1', false, '', $1, $2, false, false, false, 0, 0, false, false)",
 					now, now,
 				)
-				assertCheckViolation(t, err, "agents", "runs_on_node_id_only_for_pmm_agent_and_external")
-			})
-
-			t.Run("ExternalExporter", func(t *testing.T) {
-				tx, rollback := getTX(t, db)
-				defer rollback()
-
-				_, err = tx.Exec(
-					"INSERT INTO agents (agent_id, agent_type, runs_on_node_id, pmm_agent_id, node_id, disabled, status, created_at, updated_at, tls, tls_skip_verify, query_examples_disabled, max_query_log_size, table_count_tablestats_group_limit, rds_basic_metrics_disabled, rds_enhanced_metrics_disabled) "+
-						"VALUES ('/agent_id/7', 'external-exporter', NULL, '/agent_id/1', '/node_id/1', false, '', $1, $2, false, false, false, 0, 0, false, false)",
-					now, now,
-				)
-				assertCheckViolation(t, err, "agents", "runs_on_node_id_only_for_pmm_agent_and_external")
+				assertCheckViolation(t, err, "agents", "runs_on_node_id_only_for_pmm_agent")
 			})
 		})
-
 		t.Run("node_id_or_service_id_or_pmm_agent_id", func(t *testing.T) {
 			// pmm_agent_id is always set in that test - NULL is tested above
 

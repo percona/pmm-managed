@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"os/exec"
-	"strings"
 	"testing"
 
 	"github.com/percona-platform/saas/pkg/check"
@@ -32,8 +31,12 @@ import (
 )
 
 const (
-	invalidStarlarkScriptStderr = "Error running starlark script: thread invalid starlark script: failed to execute function check: function check accepts no arguments (1 given)"
-	memoryConsumingScriptStderr = "fatal error: runtime: out of memory"
+	invalidStarlarkScriptStderr = "Error running starlark script: thread invalid starlark script: failed to execute function check_context: function check_context accepts no arguments (2 given)"
+
+	// Possible errors:
+	// fatal error: runtime: out of memory
+	// fatal error: out of memory allocating heap arena metadata
+	memoryConsumingScriptStderr = "out of memory"
 )
 
 var validQueryActionResult = []map[string]interface{}{
@@ -55,21 +58,21 @@ func TestStarlarkSandbox(t *testing.T) {
 	}{
 		{
 			name:         "invalid starlark script",
-			script:       "def check(): return []",
+			script:       "def check_context(): return []",
 			exitError:    "exit status 1",
 			stderr:       invalidStarlarkScriptStderr,
 			checkResults: nil,
 			exitCode:     1,
 		}, {
 			name:         "memory consuming starlark script",
-			script:       "def check(rows): return [1] * (1 << 30-1)",
+			script:       "def check_context(rows, context): return [1] * (1 << 30-1)",
 			exitError:    "exit status 2",
 			stderr:       memoryConsumingScriptStderr,
 			checkResults: nil,
 			exitCode:     2,
 		}, {
 			name: "cpu consuming starlark script",
-			script: `def check(rows):
+			script: `def check_context(rows, context):
 							while True:
 								pass`,
 			exitError:    "signal: killed",
@@ -78,7 +81,7 @@ func TestStarlarkSandbox(t *testing.T) {
 			exitCode:     -1,
 		}, {
 			name: "valid starlark script",
-			script: `def check(rows):
+			script: `def check_context(rows, context):
 							results = []
 							results.append({
 								"summary": "Fake check",
@@ -146,7 +149,7 @@ func TestStarlarkSandbox(t *testing.T) {
 			}
 
 			stderrContent := stderr.String()
-			assert.True(t, strings.Contains(stderrContent, tc.stderr))
+			assert.Contains(t, stderrContent, tc.stderr)
 
 			// make sure that the limits were set
 			assert.NotContains(t, stderrContent, cpuUsageWarning)

@@ -43,13 +43,12 @@ func TestServer(t *testing.T) {
 		r.Test(t)
 		r.On("UpdateConfiguration", mock.Anything).Return(nil)
 
-		mp := new(mockPrometheusService)
-		mp.Test(t)
-		mp.On("RequestConfigurationUpdate").Return(nil)
-
 		mvmdb := new(mockPrometheusService)
 		mvmdb.Test(t)
 		mvmdb.On("RequestConfigurationUpdate").Return(nil)
+		mAgents := new(mockAgentsRegistry)
+		mAgents.Test(t)
+		mAgents.On("UpdateAgentsState", context.TODO()).Return(nil)
 
 		mvmalert := new(mockPrometheusService)
 		mvmalert.Test(t)
@@ -67,9 +66,9 @@ func TestServer(t *testing.T) {
 
 		s, err := NewServer(&Params{
 			DB:                      reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
-			Prometheus:              mp,
 			VMDB:                    mvmdb,
 			VMAlert:                 mvmalert,
+			AgentsRegistry:          mAgents,
 			Supervisord:             r,
 			PrometheusAlertingRules: par,
 			TelemetryService:        ts,

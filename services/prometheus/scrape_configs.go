@@ -48,21 +48,6 @@ func scrapeTimeout(interval time.Duration) config.Duration {
 	}
 }
 
-func scrapeConfigForPrometheus(interval time.Duration) *config.ScrapeConfig {
-	return &config.ScrapeConfig{
-		JobName:        "prometheus",
-		ScrapeInterval: config.Duration(interval),
-		ScrapeTimeout:  scrapeTimeout(interval),
-		MetricsPath:    "/prometheus/metrics",
-		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
-			StaticConfigs: []*config.Group{{
-				Targets: []string{"127.0.0.1:9090"},
-				Labels:  map[string]string{"instance": "pmm-server"},
-			}},
-		},
-	}
-}
-
 func scrapeConfigForAlertmanager(interval time.Duration) *config.ScrapeConfig {
 	return &config.ScrapeConfig{
 		JobName:        "alertmanager",
@@ -117,6 +102,21 @@ func scrapeConfigForQANAPI2(interval time.Duration) *config.ScrapeConfig {
 		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
 			StaticConfigs: []*config.Group{{
 				Targets: []string{"127.0.0.1:9933"},
+				Labels:  map[string]string{"instance": "pmm-server"},
+			}},
+		},
+	}
+}
+
+func scrapeConfigForDBaaSController(interval time.Duration) *config.ScrapeConfig {
+	return &config.ScrapeConfig{
+		JobName:        "dbaas-controller",
+		ScrapeInterval: config.Duration(interval),
+		ScrapeTimeout:  scrapeTimeout(interval),
+		MetricsPath:    "/debug/metrics",
+		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+			StaticConfigs: []*config.Group{{
+				Targets: []string{"127.0.0.1:20203"},
 				Labels:  map[string]string{"instance": "pmm-server"},
 			}},
 		},
@@ -477,5 +477,41 @@ func scrapeConfigsForExternalExporter(s *models.MetricsResolutions, params *scra
 		}},
 	}
 
+	return []*config.ScrapeConfig{cfg}, nil
+}
+
+func scrapeConfigsForVMAgent(s *models.MetricsResolutions, params *scrapeConfigParams) ([]*config.ScrapeConfig, error) {
+	labels, err := mergeLabels(params.node, params.service, params.agent)
+	if err != nil {
+		return nil, err
+	}
+
+	interval := s.MR
+	cfg := &config.ScrapeConfig{
+		JobName:        jobName(params.agent, "mr", interval),
+		ScrapeInterval: config.Duration(interval),
+		ScrapeTimeout:  scrapeTimeout(interval),
+		Scheme:         pointer.GetString(params.agent.MetricsScheme),
+		MetricsPath:    pointer.GetString(params.agent.MetricsPath),
+	}
+
+	if pointer.GetString(params.agent.Username) != "" {
+		cfg.HTTPClientConfig = config.HTTPClientConfig{
+			BasicAuth: &config.BasicAuth{
+				Username: pointer.GetString(params.agent.Username),
+				Password: pointer.GetString(params.agent.Password),
+			},
+		}
+	}
+
+	port := int(*params.agent.ListenPort)
+	hostport := net.JoinHostPort(params.host, strconv.Itoa(port))
+
+	cfg.ServiceDiscoveryConfig = config.ServiceDiscoveryConfig{
+		StaticConfigs: []*config.Group{{
+			Targets: []string{hostport},
+			Labels:  labels,
+		}},
+	}
 	return []*config.ScrapeConfig{cfg}, nil
 }

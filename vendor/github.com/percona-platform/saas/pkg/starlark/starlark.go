@@ -9,6 +9,7 @@ import (
 	"go.starlark.net/starlark"
 
 	"github.com/percona-platform/saas/pkg/check"
+	"github.com/percona-platform/saas/pkg/common"
 )
 
 // PrintFunc represents fmt.Println-like function that is used by Starlark 'print' function implementation.
@@ -24,9 +25,9 @@ type Env struct {
 }
 
 // NewEnv creates a new Starlark execution environment.
-func NewEnv(name, script string, funcs map[string]GoFunc) (env *Env, err error) {
-	predeclared := make(starlark.StringDict, len(funcs))
-	for n, f := range funcs {
+func NewEnv(name, script string, predeclaredFuncs map[string]GoFunc) (env *Env, err error) {
+	predeclared := make(starlark.StringDict, len(predeclaredFuncs))
+	for n, f := range predeclaredFuncs {
 		predeclared[n] = starlark.NewBuiltin(n, makeFunc(f))
 	}
 	predeclared.Freeze()
@@ -127,31 +128,38 @@ func (env *Env) run(funcName string, args starlark.Tuple, threadName string, pri
 	return v, nil
 }
 
-// Run executes function 'check' with given query results.
+// Run executes function 'check_context' with given query results and additional funcs known as 'context'.
 // Id is used to separate that execution from other and used only for debugging.
 // print is a user-suplied Starlark 'print' function implementation.
-func (env *Env) Run(id string, input []map[string]interface{}, print PrintFunc) (res []check.Result, err error) {
+func (env *Env) Run(id string, input []map[string]interface{}, contextFuncs map[string]GoFunc, print PrintFunc) ([]check.Result, error) {
 	var rows *starlark.List
-	rows, err = prepareInput(input)
+	rows, err := prepareInput(input)
 	if err != nil {
-		err = errors.Wrapf(err, "thread %s", id)
-		return
+		return nil, errors.Wrapf(err, "thread %s", id)
 	}
+
+	context := starlark.NewDict(len(contextFuncs))
+	for n, f := range contextFuncs {
+		err = context.SetKey(starlark.String(n), starlark.NewBuiltin(n, makeFunc(f)))
+		if err != nil {
+			return nil, errors.Wrapf(err, "thread %s", id)
+		}
+	}
+	context.Freeze()
 
 	var output starlark.Value
-	output, err = env.run("check", starlark.Tuple{rows}, id, print)
+	output, err = env.run("check_context", starlark.Tuple{rows, context}, id, print)
 	if err != nil {
 		// thread id is already present
-		return
+		return nil, err
 	}
 
-	res, err = parseOutput(output)
+	res, err := parseOutput(output)
 	if err != nil {
-		err = errors.Wrapf(err, "thread %s", id)
-		return
+		return nil, errors.Wrapf(err, "thread %s", id)
 	}
 
-	return
+	return res, nil
 }
 
 func prepareInput(input []map[string]interface{}) (*starlark.List, error) {
@@ -252,7 +260,7 @@ func convertResult(m map[string]interface{}) (*check.Result, error) {
 	res := &check.Result{
 		Summary:     summary,
 		Description: description,
-		Severity:    check.ParseSeverity(severity),
+		Severity:    common.ParseSeverity(severity),
 		Labels:      labels,
 	}
 	if err = res.Validate(); err != nil {
@@ -260,6 +268,31 @@ func convertResult(m map[string]interface{}) (*check.Result, error) {
 	}
 
 	return res, nil
+}
+
+// CheckGlobals checks for the presence of `check` and `check_context` functions.
+func CheckGlobals(c *check.Check, predeclaredFuncs map[string]GoFunc) error {
+	predeclared := make(starlark.StringDict, len(predeclaredFuncs))
+	for n, f := range predeclaredFuncs {
+		predeclared[n] = starlark.NewBuiltin(n, makeFunc(f))
+	}
+	predeclared.Freeze()
+
+	var thread starlark.Thread
+	globals, err := starlark.ExecFile(&thread, "", c.Script, predeclared)
+	if err != nil {
+		return err
+	}
+
+	_, ok := globals["check"].(*starlark.Function)
+	if !ok {
+		return fmt.Errorf("%s: no `check` function found", c.Name)
+	}
+	_, ok = globals["check_context"].(*starlark.Function)
+	if !ok {
+		return fmt.Errorf("%s: no `check_context` function found", c.Name)
+	}
+	return nil
 }
 
 // modify unavoidable global state once on package initialization to avoid race conditions

@@ -7,15 +7,18 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/pkg/errors"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 //go-sumtype:decl isQueryActionValue_Kind
 
 func makeValue(value interface{}) (*QueryActionValue, error) {
-	// Once we actually use that function, we my decide to:
+	// In the future, we may decide to:
 	// * dereference pointers;
 	// * handle other types of the same kind (like `type String string`);
 	// * handle typed nils (like `(*int)(nil)`).
+	//
+	// We should do it only once we have a clear use-case without (or with too ugly) workarounds.
 
 	// avoid reflection for basic types
 	var err error
@@ -56,14 +59,39 @@ func makeValue(value interface{}) (*QueryActionValue, error) {
 	case []byte:
 		return &QueryActionValue{Kind: &QueryActionValue_Bytes{Bytes: v}}, nil
 	case string:
-		// we couldn't encode Go string (that can contain any byte sequence)
-		// to protobuf string (that can contain only valid UTF-8 byte sequence)
+		// We couldn't encode Go string (that can contain any byte sequence)
+		// to protobuf string (that can contain only valid UTF-8 byte sequence).
+		// See https://jira.percona.com/browse/SAAS-107.
 		return &QueryActionValue{Kind: &QueryActionValue_Bytes{Bytes: []byte(v)}}, nil
 
 	case time.Time:
 		ts, err := ptypes.TimestampProto(v)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to handle time")
+			return nil, errors.Wrap(err, "failed to handle time.Time")
+		}
+		return &QueryActionValue{Kind: &QueryActionValue_Timestamp{Timestamp: ts}}, nil
+	case primitive.Timestamp:
+		// https://docs.mongodb.com/manual/reference/bson-types/#timestamps
+		// resolution is up to a second; cram I (ordinal) into nanoseconds
+		var t time.Time
+		if !v.IsZero() {
+			t = time.Unix(int64(v.T), int64(v.I))
+		}
+		ts, err := ptypes.TimestampProto(t)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to handle MongoDB's primitive.Timestamp")
+		}
+		return &QueryActionValue{Kind: &QueryActionValue_Timestamp{Timestamp: ts}}, nil
+	case primitive.DateTime:
+		// https://docs.mongodb.com/manual/reference/bson-types/#date
+		// resolution is up to a millisecond
+		var t time.Time
+		if v != 0 {
+			t = v.Time()
+		}
+		ts, err := ptypes.TimestampProto(t)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to handle MongoDB's primitive.DateTime")
 		}
 		return &QueryActionValue{Kind: &QueryActionValue_Timestamp{Timestamp: ts}}, nil
 	}
@@ -110,8 +138,7 @@ func makeValue(value interface{}) (*QueryActionValue, error) {
 //  * int, int8, int16, int32, int64;
 //  * uint, uint8, uint16, uint32, uint64;
 //  * float32, float64;
-//  * []byte;
-//  * string;
+//  * string, []byte;
 //  * time.Time;
 //  * []T for any T from above, including other slices and maps;
 //  * map[string]T for any T from above, including other slices and maps.
@@ -146,7 +173,8 @@ func MarshalActionQuerySQLResult(columns []string, rows [][]interface{}) ([]byte
 
 // MarshalActionQueryDocsResult returns serialized form of query Action documents result.
 //
-// It supports the same types as MarshalActionQuerySQLResult.
+// It supports the same types as MarshalActionQuerySQLResult plus:
+// * MongoDB's primitive.DateTime and primitive.Timestamp are converted to time.Time.
 func MarshalActionQueryDocsResult(docs []map[string]interface{}) ([]byte, error) {
 	res := QueryActionResult{
 		Docs: make([]*QueryActionMap, len(docs)),
@@ -185,13 +213,14 @@ func makeInterface(value *QueryActionValue) (interface{}, error) {
 	case *QueryActionValue_Double:
 		return v.Double, nil
 	case *QueryActionValue_Bytes:
-		// convert to Go string just for better developer experience;
-		// it can contain any byte sequence and not limited to UTF-8
+		// Convert to Go string just for better developer experience;
+		// it can contain any byte sequence and not limited to UTF-8.
+		// See https://jira.percona.com/browse/SAAS-107.
 		return string(v.Bytes), nil
 	case *QueryActionValue_Timestamp:
 		t, err := ptypes.Timestamp(v.Timestamp)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to handle time")
+			return nil, errors.Wrap(err, "failed to handle timestamp")
 		}
 		return t, nil
 

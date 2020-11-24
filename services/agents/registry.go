@@ -50,6 +50,9 @@ const (
 var (
 	defaultActionTimeout      = ptypes.DurationProto(10 * time.Second)
 	defaultQueryActionTimeout = ptypes.DurationProto(15 * time.Second) // should be less than checks.resultTimeout
+	// vmagent with push model version will be released with PMM Agent v2.12.
+	// TODO fix it to 2.11.99 before release
+	vmagentPMMVersion = version.MustParse("2.11.2")
 )
 
 type pmmAgentInfo struct {
@@ -62,10 +65,9 @@ type pmmAgentInfo struct {
 //
 // TODO Split into several types https://jira.percona.com/browse/PMM-4932
 type Registry struct {
-	db         *reform.DB
-	prometheus prometheusService
-	vmdb       prometheusService
-	qanClient  qanClient
+	db        *reform.DB
+	vmdb      prometheusService
+	qanClient qanClient
 
 	rw     sync.RWMutex
 	agents map[string]*pmmAgentInfo // id -> info
@@ -80,12 +82,11 @@ type Registry struct {
 }
 
 // NewRegistry creates a new registry with given database connection.
-func NewRegistry(db *reform.DB, qanClient qanClient, prometheus, vmdb prometheusService) *Registry {
+func NewRegistry(db *reform.DB, qanClient qanClient, vmdb prometheusService) *Registry {
 	r := &Registry{
-		db:         db,
-		prometheus: prometheus,
-		vmdb:       vmdb,
-		qanClient:  qanClient,
+		db:        db,
+		vmdb:      vmdb,
+		qanClient: qanClient,
 
 		agents: make(map[string]*pmmAgentInfo),
 
@@ -394,8 +395,36 @@ func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRe
 	if e != nil {
 		return e
 	}
-	r.prometheus.RequestConfigurationUpdate()
 	r.vmdb.RequestConfigurationUpdate()
+	agent, err := models.FindAgentByID(r.db.Querier, req.AgentId)
+	if err != nil {
+		return err
+	}
+	if agent.PMMAgentID == nil {
+		return nil
+	}
+	r.SendSetStateRequest(ctx, *agent.PMMAgentID)
+	return nil
+}
+
+// UpdateAgentsState sends SetStateRequest to all pmm-agents with push metrics agents.
+func (r *Registry) UpdateAgentsState(ctx context.Context) error {
+	pmmAgents, err := models.FindPMMAgentsIDsWithPushMetrics(r.db.Querier)
+	if err != nil {
+		return errors.Wrap(err, "cannot find pmmAgentsIDs for AgentsState update")
+	}
+	var wg sync.WaitGroup
+	limiter := make(chan struct{}, 10)
+	for _, pmmAgentID := range pmmAgents {
+		wg.Add(1)
+		limiter <- struct{}{}
+		go func(pmmAgentID string) {
+			defer wg.Done()
+			r.SendSetStateRequest(ctx, pmmAgentID)
+			<-limiter
+		}(pmmAgentID)
+	}
+	wg.Wait()
 	return nil
 }
 
@@ -449,6 +478,15 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		switch row.AgentType {
 		case models.PMMAgentType:
 			continue
+		case models.VMAgentType:
+			if pmmAgentVersion.Less(vmagentPMMVersion) {
+				continue
+			}
+			scrapeCfg, err := r.vmdb.BuildScrapeConfigForVMAgent(pmmAgentID)
+			if err != nil {
+				l.WithError(err).Errorf("cannot get agent scrape config for agent: %s", pmmAgentID)
+			}
+			agentProcesses[row.AgentID] = vmAgentConfig(string(scrapeCfg))
 
 		case models.NodeExporterType:
 			node, err := models.FindNodeByID(r.db.Querier, pointer.GetString(row.NodeID))
@@ -465,6 +503,8 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 				return
 			}
 			rdsExporters[node] = row
+		case models.ExternalExporterType:
+			// ignore
 
 		// Agents with exactly one Service
 		case models.MySQLdExporterType, models.MongoDBExporterType, models.PostgresExporterType, models.ProxySQLExporterType,
@@ -498,9 +538,6 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 				builtinAgents[row.AgentID] = qanPostgreSQLPgStatMonitorAgentConfig(service, row)
 			}
 
-		case models.ExternalExporterType:
-			// ignore
-
 		default:
 			l.Panicf("unhandled Agent type %s", row.AgentType)
 		}
@@ -521,7 +558,6 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 			l.Errorf("%+v", err)
 		}
 	}
-
 	state := &agentpb.SetStateRequest{
 		AgentProcesses: agentProcesses,
 		BuiltinAgents:  builtinAgents,
