@@ -27,14 +27,15 @@ const (
 	testShippedFilePath     = "../../../testdata/ia/shipped/*.yml"
 	testUserDefinedFilePath = "../../../testdata/ia/userdefined/*.yml"
 	testOtherRulesFilePath  = "../../../testdata/ia/others/*.yml"
+	testBadRulesFilePath    = "../../../testdata/ia/bad/*.yml"
 	testInvalidFilePath     = "../../../testdata/ia/invalid/*.yml"
 )
 
 func TestCollect(t *testing.T) {
-	t.Run("invalid template paths", func(t *testing.T) {
+	t.Run("invalid paths and bad rule template", func(t *testing.T) {
 		svc := NewTemplatesService()
 		svc.shippedRuleTemplatePath = testInvalidFilePath
-		svc.userDefinedRuleTemplatePath = testInvalidFilePath
+		svc.userDefinedRuleTemplatePath = testBadRulesFilePath
 		svc.collectRuleTemplates()
 
 		require.Empty(t, svc.rules)
