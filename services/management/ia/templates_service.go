@@ -74,8 +74,7 @@ func (svc *TemplatesService) collectRuleTemplates() {
 		return
 	}
 
-	ruleLen := len(shippedFilePaths) + len(userDefinedFilePaths)
-	rules := make([]saas.Rule, 0, ruleLen)
+	rules := make([]saas.Rule, 0, len(shippedFilePaths)+len(userDefinedFilePaths))
 
 	for _, path := range shippedFilePaths {
 		r, err := svc.loadRuleTemplates(path)
