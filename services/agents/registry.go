@@ -1005,12 +1005,8 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID stri
 }
 
 // StartPTPgSQLSummaryAction starts pt-pg-summary action on the pmm-agent.
-// The pt-pg-summary may require some of the following params:
-// address	IP address
-// port
-// username
-// password
-// return:		nil - ok, otherwise an error code
+// The pt-pg-summary may require some of the following params: IP address, port, username, password.
+// The function returns nil if ok, otherwise an error code
 func (r *Registry) StartPTPgSQLSummaryAction(ctx context.Context, id, pmmAgentID, address string, port uint16, username, password string) error {
 	// Action request data that'll be sent to agent
 	actionRequest := &agentpb.StartActionRequest{
