@@ -113,19 +113,25 @@ func ValidateChannel(ch *Channel) error {
 
 	switch ch.Type {
 	case Email:
-		if ch.SlackConfig != nil || ch.WebHookConfig != nil {
+		if ch.SlackConfig != nil || ch.WebHookConfig != nil || ch.PagerDutyConfig != nil {
 			return errors.New("email channel should has only email configuration")
 		}
 
 		return validateEmailConfig(ch.EmailConfig)
+	case PagerDuty:
+		if ch.EmailConfig != nil || ch.SlackConfig != nil || ch.WebHookConfig != nil {
+			return errors.New("pager duty channel should has only email configuration")
+		}
+
+		return validatePagerDutyConfig(ch.PagerDutyConfig)
 	case Slack:
-		if ch.EmailConfig != nil || ch.WebHookConfig != nil {
+		if ch.EmailConfig != nil || ch.WebHookConfig != nil || ch.PagerDutyConfig != nil {
 			return errors.New("slack channel should has only slack configuration")
 		}
 
 		return validateSlackConfig(ch.SlackConfig)
 	case WebHook:
-		if ch.SlackConfig != nil || ch.EmailConfig != nil {
+		if ch.SlackConfig != nil || ch.EmailConfig != nil || ch.PagerDutyConfig != nil {
 			return errors.New("webhook channel should has only webhook configuration")
 		}
 
@@ -144,6 +150,22 @@ func validateEmailConfig(c *EmailConfig) error {
 
 	if len(c.To) == 0 {
 		return errors.New("email to field is empty")
+	}
+
+	return nil
+}
+
+func validatePagerDutyConfig(c *PagerDutyConfig) error {
+	if c == nil {
+		return errors.New("pager duty config is empty")
+	}
+
+	if c.RoutingKey == "" {
+		return errors.New("pager duty routing key is empty")
+	}
+
+	if c.ServiceKey == "" {
+		return errors.New("pager duty service key is empty")
 	}
 
 	return nil

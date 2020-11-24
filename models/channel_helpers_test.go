@@ -187,6 +187,16 @@ func TestChannelValidation(t *testing.T) {
 			errorMsg: "email config is empty",
 		},
 		{
+			name: "missing pager duty config",
+			channel: models.Channel{
+				ID:              "some_id",
+				Type:            models.PagerDuty,
+				PagerDutyConfig: nil,
+				Disabled:        false,
+			},
+			errorMsg: "pager duty config is empty",
+		},
+		{
 			name: "missing slack config",
 			channel: models.Channel{
 				ID:       "some_id",
@@ -215,6 +225,34 @@ func TestChannelValidation(t *testing.T) {
 				Disabled: false,
 			},
 			errorMsg: "email to field is empty",
+		},
+		{
+			name: "missing routing key in pager duty config",
+			channel: models.Channel{
+				ID:   "some_id",
+				Type: models.PagerDuty,
+				PagerDutyConfig: &models.PagerDutyConfig{
+					SendResolved: false,
+					RoutingKey:   "",
+					ServiceKey:   "some key",
+				},
+				Disabled: false,
+			},
+			errorMsg: "pager duty routing key is empty",
+		},
+		{
+			name: "missing service key in pager duty config",
+			channel: models.Channel{
+				ID:   "some_id",
+				Type: models.PagerDuty,
+				PagerDutyConfig: &models.PagerDutyConfig{
+					SendResolved: false,
+					RoutingKey:   "some key",
+					ServiceKey:   "",
+				},
+				Disabled: false,
+			},
+			errorMsg: "pager duty service key is empty",
 		},
 		{
 			name: "missing channel in slack configuration",

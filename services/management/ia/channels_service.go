@@ -63,6 +63,15 @@ func (s *ChannelsService) ListChannels(ctx context.Context, request *iav1beta1.L
 					To:           config.To,
 				},
 			}
+		case models.PagerDuty:
+			config := channel.PagerDutyConfig
+			c.Channel = &iav1beta1.Channel_PagerdutyConfig{
+				PagerdutyConfig: &iav1beta1.PagerDutyConfig{
+					SendResolved: config.SendResolved,
+					RoutingKey:   config.RoutingKey,
+					ServiceKey:   config.ServiceKey,
+				},
+			}
 		case models.Slack:
 			config := channel.SlackConfig
 			c.Channel = &iav1beta1.Channel_SlackConfig{
@@ -103,6 +112,17 @@ func (s *ChannelsService) AddChannel(ctx context.Context, req *iav1beta1.AddChan
 		channel.EmailConfig = &models.EmailConfig{
 			SendResolved: emailConf.SendResolved,
 			To:           emailConf.To,
+		}
+	}
+	if pagerDutyConf := req.GetPagerdutyConfig(); pagerDutyConf != nil {
+		if channel.Type != "" {
+			return nil, status.Error(codes.InvalidArgument, "Request should contain only one type of channel configuration")
+		}
+		channel.Type = models.PagerDuty
+		channel.PagerDutyConfig = &models.PagerDutyConfig{
+			SendResolved: pagerDutyConf.SendResolved,
+			RoutingKey:   pagerDutyConf.RoutingKey,
+			ServiceKey:   pagerDutyConf.ServiceKey,
 		}
 	}
 	if slackConf := req.GetSlackConfig(); slackConf != nil {
@@ -148,6 +168,17 @@ func (s *ChannelsService) ChangeChannel(ctx context.Context, req *iav1beta1.Chan
 		channel.EmailConfig = &models.EmailConfig{
 			SendResolved: emailConf.SendResolved,
 			To:           emailConf.To,
+		}
+	}
+	if pagerDutyConf := req.GetPagerdutyConfig(); pagerDutyConf != nil {
+		if channel.Type != "" {
+			return nil, status.Error(codes.InvalidArgument, "Request should contain only one type of channel configuration")
+		}
+		channel.Type = models.PagerDuty
+		channel.PagerDutyConfig = &models.PagerDutyConfig{
+			SendResolved: pagerDutyConf.SendResolved,
+			RoutingKey:   pagerDutyConf.RoutingKey,
+			ServiceKey:   pagerDutyConf.ServiceKey,
 		}
 	}
 	if slackConf := req.GetSlackConfig(); slackConf != nil {

@@ -21,9 +21,10 @@ type ChannelType string
 
 // Available notificaion channel types.
 const (
-	Email   = ChannelType("email")
-	Slack   = ChannelType("slack")
-	WebHook = ChannelType("webhook")
+	Email     = ChannelType("email")
+	PagerDuty = ChannelType("pagerduty")
+	Slack     = ChannelType("slack")
+	WebHook   = ChannelType("webhook")
 )
 
 // Channel represents notification channel configuration.
@@ -31,9 +32,10 @@ type Channel struct {
 	ID   string      `json:"name"`
 	Type ChannelType `json:"type"`
 
-	EmailConfig   *EmailConfig   `json:"email_config"`
-	SlackConfig   *SlackConfig   `json:"slack_config"`
-	WebHookConfig *WebHookConfig `json:"web_hook_config"`
+	EmailConfig     *EmailConfig     `json:"email_config"`
+	PagerDutyConfig *PagerDutyConfig `json:"pager_duty_config"`
+	SlackConfig     *SlackConfig     `json:"slack_config"`
+	WebHookConfig   *WebHookConfig   `json:"web_hook_config"`
 
 	Disabled bool `json:"disabled"`
 }
@@ -42,6 +44,13 @@ type Channel struct {
 type EmailConfig struct {
 	SendResolved bool     `json:"send_resolved"`
 	To           []string `json:"to"`
+}
+
+// PagerDutyConfig represents PagerDuty channel configuration.
+type PagerDutyConfig struct {
+	SendResolved bool   `json:"send_resolved"`
+	RoutingKey   string `json:"routing_key"`
+	ServiceKey   string `json:"service_key"`
 }
 
 // SlackConfig is slack notification channel configuration.
