@@ -393,7 +393,7 @@
     "pkg/starlark",
   ]
   pruneopts = "NUT"
-  revision = "d9333b94126dc5359b5b946675c246c57e9b15ea"
+  revision = "8657f06b2badaee3980eb85fa61d7e2f7b34484b"
 
 [[projects]]
   digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
@@ -405,7 +405,7 @@
 
 [[projects]]
   branch = "PMM-5364-ssl-mongo"
-  digest = "1:871cab9454c6e2651ad31ccf3235af11d62d7ef23a5f295d31d5cba3e851753d"
+  digest = "1:b97cbeac516de900e8d9068f17423fd2dbecb3f0088a69d66f702a46f85a113c"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -419,6 +419,7 @@
     "api/inventorypb",
     "api/managementpb",
     "api/managementpb/dbaas",
+    "api/managementpb/ia",
     "api/qanpb",
     "api/serverpb",
     "utils/pdeathsig",
@@ -427,7 +428,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "fad5da55a39bf72d554a84352569ad8e791fd60c"
+  revision = "784568fb9299caf123433b346e731379e6d55348"
 
 [[projects]]
   branch = "master"
@@ -880,6 +881,7 @@
     "github.com/percona/pmm/api/inventorypb",
     "github.com/percona/pmm/api/managementpb",
     "github.com/percona/pmm/api/managementpb/dbaas",
+    "github.com/percona/pmm/api/managementpb/ia",
     "github.com/percona/pmm/api/qanpb",
     "github.com/percona/pmm/api/serverpb",
     "github.com/percona/pmm/utils/pdeathsig",
