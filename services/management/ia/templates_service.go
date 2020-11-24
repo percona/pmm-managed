@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 
 	saas "github.com/percona-platform/saas/pkg/alert"
+	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -124,3 +125,8 @@ func (svc *TemplatesService) loadRuleTemplates(file string) ([]saas.Rule, error)
 
 	return rules, nil
 }
+
+// Check interfaces.
+var (
+	_ iav1beta1.ChannelsServer = (*ChannelsService)(nil)
+)
