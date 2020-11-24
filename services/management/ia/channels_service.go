@@ -150,7 +150,12 @@ func (s *ChannelsService) AddChannel(ctx context.Context, req *iav1beta1.AddChan
 
 	err := s.ia.AddChannel(channel)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to add new notification channel")
+		switch errors.Cause(err).(type) {
+		case *models.ValidationError:
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		default:
+			return nil, errors.Wrap(err, "failed to add new notification channel")
+		}
 	}
 
 	return &iav1beta1.AddChannelResponse{}, nil
@@ -206,7 +211,12 @@ func (s *ChannelsService) ChangeChannel(ctx context.Context, req *iav1beta1.Chan
 
 	err := s.ia.ChangeChannel(channel)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to change existing notification channel")
+		switch errors.Cause(err).(type) {
+		case *models.ValidationError:
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		default:
+			return nil, errors.Wrap(err, "failed to change existing notification channel")
+		}
 	}
 
 	return &iav1beta1.ChangeChannelResponse{}, nil
