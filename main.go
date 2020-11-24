@@ -288,6 +288,8 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 		managementpb.RegisterAnnotationHandlerFromEndpoint,
 		managementpb.RegisterSecurityChecksHandlerFromEndpoint,
 
+		iav1beta1.RegisterChannelsHandlerFromEndpoint,
+
 		dbaasv1beta1.RegisterKubernetesHandlerFromEndpoint,
 		dbaasv1beta1.RegisterXtraDBClusterHandlerFromEndpoint,
 		dbaasv1beta1.RegisterPSMDBClusterHandlerFromEndpoint,
