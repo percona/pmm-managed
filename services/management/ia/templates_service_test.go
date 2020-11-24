@@ -35,15 +35,17 @@ const (
 func TestCollect(t *testing.T) {
 	t.Parallel()
 
+	ctx := context.Background()
+
 	t.Run("bad and missing template paths", func(t *testing.T) {
 		t.Parallel()
 
 		svc := NewTemplatesService()
 		svc.builtinTemplatesPath = testMissingTemplates
 		svc.userTemplatesPath = testBadTemplates
-		svc.collectRuleTemplates(context.Background())
+		svc.collect(ctx)
 
-		require.Empty(t, svc.rules)
+		require.Empty(t, svc.getCollected(ctx))
 	})
 
 	t.Run("valid template paths", func(t *testing.T) {
@@ -52,21 +54,23 @@ func TestCollect(t *testing.T) {
 		svc := NewTemplatesService()
 		svc.builtinTemplatesPath = testBuiltinTemplates
 		svc.userTemplatesPath = testUserTemplates
-		svc.collectRuleTemplates(context.Background())
+		svc.collect(ctx)
 
-		require.NotEmpty(t, svc.rules)
-		require.Len(t, svc.rules, 2)
-		assert.Contains(t, svc.rules, "builtin_rule")
-		assert.Contains(t, svc.rules, "user_rule")
+		rules := svc.getCollected(ctx)
+		require.NotEmpty(t, rules)
+		require.Len(t, rules, 2)
+		assert.Contains(t, rules, "builtin_rule")
+		assert.Contains(t, rules, "user_rule")
 
 		// check whether map was cleared and updated on a subsequent call
 		svc.userTemplatesPath = testUser2Templates
-		svc.collectRuleTemplates(context.Background())
+		svc.collect(ctx)
 
-		require.NotEmpty(t, svc.rules)
-		require.Len(t, svc.rules, 2)
-		assert.NotContains(t, svc.rules, "user_rule")
-		assert.Contains(t, svc.rules, "builtin_rule")
-		assert.Contains(t, svc.rules, "user2_rule")
+		rules = svc.getCollected(ctx)
+		require.NotEmpty(t, rules)
+		require.Len(t, rules, 2)
+		assert.NotContains(t, rules, "user_rule")
+		assert.Contains(t, rules, "builtin_rule")
+		assert.Contains(t, rules, "user2_rule")
 	})
 }
