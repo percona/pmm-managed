@@ -51,7 +51,7 @@ const (
 	BasePrometheusConfigPath = "/srv/prometheus/prometheus.base.yml"
 )
 
-var checkFailedRE = regexp.MustCompile(`FAILED: parsing YAML file \S+: (.+)\n`)
+var checkFailedRE = regexp.MustCompile(`cannot unmarshal data\S+: (.+)\n`)
 
 // Service is responsible for interactions with victoria metrics.
 type Service struct {
@@ -286,9 +286,12 @@ func (svc *Service) configAndReload(ctx context.Context, cfg []byte) error {
 		_ = f.Close()
 		_ = os.Remove(f.Name())
 	}()
-	args := []string{"check", "config", f.Name()}
-	cmd := exec.CommandContext(ctx, "promtool", args...) //nolint:gosec
+
+	args := []string{"-dryRun", "-promscrape.config", f.Name()}
+	cmd := exec.CommandContext(ctx, "/usr/local/percona/pmm2/exporters/vmagent", args...) //nolint:gosec
+
 	pdeathsig.Set(cmd, unix.SIGKILL)
+
 	b, err := cmd.CombinedOutput()
 	if err != nil {
 		svc.l.Errorf("%s", b)
