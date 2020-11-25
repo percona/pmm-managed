@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -76,7 +75,6 @@ func RemoveChannel(q *reform.Querier, id string) error {
 
 // GetChannels returns saved notification channels configuration.
 func GetChannels(q *reform.Querier) ([]Channel, error) {
-
 	structs, err := q.SelectAllFrom(notificationChannelTable, "")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select notification channels")
@@ -231,7 +229,6 @@ func notificationChannelToChannel(nc *notificationChannel) (*Channel, error) {
 
 	switch nc.Type {
 	case Email:
-		spew.Dump(nc)
 		c.EmailConfig = &EmailConfig{}
 		err := json.Unmarshal(*nc.EmailConfig, c.EmailConfig)
 		if err != nil {
