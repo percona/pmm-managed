@@ -16,10 +16,12 @@
 
 package models
 
+//go:generate reform
+
 // ChannelType represents notificaion channel type.
 type ChannelType string
 
-// Available notificaion channel types.
+// Available notification channel types.
 const (
 	Email     = ChannelType("email")
 	PagerDuty = ChannelType("pagerduty")
@@ -27,17 +29,30 @@ const (
 	WebHook   = ChannelType("webhook")
 )
 
+//reform:notification_channels
+type notificationChannel struct {
+	ID   string      `reform:"id,pk"`
+	Type ChannelType `reform:"type"`
+
+	EmailConfig     *[]byte `reform:"email_config"`
+	PagerDutyConfig *[]byte `reform:"pagerduty_config"`
+	SlackConfig     *[]byte `reform:"slack_config"`
+	WebHookConfig   *[]byte `reform:"webhook_config"`
+
+	Disabled bool `reform:"disabled"`
+}
+
 // Channel represents notification channel configuration.
 type Channel struct {
-	ID   string      `json:"name"`
-	Type ChannelType `json:"type"`
+	ID   string
+	Type ChannelType
 
-	EmailConfig     *EmailConfig     `json:"email_config"`
-	PagerDutyConfig *PagerDutyConfig `json:"pager_duty_config"`
-	SlackConfig     *SlackConfig     `json:"slack_config"`
-	WebHookConfig   *WebHookConfig   `json:"web_hook_config"`
+	EmailConfig     *EmailConfig
+	PagerDutyConfig *PagerDutyConfig
+	SlackConfig     *SlackConfig
+	WebHookConfig   *WebHookConfig
 
-	Disabled bool `json:"disabled"`
+	Disabled bool
 }
 
 // EmailConfig is email notification channel configuration.

@@ -42,6 +42,8 @@ func TestNotificationChannels(t *testing.T) {
 			require.NoError(t, tx.Rollback())
 		}()
 
+		q := tx.Querier
+
 		c := models.Channel{
 			ID:   "some_id",
 			Type: models.Email,
@@ -51,10 +53,10 @@ func TestNotificationChannels(t *testing.T) {
 			Disabled: false,
 		}
 
-		err = models.SaveChannel(tx, &c)
+		err = models.SaveChannel(q, &c)
 		require.NoError(t, err)
 
-		channels, err := models.GetChannels(tx)
+		channels, err := models.GetChannels(q)
 		require.NoError(t, err)
 		require.Len(t, channels, 1)
 
@@ -68,6 +70,8 @@ func TestNotificationChannels(t *testing.T) {
 			require.NoError(t, tx.Rollback())
 		}()
 
+		q := tx.Querier
+
 		c := models.Channel{
 			ID:   "some_id",
 			Type: models.Email,
@@ -77,15 +81,15 @@ func TestNotificationChannels(t *testing.T) {
 			Disabled: false,
 		}
 
-		err = models.SaveChannel(tx, &c)
+		err = models.SaveChannel(q, &c)
 		require.NoError(t, err)
 
 		c.EmailConfig.To = []string{"test2@test.test"}
 
-		err = models.UpdateChannel(tx, &c)
+		err = models.UpdateChannel(q, &c)
 		require.NoError(t, err)
 
-		cs, err := models.GetChannels(tx)
+		cs, err := models.GetChannels(q)
 		require.NoError(t, err)
 		assert.Len(t, cs, 1)
 		assert.Equal(t, c, cs[0])
@@ -98,6 +102,8 @@ func TestNotificationChannels(t *testing.T) {
 			require.NoError(t, tx.Rollback())
 		}()
 
+		q := tx.Querier
+
 		c := models.Channel{
 			ID:   "some_id",
 			Type: models.Email,
@@ -107,13 +113,13 @@ func TestNotificationChannels(t *testing.T) {
 			Disabled: false,
 		}
 
-		err = models.SaveChannel(tx, &c)
+		err = models.SaveChannel(q, &c)
 		require.NoError(t, err)
 
-		err = models.RemoveChannel(tx, c.ID)
+		err = models.RemoveChannel(q, c.ID)
 		require.NoError(t, err)
 
-		cs, err := models.GetChannels(tx)
+		cs, err := models.GetChannels(q)
 		require.NoError(t, err)
 		assert.Len(t, cs, 0)
 	})

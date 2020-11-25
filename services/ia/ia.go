@@ -37,20 +37,20 @@ func New(db *reform.DB) *Service {
 
 // AddChannel adds new notification channel.
 func (s *Service) AddChannel(ch *models.Channel) error {
-	return models.SaveChannel(s.db, ch)
+	return models.SaveChannel(s.db.Querier, ch)
 }
 
 // ChangeChannel changes existing notification channel.
 func (s *Service) ChangeChannel(ch *models.Channel) error {
-	return models.UpdateChannel(s.db, ch)
+	return models.UpdateChannel(s.db.Querier, ch)
 }
 
 // RemoveChannel removes notification channel.
 func (s *Service) RemoveChannel(id string) error {
-	return models.RemoveChannel(s.db, id)
+	return models.RemoveChannel(s.db.Querier, id)
 }
 
 // ListChannels returns list of available channels.
 func (s *Service) ListChannels() ([]models.Channel, error) {
-	return models.GetChannels(s.db)
+	return models.GetChannels(s.db.Querier)
 }

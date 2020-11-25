@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -27,17 +28,17 @@ import (
 )
 
 // SaveChannel persists notification channel.
-func SaveChannel(q reform.DBTX, c *Channel) error {
+func SaveChannel(q *reform.Querier, c *Channel) error {
 	if err := ValidateChannel(c); err != nil {
 		return err
 	}
 
-	b, err := json.Marshal(c)
+	nc, err := channelToNotificationChannel(c)
 	if err != nil {
-		return errors.Wrap(err, "failed to marshall notification channel")
+		return err
 	}
 
-	_, err = q.Exec("INSERT INTO notification_channels (id, channel) VALUES ($1, $2)", c.ID, b)
+	err = q.Insert(nc)
 	if err != nil {
 		return errors.Wrap(err, "failed to create notifications channel")
 	}
@@ -46,16 +47,17 @@ func SaveChannel(q reform.DBTX, c *Channel) error {
 }
 
 // UpdateChannel updates existing notifications channel.
-func UpdateChannel(q reform.DBTX, c *Channel) error {
+func UpdateChannel(q *reform.Querier, c *Channel) error {
 	if err := ValidateChannel(c); err != nil {
 		return errors.Wrap(err, "channel validation failed")
 	}
-	b, err := json.Marshal(c)
+
+	nc, err := channelToNotificationChannel(c)
 	if err != nil {
-		return errors.Wrap(err, "failed to marshall notification channel")
+		return err
 	}
 
-	_, err = q.Exec("UPDATE notification_channels SET channel=$1 WHERE id=$2", b, c.ID)
+	err = q.Update(nc)
 	if err != nil {
 		return errors.Wrap(err, "failed to create notifications channel")
 	}
@@ -64,8 +66,8 @@ func UpdateChannel(q reform.DBTX, c *Channel) error {
 }
 
 // RemoveChannel removes notification channel with specified id.
-func RemoveChannel(q reform.DBTX, id string) error {
-	_, err := q.Exec("DELETE FROM notification_channels WHERE id=$1", id)
+func RemoveChannel(q *reform.Querier, id string) error {
+	err := q.Delete(&notificationChannel{ID: id})
 	if err != nil {
 		return errors.Wrap(err, "failed to delete notifications channel")
 	}
@@ -73,36 +75,21 @@ func RemoveChannel(q reform.DBTX, id string) error {
 }
 
 // GetChannels returns saved notification channels configuration.
-func GetChannels(q reform.DBTX) ([]Channel, error) {
-	rows, err := q.Query("SELECT channel FROM notification_channels")
+func GetChannels(q *reform.Querier) ([]Channel, error) {
+
+	structs, err := q.SelectAllFrom(notificationChannelTable, "")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select notification channels")
+
 	}
 
-	var channels []Channel
-	for rows.Next() {
-		var b []byte
-		if err = rows.Scan(&b); err != nil {
-			break
+	channels := make([]Channel, len(structs))
+	for i, s := range structs {
+		c, err := notificationChannelToChannel(s.(*notificationChannel))
+		if err != nil {
+			return nil, err
 		}
-
-		var channel Channel
-		if err = json.Unmarshal(b, &channel); err != nil {
-			break
-		}
-		channels = append(channels, channel)
-	}
-
-	if closeErr := rows.Close(); closeErr != nil {
-		return nil, errors.Wrap(closeErr, "failed to close rows")
-	}
-
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read notification channels")
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, errors.Wrap(err, "failed to scan rows")
+		channels[i] = *c
 	}
 
 	return channels, nil
@@ -196,4 +183,79 @@ func validateWebHookConfig(c *WebHookConfig) error {
 	}
 
 	return nil
+}
+
+func channelToNotificationChannel(c *Channel) (*notificationChannel, error) {
+	nc := &notificationChannel{
+		ID:       c.ID,
+		Type:     c.Type,
+		Disabled: false,
+	}
+
+	switch c.Type {
+	case Email:
+		b, err := json.Marshal(c.EmailConfig)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to marshall email configuration")
+		}
+		nc.EmailConfig = &b
+	case PagerDuty:
+		b, err := json.Marshal(c.PagerDutyConfig)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to marshall pager duty configuration")
+		}
+		nc.PagerDutyConfig = &b
+	case Slack:
+		b, err := json.Marshal(c.SlackConfig)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to marshall slack configuration")
+		}
+		nc.SlackConfig = &b
+	case WebHook:
+		b, err := json.Marshal(c.WebHookConfig)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to marshall webhook configuration")
+		}
+		nc.WebHookConfig = &b
+	}
+
+	return nc, nil
+}
+
+func notificationChannelToChannel(nc *notificationChannel) (*Channel, error) {
+	c := &Channel{
+		ID:       nc.ID,
+		Type:     nc.Type,
+		Disabled: nc.Disabled,
+	}
+
+	switch nc.Type {
+	case Email:
+		spew.Dump(nc)
+		c.EmailConfig = &EmailConfig{}
+		err := json.Unmarshal(*nc.EmailConfig, c.EmailConfig)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to marshall email configuration")
+		}
+	case PagerDuty:
+		c.PagerDutyConfig = &PagerDutyConfig{}
+		err := json.Unmarshal(*nc.PagerDutyConfig, c.PagerDutyConfig)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to marshall pager duty configuration")
+		}
+	case Slack:
+		c.SlackConfig = &SlackConfig{}
+		err := json.Unmarshal(*nc.SlackConfig, c.SlackConfig)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to marshall slack configuration")
+		}
+	case WebHook:
+		c.WebHookConfig = &WebHookConfig{}
+		err := json.Unmarshal(*nc.WebHookConfig, c.WebHookConfig)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to marshall webhook configuration")
+		}
+	}
+
+	return c, nil
 }

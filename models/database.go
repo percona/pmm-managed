@@ -350,8 +350,13 @@ var databaseSchema = [][]string{
 	22: {
 		`CREATE TABLE notification_channels (
 			id VARCHAR NOT NULL,
-			channel JSONB,
-
+			type VARCHAR NOT NULL,
+			email_config JSONB,
+			pagerduty_config JSONB,
+			slack_config JSONB,
+			webhook_config JSONB,
+			disabled BOOLEAN,
+			
 			PRIMARY KEY (id)
 		)`,
 	},
