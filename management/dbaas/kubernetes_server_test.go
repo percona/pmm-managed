@@ -56,7 +56,7 @@ func TestKubernetesServer(t *testing.T) {
 			&kubernetes.RegisterKubernetesClusterParams{
 				Body: kubernetes.RegisterKubernetesClusterBody{
 					KubernetesClusterName: kubernetesClusterName,
-					KubeAuth:              &kubernetes.RegisterKubernetesClusterParamsBodyKubeAuth{Kubeconfig: "{}"},
+					KubeAuth:              &kubernetes.RegisterKubernetesClusterParamsBodyKubeAuth{Kubeconfig: kubeConfig},
 				},
 				Context: pmmapitests.Context,
 			},
@@ -70,7 +70,7 @@ func TestKubernetesServer(t *testing.T) {
 			&kubernetes.RegisterKubernetesClusterParams{
 				Body: kubernetes.RegisterKubernetesClusterBody{
 					KubernetesClusterName: "",
-					KubeAuth:              &kubernetes.RegisterKubernetesClusterParamsBodyKubeAuth{Kubeconfig: "{}"},
+					KubeAuth:              &kubernetes.RegisterKubernetesClusterParamsBodyKubeAuth{Kubeconfig: kubeConfig},
 				},
 				Context: pmmapitests.Context,
 			},

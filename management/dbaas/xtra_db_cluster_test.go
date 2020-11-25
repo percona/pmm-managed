@@ -33,15 +33,17 @@ func TestXtraDBClusterServer(t *testing.T) {
 					ClusterSize: 3,
 					Proxysql: &xtra_db_cluster.CreateXtraDBClusterParamsBodyParamsProxysql{
 						ComputeResources: &xtra_db_cluster.CreateXtraDBClusterParamsBodyParamsProxysqlComputeResources{
-							CPUm:        1,
-							MemoryBytes: "64",
+							CPUm:        500,
+							MemoryBytes: "1000000000",
 						},
+						DiskSize: "1000000000",
 					},
 					Pxc: &xtra_db_cluster.CreateXtraDBClusterParamsBodyParamsPxc{
 						ComputeResources: &xtra_db_cluster.CreateXtraDBClusterParamsBodyParamsPxcComputeResources{
 							CPUm:        1,
 							MemoryBytes: "64",
 						},
+						DiskSize: "1000000000",
 					},
 				},
 			},
@@ -60,15 +62,17 @@ func TestXtraDBClusterServer(t *testing.T) {
 					ClusterSize: 1,
 					Proxysql: &xtra_db_cluster.CreateXtraDBClusterParamsBodyParamsProxysql{
 						ComputeResources: &xtra_db_cluster.CreateXtraDBClusterParamsBodyParamsProxysqlComputeResources{
-							CPUm:        1,
-							MemoryBytes: "64",
+							CPUm:        500,
+							MemoryBytes: "1000000000",
 						},
+						DiskSize: "1000000000",
 					},
 					Pxc: &xtra_db_cluster.CreateXtraDBClusterParamsBodyParamsPxc{
 						ComputeResources: &xtra_db_cluster.CreateXtraDBClusterParamsBodyParamsPxcComputeResources{
 							CPUm:        1,
 							MemoryBytes: "64",
 						},
+						DiskSize: "1000000000",
 					},
 				},
 			},
@@ -108,17 +112,7 @@ func TestXtraDBClusterServer(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, xtraDBCluster.Payload.ConnectionCredentials.Username, "root")
 		assert.Equal(t, xtraDBCluster.Payload.ConnectionCredentials.Host, "first-pxc-test-proxysql")
-		assert.Equal(t, xtraDBCluster.Payload.ConnectionCredentials.Port, 3306)
-
-		restartXtraDBClusterParamsParam := xtra_db_cluster.RestartXtraDBClusterParams{
-			Context: pmmapitests.Context,
-			Body: xtra_db_cluster.RestartXtraDBClusterBody{
-				KubernetesClusterName: kubernetesClusterName,
-				Name:                  "first-pxc-test",
-			},
-		}
-		_, err := dbaasClient.Default.XtraDBCluster.RestartXtraDBCluster(&restartXtraDBClusterParamsParam)
-		assert.NoError(t, err)
+		assert.Equal(t, xtraDBCluster.Payload.ConnectionCredentials.Port, int32(3306))
 
 		paramsUpdatePXC := xtra_db_cluster.UpdateXtraDBClusterParams{
 			Context: pmmapitests.Context,
@@ -144,7 +138,7 @@ func TestXtraDBClusterServer(t *testing.T) {
 		}
 
 		_, err = dbaasClient.Default.XtraDBCluster.UpdateXtraDBCluster(&paramsUpdatePXC)
-		pmmapitests.AssertAPIErrorf(t, err, 501, codes.Unimplemented, `This method is not implemented yet.`)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `invalid field Params.Pxc.DiskSize: value '0' must be greater than '0'`)
 
 		for _, pxc := range xtraDBClusters.Payload.Clusters {
 			if pxc.Name == "" {
@@ -160,6 +154,17 @@ func TestXtraDBClusterServer(t *testing.T) {
 			_, err := dbaasClient.Default.XtraDBCluster.DeleteXtraDBCluster(&deleteXtraDBClusterParamsParam)
 			assert.NoError(t, err)
 		}
+
+		t.Skip("Skip restart till better implementation. https://jira.percona.com/browse/PMM-6980")
+		restartXtraDBClusterParamsParam := xtra_db_cluster.RestartXtraDBClusterParams{
+			Context: pmmapitests.Context,
+			Body: xtra_db_cluster.RestartXtraDBClusterBody{
+				KubernetesClusterName: kubernetesClusterName,
+				Name:                  "first-pxc-test",
+			},
+		}
+		_, err = dbaasClient.Default.XtraDBCluster.RestartXtraDBCluster(&restartXtraDBClusterParamsParam)
+		assert.NoError(t, err)
 	})
 
 	t.Run("CreateXtraDBClusterEmptyName", func(t *testing.T) {

@@ -3,6 +3,7 @@ package server
 import (
 	"archive/zip"
 	"bytes"
+	"os"
 	"sort"
 	"testing"
 
@@ -64,6 +65,12 @@ func TestDownloadLogs(t *testing.T) {
 		"victoriametrics.log",
 		"victoriametrics_targets.json",
 		"vmalert.log",
+	}
+
+	if os.Getenv("PERCONA_TEST_DBAAS") == "1" {
+		t.Skip("PERCONA_TEST_DBAAS env variable is not passed, skipping")
+		expected = append(expected[:10], "dbaas-controller.log")
+		expected = append(expected, expected[10:]...)
 	}
 
 	actual := make([]string, len(zipR.File))

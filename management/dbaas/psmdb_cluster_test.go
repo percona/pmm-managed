@@ -33,9 +33,10 @@ func TestPSMDBClusterServer(t *testing.T) {
 					ClusterSize: 3,
 					Replicaset: &psmdbcluster.CreatePSMDBClusterParamsBodyParamsReplicaset{
 						ComputeResources: &psmdbcluster.CreatePSMDBClusterParamsBodyParamsReplicasetComputeResources{
-							CPUm:        1,
-							MemoryBytes: "64",
+							CPUm:        500,
+							MemoryBytes: "1000000000",
 						},
+						DiskSize: "1000000000",
 					},
 				},
 			},
@@ -54,9 +55,10 @@ func TestPSMDBClusterServer(t *testing.T) {
 					ClusterSize: 1,
 					Replicaset: &psmdbcluster.CreatePSMDBClusterParamsBodyParamsReplicaset{
 						ComputeResources: &psmdbcluster.CreatePSMDBClusterParamsBodyParamsReplicasetComputeResources{
-							CPUm:        1,
-							MemoryBytes: "64",
+							CPUm:        500,
+							MemoryBytes: "1000000000",
 						},
+						DiskSize: "1000000000",
 					},
 				},
 			},
@@ -103,7 +105,7 @@ func TestPSMDBClusterServer(t *testing.T) {
 		}
 
 		_, err = dbaasClient.Default.PSMDBCluster.UpdatePSMDBCluster(&paramsUpdatePSMDB)
-		pmmapitests.AssertAPIErrorf(t, err, 501, codes.Unimplemented, `This method is not implemented yet.`)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `invalid field Params.Replicaset.DiskSize: value '0' must be greater than '0'`)
 
 		for _, psmdb := range xtraDBClusters.Payload.Clusters {
 			if psmdb.Name == "" {
@@ -137,10 +139,11 @@ func TestPSMDBClusterServer(t *testing.T) {
 			Replicaset: "rs0",
 		}, cluster.Payload.ConnectionCredentials)
 
-		cluster, err := dbaasClient.Default.PSMDBCluster.RestartPSMDBCluster(&psmdbcluster.RestartPSMDBClusterParams{
+		t.Skip("Skip restart till better implementation. https://jira.percona.com/browse/PMM-6980")
+		_, err = dbaasClient.Default.PSMDBCluster.RestartPSMDBCluster(&psmdbcluster.RestartPSMDBClusterParams{
 			Body: psmdbcluster.RestartPSMDBClusterBody{
 				KubernetesClusterName: psmdbKubernetesClusterName,
-				Name:                  "second-psmdb-test",
+				Name:                  "first-psmdb-test",
 			},
 			Context: pmmapitests.Context,
 		})
@@ -165,7 +168,7 @@ func TestPSMDBClusterServer(t *testing.T) {
 			},
 		}
 		_, err := dbaasClient.Default.PSMDBCluster.CreatePSMDBCluster(&paramsPSMDBEmptyName)
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `invalid field Name: value '' must not be an empty string`)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `invalid field Name: value '' must be a string conforming to regex "^[a-z]([-a-z0-9]*[a-z0-9])?$"`)
 	})
 
 	t.Run("CreatePSMDBClusterInvalidName", func(t *testing.T) {
@@ -187,7 +190,7 @@ func TestPSMDBClusterServer(t *testing.T) {
 		}
 		_, err := dbaasClient.Default.PSMDBCluster.CreatePSMDBCluster(&paramsPSMDBInvalidName)
 		assert.Error(t, err)
-		assert.Equal(t, 500, err.(pmmapitests.ErrorResponse).Code())
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `invalid field Name: value '123_asd' must be a string conforming to regex "^[a-z]([-a-z0-9]*[a-z0-9])?$"`)
 	})
 
 	t.Run("ListUnknownCluster", func(t *testing.T) {
