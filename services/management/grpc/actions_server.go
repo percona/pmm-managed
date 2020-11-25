@@ -309,44 +309,50 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 		return nil, err
 	}
 
-	agents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, service.NodeID)
+	pmmagents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, service.NodeID)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "No pmm-agent running on this node")
 	}
 
-	agentID, err := models.FindPmmAgentIDToRunAction(req.PmmAgentId, agents)
+	pmmAgentID, err := models.FindPmmAgentIDToRunAction(req.PmmAgentId, pmmagents)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := models.CreateActionResult(s.db.Querier, agentID)
+	res, err := models.CreateActionResult(s.db.Querier, pmmAgentID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Exporters to be filtered by service ID and agent type
-	agentFilterStruc := models.AgentFilters{ServiceID: req.ServiceId, AgentType: pointerToAgentType(models.MySQLdExporterType)}
+	agentFilter := models.AgentFilters{ServiceID: req.ServiceId, AgentType: pointerToAgentType(models.MySQLdExporterType)}
 
 	// Need to get the mysql exporters to get the username and password therefrom
-	pExportersStruc, err := models.FindAgents(s.db.Querier, agentFilterStruc)
+	mysqdExporters, err := models.FindAgents(s.db.Querier, agentFilter)
 	if err != nil {
 		return nil, err
 	}
 
+	exportersCount := len(mysqdExporters)
+
 	// Must be only one result
-	if len(pExportersStruc) != 1 {
-		return nil, status.Errorf(codes.NotFound, "No mysql exporter")
+	if exportersCount != 1 {
+		if exportersCount == 0 {
+			return nil, status.Errorf(codes.NotFound, "No mysql exporter")
+		} else {
+			return nil, status.Errorf(codes.OutOfRange, "Found more than one mysql exporter")
+		}
 	}
 
 	// Starts the pt-mysql-summary with the host address, port, socket, mysql username and password
-	err = s.r.StartPTMySQLSummaryAction(ctx, res.ID, agentID, pointer.GetString(service.Address), pointer.GetUint16(service.Port),
-		pointer.GetString(service.Socket), pointer.GetString(pExportersStruc[0].Username),
-		pointer.GetString(pExportersStruc[0].Password))
+	err = s.r.StartPTMySQLSummaryAction(ctx, res.ID, pmmAgentID, pointer.GetString(service.Address), pointer.GetUint16(service.Port),
+		pointer.GetString(service.Socket), pointer.GetString(mysqdExporters[0].Username),
+		pointer.GetString(mysqdExporters[0].Password))
 	if err != nil {
 		return nil, err
 	}
 
-	return &managementpb.StartPTMySQLSummaryActionResponse{PmmAgentId: agentID, ActionId: res.ID}, nil
+	return &managementpb.StartPTMySQLSummaryActionResponse{PmmAgentId: pmmAgentID, ActionId: res.ID}, nil
 }
 
 // CancelAction stops an Action.
