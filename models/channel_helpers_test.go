@@ -127,185 +127,169 @@ func TestChannelValidation(t *testing.T) {
 		name     string
 		channel  models.Channel
 		errorMsg string
-	}{
-		{
-			name: "normal",
-			channel: models.Channel{
-				ID:   "some_id",
-				Type: models.Email,
-				EmailConfig: &models.EmailConfig{
-					To: []string{"test@test.test"},
-				},
-				Disabled: false,
+	}{{
+		name: "normal",
+		channel: models.Channel{
+			ID:   "some_id",
+			Type: models.Email,
+			EmailConfig: &models.EmailConfig{
+				To: []string{"test@test.test"},
 			},
-			errorMsg: "",
+			Disabled: false,
 		},
-		{
-			name: "missing id",
-			channel: models.Channel{
-				ID:   "",
-				Type: models.Email,
-				EmailConfig: &models.EmailConfig{
-					To: []string{"test@test.test"},
-				},
-				Disabled: false,
+		errorMsg: "",
+	}, {
+		name: "missing id",
+		channel: models.Channel{
+			ID:   "",
+			Type: models.Email,
+			EmailConfig: &models.EmailConfig{
+				To: []string{"test@test.test"},
 			},
-			errorMsg: "notification channel id is empty",
+			Disabled: false,
 		},
-		{
-			name: "unknown type",
-			channel: models.Channel{
-				ID:   "some_id",
-				Type: "qwerty",
-				EmailConfig: &models.EmailConfig{
-					To: []string{"test@test.test"},
-				},
-				Disabled: false,
+		errorMsg: "rpc error: code = InvalidArgument desc = Notification channel id is empty",
+	}, {
+		name: "unknown type",
+		channel: models.Channel{
+			ID:   "some_id",
+			Type: "qwerty",
+			EmailConfig: &models.EmailConfig{
+				To: []string{"test@test.test"},
 			},
-			errorMsg: "unknown channel type qwerty",
+			Disabled: false,
 		},
-		{
-			name: "missing type",
-			channel: models.Channel{
-				ID:   "some_id",
-				Type: "",
-				EmailConfig: &models.EmailConfig{
-					To: []string{"test@test.test"},
-				},
-				Disabled: false,
+		errorMsg: "rpc error: code = InvalidArgument desc = Unknown channel type qwerty",
+	}, {
+		name: "missing type",
+		channel: models.Channel{
+			ID:   "some_id",
+			Type: "",
+			EmailConfig: &models.EmailConfig{
+				To: []string{"test@test.test"},
 			},
-			errorMsg: "notification channel type is empty",
+			Disabled: false,
 		},
-		{
-			name: "missing email config",
-			channel: models.Channel{
-				ID:          "some_id",
-				Type:        models.Email,
-				EmailConfig: nil,
-				Disabled:    false,
+		errorMsg: "rpc error: code = InvalidArgument desc = Notification channel type is empty",
+	}, {
+		name: "missing email config",
+		channel: models.Channel{
+			ID:          "some_id",
+			Type:        models.Email,
+			EmailConfig: nil,
+			Disabled:    false,
+		},
+		errorMsg: "rpc error: code = InvalidArgument desc = Email config is empty",
+	}, {
+		name: "missing pager duty config",
+		channel: models.Channel{
+			ID:              "some_id",
+			Type:            models.PagerDuty,
+			PagerDutyConfig: nil,
+			Disabled:        false,
+		},
+		errorMsg: "rpc error: code = InvalidArgument desc = Pager duty config is empty",
+	}, {
+		name: "missing slack config",
+		channel: models.Channel{
+			ID:       "some_id",
+			Type:     models.Slack,
+			Disabled: false,
+		},
+		errorMsg: "rpc error: code = InvalidArgument desc = Slack config is empty",
+	}, {
+		name: "missing webhook config",
+		channel: models.Channel{
+			ID:       "some_id",
+			Type:     models.WebHook,
+			Disabled: false,
+		},
+		errorMsg: "rpc error: code = InvalidArgument desc = Webhook config is empty",
+	}, {
+		name: "missing to field in email configuration",
+		channel: models.Channel{
+			ID:   "some_id",
+			Type: models.Email,
+			EmailConfig: &models.EmailConfig{
+				To: nil,
 			},
-			errorMsg: "email config is empty",
+			Disabled: false,
 		},
-		{
-			name: "missing pager duty config",
-			channel: models.Channel{
-				ID:              "some_id",
-				Type:            models.PagerDuty,
-				PagerDutyConfig: nil,
-				Disabled:        false,
+		errorMsg: "rpc error: code = InvalidArgument desc = Email to field is empty",
+	}, {
+		name: "missing routing key in pager duty config",
+		channel: models.Channel{
+			ID:   "some_id",
+			Type: models.PagerDuty,
+			PagerDutyConfig: &models.PagerDutyConfig{
+				SendResolved: false,
+				RoutingKey:   "",
+				ServiceKey:   "some key",
 			},
-			errorMsg: "pager duty config is empty",
+			Disabled: false,
 		},
-		{
-			name: "missing slack config",
-			channel: models.Channel{
-				ID:       "some_id",
-				Type:     models.Slack,
-				Disabled: false,
+		errorMsg: "rpc error: code = InvalidArgument desc = Pager duty routing key is empty",
+	}, {
+		name: "missing service key in pager duty config",
+		channel: models.Channel{
+			ID:   "some_id",
+			Type: models.PagerDuty,
+			PagerDutyConfig: &models.PagerDutyConfig{
+				SendResolved: false,
+				RoutingKey:   "some key",
+				ServiceKey:   "",
 			},
-			errorMsg: "slack config is empty",
+			Disabled: false,
 		},
-		{
-			name: "missing webhook config",
-			channel: models.Channel{
-				ID:       "some_id",
-				Type:     models.WebHook,
-				Disabled: false,
+		errorMsg: "rpc error: code = InvalidArgument desc = Pager duty service key is empty",
+	}, {
+		name: "missing channel in slack configuration",
+		channel: models.Channel{
+			ID:   "some_id",
+			Type: models.Slack,
+			SlackConfig: &models.SlackConfig{
+				Channel: "",
 			},
-			errorMsg: "webhook config is empty",
+			Disabled: false,
 		},
-		{
-			name: "missing to field in email configuration",
-			channel: models.Channel{
-				ID:   "some_id",
-				Type: models.Email,
-				EmailConfig: &models.EmailConfig{
-					To: nil,
-				},
-				Disabled: false,
+		errorMsg: "rpc error: code = InvalidArgument desc = Slack channel field is empty",
+	}, {
+		name: "missing url in webhook configuration",
+		channel: models.Channel{
+			ID:   "some_id",
+			Type: models.WebHook,
+			WebHookConfig: &models.WebHookConfig{
+				URL: "",
 			},
-			errorMsg: "email to field is empty",
+			Disabled: false,
 		},
-		{
-			name: "missing routing key in pager duty config",
-			channel: models.Channel{
-				ID:   "some_id",
-				Type: models.PagerDuty,
-				PagerDutyConfig: &models.PagerDutyConfig{
-					SendResolved: false,
-					RoutingKey:   "",
-					ServiceKey:   "some key",
-				},
-				Disabled: false,
+		errorMsg: "rpc error: code = InvalidArgument desc = Webhook url field is empty",
+	}, {
+		name: "type doesn't match actual configuration",
+		channel: models.Channel{
+			ID:   "some_id",
+			Type: models.Slack,
+			EmailConfig: &models.EmailConfig{
+				To: []string{"test@test.test"},
 			},
-			errorMsg: "pager duty routing key is empty",
+			Disabled: false,
 		},
-		{
-			name: "missing service key in pager duty config",
-			channel: models.Channel{
-				ID:   "some_id",
-				Type: models.PagerDuty,
-				PagerDutyConfig: &models.PagerDutyConfig{
-					SendResolved: false,
-					RoutingKey:   "some key",
-					ServiceKey:   "",
-				},
-				Disabled: false,
+		errorMsg: "rpc error: code = InvalidArgument desc = Slack channel should has only slack configuration",
+	}, {
+		name: "multiple configurations",
+		channel: models.Channel{
+			ID:   "some_id",
+			Type: models.Email,
+			EmailConfig: &models.EmailConfig{
+				To: []string{"test@test.test"},
 			},
-			errorMsg: "pager duty service key is empty",
-		},
-		{
-			name: "missing channel in slack configuration",
-			channel: models.Channel{
-				ID:   "some_id",
-				Type: models.Slack,
-				SlackConfig: &models.SlackConfig{
-					Channel: "",
-				},
-				Disabled: false,
+			WebHookConfig: &models.WebHookConfig{
+				URL: "example.com",
 			},
-			errorMsg: "slack channel field is empty",
+			Disabled: false,
 		},
-		{
-			name: "missing url in webhook configuration",
-			channel: models.Channel{
-				ID:   "some_id",
-				Type: models.WebHook,
-				WebHookConfig: &models.WebHookConfig{
-					URL: "",
-				},
-				Disabled: false,
-			},
-			errorMsg: "webhook url field is empty",
-		},
-		{
-			name: "type doesn't match actual configuration",
-			channel: models.Channel{
-				ID:   "some_id",
-				Type: models.Slack,
-				EmailConfig: &models.EmailConfig{
-					To: []string{"test@test.test"},
-				},
-				Disabled: false,
-			},
-			errorMsg: "slack channel should has only slack configuration",
-		},
-		{
-			name: "multiple configurations",
-			channel: models.Channel{
-				ID:   "some_id",
-				Type: models.Email,
-				EmailConfig: &models.EmailConfig{
-					To: []string{"test@test.test"},
-				},
-				WebHookConfig: &models.WebHookConfig{
-					URL: "example.com",
-				},
-				Disabled: false,
-			},
-			errorMsg: "email channel should has only email configuration",
-		},
-	}
+		errorMsg: "rpc error: code = InvalidArgument desc = Email channel should has only email configuration",
+	}}
 
 	for _, test := range tests {
 		test := test

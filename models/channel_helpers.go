@@ -21,13 +21,15 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 )
 
 // SaveChannel persists notification channel.
 func SaveChannel(q reform.DBTX, c *Channel) error {
 	if err := ValidateChannel(c); err != nil {
-		return errors.Wrap(err, "channel validation failed")
+		return err
 	}
 
 	b, err := json.Marshal(c)
@@ -109,48 +111,48 @@ func GetChannels(q reform.DBTX) ([]Channel, error) {
 // ValidateChannel validates notification channel.
 func ValidateChannel(ch *Channel) error {
 	if ch.ID == "" {
-		return &ValidationError{msg: "notification channel id is empty"}
+		return status.Error(codes.InvalidArgument, "Notification channel id is empty")
 	}
 
 	switch ch.Type {
 	case Email:
 		if ch.SlackConfig != nil || ch.WebHookConfig != nil || ch.PagerDutyConfig != nil {
-			return &ValidationError{msg: "email channel should has only email configuration"}
+			return status.Error(codes.InvalidArgument, "Email channel should has only email configuration")
 		}
 
 		return validateEmailConfig(ch.EmailConfig)
 	case PagerDuty:
 		if ch.EmailConfig != nil || ch.SlackConfig != nil || ch.WebHookConfig != nil {
-			return &ValidationError{msg: "pager duty channel should has only email configuration"}
+			return status.Error(codes.InvalidArgument, "Pager duty channel should has only email configuration")
 		}
 
 		return validatePagerDutyConfig(ch.PagerDutyConfig)
 	case Slack:
 		if ch.EmailConfig != nil || ch.WebHookConfig != nil || ch.PagerDutyConfig != nil {
-			return &ValidationError{msg: "slack channel should has only slack configuration"}
+			return status.Error(codes.InvalidArgument, "Slack channel should has only slack configuration")
 		}
 
 		return validateSlackConfig(ch.SlackConfig)
 	case WebHook:
 		if ch.SlackConfig != nil || ch.EmailConfig != nil || ch.PagerDutyConfig != nil {
-			return &ValidationError{msg: "webhook channel should has only webhook configuration"}
+			return status.Error(codes.InvalidArgument, "Webhook channel should has only webhook configuration")
 		}
 
 		return validateWebHookConfig(ch.WebHookConfig)
 	case "":
-		return &ValidationError{msg: "notification channel type is empty"}
+		return status.Error(codes.InvalidArgument, "Notification channel type is empty")
 	default:
-		return &ValidationError{msg: fmt.Sprintf("unknown channel type %s", ch.Type)}
+		return status.Error(codes.InvalidArgument, fmt.Sprintf("Unknown channel type %s", ch.Type))
 	}
 }
 
 func validateEmailConfig(c *EmailConfig) error {
 	if c == nil {
-		return &ValidationError{msg: "email config is empty"}
+		return status.Error(codes.InvalidArgument, "Email config is empty")
 	}
 
 	if len(c.To) == 0 {
-		return &ValidationError{msg: "email to field is empty"}
+		return status.Error(codes.InvalidArgument, "Email to field is empty")
 	}
 
 	return nil
@@ -158,15 +160,15 @@ func validateEmailConfig(c *EmailConfig) error {
 
 func validatePagerDutyConfig(c *PagerDutyConfig) error {
 	if c == nil {
-		return &ValidationError{msg: "pager duty config is empty"}
+		return status.Error(codes.InvalidArgument, "Pager duty config is empty")
 	}
 
 	if c.RoutingKey == "" {
-		return &ValidationError{msg: "pager duty routing key is empty"}
+		return status.Error(codes.InvalidArgument, "Pager duty routing key is empty")
 	}
 
 	if c.ServiceKey == "" {
-		return &ValidationError{msg: "pager duty service key is empty"}
+		return status.Error(codes.InvalidArgument, "Pager duty service key is empty")
 	}
 
 	return nil
@@ -174,11 +176,11 @@ func validatePagerDutyConfig(c *PagerDutyConfig) error {
 
 func validateSlackConfig(c *SlackConfig) error {
 	if c == nil {
-		return &ValidationError{msg: "slack config is empty"}
+		return status.Error(codes.InvalidArgument, "Slack config is empty")
 	}
 
 	if c.Channel == "" {
-		return &ValidationError{msg: "slack channel field is empty"}
+		return status.Error(codes.InvalidArgument, "Slack channel field is empty")
 	}
 
 	return nil
@@ -186,11 +188,11 @@ func validateSlackConfig(c *SlackConfig) error {
 
 func validateWebHookConfig(c *WebHookConfig) error {
 	if c == nil {
-		return &ValidationError{msg: "webhook config is empty"}
+		return status.Error(codes.InvalidArgument, "Webhook config is empty")
 	}
 
 	if c.URL == "" {
-		return &ValidationError{msg: "webhook url field is empty"}
+		return status.Error(codes.InvalidArgument, "Webhook url field is empty")
 	}
 
 	return nil
