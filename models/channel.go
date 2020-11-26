@@ -38,8 +38,9 @@ const (
 // Channel represents notification channel configuration.
 //reform:notification_channels
 type Channel struct {
-	ID   string      `reform:"id,pk"`
-	Type ChannelType `reform:"type"`
+	ID      string      `reform:"id,pk"`
+	Summary string      `reform:"summary"`
+	Type    ChannelType `reform:"type"`
 
 	EmailConfig     *EmailConfig     `reform:"email_config"`
 	PagerDutyConfig *PagerDutyConfig `reform:"pagerduty_config"`

@@ -21,8 +21,8 @@ import "github.com/percona/pmm-managed/models"
 // alertingService is a subset of methods of ia.Service used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
 type alertingService interface {
-	AddChannel(ch *models.Channel) error
-	ChangeChannel(ch *models.Channel) error
+	AddChannel(params *models.CreateChannelParams) error
+	ChangeChannel(channelID string, params *models.ChangeChannelParams) error
 	RemoveChannel(id string) error
 	ListChannels() ([]models.Channel, error)
 }

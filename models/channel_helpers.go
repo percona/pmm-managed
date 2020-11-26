@@ -24,6 +24,10 @@ import (
 	"gopkg.in/reform.v1"
 )
 
+var (
+	invalidConfigurationError = status.Error(codes.InvalidArgument, "Channel should contain only one type of channel configuration.")
+)
+
 func checkUniqueChannelID(q *reform.Querier, id string) error {
 	if id == "" {
 		panic("empty Channel ID")
@@ -43,11 +47,11 @@ func checkUniqueChannelID(q *reform.Querier, id string) error {
 
 func checkEmailConfig(c *EmailConfig) error {
 	if c == nil {
-		return status.Error(codes.InvalidArgument, "Email config is empty")
+		return status.Error(codes.InvalidArgument, "Email config is empty.")
 	}
 
 	if len(c.To) == 0 {
-		return status.Error(codes.InvalidArgument, "Email to field is empty")
+		return status.Error(codes.InvalidArgument, "Email to field is empty.")
 	}
 
 	return nil
@@ -55,11 +59,11 @@ func checkEmailConfig(c *EmailConfig) error {
 
 func checkPagerDutyConfig(c *PagerDutyConfig) error {
 	if c == nil {
-		return status.Error(codes.InvalidArgument, "Pager duty config is empty")
+		return status.Error(codes.InvalidArgument, "Pager duty config is empty.")
 	}
 
 	if (c.RoutingKey == "" && c.ServiceKey == "") || (c.RoutingKey != "" && c.ServiceKey != "") {
-		return status.Error(codes.InvalidArgument, "Exactly one key should be present in pager duty configuration")
+		return status.Error(codes.InvalidArgument, "Exactly one key should be present in pager duty configuration.")
 	}
 
 	return nil
@@ -67,11 +71,11 @@ func checkPagerDutyConfig(c *PagerDutyConfig) error {
 
 func checkSlackConfig(c *SlackConfig) error {
 	if c == nil {
-		return status.Error(codes.InvalidArgument, "Slack config is empty")
+		return status.Error(codes.InvalidArgument, "Slack config is empty.")
 	}
 
 	if c.Channel == "" {
-		return status.Error(codes.InvalidArgument, "Slack channel field is empty")
+		return status.Error(codes.InvalidArgument, "Slack channel field is empty.")
 	}
 
 	return nil
@@ -79,11 +83,11 @@ func checkSlackConfig(c *SlackConfig) error {
 
 func checkWebHookConfig(c *WebHookConfig) error {
 	if c == nil {
-		return status.Error(codes.InvalidArgument, "Webhook config is empty")
+		return status.Error(codes.InvalidArgument, "Webhook config is empty.")
 	}
 
 	if c.URL == "" {
-		return status.Error(codes.InvalidArgument, "Webhook url field is empty")
+		return status.Error(codes.InvalidArgument, "Webhook url field is empty.")
 	}
 
 	return nil
@@ -93,7 +97,7 @@ func checkWebHookConfig(c *WebHookConfig) error {
 func FindChannels(q *reform.Querier) ([]Channel, error) {
 	structs, err := q.SelectAllFrom(ChannelTable, "")
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to select notification channels")
+		return nil, errors.Wrap(err, "failed to select notification channels.")
 
 	}
 
@@ -124,7 +128,10 @@ func FindChannelByID(q *reform.Querier, id string) (*Channel, error) {
 	}
 }
 
+// CreateChannelParams are params for creating new channel.
 type CreateChannelParams struct {
+	Summary string
+
 	EmailConfig     *EmailConfig
 	PagerDutyConfig *PagerDutyConfig
 	SlackConfig     *SlackConfig
@@ -141,8 +148,13 @@ func CreateChannel(q *reform.Querier, params *CreateChannelParams) (*Channel, er
 		return nil, err
 	}
 
+	if params.Summary == "" {
+		return nil, status.Error(codes.InvalidArgument, "Channel summary can't be empty.")
+	}
+
 	row := &Channel{
 		ID:       id,
+		Summary:  params.Summary,
 		Disabled: params.Disabled,
 	}
 
@@ -156,7 +168,7 @@ func CreateChannel(q *reform.Querier, params *CreateChannelParams) (*Channel, er
 
 	if params.PagerDutyConfig != nil {
 		if row.Type != "" {
-			return nil, status.Error(codes.InvalidArgument, "Request should contain only one type of channel configuration")
+			return nil, invalidConfigurationError
 		}
 
 		if err := checkPagerDutyConfig(params.PagerDutyConfig); err != nil {
@@ -168,7 +180,7 @@ func CreateChannel(q *reform.Querier, params *CreateChannelParams) (*Channel, er
 
 	if params.SlackConfig != nil {
 		if row.Type != "" {
-			return nil, status.Error(codes.InvalidArgument, "Request should contain only one type of channel configuration")
+			return nil, invalidConfigurationError
 		}
 		if err := checkSlackConfig(params.SlackConfig); err != nil {
 			return nil, err
@@ -179,7 +191,7 @@ func CreateChannel(q *reform.Querier, params *CreateChannelParams) (*Channel, er
 
 	if params.WebHookConfig != nil {
 		if row.Type != "" {
-			return nil, status.Error(codes.InvalidArgument, "Request should contain only one type of channel configuration")
+			return nil, invalidConfigurationError
 		}
 		if err := checkWebHookConfig(params.WebHookConfig); err != nil {
 			return nil, err
@@ -189,7 +201,7 @@ func CreateChannel(q *reform.Querier, params *CreateChannelParams) (*Channel, er
 	}
 
 	if row.Type == "" {
-		return nil, status.Error(codes.InvalidArgument, "Missing channel configuration")
+		return nil, status.Error(codes.InvalidArgument, "Missing channel configuration.")
 	}
 
 	err := q.Insert(row)
@@ -200,6 +212,7 @@ func CreateChannel(q *reform.Querier, params *CreateChannelParams) (*Channel, er
 	return row, nil
 }
 
+// ChangeChannelParams is params for changing existing channel.
 type ChangeChannelParams struct {
 	EmailConfig     *EmailConfig
 	PagerDutyConfig *PagerDutyConfig
@@ -232,7 +245,7 @@ func ChangeChannel(q *reform.Querier, channelID string, params *ChangeChannelPar
 
 	if params.PagerDutyConfig != nil {
 		if row.Type != "" {
-			return nil, status.Error(codes.InvalidArgument, "Request should contain only one type of channel configuration")
+			return nil, invalidConfigurationError
 		}
 
 		if err := checkPagerDutyConfig(params.PagerDutyConfig); err != nil {
@@ -244,7 +257,7 @@ func ChangeChannel(q *reform.Querier, channelID string, params *ChangeChannelPar
 
 	if params.SlackConfig != nil {
 		if row.Type != "" {
-			return nil, status.Error(codes.InvalidArgument, "Request should contain only one type of channel configuration")
+			return nil, invalidConfigurationError
 		}
 		if err := checkSlackConfig(params.SlackConfig); err != nil {
 			return nil, err
@@ -255,7 +268,7 @@ func ChangeChannel(q *reform.Querier, channelID string, params *ChangeChannelPar
 
 	if params.WebHookConfig != nil {
 		if row.Type != "" {
-			return nil, status.Error(codes.InvalidArgument, "Request should contain only one type of channel configuration")
+			return nil, invalidConfigurationError
 		}
 		if err := checkWebHookConfig(params.WebHookConfig); err != nil {
 			return nil, err
@@ -266,7 +279,7 @@ func ChangeChannel(q *reform.Querier, channelID string, params *ChangeChannelPar
 
 	err = q.Update(row)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create notifications channel")
+		return nil, errors.Wrap(err, "failed to update notifications channel")
 	}
 
 	return row, nil

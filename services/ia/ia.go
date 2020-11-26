@@ -36,15 +36,7 @@ func New(db *reform.DB) *Service {
 }
 
 // AddChannel adds new notification channel.
-func (s *Service) AddChannel(ch *models.Channel) error {
-	params := &models.CreateChannelParams{
-		EmailConfig:     ch.EmailConfig,
-		PagerDutyConfig: ch.PagerDutyConfig,
-		SlackConfig:     ch.SlackConfig,
-		WebHookConfig:   ch.WebHookConfig,
-		Disabled:        ch.Disabled,
-	}
-
+func (s *Service) AddChannel(params *models.CreateChannelParams) error {
 	_, err := models.CreateChannel(s.db.Querier, params)
 	if err != nil {
 		return err
@@ -53,15 +45,8 @@ func (s *Service) AddChannel(ch *models.Channel) error {
 }
 
 // ChangeChannel changes existing notification channel.
-func (s *Service) ChangeChannel(ch *models.Channel) error {
-	params := &models.ChangeChannelParams{
-		EmailConfig:     ch.EmailConfig,
-		PagerDutyConfig: ch.PagerDutyConfig,
-		SlackConfig:     ch.SlackConfig,
-		WebHookConfig:   ch.WebHookConfig,
-		Disabled:        ch.Disabled,
-	}
-	_, err := models.ChangeChannel(s.db.Querier, ch.ID, params)
+func (s *Service) ChangeChannel(channelID string, params *models.ChangeChannelParams) error {
+	_, err := models.ChangeChannel(s.db.Querier, channelID, params)
 	if err != nil {
 		return err
 	}

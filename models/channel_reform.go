@@ -27,7 +27,7 @@ func (v *channelTableType) Name() string {
 
 // Columns returns a new slice of column names for that view or table in SQL database.
 func (v *channelTableType) Columns() []string {
-	return []string{"id", "type", "email_config", "pagerduty_config", "slack_config", "webhook_config", "disabled"}
+	return []string{"id", "summary", "type", "email_config", "pagerduty_config", "slack_config", "webhook_config", "disabled"}
 }
 
 // NewStruct makes a new struct for that view or table.
@@ -47,20 +47,21 @@ func (v *channelTableType) PKColumnIndex() uint {
 
 // ChannelTable represents notification_channels view or table in SQL database.
 var ChannelTable = &channelTableType{
-	s: parse.StructInfo{Type: "Channel", SQLSchema: "", SQLName: "notification_channels", Fields: []parse.FieldInfo{{Name: "ID", Type: "string", Column: "id"}, {Name: "Type", Type: "ChannelType", Column: "type"}, {Name: "EmailConfig", Type: "*EmailConfig", Column: "email_config"}, {Name: "PagerDutyConfig", Type: "*PagerDutyConfig", Column: "pagerduty_config"}, {Name: "SlackConfig", Type: "*SlackConfig", Column: "slack_config"}, {Name: "WebHookConfig", Type: "*WebHookConfig", Column: "webhook_config"}, {Name: "Disabled", Type: "bool", Column: "disabled"}}, PKFieldIndex: 0},
+	s: parse.StructInfo{Type: "Channel", SQLSchema: "", SQLName: "notification_channels", Fields: []parse.FieldInfo{{Name: "ID", Type: "string", Column: "id"}, {Name: "Summary", Type: "string", Column: "summary"}, {Name: "Type", Type: "ChannelType", Column: "type"}, {Name: "EmailConfig", Type: "*EmailConfig", Column: "email_config"}, {Name: "PagerDutyConfig", Type: "*PagerDutyConfig", Column: "pagerduty_config"}, {Name: "SlackConfig", Type: "*SlackConfig", Column: "slack_config"}, {Name: "WebHookConfig", Type: "*WebHookConfig", Column: "webhook_config"}, {Name: "Disabled", Type: "bool", Column: "disabled"}}, PKFieldIndex: 0},
 	z: new(Channel).Values(),
 }
 
 // String returns a string representation of this struct or record.
 func (s Channel) String() string {
-	res := make([]string, 7)
+	res := make([]string, 8)
 	res[0] = "ID: " + reform.Inspect(s.ID, true)
-	res[1] = "Type: " + reform.Inspect(s.Type, true)
-	res[2] = "EmailConfig: " + reform.Inspect(s.EmailConfig, true)
-	res[3] = "PagerDutyConfig: " + reform.Inspect(s.PagerDutyConfig, true)
-	res[4] = "SlackConfig: " + reform.Inspect(s.SlackConfig, true)
-	res[5] = "WebHookConfig: " + reform.Inspect(s.WebHookConfig, true)
-	res[6] = "Disabled: " + reform.Inspect(s.Disabled, true)
+	res[1] = "Summary: " + reform.Inspect(s.Summary, true)
+	res[2] = "Type: " + reform.Inspect(s.Type, true)
+	res[3] = "EmailConfig: " + reform.Inspect(s.EmailConfig, true)
+	res[4] = "PagerDutyConfig: " + reform.Inspect(s.PagerDutyConfig, true)
+	res[5] = "SlackConfig: " + reform.Inspect(s.SlackConfig, true)
+	res[6] = "WebHookConfig: " + reform.Inspect(s.WebHookConfig, true)
+	res[7] = "Disabled: " + reform.Inspect(s.Disabled, true)
 	return strings.Join(res, ", ")
 }
 
@@ -69,6 +70,7 @@ func (s Channel) String() string {
 func (s *Channel) Values() []interface{} {
 	return []interface{}{
 		s.ID,
+		s.Summary,
 		s.Type,
 		s.EmailConfig,
 		s.PagerDutyConfig,
@@ -83,6 +85,7 @@ func (s *Channel) Values() []interface{} {
 func (s *Channel) Pointers() []interface{} {
 	return []interface{}{
 		&s.ID,
+		&s.Summary,
 		&s.Type,
 		&s.EmailConfig,
 		&s.PagerDutyConfig,

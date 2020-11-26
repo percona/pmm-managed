@@ -21,8 +21,6 @@ import (
 
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/pkg/errors"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/ia"
@@ -102,45 +100,32 @@ func (s *ChannelsService) ListChannels(ctx context.Context, request *iav1beta1.L
 
 // AddChannel adds new notification channel.
 func (s *ChannelsService) AddChannel(ctx context.Context, req *iav1beta1.AddChannelRequest) (*iav1beta1.AddChannelResponse, error) {
-	channel := &models.Channel{
-		ID:       req.GetChannelId(),
+	params := &models.CreateChannelParams{
+		Summary:  req.Summary,
 		Disabled: req.GetDisabled(),
 	}
 
 	if emailConf := req.GetEmailConfig(); emailConf != nil {
-		channel.Type = models.Email
-		channel.EmailConfig = &models.EmailConfig{
+		params.EmailConfig = &models.EmailConfig{
 			SendResolved: emailConf.SendResolved,
 			To:           emailConf.To,
 		}
 	}
 	if pagerDutyConf := req.GetPagerdutyConfig(); pagerDutyConf != nil {
-		if channel.Type != "" {
-			return nil, status.Error(codes.InvalidArgument, "Request should contain only one type of channel configuration")
-		}
-		channel.Type = models.PagerDuty
-		channel.PagerDutyConfig = &models.PagerDutyConfig{
+		params.PagerDutyConfig = &models.PagerDutyConfig{
 			SendResolved: pagerDutyConf.SendResolved,
 			RoutingKey:   pagerDutyConf.RoutingKey,
 			ServiceKey:   pagerDutyConf.ServiceKey,
 		}
 	}
 	if slackConf := req.GetSlackConfig(); slackConf != nil {
-		if channel.Type != "" {
-			return nil, status.Error(codes.InvalidArgument, "Request should contain only one type of channel configuration")
-		}
-		channel.Type = models.Slack
-		channel.SlackConfig = &models.SlackConfig{
+		params.SlackConfig = &models.SlackConfig{
 			SendResolved: slackConf.SendResolved,
 			Channel:      slackConf.Channel,
 		}
 	}
 	if webhookConf := req.GetWebhookConfig(); webhookConf != nil {
-		if channel.Type != "" {
-			return nil, status.Error(codes.InvalidArgument, "Request should contain only one type of channel configuration")
-		}
-		channel.Type = models.WebHook
-		channel.WebHookConfig = &models.WebHookConfig{
+		params.WebHookConfig = &models.WebHookConfig{
 			SendResolved: webhookConf.SendResolved,
 			URL:          webhookConf.Url,
 			MaxAlerts:    webhookConf.MaxAlerts,
@@ -148,7 +133,7 @@ func (s *ChannelsService) AddChannel(ctx context.Context, req *iav1beta1.AddChan
 		}
 	}
 
-	err := s.ia.AddChannel(channel)
+	err := s.ia.AddChannel(params)
 	if err != nil {
 		return nil, err
 	}
@@ -158,45 +143,31 @@ func (s *ChannelsService) AddChannel(ctx context.Context, req *iav1beta1.AddChan
 
 // ChangeChannel changes existing notification channel.
 func (s *ChannelsService) ChangeChannel(ctx context.Context, req *iav1beta1.ChangeChannelRequest) (*iav1beta1.ChangeChannelResponse, error) {
-	channel := &models.Channel{
-		ID:       req.GetChannelId(),
+	params := &models.ChangeChannelParams{
 		Disabled: req.GetDisabled(),
 	}
 
 	if emailConf := req.GetEmailConfig(); emailConf != nil {
-		channel.Type = models.Email
-		channel.EmailConfig = &models.EmailConfig{
+		params.EmailConfig = &models.EmailConfig{
 			SendResolved: emailConf.SendResolved,
 			To:           emailConf.To,
 		}
 	}
 	if pagerDutyConf := req.GetPagerdutyConfig(); pagerDutyConf != nil {
-		if channel.Type != "" {
-			return nil, status.Error(codes.InvalidArgument, "Request should contain only one type of channel configuration")
-		}
-		channel.Type = models.PagerDuty
-		channel.PagerDutyConfig = &models.PagerDutyConfig{
+		params.PagerDutyConfig = &models.PagerDutyConfig{
 			SendResolved: pagerDutyConf.SendResolved,
 			RoutingKey:   pagerDutyConf.RoutingKey,
 			ServiceKey:   pagerDutyConf.ServiceKey,
 		}
 	}
 	if slackConf := req.GetSlackConfig(); slackConf != nil {
-		if channel.Type != "" {
-			return nil, status.Error(codes.InvalidArgument, "Request should contain only one type of channel configuration")
-		}
-		channel.Type = models.Slack
-		channel.SlackConfig = &models.SlackConfig{
+		params.SlackConfig = &models.SlackConfig{
 			SendResolved: slackConf.SendResolved,
 			Channel:      slackConf.Channel,
 		}
 	}
 	if webhookConf := req.GetWebhookConfig(); webhookConf != nil {
-		if channel.Type != "" {
-			return nil, status.Error(codes.InvalidArgument, "Request should contain only one type of channel configuration")
-		}
-		channel.Type = models.WebHook
-		channel.WebHookConfig = &models.WebHookConfig{
+		params.WebHookConfig = &models.WebHookConfig{
 			SendResolved: webhookConf.SendResolved,
 			URL:          webhookConf.Url,
 			MaxAlerts:    webhookConf.MaxAlerts,
@@ -204,7 +175,7 @@ func (s *ChannelsService) ChangeChannel(ctx context.Context, req *iav1beta1.Chan
 		}
 	}
 
-	err := s.ia.ChangeChannel(channel)
+	err := s.ia.ChangeChannel(req.ChannelId, params)
 	if err != nil {
 		return nil, err
 	}
