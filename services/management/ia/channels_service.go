@@ -30,7 +30,7 @@ import (
 
 // ChannelsService represents integrated alerting channels API.
 type ChannelsService struct {
-	ia aletringService
+	ia alertingService
 }
 
 // NewChannelsService creates new channels API service.
