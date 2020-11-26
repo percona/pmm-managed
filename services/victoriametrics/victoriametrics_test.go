@@ -643,6 +643,21 @@ scrape_configs:
 		err := svc.configAndReload(context.TODO(), []byte(`unexpected input`))
 		assert.Errorf(t, err, "error when checking Prometheus config")
 	})
+
+	t.Run("Good scrape config file with unsupported params", func(t *testing.T) {
+		err := svc.configAndReload(context.TODO(), []byte(strings.TrimSpace(`
+# Managed by pmm-managed. DO NOT EDIT.
+---
+global:
+  scrape_interval: 1m
+  scrape_timeout: 10s
+remote_write:
+- url: http://some-remote-url
+remote_read:
+- url: http://some-remote-read-url
+`)))
+		assert.NoError(t, err)
+	})
 }
 
 func TestBaseConfig(t *testing.T) {
