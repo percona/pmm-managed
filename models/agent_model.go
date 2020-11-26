@@ -18,8 +18,10 @@ package models
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/url"
+	"os"
 	"strconv"
 	"time"
 
@@ -33,6 +35,18 @@ import (
 // AgentType represents Agent type as stored in databases:
 // pmm-managed's PostgreSQL, qan-api's ClickHouse, and Prometheus.
 type AgentType string
+
+// TLSKeys represents structure for certificates.
+type TLSKeys struct {
+	TLSCertificateKey             string `json:"tls_certificate_key"`
+	TLSCertificateKeyFilePassword string `json:"tls_certificate_key_file_password"`
+	TLSCaKey                      string `json:"tls_ca_key"`
+}
+
+// ServicesTLSKeys represents services TLS keys.
+type ServicesTLSKeys struct {
+	MongoDBExporter TLSKeys `json:"mongo_db_exporter"`
+}
 
 // Agent types (in the same order as in agents.proto).
 const (
@@ -73,17 +87,11 @@ type Agent struct {
 	ListenPort *uint16 `reform:"listen_port"`
 	Version    *string `reform:"version"`
 
-	Username      *string `reform:"username"`
-	Password      *string `reform:"password"`
-	TLS           bool    `reform:"tls"`
-	TLSSkipVerify bool    `reform:"tls_skip_verify"`
-	TLSKeys       struct {
-		MongoDBExporter struct {
-			TLSCertificateKey             string `json:"tls_certificate_key"`
-			TLSCertificateKeyFilePassword string `json:"tls_certificate_key_file_password"`
-			TLSCaKey                      string `json:"tls_ca_key"`
-		} `json:"mongo_db_exporter"`
-	} `json:"tls_keys"`
+	Username        *string         `reform:"username"`
+	Password        *string         `reform:"password"`
+	TLS             bool            `reform:"tls"`
+	TLSSkipVerify   bool            `reform:"tls_skip_verify"`
+	ServicesTLSKeys ServicesTLSKeys `reform:"services_tls_keys"`
 
 	AWSAccessKey *string `reform:"aws_access_key"`
 	AWSSecretKey *string `reform:"aws_secret_key"`
@@ -255,6 +263,19 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			q.Add("ssl", "true")
 			if s.TLSSkipVerify {
 				q.Add("tlsInsecure", "true")
+			}
+			if s.ServicesTLSKeys != (ServicesTLSKeys{}) {
+				switch s.AgentType {
+				case MongoDBExporterType:
+					exporter := s.ServicesTLSKeys.MongoDBExporter
+					if exporter != (TLSKeys{}) && exporter.TLSCertificateKey != "" {
+						cert, err := ioutil.TempFile("", "cert")
+						if err == nil {
+							defer os.Remove(cert.Name())
+							q.Add("tlsCertificateKeyFile", cert.Name())
+						}
+					}
+				}
 			}
 		}
 

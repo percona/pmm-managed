@@ -442,9 +442,7 @@ type CreateAgentParams struct {
 	CustomLabels                   map[string]string
 	TLS                            bool
 	TLSSkipVerify                  bool
-	TLSCertificateKey              string
-	TLSCertificateKeyFilePassword  string
-	TLSCa                          string
+	ServicesTLSKeys                ServicesTLSKeys
 	TableCountTablestatsGroupLimit int32
 	QueryExamplesDisabled          bool
 	MaxQueryLogSize                int64
@@ -487,9 +485,7 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 		Password:                       pointer.ToStringOrNil(params.Password),
 		TLS:                            params.TLS,
 		TLSSkipVerify:                  params.TLSSkipVerify,
-		TLSCertificateKey:              params.TLSCertificateKey,
-		TLSCertificateKeyFilePassword:  params.TLSCertificateKeyFilePassword,
-		TLSCaKey:                       params.TLSCa,
+		ServicesTLSKeys:                params.ServicesTLSKeys,
 		TableCountTablestatsGroupLimit: params.TableCountTablestatsGroupLimit,
 		QueryExamplesDisabled:          params.QueryExamplesDisabled,
 		MaxQueryLogSize:                params.MaxQueryLogSize,
