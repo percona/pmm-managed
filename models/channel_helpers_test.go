@@ -53,10 +53,10 @@ func TestNotificationChannels(t *testing.T) {
 			Disabled: false,
 		}
 
-		err = models.SaveChannel(q, &c)
+		err = models.CreateChannel(q, &c)
 		require.NoError(t, err)
 
-		channels, err := models.GetChannels(q)
+		channels, err := models.FindChannels(q)
 		require.NoError(t, err)
 		require.Len(t, channels, 1)
 
@@ -81,15 +81,15 @@ func TestNotificationChannels(t *testing.T) {
 			Disabled: false,
 		}
 
-		err = models.SaveChannel(q, &c)
+		err = models.CreateChannel(q, &c)
 		require.NoError(t, err)
 
 		c.EmailConfig.To = []string{"test2@test.test"}
 
-		err = models.UpdateChannel(q, &c)
+		err = models.ChangeChannel(q, &c)
 		require.NoError(t, err)
 
-		cs, err := models.GetChannels(q)
+		cs, err := models.FindChannels(q)
 		require.NoError(t, err)
 		assert.Len(t, cs, 1)
 		assert.Equal(t, c, cs[0])
@@ -113,13 +113,13 @@ func TestNotificationChannels(t *testing.T) {
 			Disabled: false,
 		}
 
-		err = models.SaveChannel(q, &c)
+		err = models.CreateChannel(q, &c)
 		require.NoError(t, err)
 
 		err = models.RemoveChannel(q, c.ID)
 		require.NoError(t, err)
 
-		cs, err := models.GetChannels(q)
+		cs, err := models.FindChannels(q)
 		require.NoError(t, err)
 		assert.Len(t, cs, 0)
 	})
@@ -127,7 +127,11 @@ func TestNotificationChannels(t *testing.T) {
 }
 
 func TestChannelValidation(t *testing.T) {
-	t.Parallel()
+	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+	defer func() {
+		require.NoError(t, sqlDB.Close())
+	}()
+	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
 	tests := []struct {
 		name     string
@@ -301,8 +305,15 @@ func TestChannelValidation(t *testing.T) {
 		test := test
 
 		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-			err := models.ValidateChannel(&test.channel)
+			tx, err := db.Begin()
+			require.NoError(t, err)
+			defer func() {
+				require.NoError(t, tx.Rollback())
+			}()
+
+			q := tx.Querier
+
+			err = models.CreateChannel(q, &test.channel)
 			if test.errorMsg != "" {
 				assert.EqualError(t, err, test.errorMsg)
 				return

@@ -26,75 +26,8 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-// SaveChannel persists notification channel.
-func SaveChannel(q *reform.Querier, c *Channel) error {
-	if err := ValidateChannel(c); err != nil {
-		return err
-	}
-
-	nc, err := channelToNotificationChannel(c)
-	if err != nil {
-		return err
-	}
-
-	err = q.Insert(nc)
-	if err != nil {
-		return errors.Wrap(err, "failed to create notifications channel")
-	}
-
-	return nil
-}
-
-// UpdateChannel updates existing notifications channel.
-func UpdateChannel(q *reform.Querier, c *Channel) error {
-	if err := ValidateChannel(c); err != nil {
-		return errors.Wrap(err, "channel validation failed")
-	}
-
-	nc, err := channelToNotificationChannel(c)
-	if err != nil {
-		return err
-	}
-
-	err = q.Update(nc)
-	if err != nil {
-		return errors.Wrap(err, "failed to create notifications channel")
-	}
-
-	return nil
-}
-
-// RemoveChannel removes notification channel with specified id.
-func RemoveChannel(q *reform.Querier, id string) error {
-	err := q.Delete(&notificationChannel{ID: id})
-	if err != nil {
-		return errors.Wrap(err, "failed to delete notifications channel")
-	}
-	return nil
-}
-
-// GetChannels returns saved notification channels configuration.
-func GetChannels(q *reform.Querier) ([]Channel, error) {
-	structs, err := q.SelectAllFrom(notificationChannelTable, "")
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to select notification channels")
-
-	}
-
-	channels := make([]Channel, len(structs))
-	for i, s := range structs {
-		c, err := notificationChannelToChannel(s.(*notificationChannel))
-		if err != nil {
-			return nil, err
-		}
-		channels[i] = *c
-	}
-
-	return channels, nil
-}
-
-// ValidateChannel validates notification channel.
-func ValidateChannel(ch *Channel) error {
+// validateChannel validates notification channel.
+func validateChannel(ch *Channel) error {
 	if ch.ID == "" {
 		return status.Error(codes.InvalidArgument, "Notification channel id is empty")
 	}
@@ -180,6 +113,73 @@ func validateWebHookConfig(c *WebHookConfig) error {
 		return status.Error(codes.InvalidArgument, "Webhook url field is empty")
 	}
 
+	return nil
+}
+
+// FindChannels returns saved notification channels configuration.
+func FindChannels(q *reform.Querier) ([]Channel, error) {
+	structs, err := q.SelectAllFrom(notificationChannelTable, "")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to select notification channels")
+
+	}
+
+	channels := make([]Channel, len(structs))
+	for i, s := range structs {
+		c, err := notificationChannelToChannel(s.(*notificationChannel))
+		if err != nil {
+			return nil, err
+		}
+		channels[i] = *c
+	}
+
+	return channels, nil
+}
+
+// CreateChannel persists notification channel.
+func CreateChannel(q *reform.Querier, c *Channel) error {
+	if err := validateChannel(c); err != nil {
+		return err
+	}
+
+	nc, err := channelToNotificationChannel(c)
+	if err != nil {
+		return err
+	}
+
+	err = q.Insert(nc)
+	if err != nil {
+		return errors.Wrap(err, "failed to create notifications channel")
+	}
+
+	return nil
+}
+
+// ChangeChannel updates existing notifications channel.
+func ChangeChannel(q *reform.Querier, c *Channel) error {
+	if err := validateChannel(c); err != nil {
+		return errors.Wrap(err, "channel validation failed")
+	}
+
+	nc, err := channelToNotificationChannel(c)
+	if err != nil {
+		return err
+	}
+
+	err = q.Update(nc)
+	if err != nil {
+		return errors.Wrap(err, "failed to create notifications channel")
+	}
+
+	return nil
+}
+
+// RemoveChannel removes notification channel with specified id.
+func RemoveChannel(q *reform.Querier, id string) error {
+	err := q.Delete(&notificationChannel{ID: id})
+	if err != nil {
+		return errors.Wrap(err, "failed to delete notifications channel")
+	}
 	return nil
 }
 
