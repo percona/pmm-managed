@@ -22,7 +22,7 @@ import "github.com/percona/pmm-managed/models"
 // We use it instead of real type for testing and to avoid dependency cycle.
 type alertingService interface {
 	AddChannel(params *models.CreateChannelParams) error
-	ChangeChannel(channelID string, params *models.ChangeChannelParams) error
+	ChangeChannel(id string, params *models.ChangeChannelParams) error
 	RemoveChannel(id string) error
 	ListChannels() ([]models.Channel, error)
 }

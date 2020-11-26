@@ -49,9 +49,9 @@ func (s *Service) AddChannel(params *models.CreateChannelParams) error {
 }
 
 // ChangeChannel changes existing notification channel.
-func (s *Service) ChangeChannel(channelID string, params *models.ChangeChannelParams) error {
+func (s *Service) ChangeChannel(id string, params *models.ChangeChannelParams) error {
 	e := s.db.InTransaction(func(tx *reform.TX) error {
-		_, err := models.ChangeChannel(tx.Querier, channelID, params)
+		_, err := models.ChangeChannel(tx.Querier, id, params)
 		if err != nil {
 			return err
 		}
