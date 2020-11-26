@@ -27,7 +27,7 @@ func (v *alertRuleTableType) Name() string {
 
 // Columns returns a new slice of column names for that view or table in SQL database.
 func (v *alertRuleTableType) Columns() []string {
-	return []string{"template", "id", "summary", "disabled", "params", "severity", "custom_labels", "filters", "channels", "created_at"}
+	return []string{"template", "id", "summary", "disabled", "params", "for", "severity", "custom_labels", "filters", "channels", "created_at"}
 }
 
 // NewStruct makes a new struct for that view or table.
@@ -47,23 +47,24 @@ func (v *alertRuleTableType) PKColumnIndex() uint {
 
 // alertRuleTable represents alert_rules view or table in SQL database.
 var alertRuleTable = &alertRuleTableType{
-	s: parse.StructInfo{Type: "alertRule", SQLSchema: "", SQLName: "alert_rules", Fields: []parse.FieldInfo{{Name: "Template", Type: "*[]uint8", Column: "template"}, {Name: "ID", Type: "string", Column: "id"}, {Name: "Summary", Type: "string", Column: "summary"}, {Name: "Disabled", Type: "bool", Column: "disabled"}, {Name: "Params", Type: "*[]uint8", Column: "params"}, {Name: "Severity", Type: "string", Column: "severity"}, {Name: "CustomLabels", Type: "*[]uint8", Column: "custom_labels"}, {Name: "Filters", Type: "*[]uint8", Column: "filters"}, {Name: "Channels", Type: "*[]uint8", Column: "channels"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}}, PKFieldIndex: 1},
+	s: parse.StructInfo{Type: "alertRule", SQLSchema: "", SQLName: "alert_rules", Fields: []parse.FieldInfo{{Name: "Template", Type: "*[]uint8", Column: "template"}, {Name: "ID", Type: "string", Column: "id"}, {Name: "Summary", Type: "string", Column: "summary"}, {Name: "Disabled", Type: "bool", Column: "disabled"}, {Name: "Params", Type: "*[]uint8", Column: "params"}, {Name: "For", Type: "string", Column: "for"}, {Name: "Severity", Type: "string", Column: "severity"}, {Name: "CustomLabels", Type: "*[]uint8", Column: "custom_labels"}, {Name: "Filters", Type: "*[]uint8", Column: "filters"}, {Name: "Channels", Type: "*[]uint8", Column: "channels"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}}, PKFieldIndex: 1},
 	z: new(alertRule).Values(),
 }
 
 // String returns a string representation of this struct or record.
 func (s alertRule) String() string {
-	res := make([]string, 10)
+	res := make([]string, 11)
 	res[0] = "Template: " + reform.Inspect(s.Template, true)
 	res[1] = "ID: " + reform.Inspect(s.ID, true)
 	res[2] = "Summary: " + reform.Inspect(s.Summary, true)
 	res[3] = "Disabled: " + reform.Inspect(s.Disabled, true)
 	res[4] = "Params: " + reform.Inspect(s.Params, true)
-	res[5] = "Severity: " + reform.Inspect(s.Severity, true)
-	res[6] = "CustomLabels: " + reform.Inspect(s.CustomLabels, true)
-	res[7] = "Filters: " + reform.Inspect(s.Filters, true)
-	res[8] = "Channels: " + reform.Inspect(s.Channels, true)
-	res[9] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
+	res[5] = "For: " + reform.Inspect(s.For, true)
+	res[6] = "Severity: " + reform.Inspect(s.Severity, true)
+	res[7] = "CustomLabels: " + reform.Inspect(s.CustomLabels, true)
+	res[8] = "Filters: " + reform.Inspect(s.Filters, true)
+	res[9] = "Channels: " + reform.Inspect(s.Channels, true)
+	res[10] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
 	return strings.Join(res, ", ")
 }
 
@@ -76,6 +77,7 @@ func (s *alertRule) Values() []interface{} {
 		s.Summary,
 		s.Disabled,
 		s.Params,
+		s.For,
 		s.Severity,
 		s.CustomLabels,
 		s.Filters,
@@ -93,6 +95,7 @@ func (s *alertRule) Pointers() []interface{} {
 		&s.Summary,
 		&s.Disabled,
 		&s.Params,
+		&s.For,
 		&s.Severity,
 		&s.CustomLabels,
 		&s.Filters,

@@ -30,12 +30,12 @@ import (
 // alertRule represents an IA rule to be stored in the database.
 //reform:alert_rules
 type alertRule struct {
-	Template *[]byte `reform:"template"`
-	ID       string  `reform:"id,pk"`
-	Summary  string  `reform:"summary"`
-	Disabled bool    `reform:"disabled"`
-	Params   *[]byte `reform:"params"`
-	//For          string    `reform:"for"`
+	Template     *[]byte   `reform:"template"`
+	ID           string    `reform:"id,pk"`
+	Summary      string    `reform:"summary"`
+	Disabled     bool      `reform:"disabled"`
+	Params       *[]byte   `reform:"params"`
+	For          string    `reform:"for"`
 	Severity     string    `reform:"severity"`
 	CustomLabels *[]byte   `reform:"custom_labels"`
 	Filters      *[]byte   `reform:"filters"`
