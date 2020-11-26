@@ -1084,7 +1084,7 @@ func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID
 	// Action request data that'll be sent to agent
 	actionRequest := &agentpb.StartActionRequest{
 		ActionId: id,
-		// Proper params that'll will be passed to the command on the agent's side, even empty, othervise request's marshal fail.
+		// Proper params that'll will be passed to the command on the agent's side.
 		Params: &agentpb.StartActionRequest_PtMysqlSummaryParams{
 			PtMysqlSummaryParams: &agentpb.StartActionRequest_PTMySQLSummaryParams{
 				Address:  address,
