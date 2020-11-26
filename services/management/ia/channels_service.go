@@ -49,6 +49,7 @@ func (s *ChannelsService) ListChannels(ctx context.Context, request *iav1beta1.L
 	for i, channel := range channels {
 		c := &iav1beta1.Channel{
 			ChannelId: channel.ID,
+			Summary:   channel.Summary,
 			Disabled:  channel.Disabled,
 		}
 
