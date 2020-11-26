@@ -358,7 +358,7 @@ var databaseSchema = [][]string{
 			custom_labels JSONB,
 			filters JSONB,
 			channels JSONB,
-			created_at VARCHAR NOT NULL,
+			created_at TIMESTAMP NOT NULL,
 			
 			PRIMARY KEY (id)
 		)`,
