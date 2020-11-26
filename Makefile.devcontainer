@@ -83,7 +83,7 @@ run-race: install-race _run     ## Run pmm-managed with race detector.
 # 	bin/pmm-managed.test -test.coverprofile=cover.out -test.run=TestMainCover $(RUN_FLAGS)
 
 psql:                           ## Open psql shell.
-	env PGPASSWORD=pmm-managed psql -U pmm-managed pmm-managed-dev
+	env PGPASSWORD=pmm-managed psql -U pmm-managed pmm-managed
 
 travis: ci-reviewdog test-race test-cover test-crosscover
 	env PMM_TEST_FLAGS='-timeout=180s -v' \
