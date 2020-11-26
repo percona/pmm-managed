@@ -288,6 +288,7 @@ func (svc *Service) configAndReload(ctx context.Context, cfg []byte) error {
 	}()
 
 	args := []string{"-dryRun", "-promscrape.config", f.Name()}
+	// TODO replace it with victoriametrics at v1.48.0 version.
 	cmd := exec.CommandContext(ctx, "/usr/local/percona/pmm2/exporters/vmagent", args...) //nolint:gosec
 
 	pdeathsig.Set(cmd, unix.SIGKILL)
@@ -304,6 +305,13 @@ func (svc *Service) configAndReload(ctx context.Context, cfg []byte) error {
 	}
 	svc.l.Debugf("%s", b)
 
+	args = append(args, "-promscrape.config.strictParse", "true")
+	// TODO replace it with victoriametrics at v1.48.0 version.
+	cmd = exec.CommandContext(ctx, "/usr/local/percona/pmm2/exporters/vmagent", args...) //nolint:gosec
+	b, err = cmd.CombinedOutput()
+	if err != nil {
+		svc.l.Warnf("VictoriaMetircs scrape configuration contains unsupported params: %s", b)
+	}
 	restore = true
 	if err = ioutil.WriteFile(svc.scrapeConfigPath, cfg, fi.Mode()); err != nil {
 		return errors.WithStack(err)

@@ -236,7 +236,14 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*pmmAgentInfo, 
 	if err != nil {
 		return nil, err
 	}
-	runsOnNodeID, err := authenticate(agentMD, r.db.Querier)
+	var runsOnNodeID string
+	err = r.db.InTransaction(func(tx *reform.TX) error {
+		runsOnNodeID, err = authenticate(agentMD, tx.Querier)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 	if err != nil {
 		l.Warnf("Failed to authenticate connected pmm-agent %+v.", agentMD)
 		return nil, err
@@ -295,22 +302,28 @@ func authenticate(md *agentpb.AgentConnectMetadata, q *reform.Querier) (string, 
 	if err != nil {
 		return "", status.Errorf(codes.InvalidArgument, "Can't parse 'version' for pmm-agent with ID %q.", md.ID)
 	}
-	if agentVersion.Less(models.PMMAgentWithPushMetricsSupport) {
-		// ensure that vmagent not exists and agents dont have push_metrics.
-		if err := removeVMAgentFromPMMAgent(q, md.ID); err != nil {
-			return "", errors.Wrap(err, "failed remove vmagent")
-		}
-	} else {
-		if err := addVMAgentToPMMAgent(q, md.ID, pointer.GetString(agent.RunsOnNodeID)); err != nil {
-			return "", errors.Wrap(err, "failed create vmagent")
-		}
+
+	if err := addOrRemoveVMAgent(q, md.ID, pointer.GetString(agent.RunsOnNodeID), agentVersion); err != nil {
+		return "", err
 	}
+
 	agent.Version = &md.Version
 	if err := q.Update(agent); err != nil {
 		return "", errors.Wrap(err, "failed to update agent")
 	}
 
 	return pointer.GetString(agent.RunsOnNodeID), nil
+}
+
+// addOrRemoveVMAgent - creates vmAgent agentType if pmm-agent's version supports it and agent not exists yet,
+// otherwise ensures that vmAgent not exist for pmm-agent and pmm-agent's agents don't have push_metrics mode,
+// removes it if needed.
+func addOrRemoveVMAgent(q *reform.Querier, pmmAgentID, runsOnNodeID string, pmmAgentVersion *version.Parsed) error {
+	if pmmAgentVersion.Less(models.PMMAgentWithPushMetricsSupport) {
+		// ensure that vmagent not exists and agents dont have push_metrics.
+		return removeVMAgentFromPMMAgent(q, pmmAgentID)
+	}
+	return addVMAgentToPMMAgent(q, pmmAgentID, runsOnNodeID)
 }
 
 func addVMAgentToPMMAgent(q *reform.Querier, pmmAgentID, runsOnNodeID string) error {
