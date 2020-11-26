@@ -325,7 +325,8 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 	}
 
 	// Exporters to be filtered by service ID and agent type
-	agentFilter := models.AgentFilters{ServiceID: req.ServiceId, AgentType: pointerToAgentType(models.MySQLdExporterType)}
+	agentFilter := models.AgentFilters{PMMAgentID: "", NodeID: "",
+		ServiceID: req.ServiceId, AgentType: pointerToAgentType(models.MySQLdExporterType)}
 
 	// Need to get the mysql exporters to get the username and password therefrom
 	mysqdExporters, err := models.FindAgents(s.db.Querier, agentFilter)
@@ -339,9 +340,9 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 	if exportersCount != 1 {
 		if exportersCount == 0 {
 			return nil, status.Errorf(codes.NotFound, "No mysql exporter")
-		} else {
-			return nil, status.Errorf(codes.OutOfRange, "Found more than one mysql exporter")
 		}
+
+		return nil, status.Errorf(codes.OutOfRange, "Found more than one mysql exporter")
 	}
 
 	// Starts the pt-mysql-summary with the host address, port, socket, mysql username and password
