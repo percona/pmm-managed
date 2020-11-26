@@ -348,9 +348,9 @@ var databaseSchema = [][]string{
 	},
 	22: {
 		`ALTER TABLE agents
-			ADD COLUMN tls_certificate_key VARCHAR,
-			ADD COLUMN tls_certificate_key_file_password VARCHAR,
-			ADD COLUMN tls_ca_key VARCHAR`,
+			ADD COLUMN tls_certificate_key VARCHAR NOT NULL DEFAULT '',
+			ADD COLUMN tls_certificate_key_file_password VARCHAR NOT NULL DEFAULT '',
+			ADD COLUMN tls_ca_key VARCHAR NOT NULL DEFAULT ''`,
 	},
 }
 
