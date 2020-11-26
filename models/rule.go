@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package model
+package models
 
 import (
 	"github.com/golang/protobuf/ptypes/duration"
@@ -32,12 +32,12 @@ type alertRule struct {
 	Summary      string  `reform:"summary"`
 	Disabled     bool    `reform:"disabled"`
 	Params       *[]byte `reform:"params"`
-	For          *string `reform:"for"`
+	For          string  `reform:"for"`
 	Severity     string  `reform:"severity"`
 	CustomLabels *[]byte `reform:"custom_labels"`
 	Filters      *[]byte `reform:"filters"`
 	Channels     *[]byte `reform:"channels"`
-	CreatedAt    *string `reform:"created_at"`
+	CreatedAt    string  `reform:"created_at"`
 }
 
 // Rule represents alertRule configuration.

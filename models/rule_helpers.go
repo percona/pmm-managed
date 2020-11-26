@@ -75,7 +75,7 @@ func RemoveRule(q *reform.Querier, id string) error {
 
 // GetRules returns saved alert rules configuration.
 func GetRules(q *reform.Querier) ([]Rule, error) {
-	structs, err := q.SelectAllFrom(alertRulesTable, "")
+	structs, err := q.SelectAllFrom(alertRuleTable, "")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select alert rules")
 
@@ -104,7 +104,6 @@ func ValidateRule(r *Rule) error {
 func ruleToAlertRule(r *Rule) (*alertRule, error) {
 	ar := &alertRule{
 		ID:        r.ID,
-		Type:      r.Type,
 		Disabled:  r.Disabled,
 		For:       r.For.String(),
 		CreatedAt: r.CreatedAt.String(),
@@ -146,7 +145,6 @@ func ruleToAlertRule(r *Rule) (*alertRule, error) {
 func alertRuleToRule(ar *alertRule) (*Rule, error) {
 	r := &Rule{
 		ID:       ar.ID,
-		Type:     ar.Type,
 		Disabled: ar.Disabled,
 	}
 
@@ -156,7 +154,7 @@ func alertRuleToRule(ar *alertRule) (*Rule, error) {
 		return nil, errors.Wrap(err, "failed to marshall template")
 	}
 
-	r.Params = &[]iav1beta1.Params{}
+	r.Params = &[]iav1beta1.RuleParam{}
 	err = json.Unmarshal(*ar.Params, r.Params)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshall params")
@@ -168,7 +166,7 @@ func alertRuleToRule(ar *alertRule) (*Rule, error) {
 		return nil, errors.Wrap(err, "failed to marshall filters")
 	}
 
-	r.Channels = &[]iav1beta1.Channels{}
+	r.Channels = &[]iav1beta1.Channel{}
 	err = json.Unmarshal(*ar.Channels, r.Channels)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshall channels")
