@@ -77,8 +77,7 @@ type Agent struct {
 	Password      *string `reform:"password"`
 	TLS           bool    `reform:"tls"`
 	TLSSkipVerify bool    `reform:"tls_skip_verify"`
-	// Saas config options
-	TLSKeys struct {
+	TLSKeys       struct {
 		MongoDBExporter struct {
 			TLSCertificateKey             string `json:"tls_certificate_key"`
 			TLSCertificateKeyFilePassword string `json:"tls_certificate_key_file_password"`
