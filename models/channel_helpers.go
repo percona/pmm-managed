@@ -58,12 +58,8 @@ func checkPagerDutyConfig(c *PagerDutyConfig) error {
 		return status.Error(codes.InvalidArgument, "Pager duty config is empty")
 	}
 
-	if c.RoutingKey == "" {
-		return status.Error(codes.InvalidArgument, "Pager duty routing key is empty")
-	}
-
-	if c.ServiceKey == "" {
-		return status.Error(codes.InvalidArgument, "Pager duty service key is empty")
+	if (c.RoutingKey == "" && c.ServiceKey == "") || (c.RoutingKey != "" && c.ServiceKey != "") {
+		return status.Error(codes.InvalidArgument, "Exactly one key should be present in pager duty configuration")
 	}
 
 	return nil

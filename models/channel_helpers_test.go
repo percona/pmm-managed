@@ -136,10 +136,38 @@ func TestChannelValidation(t *testing.T) {
 		channel  models.CreateChannelParams
 		errorMsg string
 	}{{
-		name: "normal",
+		name: "normal email config",
 		channel: models.CreateChannelParams{
 			EmailConfig: &models.EmailConfig{
 				To: []string{"test@test.test"},
+			},
+			Disabled: false,
+		},
+		errorMsg: "",
+	}, {
+		name: "normal pager duty config",
+		channel: models.CreateChannelParams{
+			PagerDutyConfig: &models.PagerDutyConfig{
+				SendResolved: false,
+				RoutingKey:   "some key",
+			},
+			Disabled: false,
+		},
+		errorMsg: "",
+	}, {
+		name: "normal slack config",
+		channel: models.CreateChannelParams{
+			SlackConfig: &models.SlackConfig{
+				Channel: "channel",
+			},
+			Disabled: false,
+		},
+		errorMsg: "",
+	}, {
+		name: "normal webhook config",
+		channel: models.CreateChannelParams{
+			WebHookConfig: &models.WebHookConfig{
+				URL: "test.test",
 			},
 			Disabled: false,
 		},
@@ -180,27 +208,27 @@ func TestChannelValidation(t *testing.T) {
 		},
 		errorMsg: "rpc error: code = InvalidArgument desc = Email to field is empty",
 	}, {
-		name: "missing routing key in pager duty config",
+		name: "no keys set in pager duty config",
 		channel: models.CreateChannelParams{
 			PagerDutyConfig: &models.PagerDutyConfig{
 				SendResolved: false,
 				RoutingKey:   "",
-				ServiceKey:   "some key",
-			},
-			Disabled: false,
-		},
-		errorMsg: "rpc error: code = InvalidArgument desc = Pager duty routing key is empty",
-	}, {
-		name: "missing service key in pager duty config",
-		channel: models.CreateChannelParams{
-			PagerDutyConfig: &models.PagerDutyConfig{
-				SendResolved: false,
-				RoutingKey:   "some key",
 				ServiceKey:   "",
 			},
 			Disabled: false,
 		},
-		errorMsg: "rpc error: code = InvalidArgument desc = Pager duty service key is empty",
+		errorMsg: "rpc error: code = InvalidArgument desc = Exactly one key should be present in pager duty configuration",
+	}, {
+		name: "both keys set in pager duty config",
+		channel: models.CreateChannelParams{
+			PagerDutyConfig: &models.PagerDutyConfig{
+				SendResolved: false,
+				RoutingKey:   "some key",
+				ServiceKey:   "some key",
+			},
+			Disabled: false,
+		},
+		errorMsg: "rpc error: code = InvalidArgument desc = Exactly one key should be present in pager duty configuration",
 	}, {
 		name: "missing channel in slack configuration",
 		channel: models.CreateChannelParams{
