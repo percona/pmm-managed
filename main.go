@@ -69,12 +69,13 @@ import (
 	"github.com/percona/pmm-managed/services/checks"
 	"github.com/percona/pmm-managed/services/dbaas"
 	"github.com/percona/pmm-managed/services/grafana"
+	"github.com/percona/pmm-managed/services/ia"
 	"github.com/percona/pmm-managed/services/inventory"
 	inventorygrpc "github.com/percona/pmm-managed/services/inventory/grpc"
 	"github.com/percona/pmm-managed/services/management"
 	managementdbaas "github.com/percona/pmm-managed/services/management/dbaas"
 	managementgrpc "github.com/percona/pmm-managed/services/management/grpc"
-	"github.com/percona/pmm-managed/services/management/ia"
+	managementIA "github.com/percona/pmm-managed/services/management/ia"
 	"github.com/percona/pmm-managed/services/platform"
 	"github.com/percona/pmm-managed/services/prometheus"
 	"github.com/percona/pmm-managed/services/qan"
@@ -125,6 +126,7 @@ type gRPCServerDeps struct {
 	agentsRegistry        *agents.Registry
 	grafanaClient         *grafana.Client
 	checksService         *checks.Service
+	iaService             *ia.Service
 	dbaasControllerClient *dbaas.Client
 	settings              *models.Settings
 }
@@ -166,6 +168,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	postgresqlSvc := management.NewPostgreSQLService(deps.db, deps.agentsRegistry)
 	proxysqlSvc := management.NewProxySQLService(deps.db, deps.agentsRegistry)
 	checksSvc := management.NewChecksAPIService(deps.checksService)
+	iaRulesSvc := managementIA.NewRulesService(deps.iaService)
 
 	managementpb.RegisterNodeServer(gRPCServer, managementgrpc.NewManagementNodeServer(nodeSvc))
 	managementpb.RegisterServiceServer(gRPCServer, managementgrpc.NewManagementServiceServer(serviceSvc))
@@ -182,10 +185,10 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	// TODO remove PERCONA_TEST_IA once IA is out of beta: https://jira.percona.com/browse/PMM-7001
 	if enable, err := strconv.ParseBool(os.Getenv("PERCONA_TEST_IA")); err == nil && enable {
 		l.Warnf("Enabling experimental IA APIs.")
-		iav1beta1.RegisterAlertsServer(gRPCServer, ia.NewAlertsService())
-		iav1beta1.RegisterChannelsServer(gRPCServer, ia.NewChannelsService())
-		iav1beta1.RegisterRulesServer(gRPCServer, ia.NewRulesService())
-		iav1beta1.RegisterTemplatesServer(gRPCServer, ia.NewTemplatesService())
+		iav1beta1.RegisterAlertsServer(gRPCServer, managementIA.NewAlertsService())
+		iav1beta1.RegisterChannelsServer(gRPCServer, managementIA.NewChannelsService())
+		iav1beta1.RegisterRulesServer(gRPCServer, iaRulesSvc)
+		iav1beta1.RegisterTemplatesServer(gRPCServer, managementIA.NewTemplatesService())
 	}
 
 	// TODO Remove once changing settings.DBaaS.Enabled is possible via API.
@@ -630,6 +633,8 @@ func main() {
 
 	prom.MustRegister(checksService)
 
+	iaService := ia.New(db)
+
 	platformService, err := platform.New(db)
 	if err != nil {
 		l.Fatalf("Could not create platform service: %s", err)
@@ -747,6 +752,7 @@ func main() {
 			agentsRegistry:        agentsRegistry,
 			grafanaClient:         grafanaClient,
 			checksService:         checksService,
+			iaService:             iaService,
 			dbaasControllerClient: dbaasControllerClient,
 			settings:              settings,
 		})

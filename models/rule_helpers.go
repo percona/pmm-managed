@@ -18,11 +18,14 @@ package models
 
 import (
 	"encoding/json"
+	"time"
 
+	"github.com/golang/protobuf/ptypes"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/durationpb"
 	reform "gopkg.in/reform.v1"
 )
 
@@ -106,7 +109,8 @@ func ruleToAlertRule(r *Rule) (*alertRule, error) {
 		ID:        r.ID,
 		Disabled:  r.Disabled,
 		For:       r.For.String(),
-		CreatedAt: r.CreatedAt.String(),
+		Severity:  r.Severity.String(),
+		CreatedAt: r.CreatedAt.AsTime(),
 	}
 
 	t, err := json.Marshal(r.Template)
@@ -148,29 +152,44 @@ func alertRuleToRule(ar *alertRule) (*Rule, error) {
 		Disabled: ar.Disabled,
 	}
 
+	dur, err := time.ParseDuration(ar.For)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to convert duration")
+	}
+	r.For = durationpb.New(dur)
+
+	createdAt, err := ptypes.TimestampProto(ar.CreatedAt)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to convert timestamp")
+	}
+	r.CreatedAt = createdAt
+
 	r.Template = &iav1beta1.Template{}
-	err := json.Unmarshal(*ar.Template, r.Template)
+	err = json.Unmarshal(*ar.Template, r.Template)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshall template")
 	}
 
-	r.Params = &[]iav1beta1.RuleParam{}
-	err = json.Unmarshal(*ar.Params, r.Params)
+	var params []*iav1beta1.RuleParam
+	err = json.Unmarshal(*ar.Params, &params)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshall params")
 	}
+	r.Params = params
 
-	r.Filters = &[]Filter{}
-	err = json.Unmarshal(*ar.Filters, r.Filters)
+	var filters []*Filter
+	err = json.Unmarshal(*ar.Filters, &filters)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshall filters")
 	}
+	r.Filters = filters
 
-	r.Channels = &[]iav1beta1.Channel{}
-	err = json.Unmarshal(*ar.Channels, r.Channels)
+	var channels []*iav1beta1.Channel
+	err = json.Unmarshal(*ar.Channels, &channels)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshall channels")
 	}
+	r.Channels = channels
 
 	return r, nil
 }

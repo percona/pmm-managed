@@ -346,6 +346,22 @@ var databaseSchema = [][]string{
 			ADD CONSTRAINT runs_on_node_id_only_for_pmm_agent 
             CHECK (((runs_on_node_id IS NULL) <> (agent_type='` + string(PMMAgentType) + `'))  OR (agent_type='` + string(ExternalExporterType) + `'))`,
 	},
+	22: {
+		`CREATE TABLE alert_rules (
+			id VARCHAR NOT NULL,
+			template JSONB,
+			summary VARCHAR,
+			disabled BOOLEAN,
+			params JSONB,
+			severity VARCHAR,
+			custom_labels JSONB,
+			filters JSONB,
+			channels JSONB,
+			created_at VARCHAR NOT NULL,
+			
+			PRIMARY KEY (id)
+		)`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^

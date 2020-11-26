@@ -17,8 +17,11 @@
 package models
 
 import (
+	"time"
+
 	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/percona/pmm/api/managementpb"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 )
 
@@ -27,32 +30,32 @@ import (
 // alertRule represents an IA rule to be stored in the database.
 //reform:alert_rules
 type alertRule struct {
-	Template     *[]byte `reform:"template"`
-	ID           string  `reform:"id,pk"`
-	Summary      string  `reform:"summary"`
-	Disabled     bool    `reform:"disabled"`
-	Params       *[]byte `reform:"params"`
-	For          string  `reform:"for"`
-	Severity     string  `reform:"severity"`
-	CustomLabels *[]byte `reform:"custom_labels"`
-	Filters      *[]byte `reform:"filters"`
-	Channels     *[]byte `reform:"channels"`
-	CreatedAt    string  `reform:"created_at"`
+	Template *[]byte `reform:"template"`
+	ID       string  `reform:"id,pk"`
+	Summary  string  `reform:"summary"`
+	Disabled bool    `reform:"disabled"`
+	Params   *[]byte `reform:"params"`
+	//For          string    `reform:"for"`
+	Severity     string    `reform:"severity"`
+	CustomLabels *[]byte   `reform:"custom_labels"`
+	Filters      *[]byte   `reform:"filters"`
+	Channels     *[]byte   `reform:"channels"`
+	CreatedAt    time.Time `reform:"created_at"`
 }
 
 // Rule represents alertRule configuration.
 type Rule struct {
-	Template     *iav1beta1.Template
-	ID           string
-	Summary      string
-	Disabled     bool
-	Params       *[]iav1beta1.RuleParam
-	For          *duration.Duration
-	Severity     string
-	CustomLabels map[string]string
-	Filters      *[]Filter
-	Channels     *[]iav1beta1.Channel // replace with Channels type defined in models
-	CreatedAt    *timestamp.Timestamp
+	Template     *iav1beta1.Template    `json:"template"`
+	ID           string                 `json:"id"`
+	Summary      string                 `json:"summary"`
+	Disabled     bool                   `json:"disabled"`
+	Params       []*iav1beta1.RuleParam `json:"params"`
+	For          *duration.Duration     `json:"for"`
+	Severity     managementpb.Severity  `json:"severity"`
+	CustomLabels map[string]string      `json:"custom_labels"`
+	Filters      []*Filter              `json:"filters"`
+	Channels     []*iav1beta1.Channel   `json:"channels"`
+	CreatedAt    *timestamp.Timestamp   `json:"created_at"`
 }
 
 type FilterType int32
