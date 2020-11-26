@@ -44,23 +44,19 @@ func TestNotificationChannels(t *testing.T) {
 
 		q := tx.Querier
 
-		c := models.Channel{
-			ID:   "some_id",
-			Type: models.Email,
+		params := models.CreateChannelParams{
 			EmailConfig: &models.EmailConfig{
 				To: []string{"test@test.test"},
 			},
 			Disabled: false,
 		}
 
-		err = models.CreateChannel(q, &c)
+		expected, err := models.CreateChannel(q, &params)
 		require.NoError(t, err)
 
-		channels, err := models.FindChannels(q)
+		actual, err := models.FindChannelByID(q, expected.ID)
 		require.NoError(t, err)
-		require.Len(t, channels, 1)
-
-		assert.Equal(t, c, channels[0])
+		assert.Equal(t, expected, actual)
 	})
 
 	t.Run("update", func(t *testing.T) {
@@ -72,27 +68,31 @@ func TestNotificationChannels(t *testing.T) {
 
 		q := tx.Querier
 
-		c := models.Channel{
-			ID:   "some_id",
-			Type: models.Email,
+		cParams := &models.CreateChannelParams{
 			EmailConfig: &models.EmailConfig{
-				To: []string{"test@test.test"},
+				To:           []string{"test@test.test"},
+				SendResolved: false,
 			},
 			Disabled: false,
 		}
 
-		err = models.CreateChannel(q, &c)
+		c, err := models.CreateChannel(q, cParams)
 		require.NoError(t, err)
 
-		c.EmailConfig.To = []string{"test2@test.test"}
+		uParams := &models.ChangeChannelParams{
+			EmailConfig: &models.EmailConfig{
+				SendResolved: true,
+				To:           []string{"test2@test.test"},
+			},
+			Disabled: true,
+		}
 
-		err = models.ChangeChannel(q, &c)
+		expected, err := models.ChangeChannel(q, c.ID, uParams)
 		require.NoError(t, err)
 
-		cs, err := models.FindChannels(q)
+		actual, err := models.FindChannelByID(q, c.ID)
 		require.NoError(t, err)
-		assert.Len(t, cs, 1)
-		assert.Equal(t, c, cs[0])
+		assert.Equal(t, expected, actual)
 	})
 
 	t.Run("delete", func(t *testing.T) {
@@ -104,16 +104,14 @@ func TestNotificationChannels(t *testing.T) {
 
 		q := tx.Querier
 
-		c := models.Channel{
-			ID:   "some_id",
-			Type: models.Email,
+		params := &models.CreateChannelParams{
 			EmailConfig: &models.EmailConfig{
 				To: []string{"test@test.test"},
 			},
 			Disabled: false,
 		}
 
-		err = models.CreateChannel(q, &c)
+		c, err := models.CreateChannel(q, params)
 		require.NoError(t, err)
 
 		err = models.RemoveChannel(q, c.ID)
@@ -135,13 +133,11 @@ func TestChannelValidation(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		channel  models.Channel
+		channel  models.CreateChannelParams
 		errorMsg string
 	}{{
 		name: "normal",
-		channel: models.Channel{
-			ID:   "some_id",
-			Type: models.Email,
+		channel: models.CreateChannelParams{
 			EmailConfig: &models.EmailConfig{
 				To: []string{"test@test.test"},
 			},
@@ -149,77 +145,34 @@ func TestChannelValidation(t *testing.T) {
 		},
 		errorMsg: "",
 	}, {
-		name: "missing id",
-		channel: models.Channel{
-			ID:   "",
-			Type: models.Email,
-			EmailConfig: &models.EmailConfig{
-				To: []string{"test@test.test"},
-			},
-			Disabled: false,
-		},
-		errorMsg: "rpc error: code = InvalidArgument desc = Notification channel id is empty",
-	}, {
-		name: "unknown type",
-		channel: models.Channel{
-			ID:   "some_id",
-			Type: "qwerty",
-			EmailConfig: &models.EmailConfig{
-				To: []string{"test@test.test"},
-			},
-			Disabled: false,
-		},
-		errorMsg: "rpc error: code = InvalidArgument desc = Unknown channel type qwerty",
-	}, {
-		name: "missing type",
-		channel: models.Channel{
-			ID:   "some_id",
-			Type: "",
-			EmailConfig: &models.EmailConfig{
-				To: []string{"test@test.test"},
-			},
-			Disabled: false,
-		},
-		errorMsg: "rpc error: code = InvalidArgument desc = Notification channel type is empty",
-	}, {
 		name: "missing email config",
-		channel: models.Channel{
-			ID:          "some_id",
-			Type:        models.Email,
+		channel: models.CreateChannelParams{
 			EmailConfig: nil,
 			Disabled:    false,
 		},
-		errorMsg: "rpc error: code = InvalidArgument desc = Email config is empty",
+		errorMsg: "rpc error: code = InvalidArgument desc = Missing channel configuration",
 	}, {
 		name: "missing pager duty config",
-		channel: models.Channel{
-			ID:              "some_id",
-			Type:            models.PagerDuty,
+		channel: models.CreateChannelParams{
 			PagerDutyConfig: nil,
 			Disabled:        false,
 		},
-		errorMsg: "rpc error: code = InvalidArgument desc = Pager duty config is empty",
+		errorMsg: "rpc error: code = InvalidArgument desc = Missing channel configuration",
 	}, {
 		name: "missing slack config",
-		channel: models.Channel{
-			ID:       "some_id",
-			Type:     models.Slack,
+		channel: models.CreateChannelParams{
 			Disabled: false,
 		},
-		errorMsg: "rpc error: code = InvalidArgument desc = Slack config is empty",
+		errorMsg: "rpc error: code = InvalidArgument desc = Missing channel configuration",
 	}, {
 		name: "missing webhook config",
-		channel: models.Channel{
-			ID:       "some_id",
-			Type:     models.WebHook,
+		channel: models.CreateChannelParams{
 			Disabled: false,
 		},
-		errorMsg: "rpc error: code = InvalidArgument desc = Webhook config is empty",
+		errorMsg: "rpc error: code = InvalidArgument desc = Missing channel configuration",
 	}, {
 		name: "missing to field in email configuration",
-		channel: models.Channel{
-			ID:   "some_id",
-			Type: models.Email,
+		channel: models.CreateChannelParams{
 			EmailConfig: &models.EmailConfig{
 				To: nil,
 			},
@@ -228,9 +181,7 @@ func TestChannelValidation(t *testing.T) {
 		errorMsg: "rpc error: code = InvalidArgument desc = Email to field is empty",
 	}, {
 		name: "missing routing key in pager duty config",
-		channel: models.Channel{
-			ID:   "some_id",
-			Type: models.PagerDuty,
+		channel: models.CreateChannelParams{
 			PagerDutyConfig: &models.PagerDutyConfig{
 				SendResolved: false,
 				RoutingKey:   "",
@@ -241,9 +192,7 @@ func TestChannelValidation(t *testing.T) {
 		errorMsg: "rpc error: code = InvalidArgument desc = Pager duty routing key is empty",
 	}, {
 		name: "missing service key in pager duty config",
-		channel: models.Channel{
-			ID:   "some_id",
-			Type: models.PagerDuty,
+		channel: models.CreateChannelParams{
 			PagerDutyConfig: &models.PagerDutyConfig{
 				SendResolved: false,
 				RoutingKey:   "some key",
@@ -254,9 +203,7 @@ func TestChannelValidation(t *testing.T) {
 		errorMsg: "rpc error: code = InvalidArgument desc = Pager duty service key is empty",
 	}, {
 		name: "missing channel in slack configuration",
-		channel: models.Channel{
-			ID:   "some_id",
-			Type: models.Slack,
+		channel: models.CreateChannelParams{
 			SlackConfig: &models.SlackConfig{
 				Channel: "",
 			},
@@ -265,9 +212,7 @@ func TestChannelValidation(t *testing.T) {
 		errorMsg: "rpc error: code = InvalidArgument desc = Slack channel field is empty",
 	}, {
 		name: "missing url in webhook configuration",
-		channel: models.Channel{
-			ID:   "some_id",
-			Type: models.WebHook,
+		channel: models.CreateChannelParams{
 			WebHookConfig: &models.WebHookConfig{
 				URL: "",
 			},
@@ -275,21 +220,8 @@ func TestChannelValidation(t *testing.T) {
 		},
 		errorMsg: "rpc error: code = InvalidArgument desc = Webhook url field is empty",
 	}, {
-		name: "type doesn't match actual configuration",
-		channel: models.Channel{
-			ID:   "some_id",
-			Type: models.Slack,
-			EmailConfig: &models.EmailConfig{
-				To: []string{"test@test.test"},
-			},
-			Disabled: false,
-		},
-		errorMsg: "rpc error: code = InvalidArgument desc = Slack channel should has only slack configuration",
-	}, {
 		name: "multiple configurations",
-		channel: models.Channel{
-			ID:   "some_id",
-			Type: models.Email,
+		channel: models.CreateChannelParams{
 			EmailConfig: &models.EmailConfig{
 				To: []string{"test@test.test"},
 			},
@@ -298,7 +230,7 @@ func TestChannelValidation(t *testing.T) {
 			},
 			Disabled: false,
 		},
-		errorMsg: "rpc error: code = InvalidArgument desc = Email channel should has only email configuration",
+		errorMsg: "rpc error: code = InvalidArgument desc = Request should contain only one type of channel configuration",
 	}}
 
 	for _, test := range tests {
@@ -313,12 +245,13 @@ func TestChannelValidation(t *testing.T) {
 
 			q := tx.Querier
 
-			err = models.CreateChannel(q, &test.channel)
+			c, err := models.CreateChannel(q, &test.channel)
 			if test.errorMsg != "" {
 				assert.EqualError(t, err, test.errorMsg)
 				return
 			}
 			assert.NoError(t, err)
+			assert.NotNil(t, c)
 		})
 	}
 }

@@ -17,54 +17,31 @@
 package models
 
 import (
-	"encoding/json"
-	"fmt"
-
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 )
 
-// validateChannel validates notification channel.
-func validateChannel(ch *Channel) error {
-	if ch.ID == "" {
-		return status.Error(codes.InvalidArgument, "Notification channel id is empty")
+func checkUniqueChannelID(q *reform.Querier, id string) error {
+	if id == "" {
+		panic("empty Channel ID")
 	}
 
-	switch ch.Type {
-	case Email:
-		if ch.SlackConfig != nil || ch.WebHookConfig != nil || ch.PagerDutyConfig != nil {
-			return status.Error(codes.InvalidArgument, "Email channel should has only email configuration")
-		}
-
-		return validateEmailConfig(ch.EmailConfig)
-	case PagerDuty:
-		if ch.EmailConfig != nil || ch.SlackConfig != nil || ch.WebHookConfig != nil {
-			return status.Error(codes.InvalidArgument, "Pager duty channel should has only email configuration")
-		}
-
-		return validatePagerDutyConfig(ch.PagerDutyConfig)
-	case Slack:
-		if ch.EmailConfig != nil || ch.WebHookConfig != nil || ch.PagerDutyConfig != nil {
-			return status.Error(codes.InvalidArgument, "Slack channel should has only slack configuration")
-		}
-
-		return validateSlackConfig(ch.SlackConfig)
-	case WebHook:
-		if ch.SlackConfig != nil || ch.EmailConfig != nil || ch.PagerDutyConfig != nil {
-			return status.Error(codes.InvalidArgument, "Webhook channel should has only webhook configuration")
-		}
-
-		return validateWebHookConfig(ch.WebHookConfig)
-	case "":
-		return status.Error(codes.InvalidArgument, "Notification channel type is empty")
+	agent := &Channel{ID: id}
+	switch err := q.Reload(agent); err {
+	case nil:
+		return status.Errorf(codes.AlreadyExists, "Channel with ID %q already exists.", id)
+	case reform.ErrNoRows:
+		return nil
 	default:
-		return status.Error(codes.InvalidArgument, fmt.Sprintf("Unknown channel type %s", ch.Type))
+		return errors.WithStack(err)
 	}
+
 }
 
-func validateEmailConfig(c *EmailConfig) error {
+func checkEmailConfig(c *EmailConfig) error {
 	if c == nil {
 		return status.Error(codes.InvalidArgument, "Email config is empty")
 	}
@@ -76,7 +53,7 @@ func validateEmailConfig(c *EmailConfig) error {
 	return nil
 }
 
-func validatePagerDutyConfig(c *PagerDutyConfig) error {
+func checkPagerDutyConfig(c *PagerDutyConfig) error {
 	if c == nil {
 		return status.Error(codes.InvalidArgument, "Pager duty config is empty")
 	}
@@ -92,7 +69,7 @@ func validatePagerDutyConfig(c *PagerDutyConfig) error {
 	return nil
 }
 
-func validateSlackConfig(c *SlackConfig) error {
+func checkSlackConfig(c *SlackConfig) error {
 	if c == nil {
 		return status.Error(codes.InvalidArgument, "Slack config is empty")
 	}
@@ -104,7 +81,7 @@ func validateSlackConfig(c *SlackConfig) error {
 	return nil
 }
 
-func validateWebHookConfig(c *WebHookConfig) error {
+func checkWebHookConfig(c *WebHookConfig) error {
 	if c == nil {
 		return status.Error(codes.InvalidArgument, "Webhook config is empty")
 	}
@@ -118,7 +95,7 @@ func validateWebHookConfig(c *WebHookConfig) error {
 
 // FindChannels returns saved notification channels configuration.
 func FindChannels(q *reform.Querier) ([]Channel, error) {
-	structs, err := q.SelectAllFrom(notificationChannelTable, "")
+	structs, err := q.SelectAllFrom(ChannelTable, "")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select notification channels")
 
@@ -126,133 +103,184 @@ func FindChannels(q *reform.Querier) ([]Channel, error) {
 
 	channels := make([]Channel, len(structs))
 	for i, s := range structs {
-		c, err := notificationChannelToChannel(s.(*notificationChannel))
-		if err != nil {
-			return nil, err
-		}
+		c := s.(*Channel)
+
 		channels[i] = *c
 	}
 
 	return channels, nil
 }
 
+// FindChannelByID finds Channel by ID.
+func FindChannelByID(q *reform.Querier, id string) (*Channel, error) {
+	if id == "" {
+		return nil, status.Error(codes.InvalidArgument, "Empty Channel ID.")
+	}
+
+	channel := &Channel{ID: id}
+	switch err := q.Reload(channel); err {
+	case nil:
+		return channel, nil
+	case reform.ErrNoRows:
+		return nil, status.Errorf(codes.NotFound, "Channel with ID %q not found.", id)
+	default:
+		return nil, errors.WithStack(err)
+	}
+}
+
+type CreateChannelParams struct {
+	EmailConfig     *EmailConfig
+	PagerDutyConfig *PagerDutyConfig
+	SlackConfig     *SlackConfig
+	WebHookConfig   *WebHookConfig
+
+	Disabled bool
+}
+
 // CreateChannel persists notification channel.
-func CreateChannel(q *reform.Querier, c *Channel) error {
-	if err := validateChannel(c); err != nil {
-		return err
+func CreateChannel(q *reform.Querier, params *CreateChannelParams) (*Channel, error) {
+	id := "/channel_id/" + uuid.New().String()
+
+	if err := checkUniqueChannelID(q, id); err != nil {
+		return nil, err
 	}
 
-	nc, err := channelToNotificationChannel(c)
+	row := &Channel{
+		ID:       id,
+		Disabled: params.Disabled,
+	}
+
+	if params.EmailConfig != nil {
+		if err := checkEmailConfig(params.EmailConfig); err != nil {
+			return nil, err
+		}
+		row.Type = Email
+		row.EmailConfig = params.EmailConfig
+	}
+
+	if params.PagerDutyConfig != nil {
+		if row.Type != "" {
+			return nil, status.Error(codes.InvalidArgument, "Request should contain only one type of channel configuration")
+		}
+
+		if err := checkPagerDutyConfig(params.PagerDutyConfig); err != nil {
+			return nil, err
+		}
+		row.Type = PagerDuty
+		row.PagerDutyConfig = params.PagerDutyConfig
+	}
+
+	if params.SlackConfig != nil {
+		if row.Type != "" {
+			return nil, status.Error(codes.InvalidArgument, "Request should contain only one type of channel configuration")
+		}
+		if err := checkSlackConfig(params.SlackConfig); err != nil {
+			return nil, err
+		}
+		row.Type = Slack
+		row.SlackConfig = params.SlackConfig
+	}
+
+	if params.WebHookConfig != nil {
+		if row.Type != "" {
+			return nil, status.Error(codes.InvalidArgument, "Request should contain only one type of channel configuration")
+		}
+		if err := checkWebHookConfig(params.WebHookConfig); err != nil {
+			return nil, err
+		}
+		row.Type = WebHook
+		row.WebHookConfig = params.WebHookConfig
+	}
+
+	if row.Type == "" {
+		return nil, status.Error(codes.InvalidArgument, "Missing channel configuration")
+	}
+
+	err := q.Insert(row)
 	if err != nil {
-		return err
+		return nil, errors.Wrap(err, "failed to create notifications channel")
 	}
 
-	err = q.Insert(nc)
-	if err != nil {
-		return errors.Wrap(err, "failed to create notifications channel")
-	}
+	return row, nil
+}
 
-	return nil
+type ChangeChannelParams struct {
+	EmailConfig     *EmailConfig
+	PagerDutyConfig *PagerDutyConfig
+	SlackConfig     *SlackConfig
+	WebHookConfig   *WebHookConfig
+
+	Disabled bool
 }
 
 // ChangeChannel updates existing notifications channel.
-func ChangeChannel(q *reform.Querier, c *Channel) error {
-	if err := validateChannel(c); err != nil {
-		return errors.Wrap(err, "channel validation failed")
-	}
-
-	nc, err := channelToNotificationChannel(c)
+func ChangeChannel(q *reform.Querier, channelID string, params *ChangeChannelParams) (*Channel, error) {
+	row, err := FindChannelByID(q, channelID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = q.Update(nc)
+	// remove previous configuration
+	row.EmailConfig = nil
+	row.PagerDutyConfig = nil
+	row.SlackConfig = nil
+	row.WebHookConfig = nil
+
+	if params.EmailConfig != nil {
+		if err := checkEmailConfig(params.EmailConfig); err != nil {
+			return nil, err
+		}
+		row.Type = Email
+		row.EmailConfig = params.EmailConfig
+	}
+
+	if params.PagerDutyConfig != nil {
+		if row.Type != "" {
+			return nil, status.Error(codes.InvalidArgument, "Request should contain only one type of channel configuration")
+		}
+
+		if err := checkPagerDutyConfig(params.PagerDutyConfig); err != nil {
+			return nil, err
+		}
+		row.Type = PagerDuty
+		row.PagerDutyConfig = params.PagerDutyConfig
+	}
+
+	if params.SlackConfig != nil {
+		if row.Type != "" {
+			return nil, status.Error(codes.InvalidArgument, "Request should contain only one type of channel configuration")
+		}
+		if err := checkSlackConfig(params.SlackConfig); err != nil {
+			return nil, err
+		}
+		row.Type = Slack
+		row.SlackConfig = params.SlackConfig
+	}
+
+	if params.WebHookConfig != nil {
+		if row.Type != "" {
+			return nil, status.Error(codes.InvalidArgument, "Request should contain only one type of channel configuration")
+		}
+		if err := checkWebHookConfig(params.WebHookConfig); err != nil {
+			return nil, err
+		}
+		row.Type = WebHook
+		row.WebHookConfig = params.WebHookConfig
+	}
+
+	err = q.Update(row)
 	if err != nil {
-		return errors.Wrap(err, "failed to create notifications channel")
+		return nil, errors.Wrap(err, "failed to create notifications channel")
 	}
 
-	return nil
+	return row, nil
 }
 
 // RemoveChannel removes notification channel with specified id.
 func RemoveChannel(q *reform.Querier, id string) error {
-	err := q.Delete(&notificationChannel{ID: id})
+	err := q.Delete(&Channel{ID: id})
 	if err != nil {
 		return errors.Wrap(err, "failed to delete notifications channel")
 	}
 	return nil
-}
-
-func channelToNotificationChannel(c *Channel) (*notificationChannel, error) {
-	nc := &notificationChannel{
-		ID:       c.ID,
-		Type:     c.Type,
-		Disabled: false,
-	}
-
-	switch c.Type {
-	case Email:
-		b, err := json.Marshal(c.EmailConfig)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to marshall email configuration")
-		}
-		nc.EmailConfig = &b
-	case PagerDuty:
-		b, err := json.Marshal(c.PagerDutyConfig)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to marshall pager duty configuration")
-		}
-		nc.PagerDutyConfig = &b
-	case Slack:
-		b, err := json.Marshal(c.SlackConfig)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to marshall slack configuration")
-		}
-		nc.SlackConfig = &b
-	case WebHook:
-		b, err := json.Marshal(c.WebHookConfig)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to marshall webhook configuration")
-		}
-		nc.WebHookConfig = &b
-	}
-
-	return nc, nil
-}
-
-func notificationChannelToChannel(nc *notificationChannel) (*Channel, error) {
-	c := &Channel{
-		ID:       nc.ID,
-		Type:     nc.Type,
-		Disabled: nc.Disabled,
-	}
-
-	switch nc.Type {
-	case Email:
-		c.EmailConfig = &EmailConfig{}
-		err := json.Unmarshal(*nc.EmailConfig, c.EmailConfig)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to marshall email configuration")
-		}
-	case PagerDuty:
-		c.PagerDutyConfig = &PagerDutyConfig{}
-		err := json.Unmarshal(*nc.PagerDutyConfig, c.PagerDutyConfig)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to marshall pager duty configuration")
-		}
-	case Slack:
-		c.SlackConfig = &SlackConfig{}
-		err := json.Unmarshal(*nc.SlackConfig, c.SlackConfig)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to marshall slack configuration")
-		}
-	case WebHook:
-		c.WebHookConfig = &WebHookConfig{}
-		err := json.Unmarshal(*nc.WebHookConfig, c.WebHookConfig)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to marshall webhook configuration")
-		}
-	}
-
-	return c, nil
 }

@@ -16,6 +16,12 @@
 
 package models
 
+import (
+	"database/sql/driver"
+	"encoding/json"
+	"fmt"
+)
+
 //go:generate reform
 
 // ChannelType represents notificaion channel type.
@@ -29,36 +35,57 @@ const (
 	WebHook   = ChannelType("webhook")
 )
 
+// Channel represents notification channel configuration.
 //reform:notification_channels
-type notificationChannel struct {
+type Channel struct {
 	ID   string      `reform:"id,pk"`
 	Type ChannelType `reform:"type"`
 
-	EmailConfig     *[]byte `reform:"email_config"`
-	PagerDutyConfig *[]byte `reform:"pagerduty_config"`
-	SlackConfig     *[]byte `reform:"slack_config"`
-	WebHookConfig   *[]byte `reform:"webhook_config"`
+	EmailConfig     *EmailConfig     `reform:"email_config"`
+	PagerDutyConfig *PagerDutyConfig `reform:"pagerduty_config"`
+	SlackConfig     *SlackConfig     `reform:"slack_config"`
+	WebHookConfig   *WebHookConfig   `reform:"webhook_config"`
 
 	Disabled bool `reform:"disabled"`
-}
-
-// Channel represents notification channel configuration.
-type Channel struct {
-	ID   string
-	Type ChannelType
-
-	EmailConfig     *EmailConfig
-	PagerDutyConfig *PagerDutyConfig
-	SlackConfig     *SlackConfig
-	WebHookConfig   *WebHookConfig
-
-	Disabled bool
 }
 
 // EmailConfig is email notification channel configuration.
 type EmailConfig struct {
 	SendResolved bool     `json:"send_resolved"`
 	To           []string `json:"to"`
+}
+
+// Value implements database/sql/driver Valuer interface.
+func (c *EmailConfig) Value() (driver.Value, error) {
+	if c == nil {
+		return nil, nil
+	}
+
+	b, err := json.Marshal(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
+}
+
+// Scan implements database/sql Scanner interface.
+func (c *EmailConfig) Scan(src interface{}) error {
+	if src == nil {
+		return nil
+	}
+
+	var b []byte
+	switch v := src.(type) {
+	case []byte:
+		b = v
+	case string:
+		b = []byte(v)
+	default:
+		return fmt.Errorf("EmailConfi.Scan: expected []byte or string, got %T (%q)", src, src)
+	}
+
+	return json.Unmarshal(b, c)
 }
 
 // PagerDutyConfig represents PagerDuty channel configuration.
@@ -68,10 +95,76 @@ type PagerDutyConfig struct {
 	ServiceKey   string `json:"service_key"`
 }
 
+// Value implements database/sql/driver Valuer interface.
+func (c *PagerDutyConfig) Value() (driver.Value, error) {
+	if c == nil {
+		return nil, nil
+	}
+
+	b, err := json.Marshal(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
+}
+
+// Scan implements database/sql Scanner interface.
+func (c *PagerDutyConfig) Scan(src interface{}) error {
+	if src == nil {
+		return nil
+	}
+
+	var b []byte
+	switch v := src.(type) {
+	case []byte:
+		b = v
+	case string:
+		b = []byte(v)
+	default:
+		return fmt.Errorf("PagerDutyConfig.Scan: expected []byte or string, got %T (%q)", src, src)
+	}
+
+	return json.Unmarshal(b, c)
+}
+
 // SlackConfig is slack notification channel configuration.
 type SlackConfig struct {
 	SendResolved bool   `json:"send_resolved"`
 	Channel      string `json:"channel"`
+}
+
+// Value implements database/sql/driver Valuer interface.
+func (c *SlackConfig) Value() (driver.Value, error) {
+	if c == nil {
+		return nil, nil
+	}
+
+	b, err := json.Marshal(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
+}
+
+// Scan implements database/sql Scanner interface.
+func (c *SlackConfig) Scan(src interface{}) error {
+	if src == nil {
+		return nil
+	}
+
+	var b []byte
+	switch v := src.(type) {
+	case []byte:
+		b = v
+	case string:
+		b = []byte(v)
+	default:
+		return fmt.Errorf("SlackConfig.Scan: expected []byte or string, got %T (%q)", src, src)
+	}
+
+	return json.Unmarshal(b, c)
 }
 
 // WebHookConfig is webhook notification channel configuration.
@@ -80,6 +173,39 @@ type WebHookConfig struct {
 	URL          string      ` json:"url"`
 	HTTPConfig   *HTTPConfig ` json:"http_config"`
 	MaxAlerts    int32       ` json:"max_alerts"`
+}
+
+// Value implements database/sql/driver Valuer interface.
+func (c *WebHookConfig) Value() (driver.Value, error) {
+	if c == nil {
+		return nil, nil
+	}
+
+	b, err := json.Marshal(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return b, nil
+}
+
+// Scan implements database/sql Scanner interface.
+func (c *WebHookConfig) Scan(src interface{}) error {
+	if src == nil {
+		return nil
+	}
+
+	var b []byte
+	switch v := src.(type) {
+	case []byte:
+		b = v
+	case string:
+		b = []byte(v)
+	default:
+		return fmt.Errorf("WebHookConfig.Scan: expected []byte or string, got %T (%q)", src, src)
+	}
+
+	return json.Unmarshal(b, c)
 }
 
 // HTTPConfig is HTTP connection configuration.

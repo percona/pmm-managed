@@ -37,12 +37,35 @@ func New(db *reform.DB) *Service {
 
 // AddChannel adds new notification channel.
 func (s *Service) AddChannel(ch *models.Channel) error {
-	return models.CreateChannel(s.db.Querier, ch)
+	params := &models.CreateChannelParams{
+		EmailConfig:     ch.EmailConfig,
+		PagerDutyConfig: ch.PagerDutyConfig,
+		SlackConfig:     ch.SlackConfig,
+		WebHookConfig:   ch.WebHookConfig,
+		Disabled:        ch.Disabled,
+	}
+
+	_, err := models.CreateChannel(s.db.Querier, params)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // ChangeChannel changes existing notification channel.
 func (s *Service) ChangeChannel(ch *models.Channel) error {
-	return models.ChangeChannel(s.db.Querier, ch)
+	params := &models.ChangeChannelParams{
+		EmailConfig:     ch.EmailConfig,
+		PagerDutyConfig: ch.PagerDutyConfig,
+		SlackConfig:     ch.SlackConfig,
+		WebHookConfig:   ch.WebHookConfig,
+		Disabled:        ch.Disabled,
+	}
+	_, err := models.ChangeChannel(s.db.Querier, ch.ID, params)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // RemoveChannel removes notification channel.

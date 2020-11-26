@@ -10,49 +10,49 @@ import (
 	"gopkg.in/reform.v1/parse"
 )
 
-type notificationChannelTableType struct {
+type channelTableType struct {
 	s parse.StructInfo
 	z []interface{}
 }
 
 // Schema returns a schema name in SQL database ("").
-func (v *notificationChannelTableType) Schema() string {
+func (v *channelTableType) Schema() string {
 	return v.s.SQLSchema
 }
 
 // Name returns a view or table name in SQL database ("notification_channels").
-func (v *notificationChannelTableType) Name() string {
+func (v *channelTableType) Name() string {
 	return v.s.SQLName
 }
 
 // Columns returns a new slice of column names for that view or table in SQL database.
-func (v *notificationChannelTableType) Columns() []string {
+func (v *channelTableType) Columns() []string {
 	return []string{"id", "type", "email_config", "pagerduty_config", "slack_config", "webhook_config", "disabled"}
 }
 
 // NewStruct makes a new struct for that view or table.
-func (v *notificationChannelTableType) NewStruct() reform.Struct {
-	return new(notificationChannel)
+func (v *channelTableType) NewStruct() reform.Struct {
+	return new(Channel)
 }
 
 // NewRecord makes a new record for that table.
-func (v *notificationChannelTableType) NewRecord() reform.Record {
-	return new(notificationChannel)
+func (v *channelTableType) NewRecord() reform.Record {
+	return new(Channel)
 }
 
 // PKColumnIndex returns an index of primary key column for that table in SQL database.
-func (v *notificationChannelTableType) PKColumnIndex() uint {
+func (v *channelTableType) PKColumnIndex() uint {
 	return uint(v.s.PKFieldIndex)
 }
 
-// notificationChannelTable represents notification_channels view or table in SQL database.
-var notificationChannelTable = &notificationChannelTableType{
-	s: parse.StructInfo{Type: "notificationChannel", SQLSchema: "", SQLName: "notification_channels", Fields: []parse.FieldInfo{{Name: "ID", Type: "string", Column: "id"}, {Name: "Type", Type: "ChannelType", Column: "type"}, {Name: "EmailConfig", Type: "*[]uint8", Column: "email_config"}, {Name: "PagerDutyConfig", Type: "*[]uint8", Column: "pagerduty_config"}, {Name: "SlackConfig", Type: "*[]uint8", Column: "slack_config"}, {Name: "WebHookConfig", Type: "*[]uint8", Column: "webhook_config"}, {Name: "Disabled", Type: "bool", Column: "disabled"}}, PKFieldIndex: 0},
-	z: new(notificationChannel).Values(),
+// ChannelTable represents notification_channels view or table in SQL database.
+var ChannelTable = &channelTableType{
+	s: parse.StructInfo{Type: "Channel", SQLSchema: "", SQLName: "notification_channels", Fields: []parse.FieldInfo{{Name: "ID", Type: "string", Column: "id"}, {Name: "Type", Type: "ChannelType", Column: "type"}, {Name: "EmailConfig", Type: "*EmailConfig", Column: "email_config"}, {Name: "PagerDutyConfig", Type: "*PagerDutyConfig", Column: "pagerduty_config"}, {Name: "SlackConfig", Type: "*SlackConfig", Column: "slack_config"}, {Name: "WebHookConfig", Type: "*WebHookConfig", Column: "webhook_config"}, {Name: "Disabled", Type: "bool", Column: "disabled"}}, PKFieldIndex: 0},
+	z: new(Channel).Values(),
 }
 
 // String returns a string representation of this struct or record.
-func (s notificationChannel) String() string {
+func (s Channel) String() string {
 	res := make([]string, 7)
 	res[0] = "ID: " + reform.Inspect(s.ID, true)
 	res[1] = "Type: " + reform.Inspect(s.Type, true)
@@ -66,7 +66,7 @@ func (s notificationChannel) String() string {
 
 // Values returns a slice of struct or record field values.
 // Returned interface{} values are never untyped nils.
-func (s *notificationChannel) Values() []interface{} {
+func (s *Channel) Values() []interface{} {
 	return []interface{}{
 		s.ID,
 		s.Type,
@@ -80,7 +80,7 @@ func (s *notificationChannel) Values() []interface{} {
 
 // Pointers returns a slice of pointers to struct or record fields.
 // Returned interface{} values are never untyped nils.
-func (s *notificationChannel) Pointers() []interface{} {
+func (s *Channel) Pointers() []interface{} {
 	return []interface{}{
 		&s.ID,
 		&s.Type,
@@ -93,34 +93,34 @@ func (s *notificationChannel) Pointers() []interface{} {
 }
 
 // View returns View object for that struct.
-func (s *notificationChannel) View() reform.View {
-	return notificationChannelTable
+func (s *Channel) View() reform.View {
+	return ChannelTable
 }
 
 // Table returns Table object for that record.
-func (s *notificationChannel) Table() reform.Table {
-	return notificationChannelTable
+func (s *Channel) Table() reform.Table {
+	return ChannelTable
 }
 
 // PKValue returns a value of primary key for that record.
 // Returned interface{} value is never untyped nil.
-func (s *notificationChannel) PKValue() interface{} {
+func (s *Channel) PKValue() interface{} {
 	return s.ID
 }
 
 // PKPointer returns a pointer to primary key field for that record.
 // Returned interface{} value is never untyped nil.
-func (s *notificationChannel) PKPointer() interface{} {
+func (s *Channel) PKPointer() interface{} {
 	return &s.ID
 }
 
 // HasPK returns true if record has non-zero primary key set, false otherwise.
-func (s *notificationChannel) HasPK() bool {
-	return s.ID != notificationChannelTable.z[notificationChannelTable.s.PKFieldIndex]
+func (s *Channel) HasPK() bool {
+	return s.ID != ChannelTable.z[ChannelTable.s.PKFieldIndex]
 }
 
 // SetPK sets record primary key.
-func (s *notificationChannel) SetPK(pk interface{}) {
+func (s *Channel) SetPK(pk interface{}) {
 	if i64, ok := pk.(int64); ok {
 		s.ID = string(i64)
 	} else {
@@ -130,13 +130,13 @@ func (s *notificationChannel) SetPK(pk interface{}) {
 
 // check interfaces
 var (
-	_ reform.View   = notificationChannelTable
-	_ reform.Struct = (*notificationChannel)(nil)
-	_ reform.Table  = notificationChannelTable
-	_ reform.Record = (*notificationChannel)(nil)
-	_ fmt.Stringer  = (*notificationChannel)(nil)
+	_ reform.View   = ChannelTable
+	_ reform.Struct = (*Channel)(nil)
+	_ reform.Table  = ChannelTable
+	_ reform.Record = (*Channel)(nil)
+	_ fmt.Stringer  = (*Channel)(nil)
 )
 
 func init() {
-	parse.AssertUpToDate(&notificationChannelTable.s, new(notificationChannel))
+	parse.AssertUpToDate(&ChannelTable.s, new(Channel))
 }
