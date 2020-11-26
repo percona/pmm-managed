@@ -37,20 +37,29 @@ func New(db *reform.DB) *Service {
 
 // AddChannel adds new notification channel.
 func (s *Service) AddChannel(params *models.CreateChannelParams) error {
-	_, err := models.CreateChannel(s.db.Querier, params)
-	if err != nil {
-		return err
-	}
-	return nil
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		_, err := models.CreateChannel(tx.Querier, params)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	return e
 }
 
 // ChangeChannel changes existing notification channel.
 func (s *Service) ChangeChannel(channelID string, params *models.ChangeChannelParams) error {
-	_, err := models.ChangeChannel(s.db.Querier, channelID, params)
-	if err != nil {
-		return err
-	}
-	return nil
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		_, err := models.ChangeChannel(tx.Querier, channelID, params)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	return e
 }
 
 // RemoveChannel removes notification channel.
