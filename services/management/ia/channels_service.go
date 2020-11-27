@@ -21,6 +21,7 @@ import (
 
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/pkg/errors"
+	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/ia"
@@ -28,12 +29,14 @@ import (
 
 // ChannelsService represents integrated alerting channels API.
 type ChannelsService struct {
+	db *reform.DB
 	ia alertingService
 }
 
 // NewChannelsService creates new channels API service.
-func NewChannelsService(ia *ia.Service) *ChannelsService {
+func NewChannelsService(db *reform.DB, ia *ia.Service) *ChannelsService {
 	return &ChannelsService{
+		db: db,
 		ia: ia,
 	}
 }
