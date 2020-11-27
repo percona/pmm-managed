@@ -27,7 +27,7 @@ func (v *channelTableType) Name() string {
 
 // Columns returns a new slice of column names for that view or table in SQL database.
 func (v *channelTableType) Columns() []string {
-	return []string{"id", "summary", "type", "email_config", "pagerduty_config", "slack_config", "webhook_config", "disabled"}
+	return []string{"id", "summary", "type", "email_config", "pagerduty_config", "slack_config", "webhook_config", "disabled", "created_at", "updated_at"}
 }
 
 // NewStruct makes a new struct for that view or table.
@@ -47,13 +47,13 @@ func (v *channelTableType) PKColumnIndex() uint {
 
 // ChannelTable represents notification_channels view or table in SQL database.
 var ChannelTable = &channelTableType{
-	s: parse.StructInfo{Type: "Channel", SQLSchema: "", SQLName: "notification_channels", Fields: []parse.FieldInfo{{Name: "ID", Type: "string", Column: "id"}, {Name: "Summary", Type: "string", Column: "summary"}, {Name: "Type", Type: "ChannelType", Column: "type"}, {Name: "EmailConfig", Type: "*EmailConfig", Column: "email_config"}, {Name: "PagerDutyConfig", Type: "*PagerDutyConfig", Column: "pagerduty_config"}, {Name: "SlackConfig", Type: "*SlackConfig", Column: "slack_config"}, {Name: "WebHookConfig", Type: "*WebHookConfig", Column: "webhook_config"}, {Name: "Disabled", Type: "bool", Column: "disabled"}}, PKFieldIndex: 0},
+	s: parse.StructInfo{Type: "Channel", SQLSchema: "", SQLName: "notification_channels", Fields: []parse.FieldInfo{{Name: "ID", Type: "string", Column: "id"}, {Name: "Summary", Type: "string", Column: "summary"}, {Name: "Type", Type: "ChannelType", Column: "type"}, {Name: "EmailConfig", Type: "*EmailConfig", Column: "email_config"}, {Name: "PagerDutyConfig", Type: "*PagerDutyConfig", Column: "pagerduty_config"}, {Name: "SlackConfig", Type: "*SlackConfig", Column: "slack_config"}, {Name: "WebHookConfig", Type: "*WebHookConfig", Column: "webhook_config"}, {Name: "Disabled", Type: "bool", Column: "disabled"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}}, PKFieldIndex: 0},
 	z: new(Channel).Values(),
 }
 
 // String returns a string representation of this struct or record.
 func (s Channel) String() string {
-	res := make([]string, 8)
+	res := make([]string, 10)
 	res[0] = "ID: " + reform.Inspect(s.ID, true)
 	res[1] = "Summary: " + reform.Inspect(s.Summary, true)
 	res[2] = "Type: " + reform.Inspect(s.Type, true)
@@ -62,6 +62,8 @@ func (s Channel) String() string {
 	res[5] = "SlackConfig: " + reform.Inspect(s.SlackConfig, true)
 	res[6] = "WebHookConfig: " + reform.Inspect(s.WebHookConfig, true)
 	res[7] = "Disabled: " + reform.Inspect(s.Disabled, true)
+	res[8] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
+	res[9] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
 	return strings.Join(res, ", ")
 }
 
@@ -77,6 +79,8 @@ func (s *Channel) Values() []interface{} {
 		s.SlackConfig,
 		s.WebHookConfig,
 		s.Disabled,
+		s.CreatedAt,
+		s.UpdatedAt,
 	}
 }
 
@@ -92,6 +96,8 @@ func (s *Channel) Pointers() []interface{} {
 		&s.SlackConfig,
 		&s.WebHookConfig,
 		&s.Disabled,
+		&s.CreatedAt,
+		&s.UpdatedAt,
 	}
 }
 

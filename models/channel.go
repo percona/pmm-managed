@@ -18,6 +18,9 @@ package models
 
 import (
 	"database/sql/driver"
+	"time"
+
+	"gopkg.in/reform.v1"
 )
 
 //go:generate reform
@@ -46,6 +49,33 @@ type Channel struct {
 	WebHookConfig   *WebHookConfig   `reform:"webhook_config"`
 
 	Disabled bool `reform:"disabled"`
+
+	CreatedAt time.Time `reform:"created_at"`
+	UpdatedAt time.Time `reform:"updated_at"`
+}
+
+// BeforeInsert implements reform.BeforeInserter interface.
+func (c *Channel) BeforeInsert() error {
+	now := Now()
+	c.CreatedAt = now
+	c.UpdatedAt = now
+
+	return nil
+}
+
+// BeforeUpdate implements reform.BeforeUpdater interface.
+func (c *Channel) BeforeUpdate() error {
+	c.UpdatedAt = Now()
+
+	return nil
+}
+
+// AfterFind implements reform.AfterFinder interface.
+func (c *Channel) AfterFind() error {
+	c.CreatedAt = c.CreatedAt.UTC()
+	c.UpdatedAt = c.UpdatedAt.UTC()
+
+	return nil
 }
 
 // EmailConfig is email notification channel configuration.
@@ -123,3 +153,10 @@ type TLSConfig struct {
 	ServerName         string `json:"server_name,omitempty"`
 	InsecureSkipVerify bool   `json:"insecure_skip_verify,omitempty"`
 }
+
+// check interfaces.
+var (
+	_ reform.BeforeInserter = (*Channel)(nil)
+	_ reform.BeforeUpdater  = (*Channel)(nil)
+	_ reform.AfterFinder    = (*Channel)(nil)
+)
