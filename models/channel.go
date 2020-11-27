@@ -63,8 +63,8 @@ func (c *EmailConfig) Scan(src interface{}) error { return jsonScan(c, src) }
 // PagerDutyConfig represents PagerDuty channel configuration.
 type PagerDutyConfig struct {
 	SendResolved bool   `json:"send_resolved"`
-	RoutingKey   string `json:"routing_key"`
-	ServiceKey   string `json:"service_key"`
+	RoutingKey   string `json:"routing_key,omitempty"`
+	ServiceKey   string `json:"service_key,omitempty"`
 }
 
 // Value implements database/sql/driver.Valuer interface. Should be defined on the value.
@@ -89,7 +89,7 @@ func (c *SlackConfig) Scan(src interface{}) error { return jsonScan(c, src) }
 type WebHookConfig struct {
 	SendResolved bool        ` json:"send_resolved"`
 	URL          string      ` json:"url"`
-	HTTPConfig   *HTTPConfig ` json:"http_config"`
+	HTTPConfig   *HTTPConfig ` json:"http_config,omitempty"`
 	MaxAlerts    int32       ` json:"max_alerts"`
 }
 
@@ -110,7 +110,7 @@ type HTTPConfig struct {
 
 // HTTPBasicAuth is HTTP basic authentication configuration.
 type HTTPBasicAuth struct {
-	Username     string `json:"username"`
+	Username     string `json:"username,omitempty"`
 	Password     string `json:"password,omitempty"`
 	PasswordFile string `json:"password_file,omitempty"`
 }
@@ -121,5 +121,5 @@ type TLSConfig struct {
 	CertFile           string `json:"cert_file,omitempty"`
 	KeyFile            string `json:"key_file,omitempty"`
 	ServerName         string `json:"server_name,omitempty"`
-	InsecureSkipVerify bool   `json:"insecure_skip_verify"`
+	InsecureSkipVerify bool   `json:"insecure_skip_verify,omitempty"`
 }
