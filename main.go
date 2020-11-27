@@ -74,7 +74,7 @@ import (
 	"github.com/percona/pmm-managed/services/management"
 	managementdbaas "github.com/percona/pmm-managed/services/management/dbaas"
 	managementgrpc "github.com/percona/pmm-managed/services/management/grpc"
-	managementIA "github.com/percona/pmm-managed/services/management/ia"
+	"github.com/percona/pmm-managed/services/management/ia"
 	"github.com/percona/pmm-managed/services/platform"
 	"github.com/percona/pmm-managed/services/prometheus"
 	"github.com/percona/pmm-managed/services/qan"
@@ -182,10 +182,10 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	// TODO remove PERCONA_TEST_IA once IA is out of beta: https://jira.percona.com/browse/PMM-7001
 	if enable, err := strconv.ParseBool(os.Getenv("PERCONA_TEST_IA")); err == nil && enable {
 		l.Warnf("Enabling experimental IA APIs.")
-		iav1beta1.RegisterAlertsServer(gRPCServer, managementIA.NewAlertsService(deps.db))
-		iav1beta1.RegisterChannelsServer(gRPCServer, managementIA.NewChannelsService(deps.db))
-		iav1beta1.RegisterRulesServer(gRPCServer, managementIA.NewRulesService(deps.db))
-		iav1beta1.RegisterTemplatesServer(gRPCServer, managementIA.NewTemplatesService(deps.db))
+		iav1beta1.RegisterAlertsServer(gRPCServer, ia.NewAlertsService(deps.db))
+		iav1beta1.RegisterChannelsServer(gRPCServer, ia.NewChannelsService(deps.db))
+		iav1beta1.RegisterRulesServer(gRPCServer, ia.NewRulesService(deps.db))
+		iav1beta1.RegisterTemplatesServer(gRPCServer, ia.NewTemplatesService(deps.db))
 	}
 
 	// TODO Remove once changing settings.DBaaS.Enabled is possible via API.
