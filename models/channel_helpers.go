@@ -97,8 +97,7 @@ func checkWebHookConfig(c *WebHookConfig) error {
 func FindChannels(q *reform.Querier) ([]Channel, error) {
 	rows, err := q.SelectAllFrom(ChannelTable, "")
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to select notification channels.")
-
+		return nil, errors.Wrap(err, "failed to select notification channels")
 	}
 
 	channels := make([]Channel, len(rows))
@@ -287,9 +286,13 @@ func ChangeChannel(q *reform.Querier, channelID string, params *ChangeChannelPar
 
 // RemoveChannel removes notification channel with specified id.
 func RemoveChannel(q *reform.Querier, id string) error {
+	if _, err := FindChannelByID(q, id); err != nil {
+		return err
+	}
+
 	err := q.Delete(&Channel{ID: id})
 	if err != nil {
-		return errors.Wrap(err, "failed to delete notifications channel")
+		return errors.Wrap(err, "failed to delete notification channel")
 	}
 	return nil
 }

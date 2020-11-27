@@ -6,7 +6,6 @@ digraph packages {
 	"/" -> "/services/checks";
 	"/" -> "/services/dbaas";
 	"/" -> "/services/grafana";
-	"/" -> "/services/ia";
 	"/" -> "/services/inventory";
 	"/" -> "/services/inventory/grpc";
 	"/" -> "/services/management";

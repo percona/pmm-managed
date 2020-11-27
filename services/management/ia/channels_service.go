@@ -21,28 +21,33 @@ import (
 
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/pkg/errors"
+	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/ia"
 )
 
 // ChannelsService represents integrated alerting channels API.
 type ChannelsService struct {
-	ia alertingService
+	db *reform.DB
 }
 
 // NewChannelsService creates new channels API service.
-func NewChannelsService(ia *ia.Service) *ChannelsService {
+func NewChannelsService(db *reform.DB) *ChannelsService {
 	return &ChannelsService{
-		ia: ia,
+		db: db,
 	}
 }
 
 // ListChannels returns list of available channels.
 func (s *ChannelsService) ListChannels(ctx context.Context, request *iav1beta1.ListChannelsRequest) (*iav1beta1.ListChannelsResponse, error) {
-	channels, err := s.ia.ListChannels()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get notification channels")
+	var channels []models.Channel
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		channels, err = models.FindChannels(tx.Querier)
+		return err
+	})
+	if e != nil {
+		return nil, e
 	}
 
 	res := make([]*iav1beta1.Channel, len(channels))
@@ -90,7 +95,7 @@ func (s *ChannelsService) ListChannels(ctx context.Context, request *iav1beta1.L
 				},
 			}
 		default:
-			return nil, errors.Wrapf(err, "unknown notification channel type %s", channel.Type)
+			return nil, errors.Errorf("Unknown notification channel type %s", channel.Type)
 		}
 
 		res[i] = c
@@ -103,156 +108,166 @@ func (s *ChannelsService) ListChannels(ctx context.Context, request *iav1beta1.L
 func (s *ChannelsService) AddChannel(ctx context.Context, req *iav1beta1.AddChannelRequest) (*iav1beta1.AddChannelResponse, error) {
 	params := &models.CreateChannelParams{
 		Summary:  req.Summary,
-		Disabled: req.GetDisabled(),
+		Disabled: req.Disabled,
 	}
 
-	if emailConf := req.GetEmailConfig(); emailConf != nil {
+	if req.EmailConfig != nil {
 		params.EmailConfig = &models.EmailConfig{
-			SendResolved: emailConf.SendResolved,
-			To:           emailConf.To,
+			SendResolved: req.EmailConfig.SendResolved,
+			To:           req.EmailConfig.To,
 		}
 	}
-	if pagerDutyConf := req.GetPagerdutyConfig(); pagerDutyConf != nil {
+	if req.PagerdutyConfig != nil {
 		params.PagerDutyConfig = &models.PagerDutyConfig{
-			SendResolved: pagerDutyConf.SendResolved,
-			RoutingKey:   pagerDutyConf.RoutingKey,
-			ServiceKey:   pagerDutyConf.ServiceKey,
+			SendResolved: req.PagerdutyConfig.SendResolved,
+			RoutingKey:   req.PagerdutyConfig.RoutingKey,
+			ServiceKey:   req.PagerdutyConfig.ServiceKey,
 		}
 	}
-	if slackConf := req.GetSlackConfig(); slackConf != nil {
+	if req.SlackConfig != nil {
 		params.SlackConfig = &models.SlackConfig{
-			SendResolved: slackConf.SendResolved,
-			Channel:      slackConf.Channel,
+			SendResolved: req.SlackConfig.SendResolved,
+			Channel:      req.SlackConfig.Channel,
 		}
 	}
-	if webhookConf := req.GetWebhookConfig(); webhookConf != nil {
+	if req.WebhookConfig != nil {
 		params.WebHookConfig = &models.WebHookConfig{
-			SendResolved: webhookConf.SendResolved,
-			URL:          webhookConf.Url,
-			MaxAlerts:    webhookConf.MaxAlerts,
-			HTTPConfig:   convertHTTPConfigToModel(webhookConf.HttpConfig),
+			SendResolved: req.WebhookConfig.SendResolved,
+			URL:          req.WebhookConfig.Url,
+			MaxAlerts:    req.WebhookConfig.MaxAlerts,
+			HTTPConfig:   convertHTTPConfigToModel(req.WebhookConfig.HttpConfig),
 		}
 	}
 
-	channel, err := s.ia.AddChannel(params)
-	if err != nil {
-		return nil, err
+	var channel *models.Channel
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		channel, err = models.CreateChannel(tx.Querier, params)
+		return err
+	})
+	if e != nil {
+		return nil, e
 	}
-
 	return &iav1beta1.AddChannelResponse{ChannelId: channel.ID}, nil
 }
 
 // ChangeChannel changes existing notification channel.
 func (s *ChannelsService) ChangeChannel(ctx context.Context, req *iav1beta1.ChangeChannelRequest) (*iav1beta1.ChangeChannelResponse, error) {
 	params := &models.ChangeChannelParams{
-		Disabled: req.GetDisabled(),
+		Disabled: req.Disabled,
 	}
 
-	if emailConf := req.GetEmailConfig(); emailConf != nil {
+	if c := req.EmailConfig; c != nil {
 		params.EmailConfig = &models.EmailConfig{
-			SendResolved: emailConf.SendResolved,
-			To:           emailConf.To,
+			SendResolved: c.SendResolved,
+			To:           c.To,
 		}
 	}
-	if pagerDutyConf := req.GetPagerdutyConfig(); pagerDutyConf != nil {
+	if c := req.PagerdutyConfig; c != nil {
 		params.PagerDutyConfig = &models.PagerDutyConfig{
-			SendResolved: pagerDutyConf.SendResolved,
-			RoutingKey:   pagerDutyConf.RoutingKey,
-			ServiceKey:   pagerDutyConf.ServiceKey,
+			SendResolved: c.SendResolved,
+			RoutingKey:   c.RoutingKey,
+			ServiceKey:   c.ServiceKey,
 		}
 	}
-	if slackConf := req.GetSlackConfig(); slackConf != nil {
+	if c := req.SlackConfig; c != nil {
 		params.SlackConfig = &models.SlackConfig{
-			SendResolved: slackConf.SendResolved,
-			Channel:      slackConf.Channel,
+			SendResolved: c.SendResolved,
+			Channel:      c.Channel,
 		}
 	}
-	if webhookConf := req.GetWebhookConfig(); webhookConf != nil {
+	if c := req.WebhookConfig; c != nil {
 		params.WebHookConfig = &models.WebHookConfig{
-			SendResolved: webhookConf.SendResolved,
-			URL:          webhookConf.Url,
-			MaxAlerts:    webhookConf.MaxAlerts,
-			HTTPConfig:   convertHTTPConfigToModel(webhookConf.HttpConfig),
+			SendResolved: c.SendResolved,
+			URL:          c.Url,
+			MaxAlerts:    c.MaxAlerts,
+			HTTPConfig:   convertHTTPConfigToModel(c.HttpConfig),
 		}
 	}
 
-	err := s.ia.ChangeChannel(req.ChannelId, params)
-	if err != nil {
-		return nil, err
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		_, err := models.ChangeChannel(tx.Querier, req.ChannelId, params)
+		return err
+	})
+	if e != nil {
+		return nil, e
 	}
-
 	return &iav1beta1.ChangeChannelResponse{}, nil
 }
 
 // RemoveChannel removes notification channel.
 func (s *ChannelsService) RemoveChannel(ctx context.Context, req *iav1beta1.RemoveChannelRequest) (*iav1beta1.RemoveChannelResponse, error) {
-	if err := s.ia.RemoveChannel(req.ChannelId); err != nil {
-		return nil, errors.Wrap(err, "failed to remove notification channel")
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		return models.RemoveChannel(tx.Querier, req.ChannelId)
+	})
+	if e != nil {
+		return nil, e
 	}
-
 	return &iav1beta1.RemoveChannelResponse{}, nil
 }
 
 func convertHTTPConfigToModel(config *iav1beta1.HTTPConfig) *models.HTTPConfig {
-	var res *models.HTTPConfig
-	if config != nil {
-		res = &models.HTTPConfig{
-			BearerToken:     config.BearerToken,
-			BearerTokenFile: config.BearerTokenFile,
-			ProxyURL:        config.ProxyUrl,
-		}
-
-		if basicAuthConf := config.BasicAuth; basicAuthConf != nil {
-			res.BasicAuth = &models.HTTPBasicAuth{
-				Username:     basicAuthConf.Username,
-				Password:     basicAuthConf.Password,
-				PasswordFile: basicAuthConf.PasswordFile,
-			}
-		}
-
-		if tlsConfig := config.TlsConfig; tlsConfig != nil {
-			res.TLSConfig = &models.TLSConfig{
-				CaFile:             tlsConfig.CaFile,
-				CertFile:           tlsConfig.CertFile,
-				KeyFile:            tlsConfig.KeyFile,
-				ServerName:         tlsConfig.ServerName,
-				InsecureSkipVerify: tlsConfig.InsecureSkipVerify,
-			}
-		}
-		return res
+	if config == nil {
+		return nil
 	}
-	return nil
+
+	res := &models.HTTPConfig{
+		BearerToken:     config.BearerToken,
+		BearerTokenFile: config.BearerTokenFile,
+		ProxyURL:        config.ProxyUrl,
+	}
+
+	if basicAuthConf := config.BasicAuth; basicAuthConf != nil {
+		res.BasicAuth = &models.HTTPBasicAuth{
+			Username:     basicAuthConf.Username,
+			Password:     basicAuthConf.Password,
+			PasswordFile: basicAuthConf.PasswordFile,
+		}
+	}
+
+	if tlsConfig := config.TlsConfig; tlsConfig != nil {
+		res.TLSConfig = &models.TLSConfig{
+			CaFile:             tlsConfig.CaFile,
+			CertFile:           tlsConfig.CertFile,
+			KeyFile:            tlsConfig.KeyFile,
+			ServerName:         tlsConfig.ServerName,
+			InsecureSkipVerify: tlsConfig.InsecureSkipVerify,
+		}
+	}
+
+	return res
 }
 
 func convertModelToHTTPConfig(config *models.HTTPConfig) *iav1beta1.HTTPConfig {
-	var res *iav1beta1.HTTPConfig
-	if config != nil {
-		res = &iav1beta1.HTTPConfig{
-			BearerToken:     config.BearerToken,
-			BearerTokenFile: config.BearerTokenFile,
-			ProxyUrl:        config.ProxyURL,
-		}
-
-		if basicAuthConf := config.BasicAuth; basicAuthConf != nil {
-			res.BasicAuth = &iav1beta1.BasicAuth{
-				Username:     basicAuthConf.Username,
-				Password:     basicAuthConf.Password,
-				PasswordFile: basicAuthConf.PasswordFile,
-			}
-		}
-
-		if tlsConfig := config.TLSConfig; tlsConfig != nil {
-			res.TlsConfig = &iav1beta1.TLSConfig{
-				CaFile:             tlsConfig.CaFile,
-				CertFile:           tlsConfig.CertFile,
-				KeyFile:            tlsConfig.KeyFile,
-				ServerName:         tlsConfig.ServerName,
-				InsecureSkipVerify: tlsConfig.InsecureSkipVerify,
-			}
-		}
-		return res
+	if config == nil {
+		return nil
 	}
-	return nil
+
+	res := &iav1beta1.HTTPConfig{
+		BearerToken:     config.BearerToken,
+		BearerTokenFile: config.BearerTokenFile,
+		ProxyUrl:        config.ProxyURL,
+	}
+
+	if basicAuthConf := config.BasicAuth; basicAuthConf != nil {
+		res.BasicAuth = &iav1beta1.BasicAuth{
+			Username:     basicAuthConf.Username,
+			Password:     basicAuthConf.Password,
+			PasswordFile: basicAuthConf.PasswordFile,
+		}
+	}
+
+	if tlsConfig := config.TLSConfig; tlsConfig != nil {
+		res.TlsConfig = &iav1beta1.TLSConfig{
+			CaFile:             tlsConfig.CaFile,
+			CertFile:           tlsConfig.CertFile,
+			KeyFile:            tlsConfig.KeyFile,
+			ServerName:         tlsConfig.ServerName,
+			InsecureSkipVerify: tlsConfig.InsecureSkipVerify,
+		}
+	}
+
+	return res
 }
 
 // Check interfaces.
