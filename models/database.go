@@ -375,7 +375,7 @@ var databaseSchema = [][]string{
 			expr VARCHAR NOT NULL,
 			params JSONB,
 			"for" BIGINT,
-			severity VARCHAR NOT NUL,
+			severity VARCHAR NOT NULL,
 			labels JSONB,
 			annotations JSONB,
 			source VARCHAR NOT NULL,
