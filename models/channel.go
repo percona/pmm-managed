@@ -18,8 +18,6 @@ package models
 
 import (
 	"database/sql/driver"
-	"encoding/json"
-	"fmt"
 )
 
 //go:generate reform
@@ -56,38 +54,11 @@ type EmailConfig struct {
 	To           []string `json:"to"`
 }
 
-// Value implements database/sql/driver Valuer interface.
-func (c *EmailConfig) Value() (driver.Value, error) {
-	if c == nil {
-		return nil, nil
-	}
+// Value implements database/sql/driver.Valuer interface. Should be defined on the value.
+func (c EmailConfig) Value() (driver.Value, error) { return jsonValue(c) }
 
-	b, err := json.Marshal(c)
-	if err != nil {
-		return nil, err
-	}
-
-	return b, nil
-}
-
-// Scan implements database/sql Scanner interface.
-func (c *EmailConfig) Scan(src interface{}) error {
-	if src == nil {
-		return nil
-	}
-
-	var b []byte
-	switch v := src.(type) {
-	case []byte:
-		b = v
-	case string:
-		b = []byte(v)
-	default:
-		return fmt.Errorf("EmailConfi.Scan: expected []byte or string, got %T (%q)", src, src)
-	}
-
-	return json.Unmarshal(b, c)
-}
+// Scan implements database/sql.Scanner interface. Should be defined on the pointer.
+func (c *EmailConfig) Scan(src interface{}) error { return jsonScan(c, src) }
 
 // PagerDutyConfig represents PagerDuty channel configuration.
 type PagerDutyConfig struct {
@@ -96,38 +67,11 @@ type PagerDutyConfig struct {
 	ServiceKey   string `json:"service_key"`
 }
 
-// Value implements database/sql/driver Valuer interface.
-func (c *PagerDutyConfig) Value() (driver.Value, error) {
-	if c == nil {
-		return nil, nil
-	}
+// Value implements database/sql/driver.Valuer interface. Should be defined on the value.
+func (c PagerDutyConfig) Value() (driver.Value, error) { return jsonValue(c) }
 
-	b, err := json.Marshal(c)
-	if err != nil {
-		return nil, err
-	}
-
-	return b, nil
-}
-
-// Scan implements database/sql Scanner interface.
-func (c *PagerDutyConfig) Scan(src interface{}) error {
-	if src == nil {
-		return nil
-	}
-
-	var b []byte
-	switch v := src.(type) {
-	case []byte:
-		b = v
-	case string:
-		b = []byte(v)
-	default:
-		return fmt.Errorf("PagerDutyConfig.Scan: expected []byte or string, got %T (%q)", src, src)
-	}
-
-	return json.Unmarshal(b, c)
-}
+// Scan implements database/sql.Scanner interface. Should be defined on the pointer.
+func (c *PagerDutyConfig) Scan(src interface{}) error { return jsonScan(c, src) }
 
 // SlackConfig is slack notification channel configuration.
 type SlackConfig struct {
@@ -135,38 +79,11 @@ type SlackConfig struct {
 	Channel      string `json:"channel"`
 }
 
-// Value implements database/sql/driver Valuer interface.
-func (c *SlackConfig) Value() (driver.Value, error) {
-	if c == nil {
-		return nil, nil
-	}
+// Value implements database/sql/driver.Valuer interface. Should be defined on the value.
+func (c SlackConfig) Value() (driver.Value, error) { return jsonValue(c) }
 
-	b, err := json.Marshal(c)
-	if err != nil {
-		return nil, err
-	}
-
-	return b, nil
-}
-
-// Scan implements database/sql Scanner interface.
-func (c *SlackConfig) Scan(src interface{}) error {
-	if src == nil {
-		return nil
-	}
-
-	var b []byte
-	switch v := src.(type) {
-	case []byte:
-		b = v
-	case string:
-		b = []byte(v)
-	default:
-		return fmt.Errorf("SlackConfig.Scan: expected []byte or string, got %T (%q)", src, src)
-	}
-
-	return json.Unmarshal(b, c)
-}
+// Scan implements database/sql.Scanner interface. Should be defined on the pointer.
+func (c *SlackConfig) Scan(src interface{}) error { return jsonScan(c, src) }
 
 // WebHookConfig is webhook notification channel configuration.
 type WebHookConfig struct {
@@ -176,38 +93,11 @@ type WebHookConfig struct {
 	MaxAlerts    int32       ` json:"max_alerts"`
 }
 
-// Value implements database/sql/driver Valuer interface.
-func (c *WebHookConfig) Value() (driver.Value, error) {
-	if c == nil {
-		return nil, nil
-	}
+// Value implements database/sql/driver.Valuer interface. Should be defined on the value.
+func (c WebHookConfig) Value() (driver.Value, error) { return jsonValue(c) }
 
-	b, err := json.Marshal(c)
-	if err != nil {
-		return nil, err
-	}
-
-	return b, nil
-}
-
-// Scan implements database/sql Scanner interface.
-func (c *WebHookConfig) Scan(src interface{}) error {
-	if src == nil {
-		return nil
-	}
-
-	var b []byte
-	switch v := src.(type) {
-	case []byte:
-		b = v
-	case string:
-		b = []byte(v)
-	default:
-		return fmt.Errorf("WebHookConfig.Scan: expected []byte or string, got %T (%q)", src, src)
-	}
-
-	return json.Unmarshal(b, c)
-}
+// Scan implements database/sql.Scanner interface. Should be defined on the pointer.
+func (c *WebHookConfig) Scan(src interface{}) error { return jsonScan(c, src) }
 
 // HTTPConfig is HTTP connection configuration.
 type HTTPConfig struct {
@@ -230,6 +120,6 @@ type TLSConfig struct {
 	CaFile             string `json:"ca_file,omitempty"`
 	CertFile           string `json:"cert_file,omitempty"`
 	KeyFile            string `json:"key_file,omitempty"`
-	ServerName         string `json:"server_name"`
+	ServerName         string `json:"server_name,omitempty"`
 	InsecureSkipVerify bool   `json:"insecure_skip_verify"`
 }
