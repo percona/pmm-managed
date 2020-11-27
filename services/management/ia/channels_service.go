@@ -40,9 +40,14 @@ func NewChannelsService(db *reform.DB) *ChannelsService {
 
 // ListChannels returns list of available channels.
 func (s *ChannelsService) ListChannels(ctx context.Context, request *iav1beta1.ListChannelsRequest) (*iav1beta1.ListChannelsResponse, error) {
-	channels, err := models.FindChannels(s.db.Querier)
-	if err != nil {
-		return nil, err
+	var channels []models.Channel
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		channels, err = models.FindChannels(tx.Querier)
+		return err
+	})
+	if e != nil {
+		return nil, e
 	}
 
 	res := make([]*iav1beta1.Channel, len(channels))
@@ -192,10 +197,12 @@ func (s *ChannelsService) ChangeChannel(ctx context.Context, req *iav1beta1.Chan
 
 // RemoveChannel removes notification channel.
 func (s *ChannelsService) RemoveChannel(ctx context.Context, req *iav1beta1.RemoveChannelRequest) (*iav1beta1.RemoveChannelResponse, error) {
-	if err := models.RemoveChannel(s.db.Querier, req.ChannelId); err != nil {
-		return nil, err
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		return models.RemoveChannel(tx.Querier, req.ChannelId)
+	})
+	if e != nil {
+		return nil, e
 	}
-
 	return &iav1beta1.RemoveChannelResponse{}, nil
 }
 
