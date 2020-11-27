@@ -69,7 +69,6 @@ import (
 	"github.com/percona/pmm-managed/services/checks"
 	"github.com/percona/pmm-managed/services/dbaas"
 	"github.com/percona/pmm-managed/services/grafana"
-	"github.com/percona/pmm-managed/services/ia"
 	"github.com/percona/pmm-managed/services/inventory"
 	inventorygrpc "github.com/percona/pmm-managed/services/inventory/grpc"
 	"github.com/percona/pmm-managed/services/management"
@@ -126,7 +125,6 @@ type gRPCServerDeps struct {
 	agentsRegistry        *agents.Registry
 	grafanaClient         *grafana.Client
 	checksService         *checks.Service
-	iaService             *ia.Service
 	dbaasControllerClient *dbaas.Client
 	settings              *models.Settings
 }
@@ -168,7 +166,6 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	postgresqlSvc := management.NewPostgreSQLService(deps.db, deps.agentsRegistry)
 	proxysqlSvc := management.NewProxySQLService(deps.db, deps.agentsRegistry)
 	checksSvc := management.NewChecksAPIService(deps.checksService)
-	iaSvc := managementIA.NewChannelsService(deps.db, deps.iaService)
 
 	managementpb.RegisterNodeServer(gRPCServer, managementgrpc.NewManagementNodeServer(nodeSvc))
 	managementpb.RegisterServiceServer(gRPCServer, managementgrpc.NewManagementServiceServer(serviceSvc))
@@ -186,7 +183,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	if enable, err := strconv.ParseBool(os.Getenv("PERCONA_TEST_IA")); err == nil && enable {
 		l.Warnf("Enabling experimental IA APIs.")
 		iav1beta1.RegisterAlertsServer(gRPCServer, managementIA.NewAlertsService(deps.db))
-		iav1beta1.RegisterChannelsServer(gRPCServer, iaSvc)
+		iav1beta1.RegisterChannelsServer(gRPCServer, managementIA.NewChannelsService(deps.db))
 		iav1beta1.RegisterRulesServer(gRPCServer, managementIA.NewRulesService(deps.db))
 		iav1beta1.RegisterTemplatesServer(gRPCServer, managementIA.NewTemplatesService(deps.db))
 	}
@@ -633,8 +630,6 @@ func main() {
 
 	prom.MustRegister(checksService)
 
-	iaService := ia.New(db)
-
 	platformService, err := platform.New(db)
 	if err != nil {
 		l.Fatalf("Could not create platform service: %s", err)
@@ -752,7 +747,6 @@ func main() {
 			agentsRegistry:        agentsRegistry,
 			grafanaClient:         grafanaClient,
 			checksService:         checksService,
-			iaService:             iaService,
 			dbaasControllerClient: dbaasControllerClient,
 			settings:              settings,
 		})
