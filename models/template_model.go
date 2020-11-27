@@ -10,7 +10,7 @@ import (
 
 //go:generate reform
 
-//reform:rule_templates
+//reform:notification_rule_templates
 type Template struct {
 	Name        string   `reform:"name,pk"`
 	Version     uint32   `reform:"version"`
@@ -55,7 +55,7 @@ func (t *Template) AfterFind() error {
 type Tiers []common.Tier
 
 // Value implements database/sql/driver Valuer interface.
-func (t *Tiers) Value() (driver.Value, error) { return jsonValue(t) }
+func (t Tiers) Value() (driver.Value, error) { return jsonValue(t) }
 
 // Scan implements database/sql Scanner interface.
 func (t *Tiers) Scan(src interface{}) error { return jsonScan(t, src) }
@@ -63,23 +63,17 @@ func (t *Tiers) Scan(src interface{}) error { return jsonScan(t, src) }
 type Map map[string]string
 
 // Value implements database/sql/driver Valuer interface.
-func (m *Map) Value() (driver.Value, error) { return jsonValue(m) }
+func (m Map) Value() (driver.Value, error) { return jsonValue(m) }
 
 // Scan implements database/sql Scanner interface.
 func (m *Map) Scan(src interface{}) error { return jsonScan(m, src) }
 
 type Duration time.Duration
 
-// Value implements database/sql/driver Valuer interface.
-func (d Duration) Value() (driver.Value, error) { return jsonValue(d) }
-
-// Scan implements database/sql Scanner interface.
-func (d *Duration) Scan(src interface{}) error { return jsonScan(d, src) }
-
 type Params []Param
 
 // Value implements database/sql/driver Valuer interface.
-func (p *Params) Value() (driver.Value, error) { return jsonValue(p) }
+func (p Params) Value() (driver.Value, error) { return jsonValue(p) }
 
 // Scan implements database/sql Scanner interface.
 func (p *Params) Scan(src interface{}) error { return jsonScan(p, src) }

@@ -20,7 +20,7 @@ func (v *templateTableType) Schema() string {
 	return v.s.SQLSchema
 }
 
-// Name returns a view or table name in SQL database ("rule_templates").
+// Name returns a view or table name in SQL database ("notification_rule_templates").
 func (v *templateTableType) Name() string {
 	return v.s.SQLName
 }
@@ -45,9 +45,9 @@ func (v *templateTableType) PKColumnIndex() uint {
 	return uint(v.s.PKFieldIndex)
 }
 
-// TemplateTable represents rule_templates view or table in SQL database.
+// TemplateTable represents notification_rule_templates view or table in SQL database.
 var TemplateTable = &templateTableType{
-	s: parse.StructInfo{Type: "Template", SQLSchema: "", SQLName: "rule_templates", Fields: []parse.FieldInfo{{Name: "Name", Type: "string", Column: "name"}, {Name: "Version", Type: "uint32", Column: "version"}, {Name: "Summary", Type: "string", Column: "summary"}, {Name: "Tiers", Type: "Tiers", Column: "tiers"}, {Name: "Expr", Type: "string", Column: "expr"}, {Name: "Params", Type: "Params", Column: "params"}, {Name: "For", Type: "Duration", Column: "for"}, {Name: "Severity", Type: "Severity", Column: "severity"}, {Name: "Labels", Type: "Map", Column: "labels"}, {Name: "Annotations", Type: "Map", Column: "annotations"}, {Name: "Source", Type: "string", Column: "source"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}}, PKFieldIndex: 0},
+	s: parse.StructInfo{Type: "Template", SQLSchema: "", SQLName: "notification_rule_templates", Fields: []parse.FieldInfo{{Name: "Name", Type: "string", Column: "name"}, {Name: "Version", Type: "uint32", Column: "version"}, {Name: "Summary", Type: "string", Column: "summary"}, {Name: "Tiers", Type: "Tiers", Column: "tiers"}, {Name: "Expr", Type: "string", Column: "expr"}, {Name: "Params", Type: "Params", Column: "params"}, {Name: "For", Type: "Duration", Column: "for"}, {Name: "Severity", Type: "string", Column: "severity"}, {Name: "Labels", Type: "Map", Column: "labels"}, {Name: "Annotations", Type: "Map", Column: "annotations"}, {Name: "Source", Type: "string", Column: "source"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}}, PKFieldIndex: 0},
 	z: new(Template).Values(),
 }
 
