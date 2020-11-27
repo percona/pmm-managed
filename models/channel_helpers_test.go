@@ -125,6 +125,50 @@ func TestNotificationChannels(t *testing.T) {
 		assert.Len(t, cs, 0)
 	})
 
+	t.Run("find", func(t *testing.T) {
+		tx, err := db.Begin()
+		require.NoError(t, err)
+		defer func() {
+			require.NoError(t, tx.Rollback())
+		}()
+
+		q := tx.Querier
+
+		params1 := models.CreateChannelParams{
+			Summary: "some summary",
+			EmailConfig: &models.EmailConfig{
+				To: []string{"test@test.test"},
+			},
+			Disabled: false,
+		}
+		expected1, err := models.CreateChannel(q, &params1)
+		require.NoError(t, err)
+
+		params2 := models.CreateChannelParams{
+			Summary: "another summary",
+			EmailConfig: &models.EmailConfig{
+				To: []string{"test2@test.test"},
+			},
+			Disabled: true,
+		}
+		expected2, err := models.CreateChannel(q, &params2)
+		require.NoError(t, err)
+
+		actual, err := models.FindChannels(q)
+		require.NoError(t, err)
+		var found1, found2 bool
+		for _, channel := range actual {
+			if channel.ID == expected1.ID {
+				found1 = true
+			}
+			if channel.ID == expected2.ID {
+				found2 = true
+			}
+		}
+
+		assert.True(t, found1, "Fist channel not found")
+		assert.True(t, found2, "Second channel not found")
+	})
 }
 
 func TestChannelValidation(t *testing.T) {
