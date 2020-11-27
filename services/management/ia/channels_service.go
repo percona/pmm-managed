@@ -106,8 +106,6 @@ func (s *ChannelsService) AddChannel(ctx context.Context, req *iav1beta1.AddChan
 		Disabled: req.Disabled,
 	}
 
-	// TODO validate that only one config is present
-
 	if req.EmailConfig != nil {
 		params.EmailConfig = &models.EmailConfig{
 			SendResolved: req.EmailConfig.SendResolved,
@@ -153,8 +151,6 @@ func (s *ChannelsService) ChangeChannel(ctx context.Context, req *iav1beta1.Chan
 	params := &models.ChangeChannelParams{
 		Disabled: req.Disabled,
 	}
-
-	// TODO validate that only one config is present
 
 	if c := req.EmailConfig; c != nil {
 		params.EmailConfig = &models.EmailConfig{

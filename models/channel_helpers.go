@@ -97,8 +97,7 @@ func checkWebHookConfig(c *WebHookConfig) error {
 func FindChannels(q *reform.Querier) ([]Channel, error) {
 	rows, err := q.SelectAllFrom(ChannelTable, "")
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to select notification channels.")
-
+		return nil, errors.Wrap(err, "failed to select notification channels")
 	}
 
 	channels := make([]Channel, len(rows))
