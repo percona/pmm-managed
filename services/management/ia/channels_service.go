@@ -134,12 +134,12 @@ func (s *ChannelsService) AddChannel(ctx context.Context, req *iav1beta1.AddChan
 		}
 	}
 
-	err := s.ia.AddChannel(params)
+	channel, err := s.ia.AddChannel(params)
 	if err != nil {
 		return nil, err
 	}
 
-	return &iav1beta1.AddChannelResponse{}, nil
+	return &iav1beta1.AddChannelResponse{ChannelId: channel.ID}, nil
 }
 
 // ChangeChannel changes existing notification channel.
