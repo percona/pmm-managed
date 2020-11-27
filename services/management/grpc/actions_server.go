@@ -249,7 +249,13 @@ func (s *actionsServer) StartMongoDBExplainAction(ctx context.Context, req *mana
 		return nil, err
 	}
 
-	err = s.r.StartMongoDBExplainAction(ctx, res.ID, res.PMMAgentID, dsn, req.Query)
+	serviceTLSKeys := agentpb.StartActionRequest_ServicesTLSKeys{
+		TlsCertificateKey:             req.ServicesTlsKeys.TlsCertificateKey,
+		TlsCertificateKeyFilePassword: req.ServicesTlsKeys.TlsCertificateKeyFilePassword,
+		TlsCaKey:                      req.ServicesTlsKeys.TlsCaKey,
+	}
+
+	err = s.r.StartMongoDBExplainAction(ctx, res.ID, res.PMMAgentID, dsn, req.Query, &serviceTLSKeys)
 	if err != nil {
 		return nil, err
 	}
