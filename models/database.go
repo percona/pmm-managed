@@ -347,10 +347,7 @@ var databaseSchema = [][]string{
             CHECK (((runs_on_node_id IS NULL) <> (agent_type='` + string(PMMAgentType) + `'))  OR (agent_type='` + string(ExternalExporterType) + `'))`,
 	},
 	22: {
-		`ALTER TABLE agents
-			ADD COLUMN tls_certificate_key VARCHAR NOT NULL DEFAULT '',
-			ADD COLUMN tls_certificate_key_file_password VARCHAR NOT NULL DEFAULT '',
-			ADD COLUMN tls_ca_key VARCHAR NOT NULL DEFAULT ''`,
+		`ALTER TABLE agents ADD COLUMN services_tls_keys JSONB DEFAULT '{"QANMongoDBProfiler": {}, "MongoDBExporter": {}}'`,
 	},
 }
 

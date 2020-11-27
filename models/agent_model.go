@@ -40,12 +40,13 @@ type AgentType string
 type TLSKeys struct {
 	TLSCertificateKey             string `json:"tls_certificate_key"`
 	TLSCertificateKeyFilePassword string `json:"tls_certificate_key_file_password"`
-	TLSCaKey                      string `json:"tls_ca_key"`
+	TLSCa                         string `json:"tls_ca"`
 }
 
 // ServicesTLSKeys represents services TLS keys.
 type ServicesTLSKeys struct {
-	MongoDBExporter TLSKeys `json:"mongo_db_exporter"`
+	MongoDBExporter    TLSKeys `json:"mongo_db_exporter"`
+	QANMongoDBProfiler TLSKeys `json:"qa_mongo_db_profiler"`
 }
 
 // Agent types (in the same order as in agents.proto).

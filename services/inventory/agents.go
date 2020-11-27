@@ -274,17 +274,21 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, req *inventoryp
 	var res *inventorypb.MongoDBExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 		params := &models.CreateAgentParams{
-			PMMAgentID:                    req.PmmAgentId,
-			ServiceID:                     req.ServiceId,
-			Username:                      req.Username,
-			Password:                      req.Password,
-			CustomLabels:                  req.CustomLabels,
-			TLS:                           req.Tls,
-			TLSSkipVerify:                 req.TlsSkipVerify,
-			PushMetrics:                   req.PushMetrics,
-			TLSCertificateKey:             req.TlsCertificateKey,
-			TLSCertificateKeyFilePassword: req.TlsCertificateKeyFilePassword,
-			TLSCa:                         req.TlsCa,
+			PMMAgentID:    req.PmmAgentId,
+			ServiceID:     req.ServiceId,
+			Username:      req.Username,
+			Password:      req.Password,
+			CustomLabels:  req.CustomLabels,
+			TLS:           req.Tls,
+			TLSSkipVerify: req.TlsSkipVerify,
+			ServicesTLSKeys: models.ServicesTLSKeys{
+				MongoDBExporter: models.TLSKeys{
+					TLSCertificateKey:             req.TlsCertificateKey,
+					TLSCertificateKeyFilePassword: req.TlsCertificateKeyFilePassword,
+					TLSCa:                         req.TlsCa,
+				},
+			},
+			PushMetrics: req.PushMetrics,
 		}
 		row, err := models.CreateAgent(tx.Querier, models.MongoDBExporterType, params)
 		if err != nil {
