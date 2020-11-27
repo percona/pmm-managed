@@ -22,6 +22,7 @@ import (
 	"github.com/percona/pmm/api/alertmanager/amclient"
 	inventoryClient "github.com/percona/pmm/api/inventorypb/json/client"
 	dbaasClient "github.com/percona/pmm/api/managementpb/dbaas/json/client"
+	channelsClient "github.com/percona/pmm/api/managementpb/ia/json/client"
 	managementClient "github.com/percona/pmm/api/managementpb/json/client"
 	serverClient "github.com/percona/pmm/api/serverpb/json/client"
 	"github.com/percona/pmm/utils/tlsconfig"
@@ -48,6 +49,9 @@ var (
 
 	// RunSTTTests is true if STT tests should be run.
 	RunSTTTests bool
+
+	// RunIATests is true if IA tests should be run.
+	RunIATests bool
 
 	// Kubeconfig contains kubeconfig.
 	Kubeconfig string
@@ -118,6 +122,9 @@ func init() {
 	// FIXME we should rethink it once https://jira.percona.com/browse/PMM-5106 is implemented
 	runSTTTestsF := flag.Bool("pmm.run-stt-tests", false, "Run STT tests that require connected clients [PMM_RUN_STT_TESTS].")
 
+	// TODO remove once IA is out of beta: https://jira.percona.com/browse/PMM-7001
+	runIATestsF := flag.Bool("pmm.run-ia-tests", false, "Run IA tests that require connected clients [PMM_RUN_IA_TESTS].")
+
 	testing.Init()
 	flag.Parse()
 
@@ -149,6 +156,7 @@ func init() {
 	Debug = *debugF || *traceF
 	RunUpdateTest = *runUpdateTestF
 	RunSTTTests = *runSTTTestsF
+	RunIATests = *runIATestsF
 
 	var cancel context.CancelFunc
 	Context, cancel = context.WithCancel(context.Background())
@@ -198,6 +206,7 @@ func init() {
 	dbaasClient.Default = dbaasClient.New(transport, nil)
 	serverClient.Default = serverClient.New(transport, nil)
 	amclient.Default = amclient.New(alertmanagerTransport, nil)
+	channelsClient.Default = channelsClient.New(transport, nil)
 
 	// do not run tests if server is not available
 	_, err = serverClient.Default.Server.Readiness(nil)

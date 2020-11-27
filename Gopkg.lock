@@ -218,7 +218,7 @@
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:519ceb0006f545c73ccf39c3673ff5daec573a00ce5190bbe2f3d62c17e302ba"
+  digest = "1:db190d8b8596a4b3a7bab1d9d31b288e88fa2d29bbba72c80bc43282da8960df"
   name = "github.com/percona/pmm"
   packages = [
     "api/alertmanager/amclient",
@@ -236,6 +236,11 @@
     "api/managementpb/dbaas/json/client/kubernetes",
     "api/managementpb/dbaas/json/client/psmdb_cluster",
     "api/managementpb/dbaas/json/client/xtra_db_cluster",
+    "api/managementpb/ia/json/client",
+    "api/managementpb/ia/json/client/alerts",
+    "api/managementpb/ia/json/client/channels",
+    "api/managementpb/ia/json/client/rules",
+    "api/managementpb/ia/json/client/templates",
     "api/managementpb/json/client",
     "api/managementpb/json/client/actions",
     "api/managementpb/json/client/annotation",
@@ -253,7 +258,7 @@
     "utils/tlsconfig",
   ]
   pruneopts = "NUT"
-  revision = "b026b4acdad43e8e95fa59c183518c518f3419f7"
+  revision = "91c6a0b9c2ee98d01cf2ef11eef97051cd5d8fd9"
 
 [[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
@@ -406,6 +411,8 @@
     "github.com/percona/pmm/api/managementpb/dbaas/json/client/kubernetes",
     "github.com/percona/pmm/api/managementpb/dbaas/json/client/psmdb_cluster",
     "github.com/percona/pmm/api/managementpb/dbaas/json/client/xtra_db_cluster",
+    "github.com/percona/pmm/api/managementpb/ia/json/client",
+    "github.com/percona/pmm/api/managementpb/ia/json/client/channels",
     "github.com/percona/pmm/api/managementpb/json/client",
     "github.com/percona/pmm/api/managementpb/json/client/actions",
     "github.com/percona/pmm/api/managementpb/json/client/annotation",
