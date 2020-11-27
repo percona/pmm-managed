@@ -42,7 +42,7 @@ func NewChannelsService(db *reform.DB) *ChannelsService {
 func (s *ChannelsService) ListChannels(ctx context.Context, request *iav1beta1.ListChannelsRequest) (*iav1beta1.ListChannelsResponse, error) {
 	channels, err := models.FindChannels(s.db.Querier)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get notification channels")
+		return nil, err
 	}
 
 	res := make([]*iav1beta1.Channel, len(channels))
@@ -90,7 +90,7 @@ func (s *ChannelsService) ListChannels(ctx context.Context, request *iav1beta1.L
 				},
 			}
 		default:
-			return nil, errors.Wrapf(err, "unknown notification channel type %s", channel.Type)
+			return nil, errors.Errorf("Unknown notification channel type %s", channel.Type)
 		}
 
 		res[i] = c
@@ -103,36 +103,36 @@ func (s *ChannelsService) ListChannels(ctx context.Context, request *iav1beta1.L
 func (s *ChannelsService) AddChannel(ctx context.Context, req *iav1beta1.AddChannelRequest) (*iav1beta1.AddChannelResponse, error) {
 	params := &models.CreateChannelParams{
 		Summary:  req.Summary,
-		Disabled: req.GetDisabled(),
+		Disabled: req.Disabled,
 	}
 
 	// TODO validate that only one config is present
 
-	if emailConf := req.GetEmailConfig(); emailConf != nil {
+	if req.EmailConfig != nil {
 		params.EmailConfig = &models.EmailConfig{
-			SendResolved: emailConf.SendResolved,
-			To:           emailConf.To,
+			SendResolved: req.EmailConfig.SendResolved,
+			To:           req.EmailConfig.To,
 		}
 	}
-	if pagerDutyConf := req.GetPagerdutyConfig(); pagerDutyConf != nil {
+	if req.PagerdutyConfig != nil {
 		params.PagerDutyConfig = &models.PagerDutyConfig{
-			SendResolved: pagerDutyConf.SendResolved,
-			RoutingKey:   pagerDutyConf.RoutingKey,
-			ServiceKey:   pagerDutyConf.ServiceKey,
+			SendResolved: req.PagerdutyConfig.SendResolved,
+			RoutingKey:   req.PagerdutyConfig.RoutingKey,
+			ServiceKey:   req.PagerdutyConfig.ServiceKey,
 		}
 	}
-	if slackConf := req.GetSlackConfig(); slackConf != nil {
+	if req.SlackConfig != nil {
 		params.SlackConfig = &models.SlackConfig{
-			SendResolved: slackConf.SendResolved,
-			Channel:      slackConf.Channel,
+			SendResolved: req.SlackConfig.SendResolved,
+			Channel:      req.SlackConfig.Channel,
 		}
 	}
-	if webhookConf := req.GetWebhookConfig(); webhookConf != nil {
+	if req.WebhookConfig != nil {
 		params.WebHookConfig = &models.WebHookConfig{
-			SendResolved: webhookConf.SendResolved,
-			URL:          webhookConf.Url,
-			MaxAlerts:    webhookConf.MaxAlerts,
-			HTTPConfig:   convertHTTPConfigToModel(webhookConf.HttpConfig),
+			SendResolved: req.WebhookConfig.SendResolved,
+			URL:          req.WebhookConfig.Url,
+			MaxAlerts:    req.WebhookConfig.MaxAlerts,
+			HTTPConfig:   convertHTTPConfigToModel(req.WebhookConfig.HttpConfig),
 		}
 	}
 
@@ -151,36 +151,36 @@ func (s *ChannelsService) AddChannel(ctx context.Context, req *iav1beta1.AddChan
 // ChangeChannel changes existing notification channel.
 func (s *ChannelsService) ChangeChannel(ctx context.Context, req *iav1beta1.ChangeChannelRequest) (*iav1beta1.ChangeChannelResponse, error) {
 	params := &models.ChangeChannelParams{
-		Disabled: req.GetDisabled(),
+		Disabled: req.Disabled,
 	}
 
 	// TODO validate that only one config is present
 
-	if emailConf := req.GetEmailConfig(); emailConf != nil {
+	if c := req.EmailConfig; c != nil {
 		params.EmailConfig = &models.EmailConfig{
-			SendResolved: emailConf.SendResolved,
-			To:           emailConf.To,
+			SendResolved: c.SendResolved,
+			To:           c.To,
 		}
 	}
-	if pagerDutyConf := req.GetPagerdutyConfig(); pagerDutyConf != nil {
+	if c := req.PagerdutyConfig; c != nil {
 		params.PagerDutyConfig = &models.PagerDutyConfig{
-			SendResolved: pagerDutyConf.SendResolved,
-			RoutingKey:   pagerDutyConf.RoutingKey,
-			ServiceKey:   pagerDutyConf.ServiceKey,
+			SendResolved: c.SendResolved,
+			RoutingKey:   c.RoutingKey,
+			ServiceKey:   c.ServiceKey,
 		}
 	}
-	if slackConf := req.GetSlackConfig(); slackConf != nil {
+	if c := req.SlackConfig; c != nil {
 		params.SlackConfig = &models.SlackConfig{
-			SendResolved: slackConf.SendResolved,
-			Channel:      slackConf.Channel,
+			SendResolved: c.SendResolved,
+			Channel:      c.Channel,
 		}
 	}
-	if webhookConf := req.GetWebhookConfig(); webhookConf != nil {
+	if c := req.WebhookConfig; c != nil {
 		params.WebHookConfig = &models.WebHookConfig{
-			SendResolved: webhookConf.SendResolved,
-			URL:          webhookConf.Url,
-			MaxAlerts:    webhookConf.MaxAlerts,
-			HTTPConfig:   convertHTTPConfigToModel(webhookConf.HttpConfig),
+			SendResolved: c.SendResolved,
+			URL:          c.Url,
+			MaxAlerts:    c.MaxAlerts,
+			HTTPConfig:   convertHTTPConfigToModel(c.HttpConfig),
 		}
 	}
 
