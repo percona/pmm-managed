@@ -40,7 +40,7 @@ func NewChannelsService(db *reform.DB) *ChannelsService {
 
 // ListChannels returns list of available channels.
 func (s *ChannelsService) ListChannels(ctx context.Context, request *iav1beta1.ListChannelsRequest) (*iav1beta1.ListChannelsResponse, error) {
-	channels, err := s.listChannels()
+	channels, err := models.FindChannels(s.db.Querier)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get notification channels")
 	}
@@ -134,11 +134,15 @@ func (s *ChannelsService) AddChannel(ctx context.Context, req *iav1beta1.AddChan
 		}
 	}
 
-	channel, err := s.addChannel(params)
-	if err != nil {
-		return nil, err
+	var channel *models.Channel
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		channel, err = models.CreateChannel(tx.Querier, params)
+		return err
+	})
+	if e != nil {
+		return nil, e
 	}
-
 	return &iav1beta1.AddChannelResponse{ChannelId: channel.ID}, nil
 }
 
@@ -176,17 +180,19 @@ func (s *ChannelsService) ChangeChannel(ctx context.Context, req *iav1beta1.Chan
 		}
 	}
 
-	err := s.changeChannel(req.ChannelId, params)
-	if err != nil {
-		return nil, err
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		_, err := models.ChangeChannel(tx.Querier, req.ChannelId, params)
+		return err
+	})
+	if e != nil {
+		return nil, e
 	}
-
 	return &iav1beta1.ChangeChannelResponse{}, nil
 }
 
 // RemoveChannel removes notification channel.
 func (s *ChannelsService) RemoveChannel(ctx context.Context, req *iav1beta1.RemoveChannelRequest) (*iav1beta1.RemoveChannelResponse, error) {
-	if err := s.removeChannel(req.ChannelId); err != nil {
+	if err := models.RemoveChannel(s.db.Querier, req.ChannelId); err != nil {
 		return nil, errors.Wrap(err, "failed to remove notification channel")
 	}
 
@@ -259,47 +265,3 @@ func convertModelToHTTPConfig(config *models.HTTPConfig) *iav1beta1.HTTPConfig {
 var (
 	_ iav1beta1.ChannelsServer = (*ChannelsService)(nil)
 )
-
-// FIXME move
-
-// AddChannel adds new notification channel.
-func (s *ChannelsService) addChannel(params *models.CreateChannelParams) (*models.Channel, error) {
-	var channel *models.Channel
-	e := s.db.InTransaction(func(tx *reform.TX) error {
-		var err error
-		channel, err = models.CreateChannel(tx.Querier, params)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-
-	if e != nil {
-		return nil, e
-	}
-	return channel, nil
-}
-
-// ChangeChannel changes existing notification channel.
-func (s *ChannelsService) changeChannel(id string, params *models.ChangeChannelParams) error {
-	e := s.db.InTransaction(func(tx *reform.TX) error {
-		_, err := models.ChangeChannel(tx.Querier, id, params)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	return e
-}
-
-// RemoveChannel removes notification channel.
-func (s *ChannelsService) removeChannel(id string) error {
-	return models.RemoveChannel(s.db.Querier, id)
-}
-
-// ListChannels returns list of available channels.
-func (s *ChannelsService) listChannels() ([]models.Channel, error) {
-	return models.FindChannels(s.db.Querier)
-}
