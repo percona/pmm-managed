@@ -35,7 +35,7 @@ func TestNotificationChannels(t *testing.T) {
 	}()
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	t.Run("save", func(t *testing.T) {
+	t.Run("create", func(t *testing.T) {
 		tx, err := db.Begin()
 		require.NoError(t, err)
 		defer func() {
@@ -60,7 +60,7 @@ func TestNotificationChannels(t *testing.T) {
 		assert.Equal(t, expected, actual)
 	})
 
-	t.Run("update", func(t *testing.T) {
+	t.Run("change", func(t *testing.T) {
 		tx, err := db.Begin()
 		require.NoError(t, err)
 		defer func() {
@@ -97,7 +97,7 @@ func TestNotificationChannels(t *testing.T) {
 		assert.Equal(t, expected, actual)
 	})
 
-	t.Run("delete", func(t *testing.T) {
+	t.Run("remove", func(t *testing.T) {
 		tx, err := db.Begin()
 		require.NoError(t, err)
 		defer func() {

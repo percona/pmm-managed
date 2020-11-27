@@ -95,14 +95,14 @@ func checkWebHookConfig(c *WebHookConfig) error {
 
 // FindChannels returns saved notification channels configuration.
 func FindChannels(q *reform.Querier) ([]Channel, error) {
-	structs, err := q.SelectAllFrom(ChannelTable, "")
+	rows, err := q.SelectAllFrom(ChannelTable, "")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select notification channels.")
 
 	}
 
-	channels := make([]Channel, len(structs))
-	for i, s := range structs {
+	channels := make([]Channel, len(rows))
+	for i, s := range rows {
 		c := s.(*Channel)
 
 		channels[i] = *c
