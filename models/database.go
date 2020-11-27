@@ -366,6 +366,26 @@ var databaseSchema = [][]string{
 			PRIMARY KEY (id)
 		)`,
 	},
+	23: {
+		`CREATE TABLE notification_rule_templates (
+			name VARCHAR NOT NULL,
+			version INTEGER NOT NULL,
+			summary VARCHAR NOT NULL,
+			tiers JSONB,
+			expr VARCHAR NOT NULL,
+			params JSONB,
+			"for" BIGINT,
+			severity INTEGER,
+			labels JSONB,
+			annotations JSONB,
+			source VARCHAR NOT NULL,
+
+			created_at TIMESTAMP NOT NULL,
+			updated_at TIMESTAMP NOT NULL,
+
+			PRIMARY KEY (name)
+		)`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^
