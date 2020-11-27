@@ -106,6 +106,8 @@ func (s *ChannelsService) AddChannel(ctx context.Context, req *iav1beta1.AddChan
 		Disabled: req.GetDisabled(),
 	}
 
+	// TODO validate that only one config is present
+
 	if emailConf := req.GetEmailConfig(); emailConf != nil {
 		params.EmailConfig = &models.EmailConfig{
 			SendResolved: emailConf.SendResolved,
@@ -152,6 +154,8 @@ func (s *ChannelsService) ChangeChannel(ctx context.Context, req *iav1beta1.Chan
 		Disabled: req.GetDisabled(),
 	}
 
+	// TODO validate that only one config is present
+
 	if emailConf := req.GetEmailConfig(); emailConf != nil {
 		params.EmailConfig = &models.EmailConfig{
 			SendResolved: emailConf.SendResolved,
@@ -193,72 +197,74 @@ func (s *ChannelsService) ChangeChannel(ctx context.Context, req *iav1beta1.Chan
 // RemoveChannel removes notification channel.
 func (s *ChannelsService) RemoveChannel(ctx context.Context, req *iav1beta1.RemoveChannelRequest) (*iav1beta1.RemoveChannelResponse, error) {
 	if err := models.RemoveChannel(s.db.Querier, req.ChannelId); err != nil {
-		return nil, errors.Wrap(err, "failed to remove notification channel")
+		return nil, err
 	}
 
 	return &iav1beta1.RemoveChannelResponse{}, nil
 }
 
 func convertHTTPConfigToModel(config *iav1beta1.HTTPConfig) *models.HTTPConfig {
-	var res *models.HTTPConfig
-	if config != nil {
-		res = &models.HTTPConfig{
-			BearerToken:     config.BearerToken,
-			BearerTokenFile: config.BearerTokenFile,
-			ProxyURL:        config.ProxyUrl,
-		}
-
-		if basicAuthConf := config.BasicAuth; basicAuthConf != nil {
-			res.BasicAuth = &models.HTTPBasicAuth{
-				Username:     basicAuthConf.Username,
-				Password:     basicAuthConf.Password,
-				PasswordFile: basicAuthConf.PasswordFile,
-			}
-		}
-
-		if tlsConfig := config.TlsConfig; tlsConfig != nil {
-			res.TLSConfig = &models.TLSConfig{
-				CaFile:             tlsConfig.CaFile,
-				CertFile:           tlsConfig.CertFile,
-				KeyFile:            tlsConfig.KeyFile,
-				ServerName:         tlsConfig.ServerName,
-				InsecureSkipVerify: tlsConfig.InsecureSkipVerify,
-			}
-		}
-		return res
+	if config == nil {
+		return nil
 	}
-	return nil
+
+	res := &models.HTTPConfig{
+		BearerToken:     config.BearerToken,
+		BearerTokenFile: config.BearerTokenFile,
+		ProxyURL:        config.ProxyUrl,
+	}
+
+	if basicAuthConf := config.BasicAuth; basicAuthConf != nil {
+		res.BasicAuth = &models.HTTPBasicAuth{
+			Username:     basicAuthConf.Username,
+			Password:     basicAuthConf.Password,
+			PasswordFile: basicAuthConf.PasswordFile,
+		}
+	}
+
+	if tlsConfig := config.TlsConfig; tlsConfig != nil {
+		res.TLSConfig = &models.TLSConfig{
+			CaFile:             tlsConfig.CaFile,
+			CertFile:           tlsConfig.CertFile,
+			KeyFile:            tlsConfig.KeyFile,
+			ServerName:         tlsConfig.ServerName,
+			InsecureSkipVerify: tlsConfig.InsecureSkipVerify,
+		}
+	}
+
+	return res
 }
 
 func convertModelToHTTPConfig(config *models.HTTPConfig) *iav1beta1.HTTPConfig {
-	var res *iav1beta1.HTTPConfig
-	if config != nil {
-		res = &iav1beta1.HTTPConfig{
-			BearerToken:     config.BearerToken,
-			BearerTokenFile: config.BearerTokenFile,
-			ProxyUrl:        config.ProxyURL,
-		}
-
-		if basicAuthConf := config.BasicAuth; basicAuthConf != nil {
-			res.BasicAuth = &iav1beta1.BasicAuth{
-				Username:     basicAuthConf.Username,
-				Password:     basicAuthConf.Password,
-				PasswordFile: basicAuthConf.PasswordFile,
-			}
-		}
-
-		if tlsConfig := config.TLSConfig; tlsConfig != nil {
-			res.TlsConfig = &iav1beta1.TLSConfig{
-				CaFile:             tlsConfig.CaFile,
-				CertFile:           tlsConfig.CertFile,
-				KeyFile:            tlsConfig.KeyFile,
-				ServerName:         tlsConfig.ServerName,
-				InsecureSkipVerify: tlsConfig.InsecureSkipVerify,
-			}
-		}
-		return res
+	if config == nil {
+		return nil
 	}
-	return nil
+
+	res := &iav1beta1.HTTPConfig{
+		BearerToken:     config.BearerToken,
+		BearerTokenFile: config.BearerTokenFile,
+		ProxyUrl:        config.ProxyURL,
+	}
+
+	if basicAuthConf := config.BasicAuth; basicAuthConf != nil {
+		res.BasicAuth = &iav1beta1.BasicAuth{
+			Username:     basicAuthConf.Username,
+			Password:     basicAuthConf.Password,
+			PasswordFile: basicAuthConf.PasswordFile,
+		}
+	}
+
+	if tlsConfig := config.TLSConfig; tlsConfig != nil {
+		res.TlsConfig = &iav1beta1.TLSConfig{
+			CaFile:             tlsConfig.CaFile,
+			CertFile:           tlsConfig.CertFile,
+			KeyFile:            tlsConfig.KeyFile,
+			ServerName:         tlsConfig.ServerName,
+			InsecureSkipVerify: tlsConfig.InsecureSkipVerify,
+		}
+	}
+
+	return res
 }
 
 // Check interfaces.
