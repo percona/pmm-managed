@@ -19,7 +19,7 @@ type Template struct {
 	Expr        string   `reform:"expr"`
 	Params      Params   `reform:"params"`
 	For         Duration `reform:"for"`
-	Severity    Severity `reform:"severity"`
+	Severity    string   `reform:"severity"`
 	Labels      Map      `reform:"labels"`
 	Annotations Map      `reform:"annotations"`
 	Source      string   `reform:"source"`
@@ -68,7 +68,6 @@ func (m *Map) Value() (driver.Value, error) { return jsonValue(m) }
 // Scan implements database/sql Scanner interface.
 func (m *Map) Scan(src interface{}) error { return jsonScan(m, src) }
 
-type Severity string
 type Duration time.Duration
 
 // Value implements database/sql/driver Valuer interface.
@@ -76,14 +75,6 @@ func (d Duration) Value() (driver.Value, error) { return jsonValue(d) }
 
 // Scan implements database/sql Scanner interface.
 func (d *Duration) Scan(src interface{}) error { return jsonScan(d, src) }
-
-type Type string
-
-const (
-	Bool   = Type("bool")
-	Float  = Type("float")
-	String = Type("string")
-)
 
 type Params []Param
 
@@ -97,7 +88,7 @@ type Param struct {
 	Name    string `json:"name"`
 	Summary string `json:"summary"`
 	Unit    string `json:"unit"`
-	Type    Type   `json:"type"`
+	Type    string `json:"type"`
 
 	FloatParam *FloatParam `json:"float_param"`
 	// BoolParam   *BoolParam   `json:"bool_param"`
@@ -110,13 +101,13 @@ type BoolParam struct {
 
 type FloatParam struct {
 	HasDefault bool    `json:"has_default"`
-	Default    float32 `json:"default"`
+	Default    float64 `json:"default"`
 
 	HasMin bool    `json:"has_min"`
-	Min    float32 `json:"min"`
+	Min    float64 `json:"min"`
 
 	HaxMax bool    `json:"hax_max"`
-	Max    float32 `json:"max"`
+	Max    float64 `json:"max"`
 }
 
 type StringParam struct {
