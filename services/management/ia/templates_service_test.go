@@ -18,10 +18,12 @@ package ia
 
 import (
 	"context"
+	"io/ioutil"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -30,6 +32,9 @@ const (
 	testUser2Templates   = "../../../testdata/ia/user2/*.yml"
 	testUserTemplates    = "../../../testdata/ia/user/*.yml"
 	testMissingTemplates = "/no/such/path/*.yml"
+
+	userRuleFilePath    = "/tmp/ia1/user_rule.yml"
+	builtinRuleFilePath = "/tmp/ia1/builtin_rule.yml"
 )
 
 func TestCollect(t *testing.T) {
@@ -72,5 +77,44 @@ func TestCollect(t *testing.T) {
 		assert.NotContains(t, rules, "user_rule")
 		assert.Contains(t, rules, "builtin_rule")
 		assert.Contains(t, rules, "user2_rule")
+	})
+}
+
+func TestConvertTemplate(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	t.Run("valid template paths", func(t *testing.T) {
+		t.Parallel()
+
+		svc := NewTemplatesService()
+		svc.builtinTemplatesPath = testBuiltinTemplates
+		svc.userTemplatesPath = testUserTemplates
+		svc.collect(ctx)
+
+		svc.convertTemplates(ctx)
+		assert.FileExists(t, userRuleFilePath)
+		assert.FileExists(t, builtinRuleFilePath)
+
+		buf, err := ioutil.ReadFile(builtinRuleFilePath)
+		require.NoError(t, err)
+		var builtinRule ruleFile
+		err = yaml.Unmarshal(buf, &builtinRule)
+		require.NoError(t, err)
+		bRule := builtinRule.Group[0].Rules[0]
+		assert.Equal(t, "builtin_rule", bRule.Alert)
+		assert.Contains(t, bRule.Labels, "severity")
+		assert.Contains(t, bRule.Labels, "ia")
+
+		buf, err = ioutil.ReadFile(userRuleFilePath)
+		require.NoError(t, err)
+		var userRule ruleFile
+		err = yaml.Unmarshal(buf, &userRule)
+		require.NoError(t, err)
+		uRule := userRule.Group[0].Rules[0]
+		assert.Equal(t, "user_rule", uRule.Alert)
+		assert.Contains(t, uRule.Labels, "severity")
+		assert.Contains(t, uRule.Labels, "ia")
 	})
 }

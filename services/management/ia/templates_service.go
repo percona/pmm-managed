@@ -20,8 +20,11 @@ import (
 	"bytes"
 	"context"
 	"io/ioutil"
+	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -30,16 +33,25 @@ import (
 	saas "github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona/pmm/api/managementpb"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
+	"github.com/percona/promconfig"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"gopkg.in/yaml.v2"
 )
 
 const (
 	builtinTemplatesPath = "/tmp/ia1/*.yml"
 	userTemplatesPath    = "/tmp/ia2/*.yml"
+
+	ruleFileDir = "/tmp/ia1/"
+
+	// TODO remove once we start using real values
+	dummyParamValue = "80"
 )
+
+var paramRegex = regexp.MustCompile(`\[\[.*?\]\]`)
 
 // TemplatesService is responsible for interactions with IA rule templates.
 type TemplatesService struct {
@@ -146,6 +158,123 @@ func (svc *TemplatesService) loadFile(ctx context.Context, file string) ([]saas.
 	}
 
 	return rules, nil
+}
+
+type ruleFile struct {
+	Group []ruleGroup `yaml:"groups"`
+}
+
+type ruleGroup struct {
+	Name  string `yaml:"name"`
+	Rules []rule `yaml:"rules"`
+}
+
+type rule struct {
+	Alert       string              `yaml:"alert"` // same as alert name in template file
+	Expr        string              `yaml:"expr"`
+	Duration    promconfig.Duration `yaml:"for"`
+	Labels      map[string]string   `yaml:"labels,omitempty"`
+	Annotations map[string]string   `yaml:"annotations,omitempty"`
+}
+
+// converts an alert template rule to a rule file. generates one file per rule.
+func (svc *TemplatesService) convertTemplates(ctx context.Context) {
+	templates := svc.getCollected(ctx)
+	for _, template := range templates {
+		r := rule{
+			Alert:    template.Name,
+			Duration: template.For,
+			Labels:   template.Labels,
+		}
+
+		res := transformExpr(template.Expr)
+		r.Expr = res.transformedExpr
+
+		for t := range res.templateSet {
+			key := strings.Trim(t, "[[ . ]]")
+			r.Labels[key] = dummyParamValue
+		}
+		r.Labels["ia"] = "1"
+		r.Labels["severity"] = template.Severity.String()
+
+		transformAnnotations(template.Annotations, res.templateSet)
+		r.Annotations = template.Annotations
+
+		rf := ruleFile{
+			Group: []ruleGroup{{
+				Name:  "PMM Server Integrated Alerting",
+				Rules: []rule{r},
+			}},
+		}
+		err := dumpRule(rf)
+
+		if err != nil {
+			svc.l.Error(err)
+		}
+	}
+}
+
+type parsedExpr struct {
+	transformedExpr string
+	// stores unique templates found in expr.
+	templateSet map[string]struct{}
+}
+
+// extracts unique occurences of templates in the expression
+// and replaces all templates with a dummy value.
+func transformExpr(expr string) parsedExpr {
+	params := paramRegex.FindAll([]byte(expr), -1)
+	set := make(map[string]struct{}, len(params))
+	for _, p := range params {
+		set[string(p)] = struct{}{}
+	}
+
+	// TODO use real values instead of dummy.
+	tExpr := string(paramRegex.ReplaceAll([]byte(expr), []byte(dummyParamValue)))
+
+	return parsedExpr{
+		transformedExpr: tExpr,
+		templateSet:     set,
+	}
+}
+
+// replaces any occurence of a template in annotations with a dummy value.
+func transformAnnotations(annotations map[string]string, templateSet map[string]struct{}) {
+	var val string
+	for k, v := range annotations {
+		for param := range templateSet {
+			if strings.Contains(v, param) {
+				// TODO use real values instead of dummy.
+				val = strings.ReplaceAll(v, param, dummyParamValue)
+			}
+		}
+		annotations[k] = val
+	}
+}
+
+// dump the transformed IA rules to a file.
+func dumpRule(rule ruleFile) error {
+	b, err := yaml.Marshal(rule)
+	if err != nil {
+		return errors.Errorf("failed to marshal rule %s", err)
+	}
+	b = append([]byte("---\n"), b...)
+
+	filepath := ruleFileDir + rule.Group[0].Rules[0].Alert + ".yml"
+
+	_, err = os.Stat(ruleFileDir)
+	if os.IsNotExist(err) {
+		err = os.Mkdir(ruleFileDir, 0755)
+		if err != nil {
+			return err
+		}
+	}
+	err = ioutil.WriteFile(filepath, b, 0644)
+	if err != nil {
+		return errors.Errorf("failed to dump rule to file %s: %s", ruleFileDir, err)
+
+	}
+	return nil
 }
 
 // ListTemplates returns a list of all collected Alert Rule Templates.
