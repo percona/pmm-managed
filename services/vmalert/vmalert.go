@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package victoriametrics provides facilities for working with VMAlert.
+// Package vmalert provides facilities for working with VMAlert.
 package vmalert
 
 import (
