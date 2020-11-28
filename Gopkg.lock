@@ -316,6 +316,17 @@
   revision = "c2b33e84"
 
 [[projects]]
+  digest = "1:9d8169a68525a40501811137321057d3c3fb452b26059027e55d0d1ae307db01"
+  name = "github.com/kevinburke/go-bindata"
+  packages = [
+    ".",
+    "go-bindata",
+  ]
+  pruneopts = "NUT"
+  revision = "017bb32866cbdd959f3f9891ab831bcd199c5819"
+  version = "v3.22.0"
+
+[[projects]]
   digest = "1:a3998f85665bdf805d519735e658c0e0125bd67b57bb15e414a5a9e360e32455"
   name = "github.com/konsorten/go-windows-terminal-sequences"
   packages = ["."]
@@ -406,7 +417,7 @@
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:b8a96623bb7bc90e501c582568309b0fbb4278a2a6064719ad6c1a5a00f4b37d"
+  digest = "1:d786bf0fdf081f0c79913ddfdbf6c9ef0523adecd8c2920b851629a4b8ccd37d"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -429,7 +440,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "a259b627edce735475301e8df2114024db3f4250"
+  revision = "91c6a0b9c2ee98d01cf2ef11eef97051cd5d8fd9"
 
 [[projects]]
   digest = "1:6832634ec059f4bfddaff75621cf1c4750949129c6de2e5e58e01059d0851e25"
@@ -864,6 +875,7 @@
     "github.com/grpc-ecosystem/go-grpc-middleware/validator",
     "github.com/grpc-ecosystem/go-grpc-prometheus",
     "github.com/grpc-ecosystem/grpc-gateway/runtime",
+    "github.com/kevinburke/go-bindata/go-bindata",
     "github.com/lib/pq",
     "github.com/percona-platform/dbaas-api/gen/controller",
     "github.com/percona-platform/saas/gen/auth",
