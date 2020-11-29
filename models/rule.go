@@ -19,13 +19,13 @@ package models
 import (
 	"time"
 
-	"github.com/golang/protobuf/ptypes/duration"
-	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/percona/pmm/api/managementpb"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 )
 
 //go:generate reform
+
+// TODO merge alertRule and Rule
 
 // alertRule represents an IA rule to be stored in the database.
 //reform:alert_rules
@@ -41,6 +41,7 @@ type alertRule struct {
 	Filters      *[]byte   `reform:"filters"`
 	Channels     *[]byte   `reform:"channels"`
 	CreatedAt    time.Time `reform:"created_at"`
+	UpdatedAt    time.Time `reform:"updated_at"`
 }
 
 // Rule represents alertRule configuration.
@@ -50,13 +51,16 @@ type Rule struct {
 	Summary      string                 `json:"summary"`
 	Disabled     bool                   `json:"disabled"`
 	Params       []*iav1beta1.RuleParam `json:"params"`
-	For          *duration.Duration     `json:"for"`
+	For          time.Duration          `json:"for"`
 	Severity     managementpb.Severity  `json:"severity"`
 	CustomLabels map[string]string      `json:"custom_labels"`
 	Filters      []*Filter              `json:"filters"`
 	Channels     []*iav1beta1.Channel   `json:"channels"`
-	CreatedAt    *timestamp.Timestamp   `json:"created_at"`
+	CreatedAt    time.Time              `json:"created_at"`
+	UpdatedAt    time.Time              `json:"updated_at"`
 }
+
+// TODO BeforeInsert, BeforeUpdate, AfterFind
 
 type FilterType int32
 

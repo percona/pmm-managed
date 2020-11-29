@@ -343,23 +343,25 @@ var databaseSchema = [][]string{
 	},
 	21: {
 		`ALTER TABLE agents
-			ADD CONSTRAINT runs_on_node_id_only_for_pmm_agent 
+			ADD CONSTRAINT runs_on_node_id_only_for_pmm_agent
             CHECK (((runs_on_node_id IS NULL) <> (agent_type='` + string(PMMAgentType) + `'))  OR (agent_type='` + string(ExternalExporterType) + `'))`,
 	},
-	22: {
+
+	23: {
 		`CREATE TABLE alert_rules (
 			id VARCHAR NOT NULL,
 			template JSONB,
 			summary VARCHAR,
 			disabled BOOLEAN,
 			params JSONB,
-			for VARCHAR NOT NULL,
+			"for" VARCHAR NOT NULL,
 			severity VARCHAR,
 			custom_labels JSONB,
 			filters JSONB,
 			channels JSONB,
 			created_at TIMESTAMP NOT NULL,
-			
+			updated_at TIMESTAMP NOT NULL,
+
 			PRIMARY KEY (id)
 		)`,
 	},

@@ -19,47 +19,53 @@ package ia
 import (
 	"context"
 
+	"github.com/golang/protobuf/ptypes"
 	"github.com/google/uuid"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/ia"
 )
 
 // RulesService represents API for Integrated Alerting Rules.
 type RulesService struct {
-	ia aletringService
+	db *reform.DB
 }
 
 // NewRulesService creates an API for Integrated Alerting Rules.
-func NewRulesService(ia *ia.Service) *RulesService {
+func NewRulesService(db *reform.DB) *RulesService {
 	return &RulesService{
-		ia: ia,
+		db: db,
 	}
 }
 
 // ListAlertRules returns a list of all Integrated Alerting rules.
 func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAlertRulesRequest) (*iav1beta1.ListAlertRulesResponse, error) {
-	rules, err := s.ia.ListRules()
+	rules, err := models.GetRules(s.db.Querier)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get alert rules")
 	}
 	res := make([]*iav1beta1.Rule, len(rules))
 	for i, rule := range rules {
+		createdAt, err := ptypes.TimestampProto(rule.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+
 		r := &iav1beta1.Rule{
 			RuleId:       rule.ID,
 			Template:     rule.Template,
 			Disabled:     rule.Disabled,
 			Summary:      rule.Summary,
 			Params:       rule.Params,
-			For:          rule.For,
+			For:          ptypes.DurationProto(rule.For),
 			Severity:     rule.Severity,
 			CustomLabels: rule.CustomLabels,
 			Channels:     rule.Channels,
-			CreatedAt:    rule.CreatedAt,
+			CreatedAt:    createdAt,
 		}
 
 		filters := make([]*iav1beta1.Filter, len(rule.Filters))
@@ -84,11 +90,11 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 		ID:           "/ia/rule_id/" + uuid.New().String(),
 		Disabled:     req.GetDisabled(),
 		Params:       req.GetParams(),
-		For:          req.GetFor(),
+		For:          req.For.AsDuration(),
 		Severity:     req.GetSeverity(),
 		CustomLabels: req.GetCustomLabels(),
 	}
-	err := s.ia.AddRule(r)
+	err := models.SaveRule(s.db.Querier, r)
 	if err != nil {
 		return nil, err
 	}

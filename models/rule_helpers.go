@@ -25,7 +25,6 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/durationpb"
 	reform "gopkg.in/reform.v1"
 )
 
@@ -110,7 +109,7 @@ func ruleToAlertRule(r *Rule) (*alertRule, error) {
 		Disabled:  r.Disabled,
 		For:       r.For.String(),
 		Severity:  r.Severity.String(),
-		CreatedAt: r.CreatedAt.AsTime(),
+		CreatedAt: r.CreatedAt,
 	}
 
 	t, err := json.Marshal(r.Template)
@@ -156,13 +155,13 @@ func alertRuleToRule(ar *alertRule) (*Rule, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to convert duration")
 	}
-	r.For = durationpb.New(dur)
+	r.For = dur
 
 	createdAt, err := ptypes.TimestampProto(ar.CreatedAt)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to convert timestamp")
 	}
-	r.CreatedAt = createdAt
+	r.CreatedAt = createdAt.AsTime()
 
 	r.Template = &iav1beta1.Template{}
 	err = json.Unmarshal(*ar.Template, r.Template)
