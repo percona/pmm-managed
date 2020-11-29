@@ -371,8 +371,9 @@ var databaseSchema = [][]string{
 			PRIMARY KEY (id)
 		)`,
 	},
+
 	23: {
-		`CREATE TABLE notification_rule_templates (
+		`CREATE TABLE ia_templates (
 			name VARCHAR NOT NULL,
 			version INTEGER NOT NULL,
 			summary VARCHAR NOT NULL,

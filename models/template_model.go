@@ -10,7 +10,7 @@ import (
 
 //go:generate reform
 
-//reform:notification_rule_templates
+//reform:ia_templates
 type Template struct {
 	Name        string   `reform:"name,pk"`
 	Version     uint32   `reform:"version"`
