@@ -17,47 +17,55 @@
 package models
 
 import (
+	"database/sql/driver"
 	"time"
 
 	"github.com/percona/pmm/api/managementpb"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
+	"gopkg.in/reform.v1"
 )
 
 //go:generate reform
 
-// TODO merge alertRule and Rule
-
-// alertRule represents an IA rule to be stored in the database.
+// Rule represents alertRule configuration.
 //reform:alert_rules
-type alertRule struct {
-	Template     *[]byte   `reform:"template"`
-	ID           string    `reform:"id,pk"`
-	Summary      string    `reform:"summary"`
-	Disabled     bool      `reform:"disabled"`
-	Params       *[]byte   `reform:"params"`
-	For          string    `reform:"for"`
-	Severity     string    `reform:"severity"`
-	CustomLabels *[]byte   `reform:"custom_labels"`
-	Filters      *[]byte   `reform:"filters"`
-	Channels     *[]byte   `reform:"channels"`
-	CreatedAt    time.Time `reform:"created_at"`
-	UpdatedAt    time.Time `reform:"updated_at"`
+type Rule struct {
+	Template     *iav1beta1.Template    `reform:"template"`
+	ID           string                 `reform:"id,pk"`
+	Summary      string                 `reform:"summary"`
+	Disabled     bool                   `reform:"disabled"`
+	Params       []*iav1beta1.RuleParam `reform:"params"`
+	For          time.Duration          `reform:"for"`
+	Severity     managementpb.Severity  `reform:"severity"`
+	CustomLabels []byte                 `reform:"custom_labels"`
+	Filters      []*Filter              `reform:"filters"`
+	Channels     []*Channel             `reform:"channels"`
+	CreatedAt    time.Time              `reform:"created_at"`
+	UpdatedAt    time.Time              `reform:"updated_at"`
 }
 
-// Rule represents alertRule configuration.
-type Rule struct {
-	Template     *iav1beta1.Template    `json:"template"`
-	ID           string                 `json:"id"`
-	Summary      string                 `json:"summary"`
-	Disabled     bool                   `json:"disabled"`
-	Params       []*iav1beta1.RuleParam `json:"params"`
-	For          time.Duration          `json:"for"`
-	Severity     managementpb.Severity  `json:"severity"`
-	CustomLabels map[string]string      `json:"custom_labels"`
-	Filters      []*Filter              `json:"filters"`
-	Channels     []*iav1beta1.Channel   `json:"channels"`
-	CreatedAt    time.Time              `json:"created_at"`
-	UpdatedAt    time.Time              `json:"updated_at"`
+// BeforeInsert implements reform.BeforeInserter interface.
+func (r *Rule) BeforeInsert() error {
+	now := Now()
+	r.CreatedAt = now
+	r.UpdatedAt = now
+
+	return nil
+}
+
+// BeforeUpdate implements reform.BeforeUpdater interface.
+func (r *Rule) BeforeUpdate() error {
+	r.UpdatedAt = Now()
+
+	return nil
+}
+
+// AfterFind implements reform.AfterFinder interface.
+func (r *Rule) AfterFind() error {
+	r.CreatedAt = r.CreatedAt.UTC()
+	r.UpdatedAt = r.UpdatedAt.UTC()
+
+	return nil
 }
 
 // TODO BeforeInsert, BeforeUpdate, AfterFind
@@ -67,7 +75,7 @@ type FilterType int32
 const (
 	Invalid FilterType = 0
 	// =
-	equal FilterType = 1
+	Equal FilterType = 1
 	// !=
 	NotEqual FilterType = 2
 	// =~
@@ -77,7 +85,20 @@ const (
 )
 
 type Filter struct {
-	Type  FilterType `json:"type"`
-	Key   string     `json:"key"`
-	Value string     `json:"value"`
+	Type FilterType `json:"type"`
+	Key  string     `json:"key"`
+	Val  string     `json:"value"`
 }
+
+// Value implements database/sql/driver.Valuer interface. Should be defined on the value.
+func (f Filter) Value() (driver.Value, error) { return jsonValue(f) }
+
+// Scan implements database/sql.Scanner interface. Should be defined on the pointer.
+func (f *Filter) Scan(src interface{}) error { return jsonScan(f, src) }
+
+// check interfaces.
+var (
+	_ reform.BeforeInserter = (*Rule)(nil)
+	_ reform.BeforeUpdater  = (*Rule)(nil)
+	_ reform.AfterFinder    = (*Rule)(nil)
+)

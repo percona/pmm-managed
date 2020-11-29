@@ -18,9 +18,10 @@ package models
 
 import (
 	"encoding/json"
-	"time"
 
-	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/duration"
+	"github.com/google/uuid"
+	"github.com/percona/pmm/api/managementpb"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -28,167 +29,169 @@ import (
 	reform "gopkg.in/reform.v1"
 )
 
-// SaveRule persists alert rule.
-func SaveRule(q *reform.Querier, r *Rule) error {
-	if err := ValidateRule(r); err != nil {
-		return err
+func checkUniqueRuleID(q *reform.Querier, id string) error {
+	if id == "" {
+		panic("empty Rule ID")
 	}
 
-	nc, err := ruleToAlertRule(r)
-	if err != nil {
-		return err
+	agent := &Rule{ID: id}
+	switch err := q.Reload(agent); err {
+	case nil:
+		return status.Errorf(codes.AlreadyExists, "Rule with ID %q already exists.", id)
+	case reform.ErrNoRows:
+		return nil
+	default:
+		return errors.WithStack(err)
 	}
-
-	err = q.Insert(nc)
-	if err != nil {
-		return errors.Wrap(err, "failed to create alert rule")
-	}
-
-	return nil
 }
 
-// UpdateRule updates existing alert rule.
-func UpdateRule(q *reform.Querier, r *Rule) error {
-	if err := ValidateRule(r); err != nil {
-		return errors.Wrap(err, "channel validation failed")
-	}
-
-	nc, err := ruleToAlertRule(r)
-	if err != nil {
-		return err
-	}
-
-	err = q.Update(nc)
-	if err != nil {
-		return errors.Wrap(err, "failed to create alert rule")
-	}
-
-	return nil
-}
-
-// RemoveRule removes alert rule with specified id.
-func RemoveRule(q *reform.Querier, id string) error {
-	err := q.Delete(&alertRule{ID: id})
-	if err != nil {
-		return errors.Wrap(err, "failed to delete alert rule")
-	}
-	return nil
-}
-
-// GetRules returns saved alert rules configuration.
-func GetRules(q *reform.Querier) ([]Rule, error) {
-	structs, err := q.SelectAllFrom(alertRuleTable, "")
+// Findrules returns saved alert rules configuration.
+func Findrules(q *reform.Querier) ([]Rule, error) {
+	rows, err := q.SelectAllFrom(RuleTable, "")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select alert rules")
-
 	}
 
-	rules := make([]Rule, len(structs))
-	for i, s := range structs {
-		c, err := alertRuleToRule(s.(*alertRule))
-		if err != nil {
-			return nil, err
-		}
+	rules := make([]Rule, len(rows))
+	for i, s := range rows {
+		c := s.(*Rule)
+
 		rules[i] = *c
 	}
 
 	return rules, nil
 }
 
-// ValidateRule validates alert rule.
-func ValidateRule(r *Rule) error {
-	if r.ID == "" {
-		return status.Error(codes.InvalidArgument, "alert rule id is empty")
+// FindRuleByID finds Rule by ID.
+func FindRuleByID(q *reform.Querier, id string) (*Rule, error) {
+	if id == "" {
+		return nil, status.Error(codes.InvalidArgument, "Empty Rule ID.")
+	}
+
+	rule := &Rule{ID: id}
+	switch err := q.Reload(rule); err {
+	case nil:
+		return rule, nil
+	case reform.ErrNoRows:
+		return nil, status.Errorf(codes.NotFound, "Rule with ID %q not found.", id)
+	default:
+		return nil, errors.WithStack(err)
+	}
+}
+
+// CreateRuleParams are params for creating new Rule.
+type CreateRuleParams struct {
+	TemplateName string
+	Disabled     bool
+	RuleParams   []*iav1beta1.RuleParam
+	For          *duration.Duration
+	Severity     managementpb.Severity
+	CustomLabels map[string]string
+	Filters      []*Filter
+	ChannelIDs   []string
+}
+
+// CreateRule persists alert Rule.
+func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
+	id := "/rule_id/" + uuid.New().String()
+
+	if err := checkUniqueRuleID(q, id); err != nil {
+		return nil, err
+	}
+
+	row := &Rule{
+		ID: id,
+		Template: &iav1beta1.Template{
+			Name: params.TemplateName,
+		},
+		Disabled: params.Disabled,
+		For:      params.For.AsDuration(),
+		Severity: params.Severity,
+		Filters:  params.Filters,
+	}
+
+	labels, err := json.Marshal(params.CustomLabels)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create alert rule")
+	}
+	row.CustomLabels = labels
+
+	channels := make([]*Channel, len(params.ChannelIDs))
+	for _, cid := range params.ChannelIDs {
+		channels = append(channels, &Channel{
+			ID: cid,
+		})
+	}
+	row.Channels = channels
+
+	// TODO: RuleParams
+
+	err = q.Insert(row)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create alert rule")
+	}
+
+	return row, nil
+}
+
+// UpdateRuleParams is params for updating existing Rule.
+type UpdateRuleParams struct {
+	RuleID       string
+	Disabled     bool
+	RuleParams   []*iav1beta1.RuleParam
+	For          *duration.Duration
+	Severity     managementpb.Severity
+	CustomLabels map[string]string
+	Filters      []*Filter
+	ChannelIDs   []string
+}
+
+// UpdateRule updates existing alerts Rule.
+func UpdateRule(q *reform.Querier, RuleID string, params *UpdateRuleParams) (*Rule, error) {
+	row, err := FindRuleByID(q, RuleID)
+	if err != nil {
+		return nil, err
+	}
+
+	row.Disabled = params.Disabled
+	row.For = params.For.AsDuration()
+	row.Severity = params.Severity
+	row.Filters = params.Filters
+
+	labels, err := json.Marshal(params.CustomLabels)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to update alert rule")
+	}
+	row.CustomLabels = labels
+
+	channels := make([]*Channel, len(params.ChannelIDs))
+	for _, cid := range params.ChannelIDs {
+		channels = append(channels, &Channel{
+			ID: cid,
+		})
+	}
+	row.Channels = channels
+
+	// TODO
+	row.Params = params.RuleParams
+
+	err = q.Update(row)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to update alerts Rule")
+	}
+
+	return row, nil
+}
+
+// RemoveRule removes alert Rule with specified id.
+func RemoveRule(q *reform.Querier, id string) error {
+	if _, err := FindRuleByID(q, id); err != nil {
+		return err
+	}
+
+	err := q.Delete(&Rule{ID: id})
+	if err != nil {
+		return errors.Wrap(err, "failed to delete alert Rule")
 	}
 	return nil
-}
-
-func ruleToAlertRule(r *Rule) (*alertRule, error) {
-	ar := &alertRule{
-		ID:        r.ID,
-		Disabled:  r.Disabled,
-		For:       r.For.String(),
-		Severity:  r.Severity.String(),
-		CreatedAt: r.CreatedAt,
-	}
-
-	t, err := json.Marshal(r.Template)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshall template")
-	}
-	ar.Template = &t
-
-	p, err := json.Marshal(r.Params)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshall params")
-	}
-	ar.Params = &p
-
-	cl, err := json.Marshal(r.CustomLabels)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshall custom labels")
-	}
-	ar.CustomLabels = &cl
-
-	f, err := json.Marshal(r.Filters)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshall filters")
-	}
-	ar.Filters = &f
-
-	c, err := json.Marshal(r.Channels)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshall channels")
-	}
-	ar.Channels = &c
-
-	return ar, nil
-}
-
-func alertRuleToRule(ar *alertRule) (*Rule, error) {
-	r := &Rule{
-		ID:       ar.ID,
-		Disabled: ar.Disabled,
-	}
-
-	dur, err := time.ParseDuration(ar.For)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to convert duration")
-	}
-	r.For = dur
-
-	createdAt, err := ptypes.TimestampProto(ar.CreatedAt)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to convert timestamp")
-	}
-	r.CreatedAt = createdAt.AsTime()
-
-	r.Template = &iav1beta1.Template{}
-	err = json.Unmarshal(*ar.Template, r.Template)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshall template")
-	}
-
-	var params []*iav1beta1.RuleParam
-	err = json.Unmarshal(*ar.Params, &params)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshall params")
-	}
-	r.Params = params
-
-	var filters []*Filter
-	err = json.Unmarshal(*ar.Filters, &filters)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshall filters")
-	}
-	r.Filters = filters
-
-	var channels []*iav1beta1.Channel
-	err = json.Unmarshal(*ar.Channels, &channels)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshall channels")
-	}
-	r.Channels = channels
-
-	return r, nil
 }

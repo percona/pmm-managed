@@ -10,49 +10,49 @@ import (
 	"gopkg.in/reform.v1/parse"
 )
 
-type alertRuleTableType struct {
+type ruleTableType struct {
 	s parse.StructInfo
 	z []interface{}
 }
 
 // Schema returns a schema name in SQL database ("").
-func (v *alertRuleTableType) Schema() string {
+func (v *ruleTableType) Schema() string {
 	return v.s.SQLSchema
 }
 
 // Name returns a view or table name in SQL database ("alert_rules").
-func (v *alertRuleTableType) Name() string {
+func (v *ruleTableType) Name() string {
 	return v.s.SQLName
 }
 
 // Columns returns a new slice of column names for that view or table in SQL database.
-func (v *alertRuleTableType) Columns() []string {
+func (v *ruleTableType) Columns() []string {
 	return []string{"template", "id", "summary", "disabled", "params", "for", "severity", "custom_labels", "filters", "channels", "created_at", "updated_at"}
 }
 
 // NewStruct makes a new struct for that view or table.
-func (v *alertRuleTableType) NewStruct() reform.Struct {
-	return new(alertRule)
+func (v *ruleTableType) NewStruct() reform.Struct {
+	return new(Rule)
 }
 
 // NewRecord makes a new record for that table.
-func (v *alertRuleTableType) NewRecord() reform.Record {
-	return new(alertRule)
+func (v *ruleTableType) NewRecord() reform.Record {
+	return new(Rule)
 }
 
 // PKColumnIndex returns an index of primary key column for that table in SQL database.
-func (v *alertRuleTableType) PKColumnIndex() uint {
+func (v *ruleTableType) PKColumnIndex() uint {
 	return uint(v.s.PKFieldIndex)
 }
 
-// alertRuleTable represents alert_rules view or table in SQL database.
-var alertRuleTable = &alertRuleTableType{
-	s: parse.StructInfo{Type: "alertRule", SQLSchema: "", SQLName: "alert_rules", Fields: []parse.FieldInfo{{Name: "Template", Type: "*[]uint8", Column: "template"}, {Name: "ID", Type: "string", Column: "id"}, {Name: "Summary", Type: "string", Column: "summary"}, {Name: "Disabled", Type: "bool", Column: "disabled"}, {Name: "Params", Type: "*[]uint8", Column: "params"}, {Name: "For", Type: "string", Column: "for"}, {Name: "Severity", Type: "string", Column: "severity"}, {Name: "CustomLabels", Type: "*[]uint8", Column: "custom_labels"}, {Name: "Filters", Type: "*[]uint8", Column: "filters"}, {Name: "Channels", Type: "*[]uint8", Column: "channels"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}}, PKFieldIndex: 1},
-	z: new(alertRule).Values(),
+// RuleTable represents alert_rules view or table in SQL database.
+var RuleTable = &ruleTableType{
+	s: parse.StructInfo{Type: "Rule", SQLSchema: "", SQLName: "alert_rules", Fields: []parse.FieldInfo{{Name: "Template", Type: "*iav1beta1.Template", Column: "template"}, {Name: "ID", Type: "string", Column: "id"}, {Name: "Summary", Type: "string", Column: "summary"}, {Name: "Disabled", Type: "bool", Column: "disabled"}, {Name: "Params", Type: "[]*iav1beta1.RuleParam", Column: "params"}, {Name: "For", Type: "time.Duration", Column: "for"}, {Name: "Severity", Type: "managementpb.Severity", Column: "severity"}, {Name: "CustomLabels", Type: "[]uint8", Column: "custom_labels"}, {Name: "Filters", Type: "[]*Filter", Column: "filters"}, {Name: "Channels", Type: "[]*Channel", Column: "channels"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}}, PKFieldIndex: 1},
+	z: new(Rule).Values(),
 }
 
 // String returns a string representation of this struct or record.
-func (s alertRule) String() string {
+func (s Rule) String() string {
 	res := make([]string, 12)
 	res[0] = "Template: " + reform.Inspect(s.Template, true)
 	res[1] = "ID: " + reform.Inspect(s.ID, true)
@@ -71,7 +71,7 @@ func (s alertRule) String() string {
 
 // Values returns a slice of struct or record field values.
 // Returned interface{} values are never untyped nils.
-func (s *alertRule) Values() []interface{} {
+func (s *Rule) Values() []interface{} {
 	return []interface{}{
 		s.Template,
 		s.ID,
@@ -90,7 +90,7 @@ func (s *alertRule) Values() []interface{} {
 
 // Pointers returns a slice of pointers to struct or record fields.
 // Returned interface{} values are never untyped nils.
-func (s *alertRule) Pointers() []interface{} {
+func (s *Rule) Pointers() []interface{} {
 	return []interface{}{
 		&s.Template,
 		&s.ID,
@@ -108,34 +108,34 @@ func (s *alertRule) Pointers() []interface{} {
 }
 
 // View returns View object for that struct.
-func (s *alertRule) View() reform.View {
-	return alertRuleTable
+func (s *Rule) View() reform.View {
+	return RuleTable
 }
 
 // Table returns Table object for that record.
-func (s *alertRule) Table() reform.Table {
-	return alertRuleTable
+func (s *Rule) Table() reform.Table {
+	return RuleTable
 }
 
 // PKValue returns a value of primary key for that record.
 // Returned interface{} value is never untyped nil.
-func (s *alertRule) PKValue() interface{} {
+func (s *Rule) PKValue() interface{} {
 	return s.ID
 }
 
 // PKPointer returns a pointer to primary key field for that record.
 // Returned interface{} value is never untyped nil.
-func (s *alertRule) PKPointer() interface{} {
+func (s *Rule) PKPointer() interface{} {
 	return &s.ID
 }
 
 // HasPK returns true if record has non-zero primary key set, false otherwise.
-func (s *alertRule) HasPK() bool {
-	return s.ID != alertRuleTable.z[alertRuleTable.s.PKFieldIndex]
+func (s *Rule) HasPK() bool {
+	return s.ID != RuleTable.z[RuleTable.s.PKFieldIndex]
 }
 
 // SetPK sets record primary key.
-func (s *alertRule) SetPK(pk interface{}) {
+func (s *Rule) SetPK(pk interface{}) {
 	if i64, ok := pk.(int64); ok {
 		s.ID = string(i64)
 	} else {
@@ -145,13 +145,13 @@ func (s *alertRule) SetPK(pk interface{}) {
 
 // check interfaces
 var (
-	_ reform.View   = alertRuleTable
-	_ reform.Struct = (*alertRule)(nil)
-	_ reform.Table  = alertRuleTable
-	_ reform.Record = (*alertRule)(nil)
-	_ fmt.Stringer  = (*alertRule)(nil)
+	_ reform.View   = RuleTable
+	_ reform.Struct = (*Rule)(nil)
+	_ reform.Table  = RuleTable
+	_ reform.Record = (*Rule)(nil)
+	_ fmt.Stringer  = (*Rule)(nil)
 )
 
 func init() {
-	parse.AssertUpToDate(&alertRuleTable.s, new(alertRule))
+	parse.AssertUpToDate(&RuleTable.s, new(Rule))
 }
