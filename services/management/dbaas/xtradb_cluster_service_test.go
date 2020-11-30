@@ -245,15 +245,15 @@ func TestXtraDBClusterService(t *testing.T) {
 		in := dbaasv1beta1.UpdateXtraDBClusterRequest{
 			KubernetesClusterName: pxcKubernetesClusterNameTest,
 			Name:                  "third-pxc-test",
-			Params: &dbaasv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
+			Params: &dbaasv1beta1.XtraDBClusterParams{
 				ClusterSize: 8,
-				Pxc: &dbaasv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC{
+				Pxc: &dbaasv1beta1.XtraDBClusterParams_PXC{
 					ComputeResources: &dbaasv1beta1.ComputeResources{
 						CpuM:        1,
 						MemoryBytes: 256,
 					},
 				},
-				Proxysql: &dbaasv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_ProxySQL{
+				Proxysql: &dbaasv1beta1.XtraDBClusterParams_ProxySQL{
 					ComputeResources: &dbaasv1beta1.ComputeResources{
 						CpuM:        1,
 						MemoryBytes: 124,
