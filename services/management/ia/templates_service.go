@@ -76,12 +76,12 @@ func NewTemplatesService(db *reform.DB) *TemplatesService {
 }
 
 // getCollected return collected templates.
-func (svc *TemplatesService) getCollected(ctx context.Context) map[string]Rule {
-	svc.rw.RLock()
-	defer svc.rw.RUnlock()
+func (s *TemplatesService) getCollected(ctx context.Context) map[string]Rule {
+	s.rw.RLock()
+	defer s.rw.RUnlock()
 
 	res := make(map[string]Rule)
-	for n, r := range svc.rules {
+	for n, r := range s.rules {
 		res[n] = r
 	}
 	return res
@@ -89,12 +89,12 @@ func (svc *TemplatesService) getCollected(ctx context.Context) map[string]Rule {
 
 // collect collects IA rule templates from various sources like
 // built-in templates shipped with PMM and defined by the users.
-func (svc *TemplatesService) collect(ctx context.Context) {
-	var rules []Rule
+func (s *TemplatesService) collect(ctx context.Context) {
+	rules := make([]Rule, 0, len(s.builtinTemplatesPath)+len(s.userTemplatesPath))
 
-	builtInRules, err := svc.loadRulesFromFiles(ctx, svc.builtinTemplatesPath)
+	builtInRules, err := s.loadRulesFromFiles(ctx, s.builtinTemplatesPath)
 	if err != nil {
-		svc.l.Errorf("Failed to load built-in rule templates: %s.", err)
+		s.l.Errorf("Failed to load built-in rule templates: %s.", err)
 		return
 	}
 	for _, rule := range builtInRules {
@@ -104,9 +104,9 @@ func (svc *TemplatesService) collect(ctx context.Context) {
 		})
 	}
 
-	userDefinedRules, err := svc.loadRulesFromFiles(ctx, svc.userTemplatesPath)
+	userDefinedRules, err := s.loadRulesFromFiles(ctx, s.userTemplatesPath)
 	if err != nil {
-		svc.l.Errorf("Failed to load user-defined rule templates: %s.", err)
+		s.l.Errorf("Failed to load user-defined rule templates: %s.", err)
 		return
 	}
 	for _, rule := range userDefinedRules {
@@ -116,9 +116,9 @@ func (svc *TemplatesService) collect(ctx context.Context) {
 		})
 	}
 
-	dbRules, err := svc.loadRulesFromDB()
+	dbRules, err := s.loadRulesFromDB()
 	if err != nil {
-		svc.l.Errorf("Failed to load rule templates from DB: %s.", err)
+		s.l.Errorf("Failed to load rule templates from DB: %s.", err)
 		return
 	}
 	rules = append(rules, dbRules...)
@@ -126,19 +126,19 @@ func (svc *TemplatesService) collect(ctx context.Context) {
 	// TODO download templates from SAAS.
 
 	// replace previously stored rules with newly collected ones.
-	svc.rw.Lock()
-	defer svc.rw.Unlock()
-	svc.rules = make(map[string]Rule, len(rules))
+	s.rw.Lock()
+	defer s.rw.Unlock()
+	s.rules = make(map[string]Rule, len(rules))
 	for _, r := range rules {
 		// TODO Check for name clashes? Allow users to re-define built-in rules?
 		// Reserve prefix for built-in or user-defined rules?
 		// https://jira.percona.com/browse/PMM-7023
 
-		svc.rules[r.Name] = r
+		s.rules[r.Name] = r
 	}
 }
 
-func (svc *TemplatesService) loadRulesFromFiles(ctx context.Context, path string) ([]alert.Rule, error) {
+func (s *TemplatesService) loadRulesFromFiles(ctx context.Context, path string) ([]alert.Rule, error) {
 	paths, err := filepath.Glob(path)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get paths")
@@ -146,7 +146,7 @@ func (svc *TemplatesService) loadRulesFromFiles(ctx context.Context, path string
 
 	res := make([]alert.Rule, 0, len(paths))
 	for _, path := range paths {
-		r, err := svc.loadFile(ctx, path)
+		r, err := s.loadFile(ctx, path)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to load rule template file: %s", path)
 		}
@@ -156,9 +156,9 @@ func (svc *TemplatesService) loadRulesFromFiles(ctx context.Context, path string
 	return res, nil
 }
 
-func (svc *TemplatesService) loadRulesFromDB() ([]Rule, error) {
+func (s *TemplatesService) loadRulesFromDB() ([]Rule, error) {
 	var templates []models.Template
-	e := svc.db.InTransaction(func(tx *reform.TX) error {
+	e := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
 		templates, err = models.FindTemplates(tx.Querier)
 		return err
@@ -227,7 +227,7 @@ func (svc *TemplatesService) loadRulesFromDB() ([]Rule, error) {
 }
 
 // loadFile parses IA rule template file.
-func (svc *TemplatesService) loadFile(ctx context.Context, file string) ([]saas.Rule, error) {
+func (s *TemplatesService) loadFile(ctx context.Context, file string) ([]saas.Rule, error) {
 	if ctx.Err() != nil {
 		return nil, errors.WithStack(ctx.Err())
 	}
@@ -271,12 +271,12 @@ func convertParamUnit(u string) iav1beta1.ParamUnit {
 }
 
 // ListTemplates returns a list of all collected Alert Rule Templates.
-func (svc *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.ListTemplatesRequest) (*iav1beta1.ListTemplatesResponse, error) {
+func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.ListTemplatesRequest) (*iav1beta1.ListTemplatesResponse, error) {
 	if req.Reload {
-		svc.collect(ctx)
+		s.collect(ctx)
 	}
 
-	templates := svc.getCollected(ctx)
+	templates := s.getCollected(ctx)
 	res := &iav1beta1.ListTemplatesResponse{
 		Templates: make([]*iav1beta1.Template, 0, len(templates)),
 	}
@@ -324,7 +324,7 @@ func (svc *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.L
 					},
 				}
 			default:
-				svc.l.Warnf("Skipping unexpected parameter type %q for %q.", p.Type, r.Name)
+				s.l.Warnf("Skipping unexpected parameter type %q for %q.", p.Type, r.Name)
 			}
 
 			if tp != nil {
@@ -340,7 +340,7 @@ func (svc *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.L
 }
 
 // CreateTemplate creates a new template.
-func (svc *TemplatesService) CreateTemplate(ctx context.Context, req *iav1beta1.CreateTemplateRequest) (*iav1beta1.CreateTemplateResponse, error) {
+func (s *TemplatesService) CreateTemplate(ctx context.Context, req *iav1beta1.CreateTemplateRequest) (*iav1beta1.CreateTemplateResponse, error) {
 	pParams := &alert.ParseParams{
 		DisallowUnknownFields: true,
 		DisallowInvalidRules:  true,
@@ -348,7 +348,7 @@ func (svc *TemplatesService) CreateTemplate(ctx context.Context, req *iav1beta1.
 
 	rules, err := alert.Parse(strings.NewReader(req.Yaml), pParams)
 	if err != nil {
-		svc.l.Errorf("failed to parse rule template form request: +%v", err)
+		s.l.Errorf("failed to parse rule template form request: +%v", err)
 		return nil, status.Error(codes.InvalidArgument, "Failed to parse rule template.")
 	}
 
@@ -361,7 +361,7 @@ func (svc *TemplatesService) CreateTemplate(ctx context.Context, req *iav1beta1.
 		Source: iav1beta1.TemplateSource_USER_API.String(),
 	}
 
-	e := svc.db.InTransaction(func(tx *reform.TX) error {
+	e := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
 		_, err = models.CreateTemplate(tx.Querier, params)
 		return err
@@ -374,7 +374,7 @@ func (svc *TemplatesService) CreateTemplate(ctx context.Context, req *iav1beta1.
 }
 
 // UpdateTemplate updates existing template, previously created via API.
-func (svc *TemplatesService) UpdateTemplate(ctx context.Context, req *iav1beta1.UpdateTemplateRequest) (*iav1beta1.UpdateTemplateResponse, error) {
+func (s *TemplatesService) UpdateTemplate(ctx context.Context, req *iav1beta1.UpdateTemplateRequest) (*iav1beta1.UpdateTemplateResponse, error) {
 	pParams := &alert.ParseParams{
 		DisallowUnknownFields: true,
 		DisallowInvalidRules:  true,
@@ -382,7 +382,7 @@ func (svc *TemplatesService) UpdateTemplate(ctx context.Context, req *iav1beta1.
 
 	rules, err := alert.Parse(strings.NewReader(req.Yaml), pParams)
 	if err != nil {
-		svc.l.Errorf("failed to parse rule template form request: +%v", err)
+		s.l.Errorf("failed to parse rule template form request: +%v", err)
 		return nil, status.Error(codes.InvalidArgument, "Failed to parse rule template.")
 	}
 
@@ -394,7 +394,7 @@ func (svc *TemplatesService) UpdateTemplate(ctx context.Context, req *iav1beta1.
 		Rule: &rules[0],
 	}
 
-	e := svc.db.InTransaction(func(tx *reform.TX) error {
+	e := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
 		_, err = models.ChangeTemplate(tx.Querier, params)
 		return err
@@ -407,8 +407,8 @@ func (svc *TemplatesService) UpdateTemplate(ctx context.Context, req *iav1beta1.
 }
 
 // DeleteTemplate deletes existing, previously created via API.
-func (svc *TemplatesService) DeleteTemplate(ctx context.Context, req *iav1beta1.DeleteTemplateRequest) (*iav1beta1.DeleteTemplateResponse, error) {
-	e := svc.db.InTransaction(func(tx *reform.TX) error {
+func (s *TemplatesService) DeleteTemplate(ctx context.Context, req *iav1beta1.DeleteTemplateRequest) (*iav1beta1.DeleteTemplateResponse, error) {
+	e := s.db.InTransaction(func(tx *reform.TX) error {
 		return models.RemoveTemplate(tx.Querier, req.Name)
 	})
 	if e != nil {
