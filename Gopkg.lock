@@ -383,21 +383,12 @@
   version = "v0.3.0"
 
 [[projects]]
-<<<<<<< HEAD
   branch = "PMM-5976_increase_cluster_size"
-  digest = "1:a3601da81c827f758aa046aea38f7d8bb21c29a24513398d926f126a04ded593"
+  digest = "1:82b51a2316a7be9823a4c61f54afaec0cc0b8b658ed6fd9b7f9798bc8d17cacd"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "7e88e92af4c45d2bd6396f7a6d43582c9abe2f4a"
-=======
-  branch = "main"
-  digest = "1:ab6727c2c13553617e95eee972cf5cb16bb61043f76e3bd9649fa257fd0e349c"
-  name = "github.com/percona-platform/dbaas-api"
-  packages = ["gen/controller"]
-  pruneopts = "NUT"
-  revision = "35cb67a169d75da92106bd05ed8728a6c5bf0f01"
->>>>>>> PMM-2.0
+  revision = "5104fbefebccbb09c8abc48082d32d8133366167"
 
 [[projects]]
   branch = "main"
@@ -425,13 +416,8 @@
   version = "v0.7.2"
 
 [[projects]]
-<<<<<<< HEAD
-  branch = "PMM-5976_increase_cluster_size"
-  digest = "1:6212c77345f13a2a2758f7981836542c603b0f9e680f4ce9f89669860a229ee1"
-=======
   branch = "PMM-2.0"
   digest = "1:d786bf0fdf081f0c79913ddfdbf6c9ef0523adecd8c2920b851629a4b8ccd37d"
->>>>>>> PMM-2.0
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -454,11 +440,7 @@
     "version",
   ]
   pruneopts = "NUT"
-<<<<<<< HEAD
-  revision = "7e066993219bb60795f568ad8284618dea29667e"
-=======
   revision = "91c6a0b9c2ee98d01cf2ef11eef97051cd5d8fd9"
->>>>>>> PMM-2.0
 
 [[projects]]
   digest = "1:6832634ec059f4bfddaff75621cf1c4750949129c6de2e5e58e01059d0851e25"
