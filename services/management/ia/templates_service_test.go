@@ -97,7 +97,8 @@ func TestConvertTemplate(t *testing.T) {
 	svc.userTemplatesPath = testUserTemplates
 	svc.collect(ctx)
 
-	svc.convertTemplates(ctx)
+	err := svc.convertTemplates(ctx)
+	require.NoError(t, err)
 	assert.FileExists(t, userRuleFilePath)
 	assert.FileExists(t, builtinRuleFilePath)
 
