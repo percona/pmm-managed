@@ -22,6 +22,7 @@ import (
 	"github.com/brianvoe/gofakeit"
 	"github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona-platform/saas/pkg/common"
+	"github.com/percona/promconfig"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/reform.v1"
@@ -47,45 +48,16 @@ func TestRuleTemplatesChannels(t *testing.T) {
 
 		q := tx.Querier
 
-		params := &models.CreateTemplateParams{
-			Rule: &alert.Rule{
-				Name:    "test",
-				Version: 1,
-				Summary: "test rule",
-				Tiers:   []common.Tier{common.Anonymous},
-				Expr:    "some expression",
-				Params: []alert.Parameter{
-					{
-						Name:    "param",
-						Summary: "test param",
-						Unit:    "kg",
-						Type:    alert.Float,
-						Range:   []interface{}{float64(10), float64(100)},
-						Value:   float64(50),
-					},
-				},
-				For:         3,
-				Severity:    common.Warning,
-				Labels:      map[string]string{"foo": "bar"},
-				Annotations: nil,
-			},
-			Source: "USER_FILE",
-		}
+		params := createTemplateParams(gofakeit.UUID())
 
-		_, err = models.CreateTemplate(q, params)
+		created, err := models.CreateTemplate(q, params)
 		require.NoError(t, err)
 
-		templates, err := models.FindTemplates(q)
-		require.NoError(t, err)
-
-		require.Len(t, templates, 1)
-
-		actual := templates[0]
-		assert.Equal(t, params.Rule.Name, actual.Name)
-		assert.Equal(t, params.Rule.Version, actual.Version)
-		assert.Equal(t, params.Rule.Summary, actual.Summary)
-		assert.ElementsMatch(t, params.Rule.Tiers, actual.Tiers)
-		assert.Equal(t, params.Rule.Expr, actual.Expr)
+		assert.Equal(t, params.Rule.Name, created.Name)
+		assert.Equal(t, params.Rule.Version, created.Version)
+		assert.Equal(t, params.Rule.Summary, created.Summary)
+		assert.ElementsMatch(t, params.Rule.Tiers, created.Tiers)
+		assert.Equal(t, params.Rule.Expr, created.Expr)
 		assert.Equal(t,
 			models.Params{
 				{
@@ -100,19 +72,72 @@ func TestRuleTemplatesChannels(t *testing.T) {
 					},
 				},
 			},
-			actual.Params)
-		assert.EqualValues(t, params.Rule.For, actual.For)
-		assert.Equal(t, params.Rule.Severity.String(), actual.Severity)
+			created.Params)
+		assert.EqualValues(t, params.Rule.For, created.For)
+		assert.Equal(t, params.Rule.Severity.String(), created.Severity)
 
-		labels, err := actual.GetLabels()
+		labels, err := created.GetLabels()
 		require.NoError(t, err)
 		assert.Equal(t, params.Rule.Labels, labels)
 
-		annotations, err := actual.GetAnnotations()
+		annotations, err := created.GetAnnotations()
 		require.NoError(t, err)
 		assert.Equal(t, params.Rule.Annotations, annotations)
 
-		assert.Equal(t, params.Source, actual.Source)
+		assert.Equal(t, params.Source, created.Source)
+	})
+
+	t.Run("change", func(t *testing.T) {
+		tx, err := db.Begin()
+		require.NoError(t, err)
+		defer func() {
+			require.NoError(t, tx.Rollback())
+		}()
+
+		q := tx.Querier
+
+		name := gofakeit.UUID()
+
+		cParams := createTemplateParams(name)
+		_, err = models.CreateTemplate(q, cParams)
+		require.NoError(t, err)
+
+		uParams := changeTemplateParams(name)
+		updated, err := models.ChangeTemplate(q, uParams)
+		require.NoError(t, err)
+
+		assert.Equal(t, uParams.Rule.Name, updated.Name)
+		assert.Equal(t, uParams.Rule.Version, updated.Version)
+		assert.Equal(t, uParams.Rule.Summary, updated.Summary)
+		assert.ElementsMatch(t, uParams.Rule.Tiers, updated.Tiers)
+		assert.Equal(t, uParams.Rule.Expr, updated.Expr)
+		assert.Equal(t,
+			models.Params{
+				{
+					Name:    uParams.Rule.Params[0].Name,
+					Summary: uParams.Rule.Params[0].Summary,
+					Unit:    uParams.Rule.Params[0].Unit,
+					Type:    string(uParams.Rule.Params[0].Type),
+					FloatParam: &models.FloatParam{
+						Default: uParams.Rule.Params[0].Value.(float64),
+						Min:     uParams.Rule.Params[0].Range[0].(float64),
+						Max:     uParams.Rule.Params[0].Range[1].(float64),
+					},
+				},
+			},
+			updated.Params)
+		assert.EqualValues(t, uParams.Rule.For, updated.For)
+		assert.Equal(t, uParams.Rule.Severity.String(), updated.Severity)
+
+		labels, err := updated.GetLabels()
+		require.NoError(t, err)
+		assert.Equal(t, uParams.Rule.Labels, labels)
+
+		annotations, err := updated.GetAnnotations()
+		require.NoError(t, err)
+		assert.Equal(t, uParams.Rule.Annotations, annotations)
+
+		assert.Equal(t, cParams.Source, updated.Source)
 	})
 
 	t.Run("remove", func(t *testing.T) {
@@ -125,32 +150,8 @@ func TestRuleTemplatesChannels(t *testing.T) {
 		q := tx.Querier
 
 		name := gofakeit.UUID()
-		params := &models.CreateTemplateParams{
-			Rule: &alert.Rule{
-				Name:    name,
-				Version: 1,
-				Summary: "test rule",
-				Tiers:   []common.Tier{common.Anonymous},
-				Expr:    "some expression",
-				Params: []alert.Parameter{
-					{
-						Name:    "param",
-						Summary: "test param",
-						Unit:    "kg",
-						Type:    alert.Float,
-						Range:   []interface{}{float64(10), float64(100)},
-						Value:   float64(50),
-					},
-				},
-				For:         3,
-				Severity:    common.Warning,
-				Labels:      map[string]string{"foo": "bar"},
-				Annotations: nil,
-			},
-			Source: "USER_FILE",
-		}
 
-		_, err = models.CreateTemplate(q, params)
+		_, err = models.CreateTemplate(q, createTemplateParams(name))
 		require.NoError(t, err)
 
 		err = models.RemoveTemplate(q, name)
@@ -160,6 +161,89 @@ func TestRuleTemplatesChannels(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Empty(t, templates)
-
 	})
+
+	t.Run("list", func(t *testing.T) {
+		tx, err := db.Begin()
+		require.NoError(t, err)
+		defer func() {
+			require.NoError(t, tx.Rollback())
+		}()
+
+		q := tx.Querier
+
+		created, err := models.CreateTemplate(q, createTemplateParams(gofakeit.UUID()))
+		require.NoError(t, err)
+
+		templates, err := models.FindTemplates(q)
+		require.NoError(t, err)
+		assert.Len(t, templates, 1)
+
+		actual := templates[0]
+
+		assert.Equal(t, created.Name, actual.Name)
+		assert.Equal(t, created.Version, actual.Version)
+		assert.Equal(t, created.Summary, actual.Summary)
+		assert.ElementsMatch(t, created.Tiers, actual.Tiers)
+		assert.Equal(t, created.Expr, actual.Expr)
+		assert.Equal(t, created.Params, actual.Params)
+		assert.EqualValues(t, created.For, actual.For)
+		assert.Equal(t, created.Severity, actual.Severity)
+		assert.Equal(t, created.Labels, actual.Labels)
+		assert.Empty(t, actual.Annotations)
+		assert.Equal(t, created.Source, actual.Source)
+	})
+}
+
+func createTemplateParams(name string) *models.CreateTemplateParams {
+	return &models.CreateTemplateParams{
+		Rule: &alert.Rule{
+			Name:    name,
+			Version: 1,
+			Summary: gofakeit.Quote(),
+			Tiers:   []common.Tier{common.Anonymous},
+			Expr:    gofakeit.Quote(),
+			Params: []alert.Parameter{
+				{
+					Name:    gofakeit.UUID(),
+					Summary: gofakeit.Quote(),
+					Unit:    gofakeit.Letter(),
+					Type:    alert.Float,
+					Range:   []interface{}{float64(10), float64(100)},
+					Value:   float64(50),
+				},
+			},
+			For:         3,
+			Severity:    common.Warning,
+			Labels:      map[string]string{"foo": "bar"},
+			Annotations: nil,
+		},
+		Source: "USER_FILE",
+	}
+}
+
+func changeTemplateParams(name string) *models.ChangeTemplateParams {
+	return &models.ChangeTemplateParams{
+		Rule: &alert.Rule{
+			Name:    name,
+			Version: 1,
+			Summary: gofakeit.Quote(),
+			Tiers:   []common.Tier{common.Anonymous},
+			Expr:    gofakeit.Quote(),
+			Params: []alert.Parameter{
+				{
+					Name:    gofakeit.UUID(),
+					Summary: gofakeit.Quote(),
+					Unit:    gofakeit.Letter(),
+					Type:    alert.Float,
+					Range:   []interface{}{float64(10), float64(100)},
+					Value:   float64(50),
+				},
+			},
+			For:         promconfig.Duration(gofakeit.Number(1, 100)),
+			Severity:    common.Warning,
+			Labels:      map[string]string{"foo": "bar"},
+			Annotations: nil,
+		},
+	}
 }
