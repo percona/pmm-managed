@@ -372,16 +372,7 @@ var databaseSchema = [][]string{
 		)`,
 	},
 	23: {
-		`ALTER TABLE agents ADD COLUMN services_tls_keys JSONB DEFAULT '
-		{"QANMongoDBProfiler": {
-			"TLSCertificateKey": "",
-			"TLSCertificateKeyFilePassword": "",
-			"TLSCa": "",
-		}, "MongoDBExporter": {
-			"TLSCertificateKey": "",
-			"TLSCertificateKeyFilePassword": "",
-			"TLSCa": "",
-		}}'`,
+		`ALTER TABLE agents ADD COLUMN mongo_db_tls_options JSONB`,
 	},
 }
 

@@ -449,7 +449,7 @@ type CreateAgentParams struct {
 	CustomLabels                   map[string]string
 	TLS                            bool
 	TLSSkipVerify                  bool
-	MongoDBTLSOptions              TLSKeys
+	MongoDBTLSOptions              []byte
 	TableCountTablestatsGroupLimit int32
 	QueryExamplesDisabled          bool
 	MaxQueryLogSize                int64

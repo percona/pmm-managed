@@ -91,7 +91,7 @@ type Agent struct {
 	Password          *string `reform:"password"`
 	TLS               bool    `reform:"tls"`
 	TLSSkipVerify     bool    `reform:"tls_skip_verify"`
-	MongoDBTLSOptions TLSKeys `reform:"mongo_db_tls_options"`
+	MongoDBTLSOptions []byte  `reform:"mongo_db_tls_options"`
 
 	AWSAccessKey *string `reform:"aws_access_key"`
 	AWSSecretKey *string `reform:"aws_secret_key"`
