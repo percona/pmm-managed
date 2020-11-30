@@ -68,8 +68,6 @@ func (r *Rule) AfterFind() error {
 	return nil
 }
 
-// TODO BeforeInsert, BeforeUpdate, AfterFind
-
 type FilterType int32
 
 const (
@@ -95,6 +93,29 @@ func (f Filter) Value() (driver.Value, error) { return jsonValue(f) }
 
 // Scan implements database/sql.Scanner interface. Should be defined on the pointer.
 func (f *Filter) Scan(src interface{}) error { return jsonScan(f, src) }
+
+type ParamType int32
+
+const (
+	InvalidParam ParamType = 0
+	BoolParam    ParamType = 1
+	FloatParam   ParamType = 2
+	StringParam  ParamType = 3
+)
+
+type RuleParam struct {
+	Name      string    `json:"name"`
+	Type      ParamType `json:"type"`
+	BoolVal   bool      `json:"bval"`
+	FloatVal  float32   `json:"fval"`
+	StringVal string    `json:"sval"`
+}
+
+// Value implements database/sql/driver.Valuer interface. Should be defined on the value.
+func (p RuleParam) Value() (driver.Value, error) { return jsonValue(p) }
+
+// Scan implements database/sql.Scanner interface. Should be defined on the pointer.
+func (p *RuleParam) Scan(src interface{}) error { return jsonScan(p, src) }
 
 // check interfaces.
 var (
