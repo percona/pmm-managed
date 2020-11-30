@@ -20,8 +20,6 @@ import (
 	"database/sql/driver"
 	"time"
 
-	"github.com/percona/pmm/api/managementpb"
-	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"gopkg.in/reform.v1"
 )
 
@@ -30,18 +28,18 @@ import (
 // Rule represents alert rule configuration.
 //reform:ia_rules
 type Rule struct {
-	Template     *iav1beta1.Template    `reform:"template"`
-	ID           string                 `reform:"id,pk"`
-	Summary      string                 `reform:"summary"`
-	Disabled     bool                   `reform:"disabled"`
-	Params       []*iav1beta1.RuleParam `reform:"params"`
-	For          time.Duration          `reform:"for"`
-	Severity     managementpb.Severity  `reform:"severity"`
-	CustomLabels []byte                 `reform:"custom_labels"`
-	Filters      []*Filter              `reform:"filters"`
-	Channels     []*Channel             `reform:"channels"`
-	CreatedAt    time.Time              `reform:"created_at"`
-	UpdatedAt    time.Time              `reform:"updated_at"`
+	Template     *Template     `reform:"template"`
+	ID           string        `reform:"id,pk"`
+	Summary      string        `reform:"summary"`
+	Disabled     bool          `reform:"disabled"`
+	Params       []*RuleParam  `reform:"params"`
+	For          time.Duration `reform:"for"`
+	Severity     string        `reform:"severity"`
+	CustomLabels []byte        `reform:"custom_labels"`
+	Filters      []*Filter     `reform:"filters"`
+	Channels     []*Channel    `reform:"channels"`
+	CreatedAt    time.Time     `reform:"created_at"`
+	UpdatedAt    time.Time     `reform:"updated_at"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.
@@ -97,10 +95,10 @@ func (f *Filter) Scan(src interface{}) error { return jsonScan(f, src) }
 type ParamType int32
 
 const (
-	InvalidParam ParamType = 0
-	BoolParam    ParamType = 1
-	FloatParam   ParamType = 2
-	StringParam  ParamType = 3
+	InvalidRuleParam ParamType = 0
+	BoolRuleParam    ParamType = 1
+	FloatRuleParam   ParamType = 2
+	StringRuleParam  ParamType = 3
 )
 
 type RuleParam struct {

@@ -101,12 +101,12 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 
 	row := &Rule{
 		ID: id,
-		Template: &iav1beta1.Template{
+		Template: &Template{
 			Name: params.TemplateName,
 		},
 		Disabled: params.Disabled,
 		For:      params.For.AsDuration(),
-		Severity: params.Severity,
+		Severity: params.Severity.String(),
 		Filters:  params.Filters,
 	}
 
@@ -124,7 +124,11 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 	}
 	row.Channels = channels
 
-	// TODO: RuleParams
+	ruleParams, err := makeRuleParams(params.RuleParams)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to create alert rule")
+	}
+	row.Params = ruleParams
 
 	err = q.Insert(row)
 	if err != nil {
@@ -132,6 +136,29 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 	}
 
 	return row, nil
+}
+
+func makeRuleParams(params []*iav1beta1.RuleParam) ([]*RuleParam, error) {
+	ruleParams := make([]*RuleParam, len(params))
+	for i, param := range params {
+		p := &RuleParam{
+			Name: param.Name,
+			Type: ParamType(param.Type),
+		}
+
+		switch p.Type {
+		case BoolRuleParam:
+			p.BoolVal = param.GetBool()
+		case FloatRuleParam:
+			p.FloatVal = param.GetFloat()
+		case StringRuleParam:
+			p.StringVal = param.GetString_()
+		default:
+			return nil, errors.New("invalid rule param value type")
+		}
+		ruleParams[i] = p
+	}
+	return ruleParams, nil
 }
 
 // UpdateRuleParams is params for updating existing Rule.
@@ -155,7 +182,7 @@ func UpdateRule(q *reform.Querier, RuleID string, params *UpdateRuleParams) (*Ru
 
 	row.Disabled = params.Disabled
 	row.For = params.For.AsDuration()
-	row.Severity = params.Severity
+	row.Severity = params.Severity.String()
 	row.Filters = params.Filters
 
 	labels, err := json.Marshal(params.CustomLabels)
@@ -172,8 +199,11 @@ func UpdateRule(q *reform.Querier, RuleID string, params *UpdateRuleParams) (*Ru
 	}
 	row.Channels = channels
 
-	// TODO
-	row.Params = params.RuleParams
+	ruleParams, err := makeRuleParams(params.RuleParams)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to update alert rule")
+	}
+	row.Params = ruleParams
 
 	err = q.Update(row)
 	if err != nil {

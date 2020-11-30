@@ -19,8 +19,10 @@ package ia
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/golang/protobuf/ptypes"
+	"github.com/percona/pmm/api/managementpb"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -62,15 +64,14 @@ func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAl
 
 		r := &iav1beta1.Rule{
 			RuleId:    rule.ID,
-			Template:  rule.Template,
 			Disabled:  rule.Disabled,
 			Summary:   rule.Summary,
-			Params:    rule.Params,
 			For:       ptypes.DurationProto(rule.For),
-			Severity:  rule.Severity,
 			CreatedAt: createdAt,
 			// TODO return updated_at
 		}
+
+		// template, params and severity
 
 		var labels map[string]string
 		err = json.Unmarshal(rule.CustomLabels, &labels)
@@ -104,6 +105,16 @@ func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAl
 		res[i] = r
 	}
 	return &iav1beta1.ListAlertRulesResponse{Rules: res}, nil
+}
+
+func makeTemplate(template *models.Template) *iav1beta1.Template {
+	t := &iav1beta1.Template{
+		Name:     template.Name,
+		Summary:  template.Summary,
+		Expr:     template.Expr,
+		Severity: managementpb.Severity(managementpb.Severity_value[template.Severity]),
+		For:      ptypes.DurationProto(time.Duration(template.For)),
+	}
 }
 
 // CreateAlertRule creates Integrated Alerting rule.
