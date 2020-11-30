@@ -383,12 +383,12 @@
   version = "v0.3.0"
 
 [[projects]]
-  branch = "PMM-5976_increase_cluster_size"
+  branch = "main"
   digest = "1:82b51a2316a7be9823a4c61f54afaec0cc0b8b658ed6fd9b7f9798bc8d17cacd"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "5104fbefebccbb09c8abc48082d32d8133366167"
+  revision = "496fbe43a782f552124fc0f7511039eeb635c8c1"
 
 [[projects]]
   branch = "main"
