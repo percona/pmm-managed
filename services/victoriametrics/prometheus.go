@@ -14,8 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package prometheus contains business logic of working with Prometheus.
-package prometheus
+package victoriametrics
 
 import (
 	"github.com/AlekSi/pointer"
@@ -27,16 +26,16 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s *models.MetricsResolutions) error {
-	agents, err := q.SelectAllFrom(models.AgentTable, "WHERE NOT disabled AND listen_port IS NOT NULL ORDER BY agent_type, agent_id")
+// AddScrapeConfigs - adds agents scrape configuration to given scrape config,
+// pmm_agent_id and push_metrics used for filtering.
+func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s *models.MetricsResolutions, pmmAgentID *string, pushMetrics bool) error {
+	agents, err := models.FindAgentsForScrapeConfig(q, pmmAgentID, pushMetrics)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
 	var rdsParams []*scrapeConfigParams
-	for _, str := range agents {
-		agent := str.(*models.Agent)
-
+	for _, agent := range agents {
 		if agent.AgentType == models.PMMAgentType {
 			// TODO https://jira.percona.com/browse/PMM-4087
 			continue
@@ -71,6 +70,10 @@ func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s 
 		// find Node address where the agent runs
 		var paramsHost string
 		switch {
+		// special case for push metrics mode,
+		// vmagent scrapes it from localhost.
+		case pushMetrics:
+			paramsHost = "127.0.0.1"
 		case agent.PMMAgentID != nil:
 			// extract node address through pmm-agent
 			pmmAgent, err := models.FindAgentByID(q, *agent.PMMAgentID)
@@ -157,6 +160,13 @@ func AddScrapeConfigs(l *logrus.Entry, cfg *config.Config, q *reform.Querier, s 
 				host:    paramsHost,
 				node:    paramsNode,
 				service: paramsService,
+				agent:   agent,
+			})
+		case models.VMAgentType:
+			scfgs, err = scrapeConfigsForVMAgent(s, &scrapeConfigParams{
+				host:    paramsHost,
+				node:    paramsNode,
+				service: nil,
 				agent:   agent,
 			})
 

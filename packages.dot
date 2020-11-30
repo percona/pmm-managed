@@ -11,13 +11,14 @@ digraph packages {
 	"/" -> "/services/management";
 	"/" -> "/services/management/dbaas";
 	"/" -> "/services/management/grpc";
+	"/" -> "/services/management/ia";
 	"/" -> "/services/platform";
-	"/" -> "/services/prometheus";
 	"/" -> "/services/qan";
 	"/" -> "/services/server";
 	"/" -> "/services/supervisord";
 	"/" -> "/services/telemetry";
 	"/" -> "/services/victoriametrics";
+	"/" -> "/services/vmalert";
 	"/cmd/pmm-managed-init" -> "/models";
 	"/cmd/pmm-managed-starlark" -> "/services/checks";
 	"/models" -> "/models";
@@ -37,11 +38,10 @@ digraph packages {
 	"/services/management/grpc" -> "/services/agents";
 	"/services/management/grpc" -> "/services/grafana";
 	"/services/management/grpc" -> "/services/management";
-	"/services/prometheus" -> "/models";
 	"/services/qan" -> "/models";
 	"/services/server" -> "/models";
 	"/services/supervisord" -> "/models";
 	"/services/telemetry" -> "/models";
 	"/services/victoriametrics" -> "/models";
-	"/services/victoriametrics" -> "/services/prometheus";
+	"/services/vmalert" -> "/models";
 }

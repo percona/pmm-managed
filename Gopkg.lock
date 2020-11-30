@@ -316,6 +316,17 @@
   revision = "c2b33e84"
 
 [[projects]]
+  digest = "1:9d8169a68525a40501811137321057d3c3fb452b26059027e55d0d1ae307db01"
+  name = "github.com/kevinburke/go-bindata"
+  packages = [
+    ".",
+    "go-bindata",
+  ]
+  pruneopts = "NUT"
+  revision = "017bb32866cbdd959f3f9891ab831bcd199c5819"
+  version = "v3.22.0"
+
+[[projects]]
   digest = "1:a3998f85665bdf805d519735e658c0e0125bd67b57bb15e414a5a9e360e32455"
   name = "github.com/konsorten/go-windows-terminal-sequences"
   packages = ["."]
@@ -372,27 +383,38 @@
   version = "v0.3.0"
 
 [[projects]]
+<<<<<<< HEAD
   branch = "PMM-5976_increase_cluster_size"
   digest = "1:a3601da81c827f758aa046aea38f7d8bb21c29a24513398d926f126a04ded593"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
   revision = "7e88e92af4c45d2bd6396f7a6d43582c9abe2f4a"
+=======
+  branch = "main"
+  digest = "1:ab6727c2c13553617e95eee972cf5cb16bb61043f76e3bd9649fa257fd0e349c"
+  name = "github.com/percona-platform/dbaas-api"
+  packages = ["gen/controller"]
+  pruneopts = "NUT"
+  revision = "35cb67a169d75da92106bd05ed8728a6c5bf0f01"
+>>>>>>> PMM-2.0
 
 [[projects]]
   branch = "main"
-  digest = "1:4eab89c6b1a3a627f2b213b870d8c7d542efc8a9d816f5a993aacff96fea074e"
+  digest = "1:d01e95c04ad3858fddd5f94f13a4c869a429ac09ffbb417458727f51ec0cb7db"
   name = "github.com/percona-platform/saas"
   packages = [
     "gen/auth",
     "gen/check/retrieval",
     "gen/telemetry/events/pmm",
     "gen/telemetry/reporter",
+    "pkg/alert",
     "pkg/check",
+    "pkg/common",
     "pkg/starlark",
   ]
   pruneopts = "NUT"
-  revision = "3c2c6c2ec0cedb0bcfb8c5d17a1507ac8cc8cffe"
+  revision = "8657f06b2badaee3980eb85fa61d7e2f7b34484b"
 
 [[projects]]
   digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
@@ -403,8 +425,13 @@
   version = "v0.7.2"
 
 [[projects]]
+<<<<<<< HEAD
   branch = "PMM-5976_increase_cluster_size"
   digest = "1:6212c77345f13a2a2758f7981836542c603b0f9e680f4ce9f89669860a229ee1"
+=======
+  branch = "PMM-2.0"
+  digest = "1:d786bf0fdf081f0c79913ddfdbf6c9ef0523adecd8c2920b851629a4b8ccd37d"
+>>>>>>> PMM-2.0
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -418,6 +445,7 @@
     "api/inventorypb",
     "api/managementpb",
     "api/managementpb/dbaas",
+    "api/managementpb/ia",
     "api/qanpb",
     "api/serverpb",
     "utils/pdeathsig",
@@ -426,15 +454,22 @@
     "version",
   ]
   pruneopts = "NUT"
+<<<<<<< HEAD
   revision = "7e066993219bb60795f568ad8284618dea29667e"
+=======
+  revision = "91c6a0b9c2ee98d01cf2ef11eef97051cd5d8fd9"
+>>>>>>> PMM-2.0
 
 [[projects]]
-  digest = "1:dbee7dc52291bb149388085eeb20561d4cb3c2044e0fa6ffa8d342c6b305f4bf"
+  digest = "1:6832634ec059f4bfddaff75621cf1c4750949129c6de2e5e58e01059d0851e25"
   name = "github.com/percona/promconfig"
-  packages = ["."]
+  packages = [
+    ".",
+    "alertmanager",
+  ]
   pruneopts = "NUT"
-  revision = "b6ed0406fe0b84c57801bd8ca6842f00e52cf894"
-  version = "v0.1.1"
+  revision = "bbfe4cec824887dffa3d1d485a825485830cb710"
+  version = "v0.2.0"
 
 [[projects]]
   digest = "1:4047c378584616813d610c9f993bf90dd0d07aed8d94bd3bc299cd35ececdcba"
@@ -858,13 +893,16 @@
     "github.com/grpc-ecosystem/go-grpc-middleware/validator",
     "github.com/grpc-ecosystem/go-grpc-prometheus",
     "github.com/grpc-ecosystem/grpc-gateway/runtime",
+    "github.com/kevinburke/go-bindata/go-bindata",
     "github.com/lib/pq",
     "github.com/percona-platform/dbaas-api/gen/controller",
     "github.com/percona-platform/saas/gen/auth",
     "github.com/percona-platform/saas/gen/check/retrieval",
     "github.com/percona-platform/saas/gen/telemetry/events/pmm",
     "github.com/percona-platform/saas/gen/telemetry/reporter",
+    "github.com/percona-platform/saas/pkg/alert",
     "github.com/percona-platform/saas/pkg/check",
+    "github.com/percona-platform/saas/pkg/common",
     "github.com/percona-platform/saas/pkg/starlark",
     "github.com/percona/exporter_shared/helpers",
     "github.com/percona/pmm/api/agentpb",
@@ -875,6 +913,7 @@
     "github.com/percona/pmm/api/inventorypb",
     "github.com/percona/pmm/api/managementpb",
     "github.com/percona/pmm/api/managementpb/dbaas",
+    "github.com/percona/pmm/api/managementpb/ia",
     "github.com/percona/pmm/api/qanpb",
     "github.com/percona/pmm/api/serverpb",
     "github.com/percona/pmm/utils/pdeathsig",
@@ -882,6 +921,7 @@
     "github.com/percona/pmm/utils/tlsconfig",
     "github.com/percona/pmm/version",
     "github.com/percona/promconfig",
+    "github.com/percona/promconfig/alertmanager",
     "github.com/pkg/errors",
     "github.com/pmezard/go-difflib/difflib",
     "github.com/prometheus/client_golang/prometheus",
@@ -911,7 +951,7 @@
     "gopkg.in/reform.v1/dialects/postgresql",
     "gopkg.in/reform.v1/parse",
     "gopkg.in/reform.v1/reform",
-    "gopkg.in/yaml.v2",
+    "gopkg.in/yaml.v3",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

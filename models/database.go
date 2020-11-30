@@ -306,7 +306,6 @@ var databaseSchema = [][]string{
 
 	17: {
 		`CREATE TABLE kubernetes_clusters (
-			-- common
 			id VARCHAR NOT NULL,
 			kubernetes_cluster_name VARCHAR NOT NULL CHECK (kubernetes_cluster_name <> ''),
 			kube_config TEXT NOT NULL CHECK (kube_config <> ''),
@@ -334,6 +333,43 @@ var databaseSchema = [][]string{
 				OR
 				(service_type = '` + string(ExternalServiceType) + `' AND external_group <> '')
 			)`,
+	},
+
+	19: {
+		`ALTER TABLE agents
+			ADD COLUMN push_metrics BOOLEAN NOT NULL DEFAULT FALSE`,
+		`ALTER TABLE agents
+			ALTER COLUMN push_metrics DROP DEFAULT`,
+	},
+
+	20: {
+		`ALTER TABLE agents DROP CONSTRAINT runs_on_node_id_only_for_pmm_agent_and_external`,
+	},
+
+	21: {
+		`ALTER TABLE agents
+			ADD CONSTRAINT runs_on_node_id_only_for_pmm_agent
+            CHECK (((runs_on_node_id IS NULL) <> (agent_type='` + string(PMMAgentType) + `'))  OR (agent_type='` + string(ExternalExporterType) + `'))`,
+	},
+
+	22: {
+		`CREATE TABLE ia_channels (
+			id VARCHAR NOT NULL,
+			summary VARCHAR NOT NULL,
+			type VARCHAR NOT NULL,
+
+			email_config JSONB,
+			pagerduty_config JSONB,
+			slack_config JSONB,
+			webhook_config JSONB,
+
+			disabled BOOLEAN NOT NULL,
+
+			created_at TIMESTAMP NOT NULL,
+			updated_at TIMESTAMP NOT NULL,
+
+			PRIMARY KEY (id)
+		)`,
 	},
 }
 
@@ -472,7 +508,7 @@ func setupFixture1(q *reform.Querier, username, password string) error {
 	if _, err = createPMMAgentWithID(q, PMMServerAgentID, node.NodeID, nil); err != nil {
 		return err
 	}
-	if _, err = CreateNodeExporter(q, PMMServerAgentID, nil); err != nil {
+	if _, err = CreateNodeExporter(q, PMMServerAgentID, nil, false); err != nil {
 		return err
 	}
 

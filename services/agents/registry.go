@@ -236,7 +236,14 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*pmmAgentInfo, 
 	if err != nil {
 		return nil, err
 	}
-	runsOnNodeID, err := authenticate(agentMD, r.db.Querier)
+	var runsOnNodeID string
+	err = r.db.InTransaction(func(tx *reform.TX) error {
+		runsOnNodeID, err = authenticate(agentMD, tx.Querier)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 	if err != nil {
 		l.Warnf("Failed to authenticate connected pmm-agent %+v.", agentMD)
 		return nil, err
@@ -291,12 +298,84 @@ func authenticate(md *agentpb.AgentConnectMetadata, q *reform.Querier) (string, 
 		return "", status.Errorf(codes.PermissionDenied, "Can't get 'runs_on_node_id' for pmm-agent with ID %q.", md.ID)
 	}
 
+	agentVersion, err := version.Parse(md.Version)
+	if err != nil {
+		return "", status.Errorf(codes.InvalidArgument, "Can't parse 'version' for pmm-agent with ID %q.", md.ID)
+	}
+
+	if err := addOrRemoveVMAgent(q, md.ID, pointer.GetString(agent.RunsOnNodeID), agentVersion); err != nil {
+		return "", err
+	}
+
 	agent.Version = &md.Version
 	if err := q.Update(agent); err != nil {
 		return "", errors.Wrap(err, "failed to update agent")
 	}
 
 	return pointer.GetString(agent.RunsOnNodeID), nil
+}
+
+// addOrRemoveVMAgent - creates vmAgent agentType if pmm-agent's version supports it and agent not exists yet,
+// otherwise ensures that vmAgent not exist for pmm-agent and pmm-agent's agents don't have push_metrics mode,
+// removes it if needed.
+func addOrRemoveVMAgent(q *reform.Querier, pmmAgentID, runsOnNodeID string, pmmAgentVersion *version.Parsed) error {
+	if pmmAgentVersion.Less(models.PMMAgentWithPushMetricsSupport) {
+		// ensure that vmagent not exists and agents dont have push_metrics.
+		return removeVMAgentFromPMMAgent(q, pmmAgentID)
+	}
+	return addVMAgentToPMMAgent(q, pmmAgentID, runsOnNodeID)
+}
+
+func addVMAgentToPMMAgent(q *reform.Querier, pmmAgentID, runsOnNodeID string) error {
+	// TODO remove it after fix
+	// https://jira.percona.com/browse/PMM-4420
+	if runsOnNodeID == "pmm-server" {
+		return nil
+	}
+	vmAgentType := models.VMAgentType
+	vmAgent, err := models.FindAgents(q, models.AgentFilters{PMMAgentID: pmmAgentID, AgentType: &vmAgentType})
+	if err != nil {
+		return status.Errorf(codes.Internal, "Can't get 'vmAgent' for pmm-agent with ID %q", pmmAgentID)
+	}
+	if len(vmAgent) == 0 {
+		if _, err := models.CreateAgent(q, models.VMAgentType, &models.CreateAgentParams{
+			PMMAgentID:  pmmAgentID,
+			PushMetrics: true,
+			NodeID:      runsOnNodeID,
+		}); err != nil {
+			return errors.Wrapf(err, "Can't create 'vmAgent' for pmm-agent with ID %q", pmmAgentID)
+		}
+	}
+	return nil
+}
+
+func removeVMAgentFromPMMAgent(q *reform.Querier, pmmAgentID string) error {
+	vmAgentType := models.VMAgentType
+	vmAgent, err := models.FindAgents(q, models.AgentFilters{PMMAgentID: pmmAgentID, AgentType: &vmAgentType})
+	if err != nil {
+		return status.Errorf(codes.Internal, "Can't get 'vmAgent' for pmm-agent with ID %q", pmmAgentID)
+	}
+	if len(vmAgent) != 0 {
+		for _, agent := range vmAgent {
+			if _, err := models.RemoveAgent(q, agent.AgentID, models.RemoveRestrict); err != nil {
+				return errors.Wrapf(err, "Can't remove 'vmAgent' for pmm-agent with ID %q", pmmAgentID)
+			}
+		}
+	}
+	agents, err := models.FindAgents(q, models.AgentFilters{PMMAgentID: pmmAgentID})
+	if err != nil {
+		return errors.Wrapf(err, "Can't find agents for pmm-agent with ID %q", pmmAgentID)
+	}
+	for _, agent := range agents {
+		if agent.PushMetrics {
+			logrus.Warnf("disabling push_metrics for agent with unsupported version ID %q with pmm-agent ID %q", agent.AgentID, pmmAgentID)
+			agent.PushMetrics = false
+			if err := q.Update(agent); err != nil {
+				return errors.Wrapf(err, "Can't set push_metrics=false for agent %q at pmm-agent with ID %q", agent.AgentID, pmmAgentID)
+			}
+		}
+	}
+	return nil
 }
 
 // Kick disconnects pmm-agent with given ID.
@@ -393,6 +472,35 @@ func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRe
 		return e
 	}
 	r.vmdb.RequestConfigurationUpdate()
+	agent, err := models.FindAgentByID(r.db.Querier, req.AgentId)
+	if err != nil {
+		return err
+	}
+	if agent.PMMAgentID == nil {
+		return nil
+	}
+	r.SendSetStateRequest(ctx, *agent.PMMAgentID)
+	return nil
+}
+
+// UpdateAgentsState sends SetStateRequest to all pmm-agents with push metrics agents.
+func (r *Registry) UpdateAgentsState(ctx context.Context) error {
+	pmmAgents, err := models.FindPMMAgentsIDsWithPushMetrics(r.db.Querier)
+	if err != nil {
+		return errors.Wrap(err, "cannot find pmmAgentsIDs for AgentsState update")
+	}
+	var wg sync.WaitGroup
+	limiter := make(chan struct{}, 10)
+	for _, pmmAgentID := range pmmAgents {
+		wg.Add(1)
+		limiter <- struct{}{}
+		go func(pmmAgentID string) {
+			defer wg.Done()
+			r.SendSetStateRequest(ctx, pmmAgentID)
+			<-limiter
+		}(pmmAgentID)
+	}
+	wg.Wait()
 	return nil
 }
 
@@ -446,6 +554,12 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		switch row.AgentType {
 		case models.PMMAgentType:
 			continue
+		case models.VMAgentType:
+			scrapeCfg, err := r.vmdb.BuildScrapeConfigForVMAgent(pmmAgentID)
+			if err != nil {
+				l.WithError(err).Errorf("cannot get agent scrape config for agent: %s", pmmAgentID)
+			}
+			agentProcesses[row.AgentID] = vmAgentConfig(string(scrapeCfg))
 
 		case models.NodeExporterType:
 			node, err := models.FindNodeByID(r.db.Querier, pointer.GetString(row.NodeID))
@@ -462,6 +576,8 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 				return
 			}
 			rdsExporters[node] = row
+		case models.ExternalExporterType:
+			// ignore
 
 		// Agents with exactly one Service
 		case models.MySQLdExporterType, models.MongoDBExporterType, models.PostgresExporterType, models.ProxySQLExporterType,
@@ -495,9 +611,6 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 				builtinAgents[row.AgentID] = qanPostgreSQLPgStatMonitorAgentConfig(service, row)
 			}
 
-		case models.ExternalExporterType:
-			// ignore
-
 		default:
 			l.Panicf("unhandled Agent type %s", row.AgentType)
 		}
@@ -518,7 +631,6 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 			l.Errorf("%+v", err)
 		}
 	}
-
 	state := &agentpb.SetStateRequest{
 		AgentProcesses: agentProcesses,
 		BuiltinAgents:  builtinAgents,
