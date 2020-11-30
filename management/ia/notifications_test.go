@@ -78,7 +78,7 @@ func TestChangeChannel(t *testing.T) {
 		resp1, err := client.AddChannel(&channels.AddChannelParams{
 			Body: channels.AddChannelBody{
 				Summary:  gofakeit.Quote(),
-				Disabled: gofakeit.Bool(),
+				Disabled: false,
 				EmailConfig: &channels.AddChannelParamsBodyEmailConfig{
 					SendResolved: false,
 					To:           []string{gofakeit.Email()},
@@ -92,7 +92,7 @@ func TestChangeChannel(t *testing.T) {
 		_, err = client.ChangeChannel(&channels.ChangeChannelParams{
 			Body: channels.ChangeChannelBody{
 				ChannelID: resp1.Payload.ChannelID,
-				Disabled:  gofakeit.Bool(),
+				Disabled:  true,
 				EmailConfig: &channels.ChangeChannelParamsBodyEmailConfig{
 					SendResolved: true,
 					To:           newEmail,
@@ -109,6 +109,7 @@ func TestChangeChannel(t *testing.T) {
 		var found bool
 		for _, channel := range resp2.Payload.Channels {
 			if channel.ChannelID == resp1.Payload.ChannelID {
+				assert.True(t, channel.Disabled)
 				assert.Equal(t, newEmail, channel.EmailConfig.To)
 				assert.True(t, channel.EmailConfig.SendResolved)
 				found = true
@@ -190,10 +191,11 @@ func TestListChannels(t *testing.T) {
 
 	summary := gofakeit.UUID()
 	email := gofakeit.Email()
+	disabled := gofakeit.Bool()
 	resp1, err := client.AddChannel(&channels.AddChannelParams{
 		Body: channels.AddChannelBody{
 			Summary:  summary,
-			Disabled: gofakeit.Bool(),
+			Disabled: disabled,
 			EmailConfig: &channels.AddChannelParamsBodyEmailConfig{
 				SendResolved: true,
 				To:           []string{email},
@@ -210,6 +212,8 @@ func TestListChannels(t *testing.T) {
 	var found bool
 	for _, channel := range resp.Payload.Channels {
 		if channel.ChannelID == resp1.Payload.ChannelID {
+			assert.Equal(t, summary, channel.Summary)
+			assert.Equal(t, disabled, channel.Disabled)
 			assert.Equal(t, []string{email}, channel.EmailConfig.To)
 			assert.True(t, channel.EmailConfig.SendResolved)
 			found = true
