@@ -417,7 +417,7 @@
 
 [[projects]]
   branch = "PMM-5364-ssl-mongo"
-  digest = "1:27e46d281d292a134119bf2a1c4d678b431615c4cc650afc2aede8bb3c0a71b9"
+  digest = "1:ab7b3c4ffaae9dc1f138c831ac7b3b4fa1544b14c25a057c44a694bd4b14dbe8"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -440,7 +440,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "a4d06581bd6921478b2e792679a3654b7c92469f"
+  revision = "e076eef0ca73327433f9c17de33aa24c251d53a5"
 
 [[projects]]
   digest = "1:6832634ec059f4bfddaff75621cf1c4750949129c6de2e5e58e01059d0851e25"
