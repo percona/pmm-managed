@@ -223,7 +223,7 @@ type parsedExpr struct {
 	templateSet map[string]struct{}
 }
 
-// extracts unique occurences of templates in the expression
+// extracts unique occurrences of templates in the expression
 // and replaces all templates with a dummy value.
 func transformExpr(expr string) parsedExpr {
 	params := paramRegex.FindAll([]byte(expr), -1)
@@ -241,7 +241,7 @@ func transformExpr(expr string) parsedExpr {
 	}
 }
 
-// replaces any occurence of a template in annotations with a dummy value.
+// replaces any occurrence of a template in annotations with a dummy value.
 func transformAnnotations(annotations map[string]string, templateSet map[string]struct{}) {
 	var val string
 	for k, v := range annotations {
