@@ -29,17 +29,17 @@ import (
 // Template represents Integrated Alerting rule template.
 //reform:ia_templates
 type Template struct {
-	Name        string   `reform:"name,pk"`
-	Version     uint32   `reform:"version"`
-	Summary     string   `reform:"summary"`
-	Tiers       Tiers    `reform:"tiers"`
-	Expr        string   `reform:"expr"`
-	Params      Params   `reform:"params"`
-	For         Duration `reform:"for"`
-	Severity    string   `reform:"severity"`
-	Labels      []byte   `reform:"labels"`
-	Annotations []byte   `reform:"annotations"`
-	Source      string   `reform:"source"`
+	Name        string        `reform:"name,pk"`
+	Version     uint32        `reform:"version"`
+	Summary     string        `reform:"summary"`
+	Tiers       Tiers         `reform:"tiers"`
+	Expr        string        `reform:"expr"`
+	Params      Params        `reform:"params"`
+	For         time.Duration `reform:"for"`
+	Severity    string        `reform:"severity"`
+	Labels      []byte        `reform:"labels"`
+	Annotations []byte        `reform:"annotations"`
+	Source      string        `reform:"source"`
 
 	CreatedAt time.Time `reform:"created_at"`
 	UpdatedAt time.Time `reform:"updated_at"`
@@ -89,6 +89,7 @@ func (t *Template) SetAnnotations(m map[string]string) error {
 	return setStringMap(m, &t.Annotations)
 }
 
+// Tiers represents tiers slice.
 type Tiers []common.Tier
 
 // Value implements database/sql/driver Valuer interface.
@@ -97,16 +98,7 @@ func (t Tiers) Value() (driver.Value, error) { return jsonValue(t) }
 // Scan implements database/sql Scanner interface.
 func (t *Tiers) Scan(src interface{}) error { return jsonScan(t, src) }
 
-type Map map[string]string
-
-// Value implements database/sql/driver Valuer interface.
-func (m Map) Value() (driver.Value, error) { return jsonValue(m) }
-
-// Scan implements database/sql Scanner interface.
-func (m *Map) Scan(src interface{}) error { return jsonScan(m, src) }
-
-type Duration time.Duration
-
+// Params represent Param slice.
 type Params []Param
 
 // Value implements database/sql/driver Valuer interface.
@@ -115,6 +107,7 @@ func (p Params) Value() (driver.Value, error) { return jsonValue(p) }
 // Scan implements database/sql Scanner interface.
 func (p *Params) Scan(src interface{}) error { return jsonScan(p, src) }
 
+// Param represents template parameter.
 type Param struct {
 	Name    string `json:"name"`
 	Summary string `json:"summary"`
@@ -126,16 +119,19 @@ type Param struct {
 	// StringParam *StringParam `json:"string_param"`
 }
 
+// BoolParam represents boolean template parameter.
 type BoolParam struct {
 	Default bool `json:"default"`
 }
 
+// FloatParam represents float template parameter.
 type FloatParam struct {
 	Default float64 `json:"default"`
 	Min     float64 `json:"min"`
 	Max     float64 `json:"max"`
 }
 
+// StringParam represents string template parameter.
 type StringParam struct {
 	Default string `json:"default"`
 }

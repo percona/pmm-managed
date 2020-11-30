@@ -17,6 +17,8 @@
 package models
 
 import (
+	"time"
+
 	"github.com/percona-platform/saas/pkg/alert"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -103,7 +105,7 @@ func CreateTemplate(q *reform.Querier, params *CreateTemplateParams) (*Template,
 		Tiers:    rule.Tiers,
 		Expr:     rule.Expr,
 		Params:   p,
-		For:      Duration(rule.For),
+		For:      time.Duration(rule.For),
 		Severity: rule.Severity.String(),
 		Source:   params.Source,
 	}
@@ -152,7 +154,7 @@ func ChangeTemplate(q *reform.Querier, params *ChangeTemplateParams) (*Template,
 	row.Tiers = rule.Tiers
 	row.Expr = rule.Expr
 	row.Params = p
-	row.For = Duration(rule.For)
+	row.For = time.Duration(rule.For)
 	row.Severity = rule.Severity.String()
 
 	if err := row.SetLabels(rule.Labels); err != nil {
