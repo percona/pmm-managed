@@ -337,11 +337,11 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 	exportersCount := len(mysqdExporters)
 
 	// Must be only one result
-	if exportersCount != 1 {
-		if exportersCount == 0 {
-			return nil, status.Errorf(codes.NotFound, "No mysql exporter")
-		}
+	if exportersCount < 1 {
+		return nil, status.Errorf(codes.NotFound, "No mysql exporter")
+	}
 
+	if exportersCount > 1 {
 		return nil, status.Errorf(codes.OutOfRange, "Found more than one mysql exporter")
 	}
 
