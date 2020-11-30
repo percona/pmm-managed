@@ -86,7 +86,7 @@ func (s *MongoDBService) Add(ctx context.Context, req *managementpb.AddMongoDBRe
 			Password:       req.Password,
 			TLS:            req.Tls,
 			TLSSkipVerify:  req.TlsSkipVerify,
-			MongoDBOptions: mongoDBOptions,
+			MongoDBOptions: string(mongoDBOptions),
 			PushMetrics:    isPushMode(req.MetricsMode),
 		})
 		if err != nil {
@@ -113,7 +113,7 @@ func (s *MongoDBService) Add(ctx context.Context, req *managementpb.AddMongoDBRe
 				Password:       req.Password,
 				TLS:            req.Tls,
 				TLSSkipVerify:  req.TlsSkipVerify,
-				MongoDBOptions: mongoDBOptions,
+				MongoDBOptions: string(mongoDBOptions),
 
 				// TODO QueryExamplesDisabled https://jira.percona.com/browse/PMM-4650
 			})

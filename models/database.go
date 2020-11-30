@@ -372,7 +372,7 @@ var databaseSchema = [][]string{
 		)`,
 	},
 	23: {
-		`ALTER TABLE agents ADD COLUMN mongo_db_tls_options JSONB`,
+		`ALTER TABLE agents ADD COLUMN mongo_db_tls_options JSONB DEFAULT '{}'::jsonb`,
 	},
 }
 

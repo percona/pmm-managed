@@ -312,6 +312,7 @@ func createPMMAgentWithID(q *reform.Querier, id, runsOnNodeID string, customLabe
 	if err := agent.SetCustomLabels(customLabels); err != nil {
 		return nil, err
 	}
+
 	if err := q.Insert(agent); err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -449,7 +450,7 @@ type CreateAgentParams struct {
 	CustomLabels                   map[string]string
 	TLS                            bool
 	TLSSkipVerify                  bool
-	MongoDBOptions                 []byte
+	MongoDBOptions                 string
 	TableCountTablestatsGroupLimit int32
 	QueryExamplesDisabled          bool
 	MaxQueryLogSize                int64
@@ -501,7 +502,7 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 		Password:                       pointer.ToStringOrNil(params.Password),
 		TLS:                            params.TLS,
 		TLSSkipVerify:                  params.TLSSkipVerify,
-		MongoDBOptions:                 params.MongoDBOptions,
+		MongoDBOptions:                 pointer.ToStringOrNil(params.MongoDBOptions),
 		TableCountTablestatsGroupLimit: params.TableCountTablestatsGroupLimit,
 		QueryExamplesDisabled:          params.QueryExamplesDisabled,
 		MaxQueryLogSize:                params.MaxQueryLogSize,

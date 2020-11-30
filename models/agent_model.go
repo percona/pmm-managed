@@ -113,7 +113,7 @@ type Agent struct {
 	RDSEnhancedMetricsDisabled bool `reform:"rds_enhanced_metrics_disabled"`
 	PushMetrics                bool `reform:"push_metrics"`
 
-	MongoDBOptions []byte `reform:"mongo_db_tls_options"`
+	MongoDBOptions *string `reform:"mongo_db_tls_options"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.
@@ -264,6 +264,21 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			q.Add("ssl", "true")
 			if s.TLSSkipVerify {
 				q.Add("tlsInsecure", "true")
+			}
+
+			if *s.MongoDBOptions.TlCertificateKeyFile != "" {
+				q.Add("tlsCertificateKeyFile", "certificateKeyFileHolder")
+
+			}
+		
+			pasword := *s.MongoDBOptions.sCertificateKeyFile.TlsCertificateKeyFilePassword
+			if pasword != "" {
+				q.Add("tlsCertificateKeyFilePassword", pasword)
+
+			}
+
+			if a.params.ServicesTlsKeys. != "" {
+				q.Add("tlsCaFile", "caFileHolder")
 			}
 		}
 
