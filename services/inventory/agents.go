@@ -272,7 +272,7 @@ func (as *AgentsService) ChangeMySQLdExporter(ctx context.Context, req *inventor
 
 // AddMongoDBExporter inserts mongodb_exporter Agent with given parameters.
 func (as *AgentsService) AddMongoDBExporter(ctx context.Context, req *inventorypb.AddMongoDBExporterRequest) (*inventorypb.MongoDBExporter, error) {
-	tlsKeys, err := json.Marshal(models.TLSKeys{
+	mongoDBOptions, err := json.Marshal(models.MongoDBOptions{
 		TLSCertificateKey:             req.TlsCertificateKey,
 		TLSCertificateKeyFilePassword: req.TlsCertificateKeyFilePassword,
 		TLSCa:                         req.TlsCa,
@@ -284,15 +284,15 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, req *inventoryp
 	var res *inventorypb.MongoDBExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 		params := &models.CreateAgentParams{
-			PMMAgentID:        req.PmmAgentId,
-			ServiceID:         req.ServiceId,
-			Username:          req.Username,
-			Password:          req.Password,
-			CustomLabels:      req.CustomLabels,
-			TLS:               req.Tls,
-			TLSSkipVerify:     req.TlsSkipVerify,
-			MongoDBTLSOptions: tlsKeys,
-			PushMetrics:       req.PushMetrics,
+			PMMAgentID:     req.PmmAgentId,
+			ServiceID:      req.ServiceId,
+			Username:       req.Username,
+			Password:       req.Password,
+			CustomLabels:   req.CustomLabels,
+			TLS:            req.Tls,
+			TLSSkipVerify:  req.TlsSkipVerify,
+			MongoDBOptions: mongoDBOptions,
+			PushMetrics:    req.PushMetrics,
 		}
 		row, err := models.CreateAgent(tx.Querier, models.MongoDBExporterType, params)
 		if err != nil {
@@ -518,7 +518,7 @@ func (as *AgentsService) ChangePostgresExporter(ctx context.Context, req *invent
 func (as *AgentsService) AddQANMongoDBProfilerAgent(ctx context.Context, req *inventorypb.AddQANMongoDBProfilerAgentRequest) (*inventorypb.QANMongoDBProfilerAgent, error) {
 	var res *inventorypb.QANMongoDBProfilerAgent
 
-	tlsKeys, err := json.Marshal(models.TLSKeys{
+	mongoDBOptions, err := json.Marshal(models.MongoDBOptions{
 		TLSCertificateKey:             req.TlsCertificateKey,
 		TLSCertificateKeyFilePassword: req.TlsCertificateKeyFilePassword,
 		TLSCa:                         req.TlsCa,
@@ -529,14 +529,14 @@ func (as *AgentsService) AddQANMongoDBProfilerAgent(ctx context.Context, req *in
 
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 		params := &models.CreateAgentParams{
-			PMMAgentID:        req.PmmAgentId,
-			ServiceID:         req.ServiceId,
-			Username:          req.Username,
-			Password:          req.Password,
-			CustomLabels:      req.CustomLabels,
-			TLS:               req.Tls,
-			TLSSkipVerify:     req.TlsSkipVerify,
-			MongoDBTLSOptions: tlsKeys,
+			PMMAgentID:     req.PmmAgentId,
+			ServiceID:      req.ServiceId,
+			Username:       req.Username,
+			Password:       req.Password,
+			CustomLabels:   req.CustomLabels,
+			TLS:            req.Tls,
+			TLSSkipVerify:  req.TlsSkipVerify,
+			MongoDBOptions: mongoDBOptions,
 			// TODO QueryExamplesDisabled https://jira.percona.com/browse/PMM-4650
 		}
 		row, err := models.CreateAgent(tx.Querier, models.QANMongoDBProfilerAgentType, params)

@@ -71,7 +71,7 @@ func (s *MongoDBService) Add(ctx context.Context, req *managementpb.AddMongoDBRe
 		}
 		res.Service = invService.(*inventorypb.MongoDBService)
 
-		tlsKeys, err := json.Marshal(models.TLSKeys{
+		mongoDBOptions, err := json.Marshal(models.MongoDBOptions{
 			TLSCertificateKey:             req.TlsCertificateKey,
 			TLSCertificateKeyFilePassword: req.TlsCertificateKeyFilePassword,
 			TLSCa:                         req.TlsCa,
@@ -80,14 +80,14 @@ func (s *MongoDBService) Add(ctx context.Context, req *managementpb.AddMongoDBRe
 			return err
 		}
 		row, err := models.CreateAgent(tx.Querier, models.MongoDBExporterType, &models.CreateAgentParams{
-			PMMAgentID:        req.PmmAgentId,
-			ServiceID:         service.ServiceID,
-			Username:          req.Username,
-			Password:          req.Password,
-			TLS:               req.Tls,
-			TLSSkipVerify:     req.TlsSkipVerify,
-			MongoDBTLSOptions: tlsKeys,
-			PushMetrics:       isPushMode(req.MetricsMode),
+			PMMAgentID:     req.PmmAgentId,
+			ServiceID:      service.ServiceID,
+			Username:       req.Username,
+			Password:       req.Password,
+			TLS:            req.Tls,
+			TLSSkipVerify:  req.TlsSkipVerify,
+			MongoDBOptions: mongoDBOptions,
+			PushMetrics:    isPushMode(req.MetricsMode),
 		})
 		if err != nil {
 			return err
@@ -107,13 +107,13 @@ func (s *MongoDBService) Add(ctx context.Context, req *managementpb.AddMongoDBRe
 
 		if req.QanMongodbProfiler {
 			row, err = models.CreateAgent(tx.Querier, models.QANMongoDBProfilerAgentType, &models.CreateAgentParams{
-				PMMAgentID:        req.PmmAgentId,
-				ServiceID:         service.ServiceID,
-				Username:          req.Username,
-				Password:          req.Password,
-				TLS:               req.Tls,
-				TLSSkipVerify:     req.TlsSkipVerify,
-				MongoDBTLSOptions: tlsKeys,
+				PMMAgentID:     req.PmmAgentId,
+				ServiceID:      service.ServiceID,
+				Username:       req.Username,
+				Password:       req.Password,
+				TLS:            req.Tls,
+				TLSSkipVerify:  req.TlsSkipVerify,
+				MongoDBOptions: mongoDBOptions,
 
 				// TODO QueryExamplesDisabled https://jira.percona.com/browse/PMM-4650
 			})

@@ -449,7 +449,7 @@ type CreateAgentParams struct {
 	CustomLabels                   map[string]string
 	TLS                            bool
 	TLSSkipVerify                  bool
-	MongoDBTLSOptions              []byte
+	MongoDBOptions                 []byte
 	TableCountTablestatsGroupLimit int32
 	QueryExamplesDisabled          bool
 	MaxQueryLogSize                int64
@@ -501,7 +501,7 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 		Password:                       pointer.ToStringOrNil(params.Password),
 		TLS:                            params.TLS,
 		TLSSkipVerify:                  params.TLSSkipVerify,
-		MongoDBTLSOptions:              params.MongoDBTLSOptions,
+		MongoDBOptions:                 params.MongoDBOptions,
 		TableCountTablestatsGroupLimit: params.TableCountTablestatsGroupLimit,
 		QueryExamplesDisabled:          params.QueryExamplesDisabled,
 		MaxQueryLogSize:                params.MaxQueryLogSize,

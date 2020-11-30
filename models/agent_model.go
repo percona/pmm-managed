@@ -35,8 +35,8 @@ import (
 // pmm-managed's PostgreSQL, qan-api's ClickHouse, and VictoriaMetrics.
 type AgentType string
 
-// TLSKeys represents structure for certificates.
-type TLSKeys struct {
+// MongoDBOptions represents structure for special MongoDB options.
+type MongoDBOptions struct {
 	TLSCertificateKey             string `json:"tls_certificate_key"`
 	TLSCertificateKeyFilePassword string `json:"tls_certificate_key_file_password"`
 	TLSCa                         string `json:"tls_ca"`
@@ -87,11 +87,10 @@ type Agent struct {
 	ListenPort *uint16 `reform:"listen_port"`
 	Version    *string `reform:"version"`
 
-	Username          *string `reform:"username"`
-	Password          *string `reform:"password"`
-	TLS               bool    `reform:"tls"`
-	TLSSkipVerify     bool    `reform:"tls_skip_verify"`
-	MongoDBTLSOptions []byte  `reform:"mongo_db_tls_options"`
+	Username      *string `reform:"username"`
+	Password      *string `reform:"password"`
+	TLS           bool    `reform:"tls"`
+	TLSSkipVerify bool    `reform:"tls_skip_verify"`
 
 	AWSAccessKey *string `reform:"aws_access_key"`
 	AWSSecretKey *string `reform:"aws_secret_key"`
@@ -113,6 +112,8 @@ type Agent struct {
 	RDSBasicMetricsDisabled    bool `reform:"rds_basic_metrics_disabled"`
 	RDSEnhancedMetricsDisabled bool `reform:"rds_enhanced_metrics_disabled"`
 	PushMetrics                bool `reform:"push_metrics"`
+
+	MongoDBOptions []byte `reform:"mongo_db_tls_options"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.
