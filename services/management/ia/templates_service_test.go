@@ -90,38 +90,38 @@ func TestCollect(t *testing.T) {
 func TestConvertTemplate(t *testing.T) {
 	t.Parallel()
 
+	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 	ctx := context.Background()
 
-	t.Run("valid template paths", func(t *testing.T) {
-		t.Parallel()
+	t.Parallel()
 
-		svc := NewTemplatesService()
-		svc.builtinTemplatesPath = testBuiltinTemplates
-		svc.userTemplatesPath = testUserTemplates
-		svc.collect(ctx)
+	svc := NewTemplatesService(db)
+	svc.builtinTemplatesPath = testBuiltinTemplates
+	svc.userTemplatesPath = testUserTemplates
+	svc.collect(ctx)
 
-		svc.convertTemplates(ctx)
-		assert.FileExists(t, userRuleFilePath)
-		assert.FileExists(t, builtinRuleFilePath)
+	svc.convertTemplates(ctx)
+	assert.FileExists(t, userRuleFilePath)
+	assert.FileExists(t, builtinRuleFilePath)
 
-		buf, err := ioutil.ReadFile(builtinRuleFilePath)
-		require.NoError(t, err)
-		var builtinRule ruleFile
-		err = yaml.Unmarshal(buf, &builtinRule)
-		require.NoError(t, err)
-		bRule := builtinRule.Group[0].Rules[0]
-		assert.Equal(t, "builtin_rule", bRule.Alert)
-		assert.Contains(t, bRule.Labels, "severity")
-		assert.Contains(t, bRule.Labels, "ia")
+	buf, err := ioutil.ReadFile(builtinRuleFilePath)
+	require.NoError(t, err)
+	var builtinRule ruleFile
+	err = yaml.Unmarshal(buf, &builtinRule)
+	require.NoError(t, err)
+	bRule := builtinRule.Group[0].Rules[0]
+	assert.Equal(t, "builtin_rule", bRule.Alert)
+	assert.Contains(t, bRule.Labels, "severity")
+	assert.Contains(t, bRule.Labels, "ia")
 
-		buf, err = ioutil.ReadFile(userRuleFilePath)
-		require.NoError(t, err)
-		var userRule ruleFile
-		err = yaml.Unmarshal(buf, &userRule)
-		require.NoError(t, err)
-		uRule := userRule.Group[0].Rules[0]
-		assert.Equal(t, "user_rule", uRule.Alert)
-		assert.Contains(t, uRule.Labels, "severity")
-		assert.Contains(t, uRule.Labels, "ia")
-	})
+	buf, err = ioutil.ReadFile(userRuleFilePath)
+	require.NoError(t, err)
+	var userRule ruleFile
+	err = yaml.Unmarshal(buf, &userRule)
+	require.NoError(t, err)
+	uRule := userRule.Group[0].Rules[0]
+	assert.Equal(t, "user_rule", uRule.Alert)
+	assert.Contains(t, uRule.Labels, "severity")
+	assert.Contains(t, uRule.Labels, "ia")
 }
