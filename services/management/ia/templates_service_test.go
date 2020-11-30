@@ -110,9 +110,11 @@ func TestConvertTemplate(t *testing.T) {
 		require.NoError(t, err)
 		bRule := builtinRule.Group[0].Rules[0]
 		assert.Equal(t, "builtin_rule", bRule.Alert)
+		assert.Len(t, bRule.Labels, 4)
 		assert.Contains(t, bRule.Labels, "severity")
 		assert.Contains(t, bRule.Labels, "ia")
 		assert.NotNil(t, bRule.Annotations)
+		assert.Len(t, bRule.Annotations, 2)
 
 		buf, err = ioutil.ReadFile(userRuleFilePath)
 		require.NoError(t, err)
@@ -121,8 +123,10 @@ func TestConvertTemplate(t *testing.T) {
 		require.NoError(t, err)
 		uRule := userRule.Group[0].Rules[0]
 		assert.Equal(t, "user_rule", uRule.Alert)
+		assert.Len(t, uRule.Labels, 4)
 		assert.Contains(t, uRule.Labels, "severity")
 		assert.Contains(t, uRule.Labels, "ia")
 		assert.NotNil(t, uRule.Annotations)
+		assert.Len(t, uRule.Annotations, 2)
 	})
 }
