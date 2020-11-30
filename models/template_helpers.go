@@ -143,3 +143,16 @@ func CreateTemplate(q *reform.Querier, params *CreateTemplateParams) (*Template,
 
 	return row, nil
 }
+
+// RemoveTemplate removes rule template with specified name.
+func RemoveTemplate(q *reform.Querier, name string) error {
+	if _, err := FindTemplateByName(q, name); err != nil {
+		return err
+	}
+
+	err := q.Delete(&Template{Name: name})
+	if err != nil {
+		return errors.Wrap(err, "failed to delete rule template")
+	}
+	return nil
+}

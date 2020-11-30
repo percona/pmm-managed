@@ -380,7 +380,13 @@ func (svc *TemplatesService) UpdateTemplate(ctx context.Context, req *iav1beta1.
 
 // DeleteTemplate deletes existing, previously created via API.
 func (svc *TemplatesService) DeleteTemplate(ctx context.Context, req *iav1beta1.DeleteTemplateRequest) (*iav1beta1.DeleteTemplateResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteTemplate not implemented")
+	e := svc.db.InTransaction(func(tx *reform.TX) error {
+		return models.RemoveTemplate(tx.Querier, req.Name)
+	})
+	if e != nil {
+		return nil, e
+	}
+	return &iav1beta1.DeleteTemplateResponse{}, nil
 }
 
 // Check interfaces.

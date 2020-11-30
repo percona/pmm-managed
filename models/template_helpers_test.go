@@ -19,6 +19,7 @@ package models_test
 import (
 	"testing"
 
+	"github.com/brianvoe/gofakeit"
 	"github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona-platform/saas/pkg/common"
 	"github.com/stretchr/testify/assert"
@@ -112,5 +113,53 @@ func TestRuleTemplatesChannels(t *testing.T) {
 		assert.Equal(t, params.Rule.Annotations, annotations)
 
 		assert.Equal(t, params.Source, actual.Source)
+	})
+
+	t.Run("remove", func(t *testing.T) {
+		tx, err := db.Begin()
+		require.NoError(t, err)
+		defer func() {
+			require.NoError(t, tx.Rollback())
+		}()
+
+		q := tx.Querier
+
+		name := gofakeit.UUID()
+		params := &models.CreateTemplateParams{
+			Rule: &alert.Rule{
+				Name:    name,
+				Version: 1,
+				Summary: "test rule",
+				Tiers:   []common.Tier{common.Anonymous},
+				Expr:    "some expression",
+				Params: []alert.Parameter{
+					{
+						Name:    "param",
+						Summary: "test param",
+						Unit:    "kg",
+						Type:    alert.Float,
+						Range:   []interface{}{float64(10), float64(100)},
+						Value:   float64(50),
+					},
+				},
+				For:         3,
+				Severity:    common.Warning,
+				Labels:      map[string]string{"foo": "bar"},
+				Annotations: nil,
+			},
+			Source: "USER_FILE",
+		}
+
+		_, err = models.CreateTemplate(q, params)
+		require.NoError(t, err)
+
+		err = models.RemoveTemplate(q, name)
+		require.NoError(t, err)
+
+		templates, err := models.FindTemplates(q)
+		require.NoError(t, err)
+
+		assert.Empty(t, templates, )
+
 	})
 }
