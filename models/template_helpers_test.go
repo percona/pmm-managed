@@ -5,7 +5,6 @@ import (
 
 	"github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona-platform/saas/pkg/common"
-	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/reform.v1"
@@ -53,7 +52,7 @@ func TestRuleTemplatesChannels(t *testing.T) {
 				Labels:      map[string]string{"foo": "bar"},
 				Annotations: nil,
 			},
-			Source: iav1beta1.TemplateSource_USER_API.String(),
+			Source: "USER_FILE",
 		}
 
 		_, err = models.CreateTemplate(q, params)
