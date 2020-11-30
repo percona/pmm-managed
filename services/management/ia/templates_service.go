@@ -19,12 +19,12 @@ package ia
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"html/template"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -47,12 +47,7 @@ const (
 	userTemplatesPath    = "/tmp/ia2/*.yml"
 
 	ruleFileDir = "/tmp/ia1/"
-
-	// TODO remove once we start using real values
-	dummyParamValue = "80"
 )
-
-var paramRegex = regexp.MustCompile(`\[\[.*?\]\]`)
 
 // TemplatesService is responsible for interactions with IA rule templates.
 type TemplatesService struct {
@@ -74,6 +69,10 @@ func NewTemplatesService(db *reform.DB) *TemplatesService {
 		userTemplatesPath:    userTemplatesPath,
 		rules:                make(map[string]saas.Rule),
 	}
+}
+
+func newParamTemplate() *template.Template {
+	return template.New("").Option("missingkey=error").Delims("[[", "]]")
 }
 
 // getCollected return collected templates.
@@ -181,27 +180,62 @@ type rule struct {
 }
 
 // converts an alert template rule to a rule file. generates one file per rule.
-func (svc *TemplatesService) convertTemplates(ctx context.Context) {
+func (svc *TemplatesService) convertTemplates(ctx context.Context) error {
 	templates := svc.getCollected(ctx)
 	for _, template := range templates {
 		r := rule{
-			Alert:    template.Name,
-			Duration: template.For,
-			Labels:   template.Labels,
+			Alert:       template.Name,
+			Duration:    template.For,
+			Labels:      make(map[string]string, len(template.Labels)),
+			Annotations: make(map[string]string, len(template.Annotations)),
 		}
 
-		res := transformExpr(template.Expr)
-		r.Expr = res.transformedExpr
-
-		for t := range res.templateSet {
-			key := strings.Trim(t, "[] .")
-			r.Labels[key] = dummyParamValue
+		data := make(map[string]string, len(template.Params))
+		for _, param := range template.Params {
+			data[param.Name] = fmt.Sprint(param.Value)
 		}
+
+		var buf bytes.Buffer
+		t, err := newParamTemplate().Parse(template.Expr)
+		if err != nil {
+			return errors.Wrap(err, "failed to convert rule template")
+		}
+		if err = t.Execute(&buf, data); err != nil {
+			return errors.Wrap(err, "failed to convert rule template")
+		}
+		r.Expr = buf.String()
+
+		for k, v := range template.Labels {
+			buf.Reset()
+			t, err := newParamTemplate().Parse(v)
+			if err != nil {
+				return errors.Wrap(err, "failed to convert rule template")
+			}
+			if err = t.Execute(&buf, data); err != nil {
+				svc.l.Fatal(err)
+			}
+			r.Labels[k] = buf.String()
+		}
+
+		// add parameters to labels
+		for _, p := range template.Params {
+			r.Labels[p.Name] = fmt.Sprint(p.Value)
+		}
+
 		r.Labels["ia"] = "1"
 		r.Labels["severity"] = template.Severity.String()
 
-		transformAnnotations(template.Annotations, res.templateSet)
-		r.Annotations = template.Annotations
+		for k, v := range template.Annotations {
+			buf.Reset()
+			t, err := newParamTemplate().Parse(v)
+			if err != nil {
+				return errors.Wrap(err, "failed to convert rule template")
+			}
+			if err = t.Execute(&buf, data); err != nil {
+				return errors.Wrap(err, "failed to convert rule template")
+			}
+			r.Annotations[k] = buf.String()
+		}
 
 		rf := ruleFile{
 			Group: []ruleGroup{{
@@ -209,50 +243,13 @@ func (svc *TemplatesService) convertTemplates(ctx context.Context) {
 				Rules: []rule{r},
 			}},
 		}
-		err := dumpRule(rf)
 
+		err = dumpRule(rf)
 		if err != nil {
-			svc.l.Error(err)
+			return errors.Wrap(err, "failed to dump alert rules")
 		}
 	}
-}
-
-type parsedExpr struct {
-	transformedExpr string
-	// stores unique templates found in expr.
-	templateSet map[string]struct{}
-}
-
-// extracts unique occurrences of templates in the expression
-// and replaces all templates with a dummy value.
-func transformExpr(expr string) parsedExpr {
-	params := paramRegex.FindAll([]byte(expr), -1)
-	set := make(map[string]struct{}, len(params))
-	for _, p := range params {
-		set[string(p)] = struct{}{}
-	}
-
-	// TODO use real values instead of dummy.
-	tExpr := string(paramRegex.ReplaceAll([]byte(expr), []byte(dummyParamValue)))
-
-	return parsedExpr{
-		transformedExpr: tExpr,
-		templateSet:     set,
-	}
-}
-
-// replaces any occurrence of a template in annotations with a dummy value.
-func transformAnnotations(annotations map[string]string, templateSet map[string]struct{}) {
-	var val string
-	for k, v := range annotations {
-		for param := range templateSet {
-			if strings.Contains(v, param) {
-				// TODO use real values instead of dummy.
-				val = strings.ReplaceAll(v, param, dummyParamValue)
-			}
-		}
-		annotations[k] = val
-	}
+	return nil
 }
 
 // dump the transformed IA rules to a file.

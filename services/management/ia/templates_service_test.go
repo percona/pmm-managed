@@ -110,6 +110,7 @@ func TestConvertTemplate(t *testing.T) {
 	assert.Equal(t, "builtin_rule", bRule.Alert)
 	assert.Contains(t, bRule.Labels, "severity")
 	assert.Contains(t, bRule.Labels, "ia")
+	assert.NotNil(t, bRule.Annotations)
 
 	buf, err = ioutil.ReadFile(userRuleFilePath)
 	require.NoError(t, err)
@@ -120,4 +121,5 @@ func TestConvertTemplate(t *testing.T) {
 	assert.Equal(t, "user_rule", uRule.Alert)
 	assert.Contains(t, uRule.Labels, "severity")
 	assert.Contains(t, uRule.Labels, "ia")
+	assert.NotNil(t, uRule.Annotations)
 }
