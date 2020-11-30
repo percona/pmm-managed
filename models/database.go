@@ -373,7 +373,7 @@ var databaseSchema = [][]string{
 	},
 
 	23: {
-		`CREATE TABLE alert_rules (
+		`CREATE TABLE ia_rules (
 			id VARCHAR NOT NULL,
 			template JSONB,
 			summary VARCHAR,

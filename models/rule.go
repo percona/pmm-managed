@@ -27,8 +27,8 @@ import (
 
 //go:generate reform
 
-// Rule represents alertRule configuration.
-//reform:alert_rules
+// Rule represents alert rule configuration.
+//reform:ia_rules
 type Rule struct {
 	Template     *iav1beta1.Template    `reform:"template"`
 	ID           string                 `reform:"id,pk"`

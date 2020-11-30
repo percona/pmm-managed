@@ -20,7 +20,7 @@ func (v *ruleTableType) Schema() string {
 	return v.s.SQLSchema
 }
 
-// Name returns a view or table name in SQL database ("alert_rules").
+// Name returns a view or table name in SQL database ("ia_rules").
 func (v *ruleTableType) Name() string {
 	return v.s.SQLName
 }
@@ -45,9 +45,9 @@ func (v *ruleTableType) PKColumnIndex() uint {
 	return uint(v.s.PKFieldIndex)
 }
 
-// RuleTable represents alert_rules view or table in SQL database.
+// RuleTable represents ia_rules view or table in SQL database.
 var RuleTable = &ruleTableType{
-	s: parse.StructInfo{Type: "Rule", SQLSchema: "", SQLName: "alert_rules", Fields: []parse.FieldInfo{{Name: "Template", Type: "*iav1beta1.Template", Column: "template"}, {Name: "ID", Type: "string", Column: "id"}, {Name: "Summary", Type: "string", Column: "summary"}, {Name: "Disabled", Type: "bool", Column: "disabled"}, {Name: "Params", Type: "[]*iav1beta1.RuleParam", Column: "params"}, {Name: "For", Type: "time.Duration", Column: "for"}, {Name: "Severity", Type: "managementpb.Severity", Column: "severity"}, {Name: "CustomLabels", Type: "[]uint8", Column: "custom_labels"}, {Name: "Filters", Type: "[]*Filter", Column: "filters"}, {Name: "Channels", Type: "[]*Channel", Column: "channels"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}}, PKFieldIndex: 1},
+	s: parse.StructInfo{Type: "Rule", SQLSchema: "", SQLName: "ia_rules", Fields: []parse.FieldInfo{{Name: "Template", Type: "*iav1beta1.Template", Column: "template"}, {Name: "ID", Type: "string", Column: "id"}, {Name: "Summary", Type: "string", Column: "summary"}, {Name: "Disabled", Type: "bool", Column: "disabled"}, {Name: "Params", Type: "[]*iav1beta1.RuleParam", Column: "params"}, {Name: "For", Type: "time.Duration", Column: "for"}, {Name: "Severity", Type: "managementpb.Severity", Column: "severity"}, {Name: "CustomLabels", Type: "[]uint8", Column: "custom_labels"}, {Name: "Filters", Type: "[]*Filter", Column: "filters"}, {Name: "Channels", Type: "[]*Channel", Column: "channels"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}}, PKFieldIndex: 1},
 	z: new(Rule).Values(),
 }
 
