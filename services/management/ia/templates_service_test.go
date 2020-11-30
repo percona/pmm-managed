@@ -94,8 +94,6 @@ func TestConvertTemplate(t *testing.T) {
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 	ctx := context.Background()
 
-	t.Parallel()
-
 	svc := NewTemplatesService(db)
 	svc.builtinTemplatesPath = testBuiltinTemplates
 	svc.userTemplatesPath = testUserTemplates
