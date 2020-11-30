@@ -375,7 +375,35 @@ func (svc *TemplatesService) CreateTemplate(ctx context.Context, req *iav1beta1.
 
 // UpdateTemplate updates existing template, previously created via API.
 func (svc *TemplatesService) UpdateTemplate(ctx context.Context, req *iav1beta1.UpdateTemplateRequest) (*iav1beta1.UpdateTemplateResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateTemplate not implemented")
+	pParams := &alert.ParseParams{
+		DisallowUnknownFields: true,
+		DisallowInvalidRules:  true,
+	}
+
+	rules, err := alert.Parse(strings.NewReader(req.Yaml), pParams)
+	if err != nil {
+		svc.l.Errorf("failed to parse rule template form request: +%v", err)
+		return nil, status.Error(codes.InvalidArgument, "Failed to parse rule template.")
+	}
+
+	if len(rules) != 1 {
+		return nil, status.Error(codes.InvalidArgument, "Request should contain exactly one rule template.")
+	}
+
+	params := &models.ChangeTemplateParams{
+		Rule: &rules[0],
+	}
+
+	e := svc.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		_, err = models.ChangeTemplate(tx.Querier, params)
+		return err
+	})
+	if e != nil {
+		return nil, e
+	}
+
+	return &iav1beta1.UpdateTemplateResponse{}, nil
 }
 
 // DeleteTemplate deletes existing, previously created via API.
