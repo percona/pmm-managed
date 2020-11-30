@@ -88,39 +88,41 @@ func TestCollect(t *testing.T) {
 }
 
 func TestConvertTemplate(t *testing.T) {
-	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
-	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-	ctx := context.Background()
+	t.Run("no error", func(t *testing.T) {
+		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+		ctx := context.Background()
 
-	svc := NewTemplatesService(db)
-	svc.builtinTemplatesPath = testBuiltinTemplates
-	svc.userTemplatesPath = testUserTemplates
-	svc.collect(ctx)
+		svc := NewTemplatesService(db)
+		svc.builtinTemplatesPath = testBuiltinTemplates
+		svc.userTemplatesPath = testUserTemplates
+		svc.collect(ctx)
 
-	err := svc.convertTemplates(ctx)
-	require.NoError(t, err)
-	assert.FileExists(t, userRuleFilePath)
-	assert.FileExists(t, builtinRuleFilePath)
+		err := svc.convertTemplates(ctx)
+		require.NoError(t, err)
+		assert.FileExists(t, userRuleFilePath)
+		assert.FileExists(t, builtinRuleFilePath)
 
-	buf, err := ioutil.ReadFile(builtinRuleFilePath)
-	require.NoError(t, err)
-	var builtinRule ruleFile
-	err = yaml.Unmarshal(buf, &builtinRule)
-	require.NoError(t, err)
-	bRule := builtinRule.Group[0].Rules[0]
-	assert.Equal(t, "builtin_rule", bRule.Alert)
-	assert.Contains(t, bRule.Labels, "severity")
-	assert.Contains(t, bRule.Labels, "ia")
-	assert.NotNil(t, bRule.Annotations)
+		buf, err := ioutil.ReadFile(builtinRuleFilePath)
+		require.NoError(t, err)
+		var builtinRule ruleFile
+		err = yaml.Unmarshal(buf, &builtinRule)
+		require.NoError(t, err)
+		bRule := builtinRule.Group[0].Rules[0]
+		assert.Equal(t, "builtin_rule", bRule.Alert)
+		assert.Contains(t, bRule.Labels, "severity")
+		assert.Contains(t, bRule.Labels, "ia")
+		assert.NotNil(t, bRule.Annotations)
 
-	buf, err = ioutil.ReadFile(userRuleFilePath)
-	require.NoError(t, err)
-	var userRule ruleFile
-	err = yaml.Unmarshal(buf, &userRule)
-	require.NoError(t, err)
-	uRule := userRule.Group[0].Rules[0]
-	assert.Equal(t, "user_rule", uRule.Alert)
-	assert.Contains(t, uRule.Labels, "severity")
-	assert.Contains(t, uRule.Labels, "ia")
-	assert.NotNil(t, uRule.Annotations)
+		buf, err = ioutil.ReadFile(userRuleFilePath)
+		require.NoError(t, err)
+		var userRule ruleFile
+		err = yaml.Unmarshal(buf, &userRule)
+		require.NoError(t, err)
+		uRule := userRule.Group[0].Rules[0]
+		assert.Equal(t, "user_rule", uRule.Alert)
+		assert.Contains(t, uRule.Labels, "severity")
+		assert.Contains(t, uRule.Labels, "ia")
+		assert.NotNil(t, uRule.Annotations)
+	})
 }

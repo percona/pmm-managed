@@ -205,16 +205,9 @@ func (svc *TemplatesService) convertTemplates(ctx context.Context) error {
 		}
 		r.Expr = buf.String()
 
-		for k, v := range template.Labels {
-			buf.Reset()
-			t, err := newParamTemplate().Parse(v)
-			if err != nil {
-				return errors.Wrap(err, "failed to convert rule template")
-			}
-			if err = t.Execute(&buf, data); err != nil {
-				svc.l.Fatal(err)
-			}
-			r.Labels[k] = buf.String()
+		err = transformMaps(template.Labels, r.Labels, data)
+		if err != nil {
+			return errors.Wrap(err, "failed to convert rule template")
 		}
 
 		// add parameters to labels
@@ -222,19 +215,13 @@ func (svc *TemplatesService) convertTemplates(ctx context.Context) error {
 			r.Labels[p.Name] = fmt.Sprint(p.Value)
 		}
 
+		// add special labels
 		r.Labels["ia"] = "1"
 		r.Labels["severity"] = template.Severity.String()
 
-		for k, v := range template.Annotations {
-			buf.Reset()
-			t, err := newParamTemplate().Parse(v)
-			if err != nil {
-				return errors.Wrap(err, "failed to convert rule template")
-			}
-			if err = t.Execute(&buf, data); err != nil {
-				return errors.Wrap(err, "failed to convert rule template")
-			}
-			r.Annotations[k] = buf.String()
+		err = transformMaps(template.Annotations, r.Annotations, data)
+		if err != nil {
+			return errors.Wrap(err, "failed to convert rule template")
 		}
 
 		rf := ruleFile{
@@ -248,6 +235,24 @@ func (svc *TemplatesService) convertTemplates(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to dump alert rules")
 		}
+	}
+	return nil
+}
+
+// fills templates found in label and annotaions with values.
+func transformMaps(src map[string]string, dest map[string]string, data map[string]string) error {
+	var buf bytes.Buffer
+
+	for k, v := range src {
+		buf.Reset()
+		t, err := newParamTemplate().Parse(v)
+		if err != nil {
+			return err
+		}
+		if err = t.Execute(&buf, data); err != nil {
+			return err
+		}
+		dest[k] = buf.String()
 	}
 	return nil
 }
