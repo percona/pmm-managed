@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package victoriametrics provides facilities for working with VMAlert.
-package victoriametrics
+// Package vmalert provides facilities for working with VMAlert.
+package vmalert
 
 import (
 	"context"
@@ -27,16 +27,18 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+)
 
-	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/prometheus"
+const (
+	updateBatchDelay           = 3 * time.Second
+	configurationUpdateTimeout = 2 * time.Second
 )
 
 // VMAlert is responsible for interactions with victoria metrics.
 type VMAlert struct {
 	baseURL             *url.URL
 	client              *http.Client
-	alertingRules       *prometheus.AlertingRules
+	alertingRules       *AlertingRules
 	cachedAlertingRules string
 
 	l    *logrus.Entry
@@ -44,7 +46,7 @@ type VMAlert struct {
 }
 
 // NewVMAlert creates new Victoria Metrics Alert service.
-func NewVMAlert(alertRules *prometheus.AlertingRules, baseURL string, params *models.VictoriaMetricsParams) (*VMAlert, error) {
+func NewVMAlert(alertRules *AlertingRules, baseURL string) (*VMAlert, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, errors.WithStack(err)

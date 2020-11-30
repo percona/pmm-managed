@@ -25,13 +25,14 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/go-sql-driver/mysql"
+	"github.com/percona/pmm/version"
 	"gopkg.in/reform.v1"
 )
 
 //go:generate reform
 
 // AgentType represents Agent type as stored in databases:
-// pmm-managed's PostgreSQL, qan-api's ClickHouse, and Prometheus.
+// pmm-managed's PostgreSQL, qan-api's ClickHouse, and VictoriaMetrics.
 type AgentType string
 
 // Agent types (in the same order as in agents.proto).
@@ -54,6 +55,12 @@ const (
 
 // PMMServerAgentID is a special Agent ID representing pmm-agent on PMM Server.
 const PMMServerAgentID string = "pmm-server" // no /agent_id/ prefix
+
+// PMMAgentWithPushMetricsSupport - version of pmmAgent,
+// that support vmagent and push metrics mode
+// will be released with PMM Agent v2.12.
+// TODO fix it to 2.11.99 before release
+var PMMAgentWithPushMetricsSupport = version.MustParse("2.11.1")
 
 // Agent represents Agent as stored in database.
 //reform:agents

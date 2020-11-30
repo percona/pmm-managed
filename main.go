@@ -76,12 +76,12 @@ import (
 	managementgrpc "github.com/percona/pmm-managed/services/management/grpc"
 	"github.com/percona/pmm-managed/services/management/ia"
 	"github.com/percona/pmm-managed/services/platform"
-	"github.com/percona/pmm-managed/services/prometheus"
 	"github.com/percona/pmm-managed/services/qan"
 	"github.com/percona/pmm-managed/services/server"
 	"github.com/percona/pmm-managed/services/supervisord"
 	"github.com/percona/pmm-managed/services/telemetry"
 	"github.com/percona/pmm-managed/services/victoriametrics"
+	"github.com/percona/pmm-managed/services/vmalert"
 	"github.com/percona/pmm-managed/utils/clean"
 	"github.com/percona/pmm-managed/utils/interceptors"
 	"github.com/percona/pmm-managed/utils/logger"
@@ -182,10 +182,10 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	// TODO remove PERCONA_TEST_IA once IA is out of beta: https://jira.percona.com/browse/PMM-7001
 	if enable, err := strconv.ParseBool(os.Getenv("PERCONA_TEST_IA")); err == nil && enable {
 		l.Warnf("Enabling experimental IA APIs.")
-		iav1beta1.RegisterAlertsServer(gRPCServer, ia.NewAlertsService())
-		iav1beta1.RegisterChannelsServer(gRPCServer, ia.NewChannelsService())
-		iav1beta1.RegisterRulesServer(gRPCServer, ia.NewRulesService())
-		iav1beta1.RegisterTemplatesServer(gRPCServer, ia.NewTemplatesService())
+		iav1beta1.RegisterAlertsServer(gRPCServer, ia.NewAlertsService(deps.db))
+		iav1beta1.RegisterChannelsServer(gRPCServer, ia.NewChannelsService(deps.db))
+		iav1beta1.RegisterRulesServer(gRPCServer, ia.NewRulesService(deps.db))
+		iav1beta1.RegisterTemplatesServer(gRPCServer, ia.NewTemplatesService(deps.db))
 	}
 
 	// TODO Remove once changing settings.DBaaS.Enabled is possible via API.
@@ -587,7 +587,7 @@ func main() {
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reformL)
 
 	cleaner := clean.New(db)
-	alertingRules := prometheus.NewAlertingRules()
+	alertingRules := vmalert.NewAlertingRules()
 
 	vmParams, err := models.NewVictoriaMetricsParams(victoriametrics.BasePrometheusConfigPath)
 	if err != nil {
@@ -597,7 +597,7 @@ func main() {
 	if err != nil {
 		l.Panicf("VictoriaMetrics service problem: %+v", err)
 	}
-	vmalert, err := victoriametrics.NewVMAlert(alertingRules, *victoriaMetricsVMAlertURLF, vmParams)
+	vmalert, err := vmalert.NewVMAlert(alertingRules, *victoriaMetricsVMAlertURLF)
 	if err != nil {
 		l.Panicf("VictoriaMetrics VMAlert service problem: %+v", err)
 	}

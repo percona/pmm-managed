@@ -23,7 +23,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/reform.v1"
+	"gopkg.in/reform.v1/dialects/postgresql"
 	"gopkg.in/yaml.v2"
+
+	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/utils/testdb"
 )
 
 const (
@@ -41,11 +46,13 @@ func TestCollect(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
+	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
 	t.Run("bad and missing template paths", func(t *testing.T) {
 		t.Parallel()
 
-		svc := NewTemplatesService()
+		svc := NewTemplatesService(db)
 		svc.builtinTemplatesPath = testMissingTemplates
 		svc.userTemplatesPath = testBadTemplates
 		svc.collect(ctx)
@@ -56,7 +63,7 @@ func TestCollect(t *testing.T) {
 	t.Run("valid template paths", func(t *testing.T) {
 		t.Parallel()
 
-		svc := NewTemplatesService()
+		svc := NewTemplatesService(db)
 		svc.builtinTemplatesPath = testBuiltinTemplates
 		svc.userTemplatesPath = testUserTemplates
 		svc.collect(ctx)
