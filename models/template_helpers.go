@@ -90,36 +90,40 @@ func CreateTemplate(q *reform.Querier, params *CreateTemplateParams) (*Template,
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to parse param value")
 			}
-			fp.HasDefault = true
 
 			fp.Min, fp.Max, err = param.GetRangeForFloat()
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to parse param range")
 			}
-			fp.HasMin, fp.HaxMax = true, true
 
 			p[i].FloatParam = &fp
 		}
 	}
 
 	row := &Template{
-		Name:        rule.Name,
-		Version:     rule.Version,
-		Summary:     rule.Summary,
-		Tiers:       rule.Tiers,
-		Expr:        rule.Expr,
-		Params:      p,
-		For:         Duration(rule.For),
-		Severity:    rule.Severity.String(),
-		Labels:      rule.Labels,
-		Annotations: rule.Annotations,
-		Source:      params.Source,
+		Name:     rule.Name,
+		Version:  rule.Version,
+		Summary:  rule.Summary,
+		Tiers:    rule.Tiers,
+		Expr:     rule.Expr,
+		Params:   p,
+		For:      Duration(rule.For),
+		Severity: rule.Severity.String(),
+		Source:   params.Source,
+	}
+
+	if err := row.SetLabels(rule.Labels); err != nil {
+		return nil, err
+	}
+
+	if err := row.SetAnnotations(rule.Annotations); err != nil {
+		return nil, err
 	}
 
 	err := q.Insert(row)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create notifications channel")
+		return nil, errors.Wrap(err, "failed to create rule template")
 	}
 
-	return nil, nil
+	return row, nil
 }

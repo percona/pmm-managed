@@ -50,7 +50,7 @@ func TestRuleTemplatesChannels(t *testing.T) {
 				},
 				For:         3,
 				Severity:    common.Warning,
-				Labels:      nil,
+				Labels:      map[string]string{"foo": "bar"},
 				Annotations: nil,
 			},
 			Source: iav1beta1.TemplateSource_USER_API.String(),
@@ -78,20 +78,24 @@ func TestRuleTemplatesChannels(t *testing.T) {
 					Unit:    params.Rule.Params[0].Unit,
 					Type:    string(params.Rule.Params[0].Type),
 					FloatParam: &models.FloatParam{
-						HasDefault: true,
-						Default:    params.Rule.Params[0].Value.(float64),
-						HasMin:     true,
-						Min:        params.Rule.Params[0].Range[0].(float64),
-						HaxMax:     true,
-						Max:        params.Rule.Params[0].Range[1].(float64),
+						Default: params.Rule.Params[0].Value.(float64),
+						Min:     params.Rule.Params[0].Range[0].(float64),
+						Max:     params.Rule.Params[0].Range[1].(float64),
 					},
 				},
 			},
 			actual.Params)
 		assert.EqualValues(t, params.Rule.For, actual.For)
 		assert.Equal(t, params.Rule.Severity.String(), actual.Severity)
-		assert.ElementsMatch(t, params.Rule.Labels, actual.Labels)
-		assert.ElementsMatch(t, params.Rule.Annotations, actual.Annotations)
+
+		labels, err := actual.GetLabels()
+		require.NoError(t, err)
+		assert.Equal(t, params.Rule.Labels, labels)
+
+		annotations, err := actual.GetAnnotations()
+		require.NoError(t, err)
+		assert.Equal(t, params.Rule.Annotations, annotations)
+
 		assert.Equal(t, params.Source, actual.Source)
 	})
 }

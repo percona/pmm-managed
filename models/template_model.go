@@ -20,8 +20,8 @@ type Template struct {
 	Params      Params   `reform:"params"`
 	For         Duration `reform:"for"`
 	Severity    string   `reform:"severity"`
-	Labels      Map      `reform:"labels"`
-	Annotations Map      `reform:"annotations"`
+	Labels      []byte   `reform:"labels"`
+	Annotations []byte   `reform:"annotations"`
 	Source      string   `reform:"source"`
 
 	CreatedAt time.Time `reform:"created_at"`
@@ -50,6 +50,26 @@ func (t *Template) AfterFind() error {
 	t.UpdatedAt = t.UpdatedAt.UTC()
 
 	return nil
+}
+
+// GetLabels decodes template labels.
+func (t *Template) GetLabels() (map[string]string, error) {
+	return getStringMap(t.Labels)
+}
+
+// SetLabels encodes template labels.
+func (t *Template) SetLabels(m map[string]string) error {
+	return setStringMap(m, &t.Labels)
+}
+
+// GetAnnotations decodes template annotations.
+func (t *Template) GetAnnotations() (map[string]string, error) {
+	return getStringMap(t.Annotations)
+}
+
+// SetAnnotations encodes template annotations.
+func (t *Template) SetAnnotations(m map[string]string) error {
+	return setStringMap(m, &t.Annotations)
 }
 
 type Tiers []common.Tier
@@ -94,19 +114,13 @@ type BoolParam struct {
 }
 
 type FloatParam struct {
-	HasDefault bool    `json:"has_default"`
-	Default    float64 `json:"default"`
-
-	HasMin bool    `json:"has_min"`
-	Min    float64 `json:"min"`
-
-	HaxMax bool    `json:"hax_max"`
-	Max    float64 `json:"max"`
+	Default float64 `json:"default"`
+	Min     float64 `json:"min"`
+	Max     float64 `json:"max"`
 }
 
 type StringParam struct {
-	HasDefault bool   `json:"has_default"`
-	Default    string `json:"default"`
+	Default string `json:"default"`
 }
 
 // check interfaces
