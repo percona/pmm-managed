@@ -74,11 +74,13 @@ func FindTemplateByName(q *reform.Querier, name string) (*Template, error) {
 	}
 }
 
+// CreateTemplateParams are params for creating new rule template.
 type CreateTemplateParams struct {
 	Rule   *alert.Rule
 	Source string
 }
 
+// CreateTemplate creates rule template.
 func CreateTemplate(q *reform.Querier, params *CreateTemplateParams) (*Template, error) {
 	rule := params.Rule
 	if err := rule.Validate(); err != nil {
@@ -89,31 +91,9 @@ func CreateTemplate(q *reform.Querier, params *CreateTemplateParams) (*Template,
 		return nil, err
 	}
 
-	p := make(Params, len(rule.Params))
-	for i, param := range rule.Params {
-		p[i] = Param{
-			Name:    param.Name,
-			Summary: param.Summary,
-			Unit:    param.Unit,
-			Type:    string(param.Type),
-		}
-
-		switch param.Type {
-		case alert.Float:
-			var fp FloatParam
-			var err error
-			fp.Default, err = param.GetValueForFloat()
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to parse param value")
-			}
-
-			fp.Min, fp.Max, err = param.GetRangeForFloat()
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to parse param range")
-			}
-
-			p[i].FloatParam = &fp
-		}
+	p, err := convertTemplateParams(params.Rule.Params)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid rule template parameters: %v.", err)
 	}
 
 	row := &Template{
@@ -136,9 +116,56 @@ func CreateTemplate(q *reform.Querier, params *CreateTemplateParams) (*Template,
 		return nil, err
 	}
 
-	err := q.Insert(row)
+	err = q.Insert(row)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create rule template")
+	}
+
+	return row, nil
+}
+
+// ChangeTemplateParams is params for changing existing rule template.
+type ChangeTemplateParams struct {
+	Rule *alert.Rule
+}
+
+// ChangeTemplate updates existing rule template.
+func ChangeTemplate(q *reform.Querier, params *ChangeTemplateParams) (*Template, error) {
+	row, err := FindTemplateByName(q, params.Rule.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	rule := params.Rule
+	if err := rule.Validate(); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid rule template: %v.", err)
+	}
+
+	p, err := convertTemplateParams(params.Rule.Params)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid rule template parameters: %v.", err)
+	}
+
+	row.Name = rule.Name
+	row.Version = rule.Version
+	row.Summary = rule.Summary
+	row.Tiers = rule.Tiers
+	row.Expr = rule.Expr
+	row.Params = p
+	row.For = Duration(rule.For)
+	row.Severity = rule.Severity.String()
+
+	if err := row.SetLabels(rule.Labels); err != nil {
+		return nil, err
+	}
+
+	if err := row.SetAnnotations(rule.Annotations); err != nil {
+		return nil, err
+	}
+
+	err = q.Update(row)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to update rule template")
 	}
 
 	return row, nil
@@ -155,4 +182,35 @@ func RemoveTemplate(q *reform.Querier, name string) error {
 		return errors.Wrap(err, "failed to delete rule template")
 	}
 	return nil
+}
+
+func convertTemplateParams(params []alert.Parameter) (Params, error) {
+	res := make(Params, len(params))
+	for i, param := range params {
+		res[i] = Param{
+			Name:    param.Name,
+			Summary: param.Summary,
+			Unit:    param.Unit,
+			Type:    string(param.Type),
+		}
+
+		switch param.Type {
+		case alert.Float:
+			var fp FloatParam
+			var err error
+			fp.Default, err = param.GetValueForFloat()
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to parse param value")
+			}
+
+			fp.Min, fp.Max, err = param.GetRangeForFloat()
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to parse param range")
+			}
+
+			res[i].FloatParam = &fp
+		}
+	}
+
+	return res, nil
 }

@@ -159,7 +159,7 @@ func TestRuleTemplatesChannels(t *testing.T) {
 		templates, err := models.FindTemplates(q)
 		require.NoError(t, err)
 
-		assert.Empty(t, templates, )
+		assert.Empty(t, templates)
 
 	})
 }
