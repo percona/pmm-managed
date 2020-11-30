@@ -281,12 +281,10 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, req *inventoryp
 			CustomLabels:  req.CustomLabels,
 			TLS:           req.Tls,
 			TLSSkipVerify: req.TlsSkipVerify,
-			ServicesTLSKeys: models.ServicesTLSKeys{
-				MongoDBExporter: models.TLSKeys{
-					TLSCertificateKey:             req.TlsCertificateKey,
-					TLSCertificateKeyFilePassword: req.TlsCertificateKeyFilePassword,
-					TLSCa:                         req.TlsCa,
-				},
+			MongoDBTLSOptions: models.TLSKeys{
+				TLSCertificateKey:             req.TlsCertificateKey,
+				TLSCertificateKeyFilePassword: req.TlsCertificateKeyFilePassword,
+				TLSCa:                         req.TlsCa,
 			},
 			PushMetrics: req.PushMetrics,
 		}
@@ -522,6 +520,11 @@ func (as *AgentsService) AddQANMongoDBProfilerAgent(ctx context.Context, req *in
 			CustomLabels:  req.CustomLabels,
 			TLS:           req.Tls,
 			TLSSkipVerify: req.TlsSkipVerify,
+			MongoDBTLSOptions: models.TLSKeys{
+				TLSCertificateKey:             req.TlsCertificateKey,
+				TLSCertificateKeyFilePassword: req.TlsCertificateKeyFilePassword,
+				TLSCa:                         req.TlsCa,
+			},
 			// TODO QueryExamplesDisabled https://jira.percona.com/browse/PMM-4650
 		}
 		row, err := models.CreateAgent(tx.Querier, models.QANMongoDBProfilerAgentType, params)

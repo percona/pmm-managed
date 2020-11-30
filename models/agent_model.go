@@ -42,12 +42,6 @@ type TLSKeys struct {
 	TLSCa                         string `json:"tls_ca"`
 }
 
-// ServicesTLSKeys represents services TLS keys.
-type ServicesTLSKeys struct {
-	MongoDBExporter    TLSKeys `json:"mongo_db_exporter"`
-	QANMongoDBProfiler TLSKeys `json:"qa_mongo_db_profiler"`
-}
-
 // Agent types (in the same order as in agents.proto).
 const (
 	PMMAgentType                        AgentType = "pmm-agent"
@@ -93,11 +87,11 @@ type Agent struct {
 	ListenPort *uint16 `reform:"listen_port"`
 	Version    *string `reform:"version"`
 
-	Username        *string         `reform:"username"`
-	Password        *string         `reform:"password"`
-	TLS             bool            `reform:"tls"`
-	TLSSkipVerify   bool            `reform:"tls_skip_verify"`
-	ServicesTLSKeys ServicesTLSKeys `reform:"services_tls_keys"`
+	Username          *string `reform:"username"`
+	Password          *string `reform:"password"`
+	TLS               bool    `reform:"tls"`
+	TLSSkipVerify     bool    `reform:"tls_skip_verify"`
+	MongoDBTLSOptions TLSKeys `reform:"mongo_db_tls_options"`
 
 	AWSAccessKey *string `reform:"aws_access_key"`
 	AWSSecretKey *string `reform:"aws_secret_key"`
