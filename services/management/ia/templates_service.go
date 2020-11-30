@@ -194,7 +194,7 @@ func (svc *TemplatesService) convertTemplates(ctx context.Context) {
 		r.Expr = res.transformedExpr
 
 		for t := range res.templateSet {
-			key := strings.Trim(t, "[[ . ]]")
+			key := strings.Trim(t, "[[ . ")
 			r.Labels[key] = dummyParamValue
 		}
 		r.Labels["ia"] = "1"
@@ -267,7 +267,7 @@ func dumpRule(rule ruleFile) error {
 
 	_, err = os.Stat(ruleFileDir)
 	if os.IsNotExist(err) {
-		err = os.Mkdir(ruleFileDir, 0755)
+		err = os.Mkdir(ruleFileDir, 0750)
 		if err != nil {
 			return err
 		}
