@@ -18,10 +18,8 @@ package models
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/url"
-	"os"
 	"strconv"
 	"time"
 
@@ -271,19 +269,6 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			q.Add("ssl", "true")
 			if s.TLSSkipVerify {
 				q.Add("tlsInsecure", "true")
-			}
-			if s.ServicesTLSKeys != (ServicesTLSKeys{}) {
-				switch s.AgentType {
-				case MongoDBExporterType:
-					exporter := s.ServicesTLSKeys.MongoDBExporter
-					if exporter != (TLSKeys{}) && exporter.TLSCertificateKey != "" {
-						cert, err := ioutil.TempFile("", "cert")
-						if err == nil {
-							defer os.Remove(cert.Name())
-							q.Add("tlsCertificateKeyFile", cert.Name())
-						}
-					}
-				}
 			}
 		}
 
