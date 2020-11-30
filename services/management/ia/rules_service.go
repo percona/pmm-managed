@@ -18,11 +18,10 @@ package ia
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/google/uuid"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
-	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -44,10 +43,16 @@ func NewRulesService(db *reform.DB) *RulesService {
 
 // ListAlertRules returns a list of all Integrated Alerting rules.
 func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAlertRulesRequest) (*iav1beta1.ListAlertRulesResponse, error) {
-	rules, err := models.GetRules(s.db.Querier)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get alert rules")
+	var rules []models.Rule
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		rules, err = models.FindRules(tx.Querier)
+		return err
+	})
+	if e != nil {
+		return nil, e
 	}
+
 	res := make([]*iav1beta1.Rule, len(rules))
 	for i, rule := range rules {
 		createdAt, err := ptypes.TimestampProto(rule.CreatedAt)
@@ -56,28 +61,46 @@ func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAl
 		}
 
 		r := &iav1beta1.Rule{
-			RuleId:       rule.ID,
-			Template:     rule.Template,
-			Disabled:     rule.Disabled,
-			Summary:      rule.Summary,
-			Params:       rule.Params,
-			For:          ptypes.DurationProto(rule.For),
-			Severity:     rule.Severity,
-			CustomLabels: rule.CustomLabels,
-			Channels:     rule.Channels,
-			CreatedAt:    createdAt,
+			RuleId:    rule.ID,
+			Template:  rule.Template,
+			Disabled:  rule.Disabled,
+			Summary:   rule.Summary,
+			Params:    rule.Params,
+			For:       ptypes.DurationProto(rule.For),
+			Severity:  rule.Severity,
+			CreatedAt: createdAt,
+			// TODO return updated_at
 		}
+
+		var labels map[string]string
+		err = json.Unmarshal(rule.CustomLabels, &labels)
+		if err != nil {
+			return nil, err
+		}
+		r.CustomLabels = labels
 
 		filters := make([]*iav1beta1.Filter, len(rule.Filters))
 		for _, filter := range rule.Filters {
 			f := &iav1beta1.Filter{
 				Type:  iav1beta1.FilterType(filter.Type),
 				Key:   filter.Key,
-				Value: filter.Value,
+				Value: filter.Val,
 			}
 			filters = append(filters, f)
 		}
 		r.Filters = filters
+
+		channels := make([]*iav1beta1.Channel, len(rule.Channels))
+		for i, channel := range rule.Channels {
+			c, err := makeChannel(channel)
+			if err != nil {
+				// TODO
+				return nil, err
+			}
+			channels[i] = c
+		}
+		r.Channels = channels
+
 		res[i] = r
 	}
 	return &iav1beta1.ListAlertRulesResponse{Rules: res}, nil
@@ -85,20 +108,35 @@ func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAl
 
 // CreateAlertRule creates Integrated Alerting rule.
 func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.CreateAlertRuleRequest) (*iav1beta1.CreateAlertRuleResponse, error) {
-	r := &models.Rule{
-		// Add Template, CreatedAt, etc
-		ID:           "/ia/rule_id/" + uuid.New().String(),
-		Disabled:     req.GetDisabled(),
-		Params:       req.GetParams(),
-		For:          req.For.AsDuration(),
-		Severity:     req.GetSeverity(),
-		CustomLabels: req.GetCustomLabels(),
+	params := &models.CreateRuleParams{
+		TemplateName: req.TemplateName,
+		Disabled:     req.Disabled,
+		RuleParams:   req.Params,
+		For:          req.For,
+		Severity:     req.Severity,
+		CustomLabels: req.CustomLabels,
+		ChannelIDs:   req.ChannelIds,
 	}
-	err := models.SaveRule(s.db.Querier, r)
-	if err != nil {
-		return nil, err
+
+	filters := make([]*models.Filter, len(req.Filters))
+	for _, filter := range req.Filters {
+		filters = append(filters, &models.Filter{
+			Type: models.FilterType(filter.Type),
+			Key:  filter.Key,
+			Val:  filter.Value,
+		})
 	}
-	return &iav1beta1.CreateAlertRuleResponse{}, nil
+
+	var rule *models.Rule
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		rule, err = models.CreateRule(tx.Querier, params)
+		return err
+	})
+	if e != nil {
+		return nil, e
+	}
+	return &iav1beta1.CreateAlertRuleResponse{RuleId: rule.ID}, nil
 }
 
 // UpdateAlertRule updates Integrated Alerting rule.
