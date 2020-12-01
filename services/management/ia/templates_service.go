@@ -20,7 +20,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"html/template"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -39,6 +41,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
+	"gopkg.in/yaml.v3"
 
 	"github.com/percona/pmm-managed/models"
 )
@@ -46,6 +49,8 @@ import (
 const (
 	builtinTemplatesPath = "/tmp/ia1/*.yml"
 	userTemplatesPath    = "/tmp/ia2/*.yml"
+
+	ruleFileDir = "/tmp/ia1/"
 )
 
 // Rule represents alerting rule/rule template with added source field.
@@ -75,6 +80,10 @@ func NewTemplatesService(db *reform.DB) *TemplatesService {
 		userTemplatesPath:    userTemplatesPath,
 		rules:                make(map[string]Rule),
 	}
+}
+
+func newParamTemplate() *template.Template {
+	return template.New("").Option("missingkey=error").Delims("[[", "]]")
 }
 
 // getCollected return collected templates.
@@ -271,6 +280,131 @@ func convertParamUnit(u string) iav1beta1.ParamUnit {
 	default:
 		return iav1beta1.ParamUnit_PARAM_UNIT_INVALID
 	}
+}
+
+// TODO Move this and related types to https://github.com/percona/promconfig
+// https://jira.percona.com/browse/PMM-7069
+type ruleFile struct {
+	Group []ruleGroup `yaml:"groups"`
+}
+
+type ruleGroup struct {
+	Name  string `yaml:"name"`
+	Rules []rule `yaml:"rules"`
+}
+
+type rule struct {
+	Alert       string              `yaml:"alert"` // same as alert name in template file
+	Expr        string              `yaml:"expr"`
+	Duration    promconfig.Duration `yaml:"for"`
+	Labels      map[string]string   `yaml:"labels,omitempty"`
+	Annotations map[string]string   `yaml:"annotations,omitempty"`
+}
+
+// converts an alert template rule to a rule file. generates one file per rule.
+func (s *TemplatesService) convertTemplates(ctx context.Context) error {
+	templates := s.getCollected(ctx)
+	for _, template := range templates {
+		r := rule{
+			Alert:       template.Name,
+			Duration:    template.For,
+			Labels:      make(map[string]string, len(template.Labels)),
+			Annotations: make(map[string]string, len(template.Annotations)),
+		}
+
+		data := make(map[string]string, len(template.Params))
+		for _, param := range template.Params {
+			data[param.Name] = fmt.Sprint(param.Value)
+		}
+
+		var buf bytes.Buffer
+		t, err := newParamTemplate().Parse(template.Expr)
+		if err != nil {
+			return errors.Wrap(err, "failed to convert rule template")
+		}
+		if err = t.Execute(&buf, data); err != nil {
+			return errors.Wrap(err, "failed to convert rule template")
+		}
+		r.Expr = buf.String()
+
+		err = transformMaps(template.Labels, r.Labels, data)
+		if err != nil {
+			return errors.Wrap(err, "failed to convert rule template")
+		}
+
+		// add parameters to labels
+		for _, p := range template.Params {
+			r.Labels[p.Name] = fmt.Sprint(p.Value)
+		}
+
+		// add special labels
+		r.Labels["ia"] = "1"
+		r.Labels["severity"] = template.Severity.String()
+
+		err = transformMaps(template.Annotations, r.Annotations, data)
+		if err != nil {
+			return errors.Wrap(err, "failed to convert rule template")
+		}
+
+		rf := &ruleFile{
+			Group: []ruleGroup{{
+				Name:  "PMM Server Integrated Alerting",
+				Rules: []rule{r},
+			}},
+		}
+
+		err = dumpRule(rf)
+		if err != nil {
+			return errors.Wrap(err, "failed to dump alert rules")
+		}
+	}
+	return nil
+}
+
+// fills templates found in labels and annotaitons with values.
+func transformMaps(src map[string]string, dest map[string]string, data map[string]string) error {
+	var buf bytes.Buffer
+
+	for k, v := range src {
+		buf.Reset()
+		t, err := newParamTemplate().Parse(v)
+		if err != nil {
+			return err
+		}
+		if err = t.Execute(&buf, data); err != nil {
+			return err
+		}
+		dest[k] = buf.String()
+	}
+	return nil
+}
+
+// dump the transformed IA rules to a file.
+func dumpRule(rule *ruleFile) error {
+	b, err := yaml.Marshal(rule)
+	if err != nil {
+		return errors.Errorf("failed to marshal rule %s", err)
+	}
+	b = append([]byte("---\n"), b...)
+
+	alertRule := rule.Group[0].Rules[0]
+	if alertRule.Alert == "" {
+		return errors.New("alert rule not initialized")
+	}
+	path := ruleFileDir + alertRule.Alert + ".yml"
+
+	_, err = os.Stat(ruleFileDir)
+	if os.IsNotExist(err) {
+		err = os.Mkdir(ruleFileDir, 0750) // TODO move to https://jira.percona.com/browse/PMM-7024
+		if err != nil {
+			return err
+		}
+	}
+	if err = ioutil.WriteFile(path, b, 0644); err != nil {
+		return errors.Errorf("failed to dump rule to file %s: %s", ruleFileDir, err)
+
+	}
+	return nil
 }
 
 // ListTemplates returns a list of all collected Alert Rule Templates.
