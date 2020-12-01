@@ -19,6 +19,7 @@ package agents
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"runtime/pprof"
 	"sort"
@@ -672,10 +673,17 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 			Timeout: ptypes.DurationProto(3 * time.Second),
 		}
 	case models.MongoDBServiceType:
+		var mongoDBOptions agentpb.MongoDBOptions
+		err := json.Unmarshal([]byte(*agent.MongoDBOptions), &mongoDBOptions)
+		if err != nil {
+			return err
+		}
+
 		request = &agentpb.CheckConnectionRequest{
-			Type:    inventorypb.ServiceType_MONGODB_SERVICE,
-			Dsn:     agent.DSN(service, 2*time.Second, ""),
-			Timeout: ptypes.DurationProto(3 * time.Second),
+			Type:           inventorypb.ServiceType_MONGODB_SERVICE,
+			Dsn:            agent.DSN(service, 2*time.Second, ""),
+			Timeout:        ptypes.DurationProto(3 * time.Second),
+			MongoDbOptions: &mongoDBOptions,
 		}
 	case models.ProxySQLServiceType:
 		request = &agentpb.CheckConnectionRequest{

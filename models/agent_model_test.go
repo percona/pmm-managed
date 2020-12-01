@@ -17,6 +17,7 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"testing"
@@ -96,10 +97,18 @@ func TestAgent(t *testing.T) {
 	})
 
 	t.Run("DSN ssl", func(t *testing.T) {
+		mongoDBOptions := MongoDBOptions{
+			TLSCertificateKey:             "key",
+			TLSCertificateKeyFilePassword: "pass",
+			TLSCa:                         "cert",
+		}
+		json, _ := json.Marshal(mongoDBOptions)
+		value := string(json)
 		agent := &Agent{
-			Username: pointer.ToString("username"),
-			Password: pointer.ToString("s3cur3 p@$$w0r4."),
-			TLS:      true,
+			Username:       pointer.ToString("username"),
+			Password:       pointer.ToString("s3cur3 p@$$w0r4."),
+			TLS:            true,
+			MongoDBOptions: &value,
 		}
 		service := &Service{
 			Address: pointer.ToString("1.2.3.4"),
@@ -110,8 +119,8 @@ func TestAgent(t *testing.T) {
 			ProxySQLExporterType:        "username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:12345)/database?timeout=1s&tls=true",
 			QANMySQLPerfSchemaAgentType: "username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:12345)/database?clientFoundRows=true&parseTime=true&timeout=1s&tls=true",
 			QANMySQLSlowlogAgentType:    "username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:12345)/database?clientFoundRows=true&parseTime=true&timeout=1s&tls=true",
-			MongoDBExporterType:         "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000&ssl=true",
-			QANMongoDBProfilerAgentType: "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000&ssl=true",
+			MongoDBExporterType:         "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000&ssl=true&tlsCaFile=caFileHolder&tlsCertificateKeyFile=certificateKeyFileHolder&tlsCertificateKeyFilePassword=certificateKeyFilePasswordHolder",
+			QANMongoDBProfilerAgentType: "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000&ssl=true&tlsCaFile=caFileHolder&tlsCertificateKeyFile=certificateKeyFileHolder&tlsCertificateKeyFilePassword=certificateKeyFilePasswordHolder",
 			PostgresExporterType:        "postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connect_timeout=1&sslmode=verify-full",
 		} {
 			t.Run(string(typ), func(t *testing.T) {
@@ -123,8 +132,8 @@ func TestAgent(t *testing.T) {
 		t.Run("MongoDBNoDatabase", func(t *testing.T) {
 			agent.AgentType = MongoDBExporterType
 
-			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?connectTimeoutMS=1000&ssl=true", agent.DSN(service, time.Second, ""))
-			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?ssl=true", agent.DSN(service, 0, ""))
+			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?connectTimeoutMS=1000&ssl=true&tlsCaFile=caFileHolder&tlsCertificateKeyFile=certificateKeyFileHolder&tlsCertificateKeyFilePassword=certificateKeyFilePasswordHolder", agent.DSN(service, time.Second, ""))
+			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?ssl=true&tlsCaFile=caFileHolder&tlsCertificateKeyFile=certificateKeyFileHolder&tlsCertificateKeyFilePassword=certificateKeyFilePasswordHolder", agent.DSN(service, 0, ""))
 		})
 	})
 
