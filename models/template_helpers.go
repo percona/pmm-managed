@@ -79,6 +79,7 @@ func FindTemplateByName(q *reform.Querier, name string) (*Template, error) {
 // CreateTemplateParams are params for creating new rule template.
 type CreateTemplateParams struct {
 	Rule   *alert.Rule
+	Yaml   string
 	Source string
 }
 
@@ -108,6 +109,7 @@ func CreateTemplate(q *reform.Querier, params *CreateTemplateParams) (*Template,
 		For:      time.Duration(rule.For),
 		Severity: rule.Severity.String(),
 		Source:   params.Source,
+		Yaml:     params.Yaml,
 	}
 
 	if err := row.SetLabels(rule.Labels); err != nil {
@@ -129,6 +131,7 @@ func CreateTemplate(q *reform.Querier, params *CreateTemplateParams) (*Template,
 // ChangeTemplateParams is params for changing existing rule template.
 type ChangeTemplateParams struct {
 	Rule *alert.Rule
+	Yaml string
 }
 
 // ChangeTemplate updates existing rule template.
@@ -156,6 +159,7 @@ func ChangeTemplate(q *reform.Querier, params *ChangeTemplateParams) (*Template,
 	row.Params = p
 	row.For = time.Duration(rule.For)
 	row.Severity = rule.Severity.String()
+	row.Yaml = params.Yaml
 
 	if err := row.SetLabels(rule.Labels); err != nil {
 		return nil, err

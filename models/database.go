@@ -385,6 +385,7 @@ var databaseSchema = [][]string{
 			labels TEXT,
 			annotations TEXT,
 			source VARCHAR NOT NULL,
+			yaml TEXT,
 
 			created_at TIMESTAMP NOT NULL,
 			updated_at TIMESTAMP NOT NULL,

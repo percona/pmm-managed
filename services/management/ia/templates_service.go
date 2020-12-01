@@ -19,6 +19,7 @@ package ia
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"sort"
@@ -50,6 +51,7 @@ const (
 // Rule represents alerting rule/rule template with added source field.
 type Rule struct {
 	alert.Rule
+	Yaml   string
 	Source iav1beta1.TemplateSource
 }
 
@@ -218,6 +220,7 @@ func (s *TemplatesService) loadRulesFromDB() ([]Rule, error) {
 					Labels:      labels,
 					Annotations: annotations,
 				},
+				Yaml:   template.Yaml,
 				Source: source,
 			},
 		)
@@ -291,6 +294,7 @@ func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.Lis
 			Labels:      r.Labels,
 			Annotations: r.Annotations,
 			Source:      r.Source,
+			Yaml:        r.Yaml,
 		}
 
 		for _, p := range r.Params {
@@ -346,6 +350,8 @@ func (s *TemplatesService) CreateTemplate(ctx context.Context, req *iav1beta1.Cr
 		DisallowInvalidRules:  true,
 	}
 
+	fmt.Println(req.Yaml)
+
 	rules, err := alert.Parse(strings.NewReader(req.Yaml), pParams)
 	if err != nil {
 		s.l.Errorf("failed to parse rule template form request: +%v", err)
@@ -358,6 +364,7 @@ func (s *TemplatesService) CreateTemplate(ctx context.Context, req *iav1beta1.Cr
 
 	params := &models.CreateTemplateParams{
 		Rule:   &rules[0],
+		Yaml:   req.Yaml,
 		Source: iav1beta1.TemplateSource_USER_API.String(),
 	}
 
