@@ -165,12 +165,12 @@ func (svc *TemplatesService) loadFile(ctx context.Context, file string) ([]saas.
 // TODO Move this and related types to https://github.com/percona/promconfig
 // https://jira.percona.com/browse/PMM-7069
 type ruleFile struct {
-	Group []*ruleGroup `yaml:"groups"`
+	Group []ruleGroup `yaml:"groups"`
 }
 
 type ruleGroup struct {
-	Name  string  `yaml:"name"`
-	Rules []*rule `yaml:"rules"`
+	Name  string `yaml:"name"`
+	Rules []rule `yaml:"rules"`
 }
 
 type rule struct {
@@ -227,9 +227,9 @@ func (svc *TemplatesService) convertTemplates(ctx context.Context) error {
 		}
 
 		rf := &ruleFile{
-			Group: []*ruleGroup{{
+			Group: []ruleGroup{{
 				Name:  "PMM Server Integrated Alerting",
-				Rules: []*rule{&r},
+				Rules: []rule{r},
 			}},
 		}
 
@@ -268,20 +268,19 @@ func dumpRule(rule *ruleFile) error {
 	b = append([]byte("---\n"), b...)
 
 	alertRule := rule.Group[0].Rules[0]
-	if alertRule == nil && alertRule.Alert == "" {
+	if alertRule.Alert == "" {
 		return errors.New("alert rule not initialized")
 	}
 	path := ruleFileDir + alertRule.Alert + ".yml"
 
 	_, err = os.Stat(ruleFileDir)
 	if os.IsNotExist(err) {
-		err = os.Mkdir(ruleFileDir, 0750)
+		err = os.Mkdir(ruleFileDir, 0750) // TODO move to https://jira.percona.com/browse/PMM-7024
 		if err != nil {
 			return err
 		}
 	}
-	err = ioutil.WriteFile(path, b, 0644)
-	if err != nil {
+	if err = ioutil.WriteFile(path, b, 0644); err != nil {
 		return errors.Errorf("failed to dump rule to file %s: %s", ruleFileDir, err)
 
 	}
