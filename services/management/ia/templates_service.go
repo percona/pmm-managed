@@ -162,6 +162,8 @@ func (svc *TemplatesService) loadFile(ctx context.Context, file string) ([]saas.
 	return rules, nil
 }
 
+// TODO Move this and related types to https://github.com/percona/promconfig
+// https://jira.percona.com/browse/PMM-7069
 type ruleFile struct {
 	Group []*ruleGroup `yaml:"groups"`
 }
