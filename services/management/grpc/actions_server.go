@@ -338,11 +338,11 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 
 	// Must be only one result
 	if exportersCount < 1 {
-		return nil, status.Errorf(codes.NotFound, "No mysql exporter")
+		return nil, status.Errorf(codes.FailedPrecondition, "No mysql exporter")
 	}
 
 	if exportersCount > 1 {
-		return nil, status.Errorf(codes.OutOfRange, "Found more than one mysql exporter")
+		return nil, status.Errorf(codes.FailedPrecondition, "Found more than one mysql exporter")
 	}
 
 	// Starts the pt-mysql-summary with the host address, port, socket, mysql username and password
