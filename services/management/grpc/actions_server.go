@@ -334,7 +334,7 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 		return nil, err
 	}
 
-	exportersCount := len(mysqdExporters)
+	exportersCount := len(mysqldExporters)
 
 	// Must be only one result
 	if exportersCount < 1 {
@@ -347,8 +347,8 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 
 	// Starts the pt-mysql-summary with the host address, port, socket, mysql username and password
 	err = s.r.StartPTMySQLSummaryAction(ctx, res.ID, pmmAgentID, pointer.GetString(service.Address), pointer.GetUint16(service.Port),
-		pointer.GetString(service.Socket), pointer.GetString(mysqdExporters[0].Username),
-		pointer.GetString(mysqdExporters[0].Password))
+		pointer.GetString(service.Socket), pointer.GetString(mysqldExporters[0].Username),
+		pointer.GetString(mysqldExporters[0].Password))
 	if err != nil {
 		return nil, err
 	}
