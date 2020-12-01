@@ -887,14 +887,14 @@ func (r *Registry) StartPostgreSQLShowIndexAction(ctx context.Context, id, pmmAg
 }
 
 // StartMongoDBExplainAction starts MongoDB query explain action on pmm-agent.
-func (r *Registry) StartMongoDBExplainAction(ctx context.Context, id, pmmAgentID, dsn, query string, serviceTLSKeys *agentpb.StartActionRequest_ServicesTLSKeys) error {
+func (r *Registry) StartMongoDBExplainAction(ctx context.Context, id, pmmAgentID, dsn, query string, mongoDBOptions *agentpb.StartActionRequest_MongoDBOptions) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_MongodbExplainParams{
 			MongodbExplainParams: &agentpb.StartActionRequest_MongoDBExplainParams{
-				Dsn:             dsn,
-				Query:           query,
-				ServicesTlsKeys: serviceTLSKeys,
+				Dsn:            dsn,
+				Query:          query,
+				MongoDbOptions: mongoDBOptions,
 			},
 		},
 		Timeout: defaultActionTimeout,
