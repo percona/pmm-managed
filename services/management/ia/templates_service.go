@@ -298,7 +298,13 @@ func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.Lis
 		}
 
 		for _, p := range r.Params {
-			var tp *iav1beta1.TemplateParam
+			tp := &iav1beta1.TemplateParam{
+				Name:    p.Name,
+				Summary: p.Summary,
+				Unit:    convertParamUnit(p.Unit),
+				Type:    convertParamType(p.Type),
+			}
+
 			switch p.Type {
 			case alert.Float:
 				value, err := p.GetValueForFloat()
@@ -306,34 +312,31 @@ func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.Lis
 					return nil, errors.Wrap(err, "failed to get value for float parameter")
 				}
 
-				min, max, err := p.GetRangeForFloat()
-				if err != nil {
-					return nil, errors.Wrap(err, "failed to get range for float parameter")
+				fp := &iav1beta1.TemplateFloatParam{
+					HasDefault: true,           // TODO remove or fill with valid value.
+					Default:    float32(value), // TODO eliminate conversion.
 				}
 
-				tp = &iav1beta1.TemplateParam{
-					Name:    p.Name,
-					Summary: p.Summary,
-					Unit:    convertParamUnit(p.Unit),
-					Type:    convertParamType(p.Type),
-					Value: &iav1beta1.TemplateParam_Float{
-						Float: &iav1beta1.TemplateFloatParam{
-							HasDefault: true,           // TODO remove or fill with valid value.
-							Default:    float32(value), // TODO eliminate conversion.
-							HasMin:     true,           // TODO remove or fill with valid value.
-							Min:        float32(min),   // TODO eliminate conversion.,
-							HasMax:     true,           // TODO remove or fill with valid value.
-							Max:        float32(max),   // TODO eliminate conversion.,
-						},
-					},
+				if p.Range != nil {
+					min, max, err := p.GetRangeForFloat()
+					if err != nil {
+						return nil, errors.Wrap(err, "failed to get range for float parameter")
+					}
+
+					fp.HasMin = true      // TODO remove or fill with valid value.
+					fp.Min = float32(min) // TODO eliminate conversion.,
+					fp.HasMax = true      // TODO remove or fill with valid value.
+					fp.Max = float32(max) // TODO eliminate conversion.,
 				}
+
+				tp.Value = &iav1beta1.TemplateParam_Float{Float: fp}
+
+				t.Params = append(t.Params, tp)
+
 			default:
 				s.l.Warnf("Skipping unexpected parameter type %q for %q.", p.Type, r.Name)
 			}
 
-			if tp != nil {
-				t.Params = append(t.Params, tp)
-			}
 		}
 
 		res.Templates = append(res.Templates, t)
