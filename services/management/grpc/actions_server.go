@@ -329,7 +329,7 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 		ServiceID: req.ServiceId, AgentType: pointerToAgentType(models.MySQLdExporterType)}
 
 	// Need to get the mysql exporters to get the username and password therefrom
-	mysqdExporters, err := models.FindAgents(s.db.Querier, agentFilter)
+	mysqldExporters, err := models.FindAgents(s.db.Querier, agentFilter)
 	if err != nil {
 		return nil, err
 	}
