@@ -163,12 +163,12 @@ func (svc *TemplatesService) loadFile(ctx context.Context, file string) ([]saas.
 }
 
 type ruleFile struct {
-	Group []ruleGroup `yaml:"groups"`
+	Group []*ruleGroup `yaml:"groups"`
 }
 
 type ruleGroup struct {
-	Name  string `yaml:"name"`
-	Rules []rule `yaml:"rules"`
+	Name  string  `yaml:"name"`
+	Rules []*rule `yaml:"rules"`
 }
 
 type rule struct {
@@ -224,10 +224,10 @@ func (svc *TemplatesService) convertTemplates(ctx context.Context) error {
 			return errors.Wrap(err, "failed to convert rule template")
 		}
 
-		rf := ruleFile{
-			Group: []ruleGroup{{
+		rf := &ruleFile{
+			Group: []*ruleGroup{{
 				Name:  "PMM Server Integrated Alerting",
-				Rules: []rule{r},
+				Rules: []*rule{&r},
 			}},
 		}
 
@@ -258,14 +258,18 @@ func transformMaps(src map[string]string, dest map[string]string, data map[strin
 }
 
 // dump the transformed IA rules to a file.
-func dumpRule(rule ruleFile) error {
+func dumpRule(rule *ruleFile) error {
 	b, err := yaml.Marshal(rule)
 	if err != nil {
 		return errors.Errorf("failed to marshal rule %s", err)
 	}
 	b = append([]byte("---\n"), b...)
 
-	path := ruleFileDir + rule.Group[0].Rules[0].Alert + ".yml"
+	alertRule := rule.Group[0].Rules[0]
+	if alertRule == nil && alertRule.Alert == "" {
+		return errors.New("alert rule not initialized")
+	}
+	path := ruleFileDir + alertRule.Alert + ".yml"
 
 	_, err = os.Stat(ruleFileDir)
 	if os.IsNotExist(err) {
