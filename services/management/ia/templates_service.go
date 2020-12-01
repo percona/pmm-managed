@@ -265,7 +265,7 @@ func dumpRule(rule ruleFile) error {
 	}
 	b = append([]byte("---\n"), b...)
 
-	filepath := ruleFileDir + rule.Group[0].Rules[0].Alert + ".yml"
+	path := ruleFileDir + rule.Group[0].Rules[0].Alert + ".yml"
 
 	_, err = os.Stat(ruleFileDir)
 	if os.IsNotExist(err) {
@@ -274,7 +274,7 @@ func dumpRule(rule ruleFile) error {
 			return err
 		}
 	}
-	err = ioutil.WriteFile(filepath, b, 0644)
+	err = ioutil.WriteFile(path, b, 0644)
 	if err != nil {
 		return errors.Errorf("failed to dump rule to file %s: %s", ruleFileDir, err)
 
