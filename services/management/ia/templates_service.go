@@ -239,7 +239,7 @@ func (svc *TemplatesService) convertTemplates(ctx context.Context) error {
 	return nil
 }
 
-// fills templates found in label and annotaions with values.
+// fills templates found in labels and annotaitons with values.
 func transformMaps(src map[string]string, dest map[string]string, data map[string]string) error {
 	var buf bytes.Buffer
 
