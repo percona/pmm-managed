@@ -22,7 +22,6 @@ import (
 	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/google/uuid"
 	"github.com/percona/pmm/api/managementpb"
-	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -80,14 +79,15 @@ func FindRuleByID(q *reform.Querier, id string) (*Rule, error) {
 }
 
 // CreateRuleParams are params for creating new Rule.
+// TODO: rename to CreateAlertRuleParams.
 type CreateRuleParams struct {
 	TemplateName string
 	Disabled     bool
-	RuleParams   []*iav1beta1.RuleParam
+	RuleParams   RuleParams
 	For          *duration.Duration
 	Severity     managementpb.Severity
 	CustomLabels map[string]string
-	Filters      []*Filter
+	Filters      Filters
 	ChannelIDs   []string
 }
 
@@ -101,7 +101,7 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 
 	row := &Rule{
 		ID: id,
-		Template: &Template{
+		Template: Template{
 			Name: params.TemplateName,
 		},
 		Disabled: params.Disabled,
@@ -115,20 +115,15 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 		return nil, errors.Wrap(err, "failed to create alert rule")
 	}
 	row.CustomLabels = labels
+	row.Params = params.RuleParams
 
-	channels := make([]*Channel, len(params.ChannelIDs))
+	channels := make(Channels, len(params.ChannelIDs))
 	for _, cid := range params.ChannelIDs {
-		channels = append(channels, &Channel{
+		channels = append(channels, Channel{
 			ID: cid,
 		})
 	}
 	row.Channels = channels
-
-	ruleParams, err := makeRuleParams(params.RuleParams)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create alert rule")
-	}
-	row.Params = ruleParams
 
 	err = q.Insert(row)
 	if err != nil {
@@ -138,38 +133,15 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 	return row, nil
 }
 
-func makeRuleParams(params []*iav1beta1.RuleParam) ([]*RuleParam, error) {
-	ruleParams := make([]*RuleParam, len(params))
-	for i, param := range params {
-		p := &RuleParam{
-			Name: param.Name,
-			Type: ParamType(param.Type),
-		}
-
-		switch p.Type {
-		case BoolRuleParam:
-			p.BoolVal = param.GetBool()
-		case FloatRuleParam:
-			p.FloatVal = param.GetFloat()
-		case StringRuleParam:
-			p.StringVal = param.GetString_()
-		default:
-			return nil, errors.New("invalid rule param value type")
-		}
-		ruleParams[i] = p
-	}
-	return ruleParams, nil
-}
-
 // UpdateRuleParams is params for updating existing Rule.
 type UpdateRuleParams struct {
 	RuleID       string
 	Disabled     bool
-	RuleParams   []*iav1beta1.RuleParam
+	RuleParams   RuleParams
 	For          *duration.Duration
 	Severity     managementpb.Severity
 	CustomLabels map[string]string
-	Filters      []*Filter
+	Filters      Filters
 	ChannelIDs   []string
 }
 
@@ -184,6 +156,7 @@ func UpdateRule(q *reform.Querier, RuleID string, params *UpdateRuleParams) (*Ru
 	row.For = params.For.AsDuration()
 	row.Severity = params.Severity.String()
 	row.Filters = params.Filters
+	row.Params = params.RuleParams
 
 	labels, err := json.Marshal(params.CustomLabels)
 	if err != nil {
@@ -191,19 +164,13 @@ func UpdateRule(q *reform.Querier, RuleID string, params *UpdateRuleParams) (*Ru
 	}
 	row.CustomLabels = labels
 
-	channels := make([]*Channel, len(params.ChannelIDs))
+	channels := make(Channels, len(params.ChannelIDs))
 	for _, cid := range params.ChannelIDs {
-		channels = append(channels, &Channel{
+		channels = append(channels, Channel{
 			ID: cid,
 		})
 	}
 	row.Channels = channels
-
-	ruleParams, err := makeRuleParams(params.RuleParams)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to update alert rule")
-	}
-	row.Params = ruleParams
 
 	err = q.Update(row)
 	if err != nil {

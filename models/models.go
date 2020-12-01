@@ -115,8 +115,8 @@ func prepareLabels(m map[string]string, removeEmptyValues bool) error {
 	return nil
 }
 
-// getCustomLabels decodes custom labels from Node/Service/Agent field.
-func getCustomLabels(field []byte) (map[string]string, error) {
+// getStringMap decodes custom labels from Node/Service/Agent field.
+func getStringMap(field []byte) (map[string]string, error) {
 	if len(field) == 0 {
 		return nil, nil
 	}
@@ -127,8 +127,8 @@ func getCustomLabels(field []byte) (map[string]string, error) {
 	return m, nil
 }
 
-// setCustomLabels encodes custom labels m to the Node/Service/Agent field.
-func setCustomLabels(m map[string]string, field *[]byte) error {
+// setStringMap encodes custom labels m to the Node/Service/Agent field.
+func setStringMap(m map[string]string, field *[]byte) error {
 	if err := prepareLabels(m, false); err != nil {
 		return err
 	}

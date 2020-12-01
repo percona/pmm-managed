@@ -28,16 +28,16 @@ import (
 // Rule represents alert rule configuration.
 //reform:ia_rules
 type Rule struct {
-	Template     *Template     `reform:"template"`
+	Template     Template      `reform:"template"`
 	ID           string        `reform:"id,pk"`
 	Summary      string        `reform:"summary"`
 	Disabled     bool          `reform:"disabled"`
-	Params       []*RuleParam  `reform:"params"`
+	Params       RuleParams    `reform:"params"`
 	For          time.Duration `reform:"for"`
 	Severity     string        `reform:"severity"`
 	CustomLabels []byte        `reform:"custom_labels"`
-	Filters      []*Filter     `reform:"filters"`
-	Channels     []*Channel    `reform:"channels"`
+	Filters      Filters       `reform:"filters"`
+	Channels     Channels      `reform:"channels"`
 	CreatedAt    time.Time     `reform:"created_at"`
 	UpdatedAt    time.Time     `reform:"updated_at"`
 }
@@ -80,6 +80,8 @@ const (
 	NotRegex FilterType = 4
 )
 
+type Filters []Filter
+
 type Filter struct {
 	Type FilterType `json:"type"`
 	Key  string     `json:"key"`
@@ -101,6 +103,8 @@ const (
 	StringRuleParam  ParamType = 3
 )
 
+type RuleParams []RuleParam
+
 type RuleParam struct {
 	Name      string    `json:"name"`
 	Type      ParamType `json:"type"`
@@ -114,6 +118,9 @@ func (p RuleParam) Value() (driver.Value, error) { return jsonValue(p) }
 
 // Scan implements database/sql.Scanner interface. Should be defined on the pointer.
 func (p *RuleParam) Scan(src interface{}) error { return jsonScan(p, src) }
+
+// Channels is a slice of models.Channel
+type Channels []Channel
 
 // check interfaces.
 var (

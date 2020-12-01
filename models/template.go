@@ -1,3 +1,19 @@
+// pmm-managed
+// Copyright (C) 2017 Percona LLC
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package models
 
 import (
@@ -8,23 +24,22 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-// copied from #541
-
 //go:generate reform
 
+// Template represents Integrated Alerting rule template.
 //reform:ia_templates
 type Template struct {
-	Name        string   `reform:"name,pk"`
-	Version     uint32   `reform:"version"`
-	Summary     string   `reform:"summary"`
-	Tiers       Tiers    `reform:"tiers"`
-	Expr        string   `reform:"expr"`
-	Params      Params   `reform:"params"`
-	For         Duration `reform:"for"`
-	Severity    string   `reform:"severity"`
-	Labels      Map      `reform:"labels"`
-	Annotations Map      `reform:"annotations"`
-	Source      string   `reform:"source"`
+	Name        string        `reform:"name,pk"`
+	Version     uint32        `reform:"version"`
+	Summary     string        `reform:"summary"`
+	Tiers       Tiers         `reform:"tiers"`
+	Expr        string        `reform:"expr"`
+	Params      Params        `reform:"params"`
+	For         time.Duration `reform:"for"`
+	Severity    string        `reform:"severity"`
+	Labels      []byte        `reform:"labels"`
+	Annotations []byte        `reform:"annotations"`
+	Source      string        `reform:"source"`
 
 	CreatedAt time.Time `reform:"created_at"`
 	UpdatedAt time.Time `reform:"updated_at"`
@@ -54,6 +69,27 @@ func (t *Template) AfterFind() error {
 	return nil
 }
 
+// GetLabels decodes template labels.
+func (t *Template) GetLabels() (map[string]string, error) {
+	return getStringMap(t.Labels)
+}
+
+// SetLabels encodes template labels.
+func (t *Template) SetLabels(m map[string]string) error {
+	return setStringMap(m, &t.Labels)
+}
+
+// GetAnnotations decodes template annotations.
+func (t *Template) GetAnnotations() (map[string]string, error) {
+	return getStringMap(t.Annotations)
+}
+
+// SetAnnotations encodes template annotations.
+func (t *Template) SetAnnotations(m map[string]string) error {
+	return setStringMap(m, &t.Annotations)
+}
+
+// Tiers represents tiers slice.
 type Tiers []common.Tier
 
 // Value implements database/sql/driver Valuer interface.
@@ -62,16 +98,7 @@ func (t Tiers) Value() (driver.Value, error) { return jsonValue(t) }
 // Scan implements database/sql Scanner interface.
 func (t *Tiers) Scan(src interface{}) error { return jsonScan(t, src) }
 
-type Map map[string]string
-
-// Value implements database/sql/driver Valuer interface.
-func (m Map) Value() (driver.Value, error) { return jsonValue(m) }
-
-// Scan implements database/sql Scanner interface.
-func (m *Map) Scan(src interface{}) error { return jsonScan(m, src) }
-
-type Duration time.Duration
-
+// Params represent Param slice.
 type Params []Param
 
 // Value implements database/sql/driver Valuer interface.
@@ -80,6 +107,7 @@ func (p Params) Value() (driver.Value, error) { return jsonValue(p) }
 // Scan implements database/sql Scanner interface.
 func (p *Params) Scan(src interface{}) error { return jsonScan(p, src) }
 
+// Param represents template parameter.
 type Param struct {
 	Name    string `json:"name"`
 	Summary string `json:"summary"`
@@ -91,24 +119,21 @@ type Param struct {
 	// StringParam *StringParam `json:"string_param"`
 }
 
+// BoolParam represents boolean template parameter.
 type BoolParam struct {
 	Default bool `json:"default"`
 }
 
+// FloatParam represents float template parameter.
 type FloatParam struct {
-	HasDefault bool    `json:"has_default"`
-	Default    float64 `json:"default"`
-
-	HasMin bool    `json:"has_min"`
-	Min    float64 `json:"min"`
-
-	HaxMax bool    `json:"hax_max"`
-	Max    float64 `json:"max"`
+	Default float64 `json:"default"`
+	Min     float64 `json:"min"`
+	Max     float64 `json:"max"`
 }
 
+// StringParam represents string template parameter.
 type StringParam struct {
-	HasDefault bool   `json:"has_default"`
-	Default    string `json:"default"`
+	Default string `json:"default"`
 }
 
 // check interfaces
