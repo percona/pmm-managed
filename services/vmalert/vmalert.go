@@ -34,7 +34,7 @@ const (
 	configurationUpdateTimeout = 2 * time.Second
 )
 
-// VMAlert is responsible for interactions with victoria metrics.
+// VMAlert is responsible for interactions with VMAlert.
 type VMAlert struct {
 	baseURL             *url.URL
 	client              *http.Client
@@ -45,7 +45,7 @@ type VMAlert struct {
 	sema chan struct{}
 }
 
-// NewVMAlert creates new Victoria Metrics Alert service.
+// NewVMAlert creates new VMAlert service.
 func NewVMAlert(alertRules *AlertingRules, baseURL string) (*VMAlert, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {

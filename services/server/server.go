@@ -208,10 +208,11 @@ func (s *Server) Version(ctx context.Context, req *serverpb.VersionRequest) (*se
 func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) (*serverpb.ReadinessResponse, error) {
 	var notReady bool
 	for n, svc := range map[string]healthChecker{
-		"alertmanager":    s.alertmanager,
-		"grafana":         s.grafanaClient,
-		"vmalert":         s.vmalert,
-		"victoriametrics": s.vmdb,
+		"alertmanager":     s.alertmanager,
+		"grafana":          s.grafanaClient,
+		"victoriametrics":  s.vmdb,
+		"vmalert":          s.vmalert, // FIXME
+		"vmalert-external": s.vmalert,
 	} {
 		if err := svc.IsReady(ctx); err != nil {
 			s.l.Errorf("%s readiness check failed: %+v", n, err)

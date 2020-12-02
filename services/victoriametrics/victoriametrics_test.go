@@ -239,7 +239,7 @@ scrape_configs:
             - 127.0.0.1:9090
           labels:
             instance: pmm-server
-    - job_name: vmalert
+    - job_name: vmalert-external
       honor_timestamps: false
       scrape_interval: 5s
       scrape_timeout: 4s
@@ -617,7 +617,7 @@ scrape_configs:
     - 127.0.0.1:9090
     labels:
       instance: pmm-server
-- job_name: vmalert
+- job_name: vmalert-external
   honor_timestamps: false
   scrape_interval: 5s
   scrape_timeout: 4s
@@ -695,7 +695,7 @@ scrape_configs:
             - 127.0.0.1:9090
           labels:
             instance: pmm-server
-    - job_name: vmalert
+    - job_name: vmalert-external
       honor_timestamps: false
       scrape_interval: 5s
       scrape_timeout: 4s

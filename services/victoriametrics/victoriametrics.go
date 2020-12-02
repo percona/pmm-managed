@@ -52,7 +52,7 @@ const (
 
 var checkFailedRE = regexp.MustCompile(`(?s)cannot unmarshal data: (.+)`)
 
-// Service is responsible for interactions with victoria metrics.
+// Service is responsible for interactions with VictoriaMetrics.
 type Service struct {
 	scrapeConfigPath string
 	db               *reform.DB
@@ -65,7 +65,7 @@ type Service struct {
 	sema chan struct{}
 }
 
-// NewVictoriaMetrics creates new Victoria Metrics service.
+// NewVictoriaMetrics creates new VictoriaMetrics service.
 func NewVictoriaMetrics(scrapeConfigPath string, db *reform.DB, baseURL string, params *models.VictoriaMetricsParams) (*Service, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
@@ -229,7 +229,8 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 		if cfg.GlobalConfig.ScrapeTimeout == 0 {
 			cfg.GlobalConfig.ScrapeTimeout = ScrapeTimeout(s.LR)
 		}
-		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scrapeConfigForVictoriaMetrics(s.HR), scrapeConfigForVMAlert(s.HR))
+		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scrapeConfigForVictoriaMetrics(s.HR))
+		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scrapeConfigForVMAlerts(s.HR)...)
 		AddInternalServicesToScrape(cfg, s, settings.DBaaS.Enabled)
 		return AddScrapeConfigs(svc.l, cfg, tx.Querier, &s, nil, false)
 	})
@@ -327,7 +328,7 @@ func (svc *Service) configAndReload(ctx context.Context, cfg []byte) error {
 	return nil
 }
 
-// scrapeConfigForVictoriaMetrics returns scrape config for Victoria Metrics in Prometheus format.
+// scrapeConfigForVictoriaMetrics returns scrape config for VictoriaMetrics in Prometheus format.
 func scrapeConfigForVictoriaMetrics(interval time.Duration) *config.ScrapeConfig {
 	return &config.ScrapeConfig{
 		JobName:        "victoriametrics",
@@ -345,10 +346,10 @@ func scrapeConfigForVictoriaMetrics(interval time.Duration) *config.ScrapeConfig
 	}
 }
 
-// scrapeConfigForVMAlert returns scrape config for VMAlert in Prometheus format.
-func scrapeConfigForVMAlert(interval time.Duration) *config.ScrapeConfig {
-	return &config.ScrapeConfig{
-		JobName:        "vmalert",
+// scrapeConfigForVMAlerts returns scrape config for two VMAlerts in Prometheus format.
+func scrapeConfigForVMAlerts(interval time.Duration) []*config.ScrapeConfig {
+	external := &config.ScrapeConfig{
+		JobName:        "vmalert-external",
 		ScrapeInterval: config.Duration(interval),
 		ScrapeTimeout:  ScrapeTimeout(interval),
 		MetricsPath:    "/metrics",
@@ -361,6 +362,10 @@ func scrapeConfigForVMAlert(interval time.Duration) *config.ScrapeConfig {
 			},
 		},
 	}
+
+	// TODO internal
+
+	return []*config.ScrapeConfig{external}
 }
 
 // BuildScrapeConfigForAgent - builds scrape configuration for given pmmAgent

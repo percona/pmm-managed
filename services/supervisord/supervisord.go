@@ -595,6 +595,7 @@ redirect_stderr = true
 {{end}}
 
 {{define "vmalert"}}
+# VMAlert for integrated Alertmanager
 [program:vmalert]
 priority = 7
 command =
@@ -619,6 +620,37 @@ startsecs = 1
 stopsignal = INT
 stopwaitsecs = 300
 stdout_logfile = /srv/logs/vmalert.log
+stdout_logfile_maxbytes = 10MB
+stdout_logfile_backups = 3
+redirect_stderr = true
+{{end}}
+
+{{define "vmalert-external"}}
+# VMAlert for external Alertmanager
+[program:vmalert-external]
+priority = 7
+command =
+	/usr/sbin/vmalert
+		--notifier.url="{{ .AlertmanagerURL }}"
+		--notifier.basicAuth.password='{{ .AlertManagerPassword }}'
+		--notifier.basicAuth.username="{{ .AlertManagerUser }}"
+		--external.url=http://localhost:9090/prometheus
+		--datasource.url=http://127.0.0.1:9090/prometheus
+		--remoteRead.url=http://127.0.0.1:9090/prometheus
+		--remoteWrite.url=http://127.0.0.1:9090/prometheus
+		--rule=/srv/prometheus/rules/*.yml
+		--httpListenAddr=127.0.0.1:8880
+{{- range $index, $param := .VMAlertFlags }}
+		{{ $param }}
+{{- end }}
+user = pmm
+autorestart = true
+autostart = true
+startretries = 10
+startsecs = 1
+stopsignal = INT
+stopwaitsecs = 300
+stdout_logfile = /srv/logs/vmalert-external.log
 stdout_logfile_maxbytes = 10MB
 stdout_logfile_backups = 3
 redirect_stderr = true
