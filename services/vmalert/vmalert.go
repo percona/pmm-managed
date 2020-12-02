@@ -20,13 +20,17 @@ package vmalert
 import (
 	"context"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"path"
 	"time"
 
 	"github.com/pkg/errors"
+	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
+
+	"github.com/percona/pmm-managed/utils/irt"
 )
 
 const (
@@ -34,35 +38,68 @@ const (
 	configurationUpdateTimeout = 2 * time.Second
 )
 
-// VMAlert is responsible for interactions with VMAlert.
-type VMAlert struct {
+// Service is responsible for interactions with Service.
+type Service struct {
 	baseURL             *url.URL
 	client              *http.Client
 	alertingRules       *AlertingRules
 	cachedAlertingRules string
 
+	irtm prom.Collector
 	l    *logrus.Entry
 	sema chan struct{}
 }
 
+type Type string
+
+const (
+	Integrated = Type("integrated")
+	External   = Type("external")
+)
+
 // NewVMAlert creates new VMAlert service.
-func NewVMAlert(alertRules *AlertingRules, baseURL string) (*VMAlert, error) {
+func NewVMAlert(alertRules *AlertingRules, typ Type) (*Service, error) {
+	var baseURL string
+	switch typ {
+	case Integrated:
+		baseURL = "http://127.0.0.1:8880/"
+	case External:
+		baseURL = "http://127.0.0.1:8881/"
+	}
 	u, err := url.Parse(baseURL)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, errors.Wrapf(err, "failed to parse URL for %s VMAlert", typ)
 	}
 
-	return &VMAlert{
+	component := "vmalert/" + string(typ)
+	var t http.RoundTripper = &http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout:   3 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		MaxIdleConns:          1,
+		IdleConnTimeout:       90 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
+	if logrus.GetLevel() >= logrus.TraceLevel {
+		t = irt.WithLogger(t, logrus.WithField("component", component+"/client").Tracef)
+	}
+	t, irtm := irt.WithMetrics(t, component)
+
+	return &Service{
 		alertingRules: alertRules,
 		baseURL:       u,
-		client:        new(http.Client),
-		l:             logrus.WithField("component", "vmalert"),
-		sema:          make(chan struct{}, 1),
+		client: &http.Client{
+			Transport: t,
+		},
+		irtm: irtm,
+		l:    logrus.WithField("component", component),
+		sema: make(chan struct{}, 1),
 	}, nil
 }
 
 // Run runs VMAlert configuration update loop until ctx is canceled.
-func (svc *VMAlert) Run(ctx context.Context) {
+func (svc *Service) Run(ctx context.Context) {
 	svc.l.Info("Starting...")
 	defer svc.l.Info("Done.")
 	alertingRules, err := svc.alertingRules.ReadRules()
@@ -94,7 +131,7 @@ func (svc *VMAlert) Run(ctx context.Context) {
 }
 
 // RequestConfigurationUpdate requests VMAlert configuration update.
-func (svc *VMAlert) RequestConfigurationUpdate() {
+func (svc *Service) RequestConfigurationUpdate() {
 	select {
 	case svc.sema <- struct{}{}:
 		ctx, cancel := context.WithTimeout(context.Background(), configurationUpdateTimeout)
@@ -108,7 +145,7 @@ func (svc *VMAlert) RequestConfigurationUpdate() {
 }
 
 // IsReady verifies that VMAlert works.
-func (svc *VMAlert) IsReady(ctx context.Context) error {
+func (svc *Service) IsReady(ctx context.Context) error {
 	// check VMAlert /health API
 	u := *svc.baseURL
 	u.Path = path.Join(u.Path, "health")
@@ -136,7 +173,7 @@ func (svc *VMAlert) IsReady(ctx context.Context) error {
 }
 
 // reload asks VMAlert to reload configuration.
-func (svc *VMAlert) reload(ctx context.Context) error {
+func (svc *Service) reload(ctx context.Context) error {
 	u := *svc.baseURL
 	u.Path = path.Join(u.Path, "-", "reload")
 	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
@@ -162,7 +199,7 @@ func (svc *VMAlert) reload(ctx context.Context) error {
 
 // updateConfiguration reads alerts configuration from file
 // compares it with cached and replace if needed.
-func (svc *VMAlert) updateConfiguration(ctx context.Context) error {
+func (svc *Service) updateConfiguration(ctx context.Context) error {
 	start := time.Now()
 	defer func() {
 		if dur := time.Since(start); dur > time.Second {

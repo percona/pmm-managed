@@ -28,6 +28,7 @@ import (
 
 //go:generate mockery -name=grafanaClient -case=snake -inpkg -testonly
 //go:generate mockery -name=prometheusService -case=snake -inpkg -testonly
+//go:generate mockery -name=vmAlertService -case=snake -inpkg -testonly
 //go:generate mockery -name=alertmanagerService -case=snake -inpkg -testonly
 //go:generate mockery -name=prometheusAlertingRules -case=snake -inpkg -testonly
 //go:generate mockery -name=supervisordService -case=snake -inpkg -testonly
@@ -52,6 +53,13 @@ type grafanaClient interface {
 //
 // FIXME Rename to victoriaMetrics.Service, update tests.
 type prometheusService interface {
+	RequestConfigurationUpdate()
+	healthChecker
+}
+
+// vmAlertService is a subset of methods of vmalert.Service used by this package.
+// We use it instead of real type to avoid dependency cycle.
+type vmAlertService interface {
 	RequestConfigurationUpdate()
 	healthChecker
 }

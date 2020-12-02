@@ -444,6 +444,8 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 	}
 	deps.vmdb.RequestConfigurationUpdate()
 
+	// TODO both VMAlert
+
 	deps.l.Infof("Checking Alertmanager...")
 	if err = deps.alertmanager.IsReady(ctx); err != nil {
 		deps.l.Warnf("Alertmanager problem: %+v.", err)
@@ -511,8 +513,6 @@ func main() {
 
 	victoriaMetricsURLF := kingpin.Flag("victoriametrics-url", "VictoriaMetrics base URL").
 		Default("http://127.0.0.1:9090/prometheus/").String()
-	victoriaMetricsVMAlertURLF := kingpin.Flag("victoriametrics-vmalert-url", "VictoriaMetrics VMAlert base URL").
-		Default("http://127.0.0.1:8880/").String()
 	victoriaMetricsConfigF := kingpin.Flag("victoriametrics-config", "VictoriaMetrics scrape configuration file path").
 		Default("/etc/victoriametrics-promscrape.yml").String()
 
@@ -597,9 +597,13 @@ func main() {
 	if err != nil {
 		l.Panicf("VictoriaMetrics service problem: %+v", err)
 	}
-	vmalert, err := vmalert.NewVMAlert(alertingRules, *victoriaMetricsVMAlertURLF)
+	integratedVMAlert, err := vmalert.NewVMAlert(alertingRules, vmalert.Integrated)
 	if err != nil {
-		l.Panicf("VictoriaMetrics VMAlert service problem: %+v", err)
+		l.Panicf("Integrated VMAlert problem: %+v", err)
+	}
+	externalVMAlert, err := vmalert.NewVMAlert(alertingRules, vmalert.External)
+	if err != nil {
+		l.Panicf("External VMAlert problem: %+v", err)
 	}
 
 	qanClient := getQANClient(ctx, sqlDB, *postgresDBNameF, *qanAPIAddrF)
@@ -638,7 +642,8 @@ func main() {
 	serverParams := &server.Params{
 		DB:                      db,
 		VMDB:                    vmdb,
-		VMAlert:                 vmalert,
+		IntegratedVMAlert:       integratedVMAlert,
+		ExternalVMAlert:         externalVMAlert,
 		AgentsRegistry:          agentsRegistry,
 		Alertmanager:            alertmanager,
 		Supervisord:             supervisord,
@@ -699,7 +704,13 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		vmalert.Run(ctx)
+		integratedVMAlert.Run(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		externalVMAlert.Run(ctx)
 	}()
 
 	wg.Add(1)
@@ -707,6 +718,7 @@ func main() {
 		defer wg.Done()
 		vmdb.Run(ctx)
 	}()
+
 	wg.Add(1)
 	go func() {
 		defer wg.Done()

@@ -57,7 +57,8 @@ type Server struct {
 	db                      *reform.DB
 	vmdb                    prometheusService
 	r                       agentsRegistry
-	vmalert                 prometheusService
+	integratedVMAlert       vmAlertService
+	externalVMAlert         vmAlertService
 	prometheusAlertingRules prometheusAlertingRules
 	alertmanager            alertmanagerService
 	supervisord             supervisordService
@@ -85,7 +86,8 @@ type Params struct {
 	DB                      *reform.DB
 	AgentsRegistry          agentsRegistry
 	VMDB                    prometheusService
-	VMAlert                 prometheusService
+	IntegratedVMAlert       vmAlertService
+	ExternalVMAlert         vmAlertService
 	Alertmanager            alertmanagerService
 	PrometheusAlertingRules prometheusAlertingRules
 	Supervisord             supervisordService
@@ -107,7 +109,8 @@ func NewServer(params *Params) (*Server, error) {
 		db:                      params.DB,
 		vmdb:                    params.VMDB,
 		r:                       params.AgentsRegistry,
-		vmalert:                 params.VMAlert,
+		integratedVMAlert:       params.IntegratedVMAlert,
+		externalVMAlert:         params.ExternalVMAlert,
 		alertmanager:            params.Alertmanager,
 		prometheusAlertingRules: params.PrometheusAlertingRules,
 		supervisord:             params.Supervisord,
@@ -211,8 +214,8 @@ func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) 
 		"alertmanager":     s.alertmanager,
 		"grafana":          s.grafanaClient,
 		"victoriametrics":  s.vmdb,
-		"vmalert":          s.vmalert, // FIXME
-		"vmalert-external": s.vmalert,
+		"vmalert":          s.integratedVMAlert,
+		"vmalert-external": s.externalVMAlert,
 	} {
 		if err := svc.IsReady(ctx); err != nil {
 			s.l.Errorf("%s readiness check failed: %+v", n, err)
@@ -550,7 +553,8 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		}
 	}
 	s.vmdb.RequestConfigurationUpdate()
-	s.vmalert.RequestConfigurationUpdate()
+	s.integratedVMAlert.RequestConfigurationUpdate()
+	s.externalVMAlert.RequestConfigurationUpdate()
 
 	return &serverpb.ChangeSettingsResponse{
 		Settings: s.convertSettings(settings),
