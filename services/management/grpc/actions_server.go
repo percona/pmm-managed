@@ -252,7 +252,7 @@ func (s *actionsServer) StartMongoDBExplainAction(ctx context.Context, req *mana
 	mongoDBOptions := agentpb.StartActionRequest_MongoDBOptions{
 		TlsCertificateKey:             req.MongoDbOptions.TlsCertificateKey,
 		TlsCertificateKeyFilePassword: req.MongoDbOptions.TlsCertificateKeyFilePassword,
-		TlsCaKey:                      req.MongoDbOptions.TlsCaKey,
+		TlsCa:                         req.MongoDbOptions.TlsCa,
 	}
 
 	err = s.r.StartMongoDBExplainAction(ctx, res.ID, res.PMMAgentID, dsn, req.Query, &mongoDBOptions)
