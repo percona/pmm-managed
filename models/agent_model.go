@@ -272,14 +272,14 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 				err := json.Unmarshal([]byte(*s.MongoDBOptions), &mongoDBOptions)
 				if err == nil {
 					if mongoDBOptions.TLSCertificateKey != "" {
-						q.Add("tlsCertificateKeyFile", "certificateKeyFileHolder")
+						q.Add("sslCertificateKeyFile", "certificateKeyFileHolder")
 					}
 					pasword := mongoDBOptions.TLSCertificateKeyFilePassword
 					if pasword != "" {
-						q.Add("tlsCertificateKeyFilePassword", "certificateKeyFilePasswordHolder")
+						q.Add("sslCertificateKeyFilePassword", "certificateKeyFilePasswordHolder")
 					}
 					if mongoDBOptions.TLSCa != "" {
-						q.Add("tlsCaFile", "caFileHolder")
+						q.Add("sslCaFile", "caFileHolder")
 					}
 				}
 			}
