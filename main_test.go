@@ -97,9 +97,6 @@ func TestImports(t *testing.T) {
 		"github.com/percona/pmm-managed/services/agents/grpc",
 		"github.com/percona/pmm-managed/services/inventory/grpc",
 		"github.com/percona/pmm-managed/services/management/grpc",
-
-		// TODO remove from the once we add it above
-		"github.com/percona/pmm-managed/services/victoriametrics",
 	} {
 		constraints[service] = constraint{}
 	}
