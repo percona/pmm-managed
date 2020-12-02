@@ -75,7 +75,7 @@ func setupVMAlert(t *testing.T) (*reform.DB, *AlertingRules, *Service) {
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
 	rules := NewAlertingRules()
-	svc, err := NewVMAlert(rules, "http://127.0.0.1:8880/")
+	svc, err := NewVMAlert(rules, Integrated)
 	check.NoError(err)
 	svc.client = testClient(http.StatusOK, "")
 
