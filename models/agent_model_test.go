@@ -99,7 +99,7 @@ func TestAgent(t *testing.T) {
 	t.Run("DSN ssl", func(t *testing.T) {
 		mongoDBOptions := MongoDBOptions{
 			TLSCertificateKey:             "key",
-			sslCertificateKeyFilePassword: "pass",
+			TLSCertificateKeyFilePassword: "pass",
 			TLSCa:                         "cert",
 		}
 		json, _ := json.Marshal(mongoDBOptions)
