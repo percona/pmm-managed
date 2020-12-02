@@ -63,7 +63,7 @@ func (s *ExternalAlertingRules) ValidateRules(ctx context.Context, rules string)
 	timeoutCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(timeoutCtx, "vmalert", "-dryRun", "-rule", tempFile.Name()) //nolint:gosec
+	cmd := exec.CommandContext(timeoutCtx, "vmalert", "-loggerLevel", "WARN", "-dryRun", "-rule", tempFile.Name()) //nolint:gosec
 	pdeathsig.Set(cmd, unix.SIGKILL)
 
 	b, err := cmd.CombinedOutput()
