@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -29,11 +30,15 @@ import (
 )
 
 func TestAlertingRules(t *testing.T) {
-	t.Run("ValidateRules", func(t *testing.T) {
-		s := NewExternalAlertingRules()
+	t.Parallel()
 
-		t.Run("Valid", func(t *testing.T) {
-			rules := strings.TrimSpace(`
+	ctx := context.Background()
+	l := logrus.WithField("test", t.Name())
+
+	t.Run("Valid", func(t *testing.T) {
+		t.Parallel()
+
+		rules := strings.TrimSpace(`
 groups:
 - name: example
   rules:
@@ -45,12 +50,14 @@ groups:
     annotations:
       summary: High request latency
 			`) + "\n"
-			err := s.ValidateRules(context.Background(), rules)
-			assert.NoError(t, err)
-		})
+		err := ValidateRules(ctx, rules, l)
+		assert.NoError(t, err)
+	})
 
-		t.Run("FormerZero", func(t *testing.T) {
-			rules := strings.TrimSpace(`
+	t.Run("FormerZero", func(t *testing.T) {
+		t.Parallel()
+
+		rules := strings.TrimSpace(`
 groups:
 - name: example
 rules:
@@ -62,19 +69,20 @@ severity: page
 annotations:
 summary: High request latency
 			`) + "\n"
-			err := s.ValidateRules(context.Background(), rules)
-			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid alerting rules."), err)
-		})
+		err := ValidateRules(ctx, rules, l)
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid alerting rules."), err)
+	})
 
-		t.Run("Invalid", func(t *testing.T) {
-			rules := strings.TrimSpace(`
+	t.Run("Invalid", func(t *testing.T) {
+		t.Parallel()
+
+		rules := strings.TrimSpace(`
 groups:
 - name: example
   rules:
   - alert: HighRequestLatency
 			`) + "\n"
-			err := s.ValidateRules(context.Background(), rules)
-			tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid alerting rules."), err)
-		})
+		err := ValidateRules(ctx, rules, l)
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid alerting rules."), err)
 	})
 }

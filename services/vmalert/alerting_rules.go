@@ -33,22 +33,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const externalAlertingRulesFile = "/srv/prometheus/rules/pmm.rules.yml"
-
-// ExternalAlertingRules contains all logic related to alerting rules files.
-type ExternalAlertingRules struct {
-	l *logrus.Entry
-}
-
-// NewExternalAlertingRules creates new AlertingRules instance.
-func NewExternalAlertingRules() *ExternalAlertingRules {
-	return &ExternalAlertingRules{
-		l: logrus.WithField("component", "alerting_rules"),
-	}
-}
-
 // ValidateRules validates alerting rules.
-func (s *ExternalAlertingRules) ValidateRules(ctx context.Context, rules string) error {
+func ValidateRules(ctx context.Context, rules string, l *logrus.Entry) error {
 	tempFile, err := ioutil.TempFile("", "temp_rules_*.yml")
 	if err != nil {
 		return errors.WithStack(err)
@@ -56,7 +42,7 @@ func (s *ExternalAlertingRules) ValidateRules(ctx context.Context, rules string)
 	tempFile.Close()                 //nolint:errcheck
 	defer os.Remove(tempFile.Name()) //nolint:errcheck
 
-	if err = ioutil.WriteFile(tempFile.Name(), []byte(rules), 0644); err != nil {
+	if err = ioutil.WriteFile(tempFile.Name(), []byte(rules), 0o644); err != nil { //nolint:gosec
 		return errors.WithStack(err)
 	}
 
@@ -69,7 +55,7 @@ func (s *ExternalAlertingRules) ValidateRules(ctx context.Context, rules string)
 	b, err := cmd.CombinedOutput()
 	if err != nil {
 		if e, ok := err.(*exec.ExitError); ok && e.ExitCode() != 0 {
-			s.l.Infof("%s: %s\n%s", strings.Join(cmd.Args, " "), e, b)
+			l.Infof("%s: %s\n%s", strings.Join(cmd.Args, " "), e, b)
 			return status.Errorf(codes.InvalidArgument, "Invalid alerting rules.")
 		}
 		return errors.WithStack(err)
@@ -79,25 +65,6 @@ func (s *ExternalAlertingRules) ValidateRules(ctx context.Context, rules string)
 		return status.Errorf(codes.InvalidArgument, "Zero alerting rules found.")
 	}
 
-	s.l.Debugf("%q check passed.", strings.Join(cmd.Args, " "))
+	l.Debugf("%q check passed.", strings.Join(cmd.Args, " "))
 	return nil
-}
-
-// ReadRules reads current rules from FS.
-func (s *ExternalAlertingRules) ReadRules() (string, error) {
-	b, err := ioutil.ReadFile(externalAlertingRulesFile)
-	if err != nil && !os.IsNotExist(err) {
-		return "", err
-	}
-	return string(b), nil
-}
-
-// RemoveRulesFile removes rules file from FS.
-func (s *ExternalAlertingRules) RemoveRulesFile() error {
-	return os.Remove(externalAlertingRulesFile)
-}
-
-// WriteRules writes rules to file.
-func (s *ExternalAlertingRules) WriteRules(rules string) error {
-	return ioutil.WriteFile(externalAlertingRulesFile, []byte(rules), 0644)
 }

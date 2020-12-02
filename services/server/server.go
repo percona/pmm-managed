@@ -59,7 +59,7 @@ type Server struct {
 	r                       agentsRegistry
 	integratedVMAlert       vmAlertService
 	externalVMAlert         vmAlertService
-	prometheusAlertingRules prometheusAlertingRules
+	prometheusAlertingRules vmAlertExternalAlertingRules
 	alertmanager            alertmanagerService
 	supervisord             supervisordService
 	telemetryService        telemetryService
@@ -89,7 +89,7 @@ type Params struct {
 	IntegratedVMAlert       vmAlertService
 	ExternalVMAlert         vmAlertService
 	Alertmanager            alertmanagerService
-	PrometheusAlertingRules prometheusAlertingRules
+	PrometheusAlertingRules vmAlertExternalAlertingRules
 	Supervisord             supervisordService
 	TelemetryService        telemetryService
 	PlatformService         platformService

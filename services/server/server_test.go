@@ -54,7 +54,7 @@ func TestServer(t *testing.T) {
 		mvmalert.Test(t)
 		mvmalert.On("RequestConfigurationUpdate").Return(nil)
 
-		par := new(mockPrometheusAlertingRules)
+		par := new(mockVmAlertExternalAlertingRules)
 		par.Test(t)
 		par.On("ReadRules").Return("", nil)
 
