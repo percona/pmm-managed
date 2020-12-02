@@ -163,8 +163,10 @@ const (
 	DebugSeverity     = Severity("debug")
 )
 
+// Source represents template source.
 type Source string
 
+// Available template sources.
 const (
 	UnknownSource  = Source("unknown")
 	BuiltInSource  = Source("built_in")

@@ -55,7 +55,7 @@ func TestCollect(t *testing.T) {
 
 		testDir, err := ioutil.TempDir("", "")
 		require.NoError(t, err)
-		defer os.RemoveAll(testDir)
+		defer os.RemoveAll(testDir) //nolint:errcheck
 
 		svc := NewTemplatesService(db)
 		svc.builtinTemplatesPath = testMissingTemplates
@@ -71,7 +71,7 @@ func TestCollect(t *testing.T) {
 
 		testDir, err := ioutil.TempDir("", "")
 		require.NoError(t, err)
-		defer os.RemoveAll(testDir)
+		defer os.RemoveAll(testDir) //nolint:errcheck
 
 		svc := NewTemplatesService(db)
 		svc.builtinTemplatesPath = testBuiltinTemplates
@@ -106,7 +106,7 @@ func TestConvertTemplate(t *testing.T) {
 
 		testDir, err := ioutil.TempDir("", "")
 		require.NoError(t, err)
-		defer os.RemoveAll(testDir)
+		defer os.RemoveAll(testDir) //nolint:errcheck
 
 		svc := NewTemplatesService(db)
 		svc.builtinTemplatesPath = testBuiltinTemplates
