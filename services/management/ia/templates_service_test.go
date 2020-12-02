@@ -53,7 +53,7 @@ func TestCollect(t *testing.T) {
 	t.Run("bad and missing template paths", func(t *testing.T) {
 		t.Parallel()
 
-		testDir, err := ioutil.TempDir("","")
+		testDir, err := ioutil.TempDir("", "")
 		require.NoError(t, err)
 		defer os.RemoveAll(testDir)
 
@@ -69,7 +69,7 @@ func TestCollect(t *testing.T) {
 	t.Run("valid template paths", func(t *testing.T) {
 		t.Parallel()
 
-		testDir, err := ioutil.TempDir("","")
+		testDir, err := ioutil.TempDir("", "")
 		require.NoError(t, err)
 		defer os.RemoveAll(testDir)
 
@@ -104,7 +104,7 @@ func TestConvertTemplate(t *testing.T) {
 		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 		ctx := context.Background()
 
-		testDir, err := ioutil.TempDir("","")
+		testDir, err := ioutil.TempDir("", "")
 		require.NoError(t, err)
 		defer os.RemoveAll(testDir)
 
