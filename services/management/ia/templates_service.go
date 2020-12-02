@@ -487,8 +487,6 @@ func (s *TemplatesService) CreateTemplate(ctx context.Context, req *iav1beta1.Cr
 		DisallowInvalidRules:  true,
 	}
 
-	fmt.Println(req.Yaml)
-
 	rules, err := alert.Parse(strings.NewReader(req.Yaml), pParams)
 	if err != nil {
 		s.l.Errorf("failed to parse rule template form request: +%v", err)
