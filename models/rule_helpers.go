@@ -101,7 +101,7 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 
 	row := &Rule{
 		ID: id,
-		Template: Template{
+		Template: &Template{
 			Name: params.TemplateName,
 		},
 		Disabled: params.Disabled,

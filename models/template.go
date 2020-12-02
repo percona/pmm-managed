@@ -89,6 +89,12 @@ func (t *Template) SetAnnotations(m map[string]string) error {
 	return setStringMap(m, &t.Annotations)
 }
 
+// Value implements database/sql/driver Valuer interface.
+func (t Template) Value() (driver.Value, error) { return jsonValue(t) }
+
+// Scan implements database/sql Scanner interface.
+func (t *Template) Scan(src interface{}) error { return jsonScan(t, src) }
+
 // Tiers represents tiers slice.
 type Tiers []common.Tier
 

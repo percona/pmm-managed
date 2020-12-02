@@ -28,7 +28,7 @@ import (
 // Rule represents alert rule configuration.
 //reform:ia_rules
 type Rule struct {
-	Template     Template      `reform:"template"`
+	Template     *Template     `reform:"template"`
 	ID           string        `reform:"id,pk"`
 	Summary      string        `reform:"summary"`
 	Disabled     bool          `reform:"disabled"`
@@ -82,6 +82,12 @@ const (
 
 type Filters []Filter
 
+// Value implements database/sql/driver Valuer interface.
+func (t Filters) Value() (driver.Value, error) { return jsonValue(t) }
+
+// Scan implements database/sql Scanner interface.
+func (t *Filters) Scan(src interface{}) error { return jsonScan(t, src) }
+
 type Filter struct {
 	Type FilterType `json:"type"`
 	Key  string     `json:"key"`
@@ -105,6 +111,12 @@ const (
 
 type RuleParams []RuleParam
 
+// Value implements database/sql/driver Valuer interface.
+func (t RuleParams) Value() (driver.Value, error) { return jsonValue(t) }
+
+// Scan implements database/sql Scanner interface.
+func (t *RuleParams) Scan(src interface{}) error { return jsonScan(t, src) }
+
 type RuleParam struct {
 	Name      string    `json:"name"`
 	Type      ParamType `json:"type"`
@@ -121,6 +133,12 @@ func (p *RuleParam) Scan(src interface{}) error { return jsonScan(p, src) }
 
 // Channels is a slice of models.Channel
 type Channels []Channel
+
+// Value implements database/sql/driver Valuer interface.
+func (t Channels) Value() (driver.Value, error) { return jsonValue(t) }
+
+// Scan implements database/sql Scanner interface.
+func (t *Channels) Scan(src interface{}) error { return jsonScan(t, src) }
 
 // check interfaces.
 var (

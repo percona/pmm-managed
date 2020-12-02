@@ -379,7 +379,7 @@ var databaseSchema = [][]string{
 			summary VARCHAR,
 			disabled BOOLEAN,
 			params JSONB,
-			"for" INTERVAL NOT NULL,
+			"for" BIGINT NOT NULL,
 			severity VARCHAR,
 			custom_labels JSONB,
 			filters JSONB,
