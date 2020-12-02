@@ -21,10 +21,11 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/percona/pmm-managed/utils/validators"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/percona/pmm-managed/utils/validators"
 )
 
 const alertingRulesFile = "/srv/prometheus/rules/pmm.rules.yml"
