@@ -66,6 +66,7 @@ type TemplatesService struct {
 	l                    *logrus.Entry
 	builtinTemplatesPath string
 	userTemplatesPath    string
+	rulesFileDir         string
 
 	rw    sync.RWMutex
 	rules map[string]Rule
@@ -78,6 +79,7 @@ func NewTemplatesService(db *reform.DB) *TemplatesService {
 		l:                    logrus.WithField("component", "management/ia/templates"),
 		builtinTemplatesPath: builtinTemplatesPath,
 		userTemplatesPath:    userTemplatesPath,
+		rulesFileDir:         ruleFileDir,
 		rules:                make(map[string]Rule),
 	}
 }
