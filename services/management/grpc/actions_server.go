@@ -304,6 +304,7 @@ func pointerToAgentType(agentType models.AgentType) *models.AgentType {
 //nolint:lll
 func (s *actionsServer) StartPTMySQLSummaryAction(context.Context, *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
 	panic("not implemented yet")
+}
 
 // StartPTPgSQLSummaryAction starts pt-pg-summary (PostgreSQL) action and returns the pointer to the response message
 //nolint:lll
@@ -315,43 +316,50 @@ func (s *actionsServer) StartPTPgSQLSummaryAction(ctx context.Context, req *mana
 		return nil, err
 	}
 
-	agents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, service.NodeID)
+	pmmAgents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, service.NodeID)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "No pmm-agent running on this node")
 	}
 
-	agentID, err := models.FindPmmAgentIDToRunAction(req.PmmAgentId, agents)
+	pmmAgentID, err := models.FindPmmAgentIDToRunAction(req.PmmAgentId, pmmAgents)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := models.CreateActionResult(s.db.Querier, agentID)
+	res, err := models.CreateActionResult(s.db.Querier, pmmAgentID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Exporters to be filtered by service ID and agent type
-	agentFilterStruc := models.AgentFilters{ServiceID: req.ServiceId, AgentType: pointerToAgentType(models.PostgresExporterType)}
+	agentFilter := models.AgentFilters{PMMAgentID: "", NodeID: "",
+		ServiceID: req.ServiceId, AgentType: pointerToAgentType(models.PostgresExporterType)}
 
 	// Need to get the postgress exporters to get the username and password therefrom
-	pExportersStruc, err := models.FindAgents(s.db.Querier, agentFilterStruc)
+	pExporters, err := models.FindAgents(s.db.Querier, agentFilter)
 	if err != nil {
 		return nil, err
 	}
 
+	exportersCount := len(pExporters)
+
 	// Must be only one result
-	if len(pExportersStruc) != 1 {
-		return nil, status.Errorf(codes.NotFound, "No postgres exporter")
+	if exportersCount < 1 {
+		return nil, status.Errorf(codes.FailedPrecondition, "No mysql exporter")
+	}
+
+	if exportersCount > 1 {
+		return nil, status.Errorf(codes.FailedPrecondition, "Found more than one mysql exporter")
 	}
 
 	// Starts the pt-pg-summary with the host address, port, username and password
-	err = s.r.StartPTPgSQLSummaryAction(ctx, res.ID, agentID, pointer.GetString(service.Address), pointer.GetUint16(service.Port),
-		pointer.GetString(pExportersStruc[0].Username), pointer.GetString(pExportersStruc[0].Password))
+	err = s.r.StartPTPgSQLSummaryAction(ctx, res.ID, pmmAgentID, pointer.GetString(service.Address), pointer.GetUint16(service.Port),
+		pointer.GetString(pExporters[0].Username), pointer.GetString(pExporters[0].Password))
 	if err != nil {
 		return nil, err
 	}
 
-	return &managementpb.StartPTPgSQLSummaryActionResponse{PmmAgentId: agentID, ActionId: res.ID}, nil
+	return &managementpb.StartPTPgSQLSummaryActionResponse{PmmAgentId: pmmAgentID, ActionId: res.ID}, nil
 }
 
 // CancelAction stops an Action.
