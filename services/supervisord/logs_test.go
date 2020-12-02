@@ -123,6 +123,7 @@ func TestFiles(t *testing.T) {
 		"victoriametrics.ini",
 		"victoriametrics.log",
 		"victoriametrics_targets.json",
+		"vmalert-external.log",
 		"vmalert.log",
 	}
 
@@ -197,6 +198,7 @@ func TestZip(t *testing.T) {
 		"victoriametrics.ini",
 		"victoriametrics.log",
 		"victoriametrics_targets.json",
+		"vmalert-external.log",
 		"vmalert.log",
 	}
 

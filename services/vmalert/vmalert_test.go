@@ -68,13 +68,13 @@ func testClient(wantReloadCode int, pathPrefix string) *http.Client {
 	}
 }
 
-func setupVMAlert(t *testing.T) (*reform.DB, *AlertingRules, *Service) {
+func setupVMAlert(t *testing.T) (*reform.DB, *ExternalAlertingRules, *Service) {
 	t.Helper()
 	check := require.New(t)
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	rules := NewAlertingRules()
+	rules := NewExternalAlertingRules()
 	svc, err := NewVMAlert(rules, Integrated)
 	check.NoError(err)
 	svc.client = testClient(http.StatusOK, "")
@@ -84,7 +84,7 @@ func setupVMAlert(t *testing.T) (*reform.DB, *AlertingRules, *Service) {
 	return db, rules, svc
 }
 
-func teardownVMAlert(t *testing.T, rules *AlertingRules, db *reform.DB) {
+func teardownVMAlert(t *testing.T, rules *ExternalAlertingRules, db *reform.DB) {
 	t.Helper()
 	check := assert.New(t)
 

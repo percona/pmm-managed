@@ -38,16 +38,16 @@ const (
 	configurationUpdateTimeout = 2 * time.Second
 )
 
-// Service is responsible for interactions with Service.
+// Service is responsible for interactions with VMAlert.
 type Service struct {
+	alertingRules *ExternalAlertingRules
+
 	baseURL             *url.URL
 	client              *http.Client
-	alertingRules       *AlertingRules
 	cachedAlertingRules string
-
-	irtm prom.Collector
-	l    *logrus.Entry
-	sema chan struct{}
+	irtm                prom.Collector
+	l                   *logrus.Entry
+	sema                chan struct{}
 }
 
 type Type string
@@ -58,7 +58,7 @@ const (
 )
 
 // NewVMAlert creates new VMAlert service.
-func NewVMAlert(alertRules *AlertingRules, typ Type) (*Service, error) {
+func NewVMAlert(alertRules *ExternalAlertingRules, typ Type) (*Service, error) {
 	var baseURL string
 	switch typ {
 	case Integrated:
@@ -96,6 +96,16 @@ func NewVMAlert(alertRules *AlertingRules, typ Type) (*Service, error) {
 		l:    logrus.WithField("component", component),
 		sema: make(chan struct{}, 1),
 	}, nil
+}
+
+// Describe implements prometheus.Collector.
+func (svc *Service) Describe(ch chan<- *prom.Desc) {
+	svc.irtm.Describe(ch)
+}
+
+// Collect implements prometheus.Collector.
+func (svc *Service) Collect(ch chan<- prom.Metric) {
+	svc.irtm.Collect(ch)
 }
 
 // Run runs VMAlert configuration update loop until ctx is canceled.
@@ -227,3 +237,8 @@ func (svc *Service) updateConfiguration(ctx context.Context) error {
 
 	return nil
 }
+
+// Check interfaces.
+var (
+	_ prom.Collector = (*Service)(nil)
+)

@@ -30,7 +30,7 @@ import (
 
 func TestAlertingRules(t *testing.T) {
 	t.Run("ValidateRules", func(t *testing.T) {
-		s := NewAlertingRules()
+		s := NewExternalAlertingRules()
 
 		t.Run("Valid", func(t *testing.T) {
 			rules := strings.TrimSpace(`

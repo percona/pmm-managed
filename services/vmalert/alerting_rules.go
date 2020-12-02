@@ -33,22 +33,22 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const alertingRulesFile = "/srv/prometheus/rules/pmm.rules.yml"
+const externalAlertingRulesFile = "/srv/prometheus/rules/pmm.rules.yml"
 
-// AlertingRules contains all logic related to alerting rules files.
-type AlertingRules struct {
+// ExternalAlertingRules contains all logic related to alerting rules files.
+type ExternalAlertingRules struct {
 	l *logrus.Entry
 }
 
-// NewAlertingRules creates new AlertingRules instance.
-func NewAlertingRules() *AlertingRules {
-	return &AlertingRules{
+// NewExternalAlertingRules creates new AlertingRules instance.
+func NewExternalAlertingRules() *ExternalAlertingRules {
+	return &ExternalAlertingRules{
 		l: logrus.WithField("component", "alerting_rules"),
 	}
 }
 
 // ValidateRules validates alerting rules.
-func (s *AlertingRules) ValidateRules(ctx context.Context, rules string) error {
+func (s *ExternalAlertingRules) ValidateRules(ctx context.Context, rules string) error {
 	tempFile, err := ioutil.TempFile("", "temp_rules_*.yml")
 	if err != nil {
 		return errors.WithStack(err)
@@ -84,8 +84,8 @@ func (s *AlertingRules) ValidateRules(ctx context.Context, rules string) error {
 }
 
 // ReadRules reads current rules from FS.
-func (s *AlertingRules) ReadRules() (string, error) {
-	b, err := ioutil.ReadFile(alertingRulesFile)
+func (s *ExternalAlertingRules) ReadRules() (string, error) {
+	b, err := ioutil.ReadFile(externalAlertingRulesFile)
 	if err != nil && !os.IsNotExist(err) {
 		return "", err
 	}
@@ -93,11 +93,11 @@ func (s *AlertingRules) ReadRules() (string, error) {
 }
 
 // RemoveRulesFile removes rules file from FS.
-func (s *AlertingRules) RemoveRulesFile() error {
-	return os.Remove(alertingRulesFile)
+func (s *ExternalAlertingRules) RemoveRulesFile() error {
+	return os.Remove(externalAlertingRulesFile)
 }
 
 // WriteRules writes rules to file.
-func (s *AlertingRules) WriteRules(rules string) error {
-	return ioutil.WriteFile(alertingRulesFile, []byte(rules), 0644)
+func (s *ExternalAlertingRules) WriteRules(rules string) error {
+	return ioutil.WriteFile(externalAlertingRulesFile, []byte(rules), 0644)
 }
