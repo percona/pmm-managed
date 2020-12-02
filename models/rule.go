@@ -132,7 +132,7 @@ func (p RuleParam) Value() (driver.Value, error) { return jsonValue(p) }
 func (p *RuleParam) Scan(src interface{}) error { return jsonScan(p, src) }
 
 // Channels is a slice of models.Channel
-type Channels []Channel
+type Channels []*Channel
 
 // Value implements database/sql/driver Valuer interface.
 func (t Channels) Value() (driver.Value, error) { return jsonValue(t) }

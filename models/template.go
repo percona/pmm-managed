@@ -40,6 +40,7 @@ type Template struct {
 	Labels      []byte        `reform:"labels"`
 	Annotations []byte        `reform:"annotations"`
 	Source      string        `reform:"source"`
+	Yaml        string        `reform:"yaml"`
 
 	CreatedAt time.Time `reform:"created_at"`
 	UpdatedAt time.Time `reform:"updated_at"`

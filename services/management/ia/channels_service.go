@@ -52,7 +52,7 @@ func (s *ChannelsService) ListChannels(ctx context.Context, request *iav1beta1.L
 
 	res := make([]*iav1beta1.Channel, len(channels))
 	for i, channel := range channels {
-		c, err := makeChannel(channel)
+		c, err := makeChannel(&channel)
 		if err != nil {
 			return nil, err
 		}
@@ -164,7 +164,7 @@ func (s *ChannelsService) RemoveChannel(ctx context.Context, req *iav1beta1.Remo
 	return &iav1beta1.RemoveChannelResponse{}, nil
 }
 
-func makeChannel(channel models.Channel) (*iav1beta1.Channel, error) {
+func makeChannel(channel *models.Channel) (*iav1beta1.Channel, error) {
 	c := &iav1beta1.Channel{
 		ChannelId: channel.ID,
 		Summary:   channel.Summary,

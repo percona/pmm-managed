@@ -18,9 +18,11 @@ package models
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/google/uuid"
+	"github.com/percona-platform/saas/pkg/common"
 	"github.com/percona/pmm/api/managementpb"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -100,10 +102,8 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 	}
 
 	row := &Rule{
-		ID: id,
-		Template: &Template{
-			Name: params.TemplateName,
-		},
+		ID:       id,
+		Template: makeModelTemplate(params),
 		Disabled: params.Disabled,
 		For:      params.For.AsDuration(),
 		Severity: params.Severity.String(),
@@ -118,10 +118,12 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 	row.Params = params.RuleParams
 
 	channels := make(Channels, len(params.ChannelIDs))
-	for _, cid := range params.ChannelIDs {
-		channels = append(channels, Channel{
-			ID: cid,
-		})
+	for i, cid := range params.ChannelIDs {
+		ch, err := FindChannelByID(q, cid)
+		if err != nil {
+			return nil, errors.WithMessage(err, "failed to create alert rule")
+		}
+		channels[i] = ch
 	}
 	row.Channels = channels
 
@@ -166,9 +168,11 @@ func UpdateRule(q *reform.Querier, RuleID string, params *UpdateRuleParams) (*Ru
 
 	channels := make(Channels, len(params.ChannelIDs))
 	for _, cid := range params.ChannelIDs {
-		channels = append(channels, Channel{
-			ID: cid,
-		})
+		ch, err := FindChannelByID(q, cid)
+		if err != nil {
+			return nil, errors.WithMessage(err, "failed to update alert rule")
+		}
+		channels = append(channels, ch)
 	}
 	row.Channels = channels
 
@@ -191,4 +195,34 @@ func RemoveRule(q *reform.Querier, id string) error {
 		return errors.Wrap(err, "failed to delete alert Rule")
 	}
 	return nil
+}
+
+// TODO remove once template API is merged
+func makeModelTemplate(params *CreateRuleParams) *Template {
+	return &Template{
+		Name:    params.TemplateName,
+		Version: 1,
+		Summary: "some summary",
+		Tiers:   Tiers{common.Tier("anonymous")},
+		Expr:    "template expr",
+		For:     time.Duration(params.For.AsDuration()),
+		Params: Params{
+			Param{
+				Name:    "param name",
+				Summary: "param summary",
+				Unit:    "PERCENTAGE",
+				Type:    "FLOAT",
+				FloatParam: &FloatParam{
+					Default: 2,
+					Min:     1,
+					Max:     3,
+				},
+			},
+		},
+		Severity:    "warning",
+		Labels:      []byte("{\"key\": \"value\"}"),
+		Annotations: []byte("{\"key\": \"value\"}"),
+		Source:      "template source",
+		Yaml:        "template yaml",
+	}
 }

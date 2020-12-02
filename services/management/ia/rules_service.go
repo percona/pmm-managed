@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
@@ -81,7 +80,6 @@ func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAl
 
 		params, err := makeRuleParams(rule.Params)
 		if err != nil {
-			//panic(fmt.Errorf("rule param filed %s", err))
 			return nil, err
 		}
 		r.Params = params
@@ -89,19 +87,18 @@ func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAl
 		var labels map[string]string
 		err = json.Unmarshal(rule.CustomLabels, &labels)
 		if err != nil {
-			//panic(fmt.Errorf("custom label filed %s", err))
 			return nil, err
 		}
 		r.CustomLabels = labels
 
 		filters := make([]*iav1beta1.Filter, len(rule.Filters))
-		for _, filter := range rule.Filters {
+		for i, filter := range rule.Filters {
 			f := &iav1beta1.Filter{
 				Type:  iav1beta1.FilterType(filter.Type),
 				Key:   filter.Key,
 				Value: filter.Val,
 			}
-			filters = append(filters, f)
+			filters[i] = f
 		}
 		r.Filters = filters
 
@@ -109,8 +106,6 @@ func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAl
 		for i, channel := range rule.Channels {
 			c, err := makeChannel(channel)
 			if err != nil {
-				// TODO
-				//panic(fmt.Errorf("channel failed %s", err))
 				return nil, err
 			}
 			channels[i] = c
@@ -211,7 +206,6 @@ func makeTemplate(template *models.Template) (*iav1beta1.Template, error) {
 
 	createdAt, err := ptypes.TimestampProto(template.CreatedAt)
 	if err != nil {
-		panic(fmt.Errorf("temp timestamp failed %s", err))
 		return nil, err
 	}
 
@@ -219,14 +213,12 @@ func makeTemplate(template *models.Template) (*iav1beta1.Template, error) {
 
 	labels, err := byteToMap(template.Labels)
 	if err != nil {
-		panic(fmt.Errorf("temp map unmarshall failed %s", err))
 		return nil, err
 	}
 	t.Labels = labels
 
 	annotations, err := byteToMap(template.Annotations)
 	if err != nil {
-		panic(fmt.Errorf("temp annotations unmarshall failed %s", err))
 		return nil, err
 	}
 	t.Annotations = annotations
