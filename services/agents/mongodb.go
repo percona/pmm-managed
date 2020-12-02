@@ -34,6 +34,7 @@ var newMongoExporterPMMVersion = version.MustParse("2.9.99")
 
 // mongodbExporterConfig returns desired configuration of mongodb_exporter process.
 func mongodbExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode,
+	// TODO: here mongodbexporter certs
 	pmmAgentVersion *version.Parsed) *agentpb.SetStateRequest_AgentProcess {
 	tdp := templateDelimsPair(
 		pointer.GetString(service.Address),
@@ -88,6 +89,7 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent, reda
 
 // qanMongoDBProfilerAgentConfig returns desired configuration of qan-mongodb-profiler-agent built-in agent.
 func qanMongoDBProfilerAgentConfig(service *models.Service, agent *models.Agent) *agentpb.SetStateRequest_BuiltinAgent {
+	// TODO: here qanprofiler certs
 	return &agentpb.SetStateRequest_BuiltinAgent{
 		Type:                 inventorypb.AgentType_QAN_MONGODB_PROFILER_AGENT,
 		Dsn:                  agent.DSN(service, time.Second, ""),
