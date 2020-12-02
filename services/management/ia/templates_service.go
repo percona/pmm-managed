@@ -210,11 +210,6 @@ func (s *TemplatesService) loadRulesFromDB() ([]Rule, error) {
 			return nil, errors.Wrap(err, "failed to load template annotations")
 		}
 
-		source := iav1beta1.TemplateSource_TEMPLATE_SOURCE_INVALID
-		if v, ok := iav1beta1.TemplateSource_value[template.Source]; ok {
-			source = iav1beta1.TemplateSource(v)
-		}
-
 		res = append(res,
 			Rule{
 				Rule: alert.Rule{
@@ -225,17 +220,55 @@ func (s *TemplatesService) loadRulesFromDB() ([]Rule, error) {
 					Expr:        template.Expr,
 					Params:      params,
 					For:         promconfig.Duration(template.For),
-					Severity:    common.ParseSeverity(template.Severity),
+					Severity:    convertSeverity(template.Severity),
 					Labels:      labels,
 					Annotations: annotations,
 				},
 				Yaml:   template.Yaml,
-				Source: source,
+				Source: convertSource(template.Source),
 			},
 		)
 	}
 
 	return res, nil
+}
+
+func convertSource(source models.Source) iav1beta1.TemplateSource {
+	switch source {
+	case models.BuiltInSource:
+		return iav1beta1.TemplateSource_BUILT_IN
+	case models.SAASSource:
+		return iav1beta1.TemplateSource_SAAS
+	case models.UserFileSource:
+		return iav1beta1.TemplateSource_USER_FILE
+	case models.UserAPISource:
+		return iav1beta1.TemplateSource_USER_API
+	default:
+		return iav1beta1.TemplateSource_TEMPLATE_SOURCE_INVALID
+	}
+}
+
+func convertSeverity(severity models.Severity) common.Severity {
+	switch severity {
+	case models.EmergencySeverity:
+		return common.Emergency
+	case models.AlertSeverity:
+		return common.Alert
+	case models.CriticalSeverity:
+		return common.Critical
+	case models.ErrorSeverity:
+		return common.Error
+	case models.WarningSeverity:
+		return common.Warning
+	case models.NoticeSeverity:
+		return common.Notice
+	case models.InfoSeverity:
+		return common.Info
+	case models.DebugSeverity:
+		return common.Debug
+	default:
+		return common.Unknown
+	}
 }
 
 // loadFile parses IA rule template file.
@@ -500,7 +533,7 @@ func (s *TemplatesService) CreateTemplate(ctx context.Context, req *iav1beta1.Cr
 	params := &models.CreateTemplateParams{
 		Rule:   &rules[0],
 		Yaml:   req.Yaml,
-		Source: iav1beta1.TemplateSource_USER_API.String(),
+		Source: models.UserAPISource,
 	}
 
 	e := s.db.InTransaction(func(tx *reform.TX) error {

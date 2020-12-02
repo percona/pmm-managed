@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/percona-platform/saas/pkg/alert"
+	"github.com/percona-platform/saas/pkg/common"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -80,7 +81,7 @@ func FindTemplateByName(q *reform.Querier, name string) (*Template, error) {
 type CreateTemplateParams struct {
 	Rule   *alert.Rule
 	Yaml   string
-	Source string
+	Source Source
 }
 
 // CreateTemplate creates rule template.
@@ -107,7 +108,7 @@ func CreateTemplate(q *reform.Querier, params *CreateTemplateParams) (*Template,
 		Expr:     rule.Expr,
 		Params:   p,
 		For:      time.Duration(rule.For),
-		Severity: rule.Severity.String(),
+		Severity: convertSeverity(rule.Severity),
 		Source:   params.Source,
 		Yaml:     params.Yaml,
 	}
@@ -158,7 +159,7 @@ func ChangeTemplate(q *reform.Querier, params *ChangeTemplateParams) (*Template,
 	row.Expr = rule.Expr
 	row.Params = p
 	row.For = time.Duration(rule.For)
-	row.Severity = rule.Severity.String()
+	row.Severity = convertSeverity(rule.Severity)
 	row.Yaml = params.Yaml
 
 	if err := row.SetLabels(rule.Labels); err != nil {
@@ -193,11 +194,16 @@ func RemoveTemplate(q *reform.Querier, name string) error {
 func convertTemplateParams(params []alert.Parameter) (Params, error) {
 	res := make(Params, len(params))
 	for i, param := range params {
+		t, err := convertParamType(param.Type)
+		if err != nil {
+			return nil, err
+		}
+
 		res[i] = Param{
 			Name:    param.Name,
 			Summary: param.Summary,
 			Unit:    param.Unit,
-			Type:    string(param.Type),
+			Type:    t,
 		}
 
 		switch param.Type {
@@ -219,4 +225,36 @@ func convertTemplateParams(params []alert.Parameter) (Params, error) {
 	}
 
 	return res, nil
+}
+
+func convertParamType(paramType alert.Type) (ParamType, error) {
+	switch paramType {
+	case alert.Float:
+		return Float, nil
+	default:
+		return "", errors.Errorf("UnknownSeverity parameter type %s", paramType)
+	}
+}
+
+func convertSeverity(severity common.Severity) Severity {
+	switch severity {
+	case common.Emergency:
+		return EmergencySeverity
+	case common.Alert:
+		return AlertSeverity
+	case common.Critical:
+		return CriticalSeverity
+	case common.Error:
+		return ErrorSeverity
+	case common.Warning:
+		return WarningSeverity
+	case common.Notice:
+		return NoticeSeverity
+	case common.Info:
+		return InfoSeverity
+	case common.Debug:
+		return DebugSeverity
+	default:
+		return UnknownSeverity
+	}
 }

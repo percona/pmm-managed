@@ -64,7 +64,7 @@ func TestRuleTemplatesChannels(t *testing.T) {
 					Name:    params.Rule.Params[0].Name,
 					Summary: params.Rule.Params[0].Summary,
 					Unit:    params.Rule.Params[0].Unit,
-					Type:    string(params.Rule.Params[0].Type),
+					Type:    models.Float,
 					FloatParam: &models.FloatParam{
 						Default: params.Rule.Params[0].Value.(float64),
 						Min:     params.Rule.Params[0].Range[0].(float64),
@@ -74,7 +74,7 @@ func TestRuleTemplatesChannels(t *testing.T) {
 			},
 			created.Params)
 		assert.EqualValues(t, params.Rule.For, created.For)
-		assert.Equal(t, params.Rule.Severity.String(), created.Severity)
+		assert.Equal(t, models.WarningSeverity, created.Severity)
 
 		labels, err := created.GetLabels()
 		require.NoError(t, err)
@@ -117,7 +117,7 @@ func TestRuleTemplatesChannels(t *testing.T) {
 					Name:    uParams.Rule.Params[0].Name,
 					Summary: uParams.Rule.Params[0].Summary,
 					Unit:    uParams.Rule.Params[0].Unit,
-					Type:    string(uParams.Rule.Params[0].Type),
+					Type:    models.Float,
 					FloatParam: &models.FloatParam{
 						Default: uParams.Rule.Params[0].Value.(float64),
 						Min:     uParams.Rule.Params[0].Range[0].(float64),
@@ -127,7 +127,7 @@ func TestRuleTemplatesChannels(t *testing.T) {
 			},
 			updated.Params)
 		assert.EqualValues(t, uParams.Rule.For, updated.For)
-		assert.Equal(t, uParams.Rule.Severity.String(), updated.Severity)
+		assert.Equal(t, models.WarningSeverity, updated.Severity)
 
 		labels, err := updated.GetLabels()
 		require.NoError(t, err)

@@ -36,10 +36,10 @@ type Template struct {
 	Expr        string        `reform:"expr"`
 	Params      Params        `reform:"params"`
 	For         time.Duration `reform:"for"`
-	Severity    string        `reform:"severity"`
+	Severity    Severity      `reform:"severity"`
 	Labels      []byte        `reform:"labels"`
 	Annotations []byte        `reform:"annotations"`
-	Source      string        `reform:"source"`
+	Source      Source        `reform:"source"`
 	Yaml        string        `reform:"yaml"`
 
 	CreatedAt time.Time `reform:"created_at"`
@@ -108,12 +108,22 @@ func (p Params) Value() (driver.Value, error) { return jsonValue(p) }
 // Scan implements database/sql Scanner interface.
 func (p *Params) Scan(src interface{}) error { return jsonScan(p, src) }
 
+// ParamType represents parameter type.
+type ParamType string
+
+// Available parameter types.
+const (
+	Float  = ParamType("float")
+	Bool   = ParamType("bool")
+	String = ParamType("string")
+)
+
 // Param represents template parameter.
 type Param struct {
-	Name    string `json:"name"`
-	Summary string `json:"summary"`
-	Unit    string `json:"unit"`
-	Type    string `json:"type"`
+	Name    string    `json:"name"`
+	Summary string    `json:"summary"`
+	Unit    string    `json:"unit"`
+	Type    ParamType `json:"type"`
 
 	FloatParam *FloatParam `json:"float_param"`
 	// BoolParam   *BoolParam   `json:"bool_param"`
@@ -136,6 +146,32 @@ type FloatParam struct {
 type StringParam struct {
 	Default string `json:"default"`
 }
+
+// Severity represents alert severity.
+type Severity string
+
+// Available severity levels.
+const (
+	UnknownSeverity   = Severity("unknown")
+	EmergencySeverity = Severity("emergency")
+	AlertSeverity     = Severity("alert")
+	CriticalSeverity  = Severity("critical")
+	ErrorSeverity     = Severity("error")
+	WarningSeverity   = Severity("warning")
+	NoticeSeverity    = Severity("notice")
+	InfoSeverity      = Severity("info")
+	DebugSeverity     = Severity("debug")
+)
+
+type Source string
+
+const (
+	UnknownSource  = Source("unknown")
+	BuiltInSource  = Source("built_in")
+	SAASSource     = Source("saas")
+	UserFileSource = Source("user_file")
+	UserAPISource  = Source("user_api")
+)
 
 // check interfaces
 var (
