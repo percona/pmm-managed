@@ -89,12 +89,12 @@ func (s *Service) AfterFind() error {
 
 // GetCustomLabels decodes custom labels.
 func (s *Service) GetCustomLabels() (map[string]string, error) {
-	return getStringMap(s.CustomLabels)
+	return getLabels(s.CustomLabels)
 }
 
 // SetCustomLabels encodes custom labels.
 func (s *Service) SetCustomLabels(m map[string]string) error {
-	return setStringMap(m, &s.CustomLabels)
+	return setLabels(m, &s.CustomLabels)
 }
 
 // UnifiedLabels returns combined standard and custom labels with empty labels removed.
