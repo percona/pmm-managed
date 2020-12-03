@@ -10,6 +10,7 @@ gen:                            ## Generate files.
 	rm -f models/*_reform.go
 	find . -name mock_*.go -delete
 	go generate ./...
+	go-bindata -o services/management/ia/bindata.go -pkg ia data/iatemplates/
 	make format
 
 install:                        ## Install pmm-managed binaries.

@@ -44,13 +44,18 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/utils/dir"
 )
 
 const (
-	builtinTemplatesPath = "/tmp/ia1/*.yml"
-	userTemplatesPath    = "/tmp/ia2/*.yml"
+	builtinTemplatesPath = "../../../data/iatemplates/*.yml"
+	userTemplatesPath    = "/srv/ia/templates/*.yml"
 
-	ruleFileDir = "/tmp/ia1/"
+	templatesDir  = "/srv/ia/templates"
+	rulesDir      = "/etc/ia/rules/"
+	prometheusDir = "/srv/prometheus"
+
+	dirPerm = os.FileMode(0o775)
 )
 
 // Template represents alerting rule template with added source field.
@@ -81,6 +86,34 @@ func NewTemplatesService(db *reform.DB) *TemplatesService {
 		userTemplatesPath:    userTemplatesPath,
 		rulesFileDir:         ruleFileDir,
 		templates:            make(map[string]Template),
+	}
+}
+
+// Run creates tempaltes and rules dir
+func (svc *TemplatesService) Run() {
+	svc.l.Info("Starting...")
+	defer svc.l.Info("Done.")
+	params := []dir.Params{
+		// created both the dirs with the same owners as prometheus dir
+		{
+			Path:      templatesDir,
+			Perm:      dirPerm,
+			Chown:     true,
+			ChownPath: prometheusDir,
+		},
+		{
+			Path:      rulesDir,
+			Perm:      dirPerm,
+			Chown:     true,
+			ChownPath: prometheusDir,
+		},
+	}
+
+	for _, p := range params {
+		err := dir.CreateDataDir(p)
+		if err != nil {
+			svc.l.Error(err)
+		}
 	}
 }
 
@@ -159,6 +192,7 @@ func (s *TemplatesService) loadTemplatesFromFiles(ctx context.Context, path stri
 
 	res := make([]alert.Template, 0, len(paths))
 	for _, path := range paths {
+		path := strings.Trim(path, "./")
 		r, err := s.loadFile(ctx, path)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to load rule template file: %s", path)
@@ -426,17 +460,9 @@ func dumpRule(rule *ruleFile) error {
 	if alertRule.Alert == "" {
 		return errors.New("alert rule not initialized")
 	}
-	path := ruleFileDir + alertRule.Alert + ".yml"
-
-	_, err = os.Stat(ruleFileDir)
-	if os.IsNotExist(err) {
-		err = os.Mkdir(ruleFileDir, 0750) // TODO move to https://jira.percona.com/browse/PMM-7024
-		if err != nil {
-			return err
-		}
-	}
+	path := rulesDir + alertRule.Alert + ".yml"
 	if err = ioutil.WriteFile(path, b, 0644); err != nil {
-		return errors.Errorf("failed to dump rule to file %s: %s", ruleFileDir, err)
+		return errors.Errorf("failed to dump rule to file %s: %s", rulesDir, err)
 
 	}
 	return nil

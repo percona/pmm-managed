@@ -615,6 +615,8 @@ func main() {
 		l.Fatalf("Could not create platform service: %s", err)
 	}
 
+	templatesSvc := ia.NewTemplatesService(db)
+
 	serverParams := &server.Params{
 		DB:                      db,
 		VMDB:                    vmdb,
@@ -715,6 +717,12 @@ func main() {
 	go func() {
 		defer wg.Done()
 		telemetry.Run(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		templatesSvc.Run()
 	}()
 
 	wg.Add(1)
