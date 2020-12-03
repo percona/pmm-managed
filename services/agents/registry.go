@@ -1066,6 +1066,7 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID stri
 		Params: &agentpb.StartActionRequest_PtSummaryParams{
 			PtSummaryParams: &agentpb.StartActionRequest_PTSummaryParams{},
 		},
+		Timeout: defaultActionTimeout,
 	}
 
 	agent, err := r.get(pmmAgentID)
@@ -1094,6 +1095,7 @@ func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID
 				Password: password,
 			},
 		},
+		Timeout: defaultActionTimeout,
 	}
 
 	// Agent which the action request will be sent to, got by the provided ID
@@ -1103,7 +1105,6 @@ func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID
 	}
 
 	pmmAgent.channel.SendRequest(actionRequest)
-
 	return nil
 }
 
