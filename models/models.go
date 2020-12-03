@@ -115,7 +115,7 @@ func prepareLabels(m map[string]string, removeEmptyValues bool) error {
 	return nil
 }
 
-// getStringMap decodes custom labels from Node/Service/Agent field.
+// getStringMap decodes model's byte array field to the string map.
 func getStringMap(field []byte) (map[string]string, error) {
 	if len(field) == 0 {
 		return nil, nil
@@ -127,7 +127,7 @@ func getStringMap(field []byte) (map[string]string, error) {
 	return m, nil
 }
 
-// setStringMap encodes custom labels m to the Node/Service/Agent field.
+// setStringMap encodes string map as model's byte array field.
 func setStringMap(m map[string]string, field *[]byte) error {
 	if err := prepareLabels(m, false); err != nil {
 		return err
