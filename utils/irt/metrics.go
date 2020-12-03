@@ -49,8 +49,11 @@ func WithMetrics(t http.RoundTripper, subsystem string) (http.RoundTripper, prom
 	}
 
 	t = promhttp.InstrumentRoundTripperInFlight(m.inflight, t)
-	t = promhttp.InstrumentRoundTripperCounter(m.counter, t)
-	t = promhttp.InstrumentRoundTripperDuration(m.duration, t)
+
+	// FIXME ?!
+	// t = promhttp.InstrumentRoundTripperCounter(m.counter, t)
+	// t = promhttp.InstrumentRoundTripperDuration(m.duration, t)
+
 	// TODO InstrumentRoundTripperTrace
 
 	return t, m

@@ -28,16 +28,16 @@ import (
 func setup(t *testing.T) (context.Context, *ExternalAlertingRules, *Service) {
 	t.Helper()
 
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+
 	rules := NewExternalAlertingRules()
 	err := rules.RemoveRulesFile()
 	require.NoError(t, err)
 
 	svc, err := NewVMAlert(rules, External)
 	require.NoError(t, err)
-	err = svc.IsReady(context.Background())
+	err = svc.IsReady(ctx)
 	require.NoError(t, err)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 
 	t.Cleanup(func() {
 		cancel()
@@ -74,7 +74,7 @@ groups:
 		require.NoError(t, err)
 	})
 
-	t.Run("Invalid", func(t *testing.T) {
+	t.Run("InvalidNoError", func(t *testing.T) {
 		ctx, rules, svc := setup(t)
 		err := rules.WriteRules(`foobar`)
 		require.NoError(t, err)

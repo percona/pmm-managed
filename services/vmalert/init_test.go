@@ -24,4 +24,5 @@ import (
 func init() {
 	// make rules validation errors readable
 	logger.SetupGlobalLogger()
+	// logrus.SetLevel(logrus.TraceLevel)
 }
