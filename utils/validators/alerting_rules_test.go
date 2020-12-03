@@ -14,26 +14,20 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package vmalert
+package validators
 
 import (
 	"context"
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
-	"github.com/percona/pmm-managed/utils/tests"
 )
 
-func TestAlertingRules(t *testing.T) {
+func TestValidateAlertingRules(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	l := logrus.WithField("test", t.Name())
 
 	t.Run("Valid", func(t *testing.T) {
 		t.Parallel()
@@ -50,27 +44,8 @@ groups:
     annotations:
       summary: High request latency
 			`) + "\n"
-		err := ValidateRules(ctx, rules, l)
+		err := ValidateAlertingRules(ctx, rules)
 		assert.NoError(t, err)
-	})
-
-	t.Run("FormerZero", func(t *testing.T) {
-		t.Parallel()
-
-		rules := strings.TrimSpace(`
-groups:
-- name: example
-rules:
-- alert: HighRequestLatency
-expr: job:request_latency_seconds:mean5m{job="myjob"} > 0.5
-for: 10m
-labels:
-severity: page
-annotations:
-summary: High request latency
-			`) + "\n"
-		err := ValidateRules(ctx, rules, l)
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid alerting rules."), err)
 	})
 
 	t.Run("Invalid", func(t *testing.T) {
@@ -82,7 +57,7 @@ groups:
   rules:
   - alert: HighRequestLatency
 			`) + "\n"
-		err := ValidateRules(ctx, rules, l)
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Invalid alerting rules."), err)
+		err := ValidateAlertingRules(ctx, rules)
+		assert.Equal(t, &InvalidAlertingRuleError{"Invalid alerting rules."}, err)
 	})
 }

@@ -23,6 +23,10 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
+	"github.com/percona/pmm-managed/utils/validators"
 )
 
 const externalAlertingRulesFile = "/srv/prometheus/rules/pmm.rules.yml"
@@ -41,7 +45,11 @@ func NewExternalAlertingRules() *ExternalAlertingRules {
 
 // ValidateRules validates alerting rules.
 func (s *ExternalAlertingRules) ValidateRules(ctx context.Context, rules string) error {
-	return ValidateRules(ctx, rules, s.l)
+	err := validators.ValidateAlertingRules(ctx, rules)
+	if e, ok := err.(*validators.InvalidAlertingRuleError); ok {
+		return status.Errorf(codes.InvalidArgument, e.Msg)
+	}
+	return err
 }
 
 // ReadRules reads current rules from FS.

@@ -14,27 +14,36 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package vmalert
+package validators
 
 import (
-	"bytes"
 	"context"
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"strings"
 	"time"
 
 	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
-// ValidateRules validates alerting rules.
-func ValidateRules(ctx context.Context, rules string, l *logrus.Entry) error {
+// InvalidAlertingRuleError represents "normal" alerting rule validation error.
+type InvalidAlertingRuleError struct {
+	Msg string
+}
+
+// Error implements error interface.
+func (e *InvalidAlertingRuleError) Error() string {
+	return e.Msg
+}
+
+// ValidateAlertingRules validates alerting rules (https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/)
+// by storing them in temporary file and calling `vmalert -dryRun -rule`.
+// Returned error is nil, *InvalidAlertingRuleError for "normal" validation errors,
+// or some other fatal error.
+func ValidateAlertingRules(ctx context.Context, rules string) error {
 	tempFile, err := ioutil.TempFile("", "temp_rules_*.yml")
 	if err != nil {
 		return errors.WithStack(err)
@@ -53,18 +62,15 @@ func ValidateRules(ctx context.Context, rules string, l *logrus.Entry) error {
 	pdeathsig.Set(cmd, unix.SIGKILL)
 
 	b, err := cmd.CombinedOutput()
+	logrus.Debugf("ValidateAlertingRules: %v\n%s", err, b)
 	if err != nil {
 		if e, ok := err.(*exec.ExitError); ok && e.ExitCode() != 0 {
-			l.Infof("%s: %s\n%s", strings.Join(cmd.Args, " "), e, b)
-			return status.Errorf(codes.InvalidArgument, "Invalid alerting rules.")
+			return &InvalidAlertingRuleError{
+				Msg: "Invalid alerting rules.",
+			}
 		}
 		return errors.WithStack(err)
 	}
 
-	if bytes.Contains(b, []byte("SUCCESS: 0 rules found")) {
-		return status.Errorf(codes.InvalidArgument, "Zero alerting rules found.")
-	}
-
-	l.Debugf("%q check passed.", strings.Join(cmd.Args, " "))
 	return nil
 }
