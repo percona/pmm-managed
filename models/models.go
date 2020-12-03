@@ -115,8 +115,8 @@ func prepareLabels(m map[string]string, removeEmptyValues bool) error {
 	return nil
 }
 
-// getStringMap decodes model's byte array field to the string map.
-func getStringMap(field []byte) (map[string]string, error) {
+// getLabels decodes model's byte array field to the string map.
+func getLabels(field []byte) (map[string]string, error) {
 	if len(field) == 0 {
 		return nil, nil
 	}
@@ -127,8 +127,8 @@ func getStringMap(field []byte) (map[string]string, error) {
 	return m, nil
 }
 
-// setStringMap encodes string map as model's byte array field.
-func setStringMap(m map[string]string, field *[]byte) error {
+// setLabels encodes string map as model's byte array field.
+func setLabels(m map[string]string, field *[]byte) error {
 	if err := prepareLabels(m, false); err != nil {
 		return err
 	}

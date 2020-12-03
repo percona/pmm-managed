@@ -72,22 +72,22 @@ func (t *Template) AfterFind() error {
 
 // GetLabels decodes template labels.
 func (t *Template) GetLabels() (map[string]string, error) {
-	return getStringMap(t.Labels)
+	return getLabels(t.Labels)
 }
 
 // SetLabels encodes template labels.
 func (t *Template) SetLabels(m map[string]string) error {
-	return setStringMap(m, &t.Labels)
+	return setLabels(m, &t.Labels)
 }
 
 // GetAnnotations decodes template annotations.
 func (t *Template) GetAnnotations() (map[string]string, error) {
-	return getStringMap(t.Annotations)
+	return getLabels(t.Annotations)
 }
 
 // SetAnnotations encodes template annotations.
 func (t *Template) SetAnnotations(m map[string]string) error {
-	return setStringMap(m, &t.Annotations)
+	return setLabels(m, &t.Annotations)
 }
 
 // Tiers represents tiers slice.

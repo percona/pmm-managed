@@ -53,9 +53,9 @@ const (
 	ruleFileDir = "/tmp/ia1/"
 )
 
-// Rule represents alerting rule/rule template with added source field.
-type Rule struct {
-	alert.Rule
+// Template represents alerting rule template with added source field.
+type Template struct {
+	alert.Template
 	Yaml   string
 	Source iav1beta1.TemplateSource
 }
@@ -68,8 +68,8 @@ type TemplatesService struct {
 	userTemplatesPath    string
 	rulesFileDir         string
 
-	rw    sync.RWMutex
-	rules map[string]Rule
+	rw        sync.RWMutex
+	templates map[string]Template
 }
 
 // NewTemplatesService creates a new TemplatesService.
@@ -80,7 +80,7 @@ func NewTemplatesService(db *reform.DB) *TemplatesService {
 		builtinTemplatesPath: builtinTemplatesPath,
 		userTemplatesPath:    userTemplatesPath,
 		rulesFileDir:         ruleFileDir,
-		rules:                make(map[string]Rule),
+		templates:            make(map[string]Template),
 	}
 }
 
@@ -89,12 +89,12 @@ func newParamTemplate() *template.Template {
 }
 
 // getCollected return collected templates.
-func (s *TemplatesService) getCollected(ctx context.Context) map[string]Rule {
+func (s *TemplatesService) getCollected(ctx context.Context) map[string]Template {
 	s.rw.RLock()
 	defer s.rw.RUnlock()
 
-	res := make(map[string]Rule)
-	for n, r := range s.rules {
+	res := make(map[string]Template)
+	for n, r := range s.templates {
 		res[n] = r
 	}
 	return res
@@ -103,61 +103,61 @@ func (s *TemplatesService) getCollected(ctx context.Context) map[string]Rule {
 // collect collects IA rule templates from various sources like
 // built-in templates shipped with PMM and defined by the users.
 func (s *TemplatesService) collect(ctx context.Context) {
-	rules := make([]Rule, 0, len(s.builtinTemplatesPath)+len(s.userTemplatesPath))
+	templates := make([]Template, 0, len(s.builtinTemplatesPath)+len(s.userTemplatesPath))
 
-	builtInRules, err := s.loadRulesFromFiles(ctx, s.builtinTemplatesPath)
+	builtInTemplates, err := s.loadTemplatesFromFiles(ctx, s.builtinTemplatesPath)
 	if err != nil {
 		s.l.Errorf("Failed to load built-in rule templates: %s.", err)
 		return
 	}
-	for _, rule := range builtInRules {
-		rules = append(rules, Rule{
-			Rule:   rule,
-			Source: iav1beta1.TemplateSource_BUILT_IN,
+	for _, t := range builtInTemplates {
+		templates = append(templates, Template{
+			Template: t,
+			Source:   iav1beta1.TemplateSource_BUILT_IN,
 		})
 	}
 
-	userDefinedRules, err := s.loadRulesFromFiles(ctx, s.userTemplatesPath)
+	userDefinedTemplates, err := s.loadTemplatesFromFiles(ctx, s.userTemplatesPath)
 	if err != nil {
 		s.l.Errorf("Failed to load user-defined rule templates: %s.", err)
 		return
 	}
-	for _, rule := range userDefinedRules {
-		rules = append(rules, Rule{
-			Rule:   rule,
-			Source: iav1beta1.TemplateSource_USER_FILE,
+	for _, t := range userDefinedTemplates {
+		templates = append(templates, Template{
+			Template: t,
+			Source:   iav1beta1.TemplateSource_USER_FILE,
 		})
 	}
 
-	dbRules, err := s.loadRulesFromDB()
+	dbTemplates, err := s.loadTemplatesFromDB()
 	if err != nil {
 		s.l.Errorf("Failed to load rule templates from DB: %s.", err)
 		return
 	}
-	rules = append(rules, dbRules...)
+	templates = append(templates, dbTemplates...)
 
 	// TODO download templates from SAAS.
 
-	// replace previously stored rules with newly collected ones.
+	// replace previously stored templates with newly collected ones.
 	s.rw.Lock()
 	defer s.rw.Unlock()
-	s.rules = make(map[string]Rule, len(rules))
-	for _, r := range rules {
-		// TODO Check for name clashes? Allow users to re-define built-in rules?
-		// Reserve prefix for built-in or user-defined rules?
+	s.templates = make(map[string]Template, len(templates))
+	for _, t := range templates {
+		// TODO Check for name clashes? Allow users to re-define built-in templates?
+		// Reserve prefix for built-in or user-defined templates?
 		// https://jira.percona.com/browse/PMM-7023
 
-		s.rules[r.Name] = r
+		s.templates[t.Name] = t
 	}
 }
 
-func (s *TemplatesService) loadRulesFromFiles(ctx context.Context, path string) ([]alert.Rule, error) {
+func (s *TemplatesService) loadTemplatesFromFiles(ctx context.Context, path string) ([]alert.Template, error) {
 	paths, err := filepath.Glob(path)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get paths")
 	}
 
-	res := make([]alert.Rule, 0, len(paths))
+	res := make([]alert.Template, 0, len(paths))
 	for _, path := range paths {
 		r, err := s.loadFile(ctx, path)
 		if err != nil {
@@ -169,7 +169,7 @@ func (s *TemplatesService) loadRulesFromFiles(ctx context.Context, path string) 
 	return res, nil
 }
 
-func (s *TemplatesService) loadRulesFromDB() ([]Rule, error) {
+func (s *TemplatesService) loadTemplatesFromDB() ([]Template, error) {
 	var templates []models.Template
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
@@ -180,7 +180,7 @@ func (s *TemplatesService) loadRulesFromDB() ([]Rule, error) {
 		return nil, errors.Wrap(e, "failed to load rule templates form DB")
 	}
 
-	res := make([]Rule, 0, len(templates))
+	res := make([]Template, 0, len(templates))
 	for _, template := range templates {
 		params := make([]alert.Parameter, len(template.Params))
 		for _, param := range template.Params {
@@ -213,8 +213,8 @@ func (s *TemplatesService) loadRulesFromDB() ([]Rule, error) {
 		}
 
 		res = append(res,
-			Rule{
-				Rule: alert.Rule{
+			Template{
+				Template: alert.Template{
 					Name:        template.Name,
 					Version:     template.Version,
 					Summary:     template.Summary,
@@ -274,7 +274,7 @@ func convertSeverity(severity models.Severity) common.Severity {
 }
 
 // loadFile parses IA rule template file.
-func (s *TemplatesService) loadFile(ctx context.Context, file string) ([]saas.Rule, error) {
+func (s *TemplatesService) loadFile(ctx context.Context, file string) ([]saas.Template, error) {
 	if ctx.Err() != nil {
 		return nil, errors.WithStack(ctx.Err())
 	}
@@ -286,15 +286,15 @@ func (s *TemplatesService) loadFile(ctx context.Context, file string) ([]saas.Ru
 
 	// be strict about local files
 	params := &saas.ParseParams{
-		DisallowUnknownFields: true,
-		DisallowInvalidRules:  true,
+		DisallowUnknownFields:    true,
+		DisallowInvalidTemplates: true,
 	}
-	rules, err := saas.Parse(bytes.NewReader(data), params)
+	templates, err := saas.Parse(bytes.NewReader(data), params)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse rule template file")
 	}
 
-	return rules, nil
+	return templates, nil
 }
 
 func convertParamType(t alert.Type) iav1beta1.ParamType {
@@ -414,7 +414,7 @@ func transformMaps(src map[string]string, dest map[string]string, data map[strin
 	return nil
 }
 
-// dump the transformed IA rules to a file.
+// dump the transformed IA templates to a file.
 func dumpRule(rule *ruleFile) error {
 	b, err := yaml.Marshal(rule)
 	if err != nil {
@@ -518,24 +518,24 @@ func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.Lis
 // CreateTemplate creates a new template.
 func (s *TemplatesService) CreateTemplate(ctx context.Context, req *iav1beta1.CreateTemplateRequest) (*iav1beta1.CreateTemplateResponse, error) {
 	pParams := &alert.ParseParams{
-		DisallowUnknownFields: true,
-		DisallowInvalidRules:  true,
+		DisallowUnknownFields:    true,
+		DisallowInvalidTemplates: true,
 	}
 
-	rules, err := alert.Parse(strings.NewReader(req.Yaml), pParams)
+	templates, err := alert.Parse(strings.NewReader(req.Yaml), pParams)
 	if err != nil {
 		s.l.Errorf("failed to parse rule template form request: +%v", err)
 		return nil, status.Error(codes.InvalidArgument, "Failed to parse rule template.")
 	}
 
-	if len(rules) != 1 {
+	if len(templates) != 1 {
 		return nil, status.Error(codes.InvalidArgument, "Request should contain exactly one rule template.")
 	}
 
 	params := &models.CreateTemplateParams{
-		Rule:   &rules[0],
-		Yaml:   req.Yaml,
-		Source: models.UserAPISource,
+		Template: &templates[0],
+		Yaml:     req.Yaml,
+		Source:   models.UserAPISource,
 	}
 
 	e := s.db.InTransaction(func(tx *reform.TX) error {
@@ -553,22 +553,22 @@ func (s *TemplatesService) CreateTemplate(ctx context.Context, req *iav1beta1.Cr
 // UpdateTemplate updates existing template, previously created via API.
 func (s *TemplatesService) UpdateTemplate(ctx context.Context, req *iav1beta1.UpdateTemplateRequest) (*iav1beta1.UpdateTemplateResponse, error) {
 	pParams := &alert.ParseParams{
-		DisallowUnknownFields: true,
-		DisallowInvalidRules:  true,
+		DisallowUnknownFields:    true,
+		DisallowInvalidTemplates: true,
 	}
 
-	rules, err := alert.Parse(strings.NewReader(req.Yaml), pParams)
+	templates, err := alert.Parse(strings.NewReader(req.Yaml), pParams)
 	if err != nil {
 		s.l.Errorf("failed to parse rule template form request: +%v", err)
 		return nil, status.Error(codes.InvalidArgument, "Failed to parse rule template.")
 	}
 
-	if len(rules) != 1 {
+	if len(templates) != 1 {
 		return nil, status.Error(codes.InvalidArgument, "Request should contain exactly one rule template.")
 	}
 
 	params := &models.ChangeTemplateParams{
-		Rule: &rules[0],
+		Template: &templates[0],
 	}
 
 	e := s.db.InTransaction(func(tx *reform.TX) error {

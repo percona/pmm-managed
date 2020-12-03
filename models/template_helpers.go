@@ -79,45 +79,45 @@ func FindTemplateByName(q *reform.Querier, name string) (*Template, error) {
 
 // CreateTemplateParams are params for creating new rule template.
 type CreateTemplateParams struct {
-	Rule   *alert.Rule
-	Yaml   string
-	Source Source
+	Template *alert.Template
+	Yaml     string
+	Source   Source
 }
 
 // CreateTemplate creates rule template.
 func CreateTemplate(q *reform.Querier, params *CreateTemplateParams) (*Template, error) {
-	rule := params.Rule
-	if err := rule.Validate(); err != nil {
+	template := params.Template
+	if err := template.Validate(); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid rule template: %v.", err)
 	}
 
-	if err := checkUniqueTemplateName(q, params.Rule.Name); err != nil {
+	if err := checkUniqueTemplateName(q, params.Template.Name); err != nil {
 		return nil, err
 	}
 
-	p, err := convertTemplateParams(params.Rule.Params)
+	p, err := convertTemplateParams(params.Template.Params)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid rule template parameters: %v.", err)
 	}
 
 	row := &Template{
-		Name:     rule.Name,
-		Version:  rule.Version,
-		Summary:  rule.Summary,
-		Tiers:    rule.Tiers,
-		Expr:     rule.Expr,
+		Name:     template.Name,
+		Version:  template.Version,
+		Summary:  template.Summary,
+		Tiers:    template.Tiers,
+		Expr:     template.Expr,
 		Params:   p,
-		For:      time.Duration(rule.For),
-		Severity: convertSeverity(rule.Severity),
+		For:      time.Duration(template.For),
+		Severity: convertSeverity(template.Severity),
 		Source:   params.Source,
 		Yaml:     params.Yaml,
 	}
 
-	if err := row.SetLabels(rule.Labels); err != nil {
+	if err := row.SetLabels(template.Labels); err != nil {
 		return nil, err
 	}
 
-	if err := row.SetAnnotations(rule.Annotations); err != nil {
+	if err := row.SetAnnotations(template.Annotations); err != nil {
 		return nil, err
 	}
 
@@ -131,42 +131,42 @@ func CreateTemplate(q *reform.Querier, params *CreateTemplateParams) (*Template,
 
 // ChangeTemplateParams is params for changing existing rule template.
 type ChangeTemplateParams struct {
-	Rule *alert.Rule
-	Yaml string
+	Template *alert.Template
+	Yaml     string
 }
 
 // ChangeTemplate updates existing rule template.
 func ChangeTemplate(q *reform.Querier, params *ChangeTemplateParams) (*Template, error) {
-	row, err := FindTemplateByName(q, params.Rule.Name)
+	row, err := FindTemplateByName(q, params.Template.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	rule := params.Rule
-	if err := rule.Validate(); err != nil {
+	template := params.Template
+	if err := template.Validate(); err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid rule template: %v.", err)
 	}
 
-	p, err := convertTemplateParams(params.Rule.Params)
+	p, err := convertTemplateParams(params.Template.Params)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid rule template parameters: %v.", err)
 	}
 
-	row.Name = rule.Name
-	row.Version = rule.Version
-	row.Summary = rule.Summary
-	row.Tiers = rule.Tiers
-	row.Expr = rule.Expr
+	row.Name = template.Name
+	row.Version = template.Version
+	row.Summary = template.Summary
+	row.Tiers = template.Tiers
+	row.Expr = template.Expr
 	row.Params = p
-	row.For = time.Duration(rule.For)
-	row.Severity = convertSeverity(rule.Severity)
+	row.For = time.Duration(template.For)
+	row.Severity = convertSeverity(template.Severity)
 	row.Yaml = params.Yaml
 
-	if err := row.SetLabels(rule.Labels); err != nil {
+	if err := row.SetLabels(template.Labels); err != nil {
 		return nil, err
 	}
 
-	if err := row.SetAnnotations(rule.Annotations); err != nil {
+	if err := row.SetAnnotations(template.Annotations); err != nil {
 		return nil, err
 	}
 

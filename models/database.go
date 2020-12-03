@@ -395,7 +395,7 @@ var databaseSchema = [][]string{
 			name VARCHAR NOT NULL,
 			version INTEGER NOT NULL,
 			summary VARCHAR NOT NULL,
-			tiers JSONB,
+			tiers JSONB NOT NULL,
 			expr VARCHAR NOT NULL,
 			params JSONB,
 			"for" BIGINT,
@@ -403,7 +403,7 @@ var databaseSchema = [][]string{
 			labels TEXT,
 			annotations TEXT,
 			source VARCHAR NOT NULL,
-			yaml TEXT,
+			yaml TEXT NOT NULL,
 
 			created_at TIMESTAMP NOT NULL,
 			updated_at TIMESTAMP NOT NULL,
