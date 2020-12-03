@@ -64,7 +64,7 @@ func (s *ExternalAlertingRules) ReadRules() (string, error) {
 // RemoveRulesFile removes rules file from FS.
 func (s *ExternalAlertingRules) RemoveRulesFile() error {
 	err := os.Remove(externalAlertingRulesFile)
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return errors.Wrap(err, "failed to remove external alerting rules")
 	}
 	return nil

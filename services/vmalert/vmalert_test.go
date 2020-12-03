@@ -17,95 +17,47 @@
 package vmalert
 
 import (
-	"bytes"
 	"context"
-	"database/sql"
-	"io/ioutil"
-	"net/http"
 	"strings"
 	"testing"
+	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/reform.v1"
-	"gopkg.in/reform.v1/dialects/postgresql"
-
-	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/utils/testdb"
 )
 
-// TODO Remove.
-type roundTripFunc func(*http.Request) *http.Response
-
-// RoundTrip.
-func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
-	return f(req), nil
-}
-
-// testClient returns *http.Client with mocked transport.
-// TODO Do not use mock there; remove.
-func testClient(wantReloadCode int, pathPrefix string) *http.Client {
-	rt := func(req *http.Request) *http.Response {
-		switch req.URL.Path {
-		case pathPrefix + "/-/reload":
-			return &http.Response{
-				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(`ok`))),
-				StatusCode: wantReloadCode,
-			}
-		case pathPrefix + "/health":
-			return &http.Response{
-				Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(`ok`))),
-				StatusCode: http.StatusOK,
-			}
-		}
-		return &http.Response{
-			Body:       ioutil.NopCloser(bytes.NewBuffer([]byte(`Not Found`))),
-			StatusCode: http.StatusNotFound,
-		}
-	}
-	return &http.Client{
-		Transport: roundTripFunc(rt),
-	}
-}
-
-func setupVMAlert(t *testing.T) (*reform.DB, *ExternalAlertingRules, *Service) {
+func setup(t *testing.T) (context.Context, *ExternalAlertingRules, *Service) {
 	t.Helper()
-	check := require.New(t)
-	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
-	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
 	rules := NewExternalAlertingRules()
-	svc, err := NewVMAlert(rules, Integrated)
-	check.NoError(err)
-	svc.client = testClient(http.StatusOK, "")
+	err := rules.RemoveRulesFile()
+	require.NoError(t, err)
 
-	check.NoError(svc.IsReady(context.Background()))
+	svc, err := NewVMAlert(rules, External)
+	require.NoError(t, err)
+	err = svc.IsReady(context.Background())
+	require.NoError(t, err)
 
-	return db, rules, svc
-}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 
-func teardownVMAlert(t *testing.T, rules *ExternalAlertingRules, db *reform.DB) {
-	t.Helper()
-	check := assert.New(t)
+	t.Cleanup(func() {
+		cancel()
+		err = rules.RemoveRulesFile()
+		require.NoError(t, err)
+	})
 
-	check.NoError(rules.WriteRules(""))
-	check.NoError(db.DBInterface().(*sql.DB).Close())
+	return ctx, rules, svc
 }
 
 func TestVMAlert(t *testing.T) {
-	t.Run("Default", func(t *testing.T) {
-		check := require.New(t)
-		db, rules, svc := setupVMAlert(t)
-		defer teardownVMAlert(t, rules, db)
-		check.NoError(svc.updateConfiguration(context.Background()))
+	t.Run("Empty", func(t *testing.T) {
+		ctx, _, svc := setup(t)
+		err := svc.updateConfiguration(ctx)
+		require.NoError(t, err)
 	})
 
-	t.Run("Normal", func(t *testing.T) {
-		check := require.New(t)
-		db, rules, svc := setupVMAlert(t)
-		defer teardownVMAlert(t, rules, db)
-		check.NoError(svc.updateConfiguration(context.Background()))
-		check.NoError(rules.WriteRules(strings.TrimSpace(`
+	t.Run("Valid", func(t *testing.T) {
+		ctx, rules, svc := setup(t)
+		err := rules.WriteRules(strings.TrimSpace(`
 groups:
   - name: example
     rules:
@@ -116,7 +68,17 @@ groups:
           severity: page
       annotations:
           summary: High request latency
-			`)))
-		check.NoError(svc.updateConfiguration(context.Background()))
+		`))
+		require.NoError(t, err)
+		err = svc.updateConfiguration(ctx)
+		require.NoError(t, err)
+	})
+
+	t.Run("Invalid", func(t *testing.T) {
+		ctx, rules, svc := setup(t)
+		err := rules.WriteRules(`foobar`)
+		require.NoError(t, err)
+		err = svc.updateConfiguration(ctx)
+		require.NoError(t, err)
 	})
 }

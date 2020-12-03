@@ -155,7 +155,6 @@ func (svc *Service) RequestConfigurationUpdate() {
 
 // IsReady verifies that VMAlert works.
 func (svc *Service) IsReady(ctx context.Context) error {
-	// check VMAlert /health API
 	u := *svc.baseURL
 	u.Path = path.Join(u.Path, "health")
 	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
@@ -167,17 +166,15 @@ func (svc *Service) IsReady(ctx context.Context) error {
 		return errors.WithStack(err)
 	}
 	defer resp.Body.Close() //nolint:errcheck
+
 	b, err := ioutil.ReadAll(resp.Body)
-	svc.l.Debugf("VMAlert: %s", b)
+	svc.l.Debugf("VMAlert health: %s", b)
 	if err != nil {
 		return err
 	}
 	if resp.StatusCode != 200 {
 		return errors.Errorf("expected 200, got %d", resp.StatusCode)
 	}
-
-	svc.l.Debugf("%s", b)
-
 	return nil
 }
 
@@ -195,15 +192,15 @@ func (svc *Service) reload(ctx context.Context) error {
 	}
 	defer resp.Body.Close() //nolint:errcheck
 
-	if resp.StatusCode == http.StatusOK {
-		return nil
-	}
 	b, err := ioutil.ReadAll(resp.Body)
+	svc.l.Debugf("VMAlert reload: %s", b)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
-
-	return errors.Errorf("%d: %s", resp.StatusCode, b)
+	if resp.StatusCode != 200 {
+		return errors.Errorf("expected 200, got %d", resp.StatusCode)
+	}
+	return nil
 }
 
 // updateConfiguration updates VMAlert configuration.
