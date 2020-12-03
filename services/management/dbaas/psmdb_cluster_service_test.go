@@ -148,6 +148,7 @@ func TestPSMDBClusterService(t *testing.T) {
 						CpuM:        3,
 						MemoryBytes: 256,
 					},
+					DiskSize: 1024 * 1024 * 1024,
 				},
 			},
 		}
@@ -164,6 +165,7 @@ func TestPSMDBClusterService(t *testing.T) {
 						CpuM:        3,
 						MemoryBytes: 256,
 					},
+					DiskSize: 1024 * 1024 * 1024,
 				},
 			},
 		}
@@ -180,9 +182,9 @@ func TestPSMDBClusterService(t *testing.T) {
 				Kubeconfig: kubeconfTest,
 			},
 			Name: "third-psmdb-test",
-			Params: &controllerv1beta1.PSMDBClusterParams{
+			Params: &controllerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams{
 				ClusterSize: 8,
-				Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
+				Replicaset: &controllerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams_ReplicaSet{
 					ComputeResources: &controllerv1beta1.ComputeResources{
 						CpuM:        1,
 						MemoryBytes: 256,
@@ -196,9 +198,9 @@ func TestPSMDBClusterService(t *testing.T) {
 		in := dbaasv1beta1.UpdatePSMDBClusterRequest{
 			KubernetesClusterName: kubernetesClusterNameTest,
 			Name:                  "third-psmdb-test",
-			Params: &dbaasv1beta1.PSMDBClusterParams{
+			Params: &dbaasv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams{
 				ClusterSize: 8,
-				Replicaset: &dbaasv1beta1.PSMDBClusterParams_ReplicaSet{
+				Replicaset: &dbaasv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams_ReplicaSet{
 					ComputeResources: &dbaasv1beta1.ComputeResources{
 						CpuM:        1,
 						MemoryBytes: 256,
@@ -208,6 +210,26 @@ func TestPSMDBClusterService(t *testing.T) {
 		}
 
 		_, err := s.UpdatePSMDBCluster(ctx, &in)
+		assert.NoError(t, err)
+	})
+
+	t.Run("BasicRestartPSMDBCluster", func(t *testing.T) {
+		s := NewPSMDBClusterService(db, dbaasClient)
+		mockReq := controllerv1beta1.RestartPSMDBClusterRequest{
+			KubeAuth: &controllerv1beta1.KubeAuth{
+				Kubeconfig: kubeconfTest,
+			},
+			Name: "third-psmdb-test",
+		}
+
+		dbaasClient.On("RestartPSMDBCluster", ctx, &mockReq).Return(&controllerv1beta1.RestartPSMDBClusterResponse{}, nil)
+
+		in := dbaasv1beta1.RestartPSMDBClusterRequest{
+			KubernetesClusterName: kubernetesClusterNameTest,
+			Name:                  "third-psmdb-test",
+		}
+
+		_, err := s.RestartPSMDBCluster(ctx, &in)
 		assert.NoError(t, err)
 	})
 

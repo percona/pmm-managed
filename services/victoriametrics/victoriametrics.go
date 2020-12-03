@@ -37,10 +37,9 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/prometheus"
 )
 
 const (
@@ -51,7 +50,7 @@ const (
 	BasePrometheusConfigPath = "/srv/prometheus/prometheus.base.yml"
 )
 
-var checkFailedRE = regexp.MustCompile(`FAILED: parsing YAML file \S+: (.+)\n`)
+var checkFailedRE = regexp.MustCompile(`(?s)cannot unmarshal data: (.+)`)
 
 // Service is responsible for interactions with victoria metrics.
 type Service struct {
@@ -228,11 +227,11 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 			cfg.GlobalConfig.ScrapeInterval = config.Duration(s.LR)
 		}
 		if cfg.GlobalConfig.ScrapeTimeout == 0 {
-			cfg.GlobalConfig.ScrapeTimeout = prometheus.ScrapeTimeout(s.LR)
+			cfg.GlobalConfig.ScrapeTimeout = ScrapeTimeout(s.LR)
 		}
 		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scrapeConfigForVictoriaMetrics(s.HR), scrapeConfigForVMAlert(s.HR))
-		prometheus.AddInternalServicesToScrape(cfg, s, settings.DBaaS.Enabled)
-		return prometheus.AddScrapeConfigs(svc.l, cfg, tx.Querier, &s, nil, false)
+		AddInternalServicesToScrape(cfg, s, settings.DBaaS.Enabled)
+		return AddScrapeConfigs(svc.l, cfg, tx.Querier, &s, nil, false)
 	})
 	if e != nil {
 		return nil, e
@@ -286,9 +285,12 @@ func (svc *Service) configAndReload(ctx context.Context, cfg []byte) error {
 		_ = f.Close()
 		_ = os.Remove(f.Name())
 	}()
-	args := []string{"check", "config", f.Name()}
-	cmd := exec.CommandContext(ctx, "promtool", args...) //nolint:gosec
+
+	args := []string{"-dryRun", "-promscrape.config", f.Name()}
+	cmd := exec.CommandContext(ctx, "victoriametrics", args...) //nolint:gosec
+
 	pdeathsig.Set(cmd, unix.SIGKILL)
+
 	b, err := cmd.CombinedOutput()
 	if err != nil {
 		svc.l.Errorf("%s", b)
@@ -301,6 +303,17 @@ func (svc *Service) configAndReload(ctx context.Context, cfg []byte) error {
 	}
 	svc.l.Debugf("%s", b)
 
+	args = append(args, "-promscrape.config.strictParse", "true")
+	cmd = exec.CommandContext(ctx, "victoriametrics", args...) //nolint:gosec
+	b, err = cmd.CombinedOutput()
+	if err != nil {
+		s := string(b)
+		if m := checkFailedRE.FindStringSubmatch(s); len(m) == 2 {
+			svc.l.Warnf("VictoriaMetrics scrape configuration contains unsupported params: %s", m[1])
+		} else {
+			svc.l.Warnf("VictoriaMetrics scrape configuration contains unsupported params: %s", b)
+		}
+	}
 	restore = true
 	if err = ioutil.WriteFile(svc.scrapeConfigPath, cfg, fi.Mode()); err != nil {
 		return errors.WithStack(err)
@@ -319,7 +332,7 @@ func scrapeConfigForVictoriaMetrics(interval time.Duration) *config.ScrapeConfig
 	return &config.ScrapeConfig{
 		JobName:        "victoriametrics",
 		ScrapeInterval: config.Duration(interval),
-		ScrapeTimeout:  prometheus.ScrapeTimeout(interval),
+		ScrapeTimeout:  ScrapeTimeout(interval),
 		MetricsPath:    "/prometheus/metrics",
 		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
 			StaticConfigs: []*config.Group{
@@ -337,7 +350,7 @@ func scrapeConfigForVMAlert(interval time.Duration) *config.ScrapeConfig {
 	return &config.ScrapeConfig{
 		JobName:        "vmalert",
 		ScrapeInterval: config.Duration(interval),
-		ScrapeTimeout:  prometheus.ScrapeTimeout(interval),
+		ScrapeTimeout:  ScrapeTimeout(interval),
 		MetricsPath:    "/metrics",
 		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
 			StaticConfigs: []*config.Group{
@@ -359,7 +372,7 @@ func (svc *Service) BuildScrapeConfigForVMAgent(pmmAgentID string) ([]byte, erro
 			return err
 		}
 		s := settings.MetricsResolutions
-		return prometheus.AddScrapeConfigs(svc.l, &cfg, tx.Querier, &s, pointer.ToString(pmmAgentID), true)
+		return AddScrapeConfigs(svc.l, &cfg, tx.Querier, &s, pointer.ToString(pmmAgentID), true)
 	})
 	if e != nil {
 		return nil, e

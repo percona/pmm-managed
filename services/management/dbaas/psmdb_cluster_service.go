@@ -64,10 +64,14 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 	clusters := make([]*dbaasv1beta1.ListPSMDBClustersResponse_Cluster, len(out.Clusters))
 	for i, c := range out.Clusters {
 		var computeResources *dbaasv1beta1.ComputeResources
-		if c.Params.Replicaset != nil && c.Params.Replicaset.ComputeResources != nil {
-			computeResources = &dbaasv1beta1.ComputeResources{
-				CpuM:        c.Params.Replicaset.ComputeResources.CpuM,
-				MemoryBytes: c.Params.Replicaset.ComputeResources.MemoryBytes,
+		var diskSize int64
+		if c.Params.Replicaset != nil {
+			diskSize = c.Params.Replicaset.DiskSize
+			if c.Params.Replicaset.ComputeResources != nil {
+				computeResources = &dbaasv1beta1.ComputeResources{
+					CpuM:        c.Params.Replicaset.ComputeResources.CpuM,
+					MemoryBytes: c.Params.Replicaset.ComputeResources.MemoryBytes,
+				}
 			}
 		}
 		cluster := dbaasv1beta1.ListPSMDBClustersResponse_Cluster{
@@ -76,6 +80,7 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 				ClusterSize: c.Params.ClusterSize,
 				Replicaset: &dbaasv1beta1.PSMDBClusterParams_ReplicaSet{
 					ComputeResources: computeResources,
+					DiskSize:         diskSize,
 				},
 			},
 			State: psmdbStates()[c.State],
@@ -132,6 +137,7 @@ func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv
 					CpuM:        req.Params.Replicaset.ComputeResources.CpuM,
 					MemoryBytes: req.Params.Replicaset.ComputeResources.MemoryBytes,
 				},
+				DiskSize: req.Params.Replicaset.DiskSize,
 			},
 		},
 	}
@@ -157,9 +163,9 @@ func (s PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *dbaasv
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
 		Name: req.Name,
-		Params: &dbaascontrollerv1beta1.PSMDBClusterParams{
+		Params: &dbaascontrollerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams{
 			ClusterSize: req.Params.ClusterSize,
-			Replicaset: &dbaascontrollerv1beta1.PSMDBClusterParams_ReplicaSet{
+			Replicaset: &dbaascontrollerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams_ReplicaSet{
 				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
 					CpuM:        req.Params.Replicaset.ComputeResources.CpuM,
 					MemoryBytes: req.Params.Replicaset.ComputeResources.MemoryBytes,
@@ -196,6 +202,28 @@ func (s PSMDBClusterService) DeletePSMDBCluster(ctx context.Context, req *dbaasv
 	}
 
 	return &dbaasv1beta1.DeletePSMDBClusterResponse{}, nil
+}
+
+// RestartPSMDBCluster restarts PSMDB cluster by given name.
+func (s PSMDBClusterService) RestartPSMDBCluster(ctx context.Context, req *dbaasv1beta1.RestartPSMDBClusterRequest) (*dbaasv1beta1.RestartPSMDBClusterResponse, error) {
+	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
+	if err != nil {
+		return nil, err
+	}
+
+	in := dbaascontrollerv1beta1.RestartPSMDBClusterRequest{
+		Name: req.Name,
+		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
+			Kubeconfig: kubernetesCluster.KubeConfig,
+		},
+	}
+
+	_, err = s.controllerClient.RestartPSMDBCluster(ctx, &in)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dbaasv1beta1.RestartPSMDBClusterResponse{}, nil
 }
 
 func psmdbStates() map[dbaascontrollerv1beta1.PSMDBClusterState]dbaasv1beta1.PSMDBClusterState {
