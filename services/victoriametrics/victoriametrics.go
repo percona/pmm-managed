@@ -110,7 +110,7 @@ func (svc *Service) Run(ctx context.Context) {
 	}
 }
 
-// updateConfiguration updates Prometheus configuration.
+// updateConfiguration updates VictoriaMetrics configuration.
 func (svc *Service) updateConfiguration(ctx context.Context) error {
 	start := time.Now()
 	defer func() {
@@ -348,8 +348,8 @@ func scrapeConfigForVictoriaMetrics(interval time.Duration) *config.ScrapeConfig
 
 // scrapeConfigForVMAlerts returns scrape config for two VMAlerts in Prometheus format.
 func scrapeConfigForVMAlerts(interval time.Duration) []*config.ScrapeConfig {
-	external := &config.ScrapeConfig{
-		JobName:        "vmalert-external",
+	integrated := &config.ScrapeConfig{
+		JobName:        "vmalert",
 		ScrapeInterval: config.Duration(interval),
 		ScrapeTimeout:  ScrapeTimeout(interval),
 		MetricsPath:    "/metrics",
@@ -363,9 +363,22 @@ func scrapeConfigForVMAlerts(interval time.Duration) []*config.ScrapeConfig {
 		},
 	}
 
-	// TODO internal
+	external := &config.ScrapeConfig{
+		JobName:        "vmalert-external",
+		ScrapeInterval: config.Duration(interval),
+		ScrapeTimeout:  ScrapeTimeout(interval),
+		MetricsPath:    "/metrics",
+		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
+			StaticConfigs: []*config.Group{
+				{
+					Targets: []string{"127.0.0.1:8881"},
+					Labels:  map[string]string{"instance": "pmm-server"},
+				},
+			},
+		},
+	}
 
-	return []*config.ScrapeConfig{external}
+	return []*config.ScrapeConfig{integrated, external}
 }
 
 // BuildScrapeConfigForAgent - builds scrape configuration for given pmmAgent

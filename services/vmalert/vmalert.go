@@ -42,19 +42,22 @@ const (
 type Service struct {
 	alertingRules *ExternalAlertingRules
 
-	baseURL             *url.URL
-	client              *http.Client
-	cachedAlertingRules string
-	irtm                prom.Collector
-	l                   *logrus.Entry
-	sema                chan struct{}
+	baseURL *url.URL
+	client  *http.Client
+	irtm    prom.Collector
+	l       *logrus.Entry
+	sema    chan struct{}
 }
 
+// Type represents VMAlert instance type.
 type Type string
 
 const (
+	// Integrated is a VMAlert for Integrated Alerting.
 	Integrated = Type("integrated")
-	External   = Type("external")
+
+	// External is a VMAlert for external Alertmanager.
+	External = Type("external")
 )
 
 // NewVMAlert creates new VMAlert service.
@@ -112,11 +115,7 @@ func (svc *Service) Collect(ch chan<- prom.Metric) {
 func (svc *Service) Run(ctx context.Context) {
 	svc.l.Info("Starting...")
 	defer svc.l.Info("Done.")
-	alertingRules, err := svc.alertingRules.ReadRules()
-	if err != nil {
-		svc.l.Warnf("Cannot load alerting rules: %s", err)
-	}
-	svc.cachedAlertingRules = alertingRules
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -207,8 +206,7 @@ func (svc *Service) reload(ctx context.Context) error {
 	return errors.Errorf("%d: %s", resp.StatusCode, b)
 }
 
-// updateConfiguration reads alerts configuration from file
-// compares it with cached and replace if needed.
+// updateConfiguration updates VMAlert configuration.
 func (svc *Service) updateConfiguration(ctx context.Context) error {
 	start := time.Now()
 	defer func() {
@@ -217,20 +215,11 @@ func (svc *Service) updateConfiguration(ctx context.Context) error {
 		}
 	}()
 
-	// read existing content
-	oldCfg, err := svc.alertingRules.ReadRules()
-	if err != nil {
-		return errors.WithStack(err)
-	}
+	// Currently, we generate rule files in other services, don't call RequestConfigurationUpdate too often,
+	// and don't have problems Prometheus had with often configuration reloads, so we just reload it.
+	// We might want to add checks to avoid reloading if rules did not change later.
 
-	// compare with new config
-	if oldCfg == svc.cachedAlertingRules {
-		svc.l.Infof("Configuration not changed, doing nothing.")
-
-		return nil
-	}
-	err = svc.reload(ctx)
-	if err != nil {
+	if err := svc.reload(ctx); err != nil {
 		return errors.WithStack(err)
 	}
 	svc.l.Infof("Configuration reloaded.")

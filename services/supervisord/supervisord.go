@@ -639,7 +639,7 @@ command =
 		--remoteRead.url=http://127.0.0.1:9090/prometheus
 		--remoteWrite.url=http://127.0.0.1:9090/prometheus
 		--rule=/srv/prometheus/rules/*.yml
-		--httpListenAddr=127.0.0.1:8880
+		--httpListenAddr=127.0.0.1:8881
 {{- range $index, $param := .VMAlertFlags }}
 		{{ $param }}
 {{- end }}

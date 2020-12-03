@@ -239,7 +239,7 @@ scrape_configs:
             - 127.0.0.1:9090
           labels:
             instance: pmm-server
-    - job_name: vmalert-external
+    - job_name: vmalert
       honor_timestamps: false
       scrape_interval: 5s
       scrape_timeout: 4s
@@ -247,6 +247,16 @@ scrape_configs:
       static_configs:
         - targets:
             - 127.0.0.1:8880
+          labels:
+            instance: pmm-server
+    - job_name: vmalert-external
+      honor_timestamps: false
+      scrape_interval: 5s
+      scrape_timeout: 4s
+      metrics_path: /metrics
+      static_configs:
+        - targets:
+            - 127.0.0.1:8881
           labels:
             instance: pmm-server
     - job_name: alertmanager
@@ -617,7 +627,7 @@ scrape_configs:
     - 127.0.0.1:9090
     labels:
       instance: pmm-server
-- job_name: vmalert-external
+- job_name: vmalert
   honor_timestamps: false
   scrape_interval: 5s
   scrape_timeout: 4s
@@ -625,6 +635,16 @@ scrape_configs:
   static_configs:
   - targets:
     - 127.0.0.1:8880
+    labels:
+      instance: pmm-server
+- job_name: vmalert-external
+  honor_timestamps: false
+  scrape_interval: 5s
+  scrape_timeout: 4s
+  metrics_path: /metrics
+  static_configs:
+  - targets:
+    - 127.0.0.1:8881
     labels:
       instance: pmm-server
 - job_name: alertmanager
@@ -695,7 +715,7 @@ scrape_configs:
             - 127.0.0.1:9090
           labels:
             instance: pmm-server
-    - job_name: vmalert-external
+    - job_name: vmalert
       honor_timestamps: false
       scrape_interval: 5s
       scrape_timeout: 4s
@@ -703,6 +723,16 @@ scrape_configs:
       static_configs:
         - targets:
             - 127.0.0.1:8880
+          labels:
+            instance: pmm-server
+    - job_name: vmalert-external
+      honor_timestamps: false
+      scrape_interval: 5s
+      scrape_timeout: 4s
+      metrics_path: /metrics
+      static_configs:
+        - targets:
+            - 127.0.0.1:8881
           labels:
             instance: pmm-server
     - job_name: alertmanager
