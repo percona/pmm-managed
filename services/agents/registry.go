@@ -1078,8 +1078,8 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID stri
 }
 
 // StartPTMySQLSummaryAction starts pt-mysql-summary action on the pmm-agent.
-// The pt-mysql-summary's execution may require some of the following params: IP address, port, socket, username, password.
-// The function returns nil if ok, otherwise an error code
+// The pt-mysql-summary's execution may require some of the following params: address (hostname or IP address),
+// port, socket, username, password.
 func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID, address string, port uint16, socket, username, password string) error {
 	// Action request data that'll be sent to agent
 	actionRequest := &agentpb.StartActionRequest{
