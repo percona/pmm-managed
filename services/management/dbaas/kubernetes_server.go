@@ -85,13 +85,13 @@ func (k kubernetesServer) RegisterKubernetesCluster(ctx context.Context, req *db
 // UnregisterKubernetesCluster removes a registered Kubernetes cluster from PMM.
 func (k kubernetesServer) UnregisterKubernetesCluster(ctx context.Context, req *dbaasv1beta1.UnregisterKubernetesClusterRequest) (*dbaasv1beta1.UnregisterKubernetesClusterResponse, error) {
 	err := k.db.InTransaction(func(t *reform.TX) error {
-		if req.Force {
-			return models.RemoveKubernetesCluster(k.db.Querier, req.KubernetesClusterName)
-		}
-
 		kubernetesCluster, err := models.FindKubernetesClusterByName(k.db.Querier, req.KubernetesClusterName)
 		if err != nil {
 			return err
+		}
+
+		if req.Force {
+			return models.RemoveKubernetesCluster(k.db.Querier, req.KubernetesClusterName)
 		}
 
 		xtraDBClusters, err := k.dbaasClient.ListXtraDBClusters(ctx,
