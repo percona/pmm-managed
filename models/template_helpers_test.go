@@ -32,7 +32,7 @@ import (
 	"github.com/percona/pmm-managed/utils/testdb"
 )
 
-func TestRuleTemplatesChannels(t *testing.T) {
+func TestRuleTemplates(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	defer func() {
 		require.NoError(t, sqlDB.Close())
