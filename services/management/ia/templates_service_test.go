@@ -79,22 +79,22 @@ func TestCollect(t *testing.T) {
 		svc.rulesFileDir = testDir
 		svc.collect(ctx)
 
-		rules := svc.getCollected(ctx)
-		require.NotEmpty(t, rules)
-		require.Len(t, rules, 2)
-		assert.Contains(t, rules, "builtin_rule")
-		assert.Contains(t, rules, "user_rule")
+		templates := svc.getCollected(ctx)
+		require.NotEmpty(t, templates)
+		require.Len(t, templates, 2)
+		assert.Contains(t, templates, "builtin_rule")
+		assert.Contains(t, templates, "user_rule")
 
 		// check whether map was cleared and updated on a subsequent call
 		svc.userTemplatesPath = testUser2Templates
 		svc.collect(ctx)
 
-		rules = svc.getCollected(ctx)
-		require.NotEmpty(t, rules)
-		require.Len(t, rules, 2)
-		assert.NotContains(t, rules, "user_rule")
-		assert.Contains(t, rules, "builtin_rule")
-		assert.Contains(t, rules, "user2_rule")
+		templates = svc.getCollected(ctx)
+		require.NotEmpty(t, templates)
+		require.Len(t, templates, 2)
+		assert.NotContains(t, templates, "user_rule")
+		assert.Contains(t, templates, "builtin_rule")
+		assert.Contains(t, templates, "user2_rule")
 	})
 }
 

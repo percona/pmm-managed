@@ -53,36 +53,36 @@ func TestRuleTemplates(t *testing.T) {
 		created, err := models.CreateTemplate(q, params)
 		require.NoError(t, err)
 
-		assert.Equal(t, params.Rule.Name, created.Name)
-		assert.Equal(t, params.Rule.Version, created.Version)
-		assert.Equal(t, params.Rule.Summary, created.Summary)
-		assert.ElementsMatch(t, params.Rule.Tiers, created.Tiers)
-		assert.Equal(t, params.Rule.Expr, created.Expr)
+		assert.Equal(t, params.Template.Name, created.Name)
+		assert.Equal(t, params.Template.Version, created.Version)
+		assert.Equal(t, params.Template.Summary, created.Summary)
+		assert.ElementsMatch(t, params.Template.Tiers, created.Tiers)
+		assert.Equal(t, params.Template.Expr, created.Expr)
 		assert.Equal(t,
 			models.Params{
 				{
-					Name:    params.Rule.Params[0].Name,
-					Summary: params.Rule.Params[0].Summary,
-					Unit:    params.Rule.Params[0].Unit,
+					Name:    params.Template.Params[0].Name,
+					Summary: params.Template.Params[0].Summary,
+					Unit:    params.Template.Params[0].Unit,
 					Type:    models.Float,
 					FloatParam: &models.FloatParam{
-						Default: params.Rule.Params[0].Value.(float64),
-						Min:     params.Rule.Params[0].Range[0].(float64),
-						Max:     params.Rule.Params[0].Range[1].(float64),
+						Default: params.Template.Params[0].Value.(float64),
+						Min:     params.Template.Params[0].Range[0].(float64),
+						Max:     params.Template.Params[0].Range[1].(float64),
 					},
 				},
 			},
 			created.Params)
-		assert.EqualValues(t, params.Rule.For, created.For)
+		assert.EqualValues(t, params.Template.For, created.For)
 		assert.Equal(t, models.WarningSeverity, created.Severity)
 
 		labels, err := created.GetLabels()
 		require.NoError(t, err)
-		assert.Equal(t, params.Rule.Labels, labels)
+		assert.Equal(t, params.Template.Labels, labels)
 
 		annotations, err := created.GetAnnotations()
 		require.NoError(t, err)
-		assert.Equal(t, params.Rule.Annotations, annotations)
+		assert.Equal(t, params.Template.Annotations, annotations)
 
 		assert.Equal(t, params.Source, created.Source)
 	})
@@ -106,36 +106,36 @@ func TestRuleTemplates(t *testing.T) {
 		updated, err := models.ChangeTemplate(q, uParams)
 		require.NoError(t, err)
 
-		assert.Equal(t, uParams.Rule.Name, updated.Name)
-		assert.Equal(t, uParams.Rule.Version, updated.Version)
-		assert.Equal(t, uParams.Rule.Summary, updated.Summary)
-		assert.ElementsMatch(t, uParams.Rule.Tiers, updated.Tiers)
-		assert.Equal(t, uParams.Rule.Expr, updated.Expr)
+		assert.Equal(t, uParams.Template.Name, updated.Name)
+		assert.Equal(t, uParams.Template.Version, updated.Version)
+		assert.Equal(t, uParams.Template.Summary, updated.Summary)
+		assert.ElementsMatch(t, uParams.Template.Tiers, updated.Tiers)
+		assert.Equal(t, uParams.Template.Expr, updated.Expr)
 		assert.Equal(t,
 			models.Params{
 				{
-					Name:    uParams.Rule.Params[0].Name,
-					Summary: uParams.Rule.Params[0].Summary,
-					Unit:    uParams.Rule.Params[0].Unit,
+					Name:    uParams.Template.Params[0].Name,
+					Summary: uParams.Template.Params[0].Summary,
+					Unit:    uParams.Template.Params[0].Unit,
 					Type:    models.Float,
 					FloatParam: &models.FloatParam{
-						Default: uParams.Rule.Params[0].Value.(float64),
-						Min:     uParams.Rule.Params[0].Range[0].(float64),
-						Max:     uParams.Rule.Params[0].Range[1].(float64),
+						Default: uParams.Template.Params[0].Value.(float64),
+						Min:     uParams.Template.Params[0].Range[0].(float64),
+						Max:     uParams.Template.Params[0].Range[1].(float64),
 					},
 				},
 			},
 			updated.Params)
-		assert.EqualValues(t, uParams.Rule.For, updated.For)
+		assert.EqualValues(t, uParams.Template.For, updated.For)
 		assert.Equal(t, models.WarningSeverity, updated.Severity)
 
 		labels, err := updated.GetLabels()
 		require.NoError(t, err)
-		assert.Equal(t, uParams.Rule.Labels, labels)
+		assert.Equal(t, uParams.Template.Labels, labels)
 
 		annotations, err := updated.GetAnnotations()
 		require.NoError(t, err)
-		assert.Equal(t, uParams.Rule.Annotations, annotations)
+		assert.Equal(t, uParams.Template.Annotations, annotations)
 
 		assert.Equal(t, cParams.Source, updated.Source)
 	})
@@ -197,7 +197,7 @@ func TestRuleTemplates(t *testing.T) {
 
 func createTemplateParams(name string) *models.CreateTemplateParams {
 	return &models.CreateTemplateParams{
-		Rule: &alert.Rule{
+		Template: &alert.Template{
 			Name:    name,
 			Version: 1,
 			Summary: gofakeit.Quote(),
@@ -224,7 +224,7 @@ func createTemplateParams(name string) *models.CreateTemplateParams {
 
 func changeTemplateParams(name string) *models.ChangeTemplateParams {
 	return &models.ChangeTemplateParams{
-		Rule: &alert.Rule{
+		Template: &alert.Template{
 			Name:    name,
 			Version: 1,
 			Summary: gofakeit.Quote(),
