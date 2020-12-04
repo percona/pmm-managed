@@ -99,9 +99,6 @@ func (this *UpdatePSMDBClusterRequest) Validate() error {
 	return nil
 }
 func (this *UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams) Validate() error {
-	if !(this.ClusterSize > 0) {
-		return github_com_mwitkow_go_proto_validators.FieldError("ClusterSize", fmt.Errorf(`value '%v' must be greater than '0'`, this.ClusterSize))
-	}
 	if nil == this.Replicaset {
 		return github_com_mwitkow_go_proto_validators.FieldError("Replicaset", fmt.Errorf("message must exist"))
 	}
