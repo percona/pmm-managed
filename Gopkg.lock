@@ -392,7 +392,7 @@
 
 [[projects]]
   branch = "main"
-  digest = "1:d01e95c04ad3858fddd5f94f13a4c869a429ac09ffbb417458727f51ec0cb7db"
+  digest = "1:1437b7f23ac82538bfd92ed22909f854d6ef51020792b76bec03c0e2a4bec125"
   name = "github.com/percona-platform/saas"
   packages = [
     "gen/auth",
@@ -405,7 +405,7 @@
     "pkg/starlark",
   ]
   pruneopts = "NUT"
-  revision = "8657f06b2badaee3980eb85fa61d7e2f7b34484b"
+  revision = "ad38b2c7116bd3cc80057ab2a8cf86166d9d2e24"
 
 [[projects]]
   digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
@@ -417,7 +417,7 @@
 
 [[projects]]
   branch = "PMM-6983-force-for-unregister-k8s"
-  digest = "1:138392b603b3f720a9929a0f9694b5dcf313b7890fc5d4ccd13aba70b56f68e7"
+  digest = "1:600a7950b6c7d6d826758f1352e1834e2fa9d45c3eee1578ff5bf96bb9ed2e37"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -440,7 +440,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "81da092967f5ce7ad8d5d95303c17165cde74d72"
+  revision = "649c21e55941a95907aade8cedf81d9955888457"
 
 [[projects]]
   digest = "1:6832634ec059f4bfddaff75621cf1c4750949129c6de2e5e58e01059d0851e25"
