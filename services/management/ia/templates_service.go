@@ -84,7 +84,6 @@ func NewTemplatesService(db *reform.DB) *TemplatesService {
 		l:                    logrus.WithField("component", "management/ia/templates"),
 		builtinTemplatesPath: builtinTemplatesPath,
 		userTemplatesPath:    userTemplatesPath,
-		rulesFileDir:         ruleFileDir,
 		templates:            make(map[string]Template),
 	}
 }
