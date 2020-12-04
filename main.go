@@ -442,7 +442,7 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 	}
 	deps.vmdb.RequestConfigurationUpdate()
 
-	// TODO both VMAlert
+	// TODO Check both VMAlerts.
 
 	deps.l.Infof("Checking Alertmanager...")
 	if err = deps.alertmanager.IsReady(ctx); err != nil {
