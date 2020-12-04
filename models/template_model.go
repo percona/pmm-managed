@@ -93,19 +93,19 @@ func (t *Template) SetAnnotations(m map[string]string) error {
 // Tiers represents tiers slice.
 type Tiers []common.Tier
 
-// Value implements database/sql/driver Valuer interface.
+// Value implements database/sql/driver.Valuer interface. Should be defined on the value.
 func (t Tiers) Value() (driver.Value, error) { return jsonValue(t) }
 
-// Scan implements database/sql Scanner interface.
+// Scan implements database/sql.Scanner interface. Should be defined on the pointer.
 func (t *Tiers) Scan(src interface{}) error { return jsonScan(t, src) }
 
 // Params represent Param slice.
 type Params []Param
 
-// Value implements database/sql/driver Valuer interface.
+// Value implements database/sql/driver.Valuer interface. Should be defined on the value.
 func (p Params) Value() (driver.Value, error) { return jsonValue(p) }
 
-// Scan implements database/sql Scanner interface.
+// Scan implements database/sql.Scanner interface. Should be defined on the pointer.
 func (p *Params) Scan(src interface{}) error { return jsonScan(p, src) }
 
 // ParamType represents parameter type.
