@@ -67,7 +67,8 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 			Params: &dbaasv1beta1.XtraDBClusterParams{
 				ClusterSize: c.Params.ClusterSize,
 			},
-			State: dbaasv1beta1.XtraDBClusterState(c.State),
+			State:  dbaasv1beta1.XtraDBClusterState(c.State),
+			Paused: c.Params.Paused,
 		}
 
 		if c.Params.Pxc != nil {
@@ -199,6 +200,14 @@ func (s XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *dbaa
 				},
 			},
 		},
+	}
+
+	if req.Params.Suspend {
+		in.Params.Suspend = req.Params.Suspend
+	}
+
+	if req.Params.Resume {
+		in.Params.Resume = req.Params.Resume
 	}
 
 	_, err = s.controllerClient.UpdateXtraDBCluster(ctx, &in)
