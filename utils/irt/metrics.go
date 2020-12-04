@@ -18,14 +18,21 @@
 package irt
 
 import (
+	"fmt"
 	"net/http"
 
 	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/common/model"
 )
 
 // WithMetrics returns http.RoundTripper instrumented with returned Prometheus metrics.
 func WithMetrics(t http.RoundTripper, subsystem string) (http.RoundTripper, prom.Collector) {
+	// Check early as a workaround for https://github.com/prometheus/client_golang/issues/822.
+	if !model.IsValidMetricName(model.LabelValue(subsystem)) {
+		panic(fmt.Sprintf("%q is not a valid subsystem name.", subsystem))
+	}
+
 	m := &metrics{
 		inflight: prom.NewGauge(prom.GaugeOpts{
 			Namespace: "promhttp",
@@ -49,10 +56,8 @@ func WithMetrics(t http.RoundTripper, subsystem string) (http.RoundTripper, prom
 	}
 
 	t = promhttp.InstrumentRoundTripperInFlight(m.inflight, t)
-
-	// FIXME ?!
-	// t = promhttp.InstrumentRoundTripperCounter(m.counter, t)
-	// t = promhttp.InstrumentRoundTripperDuration(m.duration, t)
+	t = promhttp.InstrumentRoundTripperCounter(m.counter, t)
+	t = promhttp.InstrumentRoundTripperDuration(m.duration, t)
 
 	// TODO InstrumentRoundTripperTrace
 

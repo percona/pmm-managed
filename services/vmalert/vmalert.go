@@ -74,7 +74,7 @@ func NewVMAlert(alertRules *ExternalAlertingRules, typ Type) (*Service, error) {
 		return nil, errors.Wrapf(err, "failed to parse URL for %s VMAlert", typ)
 	}
 
-	component := "vmalert/" + string(typ)
+	subsystem := "vmalert_" + string(typ)
 	var t http.RoundTripper = &http.Transport{
 		DialContext: (&net.Dialer{
 			Timeout:   3 * time.Second,
@@ -85,9 +85,9 @@ func NewVMAlert(alertRules *ExternalAlertingRules, typ Type) (*Service, error) {
 		ExpectContinueTimeout: 1 * time.Second,
 	}
 	if logrus.GetLevel() >= logrus.TraceLevel {
-		t = irt.WithLogger(t, logrus.WithField("component", component+"/client").Tracef)
+		t = irt.WithLogger(t, logrus.WithField("component", subsystem+"/client").Tracef)
 	}
-	t, irtm := irt.WithMetrics(t, component)
+	t, irtm := irt.WithMetrics(t, subsystem)
 
 	return &Service{
 		alertingRules: alertRules,
@@ -96,7 +96,7 @@ func NewVMAlert(alertRules *ExternalAlertingRules, typ Type) (*Service, error) {
 			Transport: t,
 		},
 		irtm: irtm,
-		l:    logrus.WithField("component", component),
+		l:    logrus.WithField("component", subsystem),
 		sema: make(chan struct{}, 1),
 	}, nil
 }
