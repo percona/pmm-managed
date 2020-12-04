@@ -26,7 +26,7 @@ import (
 	"github.com/percona/pmm-managed/utils/tests"
 )
 
-func TestCustomLabels(t *testing.T) {
+func TestLabels(t *testing.T) {
 	var b []byte
 	var err error
 
