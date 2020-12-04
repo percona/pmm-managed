@@ -60,9 +60,6 @@ func CreateDataDir(params Params) error {
 
 		chownDirSysStat := chownDirStat.Sys().(*syscall.Stat_t)
 		bUID, bGID := int(chownDirSysStat.Uid), int(chownDirSysStat.Gid)
-		// TODO: in case of `/srv/alertmanager/data` it only chowns the `data` dir
-		// and its parent dir is set to root:root but when we `make env-up`
-		// `srv/alertmanager` dir is always set to pmm:pmm, same goes for other paths
 		if aUID != bUID || aGID != bGID {
 			if err := os.Chown(params.Path, bUID, bGID); err != nil {
 				return fmt.Errorf("cannot chown datadir %v", err)
