@@ -28,16 +28,16 @@ import (
 // Rule represents alert rule configuration.
 //reform:ia_rules
 type Rule struct {
-	Template     *Template     `reform:"template"`
+	TemplateName string        `reform:"template_name"`
 	ID           string        `reform:"id,pk"`
 	Summary      string        `reform:"summary"`
 	Disabled     bool          `reform:"disabled"`
 	Params       RuleParams    `reform:"params"`
 	For          time.Duration `reform:"for"`
-	Severity     string        `reform:"severity"`
+	Severity     Severity      `reform:"severity"`
 	CustomLabels []byte        `reform:"custom_labels"`
 	Filters      Filters       `reform:"filters"`
-	Channels     Channels      `reform:"channels"`
+	ChannelIDs   ChannelIDs    `reform:"channel_ids"`
 	CreatedAt    time.Time     `reform:"created_at"`
 	UpdatedAt    time.Time     `reform:"updated_at"`
 }
@@ -66,18 +66,28 @@ func (r *Rule) AfterFind() error {
 	return nil
 }
 
-type FilterType int32
+// GetLabels decodes template labels.
+func (r *Rule) GetCustomLabels() (map[string]string, error) {
+	return getLabels(r.CustomLabels)
+}
+
+// SetLabels encodes template labels.
+func (r *Rule) SetCustomLabels(m map[string]string) error {
+	return setLabels(m, &r.CustomLabels)
+}
+
+type FilterType string
 
 const (
-	Invalid FilterType = 0
+	Invalid = FilterType("invalid")
 	// =
-	Equal FilterType = 1
+	Equal = FilterType("=")
 	// !=
-	NotEqual FilterType = 2
+	NotEqual = FilterType("!=")
 	// =~
-	Regex FilterType = 3
+	Regex = FilterType("=~")
 	// !~
-	NotRegex FilterType = 4
+	NotRegex = FilterType("!~")
 )
 
 type Filters []Filter
@@ -100,15 +110,6 @@ func (f Filter) Value() (driver.Value, error) { return jsonValue(f) }
 // Scan implements database/sql.Scanner interface. Should be defined on the pointer.
 func (f *Filter) Scan(src interface{}) error { return jsonScan(f, src) }
 
-type ParamType int32
-
-const (
-	InvalidRuleParam ParamType = 0
-	BoolRuleParam    ParamType = 1
-	FloatRuleParam   ParamType = 2
-	StringRuleParam  ParamType = 3
-)
-
 type RuleParams []RuleParam
 
 // Value implements database/sql/driver Valuer interface.
@@ -118,11 +119,11 @@ func (t RuleParams) Value() (driver.Value, error) { return jsonValue(t) }
 func (t *RuleParams) Scan(src interface{}) error { return jsonScan(t, src) }
 
 type RuleParam struct {
-	Name      string    `json:"name"`
-	Type      ParamType `json:"type"`
-	BoolVal   bool      `json:"bval"`
-	FloatVal  float32   `json:"fval"`
-	StringVal string    `json:"sval"`
+	Name        string    `json:"name"`
+	Type        ParamType `json:"type"`
+	BoolValue   bool      `json:"bool"`
+	FloatValue  float32   `json:"float"`
+	StringValue string    `json:"string"`
 }
 
 // Value implements database/sql/driver.Valuer interface. Should be defined on the value.
@@ -131,14 +132,14 @@ func (p RuleParam) Value() (driver.Value, error) { return jsonValue(p) }
 // Scan implements database/sql.Scanner interface. Should be defined on the pointer.
 func (p *RuleParam) Scan(src interface{}) error { return jsonScan(p, src) }
 
-// Channels is a slice of models.Channel
-type Channels []*Channel
+// ChannelIDs is a slice of notification channel ids.
+type ChannelIDs []string
 
 // Value implements database/sql/driver Valuer interface.
-func (t Channels) Value() (driver.Value, error) { return jsonValue(t) }
+func (t ChannelIDs) Value() (driver.Value, error) { return jsonValue(t) }
 
 // Scan implements database/sql Scanner interface.
-func (t *Channels) Scan(src interface{}) error { return jsonScan(t, src) }
+func (t *ChannelIDs) Scan(src interface{}) error { return jsonScan(t, src) }
 
 // check interfaces.
 var (

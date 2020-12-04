@@ -191,15 +191,15 @@ func RemoveTemplate(q *reform.Querier, name string) error {
 	return nil
 }
 
-func convertTemplateParams(params []alert.Parameter) (Params, error) {
-	res := make(Params, len(params))
+func convertTemplateParams(params []alert.Parameter) (TemplateParams, error) {
+	res := make(TemplateParams, len(params))
 	for i, param := range params {
 		t, err := convertParamType(param.Type)
 		if err != nil {
 			return nil, err
 		}
 
-		res[i] = Param{
+		res[i] = TemplateParam{
 			Name:    param.Name,
 			Summary: param.Summary,
 			Unit:    param.Unit,

@@ -34,12 +34,6 @@ import (
 
 func TestRuleTemplates(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
-<<<<<<< HEAD
-	defer func() {
-		require.NoError(t, sqlDB.Close())
-	}()
-=======
->>>>>>> release/2.13
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
 	t.Run("create", func(t *testing.T) {
@@ -62,22 +56,7 @@ func TestRuleTemplates(t *testing.T) {
 		assert.ElementsMatch(t, params.Template.Tiers, created.Tiers)
 		assert.Equal(t, params.Template.Expr, created.Expr)
 		assert.Equal(t,
-<<<<<<< HEAD
-			models.Params{
-				{
-					Name:    params.Template.Params[0].Name,
-					Summary: params.Template.Params[0].Summary,
-					Unit:    params.Template.Params[0].Unit,
-					Type:    models.Float,
-					FloatParam: &models.FloatParam{
-						Default: params.Template.Params[0].Value.(float64),
-						Min:     params.Template.Params[0].Range[0].(float64),
-						Max:     params.Template.Params[0].Range[1].(float64),
-					},
-				},
-			},
-=======
-			models.Params{{
+			models.TemplateParams{{
 				Name:    params.Template.Params[0].Name,
 				Summary: params.Template.Params[0].Summary,
 				Unit:    params.Template.Params[0].Unit,
@@ -88,7 +67,6 @@ func TestRuleTemplates(t *testing.T) {
 					Max:     params.Template.Params[0].Range[1].(float64),
 				},
 			}},
->>>>>>> release/2.13
 			created.Params)
 		assert.EqualValues(t, params.Template.For, created.For)
 		assert.Equal(t, models.WarningSeverity, created.Severity)
@@ -129,22 +107,7 @@ func TestRuleTemplates(t *testing.T) {
 		assert.ElementsMatch(t, uParams.Template.Tiers, updated.Tiers)
 		assert.Equal(t, uParams.Template.Expr, updated.Expr)
 		assert.Equal(t,
-<<<<<<< HEAD
-			models.Params{
-				{
-					Name:    uParams.Template.Params[0].Name,
-					Summary: uParams.Template.Params[0].Summary,
-					Unit:    uParams.Template.Params[0].Unit,
-					Type:    models.Float,
-					FloatParam: &models.FloatParam{
-						Default: uParams.Template.Params[0].Value.(float64),
-						Min:     uParams.Template.Params[0].Range[0].(float64),
-						Max:     uParams.Template.Params[0].Range[1].(float64),
-					},
-				},
-			},
-=======
-			models.Params{{
+			models.TemplateParams{{
 				Name:    uParams.Template.Params[0].Name,
 				Summary: uParams.Template.Params[0].Summary,
 				Unit:    uParams.Template.Params[0].Unit,
@@ -155,7 +118,6 @@ func TestRuleTemplates(t *testing.T) {
 					Max:     uParams.Template.Params[0].Range[1].(float64),
 				},
 			}},
->>>>>>> release/2.13
 			updated.Params)
 		assert.EqualValues(t, uParams.Template.For, updated.For)
 		assert.Equal(t, models.WarningSeverity, updated.Severity)
@@ -234,18 +196,6 @@ func createTemplateParams(name string) *models.CreateTemplateParams {
 			Summary: gofakeit.Quote(),
 			Tiers:   []common.Tier{common.Anonymous},
 			Expr:    gofakeit.Quote(),
-<<<<<<< HEAD
-			Params: []alert.Parameter{
-				{
-					Name:    gofakeit.UUID(),
-					Summary: gofakeit.Quote(),
-					Unit:    gofakeit.Letter(),
-					Type:    alert.Float,
-					Range:   []interface{}{float64(10), float64(100)},
-					Value:   float64(50),
-				},
-			},
-=======
 			Params: []alert.Parameter{{
 				Name:    gofakeit.UUID(),
 				Summary: gofakeit.Quote(),
@@ -254,7 +204,6 @@ func createTemplateParams(name string) *models.CreateTemplateParams {
 				Range:   []interface{}{float64(10), float64(100)},
 				Value:   float64(50),
 			}},
->>>>>>> release/2.13
 			For:         3,
 			Severity:    common.Warning,
 			Labels:      map[string]string{"foo": "bar"},
@@ -272,18 +221,6 @@ func changeTemplateParams(name string) *models.ChangeTemplateParams {
 			Summary: gofakeit.Quote(),
 			Tiers:   []common.Tier{common.Anonymous},
 			Expr:    gofakeit.Quote(),
-<<<<<<< HEAD
-			Params: []alert.Parameter{
-				{
-					Name:    gofakeit.UUID(),
-					Summary: gofakeit.Quote(),
-					Unit:    gofakeit.Letter(),
-					Type:    alert.Float,
-					Range:   []interface{}{float64(10), float64(100)},
-					Value:   float64(50),
-				},
-			},
-=======
 			Params: []alert.Parameter{{
 				Name:    gofakeit.UUID(),
 				Summary: gofakeit.Quote(),
@@ -292,7 +229,6 @@ func changeTemplateParams(name string) *models.ChangeTemplateParams {
 				Range:   []interface{}{float64(10), float64(100)},
 				Value:   float64(50),
 			}},
->>>>>>> release/2.13
 			For:         promconfig.Duration(gofakeit.Number(1, 100)),
 			Severity:    common.Warning,
 			Labels:      map[string]string{"foo": "bar"},

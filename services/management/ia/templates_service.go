@@ -27,13 +27,10 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"time"
 
-	"github.com/golang/protobuf/ptypes"
 	"github.com/percona-platform/saas/pkg/alert"
 	saas "github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona-platform/saas/pkg/common"
-	"github.com/percona/pmm/api/managementpb"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/percona/promconfig"
 	"github.com/pkg/errors"
@@ -222,12 +219,12 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]Template, error) {
 					Expr:        template.Expr,
 					Params:      params,
 					For:         promconfig.Duration(template.For),
-					Severity:    convertSeverity(template.Severity),
+					Severity:    common.Severity(convertModelToSeverity(template.Severity)),
 					Labels:      labels,
 					Annotations: annotations,
 				},
 				Yaml:   template.Yaml,
-				Source: convertSource(template.Source),
+				Source: convertModelToSource(template.Source),
 			},
 		)
 	}
@@ -235,7 +232,7 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]Template, error) {
 	return res, nil
 }
 
-func convertSource(source models.Source) iav1beta1.TemplateSource {
+func convertModelToSource(source models.Source) iav1beta1.TemplateSource {
 	switch source {
 	case models.BuiltInSource:
 		return iav1beta1.TemplateSource_BUILT_IN
@@ -247,29 +244,6 @@ func convertSource(source models.Source) iav1beta1.TemplateSource {
 		return iav1beta1.TemplateSource_USER_API
 	default:
 		return iav1beta1.TemplateSource_TEMPLATE_SOURCE_INVALID
-	}
-}
-
-func convertSeverity(severity models.Severity) common.Severity {
-	switch severity {
-	case models.EmergencySeverity:
-		return common.Emergency
-	case models.AlertSeverity:
-		return common.Alert
-	case models.CriticalSeverity:
-		return common.Critical
-	case models.ErrorSeverity:
-		return common.Error
-	case models.WarningSeverity:
-		return common.Warning
-	case models.NoticeSeverity:
-		return common.Notice
-	case models.InfoSeverity:
-		return common.Info
-	case models.DebugSeverity:
-		return common.Debug
-	default:
-		return common.Unknown
 	}
 }
 
@@ -304,16 +278,6 @@ func convertParamType(t alert.Type) iav1beta1.ParamType {
 		return iav1beta1.ParamType_FLOAT
 	default:
 		return iav1beta1.ParamType_PARAM_TYPE_INVALID
-	}
-}
-
-func convertParamUnit(u string) iav1beta1.ParamUnit {
-	// TODO: check possible variants.
-	switch u {
-	case "%", "percentage":
-		return iav1beta1.ParamUnit_PERCENTAGE
-	default:
-		return iav1beta1.ParamUnit_PARAM_UNIT_INVALID
 	}
 }
 
@@ -452,60 +416,10 @@ func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.Lis
 	res := &iav1beta1.ListTemplatesResponse{
 		Templates: make([]*iav1beta1.Template, 0, len(templates)),
 	}
-	for _, r := range templates {
-		t := &iav1beta1.Template{
-			Name:        r.Name,
-			Summary:     r.Summary,
-			Expr:        r.Expr,
-			Params:      make([]*iav1beta1.TemplateParam, 0, len(r.Params)),
-			For:         ptypes.DurationProto(time.Duration(r.For)),
-			Severity:    managementpb.Severity(r.Severity),
-			Labels:      r.Labels,
-			Annotations: r.Annotations,
-			Source:      r.Source,
-			Yaml:        r.Yaml,
-		}
-
-		for _, p := range r.Params {
-			tp := &iav1beta1.TemplateParam{
-				Name:    p.Name,
-				Summary: p.Summary,
-				Unit:    convertParamUnit(p.Unit),
-				Type:    convertParamType(p.Type),
-			}
-
-			switch p.Type {
-			case alert.Float:
-				value, err := p.GetValueForFloat()
-				if err != nil {
-					return nil, errors.Wrap(err, "failed to get value for float parameter")
-				}
-
-				fp := &iav1beta1.TemplateFloatParam{
-					HasDefault: true,           // TODO remove or fill with valid value.
-					Default:    float32(value), // TODO eliminate conversion.
-				}
-
-				if p.Range != nil {
-					min, max, err := p.GetRangeForFloat()
-					if err != nil {
-						return nil, errors.Wrap(err, "failed to get range for float parameter")
-					}
-
-					fp.HasMin = true      // TODO remove or fill with valid value.
-					fp.Min = float32(min) // TODO eliminate conversion.,
-					fp.HasMax = true      // TODO remove or fill with valid value.
-					fp.Max = float32(max) // TODO eliminate conversion.,
-				}
-
-				tp.Value = &iav1beta1.TemplateParam_Float{Float: fp}
-
-				t.Params = append(t.Params, tp)
-
-			default:
-				s.l.Warnf("Skipping unexpected parameter type %q for %q.", p.Type, r.Name)
-			}
-
+	for _, template := range templates {
+		t, err := convertTemplate(s.l, template)
+		if err != nil {
+			return nil, err
 		}
 
 		res.Templates = append(res.Templates, t)

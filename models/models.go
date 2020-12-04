@@ -115,15 +115,9 @@ func prepareLabels(m map[string]string, removeEmptyValues bool) error {
 	return nil
 }
 
-<<<<<<< HEAD
-// getLabels decodes model's byte array field to the string map.
-func getLabels(field []byte) (map[string]string, error) {
-	if len(field) == 0 {
-=======
 // getLabels deserializes model's Prometheus labels.
 func getLabels(b []byte) (map[string]string, error) {
 	if len(b) == 0 {
->>>>>>> release/2.13
 		return nil, nil
 	}
 	m := make(map[string]string)
@@ -133,13 +127,8 @@ func getLabels(b []byte) (map[string]string, error) {
 	return m, nil
 }
 
-<<<<<<< HEAD
-// setLabels encodes string map as model's byte array field.
-func setLabels(m map[string]string, field *[]byte) error {
-=======
 // getLabels serializes model's Prometheus labels.
 func setLabels(m map[string]string, res *[]byte) error {
->>>>>>> release/2.13
 	if err := prepareLabels(m, false); err != nil {
 		return err
 	}
@@ -183,3 +172,29 @@ func jsonScan(v, src interface{}) error {
 	}
 	return nil
 }
+
+// Severity represents alert severity.
+type Severity string
+
+// Available severity levels.
+const (
+	UnknownSeverity   = Severity("unknown")
+	EmergencySeverity = Severity("emergency")
+	AlertSeverity     = Severity("alert")
+	CriticalSeverity  = Severity("critical")
+	ErrorSeverity     = Severity("error")
+	WarningSeverity   = Severity("warning")
+	NoticeSeverity    = Severity("notice")
+	InfoSeverity      = Severity("info")
+	DebugSeverity     = Severity("debug")
+)
+
+// ParamType represents parameter type.
+type ParamType string
+
+// Available parameter types.
+const (
+	Float  = ParamType("float")
+	Bool   = ParamType("bool")
+	String = ParamType("string")
+)

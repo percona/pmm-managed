@@ -18,13 +18,12 @@ package ia
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
-	"time"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/percona/pmm/api/managementpb"
+	"github.com/percona-platform/saas/pkg/common"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -34,86 +33,106 @@ import (
 
 // RulesService represents API for Integrated Alerting Rules.
 type RulesService struct {
-	db *reform.DB
+	db        *reform.DB
+	l         *logrus.Entry
+	templates *TemplatesService
 }
 
 // NewRulesService creates an API for Integrated Alerting Rules.
-func NewRulesService(db *reform.DB) *RulesService {
+func NewRulesService(db *reform.DB, templates *TemplatesService) *RulesService {
 	return &RulesService{
-		db: db,
+		db:        db,
+		l:         logrus.WithField("component", "management/ia/rules"),
+		templates: templates,
 	}
 }
 
 // ListAlertRules returns a list of all Integrated Alerting rules.
 func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAlertRulesRequest) (*iav1beta1.ListAlertRulesResponse, error) {
 	var rules []models.Rule
+	var channels []models.Channel
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
 		rules, err = models.FindRules(tx.Querier)
-		return err
+		if err != nil {
+			return err
+		}
+
+		channels, err = models.FindChannels(tx.Querier)
+		if err != nil {
+			return err
+		}
+		return nil
 	})
+
 	if e != nil {
 		return nil, e
 	}
 
+	cm := make(map[string]models.Channel)
+	for _, channel := range channels {
+		cm[channel.ID] = channel
+	}
+
+	templates := s.templates.getCollected(ctx)
+
 	res := make([]*iav1beta1.Rule, len(rules))
+	var err error
 	for i, rule := range rules {
-		createdAt, err := ptypes.TimestampProto(rule.CreatedAt)
-		if err != nil {
-			return nil, err
-		}
-
 		r := &iav1beta1.Rule{
-			RuleId:    rule.ID,
-			Disabled:  rule.Disabled,
-			Summary:   rule.Summary,
-			Severity:  managementpb.Severity(managementpb.Severity_value[rule.Severity]),
-			For:       ptypes.DurationProto(rule.For),
-			CreatedAt: createdAt,
+			RuleId:   rule.ID,
+			Disabled: rule.Disabled,
+			Summary:  rule.Summary,
+			Severity: convertModelToSeverity(rule.Severity),
+			For:      ptypes.DurationProto(rule.For),
 		}
 
-		template, err := makeTemplate(rule.Template)
+		r.CreatedAt, err = ptypes.TimestampProto(rule.CreatedAt)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to convert timestamp")
 		}
-		r.Template = template
 
-		params, err := makeRuleParams(rule.Params)
+		r.Template, err = convertTemplate(s.l, templates[rule.TemplateName])
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to convert template")
 		}
-		r.Params = params
 
-		var labels map[string]string
-		err = json.Unmarshal(rule.CustomLabels, &labels)
+		r.Params, err = convertModelToRuleParams(rule.Params)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to convert rule parameters")
 		}
-		r.CustomLabels = labels
 
-		filters := make([]*iav1beta1.Filter, len(rule.Filters))
+		r.CustomLabels, err = rule.GetCustomLabels()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to load rule labels")
+		}
+
+		r.Filters = make([]*iav1beta1.Filter, len(rule.Filters))
 		for i, filter := range rule.Filters {
-			f := &iav1beta1.Filter{
-				Type:  iav1beta1.FilterType(filter.Type),
+			r.Filters[i] = &iav1beta1.Filter{
+				Type:  convertModelToFilterType(filter.Type),
 				Key:   filter.Key,
 				Value: filter.Val,
 			}
-			filters[i] = f
 		}
-		r.Filters = filters
 
-		channels := make([]*iav1beta1.Channel, len(rule.Channels))
-		for i, channel := range rule.Channels {
-			c, err := makeChannel(channel)
-			if err != nil {
-				return nil, err
+		for _, id := range rule.ChannelIDs {
+			channel, ok := cm[id]
+			if !ok {
+				s.l.Warningf("Skip missing channel with ID %s", id)
+				continue
 			}
-			channels[i] = c
+
+			c, err := convertChannel(&channel)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to convert channel")
+			}
+			r.Channels = append(r.Channels, c)
 		}
-		r.Channels = channels
 
 		res[i] = r
 	}
+
 	return &iav1beta1.ListAlertRulesResponse{Rules: res}, nil
 }
 
@@ -123,18 +142,17 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 		TemplateName: req.TemplateName,
 		Disabled:     req.Disabled,
 		For:          req.For,
-		Severity:     req.Severity,
+		Severity:     common.Severity(req.Severity),
 		CustomLabels: req.CustomLabels,
 		ChannelIDs:   req.ChannelIds,
+		Filters:      convertFiltersToModel(req.Filters),
 	}
 
-	ruleParams, err := makeModelRuleParams(req.Params)
+	var err error
+	params.RuleParams, err = convertRuleParamsToModel(req.Params)
 	if err != nil {
 		return nil, err
 	}
-	params.RuleParams = ruleParams
-
-	params.Filters = makeFilters(req.Filters)
 
 	var rule *models.Rule
 	e := s.db.InTransaction(func(tx *reform.TX) error {
@@ -154,18 +172,18 @@ func (s *RulesService) UpdateAlertRule(ctx context.Context, req *iav1beta1.Updat
 		RuleID:       req.RuleId,
 		Disabled:     req.Disabled,
 		For:          req.For,
-		Severity:     req.Severity,
+		Severity:     common.Severity(req.Severity),
 		CustomLabels: req.CustomLabels,
 		ChannelIDs:   req.ChannelIds,
 	}
 
-	ruleParams, err := makeModelRuleParams(req.Params)
+	ruleParams, err := convertRuleParamsToModel(req.Params)
 	if err != nil {
 		return nil, err
 	}
 	params.RuleParams = ruleParams
 
-	params.Filters = makeFilters(req.Filters)
+	params.Filters = convertFiltersToModel(req.Filters)
 
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		_, err := models.UpdateRule(tx.Querier, req.RuleId, params)
@@ -193,112 +211,44 @@ func (s *RulesService) DeleteAlertRule(ctx context.Context, req *iav1beta1.Delet
 	return &iav1beta1.DeleteAlertRuleResponse{}, nil
 }
 
-func makeTemplate(template *models.Template) (*iav1beta1.Template, error) {
-	t := &iav1beta1.Template{
-		Name:     template.Name,
-		Summary:  template.Summary,
-		Expr:     template.Expr,
-		Params:   makeTemplateParams(template.Params),
-		Severity: managementpb.Severity(managementpb.Severity_value[template.Severity]),
-		For:      ptypes.DurationProto(time.Duration(template.For)),
-		Source:   iav1beta1.TemplateSource(iav1beta1.TemplateSource_value[template.Source]),
-	}
-
-	createdAt, err := ptypes.TimestampProto(template.CreatedAt)
-	if err != nil {
-		return nil, err
-	}
-
-	t.CreatedAt = createdAt
-
-	labels, err := byteToMap(template.Labels)
-	if err != nil {
-		return nil, err
-	}
-	t.Labels = labels
-
-	annotations, err := byteToMap(template.Annotations)
-	if err != nil {
-		return nil, err
-	}
-	t.Annotations = annotations
-	return t, nil
-}
-
-func byteToMap(b []byte) (map[string]string, error) {
-	m := make(map[string]string)
-	err := json.Unmarshal(b, &m)
-	if err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func makeTemplateParams(params models.Params) []*iav1beta1.TemplateParam {
-	templateParams := make([]*iav1beta1.TemplateParam, len(params))
-	for i, p := range params {
-		param := &iav1beta1.TemplateParam{
-			Name:    p.Name,
-			Summary: p.Summary,
-			Unit:    iav1beta1.ParamUnit(iav1beta1.ParamUnit_value[p.Unit]),
-			Type:    iav1beta1.ParamType(iav1beta1.ParamType_value[p.Type]),
-			Value: &iav1beta1.TemplateParam_Float{
-				Float: &iav1beta1.TemplateFloatParam{
-					Default: float32(p.FloatParam.Default),
-					Min:     float32(p.FloatParam.Min),
-					Max:     float32(p.FloatParam.Max),
-				},
-			},
-		}
-		templateParams[i] = param
-	}
-	return templateParams
-}
-
-func makeRuleParams(params models.RuleParams) ([]*iav1beta1.RuleParam, error) {
-	ruleParams := make([]*iav1beta1.RuleParam, len(params))
+func convertModelToRuleParams(params models.RuleParams) ([]*iav1beta1.RuleParam, error) {
+	res := make([]*iav1beta1.RuleParam, len(params))
 	for i, param := range params {
-		p := &iav1beta1.RuleParam{
-			Name: param.Name,
-			Type: iav1beta1.ParamType(param.Type),
-		}
+		p := &iav1beta1.RuleParam{Name: param.Name}
 
-		switch p.Type {
-		case iav1beta1.ParamType_BOOL:
-			p.Value = &iav1beta1.RuleParam_Bool{
-				Bool: param.BoolVal,
-			}
-		case iav1beta1.ParamType_FLOAT:
-			p.Value = &iav1beta1.RuleParam_Float{
-				Float: param.FloatVal,
-			}
-		case iav1beta1.ParamType_STRING:
-			p.Value = &iav1beta1.RuleParam_String_{
-				String_: param.StringVal,
-			}
+		switch param.Type {
+		case models.Bool:
+			p.Type = iav1beta1.ParamType_BOOL
+			p.Value = &iav1beta1.RuleParam_Bool{Bool: param.BoolValue}
+		case models.Float:
+			p.Type = iav1beta1.ParamType_FLOAT
+			p.Value = &iav1beta1.RuleParam_Float{Float: param.FloatValue}
+		case models.String:
+			p.Type = iav1beta1.ParamType_STRING
+			p.Value = &iav1beta1.RuleParam_String_{String_: param.StringValue}
 		default:
 			return nil, errors.New("invalid rule param value type")
 		}
-		ruleParams[i] = p
+		res[i] = p
 	}
-	return ruleParams, nil
+	return res, nil
 }
 
-func makeModelRuleParams(params []*iav1beta1.RuleParam) (models.RuleParams, error) {
+func convertRuleParamsToModel(params []*iav1beta1.RuleParam) (models.RuleParams, error) {
 	ruleParams := make(models.RuleParams, len(params))
 	for i, param := range params {
-		p := models.RuleParam{
-			Name: param.Name,
-			Type: models.ParamType(param.Type),
-		}
+		p := models.RuleParam{Name: param.Name}
 
-		switch p.Type {
-		case models.BoolRuleParam:
-			p.BoolVal = param.GetBool()
-		case models.FloatRuleParam:
-			p.FloatVal = param.GetFloat()
-		case models.StringRuleParam:
-			p.StringVal = param.GetString_()
+		switch param.Type {
+		case iav1beta1.ParamType_BOOL:
+			p.Type = models.Bool
+			p.BoolValue = param.GetBool()
+		case iav1beta1.ParamType_FLOAT:
+			p.Type = models.Float
+			p.FloatValue = param.GetFloat()
+		case iav1beta1.ParamType_STRING:
+			p.Type = models.Float
+			p.StringValue = param.GetString_()
 		default:
 			return nil, errors.New("invalid model rule param value type")
 		}
@@ -307,17 +257,42 @@ func makeModelRuleParams(params []*iav1beta1.RuleParam) (models.RuleParams, erro
 	return ruleParams, nil
 }
 
-func makeFilters(filters []*iav1beta1.Filter) models.Filters {
-	mFilters := make(models.Filters, len(filters))
+func convertModelToFilterType(filterType models.FilterType) iav1beta1.FilterType {
+	switch filterType {
+	case models.Equal:
+		return iav1beta1.FilterType_EQUAL
+	case models.NotEqual:
+		return iav1beta1.FilterType_NOT_EQUAL
+	case models.Regex:
+		return iav1beta1.FilterType_REGEX
+	case models.NotRegex:
+		return iav1beta1.FilterType_NOT_REGEX
+	default:
+		return iav1beta1.FilterType_FILTER_TYPE_INVALID
+	}
+}
+
+func convertFiltersToModel(filters []*iav1beta1.Filter) models.Filters {
+	res := make(models.Filters, len(filters))
 	for i, filter := range filters {
 		f := models.Filter{
-			Type: models.FilterType(filter.Type),
-			Key:  filter.Key,
-			Val:  filter.Value,
+			Key: filter.Key,
+			Val: filter.Value,
 		}
-		mFilters[i] = f
+
+		switch filter.Type {
+		case iav1beta1.FilterType_EQUAL:
+			f.Type = models.Equal
+		case iav1beta1.FilterType_NOT_EQUAL:
+			f.Type = models.NotEqual
+		case iav1beta1.FilterType_REGEX:
+			f.Type = models.Regex
+		case iav1beta1.FilterType_NOT_REGEX:
+			f.Type = models.NotRegex
+		}
+		res[i] = f
 	}
-	return mFilters
+	return res
 }
 
 // Check interfaces.

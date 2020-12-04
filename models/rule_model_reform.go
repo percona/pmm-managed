@@ -27,7 +27,7 @@ func (v *ruleTableType) Name() string {
 
 // Columns returns a new slice of column names for that view or table in SQL database.
 func (v *ruleTableType) Columns() []string {
-	return []string{"template", "id", "summary", "disabled", "params", "for", "severity", "custom_labels", "filters", "channels", "created_at", "updated_at"}
+	return []string{"template_name", "id", "summary", "disabled", "params", "for", "severity", "custom_labels", "filters", "channel_ids", "created_at", "updated_at"}
 }
 
 // NewStruct makes a new struct for that view or table.
@@ -47,14 +47,14 @@ func (v *ruleTableType) PKColumnIndex() uint {
 
 // RuleTable represents ia_rules view or table in SQL database.
 var RuleTable = &ruleTableType{
-	s: parse.StructInfo{Type: "Rule", SQLSchema: "", SQLName: "ia_rules", Fields: []parse.FieldInfo{{Name: "Template", Type: "*Template", Column: "template"}, {Name: "ID", Type: "string", Column: "id"}, {Name: "Summary", Type: "string", Column: "summary"}, {Name: "Disabled", Type: "bool", Column: "disabled"}, {Name: "Params", Type: "RuleParams", Column: "params"}, {Name: "For", Type: "time.Duration", Column: "for"}, {Name: "Severity", Type: "string", Column: "severity"}, {Name: "CustomLabels", Type: "[]uint8", Column: "custom_labels"}, {Name: "Filters", Type: "Filters", Column: "filters"}, {Name: "Channels", Type: "Channels", Column: "channels"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}}, PKFieldIndex: 1},
+	s: parse.StructInfo{Type: "Rule", SQLSchema: "", SQLName: "ia_rules", Fields: []parse.FieldInfo{{Name: "TemplateName", Type: "string", Column: "template_name"}, {Name: "ID", Type: "string", Column: "id"}, {Name: "Summary", Type: "string", Column: "summary"}, {Name: "Disabled", Type: "bool", Column: "disabled"}, {Name: "Params", Type: "RuleParams", Column: "params"}, {Name: "For", Type: "time.Duration", Column: "for"}, {Name: "Severity", Type: "Severity", Column: "severity"}, {Name: "CustomLabels", Type: "[]uint8", Column: "custom_labels"}, {Name: "Filters", Type: "Filters", Column: "filters"}, {Name: "ChannelIDs", Type: "ChannelIDs", Column: "channel_ids"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}}, PKFieldIndex: 1},
 	z: new(Rule).Values(),
 }
 
 // String returns a string representation of this struct or record.
 func (s Rule) String() string {
 	res := make([]string, 12)
-	res[0] = "Template: " + reform.Inspect(s.Template, true)
+	res[0] = "TemplateName: " + reform.Inspect(s.TemplateName, true)
 	res[1] = "ID: " + reform.Inspect(s.ID, true)
 	res[2] = "Summary: " + reform.Inspect(s.Summary, true)
 	res[3] = "Disabled: " + reform.Inspect(s.Disabled, true)
@@ -63,7 +63,7 @@ func (s Rule) String() string {
 	res[6] = "Severity: " + reform.Inspect(s.Severity, true)
 	res[7] = "CustomLabels: " + reform.Inspect(s.CustomLabels, true)
 	res[8] = "Filters: " + reform.Inspect(s.Filters, true)
-	res[9] = "Channels: " + reform.Inspect(s.Channels, true)
+	res[9] = "ChannelIDs: " + reform.Inspect(s.ChannelIDs, true)
 	res[10] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
 	res[11] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
 	return strings.Join(res, ", ")
@@ -73,7 +73,7 @@ func (s Rule) String() string {
 // Returned interface{} values are never untyped nils.
 func (s *Rule) Values() []interface{} {
 	return []interface{}{
-		s.Template,
+		s.TemplateName,
 		s.ID,
 		s.Summary,
 		s.Disabled,
@@ -82,7 +82,7 @@ func (s *Rule) Values() []interface{} {
 		s.Severity,
 		s.CustomLabels,
 		s.Filters,
-		s.Channels,
+		s.ChannelIDs,
 		s.CreatedAt,
 		s.UpdatedAt,
 	}
@@ -92,7 +92,7 @@ func (s *Rule) Values() []interface{} {
 // Returned interface{} values are never untyped nils.
 func (s *Rule) Pointers() []interface{} {
 	return []interface{}{
-		&s.Template,
+		&s.TemplateName,
 		&s.ID,
 		&s.Summary,
 		&s.Disabled,
@@ -101,7 +101,7 @@ func (s *Rule) Pointers() []interface{} {
 		&s.Severity,
 		&s.CustomLabels,
 		&s.Filters,
-		&s.Channels,
+		&s.ChannelIDs,
 		&s.CreatedAt,
 		&s.UpdatedAt,
 	}

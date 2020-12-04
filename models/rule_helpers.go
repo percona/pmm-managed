@@ -18,16 +18,14 @@ package models
 
 import (
 	"encoding/json"
-	"time"
 
 	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/google/uuid"
 	"github.com/percona-platform/saas/pkg/common"
-	"github.com/percona/pmm/api/managementpb"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	reform "gopkg.in/reform.v1"
+	"gopkg.in/reform.v1"
 )
 
 func checkUniqueRuleID(q *reform.Querier, id string) error {
@@ -35,8 +33,8 @@ func checkUniqueRuleID(q *reform.Querier, id string) error {
 		panic("empty Rule ID")
 	}
 
-	agent := &Rule{ID: id}
-	switch err := q.Reload(agent); err {
+	rule := &Rule{ID: id}
+	switch err := q.Reload(rule); err {
 	case nil:
 		return status.Errorf(codes.AlreadyExists, "Rule with ID %q already exists.", id)
 	case reform.ErrNoRows:
@@ -81,13 +79,12 @@ func FindRuleByID(q *reform.Querier, id string) (*Rule, error) {
 }
 
 // CreateRuleParams are params for creating new Rule.
-// TODO: rename to CreateAlertRuleParams.
 type CreateRuleParams struct {
 	TemplateName string
 	Disabled     bool
 	RuleParams   RuleParams
 	For          *duration.Duration
-	Severity     managementpb.Severity
+	Severity     common.Severity
 	CustomLabels map[string]string
 	Filters      Filters
 	ChannelIDs   []string
@@ -96,36 +93,25 @@ type CreateRuleParams struct {
 // CreateRule persists alert Rule.
 func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 	id := "/rule_id/" + uuid.New().String()
-
 	if err := checkUniqueRuleID(q, id); err != nil {
 		return nil, err
 	}
 
 	row := &Rule{
-		ID:       id,
-		Template: makeModelTemplate(params),
-		Disabled: params.Disabled,
-		For:      params.For.AsDuration(),
-		Severity: params.Severity.String(),
-		Filters:  params.Filters,
+		ID:           id,
+		TemplateName: params.TemplateName,
+		Disabled:     params.Disabled,
+		For:          params.For.AsDuration(),
+		Severity:     convertSeverity(params.Severity),
+		Filters:      params.Filters,
 	}
 
-	labels, err := json.Marshal(params.CustomLabels)
+	err := row.SetCustomLabels(params.CustomLabels)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create alert rule")
+		return nil, err
 	}
-	row.CustomLabels = labels
 	row.Params = params.RuleParams
-
-	channels := make(Channels, len(params.ChannelIDs))
-	for i, cid := range params.ChannelIDs {
-		ch, err := FindChannelByID(q, cid)
-		if err != nil {
-			return nil, errors.WithMessage(err, "failed to create alert rule")
-		}
-		channels[i] = ch
-	}
-	row.Channels = channels
+	row.ChannelIDs = params.ChannelIDs
 
 	err = q.Insert(row)
 	if err != nil {
@@ -141,7 +127,7 @@ type UpdateRuleParams struct {
 	Disabled     bool
 	RuleParams   RuleParams
 	For          *duration.Duration
-	Severity     managementpb.Severity
+	Severity     common.Severity
 	CustomLabels map[string]string
 	Filters      Filters
 	ChannelIDs   []string
@@ -156,7 +142,7 @@ func UpdateRule(q *reform.Querier, RuleID string, params *UpdateRuleParams) (*Ru
 
 	row.Disabled = params.Disabled
 	row.For = params.For.AsDuration()
-	row.Severity = params.Severity.String()
+	row.Severity = convertSeverity(params.Severity)
 	row.Filters = params.Filters
 	row.Params = params.RuleParams
 
@@ -165,16 +151,7 @@ func UpdateRule(q *reform.Querier, RuleID string, params *UpdateRuleParams) (*Ru
 		return nil, errors.Wrap(err, "failed to update alert rule")
 	}
 	row.CustomLabels = labels
-
-	channels := make(Channels, len(params.ChannelIDs))
-	for _, cid := range params.ChannelIDs {
-		ch, err := FindChannelByID(q, cid)
-		if err != nil {
-			return nil, errors.WithMessage(err, "failed to update alert rule")
-		}
-		channels = append(channels, ch)
-	}
-	row.Channels = channels
+	row.ChannelIDs = params.ChannelIDs
 
 	err = q.Update(row)
 	if err != nil {
@@ -195,34 +172,4 @@ func RemoveRule(q *reform.Querier, id string) error {
 		return errors.Wrap(err, "failed to delete alert Rule")
 	}
 	return nil
-}
-
-// TODO remove once template API is merged
-func makeModelTemplate(params *CreateRuleParams) *Template {
-	return &Template{
-		Name:    params.TemplateName,
-		Version: 1,
-		Summary: "some summary",
-		Tiers:   Tiers{common.Tier("anonymous")},
-		Expr:    "template expr",
-		For:     time.Duration(params.For.AsDuration()),
-		Params: Params{
-			Param{
-				Name:    "param name",
-				Summary: "param summary",
-				Unit:    "PERCENTAGE",
-				Type:    "FLOAT",
-				FloatParam: &FloatParam{
-					Default: 2,
-					Min:     1,
-					Max:     3,
-				},
-			},
-		},
-		Severity:    "warning",
-		Labels:      []byte("{\"key\": \"value\"}"),
-		Annotations: []byte("{\"key\": \"value\"}"),
-		Source:      "template source",
-		Yaml:        "template yaml",
-	}
 }
