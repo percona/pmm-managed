@@ -192,7 +192,7 @@ func (s *TemplatesService) loadTemplatesFromFiles(ctx context.Context, path stri
 	res := make([]alert.Template, 0, len(paths))
 	for _, path := range paths {
 		path := strings.Trim(path, "./")
-		r, err := s.loadFile(ctx, path)
+		r, err := s.loadFile(ctx, path, true)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to load rule template file: %s", path)
 		}
@@ -306,13 +306,18 @@ func convertSeverity(severity models.Severity) common.Severity {
 	}
 }
 
-// loadFile parses IA rule template file.
-func (s *TemplatesService) loadFile(ctx context.Context, file string) ([]saas.Template, error) {
+func (svc *TemplatesService) loadFile(ctx context.Context, file string, buitin bool) ([]saas.Rule, error) {
 	if ctx.Err() != nil {
 		return nil, errors.WithStack(ctx.Err())
 	}
 
-	data, err := ioutil.ReadFile(file) //nolint:gosec
+	var err error
+	var data []byte
+	if buitin {
+		data, err = Asset(file)
+	} else {
+		data, err = ioutil.ReadFile(file) //nolint:gosec
+	}
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read rule template file")
 	}
