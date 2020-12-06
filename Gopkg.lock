@@ -384,11 +384,11 @@
 
 [[projects]]
   branch = "PMM-6827-db-cluster-monitoring"
-  digest = "1:8e2ce9403a84d5fc915629307d5523dbf6906acc0b6c5df4d0b9fe19311f8a0c"
+  digest = "1:5baea2c09a15784fca045752d007c6d24e42ed05d4b0d8f23fa275286c678d35"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "6cb73d125f46683d7309375342a0e4494e7f7263"
+  revision = "e46314b283b21f10593ae4d969f8c5dd580866ff"
 
 [[projects]]
   branch = "main"
@@ -417,7 +417,7 @@
 
 [[projects]]
   branch = "PMM-6827-db-cluster-monitoring"
-  digest = "1:f8c52adcb9c1ff79edee0524faa1e2391e7b7acd1b82794c0a6a9a0a6694a6e9"
+  digest = "1:f179c17bbd3573c387cbaf239841cc55fc0b50fd6299b3722a5918a9509ebe2c"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -440,7 +440,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "61a8bb4dcc74b19edfcb600cddfae99037281ac0"
+  revision = "5d5f275f1a49d9ce4f3588fb0894bf2a4bd87343"
 
 [[projects]]
   digest = "1:6832634ec059f4bfddaff75621cf1c4750949129c6de2e5e58e01059d0851e25"
