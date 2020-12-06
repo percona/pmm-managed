@@ -316,6 +316,17 @@
   revision = "c2b33e84"
 
 [[projects]]
+  digest = "1:9d8169a68525a40501811137321057d3c3fb452b26059027e55d0d1ae307db01"
+  name = "github.com/kevinburke/go-bindata"
+  packages = [
+    ".",
+    "go-bindata",
+  ]
+  pruneopts = "NUT"
+  revision = "017bb32866cbdd959f3f9891ab831bcd199c5819"
+  version = "v3.22.0"
+
+[[projects]]
   digest = "1:a3998f85665bdf805d519735e658c0e0125bd67b57bb15e414a5a9e360e32455"
   name = "github.com/konsorten/go-windows-terminal-sequences"
   packages = ["."]
@@ -381,19 +392,20 @@
 
 [[projects]]
   branch = "main"
-  digest = "1:85318c240c0262281eeea84cf3b12730bab87a3c62b6cf8a67bbe6edba2ff560"
+  digest = "1:1437b7f23ac82538bfd92ed22909f854d6ef51020792b76bec03c0e2a4bec125"
   name = "github.com/percona-platform/saas"
   packages = [
     "gen/auth",
     "gen/check/retrieval",
     "gen/telemetry/events/pmm",
     "gen/telemetry/reporter",
+    "pkg/alert",
     "pkg/check",
     "pkg/common",
     "pkg/starlark",
   ]
   pruneopts = "NUT"
-  revision = "8657f06b2badaee3980eb85fa61d7e2f7b34484b"
+  revision = "ad38b2c7116bd3cc80057ab2a8cf86166d9d2e24"
 
 [[projects]]
   digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
@@ -431,15 +443,15 @@
   revision = "61a8bb4dcc74b19edfcb600cddfae99037281ac0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:3bd992dcc2eed2acdd3e838ae24bc1a267793b8f8ae93b86a38c720a16472ce3"
+  digest = "1:6832634ec059f4bfddaff75621cf1c4750949129c6de2e5e58e01059d0851e25"
   name = "github.com/percona/promconfig"
   packages = [
     ".",
     "alertmanager",
   ]
   pruneopts = "NUT"
-  revision = "a037e390f55969afa55b3011486744d612e7de60"
+  revision = "bbfe4cec824887dffa3d1d485a825485830cb710"
+  version = "v0.2.0"
 
 [[projects]]
   digest = "1:4047c378584616813d610c9f993bf90dd0d07aed8d94bd3bc299cd35ececdcba"
@@ -863,12 +875,14 @@
     "github.com/grpc-ecosystem/go-grpc-middleware/validator",
     "github.com/grpc-ecosystem/go-grpc-prometheus",
     "github.com/grpc-ecosystem/grpc-gateway/runtime",
+    "github.com/kevinburke/go-bindata/go-bindata",
     "github.com/lib/pq",
     "github.com/percona-platform/dbaas-api/gen/controller",
     "github.com/percona-platform/saas/gen/auth",
     "github.com/percona-platform/saas/gen/check/retrieval",
     "github.com/percona-platform/saas/gen/telemetry/events/pmm",
     "github.com/percona-platform/saas/gen/telemetry/reporter",
+    "github.com/percona-platform/saas/pkg/alert",
     "github.com/percona-platform/saas/pkg/check",
     "github.com/percona-platform/saas/pkg/common",
     "github.com/percona-platform/saas/pkg/starlark",
@@ -919,7 +933,6 @@
     "gopkg.in/reform.v1/dialects/postgresql",
     "gopkg.in/reform.v1/parse",
     "gopkg.in/reform.v1/reform",
-    "gopkg.in/yaml.v2",
     "gopkg.in/yaml.v3",
   ]
   solver-name = "gps-cdcl"

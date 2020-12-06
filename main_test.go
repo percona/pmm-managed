@@ -64,9 +64,8 @@ func TestImports(t *testing.T) {
 		"github.com/percona/pmm-managed/services/server",
 		"github.com/percona/pmm-managed/services/supervisord",
 		"github.com/percona/pmm-managed/services/telemetry",
-
-		// TODO add "github.com/percona/pmm-managed/services/victoriametrics" once we remove prometheus package
-		"github.com/percona/pmm-managed/services/prometheus",
+		"github.com/percona/pmm-managed/services/victoriametrics",
+		"github.com/percona/pmm-managed/services/vmalert",
 	} {
 		constraints[service] = constraint{
 			blacklistPrefixes: []string{
@@ -90,6 +89,13 @@ func TestImports(t *testing.T) {
 		}
 	}
 
+	// validators should not import gRPC stack, including errors
+	constraints["github.com/percona/pmm-managed/utils/validators"] = constraint{
+		blacklistPrefixes: []string{
+			"google.golang.org/grpc",
+		},
+	}
+
 	// just to add them to packages.dot
 	for _, service := range []string{
 		"github.com/percona/pmm-managed",
@@ -98,9 +104,6 @@ func TestImports(t *testing.T) {
 		"github.com/percona/pmm-managed/services/agents/grpc",
 		"github.com/percona/pmm-managed/services/inventory/grpc",
 		"github.com/percona/pmm-managed/services/management/grpc",
-
-		// TODO remove from the once we add it above
-		"github.com/percona/pmm-managed/services/victoriametrics",
 	} {
 		constraints[service] = constraint{}
 	}

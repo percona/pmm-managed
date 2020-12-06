@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package prometheus
+package victoriametrics
 
 import (
 	"net/url"
@@ -26,7 +26,7 @@ import (
 	"github.com/pmezard/go-difflib/difflib"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	"github.com/percona/pmm-managed/models"
 )

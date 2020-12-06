@@ -29,8 +29,6 @@ import (
 	_ "net/http/pprof" // register /debug/pprof
 	"os"
 	"os/signal"
-	"path/filepath"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -76,12 +74,12 @@ import (
 	managementgrpc "github.com/percona/pmm-managed/services/management/grpc"
 	"github.com/percona/pmm-managed/services/management/ia"
 	"github.com/percona/pmm-managed/services/platform"
-	"github.com/percona/pmm-managed/services/prometheus"
 	"github.com/percona/pmm-managed/services/qan"
 	"github.com/percona/pmm-managed/services/server"
 	"github.com/percona/pmm-managed/services/supervisord"
 	"github.com/percona/pmm-managed/services/telemetry"
 	"github.com/percona/pmm-managed/services/victoriametrics"
+	"github.com/percona/pmm-managed/services/vmalert"
 	"github.com/percona/pmm-managed/utils/clean"
 	"github.com/percona/pmm-managed/utils/interceptors"
 	"github.com/percona/pmm-managed/utils/logger"
@@ -180,14 +178,15 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterSecurityChecksServer(gRPCServer, managementgrpc.NewChecksServer(checksSvc))
 
 	// TODO remove PERCONA_TEST_IA once IA is out of beta: https://jira.percona.com/browse/PMM-7001
-	if enable, _ := strconv.ParseBool(os.Getenv("PERCONA_TEST_IA")); enable {
+	if enable, err := strconv.ParseBool(os.Getenv("PERCONA_TEST_IA")); err == nil && enable {
 		l.Warnf("Enabling experimental IA APIs.")
-		iav1beta1.RegisterAlertsServer(gRPCServer, ia.NewAlertsService())
-		iav1beta1.RegisterChannelsServer(gRPCServer, ia.NewChannelsService())
-		iav1beta1.RegisterRulesServer(gRPCServer, ia.NewRulesService())
-		iav1beta1.RegisterTemplatesServer(gRPCServer, ia.NewTemplatesService())
+		iav1beta1.RegisterAlertsServer(gRPCServer, ia.NewAlertsService(deps.db))
+		iav1beta1.RegisterChannelsServer(gRPCServer, ia.NewChannelsService(deps.db))
+		iav1beta1.RegisterRulesServer(gRPCServer, ia.NewRulesService(deps.db))
+		iav1beta1.RegisterTemplatesServer(gRPCServer, ia.NewTemplatesService(deps.db))
 	}
 
+	// TODO Remove once changing settings.DBaaS.Enabled is possible via API.
 	if deps.settings.DBaaS.Enabled {
 		dbaasv1beta1.RegisterKubernetesServer(gRPCServer, managementdbaas.NewKubernetesServer(deps.db, deps.dbaasControllerClient))
 		dbaasv1beta1.RegisterXtraDBClusterServer(gRPCServer, managementdbaas.NewXtraDBClusterService(deps.db, deps.dbaasControllerClient))
@@ -284,6 +283,11 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 		managementpb.RegisterExternalHandlerFromEndpoint,
 		managementpb.RegisterAnnotationHandlerFromEndpoint,
 		managementpb.RegisterSecurityChecksHandlerFromEndpoint,
+
+		iav1beta1.RegisterAlertsHandlerFromEndpoint,
+		iav1beta1.RegisterChannelsHandlerFromEndpoint,
+		iav1beta1.RegisterRulesHandlerFromEndpoint,
+		iav1beta1.RegisterTemplatesHandlerFromEndpoint,
 
 		dbaasv1beta1.RegisterKubernetesHandlerFromEndpoint,
 		dbaasv1beta1.RegisterXtraDBClusterHandlerFromEndpoint,
@@ -470,9 +474,11 @@ func getQANClient(ctx context.Context, sqlDB *sql.DB, dbName, qanAPIAddr string)
 }
 
 func getDBaaSControllerClient(ctx context.Context, dbaasControllerAPIAddr string, settings *models.Settings) *dbaas.Client {
+	// TODO Remove once changing settings.DBaaS.Enabled is possible via API.
 	if !settings.DBaaS.Enabled {
 		return dbaas.NewClient(nil)
 	}
+
 	opts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithConnectParams(grpc.ConnectParams{Backoff: backoff.Config{MaxDelay: 10 * time.Second}, MinConnectTimeout: 10 * time.Second}),
@@ -524,25 +530,7 @@ func main() {
 
 	kingpin.Parse()
 
-	logrus.SetFormatter(&logrus.TextFormatter{
-		// Enable multiline-friendly formatter in both development (with terminal) and production (without terminal):
-		// https://github.com/sirupsen/logrus/blob/839c75faf7f98a33d445d181f3018b5c3409a45e/text_formatter.go#L176-L178
-		ForceColors:     true,
-		FullTimestamp:   true,
-		TimestampFormat: "2006-01-02T15:04:05.000-07:00",
-
-		CallerPrettyfier: func(f *runtime.Frame) (function string, file string) {
-			_, function = filepath.Split(f.Function)
-
-			// keep a single directory name as a compromise between brevity and unambiguity
-			var dir string
-			dir, file = filepath.Split(f.File)
-			dir = filepath.Base(dir)
-			file = fmt.Sprintf("%s/%s:%d", dir, file, f.Line)
-
-			return
-		},
-	})
+	logger.SetupGlobalLogger()
 	if *debugF {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
@@ -579,7 +567,7 @@ func main() {
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reformL)
 
 	cleaner := clean.New(db)
-	alertingRules := prometheus.NewAlertingRules()
+	alertingRules := vmalert.NewAlertingRules()
 
 	vmParams, err := models.NewVictoriaMetricsParams(victoriametrics.BasePrometheusConfigPath)
 	if err != nil {
@@ -589,7 +577,7 @@ func main() {
 	if err != nil {
 		l.Panicf("VictoriaMetrics service problem: %+v", err)
 	}
-	vmalert, err := victoriametrics.NewVMAlert(alertingRules, *victoriaMetricsVMAlertURLF, vmParams)
+	vmalert, err := vmalert.NewVMAlert(alertingRules, *victoriaMetricsVMAlertURLF)
 	if err != nil {
 		l.Panicf("VictoriaMetrics VMAlert service problem: %+v", err)
 	}

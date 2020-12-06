@@ -24,14 +24,11 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/envvars"
+	"github.com/percona/pmm-managed/utils/logger"
 )
 
 func main() {
-	logrus.SetFormatter(&logrus.TextFormatter{
-		ForceColors:     true,
-		FullTimestamp:   true,
-		TimestampFormat: "2006-01-02T15:04:05.000-07:00",
-	})
+	logger.SetupGlobalLogger()
 	if on, _ := strconv.ParseBool(os.Getenv("PMM_DEBUG")); on {
 		logrus.SetLevel(logrus.DebugLevel)
 	}

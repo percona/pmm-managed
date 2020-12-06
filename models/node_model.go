@@ -26,7 +26,7 @@ import (
 //go:generate reform
 
 // NodeType represents Node type as stored in databases:
-// pmm-managed's PostgreSQL, qan-api's ClickHouse, and Prometheus.
+// pmm-managed's PostgreSQL, qan-api's ClickHouse, and VictoriaMetrics.
 type NodeType string
 
 // Node types (in the same order as in nodes.proto).
@@ -97,12 +97,12 @@ func (s *Node) AfterFind() error {
 
 // GetCustomLabels decodes custom labels.
 func (s *Node) GetCustomLabels() (map[string]string, error) {
-	return getCustomLabels(s.CustomLabels)
+	return getLabels(s.CustomLabels)
 }
 
 // SetCustomLabels encodes custom labels.
 func (s *Node) SetCustomLabels(m map[string]string) error {
-	return setCustomLabels(m, &s.CustomLabels)
+	return setLabels(m, &s.CustomLabels)
 }
 
 // UnifiedLabels returns combined standard and custom labels with empty labels removed.
