@@ -24,10 +24,9 @@ import (
 
 // Params represent the input for CreateDataDir
 type Params struct {
-	Path string
-	Perm os.FileMode
-	// The path of the directory whose uID and gID will be used
-	// to chown the created dir.
+	Path      string
+	Perm      os.FileMode
+	Chown     bool
 	ChownPath string
 }
 
@@ -50,7 +49,7 @@ func CreateDataDir(params Params) error {
 		}
 	}
 
-	if params.ChownPath != "" {
+	if params.Chown {
 		dataDirSysStat := dataDirStat.Sys().(*syscall.Stat_t)
 		aUID, aGID := int(dataDirSysStat.Uid), int(dataDirSysStat.Gid)
 

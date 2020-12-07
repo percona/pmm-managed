@@ -80,10 +80,12 @@ func NewTemplatesService(db *reform.DB) *TemplatesService {
 	params := []dir.Params{{
 		Path:      templatesDir,
 		Perm:      dirPerm,
+		Chown:     true,
 		ChownPath: prometheusDir,
 	}, {
 		Path:      rulesDir,
 		Perm:      dirPerm,
+		Chown:     true,
 		ChownPath: prometheusDir,
 	}}
 
