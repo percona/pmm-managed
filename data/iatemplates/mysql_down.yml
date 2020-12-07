@@ -1,3 +1,4 @@
+---
 templates:
   - name: mysql_down
     version: 1
