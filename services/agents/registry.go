@@ -1093,6 +1093,7 @@ func (r *Registry) StartPTPgSQLSummaryAction(ctx context.Context, id, pmmAgentID
 				Password: password,
 			},
 		},
+		Timeout: defaultActionTimeout,
 	}
 
 	// Agent which the action request will be sent to, got by the provided ID
