@@ -130,8 +130,10 @@ func (s *TemplatesService) getCollected(ctx context.Context) map[string]Template
 	return res
 }
 
-// collect collects IA rule templates from various sources like
-// built-in templates shipped with PMM and defined by the users.
+// collect collects IA rule templates from various sources like:
+// builtin templates: read from the generated code in bindata.go.
+// user-defined templates: read from yaml files created by the user in `/srv/ia/templates` or
+// in the DB created using the API.
 func (s *TemplatesService) collect(ctx context.Context) {
 	templates := make([]Template, 0, len(s.builtinTemplatesPath)+len(s.userTemplatesPath))
 
