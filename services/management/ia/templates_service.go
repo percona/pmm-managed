@@ -43,6 +43,7 @@ import (
 	"gopkg.in/reform.v1"
 	"gopkg.in/yaml.v3"
 
+	"github.com/percona/pmm-managed/data"
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/dir"
 )
@@ -53,8 +54,6 @@ const (
 
 	dirPerm = os.FileMode(0o775)
 )
-
-//go:generate go-bindata -o bindata.go -pkg ia ../../../data/iatemplates/
 
 // Template represents alerting rule template with added source field.
 type Template struct {
@@ -180,10 +179,10 @@ func (s *TemplatesService) collect(ctx context.Context) {
 }
 
 func (s *TemplatesService) loadTemplatesFromAssets(ctx context.Context) ([]alert.Template, error) {
-	paths := AssetNames()
+	paths := data.AssetNames()
 	res := make([]alert.Template, 0, len(paths))
 	for _, path := range paths {
-		data, err := Asset(path)
+		data, err := data.Asset(path)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to load rule template file: %s", path)
 		}
