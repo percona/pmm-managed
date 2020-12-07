@@ -50,7 +50,7 @@ const (
 	builtinTemplatesPath = "/tmp/ia1/*.yml"
 	userTemplatesPath    = "/tmp/ia2/*.yml"
 
-	ruleFileDir = "/tmp/ia1/"
+	ruleFileDir = "/tmp/ia3/"
 )
 
 // Template represents alerting rule template with added source field.
