@@ -578,6 +578,7 @@ func (s *TemplatesService) UpdateTemplate(ctx context.Context, req *iav1beta1.Up
 
 	params := &models.ChangeTemplateParams{
 		Template: &templates[0],
+		Yaml:     req.Yaml,
 	}
 
 	e := s.db.InTransaction(func(tx *reform.TX) error {
