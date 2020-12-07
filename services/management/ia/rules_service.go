@@ -141,7 +141,7 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 	params := &models.CreateRuleParams{
 		TemplateName: req.TemplateName,
 		Disabled:     req.Disabled,
-		For:          req.For,
+		For:          req.For.AsDuration(),
 		Severity:     common.Severity(req.Severity),
 		CustomLabels: req.CustomLabels,
 		ChannelIDs:   req.ChannelIds,
@@ -168,10 +168,9 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 
 // UpdateAlertRule updates Integrated Alerting rule.
 func (s *RulesService) UpdateAlertRule(ctx context.Context, req *iav1beta1.UpdateAlertRuleRequest) (*iav1beta1.UpdateAlertRuleResponse, error) {
-	params := &models.UpdateRuleParams{
-		RuleID:       req.RuleId,
+	params := &models.ChangeRuleParams{
 		Disabled:     req.Disabled,
-		For:          req.For,
+		For:          req.For.AsDuration(),
 		Severity:     common.Severity(req.Severity),
 		CustomLabels: req.CustomLabels,
 		ChannelIDs:   req.ChannelIds,
@@ -186,7 +185,7 @@ func (s *RulesService) UpdateAlertRule(ctx context.Context, req *iav1beta1.Updat
 	params.Filters = convertFiltersToModel(req.Filters)
 
 	e := s.db.InTransaction(func(tx *reform.TX) error {
-		_, err := models.UpdateRule(tx.Querier, req.RuleId, params)
+		_, err := models.ChangeRule(tx.Querier, req.RuleId, params)
 		return err
 	})
 	if e != nil {

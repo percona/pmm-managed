@@ -30,6 +30,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -88,6 +89,22 @@ func MergeLabels(node *Node, service *Service, agent *Agent) (map[string]string,
 	}
 
 	return res, nil
+}
+
+// deduplicateStrings deduplicates elements in string slice.
+func deduplicateStrings(strings []string) []string {
+	set := make(map[string]struct{})
+	for _, p := range strings {
+		set[p] = struct{}{}
+	}
+
+	slice := make([]string, 0, len(set))
+	for s := range set {
+		slice = append(slice, s)
+	}
+	sort.Strings(slice)
+
+	return slice
 }
 
 var labelNameRE = regexp.MustCompile("^[a-zA-Z_][a-zA-Z0-9_]*$")

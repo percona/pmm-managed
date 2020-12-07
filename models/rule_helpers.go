@@ -18,8 +18,8 @@ package models
 
 import (
 	"encoding/json"
+	"time"
 
-	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/google/uuid"
 	"github.com/percona-platform/saas/pkg/common"
 	"github.com/pkg/errors"
@@ -83,7 +83,7 @@ type CreateRuleParams struct {
 	TemplateName string
 	Disabled     bool
 	RuleParams   RuleParams
-	For          *duration.Duration
+	For          time.Duration
 	Severity     common.Severity
 	CustomLabels map[string]string
 	Filters      Filters
@@ -97,21 +97,35 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 		return nil, err
 	}
 
+	channelIDs := deduplicateStrings(params.ChannelIDs)
+	channels, err := FindChannelsByIDs(q, channelIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(channelIDs) != len(channels) {
+		return nil, errors.Errorf("failed to find all required channels %v", channelIDs)
+	}
+
+	if _, err := FindTemplateByName(q, params.TemplateName); err != nil {
+		return nil, err
+	}
+
 	row := &Rule{
 		ID:           id,
 		TemplateName: params.TemplateName,
 		Disabled:     params.Disabled,
-		For:          params.For.AsDuration(),
+		For:          params.For,
 		Severity:     convertSeverity(params.Severity),
 		Filters:      params.Filters,
+		Params:       params.RuleParams,
+		ChannelIDs:   params.ChannelIDs,
 	}
 
-	err := row.SetCustomLabels(params.CustomLabels)
+	err = row.SetCustomLabels(params.CustomLabels)
 	if err != nil {
 		return nil, err
 	}
-	row.Params = params.RuleParams
-	row.ChannelIDs = params.ChannelIDs
 
 	err = q.Insert(row)
 	if err != nil {
@@ -121,27 +135,36 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 	return row, nil
 }
 
-// UpdateRuleParams is params for updating existing Rule.
-type UpdateRuleParams struct {
-	RuleID       string
+// ChangeRuleParams is params for updating existing Rule.
+type ChangeRuleParams struct {
 	Disabled     bool
 	RuleParams   RuleParams
-	For          *duration.Duration
+	For          time.Duration
 	Severity     common.Severity
 	CustomLabels map[string]string
 	Filters      Filters
 	ChannelIDs   []string
 }
 
-// UpdateRule updates existing alerts Rule.
-func UpdateRule(q *reform.Querier, ruleID string, params *UpdateRuleParams) (*Rule, error) {
+// ChangeRule updates existing alerts Rule.
+func ChangeRule(q *reform.Querier, ruleID string, params *ChangeRuleParams) (*Rule, error) {
 	row, err := FindRuleByID(q, ruleID)
 	if err != nil {
 		return nil, err
 	}
 
+	channelIDs := deduplicateStrings(params.ChannelIDs)
+	channels, err := FindChannelsByIDs(q, channelIDs)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to find channels")
+	}
+
+	if len(channelIDs) != len(channels) {
+		return nil, errors.Errorf("failed to find all required channels %v", channelIDs)
+	}
+
 	row.Disabled = params.Disabled
-	row.For = params.For.AsDuration()
+	row.For = params.For
 	row.Severity = convertSeverity(params.Severity)
 	row.Filters = params.Filters
 	row.Params = params.RuleParams
