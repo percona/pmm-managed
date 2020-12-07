@@ -193,7 +193,6 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]Template, error) {
 				f := param.FloatParam
 				p.Value = f.Default
 				p.Range = []interface{}{f.Min, f.Max}
-
 			}
 
 			params = append(params, p)
@@ -234,6 +233,8 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]Template, error) {
 
 func convertModelToSource(source models.Source) iav1beta1.TemplateSource {
 	switch source {
+	case models.UnknownSource:
+		return iav1beta1.TemplateSource_TEMPLATE_SOURCE_INVALID
 	case models.BuiltInSource:
 		return iav1beta1.TemplateSource_BUILT_IN
 	case models.SAASSource:
@@ -399,9 +400,8 @@ func dumpRule(rule *ruleFile) error {
 			return err
 		}
 	}
-	if err = ioutil.WriteFile(path, b, 0644); err != nil {
+	if err = ioutil.WriteFile(path, b, 0644); err != nil { //nolint:gosec
 		return errors.Errorf("failed to dump rule to file %s: %s", ruleFileDir, err)
-
 	}
 	return nil
 }

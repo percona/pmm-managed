@@ -52,7 +52,7 @@ func (s *ChannelsService) ListChannels(ctx context.Context, request *iav1beta1.L
 
 	res := make([]*iav1beta1.Channel, len(channels))
 	for i, channel := range channels {
-		c, err := convertChannel(&channel)
+		c, err := convertChannel(&channel) //nolint:gosec
 		if err != nil {
 			return nil, err
 		}

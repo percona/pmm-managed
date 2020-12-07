@@ -281,6 +281,8 @@ func convertFiltersToModel(filters []*iav1beta1.Filter) models.Filters {
 		}
 
 		switch filter.Type {
+		case iav1beta1.FilterType_FILTER_TYPE_INVALID:
+			f.Type = models.Invalid
 		case iav1beta1.FilterType_EQUAL:
 			f.Type = models.Equal
 		case iav1beta1.FilterType_NOT_EQUAL:
@@ -289,6 +291,8 @@ func convertFiltersToModel(filters []*iav1beta1.Filter) models.Filters {
 			f.Type = models.Regex
 		case iav1beta1.FilterType_NOT_REGEX:
 			f.Type = models.NotRegex
+		default:
+			f.Type = models.Invalid
 		}
 		res[i] = f
 	}

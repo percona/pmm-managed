@@ -66,30 +66,29 @@ func (r *Rule) AfterFind() error {
 	return nil
 }
 
-// GetLabels decodes template labels.
+// GetCustomLabels decodes template labels.
 func (r *Rule) GetCustomLabels() (map[string]string, error) {
 	return getLabels(r.CustomLabels)
 }
 
-// SetLabels encodes template labels.
+// SetCustomLabels encodes template labels.
 func (r *Rule) SetCustomLabels(m map[string]string) error {
 	return setLabels(m, &r.CustomLabels)
 }
 
+// FilterType represents rule filter type.
 type FilterType string
 
+// Available filter types.
 const (
-	Invalid = FilterType("invalid")
-	// =
-	Equal = FilterType("=")
-	// !=
+	Invalid  = FilterType("invalid")
+	Equal    = FilterType("=")
 	NotEqual = FilterType("!=")
-	// =~
-	Regex = FilterType("=~")
-	// !~
+	Regex    = FilterType("=~")
 	NotRegex = FilterType("!~")
 )
 
+// Filters represents filters slice.
 type Filters []Filter
 
 // Value implements database/sql/driver Valuer interface.
@@ -98,6 +97,7 @@ func (t Filters) Value() (driver.Value, error) { return jsonValue(t) }
 // Scan implements database/sql Scanner interface.
 func (t *Filters) Scan(src interface{}) error { return jsonScan(t, src) }
 
+// Filter represents rule filter.
 type Filter struct {
 	Type FilterType `json:"type"`
 	Key  string     `json:"key"`
@@ -110,6 +110,7 @@ func (f Filter) Value() (driver.Value, error) { return jsonValue(f) }
 // Scan implements database/sql.Scanner interface. Should be defined on the pointer.
 func (f *Filter) Scan(src interface{}) error { return jsonScan(f, src) }
 
+// RuleParams represents rule parameters slice.
 type RuleParams []RuleParam
 
 // Value implements database/sql/driver Valuer interface.
@@ -118,6 +119,7 @@ func (t RuleParams) Value() (driver.Value, error) { return jsonValue(t) }
 // Scan implements database/sql Scanner interface.
 func (t *RuleParams) Scan(src interface{}) error { return jsonScan(t, src) }
 
+// RuleParam represents rule parameter.
 type RuleParam struct {
 	Name        string    `json:"name"`
 	Type        ParamType `json:"type"`

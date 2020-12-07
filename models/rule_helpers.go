@@ -134,8 +134,8 @@ type UpdateRuleParams struct {
 }
 
 // UpdateRule updates existing alerts Rule.
-func UpdateRule(q *reform.Querier, RuleID string, params *UpdateRuleParams) (*Rule, error) {
-	row, err := FindRuleByID(q, RuleID)
+func UpdateRule(q *reform.Querier, ruleID string, params *UpdateRuleParams) (*Rule, error) {
+	row, err := FindRuleByID(q, ruleID)
 	if err != nil {
 		return nil, err
 	}

@@ -238,6 +238,8 @@ func convertParamType(paramType alert.Type) (ParamType, error) {
 
 func convertSeverity(severity common.Severity) Severity {
 	switch severity {
+	case common.Unknown:
+		return UnknownSeverity
 	case common.Emergency:
 		return EmergencySeverity
 	case common.Alert:
