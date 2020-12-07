@@ -79,19 +79,8 @@ type TemplatesService struct {
 
 // NewTemplatesService creates a new TemplatesService.
 func NewTemplatesService(db *reform.DB) *TemplatesService {
-	return &TemplatesService{
-		db:                   db,
-		l:                    logrus.WithField("component", "management/ia/templates"),
-		builtinTemplatesPath: builtinTemplatesPath,
-		userTemplatesPath:    userTemplatesPath,
-		templates:            make(map[string]Template),
-	}
-}
+	l := logrus.WithField("component", "management/ia/templates")
 
-// Run creates tempaltes and rules dir
-func (svc *TemplatesService) Run() {
-	svc.l.Info("Starting...")
-	defer svc.l.Info("Done.")
 	params := []dir.Params{
 		// created both the dirs with the same owners as prometheus dir
 		{
@@ -111,8 +100,16 @@ func (svc *TemplatesService) Run() {
 	for _, p := range params {
 		err := dir.CreateDataDir(p)
 		if err != nil {
-			svc.l.Error(err)
+			l.Error(err)
 		}
+	}
+
+	return &TemplatesService{
+		db:                   db,
+		l:                    l,
+		builtinTemplatesPath: builtinTemplatesPath,
+		userTemplatesPath:    userTemplatesPath,
+		templates:            make(map[string]Template),
 	}
 }
 
