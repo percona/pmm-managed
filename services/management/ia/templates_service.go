@@ -134,7 +134,7 @@ func (s *TemplatesService) getCollected(ctx context.Context) map[string]Template
 func (s *TemplatesService) collect(ctx context.Context) {
 	templates := make([]Template, 0, len(s.builtinTemplatesPath)+len(s.userTemplatesPath))
 
-	builtInTemplates, err := s.loadTemplatesFromFiles(ctx, s.builtinTemplatesPath)
+	builtInTemplates, err := s.loadTemplatesFromFiles(ctx, s.builtinTemplatesPath, true)
 	if err != nil {
 		s.l.Errorf("Failed to load built-in rule templates: %s.", err)
 		return
@@ -146,7 +146,7 @@ func (s *TemplatesService) collect(ctx context.Context) {
 		})
 	}
 
-	userDefinedTemplates, err := s.loadTemplatesFromFiles(ctx, s.userTemplatesPath)
+	userDefinedTemplates, err := s.loadTemplatesFromFiles(ctx, s.userTemplatesPath, false)
 	if err != nil {
 		s.l.Errorf("Failed to load user-defined rule templates: %s.", err)
 		return
@@ -180,7 +180,7 @@ func (s *TemplatesService) collect(ctx context.Context) {
 	}
 }
 
-func (s *TemplatesService) loadTemplatesFromFiles(ctx context.Context, path string) ([]alert.Template, error) {
+func (s *TemplatesService) loadTemplatesFromFiles(ctx context.Context, path string, builtin bool) ([]alert.Template, error) {
 	paths, err := filepath.Glob(path)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get paths")
@@ -188,8 +188,7 @@ func (s *TemplatesService) loadTemplatesFromFiles(ctx context.Context, path stri
 
 	res := make([]alert.Template, 0, len(paths))
 	for _, path := range paths {
-		path := strings.Trim(path, "./")
-		r, err := s.loadFile(ctx, path, true)
+		r, err := s.loadFile(ctx, path, builtin)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to load rule template file: %s", path)
 		}
@@ -311,7 +310,7 @@ func (svc *TemplatesService) loadFile(ctx context.Context, file string, buitin b
 	var err error
 	var data []byte
 	if buitin {
-		data, err = Asset(file)
+		data, err = Asset(strings.Trim(file, "./"))
 	} else {
 		data, err = ioutil.ReadFile(file) //nolint:gosec
 	}
