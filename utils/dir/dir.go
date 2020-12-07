@@ -19,6 +19,8 @@ package dir
 import (
 	"fmt"
 	"os"
+	"os/user"
+	"strconv"
 	"syscall"
 )
 
@@ -27,8 +29,8 @@ type Params struct {
 	Path  string
 	Perm  os.FileMode
 	Chown bool
-	UID   int
-	GID   int
+	User  string
+	Group string
 }
 
 // CreateDataDir creates/updates directories with the given permissions in the persistent volume.
@@ -52,10 +54,28 @@ func CreateDataDir(params Params) error {
 
 	if params.Chown {
 		dataDirSysStat := dataDirStat.Sys().(*syscall.Stat_t)
-		uID, gID := int(dataDirSysStat.Uid), int(dataDirSysStat.Gid)
+		aUID, aGID := int(dataDirSysStat.Uid), int(dataDirSysStat.Gid)
 
-		if uID != params.UID || gID != params.GID {
-			if err := os.Chown(params.Path, params.UID, params.GID); err != nil {
+		dirUser, err := user.Lookup(params.User)
+		if err != nil {
+			return fmt.Errorf("cannot chown datadir %v", err)
+		}
+		bUID, err := strconv.Atoi(dirUser.Uid)
+		if err != nil {
+			return fmt.Errorf("cannot chown datadir %v", err)
+		}
+
+		group, err := user.LookupGroup(params.Group)
+		if err != nil {
+			return fmt.Errorf("cannot chown datadir %v", err)
+		}
+		bGID, err := strconv.Atoi(group.Gid)
+		if err != nil {
+			return fmt.Errorf("cannot chown datadir %v", err)
+		}
+
+		if aUID != bUID || aGID != bGID {
+			if err := os.Chown(params.Path, bUID, bGID); err != nil {
 				return fmt.Errorf("cannot chown datadir %v", err)
 			}
 		}

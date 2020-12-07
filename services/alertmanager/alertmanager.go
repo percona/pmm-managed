@@ -22,7 +22,6 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
-	"syscall"
 
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/percona/pmm/api/alertmanager/amclient"
@@ -40,7 +39,6 @@ import (
 
 const (
 	alertmanagerDataDir = "/srv/alertmanager/data"
-	prometheusDir       = "/srv/prometheus"
 	dirPerm             = os.FileMode(0o775)
 
 	alertmanagerConfigPath     = "/etc/alertmanager.yml"
@@ -66,20 +64,12 @@ func (svc *Service) Run(ctx context.Context) {
 	svc.l.Info("Starting...")
 	defer svc.l.Info("Done.")
 
-	chownDirStat, err := os.Stat(prometheusDir)
-	if err != nil {
-		svc.l.Errorf("cannot get stat of %q: %v", prometheusDir, err)
-	}
-
-	chownDirSysStat := chownDirStat.Sys().(*syscall.Stat_t)
-	uID, gID := int(chownDirSysStat.Uid), int(chownDirSysStat.Gid)
-
-	err = dir.CreateDataDir(dir.Params{
+	err := dir.CreateDataDir(dir.Params{
 		Path:  alertmanagerDataDir,
 		Perm:  dirPerm,
 		Chown: true,
-		UID:   uID,
-		GID:   gID,
+		User:  "pmm",
+		Group: "pmm",
 	})
 	if err != nil {
 		svc.l.Error(err)
