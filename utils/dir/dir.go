@@ -24,10 +24,11 @@ import (
 
 // Params represent the input for CreateDataDir
 type Params struct {
-	Path      string
-	Perm      os.FileMode
-	Chown     bool
-	ChownPath string
+	Path  string
+	Perm  os.FileMode
+	Chown bool
+	UID   int
+	GID   int
 }
 
 // CreateDataDir creates/updates directories with the given permissions in the persistent volume.
@@ -51,17 +52,10 @@ func CreateDataDir(params Params) error {
 
 	if params.Chown {
 		dataDirSysStat := dataDirStat.Sys().(*syscall.Stat_t)
-		aUID, aGID := int(dataDirSysStat.Uid), int(dataDirSysStat.Gid)
+		uID, gID := int(dataDirSysStat.Uid), int(dataDirSysStat.Gid)
 
-		chownDirStat, err := os.Stat(params.ChownPath)
-		if err != nil {
-			return fmt.Errorf("cannot get stat of %q: %v", params.ChownPath, err)
-		}
-
-		chownDirSysStat := chownDirStat.Sys().(*syscall.Stat_t)
-		bUID, bGID := int(chownDirSysStat.Uid), int(chownDirSysStat.Gid)
-		if aUID != bUID || aGID != bGID {
-			if err := os.Chown(params.Path, bUID, bGID); err != nil {
+		if uID != params.UID || gID != params.GID {
+			if err := os.Chown(params.Path, params.UID, params.GID); err != nil {
 				return fmt.Errorf("cannot chown datadir %v", err)
 			}
 		}
