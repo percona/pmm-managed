@@ -1,5 +1,5 @@
 ---
-rules:
+templates:
   - name: mysql_restarted
     version: 1
     summary: MySQL Restarted
