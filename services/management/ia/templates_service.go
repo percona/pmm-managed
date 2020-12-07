@@ -82,21 +82,17 @@ type TemplatesService struct {
 func NewTemplatesService(db *reform.DB) *TemplatesService {
 	l := logrus.WithField("component", "management/ia/templates")
 
-	params := []dir.Params{
-		// created both the dirs with the same owners as prometheus dir
-		{
-			Path:      templatesDir,
-			Perm:      dirPerm,
-			Chown:     true,
-			ChownPath: prometheusDir,
-		},
-		{
-			Path:      rulesDir,
-			Perm:      dirPerm,
-			Chown:     true,
-			ChownPath: prometheusDir,
-		},
-	}
+	params := []dir.Params{{
+		Path:      templatesDir,
+		Perm:      dirPerm,
+		Chown:     true,
+		ChownPath: prometheusDir,
+	}, {
+		Path:      rulesDir,
+		Perm:      dirPerm,
+		Chown:     true,
+		ChownPath: prometheusDir,
+	}}
 
 	for _, p := range params {
 		err := dir.CreateDataDir(p)
