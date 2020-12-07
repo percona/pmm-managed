@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"syscall"
 
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/percona/pmm/api/alertmanager/amclient"
@@ -65,11 +66,20 @@ func (svc *Service) Run(ctx context.Context) {
 	svc.l.Info("Starting...")
 	defer svc.l.Info("Done.")
 
-	err := dir.CreateDataDir(dir.Params{
-		Path:      alertmanagerDataDir,
-		Perm:      dirPerm,
-		Chown:     true,
-		ChownPath: prometheusDir,
+	chownDirStat, err := os.Stat(prometheusDir)
+	if err != nil {
+		svc.l.Errorf("cannot get stat of %q: %v", prometheusDir, err)
+	}
+
+	chownDirSysStat := chownDirStat.Sys().(*syscall.Stat_t)
+	uID, gID := int(chownDirSysStat.Uid), int(chownDirSysStat.Gid)
+
+	err = dir.CreateDataDir(dir.Params{
+		Path:  alertmanagerDataDir,
+		Perm:  dirPerm,
+		Chown: true,
+		UID:   uID,
+		GID:   gID,
 	})
 	if err != nil {
 		svc.l.Error(err)
