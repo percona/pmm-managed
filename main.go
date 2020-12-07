@@ -615,8 +615,6 @@ func main() {
 		l.Fatalf("Could not create platform service: %s", err)
 	}
 
-	templatesSvc := ia.NewTemplatesService(db)
-
 	serverParams := &server.Params{
 		DB:                      db,
 		VMDB:                    vmdb,
