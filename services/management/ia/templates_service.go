@@ -67,7 +67,6 @@ type TemplatesService struct {
 	db                *reform.DB
 	l                 *logrus.Entry
 	userTemplatesPath string
-	rulesFileDir      string
 
 	rw        sync.RWMutex
 	templates map[string]Template
@@ -322,7 +321,7 @@ func convertSeverity(severity models.Severity) common.Severity {
 	}
 }
 
-func (svc *TemplatesService) loadFile(ctx context.Context, file string) ([]saas.Rule, error) {
+func (s *TemplatesService) loadFile(ctx context.Context, file string) ([]saas.Rule, error) {
 	if ctx.Err() != nil {
 		return nil, errors.WithStack(ctx.Err())
 	}

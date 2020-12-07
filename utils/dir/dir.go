@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+// Package dir contains utilities for creating directories.
 package dir
 
 import (
@@ -24,7 +25,7 @@ import (
 	"syscall"
 )
 
-// Params represent the input for CreateDataDir
+// Params represent the input for CreateDataDir.
 type Params struct {
 	Path  string
 	Perm  os.FileMode
@@ -39,15 +40,16 @@ func CreateDataDir(params Params) error {
 		return fmt.Errorf("cannot create datadir %v", err)
 	}
 
+	var err error
 	// check and fix directory permissions
 	dataDirStat, err := os.Stat(params.Path)
 	if err != nil {
-		return fmt.Errorf("cannot get stat of %q: %v", params.Path, err)
+		err = fmt.Errorf("cannot get stat of %q: %v", params.Path, err)
 	}
 
 	if dataDirStat.Mode()&os.ModePerm != params.Perm {
 		if err := os.Chmod(params.Path, params.Perm); err != nil {
-			return fmt.Errorf("cannot chmod datadir %v", err)
+			err = fmt.Errorf("cannot chmod datadir %v", err)
 		}
 	}
 
@@ -60,7 +62,7 @@ func CreateDataDir(params Params) error {
 	}
 	bUID, err := strconv.Atoi(dirUser.Uid)
 	if err != nil {
-		return fmt.Errorf("cannot chown datadir %v", err)
+		err = fmt.Errorf("cannot chown datadir %v", err)
 	}
 
 	group, err := user.LookupGroup(params.Group)
@@ -69,13 +71,13 @@ func CreateDataDir(params Params) error {
 	}
 	bGID, err := strconv.Atoi(group.Gid)
 	if err != nil {
-		return fmt.Errorf("cannot chown datadir %v", err)
+		err = fmt.Errorf("cannot chown datadir %v", err)
 	}
 
 	if aUID != bUID || aGID != bGID {
 		if err := os.Chown(params.Path, bUID, bGID); err != nil {
-			return fmt.Errorf("cannot chown datadir %v", err)
+			err = fmt.Errorf("cannot chown datadir %v", err)
 		}
 	}
-	return nil
+	return err
 }
