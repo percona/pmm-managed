@@ -48,6 +48,7 @@ import (
 )
 
 const (
+	// TODO remove this constant
 	builtinTemplatesPath = "../../../data/iatemplates/*.yml"
 	userTemplatesPath    = "/srv/ia/templates/*.yml"
 
@@ -134,7 +135,7 @@ func (s *TemplatesService) getCollected(ctx context.Context) map[string]Template
 func (s *TemplatesService) collect(ctx context.Context) {
 	templates := make([]Template, 0, len(s.builtinTemplatesPath)+len(s.userTemplatesPath))
 
-	builtInTemplates, err := s.loadTemplatesFromFiles(ctx, s.builtinTemplatesPath, true)
+	builtInTemplates, err := s.loadTemplatesFromAssets(ctx)
 	if err != nil {
 		s.l.Errorf("Failed to load built-in rule templates: %s.", err)
 		return
@@ -146,7 +147,7 @@ func (s *TemplatesService) collect(ctx context.Context) {
 		})
 	}
 
-	userDefinedTemplates, err := s.loadTemplatesFromFiles(ctx, s.userTemplatesPath, false)
+	userDefinedTemplates, err := s.loadTemplatesFromFiles(ctx, s.userTemplatesPath)
 	if err != nil {
 		s.l.Errorf("Failed to load user-defined rule templates: %s.", err)
 		return
@@ -180,7 +181,31 @@ func (s *TemplatesService) collect(ctx context.Context) {
 	}
 }
 
-func (s *TemplatesService) loadTemplatesFromFiles(ctx context.Context, path string, builtin bool) ([]alert.Template, error) {
+func (s *TemplatesService) loadTemplatesFromAssets(ctx context.Context) ([]alert.Template, error) {
+	paths := AssetNames()
+	res := make([]alert.Template, 0, len(paths))
+	for _, path := range paths {
+		data, err := Asset(strings.Trim(path, "./"))
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to load rule template file: %s", path)
+		}
+
+		// be strict about local files
+		params := &saas.ParseParams{
+			DisallowUnknownFields:    true,
+			DisallowInvalidTemplates: true,
+		}
+		templates, err := saas.Parse(bytes.NewReader(data), params)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to parse rule template file")
+		}
+
+		res = append(res, templates...)
+	}
+	return res, nil
+}
+
+func (s *TemplatesService) loadTemplatesFromFiles(ctx context.Context, path string) ([]alert.Template, error) {
 	paths, err := filepath.Glob(path)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get paths")
@@ -188,12 +213,12 @@ func (s *TemplatesService) loadTemplatesFromFiles(ctx context.Context, path stri
 
 	res := make([]alert.Template, 0, len(paths))
 	for _, path := range paths {
-		r, err := s.loadFile(ctx, path, builtin)
+		templates, err := s.loadFile(ctx, path)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to load rule template file: %s", path)
 		}
 
-		res = append(res, r...)
+		res = append(res, templates...)
 	}
 	return res, nil
 }
@@ -302,18 +327,12 @@ func convertSeverity(severity models.Severity) common.Severity {
 	}
 }
 
-func (svc *TemplatesService) loadFile(ctx context.Context, file string, buitin bool) ([]saas.Rule, error) {
+func (svc *TemplatesService) loadFile(ctx context.Context, file string) ([]saas.Rule, error) {
 	if ctx.Err() != nil {
 		return nil, errors.WithStack(ctx.Err())
 	}
 
-	var err error
-	var data []byte
-	if buitin {
-		data, err = Asset(strings.Trim(file, "./"))
-	} else {
-		data, err = ioutil.ReadFile(file) //nolint:gosec
-	}
+	data, err := ioutil.ReadFile(file) //nolint:gosec
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read rule template file")
 	}
