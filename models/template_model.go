@@ -149,7 +149,7 @@ const (
 	UserAPISource  = Source("user_api")
 )
 
-// check interfaces
+// check interfaces.
 var (
 	_ reform.BeforeInserter = (*Template)(nil)
 	_ reform.BeforeUpdater  = (*Template)(nil)
