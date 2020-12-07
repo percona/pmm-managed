@@ -56,6 +56,8 @@ const (
 	dirPerm = os.FileMode(0o775)
 )
 
+//go:generate go-bindata -o bindata.go -pkg ia ../../../data/iatemplates/
+
 // Template represents alerting rule template with added source field.
 type Template struct {
 	alert.Template
@@ -192,7 +194,7 @@ func (s *TemplatesService) loadTemplatesFromAssets(ctx context.Context) ([]alert
 	paths := AssetNames()
 	res := make([]alert.Template, 0, len(paths))
 	for _, path := range paths {
-		data, err := Asset(strings.Trim(path, "./"))
+		data, err := Asset(path)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to load rule template file: %s", path)
 		}
