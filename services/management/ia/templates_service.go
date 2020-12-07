@@ -48,10 +48,6 @@ import (
 )
 
 const (
-	// TODO remove this constant
-	builtinTemplatesPath = "../../../data/iatemplates/*.yml"
-	userTemplatesPath    = "/srv/ia/templates/*.yml"
-
 	templatesDir  = "/srv/ia/templates"
 	rulesDir      = "/etc/ia/rules/"
 	prometheusDir = "/srv/prometheus"
@@ -68,11 +64,10 @@ type Template struct {
 
 // TemplatesService is responsible for interactions with IA rule templates.
 type TemplatesService struct {
-	db                   *reform.DB
-	l                    *logrus.Entry
-	builtinTemplatesPath string
-	userTemplatesPath    string
-	rulesFileDir         string
+	db                *reform.DB
+	l                 *logrus.Entry
+	userTemplatesPath string
+	rulesFileDir      string
 
 	rw        sync.RWMutex
 	templates map[string]Template
@@ -102,11 +97,10 @@ func NewTemplatesService(db *reform.DB) *TemplatesService {
 	}
 
 	return &TemplatesService{
-		db:                   db,
-		l:                    l,
-		builtinTemplatesPath: builtinTemplatesPath,
-		userTemplatesPath:    userTemplatesPath,
-		templates:            make(map[string]Template),
+		db:                db,
+		l:                 l,
+		userTemplatesPath: templatesDir + "/*.yml",
+		templates:         make(map[string]Template),
 	}
 }
 
@@ -131,18 +125,10 @@ func (s *TemplatesService) getCollected(ctx context.Context) map[string]Template
 // user-defined templates: read from yaml files created by the user in `/srv/ia/templates` or
 // in the DB created using the API.
 func (s *TemplatesService) collect(ctx context.Context) {
-	templates := make([]Template, 0, len(s.builtinTemplatesPath)+len(s.userTemplatesPath))
-
 	builtInTemplates, err := s.loadTemplatesFromAssets(ctx)
 	if err != nil {
 		s.l.Errorf("Failed to load built-in rule templates: %s.", err)
 		return
-	}
-	for _, t := range builtInTemplates {
-		templates = append(templates, Template{
-			Template: t,
-			Source:   iav1beta1.TemplateSource_BUILT_IN,
-		})
 	}
 
 	userDefinedTemplates, err := s.loadTemplatesFromFiles(ctx, s.userTemplatesPath)
@@ -150,6 +136,22 @@ func (s *TemplatesService) collect(ctx context.Context) {
 		s.l.Errorf("Failed to load user-defined rule templates: %s.", err)
 		return
 	}
+
+	dbTemplates, err := s.loadTemplatesFromDB()
+	if err != nil {
+		s.l.Errorf("Failed to load rule templates from DB: %s.", err)
+		return
+	}
+
+	templates := make([]Template, 0, len(builtInTemplates)+len(userDefinedTemplates)+len(dbTemplates))
+
+	for _, t := range builtInTemplates {
+		templates = append(templates, Template{
+			Template: t,
+			Source:   iav1beta1.TemplateSource_BUILT_IN,
+		})
+	}
+
 	for _, t := range userDefinedTemplates {
 		templates = append(templates, Template{
 			Template: t,
@@ -157,11 +159,6 @@ func (s *TemplatesService) collect(ctx context.Context) {
 		})
 	}
 
-	dbTemplates, err := s.loadTemplatesFromDB()
-	if err != nil {
-		s.l.Errorf("Failed to load rule templates from DB: %s.", err)
-		return
-	}
 	templates = append(templates, dbTemplates...)
 
 	// TODO download templates from SAAS.

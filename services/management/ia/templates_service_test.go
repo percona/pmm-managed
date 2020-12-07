@@ -33,10 +33,9 @@ import (
 )
 
 const (
-	testBadTemplates     = "../../../testdata/ia/bad/*.yml"
-	testUser2Templates   = "../../../testdata/ia/user2/*.yml"
-	testUserTemplates    = "../../../testdata/ia/user/*.yml"
-	testMissingTemplates = "/no/such/path/*.yml"
+	testBadTemplates   = "../../../testdata/ia/bad/*.yml"
+	testUser2Templates = "../../../testdata/ia/user2/*.yml"
+	testUserTemplates  = "../../../testdata/ia/user/*.yml"
 
 	userRuleFilepath     = "/etc/ia/rules/user_rule.yml"
 	builtinRuleFilepath1 = "/etc/ia/rules/mysql_down.yml"
@@ -51,7 +50,7 @@ func TestCollect(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	t.Run("bad and missing template paths", func(t *testing.T) {
+	t.Run("bad template paths", func(t *testing.T) {
 		t.Parallel()
 
 		testDir, err := ioutil.TempDir("", "")
@@ -59,9 +58,7 @@ func TestCollect(t *testing.T) {
 		defer os.RemoveAll(testDir) //nolint:errcheck
 
 		svc := NewTemplatesService(db)
-		svc.builtinTemplatesPath = testMissingTemplates
 		svc.userTemplatesPath = testBadTemplates
-		//svc.rulesFileDir = testDir
 		svc.collect(ctx)
 
 		require.Empty(t, svc.getCollected(ctx))
@@ -76,7 +73,6 @@ func TestCollect(t *testing.T) {
 
 		svc := NewTemplatesService(db)
 		svc.userTemplatesPath = testUserTemplates
-		//svc.rulesFileDir = testDir
 		svc.collect(ctx)
 
 		// todo rename rules to templates
@@ -112,7 +108,6 @@ func TestConvertTemplate(t *testing.T) {
 
 		svc := NewTemplatesService(db)
 		svc.userTemplatesPath = testUserTemplates
-		//svc.rulesFileDir = testDir
 		svc.collect(ctx)
 
 		err = svc.convertTemplates(ctx)
