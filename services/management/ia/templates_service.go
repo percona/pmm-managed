@@ -56,8 +56,9 @@ const (
 // Template represents alerting rule template with added source field.
 type Template struct {
 	alert.Template
-	Yaml   string
-	Source iav1beta1.TemplateSource
+	Yaml      string
+	Source    iav1beta1.TemplateSource
+	CreatedAt *time.Time
 }
 
 // TemplatesService is responsible for interactions with IA rule templates.
@@ -226,8 +227,9 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]Template, error) {
 					Labels:      labels,
 					Annotations: annotations,
 				},
-				Yaml:   template.Yaml,
-				Source: convertSource(template.Source),
+				Yaml:      template.Yaml,
+				Source:    convertSource(template.Source),
+				CreatedAt: &template.CreatedAt,
 			},
 		)
 	}
@@ -464,6 +466,13 @@ func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.Lis
 			Annotations: r.Annotations,
 			Source:      r.Source,
 			Yaml:        r.Yaml,
+		}
+
+		if r.CreatedAt != nil {
+			var err error
+			if t.CreatedAt, err = ptypes.TimestampProto(*r.CreatedAt); err != nil {
+				return nil, err
+			}
 		}
 
 		for _, p := range r.Params {
