@@ -67,7 +67,6 @@ func (svc *Service) Run(ctx context.Context) {
 	err := dir.CreateDataDir(dir.Params{
 		Path:  alertmanagerDataDir,
 		Perm:  dirPerm,
-		Chown: true,
 		User:  "pmm",
 		Group: "pmm",
 	})

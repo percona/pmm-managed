@@ -28,7 +28,6 @@ import (
 type Params struct {
 	Path  string
 	Perm  os.FileMode
-	Chown bool
 	User  string
 	Group string
 }
@@ -52,32 +51,30 @@ func CreateDataDir(params Params) error {
 		}
 	}
 
-	if params.Chown {
-		dataDirSysStat := dataDirStat.Sys().(*syscall.Stat_t)
-		aUID, aGID := int(dataDirSysStat.Uid), int(dataDirSysStat.Gid)
+	dataDirSysStat := dataDirStat.Sys().(*syscall.Stat_t)
+	aUID, aGID := int(dataDirSysStat.Uid), int(dataDirSysStat.Gid)
 
-		dirUser, err := user.Lookup(params.User)
-		if err != nil {
-			return fmt.Errorf("cannot chown datadir %v", err)
-		}
-		bUID, err := strconv.Atoi(dirUser.Uid)
-		if err != nil {
-			return fmt.Errorf("cannot chown datadir %v", err)
-		}
+	dirUser, err := user.Lookup(params.User)
+	if err != nil {
+		return fmt.Errorf("cannot chown datadir %v", err)
+	}
+	bUID, err := strconv.Atoi(dirUser.Uid)
+	if err != nil {
+		return fmt.Errorf("cannot chown datadir %v", err)
+	}
 
-		group, err := user.LookupGroup(params.Group)
-		if err != nil {
-			return fmt.Errorf("cannot chown datadir %v", err)
-		}
-		bGID, err := strconv.Atoi(group.Gid)
-		if err != nil {
-			return fmt.Errorf("cannot chown datadir %v", err)
-		}
+	group, err := user.LookupGroup(params.Group)
+	if err != nil {
+		return fmt.Errorf("cannot chown datadir %v", err)
+	}
+	bGID, err := strconv.Atoi(group.Gid)
+	if err != nil {
+		return fmt.Errorf("cannot chown datadir %v", err)
+	}
 
-		if aUID != bUID || aGID != bGID {
-			if err := os.Chown(params.Path, bUID, bGID); err != nil {
-				return fmt.Errorf("cannot chown datadir %v", err)
-			}
+	if aUID != bUID || aGID != bGID {
+		if err := os.Chown(params.Path, bUID, bGID); err != nil {
+			return fmt.Errorf("cannot chown datadir %v", err)
 		}
 	}
 	return nil
