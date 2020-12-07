@@ -155,18 +155,20 @@ func TestConvertTemplate(t *testing.T) {
 		}
 
 		for _, tc := range testcases {
-			buf, err := ioutil.ReadFile(tc.path)
-			require.NoError(t, err)
-			var rf ruleFile
-			err = yaml.Unmarshal(buf, &rf)
-			require.NoError(t, err)
-			rule := rf.Group[0].Rules[0]
-			assert.Equal(t, tc.alert, rule.Alert)
-			assert.Len(t, rule.Labels, tc.labelsCount)
-			assert.Contains(t, rule.Labels, "severity")
-			assert.Contains(t, rule.Labels, "ia")
-			assert.NotNil(t, rule.Annotations)
-			assert.Len(t, rule.Annotations, tc.annotationsCount)
+			t.Run(tc.path, func(t *testing.T) {
+				buf, err := ioutil.ReadFile(tc.path)
+				require.NoError(t, err)
+				var rf ruleFile
+				err = yaml.Unmarshal(buf, &rf)
+				require.NoError(t, err)
+				rule := rf.Group[0].Rules[0]
+				assert.Equal(t, tc.alert, rule.Alert)
+				assert.Len(t, rule.Labels, tc.labelsCount)
+				assert.Contains(t, rule.Labels, "severity")
+				assert.Contains(t, rule.Labels, "ia")
+				assert.NotNil(t, rule.Annotations)
+				assert.Len(t, rule.Annotations, tc.annotationsCount)
+			})
 		}
 	})
 }
