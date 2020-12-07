@@ -27,6 +27,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
@@ -77,16 +78,27 @@ type TemplatesService struct {
 func NewTemplatesService(db *reform.DB) *TemplatesService {
 	l := logrus.WithField("component", "management/ia/templates")
 
+	// we want owner and group of our directories to be the same as that of prometheusDir.
+	chownDirStat, err := os.Stat(prometheusDir)
+	if err != nil {
+		l.Errorf("cannot get stat of %q: %v", prometheusDir, err)
+	}
+
+	chownDirSysStat := chownDirStat.Sys().(*syscall.Stat_t)
+	uID, gID := int(chownDirSysStat.Uid), int(chownDirSysStat.Gid)
+
 	params := []dir.Params{{
-		Path:      templatesDir,
-		Perm:      dirPerm,
-		Chown:     true,
-		ChownPath: prometheusDir,
+		Path:  templatesDir,
+		Perm:  dirPerm,
+		Chown: true,
+		UID:   uID,
+		GID:   gID,
 	}, {
-		Path:      rulesDir,
-		Perm:      dirPerm,
-		Chown:     true,
-		ChownPath: prometheusDir,
+		Path:  rulesDir,
+		Perm:  dirPerm,
+		Chown: true,
+		UID:   uID,
+		GID:   gID,
 	}}
 
 	for _, p := range params {
