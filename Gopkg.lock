@@ -417,7 +417,7 @@
 
 [[projects]]
   branch = "PMM-5784-pt-pg-summary"
-  digest = "1:247d8c4474a1a4e0d24bb1ba1eb396bec69e22ba98ec954099a69c5c4e88d433"
+  digest = "1:725b3294e7696d758650c5260527ff68170ba3f026df8d0d0fe21e1d0fb3fcc1"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -440,7 +440,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "d419a1f28429b731fa29c6349aefdbbaf47a9ec3"
+  revision = "e93e411bfcba4731d901d5bc0499477e1a288c97"
 
 [[projects]]
   digest = "1:6832634ec059f4bfddaff75621cf1c4750949129c6de2e5e58e01059d0851e25"
@@ -815,23 +815,18 @@
   version = "v2.2.6"
 
 [[projects]]
-  digest = "1:72caeb94dfca2a9190404cff141246fd9b81af2a19b27bcec8aa22f84887abf4"
+  digest = "1:666e94676a94cb3351be105e21b8579039a6306ec050191333fb931ef4baab64"
   name = "gopkg.in/reform.v1"
   packages = [
     ".",
-    "dialects",
-    "dialects/mssql",
-    "dialects/mysql",
     "dialects/postgresql",
-    "dialects/sqlite3",
-    "dialects/sqlserver",
     "internal",
     "parse",
     "reform",
   ]
   pruneopts = "NUT"
-  revision = "d180de3a658d1bd73a5473b48cc635263dac2320"
-  version = "v1.3.4"
+  revision = "be1c9e20a895a055b71875afe38f593d8f0623b9"
+  version = "v1.5.0"
 
 [[projects]]
   digest = "1:62a89978829993fb84e755bff5ae0e3d84837228898fd55b1a88a885036e1e51"

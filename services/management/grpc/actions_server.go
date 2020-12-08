@@ -299,13 +299,6 @@ func pointerToAgentType(agentType models.AgentType) *models.AgentType {
 	return &agentType
 }
 
-// TBD: This prototype is here to allow compilation. It will be replaced by PMM-4172 content when its PR approved.
-// StartPTMySQLSummaryAction starts pt-mysql-summary action.
-//nolint:lll
-func (s *actionsServer) StartPTMySQLSummaryAction(context.Context, *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
-	panic("not implemented yet")
-}
-
 // StartPTPgSQLSummaryAction starts pt-pg-summary (PostgreSQL) action and returns the pointer to the response message
 //nolint:lll
 func (s *actionsServer) StartPTPgSQLSummaryAction(ctx context.Context, req *managementpb.StartPTPgSQLSummaryActionRequest) (*managementpb.StartPTPgSQLSummaryActionResponse, error) {
@@ -335,7 +328,7 @@ func (s *actionsServer) StartPTPgSQLSummaryAction(ctx context.Context, req *mana
 	agentFilter := models.AgentFilters{PMMAgentID: "", NodeID: "",
 		ServiceID: req.ServiceId, AgentType: pointerToAgentType(models.PostgresExporterType)}
 
-	// Need to get the postgress exporters to get the username and password therefrom
+	// Need to get the postgres exporters to get the username and password therefrom
 	pExporters, err := models.FindAgents(s.db.Querier, agentFilter)
 	if err != nil {
 		return nil, err
@@ -345,11 +338,11 @@ func (s *actionsServer) StartPTPgSQLSummaryAction(ctx context.Context, req *mana
 
 	// Must be only one result
 	if exportersCount < 1 {
-		return nil, status.Errorf(codes.FailedPrecondition, "No mysql exporter")
+		return nil, status.Errorf(codes.FailedPrecondition, "No postgres exporter")
 	}
 
 	if exportersCount > 1 {
-		return nil, status.Errorf(codes.FailedPrecondition, "Found more than one mysql exporter")
+		return nil, status.Errorf(codes.FailedPrecondition, "Found more than one postgres exporter")
 	}
 
 	// Starts the pt-pg-summary with the host address, port, username and password
