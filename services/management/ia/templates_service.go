@@ -31,7 +31,6 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/percona-platform/saas/pkg/alert"
-	saas "github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona-platform/saas/pkg/common"
 	"github.com/percona/pmm/api/managementpb"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
@@ -94,6 +93,7 @@ func NewTemplatesService(db *reform.DB) *TemplatesService {
 		l.Error(err)
 	}
 
+	// TODO move to rules service
 	err = dir.CreateDataDir(rulesDir, "pmm", "pmm", dirPerm)
 	if err != nil {
 		l.Error(err)
@@ -194,7 +194,7 @@ func (s *TemplatesService) loadTemplatesFromAssets(ctx context.Context) ([]alert
 			DisallowUnknownFields:    true,
 			DisallowInvalidTemplates: true,
 		}
-		templates, err := saas.Parse(bytes.NewReader(data), params)
+		templates, err := alert.Parse(bytes.NewReader(data), params)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to parse rule template file")
 		}
@@ -338,11 +338,11 @@ func (s *TemplatesService) loadFile(ctx context.Context, file string) ([]saas.Te
 	}
 
 	// be strict about local files
-	params := &saas.ParseParams{
+	params := &alert.ParseParams{
 		DisallowUnknownFields:    true,
 		DisallowInvalidTemplates: true,
 	}
-	templates, err := saas.Parse(bytes.NewReader(data), params)
+	templates, err := alert.Parse(bytes.NewReader(data), params)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse rule template file")
 	}
