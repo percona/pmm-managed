@@ -27,7 +27,20 @@ func (v *ruleTableType) Name() string {
 
 // Columns returns a new slice of column names for that view or table in SQL database.
 func (v *ruleTableType) Columns() []string {
-	return []string{"template_name", "id", "summary", "disabled", "params", "for", "severity", "custom_labels", "filters", "channel_ids", "created_at", "updated_at"}
+	return []string{
+		"template_name",
+		"id",
+		"summary",
+		"disabled",
+		"params",
+		"for",
+		"severity",
+		"custom_labels",
+		"filters",
+		"channel_ids",
+		"created_at",
+		"updated_at",
+	}
 }
 
 // NewStruct makes a new struct for that view or table.
@@ -47,7 +60,25 @@ func (v *ruleTableType) PKColumnIndex() uint {
 
 // RuleTable represents ia_rules view or table in SQL database.
 var RuleTable = &ruleTableType{
-	s: parse.StructInfo{Type: "Rule", SQLSchema: "", SQLName: "ia_rules", Fields: []parse.FieldInfo{{Name: "TemplateName", Type: "string", Column: "template_name"}, {Name: "ID", Type: "string", Column: "id"}, {Name: "Summary", Type: "string", Column: "summary"}, {Name: "Disabled", Type: "bool", Column: "disabled"}, {Name: "Params", Type: "RuleParams", Column: "params"}, {Name: "For", Type: "time.Duration", Column: "for"}, {Name: "Severity", Type: "Severity", Column: "severity"}, {Name: "CustomLabels", Type: "[]uint8", Column: "custom_labels"}, {Name: "Filters", Type: "Filters", Column: "filters"}, {Name: "ChannelIDs", Type: "ChannelIDs", Column: "channel_ids"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}}, PKFieldIndex: 1},
+	s: parse.StructInfo{
+		Type:    "Rule",
+		SQLName: "ia_rules",
+		Fields: []parse.FieldInfo{
+			{Name: "TemplateName", Type: "string", Column: "template_name"},
+			{Name: "ID", Type: "string", Column: "id"},
+			{Name: "Summary", Type: "string", Column: "summary"},
+			{Name: "Disabled", Type: "bool", Column: "disabled"},
+			{Name: "Params", Type: "RuleParams", Column: "params"},
+			{Name: "For", Type: "time.Duration", Column: "for"},
+			{Name: "Severity", Type: "Severity", Column: "severity"},
+			{Name: "CustomLabels", Type: "[]uint8", Column: "custom_labels"},
+			{Name: "Filters", Type: "Filters", Column: "filters"},
+			{Name: "ChannelIDs", Type: "ChannelIDs", Column: "channel_ids"},
+			{Name: "CreatedAt", Type: "time.Time", Column: "created_at"},
+			{Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"},
+		},
+		PKFieldIndex: 1,
+	},
 	z: new(Rule).Values(),
 }
 
@@ -134,13 +165,11 @@ func (s *Rule) HasPK() bool {
 	return s.ID != RuleTable.z[RuleTable.s.PKFieldIndex]
 }
 
-// SetPK sets record primary key.
+// SetPK sets record primary key, if possible.
+//
+// Deprecated: prefer direct field assignment where possible: s.ID = pk.
 func (s *Rule) SetPK(pk interface{}) {
-	if i64, ok := pk.(int64); ok {
-		s.ID = string(i64)
-	} else {
-		s.ID = pk.(string)
-	}
+	reform.SetPK(s, pk)
 }
 
 // check interfaces
