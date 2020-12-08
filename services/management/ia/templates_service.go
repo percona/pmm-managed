@@ -31,7 +31,6 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/percona-platform/saas/pkg/alert"
-	saas "github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona-platform/saas/pkg/common"
 	"github.com/percona/pmm/api/managementpb"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
@@ -179,11 +178,11 @@ func (s *TemplatesService) loadTemplatesFromAssets(ctx context.Context) ([]alert
 		}
 
 		// be strict about local files
-		params := &saas.ParseParams{
+		params := &alert.ParseParams{
 			DisallowUnknownFields:    true,
 			DisallowInvalidTemplates: true,
 		}
-		templates, err := saas.Parse(bytes.NewReader(data), params)
+		templates, err := alert.Parse(bytes.NewReader(data), params)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to parse rule template file")
 		}
@@ -315,7 +314,7 @@ func convertSeverity(severity models.Severity) common.Severity {
 	}
 }
 
-func (s *TemplatesService) loadFile(ctx context.Context, file string) ([]saas.Template, error) {
+func (s *TemplatesService) loadFile(ctx context.Context, file string) ([]alert.Template, error) {
 	if ctx.Err() != nil {
 		return nil, errors.WithStack(ctx.Err())
 	}
@@ -326,11 +325,11 @@ func (s *TemplatesService) loadFile(ctx context.Context, file string) ([]saas.Te
 	}
 
 	// be strict about local files
-	params := &saas.ParseParams{
+	params := &alert.ParseParams{
 		DisallowUnknownFields:    true,
 		DisallowInvalidTemplates: true,
 	}
-	templates, err := saas.Parse(bytes.NewReader(data), params)
+	templates, err := alert.Parse(bytes.NewReader(data), params)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse rule template file")
 	}
