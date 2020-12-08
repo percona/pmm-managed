@@ -60,6 +60,12 @@ func TestCreateDataDir(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
+			defer func() {
+				if _, err := os.Stat(tc.path); !os.IsNotExist(err) {
+					os.Remove(tc.path)
+				}
+			}()
+
 			actual := CreateDataDir(tc.path, tc.username, tc.groupname, tc.perm)
 			if tc.err != "" {
 				assert.EqualError(t, actual, tc.err)
