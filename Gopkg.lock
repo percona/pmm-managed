@@ -383,7 +383,7 @@
   version = "v0.3.0"
 
 [[projects]]
-  branch = "pmm/2.13"
+  branch = "pmm-2.13"
   digest = "1:5baea2c09a15784fca045752d007c6d24e42ed05d4b0d8f23fa275286c678d35"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
