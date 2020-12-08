@@ -64,12 +64,7 @@ func (svc *Service) Run(ctx context.Context) {
 	svc.l.Info("Starting...")
 	defer svc.l.Info("Done.")
 
-	err := dir.CreateDataDir(dir.Params{
-		Path:  alertmanagerDataDir,
-		Perm:  dirPerm,
-		User:  "pmm",
-		Group: "pmm",
-	})
+	err := dir.CreateDataDir(alertmanagerDataDir, "pmm", "pmm", dirPerm)
 	if err != nil {
 		svc.l.Error(err)
 	}

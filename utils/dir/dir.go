@@ -34,21 +34,21 @@ type Params struct {
 }
 
 // CreateDataDir creates/updates directories with the given permissions in the persistent volume.
-func CreateDataDir(params Params) error {
+func CreateDataDir(path, username, groupname string, perm os.FileMode) error {
 	// try to create data directory
-	if err := os.MkdirAll(params.Path, params.Perm); err != nil {
+	if err := os.MkdirAll(path, perm); err != nil {
 		return fmt.Errorf("cannot create datadir %v", err)
 	}
 
 	var storedErr error // store the first encountered error
 	// check and fix directory permissions
-	dataDirStat, err := os.Stat(params.Path)
+	dataDirStat, err := os.Stat(path)
 	if err != nil {
-		storedErr = fmt.Errorf("cannot get stat of %q: %v", params.Path, err)
+		storedErr = fmt.Errorf("cannot get stat of %q: %v", path, err)
 	}
 
-	if dataDirStat.Mode()&os.ModePerm != params.Perm {
-		if err := os.Chmod(params.Path, params.Perm); err != nil {
+	if dataDirStat.Mode()&os.ModePerm != perm {
+		if err := os.Chmod(path, perm); err != nil {
 			if storedErr != nil {
 				return storedErr
 			}
@@ -59,7 +59,7 @@ func CreateDataDir(params Params) error {
 	dataDirSysStat := dataDirStat.Sys().(*syscall.Stat_t)
 	aUID, aGID := int(dataDirSysStat.Uid), int(dataDirSysStat.Gid)
 
-	dirUser, err := user.Lookup(params.User)
+	dirUser, err := user.Lookup(username)
 	if err != nil {
 		return fmt.Errorf("cannot chown datadir %v", err)
 	}
@@ -71,7 +71,7 @@ func CreateDataDir(params Params) error {
 		storedErr = fmt.Errorf("cannot chown datadir %v", err)
 	}
 
-	group, err := user.LookupGroup(params.Group)
+	group, err := user.LookupGroup(groupname)
 	if err != nil {
 		return fmt.Errorf("cannot chown datadir %v", err)
 	}
@@ -84,7 +84,7 @@ func CreateDataDir(params Params) error {
 	}
 
 	if aUID != bUID || aGID != bGID {
-		if err := os.Chown(params.Path, bUID, bGID); err != nil {
+		if err := os.Chown(path, bUID, bGID); err != nil {
 			if storedErr != nil {
 				return storedErr
 			}

@@ -26,50 +26,49 @@ import (
 
 func TestCreateDataDir(t *testing.T) {
 	testcases := []struct {
-		name   string
-		params Params
-		err    string
+		name      string
+		path      string
+		username  string
+		groupname string
+		perm      os.FileMode
+		err       string
 	}{{
-		name: "valid params",
-		params: Params{
-			Path:  "/tmp/testdir",
-			Perm:  os.FileMode(0o775),
-			User:  "pmm",
-			Group: "pmm",
-		},
+		name:      "valid params",
+		path:      "/tmp/testdir",
+		username:  "pmm",
+		groupname: "pmm",
+		perm:      os.FileMode(0o775),
+
 		err: "",
 	}, {
-		name: "unknown user",
-		params: Params{
-			Path:  "/tmp/testdir",
-			Perm:  os.FileMode(0o775),
-			User:  "$",
-			Group: "pmm",
-		},
+		name:      "unknown user",
+		path:      "/tmp/testdir",
+		username:  "$",
+		groupname: "pmm",
+		perm:      os.FileMode(0o775),
+
 		err: "cannot chown datadir user: unknown user $",
 	}, {
-		name: "unknown group",
-		params: Params{
-			Path:  "/tmp/testdir",
-			Perm:  os.FileMode(0o775),
-			User:  "pmm",
-			Group: "$",
-		},
-		err: "cannot chown datadir group: unknown group $",
+		name:      "unknown group",
+		path:      "/tmp/testdir",
+		username:  "pmm",
+		groupname: "$",
+		perm:      os.FileMode(0o775),
+		err:       "cannot chown datadir group: unknown group $",
 	},
 	}
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := CreateDataDir(tc.params)
+			actual := CreateDataDir(tc.path, tc.username, tc.groupname, tc.perm)
 			if tc.err != "" {
 				assert.EqualError(t, actual, tc.err)
 				return
 			}
-			stat, err := os.Stat(tc.params.Path)
+			stat, err := os.Stat(tc.path)
 			require.NoError(t, err)
 			assert.True(t, stat.IsDir())
-			assert.Equal(t, tc.params.Perm, stat.Mode().Perm())
+			assert.Equal(t, tc.perm, stat.Mode().Perm())
 
 		})
 	}

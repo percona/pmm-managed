@@ -76,23 +76,14 @@ type TemplatesService struct {
 func NewTemplatesService(db *reform.DB) *TemplatesService {
 	l := logrus.WithField("component", "management/ia/templates")
 
-	params := []dir.Params{{
-		Path:  templatesDir,
-		Perm:  dirPerm,
-		User:  "pmm",
-		Group: "pmm",
-	}, {
-		Path:  rulesDir,
-		Perm:  dirPerm,
-		User:  "pmm",
-		Group: "pmm",
-	}}
+	err := dir.CreateDataDir(templatesDir, "pmm", "pmm", dirPerm)
+	if err != nil {
+		l.Error(err)
+	}
 
-	for _, p := range params {
-		err := dir.CreateDataDir(p)
-		if err != nil {
-			l.Error(err)
-		}
+	err = dir.CreateDataDir(rulesDir, "pmm", "pmm", dirPerm)
+	if err != nil {
+		l.Error(err)
 	}
 
 	return &TemplatesService{
