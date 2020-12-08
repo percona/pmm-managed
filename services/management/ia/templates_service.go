@@ -321,7 +321,7 @@ func convertSeverity(severity models.Severity) common.Severity {
 	}
 }
 
-func (s *TemplatesService) loadFile(ctx context.Context, file string) ([]saas.Rule, error) {
+func (s *TemplatesService) loadFile(ctx context.Context, file string) ([]saas.Template, error) {
 	if ctx.Err() != nil {
 		return nil, errors.WithStack(ctx.Err())
 	}
