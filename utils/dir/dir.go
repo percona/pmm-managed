@@ -22,7 +22,10 @@ import (
 	"os"
 	"os/user"
 	"strconv"
+	"strings"
 	"syscall"
+
+	"github.com/pkg/errors"
 )
 
 // CreateDataDir creates/updates directories with the given permissions in the persistent volume.
@@ -53,34 +56,45 @@ func CreateDataDir(path, username, groupname string, perm os.FileMode) error {
 
 	dirUser, err := user.Lookup(username)
 	if err != nil {
-		return fmt.Errorf("cannot chown datadir %v", err)
+		return errors.Wrap(err, "cannot chown datadir")
 	}
 	bUID, err := strconv.Atoi(dirUser.Uid)
 	if err != nil {
 		if storedErr != nil {
 			return storedErr
 		}
-		storedErr = fmt.Errorf("cannot chown datadir %v", err)
+		storedErr = errors.Wrap(err, "cannot chown datadir")
 	}
 
 	group, err := user.LookupGroup(groupname)
 	if err != nil {
-		return fmt.Errorf("cannot chown datadir %v", err)
+		return errors.Wrap(err, "cannot chown datadir")
 	}
 	bGID, err := strconv.Atoi(group.Gid)
 	if err != nil {
 		if storedErr != nil {
 			return storedErr
 		}
-		storedErr = fmt.Errorf("cannot chown datadir %v", err)
+		storedErr = errors.Wrap(err, "cannot chown datadir")
 	}
 
 	if aUID != bUID || aGID != bGID {
+		parentDir := path[:strings.LastIndex(path, "/")]
+		// chown parent dir with the same user:group except for top-level dirs
+		if parentDir != "/srv" && parentDir != "/etc" {
+			if err := os.Chown(parentDir, bUID, bGID); err != nil {
+				if storedErr != nil {
+					return storedErr
+				}
+				storedErr = errors.Wrap(err, "cannot chown datadir")
+			}
+		}
+
 		if err := os.Chown(path, bUID, bGID); err != nil {
 			if storedErr != nil {
 				return storedErr
 			}
-			storedErr = fmt.Errorf("cannot chown datadir %v", err)
+			storedErr = errors.Wrap(err, "cannot chown datadir")
 		}
 	}
 	return storedErr

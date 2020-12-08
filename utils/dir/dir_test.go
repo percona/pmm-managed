@@ -46,14 +46,14 @@ func TestCreateDataDir(t *testing.T) {
 		groupname: "pmm",
 		perm:      os.FileMode(0o775),
 
-		err: "cannot chown datadir user: unknown user $",
+		err: "cannot chown datadir: user: unknown user $",
 	}, {
 		name:      "unknown group",
 		path:      "/tmp/testdir",
 		username:  "pmm",
 		groupname: "$",
 		perm:      os.FileMode(0o775),
-		err:       "cannot chown datadir group: unknown group $",
+		err:       "cannot chown datadir: group: unknown group $",
 	},
 	}
 
