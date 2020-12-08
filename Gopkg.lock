@@ -417,7 +417,7 @@
 
 [[projects]]
   branch = "PMM-6983-force-for-unregister-k8s"
-  digest = "1:e593cf8e4036d5b125527b7ba51b3d18743a32dfed09d9a8d25e8ea4c101eae7"
+  digest = "1:e2d4055c0c4c1d1a67b04e54f92015492285f04badf6385b837a478677779ba8"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -440,7 +440,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "4e76e64d7e40c9bd33f62c36039e809b7d4c9549"
+  revision = "3b227dbe8fcd7a32ce555b806d60fc19bf5db06a"
 
 [[projects]]
   digest = "1:6832634ec059f4bfddaff75621cf1c4750949129c6de2e5e58e01059d0851e25"
