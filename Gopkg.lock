@@ -383,12 +383,12 @@
   version = "v0.3.0"
 
 [[projects]]
-  branch = "PMM-6827-db-cluster-monitoring"
-  digest = "1:5baea2c09a15784fca045752d007c6d24e42ed05d4b0d8f23fa275286c678d35"
+  branch = "main"
+  digest = "1:82b51a2316a7be9823a4c61f54afaec0cc0b8b658ed6fd9b7f9798bc8d17cacd"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "e46314b283b21f10593ae4d969f8c5dd580866ff"
+  revision = "496fbe43a782f552124fc0f7511039eeb635c8c1"
 
 [[projects]]
   branch = "main"
@@ -416,8 +416,8 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-6827-db-cluster-monitoring"
-  digest = "1:f179c17bbd3573c387cbaf239841cc55fc0b50fd6299b3722a5918a9509ebe2c"
+  branch = "release/2.13"
+  digest = "1:95d80de4fe9d8adc4bb9bd497b564489c827b8ce071367a7727058a679eaf0c2"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -440,7 +440,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "5d5f275f1a49d9ce4f3588fb0894bf2a4bd87343"
+  revision = "b1469eee300016ea48a987503b6a3f036ab78025"
 
 [[projects]]
   digest = "1:6832634ec059f4bfddaff75621cf1c4750949129c6de2e5e58e01059d0851e25"
@@ -815,23 +815,18 @@
   version = "v2.2.6"
 
 [[projects]]
-  digest = "1:72caeb94dfca2a9190404cff141246fd9b81af2a19b27bcec8aa22f84887abf4"
+  digest = "1:666e94676a94cb3351be105e21b8579039a6306ec050191333fb931ef4baab64"
   name = "gopkg.in/reform.v1"
   packages = [
     ".",
-    "dialects",
-    "dialects/mssql",
-    "dialects/mysql",
     "dialects/postgresql",
-    "dialects/sqlite3",
-    "dialects/sqlserver",
     "internal",
     "parse",
     "reform",
   ]
   pruneopts = "NUT"
-  revision = "d180de3a658d1bd73a5473b48cc635263dac2320"
-  version = "v1.3.4"
+  revision = "be1c9e20a895a055b71875afe38f593d8f0623b9"
+  version = "v1.5.0"
 
 [[projects]]
   digest = "1:62a89978829993fb84e755bff5ae0e3d84837228898fd55b1a88a885036e1e51"
