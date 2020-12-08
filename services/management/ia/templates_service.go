@@ -50,7 +50,7 @@ import (
 
 const (
 	templatesDir = "/srv/ia/templates"
-	rulesDir     = "/etc/ia/rules"
+	rulesDir     = "/etc/ia/rules" // TODO move to rules service
 
 	dirPerm = os.FileMode(0o775)
 )
@@ -82,6 +82,7 @@ func NewTemplatesService(db *reform.DB) *TemplatesService {
 		l.Error(err)
 	}
 
+	// TODO move to rules service
 	err = dir.CreateDataDir(rulesDir, "pmm", "pmm", dirPerm)
 	if err != nil {
 		l.Error(err)
