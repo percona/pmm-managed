@@ -50,7 +50,7 @@ import (
 
 const (
 	templatesDir = "/srv/ia/templates"
-	rulesDir     = "/etc/ia/rules/"
+	rulesDir     = "/etc/ia/rules"
 
 	dirPerm = os.FileMode(0o775)
 )
