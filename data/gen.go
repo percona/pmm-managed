@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+// Package data provides access to embedded data.
 package data
 
 //go:generate go-bindata -o bindata.go -pkg data -nometadata iatemplates/
