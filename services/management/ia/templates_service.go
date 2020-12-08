@@ -67,6 +67,7 @@ type TemplatesService struct {
 	db                *reform.DB
 	l                 *logrus.Entry
 	userTemplatesPath string
+	rulesPath         string // used for testing
 
 	rw        sync.RWMutex
 	templates map[string]Template
@@ -90,6 +91,7 @@ func NewTemplatesService(db *reform.DB) *TemplatesService {
 		db:                db,
 		l:                 l,
 		userTemplatesPath: templatesDir + "/*.yml",
+		rulesPath:         rulesDir,
 		templates:         make(map[string]Template),
 	}
 }
@@ -426,7 +428,7 @@ func (s *TemplatesService) convertTemplates(ctx context.Context) error {
 			}},
 		}
 
-		err = dumpRule(rf)
+		err = s.dumpRule(rf)
 		if err != nil {
 			return errors.Wrap(err, "failed to dump alert rules")
 		}
@@ -453,7 +455,7 @@ func transformMaps(src map[string]string, dest map[string]string, data map[strin
 }
 
 // dump the transformed IA templates to a file.
-func dumpRule(rule *ruleFile) error {
+func (s *TemplatesService) dumpRule(rule *ruleFile) error {
 	b, err := yaml.Marshal(rule)
 	if err != nil {
 		return errors.Errorf("failed to marshal rule %s", err)
@@ -464,9 +466,9 @@ func dumpRule(rule *ruleFile) error {
 	if alertRule.Alert == "" {
 		return errors.New("alert rule not initialized")
 	}
-	path := rulesDir + alertRule.Alert + ".yml"
+	path := s.rulesPath + alertRule.Alert + ".yml"
 	if err = ioutil.WriteFile(path, b, 0644); err != nil {
-		return errors.Errorf("failed to dump rule to file %s: %s", rulesDir, err)
+		return errors.Errorf("failed to dump rule to file %s: %s", s.rulesPath, err)
 
 	}
 	return nil

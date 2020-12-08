@@ -37,10 +37,10 @@ const (
 	testUser2Templates = "../../../testdata/ia/user2/*.yml"
 	testUserTemplates  = "../../../testdata/ia/user/*.yml"
 
-	userRuleFilepath     = "/etc/ia/rules/user_rule.yml"
-	builtinRuleFilepath1 = "/etc/ia/rules/mysql_down.yml"
-	builtinRuleFilepath2 = "/etc/ia/rules/mysql_restarted.yml"
-	builtinRuleFilepath3 = "/etc/ia/rules/mysql_too_many_connections.yml"
+	userRuleFilepath     = "user_rule.yml"
+	builtinRuleFilepath1 = "mysql_down.yml"
+	builtinRuleFilepath2 = "mysql_restarted.yml"
+	builtinRuleFilepath3 = "mysql_too_many_connections.yml"
 )
 
 func TestCollect(t *testing.T) {
@@ -59,6 +59,7 @@ func TestCollect(t *testing.T) {
 
 		svc := NewTemplatesService(db)
 		svc.userTemplatesPath = testBadTemplates
+		svc.rulesPath = testDir
 		svc.collect(ctx)
 
 		require.Empty(t, svc.getCollected(ctx))
@@ -73,6 +74,7 @@ func TestCollect(t *testing.T) {
 
 		svc := NewTemplatesService(db)
 		svc.userTemplatesPath = testUserTemplates
+		svc.rulesPath = testDir
 		svc.collect(ctx)
 
 		templates := svc.getCollected(ctx)
@@ -107,7 +109,13 @@ func TestConvertTemplate(t *testing.T) {
 
 		svc := NewTemplatesService(db)
 		svc.userTemplatesPath = testUserTemplates
+		svc.rulesPath = testDir
 		svc.collect(ctx)
+
+		userRuleFilepath := testDir + userRuleFilepath
+		builtinRuleFilepath1 := testDir + builtinRuleFilepath1
+		builtinRuleFilepath2 := testDir + builtinRuleFilepath2
+		builtinRuleFilepath3 := testDir + builtinRuleFilepath3
 
 		err = svc.convertTemplates(ctx)
 		require.NoError(t, err)
