@@ -53,13 +53,8 @@ func TestCollect(t *testing.T) {
 	t.Run("bad template paths", func(t *testing.T) {
 		t.Parallel()
 
-		testDir, err := ioutil.TempDir("", "")
-		require.NoError(t, err)
-		defer os.RemoveAll(testDir) //nolint:errcheck
-
 		svc := NewTemplatesService(db)
 		svc.userTemplatesPath = testBadTemplates
-		svc.rulesPath = testDir
 		svc.collect(ctx)
 
 		require.Empty(t, svc.getCollected(ctx))
@@ -68,13 +63,8 @@ func TestCollect(t *testing.T) {
 	t.Run("valid template paths", func(t *testing.T) {
 		t.Parallel()
 
-		testDir, err := ioutil.TempDir("", "")
-		require.NoError(t, err)
-		defer os.RemoveAll(testDir) //nolint:errcheck
-
 		svc := NewTemplatesService(db)
 		svc.userTemplatesPath = testUserTemplates
-		svc.rulesPath = testDir
 		svc.collect(ctx)
 
 		templates := svc.getCollected(ctx)
