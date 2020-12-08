@@ -63,13 +63,14 @@ func TestCreateDataDir(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			actual := CreateDataDir(tc.params)
 			if tc.err != "" {
-				assert.Equal(t, tc.err, actual.Error())
-			} else {
-				stat, err := os.Stat(tc.params.Path)
-				require.NoError(t, err)
-				assert.True(t, stat.IsDir())
-				assert.Equal(t, tc.params.Perm, stat.Mode().Perm())
+				assert.EqualError(t, actual, tc.err)
+				return
 			}
+			stat, err := os.Stat(tc.params.Path)
+			require.NoError(t, err)
+			assert.True(t, stat.IsDir())
+			assert.Equal(t, tc.params.Perm, stat.Mode().Perm())
+
 		})
 	}
 }

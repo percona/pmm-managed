@@ -49,11 +49,10 @@ func CreateDataDir(params Params) error {
 
 	if dataDirStat.Mode()&os.ModePerm != params.Perm {
 		if err := os.Chmod(params.Path, params.Perm); err != nil {
-			if storedErr == nil {
-				storedErr = fmt.Errorf("cannot chmod datadir %v", err)
-			} else {
+			if storedErr != nil {
 				return storedErr
 			}
+			storedErr = fmt.Errorf("cannot chmod datadir %v", err)
 		}
 	}
 
@@ -66,11 +65,10 @@ func CreateDataDir(params Params) error {
 	}
 	bUID, err := strconv.Atoi(dirUser.Uid)
 	if err != nil {
-		if storedErr == nil {
-			storedErr = fmt.Errorf("cannot chown datadir %v", err)
-		} else {
+		if storedErr != nil {
 			return storedErr
 		}
+		storedErr = fmt.Errorf("cannot chown datadir %v", err)
 	}
 
 	group, err := user.LookupGroup(params.Group)
@@ -79,20 +77,18 @@ func CreateDataDir(params Params) error {
 	}
 	bGID, err := strconv.Atoi(group.Gid)
 	if err != nil {
-		if storedErr == nil {
-			storedErr = fmt.Errorf("cannot chown datadir %v", err)
-		} else {
+		if storedErr != nil {
 			return storedErr
 		}
+		storedErr = fmt.Errorf("cannot chown datadir %v", err)
 	}
 
 	if aUID != bUID || aGID != bGID {
 		if err := os.Chown(params.Path, bUID, bGID); err != nil {
-			if storedErr == nil {
-				storedErr = fmt.Errorf("cannot chown datadir %v", err)
-			} else {
+			if storedErr != nil {
 				return storedErr
 			}
+			storedErr = fmt.Errorf("cannot chown datadir %v", err)
 		}
 	}
 	return storedErr
