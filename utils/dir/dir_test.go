@@ -69,7 +69,6 @@ func TestCreateDataDir(t *testing.T) {
 			require.NoError(t, err)
 			assert.True(t, stat.IsDir())
 			assert.Equal(t, tc.perm, stat.Mode().Perm())
-
 		})
 	}
 }
