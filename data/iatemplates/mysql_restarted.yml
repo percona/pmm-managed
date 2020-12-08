@@ -10,7 +10,7 @@ rules:
       - name: threshold
         summary: Seconds from the last restart
         unit: "sec"
-        type: int
+        type: float
         value: 360
     for: 10s
     severity: warning
