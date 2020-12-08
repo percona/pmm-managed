@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/user"
 	"strconv"
+	"strings"
 	"syscall"
 )
 
@@ -76,6 +77,17 @@ func CreateDataDir(path, username, groupname string, perm os.FileMode) error {
 	}
 
 	if aUID != bUID || aGID != bGID {
+		parentDir := path[:strings.LastIndex(path, "/")]
+		// chown parent dir with the same user:group except for top-level dirs
+		if parentDir != "/srv" && parentDir != "/etc" {
+			if err := os.Chown(parentDir, bUID, bGID); err != nil {
+				if storedErr != nil {
+					return storedErr
+				}
+				storedErr = fmt.Errorf("cannot chown datadir %v", err)
+			}
+		}
+
 		if err := os.Chown(path, bUID, bGID); err != nil {
 			if storedErr != nil {
 				return storedErr
