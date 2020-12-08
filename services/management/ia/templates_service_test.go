@@ -39,8 +39,8 @@ const (
 	testUserTemplates    = "../../../testdata/ia/user/*.yml"
 	testMissingTemplates = "/no/such/path/*.yml"
 
-	userRuleFilePath    = "/tmp/ia1/user_rule.yml"
-	builtinRuleFilePath = "/tmp/ia1/builtin_rule.yml"
+	userRuleFilePath    = "/tmp/ia3/user_rule.yml"
+	builtinRuleFilePath = "/tmp/ia3/builtin_rule.yml"
 )
 
 func TestCollect(t *testing.T) {
