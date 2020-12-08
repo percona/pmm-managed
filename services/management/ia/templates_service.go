@@ -31,7 +31,6 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/percona-platform/saas/pkg/alert"
-	saas "github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona-platform/saas/pkg/common"
 	"github.com/percona/pmm/api/managementpb"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
@@ -191,7 +190,7 @@ func (s *TemplatesService) loadTemplatesFromAssets(ctx context.Context) ([]alert
 		}
 
 		// be strict about builtin templates.
-		params := &saas.ParseParams{
+		params := &alert.ParseParams{
 			DisallowUnknownFields:    true,
 			DisallowInvalidTemplates: true,
 		}
@@ -328,7 +327,7 @@ func convertSeverity(severity models.Severity) common.Severity {
 }
 
 // loadFile parses IA rule template file.
-func (s *TemplatesService) loadFile(ctx context.Context, file string) ([]saas.Template, error) {
+func (s *TemplatesService) loadFile(ctx context.Context, file string) ([]alert.Template, error) {
 	if ctx.Err() != nil {
 		return nil, errors.WithStack(ctx.Err())
 	}
