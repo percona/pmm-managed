@@ -75,24 +75,23 @@ func TestCollect(t *testing.T) {
 		svc.userTemplatesPath = testUserTemplates
 		svc.collect(ctx)
 
-		// todo rename rules to templates
-		rules := svc.getCollected(ctx)
-		require.NotEmpty(t, rules)
-		require.Len(t, rules, 4)
-		assert.Contains(t, rules, "user_rule")
-		assert.Contains(t, rules, "mysql_down")
-		assert.Contains(t, rules, "mysql_restarted")
-		assert.Contains(t, rules, "mysql_too_many_connections")
+		templates := svc.getCollected(ctx)
+		require.NotEmpty(t, templates)
+		require.Len(t, templates, 4)
+		assert.Contains(t, templates, "user_rule")
+		assert.Contains(t, templates, "mysql_down")
+		assert.Contains(t, templates, "mysql_restarted")
+		assert.Contains(t, templates, "mysql_too_many_connections")
 
 		// check whether map was cleared and updated on a subsequent call
 		svc.userTemplatesPath = testUser2Templates
 		svc.collect(ctx)
 
-		rules = svc.getCollected(ctx)
-		require.NotEmpty(t, rules)
-		require.Len(t, rules, 4)
-		assert.NotContains(t, rules, "user_rule")
-		assert.Contains(t, rules, "user2_rule")
+		templates = svc.getCollected(ctx)
+		require.NotEmpty(t, templates)
+		require.Len(t, templates, 4)
+		assert.NotContains(t, templates, "user_rule")
+		assert.Contains(t, templates, "user2_rule")
 	})
 }
 
