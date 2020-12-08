@@ -49,8 +49,10 @@ import (
 )
 
 const (
-	templatesDir = "/srv/ia/templates"
-	rulesDir     = "/etc/ia/rules"
+	templatesParentDir = "/srv/ia"
+	templatesDir       = "/srv/ia/templates"
+	rulesParentDir     = "/etc/ia"
+	rulesDir           = "/etc/ia/rules"
 
 	dirPerm = os.FileMode(0o775)
 )
@@ -77,7 +79,17 @@ type TemplatesService struct {
 func NewTemplatesService(db *reform.DB) *TemplatesService {
 	l := logrus.WithField("component", "management/ia/templates")
 
-	err := dir.CreateDataDir(templatesDir, "pmm", "pmm", dirPerm)
+	err := dir.CreateDataDir(templatesParentDir, "pmm", "pmm", dirPerm)
+	if err != nil {
+		l.Error(err)
+	}
+
+	err = dir.CreateDataDir(templatesDir, "pmm", "pmm", dirPerm)
+	if err != nil {
+		l.Error(err)
+	}
+
+	err = dir.CreateDataDir(rulesParentDir, "pmm", "pmm", dirPerm)
 	if err != nil {
 		l.Error(err)
 	}
@@ -114,8 +126,8 @@ func (s *TemplatesService) getCollected(ctx context.Context) map[string]Template
 
 // collect collects IA rule templates from various sources like:
 // builtin templates: read from the generated code in bindata.go.
-// user-defined templates: read from yaml files created by the user in `/srv/ia/templates` or
-// in the DB created using the API.
+// user file templates: read from yaml files created by the user in `/srv/ia/templates`
+// user API templates: in the DB created using the API.
 func (s *TemplatesService) collect(ctx context.Context) {
 	builtInTemplates, err := s.loadTemplatesFromAssets(ctx)
 	if err != nil {
@@ -177,7 +189,7 @@ func (s *TemplatesService) loadTemplatesFromAssets(ctx context.Context) ([]alert
 			return nil, errors.Wrapf(err, "failed to load rule template file: %s", path)
 		}
 
-		// be strict about local files
+		// be strict about builtin templates.
 		params := &saas.ParseParams{
 			DisallowUnknownFields:    true,
 			DisallowInvalidTemplates: true,
@@ -314,6 +326,7 @@ func convertSeverity(severity models.Severity) common.Severity {
 	}
 }
 
+// loadFile parses IA rule template file.
 func (s *TemplatesService) loadFile(ctx context.Context, file string) ([]saas.Template, error) {
 	if ctx.Err() != nil {
 		return nil, errors.WithStack(ctx.Err())

@@ -18,11 +18,9 @@
 package dir
 
 import (
-	"fmt"
 	"os"
 	"os/user"
 	"strconv"
-	"strings"
 	"syscall"
 
 	"github.com/pkg/errors"
@@ -32,22 +30,20 @@ import (
 func CreateDataDir(path, username, groupname string, perm os.FileMode) error {
 	// try to create data directory
 	if err := os.MkdirAll(path, perm); err != nil {
-		return fmt.Errorf("cannot create datadir %v", err)
+		return errors.Wrap(err, "cannot create datadir")
 	}
 
 	var storedErr error // store the first encountered error
 	// check and fix directory permissions
 	dataDirStat, err := os.Stat(path)
 	if err != nil {
-		storedErr = fmt.Errorf("cannot get stat of %q: %v", path, err)
+		storedErr = errors.Wrapf(err, "cannot get stat of %q", path)
 	}
 
-	if dataDirStat.Mode()&os.ModePerm != perm {
-		if err := os.Chmod(path, perm); err != nil {
-			if storedErr != nil {
-				return storedErr
-			}
-			storedErr = fmt.Errorf("cannot chmod datadir %v", err)
+	if err := os.Chmod(path, perm); err != nil {
+		err = errors.Wrapf(err, "cannot chmod path %q", path)
+		if storedErr == nil {
+			storedErr = err
 		}
 	}
 
@@ -79,17 +75,6 @@ func CreateDataDir(path, username, groupname string, perm os.FileMode) error {
 	}
 
 	if aUID != bUID || aGID != bGID {
-		parentDir := path[:strings.LastIndex(path, "/")]
-		// chown parent dir with the same user:group except for top-level dirs
-		if parentDir != "/srv" && parentDir != "/etc" {
-			if err := os.Chown(parentDir, bUID, bGID); err != nil {
-				if storedErr != nil {
-					return storedErr
-				}
-				storedErr = errors.Wrap(err, "cannot chown datadir")
-			}
-		}
-
 		if err := os.Chown(path, bUID, bGID); err != nil {
 			if storedErr != nil {
 				return storedErr

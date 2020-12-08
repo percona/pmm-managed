@@ -38,6 +38,7 @@ import (
 )
 
 const (
+	alertmanagerDir     = "/srv/alertmanager/data"
 	alertmanagerDataDir = "/srv/alertmanager/data"
 	dirPerm             = os.FileMode(0o775)
 
@@ -64,7 +65,12 @@ func (svc *Service) Run(ctx context.Context) {
 	svc.l.Info("Starting...")
 	defer svc.l.Info("Done.")
 
-	err := dir.CreateDataDir(alertmanagerDataDir, "pmm", "pmm", dirPerm)
+	err := dir.CreateDataDir(alertmanagerDir, "pmm", "pmm", dirPerm)
+	if err != nil {
+		svc.l.Error(err)
+	}
+
+	err = dir.CreateDataDir(alertmanagerDataDir, "pmm", "pmm", dirPerm)
 	if err != nil {
 		svc.l.Error(err)
 	}
