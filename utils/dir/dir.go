@@ -25,14 +25,6 @@ import (
 	"syscall"
 )
 
-// Params represent the input for CreateDataDir.
-type Params struct {
-	Path  string
-	Perm  os.FileMode
-	User  string
-	Group string
-}
-
 // CreateDataDir creates/updates directories with the given permissions in the persistent volume.
 func CreateDataDir(path, username, groupname string, perm os.FileMode) error {
 	// try to create data directory
