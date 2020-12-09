@@ -39,8 +39,8 @@ const (
 	testUserTemplates    = "../../../testdata/ia/user/*.yml"
 	testMissingTemplates = "/no/such/path/*.yml"
 
-	userRuleFilePath    = "/tmp/ia1/user_rule.yml"
-	builtinRuleFilePath = "/tmp/ia1/builtin_rule.yml"
+	userRuleFile    = "user_rule.yml"
+	builtinRuleFile = "builtin_rule.yml"
 )
 
 func TestCollect(t *testing.T) {
@@ -56,6 +56,7 @@ func TestCollect(t *testing.T) {
 		testDir, err := ioutil.TempDir("", "")
 		require.NoError(t, err)
 		defer os.RemoveAll(testDir) //nolint:errcheck
+		testDir = testDir + "/"
 
 		svc := NewTemplatesService(db)
 		svc.builtinTemplatesPath = testMissingTemplates
@@ -107,6 +108,7 @@ func TestConvertTemplate(t *testing.T) {
 		testDir, err := ioutil.TempDir("", "")
 		require.NoError(t, err)
 		defer os.RemoveAll(testDir) //nolint:errcheck
+		testDir = testDir + "/"
 
 		svc := NewTemplatesService(db)
 		svc.builtinTemplatesPath = testBuiltinTemplates
@@ -116,10 +118,10 @@ func TestConvertTemplate(t *testing.T) {
 
 		err = svc.convertTemplates(ctx)
 		require.NoError(t, err)
-		assert.FileExists(t, userRuleFilePath)
-		assert.FileExists(t, builtinRuleFilePath)
+		assert.FileExists(t, testDir+userRuleFile)
+		assert.FileExists(t, testDir+builtinRuleFile)
 
-		buf, err := ioutil.ReadFile(builtinRuleFilePath)
+		buf, err := ioutil.ReadFile(testDir + builtinRuleFile)
 		require.NoError(t, err)
 		var builtinRule ruleFile
 		err = yaml.Unmarshal(buf, &builtinRule)
@@ -132,7 +134,7 @@ func TestConvertTemplate(t *testing.T) {
 		assert.NotNil(t, bRule.Annotations)
 		assert.Len(t, bRule.Annotations, 2)
 
-		buf, err = ioutil.ReadFile(userRuleFilePath)
+		buf, err = ioutil.ReadFile(testDir + userRuleFile)
 		require.NoError(t, err)
 		var userRule ruleFile
 		err = yaml.Unmarshal(buf, &userRule)

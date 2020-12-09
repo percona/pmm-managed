@@ -353,7 +353,7 @@ func (s *TemplatesService) convertTemplates(ctx context.Context) error {
 			}},
 		}
 
-		err = dumpRule(rf)
+		err = s.dumpRule(rf)
 		if err != nil {
 			return errors.Wrap(err, "failed to dump alert rules")
 		}
@@ -380,7 +380,7 @@ func transformMaps(src map[string]string, dest map[string]string, data map[strin
 }
 
 // dump the transformed IA templates to a file.
-func dumpRule(rule *ruleFile) error {
+func (s *TemplatesService) dumpRule(rule *ruleFile) error {
 	b, err := yaml.Marshal(rule)
 	if err != nil {
 		return errors.Errorf("failed to marshal rule %s", err)
@@ -391,17 +391,17 @@ func dumpRule(rule *ruleFile) error {
 	if alertRule.Alert == "" {
 		return errors.New("alert rule not initialized")
 	}
-	path := ruleFileDir + alertRule.Alert + ".yml"
+	path := s.rulesFileDir + alertRule.Alert + ".yml"
 
-	_, err = os.Stat(ruleFileDir)
+	_, err = os.Stat(s.rulesFileDir)
 	if os.IsNotExist(err) {
-		err = os.Mkdir(ruleFileDir, 0750) // TODO move to https://jira.percona.com/browse/PMM-7024
+		err = os.Mkdir(s.rulesFileDir, 0750) // TODO move to https://jira.percona.com/browse/PMM-7024
 		if err != nil {
 			return err
 		}
 	}
 	if err = ioutil.WriteFile(path, b, 0644); err != nil { //nolint:gosec
-		return errors.Errorf("failed to dump rule to file %s: %s", ruleFileDir, err)
+		return errors.Errorf("failed to dump rule to file %s: %s", s.rulesFileDir, err)
 	}
 	return nil
 }
