@@ -115,15 +115,11 @@ func TestEnvVarValidator(t *testing.T) {
 
 	t.Run("SAAS env vars with warnings", func(t *testing.T) {
 		envs := []string{
-			"PERCONA_TEST_AUTH_HOST=host:333",
-			"PERCONA_TEST_CHECKS_HOST=host:333",
-			"PERCONA_TEST_TELEMETRY_HOST=host:333",
+			"PERCONA_TEST_SAAS_HOST=host:333",
 		}
 		expectedEnvVars := &models.ChangeSettingsParams{}
 		expectedWarns := []string{
-			`Environment variable "PERCONA_TEST_AUTH_HOST" WILL BE REMOVED SOON, please use "PERCONA_TEST_SAAS_HOST" instead.`,
-			`Environment variable "PERCONA_TEST_CHECKS_HOST" WILL BE REMOVED SOON, please use "PERCONA_TEST_SAAS_HOST" instead.`,
-			`Environment variable "PERCONA_TEST_TELEMETRY_HOST" WILL BE REMOVED SOON, please use "PERCONA_TEST_SAAS_HOST" instead.`,
+			`environment variable "PERCONA_TEST_SAAS_HOST" IS NOT SUPPORTED and WILL BE REMOVED IN THE FUTURE`,
 		}
 
 		gotEnvVars, gotErrs, gotWarns := ParseEnvVars(envs)
