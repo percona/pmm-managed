@@ -68,6 +68,10 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 				ClusterSize: c.Params.ClusterSize,
 			},
 			State: dbaasv1beta1.XtraDBClusterState(c.State),
+			Operation: &dbaasv1beta1.RunningOperation{
+				Message:  c.Operation.Message,
+				Progress: c.Operation.Progress,
+			},
 		}
 
 		if c.Params.Pxc != nil {
