@@ -21,66 +21,53 @@ import (
 	"os"
 	"os/user"
 	"strconv"
-	"syscall"
 
 	"github.com/pkg/errors"
 )
 
 // CreateDataDir creates/updates directories with the given permissions in the persistent volume.
 func CreateDataDir(path, username, groupname string, perm os.FileMode) error {
-	// try to create data directory
-	if err := os.MkdirAll(path, perm); err != nil {
-		return errors.Wrap(err, "cannot create datadir")
+	// store the first encountered error, but continue as far as possible
+	var storedErr error
+
+	if err := os.MkdirAll(path, perm); err != nil && storedErr == nil {
+		storedErr = errors.Wrapf(err, "cannot create path %q", path)
 	}
 
-	var storedErr error // store the first encountered error
-	// check and fix directory permissions
-	dataDirStat, err := os.Stat(path)
-	if err != nil {
-		storedErr = errors.Wrapf(err, "cannot get stat of %q", path)
+	if err := os.Chmod(path, perm); err != nil && storedErr == nil {
+		storedErr = errors.Wrapf(err, "cannot chmod path %q", path)
 	}
 
-	if err := os.Chmod(path, perm); err != nil {
-		err = errors.Wrapf(err, "cannot chmod path %q", path)
-		if storedErr == nil {
-			storedErr = err
-		}
+	if err := chown(path, username, groupname); err != nil && storedErr == nil {
+		storedErr = err // already wrapped
 	}
 
-	dataDirSysStat := dataDirStat.Sys().(*syscall.Stat_t)
-	aUID, aGID := int(dataDirSysStat.Uid), int(dataDirSysStat.Gid)
-
-	dirUser, err := user.Lookup(username)
-	if err != nil {
-		return errors.Wrap(err, "cannot chown datadir")
-	}
-	bUID, err := strconv.Atoi(dirUser.Uid)
-	if err != nil {
-		if storedErr != nil {
-			return storedErr
-		}
-		storedErr = errors.Wrap(err, "cannot chown datadir")
-	}
-
-	group, err := user.LookupGroup(groupname)
-	if err != nil {
-		return errors.Wrap(err, "cannot chown datadir")
-	}
-	bGID, err := strconv.Atoi(group.Gid)
-	if err != nil {
-		if storedErr != nil {
-			return storedErr
-		}
-		storedErr = errors.Wrap(err, "cannot chown datadir")
-	}
-
-	if aUID != bUID || aGID != bGID {
-		if err := os.Chown(path, bUID, bGID); err != nil {
-			if storedErr != nil {
-				return storedErr
-			}
-			storedErr = errors.Wrap(err, "cannot chown datadir")
-		}
-	}
 	return storedErr
+}
+
+// chown is like os.Chown, but with names instead of numerical IDs.
+func chown(path, username, groupname string) error {
+	userInfo, err := user.Lookup(username)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	groupInfo, err := user.LookupGroup(groupname)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	uid, err := strconv.Atoi(userInfo.Uid)
+	if err != nil {
+		return errors.Wrapf(err, "cannot convert uid %q", userInfo.Uid)
+	}
+	gid, err := strconv.Atoi(groupInfo.Gid)
+	if err != nil {
+		return errors.Wrapf(err, "cannot convert gid %q", groupInfo.Gid)
+	}
+
+	if err = os.Chown(path, uid, gid); err != nil {
+		return errors.Wrapf(err, "cannot chown path %q", path)
+	}
+
+	return nil
 }
