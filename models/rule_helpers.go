@@ -107,10 +107,6 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 		return nil, errors.Errorf("failed to find all required channels %v", channelIDs)
 	}
 
-	if _, err := FindTemplateByName(q, params.TemplateName); err != nil {
-		return nil, err
-	}
-
 	row := &Rule{
 		ID:           id,
 		TemplateName: params.TemplateName,

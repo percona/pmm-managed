@@ -154,6 +154,10 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 		return nil, err
 	}
 
+	if _, ok := s.templates.getCollected(ctx)[params.TemplateName]; !ok {
+		return nil, status.Errorf(codes.NotFound, "Unknown template %s", params.TemplateName)
+	}
+
 	var rule *models.Rule
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
@@ -181,7 +185,6 @@ func (s *RulesService) UpdateAlertRule(ctx context.Context, req *iav1beta1.Updat
 		return nil, err
 	}
 	params.RuleParams = ruleParams
-
 	params.Filters = convertFiltersToModel(req.Filters)
 
 	e := s.db.InTransaction(func(tx *reform.TX) error {

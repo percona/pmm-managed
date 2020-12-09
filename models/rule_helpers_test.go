@@ -25,14 +25,11 @@ import (
 	"github.com/percona-platform/saas/pkg/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/testdb"
-	"github.com/percona/pmm-managed/utils/tests"
 )
 
 func TestRules(t *testing.T) {
@@ -68,23 +65,6 @@ func TestRules(t *testing.T) {
 			assert.Equal(t, params.CustomLabels, labels)
 			assert.Equal(t, params.Filters, rule.Filters)
 			assert.ElementsMatch(t, params.ChannelIDs, rule.ChannelIDs)
-		})
-
-		t.Run("unknown template", func(t *testing.T) {
-			tx, err := db.Begin()
-			require.NoError(t, err)
-			defer func() {
-				require.NoError(t, tx.Rollback())
-			}()
-
-			q := tx.Querier
-
-			channelID := createChannel(t, q)
-
-			templateName := gofakeit.UUID()
-			params := createCreateRuleParams(templateName, channelID)
-			_, err = models.CreateRule(q, params)
-			tests.AssertGRPCError(t, status.New(codes.NotFound, fmt.Sprintf("Template with name %q not found.", templateName)), err)
 		})
 
 		t.Run("unknown channel", func(t *testing.T) {
