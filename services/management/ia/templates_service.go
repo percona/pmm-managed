@@ -52,8 +52,7 @@ const (
 	templatesDir       = "/srv/ia/templates"
 	rulesParentDir     = "/etc/ia"
 	rulesDir           = "/etc/ia/rules"
-
-	dirPerm = os.FileMode(0o775)
+	dirPerm            = os.FileMode(0o775)
 )
 
 // templateInfo represents alerting rule template information from various sources.
@@ -85,7 +84,6 @@ func NewTemplatesService(db *reform.DB) *TemplatesService {
 	if err != nil {
 		l.Error(err)
 	}
-
 	err = dir.CreateDataDir(templatesDir, "pmm", "pmm", dirPerm)
 	if err != nil {
 		l.Error(err)
@@ -95,7 +93,6 @@ func NewTemplatesService(db *reform.DB) *TemplatesService {
 	if err != nil {
 		l.Error(err)
 	}
-
 	// TODO move to rules service
 	err = dir.CreateDataDir(rulesDir, "pmm", "pmm", dirPerm)
 	if err != nil {
@@ -482,7 +479,7 @@ func (s *TemplatesService) dumpRule(rule *ruleFile) error {
 		return errors.New("alert rule not initialized")
 	}
 	path := s.rulesPath + alertRule.Alert + ".yml"
-	if err = ioutil.WriteFile(path, b, 0644); err != nil {
+	if err = ioutil.WriteFile(path, b, 0o644); err != nil {
 		return errors.Errorf("failed to dump rule to file %s: %s", s.rulesPath, err)
 	}
 	return nil

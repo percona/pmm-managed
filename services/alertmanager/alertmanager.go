@@ -38,7 +38,7 @@ import (
 )
 
 const (
-	alertmanagerDir     = "/srv/alertmanager/data"
+	alertmanagerDir     = "/srv/alertmanager"
 	alertmanagerDataDir = "/srv/alertmanager/data"
 	dirPerm             = os.FileMode(0o775)
 
@@ -69,7 +69,6 @@ func (svc *Service) Run(ctx context.Context) {
 	if err != nil {
 		svc.l.Error(err)
 	}
-
 	err = dir.CreateDataDir(alertmanagerDataDir, "pmm", "pmm", dirPerm)
 	if err != nil {
 		svc.l.Error(err)
@@ -101,7 +100,7 @@ route:
 receivers:
   - name: empty
 `) + "\n"
-		err = ioutil.WriteFile(alertmanagerBaseConfigPath, []byte(defaultBase), 0644) //nolint:gosec
+		err = ioutil.WriteFile(alertmanagerBaseConfigPath, []byte(defaultBase), 0o644) //nolint:gosec
 		svc.l.Infof("%s created: %v.", alertmanagerBaseConfigPath, err)
 	}
 }
@@ -143,7 +142,7 @@ func (svc *Service) updateConfiguration(ctx context.Context) {
 		}
 		b = append([]byte("# Managed by pmm-managed. DO NOT EDIT.\n---\n"), b...)
 
-		err = ioutil.WriteFile(alertmanagerConfigPath, b, 0644)
+		err = ioutil.WriteFile(alertmanagerConfigPath, b, 0o644)
 		if err != nil {
 			svc.l.Errorf("Failed to write alertmanager config %s: %s.", alertmanagerConfigPath, err)
 			return
