@@ -130,6 +130,7 @@ func FindChannelByID(q *reform.Querier, id string) (*Channel, error) {
 	}
 }
 
+// FindChannelsByIDs finds channels by IDs.
 func FindChannelsByIDs(q *reform.Querier, ids []string) ([]*Channel, error) {
 	p := strings.Join(q.Placeholders(1, len(ids)), ", ")
 	tail := fmt.Sprintf("WHERE id IN (%s)", p) //nolint:gosec
