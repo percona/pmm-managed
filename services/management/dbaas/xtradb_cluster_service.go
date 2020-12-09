@@ -19,6 +19,7 @@ package dbaas
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	dbaascontrollerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
@@ -140,11 +141,6 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 		return nil, err
 	}
 
-	// TODO: remove me
-	if settings.PMMPublicAddress == "" {
-		settings.PMMPublicAddress = "http://localhost"
-	}
-
 	in := dbaascontrollerv1beta1.CreateXtraDBClusterRequest{
 		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
@@ -200,8 +196,8 @@ func (s XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *dbaa
 		},
 		Name: req.Name,
 		Params: &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
-			Pxc:      &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC{},
-			Proxysql: &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_ProxySQL{},
+			Pxc:      new(dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC),
+			Proxysql: new(dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_ProxySQL),
 		},
 	}
 
@@ -211,6 +207,7 @@ func (s XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *dbaa
 		}
 
 		if req.Params.Pxc != nil && req.Params.Pxc.ComputeResources != nil {
+			in.Params.Pxc.ComputeResources = new(dbaascontrollerv1beta1.ComputeResources)
 			if req.Params.Pxc.ComputeResources.CpuM > 0 {
 				in.Params.Pxc.ComputeResources.CpuM = req.Params.Pxc.ComputeResources.CpuM
 			}
@@ -220,12 +217,17 @@ func (s XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *dbaa
 		}
 
 		if req.Params.Proxysql != nil && req.Params.Proxysql.ComputeResources != nil {
+			in.Params.Proxysql.ComputeResources = new(dbaascontrollerv1beta1.ComputeResources)
 			if req.Params.Proxysql.ComputeResources.CpuM > 0 {
 				in.Params.Proxysql.ComputeResources.CpuM = req.Params.Proxysql.ComputeResources.CpuM
 			}
 			if req.Params.Proxysql.ComputeResources.MemoryBytes > 0 {
 				in.Params.Proxysql.ComputeResources.MemoryBytes = req.Params.Proxysql.ComputeResources.MemoryBytes
 			}
+		}
+
+		if req.Params.Suspend && req.Params.Resume {
+			return nil, errors.New("resume and suspend cannot be set together")
 		}
 
 		if req.Params.Suspend {

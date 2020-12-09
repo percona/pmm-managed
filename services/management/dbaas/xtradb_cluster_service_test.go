@@ -246,7 +246,8 @@ func TestXtraDBClusterService(t *testing.T) {
 			KubernetesClusterName: pxcKubernetesClusterNameTest,
 			Name:                  "third-pxc-test",
 			Params: &dbaasv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
-				ClusterSize: 8,
+				UpdateClusterSize: true,
+				ClusterSize:       8,
 				Pxc: &dbaasv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC{
 					ComputeResources: &dbaasv1beta1.ComputeResources{
 						CpuM:        1,
@@ -263,6 +264,54 @@ func TestXtraDBClusterService(t *testing.T) {
 		}
 
 		_, err := s.UpdateXtraDBCluster(ctx, &in)
+		assert.NoError(t, err)
+	})
+
+	//nolint:dupl
+	t.Run("BasicSuspendResumeXtraDBCluster", func(t *testing.T) {
+		s := NewXtraDBClusterService(db, dbaasClient)
+		mockReq := controllerv1beta1.UpdateXtraDBClusterRequest{
+			KubeAuth: &controllerv1beta1.KubeAuth{
+				Kubeconfig: pxcKubeconfigTest,
+			},
+			Name: "third-pxc-test",
+			Params: &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
+				Suspend: true,
+			},
+		}
+
+		dbaasClient.On("UpdateXtraDBCluster", ctx, &mockReq).Return(&controllerv1beta1.UpdateXtraDBClusterResponse{}, nil)
+
+		in := dbaasv1beta1.UpdateXtraDBClusterRequest{
+			KubernetesClusterName: pxcKubernetesClusterNameTest,
+			Name:                  "third-pxc-test",
+			Params: &dbaasv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
+				Suspend: true,
+			},
+		}
+		_, err := s.UpdateXtraDBCluster(ctx, &in)
+		assert.NoError(t, err)
+
+		mockReq = controllerv1beta1.UpdateXtraDBClusterRequest{
+			KubeAuth: &controllerv1beta1.KubeAuth{
+				Kubeconfig: pxcKubeconfigTest,
+			},
+			Name: "third-pxc-test",
+			Params: &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
+				Resume: true,
+			},
+		}
+
+		dbaasClient.On("UpdateXtraDBCluster", ctx, &mockReq).Return(&controllerv1beta1.UpdateXtraDBClusterResponse{}, nil)
+
+		in = dbaasv1beta1.UpdateXtraDBClusterRequest{
+			KubernetesClusterName: pxcKubernetesClusterNameTest,
+			Name:                  "third-pxc-test",
+			Params: &dbaasv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
+				Resume: true,
+			},
+		}
+		_, err = s.UpdateXtraDBCluster(ctx, &in)
 		assert.NoError(t, err)
 	})
 
