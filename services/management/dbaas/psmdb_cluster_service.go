@@ -67,9 +67,11 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 		var diskSize int64
 		if c.Params.Replicaset != nil {
 			diskSize = c.Params.Replicaset.DiskSize
-			computeResources = &dbaasv1beta1.ComputeResources{
-				CpuM:        c.Params.Replicaset.ComputeResources.CpuM,
-				MemoryBytes: c.Params.Replicaset.ComputeResources.MemoryBytes,
+			if c.Params.Replicaset.ComputeResources != nil {
+				computeResources = &dbaasv1beta1.ComputeResources{
+					CpuM:        c.Params.Replicaset.ComputeResources.CpuM,
+					MemoryBytes: c.Params.Replicaset.ComputeResources.MemoryBytes,
+				}
 			}
 		}
 		cluster := dbaasv1beta1.ListPSMDBClustersResponse_Cluster{
@@ -161,9 +163,9 @@ func (s PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *dbaasv
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
 		Name: req.Name,
-		Params: &dbaascontrollerv1beta1.PSMDBClusterParams{
+		Params: &dbaascontrollerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams{
 			ClusterSize: req.Params.ClusterSize,
-			Replicaset: &dbaascontrollerv1beta1.PSMDBClusterParams_ReplicaSet{
+			Replicaset: &dbaascontrollerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams_ReplicaSet{
 				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
 					CpuM:        req.Params.Replicaset.ComputeResources.CpuM,
 					MemoryBytes: req.Params.Replicaset.ComputeResources.MemoryBytes,
