@@ -104,7 +104,8 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 	}
 
 	if len(channelIDs) != len(channels) {
-		return nil, status.Errorf(codes.NotFound, "Failed to find all required channels: %v.", channelIDs)
+		missingChannelsIDs := findMissingChannels(channelIDs, channels)
+		return nil, status.Errorf(codes.NotFound, "Failed to find all required channels: %v.", missingChannelsIDs)
 	}
 
 	row := &Rule{
@@ -156,7 +157,8 @@ func ChangeRule(q *reform.Querier, ruleID string, params *ChangeRuleParams) (*Ru
 	}
 
 	if len(channelIDs) != len(channels) {
-		return nil, status.Errorf(codes.NotFound, "Failed to find all required channels: %v.", channelIDs)
+		missingChannelsIDs := findMissingChannels(channelIDs, channels)
+		return nil, status.Errorf(codes.NotFound, "Failed to find all required channels: %v.", missingChannelsIDs)
 	}
 
 	row.Disabled = params.Disabled
@@ -191,4 +193,26 @@ func RemoveRule(q *reform.Querier, id string) error {
 		return errors.Wrap(err, "failed to delete alert Rule")
 	}
 	return nil
+}
+
+func findMissingChannels(ids []string, channels []*Channel) []string {
+	m := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		m[id] = false
+	}
+
+	for _, channel := range channels {
+		if _, ok := m[channel.ID]; ok {
+			m[channel.ID] = true
+		}
+	}
+
+	var res []string
+	for k, v := range m {
+		if !v {
+			res = append(res, k)
+		}
+	}
+
+	return res
 }
