@@ -36,7 +36,7 @@ func TestCreateDataDir(t *testing.T) {
 		err       string
 	}{{
 		name:      "valid params",
-		path:      "/tmp/testdir",
+		path:      "/tmp/testdir_valid",
 		username:  "pmm",
 		groupname: "pmm",
 		perm:      os.FileMode(0o775),
@@ -50,14 +50,14 @@ func TestCreateDataDir(t *testing.T) {
 		err:       `cannot create path "": mkdir : no such file or directory`,
 	}, {
 		name:      "unknown user",
-		path:      "/tmp/testdir",
+		path:      "/tmp/testdir_user",
 		username:  "$",
 		groupname: "pmm",
 		perm:      os.FileMode(0o775),
 		err:       `user: unknown user $`,
 	}, {
 		name:      "unknown group",
-		path:      "/tmp/testdir",
+		path:      "/tmp/testdir_group",
 		username:  "pmm",
 		groupname: "$",
 		perm:      os.FileMode(0o775),
