@@ -417,7 +417,7 @@
 
 [[projects]]
   branch = "PMM-5980-suspend-pxc"
-  digest = "1:af514ed1259c162a6b565ef1bc60d3129cd342e5c610e03e2793271f4afd9838"
+  digest = "1:7f4d7b87e313dce83b244b711660881a7f8c1c824acf668c032b3e44eea97ebd"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -440,7 +440,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "cde4a862d212b9960721fa0fb1e57a4211068ed1"
+  revision = "491dafd44c58e79550b9ab7139bfa0211d7a358d"
 
 [[projects]]
   digest = "1:6832634ec059f4bfddaff75621cf1c4750949129c6de2e5e58e01059d0851e25"

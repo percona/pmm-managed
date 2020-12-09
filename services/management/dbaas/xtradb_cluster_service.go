@@ -67,8 +67,11 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 			Params: &dbaasv1beta1.XtraDBClusterParams{
 				ClusterSize: c.Params.ClusterSize,
 			},
-			State:  dbaasv1beta1.XtraDBClusterState(c.State),
-			Paused: c.Params.Paused,
+			State: dbaasv1beta1.XtraDBClusterState(c.State),
+		}
+
+		if c.Params.Paused {
+			cluster.State = dbaasv1beta1.XtraDBClusterState(dbaasv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_PAUSED)
 		}
 
 		if c.Params.Pxc != nil {
@@ -137,6 +140,11 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 		return nil, err
 	}
 
+	// TODO: remove me
+	if settings.PMMPublicAddress == "" {
+		settings.PMMPublicAddress = "http://localhost"
+	}
+
 	in := dbaascontrollerv1beta1.CreateXtraDBClusterRequest{
 		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
@@ -192,28 +200,41 @@ func (s XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *dbaa
 		},
 		Name: req.Name,
 		Params: &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
-			ClusterSize: req.Params.ClusterSize,
-			Pxc: &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC{
-				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
-					CpuM:        req.Params.Pxc.ComputeResources.CpuM,
-					MemoryBytes: req.Params.Pxc.ComputeResources.MemoryBytes,
-				},
-			},
-			Proxysql: &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_ProxySQL{
-				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
-					CpuM:        req.Params.Proxysql.ComputeResources.CpuM,
-					MemoryBytes: req.Params.Proxysql.ComputeResources.MemoryBytes,
-				},
-			},
+			Pxc:      &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC{},
+			Proxysql: &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_ProxySQL{},
 		},
 	}
 
-	if req.Params.Suspend {
-		in.Params.Suspend = req.Params.Suspend
-	}
+	if req.Params != nil {
+		if req.Params.UpdateClusterSize {
+			in.Params.ClusterSize = req.Params.ClusterSize
+		}
 
-	if req.Params.Resume {
-		in.Params.Resume = req.Params.Resume
+		if req.Params.Pxc != nil && req.Params.Pxc.ComputeResources != nil {
+			if req.Params.Pxc.ComputeResources.CpuM > 0 {
+				in.Params.Pxc.ComputeResources.CpuM = req.Params.Pxc.ComputeResources.CpuM
+			}
+			if req.Params.Pxc.ComputeResources.MemoryBytes > 0 {
+				in.Params.Pxc.ComputeResources.MemoryBytes = req.Params.Pxc.ComputeResources.MemoryBytes
+			}
+		}
+
+		if req.Params.Proxysql != nil && req.Params.Proxysql.ComputeResources != nil {
+			if req.Params.Proxysql.ComputeResources.CpuM > 0 {
+				in.Params.Proxysql.ComputeResources.CpuM = req.Params.Proxysql.ComputeResources.CpuM
+			}
+			if req.Params.Proxysql.ComputeResources.MemoryBytes > 0 {
+				in.Params.Proxysql.ComputeResources.MemoryBytes = req.Params.Proxysql.ComputeResources.MemoryBytes
+			}
+		}
+
+		if req.Params.Suspend {
+			in.Params.Suspend = req.Params.Suspend
+		}
+
+		if req.Params.Resume {
+			in.Params.Resume = req.Params.Resume
+		}
 	}
 
 	_, err = s.controllerClient.UpdateXtraDBCluster(ctx, &in)
