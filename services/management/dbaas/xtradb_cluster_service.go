@@ -160,7 +160,6 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 		},
 	}
 
-	settings.PMMPublicAddress = "http://unavailable-pmm-address.com"
 	if settings.PMMPublicAddress != "" {
 		in.PmmPublicAddress = settings.PMMPublicAddress
 	}
