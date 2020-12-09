@@ -383,16 +383,16 @@
   version = "v0.3.0"
 
 [[projects]]
-  branch = "main"
-  digest = "1:82b51a2316a7be9823a4c61f54afaec0cc0b8b658ed6fd9b7f9798bc8d17cacd"
+  branch = "pmm-2.13"
+  digest = "1:5baea2c09a15784fca045752d007c6d24e42ed05d4b0d8f23fa275286c678d35"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "496fbe43a782f552124fc0f7511039eeb635c8c1"
+  revision = "f76673970786a54643fa53feeed648736db3a613"
 
 [[projects]]
   branch = "main"
-  digest = "1:d01e95c04ad3858fddd5f94f13a4c869a429ac09ffbb417458727f51ec0cb7db"
+  digest = "1:1437b7f23ac82538bfd92ed22909f854d6ef51020792b76bec03c0e2a4bec125"
   name = "github.com/percona-platform/saas"
   packages = [
     "gen/auth",
@@ -405,7 +405,7 @@
     "pkg/starlark",
   ]
   pruneopts = "NUT"
-  revision = "8657f06b2badaee3980eb85fa61d7e2f7b34484b"
+  revision = "ad38b2c7116bd3cc80057ab2a8cf86166d9d2e24"
 
 [[projects]]
   digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
@@ -417,7 +417,7 @@
 
 [[projects]]
   branch = "revert-623-PMM-7026-revert-pt-mysql-summary"
-  digest = "1:e8980aa2bcd1c27f161964de4e3e53e23abeb250f645eb10b6077ccbb588b068"
+  digest = "1:922715ace9886333ce01c062499e4a0342743b908e3baca2fe40ae6f4df52abf"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -440,7 +440,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "660dcbdc15fb21e567cf1f374100a6163cc9a14e"
+  revision = "4a595bf6ae624b7238f4f83a1a17f75316c6ea42"
 
 [[projects]]
   digest = "1:6832634ec059f4bfddaff75621cf1c4750949129c6de2e5e58e01059d0851e25"
@@ -815,23 +815,18 @@
   version = "v2.2.6"
 
 [[projects]]
-  digest = "1:72caeb94dfca2a9190404cff141246fd9b81af2a19b27bcec8aa22f84887abf4"
+  digest = "1:666e94676a94cb3351be105e21b8579039a6306ec050191333fb931ef4baab64"
   name = "gopkg.in/reform.v1"
   packages = [
     ".",
-    "dialects",
-    "dialects/mssql",
-    "dialects/mysql",
     "dialects/postgresql",
-    "dialects/sqlite3",
-    "dialects/sqlserver",
     "internal",
     "parse",
     "reform",
   ]
   pruneopts = "NUT"
-  revision = "d180de3a658d1bd73a5473b48cc635263dac2320"
-  version = "v1.3.4"
+  revision = "be1c9e20a895a055b71875afe38f593d8f0623b9"
+  version = "v1.5.0"
 
 [[projects]]
   digest = "1:62a89978829993fb84e755bff5ae0e3d84837228898fd55b1a88a885036e1e51"
