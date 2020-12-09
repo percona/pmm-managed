@@ -1,8 +1,8 @@
 ---
-rules:
+templates:
   - name: node_swap_filled_up
     version: 1
-    summary: Node high SWAP filling up 
+    summary: Node high SWAP filling up
     expr: |-
       (1 - (node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes))
       * 100
@@ -20,7 +20,7 @@ rules:
       foo: bar
     annotations:
       description: |-
-        {{ $labels.node_name }} Swap is filled up more than [[ .threshold ]]% 
+        {{ $labels.node_name }} Swap is filled up more than [[ .threshold ]]%
         VALUE = {{ $value }}
         LABELS: {{ $labels }}
       summary: Node swap is filling up (instance {{ $labels.node_name }})

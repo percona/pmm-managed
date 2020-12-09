@@ -1,5 +1,5 @@
 ---
-rules:
+templates:
   - name: node_high_cpu_load
     version: 1
     summary: Node high CPU load
@@ -20,7 +20,7 @@ rules:
       foo: bar
     annotations:
       description: |-
-        {{ $labels.node_name }} CPU load is more than [[ .threshold ]]% 
+        {{ $labels.node_name }} CPU load is more than [[ .threshold ]]%
         VALUE = {{ $value }}
         LABELS: {{ $labels }}
       summary: Node high CPU load (instance {{ $labels.node_name }})

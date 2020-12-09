@@ -1,5 +1,5 @@
 ---
-rules:
+templates:
   - name: node_low_free_memory
     version: 1
     summary: Node out of memory
