@@ -56,8 +56,11 @@ const (
 	dirPerm = os.FileMode(0o775)
 )
 
-// Template represents alerting rule template with added source field.
-type Template struct {
+// templateInfo represents alerting rule template information from various sources.
+//
+// TODO We already have models.Template, iav1beta1.Template, and alert.Template.
+//      We probably can remove that type.
+type templateInfo struct {
 	alert.Template
 	Yaml   string
 	Source iav1beta1.TemplateSource
@@ -71,7 +74,7 @@ type TemplatesService struct {
 	rulesPath         string // used for testing
 
 	rw        sync.RWMutex
-	templates map[string]Template
+	templates map[string]templateInfo
 }
 
 // NewTemplatesService creates a new TemplatesService.
@@ -104,7 +107,7 @@ func NewTemplatesService(db *reform.DB) *TemplatesService {
 		l:                 l,
 		userTemplatesPath: templatesDir + "/*.yml",
 		rulesPath:         rulesDir,
-		templates:         make(map[string]Template),
+		templates:         make(map[string]templateInfo),
 	}
 }
 
@@ -113,11 +116,11 @@ func newParamTemplate() *template.Template {
 }
 
 // getCollected return collected templates.
-func (s *TemplatesService) getCollected(ctx context.Context) map[string]Template {
+func (s *TemplatesService) getCollected(ctx context.Context) map[string]templateInfo {
 	s.rw.RLock()
 	defer s.rw.RUnlock()
 
-	res := make(map[string]Template)
+	res := make(map[string]templateInfo)
 	for n, r := range s.templates {
 		res[n] = r
 	}
@@ -147,17 +150,17 @@ func (s *TemplatesService) collect(ctx context.Context) {
 		return
 	}
 
-	templates := make([]Template, 0, len(builtInTemplates)+len(userDefinedTemplates)+len(dbTemplates))
+	templates := make([]templateInfo, 0, len(builtInTemplates)+len(userDefinedTemplates)+len(dbTemplates))
 
 	for _, t := range builtInTemplates {
-		templates = append(templates, Template{
+		templates = append(templates, templateInfo{
 			Template: t,
 			Source:   iav1beta1.TemplateSource_BUILT_IN,
 		})
 	}
 
 	for _, t := range userDefinedTemplates {
-		templates = append(templates, Template{
+		templates = append(templates, templateInfo{
 			Template: t,
 			Source:   iav1beta1.TemplateSource_USER_FILE,
 		})
@@ -170,7 +173,7 @@ func (s *TemplatesService) collect(ctx context.Context) {
 	// replace previously stored templates with newly collected ones.
 	s.rw.Lock()
 	defer s.rw.Unlock()
-	s.templates = make(map[string]Template, len(templates))
+	s.templates = make(map[string]templateInfo, len(templates))
 	for _, t := range templates {
 		// TODO Check for name clashes? Allow users to re-define built-in templates?
 		// Reserve prefix for built-in or user-defined templates?
@@ -222,7 +225,7 @@ func (s *TemplatesService) loadTemplatesFromFiles(ctx context.Context, path stri
 	return res, nil
 }
 
-func (s *TemplatesService) loadTemplatesFromDB() ([]Template, error) {
+func (s *TemplatesService) loadTemplatesFromDB() ([]templateInfo, error) {
 	var templates []models.Template
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
@@ -233,7 +236,7 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]Template, error) {
 		return nil, errors.Wrap(e, "failed to load rule templates form DB")
 	}
 
-	res := make([]Template, 0, len(templates))
+	res := make([]templateInfo, 0, len(templates))
 	for _, template := range templates {
 		params := make([]alert.Parameter, len(template.Params))
 		for _, param := range template.Params {
@@ -249,7 +252,6 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]Template, error) {
 				f := param.FloatParam
 				p.Value = f.Default
 				p.Range = []interface{}{f.Min, f.Max}
-
 			}
 
 			params = append(params, p)
@@ -266,7 +268,7 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]Template, error) {
 		}
 
 		res = append(res,
-			Template{
+			templateInfo{
 				Template: alert.Template{
 					Name:        template.Name,
 					Version:     template.Version,
@@ -482,7 +484,6 @@ func (s *TemplatesService) dumpRule(rule *ruleFile) error {
 	path := s.rulesPath + alertRule.Alert + ".yml"
 	if err = ioutil.WriteFile(path, b, 0644); err != nil {
 		return errors.Errorf("failed to dump rule to file %s: %s", s.rulesPath, err)
-
 	}
 	return nil
 }
