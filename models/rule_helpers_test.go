@@ -17,7 +17,6 @@
 package models_test
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -25,11 +24,14 @@ import (
 	"github.com/percona-platform/saas/pkg/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/testdb"
+	"github.com/percona/pmm-managed/utils/tests"
 )
 
 func TestRules(t *testing.T) {
@@ -81,7 +83,7 @@ func TestRules(t *testing.T) {
 
 			params := createCreateRuleParams(templateName, channelID)
 			_, err = models.CreateRule(q, params)
-			require.EqualError(t, err, fmt.Sprintf("failed to find all required channels %v", []string{channelID}))
+			tests.AssertGRPCError(t, status.Newf(codes.NotFound, "Failed to find all required channels: %v.", []string{channelID}), err)
 		})
 	})
 
@@ -156,7 +158,7 @@ func TestRules(t *testing.T) {
 			}
 
 			_, err = models.ChangeRule(q, rule.ID, params)
-			require.EqualError(t, err, fmt.Sprintf("failed to find all required channels %v", []string{newChannelID}))
+			tests.AssertGRPCError(t, status.Newf(codes.NotFound, "Failed to find all required channels: %v.", []string{newChannelID}), err)
 		})
 	})
 

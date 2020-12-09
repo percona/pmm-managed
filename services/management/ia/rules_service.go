@@ -155,7 +155,7 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 	}
 
 	if _, ok := s.templates.getCollected(ctx)[params.TemplateName]; !ok {
-		return nil, status.Errorf(codes.NotFound, "Unknown template %s", params.TemplateName)
+		return nil, status.Errorf(codes.NotFound, "Unknown template %s.", params.TemplateName)
 	}
 
 	var rule *models.Rule

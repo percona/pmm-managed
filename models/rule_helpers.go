@@ -104,7 +104,7 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 	}
 
 	if len(channelIDs) != len(channels) {
-		return nil, errors.Errorf("failed to find all required channels %v", channelIDs)
+		return nil, status.Errorf(codes.NotFound, "Failed to find all required channels: %v.", channelIDs)
 	}
 
 	row := &Rule{
@@ -115,7 +115,7 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 		Severity:     convertSeverity(params.Severity),
 		Filters:      params.Filters,
 		Params:       params.RuleParams,
-		ChannelIDs:   params.ChannelIDs,
+		ChannelIDs:   channelIDs,
 	}
 
 	err = row.SetCustomLabels(params.CustomLabels)
@@ -156,7 +156,7 @@ func ChangeRule(q *reform.Querier, ruleID string, params *ChangeRuleParams) (*Ru
 	}
 
 	if len(channelIDs) != len(channels) {
-		return nil, errors.Errorf("failed to find all required channels %v", channelIDs)
+		return nil, status.Errorf(codes.NotFound, "Failed to find all required channels: %v.", channelIDs)
 	}
 
 	row.Disabled = params.Disabled
