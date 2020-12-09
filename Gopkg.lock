@@ -384,11 +384,11 @@
 
 [[projects]]
   branch = "PMM-5980-suspend-pxc"
-  digest = "1:fd84c1b0fe58d1e35cec1574a90160006c2de8996bbe73a368812ecb9b524556"
+  digest = "1:359de2a499cefe7e8afd29e418e79c804c8aea56bf30a7c70449802896701571"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "dbad308546de7225390b13ec030c7e0181ff84ed"
+  revision = "d0a98ccc51ccbeac66bccd55807f9eda984c517e"
 
 [[projects]]
   branch = "main"

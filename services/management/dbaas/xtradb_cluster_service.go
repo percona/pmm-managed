@@ -23,8 +23,9 @@ import (
 
 	dbaascontrollerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -159,9 +160,7 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 		},
 	}
 
-	// TODO: hack to create cluster with pmm on localhost
-	// in.PmmPublicAddress = "-"
-
+	settings.PMMPublicAddress = "http://unavailable-pmm-address.com"
 	if settings.PMMPublicAddress != "" {
 		in.PmmPublicAddress = settings.PMMPublicAddress
 	}
@@ -233,7 +232,7 @@ func (s XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *dbaa
 		}
 
 		if req.Params.Suspend && req.Params.Resume {
-			return nil, errors.New("resume and suspend cannot be set together")
+			return nil, status.Error(codes.InvalidArgument, "resume and suspend cannot be set together")
 		}
 
 		if req.Params.Suspend {
