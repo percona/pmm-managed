@@ -140,6 +140,7 @@ func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAl
 func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.CreateAlertRuleRequest) (*iav1beta1.CreateAlertRuleResponse, error) {
 	params := &models.CreateRuleParams{
 		TemplateName: req.TemplateName,
+		Summary:      req.Summary,
 		Disabled:     req.Disabled,
 		For:          req.For.AsDuration(),
 		Severity:     common.Severity(req.Severity),

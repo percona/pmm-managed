@@ -81,6 +81,7 @@ func FindRuleByID(q *reform.Querier, id string) (*Rule, error) {
 // CreateRuleParams are params for creating new Rule.
 type CreateRuleParams struct {
 	TemplateName string
+	Summary      string
 	Disabled     bool
 	RuleParams   RuleParams
 	For          time.Duration
@@ -109,13 +110,14 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 	}
 
 	row := &Rule{
-		ID:           id,
 		TemplateName: params.TemplateName,
+		ID:           id,
+		Summary:      params.Summary,
 		Disabled:     params.Disabled,
+		Params:       params.RuleParams,
 		For:          params.For,
 		Severity:     convertSeverity(params.Severity),
 		Filters:      params.Filters,
-		Params:       params.RuleParams,
 		ChannelIDs:   channelIDs,
 	}
 

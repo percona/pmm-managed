@@ -57,6 +57,7 @@ func TestRules(t *testing.T) {
 
 			assert.NotEmpty(t, rule.ID)
 			assert.Equal(t, templateName, rule.TemplateName)
+			assert.Equal(t, params.Summary, rule.Summary)
 			assert.Equal(t, params.Disabled, rule.Disabled)
 			assert.Equal(t, params.RuleParams, rule.Params)
 			assert.Equal(t, params.For, rule.For)
@@ -208,6 +209,7 @@ func TestRules(t *testing.T) {
 
 		actual := rules[0]
 		assert.NotEmpty(t, rule.ID)
+		assert.Equal(t, rule.Summary, actual.Summary)
 		assert.Equal(t, rule.TemplateName, actual.TemplateName)
 		assert.Equal(t, rule.Disabled, actual.Disabled)
 		assert.Equal(t, rule.Params, actual.Params)
