@@ -461,6 +461,8 @@ func (s *TemplatesService) CreateTemplate(ctx context.Context, req *iav1beta1.Cr
 		return nil, e
 	}
 
+	s.collect(ctx)
+
 	return &iav1beta1.CreateTemplateResponse{}, nil
 }
 
@@ -493,6 +495,8 @@ func (s *TemplatesService) UpdateTemplate(ctx context.Context, req *iav1beta1.Up
 	if e != nil {
 		return nil, e
 	}
+
+	s.collect(ctx)
 
 	return &iav1beta1.UpdateTemplateResponse{}, nil
 }
