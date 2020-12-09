@@ -74,6 +74,11 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 				}
 			}
 		}
+
+		message := ""
+		if c.Operation != nil {
+			message = c.Operation.Message
+		}
 		cluster := dbaasv1beta1.ListPSMDBClustersResponse_Cluster{
 			Name: c.Name,
 			Params: &dbaasv1beta1.PSMDBClusterParams{
@@ -85,8 +90,7 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 			},
 			State: psmdbStates()[c.State],
 			Operation: &dbaasv1beta1.RunningOperation{
-				Message:  c.Operation.Message,
-				Progress: c.Operation.Progress,
+				Message: message,
 			},
 		}
 
