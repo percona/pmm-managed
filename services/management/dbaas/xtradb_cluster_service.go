@@ -19,11 +19,11 @@ package dbaas
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	dbaascontrollerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/reform.v1"
 
@@ -157,7 +157,13 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 				DiskSize:         req.Params.Proxysql.DiskSize,
 			},
 		},
-		PmmPublicAddress: settings.PMMPublicAddress,
+	}
+
+	// TODO: hack to create cluster with pmm on localhost
+	// in.PmmPublicAddress = "-"
+
+	if settings.PMMPublicAddress != "" {
+		in.PmmPublicAddress = settings.PMMPublicAddress
 	}
 
 	if req.Params.Pxc.ComputeResources != nil {
