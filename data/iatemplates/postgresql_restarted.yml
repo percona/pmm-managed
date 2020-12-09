@@ -1,5 +1,5 @@
 ---
-rules:
+templates:
   - name: postgresql_restarted
     version: 1
     summary: PostgreSQL Restarted

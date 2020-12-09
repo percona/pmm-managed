@@ -1,5 +1,5 @@
 ---
-rules:
+templates:
   - name: postgresql_down
     version: 1
     summary: PostgreSQL DOWN
