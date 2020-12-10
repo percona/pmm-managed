@@ -206,10 +206,7 @@ func (s XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *dbaa
 	}
 
 	if req.Params != nil {
-		if req.Params.UpdateClusterSize {
-			in.Params.ClusterSize = req.Params.ClusterSize
-		}
-
+		in.Params.ClusterSize = req.Params.ClusterSize
 		if req.Params.Pxc != nil && req.Params.Pxc.ComputeResources != nil {
 			in.Params.Pxc.ComputeResources = new(dbaascontrollerv1beta1.ComputeResources)
 			if req.Params.Pxc.ComputeResources.CpuM > 0 {

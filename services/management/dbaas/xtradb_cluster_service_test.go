@@ -246,8 +246,7 @@ func TestXtraDBClusterService(t *testing.T) {
 			KubernetesClusterName: pxcKubernetesClusterNameTest,
 			Name:                  "third-pxc-test",
 			Params: &dbaasv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
-				UpdateClusterSize: true,
-				ClusterSize:       8,
+				ClusterSize: 8,
 				Pxc: &dbaasv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC{
 					ComputeResources: &dbaasv1beta1.ComputeResources{
 						CpuM:        1,
