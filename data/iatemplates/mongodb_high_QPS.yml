@@ -1,0 +1,25 @@
+---
+templates:
+  - name: mongodb_high_QPS
+    version: 1
+    summary: MongoDB high rate of queries per second
+    expr: |-
+      sum by (service_name) (rate(mongodb_mongod_op_counters_total{type!="command"}[1m]) or 
+      rate(mongodb_op_counters_total{type!="command"}[1m]))
+      > [[ .threshold ]]
+    params:
+      - name: threshold
+        summary: Queries per second warning limit 
+        unit: "queries"
+        type: float
+        value: 500
+    for: 5m
+    severity: warning
+    labels:
+      foo: bar
+    annotations:
+      description: |-
+        MongoDB hit {{ $values }} QPS on {{ $labels.service_name }}
+        VALUE = {{ $value }}
+        LABELS: {{ $labels }}
+      summary: MongoDB has high QPS (instance {{ $labels.service_name }})

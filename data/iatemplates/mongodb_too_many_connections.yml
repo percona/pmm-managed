@@ -1,0 +1,27 @@
+---
+templates:
+  - name: mongodb_too_many_connections
+    version: 1
+    summary: MongoDB connections in use
+    expr: |-
+      sum by (service_name) (max_over_time(mongodb_connections{state="current"}[5m])) 
+      / sum by (service_name) (mongodb_connections{state=~"available|current"}) 
+      * 100
+      > [[ .threshold ]]
+    params:
+      - name: threshold
+        summary: A percentage from configured maximum
+        unit: "%"
+        type: float
+        range: [0, 100]
+        value: 80
+    for: 5m
+    severity: warning
+    labels:
+      foo: bar
+    annotations:
+      description: |-
+        More than [[ .threshold ]]% of MongoDB connections are in use on {{ $labels.service_name }}
+        VALUE = {{ $value }}
+        LABELS: {{ $labels }}
+      summary: MongoDB too many connections (instance {{ $labels.service_name }})
