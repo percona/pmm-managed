@@ -128,6 +128,24 @@ func TestEnvVarValidator(t *testing.T) {
 		assert.Equal(t, expectedWarns, gotWarns)
 	})
 
+	t.Run("Parse SAAS host", func(t *testing.T) {
+		userCase := []struct {
+			value   string
+			err     error
+			respVal string
+		}{
+			{value: "host", err: nil, respVal: "host:443"},
+			{value: ":443", err: fmt.Errorf("environment variable %q has invalid format %q. Expected host[:port]", envSaaSHost, ":443"), respVal: ""},
+			{value: "host:443", err: nil, respVal: "host:443"},
+		}
+
+		for _, c := range userCase {
+			value, err := parseSAASHost(c.value)
+			assert.Equal(t, c.respVal, value)
+			assert.Equal(t, c.err, err)
+		}
+	})
+
 	t.Run("Grafana env vars", func(t *testing.T) {
 		envs := []string{
 			`GF_AUTH_GENERIC_OAUTH_ALLOWED_DOMAINS='example.com'`,

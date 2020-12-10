@@ -162,13 +162,24 @@ func parseStringDuration(value string) (time.Duration, error) {
 // GetSAASHost returns SaaS host env variable value if it's present and valid.
 // Otherwise returns defaultSaaSHost.
 func GetSAASHost() (string, error) {
-	name, v := envSaaSHost, os.Getenv(envSaaSHost)
+	v := os.Getenv(envSaaSHost)
+	host, err := parseSAASHost(v)
+	if err != nil {
+		return "", err
+	}
+
+	logrus.Infof("Using SaaS host %q.", host)
+	return host, nil
+}
+
+// parseSAASHost parses, validates and returns SAAS host, otherwize returns error
+func parseSAASHost(v string) (string, error) {
 	if v == "" {
 		logrus.Infof("Using default SaaS host %q.", defaultSaaSHost)
 		return defaultSaaSHost, nil
 	}
 	if strings.HasPrefix(v, ":") {
-		return "", fmt.Errorf("environment variable %q has invalid format %q. Expected host:[port]", name, v)
+		return "", fmt.Errorf("environment variable %q has invalid format %q. Expected host[:port]", envSaaSHost, v)
 	}
 
 	host, port, err := net.SplitHostPort(v)
@@ -183,7 +194,6 @@ func GetSAASHost() (string, error) {
 	}
 
 	v = net.JoinHostPort(host, port)
-	logrus.Infof("Using SaaS host %q.", v)
 	return v, nil
 }
 
