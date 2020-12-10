@@ -27,6 +27,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona-platform/saas/pkg/common"
@@ -58,8 +59,9 @@ const (
 //      We probably can remove that type.
 type templateInfo struct {
 	alert.Template
-	Yaml   string
-	Source iav1beta1.TemplateSource
+	Yaml      string
+	Source    iav1beta1.TemplateSource
+	CreatedAt *time.Time
 }
 
 // TemplatesService is responsible for interactions with IA rule templates.
@@ -232,6 +234,7 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]templateInfo, error) {
 
 	res := make([]templateInfo, 0, len(templates))
 	for _, template := range templates {
+		template := template
 		params := make([]alert.Parameter, len(template.Params))
 		for _, param := range template.Params {
 			p := alert.Parameter{
@@ -275,8 +278,9 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]templateInfo, error) {
 					Labels:      labels,
 					Annotations: annotations,
 				},
-				Yaml:   template.Yaml,
-				Source: convertModelToSource(template.Source),
+				Yaml:      template.Yaml,
+				Source:    convertModelToSource(template.Source),
+				CreatedAt: &template.CreatedAt,
 			},
 		)
 	}
@@ -528,6 +532,7 @@ func (s *TemplatesService) UpdateTemplate(ctx context.Context, req *iav1beta1.Up
 
 	params := &models.ChangeTemplateParams{
 		Template: &templates[0],
+		Yaml:     req.Yaml,
 	}
 
 	e := s.db.InTransaction(func(tx *reform.TX) error {

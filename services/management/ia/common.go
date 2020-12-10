@@ -54,6 +54,13 @@ func convertTemplate(l *logrus.Entry, template templateInfo) (*iav1beta1.Templat
 		Yaml:        template.Yaml,
 	}
 
+	if template.CreatedAt != nil {
+		var err error
+		if t.CreatedAt, err = ptypes.TimestampProto(*template.CreatedAt); err != nil {
+			return nil, err
+		}
+	}
+
 	for _, p := range template.Params {
 		tp := &iav1beta1.TemplateParam{
 			Name:    p.Name,
