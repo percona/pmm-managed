@@ -207,6 +207,13 @@ func (s XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *dbaa
 
 	if req.Params != nil {
 		in.Params.ClusterSize = req.Params.ClusterSize
+
+		if req.Params.Suspend && req.Params.Resume {
+			return nil, status.Error(codes.InvalidArgument, "resume and suspend cannot be set together")
+		}
+		in.Params.Suspend = req.Params.Suspend
+		in.Params.Resume = req.Params.Resume
+
 		if req.Params.Pxc != nil && req.Params.Pxc.ComputeResources != nil {
 			in.Params.Pxc.ComputeResources = new(dbaascontrollerv1beta1.ComputeResources)
 			if req.Params.Pxc.ComputeResources.CpuM > 0 {
@@ -225,18 +232,6 @@ func (s XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *dbaa
 			if req.Params.Proxysql.ComputeResources.MemoryBytes > 0 {
 				in.Params.Proxysql.ComputeResources.MemoryBytes = req.Params.Proxysql.ComputeResources.MemoryBytes
 			}
-		}
-
-		if req.Params.Suspend && req.Params.Resume {
-			return nil, status.Error(codes.InvalidArgument, "resume and suspend cannot be set together")
-		}
-
-		if req.Params.Suspend {
-			in.Params.Suspend = req.Params.Suspend
-		}
-
-		if req.Params.Resume {
-			in.Params.Resume = req.Params.Resume
 		}
 	}
 
