@@ -139,6 +139,7 @@ type CreateXtraDBClusterRequest struct {
 	// Cluster parameters.
 	Params *XtraDBClusterParams `protobuf:"bytes,3,opt,name=params,proto3" json:"params,omitempty"`
 	// PMM server public address.
+	// TODO: https://jira.percona.com/browse/PMM-7132
 	PmmPublicAddress string `protobuf:"bytes,4,opt,name=pmm_public_address,json=pmmPublicAddress,proto3" json:"pmm_public_address,omitempty"`
 }
 
