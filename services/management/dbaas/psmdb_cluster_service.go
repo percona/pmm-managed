@@ -76,15 +76,18 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 		}
 		cluster := dbaasv1beta1.ListPSMDBClustersResponse_Cluster{
 			Name: c.Name,
-			Params: &dbaasv1beta1.PSMDBClusterParamsList{
+			Params: &dbaasv1beta1.PSMDBClusterParams{
 				ClusterSize: c.Params.ClusterSize,
-				Replicaset: &dbaasv1beta1.PSMDBClusterParamsList_ReplicaSet{
+				Replicaset: &dbaasv1beta1.PSMDBClusterParams_ReplicaSet{
 					ComputeResources: computeResources,
 					DiskSize:         diskSize,
 				},
-				Paused: c.Params.Paused,
 			},
 			State: psmdbStates()[c.State],
+		}
+
+		if c.Params.Paused {
+			cluster.State = dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED
 		}
 
 		clusters[i] = &cluster
@@ -169,29 +172,41 @@ func (s PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *dbaasv
 		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
-		Name:   req.Name,
-		Params: new(dbaascontrollerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams),
+		Name: req.Name,
 	}
 
-	if req.Params.UpdateClusterSize {
-		in.Params.UpdateClusterSize = req.Params.UpdateClusterSize
-		in.Params.ClusterSize = req.Params.ClusterSize
-	}
+	if req.Params != nil {
+		in.Params = new(dbaascontrollerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams)
 
-	if req.Params.Suspend {
-		in.Params.Suspend = req.Params.Suspend
-	}
+		if req.Params.UpdateClusterSize {
+			in.Params.UpdateClusterSize = req.Params.UpdateClusterSize
+			in.Params.ClusterSize = req.Params.ClusterSize
+		}
 
-	if req.Params.Resume {
-		in.Params.Resume = req.Params.Resume
-	}
+		if req.Params.Suspend && req.Params.Resume {
+			return nil, status.Error(codes.InvalidArgument, "resume and suspend cannot be set together")
+		}
 
-	in.Params.Replicaset = new(dbaascontrollerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams_ReplicaSet)
-	in.Params.Replicaset.ComputeResources = new(dbaascontrollerv1beta1.ComputeResources)
-	if req.Params.Replicaset != nil && req.Params.Replicaset.ComputeResources != nil {
-		in.Params.Replicaset.ComputeResources = &dbaascontrollerv1beta1.ComputeResources{
-			CpuM:        req.Params.Replicaset.ComputeResources.CpuM,
-			MemoryBytes: req.Params.Replicaset.ComputeResources.MemoryBytes,
+		if req.Params.Suspend {
+			in.Params.Suspend = req.Params.Suspend
+		}
+
+		if req.Params.Resume {
+			in.Params.Resume = req.Params.Resume
+		}
+
+		if req.Params.Replicaset != nil {
+			in.Params.Replicaset = new(dbaascontrollerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams_ReplicaSet)
+		}
+
+		if req.Params.Replicaset.ComputeResources != nil {
+			in.Params.Replicaset.ComputeResources = new(dbaascontrollerv1beta1.ComputeResources)
+			if req.Params.Replicaset.ComputeResources.CpuM > 0 {
+				in.Params.Replicaset.ComputeResources.CpuM = req.Params.Replicaset.ComputeResources.CpuM
+			}
+			if req.Params.Replicaset.ComputeResources.MemoryBytes > 0 {
+				in.Params.Replicaset.ComputeResources.MemoryBytes = req.Params.Replicaset.ComputeResources.MemoryBytes
+			}
 		}
 	}
 	_, err = s.controllerClient.UpdatePSMDBCluster(ctx, &in)
