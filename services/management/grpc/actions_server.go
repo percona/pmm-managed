@@ -300,9 +300,9 @@ func pointerToAgentType(agentType models.AgentType) *models.AgentType {
 	return &agentType
 }
 
-// StartPTPgSQLSummaryAction starts pt-pg-summary (PostgreSQL) action and returns the pointer to the response message
+// StartPTPgSummaryAction starts pt-pg-summary (PostgreSQL) action and returns the pointer to the response message
 //nolint:lll
-func (s *actionsServer) StartPTPgSQLSummaryAction(ctx context.Context, req *managementpb.StartPTPgSQLSummaryActionRequest) (*managementpb.StartPTPgSQLSummaryActionResponse, error) {
+func (s *actionsServer) StartPTPgSummaryAction(ctx context.Context, req *managementpb.StartPTPgSummaryActionRequest) (*managementpb.StartPTPgSummaryActionResponse, error) {
 	// Need to get the service id's pointer to retrieve the list of agent pointers therefrom
 	// to get the particular agentID from the request.
 	service, err := models.FindServiceByID(s.db.Querier, req.ServiceId)
@@ -330,12 +330,12 @@ func (s *actionsServer) StartPTPgSQLSummaryAction(ctx context.Context, req *mana
 		ServiceID: req.ServiceId, AgentType: pointerToAgentType(models.PostgresExporterType)}
 
 	// Need to get the postgres exporters to get the username and password therefrom
-	pExporters, err := models.FindAgents(s.db.Querier, agentFilter)
+	postgresExporters, err := models.FindAgents(s.db.Querier, agentFilter)
 	if err != nil {
 		return nil, err
 	}
 
-	exportersCount := len(pExporters)
+	exportersCount := len(postgresExporters)
 
 	// Must be only one result
 	if exportersCount < 1 {
@@ -347,13 +347,13 @@ func (s *actionsServer) StartPTPgSQLSummaryAction(ctx context.Context, req *mana
 	}
 
 	// Starts the pt-pg-summary with the host address, port, username and password
-	err = s.r.StartPTPgSQLSummaryAction(ctx, res.ID, pmmAgentID, pointer.GetString(service.Address), pointer.GetUint16(service.Port),
-		pointer.GetString(pExporters[0].Username), pointer.GetString(pExporters[0].Password))
+	err = s.r.StartPTPgSummaryAction(ctx, res.ID, pmmAgentID, pointer.GetString(service.Address), pointer.GetUint16(service.Port),
+		pointer.GetString(postgresExporters[0].Username), pointer.GetString(postgresExporters[0].Password))
 	if err != nil {
 		return nil, err
 	}
 
-	return &managementpb.StartPTPgSQLSummaryActionResponse{PmmAgentId: pmmAgentID, ActionId: res.ID}, nil
+	return &managementpb.StartPTPgSummaryActionResponse{PmmAgentId: pmmAgentID, ActionId: res.ID}, nil
 }
 
 // CancelAction stops an Action.
