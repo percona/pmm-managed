@@ -98,7 +98,7 @@ func convertTemplate(l *logrus.Entry, template Template) (*iav1beta1.Template, e
 	return t, nil
 }
 
-func convertModelToSeverity(severity models.Severity) managementpb.Severity {
+func convertSeverity(severity models.Severity) managementpb.Severity {
 	switch severity {
 	case models.UnknownSeverity:
 		return managementpb.Severity_SEVERITY_INVALID

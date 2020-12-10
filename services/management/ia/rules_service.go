@@ -83,7 +83,7 @@ func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAl
 			RuleId:   rule.ID,
 			Disabled: rule.Disabled,
 			Summary:  rule.Summary,
-			Severity: convertModelToSeverity(rule.Severity),
+			Severity: convertSeverity(rule.Severity),
 			For:      ptypes.DurationProto(rule.For),
 		}
 

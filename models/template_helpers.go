@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/percona-platform/saas/pkg/alert"
-	"github.com/percona-platform/saas/pkg/common"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -233,30 +232,5 @@ func convertParamType(paramType alert.Type) (ParamType, error) {
 		return Float, nil
 	default:
 		return "", errors.Errorf("UnknownSeverity parameter type %s", paramType)
-	}
-}
-
-func convertSeverity(severity common.Severity) Severity {
-	switch severity {
-	case common.Unknown:
-		return UnknownSeverity
-	case common.Emergency:
-		return EmergencySeverity
-	case common.Alert:
-		return AlertSeverity
-	case common.Critical:
-		return CriticalSeverity
-	case common.Error:
-		return ErrorSeverity
-	case common.Warning:
-		return WarningSeverity
-	case common.Notice:
-		return NoticeSeverity
-	case common.Info:
-		return InfoSeverity
-	case common.Debug:
-		return DebugSeverity
-	default:
-		return UnknownSeverity
 	}
 }
