@@ -1,0 +1,21 @@
+---
+templates:
+    - name: %s
+      version: 1
+      summary: Test summary
+      tiers: [anonymous, registered]
+      expr: %s
+      params:
+        - name: threshold
+          summary: test param summary
+          unit: "%%"
+          type: float
+          range: [0, 100]
+          value: 80
+      for: 300s
+      severity: warning
+      labels:
+        foo: bar
+      annotations:
+        description: test description
+        summary: test summary
