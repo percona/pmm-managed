@@ -29,7 +29,6 @@ import (
 	"sync"
 
 	"github.com/percona-platform/saas/pkg/alert"
-	saas "github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona-platform/saas/pkg/common"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/percona/promconfig"
@@ -40,18 +39,24 @@ import (
 	"gopkg.in/reform.v1"
 	"gopkg.in/yaml.v3"
 
+	"github.com/percona/pmm-managed/data"
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/utils/dir"
 )
 
 const (
-	builtinTemplatesPath = "/tmp/ia1/*.yml"
-	userTemplatesPath    = "/tmp/ia2/*.yml"
-
-	ruleFileDir = "/tmp/ia1/"
+	templatesParentDir = "/srv/ia"
+	templatesDir       = "/srv/ia/templates"
+	rulesParentDir     = "/etc/ia"
+	rulesDir           = "/etc/ia/rules"
+	dirPerm            = os.FileMode(0o775)
 )
 
-// Template represents alerting rule template with added source field.
-type Template struct {
+// templateInfo represents alerting rule template information from various sources.
+//
+// TODO We already have models.Template, iav1beta1.Template, and alert.Template.
+//      We probably can remove that type.
+type templateInfo struct {
 	alert.Template
 	Yaml   string
 	Source iav1beta1.TemplateSource
@@ -59,25 +64,44 @@ type Template struct {
 
 // TemplatesService is responsible for interactions with IA rule templates.
 type TemplatesService struct {
-	db                   *reform.DB
-	l                    *logrus.Entry
-	builtinTemplatesPath string
-	userTemplatesPath    string
-	rulesFileDir         string
+	db                *reform.DB
+	l                 *logrus.Entry
+	userTemplatesPath string
+	rulesPath         string // used for testing
 
 	rw        sync.RWMutex
-	templates map[string]Template
+	templates map[string]templateInfo
 }
 
 // NewTemplatesService creates a new TemplatesService.
 func NewTemplatesService(db *reform.DB) *TemplatesService {
+	l := logrus.WithField("component", "management/ia/templates")
+
+	err := dir.CreateDataDir(templatesParentDir, "pmm", "pmm", dirPerm)
+	if err != nil {
+		l.Error(err)
+	}
+	err = dir.CreateDataDir(templatesDir, "pmm", "pmm", dirPerm)
+	if err != nil {
+		l.Error(err)
+	}
+
+	err = dir.CreateDataDir(rulesParentDir, "pmm", "pmm", dirPerm)
+	if err != nil {
+		l.Error(err)
+	}
+	// TODO move to rules service
+	err = dir.CreateDataDir(rulesDir, "pmm", "pmm", dirPerm)
+	if err != nil {
+		l.Error(err)
+	}
+
 	return &TemplatesService{
-		db:                   db,
-		l:                    logrus.WithField("component", "management/ia/templates"),
-		builtinTemplatesPath: builtinTemplatesPath,
-		userTemplatesPath:    userTemplatesPath,
-		rulesFileDir:         ruleFileDir,
-		templates:            make(map[string]Template),
+		db:                db,
+		l:                 l,
+		userTemplatesPath: templatesDir + "/*.yml",
+		rulesPath:         rulesDir,
+		templates:         make(map[string]templateInfo),
 	}
 }
 
@@ -86,32 +110,26 @@ func newParamTemplate() *template.Template {
 }
 
 // getCollected return collected templates.
-func (s *TemplatesService) getCollected(ctx context.Context) map[string]Template {
+func (s *TemplatesService) getCollected(ctx context.Context) map[string]templateInfo {
 	s.rw.RLock()
 	defer s.rw.RUnlock()
 
-	res := make(map[string]Template)
+	res := make(map[string]templateInfo)
 	for n, r := range s.templates {
 		res[n] = r
 	}
 	return res
 }
 
-// collect collects IA rule templates from various sources like
-// built-in templates shipped with PMM and defined by the users.
+// collect collects IA rule templates from various sources like:
+// builtin templates: read from the generated code in bindata.go.
+// user file templates: read from yaml files created by the user in `/srv/ia/templates`
+// user API templates: in the DB created using the API.
 func (s *TemplatesService) collect(ctx context.Context) {
-	templates := make([]Template, 0, len(s.builtinTemplatesPath)+len(s.userTemplatesPath))
-
-	builtInTemplates, err := s.loadTemplatesFromFiles(ctx, s.builtinTemplatesPath)
+	builtInTemplates, err := s.loadTemplatesFromAssets(ctx)
 	if err != nil {
 		s.l.Errorf("Failed to load built-in rule templates: %s.", err)
 		return
-	}
-	for _, t := range builtInTemplates {
-		templates = append(templates, Template{
-			Template: t,
-			Source:   iav1beta1.TemplateSource_BUILT_IN,
-		})
 	}
 
 	userDefinedTemplates, err := s.loadTemplatesFromFiles(ctx, s.userTemplatesPath)
@@ -119,18 +137,29 @@ func (s *TemplatesService) collect(ctx context.Context) {
 		s.l.Errorf("Failed to load user-defined rule templates: %s.", err)
 		return
 	}
-	for _, t := range userDefinedTemplates {
-		templates = append(templates, Template{
-			Template: t,
-			Source:   iav1beta1.TemplateSource_USER_FILE,
-		})
-	}
 
 	dbTemplates, err := s.loadTemplatesFromDB()
 	if err != nil {
 		s.l.Errorf("Failed to load rule templates from DB: %s.", err)
 		return
 	}
+
+	templates := make([]templateInfo, 0, len(builtInTemplates)+len(userDefinedTemplates)+len(dbTemplates))
+
+	for _, t := range builtInTemplates {
+		templates = append(templates, templateInfo{
+			Template: t,
+			Source:   iav1beta1.TemplateSource_BUILT_IN,
+		})
+	}
+
+	for _, t := range userDefinedTemplates {
+		templates = append(templates, templateInfo{
+			Template: t,
+			Source:   iav1beta1.TemplateSource_USER_FILE,
+		})
+	}
+
 	templates = append(templates, dbTemplates...)
 
 	// TODO download templates from SAAS.
@@ -138,7 +167,7 @@ func (s *TemplatesService) collect(ctx context.Context) {
 	// replace previously stored templates with newly collected ones.
 	s.rw.Lock()
 	defer s.rw.Unlock()
-	s.templates = make(map[string]Template, len(templates))
+	s.templates = make(map[string]templateInfo, len(templates))
 	for _, t := range templates {
 		// TODO Check for name clashes? Allow users to re-define built-in templates?
 		// Reserve prefix for built-in or user-defined templates?
@@ -146,6 +175,30 @@ func (s *TemplatesService) collect(ctx context.Context) {
 
 		s.templates[t.Name] = t
 	}
+}
+
+func (s *TemplatesService) loadTemplatesFromAssets(ctx context.Context) ([]alert.Template, error) {
+	paths := data.AssetNames()
+	res := make([]alert.Template, 0, len(paths))
+	for _, path := range paths {
+		data, err := data.Asset(path)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to load rule template file: %s", path)
+		}
+
+		// be strict about builtin templates.
+		params := &alert.ParseParams{
+			DisallowUnknownFields:    true,
+			DisallowInvalidTemplates: true,
+		}
+		templates, err := alert.Parse(bytes.NewReader(data), params)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to parse rule template file")
+		}
+
+		res = append(res, templates...)
+	}
+	return res, nil
 }
 
 func (s *TemplatesService) loadTemplatesFromFiles(ctx context.Context, path string) ([]alert.Template, error) {
@@ -156,17 +209,17 @@ func (s *TemplatesService) loadTemplatesFromFiles(ctx context.Context, path stri
 
 	res := make([]alert.Template, 0, len(paths))
 	for _, path := range paths {
-		r, err := s.loadFile(ctx, path)
+		templates, err := s.loadFile(ctx, path)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to load rule template file: %s", path)
 		}
 
-		res = append(res, r...)
+		res = append(res, templates...)
 	}
 	return res, nil
 }
 
-func (s *TemplatesService) loadTemplatesFromDB() ([]Template, error) {
+func (s *TemplatesService) loadTemplatesFromDB() ([]templateInfo, error) {
 	var templates []models.Template
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
@@ -177,7 +230,7 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]Template, error) {
 		return nil, errors.Wrap(e, "failed to load rule templates form DB")
 	}
 
-	res := make([]Template, 0, len(templates))
+	res := make([]templateInfo, 0, len(templates))
 	for _, template := range templates {
 		params := make([]alert.Parameter, len(template.Params))
 		for _, param := range template.Params {
@@ -209,7 +262,7 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]Template, error) {
 		}
 
 		res = append(res,
-			Template{
+			templateInfo{
 				Template: alert.Template{
 					Name:        template.Name,
 					Version:     template.Version,
@@ -233,8 +286,6 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]Template, error) {
 
 func convertModelToSource(source models.Source) iav1beta1.TemplateSource {
 	switch source {
-	case models.UnknownSource:
-		return iav1beta1.TemplateSource_TEMPLATE_SOURCE_INVALID
 	case models.BuiltInSource:
 		return iav1beta1.TemplateSource_BUILT_IN
 	case models.SAASSource:
@@ -249,7 +300,7 @@ func convertModelToSource(source models.Source) iav1beta1.TemplateSource {
 }
 
 // loadFile parses IA rule template file.
-func (s *TemplatesService) loadFile(ctx context.Context, file string) ([]saas.Template, error) {
+func (s *TemplatesService) loadFile(ctx context.Context, file string) ([]alert.Template, error) {
 	if ctx.Err() != nil {
 		return nil, errors.WithStack(ctx.Err())
 	}
@@ -260,11 +311,11 @@ func (s *TemplatesService) loadFile(ctx context.Context, file string) ([]saas.Te
 	}
 
 	// be strict about local files
-	params := &saas.ParseParams{
+	params := &alert.ParseParams{
 		DisallowUnknownFields:    true,
 		DisallowInvalidTemplates: true,
 	}
-	templates, err := saas.Parse(bytes.NewReader(data), params)
+	templates, err := alert.Parse(bytes.NewReader(data), params)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse rule template file")
 	}
@@ -391,17 +442,9 @@ func (s *TemplatesService) dumpRule(rule *ruleFile) error {
 	if alertRule.Alert == "" {
 		return errors.New("alert rule not initialized")
 	}
-	path := s.rulesFileDir + alertRule.Alert + ".yml"
-
-	_, err = os.Stat(s.rulesFileDir)
-	if os.IsNotExist(err) {
-		err = os.Mkdir(s.rulesFileDir, 0750) // TODO move to https://jira.percona.com/browse/PMM-7024
-		if err != nil {
-			return err
-		}
-	}
-	if err = ioutil.WriteFile(path, b, 0644); err != nil { //nolint:gosec
-		return errors.Errorf("failed to dump rule to file %s: %s", s.rulesFileDir, err)
+	path := s.rulesPath + alertRule.Alert + ".yml"
+	if err = ioutil.WriteFile(path, b, 0o644); err != nil {
+		return errors.Errorf("failed to dump rule to file %s: %s", s.rulesPath, err)
 	}
 	return nil
 }

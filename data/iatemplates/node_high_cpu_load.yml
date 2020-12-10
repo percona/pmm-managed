@@ -1,11 +1,10 @@
 ---
 templates:
-  - name: mysql_too_many_connections
+  - name: node_high_cpu_load
     version: 1
-    summary: MySQL connections in use
+    summary: Node high CPU load
     expr: |-
-      max_over_time(mysql_global_status_threads_connected[5m]) / ignoring (job)
-      mysql_global_variables_max_connections
+      (1 - avg by(node_name) (rate(node_cpu_seconds_total{mode="idle"}[5m])))
       * 100
       > [[ .threshold ]]
     params:
@@ -21,7 +20,7 @@ templates:
       foo: bar
     annotations:
       description: |-
-        More than [[ .threshold ]]% of MySQL connections are in use on {{ $labels.service_name }}
+        {{ $labels.node_name }} CPU load is more than [[ .threshold ]]%
         VALUE = {{ $value }}
         LABELS: {{ $labels }}
-      summary: MySQL too many connections (instance {{ $labels.service_name }})
+      summary: Node high CPU load (instance {{ $labels.node_name }})

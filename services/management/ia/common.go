@@ -40,7 +40,7 @@ func convertParamUnit(u string) iav1beta1.ParamUnit {
 	}
 }
 
-func convertTemplate(l *logrus.Entry, template Template) (*iav1beta1.Template, error) {
+func convertTemplate(l *logrus.Entry, template templateInfo) (*iav1beta1.Template, error) {
 	t := &iav1beta1.Template{
 		Name:        template.Name,
 		Summary:     template.Summary,
