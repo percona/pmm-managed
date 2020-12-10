@@ -17,7 +17,7 @@ type mockDbaasClient struct {
 }
 
 // CheckKubernetesClusterConnection provides a mock function with given fields: ctx, kubeConfig
-func (_m *mockDbaasClient) CheckKubernetesClusterConnection(ctx context.Context, kubeConfig string) error {
+func (_m *mockDbaasClient) CheckKubernetesClusterConnection(ctx context.Context, kubeConfig string) (*controllerv1beta1.CheckKubernetesClusterConnectionResponse, error) {
 	ret := _m.Called(ctx, kubeConfig)
 
 	var r0 error
@@ -27,7 +27,7 @@ func (_m *mockDbaasClient) CheckKubernetesClusterConnection(ctx context.Context,
 		r0 = ret.Error(0)
 	}
 
-	return r0
+	return nil, r0
 }
 
 // CreatePSMDBCluster provides a mock function with given fields: ctx, in, opts
