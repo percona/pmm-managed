@@ -146,7 +146,8 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
-		Name: req.Name,
+		Name:             req.Name,
+		PmmPublicAddress: settings.PMMPublicAddress,
 		Params: &dbaascontrollerv1beta1.XtraDBClusterParams{
 			ClusterSize: req.Params.ClusterSize,
 			Pxc: &dbaascontrollerv1beta1.XtraDBClusterParams_PXC{
@@ -158,10 +159,6 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 				DiskSize:         req.Params.Proxysql.DiskSize,
 			},
 		},
-	}
-
-	if settings.PMMPublicAddress != "" {
-		in.PmmPublicAddress = settings.PMMPublicAddress
 	}
 
 	if req.Params.Pxc.ComputeResources != nil {
