@@ -68,7 +68,7 @@ func TestKubernetesServer(t *testing.T) {
 				Psmdb:  &controllerv1beta1.Operator{Status: controllerv1beta1.OperatorsStatus_OPERATORS_STATUS_OK},
 			},
 			Status: controllerv1beta1.KubernetesClusterStatus_KUBERNETES_CLUSTER_STATUS_OK,
-		})
+		}, nil)
 		clusters, err := ks.ListKubernetesClusters(ctx, new(dbaasv1beta1.ListKubernetesClustersRequest))
 		require.NoError(t, err)
 		require.Empty(t, clusters.KubernetesClusters)
