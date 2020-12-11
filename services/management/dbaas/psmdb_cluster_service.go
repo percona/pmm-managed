@@ -182,10 +182,9 @@ func (s PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *dbaasv
 
 		in.Params = &dbaascontrollerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams{
 			ClusterSize: req.Params.ClusterSize,
+			Suspend:     req.Params.Suspend,
+			Resume:      req.Params.Resume,
 		}
-
-		in.Params.Suspend = req.Params.Suspend
-		in.Params.Resume = req.Params.Resume
 
 		if req.Params.Replicaset != nil {
 			in.Params.Replicaset = new(dbaascontrollerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams_ReplicaSet)
