@@ -72,8 +72,8 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 			State: dbaasv1beta1.XtraDBClusterState(c.State),
 		}
 
-		if c.Params.Paused {
-			cluster.State = dbaasv1beta1.XtraDBClusterState(dbaasv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_PAUSED)
+		if c.Params.Paused && cluster.State == dbaasv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_READY {
+			cluster.State = dbaasv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_PAUSED
 		}
 
 		if c.Params.Pxc != nil {
@@ -199,38 +199,34 @@ func (s XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *dbaa
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
 		Name: req.Name,
-		Params: &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
-			Pxc:      new(dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC),
-			Proxysql: new(dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_ProxySQL),
-		},
 	}
 
 	if req.Params != nil {
-		in.Params.ClusterSize = req.Params.ClusterSize
-
 		if req.Params.Suspend && req.Params.Resume {
 			return nil, status.Error(codes.InvalidArgument, "resume and suspend cannot be set together")
 		}
-		in.Params.Suspend = req.Params.Suspend
-		in.Params.Resume = req.Params.Resume
+
+		in.Params = &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
+			ClusterSize: req.Params.ClusterSize,
+			Suspend:     req.Params.Suspend,
+			Resume:      req.Params.Resume,
+		}
 
 		if req.Params.Pxc != nil && req.Params.Pxc.ComputeResources != nil {
-			in.Params.Pxc.ComputeResources = new(dbaascontrollerv1beta1.ComputeResources)
-			if req.Params.Pxc.ComputeResources.CpuM > 0 {
-				in.Params.Pxc.ComputeResources.CpuM = req.Params.Pxc.ComputeResources.CpuM
-			}
-			if req.Params.Pxc.ComputeResources.MemoryBytes > 0 {
-				in.Params.Pxc.ComputeResources.MemoryBytes = req.Params.Pxc.ComputeResources.MemoryBytes
+			in.Params.Pxc = &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC{
+				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
+					CpuM:        req.Params.Pxc.ComputeResources.CpuM,
+					MemoryBytes: req.Params.Pxc.ComputeResources.MemoryBytes,
+				},
 			}
 		}
 
 		if req.Params.Proxysql != nil && req.Params.Proxysql.ComputeResources != nil {
-			in.Params.Proxysql.ComputeResources = new(dbaascontrollerv1beta1.ComputeResources)
-			if req.Params.Proxysql.ComputeResources.CpuM > 0 {
-				in.Params.Proxysql.ComputeResources.CpuM = req.Params.Proxysql.ComputeResources.CpuM
-			}
-			if req.Params.Proxysql.ComputeResources.MemoryBytes > 0 {
-				in.Params.Proxysql.ComputeResources.MemoryBytes = req.Params.Proxysql.ComputeResources.MemoryBytes
+			in.Params.Proxysql = &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_ProxySQL{
+				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
+					CpuM:        req.Params.Proxysql.ComputeResources.CpuM,
+					MemoryBytes: req.Params.Proxysql.ComputeResources.MemoryBytes,
+				},
 			}
 		}
 	}
