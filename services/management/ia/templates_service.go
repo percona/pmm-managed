@@ -111,8 +111,8 @@ func newParamTemplate() *template.Template {
 	return template.New("").Option("missingkey=error").Delims("[[", "]]")
 }
 
-// getCollected return collected templates.
-func (s *TemplatesService) getCollected(ctx context.Context) map[string]templateInfo {
+// GetTemplates return collected templates.
+func (s *TemplatesService) GetTemplates(ctx context.Context) map[string]templateInfo {
 	s.rw.RLock()
 	defer s.rw.RUnlock()
 
@@ -358,7 +358,7 @@ type rule struct {
 
 // converts an alert template rule to a rule file. generates one file per rule.
 func (s *TemplatesService) convertTemplates(ctx context.Context) error {
-	templates := s.getCollected(ctx)
+	templates := s.GetTemplates(ctx)
 	for _, template := range templates {
 		r := rule{
 			Alert:       template.Name,
@@ -459,7 +459,7 @@ func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.Lis
 		s.collect(ctx)
 	}
 
-	templates := s.getCollected(ctx)
+	templates := s.GetTemplates(ctx)
 	res := &iav1beta1.ListTemplatesResponse{
 		Templates: make([]*iav1beta1.Template, 0, len(templates)),
 	}

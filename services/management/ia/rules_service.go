@@ -19,7 +19,6 @@ package ia
 import (
 	"context"
 
-	"github.com/golang/protobuf/ptypes"
 	"github.com/percona-platform/saas/pkg/common"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/pkg/errors"
@@ -49,8 +48,15 @@ func NewRulesService(db *reform.DB, templates *TemplatesService) *RulesService {
 
 // ListAlertRules returns a list of all Integrated Alerting rules.
 func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAlertRulesRequest) (*iav1beta1.ListAlertRulesResponse, error) {
-	var rules []models.Rule
-	var channels []models.Channel
+	res, err := s.GetAlertRules(ctx)
+	if err != nil {
+	}
+	return &iav1beta1.ListAlertRulesResponse{Rules: res}, nil
+}
+
+func (s *RulesService) GetAlertRules(ctx context.Context) ([]*iav1beta1.Rule, error) {
+	var rules []*models.Rule
+	var channels []*models.Channel
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
 		rules, err = models.FindRules(tx.Querier)
@@ -69,71 +75,18 @@ func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAl
 		return nil, e
 	}
 
-	cm := make(map[string]models.Channel)
-	for _, channel := range channels {
-		cm[channel.ID] = channel
-	}
-
-	templates := s.templates.getCollected(ctx)
+	templates := s.templates.GetTemplates(ctx)
 
 	res := make([]*iav1beta1.Rule, len(rules))
-	var err error
 	for i, rule := range rules {
-		r := &iav1beta1.Rule{
-			RuleId:   rule.ID,
-			Disabled: rule.Disabled,
-			Summary:  rule.Summary,
-			Severity: convertSeverity(rule.Severity),
-			For:      ptypes.DurationProto(rule.For),
-		}
-
-		r.CreatedAt, err = ptypes.TimestampProto(rule.CreatedAt)
+		r, err := convertRule(s.l, rule, templates[rule.TemplateName], channels)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to convert timestamp")
+			return nil, err
 		}
-
-		r.Template, err = convertTemplate(s.l, templates[rule.TemplateName])
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to convert template")
-		}
-
-		r.Params, err = convertModelToRuleParams(rule.Params)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to convert rule parameters")
-		}
-
-		r.CustomLabels, err = rule.GetCustomLabels()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to load rule labels")
-		}
-
-		r.Filters = make([]*iav1beta1.Filter, len(rule.Filters))
-		for i, filter := range rule.Filters {
-			r.Filters[i] = &iav1beta1.Filter{
-				Type:  convertModelToFilterType(filter.Type),
-				Key:   filter.Key,
-				Value: filter.Val,
-			}
-		}
-
-		for _, id := range rule.ChannelIDs {
-			channel, ok := cm[id]
-			if !ok {
-				s.l.Warningf("Skip missing channel with ID %s", id)
-				continue
-			}
-
-			c, err := convertChannel(&channel)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to convert channel")
-			}
-			r.Channels = append(r.Channels, c)
-		}
-
 		res[i] = r
 	}
 
-	return &iav1beta1.ListAlertRulesResponse{Rules: res}, nil
+	return res, nil
 }
 
 // CreateAlertRule creates Integrated Alerting rule.
@@ -155,7 +108,7 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 		return nil, err
 	}
 
-	if _, ok := s.templates.getCollected(ctx)[params.TemplateName]; !ok {
+	if _, ok := s.templates.GetTemplates(ctx)[params.TemplateName]; !ok {
 		return nil, status.Errorf(codes.NotFound, "Unknown template %s.", params.TemplateName)
 	}
 

@@ -27,6 +27,7 @@ import (
 	"github.com/percona/pmm/api/alertmanager/amclient"
 	"github.com/percona/pmm/api/alertmanager/amclient/alert"
 	"github.com/percona/pmm/api/alertmanager/amclient/general"
+	"github.com/percona/pmm/api/alertmanager/amclient/silence"
 	"github.com/percona/pmm/api/alertmanager/ammodels"
 	"github.com/percona/promconfig/alertmanager"
 	"github.com/pkg/errors"
@@ -167,6 +168,35 @@ func (svc *Service) SendAlerts(ctx context.Context, alerts ammodels.PostableAler
 	if err != nil {
 		svc.l.Error(err)
 	}
+}
+
+func (svc *Service) GetAlerts(ctx context.Context) ([]*ammodels.GettableAlert, error) {
+	resp, err := amclient.Default.Alert.GetAlerts(&alert.GetAlertsParams{
+		Context: ctx,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Payload, nil
+}
+
+func (svc *Service) Silence(ctx context.Context, id string) {
+	amclient.Default.Silence.PostSilences(&silence.PostSilencesParams{
+		Silence: &ammodels.PostableSilence{
+			ID: "", // TODO ???
+			Silence: ammodels.Silence{
+				Matchers: ammodels.Matchers{
+					{
+						IsRegex: nil, // TODO matcher for alert
+						Name:    nil,
+						Value:   nil,
+					},
+				},
+			},
+		},
+		Context: ctx,
+	})
 }
 
 // IsReady verifies that Alertmanager works.

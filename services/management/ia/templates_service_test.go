@@ -65,7 +65,7 @@ func TestCollect(t *testing.T) {
 		svc.userTemplatesPath = testBadTemplates
 		svc.collect(ctx)
 
-		require.Empty(t, svc.getCollected(ctx))
+		require.Empty(t, svc.GetTemplates(ctx))
 	})
 
 	t.Run("valid template paths", func(t *testing.T) {
@@ -75,7 +75,7 @@ func TestCollect(t *testing.T) {
 		svc.userTemplatesPath = testUserTemplates
 		svc.collect(ctx)
 
-		templates := svc.getCollected(ctx)
+		templates := svc.GetTemplates(ctx)
 		require.NotEmpty(t, templates)
 		assert.Contains(t, templates, "user_rule")
 		assert.Contains(t, templates, "mysql_down")
@@ -86,7 +86,7 @@ func TestCollect(t *testing.T) {
 		svc.userTemplatesPath = testUser2Templates
 		svc.collect(ctx)
 
-		templates = svc.getCollected(ctx)
+		templates = svc.GetTemplates(ctx)
 		require.NotEmpty(t, templates)
 		assert.NotContains(t, templates, "user_rule")
 		assert.Contains(t, templates, "user2_rule")
