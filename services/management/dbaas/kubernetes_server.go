@@ -71,11 +71,9 @@ func (k kubernetesServer) ListKubernetesClusters(ctx context.Context, _ *dbaasv1
 			resp, e := k.dbaasClient.CheckKubernetesClusterConnection(ctx, cluster.KubeConfig)
 			if e != nil {
 				clusters[i].Status = dbaasv1beta1.KubernetesClusterStatus_KUBERNETES_CLUSTER_STATUS_UNAVAILABLE
-			}
-
-			if resp == nil {
 				return
 			}
+
 			clusters[i].Status = dbaasv1beta1.KubernetesClusterStatus(resp.Status)
 
 			if resp.Operators == nil {
