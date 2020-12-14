@@ -145,7 +145,7 @@ func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv
 				DiskSize: req.Params.Replicaset.DiskSize,
 			},
 		},
-		PmmPublicAddress: settings.PMMPublicAddress,
+		PmmPublicAddressUrl: settings.PMMPublicAddress,
 	}
 
 	_, err = s.controllerClient.CreatePSMDBCluster(ctx, &in)
