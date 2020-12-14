@@ -186,14 +186,12 @@ func (s PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *dbaasv
 			Resume:      req.Params.Resume,
 		}
 
-		if req.Params.Replicaset != nil {
-			in.Params.Replicaset = new(dbaascontrollerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams_ReplicaSet)
-		}
-
 		if req.Params.Replicaset != nil && req.Params.Replicaset.ComputeResources != nil {
-			in.Params.Replicaset.ComputeResources = &dbaascontrollerv1beta1.ComputeResources{
-				CpuM:        req.Params.Replicaset.ComputeResources.CpuM,
-				MemoryBytes: req.Params.Replicaset.ComputeResources.MemoryBytes,
+			in.Params.Replicaset = &dbaascontrollerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams_ReplicaSet{
+				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
+					CpuM:        req.Params.Replicaset.ComputeResources.CpuM,
+					MemoryBytes: req.Params.Replicaset.ComputeResources.MemoryBytes,
+				},
 			}
 		}
 	}
