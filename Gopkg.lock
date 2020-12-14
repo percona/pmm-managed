@@ -316,6 +316,14 @@
   revision = "c2b33e84"
 
 [[projects]]
+  digest = "1:db3c1b3d1e843b1aecfb29f4922b6496b4fc494518e9016bb531c14573b14278"
+  name = "github.com/json-iterator/go"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "a1ca0830781e007c66b225121d2cdb3a649421f6"
+  version = "v1.1.10"
+
+[[projects]]
   digest = "1:9d8169a68525a40501811137321057d3c3fb452b26059027e55d0d1ae307db01"
   name = "github.com/kevinburke/go-bindata"
   packages = [
@@ -373,6 +381,22 @@
   pruneopts = "NUT"
   revision = "9e1e4717f8567d7ead72d070d064ad17d444a67e"
   version = "v1.3.3"
+
+[[projects]]
+  digest = "1:2f42fa12d6911c7b7659738758631bec870b7e9b4c6be5444f963cdcfccc191f"
+  name = "github.com/modern-go/concurrent"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94"
+  version = "1.0.3"
+
+[[projects]]
+  digest = "1:c6aca19413b13dc59c220ad7430329e2ec454cc310bc6d8de2c7e2b93c18a0f6"
+  name = "github.com/modern-go/reflect2"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "4b7aa43c6742a2c18fdef89dd197aaae7dac7ccd"
+  version = "1.0.1"
 
 [[projects]]
   digest = "1:93b5830f1e6138532e9450d6a639d68132e613a0878d789c610322764220171a"
@@ -470,9 +494,11 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:254b83bcd08a647e239388d738403d63a61d3d6b4240ec88656220bad880325c"
+  digest = "1:cc2f67d51864ced1a73a516670703bf3f7e26bbeed207b621b024a6a1b60d39c"
   name = "github.com/prometheus/client_golang"
   packages = [
+    "api",
+    "api/prometheus/v1",
     "prometheus",
     "prometheus/internal",
     "prometheus/promhttp",
@@ -886,6 +912,7 @@
     "github.com/percona/pmm/api/alertmanager/amclient",
     "github.com/percona/pmm/api/alertmanager/amclient/alert",
     "github.com/percona/pmm/api/alertmanager/amclient/general",
+    "github.com/percona/pmm/api/alertmanager/amclient/silence",
     "github.com/percona/pmm/api/alertmanager/ammodels",
     "github.com/percona/pmm/api/inventorypb",
     "github.com/percona/pmm/api/managementpb",
@@ -901,6 +928,7 @@
     "github.com/percona/promconfig/alertmanager",
     "github.com/pkg/errors",
     "github.com/pmezard/go-difflib/difflib",
+    "github.com/prometheus/client_golang/api/prometheus/v1",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/prometheus/client_golang/prometheus/testutil",
