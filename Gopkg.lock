@@ -388,7 +388,7 @@
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "496fbe43a782f552124fc0f7511039eeb635c8c1"
+  revision = "4095c002153d256aa1d71a90c689a80b3dc18ac1"
 
 [[projects]]
   branch = "main"
