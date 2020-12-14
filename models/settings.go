@@ -71,6 +71,26 @@ type Settings struct {
 	DBaaS struct {
 		Enabled bool `json:"enabled"`
 	} `json:"dbaas"`
+
+	IntegratedAlerting struct {
+		Enabled               bool                  `json:"ia_enabled"`
+		EmailAlertingSettings EmailAlertingSettings `json:"email_settings"`
+		SlackAlertingSettings SlackAlertingSettings `json:"slack_settings"`
+	}
+}
+
+type EmailAlertingSettings struct {
+	From      string `json:"from"`
+	Smarthost string `json:"smarthost"`
+	Hello     string `json:"hello"`
+	Username  string `json:"username"`
+	Password  string `json:"password"`
+	Identity  string `json:"identity"`
+	Secret    string `json:"secret"`
+}
+
+type SlackAlertingSettings struct {
+	URL string `json:"url"`
 }
 
 // fillDefaults sets zero values to their default values.

@@ -405,6 +405,19 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 		PlatformEmail:    settings.SaaS.Email,
 		DbaasEnabled:     settings.DBaaS.Enabled,
 		PmmPublicAddress: settings.PMMPublicAddress,
+		AlertingEnabled:  settings.IntegratedAlerting.Enabled,
+		EmailAlertingSettings: &serverpb.EmailAlertingSettings{
+			From:      settings.IntegratedAlerting.EmailAlertingSettings.From,
+			Smarthost: settings.IntegratedAlerting.EmailAlertingSettings.Smarthost,
+			Hello:     settings.IntegratedAlerting.EmailAlertingSettings.Hello,
+			Username:  settings.IntegratedAlerting.EmailAlertingSettings.Username,
+			Password:  settings.IntegratedAlerting.EmailAlertingSettings.Password,
+			Identity:  settings.IntegratedAlerting.EmailAlertingSettings.Identity,
+			Secret:    settings.IntegratedAlerting.EmailAlertingSettings.Secret,
+		},
+		SlackAlertingSettings: &serverpb.SlackAlertingSettings{
+			Url: settings.IntegratedAlerting.SlackAlertingSettings.URL,
+		},
 	}
 
 	b, err := s.prometheusAlertingRules.ReadRules()
@@ -515,6 +528,20 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			DisableSTT:             req.DisableStt,
 			PMMPublicAddress:       req.PmmPublicAddress,
 			RemovePMMPublicAddress: req.RemovePmmPublicAddress,
+			EnableAlerting:         req.EnableAlerting,
+			DisableAlerting:        req.DisableAlerting,
+			EmailAlertingSettings: models.EmailAlertingSettings{
+				From:      req.EmailAlertingSettings.GetFrom(),
+				Smarthost: req.EmailAlertingSettings.GetSmarthost(),
+				Hello:     req.EmailAlertingSettings.GetHello(),
+				Username:  req.EmailAlertingSettings.GetUsername(),
+				Password:  req.EmailAlertingSettings.GetPassword(),
+				Identity:  req.EmailAlertingSettings.GetIdentity(),
+				Secret:    req.EmailAlertingSettings.GetSecret(),
+			},
+			SlackAlertingSettings: models.SlackAlertingSettings{
+				URL: req.SlackAlertingSettings.GetUrl(),
+			},
 		}
 
 		var e error

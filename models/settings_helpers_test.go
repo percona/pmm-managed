@@ -306,5 +306,53 @@ func TestSettings(t *testing.T) {
 			require.NoError(t, err)
 			assert.ElementsMatch(t, ns.SaaS.DisabledSTTChecks, []string{"one", "three"})
 		})
+
+		t.Run("Integrated Alerting settings validation", func(t *testing.T) {
+			emailSettings := models.EmailAlertingSettings{
+				From:      "sender@alerting.com",
+				Smarthost: "0.0.0.0:8080",
+				Hello:     "smtp_host",
+				Username:  "smtp_username",
+				Password:  "smtp_password",
+				Secret:    "smtp_secret",
+			}
+			slackSettings := models.SlackAlertingSettings{URL: "https://hooks.slack.com"}
+			ns, err := models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
+				EnableAlerting:        true,
+				EmailAlertingSettings: emailSettings,
+				SlackAlertingSettings: slackSettings,
+			})
+			assert.NoError(t, err)
+			assert.True(t, ns.IntegratedAlerting.Enabled)
+			assert.Equal(t, ns.IntegratedAlerting.EmailAlertingSettings, emailSettings)
+			assert.Equal(t, ns.IntegratedAlerting.SlackAlertingSettings, slackSettings)
+
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
+				RemoveEmailAlertingSettings: true,
+				EmailAlertingSettings:       emailSettings,
+			})
+			assert.EqualError(t, err, "Both email_alerting_settings and remove_email_alerting_settings are present.")
+
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
+				RemoveSlackAlertingSettings: true,
+				SlackAlertingSettings:       slackSettings,
+			})
+			assert.EqualError(t, err, "Both slack_alerting_settings and remove_slack_alerting_settings are present.")
+
+			ns, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
+				DisableAlerting:             true,
+				RemoveEmailAlertingSettings: true,
+				RemoveSlackAlertingSettings: true,
+			})
+			assert.NoError(t, err)
+			assert.Empty(t, ns.IntegratedAlerting.EmailAlertingSettings)
+			assert.False(t, ns.IntegratedAlerting.Enabled)
+
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
+				DisableAlerting: true,
+				EnableAlerting:  true,
+			})
+			assert.EqualError(t, err, "Both enable_alerting and disable_alerting are present.")
+		})
 	})
 }

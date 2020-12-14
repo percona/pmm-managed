@@ -140,6 +140,15 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 					}
 					envSettings.DisableDBaaS = !envSettings.EnableDBaaS
 				}
+				if k == "PERCONA_TEST_IA" {
+					envSettings.EnableAlerting, err = strconv.ParseBool(v)
+					if err != nil {
+						err = fmt.Errorf("invalid value %q for environment variable %q", v, k)
+						errs = append(errs, err)
+						continue
+					}
+					envSettings.DisableAlerting = !envSettings.EnableAlerting
+				}
 			} else {
 				warns = append(warns, fmt.Sprintf("unknown environment variable %q", env))
 			}

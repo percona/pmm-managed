@@ -81,6 +81,21 @@ type ChangeSettingsParams struct {
 	// Disable DBaaS features.
 	DisableDBaaS bool
 
+	// Enable Integrated Alerting features.
+	EnableAlerting bool
+	// Disable Integrated Alerting features.
+	DisableAlerting bool
+
+	// Email config for Integrated Alerting.
+	EmailAlertingSettings EmailAlertingSettings
+	// If true removes email alerting settings.
+	RemoveEmailAlertingSettings bool
+
+	// Slack config for Integrated Alerting.
+	SlackAlertingSettings SlackAlertingSettings
+	// If true removes Slack alerting settings.
+	RemoveSlackAlertingSettings bool
+
 	// Percona Platform user email
 	Email string
 	// Percona Platform session Id
@@ -208,6 +223,25 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 		settings.PMMPublicAddress = ""
 	}
 
+	if params.DisableAlerting {
+		settings.IntegratedAlerting.Enabled = false
+	}
+
+	if params.EnableAlerting {
+		settings.IntegratedAlerting.Enabled = true
+	}
+
+	if params.RemoveEmailAlertingSettings {
+		settings.IntegratedAlerting.EmailAlertingSettings = EmailAlertingSettings{}
+	}
+
+	if params.RemoveSlackAlertingSettings {
+		settings.IntegratedAlerting.SlackAlertingSettings = SlackAlertingSettings{}
+	}
+
+	settings.IntegratedAlerting.EmailAlertingSettings = params.EmailAlertingSettings
+	settings.IntegratedAlerting.SlackAlertingSettings = params.SlackAlertingSettings
+
 	err = SaveSettings(q, settings)
 	if err != nil {
 		return nil, err
@@ -225,6 +259,9 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 	}
 	if params.EnableVMCache && params.DisableVMCache {
 		return fmt.Errorf("Both enable_vm_cache and disable_vm_cache are present.") //nolint:golint,stylecheck
+	}
+	if params.EnableAlerting && params.DisableAlerting {
+		return fmt.Errorf("Both enable_alerting and disable_alerting are present.") //nolint:golint,stylecheck
 	}
 
 	checkCases := []struct {
@@ -293,6 +330,14 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 
 	if params.PMMPublicAddress != "" && params.RemovePMMPublicAddress {
 		return fmt.Errorf("Both pmm_public_address and remove_pmm_public_address are present.") //nolint:golint,stylecheck
+	}
+
+	if params.EmailAlertingSettings != (EmailAlertingSettings{}) && params.RemoveEmailAlertingSettings {
+		return fmt.Errorf("Both email_alerting_settings and remove_email_alerting_settings are present.") //nolint:golint,stylecheck
+	}
+
+	if params.SlackAlertingSettings != (SlackAlertingSettings{}) && params.RemoveSlackAlertingSettings {
+		return fmt.Errorf("Both slack_alerting_settings and remove_slack_alerting_settings are present.") //nolint:golint,stylecheck
 	}
 
 	return nil
