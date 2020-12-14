@@ -102,3 +102,8 @@ func (c *Client) DeletePSMDBCluster(ctx context.Context, in *controllerv1beta1.D
 func (c *Client) RestartPSMDBCluster(ctx context.Context, in *controllerv1beta1.RestartPSMDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.RestartPSMDBClusterResponse, error) {
 	return c.psmdbClusterClient.RestartPSMDBCluster(ctx, in, opts...)
 }
+
+// GetPSMDBCluster restarts PSMDB cluster.
+func (c *Client) GetPSMDBCluster(ctx context.Context, in *controllerv1beta1.GetPSMDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.GetPSMDBClusterResponse, error) {
+	return c.psmdbClusterClient.GetPSMDBCluster(ctx, in, opts...)
+}
