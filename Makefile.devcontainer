@@ -52,6 +52,7 @@ fuzz-grafana:                   ## Run fuzzer for services/grafana package.
 
 check:                          ## Run required checkers and linters.
 	go run .github/check-license.go
+	go-sumtype ./vendor/... ./...
 
 check-all: check                ## Run all linters for new code.
 	golangci-lint run -c=.golangci.yml --new-from-rev=PMM-2.0
