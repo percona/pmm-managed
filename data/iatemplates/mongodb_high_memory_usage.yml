@@ -1,10 +1,10 @@
 ---
 templates:
-  - name: mongodb_too_many_connections
+  - name: mongodb_high_memory_usage
     version: 1
-    summary: Memory used by MongoDB connections
+    summary: Memory used MongoDB instances 
     expr: |-
-      sum by (node_name) (mongodb_ss_connections{conn_type="current"}) * 1024 * 1024
+      sum by (node_name) (mongodb_ss_mem_resident * 1024 * 1024)
       / on (node_name) (node_memory_MemTotal_bytes)
       * 100
       > [[ .threshold ]]
@@ -14,14 +14,14 @@ templates:
         unit: "%"
         type: float
         range: [0, 100]
-        value: 30
+        value: 80
     for: 5m
     severity: warning
     labels:
       foo: bar
     annotations:
       description: |-
-        More than [[ .threshold ]]% of Memory used by MongoDB connections on {{ $labels.node_name }}
+        More than [[ .threshold ]]% of Memory used by MongoDB service on {{ $labels.node_name }}
         VALUE = {{ $value }}
         LABELS: {{ $labels }}
-      summary: MongoDB too many connections (instance {{ $labels.node_name }})
+      summary: MongoDB high memory usage (instance {{ $labels.node_name }})
