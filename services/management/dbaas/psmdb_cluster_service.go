@@ -18,8 +18,8 @@ package dbaas
 
 import (
 	"context"
-	"fmt"
 
+	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaascontrollerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
 	"github.com/sirupsen/logrus"
@@ -94,7 +94,7 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 
 // GetPSMDBCluster returns a PSMDB cluster by name.
 func (s PSMDBClusterService) GetPSMDBCluster(ctx context.Context, req *dbaasv1beta1.GetPSMDBClusterRequest) (*dbaasv1beta1.GetPSMDBClusterResponse, error) {
-	_, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
+	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
 	if err != nil {
 		return nil, err
 	}
@@ -104,11 +104,23 @@ func (s PSMDBClusterService) GetPSMDBCluster(ctx context.Context, req *dbaasv1be
 	//  - Ex.: kubectl get -o=json PerconaServerMongoDB/<cluster_name>
 	// 2. Get root password:
 	//   - Ex.: kubectl get secret my-cluster-name-secrets -o json  | jq -r ".data.MONGODB_USER_ADMIN_PASSWORD" | base64 -d
+	in := &controllerv1beta1.GetPSMDBClusterRequest{
+		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
+			Kubeconfig: kubernetesCluster.KubeConfig,
+		},
+		Name: req.Name,
+	}
+
+	cluster, err := s.controllerClient.GetPSMDBCluster(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+
 	resp := dbaasv1beta1.GetPSMDBClusterResponse{
 		ConnectionCredentials: &dbaasv1beta1.GetPSMDBClusterResponse_PSMDBCredentials{
 			Username:   "userAdmin",
 			Password:   "userAdmin123456",
-			Host:       fmt.Sprintf("%s-rs0.default.svc.cluster.local", req.Name),
+			Host:       cluster.Credentials.Host,
 			Port:       27017,
 			Replicaset: "rs0",
 		},

@@ -383,12 +383,12 @@
   version = "v0.3.0"
 
 [[projects]]
-  branch = "main"
-  digest = "1:82b51a2316a7be9823a4c61f54afaec0cc0b8b658ed6fd9b7f9798bc8d17cacd"
+  branch = "PMM-6899_cluster_external_connections"
+  digest = "1:61943f36637b8e948957fe598854ea524cbd4222d9a166926114be9d060713ff"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "496fbe43a782f552124fc0f7511039eeb635c8c1"
+  revision = "e9e4c480ac14bdf9e0ed6beedbf34ce571c41a9e"
 
 [[projects]]
   branch = "main"

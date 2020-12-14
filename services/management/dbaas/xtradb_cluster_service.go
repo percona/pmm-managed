@@ -19,8 +19,8 @@ package dbaas
 
 import (
 	"context"
-	"fmt"
 
+	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaascontrollerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
 	"github.com/sirupsen/logrus"
@@ -106,16 +106,28 @@ func (s XtraDBClusterService) GetXtraDBCluster(ctx context.Context, req *dbaasv1
 	}
 
 	// TODO: implement on dbaas-controller side:
-	// 1. Get pxc host and status
+	// 1. Get --- done pxc host ---  and status
 	//  - Ex.: kubectl get -o=json PerconaXtraDBCluster/<cluster_name>
 	// 2. Get root password:
 	//   - Ex.: kubectl get secret my-cluster-secrets -o json  | jq -r ".data.root" | base64 -d
+	in := &controllerv1beta1.GetXtraDBClusterRequest{
+		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
+			Kubeconfig: kubernetesCluster.KubeConfig,
+		},
+		Name: req.Name,
+	}
+
+	cluster, err := s.controllerClient.GetXtraDBCluster(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+
 	_ = kubernetesCluster
 	resp := dbaasv1beta1.GetXtraDBClusterResponse{
 		ConnectionCredentials: &dbaasv1beta1.XtraDBClusterConnectionCredentials{
 			Username: "root",
 			Password: "root_password",
-			Host:     fmt.Sprintf("%s-proxysql", req.Name),
+			Host:     cluster.Credentials.Host,
 			Port:     3306,
 		},
 	}
