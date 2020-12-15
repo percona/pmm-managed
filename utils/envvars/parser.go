@@ -183,7 +183,7 @@ func parseSAASHost(v string) (string, error) {
 	}
 
 	host, port, err := net.SplitHostPort(v)
-	if err != nil && strings.Count(v, ":") > 1 {
+	if err != nil && strings.Count(v, ":") >= 1 {
 		return "", err
 	}
 	if host == "" {
