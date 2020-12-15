@@ -20,7 +20,6 @@ import (
 	"context"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
-	dbaascontrollerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -50,8 +49,8 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 		return nil, err
 	}
 
-	in := dbaascontrollerv1beta1.ListPSMDBClustersRequest{
-		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
+	in := controllerv1beta1.ListPSMDBClustersRequest{
+		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
 	}
@@ -105,7 +104,7 @@ func (s PSMDBClusterService) GetPSMDBCluster(ctx context.Context, req *dbaasv1be
 	// 2. Get root password:
 	//   - Ex.: kubectl get secret my-cluster-name-secrets -o json  | jq -r ".data.MONGODB_USER_ADMIN_PASSWORD" | base64 -d
 	in := &controllerv1beta1.GetPSMDBClusterRequest{
-		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
+		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
 		Name: req.Name,
@@ -142,15 +141,15 @@ func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv
 		return nil, err
 	}
 
-	in := dbaascontrollerv1beta1.CreatePSMDBClusterRequest{
-		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
+	in := controllerv1beta1.CreatePSMDBClusterRequest{
+		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
 		Name: req.Name,
-		Params: &dbaascontrollerv1beta1.PSMDBClusterParams{
+		Params: &controllerv1beta1.PSMDBClusterParams{
 			ClusterSize: req.Params.ClusterSize,
-			Replicaset: &dbaascontrollerv1beta1.PSMDBClusterParams_ReplicaSet{
-				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
+			Replicaset: &controllerv1beta1.PSMDBClusterParams_ReplicaSet{
+				ComputeResources: &controllerv1beta1.ComputeResources{
 					CpuM:        req.Params.Replicaset.ComputeResources.CpuM,
 					MemoryBytes: req.Params.Replicaset.ComputeResources.MemoryBytes,
 				},
@@ -175,15 +174,15 @@ func (s PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *dbaasv
 		return nil, err
 	}
 
-	in := dbaascontrollerv1beta1.UpdatePSMDBClusterRequest{
-		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
+	in := controllerv1beta1.UpdatePSMDBClusterRequest{
+		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
 		Name: req.Name,
-		Params: &dbaascontrollerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams{
+		Params: &controllerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams{
 			ClusterSize: req.Params.ClusterSize,
-			Replicaset: &dbaascontrollerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams_ReplicaSet{
-				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
+			Replicaset: &controllerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams_ReplicaSet{
+				ComputeResources: &controllerv1beta1.ComputeResources{
 					CpuM:        req.Params.Replicaset.ComputeResources.CpuM,
 					MemoryBytes: req.Params.Replicaset.ComputeResources.MemoryBytes,
 				},
@@ -206,9 +205,9 @@ func (s PSMDBClusterService) DeletePSMDBCluster(ctx context.Context, req *dbaasv
 		return nil, err
 	}
 
-	in := dbaascontrollerv1beta1.DeletePSMDBClusterRequest{
+	in := controllerv1beta1.DeletePSMDBClusterRequest{
 		Name: req.Name,
-		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
+		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
 	}
@@ -228,9 +227,9 @@ func (s PSMDBClusterService) RestartPSMDBCluster(ctx context.Context, req *dbaas
 		return nil, err
 	}
 
-	in := dbaascontrollerv1beta1.RestartPSMDBClusterRequest{
+	in := controllerv1beta1.RestartPSMDBClusterRequest{
 		Name: req.Name,
-		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
+		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
 	}
@@ -243,12 +242,12 @@ func (s PSMDBClusterService) RestartPSMDBCluster(ctx context.Context, req *dbaas
 	return &dbaasv1beta1.RestartPSMDBClusterResponse{}, nil
 }
 
-func psmdbStates() map[dbaascontrollerv1beta1.PSMDBClusterState]dbaasv1beta1.PSMDBClusterState {
-	return map[dbaascontrollerv1beta1.PSMDBClusterState]dbaasv1beta1.PSMDBClusterState{
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID:  dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING: dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY:    dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED:   dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED,
-		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING: dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING,
+func psmdbStates() map[controllerv1beta1.PSMDBClusterState]dbaasv1beta1.PSMDBClusterState {
+	return map[controllerv1beta1.PSMDBClusterState]dbaasv1beta1.PSMDBClusterState{
+		controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID:  dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_INVALID,
+		controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING: dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_CHANGING,
+		controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY:    dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY,
+		controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED:   dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED,
+		controllerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING: dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING,
 	}
 }
