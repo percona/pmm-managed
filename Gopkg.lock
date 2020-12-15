@@ -388,7 +388,7 @@
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "85960ed87d98b411e3e16070f5db4c50b2a963e6"
+  revision = "af1f5465fdff6619a662c3ac51dbbc68ec039c04"
 
 [[projects]]
   branch = "main"
@@ -417,7 +417,7 @@
 
 [[projects]]
   branch = "PMM-6897-suspend-psmdb"
-  digest = "1:8122c4d73ebc8f65796f3b3de68af69968cccea865b25f6c01e49b7275095b54"
+  digest = "1:b63a1b56b1c6bc9aca1fe98c7edbeede1cd0b00bcb17f92a9f157939b85931ae"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -440,7 +440,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "da6293535a3c6c8ef1199d90869feb5b8a7cf343"
+  revision = "2b9d2959ada46083b4d483bf20196eb05b74a023"
 
 [[projects]]
   digest = "1:6832634ec059f4bfddaff75621cf1c4750949129c6de2e5e58e01059d0851e25"
