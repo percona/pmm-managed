@@ -207,7 +207,7 @@ func TestServer(t *testing.T) {
 
 		server.UpdateSettingsFromEnv([]string{
 			"PERCONA_TEST_DBAAS=1",
-			"PERCONA_TEST_IA=1",
+			"ENABLE_ALERTING=1",
 		})
 
 		ctx := context.TODO()

@@ -51,9 +51,9 @@ func (e InvalidDurationError) Error() string { return string(e) }
 //  - PATH, HOSTNAME, TERM, HOME are default environment variables that will be ignored;
 //  - DISABLE_UPDATES is a boolean flag to enable or disable pmm-server update;
 //  - DISABLE_TELEMETRY is a boolean flag to enable or disable pmm telemetry (and disable STT if telemetry is disabled);
-//  - METRICS_RESOLUTION, METRICS_RESOLUTION, METRICS_RESOLUTION_HR,
-// METRICS_RESOLUTION_LR are durations of metrics resolution;
+//  - METRICS_RESOLUTION, METRICS_RESOLUTION, METRICS_RESOLUTION_HR, METRICS_RESOLUTION_LR are durations of metrics resolution;
 //  - DATA_RETENTION is the duration of how long keep time-series data in ClickHouse;
+//  - ENABLE_ALERTING enables Integrated Alerting;
 //  - the environment variables prefixed with GF_ passed as related to Grafana.
 func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs []error, warns []string) {
 	envSettings = new(models.ChangeSettingsParams)
@@ -125,8 +125,23 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 				// disable cache explicitly
 				envSettings.DisableVMCache = true
 			}
+
+		case "PERCONA_TEST_IA": // FIXME remove
+			warns = append(warns, fmt.Sprintf("Environment variable %q WILL BE REMOVED SOON, please use %q instead.", k, "ENABLE_ALERTING"))
+			fallthrough
+		case "ENABLE_ALERTING":
+			envSettings.EnableAlerting, err = strconv.ParseBool(v)
+			if err != nil {
+				err = fmt.Errorf("invalid value %q for environment variable %q", v, k)
+			}
+			if !envSettings.EnableAlerting {
+				// disable alerting explicitly
+				envSettings.DisableAlerting = true
+			}
+
 		case "PERCONA_TEST_AUTH_HOST", "PERCONA_TEST_CHECKS_HOST", "PERCONA_TEST_TELEMETRY_HOST": // FIXME remove https://jira.percona.com/browse/SAAS-360
 			warns = append(warns, fmt.Sprintf("Environment variable %q WILL BE REMOVED SOON, please use %q instead.", k, envSaaSHost))
+
 		default:
 			// skip test environment variables that are handled here or elsewere with a big warning
 			if strings.HasPrefix(k, "PERCONA_TEST_") {
