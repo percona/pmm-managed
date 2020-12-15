@@ -87,8 +87,7 @@ var tags = []struct{ version, buildTags string }{
 	{"9.0.0", "!go1.10"},
 	{"10.0.0", "go1.10,!go1.13"},
 	{"11.0.0", "go1.13,!go1.14"},
-	{"12.0.0", "go1.14,!go1.16"},
-	{"13.0.0", "go1.16"},
+	{"12.0.0", "go1.14"},
 }
 
 // buildTags reports the build tags used for the current Unicode version.

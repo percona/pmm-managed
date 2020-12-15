@@ -132,6 +132,7 @@ type Comparable interface {
 }
 
 var (
+	_ Comparable = None
 	_ Comparable = Int{}
 	_ Comparable = False
 	_ Comparable = Float(0)
@@ -353,6 +354,9 @@ func (NoneType) Type() string          { return "NoneType" }
 func (NoneType) Freeze()               {} // immutable
 func (NoneType) Truth() Bool           { return False }
 func (NoneType) Hash() (uint32, error) { return 0, nil }
+func (NoneType) CompareSameType(op syntax.Token, y Value, depth int) (bool, error) {
+	return threeway(op, 0), nil
+}
 
 // Bool is the type of a Starlark bool.
 type Bool bool
@@ -381,47 +385,10 @@ func (x Bool) CompareSameType(op syntax.Token, y_ Value, depth int) (bool, error
 // Float is the type of a Starlark float.
 type Float float64
 
-func (f Float) String() string {
-	var buf strings.Builder
-	f.format(&buf, 'g')
-	return buf.String()
-}
-
-func (f Float) format(buf *strings.Builder, conv byte) {
-	ff := float64(f)
-	if !isFinite(ff) {
-		if math.IsInf(ff, +1) {
-			buf.WriteString("+inf")
-		} else if math.IsInf(ff, -1) {
-			buf.WriteString("-inf")
-		} else {
-			buf.WriteString("nan")
-		}
-		return
-	}
-
-	// %g is the default format used by str.
-	// It uses the minimum precision to avoid ambiguity,
-	// and always includes a '.' or an 'e' so that the value
-	// is self-evidently a float, not an int.
-	if conv == 'g' || conv == 'G' {
-		s := strconv.FormatFloat(ff, conv, -1, 64)
-		buf.WriteString(s)
-		// Ensure result always has a decimal point if no exponent.
-		// "123" -> "123.0"
-		if strings.IndexByte(s, conv-'g'+'e') < 0 && strings.IndexByte(s, '.') < 0 {
-			buf.WriteString(".0")
-		}
-		return
-	}
-
-	// %[eEfF] use 6-digit precision
-	buf.WriteString(strconv.FormatFloat(ff, conv, 6, 64))
-}
-
-func (f Float) Type() string { return "float" }
-func (f Float) Freeze()      {} // immutable
-func (f Float) Truth() Bool  { return f != 0.0 }
+func (f Float) String() string { return strconv.FormatFloat(float64(f), 'g', 6, 64) }
+func (f Float) Type() string   { return "float" }
+func (f Float) Freeze()        {} // immutable
+func (f Float) Truth() Bool    { return f != 0.0 }
 func (f Float) Hash() (uint32, error) {
 	// Equal float and int values must yield the same hash.
 	// TODO(adonovan): opt: if f is non-integral, and thus not equal
@@ -442,34 +409,27 @@ func isFinite(f float64) bool {
 
 func (x Float) CompareSameType(op syntax.Token, y_ Value, depth int) (bool, error) {
 	y := y_.(Float)
-	return threeway(op, floatCmp(x, y)), nil
-}
-
-// floatCmp performs a three-valued comparison on floats,
-// which are totally ordered with NaN > +Inf.
-func floatCmp(x, y Float) int {
-	if x > y {
-		return +1
-	} else if x < y {
-		return -1
-	} else if x == y {
-		return 0
+	switch op {
+	case syntax.EQL:
+		return x == y, nil
+	case syntax.NEQ:
+		return x != y, nil
+	case syntax.LE:
+		return x <= y, nil
+	case syntax.LT:
+		return x < y, nil
+	case syntax.GE:
+		return x >= y, nil
+	case syntax.GT:
+		return x > y, nil
 	}
-
-	// At least one operand is NaN.
-	if x == x {
-		return -1 // y is NaN
-	} else if y == y {
-		return +1 // x is NaN
-	}
-	return 0 // both NaN
+	panic(op)
 }
 
 func (f Float) rational() *big.Rat { return new(big.Rat).SetFloat64(float64(f)) }
 
 // AsFloat returns the float64 value closest to x.
-// The f result is undefined if x is not a float or Int.
-// The result may be infinite if x is a very large Int.
+// The f result is undefined if x is not a float or int.
 func AsFloat(x Value) (f float64, ok bool) {
 	switch x := x.(type) {
 	case Float:
@@ -480,13 +440,7 @@ func AsFloat(x Value) (f float64, ok bool) {
 	return 0, false
 }
 
-func (x Float) Mod(y Float) Float {
-	z := Float(math.Mod(float64(x), float64(y)))
-	if (x < 0) != (y < 0) && z != 0 {
-		z += y
-	}
-	return z
-}
+func (x Float) Mod(y Float) Float { return Float(math.Mod(float64(x), float64(y))) }
 
 // Unary implements the operations +float and -float.
 func (f Float) Unary(op syntax.Token) (Value, error) {
@@ -1239,10 +1193,11 @@ func CompareDepth(op syntax.Token, x, y Value, depth int) (bool, error) {
 	switch x := x.(type) {
 	case Int:
 		if y, ok := y.(Float); ok {
-			var cmp int
 			if y != y {
-				cmp = -1 // y is NaN
-			} else if !math.IsInf(float64(y), 0) {
+				return false, nil // y is NaN
+			}
+			var cmp int
+			if !math.IsInf(float64(y), 0) {
 				cmp = x.rational().Cmp(y.rational()) // y is finite
 			} else if y > 0 {
 				cmp = -1 // y is +Inf
@@ -1253,15 +1208,16 @@ func CompareDepth(op syntax.Token, x, y Value, depth int) (bool, error) {
 		}
 	case Float:
 		if y, ok := y.(Int); ok {
-			var cmp int
 			if x != x {
-				cmp = +1 // x is NaN
-			} else if !math.IsInf(float64(x), 0) {
+				return false, nil // x is NaN
+			}
+			var cmp int
+			if !math.IsInf(float64(x), 0) {
 				cmp = x.rational().Cmp(y.rational()) // x is finite
 			} else if x > 0 {
-				cmp = +1 // x is +Inf
+				cmp = -1 // x is +Inf
 			} else {
-				cmp = -1 // x is -Inf
+				cmp = +1 // x is -Inf
 			}
 			return threeway(op, cmp), nil
 		}

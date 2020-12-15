@@ -24,16 +24,6 @@ import (
 
 var defaultValueDecoders DefaultValueDecoders
 
-func newDefaultStructCodec() *StructCodec {
-	codec, err := NewStructCodec(DefaultStructTagParser)
-	if err != nil {
-		// This function is called from the codec registration path, so errors can't be propagated. If there's an error
-		// constructing the StructCodec, we panic to avoid losing it.
-		panic(fmt.Errorf("error creating default StructCodec: %v", err))
-	}
-	return codec
-}
-
 // DefaultValueDecoders is a namespace type for the default ValueDecoders used
 // when creating a registry.
 type DefaultValueDecoders struct{}
@@ -87,7 +77,7 @@ func (dvd DefaultValueDecoders) RegisterDefaultDecoders(rb *RegistryBuilder) {
 		RegisterDefaultDecoder(reflect.Map, defaultMapCodec).
 		RegisterDefaultDecoder(reflect.Slice, defaultSliceCodec).
 		RegisterDefaultDecoder(reflect.String, defaultStringCodec).
-		RegisterDefaultDecoder(reflect.Struct, newDefaultStructCodec()).
+		RegisterDefaultDecoder(reflect.Struct, defaultStructCodec).
 		RegisterDefaultDecoder(reflect.Ptr, NewPointerCodec()).
 		RegisterTypeMapEntry(bsontype.Double, tFloat64).
 		RegisterTypeMapEntry(bsontype.String, tString).
@@ -150,10 +140,6 @@ func (dvd DefaultValueDecoders) BooleanDecodeValue(dctx DecodeContext, vr bsonrw
 		if err = vr.ReadNull(); err != nil {
 			return err
 		}
-	case bsontype.Undefined:
-		if err = vr.ReadUndefined(); err != nil {
-			return err
-		}
 	default:
 		return fmt.Errorf("cannot decode %v into a boolean", vrType)
 	}
@@ -209,10 +195,6 @@ func (dvd DefaultValueDecoders) IntDecodeValue(dc DecodeContext, vr bsonrw.Value
 		if err = vr.ReadNull(); err != nil {
 			return err
 		}
-	case bsontype.Undefined:
-		if err = vr.ReadUndefined(); err != nil {
-			return err
-		}
 	default:
 		return fmt.Errorf("cannot decode %v into an integer type", vrType)
 	}
@@ -248,8 +230,8 @@ func (dvd DefaultValueDecoders) IntDecodeValue(dc DecodeContext, vr bsonrw.Value
 }
 
 // UintDecodeValue is the ValueDecoderFunc for uint types.
-//
-// Deprecated: UintDecodeValue is not registered by default. Use UintCodec.DecodeValue instead.
+// This method is deprecated and does not have any stability guarantees. It may be removed in the
+// future. Use UIntCodec.DecodeValue instead.
 func (dvd DefaultValueDecoders) UintDecodeValue(dc DecodeContext, vr bsonrw.ValueReader, val reflect.Value) error {
 	var i64 int64
 	var err error
@@ -372,10 +354,6 @@ func (dvd DefaultValueDecoders) FloatDecodeValue(ec DecodeContext, vr bsonrw.Val
 		if err = vr.ReadNull(); err != nil {
 			return err
 		}
-	case bsontype.Undefined:
-		if err = vr.ReadUndefined(); err != nil {
-			return err
-		}
 	default:
 		return fmt.Errorf("cannot decode %v into a float32 or float64 type", vrType)
 	}
@@ -395,8 +373,8 @@ func (dvd DefaultValueDecoders) FloatDecodeValue(ec DecodeContext, vr bsonrw.Val
 }
 
 // StringDecodeValue is the ValueDecoderFunc for string types.
-//
-// Deprecated: StringDecodeValue is not registered by default. Use StringCodec.DecodeValue instead.
+// This method is deprecated and does not have any stability guarantees. It may be removed in the
+// future. Use StringCodec.DecodeValue instead.
 func (dvd DefaultValueDecoders) StringDecodeValue(dctx DecodeContext, vr bsonrw.ValueReader, val reflect.Value) error {
 	var str string
 	var err error
@@ -431,8 +409,6 @@ func (DefaultValueDecoders) JavaScriptDecodeValue(dctx DecodeContext, vr bsonrw.
 		js, err = vr.ReadJavascript()
 	case bsontype.Null:
 		err = vr.ReadNull()
-	case bsontype.Undefined:
-		err = vr.ReadUndefined()
 	default:
 		return fmt.Errorf("cannot decode %v into a primitive.JavaScript", vrType)
 	}
@@ -476,10 +452,6 @@ func (DefaultValueDecoders) SymbolDecodeValue(dctx DecodeContext, vr bsonrw.Valu
 		if err = vr.ReadNull(); err != nil {
 			return err
 		}
-	case bsontype.Undefined:
-		if err = vr.ReadUndefined(); err != nil {
-			return err
-		}
 	default:
 		return fmt.Errorf("cannot decode %v into a primitive.Symbol", vrType)
 	}
@@ -502,8 +474,6 @@ func (DefaultValueDecoders) BinaryDecodeValue(dc DecodeContext, vr bsonrw.ValueR
 		data, subtype, err = vr.ReadBinary()
 	case bsontype.Null:
 		err = vr.ReadNull()
-	case bsontype.Undefined:
-		err = vr.ReadUndefined()
 	default:
 		return fmt.Errorf("cannot decode %v into a Binary", vrType)
 	}
@@ -566,10 +536,6 @@ func (dvd DefaultValueDecoders) ObjectIDDecodeValue(dc DecodeContext, vr bsonrw.
 		if err = vr.ReadNull(); err != nil {
 			return err
 		}
-	case bsontype.Undefined:
-		if err = vr.ReadUndefined(); err != nil {
-			return err
-		}
 	default:
 		return fmt.Errorf("cannot decode %v into an ObjectID", vrType)
 	}
@@ -591,8 +557,6 @@ func (DefaultValueDecoders) DateTimeDecodeValue(dc DecodeContext, vr bsonrw.Valu
 		dt, err = vr.ReadDateTime()
 	case bsontype.Null:
 		err = vr.ReadNull()
-	case bsontype.Undefined:
-		err = vr.ReadUndefined()
 	default:
 		return fmt.Errorf("cannot decode %v into a DateTime", vrType)
 	}
@@ -610,21 +574,12 @@ func (DefaultValueDecoders) NullDecodeValue(dc DecodeContext, vr bsonrw.ValueRea
 		return ValueDecoderError{Name: "NullDecodeValue", Types: []reflect.Type{tNull}, Received: val}
 	}
 
-	var err error
-	switch vrType := vr.Type(); vrType {
-	case bsontype.Undefined:
-		err = vr.ReadUndefined()
-	case bsontype.Null:
-		err = vr.ReadNull()
-	default:
-		return fmt.Errorf("cannot decode %v into a Null", vr.Type())
+	if vrType := vr.Type(); vrType != bsontype.Null {
+		return fmt.Errorf("cannot decode %v into a Null", vrType)
 	}
 
-	if err != nil {
-		return err
-	}
 	val.Set(reflect.ValueOf(primitive.Null{}))
-	return nil
+	return vr.ReadNull()
 }
 
 // RegexDecodeValue is the ValueDecoderFunc for Regex.
@@ -640,8 +595,6 @@ func (DefaultValueDecoders) RegexDecodeValue(dc DecodeContext, vr bsonrw.ValueRe
 		pattern, options, err = vr.ReadRegex()
 	case bsontype.Null:
 		err = vr.ReadNull()
-	case bsontype.Undefined:
-		err = vr.ReadUndefined()
 	default:
 		return fmt.Errorf("cannot decode %v into a Regex", vrType)
 	}
@@ -667,8 +620,6 @@ func (DefaultValueDecoders) DBPointerDecodeValue(dc DecodeContext, vr bsonrw.Val
 		ns, pointer, err = vr.ReadDBPointer()
 	case bsontype.Null:
 		err = vr.ReadNull()
-	case bsontype.Undefined:
-		err = vr.ReadUndefined()
 	default:
 		return fmt.Errorf("cannot decode %v into a DBPointer", vrType)
 	}
@@ -693,8 +644,6 @@ func (DefaultValueDecoders) TimestampDecodeValue(dc DecodeContext, vr bsonrw.Val
 		t, incr, err = vr.ReadTimestamp()
 	case bsontype.Null:
 		err = vr.ReadNull()
-	case bsontype.Undefined:
-		err = vr.ReadUndefined()
 	default:
 		return fmt.Errorf("cannot decode %v into a Timestamp", vrType)
 	}
@@ -718,8 +667,6 @@ func (DefaultValueDecoders) MinKeyDecodeValue(dc DecodeContext, vr bsonrw.ValueR
 		err = vr.ReadMinKey()
 	case bsontype.Null:
 		err = vr.ReadNull()
-	case bsontype.Undefined:
-		err = vr.ReadUndefined()
 	default:
 		return fmt.Errorf("cannot decode %v into a MinKey", vr.Type())
 	}
@@ -743,8 +690,6 @@ func (DefaultValueDecoders) MaxKeyDecodeValue(dc DecodeContext, vr bsonrw.ValueR
 		err = vr.ReadMaxKey()
 	case bsontype.Null:
 		err = vr.ReadNull()
-	case bsontype.Undefined:
-		err = vr.ReadUndefined()
 	default:
 		return fmt.Errorf("cannot decode %v into a MaxKey", vr.Type())
 	}
@@ -769,8 +714,6 @@ func (dvd DefaultValueDecoders) Decimal128DecodeValue(dctx DecodeContext, vr bso
 		d128, err = vr.ReadDecimal128()
 	case bsontype.Null:
 		err = vr.ReadNull()
-	case bsontype.Undefined:
-		err = vr.ReadUndefined()
 	default:
 		return fmt.Errorf("cannot decode %v into a primitive.Decimal128", vr.Type())
 	}
@@ -812,11 +755,6 @@ func (dvd DefaultValueDecoders) JSONNumberDecodeValue(dc DecodeContext, vr bsonr
 			return err
 		}
 		val.SetString("")
-	case bsontype.Undefined:
-		if err := vr.ReadUndefined(); err != nil {
-			return err
-		}
-		val.SetString("")
 	default:
 		return fmt.Errorf("cannot decode %v into a json.Number", vrType)
 	}
@@ -849,20 +787,14 @@ func (dvd DefaultValueDecoders) URLDecodeValue(dc DecodeContext, vr bsonrw.Value
 		}
 		val.Set(reflect.ValueOf(url.URL{}))
 		return nil
-	case bsontype.Undefined:
-		if err := vr.ReadUndefined(); err != nil {
-			return err
-		}
-		val.Set(reflect.ValueOf(url.URL{}))
-		return nil
 	default:
 		return fmt.Errorf("cannot decode %v into a *url.URL", vrType)
 	}
 }
 
 // TimeDecodeValue is the ValueDecoderFunc for time.Time.
-//
-// Deprecated: TimeDecodeValue is not registered by default. Use TimeCodec.DecodeValue instead.
+// This method is deprecated and does not have any stability guarantees. It may be removed in the
+// future. Use Time.DecodeValue instead.
 func (dvd DefaultValueDecoders) TimeDecodeValue(dc DecodeContext, vr bsonrw.ValueReader, val reflect.Value) error {
 	if vr.Type() != bsontype.DateTime {
 		return fmt.Errorf("cannot decode %v into a time.Time", vr.Type())
@@ -882,8 +814,8 @@ func (dvd DefaultValueDecoders) TimeDecodeValue(dc DecodeContext, vr bsonrw.Valu
 }
 
 // ByteSliceDecodeValue is the ValueDecoderFunc for []byte.
-//
-// Deprecated: ByteSliceDecodeValue is not registered by default. Use ByteSliceCodec.DecodeValue instead.
+// This method is deprecated and does not have any stability guarantees. It may be removed in the
+// future. Use ByteSliceCodec.DecodeValue instead.
 func (dvd DefaultValueDecoders) ByteSliceDecodeValue(dc DecodeContext, vr bsonrw.ValueReader, val reflect.Value) error {
 	if vr.Type() != bsontype.Binary && vr.Type() != bsontype.Null {
 		return fmt.Errorf("cannot decode %v into a []byte", vr.Type())
@@ -911,8 +843,8 @@ func (dvd DefaultValueDecoders) ByteSliceDecodeValue(dc DecodeContext, vr bsonrw
 }
 
 // MapDecodeValue is the ValueDecoderFunc for map[string]* types.
-//
-// Deprecated: MapDecodeValue is not registered by default. Use MapCodec.DecodeValue instead.
+// This method is deprecated and does not have any stability guarantees. It may be removed in the
+// future. Use Map.DecodeValue instead.
 func (dvd DefaultValueDecoders) MapDecodeValue(dc DecodeContext, vr bsonrw.ValueReader, val reflect.Value) error {
 	if !val.CanSet() || val.Kind() != reflect.Map || val.Type().Key().Kind() != reflect.String {
 		return ValueDecoderError{Name: "MapDecodeValue", Kinds: []reflect.Kind{reflect.Map}, Received: val}
@@ -1003,9 +935,6 @@ func (dvd DefaultValueDecoders) ArrayDecodeValue(dc DecodeContext, vr bsonrw.Val
 	case bsontype.Null:
 		val.Set(reflect.Zero(val.Type()))
 		return vr.ReadNull()
-	case bsontype.Undefined:
-		val.Set(reflect.Zero(val.Type()))
-		return vr.ReadUndefined()
 	default:
 		return fmt.Errorf("cannot decode %v into an array", vrType)
 	}
@@ -1035,8 +964,8 @@ func (dvd DefaultValueDecoders) ArrayDecodeValue(dc DecodeContext, vr bsonrw.Val
 }
 
 // SliceDecodeValue is the ValueDecoderFunc for slice types.
-//
-// Deprecated: SliceDecodeValue is not registered by default. Use SliceCodec.DecodeValue instead.
+// This method is deprecated and does not have any stability guarantees. It may be removed in the
+// future. Use SliceCodec.DecodeValue instead.
 func (dvd DefaultValueDecoders) SliceDecodeValue(dc DecodeContext, vr bsonrw.ValueReader, val reflect.Value) error {
 	if !val.CanSet() || val.Kind() != reflect.Slice {
 		return ValueDecoderError{Name: "SliceDecodeValue", Kinds: []reflect.Kind{reflect.Slice}, Received: val}
@@ -1146,8 +1075,8 @@ func (dvd DefaultValueDecoders) UnmarshalerDecodeValue(dc DecodeContext, vr bson
 }
 
 // EmptyInterfaceDecodeValue is the ValueDecoderFunc for interface{}.
-//
-// Deprecated: EmptyInterfaceDecodeValue is not registered by default. Use EmptyInterfaceCodec.DecodeValue instead.
+// This method is deprecated and does not have any stability guarantees. It may be removed in the
+// future. Use EmptyInterfaceCodec.DecodeValue instead.
 func (dvd DefaultValueDecoders) EmptyInterfaceDecodeValue(dc DecodeContext, vr bsonrw.ValueReader, val reflect.Value) error {
 	if !val.CanSet() || val.Type() != tEmpty {
 		return ValueDecoderError{Name: "EmptyInterfaceDecodeValue", Types: []reflect.Type{tEmpty}, Received: val}
@@ -1217,7 +1146,6 @@ func (dvd DefaultValueDecoders) decodeDefault(dc DecodeContext, vr bsonrw.ValueR
 		return nil, err
 	}
 
-	idx := 0
 	for {
 		vr, err := ar.ReadValue()
 		if err == bsonrw.ErrEOA {
@@ -1231,10 +1159,9 @@ func (dvd DefaultValueDecoders) decodeDefault(dc DecodeContext, vr bsonrw.ValueR
 
 		err = decoder.DecodeValue(dc, vr, elem)
 		if err != nil {
-			return nil, newDecodeError(strconv.Itoa(idx), err)
+			return nil, err
 		}
 		elems = append(elems, elem)
-		idx++
 	}
 
 	return elems, nil
@@ -1269,12 +1196,6 @@ func (dvd DefaultValueDecoders) CodeWithScopeDecodeValue(dc DecodeContext, vr bs
 		return nil
 	case bsontype.Null:
 		if err := vr.ReadNull(); err != nil {
-			return err
-		}
-		val.Set(reflect.ValueOf(primitive.CodeWithScope{}))
-		return nil
-	case bsontype.Undefined:
-		if err := vr.ReadUndefined(); err != nil {
 			return err
 		}
 		val.Set(reflect.ValueOf(primitive.CodeWithScope{}))
@@ -1318,7 +1239,7 @@ func (DefaultValueDecoders) decodeElemsFromDocumentReader(dc DecodeContext, dr b
 		val := reflect.New(tEmpty).Elem()
 		err = decoder.DecodeValue(dc, vr, val)
 		if err != nil {
-			return nil, newDecodeError(key, err)
+			return nil, err
 		}
 
 		elems = append(elems, reflect.ValueOf(primitive.E{Key: key, Value: val.Interface()}))

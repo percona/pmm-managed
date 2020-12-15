@@ -14,7 +14,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/bsonoptions"
 	"go.mongodb.org/mongo-driver/bson/bsonrw"
 	"go.mongodb.org/mongo-driver/bson/bsontype"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 const (
@@ -81,10 +80,6 @@ func (tc *TimeCodec) DecodeValue(dc DecodeContext, vr bsonrw.ValueReader, val re
 		if err := vr.ReadNull(); err != nil {
 			return err
 		}
-	case bsontype.Undefined:
-		if err := vr.ReadUndefined(); err != nil {
-			return err
-		}
 	default:
 		return fmt.Errorf("cannot decode %v into a time.Time", vrType)
 	}
@@ -102,6 +97,5 @@ func (tc *TimeCodec) EncodeValue(ec EncodeContext, vw bsonrw.ValueWriter, val re
 		return ValueEncoderError{Name: "TimeEncodeValue", Types: []reflect.Type{tTime}, Received: val}
 	}
 	tt := val.Interface().(time.Time)
-	dt := primitive.NewDateTimeFromTime(tt)
-	return vw.WriteDateTime(int64(dt))
+	return vw.WriteDateTime(tt.Unix()*1000 + int64(tt.Nanosecond()/1e6))
 }

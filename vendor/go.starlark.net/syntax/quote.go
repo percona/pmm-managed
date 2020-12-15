@@ -130,10 +130,9 @@ func unquote(quoted string) (s string, triple bool, err error) {
 			// Ignore the escape and the line break.
 			quoted = quoted[2:]
 
-		case 'a', 'b', 'f', 'n', 'r', 't', 'v', '\\', '\'', '"':
+		case 'a', 'b', 'f', 'n', 'r', 't', 'v', '\\', quote:
 			// One-char escape.
-			// Escapes are allowed for both kinds of quotation
-			// mark, not just the kind in use.
+			// We escape only the kind of quotation mark in use.
 			buf.WriteByte(unesc[quoted[1]])
 			quoted = quoted[2:]
 

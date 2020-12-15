@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"sync/atomic"
 	"time"
 )
 
@@ -90,21 +89,10 @@ func (cn *conn) Ping(ctx context.Context) error {
 
 func (cn *conn) watchCancel(ctx context.Context) func() {
 	if done := ctx.Done(); done != nil {
-		finished := make(chan struct{}, 1)
+		finished := make(chan struct{})
 		go func() {
 			select {
 			case <-done:
-				select {
-				case finished <- struct{}{}:
-				default:
-					// We raced with the finish func, let the next query handle this with the
-					// context.
-					return
-				}
-
-				// Set the connection state to bad so it does not get reused.
-				cn.setBad()
-
 				// At this point the function level context is canceled,
 				// so it must not be used for the additional network
 				// request to cancel the query.
@@ -113,14 +101,13 @@ func (cn *conn) watchCancel(ctx context.Context) func() {
 				defer cancel()
 
 				_ = cn.cancel(ctxCancel)
+				finished <- struct{}{}
 			case <-finished:
 			}
 		}()
 		return func() {
 			select {
 			case <-finished:
-				cn.setBad()
-				cn.Close()
 			case finished <- struct{}{}:
 			}
 		}
@@ -136,11 +123,8 @@ func (cn *conn) cancel(ctx context.Context) error {
 	defer c.Close()
 
 	{
-		bad := &atomic.Value{}
-		bad.Store(false)
 		can := conn{
-			c:   c,
-			bad: bad,
+			c: c,
 		}
 		err = can.ssl(cn.opts)
 		if err != nil {
