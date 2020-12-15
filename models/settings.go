@@ -79,6 +79,7 @@ type Settings struct {
 	} `json:"ia"`
 }
 
+// EmailAlertingSettings represents email settings for Integrated Alerting.
 type EmailAlertingSettings struct {
 	From      string `json:"from"`
 	Smarthost string `json:"smarthost"`
@@ -89,6 +90,7 @@ type EmailAlertingSettings struct {
 	Secret    string `json:"secret"`
 }
 
+// SlackAlertingSettings represents Slack settings for Integrated Alerting.
 type SlackAlertingSettings struct {
 	URL string `json:"url"`
 }
@@ -120,6 +122,8 @@ func (s *Settings) fillDefaults() {
 	// SSHKey is empty by default
 	// AlertManagerURL is empty by default
 	// SaaS.STTEnabled is false by default
+	// DBaaS.Enabled is false by default
+	// IntegratedAlerting.Enabled is false by default
 	// VictoriaMetrics CacheEnable is false by default
 	// PMMPublicAddress is empty by default
 }
