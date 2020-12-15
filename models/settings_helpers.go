@@ -332,14 +332,13 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 		return fmt.Errorf("Both pmm_public_address and remove_pmm_public_address are present.") //nolint:golint,stylecheck
 	}
 
-	if params.EmailAlertingSettings != (EmailAlertingSettings{}) && params.RemoveEmailAlertingSettings {
+	if (EmailAlertingSettings{}) != params.EmailAlertingSettings && params.RemoveEmailAlertingSettings {
 		return fmt.Errorf("Both email_alerting_settings and remove_email_alerting_settings are present.") //nolint:golint,stylecheck
 	}
 
-	if params.SlackAlertingSettings != (SlackAlertingSettings{}) && params.RemoveSlackAlertingSettings {
+	if (SlackAlertingSettings{}) != params.SlackAlertingSettings && params.RemoveSlackAlertingSettings {
 		return fmt.Errorf("Both slack_alerting_settings and remove_slack_alerting_settings are present.") //nolint:golint,stylecheck
 	}
-
 	return nil
 }
 

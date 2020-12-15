@@ -539,9 +539,11 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 				Identity:  req.EmailAlertingSettings.GetIdentity(),
 				Secret:    req.EmailAlertingSettings.GetSecret(),
 			},
+			RemoveEmailAlertingSettings: req.RemoveEmailAlertingSettings,
 			SlackAlertingSettings: models.SlackAlertingSettings{
 				URL: req.SlackAlertingSettings.GetUrl(),
 			},
+			RemoveSlackAlertingSettings: req.RemoveSlackAlertingSettings,
 		}
 
 		var e error
