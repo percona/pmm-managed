@@ -275,9 +275,7 @@ func TestXtraDBClusterService(t *testing.T) {
 			},
 			Name: "forth-pxc-test",
 			Params: &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
-				Pxc:      new(controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC),
-				Proxysql: new(controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_ProxySQL),
-				Suspend:  true,
+				Suspend: true,
 			},
 		}
 
@@ -299,9 +297,7 @@ func TestXtraDBClusterService(t *testing.T) {
 			},
 			Name: "forth-pxc-test",
 			Params: &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
-				Pxc:      new(controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC),
-				Proxysql: new(controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_ProxySQL),
-				Resume:   true,
+				Resume: true,
 			},
 		}
 		dbaasClient.On("UpdateXtraDBCluster", ctx, &mockReqResume).Return(&controllerv1beta1.UpdateXtraDBClusterResponse{}, nil)
