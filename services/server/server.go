@@ -482,6 +482,11 @@ func (s *Server) validateChangeSettingsRequest(ctx context.Context, req *serverp
 		return status.Error(codes.FailedPrecondition, "STT cannot be enabled because telemetry is disabled via DISABLE_TELEMETRY environment variable.")
 	}
 
+	// ignore req.EnableAlerting even if they are present since that will not change anything
+	if req.DisableAlerting && s.envSettings.EnableAlerting {
+		return status.Error(codes.FailedPrecondition, "Alerting is enabled via ENABLE_ALERTING environment variable.")
+	}
+
 	if getDuration(metricsRes.GetHr()) != 0 && s.envSettings.MetricsResolutions.HR != 0 {
 		return status.Error(codes.FailedPrecondition, "High resolution for metrics is set via METRICS_RESOLUTION_HR (or METRICS_RESOLUTION) environment variable.")
 	}
@@ -695,11 +700,6 @@ func (s *Server) PlatformSignOut(ctx context.Context, _ *serverpb.PlatformSignOu
 	return &serverpb.PlatformSignOutResponse{}, nil
 }
 
-// check interfaces
-var (
-	_ serverpb.ServerServer = (*Server)(nil)
-)
-
 // isAgentsStateUpdateNeeded - checks metrics resolution changes,
 // if it was changed, agents state must be updated.
 func isAgentsStateUpdateNeeded(mr *serverpb.MetricsResolutions) bool {
@@ -711,3 +711,8 @@ func isAgentsStateUpdateNeeded(mr *serverpb.MetricsResolutions) bool {
 	}
 	return true
 }
+
+// check interfaces
+var (
+	_ serverpb.ServerServer = (*Server)(nil)
+)

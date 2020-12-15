@@ -134,10 +134,6 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 			if err != nil {
 				err = fmt.Errorf("invalid value %q for environment variable %q", v, k)
 			}
-			if !envSettings.EnableAlerting {
-				// disable alerting explicitly
-				envSettings.DisableAlerting = true
-			}
 
 		case "PERCONA_TEST_AUTH_HOST", "PERCONA_TEST_CHECKS_HOST", "PERCONA_TEST_TELEMETRY_HOST": // FIXME remove https://jira.percona.com/browse/SAAS-360
 			warns = append(warns, fmt.Sprintf("Environment variable %q WILL BE REMOVED SOON, please use %q instead.", k, envSaaSHost))
@@ -154,15 +150,6 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 						continue
 					}
 					envSettings.DisableDBaaS = !envSettings.EnableDBaaS
-				}
-				if k == "PERCONA_TEST_IA" {
-					envSettings.EnableAlerting, err = strconv.ParseBool(v)
-					if err != nil {
-						err = fmt.Errorf("invalid value %q for environment variable %q", v, k)
-						errs = append(errs, err)
-						continue
-					}
-					envSettings.DisableAlerting = !envSettings.EnableAlerting
 				}
 			} else {
 				warns = append(warns, fmt.Sprintf("unknown environment variable %q", env))
