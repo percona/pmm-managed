@@ -26,6 +26,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services"
 )
 
 // ChannelsService represents integrated alerting channels API.
@@ -48,7 +49,7 @@ func (s *ChannelsService) ListChannels(ctx context.Context, request *iav1beta1.L
 	}
 
 	if !settings.IntegratedAlerting.Enabled {
-		return nil, status.Errorf(codes.FailedPrecondition, "%v.", err)
+		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
 	}
 
 	var channels []models.Channel
@@ -123,7 +124,7 @@ func (s *ChannelsService) AddChannel(ctx context.Context, req *iav1beta1.AddChan
 	}
 
 	if !settings.IntegratedAlerting.Enabled {
-		return nil, status.Errorf(codes.FailedPrecondition, "%v.", err)
+		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
 	}
 
 	params := &models.CreateChannelParams{
@@ -179,7 +180,7 @@ func (s *ChannelsService) ChangeChannel(ctx context.Context, req *iav1beta1.Chan
 	}
 
 	if !settings.IntegratedAlerting.Enabled {
-		return nil, status.Errorf(codes.FailedPrecondition, "%v.", err)
+		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
 	}
 
 	params := &models.ChangeChannelParams{
@@ -232,7 +233,7 @@ func (s *ChannelsService) RemoveChannel(ctx context.Context, req *iav1beta1.Remo
 	}
 
 	if !settings.IntegratedAlerting.Enabled {
-		return nil, status.Errorf(codes.FailedPrecondition, "%v.", err)
+		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
 	}
 
 	e := s.db.InTransaction(func(tx *reform.TX) error {
