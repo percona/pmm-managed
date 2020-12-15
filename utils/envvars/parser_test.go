@@ -19,6 +19,7 @@ package envvars
 
 import (
 	"fmt"
+	"net"
 	"testing"
 	"time"
 
@@ -135,8 +136,9 @@ func TestEnvVarValidator(t *testing.T) {
 			respVal string
 		}{
 			{value: "host", err: nil, respVal: "host:443"},
-			{value: ":443", err: fmt.Errorf("environment variable %q has invalid format %q. Expected host[:port]", envSaaSHost, ":443"), respVal: ""},
-			{value: "host:443", err: nil, respVal: "host:443"},
+			{value: ":111", err: fmt.Errorf("environment variable %q has invalid format %q. Expected host[:port]", envSaaSHost, ":111"), respVal: ""},
+			{value: "host:555", err: nil, respVal: "host:555"},
+			{value: "ho:st:444", err: &net.AddrError{Err: "too many colons in address", Addr: "ho:st:444"}, respVal: ""},
 		}
 
 		for _, c := range userCase {
