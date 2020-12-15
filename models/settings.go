@@ -65,7 +65,7 @@ type Settings struct {
 		STTEnabled bool `json:"stt_enabled"`
 		// List of disabled STT checks
 		DisabledSTTChecks []string `json:"disabled_stt_checks"`
-	} `json:"sass"`
+	} `json:"sass"` // sic :(
 
 	// DBaaS config options
 	DBaaS struct {
@@ -73,10 +73,10 @@ type Settings struct {
 	} `json:"dbaas"`
 
 	IntegratedAlerting struct {
-		Enabled               bool                  `json:"ia_enabled"`
+		Enabled               bool                  `json:"enabled"`
 		EmailAlertingSettings EmailAlertingSettings `json:"email_settings"`
 		SlackAlertingSettings SlackAlertingSettings `json:"slack_settings"`
-	}
+	} `json:"ia"`
 }
 
 type EmailAlertingSettings struct {
