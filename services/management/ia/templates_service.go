@@ -279,7 +279,7 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]templateInfo, error) {
 					Annotations: annotations,
 				},
 				Yaml:      template.Yaml,
-				Source:    convertModelToSource(template.Source),
+				Source:    convertSource(template.Source),
 				CreatedAt: &template.CreatedAt,
 			},
 		)
@@ -288,7 +288,7 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]templateInfo, error) {
 	return res, nil
 }
 
-func convertModelToSource(source models.Source) iav1beta1.TemplateSource {
+func convertSource(source models.Source) iav1beta1.TemplateSource {
 	switch source {
 	case models.BuiltInSource:
 		return iav1beta1.TemplateSource_BUILT_IN
