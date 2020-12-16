@@ -629,6 +629,20 @@ func main() {
 	if err != nil {
 		l.Panicf("Server problem: %+v", err)
 	}
+	updateSignal := make(chan os.Signal, 1)
+	signal.Notify(updateSignal, unix.SIGHUP)
+	go func() {
+		for {
+			s := <-updateSignal
+			l.Infof("Got %s signal: reloading configuration", s.String())
+			err := server.UpdateConfigurations()
+			if err != nil {
+				l.Warnf("Coulnd't reload configuration: %s", err)
+			} else {
+				l.Info("Configuration reloaded")
+			}
+		}
+	}()
 
 	// try synchronously once, then retry in the background
 	deps := &setupDeps{

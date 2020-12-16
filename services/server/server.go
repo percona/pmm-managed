@@ -546,20 +546,33 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		return nil, err
 	}
 
-	if err := s.supervisord.UpdateConfiguration(settings); err != nil {
-		return nil, err
-	}
 	if isAgentsStateUpdateNeeded(req.MetricsResolutions) {
 		if err := s.r.UpdateAgentsState(ctx); err != nil {
 			return nil, err
 		}
 	}
-	s.vmdb.RequestConfigurationUpdate()
-	s.vmalert.RequestConfigurationUpdate()
+
+	if err := s.UpdateConfigurations(); err != nil {
+		return nil, err
+	}
 
 	return &serverpb.ChangeSettingsResponse{
 		Settings: s.convertSettings(settings),
 	}, nil
+}
+
+// UpdateConfigurations updates supervisor config and requests configuration update for victoria metrics
+func (s *Server) UpdateConfigurations() error {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return errors.Wrap(err, "get settings")
+	}
+	if err := s.supervisord.UpdateConfiguration(settings); err != nil {
+		return errors.Wrap(err, "supervisord update configuration")
+	}
+	s.vmdb.RequestConfigurationUpdate()
+	s.vmalert.RequestConfigurationUpdate()
+	return nil
 }
 
 func (s *Server) validateSSHKey(ctx context.Context, sshKey string) error {
