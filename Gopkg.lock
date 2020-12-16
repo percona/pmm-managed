@@ -383,7 +383,7 @@
   version = "v0.3.0"
 
 [[projects]]
-  branch = "pmm-2.13"
+  branch = "main"
   digest = "1:5baea2c09a15784fca045752d007c6d24e42ed05d4b0d8f23fa275286c678d35"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
@@ -417,7 +417,7 @@
 
 [[projects]]
   branch = "PMM-4306-pt-mongodb-summary"
-  digest = "1:28e77ba88720fffafda66a37d4bda0818965dd1dd8a97d5bb659e5a0a9657e8d"
+  digest = "1:e4821646950a500182d8bdd682cda5d31cd0c2226f981afb505b2f3d1389efc2"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -440,7 +440,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "acd8e5d35ce9e639488c07d4d23c91ab37593329"
+  revision = "249cc299deb939dfa8f612805f5fd5ab9471d4e0"
 
 [[projects]]
   digest = "1:6832634ec059f4bfddaff75621cf1c4750949129c6de2e5e58e01059d0851e25"
