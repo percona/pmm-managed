@@ -1,5 +1,9 @@
 ---
+<<<<<<< HEAD
 rules:
+=======
+templates:
+>>>>>>> origin/PMM-2.0
   - name: mysql_down
     version: 1
     summary: MySQL DOWN

@@ -168,7 +168,10 @@ type Source string
 
 // Available template sources.
 const (
+<<<<<<< HEAD
 	UnknownSource  = Source("unknown")
+=======
+>>>>>>> origin/PMM-2.0
 	BuiltInSource  = Source("built_in")
 	SAASSource     = Source("saas")
 	UserFileSource = Source("user_file")
