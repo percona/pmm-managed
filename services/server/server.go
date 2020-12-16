@@ -546,14 +546,14 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		return nil, err
 	}
 
+	if err := s.UpdateConfigurations(); err != nil {
+		return nil, err
+	}
+
 	if isAgentsStateUpdateNeeded(req.MetricsResolutions) {
 		if err := s.r.UpdateAgentsState(ctx); err != nil {
 			return nil, err
 		}
-	}
-
-	if err := s.UpdateConfigurations(); err != nil {
-		return nil, err
 	}
 
 	return &serverpb.ChangeSettingsResponse{
@@ -561,14 +561,14 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	}, nil
 }
 
-// UpdateConfigurations updates supervisor config and requests configuration update for victoria metrics
+// UpdateConfigurations updates supervisor config and requests configuration update for VictoriaMetrics components.
 func (s *Server) UpdateConfigurations() error {
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
-		return errors.Wrap(err, "get settings")
+		return err
 	}
 	if err := s.supervisord.UpdateConfiguration(settings); err != nil {
-		return errors.Wrap(err, "supervisord update configuration")
+		return err
 	}
 	s.vmdb.RequestConfigurationUpdate()
 	s.vmalert.RequestConfigurationUpdate()
