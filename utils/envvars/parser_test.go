@@ -19,6 +19,7 @@ package envvars
 
 import (
 	"fmt"
+	"net"
 	"testing"
 	"time"
 
@@ -115,21 +116,36 @@ func TestEnvVarValidator(t *testing.T) {
 
 	t.Run("SAAS env vars with warnings", func(t *testing.T) {
 		envs := []string{
-			"PERCONA_TEST_AUTH_HOST=host:333",
-			"PERCONA_TEST_CHECKS_HOST=host:333",
-			"PERCONA_TEST_TELEMETRY_HOST=host:333",
+			"PERCONA_TEST_SAAS_HOST=host:333",
 		}
 		expectedEnvVars := &models.ChangeSettingsParams{}
 		expectedWarns := []string{
-			`Environment variable "PERCONA_TEST_AUTH_HOST" WILL BE REMOVED SOON, please use "PERCONA_TEST_SAAS_HOST" instead.`,
-			`Environment variable "PERCONA_TEST_CHECKS_HOST" WILL BE REMOVED SOON, please use "PERCONA_TEST_SAAS_HOST" instead.`,
-			`Environment variable "PERCONA_TEST_TELEMETRY_HOST" WILL BE REMOVED SOON, please use "PERCONA_TEST_SAAS_HOST" instead.`,
+			`environment variable "PERCONA_TEST_SAAS_HOST" IS NOT SUPPORTED and WILL BE REMOVED IN THE FUTURE`,
 		}
 
 		gotEnvVars, gotErrs, gotWarns := ParseEnvVars(envs)
 		assert.Nil(t, gotErrs)
 		assert.Equal(t, expectedEnvVars, gotEnvVars)
 		assert.Equal(t, expectedWarns, gotWarns)
+	})
+
+	t.Run("Parse SAAS host", func(t *testing.T) {
+		userCase := []struct {
+			value   string
+			err     error
+			respVal string
+		}{
+			{value: "host", err: nil, respVal: "host:443"},
+			{value: ":111", err: fmt.Errorf("environment variable %q has invalid format %q. Expected host[:port]", envSaaSHost, ":111"), respVal: ""},
+			{value: "host:555", err: nil, respVal: "host:555"},
+			{value: "ho:st:444", err: &net.AddrError{Err: "too many colons in address", Addr: "ho:st:444"}, respVal: ""},
+		}
+
+		for _, c := range userCase {
+			value, err := parseSAASHost(c.value)
+			assert.Equal(t, c.respVal, value)
+			assert.Equal(t, c.err, err)
+		}
 	})
 
 	t.Run("Grafana env vars", func(t *testing.T) {
