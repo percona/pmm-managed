@@ -138,7 +138,7 @@ type CreateXtraDBClusterRequest struct {
 	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	// Cluster parameters.
 	Params *XtraDBClusterParams `protobuf:"bytes,3,opt,name=params,proto3" json:"params,omitempty"`
-	// PMM server public address.
+	// PMM server public address. If empty do not turn on monitoring.
 	PmmPublicAddress string `protobuf:"bytes,4,opt,name=pmm_public_address,json=pmmPublicAddress,proto3" json:"pmm_public_address,omitempty"`
 }
 
