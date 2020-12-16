@@ -30,9 +30,11 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
+	"github.com/percona-platform/saas/pkg/common"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -90,6 +92,22 @@ func MergeLabels(node *Node, service *Service, agent *Agent) (map[string]string,
 	return res, nil
 }
 
+// deduplicateStrings deduplicates elements in string slice.
+func deduplicateStrings(strings []string) []string {
+	set := make(map[string]struct{})
+	for _, p := range strings {
+		set[p] = struct{}{}
+	}
+
+	slice := make([]string, 0, len(set))
+	for s := range set {
+		slice = append(slice, s)
+	}
+	sort.Strings(slice)
+
+	return slice
+}
+
 var labelNameRE = regexp.MustCompile("^[a-zA-Z_][a-zA-Z0-9_]*$")
 
 // prepareLabels checks that label names are valid, and trims or removes empty values.
@@ -115,26 +133,26 @@ func prepareLabels(m map[string]string, removeEmptyValues bool) error {
 	return nil
 }
 
-// getCustomLabels decodes custom labels from Node/Service/Agent field.
-func getCustomLabels(field []byte) (map[string]string, error) {
-	if len(field) == 0 {
+// getLabels deserializes model's Prometheus labels.
+func getLabels(b []byte) (map[string]string, error) {
+	if len(b) == 0 {
 		return nil, nil
 	}
 	m := make(map[string]string)
-	if err := json.Unmarshal(field, &m); err != nil {
+	if err := json.Unmarshal(b, &m); err != nil {
 		return nil, errors.Wrap(err, "failed to decode custom labels")
 	}
 	return m, nil
 }
 
-// setCustomLabels encodes custom labels m to the Node/Service/Agent field.
-func setCustomLabels(m map[string]string, field *[]byte) error {
+// getLabels serializes model's Prometheus labels.
+func setLabels(m map[string]string, res *[]byte) error {
 	if err := prepareLabels(m, false); err != nil {
 		return err
 	}
 
 	if len(m) == 0 {
-		*field = nil
+		*res = nil
 		return nil
 	}
 
@@ -142,10 +160,11 @@ func setCustomLabels(m map[string]string, field *[]byte) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to encode custom labels")
 	}
-	*field = b
+	*res = b
 	return nil
 }
 
+// jsonValue implements database/sql/driver.Valuer interface for v that should be a value.
 func jsonValue(v interface{}) (driver.Value, error) {
 	b, err := json.Marshal(v)
 	if err != nil {
@@ -154,6 +173,7 @@ func jsonValue(v interface{}) (driver.Value, error) {
 	return b, nil
 }
 
+// jsonScan implements database/sql.Scanner interface for v that should be a pointer.
 func jsonScan(v, src interface{}) error {
 	var b []byte
 	switch v := src.(type) {
@@ -170,3 +190,54 @@ func jsonScan(v, src interface{}) error {
 	}
 	return nil
 }
+
+// Severity represents alert severity.
+type Severity string
+
+// Available severity levels.
+const (
+	UnknownSeverity   = Severity("unknown")
+	EmergencySeverity = Severity("emergency")
+	AlertSeverity     = Severity("alert")
+	CriticalSeverity  = Severity("critical")
+	ErrorSeverity     = Severity("error")
+	WarningSeverity   = Severity("warning")
+	NoticeSeverity    = Severity("notice")
+	InfoSeverity      = Severity("info")
+	DebugSeverity     = Severity("debug")
+)
+
+func convertSeverity(severity common.Severity) Severity {
+	switch severity {
+	case common.Unknown:
+		return UnknownSeverity
+	case common.Emergency:
+		return EmergencySeverity
+	case common.Alert:
+		return AlertSeverity
+	case common.Critical:
+		return CriticalSeverity
+	case common.Error:
+		return ErrorSeverity
+	case common.Warning:
+		return WarningSeverity
+	case common.Notice:
+		return NoticeSeverity
+	case common.Info:
+		return InfoSeverity
+	case common.Debug:
+		return DebugSeverity
+	default:
+		return UnknownSeverity
+	}
+}
+
+// ParamType represents parameter type.
+type ParamType string
+
+// Available parameter types.
+const (
+	Float  = ParamType("float")
+	Bool   = ParamType("bool")
+	String = ParamType("string")
+)
