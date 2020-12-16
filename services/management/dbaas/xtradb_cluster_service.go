@@ -113,7 +113,7 @@ func (s XtraDBClusterService) GetXtraDBCluster(ctx context.Context, req *dbaasv1
 	}
 
 	// TODO: implement on dbaas-controller side:
-	// 1. Get --- done pxc host ---  and status
+	// 1. Get pxc host and status
 	//  - Ex.: kubectl get -o=json PerconaXtraDBCluster/<cluster_name>
 	// 2. Get root password:
 	//   - Ex.: kubectl get secret my-cluster-secrets -o json  | jq -r ".data.root" | base64 -d
