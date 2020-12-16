@@ -632,11 +632,12 @@ func main() {
 				signal.Stop(terminationSignals)
 				l.Warnf("Got %s, shutting down...", unix.SignalName(s.(unix.Signal)))
 				cancel()
+				return
 			case s := <-updateSignals:
 				l.Infof("Got %s, reloading configuration...", unix.SignalName(s.(unix.Signal)))
 				err := server.UpdateConfigurations()
 				if err != nil {
-					l.Warnf("Coulnd't reload configuration: %s", err)
+					l.Warnf("Couldn't reload configuration: %s", err)
 				} else {
 					l.Info("Configuration reloaded")
 				}
