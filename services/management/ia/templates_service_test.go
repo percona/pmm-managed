@@ -123,32 +123,30 @@ func TestConvertTemplate(t *testing.T) {
 		testcases := []struct {
 			path             string
 			alert            string
-			labelsCount      int
 			annotationsCount int
 		}{{
 			path:             builtinRuleFilepath1,
 			alert:            "mysql_down",
-			labelsCount:      3,
 			annotationsCount: 2,
 		}, {
 			path:             builtinRuleFilepath2,
 			alert:            "mysql_restarted",
-			labelsCount:      4,
 			annotationsCount: 2,
 		}, {
 			path:             builtinRuleFilepath3,
 			alert:            "mysql_too_many_connections",
-			labelsCount:      4,
 			annotationsCount: 2,
 		}, {
 			path:             userRuleFilepath,
 			alert:            "user_rule",
-			labelsCount:      4,
 			annotationsCount: 2,
 		}}
 
 		for _, tc := range testcases {
+			tc := tc
 			t.Run(tc.path, func(t *testing.T) {
+				t.Parallel()
+
 				buf, err := ioutil.ReadFile(tc.path)
 				require.NoError(t, err)
 				var rf ruleFile
@@ -156,7 +154,6 @@ func TestConvertTemplate(t *testing.T) {
 				require.NoError(t, err)
 				rule := rf.Group[0].Rules[0]
 				assert.Equal(t, tc.alert, rule.Alert)
-				assert.Len(t, rule.Labels, tc.labelsCount)
 				assert.Contains(t, rule.Labels, "severity")
 				assert.Contains(t, rule.Labels, "ia")
 				assert.NotNil(t, rule.Annotations)
