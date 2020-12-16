@@ -1,6 +1,6 @@
 ---
 templates:
-  - name: mongodb_too_many_connections
+  - name: mongodb_connections_memory_usage
     version: 1
     summary: Memory used by MongoDB connections
     expr: |-
@@ -24,4 +24,4 @@ templates:
         More than [[ .threshold ]]% of Memory used by MongoDB connections on {{ $labels.node_name }}
         VALUE = {{ $value }}
         LABELS: {{ $labels }}
-      summary: MongoDB too many connections (instance {{ $labels.node_name }})
+      summary: MongoDB high memory usage by connections (instance {{ $labels.node_name }})
