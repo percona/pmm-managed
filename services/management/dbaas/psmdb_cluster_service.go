@@ -107,7 +107,7 @@ func (s PSMDBClusterService) GetPSMDBCluster(ctx context.Context, req *dbaasv1be
 	}
 
 	// TODO: implement on dbaas-controller side:
-	// 1. Get psmdb host and status
+	// 1. Get psmdb status
 	//  - Ex.: kubectl get -o=json PerconaServerMongoDB/<cluster_name>
 	// 2. Get root password:
 	//   - Ex.: kubectl get secret my-cluster-name-secrets -o json  | jq -r ".data.MONGODB_USER_ADMIN_PASSWORD" | base64 -d
