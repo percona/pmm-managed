@@ -18,7 +18,6 @@ package server
 
 import (
 	"context"
-	"database/sql"
 	"testing"
 	"time"
 
@@ -36,49 +35,47 @@ import (
 	"github.com/percona/pmm-managed/utils/tests"
 )
 
-func newTestServer(db *sql.DB, t *testing.T) *Server {
-	r := new(mockSupervisordService)
-	r.Test(t)
-	r.On("UpdateConfiguration", mock.Anything).Return(nil)
-
-	mvmdb := new(mockPrometheusService)
-	mvmdb.Test(t)
-	mvmdb.On("RequestConfigurationUpdate").Return(nil)
-	mAgents := new(mockAgentsRegistry)
-	mAgents.Test(t)
-	mAgents.On("UpdateAgentsState", context.TODO()).Return(nil)
-
-	mvmalert := new(mockPrometheusService)
-	mvmalert.Test(t)
-	mvmalert.On("RequestConfigurationUpdate").Return(nil)
-
-	par := new(mockPrometheusAlertingRules)
-	par.Test(t)
-	par.On("ReadRules").Return("", nil)
-
-	ts := new(mockTelemetryService)
-	ts.Test(t)
-
-	ps := new(mockPlatformService)
-	ps.Test(t)
-
-	s, err := NewServer(&Params{
-		DB:                      reform.NewDB(db, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
-		VMDB:                    mvmdb,
-		VMAlert:                 mvmalert,
-		AgentsRegistry:          mAgents,
-		Supervisord:             r,
-		PrometheusAlertingRules: par,
-		TelemetryService:        ts,
-		PlatformService:         ps,
-	})
-	require.NoError(t, err)
-	return s
-}
 func TestServer(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+
 	newServer := func(t *testing.T) *Server {
-		return newTestServer(sqlDB, t)
+		r := new(mockSupervisordService)
+		r.Test(t)
+		r.On("UpdateConfiguration", mock.Anything).Return(nil)
+
+		mvmdb := new(mockPrometheusService)
+		mvmdb.Test(t)
+		mvmdb.On("RequestConfigurationUpdate").Return(nil)
+		mAgents := new(mockAgentsRegistry)
+		mAgents.Test(t)
+		mAgents.On("UpdateAgentsState", context.TODO()).Return(nil)
+
+		mvmalert := new(mockPrometheusService)
+		mvmalert.Test(t)
+		mvmalert.On("RequestConfigurationUpdate").Return(nil)
+
+		par := new(mockPrometheusAlertingRules)
+		par.Test(t)
+		par.On("ReadRules").Return("", nil)
+
+		ts := new(mockTelemetryService)
+		ts.Test(t)
+
+		ps := new(mockPlatformService)
+		ps.Test(t)
+
+		s, err := NewServer(&Params{
+			DB:                      reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
+			VMDB:                    mvmdb,
+			VMAlert:                 mvmalert,
+			AgentsRegistry:          mAgents,
+			Supervisord:             r,
+			PrometheusAlertingRules: par,
+			TelemetryService:        ts,
+			PlatformService:         ps,
+		})
+		require.NoError(t, err)
+		return s
 	}
 
 	t.Run("UpdateSettingsFromEnv", func(t *testing.T) {
@@ -223,26 +220,5 @@ func TestServer(t *testing.T) {
 		settings, err := server.GetSettings(ctx, new(serverpb.GetSettingsRequest))
 		require.NoError(t, err)
 		assert.True(t, settings.Settings.DbaasEnabled)
-	})
-}
-
-func TestServerUpdateConfigurations(t *testing.T) {
-	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
-
-	t.Run("Typical", func(t *testing.T) {
-		server := newTestServer(sqlDB, t)
-
-		err := server.UpdateConfigurations()
-		assert.NoError(t, err)
-	})
-	t.Run("MissingSettings", func(t *testing.T) {
-		server := newTestServer(sqlDB, t)
-
-		_, err := server.db.Exec("DELETE FROM settings")
-		require.NoError(t, err)
-
-		err = server.UpdateConfigurations()
-		assert.Error(t, err)
-
 	})
 }
