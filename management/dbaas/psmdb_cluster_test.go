@@ -228,4 +228,20 @@ func TestPSMDBClusterServer(t *testing.T) {
 		require.Error(t, err)
 		assert.Equal(t, 500, err.(pmmapitests.ErrorResponse).Code())
 	})
+
+	t.Run("SuspendResumeCluster", func(t *testing.T) {
+		paramsUpdatePSMDB := psmdbcluster.UpdatePSMDBClusterParams{
+			Context: pmmapitests.Context,
+			Body: psmdbcluster.UpdatePSMDBClusterBody{
+				KubernetesClusterName: psmdbKubernetesClusterName,
+				Name:                  "second-psmdb-test",
+				Params: &psmdbcluster.UpdatePSMDBClusterParamsBodyParams{
+					Suspend: true,
+					Resume:  true,
+				},
+			},
+		}
+		_, err := dbaasClient.Default.PSMDBCluster.UpdatePSMDBCluster(&paramsUpdatePSMDB)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `resume and suspend cannot be set together`)
+	})
 }
