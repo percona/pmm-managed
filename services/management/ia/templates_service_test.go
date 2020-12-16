@@ -33,16 +33,6 @@ import (
 )
 
 const (
-<<<<<<< HEAD
-	testBadTemplates     = "../../../testdata/ia/bad/*.yml"
-	testBuiltinTemplates = "../../../testdata/ia/builtin/*.yml"
-	testUser2Templates   = "../../../testdata/ia/user2/*.yml"
-	testUserTemplates    = "../../../testdata/ia/user/*.yml"
-	testMissingTemplates = "/no/such/path/*.yml"
-
-	userRuleFilePath    = "/tmp/ia1/user_rule.yml"
-	builtinRuleFilePath = "/tmp/ia1/builtin_rule.yml"
-=======
 	testBadTemplates   = "../../../testdata/ia/bad/*.yml"
 	testUser2Templates = "../../../testdata/ia/user2/*.yml"
 	testUserTemplates  = "../../../testdata/ia/user/*.yml"
@@ -51,7 +41,6 @@ const (
 	builtinRuleFilepath1 = "mysql_down.yml"
 	builtinRuleFilepath2 = "mysql_restarted.yml"
 	builtinRuleFilepath3 = "mysql_too_many_connections.yml"
->>>>>>> origin/PMM-2.0
 )
 
 func TestCollect(t *testing.T) {
@@ -72,13 +61,8 @@ func TestCollect(t *testing.T) {
 	t.Run("bad template paths", func(t *testing.T) {
 		t.Parallel()
 
-		testDir, err := ioutil.TempDir("", "")
-		require.NoError(t, err)
-		defer os.RemoveAll(testDir) //nolint:errcheck
-
 		svc := NewTemplatesService(db)
 		svc.userTemplatesPath = testBadTemplates
-		svc.rulesFileDir = testDir
 		svc.collect(ctx)
 
 		require.Empty(t, svc.getCollected(ctx))
@@ -87,27 +71,16 @@ func TestCollect(t *testing.T) {
 	t.Run("valid template paths", func(t *testing.T) {
 		t.Parallel()
 
-		testDir, err := ioutil.TempDir("", "")
-		require.NoError(t, err)
-		defer os.RemoveAll(testDir) //nolint:errcheck
-
 		svc := NewTemplatesService(db)
 		svc.userTemplatesPath = testUserTemplates
-		svc.rulesFileDir = testDir
 		svc.collect(ctx)
 
 		templates := svc.getCollected(ctx)
 		require.NotEmpty(t, templates)
-<<<<<<< HEAD
-		require.Len(t, templates, 2)
-		assert.Contains(t, templates, "builtin_rule")
-		assert.Contains(t, templates, "user_rule")
-=======
 		assert.Contains(t, templates, "user_rule")
 		assert.Contains(t, templates, "mysql_down")
 		assert.Contains(t, templates, "mysql_restarted")
 		assert.Contains(t, templates, "mysql_too_many_connections")
->>>>>>> origin/PMM-2.0
 
 		// check whether map was cleared and updated on a subsequent call
 		svc.userTemplatesPath = testUser2Templates
@@ -115,13 +88,7 @@ func TestCollect(t *testing.T) {
 
 		templates = svc.getCollected(ctx)
 		require.NotEmpty(t, templates)
-<<<<<<< HEAD
-		require.Len(t, templates, 2)
 		assert.NotContains(t, templates, "user_rule")
-		assert.Contains(t, templates, "builtin_rule")
-=======
-		assert.NotContains(t, templates, "user_rule")
->>>>>>> origin/PMM-2.0
 		assert.Contains(t, templates, "user2_rule")
 	})
 }
@@ -137,43 +104,6 @@ func TestConvertTemplate(t *testing.T) {
 		defer os.RemoveAll(testDir) //nolint:errcheck
 
 		svc := NewTemplatesService(db)
-<<<<<<< HEAD
-		svc.builtinTemplatesPath = testBuiltinTemplates
-		svc.userTemplatesPath = testUserTemplates
-		svc.rulesFileDir = testDir
-		svc.collect(ctx)
-
-		err = svc.convertTemplates(ctx)
-		require.NoError(t, err)
-		assert.FileExists(t, userRuleFilePath)
-		assert.FileExists(t, builtinRuleFilePath)
-
-		buf, err := ioutil.ReadFile(builtinRuleFilePath)
-		require.NoError(t, err)
-		var builtinRule ruleFile
-		err = yaml.Unmarshal(buf, &builtinRule)
-		require.NoError(t, err)
-		bRule := builtinRule.Group[0].Rules[0]
-		assert.Equal(t, "builtin_rule", bRule.Alert)
-		assert.Len(t, bRule.Labels, 4)
-		assert.Contains(t, bRule.Labels, "severity")
-		assert.Contains(t, bRule.Labels, "ia")
-		assert.NotNil(t, bRule.Annotations)
-		assert.Len(t, bRule.Annotations, 2)
-
-		buf, err = ioutil.ReadFile(userRuleFilePath)
-		require.NoError(t, err)
-		var userRule ruleFile
-		err = yaml.Unmarshal(buf, &userRule)
-		require.NoError(t, err)
-		uRule := userRule.Group[0].Rules[0]
-		assert.Equal(t, "user_rule", uRule.Alert)
-		assert.Len(t, uRule.Labels, 4)
-		assert.Contains(t, uRule.Labels, "severity")
-		assert.Contains(t, uRule.Labels, "ia")
-		assert.NotNil(t, uRule.Annotations)
-		assert.Len(t, uRule.Annotations, 2)
-=======
 		svc.userTemplatesPath = testUserTemplates
 		svc.rulesPath = testDir
 		svc.collect(ctx)
@@ -233,6 +163,5 @@ func TestConvertTemplate(t *testing.T) {
 				assert.Len(t, rule.Annotations, tc.annotationsCount)
 			})
 		}
->>>>>>> origin/PMM-2.0
 	})
 }
