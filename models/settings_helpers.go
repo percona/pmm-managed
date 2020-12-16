@@ -87,12 +87,12 @@ type ChangeSettingsParams struct {
 	DisableAlerting bool
 
 	// Email config for Integrated Alerting.
-	EmailAlertingSettings EmailAlertingSettings
+	EmailAlertingSettings *EmailAlertingSettings
 	// If true removes email alerting settings.
 	RemoveEmailAlertingSettings bool
 
 	// Slack config for Integrated Alerting.
-	SlackAlertingSettings SlackAlertingSettings
+	SlackAlertingSettings *SlackAlertingSettings
 	// If true removes Slack alerting settings.
 	RemoveSlackAlertingSettings bool
 
@@ -232,11 +232,11 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 	}
 
 	if params.RemoveEmailAlertingSettings {
-		settings.IntegratedAlerting.EmailAlertingSettings = EmailAlertingSettings{}
+		settings.IntegratedAlerting.EmailAlertingSettings = nil
 	}
 
 	if params.RemoveSlackAlertingSettings {
-		settings.IntegratedAlerting.SlackAlertingSettings = SlackAlertingSettings{}
+		settings.IntegratedAlerting.SlackAlertingSettings = nil
 	}
 
 	settings.IntegratedAlerting.EmailAlertingSettings = params.EmailAlertingSettings
@@ -332,11 +332,11 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 		return fmt.Errorf("Both pmm_public_address and remove_pmm_public_address are present.") //nolint:golint,stylecheck
 	}
 
-	if params.EmailAlertingSettings != (EmailAlertingSettings{}) && params.RemoveEmailAlertingSettings {
+	if params.EmailAlertingSettings != nil && params.RemoveEmailAlertingSettings {
 		return fmt.Errorf("Both email_alerting_settings and remove_email_alerting_settings are present.") //nolint:golint,stylecheck
 	}
 
-	if params.SlackAlertingSettings != (SlackAlertingSettings{}) && params.RemoveSlackAlertingSettings {
+	if params.SlackAlertingSettings != nil && params.RemoveSlackAlertingSettings {
 		return fmt.Errorf("Both slack_alerting_settings and remove_slack_alerting_settings are present.") //nolint:golint,stylecheck
 	}
 	return nil

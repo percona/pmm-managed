@@ -308,15 +308,15 @@ func TestSettings(t *testing.T) {
 		})
 
 		t.Run("Integrated Alerting settings validation", func(t *testing.T) {
-			emailSettings := models.EmailAlertingSettings{
-				From:      "sender@alerting.com",
+			emailSettings := &models.EmailAlertingSettings{
+				From:      gofakeit.Email(),
 				Smarthost: "0.0.0.0:8080",
 				Hello:     "smtp_host",
 				Username:  "smtp_username",
 				Password:  "smtp_password",
 				Secret:    "smtp_secret",
 			}
-			slackSettings := models.SlackAlertingSettings{URL: "https://hooks.slack.com"}
+			slackSettings := &models.SlackAlertingSettings{URL: gofakeit.URL()}
 			ns, err := models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				EnableAlerting:        true,
 				EmailAlertingSettings: emailSettings,

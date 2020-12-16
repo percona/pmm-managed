@@ -407,7 +407,10 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 		PmmPublicAddress: settings.PMMPublicAddress,
 
 		AlertingEnabled: settings.IntegratedAlerting.Enabled,
-		EmailAlertingSettings: &serverpb.EmailAlertingSettings{
+	}
+
+	if settings.IntegratedAlerting.EmailAlertingSettings != nil {
+		res.EmailAlertingSettings = &serverpb.EmailAlertingSettings{
 			From:      settings.IntegratedAlerting.EmailAlertingSettings.From,
 			Smarthost: settings.IntegratedAlerting.EmailAlertingSettings.Smarthost,
 			Hello:     settings.IntegratedAlerting.EmailAlertingSettings.Hello,
@@ -415,10 +418,13 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 			Password:  "",
 			Identity:  settings.IntegratedAlerting.EmailAlertingSettings.Identity,
 			Secret:    settings.IntegratedAlerting.EmailAlertingSettings.Secret,
-		},
-		SlackAlertingSettings: &serverpb.SlackAlertingSettings{
+		}
+	}
+
+	if settings.IntegratedAlerting.SlackAlertingSettings != nil {
+		res.SlackAlertingSettings = &serverpb.SlackAlertingSettings{
 			Url: settings.IntegratedAlerting.SlackAlertingSettings.URL,
-		},
+		}
 	}
 
 	b, err := s.prometheusAlertingRules.ReadRules()
@@ -535,9 +541,14 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			PMMPublicAddress:       req.PmmPublicAddress,
 			RemovePMMPublicAddress: req.RemovePmmPublicAddress,
 
-			EnableAlerting:  req.EnableAlerting,
-			DisableAlerting: req.DisableAlerting,
-			EmailAlertingSettings: models.EmailAlertingSettings{
+			EnableAlerting:              req.EnableAlerting,
+			DisableAlerting:             req.DisableAlerting,
+			RemoveEmailAlertingSettings: req.RemoveEmailAlertingSettings,
+			RemoveSlackAlertingSettings: req.RemoveSlackAlertingSettings,
+		}
+
+		if req.EmailAlertingSettings != nil {
+			settingsParams.EmailAlertingSettings = &models.EmailAlertingSettings{
 				From:      req.EmailAlertingSettings.GetFrom(),
 				Smarthost: req.EmailAlertingSettings.GetSmarthost(),
 				Hello:     req.EmailAlertingSettings.GetHello(),
@@ -545,12 +556,13 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 				Password:  req.EmailAlertingSettings.GetPassword(),
 				Identity:  req.EmailAlertingSettings.GetIdentity(),
 				Secret:    req.EmailAlertingSettings.GetSecret(),
-			},
-			RemoveEmailAlertingSettings: req.RemoveEmailAlertingSettings,
-			SlackAlertingSettings: models.SlackAlertingSettings{
+			}
+		}
+
+		if req.SlackAlertingSettings != nil {
+			settingsParams.SlackAlertingSettings = &models.SlackAlertingSettings{
 				URL: req.SlackAlertingSettings.GetUrl(),
-			},
-			RemoveSlackAlertingSettings: req.RemoveSlackAlertingSettings,
+			}
 		}
 
 		var e error

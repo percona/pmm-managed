@@ -73,9 +73,9 @@ type Settings struct {
 	} `json:"dbaas"`
 
 	IntegratedAlerting struct {
-		Enabled               bool                  `json:"enabled"`
-		EmailAlertingSettings EmailAlertingSettings `json:"email_settings"`
-		SlackAlertingSettings SlackAlertingSettings `json:"slack_settings"`
+		Enabled               bool                   `json:"enabled"`
+		EmailAlertingSettings *EmailAlertingSettings `json:"email_settings"`
+		SlackAlertingSettings *SlackAlertingSettings `json:"slack_settings"`
 	} `json:"ia"`
 }
 
