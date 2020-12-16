@@ -44,7 +44,6 @@ func TestPSMDBClusterServer(t *testing.T) {
 
 		_, err := dbaasClient.Default.PSMDBCluster.CreatePSMDBCluster(&paramsFirstPSMDB)
 		assert.NoError(t, err)
-
 		// Create one more PSMDB Cluster.
 		paramsSecondPSMDB := psmdbcluster.CreatePSMDBClusterParams{
 			Context: pmmapitests.Context,
@@ -105,7 +104,7 @@ func TestPSMDBClusterServer(t *testing.T) {
 		}
 
 		_, err = dbaasClient.Default.PSMDBCluster.UpdatePSMDBCluster(&paramsUpdatePSMDB)
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `invalid field Params.Replicaset.DiskSize: value '0' must be greater than '0'`)
+		pmmapitests.AssertAPIErrorf(t, err, 500, codes.Internal, `state is initializing: PSMDB cluster is not ready`)
 
 		for _, psmdb := range xtraDBClusters.Payload.Clusters {
 			if psmdb.Name == "" {

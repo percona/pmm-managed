@@ -138,7 +138,7 @@ func TestXtraDBClusterServer(t *testing.T) {
 		}
 
 		_, err = dbaasClient.Default.XtraDBCluster.UpdateXtraDBCluster(&paramsUpdatePXC)
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `invalid field Params.Pxc.DiskSize: value '0' must be greater than '0'`)
+		pmmapitests.AssertAPIErrorf(t, err, 500, codes.Internal, `state is Error: XtraDB cluster is not ready`)
 
 		for _, pxc := range xtraDBClusters.Payload.Clusters {
 			if pxc.Name == "" {
@@ -256,5 +256,21 @@ func TestXtraDBClusterServer(t *testing.T) {
 		_, err := dbaasClient.Default.XtraDBCluster.DeleteXtraDBCluster(&deleteXtraDBClusterParamsParam)
 		require.Error(t, err)
 		assert.Equal(t, 500, err.(pmmapitests.ErrorResponse).Code())
+	})
+
+	t.Run("SuspendResumeCluster", func(t *testing.T) {
+		paramsUpdatePXC := xtra_db_cluster.UpdateXtraDBClusterParams{
+			Context: pmmapitests.Context,
+			Body: xtra_db_cluster.UpdateXtraDBClusterBody{
+				KubernetesClusterName: kubernetesClusterName,
+				Name:                  "second-pxc-test",
+				Params: &xtra_db_cluster.UpdateXtraDBClusterParamsBodyParams{
+					Suspend: true,
+					Resume:  true,
+				},
+			},
+		}
+		_, err := dbaasClient.Default.XtraDBCluster.UpdateXtraDBCluster(&paramsUpdatePXC)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `resume and suspend cannot be set together`)
 	})
 }
