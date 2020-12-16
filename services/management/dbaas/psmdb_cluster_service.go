@@ -73,6 +73,11 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 				}
 			}
 		}
+
+		message := ""
+		if c.Operation != nil {
+			message = c.Operation.Message
+		}
 		cluster := dbaasv1beta1.ListPSMDBClustersResponse_Cluster{
 			Name: c.Name,
 			Params: &dbaasv1beta1.PSMDBClusterParams{
@@ -83,6 +88,9 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 				},
 			},
 			State: psmdbStates()[c.State],
+			Operation: &dbaasv1beta1.RunningOperation{
+				Message: message,
+			},
 		}
 
 		clusters[i] = &cluster
@@ -136,6 +144,11 @@ func (s PSMDBClusterService) GetPSMDBCluster(ctx context.Context, req *dbaasv1be
 // CreatePSMDBCluster creates PSMDB cluster with given parameters.
 //nolint:dupl
 func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv1beta1.CreatePSMDBClusterRequest) (*dbaasv1beta1.CreatePSMDBClusterResponse, error) {
+	settings, err := models.GetSettings(s.db.Querier)
+	if err != nil {
+		return nil, err
+	}
+
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
 	if err != nil {
 		return nil, err
@@ -156,6 +169,7 @@ func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv
 				DiskSize: req.Params.Replicaset.DiskSize,
 			},
 		},
+		PmmPublicAddress: settings.PMMPublicAddress,
 	}
 
 	_, err = s.controllerClient.CreatePSMDBCluster(ctx, &in)
