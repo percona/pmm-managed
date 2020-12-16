@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"sort"
 	"strings"
 	"time"
 
@@ -92,6 +91,10 @@ type ChangeSettingsParams struct {
 	EnableVMCache bool
 	// DisableVMCache disables caching for vmdb search queries
 	DisableVMCache bool
+
+	// PMM Server public address.
+	PMMPublicAddress       string
+	RemovePMMPublicAddress bool
 }
 
 // UpdateSettings updates only non-zero, non-empty values.
@@ -197,6 +200,13 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 		settings.VictoriaMetrics.CacheEnabled = true
 	}
 
+	if params.PMMPublicAddress != "" {
+		settings.PMMPublicAddress = params.PMMPublicAddress
+	}
+	if params.RemovePMMPublicAddress {
+		settings.PMMPublicAddress = ""
+	}
+
 	err = SaveSettings(q, settings)
 	if err != nil {
 		return nil, err
@@ -280,6 +290,10 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 		}
 	}
 
+	if params.PMMPublicAddress != "" && params.RemovePMMPublicAddress {
+		return fmt.Errorf("Both pmm_public_address and remove_pmm_public_address are present.") //nolint:golint,stylecheck
+	}
+
 	return nil
 }
 
@@ -317,20 +331,4 @@ func SaveSettings(q reform.DBTX, s *Settings) error {
 	}
 
 	return nil
-}
-
-// deduplicateStrings deduplicates elements in string slice.
-func deduplicateStrings(partitions []string) []string {
-	set := make(map[string]struct{})
-	for _, p := range partitions {
-		set[p] = struct{}{}
-	}
-
-	slice := make([]string, 0, len(set))
-	for partition := range set {
-		slice = append(slice, partition)
-	}
-	sort.Strings(slice)
-
-	return slice
 }
