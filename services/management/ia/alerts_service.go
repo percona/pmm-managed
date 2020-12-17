@@ -46,10 +46,10 @@ type AlertsService struct {
 // NewAlertsService creates new alerts API service.
 func NewAlertsService(db *reform.DB, alertManager alertManager, templatesService *TemplatesService) *AlertsService {
 	return &AlertsService{
+		l:                logrus.WithField("component", "management/ia/alerts"),
 		db:               db,
 		alertManager:     alertManager,
 		templatesService: templatesService,
-		l:                logrus.WithField("component", "management/ia/alerts"),
 	}
 }
 
