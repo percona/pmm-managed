@@ -144,10 +144,7 @@ func TestConvertTemplate(t *testing.T) {
 		}}
 
 		for _, tc := range testcases {
-			tc := tc
 			t.Run(tc.path, func(t *testing.T) {
-				t.Parallel()
-
 				buf, err := ioutil.ReadFile(tc.path)
 				require.NoError(t, err)
 				var rf ruleFile
