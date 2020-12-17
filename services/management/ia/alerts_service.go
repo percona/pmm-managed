@@ -60,7 +60,7 @@ func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlert
 		return nil, errors.Wrap(err, "failed to get alerts form alertmanager")
 	}
 
-	var res []*iav1beta1.Alert
+	res := make([]*iav1beta1.Alert, 0, len(alerts))
 	for _, alert := range alerts {
 		updatedAt, err := ptypes.TimestampProto(time.Time(*alert.UpdatedAt))
 		if err != nil {
@@ -108,7 +108,7 @@ func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlert
 
 		r, err := convertRule(s.l, rule, template, channels)
 		if err != nil {
-
+			return nil, errors.Wrapf(err, "failed to convert alert rule")
 		}
 
 		res = append(res, &iav1beta1.Alert{
@@ -136,12 +136,12 @@ func (s *AlertsService) ToggleAlert(ctx context.Context, req *iav1beta1.ToggleAl
 	case iav1beta1.BooleanFlag_TRUE:
 		err := s.alertManager.Silence(ctx, req.AlertId)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to silence alert with id: %s", req.AlertId)
+			return nil, err
 		}
 	case iav1beta1.BooleanFlag_FALSE:
 		err := s.alertManager.Unsilence(ctx, req.AlertId)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to unsilence alert with id: %s", req.AlertId)
+			return nil, err
 		}
 	}
 

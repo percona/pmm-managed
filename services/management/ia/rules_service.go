@@ -55,6 +55,7 @@ func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAl
 	return &iav1beta1.ListAlertRulesResponse{Rules: res}, nil
 }
 
+// GetAlertRules returns list of available alert rules.
 func (s *RulesService) GetAlertRules(ctx context.Context) ([]*iav1beta1.Rule, error) {
 	var rules []*models.Rule
 	var channels []*models.Channel

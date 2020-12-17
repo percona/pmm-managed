@@ -35,6 +35,8 @@ import (
 	"github.com/percona/promconfig/alertmanager"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 	"gopkg.in/yaml.v3"
 
@@ -198,14 +200,14 @@ func (svc *Service) FindAlertByID(ctx context.Context, id string) (*ammodels.Get
 		}
 	}
 
-	return nil, errors.Errorf("alert with id %s not found", id)
+	return nil, status.Errorf(codes.NotFound, "Alert with id %s not found", id)
 }
 
 // Silence mutes alert with specified id.
 func (svc *Service) Silence(ctx context.Context, id string) error {
 	a, err := svc.FindAlertByID(ctx, id)
 	if err != nil {
-		return err // TODO gRPC error?
+		return err
 	}
 
 	if len(a.Status.SilencedBy) != 0 {
@@ -238,7 +240,7 @@ func (svc *Service) Silence(ctx context.Context, id string) error {
 		Context: ctx,
 	})
 
-	return err
+	return errors.Wrapf(err, "failed to silence alert with id: %s", id)
 }
 
 // Unsilence unmutes alert with specified id.
@@ -255,7 +257,7 @@ func (svc *Service) Unsilence(ctx context.Context, id string) error {
 		})
 
 		if err != nil {
-			return errors.Wrapf(err, "failed to delete silence with id %s", silenceID)
+			return errors.Wrapf(err, "failed to delete silence with id %s for alert %s", silenceID, id)
 		}
 	}
 

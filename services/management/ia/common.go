@@ -40,7 +40,7 @@ func convertParamUnit(u string) iav1beta1.ParamUnit {
 	}
 }
 
-func convertTemplate(l *logrus.Entry, template templateInfo) (*iav1beta1.Template, error) {
+func convertTemplate(l *logrus.Entry, template TemplateInfo) (*iav1beta1.Template, error) {
 	t := &iav1beta1.Template{
 		Name:        template.Name,
 		Summary:     template.Summary,
@@ -105,7 +105,7 @@ func convertTemplate(l *logrus.Entry, template templateInfo) (*iav1beta1.Templat
 	return t, nil
 }
 
-func convertRule(l *logrus.Entry, rule *models.Rule, template templateInfo, channels []*models.Channel) (*iav1beta1.Rule, error) {
+func convertRule(l *logrus.Entry, rule *models.Rule, template TemplateInfo, channels []*models.Channel) (*iav1beta1.Rule, error) {
 	r := &iav1beta1.Rule{
 		RuleId:   rule.ID,
 		Disabled: rule.Disabled,
