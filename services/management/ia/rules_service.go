@@ -50,6 +50,7 @@ func NewRulesService(db *reform.DB, templates *TemplatesService) *RulesService {
 func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAlertRulesRequest) (*iav1beta1.ListAlertRulesResponse, error) {
 	res, err := s.GetAlertRules(ctx)
 	if err != nil {
+		return nil, err
 	}
 	return &iav1beta1.ListAlertRulesResponse{Rules: res}, nil
 }
