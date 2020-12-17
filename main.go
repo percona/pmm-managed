@@ -29,8 +29,6 @@ import (
 	_ "net/http/pprof" // register /debug/pprof
 	"os"
 	"os/signal"
-	"path/filepath"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -179,14 +177,11 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterAnnotationServer(gRPCServer, managementgrpc.NewAnnotationServer(deps.db, deps.grafanaClient))
 	managementpb.RegisterSecurityChecksServer(gRPCServer, managementgrpc.NewChecksServer(checksSvc))
 
-	// TODO remove PERCONA_TEST_IA once IA is out of beta: https://jira.percona.com/browse/PMM-7001
-	if enable, err := strconv.ParseBool(os.Getenv("PERCONA_TEST_IA")); err == nil && enable {
-		l.Warnf("Enabling experimental IA APIs.")
-		iav1beta1.RegisterAlertsServer(gRPCServer, ia.NewAlertsService(deps.db))
-		iav1beta1.RegisterChannelsServer(gRPCServer, ia.NewChannelsService(deps.db))
-		iav1beta1.RegisterRulesServer(gRPCServer, ia.NewRulesService(deps.db))
-		iav1beta1.RegisterTemplatesServer(gRPCServer, ia.NewTemplatesService(deps.db))
-	}
+	iav1beta1.RegisterAlertsServer(gRPCServer, ia.NewAlertsService(deps.db))
+	iav1beta1.RegisterChannelsServer(gRPCServer, ia.NewChannelsService(deps.db))
+	templatesSvc := ia.NewTemplatesService(deps.db)
+	iav1beta1.RegisterTemplatesServer(gRPCServer, templatesSvc)
+	iav1beta1.RegisterRulesServer(gRPCServer, ia.NewRulesService(deps.db, templatesSvc))
 
 	// TODO Remove once changing settings.DBaaS.Enabled is possible via API.
 	if deps.settings.DBaaS.Enabled {
@@ -252,7 +247,7 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 		Indent:       "  ",
 	}
 
-	// FIXME make that a default behavior: https://jira.percona.com/browse/PMM-4597
+	// FIXME make that a default behavior: https://jira.percona.com/browse/PMM-6722
 	if nicer, _ := strconv.ParseBool(os.Getenv("PERCONA_TEST_NICER_API")); nicer {
 		l.Warn("Enabling nicer API with default/zero values in response.")
 		marshaller.EmitDefaults = true
@@ -532,25 +527,7 @@ func main() {
 
 	kingpin.Parse()
 
-	logrus.SetFormatter(&logrus.TextFormatter{
-		// Enable multiline-friendly formatter in both development (with terminal) and production (without terminal):
-		// https://github.com/sirupsen/logrus/blob/839c75faf7f98a33d445d181f3018b5c3409a45e/text_formatter.go#L176-L178
-		ForceColors:     true,
-		FullTimestamp:   true,
-		TimestampFormat: "2006-01-02T15:04:05.000-07:00",
-
-		CallerPrettyfier: func(f *runtime.Frame) (function string, file string) {
-			_, function = filepath.Split(f.Function)
-
-			// keep a single directory name as a compromise between brevity and unambiguity
-			var dir string
-			dir, file = filepath.Split(f.File)
-			dir = filepath.Base(dir)
-			file = fmt.Sprintf("%s/%s:%d", dir, file, f.Line)
-
-			return
-		},
-	})
+	logger.SetupGlobalLogger()
 	if *debugF {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
