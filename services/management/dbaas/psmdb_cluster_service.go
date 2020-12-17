@@ -204,15 +204,15 @@ func (s PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *dbaasv
 			return nil, status.Error(codes.InvalidArgument, "resume and suspend cannot be set together")
 		}
 
-		in.Params = &dbaascontrollerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams{
+		in.Params = &controllerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams{
 			ClusterSize: req.Params.ClusterSize,
 			Suspend:     req.Params.Suspend,
 			Resume:      req.Params.Resume,
 		}
 
 		if req.Params.Replicaset != nil && req.Params.Replicaset.ComputeResources != nil {
-			in.Params.Replicaset = &dbaascontrollerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams_ReplicaSet{
-				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
+			in.Params.Replicaset = &controllerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams_ReplicaSet{
+				ComputeResources: &controllerv1beta1.ComputeResources{
 					CpuM:        req.Params.Replicaset.ComputeResources.CpuM,
 					MemoryBytes: req.Params.Replicaset.ComputeResources.MemoryBytes,
 				},

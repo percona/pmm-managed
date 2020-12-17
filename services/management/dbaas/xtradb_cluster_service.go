@@ -172,7 +172,7 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 		},
 		Name:             req.Name,
 		PmmPublicAddress: settings.PMMPublicAddress,
-		Params: &dbaascontrollerv1beta1.XtraDBClusterParams{
+		Params: &controllerv1beta1.XtraDBClusterParams{
 			ClusterSize: req.Params.ClusterSize,
 			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
 				ComputeResources: new(controllerv1beta1.ComputeResources),
@@ -227,15 +227,15 @@ func (s XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *dbaa
 			return nil, status.Error(codes.InvalidArgument, "resume and suspend cannot be set together")
 		}
 
-		in.Params = &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
+		in.Params = &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
 			ClusterSize: req.Params.ClusterSize,
 			Suspend:     req.Params.Suspend,
 			Resume:      req.Params.Resume,
 		}
 
 		if req.Params.Pxc != nil && req.Params.Pxc.ComputeResources != nil {
-			in.Params.Pxc = &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC{
-				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
+			in.Params.Pxc = &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC{
+				ComputeResources: &controllerv1beta1.ComputeResources{
 					CpuM:        req.Params.Pxc.ComputeResources.CpuM,
 					MemoryBytes: req.Params.Pxc.ComputeResources.MemoryBytes,
 				},
@@ -243,8 +243,8 @@ func (s XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *dbaa
 		}
 
 		if req.Params.Proxysql != nil && req.Params.Proxysql.ComputeResources != nil {
-			in.Params.Proxysql = &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_ProxySQL{
-				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
+			in.Params.Proxysql = &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_ProxySQL{
+				ComputeResources: &controllerv1beta1.ComputeResources{
 					CpuM:        req.Params.Proxysql.ComputeResources.CpuM,
 					MemoryBytes: req.Params.Proxysql.ComputeResources.MemoryBytes,
 				},
