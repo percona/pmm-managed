@@ -131,7 +131,7 @@ func (k kubernetesServer) UnregisterKubernetesCluster(ctx context.Context, req *
 	return &dbaasv1beta1.UnregisterKubernetesClusterResponse{}, nil
 }
 
-// GetKubernetesCluster return KubAuth with Kubernetes config.
+// GetKubernetesCluster return KubeAuth with Kubernetes config.
 func (k kubernetesServer) GetKubernetesCluster(ctx context.Context, req *dbaasv1beta1.GetKubernetesClusterRequest) (*dbaasv1beta1.GetKubernetesClusterResponse, error) {
 	kubernetesCluster, err := models.FindKubernetesClusterByName(k.db.Querier, req.KubernetesClusterName)
 	if err != nil {
