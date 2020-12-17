@@ -173,6 +173,7 @@ func (svc *Service) SendAlerts(ctx context.Context, alerts ammodels.PostableAler
 	}
 }
 
+// GetAlerts returns alerts available in alertmanager.
 func (svc *Service) GetAlerts(ctx context.Context) ([]*ammodels.GettableAlert, error) {
 	resp, err := amclient.Default.Alert.GetAlerts(&alert.GetAlertsParams{
 		Context: ctx,
@@ -184,6 +185,7 @@ func (svc *Service) GetAlerts(ctx context.Context) ([]*ammodels.GettableAlert, e
 	return resp.Payload, nil
 }
 
+// FindAlertByID searches alert by ID in alertmanager.
 func (svc *Service) FindAlertByID(ctx context.Context, id string) (*ammodels.GettableAlert, error) {
 	alerts, err := svc.GetAlerts(ctx)
 	if err != nil {
@@ -199,6 +201,7 @@ func (svc *Service) FindAlertByID(ctx context.Context, id string) (*ammodels.Get
 	return nil, errors.Errorf("alert with id %s not found", id)
 }
 
+// Silence mutes alert with specified id.
 func (svc *Service) Silence(ctx context.Context, id string) error {
 	a, err := svc.FindAlertByID(ctx, id)
 	if err != nil {
@@ -238,6 +241,7 @@ func (svc *Service) Silence(ctx context.Context, id string) error {
 	return err
 }
 
+// Unsilence unmutes alert with specified id.
 func (svc *Service) Unsilence(ctx context.Context, id string) error {
 	a, err := svc.FindAlertByID(ctx, id)
 	if err != nil {

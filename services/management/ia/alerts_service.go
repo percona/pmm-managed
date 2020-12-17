@@ -27,7 +27,6 @@ import (
 	"github.com/percona/pmm/api/managementpb"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/pkg/errors"
-	prom "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -36,6 +35,7 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
+// AlertsService represents integrated alerting alerts API.
 type AlertsService struct {
 	db               *reform.DB
 	l                *logrus.Entry
@@ -43,6 +43,7 @@ type AlertsService struct {
 	templatesService *TemplatesService
 }
 
+// NewAlertsService creates new alerts API service.
 func NewAlertsService(db *reform.DB, alertManager alertManager, templatesService *TemplatesService) *AlertsService {
 	return &AlertsService{
 		db:               db,
@@ -52,18 +53,7 @@ func NewAlertsService(db *reform.DB, alertManager alertManager, templatesService
 	}
 }
 
-type Alert struct {
-	ID          string            `json:"id"`
-	Name        string            `json:"name"`
-	GroupID     string            `json:"group_id"`
-	Expression  string            `json:"expression"`
-	ActiveAt    time.Time         `json:"activeAt"`
-	Annotations map[string]string `json:"annotations"`
-	Labels      map[string]string `json:"labels"`
-	State       prom.AlertState   `json:"state"`
-	Value       string            `json:"value"`
-}
-
+// ListAlerts returns list of existing alerts.
 func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlertsRequest) (*iav1beta1.ListAlertsResponse, error) {
 	alerts, err := s.alertManager.GetAlerts(ctx)
 	if err != nil {
@@ -141,6 +131,7 @@ func getAlertID(alert *ammodels.GettableAlert) string {
 	return *alert.Fingerprint
 }
 
+// ToggleAlert allows to silence/unsilence specified alerts.
 func (s *AlertsService) ToggleAlert(ctx context.Context, req *iav1beta1.ToggleAlertRequest) (*iav1beta1.ToggleAlertResponse, error) {
 	switch req.Silenced {
 	case iav1beta1.BooleanFlag_TRUE:
@@ -158,6 +149,7 @@ func (s *AlertsService) ToggleAlert(ctx context.Context, req *iav1beta1.ToggleAl
 	return &iav1beta1.ToggleAlertResponse{}, nil
 }
 
+// DeleteAlert is unimplemented.
 func (s *AlertsService) DeleteAlert(ctx context.Context, req *iav1beta1.DeleteAlertRequest) (*iav1beta1.DeleteAlertResponse, error) {
 	panic("implement me")
 }
