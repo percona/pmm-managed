@@ -328,7 +328,6 @@ func TestSettings(t *testing.T) {
 			assert.Equal(t, ns.IntegratedAlerting.EmailAlertingSettings, emailSettings)
 			assert.Equal(t, ns.IntegratedAlerting.SlackAlertingSettings, slackSettings)
 
-			// TODO Palash: update nothing
 			ns, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{})
 			assert.NoError(t, err)
 			assert.True(t, ns.IntegratedAlerting.Enabled)
