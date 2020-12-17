@@ -179,8 +179,9 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 
 	iav1beta1.RegisterAlertsServer(gRPCServer, ia.NewAlertsService(deps.db))
 	iav1beta1.RegisterChannelsServer(gRPCServer, ia.NewChannelsService(deps.db))
-	iav1beta1.RegisterRulesServer(gRPCServer, ia.NewRulesService(deps.db))
-	iav1beta1.RegisterTemplatesServer(gRPCServer, ia.NewTemplatesService(deps.db))
+	templatesSvc := ia.NewTemplatesService(deps.db)
+	iav1beta1.RegisterTemplatesServer(gRPCServer, templatesSvc)
+	iav1beta1.RegisterRulesServer(gRPCServer, ia.NewRulesService(deps.db, templatesSvc))
 
 	// TODO Remove once changing settings.DBaaS.Enabled is possible via API.
 	if deps.settings.DBaaS.Enabled {
@@ -246,7 +247,7 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 		Indent:       "  ",
 	}
 
-	// FIXME make that a default behavior: https://jira.percona.com/browse/PMM-4597
+	// FIXME make that a default behavior: https://jira.percona.com/browse/PMM-6722
 	if nicer, _ := strconv.ParseBool(os.Getenv("PERCONA_TEST_NICER_API")); nicer {
 		l.Warn("Enabling nicer API with default/zero values in response.")
 		marshaller.EmitDefaults = true
