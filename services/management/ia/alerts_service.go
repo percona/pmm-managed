@@ -101,7 +101,7 @@ func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlert
 			return nil, e
 		}
 
-		template, ok := s.templatesService.GetTemplates(ctx)[rule.TemplateName]
+		template, ok := s.templatesService.GetTemplates()[rule.TemplateName]
 		if !ok {
 			return nil, status.Errorf(codes.NotFound, "Failed to find template with name: %s", rule.TemplateName)
 		}
@@ -132,7 +132,7 @@ func getAlertID(alert *ammodels.GettableAlert) string {
 
 // ToggleAlert allows to silence/unsilence specified alerts.
 func (s *AlertsService) ToggleAlert(ctx context.Context, req *iav1beta1.ToggleAlertRequest) (*iav1beta1.ToggleAlertResponse, error) {
-	switch req.Silenced {
+	switch req.Silenced { //nolint:exhaustive
 	case iav1beta1.BooleanFlag_TRUE:
 		err := s.alertManager.Silence(ctx, req.AlertId)
 		if err != nil {
