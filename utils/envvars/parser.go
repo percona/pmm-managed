@@ -69,16 +69,6 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 		k, v := strings.ToUpper(p[0]), strings.ToLower(p[1])
 		logrus.Tracef("ParseEnvVars: %#q: k=%#q v=%#q", env, k, v)
 
-		// skip Grafana's environment variables
-		if strings.HasPrefix(k, "GF_") {
-			continue
-		}
-
-		// skip supervisord environment variables
-		if strings.HasPrefix(k, "SUPERVISOR_") {
-			continue
-		}
-
 		var err error
 		switch k {
 		case "_", "HOME", "HOSTNAME", "LANG", "PATH", "PWD", "SHLVL", "TERM":
@@ -125,27 +115,47 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 				// disable cache explicitly
 				envSettings.DisableVMCache = true
 			}
+
+		case "PERCONA_TEST_AUTH_HOST", "PERCONA_TEST_CHECKS_HOST", "PERCONA_TEST_TELEMETRY_HOST":
+			err = fmt.Errorf("environment variable %q is removed and replaced by %q", k, envSaaSHost)
+
 		default:
-			// skip test environment variables that are handled here or elsewere with a big warning
-			if strings.HasPrefix(k, "PERCONA_TEST_") {
-				warns = append(warns, fmt.Sprintf("environment variable %q IS NOT SUPPORTED and WILL BE REMOVED IN THE FUTURE", k))
-				if k == "PERCONA_TEST_DBAAS" {
-					envSettings.EnableDBaaS, err = strconv.ParseBool(v)
-					if err != nil {
-						err = fmt.Errorf("invalid value %q for environment variable %q", v, k)
-						errs = append(errs, err)
-						continue
-					}
-					envSettings.DisableDBaaS = !envSettings.EnableDBaaS
-				}
-			} else {
+			// handle prefixes
+
+			// skip Grafana's environment variables
+			if strings.HasPrefix(k, "GF_") {
+				continue
+			}
+
+			// skip supervisord environment variables
+			if strings.HasPrefix(k, "SUPERVISOR_") {
+				continue
+			}
+
+			if !strings.HasPrefix(k, "PERCONA_TEST_") {
 				warns = append(warns, fmt.Sprintf("unknown environment variable %q", env))
+				continue
+			}
+
+			warns = append(warns, fmt.Sprintf("environment variable %q IS NOT SUPPORTED and WILL BE REMOVED IN THE FUTURE", k))
+
+			// TODO rename to ENABLE_DBAAS and move to own `case` before `default:`
+			if k == "PERCONA_TEST_DBAAS" {
+				envSettings.EnableDBaaS, err = strconv.ParseBool(v)
+				if err != nil {
+					err = fmt.Errorf("invalid value %q for environment variable %q", v, k)
+					errs = append(errs, err)
+					continue
+				}
+				envSettings.DisableDBaaS = !envSettings.EnableDBaaS
 			}
 		}
+
 		if err != nil {
 			errs = append(errs, err)
 		}
 	}
+
 	return envSettings, errs, warns
 }
 
