@@ -224,15 +224,15 @@ func (svc *Service) Silence(ctx context.Context, id string) error {
 	}
 
 	starts := strfmt.DateTime(time.Now())
-	ends := strfmt.DateTime(time.Now().Add(365 * 24 * time.Hour)) // TODO increase
+	ends := strfmt.DateTime(time.Now().Add(100 * 365 * 24 * time.Hour)) // Mute for 100 years
 	_, err = amclient.Default.Silence.PostSilences(&silence.PostSilencesParams{
 		Silence: &ammodels.PostableSilence{
 			Silence: ammodels.Silence{
-				Comment:   pointer.ToString("some comment"),
-				CreatedBy: pointer.ToString("some user"),
+				Comment:   pointer.ToString(""),
+				CreatedBy: pointer.ToString("PMM"),
+				StartsAt:  &starts,
 				EndsAt:    &ends,
 				Matchers:  matchers,
-				StartsAt:  &starts,
 			},
 		},
 		Context: ctx,

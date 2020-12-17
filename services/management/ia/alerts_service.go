@@ -62,7 +62,6 @@ func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlert
 
 	var res []*iav1beta1.Alert
 	for _, alert := range alerts {
-
 		updatedAt, err := ptypes.TimestampProto(time.Time(*alert.UpdatedAt))
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to convert timestamp")
