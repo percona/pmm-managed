@@ -238,8 +238,12 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 		settings.IntegratedAlerting.SlackAlertingSettings = nil
 	}
 
-	settings.IntegratedAlerting.EmailAlertingSettings = params.EmailAlertingSettings
-	settings.IntegratedAlerting.SlackAlertingSettings = params.SlackAlertingSettings
+	if params.EmailAlertingSettings != nil {
+		settings.IntegratedAlerting.EmailAlertingSettings = params.EmailAlertingSettings
+	}
+	if params.SlackAlertingSettings != nil {
+		settings.IntegratedAlerting.SlackAlertingSettings = params.SlackAlertingSettings
+	}
 
 	err = SaveSettings(q, settings)
 	if err != nil {
