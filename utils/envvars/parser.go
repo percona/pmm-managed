@@ -182,7 +182,7 @@ func GetSAASHost() (string, error) {
 	return host, nil
 }
 
-// parseSAASHost parses, validates and returns SAAS host, otherwize returns error
+// parseSAASHost parses, validates and returns SAAS host, otherwise returns error.
 func parseSAASHost(v string) (string, error) {
 	if v == "" {
 		logrus.Infof("Using default SaaS host %q.", defaultSaaSHost)
