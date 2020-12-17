@@ -123,11 +123,11 @@ func (s *TemplatesService) GetTemplates(ctx context.Context) map[string]template
 	return res
 }
 
-// collect collects IA rule templates from various sources like:
+// Collect collects IA rule templates from various sources like:
 // builtin templates: read from the generated code in bindata.go.
 // user file templates: read from yaml files created by the user in `/srv/ia/templates`
 // user API templates: in the DB created using the API.
-func (s *TemplatesService) collect(ctx context.Context) {
+func (s *TemplatesService) Collect(ctx context.Context) {
 	builtInTemplates, err := s.loadTemplatesFromAssets(ctx)
 	if err != nil {
 		s.l.Errorf("Failed to load built-in rule templates: %s.", err)
@@ -456,7 +456,7 @@ func (s *TemplatesService) dumpRule(rule *ruleFile) error {
 // ListTemplates returns a list of all collected Alert Rule Templates.
 func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.ListTemplatesRequest) (*iav1beta1.ListTemplatesResponse, error) {
 	if req.Reload {
-		s.collect(ctx)
+		s.Collect(ctx)
 	}
 
 	templates := s.GetTemplates(ctx)
@@ -508,7 +508,7 @@ func (s *TemplatesService) CreateTemplate(ctx context.Context, req *iav1beta1.Cr
 		return nil, e
 	}
 
-	s.collect(ctx)
+	s.Collect(ctx)
 
 	return &iav1beta1.CreateTemplateResponse{}, nil
 }
@@ -544,7 +544,7 @@ func (s *TemplatesService) UpdateTemplate(ctx context.Context, req *iav1beta1.Up
 		return nil, e
 	}
 
-	s.collect(ctx)
+	s.Collect(ctx)
 
 	return &iav1beta1.UpdateTemplateResponse{}, nil
 }

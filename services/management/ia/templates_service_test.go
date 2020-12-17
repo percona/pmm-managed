@@ -63,7 +63,7 @@ func TestCollect(t *testing.T) {
 
 		svc := NewTemplatesService(db)
 		svc.userTemplatesPath = testBadTemplates
-		svc.collect(ctx)
+		svc.Collect(ctx)
 
 		require.Empty(t, svc.GetTemplates(ctx))
 	})
@@ -73,7 +73,7 @@ func TestCollect(t *testing.T) {
 
 		svc := NewTemplatesService(db)
 		svc.userTemplatesPath = testUserTemplates
-		svc.collect(ctx)
+		svc.Collect(ctx)
 
 		templates := svc.GetTemplates(ctx)
 		require.NotEmpty(t, templates)
@@ -84,7 +84,7 @@ func TestCollect(t *testing.T) {
 
 		// check whether map was cleared and updated on a subsequent call
 		svc.userTemplatesPath = testUser2Templates
-		svc.collect(ctx)
+		svc.Collect(ctx)
 
 		templates = svc.GetTemplates(ctx)
 		require.NotEmpty(t, templates)
@@ -107,7 +107,7 @@ func TestConvertTemplate(t *testing.T) {
 		svc := NewTemplatesService(db)
 		svc.userTemplatesPath = testUserTemplates
 		svc.rulesPath = testDir
-		svc.collect(ctx)
+		svc.Collect(ctx)
 
 		userRuleFilepath := testDir + userRuleFilepath
 		builtinRuleFilepath1 := testDir + builtinRuleFilepath1
