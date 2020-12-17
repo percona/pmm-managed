@@ -94,10 +94,6 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 			},
 		}
 
-		if c.Params.Paused && cluster.State == dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY {
-			cluster.State = dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED
-		}
-
 		clusters[i] = &cluster
 	}
 

@@ -80,10 +80,6 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 			},
 		}
 
-		if c.Params.Paused && cluster.State == dbaasv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_READY {
-			cluster.State = dbaasv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_PAUSED
-		}
-
 		if c.Params.Pxc != nil {
 			cluster.Params.Pxc = &dbaasv1beta1.XtraDBClusterParams_PXC{
 				DiskSize: c.Params.Pxc.DiskSize,
