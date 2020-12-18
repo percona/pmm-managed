@@ -29,18 +29,18 @@ import (
 // Template represents Integrated Alerting rule template.
 //reform:ia_templates
 type Template struct {
-	Name        string        `reform:"name,pk"`
-	Version     uint32        `reform:"version"`
-	Summary     string        `reform:"summary"`
-	Tiers       Tiers         `reform:"tiers"`
-	Expr        string        `reform:"expr"`
-	Params      Params        `reform:"params"`
-	For         time.Duration `reform:"for"`
-	Severity    Severity      `reform:"severity"`
-	Labels      []byte        `reform:"labels"`
-	Annotations []byte        `reform:"annotations"`
-	Source      Source        `reform:"source"`
-	Yaml        string        `reform:"yaml"`
+	Name        string         `reform:"name,pk"`
+	Version     uint32         `reform:"version"`
+	Summary     string         `reform:"summary"`
+	Tiers       Tiers          `reform:"tiers"`
+	Expr        string         `reform:"expr"`
+	Params      TemplateParams `reform:"params"`
+	For         time.Duration  `reform:"for"`
+	Severity    Severity       `reform:"severity"`
+	Labels      []byte         `reform:"labels"`
+	Annotations []byte         `reform:"annotations"`
+	Source      Source         `reform:"source"`
+	Yaml        string         `reform:"yaml"`
 
 	CreatedAt time.Time `reform:"created_at"`
 	UpdatedAt time.Time `reform:"updated_at"`
@@ -99,14 +99,14 @@ func (t Tiers) Value() (driver.Value, error) { return jsonValue(t) }
 // Scan implements database/sql.Scanner interface. Should be defined on the pointer.
 func (t *Tiers) Scan(src interface{}) error { return jsonScan(t, src) }
 
-// Params represent Param slice.
-type Params []Param
+// TemplateParams represent TemplateParam slice.
+type TemplateParams []TemplateParam
 
 // Value implements database/sql/driver.Valuer interface. Should be defined on the value.
-func (p Params) Value() (driver.Value, error) { return jsonValue(p) }
+func (p TemplateParams) Value() (driver.Value, error) { return jsonValue(p) }
 
 // Scan implements database/sql.Scanner interface. Should be defined on the pointer.
-func (p *Params) Scan(src interface{}) error { return jsonScan(p, src) }
+func (p *TemplateParams) Scan(src interface{}) error { return jsonScan(p, src) }
 
 // ParamType represents parameter type.
 type ParamType string
@@ -118,8 +118,8 @@ const (
 	String = ParamType("string")
 )
 
-// Param represents template parameter.
-type Param struct {
+// TemplateParam represents template parameter.
+type TemplateParam struct {
 	Name    string    `json:"name"`
 	Summary string    `json:"summary"`
 	Unit    string    `json:"unit"`
