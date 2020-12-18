@@ -1,10 +1,10 @@
 ---
 templates:
-  - name: mysql_down
+  - name: postgresql_down
     version: 1
-    summary: MySQL DOWN
+    summary: PostgreSQL DOWN
     expr: |-
-      sum by (service_name, node_name, service_type) (mysql_up) == 0
+      sum by (service_name, node_name, service_type) (pg_up) == 0
     params:
     for: 5s
     severity: critical
@@ -14,6 +14,6 @@ templates:
     annotations:
       description: |-
         This template is not finished: https://jira.percona.com/browse/PMM-7135
-        MySQL instance {{ $labels.service_name }} is DOWN.
+        PostgreSQL instance {{ $labels.service_name }} is DOWN.
         LABELS: {{ $labels }}
-      summary: MySQL DOWN (instance {{ $labels.service_name }})
+      summary: PostgreSQL DOWN (instance {{ $labels.service_name }})

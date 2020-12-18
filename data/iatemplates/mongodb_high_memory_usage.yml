@@ -1,11 +1,11 @@
 ---
 templates:
-  - name: mysql_too_many_connections
+  - name: mongodb_high_memory_usage
     version: 1
-    summary: MySQL connections in use
+    summary: Memory used MongoDB instances
     expr: |-
-      max_over_time(mysql_global_status_threads_connected[5m]) / ignoring (job)
-      mysql_global_variables_max_connections
+      sum by (node_name) (mongodb_ss_mem_resident * 1024 * 1024)
+      / on (node_name) (node_memory_MemTotal_bytes)
       * 100
       > [[ .threshold ]]
     params:
@@ -23,7 +23,7 @@ templates:
     annotations:
       description: |-
         This template is not finished: https://jira.percona.com/browse/PMM-7135
-        More than [[ .threshold ]]% of MySQL connections are in use on {{ $labels.service_name }}
+        More than [[ .threshold ]]% of Memory used by MongoDB service on {{ $labels.node_name }}
         VALUE = {{ $value }}
         LABELS: {{ $labels }}
-      summary: MySQL too many connections (instance {{ $labels.service_name }})
+      summary: MongoDB high memory usage (instance {{ $labels.node_name }})
