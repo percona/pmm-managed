@@ -549,19 +549,19 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 
 		if req.EmailAlertingSettings != nil {
 			settingsParams.EmailAlertingSettings = &models.EmailAlertingSettings{
-				From:      req.EmailAlertingSettings.GetFrom(),
-				Smarthost: req.EmailAlertingSettings.GetSmarthost(),
-				Hello:     req.EmailAlertingSettings.GetHello(),
-				Username:  req.EmailAlertingSettings.GetUsername(),
-				Password:  req.EmailAlertingSettings.GetPassword(),
-				Identity:  req.EmailAlertingSettings.GetIdentity(),
-				Secret:    req.EmailAlertingSettings.GetSecret(),
+				From:      req.EmailAlertingSettings.From,
+				Smarthost: req.EmailAlertingSettings.Smarthost,
+				Hello:     req.EmailAlertingSettings.Hello,
+				Username:  req.EmailAlertingSettings.Username,
+				Password:  req.EmailAlertingSettings.Password,
+				Identity:  req.EmailAlertingSettings.Identity,
+				Secret:    req.EmailAlertingSettings.Secret,
 			}
 		}
 
 		if req.SlackAlertingSettings != nil {
 			settingsParams.SlackAlertingSettings = &models.SlackAlertingSettings{
-				URL: req.SlackAlertingSettings.GetUrl(),
+				URL: req.SlackAlertingSettings.Url,
 			}
 		}
 
