@@ -13,6 +13,9 @@ import (
 	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
 )
 
+// Note: Even though the IA services check for alerting enabled or disabled before returning results
+// we don't enable or disable IA explicit in our tests since it is enabled by default through
+// ENABLE_ALERTING env var.
 func TestAddChannel(t *testing.T) {
 	client := channelsClient.Default.Channels
 
@@ -205,7 +208,6 @@ func TestListChannels(t *testing.T) {
 			found = true
 		}
 	}
-
 	assert.True(t, found, "Expected channel not found")
 }
 

@@ -11,7 +11,7 @@ build:
 	go test -c -v ./management
 	go test -c -v ./server
 
-dev-test:						## Run test on dev env. Use `PMM_KUBECONFIG=/path/to/kubeconfig.yaml make dev-test` to run tests for BDaaS.
+dev-test:						## Run test on dev env. Use `PMM_KUBECONFIG=/path/to/kubeconfig.yaml make dev-test` to run tests for DBaaS.
 	go test -count=1 -p 1 -v ./... -pmm.server-insecure-tls
 
 run:
