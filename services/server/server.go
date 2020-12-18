@@ -553,9 +553,11 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 				Smarthost: req.EmailAlertingSettings.Smarthost,
 				Hello:     req.EmailAlertingSettings.Hello,
 				Username:  req.EmailAlertingSettings.Username,
-				Password:  req.EmailAlertingSettings.Password,
 				Identity:  req.EmailAlertingSettings.Identity,
 				Secret:    req.EmailAlertingSettings.Secret,
+			}
+			if req.EmailAlertingSettings.Password != "" {
+				settingsParams.EmailAlertingSettings.Password = req.EmailAlertingSettings.Password
 			}
 		}
 
