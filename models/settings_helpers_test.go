@@ -310,7 +310,7 @@ func TestSettings(t *testing.T) {
 
 		t.Run("Integrated Alerting settings validation", func(t *testing.T) {
 			emailSettings := &models.EmailAlertingSettings{
-				From:      gofakeit.Email(),
+				From:      tests.GenEmail(t),
 				Smarthost: "0.0.0.0:8080",
 				Hello:     "smtp_host",
 				Username:  "smtp_username",
