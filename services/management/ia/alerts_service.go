@@ -33,6 +33,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services"
 )
 
 // AlertsService represents integrated alerting alerts API.
@@ -55,6 +56,15 @@ func NewAlertsService(db *reform.DB, alertManager alertManager, templatesService
 
 // ListAlerts returns list of existing alerts.
 func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlertsRequest) (*iav1beta1.ListAlertsResponse, error) {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	if !settings.IntegratedAlerting.Enabled {
+		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
+	}
+
 	alerts, err := s.alertManager.GetAlerts(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get alerts form alertmanager")
@@ -132,6 +142,15 @@ func getAlertID(alert *ammodels.GettableAlert) string {
 
 // ToggleAlert allows to silence/unsilence specified alerts.
 func (s *AlertsService) ToggleAlert(ctx context.Context, req *iav1beta1.ToggleAlertRequest) (*iav1beta1.ToggleAlertResponse, error) {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	if !settings.IntegratedAlerting.Enabled {
+		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
+	}
+
 	switch req.Silenced { //nolint:exhaustive
 	case iav1beta1.BooleanFlag_TRUE:
 		err := s.alertManager.Silence(ctx, req.AlertId)
