@@ -20,7 +20,7 @@ package dbaas
 import (
 	"context"
 
-	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
+	dbaascontrollerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -50,8 +50,8 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 		return nil, err
 	}
 
-	in := controllerv1beta1.ListXtraDBClustersRequest{
-		KubeAuth: &controllerv1beta1.KubeAuth{
+	in := dbaascontrollerv1beta1.ListXtraDBClustersRequest{
+		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
 	}
@@ -119,8 +119,8 @@ func (s XtraDBClusterService) GetXtraDBCluster(ctx context.Context, req *dbaasv1
 	//  - Ex.: kubectl get -o=json PerconaXtraDBCluster/<cluster_name>
 	// 2. Get root password:
 	//   - Ex.: kubectl get secret my-cluster-secrets -o json  | jq -r ".data.root" | base64 -d
-	in := &controllerv1beta1.GetXtraDBClusterRequest{
-		KubeAuth: &controllerv1beta1.KubeAuth{
+	in := &dbaascontrollerv1beta1.GetXtraDBClusterRequest{
+		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
 		Name: req.Name,
@@ -162,34 +162,34 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 		return nil, err
 	}
 
-	in := controllerv1beta1.CreateXtraDBClusterRequest{
-		KubeAuth: &controllerv1beta1.KubeAuth{
+	in := dbaascontrollerv1beta1.CreateXtraDBClusterRequest{
+		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
 		Name:             req.Name,
 		PmmPublicAddress: settings.PMMPublicAddress,
-		Params: &controllerv1beta1.XtraDBClusterParams{
+		Params: &dbaascontrollerv1beta1.XtraDBClusterParams{
 			ClusterSize: req.Params.ClusterSize,
-			Pxc: &controllerv1beta1.XtraDBClusterParams_PXC{
-				ComputeResources: new(controllerv1beta1.ComputeResources),
+			Pxc: &dbaascontrollerv1beta1.XtraDBClusterParams_PXC{
+				ComputeResources: new(dbaascontrollerv1beta1.ComputeResources),
 				DiskSize:         req.Params.Pxc.DiskSize,
 			},
-			Proxysql: &controllerv1beta1.XtraDBClusterParams_ProxySQL{
-				ComputeResources: new(controllerv1beta1.ComputeResources),
+			Proxysql: &dbaascontrollerv1beta1.XtraDBClusterParams_ProxySQL{
+				ComputeResources: new(dbaascontrollerv1beta1.ComputeResources),
 				DiskSize:         req.Params.Proxysql.DiskSize,
 			},
 		},
 	}
 
 	if req.Params.Pxc.ComputeResources != nil {
-		in.Params.Pxc.ComputeResources = &controllerv1beta1.ComputeResources{
+		in.Params.Pxc.ComputeResources = &dbaascontrollerv1beta1.ComputeResources{
 			CpuM:        req.Params.Pxc.ComputeResources.CpuM,
 			MemoryBytes: req.Params.Pxc.ComputeResources.MemoryBytes,
 		}
 	}
 
 	if req.Params.Proxysql.ComputeResources != nil {
-		in.Params.Proxysql.ComputeResources = &controllerv1beta1.ComputeResources{
+		in.Params.Proxysql.ComputeResources = &dbaascontrollerv1beta1.ComputeResources{
 			CpuM:        req.Params.Proxysql.ComputeResources.CpuM,
 			MemoryBytes: req.Params.Proxysql.ComputeResources.MemoryBytes,
 		}
@@ -211,8 +211,8 @@ func (s XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *dbaa
 		return nil, err
 	}
 
-	in := controllerv1beta1.UpdateXtraDBClusterRequest{
-		KubeAuth: &controllerv1beta1.KubeAuth{
+	in := dbaascontrollerv1beta1.UpdateXtraDBClusterRequest{
+		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
 		Name: req.Name,
@@ -223,15 +223,15 @@ func (s XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *dbaa
 			return nil, status.Error(codes.InvalidArgument, "resume and suspend cannot be set together")
 		}
 
-		in.Params = &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
+		in.Params = &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
 			ClusterSize: req.Params.ClusterSize,
 			Suspend:     req.Params.Suspend,
 			Resume:      req.Params.Resume,
 		}
 
 		if req.Params.Pxc != nil && req.Params.Pxc.ComputeResources != nil {
-			in.Params.Pxc = &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC{
-				ComputeResources: &controllerv1beta1.ComputeResources{
+			in.Params.Pxc = &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC{
+				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
 					CpuM:        req.Params.Pxc.ComputeResources.CpuM,
 					MemoryBytes: req.Params.Pxc.ComputeResources.MemoryBytes,
 				},
@@ -239,8 +239,8 @@ func (s XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *dbaa
 		}
 
 		if req.Params.Proxysql != nil && req.Params.Proxysql.ComputeResources != nil {
-			in.Params.Proxysql = &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_ProxySQL{
-				ComputeResources: &controllerv1beta1.ComputeResources{
+			in.Params.Proxysql = &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_ProxySQL{
+				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
 					CpuM:        req.Params.Proxysql.ComputeResources.CpuM,
 					MemoryBytes: req.Params.Proxysql.ComputeResources.MemoryBytes,
 				},
@@ -263,9 +263,9 @@ func (s XtraDBClusterService) DeleteXtraDBCluster(ctx context.Context, req *dbaa
 		return nil, err
 	}
 
-	in := controllerv1beta1.DeleteXtraDBClusterRequest{
+	in := dbaascontrollerv1beta1.DeleteXtraDBClusterRequest{
 		Name: req.Name,
-		KubeAuth: &controllerv1beta1.KubeAuth{
+		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
 	}
@@ -285,9 +285,9 @@ func (s XtraDBClusterService) RestartXtraDBCluster(ctx context.Context, req *dba
 		return nil, err
 	}
 
-	in := controllerv1beta1.RestartXtraDBClusterRequest{
+	in := dbaascontrollerv1beta1.RestartXtraDBClusterRequest{
 		Name: req.Name,
-		KubeAuth: &controllerv1beta1.KubeAuth{
+		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
 	}
