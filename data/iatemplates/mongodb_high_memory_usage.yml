@@ -1,11 +1,13 @@
 ---
 templates:
-  - name: postgresql_too_many_connections
+  - name: mongodb_high_memory_usage
     version: 1
-    summary: PostgreSQL connections in use
+    summary: Memory used MongoDB instances
     expr: |-
-      sum(pg_stat_activity_count{datname!~"template.*|postgres"})
-      > pg_settings_max_connections * [[ .threshold ]] / 100
+      sum by (node_name) (mongodb_ss_mem_resident * 1024 * 1024)
+      / on (node_name) (node_memory_MemTotal_bytes)
+      * 100
+      > [[ .threshold ]]
     params:
       - name: threshold
         summary: A percentage from configured maximum
@@ -21,7 +23,7 @@ templates:
     annotations:
       description: |-
         This template is not finished: https://jira.percona.com/browse/PMM-7135
-        More than [[ .threshold ]]% of PostgreSQL connections are in use on {{ $labels.service_name }}
+        More than [[ .threshold ]]% of Memory used by MongoDB service on {{ $labels.node_name }}
         VALUE = {{ $value }}
         LABELS: {{ $labels }}
-      summary: PostgreSQL too many connections (instance {{ $labels.service_name }})
+      summary: MongoDB high memory usage (instance {{ $labels.node_name }})

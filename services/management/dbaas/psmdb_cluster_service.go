@@ -74,6 +74,11 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 				}
 			}
 		}
+
+		message := ""
+		if c.Operation != nil {
+			message = c.Operation.Message
+		}
 		cluster := dbaasv1beta1.ListPSMDBClustersResponse_Cluster{
 			Name: c.Name,
 			Params: &dbaasv1beta1.PSMDBClusterParams{
@@ -84,6 +89,9 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 				},
 			},
 			State: psmdbStates()[c.State],
+			Operation: &dbaasv1beta1.RunningOperation{
+				Message: message,
+			},
 		}
 
 		clusters[i] = &cluster
@@ -169,17 +177,28 @@ func (s PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *dbaasv
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
 		Name: req.Name,
-		Params: &dbaascontrollerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams{
+	}
+
+	if req.Params != nil {
+		if req.Params.Suspend && req.Params.Resume {
+			return nil, status.Error(codes.InvalidArgument, "resume and suspend cannot be set together")
+		}
+
+		in.Params = &dbaascontrollerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams{
 			ClusterSize: req.Params.ClusterSize,
-			Replicaset: &dbaascontrollerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams_ReplicaSet{
+			Suspend:     req.Params.Suspend,
+			Resume:      req.Params.Resume,
+		}
+
+		if req.Params.Replicaset != nil && req.Params.Replicaset.ComputeResources != nil {
+			in.Params.Replicaset = &dbaascontrollerv1beta1.UpdatePSMDBClusterRequest_UpdatePSMDBClusterParams_ReplicaSet{
 				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
 					CpuM:        req.Params.Replicaset.ComputeResources.CpuM,
 					MemoryBytes: req.Params.Replicaset.ComputeResources.MemoryBytes,
 				},
-			},
-		},
+			}
+		}
 	}
-
 	_, err = s.controllerClient.UpdatePSMDBCluster(ctx, &in)
 	if err != nil {
 		return nil, err
@@ -239,5 +258,6 @@ func psmdbStates() map[dbaascontrollerv1beta1.PSMDBClusterState]dbaasv1beta1.PSM
 		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY:    dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_READY,
 		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED:   dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_FAILED,
 		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING: dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_DELETING,
+		dbaascontrollerv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED:   dbaasv1beta1.PSMDBClusterState_PSMDB_CLUSTER_STATE_PAUSED,
 	}
 }

@@ -383,12 +383,12 @@
   version = "v0.3.0"
 
 [[projects]]
-  branch = "PMM-6876-operators-in-response"
-  digest = "1:b6a82e99ba5aa7c953cb8247b6ebe450c79a6f030d5c38a6ed2c757e491c1cfa"
+  branch = "main"
+  digest = "1:053f0c93dcddd3033e6b0dffa70717ca742f66c51d8894b7f1a1854eb1e6c853"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "afddf62674e2c75287025be28b54391fadb42dbc"
+  revision = "f96aecdeca9326ea98e11b68d214c536d2657953"
 
 [[projects]]
   branch = "main"
@@ -405,7 +405,7 @@
     "pkg/starlark",
   ]
   pruneopts = "NUT"
-  revision = "ad38b2c7116bd3cc80057ab2a8cf86166d9d2e24"
+  revision = "b395fb361ebdfbc9dcbcb7b702fc197c8f59e5fa"
 
 [[projects]]
   digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
@@ -416,8 +416,8 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-6876-operators-in-response"
-  digest = "1:a6a9acc4e2892977b98a4b85bb97050cdbdf74a06853a8b1778e0ac0e1bfa801"
+  branch = "PMM-2.0"
+  digest = "1:2f903bffbba71afa29d4e9cf4aa377ef81f858262efe80e83842907e2850b2d1"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -440,7 +440,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "160d862b3185d2f88499827352182386a85df7c5"
+  revision = "eb14295558e7df8f18c102f4259c19e4c26a3213"
 
 [[projects]]
   digest = "1:6832634ec059f4bfddaff75621cf1c4750949129c6de2e5e58e01059d0851e25"

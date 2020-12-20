@@ -24,6 +24,8 @@ import (
 	dbaascontrollerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -62,12 +64,20 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 
 	clusters := make([]*dbaasv1beta1.ListXtraDBClustersResponse_Cluster, len(out.Clusters))
 	for i, c := range out.Clusters {
+		message := ""
+		if c.Operation != nil {
+			message = c.Operation.Message
+		}
+
 		cluster := dbaasv1beta1.ListXtraDBClustersResponse_Cluster{
 			Name: c.Name,
 			Params: &dbaasv1beta1.XtraDBClusterParams{
 				ClusterSize: c.Params.ClusterSize,
 			},
-			State: dbaasv1beta1.XtraDBClusterState(c.State),
+			State: pxcStates()[c.State],
+			Operation: &dbaasv1beta1.RunningOperation{
+				Message: message,
+			},
 		}
 
 		if c.Params.Pxc != nil {
@@ -140,7 +150,8 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
-		Name: req.Name,
+		Name:             req.Name,
+		PmmPublicAddress: settings.PMMPublicAddress,
 		Params: &dbaascontrollerv1beta1.XtraDBClusterParams{
 			ClusterSize: req.Params.ClusterSize,
 			Pxc: &dbaascontrollerv1beta1.XtraDBClusterParams_PXC{
@@ -190,21 +201,36 @@ func (s XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *dbaa
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
 		Name: req.Name,
-		Params: &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
+	}
+
+	if req.Params != nil {
+		if req.Params.Suspend && req.Params.Resume {
+			return nil, status.Error(codes.InvalidArgument, "resume and suspend cannot be set together")
+		}
+
+		in.Params = &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
 			ClusterSize: req.Params.ClusterSize,
-			Pxc: &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC{
+			Suspend:     req.Params.Suspend,
+			Resume:      req.Params.Resume,
+		}
+
+		if req.Params.Pxc != nil && req.Params.Pxc.ComputeResources != nil {
+			in.Params.Pxc = &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC{
 				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
 					CpuM:        req.Params.Pxc.ComputeResources.CpuM,
 					MemoryBytes: req.Params.Pxc.ComputeResources.MemoryBytes,
 				},
-			},
-			Proxysql: &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_ProxySQL{
+			}
+		}
+
+		if req.Params.Proxysql != nil && req.Params.Proxysql.ComputeResources != nil {
+			in.Params.Proxysql = &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_ProxySQL{
 				ComputeResources: &dbaascontrollerv1beta1.ComputeResources{
 					CpuM:        req.Params.Proxysql.ComputeResources.CpuM,
 					MemoryBytes: req.Params.Proxysql.ComputeResources.MemoryBytes,
 				},
-			},
-		},
+			}
+		}
 	}
 
 	_, err = s.controllerClient.UpdateXtraDBCluster(ctx, &in)
@@ -257,4 +283,15 @@ func (s XtraDBClusterService) RestartXtraDBCluster(ctx context.Context, req *dba
 	}
 
 	return &dbaasv1beta1.RestartXtraDBClusterResponse{}, nil
+}
+
+func pxcStates() map[dbaascontrollerv1beta1.XtraDBClusterState]dbaasv1beta1.XtraDBClusterState {
+	return map[dbaascontrollerv1beta1.XtraDBClusterState]dbaasv1beta1.XtraDBClusterState{
+		dbaascontrollerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_INVALID:  dbaasv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_INVALID,
+		dbaascontrollerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_CHANGING: dbaasv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_CHANGING,
+		dbaascontrollerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_READY:    dbaasv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_READY,
+		dbaascontrollerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_FAILED:   dbaasv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_FAILED,
+		dbaascontrollerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_DELETING: dbaasv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_DELETING,
+		dbaascontrollerv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_PAUSED:   dbaasv1beta1.XtraDBClusterState_XTRA_DB_CLUSTER_STATE_PAUSED,
+	}
 }

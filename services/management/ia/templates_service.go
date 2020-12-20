@@ -29,10 +29,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
 	"github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona-platform/saas/pkg/common"
-	"github.com/percona/pmm/api/managementpb"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/percona/promconfig"
 	"github.com/pkg/errors"
@@ -44,6 +42,7 @@ import (
 
 	"github.com/percona/pmm-managed/data"
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services"
 	"github.com/percona/pmm-managed/utils/dir"
 )
 
@@ -276,7 +275,7 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]templateInfo, error) {
 					Expr:        template.Expr,
 					Params:      params,
 					For:         promconfig.Duration(template.For),
-					Severity:    convertSeverity(template.Severity),
+					Severity:    common.Severity(convertSeverity(template.Severity)),
 					Labels:      labels,
 					Annotations: annotations,
 				},
@@ -302,29 +301,6 @@ func convertSource(source models.Source) iav1beta1.TemplateSource {
 		return iav1beta1.TemplateSource_USER_API
 	default:
 		return iav1beta1.TemplateSource_TEMPLATE_SOURCE_INVALID
-	}
-}
-
-func convertSeverity(severity models.Severity) common.Severity {
-	switch severity {
-	case models.EmergencySeverity:
-		return common.Emergency
-	case models.AlertSeverity:
-		return common.Alert
-	case models.CriticalSeverity:
-		return common.Critical
-	case models.ErrorSeverity:
-		return common.Error
-	case models.WarningSeverity:
-		return common.Warning
-	case models.NoticeSeverity:
-		return common.Notice
-	case models.InfoSeverity:
-		return common.Info
-	case models.DebugSeverity:
-		return common.Debug
-	default:
-		return common.Unknown
 	}
 }
 
@@ -359,16 +335,6 @@ func convertParamType(t alert.Type) iav1beta1.ParamType {
 		return iav1beta1.ParamType_FLOAT
 	default:
 		return iav1beta1.ParamType_PARAM_TYPE_INVALID
-	}
-}
-
-func convertParamUnit(u string) iav1beta1.ParamUnit {
-	// TODO: check possible variants.
-	switch u {
-	case "%", "percentage":
-		return iav1beta1.ParamUnit_PERCENTAGE
-	default:
-		return iav1beta1.ParamUnit_PARAM_UNIT_INVALID
 	}
 }
 
@@ -490,6 +456,15 @@ func (s *TemplatesService) dumpRule(rule *ruleFile) error {
 
 // ListTemplates returns a list of all collected Alert Rule Templates.
 func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.ListTemplatesRequest) (*iav1beta1.ListTemplatesResponse, error) {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	if !settings.IntegratedAlerting.Enabled {
+		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
+	}
+
 	if req.Reload {
 		s.collect(ctx)
 	}
@@ -498,67 +473,10 @@ func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.Lis
 	res := &iav1beta1.ListTemplatesResponse{
 		Templates: make([]*iav1beta1.Template, 0, len(templates)),
 	}
-	for _, r := range templates {
-		t := &iav1beta1.Template{
-			Name:        r.Name,
-			Summary:     r.Summary,
-			Expr:        r.Expr,
-			Params:      make([]*iav1beta1.TemplateParam, 0, len(r.Params)),
-			For:         ptypes.DurationProto(time.Duration(r.For)),
-			Severity:    managementpb.Severity(r.Severity),
-			Labels:      r.Labels,
-			Annotations: r.Annotations,
-			Source:      r.Source,
-			Yaml:        r.Yaml,
-		}
-
-		if r.CreatedAt != nil {
-			var err error
-			if t.CreatedAt, err = ptypes.TimestampProto(*r.CreatedAt); err != nil {
-				return nil, err
-			}
-		}
-
-		for _, p := range r.Params {
-			tp := &iav1beta1.TemplateParam{
-				Name:    p.Name,
-				Summary: p.Summary,
-				Unit:    convertParamUnit(p.Unit),
-				Type:    convertParamType(p.Type),
-			}
-
-			switch p.Type {
-			case alert.Float:
-				value, err := p.GetValueForFloat()
-				if err != nil {
-					return nil, errors.Wrap(err, "failed to get value for float parameter")
-				}
-
-				fp := &iav1beta1.TemplateFloatParam{
-					HasDefault: true,           // TODO remove or fill with valid value.
-					Default:    float32(value), // TODO eliminate conversion.
-				}
-
-				if p.Range != nil {
-					min, max, err := p.GetRangeForFloat()
-					if err != nil {
-						return nil, errors.Wrap(err, "failed to get range for float parameter")
-					}
-
-					fp.HasMin = true      // TODO remove or fill with valid value.
-					fp.Min = float32(min) // TODO eliminate conversion.,
-					fp.HasMax = true      // TODO remove or fill with valid value.
-					fp.Max = float32(max) // TODO eliminate conversion.,
-				}
-
-				tp.Value = &iav1beta1.TemplateParam_Float{Float: fp}
-
-				t.Params = append(t.Params, tp)
-
-			default:
-				s.l.Warnf("Skipping unexpected parameter type %q for %q.", p.Type, r.Name)
-			}
-
+	for _, template := range templates {
+		t, err := convertTemplate(s.l, template)
+		if err != nil {
+			return nil, err
 		}
 
 		res.Templates = append(res.Templates, t)
@@ -570,6 +488,15 @@ func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.Lis
 
 // CreateTemplate creates a new template.
 func (s *TemplatesService) CreateTemplate(ctx context.Context, req *iav1beta1.CreateTemplateRequest) (*iav1beta1.CreateTemplateResponse, error) {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	if !settings.IntegratedAlerting.Enabled {
+		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
+	}
+
 	pParams := &alert.ParseParams{
 		DisallowUnknownFields:    true,
 		DisallowInvalidTemplates: true,
@@ -600,11 +527,22 @@ func (s *TemplatesService) CreateTemplate(ctx context.Context, req *iav1beta1.Cr
 		return nil, e
 	}
 
+	s.collect(ctx)
+
 	return &iav1beta1.CreateTemplateResponse{}, nil
 }
 
 // UpdateTemplate updates existing template, previously created via API.
 func (s *TemplatesService) UpdateTemplate(ctx context.Context, req *iav1beta1.UpdateTemplateRequest) (*iav1beta1.UpdateTemplateResponse, error) {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	if !settings.IntegratedAlerting.Enabled {
+		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
+	}
+
 	pParams := &alert.ParseParams{
 		DisallowUnknownFields:    true,
 		DisallowInvalidTemplates: true,
@@ -634,11 +572,22 @@ func (s *TemplatesService) UpdateTemplate(ctx context.Context, req *iav1beta1.Up
 		return nil, e
 	}
 
+	s.collect(ctx)
+
 	return &iav1beta1.UpdateTemplateResponse{}, nil
 }
 
 // DeleteTemplate deletes existing, previously created via API.
 func (s *TemplatesService) DeleteTemplate(ctx context.Context, req *iav1beta1.DeleteTemplateRequest) (*iav1beta1.DeleteTemplateResponse, error) {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	if !settings.IntegratedAlerting.Enabled {
+		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
+	}
+
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		return models.RemoveTemplate(tx.Querier, req.Name)
 	})

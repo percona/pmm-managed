@@ -21,9 +21,12 @@ import (
 
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services"
 )
 
 // ChannelsService represents integrated alerting channels API.
@@ -40,6 +43,15 @@ func NewChannelsService(db *reform.DB) *ChannelsService {
 
 // ListChannels returns list of available channels.
 func (s *ChannelsService) ListChannels(ctx context.Context, request *iav1beta1.ListChannelsRequest) (*iav1beta1.ListChannelsResponse, error) {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	if !settings.IntegratedAlerting.Enabled {
+		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
+	}
+
 	var channels []models.Channel
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
@@ -52,52 +64,10 @@ func (s *ChannelsService) ListChannels(ctx context.Context, request *iav1beta1.L
 
 	res := make([]*iav1beta1.Channel, len(channels))
 	for i, channel := range channels {
-		c := &iav1beta1.Channel{
-			ChannelId: channel.ID,
-			Summary:   channel.Summary,
-			Disabled:  channel.Disabled,
+		c, err := convertChannel(&channel) //nolint:gosec
+		if err != nil {
+			return nil, err
 		}
-
-		switch channel.Type {
-		case models.Email:
-			config := channel.EmailConfig
-			c.Channel = &iav1beta1.Channel_EmailConfig{
-				EmailConfig: &iav1beta1.EmailConfig{
-					SendResolved: config.SendResolved,
-					To:           config.To,
-				},
-			}
-		case models.PagerDuty:
-			config := channel.PagerDutyConfig
-			c.Channel = &iav1beta1.Channel_PagerdutyConfig{
-				PagerdutyConfig: &iav1beta1.PagerDutyConfig{
-					SendResolved: config.SendResolved,
-					RoutingKey:   config.RoutingKey,
-					ServiceKey:   config.ServiceKey,
-				},
-			}
-		case models.Slack:
-			config := channel.SlackConfig
-			c.Channel = &iav1beta1.Channel_SlackConfig{
-				SlackConfig: &iav1beta1.SlackConfig{
-					SendResolved: config.SendResolved,
-					Channel:      config.Channel,
-				},
-			}
-		case models.WebHook:
-			config := channel.WebHookConfig
-			c.Channel = &iav1beta1.Channel_WebhookConfig{
-				WebhookConfig: &iav1beta1.WebhookConfig{
-					SendResolved: config.SendResolved,
-					Url:          config.URL,
-					HttpConfig:   convertModelToHTTPConfig(config.HTTPConfig),
-					MaxAlerts:    config.MaxAlerts,
-				},
-			}
-		default:
-			return nil, errors.Errorf("Unknown notification channel type %s", channel.Type)
-		}
-
 		res[i] = c
 	}
 
@@ -106,6 +76,15 @@ func (s *ChannelsService) ListChannels(ctx context.Context, request *iav1beta1.L
 
 // AddChannel adds new notification channel.
 func (s *ChannelsService) AddChannel(ctx context.Context, req *iav1beta1.AddChannelRequest) (*iav1beta1.AddChannelResponse, error) {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	if !settings.IntegratedAlerting.Enabled {
+		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
+	}
+
 	params := &models.CreateChannelParams{
 		Summary:  req.Summary,
 		Disabled: req.Disabled,
@@ -153,6 +132,15 @@ func (s *ChannelsService) AddChannel(ctx context.Context, req *iav1beta1.AddChan
 
 // ChangeChannel changes existing notification channel.
 func (s *ChannelsService) ChangeChannel(ctx context.Context, req *iav1beta1.ChangeChannelRequest) (*iav1beta1.ChangeChannelResponse, error) {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	if !settings.IntegratedAlerting.Enabled {
+		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
+	}
+
 	params := &models.ChangeChannelParams{
 		Disabled: req.Disabled,
 	}
@@ -197,6 +185,15 @@ func (s *ChannelsService) ChangeChannel(ctx context.Context, req *iav1beta1.Chan
 
 // RemoveChannel removes notification channel.
 func (s *ChannelsService) RemoveChannel(ctx context.Context, req *iav1beta1.RemoveChannelRequest) (*iav1beta1.RemoveChannelResponse, error) {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	if !settings.IntegratedAlerting.Enabled {
+		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
+	}
+
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		return models.RemoveChannel(tx.Querier, req.ChannelId)
 	})
@@ -204,6 +201,56 @@ func (s *ChannelsService) RemoveChannel(ctx context.Context, req *iav1beta1.Remo
 		return nil, e
 	}
 	return &iav1beta1.RemoveChannelResponse{}, nil
+}
+
+func convertChannel(channel *models.Channel) (*iav1beta1.Channel, error) {
+	c := &iav1beta1.Channel{
+		ChannelId: channel.ID,
+		Summary:   channel.Summary,
+		Disabled:  channel.Disabled,
+	}
+
+	switch channel.Type {
+	case models.Email:
+		config := channel.EmailConfig
+		c.Channel = &iav1beta1.Channel_EmailConfig{
+			EmailConfig: &iav1beta1.EmailConfig{
+				SendResolved: config.SendResolved,
+				To:           config.To,
+			},
+		}
+	case models.PagerDuty:
+		config := channel.PagerDutyConfig
+		c.Channel = &iav1beta1.Channel_PagerdutyConfig{
+			PagerdutyConfig: &iav1beta1.PagerDutyConfig{
+				SendResolved: config.SendResolved,
+				RoutingKey:   config.RoutingKey,
+				ServiceKey:   config.ServiceKey,
+			},
+		}
+	case models.Slack:
+		config := channel.SlackConfig
+		c.Channel = &iav1beta1.Channel_SlackConfig{
+			SlackConfig: &iav1beta1.SlackConfig{
+				SendResolved: config.SendResolved,
+				Channel:      config.Channel,
+			},
+		}
+	case models.WebHook:
+		config := channel.WebHookConfig
+		c.Channel = &iav1beta1.Channel_WebhookConfig{
+			WebhookConfig: &iav1beta1.WebhookConfig{
+				SendResolved: config.SendResolved,
+				Url:          config.URL,
+				HttpConfig:   convertModelToHTTPConfig(config.HTTPConfig),
+				MaxAlerts:    config.MaxAlerts,
+			},
+		}
+	default:
+		return nil, errors.Errorf("unknown notification channel type %s", channel.Type)
+	}
+
+	return c, nil
 }
 
 func convertHTTPConfigToModel(config *iav1beta1.HTTPConfig) *models.HTTPConfig {
