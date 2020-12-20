@@ -19,7 +19,6 @@ package platform
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/brianvoe/gofakeit"
 	"github.com/stretchr/testify/assert"
@@ -29,6 +28,7 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/testdb"
+	"github.com/percona/pmm-managed/utils/tests"
 )
 
 const devAuthHost = "check-dev.percona.com:443"
@@ -42,7 +42,7 @@ func TestPlatformService(t *testing.T) {
 	s.host = devAuthHost
 
 	t.Run("SignUp", func(t *testing.T) {
-		login := gofakeit.Email()
+		login := tests.GenEmail(t)
 		password := gofakeit.Password(true, true, true, false, false, 14)
 
 		err := s.SignUp(context.Background(), login, password)
@@ -50,7 +50,7 @@ func TestPlatformService(t *testing.T) {
 	})
 
 	t.Run("SignIn", func(t *testing.T) {
-		login := gofakeit.Email()
+		login := tests.GenEmail(t)
 		password := gofakeit.Password(true, true, true, false, false, 14)
 
 		err := s.SignUp(context.Background(), login, password)
@@ -71,7 +71,7 @@ func TestPlatformService(t *testing.T) {
 	})
 
 	t.Run("SignOut", func(t *testing.T) {
-		login := gofakeit.Email()
+		login := tests.GenEmail(t)
 		password := gofakeit.Password(true, true, true, false, false, 14)
 
 		err := s.SignUp(context.Background(), login, password)
@@ -90,7 +90,7 @@ func TestPlatformService(t *testing.T) {
 	})
 
 	t.Run("refreshSession", func(t *testing.T) {
-		login := gofakeit.Email()
+		login := tests.GenEmail(t)
 		password := gofakeit.Password(true, true, true, false, false, 14)
 
 		err := s.SignUp(context.Background(), login, password)
@@ -102,8 +102,4 @@ func TestPlatformService(t *testing.T) {
 		err = s.refreshSession(context.Background())
 		assert.NoError(t, err)
 	})
-}
-
-func init() { //nolint:gochecknoinits
-	gofakeit.Seed(time.Now().UnixNano())
 }

@@ -14,14 +14,38 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package services
+package tests
 
 import (
-	"github.com/pkg/errors"
+	"os"
+	"os/user"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/brianvoe/gofakeit"
+	"github.com/stretchr/testify/require"
 )
 
-// ErrSTTDisabled means that STT checks are disabled and can't be executed.
-var ErrSTTDisabled = errors.New("STT is disabled")
+// GenEmail generates test user email.
+func GenEmail(tb testing.TB) string {
+	u, err := user.Current()
+	require.NoError(tb, err)
 
-// ErrAlertingDisabled means Integrated Alerting is disabled and IA APIs can't be executed.
-var ErrAlertingDisabled = errors.New("Alerting is disabled")
+	hostname, err := os.Hostname()
+	require.NoError(tb, err)
+
+	return strings.Join([]string{u.Username, hostname, gofakeit.Email(), "test"}, ".")
+}
+
+// GenCredentials generates test user email and password.
+func GenCredentials(tb testing.TB) (string, string) {
+	email := GenEmail(tb)
+	password := gofakeit.Password(true, true, true, false, false, 14)
+	return email, password
+}
+
+//nolint:gochecknoinits
+func init() {
+	gofakeit.Seed(time.Now().UnixNano())
+}

@@ -26,6 +26,7 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/testdb"
+	"github.com/percona/pmm-managed/utils/tests"
 )
 
 func TestSettings(t *testing.T) {
@@ -242,8 +243,8 @@ func TestSettings(t *testing.T) {
 			assert.Empty(t, ns.Telemetry.UUID)
 		})
 
-		t.Run("Percona Platform auth ", func(t *testing.T) {
-			email := gofakeit.Email()
+		t.Run("Percona Platform auth", func(t *testing.T) {
+			email := tests.GenEmail(t)
 			sessionID := gofakeit.UUID()
 
 			// User logged in
@@ -258,7 +259,7 @@ func TestSettings(t *testing.T) {
 			// Logout with email update
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				LogOut: true,
-				Email:  gofakeit.Email(),
+				Email:  tests.GenEmail(t),
 			})
 			assert.Error(t, err, "Cannot logout while updating Percona Platform user data.")
 
@@ -272,7 +273,7 @@ func TestSettings(t *testing.T) {
 			// Logout with email and session ID update
 			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
 				LogOut:    true,
-				Email:     gofakeit.Email(),
+				Email:     tests.GenEmail(t),
 				SessionID: gofakeit.UUID(),
 			})
 			assert.Error(t, err, "Cannot logout while updating Percona Platform user data.")
@@ -305,6 +306,61 @@ func TestSettings(t *testing.T) {
 			ns, err := models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{EnableSTTChecks: []string{"two"}})
 			require.NoError(t, err)
 			assert.ElementsMatch(t, ns.SaaS.DisabledSTTChecks, []string{"one", "three"})
+		})
+
+		t.Run("Integrated Alerting settings validation", func(t *testing.T) {
+			emailSettings := &models.EmailAlertingSettings{
+				From:      tests.GenEmail(t),
+				Smarthost: "0.0.0.0:8080",
+				Hello:     "smtp_host",
+				Username:  "smtp_username",
+				Password:  "smtp_password",
+				Secret:    "smtp_secret",
+			}
+			slackSettings := &models.SlackAlertingSettings{URL: gofakeit.URL()}
+			ns, err := models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
+				EnableAlerting:        true,
+				EmailAlertingSettings: emailSettings,
+				SlackAlertingSettings: slackSettings,
+			})
+			assert.NoError(t, err)
+			assert.True(t, ns.IntegratedAlerting.Enabled)
+			assert.Equal(t, ns.IntegratedAlerting.EmailAlertingSettings, emailSettings)
+			assert.Equal(t, ns.IntegratedAlerting.SlackAlertingSettings, slackSettings)
+
+			// check that we don't lose settings on empty updates
+			ns, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{})
+			assert.NoError(t, err)
+			assert.True(t, ns.IntegratedAlerting.Enabled)
+			assert.Equal(t, ns.IntegratedAlerting.EmailAlertingSettings, emailSettings)
+			assert.Equal(t, ns.IntegratedAlerting.SlackAlertingSettings, slackSettings)
+
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
+				RemoveEmailAlertingSettings: true,
+				EmailAlertingSettings:       emailSettings,
+			})
+			assert.EqualError(t, err, "Both email_alerting_settings and remove_email_alerting_settings are present.")
+
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
+				RemoveSlackAlertingSettings: true,
+				SlackAlertingSettings:       slackSettings,
+			})
+			assert.EqualError(t, err, "Both slack_alerting_settings and remove_slack_alerting_settings are present.")
+
+			ns, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
+				DisableAlerting:             true,
+				RemoveEmailAlertingSettings: true,
+				RemoveSlackAlertingSettings: true,
+			})
+			assert.NoError(t, err)
+			assert.Empty(t, ns.IntegratedAlerting.EmailAlertingSettings)
+			assert.False(t, ns.IntegratedAlerting.Enabled)
+
+			_, err = models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{
+				DisableAlerting: true,
+				EnableAlerting:  true,
+			})
+			assert.EqualError(t, err, "Both enable_alerting and disable_alerting are present.")
 		})
 	})
 }
