@@ -17,7 +17,7 @@
 package models
 
 import (
-	"encoding/json"
+	"database/sql/driver"
 	"fmt"
 	"net"
 	"net/url"
@@ -36,12 +36,8 @@ import (
 // pmm-managed's PostgreSQL, qan-api's ClickHouse, and VictoriaMetrics.
 type AgentType string
 
-// MongoDBOptions represents structure for special MongoDB options.
-type MongoDBOptions struct {
-	TLSCertificateKey             string `json:"tls_certificate_key"`
-	TLSCertificateKeyFilePassword string `json:"tls_certificate_key_file_password"`
-	TLSCa                         string `json:"tls_ca"`
-}
+const certificateKeyFilePlaceholder = "certificateKeyFilePlaceholder"
+const caFilePlaceholder = "caFilePlaceholder"
 
 // Agent types (in the same order as in agents.proto).
 const (
@@ -64,11 +60,23 @@ const (
 // PMMServerAgentID is a special Agent ID representing pmm-agent on PMM Server.
 const PMMServerAgentID string = "pmm-server" // no /agent_id/ prefix
 
+// MongoDBOptions represents structure for special MongoDB options.
+type MongoDBOptions struct {
+	TLSCertificateKey             string `json:"tls_certificate_key"`
+	TLSCertificateKeyFilePassword string `json:"tls_certificate_key_file_password"`
+	TLSCa                         string `json:"tls_ca"`
+}
+
+// Value implements database/sql/driver.Valuer interface. Should be defined on the value.
+func (c MongoDBOptions) Value() (driver.Value, error) { return jsonValue(c) }
+
+// Scan implements database/sql.Scanner interface. Should be defined on the pointer.
+func (c *MongoDBOptions) Scan(src interface{}) error { return jsonScan(c, src) }
+
 // PMMAgentWithPushMetricsSupport - version of pmmAgent,
 // that support vmagent and push metrics mode
 // will be released with PMM Agent v2.12.
-// TODO fix it to 2.11.99 before release
-var PMMAgentWithPushMetricsSupport = version.MustParse("2.11.1")
+var PMMAgentWithPushMetricsSupport = version.MustParse("2.11.99")
 
 // Agent represents Agent as stored in database.
 //reform:agents
@@ -114,7 +122,7 @@ type Agent struct {
 	RDSEnhancedMetricsDisabled bool `reform:"rds_enhanced_metrics_disabled"`
 	PushMetrics                bool `reform:"push_metrics"`
 
-	MongoDBOptions *string `reform:"mongo_db_tls_options"`
+	MongoDBOptions *MongoDBOptions `reform:"mongo_db_tls_options"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.
@@ -179,12 +187,16 @@ func (s *Agent) UnifiedLabels() (map[string]string, error) {
 }
 
 // DSN returns DSN string for accessing given Service with this Agent (and implicit driver).
-func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string) string {
+func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string, tdp *Pair) string {
 	host := pointer.GetString(service.Address)
 	port := pointer.GetUint16(service.Port)
 	socket := pointer.GetString(service.Socket)
 	username := pointer.GetString(s.Username)
 	password := pointer.GetString(s.Password)
+
+	if tdp == nil {
+		tdp = s.TemplateDelimiters(service)
+	}
 
 	switch s.AgentType {
 	case MySQLdExporterType, ProxySQLExporterType:
@@ -268,19 +280,14 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			}
 
 			if s.MongoDBOptions != nil {
-				var mongoDBOptions MongoDBOptions
-				err := json.Unmarshal([]byte(*s.MongoDBOptions), &mongoDBOptions)
-				if err == nil {
-					if mongoDBOptions.TLSCertificateKey != "" {
-						q.Add("sslCertificateKeyFile", "certificateKeyFileHolder")
-					}
-					pasword := mongoDBOptions.TLSCertificateKeyFilePassword
-					if pasword != "" {
-						q.Add("sslCertificateKeyFilePassword", "certificateKeyFilePasswordHolder")
-					}
-					if mongoDBOptions.TLSCa != "" {
-						q.Add("sslCaFile", "caFileHolder")
-					}
+				if s.MongoDBOptions.TLSCertificateKey != "" {
+					q.Add("sslCertificateKeyFile", tdp.Left+certificateKeyFilePlaceholder+tdp.Right)
+				}
+				if s.MongoDBOptions.TLSCertificateKeyFilePassword != "" {
+					q.Add("sslCertificateKeyFilePassword", s.MongoDBOptions.TLSCertificateKeyFilePassword)
+				}
+				if s.MongoDBOptions.TLSCa != "" {
+					q.Add("sslCaFile", tdp.Left+caFilePlaceholder+tdp.Right)
 				}
 			}
 		}
@@ -302,7 +309,9 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		case username != "":
 			u.User = url.User(username)
 		}
-		return u.String()
+		dsn := u.String()
+		//TODO: unescape delimiters.
+		return dsn
 
 	case PostgresExporterType, QANPostgreSQLPgStatementsAgentType, QANPostgreSQLPgStatMonitorAgentType:
 		q := make(url.Values)
@@ -366,6 +375,50 @@ func (s *Agent) IsMySQLTablestatsGroupEnabled() bool {
 	default:
 		return *s.TableCount <= s.TableCountTablestatsGroupLimit
 	}
+}
+
+func (s Agent) Files() map[string]string {
+	switch s.AgentType {
+	case MySQLdExporterType, ProxySQLExporterType:
+		return nil
+	case QANMySQLPerfSchemaAgentType, QANMySQLSlowlogAgentType:
+		return nil
+	case QANMongoDBProfilerAgentType, MongoDBExporterType:
+		if s.MongoDBOptions != nil {
+			return map[string]string{
+				caFilePlaceholder:             s.MongoDBOptions.TLSCa,
+				certificateKeyFilePlaceholder: s.MongoDBOptions.TLSCertificateKey,
+			}
+		}
+		return nil
+	case PostgresExporterType, QANPostgreSQLPgStatementsAgentType, QANPostgreSQLPgStatMonitorAgentType:
+		return nil
+	default:
+		panic(fmt.Errorf("unhandled AgentType %q", s.AgentType))
+	}
+}
+
+func (s Agent) TemplateDelimiters(svc *Service) *Pair {
+	templateParams := []string{
+		pointer.GetString(svc.Address),
+		pointer.GetString(s.Username),
+		pointer.GetString(s.Password),
+		pointer.GetString(s.MetricsPath),
+	}
+
+	switch svc.ServiceType {
+	case MySQLServiceType:
+	case PostgreSQLServiceType:
+	case MongoDBServiceType:
+		if s.MongoDBOptions != nil {
+			templateParams = append(templateParams, s.MongoDBOptions.TLSCertificateKeyFilePassword)
+		}
+	}
+
+	tdp := TemplateDelimsPair(
+		templateParams...,
+	)
+	return &tdp
 }
 
 // check interfaces

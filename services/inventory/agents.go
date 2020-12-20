@@ -18,7 +18,6 @@ package inventory
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb"
@@ -272,15 +271,6 @@ func (as *AgentsService) ChangeMySQLdExporter(ctx context.Context, req *inventor
 
 // AddMongoDBExporter inserts mongodb_exporter Agent with given parameters.
 func (as *AgentsService) AddMongoDBExporter(ctx context.Context, req *inventorypb.AddMongoDBExporterRequest) (*inventorypb.MongoDBExporter, error) {
-	mongoDBOptions, err := json.Marshal(models.MongoDBOptions{
-		TLSCertificateKey:             req.TlsCertificateKey,
-		TLSCertificateKeyFilePassword: req.TlsCertificateKeyFilePassword,
-		TLSCa:                         req.TlsCa,
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	var res *inventorypb.MongoDBExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 		params := &models.CreateAgentParams{
@@ -291,7 +281,7 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, req *inventoryp
 			CustomLabels:   req.CustomLabels,
 			TLS:            req.Tls,
 			TLSSkipVerify:  req.TlsSkipVerify,
-			MongoDBOptions: string(mongoDBOptions),
+			MongoDBOptions: models.MongoDBOptionsFromRequest(req),
 			PushMetrics:    req.PushMetrics,
 		}
 		row, err := models.CreateAgent(tx.Querier, models.MongoDBExporterType, params)
@@ -518,15 +508,6 @@ func (as *AgentsService) ChangePostgresExporter(ctx context.Context, req *invent
 func (as *AgentsService) AddQANMongoDBProfilerAgent(ctx context.Context, req *inventorypb.AddQANMongoDBProfilerAgentRequest) (*inventorypb.QANMongoDBProfilerAgent, error) {
 	var res *inventorypb.QANMongoDBProfilerAgent
 
-	mongoDBOptions, err := json.Marshal(models.MongoDBOptions{
-		TLSCertificateKey:             req.TlsCertificateKey,
-		TLSCertificateKeyFilePassword: req.TlsCertificateKeyFilePassword,
-		TLSCa:                         req.TlsCa,
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 		params := &models.CreateAgentParams{
 			PMMAgentID:     req.PmmAgentId,
@@ -536,7 +517,7 @@ func (as *AgentsService) AddQANMongoDBProfilerAgent(ctx context.Context, req *in
 			CustomLabels:   req.CustomLabels,
 			TLS:            req.Tls,
 			TLSSkipVerify:  req.TlsSkipVerify,
-			MongoDBOptions: string(mongoDBOptions),
+			MongoDBOptions: models.MongoDBOptionsFromRequest(req),
 			// TODO QueryExamplesDisabled https://jira.percona.com/browse/PMM-4650
 		}
 		row, err := models.CreateAgent(tx.Querier, models.QANMongoDBProfilerAgentType, params)

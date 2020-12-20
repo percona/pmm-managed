@@ -32,9 +32,9 @@ type agentsRegistry interface {
 	StartMySQLQuerySelectAction(ctx context.Context, id, pmmAgentID, dsn, query string) error
 	StartPostgreSQLQueryShowAction(ctx context.Context, id, pmmAgentID, dsn string) error
 	StartPostgreSQLQuerySelectAction(ctx context.Context, id, pmmAgentID, dsn, query string) error
-	StartMongoDBQueryGetParameterAction(ctx context.Context, id, pmmAgentID, dsn string) error
-	StartMongoDBQueryBuildInfoAction(ctx context.Context, id, pmmAgentID, dsn string) error
-	StartMongoDBQueryGetCmdLineOptsAction(ctx context.Context, id, pmmAgentID, dsn string) error
+	StartMongoDBQueryGetParameterAction(ctx context.Context, id, pmmAgentID, dsn string, files map[string]string) error
+	StartMongoDBQueryBuildInfoAction(ctx context.Context, id, pmmAgentID, dsn string, files map[string]string) error
+	StartMongoDBQueryGetCmdLineOptsAction(ctx context.Context, id, pmmAgentID, dsn string, files map[string]string) error
 }
 
 // alertmanagerService is is a subset of methods of alertmanager.Service used by this package.

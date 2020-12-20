@@ -41,6 +41,12 @@ func TestMongodbExporterConfig(t *testing.T) {
 		AgentType: models.MongoDBExporterType,
 		Username:  pointer.ToString("username"),
 		Password:  pointer.ToString("s3cur3 p@$$w0r4."),
+		TLS:       true,
+		MongoDBOptions: &models.MongoDBOptions{
+			TLSCertificateKey:             "content-of-tls-certificate-key",
+			TLSCertificateKeyFilePassword: "passwordoftls",
+			TLSCa:                         "content-of-tls-ca",
+		},
 	}
 	actual := mongodbExporterConfig(mongodb, exporter, redactSecrets, pmmAgentVersion)
 	expected := &agentpb.SetStateRequest_AgentProcess{
@@ -56,10 +62,15 @@ func TestMongodbExporterConfig(t *testing.T) {
 			"--web.listen-address=:{{ .listen_port }}",
 		},
 		Env: []string{
-			"MONGODB_URI=mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:27017/?connectTimeoutMS=1000",
+			"MONGODB_URI=mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:27017/?connectTimeoutMS=1000" +
+				"&sslCertificateKeyFile={{certificateKeyFilePlaceholder}}&sslCertificateKeyFilePassword=passwordoftls&sslCaFile={{caFilePlaceholder}}",
 			"HTTP_AUTH=pmm:agent-id",
 		},
 		RedactWords: []string{"s3cur3 p@$$w0r4."},
+		TextFiles: map[string]string{
+			"certificateKeyFilePlaceholder": exporter.MongoDBOptions.TLSCertificateKey,
+			"caFilePlaceholder":             exporter.MongoDBOptions.TLSCa,
+		},
 	}
 	requireNoDuplicateFlags(t, actual.Args)
 	require.Equal(t, expected.Args, actual.Args)

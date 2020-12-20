@@ -628,17 +628,17 @@ func (s *Service) executeMongoDBChecks(ctx context.Context, except []string) []s
 
 			switch c.Type {
 			case check.MongoDBGetParameter:
-				if err := s.agentsRegistry.StartMongoDBQueryGetParameterAction(ctx, r.ID, target.agentID, target.dsn); err != nil {
+				if err := s.agentsRegistry.StartMongoDBQueryGetParameterAction(ctx, r.ID, target.agentID, target.dsn, target.files); err != nil {
 					s.l.Warnf("Failed to start MongoDB get parameter query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 			case check.MongoDBBuildInfo:
-				if err := s.agentsRegistry.StartMongoDBQueryBuildInfoAction(ctx, r.ID, target.agentID, target.dsn); err != nil {
+				if err := s.agentsRegistry.StartMongoDBQueryBuildInfoAction(ctx, r.ID, target.agentID, target.dsn, target.files); err != nil {
 					s.l.Warnf("Failed to start MongoDB build info query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 			case check.MongoDBGetCmdLineOpts:
-				if err := s.agentsRegistry.StartMongoDBQueryGetCmdLineOptsAction(ctx, r.ID, target.agentID, target.dsn); err != nil {
+				if err := s.agentsRegistry.StartMongoDBQueryGetCmdLineOptsAction(ctx, r.ID, target.agentID, target.dsn, target.files); err != nil {
 					s.l.Warnf("Failed to start MongoDB getCmdLineOpts query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
@@ -746,6 +746,7 @@ type target struct {
 	serviceID string
 	labels    map[string]string
 	dsn       string
+	files     map[string]string
 }
 
 // findTargets returns slice of available targets for specified service type.
@@ -778,7 +779,7 @@ func (s *Service) findTargets(serviceType models.ServiceType, minPMMAgentVersion
 			}
 			agent := agents[0]
 
-			dsn, err := models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, service.ServiceID, agents[0].AgentID, "")
+			dsn, files, err := models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, service.ServiceID, agents[0].AgentID, "")
 			if err != nil {
 				return err
 			}
@@ -798,6 +799,7 @@ func (s *Service) findTargets(serviceType models.ServiceType, minPMMAgentVersion
 				serviceID: service.ServiceID,
 				labels:    labels,
 				dsn:       dsn,
+				files:     files,
 			})
 			return nil
 		})

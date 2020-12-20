@@ -19,7 +19,6 @@ package agents
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"runtime/pprof"
 	"sort"
@@ -663,32 +662,26 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 	case models.MySQLServiceType:
 		request = &agentpb.CheckConnectionRequest{
 			Type:    inventorypb.ServiceType_MYSQL_SERVICE,
-			Dsn:     agent.DSN(service, 2*time.Second, ""),
+			Dsn:     agent.DSN(service, 2*time.Second, "", nil),
 			Timeout: ptypes.DurationProto(3 * time.Second),
 		}
 	case models.PostgreSQLServiceType:
 		request = &agentpb.CheckConnectionRequest{
 			Type:    inventorypb.ServiceType_POSTGRESQL_SERVICE,
-			Dsn:     agent.DSN(service, 2*time.Second, "postgres"),
+			Dsn:     agent.DSN(service, 2*time.Second, "postgres", nil),
 			Timeout: ptypes.DurationProto(3 * time.Second),
 		}
 	case models.MongoDBServiceType:
-		var mongoDBOptions agentpb.MongoDBOptions
-		err := json.Unmarshal([]byte(*agent.MongoDBOptions), &mongoDBOptions)
-		if err != nil {
-			return err
-		}
-
 		request = &agentpb.CheckConnectionRequest{
-			Type:           inventorypb.ServiceType_MONGODB_SERVICE,
-			Dsn:            agent.DSN(service, 2*time.Second, ""),
-			Timeout:        ptypes.DurationProto(3 * time.Second),
-			MongoDbOptions: &mongoDBOptions,
+			Type:      inventorypb.ServiceType_MONGODB_SERVICE,
+			Dsn:       agent.DSN(service, 2*time.Second, "", nil),
+			Timeout:   ptypes.DurationProto(3 * time.Second),
+			TextFiles: agent.Files(),
 		}
 	case models.ProxySQLServiceType:
 		request = &agentpb.CheckConnectionRequest{
 			Type:    inventorypb.ServiceType_PROXYSQL_SERVICE,
-			Dsn:     agent.DSN(service, 2*time.Second, ""),
+			Dsn:     agent.DSN(service, 2*time.Second, "", nil),
 			Timeout: ptypes.DurationProto(3 * time.Second),
 		}
 	default:
@@ -895,14 +888,14 @@ func (r *Registry) StartPostgreSQLShowIndexAction(ctx context.Context, id, pmmAg
 }
 
 // StartMongoDBExplainAction starts MongoDB query explain action on pmm-agent.
-func (r *Registry) StartMongoDBExplainAction(ctx context.Context, id, pmmAgentID, dsn, query string, mongoDBOptions *agentpb.StartActionRequest_MongoDBOptions) error {
+func (r *Registry) StartMongoDBExplainAction(ctx context.Context, id, pmmAgentID, dsn, query string, files map[string]string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_MongodbExplainParams{
 			MongodbExplainParams: &agentpb.StartActionRequest_MongoDBExplainParams{
-				Dsn:            dsn,
-				Query:          query,
-				MongoDbOptions: mongoDBOptions,
+				Dsn:       dsn,
+				Query:     query,
+				TextFiles: files,
 			},
 		},
 		Timeout: defaultActionTimeout,
@@ -1005,13 +998,13 @@ func (r *Registry) StartPostgreSQLQuerySelectAction(ctx context.Context, id, pmm
 }
 
 // StartMongoDBQueryGetParameterAction starts MongoDB getParameter query action on pmm-agent.
-func (r *Registry) StartMongoDBQueryGetParameterAction(ctx context.Context, id, pmmAgentID, dsn string) error {
-	// TODO: here mongo certs
+func (r *Registry) StartMongoDBQueryGetParameterAction(ctx context.Context, id, pmmAgentID, dsn string, files map[string]string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_MongodbQueryGetparameterParams{
 			MongodbQueryGetparameterParams: &agentpb.StartActionRequest_MongoDBQueryGetParameterParams{
-				Dsn: dsn,
+				Dsn:       dsn,
+				TextFiles: files,
 			},
 		},
 		Timeout: defaultQueryActionTimeout,
@@ -1027,13 +1020,13 @@ func (r *Registry) StartMongoDBQueryGetParameterAction(ctx context.Context, id, 
 }
 
 // StartMongoDBQueryBuildInfoAction starts MongoDB buildInfo query action on pmm-agent.
-func (r *Registry) StartMongoDBQueryBuildInfoAction(ctx context.Context, id, pmmAgentID, dsn string) error {
-	// TODO: here mongo certs
+func (r *Registry) StartMongoDBQueryBuildInfoAction(ctx context.Context, id, pmmAgentID, dsn string, files map[string]string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_MongodbQueryBuildinfoParams{
 			MongodbQueryBuildinfoParams: &agentpb.StartActionRequest_MongoDBQueryBuildInfoParams{
-				Dsn: dsn,
+				Dsn:       dsn,
+				TextFiles: files,
 			},
 		},
 		Timeout: defaultQueryActionTimeout,
@@ -1049,13 +1042,13 @@ func (r *Registry) StartMongoDBQueryBuildInfoAction(ctx context.Context, id, pmm
 }
 
 // StartMongoDBQueryGetCmdLineOptsAction starts MongoDB getCmdLineOpts query action on pmm-agent.
-func (r *Registry) StartMongoDBQueryGetCmdLineOptsAction(ctx context.Context, id, pmmAgentID, dsn string) error {
-	// TODO: here mongo certs
+func (r *Registry) StartMongoDBQueryGetCmdLineOptsAction(ctx context.Context, id, pmmAgentID, dsn string, files map[string]string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_MongodbQueryGetcmdlineoptsParams{
 			MongodbQueryGetcmdlineoptsParams: &agentpb.StartActionRequest_MongoDBQueryGetCmdLineOptsParams{
-				Dsn: dsn,
+				Dsn:       dsn,
+				TextFiles: files,
 			},
 		},
 		Timeout: defaultQueryActionTimeout,

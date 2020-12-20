@@ -13,13 +13,13 @@ type mockAgentsRegistry struct {
 	mock.Mock
 }
 
-// StartMongoDBQueryBuildInfoAction provides a mock function with given fields: ctx, id, pmmAgentID, dsn
-func (_m *mockAgentsRegistry) StartMongoDBQueryBuildInfoAction(ctx context.Context, id string, pmmAgentID string, dsn string) error {
-	ret := _m.Called(ctx, id, pmmAgentID, dsn)
+// StartMongoDBQueryBuildInfoAction provides a mock function with given fields: ctx, id, pmmAgentID, dsn, files
+func (_m *mockAgentsRegistry) StartMongoDBQueryBuildInfoAction(ctx context.Context, id string, pmmAgentID string, dsn string, files map[string]string) error {
+	ret := _m.Called(ctx, id, pmmAgentID, dsn, files)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) error); ok {
-		r0 = rf(ctx, id, pmmAgentID, dsn)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, map[string]string) error); ok {
+		r0 = rf(ctx, id, pmmAgentID, dsn, files)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -27,13 +27,13 @@ func (_m *mockAgentsRegistry) StartMongoDBQueryBuildInfoAction(ctx context.Conte
 	return r0
 }
 
-// StartMongoDBQueryGetCmdLineOptsAction provides a mock function with given fields: ctx, id, pmmAgentID, dsn
-func (_m *mockAgentsRegistry) StartMongoDBQueryGetCmdLineOptsAction(ctx context.Context, id string, pmmAgentID string, dsn string) error {
-	ret := _m.Called(ctx, id, pmmAgentID, dsn)
+// StartMongoDBQueryGetCmdLineOptsAction provides a mock function with given fields: ctx, id, pmmAgentID, dsn, files
+func (_m *mockAgentsRegistry) StartMongoDBQueryGetCmdLineOptsAction(ctx context.Context, id string, pmmAgentID string, dsn string, files map[string]string) error {
+	ret := _m.Called(ctx, id, pmmAgentID, dsn, files)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) error); ok {
-		r0 = rf(ctx, id, pmmAgentID, dsn)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, map[string]string) error); ok {
+		r0 = rf(ctx, id, pmmAgentID, dsn, files)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -41,13 +41,13 @@ func (_m *mockAgentsRegistry) StartMongoDBQueryGetCmdLineOptsAction(ctx context.
 	return r0
 }
 
-// StartMongoDBQueryGetParameterAction provides a mock function with given fields: ctx, id, pmmAgentID, dsn
-func (_m *mockAgentsRegistry) StartMongoDBQueryGetParameterAction(ctx context.Context, id string, pmmAgentID string, dsn string) error {
-	ret := _m.Called(ctx, id, pmmAgentID, dsn)
+// StartMongoDBQueryGetParameterAction provides a mock function with given fields: ctx, id, pmmAgentID, dsn, files
+func (_m *mockAgentsRegistry) StartMongoDBQueryGetParameterAction(ctx context.Context, id string, pmmAgentID string, dsn string, files map[string]string) error {
+	ret := _m.Called(ctx, id, pmmAgentID, dsn, files)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) error); ok {
-		r0 = rf(ctx, id, pmmAgentID, dsn)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, map[string]string) error); ok {
+		r0 = rf(ctx, id, pmmAgentID, dsn, files)
 	} else {
 		r0 = ret.Error(0)
 	}

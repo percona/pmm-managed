@@ -18,7 +18,6 @@ package management
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb"
@@ -71,14 +70,8 @@ func (s *MongoDBService) Add(ctx context.Context, req *managementpb.AddMongoDBRe
 		}
 		res.Service = invService.(*inventorypb.MongoDBService)
 
-		mongoDBOptions, err := json.Marshal(models.MongoDBOptions{
-			TLSCertificateKey:             req.TlsCertificateKey,
-			TLSCertificateKeyFilePassword: req.TlsCertificateKeyFilePassword,
-			TLSCa:                         req.TlsCa,
-		})
-		if err != nil {
-			return err
-		}
+		mongoDBOptions := models.MongoDBOptionsFromRequest(req)
+
 		row, err := models.CreateAgent(tx.Querier, models.MongoDBExporterType, &models.CreateAgentParams{
 			PMMAgentID:     req.PmmAgentId,
 			ServiceID:      service.ServiceID,
@@ -86,7 +79,7 @@ func (s *MongoDBService) Add(ctx context.Context, req *managementpb.AddMongoDBRe
 			Password:       req.Password,
 			TLS:            req.Tls,
 			TLSSkipVerify:  req.TlsSkipVerify,
-			MongoDBOptions: string(mongoDBOptions),
+			MongoDBOptions: mongoDBOptions,
 			PushMetrics:    isPushMode(req.MetricsMode),
 		})
 		if err != nil {
@@ -113,7 +106,7 @@ func (s *MongoDBService) Add(ctx context.Context, req *managementpb.AddMongoDBRe
 				Password:       req.Password,
 				TLS:            req.Tls,
 				TLSSkipVerify:  req.TlsSkipVerify,
-				MongoDBOptions: string(mongoDBOptions),
+				MongoDBOptions: mongoDBOptions,
 
 				// TODO QueryExamplesDisabled https://jira.percona.com/browse/PMM-4650
 			})

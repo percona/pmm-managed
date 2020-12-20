@@ -17,7 +17,6 @@
 package models
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"testing"
@@ -63,15 +62,15 @@ func TestAgent(t *testing.T) {
 		} {
 			t.Run(string(typ), func(t *testing.T) {
 				agent.AgentType = typ
-				assert.Equal(t, expected, agent.DSN(service, time.Second, "database"))
+				assert.Equal(t, expected, agent.DSN(service, time.Second, "database", nil))
 			})
 		}
 
 		t.Run("MongoDBNoDatabase", func(t *testing.T) {
 			agent.AgentType = MongoDBExporterType
 
-			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?connectTimeoutMS=1000", agent.DSN(service, time.Second, ""))
-			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/", agent.DSN(service, 0, ""))
+			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?connectTimeoutMS=1000", agent.DSN(service, time.Second, "", nil))
+			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/", agent.DSN(service, 0, "", nil))
 		})
 	})
 
@@ -91,7 +90,7 @@ func TestAgent(t *testing.T) {
 		} {
 			t.Run(string(typ), func(t *testing.T) {
 				agent.AgentType = typ
-				assert.Equal(t, expected, agent.DSN(service, time.Second, "database"))
+				assert.Equal(t, expected, agent.DSN(service, time.Second, "database", nil))
 			})
 		}
 	})
@@ -102,13 +101,11 @@ func TestAgent(t *testing.T) {
 			TLSCertificateKeyFilePassword: "pass",
 			TLSCa:                         "cert",
 		}
-		json, _ := json.Marshal(mongoDBOptions)
-		value := string(json)
 		agent := &Agent{
 			Username:       pointer.ToString("username"),
 			Password:       pointer.ToString("s3cur3 p@$$w0r4."),
 			TLS:            true,
-			MongoDBOptions: &value,
+			MongoDBOptions: &mongoDBOptions,
 		}
 		service := &Service{
 			Address: pointer.ToString("1.2.3.4"),
@@ -125,15 +122,15 @@ func TestAgent(t *testing.T) {
 		} {
 			t.Run(string(typ), func(t *testing.T) {
 				agent.AgentType = typ
-				assert.Equal(t, expected, agent.DSN(service, time.Second, "database"))
+				assert.Equal(t, expected, agent.DSN(service, time.Second, "database", nil))
 			})
 		}
 
 		t.Run("MongoDBNoDatabase", func(t *testing.T) {
 			agent.AgentType = MongoDBExporterType
 
-			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?connectTimeoutMS=1000&ssl=true&sslCaFile=caFileHolder&sslCertificateKeyFile=certificateKeyFileHolder&sslCertificateKeyFilePassword=certificateKeyFilePasswordHolder", agent.DSN(service, time.Second, ""))
-			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?ssl=true&sslCaFile=caFileHolder&sslCertificateKeyFile=certificateKeyFileHolder&sslCertificateKeyFilePassword=certificateKeyFilePasswordHolder", agent.DSN(service, 0, ""))
+			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?connectTimeoutMS=1000&ssl=true&sslCaFile=caFileHolder&sslCertificateKeyFile=certificateKeyFileHolder&sslCertificateKeyFilePassword=certificateKeyFilePasswordHolder", agent.DSN(service, time.Second, "", nil))
+			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?ssl=true&sslCaFile=caFileHolder&sslCertificateKeyFile=certificateKeyFileHolder&sslCertificateKeyFilePassword=certificateKeyFilePasswordHolder", agent.DSN(service, 0, "", nil))
 		})
 	})
 
@@ -159,15 +156,15 @@ func TestAgent(t *testing.T) {
 		} {
 			t.Run(string(typ), func(t *testing.T) {
 				agent.AgentType = typ
-				assert.Equal(t, expected, agent.DSN(service, time.Second, "database"))
+				assert.Equal(t, expected, agent.DSN(service, time.Second, "database", nil))
 			})
 		}
 
 		t.Run("MongoDBNoDatabase", func(t *testing.T) {
 			agent.AgentType = MongoDBExporterType
 
-			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?connectTimeoutMS=1000&ssl=true&tlsInsecure=true", agent.DSN(service, time.Second, ""))
-			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?ssl=true&tlsInsecure=true", agent.DSN(service, 0, ""))
+			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?connectTimeoutMS=1000&ssl=true&tlsInsecure=true", agent.DSN(service, time.Second, "", nil))
+			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?ssl=true&tlsInsecure=true", agent.DSN(service, 0, "", nil))
 		})
 	})
 }
@@ -197,7 +194,7 @@ func TestPostgresAgentTLS(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			agent.TLS = testCase.tls
 			agent.TLSSkipVerify = testCase.tlsSkipVerify
-			assert.Equal(t, testCase.expected, agent.DSN(service, time.Second, "database"))
+			assert.Equal(t, testCase.expected, agent.DSN(service, time.Second, "database", nil))
 		})
 	}
 }
@@ -214,7 +211,7 @@ func TestPostgresWithSocket(t *testing.T) {
 			Socket: pointer.ToString("/var/run/postgres"),
 		}
 		expect := "postgres://username@/database?connect_timeout=1&host=%2Fvar%2Frun%2Fpostgres&sslmode=verify-full"
-		assert.Equal(t, expect, agent.DSN(service, time.Second, "database"))
+		assert.Equal(t, expect, agent.DSN(service, time.Second, "database", nil))
 	})
 
 	t.Run("empty-user-passowrd", func(t *testing.T) {
@@ -225,7 +222,7 @@ func TestPostgresWithSocket(t *testing.T) {
 			Socket: pointer.ToString("/var/run/postgres"),
 		}
 		expect := "postgres:///database?connect_timeout=1&host=%2Fvar%2Frun%2Fpostgres&sslmode=disable"
-		assert.Equal(t, expect, agent.DSN(service, time.Second, "database"))
+		assert.Equal(t, expect, agent.DSN(service, time.Second, "database", nil))
 	})
 
 	t.Run("dir-with-symbols", func(t *testing.T) {
@@ -236,7 +233,7 @@ func TestPostgresWithSocket(t *testing.T) {
 			Socket: pointer.ToString(`/tmp/123\ A0m\%\$\@\8\,\+\-`),
 		}
 		expect := "postgres:///database?connect_timeout=1&host=%2Ftmp%2F123%5C+A0m%5C%25%5C%24%5C%40%5C8%5C%2C%5C%2B%5C-&sslmode=disable"
-		assert.Equal(t, expect, agent.DSN(service, time.Second, "database"))
+		assert.Equal(t, expect, agent.DSN(service, time.Second, "database", nil))
 	})
 }
 
@@ -252,7 +249,7 @@ func TestMongoWithSocket(t *testing.T) {
 			Socket: pointer.ToString("/tmp/mongodb-27017.sock"),
 		}
 		expect := "mongodb://username@%2Ftmp%2Fmongodb-27017.sock/database?connectTimeoutMS=1000&ssl=true"
-		assert.Equal(t, expect, agent.DSN(service, time.Second, "database"))
+		assert.Equal(t, expect, agent.DSN(service, time.Second, "database", nil))
 	})
 
 	t.Run("empty-user-passowrd", func(t *testing.T) {
@@ -263,7 +260,7 @@ func TestMongoWithSocket(t *testing.T) {
 			Socket: pointer.ToString("/tmp/mongodb-27017.sock"),
 		}
 		expect := "mongodb://%2Ftmp%2Fmongodb-27017.sock/database?connectTimeoutMS=1000"
-		assert.Equal(t, expect, agent.DSN(service, time.Second, "database"))
+		assert.Equal(t, expect, agent.DSN(service, time.Second, "database", nil))
 	})
 
 	t.Run("dir-with-symbols", func(t *testing.T) {
@@ -274,7 +271,7 @@ func TestMongoWithSocket(t *testing.T) {
 			Socket: pointer.ToString(`/tmp/123\ A0m\%\$\@\8\,\+\-/mongodb-27017.sock`),
 		}
 		expect := "mongodb://%2Ftmp%2F123%5C%20A0m%5C%25%5C$%5C%40%5C8%5C,%5C+%5C-%2Fmongodb-27017.sock/database?connectTimeoutMS=1000"
-		assert.Equal(t, expect, agent.DSN(service, time.Second, "database"))
+		assert.Equal(t, expect, agent.DSN(service, time.Second, "database", nil))
 	})
 }
 

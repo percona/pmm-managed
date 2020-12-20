@@ -30,6 +30,23 @@ import (
 	"gopkg.in/reform.v1"
 )
 
+type MongoDBOptionsParams interface {
+	GetTlsCertificateKey() string
+	GetTlsCertificateKeyFilePassword() string
+	GetTlsCa() string
+}
+
+func MongoDBOptionsFromRequest(params MongoDBOptionsParams) *MongoDBOptions {
+	if params.GetTlsCertificateKey() != "" || params.GetTlsCertificateKeyFilePassword() != "" || params.GetTlsCa() != "" {
+		return &MongoDBOptions{
+			TLSCertificateKey:             params.GetTlsCertificateKey(),
+			TLSCertificateKeyFilePassword: params.GetTlsCertificateKeyFilePassword(),
+			TLSCa:                         params.GetTlsCa(),
+		}
+	}
+	return nil
+}
+
 func checkUniqueAgentID(q *reform.Querier, id string) error {
 	if id == "" {
 		panic("empty Agent ID")
@@ -450,7 +467,7 @@ type CreateAgentParams struct {
 	CustomLabels                   map[string]string
 	TLS                            bool
 	TLSSkipVerify                  bool
-	MongoDBOptions                 string
+	MongoDBOptions                 *MongoDBOptions
 	TableCountTablestatsGroupLimit int32
 	QueryExamplesDisabled          bool
 	MaxQueryLogSize                int64
@@ -502,7 +519,7 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 		Password:                       pointer.ToStringOrNil(params.Password),
 		TLS:                            params.TLS,
 		TLSSkipVerify:                  params.TLSSkipVerify,
-		MongoDBOptions:                 pointer.ToStringOrNil(params.MongoDBOptions),
+		MongoDBOptions:                 params.MongoDBOptions,
 		TableCountTablestatsGroupLimit: params.TableCountTablestatsGroupLimit,
 		QueryExamplesDisabled:          params.QueryExamplesDisabled,
 		MaxQueryLogSize:                params.MaxQueryLogSize,
