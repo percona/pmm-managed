@@ -116,8 +116,8 @@ func TestAgent(t *testing.T) {
 			ProxySQLExporterType:        "username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:12345)/database?timeout=1s&tls=true",
 			QANMySQLPerfSchemaAgentType: "username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:12345)/database?clientFoundRows=true&parseTime=true&timeout=1s&tls=true",
 			QANMySQLSlowlogAgentType:    "username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:12345)/database?clientFoundRows=true&parseTime=true&timeout=1s&tls=true",
-			MongoDBExporterType:         "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000&ssl=true&sslCaFile={{caFilePlaceholder}}&sslCertificateKeyFile={{certificateKeyFilePlaceholder}}&sslCertificateKeyFilePassword=pass",
-			QANMongoDBProfilerAgentType: "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000&ssl=true&sslCaFile={{caFilePlaceholder}}&sslCertificateKeyFile={{certificateKeyFilePlaceholder}}&sslCertificateKeyFilePassword=pass",
+			MongoDBExporterType:         "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000&ssl=true&sslCaFile={{.TextFiles.caFilePlaceholder}}&sslCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}&sslCertificateKeyFilePassword=pass",
+			QANMongoDBProfilerAgentType: "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000&ssl=true&sslCaFile={{.TextFiles.caFilePlaceholder}}&sslCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}&sslCertificateKeyFilePassword=pass",
 			PostgresExporterType:        "postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connect_timeout=1&sslmode=verify-full",
 		} {
 			t.Run(string(typ), func(t *testing.T) {
@@ -129,11 +129,11 @@ func TestAgent(t *testing.T) {
 		t.Run("MongoDBNoDatabase", func(t *testing.T) {
 			agent.AgentType = MongoDBExporterType
 
-			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?connectTimeoutMS=1000&ssl=true&sslCaFile={{caFilePlaceholder}}&sslCertificateKeyFile={{certificateKeyFilePlaceholder}}&sslCertificateKeyFilePassword=pass", agent.DSN(service, time.Second, "", nil))
-			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?ssl=true&sslCaFile={{caFilePlaceholder}}&sslCertificateKeyFile={{certificateKeyFilePlaceholder}}&sslCertificateKeyFilePassword=pass", agent.DSN(service, 0, "", nil))
+			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?connectTimeoutMS=1000&ssl=true&sslCaFile={{.TextFiles.caFilePlaceholder}}&sslCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}&sslCertificateKeyFilePassword=pass", agent.DSN(service, time.Second, "", nil))
+			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?ssl=true&sslCaFile={{.TextFiles.caFilePlaceholder}}&sslCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}&sslCertificateKeyFilePassword=pass", agent.DSN(service, 0, "", nil))
 			expectedFiles := map[string]string{
-				"caFilePlaceholder":             "cert",
-				"certificateKeyFilePlaceholder": "key",
+				".TextFiles.caFilePlaceholder":             "cert",
+				".TextFiles.certificateKeyFilePlaceholder": "key",
 			}
 			assert.Equal(t, expectedFiles, agent.Files())
 		})

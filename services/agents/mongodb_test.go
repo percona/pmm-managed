@@ -86,11 +86,11 @@ func TestMongodbExporterConfig(t *testing.T) {
 		}
 		actual := mongodbExporterConfig(mongodb, exporter, exposeSecrets, pmmAgentVersion)
 		expected := "MONGODB_URI=mongodb://1.2.3.4:27017/?connectTimeoutMS=1000&ssl=true&" +
-			"sslCaFile={{caFilePlaceholder}}&sslCertificateKeyFile={{certificateKeyFilePlaceholder}}&sslCertificateKeyFilePassword=passwordoftls"
+			"sslCaFile={{.TextFiles.caFilePlaceholder}}&sslCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}&sslCertificateKeyFilePassword=passwordoftls"
 		assert.Equal(t, expected, actual.Env[0])
 		expectedFiles := map[string]string{
-			"certificateKeyFilePlaceholder": exporter.MongoDBOptions.TLSCertificateKey,
-			"caFilePlaceholder":             exporter.MongoDBOptions.TLSCa,
+			".TextFiles.certificateKeyFilePlaceholder": exporter.MongoDBOptions.TLSCertificateKey,
+			".TextFiles.caFilePlaceholder":             exporter.MongoDBOptions.TLSCa,
 		}
 		assert.Equal(t, expectedFiles, actual.TextFiles)
 	})
