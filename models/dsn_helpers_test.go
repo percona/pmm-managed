@@ -146,7 +146,7 @@ func TestFindDSNByServiceID(t *testing.T) {
 				AgentType:    models.MongoDBExporterType,
 				PMMAgentID:   pointer.ToString("PA2"),
 				RunsOnNodeID: nil,
-				Username:     pointer.ToString("pmm-user"),
+				Username:     pointer.ToString("pmm-user{{"),
 				ServiceID:    pointer.ToString("S4"),
 				TLS:          true,
 				MongoDBOptions: &models.MongoDBOptions{
@@ -202,7 +202,7 @@ func TestFindDSNByServiceID(t *testing.T) {
 
 		dsn, files, err := models.FindDSNByServiceIDandPMMAgentID(q, "S4", "PA2", "test")
 		require.NoError(t, err)
-		expected := "mongodb://pmm-user@127.0.0.1:27017/test?connectTimeoutMS=1000&ssl=true&sslCaFile=[[caFilePlaceholder]]&sslCertificateKeyFile=%28%28certificateKeyFilePlaceholder%29%29&sslCertificateKeyFilePassword=passwordoftls"
+		expected := "mongodb://pmm-user%7B%7B@127.0.0.1:27017/test?connectTimeoutMS=1000&ssl=true&sslCaFile=[[caFilePlaceholder]]&sslCertificateKeyFile=[[certificateKeyFilePlaceholder]]&sslCertificateKeyFilePassword=passwordoftls"
 		assert.Equal(t, expected, dsn)
 		assert.NotNil(t, files)
 	})

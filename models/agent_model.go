@@ -22,6 +22,7 @@ import (
 	"net"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/AlekSi/pointer"
@@ -310,7 +311,8 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			u.User = url.User(username)
 		}
 		dsn := u.String()
-		//TODO: unescape delimiters.
+		dsn = strings.Replace(dsn, url.QueryEscape(tdp.Left), tdp.Left, -1)
+		dsn = strings.Replace(dsn, url.QueryEscape(tdp.Right), tdp.Right, -1)
 		return dsn
 
 	case PostgresExporterType, QANPostgreSQLPgStatementsAgentType, QANPostgreSQLPgStatMonitorAgentType:
