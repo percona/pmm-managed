@@ -37,7 +37,7 @@ import (
 	"github.com/percona/pmm-managed/utils/tests"
 )
 
-const xtradbKubeconfigTest = `
+const pxcKubeconfigTest = `
 	{
 		"apiVersion": "v1",
 		"kind": "Config",
@@ -70,7 +70,7 @@ const xtradbKubeconfigTest = `
 		"current-context": "svcs-acct-context"
 	}
 `
-const xtradbKubernetesClusterNameTest = "test-k8s-cluster-name"
+const pxcKubernetesClusterNameTest = "test-k8s-cluster-name"
 
 func TestXtraDBClusterService(t *testing.T) {
 	setup := func(t *testing.T) (ctx context.Context, db *reform.DB, dbaasClient *mockDbaasClient, teardown func(t *testing.T)) {
@@ -95,7 +95,7 @@ func TestXtraDBClusterService(t *testing.T) {
 	defer teardown(t)
 
 	ks := NewKubernetesServer(db, dbaasClient)
-	dbaasClient.On("CheckKubernetesClusterConnection", ctx, xtradbKubeconfigTest).Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
+	dbaasClient.On("CheckKubernetesClusterConnection", ctx, pxcKubeconfigTest).Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
 		Operators: &controllerv1beta1.Operators{
 			Xtradb: &controllerv1beta1.Operator{Status: controllerv1beta1.OperatorsStatus_OPERATORS_STATUS_NOT_INSTALLED},
 			Psmdb:  &controllerv1beta1.Operator{Status: controllerv1beta1.OperatorsStatus_OPERATORS_STATUS_OK},
@@ -104,8 +104,8 @@ func TestXtraDBClusterService(t *testing.T) {
 	}, nil)
 
 	registerKubernetesClusterResponse, err := ks.RegisterKubernetesCluster(ctx, &dbaasv1beta1.RegisterKubernetesClusterRequest{
-		KubernetesClusterName: xtradbKubernetesClusterNameTest,
-		KubeAuth:              &dbaasv1beta1.KubeAuth{Kubeconfig: xtradbKubeconfigTest},
+		KubernetesClusterName: pxcKubernetesClusterNameTest,
+		KubeAuth:              &dbaasv1beta1.KubeAuth{Kubeconfig: pxcKubeconfigTest},
 	})
 	require.NoError(t, err)
 	assert.NotNil(t, registerKubernetesClusterResponse)
@@ -139,7 +139,7 @@ func TestXtraDBClusterService(t *testing.T) {
 
 		dbaasClient.On("ListXtraDBClusters", ctx, mock.Anything).Return(&mockResp, nil)
 
-		resp, err := s.ListXtraDBClusters(ctx, &dbaasv1beta1.ListXtraDBClustersRequest{KubernetesClusterName: xtradbKubernetesClusterNameTest})
+		resp, err := s.ListXtraDBClusters(ctx, &dbaasv1beta1.ListXtraDBClustersRequest{KubernetesClusterName: pxcKubernetesClusterNameTest})
 		assert.NoError(t, err)
 		require.NotNil(t, resp.Clusters[0])
 		assert.Equal(t, resp.Clusters[0].Name, "first-pxc-test")
@@ -155,7 +155,7 @@ func TestXtraDBClusterService(t *testing.T) {
 		s := NewXtraDBClusterService(db, dbaasClient)
 		mockReq := controllerv1beta1.CreateXtraDBClusterRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
-				Kubeconfig: xtradbKubeconfigTest,
+				Kubeconfig: pxcKubeconfigTest,
 			},
 			Name: "third-pxc-test",
 			Params: &controllerv1beta1.XtraDBClusterParams{
@@ -180,7 +180,7 @@ func TestXtraDBClusterService(t *testing.T) {
 		dbaasClient.On("CreateXtraDBCluster", ctx, &mockReq).Return(&controllerv1beta1.CreateXtraDBClusterResponse{}, nil)
 
 		in := dbaasv1beta1.CreateXtraDBClusterRequest{
-			KubernetesClusterName: xtradbKubernetesClusterNameTest,
+			KubernetesClusterName: pxcKubernetesClusterNameTest,
 			Name:                  "third-pxc-test",
 			Params: &dbaasv1beta1.XtraDBClusterParams{
 				ClusterSize: 5,
@@ -226,7 +226,7 @@ func TestXtraDBClusterService(t *testing.T) {
 		s := NewXtraDBClusterService(db, dbaasClient)
 		mockReq := controllerv1beta1.UpdateXtraDBClusterRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
-				Kubeconfig: xtradbKubeconfigTest,
+				Kubeconfig: pxcKubeconfigTest,
 			},
 			Name: "third-pxc-test",
 			Params: &controllerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
@@ -249,7 +249,7 @@ func TestXtraDBClusterService(t *testing.T) {
 		dbaasClient.On("UpdateXtraDBCluster", ctx, &mockReq).Return(&controllerv1beta1.UpdateXtraDBClusterResponse{}, nil)
 
 		in := dbaasv1beta1.UpdateXtraDBClusterRequest{
-			KubernetesClusterName: xtradbKubernetesClusterNameTest,
+			KubernetesClusterName: pxcKubernetesClusterNameTest,
 			Name:                  "third-pxc-test",
 			Params: &dbaasv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
 				ClusterSize: 8,
@@ -323,7 +323,7 @@ func TestXtraDBClusterService(t *testing.T) {
 		s := NewXtraDBClusterService(db, dbaasClient)
 		mockReq := controllerv1beta1.RestartXtraDBClusterRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
-				Kubeconfig: xtradbKubeconfigTest,
+				Kubeconfig: pxcKubeconfigTest,
 			},
 			Name: "third-pxc-test",
 		}
@@ -331,7 +331,7 @@ func TestXtraDBClusterService(t *testing.T) {
 		dbaasClient.On("RestartXtraDBCluster", ctx, &mockReq).Return(&controllerv1beta1.RestartXtraDBClusterResponse{}, nil)
 
 		in := dbaasv1beta1.RestartXtraDBClusterRequest{
-			KubernetesClusterName: xtradbKubernetesClusterNameTest,
+			KubernetesClusterName: pxcKubernetesClusterNameTest,
 			Name:                  "third-pxc-test",
 		}
 
@@ -343,7 +343,7 @@ func TestXtraDBClusterService(t *testing.T) {
 		s := NewXtraDBClusterService(db, dbaasClient)
 		mockReq := controllerv1beta1.DeleteXtraDBClusterRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
-				Kubeconfig: xtradbKubeconfigTest,
+				Kubeconfig: pxcKubeconfigTest,
 			},
 			Name: "third-pxc-test",
 		}
@@ -351,7 +351,7 @@ func TestXtraDBClusterService(t *testing.T) {
 		dbaasClient.On("DeleteXtraDBCluster", ctx, &mockReq).Return(&controllerv1beta1.DeleteXtraDBClusterResponse{}, nil)
 
 		in := dbaasv1beta1.DeleteXtraDBClusterRequest{
-			KubernetesClusterName: xtradbKubernetesClusterNameTest,
+			KubernetesClusterName: pxcKubernetesClusterNameTest,
 			Name:                  "third-pxc-test",
 		}
 
