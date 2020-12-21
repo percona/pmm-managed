@@ -209,7 +209,6 @@ func (s *RulesService) ToggleAlertRule(ctx context.Context, req *iav1beta1.Toggl
 		return nil, e
 	}
 	return &iav1beta1.ToggleAlertRuleResponse{}, nil
-
 }
 
 // DeleteAlertRule deletes Integrated Alerting rule.
