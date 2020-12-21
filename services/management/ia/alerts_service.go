@@ -111,7 +111,7 @@ func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlert
 			return nil, e
 		}
 
-		template, ok := s.templatesService.GetTemplates()[rule.TemplateName]
+		template, ok := s.templatesService.getTemplates()[rule.TemplateName]
 		if !ok {
 			return nil, status.Errorf(codes.NotFound, "Failed to find template with name: %s", rule.TemplateName)
 		}

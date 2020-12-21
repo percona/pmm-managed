@@ -87,7 +87,7 @@ func (s *RulesService) GetAlertRules() ([]*iav1beta1.Rule, error) {
 		return nil, e
 	}
 
-	templates := s.templates.GetTemplates()
+	templates := s.templates.getTemplates()
 
 	res := make([]*iav1beta1.Rule, len(rules))
 	for i, rule := range rules {
@@ -128,7 +128,7 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 		return nil, err
 	}
 
-	if _, ok := s.templates.GetTemplates()[params.TemplateName]; !ok {
+	if _, ok := s.templates.getTemplates()[params.TemplateName]; !ok {
 		return nil, status.Errorf(codes.NotFound, "Unknown template %s.", params.TemplateName)
 	}
 
