@@ -416,7 +416,7 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-7135-add-seconds-and-summary"
+  branch = "PMM-2.0"
   digest = "1:7215bd6323e5ab20f47da37f708880472fc97edcf4d0de714b6dce28a0a55d42"
   name = "github.com/percona/pmm"
   packages = [
@@ -440,7 +440,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "bca928c617f7f64af93fe8b827eb2bee96d96876"
+  revision = "5b15958558aaf106bb624317d20fb64f03d3cf93"
 
 [[projects]]
   digest = "1:6832634ec059f4bfddaff75621cf1c4750949129c6de2e5e58e01059d0851e25"
