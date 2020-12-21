@@ -416,8 +416,8 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-2.0"
-  digest = "1:8c5a70d25ba3802706df7c801338bd47c9d6f4d132784ee36fcf48ec3af48e9f"
+  branch = "PMM-7135-add-seconds-and-summary"
+  digest = "1:7215bd6323e5ab20f47da37f708880472fc97edcf4d0de714b6dce28a0a55d42"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -440,7 +440,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "ca89e8a37a545062763882b74ca594393ab7ff4e"
+  revision = "bca928c617f7f64af93fe8b827eb2bee96d96876"
 
 [[projects]]
   digest = "1:6832634ec059f4bfddaff75621cf1c4750949129c6de2e5e58e01059d0851e25"

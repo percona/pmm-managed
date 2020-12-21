@@ -2,21 +2,19 @@
 templates:
   - name: pmm_mongodb_restarted
     version: 1
-    summary: MongoDB Restarted
+    summary: MongoDB restarted
     expr: |-
       mongodb_instance_uptime_seconds
       < [[ .threshold ]]
     params:
       - name: threshold
         summary: Seconds from the last restart
-        unit: "sec"
+        unit: s
         type: float
-        value: 360
+        range: [0, 1800]
+        value: 300
     for: 10s
     severity: warning
-    labels:
-      ticket: PMM-7135
-      things_to_do: "yes"
     annotations:
       description: |-
         This template is not finished: https://jira.percona.com/browse/PMM-7135

@@ -9,10 +9,10 @@ templates:
     params:
       - name: threshold
         summary: Seconds from the last restart
-        unit: "sec"
-        type: float # hack to be able to parse the template, original type was int
-        range: [0, 400]
-        value: 360
+        unit: s
+        type: float
+        range: [0, 1800]
+        value: 300
     for: 10s
     severity: warning
     labels:
