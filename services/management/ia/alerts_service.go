@@ -167,11 +167,6 @@ func (s *AlertsService) ToggleAlert(ctx context.Context, req *iav1beta1.ToggleAl
 	return &iav1beta1.ToggleAlertResponse{}, nil
 }
 
-// DeleteAlert is unimplemented.
-func (s *AlertsService) DeleteAlert(ctx context.Context, req *iav1beta1.DeleteAlertRequest) (*iav1beta1.DeleteAlertResponse, error) {
-	panic("implement me")
-}
-
 // Check interfaces.
 var (
 	_ iav1beta1.AlertsServer = (*AlertsService)(nil)
