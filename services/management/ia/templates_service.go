@@ -200,20 +200,29 @@ func (s *TemplatesService) loadTemplatesFromAssets(ctx context.Context) ([]alert
 			return nil, errors.Wrap(err, "failed to parse rule template file")
 		}
 
-		// built-in-specific validation
+		// built-in-specific validations
+
 		if l := len(templates); l != 1 {
 			return nil, errors.Errorf("%q should contain exactly one template, got %d", path, l)
 		}
-		if strings.HasPrefix(filepath.Base(path), "pmm_") {
-			return nil, errors.Errorf("%q should not start with 'pmm_' prefix", path)
-		}
-		for _, t := range templates {
-			if !strings.HasPrefix(t.Name, "pmm_") {
-				return nil, errors.Errorf("%s %q: template name should start with 'pmm_' prefix", path, t.Name)
-			}
 
-			res = append(res, t)
+		t := templates[0]
+
+		filename := filepath.Base(path)
+		if strings.HasPrefix(filename, "pmm_") {
+			return nil, errors.Errorf("%q file name should not start with 'pmm_' prefix", path)
 		}
+		if !strings.HasPrefix(t.Name, "pmm_") {
+			return nil, errors.Errorf("%s %q: template name should start with 'pmm_' prefix", path, t.Name)
+		}
+		if expected := strings.TrimPrefix(t.Name, "pmm_") + ".yml"; filename != expected {
+			return nil, errors.Errorf("template file name %q should be %q", filename, expected)
+		}
+		if len(t.Annotations) != 2 || t.Annotations["summary"] == "" || t.Annotations["description"] == "" {
+			return nil, errors.Errorf("%s %q: template should contain exactly two annotations: summary and description", path, t.Name)
+		}
+
+		res = append(res, t)
 	}
 	return res, nil
 }
