@@ -58,15 +58,15 @@ func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAl
 		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
 	}
 
-	res, err := s.GetAlertRules()
+	res, err := s.getAlertRules()
 	if err != nil {
 		return nil, err
 	}
 	return &iav1beta1.ListAlertRulesResponse{Rules: res}, nil
 }
 
-// GetAlertRules returns list of available alert rules.
-func (s *RulesService) GetAlertRules() ([]*iav1beta1.Rule, error) {
+// getAlertRules returns list of available alert rules.
+func (s *RulesService) getAlertRules() ([]*iav1beta1.Rule, error) {
 	var rules []*models.Rule
 	var channels []*models.Channel
 	e := s.db.InTransaction(func(tx *reform.TX) error {
