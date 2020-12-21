@@ -54,11 +54,11 @@ const (
 	dirPerm            = os.FileMode(0o775)
 )
 
-// TemplateInfo represents alerting rule template information from various sources.
+// templateInfo represents alerting rule template information from various sources.
 //
 // TODO We already have models.Template, iav1beta1.Template, and alert.Template.
 //      We probably can remove that type.
-type TemplateInfo struct {
+type templateInfo struct {
 	alert.Template
 	Yaml      string
 	Source    iav1beta1.TemplateSource
@@ -73,7 +73,7 @@ type TemplatesService struct {
 	rulesPath         string // used for testing
 
 	rw        sync.RWMutex
-	templates map[string]TemplateInfo
+	templates map[string]templateInfo
 }
 
 // NewTemplatesService creates a new TemplatesService.
@@ -104,7 +104,7 @@ func NewTemplatesService(db *reform.DB) *TemplatesService {
 		l:                 l,
 		userTemplatesPath: templatesDir + "/*.yml",
 		rulesPath:         rulesDir,
-		templates:         make(map[string]TemplateInfo),
+		templates:         make(map[string]templateInfo),
 	}
 }
 
@@ -113,11 +113,11 @@ func newParamTemplate() *template.Template {
 }
 
 // GetTemplates return collected templates.
-func (s *TemplatesService) GetTemplates() map[string]TemplateInfo {
+func (s *TemplatesService) GetTemplates() map[string]templateInfo {
 	s.rw.RLock()
 	defer s.rw.RUnlock()
 
-	res := make(map[string]TemplateInfo)
+	res := make(map[string]templateInfo)
 	for n, r := range s.templates {
 		res[n] = r
 	}
@@ -147,17 +147,17 @@ func (s *TemplatesService) Collect(ctx context.Context) {
 		return
 	}
 
-	templates := make([]TemplateInfo, 0, len(builtInTemplates)+len(userDefinedTemplates)+len(dbTemplates))
+	templates := make([]templateInfo, 0, len(builtInTemplates)+len(userDefinedTemplates)+len(dbTemplates))
 
 	for _, t := range builtInTemplates {
-		templates = append(templates, TemplateInfo{
+		templates = append(templates, templateInfo{
 			Template: t,
 			Source:   iav1beta1.TemplateSource_BUILT_IN,
 		})
 	}
 
 	for _, t := range userDefinedTemplates {
-		templates = append(templates, TemplateInfo{
+		templates = append(templates, templateInfo{
 			Template: t,
 			Source:   iav1beta1.TemplateSource_USER_FILE,
 		})
@@ -170,7 +170,7 @@ func (s *TemplatesService) Collect(ctx context.Context) {
 	// replace previously stored templates with newly collected ones.
 	s.rw.Lock()
 	defer s.rw.Unlock()
-	s.templates = make(map[string]TemplateInfo, len(templates))
+	s.templates = make(map[string]templateInfo, len(templates))
 	for _, t := range templates {
 		// TODO Check for name clashes? Allow users to re-define built-in templates?
 		// Reserve prefix for built-in or user-defined templates?
@@ -222,7 +222,7 @@ func (s *TemplatesService) loadTemplatesFromFiles(ctx context.Context, path stri
 	return res, nil
 }
 
-func (s *TemplatesService) loadTemplatesFromDB() ([]TemplateInfo, error) {
+func (s *TemplatesService) loadTemplatesFromDB() ([]templateInfo, error) {
 	var templates []models.Template
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
@@ -233,7 +233,7 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]TemplateInfo, error) {
 		return nil, errors.Wrap(e, "failed to load rule templates form DB")
 	}
 
-	res := make([]TemplateInfo, 0, len(templates))
+	res := make([]templateInfo, 0, len(templates))
 	for _, template := range templates {
 		template := template
 		params := make([]alert.Parameter, len(template.Params))
@@ -266,7 +266,7 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]TemplateInfo, error) {
 		}
 
 		res = append(res,
-			TemplateInfo{
+			templateInfo{
 				Template: alert.Template{
 					Name:        template.Name,
 					Version:     template.Version,
