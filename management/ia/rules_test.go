@@ -149,6 +149,48 @@ func TestRulesAPI(t *testing.T) {
 		})
 	})
 
+	t.Run("toggle", func(t *testing.T) {
+		t.Run("normal", func(t *testing.T) {
+			cParams := createAlertRuleParams(templateName, channelID)
+			rule, err := client.CreateAlertRule(cParams)
+			require.NoError(t, err)
+			defer deleteRule(t, client, rule.Payload.RuleID)
+
+			list, err := client.ListAlertRules(&rules.ListAlertRulesParams{Context: pmmapitests.Context})
+			require.NoError(t, err)
+
+			var found bool
+			for _, r := range list.Payload.Rules {
+				if r.RuleID == rule.Payload.RuleID {
+					assert.True(t, r.Disabled)
+					found = true
+				}
+			}
+			assert.Truef(t, found, "Rule with id %s not found", rule.Payload.RuleID)
+
+			_, err = client.ToggleAlertRule(&rules.ToggleAlertRuleParams{
+				Body: rules.ToggleAlertRuleBody{
+					RuleID:   rule.Payload.RuleID,
+					Disabled: pointer.ToString(rules.ToggleAlertRuleBodyDisabledFALSE),
+				},
+				Context: pmmapitests.Context,
+			})
+			require.NoError(t, err)
+
+			list, err = client.ListAlertRules(&rules.ListAlertRulesParams{Context: pmmapitests.Context})
+			require.NoError(t, err)
+
+			found = false
+			for _, r := range list.Payload.Rules {
+				if r.RuleID == rule.Payload.RuleID {
+					assert.False(t, r.Disabled)
+					found = true
+				}
+			}
+			assert.Truef(t, found, "Rule with id %s not found", rule.Payload.RuleID)
+		})
+	})
+
 	t.Run("delete", func(t *testing.T) {
 		params := createAlertRuleParams(templateName, channelID)
 		rule, err := client.CreateAlertRule(params)
