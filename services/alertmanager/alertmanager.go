@@ -185,7 +185,6 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 	}
 
 	recvSet := make(map[string]struct{}) // stores unique combinations of channel IDs
-	// TODO: don't store subsets of a combination
 	for _, r := range rules {
 		match, _ := r.GetCustomLabels()
 		match["rule_id"] = r.ID
@@ -211,58 +210,63 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 func generateReceivers(chanMap map[string]models.Channel, recvSet map[string]struct{}) ([]*alertmanager.Receiver, error) {
 	var recvs []*alertmanager.Receiver
 	for k := range recvSet {
-		recv, err := makeReceiver(chanMap, k)
-		if err != nil {
-			return nil, err
+		recv := &alertmanager.Receiver{
+			Name: k,
+		}
+
+		individualChannels := strings.Split(k, " + ")
+		for _, ch := range individualChannels {
+			channel := chanMap[ch]
+			switch channel.Type {
+			case models.Email:
+				recv.EmailConfigs = append(recv.EmailConfigs, &alertmanager.EmailConfig{
+					NotifierConfig: alertmanager.NotifierConfig{
+						SendResolved: channel.EmailConfig.SendResolved,
+					},
+					// besides promconfig, To field is a slice everywhere, do we need to edit the type in promconfig?
+					To: channel.EmailConfig.To[0],
+				})
+			case models.PagerDuty:
+				pdConfig := channel.PagerDutyConfig
+				if pdConfig.RoutingKey != "" {
+					recv.PagerdutyConfigs = append(recv.PagerdutyConfigs, &alertmanager.PagerdutyConfig{
+						NotifierConfig: alertmanager.NotifierConfig{
+							SendResolved: channel.EmailConfig.SendResolved,
+						},
+						RoutingKey: pdConfig.RoutingKey,
+					})
+					break
+				}
+				recv.PagerdutyConfigs = append(recv.PagerdutyConfigs, &alertmanager.PagerdutyConfig{
+					NotifierConfig: alertmanager.NotifierConfig{
+						SendResolved: channel.EmailConfig.SendResolved,
+					},
+					ServiceKey: pdConfig.ServiceKey,
+				})
+			case models.Slack:
+				recv.SlackConfigs = append(recv.SlackConfigs, &alertmanager.SlackConfig{
+					NotifierConfig: alertmanager.NotifierConfig{
+						SendResolved: channel.EmailConfig.SendResolved,
+					},
+					Channel: channel.SlackConfig.Channel,
+				})
+			case models.WebHook:
+				recv.WebhookConfigs = append(recv.WebhookConfigs, &alertmanager.WebhookConfig{
+					NotifierConfig: alertmanager.NotifierConfig{
+						SendResolved: channel.EmailConfig.SendResolved,
+					},
+					URL:       channel.WebHookConfig.URL,
+					MaxAlerts: uint64(channel.WebHookConfig.MaxAlerts),
+					// TODO: add http config
+				})
+			default:
+				return nil, errors.New("Invalid channel type")
+			}
+
 		}
 		recvs = append(recvs, recv)
 	}
 	return recvs, nil
-}
-
-// makeReceiver takes one of the unique combination of channels and turns it into a alertmanager.Receiver
-func makeReceiver(chanMap map[string]models.Channel, name string) (*alertmanager.Receiver, error) {
-	recv := &alertmanager.Receiver{
-		Name: name,
-	}
-
-	individualChannels := strings.Split(name, " + ")
-
-	for _, ch := range individualChannels {
-		channel := chanMap[ch]
-		switch channel.Type {
-		case models.Email:
-			recv.EmailConfigs = append(recv.EmailConfigs, &alertmanager.EmailConfig{
-				// besides promconfig, To field is a slice everywhere, do we need to edit the type in promconfig?
-				To: channel.EmailConfig.To[0],
-			})
-		case models.PagerDuty:
-			pdConfig := channel.PagerDutyConfig
-			if pdConfig.RoutingKey != "" {
-				recv.PagerdutyConfigs = append(recv.PagerdutyConfigs, &alertmanager.PagerdutyConfig{
-					RoutingKey: pdConfig.RoutingKey,
-				})
-				break
-			}
-			recv.PagerdutyConfigs = append(recv.PagerdutyConfigs, &alertmanager.PagerdutyConfig{
-				ServiceKey: pdConfig.ServiceKey,
-			})
-		case models.Slack:
-			recv.SlackConfigs = append(recv.SlackConfigs, &alertmanager.SlackConfig{
-				Channel: channel.SlackConfig.Channel,
-			})
-		case models.WebHook:
-			recv.WebhookConfigs = append(recv.WebhookConfigs, &alertmanager.WebhookConfig{
-				URL:       channel.WebHookConfig.URL,
-				MaxAlerts: uint64(channel.WebHookConfig.MaxAlerts),
-				// TODO: add http config
-			})
-		default:
-			return nil, errors.New("Invalid channel type")
-		}
-
-	}
-	return recv, nil
 }
 
 // SendAlerts sends given alerts. It is the caller's responsibility
