@@ -24,7 +24,6 @@ import (
 	"strings"
 
 	httptransport "github.com/go-openapi/runtime/client"
-	combinations "github.com/mxschmitt/golang-combinations"
 	"github.com/percona/pmm/api/alertmanager/amclient"
 	"github.com/percona/pmm/api/alertmanager/amclient/alert"
 	"github.com/percona/pmm/api/alertmanager/amclient/general"
@@ -212,33 +211,25 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 func generateReceivers(chanMap map[string]models.Channel, recvSet map[string]struct{}) ([]*alertmanager.Receiver, error) {
 	var recvs []*alertmanager.Receiver
 	for k := range recvSet {
-		// "/channel_id/1 + /channel_id/2" is converted to unique combinations
-		// [["/channel_id/1"], ["/channel_id/2"], ["/channel_id/1", "/channel_id/2"]]
-		channelIDs := strings.Split(k, " + ")
-		subsets := combinations.All(channelIDs)
-
-		// for each combination of channels we generate a receiver
-		for _, ss := range subsets {
-			// TODO: handle error
-			recv, err := makeReceiver(chanMap, ss)
-			if err != nil {
-				return nil, err
-			}
-			recvs = append(recvs, recv)
+		recv, err := makeReceiver(chanMap, k)
+		if err != nil {
+			return nil, err
 		}
+		recvs = append(recvs, recv)
 	}
 	return recvs, nil
 }
 
 // makeReceiver takes one of the unique combination of channels and turns it into a alertmanager.Receiver
-func makeReceiver(chanMap map[string]models.Channel, subset []string) (*alertmanager.Receiver, error) {
-	name := strings.Join(subset, " + ")
+func makeReceiver(chanMap map[string]models.Channel, name string) (*alertmanager.Receiver, error) {
 	recv := &alertmanager.Receiver{
 		Name: name,
 	}
 
-	for _, s := range subset {
-		channel := chanMap[s]
+	individualChannels := strings.Split(name, " + ")
+
+	for _, ch := range individualChannels {
+		channel := chanMap[ch]
 		switch channel.Type {
 		case models.Email:
 			recv.EmailConfigs = append(recv.EmailConfigs, &alertmanager.EmailConfig{
