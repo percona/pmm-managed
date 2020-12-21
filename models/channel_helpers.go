@@ -96,17 +96,15 @@ func checkWebHookConfig(c *WebHookConfig) error {
 }
 
 // FindChannels returns saved notification channels configuration.
-func FindChannels(q *reform.Querier) ([]Channel, error) {
+func FindChannels(q *reform.Querier) ([]*Channel, error) {
 	rows, err := q.SelectAllFrom(ChannelTable, "")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select notification channels")
 	}
 
-	channels := make([]Channel, len(rows))
+	channels := make([]*Channel, len(rows))
 	for i, s := range rows {
-		c := s.(*Channel)
-
-		channels[i] = *c
+		channels[i] = s.(*Channel)
 	}
 
 	return channels, nil
@@ -131,6 +129,10 @@ func FindChannelByID(q *reform.Querier, id string) (*Channel, error) {
 
 // FindChannelsByIDs finds channels by IDs.
 func FindChannelsByIDs(q *reform.Querier, ids []string) ([]*Channel, error) {
+	if len(ids) == 0 {
+		return []*Channel{}, nil
+	}
+
 	p := strings.Join(q.Placeholders(1, len(ids)), ", ")
 	tail := fmt.Sprintf("WHERE id IN (%s) ORDER BY id", p) //nolint:gosec
 	args := make([]interface{}, len(ids))
