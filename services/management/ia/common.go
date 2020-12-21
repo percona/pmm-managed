@@ -35,6 +35,8 @@ func convertParamUnit(u string) iav1beta1.ParamUnit {
 	switch strings.ToLower(u) {
 	case "%", "percentage":
 		return iav1beta1.ParamUnit_PERCENTAGE
+	case "s", "sec", "second", "seconds":
+		return iav1beta1.ParamUnit_SECONDS
 	default:
 		return iav1beta1.ParamUnit_PARAM_UNIT_INVALID
 	}
