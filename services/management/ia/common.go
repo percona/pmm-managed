@@ -31,11 +31,10 @@ import (
 )
 
 func convertParamUnit(u string) iav1beta1.ParamUnit {
-	// TODO: check possible variants.
 	switch strings.ToLower(u) {
-	case "%", "percentage":
+	case "%":
 		return iav1beta1.ParamUnit_PERCENTAGE
-	case "s", "sec", "second", "seconds":
+	case "s":
 		return iav1beta1.ParamUnit_SECONDS
 	default:
 		return iav1beta1.ParamUnit_PARAM_UNIT_INVALID
