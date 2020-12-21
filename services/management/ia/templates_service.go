@@ -180,6 +180,7 @@ func (s *TemplatesService) Collect(ctx context.Context) {
 	}
 }
 
+// loadTemplatesFromAssets loads built-in alerting rule templates from pmm-managed binary's assets.
 func (s *TemplatesService) loadTemplatesFromAssets(ctx context.Context) ([]alert.Template, error) {
 	paths := data.AssetNames()
 	res := make([]alert.Template, 0, len(paths))
@@ -189,7 +190,7 @@ func (s *TemplatesService) loadTemplatesFromAssets(ctx context.Context) ([]alert
 			return nil, errors.Wrapf(err, "failed to load rule template file: %s", path)
 		}
 
-		// be strict about builtin templates.
+		// be strict about built-in templates
 		params := &alert.ParseParams{
 			DisallowUnknownFields:    true,
 			DisallowInvalidTemplates: true,
@@ -199,7 +200,20 @@ func (s *TemplatesService) loadTemplatesFromAssets(ctx context.Context) ([]alert
 			return nil, errors.Wrap(err, "failed to parse rule template file")
 		}
 
-		res = append(res, templates...)
+		// built-in-specific validation
+		if l := len(templates); l != 1 {
+			return nil, errors.Errorf("%q should contain exactly one template, got %d", path, l)
+		}
+		if strings.HasPrefix(filepath.Base(path), "pmm_") {
+			return nil, errors.Errorf("%q should not start with 'pmm_' prefix", path)
+		}
+		for _, t := range templates {
+			if !strings.HasPrefix(t.Name, "pmm_") {
+				return nil, errors.Errorf("%s %q: template name should start with 'pmm_' prefix", path, t.Name)
+			}
+
+			res = append(res, t)
+		}
 	}
 	return res, nil
 }
@@ -214,6 +228,7 @@ func (s *TemplatesService) loadTemplatesFromFiles(ctx context.Context, path stri
 	for _, path := range paths {
 		templates, err := s.loadFile(ctx, path)
 		if err != nil {
+			// FIXME skip one bad template file instead of failing everything
 			return nil, errors.Wrapf(err, "failed to load rule template file: %s", path)
 		}
 

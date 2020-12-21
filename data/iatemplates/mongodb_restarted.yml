@@ -1,6 +1,6 @@
 ---
 templates:
-  - name: mongodb_restarted
+  - name: pmm_mongodb_restarted
     version: 1
     summary: MongoDB Restarted
     expr: |-

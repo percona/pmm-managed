@@ -1,6 +1,6 @@
 ---
 templates:
-  - name: postgresql_restarted
+  - name: pmm_postgresql_restarted
     version: 1
     summary: PostgreSQL Restarted
     expr: |-

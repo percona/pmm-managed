@@ -1,6 +1,6 @@
 ---
 templates:
-  - name: postgresql_down
+  - name: pmm_postgresql_down
     version: 1
     summary: PostgreSQL DOWN
     expr: |-

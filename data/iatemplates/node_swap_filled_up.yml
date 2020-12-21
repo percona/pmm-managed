@@ -1,6 +1,6 @@
 ---
 templates:
-  - name: node_swap_filled_up
+  - name: pmm_node_swap_filled_up
     version: 1
     summary: Node high SWAP filling up
     expr: |-

@@ -1,6 +1,6 @@
 ---
 templates:
-  - name: mysql_restarted
+  - name: pmm_mysql_restarted
     version: 1
     summary: MySQL Restarted
     expr: |-

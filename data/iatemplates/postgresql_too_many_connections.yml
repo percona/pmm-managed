@@ -1,6 +1,6 @@
 ---
 templates:
-  - name: postgresql_too_many_connections
+  - name: pmm_postgresql_too_many_connections
     version: 1
     summary: PostgreSQL connections in use
     expr: |-

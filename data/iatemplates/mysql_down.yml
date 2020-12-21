@@ -1,6 +1,6 @@
 ---
 templates:
-  - name: mysql_down
+  - name: pmm_mysql_down
     version: 1
     summary: MySQL DOWN
     expr: |-

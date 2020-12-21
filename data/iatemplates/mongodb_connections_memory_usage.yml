@@ -1,6 +1,6 @@
 ---
 templates:
-  - name: mongodb_connections_memory_usage
+  - name: pmm_mongodb_connections_memory_usage
     version: 1
     summary: Memory used by MongoDB connections
     expr: |-
