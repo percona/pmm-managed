@@ -383,6 +383,14 @@
   version = "v0.3.0"
 
 [[projects]]
+  digest = "1:66a7cef96d36afbc94e41b7bcc21c801401799ef3ce6b3c91b22e0d48362d876"
+  name = "github.com/mxschmitt/golang-combinations"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "341af75e2cab52082c7fe0567781804a41896764"
+  version = "v1.1.0"
+
+[[projects]]
   branch = "main"
   digest = "1:053f0c93dcddd3033e6b0dffa70717ca742f66c51d8894b7f1a1854eb1e6c853"
   name = "github.com/percona-platform/dbaas-api"
@@ -872,6 +880,7 @@
     "github.com/grpc-ecosystem/grpc-gateway/runtime",
     "github.com/kevinburke/go-bindata/go-bindata",
     "github.com/lib/pq",
+    "github.com/mxschmitt/golang-combinations",
     "github.com/percona-platform/dbaas-api/gen/controller",
     "github.com/percona-platform/saas/gen/auth",
     "github.com/percona-platform/saas/gen/check/retrieval",

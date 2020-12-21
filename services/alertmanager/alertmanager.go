@@ -24,16 +24,19 @@ import (
 	"strings"
 
 	httptransport "github.com/go-openapi/runtime/client"
+	combinations "github.com/mxschmitt/golang-combinations"
 	"github.com/percona/pmm/api/alertmanager/amclient"
 	"github.com/percona/pmm/api/alertmanager/amclient/alert"
 	"github.com/percona/pmm/api/alertmanager/amclient/general"
 	"github.com/percona/pmm/api/alertmanager/ammodels"
+	"github.com/percona/promconfig"
 	"github.com/percona/promconfig/alertmanager"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/reform.v1"
 	"gopkg.in/yaml.v3"
 
+	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/dir"
 )
 
@@ -134,12 +137,17 @@ func (svc *Service) updateConfiguration(ctx context.Context) {
 			return
 		}
 
-		// TODO add custom information to this config.
+		err = svc.populateConfig(&cfg)
+		if err != nil {
+			svc.l.Error(err)
+		}
+
 		b, err := yaml.Marshal(cfg)
 		if err != nil {
 			svc.l.Errorf("Failed to marshal alertmanager config %s: %s.", alertmanagerConfigPath, err)
 			return
 		}
+
 		b = append([]byte("# Managed by pmm-managed. DO NOT EDIT.\n---\n"), b...)
 
 		err = ioutil.WriteFile(alertmanagerConfigPath, b, 0o644)
@@ -149,6 +157,121 @@ func (svc *Service) updateConfiguration(ctx context.Context) {
 		}
 	}
 	svc.l.Infof("%s created", alertmanagerConfigPath)
+}
+
+func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
+	var rules []models.Rule
+	var channels []models.Channel
+	e := svc.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		rules, err = models.FindRules(tx.Querier)
+		return err
+	})
+	if e != nil {
+		return errors.Errorf("Failed to retrieve alert rules from database: %s", e)
+	}
+
+	e = svc.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		channels, err = models.FindChannels(tx.Querier)
+		return err
+	})
+	if e != nil {
+		return errors.Errorf("Failed to retrieve notification channels from database: %s", e)
+	}
+
+	chanMap := make(map[string]models.Channel, len(channels))
+	for _, ch := range channels {
+		chanMap[ch.ID] = ch
+	}
+
+	recvSet := make(map[string]struct{}) // stores unique combinations of channel IDs
+	// TODO: don't store subsets of a combination
+	for _, r := range rules {
+		match, _ := r.GetCustomLabels()
+		match["rule_id"] = r.ID
+		recv := strings.Join(r.ChannelIDs, " + ")
+		recvSet[recv] = struct{}{}
+		cfg.Route.Routes = append(cfg.Route.Routes, &alertmanager.Route{
+			Match:          match,
+			Receiver:       recv,
+			RepeatInterval: promconfig.Duration(r.For),
+		})
+	}
+
+	recvs, err := generateReceivers(chanMap, recvSet)
+	if err != nil {
+		return err
+	}
+
+	cfg.Receivers = append(cfg.Receivers, recvs...)
+	return nil
+}
+
+// generateReceivers takes the channel map and a unique set of rule combinations and generates a slice of receivers
+func generateReceivers(chanMap map[string]models.Channel, recvSet map[string]struct{}) ([]*alertmanager.Receiver, error) {
+	var recvs []*alertmanager.Receiver
+	for k := range recvSet {
+		// "/channel_id/1 + /channel_id/2" is converted to unique combinations
+		// [["/channel_id/1"], ["/channel_id/2"], ["/channel_id/1", "/channel_id/2"]]
+		channelIDs := strings.Split(k, " + ")
+		subsets := combinations.All(channelIDs)
+
+		// for each combination of channels we generate a receiver
+		for _, ss := range subsets {
+			// TODO: handle error
+			recv, err := makeReceiver(chanMap, ss)
+			if err != nil {
+				return nil, err
+			}
+			recvs = append(recvs, recv)
+		}
+	}
+	return recvs, nil
+}
+
+// makeReceiver takes one of the unique combination of channels and turns it into a alertmanager.Receiver
+func makeReceiver(chanMap map[string]models.Channel, subset []string) (*alertmanager.Receiver, error) {
+	name := strings.Join(subset, " + ")
+	recv := &alertmanager.Receiver{
+		Name: name,
+	}
+
+	for _, s := range subset {
+		channel := chanMap[s]
+		switch channel.Type {
+		case models.Email:
+			recv.EmailConfigs = append(recv.EmailConfigs, &alertmanager.EmailConfig{
+				// besides promconfig, To field is a slice everywhere, do we need to edit the type in promconfig?
+				To: channel.EmailConfig.To[0],
+			})
+		case models.PagerDuty:
+			pdConfig := channel.PagerDutyConfig
+			if pdConfig.RoutingKey != "" {
+				recv.PagerdutyConfigs = append(recv.PagerdutyConfigs, &alertmanager.PagerdutyConfig{
+					RoutingKey: pdConfig.RoutingKey,
+				})
+				break
+			}
+			recv.PagerdutyConfigs = append(recv.PagerdutyConfigs, &alertmanager.PagerdutyConfig{
+				ServiceKey: pdConfig.ServiceKey,
+			})
+		case models.Slack:
+			recv.SlackConfigs = append(recv.SlackConfigs, &alertmanager.SlackConfig{
+				Channel: channel.SlackConfig.Channel,
+			})
+		case models.WebHook:
+			recv.WebhookConfigs = append(recv.WebhookConfigs, &alertmanager.WebhookConfig{
+				URL:       channel.WebHookConfig.URL,
+				MaxAlerts: uint64(channel.WebHookConfig.MaxAlerts),
+				// TODO: add http config
+			})
+		default:
+			return nil, errors.New("Invalid channel type")
+		}
+
+	}
+	return recv, nil
 }
 
 // SendAlerts sends given alerts. It is the caller's responsibility
