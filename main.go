@@ -125,6 +125,7 @@ type gRPCServerDeps struct {
 	checksService         *checks.Service
 	dbaasControllerClient *dbaas.Client
 	alertmanager          *alertmanager.Service
+	vmalert               *vmalert.Service
 	settings              *models.Settings
 }
 
@@ -182,7 +183,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	templatesSvc := ia.NewTemplatesService(deps.db)
 	templatesSvc.Collect(ctx)
 	iav1beta1.RegisterTemplatesServer(gRPCServer, templatesSvc)
-	iav1beta1.RegisterRulesServer(gRPCServer, ia.NewRulesService(deps.db, templatesSvc))
+	iav1beta1.RegisterRulesServer(gRPCServer, ia.NewRulesService(deps.db, templatesSvc, deps.vmalert))
 	iav1beta1.RegisterAlertsServer(gRPCServer, ia.NewAlertsService(deps.db, deps.alertmanager, templatesSvc))
 
 	// TODO Remove once changing settings.DBaaS.Enabled is possible via API.
@@ -729,6 +730,7 @@ func main() {
 			checksService:         checksService,
 			dbaasControllerClient: dbaasControllerClient,
 			alertmanager:          alertmanager,
+			vmalert:               vmalert,
 			settings:              settings,
 		})
 	}()
