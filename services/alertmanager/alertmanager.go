@@ -175,6 +175,7 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 		return errors.Errorf("Failed to retrieve global alerting settings from database: %s", e)
 	}
 
+	cfg.Global = &alertmanager.GlobalConfig{}
 	if settings.IntegratedAlerting.EmailAlertingSettings != nil {
 		cfg.Global.SMTPFrom = settings.IntegratedAlerting.EmailAlertingSettings.From
 		cfg.Global.SMTPHello = settings.IntegratedAlerting.EmailAlertingSettings.Hello
