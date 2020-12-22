@@ -40,6 +40,15 @@ func TestRulesAPI(t *testing.T) {
 			assert.NotEmpty(t, rule.Payload.RuleID)
 		})
 
+		t.Run("builtin_template", func(t *testing.T) {
+			params := createAlertRuleParams("mongodb_restarted", channelID)
+			rule, err := client.CreateAlertRule(params)
+			require.NoError(t, err)
+			defer deleteRule(t, client, rule.Payload.RuleID)
+
+			assert.NotEmpty(t, rule.Payload.RuleID)
+		})
+
 		t.Run("unknown template", func(t *testing.T) {
 			templateName := gofakeit.UUID()
 			params := createAlertRuleParams(templateName, channelID)
