@@ -42,6 +42,7 @@ import (
 
 	"github.com/percona/pmm-managed/data"
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services"
 	"github.com/percona/pmm-managed/utils/dir"
 )
 
@@ -111,8 +112,8 @@ func newParamTemplate() *template.Template {
 	return template.New("").Option("missingkey=error").Delims("[[", "]]")
 }
 
-// getCollected return collected templates.
-func (s *TemplatesService) getCollected(ctx context.Context) map[string]templateInfo {
+// getTemplates return collected templates.
+func (s *TemplatesService) getTemplates() map[string]templateInfo {
 	s.rw.RLock()
 	defer s.rw.RUnlock()
 
@@ -123,11 +124,11 @@ func (s *TemplatesService) getCollected(ctx context.Context) map[string]template
 	return res
 }
 
-// collect collects IA rule templates from various sources like:
+// Collect collects IA rule templates from various sources like:
 // builtin templates: read from the generated code in bindata.go.
 // user file templates: read from yaml files created by the user in `/srv/ia/templates`
 // user API templates: in the DB created using the API.
-func (s *TemplatesService) collect(ctx context.Context) {
+func (s *TemplatesService) Collect(ctx context.Context) {
 	builtInTemplates, err := s.loadTemplatesFromAssets(ctx)
 	if err != nil {
 		s.l.Errorf("Failed to load built-in rule templates: %s.", err)
@@ -358,7 +359,7 @@ type rule struct {
 
 // converts an alert template rule to a rule file. generates one file per rule.
 func (s *TemplatesService) convertTemplates(ctx context.Context) error {
-	templates := s.getCollected(ctx)
+	templates := s.getTemplates()
 	for _, template := range templates {
 		r := rule{
 			Alert:       template.Name,
@@ -455,11 +456,20 @@ func (s *TemplatesService) dumpRule(rule *ruleFile) error {
 
 // ListTemplates returns a list of all collected Alert Rule Templates.
 func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.ListTemplatesRequest) (*iav1beta1.ListTemplatesResponse, error) {
-	if req.Reload {
-		s.collect(ctx)
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return nil, err
 	}
 
-	templates := s.getCollected(ctx)
+	if !settings.IntegratedAlerting.Enabled {
+		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
+	}
+
+	if req.Reload {
+		s.Collect(ctx)
+	}
+
+	templates := s.getTemplates()
 	res := &iav1beta1.ListTemplatesResponse{
 		Templates: make([]*iav1beta1.Template, 0, len(templates)),
 	}
@@ -478,6 +488,15 @@ func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.Lis
 
 // CreateTemplate creates a new template.
 func (s *TemplatesService) CreateTemplate(ctx context.Context, req *iav1beta1.CreateTemplateRequest) (*iav1beta1.CreateTemplateResponse, error) {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	if !settings.IntegratedAlerting.Enabled {
+		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
+	}
+
 	pParams := &alert.ParseParams{
 		DisallowUnknownFields:    true,
 		DisallowInvalidTemplates: true,
@@ -508,13 +527,22 @@ func (s *TemplatesService) CreateTemplate(ctx context.Context, req *iav1beta1.Cr
 		return nil, e
 	}
 
-	s.collect(ctx)
+	s.Collect(ctx)
 
 	return &iav1beta1.CreateTemplateResponse{}, nil
 }
 
 // UpdateTemplate updates existing template, previously created via API.
 func (s *TemplatesService) UpdateTemplate(ctx context.Context, req *iav1beta1.UpdateTemplateRequest) (*iav1beta1.UpdateTemplateResponse, error) {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	if !settings.IntegratedAlerting.Enabled {
+		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
+	}
+
 	pParams := &alert.ParseParams{
 		DisallowUnknownFields:    true,
 		DisallowInvalidTemplates: true,
@@ -544,13 +572,22 @@ func (s *TemplatesService) UpdateTemplate(ctx context.Context, req *iav1beta1.Up
 		return nil, e
 	}
 
-	s.collect(ctx)
+	s.Collect(ctx)
 
 	return &iav1beta1.UpdateTemplateResponse{}, nil
 }
 
 // DeleteTemplate deletes existing, previously created via API.
 func (s *TemplatesService) DeleteTemplate(ctx context.Context, req *iav1beta1.DeleteTemplateRequest) (*iav1beta1.DeleteTemplateResponse, error) {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	if !settings.IntegratedAlerting.Enabled {
+		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
+	}
+
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		return models.RemoveTemplate(tx.Querier, req.Name)
 	})

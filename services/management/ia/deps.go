@@ -14,14 +14,16 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package services
+package ia
 
 import (
-	"github.com/pkg/errors"
+	"context"
+
+	"github.com/percona/pmm/api/alertmanager/ammodels"
 )
 
-// ErrSTTDisabled means that STT checks are disabled and can't be executed.
-var ErrSTTDisabled = errors.New("STT is disabled")
-
-// ErrAlertingDisabled means Integrated Alerting is disabled and IA APIs can't be executed.
-var ErrAlertingDisabled = errors.New("Alerting is disabled")
+type alertManager interface {
+	GetAlerts(ctx context.Context) ([]*ammodels.GettableAlert, error)
+	Silence(ctx context.Context, id string) error
+	Unsilence(ctx context.Context, id string) error
+}
