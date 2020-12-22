@@ -80,7 +80,7 @@ func NewVMAlert(alertRules *AlertingRules, baseURL string) (*Service, error) {
 		},
 		l:    logrus.WithField("component", "vmalert"),
 		irtm: irtm,
-		sema: make(chan struct{}, 1),
+		sema: make(chan struct{}),
 	}, nil
 }
 

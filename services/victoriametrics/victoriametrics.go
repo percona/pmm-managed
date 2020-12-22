@@ -84,7 +84,7 @@ func NewVictoriaMetrics(scrapeConfigPath string, db *reform.DB, baseURL string, 
 		client:           new(http.Client),
 		baseConfigPath:   params.BaseConfigPath,
 		l:                logrus.WithField("component", "victoriametrics"),
-		sema:             make(chan struct{}, 1),
+		sema:             make(chan struct{}),
 	}, nil
 }
 
