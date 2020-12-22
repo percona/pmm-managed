@@ -159,9 +159,35 @@ func (svc *Service) updateConfiguration(ctx context.Context) {
 }
 
 func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
+	var settings *models.Settings
+	e := svc.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		settings, err = models.GetSettings(tx.Querier)
+		return err
+	})
+	if e != nil {
+		return errors.Errorf("Failed to retrieve global alerting settings from database: %s", e)
+	}
+
+	if settings.IntegratedAlerting.EmailAlertingSettings != nil {
+		cfg.Global.SMTPFrom = settings.IntegratedAlerting.EmailAlertingSettings.From
+		cfg.Global.SMTPHello = settings.IntegratedAlerting.EmailAlertingSettings.Hello
+		cfg.Global.SMTPAuthIdentity = settings.IntegratedAlerting.EmailAlertingSettings.Identity
+		cfg.Global.SMTPAuthUsername = settings.IntegratedAlerting.EmailAlertingSettings.Username
+		cfg.Global.SMTPAuthPassword = settings.IntegratedAlerting.EmailAlertingSettings.Password
+		cfg.Global.SMTPAuthSecret = settings.IntegratedAlerting.EmailAlertingSettings.Secret
+		smarthost := strings.Split(settings.IntegratedAlerting.EmailAlertingSettings.Smarthost, ":")
+		cfg.Global.SMTPSmarthost.Host = smarthost[0]
+		cfg.Global.SMTPSmarthost.Port = smarthost[1]
+	}
+
+	if settings.IntegratedAlerting.SlackAlertingSettings != nil {
+		cfg.Global.SlackAPIURL = settings.IntegratedAlerting.SlackAlertingSettings.URL
+	}
+
 	var rules []models.Rule
 	var channels []models.Channel
-	e := svc.db.InTransaction(func(tx *reform.TX) error {
+	e = svc.db.InTransaction(func(tx *reform.TX) error {
 		var err error
 		rules, err = models.FindRules(tx.Querier)
 		return err
@@ -223,7 +249,6 @@ func generateReceivers(chanMap map[string]models.Channel, recvSet map[string]str
 					NotifierConfig: alertmanager.NotifierConfig{
 						SendResolved: channel.EmailConfig.SendResolved,
 					},
-					// besides promconfig, To field is a slice everywhere, do we need to edit the type in promconfig?
 					To: channel.EmailConfig.To[0],
 				})
 			case models.PagerDuty:
