@@ -191,8 +191,8 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 		cfg.Global.SlackAPIURL = settings.IntegratedAlerting.SlackAlertingSettings.URL
 	}
 
-	var rules []models.Rule
-	var channels []models.Channel
+	var rules []*models.Rule
+	var channels []*models.Channel
 	e = svc.db.InTransaction(func(tx *reform.TX) error {
 		var err error
 		rules, err = models.FindRules(tx.Querier)
@@ -211,7 +211,7 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 		return errors.Errorf("Failed to retrieve notification channels from database: %s", e)
 	}
 
-	chanMap := make(map[string]models.Channel, len(channels))
+	chanMap := make(map[string]*models.Channel, len(channels))
 	for _, ch := range channels {
 		chanMap[ch.ID] = ch
 	}
@@ -239,7 +239,7 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 }
 
 // generateReceivers takes the channel map and a unique set of rule combinations and generates a slice of receivers
-func generateReceivers(chanMap map[string]models.Channel, recvSet map[string]struct{}) ([]*alertmanager.Receiver, error) {
+func generateReceivers(chanMap map[string]*models.Channel, recvSet map[string]struct{}) ([]*alertmanager.Receiver, error) {
 	var recvs []*alertmanager.Receiver
 	for k := range recvSet {
 		recv := &alertmanager.Receiver{
