@@ -57,7 +57,7 @@ func NewVMAlert(alertRules *AlertingRules, baseURL string) (*VMAlert, error) {
 		baseURL:       u,
 		client:        new(http.Client),
 		l:             logrus.WithField("component", "vmalert"),
-		sema:          make(chan struct{}, 1),
+		sema:          make(chan struct{}),
 	}, nil
 }
 
