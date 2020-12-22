@@ -85,14 +85,16 @@ func TestChangeChannel(t *testing.T) {
 		require.NoError(t, err)
 		defer deleteChannel(t, client, resp1.Payload.ChannelID)
 
-		newEmail := []string{gofakeit.Email()}
+		slackChannel := gofakeit.UUID()
+		newSummary := gofakeit.UUID()
 		_, err = client.ChangeChannel(&channels.ChangeChannelParams{
 			Body: channels.ChangeChannelBody{
 				ChannelID: resp1.Payload.ChannelID,
+				Summary:   newSummary,
 				Disabled:  true,
-				EmailConfig: &channels.ChangeChannelParamsBodyEmailConfig{
+				SlackConfig: &channels.ChangeChannelParamsBodySlackConfig{
 					SendResolved: true,
-					To:           newEmail,
+					Channel:      slackChannel,
 				},
 			},
 			Context: pmmapitests.Context,
@@ -106,9 +108,11 @@ func TestChangeChannel(t *testing.T) {
 		var found bool
 		for _, channel := range resp2.Payload.Channels {
 			if channel.ChannelID == resp1.Payload.ChannelID {
+				assert.Equal(t, newSummary, channel.Summary)
 				assert.True(t, channel.Disabled)
-				assert.Equal(t, newEmail, channel.EmailConfig.To)
-				assert.True(t, channel.EmailConfig.SendResolved)
+				assert.Nil(t, channel.EmailConfig)
+				assert.Equal(t, slackChannel, channel.SlackConfig.Channel)
+				assert.True(t, channel.SlackConfig.SendResolved)
 				found = true
 			}
 		}

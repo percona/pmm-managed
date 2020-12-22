@@ -8,7 +8,7 @@ templates:
       params:
         - name: threshold
           summary: test param summary
-          unit: "%%"
+          unit: "%s"
           type: float
           range: [0, 100]
           value: 80
