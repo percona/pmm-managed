@@ -289,7 +289,23 @@ func generateReceivers(chanMap map[string]*models.Channel, recvSet map[string]st
 					},
 					URL:       channel.WebHookConfig.URL,
 					MaxAlerts: uint64(channel.WebHookConfig.MaxAlerts),
-					// TODO: add http config
+					HTTPConfig: promconfig.HTTPClientConfig{
+						BasicAuth: &promconfig.BasicAuth{
+							Username:     channel.WebHookConfig.HTTPConfig.BasicAuth.Username,
+							Password:     channel.WebHookConfig.HTTPConfig.BasicAuth.Password,
+							PasswordFile: channel.WebHookConfig.HTTPConfig.BasicAuth.PasswordFile,
+						},
+						BearerToken:     channel.WebHookConfig.HTTPConfig.BearerToken,
+						BearerTokenFile: channel.WebHookConfig.HTTPConfig.BearerTokenFile,
+						TLSConfig: promconfig.TLSConfig{
+							CAFile:             channel.WebHookConfig.HTTPConfig.TLSConfig.CaFile,
+							CertFile:           channel.WebHookConfig.HTTPConfig.TLSConfig.CertFile,
+							KeyFile:            channel.WebHookConfig.HTTPConfig.TLSConfig.KeyFile,
+							ServerName:         channel.WebHookConfig.HTTPConfig.TLSConfig.ServerName,
+							InsecureSkipVerify: channel.WebHookConfig.HTTPConfig.TLSConfig.InsecureSkipVerify,
+						},
+						ProxyURL: channel.WebHookConfig.HTTPConfig.ProxyURL,
+					},
 				})
 			default:
 				return nil, errors.New("Invalid channel type")
