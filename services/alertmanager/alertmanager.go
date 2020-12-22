@@ -294,7 +294,6 @@ func generateReceivers(chanMap map[string]*models.Channel, recvSet map[string]st
 			default:
 				return nil, errors.New("Invalid channel type")
 			}
-
 		}
 		recvs = append(recvs, recv)
 	}

@@ -19,6 +19,7 @@ package alertmanager
 import (
 	"context"
 	"io/ioutil"
+	"strings"
 	"testing"
 	"time"
 
@@ -34,6 +35,7 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/testdb"
+	"github.com/percona/pmm-managed/utils/tests"
 )
 
 func TestAlertmanager(t *testing.T) {
@@ -123,11 +125,27 @@ func TestPopulateConfig(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	settings, err := models.UpdateSettings(q, &models.ChangeSettingsParams{
+		EmailAlertingSettings: &models.EmailAlertingSettings{
+			From:      tests.GenEmail(t),
+			Smarthost: "0.0.0.0:80",
+			Hello:     "host",
+			Username:  "user",
+			Password:  "password",
+			Identity:  "id",
+			Secret:    "secret",
+		},
+		SlackAlertingSettings: &models.SlackAlertingSettings{
+			URL: gofakeit.URL(),
+		},
+	})
+	require.NoError(t, err)
+
 	svc := New(db)
 	err = svc.populateConfig(&cfg)
 	require.NoError(t, err)
 
-	assert.Len(t, cfg.Receivers, 1)
+	assert.Len(t, cfg.Receivers, 2)
 	assert.Equal(t, "empty", cfg.Receivers[0].Name)
 	assert.Equal(t, channel1.ID+" + "+channel2.ID, cfg.Receivers[1].Name)
 	assert.NotNil(t, cfg.Receivers[1].EmailConfigs)
@@ -135,4 +153,16 @@ func TestPopulateConfig(t *testing.T) {
 	assert.Equal(t, "empty", cfg.Route.Receiver)
 	assert.Len(t, cfg.Route.Routes, 1)
 	assert.Equal(t, rule.ID, cfg.Route.Routes[0].Match["rule_id"])
+	// check global config
+	assert.Equal(t, cfg.Global.SMTPFrom, settings.IntegratedAlerting.EmailAlertingSettings.From)
+	assert.Equal(t, cfg.Global.SMTPHello, settings.IntegratedAlerting.EmailAlertingSettings.Hello)
+	assert.Equal(t, cfg.Global.SMTPAuthUsername, settings.IntegratedAlerting.EmailAlertingSettings.Username)
+	assert.Equal(t, cfg.Global.SMTPAuthPassword, settings.IntegratedAlerting.EmailAlertingSettings.Password)
+	assert.Equal(t, cfg.Global.SMTPAuthIdentity, settings.IntegratedAlerting.EmailAlertingSettings.Identity)
+	assert.Equal(t, cfg.Global.SMTPAuthSecret, settings.IntegratedAlerting.EmailAlertingSettings.Secret)
+
+	smarthost := strings.Split(settings.IntegratedAlerting.EmailAlertingSettings.Smarthost, ":")
+	assert.Equal(t, cfg.Global.SMTPSmarthost.Host, smarthost[0])
+	assert.Equal(t, cfg.Global.SMTPSmarthost.Port, smarthost[1])
+	assert.Equal(t, cfg.Global.SlackAPIURL, settings.IntegratedAlerting.SlackAlertingSettings.URL)
 }
