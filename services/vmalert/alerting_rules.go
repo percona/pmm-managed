@@ -19,8 +19,8 @@ package vmalert
 import (
 	"context"
 	"crypto/sha256"
+	"hash"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 
 	"github.com/pkg/errors"
@@ -32,11 +32,8 @@ import (
 )
 
 const (
-	// TODO: Currently that file can be edited via Settings API.
-	// TODO: It seems that Settings API should edit configuration for external AlertManager.
-	alertingRulesFile = "/srv/prometheus/rules/pmm.rules.yml"
-
-	generatedAlertingRulesDir = "/etc/ia/rules/*.yml"
+	editableAlertingRulesFileDir = "/srv/prometheus/rules/*.yml"
+	generatedAlertingRulesDir    = "/etc/ia/rules/*.yml"
 )
 
 // AlertingRules contains all logic related to alerting rules files.
@@ -62,44 +59,52 @@ func (s *AlertingRules) ValidateRules(ctx context.Context, rules string) error {
 
 // ReadRules reads current rules from FS.
 func (s *AlertingRules) ReadRules() (string, error) {
-	b, err := ioutil.ReadFile(alertingRulesFile)
-	if err != nil && !os.IsNotExist(err) {
-		return "", err
-	}
-	return string(b), nil
+	// TODO: this method supposed to return external alertmanager rules.
+	// TODO: For now we have common rules for both, external and internal alertmanagers.
+	return "", nil
 }
 
 // RemoveRulesFile removes rules file from FS.
 func (s *AlertingRules) RemoveRulesFile() error {
-	return os.Remove(alertingRulesFile)
+	// TODO: same as ReadRules()
+	return nil
 }
 
 // WriteRules writes rules to file.
 func (s *AlertingRules) WriteRules(rules string) error {
-	return ioutil.WriteFile(alertingRulesFile, []byte(rules), 0o644) //nolint:gosec
+	// TODO: same as ReadRules()
+	return nil
 }
 
 // GetRulesHash returns current rules files hash sum.
 func (s *AlertingRules) GetRulesHash() ([]byte, error) {
 	h := sha256.New()
-	b, err := ioutil.ReadFile(alertingRulesFile)
-	if err != nil && !os.IsNotExist(err) {
+	var err error
+
+	if err = addFilesToHash(editableAlertingRulesFileDir, h); err != nil {
 		return nil, err
 	}
-	h.Write(b) //nolint:errcheck
 
-	paths, err := filepath.Glob(generatedAlertingRulesDir)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get paths")
-	}
-
-	for _, path := range paths {
-		b, err = ioutil.ReadFile(path) //nolint:gosec
-		if err != nil {
-			return nil, err
-		}
-		h.Write(b) //nolint:errcheck
+	if err = addFilesToHash(generatedAlertingRulesDir, h); err != nil {
+		return nil, err
 	}
 
 	return h.Sum(nil), nil
+}
+
+func addFilesToHash(pattern string, hash hash.Hash) error {
+	paths, err := filepath.Glob(pattern)
+	if err != nil {
+		return errors.Wrap(err, "failed to get paths")
+	}
+
+	var b []byte
+	for _, path := range paths {
+		b, err = ioutil.ReadFile(path) //nolint:gosec
+		if err != nil {
+			return err
+		}
+		hash.Write(b) //nolint:errcheck
+	}
+	return nil
 }
