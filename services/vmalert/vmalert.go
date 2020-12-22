@@ -44,7 +44,7 @@ type Service struct {
 	baseURL                 *url.URL
 	client                  *http.Client
 	alertingRules           *AlertingRules
-	cachedAlertingRulesHash []byte
+	loadedAlertingRulesHash []byte
 	irtm                    prom.Collector
 
 	l    *logrus.Entry
@@ -102,7 +102,7 @@ func (svc *Service) Run(ctx context.Context) {
 	if err != nil {
 		svc.l.Warnf("Cannot load alerting rules: %s", err)
 	}
-	svc.cachedAlertingRulesHash = hash
+	svc.loadedAlertingRulesHash = hash
 
 	for {
 		select {
@@ -210,7 +210,7 @@ func (svc *Service) updateConfiguration(ctx context.Context) error {
 	}
 
 	// compare with previous one
-	if bytes.Equal(hash, svc.cachedAlertingRulesHash) {
+	if bytes.Equal(hash, svc.loadedAlertingRulesHash) {
 		svc.l.Infof("Configuration not changed, doing nothing.")
 		return nil
 	}
