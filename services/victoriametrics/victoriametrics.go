@@ -147,13 +147,6 @@ func (svc *Service) updateConfiguration(ctx context.Context) error {
 func (svc *Service) RequestConfigurationUpdate() {
 	select {
 	case svc.sema <- struct{}{}:
-		ctx, cancel := context.WithTimeout(context.Background(), configurationUpdateTimeout)
-		defer cancel()
-		err := svc.updateConfiguration(ctx)
-		if err != nil {
-			svc.l.WithError(err).Errorf("cannot reload configuration")
-		}
-
 	default:
 	}
 }
