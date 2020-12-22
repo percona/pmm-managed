@@ -18,9 +18,12 @@ package vmalert
 
 import (
 	"context"
+	"crypto/sha256"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -28,7 +31,13 @@ import (
 	"github.com/percona/pmm-managed/utils/validators"
 )
 
-const alertingRulesFile = "/srv/prometheus/rules/pmm.rules.yml"
+const (
+	// TODO: Currently that file can be edited via Settings API.
+	// TODO: It seems that Settings API should edit configuration for external AlertManager.
+	alertingRulesFile = "/srv/prometheus/rules/pmm.rules.yml"
+
+	generatedAlertingRulesDir = "/etc/ia/rules/*.yml"
+)
 
 // AlertingRules contains all logic related to alerting rules files.
 type AlertingRules struct {
@@ -68,4 +77,29 @@ func (s *AlertingRules) RemoveRulesFile() error {
 // WriteRules writes rules to file.
 func (s *AlertingRules) WriteRules(rules string) error {
 	return ioutil.WriteFile(alertingRulesFile, []byte(rules), 0o644) //nolint:gosec
+}
+
+// GetRulesHash returns current rules files hash sum.
+func (s *AlertingRules) GetRulesHash() ([]byte, error) {
+	h := sha256.New()
+	b, err := ioutil.ReadFile(alertingRulesFile)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+	h.Write(b) //nolint:errcheck
+
+	paths, err := filepath.Glob(generatedAlertingRulesDir)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get paths")
+	}
+
+	for _, path := range paths {
+		b, err = ioutil.ReadFile(path) //nolint:gosec
+		if err != nil {
+			return nil, err
+		}
+		h.Write(b) //nolint:errcheck
+	}
+
+	return h.Sum(nil), nil
 }

@@ -68,7 +68,7 @@ func testClient(wantReloadCode int, pathPrefix string) *http.Client {
 	}
 }
 
-func setupVMAlert(t *testing.T) (*reform.DB, *AlertingRules, *VMAlert) {
+func setupVMAlert(t *testing.T) (*reform.DB, *AlertingRules, *Service) {
 	t.Helper()
 	check := require.New(t)
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)

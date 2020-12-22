@@ -508,7 +508,7 @@ func main() {
 
 	victoriaMetricsURLF := kingpin.Flag("victoriametrics-url", "VictoriaMetrics base URL").
 		Default("http://127.0.0.1:9090/prometheus/").String()
-	victoriaMetricsVMAlertURLF := kingpin.Flag("victoriametrics-vmalert-url", "VictoriaMetrics VMAlert base URL").
+	victoriaMetricsVMAlertURLF := kingpin.Flag("victoriametrics-vmalert-url", "VictoriaMetrics Service base URL").
 		Default("http://127.0.0.1:8880/").String()
 	victoriaMetricsConfigF := kingpin.Flag("victoriametrics-config", "VictoriaMetrics scrape configuration file path").
 		Default("/etc/victoriametrics-promscrape.yml").String()
@@ -578,8 +578,9 @@ func main() {
 	}
 	vmalert, err := vmalert.NewVMAlert(alertingRules, *victoriaMetricsVMAlertURLF)
 	if err != nil {
-		l.Panicf("VictoriaMetrics VMAlert service problem: %+v", err)
+		l.Panicf("VictoriaMetrics Service service problem: %+v", err)
 	}
+	prom.MustRegister(vmalert)
 
 	qanClient := getQANClient(ctx, sqlDB, *postgresDBNameF, *qanAPIAddrF)
 
@@ -615,17 +616,17 @@ func main() {
 	}
 
 	serverParams := &server.Params{
-		DB:                      db,
-		VMDB:                    vmdb,
-		VMAlert:                 vmalert,
-		AgentsRegistry:          agentsRegistry,
-		Alertmanager:            alertmanager,
-		Supervisord:             supervisord,
-		TelemetryService:        telemetry,
-		PlatformService:         platformService,
-		AwsInstanceChecker:      awsInstanceChecker,
-		GrafanaClient:           grafanaClient,
-		PrometheusAlertingRules: alertingRules,
+		DB:                   db,
+		VMDB:                 vmdb,
+		VMAlert:              vmalert,
+		AgentsRegistry:       agentsRegistry,
+		Alertmanager:         alertmanager,
+		Supervisord:          supervisord,
+		TelemetryService:     telemetry,
+		PlatformService:      platformService,
+		AwsInstanceChecker:   awsInstanceChecker,
+		GrafanaClient:        grafanaClient,
+		VMAlertAlertingRules: alertingRules,
 	}
 
 	server, err := server.NewServer(serverParams)
