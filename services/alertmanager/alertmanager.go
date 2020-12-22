@@ -52,6 +52,8 @@ const (
 
 	alertmanagerConfigPath     = "/etc/alertmanager.yml"
 	alertmanagerBaseConfigPath = "/srv/alertmanager/alertmanager.base.yml"
+
+	receiverNameSeparator = " + "
 )
 
 // Service is responsible for interactions with Alertmanager.
@@ -221,7 +223,7 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 	for _, r := range rules {
 		match, _ := r.GetCustomLabels()
 		match["rule_id"] = r.ID
-		recv := strings.Join(r.ChannelIDs, " + ")
+		recv := strings.Join(r.ChannelIDs, receiverNameSeparator)
 		recvSet[recv] = struct{}{}
 		cfg.Route.Routes = append(cfg.Route.Routes, &alertmanager.Route{
 			Match:          match,
@@ -239,7 +241,7 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 	return nil
 }
 
-// generateReceivers takes the channel map and a unique set of rule combinations and generates a slice of receivers
+// generateReceivers takes the channel map and a unique set of rule combinations and generates a slice of receivers.
 func generateReceivers(chanMap map[string]*models.Channel, recvSet map[string]struct{}) ([]*alertmanager.Receiver, error) {
 	var recvs []*alertmanager.Receiver
 	for k := range recvSet {
@@ -247,7 +249,7 @@ func generateReceivers(chanMap map[string]*models.Channel, recvSet map[string]st
 			Name: k,
 		}
 
-		individualChannels := strings.Split(k, " + ")
+		individualChannels := strings.Split(k)
 		for _, ch := range individualChannels {
 			channel := chanMap[ch]
 			switch channel.Type {
