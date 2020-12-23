@@ -40,11 +40,10 @@ const (
 
 // Service is responsible for interactions with victoria metrics.
 type Service struct {
-	baseURL                 *url.URL
-	client                  *http.Client
-	externalRules           *ExternalRules
-	loadedAlertingRulesHash []byte
-	irtm                    prom.Collector
+	baseURL       *url.URL
+	client        *http.Client
+	externalRules *ExternalRules
+	irtm          prom.Collector
 
 	l    *logrus.Entry
 	sema chan struct{}
