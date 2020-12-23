@@ -41,7 +41,7 @@ func TestRulesAPI(t *testing.T) {
 		})
 
 		t.Run("builtin_template", func(t *testing.T) {
-			params := createAlertRuleParams("mongodb_restarted", channelID)
+			params := createAlertRuleParams("pmm_mongodb_restarted", channelID)
 			rule, err := client.CreateAlertRule(params)
 			require.NoError(t, err)
 			defer deleteRule(t, client, rule.Payload.RuleID)
