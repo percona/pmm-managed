@@ -20,6 +20,7 @@ package alertmanager
 import (
 	"context"
 	"io/ioutil"
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -201,9 +202,13 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 		cfg.Global.SMTPAuthUsername = settings.IntegratedAlerting.EmailAlertingSettings.Username
 		cfg.Global.SMTPAuthPassword = settings.IntegratedAlerting.EmailAlertingSettings.Password
 		cfg.Global.SMTPAuthSecret = settings.IntegratedAlerting.EmailAlertingSettings.Secret
-		smarthost := strings.Split(settings.IntegratedAlerting.EmailAlertingSettings.Smarthost, ":")
-		cfg.Global.SMTPSmarthost.Host = smarthost[0]
-		cfg.Global.SMTPSmarthost.Port = smarthost[1]
+
+		host, port, err := net.SplitHostPort(settings.IntegratedAlerting.EmailAlertingSettings.Smarthost)
+		if err != nil {
+			return errors.Errorf("Failed to set global email settings: %s", err)
+		}
+		cfg.Global.SMTPSmarthost.Host = host
+		cfg.Global.SMTPSmarthost.Port = port
 	}
 
 	if settings.IntegratedAlerting.SlackAlertingSettings != nil {
