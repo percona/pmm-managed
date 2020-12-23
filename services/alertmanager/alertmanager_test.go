@@ -20,6 +20,7 @@ import (
 	"context"
 	"io/ioutil"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
@@ -64,7 +65,8 @@ func TestPopulateConfig(t *testing.T) {
 		assert.Len(t, cfg.Receivers, 1)
 		assert.Equal(t, "empty", cfg.Receivers[0].Name)
 		assert.Equal(t, "empty", cfg.Route.Receiver)
-		assert.Len(t, cfg.Route.Routes, 0)
+		assert.Empty(t, cfg.Route.Routes)
+		assert.Empty(t, cfg.Global)
 	})
 
 	t.Run("with receivers and routes", func(t *testing.T) {
@@ -155,16 +157,26 @@ func TestPopulateConfig(t *testing.T) {
 		})
 		require.NoError(t, err)
 
+		// cleanup
+		defer func() {
+			assert.NoError(t, models.RemoveChannel(db.Querier, channel1.ID))
+			assert.NoError(t, models.RemoveChannel(db.Querier, channel2.ID))
+			assert.NoError(t, models.RemoveRule(db.Querier, rule.ID))
+		}()
+
 		svc := New(db)
 		err = svc.populateConfig(&cfg)
 		require.NoError(t, err)
 
 		assert.Len(t, cfg.Receivers, 2)
-		assert.Equal(t, "empty", cfg.Receivers[0].Name)
-		assert.Equal(t, channel1.ID+receiverNameSeparator+channel2.ID, cfg.Receivers[1].Name)
+		assert.Equal(t, "empty", cfg.Receivers[0].Name) // empty receiver from base should be preserved
+
+		// channelIDs in receiver name don't preserve order so we split name to avoid flaky tests.
+		receiverNameIDs := strings.Split(cfg.Receivers[1].Name, receiverNameSeparator)
+		assert.Contains(t, receiverNameIDs, channel1.ID, channel2.ID)
 		assert.NotNil(t, cfg.Receivers[1].EmailConfigs)
 		assert.NotNil(t, cfg.Receivers[1].PagerdutyConfigs)
-		assert.Equal(t, "empty", cfg.Route.Receiver)
+		assert.Equal(t, "empty", cfg.Route.Receiver) // empty route from base should be preserved
 		assert.Len(t, cfg.Route.Routes, 1)
 		assert.Equal(t, rule.ID, cfg.Route.Routes[0].Match["rule_id"])
 		// check global config

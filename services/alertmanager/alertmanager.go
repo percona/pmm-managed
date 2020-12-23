@@ -244,7 +244,7 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 
 // generateReceivers takes the channel map and a unique set of rule combinations and generates a slice of receivers.
 func generateReceivers(chanMap map[string]*models.Channel, recvSet map[string]struct{}) ([]*alertmanager.Receiver, error) {
-	recvs := make([]*alertmanager.Receiver, 0, len(recvSet))
+	receivers := make([]*alertmanager.Receiver, 0, len(recvSet))
 	for k := range recvSet {
 		recv := &alertmanager.Receiver{
 			Name: k,
@@ -314,9 +314,9 @@ func generateReceivers(chanMap map[string]*models.Channel, recvSet map[string]st
 				return nil, errors.New("Invalid channel type")
 			}
 		}
-		recvs = append(recvs, recv)
+		receivers = append(receivers, recv)
 	}
-	return recvs, nil
+	return receivers, nil
 }
 
 // SendAlerts sends given alerts. It is the caller's responsibility
