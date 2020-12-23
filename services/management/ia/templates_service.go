@@ -384,6 +384,9 @@ type rule struct {
 // converts an alert template rule to a rule file. generates one file per rule.
 func (s *TemplatesService) convertTemplates(ctx context.Context) error {
 	templates := s.getTemplates()
+
+	// FIXME iterate over rules from the database, not over templates
+
 	for _, template := range templates {
 		r := rule{
 			Alert:       template.Name,
@@ -394,6 +397,7 @@ func (s *TemplatesService) convertTemplates(ctx context.Context) error {
 
 		data := make(map[string]string, len(template.Params))
 		for _, param := range template.Params {
+			// FIXME use the value from the rule, not from template
 			data[param.Name] = fmt.Sprint(param.Value)
 		}
 
@@ -412,14 +416,14 @@ func (s *TemplatesService) convertTemplates(ctx context.Context) error {
 			return errors.Wrap(err, "failed to convert rule template")
 		}
 
-		// add parameters to labels
-		for _, p := range template.Params {
-			r.Labels[p.Name] = fmt.Sprint(p.Value)
-		}
-
-		// add special labels
+		// Add labels.
+		// Do not add volatile values like `{{ $value }}` to labels as it will break alerts identity.
 		r.Labels["ia"] = "1"
 		r.Labels["severity"] = template.Severity.String()
+		for _, p := range template.Params {
+			// FIXME use the value from the rule, not from template
+			r.Labels[p.Name] = fmt.Sprint(p.Value)
+		}
 
 		err = transformMaps(template.Annotations, r.Annotations, data)
 		if err != nil {
