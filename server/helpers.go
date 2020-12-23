@@ -27,6 +27,8 @@ func restoreSettingsDefaults(t *testing.T) {
 			AWSPartitions:           []string{"aws"},
 			RemoveAlertManagerURL:   true,
 			RemoveAlertManagerRules: true,
+			RemoveEmailAlertingSettings: true,
+			RemoveSlackAlertingSettings: true,
 		},
 		Context: pmmapitests.Context,
 	})
