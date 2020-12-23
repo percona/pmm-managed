@@ -18,13 +18,9 @@ package vmalert
 
 import (
 	"context"
-	"crypto/sha256"
-	"hash"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -77,37 +73,4 @@ func (s *AlertingRules) RemoveRulesFile() error {
 // WriteRules writes rules to file.
 func (s *AlertingRules) WriteRules(rules string) error {
 	return ioutil.WriteFile(alertingRulesFile, []byte(rules), 0o644) //nolint:gosec
-}
-
-// GetRulesHash returns current rules files hash sum.
-func (s *AlertingRules) GetRulesHash() ([]byte, error) {
-	h := sha256.New()
-	var err error
-
-	if err = addFilesToHash(editableAlertingRulesFileDir, h); err != nil {
-		return nil, err
-	}
-
-	if err = addFilesToHash(generatedAlertingRulesDir, h); err != nil {
-		return nil, err
-	}
-
-	return h.Sum(nil), nil
-}
-
-func addFilesToHash(pattern string, hash hash.Hash) error {
-	paths, err := filepath.Glob(pattern)
-	if err != nil {
-		return errors.Wrap(err, "failed to get paths")
-	}
-
-	var b []byte
-	for _, path := range paths {
-		b, err = ioutil.ReadFile(path) //nolint:gosec
-		if err != nil {
-			return err
-		}
-		hash.Write(b) //nolint:errcheck
-	}
-	return nil
 }

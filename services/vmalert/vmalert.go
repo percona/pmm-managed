@@ -18,7 +18,6 @@
 package vmalert
 
 import (
-	"bytes"
 	"context"
 	"io/ioutil"
 	"net"
@@ -35,8 +34,7 @@ import (
 )
 
 const (
-	updateBatchDelay           = 3 * time.Second
-	configurationUpdateTimeout = 2 * time.Second
+	updateBatchDelay = 3 * time.Second
 )
 
 // Service is responsible for interactions with victoria metrics.
@@ -98,11 +96,6 @@ func (svc *Service) Collect(ch chan<- prom.Metric) {
 func (svc *Service) Run(ctx context.Context) {
 	svc.l.Info("Starting...")
 	defer svc.l.Info("Done.")
-	hash, err := svc.alertingRules.GetRulesHash()
-	if err != nil {
-		svc.l.Warnf("Cannot load alerting rules: %s", err)
-	}
-	svc.loadedAlertingRulesHash = hash
 
 	for {
 		select {
@@ -197,19 +190,7 @@ func (svc *Service) updateConfiguration(ctx context.Context) error {
 		}
 	}()
 
-	// get existing rules hash
-	hash, err := svc.alertingRules.GetRulesHash()
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	// compare with previous one
-	if bytes.Equal(hash, svc.loadedAlertingRulesHash) {
-		svc.l.Infof("Configuration not changed, doing nothing.")
-		return nil
-	}
-
-	if err = svc.reload(ctx); err != nil {
+	if err := svc.reload(ctx); err != nil {
 		return errors.WithStack(err)
 	}
 	svc.l.Infof("Configuration reloaded.")
