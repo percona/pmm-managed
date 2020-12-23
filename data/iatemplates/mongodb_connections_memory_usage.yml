@@ -21,4 +21,4 @@ templates:
       summary: MongoDB high memory usage by connections ({{ $labels.service_name }})
       description: |-
         {{ $value }}% of memory (more than [[ .threshold ]]%) is used
-        by {{ $labels.service_name }} connections on {{ $labels.node_name }}).
+        by {{ $labels.service_name }} connections on {{ $labels.node_name }}.

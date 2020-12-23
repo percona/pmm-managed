@@ -16,8 +16,7 @@ templates:
     for: 10s
     severity: warning
     annotations:
+      summary: MongoDB restarted ({{ $labels.service_name }})
       description: |-
-        This template is not finished: https://jira.percona.com/browse/PMM-7135
-        MongoDB instance {{ $labels.service_name }} was restarted {{ $value }} seconds ago.
-        LABELS: {{ $labels }}
-      summary: MOngoDB was restarted (instance {{ $labels.service_name }})
+        MongoDB {{ $labels.service_name }} on {{ $labels.node_name }}
+        was restarted {{ $value }} seconds ago.
