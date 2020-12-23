@@ -28,7 +28,3 @@ required = [
 [[constraint]]
   name = "github.com/percona/exporter_shared"
   version = "0.7.2"
-
-[[constraint]]
-  name = "github.com/mxschmitt/golang-combinations"
-  version = "1.1.0"
