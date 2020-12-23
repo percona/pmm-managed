@@ -140,7 +140,7 @@ func TestPopulateConfig(t *testing.T) {
 
 	assert.Len(t, cfg.Receivers, 2)
 	assert.Equal(t, "empty", cfg.Receivers[0].Name)
-	assert.Equal(t, channel1.ID+" + "+channel2.ID, cfg.Receivers[1].Name)
+	assert.Equal(t, channel1.ID+receiverNameSeparator+channel2.ID, cfg.Receivers[1].Name)
 	assert.NotNil(t, cfg.Receivers[1].EmailConfigs)
 	assert.NotNil(t, cfg.Receivers[1].PagerdutyConfigs)
 	assert.Equal(t, "empty", cfg.Route.Receiver)
