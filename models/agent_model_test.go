@@ -128,9 +128,10 @@ func TestAgent(t *testing.T) {
 
 		t.Run("MongoDBNoDatabase", func(t *testing.T) {
 			agent.AgentType = MongoDBExporterType
+			agent.MongoDBOptions.TLSCertificateKeyFilePassword = ""
 
-			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?connectTimeoutMS=1000&ssl=true&sslCaFile={{.TextFiles.caFilePlaceholder}}&sslCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}&sslCertificateKeyFilePassword=pass", agent.DSN(service, time.Second, "", nil))
-			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?ssl=true&sslCaFile={{.TextFiles.caFilePlaceholder}}&sslCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}&sslCertificateKeyFilePassword=pass", agent.DSN(service, 0, "", nil))
+			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?connectTimeoutMS=1000&ssl=true&sslCaFile={{.TextFiles.caFilePlaceholder}}&sslCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}", agent.DSN(service, time.Second, "", nil))
+			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?ssl=true&sslCaFile={{.TextFiles.caFilePlaceholder}}&sslCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}", agent.DSN(service, 0, "", nil))
 			expectedFiles := map[string]string{
 				".TextFiles.caFilePlaceholder":             "cert",
 				".TextFiles.certificateKeyFilePlaceholder": "key",
