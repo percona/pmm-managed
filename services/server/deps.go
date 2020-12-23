@@ -74,7 +74,6 @@ type vmAlertService interface {
 type vmAlertAlertingRules interface {
 	ValidateRules(ctx context.Context, rules string) error
 	ReadRules() (string, error)
-	GetRulesHash() ([]byte, error)
 	RemoveRulesFile() error
 	WriteRules(rules string) error
 }
