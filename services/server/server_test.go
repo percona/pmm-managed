@@ -54,7 +54,7 @@ func TestServer(t *testing.T) {
 		mvmalert.Test(t)
 		mvmalert.On("RequestConfigurationUpdate").Return(nil)
 
-		par := new(mockVmAlertAlertingRules)
+		par := new(mockVmAlertExternalRules)
 		par.Test(t)
 		par.On("ReadRules").Return("", nil)
 
@@ -70,7 +70,7 @@ func TestServer(t *testing.T) {
 			VMAlert:              mvmalert,
 			AgentsRegistry:       mAgents,
 			Supervisord:          r,
-			VMAlertAlertingRules: par,
+			VMAlertExternalRules: par,
 			TelemetryService:     ts,
 			PlatformService:      ps,
 		})

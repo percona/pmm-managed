@@ -58,7 +58,7 @@ type Server struct {
 	vmdb                 prometheusService
 	r                    agentsRegistry
 	vmalert              vmAlertService
-	vmalertAlertingRules vmAlertAlertingRules
+	vmalertExternalRules vmAlertExternalRules
 	alertmanager         alertmanagerService
 	supervisord          supervisordService
 	telemetryService     telemetryService
@@ -87,7 +87,7 @@ type Params struct {
 	VMDB                 prometheusService
 	VMAlert              prometheusService
 	Alertmanager         alertmanagerService
-	VMAlertAlertingRules vmAlertAlertingRules
+	VMAlertExternalRules vmAlertExternalRules
 	Supervisord          supervisordService
 	TelemetryService     telemetryService
 	PlatformService      platformService
@@ -109,7 +109,7 @@ func NewServer(params *Params) (*Server, error) {
 		r:                    params.AgentsRegistry,
 		vmalert:              params.VMAlert,
 		alertmanager:         params.Alertmanager,
-		vmalertAlertingRules: params.VMAlertAlertingRules,
+		vmalertExternalRules: params.VMAlertExternalRules,
 		supervisord:          params.Supervisord,
 		telemetryService:     params.TelemetryService,
 		platformService:      params.PlatformService,
@@ -427,7 +427,7 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 		}
 	}
 
-	b, err := s.vmalertAlertingRules.ReadRules()
+	b, err := s.vmalertExternalRules.ReadRules()
 	if err != nil {
 		s.l.Warnf("Cannot load Alert Manager rules: %s", err)
 	}
@@ -474,7 +474,7 @@ func (s *Server) validateChangeSettingsRequest(ctx context.Context, req *serverp
 	}
 
 	if req.AlertManagerRules != "" {
-		if err := s.vmalertAlertingRules.ValidateRules(ctx, req.AlertManagerRules); err != nil {
+		if err := s.vmalertExternalRules.ValidateRules(ctx, req.AlertManagerRules); err != nil {
 			return err
 		}
 	}
@@ -581,12 +581,12 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 
 		// absent value means "do not change"
 		if req.AlertManagerRules != "" {
-			if e = s.vmalertAlertingRules.WriteRules(req.AlertManagerRules); e != nil {
+			if e = s.vmalertExternalRules.WriteRules(req.AlertManagerRules); e != nil {
 				return errors.WithStack(e)
 			}
 		}
 		if req.RemoveAlertManagerRules {
-			if e = s.vmalertAlertingRules.RemoveRulesFile(); e != nil && !os.IsNotExist(e) {
+			if e = s.vmalertExternalRules.RemoveRulesFile(); e != nil && !os.IsNotExist(e) {
 				return errors.WithStack(e)
 			}
 		}

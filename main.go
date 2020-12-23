@@ -567,7 +567,7 @@ func main() {
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reformL)
 
 	cleaner := clean.New(db)
-	alertingRules := vmalert.NewAlertingRules()
+	externalRules := vmalert.NewExternalRules()
 
 	vmParams, err := models.NewVictoriaMetricsParams(victoriametrics.BasePrometheusConfigPath)
 	if err != nil {
@@ -577,7 +577,7 @@ func main() {
 	if err != nil {
 		l.Panicf("VictoriaMetrics service problem: %+v", err)
 	}
-	vmalert, err := vmalert.NewVMAlert(alertingRules, *victoriaMetricsVMAlertURLF)
+	vmalert, err := vmalert.NewVMAlert(externalRules, *victoriaMetricsVMAlertURLF)
 	if err != nil {
 		l.Panicf("VictoriaMetrics VMAlert service problem: %+v", err)
 	}
@@ -627,7 +627,7 @@ func main() {
 		PlatformService:      platformService,
 		AwsInstanceChecker:   awsInstanceChecker,
 		GrafanaClient:        grafanaClient,
-		VMAlertAlertingRules: alertingRules,
+		VMAlertExternalRules: externalRules,
 	}
 
 	server, err := server.NewServer(serverParams)

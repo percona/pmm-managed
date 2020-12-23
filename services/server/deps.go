@@ -29,7 +29,7 @@ import (
 //go:generate mockery -name=grafanaClient -case=snake -inpkg -testonly
 //go:generate mockery -name=prometheusService -case=snake -inpkg -testonly
 //go:generate mockery -name=alertmanagerService -case=snake -inpkg -testonly
-//go:generate mockery -name=vmAlertAlertingRules -case=snake -inpkg -testonly
+//go:generate mockery -name=vmAlertExternalRules -case=snake -inpkg -testonly
 //go:generate mockery -name=supervisordService -case=snake -inpkg -testonly
 //go:generate mockery -name=telemetryService -case=snake -inpkg -testonly
 //go:generate mockery -name=platformService -case=snake -inpkg -testonly
@@ -69,9 +69,9 @@ type vmAlertService interface {
 	healthChecker
 }
 
-// vmAlertAlertingRules is a subset of methods of vmalert.ExternalAlertingRules used by this package.
+// vmAlertExternalRules is a subset of methods of vmalert.ExternalRules used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
-type vmAlertAlertingRules interface {
+type vmAlertExternalRules interface {
 	ValidateRules(ctx context.Context, rules string) error
 	ReadRules() (string, error)
 	RemoveRulesFile() error

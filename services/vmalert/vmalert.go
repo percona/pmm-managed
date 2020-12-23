@@ -42,7 +42,7 @@ const (
 type Service struct {
 	baseURL                 *url.URL
 	client                  *http.Client
-	alertingRules           *AlertingRules
+	externalRules           *ExternalRules
 	loadedAlertingRulesHash []byte
 	irtm                    prom.Collector
 
@@ -51,7 +51,7 @@ type Service struct {
 }
 
 // NewVMAlert creates new Victoria Metrics Alert service.
-func NewVMAlert(alertRules *AlertingRules, baseURL string) (*Service, error) {
+func NewVMAlert(externalRules *ExternalRules, baseURL string) (*Service, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -72,7 +72,7 @@ func NewVMAlert(alertRules *AlertingRules, baseURL string) (*Service, error) {
 	t, irtm := irt.WithMetrics(t, "vmalert")
 
 	return &Service{
-		alertingRules: alertRules,
+		externalRules: externalRules,
 		baseURL:       u,
 		client: &http.Client{
 			Transport: t,
