@@ -34,7 +34,8 @@ import (
 )
 
 const (
-	updateBatchDelay = 3 * time.Second
+	updateBatchDelay           = 3 * time.Second
+	configurationUpdateTimeout = 2 * time.Second
 )
 
 // Service is responsible for interactions with victoria metrics.
@@ -112,10 +113,12 @@ func (svc *Service) Run(ctx context.Context) {
 				return
 			}
 
-			if err := svc.updateConfiguration(ctx); err != nil {
+			nCtx, cancel := context.WithTimeout(ctx, configurationUpdateTimeout)
+			if err := svc.updateConfiguration(nCtx); err != nil {
 				svc.l.Errorf("Failed to update configuration, will retry: %+v.", err)
 				svc.RequestConfigurationUpdate()
 			}
+			cancel()
 		}
 	}
 }
