@@ -249,7 +249,7 @@ func generateReceivers(chanMap map[string]*models.Channel, recvSet map[string]st
 			Name: k,
 		}
 
-		individualChannels := strings.Split(k)
+		individualChannels := strings.Split(k, receiverNameSeparator)
 		for _, ch := range individualChannels {
 			channel := chanMap[ch]
 			switch channel.Type {
