@@ -123,7 +123,26 @@ func TestPopulateConfig(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		rule, err := models.CreateRule(db.Querier, &models.CreateRuleParams{
+		rule1, err := models.CreateRule(db.Querier, &models.CreateRuleParams{
+			TemplateName: templateName,
+			Disabled:     true,
+			RuleParams: []models.RuleParam{
+				{
+					Name:       "test",
+					Type:       models.Float,
+					FloatValue: 3.14,
+				},
+			},
+			For:          5 * time.Second,
+			Severity:     common.Warning,
+			CustomLabels: map[string]string{"foo": "bar"},
+			Filters:      []models.Filter{{Type: models.Equal, Key: "value", Val: "10"}},
+			ChannelIDs:   []string{channel1.ID, channel2.ID},
+		})
+		require.NoError(t, err)
+
+		// create another rule with same channelIDs to check for redundant receivers.
+		rule2, err := models.CreateRule(db.Querier, &models.CreateRuleParams{
 			TemplateName: templateName,
 			Disabled:     true,
 			RuleParams: []models.RuleParam{
@@ -161,7 +180,8 @@ func TestPopulateConfig(t *testing.T) {
 		defer func() {
 			assert.NoError(t, models.RemoveChannel(db.Querier, channel1.ID))
 			assert.NoError(t, models.RemoveChannel(db.Querier, channel2.ID))
-			assert.NoError(t, models.RemoveRule(db.Querier, rule.ID))
+			assert.NoError(t, models.RemoveRule(db.Querier, rule1.ID))
+			assert.NoError(t, models.RemoveRule(db.Querier, rule2.ID))
 		}()
 
 		svc := New(db)
@@ -177,8 +197,9 @@ func TestPopulateConfig(t *testing.T) {
 		assert.NotNil(t, cfg.Receivers[1].EmailConfigs)
 		assert.NotNil(t, cfg.Receivers[1].PagerdutyConfigs)
 		assert.Equal(t, "empty", cfg.Route.Receiver) // empty route from base should be preserved
-		assert.Len(t, cfg.Route.Routes, 1)
-		assert.Equal(t, rule.ID, cfg.Route.Routes[0].Match["rule_id"])
+		assert.Len(t, cfg.Route.Routes, 2)
+		routeIDs := []string{cfg.Route.Routes[0].Match["rule_id"], cfg.Route.Routes[1].Match["rule_id"]}
+		assert.Contains(t, routeIDs, rule1.ID, rule2.ID)
 		// check global config
 		assert.Equal(t, cfg.Global.SMTPFrom, settings.IntegratedAlerting.EmailAlertingSettings.From)
 		assert.Equal(t, cfg.Global.SMTPHello, settings.IntegratedAlerting.EmailAlertingSettings.Hello)

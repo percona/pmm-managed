@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -224,6 +225,8 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 	for _, r := range rules {
 		match, _ := r.GetCustomLabels()
 		match["rule_id"] = r.ID
+		// make sure same slice with different order are not considered unique.
+		sort.Strings(r.ChannelIDs)
 		recv := strings.Join(r.ChannelIDs, receiverNameSeparator)
 		recvSet[recv] = struct{}{}
 		cfg.Route.Routes = append(cfg.Route.Routes, &alertmanager.Route{
@@ -233,12 +236,12 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 		})
 	}
 
-	recvs, err := generateReceivers(chanMap, recvSet)
+	receivers, err := generateReceivers(chanMap, recvSet)
 	if err != nil {
 		return err
 	}
 
-	cfg.Receivers = append(cfg.Receivers, recvs...)
+	cfg.Receivers = append(cfg.Receivers, receivers...)
 	return nil
 }
 
