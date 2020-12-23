@@ -56,15 +56,8 @@ func TestPopulateConfig(t *testing.T) {
 
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-	tx, err := db.Begin()
-	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, tx.Rollback())
-	}()
 
-	q := tx.Querier
-
-	channel1, err := models.CreateChannel(q, &models.CreateChannelParams{
+	channel1, err := models.CreateChannel(db.Querier, &models.CreateChannelParams{
 		Summary: "some summary",
 		EmailConfig: &models.EmailConfig{
 			To: []string{"test@test.test"},
@@ -73,7 +66,7 @@ func TestPopulateConfig(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	channel2, err := models.CreateChannel(q, &models.CreateChannelParams{
+	channel2, err := models.CreateChannel(db.Querier, &models.CreateChannelParams{
 		Summary: "some summary",
 		PagerDutyConfig: &models.PagerDutyConfig{
 			RoutingKey: "ms-pagerduty-dev",
@@ -83,7 +76,7 @@ func TestPopulateConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	templateName := gofakeit.UUID()
-	_, err = models.CreateTemplate(q, &models.CreateTemplateParams{
+	_, err = models.CreateTemplate(db.Querier, &models.CreateTemplateParams{
 		Template: &alert.Template{
 			Name:    templateName,
 			Version: 1,
@@ -107,7 +100,7 @@ func TestPopulateConfig(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	rule, err := models.CreateRule(q, &models.CreateRuleParams{
+	rule, err := models.CreateRule(db.Querier, &models.CreateRuleParams{
 		TemplateName: templateName,
 		Disabled:     true,
 		RuleParams: []models.RuleParam{
@@ -125,7 +118,7 @@ func TestPopulateConfig(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	settings, err := models.UpdateSettings(q, &models.ChangeSettingsParams{
+	settings, err := models.UpdateSettings(db.Querier, &models.ChangeSettingsParams{
 		EmailAlertingSettings: &models.EmailAlertingSettings{
 			From:      tests.GenEmail(t),
 			Smarthost: "0.0.0.0:80",

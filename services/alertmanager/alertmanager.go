@@ -147,6 +147,7 @@ func (svc *Service) updateConfiguration(ctx context.Context) {
 		err = svc.populateConfig(&cfg)
 		if err != nil {
 			svc.l.Error(err)
+			return
 		}
 
 		b, err := yaml.Marshal(cfg)
@@ -168,13 +169,28 @@ func (svc *Service) updateConfiguration(ctx context.Context) {
 
 func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 	var settings *models.Settings
+	var rules []*models.Rule
+	var channels []*models.Channel
 	e := svc.db.InTransaction(func(tx *reform.TX) error {
 		var err error
 		settings, err = models.GetSettings(tx.Querier)
-		return err
+		if err != nil {
+			return err
+		}
+
+		rules, err = models.FindRules(tx.Querier)
+		if err != nil {
+			return err
+		}
+
+		channels, err = models.FindChannels(tx.Querier)
+		if err != nil {
+			return err
+		}
+		return nil
 	})
 	if e != nil {
-		return errors.Errorf("Failed to retrieve global alerting settings from database: %s", e)
+		return errors.Errorf("Failed to fetch items from database: %s", e)
 	}
 
 	cfg.Global = &alertmanager.GlobalConfig{}
@@ -192,26 +208,6 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 
 	if settings.IntegratedAlerting.SlackAlertingSettings != nil {
 		cfg.Global.SlackAPIURL = settings.IntegratedAlerting.SlackAlertingSettings.URL
-	}
-
-	var rules []*models.Rule
-	var channels []*models.Channel
-	e = svc.db.InTransaction(func(tx *reform.TX) error {
-		var err error
-		rules, err = models.FindRules(tx.Querier)
-		return err
-	})
-	if e != nil {
-		return errors.Errorf("Failed to retrieve alert rules from database: %s", e)
-	}
-
-	e = svc.db.InTransaction(func(tx *reform.TX) error {
-		var err error
-		channels, err = models.FindChannels(tx.Querier)
-		return err
-	})
-	if e != nil {
-		return errors.Errorf("Failed to retrieve notification channels from database: %s", e)
 	}
 
 	chanMap := make(map[string]*models.Channel, len(channels))
@@ -243,7 +239,7 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 
 // generateReceivers takes the channel map and a unique set of rule combinations and generates a slice of receivers.
 func generateReceivers(chanMap map[string]*models.Channel, recvSet map[string]struct{}) ([]*alertmanager.Receiver, error) {
-	var recvs []*alertmanager.Receiver
+	recvs := make([]*alertmanager.Receiver, 0, len(recvSet))
 	for k := range recvSet {
 		recv := &alertmanager.Receiver{
 			Name: k,
@@ -265,7 +261,7 @@ func generateReceivers(chanMap map[string]*models.Channel, recvSet map[string]st
 				if pdConfig.RoutingKey != "" {
 					recv.PagerdutyConfigs = append(recv.PagerdutyConfigs, &alertmanager.PagerdutyConfig{
 						NotifierConfig: alertmanager.NotifierConfig{
-							SendResolved: channel.EmailConfig.SendResolved,
+							SendResolved: pdConfig.SendResolved,
 						},
 						RoutingKey: pdConfig.RoutingKey,
 					})
@@ -273,21 +269,21 @@ func generateReceivers(chanMap map[string]*models.Channel, recvSet map[string]st
 				}
 				recv.PagerdutyConfigs = append(recv.PagerdutyConfigs, &alertmanager.PagerdutyConfig{
 					NotifierConfig: alertmanager.NotifierConfig{
-						SendResolved: channel.EmailConfig.SendResolved,
+						SendResolved: pdConfig.SendResolved,
 					},
 					ServiceKey: pdConfig.ServiceKey,
 				})
 			case models.Slack:
 				recv.SlackConfigs = append(recv.SlackConfigs, &alertmanager.SlackConfig{
 					NotifierConfig: alertmanager.NotifierConfig{
-						SendResolved: channel.EmailConfig.SendResolved,
+						SendResolved: channel.SlackConfig.SendResolved,
 					},
 					Channel: channel.SlackConfig.Channel,
 				})
 			case models.WebHook:
 				recv.WebhookConfigs = append(recv.WebhookConfigs, &alertmanager.WebhookConfig{
 					NotifierConfig: alertmanager.NotifierConfig{
-						SendResolved: channel.EmailConfig.SendResolved,
+						SendResolved: channel.WebHookConfig.SendResolved,
 					},
 					URL:       channel.WebHookConfig.URL,
 					MaxAlerts: uint64(channel.WebHookConfig.MaxAlerts),
