@@ -21,6 +21,7 @@ import (
 	"crypto/sha256"
 	"hash"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/pkg/errors"
@@ -34,6 +35,8 @@ import (
 const (
 	editableAlertingRulesFileDir = "/srv/prometheus/rules/*.yml"
 	generatedAlertingRulesDir    = "/etc/ia/rules/*.yml"
+
+	alertingRulesFile = "/srv/prometheus/rules/pmm.rules.yml"
 )
 
 // AlertingRules contains all logic related to alerting rules files.
@@ -59,21 +62,21 @@ func (s *AlertingRules) ValidateRules(ctx context.Context, rules string) error {
 
 // ReadRules reads current rules from FS.
 func (s *AlertingRules) ReadRules() (string, error) {
-	// TODO: this method supposed to return external alertmanager rules.
-	// TODO: For now we have common rules for both, external and internal alertmanagers.
-	return "", nil
+	b, err := ioutil.ReadFile(alertingRulesFile)
+	if err != nil && !os.IsNotExist(err) {
+		return "", err
+	}
+	return string(b), nil
 }
 
 // RemoveRulesFile removes rules file from FS.
 func (s *AlertingRules) RemoveRulesFile() error {
-	// TODO: same as ReadRules()
-	return nil
+	return os.Remove(alertingRulesFile)
 }
 
 // WriteRules writes rules to file.
 func (s *AlertingRules) WriteRules(rules string) error {
-	// TODO: same as ReadRules()
-	return nil
+	return ioutil.WriteFile(alertingRulesFile, []byte(rules), 0o644) //nolint:gosec
 }
 
 // GetRulesHash returns current rules files hash sum.
