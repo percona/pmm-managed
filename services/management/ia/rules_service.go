@@ -100,8 +100,8 @@ func (s *RulesService) writeVMAlertRulesFiles() error {
 		r := rule{
 			Alert:       ruleM.RuleId,
 			Duration:    promconfig.Duration(ruleM.For.AsDuration()),
-			Labels:      make(map[string]string, len(ruleM.CustomLabels)+len(ruleM.CustomLabels)),
-			Annotations: make(map[string]string, len(ruleM.Template.Annotations)),
+			Labels:      make(map[string]string, len(ruleM.CustomLabels)+len(ruleM.CustomLabels)+2),
+			Annotations: make(map[string]string, len(ruleM.Template.Annotations)+1),
 		}
 
 		data := make(map[string]string, len(ruleM.Params))
@@ -133,22 +133,19 @@ func (s *RulesService) writeVMAlertRulesFiles() error {
 		r.Expr = buf.String()
 
 		// Copy annotations form template
-		err = transformMaps(ruleM.Template.Annotations, r.Annotations, data)
-		if err != nil {
+		if err = transformMaps(ruleM.Template.Annotations, r.Annotations, data); err != nil {
 			return errors.Wrap(err, "failed to convert rule template")
 		}
 
 		r.Annotations["rule_summary"] = ruleM.Summary
 
 		// Copy labels form template
-		err = transformMaps(ruleM.Template.Labels, r.Labels, data)
-		if err != nil {
+		if err = transformMaps(ruleM.Template.Labels, r.Labels, data); err != nil {
 			return errors.Wrap(err, "failed to convert rule template")
 		}
 
 		// Add rule labels
-		err = transformMaps(ruleM.CustomLabels, r.Labels, data)
-		if err != nil {
+		if err = transformMaps(ruleM.CustomLabels, r.Labels, data); err != nil {
 			return errors.Wrap(err, "failed to convert rule template")
 		}
 
@@ -156,14 +153,13 @@ func (s *RulesService) writeVMAlertRulesFiles() error {
 		r.Labels["ia"] = "1"
 		r.Labels["severity"] = ruleM.Severity.String()
 
-		rf := &ruleFile{
-			Group: []ruleGroup{{
-				Name:  "PMM Server Integrated Alerting",
-				Rules: []rule{r},
-			}},
-		}
-
-		err = s.dumpRule(rf)
+		err = s.dumpRule(
+			&ruleFile{
+				Group: []ruleGroup{{
+					Name:  "PMM Server Integrated Alerting",
+					Rules: []rule{r},
+				}},
+			})
 		if err != nil {
 			return errors.Wrap(err, "failed to dump alert rules")
 		}
