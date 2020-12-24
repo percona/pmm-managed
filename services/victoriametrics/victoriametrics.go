@@ -245,6 +245,54 @@ func (svc *Service) marshalConfig() ([]byte, error) {
 	return b, nil
 }
 
+// validateConfig validates given configuration with `victoriametrics -dryRun`.
+func (svc *Service) validateConfig(ctx context.Context, cfg []byte) error {
+	f, err := ioutil.TempFile("", "pmm-managed-config-victoriametrics-")
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	if _, err = f.Write(cfg); err != nil {
+		return errors.WithStack(err)
+	}
+	defer func() {
+		_ = f.Close()
+		_ = os.Remove(f.Name())
+	}()
+
+	args := []string{"-dryRun", "-promscrape.config", f.Name()}
+	cmd := exec.CommandContext(ctx, "victoriametrics", args...) //nolint:gosec
+	pdeathsig.Set(cmd, unix.SIGKILL)
+
+	b, err := cmd.CombinedOutput()
+	if err != nil {
+		svc.l.Errorf("%s", b)
+		s := string(b)
+		if m := checkFailedRE.FindStringSubmatch(s); len(m) == 2 {
+			return status.Error(codes.Aborted, m[1])
+		}
+
+		return errors.Wrap(err, s)
+	}
+	svc.l.Debugf("%s", b)
+
+	args = append(args, "-promscrape.config.strictParse", "true")
+	cmd = exec.CommandContext(ctx, "victoriametrics", args...) //nolint:gosec
+	pdeathsig.Set(cmd, unix.SIGKILL)
+
+	b, err = cmd.CombinedOutput()
+	if err != nil {
+		s := string(b)
+		if m := checkFailedRE.FindStringSubmatch(s); len(m) == 2 {
+			svc.l.Warnf("VictoriaMetrics scrape configuration contains unsupported params: %s", m[1])
+		} else {
+			svc.l.Warnf("VictoriaMetrics scrape configuration contains unsupported params: %s", b)
+		}
+	}
+	svc.l.Debugf("%s", b)
+
+	return nil
+}
+
 // configAndReload saves given VictoriaMetrics configuration to file and reloads VictoriaMetrics.
 // If configuration can't be reloaded for some reason, old file is restored, and configuration is reloaded again.
 func (svc *Service) configAndReload(ctx context.Context, cfg []byte) error {
@@ -271,47 +319,10 @@ func (svc *Service) configAndReload(ctx context.Context, cfg []byte) error {
 		}
 	}()
 
-	// write new content to temporary file, check it
-	f, err := ioutil.TempFile("", "pmm-managed-config-victoriametrics-")
-	if err != nil {
-		return errors.WithStack(err)
+	if err = svc.validateConfig(ctx, cfg); err != nil {
+		return err
 	}
-	if _, err = f.Write(cfg); err != nil {
-		return errors.WithStack(err)
-	}
-	defer func() {
-		_ = f.Close()
-		_ = os.Remove(f.Name())
-	}()
 
-	args := []string{"-dryRun", "-promscrape.config", f.Name()}
-	cmd := exec.CommandContext(ctx, "victoriametrics", args...) //nolint:gosec
-
-	pdeathsig.Set(cmd, unix.SIGKILL)
-
-	b, err := cmd.CombinedOutput()
-	if err != nil {
-		svc.l.Errorf("%s", b)
-		s := string(b)
-		if m := checkFailedRE.FindStringSubmatch(s); len(m) == 2 {
-			return status.Error(codes.Aborted, m[1])
-		}
-
-		return errors.Wrap(err, s)
-	}
-	svc.l.Debugf("%s", b)
-
-	args = append(args, "-promscrape.config.strictParse", "true")
-	cmd = exec.CommandContext(ctx, "victoriametrics", args...) //nolint:gosec
-	b, err = cmd.CombinedOutput()
-	if err != nil {
-		s := string(b)
-		if m := checkFailedRE.FindStringSubmatch(s); len(m) == 2 {
-			svc.l.Warnf("VictoriaMetrics scrape configuration contains unsupported params: %s", m[1])
-		} else {
-			svc.l.Warnf("VictoriaMetrics scrape configuration contains unsupported params: %s", b)
-		}
-	}
 	restore = true
 	if err = ioutil.WriteFile(svc.scrapeConfigPath, cfg, fi.Mode()); err != nil {
 		return errors.WithStack(err)

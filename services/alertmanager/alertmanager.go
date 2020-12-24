@@ -21,7 +21,9 @@ import (
 	"context"
 	"io/ioutil"
 	"net"
+	"net/http"
 	"os"
+	"os/exec"
 	"sort"
 	"strings"
 	"time"
@@ -31,13 +33,14 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/percona/pmm/api/alertmanager/amclient"
 	"github.com/percona/pmm/api/alertmanager/amclient/alert"
-	"github.com/percona/pmm/api/alertmanager/amclient/general"
 	"github.com/percona/pmm/api/alertmanager/amclient/silence"
 	"github.com/percona/pmm/api/alertmanager/ammodels"
+	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/percona/promconfig"
 	"github.com/percona/promconfig/alertmanager"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -48,6 +51,9 @@ import (
 )
 
 const (
+	updateBatchDelay           = time.Second
+	configurationUpdateTimeout = 3 * time.Second
+
 	alertmanagerDir     = "/srv/alertmanager"
 	alertmanagerDataDir = "/srv/alertmanager/data"
 	dirPerm             = os.FileMode(0o775)
@@ -60,20 +66,28 @@ const (
 
 // Service is responsible for interactions with Alertmanager.
 type Service struct {
-	db *reform.DB
-	l  *logrus.Entry
+	db     *reform.DB
+	client *http.Client
+
+	l        *logrus.Entry
+	reloadCh chan struct{}
 }
 
 // New creates new service.
 func New(db *reform.DB) *Service {
 	return &Service{
-		db: db,
-		l:  logrus.WithField("component", "alertmanager"),
+		db:       db,
+		client:   new(http.Client), // TODO instrument with utils/irt; see vmalert package
+		l:        logrus.WithField("component", "alertmanager"),
+		reloadCh: make(chan struct{}, 1),
 	}
 }
 
 // Run runs Alertmanager configuration update loop until ctx is canceled.
 func (svc *Service) Run(ctx context.Context) {
+	// If you change this and related methods,
+	// please do similar changes in victoriametrics and vmalert packages.
+
 	svc.l.Info("Starting...")
 	defer svc.l.Info("Done.")
 
@@ -87,91 +101,219 @@ func (svc *Service) Run(ctx context.Context) {
 	}
 
 	svc.generateBaseConfig()
-	svc.updateConfiguration(ctx)
 
-	// we don't have "configuration update loop" yet, so do nothing
-	// TODO implement loop similar to victoriametrics.Service.Run
+	// reloadCh, configuration update loop, and RequestConfigurationUpdate method ensure that configuration
+	// is reloaded when requested, but several requests are batched together to avoid too often reloads.
+	// That allows the caller to just call RequestConfigurationUpdate when it seems fit.
+	if cap(svc.reloadCh) != 1 {
+		panic("reloadCh should have capacity 1")
+	}
 
-	<-ctx.Done()
-}
+	for {
+		select {
+		case <-ctx.Done():
+			return
 
-// RequestConfigurationUpdate requests Alertmanager configuration update.
-func (svc *Service) RequestConfigurationUpdate() {
-	// FIXME
+		case <-svc.reloadCh:
+			// batch several update requests together by delaying the first one
+			sleepCtx, sleepCancel := context.WithTimeout(ctx, updateBatchDelay)
+			<-sleepCtx.Done()
+			sleepCancel()
+
+			if ctx.Err() != nil {
+				return
+			}
+
+			nCtx, cancel := context.WithTimeout(ctx, configurationUpdateTimeout)
+			if err := svc.updateConfiguration(nCtx); err != nil {
+				svc.l.Errorf("Failed to update configuration, will retry: %+v.", err)
+				svc.RequestConfigurationUpdate()
+			}
+			cancel()
+		}
+	}
 }
 
 // generateBaseConfig generates /srv/alertmanager/alertmanager.base.yml if it is not present.
 func (svc *Service) generateBaseConfig() {
+	defaultBase := strings.TrimSpace(`
+	---
+	# You can edit this file; changes will be preserved.
+
+	route:
+	  receiver: empty
+	  routes: []
+
+	receivers:
+	  - name: empty
+	`) + "\n"
+
 	_, err := os.Stat(alertmanagerBaseConfigPath)
 	svc.l.Debugf("%s status: %v", alertmanagerBaseConfigPath, err)
-
 	if os.IsNotExist(err) {
-		defaultBase := strings.TrimSpace(`
----
-# You can edit this file; changes will be preserved.
-
-route:
-  receiver: empty
-  routes: []
-
-receivers:
-  - name: empty
-`) + "\n"
 		err = ioutil.WriteFile(alertmanagerBaseConfigPath, []byte(defaultBase), 0o644) //nolint:gosec
 		svc.l.Infof("%s created: %v.", alertmanagerBaseConfigPath, err)
 	}
 }
 
+// RequestConfigurationUpdate requests Alertmanager configuration update.
+func (svc *Service) RequestConfigurationUpdate() {
+	select {
+	case svc.reloadCh <- struct{}{}:
+	default:
+	}
+}
+
 // updateConfiguration updates Alertmanager configuration.
-func (svc *Service) updateConfiguration(ctx context.Context) {
-	// TODO split into marshalConfig and configAndReload like in victoriametrics.Service
-
-	// if /etc/alertmanager.yml already exists, read its contents.
-	var content []byte
-	_, err := os.Stat(alertmanagerConfigPath)
-	if err == nil {
-		svc.l.Infof("%s exists, checking content", alertmanagerConfigPath)
-		content, err = ioutil.ReadFile(alertmanagerConfigPath)
-		if err != nil {
-			svc.l.Errorf("Failed to load alertmanager config %s: %s", alertmanagerConfigPath, err)
+func (svc *Service) updateConfiguration(ctx context.Context) error {
+	start := time.Now()
+	defer func() {
+		if dur := time.Since(start); dur > time.Second {
+			svc.l.Warnf("updateConfiguration took %s.", dur)
 		}
+	}()
+
+	cfg, err := svc.marshalConfig()
+	if err != nil {
+		return err
 	}
 
-	// copy the base config if `/etc/alertmanager.yml` is not present or
-	// is already present but does not have any config.
-	if os.IsNotExist(err) || string(content) == "---\n" {
-		var cfg alertmanager.Config
-		buf, err := ioutil.ReadFile(alertmanagerBaseConfigPath)
-		if err != nil {
-			svc.l.Errorf("Failed to load alertmanager base config %s: %s", alertmanagerBaseConfigPath, err)
-			return
-		}
-		if err := yaml.Unmarshal(buf, &cfg); err != nil {
-			svc.l.Errorf("Failed to parse alertmanager base config %s: %s.", alertmanagerBaseConfigPath, err)
-			return
-		}
+	return svc.configAndReload(ctx, cfg)
+}
 
-		err = svc.populateConfig(&cfg)
-		if err != nil {
-			svc.l.Error(err)
-			return
-		}
-
-		b, err := yaml.Marshal(cfg)
-		if err != nil {
-			svc.l.Errorf("Failed to marshal alertmanager config %s: %s.", alertmanagerConfigPath, err)
-			return
-		}
-
-		b = append([]byte("# Managed by pmm-managed. DO NOT EDIT.\n---\n"), b...)
-
-		err = ioutil.WriteFile(alertmanagerConfigPath, b, 0o644)
-		if err != nil {
-			svc.l.Errorf("Failed to write alertmanager config %s: %s.", alertmanagerConfigPath, err)
-			return
-		}
+// reload asks Alertmanager to reload configuration.
+func (svc *Service) reload(ctx context.Context) error {
+	u := "http://127.0.0.1:9093/-/reload"
+	req, err := http.NewRequestWithContext(ctx, "GET", u, nil)
+	if err != nil {
+		return errors.WithStack(err)
 	}
-	svc.l.Infof("%s created", alertmanagerConfigPath)
+	resp, err := svc.client.Do(req)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer resp.Body.Close() //nolint:errcheck
+
+	b, err := ioutil.ReadAll(resp.Body)
+	svc.l.Debugf("Alertmanager reload: %s", b)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if resp.StatusCode != 888 {
+		return errors.Errorf("expected 888, got %d", resp.StatusCode)
+	}
+	return nil
+}
+
+// loadBaseConfig returns parsed base configuration file, or empty configuration on error.
+func (svc *Service) loadBaseConfig() *alertmanager.Config {
+	buf, err := ioutil.ReadFile(alertmanagerBaseConfigPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			svc.l.Errorf("Failed to load base Alertmanager config %s: %s", alertmanagerBaseConfigPath, err)
+		}
+
+		return &alertmanager.Config{}
+	}
+
+	var cfg alertmanager.Config
+	if err := yaml.Unmarshal(buf, &cfg); err != nil {
+		svc.l.Errorf("Failed to parse base Alertmanager config %s: %s.", alertmanagerBaseConfigPath, err)
+
+		return &alertmanager.Config{}
+	}
+
+	return &cfg
+}
+
+// marshalConfig marshals Alertmanager configuration.
+func (svc *Service) marshalConfig() ([]byte, error) {
+	cfg := svc.loadBaseConfig()
+
+	if err := svc.populateConfig(cfg); err != nil {
+		return nil, err
+	}
+
+	b, err := yaml.Marshal(cfg)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't marshal Alertmanager configuration file")
+	}
+
+	b = append([]byte("# Managed by pmm-managed. DO NOT EDIT.\n---\n"), b...)
+
+	return b, nil
+}
+
+// validateConfig validates given configuration with `amtool check-config`.
+func (svc *Service) validateConfig(ctx context.Context, cfg []byte) error {
+	f, err := ioutil.TempFile("", "pmm-managed-config-alertmanager-")
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	if _, err = f.Write(cfg); err != nil {
+		return errors.WithStack(err)
+	}
+	defer func() {
+		_ = f.Close()
+		_ = os.Remove(f.Name())
+	}()
+
+	args := []string{"check-config", "--output=json", f.Name()}
+	cmd := exec.CommandContext(ctx, "amtool", args...) //nolint:gosec
+	pdeathsig.Set(cmd, unix.SIGKILL)
+
+	b, err := cmd.CombinedOutput()
+	if err != nil {
+		svc.l.Errorf("%s", b)
+		return errors.Wrap(err, string(b))
+	}
+	svc.l.Debugf("%s", b)
+
+	return nil
+}
+
+// configAndReload saves given VictoriaMetrics configuration to file and reloads VictoriaMetrics.
+// If configuration can't be reloaded for some reason, old file is restored, and configuration is reloaded again.
+func (svc *Service) configAndReload(ctx context.Context, cfg []byte) error {
+	oldCfg, err := ioutil.ReadFile(alertmanagerConfigPath)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	fi, err := os.Stat(alertmanagerConfigPath)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	// restore old content and reload in case of error
+	var restore bool
+	defer func() {
+		if restore {
+			if err = ioutil.WriteFile(alertmanagerConfigPath, oldCfg, fi.Mode()); err != nil {
+				svc.l.Error(err)
+			}
+			if err = svc.reload(ctx); err != nil {
+				svc.l.Error(err)
+			}
+		}
+	}()
+
+	if err = svc.validateConfig(ctx, cfg); err != nil {
+		return err
+	}
+
+	restore = true
+	if err = ioutil.WriteFile(alertmanagerConfigPath, cfg, fi.Mode()); err != nil {
+		return errors.WithStack(err)
+	}
+	if err = svc.reload(ctx); err != nil {
+		return err
+	}
+	svc.l.Infof("Configuration reloaded.")
+	restore = false
+
+	return nil
 }
 
 func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
@@ -445,11 +587,24 @@ func (svc *Service) Unsilence(ctx context.Context, id string) error {
 
 // IsReady verifies that Alertmanager works.
 func (svc *Service) IsReady(ctx context.Context) error {
-	_, err := amclient.Default.General.GetStatus(&general.GetStatusParams{
-		Context: ctx,
-	})
+	u := "http://127.0.0.1:9093/alertmanager/-/ready"
+	req, err := http.NewRequestWithContext(ctx, "GET", u, nil)
 	if err != nil {
 		return errors.WithStack(err)
+	}
+	resp, err := svc.client.Do(req)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer resp.Body.Close() //nolint:errcheck
+
+	b, err := ioutil.ReadAll(resp.Body)
+	svc.l.Debugf("Alertmanager ready: %s", b)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	if resp.StatusCode != 200 {
+		return errors.Errorf("expected 200, got %d", resp.StatusCode)
 	}
 
 	return nil
