@@ -118,13 +118,11 @@ func (s *RulesService) writeVMAlertRulesFiles() {
 	}
 
 	for _, file := range ruleFiles {
-		err = s.writeRuleFile(&file)
+		err = s.writeRuleFile(&file) //nolint:gosec
 		if err != nil {
 			s.l.Errorf("Failed to write alert rule file: %+v", err)
 		}
 	}
-
-	return
 }
 
 func (s *RulesService) prepareRulesFiles(rules []*iav1beta1.Rule) ([]ruleFile, error) {
