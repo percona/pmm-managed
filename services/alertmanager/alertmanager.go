@@ -195,7 +195,11 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 		return errors.Errorf("Failed to fetch items from database: %s", e)
 	}
 
-	cfg.Global = &alertmanager.GlobalConfig{}
+	if cfg.Global == nil {
+		cfg.Global = &alertmanager.GlobalConfig{}
+	}
+
+	svc.l.Warn("Setting global config, any user defined changes to the base config might be overwritten.")
 	if settings.IntegratedAlerting.EmailAlertingSettings != nil {
 		cfg.Global.SMTPFrom = settings.IntegratedAlerting.EmailAlertingSettings.From
 		cfg.Global.SMTPHello = settings.IntegratedAlerting.EmailAlertingSettings.Hello
@@ -265,22 +269,18 @@ func generateReceivers(chanMap map[string]*models.Channel, recvSet map[string]st
 					To: channel.EmailConfig.To[0],
 				})
 			case models.PagerDuty:
-				pdConfig := channel.PagerDutyConfig
-				if pdConfig.RoutingKey != "" {
-					recv.PagerdutyConfigs = append(recv.PagerdutyConfigs, &alertmanager.PagerdutyConfig{
-						NotifierConfig: alertmanager.NotifierConfig{
-							SendResolved: pdConfig.SendResolved,
-						},
-						RoutingKey: pdConfig.RoutingKey,
-					})
-					break
-				}
-				recv.PagerdutyConfigs = append(recv.PagerdutyConfigs, &alertmanager.PagerdutyConfig{
+				pdConfig := &alertmanager.PagerdutyConfig{
 					NotifierConfig: alertmanager.NotifierConfig{
-						SendResolved: pdConfig.SendResolved,
+						SendResolved: channel.PagerDutyConfig.SendResolved,
 					},
-					ServiceKey: pdConfig.ServiceKey,
-				})
+				}
+				if pdConfig.RoutingKey != "" {
+					pdConfig.RoutingKey = channel.PagerDutyConfig.RoutingKey
+				}
+				if pdConfig.ServiceKey != "" {
+					pdConfig.ServiceKey = channel.PagerDutyConfig.ServiceKey
+				}
+				recv.PagerdutyConfigs = append(recv.PagerdutyConfigs, pdConfig)
 			case models.Slack:
 				recv.SlackConfigs = append(recv.SlackConfigs, &alertmanager.SlackConfig{
 					NotifierConfig: alertmanager.NotifierConfig{
@@ -289,32 +289,40 @@ func generateReceivers(chanMap map[string]*models.Channel, recvSet map[string]st
 					Channel: channel.SlackConfig.Channel,
 				})
 			case models.WebHook:
-				recv.WebhookConfigs = append(recv.WebhookConfigs, &alertmanager.WebhookConfig{
+				webhookConfig := &alertmanager.WebhookConfig{
 					NotifierConfig: alertmanager.NotifierConfig{
 						SendResolved: channel.WebHookConfig.SendResolved,
 					},
 					URL:       channel.WebHookConfig.URL,
 					MaxAlerts: uint64(channel.WebHookConfig.MaxAlerts),
-					HTTPConfig: promconfig.HTTPClientConfig{
-						BasicAuth: &promconfig.BasicAuth{
+				}
+
+				if channel.WebHookConfig.HTTPConfig != nil {
+					webhookConfig.HTTPConfig = promconfig.HTTPClientConfig{
+						BearerToken:     channel.WebHookConfig.HTTPConfig.BearerToken,
+						BearerTokenFile: channel.WebHookConfig.HTTPConfig.BearerTokenFile,
+						ProxyURL:        channel.WebHookConfig.HTTPConfig.ProxyURL,
+					}
+					if channel.WebHookConfig.HTTPConfig.BasicAuth != nil {
+						webhookConfig.HTTPConfig.BasicAuth = &promconfig.BasicAuth{
 							Username:     channel.WebHookConfig.HTTPConfig.BasicAuth.Username,
 							Password:     channel.WebHookConfig.HTTPConfig.BasicAuth.Password,
 							PasswordFile: channel.WebHookConfig.HTTPConfig.BasicAuth.PasswordFile,
-						},
-						BearerToken:     channel.WebHookConfig.HTTPConfig.BearerToken,
-						BearerTokenFile: channel.WebHookConfig.HTTPConfig.BearerTokenFile,
-						TLSConfig: promconfig.TLSConfig{
+						}
+					}
+					if channel.WebHookConfig.HTTPConfig.TLSConfig != nil {
+						webhookConfig.HTTPConfig.TLSConfig = promconfig.TLSConfig{
 							CAFile:             channel.WebHookConfig.HTTPConfig.TLSConfig.CaFile,
 							CertFile:           channel.WebHookConfig.HTTPConfig.TLSConfig.CertFile,
 							KeyFile:            channel.WebHookConfig.HTTPConfig.TLSConfig.KeyFile,
 							ServerName:         channel.WebHookConfig.HTTPConfig.TLSConfig.ServerName,
 							InsecureSkipVerify: channel.WebHookConfig.HTTPConfig.TLSConfig.InsecureSkipVerify,
-						},
-						ProxyURL: channel.WebHookConfig.HTTPConfig.ProxyURL,
-					},
-				})
+						}
+					}
+				}
+				recv.WebhookConfigs = append(recv.WebhookConfigs, webhookConfig)
 			default:
-				return nil, errors.New("Invalid channel type")
+				return nil, errors.Errorf("invalid channel type: %T", channel.Type)
 			}
 		}
 		receivers = append(receivers, recv)
