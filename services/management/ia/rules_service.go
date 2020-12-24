@@ -17,19 +17,28 @@
 package ia
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"io/ioutil"
+	"strings"
 
 	"github.com/percona-platform/saas/pkg/common"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
+	"github.com/percona/promconfig"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
+	"gopkg.in/yaml.v3"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services"
+	"github.com/percona/pmm-managed/utils/dir"
 )
+
+const rulesDir = "/etc/ia/rules"
 
 // RulesService represents API for Integrated Alerting Rules.
 type RulesService struct {
@@ -37,16 +46,167 @@ type RulesService struct {
 	l         *logrus.Entry
 	templates *TemplatesService
 	vmalert   vmAlertService
+	rulesPath string // used for testing
+
 }
 
 // NewRulesService creates an API for Integrated Alerting Rules.
 func NewRulesService(db *reform.DB, templates *TemplatesService, vmalert vmAlertService) *RulesService {
+	l := logrus.WithField("component", "management/ia/rules")
+
+	err := dir.CreateDataDir(rulesDir, "pmm", "pmm", dirPerm)
+	if err != nil {
+		l.Error(err)
+	}
+
 	return &RulesService{
 		db:        db,
-		l:         logrus.WithField("component", "management/ia/rules"),
+		l:         l,
 		templates: templates,
 		vmalert:   vmalert,
+		rulesPath: rulesDir,
 	}
+}
+
+// TODO Move this and related types to https://github.com/percona/promconfig
+// https://jira.percona.com/browse/PMM-7069
+type ruleFile struct {
+	Group []ruleGroup `yaml:"groups"`
+}
+
+type ruleGroup struct {
+	Name  string `yaml:"name"`
+	Rules []rule `yaml:"rules"`
+}
+
+type rule struct {
+	Alert       string              `yaml:"alert"` // Rule ID.
+	Expr        string              `yaml:"expr"`
+	Duration    promconfig.Duration `yaml:"for"`
+	Labels      map[string]string   `yaml:"labels,omitempty"`
+	Annotations map[string]string   `yaml:"annotations,omitempty"`
+}
+
+// writeVMAlertRulesFiles converts all available rules to VMAlert rule files.
+func (s *RulesService) writeVMAlertRulesFiles() error {
+	rules, err := s.getAlertRules()
+	if err != nil {
+		return err
+	}
+
+	for _, ruleM := range rules {
+		r := rule{
+			Alert:       ruleM.RuleId,
+			Duration:    promconfig.Duration(ruleM.For.AsDuration()),
+			Labels:      make(map[string]string, len(ruleM.CustomLabels)+len(ruleM.CustomLabels)),
+			Annotations: make(map[string]string, len(ruleM.Template.Annotations)),
+		}
+
+		data := make(map[string]string, len(ruleM.Params))
+		for _, p := range ruleM.Params {
+			var value string
+			switch p.Type {
+			case iav1beta1.ParamType_FLOAT:
+				value = fmt.Sprint(p.GetFloat())
+			case iav1beta1.ParamType_BOOL:
+				value = fmt.Sprint(p.GetBool())
+			case iav1beta1.ParamType_STRING:
+				value = fmt.Sprint(p.GetString_())
+			case iav1beta1.ParamType_PARAM_TYPE_INVALID:
+				s.l.Warnf("Invalid parameter type %s", p.Type)
+				continue
+			}
+
+			data[p.Name] = value
+		}
+
+		var buf bytes.Buffer
+		t, err := newParamTemplate().Parse(ruleM.Template.Expr)
+		if err != nil {
+			return errors.Wrap(err, "failed to convert rule template")
+		}
+		if err = t.Execute(&buf, data); err != nil {
+			return errors.Wrap(err, "failed to convert rule template")
+		}
+		r.Expr = buf.String()
+
+		// Copy annotations form template
+		err = transformMaps(ruleM.Template.Annotations, r.Annotations, data)
+		if err != nil {
+			return errors.Wrap(err, "failed to convert rule template")
+		}
+
+		r.Annotations["rule_summary"] = ruleM.Summary
+
+		// Copy labels form template
+		err = transformMaps(ruleM.Template.Labels, r.Labels, data)
+		if err != nil {
+			return errors.Wrap(err, "failed to convert rule template")
+		}
+
+		// Add rule labels
+		err = transformMaps(ruleM.CustomLabels, r.Labels, data)
+		if err != nil {
+			return errors.Wrap(err, "failed to convert rule template")
+		}
+
+		// Do not add volatile values like `{{ $value }}` to labels as it will break alerts identity.
+		r.Labels["ia"] = "1"
+		r.Labels["severity"] = ruleM.Severity.String()
+
+		rf := &ruleFile{
+			Group: []ruleGroup{{
+				Name:  "PMM Server Integrated Alerting",
+				Rules: []rule{r},
+			}},
+		}
+
+		err = s.dumpRule(rf)
+		if err != nil {
+			return errors.Wrap(err, "failed to dump alert rules")
+		}
+	}
+	return nil
+}
+
+// fills templates found in labels and annotaitons with values.
+func transformMaps(src map[string]string, dest map[string]string, data map[string]string) error {
+	var buf bytes.Buffer
+
+	for k, v := range src {
+		buf.Reset()
+		t, err := newParamTemplate().Parse(v)
+		if err != nil {
+			return err
+		}
+		if err = t.Execute(&buf, data); err != nil {
+			return err
+		}
+		dest[k] = buf.String()
+	}
+	return nil
+}
+
+// dump the transformed IA templates to a file.
+func (s *RulesService) dumpRule(rule *ruleFile) error {
+	b, err := yaml.Marshal(rule)
+	if err != nil {
+		return errors.Errorf("failed to marshal rule %s", err)
+	}
+	b = append([]byte("---\n"), b...)
+
+	alertRule := rule.Group[0].Rules[0]
+	if alertRule.Alert == "" {
+		return errors.New("alert rule not initialized")
+	}
+
+	fileName := strings.TrimPrefix(alertRule.Alert, "/rule_id/")
+	path := s.rulesPath + "/" + fileName + ".yml"
+	if err = ioutil.WriteFile(path, b, 0o644); err != nil {
+		return errors.Errorf("failed to dump rule to file %s: %s", s.rulesPath, err)
+	}
+
+	return nil
 }
 
 // ListAlertRules returns a list of all Integrated Alerting rules.
