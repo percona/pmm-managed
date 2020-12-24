@@ -188,7 +188,7 @@ func (s *Agent) UnifiedLabels() (map[string]string, error) {
 }
 
 // DSN returns DSN string for accessing given Service with this Agent (and implicit driver).
-func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string, tdp *Pair) string {
+func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string, tdp *DelimiterPair) string {
 	host := pointer.GetString(service.Address)
 	port := pointer.GetUint16(service.Port)
 	socket := pointer.GetString(service.Socket)
@@ -379,6 +379,7 @@ func (s *Agent) IsMySQLTablestatsGroupEnabled() bool {
 	}
 }
 
+// Files returns files map required to connect to DB.
 func (s Agent) Files() map[string]string {
 	switch s.AgentType {
 	case MySQLdExporterType, ProxySQLExporterType:
@@ -400,7 +401,8 @@ func (s Agent) Files() map[string]string {
 	}
 }
 
-func (s Agent) TemplateDelimiters(svc *Service) *Pair {
+// TemplateDelimiters returns a pair of safe template delimiters that are not present in agent parameters.
+func (s Agent) TemplateDelimiters(svc *Service) *DelimiterPair {
 	templateParams := []string{
 		pointer.GetString(svc.Address),
 		pointer.GetString(s.Username),
@@ -410,11 +412,13 @@ func (s Agent) TemplateDelimiters(svc *Service) *Pair {
 
 	switch svc.ServiceType {
 	case MySQLServiceType:
-	case PostgreSQLServiceType:
 	case MongoDBServiceType:
 		if s.MongoDBOptions != nil {
 			templateParams = append(templateParams, s.MongoDBOptions.TLSCertificateKeyFilePassword)
 		}
+	case PostgreSQLServiceType:
+	case ProxySQLServiceType:
+	case ExternalServiceType:
 	}
 
 	tdp := TemplateDelimsPair(

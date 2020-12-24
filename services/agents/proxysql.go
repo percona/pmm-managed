@@ -30,12 +30,7 @@ import (
 
 // proxysqlExporterConfig returns desired configuration of proxysql_exporter process.
 func proxysqlExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode) *agentpb.SetStateRequest_AgentProcess {
-	tdp := models.TemplateDelimsPair(
-		pointer.GetString(service.Address),
-		pointer.GetString(exporter.Username),
-		pointer.GetString(exporter.Password),
-		pointer.GetString(exporter.MetricsPath),
-	)
+	tdp := exporter.TemplateDelimiters(service)
 
 	args := []string{
 		"-collect.mysql_connection_list",

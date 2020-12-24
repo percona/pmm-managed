@@ -30,12 +30,14 @@ import (
 	"gopkg.in/reform.v1"
 )
 
+// MongoDBOptionsParams contains methods to create MongoDBOptions object.
 type MongoDBOptionsParams interface {
 	GetTlsCertificateKey() string
 	GetTlsCertificateKeyFilePassword() string
 	GetTlsCa() string
 }
 
+// MongoDBOptionsFromRequest creates MongoDBOptionsParams object from request.
 func MongoDBOptionsFromRequest(params MongoDBOptionsParams) *MongoDBOptions {
 	if params.GetTlsCertificateKey() != "" || params.GetTlsCertificateKeyFilePassword() != "" || params.GetTlsCa() != "" {
 		return &MongoDBOptions{

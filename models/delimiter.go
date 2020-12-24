@@ -20,12 +20,13 @@ import (
 	"strings"
 )
 
-type Pair struct {
+// DelimiterPair contains a pair of safe template delimiters.
+type DelimiterPair struct {
 	Left  string
 	Right string
 }
 
-var pairs = []Pair{
+var pairs = []DelimiterPair{
 	{Left: "{{", Right: "}}"},
 	{Left: "[[", Right: "]]"},
 	{Left: "((", Right: "))"},
@@ -34,7 +35,7 @@ var pairs = []Pair{
 }
 
 // TemplateDelimsPair returns a pair of safe template delimiters that are not present in any given string.
-func TemplateDelimsPair(str ...string) Pair {
+func TemplateDelimsPair(str ...string) DelimiterPair {
 	for _, p := range pairs {
 		var found bool
 		for _, s := range str {
