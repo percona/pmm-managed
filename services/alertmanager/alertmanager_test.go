@@ -42,22 +42,20 @@ func TestIsReady(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 	svc := New(db)
+	svc.GenerateBaseConfigs(ctx)
 
-	require.NoError(t, svc.IsReady(ctx))
-
-	assert.NoError(t, svc.generateBaseConfig())
 	assert.NoError(t, svc.updateConfiguration(ctx))
 	assert.NoError(t, svc.IsReady(ctx))
 }
 
 func TestPopulateConfig(t *testing.T) {
-	err := New(nil).generateBaseConfig()
-	require.NoError(t, err)
+	ctx := context.Background()
 
 	t.Run("without receivers and routes", func(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 		svc := New(db)
+		svc.GenerateBaseConfigs(ctx)
 
 		cfg := svc.loadBaseConfig()
 
@@ -67,7 +65,7 @@ func TestPopulateConfig(t *testing.T) {
 			SlackAPIURL: slackURL,
 		}
 
-		err = svc.populateConfig(cfg)
+		err := svc.populateConfig(cfg)
 		require.NoError(t, err)
 
 		assert.Len(t, cfg.Receivers, 1)
@@ -83,6 +81,7 @@ func TestPopulateConfig(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 		svc := New(db)
+		svc.GenerateBaseConfigs(ctx)
 
 		channel1, err := models.CreateChannel(db.Querier, &models.CreateChannelParams{
 			Summary: "some summary",

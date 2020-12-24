@@ -83,6 +83,37 @@ func New(db *reform.DB) *Service {
 	}
 }
 
+// GenerateBaseConfigs generates alertmanager.base.yml if it is absent,
+// and then updates the main configuration file. It is needed because Alertmanager was added to PMM
+// with invalid configuration file (it will fail with "no route provided in config" error).
+func (svc *Service) GenerateBaseConfigs(ctx context.Context) {
+	defaultBase := strings.TrimSpace(`
+---
+# You can edit this file; changes will be preserved.
+
+route:
+    receiver: empty
+    routes: []
+
+receivers:
+    - name: empty
+	`) + "\n"
+
+	_, err := os.Stat(alertmanagerBaseConfigPath)
+	svc.l.Debugf("%s status: %v", alertmanagerBaseConfigPath, err)
+	if os.IsNotExist(err) {
+		svc.l.Infof("Creating %s", alertmanagerBaseConfigPath)
+		err = ioutil.WriteFile(alertmanagerBaseConfigPath, []byte(defaultBase), 0o644) //nolint:gosec
+		if err != nil {
+			svc.l.Errorf("Failed to write alertmanager.base.yml: %s", err)
+		}
+	}
+
+	if err = svc.updateConfiguration(ctx); err != nil {
+		svc.l.Errorf("Failed to update configuration: %+v", err)
+	}
+}
+
 // Run runs Alertmanager configuration update loop until ctx is canceled.
 func (svc *Service) Run(ctx context.Context) {
 	// If you change this and related methods,
@@ -95,10 +126,6 @@ func (svc *Service) Run(ctx context.Context) {
 		svc.l.Error(err)
 	}
 	if err := dir.CreateDataDir(alertmanagerDataDir, "pmm", "pmm", dirPerm); err != nil {
-		svc.l.Error(err)
-	}
-
-	if err := svc.generateBaseConfig(); err != nil {
 		svc.l.Error(err)
 	}
 
@@ -132,33 +159,6 @@ func (svc *Service) Run(ctx context.Context) {
 			cancel()
 		}
 	}
-}
-
-// generateBaseConfig generates /srv/alertmanager/alertmanager.base.yml if it is not present.
-func (svc *Service) generateBaseConfig() error {
-	defaultBase := strings.TrimSpace(`
-	---
-	# You can edit this file; changes will be preserved.
-
-	route:
-	  receiver: empty
-	  routes: []
-
-	receivers:
-	  - name: empty
-	`) + "\n"
-
-	_, err := os.Stat(alertmanagerBaseConfigPath)
-	svc.l.Debugf("%s status: %v", alertmanagerBaseConfigPath, err)
-	if os.IsNotExist(err) {
-		svc.l.Infof("Creating %s", alertmanagerBaseConfigPath)
-		err = ioutil.WriteFile(alertmanagerBaseConfigPath, []byte(defaultBase), 0o644) //nolint:gosec
-	}
-
-	if err != nil {
-		return errors.Wrap(err, "failed to generate base config")
-	}
-	return nil
 }
 
 // RequestConfigurationUpdate requests Alertmanager configuration update.
