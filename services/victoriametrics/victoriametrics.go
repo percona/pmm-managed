@@ -82,7 +82,7 @@ func NewVictoriaMetrics(scrapeConfigPath string, db *reform.DB, baseURL string, 
 		scrapeConfigPath: scrapeConfigPath,
 		db:               db,
 		baseURL:          u,
-		client:           new(http.Client),
+		client:           new(http.Client), // TODO instrument with utils/irt; see vmalert package
 		baseConfigPath:   params.BaseConfigPath,
 		l:                logrus.WithField("component", "victoriametrics"),
 		reloadCh:         make(chan struct{}, 1),
@@ -189,18 +189,20 @@ func (svc *Service) reload(ctx context.Context) error {
 	return nil
 }
 
+// loadBaseConfig returns parsed base configuration file, or empty configuration on error.
 func (svc *Service) loadBaseConfig() *config.Config {
-	var cfg config.Config
 	buf, err := ioutil.ReadFile(svc.baseConfigPath)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			svc.l.Errorf("Failed to load base victoriametrics config %s: %s", svc.baseConfigPath, err)
+			svc.l.Errorf("Failed to load base VictoriaMetrics config %s: %s", svc.baseConfigPath, err)
 		}
 
-		return &cfg
+		return &config.Config{}
 	}
+
+	var cfg config.Config
 	if err := yaml.Unmarshal(buf, &cfg); err != nil {
-		svc.l.Errorf("Failed to parse base victoriametrics config %s: %s.", svc.baseConfigPath, err)
+		svc.l.Errorf("Failed to parse base VictoriaMetrics config %s: %s.", svc.baseConfigPath, err)
 
 		return &config.Config{}
 	}
