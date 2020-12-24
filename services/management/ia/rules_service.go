@@ -284,7 +284,7 @@ func (s *RulesService) getAlertRules() ([]*iav1beta1.Rule, error) {
 	for _, rule := range rules {
 		template, ok := templates[rule.TemplateName]
 		if !ok {
-			s.l.Warn("Template %s used by rule %s doesn't exist, skipping that rule")
+			s.l.Warnf("Template %s used by rule %s doesn't exist, skipping that rule", template.Name, rule.ID)
 			continue
 		}
 
