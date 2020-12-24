@@ -156,6 +156,31 @@ func TestRuleTemplates(t *testing.T) {
 		assert.Empty(t, templates)
 	})
 
+	t.Run("remove template in use", func(t *testing.T) {
+		tx, err := db.Begin()
+		require.NoError(t, err)
+		defer func() {
+			require.NoError(t, tx.Rollback())
+		}()
+
+		q := tx.Querier
+
+		name := gofakeit.UUID()
+
+		_, err = models.CreateTemplate(q, createTemplateParams(name))
+		require.NoError(t, err)
+
+		ruleID := createRule(t, q, name)
+
+		err = models.RemoveTemplate(q, name)
+		require.EqualError(t, err, "failed to delete rule template, as it is being used by rule: "+ruleID)
+
+		templates, err := models.FindTemplates(q)
+		require.NoError(t, err)
+
+		assert.NotEmpty(t, templates)
+	})
+
 	t.Run("list", func(t *testing.T) {
 		tx, err := db.Begin()
 		require.NoError(t, err)
@@ -235,4 +260,11 @@ func changeTemplateParams(name string) *models.ChangeTemplateParams {
 			Annotations: nil,
 		},
 	}
+}
+
+func createRule(t *testing.T, q *reform.Querier, name string) string {
+	chID := createChannel(t, q)
+	rule, err := models.CreateRule(q, createCreateRuleParams(name, chID))
+	require.NoError(t, err)
+	return rule.ID
 }
