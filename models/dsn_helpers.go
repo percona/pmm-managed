@@ -25,7 +25,7 @@ import (
 )
 
 // FindDSNByServiceIDandPMMAgentID resolves DSN and Files by service id.
-func FindDSNByServiceIDandPMMAgentID(q *reform.Querier, serviceID, pmmAgentID, db string) (string, map[string]string, error) {
+func FindDSNByServiceIDandPMMAgentID(q *reform.Querier, serviceID, pmmAgentID, db string) (string, *Agent, error) {
 	// FIXME This function is problematic:
 	//
 	// * it will return error in case we run multiple exporters for the same service with different credentials;
@@ -76,7 +76,7 @@ func FindDSNByServiceIDandPMMAgentID(q *reform.Querier, serviceID, pmmAgentID, d
 			return "", nil, err
 		}
 		if len(fexp) == 1 {
-			return fexp[0].DSN(svc, time.Second, db, nil), fexp[0].Files(), nil
+			return fexp[0].DSN(svc, time.Second, db, nil), fexp[0], nil
 		}
 		if len(fexp) > 1 {
 			return "", nil, status.Errorf(codes.FailedPrecondition, "Couldn't resolve dsn, as there should be only one agent")

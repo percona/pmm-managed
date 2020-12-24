@@ -61,10 +61,9 @@ func (s *actionsServer) GetAction(ctx context.Context, req *managementpb.GetActi
 	}, nil
 }
 
-func (s *actionsServer) prepareServiceAction(serviceID, pmmAgentID, database string) (*models.ActionResult, string, map[string]string, error) {
+func (s *actionsServer) prepareServiceAction(serviceID, pmmAgentID, database string) (*models.ActionResult, string, error) {
 	var res *models.ActionResult
 	var dsn string
-	var files map[string]string
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		agents, err := models.FindPMMAgentsForService(tx.Querier, serviceID)
 		if err != nil {
@@ -75,7 +74,7 @@ func (s *actionsServer) prepareServiceAction(serviceID, pmmAgentID, database str
 			return err
 		}
 
-		if dsn, files, err = models.FindDSNByServiceIDandPMMAgentID(tx.Querier, serviceID, pmmAgentID, database); err != nil {
+		if dsn, _, err = models.FindDSNByServiceIDandPMMAgentID(tx.Querier, serviceID, pmmAgentID, database); err != nil {
 			return err
 		}
 
@@ -83,15 +82,51 @@ func (s *actionsServer) prepareServiceAction(serviceID, pmmAgentID, database str
 		return err
 	})
 	if e != nil {
-		return nil, "", nil, e
+		return nil, "", e
 	}
-	return res, dsn, files, nil
+	return res, dsn, nil
+}
+
+func (s *actionsServer) prepareServiceActionWithFiles(serviceID, pmmAgentID, database string) (*models.ActionResult, string, map[string]string, *models.DelimiterPair, error) {
+	var res *models.ActionResult
+	var dsn string
+	var files map[string]string
+	var tdp *models.DelimiterPair
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		svc, err := models.FindServiceByID(tx.Querier, serviceID)
+		if err != nil {
+			return err
+		}
+
+		pmmAgents, err := models.FindPMMAgentsForService(tx.Querier, serviceID)
+		if err != nil {
+			return err
+		}
+
+		if pmmAgentID, err = models.FindPmmAgentIDToRunAction(pmmAgentID, pmmAgents); err != nil {
+			return err
+		}
+
+		var agent *models.Agent
+		if dsn, agent, err = models.FindDSNByServiceIDandPMMAgentID(tx.Querier, serviceID, pmmAgentID, database); err != nil {
+			return err
+		}
+
+		tdp = agent.TemplateDelimiters(svc)
+
+		res, err = models.CreateActionResult(tx.Querier, pmmAgentID)
+		return err
+	})
+	if e != nil {
+		return nil, "", nil, nil, e
+	}
+	return res, dsn, files, tdp, nil
 }
 
 // StartMySQLExplainAction starts MySQL EXPLAIN Action with traditional output.
 //nolint:lll
 func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *managementpb.StartMySQLExplainActionRequest) (*managementpb.StartMySQLExplainActionResponse, error) {
-	res, dsn, _, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
+	res, dsn, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +145,7 @@ func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *manage
 // StartMySQLExplainJSONAction starts MySQL EXPLAIN Action with JSON output.
 //nolint:lll
 func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *managementpb.StartMySQLExplainJSONActionRequest) (*managementpb.StartMySQLExplainJSONActionResponse, error) {
-	res, dsn, _, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
+	res, dsn, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +164,7 @@ func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *ma
 // StartMySQLExplainTraditionalJSONAction starts MySQL EXPLAIN Action with traditional JSON output.
 //nolint:lll
 func (s *actionsServer) StartMySQLExplainTraditionalJSONAction(ctx context.Context, req *managementpb.StartMySQLExplainTraditionalJSONActionRequest) (*managementpb.StartMySQLExplainTraditionalJSONActionResponse, error) {
-	res, dsn, _, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
+	res, dsn, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +183,7 @@ func (s *actionsServer) StartMySQLExplainTraditionalJSONAction(ctx context.Conte
 // StartMySQLShowCreateTableAction starts MySQL SHOW CREATE TABLE Action.
 //nolint:lll
 func (s *actionsServer) StartMySQLShowCreateTableAction(ctx context.Context, req *managementpb.StartMySQLShowCreateTableActionRequest) (*managementpb.StartMySQLShowCreateTableActionResponse, error) {
-	res, dsn, _, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
+	res, dsn, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +202,7 @@ func (s *actionsServer) StartMySQLShowCreateTableAction(ctx context.Context, req
 // StartMySQLShowTableStatusAction starts MySQL SHOW TABLE STATUS Action.
 //nolint:lll
 func (s *actionsServer) StartMySQLShowTableStatusAction(ctx context.Context, req *managementpb.StartMySQLShowTableStatusActionRequest) (*managementpb.StartMySQLShowTableStatusActionResponse, error) {
-	res, dsn, _, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
+	res, dsn, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +221,7 @@ func (s *actionsServer) StartMySQLShowTableStatusAction(ctx context.Context, req
 // StartMySQLShowIndexAction starts MySQL SHOW INDEX Action.
 //nolint:lll
 func (s *actionsServer) StartMySQLShowIndexAction(ctx context.Context, req *managementpb.StartMySQLShowIndexActionRequest) (*managementpb.StartMySQLShowIndexActionResponse, error) {
-	res, dsn, _, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
+	res, dsn, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +240,7 @@ func (s *actionsServer) StartMySQLShowIndexAction(ctx context.Context, req *mana
 // StartPostgreSQLShowCreateTableAction starts PostgreSQL SHOW CREATE TABLE Action.
 //nolint:lll
 func (s *actionsServer) StartPostgreSQLShowCreateTableAction(ctx context.Context, req *managementpb.StartPostgreSQLShowCreateTableActionRequest) (*managementpb.StartPostgreSQLShowCreateTableActionResponse, error) {
-	res, dsn, _, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
+	res, dsn, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +259,7 @@ func (s *actionsServer) StartPostgreSQLShowCreateTableAction(ctx context.Context
 // StartPostgreSQLShowIndexAction starts PostgreSQL SHOW INDEX Action.
 //nolint:lll
 func (s *actionsServer) StartPostgreSQLShowIndexAction(ctx context.Context, req *managementpb.StartPostgreSQLShowIndexActionRequest) (*managementpb.StartPostgreSQLShowIndexActionResponse, error) {
-	res, dsn, _, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
+	res, dsn, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
 		return nil, err
 	}
@@ -245,12 +280,12 @@ func (s *actionsServer) StartPostgreSQLShowIndexAction(ctx context.Context, req 
 func (s *actionsServer) StartMongoDBExplainAction(ctx context.Context, req *managementpb.StartMongoDBExplainActionRequest) (
 	*managementpb.StartMongoDBExplainActionResponse, error) {
 	// Explain action must be executed against the admin database
-	res, dsn, files, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, "admin")
+	res, dsn, files, tdp, err := s.prepareServiceActionWithFiles(req.ServiceId, req.PmmAgentId, "admin")
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.r.StartMongoDBExplainAction(ctx, res.ID, res.PMMAgentID, dsn, req.Query, files)
+	err = s.r.StartMongoDBExplainAction(ctx, res.ID, res.PMMAgentID, dsn, req.Query, files, tdp)
 	if err != nil {
 		return nil, err
 	}

@@ -37,8 +37,8 @@ import (
 // pmm-managed's PostgreSQL, qan-api's ClickHouse, and VictoriaMetrics.
 type AgentType string
 
-const certificateKeyFilePlaceholder = ".TextFiles.certificateKeyFilePlaceholder"
-const caFilePlaceholder = ".TextFiles.caFilePlaceholder"
+const certificateKeyFilePlaceholder = "certificateKeyFilePlaceholder"
+const caFilePlaceholder = "caFilePlaceholder"
 
 // Agent types (in the same order as in agents.proto).
 const (
@@ -282,13 +282,13 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 
 			if s.MongoDBOptions != nil {
 				if s.MongoDBOptions.TLSCertificateKey != "" {
-					q.Add("sslCertificateKeyFile", tdp.Left+certificateKeyFilePlaceholder+tdp.Right)
+					q.Add("tlsCertificateKeyFile", tdp.Left+".TextFiles."+certificateKeyFilePlaceholder+tdp.Right)
 				}
 				if s.MongoDBOptions.TLSCertificateKeyFilePassword != "" {
-					q.Add("sslCertificateKeyFilePassword", s.MongoDBOptions.TLSCertificateKeyFilePassword)
+					q.Add("tlsCertificateKeyFilePassword", s.MongoDBOptions.TLSCertificateKeyFilePassword)
 				}
 				if s.MongoDBOptions.TLSCa != "" {
-					q.Add("sslCaFile", tdp.Left+caFilePlaceholder+tdp.Right)
+					q.Add("tlsCaFile", tdp.Left+".TextFiles."+caFilePlaceholder+tdp.Right)
 				}
 			}
 		}
@@ -311,8 +311,8 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			u.User = url.User(username)
 		}
 		dsn := u.String()
-		dsn = strings.Replace(dsn, url.QueryEscape(tdp.Left), tdp.Left, -1)
-		dsn = strings.Replace(dsn, url.QueryEscape(tdp.Right), tdp.Right, -1)
+		dsn = strings.ReplaceAll(dsn, url.QueryEscape(tdp.Left), tdp.Left)
+		dsn = strings.ReplaceAll(dsn, url.QueryEscape(tdp.Right), tdp.Right)
 		return dsn
 
 	case PostgresExporterType, QANPostgreSQLPgStatementsAgentType, QANPostgreSQLPgStatMonitorAgentType:

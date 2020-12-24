@@ -178,37 +178,37 @@ func TestFindDSNByServiceID(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
 
-		dsn, files, err := models.FindDSNByServiceIDandPMMAgentID(q, "S2", "PA1", "test")
+		dsn, agent, err := models.FindDSNByServiceIDandPMMAgentID(q, "S2", "PA1", "test")
 		require.NoError(t, err)
 		expected := "pmm-user@tcp(127.0.0.1:3306)/test?clientFoundRows=true&parseTime=true&timeout=1s"
 		assert.Equal(t, expected, dsn)
-		assert.Nil(t, files)
+		assert.NotNil(t, agent)
 	})
 
 	t.Run("FindDSNWithSocketByServiceIDandPMMAgentID", func(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
 
-		dsn, files, err := models.FindDSNByServiceIDandPMMAgentID(q, "S1", "PA1", "test")
+		dsn, agent, err := models.FindDSNByServiceIDandPMMAgentID(q, "S1", "PA1", "test")
 		require.NoError(t, err)
 		expected := "unix(/var/run/mysqld/mysqld.sock)/test?timeout=1s"
 		assert.Equal(t, expected, dsn)
-		assert.Nil(t, files)
+		assert.NotNil(t, agent)
 	})
 
 	t.Run("FindDSNWithFilesByServiceIDandPMMAgentID", func(t *testing.T) {
 		q, teardown := setup(t)
 		defer teardown(t)
 
-		dsn, files, err := models.FindDSNByServiceIDandPMMAgentID(q, "S4", "PA2", "test")
+		dsn, agent, err := models.FindDSNByServiceIDandPMMAgentID(q, "S4", "PA2", "test")
 		require.NoError(t, err)
 		expected := "mongodb://pmm-user%7B%7B@127.0.0.1:27017/test?connectTimeoutMS=1000&ssl=true&sslCaFile=[[.TextFiles.caFilePlaceholder]]&sslCertificateKeyFile=[[.TextFiles.certificateKeyFilePlaceholder]]&sslCertificateKeyFilePassword=passwordoftls"
 		assert.Equal(t, expected, dsn)
 		expectedFiles := map[string]string{
-			".TextFiles.caFilePlaceholder":             "cert",
-			".TextFiles.certificateKeyFilePlaceholder": "key",
+			".TextFiles.caFilePlaceholder":             "content-of-tls-ca",
+			".TextFiles.certificateKeyFilePlaceholder": "content-of-tls-certificate-key",
 		}
-		assert.Equal(t, expectedFiles, files)
+		assert.Equal(t, expectedFiles, agent.Files())
 	})
 
 	t.Run("FindDSNByServiceIDandPMMAgentIDWithTwoAgentsOfSameType", func(t *testing.T) {

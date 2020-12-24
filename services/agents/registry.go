@@ -672,11 +672,16 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 			Timeout: ptypes.DurationProto(3 * time.Second),
 		}
 	case models.MongoDBServiceType:
+		tdp := agent.TemplateDelimiters(service)
 		request = &agentpb.CheckConnectionRequest{
-			Type:      inventorypb.ServiceType_MONGODB_SERVICE,
-			Dsn:       agent.DSN(service, 2*time.Second, "", nil),
-			Timeout:   ptypes.DurationProto(3 * time.Second),
-			TextFiles: agent.Files(),
+			Type:    inventorypb.ServiceType_MONGODB_SERVICE,
+			Dsn:     agent.DSN(service, 2*time.Second, "", nil),
+			Timeout: ptypes.DurationProto(3 * time.Second),
+			TextFiles: &agentpb.TextFiles{
+				Files:              agent.Files(),
+				TemplateLeftDelim:  tdp.Left,
+				TemplateRightDelim: tdp.Right,
+			},
 		}
 	case models.ProxySQLServiceType:
 		request = &agentpb.CheckConnectionRequest{
@@ -888,14 +893,18 @@ func (r *Registry) StartPostgreSQLShowIndexAction(ctx context.Context, id, pmmAg
 }
 
 // StartMongoDBExplainAction starts MongoDB query explain action on pmm-agent.
-func (r *Registry) StartMongoDBExplainAction(ctx context.Context, id, pmmAgentID, dsn, query string, files map[string]string) error {
+func (r *Registry) StartMongoDBExplainAction(ctx context.Context, id, pmmAgentID, dsn, query string, files map[string]string, tdp *models.DelimiterPair) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_MongodbExplainParams{
 			MongodbExplainParams: &agentpb.StartActionRequest_MongoDBExplainParams{
-				Dsn:       dsn,
-				Query:     query,
-				TextFiles: files,
+				Dsn:   dsn,
+				Query: query,
+				TextFiles: &agentpb.TextFiles{
+					Files:              files,
+					TemplateLeftDelim:  tdp.Left,
+					TemplateRightDelim: tdp.Right,
+				},
 			},
 		},
 		Timeout: defaultActionTimeout,
@@ -998,13 +1007,17 @@ func (r *Registry) StartPostgreSQLQuerySelectAction(ctx context.Context, id, pmm
 }
 
 // StartMongoDBQueryGetParameterAction starts MongoDB getParameter query action on pmm-agent.
-func (r *Registry) StartMongoDBQueryGetParameterAction(ctx context.Context, id, pmmAgentID, dsn string, files map[string]string) error {
+func (r *Registry) StartMongoDBQueryGetParameterAction(ctx context.Context, id, pmmAgentID, dsn string, files map[string]string, tdp *models.DelimiterPair) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_MongodbQueryGetparameterParams{
 			MongodbQueryGetparameterParams: &agentpb.StartActionRequest_MongoDBQueryGetParameterParams{
-				Dsn:       dsn,
-				TextFiles: files,
+				Dsn: dsn,
+				TextFiles: &agentpb.TextFiles{
+					Files:              files,
+					TemplateLeftDelim:  tdp.Left,
+					TemplateRightDelim: tdp.Right,
+				},
 			},
 		},
 		Timeout: defaultQueryActionTimeout,
@@ -1020,13 +1033,17 @@ func (r *Registry) StartMongoDBQueryGetParameterAction(ctx context.Context, id, 
 }
 
 // StartMongoDBQueryBuildInfoAction starts MongoDB buildInfo query action on pmm-agent.
-func (r *Registry) StartMongoDBQueryBuildInfoAction(ctx context.Context, id, pmmAgentID, dsn string, files map[string]string) error {
+func (r *Registry) StartMongoDBQueryBuildInfoAction(ctx context.Context, id, pmmAgentID, dsn string, files map[string]string, tdp *models.DelimiterPair) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_MongodbQueryBuildinfoParams{
 			MongodbQueryBuildinfoParams: &agentpb.StartActionRequest_MongoDBQueryBuildInfoParams{
-				Dsn:       dsn,
-				TextFiles: files,
+				Dsn: dsn,
+				TextFiles: &agentpb.TextFiles{
+					Files:              files,
+					TemplateLeftDelim:  tdp.Left,
+					TemplateRightDelim: tdp.Right,
+				},
 			},
 		},
 		Timeout: defaultQueryActionTimeout,
@@ -1042,13 +1059,17 @@ func (r *Registry) StartMongoDBQueryBuildInfoAction(ctx context.Context, id, pmm
 }
 
 // StartMongoDBQueryGetCmdLineOptsAction starts MongoDB getCmdLineOpts query action on pmm-agent.
-func (r *Registry) StartMongoDBQueryGetCmdLineOptsAction(ctx context.Context, id, pmmAgentID, dsn string, files map[string]string) error {
+func (r *Registry) StartMongoDBQueryGetCmdLineOptsAction(ctx context.Context, id, pmmAgentID, dsn string, files map[string]string, tdp *models.DelimiterPair) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_MongodbQueryGetcmdlineoptsParams{
 			MongodbQueryGetcmdlineoptsParams: &agentpb.StartActionRequest_MongoDBQueryGetCmdLineOptsParams{
-				Dsn:       dsn,
-				TextFiles: files,
+				Dsn: dsn,
+				TextFiles: &agentpb.TextFiles{
+					Files:              files,
+					TemplateLeftDelim:  tdp.Left,
+					TemplateRightDelim: tdp.Right,
+				},
 			},
 		},
 		Timeout: defaultQueryActionTimeout,
