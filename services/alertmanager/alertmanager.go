@@ -183,8 +183,8 @@ func (svc *Service) updateConfiguration(ctx context.Context) error {
 
 // reload asks Alertmanager to reload configuration.
 func (svc *Service) reload(ctx context.Context) error {
-	u := "http://127.0.0.1:9093/-/reload"
-	req, err := http.NewRequestWithContext(ctx, "GET", u, nil)
+	u := "http://127.0.0.1:9093/alertmanager/-/reload"
+	req, err := http.NewRequestWithContext(ctx, "POST", u, nil)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -200,8 +200,8 @@ func (svc *Service) reload(ctx context.Context) error {
 		return errors.WithStack(err)
 	}
 
-	if resp.StatusCode != 888 {
-		return errors.Errorf("expected 888, got %d", resp.StatusCode)
+	if resp.StatusCode != 200 {
+		return errors.Errorf("expected 200, got %d", resp.StatusCode)
 	}
 	return nil
 }

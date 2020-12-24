@@ -40,12 +40,15 @@ import (
 )
 
 func TestAlertmanager(t *testing.T) {
+	ctx := context.Background()
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-
 	svc := New(db)
 
-	require.NoError(t, svc.IsReady(context.Background()))
+	require.NoError(t, svc.IsReady(ctx))
+
+	assert.NoError(t, svc.reload(ctx))
+	assert.NoError(t, svc.IsReady(ctx))
 }
 
 func TestPopulateConfig(t *testing.T) {
@@ -182,14 +185,6 @@ func TestPopulateConfig(t *testing.T) {
 			},
 		})
 		require.NoError(t, err)
-
-		// cleanup
-		defer func() {
-			assert.NoError(t, models.RemoveChannel(db.Querier, channel1.ID))
-			assert.NoError(t, models.RemoveChannel(db.Querier, channel2.ID))
-			assert.NoError(t, models.RemoveRule(db.Querier, rule1.ID))
-			assert.NoError(t, models.RemoveRule(db.Querier, rule2.ID))
-		}()
 
 		svc := New(db)
 		err = svc.populateConfig(&cfg)
