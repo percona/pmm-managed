@@ -225,14 +225,14 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 		chanMap[ch.ID] = ch
 	}
 
-	recvSet := make(map[string]struct{}) // stores unique combinations of channel IDs
+	recvSet := make(map[string]models.ChannelIDs) // stores unique combinations of channel IDs
 	for _, r := range rules {
 		match, _ := r.GetCustomLabels()
 		match["rule_id"] = r.ID
 		// make sure same slice with different order are not considered unique.
 		sort.Strings(r.ChannelIDs)
 		recv := strings.Join(r.ChannelIDs, receiverNameSeparator)
-		recvSet[recv] = struct{}{}
+		recvSet[recv] = r.ChannelIDs
 		cfg.Route.Routes = append(cfg.Route.Routes, &alertmanager.Route{
 			Match:          match,
 			Receiver:       recv,
@@ -250,15 +250,14 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 }
 
 // generateReceivers takes the channel map and a unique set of rule combinations and generates a slice of receivers.
-func generateReceivers(chanMap map[string]*models.Channel, recvSet map[string]struct{}) ([]*alertmanager.Receiver, error) {
+func generateReceivers(chanMap map[string]*models.Channel, recvSet map[string]models.ChannelIDs) ([]*alertmanager.Receiver, error) {
 	receivers := make([]*alertmanager.Receiver, 0, len(recvSet))
-	for k := range recvSet {
+	for name, channelIDs := range recvSet {
 		recv := &alertmanager.Receiver{
-			Name: k,
+			Name: name,
 		}
 
-		individualChannels := strings.Split(k, receiverNameSeparator)
-		for _, ch := range individualChannels {
+		for _, ch := range channelIDs {
 			channel := chanMap[ch]
 			switch channel.Type {
 			case models.Email:
