@@ -126,8 +126,7 @@ func TestConvertTemplate(t *testing.T) {
 	}()
 
 	// Write vmAlert rules files
-	err = rules.writeVMAlertRulesFiles()
-	require.NoError(t, err)
+	rules.writeVMAlertRulesFiles()
 
 	file, err := ioutil.ReadFile(testDir + "/" + strings.TrimPrefix(ruleID, "/rule_id/") + ".yml")
 	require.NoError(t, err)

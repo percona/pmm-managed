@@ -21,6 +21,8 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/percona-platform/saas/pkg/common"
@@ -90,12 +92,43 @@ type rule struct {
 }
 
 // writeVMAlertRulesFiles converts all available rules to VMAlert rule files.
-func (s *RulesService) writeVMAlertRulesFiles() error {
+func (s *RulesService) writeVMAlertRulesFiles() {
 	rules, err := s.getAlertRules()
 	if err != nil {
-		return err
+		s.l.Errorf("Failed to get available alert rules: %+v", err)
+		return
 	}
 
+	ruleFiles, err := s.prepareRulesFiles(rules)
+	if err != nil {
+		s.l.Errorf("Failed to prepare alert rule files: %+v", err)
+		return
+	}
+
+	matches, err := filepath.Glob(s.rulesPath + "/*.yml")
+	if err != nil {
+		s.l.Errorf("Failed to clean old alert rule files: %+v", err)
+		return
+	}
+
+	for _, match := range matches {
+		if err = os.RemoveAll(match); err != nil {
+			s.l.Errorf("Failed to remove old rule file: %+v", err)
+		}
+	}
+
+	for _, file := range ruleFiles {
+		err = s.writeRuleFile(&file)
+		if err != nil {
+			s.l.Errorf("Failed to write alert rule file: %+v", err)
+		}
+	}
+
+	return
+}
+
+func (s *RulesService) prepareRulesFiles(rules []*iav1beta1.Rule) ([]ruleFile, error) {
+	res := make([]ruleFile, 0, len(rules))
 	for _, ruleM := range rules {
 		r := rule{
 			Alert:       ruleM.RuleId,
@@ -125,46 +158,44 @@ func (s *RulesService) writeVMAlertRulesFiles() error {
 		var buf bytes.Buffer
 		t, err := newParamTemplate().Parse(ruleM.Template.Expr)
 		if err != nil {
-			return errors.Wrap(err, "failed to convert rule template")
+			return nil, errors.Wrap(err, "Failed to parse rule expression")
 		}
 		if err = t.Execute(&buf, data); err != nil {
-			return errors.Wrap(err, "failed to convert rule template")
+			return nil, errors.Wrap(err, "Failed to fill expression placeholders")
 		}
 		r.Expr = buf.String()
 
 		// Copy annotations form template
 		if err = transformMaps(ruleM.Template.Annotations, r.Annotations, data); err != nil {
-			return errors.Wrap(err, "failed to convert rule template")
+			return nil, errors.Wrap(err, "Failed to fill template annotations placeholders")
 		}
 
 		r.Annotations["rule_summary"] = ruleM.Summary
 
 		// Copy labels form template
 		if err = transformMaps(ruleM.Template.Labels, r.Labels, data); err != nil {
-			return errors.Wrap(err, "failed to convert rule template")
+			return nil, errors.Wrap(err, "Failed to fill template labels placeholders")
 		}
 
 		// Add rule labels
 		if err = transformMaps(ruleM.CustomLabels, r.Labels, data); err != nil {
-			return errors.Wrap(err, "failed to convert rule template")
+			return nil, errors.Wrap(err, "Failed to fill rule labels placeholders")
 		}
 
 		// Do not add volatile values like `{{ $value }}` to labels as it will break alerts identity.
 		r.Labels["ia"] = "1"
 		r.Labels["severity"] = ruleM.Severity.String()
 
-		err = s.dumpRule(
-			&ruleFile{
+		res = append(res,
+			ruleFile{
 				Group: []ruleGroup{{
 					Name:  "PMM Server Integrated Alerting",
 					Rules: []rule{r},
 				}},
 			})
-		if err != nil {
-			return errors.Wrap(err, "failed to dump alert rules")
-		}
 	}
-	return nil
+
+	return res, nil
 }
 
 // fills templates found in labels and annotaitons with values.
@@ -186,7 +217,7 @@ func transformMaps(src map[string]string, dest map[string]string, data map[strin
 }
 
 // dump the transformed IA templates to a file.
-func (s *RulesService) dumpRule(rule *ruleFile) error {
+func (s *RulesService) writeRuleFile(rule *ruleFile) error {
 	b, err := yaml.Marshal(rule)
 	if err != nil {
 		return errors.Errorf("failed to marshal rule %s", err)
@@ -249,13 +280,19 @@ func (s *RulesService) getAlertRules() ([]*iav1beta1.Rule, error) {
 
 	templates := s.templates.getTemplates()
 
-	res := make([]*iav1beta1.Rule, len(rules))
-	for i, rule := range rules {
-		r, err := convertRule(s.l, rule, templates[rule.TemplateName], channels)
+	res := make([]*iav1beta1.Rule, 0, len(rules))
+	for _, rule := range rules {
+		template, ok := templates[rule.TemplateName]
+		if !ok {
+			s.l.Warn("Template %s used by rule %s doesn't exist, skipping that rule")
+			continue
+		}
+
+		r, err := convertRule(s.l, rule, template, channels)
 		if err != nil {
 			return nil, err
 		}
-		res[i] = r
+		res = append(res, r)
 	}
 
 	return res, nil
@@ -302,6 +339,7 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 		return nil, e
 	}
 
+	s.writeVMAlertRulesFiles()
 	s.vmalert.RequestConfigurationUpdate()
 	s.alertManager.RequestConfigurationUpdate()
 
@@ -342,6 +380,7 @@ func (s *RulesService) UpdateAlertRule(ctx context.Context, req *iav1beta1.Updat
 		return nil, e
 	}
 
+	s.writeVMAlertRulesFiles()
 	s.vmalert.RequestConfigurationUpdate()
 	s.alertManager.RequestConfigurationUpdate()
 
@@ -377,6 +416,7 @@ func (s *RulesService) ToggleAlertRule(ctx context.Context, req *iav1beta1.Toggl
 		return nil, e
 	}
 
+	s.writeVMAlertRulesFiles()
 	s.vmalert.RequestConfigurationUpdate()
 	s.alertManager.RequestConfigurationUpdate()
 
@@ -401,6 +441,7 @@ func (s *RulesService) DeleteAlertRule(ctx context.Context, req *iav1beta1.Delet
 		return nil, e
 	}
 
+	s.writeVMAlertRulesFiles()
 	s.vmalert.RequestConfigurationUpdate()
 	s.alertManager.RequestConfigurationUpdate()
 
