@@ -202,6 +202,10 @@ func (s *Service) LastCheckUpdatesResult(ctx context.Context) (*version.UpdateCh
 
 // ForceCheckUpdates forces check for PMM updates. Result can be obtained via LastCheckUpdatesResult.
 func (s *Service) ForceCheckUpdates(ctx context.Context) error {
+	err := s.pmmUpdateCheck.clean(ctx)
+	if err != nil {
+		return err
+	}
 	return s.pmmUpdateCheck.check(ctx)
 }
 

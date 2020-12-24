@@ -168,3 +168,19 @@ func (p *PMMUpdateChecker) check(ctx context.Context) error {
 	p.lastCheckTime = time.Now()
 	return nil
 }
+
+// clean calls `pmm-update -clean`.
+func (p *PMMUpdateChecker) clean(ctx context.Context) error {
+	p.checkRW.Lock()
+	defer p.checkRW.Unlock()
+
+	cmdLine := "pmm-update -clean"
+	b, stderr, err := p.cmdRun(ctx, cmdLine)
+	if err != nil {
+		p.l.Errorf("%s output: %s. Error: %s", cmdLine, stderr.Bytes(), err)
+		return errors.WithStack(err)
+	}
+
+	p.l.Debugf("%s output: %s; error: %s", cmdLine, b, stderr.Bytes())
+	return nil
+}
