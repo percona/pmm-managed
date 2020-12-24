@@ -55,6 +55,11 @@ func TestPopulateConfig(t *testing.T) {
 		require.NoError(t, err)
 		err = yaml.Unmarshal(buf, &cfg)
 		require.NoError(t, err)
+		// add fake setting to check for overwrite
+		slackURL := gofakeit.URL()
+		cfg.Global = &alertmanager.GlobalConfig{
+			SlackAPIURL: slackURL,
+		}
 
 		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
@@ -66,7 +71,9 @@ func TestPopulateConfig(t *testing.T) {
 		assert.Equal(t, "empty", cfg.Receivers[0].Name)
 		assert.Equal(t, "empty", cfg.Route.Receiver)
 		assert.Empty(t, cfg.Route.Routes)
-		assert.Empty(t, cfg.Global)
+		assert.NotEmpty(t, cfg.Global)
+		// check that user setting is not over-written when there is no setting in the DB
+		assert.Equal(t, slackURL, cfg.Global.SlackAPIURL)
 	})
 
 	t.Run("with receivers and routes", func(t *testing.T) {
