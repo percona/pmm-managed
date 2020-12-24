@@ -97,12 +97,10 @@ func (svc *Service) Run(ctx context.Context) {
 	svc.l.Info("Starting...")
 	defer svc.l.Info("Done.")
 
-	err := dir.CreateDataDir(victoriametricsDir, "pmm", "pmm", dirPerm)
-	if err != nil {
+	if err := dir.CreateDataDir(victoriametricsDir, "pmm", "pmm", dirPerm); err != nil {
 		svc.l.Error(err)
 	}
-	err = dir.CreateDataDir(victoriametricsDataDir, "pmm", "pmm", dirPerm)
-	if err != nil {
+	if err := dir.CreateDataDir(victoriametricsDataDir, "pmm", "pmm", dirPerm); err != nil {
 		svc.l.Error(err)
 	}
 
@@ -155,7 +153,8 @@ func (svc *Service) updateConfiguration(ctx context.Context) error {
 		}
 	}()
 
-	cfg, err := svc.marshalConfig()
+	base := svc.loadBaseConfig()
+	cfg, err := svc.marshalConfig(base)
 	if err != nil {
 		return err
 	}
@@ -211,28 +210,10 @@ func (svc *Service) loadBaseConfig() *config.Config {
 }
 
 // marshalConfig marshals VictoriaMetrics configuration.
-func (svc *Service) marshalConfig() ([]byte, error) {
-	cfg := svc.loadBaseConfig()
-
-	e := svc.db.InTransaction(func(tx *reform.TX) error {
-		settings, err := models.GetSettings(tx)
-		if err != nil {
-			return err
-		}
-		s := settings.MetricsResolutions
-		if cfg.GlobalConfig.ScrapeInterval == 0 {
-			cfg.GlobalConfig.ScrapeInterval = config.Duration(s.LR)
-		}
-		if cfg.GlobalConfig.ScrapeTimeout == 0 {
-			cfg.GlobalConfig.ScrapeTimeout = ScrapeTimeout(s.LR)
-		}
-		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scrapeConfigForVictoriaMetrics(s.HR))
-		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scrapeConfigForVMAlert(s.HR))
-		AddInternalServicesToScrape(cfg, s, settings.DBaaS.Enabled)
-		return AddScrapeConfigs(svc.l, cfg, tx.Querier, &s, nil, false)
-	})
-	if e != nil {
-		return nil, e
+func (svc *Service) marshalConfig(base *config.Config) ([]byte, error) {
+	cfg := base
+	if err := svc.populateConfig(cfg); err != nil {
+		return nil, err
 	}
 
 	b, err := yaml.Marshal(cfg)
@@ -295,7 +276,7 @@ func (svc *Service) validateConfig(ctx context.Context, cfg []byte) error {
 
 // configAndReload saves given VictoriaMetrics configuration to file and reloads VictoriaMetrics.
 // If configuration can't be reloaded for some reason, old file is restored, and configuration is reloaded again.
-func (svc *Service) configAndReload(ctx context.Context, cfg []byte) error {
+func (svc *Service) configAndReload(ctx context.Context, b []byte) error {
 	oldCfg, err := ioutil.ReadFile(svc.scrapeConfigPath)
 	if err != nil {
 		return errors.WithStack(err)
@@ -319,12 +300,12 @@ func (svc *Service) configAndReload(ctx context.Context, cfg []byte) error {
 		}
 	}()
 
-	if err = svc.validateConfig(ctx, cfg); err != nil {
+	if err = svc.validateConfig(ctx, b); err != nil {
 		return err
 	}
 
 	restore = true
-	if err = ioutil.WriteFile(svc.scrapeConfigPath, cfg, fi.Mode()); err != nil {
+	if err = ioutil.WriteFile(svc.scrapeConfigPath, b, fi.Mode()); err != nil {
 		return errors.WithStack(err)
 	}
 	if err = svc.reload(ctx); err != nil {
@@ -334,6 +315,27 @@ func (svc *Service) configAndReload(ctx context.Context, cfg []byte) error {
 	restore = false
 
 	return nil
+}
+
+// populateConfig adds configuration from the database to cfg.
+func (svc *Service) populateConfig(cfg *config.Config) error {
+	return svc.db.InTransaction(func(tx *reform.TX) error {
+		settings, err := models.GetSettings(tx)
+		if err != nil {
+			return err
+		}
+		s := settings.MetricsResolutions
+		if cfg.GlobalConfig.ScrapeInterval == 0 {
+			cfg.GlobalConfig.ScrapeInterval = config.Duration(s.LR)
+		}
+		if cfg.GlobalConfig.ScrapeTimeout == 0 {
+			cfg.GlobalConfig.ScrapeTimeout = ScrapeTimeout(s.LR)
+		}
+		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scrapeConfigForVictoriaMetrics(s.HR))
+		cfg.ScrapeConfigs = append(cfg.ScrapeConfigs, scrapeConfigForVMAlert(s.HR))
+		AddInternalServicesToScrape(cfg, s, settings.DBaaS.Enabled)
+		return AddScrapeConfigs(svc.l, cfg, tx.Querier, &s, nil, false)
+	})
 }
 
 // scrapeConfigForVictoriaMetrics returns scrape config for Victoria Metrics in Prometheus format.

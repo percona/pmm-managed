@@ -91,16 +91,16 @@ func (svc *Service) Run(ctx context.Context) {
 	svc.l.Info("Starting...")
 	defer svc.l.Info("Done.")
 
-	err := dir.CreateDataDir(alertmanagerDir, "pmm", "pmm", dirPerm)
-	if err != nil {
+	if err := dir.CreateDataDir(alertmanagerDir, "pmm", "pmm", dirPerm); err != nil {
 		svc.l.Error(err)
 	}
-	err = dir.CreateDataDir(alertmanagerDataDir, "pmm", "pmm", dirPerm)
-	if err != nil {
+	if err := dir.CreateDataDir(alertmanagerDataDir, "pmm", "pmm", dirPerm); err != nil {
 		svc.l.Error(err)
 	}
 
-	svc.generateBaseConfig()
+	if err := svc.generateBaseConfig(); err != nil {
+		svc.l.Error(err)
+	}
 
 	// reloadCh, configuration update loop, and RequestConfigurationUpdate method ensure that configuration
 	// is reloaded when requested, but several requests are batched together to avoid too often reloads.
@@ -135,7 +135,7 @@ func (svc *Service) Run(ctx context.Context) {
 }
 
 // generateBaseConfig generates /srv/alertmanager/alertmanager.base.yml if it is not present.
-func (svc *Service) generateBaseConfig() {
+func (svc *Service) generateBaseConfig() error {
 	defaultBase := strings.TrimSpace(`
 	---
 	# You can edit this file; changes will be preserved.
@@ -151,9 +151,14 @@ func (svc *Service) generateBaseConfig() {
 	_, err := os.Stat(alertmanagerBaseConfigPath)
 	svc.l.Debugf("%s status: %v", alertmanagerBaseConfigPath, err)
 	if os.IsNotExist(err) {
+		svc.l.Infof("Creating %s", alertmanagerBaseConfigPath)
 		err = ioutil.WriteFile(alertmanagerBaseConfigPath, []byte(defaultBase), 0o644) //nolint:gosec
-		svc.l.Infof("%s created: %v.", alertmanagerBaseConfigPath, err)
 	}
+
+	if err != nil {
+		return errors.Wrap(err, "failed to generate base config")
+	}
+	return nil
 }
 
 // RequestConfigurationUpdate requests Alertmanager configuration update.
@@ -173,12 +178,13 @@ func (svc *Service) updateConfiguration(ctx context.Context) error {
 		}
 	}()
 
-	cfg, err := svc.marshalConfig()
+	base := svc.loadBaseConfig()
+	b, err := svc.marshalConfig(base)
 	if err != nil {
 		return err
 	}
 
-	return svc.configAndReload(ctx, cfg)
+	return svc.configAndReload(ctx, b)
 }
 
 // reload asks Alertmanager to reload configuration.
@@ -228,9 +234,8 @@ func (svc *Service) loadBaseConfig() *alertmanager.Config {
 }
 
 // marshalConfig marshals Alertmanager configuration.
-func (svc *Service) marshalConfig() ([]byte, error) {
-	cfg := svc.loadBaseConfig()
-
+func (svc *Service) marshalConfig(base *alertmanager.Config) ([]byte, error) {
+	cfg := base
 	if err := svc.populateConfig(cfg); err != nil {
 		return nil, err
 	}
@@ -275,7 +280,7 @@ func (svc *Service) validateConfig(ctx context.Context, cfg []byte) error {
 
 // configAndReload saves given Alertmanager configuration to file and reloads Alertmanager.
 // If configuration can't be reloaded for some reason, old file is restored, and configuration is reloaded again.
-func (svc *Service) configAndReload(ctx context.Context, cfg []byte) error {
+func (svc *Service) configAndReload(ctx context.Context, b []byte) error {
 	oldCfg, err := ioutil.ReadFile(alertmanagerConfigPath)
 	if err != nil {
 		return errors.WithStack(err)
@@ -299,12 +304,12 @@ func (svc *Service) configAndReload(ctx context.Context, cfg []byte) error {
 		}
 	}()
 
-	if err = svc.validateConfig(ctx, cfg); err != nil {
+	if err = svc.validateConfig(ctx, b); err != nil {
 		return err
 	}
 
 	restore = true
-	if err = ioutil.WriteFile(alertmanagerConfigPath, cfg, fi.Mode()); err != nil {
+	if err = ioutil.WriteFile(alertmanagerConfigPath, b, fi.Mode()); err != nil {
 		return errors.WithStack(err)
 	}
 	if err = svc.reload(ctx); err != nil {
@@ -316,6 +321,7 @@ func (svc *Service) configAndReload(ctx context.Context, cfg []byte) error {
 	return nil
 }
 
+// populateConfig adds configuration from the database to cfg.
 func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 	var settings *models.Settings
 	var rules []*models.Rule
@@ -374,6 +380,9 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 
 	recvSet := make(map[string]models.ChannelIDs) // stores unique combinations of channel IDs
 	for _, r := range rules {
+
+		// FIXME we should use filters there, not custom labels
+
 		match, _ := r.GetCustomLabels()
 		match["rule_id"] = r.ID
 		// make sure same slice with different order are not considered unique.

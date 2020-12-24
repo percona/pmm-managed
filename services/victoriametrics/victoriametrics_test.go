@@ -709,7 +709,7 @@ scrape_configs:
           labels:
             instance: pmm-server
 `) + "\n"
-	newcfg, err := svc.marshalConfig()
+	newcfg, err := svc.marshalConfig(svc.loadBaseConfig())
 	assert.NoError(t, err)
 	assert.Equal(t, expected, string(newcfg), "actual:\n%s", newcfg)
 }
