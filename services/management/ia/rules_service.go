@@ -42,16 +42,17 @@ const rulesDir = "/etc/ia/rules"
 
 // RulesService represents API for Integrated Alerting Rules.
 type RulesService struct {
-	db        *reform.DB
-	l         *logrus.Entry
-	templates *TemplatesService
-	vmalert   vmAlertService
-	rulesPath string // used for testing
+	db           *reform.DB
+	l            *logrus.Entry
+	templates    *TemplatesService
+	vmalert      vmAlert
+	alertManager alertManager
+	rulesPath    string // used for testing
 
 }
 
 // NewRulesService creates an API for Integrated Alerting Rules.
-func NewRulesService(db *reform.DB, templates *TemplatesService, vmalert vmAlertService) *RulesService {
+func NewRulesService(db *reform.DB, templates *TemplatesService, vmalert vmAlert, alertManager alertManager) *RulesService {
 	l := logrus.WithField("component", "management/ia/rules")
 
 	err := dir.CreateDataDir(rulesDir, "pmm", "pmm", dirPerm)
@@ -60,11 +61,12 @@ func NewRulesService(db *reform.DB, templates *TemplatesService, vmalert vmAlert
 	}
 
 	return &RulesService{
-		db:        db,
-		l:         l,
-		templates: templates,
-		vmalert:   vmalert,
-		rulesPath: rulesDir,
+		db:           db,
+		l:            l,
+		templates:    templates,
+		vmalert:      vmalert,
+		alertManager: alertManager,
+		rulesPath:    rulesDir,
 	}
 }
 
@@ -305,6 +307,7 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 	}
 
 	s.vmalert.RequestConfigurationUpdate()
+	s.alertManager.RequestConfigurationUpdate()
 
 	return &iav1beta1.CreateAlertRuleResponse{RuleId: rule.ID}, nil
 }
@@ -344,6 +347,7 @@ func (s *RulesService) UpdateAlertRule(ctx context.Context, req *iav1beta1.Updat
 	}
 
 	s.vmalert.RequestConfigurationUpdate()
+	s.alertManager.RequestConfigurationUpdate()
 
 	return &iav1beta1.UpdateAlertRuleResponse{}, nil
 }
@@ -378,6 +382,7 @@ func (s *RulesService) ToggleAlertRule(ctx context.Context, req *iav1beta1.Toggl
 	}
 
 	s.vmalert.RequestConfigurationUpdate()
+	s.alertManager.RequestConfigurationUpdate()
 
 	return &iav1beta1.ToggleAlertRuleResponse{}, nil
 }
@@ -401,6 +406,7 @@ func (s *RulesService) DeleteAlertRule(ctx context.Context, req *iav1beta1.Delet
 	}
 
 	s.vmalert.RequestConfigurationUpdate()
+	s.alertManager.RequestConfigurationUpdate()
 
 	return &iav1beta1.DeleteAlertRuleResponse{}, nil
 }

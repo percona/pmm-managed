@@ -56,11 +56,14 @@ func TestConvertTemplate(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	vmAlert := new(mockVmAlertService)
+	vmAlert := new(mockVmAlert)
 	vmAlert.On("RequestConfigurationUpdate").Return()
 
+	alertManager := new(mockAlertManager)
+	alertManager.On("RequestConfigurationUpdate").Return()
+
 	// Create channel
-	channels := NewChannelsService(db)
+	channels := NewChannelsService(db, alertManager)
 	respC, err := channels.AddChannel(context.Background(), &iav1beta1.AddChannelRequest{
 		Summary: "test channel",
 		EmailConfig: &iav1beta1.EmailConfig{
@@ -84,7 +87,7 @@ func TestConvertTemplate(t *testing.T) {
 	templates.Collect(ctx)
 
 	// Create test rule
-	rules := NewRulesService(db, templates, vmAlert)
+	rules := NewRulesService(db, templates, vmAlert, alertManager)
 	rules.rulesPath = testDir
 	resp, err := rules.CreateAlertRule(context.Background(), &iav1beta1.CreateAlertRuleRequest{
 		TemplateName: "user_rule",
