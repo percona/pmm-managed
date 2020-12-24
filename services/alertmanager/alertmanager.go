@@ -273,7 +273,7 @@ func (svc *Service) validateConfig(ctx context.Context, cfg []byte) error {
 	return nil
 }
 
-// configAndReload saves given VictoriaMetrics configuration to file and reloads VictoriaMetrics.
+// configAndReload saves given Alertmanager configuration to file and reloads Alertmanager.
 // If configuration can't be reloaded for some reason, old file is restored, and configuration is reloaded again.
 func (svc *Service) configAndReload(ctx context.Context, cfg []byte) error {
 	oldCfg, err := ioutil.ReadFile(alertmanagerConfigPath)
