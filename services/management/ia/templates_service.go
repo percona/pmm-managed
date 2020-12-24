@@ -112,8 +112,8 @@ func newParamTemplate() *template.Template {
 	return template.New("").Option("missingkey=error").Delims("[[", "]]")
 }
 
-// getCollected return collected templates.
-func (s *TemplatesService) getCollected(ctx context.Context) map[string]templateInfo {
+// getTemplates return collected templates.
+func (s *TemplatesService) getTemplates() map[string]templateInfo {
 	s.rw.RLock()
 	defer s.rw.RUnlock()
 
@@ -124,18 +124,18 @@ func (s *TemplatesService) getCollected(ctx context.Context) map[string]template
 	return res
 }
 
-// collect collects IA rule templates from various sources like:
+// Collect collects IA rule templates from various sources like:
 // builtin templates: read from the generated code in bindata.go.
 // user file templates: read from yaml files created by the user in `/srv/ia/templates`
 // user API templates: in the DB created using the API.
-func (s *TemplatesService) collect(ctx context.Context) {
+func (s *TemplatesService) Collect(ctx context.Context) {
 	builtInTemplates, err := s.loadTemplatesFromAssets(ctx)
 	if err != nil {
 		s.l.Errorf("Failed to load built-in rule templates: %s.", err)
 		return
 	}
 
-	userDefinedTemplates, err := s.loadTemplatesFromFiles(ctx, s.userTemplatesPath)
+	userDefinedTemplates, err := s.loadTemplatesFromUserFiles(ctx)
 	if err != nil {
 		s.l.Errorf("Failed to load user-defined rule templates: %s.", err)
 		return
@@ -180,44 +180,96 @@ func (s *TemplatesService) collect(ctx context.Context) {
 	}
 }
 
+// loadTemplatesFromAssets loads built-in alerting rule templates from pmm-managed binary's assets.
 func (s *TemplatesService) loadTemplatesFromAssets(ctx context.Context) ([]alert.Template, error) {
 	paths := data.AssetNames()
 	res := make([]alert.Template, 0, len(paths))
 	for _, path := range paths {
-		data, err := data.Asset(path)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to load rule template file: %s", path)
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
 		}
 
-		// be strict about builtin templates.
+		data, err := data.Asset(path)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to read rule template asset: %s", path)
+		}
+
+		// be strict about built-in templates
 		params := &alert.ParseParams{
 			DisallowUnknownFields:    true,
 			DisallowInvalidTemplates: true,
 		}
 		templates, err := alert.Parse(bytes.NewReader(data), params)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to parse rule template file")
+			return nil, errors.Wrapf(err, "failed to parse rule template asset: %s", path)
 		}
 
-		res = append(res, templates...)
+		// built-in-specific validations
+		// TODO move to some better / common place
+
+		if l := len(templates); l != 1 {
+			return nil, errors.Errorf("%q should contain exactly one template, got %d", path, l)
+		}
+
+		t := templates[0]
+
+		filename := filepath.Base(path)
+		if strings.HasPrefix(filename, "pmm_") {
+			return nil, errors.Errorf("%q file name should not start with 'pmm_' prefix", path)
+		}
+		if !strings.HasPrefix(t.Name, "pmm_") {
+			return nil, errors.Errorf("%s %q: template name should start with 'pmm_' prefix", path, t.Name)
+		}
+		if expected := strings.TrimPrefix(t.Name, "pmm_") + ".yml"; filename != expected {
+			return nil, errors.Errorf("template file name %q should be %q", filename, expected)
+		}
+		if len(t.Annotations) != 2 || t.Annotations["summary"] == "" || t.Annotations["description"] == "" {
+			return nil, errors.Errorf("%s %q: template should contain exactly two annotations: summary and description", path, t.Name)
+		}
+
+		res = append(res, t)
 	}
 	return res, nil
 }
 
-func (s *TemplatesService) loadTemplatesFromFiles(ctx context.Context, path string) ([]alert.Template, error) {
-	paths, err := filepath.Glob(path)
+// loadTemplatesFromUserFiles loads user's alerting rule templates from /srv/ia/templates.
+func (s *TemplatesService) loadTemplatesFromUserFiles(ctx context.Context) ([]alert.Template, error) {
+	paths, err := filepath.Glob(s.userTemplatesPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get paths")
 	}
 
 	res := make([]alert.Template, 0, len(paths))
 	for _, path := range paths {
-		templates, err := s.loadFile(ctx, path)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to load rule template file: %s", path)
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
 		}
 
-		res = append(res, templates...)
+		data, err := ioutil.ReadFile(path) //nolint:gosec
+		if err != nil {
+			s.l.Warnf("Failed to load rule template file %s.", path)
+			continue
+		}
+
+		// be strict about user files
+		params := &alert.ParseParams{
+			DisallowUnknownFields:    true,
+			DisallowInvalidTemplates: true,
+		}
+		templates, err := alert.Parse(bytes.NewReader(data), params)
+		if err != nil {
+			s.l.Warnf("Failed to parse rule template file %s.", path)
+			continue
+		}
+
+		for _, t := range templates {
+			if err = validateUserTemplate(&t); err != nil { //nolint:gosec
+				s.l.Warnf("%s %s", path, err)
+				continue
+			}
+
+			res = append(res, t)
+		}
 	}
 	return res, nil
 }
@@ -289,6 +341,19 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]templateInfo, error) {
 	return res, nil
 }
 
+// validateUserTemplate validates user-provided template (API or file).
+func validateUserTemplate(t *alert.Template) error {
+	// TODO move to some better place
+
+	if strings.HasPrefix(t.Name, "pmm_") || strings.HasPrefix(t.Name, "saas_") {
+		return errors.Errorf("%s: template name should not start with 'pmm_' or 'saas_' prefix", t.Name)
+	}
+
+	// TODO more validations
+
+	return nil
+}
+
 func convertSource(source models.Source) iav1beta1.TemplateSource {
 	switch source {
 	case models.BuiltInSource:
@@ -302,30 +367,6 @@ func convertSource(source models.Source) iav1beta1.TemplateSource {
 	default:
 		return iav1beta1.TemplateSource_TEMPLATE_SOURCE_INVALID
 	}
-}
-
-// loadFile parses IA rule template file.
-func (s *TemplatesService) loadFile(ctx context.Context, file string) ([]alert.Template, error) {
-	if ctx.Err() != nil {
-		return nil, errors.WithStack(ctx.Err())
-	}
-
-	data, err := ioutil.ReadFile(file) //nolint:gosec
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to read rule template file")
-	}
-
-	// be strict about local files
-	params := &alert.ParseParams{
-		DisallowUnknownFields:    true,
-		DisallowInvalidTemplates: true,
-	}
-	templates, err := alert.Parse(bytes.NewReader(data), params)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse rule template file")
-	}
-
-	return templates, nil
 }
 
 func convertParamType(t alert.Type) iav1beta1.ParamType {
@@ -359,7 +400,10 @@ type rule struct {
 
 // converts an alert template rule to a rule file. generates one file per rule.
 func (s *TemplatesService) convertTemplates(ctx context.Context) error {
-	templates := s.getCollected(ctx)
+	templates := s.getTemplates()
+
+	// FIXME iterate over rules from the database, not over templates
+
 	for _, template := range templates {
 		r := rule{
 			Alert:       template.Name,
@@ -370,6 +414,7 @@ func (s *TemplatesService) convertTemplates(ctx context.Context) error {
 
 		data := make(map[string]string, len(template.Params))
 		for _, param := range template.Params {
+			// FIXME use the value from the rule, not from template
 			data[param.Name] = fmt.Sprint(param.Value)
 		}
 
@@ -388,14 +433,14 @@ func (s *TemplatesService) convertTemplates(ctx context.Context) error {
 			return errors.Wrap(err, "failed to convert rule template")
 		}
 
-		// add parameters to labels
-		for _, p := range template.Params {
-			r.Labels[p.Name] = fmt.Sprint(p.Value)
-		}
-
-		// add special labels
+		// Add labels.
+		// Do not add volatile values like `{{ $value }}` to labels as it will break alerts identity.
 		r.Labels["ia"] = "1"
 		r.Labels["severity"] = template.Severity.String()
+		for _, p := range template.Params {
+			// FIXME use the value from the rule, not from template
+			r.Labels[p.Name] = fmt.Sprint(p.Value)
+		}
 
 		err = transformMaps(template.Annotations, r.Annotations, data)
 		if err != nil {
@@ -466,10 +511,10 @@ func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.Lis
 	}
 
 	if req.Reload {
-		s.collect(ctx)
+		s.Collect(ctx)
 	}
 
-	templates := s.getCollected(ctx)
+	templates := s.getTemplates()
 	res := &iav1beta1.ListTemplatesResponse{
 		Templates: make([]*iav1beta1.Template, 0, len(templates)),
 	}
@@ -512,6 +557,12 @@ func (s *TemplatesService) CreateTemplate(ctx context.Context, req *iav1beta1.Cr
 		return nil, status.Error(codes.InvalidArgument, "Request should contain exactly one rule template.")
 	}
 
+	for _, t := range templates {
+		if err = validateUserTemplate(&t); err != nil { //nolint:gosec
+			return nil, status.Errorf(codes.InvalidArgument, "%s.", err)
+		}
+	}
+
 	params := &models.CreateTemplateParams{
 		Template: &templates[0],
 		Yaml:     req.Yaml,
@@ -527,7 +578,7 @@ func (s *TemplatesService) CreateTemplate(ctx context.Context, req *iav1beta1.Cr
 		return nil, e
 	}
 
-	s.collect(ctx)
+	s.Collect(ctx)
 
 	return &iav1beta1.CreateTemplateResponse{}, nil
 }
@@ -558,6 +609,12 @@ func (s *TemplatesService) UpdateTemplate(ctx context.Context, req *iav1beta1.Up
 		return nil, status.Error(codes.InvalidArgument, "Request should contain exactly one rule template.")
 	}
 
+	for _, t := range templates {
+		if err = validateUserTemplate(&t); err != nil { //nolint:gosec
+			return nil, status.Errorf(codes.InvalidArgument, "%s.", err)
+		}
+	}
+
 	params := &models.ChangeTemplateParams{
 		Template: &templates[0],
 		Yaml:     req.Yaml,
@@ -572,7 +629,7 @@ func (s *TemplatesService) UpdateTemplate(ctx context.Context, req *iav1beta1.Up
 		return nil, e
 	}
 
-	s.collect(ctx)
+	s.Collect(ctx)
 
 	return &iav1beta1.UpdateTemplateResponse{}, nil
 }

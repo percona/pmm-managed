@@ -124,6 +124,8 @@ type gRPCServerDeps struct {
 	grafanaClient         *grafana.Client
 	checksService         *checks.Service
 	dbaasControllerClient *dbaas.Client
+	alertmanager          *alertmanager.Service
+	vmalert               *vmalert.Service
 	settings              *models.Settings
 }
 
@@ -177,11 +179,12 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterAnnotationServer(gRPCServer, managementgrpc.NewAnnotationServer(deps.db, deps.grafanaClient))
 	managementpb.RegisterSecurityChecksServer(gRPCServer, managementgrpc.NewChecksServer(checksSvc))
 
-	iav1beta1.RegisterAlertsServer(gRPCServer, ia.NewAlertsService(deps.db))
 	iav1beta1.RegisterChannelsServer(gRPCServer, ia.NewChannelsService(deps.db))
 	templatesSvc := ia.NewTemplatesService(deps.db)
+	templatesSvc.Collect(ctx)
 	iav1beta1.RegisterTemplatesServer(gRPCServer, templatesSvc)
-	iav1beta1.RegisterRulesServer(gRPCServer, ia.NewRulesService(deps.db, templatesSvc))
+	iav1beta1.RegisterRulesServer(gRPCServer, ia.NewRulesService(deps.db, templatesSvc, deps.vmalert))
+	iav1beta1.RegisterAlertsServer(gRPCServer, ia.NewAlertsService(deps.db, deps.alertmanager, templatesSvc))
 
 	// TODO Remove once changing settings.DBaaS.Enabled is possible via API.
 	if deps.settings.DBaaS.Enabled {
@@ -564,7 +567,7 @@ func main() {
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reformL)
 
 	cleaner := clean.New(db)
-	alertingRules := vmalert.NewAlertingRules()
+	externalRules := vmalert.NewExternalRules()
 
 	vmParams, err := models.NewVictoriaMetricsParams(victoriametrics.BasePrometheusConfigPath)
 	if err != nil {
@@ -574,10 +577,11 @@ func main() {
 	if err != nil {
 		l.Panicf("VictoriaMetrics service problem: %+v", err)
 	}
-	vmalert, err := vmalert.NewVMAlert(alertingRules, *victoriaMetricsVMAlertURLF)
+	vmalert, err := vmalert.NewVMAlert(externalRules, *victoriaMetricsVMAlertURLF)
 	if err != nil {
 		l.Panicf("VictoriaMetrics VMAlert service problem: %+v", err)
 	}
+	prom.MustRegister(vmalert)
 
 	qanClient := getQANClient(ctx, sqlDB, *postgresDBNameF, *qanAPIAddrF)
 
@@ -613,17 +617,17 @@ func main() {
 	}
 
 	serverParams := &server.Params{
-		DB:                      db,
-		VMDB:                    vmdb,
-		VMAlert:                 vmalert,
-		AgentsRegistry:          agentsRegistry,
-		Alertmanager:            alertmanager,
-		Supervisord:             supervisord,
-		TelemetryService:        telemetry,
-		PlatformService:         platformService,
-		AwsInstanceChecker:      awsInstanceChecker,
-		GrafanaClient:           grafanaClient,
-		PrometheusAlertingRules: alertingRules,
+		DB:                   db,
+		VMDB:                 vmdb,
+		VMAlert:              vmalert,
+		AgentsRegistry:       agentsRegistry,
+		Alertmanager:         alertmanager,
+		Supervisord:          supervisord,
+		TelemetryService:     telemetry,
+		PlatformService:      platformService,
+		AwsInstanceChecker:   awsInstanceChecker,
+		GrafanaClient:        grafanaClient,
+		VMAlertExternalRules: externalRules,
 	}
 
 	server, err := server.NewServer(serverParams)
@@ -725,6 +729,8 @@ func main() {
 			grafanaClient:         grafanaClient,
 			checksService:         checksService,
 			dbaasControllerClient: dbaasControllerClient,
+			alertmanager:          alertmanager,
+			vmalert:               vmalert,
 			settings:              settings,
 		})
 	}()

@@ -20,20 +20,30 @@ package alertmanager
 import (
 	"context"
 	"io/ioutil"
+	"net"
 	"os"
+	"sort"
 	"strings"
+	"time"
 
+	"github.com/AlekSi/pointer"
 	httptransport "github.com/go-openapi/runtime/client"
+	"github.com/go-openapi/strfmt"
 	"github.com/percona/pmm/api/alertmanager/amclient"
 	"github.com/percona/pmm/api/alertmanager/amclient/alert"
 	"github.com/percona/pmm/api/alertmanager/amclient/general"
+	"github.com/percona/pmm/api/alertmanager/amclient/silence"
 	"github.com/percona/pmm/api/alertmanager/ammodels"
+	"github.com/percona/promconfig"
 	"github.com/percona/promconfig/alertmanager"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 	"gopkg.in/yaml.v3"
 
+	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/dir"
 )
 
@@ -44,6 +54,8 @@ const (
 
 	alertmanagerConfigPath     = "/etc/alertmanager.yml"
 	alertmanagerBaseConfigPath = "/srv/alertmanager/alertmanager.base.yml"
+
+	receiverNameSeparator = " + "
 )
 
 // Service is responsible for interactions with Alertmanager.
@@ -81,6 +93,11 @@ func (svc *Service) Run(ctx context.Context) {
 	// TODO implement loop similar to victoriametrics.Service.Run
 
 	<-ctx.Done()
+}
+
+// RequestConfigurationUpdate requests Alertmanager configuration update.
+func (svc *Service) RequestConfigurationUpdate() {
+	// FIXME
 }
 
 // generateBaseConfig generates /srv/alertmanager/alertmanager.base.yml if it is not present.
@@ -134,12 +151,18 @@ func (svc *Service) updateConfiguration(ctx context.Context) {
 			return
 		}
 
-		// TODO add custom information to this config.
+		err = svc.populateConfig(&cfg)
+		if err != nil {
+			svc.l.Error(err)
+			return
+		}
+
 		b, err := yaml.Marshal(cfg)
 		if err != nil {
 			svc.l.Errorf("Failed to marshal alertmanager config %s: %s.", alertmanagerConfigPath, err)
 			return
 		}
+
 		b = append([]byte("# Managed by pmm-managed. DO NOT EDIT.\n---\n"), b...)
 
 		err = ioutil.WriteFile(alertmanagerConfigPath, b, 0o644)
@@ -149,6 +172,168 @@ func (svc *Service) updateConfiguration(ctx context.Context) {
 		}
 	}
 	svc.l.Infof("%s created", alertmanagerConfigPath)
+}
+
+func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
+	var settings *models.Settings
+	var rules []*models.Rule
+	var channels []*models.Channel
+	e := svc.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		settings, err = models.GetSettings(tx.Querier)
+		if err != nil {
+			return err
+		}
+
+		rules, err = models.FindRules(tx.Querier)
+		if err != nil {
+			return err
+		}
+
+		channels, err = models.FindChannels(tx.Querier)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if e != nil {
+		return errors.Errorf("Failed to fetch items from database: %s", e)
+	}
+
+	if cfg.Global == nil {
+		cfg.Global = &alertmanager.GlobalConfig{}
+	}
+
+	svc.l.Warn("Setting global config, any user defined changes to the base config might be overwritten.")
+	if settings.IntegratedAlerting.EmailAlertingSettings != nil {
+		cfg.Global.SMTPFrom = settings.IntegratedAlerting.EmailAlertingSettings.From
+		cfg.Global.SMTPHello = settings.IntegratedAlerting.EmailAlertingSettings.Hello
+		cfg.Global.SMTPAuthIdentity = settings.IntegratedAlerting.EmailAlertingSettings.Identity
+		cfg.Global.SMTPAuthUsername = settings.IntegratedAlerting.EmailAlertingSettings.Username
+		cfg.Global.SMTPAuthPassword = settings.IntegratedAlerting.EmailAlertingSettings.Password
+		cfg.Global.SMTPAuthSecret = settings.IntegratedAlerting.EmailAlertingSettings.Secret
+
+		host, port, err := net.SplitHostPort(settings.IntegratedAlerting.EmailAlertingSettings.Smarthost)
+		if err != nil {
+			return errors.Errorf("Failed to set global email settings: %s", err)
+		}
+		cfg.Global.SMTPSmarthost.Host = host
+		cfg.Global.SMTPSmarthost.Port = port
+	}
+
+	if settings.IntegratedAlerting.SlackAlertingSettings != nil {
+		cfg.Global.SlackAPIURL = settings.IntegratedAlerting.SlackAlertingSettings.URL
+	}
+
+	chanMap := make(map[string]*models.Channel, len(channels))
+	for _, ch := range channels {
+		chanMap[ch.ID] = ch
+	}
+
+	recvSet := make(map[string]models.ChannelIDs) // stores unique combinations of channel IDs
+	for _, r := range rules {
+		match, _ := r.GetCustomLabels()
+		match["rule_id"] = r.ID
+		// make sure same slice with different order are not considered unique.
+		sort.Strings(r.ChannelIDs)
+		recv := strings.Join(r.ChannelIDs, receiverNameSeparator)
+		recvSet[recv] = r.ChannelIDs
+		cfg.Route.Routes = append(cfg.Route.Routes, &alertmanager.Route{
+			Match:          match,
+			Receiver:       recv,
+			RepeatInterval: promconfig.Duration(r.For),
+		})
+	}
+
+	receivers, err := generateReceivers(chanMap, recvSet)
+	if err != nil {
+		return err
+	}
+
+	cfg.Receivers = append(cfg.Receivers, receivers...)
+	return nil
+}
+
+// generateReceivers takes the channel map and a unique set of rule combinations and generates a slice of receivers.
+func generateReceivers(chanMap map[string]*models.Channel, recvSet map[string]models.ChannelIDs) ([]*alertmanager.Receiver, error) {
+	receivers := make([]*alertmanager.Receiver, 0, len(recvSet))
+	for name, channelIDs := range recvSet {
+		recv := &alertmanager.Receiver{
+			Name: name,
+		}
+
+		for _, ch := range channelIDs {
+			channel := chanMap[ch]
+			switch channel.Type {
+			case models.Email:
+				for _, to := range channel.EmailConfig.To {
+					recv.EmailConfigs = append(recv.EmailConfigs, &alertmanager.EmailConfig{
+						NotifierConfig: alertmanager.NotifierConfig{
+							SendResolved: channel.EmailConfig.SendResolved,
+						},
+						To: to,
+					})
+				}
+			case models.PagerDuty:
+				pdConfig := &alertmanager.PagerdutyConfig{
+					NotifierConfig: alertmanager.NotifierConfig{
+						SendResolved: channel.PagerDutyConfig.SendResolved,
+					},
+				}
+				if pdConfig.RoutingKey != "" {
+					pdConfig.RoutingKey = channel.PagerDutyConfig.RoutingKey
+				}
+				if pdConfig.ServiceKey != "" {
+					pdConfig.ServiceKey = channel.PagerDutyConfig.ServiceKey
+				}
+				recv.PagerdutyConfigs = append(recv.PagerdutyConfigs, pdConfig)
+			case models.Slack:
+				recv.SlackConfigs = append(recv.SlackConfigs, &alertmanager.SlackConfig{
+					NotifierConfig: alertmanager.NotifierConfig{
+						SendResolved: channel.SlackConfig.SendResolved,
+					},
+					Channel: channel.SlackConfig.Channel,
+				})
+			case models.WebHook:
+				webhookConfig := &alertmanager.WebhookConfig{
+					NotifierConfig: alertmanager.NotifierConfig{
+						SendResolved: channel.WebHookConfig.SendResolved,
+					},
+					URL:       channel.WebHookConfig.URL,
+					MaxAlerts: uint64(channel.WebHookConfig.MaxAlerts),
+				}
+
+				if channel.WebHookConfig.HTTPConfig != nil {
+					webhookConfig.HTTPConfig = promconfig.HTTPClientConfig{
+						BearerToken:     channel.WebHookConfig.HTTPConfig.BearerToken,
+						BearerTokenFile: channel.WebHookConfig.HTTPConfig.BearerTokenFile,
+						ProxyURL:        channel.WebHookConfig.HTTPConfig.ProxyURL,
+					}
+					if channel.WebHookConfig.HTTPConfig.BasicAuth != nil {
+						webhookConfig.HTTPConfig.BasicAuth = &promconfig.BasicAuth{
+							Username:     channel.WebHookConfig.HTTPConfig.BasicAuth.Username,
+							Password:     channel.WebHookConfig.HTTPConfig.BasicAuth.Password,
+							PasswordFile: channel.WebHookConfig.HTTPConfig.BasicAuth.PasswordFile,
+						}
+					}
+					if channel.WebHookConfig.HTTPConfig.TLSConfig != nil {
+						webhookConfig.HTTPConfig.TLSConfig = promconfig.TLSConfig{
+							CAFile:             channel.WebHookConfig.HTTPConfig.TLSConfig.CaFile,
+							CertFile:           channel.WebHookConfig.HTTPConfig.TLSConfig.CertFile,
+							KeyFile:            channel.WebHookConfig.HTTPConfig.TLSConfig.KeyFile,
+							ServerName:         channel.WebHookConfig.HTTPConfig.TLSConfig.ServerName,
+							InsecureSkipVerify: channel.WebHookConfig.HTTPConfig.TLSConfig.InsecureSkipVerify,
+						}
+					}
+				}
+				recv.WebhookConfigs = append(recv.WebhookConfigs, webhookConfig)
+			default:
+				return nil, errors.Errorf("invalid channel type: %T", channel.Type)
+			}
+		}
+		receivers = append(receivers, recv)
+	}
+	return receivers, nil
 }
 
 // SendAlerts sends given alerts. It is the caller's responsibility
@@ -167,6 +352,95 @@ func (svc *Service) SendAlerts(ctx context.Context, alerts ammodels.PostableAler
 	if err != nil {
 		svc.l.Error(err)
 	}
+}
+
+// GetAlerts returns alerts available in alertmanager.
+func (svc *Service) GetAlerts(ctx context.Context) ([]*ammodels.GettableAlert, error) {
+	resp, err := amclient.Default.Alert.GetAlerts(&alert.GetAlertsParams{
+		Context: ctx,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Payload, nil
+}
+
+// FindAlertByID searches alert by ID in alertmanager.
+func (svc *Service) FindAlertByID(ctx context.Context, id string) (*ammodels.GettableAlert, error) {
+	alerts, err := svc.GetAlerts(ctx)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get alerts form alertmanager")
+	}
+
+	for _, a := range alerts {
+		if *a.Fingerprint == id {
+			return a, nil
+		}
+	}
+
+	return nil, status.Errorf(codes.NotFound, "Alert with id %s not found", id)
+}
+
+// Silence mutes alert with specified id.
+func (svc *Service) Silence(ctx context.Context, id string) error {
+	a, err := svc.FindAlertByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if len(a.Status.SilencedBy) != 0 {
+		// already silenced
+		return nil
+	}
+
+	matchers := make([]*ammodels.Matcher, 0, len(a.Labels))
+	for label, value := range a.Labels {
+		matchers = append(matchers,
+			&ammodels.Matcher{
+				IsRegex: pointer.ToBool(false),
+				Name:    pointer.ToString(label),
+				Value:   pointer.ToString(value),
+			})
+	}
+
+	starts := strfmt.DateTime(time.Now())
+	ends := strfmt.DateTime(time.Now().Add(100 * 365 * 24 * time.Hour)) // Mute for 100 years
+	_, err = amclient.Default.Silence.PostSilences(&silence.PostSilencesParams{
+		Silence: &ammodels.PostableSilence{
+			Silence: ammodels.Silence{
+				Comment:   pointer.ToString(""),
+				CreatedBy: pointer.ToString("PMM"),
+				StartsAt:  &starts,
+				EndsAt:    &ends,
+				Matchers:  matchers,
+			},
+		},
+		Context: ctx,
+	})
+
+	return errors.Wrapf(err, "failed to silence alert with id: %s", id)
+}
+
+// Unsilence unmutes alert with specified id.
+func (svc *Service) Unsilence(ctx context.Context, id string) error {
+	a, err := svc.FindAlertByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	for _, silenceID := range a.Status.SilencedBy {
+		_, err = amclient.Default.Silence.DeleteSilence(&silence.DeleteSilenceParams{
+			SilenceID: strfmt.UUID(silenceID),
+			Context:   ctx,
+		})
+
+		if err != nil {
+			return errors.Wrapf(err, "failed to delete silence with id %s for alert %s", silenceID, id)
+		}
+	}
+
+	return nil
 }
 
 // IsReady verifies that Alertmanager works.

@@ -20,6 +20,7 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -38,14 +39,12 @@ const (
 	testUserTemplates  = "../../../testdata/ia/user/*.yml"
 
 	userRuleFilepath     = "user_rule.yml"
-	builtinRuleFilepath1 = "mysql_down.yml"
-	builtinRuleFilepath2 = "mysql_restarted.yml"
-	builtinRuleFilepath3 = "mysql_too_many_connections.yml"
+	builtinRuleFilepath1 = "pmm_mysql_down.yml"
+	builtinRuleFilepath2 = "pmm_mysql_restarted.yml"
+	builtinRuleFilepath3 = "pmm_mysql_too_many_connections.yml"
 )
 
 func TestCollect(t *testing.T) {
-	t.Parallel()
-
 	ctx := context.Background()
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
@@ -63,9 +62,9 @@ func TestCollect(t *testing.T) {
 
 		svc := NewTemplatesService(db)
 		svc.userTemplatesPath = testBadTemplates
-		svc.collect(ctx)
-
-		require.Empty(t, svc.getCollected(ctx))
+		templates, err := svc.loadTemplatesFromUserFiles(ctx)
+		assert.NoError(t, err)
+		assert.Empty(t, templates)
 	})
 
 	t.Run("valid template paths", func(t *testing.T) {
@@ -73,20 +72,20 @@ func TestCollect(t *testing.T) {
 
 		svc := NewTemplatesService(db)
 		svc.userTemplatesPath = testUserTemplates
-		svc.collect(ctx)
+		svc.Collect(ctx)
 
-		templates := svc.getCollected(ctx)
+		templates := svc.getTemplates()
 		require.NotEmpty(t, templates)
 		assert.Contains(t, templates, "user_rule")
-		assert.Contains(t, templates, "mysql_down")
-		assert.Contains(t, templates, "mysql_restarted")
-		assert.Contains(t, templates, "mysql_too_many_connections")
+		assert.Contains(t, templates, "pmm_mysql_down")
+		assert.Contains(t, templates, "pmm_mysql_restarted")
+		assert.Contains(t, templates, "pmm_mysql_too_many_connections")
 
 		// check whether map was cleared and updated on a subsequent call
 		svc.userTemplatesPath = testUser2Templates
-		svc.collect(ctx)
+		svc.Collect(ctx)
 
-		templates = svc.getCollected(ctx)
+		templates = svc.getTemplates()
 		require.NotEmpty(t, templates)
 		assert.NotContains(t, templates, "user_rule")
 		assert.Contains(t, templates, "user2_rule")
@@ -94,20 +93,25 @@ func TestCollect(t *testing.T) {
 }
 
 func TestConvertTemplate(t *testing.T) {
+	ctx := context.Background()
+	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+
 	t.Run("no error", func(t *testing.T) {
-		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
-		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-		ctx := context.Background()
+		t.Parallel()
 
 		testDir, err := ioutil.TempDir("", "")
 		require.NoError(t, err)
-		defer os.RemoveAll(testDir) //nolint:errcheck
+		t.Cleanup(func() {
+			err = os.RemoveAll(testDir)
+			require.NoError(t, err)
+		})
 		testDir = testDir + "/"
 
 		svc := NewTemplatesService(db)
 		svc.userTemplatesPath = testUserTemplates
 		svc.rulesPath = testDir
-		svc.collect(ctx)
+		svc.Collect(ctx)
 
 		userRuleFilepath := testDir + userRuleFilepath
 		builtinRuleFilepath1 := testDir + builtinRuleFilepath1
@@ -116,35 +120,41 @@ func TestConvertTemplate(t *testing.T) {
 
 		err = svc.convertTemplates(ctx)
 		require.NoError(t, err)
-		assert.FileExists(t, userRuleFilepath)
-		assert.FileExists(t, builtinRuleFilepath1)
-		assert.FileExists(t, builtinRuleFilepath2)
-		assert.FileExists(t, builtinRuleFilepath3)
+		files, err := filepath.Glob(testDir + "*")
+		require.NoError(t, err)
+		t.Logf("%q: %v", testDir, files)
+		require.FileExists(t, userRuleFilepath)
+		require.FileExists(t, builtinRuleFilepath1)
+		require.FileExists(t, builtinRuleFilepath2)
+		require.FileExists(t, builtinRuleFilepath3)
 
 		testcases := []struct {
 			path             string
 			alert            string
 			annotationsCount int
 		}{{
+			path:             userRuleFilepath,
+			alert:            "user_rule",
+			annotationsCount: 2,
+		}, {
 			path:             builtinRuleFilepath1,
-			alert:            "mysql_down",
+			alert:            "pmm_mysql_down",
 			annotationsCount: 2,
 		}, {
 			path:             builtinRuleFilepath2,
-			alert:            "mysql_restarted",
+			alert:            "pmm_mysql_restarted",
 			annotationsCount: 2,
 		}, {
 			path:             builtinRuleFilepath3,
-			alert:            "mysql_too_many_connections",
-			annotationsCount: 2,
-		}, {
-			path:             userRuleFilepath,
-			alert:            "user_rule",
+			alert:            "pmm_mysql_too_many_connections",
 			annotationsCount: 2,
 		}}
 
 		for _, tc := range testcases {
-			t.Run(tc.path, func(t *testing.T) {
+			tc := tc
+			t.Run(tc.alert, func(t *testing.T) {
+				t.Parallel()
+
 				buf, err := ioutil.ReadFile(tc.path)
 				require.NoError(t, err)
 				var rf ruleFile
