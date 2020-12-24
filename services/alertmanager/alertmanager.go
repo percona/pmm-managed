@@ -87,6 +87,13 @@ func New(db *reform.DB) *Service {
 // and then updates the main configuration file. It is needed because Alertmanager was added to PMM
 // with invalid configuration file (it will fail with "no route provided in config" error).
 func (svc *Service) GenerateBaseConfigs(ctx context.Context) {
+	if err := dir.CreateDataDir(alertmanagerDir, "pmm", "pmm", dirPerm); err != nil {
+		svc.l.Error(err)
+	}
+	if err := dir.CreateDataDir(alertmanagerDataDir, "pmm", "pmm", dirPerm); err != nil {
+		svc.l.Error(err)
+	}
+
 	defaultBase := strings.TrimSpace(`
 ---
 # You can edit this file; changes will be preserved.
@@ -121,13 +128,6 @@ func (svc *Service) Run(ctx context.Context) {
 
 	svc.l.Info("Starting...")
 	defer svc.l.Info("Done.")
-
-	if err := dir.CreateDataDir(alertmanagerDir, "pmm", "pmm", dirPerm); err != nil {
-		svc.l.Error(err)
-	}
-	if err := dir.CreateDataDir(alertmanagerDataDir, "pmm", "pmm", dirPerm); err != nil {
-		svc.l.Error(err)
-	}
 
 	// reloadCh, configuration update loop, and RequestConfigurationUpdate method ensure that configuration
 	// is reloaded when requested, but several requests are batched together to avoid too often reloads.
