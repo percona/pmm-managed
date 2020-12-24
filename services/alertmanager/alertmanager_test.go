@@ -83,7 +83,7 @@ func TestPopulateConfig(t *testing.T) {
 		channel1, err := models.CreateChannel(db.Querier, &models.CreateChannelParams{
 			Summary: "some summary",
 			EmailConfig: &models.EmailConfig{
-				To: []string{"test@test.test"},
+				To: []string{"test@test.test", "test2@test.test"},
 			},
 			Disabled: false,
 		})
@@ -195,6 +195,7 @@ func TestPopulateConfig(t *testing.T) {
 		receiverNameIDs := strings.Split(cfg.Receivers[1].Name, receiverNameSeparator)
 		assert.Contains(t, receiverNameIDs, channel1.ID, channel2.ID)
 		assert.NotNil(t, cfg.Receivers[1].EmailConfigs)
+		assert.Len(t, cfg.Receivers[1].EmailConfigs, 2)
 		assert.NotNil(t, cfg.Receivers[1].PagerdutyConfigs)
 		assert.Equal(t, "empty", cfg.Route.Receiver) // empty route from base should be preserved
 		assert.Len(t, cfg.Route.Routes, 2)

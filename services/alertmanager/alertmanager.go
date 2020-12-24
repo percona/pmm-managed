@@ -261,12 +261,14 @@ func generateReceivers(chanMap map[string]*models.Channel, recvSet map[string]mo
 			channel := chanMap[ch]
 			switch channel.Type {
 			case models.Email:
-				recv.EmailConfigs = append(recv.EmailConfigs, &alertmanager.EmailConfig{
-					NotifierConfig: alertmanager.NotifierConfig{
-						SendResolved: channel.EmailConfig.SendResolved,
-					},
-					To: channel.EmailConfig.To[0],
-				})
+				for _, to := range channel.EmailConfig.To {
+					recv.EmailConfigs = append(recv.EmailConfigs, &alertmanager.EmailConfig{
+						NotifierConfig: alertmanager.NotifierConfig{
+							SendResolved: channel.EmailConfig.SendResolved,
+						},
+						To: to,
+					})
+				}
 			case models.PagerDuty:
 				pdConfig := &alertmanager.PagerdutyConfig{
 					NotifierConfig: alertmanager.NotifierConfig{
