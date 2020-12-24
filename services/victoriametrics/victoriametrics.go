@@ -44,8 +44,9 @@ import (
 )
 
 const (
-	updateBatchDelay           = 3 * time.Second
-	configurationUpdateTimeout = 2 * time.Second
+	updateBatchDelay           = time.Second
+	configurationUpdateTimeout = 3 * time.Second
+
 	// BasePrometheusConfigPath - basic path with prometheus config,
 	// that user can mount to container.
 	BasePrometheusConfigPath = "/srv/prometheus/prometheus.base.yml"
@@ -66,8 +67,8 @@ type Service struct {
 
 	baseConfigPath string // for testing
 
-	l    *logrus.Entry
-	sema chan struct{}
+	l        *logrus.Entry
+	reloadCh chan struct{}
 }
 
 // NewVictoriaMetrics creates new VictoriaMetrics service.
@@ -84,12 +85,15 @@ func NewVictoriaMetrics(scrapeConfigPath string, db *reform.DB, baseURL string, 
 		client:           new(http.Client),
 		baseConfigPath:   params.BaseConfigPath,
 		l:                logrus.WithField("component", "victoriametrics"),
-		sema:             make(chan struct{}, 1),
+		reloadCh:         make(chan struct{}, 1),
 	}, nil
 }
 
 // Run runs VictoriaMetrics configuration update loop until ctx is canceled.
 func (svc *Service) Run(ctx context.Context) {
+	// If you change this and related methods,
+	// please do similar changes in alertmanager and vmalert packages.
+
 	svc.l.Info("Starting...")
 	defer svc.l.Info("Done.")
 
@@ -97,10 +101,16 @@ func (svc *Service) Run(ctx context.Context) {
 	if err != nil {
 		svc.l.Error(err)
 	}
-
 	err = dir.CreateDataDir(victoriametricsDataDir, "pmm", "pmm", dirPerm)
 	if err != nil {
 		svc.l.Error(err)
+	}
+
+	// reloadCh, configuration update loop, and RequestConfigurationUpdate method ensure that configuration
+	// is reloaded when requested, but several requests are batched together to avoid too often reloads.
+	// That allows the caller to just call RequestConfigurationUpdate when it seems fit.
+	if cap(svc.reloadCh) != 1 {
+		panic("reloadCh should have capacity 1")
 	}
 
 	for {
@@ -108,7 +118,7 @@ func (svc *Service) Run(ctx context.Context) {
 		case <-ctx.Done():
 			return
 
-		case <-svc.sema:
+		case <-svc.reloadCh:
 			// batch several update requests together by delaying the first one
 			sleepCtx, sleepCancel := context.WithTimeout(ctx, updateBatchDelay)
 			<-sleepCtx.Done()
@@ -118,11 +128,21 @@ func (svc *Service) Run(ctx context.Context) {
 				return
 			}
 
-			if err := svc.updateConfiguration(ctx); err != nil {
+			nCtx, cancel := context.WithTimeout(ctx, configurationUpdateTimeout)
+			if err := svc.updateConfiguration(nCtx); err != nil {
 				svc.l.Errorf("Failed to update configuration, will retry: %+v.", err)
 				svc.RequestConfigurationUpdate()
 			}
+			cancel()
 		}
+	}
+}
+
+// RequestConfigurationUpdate requests VictoriaMetrics configuration update.
+func (svc *Service) RequestConfigurationUpdate() {
+	select {
+	case svc.reloadCh <- struct{}{}:
+	default:
 	}
 }
 
@@ -143,47 +163,6 @@ func (svc *Service) updateConfiguration(ctx context.Context) error {
 	return svc.configAndReload(ctx, cfg)
 }
 
-// RequestConfigurationUpdate requests VictoriaMetrics configuration update.
-func (svc *Service) RequestConfigurationUpdate() {
-	select {
-	case svc.sema <- struct{}{}:
-		ctx, cancel := context.WithTimeout(context.Background(), configurationUpdateTimeout)
-		defer cancel()
-		err := svc.updateConfiguration(ctx)
-		if err != nil {
-			svc.l.WithError(err).Errorf("cannot reload configuration")
-		}
-
-	default:
-	}
-}
-
-// IsReady verifies that VictoriaMetrics works.
-func (svc *Service) IsReady(ctx context.Context) error {
-	// check VictoriaMetrics /health API
-	u := *svc.baseURL
-	u.Path = path.Join(u.Path, "health")
-	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	resp, err := svc.client.Do(req)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	defer resp.Body.Close() //nolint:errcheck
-	b, err := ioutil.ReadAll(resp.Body)
-	svc.l.Debugf("VictoriaMetrics: %s", b)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != 200 {
-		return errors.Errorf("expected 200, got %d", resp.StatusCode)
-	}
-
-	return nil
-}
-
 // reload asks VictoriaMetrics to reload configuration.
 func (svc *Service) reload(ctx context.Context) error {
 	u := *svc.baseURL
@@ -192,22 +171,22 @@ func (svc *Service) reload(ctx context.Context) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-
 	resp, err := svc.client.Do(req)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	defer resp.Body.Close() //nolint:errcheck
 
-	if resp.StatusCode == http.StatusNoContent {
-		return nil
-	}
 	b, err := ioutil.ReadAll(resp.Body)
+	svc.l.Debugf("VM reload: %s", b)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	return errors.Errorf("%d: %s", resp.StatusCode, b)
+	if resp.StatusCode != 204 {
+		return errors.Errorf("expected 204, got %d", resp.StatusCode)
+	}
+	return nil
 }
 
 func (svc *Service) loadBaseConfig() *config.Config {
@@ -380,7 +359,7 @@ func scrapeConfigForVMAlert(interval time.Duration) *config.ScrapeConfig {
 	}
 }
 
-// BuildScrapeConfigForAgent - builds scrape configuration for given pmmAgent
+// BuildScrapeConfigForVMAgent builds scrape configuration for given pmm-agent.
 func (svc *Service) BuildScrapeConfigForVMAgent(pmmAgentID string) ([]byte, error) {
 	var cfg config.Config
 	e := svc.db.InTransaction(func(tx *reform.TX) error {
@@ -396,4 +375,30 @@ func (svc *Service) BuildScrapeConfigForVMAgent(pmmAgentID string) ([]byte, erro
 	}
 
 	return yaml.Marshal(cfg)
+}
+
+// IsReady verifies that VictoriaMetrics works.
+func (svc *Service) IsReady(ctx context.Context) error {
+	u := *svc.baseURL
+	u.Path = path.Join(u.Path, "health")
+	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	resp, err := svc.client.Do(req)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer resp.Body.Close() //nolint:errcheck
+
+	b, err := ioutil.ReadAll(resp.Body)
+	svc.l.Debugf("VM health: %s", b)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	if resp.StatusCode != 200 {
+		return errors.Errorf("expected 200, got %d", resp.StatusCode)
+	}
+
+	return nil
 }
