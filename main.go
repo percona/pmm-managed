@@ -450,9 +450,6 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 	}
 	deps.vmalert.RequestConfigurationUpdate()
 
-	// Alertmanager is special due to being added to PMM with invalid /etc/alertmanager.yml.
-	deps.alertmanager.GenerateBaseConfigs()
-
 	deps.l.Infof("Checking Alertmanager...")
 	if err = deps.alertmanager.IsReady(ctx); err != nil {
 		deps.l.Warnf("Alertmanager problem: %+v.", err)
@@ -601,6 +598,9 @@ func main() {
 	prom.MustRegister(agentsRegistry)
 
 	alertmanager := alertmanager.New(db)
+	// Alertmanager is special due to being added to PMM with invalid /etc/alertmanager.yml.
+	// Generate configuration file before reloading with supervisord, checking status, etc.
+	alertmanager.GenerateBaseConfigs()
 
 	pmmUpdateCheck := supervisord.NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker"))
 
