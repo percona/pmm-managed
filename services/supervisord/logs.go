@@ -152,12 +152,17 @@ func (l *Logs) files(ctx context.Context) []fileContent {
 		"/etc/nginx/conf.d/pmm.conf",
 		"/etc/nginx/conf.d/pmm-ssl.conf",
 
+		"/etc/alertmanager.yml",
+		"/etc/prometheus.yml",
 		"/etc/victoriametrics-promscrape.yml",
 
 		"/etc/supervisord.conf",
+		"/etc/supervisord.d/alertmanager.ini",
 		"/etc/supervisord.d/pmm.ini",
-		"/etc/supervisord.d/victoriametrics.ini",
+		"/etc/supervisord.d/prometheus.ini",
 		"/etc/supervisord.d/qan-api2.ini",
+		"/etc/supervisord.d/victoriametrics.ini",
+		"/etc/supervisord.d/vmalert.ini",
 
 		"/usr/local/percona/pmm2/config/pmm-agent.yaml",
 	} {
