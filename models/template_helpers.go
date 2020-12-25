@@ -183,15 +183,13 @@ func RemoveTemplate(q *reform.Querier, name string) error {
 		return err
 	}
 
-	rules, err := FindRules(q)
+	rule, err := FindRuleByTemplateName(q, name)
 	if err != nil {
 		return err
 	}
 
-	for _, rule := range rules {
-		if name == rule.TemplateName {
-			return errors.Errorf("failed to delete rule template, as it is being used by rule: %s", rule.ID)
-		}
+	if rule != nil {
+		return errors.Errorf("failed to delete rule template, as it is being used by rule: %s", rule.ID)
 	}
 
 	err = q.Delete(&Template{Name: name})
