@@ -93,6 +93,7 @@ func TestFiles(t *testing.T) {
 	ctx := logger.Set(context.Background(), t.Name())
 
 	expected := []string{
+		"alertmanager.base.yml",
 		"alertmanager.ini",
 		"alertmanager.log",
 		"alertmanager.yml",
@@ -136,6 +137,11 @@ func TestFiles(t *testing.T) {
 	for _, f := range files {
 		// present only after update
 		if f.Name == "pmm-update-perform.log" {
+			continue
+		}
+
+		if f.Name == "prometheus.base.yml" {
+			assert.EqualError(t, f.Err, "open /srv/prometheus/prometheus.base.yml: no such file or directory")
 			continue
 		}
 
