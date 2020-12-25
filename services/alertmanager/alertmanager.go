@@ -84,9 +84,10 @@ func New(db *reform.DB) *Service {
 }
 
 // GenerateBaseConfigs generates alertmanager.base.yml if it is absent,
-// and then updates the main configuration file. It is needed because Alertmanager was added to PMM
+// and then writes basic alertmanager.yml if it is absent or empty.
+// It is needed because Alertmanager was added to PMM
 // with invalid configuration file (it will fail with "no route provided in config" error).
-func (svc *Service) GenerateBaseConfigs(ctx context.Context) {
+func (svc *Service) GenerateBaseConfigs() {
 	if err := dir.CreateDataDir(alertmanagerDir, "pmm", "pmm", dirPerm); err != nil {
 		svc.l.Error(err)
 	}
@@ -112,12 +113,19 @@ receivers:
 		svc.l.Infof("Creating %s", alertmanagerBaseConfigPath)
 		err = ioutil.WriteFile(alertmanagerBaseConfigPath, []byte(defaultBase), 0o644) //nolint:gosec
 		if err != nil {
-			svc.l.Errorf("Failed to write alertmanager.base.yml: %s", err)
+			svc.l.Errorf("Failed to write %s: %s", alertmanagerBaseConfigPath, err)
 		}
 	}
 
-	if err = svc.updateConfiguration(ctx); err != nil {
-		svc.l.Errorf("Failed to update configuration: %+v", err)
+	// Don't call updateConfiguration() there as Alertmanager is likely to be in the crash loop at the moment.
+	// Instead, write alertmanager.yml directly. main.go will request configuration update.
+	stat, err := os.Stat(alertmanagerConfigPath)
+	if err != nil || int(stat.Size()) < len("---\n") { // https://github.com/percona/pmm-server/blob/PMM-2.0/alertmanager.yml
+		svc.l.Infof("Creating %s", alertmanagerConfigPath)
+		err = ioutil.WriteFile(alertmanagerConfigPath, []byte(defaultBase), 0o644) //nolint:gosec
+		if err != nil {
+			svc.l.Errorf("Failed to write %s: %s", alertmanagerConfigPath, err)
+		}
 	}
 }
 

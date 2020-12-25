@@ -42,20 +42,18 @@ func TestIsReady(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 	svc := New(db)
-	svc.GenerateBaseConfigs(ctx)
+	svc.GenerateBaseConfigs()
 
 	assert.NoError(t, svc.updateConfiguration(ctx))
 	assert.NoError(t, svc.IsReady(ctx))
 }
 
 func TestPopulateConfig(t *testing.T) {
-	ctx := context.Background()
-
 	t.Run("without receivers and routes", func(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 		svc := New(db)
-		svc.GenerateBaseConfigs(ctx)
+		svc.GenerateBaseConfigs()
 
 		cfg := svc.loadBaseConfig()
 
@@ -81,7 +79,7 @@ func TestPopulateConfig(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 		svc := New(db)
-		svc.GenerateBaseConfigs(ctx)
+		svc.GenerateBaseConfigs()
 
 		channel1, err := models.CreateChannel(db.Querier, &models.CreateChannelParams{
 			Summary: "some summary",

@@ -451,7 +451,7 @@ func setup(ctx context.Context, deps *setupDeps) bool {
 	deps.vmalert.RequestConfigurationUpdate()
 
 	// Alertmanager is special due to being added to PMM with invalid /etc/alertmanager.yml.
-	deps.alertmanager.GenerateBaseConfigs(ctx)
+	deps.alertmanager.GenerateBaseConfigs()
 
 	deps.l.Infof("Checking Alertmanager...")
 	if err = deps.alertmanager.IsReady(ctx); err != nil {
