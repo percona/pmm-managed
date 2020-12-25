@@ -30,9 +30,9 @@ import (
 )
 
 const (
-	testBadTemplates   = "../../../testdata/ia/bad/*.yml"
-	testUser2Templates = "../../../testdata/ia/user2/*.yml"
-	testUserTemplates  = "../../../testdata/ia/user/*.yml"
+	testBadTemplates = "../../../testdata/ia/bad/*.yml"
+	testTemplates    = "../../../testdata/ia/user2/*.yml"
+	testTemplates2   = "../../../testdata/ia/user/*.yml"
 )
 
 func TestCollect(t *testing.T) {
@@ -62,23 +62,23 @@ func TestCollect(t *testing.T) {
 		t.Parallel()
 
 		svc := NewTemplatesService(db)
-		svc.userTemplatesPath = testUserTemplates
+		svc.userTemplatesPath = testTemplates2
 		svc.Collect(ctx)
 
 		templates := svc.getTemplates()
 		require.NotEmpty(t, templates)
-		assert.Contains(t, templates, "user_rule")
+		assert.Contains(t, templates, "test_template")
 		assert.Contains(t, templates, "pmm_mysql_down")
 		assert.Contains(t, templates, "pmm_mysql_restarted")
 		assert.Contains(t, templates, "pmm_mysql_too_many_connections")
 
 		// check whether map was cleared and updated on a subsequent call
-		svc.userTemplatesPath = testUser2Templates
+		svc.userTemplatesPath = testTemplates
 		svc.Collect(ctx)
 
 		templates = svc.getTemplates()
 		require.NotEmpty(t, templates)
-		assert.NotContains(t, templates, "user_rule")
-		assert.Contains(t, templates, "user2_rule")
+		assert.NotContains(t, templates, "test_template")
+		assert.Contains(t, templates, "test_template_2")
 	})
 }

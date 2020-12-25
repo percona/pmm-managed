@@ -131,7 +131,7 @@ func (s *RulesService) prepareRulesFiles(rules []*iav1beta1.Rule) ([]ruleFile, e
 		r := rule{
 			Alert:       ruleM.RuleId,
 			Duration:    promconfig.Duration(ruleM.For.AsDuration()),
-			Labels:      make(map[string]string, len(ruleM.CustomLabels)+len(ruleM.CustomLabels)+2),
+			Labels:      make(map[string]string, len(ruleM.CustomLabels)+len(ruleM.CustomLabels)+4),
 			Annotations: make(map[string]string, len(ruleM.Template.Annotations)+1),
 		}
 
@@ -168,7 +168,7 @@ func (s *RulesService) prepareRulesFiles(rules []*iav1beta1.Rule) ([]ruleFile, e
 			return nil, errors.Wrap(err, "Failed to fill template annotations placeholders")
 		}
 
-		r.Annotations["rule_summary"] = ruleM.Summary
+		r.Annotations["rule"] = ruleM.Summary
 
 		// Copy labels form template
 		if err = transformMaps(ruleM.Template.Labels, r.Labels, data); err != nil {
@@ -183,6 +183,8 @@ func (s *RulesService) prepareRulesFiles(rules []*iav1beta1.Rule) ([]ruleFile, e
 		// Do not add volatile values like `{{ $value }}` to labels as it will break alerts identity.
 		r.Labels["ia"] = "1"
 		r.Labels["severity"] = ruleM.Severity.String()
+		r.Labels["rule_id"] = ruleM.RuleId
+		r.Labels["template_name"] = ruleM.Template.Name
 
 		res = append(res,
 			ruleFile{

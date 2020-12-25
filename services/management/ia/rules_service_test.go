@@ -74,23 +74,17 @@ func TestConvertTemplate(t *testing.T) {
 	})
 	require.NoError(t, err)
 	channelID := respC.ChannelId
-	defer func() {
-		e := db.InTransaction(func(t *reform.TX) error {
-			return models.RemoveChannel(t.Querier, channelID)
-		})
-		assert.NoError(t, e)
-	}()
 
 	// Load test templates
 	templates := NewTemplatesService(db)
-	templates.userTemplatesPath = testUserTemplates
+	templates.userTemplatesPath = testTemplates2
 	templates.Collect(ctx)
 
 	// Create test rule
 	rules := NewRulesService(db, templates, vmAlert, alertManager)
 	rules.rulesPath = testDir
 	resp, err := rules.CreateAlertRule(context.Background(), &iav1beta1.CreateAlertRuleRequest{
-		TemplateName: "user_rule",
+		TemplateName: "test_template",
 		Disabled:     false,
 		Summary:      "some testing rule",
 		Params: []*iav1beta1.RuleParam{
@@ -118,12 +112,6 @@ func TestConvertTemplate(t *testing.T) {
 	})
 	require.NoError(t, err)
 	ruleID := resp.RuleId
-	defer func() {
-		e := db.InTransaction(func(t *reform.TX) error {
-			return models.RemoveRule(t.Querier, ruleID)
-		})
-		assert.NoError(t, e)
-	}()
 
 	// Write vmAlert rules files
 	rules.writeVMAlertRulesFiles()
@@ -146,15 +134,17 @@ groups:
             baz: faz
             foo: bar
             ia: "1"
+            rule_id: %s
             severity: SEVERITY_INFO
+            template_name: test_template
           annotations:
             description: |-
                 More than 1.22%% of MySQL connections are in use on {{ $labels.instance }}
                 VALUE = {{ $value }}
                 LABELS: {{ $labels }}
-            rule_summary: some testing rule
+            rule: some testing rule
             summary: MySQL too many connections (instance {{ $labels.instance }})
-`, ruleID)
+`, ruleID, ruleID)
 
 	assert.Equal(t, expected, string(file))
 }
