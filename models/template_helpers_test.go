@@ -18,6 +18,7 @@ package models_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/brianvoe/gofakeit"
 	"github.com/percona-platform/saas/pkg/alert"
@@ -170,10 +171,10 @@ func TestRuleTemplates(t *testing.T) {
 		_, err = models.CreateTemplate(q, createTemplateParams(name))
 		require.NoError(t, err)
 
-		ruleID := createRule(t, q, name)
+		_ = createRule(t, q, name)
 
 		err = models.RemoveTemplate(q, name)
-		require.EqualError(t, err, "failed to delete rule template, as it is being used by rule: "+ruleID)
+		require.EqualError(t, err, "failed to delete rule template, as it is being used by a rule")
 
 		templates, err := models.FindTemplates(q)
 		require.NoError(t, err)
@@ -263,8 +264,30 @@ func changeTemplateParams(name string) *models.ChangeTemplateParams {
 }
 
 func createRule(t *testing.T, q *reform.Querier, name string) string {
-	chID := createChannel(t, q)
-	rule, err := models.CreateRule(q, createCreateRuleParams(name, chID))
+	ch, err := models.CreateChannel(q, &models.CreateChannelParams{
+		Summary: "some summary",
+		EmailConfig: &models.EmailConfig{
+			To: []string{"test@test.test"},
+		},
+		Disabled: false,
+	})
+	require.NoError(t, err)
+	rule, err := models.CreateRule(q, &models.CreateRuleParams{
+		TemplateName: name,
+		Disabled:     true,
+		RuleParams: []models.RuleParam{
+			{
+				Name:       "test",
+				Type:       models.Float,
+				FloatValue: 3.14,
+			},
+		},
+		For:          5 * time.Second,
+		Severity:     common.Warning,
+		CustomLabels: map[string]string{"foo": "bar"},
+		Filters:      []models.Filter{{Type: models.Equal, Key: "value", Val: "10"}},
+		ChannelIDs:   []string{ch.ID},
+	})
 	require.NoError(t, err)
 	return rule.ID
 }

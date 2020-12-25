@@ -76,23 +76,6 @@ func FindRuleByID(q *reform.Querier, id string) (*Rule, error) {
 	}
 }
 
-// FindRuleByTemplateName finds Rule by TemplateName.
-func FindRuleByTemplateName(q *reform.Querier, name string) (*Rule, error) {
-	if name == "" {
-		return nil, status.Error(codes.InvalidArgument, "Empty Rule TemplateName.")
-	}
-
-	rule := &Rule{TemplateName: name}
-	switch err := q.Reload(rule); err {
-	case nil:
-		return rule, nil
-	case reform.ErrNoRows:
-		return nil, status.Errorf(codes.NotFound, "Rule with template name %q not found.", name)
-	default:
-		return nil, errors.WithStack(err)
-	}
-}
-
 // CreateRuleParams are params for creating new Rule.
 type CreateRuleParams struct {
 	TemplateName string
