@@ -267,6 +267,52 @@ func TestDeleteTemplate(t *testing.T) {
 		}
 	})
 
+	t.Run("template in use", func(t *testing.T) {
+		name := gofakeit.UUID()
+		_, err := client.CreateTemplate(&templates.CreateTemplateParams{
+			Body: templates.CreateTemplateBody{
+				Yaml: fmt.Sprintf(string(b), name, gofakeit.UUID(), "s"),
+			},
+			Context: pmmapitests.Context,
+		})
+		require.NoError(t, err)
+
+		channelID := createChannel(t)
+		defer deleteChannel(t, templatesClient.Default.Channels, channelID)
+
+		params := createAlertRuleParams(name, channelID)
+
+		rule, err := templatesClient.Default.Rules.CreateAlertRule(params)
+		require.NoError(t, err)
+
+		_, err = client.DeleteTemplate(&templates.DeleteTemplateParams{
+			Body: templates.DeleteTemplateBody{
+				Name: name,
+			},
+			Context: pmmapitests.Context,
+		})
+		pmmapitests.AssertAPIErrorf(t, err, 500, codes.Internal, "Internal server error.")
+
+		defer deleteTemplate(t, templatesClient.Default.Templates, name)
+		defer deleteRule(t, templatesClient.Default.Rules, rule.Payload.RuleID)
+
+		resp, err := client.ListTemplates(&templates.ListTemplatesParams{
+			Body: templates.ListTemplatesBody{
+				Reload: true,
+			},
+			Context: pmmapitests.Context,
+		})
+		require.NoError(t, err)
+
+		var found bool
+		for _, template := range resp.Payload.Templates {
+			if name == template.Name {
+				found = true
+			}
+		}
+		assert.Truef(t, found, "Template with id %s not found", name)
+	})
+
 	t.Run("unknown template", func(t *testing.T) {
 		name := gofakeit.UUID()
 		_, err = client.DeleteTemplate(&templates.DeleteTemplateParams{
