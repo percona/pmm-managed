@@ -166,6 +166,7 @@ func TestZip(t *testing.T) {
 
 	// zip file includes client files
 	expected := []string{
+		"alertmanager.base.yml",
 		"alertmanager.ini",
 		"alertmanager.log",
 		"alertmanager.yml",
@@ -194,6 +195,7 @@ func TestZip(t *testing.T) {
 		"pmm.ini",
 		"postgresql.log",
 		"postgresql.startup.log",
+		"prometheus.base.yml",
 		"prometheus.ini",
 		"prometheus.yml",
 		"qan-api2.ini",

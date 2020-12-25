@@ -152,6 +152,9 @@ func (l *Logs) files(ctx context.Context) []fileContent {
 		"/etc/nginx/conf.d/pmm.conf",
 		"/etc/nginx/conf.d/pmm-ssl.conf",
 
+		"/srv/alertmanager/alertmanager.base.yml",
+		"/srv/prometheus/prometheus.base.yml",
+
 		"/etc/alertmanager.yml",
 		"/etc/prometheus.yml",
 		"/etc/victoriametrics-promscrape.yml",
