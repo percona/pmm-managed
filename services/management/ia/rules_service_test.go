@@ -49,16 +49,6 @@ func TestConvertTemplate(t *testing.T) {
 	err = models.SaveSettings(db, settings)
 	require.NoError(t, err)
 
-	testDir, err := ioutil.TempDir("", "")
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		err = os.RemoveAll(testDir)
-		require.NoError(t, err)
-	})
-
-	vmAlert := new(mockVmAlert)
-	vmAlert.On("RequestConfigurationUpdate").Return()
-
 	alertManager := new(mockAlertManager)
 	alertManager.On("RequestConfigurationUpdate").Return()
 
@@ -80,46 +70,57 @@ func TestConvertTemplate(t *testing.T) {
 	templates.userTemplatesPath = testTemplates2
 	templates.Collect(ctx)
 
-	// Create test rule
-	rules := NewRulesService(db, templates, vmAlert, alertManager)
-	rules.rulesPath = testDir
-	resp, err := rules.CreateAlertRule(context.Background(), &iav1beta1.CreateAlertRuleRequest{
-		TemplateName: "test_template",
-		Disabled:     false,
-		Summary:      "some testing rule",
-		Params: []*iav1beta1.RuleParam{
-			{
-				Name: "threshold",
-				Type: iav1beta1.ParamType_FLOAT,
-				Value: &iav1beta1.RuleParam_Float{
-					Float: 1.22,
+	t.Run("normal", func(t *testing.T) {
+		testDir, err := ioutil.TempDir("", "")
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			err = os.RemoveAll(testDir)
+			require.NoError(t, err)
+		})
+
+		vmAlert := new(mockVmAlert)
+		vmAlert.On("RequestConfigurationUpdate").Return()
+
+		// Create test rule
+		rules := NewRulesService(db, templates, vmAlert, alertManager)
+		rules.rulesPath = testDir
+		resp, err := rules.CreateAlertRule(context.Background(), &iav1beta1.CreateAlertRuleRequest{
+			TemplateName: "test_template",
+			Disabled:     false,
+			Summary:      "some testing rule",
+			Params: []*iav1beta1.RuleParam{
+				{
+					Name: "threshold",
+					Type: iav1beta1.ParamType_FLOAT,
+					Value: &iav1beta1.RuleParam_Float{
+						Float: 1.22,
+					},
 				},
 			},
-		},
-		For:      durationpb.New(2 * time.Second),
-		Severity: managementpb.Severity_SEVERITY_INFO,
-		CustomLabels: map[string]string{
-			"baz": "faz",
-		},
-		Filters: []*iav1beta1.Filter{
-			{
-				Type:  iav1beta1.FilterType_EQUAL,
-				Key:   "some_key",
-				Value: "60",
+			For:      durationpb.New(2 * time.Second),
+			Severity: managementpb.Severity_SEVERITY_INFO,
+			CustomLabels: map[string]string{
+				"baz": "faz",
 			},
-		},
-		ChannelIds: []string{channelID},
-	})
-	require.NoError(t, err)
-	ruleID := resp.RuleId
+			Filters: []*iav1beta1.Filter{
+				{
+					Type:  iav1beta1.FilterType_EQUAL,
+					Key:   "some_key",
+					Value: "60",
+				},
+			},
+			ChannelIds: []string{channelID},
+		})
+		require.NoError(t, err)
+		ruleID := resp.RuleId
 
-	// Write vmAlert rules files
-	rules.writeVMAlertRulesFiles()
+		// Write vmAlert rules files
+		rules.writeVMAlertRulesFiles()
 
-	file, err := ioutil.ReadFile(testDir + "/" + strings.TrimPrefix(ruleID, "/rule_id/") + ".yml")
-	require.NoError(t, err)
+		file, err := ioutil.ReadFile(ruleFileName(testDir, ruleID))
+		require.NoError(t, err)
 
-	expected := fmt.Sprintf(`---
+		expected := fmt.Sprintf(`---
 groups:
     - name: PMM Server Integrated Alerting
       rules:
@@ -146,5 +147,63 @@ groups:
             summary: MySQL too many connections (instance {{ $labels.instance }})
 `, ruleID, ruleID)
 
-	assert.Equal(t, expected, string(file))
+		assert.Equal(t, expected, string(file))
+	})
+
+	t.Run("disabled", func(t *testing.T) {
+		testDir, err := ioutil.TempDir("", "")
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			err = os.RemoveAll(testDir)
+			require.NoError(t, err)
+		})
+
+		vmAlert := new(mockVmAlert)
+		vmAlert.On("RequestConfigurationUpdate").Return()
+
+		// Create test rule
+		rules := NewRulesService(db, templates, vmAlert, alertManager)
+		rules.rulesPath = testDir
+		resp, err := rules.CreateAlertRule(context.Background(), &iav1beta1.CreateAlertRuleRequest{
+			TemplateName: "test_template",
+			Disabled:     true,
+			Summary:      "some testing rule",
+			Params: []*iav1beta1.RuleParam{
+				{
+					Name: "threshold",
+					Type: iav1beta1.ParamType_FLOAT,
+					Value: &iav1beta1.RuleParam_Float{
+						Float: 1.22,
+					},
+				},
+			},
+			For:      durationpb.New(2 * time.Second),
+			Severity: managementpb.Severity_SEVERITY_INFO,
+			CustomLabels: map[string]string{
+				"baz": "faz",
+			},
+			Filters: []*iav1beta1.Filter{
+				{
+					Type:  iav1beta1.FilterType_EQUAL,
+					Key:   "some_key",
+					Value: "60",
+				},
+			},
+			ChannelIds: []string{channelID},
+		})
+		require.NoError(t, err)
+		ruleID := resp.RuleId
+
+		// Write vmAlert rules files
+		rules.writeVMAlertRulesFiles()
+
+		filename := ruleFileName(testDir, ruleID)
+		_, err = os.Stat(filename)
+		assert.EqualError(t, err, fmt.Sprintf("stat %s: no such file or directory", filename))
+	})
+
+}
+
+func ruleFileName(testDir, ruleID string) string {
+	return testDir + "/" + strings.TrimPrefix(ruleID, "/rule_id/") + ".yml"
 }

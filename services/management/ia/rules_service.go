@@ -128,6 +128,11 @@ func (s *RulesService) writeVMAlertRulesFiles() {
 func (s *RulesService) prepareRulesFiles(rules []*iav1beta1.Rule) ([]ruleFile, error) {
 	res := make([]ruleFile, 0, len(rules))
 	for _, ruleM := range rules {
+		if ruleM.Disabled {
+			s.l.Debugf("Skipping rule %s as it is disabled.", ruleM.RuleId)
+			continue
+		}
+
 		r := rule{
 			Alert:       ruleM.RuleId,
 			Duration:    promconfig.Duration(ruleM.For.AsDuration()),
