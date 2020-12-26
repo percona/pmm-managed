@@ -20,62 +20,89 @@ package vmalert
 import (
 	"context"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"path"
 	"time"
 
 	"github.com/pkg/errors"
+	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
+
+	"github.com/percona/pmm-managed/utils/irt"
 )
 
 const (
-	updateBatchDelay           = 3 * time.Second
-	configurationUpdateTimeout = 2 * time.Second
+	updateBatchDelay           = time.Second
+	configurationUpdateTimeout = 3 * time.Second
 )
 
-// VMAlert is responsible for interactions with victoria metrics.
-type VMAlert struct {
-	baseURL             *url.URL
-	client              *http.Client
-	alertingRules       *AlertingRules
-	cachedAlertingRules string
+// Service is responsible for interactions with victoria metrics.
+type Service struct {
+	baseURL       *url.URL
+	client        *http.Client
+	externalRules *ExternalRules
+	irtm          prom.Collector
 
-	l    *logrus.Entry
-	sema chan struct{}
+	l        *logrus.Entry
+	reloadCh chan struct{}
 }
 
 // NewVMAlert creates new Victoria Metrics Alert service.
-func NewVMAlert(alertRules *AlertingRules, baseURL string) (*VMAlert, error) {
+func NewVMAlert(externalRules *ExternalRules, baseURL string) (*Service, error) {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	return &VMAlert{
-		alertingRules: alertRules,
+	var t http.RoundTripper = &http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout:   3 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		MaxIdleConns:          1,
+		IdleConnTimeout:       90 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
+	if logrus.GetLevel() >= logrus.TraceLevel {
+		t = irt.WithLogger(t, logrus.WithField("component", "vmalert/client").Tracef)
+	}
+	t, irtm := irt.WithMetrics(t, "vmalert")
+
+	return &Service{
+		externalRules: externalRules,
 		baseURL:       u,
-		client:        new(http.Client),
-		l:             logrus.WithField("component", "vmalert"),
-		sema:          make(chan struct{}, 1),
+		client: &http.Client{
+			Transport: t,
+		},
+		l:        logrus.WithField("component", "vmalert"),
+		irtm:     irtm,
+		reloadCh: make(chan struct{}, 1),
 	}, nil
 }
 
 // Run runs VMAlert configuration update loop until ctx is canceled.
-func (svc *VMAlert) Run(ctx context.Context) {
+func (svc *Service) Run(ctx context.Context) {
+	// If you change this and related methods,
+	// please do similar changes in alertmanager and victoriametrics packages.
+
 	svc.l.Info("Starting...")
 	defer svc.l.Info("Done.")
-	alertingRules, err := svc.alertingRules.ReadRules()
-	if err != nil {
-		svc.l.Warnf("Cannot load alerting rules: %s", err)
+
+	// reloadCh, configuration update loop, and RequestConfigurationUpdate method ensure that configuration
+	// is reloaded when requested, but several requests are batched together to avoid too often reloads.
+	// That allows the caller to just call RequestConfigurationUpdate when it seems fit.
+	if cap(svc.reloadCh) != 1 {
+		panic("reloadCh should have capacity 1")
 	}
-	svc.cachedAlertingRules = alertingRules
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
 
-		case <-svc.sema:
+		case <-svc.reloadCh:
 			// batch several update requests together by delaying the first one
 			sleepCtx, sleepCancel := context.WithTimeout(ctx, updateBatchDelay)
 			<-sleepCtx.Done()
@@ -85,58 +112,44 @@ func (svc *VMAlert) Run(ctx context.Context) {
 				return
 			}
 
-			if err := svc.updateConfiguration(ctx); err != nil {
+			nCtx, cancel := context.WithTimeout(ctx, configurationUpdateTimeout)
+			if err := svc.updateConfiguration(nCtx); err != nil {
 				svc.l.Errorf("Failed to update configuration, will retry: %+v.", err)
 				svc.RequestConfigurationUpdate()
 			}
+			cancel()
 		}
 	}
 }
 
 // RequestConfigurationUpdate requests VMAlert configuration update.
-func (svc *VMAlert) RequestConfigurationUpdate() {
+func (svc *Service) RequestConfigurationUpdate() {
 	select {
-	case svc.sema <- struct{}{}:
-		ctx, cancel := context.WithTimeout(context.Background(), configurationUpdateTimeout)
-		defer cancel()
-		err := svc.updateConfiguration(ctx)
-		if err != nil {
-			svc.l.WithError(err).Errorf("cannot reload configuration")
-		}
+	case svc.reloadCh <- struct{}{}:
 	default:
 	}
 }
 
-// IsReady verifies that VMAlert works.
-func (svc *VMAlert) IsReady(ctx context.Context) error {
-	// check VMAlert /health API
-	u := *svc.baseURL
-	u.Path = path.Join(u.Path, "health")
-	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	resp, err := svc.client.Do(req)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	defer resp.Body.Close() //nolint:errcheck
-	b, err := ioutil.ReadAll(resp.Body)
-	svc.l.Debugf("VMAlert: %s", b)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != 200 {
-		return errors.Errorf("expected 200, got %d", resp.StatusCode)
-	}
+// updateConfiguration reads alerts configuration from file
+// compares it with cached and replace if needed.
+func (svc *Service) updateConfiguration(ctx context.Context) error {
+	start := time.Now()
+	defer func() {
+		if dur := time.Since(start); dur > time.Second {
+			svc.l.Warnf("updateConfiguration took %s.", dur)
+		}
+	}()
 
-	svc.l.Debugf("%s", b)
+	if err := svc.reload(ctx); err != nil {
+		return errors.WithStack(err)
+	}
+	svc.l.Infof("Configuration reloaded.")
 
 	return nil
 }
 
 // reload asks VMAlert to reload configuration.
-func (svc *VMAlert) reload(ctx context.Context) error {
+func (svc *Service) reload(ctx context.Context) error {
 	u := *svc.baseURL
 	u.Path = path.Join(u.Path, "-", "reload")
 	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
@@ -149,44 +162,55 @@ func (svc *VMAlert) reload(ctx context.Context) error {
 	}
 	defer resp.Body.Close() //nolint:errcheck
 
-	if resp.StatusCode == http.StatusOK {
-		return nil
-	}
 	b, err := ioutil.ReadAll(resp.Body)
+	svc.l.Debugf("VMAlert reload: %s", b)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	return errors.Errorf("%d: %s", resp.StatusCode, b)
+	if resp.StatusCode != 200 {
+		return errors.Errorf("expected 200, got %d", resp.StatusCode)
+	}
+	return nil
 }
 
-// updateConfiguration reads alerts configuration from file
-// compares it with cached and replace if needed.
-func (svc *VMAlert) updateConfiguration(ctx context.Context) error {
-	start := time.Now()
-	defer func() {
-		if dur := time.Since(start); dur > time.Second {
-			svc.l.Warnf("updateConfiguration took %s.", dur)
-		}
-	}()
-
-	// read existing content
-	oldCfg, err := svc.alertingRules.ReadRules()
+// IsReady verifies that VMAlert works.
+func (svc *Service) IsReady(ctx context.Context) error {
+	u := *svc.baseURL
+	u.Path = path.Join(u.Path, "health")
+	req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-
-	// compare with new config
-	if oldCfg == svc.cachedAlertingRules {
-		svc.l.Infof("Configuration not changed, doing nothing.")
-
-		return nil
-	}
-	err = svc.reload(ctx)
+	resp, err := svc.client.Do(req)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	svc.l.Infof("Configuration reloaded.")
+	defer resp.Body.Close() //nolint:errcheck
+
+	b, err := ioutil.ReadAll(resp.Body)
+	svc.l.Debugf("VMAlert health: %s", b)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	if resp.StatusCode != 200 {
+		return errors.Errorf("expected 200, got %d", resp.StatusCode)
+	}
 
 	return nil
 }
+
+// Describe implements prometheus.Collector.
+func (svc *Service) Describe(ch chan<- *prom.Desc) {
+	svc.irtm.Describe(ch)
+}
+
+// Collect implements prometheus.Collector.
+func (svc *Service) Collect(ch chan<- prom.Metric) {
+	svc.irtm.Collect(ch)
+}
+
+// Check interfaces.
+var (
+	_ prom.Collector = (*Service)(nil)
+)
