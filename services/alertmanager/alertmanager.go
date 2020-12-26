@@ -391,8 +391,15 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 
 		// FIXME we should use filters there, not custom labels
 
-		match, _ := r.GetCustomLabels()
+		match, err := r.GetCustomLabels()
+		if err != nil {
+			svc.l.Warn(err)
+		}
+		if match == nil {
+			match = make(map[string]string)
+		}
 		match["rule_id"] = r.ID
+
 		// make sure same slice with different order are not considered unique.
 		sort.Strings(r.ChannelIDs)
 		recv := strings.Join(r.ChannelIDs, receiverNameSeparator)
