@@ -17,7 +17,7 @@
 package ia
 
 import (
-	"strings"
+	"os"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
@@ -30,11 +30,14 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
+const dirPerm = os.FileMode(0o775)
+
 func convertParamUnit(u string) iav1beta1.ParamUnit {
-	// TODO: check possible variants.
-	switch strings.ToLower(u) {
-	case "%", "percentage":
+	switch u {
+	case "%":
 		return iav1beta1.ParamUnit_PERCENTAGE
+	case "s":
+		return iav1beta1.ParamUnit_SECONDS
 	default:
 		return iav1beta1.ParamUnit_PARAM_UNIT_INVALID
 	}

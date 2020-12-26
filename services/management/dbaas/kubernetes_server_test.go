@@ -81,6 +81,14 @@ func TestKubernetesServer(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, registerKubernetesClusterResponse)
 
+		getClusterResponse, err := ks.GetKubernetesCluster(ctx, &dbaasv1beta1.GetKubernetesClusterRequest{
+			KubernetesClusterName: kubernetesClusterName,
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, getClusterResponse)
+		assert.NotNil(t, getClusterResponse.KubeAuth)
+		assert.Equal(t, kubeconfig, getClusterResponse.KubeAuth.Kubeconfig)
+
 		clusters, err = ks.ListKubernetesClusters(ctx, new(dbaasv1beta1.ListKubernetesClustersRequest))
 		assert.NoError(t, err)
 		assert.Equal(t, 1, len(clusters.KubernetesClusters))
@@ -111,7 +119,8 @@ func TestKubernetesServer(t *testing.T) {
 		listPSMDBClustersMock.Return(&controllerv1beta1.ListPSMDBClustersResponse{
 			Clusters: []*controllerv1beta1.ListPSMDBClustersResponse_Cluster{
 				{Name: "first-xtradb-cluster"},
-			}}, nil)
+			},
+		}, nil)
 		listXtraDBClustersMock.Return(&controllerv1beta1.ListXtraDBClustersResponse{}, nil)
 		_, err = ks.UnregisterKubernetesCluster(ctx, &dbaasv1beta1.UnregisterKubernetesClusterRequest{
 			KubernetesClusterName: kubernetesClusterName,
