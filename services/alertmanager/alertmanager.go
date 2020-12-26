@@ -77,7 +77,7 @@ type Service struct {
 func New(db *reform.DB) *Service {
 	return &Service{
 		db:       db,
-		client:   new(http.Client), // TODO instrument with utils/irt; see vmalert package
+		client:   new(http.Client), // TODO instrument with utils/irt; see vmalert package https://jira.percona.com/browse/PMM-7229
 		l:        logrus.WithField("component", "alertmanager"),
 		reloadCh: make(chan struct{}, 1),
 	}
