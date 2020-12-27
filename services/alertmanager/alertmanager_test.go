@@ -18,7 +18,6 @@ package alertmanager
 
 import (
 	"context"
-	"net"
 	"strings"
 	"testing"
 	"time"
@@ -198,15 +197,12 @@ func TestPopulateConfig(t *testing.T) {
 		// check global config
 		assert.Equal(t, cfg.Global.SMTPFrom, settings.IntegratedAlerting.EmailAlertingSettings.From)
 		assert.Equal(t, cfg.Global.SMTPHello, settings.IntegratedAlerting.EmailAlertingSettings.Hello)
+		assert.Equal(t, cfg.Global.SMTPSmarthost, settings.IntegratedAlerting.EmailAlertingSettings.Smarthost)
 		assert.Equal(t, cfg.Global.SMTPAuthUsername, settings.IntegratedAlerting.EmailAlertingSettings.Username)
 		assert.Equal(t, cfg.Global.SMTPAuthPassword, settings.IntegratedAlerting.EmailAlertingSettings.Password)
 		assert.Equal(t, cfg.Global.SMTPAuthIdentity, settings.IntegratedAlerting.EmailAlertingSettings.Identity)
 		assert.Equal(t, cfg.Global.SMTPAuthSecret, settings.IntegratedAlerting.EmailAlertingSettings.Secret)
 
-		host, port, err := net.SplitHostPort(settings.IntegratedAlerting.EmailAlertingSettings.Smarthost)
-		require.NoError(t, err)
-		assert.Equal(t, cfg.Global.SMTPSmarthost.Host, host)
-		assert.Equal(t, cfg.Global.SMTPSmarthost.Port, port)
 		assert.Equal(t, cfg.Global.SlackAPIURL, settings.IntegratedAlerting.SlackAlertingSettings.URL)
 	})
 }

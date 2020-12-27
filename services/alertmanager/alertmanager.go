@@ -20,7 +20,6 @@ package alertmanager
 import (
 	"context"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -360,24 +359,21 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 		cfg.Global = &alertmanager.GlobalConfig{}
 	}
 
-	svc.l.Warn("Setting global config, any user defined changes to the base config might be overwritten.")
 	if settings.IntegratedAlerting.EmailAlertingSettings != nil {
+		svc.l.Warn("Setting global email config, any user defined changes to the base config might be overwritten.")
+
 		cfg.Global.SMTPFrom = settings.IntegratedAlerting.EmailAlertingSettings.From
 		cfg.Global.SMTPHello = settings.IntegratedAlerting.EmailAlertingSettings.Hello
+		cfg.Global.SMTPSmarthost = settings.IntegratedAlerting.EmailAlertingSettings.Smarthost
 		cfg.Global.SMTPAuthIdentity = settings.IntegratedAlerting.EmailAlertingSettings.Identity
 		cfg.Global.SMTPAuthUsername = settings.IntegratedAlerting.EmailAlertingSettings.Username
 		cfg.Global.SMTPAuthPassword = settings.IntegratedAlerting.EmailAlertingSettings.Password
 		cfg.Global.SMTPAuthSecret = settings.IntegratedAlerting.EmailAlertingSettings.Secret
-
-		host, port, err := net.SplitHostPort(settings.IntegratedAlerting.EmailAlertingSettings.Smarthost)
-		if err != nil {
-			return errors.Errorf("Failed to set global email settings: %s", err)
-		}
-		cfg.Global.SMTPSmarthost.Host = host
-		cfg.Global.SMTPSmarthost.Port = port
 	}
 
 	if settings.IntegratedAlerting.SlackAlertingSettings != nil {
+		svc.l.Warn("Setting global Slack config, any user defined changes to the base config might be overwritten.")
+
 		cfg.Global.SlackAPIURL = settings.IntegratedAlerting.SlackAlertingSettings.URL
 	}
 

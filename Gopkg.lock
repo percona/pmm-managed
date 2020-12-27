@@ -443,15 +443,15 @@
   revision = "d681295801b30b067a3e1667733e49a78667e0c2"
 
 [[projects]]
-  digest = "1:6832634ec059f4bfddaff75621cf1c4750949129c6de2e5e58e01059d0851e25"
+  digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
   name = "github.com/percona/promconfig"
   packages = [
     ".",
     "alertmanager",
   ]
   pruneopts = "NUT"
-  revision = "bbfe4cec824887dffa3d1d485a825485830cb710"
-  version = "v0.2.0"
+  revision = "4b3fbe05a3478c76879e598fca582536f7871f77"
+  version = "v0.2.1"
 
 [[projects]]
   digest = "1:4047c378584616813d610c9f993bf90dd0d07aed8d94bd3bc299cd35ececdcba"
