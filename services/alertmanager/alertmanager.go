@@ -436,6 +436,7 @@ func generateReceivers(chanMap map[string]*models.Channel, recvSet map[string]mo
 						To: to,
 					})
 				}
+
 			case models.PagerDuty:
 				pdConfig := &alertmanager.PagerdutyConfig{
 					NotifierConfig: alertmanager.NotifierConfig{
@@ -449,6 +450,7 @@ func generateReceivers(chanMap map[string]*models.Channel, recvSet map[string]mo
 					pdConfig.ServiceKey = channel.PagerDutyConfig.ServiceKey
 				}
 				recv.PagerdutyConfigs = append(recv.PagerdutyConfigs, pdConfig)
+
 			case models.Slack:
 				recv.SlackConfigs = append(recv.SlackConfigs, &alertmanager.SlackConfig{
 					NotifierConfig: alertmanager.NotifierConfig{
@@ -456,6 +458,7 @@ func generateReceivers(chanMap map[string]*models.Channel, recvSet map[string]mo
 					},
 					Channel: channel.SlackConfig.Channel,
 				})
+
 			case models.WebHook:
 				webhookConfig := &alertmanager.WebhookConfig{
 					NotifierConfig: alertmanager.NotifierConfig{
@@ -488,13 +491,18 @@ func generateReceivers(chanMap map[string]*models.Channel, recvSet map[string]mo
 						}
 					}
 				}
+
 				recv.WebhookConfigs = append(recv.WebhookConfigs, webhookConfig)
+
 			default:
-				return nil, errors.Errorf("invalid channel type: %T", channel.Type)
+				return nil, errors.Errorf("invalid channel type: %q", channel.Type)
 			}
 		}
+
 		receivers = append(receivers, recv)
 	}
+
+	sort.Slice(receivers, func(i, j int) bool { return receivers[i].Name < receivers[j].Name })
 	return receivers, nil
 }
 

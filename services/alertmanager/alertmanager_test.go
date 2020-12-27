@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
+	"gopkg.in/yaml.v3"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/testdb"
@@ -142,13 +143,11 @@ templates: []
 		_, err = models.CreateRule(db.Querier, &models.CreateRuleParams{
 			TemplateName: templateName,
 			Disabled:     true,
-			RuleParams: []models.RuleParam{
-				{
-					Name:       "test",
-					Type:       models.Float,
-					FloatValue: 3.14,
-				},
-			},
+			RuleParams: []models.RuleParam{{
+				Name:       "test",
+				Type:       models.Float,
+				FloatValue: 3.14,
+			}},
 			For:          5 * time.Second,
 			Severity:     common.Warning,
 			CustomLabels: map[string]string{"foo": "bar"},
@@ -199,4 +198,58 @@ templates: []
 		`) + "\n"
 		assert.Equal(t, expected, actual, "actual:\n%s", actual)
 	})
+}
+
+func TestGenerateReceivers(t *testing.T) {
+	t.Parallel()
+
+	chanMap := map[string]*models.Channel{
+		"1": {
+			Type: models.Slack,
+			SlackConfig: &models.SlackConfig{
+				Channel: "channel1",
+			},
+		},
+		"2": {
+			Type: models.Slack,
+			SlackConfig: &models.SlackConfig{
+				Channel: "channel2",
+			},
+		},
+	}
+	recvSet := map[string]models.ChannelIDs{
+		"1":   {"1"},
+		"2":   {"2"},
+		"1+2": {"1", "2"},
+	}
+	actualR, err := generateReceivers(chanMap, recvSet)
+	require.NoError(t, err)
+	actual, err := yaml.Marshal(actualR)
+	require.NoError(t, err)
+
+	expected := strings.TrimSpace(`
+- name: "1"
+  slack_configs:
+    - send_resolved: false
+      channel: channel1
+      short_fields: false
+      link_names: false
+- name: 1+2
+  slack_configs:
+    - send_resolved: false
+      channel: channel1
+      short_fields: false
+      link_names: false
+    - send_resolved: false
+      channel: channel2
+      short_fields: false
+      link_names: false
+- name: "2"
+  slack_configs:
+    - send_resolved: false
+      channel: channel2
+      short_fields: false
+      link_names: false
+`) + "\n"
+	assert.Equal(t, expected, string(actual), "actual:\n%s", actual)
 }
