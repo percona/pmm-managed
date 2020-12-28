@@ -100,7 +100,7 @@ templates: []
 		svc := New(db)
 
 		channel1, err := models.CreateChannel(db.Querier, &models.CreateChannelParams{
-			Summary: "some summary",
+			Summary: "channel1",
 			EmailConfig: &models.EmailConfig{
 				To: []string{"test@test.test", "test2@test.test"},
 			},
@@ -109,7 +109,7 @@ templates: []
 		require.NoError(t, err)
 
 		channel2, err := models.CreateChannel(db.Querier, &models.CreateChannelParams{
-			Summary: "some summary",
+			Summary: "channel2",
 			PagerDutyConfig: &models.PagerDutyConfig{
 				RoutingKey: "ms-pagerduty-dev",
 			},
@@ -149,11 +149,17 @@ templates: []
 				Type:       models.Float,
 				FloatValue: 3.14,
 			}},
-			For:          5 * time.Second,
-			Severity:     common.Warning,
-			CustomLabels: map[string]string{"foo": "bar"},
-			Filters:      []models.Filter{{Type: models.Equal, Key: "value", Val: "10"}},
-			ChannelIDs:   []string{channel1.ID, channel2.ID},
+			For:      5 * time.Second,
+			Severity: common.Warning,
+			CustomLabels: map[string]string{
+				"foo": "bar",
+			},
+			Filters: []models.Filter{{
+				Type: models.Equal,
+				Key:  "service_name",
+				Val:  "mysql1",
+			}},
+			ChannelIDs: []string{channel1.ID, channel2.ID},
 		})
 		require.NoError(t, err)
 
@@ -166,18 +172,24 @@ templates: []
 				Type:       models.Float,
 				FloatValue: 3.14,
 			}},
-			For:          5 * time.Second,
-			Severity:     common.Warning,
-			CustomLabels: map[string]string{"foo": "bar"},
-			Filters:      []models.Filter{{Type: models.Equal, Key: "value", Val: "10"}},
-			ChannelIDs:   []string{channel1.ID, channel2.ID},
+			For:      5 * time.Second,
+			Severity: common.Warning,
+			CustomLabels: map[string]string{
+				"foo": "baz",
+			},
+			Filters: []models.Filter{{
+				Type: models.Equal,
+				Key:  "service_name",
+				Val:  "mysql2",
+			}},
+			ChannelIDs: []string{channel1.ID, channel2.ID},
 		})
 		require.NoError(t, err)
 
 		_, err = models.UpdateSettings(db.Querier, &models.ChangeSettingsParams{
 			EmailAlertingSettings: &models.EmailAlertingSettings{
 				From:      "from@test.com",
-				Smarthost: "0.0.0.0:80",
+				Smarthost: "1.2.3.4:80",
 				Hello:     "host",
 				Username:  "user",
 				Password:  "password",
@@ -198,7 +210,7 @@ global:
     resolve_timeout: 0s
     smtp_from: from@test.com
     smtp_hello: host
-    smtp_smarthost: 0.0.0.0:80
+    smtp_smarthost: 1.2.3.4:80
     smtp_auth_username: user
     smtp_auth_password: password
     smtp_auth_secret: secret
@@ -211,16 +223,14 @@ route:
     routes:
         - receiver: /channel_id/00000000-0000-4000-8000-000000000001 + /channel_id/00000000-0000-4000-8000-000000000002
           match:
-            foo: bar
             rule_id: /rule_id/00000000-0000-4000-8000-000000000003
+            service_name: mysql1
           continue: false
-          repeat_interval: 5s
         - receiver: /channel_id/00000000-0000-4000-8000-000000000001 + /channel_id/00000000-0000-4000-8000-000000000002
           match:
-            foo: bar
             rule_id: /rule_id/00000000-0000-4000-8000-000000000004
+            service_name: mysql2
           continue: false
-          repeat_interval: 5s
 receivers:
     - name: empty
     - name: /channel_id/00000000-0000-4000-8000-000000000001 + /channel_id/00000000-0000-4000-8000-000000000002
