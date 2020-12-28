@@ -218,18 +218,18 @@
 
 [[projects]]
   branch = "main"
-  digest = "1:4f1544368b2a0373a65e63abfa889d668d60a2000b86cd08cc8ae9ee350ab296"
+  digest = "1:4ce3cd60919b35a67fa20eeeb92c8495313fdaf39a0c67cdf83c64fef26f80ba"
   name = "github.com/percona-platform/saas"
   packages = [
     "pkg/alert",
     "pkg/common",
   ]
   pruneopts = "NUT"
-  revision = "0bd6af658c1ce7b3ed583b6e10a434656389ae1a"
+  revision = "fa94aa1c69dda7db9834dbaa295ec9977a45b165"
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:730cd7b6da3c6c0a9e5eb8c9e5600538c3240770074842a6c0116cf676afafae"
+  digest = "1:c00e3acf4a0a6d872f988adc2ae04274a0d3c2bbdb92287010d0159a85af7426"
   name = "github.com/percona/pmm"
   packages = [
     "api/alertmanager/amclient",
@@ -269,7 +269,7 @@
     "utils/tlsconfig",
   ]
   pruneopts = "NUT"
-  revision = "d681295801b30b067a3e1667733e49a78667e0c2"
+  revision = "947e30b4de30dc900fbc73c1dd81d11fd2b300b7"
 
 [[projects]]
   digest = "1:ddc4b7507aa587f326a9874dc5d0ca7b3961ed050a7db734eb49b8682cc2b19f"

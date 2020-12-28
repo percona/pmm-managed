@@ -77,23 +77,19 @@ func TestRulesAPI(t *testing.T) {
 				Body: rules.UpdateAlertRuleBody{
 					RuleID:   rule.Payload.RuleID,
 					Disabled: false,
-					Params: []*rules.ParamsItems0{
-						{
-							Name:  "threshold",
-							Type:  pointer.ToString("FLOAT"),
-							Float: 21,
-						},
-					},
+					Params: []*rules.ParamsItems0{{
+						Name:  "threshold",
+						Type:  pointer.ToString("FLOAT"),
+						Float: 21,
+					}},
 					For:          "10s",
 					Severity:     pointer.ToString("SEVERITY_ERROR"),
 					CustomLabels: map[string]string{"foo": "bar", "baz": "faz"},
-					Filters: []*rules.FiltersItems0{
-						{
-							Type:  pointer.ToString("NOT_EQUAL"),
-							Key:   "threshold",
-							Value: "21",
-						},
-					},
+					Filters: []*rules.FiltersItems0{{
+						Type:  pointer.ToString("EQUAL"),
+						Key:   "threshold",
+						Value: "21",
+					}},
 					ChannelIds: []string{channelID, newChannelID},
 				},
 				Context: pmmapitests.Context,
@@ -132,23 +128,19 @@ func TestRulesAPI(t *testing.T) {
 				Body: rules.UpdateAlertRuleBody{
 					RuleID:   rule.Payload.RuleID,
 					Disabled: false,
-					Params: []*rules.ParamsItems0{
-						{
-							Name:  "threshold",
-							Type:  pointer.ToString("FLOAT"),
-							Float: 21,
-						},
-					},
+					Params: []*rules.ParamsItems0{{
+						Name:  "threshold",
+						Type:  pointer.ToString("FLOAT"),
+						Float: 21,
+					}},
 					For:          "10s",
 					Severity:     pointer.ToString("SEVERITY_ERROR"),
 					CustomLabels: map[string]string{"foo": "bar", "baz": "faz"},
-					Filters: []*rules.FiltersItems0{
-						{
-							Type:  pointer.ToString("NOT_EQUAL"),
-							Key:   "threshold",
-							Value: "21",
-						},
-					},
+					Filters: []*rules.FiltersItems0{{
+						Type:  pointer.ToString("EQUAL"),
+						Key:   "threshold",
+						Value: "21",
+					}},
 					ChannelIds: []string{channelID, unknownChannelID},
 				},
 				Context: pmmapitests.Context,
@@ -172,6 +164,7 @@ func TestRulesAPI(t *testing.T) {
 			for _, r := range list.Payload.Rules {
 				if r.RuleID == rule.Payload.RuleID {
 					assert.True(t, r.Disabled)
+					assert.Equal(t, "SEVERITY_WARNING", pointer.GetString(r.Severity))
 					found = true
 				}
 			}
@@ -193,6 +186,7 @@ func TestRulesAPI(t *testing.T) {
 			for _, r := range list.Payload.Rules {
 				if r.RuleID == rule.Payload.RuleID {
 					assert.False(t, r.Disabled)
+					assert.Equal(t, "SEVERITY_WARNING", pointer.GetString(r.Severity))
 					found = true
 				}
 			}
@@ -269,23 +263,19 @@ func createAlertRuleParams(templateName, channelID string) *rules.CreateAlertRul
 			TemplateName: templateName,
 			Disabled:     true,
 			Summary:      "example summary",
-			Params: []*rules.ParamsItems0{
-				{
-					Name:  "threshold",
-					Type:  pointer.ToString("FLOAT"),
-					Float: 12,
-				},
-			},
+			Params: []*rules.ParamsItems0{{
+				Name:  "threshold",
+				Type:  pointer.ToString("FLOAT"),
+				Float: 12,
+			}},
 			For:          "5s",
 			Severity:     pointer.ToString("SEVERITY_WARNING"),
 			CustomLabels: map[string]string{"foo": "bar"},
-			Filters: []*rules.FiltersItems0{
-				{
-					Type:  pointer.ToString("EQUAL"),
-					Key:   "threshold",
-					Value: "12",
-				},
-			},
+			Filters: []*rules.FiltersItems0{{
+				Type:  pointer.ToString("EQUAL"),
+				Key:   "threshold",
+				Value: "12",
+			}},
 			ChannelIds: []string{channelID},
 		},
 		Context: pmmapitests.Context,
