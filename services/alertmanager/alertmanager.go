@@ -359,6 +359,20 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 		cfg.Global = &alertmanager.GlobalConfig{}
 	}
 
+	// make sure that "empty" receiver is there
+	var emptyFound bool
+	for _, r := range cfg.Receivers {
+		if r.Name == "empty" {
+			emptyFound = true
+			break
+		}
+	}
+	if !emptyFound {
+		cfg.Receivers = append(cfg.Receivers, &alertmanager.Receiver{
+			Name: "empty",
+		})
+	}
+
 	if settings.IntegratedAlerting.EmailAlertingSettings != nil {
 		svc.l.Warn("Setting global email config, any user defined changes to the base config might be overwritten.")
 
