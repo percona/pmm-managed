@@ -113,6 +113,7 @@ func (s *actionsServer) prepareServiceActionWithFiles(serviceID, pmmAgentID, dat
 		}
 
 		tdp = agent.TemplateDelimiters(svc)
+		files = agent.Files()
 
 		res, err = models.CreateActionResult(tx.Querier, pmmAgentID)
 		return err
