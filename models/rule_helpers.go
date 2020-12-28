@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/percona-platform/saas/pkg/common"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -83,7 +82,7 @@ type CreateRuleParams struct {
 	Disabled     bool
 	RuleParams   RuleParams
 	For          time.Duration
-	Severity     common.Severity
+	Severity     Severity
 	CustomLabels map[string]string
 	Filters      Filters
 	ChannelIDs   []string
@@ -114,7 +113,7 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 		Disabled:     params.Disabled,
 		Params:       params.RuleParams,
 		For:          params.For,
-		Severity:     convertSeverity(params.Severity),
+		Severity:     Severity(params.Severity),
 		Filters:      params.Filters,
 		ChannelIDs:   channelIDs,
 	}
@@ -137,7 +136,7 @@ type ChangeRuleParams struct {
 	Disabled     bool
 	RuleParams   RuleParams
 	For          time.Duration
-	Severity     common.Severity
+	Severity     Severity
 	CustomLabels map[string]string
 	Filters      Filters
 	ChannelIDs   []string
@@ -161,9 +160,11 @@ func ChangeRule(q *reform.Querier, ruleID string, params *ChangeRuleParams) (*Ru
 		return nil, status.Errorf(codes.NotFound, "Failed to find all required channels: %v.", missingChannelsIDs)
 	}
 
+	// TODO toggle
+
 	row.Disabled = params.Disabled
 	row.For = params.For
-	row.Severity = convertSeverity(params.Severity)
+	row.Severity = Severity(params.Severity)
 	row.Filters = params.Filters
 	row.Params = params.RuleParams
 

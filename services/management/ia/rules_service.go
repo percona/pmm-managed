@@ -187,7 +187,7 @@ func (s *RulesService) prepareRulesFiles(rules []*iav1beta1.Rule) ([]ruleFile, e
 
 		// Do not add volatile values like `{{ $value }}` to labels as it will break alerts identity.
 		r.Labels["ia"] = "1"
-		r.Labels["severity"] = ruleM.Severity.String() // FIXME https://jira.percona.com/browse/PMM-7228
+		r.Labels["severity"] = common.Severity(ruleM.Severity).String()
 		r.Labels["rule_id"] = ruleM.RuleId
 		r.Labels["template_name"] = ruleM.Template.Name
 
@@ -318,7 +318,7 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 		Summary:      req.Summary,
 		Disabled:     req.Disabled,
 		For:          req.For.AsDuration(),
-		Severity:     common.Severity(req.Severity),
+		Severity:     models.Severity(req.Severity),
 		CustomLabels: req.CustomLabels,
 		ChannelIDs:   req.ChannelIds,
 	}
@@ -367,7 +367,7 @@ func (s *RulesService) UpdateAlertRule(ctx context.Context, req *iav1beta1.Updat
 	params := &models.ChangeRuleParams{
 		Disabled:     req.Disabled,
 		For:          req.For.AsDuration(),
-		Severity:     common.Severity(req.Severity),
+		Severity:     models.Severity(req.Severity),
 		CustomLabels: req.CustomLabels,
 		ChannelIDs:   req.ChannelIds,
 	}
