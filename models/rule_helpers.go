@@ -113,7 +113,7 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 		Disabled:     params.Disabled,
 		Params:       params.RuleParams,
 		For:          params.For,
-		Severity:     Severity(params.Severity),
+		Severity:     params.Severity,
 		Filters:      params.Filters,
 		ChannelIDs:   channelIDs,
 	}
@@ -160,11 +160,9 @@ func ChangeRule(q *reform.Querier, ruleID string, params *ChangeRuleParams) (*Ru
 		return nil, status.Errorf(codes.NotFound, "Failed to find all required channels: %v.", missingChannelsIDs)
 	}
 
-	// TODO toggle
-
 	row.Disabled = params.Disabled
 	row.For = params.For
-	row.Severity = Severity(params.Severity)
+	row.Severity = params.Severity
 	row.Filters = params.Filters
 	row.Params = params.RuleParams
 
@@ -175,9 +173,33 @@ func ChangeRule(q *reform.Querier, ruleID string, params *ChangeRuleParams) (*Ru
 	row.CustomLabels = labels
 	row.ChannelIDs = params.ChannelIDs
 
-	err = q.Update(row)
+	if err = q.Update(row); err != nil {
+		return nil, errors.Wrap(err, "failed to change alerts Rule")
+	}
+
+	return row, nil
+}
+
+// ToggleRuleParams represents rule toggle parameters.
+type ToggleRuleParams struct {
+	Disabled *bool // nil - do not change
+}
+
+// ToggleRule updates some alert rule fields.
+func ToggleRule(q *reform.Querier, ruleID string, params *ToggleRuleParams) (*Rule, error) {
+	row, err := FindRuleByID(q, ruleID)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to update alerts Rule")
+		return nil, err
+	}
+
+	if params.Disabled == nil {
+		return row, nil
+	}
+
+	row.Disabled = *params.Disabled
+
+	if err = q.Update(row); err != nil {
+		return nil, errors.Wrap(err, "failed to toggle alerts Rule")
 	}
 
 	return row, nil

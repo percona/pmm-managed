@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/AlekSi/pointer"
 	"github.com/percona-platform/saas/pkg/common"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/percona/promconfig"
@@ -408,18 +409,20 @@ func (s *RulesService) ToggleAlertRule(ctx context.Context, req *iav1beta1.Toggl
 		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
 	}
 
-	var params models.ChangeRuleParams
+	var params models.ToggleRuleParams
 	switch req.Disabled {
-	case iav1beta1.BooleanFlag_DO_NOT_CHANGE:
-		return &iav1beta1.ToggleAlertRuleResponse{}, nil
 	case iav1beta1.BooleanFlag_TRUE:
-		params.Disabled = true
+		params.Disabled = pointer.ToBool(true)
 	case iav1beta1.BooleanFlag_FALSE:
-		// nothing
+		params.Disabled = pointer.ToBool(false)
+	case iav1beta1.BooleanFlag_DO_NOT_CHANGE:
+		fallthrough
+	default:
+		return nil, status.Errorf(codes.InvalidArgument, "Unexpected value of disabled flag.")
 	}
 
 	e := s.db.InTransaction(func(tx *reform.TX) error {
-		_, err := models.ChangeRule(tx.Querier, req.RuleId, &params)
+		_, err := models.ToggleRule(tx.Querier, req.RuleId, &params)
 		return err
 	})
 	if e != nil {
