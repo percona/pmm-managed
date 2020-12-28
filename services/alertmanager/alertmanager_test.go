@@ -48,32 +48,47 @@ func TestIsReady(t *testing.T) {
 	assert.NoError(t, svc.IsReady(ctx))
 }
 
+// marshalAndValidate populates, marshals and validates config.
+func marshalAndValidate(t *testing.T, svc *Service, base *alertmanager.Config) string {
+	b, err := svc.marshalConfig(base)
+	require.NoError(t, err)
+	err = svc.validateConfig(context.Background(), b)
+	require.NoError(t, err)
+	return string(b)
+}
+
 func TestPopulateConfig(t *testing.T) {
 	New(nil).GenerateBaseConfigs() // this method should not use database
+
+	tests.SetTestIDReader(t)
 
 	t.Run("without receivers and routes", func(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 		svc := New(db)
 
-		cfg := svc.loadBaseConfig()
-
 		// add fake setting to check for overwrite
-		slackURL := gofakeit.URL()
+		cfg := svc.loadBaseConfig()
 		cfg.Global = &alertmanager.GlobalConfig{
-			SlackAPIURL: slackURL,
+			SlackAPIURL: "https://hooks.slack.com/services/abc/123/xyz",
 		}
 
-		err := svc.populateConfig(cfg)
-		require.NoError(t, err)
-
-		assert.Len(t, cfg.Receivers, 1)
-		assert.Equal(t, "empty", cfg.Receivers[0].Name)
-		assert.Equal(t, "empty", cfg.Route.Receiver)
-		assert.Empty(t, cfg.Route.Routes)
-		assert.NotEmpty(t, cfg.Global)
-		// check that user setting is not over-written when there is no setting in the DB
-		assert.Equal(t, slackURL, cfg.Global.SlackAPIURL)
+		actual := marshalAndValidate(t, svc, cfg)
+		expected := strings.TrimSpace(`
+# Managed by pmm-managed. DO NOT EDIT.
+---
+global:
+    resolve_timeout: 0s
+    smtp_require_tls: false
+    slack_api_url: https://hooks.slack.com/services/abc/123/xyz
+route:
+    receiver: empty
+    continue: false
+receivers:
+    - name: empty
+templates: []
+		`) + "\n"
+		assert.Equal(t, expected, actual, "actual:\n%s", actual)
 	})
 
 	t.Run("with receivers and routes", func(t *testing.T) {
@@ -124,7 +139,7 @@ func TestPopulateConfig(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		rule1, err := models.CreateRule(db.Querier, &models.CreateRuleParams{
+		_, err = models.CreateRule(db.Querier, &models.CreateRuleParams{
 			TemplateName: templateName,
 			Disabled:     true,
 			RuleParams: []models.RuleParam{
@@ -143,16 +158,14 @@ func TestPopulateConfig(t *testing.T) {
 		require.NoError(t, err)
 
 		// create another rule with same channelIDs to check for redundant receivers.
-		rule2, err := models.CreateRule(db.Querier, &models.CreateRuleParams{
+		_, err = models.CreateRule(db.Querier, &models.CreateRuleParams{
 			TemplateName: templateName,
 			Disabled:     true,
-			RuleParams: []models.RuleParam{
-				{
-					Name:       "test",
-					Type:       models.Float,
-					FloatValue: 3.14,
-				},
-			},
+			RuleParams: []models.RuleParam{{
+				Name:       "test",
+				Type:       models.Float,
+				FloatValue: 3.14,
+			}},
 			For:          5 * time.Second,
 			Severity:     common.Warning,
 			CustomLabels: map[string]string{"foo": "bar"},
@@ -161,7 +174,7 @@ func TestPopulateConfig(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		settings, err := models.UpdateSettings(db.Querier, &models.ChangeSettingsParams{
+		_, err = models.UpdateSettings(db.Querier, &models.ChangeSettingsParams{
 			EmailAlertingSettings: &models.EmailAlertingSettings{
 				From:      tests.GenEmail(t),
 				Smarthost: "0.0.0.0:80",
@@ -181,28 +194,9 @@ func TestPopulateConfig(t *testing.T) {
 		err = svc.populateConfig(cfg)
 		require.NoError(t, err)
 
-		assert.Len(t, cfg.Receivers, 2)
-		assert.Equal(t, "empty", cfg.Receivers[0].Name) // empty receiver from base should be preserved
-
-		// channelIDs in receiver name don't preserve order so we split name to avoid flaky tests.
-		receiverNameIDs := strings.Split(cfg.Receivers[1].Name, receiverNameSeparator)
-		assert.Contains(t, receiverNameIDs, channel1.ID, channel2.ID)
-		assert.NotNil(t, cfg.Receivers[1].EmailConfigs)
-		assert.Len(t, cfg.Receivers[1].EmailConfigs, 2)
-		assert.NotNil(t, cfg.Receivers[1].PagerdutyConfigs)
-		assert.Equal(t, "empty", cfg.Route.Receiver) // empty route from base should be preserved
-		assert.Len(t, cfg.Route.Routes, 2)
-		routeIDs := []string{cfg.Route.Routes[0].Match["rule_id"], cfg.Route.Routes[1].Match["rule_id"]}
-		assert.Contains(t, routeIDs, rule1.ID, rule2.ID)
-		// check global config
-		assert.Equal(t, cfg.Global.SMTPFrom, settings.IntegratedAlerting.EmailAlertingSettings.From)
-		assert.Equal(t, cfg.Global.SMTPHello, settings.IntegratedAlerting.EmailAlertingSettings.Hello)
-		assert.Equal(t, cfg.Global.SMTPSmarthost, settings.IntegratedAlerting.EmailAlertingSettings.Smarthost)
-		assert.Equal(t, cfg.Global.SMTPAuthUsername, settings.IntegratedAlerting.EmailAlertingSettings.Username)
-		assert.Equal(t, cfg.Global.SMTPAuthPassword, settings.IntegratedAlerting.EmailAlertingSettings.Password)
-		assert.Equal(t, cfg.Global.SMTPAuthIdentity, settings.IntegratedAlerting.EmailAlertingSettings.Identity)
-		assert.Equal(t, cfg.Global.SMTPAuthSecret, settings.IntegratedAlerting.EmailAlertingSettings.Secret)
-
-		assert.Equal(t, cfg.Global.SlackAPIURL, settings.IntegratedAlerting.SlackAlertingSettings.URL)
+		actual := marshalAndValidate(t, svc, svc.loadBaseConfig())
+		expected := strings.TrimSpace(`
+		`) + "\n"
+		assert.Equal(t, expected, actual, "actual:\n%s", actual)
 	})
 }
