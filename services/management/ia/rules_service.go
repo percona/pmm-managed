@@ -321,7 +321,10 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 		Severity:     common.Severity(req.Severity),
 		CustomLabels: req.CustomLabels,
 		ChannelIDs:   req.ChannelIds,
-		Filters:      convertFiltersToModel(req.Filters),
+	}
+	params.Filters, err = convertFiltersToModel(req.Filters)
+	if err != nil {
+		return nil, err
 	}
 
 	params.RuleParams, err = convertRuleParamsToModel(req.Params)
@@ -374,7 +377,10 @@ func (s *RulesService) UpdateAlertRule(ctx context.Context, req *iav1beta1.Updat
 		return nil, err
 	}
 	params.RuleParams = ruleParams
-	params.Filters = convertFiltersToModel(req.Filters)
+	params.Filters, err = convertFiltersToModel(req.Filters)
+	if err != nil {
+		return nil, err
+	}
 
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		_, err := models.ChangeRule(tx.Querier, req.RuleId, params)
@@ -503,22 +509,16 @@ func convertRuleParamsToModel(params []*iav1beta1.RuleParam) (models.RuleParams,
 
 func convertModelToFilterType(filterType models.FilterType) iav1beta1.FilterType {
 	switch filterType {
-	case models.Invalid:
-		return iav1beta1.FilterType_FILTER_TYPE_INVALID
 	case models.Equal:
 		return iav1beta1.FilterType_EQUAL
-	case models.NotEqual:
-		return iav1beta1.FilterType_NOT_EQUAL
 	case models.Regex:
 		return iav1beta1.FilterType_REGEX
-	case models.NotRegex:
-		return iav1beta1.FilterType_NOT_REGEX
 	default:
 		return iav1beta1.FilterType_FILTER_TYPE_INVALID
 	}
 }
 
-func convertFiltersToModel(filters []*iav1beta1.Filter) models.Filters {
+func convertFiltersToModel(filters []*iav1beta1.Filter) (models.Filters, error) {
 	res := make(models.Filters, len(filters))
 	for i, filter := range filters {
 		f := models.Filter{
@@ -537,22 +537,19 @@ func convertFiltersToModel(filters []*iav1beta1.Filter) models.Filters {
 		}
 
 		switch filter.Type {
-		case iav1beta1.FilterType_FILTER_TYPE_INVALID:
-			f.Type = models.Invalid
 		case iav1beta1.FilterType_EQUAL:
 			f.Type = models.Equal
-		case iav1beta1.FilterType_NOT_EQUAL:
-			f.Type = models.NotEqual
 		case iav1beta1.FilterType_REGEX:
 			f.Type = models.Regex
-		case iav1beta1.FilterType_NOT_REGEX:
-			f.Type = models.NotRegex
+		case iav1beta1.FilterType_FILTER_TYPE_INVALID:
+			fallthrough
 		default:
-			f.Type = models.Invalid
+			return nil, status.Errorf(codes.InvalidArgument, "Unexpected filter type.")
 		}
 		res[i] = f
 	}
-	return res
+
+	return res, nil
 }
 
 // Check interfaces.

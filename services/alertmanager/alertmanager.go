@@ -373,6 +373,13 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 		})
 	}
 
+	// set default route if absent
+	if cfg.Route == nil {
+		cfg.Route = &alertmanager.Route{
+			Receiver: "empty",
+		}
+	}
+
 	if settings.IntegratedAlerting.EmailAlertingSettings != nil {
 		svc.l.Warn("Setting global email config, any user defined changes to the base config might be overwritten.")
 
@@ -403,24 +410,31 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 
 		// FIXME we should use filters there, not custom labels
 
-		match, err := r.GetCustomLabels()
-		if err != nil {
-			svc.l.Warn(err)
+		route := &alertmanager.Route{
+			Match: map[string]string{
+				"rule_id": r.ID,
+			},
+			MatchRE: map[string]string{},
 		}
-		if match == nil {
-			match = make(map[string]string)
+
+		for _, f := range r.Filters {
+			switch f.Type {
+			case models.Equal:
+				route.Match[f.Key] = f.Val
+			case models.Regex:
+				route.MatchRE[f.Key] = f.Val
+			default:
+				svc.l.Warnf("Unhandled filter: %+v", f)
+			}
 		}
-		match["rule_id"] = r.ID
 
 		// make sure same slice with different order are not considered unique.
 		sort.Strings(r.ChannelIDs)
 		recv := strings.Join(r.ChannelIDs, receiverNameSeparator)
 		recvSet[recv] = r.ChannelIDs
-		cfg.Route.Routes = append(cfg.Route.Routes, &alertmanager.Route{
-			Match:          match,
-			Receiver:       recv,
-			RepeatInterval: promconfig.Duration(r.For),
-		})
+		route.Receiver = recv
+
+		cfg.Route.Routes = append(cfg.Route.Routes, route)
 	}
 
 	receivers, err := generateReceivers(chanMap, recvSet)
