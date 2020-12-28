@@ -22,9 +22,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brianvoe/gofakeit"
 	"github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona-platform/saas/pkg/common"
+	"github.com/percona/promconfig"
 	"github.com/percona/promconfig/alertmanager"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -53,6 +53,9 @@ func TestIsReady(t *testing.T) {
 func marshalAndValidate(t *testing.T, svc *Service, base *alertmanager.Config) string {
 	b, err := svc.marshalConfig(base)
 	require.NoError(t, err)
+
+	t.Logf("config:\n%s", b)
+
 	err = svc.validateConfig(context.Background(), b)
 	require.NoError(t, err)
 	return string(b)
@@ -61,14 +64,12 @@ func marshalAndValidate(t *testing.T, svc *Service, base *alertmanager.Config) s
 func TestPopulateConfig(t *testing.T) {
 	New(nil).GenerateBaseConfigs() // this method should not use database
 
-	tests.SetTestIDReader(t)
-
 	t.Run("without receivers and routes", func(t *testing.T) {
+		tests.SetTestIDReader(t)
 		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 		svc := New(db)
 
-		// add fake setting to check for overwrite
 		cfg := svc.loadBaseConfig()
 		cfg.Global = &alertmanager.GlobalConfig{
 			SlackAPIURL: "https://hooks.slack.com/services/abc/123/xyz",
@@ -93,6 +94,7 @@ templates: []
 	})
 
 	t.Run("with receivers and routes", func(t *testing.T) {
+		tests.SetTestIDReader(t)
 		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 		svc := New(db)
@@ -115,23 +117,22 @@ templates: []
 		})
 		require.NoError(t, err)
 
-		templateName := gofakeit.UUID()
 		_, err = models.CreateTemplate(db.Querier, &models.CreateTemplateParams{
 			Template: &alert.Template{
-				Name:    templateName,
+				Name:    "test_template",
 				Version: 1,
-				Summary: gofakeit.Quote(),
+				Summary: "summary",
 				Tiers:   []common.Tier{common.Anonymous},
-				Expr:    gofakeit.Quote(),
+				Expr:    "expr",
 				Params: []alert.Parameter{{
-					Name:    gofakeit.UUID(),
-					Summary: gofakeit.Quote(),
-					Unit:    gofakeit.Letter(),
+					Name:    "param",
+					Summary: "param summary",
+					Unit:    "%",
 					Type:    alert.Float,
 					Range:   []interface{}{float64(10), float64(100)},
 					Value:   float64(50),
 				}},
-				For:         3,
+				For:         promconfig.Duration(3 * time.Second),
 				Severity:    common.Warning,
 				Labels:      map[string]string{"foo": "bar"},
 				Annotations: nil,
@@ -141,7 +142,7 @@ templates: []
 		require.NoError(t, err)
 
 		_, err = models.CreateRule(db.Querier, &models.CreateRuleParams{
-			TemplateName: templateName,
+			TemplateName: "test_template",
 			Disabled:     true,
 			RuleParams: []models.RuleParam{{
 				Name:       "test",
@@ -158,7 +159,7 @@ templates: []
 
 		// create another rule with same channelIDs to check for redundant receivers.
 		_, err = models.CreateRule(db.Querier, &models.CreateRuleParams{
-			TemplateName: templateName,
+			TemplateName: "test_template",
 			Disabled:     true,
 			RuleParams: []models.RuleParam{{
 				Name:       "test",
@@ -184,13 +185,9 @@ templates: []
 				Secret:    "secret",
 			},
 			SlackAlertingSettings: &models.SlackAlertingSettings{
-				URL: gofakeit.URL(),
+				URL: "https://hooks.slack.com/services/abc/456/xyz",
 			},
 		})
-		require.NoError(t, err)
-
-		cfg := svc.loadBaseConfig()
-		err = svc.populateConfig(cfg)
 		require.NoError(t, err)
 
 		actual := marshalAndValidate(t, svc, svc.loadBaseConfig())
@@ -222,6 +219,7 @@ func TestGenerateReceivers(t *testing.T) {
 		"2":   {"2"},
 		"1+2": {"1", "2"},
 	}
+
 	actualR, err := generateReceivers(chanMap, recvSet)
 	require.NoError(t, err)
 	actual, err := yaml.Marshal(actualR)

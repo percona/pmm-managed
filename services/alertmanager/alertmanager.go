@@ -385,6 +385,8 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 	recvSet := make(map[string]models.ChannelIDs) // stores unique combinations of channel IDs
 	for _, r := range rules {
 
+		// FIXME We should handle disabled channels. https://jira.percona.com/browse/PMM-7231
+
 		// FIXME we should use filters there, not custom labels
 
 		match, err := r.GetCustomLabels()
@@ -443,10 +445,10 @@ func generateReceivers(chanMap map[string]*models.Channel, recvSet map[string]mo
 						SendResolved: channel.PagerDutyConfig.SendResolved,
 					},
 				}
-				if pdConfig.RoutingKey != "" {
+				if channel.PagerDutyConfig.RoutingKey != "" {
 					pdConfig.RoutingKey = channel.PagerDutyConfig.RoutingKey
 				}
-				if pdConfig.ServiceKey != "" {
+				if channel.PagerDutyConfig.ServiceKey != "" {
 					pdConfig.ServiceKey = channel.PagerDutyConfig.ServiceKey
 				}
 				recv.PagerdutyConfigs = append(recv.PagerdutyConfigs, pdConfig)
