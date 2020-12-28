@@ -176,7 +176,7 @@ templates: []
 
 		_, err = models.UpdateSettings(db.Querier, &models.ChangeSettingsParams{
 			EmailAlertingSettings: &models.EmailAlertingSettings{
-				From:      tests.GenEmail(t),
+				From:      "from@test.com",
 				Smarthost: "0.0.0.0:80",
 				Hello:     "host",
 				Username:  "user",
@@ -192,7 +192,48 @@ templates: []
 
 		actual := marshalAndValidate(t, svc, svc.loadBaseConfig())
 		expected := strings.TrimSpace(`
-		`) + "\n"
+# Managed by pmm-managed. DO NOT EDIT.
+---
+global:
+    resolve_timeout: 0s
+    smtp_from: from@test.com
+    smtp_hello: host
+    smtp_smarthost: 0.0.0.0:80
+    smtp_auth_username: user
+    smtp_auth_password: password
+    smtp_auth_secret: secret
+    smtp_auth_identity: id
+    smtp_require_tls: false
+    slack_api_url: https://hooks.slack.com/services/abc/456/xyz
+route:
+    receiver: empty
+    continue: false
+    routes:
+        - receiver: /channel_id/00000000-0000-4000-8000-000000000001 + /channel_id/00000000-0000-4000-8000-000000000002
+          match:
+            foo: bar
+            rule_id: /rule_id/00000000-0000-4000-8000-000000000003
+          continue: false
+          repeat_interval: 5s
+        - receiver: /channel_id/00000000-0000-4000-8000-000000000001 + /channel_id/00000000-0000-4000-8000-000000000002
+          match:
+            foo: bar
+            rule_id: /rule_id/00000000-0000-4000-8000-000000000004
+          continue: false
+          repeat_interval: 5s
+receivers:
+    - name: empty
+    - name: /channel_id/00000000-0000-4000-8000-000000000001 + /channel_id/00000000-0000-4000-8000-000000000002
+      email_configs:
+        - send_resolved: false
+          to: test@test.test
+        - send_resolved: false
+          to: test2@test.test
+      pagerduty_configs:
+        - send_resolved: false
+          routing_key: ms-pagerduty-dev
+templates: []
+`) + "\n"
 		assert.Equal(t, expected, actual, "actual:\n%s", actual)
 	})
 }
