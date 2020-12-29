@@ -72,10 +72,10 @@ func (vmp *VictoriaMetricsParams) loadVMAlertParams() error {
 	}
 	vmalertFlags := make([]string, 0, len(vmp.VMAlertFlags))
 	for _, r := range cfg.RuleFiles {
-		vmalertFlags = append(vmalertFlags, "--rule="+r)
+		vmalertFlags = append(vmalertFlags, "-rule="+r)
 	}
 	if cfg.GlobalConfig.EvaluationInterval != 0 {
-		vmalertFlags = append(vmalertFlags, "--evaluationInterval="+cfg.GlobalConfig.EvaluationInterval.String())
+		vmalertFlags = append(vmalertFlags, "-evaluationInterval="+cfg.GlobalConfig.EvaluationInterval.String())
 	}
 	vmp.VMAlertFlags = vmalertFlags
 

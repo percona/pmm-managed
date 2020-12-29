@@ -598,16 +598,16 @@ redirect_stderr = true
 priority = 7
 command =
 	/usr/sbin/vmalert
-		--notifier.url="{{ .AlertmanagerURL }}"
-		--notifier.basicAuth.password='{{ .AlertManagerPassword }}'
-		--notifier.basicAuth.username="{{ .AlertManagerUser }}"
-		--external.url=http://localhost:9090/prometheus
-		--datasource.url=http://127.0.0.1:9090/prometheus
-		--remoteRead.url=http://127.0.0.1:9090/prometheus
-		--remoteWrite.url=http://127.0.0.1:9090/prometheus
-		--rule=/srv/prometheus/rules/*.yml
-		--rule=/etc/ia/rules/*.yml
-		--httpListenAddr=127.0.0.1:8880
+		-datasource.url=http://127.0.0.1:9090/prometheus
+		-external.url=http://localhost/
+		-httpListenAddr=127.0.0.1:8880
+		-notifier.basicAuth.password='{{ .AlertManagerPassword }}'
+		-notifier.basicAuth.username="{{ .AlertManagerUser }}"
+		-notifier.url="{{ .AlertmanagerURL }}"
+		-remoteRead.url=http://127.0.0.1:9090/prometheus
+		-remoteWrite.url=http://127.0.0.1:9090/prometheus
+		-rule=/etc/ia/rules/*.yml
+		-rule=/srv/prometheus/rules/*.yml
 {{- range $index, $param := .VMAlertFlags }}
 		{{ $param }}
 {{- end }}

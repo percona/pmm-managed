@@ -30,6 +30,6 @@ func TestVictoriaMetricsParams(t *testing.T) {
 	t.Run("check params for VMAlert", func(t *testing.T) {
 		vmp, err := NewVictoriaMetricsParams("../testdata/victoriametrics/prometheus.external.alerts.yml")
 		require.NoError(t, err)
-		require.Equal(t, []string{"--rule=/srv/external_rules/rul1.yml", "--rule=/srv/external_rules/rule2.yml", "--evaluationInterval=10s"}, vmp.VMAlertFlags)
+		require.Equal(t, []string{"-rule=/srv/external_rules/rul1.yml", "-rule=/srv/external_rules/rule2.yml", "-evaluationInterval=10s"}, vmp.VMAlertFlags)
 	})
 }
