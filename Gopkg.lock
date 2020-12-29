@@ -392,7 +392,7 @@
 
 [[projects]]
   branch = "main"
-  digest = "1:b4bee33f5671905c6155b2349c4c088b833f75acb3b5f46361f1a079efe70728"
+  digest = "1:c1629f86dc19ba5a6f03cbce52a629deda6f77184272ed10d97e744224cf2fad"
   name = "github.com/percona-platform/saas"
   packages = [
     "gen/auth",
@@ -405,7 +405,7 @@
     "pkg/starlark",
   ]
   pruneopts = "NUT"
-  revision = "0bd6af658c1ce7b3ed583b6e10a434656389ae1a"
+  revision = "fa94aa1c69dda7db9834dbaa295ec9977a45b165"
 
 [[projects]]
   digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
@@ -416,8 +416,8 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-5364-ssl-mongo"
-  digest = "1:246f86282c6904433c2d3829c58a72c63ade89f4eeb5a87ac13edeaa419fd042"
+  branch = "PMM-2.0"
+  digest = "1:6bd4d659cfc795335cdeb2445c545d9969eeabdc7114ac7cdc69c532ea5d7f5f"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -440,18 +440,18 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "700a6742aaecbe6c47e00b728206cbe01ef47efd"
+  revision = "947e30b4de30dc900fbc73c1dd81d11fd2b300b7"
 
 [[projects]]
-  digest = "1:6832634ec059f4bfddaff75621cf1c4750949129c6de2e5e58e01059d0851e25"
+  digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
   name = "github.com/percona/promconfig"
   packages = [
     ".",
     "alertmanager",
   ]
   pruneopts = "NUT"
-  revision = "bbfe4cec824887dffa3d1d485a825485830cb710"
-  version = "v0.2.0"
+  revision = "4b3fbe05a3478c76879e598fca582536f7871f77"
+  version = "v0.2.1"
 
 [[projects]]
   digest = "1:4047c378584616813d610c9f993bf90dd0d07aed8d94bd3bc299cd35ececdcba"
