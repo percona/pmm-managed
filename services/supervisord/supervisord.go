@@ -405,7 +405,6 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 		"DataRetentionHours": int(settings.DataRetention.Hours()),
 		"DataRetentionDays":  int(settings.DataRetention.Hours() / 24),
 		"VMAlertFlags":       s.vmParams.VMAlertFlags,
-		"VMDBCacheDisable":   !settings.VictoriaMetrics.CacheEnabled,
 		"PerconaTestDbaas":   settings.DBaaS.Enabled,
 	}
 	if err := addAlertManagerParams(settings.AlertManagerURL, templateParams); err != nil {
@@ -576,7 +575,6 @@ command =
 		--retentionPeriod={{ .DataRetentionDays }}d
 		--storageDataPath=/srv/victoriametrics/data
 		--httpListenAddr=127.0.0.1:9090
-		--search.disableCache={{ .VMDBCacheDisable }}
 		--search.maxQueryLen=72KB
 		--search.maxUniqueTimeseries=1500000
 		--prometheusDataPath=/srv/prometheus/data

@@ -42,7 +42,6 @@ func TestConfig(t *testing.T) {
 		DataRetention:   30 * 24 * time.Hour,
 		AlertManagerURL: "https://external-user:passw!,ord@external-alertmanager:6443/alerts",
 	}
-	settings.VictoriaMetrics.CacheEnabled = false
 
 	for _, tmpl := range templates.Templates() {
 		n := tmpl.Name()

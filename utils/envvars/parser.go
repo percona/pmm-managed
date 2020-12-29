@@ -106,27 +106,22 @@ func ParseEnvVars(envs []string) (envSettings *models.ChangeSettingsParams, errs
 			if envSettings.DataRetention, err = parseStringDuration(v); err != nil {
 				err = formatEnvVariableError(err, env, v)
 			}
-		case "ENABLE_VM_CACHE":
-			envSettings.EnableVMCache, err = strconv.ParseBool(v)
-			if err != nil {
-				err = fmt.Errorf("invalid value %q for environment variable %q", v, k)
-			}
-			if !envSettings.EnableVMCache {
-				// disable cache explicitly
-				envSettings.DisableVMCache = true
-			}
 
-		case "PERCONA_TEST_IA": // FIXME remove
-			warns = append(warns, fmt.Sprintf("Environment variable %q WILL BE REMOVED SOON, please use %q instead.", k, "ENABLE_ALERTING"))
-			fallthrough
 		case "ENABLE_ALERTING":
 			envSettings.EnableAlerting, err = strconv.ParseBool(v)
 			if err != nil {
 				err = fmt.Errorf("invalid value %q for environment variable %q", v, k)
 			}
 
+		// deprecated variables that produce warnings
+		case "ENABLE_VM_CACHE": // keep it forever since it does not have PERCONA_TEST_ prefix
+			warns = append(warns, fmt.Sprintf("environment variable %q does nothing now", k))
+
+		// removed variables that produce errors
 		case "PERCONA_TEST_AUTH_HOST", "PERCONA_TEST_CHECKS_HOST", "PERCONA_TEST_TELEMETRY_HOST":
 			err = fmt.Errorf("environment variable %q is removed and replaced by %q", k, envSaaSHost)
+		case "PERCONA_TEST_IA":
+			err = fmt.Errorf("environment variable %q is removed and replaced by %q", k, "ENABLE_ALERTING")
 
 		default:
 			// handle prefixes
