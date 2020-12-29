@@ -405,7 +405,6 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 		"DataRetentionHours": int(settings.DataRetention.Hours()),
 		"DataRetentionDays":  int(settings.DataRetention.Hours() / 24),
 		"VMAlertFlags":       s.vmParams.VMAlertFlags,
-		"VMDBCacheDisable":   !settings.VictoriaMetrics.CacheEnabled,
 		"PerconaTestDbaas":   settings.DBaaS.Enabled,
 	}
 	if err := addAlertManagerParams(settings.AlertManagerURL, templateParams); err != nil {
@@ -572,15 +571,15 @@ redirect_stderr = true
 priority = 7
 command =
 	/usr/sbin/victoriametrics
-		--promscrape.config=/etc/victoriametrics-promscrape.yml
-		--retentionPeriod={{ .DataRetentionDays }}d
-		--storageDataPath=/srv/victoriametrics/data
-		--httpListenAddr=127.0.0.1:9090
-		--search.disableCache={{ .VMDBCacheDisable }}
-		--search.maxQueryLen=72KB
-		--search.maxUniqueTimeseries=1500000
-		--prometheusDataPath=/srv/prometheus/data
-		--http.pathPrefix=/prometheus
+		-http.pathPrefix=/prometheus
+		-httpListenAddr=127.0.0.1:9090
+		-prometheusDataPath=/srv/prometheus/data
+		-promscrape.config=/etc/victoriametrics-promscrape.yml
+		-retentionPeriod={{ .DataRetentionDays }}d
+		-search.latencyOffset=5s
+		-search.maxQueryLen=72KB
+		-search.maxUniqueTimeseries=1500000
+		-storageDataPath=/srv/victoriametrics/data
 user = pmm
 autorestart = true
 autostart = true
@@ -599,16 +598,16 @@ redirect_stderr = true
 priority = 7
 command =
 	/usr/sbin/vmalert
-		--notifier.url="{{ .AlertmanagerURL }}"
-		--notifier.basicAuth.password='{{ .AlertManagerPassword }}'
-		--notifier.basicAuth.username="{{ .AlertManagerUser }}"
-		--external.url=http://localhost:9090/prometheus
-		--datasource.url=http://127.0.0.1:9090/prometheus
-		--remoteRead.url=http://127.0.0.1:9090/prometheus
-		--remoteWrite.url=http://127.0.0.1:9090/prometheus
-		--rule=/srv/prometheus/rules/*.yml
-		--rule=/etc/ia/rules/*.yml
-		--httpListenAddr=127.0.0.1:8880
+		-datasource.url=http://127.0.0.1:9090/prometheus
+		-external.url=http://localhost/
+		-httpListenAddr=127.0.0.1:8880
+		-notifier.basicAuth.password='{{ .AlertManagerPassword }}'
+		-notifier.basicAuth.username="{{ .AlertManagerUser }}"
+		-notifier.url="{{ .AlertmanagerURL }}"
+		-remoteRead.url=http://127.0.0.1:9090/prometheus
+		-remoteWrite.url=http://127.0.0.1:9090/prometheus
+		-rule=/etc/ia/rules/*.yml
+		-rule=/srv/prometheus/rules/*.yml
 {{- range $index, $param := .VMAlertFlags }}
 		{{ $param }}
 {{- end }}

@@ -52,7 +52,8 @@ type Settings struct {
 	AlertManagerURL string `json:"alert_manager_url"`
 
 	VictoriaMetrics struct {
-		CacheEnabled bool `json:"cache_enabled"`
+		// Deprecated: does nothing now but kept to ensure that we don't reuse that JSON name.
+		DeprecatedCacheEnabled bool `json:"cache_enabled"`
 	} `json:"victoria_metrics"`
 
 	// Saas config options

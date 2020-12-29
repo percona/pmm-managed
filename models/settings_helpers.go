@@ -102,11 +102,6 @@ type ChangeSettingsParams struct {
 	// LogOut user from Percona Platform, i.e. remove user email and session id
 	LogOut bool
 
-	// EnableVMCache enables caching for vmdb search queries
-	EnableVMCache bool
-	// DisableVMCache disables caching for vmdb search queries
-	DisableVMCache bool
-
 	// PMM Server public address.
 	PMMPublicAddress       string
 	RemovePMMPublicAddress bool
@@ -207,14 +202,6 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 		settings.SaaS.Email = params.Email
 	}
 
-	if params.DisableVMCache {
-		settings.VictoriaMetrics.CacheEnabled = false
-	}
-
-	if params.EnableVMCache {
-		settings.VictoriaMetrics.CacheEnabled = true
-	}
-
 	if params.PMMPublicAddress != "" {
 		settings.PMMPublicAddress = params.PMMPublicAddress
 	}
@@ -259,9 +246,6 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 	}
 	if params.EnableSTT && params.DisableSTT {
 		return fmt.Errorf("Both enable_stt and disable_stt are present.") //nolint:golint,stylecheck
-	}
-	if params.EnableVMCache && params.DisableVMCache {
-		return fmt.Errorf("Both enable_vm_cache and disable_vm_cache are present.") //nolint:golint,stylecheck
 	}
 	if params.EnableAlerting && params.DisableAlerting {
 		return fmt.Errorf("Both enable_alerting and disable_alerting are present.") //nolint:golint,stylecheck
