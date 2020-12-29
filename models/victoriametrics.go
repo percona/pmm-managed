@@ -47,6 +47,9 @@ func NewVictoriaMetricsParams(basePath string) (*VictoriaMetricsParams, error) {
 
 // UpdateParams - reads configuration file and updates corresponding flags.
 func (vmp *VictoriaMetricsParams) UpdateParams() error {
+	// TODO read settings, set -external.url and -external.alert.source
+	// https://jira.percona.com/browse/PMM-7248
+
 	if err := vmp.loadVMAlertParams(); err != nil {
 		return errors.Wrap(err, "cannot update VMAlertFlags config param")
 	}
