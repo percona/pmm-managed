@@ -405,7 +405,7 @@ var databaseSchema = [][]string{
 			severity VARCHAR NOT NULL,
 			custom_labels TEXT,
 			filters JSONB,
-			channel_ids JSONB NOT NULL,
+			channel_ids JSONB,
 
 			created_at TIMESTAMP NOT NULL,
 			updated_at TIMESTAMP NOT NULL,

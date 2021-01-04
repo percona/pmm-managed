@@ -321,8 +321,12 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 		For:          req.For.AsDuration(),
 		Severity:     models.Severity(req.Severity),
 		CustomLabels: req.CustomLabels,
-		ChannelIDs:   req.ChannelIds,
 	}
+
+	if len(req.ChannelIds) > 0 {
+		params.ChannelIDs = req.ChannelIds
+	}
+
 	params.Filters, err = convertFiltersToModel(req.Filters)
 	if err != nil {
 		return nil, err
