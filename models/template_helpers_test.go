@@ -18,6 +18,7 @@ package models_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/brianvoe/gofakeit"
 	"github.com/percona-platform/saas/pkg/alert"
@@ -69,7 +70,7 @@ func TestRuleTemplates(t *testing.T) {
 			}},
 			created.Params)
 		assert.EqualValues(t, params.Template.For, created.For)
-		assert.Equal(t, models.WarningSeverity, created.Severity)
+		assert.Equal(t, models.Severity(common.Warning), created.Severity)
 
 		labels, err := created.GetLabels()
 		require.NoError(t, err)
@@ -120,7 +121,7 @@ func TestRuleTemplates(t *testing.T) {
 			}},
 			updated.Params)
 		assert.EqualValues(t, uParams.Template.For, updated.For)
-		assert.Equal(t, models.WarningSeverity, updated.Severity)
+		assert.Equal(t, models.Severity(common.Warning), updated.Severity)
 
 		labels, err := updated.GetLabels()
 		require.NoError(t, err)
@@ -154,6 +155,31 @@ func TestRuleTemplates(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Empty(t, templates)
+	})
+
+	t.Run("remove template in use", func(t *testing.T) {
+		tx, err := db.Begin()
+		require.NoError(t, err)
+		defer func() {
+			require.NoError(t, tx.Rollback())
+		}()
+
+		q := tx.Querier
+
+		name := gofakeit.UUID()
+
+		_, err = models.CreateTemplate(q, createTemplateParams(name))
+		require.NoError(t, err)
+
+		_ = createRule(t, q, name)
+
+		err = models.RemoveTemplate(q, name)
+		require.EqualError(t, err, "failed to delete rule template, as it is being used by a rule")
+
+		templates, err := models.FindTemplates(q)
+		require.NoError(t, err)
+
+		assert.NotEmpty(t, templates)
 	})
 
 	t.Run("list", func(t *testing.T) {
@@ -235,4 +261,33 @@ func changeTemplateParams(name string) *models.ChangeTemplateParams {
 			Annotations: nil,
 		},
 	}
+}
+
+func createRule(t *testing.T, q *reform.Querier, name string) string {
+	ch, err := models.CreateChannel(q, &models.CreateChannelParams{
+		Summary: "some summary",
+		EmailConfig: &models.EmailConfig{
+			To: []string{"test@test.test"},
+		},
+		Disabled: false,
+	})
+	require.NoError(t, err)
+	rule, err := models.CreateRule(q, &models.CreateRuleParams{
+		TemplateName: name,
+		Disabled:     true,
+		RuleParams: []models.RuleParam{
+			{
+				Name:       "test",
+				Type:       models.Float,
+				FloatValue: 3.14,
+			},
+		},
+		For:          5 * time.Second,
+		Severity:     models.Severity(common.Warning),
+		CustomLabels: map[string]string{"foo": "bar"},
+		Filters:      []models.Filter{{Type: models.Equal, Key: "value", Val: "10"}},
+		ChannelIDs:   []string{ch.ID},
+	})
+	require.NoError(t, err)
+	return rule.ID
 }

@@ -17,7 +17,7 @@
 package ia
 
 import (
-	"strings"
+	"os"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
@@ -30,11 +30,14 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
+const dirPerm = os.FileMode(0o775)
+
 func convertParamUnit(u string) iav1beta1.ParamUnit {
-	// TODO: check possible variants.
-	switch strings.ToLower(u) {
-	case "%", "percentage":
+	switch u {
+	case "%":
 		return iav1beta1.ParamUnit_PERCENTAGE
+	case "s":
+		return iav1beta1.ParamUnit_SECONDS
 	default:
 		return iav1beta1.ParamUnit_PARAM_UNIT_INVALID
 	}
@@ -105,27 +108,63 @@ func convertTemplate(l *logrus.Entry, template templateInfo) (*iav1beta1.Templat
 	return t, nil
 }
 
-func convertSeverity(severity models.Severity) managementpb.Severity {
-	switch severity {
-	case models.UnknownSeverity:
-		return managementpb.Severity_SEVERITY_INVALID
-	case models.EmergencySeverity:
-		return managementpb.Severity_SEVERITY_EMERGENCY
-	case models.AlertSeverity:
-		return managementpb.Severity_SEVERITY_ALERT
-	case models.CriticalSeverity:
-		return managementpb.Severity_SEVERITY_CRITICAL
-	case models.ErrorSeverity:
-		return managementpb.Severity_SEVERITY_ERROR
-	case models.WarningSeverity:
-		return managementpb.Severity_SEVERITY_WARNING
-	case models.NoticeSeverity:
-		return managementpb.Severity_SEVERITY_NOTICE
-	case models.InfoSeverity:
-		return managementpb.Severity_SEVERITY_INFO
-	case models.DebugSeverity:
-		return managementpb.Severity_SEVERITY_DEBUG
-	default:
-		return managementpb.Severity_SEVERITY_INVALID
+func convertRule(l *logrus.Entry, rule *models.Rule, template templateInfo, channels []*models.Channel) (*iav1beta1.Rule, error) {
+	r := &iav1beta1.Rule{
+		RuleId:   rule.ID,
+		Disabled: rule.Disabled,
+		Summary:  rule.Summary,
+		Severity: managementpb.Severity(rule.Severity),
+		For:      ptypes.DurationProto(rule.For),
 	}
+
+	var err error
+	r.CreatedAt, err = ptypes.TimestampProto(rule.CreatedAt)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to convert timestamp")
+	}
+
+	r.Template, err = convertTemplate(l, template)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to convert template")
+	}
+
+	r.Params, err = convertModelToRuleParams(rule.Params)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to convert rule parameters")
+	}
+
+	r.CustomLabels, err = rule.GetCustomLabels()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to load rule labels")
+	}
+
+	r.Filters = make([]*iav1beta1.Filter, len(rule.Filters))
+	for i, filter := range rule.Filters {
+		r.Filters[i] = &iav1beta1.Filter{
+			Type:  convertModelToFilterType(filter.Type),
+			Key:   filter.Key,
+			Value: filter.Val,
+		}
+	}
+
+	cm := make(map[string]*models.Channel)
+	for _, channel := range channels {
+		cm[channel.ID] = channel
+	}
+
+	for _, id := range rule.ChannelIDs {
+		channel, ok := cm[id]
+		if !ok {
+			l.Warningf("Skip missing channel with ID %s", id)
+			continue
+		}
+
+		c, err := convertChannel(channel)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to convert channel")
+		}
+		r.Channels = append(r.Channels, c)
+	}
+
+	return r, nil
 }

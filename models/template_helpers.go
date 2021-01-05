@@ -107,7 +107,7 @@ func CreateTemplate(q *reform.Querier, params *CreateTemplateParams) (*Template,
 		Expr:     template.Expr,
 		Params:   p,
 		For:      time.Duration(template.For),
-		Severity: convertSeverity(template.Severity),
+		Severity: Severity(template.Severity),
 		Source:   params.Source,
 		Yaml:     params.Yaml,
 	}
@@ -158,7 +158,7 @@ func ChangeTemplate(q *reform.Querier, params *ChangeTemplateParams) (*Template,
 	row.Expr = template.Expr
 	row.Params = p
 	row.For = time.Duration(template.For)
-	row.Severity = convertSeverity(template.Severity)
+	row.Severity = Severity(template.Severity)
 	row.Yaml = params.Yaml
 
 	if err := row.SetLabels(template.Labels); err != nil {
@@ -183,11 +183,32 @@ func RemoveTemplate(q *reform.Querier, name string) error {
 		return err
 	}
 
-	err := q.Delete(&Template{Name: name})
+	inUse, err := templateInUse(q, name)
+	if err != nil {
+		return err
+	}
+
+	if inUse {
+		return errors.Errorf("failed to delete rule template, as it is being used by a rule")
+	}
+
+	err = q.Delete(&Template{Name: name})
 	if err != nil {
 		return errors.Wrap(err, "failed to delete rule template")
 	}
 	return nil
+}
+
+func templateInUse(q *reform.Querier, name string) (bool, error) {
+	_, err := q.FindOneFrom(RuleTable, "template_name", name)
+	switch err {
+	case nil:
+		return true, nil
+	case reform.ErrNoRows:
+		return false, nil
+	default:
+		return false, errors.WithStack(err)
+	}
 }
 
 func convertTemplateParams(params []alert.Parameter) (TemplateParams, error) {
