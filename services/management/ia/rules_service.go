@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/AlekSi/pointer"
+	"github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona-platform/saas/pkg/common"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
 	"github.com/percona/promconfig"
@@ -333,8 +334,13 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 		return nil, err
 	}
 
-	if _, ok := s.templates.getTemplates()[params.TemplateName]; !ok {
+	t, ok := s.templates.getTemplates()[params.TemplateName]
+	if !ok {
 		return nil, status.Errorf(codes.NotFound, "Unknown template %s.", params.TemplateName)
+	}
+
+	if err = validateRuleParams(params.RuleParams, t.Params); err != nil {
+		return nil, err
 	}
 
 	var rule *models.Rule
@@ -352,6 +358,30 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 	s.alertManager.RequestConfigurationUpdate()
 
 	return &iav1beta1.CreateAlertRuleResponse{RuleId: rule.ID}, nil
+}
+
+func validateRuleParams(ruleParams models.RuleParams, templateParams []alert.Parameter) error {
+	if len(ruleParams) != len(templateParams) {
+		return status.Errorf(codes.InvalidArgument, "Template defines only %d parameters, but rule has %d.", len(templateParams), len(ruleParams))
+	}
+
+	m := make(map[string]models.RuleParam, len(ruleParams))
+	for _, param := range ruleParams {
+		m[param.Name] = param
+	}
+
+	for _, tp := range templateParams {
+		rp, ok := m[tp.Name]
+		if !ok {
+			return status.Errorf(codes.InvalidArgument, "Missing parameter %s.", tp.Name)
+		}
+
+		if string(tp.Type) != string(rp.Type) {
+			return status.Errorf(codes.InvalidArgument, "Parameter %s has type %s instead of %s.", tp.Name, rp.Type, tp.Type)
+		}
+	}
+
+	return nil
 }
 
 // UpdateAlertRule updates Integrated Alerting rule.
