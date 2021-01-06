@@ -19,6 +19,9 @@ package management
 import (
 	"context"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services"
 
@@ -44,9 +47,16 @@ func (e ExternalService) AddExternal(ctx context.Context, req *managementpb.AddE
 	res := new(managementpb.AddExternalResponse)
 	var pmmAgentID *string
 	if e := e.db.InTransaction(func(tx *reform.TX) error {
+		if (req.NodeId == "") != (req.RunsOnNodeId == "") {
+			return status.Error(codes.InvalidArgument, "runs_on_node_id and node_id should be specified together.")
+		}
+		nodeID, err := nodeID(tx, req.NodeId, req.NodeName, req.AddNode, req.Address)
+		if err != nil {
+			return err
+		}
 		service, err := models.AddNewService(tx.Querier, models.ExternalServiceType, &models.AddDBMSServiceParams{
 			ServiceName:    req.ServiceName,
-			NodeID:         req.NodeId,
+			NodeID:         nodeID,
 			Environment:    req.Environment,
 			Cluster:        req.Cluster,
 			ReplicationSet: req.ReplicationSet,
