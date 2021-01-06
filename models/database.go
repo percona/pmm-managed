@@ -405,7 +405,7 @@ var databaseSchema = [][]string{
 			severity VARCHAR NOT NULL,
 			custom_labels TEXT,
 			filters JSONB,
-			channel_ids JSONB,
+			channel_ids JSONB NOT NULL,
 
 			created_at TIMESTAMP NOT NULL,
 			updated_at TIMESTAMP NOT NULL,
@@ -415,6 +415,9 @@ var databaseSchema = [][]string{
 	},
 	25: {
 		`ALTER TABLE agents ADD COLUMN mongo_db_tls_options JSONB`,
+	},
+	26: {
+		`ALTER TABLE ia_rules ALTER COLUMN channel_ids DROP NOT NULL`,
 	},
 }
 
