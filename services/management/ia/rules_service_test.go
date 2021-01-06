@@ -40,7 +40,7 @@ import (
 	"github.com/percona/pmm-managed/utils/tests"
 )
 
-func TestConvertTemplate(t *testing.T) {
+func TestCreateAlertRule(t *testing.T) {
 	ctx := context.Background()
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))

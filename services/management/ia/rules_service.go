@@ -414,7 +414,21 @@ func (s *RulesService) UpdateAlertRule(ctx context.Context, req *iav1beta1.Updat
 	}
 
 	e := s.db.InTransaction(func(tx *reform.TX) error {
-		_, err := models.ChangeRule(tx.Querier, req.RuleId, params)
+		rule, err := models.FindRuleByID(tx.Querier, req.RuleId)
+		if err != nil {
+			return err
+		}
+
+		t, ok := s.templates.getTemplates()[rule.TemplateName]
+		if !ok {
+			return status.Errorf(codes.NotFound, "Unknown template %s.", rule.TemplateName)
+		}
+
+		if err = validateRuleParams(params.RuleParams, t.Params); err != nil {
+			return err
+		}
+
+		_, err = models.ChangeRule(tx.Querier, req.RuleId, params)
 		return err
 	})
 	if e != nil {
