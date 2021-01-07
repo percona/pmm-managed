@@ -84,7 +84,7 @@ func TestRules(t *testing.T) {
 
 			templateName := createTemplate(t, q)
 
-			params := createCreateRuleParams(templateName, "", nonEmptyFilter)
+			params := createCreateRuleParams(templateName, "", emptyFilter)
 			rule, err := models.CreateRule(q, params)
 			require.NoError(t, err)
 
