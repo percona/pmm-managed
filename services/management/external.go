@@ -54,6 +54,12 @@ func (e ExternalService) AddExternal(ctx context.Context, req *managementpb.AddE
 		if err != nil {
 			return err
 		}
+
+		runsOnNodeId := req.RunsOnNodeId
+		if req.AddNode != nil && runsOnNodeId == "" {
+			runsOnNodeId = nodeID
+		}
+
 		service, err := models.AddNewService(tx.Querier, models.ExternalServiceType, &models.AddDBMSServiceParams{
 			ServiceName:    req.ServiceName,
 			NodeID:         nodeID,
@@ -74,7 +80,7 @@ func (e ExternalService) AddExternal(ctx context.Context, req *managementpb.AddE
 		res.Service = invService.(*inventorypb.ExternalService)
 
 		params := &models.CreateExternalExporterParams{
-			RunsOnNodeID: req.RunsOnNodeId,
+			RunsOnNodeID: runsOnNodeId,
 			ServiceID:    service.ServiceID,
 			Username:     req.Username,
 			Password:     req.Password,
