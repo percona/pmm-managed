@@ -34,12 +34,11 @@ import (
 	"github.com/percona/pmm-managed/utils/tests"
 )
 
-var emptyFilter = models.Filter{}
-var nonEmptyFilter = models.Filter{Type: models.Equal, Key: "value", Val: "10"}
-
 func TestRules(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+
+	nonEmptyFilters := []models.Filter{{Type: models.Equal, Key: "value", Val: "10"}}
 
 	t.Run("create", func(t *testing.T) {
 		t.Run("normal", func(t *testing.T) {
@@ -54,7 +53,7 @@ func TestRules(t *testing.T) {
 			templateName := createTemplate(t, q)
 			channelID := createChannel(t, q)
 
-			params := createCreateRuleParams(templateName, channelID, nonEmptyFilter)
+			params := createCreateRuleParams(templateName, channelID, nonEmptyFilters)
 			rule, err := models.CreateRule(q, params)
 			require.NoError(t, err)
 
@@ -84,7 +83,7 @@ func TestRules(t *testing.T) {
 
 			templateName := createTemplate(t, q)
 
-			params := createCreateRuleParams(templateName, "", emptyFilter)
+			params := createCreateRuleParams(templateName, "", nil)
 			rule, err := models.CreateRule(q, params)
 			require.NoError(t, err)
 
@@ -115,7 +114,7 @@ func TestRules(t *testing.T) {
 			templateName := createTemplate(t, q)
 			channelID := gofakeit.UUID()
 
-			params := createCreateRuleParams(templateName, channelID, nonEmptyFilter)
+			params := createCreateRuleParams(templateName, channelID, nonEmptyFilters)
 			_, err = models.CreateRule(q, params)
 			tests.AssertGRPCError(t, status.Newf(codes.NotFound, "Failed to find all required channels: %v.", []string{channelID}), err)
 		})
@@ -133,7 +132,7 @@ func TestRules(t *testing.T) {
 
 			templateName := createTemplate(t, q)
 			channelID := createChannel(t, q)
-			rule, err := models.CreateRule(q, createCreateRuleParams(templateName, channelID, nonEmptyFilter))
+			rule, err := models.CreateRule(q, createCreateRuleParams(templateName, channelID, nonEmptyFilters))
 			require.NoError(t, err)
 
 			newChannelID := createChannel(t, q)
@@ -176,7 +175,7 @@ func TestRules(t *testing.T) {
 
 			templateName := createTemplate(t, q)
 			channelID := createChannel(t, q)
-			rule, err := models.CreateRule(q, createCreateRuleParams(templateName, channelID, nonEmptyFilter))
+			rule, err := models.CreateRule(q, createCreateRuleParams(templateName, channelID, nonEmptyFilters))
 			require.NoError(t, err)
 
 			newChannelID := gofakeit.UUID()
@@ -208,7 +207,7 @@ func TestRules(t *testing.T) {
 		templateName := createTemplate(t, q)
 		channelID := createChannel(t, q)
 
-		params := createCreateRuleParams(templateName, channelID, nonEmptyFilter)
+		params := createCreateRuleParams(templateName, channelID, nonEmptyFilters)
 		rule, err := models.CreateRule(q, params)
 		require.NoError(t, err)
 
@@ -232,7 +231,7 @@ func TestRules(t *testing.T) {
 		templateName := createTemplate(t, q)
 		channelID := createChannel(t, q)
 
-		params := createCreateRuleParams(templateName, channelID, nonEmptyFilter)
+		params := createCreateRuleParams(templateName, channelID, nonEmptyFilters)
 		rule, err := models.CreateRule(q, params)
 		require.NoError(t, err)
 
@@ -254,7 +253,7 @@ func TestRules(t *testing.T) {
 	})
 }
 
-func createCreateRuleParams(templateName, channelID string, filter models.Filter) *models.CreateRuleParams {
+func createCreateRuleParams(templateName, channelID string, filters []models.Filter) *models.CreateRuleParams {
 	rule := &models.CreateRuleParams{
 		TemplateName: templateName,
 		Disabled:     true,
@@ -273,8 +272,8 @@ func createCreateRuleParams(templateName, channelID string, filter models.Filter
 		rule.ChannelIDs = []string{channelID}
 	}
 
-	if filter != emptyFilter {
-		rule.Filters = []models.Filter{{Type: models.Equal, Key: "value", Val: "10"}}
+	if filters != nil {
+		rule.Filters = filters
 	}
 
 	return rule
