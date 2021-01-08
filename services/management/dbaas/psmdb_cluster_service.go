@@ -129,7 +129,7 @@ func (s PSMDBClusterService) GetPSMDBCluster(ctx context.Context, req *dbaasv1be
 			Password:   cluster.Credentials.Password,
 			Host:       host,
 			Port:       cluster.Credentials.Port,
-			Replicaset: "rs0",
+			Replicaset: cluster.Credentials.Replicaset,
 		},
 	}
 
