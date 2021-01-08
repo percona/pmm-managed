@@ -126,17 +126,12 @@ func (s XtraDBClusterService) GetXtraDBCluster(ctx context.Context, req *dbaasv1
 		return nil, err
 	}
 
-	host := ""
-	if cluster.Credentials != nil {
-		host = cluster.Credentials.Host
-	}
-
 	_ = kubernetesCluster
 	resp := dbaasv1beta1.GetXtraDBClusterResponse{
 		ConnectionCredentials: &dbaasv1beta1.XtraDBClusterConnectionCredentials{
 			Username: cluster.Credentials.Username,
 			Password: cluster.Credentials.Password,
-			Host:     host,
+			Host:     cluster.Credentials.Host,
 			Port:     cluster.Credentials.Port,
 		},
 	}

@@ -118,16 +118,11 @@ func (s PSMDBClusterService) GetPSMDBCluster(ctx context.Context, req *dbaasv1be
 		return nil, err
 	}
 
-	host := ""
-	if cluster.Credentials != nil {
-		host = cluster.Credentials.Host
-	}
-
 	resp := dbaasv1beta1.GetPSMDBClusterResponse{
 		ConnectionCredentials: &dbaasv1beta1.GetPSMDBClusterResponse_PSMDBCredentials{
 			Username:   cluster.Credentials.Username,
 			Password:   cluster.Credentials.Password,
-			Host:       host,
+			Host:       cluster.Credentials.Host,
 			Port:       cluster.Credentials.Port,
 			Replicaset: cluster.Credentials.Replicaset,
 		},
