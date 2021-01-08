@@ -112,7 +112,7 @@ func (p *TemplateParams) Scan(src interface{}) error { return jsonScan(p, src) }
 type TemplateParam struct {
 	Name    string    `json:"name"`
 	Summary string    `json:"summary"`
-	Unit    string    `json:"unit"`
+	Unit    Unit      `json:"unit"`
 	Type    ParamType `json:"type"`
 
 	FloatParam *FloatParam `json:"float_param"`
@@ -122,19 +122,19 @@ type TemplateParam struct {
 
 // BoolParam represents boolean template parameter.
 type BoolParam struct {
-	Default bool `json:"default"`
+	Default *bool `json:"default,omitempty"`
 }
 
 // FloatParam represents float template parameter.
 type FloatParam struct {
-	Default float64 `json:"default"`
-	Min     float64 `json:"min"`
-	Max     float64 `json:"max"`
+	Default *float64 `json:"default,omitempty"`
+	Min     *float64 `json:"min,omitempty"`
+	Max     *float64 `json:"max,omitempty"`
 }
 
 // StringParam represents string template parameter.
 type StringParam struct {
-	Default string `json:"default"`
+	Default *string `json:"default,omitempty"`
 }
 
 // Source represents template source.
@@ -146,6 +146,15 @@ const (
 	SAASSource     = Source("saas")
 	UserFileSource = Source("user_file")
 	UserAPISource  = Source("user_api")
+)
+
+// Unit parameter unit.
+type Unit string
+
+// Available parameter units.
+const (
+	Percentage = Unit("%")
+	Seconds    = Unit("s")
 )
 
 // check interfaces.
