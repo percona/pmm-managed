@@ -112,7 +112,7 @@ func (p *TemplateParams) Scan(src interface{}) error { return jsonScan(p, src) }
 type TemplateParam struct {
 	Name    string    `json:"name"`
 	Summary string    `json:"summary"`
-	Unit    Unit      `json:"unit"`
+	Unit    string    `json:"unit"`
 	Type    ParamType `json:"type"`
 
 	FloatParam *FloatParam `json:"float_param"`
@@ -146,15 +146,6 @@ const (
 	SAASSource     = Source("saas")
 	UserFileSource = Source("user_file")
 	UserAPISource  = Source("user_api")
-)
-
-// Unit parameter unit.
-type Unit string
-
-// Available parameter units.
-const (
-	Percentage = Unit("%")
-	Seconds    = Unit("s")
 )
 
 // check interfaces.

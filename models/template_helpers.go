@@ -219,7 +219,7 @@ func convertTemplateParams(params []alert.Parameter) (TemplateParams, error) {
 		res[i] = TemplateParam{
 			Name:    param.Name,
 			Summary: param.Summary,
-			Unit:    Unit(param.Unit),
+			Unit:    string(param.Unit),
 			Type:    ParamType(param.Type),
 		}
 
