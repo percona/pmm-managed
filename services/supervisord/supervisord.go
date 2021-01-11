@@ -578,6 +578,7 @@ command =
 		--httpListenAddr=127.0.0.1:9090
 		--search.disableCache={{ .VMDBCacheDisable }}
 		--search.maxQueryLen=72KB
+		--search.latencyOffset=5s
 		--search.maxConcurrentRequests=32
 		--search.maxQueueDuration=20s
 		--search.maxQueryDuration=30s
