@@ -50,6 +50,9 @@ func (e ExternalService) AddExternal(ctx context.Context, req *managementpb.AddE
 		if (req.NodeId == "") != (req.RunsOnNodeId == "") {
 			return status.Error(codes.InvalidArgument, "runs_on_node_id and node_id should be specified together.")
 		}
+		if req.Address == "" && req.AddNode != nil {
+			return status.Error(codes.InvalidArgument, "address can't be empty for add node request.")
+		}
 		nodeID, err := nodeID(tx, req.NodeId, req.NodeName, req.AddNode, req.Address)
 		if err != nil {
 			return err
