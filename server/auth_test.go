@@ -113,8 +113,8 @@ func TestSetup(t *testing.T) {
 			"prometheus/": 303,
 			"qan":         303,
 			"qan/":        303,
-			"swagger":     303,
-			"swagger/":    303,
+			"swagger":     200,
+			"swagger/":    301,
 
 			"v1/readyz":           200,
 			"v1/AWSInstanceCheck": 405, // only POST is expected
@@ -164,15 +164,6 @@ func TestSetup(t *testing.T) {
 }
 
 func TestSwagger(t *testing.T) {
-	// https://jira.percona.com/browse/PMM-5137
-
-	// make client that does not follow redirects
-	client := &http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
-	}
-
 	for _, path := range []string{
 		"swagger",
 		"swagger/",
@@ -197,7 +188,7 @@ func TestSwagger(t *testing.T) {
 				req, err := http.NewRequest("GET", uri.String(), nil)
 				require.NoError(t, err)
 
-				resp, _ := doRequest(t, client, req)
+				resp, _ := doRequest(t, http.DefaultClient, req)
 				require.NoError(t, err)
 				assert.Equal(t, 200, resp.StatusCode)
 			})
@@ -212,7 +203,7 @@ func TestSwagger(t *testing.T) {
 				req, err := http.NewRequest("GET", uri.String(), nil)
 				require.NoError(t, err)
 
-				resp, _ := doRequest(t, client, req)
+				resp, _ := doRequest(t, http.DefaultClient, req)
 				require.NoError(t, err)
 				assert.Equal(t, 200, resp.StatusCode)
 			})
