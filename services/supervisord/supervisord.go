@@ -580,6 +580,8 @@ command =
 		--search.maxQueryLen=72KB
 		--search.latencyOffset=5s
 		--search.maxConcurrentRequests=32
+
+		//
 		--search.maxQueueDuration=20s
 		--search.maxQueryDuration=60s
 		--search.maxUniqueTimeseries=1500000
