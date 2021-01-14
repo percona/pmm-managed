@@ -6,6 +6,7 @@ import (
 	"github.com/AlekSi/pointer"
 	inventoryClient "github.com/percona/pmm/api/inventorypb/json/client"
 	"github.com/percona/pmm/api/inventorypb/json/client/agents"
+	"github.com/percona/pmm/api/inventorypb/json/client/nodes"
 	"github.com/percona/pmm/api/inventorypb/json/client/services"
 	"github.com/percona/pmm/api/managementpb/json/client"
 	"github.com/percona/pmm/api/managementpb/json/client/external"
@@ -142,6 +143,97 @@ func TestAddExternal(t *testing.T) {
 		}, *serviceOK.Payload)
 	})
 
+	t.Run("OnRemoteNode", func(t *testing.T) {
+		nodeName := pmmapitests.TestString(t, "genericNode-for-basic-name")
+
+		serviceName := pmmapitests.TestString(t, "service-for-basic-name")
+
+		params := &external.AddExternalParams{
+			Context: pmmapitests.Context,
+			Body: external.AddExternalBody{
+				AddNode: &external.AddExternalParamsBodyAddNode{
+					NodeType:     pointer.ToString(external.AddExternalParamsBodyAddNodeNodeTypeREMOTENODE),
+					NodeName:     nodeName,
+					MachineID:    "/machine-id/",
+					Distro:       "linux",
+					Region:       "us-west2",
+					CustomLabels: map[string]string{"foo": "bar-for-node"},
+				},
+				Address:     "localhost",
+				ServiceName: serviceName,
+				ListenPort:  9104,
+				Group:       "", // empty group - pmm-admin does not support group.
+			},
+		}
+		addExternalOK, err := client.Default.External.AddExternal(params)
+		require.NoError(t, err)
+		require.NotNil(t, addExternalOK)
+		require.NotNil(t, addExternalOK.Payload.Service)
+		nodeID := addExternalOK.Payload.Service.NodeID
+		defer pmmapitests.RemoveNodes(t, nodeID)
+		serviceID := addExternalOK.Payload.Service.ServiceID
+		defer pmmapitests.RemoveServices(t, serviceID)
+
+		// Check that node is created and its fields.
+		node, err := inventoryClient.Default.Nodes.GetNode(&nodes.GetNodeParams{
+			Body: nodes.GetNodeBody{
+				NodeID: nodeID,
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		require.NotNil(t, node)
+		assert.Equal(t, nodes.GetNodeOKBody{
+			Remote: &nodes.GetNodeOKBodyRemote{
+				NodeID:       nodeID,
+				NodeName:     nodeName,
+				Address:      "localhost",
+				Region:       "us-west2",
+				CustomLabels: map[string]string{"foo": "bar-for-node"},
+			},
+		}, *node.Payload)
+
+		// Check that service is created and its fields.
+		serviceOK, err := inventoryClient.Default.Services.GetService(&services.GetServiceParams{
+			Body: services.GetServiceBody{
+				ServiceID: serviceID,
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		require.NotNil(t, serviceOK)
+		assert.Equal(t, services.GetServiceOKBody{
+			External: &services.GetServiceOKBodyExternal{
+				ServiceID:   serviceID,
+				NodeID:      nodeID,
+				ServiceName: serviceName,
+				Group:       "external",
+			},
+		}, *serviceOK.Payload)
+
+		// Check that external exporter is added.
+		listAgents, err := inventoryClient.Default.Agents.ListAgents(&agents.ListAgentsParams{
+			Context: pmmapitests.Context,
+			Body: agents.ListAgentsBody{
+				ServiceID: serviceID,
+			},
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, agents.ListAgentsOKBody{
+			ExternalExporter: []*agents.ExternalExporterItems0{
+				{
+					AgentID:      listAgents.Payload.ExternalExporter[0].AgentID,
+					ServiceID:    serviceID,
+					ListenPort:   9104,
+					RunsOnNodeID: nodeID,
+					Scheme:       "http",
+					MetricsPath:  "/metrics",
+				},
+			},
+		}, *listAgents.Payload)
+		defer removeAllAgentsInList(t, listAgents)
+	})
+
 	t.Run("With the same name", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-for-the-same-name")
 		genericNode := pmmapitests.AddGenericNode(t, nodeName)
@@ -240,7 +332,7 @@ func TestAddExternal(t *testing.T) {
 			},
 		}
 		addExternalOK, err := client.Default.External.AddExternal(params)
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field NodeId: value '' must not be an empty string")
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "runs_on_node_id and node_id should be specified together.")
 		assert.Nil(t, addExternalOK)
 	})
 
@@ -261,7 +353,31 @@ func TestAddExternal(t *testing.T) {
 			},
 		}
 		addExternalOK, err := client.Default.External.AddExternal(params)
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field RunsOnNodeId: value '' must not be an empty string")
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "runs_on_node_id and node_id should be specified together.")
+		assert.Nil(t, addExternalOK)
+	})
+
+	t.Run("Empty Address for Add Node", func(t *testing.T) {
+		nodeName := pmmapitests.TestString(t, "node-name")
+		genericNode := pmmapitests.AddGenericNode(t, nodeName)
+		nodeID := genericNode.NodeID
+		defer pmmapitests.RemoveNodes(t, nodeID)
+
+		serviceName := pmmapitests.TestString(t, "service-name")
+		params := &external.AddExternalParams{
+			Context: pmmapitests.Context,
+			Body: external.AddExternalBody{
+				AddNode: &external.AddExternalParamsBodyAddNode{
+					NodeType: pointer.ToString(external.AddExternalParamsBodyAddNodeNodeTypeREMOTENODE),
+					NodeName: "external-serverless",
+				},
+				ServiceName: serviceName,
+				ListenPort:  12345,
+				Group:       "external",
+			},
+		}
+		addExternalOK, err := client.Default.External.AddExternal(params)
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "address can't be empty for add node request.")
 		assert.Nil(t, addExternalOK)
 	})
 }
