@@ -416,7 +416,7 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-5765-add-external-service-on-remote-node"
+  branch = "PMM-2.0"
   digest = "1:d2907ba9a56d05fab5b12db0bb7aace4fa68a924cfb04d5ebe73687fe1a7a604"
   name = "github.com/percona/pmm"
   packages = [
@@ -440,7 +440,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "0ec97e93a23b7a4c54c6b580f12c48234d4c850b"
+  revision = "c4ee3d8bfe5b0b556e49afba553d6700308f3d25"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
