@@ -6,9 +6,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/AlekSi/pointer"
 	"github.com/brianvoe/gofakeit"
 	"github.com/percona-platform/saas/pkg/alert"
 	templatesClient "github.com/percona/pmm/api/managementpb/ia/json/client"
+	"github.com/percona/pmm/api/managementpb/ia/json/client/rules"
 	"github.com/percona/pmm/api/managementpb/ia/json/client/templates"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -280,7 +282,11 @@ func TestDeleteTemplate(t *testing.T) {
 		channelID := createChannel(t)
 		defer deleteChannel(t, templatesClient.Default.Channels, channelID)
 
-		params := createAlertRuleParams(name, channelID)
+		params := createAlertRuleParams(name, channelID, &rules.FiltersItems0{
+			Type:  pointer.ToString("EQUAL"),
+			Key:   "threshold",
+			Value: "12",
+		})
 
 		rule, err := templatesClient.Default.Rules.CreateAlertRule(params)
 		require.NoError(t, err)

@@ -22,6 +22,12 @@ import (
 // we don't enable or disable IA explicit in our tests since it is enabled by default through
 // ENABLE_ALERTING env var.
 func TestRulesAPI(t *testing.T) {
+	dummyFilter := &rules.FiltersItems0{
+		Type:  pointer.ToString("EQUAL"),
+		Key:   "threshold",
+		Value: "12",
+	}
+
 	templateName := createTemplate(t)
 	defer deleteTemplate(t, client.Default.Templates, templateName)
 
@@ -32,7 +38,16 @@ func TestRulesAPI(t *testing.T) {
 
 	t.Run("add", func(t *testing.T) {
 		t.Run("normal", func(t *testing.T) {
-			params := createAlertRuleParams(templateName, channelID)
+			params := createAlertRuleParams(templateName, channelID, dummyFilter)
+			rule, err := client.CreateAlertRule(params)
+			require.NoError(t, err)
+			defer deleteRule(t, client, rule.Payload.RuleID)
+
+			assert.NotEmpty(t, rule.Payload.RuleID)
+		})
+
+		t.Run("without channels and filters", func(t *testing.T) {
+			params := createAlertRuleParams(templateName, "", nil)
 			rule, err := client.CreateAlertRule(params)
 			require.NoError(t, err)
 			defer deleteRule(t, client, rule.Payload.RuleID)
@@ -41,7 +56,7 @@ func TestRulesAPI(t *testing.T) {
 		})
 
 		t.Run("builtin_template", func(t *testing.T) {
-			params := createAlertRuleParams("pmm_mongodb_restarted", channelID)
+			params := createAlertRuleParams("pmm_mongodb_restarted", channelID, dummyFilter)
 			rule, err := client.CreateAlertRule(params)
 			require.NoError(t, err)
 			defer deleteRule(t, client, rule.Payload.RuleID)
@@ -51,14 +66,14 @@ func TestRulesAPI(t *testing.T) {
 
 		t.Run("unknown template", func(t *testing.T) {
 			templateName := gofakeit.UUID()
-			params := createAlertRuleParams(templateName, channelID)
+			params := createAlertRuleParams(templateName, channelID, dummyFilter)
 			_, err := client.CreateAlertRule(params)
 			pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Unknown template %s.", templateName)
 		})
 
 		t.Run("unknown channel", func(t *testing.T) {
 			channelID := gofakeit.UUID()
-			params := createAlertRuleParams(templateName, channelID)
+			params := createAlertRuleParams(templateName, channelID, dummyFilter)
 			_, err := client.CreateAlertRule(params)
 			pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Failed to find all required channels: [%s].", channelID)
 		})
@@ -66,7 +81,7 @@ func TestRulesAPI(t *testing.T) {
 
 	t.Run("update", func(t *testing.T) {
 		t.Run("normal", func(t *testing.T) {
-			cParams := createAlertRuleParams(templateName, channelID)
+			cParams := createAlertRuleParams(templateName, channelID, dummyFilter)
 			rule, err := client.CreateAlertRule(cParams)
 			require.NoError(t, err)
 			defer deleteRule(t, client, rule.Payload.RuleID)
@@ -118,7 +133,7 @@ func TestRulesAPI(t *testing.T) {
 		})
 
 		t.Run("unknown channel", func(t *testing.T) {
-			cParams := createAlertRuleParams(templateName, channelID)
+			cParams := createAlertRuleParams(templateName, channelID, dummyFilter)
 			rule, err := client.CreateAlertRule(cParams)
 			require.NoError(t, err)
 			defer deleteRule(t, client, rule.Payload.RuleID)
@@ -152,7 +167,7 @@ func TestRulesAPI(t *testing.T) {
 
 	t.Run("toggle", func(t *testing.T) {
 		t.Run("normal", func(t *testing.T) {
-			cParams := createAlertRuleParams(templateName, channelID)
+			cParams := createAlertRuleParams(templateName, channelID, dummyFilter)
 			rule, err := client.CreateAlertRule(cParams)
 			require.NoError(t, err)
 			defer deleteRule(t, client, rule.Payload.RuleID)
@@ -195,7 +210,7 @@ func TestRulesAPI(t *testing.T) {
 	})
 
 	t.Run("delete", func(t *testing.T) {
-		params := createAlertRuleParams(templateName, channelID)
+		params := createAlertRuleParams(templateName, channelID, dummyFilter)
 		rule, err := client.CreateAlertRule(params)
 		require.NoError(t, err)
 
@@ -214,7 +229,7 @@ func TestRulesAPI(t *testing.T) {
 	})
 
 	t.Run("list", func(t *testing.T) {
-		params := createAlertRuleParams(templateName, channelID)
+		params := createAlertRuleParams(templateName, channelID, dummyFilter)
 		rule, err := client.CreateAlertRule(params)
 		require.NoError(t, err)
 		defer deleteRule(t, client, rule.Payload.RuleID)
@@ -257,8 +272,8 @@ func deleteRule(t *testing.T, client rules.ClientService, id string) {
 	assert.NoError(t, err)
 }
 
-func createAlertRuleParams(templateName, channelID string) *rules.CreateAlertRuleParams {
-	return &rules.CreateAlertRuleParams{
+func createAlertRuleParams(templateName, channelID string, filter *rules.FiltersItems0) *rules.CreateAlertRuleParams {
+	rule := &rules.CreateAlertRuleParams{
 		Body: rules.CreateAlertRuleBody{
 			TemplateName: templateName,
 			Disabled:     true,
@@ -271,15 +286,19 @@ func createAlertRuleParams(templateName, channelID string) *rules.CreateAlertRul
 			For:          "5s",
 			Severity:     pointer.ToString("SEVERITY_WARNING"),
 			CustomLabels: map[string]string{"foo": "bar"},
-			Filters: []*rules.FiltersItems0{{
-				Type:  pointer.ToString("EQUAL"),
-				Key:   "threshold",
-				Value: "12",
-			}},
-			ChannelIds: []string{channelID},
 		},
 		Context: pmmapitests.Context,
 	}
+
+	if channelID != "" {
+		rule.Body.ChannelIds = []string{channelID}
+	}
+
+	if filter != nil {
+		rule.Body.Filters = []*rules.FiltersItems0{filter}
+	}
+
+	return rule
 }
 
 func createTemplate(t *testing.T) string {
