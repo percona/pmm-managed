@@ -60,6 +60,7 @@ type Server struct {
 	vmalert              vmAlertService
 	vmalertExternalRules vmAlertExternalRules
 	alertmanager         alertmanagerService
+	checksService        checksService
 	supervisord          supervisordService
 	telemetryService     telemetryService
 	platformService      platformService
@@ -87,6 +88,7 @@ type Params struct {
 	VMDB                 prometheusService
 	VMAlert              prometheusService
 	Alertmanager         alertmanagerService
+	ChecksService        checksService
 	VMAlertExternalRules vmAlertExternalRules
 	Supervisord          supervisordService
 	TelemetryService     telemetryService
@@ -109,6 +111,7 @@ func NewServer(params *Params) (*Server, error) {
 		r:                    params.AgentsRegistry,
 		vmalert:              params.VMAlert,
 		alertmanager:         params.Alertmanager,
+		checksService:        params.ChecksService,
 		vmalertExternalRules: params.VMAlertExternalRules,
 		supervisord:          params.Supervisord,
 		telemetryService:     params.TelemetryService,
@@ -594,6 +597,14 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	if settings.SaaS.STTEnabled {
+		err = s.checksService.StartChecks(ctx)
+		// should we return error or just log it?
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if err := s.supervisord.UpdateConfiguration(settings); err != nil {
