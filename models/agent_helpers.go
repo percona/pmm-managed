@@ -359,8 +359,7 @@ func CreateNodeExporter(q *reform.Querier, pmmAgentID string, customLabels map[s
 		return nil, err
 	}
 	if !isPushMetricsSupported(pmmAgent.Version) {
-		return nil, errors.Errorf("cannot use push_metrics_enabled with pmm_agent version=%q,"+
-			" it doesn't support it, minimum supported version=%q", pointer.GetString(pmmAgent.Version), PMMAgentWithPushMetricsSupport.String())
+		pushMetrics = false
 	}
 	row := &Agent{
 		AgentID:     id,
@@ -414,8 +413,7 @@ func CreateExternalExporter(q *reform.Querier, params *CreateExternalExporterPar
 				" more than one (%d) pmm_agent was found at node: %s", len(agentIDs), params.RunsOnNodeID)
 		}
 		if !isPushMetricsSupported(agentIDs[0].Version) {
-			return nil, errors.Errorf("cannot use push_metrics_enabled with pmm_agent version=%q,"+
-				" it doesn't support it, minimum supported version=%q", pointer.GetString(agentIDs[0].Version), PMMAgentWithPushMetricsSupport.String())
+			params.PushMetrics = false
 		}
 		pmmAgentID = pointer.ToString(agentIDs[0].AgentID)
 		runsOnNodeID = nil
