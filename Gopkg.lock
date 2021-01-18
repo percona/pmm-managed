@@ -384,15 +384,15 @@
 
 [[projects]]
   branch = "main"
-  digest = "1:053f0c93dcddd3033e6b0dffa70717ca742f66c51d8894b7f1a1854eb1e6c853"
+  digest = "1:d6c8d679318cbc3593eab770aa4a6b8bed8181aaf110a6482b8d9432a81f2df5"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "f96aecdeca9326ea98e11b68d214c536d2657953"
+  revision = "3f82faf45bf2d9aa00f9791efd114da4b6675e07"
 
 [[projects]]
   branch = "main"
-  digest = "1:1437b7f23ac82538bfd92ed22909f854d6ef51020792b76bec03c0e2a4bec125"
+  digest = "1:c1629f86dc19ba5a6f03cbce52a629deda6f77184272ed10d97e744224cf2fad"
   name = "github.com/percona-platform/saas"
   packages = [
     "gen/auth",
@@ -405,7 +405,7 @@
     "pkg/starlark",
   ]
   pruneopts = "NUT"
-  revision = "b395fb361ebdfbc9dcbcb7b702fc197c8f59e5fa"
+  revision = "fa94aa1c69dda7db9834dbaa295ec9977a45b165"
 
 [[projects]]
   digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
@@ -443,15 +443,15 @@
   revision = "7ad25c0b059ffd6aaaf9e593f6c51c1a75868c2b"
 
 [[projects]]
-  digest = "1:6832634ec059f4bfddaff75621cf1c4750949129c6de2e5e58e01059d0851e25"
+  digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
   name = "github.com/percona/promconfig"
   packages = [
     ".",
     "alertmanager",
   ]
   pruneopts = "NUT"
-  revision = "bbfe4cec824887dffa3d1d485a825485830cb710"
-  version = "v0.2.0"
+  revision = "4b3fbe05a3478c76879e598fca582536f7871f77"
+  version = "v0.2.1"
 
 [[projects]]
   digest = "1:4047c378584616813d610c9f993bf90dd0d07aed8d94bd3bc299cd35ececdcba"
@@ -885,7 +885,7 @@
     "github.com/percona/pmm/api/agentpb",
     "github.com/percona/pmm/api/alertmanager/amclient",
     "github.com/percona/pmm/api/alertmanager/amclient/alert",
-    "github.com/percona/pmm/api/alertmanager/amclient/general",
+    "github.com/percona/pmm/api/alertmanager/amclient/silence",
     "github.com/percona/pmm/api/alertmanager/ammodels",
     "github.com/percona/pmm/api/inventorypb",
     "github.com/percona/pmm/api/managementpb",
@@ -923,6 +923,7 @@
     "google.golang.org/grpc/metadata",
     "google.golang.org/grpc/reflection",
     "google.golang.org/grpc/status",
+    "google.golang.org/protobuf/types/known/durationpb",
     "gopkg.in/alecthomas/kingpin.v2",
     "gopkg.in/reform.v1",
     "gopkg.in/reform.v1/dialects/postgresql",

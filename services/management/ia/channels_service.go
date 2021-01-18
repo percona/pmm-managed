@@ -31,13 +31,15 @@ import (
 
 // ChannelsService represents integrated alerting channels API.
 type ChannelsService struct {
-	db *reform.DB
+	db           *reform.DB
+	alertManager alertManager
 }
 
 // NewChannelsService creates new channels API service.
-func NewChannelsService(db *reform.DB) *ChannelsService {
+func NewChannelsService(db *reform.DB, alertManager alertManager) *ChannelsService {
 	return &ChannelsService{
-		db: db,
+		db:           db,
+		alertManager: alertManager,
 	}
 }
 
@@ -52,7 +54,7 @@ func (s *ChannelsService) ListChannels(ctx context.Context, request *iav1beta1.L
 		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
 	}
 
-	var channels []models.Channel
+	var channels []*models.Channel
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
 		channels, err = models.FindChannels(tx.Querier)
@@ -64,7 +66,7 @@ func (s *ChannelsService) ListChannels(ctx context.Context, request *iav1beta1.L
 
 	res := make([]*iav1beta1.Channel, len(channels))
 	for i, channel := range channels {
-		c, err := convertChannel(&channel) //nolint:gosec
+		c, err := convertChannel(channel) //nolint:gosec
 		if err != nil {
 			return nil, err
 		}
@@ -127,6 +129,9 @@ func (s *ChannelsService) AddChannel(ctx context.Context, req *iav1beta1.AddChan
 	if e != nil {
 		return nil, e
 	}
+
+	s.alertManager.RequestConfigurationUpdate()
+
 	return &iav1beta1.AddChannelResponse{ChannelId: channel.ID}, nil
 }
 
@@ -142,6 +147,7 @@ func (s *ChannelsService) ChangeChannel(ctx context.Context, req *iav1beta1.Chan
 	}
 
 	params := &models.ChangeChannelParams{
+		Summary:  req.Summary,
 		Disabled: req.Disabled,
 	}
 
@@ -180,6 +186,9 @@ func (s *ChannelsService) ChangeChannel(ctx context.Context, req *iav1beta1.Chan
 	if e != nil {
 		return nil, e
 	}
+
+	s.alertManager.RequestConfigurationUpdate()
+
 	return &iav1beta1.ChangeChannelResponse{}, nil
 }
 
@@ -200,6 +209,9 @@ func (s *ChannelsService) RemoveChannel(ctx context.Context, req *iav1beta1.Remo
 	if e != nil {
 		return nil, e
 	}
+
+	s.alertManager.RequestConfigurationUpdate()
+
 	return &iav1beta1.RemoveChannelResponse{}, nil
 }
 

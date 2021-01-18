@@ -17,17 +17,26 @@ type mockDbaasClient struct {
 }
 
 // CheckKubernetesClusterConnection provides a mock function with given fields: ctx, kubeConfig
-func (_m *mockDbaasClient) CheckKubernetesClusterConnection(ctx context.Context, kubeConfig string) error {
+func (_m *mockDbaasClient) CheckKubernetesClusterConnection(ctx context.Context, kubeConfig string) (*controllerv1beta1.CheckKubernetesClusterConnectionResponse, error) {
 	ret := _m.Called(ctx, kubeConfig)
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
+	var r0 *controllerv1beta1.CheckKubernetesClusterConnectionResponse
+	if rf, ok := ret.Get(0).(func(context.Context, string) *controllerv1beta1.CheckKubernetesClusterConnectionResponse); ok {
 		r0 = rf(ctx, kubeConfig)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*controllerv1beta1.CheckKubernetesClusterConnectionResponse)
+		}
 	}
 
-	return r0
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, kubeConfig)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // CreatePSMDBCluster provides a mock function with given fields: ctx, in, opts
@@ -142,6 +151,66 @@ func (_m *mockDbaasClient) DeleteXtraDBCluster(ctx context.Context, in *controll
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *controllerv1beta1.DeleteXtraDBClusterRequest, ...grpc.CallOption) error); ok {
+		r1 = rf(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetPSMDBCluster provides a mock function with given fields: ctx, in, opts
+func (_m *mockDbaasClient) GetPSMDBCluster(ctx context.Context, in *controllerv1beta1.GetPSMDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.GetPSMDBClusterResponse, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, in)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *controllerv1beta1.GetPSMDBClusterResponse
+	if rf, ok := ret.Get(0).(func(context.Context, *controllerv1beta1.GetPSMDBClusterRequest, ...grpc.CallOption) *controllerv1beta1.GetPSMDBClusterResponse); ok {
+		r0 = rf(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*controllerv1beta1.GetPSMDBClusterResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *controllerv1beta1.GetPSMDBClusterRequest, ...grpc.CallOption) error); ok {
+		r1 = rf(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetXtraDBCluster provides a mock function with given fields: ctx, in, opts
+func (_m *mockDbaasClient) GetXtraDBCluster(ctx context.Context, in *controllerv1beta1.GetXtraDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.GetXtraDBClusterResponse, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, in)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	var r0 *controllerv1beta1.GetXtraDBClusterResponse
+	if rf, ok := ret.Get(0).(func(context.Context, *controllerv1beta1.GetXtraDBClusterRequest, ...grpc.CallOption) *controllerv1beta1.GetXtraDBClusterResponse); ok {
+		r0 = rf(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*controllerv1beta1.GetXtraDBClusterResponse)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *controllerv1beta1.GetXtraDBClusterRequest, ...grpc.CallOption) error); ok {
 		r1 = rf(ctx, in, opts...)
 	} else {
 		r1 = ret.Error(1)

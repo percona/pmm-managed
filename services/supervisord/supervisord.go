@@ -578,6 +578,7 @@ command =
 		--httpListenAddr=127.0.0.1:9090
 		--search.disableCache={{ .VMDBCacheDisable }}
 		--search.maxQueryLen=72KB
+		--search.latencyOffset=5s
 		--search.maxUniqueTimeseries=1500000
 		--prometheusDataPath=/srv/prometheus/data
 		--http.pathPrefix=/prometheus
@@ -607,6 +608,7 @@ command =
 		--remoteRead.url=http://127.0.0.1:9090/prometheus
 		--remoteWrite.url=http://127.0.0.1:9090/prometheus
 		--rule=/srv/prometheus/rules/*.yml
+		--rule=/etc/ia/rules/*.yml
 		--httpListenAddr=127.0.0.1:8880
 {{- range $index, $param := .VMAlertFlags }}
 		{{ $param }}

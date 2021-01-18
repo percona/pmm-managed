@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/percona-platform/saas/pkg/common"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -45,17 +44,15 @@ func checkUniqueRuleID(q *reform.Querier, id string) error {
 }
 
 // FindRules returns saved alert rules configuration.
-func FindRules(q *reform.Querier) ([]Rule, error) {
+func FindRules(q *reform.Querier) ([]*Rule, error) {
 	rows, err := q.SelectAllFrom(RuleTable, "")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select alert rules")
 	}
 
-	rules := make([]Rule, len(rows))
+	rules := make([]*Rule, len(rows))
 	for i, s := range rows {
-		c := s.(*Rule)
-
-		rules[i] = *c
+		rules[i] = s.(*Rule)
 	}
 
 	return rules, nil
@@ -85,7 +82,7 @@ type CreateRuleParams struct {
 	Disabled     bool
 	RuleParams   RuleParams
 	For          time.Duration
-	Severity     common.Severity
+	Severity     Severity
 	CustomLabels map[string]string
 	Filters      Filters
 	ChannelIDs   []string
@@ -98,17 +95,6 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 		return nil, err
 	}
 
-	channelIDs := deduplicateStrings(params.ChannelIDs)
-	channels, err := FindChannelsByIDs(q, channelIDs)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(channelIDs) != len(channels) {
-		missingChannelsIDs := findMissingChannels(channelIDs, channels)
-		return nil, status.Errorf(codes.NotFound, "Failed to find all required channels: %v.", missingChannelsIDs)
-	}
-
 	row := &Rule{
 		TemplateName: params.TemplateName,
 		ID:           id,
@@ -116,12 +102,26 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 		Disabled:     params.Disabled,
 		Params:       params.RuleParams,
 		For:          params.For,
-		Severity:     convertSeverity(params.Severity),
+		Severity:     params.Severity,
 		Filters:      params.Filters,
-		ChannelIDs:   channelIDs,
 	}
 
-	err = row.SetCustomLabels(params.CustomLabels)
+	if len(params.ChannelIDs) > 0 {
+		channelIDs := deduplicateStrings(params.ChannelIDs)
+		channels, err := FindChannelsByIDs(q, channelIDs)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(channelIDs) != len(channels) {
+			missingChannelsIDs := findMissingChannels(channelIDs, channels)
+			return nil, status.Errorf(codes.NotFound, "Failed to find all required channels: %v.", missingChannelsIDs)
+		}
+
+		row.ChannelIDs = channelIDs
+	}
+
+	err := row.SetCustomLabels(params.CustomLabels)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +139,7 @@ type ChangeRuleParams struct {
 	Disabled     bool
 	RuleParams   RuleParams
 	For          time.Duration
-	Severity     common.Severity
+	Severity     Severity
 	CustomLabels map[string]string
 	Filters      Filters
 	ChannelIDs   []string
@@ -165,7 +165,7 @@ func ChangeRule(q *reform.Querier, ruleID string, params *ChangeRuleParams) (*Ru
 
 	row.Disabled = params.Disabled
 	row.For = params.For
-	row.Severity = convertSeverity(params.Severity)
+	row.Severity = params.Severity
 	row.Filters = params.Filters
 	row.Params = params.RuleParams
 
@@ -176,9 +176,33 @@ func ChangeRule(q *reform.Querier, ruleID string, params *ChangeRuleParams) (*Ru
 	row.CustomLabels = labels
 	row.ChannelIDs = params.ChannelIDs
 
-	err = q.Update(row)
+	if err = q.Update(row); err != nil {
+		return nil, errors.Wrap(err, "failed to change alerts Rule")
+	}
+
+	return row, nil
+}
+
+// ToggleRuleParams represents rule toggle parameters.
+type ToggleRuleParams struct {
+	Disabled *bool // nil - do not change
+}
+
+// ToggleRule updates some alert rule fields.
+func ToggleRule(q *reform.Querier, ruleID string, params *ToggleRuleParams) (*Rule, error) {
+	row, err := FindRuleByID(q, ruleID)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to update alerts Rule")
+		return nil, err
+	}
+
+	if params.Disabled == nil {
+		return row, nil
+	}
+
+	row.Disabled = *params.Disabled
+
+	if err = q.Update(row); err != nil {
+		return nil, errors.Wrap(err, "failed to toggle alerts Rule")
 	}
 
 	return row, nil

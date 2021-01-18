@@ -27,7 +27,8 @@ import (
 //go:generate mockery -name=dbaasClient -case=snake -inpkg -testonly
 
 type dbaasClient interface {
-	CheckKubernetesClusterConnection(ctx context.Context, kubeConfig string) error
+	// CheckKubernetesClusterConnection checks connection to Kubernetes cluster and returns statuses of the cluster and operators.
+	CheckKubernetesClusterConnection(ctx context.Context, kubeConfig string) (*controllerv1beta1.CheckKubernetesClusterConnectionResponse, error)
 	// ListXtraDBClusters returns a list of XtraDB clusters.
 	ListXtraDBClusters(ctx context.Context, in *controllerv1beta1.ListXtraDBClustersRequest, opts ...grpc.CallOption) (*controllerv1beta1.ListXtraDBClustersResponse, error)
 	// CreateXtraDBCluster creates a new XtraDB cluster.
@@ -38,6 +39,8 @@ type dbaasClient interface {
 	DeleteXtraDBCluster(ctx context.Context, in *controllerv1beta1.DeleteXtraDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.DeleteXtraDBClusterResponse, error)
 	// RestartXtraDBCluster restarts XtraDB cluster.
 	RestartXtraDBCluster(ctx context.Context, in *controllerv1beta1.RestartXtraDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.RestartXtraDBClusterResponse, error)
+	// GetXtraDBCluster returns an XtraDB cluster credentials.
+	GetXtraDBCluster(ctx context.Context, in *controllerv1beta1.GetXtraDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.GetXtraDBClusterResponse, error)
 	// ListPSMDBClusters returns a list of PSMDB clusters.
 	ListPSMDBClusters(ctx context.Context, in *controllerv1beta1.ListPSMDBClustersRequest, opts ...grpc.CallOption) (*controllerv1beta1.ListPSMDBClustersResponse, error)
 	// CreatePSMDBCluster creates a new PSMDB cluster.
@@ -48,4 +51,6 @@ type dbaasClient interface {
 	DeletePSMDBCluster(ctx context.Context, in *controllerv1beta1.DeletePSMDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.DeletePSMDBClusterResponse, error)
 	// RestartPSMDBCluster restarts PSMDB cluster.
 	RestartPSMDBCluster(ctx context.Context, in *controllerv1beta1.RestartPSMDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.RestartPSMDBClusterResponse, error)
+	// GetPSMDBCluster gets a PSMDB cluster.
+	GetPSMDBCluster(ctx context.Context, in *controllerv1beta1.GetPSMDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.GetPSMDBClusterResponse, error)
 }
