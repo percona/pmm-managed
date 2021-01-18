@@ -54,6 +54,8 @@ func TestCreateAlertRule(t *testing.T) {
 
 	alertManager := new(mockAlertManager)
 	alertManager.On("RequestConfigurationUpdate").Return()
+	vmAlert := new(mockVmAlert)
+	vmAlert.On("RequestConfigurationUpdate").Return()
 
 	// Create channel
 	channels := NewChannelsService(db, alertManager)
@@ -80,9 +82,6 @@ func TestCreateAlertRule(t *testing.T) {
 			err = os.RemoveAll(testDir)
 			require.NoError(t, err)
 		})
-
-		vmAlert := new(mockVmAlert)
-		vmAlert.On("RequestConfigurationUpdate").Return()
 
 		// Create test rule
 		rules := NewRulesService(db, templates, vmAlert, alertManager)
@@ -158,7 +157,7 @@ groups:
 		})
 
 		// Create test rule
-		rules := NewRulesService(db, templates, nil, alertManager)
+		rules := NewRulesService(db, templates, vmAlert, alertManager)
 		rules.rulesPath = testDir
 		_, err = rules.CreateAlertRule(context.Background(), &iav1beta1.CreateAlertRuleRequest{
 			TemplateName: "test_template",
@@ -183,39 +182,39 @@ groups:
 			}},
 			ChannelIds: []string{channelID},
 		})
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Missing parameter threshold."), err)
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Unknown parameters [unknown parameter]."), err)
 	})
 
-	t.Run("missing parameter", func(t *testing.T) {
-		testDir, err := ioutil.TempDir("", "")
-		require.NoError(t, err)
-		t.Cleanup(func() {
-			err = os.RemoveAll(testDir)
-			require.NoError(t, err)
-		})
-
-		// Create test rule
-		rules := NewRulesService(db, templates, nil, alertManager)
-		rules.rulesPath = testDir
-		_, err = rules.CreateAlertRule(context.Background(), &iav1beta1.CreateAlertRuleRequest{
-			TemplateName: "test_template",
-			Disabled:     false,
-			Summary:      "some testing rule",
-			Params:       nil,
-			For:          durationpb.New(2 * time.Second),
-			Severity:     managementpb.Severity_SEVERITY_INFO,
-			CustomLabels: map[string]string{
-				"baz": "faz",
-			},
-			Filters: []*iav1beta1.Filter{{
-				Type:  iav1beta1.FilterType_EQUAL,
-				Key:   "some_key",
-				Value: "'60'",
-			}},
-			ChannelIds: []string{channelID},
-		})
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Template defines only 1 parameters, but rule has 0."), err)
-	})
+	// t.Run("missing parameter", func(t *testing.T) { TODO: PMM-7279 fix once templates will support parameters without default value.
+	// 	testDir, err := ioutil.TempDir("", "")
+	// 	require.NoError(t, err)
+	// 	t.Cleanup(func() {
+	// 		err = os.RemoveAll(testDir)
+	// 		require.NoError(t, err)
+	// 	})
+	//
+	// 	// Create test rule
+	// 	rules := NewRulesService(db, templates, vmAlert, alertManager)
+	// 	rules.rulesPath = testDir
+	// 	_, err = rules.CreateAlertRule(context.Background(), &iav1beta1.CreateAlertRuleRequest{
+	// 		TemplateName: "test_template",
+	// 		Disabled:     false,
+	// 		Summary:      "some testing rule",
+	// 		Params:       nil,
+	// 		For:          durationpb.New(2 * time.Second),
+	// 		Severity:     managementpb.Severity_SEVERITY_INFO,
+	// 		CustomLabels: map[string]string{
+	// 			"baz": "faz",
+	// 		},
+	// 		Filters: []*iav1beta1.Filter{{
+	// 			Type:  iav1beta1.FilterType_EQUAL,
+	// 			Key:   "some_key",
+	// 			Value: "'60'",
+	// 		}},
+	// 		ChannelIds: []string{channelID},
+	// 	})
+	// 	tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Template defines only 1 parameters, but rule has 0."), err)
+	// })
 
 	t.Run("wrong parameter type", func(t *testing.T) {
 		testDir, err := ioutil.TempDir("", "")

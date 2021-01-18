@@ -330,17 +330,8 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 		return nil, err
 	}
 
-	params.RuleParams, err = convertRuleParamsToModel(req.Params)
+	params.RuleParams, err = s.processRuleParameters(req.Params, req.TemplateName)
 	if err != nil {
-		return nil, err
-	}
-
-	t, ok := s.templates.getTemplates()[params.TemplateName]
-	if !ok {
-		return nil, status.Errorf(codes.NotFound, "Unknown template %s.", params.TemplateName)
-	}
-
-	if err = validateRuleParams(params.RuleParams, t.Params); err != nil {
 		return nil, err
 	}
 
@@ -361,28 +352,85 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 	return &iav1beta1.CreateAlertRuleResponse{RuleId: rule.ID}, nil
 }
 
-func validateRuleParams(ruleParams models.RuleParams, templateParams []alert.Parameter) error {
-	if len(ruleParams) != len(templateParams) {
-		return status.Errorf(codes.InvalidArgument, "Template defines only %d parameters, but rule has %d.", len(templateParams), len(ruleParams))
+func (s *RulesService) processRuleParameters(param []*iav1beta1.RuleParam, templateName string) (models.RuleParams, error) {
+	ruleParams, err := convertRuleParamsToModel(param)
+	if err != nil {
+		return nil, err
 	}
 
-	m := make(map[string]models.RuleParam, len(ruleParams))
-	for _, param := range ruleParams {
-		m[param.Name] = param
+	t, ok := s.templates.getTemplates()[templateName]
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "Unknown template %s.", templateName)
 	}
 
-	for _, tp := range templateParams {
-		rp, ok := m[tp.Name]
-		if !ok {
-			return status.Errorf(codes.InvalidArgument, "Missing parameter %s.", tp.Name)
+	unknownParams := make(map[string]bool)
+
+	res := make(models.RuleParams, 0, len(t.Params))
+	for _, tp := range t.Params {
+		var filled bool
+		for _, rp := range ruleParams {
+			if _, ok := unknownParams[rp.Name]; !ok {
+				unknownParams[rp.Name] = true
+			}
+
+			if rp.Name == tp.Name {
+				if string(tp.Type) != string(rp.Type) {
+					return nil, status.Errorf(codes.InvalidArgument, "Parameter %s has type %s instead of %s.", tp.Name, rp.Type, tp.Type)
+				}
+				unknownParams[rp.Name] = false
+				filled = true
+				res = append(res, rp)
+				break
+			}
 		}
 
-		if string(tp.Type) != string(rp.Type) {
-			return status.Errorf(codes.InvalidArgument, "Parameter %s has type %s instead of %s.", tp.Name, rp.Type, tp.Type)
+		if !filled {
+			if tp.Value == nil {
+				return nil, status.Errorf(codes.InvalidArgument, "Parameter %s defined in template %s hasn't "+
+					"default value, so it should be specified in rule", tp.Name, templateName)
+			}
+
+			p := models.RuleParam{
+				Name: tp.Name,
+				Type: models.ParamType(tp.Type),
+			}
+
+			switch tp.Type {
+			case alert.Bool:
+				v, err := tp.GetValueForBool()
+				if err != nil {
+					return nil, err
+				}
+				p.BoolValue = v
+			case alert.Float:
+				v, err := tp.GetValueForFloat()
+				if err != nil {
+					return nil, err
+				}
+				p.FloatValue = float32(v)
+			case alert.String:
+				v, err := tp.GetValueForString()
+				if err != nil {
+					return nil, err
+				}
+				p.StringValue = v
+			}
+
+			res = append(res, p)
 		}
 	}
 
-	return nil
+	var names []string
+	for name, unknown := range unknownParams {
+		if unknown {
+			names = append(names, name)
+		}
+	}
+	if len(names) != 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "Unknown parameters %s.", names)
+	}
+
+	return res, nil
 }
 
 // UpdateAlertRule updates Integrated Alerting rule.
@@ -420,12 +468,8 @@ func (s *RulesService) UpdateAlertRule(ctx context.Context, req *iav1beta1.Updat
 			return err
 		}
 
-		t, ok := s.templates.getTemplates()[rule.TemplateName]
-		if !ok {
-			return status.Errorf(codes.NotFound, "Unknown template %s.", rule.TemplateName)
-		}
-
-		if err = validateRuleParams(params.RuleParams, t.Params); err != nil {
+		params.RuleParams, err = s.processRuleParameters(req.Params, rule.TemplateName)
+		if err != nil {
 			return err
 		}
 
