@@ -655,7 +655,6 @@ func updateExternalExporterParams(q *reform.Querier, row *Agent) error {
 	return nil
 }
 
-// IsPushMetricsSupported check if pmm agent version support push mode.
 func IsPushMetricsSupported(pmmAgentVersion *string) bool {
 	if agentVersion, err := version.Parse(pointer.GetString(pmmAgentVersion)); err == nil {
 		if agentVersion.Less(PMMAgentWithPushMetricsSupport) {
