@@ -314,6 +314,17 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 			}
 			res.Mysql = invService.(*inventorypb.MySQLService)
 
+			if isPushMode(req.MetricsMode) {
+				pmmAgent, err := models.FindAgentByID(tx.Querier, models.PMMServerAgentID)
+				if err != nil {
+					return err
+				}
+
+				if !models.IsPushMetricsSupported(pmmAgent.Version) {
+					req.MetricsMode = managementpb.MetricsMode_PULL
+				}
+			}
+
 			// add MySQL Exporter
 			mysqldExporter, err := models.CreateAgent(tx.Querier, models.MySQLdExporterType, &models.CreateAgentParams{
 				PMMAgentID:                     models.PMMServerAgentID,
