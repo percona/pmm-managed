@@ -21,7 +21,6 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb"
-	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -179,15 +178,13 @@ func (as *AgentsService) AddPMMAgent(ctx context.Context, req *inventorypb.AddPM
 func (as *AgentsService) AddNodeExporter(ctx context.Context, req *inventorypb.AddNodeExporterRequest) (*inventorypb.NodeExporter, error) {
 	var res *inventorypb.NodeExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		if req.PushMetrics {
-			pmmAgent, err := models.FindAgentByID(tx.Querier, req.PmmAgentId)
-			if err != nil {
-				return err
-			}
+		pmmAgent, err := models.FindAgentByID(tx.Querier, req.PmmAgentId)
+		if err != nil {
+			return err
+		}
 
-			if !models.IsPushMetricsSupported(pmmAgent.Version) {
-				req.PushMetrics = false
-			}
+		if !models.IsPushMetricsSupported(pmmAgent.Version) {
+			req.PushMetrics = false
 		}
 
 		row, err := models.CreateNodeExporter(tx.Querier, req.PmmAgentId, req.CustomLabels, req.PushMetrics)
@@ -227,15 +224,13 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, req *inventorypb
 	var row *models.Agent
 	var res *inventorypb.MySQLdExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		if req.PushMetrics {
-			pmmAgent, err := models.FindAgentByID(tx.Querier, req.PmmAgentId)
-			if err != nil {
-				return err
-			}
+		pmmAgent, err := models.FindAgentByID(tx.Querier, req.PmmAgentId)
+		if err != nil {
+			return err
+		}
 
-			if !models.IsPushMetricsSupported(pmmAgent.Version) {
-				req.PushMetrics = false
-			}
+		if !models.IsPushMetricsSupported(pmmAgent.Version) {
+			req.PushMetrics = false
 		}
 
 		params := &models.CreateAgentParams{
@@ -250,7 +245,7 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, req *inventorypb
 			PushMetrics:                    req.PushMetrics,
 		}
 
-		row, err := models.CreateAgent(tx.Querier, models.MySQLdExporterType, params)
+		row, err = models.CreateAgent(tx.Querier, models.MySQLdExporterType, params)
 		if err != nil {
 			return err
 		}
@@ -296,15 +291,13 @@ func (as *AgentsService) ChangeMySQLdExporter(ctx context.Context, req *inventor
 func (as *AgentsService) AddMongoDBExporter(ctx context.Context, req *inventorypb.AddMongoDBExporterRequest) (*inventorypb.MongoDBExporter, error) {
 	var res *inventorypb.MongoDBExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		if req.PushMetrics {
-			pmmAgent, err := models.FindAgentByID(tx.Querier, req.PmmAgentId)
-			if err != nil {
-				return err
-			}
+		pmmAgent, err := models.FindAgentByID(tx.Querier, req.PmmAgentId)
+		if err != nil {
+			return err
+		}
 
-			if !models.IsPushMetricsSupported(pmmAgent.Version) {
-				req.PushMetrics = false
-			}
+		if !models.IsPushMetricsSupported(pmmAgent.Version) {
+			req.PushMetrics = false
 		}
 
 		params := &models.CreateAgentParams{
@@ -485,15 +478,13 @@ func (as *AgentsService) ChangeQANMySQLSlowlogAgent(ctx context.Context, req *in
 func (as *AgentsService) AddPostgresExporter(ctx context.Context, req *inventorypb.AddPostgresExporterRequest) (*inventorypb.PostgresExporter, error) {
 	var res *inventorypb.PostgresExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		if req.PushMetrics {
-			pmmAgent, err := models.FindAgentByID(tx.Querier, req.PmmAgentId)
-			if err != nil {
-				return err
-			}
+		pmmAgent, err := models.FindAgentByID(tx.Querier, req.PmmAgentId)
+		if err != nil {
+			return err
+		}
 
-			if !models.IsPushMetricsSupported(pmmAgent.Version) {
-				req.PushMetrics = false
-			}
+		if !models.IsPushMetricsSupported(pmmAgent.Version) {
+			req.PushMetrics = false
 		}
 
 		params := &models.CreateAgentParams{
@@ -612,15 +603,13 @@ func (as *AgentsService) ChangeQANMongoDBProfilerAgent(ctx context.Context, req 
 func (as *AgentsService) AddProxySQLExporter(ctx context.Context, req *inventorypb.AddProxySQLExporterRequest) (*inventorypb.ProxySQLExporter, error) {
 	var res *inventorypb.ProxySQLExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		if req.PushMetrics {
-			pmmAgent, err := models.FindAgentByID(tx.Querier, req.PmmAgentId)
-			if err != nil {
-				return err
-			}
+		pmmAgent, err := models.FindAgentByID(tx.Querier, req.PmmAgentId)
+		if err != nil {
+			return err
+		}
 
-			if !models.IsPushMetricsSupported(pmmAgent.Version) {
-				req.PushMetrics = false
-			}
+		if !models.IsPushMetricsSupported(pmmAgent.Version) {
+			req.PushMetrics = false
 		}
 
 		params := &models.CreateAgentParams{
@@ -792,15 +781,13 @@ func (as *AgentsService) ChangeQANPostgreSQLPgStatMonitorAgent(ctx context.Conte
 func (as *AgentsService) AddRDSExporter(ctx context.Context, req *inventorypb.AddRDSExporterRequest) (*inventorypb.RDSExporter, error) {
 	var res *inventorypb.RDSExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		if req.PushMetrics {
-			pmmAgent, err := models.FindAgentByID(tx.Querier, req.PmmAgentId)
-			if err != nil {
-				return err
-			}
+		pmmAgent, err := models.FindAgentByID(tx.Querier, req.PmmAgentId)
+		if err != nil {
+			return err
+		}
 
-			if !models.IsPushMetricsSupported(pmmAgent.Version) {
-				req.PushMetrics = false
-			}
+		if !models.IsPushMetricsSupported(pmmAgent.Version) {
+			req.PushMetrics = false
 		}
 
 		params := &models.CreateAgentParams{
@@ -856,20 +843,6 @@ func (as *AgentsService) AddExternalExporter(ctx context.Context, req *inventory
 		PMMAgentID *string
 	)
 	e := as.db.InTransaction(func(tx *reform.TX) error {
-		if req.PushMetrics {
-			agentIDs, err := models.FindPMMAgentsRunningOnNode(tx.Querier, req.RunsOnNodeId)
-			if err != nil {
-				return errors.Wrapf(err, "cannot find pmm_agent for external exporter with push_metrics")
-			}
-			if len(agentIDs) > 1 {
-				return errors.Errorf("cannot find exact match for pmm_agent for external exporter,"+
-					" more than one (%d) pmm_agent was found at node: %s", len(agentIDs), req.RunsOnNodeId)
-			}
-			if !models.IsPushMetricsSupported(agentIDs[0].Version) {
-				req.PushMetrics = false
-			}
-		}
-
 		params := &models.CreateExternalExporterParams{
 			RunsOnNodeID: req.RunsOnNodeId,
 			ServiceID:    req.ServiceId,
