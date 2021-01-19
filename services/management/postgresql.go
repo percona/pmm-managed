@@ -70,7 +70,7 @@ func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgr
 		}
 		res.Service = invService.(*inventorypb.PostgreSQLService)
 
-		switch true {
+		switch {
 		case req.AddNode != nil && req.AddNode.NodeType == inventorypb.NodeType_REMOTE_NODE:
 			req.MetricsMode = managementpb.MetricsMode_PULL
 		case isPushMode(req.MetricsMode):

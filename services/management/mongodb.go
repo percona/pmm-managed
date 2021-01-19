@@ -72,7 +72,7 @@ func (s *MongoDBService) Add(ctx context.Context, req *managementpb.AddMongoDBRe
 
 		mongoDBOptions := models.MongoDBOptionsFromRequest(req)
 
-		switch true {
+		switch {
 		case req.AddNode != nil && req.AddNode.NodeType == inventorypb.NodeType_REMOTE_NODE:
 			req.MetricsMode = managementpb.MetricsMode_PULL
 		case isPushMode(req.MetricsMode):
