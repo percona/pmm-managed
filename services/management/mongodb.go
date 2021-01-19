@@ -72,6 +72,10 @@ func (s *MongoDBService) Add(ctx context.Context, req *managementpb.AddMongoDBRe
 
 		mongoDBOptions := models.MongoDBOptionsFromRequest(req)
 
+		if req.AddNode.NodeType == inventorypb.NodeType_REMOTE_NODE {
+			req.MetricsMode = managementpb.MetricsMode_PULL
+		}
+
 		row, err := models.CreateAgent(tx.Querier, models.MongoDBExporterType, &models.CreateAgentParams{
 			PMMAgentID:     req.PmmAgentId,
 			ServiceID:      service.ServiceID,

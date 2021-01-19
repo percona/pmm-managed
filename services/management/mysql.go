@@ -92,6 +92,10 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 		}
 		res.Service = invService.(*inventorypb.MySQLService)
 
+		if req.AddNode.NodeType == inventorypb.NodeType_REMOTE_NODE {
+			req.MetricsMode = managementpb.MetricsMode_PULL
+		}
+
 		row, err := models.CreateAgent(tx.Querier, models.MySQLdExporterType, &models.CreateAgentParams{
 			PMMAgentID:                     req.PmmAgentId,
 			ServiceID:                      service.ServiceID,

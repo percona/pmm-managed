@@ -70,6 +70,10 @@ func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgr
 		}
 		res.Service = invService.(*inventorypb.PostgreSQLService)
 
+		if req.AddNode.NodeType == inventorypb.NodeType_REMOTE_NODE {
+			req.MetricsMode = managementpb.MetricsMode_PULL
+		}
+
 		row, err := models.CreateAgent(tx.Querier, models.PostgresExporterType, &models.CreateAgentParams{
 			PMMAgentID:    req.PmmAgentId,
 			ServiceID:     service.ServiceID,

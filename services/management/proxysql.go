@@ -69,6 +69,10 @@ func (s *ProxySQLService) Add(ctx context.Context, req *managementpb.AddProxySQL
 		}
 		res.Service = invService.(*inventorypb.ProxySQLService)
 
+		if req.AddNode.NodeType == inventorypb.NodeType_REMOTE_NODE {
+			req.MetricsMode = managementpb.MetricsMode_PULL
+		}
+
 		row, err := models.CreateAgent(tx.Querier, models.ProxySQLExporterType, &models.CreateAgentParams{
 			PMMAgentID:    req.PmmAgentId,
 			ServiceID:     service.ServiceID,
