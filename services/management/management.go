@@ -127,8 +127,7 @@ func validateNodeParamsOneOf(nodeID, nodeName string, addNodeParams *managementp
 	return nil
 }
 
-// for now only PUSH variant enables pushMode for the agent,
-// later it will be changed and auto will mean pushMode.
+// PUSH or AUTO variant enables pushMode for the agent
 func isPushMode(variant managementpb.MetricsMode) bool {
 	return variant == managementpb.MetricsMode_PUSH || variant == managementpb.MetricsMode_AUTO
 }
