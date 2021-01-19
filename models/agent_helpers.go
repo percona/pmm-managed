@@ -413,7 +413,7 @@ func CreateExternalExporter(q *reform.Querier, params *CreateExternalExporterPar
 			return nil, errors.Errorf("cannot find exact match for pmm_agent for external exporter,"+
 				" more than one (%d) pmm_agent was found at node: %s", len(agentIDs), params.RunsOnNodeID)
 		}
-		if params.PushMetrics && !IsPushMetricsSupported(agentIDs[0].Version) {
+		if !IsPushMetricsSupported(agentIDs[0].Version) {
 			return nil, errors.Errorf("cannot use push_metrics_enabled with pmm_agent version=%q,"+
 				" it doesn't support it, minimum supported version=%q", pointer.GetString(agentIDs[0].Version), PMMAgentWithPushMetricsSupport.String())
 		}
@@ -494,7 +494,7 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 	// check version for agent, if it exists.
 	if params.PushMetrics {
 		// special case for vmAgent, it always support push metrics.
-		if agentType != VMAgentType && params.PushMetrics && !IsPushMetricsSupported(pmmAgent.Version) {
+		if agentType != VMAgentType && && !IsPushMetricsSupported(pmmAgent.Version) {
 			return nil, errors.Errorf("cannot use push_metrics_enabled with pmm_agent version=%q,"+
 				" it doesn't support it, minimum supported version=%q", pointer.GetString(pmmAgent.Version), PMMAgentWithPushMetricsSupport.String())
 		}
