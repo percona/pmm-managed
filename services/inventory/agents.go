@@ -178,6 +178,15 @@ func (as *AgentsService) AddPMMAgent(ctx context.Context, req *inventorypb.AddPM
 func (as *AgentsService) AddNodeExporter(ctx context.Context, req *inventorypb.AddNodeExporterRequest) (*inventorypb.NodeExporter, error) {
 	var res *inventorypb.NodeExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
+		pmmAgent, err := models.FindAgentByID(tx.Querier, req.PmmAgentId)
+		if err != nil {
+			return err
+		}
+
+		if !models.IsPushMetricsSupported(pmmAgent.Version) {
+			req.PushMetrics = false
+		}
+
 		row, err := models.CreateNodeExporter(tx.Querier, req.PmmAgentId, req.CustomLabels, req.PushMetrics)
 		if err != nil {
 			return err
@@ -215,6 +224,15 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, req *inventorypb
 	var row *models.Agent
 	var res *inventorypb.MySQLdExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
+		pmmAgent, err := models.FindAgentByID(tx.Querier, req.PmmAgentId)
+		if err != nil {
+			return err
+		}
+
+		if !models.IsPushMetricsSupported(pmmAgent.Version) {
+			req.PushMetrics = false
+		}
+
 		params := &models.CreateAgentParams{
 			PMMAgentID:                     req.PmmAgentId,
 			ServiceID:                      req.ServiceId,
@@ -226,7 +244,7 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, req *inventorypb
 			TableCountTablestatsGroupLimit: req.TablestatsGroupTableLimit,
 			PushMetrics:                    req.PushMetrics,
 		}
-		var err error
+
 		row, err = models.CreateAgent(tx.Querier, models.MySQLdExporterType, params)
 		if err != nil {
 			return err
@@ -273,6 +291,15 @@ func (as *AgentsService) ChangeMySQLdExporter(ctx context.Context, req *inventor
 func (as *AgentsService) AddMongoDBExporter(ctx context.Context, req *inventorypb.AddMongoDBExporterRequest) (*inventorypb.MongoDBExporter, error) {
 	var res *inventorypb.MongoDBExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
+		pmmAgent, err := models.FindAgentByID(tx.Querier, req.PmmAgentId)
+		if err != nil {
+			return err
+		}
+
+		if !models.IsPushMetricsSupported(pmmAgent.Version) {
+			req.PushMetrics = false
+		}
+
 		params := &models.CreateAgentParams{
 			PMMAgentID:     req.PmmAgentId,
 			ServiceID:      req.ServiceId,
@@ -451,6 +478,15 @@ func (as *AgentsService) ChangeQANMySQLSlowlogAgent(ctx context.Context, req *in
 func (as *AgentsService) AddPostgresExporter(ctx context.Context, req *inventorypb.AddPostgresExporterRequest) (*inventorypb.PostgresExporter, error) {
 	var res *inventorypb.PostgresExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
+		pmmAgent, err := models.FindAgentByID(tx.Querier, req.PmmAgentId)
+		if err != nil {
+			return err
+		}
+
+		if !models.IsPushMetricsSupported(pmmAgent.Version) {
+			req.PushMetrics = false
+		}
+
 		params := &models.CreateAgentParams{
 			PMMAgentID:    req.PmmAgentId,
 			ServiceID:     req.ServiceId,
@@ -567,6 +603,15 @@ func (as *AgentsService) ChangeQANMongoDBProfilerAgent(ctx context.Context, req 
 func (as *AgentsService) AddProxySQLExporter(ctx context.Context, req *inventorypb.AddProxySQLExporterRequest) (*inventorypb.ProxySQLExporter, error) {
 	var res *inventorypb.ProxySQLExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
+		pmmAgent, err := models.FindAgentByID(tx.Querier, req.PmmAgentId)
+		if err != nil {
+			return err
+		}
+
+		if !models.IsPushMetricsSupported(pmmAgent.Version) {
+			req.PushMetrics = false
+		}
+
 		params := &models.CreateAgentParams{
 			PMMAgentID:    req.PmmAgentId,
 			ServiceID:     req.ServiceId,
@@ -736,6 +781,15 @@ func (as *AgentsService) ChangeQANPostgreSQLPgStatMonitorAgent(ctx context.Conte
 func (as *AgentsService) AddRDSExporter(ctx context.Context, req *inventorypb.AddRDSExporterRequest) (*inventorypb.RDSExporter, error) {
 	var res *inventorypb.RDSExporter
 	e := as.db.InTransaction(func(tx *reform.TX) error {
+		pmmAgent, err := models.FindAgentByID(tx.Querier, req.PmmAgentId)
+		if err != nil {
+			return err
+		}
+
+		if !models.IsPushMetricsSupported(pmmAgent.Version) {
+			req.PushMetrics = false
+		}
+
 		params := &models.CreateAgentParams{
 			PMMAgentID:                 req.PmmAgentId,
 			NodeID:                     req.NodeId,
