@@ -416,8 +416,8 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-2.0"
-  digest = "1:d2907ba9a56d05fab5b12db0bb7aace4fa68a924cfb04d5ebe73687fe1a7a604"
+  branch = "PMM-7257-rule-list-expr"
+  digest = "1:023275a87355a6b176886b8a97cc1e7c112fb071526593d92c6aeb8930ce8655"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -440,7 +440,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "c4ee3d8bfe5b0b556e49afba553d6700308f3d25"
+  revision = "99e7d75b60cf5830fc6628c711ec92bc6da6a8ea"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"

@@ -158,16 +158,11 @@ func (s *RulesService) prepareRulesFiles(rules []*iav1beta1.Rule) ([]ruleFile, e
 
 			params[p.Name] = value
 		}
-
-		var buf bytes.Buffer
-		t, err := newParamTemplate().Parse(ruleM.Template.Expr)
+		var err error
+		r.Expr, err = renderRuleExpr(ruleM.Template.Expr, params)
 		if err != nil {
-			return nil, errors.Wrap(err, "Failed to parse rule expression")
+			return nil, err
 		}
-		if err = t.Execute(&buf, params); err != nil {
-			return nil, errors.Wrap(err, "Failed to fill expression placeholders")
-		}
-		r.Expr = buf.String()
 
 		// Copy annotations form template
 		if err = transformMaps(ruleM.Template.Annotations, r.Annotations, params); err != nil {
@@ -554,6 +549,18 @@ func convertFiltersToModel(filters []*iav1beta1.Filter) (models.Filters, error) 
 	}
 
 	return res, nil
+}
+
+func renderRuleExpr(templateExpr string, params map[string]string) (string, error) {
+	var buf bytes.Buffer
+	t, err := newParamTemplate().Parse(templateExpr)
+	if err != nil {
+		return "", errors.Wrap(err, "Failed to parse rule expression")
+	}
+	if err = t.Execute(&buf, params); err != nil {
+		return "", errors.Wrap(err, "Failed to fill expression placeholders")
+	}
+	return buf.String(), nil
 }
 
 // Check interfaces.
