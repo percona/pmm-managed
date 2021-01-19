@@ -358,9 +358,8 @@ func CreateNodeExporter(q *reform.Querier, pmmAgentID string, customLabels map[s
 	if err != nil {
 		return nil, err
 	}
-	if pushMetrics && !IsPushMetricsSupported(pmmAgent.Version) {
-		return nil, errors.Errorf("cannot use push_metrics_enabled with pmm_agent version=%q,"+
-			" it doesn't support it, minimum supported version=%q", pointer.GetString(pmmAgent.Version), PMMAgentWithPushMetricsSupport.String())
+	if !isPushMetricsSupported(pmmAgent.Version) {
+		pushMetrics = false
 	}
 	row := &Agent{
 		AgentID:     id,
@@ -413,9 +412,8 @@ func CreateExternalExporter(q *reform.Querier, params *CreateExternalExporterPar
 			return nil, errors.Errorf("cannot find exact match for pmm_agent for external exporter,"+
 				" more than one (%d) pmm_agent was found at node: %s", len(agentIDs), params.RunsOnNodeID)
 		}
-		if params.PushMetrics && !IsPushMetricsSupported(agentIDs[0].Version) {
-			return nil, errors.Errorf("cannot use push_metrics_enabled with pmm_agent version=%q,"+
-				" it doesn't support it, minimum supported version=%q", pointer.GetString(agentIDs[0].Version), PMMAgentWithPushMetricsSupport.String())
+		if !isPushMetricsSupported(agentIDs[0].Version) {
+			params.PushMetrics = false
 		}
 		pmmAgentID = pointer.ToString(agentIDs[0].AgentID)
 		runsOnNodeID = nil
@@ -494,9 +492,8 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 	// check version for agent, if it exists.
 	if params.PushMetrics {
 		// special case for vmAgent, it always support push metrics.
-		if agentType != VMAgentType && params.PushMetrics && !IsPushMetricsSupported(pmmAgent.Version) {
-			return nil, errors.Errorf("cannot use push_metrics_enabled with pmm_agent version=%q,"+
-				" it doesn't support it, minimum supported version=%q", pointer.GetString(pmmAgent.Version), PMMAgentWithPushMetricsSupport.String())
+		if agentType != VMAgentType && !isPushMetricsSupported(pmmAgent.Version) {
+			params.PushMetrics = false
 		}
 	}
 
@@ -655,7 +652,7 @@ func updateExternalExporterParams(q *reform.Querier, row *Agent) error {
 	return nil
 }
 
-func IsPushMetricsSupported(pmmAgentVersion *string) bool {
+func isPushMetricsSupported(pmmAgentVersion *string) bool {
 	if agentVersion, err := version.Parse(pointer.GetString(pmmAgentVersion)); err == nil {
 		if agentVersion.Less(PMMAgentWithPushMetricsSupport) {
 			return false
