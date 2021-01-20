@@ -269,7 +269,6 @@ func TestRDSService(t *testing.T) {
 				ServiceId:                 "/service_id/00000000-0000-4000-8000-000000000007",
 				Username:                  "username",
 				TablestatsGroupTableLimit: 1000,
-				PushMetricsEnabled:        true,
 			},
 			QanMysqlPerfschema: &inventorypb.QANMySQLPerfSchemaAgent{
 				AgentId:               "/agent_id/00000000-0000-4000-8000-000000000009",
