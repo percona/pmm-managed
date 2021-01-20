@@ -22,7 +22,6 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/google/uuid"
-	"github.com/percona/pmm/api/managementpb"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -359,7 +358,7 @@ func CreateNodeExporter(q *reform.Querier, pmmAgentID string, customLabels map[s
 	if err != nil {
 		return nil, err
 	}
-	if !isPushMetricsSupported(pmmAgent.Version) {
+	if !IsPushMetricsSupported(pmmAgent.Version) {
 		return nil, errors.Errorf("cannot use push_metrics_enabled with pmm_agent version=%q,"+
 			" it doesn't support it, minimum supported version=%q", pointer.GetString(pmmAgent.Version), PMMAgentWithPushMetricsSupport.String())
 	}
@@ -414,7 +413,7 @@ func CreateExternalExporter(q *reform.Querier, params *CreateExternalExporterPar
 			return nil, errors.Errorf("cannot find exact match for pmm_agent for external exporter,"+
 				" more than one (%d) pmm_agent was found at node: %s", len(agentIDs), params.RunsOnNodeID)
 		}
-		if !isPushMetricsSupported(agentIDs[0].Version) {
+		if !IsPushMetricsSupported(agentIDs[0].Version) {
 			return nil, errors.Errorf("cannot use push_metrics_enabled with pmm_agent version=%q,"+
 				" it doesn't support it, minimum supported version=%q", pointer.GetString(agentIDs[0].Version), PMMAgentWithPushMetricsSupport.String())
 		}
@@ -495,7 +494,7 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 	// check version for agent, if it exists.
 	if params.PushMetrics {
 		// special case for vmAgent, it always support push metrics.
-		if agentType != VMAgentType && !isPushMetricsSupported(pmmAgent.Version) {
+		if agentType != VMAgentType && !IsPushMetricsSupported(pmmAgent.Version) {
 			return nil, errors.Errorf("cannot use push_metrics_enabled with pmm_agent version=%q,"+
 				" it doesn't support it, minimum supported version=%q", pointer.GetString(pmmAgent.Version), PMMAgentWithPushMetricsSupport.String())
 		}
@@ -656,38 +655,12 @@ func updateExternalExporterParams(q *reform.Querier, row *Agent) error {
 	return nil
 }
 
-// isPushMetricsSupported return if PUSH mode is supported for pmm agent version.
-func isPushMetricsSupported(pmmAgentVersion *string) bool {
+// IsPushMetricsSupported return if PUSH mode is supported for pmm agent version.
+func IsPushMetricsSupported(pmmAgentVersion *string) bool {
 	if agentVersion, err := version.Parse(pointer.GetString(pmmAgentVersion)); err == nil {
 		if agentVersion.Less(PMMAgentWithPushMetricsSupport) {
 			return false
 		}
 	}
 	return true
-}
-
-// SupportedMetricsMode automatically pick metrics mode.
-func SupportedMetricsMode(q *reform.Querier, metricsMode managementpb.MetricsMode, pmmAgentID string) (managementpb.MetricsMode, error) {
-	if pmmAgentID == PMMServerAgentID && metricsMode == managementpb.MetricsMode_PUSH {
-		return metricsMode, errors.Errorf("push metrics mode is not allowed for exporters running on pmm-server")
-	}
-
-	if metricsMode != managementpb.MetricsMode_AUTO {
-		return metricsMode, nil
-	}
-
-	if pmmAgentID == PMMServerAgentID {
-		return managementpb.MetricsMode_PULL, nil
-	}
-
-	pmmAgent, err := FindAgentByID(q, pmmAgentID)
-	if err != nil {
-		return metricsMode, err
-	}
-
-	if !isPushMetricsSupported(pmmAgent.Version) {
-		return managementpb.MetricsMode_PULL, nil
-	}
-
-	return metricsMode, nil
 }

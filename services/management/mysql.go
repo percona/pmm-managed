@@ -92,7 +92,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 		}
 		res.Service = invService.(*inventorypb.MySQLService)
 
-		metricsMode, err := models.SupportedMetricsMode(tx.Querier, req.MetricsMode, req.PmmAgentId)
+		metricsMode, err := SupportedMetricsMode(tx.Querier, req.MetricsMode, req.PmmAgentId)
 		if err != nil {
 			return err
 		}

@@ -314,7 +314,7 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 			}
 			res.Mysql = invService.(*inventorypb.MySQLService)
 
-			metricsMode, err := models.SupportedMetricsMode(tx.Querier, req.MetricsMode, models.PMMServerAgentID)
+			metricsMode, err := SupportedMetricsMode(tx.Querier, req.MetricsMode, models.PMMServerAgentID)
 			if err != nil {
 				return err
 			}
