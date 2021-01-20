@@ -119,7 +119,6 @@ func (s *NodeService) Register(ctx context.Context, req *managementpb.RegisterNo
 		if err != nil {
 			return err
 		}
-
 		res.PmmAgent = a.(*inventorypb.PMMAgent)
 		_, err = models.CreateNodeExporter(tx.Querier, pmmAgent.AgentID, nil, isPushMode(req.MetricsMode))
 		return err
