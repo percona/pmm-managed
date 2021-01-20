@@ -19,24 +19,27 @@ package inventory
 import (
 	"context"
 
-	"github.com/percona/pmm/api/inventorypb"
+	"github.com/AlekSi/pointer"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services"
+	"github.com/percona/pmm/api/inventorypb"
 )
 
 // ServicesService works with inventory API Services.
 type ServicesService struct {
-	db *reform.DB
-	r  agentsRegistry
+	db   *reform.DB
+	r    agentsRegistry
+	vmdb prometheusService
 }
 
 // NewServicesService creates new ServicesService
-func NewServicesService(db *reform.DB, r agentsRegistry) *ServicesService {
+func NewServicesService(db *reform.DB, r agentsRegistry, vmdb prometheusService) *ServicesService {
 	return &ServicesService{
-		db: db,
-		r:  r,
+		db:   db,
+		r:    r,
+		vmdb: vmdb,
 	}
 }
 
@@ -198,11 +201,40 @@ func (ss *ServicesService) AddExternalService(ctx context.Context, params *model
 // Remove removes Service without any Agents.
 //nolint:unparam
 func (ss *ServicesService) Remove(ctx context.Context, id string, force bool) error {
-	return ss.db.InTransaction(func(tx *reform.TX) error {
+	pmmAgentIDs := make(map[string]bool)
+	var reloadPrometheusConfig bool
+
+	if e := ss.db.InTransaction(func(tx *reform.TX) error {
 		mode := models.RemoveRestrict
 		if force {
 			mode = models.RemoveCascade
 		}
+
+		agents, err := models.FindAgents(tx.Querier, models.AgentFilters{ServiceID: id})
+		if err != nil {
+			return err
+		}
+
+		for _, agent := range agents {
+			if agent.PMMAgentID != nil {
+				pmmAgentIDs[pointer.GetString(agent.PMMAgentID)] = true
+			} else {
+				reloadPrometheusConfig = true
+			}
+		}
+
 		return models.RemoveService(tx.Querier, id, mode)
-	})
+	}); e != nil {
+		return e
+	}
+
+	for agentID := range pmmAgentIDs {
+		ss.r.SendSetStateRequest(ctx, agentID)
+	}
+	if reloadPrometheusConfig {
+		// It's required to regenerate victoriametrics config file for the agents which aren't run by pmm-agent.
+		ss.vmdb.RequestConfigurationUpdate()
+	}
+
+	return nil
 }

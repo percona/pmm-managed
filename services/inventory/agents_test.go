@@ -64,7 +64,7 @@ func TestAgents(t *testing.T) {
 			require.NoError(t, sqlDB.Close())
 		}
 		ns = NewNodesService(db)
-		ss = NewServicesService(db, r)
+		ss = NewServicesService(db, r, vmdb)
 		as = NewAgentsService(db, r, vmdb)
 
 		return
