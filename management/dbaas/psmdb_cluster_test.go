@@ -129,14 +129,11 @@ func TestPSMDBClusterServer(t *testing.T) {
 			Context: pmmapitests.Context,
 		})
 		require.NoError(t, err)
-
-		assert.Equal(t, &psmdbcluster.GetPSMDBClusterOKBodyConnectionCredentials{
-			Username:   "userAdmin",
-			Password:   "userAdmin123456",
-			Host:       "second-psmdb-test-rs0.default.svc.cluster.local",
-			Port:       27017,
-			Replicaset: "rs0",
-		}, cluster.Payload.ConnectionCredentials)
+		assert.Equal(t, cluster.Payload.ConnectionCredentials.Username, "userAdmin")
+		assert.Equal(t, cluster.Payload.ConnectionCredentials.Host, "second-psmdb-test-rs0.default.svc.cluster.local")
+		assert.Equal(t, cluster.Payload.ConnectionCredentials.Port, int32(27017))
+		assert.Equal(t, cluster.Payload.ConnectionCredentials.Replicaset, "rs0")
+		assert.NotEmpty(t, cluster.Payload.ConnectionCredentials.Password)
 
 		t.Skip("Skip restart till better implementation. https://jira.percona.com/browse/PMM-6980")
 		_, err = dbaasClient.Default.PSMDBCluster.RestartPSMDBCluster(&psmdbcluster.RestartPSMDBClusterParams{

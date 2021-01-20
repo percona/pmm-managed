@@ -113,6 +113,7 @@ func TestXtraDBClusterServer(t *testing.T) {
 		assert.Equal(t, xtraDBCluster.Payload.ConnectionCredentials.Username, "root")
 		assert.Equal(t, xtraDBCluster.Payload.ConnectionCredentials.Host, "first-pxc-test-proxysql")
 		assert.Equal(t, xtraDBCluster.Payload.ConnectionCredentials.Port, int32(3306))
+		assert.NotEmpty(t, xtraDBCluster.Payload.ConnectionCredentials.Password)
 
 		paramsUpdatePXC := xtra_db_cluster.UpdateXtraDBClusterParams{
 			Context: pmmapitests.Context,
