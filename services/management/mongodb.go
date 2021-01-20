@@ -73,9 +73,10 @@ func (s *MongoDBService) Add(ctx context.Context, req *managementpb.AddMongoDBRe
 		mongoDBOptions := models.MongoDBOptionsFromRequest(req)
 
 		metricsMode, err := models.SupportedMetricsMode(tx.Querier, req.MetricsMode, req.PmmAgentId)
-		if err == nil {
-			req.MetricsMode = metricsMode
+		if err != nil {
+			return err
 		}
+		req.MetricsMode = metricsMode
 
 		row, err := models.CreateAgent(tx.Querier, models.MongoDBExporterType, &models.CreateAgentParams{
 			PMMAgentID:     req.PmmAgentId,
