@@ -314,9 +314,11 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 			}
 			res.Mysql = invService.(*inventorypb.MySQLService)
 
-			if req.MetricsMode == managementpb.MetricsMode_PUSH {
-				return errors.Errorf("push metrics mode is not allowed for exporters running on pmm-server")
+			metricsMode, err := models.SupportedMetricsMode(tx.Querier, req.MetricsMode, models.PMMServerAgentID)
+			if err != nil {
+				return err
 			}
+			req.MetricsMode = metricsMode
 
 			// add MySQL Exporter
 			mysqldExporter, err := models.CreateAgent(tx.Querier, models.MySQLdExporterType, &models.CreateAgentParams{

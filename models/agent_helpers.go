@@ -668,6 +668,10 @@ func isPushMetricsSupported(pmmAgentVersion *string) bool {
 
 // SupportedMetricsMode automatically pick metrics mode.
 func SupportedMetricsMode(q *reform.Querier, metricsMode managementpb.MetricsMode, pmmAgentID string) (managementpb.MetricsMode, error) {
+	if pmmAgentID == PMMServerAgentID && metricsMode == managementpb.MetricsMode_PUSH {
+		return metricsMode, errors.Errorf("push metrics mode is not allowed for exporters running on pmm-server")
+	}
+
 	if metricsMode != managementpb.MetricsMode_AUTO {
 		return metricsMode, nil
 	}
