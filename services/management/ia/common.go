@@ -140,7 +140,10 @@ func convertRule(l *logrus.Entry, rule *models.Rule, template templateInfo, chan
 		}
 		params[p.Name] = value
 	}
-	r.Expr, err = renderRuleExpr(template.Expr, params)
+	r.Expr, err = templateRuleExpr(template.Expr, params)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to template rule expression")
+	}
 
 	r.Template, err = convertTemplate(l, template)
 	if err != nil {

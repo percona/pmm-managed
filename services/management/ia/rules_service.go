@@ -159,9 +159,9 @@ func (s *RulesService) prepareRulesFiles(rules []*iav1beta1.Rule) ([]ruleFile, e
 			params[p.Name] = value
 		}
 		var err error
-		r.Expr, err = renderRuleExpr(ruleM.Template.Expr, params)
+		r.Expr, err = templateRuleExpr(ruleM.Template.Expr, params)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Failed to template rule expression")
 		}
 
 		// Copy annotations form template
@@ -551,7 +551,7 @@ func convertFiltersToModel(filters []*iav1beta1.Filter) (models.Filters, error) 
 	return res, nil
 }
 
-func renderRuleExpr(templateExpr string, params map[string]string) (string, error) {
+func templateRuleExpr(templateExpr string, params map[string]string) (string, error) {
 	var buf bytes.Buffer
 	t, err := newParamTemplate().Parse(templateExpr)
 	if err != nil {
