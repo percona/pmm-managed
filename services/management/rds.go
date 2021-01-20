@@ -314,6 +314,10 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 			}
 			res.Mysql = invService.(*inventorypb.MySQLService)
 
+			if req.MetricsMode == managementpb.MetricsMode_PUSH {
+				return errors.Errorf("cannot use push_metrics_enabled with RDS")
+			}
+
 			// add MySQL Exporter
 			mysqldExporter, err := models.CreateAgent(tx.Querier, models.MySQLdExporterType, &models.CreateAgentParams{
 				PMMAgentID:                     models.PMMServerAgentID,
@@ -323,6 +327,7 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 				TLS:                            req.Tls,
 				TLSSkipVerify:                  req.TlsSkipVerify,
 				TableCountTablestatsGroupLimit: tablestatsGroupTableLimit,
+				PushMetrics:                    false,
 			})
 			if err != nil {
 				return err
