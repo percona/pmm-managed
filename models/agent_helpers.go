@@ -22,6 +22,7 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/google/uuid"
+	"github.com/percona/pmm/api/managementpb"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -663,4 +664,26 @@ func IsPushMetricsSupported(pmmAgentVersion *string) bool {
 		}
 	}
 	return true
+}
+
+// SupportedMetricsMode automatically pick metrics mode.
+func SupportedMetricsMode(q *reform.Querier, metricsMode managementpb.MetricsMode, pmmAgentID string) (managementpb.MetricsMode, error) {
+	if metricsMode != managementpb.MetricsMode_AUTO {
+		return metricsMode, nil
+	}
+
+	if pmmAgentID == PMMServerAgentID {
+		return managementpb.MetricsMode_PULL, nil
+	}
+
+	pmmAgent, err := FindAgentByID(q, pmmAgentID)
+	if err != nil {
+		return metricsMode, err
+	}
+
+	if !IsPushMetricsSupported(pmmAgent.Version) {
+		return managementpb.MetricsMode_PULL, nil
+	}
+
+	return metricsMode, nil
 }

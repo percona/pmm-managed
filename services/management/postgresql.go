@@ -70,20 +70,9 @@ func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgr
 		}
 		res.Service = invService.(*inventorypb.PostgreSQLService)
 
-		if req.MetricsMode == managementpb.MetricsMode_AUTO {
-			switch {
-			case req.PmmAgentId == models.PMMServerAgentID:
-				req.MetricsMode = managementpb.MetricsMode_PULL
-			default:
-				pmmAgent, err := models.FindAgentByID(tx.Querier, req.PmmAgentId)
-				if err != nil {
-					return err
-				}
-
-				if !models.IsPushMetricsSupported(pmmAgent.Version) {
-					req.MetricsMode = managementpb.MetricsMode_PULL
-				}
-			}
+		metricsMode, err := models.SupportedMetricsMode(tx.Querier, req.MetricsMode, req.PmmAgentId)
+		if err == nil {
+			req.MetricsMode = metricsMode
 		}
 
 		row, err := models.CreateAgent(tx.Querier, models.PostgresExporterType, &models.CreateAgentParams{
