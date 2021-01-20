@@ -315,7 +315,7 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 			res.Mysql = invService.(*inventorypb.MySQLService)
 
 			if req.MetricsMode == managementpb.MetricsMode_PUSH {
-				return errors.Errorf("cannot use push_metrics_enabled with RDS")
+				return errors.Errorf("push metrics mode is not allowed for exporters running on pmm-server")
 			}
 
 			// add MySQL Exporter
