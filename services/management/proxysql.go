@@ -69,17 +69,19 @@ func (s *ProxySQLService) Add(ctx context.Context, req *managementpb.AddProxySQL
 		}
 		res.Service = invService.(*inventorypb.ProxySQLService)
 
-		switch {
-		case req.PmmAgentId == models.PMMServerAgentID:
-			req.MetricsMode = managementpb.MetricsMode_PULL
-		case req.MetricsMode == managementpb.MetricsMode_AUTO:
-			pmmAgent, err := models.FindAgentByID(tx.Querier, req.PmmAgentId)
-			if err != nil {
-				return err
-			}
-
-			if !models.IsPushMetricsSupported(pmmAgent.Version) {
+		if req.MetricsMode == managementpb.MetricsMode_AUTO {
+			switch {
+			case req.PmmAgentId == models.PMMServerAgentID:
 				req.MetricsMode = managementpb.MetricsMode_PULL
+			default:
+				pmmAgent, err := models.FindAgentByID(tx.Querier, req.PmmAgentId)
+				if err != nil {
+					return err
+				}
+
+				if !models.IsPushMetricsSupported(pmmAgent.Version) {
+					req.MetricsMode = managementpb.MetricsMode_PULL
+				}
 			}
 		}
 
