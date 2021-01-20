@@ -83,14 +83,7 @@ func (e ExternalService) AddExternal(ctx context.Context, req *managementpb.AddE
 		res.Service = invService.(*inventorypb.ExternalService)
 
 		if isPushMode(req.MetricsMode) {
-			pmmAgent, err := models.FindAgentByID(tx.Querier, models.PMMServerAgentID)
-			if err != nil {
-				return err
-			}
-
-			if !models.IsPushMetricsSupported(pmmAgent.Version) {
-				req.MetricsMode = managementpb.MetricsMode_PULL
-			}
+			req.MetricsMode = managementpb.MetricsMode_PULL
 		}
 
 		params := &models.CreateExternalExporterParams{
