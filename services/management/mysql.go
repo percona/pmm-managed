@@ -93,7 +93,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 		res.Service = invService.(*inventorypb.MySQLService)
 
 		switch {
-		case req.AddNode != nil && req.AddNode.NodeType == inventorypb.NodeType_REMOTE_NODE:
+		case req.PmmAgentId == models.PMMServerAgentID:
 			req.MetricsMode = managementpb.MetricsMode_PULL
 		case isPushMode(req.MetricsMode):
 			pmmAgent, err := models.FindAgentByID(tx.Querier, req.PmmAgentId)

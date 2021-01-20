@@ -120,17 +120,6 @@ func (s *NodeService) Register(ctx context.Context, req *managementpb.RegisterNo
 			return err
 		}
 
-		if isPushMode(req.MetricsMode) {
-			pmmAgent, err := models.FindAgentByID(tx.Querier, pmmAgent.AgentID)
-			if err != nil {
-				return err
-			}
-
-			if !models.IsPushMetricsSupported(pmmAgent.Version) {
-				req.MetricsMode = managementpb.MetricsMode_PULL
-			}
-		}
-
 		res.PmmAgent = a.(*inventorypb.PMMAgent)
 		_, err = models.CreateNodeExporter(tx.Querier, pmmAgent.AgentID, nil, isPushMode(req.MetricsMode))
 		return err
