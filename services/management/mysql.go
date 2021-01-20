@@ -95,7 +95,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 		switch {
 		case req.PmmAgentId == models.PMMServerAgentID:
 			req.MetricsMode = managementpb.MetricsMode_PULL
-		case isPushMode(req.MetricsMode):
+		case req.MetricsMode == managementpb.MetricsMode_AUTO:
 			pmmAgent, err := models.FindAgentByID(tx.Querier, req.PmmAgentId)
 			if err != nil {
 				return err
