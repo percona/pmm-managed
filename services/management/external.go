@@ -24,6 +24,7 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services"
+	"github.com/pkg/errors"
 
 	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/api/managementpb"
@@ -82,7 +83,16 @@ func (e ExternalService) AddExternal(ctx context.Context, req *managementpb.AddE
 		}
 		res.Service = invService.(*inventorypb.ExternalService)
 
-		req.MetricsMode, err = supportedMetricsMode(tx.Querier, req.MetricsMode, models.PMMServerAgentID)
+		agentIDs, err := models.FindPMMAgentsRunningOnNode(tx.Querier, req.RunsOnNodeId)
+		if err != nil {
+			return errors.Wrapf(err, "cannot find pmm_agent for external exporter with push_metrics")
+		}
+		if len(agentIDs) > 1 {
+			return errors.Errorf("cannot find exact match for pmm_agent for external exporter,"+
+				" more than one (%d) pmm_agent was found at node: %s", len(agentIDs), req.RunsOnNodeId)
+		}
+
+		req.MetricsMode, err = supportedMetricsMode(tx.Querier, req.MetricsMode, agentIDs[0].AgentID)
 		if err != nil {
 			return err
 		}
