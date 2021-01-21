@@ -151,7 +151,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 
 	agentpb.RegisterAgentServer(gRPCServer, agentgrpc.NewAgentServer(deps.agentsRegistry))
 
-	nodesSvc := inventory.NewNodesService(deps.db)
+	nodesSvc := inventory.NewNodesService(deps.db, deps.agentsRegistry, deps.vmdb)
 	servicesSvc := inventory.NewServicesService(deps.db, deps.agentsRegistry, deps.vmdb)
 	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry, deps.vmdb)
 

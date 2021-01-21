@@ -58,7 +58,9 @@ func TestServices(t *testing.T) {
 			uuid.SetRand(nil)
 
 			require.NoError(t, sqlDB.Close())
+
 			r.AssertExpectations(t)
+			vmdb.AssertExpectations(t)
 		}
 		ss = NewServicesService(db, r, vmdb)
 

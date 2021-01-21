@@ -20,22 +20,27 @@ import (
 	"context"
 
 	"github.com/AlekSi/pointer"
-	"github.com/percona/pmm/api/inventorypb"
+	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services"
+	"github.com/percona/pmm/api/inventorypb"
 )
 
 // NodesService works with inventory API Nodes.
 type NodesService struct {
-	db *reform.DB
+	db   *reform.DB
+	r    agentsRegistry
+	vmdb prometheusService
 }
 
 // NewNodesService returns Inventory API handler for managing Nodes.
-func NewNodesService(db *reform.DB) *NodesService {
+func NewNodesService(db *reform.DB, r agentsRegistry, vmdb prometheusService) *NodesService {
 	return &NodesService{
-		db: db,
+		db:   db,
+		r:    r,
+		vmdb: vmdb,
 	}
 }
 
@@ -190,18 +195,6 @@ func (s *NodesService) AddRemoteNode(ctx context.Context, req *inventorypb.AddRe
 	return invNode.(*inventorypb.RemoteNode), nil
 }
 
-// Remove removes Node without any Agents and Services.
-//nolint:unparam
-func (s *NodesService) Remove(ctx context.Context, id string, force bool) error {
-	return s.db.InTransaction(func(tx *reform.TX) error {
-		mode := models.RemoveRestrict
-		if force {
-			mode = models.RemoveCascade
-		}
-		return models.RemoveNode(tx.Querier, id, mode)
-	})
-}
-
 // AddRemoteRDSNode adds a new RDS node
 //nolint:unparam
 func (s *NodesService) AddRemoteRDSNode(ctx context.Context, req *inventorypb.AddRemoteRDSNodeRequest) (*inventorypb.RemoteRDSNode, error) {
@@ -233,4 +226,53 @@ func (s *NodesService) AddRemoteRDSNode(ctx context.Context, req *inventorypb.Ad
 	}
 
 	return invNode.(*inventorypb.RemoteRDSNode), nil
+}
+
+// Remove removes Node without any Agents and Services.
+// Removes Node with the Agents and Services when force == true.
+//nolint:unparam
+func (s *NodesService) Remove(ctx context.Context, id string, force bool) error {
+	pmmAgentIDs := make(map[string]struct{})
+
+	if e := s.db.InTransaction(func(tx *reform.TX) error {
+		mode := models.RemoveRestrict
+		if force {
+			mode = models.RemoveCascade
+
+			var allAgents []*models.Agent
+			agents, err := models.FindPMMAgentsRunningOnNode(tx.Querier, id)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+
+			allAgents = append(allAgents, agents...)
+
+			agents, err = models.FindAgents(tx.Querier, models.AgentFilters{NodeID: id})
+			if err != nil {
+				return errors.WithStack(err)
+			}
+
+			allAgents = append(allAgents, agents...)
+
+			for _, a := range allAgents {
+				if a.PMMAgentID != nil {
+					pmmAgentIDs[pointer.GetString(a.PMMAgentID)] = struct{}{}
+				}
+			}
+		}
+		return models.RemoveNode(tx.Querier, id, mode)
+	}); e != nil {
+		return e
+	}
+
+	for id := range pmmAgentIDs {
+		s.r.SendSetStateRequest(ctx, id)
+	}
+
+	if force {
+		// It's required to regenerate victoriametrics config file for the agents which aren't run by pmm-agent.
+		s.vmdb.RequestConfigurationUpdate()
+	}
+
+	return nil
 }

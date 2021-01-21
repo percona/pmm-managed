@@ -63,7 +63,7 @@ func TestAgents(t *testing.T) {
 			vmdb.AssertExpectations(t)
 			require.NoError(t, sqlDB.Close())
 		}
-		ns = NewNodesService(db)
+		ns = NewNodesService(db, r, vmdb)
 		ss = NewServicesService(db, r, vmdb)
 		as = NewAgentsService(db, r, vmdb)
 
