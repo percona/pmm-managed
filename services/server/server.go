@@ -599,7 +599,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		return nil, err
 	}
 
-	if settings.SaaS.STTEnabled {
+	if req.EnableStt {
 		// force checks download and execution when STT is enabled
 		err = s.checksService.StartChecks(ctx)
 		if err != nil {
