@@ -82,6 +82,11 @@ func (e ExternalService) AddExternal(ctx context.Context, req *managementpb.AddE
 		}
 		res.Service = invService.(*inventorypb.ExternalService)
 
+		req.MetricsMode, err = supportedMetricsMode(tx.Querier, req.MetricsMode, req.PmmAgentId)
+		if err != nil {
+			return err
+		}
+
 		params := &models.CreateExternalExporterParams{
 			RunsOnNodeID: runsOnNodeId,
 			ServiceID:    service.ServiceID,
