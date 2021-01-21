@@ -229,7 +229,8 @@ func (s *NodesService) AddRemoteRDSNode(ctx context.Context, req *inventorypb.Ad
 }
 
 // Remove removes Node without any Agents and Services.
-// Removes Node with the Agents and Services when force == true.
+// Removes Node with the Agents and Services if force == true.
+// Returns an error if force == false and Node has Agents or Services.
 func (s *NodesService) Remove(ctx context.Context, id string, force bool) error {
 	pmmAgentIDs := make(map[string]struct{})
 

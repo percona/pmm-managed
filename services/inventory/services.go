@@ -198,7 +198,8 @@ func (ss *ServicesService) AddExternalService(ctx context.Context, params *model
 }
 
 // Remove removes Service without any Agents.
-// Removes Service with the Agents when force == true.
+// Removes Service with the Agents if force == true.
+// Returns an error if force == false and Service has Agents.
 func (ss *ServicesService) Remove(ctx context.Context, id string, force bool) error {
 	var agents []*models.Agent
 
