@@ -99,7 +99,7 @@ func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlert
 
 		var rule *iav1beta1.Rule
 		// Rules files created by user in directory /srv/prometheus/rules/ doesn't have associated rules in DB.
-		// So alertname field will be empty or will keep invalid value. Don't fill rule filed in that case.
+		// So alertname field will be empty or will keep invalid value. Don't fill rule field in that case.
 		ruleID, ok := alert.Labels["alertname"]
 		if ok && strings.HasPrefix(ruleID, "/rule_id/") {
 			var r *models.Rule
