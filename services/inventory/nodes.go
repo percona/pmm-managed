@@ -230,7 +230,6 @@ func (s *NodesService) AddRemoteRDSNode(ctx context.Context, req *inventorypb.Ad
 
 // Remove removes Node without any Agents and Services.
 // Removes Node with the Agents and Services when force == true.
-//nolint:unparam
 func (s *NodesService) Remove(ctx context.Context, id string, force bool) error {
 	pmmAgentIDs := make(map[string]struct{})
 
