@@ -363,21 +363,20 @@ func (s *RulesService) processRuleParameters(param []*iav1beta1.RuleParam, templ
 		return nil, status.Errorf(codes.NotFound, "Unknown template %s.", templateName)
 	}
 
-	unknownParams := make(map[string]bool)
+	unknownParams := make(map[string]struct{}, len(ruleParams))
+	for _, p := range ruleParams {
+		unknownParams[p.Name] = struct{}{}
+	}
 
 	res := make(models.RuleParams, 0, len(t.Params))
 	for _, tp := range t.Params {
 		var filled bool
 		for _, rp := range ruleParams {
-			if _, ok := unknownParams[rp.Name]; !ok {
-				unknownParams[rp.Name] = true
-			}
-
 			if rp.Name == tp.Name {
 				if string(tp.Type) != string(rp.Type) {
 					return nil, status.Errorf(codes.InvalidArgument, "Parameter %s has type %s instead of %s.", tp.Name, rp.Type, tp.Type)
 				}
-				unknownParams[rp.Name] = false
+				delete(unknownParams, rp.Name)
 				filled = true
 				res = append(res, rp)
 				break
@@ -386,7 +385,7 @@ func (s *RulesService) processRuleParameters(param []*iav1beta1.RuleParam, templ
 
 		if !filled {
 			if tp.Value == nil {
-				return nil, status.Errorf(codes.InvalidArgument, "Parameter %s defined in template %s hasn't "+
+				return nil, status.Errorf(codes.InvalidArgument, "Parameter %s defined in template %s doesn't have "+
 					"default value, so it should be specified in rule", tp.Name, templateName)
 			}
 
@@ -421,10 +420,8 @@ func (s *RulesService) processRuleParameters(param []*iav1beta1.RuleParam, templ
 	}
 
 	var names []string
-	for name, unknown := range unknownParams {
-		if unknown {
-			names = append(names, name)
-		}
+	for name := range unknownParams {
+		names = append(names, name)
 	}
 	if len(names) != 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "Unknown parameters %s.", names)
