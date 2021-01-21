@@ -82,7 +82,7 @@ func (e ExternalService) AddExternal(ctx context.Context, req *managementpb.AddE
 		}
 		res.Service = invService.(*inventorypb.ExternalService)
 
-		req.MetricsMode, err = supportedMetricsMode(tx.Querier, req.MetricsMode, req.PmmAgentId)
+		req.MetricsMode, err = supportedMetricsMode(tx.Querier, req.MetricsMode, models.PMMServerAgentID)
 		if err != nil {
 			return err
 		}
