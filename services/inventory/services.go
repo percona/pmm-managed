@@ -19,11 +19,11 @@ package inventory
 import (
 	"context"
 
+	"github.com/percona/pmm/api/inventorypb"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services"
-	"github.com/percona/pmm/api/inventorypb"
 )
 
 // ServicesService works with inventory API Services.
