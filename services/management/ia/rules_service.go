@@ -419,7 +419,7 @@ func (s *RulesService) processRuleParameters(param []*iav1beta1.RuleParam, templ
 		}
 	}
 
-	var names []string
+	names := make([]string, 0, len(unknownParams))
 	for name := range unknownParams {
 		names = append(names, name)
 	}
