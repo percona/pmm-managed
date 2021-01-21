@@ -314,11 +314,10 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 			}
 			res.Mysql = invService.(*inventorypb.MySQLService)
 
-			metricsMode, err := SupportedMetricsMode(tx.Querier, req.MetricsMode, models.PMMServerAgentID)
+			_, err = supportedMetricsMode(tx.Querier, req.MetricsMode, models.PMMServerAgentID)
 			if err != nil {
 				return err
 			}
-			req.MetricsMode = metricsMode
 
 			// add MySQL Exporter
 			mysqldExporter, err := models.CreateAgent(tx.Querier, models.MySQLdExporterType, &models.CreateAgentParams{
@@ -329,7 +328,6 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 				TLS:                            req.Tls,
 				TLSSkipVerify:                  req.TlsSkipVerify,
 				TableCountTablestatsGroupLimit: tablestatsGroupTableLimit,
-				PushMetrics:                    false,
 			})
 			if err != nil {
 				return err

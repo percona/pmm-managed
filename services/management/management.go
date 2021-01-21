@@ -128,13 +128,13 @@ func validateNodeParamsOneOf(nodeID, nodeName string, addNodeParams *managementp
 	return nil
 }
 
-// PUSH or AUTO variant enables pushMode for the agent
+// PUSH or AUTO variant enables pushMode for the agent.
 func isPushMode(variant managementpb.MetricsMode) bool {
 	return variant == managementpb.MetricsMode_PUSH || variant == managementpb.MetricsMode_AUTO
 }
 
-// SupportedMetricsMode automatically pick metrics mode.
-func SupportedMetricsMode(q *reform.Querier, metricsMode managementpb.MetricsMode, pmmAgentID string) (managementpb.MetricsMode, error) {
+// Automatically pick metrics mode.
+func supportedMetricsMode(q *reform.Querier, metricsMode managementpb.MetricsMode, pmmAgentID string) (managementpb.MetricsMode, error) {
 	if pmmAgentID == models.PMMServerAgentID && metricsMode == managementpb.MetricsMode_PUSH {
 		return metricsMode, errors.Errorf("push metrics mode is not allowed for exporters running on pmm-server")
 	}

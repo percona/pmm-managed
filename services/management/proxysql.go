@@ -69,11 +69,10 @@ func (s *ProxySQLService) Add(ctx context.Context, req *managementpb.AddProxySQL
 		}
 		res.Service = invService.(*inventorypb.ProxySQLService)
 
-		metricsMode, err := SupportedMetricsMode(tx.Querier, req.MetricsMode, req.PmmAgentId)
+		req.MetricsMode, err = supportedMetricsMode(tx.Querier, req.MetricsMode, req.PmmAgentId)
 		if err != nil {
 			return err
 		}
-		req.MetricsMode = metricsMode
 
 		row, err := models.CreateAgent(tx.Querier, models.ProxySQLExporterType, &models.CreateAgentParams{
 			PMMAgentID:    req.PmmAgentId,

@@ -70,11 +70,10 @@ func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgr
 		}
 		res.Service = invService.(*inventorypb.PostgreSQLService)
 
-		metricsMode, err := SupportedMetricsMode(tx.Querier, req.MetricsMode, req.PmmAgentId)
+		req.MetricsMode, err = supportedMetricsMode(tx.Querier, req.MetricsMode, req.PmmAgentId)
 		if err != nil {
 			return err
 		}
-		req.MetricsMode = metricsMode
 
 		row, err := models.CreateAgent(tx.Querier, models.PostgresExporterType, &models.CreateAgentParams{
 			PMMAgentID:    req.PmmAgentId,
