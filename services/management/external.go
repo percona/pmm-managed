@@ -85,7 +85,7 @@ func (e ExternalService) AddExternal(ctx context.Context, req *managementpb.AddE
 		if req.MetricsMode == managementpb.MetricsMode_AUTO {
 			agentIDs, err := models.FindPMMAgentsRunningOnNode(tx.Querier, req.RunsOnNodeId)
 			switch {
-			case err != nil || len(agentIDs) > 1:
+			case err != nil || len(agentIDs) != 1:
 				req.MetricsMode = managementpb.MetricsMode_PULL
 			default:
 				req.MetricsMode, err = supportedMetricsMode(tx.Querier, req.MetricsMode, agentIDs[0].AgentID)

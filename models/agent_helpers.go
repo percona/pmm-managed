@@ -430,7 +430,11 @@ func CreateExternalExporter(q *reform.Querier, params *CreateExternalExporterPar
 		if err != nil {
 			return nil, errors.Wrapf(err, "cannot find pmm_agent for external exporter with push_metrics")
 		}
-		if len(agentIDs) != 1 {
+		switch len(agentIDs) {
+		case 0:
+			return nil, status.Errorf(codes.NotFound, "cannot find any pmm-agent by NodeID")
+		case 1:
+		default:
 			return nil, errors.Errorf("exactly one pmm_agent expected for external exporter, but "+
 				"(%d) found at node: %s", len(agentIDs), params.RunsOnNodeID)
 		}
@@ -658,7 +662,11 @@ func updateExternalExporterParams(q *reform.Querier, row *Agent) error {
 		if err != nil {
 			return err
 		}
-		if len(pmmAgent) != 1 {
+		switch len(pmmAgent) {
+		case 0:
+			return status.Errorf(codes.NotFound, "cannot find any pmm-agent by NodeID")
+		case 1:
+		default:
 			return errors.Errorf("exactly one pmm agent expected, but (%d) found", len(pmmAgent))
 		}
 
