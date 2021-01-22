@@ -75,7 +75,9 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 			},
 			State: pxcStates()[c.State],
 			Operation: &dbaasv1beta1.RunningOperation{
-				Message: message,
+				TotalSteps:    c.Operation.TotalSteps,
+				FinishedSteps: c.Operation.FinishedSteps,
+				Message:       message,
 			},
 		}
 

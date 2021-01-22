@@ -89,7 +89,9 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 			},
 			State: psmdbStates()[c.State],
 			Operation: &dbaasv1beta1.RunningOperation{
-				Message: message,
+				TotalSteps:    c.Operation.TotalSteps,
+				FinishedSteps: c.Operation.FinishedSteps,
+				Message:       message,
 			},
 		}
 
