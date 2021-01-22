@@ -186,6 +186,23 @@ templates: []
 		})
 		require.NoError(t, err)
 
+		// create another rule without channelID and check if it is absent in the config.
+		_, err = models.CreateRule(db.Querier, &models.CreateRuleParams{
+			TemplateName: "test_template",
+			Disabled:     true,
+			RuleParams: []models.RuleParam{{
+				Name:       "test",
+				Type:       models.Float,
+				FloatValue: 3.14,
+			}},
+			For:      5 * time.Second,
+			Severity: models.Severity(common.Warning),
+			CustomLabels: map[string]string{
+				"foo": "baz",
+			},
+		})
+		require.NoError(t, err)
+
 		_, err = models.UpdateSettings(db.Querier, &models.ChangeSettingsParams{
 			EmailAlertingSettings: &models.EmailAlertingSettings{
 				From:      "from@test.com",
@@ -251,14 +268,16 @@ templates: []
 func TestGenerateReceivers(t *testing.T) {
 	t.Parallel()
 
-	chanMap := map[string]*models.Channel{
-		"1": {
+	chanMap := []*models.Channel{
+		{
+			ID:   "1",
 			Type: models.Slack,
 			SlackConfig: &models.SlackConfig{
 				Channel: "channel1",
 			},
 		},
-		"2": {
+		{
+			ID:   "2",
 			Type: models.Slack,
 			SlackConfig: &models.SlackConfig{
 				Channel: "channel2",
@@ -270,8 +289,8 @@ func TestGenerateReceivers(t *testing.T) {
 		"2":   {"2"},
 		"1+2": {"1", "2"},
 	}
-
-	actualR, err := generateReceivers(chanMap, recvSet)
+	s := New(nil)
+	actualR, err := s.generateReceivers(chanMap, recvSet)
 	require.NoError(t, err)
 	actual, err := yaml.Marshal(actualR)
 	require.NoError(t, err)

@@ -74,10 +74,6 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 			}
 		}
 
-		message := ""
-		if c.Operation != nil {
-			message = c.Operation.Message
-		}
 		cluster := dbaasv1beta1.ListPSMDBClustersResponse_Cluster{
 			Name: c.Name,
 			Params: &dbaasv1beta1.PSMDBClusterParams{
@@ -89,7 +85,9 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 			},
 			State: psmdbStates()[c.State],
 			Operation: &dbaasv1beta1.RunningOperation{
-				Message: message,
+				TotalSteps:    c.Operation.TotalSteps,
+				FinishedSteps: c.Operation.FinishedSteps,
+				Message:       c.Operation.Message,
 			},
 		}
 
@@ -106,11 +104,6 @@ func (s PSMDBClusterService) GetPSMDBCluster(ctx context.Context, req *dbaasv1be
 		return nil, err
 	}
 
-	// TODO: implement on dbaas-controller side:
-	// 1. Get psmdb status
-	//  - Ex.: kubectl get -o=json PerconaServerMongoDB/<cluster_name>
-	// 2. Get root password:
-	//   - Ex.: kubectl get secret my-cluster-name-secrets -o json  | jq -r ".data.MONGODB_USER_ADMIN_PASSWORD" | base64 -d
 	in := &dbaascontrollerv1beta1.GetPSMDBClusterRequest{
 		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
@@ -123,18 +116,13 @@ func (s PSMDBClusterService) GetPSMDBCluster(ctx context.Context, req *dbaasv1be
 		return nil, err
 	}
 
-	host := ""
-	if cluster.Credentials != nil {
-		host = cluster.Credentials.Host
-	}
-
 	resp := dbaasv1beta1.GetPSMDBClusterResponse{
 		ConnectionCredentials: &dbaasv1beta1.GetPSMDBClusterResponse_PSMDBCredentials{
-			Username:   "userAdmin",
-			Password:   "userAdmin123456",
-			Host:       host,
-			Port:       27017,
-			Replicaset: "rs0",
+			Username:   cluster.Credentials.Username,
+			Password:   cluster.Credentials.Password,
+			Host:       cluster.Credentials.Host,
+			Port:       cluster.Credentials.Port,
+			Replicaset: cluster.Credentials.Replicaset,
 		},
 	}
 
