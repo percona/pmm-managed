@@ -239,14 +239,12 @@ func (s *NodesService) Remove(ctx context.Context, id string, force bool) error 
 		if force {
 			mode = models.RemoveCascade
 
-			var allAgents []*models.Agent
-			agents, err := models.FindPMMAgentsRunningOnNode(tx.Querier, id)
+			allAgents, err := models.FindPMMAgentsRunningOnNode(tx.Querier, id)
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			allAgents = append(allAgents, agents...)
 
-			agents, err = models.FindAgents(tx.Querier, models.AgentFilters{NodeID: id})
+			agents, err := models.FindAgents(tx.Querier, models.AgentFilters{NodeID: id})
 			if err != nil {
 				return errors.WithStack(err)
 			}
