@@ -237,7 +237,7 @@ func FindPMMAgentsForServicesOnNode(q *reform.Querier, nodeID string) ([]*Agent,
 		return nil, errors.Wrap(err, "failed to select Service IDs")
 	}
 
-	var allAgents []*Agent
+	allAgents := make([]*Agent, 0, len(structs))
 	for _, str := range structs {
 		serviceID := str.(*Service).ServiceID
 		agents, err := FindPMMAgentsForService(q, serviceID)
