@@ -38,7 +38,7 @@ func TestRulesAPI(t *testing.T) {
 
 	t.Run("add", func(t *testing.T) {
 		t.Run("normal", func(t *testing.T) {
-			params := createAlertRuleParams(templateName, channelID, dummyFilter)
+			params := createAlertRuleParams(templateName, channelID, "param1", dummyFilter)
 			rule, err := client.CreateAlertRule(params)
 			require.NoError(t, err)
 			defer deleteRule(t, client, rule.Payload.RuleID)
@@ -47,7 +47,7 @@ func TestRulesAPI(t *testing.T) {
 		})
 
 		t.Run("without channels and filters", func(t *testing.T) {
-			params := createAlertRuleParams(templateName, "", nil)
+			params := createAlertRuleParams(templateName, "", "param1", nil)
 			rule, err := client.CreateAlertRule(params)
 			require.NoError(t, err)
 			defer deleteRule(t, client, rule.Payload.RuleID)
@@ -56,7 +56,17 @@ func TestRulesAPI(t *testing.T) {
 		})
 
 		t.Run("builtin_template", func(t *testing.T) {
-			params := createAlertRuleParams("pmm_mongodb_restarted", channelID, dummyFilter)
+			params := createAlertRuleParams("pmm_mongodb_restarted", channelID, "threshold", dummyFilter)
+			rule, err := client.CreateAlertRule(params)
+			require.NoError(t, err)
+			defer deleteRule(t, client, rule.Payload.RuleID)
+
+			assert.NotEmpty(t, rule.Payload.RuleID)
+		})
+
+		t.Run("use default value for parameter", func(t *testing.T) {
+			params := createAlertRuleParams(templateName, channelID, "param1", dummyFilter)
+			params.Body.Params = []*rules.ParamsItems0{} // parameter param1 has default value
 			rule, err := client.CreateAlertRule(params)
 			require.NoError(t, err)
 			defer deleteRule(t, client, rule.Payload.RuleID)
@@ -66,34 +76,56 @@ func TestRulesAPI(t *testing.T) {
 
 		t.Run("unknown template", func(t *testing.T) {
 			templateName := gofakeit.UUID()
-			params := createAlertRuleParams(templateName, channelID, dummyFilter)
+			params := createAlertRuleParams(templateName, channelID, "param1", dummyFilter)
 			_, err := client.CreateAlertRule(params)
 			pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Unknown template %s.", templateName)
 		})
 
 		t.Run("unknown channel", func(t *testing.T) {
 			channelID := gofakeit.UUID()
-			params := createAlertRuleParams(templateName, channelID, dummyFilter)
+			params := createAlertRuleParams(templateName, channelID, "param1", dummyFilter)
 			_, err := client.CreateAlertRule(params)
 			pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Failed to find all required channels: [%s].", channelID)
+		})
+
+		t.Run("wrong parameter", func(t *testing.T) {
+			params := createAlertRuleParams(templateName, channelID, "param1", dummyFilter)
+			params.Body.Params = []*rules.ParamsItems0{{
+				Name:  "unknown parameter",
+				Type:  pointer.ToString("FLOAT"),
+				Float: 12,
+			}}
+			_, err := client.CreateAlertRule(params)
+			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Unknown parameters [unknown parameter].")
+		})
+
+		t.Run("wrong parameter type", func(t *testing.T) {
+			params := createAlertRuleParams(templateName, channelID, "param1", dummyFilter)
+			params.Body.Params = []*rules.ParamsItems0{{
+				Name: "param1",
+				Type: pointer.ToString("BOOL"),
+				Bool: true,
+			}}
+			_, err := client.CreateAlertRule(params)
+			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Parameter param1 has type bool instead of float.")
 		})
 	})
 
 	t.Run("update", func(t *testing.T) {
+		newChannelID := createChannel(t)
+
 		t.Run("normal", func(t *testing.T) {
-			cParams := createAlertRuleParams(templateName, channelID, dummyFilter)
+			cParams := createAlertRuleParams(templateName, channelID, "param1", dummyFilter)
 			rule, err := client.CreateAlertRule(cParams)
 			require.NoError(t, err)
 			defer deleteRule(t, client, rule.Payload.RuleID)
-
-			newChannelID := createChannel(t)
 
 			params := &rules.UpdateAlertRuleParams{
 				Body: rules.UpdateAlertRuleBody{
 					RuleID:   rule.Payload.RuleID,
 					Disabled: false,
 					Params: []*rules.ParamsItems0{{
-						Name:  "threshold",
+						Name:  "param1",
 						Type:  pointer.ToString("FLOAT"),
 						Float: 21,
 					}},
@@ -102,7 +134,7 @@ func TestRulesAPI(t *testing.T) {
 					CustomLabels: map[string]string{"foo": "bar", "baz": "faz"},
 					Filters: []*rules.FiltersItems0{{
 						Type:  pointer.ToString("EQUAL"),
-						Key:   "threshold",
+						Key:   "param1",
 						Value: "21",
 					}},
 					ChannelIds: []string{channelID, newChannelID},
@@ -120,12 +152,17 @@ func TestRulesAPI(t *testing.T) {
 				if r.RuleID == rule.Payload.RuleID {
 					assert.False(t, r.Disabled)
 					assert.Equal(t, "10s", r.For)
-					assert.Len(t, r.Params, 1)
+					assert.Len(t, r.Params, 2)
 					assert.Equal(t, params.Body.Params[0].Type, r.Params[0].Type)
 					assert.Equal(t, params.Body.Params[0].Name, r.Params[0].Name)
 					assert.Equal(t, params.Body.Params[0].Float, r.Params[0].Float)
 					assert.Equal(t, params.Body.Params[0].Bool, r.Params[0].Bool)
 					assert.Equal(t, params.Body.Params[0].String, r.Params[0].String)
+					assert.Equal(t, "FLOAT", *r.Params[1].Type)
+					assert.Equal(t, "param2", r.Params[1].Name)
+					assert.Equal(t, float32(50), r.Params[1].Float)
+					assert.Equal(t, false, r.Params[1].Bool)
+					assert.Equal(t, "", r.Params[1].String)
 					found = true
 				}
 			}
@@ -133,7 +170,7 @@ func TestRulesAPI(t *testing.T) {
 		})
 
 		t.Run("unknown channel", func(t *testing.T) {
-			cParams := createAlertRuleParams(templateName, channelID, dummyFilter)
+			cParams := createAlertRuleParams(templateName, channelID, "param1", dummyFilter)
 			rule, err := client.CreateAlertRule(cParams)
 			require.NoError(t, err)
 			defer deleteRule(t, client, rule.Payload.RuleID)
@@ -144,7 +181,7 @@ func TestRulesAPI(t *testing.T) {
 					RuleID:   rule.Payload.RuleID,
 					Disabled: false,
 					Params: []*rules.ParamsItems0{{
-						Name:  "threshold",
+						Name:  "param1",
 						Type:  pointer.ToString("FLOAT"),
 						Float: 21,
 					}},
@@ -153,7 +190,7 @@ func TestRulesAPI(t *testing.T) {
 					CustomLabels: map[string]string{"foo": "bar", "baz": "faz"},
 					Filters: []*rules.FiltersItems0{{
 						Type:  pointer.ToString("EQUAL"),
-						Key:   "threshold",
+						Key:   "param1",
 						Value: "21",
 					}},
 					ChannelIds: []string{channelID, unknownChannelID},
@@ -163,11 +200,101 @@ func TestRulesAPI(t *testing.T) {
 			_, err = client.UpdateAlertRule(params)
 			pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Failed to find all required channels: [%s].", unknownChannelID)
 		})
+
+		t.Run("wrong parameter", func(t *testing.T) {
+			cParams := createAlertRuleParams(templateName, channelID, "param1", dummyFilter)
+			rule, err := client.CreateAlertRule(cParams)
+			require.NoError(t, err)
+			defer deleteRule(t, client, rule.Payload.RuleID)
+
+			params := &rules.UpdateAlertRuleParams{
+				Body: rules.UpdateAlertRuleBody{
+					RuleID:   rule.Payload.RuleID,
+					Disabled: false,
+					Params: []*rules.ParamsItems0{{
+						Name:  "unknown parameter",
+						Type:  pointer.ToString("FLOAT"),
+						Float: 21,
+					}},
+					For:          "10s",
+					Severity:     pointer.ToString("SEVERITY_ERROR"),
+					CustomLabels: map[string]string{"foo": "bar", "baz": "faz"},
+					Filters: []*rules.FiltersItems0{{
+						Type:  pointer.ToString("EQUAL"),
+						Key:   "param1",
+						Value: "21",
+					}},
+					ChannelIds: []string{channelID, newChannelID},
+				},
+				Context: pmmapitests.Context,
+			}
+			_, err = client.UpdateAlertRule(params)
+			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Unknown parameters [unknown parameter].")
+		})
+
+		t.Run("missing parameter", func(t *testing.T) {
+			t.Skip("Skipping until templates will support parameters without default value https://jira.percona.com/browse/PMM-7279")
+			cParams := createAlertRuleParams(templateName, channelID, "param1", dummyFilter)
+			rule, err := client.CreateAlertRule(cParams)
+			require.NoError(t, err)
+			defer deleteRule(t, client, rule.Payload.RuleID)
+
+			params := &rules.UpdateAlertRuleParams{
+				Body: rules.UpdateAlertRuleBody{
+					RuleID:       rule.Payload.RuleID,
+					Disabled:     false,
+					Params:       nil,
+					For:          "10s",
+					Severity:     pointer.ToString("SEVERITY_ERROR"),
+					CustomLabels: map[string]string{"foo": "bar", "baz": "faz"},
+					Filters: []*rules.FiltersItems0{{
+						Type:  pointer.ToString("EQUAL"),
+						Key:   "param1",
+						Value: "21",
+					}},
+					ChannelIds: []string{channelID, newChannelID},
+				},
+				Context: pmmapitests.Context,
+			}
+			_, err = client.UpdateAlertRule(params)
+			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Template defines only 1 parameters, but rule has 0.")
+		})
+
+		t.Run("wrong parameter type", func(t *testing.T) {
+			cParams := createAlertRuleParams(templateName, channelID, "param1", dummyFilter)
+			rule, err := client.CreateAlertRule(cParams)
+			require.NoError(t, err)
+			defer deleteRule(t, client, rule.Payload.RuleID)
+
+			params := &rules.UpdateAlertRuleParams{
+				Body: rules.UpdateAlertRuleBody{
+					RuleID:   rule.Payload.RuleID,
+					Disabled: false,
+					Params: []*rules.ParamsItems0{{
+						Name: "param1",
+						Type: pointer.ToString("BOOL"),
+						Bool: true,
+					}},
+					For:          "10s",
+					Severity:     pointer.ToString("SEVERITY_ERROR"),
+					CustomLabels: map[string]string{"foo": "bar", "baz": "faz"},
+					Filters: []*rules.FiltersItems0{{
+						Type:  pointer.ToString("EQUAL"),
+						Key:   "param1",
+						Value: "21",
+					}},
+					ChannelIds: []string{channelID, newChannelID},
+				},
+				Context: pmmapitests.Context,
+			}
+			_, err = client.UpdateAlertRule(params)
+			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Parameter param1 has type bool instead of float.")
+		})
 	})
 
 	t.Run("toggle", func(t *testing.T) {
 		t.Run("normal", func(t *testing.T) {
-			cParams := createAlertRuleParams(templateName, channelID, dummyFilter)
+			cParams := createAlertRuleParams(templateName, channelID, "param1", dummyFilter)
 			rule, err := client.CreateAlertRule(cParams)
 			require.NoError(t, err)
 			defer deleteRule(t, client, rule.Payload.RuleID)
@@ -210,7 +337,7 @@ func TestRulesAPI(t *testing.T) {
 	})
 
 	t.Run("delete", func(t *testing.T) {
-		params := createAlertRuleParams(templateName, channelID, dummyFilter)
+		params := createAlertRuleParams(templateName, channelID, "param1", dummyFilter)
 		rule, err := client.CreateAlertRule(params)
 		require.NoError(t, err)
 
@@ -229,7 +356,7 @@ func TestRulesAPI(t *testing.T) {
 	})
 
 	t.Run("list", func(t *testing.T) {
-		params := createAlertRuleParams(templateName, channelID, dummyFilter)
+		params := createAlertRuleParams(templateName, channelID, "param1", dummyFilter)
 		rule, err := client.CreateAlertRule(params)
 		require.NoError(t, err)
 		defer deleteRule(t, client, rule.Payload.RuleID)
@@ -242,12 +369,17 @@ func TestRulesAPI(t *testing.T) {
 			if r.RuleID == rule.Payload.RuleID {
 				assert.True(t, r.Disabled)
 				assert.Equal(t, params.Body.Summary, r.Summary)
-				assert.Len(t, r.Params, 1)
+				assert.Len(t, r.Params, 2)
 				assert.Equal(t, params.Body.Params[0].Type, r.Params[0].Type)
 				assert.Equal(t, params.Body.Params[0].Name, r.Params[0].Name)
 				assert.Equal(t, params.Body.Params[0].Float, r.Params[0].Float)
 				assert.Equal(t, params.Body.Params[0].Bool, r.Params[0].Bool)
 				assert.Equal(t, params.Body.Params[0].String, r.Params[0].String)
+				assert.Equal(t, "FLOAT", *r.Params[1].Type)
+				assert.Equal(t, "param2", r.Params[1].Name)
+				assert.Equal(t, float32(50), r.Params[1].Float)
+				assert.Equal(t, false, r.Params[1].Bool)
+				assert.Equal(t, "", r.Params[1].String)
 				assert.Equal(t, params.Body.For, r.For)
 				assert.Equal(t, params.Body.Severity, r.Severity)
 				assert.Equal(t, params.Body.CustomLabels, r.CustomLabels)
@@ -272,14 +404,14 @@ func deleteRule(t *testing.T, client rules.ClientService, id string) {
 	assert.NoError(t, err)
 }
 
-func createAlertRuleParams(templateName, channelID string, filter *rules.FiltersItems0) *rules.CreateAlertRuleParams {
+func createAlertRuleParams(templateName, channelID, paramName string, filter *rules.FiltersItems0) *rules.CreateAlertRuleParams {
 	rule := &rules.CreateAlertRuleParams{
 		Body: rules.CreateAlertRuleBody{
 			TemplateName: templateName,
 			Disabled:     true,
 			Summary:      "example summary",
 			Params: []*rules.ParamsItems0{{
-				Name:  "threshold",
+				Name:  paramName,
 				Type:  pointer.ToString("FLOAT"),
 				Float: 12,
 			}},
@@ -308,7 +440,7 @@ func createTemplate(t *testing.T) string {
 	templateName := gofakeit.UUID()
 	_, err = client.Default.Templates.CreateTemplate(&templates.CreateTemplateParams{
 		Body: templates.CreateTemplateBody{
-			Yaml: fmt.Sprintf(string(b), templateName, gofakeit.UUID()),
+			Yaml: fmt.Sprintf(string(b), templateName, gofakeit.UUID(), "%", "s"),
 		},
 		Context: pmmapitests.Context,
 	})
