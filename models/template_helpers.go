@@ -213,10 +213,9 @@ func templateInUse(q *reform.Querier, name string) (bool, error) {
 }
 
 func convertTemplateParams(params []alert.Parameter) (TemplateParams, error) {
-	res := make(TemplateParams, len(params))
-	for i, param := range params {
-
-		res[i] = TemplateParam{
+	res := make(TemplateParams, 0, len(params))
+	for _, param := range params {
+		p := TemplateParam{
 			Name:    param.Name,
 			Summary: param.Summary,
 			Unit:    string(param.Unit),
@@ -242,10 +241,12 @@ func convertTemplateParams(params []alert.Parameter) (TemplateParams, error) {
 				fp.Min, fp.Max = pointer.ToFloat64(min), pointer.ToFloat64(max)
 			}
 
-			res[i].FloatParam = &fp
+			p.FloatParam = &fp
 		default:
 			return nil, errors.Errorf("Unknown parameter type %s", param.Type)
 		}
+
+		res = append(res, p)
 	}
 
 	return res, nil
