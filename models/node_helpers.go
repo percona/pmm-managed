@@ -242,6 +242,10 @@ func CreateNode(q *reform.Querier, nodeType NodeType, params *CreateNodeParams) 
 
 // RemoveNode removes single Node.
 func RemoveNode(q *reform.Querier, id string, mode RemoveMode) error {
+	if mode != RemoveRestrict && mode != RemoveCascade {
+		panic(fmt.Errorf("unexpected mode %v", mode))
+	}
+
 	n, err := FindNodeByID(q, id)
 	if err != nil {
 		return err
@@ -256,19 +260,14 @@ func RemoveNode(q *reform.Querier, id string, mode RemoveMode) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to select Agent IDs")
 	}
-	if len(structs) != 0 {
-		switch mode {
-		case RemoveRestrict:
-			return status.Errorf(codes.FailedPrecondition, "Node with ID %q has agents.", id)
-		case RemoveCascade:
-			for _, str := range structs {
-				agentID := str.(*Agent).AgentID
-				if _, err = RemoveAgent(q, agentID, RemoveCascade); err != nil {
-					return err
-				}
-			}
-		default:
-			panic(fmt.Errorf("unhandled RemoveMode %v", mode))
+	if len(structs) != 0 && mode == RemoveRestrict {
+		return status.Errorf(codes.FailedPrecondition, "Node with ID %q has agents.", id)
+	}
+
+	for _, str := range structs {
+		agentID := str.(*Agent).AgentID
+		if _, err = RemoveAgent(q, agentID, RemoveCascade); err != nil {
+			return err
 		}
 	}
 
@@ -277,19 +276,14 @@ func RemoveNode(q *reform.Querier, id string, mode RemoveMode) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to select Agents")
 	}
-	if len(structs) != 0 {
-		switch mode {
-		case RemoveRestrict:
-			return status.Errorf(codes.FailedPrecondition, "Node with ID %q has pmm-agent.", id)
-		case RemoveCascade:
-			for _, str := range structs {
-				agentID := str.(*Agent).AgentID
-				if _, err = RemoveAgent(q, agentID, RemoveCascade); err != nil {
-					return err
-				}
-			}
-		default:
-			panic(fmt.Errorf("unhandled RemoveMode %v", mode))
+	if len(structs) != 0 && mode == RemoveRestrict {
+		return status.Errorf(codes.FailedPrecondition, "Node with ID %q has pmm-agent.", id)
+	}
+
+	for _, str := range structs {
+		agentID := str.(*Agent).AgentID
+		if _, err = RemoveAgent(q, agentID, RemoveCascade); err != nil {
+			return err
 		}
 	}
 
@@ -298,19 +292,14 @@ func RemoveNode(q *reform.Querier, id string, mode RemoveMode) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to select Service IDs")
 	}
-	if len(structs) != 0 {
-		switch mode {
-		case RemoveRestrict:
-			return status.Errorf(codes.FailedPrecondition, "Node with ID %q has services.", id)
-		case RemoveCascade:
-			for _, str := range structs {
-				serviceID := str.(*Service).ServiceID
-				if err = RemoveService(q, serviceID, RemoveCascade); err != nil {
-					return err
-				}
-			}
-		default:
-			panic(fmt.Errorf("unhandled RemoveMode %v", mode))
+	if len(structs) != 0 && mode == RemoveRestrict {
+		return status.Errorf(codes.FailedPrecondition, "Node with ID %q has services.", id)
+	}
+
+	for _, str := range structs {
+		serviceID := str.(*Service).ServiceID
+		if err = RemoveService(q, serviceID, RemoveCascade); err != nil {
+			return err
 		}
 	}
 

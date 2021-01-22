@@ -244,6 +244,10 @@ func AddNewService(q *reform.Querier, serviceType ServiceType, params *AddDBMSSe
 
 // RemoveService removes single Service.
 func RemoveService(q *reform.Querier, id string, mode RemoveMode) error {
+	if mode != RemoveRestrict && mode != RemoveCascade {
+		panic(fmt.Errorf("unexpected mode %v", mode))
+	}
+
 	s, err := FindServiceByID(q, id)
 	if err != nil {
 		return err
@@ -254,18 +258,13 @@ func RemoveService(q *reform.Querier, id string, mode RemoveMode) error {
 		return errors.Wrap(err, "failed to select Agent IDs")
 	}
 	if len(structs) != 0 {
-		switch mode {
-		case RemoveRestrict:
-			return status.Errorf(codes.FailedPrecondition, "Service with ID %q has agents.", id)
-		case RemoveCascade:
-			for _, str := range structs {
-				agentID := str.(*Agent).AgentID
-				if _, err = RemoveAgent(q, agentID, RemoveCascade); err != nil {
-					return err
-				}
-			}
-		default:
-			panic(fmt.Errorf("unhandled RemoveMode %v", mode))
+		return status.Errorf(codes.FailedPrecondition, "Service with ID %q has agents.", id)
+	}
+
+	for _, str := range structs {
+		agentID := str.(*Agent).AgentID
+		if _, err = RemoveAgent(q, agentID, RemoveCascade); err != nil {
+			return err
 		}
 	}
 

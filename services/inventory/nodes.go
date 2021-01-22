@@ -244,14 +244,18 @@ func (s *NodesService) Remove(ctx context.Context, id string, force bool) error 
 			if err != nil {
 				return errors.WithStack(err)
 			}
-
 			allAgents = append(allAgents, agents...)
 
 			agents, err = models.FindAgents(tx.Querier, models.AgentFilters{NodeID: id})
 			if err != nil {
 				return errors.WithStack(err)
 			}
+			allAgents = append(allAgents, agents...)
 
+			agents, err = models.FindPMMAgentsForServicesOnNode(tx.Querier, id)
+			if err != nil {
+				return errors.WithStack(err)
+			}
 			allAgents = append(allAgents, agents...)
 
 			for _, a := range allAgents {
