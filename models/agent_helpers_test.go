@@ -277,7 +277,7 @@ func TestAgentHelpers(t *testing.T) {
 		agents, err := models.FindPMMAgentsForServicesOnNode(q, "N1")
 		require.NoError(t, err)
 		t.Log(agents, err)
-		assert.Equal(t, "A2", agents[0].AgentID)
+		assert.Equal(t, "A1", agents[0].AgentID)
 	})
 
 	t.Run("FindPMMAgentsForService", func(t *testing.T) {

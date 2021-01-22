@@ -257,7 +257,7 @@ func RemoveService(q *reform.Querier, id string, mode RemoveMode) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to select Agent IDs")
 	}
-	if len(structs) != 0 {
+	if len(structs) != 0 && mode == RemoveRestrict {
 		return status.Errorf(codes.FailedPrecondition, "Service with ID %q has agents.", id)
 	}
 
