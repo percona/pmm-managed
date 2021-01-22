@@ -383,12 +383,12 @@
   version = "v0.3.0"
 
 [[projects]]
-  branch = "PMM-5988-dbaas-add-progress-bar"
+  branch = "main"
   digest = "1:436b854da3ff2bbd228f33cd6f0c0497c4cdf4daaefa6325f83a3c5e73995cfd"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "580017f3d4b86acc4791596bc156ea48fe9289a3"
+  revision = "c385730b6f7e85bc2f8218051e888020f686cb47"
 
 [[projects]]
   branch = "main"
@@ -416,7 +416,7 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-5988-dbaas-add-progress-bar"
+  branch = "PMM-2.0"
   digest = "1:3cad3bbefa3345f298ee5c0f33c63df61bce036a4b407c94dbeb408341ae02a2"
   name = "github.com/percona/pmm"
   packages = [
@@ -440,7 +440,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "6aa51de46edb1b53361bf4f35488fc6a23b7f10d"
+  revision = "2ab7746c89524ec612028b0c480fa1f90d1cdab5"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
