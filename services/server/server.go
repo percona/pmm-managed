@@ -600,11 +600,13 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	}
 
 	if req.EnableStt {
-		// force checks download and execution when STT is enabled
-		err = s.checksService.StartChecks(ctx)
-		if err != nil {
-			return nil, err
-		}
+		go func() {
+			// force checks download and execution when STT is enabled
+			err = s.checksService.StartChecks(context.Background())
+			if err != nil {
+				s.l.Error(err)
+			}
+		}()
 	}
 
 	if err := s.UpdateConfigurations(); err != nil {
