@@ -267,7 +267,7 @@ func TestAgentHelpers(t *testing.T) {
 		// find with non existing node.
 		agents, err = models.FindPMMAgentsRunningOnNode(q, "X1")
 		require.NoError(t, err)
-		assert.Len(t, agents, 0)
+		assert.Empty(t, agents)
 	})
 
 	t.Run("FindPMMAgentsForServicesOnNode", func(t *testing.T) {
