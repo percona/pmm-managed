@@ -135,6 +135,13 @@ func TestRuleTemplates(t *testing.T) {
 		assert.Equal(t, uParams.Template.Annotations, annotations)
 
 		assert.Equal(t, cParams.Source, updated.Source)
+
+		// mismatch name and yaml name
+		uParamsErr := changeTemplateParams(name)
+		uParamsErr.Name = gofakeit.UUID()
+		_, err = models.ChangeTemplate(q, uParamsErr)
+		require.NotNil(t, err)
+
 	})
 
 	t.Run("remove", func(t *testing.T) {
@@ -244,6 +251,7 @@ func createTemplateParams(name string) *models.CreateTemplateParams {
 
 func changeTemplateParams(name string) *models.ChangeTemplateParams {
 	return &models.ChangeTemplateParams{
+		Name: name,
 		Template: &alert.Template{
 			Name:    name,
 			Version: 1,
