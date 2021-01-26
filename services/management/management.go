@@ -21,7 +21,6 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/api/managementpb"
-	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -128,33 +127,8 @@ func validateNodeParamsOneOf(nodeID, nodeName string, addNodeParams *managementp
 	return nil
 }
 
-// PUSH or AUTO variant enables pushMode for the agent.
+// for now only PUSH variant enables pushMode for the agent,
+// later it will be changed and auto will mean pushMode.
 func isPushMode(variant managementpb.MetricsMode) bool {
-	return variant == managementpb.MetricsMode_PUSH || variant == managementpb.MetricsMode_AUTO
-}
-
-// Automatically pick metrics mode.
-func supportedMetricsMode(q *reform.Querier, metricsMode managementpb.MetricsMode, pmmAgentID string) (managementpb.MetricsMode, error) {
-	if pmmAgentID == models.PMMServerAgentID && metricsMode == managementpb.MetricsMode_PUSH {
-		return metricsMode, errors.Errorf("push metrics mode is not allowed for exporters running on pmm-server")
-	}
-
-	if metricsMode != managementpb.MetricsMode_AUTO {
-		return metricsMode, nil
-	}
-
-	if pmmAgentID == models.PMMServerAgentID {
-		return managementpb.MetricsMode_PULL, nil
-	}
-
-	pmmAgent, err := models.FindAgentByID(q, pmmAgentID)
-	if err != nil {
-		return metricsMode, err
-	}
-
-	if !models.IsPushMetricsSupported(pmmAgent.Version) {
-		return managementpb.MetricsMode_PULL, nil
-	}
-
-	return metricsMode, nil
+	return variant == managementpb.MetricsMode_PUSH
 }
