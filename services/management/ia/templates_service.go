@@ -464,14 +464,15 @@ func (s *TemplatesService) UpdateTemplate(ctx context.Context, req *iav1beta1.Up
 		return nil, status.Error(codes.InvalidArgument, "Request should contain exactly one rule template.")
 	}
 
-	for _, t := range templates {
-		if err = validateUserTemplate(&t); err != nil { //nolint:gosec
-			return nil, status.Errorf(codes.InvalidArgument, "%s.", err)
-		}
+	tmpl := templates[0]
+
+	if err = validateUserTemplate(&tmpl); err != nil { //nolint:gosec
+		return nil, status.Errorf(codes.InvalidArgument, "%s.", err)
 	}
 
 	params := &models.ChangeTemplateParams{
-		Template: &templates[0],
+		Template: &tmpl,
+		Name:     req.Name,
 		Yaml:     req.Yaml,
 	}
 
