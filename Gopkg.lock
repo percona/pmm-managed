@@ -418,7 +418,6 @@
 [[projects]]
   branch = "PMM-5784-pt-pg-summary"
   digest = "1:b4637ce96933a024043415151887bf2b3ae7e1fa40f01c6398d88a99d5a36002"
-
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
