@@ -53,6 +53,8 @@ func postgresExporterConfig(service *models.Service, exporter *models.Agent, red
 		args = append(args, "--web.telemetry-path="+*exporter.MetricsPath)
 	}
 
+	args = filterOutCollectors("--collect", args, exporter.DisabledCollectors)
+
 	sort.Strings(args)
 
 	res := &agentpb.SetStateRequest_AgentProcess{

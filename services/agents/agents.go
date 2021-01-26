@@ -17,6 +17,9 @@
 package agents
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/AlekSi/pointer"
 
 	"github.com/percona/pmm-managed/models"
@@ -39,4 +42,24 @@ func redactWords(agent *models.Agent) []string {
 		words = append(words, s)
 	}
 	return words
+}
+
+func filterOutCollectors(prefix string, args, disabledCollectors []string) []string {
+	isDisabled := func(arg string) bool {
+		for _, disabledCollector := range disabledCollectors {
+			if arg == fmt.Sprintf("%s.%s", prefix, disabledCollector) || strings.HasPrefix(arg, fmt.Sprintf("%s.%s.", prefix, disabledCollector)) {
+				return true
+			}
+		}
+		return false
+	}
+
+	var enabledArgs []string
+	for _, arg := range args {
+		if !isDisabled(arg) {
+			enabledArgs = append(enabledArgs, arg)
+		}
+	}
+
+	return enabledArgs
 }

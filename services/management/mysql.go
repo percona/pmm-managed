@@ -91,7 +91,6 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 			return err
 		}
 		res.Service = invService.(*inventorypb.MySQLService)
-
 		row, err := models.CreateAgent(tx.Querier, models.MySQLdExporterType, &models.CreateAgentParams{
 			PMMAgentID:                     req.PmmAgentId,
 			ServiceID:                      service.ServiceID,
@@ -101,6 +100,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 			TLSSkipVerify:                  req.TlsSkipVerify,
 			TableCountTablestatsGroupLimit: tablestatsGroupTableLimit,
 			PushMetrics:                    isPushMode(req.MetricsMode),
+			DisableCollectors:              req.DisableCollectors,
 		})
 		if err != nil {
 			return err

@@ -73,14 +73,15 @@ func (s *MongoDBService) Add(ctx context.Context, req *managementpb.AddMongoDBRe
 		mongoDBOptions := models.MongoDBOptionsFromRequest(req)
 
 		row, err := models.CreateAgent(tx.Querier, models.MongoDBExporterType, &models.CreateAgentParams{
-			PMMAgentID:     req.PmmAgentId,
-			ServiceID:      service.ServiceID,
-			Username:       req.Username,
-			Password:       req.Password,
-			TLS:            req.Tls,
-			TLSSkipVerify:  req.TlsSkipVerify,
-			MongoDBOptions: mongoDBOptions,
-			PushMetrics:    isPushMode(req.MetricsMode),
+			PMMAgentID:        req.PmmAgentId,
+			ServiceID:         service.ServiceID,
+			Username:          req.Username,
+			Password:          req.Password,
+			TLS:               req.Tls,
+			TLSSkipVerify:     req.TlsSkipVerify,
+			MongoDBOptions:    mongoDBOptions,
+			PushMetrics:       isPushMode(req.MetricsMode),
+			DisableCollectors: req.DisableCollectors,
 		})
 		if err != nil {
 			return err
