@@ -599,6 +599,10 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		return nil, err
 	}
 
+	if err := s.UpdateConfigurations(); err != nil {
+		return nil, err
+	}
+
 	if req.EnableStt {
 		go func() {
 			// force checks download and execution when STT is enabled
@@ -607,10 +611,6 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 				s.l.Error(err)
 			}
 		}()
-	}
-
-	if err := s.UpdateConfigurations(); err != nil {
-		return nil, err
 	}
 
 	if isAgentsStateUpdateNeeded(req.MetricsResolutions) {
