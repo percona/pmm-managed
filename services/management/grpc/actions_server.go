@@ -31,6 +31,8 @@ import (
 	"github.com/percona/pmm-managed/services/agents"
 )
 
+const defaultDatabase = "pmm-agent"
+
 type actionsServer struct {
 	r  *agents.Registry
 	db *reform.DB
@@ -241,6 +243,10 @@ func (s *actionsServer) StartMySQLShowIndexAction(ctx context.Context, req *mana
 // StartPostgreSQLShowCreateTableAction starts PostgreSQL SHOW CREATE TABLE Action.
 //nolint:lll
 func (s *actionsServer) StartPostgreSQLShowCreateTableAction(ctx context.Context, req *managementpb.StartPostgreSQLShowCreateTableActionRequest) (*managementpb.StartPostgreSQLShowCreateTableActionResponse, error) {
+	if req.Database == "" {
+		req.Database = defaultDatabase
+	}
+
 	res, dsn, err := s.prepareServiceAction(req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
 		return nil, err
