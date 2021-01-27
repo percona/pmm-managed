@@ -202,11 +202,11 @@ func TestMySQLdExporterConfigDisabledCollectors(t *testing.T) {
 		Args: []string{
 			"--collect.auto_increment.columns",
 			"--collect.binlog_size",
+			"--collect.custom_query.hr.directory=/usr/local/percona/pmm2/collectors/custom-queries/mysql/high-resolution",
 			"--collect.custom_query.lr",
 			"--collect.custom_query.lr.directory=/usr/local/percona/pmm2/collectors/custom-queries/mysql/low-resolution",
 			"--collect.custom_query.mr",
 			"--collect.custom_query.mr.directory=/usr/local/percona/pmm2/collectors/custom-queries/mysql/medium-resolution",
-			"--collect.custom_query.hr.directory=/usr/local/percona/pmm2/collectors/custom-queries/mysql/high-resolution",
 			"--collect.engine_innodb_status",
 			"--collect.engine_tokudb_status",
 			"--collect.global_status",

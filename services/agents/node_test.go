@@ -147,6 +147,10 @@ func TestNodeExporterConfig(t *testing.T) {
 				"--collector.textfile.mr",
 				"--collector.time",
 				"--collector.uname",
+				"--collector.vmstat.fields=^(pg(steal_(kswapd|direct)|refill|alloc)_(movable|normal|dma3?2?)" +
+					"|nr_(dirty.*|slab.*|vmscan.*|isolated.*|free.*|shmem.*|i?n?active.*|anon_transparent_.*|writeback.*|unstable" +
+					"|unevictable|mlock|mapped|bounce|page_table_pages|kernel_stack)|drop_slab|slabs_scanned|pgd?e?activate" +
+					"|pgpg(in|out)|pswp(in|out)|pgm?a?j?fault)$",
 				"--no-collector.arp",
 				"--no-collector.bcache",
 				"--no-collector.conntrack",
