@@ -117,7 +117,7 @@ func TestNodeExporterConfig(t *testing.T) {
 		node := &models.Node{}
 		exporter := &models.Agent{
 			AgentID:            "agent-id",
-			DisabledCollectors: []string{"cpu", "netstat", "vmstat", "meminfo"},
+			DisabledCollectors: []string{"cpu", "netstat", "netstat.fields", "vmstat", "meminfo"},
 		}
 		actual := nodeExporterConfig(node, exporter)
 		expected := &agentpb.SetStateRequest_AgentProcess{

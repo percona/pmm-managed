@@ -88,7 +88,7 @@ func TestPostgresExporterConfig(t *testing.T) {
 		postgresql.Address = nil
 		postgresql.Port = nil
 		postgresql.Socket = pointer.ToString("/var/run/postgres")
-		exporter.DisabledCollectors = []string{"custom_query.hr"}
+		exporter.DisabledCollectors = []string{"custom_query.hr", "custom_query.hr.directory"}
 		actual := postgresExporterConfig(postgresql, exporter, exposeSecrets)
 		expected := &agentpb.SetStateRequest_AgentProcess{
 			Type:               inventorypb.AgentType_POSTGRES_EXPORTER,
