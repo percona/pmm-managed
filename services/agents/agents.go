@@ -50,7 +50,7 @@ func filterOutCollectors(prefix string, args, disabledCollectors []string) []str
 			// DisableCollector valuse should  match collector flag till end of string or till `=` sign.
 			// Examples:
 			// 1. if we pass `meminfo` then only "--collector.meminfo" but not "--collector.meminfo_numa"
-			// 2. if we pass `netstat.field` then "--collector.netstat.fields=^(.*_(InErrors|InErrs|InCsumErrors)..." shold be disabled.
+			// 2. if we pass `netstat.field` then "--collector.netstat.fields=^(.*_(InErrors|InErrs|InCsumErrors)..." should be disabled.
 			// 3. To disable "--collect.custom_query.hr" with directory ""--collect.custom_query.lr.directory" user should pass both names.
 			if arg == fmt.Sprintf("%s.%s", prefix, disabledCollector) || strings.HasPrefix(arg, fmt.Sprintf("%s.%s=", prefix, disabledCollector)) {
 				return true
