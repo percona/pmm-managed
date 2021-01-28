@@ -416,7 +416,7 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-7257-rule-list-expr"
+  branch = "release/2.15"
   digest = "1:96384f182d87cca9d1ab2fec85ce9af8073b21d416c2568186f938de13e02179"
   name = "github.com/percona/pmm"
   packages = [
@@ -440,7 +440,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "cd28728a7f8dd7ed78566326656d126b0916e74f"
+  revision = "43174e329a5f36b05a58f27160033c12a3bdee68"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
