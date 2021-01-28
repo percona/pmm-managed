@@ -155,7 +155,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 		l.Infof("Disconnecting client: %s.", disconnectReason)
 	}()
 
-	go r.RunStateChangeHandler(ctx, agent)
+	go r.runStateChangeHandler(ctx, agent)
 
 	// send first SetStateRequest concurrently with handling ping from agent
 	go r.SendSetStateRequest(ctx, agent.id)
@@ -514,11 +514,11 @@ func (r *Registry) UpdateAgentsState(ctx context.Context) error {
 	return nil
 }
 
-func (r *Registry) RunStateChangeHandler(ctx context.Context, agent *pmmAgentInfo) {
+func (r *Registry) runStateChangeHandler(ctx context.Context, agent *pmmAgentInfo) {
 	l := logger.Get(ctx).WithField("agent_id", agent.id)
 
-	l.Info("Starting RunStateChangeHandler ...")
-	defer l.Info("Done RunStateChangeHandler.")
+	l.Info("Starting runStateChangeHandler ...")
+	defer l.Info("Done runStateChangeHandler.")
 
 	// stateChangeChan, state update loop, and SendSetStateRequest method ensure that state
 	// is reloaded when requested, but several requests are batched together to avoid too often reloads.
