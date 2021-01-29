@@ -189,7 +189,7 @@ func RemoveTemplate(q *reform.Querier, name string) error {
 	}
 
 	if inUse {
-		return errors.Errorf("failed to delete rule template, as it is being used by a rule")
+		return status.Errorf(codes.FailedPrecondition, "Failed to delete rule template %s, as it is being used by some rule.", name)
 	}
 
 	err = q.Delete(&Template{Name: name})
@@ -212,14 +212,14 @@ func templateInUse(q *reform.Querier, name string) (bool, error) {
 }
 
 func convertTemplateParams(params []alert.Parameter) (TemplateParams, error) {
-	res := make(TemplateParams, len(params))
-	for i, param := range params {
+	res := make(TemplateParams, 0, len(params))
+	for _, param := range params {
 		t, err := convertParamType(param.Type)
 		if err != nil {
 			return nil, err
 		}
 
-		res[i] = TemplateParam{
+		p := TemplateParam{
 			Name:    param.Name,
 			Summary: param.Summary,
 			Unit:    param.Unit,
@@ -240,8 +240,10 @@ func convertTemplateParams(params []alert.Parameter) (TemplateParams, error) {
 				return nil, errors.Wrap(err, "failed to parse param range")
 			}
 
-			res[i].FloatParam = &fp
+			p.FloatParam = &fp
 		}
+
+		res = append(res, p)
 	}
 
 	return res, nil

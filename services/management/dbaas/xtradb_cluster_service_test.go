@@ -132,6 +132,10 @@ func TestXtraDBClusterService(t *testing.T) {
 							DiskSize: 1024 * 1024 * 1024,
 						},
 					},
+					Operation: &controllerv1beta1.RunningOperation{
+						TotalSteps:    int32(15),
+						FinishedSteps: int32(15),
+					},
 				},
 			},
 		}
@@ -147,6 +151,8 @@ func TestXtraDBClusterService(t *testing.T) {
 		assert.Equal(t, int64(256), resp.Clusters[0].Params.Pxc.ComputeResources.MemoryBytes)
 		assert.Equal(t, int32(2), resp.Clusters[0].Params.Proxysql.ComputeResources.CpuM)
 		assert.Equal(t, int64(124), resp.Clusters[0].Params.Proxysql.ComputeResources.MemoryBytes)
+		assert.Equal(t, int32(15), resp.Clusters[0].Operation.TotalSteps)
+		assert.Equal(t, int32(15), resp.Clusters[0].Operation.FinishedSteps)
 	})
 
 	//nolint:dupl
@@ -214,7 +220,14 @@ func TestXtraDBClusterService(t *testing.T) {
 			Name: name,
 		}
 
-		dbaasClient.On("GetXtraDBCluster", ctx, &mockReq).Return(&controllerv1beta1.GetXtraDBClusterResponse{}, nil)
+		dbaasClient.On("GetXtraDBCluster", ctx, &mockReq).Return(&controllerv1beta1.GetXtraDBClusterResponse{
+			Credentials: &controllerv1beta1.XtraDBCredentials{
+				Username: "root",
+				Password: "root_password",
+				Host:     "hostname",
+				Port:     3306,
+			},
+		}, nil)
 
 		in := dbaasv1beta1.GetXtraDBClusterRequest{
 			KubernetesClusterName: pxcKubernetesClusterNameTest,
@@ -225,7 +238,7 @@ func TestXtraDBClusterService(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, actual.ConnectionCredentials.Username, "root")
 		assert.Equal(t, actual.ConnectionCredentials.Password, "root_password")
-		assert.Equal(t, actual.ConnectionCredentials.Host, "", name)
+		assert.Equal(t, actual.ConnectionCredentials.Host, "hostname", name)
 		assert.Equal(t, actual.ConnectionCredentials.Port, int32(3306))
 	})
 
@@ -241,7 +254,10 @@ func TestXtraDBClusterService(t *testing.T) {
 
 		mockCluster := &controllerv1beta1.GetXtraDBClusterResponse{
 			Credentials: &controllerv1beta1.XtraDBCredentials{
-				Host: "amazing.com",
+				Username: "root",
+				Password: "root_password",
+				Host:     "amazing.com",
+				Port:     3306,
 			},
 		}
 
