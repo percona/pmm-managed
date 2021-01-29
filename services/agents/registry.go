@@ -50,6 +50,7 @@ const (
 var (
 	defaultActionTimeout      = ptypes.DurationProto(10 * time.Second)
 	defaultQueryActionTimeout = ptypes.DurationProto(15 * time.Second) // should be less than checks.resultTimeout
+	defaultPtActionTimeout    = ptypes.DurationProto(30 * time.Second) // Percona-toolkit action timeout
 )
 
 type pmmAgentInfo struct {
@@ -1092,7 +1093,7 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID stri
 		Params: &agentpb.StartActionRequest_PtSummaryParams{
 			PtSummaryParams: &agentpb.StartActionRequest_PTSummaryParams{},
 		},
-		Timeout: defaultActionTimeout,
+		Timeout: defaultPtActionTimeout,
 	}
 
 	agent, err := r.get(pmmAgentID)
@@ -1120,7 +1121,7 @@ func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID
 				Password: password,
 			},
 		},
-		Timeout: defaultActionTimeout,
+		Timeout: defaultPtActionTimeout,
 	}
 
 	// Agent which the action request will be sent to, got by the provided ID
