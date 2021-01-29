@@ -44,26 +44,30 @@ func redactWords(agent *models.Agent) []string {
 	return words
 }
 
-func filterOutCollectors(prefix string, args, disabledCollectors []string) []string {
-	isDisabled := func(arg string) bool {
-		for _, disabledCollector := range disabledCollectors {
-			// DisableCollector valuse should  match collector flag till end of string or till `=` sign.
-			// Examples:
-			// 1. if we pass `meminfo` then only "--collector.meminfo" but not "--collector.meminfo_numa"
-			// 2. if we pass `netstat.field` then "--collector.netstat.fields=^(.*_(InErrors|InErrs|InCsumErrors)..." shold be disabled.
-			// 3. To disable "--collect.custom_query.hr" with directory ""--collect.custom_query.lr.directory" user should pass both names.
-			if arg == fmt.Sprintf("%s.%s", prefix, disabledCollector) || strings.HasPrefix(arg, fmt.Sprintf("%s.%s=", prefix, disabledCollector)) {
-				return true
-			}
-		}
-		return false
+// FilterOutCollectors removes from exporter's flags disabled collectors.
+// DisableCollector values should  match collector flag till end of string or till `=` sign.
+// Examples:
+// 1. if we pass `meminfo` then only "--collector.meminfo" but not "--collector.meminfo_numa"
+// 2. if we pass `netstat.field` then "--collector.netstat.fields=^(.*_(InErrors|InErrs|InCsumErrors)..." shold be disabled.
+// 3. To disable "--collect.custom_query.hr" with directory ""--collect.custom_query.lr.directory" user should pass both names.
+func FilterOutCollectors(prefix string, args, disabledCollectors []string) []string {
+	argsMap := make(map[string]string)
+	for _, arg := range args {
+		flagName := strings.Split(arg, "=")[0]
+		argsMap[flagName] = arg
 	}
 
-	var enabledArgs []string
-	for _, arg := range args {
-		if !isDisabled(arg) {
-			enabledArgs = append(enabledArgs, arg)
+	for _, disabledCollector := range disabledCollectors {
+		key := fmt.Sprintf("%s%s", prefix, disabledCollector)
+		_, ok := argsMap[key]
+		if ok {
+			delete(argsMap, key)
 		}
+	}
+
+	enabledArgs := []string{}
+	for _, arg := range argsMap {
+		enabledArgs = append(enabledArgs, arg)
 	}
 
 	return enabledArgs

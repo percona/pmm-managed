@@ -90,7 +90,7 @@ func mysqldExporterConfig(service *models.Service, exporter *models.Agent, redac
 		args = append(args, tablestatsGroup...)
 	}
 
-	args = filterOutCollectors("--collect", args, exporter.DisabledCollectors)
+	args = FilterOutCollectors("--collect.", args, exporter.DisabledCollectors)
 
 	if pointer.GetString(exporter.MetricsPath) != "" {
 		args = append(args, "--web.telemetry-path="+*exporter.MetricsPath)
