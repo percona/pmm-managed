@@ -383,12 +383,12 @@
   version = "v0.3.0"
 
 [[projects]]
-  branch = "main"
-  digest = "1:436b854da3ff2bbd228f33cd6f0c0497c4cdf4daaefa6325f83a3c5e73995cfd"
+  branch = "PMM-7250-rename-get-to-get-credentials"
+  digest = "1:a7d0b2cedb16e5aaa117dd3ea42166b40abc941f12c9cf0c1f87bad1a995f829"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "c385730b6f7e85bc2f8218051e888020f686cb47"
+  revision = "27d345bd4893e1e85adc8af59884d0901e556c4c"
 
 [[projects]]
   branch = "main"
