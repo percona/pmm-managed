@@ -232,34 +232,38 @@ func (s *NodesService) AddRemoteRDSNode(ctx context.Context, req *inventorypb.Ad
 // Removes Node with the Agents and Services if force == true.
 // Returns an error if force == false and Node has Agents or Services.
 func (s *NodesService) Remove(ctx context.Context, id string, force bool) error {
-	pmmAgentIDs := make(map[string]struct{})
+	idsToKick := make(map[string]struct{})
+	idsToSetState := make(map[string]struct{})
 
 	if e := s.db.InTransaction(func(tx *reform.TX) error {
 		mode := models.RemoveRestrict
 		if force {
 			mode = models.RemoveCascade
 
-			allAgents, err := models.FindPMMAgentsRunningOnNode(tx.Querier, id)
+			agents, err := models.FindPMMAgentsRunningOnNode(tx.Querier, id)
 			if err != nil {
 				return errors.WithStack(err)
+			}
+			for _, a := range agents {
+				idsToKick[a.AgentID] = struct{}{}
 			}
 
-			agents, err := models.FindAgents(tx.Querier, models.AgentFilters{NodeID: id})
+			agents, err = models.FindAgents(tx.Querier, models.AgentFilters{NodeID: id})
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			allAgents = append(allAgents, agents...)
+			for _, a := range agents {
+				if a.PMMAgentID != nil {
+					idsToSetState[pointer.GetString(a.PMMAgentID)] = struct{}{}
+				}
+			}
 
 			agents, err = models.FindPMMAgentsForServicesOnNode(tx.Querier, id)
 			if err != nil {
 				return errors.WithStack(err)
 			}
-			allAgents = append(allAgents, agents...)
-
-			for _, a := range allAgents {
-				if a.PMMAgentID != nil {
-					pmmAgentIDs[pointer.GetString(a.PMMAgentID)] = struct{}{}
-				}
+			for _, a := range agents {
+				idsToSetState[a.AgentID] = struct{}{}
 			}
 		}
 		return models.RemoveNode(tx.Querier, id, mode)
@@ -267,8 +271,11 @@ func (s *NodesService) Remove(ctx context.Context, id string, force bool) error 
 		return e
 	}
 
-	for id := range pmmAgentIDs {
+	for id := range idsToSetState {
 		s.r.SendSetStateRequest(ctx, id)
+	}
+	for id := range idsToKick {
+		s.r.Kick(ctx, id)
 	}
 
 	if force {

@@ -43,7 +43,7 @@ func NewExternalService(db *reform.DB, registry agentsRegistry, vmdb prometheusS
 	return &ExternalService{db: db, registry: registry, vmdb: vmdb}
 }
 
-func (e ExternalService) AddExternal(ctx context.Context, req *managementpb.AddExternalRequest) (*managementpb.AddExternalResponse, error) {
+func (e *ExternalService) AddExternal(ctx context.Context, req *managementpb.AddExternalRequest) (*managementpb.AddExternalResponse, error) {
 	res := new(managementpb.AddExternalResponse)
 	var pmmAgentID *string
 	if e := e.db.InTransaction(func(tx *reform.TX) error {
