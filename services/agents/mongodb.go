@@ -27,6 +27,7 @@ import (
 	"github.com/percona/pmm/version"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/utils/collectors"
 )
 
 // New MongoDB Exporter will be released with PMM agent v2.10.0.
@@ -56,7 +57,7 @@ func mongodbExporterConfig(service *models.Service, exporter *models.Agent, reda
 		}
 	}
 
-	args = filterOutCollectors("--collect.", args, exporter.DisabledCollectors)
+	args = collectors.FilterOutCollectors("--collect.", args, exporter.DisabledCollectors)
 
 	if pointer.GetString(exporter.MetricsPath) != "" {
 		args = append(args, "--web.telemetry-path="+*exporter.MetricsPath)

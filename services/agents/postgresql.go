@@ -26,6 +26,7 @@ import (
 	"github.com/percona/pmm/api/inventorypb"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/utils/collectors"
 )
 
 // postgresExporterConfig returns desired configuration of postgres_exporter process.
@@ -53,7 +54,7 @@ func postgresExporterConfig(service *models.Service, exporter *models.Agent, red
 		args = append(args, "--web.telemetry-path="+*exporter.MetricsPath)
 	}
 
-	args = filterOutCollectors("--collect.", args, exporter.DisabledCollectors)
+	args = collectors.FilterOutCollectors("--collect.", args, exporter.DisabledCollectors)
 
 	sort.Strings(args)
 

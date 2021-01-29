@@ -420,7 +420,7 @@ var databaseSchema = [][]string{
 		`ALTER TABLE ia_rules ALTER COLUMN channel_ids DROP NOT NULL`,
 	},
 	27: {
-		`ALTER TABLE agents ADD COLUMN disabled_collectors VARCHAR []`,
+		`ALTER TABLE agents ADD COLUMN disabled_collectors VARCHAR[]`,
 	},
 }
 
