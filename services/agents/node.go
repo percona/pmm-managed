@@ -118,7 +118,7 @@ func nodeExporterConfig(node *models.Node, exporter *models.Agent) *agentpb.SetS
 		)
 	}
 
-	args = FilterOutCollectors("--collector.", args, exporter.DisabledCollectors)
+	args = filterOutCollectors("--collector.", args, exporter.DisabledCollectors)
 
 	if pointer.GetString(exporter.MetricsPath) != "" {
 		args = append(args, "--web.telemetry-path="+*exporter.MetricsPath)

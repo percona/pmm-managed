@@ -29,7 +29,6 @@ import (
 	config "github.com/percona/promconfig"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/agents"
 )
 
 // ScrapeTimeout - wraps scrapeTimeout and makes it public for victoriametrics package.
@@ -227,7 +226,7 @@ func scrapeConfigsForNodeExporter(s *models.MetricsResolutions, params *scrapeCo
 			"hwmon",
 			"textfile.mr",
 		}
-		mrCollect = agents.FilterOutCollectors("", mrCollect, params.agent.DisabledCollectors)
+		mrCollect = filterOutCollectors(mrCollect, params.agent.DisabledCollectors)
 		mr, err = scrapeConfigForStandardExporter("mr", s.MR, params, mrCollect)
 		if err != nil {
 			return nil, err
@@ -239,7 +238,7 @@ func scrapeConfigsForNodeExporter(s *models.MetricsResolutions, params *scrapeCo
 			"textfile.lr",
 			"uname",
 		}
-		lrCollect = agents.FilterOutCollectors("", lrCollect, params.agent.DisabledCollectors)
+		lrCollect = filterOutCollectors(lrCollect, params.agent.DisabledCollectors)
 		lr, err = scrapeConfigForStandardExporter("lr", s.LR, params, lrCollect)
 		if err != nil {
 			return nil, err
@@ -268,7 +267,7 @@ func scrapeConfigsForNodeExporter(s *models.MetricsResolutions, params *scrapeCo
 		"netdev",
 		"time",
 	)
-	hrCollect = agents.FilterOutCollectors("", hrCollect, params.agent.DisabledCollectors)
+	hrCollect = filterOutCollectors(hrCollect, params.agent.DisabledCollectors)
 
 	hr, err = scrapeConfigForStandardExporter("hr", s.HR, params, hrCollect)
 	if err != nil {
@@ -298,7 +297,7 @@ func scrapeConfigsForMySQLdExporter(s *models.MetricsResolutions, params *scrape
 		"standard.go",
 		"standard.process",
 	}
-	hrOptions = agents.FilterOutCollectors("", hrOptions, params.agent.DisabledCollectors)
+	hrOptions = filterOutCollectors(hrOptions, params.agent.DisabledCollectors)
 
 	hr, err := scrapeConfigForStandardExporter("hr", s.HR, params, hrOptions)
 	if err != nil {
@@ -320,7 +319,7 @@ func scrapeConfigsForMySQLdExporter(s *models.MetricsResolutions, params *scrape
 		mrOptions = append(mrOptions, "perf_schema.tablelocks")
 	}
 
-	mrOptions = agents.FilterOutCollectors("", mrOptions, params.agent.DisabledCollectors)
+	mrOptions = filterOutCollectors(mrOptions, params.agent.DisabledCollectors)
 	mr, err := scrapeConfigForStandardExporter("mr", s.MR, params, mrOptions)
 	if err != nil {
 		return nil, err
@@ -348,7 +347,7 @@ func scrapeConfigsForMySQLdExporter(s *models.MetricsResolutions, params *scrape
 		)
 	}
 
-	lrOptions = agents.FilterOutCollectors("", lrOptions, params.agent.DisabledCollectors)
+	lrOptions = filterOutCollectors(lrOptions, params.agent.DisabledCollectors)
 
 	lr, err := scrapeConfigForStandardExporter("lr", s.LR, params, lrOptions)
 	if err != nil {
@@ -388,7 +387,7 @@ func scrapeConfigsForPostgresExporter(s *models.MetricsResolutions, params *scra
 		"standard.go",
 		"standard.process",
 	}
-	hrOptions = agents.FilterOutCollectors("", hrOptions, params.agent.DisabledCollectors)
+	hrOptions = filterOutCollectors(hrOptions, params.agent.DisabledCollectors)
 	hr, err := scrapeConfigForStandardExporter("hr", s.HR, params, hrOptions)
 	if err != nil {
 		return nil, err
@@ -397,7 +396,7 @@ func scrapeConfigsForPostgresExporter(s *models.MetricsResolutions, params *scra
 	mrOptions := []string{
 		"custom_query.mr",
 	}
-	mrOptions = agents.FilterOutCollectors("", mrOptions, params.agent.DisabledCollectors)
+	mrOptions = filterOutCollectors(mrOptions, params.agent.DisabledCollectors)
 	mr, err := scrapeConfigForStandardExporter("mr", s.MR, params, mrOptions)
 	if err != nil {
 		return nil, err
@@ -406,7 +405,7 @@ func scrapeConfigsForPostgresExporter(s *models.MetricsResolutions, params *scra
 	lrOptions := []string{
 		"custom_query.lr",
 	}
-	lrOptions = agents.FilterOutCollectors("", lrOptions, params.agent.DisabledCollectors)
+	lrOptions = filterOutCollectors(lrOptions, params.agent.DisabledCollectors)
 	lr, err := scrapeConfigForStandardExporter("lr", s.LR, params, lrOptions)
 	if err != nil {
 		return nil, err
@@ -533,4 +532,26 @@ func scrapeConfigsForVMAgent(s *models.MetricsResolutions, params *scrapeConfigP
 		}},
 	}
 	return []*config.ScrapeConfig{cfg}, nil
+}
+
+// filterOutCollectors removes disabled collectors from scrape config.
+func filterOutCollectors(collectors, disabledCollectors []string) []string {
+	collectorsMap := make(map[string]struct{})
+	for _, collector := range collectors {
+		collectorsMap[collector] = struct{}{}
+	}
+
+	for _, disabledCollector := range disabledCollectors {
+		_, ok := collectorsMap[disabledCollector]
+		if ok {
+			delete(collectorsMap, disabledCollector)
+		}
+	}
+
+	enabledCollectors := []string{}
+	for collector := range collectorsMap {
+		enabledCollectors = append(enabledCollectors, collector)
+	}
+
+	return enabledCollectors
 }

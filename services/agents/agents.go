@@ -44,13 +44,13 @@ func redactWords(agent *models.Agent) []string {
 	return words
 }
 
-// FilterOutCollectors removes from exporter's flags disabled collectors.
+// filterOutCollectors removes from exporter's flags disabled collectors.
 // DisableCollector values should  match collector flag till end of string or till `=` sign.
 // Examples:
 // 1. if we pass `meminfo` then only "--collector.meminfo" but not "--collector.meminfo_numa"
 // 2. if we pass `netstat.field` then "--collector.netstat.fields=^(.*_(InErrors|InErrs|InCsumErrors)..." should be disabled.
 // 3. To disable "--collect.custom_query.hr" with directory ""--collect.custom_query.lr.directory" user should pass both names.
-func FilterOutCollectors(prefix string, args, disabledCollectors []string) []string {
+func filterOutCollectors(prefix string, args, disabledCollectors []string) []string {
 	argsMap := make(map[string]string)
 	for _, arg := range args {
 		flagName := strings.Split(arg, "=")[0]
