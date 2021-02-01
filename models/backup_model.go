@@ -69,6 +69,7 @@ func (s *BackupLocation) AfterFind() error {
 	return nil
 }
 
+// S3LocationConfig contains required properties for accessing S3 Bucket
 type S3LocationConfig struct {
 	Endpoint  string `json:"endpoint"`
 	AccessKey string `json:"access_key"`
@@ -81,6 +82,7 @@ func (c S3LocationConfig) Value() (driver.Value, error) { return jsonValue(c) }
 // Scan implements database/sql.Scanner interface. Should be defined on the pointer.
 func (c *S3LocationConfig) Scan(src interface{}) error { return jsonScan(c, src) }
 
+// FSLocationConfig contains require properties for accessing file system
 type FSLocationConfig struct {
 	Path string `json:"path"`
 }
