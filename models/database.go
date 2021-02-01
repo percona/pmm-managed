@@ -425,10 +425,8 @@ var databaseSchema = [][]string{
 			name VARCHAR NOT NULL CHECK (name <> ''),
 			description VARCHAR,
 			type VARCHAR NOT NULL CHECK (type <> ''),
-			endpoint VARCHAR,
-			access_key VARCHAR,
-			secret_key VARCHAR,
-			path VARCHAR,
+			s3_config JSONB,
+			fs_config JSONB,
 
 			created_at TIMESTAMP NOT NULL,
 			updated_at TIMESTAMP NOT NULL,

@@ -17,6 +17,7 @@
 package models
 
 import (
+	"database/sql/driver"
 	"time"
 
 	"gopkg.in/reform.v1"
@@ -40,10 +41,8 @@ type BackupLocation struct {
 	Name        string             `reform:"name"`
 	Description *string            `reform:"description"`
 	Type        BackupLocationType `reform:"type"`
-	Endpoint    *string            `reform:"endpoint"`
-	AccessKey   *string            `reform:"access_key"`
-	SecretKey   *string            `reform:"secret_key"`
-	Path        *string            `reform:"path"`
+	S3Config    *S3LocationConfig  `reform:"s3_config"`
+	FSConfig    *FSLocationConfig  `reform:"fs_config"`
 
 	CreatedAt time.Time `reform:"created_at"`
 	UpdatedAt time.Time `reform:"updated_at"`
@@ -69,6 +68,28 @@ func (s *BackupLocation) AfterFind() error {
 	s.UpdatedAt = s.UpdatedAt.UTC()
 	return nil
 }
+
+type S3LocationConfig struct {
+	Endpoint  string `json:"endpoint"`
+	AccessKey string `json:"access_key"`
+	SecretKey string `json:"secret_key"`
+}
+
+// Value implements database/sql/driver.Valuer interface. Should be defined on the value.
+func (c S3LocationConfig) Value() (driver.Value, error) { return jsonValue(c) }
+
+// Scan implements database/sql.Scanner interface. Should be defined on the pointer.
+func (c *S3LocationConfig) Scan(src interface{}) error { return jsonScan(c, src) }
+
+type FSLocationConfig struct {
+	Path string `json:"path"`
+}
+
+// Value implements database/sql/driver.Valuer interface. Should be defined on the value.
+func (c FSLocationConfig) Value() (driver.Value, error) { return jsonValue(c) }
+
+// Scan implements database/sql.Scanner interface. Should be defined on the pointer.
+func (c *FSLocationConfig) Scan(src interface{}) error { return jsonScan(c, src) }
 
 // check interfaces
 var (

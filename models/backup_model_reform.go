@@ -32,10 +32,8 @@ func (v *backupLocationTableType) Columns() []string {
 		"name",
 		"description",
 		"type",
-		"endpoint",
-		"access_key",
-		"secret_key",
-		"path",
+		"s3_config",
+		"fs_config",
 		"created_at",
 		"updated_at",
 	}
@@ -66,10 +64,8 @@ var BackupLocationTable = &backupLocationTableType{
 			{Name: "Name", Type: "string", Column: "name"},
 			{Name: "Description", Type: "*string", Column: "description"},
 			{Name: "Type", Type: "BackupLocationType", Column: "type"},
-			{Name: "Endpoint", Type: "*string", Column: "endpoint"},
-			{Name: "AccessKey", Type: "*string", Column: "access_key"},
-			{Name: "SecretKey", Type: "*string", Column: "secret_key"},
-			{Name: "Path", Type: "*string", Column: "path"},
+			{Name: "S3Config", Type: "*S3LocationConfig", Column: "s3_config"},
+			{Name: "FSConfig", Type: "*FSLocationConfig", Column: "fs_config"},
 			{Name: "CreatedAt", Type: "time.Time", Column: "created_at"},
 			{Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"},
 		},
@@ -80,17 +76,15 @@ var BackupLocationTable = &backupLocationTableType{
 
 // String returns a string representation of this struct or record.
 func (s BackupLocation) String() string {
-	res := make([]string, 10)
+	res := make([]string, 8)
 	res[0] = "ID: " + reform.Inspect(s.ID, true)
 	res[1] = "Name: " + reform.Inspect(s.Name, true)
 	res[2] = "Description: " + reform.Inspect(s.Description, true)
 	res[3] = "Type: " + reform.Inspect(s.Type, true)
-	res[4] = "Endpoint: " + reform.Inspect(s.Endpoint, true)
-	res[5] = "AccessKey: " + reform.Inspect(s.AccessKey, true)
-	res[6] = "SecretKey: " + reform.Inspect(s.SecretKey, true)
-	res[7] = "Path: " + reform.Inspect(s.Path, true)
-	res[8] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
-	res[9] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
+	res[4] = "S3Config: " + reform.Inspect(s.S3Config, true)
+	res[5] = "FSConfig: " + reform.Inspect(s.FSConfig, true)
+	res[6] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
+	res[7] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
 	return strings.Join(res, ", ")
 }
 
@@ -102,10 +96,8 @@ func (s *BackupLocation) Values() []interface{} {
 		s.Name,
 		s.Description,
 		s.Type,
-		s.Endpoint,
-		s.AccessKey,
-		s.SecretKey,
-		s.Path,
+		s.S3Config,
+		s.FSConfig,
 		s.CreatedAt,
 		s.UpdatedAt,
 	}
@@ -119,10 +111,8 @@ func (s *BackupLocation) Pointers() []interface{} {
 		&s.Name,
 		&s.Description,
 		&s.Type,
-		&s.Endpoint,
-		&s.AccessKey,
-		&s.SecretKey,
-		&s.Path,
+		&s.S3Config,
+		&s.FSConfig,
 		&s.CreatedAt,
 		&s.UpdatedAt,
 	}
