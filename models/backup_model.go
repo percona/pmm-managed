@@ -17,23 +17,33 @@
 package models
 
 import (
-	"gopkg.in/reform.v1"
 	"time"
+
+	"gopkg.in/reform.v1"
 )
 
 //go:generate reform
 
-// Template represents Integrated Alerting rule template.
+// BackupLocationType represents BackupLocation type as stored in database.
+type BackupLocationType string
+
+// BackupLocation types
+const (
+	S3BackupLocationType NodeType = "s3"
+	FSBackupLocationType NodeType = "fs"
+)
+
+// BackupLocation represents destination for backup.
 //reform:backup_locations
 type BackupLocation struct {
-	ID          string  `reform:"id,pk"`
-	Name        string  `reform:"name"`
-	Description string  `reform:"description"`
-	Type        string  `reform:"type"`
-	Endpoint    *string `reform:"endpoint"`
-	AccessKey   *string `reform:"access_key"`
-	SecretKey   *string `reform:"secret_key"`
-	Path        *string `reform:"path"`
+	ID          string             `reform:"id,pk"`
+	Name        string             `reform:"name"`
+	Description string             `reform:"description"`
+	Type        BackupLocationType `reform:"type"`
+	Endpoint    *string            `reform:"endpoint"`
+	AccessKey   *string            `reform:"access_key"`
+	SecretKey   *string            `reform:"secret_key"`
+	Path        *string            `reform:"path"`
 
 	CreatedAt time.Time `reform:"created_at"`
 	UpdatedAt time.Time `reform:"updated_at"`
