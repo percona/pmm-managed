@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/percona/pmm-managed/utils"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -40,6 +39,7 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services"
+	"github.com/percona/pmm-managed/utils"
 	"github.com/percona/pmm-managed/utils/dir"
 )
 
@@ -294,7 +294,7 @@ func (s *RulesService) getAlertRulesPage(page *iav1beta1.Page) ([]*iav1beta1.Rul
 	var totalItems int
 	errTx := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
-		rules, err = models.FindRules(tx.Querier)
+		rules, err = models.FindRulesOnPage(tx.Querier, int(page.Index), int(page.Size))
 		if err != nil {
 			return errors.WithStack(err)
 		}

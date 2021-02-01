@@ -18,6 +18,7 @@ package models
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -46,6 +47,22 @@ func checkUniqueRuleID(q *reform.Querier, id string) error {
 // FindRules returns saved alert rules configuration.
 func FindRules(q *reform.Querier) ([]*Rule, error) {
 	rows, err := q.SelectAllFrom(RuleTable, "")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to select alert rules")
+	}
+
+	rules := make([]*Rule, len(rows))
+	for i, s := range rows {
+		rules[i] = s.(*Rule)
+	}
+
+	return rules, nil
+}
+
+// FindRulesOnPage returns a page with saved alert rules configuration.
+func FindRulesOnPage(q *reform.Querier, pageIndex, pageSize int) ([]*Rule, error) {
+	tail := fmt.Sprintf("ORDER BY id LIMIT %d OFFSET %d", pageSize, pageIndex*pageSize)
+	rows, err := q.SelectAllFrom(RuleTable, tail)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select alert rules")
 	}
