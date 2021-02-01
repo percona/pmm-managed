@@ -166,6 +166,18 @@ func ToAPIService(service *models.Service) (inventorypb.Service, error) {
 			Group:          service.ExternalGroup,
 		}, nil
 
+	case models.HAProxyServiceType:
+		return &inventorypb.HAProxyService{
+			ServiceId:      service.ServiceID,
+			ServiceName:    service.ServiceName,
+			NodeId:         service.NodeID,
+			Environment:    service.Environment,
+			Cluster:        service.Cluster,
+			ReplicationSet: service.ReplicationSet,
+			CustomLabels:   labels,
+			Group:          service.ExternalGroup,
+		}, nil
+
 	default:
 		panic(fmt.Errorf("unhandled Service type %s", service.ServiceType))
 	}

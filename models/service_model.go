@@ -35,6 +35,7 @@ const (
 	PostgreSQLServiceType ServiceType = "postgresql"
 	ProxySQLServiceType   ServiceType = "proxysql"
 	ExternalServiceType   ServiceType = "external"
+	HAProxyServiceType    ServiceType = "haproxy"
 )
 
 // Service represents Service as stored in database.
