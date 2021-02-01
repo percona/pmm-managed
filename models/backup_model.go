@@ -29,8 +29,8 @@ type BackupLocationType string
 
 // BackupLocation types
 const (
-	S3BackupLocationType NodeType = "s3"
-	FSBackupLocationType NodeType = "fs"
+	S3BackupLocationType BackupLocationType = "s3"
+	FSBackupLocationType BackupLocationType = "fs"
 )
 
 // BackupLocation represents destination for backup.
