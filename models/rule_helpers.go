@@ -58,6 +58,16 @@ func FindRules(q *reform.Querier) ([]*Rule, error) {
 	return rules, nil
 }
 
+// CountRules returns number of alert rules.
+func CountRules(q *reform.Querier) (int, error) {
+	count, err := q.Count(RuleTable, "")
+	if err != nil {
+		return 0, errors.Wrap(err, "failed to count alert rules")
+	}
+
+	return count, nil
+}
+
 // FindRuleByID finds Rule by ID.
 func FindRuleByID(q *reform.Querier, id string) (*Rule, error) {
 	if id == "" {
