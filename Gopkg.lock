@@ -416,8 +416,8 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-2.0"
-  digest = "1:946c0c27ce795798554ef95ede53e14566cfbba9ed2b25eb68a2466db3a7ef4a"
+  branch = "PMM-6711-folter-external-group"
+  digest = "1:b08df2f2cad6bc6bee11c3a0a4bfaf5a606a454a63ceb3e04e9f4afea6f72adc"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -440,7 +440,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "82984d90aa6f2c391b627dc958cb5b698a7122dc"
+  revision = "81211a03e99069f87b1926f1123922d8232abf06"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"

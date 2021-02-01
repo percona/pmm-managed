@@ -57,6 +57,7 @@ func (s *servicesServer) ListServices(ctx context.Context, req *inventorypb.List
 	filters := models.ServiceFilters{
 		NodeID:      req.GetNodeId(),
 		ServiceType: serviceType(req.GetServiceType()),
+		ExternalGroup: req.GetExternalGroup(),
 	}
 	services, err := s.s.List(ctx, filters)
 	if err != nil {
