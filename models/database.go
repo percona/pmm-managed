@@ -423,7 +423,7 @@ var databaseSchema = [][]string{
 		`CREATE TABLE backup_locations (
 			id VARCHAR NOT NULL,
 			name VARCHAR NOT NULL CHECK (name <> ''),
-			description VARCHAR NOT NULL,
+			description VARCHAR,
 			type VARCHAR NOT NULL CHECK (type <> ''),
 			endpoint VARCHAR,
 			access_key VARCHAR,

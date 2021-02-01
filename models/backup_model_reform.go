@@ -64,7 +64,7 @@ var BackupLocationTable = &backupLocationTableType{
 		Fields: []parse.FieldInfo{
 			{Name: "ID", Type: "string", Column: "id"},
 			{Name: "Name", Type: "string", Column: "name"},
-			{Name: "Description", Type: "string", Column: "description"},
+			{Name: "Description", Type: "*string", Column: "description"},
 			{Name: "Type", Type: "BackupLocationType", Column: "type"},
 			{Name: "Endpoint", Type: "*string", Column: "endpoint"},
 			{Name: "AccessKey", Type: "*string", Column: "access_key"},

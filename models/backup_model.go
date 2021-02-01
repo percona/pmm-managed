@@ -38,7 +38,7 @@ const (
 type BackupLocation struct {
 	ID          string             `reform:"id,pk"`
 	Name        string             `reform:"name"`
-	Description string             `reform:"description"`
+	Description *string            `reform:"description"`
 	Type        BackupLocationType `reform:"type"`
 	Endpoint    *string            `reform:"endpoint"`
 	AccessKey   *string            `reform:"access_key"`
