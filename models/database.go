@@ -321,8 +321,7 @@ var databaseSchema = [][]string{
 		`ALTER TABLE services
 			ADD COLUMN external_group VARCHAR NOT NULL DEFAULT ''`,
 
-		`UPDATE services SET external_group = 'external' WHERE 
-			service_type = '` + string(ExternalServiceType) + `'`,
+		`UPDATE services SET external_group = 'external' WHERE service_type = '` + string(ExternalServiceType) + `'`,
 
 		`ALTER TABLE services
 			ALTER COLUMN external_group DROP DEFAULT`,
