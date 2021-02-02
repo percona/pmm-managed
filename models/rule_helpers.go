@@ -62,7 +62,7 @@ func FindRules(q *reform.Querier) ([]*Rule, error) {
 // FindRulesOnPage returns a page with saved alert rules configuration.
 func FindRulesOnPage(q *reform.Querier, pageIndex, pageSize int) ([]*Rule, error) {
 	tail := fmt.Sprintf("ORDER BY id LIMIT %d OFFSET %d", pageSize, pageIndex*pageSize)
-	rows, err := q.SelectAllFrom(RuleTable, tail)
+	rows, err := q.SelectAllFrom(RuleTable, "ORDER BY id LIMIT $1 OFFSET $2", pageSize, pageIndex*pageSize)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select alert rules")
 	}
