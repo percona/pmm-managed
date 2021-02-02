@@ -282,6 +282,7 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 		managementpb.RegisterActionsHandlerFromEndpoint,
 		managementpb.RegisterRDSHandlerFromEndpoint,
 		managementpb.RegisterExternalHandlerFromEndpoint,
+		managementpb.RegisterHAProxyHandlerFromEndpoint,
 		managementpb.RegisterAnnotationHandlerFromEndpoint,
 		managementpb.RegisterSecurityChecksHandlerFromEndpoint,
 
