@@ -237,7 +237,7 @@ func (s *servicesServer) AddHAProxyService(ctx context.Context, req *inventorypb
 	}
 
 	res := &inventorypb.AddHAProxyServiceResponse{
-		External: service,
+		Haproxy: service,
 	}
 	return res, nil
 }
