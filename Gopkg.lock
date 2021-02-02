@@ -218,14 +218,14 @@
 
 [[projects]]
   branch = "main"
-  digest = "1:4ce3cd60919b35a67fa20eeeb92c8495313fdaf39a0c67cdf83c64fef26f80ba"
+  digest = "1:7d65bb1d88047bae40ab7c40f18e16e510660941f9fbca99dfdf8288ea5530a2"
   name = "github.com/percona-platform/saas"
   packages = [
     "pkg/alert",
     "pkg/common",
   ]
   pruneopts = "NUT"
-  revision = "fa94aa1c69dda7db9834dbaa295ec9977a45b165"
+  revision = "1b32ca1828e1a3419423c9e36c153faf0eb4cc28"
 
 [[projects]]
   branch = "PMM-2.0"
