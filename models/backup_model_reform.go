@@ -62,7 +62,7 @@ var BackupLocationTable = &backupLocationTableType{
 		Fields: []parse.FieldInfo{
 			{Name: "ID", Type: "string", Column: "id"},
 			{Name: "Name", Type: "string", Column: "name"},
-			{Name: "Description", Type: "*string", Column: "description"},
+			{Name: "Description", Type: "string", Column: "description"},
 			{Name: "Type", Type: "BackupLocationType", Column: "type"},
 			{Name: "S3Config", Type: "*S3LocationConfig", Column: "s3_config"},
 			{Name: "FSConfig", Type: "*FSLocationConfig", Column: "fs_config"},

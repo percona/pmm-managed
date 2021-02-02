@@ -423,7 +423,7 @@ var databaseSchema = [][]string{
 		`CREATE TABLE backup_locations (
 			id VARCHAR NOT NULL,
 			name VARCHAR NOT NULL CHECK (name <> ''),
-			description VARCHAR,
+			description VARCHAR NOT NULL,
 			type VARCHAR NOT NULL CHECK (type <> ''),
 			s3_config JSONB,
 			fs_config JSONB,

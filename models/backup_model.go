@@ -39,7 +39,7 @@ const (
 type BackupLocation struct {
 	ID          string             `reform:"id,pk"`
 	Name        string             `reform:"name"`
-	Description *string            `reform:"description"`
+	Description string             `reform:"description"`
 	Type        BackupLocationType `reform:"type"`
 	S3Config    *S3LocationConfig  `reform:"s3_config"`
 	FSConfig    *FSLocationConfig  `reform:"fs_config"`
