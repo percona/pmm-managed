@@ -253,10 +253,9 @@ func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAl
 
 	const defaultPageSize = 20
 
-	var pageIndex, pageSize int
-	if req.Page == nil {
-		pageSize = defaultPageSize
-	} else {
+	pageIndex := 0
+	pageSize := defaultPageSize
+	if req.Page != nil {
 		pageIndex = int(req.Page.Index)
 		pageSize = int(req.Page.Size)
 	}
