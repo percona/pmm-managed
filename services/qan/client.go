@@ -30,7 +30,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/utils"
+	"github.com/percona/pmm-managed/utils/stringset"
 )
 
 // Client represents qan-api client for data collection.
@@ -58,7 +58,7 @@ func collectAgents(q *reform.Querier, metricsBuckets []*agentpb.MetricsBucket) (
 		}
 	}
 
-	agents, err := models.FindAgentsByIDs(q, utils.SetToSlice(agentIDs))
+	agents, err := models.FindAgentsByIDs(q, stringset.ToSlice(agentIDs))
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func collectServices(q *reform.Querier, agents map[string]*models.Agent) (map[st
 		}
 	}
 
-	services, err := models.FindServicesByIDs(q, utils.SetToSlice(serviceIDs))
+	services, err := models.FindServicesByIDs(q, stringset.ToSlice(serviceIDs))
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func collectNodes(q *reform.Querier, services map[string]*models.Service) (map[s
 		}
 	}
 
-	nodes, err := models.FindNodesByIDs(q, utils.SetToSlice(nodeIDs))
+	nodes, err := models.FindNodesByIDs(q, stringset.ToSlice(nodeIDs))
 	if err != nil {
 		return nil, err
 	}

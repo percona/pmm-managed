@@ -14,11 +14,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-package utils
+package stringset
 
 import "sort"
 
-func SetToSlice(set map[string]struct{}) []string {
+// ToSlice converts a set of strings to slice of strings. The result is sorted in increasing order.
+func ToSlice(set map[string]struct{}) []string {
 	res := make([]string, 0, len(set))
 	for k := range set {
 		res = append(res, k)
