@@ -416,8 +416,8 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "PMM-4306-pt-mongodb-summary"
-  digest = "1:877fd4f3e7176a1cd4aa60512057b339eeedf1a26e6d06a8edea9f394c58d24e"
+  branch = "PMM-7380-backup-location-list-add"
+  digest = "1:3809cdefd0a87ec686ed39927d9af00ee80637f628093fd4416b02eae75cd545"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -430,6 +430,7 @@
     "api/alertmanager/ammodels",
     "api/inventorypb",
     "api/managementpb",
+    "api/managementpb/backup",
     "api/managementpb/dbaas",
     "api/managementpb/ia",
     "api/qanpb",
@@ -440,7 +441,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "4bbdba020900a95623951fc8b3262571c56975cb"
+  revision = "b16d28e27997d5f486fc161bcfcc6552759397e0"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
@@ -889,6 +890,7 @@
     "github.com/percona/pmm/api/alertmanager/ammodels",
     "github.com/percona/pmm/api/inventorypb",
     "github.com/percona/pmm/api/managementpb",
+    "github.com/percona/pmm/api/managementpb/backup",
     "github.com/percona/pmm/api/managementpb/dbaas",
     "github.com/percona/pmm/api/managementpb/ia",
     "github.com/percona/pmm/api/qanpb",

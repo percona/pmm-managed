@@ -22,6 +22,7 @@ import (
 	"database/sql"
 	_ "expvar" // register /debug/vars
 	"fmt"
+	"github.com/percona/pmm-managed/services/management/backup"
 	"html/template"
 	"log"
 	"net"
@@ -42,8 +43,10 @@ import (
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/api/managementpb"
+	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
 	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
+
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/utils/sqlmetrics"
 	"github.com/percona/pmm/version"
@@ -185,6 +188,8 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	iav1beta1.RegisterTemplatesServer(gRPCServer, templatesSvc)
 	iav1beta1.RegisterRulesServer(gRPCServer, ia.NewRulesService(deps.db, templatesSvc, deps.vmalert, deps.alertmanager))
 	iav1beta1.RegisterAlertsServer(gRPCServer, ia.NewAlertsService(deps.db, deps.alertmanager, templatesSvc))
+
+	backupv1beta1.RegisterLocationsServer(gRPCServer, backup.NewLocationsService(deps.db))
 
 	// TODO Remove once changing settings.DBaaS.Enabled is possible via API.
 	if deps.settings.DBaaS.Enabled {
