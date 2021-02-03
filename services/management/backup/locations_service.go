@@ -18,10 +18,12 @@ package backup
 
 import (
 	"context"
-	"github.com/percona/pmm-managed/models"
+
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
+
+	"github.com/percona/pmm-managed/models"
 )
 
 // LocationsService represents backup locations API.
@@ -50,12 +52,37 @@ func (s *LocationsService) ListLocations(ctx context.Context, req *backupv1beta1
 		}
 		res[i] = loc
 	}
-	return &backupv1beta1.ListLocationsResponse{Locations: res}, nil
+	return &backupv1beta1.ListLocationsResponse{
+		Locations: res,
+	}, nil
 }
 
 // AddLocations adds new backup location.
 func (s *LocationsService) AddLocation(ctx context.Context, req *backupv1beta1.AddLocationRequest) (*backupv1beta1.AddLocationResponse, error) {
-	return nil, nil
+	params := models.CreateBackupLocationParams{
+		Name:        req.Name,
+		Description: req.Description,
+	}
+
+	if req.S3Config != nil {
+		params.S3Config = &models.S3LocationConfig{
+			Endpoint:  req.S3Config.Endpoint,
+			AccessKey: req.S3Config.AccessKey,
+			SecretKey: req.S3Config.SecretKey,
+		}
+	} else if req.FsConfig != nil {
+		params.FSConfig = &models.FSLocationConfig{
+			Path: req.FsConfig.Path,
+		}
+	}
+	loc, err := models.CreateBackupLocation(s.db.Querier, params)
+	if err != nil {
+		return nil, err
+	}
+
+	return &backupv1beta1.AddLocationResponse{
+		LocationId: loc.ID,
+	}, nil
 }
 
 func convertLocation(location *models.BackupLocation) (*backupv1beta1.Location, error) {

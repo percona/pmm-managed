@@ -22,7 +22,6 @@ import (
 	"database/sql"
 	_ "expvar" // register /debug/vars
 	"fmt"
-	"github.com/percona/pmm-managed/services/management/backup"
 	"html/template"
 	"log"
 	"net"
@@ -35,6 +34,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/percona/pmm-managed/services/management/backup"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_validator "github.com/grpc-ecosystem/go-grpc-middleware/validator"
