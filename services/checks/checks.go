@@ -214,12 +214,7 @@ func (s *Service) resendAlerts(ctx context.Context) {
 	defer t.Stop()
 
 	for {
-		settings, err := models.GetSettings(s.db)
-
-		// Only sends if IAs enabled in the settings
-		if (err == nil) && settings.IntegratedAlerting.Enabled {
-			s.alertmanagerService.SendAlerts(ctx, s.alertsRegistry.collect())
-		}
+		s.alertmanagerService.SendAlerts(ctx, s.alertsRegistry.collect())
 
 		select {
 		case <-ctx.Done():

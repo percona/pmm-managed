@@ -572,6 +572,13 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			return status.Error(codes.InvalidArgument, e.Error())
 		}
 
+		// Deletes the alert rules in case of disabling
+		if req.DisableAlerting {
+			if e = s.deleteAllAlertRules(); e != nil {
+				return errors.WithStack(e)
+			}
+		}
+
 		// absent value means "do not change"
 		if req.SshKey != "" {
 			if e = s.writeSSHKey(req.SshKey); e != nil {
@@ -609,6 +616,49 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	return &serverpb.ChangeSettingsResponse{
 		Settings: s.convertSettings(settings),
 	}, nil
+}
+
+// deleteAllAlertRules deletes all alerts present rules.
+// Returns nil in case of success, otherwise an error.
+func (s *Server) deleteAllAlertRules() error {
+	alertRuleIds := s.getAlertRuleIds()
+
+	if len(alertRuleIds) > 0 {
+		err := s.db.InTransaction(func(tx *reform.TX) error {
+			return models.RemoveRules(tx.Querier, alertRuleIds)
+		})
+		if err != nil {
+			return err
+		}
+
+		s.vmalert.RequestConfigurationUpdate()
+	}
+
+	return nil
+}
+
+// getAlertRuleIds lists the alert rules ids into an array.
+// Error is not returned, when occurres an empty array is returned.
+func (s *Server) getAlertRuleIds() []string {
+	var rules []*models.Rule
+	err := s.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		rules, err = models.FindRules(tx.Querier)
+
+		return err
+	})
+
+	if err == nil {
+		ruleIds := make([]string, len(rules))
+
+		for i, rule := range rules {
+			ruleIds[i] = rule.ID
+		}
+
+		return ruleIds
+	}
+
+	return []string{}
 }
 
 // UpdateConfigurations updates supervisor config and requests configuration update for VictoriaMetrics components.
