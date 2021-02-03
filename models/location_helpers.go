@@ -112,19 +112,20 @@ func CreateBackupLocation(q *reform.Querier, params CreateBackupLocationParams) 
 		Description: params.Description,
 	}
 
-	if params.FSConfig != nil {
+	switch {
+	case params.FSConfig != nil:
 		if err := checkFSConfig(params.FSConfig); err != nil {
 			return nil, err
 		}
 		row.Type = FSBackupLocationType
 		row.FSConfig = params.FSConfig
-	} else if params.S3Config != nil {
+	case params.S3Config != nil:
 		if err := checkS3Config(params.S3Config); err != nil {
 			return nil, err
 		}
 		row.Type = S3BackupLocationType
 		row.S3Config = params.S3Config
-	} else {
+	default:
 		return nil, status.Error(codes.InvalidArgument, "Missing location type")
 	}
 

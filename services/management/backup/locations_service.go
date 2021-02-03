@@ -57,7 +57,7 @@ func (s *LocationsService) ListLocations(ctx context.Context, req *backupv1beta1
 	}, nil
 }
 
-// AddLocations adds new backup location.
+// AddLocation adds new backup location.
 func (s *LocationsService) AddLocation(ctx context.Context, req *backupv1beta1.AddLocationRequest) (*backupv1beta1.AddLocationResponse, error) {
 	params := models.CreateBackupLocationParams{
 		Name:        req.Name,
