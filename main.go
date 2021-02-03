@@ -294,6 +294,8 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 		iav1beta1.RegisterRulesHandlerFromEndpoint,
 		iav1beta1.RegisterTemplatesHandlerFromEndpoint,
 
+		backupv1beta1.RegisterLocationsHandlerFromEndpoint,
+
 		dbaasv1beta1.RegisterKubernetesHandlerFromEndpoint,
 		dbaasv1beta1.RegisterXtraDBClusterHandlerFromEndpoint,
 		dbaasv1beta1.RegisterPSMDBClusterHandlerFromEndpoint,
