@@ -112,6 +112,10 @@ func CreateBackupLocation(q *reform.Querier, params CreateBackupLocationParams) 
 		Description: params.Description,
 	}
 
+	if params.FSConfig != nil && params.S3Config != nil {
+		return nil, status.Error(codes.InvalidArgument, "Only one config is allowed")
+
+	}
 	switch {
 	case params.FSConfig != nil:
 		if err := checkFSConfig(params.FSConfig); err != nil {

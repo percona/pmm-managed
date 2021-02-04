@@ -35,7 +35,7 @@ func TestBackupLocations(t *testing.T) {
 	}()
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	t.Run("create", func(t *testing.T) {
+	t.Run("create - fs", func(t *testing.T) {
 		tx, err := db.Begin()
 		require.NoError(t, err)
 		defer func() {
@@ -61,6 +61,63 @@ func TestBackupLocations(t *testing.T) {
 		assert.NotEmpty(t, location.ID)
 	})
 
+	t.Run("create - s3", func(t *testing.T) {
+		tx, err := db.Begin()
+		require.NoError(t, err)
+		defer func() {
+			require.NoError(t, tx.Rollback())
+		}()
+
+		q := tx.Querier
+
+		params := models.CreateBackupLocationParams{
+			Name:        "some name",
+			Description: "some desc",
+			S3Config: &models.S3LocationConfig{
+				Endpoint:  "https://example.com/bucket",
+				AccessKey: "access_key",
+				SecretKey: "secret_key",
+			},
+		}
+
+		location, err := models.CreateBackupLocation(q, params)
+		require.NoError(t, err)
+		assert.Equal(t, models.S3BackupLocationType, location.Type)
+		assert.Equal(t, params.Name, location.Name)
+		assert.Equal(t, params.Description, location.Description)
+		assert.Equal(t, params.S3Config.Endpoint, location.S3Config.Endpoint)
+		assert.Equal(t, params.S3Config.AccessKey, location.S3Config.AccessKey)
+		assert.Equal(t, params.S3Config.SecretKey, location.S3Config.SecretKey)
+
+		assert.NotEmpty(t, location.ID)
+	})
+
+	t.Run("create - two configs", func(t *testing.T) {
+		tx, err := db.Begin()
+		require.NoError(t, err)
+		defer func() {
+			require.NoError(t, tx.Rollback())
+		}()
+
+		q := tx.Querier
+
+		params := models.CreateBackupLocationParams{
+			Name:        "some name",
+			Description: "some desc",
+			FSConfig: &models.FSLocationConfig{
+				Path: "/tmp",
+			},
+			S3Config: &models.S3LocationConfig{
+				Endpoint:  "https://example.com/bucket",
+				AccessKey: "access_key",
+				SecretKey: "secret_key",
+			},
+		}
+
+		_, err = models.CreateBackupLocation(q, params)
+		require.NotNil(t, err)
+	})
+
 	t.Run("list", func(t *testing.T) {
 		tx, err := db.Begin()
 		require.NoError(t, err)
@@ -79,9 +136,11 @@ func TestBackupLocations(t *testing.T) {
 		}
 		params2 := models.CreateBackupLocationParams{
 			Name:        "some name2",
-			Description: "some desc",
-			FSConfig: &models.FSLocationConfig{
-				Path: "/tmp",
+			Description: "some desc2",
+			S3Config: &models.S3LocationConfig{
+				Endpoint:  "https://example.com/bucket",
+				AccessKey: "access_key",
+				SecretKey: "secret_key",
 			},
 		}
 
@@ -93,11 +152,11 @@ func TestBackupLocations(t *testing.T) {
 		actual, err := models.FindBackupLocations(q)
 		require.NoError(t, err)
 		var found1, found2 bool
-		for _, channel := range actual {
-			if channel.ID == loc1.ID {
+		for _, location := range actual {
+			if location.ID == loc1.ID {
 				found1 = true
 			}
-			if channel.ID == loc2.ID {
+			if location.ID == loc2.ID {
 				found2 = true
 			}
 		}
