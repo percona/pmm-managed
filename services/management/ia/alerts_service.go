@@ -162,14 +162,18 @@ func satisfiesFilters(alert *ammodels.GettableAlert, filters []*iav1beta1.Filter
 
 		switch filter.Type {
 		case iav1beta1.FilterType_EQUAL:
-			return filter.Value == value, nil
+			if filter.Value != value {
+				return false, nil
+			}
 		case iav1beta1.FilterType_REGEX:
 			match, err := regexp.Match(filter.Value, []byte(value))
 			if err != nil {
-				return false, errors.WithStack(err)
+				return false, status.Errorf(codes.InvalidArgument, "bad regular expression: +%v", err)
 			}
 
-			return match, nil
+			if !match {
+				return false, nil
+			}
 		case iav1beta1.FilterType_FILTER_TYPE_INVALID:
 			fallthrough
 		default:
