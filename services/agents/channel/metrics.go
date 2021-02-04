@@ -59,8 +59,6 @@ func (scm *SharedChannelMetrics) Describe(ch chan<- *prom.Desc) {
 func (scm *SharedChannelMetrics) Collect(ch chan<- prom.Metric) {
 	scm.mRecv.Collect(ch)
 	scm.mSend.Collect(ch)
-
-	// TODO metrics for channel's len(requests) and cap(requests)
 }
 
 // check interfaces
