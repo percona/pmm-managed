@@ -436,6 +436,9 @@ var databaseSchema = [][]string{
 		)`,
 	},
 	28: {
+		`ALTER TABLE agents ADD COLUMN disabled_collectors VARCHAR[]`,
+	},
+	29: {
 		`ALTER TABLE services
 			DROP CONSTRAINT services_external_group_check`,
 
@@ -586,7 +589,7 @@ func setupFixture1(q *reform.Querier, username, password string) error {
 	if _, err = createPMMAgentWithID(q, PMMServerAgentID, node.NodeID, nil); err != nil {
 		return err
 	}
-	if _, err = CreateNodeExporter(q, PMMServerAgentID, nil, false); err != nil {
+	if _, err = CreateNodeExporter(q, PMMServerAgentID, nil, false, []string{}); err != nil {
 		return err
 	}
 

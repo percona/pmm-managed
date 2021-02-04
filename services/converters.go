@@ -223,6 +223,7 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 			ListenPort:         uint32(pointer.GetUint16(agent.ListenPort)),
 			CustomLabels:       labels,
 			PushMetricsEnabled: agent.PushMetrics,
+			DisabledCollectors: agent.DisabledCollectors,
 		}, nil
 
 	case models.MySQLdExporterType:
@@ -240,6 +241,7 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 			TablestatsGroupTableLimit: agent.TableCountTablestatsGroupLimit,
 			TablestatsGroupDisabled:   !agent.IsMySQLTablestatsGroupEnabled(),
 			PushMetricsEnabled:        agent.PushMetrics,
+			DisabledCollectors:        agent.DisabledCollectors,
 		}, nil
 
 	case models.MongoDBExporterType:
@@ -255,6 +257,7 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 			Tls:                agent.TLS,
 			TlsSkipVerify:      agent.TLSSkipVerify,
 			PushMetricsEnabled: agent.PushMetrics,
+			DisabledCollectors: agent.DisabledCollectors,
 		}, nil
 
 	case models.PostgresExporterType:
@@ -270,6 +273,7 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 			Tls:                agent.TLS,
 			TlsSkipVerify:      agent.TLSSkipVerify,
 			PushMetricsEnabled: agent.PushMetrics,
+			DisabledCollectors: agent.DisabledCollectors,
 		}, nil
 
 	case models.QANMySQLPerfSchemaAgentType:
@@ -328,6 +332,7 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 			Tls:                agent.TLS,
 			TlsSkipVerify:      agent.TLSSkipVerify,
 			PushMetricsEnabled: agent.PushMetrics,
+			DisabledCollectors: agent.DisabledCollectors,
 		}, nil
 
 	case models.QANPostgreSQLPgStatementsAgentType:
