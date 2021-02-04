@@ -491,14 +491,16 @@ func TestServices(t *testing.T) {
 		require.Len(t, actualServices, 1) // PMM Server PostgreSQL
 
 		actualHAProxyService, err := ss.AddHAProxyService(ctx, &models.AddDBMSServiceParams{
-			ServiceName: "test-haproxy-service",
-			NodeID:      models.PMMServerNodeID,
+			ServiceName:   "test-haproxy-service",
+			NodeID:        models.PMMServerNodeID,
+			ExternalGroup: "external",
 		})
 		require.NoError(t, err)
 		expectedHAProxyService := &inventorypb.HAProxyService{
 			ServiceId:   "/service_id/00000000-0000-4000-8000-000000000005",
 			ServiceName: "test-haproxy-service",
 			NodeId:      models.PMMServerNodeID,
+			Group:       "external",
 		}
 		assert.Equal(t, expectedHAProxyService, actualHAProxyService)
 
