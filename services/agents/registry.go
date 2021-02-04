@@ -169,16 +169,20 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 		case <-ticker.C:
 			r.ping(ctx, agent)
 
+		// see unregister and Kick methods
 		case <-agent.kick:
+			// already unregistered, no need to call unregister method
 			l.Warn("Kicked.")
 			disconnectReason = "kicked"
-			err = status.Errorf(codes.Aborted, "Another pmm-agent with ID %q connected to the server.", agent.id)
+			err = status.Errorf(codes.Aborted, "Kicked.")
 			return err
 
 		case req := <-agent.channel.Requests():
 			if req == nil {
 				disconnectReason = "done"
-				return agent.channel.Wait()
+				err = agent.channel.Wait()
+				r.unregister(agent.id)
+				return err
 			}
 
 			switch p := req.Payload.(type) {
@@ -269,14 +273,16 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*pmmAgentInfo, 
 		return nil, err
 	}
 
+	// pmm-agent with the same ID can still be connected in two cases:
+	//   1. Someone uses the same ID by mistake, glitch, or malicious intent.
+	//   2. pmm-agent detects broken connection and reconnects,
+	//      but pmm-managed still thinks that the previous connection is okay.
+	// In both cases, kick it.
+	l.Warnf("Another pmm-agent with ID %q is already connected.", agentMD.ID)
+	r.Kick(ctx, agentMD.ID)
+
 	r.rw.Lock()
 	defer r.rw.Unlock()
-
-	// do not use r.get() - r.rw is already locked
-	if agent := r.agents[agentMD.ID]; agent != nil {
-		r.roster.clear(agentMD.ID)
-		close(agent.kick)
-	}
 
 	agent := &pmmAgentInfo{
 		channel: channel.New(stream, r.sharedMetrics),
@@ -323,6 +329,24 @@ func authenticate(md *agentpb.AgentConnectMetadata, q *reform.Querier) (string, 
 	}
 
 	return pointer.GetString(agent.RunsOnNodeID), nil
+}
+
+// unregister removes pmm-agent with given ID from the registry.
+func (r *Registry) unregister(pmmAgentID string) *pmmAgentInfo {
+	r.rw.Lock()
+	defer r.rw.Unlock()
+
+	// We do not check that pmmAgentID is in fact ID of existing pmm-agent because
+	// it may be already deleted from the database, that's why we unregister it.
+
+	agent := r.agents[pmmAgentID]
+	if agent == nil {
+		return nil
+	}
+
+	delete(r.agents, pmmAgentID)
+	r.roster.clear(pmmAgentID)
+	return agent
 }
 
 // addOrRemoveVMAgent - creates vmAgent agentType if pmm-agent's version supports it and agent not exists yet,
@@ -388,25 +412,16 @@ func removeVMAgentFromPMMAgent(q *reform.Querier, pmmAgentID string) error {
 	return nil
 }
 
-// Kick disconnects pmm-agent with given ID.
+// Kick unregisters and forcefully disconnects pmm-agent with given ID.
 func (r *Registry) Kick(ctx context.Context, pmmAgentID string) {
-	// We do not check that pmmAgentID is in fact ID of existing pmm-agent because
-	// it may be already deleted from the database, that's why we disconnect it.
-
-	r.rw.Lock()
-	defer r.rw.Unlock()
-
-	// do not use r.get() - r.rw is already locked
-	l := logger.Get(ctx)
-	agent := r.agents[pmmAgentID]
+	agent := r.unregister(pmmAgentID)
 	if agent == nil {
-		l.Infof("pmm-agent with ID %q is not connected.", pmmAgentID)
 		return
 	}
-	l.Infof("pmm-agent with ID %q is connected, kicking.", pmmAgentID)
-	delete(r.agents, pmmAgentID)
-	r.roster.clear(pmmAgentID)
-	close(agent.kick)
+
+	l := logger.Get(ctx)
+	l.Debugf("pmm-agent with ID %q will be kicked in a moment.", pmmAgentID)
+	close(agent.kick) // see Run method
 }
 
 // ping sends Ping message to given Agent, waits for Pong and observes round-trip time and clock drift.
