@@ -447,9 +447,7 @@ var databaseSchema = [][]string{
 			ADD CONSTRAINT services_external_group_check_with_haproxy CHECK (
 				((service_type <> '` + string(ExternalServiceType) + `' OR service_type <> '` + string(HAProxyServiceType) + `') AND external_group = '')
 				OR
-				(service_type = '` + string(ExternalServiceType) + `' AND external_group <> '')
-				OR
-				(service_type = '` + string(HAProxyServiceType) + `' AND external_group <> '')
+				((service_type <> '` + string(ExternalServiceType) + `' AND service_type <> '` + string(HAProxyServiceType) + `') AND external_group = '')
 			)`,
 	},
 }
