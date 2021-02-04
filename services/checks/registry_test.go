@@ -68,7 +68,7 @@ func TestRegistry(t *testing.T) {
 			EndsAt: strfmt.DateTime(nowValue.Add(alertTTL)),
 			Alert: ammodels.Alert{
 				Labels: map[string]string{
-					"alert_id":  "/stt/3293a1002b32c425dbda851406bf1428dced74cd",
+					"alert_id":  "/stt/e7b471407fe9734eac5b6adb178ee0ef08ef45f2",
 					"alertname": "name",
 					"baz":       "qux",
 					"foo":       "bar",
