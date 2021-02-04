@@ -72,6 +72,7 @@ type Registry struct {
 	roster *roster
 
 	sharedMetrics *channel.SharedChannelMetrics
+	mAgents       prom.GaugeFunc
 	mConnects     prom.Counter
 	mDisconnects  *prom.CounterVec
 	mRoundTrip    prom.Summary
@@ -80,16 +81,25 @@ type Registry struct {
 
 // NewRegistry creates a new registry with given database connection.
 func NewRegistry(db *reform.DB, qanClient qanClient, vmdb prometheusService) *Registry {
+	agents := make(map[string]*pmmAgentInfo)
 	r := &Registry{
 		db:        db,
 		vmdb:      vmdb,
 		qanClient: qanClient,
 
-		agents: make(map[string]*pmmAgentInfo),
+		agents: agents,
 
 		roster: newRoster(),
 
 		sharedMetrics: channel.NewSharedMetrics(),
+		mAgents: prom.NewGaugeFunc(prom.GaugeOpts{
+			Namespace: prometheusNamespace,
+			Subsystem: prometheusSubsystem,
+			Name:      "connected",
+			Help:      "The current number of connected pmm-agents.",
+		}, func() float64 {
+			return float64(len(agents))
+		}),
 		mConnects: prom.NewCounter(prom.CounterOpts{
 			Namespace: prometheusNamespace,
 			Subsystem: prometheusSubsystem,
@@ -738,6 +748,7 @@ func (r *Registry) get(pmmAgentID string) (*pmmAgentInfo, error) {
 // Describe implements prometheus.Collector.
 func (r *Registry) Describe(ch chan<- *prom.Desc) {
 	r.sharedMetrics.Describe(ch)
+	r.mAgents.Describe(ch)
 	r.mConnects.Describe(ch)
 	r.mDisconnects.Describe(ch)
 	r.mRoundTrip.Describe(ch)
@@ -747,6 +758,7 @@ func (r *Registry) Describe(ch chan<- *prom.Desc) {
 // Collect implement prometheus.Collector.
 func (r *Registry) Collect(ch chan<- prom.Metric) {
 	r.sharedMetrics.Collect(ch)
+	r.mAgents.Collect(ch)
 	r.mConnects.Collect(ch)
 	r.mDisconnects.Collect(ch)
 	r.mRoundTrip.Collect(ch)
