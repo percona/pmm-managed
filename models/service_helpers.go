@@ -198,7 +198,11 @@ func AddNewService(q *reform.Querier, serviceType ServiceType, params *AddDBMSSe
 		if params.ExternalGroup != "" {
 			return nil, status.Errorf(codes.InvalidArgument, "The external group is not allowed for service type: %q.", serviceType)
 		}
-	case ExternalServiceType, HAProxyServiceType:
+	case HAProxyServiceType:
+		if params.ExternalGroup != "" {
+			return nil, status.Errorf(codes.InvalidArgument, "The external group is not allowed for service type: %q.", serviceType)
+		}
+	case ExternalServiceType:
 		if params.ExternalGroup == "" {
 			// Set default value for backward compatibility with an old pmm-admin.
 			params.ExternalGroup = "external"
