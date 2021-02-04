@@ -47,20 +47,12 @@ func (e HAProxyService) AddHAProxy(ctx context.Context, req *managementpb.AddHAP
 	res := new(managementpb.AddHAProxyResponse)
 	var pmmAgentID *string
 	if e := e.db.InTransaction(func(tx *reform.TX) error {
-		if (req.NodeId == "") != (req.RunsOnNodeId == "") {
-			return status.Error(codes.InvalidArgument, "runs_on_node_id and node_id should be specified together.")
-		}
 		if req.Address == "" && req.AddNode != nil {
 			return status.Error(codes.InvalidArgument, "address can't be empty for add node request.")
 		}
 		nodeID, err := nodeID(tx, req.NodeId, req.NodeName, req.AddNode, req.Address)
 		if err != nil {
 			return err
-		}
-
-		runsOnNodeId := req.RunsOnNodeId
-		if req.AddNode != nil && runsOnNodeId == "" {
-			runsOnNodeId = nodeID
 		}
 
 		service, err := models.AddNewService(tx.Querier, models.HAProxyServiceType, &models.AddDBMSServiceParams{
@@ -70,7 +62,6 @@ func (e HAProxyService) AddHAProxy(ctx context.Context, req *managementpb.AddHAP
 			Cluster:        req.Cluster,
 			ReplicationSet: req.ReplicationSet,
 			CustomLabels:   req.CustomLabels,
-			ExternalGroup:  req.Group,
 		})
 		if err != nil {
 			return err
@@ -83,7 +74,7 @@ func (e HAProxyService) AddHAProxy(ctx context.Context, req *managementpb.AddHAP
 		res.Service = invService.(*inventorypb.HAProxyService)
 
 		if req.MetricsMode == managementpb.MetricsMode_AUTO {
-			agentIDs, err := models.FindPMMAgentsRunningOnNode(tx.Querier, req.RunsOnNodeId)
+			agentIDs, err := models.FindPMMAgentsRunningOnNode(tx.Querier, req.NodeId)
 			switch {
 			case err != nil || len(agentIDs) > 1:
 				req.MetricsMode = managementpb.MetricsMode_PULL
@@ -96,7 +87,7 @@ func (e HAProxyService) AddHAProxy(ctx context.Context, req *managementpb.AddHAP
 		}
 
 		params := &models.CreateExternalExporterParams{
-			RunsOnNodeID: runsOnNodeId,
+			RunsOnNodeID: req.NodeId,
 			ServiceID:    service.ServiceID,
 			Username:     req.Username,
 			Password:     req.Password,
@@ -108,10 +99,6 @@ func (e HAProxyService) AddHAProxy(ctx context.Context, req *managementpb.AddHAP
 		}
 		row, err := models.CreateExternalExporter(tx.Querier, params)
 		if err != nil {
-			return err
-		}
-
-		if err = e.registry.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
 			return err
 		}
 

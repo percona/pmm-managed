@@ -326,7 +326,7 @@ var databaseSchema = [][]string{
 		`ALTER TABLE services
 			ALTER COLUMN external_group DROP DEFAULT`,
 
-		// Only service with type external or haproxy can have non empty value of group.
+		// Only service with type external can have non empty value of group.
 		`ALTER TABLE services
 			ADD CONSTRAINT services_external_group_check CHECK (
 				(service_type <> '` + string(ExternalServiceType) + `' AND external_group = '')
@@ -437,18 +437,6 @@ var databaseSchema = [][]string{
 	},
 	28: {
 		`ALTER TABLE agents ADD COLUMN disabled_collectors VARCHAR[]`,
-	},
-	29: {
-		`ALTER TABLE services
-			DROP CONSTRAINT services_external_group_check`,
-
-		// Only service with type external or haproxy can have non empty value of group.
-		`ALTER TABLE services
-			ADD CONSTRAINT services_external_group_check_with_haproxy CHECK (
-				((service_type <> '` + string(ExternalServiceType) + `' OR service_type <> '` + string(HAProxyServiceType) + `') AND external_group = '')
-				OR
-				((service_type <> '` + string(ExternalServiceType) + `' AND service_type <> '` + string(HAProxyServiceType) + `') AND external_group = '')
-			)`,
 	},
 }
 
