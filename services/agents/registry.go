@@ -155,10 +155,11 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 		l.Infof("Disconnecting client: %s.", disconnectReason)
 	}()
 
+	// run pmm-agent state update loop for the current agent.
 	go r.runStateChangeHandler(ctx, agent)
 
 	// send first SetStateRequest concurrently with handling ping from agent
-	go r.SendSetStateRequest(ctx, agent.id)
+	go r.RequestStateUpdate(ctx, agent.id)
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
@@ -489,7 +490,7 @@ func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRe
 	if agent.PMMAgentID == nil {
 		return nil
 	}
-	r.SendSetStateRequest(ctx, *agent.PMMAgentID)
+	r.RequestStateUpdate(ctx, *agent.PMMAgentID)
 	return nil
 }
 
@@ -506,7 +507,7 @@ func (r *Registry) UpdateAgentsState(ctx context.Context) error {
 		limiter <- struct{}{}
 		go func(pmmAgentID string) {
 			defer wg.Done()
-			r.SendSetStateRequest(ctx, pmmAgentID)
+			r.RequestStateUpdate(ctx, pmmAgentID)
 			<-limiter
 		}(pmmAgentID)
 	}
@@ -514,15 +515,16 @@ func (r *Registry) UpdateAgentsState(ctx context.Context) error {
 	return nil
 }
 
+// runStateChangeHandler runs pmm-agent state update loop for given pmm-agent until ctx is canceled or agent is kicked.
 func (r *Registry) runStateChangeHandler(ctx context.Context, agent *pmmAgentInfo) {
 	l := logger.Get(ctx).WithField("agent_id", agent.id)
 
 	l.Info("Starting runStateChangeHandler ...")
 	defer l.Info("Done runStateChangeHandler.")
 
-	// stateChangeChan, state update loop, and SendSetStateRequest method ensure that state
+	// stateChangeChan, state update loop, and RequestStateUpdate method ensure that state
 	// is reloaded when requested, but several requests are batched together to avoid too often reloads.
-	// That allows the caller to just call SendSetStateRequest when it seems fit.
+	// That allows the caller to just call RequestStateUpdate when it seems fit.
 	if cap(agent.stateChangeChan) != 1 {
 		panic("stateChangeChan should have capacity 1")
 	}
@@ -552,13 +554,13 @@ func (r *Registry) runStateChangeHandler(ctx context.Context, agent *pmmAgentInf
 	}
 }
 
-// SendSetStateRequest sends SetStateRequest to pmm-agent with given ID.
-func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
+// RequestStateUpdate requests state update on pmm-agent with given ID.
+func (r *Registry) RequestStateUpdate(ctx context.Context, pmmAgentID string) {
 	l := logger.Get(ctx)
 
 	agent, err := r.get(pmmAgentID)
 	if err != nil {
-		l.Infof("SendSetStateRequest: %s.", err)
+		l.Infof("RequestStateUpdate: %s.", err)
 		return
 	}
 
@@ -568,12 +570,13 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 	}
 }
 
+// sendSetStateRequest sends SetStateRequest to given pmm-agent.
 func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo) {
 	l := logger.Get(ctx)
 	start := time.Now()
 	defer func() {
 		if dur := time.Since(start); dur > time.Second {
-			l.Warnf("SendSetStateRequest took %s.", dur)
+			l.Warnf("sendSetStateRequest took %s.", dur)
 		}
 	}()
 	pmmAgent, err := models.FindAgentByID(r.db.Querier, agent.id)
@@ -691,7 +694,7 @@ func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo)
 		AgentProcesses: agentProcesses,
 		BuiltinAgents:  builtinAgents,
 	}
-	l.Infof("SendSetStateRequest: %+v.", state)
+	l.Infof("sendSetStateRequest: %+v.", state)
 	resp := agent.channel.SendRequest(state)
 	l.Infof("SetState response: %+v.", resp)
 }
