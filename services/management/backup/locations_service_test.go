@@ -18,8 +18,9 @@ package backup
 
 import (
 	"context"
+	"testing"
+
 	"github.com/brianvoe/gofakeit"
-	"github.com/percona/pmm-managed/utils/tests"
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,7 +28,8 @@ import (
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
-	"testing"
+
+	"github.com/percona/pmm-managed/utils/tests"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/testdb"
