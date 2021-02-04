@@ -47,6 +47,7 @@ const (
 	prometheusSubsystem = "agents"
 )
 
+// constants for delayed batch updates.
 const (
 	updateBatchDelay   = time.Second
 	stateChangeTimeout = 5 * time.Second
