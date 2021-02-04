@@ -130,7 +130,7 @@ func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlert
 			}
 		}
 
-		pass, err := applyFilters(alert, rule.Filters)
+		pass, err := satisfiesFilters(alert, rule.Filters)
 		if err != nil {
 			return nil, err
 		}
@@ -152,8 +152,8 @@ func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlert
 	return &iav1beta1.ListAlertsResponse{Alerts: res}, nil
 }
 
-// applyFilters applies filters to the given alert, returns true if alert passes all filters.
-func applyFilters(alert *ammodels.GettableAlert, filters []*iav1beta1.Filter) (bool, error) {
+// satisfiesFilters checks that alert passes filters, returns true in case of success.
+func satisfiesFilters(alert *ammodels.GettableAlert, filters []*iav1beta1.Filter) (bool, error) {
 	for _, filter := range filters {
 		value, ok := alert.Labels[filter.Key]
 		if !ok {
