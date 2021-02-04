@@ -134,10 +134,10 @@ func TestBackupLocationValidation(t *testing.T) {
 			location: models.CreateBackupLocationParams{
 				Name: "fs-1",
 				FSConfig: &models.FSLocationConfig{
-					Path: "rpc error: code = InvalidArgument desc = FS path field is empty",
+					Path: "",
 				},
 			},
-			errorMsg: "",
+			errorMsg: "rpc error: code = InvalidArgument desc = FS path field is empty",
 		},
 		{
 			name: "normal s3 config",
@@ -145,8 +145,8 @@ func TestBackupLocationValidation(t *testing.T) {
 				Name: "s3-1",
 				S3Config: &models.S3LocationConfig{
 					Endpoint:  "https://s3.us-west-2.amazonaws.com/mybucket",
-					AccessKey: "AKIAIOSFODNN7EXAMPLE",
-					SecretKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+					AccessKey: "access_key",
+					SecretKey: "secret_key",
 				},
 			},
 			errorMsg: "",
@@ -157,8 +157,8 @@ func TestBackupLocationValidation(t *testing.T) {
 				Name: "s3-2",
 				S3Config: &models.S3LocationConfig{
 					Endpoint:  "",
-					AccessKey: "AKIAIOSFODNN7EXAMPLE",
-					SecretKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+					AccessKey: "access_key",
+					SecretKey: "secret_key",
 				},
 			},
 			errorMsg: "rpc error: code = InvalidArgument desc = S3 endpoint field is empty",
@@ -170,7 +170,7 @@ func TestBackupLocationValidation(t *testing.T) {
 				S3Config: &models.S3LocationConfig{
 					Endpoint:  "https://s3.us-west-2.amazonaws.com/mybucket",
 					AccessKey: "",
-					SecretKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+					SecretKey: "secret_key",
 				},
 			},
 			errorMsg: "rpc error: code = InvalidArgument desc = S3 accessKey field is empty",
@@ -181,7 +181,7 @@ func TestBackupLocationValidation(t *testing.T) {
 				Name: "s3-4",
 				S3Config: &models.S3LocationConfig{
 					Endpoint:  "https://s3.us-west-2.amazonaws.com/mybucket",
-					AccessKey: "AKIAIOSFODNN7EXAMPLE",
+					AccessKey: "secret_key",
 					SecretKey: "",
 				},
 			},
