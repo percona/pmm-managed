@@ -70,7 +70,8 @@ func (s *LocationsService) AddLocation(ctx context.Context, req *backupv1beta1.A
 			AccessKey: req.S3Config.AccessKey,
 			SecretKey: req.S3Config.SecretKey,
 		}
-	} else if req.FsConfig != nil {
+	}
+	if req.FsConfig != nil {
 		params.FSConfig = &models.FSLocationConfig{
 			Path: req.FsConfig.Path,
 		}
