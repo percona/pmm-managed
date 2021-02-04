@@ -420,6 +420,22 @@ var databaseSchema = [][]string{
 		`ALTER TABLE ia_rules ALTER COLUMN channel_ids DROP NOT NULL`,
 	},
 	27: {
+		`CREATE TABLE backup_locations (
+			id VARCHAR NOT NULL,
+			name VARCHAR NOT NULL CHECK (name <> ''),
+			description VARCHAR NOT NULL,
+			type VARCHAR NOT NULL CHECK (type <> ''),
+			s3_config JSONB,
+			fs_config JSONB,
+
+			created_at TIMESTAMP NOT NULL,
+			updated_at TIMESTAMP NOT NULL,
+
+			PRIMARY KEY (id),
+			UNIQUE (name)
+		)`,
+	},
+	28: {
 		`ALTER TABLE agents ADD COLUMN disabled_collectors VARCHAR[]`,
 	},
 }

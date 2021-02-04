@@ -16,6 +16,7 @@ required = [
   name = "github.com/percona/pmm"
   branch = "PMM-7306-disable-collectors"
 
+
 [[constraint]]
   name = "github.com/percona-platform/saas"
   branch = "main"
