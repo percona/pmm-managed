@@ -21,15 +21,12 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/percona/exporter_shared/helpers"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/pkg/errors"
-	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -143,43 +140,11 @@ func TestAgentRequest(t *testing.T) {
 	assert.NoError(t, err)
 
 	// check metrics
-	metrics := make([]prom.Metric, 0, 100)
-	metricsCh := make(chan prom.Metric)
-	go func() {
-		channel.Collect(metricsCh)
-		close(metricsCh)
-	}()
-	for m := range metricsCh {
-		metrics = append(metrics, m)
+	expectedMetrics := &Metrics{
+		Sent: 50,
+		Recv: 50,
 	}
-	expectedMetrics := strings.Split(strings.TrimSpace(`
-# HELP pmm_managed_channel_messages_received_total A total number of messages received from pmm-agent.
-# TYPE pmm_managed_channel_messages_received_total counter
-pmm_managed_channel_messages_received_total 50
-# HELP pmm_managed_channel_messages_request_queue_length The current length of the request queue.
-# TYPE pmm_managed_channel_messages_request_queue_length gauge
-pmm_managed_channel_messages_request_queue_length 0
-# HELP pmm_managed_channel_messages_response_queue_length The current length of the response queue.
-# TYPE pmm_managed_channel_messages_response_queue_length gauge
-pmm_managed_channel_messages_response_queue_length 0
-# HELP pmm_managed_channel_messages_sent_total A total number of messages sent to pmm-agent.
-# TYPE pmm_managed_channel_messages_sent_total counter
-pmm_managed_channel_messages_sent_total 50
-`), "\n")
-	assert.Equal(t, expectedMetrics, helpers.Format(metrics))
-
-	// check that descriptions match metrics: same number, same order
-	descCh := make(chan *prom.Desc)
-	go func() {
-		channel.Describe(descCh)
-		close(descCh)
-	}()
-	var i int
-	for d := range descCh {
-		assert.Equal(t, metrics[i].Desc(), d)
-		i++
-	}
-	assert.Len(t, metrics, i)
+	assert.Equal(t, expectedMetrics, channel.Metrics())
 }
 
 func TestServerRequest(t *testing.T) {

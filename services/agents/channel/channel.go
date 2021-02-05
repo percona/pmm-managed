@@ -25,7 +25,6 @@ import (
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/pkg/errors"
-	prom "github.com/prometheus/client_golang/prometheus"
 
 	"github.com/percona/pmm-managed/utils/logger"
 )
@@ -53,6 +52,14 @@ type ServerResponse struct {
 	Payload agentpb.ServerResponsePayload
 }
 
+// Metrics represents useful channel metrics.
+type Metrics struct {
+	Sent      float64 // a total number of messages sent to pmm-agent
+	Recv      float64 // a total number of messages received from pmm-agent
+	Responses float64 // the current length of the response queue
+	Requests  float64 // the current length of the request queue
+}
+
 // Channel encapsulates two-way communication channel between pmm-managed and pmm-agent.
 //
 // All exported methods are thread-safe.
@@ -60,14 +67,13 @@ type ServerResponse struct {
 type Channel struct {
 	s agentpb.Agent_ConnectServer
 
-	mRecv, mSend          prom.Counter
-	mResponses, mRequests prom.GaugeFunc
+	mSent, mRecv uint32
 
 	lastSentRequestID uint32
 
 	sendM sync.Mutex
 
-	m         sync.Mutex
+	rw        sync.RWMutex
 	responses map[uint32]chan agentpb.AgentResponsePayload
 	requests  chan *AgentRequest
 
@@ -86,31 +92,6 @@ func New(stream agentpb.Agent_ConnectServer) *Channel {
 	s := &Channel{
 		s: stream,
 
-		mRecv: prom.NewCounter(prom.CounterOpts{
-			Namespace: prometheusNamespace,
-			Subsystem: prometheusSubsystem,
-			Name:      "messages_received_total",
-			Help:      "A total number of messages received from pmm-agent.",
-		}),
-		mSend: prom.NewCounter(prom.CounterOpts{
-			Namespace: prometheusNamespace,
-			Subsystem: prometheusSubsystem,
-			Name:      "messages_sent_total",
-			Help:      "A total number of messages sent to pmm-agent.",
-		}),
-		mResponses: prom.NewGaugeFunc(prom.GaugeOpts{
-			Namespace: prometheusNamespace,
-			Subsystem: prometheusSubsystem,
-			Name:      "messages_response_queue_length",
-			Help:      "The current length of the response queue.",
-		}, func() float64 { return float64(len(responses)) }),
-		mRequests: prom.NewGaugeFunc(prom.GaugeOpts{
-			Namespace: prometheusNamespace,
-			Subsystem: prometheusSubsystem,
-			Name:      "messages_request_queue_length",
-			Help:      "The current length of the request queue.",
-		}, func() float64 { return float64(len(requests)) }),
-
 		responses: responses,
 		requests:  requests,
 
@@ -127,12 +108,12 @@ func (c *Channel) close(err error) {
 		logger.Get(c.s.Context()).Debugf("Closing with error: %+v", err)
 		c.closeErr = err
 
-		c.m.Lock()
+		c.rw.Lock()
 		for _, ch := range c.responses { // unblock all subscribers
 			close(ch)
 		}
 		c.responses = nil // prevent future subscriptions
-		c.m.Unlock()
+		c.rw.Unlock()
 
 		close(c.closeWait)
 	})
@@ -198,7 +179,7 @@ func (c *Channel) send(msg *agentpb.ServerMessage) {
 		c.close(errors.Wrap(err, "failed to send message"))
 		return
 	}
-	c.mSend.Inc()
+	atomic.AddUint32(&c.mSent, 1)
 }
 
 // runReader receives messages from server.
@@ -215,7 +196,7 @@ func (c *Channel) runReceiver() {
 			c.close(errors.Wrap(err, "failed to receive message"))
 			return
 		}
-		c.mRecv.Inc()
+		atomic.AddUint32(&c.mRecv, 1)
 
 		// do not use default compact representation for large/complex messages
 		if size := proto.Size(msg); size < 100 {
@@ -269,9 +250,9 @@ func (c *Channel) runReceiver() {
 func (c *Channel) subscribe(id uint32) chan agentpb.AgentResponsePayload {
 	ch := make(chan agentpb.AgentResponsePayload, 1)
 
-	c.m.Lock()
+	c.rw.Lock()
 	if c.responses == nil { // Channel is closed, no more subscriptions
-		c.m.Unlock()
+		c.rw.Unlock()
 		close(ch)
 		return ch
 	}
@@ -283,46 +264,40 @@ func (c *Channel) subscribe(id uint32) chan agentpb.AgentResponsePayload {
 	}
 
 	c.responses[id] = ch
-	c.m.Unlock()
+	c.rw.Unlock()
 	return ch
 }
 
 func (c *Channel) publish(id uint32, resp agentpb.AgentResponsePayload) {
-	c.m.Lock()
+	c.rw.Lock()
 	if c.responses == nil { // Channel is closed, no more publishing
-		c.m.Unlock()
+		c.rw.Unlock()
 		return
 	}
 
 	ch := c.responses[id]
 	if ch == nil {
-		c.m.Unlock()
+		c.rw.Unlock()
 		c.close(errors.WithStack(fmt.Errorf("no subscriber for ID %d", id)))
 		return
 	}
 
 	delete(c.responses, id)
-	c.m.Unlock()
+	c.rw.Unlock()
 	ch <- resp
 }
 
-// Describe implements prometheus.Collector.
-func (c *Channel) Describe(ch chan<- *prom.Desc) {
-	c.mRecv.Describe(ch)
-	c.mSend.Describe(ch)
-	c.mResponses.Describe(ch)
-	c.mRequests.Describe(ch)
-}
+// Metrics returns current channel metrics.
+func (c *Channel) Metrics() *Metrics {
+	c.rw.RLock()
+	responses := len(c.responses)
+	requests := len(c.requests)
+	c.rw.RUnlock()
 
-// Collect implement prometheus.Collector.
-func (c *Channel) Collect(ch chan<- prom.Metric) {
-	c.mRecv.Collect(ch)
-	c.mSend.Collect(ch)
-	c.mResponses.Collect(ch)
-	c.mRequests.Collect(ch)
+	return &Metrics{
+		Sent:      float64(atomic.LoadUint32(&c.mSent)),
+		Recv:      float64(atomic.LoadUint32(&c.mRecv)),
+		Responses: float64(responses),
+		Requests:  float64(requests),
+	}
 }
-
-// check interfaces
-var (
-	_ prom.Collector = (*Channel)(nil)
-)

@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/AlekSi/pointer"
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
@@ -43,19 +44,42 @@ import (
 )
 
 const (
-	prometheusNamespace = "pmm_managed"
-	prometheusSubsystem = "agents"
-)
-
-// constants for delayed batch updates.
-const (
+	// constants for delayed batch updates
 	updateBatchDelay   = time.Second
 	stateChangeTimeout = 5 * time.Second
+
+	prometheusNamespace = "pmm_managed"
+	prometheusSubsystem = "agents"
 )
 
 var (
 	defaultActionTimeout      = ptypes.DurationProto(10 * time.Second)
 	defaultQueryActionTimeout = ptypes.DurationProto(15 * time.Second) // should be less than checks.resultTimeout
+
+	mSentDesc = prom.NewDesc(
+		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_sent_total"),
+		"A total number of messages sent to pmm-agent.",
+		[]string{"agent_id"},
+		nil,
+	)
+	mRecvDesc = prom.NewDesc(
+		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_received_total"),
+		"A total number of messages received from pmm-agent.",
+		[]string{"agent_id"},
+		nil,
+	)
+	mResponsesDesc = prom.NewDesc(
+		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_response_queue_length"),
+		"The current length of the response queue.",
+		[]string{"agent_id"},
+		nil,
+	)
+	mRequestsDesc = prom.NewDesc(
+		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_request_queue_length"),
+		"The current length of the request queue.",
+		[]string{"agent_id"},
+		nil,
+	)
 )
 
 type pmmAgentInfo struct {
@@ -299,8 +323,6 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*pmmAgentInfo, 
 	}
 	r.agents[agentMD.ID] = agent
 
-	// TODO registry metrics
-
 	return agent, nil
 }
 
@@ -357,8 +379,6 @@ func (r *Registry) unregister(pmmAgentID string) *pmmAgentInfo {
 
 	delete(r.agents, pmmAgentID)
 	r.roster.clear(pmmAgentID)
-
-	// TODO unregister metrics
 
 	return agent
 }
@@ -727,7 +747,7 @@ func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo)
 		AgentProcesses: agentProcesses,
 		BuiltinAgents:  builtinAgents,
 	}
-	l.Infof("sendSetStateRequest: %+v.", state)
+	l.Infof("sendSetStateRequest:\n%s", proto.MarshalTextString(state))
 	resp := agent.channel.SendRequest(state)
 	l.Infof("SetState response: %+v.", resp)
 }
@@ -829,7 +849,10 @@ func (r *Registry) get(pmmAgentID string) (*pmmAgentInfo, error) {
 
 // Describe implements prometheus.Collector.
 func (r *Registry) Describe(ch chan<- *prom.Desc) {
-	// TODO channel metrics
+	ch <- mSentDesc
+	ch <- mRecvDesc
+	ch <- mResponsesDesc
+	ch <- mRequestsDesc
 
 	r.mAgents.Describe(ch)
 	r.mConnects.Describe(ch)
@@ -840,7 +863,18 @@ func (r *Registry) Describe(ch chan<- *prom.Desc) {
 
 // Collect implement prometheus.Collector.
 func (r *Registry) Collect(ch chan<- prom.Metric) {
-	// TODO channel metrics
+	r.rw.RLock()
+
+	for _, agent := range r.agents {
+		m := agent.channel.Metrics()
+
+		ch <- prom.MustNewConstMetric(mSentDesc, prom.CounterValue, m.Sent, agent.id)
+		ch <- prom.MustNewConstMetric(mRecvDesc, prom.CounterValue, m.Recv, agent.id)
+		ch <- prom.MustNewConstMetric(mResponsesDesc, prom.GaugeValue, m.Responses, agent.id)
+		ch <- prom.MustNewConstMetric(mRequestsDesc, prom.GaugeValue, m.Requests, agent.id)
+	}
+
+	r.rw.RUnlock()
 
 	r.mAgents.Collect(ch)
 	r.mConnects.Collect(ch)
