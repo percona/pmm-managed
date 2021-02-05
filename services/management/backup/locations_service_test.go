@@ -91,28 +91,63 @@ func TestListBackupLocations(t *testing.T) {
 
 	svc := NewLocationsService(db)
 
-	_, err := svc.AddLocation(ctx, &backupv1beta1.AddLocationRequest{
+	req1 := &backupv1beta1.AddLocationRequest{
 		Name: gofakeit.Name(),
 		FsConfig: &backupv1beta1.FSConfig{
 			Path: "/tmp",
 		},
-	})
+	}
+	res1, err := svc.AddLocation(ctx, req1)
 	require.Nil(t, err)
-	_, err = svc.AddLocation(ctx, &backupv1beta1.AddLocationRequest{
+	req2 := &backupv1beta1.AddLocationRequest{
 		Name: gofakeit.Name(),
 		S3Config: &backupv1beta1.S3Config{
 			Endpoint:  gofakeit.URL(),
 			AccessKey: "access_key",
 			SecretKey: "secret_key",
 		},
-	})
+	}
+	res2, err := svc.AddLocation(ctx, req2)
 	require.Nil(t, err)
 
 	t.Run("list", func(t *testing.T) {
 		res, err := svc.ListLocations(ctx, &backupv1beta1.ListLocationsRequest{})
 		assert.Nil(t, err)
 
+		checkLocation := func(id string, req *backupv1beta1.AddLocationRequest) func() bool {
+			return func() bool {
+				for _, loc := range res.Locations {
+					if loc.LocationId == id {
+						if loc.Name != req.Name || loc.Description != req.Description {
+							return false
+						}
+						if req.S3Config != nil {
+							cfg := loc.Config.(*backupv1beta1.Location_S3Config)
+							if req.S3Config.Endpoint != cfg.S3Config.Endpoint ||
+								req.S3Config.AccessKey != cfg.S3Config.AccessKey ||
+								req.S3Config.SecretKey != cfg.S3Config.SecretKey {
+								return false
+							}
+
+						}
+						if req.FsConfig != nil {
+							cfg := loc.Config.(*backupv1beta1.Location_FsConfig)
+							if req.FsConfig.Path != cfg.FsConfig.Path {
+								return false
+							}
+						}
+						return true
+					}
+				}
+				return false
+			}
+		}
+
 		assert.Len(t, res.Locations, 2)
+
+		assert.Condition(t, checkLocation(res1.LocationId, req1))
+		assert.Condition(t, checkLocation(res2.LocationId, req2))
+
 	})
 
 }

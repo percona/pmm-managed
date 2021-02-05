@@ -102,10 +102,6 @@ func CreateBackupLocation(q *reform.Querier, params CreateBackupLocationParams) 
 		return nil, err
 	}
 
-	if params.Name == "" {
-		return nil, status.Error(codes.InvalidArgument, "Location name can't be empty")
-	}
-
 	row := &BackupLocation{
 		ID:          id,
 		Name:        params.Name,

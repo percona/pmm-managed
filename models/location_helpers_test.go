@@ -115,7 +115,7 @@ func TestBackupLocations(t *testing.T) {
 		}
 
 		_, err = models.CreateBackupLocation(q, params)
-		require.NotNil(t, err)
+		require.EqualError(t, err, "rpc error: code = InvalidArgument desc = Only one config is allowed")
 	})
 
 	t.Run("list", func(t *testing.T) {
@@ -151,18 +151,21 @@ func TestBackupLocations(t *testing.T) {
 
 		actual, err := models.FindBackupLocations(q)
 		require.NoError(t, err)
-		var found1, found2 bool
-		for _, location := range actual {
-			if location.ID == loc1.ID {
-				found1 = true
-			}
-			if location.ID == loc2.ID {
-				found2 = true
+
+		findLocID := func(id string) func() bool {
+			return func() bool {
+				for _, location := range actual {
+					if location.ID == id {
+						return true
+					}
+				}
+				return false
 			}
 		}
 
-		assert.True(t, found1, "Fist location not found")
-		assert.True(t, found2, "Second location not found")
+		assert.Condition(t, findLocID(loc1.ID), "First location not found")
+		assert.Condition(t, findLocID(loc2.ID), "Second location not found")
+
 	})
 }
 
