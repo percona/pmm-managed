@@ -115,7 +115,7 @@ func (e HAProxyService) AddHAProxy(ctx context.Context, req *managementpb.AddHAP
 	// we have to trigger after transaction
 	if pmmAgentID != nil {
 		// It's required to regenerate victoriametrics config file.
-		e.registry.SendSetStateRequest(ctx, *pmmAgentID)
+		e.registry.RequestStateUpdate(ctx, *pmmAgentID)
 	} else {
 		e.vmdb.RequestConfigurationUpdate()
 	}
