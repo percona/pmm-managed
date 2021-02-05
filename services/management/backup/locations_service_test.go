@@ -48,7 +48,7 @@ func TestCreateBackupLocation(t *testing.T) {
 				Path: "/tmp",
 			},
 		})
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 
 		assert.NotEmpty(t, loc.LocationId)
 	})

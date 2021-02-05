@@ -19,6 +19,11 @@ package models_test
 import (
 	"testing"
 
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
+	"github.com/percona/pmm-managed/utils/tests"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/reform.v1"
@@ -115,7 +120,7 @@ func TestBackupLocations(t *testing.T) {
 		}
 
 		_, err = models.CreateBackupLocation(q, params)
-		require.EqualError(t, err, "rpc error: code = InvalidArgument desc = Only one config is allowed")
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Only one config is allowed"), err)
 	})
 
 	t.Run("list", func(t *testing.T) {
@@ -176,7 +181,7 @@ func TestBackupLocationValidation(t *testing.T) {
 	}()
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	tests := []struct {
+	tableTests := []struct {
 		name     string
 		location models.CreateBackupLocationParams
 		errorMsg string
@@ -199,7 +204,7 @@ func TestBackupLocationValidation(t *testing.T) {
 					Path: "",
 				},
 			},
-			errorMsg: "rpc error: code = InvalidArgument desc = FS path field is empty",
+			errorMsg: "rpc error: code = InvalidArgument desc = FS path field is empty.",
 		},
 		{
 			name: "normal s3 config",
@@ -223,7 +228,7 @@ func TestBackupLocationValidation(t *testing.T) {
 					SecretKey: "secret_key",
 				},
 			},
-			errorMsg: "rpc error: code = InvalidArgument desc = S3 endpoint field is empty",
+			errorMsg: "rpc error: code = InvalidArgument desc = S3 endpoint field is empty.",
 		},
 		{
 			name: "s3 config - missing access key",
@@ -235,7 +240,7 @@ func TestBackupLocationValidation(t *testing.T) {
 					SecretKey: "secret_key",
 				},
 			},
-			errorMsg: "rpc error: code = InvalidArgument desc = S3 accessKey field is empty",
+			errorMsg: "rpc error: code = InvalidArgument desc = S3 accessKey field is empty.",
 		},
 		{
 			name: "s3 config - missing secret key",
@@ -247,11 +252,11 @@ func TestBackupLocationValidation(t *testing.T) {
 					SecretKey: "",
 				},
 			},
-			errorMsg: "rpc error: code = InvalidArgument desc = S3 secretKey field is empty",
+			errorMsg: "rpc error: code = InvalidArgument desc = S3 secretKey field is empty.",
 		},
 	}
 
-	for _, test := range tests {
+	for _, test := range tableTests {
 		test := test
 
 		t.Run(test.name, func(t *testing.T) {

@@ -26,7 +26,7 @@ import (
 
 func checkUniqueLocationID(q *reform.Querier, id string) error {
 	if id == "" {
-		panic("empty Channel ID")
+		panic("empty Location ID")
 	}
 
 	location := &BackupLocation{ID: id}
@@ -45,7 +45,7 @@ func checkFSConfig(c *FSLocationConfig) error {
 		return status.Error(codes.InvalidArgument, "FS location config is empty.")
 	}
 	if c.Path == "" {
-		return status.Error(codes.InvalidArgument, "FS path field is empty")
+		return status.Error(codes.InvalidArgument, "FS path field is empty.")
 	}
 	return nil
 }
@@ -56,15 +56,15 @@ func checkS3Config(c *S3LocationConfig) error {
 	}
 
 	if c.Endpoint == "" {
-		return status.Error(codes.InvalidArgument, "S3 endpoint field is empty")
+		return status.Error(codes.InvalidArgument, "S3 endpoint field is empty.")
 	}
 
 	if c.AccessKey == "" {
-		return status.Error(codes.InvalidArgument, "S3 accessKey field is empty")
+		return status.Error(codes.InvalidArgument, "S3 accessKey field is empty.")
 	}
 
 	if c.SecretKey == "" {
-		return status.Error(codes.InvalidArgument, "S3 secretKey field is empty")
+		return status.Error(codes.InvalidArgument, "S3 secretKey field is empty.")
 	}
 
 	return nil
