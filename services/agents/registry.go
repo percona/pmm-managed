@@ -47,15 +47,22 @@ const (
 	prometheusSubsystem = "agents"
 )
 
+// constants for delayed batch updates.
+const (
+	updateBatchDelay   = time.Second
+	stateChangeTimeout = 5 * time.Second
+)
+
 var (
 	defaultActionTimeout      = ptypes.DurationProto(10 * time.Second)
 	defaultQueryActionTimeout = ptypes.DurationProto(15 * time.Second) // should be less than checks.resultTimeout
 )
 
 type pmmAgentInfo struct {
-	channel *channel.Channel
-	id      string
-	kick    chan struct{}
+	channel         *channel.Channel
+	id              string
+	stateChangeChan chan struct{}
+	kick            chan struct{}
 }
 
 // Registry keeps track of all connected pmm-agents.
@@ -157,8 +164,11 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 		l.Infof("Disconnecting client: %s.", disconnectReason)
 	}()
 
+	// run pmm-agent state update loop for the current agent.
+	go r.runStateChangeHandler(ctx, agent)
+
 	// send first SetStateRequest concurrently with handling ping from agent
-	go r.SendSetStateRequest(ctx, agent.id)
+	go r.RequestStateUpdate(ctx, agent.id)
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
@@ -283,9 +293,10 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*pmmAgentInfo, 
 	defer r.rw.Unlock()
 
 	agent := &pmmAgentInfo{
-		channel: channel.New(stream),
-		id:      agentMD.ID,
-		kick:    make(chan struct{}),
+		channel:         channel.New(stream),
+		id:              agentMD.ID,
+		stateChangeChan: make(chan struct{}, 1),
+		kick:            make(chan struct{}),
 	}
 	r.agents[agentMD.ID] = agent
 
@@ -425,7 +436,12 @@ func (r *Registry) Kick(ctx context.Context, pmmAgentID string) {
 
 	l := logger.Get(ctx)
 	l.Debugf("pmm-agent with ID %q will be kicked in a moment.", pmmAgentID)
-	close(agent.kick) // see Run method
+
+	// see Run method
+	close(agent.kick)
+
+	// Do not close agent.stateChangeChan to avoid breaking RequestStateUpdate;
+	// closing agent.kick is enough to exit runStateChangeHandler goroutine.
 }
 
 // ping sends Ping message to given Agent, waits for Pong and observes round-trip time and clock drift.
@@ -508,7 +524,7 @@ func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRe
 	if agent.PMMAgentID == nil {
 		return nil
 	}
-	r.SendSetStateRequest(ctx, *agent.PMMAgentID)
+	r.RequestStateUpdate(ctx, *agent.PMMAgentID)
 	return nil
 }
 
@@ -525,7 +541,7 @@ func (r *Registry) UpdateAgentsState(ctx context.Context) error {
 		limiter <- struct{}{}
 		go func(pmmAgentID string) {
 			defer wg.Done()
-			r.SendSetStateRequest(ctx, pmmAgentID)
+			r.RequestStateUpdate(ctx, pmmAgentID)
 			<-limiter
 		}(pmmAgentID)
 	}
@@ -533,23 +549,71 @@ func (r *Registry) UpdateAgentsState(ctx context.Context) error {
 	return nil
 }
 
-// SendSetStateRequest sends SetStateRequest to pmm-agent with given ID.
-func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
+// runStateChangeHandler runs pmm-agent state update loop for given pmm-agent until ctx is canceled or agent is kicked.
+func (r *Registry) runStateChangeHandler(ctx context.Context, agent *pmmAgentInfo) {
+	l := logger.Get(ctx).WithField("agent_id", agent.id)
+
+	l.Info("Starting runStateChangeHandler ...")
+	defer l.Info("Done runStateChangeHandler.")
+
+	// stateChangeChan, state update loop, and RequestStateUpdate method ensure that state
+	// is reloaded when requested, but several requests are batched together to avoid too often reloads.
+	// That allows the caller to just call RequestStateUpdate when it seems fit.
+	if cap(agent.stateChangeChan) != 1 {
+		panic("stateChangeChan should have capacity 1")
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+
+		case <-agent.kick:
+			return
+
+		case <-agent.stateChangeChan:
+			// batch several update requests together by delaying the first one
+			sleepCtx, sleepCancel := context.WithTimeout(ctx, updateBatchDelay)
+			<-sleepCtx.Done()
+			sleepCancel()
+
+			if ctx.Err() != nil {
+				return
+			}
+
+			nCtx, cancel := context.WithTimeout(ctx, stateChangeTimeout)
+			r.sendSetStateRequest(nCtx, agent)
+			cancel()
+		}
+	}
+}
+
+// RequestStateUpdate requests state update on pmm-agent with given ID.
+func (r *Registry) RequestStateUpdate(ctx context.Context, pmmAgentID string) {
+	l := logger.Get(ctx)
+
+	agent, err := r.get(pmmAgentID)
+	if err != nil {
+		l.Infof("RequestStateUpdate: %s.", err)
+		return
+	}
+
+	select {
+	case agent.stateChangeChan <- struct{}{}:
+	default:
+	}
+}
+
+// sendSetStateRequest sends SetStateRequest to given pmm-agent.
+func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo) {
 	l := logger.Get(ctx)
 	start := time.Now()
 	defer func() {
 		if dur := time.Since(start); dur > time.Second {
-			l.Warnf("SendSetStateRequest took %s.", dur)
+			l.Warnf("sendSetStateRequest took %s.", dur)
 		}
 	}()
-
-	agent, err := r.get(pmmAgentID)
-	if err != nil {
-		l.Infof("SendSetStateRequest: %s.", err)
-		return
-	}
-
-	pmmAgent, err := models.FindAgentByID(r.db.Querier, pmmAgentID)
+	pmmAgent, err := models.FindAgentByID(r.db.Querier, agent.id)
 	if err != nil {
 		l.Errorf("Failed to get PMM Agent: %s.", err)
 		return
@@ -560,7 +624,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		return
 	}
 
-	agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{PMMAgentID: pmmAgentID})
+	agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{PMMAgentID: agent.id})
 	if err != nil {
 		l.Errorf("Failed to collect agents: %s.", err)
 		return
@@ -584,9 +648,9 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		case models.PMMAgentType:
 			continue
 		case models.VMAgentType:
-			scrapeCfg, err := r.vmdb.BuildScrapeConfigForVMAgent(pmmAgentID)
+			scrapeCfg, err := r.vmdb.BuildScrapeConfigForVMAgent(agent.id)
 			if err != nil {
-				l.WithError(err).Errorf("cannot get agent scrape config for agent: %s", pmmAgentID)
+				l.WithError(err).Errorf("cannot get agent scrape config for agent: %s", agent.id)
 			}
 			agentProcesses[row.AgentID] = vmAgentConfig(string(scrapeCfg))
 
@@ -652,7 +716,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		}
 		sort.Strings(rdsExporterIDs)
 
-		groupID := r.roster.add(pmmAgentID, rdsGroup, rdsExporterIDs)
+		groupID := r.roster.add(agent.id, rdsGroup, rdsExporterIDs)
 		c, err := rdsExporterConfig(rdsExporters, redactMode)
 		if err == nil {
 			agentProcesses[groupID] = c
@@ -664,7 +728,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		AgentProcesses: agentProcesses,
 		BuiltinAgents:  builtinAgents,
 	}
-	l.Infof("SendSetStateRequest: %+v.", state)
+	l.Infof("sendSetStateRequest: %+v.", state)
 	resp := agent.channel.SendRequest(state)
 	l.Infof("SetState response: %+v.", resp)
 }

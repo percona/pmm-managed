@@ -195,7 +195,7 @@ func (as *AgentsService) AddNodeExporter(ctx context.Context, req *inventorypb.A
 		return nil, e
 	}
 
-	as.r.SendSetStateRequest(ctx, req.PmmAgentId)
+	as.r.RequestStateUpdate(ctx, req.PmmAgentId)
 	return res, nil
 }
 
@@ -207,7 +207,7 @@ func (as *AgentsService) ChangeNodeExporter(ctx context.Context, req *inventoryp
 	}
 
 	res := agent.(*inventorypb.NodeExporter)
-	as.r.SendSetStateRequest(ctx, res.PmmAgentId)
+	as.r.RequestStateUpdate(ctx, res.PmmAgentId)
 	return res, nil
 }
 
@@ -254,7 +254,7 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, req *inventorypb
 		return nil, 0, e
 	}
 
-	as.r.SendSetStateRequest(ctx, req.PmmAgentId)
+	as.r.RequestStateUpdate(ctx, req.PmmAgentId)
 	return res, pointer.GetInt32(row.TableCount), nil
 }
 
@@ -266,7 +266,7 @@ func (as *AgentsService) ChangeMySQLdExporter(ctx context.Context, req *inventor
 	}
 
 	res := agent.(*inventorypb.MySQLdExporter)
-	as.r.SendSetStateRequest(ctx, res.PmmAgentId)
+	as.r.RequestStateUpdate(ctx, res.PmmAgentId)
 	return res, nil
 }
 
@@ -311,7 +311,7 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, req *inventoryp
 		return nil, e
 	}
 
-	as.r.SendSetStateRequest(ctx, req.PmmAgentId)
+	as.r.RequestStateUpdate(ctx, req.PmmAgentId)
 	return res, nil
 }
 
@@ -323,7 +323,7 @@ func (as *AgentsService) ChangeMongoDBExporter(ctx context.Context, req *invento
 	}
 
 	res := agent.(*inventorypb.MongoDBExporter)
-	as.r.SendSetStateRequest(ctx, res.PmmAgentId)
+	as.r.RequestStateUpdate(ctx, res.PmmAgentId)
 	return res, nil
 }
 
@@ -368,7 +368,7 @@ func (as *AgentsService) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *in
 		return res, e
 	}
 
-	as.r.SendSetStateRequest(ctx, req.PmmAgentId)
+	as.r.RequestStateUpdate(ctx, req.PmmAgentId)
 	return res, e
 }
 
@@ -380,7 +380,7 @@ func (as *AgentsService) ChangeQANMySQLPerfSchemaAgent(ctx context.Context, req 
 	}
 
 	res := agent.(*inventorypb.QANMySQLPerfSchemaAgent)
-	as.r.SendSetStateRequest(ctx, res.PmmAgentId)
+	as.r.RequestStateUpdate(ctx, res.PmmAgentId)
 	return res, nil
 }
 
@@ -432,7 +432,7 @@ func (as *AgentsService) AddQANMySQLSlowlogAgent(ctx context.Context, req *inven
 		return res, e
 	}
 
-	as.r.SendSetStateRequest(ctx, req.PmmAgentId)
+	as.r.RequestStateUpdate(ctx, req.PmmAgentId)
 	return res, e
 }
 
@@ -444,7 +444,7 @@ func (as *AgentsService) ChangeQANMySQLSlowlogAgent(ctx context.Context, req *in
 	}
 
 	res := agent.(*inventorypb.QANMySQLSlowlogAgent)
-	as.r.SendSetStateRequest(ctx, res.PmmAgentId)
+	as.r.RequestStateUpdate(ctx, res.PmmAgentId)
 	return res, nil
 }
 
@@ -488,7 +488,7 @@ func (as *AgentsService) AddPostgresExporter(ctx context.Context, req *inventory
 		return nil, e
 	}
 
-	as.r.SendSetStateRequest(ctx, req.PmmAgentId)
+	as.r.RequestStateUpdate(ctx, req.PmmAgentId)
 	return res, nil
 }
 
@@ -500,7 +500,7 @@ func (as *AgentsService) ChangePostgresExporter(ctx context.Context, req *invent
 	}
 
 	res := agent.(*inventorypb.PostgresExporter)
-	as.r.SendSetStateRequest(ctx, res.PmmAgentId)
+	as.r.RequestStateUpdate(ctx, res.PmmAgentId)
 	return res, nil
 }
 
@@ -547,7 +547,7 @@ func (as *AgentsService) AddQANMongoDBProfilerAgent(ctx context.Context, req *in
 		return res, e
 	}
 
-	as.r.SendSetStateRequest(ctx, req.PmmAgentId)
+	as.r.RequestStateUpdate(ctx, req.PmmAgentId)
 	return res, e
 }
 
@@ -560,7 +560,7 @@ func (as *AgentsService) ChangeQANMongoDBProfilerAgent(ctx context.Context, req 
 	}
 
 	res := agent.(*inventorypb.QANMongoDBProfilerAgent)
-	as.r.SendSetStateRequest(ctx, res.PmmAgentId)
+	as.r.RequestStateUpdate(ctx, res.PmmAgentId)
 	return res, nil
 }
 
@@ -604,7 +604,7 @@ func (as *AgentsService) AddProxySQLExporter(ctx context.Context, req *inventory
 		return nil, e
 	}
 
-	as.r.SendSetStateRequest(ctx, req.PmmAgentId)
+	as.r.RequestStateUpdate(ctx, req.PmmAgentId)
 	return res, nil
 }
 
@@ -616,7 +616,7 @@ func (as *AgentsService) ChangeProxySQLExporter(ctx context.Context, req *invent
 	}
 
 	res := agent.(*inventorypb.ProxySQLExporter)
-	as.r.SendSetStateRequest(ctx, res.PmmAgentId)
+	as.r.RequestStateUpdate(ctx, res.PmmAgentId)
 	return res, nil
 }
 
@@ -660,7 +660,7 @@ func (as *AgentsService) AddQANPostgreSQLPgStatementsAgent(ctx context.Context, 
 		return res, e
 	}
 
-	as.r.SendSetStateRequest(ctx, req.PmmAgentId)
+	as.r.RequestStateUpdate(ctx, req.PmmAgentId)
 	return res, e
 }
 
@@ -672,7 +672,7 @@ func (as *AgentsService) ChangeQANPostgreSQLPgStatementsAgent(ctx context.Contex
 	}
 
 	res := agent.(*inventorypb.QANPostgreSQLPgStatementsAgent)
-	as.r.SendSetStateRequest(ctx, res.PmmAgentId)
+	as.r.RequestStateUpdate(ctx, res.PmmAgentId)
 	return res, nil
 }
 
@@ -717,7 +717,7 @@ func (as *AgentsService) AddQANPostgreSQLPgStatMonitorAgent(ctx context.Context,
 		return res, e
 	}
 
-	as.r.SendSetStateRequest(ctx, req.PmmAgentId)
+	as.r.RequestStateUpdate(ctx, req.PmmAgentId)
 	return res, e
 }
 
@@ -729,7 +729,7 @@ func (as *AgentsService) ChangeQANPostgreSQLPgStatMonitorAgent(ctx context.Conte
 	}
 
 	res := agent.(*inventorypb.QANPostgreSQLPgStatMonitorAgent)
-	as.r.SendSetStateRequest(ctx, res.PmmAgentId)
+	as.r.RequestStateUpdate(ctx, res.PmmAgentId)
 	return res, nil
 }
 
@@ -767,7 +767,7 @@ func (as *AgentsService) AddRDSExporter(ctx context.Context, req *inventorypb.Ad
 		return nil, e
 	}
 
-	as.r.SendSetStateRequest(ctx, req.PmmAgentId)
+	as.r.RequestStateUpdate(ctx, req.PmmAgentId)
 	return res, nil
 }
 
@@ -779,7 +779,7 @@ func (as *AgentsService) ChangeRDSExporter(ctx context.Context, req *inventorypb
 	}
 
 	res := agent.(*inventorypb.RDSExporter)
-	as.r.SendSetStateRequest(ctx, res.PmmAgentId)
+	as.r.RequestStateUpdate(ctx, res.PmmAgentId)
 	return res, nil
 }
 
@@ -819,7 +819,7 @@ func (as *AgentsService) AddExternalExporter(ctx context.Context, req *inventory
 	}
 
 	if PMMAgentID != nil {
-		as.r.SendSetStateRequest(ctx, *PMMAgentID)
+		as.r.RequestStateUpdate(ctx, *PMMAgentID)
 	} else {
 		// It's required to regenerate victoriametrics config file.
 		as.vmdb.RequestConfigurationUpdate()
@@ -859,7 +859,7 @@ func (as *AgentsService) Remove(ctx context.Context, id string, force bool) erro
 	}
 
 	if pmmAgentID := pointer.GetString(removedAgent.PMMAgentID); pmmAgentID != "" {
-		as.r.SendSetStateRequest(ctx, pmmAgentID)
+		as.r.RequestStateUpdate(ctx, pmmAgentID)
 	} else {
 		// It's required to regenerate victoriametrics config file for the agents which aren't run by pmm-agent.
 		as.vmdb.RequestConfigurationUpdate()
