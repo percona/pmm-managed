@@ -272,7 +272,7 @@ func (s *NodesService) Remove(ctx context.Context, id string, force bool) error 
 	}
 
 	for id := range idsToSetState {
-		s.r.SendSetStateRequest(ctx, id)
+		s.r.RequestStateUpdate(ctx, id)
 	}
 	for id := range idsToKick {
 		s.r.Kick(ctx, id)

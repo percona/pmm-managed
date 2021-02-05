@@ -222,7 +222,7 @@ func (ss *ServicesService) Remove(ctx context.Context, id string, force bool) er
 	}
 
 	for _, a := range agents {
-		ss.r.SendSetStateRequest(ctx, a.AgentID)
+		ss.r.RequestStateUpdate(ctx, a.AgentID)
 	}
 
 	if force {
