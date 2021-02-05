@@ -154,8 +154,8 @@ func ToAPIService(service *models.Service) (inventorypb.Service, error) {
 			CustomLabels:   labels,
 		}, nil
 
-	case models.ExternalServiceType:
-		return &inventorypb.ExternalService{
+	case models.HAProxyServiceType:
+		return &inventorypb.HAProxyService{
 			ServiceId:      service.ServiceID,
 			ServiceName:    service.ServiceName,
 			NodeId:         service.NodeID,
@@ -163,11 +163,10 @@ func ToAPIService(service *models.Service) (inventorypb.Service, error) {
 			Cluster:        service.Cluster,
 			ReplicationSet: service.ReplicationSet,
 			CustomLabels:   labels,
-			Group:          service.ExternalGroup,
 		}, nil
 
-	case models.HAProxyServiceType:
-		return &inventorypb.HAProxyService{
+	case models.ExternalServiceType:
+		return &inventorypb.ExternalService{
 			ServiceId:      service.ServiceID,
 			ServiceName:    service.ServiceName,
 			NodeId:         service.NodeID,
