@@ -83,14 +83,11 @@ type Channel struct {
 //
 // Stream should not be used by the caller after channel is created.
 func New(stream agentpb.Agent_ConnectServer) *Channel {
-	responses := make(map[uint32]chan agentpb.AgentResponsePayload)
-	requests := make(chan *AgentRequest, agentRequestsCap)
-
 	s := &Channel{
 		s: stream,
 
-		responses: responses,
-		requests:  requests,
+		responses: make(map[uint32]chan agentpb.AgentResponsePayload),
+		requests:  make(chan *AgentRequest, agentRequestsCap),
 
 		closeWait: make(chan struct{}),
 	}
