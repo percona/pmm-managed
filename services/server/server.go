@@ -617,6 +617,11 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		}()
 	}
 
+	// When STT moved from enabled state to disabled drop all existing STT alerts.
+	if oldSettings.SaaS.STTEnabled && !newSettings.SaaS.STTEnabled {
+		s.checksService.CleanupAlerts()
+	}
+
 	if isAgentsStateUpdateNeeded(req.MetricsResolutions) {
 		if err := s.r.UpdateAgentsState(ctx); err != nil {
 			return nil, err

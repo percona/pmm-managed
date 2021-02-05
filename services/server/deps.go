@@ -67,6 +67,7 @@ type alertmanagerService interface {
 // We use it instead of real type for testing and to avoid dependency cycle.
 type checksService interface {
 	StartChecks(ctx context.Context) error
+	CleanupAlerts()
 }
 
 // vmAlertService is a subset of methods of vmalert.Service used by this package.
