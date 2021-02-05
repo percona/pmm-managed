@@ -65,7 +65,7 @@ func setup(t *testing.T, connect func(*Channel) error, expected ...error) (agent
 	)
 	agentpb.RegisterAgentServer(server, &testServer{
 		connectFunc: func(stream agentpb.Agent_ConnectServer) error {
-			channel = New(stream, NewSharedMetrics())
+			channel = New(stream)
 			return connect(channel)
 		},
 	})
@@ -146,17 +146,23 @@ func TestAgentRequest(t *testing.T) {
 	metrics := make([]prom.Metric, 0, 100)
 	metricsCh := make(chan prom.Metric)
 	go func() {
-		channel.metrics.Collect(metricsCh)
+		channel.Collect(metricsCh)
 		close(metricsCh)
 	}()
 	for m := range metricsCh {
 		metrics = append(metrics, m)
 	}
 	expectedMetrics := strings.Split(strings.TrimSpace(`
-# HELP pmm_managed_channel_messages_received_total A total number of messages received from pmm-agents.
+# HELP pmm_managed_channel_messages_received_total A total number of messages received from pmm-agent.
 # TYPE pmm_managed_channel_messages_received_total counter
 pmm_managed_channel_messages_received_total 50
-# HELP pmm_managed_channel_messages_sent_total A total number of messages sent to pmm-agents.
+# HELP pmm_managed_channel_messages_request_queue_length The current length of the request queue.
+# TYPE pmm_managed_channel_messages_request_queue_length gauge
+pmm_managed_channel_messages_request_queue_length 0
+# HELP pmm_managed_channel_messages_response_queue_length The current length of the response queue.
+# TYPE pmm_managed_channel_messages_response_queue_length gauge
+pmm_managed_channel_messages_response_queue_length 0
+# HELP pmm_managed_channel_messages_sent_total A total number of messages sent to pmm-agent.
 # TYPE pmm_managed_channel_messages_sent_total counter
 pmm_managed_channel_messages_sent_total 50
 `), "\n")
@@ -165,7 +171,7 @@ pmm_managed_channel_messages_sent_total 50
 	// check that descriptions match metrics: same number, same order
 	descCh := make(chan *prom.Desc)
 	go func() {
-		channel.metrics.Describe(descCh)
+		channel.Describe(descCh)
 		close(descCh)
 	}()
 	var i int
