@@ -752,9 +752,10 @@ func (as *AgentsService) AddRDSExporter(ctx context.Context, req *inventorypb.Ad
 			return err
 		}
 
-		if !req.SkipConnectionCheck {
-			// TODO check connection to AWS: https://jira.percona.com/browse/PMM-5024
-		}
+		// TODO check connection to AWS: https://jira.percona.com/browse/PMM-5024
+		// if !req.SkipConnectionCheck {
+		// 	...
+		// }
 
 		agent, err := services.ToAPIAgent(tx.Querier, row)
 		if err != nil {
