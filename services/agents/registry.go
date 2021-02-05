@@ -322,7 +322,6 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*pmmAgentInfo, 
 		kick:            make(chan struct{}),
 	}
 	r.agents[agentMD.ID] = agent
-
 	return agent, nil
 }
 
@@ -379,7 +378,6 @@ func (r *Registry) unregister(pmmAgentID string) *pmmAgentInfo {
 
 	delete(r.agents, pmmAgentID)
 	r.roster.clear(pmmAgentID)
-
 	return agent
 }
 
