@@ -523,7 +523,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		return nil, err
 	}
 
-	var settings *models.Settings
+	var newSettings, oldSettings *models.Settings
 	err := s.db.InTransaction(func(tx *reform.TX) error {
 		metricsRes := req.MetricsResolutions
 		settingsParams := &models.ChangeSettingsParams{
@@ -571,7 +571,11 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		}
 
 		var e error
-		if settings, e = models.UpdateSettings(tx, settingsParams); e != nil {
+		if oldSettings, e = models.GetSettings(tx); e != nil {
+			return errors.WithStack(e)
+		}
+
+		if newSettings, e = models.UpdateSettings(tx, settingsParams); e != nil {
 			return status.Error(codes.InvalidArgument, e.Error())
 		}
 
@@ -603,9 +607,9 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		return nil, err
 	}
 
-	if req.EnableStt {
+	// When STT moved from disabled state to enabled force checks download and execution
+	if !oldSettings.SaaS.STTEnabled && newSettings.SaaS.STTEnabled {
 		go func() {
-			// force checks download and execution when STT is enabled
 			err = s.checksService.StartChecks(context.Background())
 			if err != nil {
 				s.l.Error(err)
@@ -620,7 +624,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	}
 
 	return &serverpb.ChangeSettingsResponse{
-		Settings: s.convertSettings(settings),
+		Settings: s.convertSettings(newSettings),
 	}, nil
 }
 
