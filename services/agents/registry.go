@@ -169,8 +169,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 	// run pmm-agent state update loop for the current agent.
 	go r.runStateChangeHandler(ctx, agent)
 
-	// send first SetStateRequest concurrently with handling ping from agent
-	go r.RequestStateUpdate(ctx, agent.id)
+	r.RequestStateUpdate(ctx, agent.id)
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
