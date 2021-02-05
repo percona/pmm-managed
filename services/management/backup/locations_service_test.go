@@ -79,7 +79,7 @@ func TestCreateBackupLocation(t *testing.T) {
 				SecretKey: "secret_key",
 			},
 		})
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Only one config is allowed"), err)
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Only one config is allowed."), err)
 
 	})
 }

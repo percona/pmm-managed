@@ -120,7 +120,7 @@ func TestBackupLocations(t *testing.T) {
 		}
 
 		_, err = models.CreateBackupLocation(q, params)
-		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Only one config is allowed"), err)
+		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Only one config is allowed."), err)
 	})
 
 	t.Run("list", func(t *testing.T) {

@@ -109,7 +109,7 @@ func CreateBackupLocation(q *reform.Querier, params CreateBackupLocationParams) 
 	}
 
 	if params.FSConfig != nil && params.S3Config != nil {
-		return nil, status.Error(codes.InvalidArgument, "Only one config is allowed")
+		return nil, status.Error(codes.InvalidArgument, "Only one config is allowed.")
 
 	}
 	switch {
@@ -126,7 +126,7 @@ func CreateBackupLocation(q *reform.Querier, params CreateBackupLocationParams) 
 		row.Type = S3BackupLocationType
 		row.S3Config = params.S3Config
 	default:
-		return nil, status.Error(codes.InvalidArgument, "Missing location type")
+		return nil, status.Error(codes.InvalidArgument, "Missing location type.")
 	}
 
 	if err := q.Insert(row); err != nil {
