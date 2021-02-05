@@ -180,11 +180,10 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterSecurityChecksServer(gRPCServer, managementgrpc.NewChecksServer(checksSvc))
 
 	iav1beta1.RegisterChannelsServer(gRPCServer, ia.NewChannelsService(deps.db, deps.alertmanager))
-	templatesSvc := ia.NewTemplatesService(deps.db)
-	templatesSvc.Collect(ctx)
-	iav1beta1.RegisterTemplatesServer(gRPCServer, templatesSvc)
-	iav1beta1.RegisterRulesServer(gRPCServer, ia.NewRulesService(deps.db, templatesSvc, deps.vmalert, deps.alertmanager))
-	iav1beta1.RegisterAlertsServer(gRPCServer, ia.NewAlertsService(deps.db, deps.alertmanager, templatesSvc))
+	deps.server.TemplatesService.Collect(ctx)
+	iav1beta1.RegisterTemplatesServer(gRPCServer, deps.server.TemplatesService)
+	iav1beta1.RegisterRulesServer(gRPCServer, deps.server.RulesService)
+	iav1beta1.RegisterAlertsServer(gRPCServer, deps.server.AlertsService)
 
 	// TODO Remove once changing settings.DBaaS.Enabled is possible via API.
 	if deps.settings.DBaaS.Enabled {
@@ -505,6 +504,7 @@ func getDBaaSControllerClient(ctx context.Context, dbaasControllerAPIAddr string
 }
 
 func main() {
+	version.Version = "2.13.0-15-g8644f3b-dirty"
 	// empty version breaks much of pmm-managed logic
 	if version.Version == "" {
 		panic("pmm-managed version is not set during build.")
@@ -618,6 +618,11 @@ func main() {
 		l.Fatalf("Could not create platform service: %s", err)
 	}
 
+	// Integrated alerts services
+	templatesSvc := ia.NewTemplatesService(db)
+	rulesSvc := ia.NewRulesService(db, templatesSvc, vmalert, alertmanager)
+	alertsSvc := ia.NewAlertsService(db, alertmanager, templatesSvc)
+
 	serverParams := &server.Params{
 		DB:                   db,
 		VMDB:                 vmdb,
@@ -630,6 +635,9 @@ func main() {
 		AwsInstanceChecker:   awsInstanceChecker,
 		GrafanaClient:        grafanaClient,
 		VMAlertExternalRules: externalRules,
+		RulesService:         rulesSvc,
+		AlertsService:        alertsSvc,
+		TemplatesService:     templatesSvc,
 	}
 
 	server, err := server.NewServer(serverParams)

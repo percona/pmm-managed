@@ -47,6 +47,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/management/ia"
 	"github.com/percona/pmm-managed/utils/envvars"
 )
 
@@ -65,7 +66,11 @@ type Server struct {
 	platformService      platformService
 	awsInstanceChecker   *AWSInstanceChecker
 	grafanaClient        grafanaClient
-	l                    *logrus.Entry
+	RulesService         *ia.RulesService
+	AlertsService        *ia.AlertsService
+	TemplatesService     *ia.TemplatesService
+
+	l *logrus.Entry
 
 	pmmUpdateAuthFileM sync.Mutex
 	pmmUpdateAuthFile  string
@@ -93,6 +98,9 @@ type Params struct {
 	PlatformService      platformService
 	AwsInstanceChecker   *AWSInstanceChecker
 	GrafanaClient        grafanaClient
+	RulesService         *ia.RulesService
+	AlertsService        *ia.AlertsService
+	TemplatesService     *ia.TemplatesService
 }
 
 // NewServer returns new server for Server service.
@@ -115,6 +123,9 @@ func NewServer(params *Params) (*Server, error) {
 		platformService:      params.PlatformService,
 		awsInstanceChecker:   params.AwsInstanceChecker,
 		grafanaClient:        params.GrafanaClient,
+		RulesService:         params.RulesService,
+		AlertsService:        params.AlertsService,
+		TemplatesService:     params.TemplatesService,
 		l:                    logrus.WithField("component", "server"),
 		pmmUpdateAuthFile:    path,
 		envSettings:          new(models.ChangeSettingsParams),
@@ -572,11 +583,14 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			return status.Error(codes.InvalidArgument, e.Error())
 		}
 
-		// Deletes the alert rules in case of disabling
 		if req.DisableAlerting {
-			if e = s.deleteAllAlertRules(); e != nil {
+			// Deletes the alert rules files in case of disabling
+			if e = s.RulesService.RemoveVMAlertRulesFiles(); e != nil {
 				return errors.WithStack(e)
 			}
+		} else if req.EnableAlerting {
+			// Regenerates the rules files in case of enabling
+			s.RulesService.WriteVMAlertRulesFiles()
 		}
 
 		// absent value means "do not change"
@@ -616,49 +630,6 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	return &serverpb.ChangeSettingsResponse{
 		Settings: s.convertSettings(settings),
 	}, nil
-}
-
-// deleteAllAlertRules deletes all alerts present rules.
-// Returns nil in case of success, otherwise an error.
-func (s *Server) deleteAllAlertRules() error {
-	alertRuleIds := s.getAlertRuleIds()
-
-	if len(alertRuleIds) > 0 {
-		err := s.db.InTransaction(func(tx *reform.TX) error {
-			return models.RemoveRules(tx.Querier, alertRuleIds)
-		})
-		if err != nil {
-			return err
-		}
-
-		s.vmalert.RequestConfigurationUpdate()
-	}
-
-	return nil
-}
-
-// getAlertRuleIds lists the alert rules ids into an array.
-// Error is not returned, when occurres an empty array is returned.
-func (s *Server) getAlertRuleIds() []string {
-	var rules []*models.Rule
-	err := s.db.InTransaction(func(tx *reform.TX) error {
-		var err error
-		rules, err = models.FindRules(tx.Querier)
-
-		return err
-	})
-
-	if err == nil {
-		ruleIds := make([]string, len(rules))
-
-		for i, rule := range rules {
-			ruleIds[i] = rule.ID
-		}
-
-		return ruleIds
-	}
-
-	return []string{}
 }
 
 // UpdateConfigurations updates supervisor config and requests configuration update for VictoriaMetrics components.

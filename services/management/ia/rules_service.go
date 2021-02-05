@@ -92,8 +92,26 @@ type rule struct {
 	Annotations map[string]string   `yaml:"annotations,omitempty"`
 }
 
+// RemoveVMAlertRulesFiles removes all generated rules files (*.yml) on the ia path
+func (s *RulesService) RemoveVMAlertRulesFiles() error {
+	ruleFiles, err := filepath.Glob(rulesDir + "/*.yml")
+	if err == nil {
+
+		for _, file := range ruleFiles {
+			if err = os.RemoveAll(file); err != nil {
+				break
+			}
+		}
+
+		s.vmalert.RequestConfigurationUpdate()
+		s.alertManager.RequestConfigurationUpdate()
+	}
+
+	return err
+}
+
 // writeVMAlertRulesFiles converts all available rules to VMAlert rule files.
-func (s *RulesService) writeVMAlertRulesFiles() {
+func (s *RulesService) WriteVMAlertRulesFiles() {
 	rules, err := s.getAlertRules()
 	if err != nil {
 		s.l.Errorf("Failed to get available alert rules: %+v", err)
@@ -345,7 +363,7 @@ func (s *RulesService) CreateAlertRule(ctx context.Context, req *iav1beta1.Creat
 		return nil, e
 	}
 
-	s.writeVMAlertRulesFiles()
+	s.WriteVMAlertRulesFiles()
 	s.vmalert.RequestConfigurationUpdate()
 	s.alertManager.RequestConfigurationUpdate()
 
@@ -477,7 +495,7 @@ func (s *RulesService) UpdateAlertRule(ctx context.Context, req *iav1beta1.Updat
 		return nil, e
 	}
 
-	s.writeVMAlertRulesFiles()
+	s.WriteVMAlertRulesFiles()
 	s.vmalert.RequestConfigurationUpdate()
 	s.alertManager.RequestConfigurationUpdate()
 
@@ -515,7 +533,7 @@ func (s *RulesService) ToggleAlertRule(ctx context.Context, req *iav1beta1.Toggl
 		return nil, e
 	}
 
-	s.writeVMAlertRulesFiles()
+	s.WriteVMAlertRulesFiles()
 	s.vmalert.RequestConfigurationUpdate()
 	s.alertManager.RequestConfigurationUpdate()
 
@@ -540,7 +558,7 @@ func (s *RulesService) DeleteAlertRule(ctx context.Context, req *iav1beta1.Delet
 		return nil, e
 	}
 
-	s.writeVMAlertRulesFiles()
+	s.WriteVMAlertRulesFiles()
 	s.vmalert.RequestConfigurationUpdate()
 	s.alertManager.RequestConfigurationUpdate()
 
