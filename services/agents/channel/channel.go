@@ -31,9 +31,6 @@ import (
 
 const (
 	agentRequestsCap = 32
-
-	prometheusNamespace = "pmm_managed"
-	prometheusSubsystem = "channel"
 )
 
 // AgentRequest represents an request from agent.
