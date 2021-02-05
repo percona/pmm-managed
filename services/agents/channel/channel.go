@@ -25,16 +25,12 @@ import (
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/pkg/errors"
-	prom "github.com/prometheus/client_golang/prometheus"
 
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
 const (
 	agentRequestsCap = 32
-
-	prometheusNamespace = "pmm_managed"
-	prometheusSubsystem = "channel"
 )
 
 // AgentRequest represents an request from agent.
@@ -58,10 +54,8 @@ type ServerResponse struct {
 // All exported methods are thread-safe.
 //nolint:maligned
 type Channel struct {
-	s agentpb.Agent_ConnectServer
-
-	mRecv, mSend          prom.Counter
-	mResponses, mRequests prom.GaugeFunc
+	s       agentpb.Agent_ConnectServer
+	metrics *SharedChannelMetrics
 
 	lastSentRequestID uint32
 
@@ -79,40 +73,13 @@ type Channel struct {
 // New creates new two-way communication channel with given stream.
 //
 // Stream should not be used by the caller after channel is created.
-func New(stream agentpb.Agent_ConnectServer) *Channel {
-	responses := make(map[uint32]chan agentpb.AgentResponsePayload)
-	requests := make(chan *AgentRequest, agentRequestsCap)
-
+func New(stream agentpb.Agent_ConnectServer, m *SharedChannelMetrics) *Channel {
 	s := &Channel{
-		s: stream,
+		s:       stream,
+		metrics: m,
 
-		mRecv: prom.NewCounter(prom.CounterOpts{
-			Namespace: prometheusNamespace,
-			Subsystem: prometheusSubsystem,
-			Name:      "messages_received_total",
-			Help:      "A total number of messages received from pmm-agent.",
-		}),
-		mSend: prom.NewCounter(prom.CounterOpts{
-			Namespace: prometheusNamespace,
-			Subsystem: prometheusSubsystem,
-			Name:      "messages_sent_total",
-			Help:      "A total number of messages sent to pmm-agent.",
-		}),
-		mResponses: prom.NewGaugeFunc(prom.GaugeOpts{
-			Namespace: prometheusNamespace,
-			Subsystem: prometheusSubsystem,
-			Name:      "messages_response_queue_length",
-			Help:      "The current length of the response queue.",
-		}, func() float64 { return float64(len(responses)) }),
-		mRequests: prom.NewGaugeFunc(prom.GaugeOpts{
-			Namespace: prometheusNamespace,
-			Subsystem: prometheusSubsystem,
-			Name:      "messages_request_queue_length",
-			Help:      "The current length of the request queue.",
-		}, func() float64 { return float64(len(requests)) }),
-
-		responses: responses,
-		requests:  requests,
+		responses: make(map[uint32]chan agentpb.AgentResponsePayload),
+		requests:  make(chan *AgentRequest, agentRequestsCap),
 
 		closeWait: make(chan struct{}),
 	}
@@ -198,7 +165,7 @@ func (c *Channel) send(msg *agentpb.ServerMessage) {
 		c.close(errors.Wrap(err, "failed to send message"))
 		return
 	}
-	c.mSend.Inc()
+	c.metrics.mSend.Inc()
 }
 
 // runReader receives messages from server.
@@ -215,7 +182,7 @@ func (c *Channel) runReceiver() {
 			c.close(errors.Wrap(err, "failed to receive message"))
 			return
 		}
-		c.mRecv.Inc()
+		c.metrics.mRecv.Inc()
 
 		// do not use default compact representation for large/complex messages
 		if size := proto.Size(msg); size < 100 {
@@ -305,24 +272,3 @@ func (c *Channel) publish(id uint32, resp agentpb.AgentResponsePayload) {
 	c.m.Unlock()
 	ch <- resp
 }
-
-// Describe implements prometheus.Collector.
-func (c *Channel) Describe(ch chan<- *prom.Desc) {
-	c.mRecv.Describe(ch)
-	c.mSend.Describe(ch)
-	c.mResponses.Describe(ch)
-	c.mRequests.Describe(ch)
-}
-
-// Collect implement prometheus.Collector.
-func (c *Channel) Collect(ch chan<- prom.Metric) {
-	c.mRecv.Collect(ch)
-	c.mSend.Collect(ch)
-	c.mResponses.Collect(ch)
-	c.mRequests.Collect(ch)
-}
-
-// check interfaces
-var (
-	_ prom.Collector = (*Channel)(nil)
-)

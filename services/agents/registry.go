@@ -78,11 +78,12 @@ type Registry struct {
 
 	roster *roster
 
-	mAgents      prom.GaugeFunc
-	mConnects    prom.Counter
-	mDisconnects *prom.CounterVec
-	mRoundTrip   prom.Summary
-	mClockDrift  prom.Summary
+	sharedMetrics *channel.SharedChannelMetrics
+	mAgents       prom.GaugeFunc
+	mConnects     prom.Counter
+	mDisconnects  *prom.CounterVec
+	mRoundTrip    prom.Summary
+	mClockDrift   prom.Summary
 }
 
 // NewRegistry creates a new registry with given database connection.
@@ -97,6 +98,7 @@ func NewRegistry(db *reform.DB, qanClient qanClient, vmdb prometheusService) *Re
 
 		roster: newRoster(),
 
+		sharedMetrics: channel.NewSharedMetrics(),
 		mAgents: prom.NewGaugeFunc(prom.GaugeOpts{
 			Namespace: prometheusNamespace,
 			Subsystem: prometheusSubsystem,
@@ -293,15 +295,12 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*pmmAgentInfo, 
 	defer r.rw.Unlock()
 
 	agent := &pmmAgentInfo{
-		channel:         channel.New(stream),
+		channel:         channel.New(stream, r.sharedMetrics),
 		id:              agentMD.ID,
 		stateChangeChan: make(chan struct{}, 1),
 		kick:            make(chan struct{}),
 	}
 	r.agents[agentMD.ID] = agent
-
-	// TODO registry metrics
-
 	return agent, nil
 }
 
@@ -358,9 +357,6 @@ func (r *Registry) unregister(pmmAgentID string) *pmmAgentInfo {
 
 	delete(r.agents, pmmAgentID)
 	r.roster.clear(pmmAgentID)
-
-	// TODO unregister metrics
-
 	return agent
 }
 
@@ -830,8 +826,7 @@ func (r *Registry) get(pmmAgentID string) (*pmmAgentInfo, error) {
 
 // Describe implements prometheus.Collector.
 func (r *Registry) Describe(ch chan<- *prom.Desc) {
-	// TODO channel metrics
-
+	r.sharedMetrics.Describe(ch)
 	r.mAgents.Describe(ch)
 	r.mConnects.Describe(ch)
 	r.mDisconnects.Describe(ch)
@@ -841,8 +836,7 @@ func (r *Registry) Describe(ch chan<- *prom.Desc) {
 
 // Collect implement prometheus.Collector.
 func (r *Registry) Collect(ch chan<- prom.Metric) {
-	// TODO channel metrics
-
+	r.sharedMetrics.Collect(ch)
 	r.mAgents.Collect(ch)
 	r.mConnects.Collect(ch)
 	r.mDisconnects.Collect(ch)
