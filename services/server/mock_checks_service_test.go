@@ -13,6 +13,11 @@ type mockChecksService struct {
 	mock.Mock
 }
 
+// CleanupAlerts provides a mock function with given fields:
+func (_m *mockChecksService) CleanupAlerts() {
+	_m.Called()
+}
+
 // StartChecks provides a mock function with given fields: ctx
 func (_m *mockChecksService) StartChecks(ctx context.Context) error {
 	ret := _m.Called(ctx)
