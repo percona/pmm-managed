@@ -221,24 +221,6 @@ func RemoveRule(q *reform.Querier, id string) error {
 	return nil
 }
 
-// RemoveRules removes alert rules whose ids are present in the ids array.
-// In case of success nil is returned, otherwise an error.
-func RemoveRules(q *reform.Querier, ids []string) error {
-	for _, id := range ids {
-		rule, err := FindRuleByID(q, id)
-
-		if err != nil {
-			return err
-		}
-
-		if err := q.Delete(rule); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func findMissingChannels(ids []string, channels []*Channel) []string {
 	m := make(map[string]bool, len(ids))
 	for _, id := range ids {

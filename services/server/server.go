@@ -67,10 +67,7 @@ type Server struct {
 	awsInstanceChecker   *AWSInstanceChecker
 	grafanaClient        grafanaClient
 	RulesService         *ia.RulesService
-	AlertsService        *ia.AlertsService
-	TemplatesService     *ia.TemplatesService
-
-	l *logrus.Entry
+	l                    *logrus.Entry
 
 	pmmUpdateAuthFileM sync.Mutex
 	pmmUpdateAuthFile  string
@@ -99,8 +96,6 @@ type Params struct {
 	AwsInstanceChecker   *AWSInstanceChecker
 	GrafanaClient        grafanaClient
 	RulesService         *ia.RulesService
-	AlertsService        *ia.AlertsService
-	TemplatesService     *ia.TemplatesService
 }
 
 // NewServer returns new server for Server service.
@@ -124,8 +119,6 @@ func NewServer(params *Params) (*Server, error) {
 		awsInstanceChecker:   params.AwsInstanceChecker,
 		grafanaClient:        params.GrafanaClient,
 		RulesService:         params.RulesService,
-		AlertsService:        params.AlertsService,
-		TemplatesService:     params.TemplatesService,
 		l:                    logrus.WithField("component", "server"),
 		pmmUpdateAuthFile:    path,
 		envSettings:          new(models.ChangeSettingsParams),
@@ -585,9 +578,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 
 		if req.DisableAlerting {
 			// Deletes the alert rules files in case of disabling
-			if e = s.RulesService.RemoveVMAlertRulesFiles(); e != nil {
-				return errors.WithStack(e)
-			}
+			s.RulesService.RemoveVMAlertRulesFiles()
 		} else if req.EnableAlerting {
 			// Regenerates the rules files in case of enabling
 			s.RulesService.WriteVMAlertRulesFiles()

@@ -127,6 +127,8 @@ type gRPCServerDeps struct {
 	alertmanager          *alertmanager.Service
 	vmalert               *vmalert.Service
 	settings              *models.Settings
+	alertsService         *ia.AlertsService
+	templatesService      *ia.TemplatesService
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -180,10 +182,10 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterSecurityChecksServer(gRPCServer, managementgrpc.NewChecksServer(checksSvc))
 
 	iav1beta1.RegisterChannelsServer(gRPCServer, ia.NewChannelsService(deps.db, deps.alertmanager))
-	deps.server.TemplatesService.Collect(ctx)
-	iav1beta1.RegisterTemplatesServer(gRPCServer, deps.server.TemplatesService)
+	deps.templatesService.Collect(ctx)
+	iav1beta1.RegisterTemplatesServer(gRPCServer, deps.templatesService)
 	iav1beta1.RegisterRulesServer(gRPCServer, deps.server.RulesService)
-	iav1beta1.RegisterAlertsServer(gRPCServer, deps.server.AlertsService)
+	iav1beta1.RegisterAlertsServer(gRPCServer, deps.alertsService)
 
 	// TODO Remove once changing settings.DBaaS.Enabled is possible via API.
 	if deps.settings.DBaaS.Enabled {
@@ -384,15 +386,17 @@ func runDebugServer(ctx context.Context) {
 }
 
 type setupDeps struct {
-	sqlDB        *sql.DB
-	dbUsername   string
-	dbPassword   string
-	supervisord  *supervisord.Service
-	vmdb         *victoriametrics.Service
-	vmalert      *vmalert.Service
-	alertmanager *alertmanager.Service
-	server       *server.Server
-	l            *logrus.Entry
+	sqlDB            *sql.DB
+	dbUsername       string
+	dbPassword       string
+	supervisord      *supervisord.Service
+	vmdb             *victoriametrics.Service
+	vmalert          *vmalert.Service
+	alertmanager     *alertmanager.Service
+	server           *server.Server
+	l                *logrus.Entry
+	alertsService    *ia.AlertsService
+	templatesService *ia.TemplatesService
 }
 
 // setup migrates database and performs other setup tasks that depend on database.
@@ -504,7 +508,6 @@ func getDBaaSControllerClient(ctx context.Context, dbaasControllerAPIAddr string
 }
 
 func main() {
-	version.Version = "2.13.0-15-g8644f3b-dirty"
 	// empty version breaks much of pmm-managed logic
 	if version.Version == "" {
 		panic("pmm-managed version is not set during build.")
@@ -636,8 +639,6 @@ func main() {
 		GrafanaClient:        grafanaClient,
 		VMAlertExternalRules: externalRules,
 		RulesService:         rulesSvc,
-		AlertsService:        alertsSvc,
-		TemplatesService:     templatesSvc,
 	}
 
 	server, err := server.NewServer(serverParams)
@@ -672,15 +673,17 @@ func main() {
 
 	// try synchronously once, then retry in the background
 	deps := &setupDeps{
-		sqlDB:        sqlDB,
-		dbUsername:   *postgresDBUsernameF,
-		dbPassword:   *postgresDBPasswordF,
-		supervisord:  supervisord,
-		vmdb:         vmdb,
-		vmalert:      vmalert,
-		alertmanager: alertmanager,
-		server:       server,
-		l:            logrus.WithField("component", "setup"),
+		sqlDB:            sqlDB,
+		dbUsername:       *postgresDBUsernameF,
+		dbPassword:       *postgresDBPasswordF,
+		supervisord:      supervisord,
+		vmdb:             vmdb,
+		vmalert:          vmalert,
+		alertmanager:     alertmanager,
+		server:           server,
+		l:                logrus.WithField("component", "setup"),
+		alertsService:    alertsSvc,
+		templatesService: templatesSvc,
 	}
 	if !setup(ctx, deps) {
 		go func() {
@@ -768,6 +771,8 @@ func main() {
 			alertmanager:          alertmanager,
 			vmalert:               vmalert,
 			settings:              settings,
+			alertsService:         alertsSvc,
+			templatesService:      templatesSvc,
 		})
 	}()
 
