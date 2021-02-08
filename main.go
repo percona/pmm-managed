@@ -96,9 +96,6 @@ const (
 	cleanOlderThan = 30 * time.Minute
 )
 
-// Pointer to the rules service needed at the time of registration
-var rulesSvc *ia.RulesService
-
 func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
 	l := logrus.WithField("component", "logs.zip")
 
@@ -132,6 +129,7 @@ type gRPCServerDeps struct {
 	settings              *models.Settings
 	alertsService         *ia.AlertsService
 	templatesService      *ia.TemplatesService
+	rulesService          *ia.RulesService
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -187,7 +185,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	iav1beta1.RegisterChannelsServer(gRPCServer, ia.NewChannelsService(deps.db, deps.alertmanager))
 	deps.templatesService.Collect(ctx)
 	iav1beta1.RegisterTemplatesServer(gRPCServer, deps.templatesService)
-	iav1beta1.RegisterRulesServer(gRPCServer, rulesSvc)
+	iav1beta1.RegisterRulesServer(gRPCServer, deps.rulesService)
 	iav1beta1.RegisterAlertsServer(gRPCServer, deps.alertsService)
 
 	// TODO Remove once changing settings.DBaaS.Enabled is possible via API.
@@ -389,17 +387,15 @@ func runDebugServer(ctx context.Context) {
 }
 
 type setupDeps struct {
-	sqlDB            *sql.DB
-	dbUsername       string
-	dbPassword       string
-	supervisord      *supervisord.Service
-	vmdb             *victoriametrics.Service
-	vmalert          *vmalert.Service
-	alertmanager     *alertmanager.Service
-	server           *server.Server
-	l                *logrus.Entry
-	alertsService    *ia.AlertsService
-	templatesService *ia.TemplatesService
+	sqlDB        *sql.DB
+	dbUsername   string
+	dbPassword   string
+	supervisord  *supervisord.Service
+	vmdb         *victoriametrics.Service
+	vmalert      *vmalert.Service
+	alertmanager *alertmanager.Service
+	server       *server.Server
+	l            *logrus.Entry
 }
 
 // setup migrates database and performs other setup tasks that depend on database.
@@ -626,7 +622,7 @@ func main() {
 
 	// Integrated alerts services
 	templatesSvc := ia.NewTemplatesService(db)
-	rulesSvc = ia.NewRulesService(db, templatesSvc, vmalert, alertmanager)
+	rulesSvc := ia.NewRulesService(db, templatesSvc, vmalert, alertmanager)
 	alertsSvc := ia.NewAlertsService(db, alertmanager, templatesSvc)
 
 	serverParams := &server.Params{
@@ -676,17 +672,15 @@ func main() {
 
 	// try synchronously once, then retry in the background
 	deps := &setupDeps{
-		sqlDB:            sqlDB,
-		dbUsername:       *postgresDBUsernameF,
-		dbPassword:       *postgresDBPasswordF,
-		supervisord:      supervisord,
-		vmdb:             vmdb,
-		vmalert:          vmalert,
-		alertmanager:     alertmanager,
-		server:           server,
-		alertsService:    alertsSvc,
-		templatesService: templatesSvc,
-		l:                logrus.WithField("component", "setup"),
+		sqlDB:        sqlDB,
+		dbUsername:   *postgresDBUsernameF,
+		dbPassword:   *postgresDBPasswordF,
+		supervisord:  supervisord,
+		vmdb:         vmdb,
+		vmalert:      vmalert,
+		alertmanager: alertmanager,
+		server:       server,
+		l:            logrus.WithField("component", "setup"),
 	}
 	if !setup(ctx, deps) {
 		go func() {
@@ -776,6 +770,7 @@ func main() {
 			settings:              settings,
 			alertsService:         alertsSvc,
 			templatesService:      templatesSvc,
+			rulesService:          rulesSvc,
 		})
 	}()
 
