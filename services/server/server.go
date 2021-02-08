@@ -47,7 +47,6 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/management/ia"
 	"github.com/percona/pmm-managed/utils/envvars"
 )
 
@@ -66,7 +65,7 @@ type Server struct {
 	platformService      platformService
 	awsInstanceChecker   *AWSInstanceChecker
 	grafanaClient        grafanaClient
-	rulesService         *ia.RulesService
+	rulesService         rulesService
 	l                    *logrus.Entry
 
 	pmmUpdateAuthFileM sync.Mutex
@@ -95,7 +94,7 @@ type Params struct {
 	PlatformService      platformService
 	AwsInstanceChecker   *AWSInstanceChecker
 	GrafanaClient        grafanaClient
-	RulesService         *ia.RulesService
+	RulesService         rulesService
 }
 
 // NewServer returns new server for Server service.

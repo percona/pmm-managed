@@ -684,9 +684,9 @@ func main() {
 		vmalert:          vmalert,
 		alertmanager:     alertmanager,
 		server:           server,
-		l:                logrus.WithField("component", "setup"),
 		alertsService:    alertsSvc,
 		templatesService: templatesSvc,
+		l:                logrus.WithField("component", "setup"),
 	}
 	if !setup(ctx, deps) {
 		go func() {
