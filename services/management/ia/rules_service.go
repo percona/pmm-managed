@@ -43,7 +43,10 @@ import (
 	"github.com/percona/pmm-managed/utils/stringset"
 )
 
-const rulesDir = "/etc/ia/rules"
+const (
+	rulesDir        = "/etc/ia/rules"
+	defaultPageSize = 20
+)
 
 // RulesService represents API for Integrated Alerting Rules.
 type RulesService struct {
@@ -250,8 +253,6 @@ func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAl
 	if !settings.IntegratedAlerting.Enabled {
 		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
 	}
-
-	const defaultPageSize = 20
 
 	pageIndex := 0
 	pageSize := defaultPageSize
