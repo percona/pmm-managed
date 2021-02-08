@@ -524,7 +524,15 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	}
 
 	var settings *models.Settings
+
 	err := s.db.InTransaction(func(tx *reform.TX) error {
+		var e error
+		var oldSettings *models.Settings
+
+		if oldSettings, e = models.GetSettings(tx); e != nil {
+			return errors.WithStack(e)
+		}
+
 		metricsRes := req.MetricsResolutions
 		settingsParams := &models.ChangeSettingsParams{
 			DisableTelemetry: req.DisableTelemetry,
@@ -570,17 +578,20 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			}
 		}
 
-		var e error
 		if settings, e = models.UpdateSettings(tx, settingsParams); e != nil {
 			return status.Error(codes.InvalidArgument, e.Error())
 		}
 
-		if req.DisableAlerting {
-			// Deletes the alert rules files in case of disabling
-			s.rulesService.RemoveVMAlertRulesFiles()
-		} else if req.EnableAlerting {
-			// Regenerates the rules files in case of enabling
-			s.rulesService.WriteVMAlertRulesFiles()
+		if oldSettings.IntegratedAlerting.Enabled {
+			if req.DisableAlerting {
+				// Deletes the alert rules files in case of disabling
+				s.rulesService.RemoveVMAlertRulesFiles()
+			}
+		} else {
+			if req.EnableAlerting {
+				// Regenerates the rules files in case of enabling
+				s.rulesService.WriteVMAlertRulesFiles()
+			}
 		}
 
 		// absent value means "do not change"

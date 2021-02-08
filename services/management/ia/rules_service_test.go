@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -146,6 +147,13 @@ groups:
 `, ruleID, ruleID)
 
 		assert.Equal(t, expected, string(file))
+
+		// Removes the rules files
+		rules.RemoveVMAlertRulesFiles()
+
+		matches, err := filepath.Glob(testDir + "/*.yml")
+
+		assert.Zero(t, len(matches))
 	})
 
 	t.Run("wrong parameter", func(t *testing.T) {
