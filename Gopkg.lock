@@ -391,7 +391,7 @@
   revision = "c385730b6f7e85bc2f8218051e888020f686cb47"
 
 [[projects]]
-  branch = "SAAS-477-add-link-to-checks"
+  branch = "main"
   digest = "1:adfc8f23176169e0c810abf12615f8303ffbc5d669cd11f73b145e635634f5c5"
   name = "github.com/percona-platform/saas"
   packages = [
@@ -405,7 +405,7 @@
     "pkg/starlark",
   ]
   pruneopts = "NUT"
-  revision = "35dd14f0e34fea141eb5dce36fc67af431727908"
+  revision = "c158e23a172f892cc389233858238449efec1dbb"
 
 [[projects]]
   digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
@@ -416,8 +416,8 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "SAAS-477-add-link-to-checks"
-  digest = "1:035ff17112d5e5ce83b5d54d4dad456129062cea8ba3a8e20eade094906024a8"
+  branch = "release/2.15"
+  digest = "1:8b6a8bbc251529dd3aaa932c6aa5c818dbb15a11697e22111035be9609dbc036"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -440,7 +440,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "4b2705aae151c8036317f1054c3365b4e206dc50"
+  revision = "1cb24bb3efb743fe1685ecf16b5add3572c55fd4"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
