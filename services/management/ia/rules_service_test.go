@@ -113,7 +113,7 @@ func TestCreateAlertRule(t *testing.T) {
 		ruleID := resp.RuleId
 
 		// Write vmAlert rules files
-		rules.writeVMAlertRulesFiles()
+		rules.WriteVMAlertRulesFiles()
 
 		file, err := ioutil.ReadFile(ruleFileName(testDir, ruleID))
 		require.NoError(t, err)
@@ -333,7 +333,7 @@ groups:
 		ruleID := resp.RuleId
 
 		// Write vmAlert rules files
-		rules.writeVMAlertRulesFiles()
+		rules.WriteVMAlertRulesFiles()
 
 		filename := ruleFileName(testDir, ruleID)
 		_, err = os.Stat(filename)

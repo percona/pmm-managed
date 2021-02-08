@@ -96,6 +96,9 @@ const (
 	cleanOlderThan = 30 * time.Minute
 )
 
+// Pointer to the rules service needed at the time of registration
+var rulesSvc *ia.RulesService
+
 func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
 	l := logrus.WithField("component", "logs.zip")
 
@@ -184,7 +187,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	iav1beta1.RegisterChannelsServer(gRPCServer, ia.NewChannelsService(deps.db, deps.alertmanager))
 	deps.templatesService.Collect(ctx)
 	iav1beta1.RegisterTemplatesServer(gRPCServer, deps.templatesService)
-	iav1beta1.RegisterRulesServer(gRPCServer, deps.server.RulesService)
+	iav1beta1.RegisterRulesServer(gRPCServer, rulesSvc)
 	iav1beta1.RegisterAlertsServer(gRPCServer, deps.alertsService)
 
 	// TODO Remove once changing settings.DBaaS.Enabled is possible via API.
@@ -623,7 +626,7 @@ func main() {
 
 	// Integrated alerts services
 	templatesSvc := ia.NewTemplatesService(db)
-	rulesSvc := ia.NewRulesService(db, templatesSvc, vmalert, alertmanager)
+	rulesSvc = ia.NewRulesService(db, templatesSvc, vmalert, alertmanager)
 	alertsSvc := ia.NewAlertsService(db, alertmanager, templatesSvc)
 
 	serverParams := &server.Params{
