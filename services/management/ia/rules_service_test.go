@@ -154,6 +154,7 @@ groups:
 		matches, err := filepath.Glob(testDir + "/*.yml")
 
 		assert.Zero(t, len(matches))
+		assert.NoError(t, err)
 	})
 
 	t.Run("wrong parameter", func(t *testing.T) {
