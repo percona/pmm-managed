@@ -626,6 +626,7 @@ func main() {
 		VMAlert:              vmalert,
 		AgentsRegistry:       agentsRegistry,
 		Alertmanager:         alertmanager,
+		ChecksService:        checksService,
 		Supervisord:          supervisord,
 		TelemetryService:     telemetry,
 		PlatformService:      platformService,
