@@ -62,6 +62,13 @@ func TestServices(t *testing.T) {
 		externalServiceID := externalService.External.ServiceID
 		defer pmmapitests.RemoveServices(t, externalServiceID)
 
+		haProxyService := addHAProxyService(t, services.AddHAProxyServiceBody{
+			NodeID:      genericNodeID,
+			ServiceName: pmmapitests.TestString(t, "Some External Service on remote Node"),
+		})
+		haProxyServiceID := haProxyService.Haproxy.ServiceID
+		defer pmmapitests.RemoveServices(t, haProxyServiceID)
+
 		res, err := client.Default.Services.ListServices(&services.ListServicesParams{Context: pmmapitests.Context})
 		assert.NoError(t, err)
 		require.NotNil(t, res)
@@ -71,6 +78,7 @@ func TestServices(t *testing.T) {
 		assertMySQLServiceExists(t, res, remoteServiceID)
 		assertPostgreSQLServiceExists(t, res, postgreSQLServiceID)
 		assertExternalServiceExists(t, res, externalServiceID)
+		assertHAProxyServiceExists(t, res, haProxyServiceID)
 
 		// Filter by node ID.
 		res, err = client.Default.Services.ListServices(&services.ListServicesParams{
@@ -88,6 +96,7 @@ func TestServices(t *testing.T) {
 		assertMySQLServiceNotExist(t, res, remoteServiceID)
 		assertPostgreSQLServiceExists(t, res, postgreSQLServiceID)
 		assertExternalServiceExists(t, res, externalServiceID)
+		assertHAProxyServiceExists(t, res, haProxyServiceID)
 
 		// Filter by service type.
 		res, err = client.Default.Services.ListServices(&services.ListServicesParams{
@@ -102,6 +111,7 @@ func TestServices(t *testing.T) {
 		assertMySQLServiceNotExist(t, res, serviceID)
 		assertMySQLServiceNotExist(t, res, remoteServiceID)
 		assertExternalServiceNotExist(t, res, externalServiceID)
+		assertHAProxyServiceNotExist(t, res, haProxyServiceID)
 		assertPostgreSQLServiceExists(t, res, postgreSQLServiceID)
 	})
 
