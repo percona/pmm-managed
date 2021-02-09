@@ -151,8 +151,8 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 
 	agentpb.RegisterAgentServer(gRPCServer, agentgrpc.NewAgentServer(deps.agentsRegistry))
 
-	nodesSvc := inventory.NewNodesService(deps.db)
-	servicesSvc := inventory.NewServicesService(deps.db, deps.agentsRegistry)
+	nodesSvc := inventory.NewNodesService(deps.db, deps.agentsRegistry, deps.vmdb)
+	servicesSvc := inventory.NewServicesService(deps.db, deps.agentsRegistry, deps.vmdb)
 	agentsSvc := inventory.NewAgentsService(deps.db, deps.agentsRegistry, deps.vmdb)
 
 	inventorypb.RegisterNodesServer(gRPCServer, inventorygrpc.NewNodesServer(nodesSvc))
@@ -624,6 +624,7 @@ func main() {
 		VMAlert:              vmalert,
 		AgentsRegistry:       agentsRegistry,
 		Alertmanager:         alertmanager,
+		ChecksService:        checksService,
 		Supervisord:          supervisord,
 		TelemetryService:     telemetry,
 		PlatformService:      platformService,
