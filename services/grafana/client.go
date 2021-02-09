@@ -181,13 +181,19 @@ func (r role) String() string {
 func (c *Client) getRole(ctx context.Context, authHeaders http.Header) (role, error) {
 	// https://grafana.com/docs/http_api/user/#actual-user - works with any authentication
 	var m map[string]interface{}
-	if err := c.do(ctx, "GET", "/api/user", "", authHeaders, nil, &m); err == nil {
-		if a, _ := m["isGrafanaAdmin"].(bool); a {
-			return grafanaAdmin, nil
+	err := c.do(ctx, "GET", "/api/user", "", authHeaders, nil, &m)
+	// User is not exist, check API key role.
+	if err != nil {
+		if e, ok := errors.Cause(err).(*clientError); ok && e.Code == 404 {
+			return c.getRoleforAPIKey(ctx, authHeaders)
 		}
 	}
 
-	// https://grafana.com/docs/http_api/user/#organizations-of-the-actual-user - works with any authentication
+	if a, _ := m["isGrafanaAdmin"].(bool); a {
+		return grafanaAdmin, nil
+	}
+
+	// works only with Basic auth
 	var s []interface{}
 	if err := c.do(ctx, "GET", "/api/user/orgs", "", authHeaders, nil, &s); err != nil {
 		return none, err
@@ -202,20 +208,44 @@ func (c *Client) getRole(ctx context.Context, authHeaders http.Header) (role, er
 		// check only default organization (with ID 1)
 		if id, _ := m["orgId"].(float64); id == 1 {
 			role, _ := m["role"].(string)
-			switch role {
-			case "Viewer":
-				return viewer, nil
-			case "Editor":
-				return editor, nil
-			case "Admin":
-				return admin, nil
-			default:
-				return none, nil
-			}
+			return c.convertRole(role), nil
 		}
 	}
 
 	return none, nil
+}
+
+func (c *Client) convertRole(role string) role {
+	switch role {
+	case "Viewer":
+		return viewer
+	case "Editor":
+		return editor
+	case "Admin":
+		return admin
+	default:
+		return none
+	}
+}
+
+func (c *Client) getRoleforAPIKey(ctx context.Context, authHeaders http.Header) (role, error) {
+
+	var m map[string]interface{}
+	if err := c.do(ctx, "GET", "/api/org", "", authHeaders, nil, &m); err != nil {
+		return none, err
+	}
+
+	if id, _ := m["id"].(float64); id != 1 {
+		return none, nil
+	}
+
+	var s map[string]interface{}
+	if err := c.do(ctx, "GET", "/api/auth/key", "", authHeaders, nil, &s); err != nil {
+		return none, err
+	}
+
+	role, _ := s["role"].(string)
+	return c.convertRole(role), nil
 }
 
 func (c *Client) testCreateUser(ctx context.Context, login string, role role, authHeaders http.Header) (int, error) {
