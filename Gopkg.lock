@@ -408,14 +408,6 @@
   revision = "fa94aa1c69dda7db9834dbaa295ec9977a45b165"
 
 [[projects]]
-  digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
-  name = "github.com/percona/exporter_shared"
-  packages = ["helpers"]
-  pruneopts = "NUT"
-  revision = "6ed5adb5b4587752e46c8b9f9e4e5b79895a06f9"
-  version = "v0.7.2"
-
-[[projects]]
   branch = "PMM-7412-dbaas-implement-api-for-getting-logs"
   digest = "1:9e72e897e9d93900bae122247a1cc707af6e2a0ff431de75c804717b78373511"
   name = "github.com/percona/pmm"
