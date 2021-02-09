@@ -106,6 +106,7 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 			TLSSkipVerify:                  req.TlsSkipVerify,
 			TableCountTablestatsGroupLimit: tablestatsGroupTableLimit,
 			PushMetrics:                    isPushMode(req.MetricsMode),
+			DisableCollectors:              req.DisableCollectors,
 		})
 		if err != nil {
 			return err
@@ -172,6 +173,6 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 		return nil, e
 	}
 
-	s.registry.SendSetStateRequest(ctx, req.PmmAgentId)
+	s.registry.RequestStateUpdate(ctx, req.PmmAgentId)
 	return res, nil
 }
