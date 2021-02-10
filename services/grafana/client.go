@@ -220,9 +220,9 @@ func (c *Client) getRole(ctx context.Context, authHeaders http.Header) (role, er
 
 func (c *Client) isAPIKeyAuth(authHeader string) bool {
 	switch {
-	case strings.Contains(authHeader, "Bearer"):
+	case strings.HasPrefix(authHeader, "Bearer"):
 		return true
-	case strings.Contains(authHeader, "Basic"):
+	case strings.HasPrefix(authHeader, "Basic"):
 		h := strings.TrimPrefix(authHeader, "Basic")
 		d, err := base64.StdEncoding.DecodeString(strings.TrimSpace(h))
 		if err != nil {
@@ -298,6 +298,38 @@ func (c *Client) testCreateUser(ctx context.Context, login string, role role, au
 func (c *Client) testDeleteUser(ctx context.Context, userID int, authHeaders http.Header) error {
 	// https://grafana.com/docs/http_api/admin/#delete-global-user
 	return c.do(ctx, "DELETE", "/api/admin/users/"+strconv.Itoa(userID), "", authHeaders, nil, nil)
+}
+
+func (c *Client) testCreateAPIKey(ctx context.Context, name string, role role, authHeaders http.Header) (int, string, error) {
+	// https://grafana.com/docs/grafana/latest/http_api/auth/#create-api-key
+	b, err := json.Marshal(map[string]string{
+		"name": name,
+		"role": role.String(),
+	})
+	if err != nil {
+		return 0, "", errors.WithStack(err)
+	}
+	var m map[string]interface{}
+	if err = c.do(ctx, "POST", "/api/auth/keys", "", authHeaders, b, &m); err != nil {
+		return 0, "", err
+	}
+	apiKey := m["key"].(string)
+
+	apiAuthHeaders := http.Header{}
+	apiAuthHeaders.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
+
+	var k map[string]interface{}
+	if err := c.do(ctx, "GET", "/api/auth/key", "", apiAuthHeaders, nil, &k); err != nil {
+		return 0, "", err
+	}
+	apiKeyID := int(k["id"].(float64))
+
+	return apiKeyID, apiKey, nil
+}
+
+func (c *Client) testDeleteAPIKey(ctx context.Context, apiKeyID int, authHeaders http.Header) error {
+	// https://grafana.com/docs/grafana/latest/http_api/auth/#delete-api-key
+	return c.do(ctx, "DELETE", "/api/auth/keys/"+strconv.Itoa(apiKeyID), "", authHeaders, nil, nil)
 }
 
 // Annotation contains grafana annotation response.
