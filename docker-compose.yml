@@ -33,8 +33,3 @@ services:
     volumes:
       - .:/root/go/src/github.com/percona/pmm-managed
       - ./Makefile.devcontainer:/root/go/src/github.com/percona/pmm-managed/Makefile:ro
-
-networks:
-  default:
-    external:
-      name: pmm-network
