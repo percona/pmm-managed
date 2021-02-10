@@ -20,6 +20,7 @@ package grafana
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -179,15 +180,18 @@ func (r role) String() string {
 // Otherwise, it returns a role in the default organization (with ID 1).
 // ctx is used only for cancelation.
 func (c *Client) getRole(ctx context.Context, authHeaders http.Header) (role, error) {
-	// https://grafana.com/docs/http_api/user/#actual-user - works with any authentication
+
+	authHeader := authHeaders.Get("Authorization")
+	fmt.Println(authHeader)
+	// Check if it's API Key
+	if c.isApiKeyAuth(authHeader) {
+		return c.getRoleforAPIKey(ctx, authHeaders)
+	}
+
+	// https://grafana.com/docs/http_api/user/#actual-user - works only with Basic Auth
 	var m map[string]interface{}
 	err := c.do(ctx, "GET", "/api/user", "", authHeaders, nil, &m)
-	// User is not exist, check API key role.
 	if err != nil {
-		if e, ok := errors.Cause(err).(*clientError); ok && e.Code == 404 {
-			return c.getRoleforAPIKey(ctx, authHeaders)
-		}
-
 		return none, err
 	}
 
@@ -217,6 +221,21 @@ func (c *Client) getRole(ctx context.Context, authHeaders http.Header) (role, er
 	return none, nil
 }
 
+func (c *Client) isApiKeyAuth(authHeader string) bool {
+	switch {
+	case strings.Contains(authHeader, "Bearer"):
+		return true
+	case strings.Contains(authHeader, "Basic"):
+		h := strings.TrimPrefix(authHeader, "Basic")
+		d, err := base64.StdEncoding.DecodeString(strings.TrimSpace(h))
+		if err != nil {
+			return false
+		}
+		return strings.HasPrefix(string(d), "api_key:")
+	}
+	return false
+}
+
 func (c *Client) convertRole(role string) role {
 	switch role {
 	case "Viewer":
@@ -231,22 +250,21 @@ func (c *Client) convertRole(role string) role {
 }
 
 func (c *Client) getRoleforAPIKey(ctx context.Context, authHeaders http.Header) (role, error) {
-
-	var m map[string]interface{}
-	if err := c.do(ctx, "GET", "/api/org", "", authHeaders, nil, &m); err != nil {
+	var o map[string]interface{}
+	if err := c.do(ctx, "GET", "/api/org", "", authHeaders, nil, &o); err != nil {
 		return none, err
 	}
 
-	if id, _ := m["id"].(float64); id != 1 {
+	if id, _ := o["id"].(float64); id != 1 {
 		return none, nil
 	}
 
-	var s map[string]interface{}
-	if err := c.do(ctx, "GET", "/api/auth/key", "", authHeaders, nil, &s); err != nil {
+	var k map[string]interface{}
+	if err := c.do(ctx, "GET", "/api/auth/key", "", authHeaders, nil, &k); err != nil {
 		return none, err
 	}
 
-	role, _ := s["role"].(string)
+	role, _ := k["role"].(string)
 	return c.convertRole(role), nil
 }
 
