@@ -185,6 +185,11 @@ func (c *Client) getRole(ctx context.Context, authHeaders http.Header) (role, er
 	// User is not exist, check API key role.
 	if err != nil {
 		if e, ok := errors.Cause(err).(*clientError); ok && e.Code == 404 {
+				return c.getRoleforAPIKey(ctx, authHeaders)
+		}
+		
+		return none, err
+	}
 			return c.getRoleforAPIKey(ctx, authHeaders)
 		}
 	}
