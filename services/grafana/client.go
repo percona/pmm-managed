@@ -180,12 +180,9 @@ func (r role) String() string {
 // Otherwise, it returns a role in the default organization (with ID 1).
 // ctx is used only for cancelation.
 func (c *Client) getRole(ctx context.Context, authHeaders http.Header) (role, error) {
-
-	authHeader := authHeaders.Get("Authorization")
-	fmt.Println(authHeader)
 	// Check if it's API Key
-	if c.isApiKeyAuth(authHeader) {
-		return c.getRoleforAPIKey(ctx, authHeaders)
+	if c.isAPIKeyAuth(authHeaders.Get("Authorization")) {
+		return c.getRoleForAPIKey(ctx, authHeaders)
 	}
 
 	// https://grafana.com/docs/http_api/user/#actual-user - works only with Basic Auth
@@ -221,7 +218,7 @@ func (c *Client) getRole(ctx context.Context, authHeaders http.Header) (role, er
 	return none, nil
 }
 
-func (c *Client) isApiKeyAuth(authHeader string) bool {
+func (c *Client) isAPIKeyAuth(authHeader string) bool {
 	switch {
 	case strings.Contains(authHeader, "Bearer"):
 		return true
@@ -249,19 +246,14 @@ func (c *Client) convertRole(role string) role {
 	}
 }
 
-func (c *Client) getRoleforAPIKey(ctx context.Context, authHeaders http.Header) (role, error) {
-	var o map[string]interface{}
-	if err := c.do(ctx, "GET", "/api/org", "", authHeaders, nil, &o); err != nil {
-		return none, err
-	}
-
-	if id, _ := o["id"].(float64); id != 1 {
-		return none, nil
-	}
-
+func (c *Client) getRoleForAPIKey(ctx context.Context, authHeaders http.Header) (role, error) {
 	var k map[string]interface{}
 	if err := c.do(ctx, "GET", "/api/auth/key", "", authHeaders, nil, &k); err != nil {
 		return none, err
+	}
+
+	if id, _ := k["orgId"].(float64); id != 1 {
+		return none, nil
 	}
 
 	role, _ := k["role"].(string)
