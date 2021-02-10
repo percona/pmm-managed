@@ -417,7 +417,7 @@
 
 [[projects]]
   branch = "PMM-7296-list-alert-rules-pagination"
-  digest = "1:75b42cc6692a26c29b325ac80c03089988e78d34920c88d80c141fab27174de4"
+  digest = "1:939d4eb79e0310eaba24b283f7c20848ce628f2cb511850c4f74a054fd4b9f5e"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -440,7 +440,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "d468744baa75b9670a39adb4203a32ec0f4d2447"
+  revision = "652a6d8740e813d61be726e68a64f3a57a072373"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
