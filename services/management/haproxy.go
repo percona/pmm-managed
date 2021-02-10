@@ -19,37 +19,33 @@ package management
 import (
 	"context"
 
+	"github.com/percona/pmm/api/inventorypb"
+	"github.com/percona/pmm/api/managementpb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services"
-
-	"github.com/percona/pmm/api/inventorypb"
-	"github.com/percona/pmm/api/managementpb"
-	"gopkg.in/reform.v1"
 )
 
-// ExternalService External Management Service.
+// HAProxyService HAProxy Management Service.
 //nolint:unused
-type ExternalService struct {
+type HAProxyService struct {
 	db       *reform.DB
 	registry agentsRegistry
 	vmdb     prometheusService
 }
 
-// NewExternalService creates new External Management Service.
-func NewExternalService(db *reform.DB, registry agentsRegistry, vmdb prometheusService) *ExternalService {
-	return &ExternalService{db: db, registry: registry, vmdb: vmdb}
+// NewHAProxyService creates new HAProxy Management Service.
+func NewHAProxyService(db *reform.DB, registry agentsRegistry, vmdb prometheusService) *HAProxyService {
+	return &HAProxyService{db: db, registry: registry, vmdb: vmdb}
 }
 
-func (e *ExternalService) AddExternal(ctx context.Context, req *managementpb.AddExternalRequest) (*managementpb.AddExternalResponse, error) {
-	res := new(managementpb.AddExternalResponse)
+func (e HAProxyService) AddHAProxy(ctx context.Context, req *managementpb.AddHAProxyRequest) (*managementpb.AddHAProxyResponse, error) {
+	res := new(managementpb.AddHAProxyResponse)
 	var pmmAgentID *string
 	if e := e.db.InTransaction(func(tx *reform.TX) error {
-		if (req.NodeId == "") != (req.RunsOnNodeId == "") {
-			return status.Error(codes.InvalidArgument, "runs_on_node_id and node_id should be specified together.")
-		}
 		if req.Address == "" && req.AddNode != nil {
 			return status.Error(codes.InvalidArgument, "address can't be empty for add node request.")
 		}
@@ -58,19 +54,13 @@ func (e *ExternalService) AddExternal(ctx context.Context, req *managementpb.Add
 			return err
 		}
 
-		runsOnNodeId := req.RunsOnNodeId
-		if req.AddNode != nil && runsOnNodeId == "" {
-			runsOnNodeId = nodeID
-		}
-
-		service, err := models.AddNewService(tx.Querier, models.ExternalServiceType, &models.AddDBMSServiceParams{
+		service, err := models.AddNewService(tx.Querier, models.HAProxyServiceType, &models.AddDBMSServiceParams{
 			ServiceName:    req.ServiceName,
 			NodeID:         nodeID,
 			Environment:    req.Environment,
 			Cluster:        req.Cluster,
 			ReplicationSet: req.ReplicationSet,
 			CustomLabels:   req.CustomLabels,
-			ExternalGroup:  req.Group,
 		})
 		if err != nil {
 			return err
@@ -80,10 +70,10 @@ func (e *ExternalService) AddExternal(ctx context.Context, req *managementpb.Add
 		if err != nil {
 			return err
 		}
-		res.Service = invService.(*inventorypb.ExternalService)
+		res.Service = invService.(*inventorypb.HAProxyService)
 
 		if req.MetricsMode == managementpb.MetricsMode_AUTO {
-			agentIDs, err := models.FindPMMAgentsRunningOnNode(tx.Querier, req.RunsOnNodeId)
+			agentIDs, err := models.FindPMMAgentsRunningOnNode(tx.Querier, req.NodeId)
 			switch {
 			case err != nil || len(agentIDs) != 1:
 				req.MetricsMode = managementpb.MetricsMode_PULL
@@ -96,7 +86,7 @@ func (e *ExternalService) AddExternal(ctx context.Context, req *managementpb.Add
 		}
 
 		params := &models.CreateExternalExporterParams{
-			RunsOnNodeID: runsOnNodeId,
+			RunsOnNodeID: req.NodeId,
 			ServiceID:    service.ServiceID,
 			Username:     req.Username,
 			Password:     req.Password,
