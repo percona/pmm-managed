@@ -324,9 +324,30 @@ func RemoveChannel(q *reform.Querier, id string) error {
 		return err
 	}
 
-	err := q.Delete(&Channel{ID: id})
+	inUse, err := channelInUse(q, id)
+	if err != nil {
+		return err
+	}
+
+	if inUse {
+		return status.Errorf(codes.FailedPrecondition, "Failed to delete notification channel %s, as it is being used by some rule.", id)
+	}
+
+	err = q.Delete(&Channel{ID: id})
 	if err != nil {
 		return errors.Wrap(err, "failed to delete notification channel")
 	}
 	return nil
+}
+
+func channelInUse(q *reform.Querier, id string) (bool, error) {
+	_, err := q.SelectOneFrom(RuleTable, "WHERE channel_ids ? $1", id)
+	switch err {
+	case nil:
+		return true, nil
+	case reform.ErrNoRows:
+		return false, nil
+	default:
+		return false, errors.WithStack(err)
+	}
 }
