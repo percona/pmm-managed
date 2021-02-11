@@ -393,6 +393,7 @@ func TestRulesAPI(t *testing.T) {
 				assert.Equal(t, params.Body.Filters[0].Value, r.Filters[0].Value)
 				assert.Len(t, r.Channels, 1)
 				assert.Equal(t, r.Channels[0].ChannelID, channelID)
+				assert.Equal(t, "5 > 2 and 2 < 12", r.Expr)
 				found = true
 			}
 		}
@@ -442,9 +443,10 @@ func createTemplate(t *testing.T) string {
 	require.NoError(t, err)
 
 	templateName := gofakeit.UUID()
+	expression := "5 > 2 and 2 < [[ .param2 ]]"
 	_, err = client.Default.Templates.CreateTemplate(&templates.CreateTemplateParams{
 		Body: templates.CreateTemplateBody{
-			Yaml: fmt.Sprintf(string(b), templateName, gofakeit.UUID(), "%", "s"),
+			Yaml: fmt.Sprintf(string(b), templateName, expression, "%", "s"),
 		},
 		Context: pmmapitests.Context,
 	})
