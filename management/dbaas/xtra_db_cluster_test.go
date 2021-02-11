@@ -101,14 +101,14 @@ func TestXtraDBClusterServer(t *testing.T) {
 			assert.True(t, foundPXC, "Cannot find PXC with name %s in cluster list", name)
 		}
 
-		getXtraDBClusterParamsParam := xtra_db_cluster.GetXtraDBClusterParams{
+		getXtraDBClusterParamsParam := xtra_db_cluster.GetXtraDBClusterCredentialsParams{
 			Context: pmmapitests.Context,
-			Body: xtra_db_cluster.GetXtraDBClusterBody{
+			Body: xtra_db_cluster.GetXtraDBClusterCredentialsBody{
 				KubernetesClusterName: kubernetesClusterName,
 				Name:                  "first-pxc-test",
 			},
 		}
-		xtraDBCluster, err := dbaasClient.Default.XtraDBCluster.GetXtraDBCluster(&getXtraDBClusterParamsParam)
+		xtraDBCluster, err := dbaasClient.Default.XtraDBCluster.GetXtraDBClusterCredentials(&getXtraDBClusterParamsParam)
 		assert.NoError(t, err)
 		assert.Equal(t, xtraDBCluster.Payload.ConnectionCredentials.Username, "root")
 		assert.Equal(t, xtraDBCluster.Payload.ConnectionCredentials.Host, "first-pxc-test-proxysql")
