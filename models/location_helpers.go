@@ -129,7 +129,7 @@ func CreateBackupLocation(q *reform.Querier, params CreateBackupLocationParams) 
 		configCount++
 	}
 
-	if configCount != 1 {
+	if configCount > 1 {
 		return nil, status.Error(codes.InvalidArgument, "Only one config is allowed.")
 	}
 
