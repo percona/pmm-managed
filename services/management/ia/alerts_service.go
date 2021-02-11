@@ -116,6 +116,12 @@ func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlert
 				return err
 			})
 			if e != nil {
+				// Only FindRuleByID from transaction above can return codes.NotFound
+				if st, ok := status.FromError(e); ok && st.Code() == codes.NotFound {
+					s.l.Warnf("The related alert rule most likely was removed: %s", st.Message())
+					continue
+				}
+
 				return nil, e
 			}
 
