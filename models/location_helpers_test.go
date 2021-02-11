@@ -40,7 +40,7 @@ func TestBackupLocations(t *testing.T) {
 	}()
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	t.Run("create - fs", func(t *testing.T) {
+	t.Run("create - pmm client", func(t *testing.T) {
 		tx, err := db.Begin()
 		require.NoError(t, err)
 		defer func() {
@@ -52,17 +52,17 @@ func TestBackupLocations(t *testing.T) {
 		params := models.CreateBackupLocationParams{
 			Name:        "some name",
 			Description: "some desc",
-			FSConfig: &models.FSLocationConfig{
+			PMMClientConfig: &models.PMMClientLocationConfig{
 				Path: "/tmp",
 			},
 		}
 
 		location, err := models.CreateBackupLocation(q, params)
 		require.NoError(t, err)
-		assert.Equal(t, models.FSBackupLocationType, location.Type)
+		assert.Equal(t, models.PMMClientBackupLocationType, location.Type)
 		assert.Equal(t, params.Name, location.Name)
 		assert.Equal(t, params.Description, location.Description)
-		assert.Equal(t, params.FSConfig.Path, location.FSConfig.Path)
+		assert.Equal(t, params.PMMClientConfig.Path, location.PMMClientConfig.Path)
 		assert.NotEmpty(t, location.ID)
 	})
 
@@ -109,7 +109,7 @@ func TestBackupLocations(t *testing.T) {
 		params := models.CreateBackupLocationParams{
 			Name:        "some name",
 			Description: "some desc",
-			FSConfig: &models.FSLocationConfig{
+			PMMClientConfig: &models.PMMClientLocationConfig{
 				Path: "/tmp",
 			},
 			S3Config: &models.S3LocationConfig{
@@ -135,7 +135,7 @@ func TestBackupLocations(t *testing.T) {
 		params1 := models.CreateBackupLocationParams{
 			Name:        "some name",
 			Description: "some desc",
-			FSConfig: &models.FSLocationConfig{
+			PMMClientConfig: &models.PMMClientLocationConfig{
 				Path: "/tmp",
 			},
 		}
@@ -187,24 +187,24 @@ func TestBackupLocationValidation(t *testing.T) {
 		errorMsg string
 	}{
 		{
-			name: "normal fs config",
+			name: "normal client config",
 			location: models.CreateBackupLocationParams{
-				Name: "fs-1",
-				FSConfig: &models.FSLocationConfig{
+				Name: "client-1",
+				PMMClientConfig: &models.PMMClientLocationConfig{
 					Path: "/tmp",
 				},
 			},
 			errorMsg: "",
 		},
 		{
-			name: "fs config - missing path",
+			name: "client config - missing path",
 			location: models.CreateBackupLocationParams{
-				Name: "fs-1",
-				FSConfig: &models.FSLocationConfig{
+				Name: "client-2",
+				PMMClientConfig: &models.PMMClientLocationConfig{
 					Path: "",
 				},
 			},
-			errorMsg: "rpc error: code = InvalidArgument desc = FS path field is empty.",
+			errorMsg: "rpc error: code = InvalidArgument desc = PMM client config path field is empty.",
 		},
 		{
 			name: "normal s3 config",

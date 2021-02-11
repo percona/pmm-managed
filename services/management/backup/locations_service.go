@@ -71,11 +71,18 @@ func (s *LocationsService) AddLocation(ctx context.Context, req *backupv1beta1.A
 			SecretKey: req.S3Config.SecretKey,
 		}
 	}
-	if req.FsConfig != nil {
-		params.FSConfig = &models.FSLocationConfig{
-			Path: req.FsConfig.Path,
+	if req.PmmServerConfig != nil {
+		params.PMMServerConfig = &models.PMMServerLocationConfig{
+			Path: req.PmmServerConfig.Path,
 		}
 	}
+
+	if req.PmmClientConfig != nil {
+		params.PMMClientConfig = &models.PMMClientLocationConfig{
+			Path: req.PmmClientConfig.Path,
+		}
+	}
+
 	loc, err := models.CreateBackupLocation(s.db.Querier, params)
 	if err != nil {
 		return nil, err
@@ -93,17 +100,24 @@ func convertLocation(location *models.BackupLocation) (*backupv1beta1.Location, 
 		Description: location.Description,
 	}
 	switch location.Type {
-	case models.FSBackupLocationType:
-		config := location.FSConfig
-		loc.Config = &backupv1beta1.Location_FsConfig{
-			FsConfig: &backupv1beta1.FSConfig{
+	case models.PMMClientBackupLocationType:
+		config := location.PMMClientConfig
+		loc.Config = &backupv1beta1.Location_PmmClientConfig{
+			PmmClientConfig: &backupv1beta1.PMMClientLocationConfig{
+				Path: config.Path,
+			},
+		}
+	case models.PMMServerBackupLocationType:
+		config := location.PMMServerConfig
+		loc.Config = &backupv1beta1.Location_PmmServerConfig{
+			PmmServerConfig: &backupv1beta1.PMMServerLocationConfig{
 				Path: config.Path,
 			},
 		}
 	case models.S3BackupLocationType:
 		config := location.S3Config
 		loc.Config = &backupv1beta1.Location_S3Config{
-			S3Config: &backupv1beta1.S3Config{
+			S3Config: &backupv1beta1.S3LocationConfig{
 				Endpoint:  config.Endpoint,
 				AccessKey: config.AccessKey,
 				SecretKey: config.SecretKey,

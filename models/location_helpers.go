@@ -40,12 +40,22 @@ func checkUniqueLocationID(q *reform.Querier, id string) error {
 	}
 }
 
-func checkFSConfig(c *FSLocationConfig) error {
+func checkPMMServerLocationConfig(c *PMMServerLocationConfig) error {
 	if c == nil {
-		return status.Error(codes.InvalidArgument, "FS location config is empty.")
+		return status.Error(codes.InvalidArgument, "PMM server location config is empty.")
 	}
 	if c.Path == "" {
-		return status.Error(codes.InvalidArgument, "FS path field is empty.")
+		return status.Error(codes.InvalidArgument, "PMM server config path field is empty.")
+	}
+	return nil
+}
+
+func checkPMMClientLocationConfig(c *PMMClientLocationConfig) error {
+	if c == nil {
+		return status.Error(codes.InvalidArgument, "PMM client location config is empty.")
+	}
+	if c.Path == "" {
+		return status.Error(codes.InvalidArgument, "PMM client config path field is empty.")
 	}
 	return nil
 }
@@ -90,8 +100,9 @@ type CreateBackupLocationParams struct {
 	Name        string
 	Description string
 
-	FSConfig *FSLocationConfig
-	S3Config *S3LocationConfig
+	PMMClientConfig *PMMClientLocationConfig
+	PMMServerConfig *PMMServerLocationConfig
+	S3Config        *S3LocationConfig
 }
 
 // CreateBackupLocation persists backup location.
@@ -107,24 +118,43 @@ func CreateBackupLocation(q *reform.Querier, params CreateBackupLocationParams) 
 		Name:        params.Name,
 		Description: params.Description,
 	}
-
-	if params.FSConfig != nil && params.S3Config != nil {
-		return nil, status.Error(codes.InvalidArgument, "Only one config is allowed.")
-
+	configCount := 0
+	if params.S3Config != nil {
+		configCount++
 	}
+	if params.PMMServerConfig != nil {
+		configCount++
+	}
+	if params.PMMClientConfig != nil {
+		configCount++
+	}
+
+	if configCount != 1 {
+		return nil, status.Error(codes.InvalidArgument, "Only one config is allowed.")
+	}
+
 	switch {
-	case params.FSConfig != nil:
-		if err := checkFSConfig(params.FSConfig); err != nil {
-			return nil, err
-		}
-		row.Type = FSBackupLocationType
-		row.FSConfig = params.FSConfig
 	case params.S3Config != nil:
 		if err := checkS3Config(params.S3Config); err != nil {
 			return nil, err
 		}
 		row.Type = S3BackupLocationType
 		row.S3Config = params.S3Config
+
+	case params.PMMServerConfig != nil:
+		if err := checkPMMServerLocationConfig(params.PMMServerConfig); err != nil {
+			return nil, err
+		}
+		row.Type = PMMServerBackupLocationType
+		row.PMMServerConfig = params.PMMServerConfig
+
+	case params.PMMClientConfig != nil:
+		if err := checkPMMClientLocationConfig(params.PMMClientConfig); err != nil {
+			return nil, err
+		}
+		row.Type = PMMClientBackupLocationType
+		row.PMMClientConfig = params.PMMClientConfig
+
 	default:
 		return nil, status.Error(codes.InvalidArgument, "Missing location type.")
 	}

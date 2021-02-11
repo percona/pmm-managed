@@ -41,10 +41,22 @@ func TestCreateBackupLocation(t *testing.T) {
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
 	svc := NewLocationsService(db)
-	t.Run("add fs", func(t *testing.T) {
+	t.Run("add server config", func(t *testing.T) {
 		loc, err := svc.AddLocation(ctx, &backupv1beta1.AddLocationRequest{
 			Name: gofakeit.Name(),
-			FsConfig: &backupv1beta1.FSConfig{
+			PmmServerConfig: &backupv1beta1.PMMServerLocationConfig{
+				Path: "/tmp",
+			},
+		})
+		assert.NoError(t, err)
+
+		assert.NotEmpty(t, loc.LocationId)
+	})
+
+	t.Run("add client config", func(t *testing.T) {
+		loc, err := svc.AddLocation(ctx, &backupv1beta1.AddLocationRequest{
+			Name: gofakeit.Name(),
+			PmmClientConfig: &backupv1beta1.PMMClientLocationConfig{
 				Path: "/tmp",
 			},
 		})
@@ -56,7 +68,7 @@ func TestCreateBackupLocation(t *testing.T) {
 	t.Run("add s3", func(t *testing.T) {
 		loc, err := svc.AddLocation(ctx, &backupv1beta1.AddLocationRequest{
 			Name: gofakeit.Name(),
-			S3Config: &backupv1beta1.S3Config{
+			S3Config: &backupv1beta1.S3LocationConfig{
 				Endpoint:  gofakeit.URL(),
 				AccessKey: "access_key",
 				SecretKey: "secret_key",
@@ -70,10 +82,10 @@ func TestCreateBackupLocation(t *testing.T) {
 	t.Run("multiple configs", func(t *testing.T) {
 		_, err := svc.AddLocation(ctx, &backupv1beta1.AddLocationRequest{
 			Name: gofakeit.Name(),
-			FsConfig: &backupv1beta1.FSConfig{
+			PmmClientConfig: &backupv1beta1.PMMClientLocationConfig{
 				Path: "/tmp",
 			},
-			S3Config: &backupv1beta1.S3Config{
+			S3Config: &backupv1beta1.S3LocationConfig{
 				Endpoint:  gofakeit.URL(),
 				AccessKey: "access_key",
 				SecretKey: "secret_key",
@@ -93,7 +105,7 @@ func TestListBackupLocations(t *testing.T) {
 
 	req1 := &backupv1beta1.AddLocationRequest{
 		Name: gofakeit.Name(),
-		FsConfig: &backupv1beta1.FSConfig{
+		PmmClientConfig: &backupv1beta1.PMMClientLocationConfig{
 			Path: "/tmp",
 		},
 	}
@@ -101,7 +113,7 @@ func TestListBackupLocations(t *testing.T) {
 	require.Nil(t, err)
 	req2 := &backupv1beta1.AddLocationRequest{
 		Name: gofakeit.Name(),
-		S3Config: &backupv1beta1.S3Config{
+		S3Config: &backupv1beta1.S3LocationConfig{
 			Endpoint:  gofakeit.URL(),
 			AccessKey: "access_key",
 			SecretKey: "secret_key",
@@ -130,9 +142,15 @@ func TestListBackupLocations(t *testing.T) {
 							}
 
 						}
-						if req.FsConfig != nil {
-							cfg := loc.Config.(*backupv1beta1.Location_FsConfig)
-							if req.FsConfig.Path != cfg.FsConfig.Path {
+						if req.PmmClientConfig != nil {
+							cfg := loc.Config.(*backupv1beta1.Location_PmmClientConfig)
+							if req.PmmClientConfig.Path != cfg.PmmClientConfig.Path {
+								return false
+							}
+						}
+						if req.PmmServerConfig != nil {
+							cfg := loc.Config.(*backupv1beta1.Location_PmmServerConfig)
+							if req.PmmServerConfig.Path != cfg.PmmServerConfig.Path {
 								return false
 							}
 						}
