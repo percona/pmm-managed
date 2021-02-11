@@ -269,7 +269,7 @@ func changeTemplateParams(name string) *models.ChangeTemplateParams {
 	}
 }
 
-func createRule(t *testing.T, q *reform.Querier, channelId, templateName string) string {
+func createRule(t *testing.T, q *reform.Querier, channelID, templateName string) string {
 	rule, err := models.CreateRule(q, &models.CreateRuleParams{
 		TemplateName: templateName,
 		Disabled:     true,
@@ -284,7 +284,7 @@ func createRule(t *testing.T, q *reform.Querier, channelId, templateName string)
 		Severity:     models.Severity(common.Warning),
 		CustomLabels: map[string]string{"foo": "bar"},
 		Filters:      []models.Filter{{Type: models.Equal, Key: "value", Val: "10"}},
-		ChannelIDs:   []string{channelId},
+		ChannelIDs:   []string{channelID},
 	})
 	require.NoError(t, err)
 	return rule.ID
