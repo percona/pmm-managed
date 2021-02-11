@@ -6,6 +6,7 @@ import (
 	"github.com/AlekSi/pointer"
 	inventoryClient "github.com/percona/pmm/api/inventorypb/json/client"
 	"github.com/percona/pmm/api/inventorypb/json/client/agents"
+	"github.com/percona/pmm/api/inventorypb/json/client/nodes"
 	"github.com/percona/pmm/api/inventorypb/json/client/services"
 	"github.com/percona/pmm/api/managementpb/json/client"
 	"github.com/percona/pmm/api/managementpb/json/client/ha_proxy"
@@ -141,6 +142,95 @@ func TestAddHAProxy(t *testing.T) {
 				CustomLabels:   map[string]string{"bar": "foo"},
 			},
 		}, *serviceOK.Payload)
+	})
+
+	t.Run("OnRemoteNode", func(t *testing.T) {
+		nodeName := pmmapitests.TestString(t, "genericNode-for-basic-name")
+
+		serviceName := pmmapitests.TestString(t, "service-for-basic-name")
+
+		params := &ha_proxy.AddHAProxyParams{
+			Context: pmmapitests.Context,
+			Body: ha_proxy.AddHAProxyBody{
+				AddNode: &ha_proxy.AddHAProxyParamsBodyAddNode{
+					NodeType:     pointer.ToString(ha_proxy.AddHAProxyParamsBodyAddNodeNodeTypeREMOTENODE),
+					NodeName:     nodeName,
+					MachineID:    "/machine-id/",
+					Distro:       "linux",
+					Region:       "us-west2",
+					CustomLabels: map[string]string{"foo": "bar-for-node"},
+				},
+				Address:     "localhost",
+				ServiceName: serviceName,
+				ListenPort:  8404,
+			},
+		}
+		addHAProxyOK, err := client.Default.HAProxy.AddHAProxy(params)
+		require.NoError(t, err)
+		require.NotNil(t, addHAProxyOK)
+		require.NotNil(t, addHAProxyOK.Payload.Service)
+		nodeID := addHAProxyOK.Payload.Service.NodeID
+		defer pmmapitests.RemoveNodes(t, nodeID)
+		serviceID := addHAProxyOK.Payload.Service.ServiceID
+		defer pmmapitests.RemoveServices(t, serviceID)
+
+		// Check that node is created and its fields.
+		node, err := inventoryClient.Default.Nodes.GetNode(&nodes.GetNodeParams{
+			Body: nodes.GetNodeBody{
+				NodeID: nodeID,
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		require.NotNil(t, node)
+		assert.Equal(t, nodes.GetNodeOKBody{
+			Remote: &nodes.GetNodeOKBodyRemote{
+				NodeID:       nodeID,
+				NodeName:     nodeName,
+				Address:      "localhost",
+				Region:       "us-west2",
+				CustomLabels: map[string]string{"foo": "bar-for-node"},
+			},
+		}, *node.Payload)
+
+		// Check that service is created and its fields.
+		serviceOK, err := inventoryClient.Default.Services.GetService(&services.GetServiceParams{
+			Body: services.GetServiceBody{
+				ServiceID: serviceID,
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		require.NotNil(t, serviceOK)
+		assert.Equal(t, services.GetServiceOKBody{
+			Haproxy: &services.GetServiceOKBodyHaproxy{
+				ServiceID:   serviceID,
+				NodeID:      nodeID,
+				ServiceName: serviceName,
+			},
+		}, *serviceOK.Payload)
+
+		// Check that external exporter is added.
+		listAgents, err := inventoryClient.Default.Agents.ListAgents(&agents.ListAgentsParams{
+			Context: pmmapitests.Context,
+			Body: agents.ListAgentsBody{
+				ServiceID: serviceID,
+			},
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, agents.ListAgentsOKBody{
+			ExternalExporter: []*agents.ExternalExporterItems0{
+				{
+					AgentID:      listAgents.Payload.ExternalExporter[0].AgentID,
+					ServiceID:    serviceID,
+					ListenPort:   8404,
+					RunsOnNodeID: nodeID,
+					Scheme:       "http",
+					MetricsPath:  "/metrics",
+				},
+			},
+		}, *listAgents.Payload)
+		defer removeAllAgentsInList(t, listAgents)
 	})
 
 	t.Run("With the same name", func(t *testing.T) {
