@@ -417,7 +417,7 @@
 
 [[projects]]
   branch = "PMM-7405-check-conn-external-exporter"
-  digest = "1:aac179f4cb898a68b45d9c1b84a877baf44cb0df7a92ee24afa698a468ef3e4b"
+  digest = "1:5aa5d2249330105394b7a56ef82f590bb18af56b62eab3d73ac96d0e4cd79f88"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -441,7 +441,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "ff710a4e21fba295c574e10aec573dcd3856f114"
+  revision = "a80bd30fe9da6d0e81a8c113e2dcb16e5486b06d"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
