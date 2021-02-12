@@ -416,8 +416,8 @@
   version = "v0.7.2"
 
 [[projects]]
-  branch = "release/2.15"
-  digest = "1:a3113281b924c96d25babbdd2a7611ed58ff4e5184dab85353d4199666abe275"
+  branch = "PMM-7382-backup-location-update"
+  digest = "1:4a845f6dce650dc2152d91878596e5fa1a7c3c8f8a4f5b0b6b55be587d49dc60"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -441,7 +441,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "def596e1aebacd0275ad18767f35951a252bc5fb"
+  revision = "9daf9f5740c4b47b1d0ff468dbefe6483182839c"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
