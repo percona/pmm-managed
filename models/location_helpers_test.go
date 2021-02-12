@@ -180,7 +180,54 @@ func TestBackupLocations(t *testing.T) {
 
 		assert.Condition(t, findLocID(loc1.ID), "First location not found")
 		assert.Condition(t, findLocID(loc2.ID), "Second location not found")
+	})
 
+	t.Run("update", func(t *testing.T) {
+		tx, err := db.Begin()
+		require.NoError(t, err)
+		defer func() {
+			require.NoError(t, tx.Rollback())
+		}()
+
+		q := tx.Querier
+
+		createParams := models.CreateBackupLocationParams{
+			Name:        "some name",
+			Description: "some desc",
+			BackupLocationsConfigs: models.BackupLocationsConfigs{
+				PMMClientConfig: &models.PMMClientLocationConfig{
+					Path: "/tmp",
+				},
+			},
+		}
+
+		location, err := models.CreateBackupLocation(q, createParams)
+		require.NoError(t, err)
+
+		changeParams := models.ChangeBackupLocationParams{
+			Name:        "some name modified",
+			Description: "",
+			BackupLocationsConfigs: models.BackupLocationsConfigs{
+				PMMServerConfig: &models.PMMServerLocationConfig{
+					Path: "/tmp/nested",
+				},
+			},
+		}
+
+		updatedLoc, err := models.ChangeBackupLocation(q, location.ID, changeParams)
+		require.NoError(t, err)
+		assert.Equal(t, changeParams.Name, updatedLoc.Name)
+		// empty description in request, we expect no change
+		assert.Equal(t, createParams.Description, updatedLoc.Description)
+		assert.Nil(t, updatedLoc.PMMClientConfig)
+		assert.Equal(t, changeParams.PMMServerConfig.Path, updatedLoc.PMMServerConfig.Path)
+		assert.Equal(t, updatedLoc.Type, models.PMMServerBackupLocationType)
+
+		findLoc, err := models.FindBackupLocationByID(q, location.ID)
+
+		require.NoError(t, err)
+
+		assert.Equal(t, updatedLoc, findLoc)
 	})
 }
 

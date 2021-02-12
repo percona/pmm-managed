@@ -128,6 +128,7 @@ func FindBackupLocationByID(q *reform.Querier, id string) (*BackupLocation, erro
 	}
 }
 
+// BackupLocationsConfigs groups all backup locations configs.
 type BackupLocationsConfigs struct {
 	PMMClientConfig *PMMClientLocationConfig
 	PMMServerConfig *PMMServerLocationConfig

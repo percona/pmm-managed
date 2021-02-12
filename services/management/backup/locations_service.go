@@ -93,6 +93,7 @@ func (s *LocationsService) AddLocation(ctx context.Context, req *backupv1beta1.A
 	}, nil
 }
 
+// ChangeLocation changes existing backup location.
 func (s *LocationsService) ChangeLocation(ctx context.Context, req *backupv1beta1.ChangeLocationRequest) (*backupv1beta1.ChangeLocationResponse, error) {
 	params := models.ChangeBackupLocationParams{
 		Name:        req.Name,
