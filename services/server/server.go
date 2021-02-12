@@ -526,10 +526,10 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		return nil, err
 	}
 
-	var settings *models.Settings
+	var newSettings, oldSettings *models.Settings
+
 	err := s.db.InTransaction(func(tx *reform.TX) error {
 		var e error
-		var oldSettings *models.Settings
 
 		if oldSettings, e = models.GetSettings(tx); e != nil {
 			return errors.WithStack(e)
@@ -580,7 +580,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			}
 		}
 
-		if settings, e = models.UpdateSettings(tx, settingsParams); e != nil {
+		if newSettings, e = models.UpdateSettings(tx, settingsParams); e != nil {
 			return status.Error(codes.InvalidArgument, e.Error())
 		}
 
