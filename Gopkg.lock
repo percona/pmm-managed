@@ -229,7 +229,7 @@
 
 [[projects]]
   branch = "release/2.15"
-  digest = "1:e8736f8e8672e53957d5a86b9c9e9e0703ce245d9bcc1f7870578b2fa4a635d7"
+  digest = "1:2020c8d6941bcc3532ef454dbdd50a93acdfb736bfdfe1a85cdef92590f0d239"
   name = "github.com/percona/pmm"
   packages = [
     "api/alertmanager/amclient",
@@ -243,6 +243,8 @@
     "api/inventorypb/json/client/agents",
     "api/inventorypb/json/client/nodes",
     "api/inventorypb/json/client/services",
+    "api/managementpb/backup/json/client",
+    "api/managementpb/backup/json/client/locations",
     "api/managementpb/dbaas/json/client",
     "api/managementpb/dbaas/json/client/kubernetes",
     "api/managementpb/dbaas/json/client/psmdb_cluster",
@@ -270,7 +272,7 @@
     "utils/tlsconfig",
   ]
   pruneopts = "NUT"
-  revision = "4f7e2e974df22a3596429ec517e68003ceedf62e"
+  revision = "def596e1aebacd0275ad18767f35951a252bc5fb"
 
 [[projects]]
   digest = "1:ddc4b7507aa587f326a9874dc5d0ca7b3961ed050a7db734eb49b8682cc2b19f"
@@ -436,6 +438,8 @@
     "github.com/percona/pmm/api/inventorypb/json/client/agents",
     "github.com/percona/pmm/api/inventorypb/json/client/nodes",
     "github.com/percona/pmm/api/inventorypb/json/client/services",
+    "github.com/percona/pmm/api/managementpb/backup/json/client",
+    "github.com/percona/pmm/api/managementpb/backup/json/client/locations",
     "github.com/percona/pmm/api/managementpb/dbaas/json/client",
     "github.com/percona/pmm/api/managementpb/dbaas/json/client/kubernetes",
     "github.com/percona/pmm/api/managementpb/dbaas/json/client/psmdb_cluster",
