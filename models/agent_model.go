@@ -358,6 +358,24 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		}
 		return u.String()
 
+	case ExternalExporterType:
+		scheme := pointer.GetString(s.MetricsScheme)
+		path := pointer.GetString(s.MetricsPath)
+		listenPort := int(pointer.GetUint16(s.ListenPort))
+		address := net.JoinHostPort(host, strconv.Itoa(listenPort))
+		u := &url.URL{
+			Scheme: scheme,
+			Host:   address,
+			Path:   path,
+		}
+		switch {
+		case password != "":
+			u.User = url.UserPassword(username, password)
+		case username != "":
+			u.User = url.User(username)
+		}
+		return u.String()
+
 	default:
 		panic(fmt.Errorf("unhandled AgentType %q", s.AgentType))
 	}

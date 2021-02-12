@@ -14,7 +14,7 @@ required = [
 
 [[constraint]]
   name = "github.com/percona/pmm"
-  branch = "release/2.15"
+  branch = "PMM-7405-check-conn-external-exporter"
 
 [[constraint]]
   name = "github.com/percona-platform/saas"
