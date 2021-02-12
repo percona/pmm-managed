@@ -24,7 +24,7 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-func checkUniqueLocationID(q *reform.Querier, id string) error {
+func checkUniqueBackupLocationID(q *reform.Querier, id string) error {
 	if id == "" {
 		panic("empty Location ID")
 	}
@@ -33,6 +33,22 @@ func checkUniqueLocationID(q *reform.Querier, id string) error {
 	switch err := q.Reload(location); err {
 	case nil:
 		return status.Errorf(codes.AlreadyExists, "Location with ID %q already exists.", id)
+	case reform.ErrNoRows:
+		return nil
+	default:
+		return errors.WithStack(err)
+	}
+}
+
+func checkUniqueBackupLocationName(q *reform.Querier, name string) error {
+	if name == "" {
+		panic("empty Location Name")
+	}
+
+	var location BackupLocation
+	switch err := q.FindOneTo(&location, "name", name); err {
+	case nil:
+		return status.Errorf(codes.AlreadyExists, "Location with name %q already exists.", name)
 	case reform.ErrNoRows:
 		return nil
 	default:
@@ -109,7 +125,11 @@ type CreateBackupLocationParams struct {
 func CreateBackupLocation(q *reform.Querier, params CreateBackupLocationParams) (*BackupLocation, error) {
 	id := "/location_id/" + uuid.New().String()
 
-	if err := checkUniqueLocationID(q, id); err != nil {
+	if err := checkUniqueBackupLocationID(q, id); err != nil {
+		return nil, err
+	}
+
+	if err := checkUniqueBackupLocationName(q, params.Name); err != nil {
 		return nil, err
 	}
 
