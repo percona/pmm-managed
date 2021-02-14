@@ -10,14 +10,6 @@
   version = "v1.1.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:d64967cd08a660574f623ce3e126915823d46b5a593a3d228c41cab6d5c84896"
-  name = "github.com/Percona-Lab/pmm-api-tests"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "0ee3b680698047e79cd31d6a444969fbd9eb75f3"
-
-[[projects]]
   digest = "1:0a111edd8693fd977f42a0c4f199a0efb13c20aec9da99ad8830c7bb6a87e8d6"
   name = "github.com/PuerkitoBio/purell"
   packages = ["."]
@@ -434,7 +426,6 @@
   analyzer-version = 1
   input-imports = [
     "github.com/AlekSi/pointer",
-    "github.com/Percona-Lab/pmm-api-tests",
     "github.com/brianvoe/gofakeit",
     "github.com/davecgh/go-spew/spew",
     "github.com/go-openapi/runtime",
