@@ -10,6 +10,14 @@
   version = "v1.1.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:d64967cd08a660574f623ce3e126915823d46b5a593a3d228c41cab6d5c84896"
+  name = "github.com/Percona-Lab/pmm-api-tests"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "0ee3b680698047e79cd31d6a444969fbd9eb75f3"
+
+[[projects]]
   digest = "1:0a111edd8693fd977f42a0c4f199a0efb13c20aec9da99ad8830c7bb6a87e8d6"
   name = "github.com/PuerkitoBio/purell"
   packages = ["."]
@@ -228,7 +236,7 @@
   revision = "1b32ca1828e1a3419423c9e36c153faf0eb4cc28"
 
 [[projects]]
-  branch = "release/2.15"
+  branch = "PMM-2.0"
   digest = "1:2020c8d6941bcc3532ef454dbdd50a93acdfb736bfdfe1a85cdef92590f0d239"
   name = "github.com/percona/pmm"
   packages = [
@@ -272,7 +280,7 @@
     "utils/tlsconfig",
   ]
   pruneopts = "NUT"
-  revision = "def596e1aebacd0275ad18767f35951a252bc5fb"
+  revision = "4559713b8bc01ab2538bd183bca387cebe624966"
 
 [[projects]]
   digest = "1:ddc4b7507aa587f326a9874dc5d0ca7b3961ed050a7db734eb49b8682cc2b19f"
@@ -426,6 +434,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/AlekSi/pointer",
+    "github.com/Percona-Lab/pmm-api-tests",
     "github.com/brianvoe/gofakeit",
     "github.com/davecgh/go-spew/spew",
     "github.com/go-openapi/runtime",
