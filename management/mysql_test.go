@@ -41,6 +41,7 @@ func TestAddMySQL(t *testing.T) {
 				Username:    "username",
 
 				SkipConnectionCheck: true,
+				DisableCollectors:   []string{"global_status", "perf_schema.tablelocks"},
 			},
 		}
 		addMySQLOK, err := client.Default.MySQL.AddMySQL(params)
@@ -85,6 +86,7 @@ func TestAddMySQL(t *testing.T) {
 					PMMAgentID:                pmmAgentID,
 					Username:                  "username",
 					TablestatsGroupTableLimit: 1000,
+					DisabledCollectors:        []string{"global_status", "perf_schema.tablelocks"},
 					PushMetricsEnabled:        true,
 				},
 			},

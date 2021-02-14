@@ -13,11 +13,9 @@ templates:
           range: [0, 100]
           value: 80
         - name: param2
-          summary: second parameter with default value and defined range
+          summary: second parameter without default value and defined range
           unit: "%s"
           type: float
-          range: [ 20, 80 ]
-          value: 50
       for: 300s
       severity: warning
       labels:

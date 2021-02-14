@@ -62,6 +62,13 @@ func TestServices(t *testing.T) {
 		externalServiceID := externalService.External.ServiceID
 		defer pmmapitests.RemoveServices(t, externalServiceID)
 
+		haProxyService := addHAProxyService(t, services.AddHAProxyServiceBody{
+			NodeID:      genericNodeID,
+			ServiceName: pmmapitests.TestString(t, "Some External Service on remote Node"),
+		})
+		haProxyServiceID := haProxyService.Haproxy.ServiceID
+		defer pmmapitests.RemoveServices(t, haProxyServiceID)
+
 		res, err := client.Default.Services.ListServices(&services.ListServicesParams{Context: pmmapitests.Context})
 		assert.NoError(t, err)
 		require.NotNil(t, res)
@@ -71,6 +78,7 @@ func TestServices(t *testing.T) {
 		assertMySQLServiceExists(t, res, remoteServiceID)
 		assertPostgreSQLServiceExists(t, res, postgreSQLServiceID)
 		assertExternalServiceExists(t, res, externalServiceID)
+		assertHAProxyServiceExists(t, res, haProxyServiceID)
 
 		// Filter by node ID.
 		res, err = client.Default.Services.ListServices(&services.ListServicesParams{
@@ -88,6 +96,7 @@ func TestServices(t *testing.T) {
 		assertMySQLServiceNotExist(t, res, remoteServiceID)
 		assertPostgreSQLServiceExists(t, res, postgreSQLServiceID)
 		assertExternalServiceExists(t, res, externalServiceID)
+		assertHAProxyServiceExists(t, res, haProxyServiceID)
 
 		// Filter by service type.
 		res, err = client.Default.Services.ListServices(&services.ListServicesParams{
@@ -102,6 +111,7 @@ func TestServices(t *testing.T) {
 		assertMySQLServiceNotExist(t, res, serviceID)
 		assertMySQLServiceNotExist(t, res, remoteServiceID)
 		assertExternalServiceNotExist(t, res, externalServiceID)
+		assertHAProxyServiceNotExist(t, res, haProxyServiceID)
 		assertPostgreSQLServiceExists(t, res, postgreSQLServiceID)
 	})
 
@@ -1159,6 +1169,53 @@ func TestExternalService(t *testing.T) {
 				},
 			},
 		}, serviceRes)
+
+		// Filter services by external group.
+		servicesList, err := client.Default.Services.ListServices(&services.ListServicesParams{
+			Body: services.ListServicesBody{
+				ExternalGroup: "redis",
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, servicesList)
+		assert.Len(t, servicesList.Payload.Mysql, 0)
+		assert.Len(t, servicesList.Payload.Mongodb, 0)
+		assert.Len(t, servicesList.Payload.Postgresql, 0)
+		assert.Len(t, servicesList.Payload.Proxysql, 0)
+		assert.Len(t, servicesList.Payload.External, 1)
+		assert.Equal(t, servicesList.Payload.External[0].Group, "redis")
+
+		// Filter services by a non-existing external group.
+		emptyServicesList, err := client.Default.Services.ListServices(&services.ListServicesParams{
+			Body: services.ListServicesBody{
+				ExternalGroup: "non-existing-external-group",
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, emptyServicesList)
+		assert.Len(t, emptyServicesList.Payload.Mysql, 0)
+		assert.Len(t, emptyServicesList.Payload.Mongodb, 0)
+		assert.Len(t, emptyServicesList.Payload.Postgresql, 0)
+		assert.Len(t, emptyServicesList.Payload.Proxysql, 0)
+		assert.Len(t, emptyServicesList.Payload.External, 0)
+
+		//  List services with out filter by external group.
+		noFilterServicesList, err := client.Default.Services.ListServices(&services.ListServicesParams{
+			Body: services.ListServicesBody{
+				ExternalGroup: "",
+			},
+			Context: pmmapitests.Context,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, noFilterServicesList)
+		assert.Len(t, noFilterServicesList.Payload.Mysql, 1)
+		assert.Len(t, noFilterServicesList.Payload.Mongodb, 0)
+		assert.Len(t, noFilterServicesList.Payload.Postgresql, 1)
+		assert.Len(t, noFilterServicesList.Payload.Proxysql, 0)
+		assert.Len(t, noFilterServicesList.Payload.External, 1)
+		assert.Equal(t, noFilterServicesList.Payload.External[0].Group, "redis")
 
 		// Check duplicates.
 		params = &services.AddExternalServiceParams{
