@@ -221,9 +221,9 @@ func testS3Config(c *S3LocationConfig) error {
 	if _, err := s3Client.ListObjects(&s3.ListObjectsInput{Bucket: aws.String(bucket)}); err != nil {
 		if s3err, ok := err.(awserr.Error); ok {
 			return status.Errorf(codes.InvalidArgument, "%s: %s.", s3err.Code(), s3err.Message())
-		} else {
-			return status.Error(codes.InvalidArgument, err.Error())
 		}
+
+		return status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	return nil
