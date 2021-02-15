@@ -43,7 +43,7 @@ func NewExternalService(db *reform.DB, registry agentsRegistry, vmdb prometheusS
 	return &ExternalService{db: db, registry: registry, vmdb: vmdb}
 }
 
-func (e ExternalService) AddExternal(ctx context.Context, req *managementpb.AddExternalRequest) (*managementpb.AddExternalResponse, error) {
+func (e *ExternalService) AddExternal(ctx context.Context, req *managementpb.AddExternalRequest) (*managementpb.AddExternalResponse, error) {
 	res := new(managementpb.AddExternalResponse)
 	var pmmAgentID *string
 	if e := e.db.InTransaction(func(tx *reform.TX) error {
@@ -82,6 +82,19 @@ func (e ExternalService) AddExternal(ctx context.Context, req *managementpb.AddE
 		}
 		res.Service = invService.(*inventorypb.ExternalService)
 
+		if req.MetricsMode == managementpb.MetricsMode_AUTO {
+			agentIDs, err := models.FindPMMAgentsRunningOnNode(tx.Querier, req.RunsOnNodeId)
+			switch {
+			case err != nil || len(agentIDs) != 1:
+				req.MetricsMode = managementpb.MetricsMode_PULL
+			default:
+				req.MetricsMode, err = supportedMetricsMode(tx.Querier, req.MetricsMode, agentIDs[0].AgentID)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
 		params := &models.CreateExternalExporterParams{
 			RunsOnNodeID: runsOnNodeId,
 			ServiceID:    service.ServiceID,
@@ -112,7 +125,7 @@ func (e ExternalService) AddExternal(ctx context.Context, req *managementpb.AddE
 	// we have to trigger after transaction
 	if pmmAgentID != nil {
 		// It's required to regenerate victoriametrics config file.
-		e.registry.SendSetStateRequest(ctx, *pmmAgentID)
+		e.registry.RequestStateUpdate(ctx, *pmmAgentID)
 	} else {
 		e.vmdb.RequestConfigurationUpdate()
 	}

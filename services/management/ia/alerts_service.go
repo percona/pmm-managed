@@ -19,6 +19,8 @@ package ia
 
 import (
 	"context"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
@@ -72,6 +74,11 @@ func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlert
 
 	res := make([]*iav1beta1.Alert, 0, len(alerts))
 	for _, alert := range alerts {
+
+		if _, ok := alert.Labels["ia"]; !ok { // Skip non-IA alerts
+			continue
+		}
+
 		updatedAt, err := ptypes.TimestampProto(time.Time(*alert.UpdatedAt))
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to convert timestamp")
@@ -91,49 +98,90 @@ func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlert
 			st = iav1beta1.Status_SILENCED
 		}
 
+		var rule *iav1beta1.Rule
+		// Rules files created by user in directory /srv/prometheus/rules/ doesn't have associated rules in DB.
+		// So alertname field will be empty or will keep invalid value. Don't fill rule field in that case.
 		ruleID, ok := alert.Labels["alertname"]
-		if !ok {
-			return nil, errors.New("missing 'alertname' label")
-		}
-		var rule *models.Rule
-		var channels []*models.Channel
-		e := s.db.InTransaction(func(tx *reform.TX) error {
-			var err error
-			rule, err = models.FindRuleByID(tx.Querier, ruleID)
-			if err != nil {
+		if ok && strings.HasPrefix(ruleID, "/rule_id/") {
+			var r *models.Rule
+			var channels []*models.Channel
+			e := s.db.InTransaction(func(tx *reform.TX) error {
+				var err error
+				r, err = models.FindRuleByID(tx.Querier, ruleID)
+				if err != nil {
+					return err
+				}
+
+				channels, err = models.FindChannelsByIDs(tx.Querier, r.ChannelIDs)
 				return err
+			})
+			if e != nil {
+				return nil, e
 			}
 
-			channels, err = models.FindChannelsByIDs(tx.Querier, rule.ChannelIDs)
-			return err
-		})
-		if e != nil {
-			return nil, e
+			template, ok := s.templatesService.getTemplates()[r.TemplateName]
+			if !ok {
+				return nil, status.Errorf(codes.NotFound, "Failed to find template with name: %s", r.TemplateName)
+			}
+
+			rule, err = convertRule(s.l, r, template, channels)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to convert alert rule")
+			}
 		}
 
-		template, ok := s.templatesService.getTemplates()[rule.TemplateName]
-		if !ok {
-			return nil, status.Errorf(codes.NotFound, "Failed to find template with name: %s", rule.TemplateName)
-		}
-
-		r, err := convertRule(s.l, rule, template, channels)
+		pass, err := satisfiesFilters(alert, rule.Filters)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to convert alert rule")
+			return nil, err
 		}
 
-		res = append(res, &iav1beta1.Alert{
-			AlertId:   getAlertID(alert),
-			Summary:   alert.Annotations["summary"],
-			Severity:  managementpb.Severity(common.ParseSeverity(alert.Labels["severity"])),
-			Status:    st,
-			Labels:    alert.Labels,
-			Rule:      r,
-			CreatedAt: createdAt,
-			UpdatedAt: updatedAt,
-		})
+		if pass {
+			res = append(res, &iav1beta1.Alert{
+				AlertId:   getAlertID(alert),
+				Summary:   alert.Annotations["summary"],
+				Severity:  managementpb.Severity(common.ParseSeverity(alert.Labels["severity"])),
+				Status:    st,
+				Labels:    alert.Labels,
+				Rule:      rule,
+				CreatedAt: createdAt,
+				UpdatedAt: updatedAt,
+			})
+		}
 	}
 
 	return &iav1beta1.ListAlertsResponse{Alerts: res}, nil
+}
+
+// satisfiesFilters checks that alert passes filters, returns true in case of success.
+func satisfiesFilters(alert *ammodels.GettableAlert, filters []*iav1beta1.Filter) (bool, error) {
+	for _, filter := range filters {
+		value, ok := alert.Labels[filter.Key]
+		if !ok {
+			return false, nil
+		}
+
+		switch filter.Type {
+		case iav1beta1.FilterType_EQUAL:
+			if filter.Value != value {
+				return false, nil
+			}
+		case iav1beta1.FilterType_REGEX:
+			match, err := regexp.Match(filter.Value, []byte(value))
+			if err != nil {
+				return false, status.Errorf(codes.InvalidArgument, "bad regular expression: +%v", err)
+			}
+
+			if !match {
+				return false, nil
+			}
+		case iav1beta1.FilterType_FILTER_TYPE_INVALID:
+			fallthrough
+		default:
+			return false, status.Error(codes.Internal, "Unexpected filter type.")
+		}
+	}
+
+	return true, nil
 }
 
 func getAlertID(alert *ammodels.GettableAlert) string {

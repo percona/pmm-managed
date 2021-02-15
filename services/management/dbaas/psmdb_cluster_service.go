@@ -74,10 +74,6 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 			}
 		}
 
-		message := ""
-		if c.Operation != nil {
-			message = c.Operation.Message
-		}
 		cluster := dbaasv1beta1.ListPSMDBClustersResponse_Cluster{
 			Name: c.Name,
 			Params: &dbaasv1beta1.PSMDBClusterParams{
@@ -89,7 +85,9 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 			},
 			State: psmdbStates()[c.State],
 			Operation: &dbaasv1beta1.RunningOperation{
-				Message: message,
+				TotalSteps:    c.Operation.TotalSteps,
+				FinishedSteps: c.Operation.FinishedSteps,
+				Message:       c.Operation.Message,
 			},
 		}
 
@@ -99,42 +97,32 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 	return &dbaasv1beta1.ListPSMDBClustersResponse{Clusters: clusters}, nil
 }
 
-// GetPSMDBCluster returns a PSMDB cluster by name.
-func (s PSMDBClusterService) GetPSMDBCluster(ctx context.Context, req *dbaasv1beta1.GetPSMDBClusterRequest) (*dbaasv1beta1.GetPSMDBClusterResponse, error) {
+// GetPSMDBClusterCredentials returns a PSMDB cluster credentials by cluster name.
+func (s PSMDBClusterService) GetPSMDBClusterCredentials(ctx context.Context, req *dbaasv1beta1.GetPSMDBClusterCredentialsRequest) (*dbaasv1beta1.GetPSMDBClusterCredentialsResponse, error) {
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO: implement on dbaas-controller side:
-	// 1. Get psmdb status
-	//  - Ex.: kubectl get -o=json PerconaServerMongoDB/<cluster_name>
-	// 2. Get root password:
-	//   - Ex.: kubectl get secret my-cluster-name-secrets -o json  | jq -r ".data.MONGODB_USER_ADMIN_PASSWORD" | base64 -d
-	in := &dbaascontrollerv1beta1.GetPSMDBClusterRequest{
+	in := &dbaascontrollerv1beta1.GetPSMDBClusterCredentialsRequest{
 		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
 		Name: req.Name,
 	}
 
-	cluster, err := s.controllerClient.GetPSMDBCluster(ctx, in)
+	cluster, err := s.controllerClient.GetPSMDBClusterCredentials(ctx, in)
 	if err != nil {
 		return nil, err
 	}
 
-	host := ""
-	if cluster.Credentials != nil {
-		host = cluster.Credentials.Host
-	}
-
-	resp := dbaasv1beta1.GetPSMDBClusterResponse{
-		ConnectionCredentials: &dbaasv1beta1.GetPSMDBClusterResponse_PSMDBCredentials{
-			Username:   "userAdmin",
-			Password:   "userAdmin123456",
-			Host:       host,
-			Port:       27017,
-			Replicaset: "rs0",
+	resp := dbaasv1beta1.GetPSMDBClusterCredentialsResponse{
+		ConnectionCredentials: &dbaasv1beta1.GetPSMDBClusterCredentialsResponse_PSMDBCredentials{
+			Username:   cluster.Credentials.Username,
+			Password:   cluster.Credentials.Password,
+			Host:       cluster.Credentials.Host,
+			Port:       cluster.Credentials.Port,
+			Replicaset: cluster.Credentials.Replicaset,
 		},
 	}
 
