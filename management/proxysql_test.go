@@ -41,6 +41,7 @@ func TestAddProxySQL(t *testing.T) {
 				Username:    "username",
 
 				SkipConnectionCheck: true,
+				DisableCollectors:   []string{"mysql_status", "mysql_connection_pool"},
 			},
 		}
 		addProxySQLOK, err := client.Default.ProxySQL.AddProxySQL(params)
@@ -84,6 +85,7 @@ func TestAddProxySQL(t *testing.T) {
 					ServiceID:          serviceID,
 					PMMAgentID:         pmmAgentID,
 					Username:           "username",
+					DisabledCollectors: []string{"mysql_status", "mysql_connection_pool"},
 					PushMetricsEnabled: true,
 				},
 			},
