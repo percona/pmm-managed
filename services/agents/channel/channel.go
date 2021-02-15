@@ -59,6 +59,9 @@ type Metrics struct {
 
 // Channel encapsulates two-way communication channel between pmm-managed and pmm-agent.
 //
+// pmm-agent establishes a single gRPC connection with pmm-managed
+// and then starts a single gRPC bidirectional stream, which is represented by this type.
+//
 // All exported methods are thread-safe.
 //nolint:maligned
 type Channel struct {
@@ -79,7 +82,7 @@ type Channel struct {
 	closeErr  error
 }
 
-// New creates new two-way communication channel with given stream.
+// New creates new two-way communication channel with given gRPC bidirectional stream.
 //
 // Stream should not be used by the caller after channel is created.
 func New(stream agentpb.Agent_ConnectServer) *Channel {

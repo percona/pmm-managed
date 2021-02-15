@@ -71,6 +71,9 @@ func (m *StopActionResponse) AgentMessageResponsePayload() isAgentMessage_Payloa
 func (m *CheckConnectionResponse) AgentMessageResponsePayload() isAgentMessage_Payload {
 	return &AgentMessage_CheckConnection{CheckConnection: m}
 }
+func (m *SetTunnelsStateResponse) AgentMessageResponsePayload() isAgentMessage_Payload {
+	return &AgentMessage_SetTunnelsState{SetTunnelsState: m}
+}
 
 // ServerMessage response payloads
 func (m *Pong) ServerMessageResponsePayload() isServerMessage_Payload {
@@ -102,6 +105,9 @@ func (m *StopActionRequest) ServerMessageRequestPayload() isServerMessage_Payloa
 func (m *CheckConnectionRequest) ServerMessageRequestPayload() isServerMessage_Payload {
 	return &ServerMessage_CheckConnection{CheckConnection: m}
 }
+func (m *SetTunnelsStateRequest) ServerMessageRequestPayload() isServerMessage_Payload {
+	return &ServerMessage_SetTunnelsState{SetTunnelsState: m}
+}
 
 // in alphabetical order
 func (*ActionResultRequest) sealed()     {}
@@ -114,6 +120,8 @@ func (*QANCollectRequest) sealed()       {}
 func (*QANCollectResponse) sealed()      {}
 func (*SetStateRequest) sealed()         {}
 func (*SetStateResponse) sealed()        {}
+func (*SetTunnelsStateRequest) sealed()  {}
+func (*SetTunnelsStateResponse) sealed() {}
 func (*StartActionRequest) sealed()      {}
 func (*StartActionResponse) sealed()     {}
 func (*StateChangedRequest) sealed()     {}
@@ -135,6 +143,7 @@ var (
 	_ AgentResponsePayload = (*StartActionResponse)(nil)
 	_ AgentResponsePayload = (*StopActionResponse)(nil)
 	_ AgentResponsePayload = (*CheckConnectionResponse)(nil)
+	_ AgentResponsePayload = (*SetTunnelsStateResponse)(nil)
 
 	// ServerMessage response payloads
 	_ ServerResponsePayload = (*Pong)(nil)
@@ -148,6 +157,7 @@ var (
 	_ ServerRequestPayload = (*StartActionRequest)(nil)
 	_ ServerRequestPayload = (*StopActionRequest)(nil)
 	_ ServerRequestPayload = (*CheckConnectionRequest)(nil)
+	_ ServerRequestPayload = (*SetTunnelsStateRequest)(nil)
 )
 
 //go-sumtype:decl AgentParams

@@ -413,9 +413,11 @@ var databaseSchema = [][]string{
 			PRIMARY KEY (id)
 		)`,
 	},
+
 	25: {
 		`ALTER TABLE agents ADD COLUMN mongo_db_tls_options JSONB`,
 	},
+
 	26: {
 		`ALTER TABLE ia_rules ALTER COLUMN channel_ids DROP NOT NULL`,
 	},
@@ -507,6 +509,10 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 			queries = append(queries, fmt.Sprintf(`INSERT INTO schema_migrations (id) VALUES (%d)`, version))
 			for _, q := range queries {
 				q = strings.TrimSpace(q)
+				if q == "" {
+					return fmt.Errorf("empty query in version %d: missed migration number?", version)
+				}
+
 				if _, err = tx.Exec(q); err != nil {
 					return errors.Wrapf(err, "failed to execute statement:\n%s", q)
 				}
