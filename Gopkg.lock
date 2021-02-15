@@ -383,12 +383,12 @@
   version = "v0.3.0"
 
 [[projects]]
-  branch = "pmm-2.15"
+  branch = "main"
   digest = "1:a7d0b2cedb16e5aaa117dd3ea42166b40abc941f12c9cf0c1f87bad1a995f829"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "1aa24e2c2d711b63f9902e443d49bc95e4f09926"
+  revision = "eb2f85b7f9b8b6c60da225dd7de285b069888809"
 
 [[projects]]
   branch = "main"
@@ -406,14 +406,6 @@
   ]
   pruneopts = "NUT"
   revision = "c158e23a172f892cc389233858238449efec1dbb"
-
-[[projects]]
-  digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
-  name = "github.com/percona/exporter_shared"
-  packages = ["helpers"]
-  pruneopts = "NUT"
-  revision = "6ed5adb5b4587752e46c8b9f9e4e5b79895a06f9"
-  version = "v0.7.2"
 
 [[projects]]
   branch = "PMM-7382-backup-location-update"
@@ -882,7 +874,6 @@
     "github.com/percona-platform/saas/pkg/check",
     "github.com/percona-platform/saas/pkg/common",
     "github.com/percona-platform/saas/pkg/starlark",
-    "github.com/percona/exporter_shared/helpers",
     "github.com/percona/pmm/api/agentpb",
     "github.com/percona/pmm/api/alertmanager/amclient",
     "github.com/percona/pmm/api/alertmanager/amclient/alert",
