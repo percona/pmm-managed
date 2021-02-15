@@ -107,6 +107,7 @@ func (s *LocationsService) ChangeLocation(ctx context.Context, req *backupv1beta
 			SecretKey: req.S3Config.SecretKey,
 		}
 	}
+
 	if req.PmmServerConfig != nil {
 		params.PMMServerConfig = &models.PMMServerLocationConfig{
 			Path: req.PmmServerConfig.Path,

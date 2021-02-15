@@ -111,7 +111,7 @@ func FindBackupLocations(q *reform.Querier) ([]*BackupLocation, error) {
 	return locations, nil
 }
 
-// FindBackupLocationByID finds Location by ID.
+// FindBackupLocationByID finds a Backup Location by it's ID.
 func FindBackupLocationByID(q *reform.Querier, id string) (*BackupLocation, error) {
 	if id == "" {
 		return nil, status.Error(codes.InvalidArgument, "Empty Location ID.")
@@ -164,7 +164,7 @@ func (c BackupLocationsConfigs) Validate() error {
 	return nil
 }
 
-// FillLocation fills provided location based on config.
+// FillLocation fills provided location according to backup config.
 func (c BackupLocationsConfigs) FillLocation(location *BackupLocation) error {
 	switch {
 	case c.S3Config != nil:
@@ -192,7 +192,7 @@ type CreateBackupLocationParams struct {
 	BackupLocationsConfigs
 }
 
-// CreateBackupLocation persists backup location.
+// CreateBackupLocation creates backup location.
 func CreateBackupLocation(q *reform.Querier, params CreateBackupLocationParams) (*BackupLocation, error) {
 	if err := params.Validate(); err != nil {
 		return nil, err
