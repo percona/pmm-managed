@@ -64,6 +64,9 @@ func TestServer(t *testing.T) {
 		ps := new(mockPlatformService)
 		ps.Test(t)
 
+		rs := new(mockRulesService)
+		rs.Test(t)
+
 		s, err := NewServer(&Params{
 			DB:                   reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf)),
 			VMDB:                 mvmdb,
@@ -219,8 +222,57 @@ func TestServer(t *testing.T) {
 		require.NotNil(t, s)
 
 		settings, err := server.GetSettings(ctx, new(serverpb.GetSettingsRequest))
+
 		require.NoError(t, err)
 		assert.True(t, settings.Settings.DbaasEnabled)
 		assert.True(t, settings.Settings.AlertingEnabled)
+	})
+
+	t.Run("ChangeSettings IA", func(t *testing.T) {
+		server := newServer(t)
+
+		server.UpdateSettingsFromEnv([]string{
+			"PERCONA_TEST_DBAAS=1",
+			"ENABLE_ALERTING=1",
+		})
+
+		ctx := context.TODO()
+
+		s, err := server.ChangeSettings(ctx, &serverpb.ChangeSettingsRequest{
+			DisableAlerting: true,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, s)
+
+		settings, err := server.GetSettings(ctx, new(serverpb.GetSettingsRequest))
+
+		require.NoError(t, err)
+		assert.False(t, settings.Settings.IntegratedAlerting)
+
+		s, err := server.ChangeSettings(ctx, &serverpb.ChangeSettingsRequest{
+			EnableAlerting: true,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, s)
+		rs.On("WriteVMAlertRulesFiles")
+		rs.AssertExpectations(t)
+
+		settings, err := server.GetSettings(ctx, new(serverpb.GetSettingsRequest))
+
+		require.NoError(t, err)
+		assert.true(t, settings.Settings.IntegratedAlerting)
+
+		s, err := server.ChangeSettings(ctx, &serverpb.ChangeSettingsRequest{
+			DisableAlerting: true,
+		})
+		require.NoError(t, err)
+		require.NotNil(t, s)
+		rs.On("RemoveVMAlertRulesFiles")
+		rs.AssertExpectations(t)
+
+		settings, err := server.GetSettings(ctx, new(serverpb.GetSettingsRequest))
+
+		require.NoError(t, err)
+		assert.false(t, settings.Settings.IntegratedAlerting)
 	})
 }
