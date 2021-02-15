@@ -426,7 +426,12 @@ var databaseSchema = [][]string{
 			description VARCHAR NOT NULL,
 			type VARCHAR NOT NULL CHECK (type <> ''),
 			s3_config JSONB,
+<<<<<<< HEAD
 			fs_config JSONB,
+=======
+			pmm_server_config JSONB,
+			pmm_client_config JSONB,
+>>>>>>> origin/PMM-2.0
 
 			created_at TIMESTAMP NOT NULL,
 			updated_at TIMESTAMP NOT NULL,

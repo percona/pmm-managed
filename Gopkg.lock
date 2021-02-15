@@ -383,7 +383,7 @@
   version = "v0.3.0"
 
 [[projects]]
-  branch = "pmm-2.15"
+  branch = "main"
   digest = "1:a7d0b2cedb16e5aaa117dd3ea42166b40abc941f12c9cf0c1f87bad1a995f829"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
@@ -430,6 +430,7 @@
     "api/alertmanager/ammodels",
     "api/inventorypb",
     "api/managementpb",
+    "api/managementpb/backup",
     "api/managementpb/dbaas",
     "api/managementpb/ia",
     "api/qanpb",
@@ -881,7 +882,6 @@
     "github.com/percona-platform/saas/pkg/check",
     "github.com/percona-platform/saas/pkg/common",
     "github.com/percona-platform/saas/pkg/starlark",
-    "github.com/percona/exporter_shared/helpers",
     "github.com/percona/pmm/api/agentpb",
     "github.com/percona/pmm/api/alertmanager/amclient",
     "github.com/percona/pmm/api/alertmanager/amclient/alert",
@@ -889,6 +889,7 @@
     "github.com/percona/pmm/api/alertmanager/ammodels",
     "github.com/percona/pmm/api/inventorypb",
     "github.com/percona/pmm/api/managementpb",
+    "github.com/percona/pmm/api/managementpb/backup",
     "github.com/percona/pmm/api/managementpb/dbaas",
     "github.com/percona/pmm/api/managementpb/ia",
     "github.com/percona/pmm/api/qanpb",

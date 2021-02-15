@@ -527,7 +527,6 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	}
 
 	var newSettings, oldSettings *models.Settings
-
 	err := s.db.InTransaction(func(tx *reform.TX) error {
 		var e error
 
