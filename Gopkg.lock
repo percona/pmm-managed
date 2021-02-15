@@ -408,16 +408,8 @@
   revision = "c158e23a172f892cc389233858238449efec1dbb"
 
 [[projects]]
-  digest = "1:16379f2653feea4834bd3700b27e2e0058d7bb7b1a708ac2904c92b9a7939581"
-  name = "github.com/percona/exporter_shared"
-  packages = ["helpers"]
-  pruneopts = "NUT"
-  revision = "6ed5adb5b4587752e46c8b9f9e4e5b79895a06f9"
-  version = "v0.7.2"
-
-[[projects]]
-  branch = "release/2.15"
-  digest = "1:b6ebb92aa5a70b97c70a3fca48ea11fc2577c6093a654bb5caee7fbdbdc18fa4"
+  branch = "PMM-2.0"
+  digest = "1:a3113281b924c96d25babbdd2a7611ed58ff4e5184dab85353d4199666abe275"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -441,7 +433,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "4f7e2e974df22a3596429ec517e68003ceedf62e"
+  revision = "4559713b8bc01ab2538bd183bca387cebe624966"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
