@@ -41,7 +41,6 @@ func TestAddPostgreSQL(t *testing.T) {
 				Username:    "username",
 
 				SkipConnectionCheck: true,
-				DisableCollectors:   []string{"custom_query.ml", "custom_query.mr.directory"},
 			},
 		}
 		addPostgreSQLOK, err := client.Default.PostgreSQL.AddPostgreSQL(params)
@@ -85,7 +84,6 @@ func TestAddPostgreSQL(t *testing.T) {
 					ServiceID:          serviceID,
 					PMMAgentID:         pmmAgentID,
 					Username:           "username",
-					DisabledCollectors: []string{"custom_query.ml", "custom_query.mr.directory"},
 					PushMetricsEnabled: true,
 				},
 			},

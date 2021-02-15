@@ -58,7 +58,6 @@ func TestAddTemplate(t *testing.T) {
 				assert.Equal(t, "Test summary", template.Summary)
 				assert.Equal(t, expr, template.Expr)
 				assert.Len(t, template.Params, 2)
-
 				assert.Equal(t, "param1", template.Params[0].Name)
 				assert.Equal(t, "first parameter with default value and defined range", template.Params[0].Summary)
 				assert.Equal(t, "PERCENTAGE", *template.Params[0].Unit)
@@ -69,17 +68,16 @@ func TestAddTemplate(t *testing.T) {
 				assert.Equal(t, float32(100), template.Params[0].Float.Max)
 				assert.True(t, template.Params[0].Float.HasMin)
 				assert.Equal(t, float32(0), template.Params[0].Float.Min)
-
 				assert.Equal(t, "param2", template.Params[1].Name)
-				assert.Equal(t, "second parameter without default value and defined range", template.Params[1].Summary)
+				assert.Equal(t, "second parameter with default value and defined range", template.Params[1].Summary)
 				assert.Equal(t, "SECONDS", *template.Params[1].Unit)
 				assert.Equal(t, "FLOAT", *template.Params[1].Type)
-				assert.False(t, template.Params[1].Float.HasDefault)
-				assert.Equal(t, float32(0), template.Params[1].Float.Default)
-				assert.False(t, template.Params[1].Float.HasMax)
-				assert.Equal(t, float32(0), template.Params[1].Float.Max)
-				assert.False(t, template.Params[1].Float.HasMin)
-				assert.Equal(t, float32(0), template.Params[1].Float.Min)
+				assert.True(t, template.Params[1].Float.HasDefault)
+				assert.Equal(t, float32(50), template.Params[1].Float.Default)
+				assert.True(t, template.Params[1].Float.HasMax)
+				assert.Equal(t, float32(80), template.Params[1].Float.Max)
+				assert.True(t, template.Params[1].Float.HasMin)
+				assert.Equal(t, float32(20), template.Params[1].Float.Min)
 				found = true
 			}
 		}
@@ -88,7 +86,7 @@ func TestAddTemplate(t *testing.T) {
 
 	t.Run("duplicate", func(t *testing.T) {
 		name := gofakeit.UUID()
-		yaml := fmt.Sprintf(string(b), name, gofakeit.UUID(), "s", "%")
+		yaml := fmt.Sprintf(string(b), name, gofakeit.UUID())
 		_, err := client.CreateTemplate(&templates.CreateTemplateParams{
 			Body: templates.CreateTemplateBody{
 				Yaml: yaml,
@@ -142,7 +140,7 @@ func TestChangeTemplate(t *testing.T) {
 		name := gofakeit.UUID()
 		_, err := client.CreateTemplate(&templates.CreateTemplateParams{
 			Body: templates.CreateTemplateBody{
-				Yaml: fmt.Sprintf(string(b), name, gofakeit.UUID(), "s", "%"),
+				Yaml: fmt.Sprintf(string(b), name, gofakeit.UUID()),
 			},
 			Context: pmmapitests.Context,
 		})
@@ -174,7 +172,6 @@ func TestChangeTemplate(t *testing.T) {
 				assert.Equal(t, yml, template.Yaml)
 				assert.Equal(t, "Test summary", template.Summary)
 				assert.Len(t, template.Params, 2)
-
 				assert.Equal(t, "param1", template.Params[0].Name)
 				assert.Equal(t, "first parameter with default value and defined range", template.Params[0].Summary)
 				assert.Equal(t, "SECONDS", *template.Params[0].Unit)
@@ -185,17 +182,16 @@ func TestChangeTemplate(t *testing.T) {
 				assert.Equal(t, float32(100), template.Params[0].Float.Max)
 				assert.True(t, template.Params[0].Float.HasMin)
 				assert.Equal(t, float32(0), template.Params[0].Float.Min)
-
 				assert.Equal(t, "param2", template.Params[1].Name)
-				assert.Equal(t, "second parameter without default value and defined range", template.Params[1].Summary)
+				assert.Equal(t, "second parameter with default value and defined range", template.Params[1].Summary)
 				assert.Equal(t, "PERCENTAGE", *template.Params[1].Unit)
 				assert.Equal(t, "FLOAT", *template.Params[1].Type)
-				assert.False(t, template.Params[1].Float.HasDefault)
-				assert.Equal(t, float32(0), template.Params[1].Float.Default)
-				assert.False(t, template.Params[1].Float.HasMax)
-				assert.Equal(t, float32(0), template.Params[1].Float.Max)
-				assert.False(t, template.Params[1].Float.HasMin)
-				assert.Equal(t, float32(0), template.Params[1].Float.Min)
+				assert.True(t, template.Params[1].Float.HasDefault)
+				assert.Equal(t, float32(50), template.Params[1].Float.Default)
+				assert.True(t, template.Params[1].Float.HasMax)
+				assert.Equal(t, float32(80), template.Params[1].Float.Max)
+				assert.True(t, template.Params[1].Float.HasMin)
+				assert.Equal(t, float32(20), template.Params[1].Float.Min)
 				found = true
 			}
 		}
@@ -206,7 +202,7 @@ func TestChangeTemplate(t *testing.T) {
 		name := gofakeit.UUID()
 		_, err = client.UpdateTemplate(&templates.UpdateTemplateParams{
 			Body: templates.UpdateTemplateBody{
-				Yaml: fmt.Sprintf(string(b), name, gofakeit.UUID(), "s", "%"),
+				Yaml: fmt.Sprintf(string(b), name, gofakeit.UUID()),
 			},
 			Context: pmmapitests.Context,
 		})
@@ -217,7 +213,7 @@ func TestChangeTemplate(t *testing.T) {
 		name := gofakeit.UUID()
 		_, err := client.CreateTemplate(&templates.CreateTemplateParams{
 			Body: templates.CreateTemplateBody{
-				Yaml: fmt.Sprintf(string(b), name, gofakeit.UUID(), "s", "%"),
+				Yaml: fmt.Sprintf(string(b), name, gofakeit.UUID()),
 			},
 			Context: pmmapitests.Context,
 		})
@@ -237,7 +233,7 @@ func TestChangeTemplate(t *testing.T) {
 		name := gofakeit.UUID()
 		_, err = client.CreateTemplate(&templates.CreateTemplateParams{
 			Body: templates.CreateTemplateBody{
-				Yaml: fmt.Sprintf(string(b), name, gofakeit.UUID(), "s", "%"),
+				Yaml: fmt.Sprintf(string(b), name, gofakeit.UUID()),
 			},
 			Context: pmmapitests.Context,
 		})
@@ -265,7 +261,7 @@ func TestDeleteTemplate(t *testing.T) {
 		name := gofakeit.UUID()
 		_, err := client.CreateTemplate(&templates.CreateTemplateParams{
 			Body: templates.CreateTemplateBody{
-				Yaml: fmt.Sprintf(string(b), name, gofakeit.UUID(), "s", "%"),
+				Yaml: fmt.Sprintf(string(b), name, gofakeit.UUID(), "s"),
 			},
 			Context: pmmapitests.Context,
 		})
@@ -296,7 +292,7 @@ func TestDeleteTemplate(t *testing.T) {
 		name := gofakeit.UUID()
 		_, err := client.CreateTemplate(&templates.CreateTemplateParams{
 			Body: templates.CreateTemplateBody{
-				Yaml: fmt.Sprintf(string(b), name, gofakeit.UUID(), "s", "%"),
+				Yaml: fmt.Sprintf(string(b), name, gofakeit.UUID(), "s"),
 			},
 			Context: pmmapitests.Context,
 		})
@@ -305,7 +301,7 @@ func TestDeleteTemplate(t *testing.T) {
 		channelID := createChannel(t)
 		defer deleteChannel(t, templatesClient.Default.Channels, channelID)
 
-		params := createAlertRuleParams(name, channelID, "param2", &rules.FiltersItems0{
+		params := createAlertRuleParams(name, channelID, "param1", &rules.FiltersItems0{
 			Type:  pointer.ToString("EQUAL"),
 			Key:   "threshold",
 			Value: "12",
@@ -390,6 +386,7 @@ func TestListTemplate(t *testing.T) {
 			assert.Equal(t, "300s", template.For)
 			assert.Len(t, template.Params, 2)
 
+			param := template.Params[0]
 			assert.Equal(t, "param1", template.Params[0].Name)
 			assert.Equal(t, "first parameter with default value and defined range", template.Params[0].Summary)
 			assert.Equal(t, "FLOAT", *template.Params[0].Type)
@@ -397,26 +394,22 @@ func TestListTemplate(t *testing.T) {
 			assert.Nil(t, template.Params[0].Bool)
 			assert.Nil(t, template.Params[0].String)
 			assert.NotNil(t, template.Params[0].Float)
-			assert.True(t, template.Params[0].Float.HasDefault)
-			assert.Equal(t, float32(80), template.Params[0].Float.Default)
-			assert.True(t, template.Params[0].Float.HasMax)
-			assert.Equal(t, float32(100), template.Params[0].Float.Max)
-			assert.True(t, template.Params[0].Float.HasMin)
-			assert.Equal(t, float32(0), template.Params[0].Float.Min)
 
 			assert.Equal(t, "param2", template.Params[1].Name)
-			assert.Equal(t, "second parameter without default value and defined range", template.Params[1].Summary)
+			assert.Equal(t, "second parameter with default value and defined range", template.Params[1].Summary)
 			assert.Equal(t, "FLOAT", *template.Params[1].Type)
 			assert.Equal(t, "SECONDS", *template.Params[1].Unit)
 			assert.Nil(t, template.Params[1].Bool)
 			assert.Nil(t, template.Params[1].String)
 			assert.NotNil(t, template.Params[1].Float)
-			assert.False(t, template.Params[1].Float.HasDefault)
-			assert.Equal(t, float32(0), template.Params[1].Float.Default)
-			assert.False(t, template.Params[1].Float.HasMax)
-			assert.Equal(t, float32(0), template.Params[1].Float.Max)
-			assert.False(t, template.Params[1].Float.HasMin)
-			assert.Equal(t, float32(00), template.Params[1].Float.Min)
+
+			float := param.Float
+			assert.True(t, float.HasDefault)
+			assert.Equal(t, float32(80), float.Default)
+			assert.True(t, float.HasMax)
+			assert.Equal(t, float32(100), float.Max)
+			assert.True(t, float.HasMin)
+			assert.Equal(t, float32(0), float.Min)
 
 			assert.Equal(t, map[string]string{"foo": "bar"}, template.Labels)
 			assert.Equal(t, map[string]string{"description": "test description", "summary": "test summary"}, template.Annotations)

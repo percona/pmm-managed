@@ -121,8 +121,8 @@ func TestPSMDBClusterServer(t *testing.T) {
 			assert.NoError(t, err)
 		}
 
-		cluster, err := dbaasClient.Default.PSMDBCluster.GetPSMDBClusterCredentials(&psmdbcluster.GetPSMDBClusterCredentialsParams{
-			Body: psmdbcluster.GetPSMDBClusterCredentialsBody{
+		cluster, err := dbaasClient.Default.PSMDBCluster.GetPSMDBCluster(&psmdbcluster.GetPSMDBClusterParams{
+			Body: psmdbcluster.GetPSMDBClusterBody{
 				KubernetesClusterName: psmdbKubernetesClusterName,
 				Name:                  "second-psmdb-test",
 			},

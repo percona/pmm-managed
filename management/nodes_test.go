@@ -5,8 +5,6 @@ import (
 	"testing"
 
 	"github.com/AlekSi/pointer"
-	inventoryClient "github.com/percona/pmm/api/inventorypb/json/client"
-	"github.com/percona/pmm/api/inventorypb/json/client/agents"
 	"github.com/percona/pmm/api/inventorypb/json/client/nodes"
 	"github.com/percona/pmm/api/managementpb/json/client"
 	"github.com/percona/pmm/api/managementpb/json/client/node"
@@ -162,16 +160,15 @@ func TestNodeRegister(t *testing.T) {
 			machineID := pmmapitests.TestString(t, "machine-id")
 			nodeModel := pmmapitests.TestString(t, "node-model")
 			body := node.RegisterNodeBody{
-				NodeName:          nodeName,
-				NodeType:          pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
-				MachineID:         machineID,
-				NodeModel:         nodeModel,
-				Az:                "eu",
-				Region:            "us-west",
-				Address:           "10.10.10.10",
-				Distro:            "Linux",
-				CustomLabels:      map[string]string{"foo": "bar"},
-				DisableCollectors: []string{"diskstats", "filesystem", "standard.process"},
+				NodeName:     nodeName,
+				NodeType:     pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
+				MachineID:    machineID,
+				NodeModel:    nodeModel,
+				Az:           "eu",
+				Region:       "us-west",
+				Address:      "10.10.10.10",
+				Distro:       "Linux",
+				CustomLabels: map[string]string{"foo": "bar"},
 			}
 			nodeID, pmmAgentID := registerGenericNode(t, body)
 			defer pmmapitests.RemoveNodes(t, nodeID)
@@ -196,22 +193,7 @@ func TestNodeRegister(t *testing.T) {
 			assertPMMAgentCreated(t, nodeID, pmmAgentID)
 
 			// Check Node Exporter is created
-			listAgentsOK, err := inventoryClient.Default.Agents.ListAgents(&agents.ListAgentsParams{
-				Body: agents.ListAgentsBody{
-					PMMAgentID: pmmAgentID,
-				},
-				Context: pmmapitests.Context,
-			})
-			assert.NoError(t, err)
-			require.Len(t, listAgentsOK.Payload.NodeExporter, 1)
-			nodeExporterAgentID := listAgentsOK.Payload.NodeExporter[0].AgentID
-			ok := assert.Equal(t, agents.NodeExporterItems0{
-				PMMAgentID:         pmmAgentID,
-				AgentID:            nodeExporterAgentID,
-				DisabledCollectors: []string{"diskstats", "filesystem", "standard.process"},
-				PushMetricsEnabled: true,
-			}, *listAgentsOK.Payload.NodeExporter[0])
-
+			nodeExporterAgentID, ok := assertNodeExporterCreated(t, pmmAgentID)
 			if ok {
 				defer pmmapitests.RemoveAgents(t, nodeExporterAgentID)
 			}
