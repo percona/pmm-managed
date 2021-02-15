@@ -61,10 +61,11 @@
   version = "v10"
 
 [[projects]]
-  digest = "1:e39da38f0001252c6aaa76343c2eb5dfa3e0b3d501bbd86cf0d357d0ecbc7af7"
+  digest = "1:7da2f3e68d0cd750a4c33d938b648d3b0eb04a63077e2a2c42b47d5964286c46"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
+    "aws/arn",
     "aws/awserr",
     "aws/awsutil",
     "aws/client",
@@ -84,6 +85,7 @@
     "aws/signer/v4",
     "internal/context",
     "internal/ini",
+    "internal/s3err",
     "internal/sdkio",
     "internal/sdkmath",
     "internal/sdkrand",
@@ -91,13 +93,19 @@
     "internal/shareddefaults",
     "internal/strings",
     "internal/sync/singleflight",
+    "private/checksum",
     "private/protocol",
+    "private/protocol/eventstream",
+    "private/protocol/eventstream/eventstreamapi",
     "private/protocol/json/jsonutil",
     "private/protocol/query",
     "private/protocol/query/queryutil",
     "private/protocol/rest",
+    "private/protocol/restxml",
     "private/protocol/xml/xmlutil",
     "service/rds",
+    "service/s3",
+    "service/s3/internal/arn",
     "service/sts",
     "service/sts/stsiface",
   ]
@@ -408,8 +416,8 @@
   revision = "c158e23a172f892cc389233858238449efec1dbb"
 
 [[projects]]
-  branch = "PMM-2.0"
-  digest = "1:a3113281b924c96d25babbdd2a7611ed58ff4e5184dab85353d4199666abe275"
+  branch = "PMM-7448-location-and-credentials-test"
+  digest = "1:e02e1573fa524d6b2647849ab6e9a6633a8335032f8586a77012d2e6ba286270"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -433,7 +441,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "4559713b8bc01ab2538bd183bca387cebe624966"
+  revision = "befbee8a4636a07fac4b8367fd969e4f0492e5d8"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
@@ -850,6 +858,7 @@
     "github.com/aws/aws-sdk-go/aws/endpoints",
     "github.com/aws/aws-sdk-go/aws/session",
     "github.com/aws/aws-sdk-go/service/rds",
+    "github.com/aws/aws-sdk-go/service/s3",
     "github.com/brianvoe/gofakeit",
     "github.com/go-openapi/runtime/client",
     "github.com/go-openapi/strfmt",

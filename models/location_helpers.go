@@ -17,6 +17,11 @@
 package models
 
 import (
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -111,6 +116,26 @@ func FindBackupLocations(q *reform.Querier) ([]*BackupLocation, error) {
 	return locations, nil
 }
 
+// ensureOneLocationConfig ensures that only one config in the arguments is set.
+func ensureOneLocationConfig(clc *PMMClientLocationConfig, slc *PMMServerLocationConfig, s3lc *S3LocationConfig) bool {
+	var configCount int
+	if clc != nil {
+		configCount++
+	}
+	if slc != nil {
+		configCount++
+	}
+	if s3lc != nil {
+		configCount++
+	}
+
+	if configCount == 1 {
+		return true
+	}
+
+	return false
+}
+
 // CreateBackupLocationParams are params for creating new backup location.
 type CreateBackupLocationParams struct {
 	Name        string
@@ -138,18 +163,8 @@ func CreateBackupLocation(q *reform.Querier, params CreateBackupLocationParams) 
 		Name:        params.Name,
 		Description: params.Description,
 	}
-	configCount := 0
-	if params.S3Config != nil {
-		configCount++
-	}
-	if params.PMMServerConfig != nil {
-		configCount++
-	}
-	if params.PMMClientConfig != nil {
-		configCount++
-	}
 
-	if configCount > 1 {
+	if !ensureOneLocationConfig(params.PMMClientConfig, params.PMMServerConfig, params.S3Config) {
 		return nil, status.Error(codes.InvalidArgument, "Only one config is allowed.")
 	}
 
@@ -184,5 +199,66 @@ func CreateBackupLocation(q *reform.Querier, params CreateBackupLocationParams) 
 	}
 
 	return row, nil
+}
 
+func testS3Config(c *S3LocationConfig) error {
+	// TODO: extract region and bucket
+	const (
+		region = "eu-central-1"
+		bucket = "extracted_bucket"
+	)
+
+	s3Config := &aws.Config{
+		Credentials: credentials.NewStaticCredentials(c.AccessKey, c.SecretKey, ""),
+		Region:      aws.String(region),
+	}
+	newSession, err := session.NewSession(s3Config)
+	if err != nil {
+		return err
+	}
+
+	s3Client := s3.New(newSession)
+	if _, err := s3Client.ListObjects(&s3.ListObjectsInput{Bucket: aws.String(bucket)}); err != nil {
+		if s3err, ok := err.(awserr.Error); ok {
+			return status.Errorf(codes.InvalidArgument, "%s: %s.", s3err.Code(), s3err.Message())
+		} else {
+			return status.Error(codes.InvalidArgument, err.Error())
+		}
+	}
+
+	return nil
+}
+
+// TestBackupLocationParams are params for testing location and credentials.
+type TestBackupLocationParams struct {
+	PMMClientConfig *PMMClientLocationConfig
+	PMMServerConfig *PMMServerLocationConfig
+	S3Config        *S3LocationConfig
+}
+
+// TestBackupLocationConfig tests backup location config.
+func TestBackupLocationConfig(params *TestBackupLocationParams) error {
+	if !ensureOneLocationConfig(params.PMMClientConfig, params.PMMServerConfig, params.S3Config) {
+		return status.Error(codes.InvalidArgument, "Only one config is allowed.")
+	}
+
+	switch {
+	case params.S3Config != nil:
+		if err := checkS3Config(params.S3Config); err != nil {
+			return err
+		}
+		if err := testS3Config(params.S3Config); err != nil {
+			return err
+		}
+	case params.PMMServerConfig != nil:
+		if err := checkPMMServerLocationConfig(params.PMMServerConfig); err != nil {
+			return err
+		}
+	case params.PMMClientConfig != nil:
+		if err := checkPMMClientLocationConfig(params.PMMClientConfig); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

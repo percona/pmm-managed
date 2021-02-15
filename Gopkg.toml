@@ -14,7 +14,7 @@ required = [
 
 [[constraint]]
   name = "github.com/percona/pmm"
-  branch = "PMM-2.0"
+  branch = "PMM-7448-location-and-credentials-test"
 
 [[constraint]]
   name = "github.com/percona-platform/saas"
@@ -28,3 +28,7 @@ required = [
 [[constraint]]
   name = "github.com/percona/exporter_shared"
   version = "0.7.2"
+
+[[constraint]]
+  name = "github.com/aws/aws-sdk-go"
+  version = "1.33.10"
