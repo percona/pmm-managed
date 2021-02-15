@@ -24,4 +24,3 @@ required = [
 [[constraint]]
   name = "github.com/percona-platform/dbaas-api"
   branch = "PMM-7412-create-api-for-getting-logs"
-#  branch = "main"
