@@ -18,24 +18,15 @@ package management
 
 import (
 	"context"
-	"fmt"
-	"net"
-	"net/http"
-	"net/url"
-	"strconv"
-	"time"
-
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
-	"github.com/AlekSi/pointer"
-
-	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services"
 
 	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/api/managementpb"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
+
+	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services"
 )
 
 // ExternalService External Management Service.
@@ -120,14 +111,8 @@ func (e *ExternalService) AddExternal(ctx context.Context, req *managementpb.Add
 		}
 
 		if !req.SkipConnectionChecks {
-			if isPushMode(req.MetricsMode) {
-				if err = e.registry.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
-					return err
-				}
-			} else {
-				if err = e.checkPullConnectionToService(ctx, tx.Querier, service, row); err != nil {
-					return status.Error(codes.FailedPrecondition, fmt.Sprintf("Connection check failed: %s.", err.Error()))
-				}
+			if err = e.registry.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
+				return err
 			}
 		}
 
@@ -150,48 +135,4 @@ func (e *ExternalService) AddExternal(ctx context.Context, req *managementpb.Add
 		e.vmdb.RequestConfigurationUpdate()
 	}
 	return res, nil
-}
-
-func (e *ExternalService) checkPullConnectionToService(ctx context.Context, q *reform.Querier, service *models.Service, agent *models.Agent) error {
-	node, err := models.FindNodeByID(q, service.NodeID)
-	if err != nil {
-		return err
-	}
-
-	username := pointer.GetString(agent.Username)
-	password := pointer.GetString(agent.Password)
-	scheme := pointer.GetString(agent.MetricsScheme)
-	path := pointer.GetString(agent.MetricsPath)
-	listenPort := int(pointer.GetUint16(agent.ListenPort))
-	address := net.JoinHostPort(node.Address, strconv.Itoa(listenPort))
-	u := &url.URL{
-		Scheme: scheme,
-		Host:   address,
-		Path:   path,
-	}
-	switch {
-	case password != "":
-		u.User = url.UserPassword(username, password)
-	case username != "":
-		u.User = url.User(username)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
-	if err != nil {
-		return err
-	}
-
-	client := http.Client{Timeout: 5 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close() //nolint:errcheck
-
-	// TODO: handle check of exporter response format https://jira.percona.com/browse/PMM-5778
-
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("unexpected HTTP status code: %d. Expected: 200", resp.StatusCode)
-	}
-	return nil
 }
