@@ -184,13 +184,13 @@ func TestRemoveBackupLocation(t *testing.T) {
 		},
 	}
 	res1, err := svc.AddLocation(ctx, req)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	req.Name = gofakeit.Name()
 	_, err = svc.AddLocation(ctx, req)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	req.Name = gofakeit.Name()
 	res3, err := svc.AddLocation(ctx, req)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	req.Name = gofakeit.Name()
 
 	assertNotFound := func(id string, locations []*backupv1beta1.Location) func() bool {
@@ -209,15 +209,15 @@ func TestRemoveBackupLocation(t *testing.T) {
 	_, err = svc.RemoveLocation(ctx, &backupv1beta1.RemoveLocationRequest{
 		LocationId: res1.LocationId,
 	})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	_, err = svc.RemoveLocation(ctx, &backupv1beta1.RemoveLocationRequest{
 		LocationId: res3.LocationId,
 	})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	res, err := svc.ListLocations(ctx, &backupv1beta1.ListLocationsRequest{})
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	assert.Condition(t, assertNotFound(res1.LocationId, res.Locations))
 	assert.Condition(t, assertNotFound(res3.LocationId, res.Locations))
