@@ -111,7 +111,7 @@ func FindBackupLocations(q *reform.Querier) ([]*BackupLocation, error) {
 	return locations, nil
 }
 
-// FindBackupLocationByID finds a Backup Location by it's ID.
+// FindBackupLocationByID finds a Backup Location by its ID.
 func FindBackupLocationByID(q *reform.Querier, id string) (*BackupLocation, error) {
 	if id == "" {
 		return nil, status.Error(codes.InvalidArgument, "Empty Location ID.")
