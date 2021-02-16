@@ -813,13 +813,13 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 			if err != nil {
 				return err
 			}
-			host := node.Address
-			address := net.JoinHostPort(host, strconv.Itoa(int(pointer.GetUint16(agent.ListenPort))))
+
 			parsedURL, err := url.Parse(dsn)
 			if err != nil {
 				return status.Error(codes.FailedPrecondition, fmt.Sprintf("Cannot parse url: %v.", err))
 			}
-			parsedURL.Host = address
+
+			parsedURL.Host = net.JoinHostPort(node.Address, strconv.Itoa(int(pointer.GetUint16(agent.ListenPort))))
 			dsn = parsedURL.String()
 		}
 
