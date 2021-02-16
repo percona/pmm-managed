@@ -421,6 +421,7 @@ var databaseSchema = [][]string{
 	26: {
 		`ALTER TABLE ia_rules ALTER COLUMN channel_ids DROP NOT NULL`,
 	},
+
 	27: {
 		`CREATE TABLE backup_locations (
 			id VARCHAR NOT NULL,
@@ -438,8 +439,14 @@ var databaseSchema = [][]string{
 			UNIQUE (name)
 		)`,
 	},
+
 	28: {
 		`ALTER TABLE agents ADD COLUMN disabled_collectors VARCHAR[]`,
+	},
+
+	// TODO
+	1050: {
+		``,
 	},
 }
 
@@ -526,6 +533,10 @@ func SetupDB(sqlDB *sql.DB, params *SetupDBParams) (*reform.DB, error) {
 			}
 
 			queries := databaseSchema[version]
+			if len(queries) == 0 {
+				return fmt.Errorf("no queries in version %d: missed migration number?", version)
+			}
+
 			queries = append(queries, fmt.Sprintf(`INSERT INTO schema_migrations (id) VALUES (%d)`, version))
 			for _, q := range queries {
 				q = strings.TrimSpace(q)
