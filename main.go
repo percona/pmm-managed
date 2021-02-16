@@ -160,7 +160,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	inventorypb.RegisterNodesServer(gRPCServer, inventorygrpc.NewNodesServer(nodesSvc))
 	inventorypb.RegisterServicesServer(gRPCServer, inventorygrpc.NewServicesServer(servicesSvc))
 	inventorypb.RegisterAgentsServer(gRPCServer, inventorygrpc.NewAgentsServer(agentsSvc))
-	inventorypb.RegisterTunnelsServer(gRPCServer, inventory.NewTunnelsService())
+	inventorypb.RegisterTunnelsServer(gRPCServer, inventory.NewTunnelsService(deps.db, deps.agentsRegistry))
 
 	nodeSvc := management.NewNodeService(deps.db, deps.agentsRegistry)
 	serviceSvc := management.NewServiceService(deps.db, deps.agentsRegistry, deps.vmdb)

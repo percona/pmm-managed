@@ -24,22 +24,15 @@ import (
 
 //go:generate reform
 
-type TunnelType string
-
-const (
-	ConnectTunnelType TunnelType = "connect"
-	ListenTunnelType  TunnelType = "listen"
-)
-
 //reform:tunnels
 type Tunnel struct {
-	TunnelID    string     `reform:"tunnel_id,pk"`
-	TunnelType  TunnelType `reform:"tunnel_type"`
-	PMMAgentID  string     `reform:"pmm_agent_id"`
-	ConnectPort uint16     `reform:"connect_port"`
-	ListenPort  uint16     `reform:"listen_port"`
-	CreatedAt   time.Time  `reform:"created_at"`
-	UpdatedAt   time.Time  `reform:"updated_at"`
+	TunnelID       string    `reform:"tunnel_id,pk"`
+	ListenAgentID  string    `reform:"listen_agent_id"`
+	ListenPort     uint16    `reform:"listen_port"`
+	ConnectAgentID string    `reform:"connect_agent_id"`
+	ConnectPort    uint16    `reform:"connect_port"`
+	CreatedAt      time.Time `reform:"created_at"`
+	UpdatedAt      time.Time `reform:"updated_at"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.

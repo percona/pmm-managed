@@ -444,9 +444,20 @@ var databaseSchema = [][]string{
 		`ALTER TABLE agents ADD COLUMN disabled_collectors VARCHAR[]`,
 	},
 
-	// TODO
-	1050: {
-		``,
+	29: {
+		`CREATE TABLE tunnels (
+			tunnel_id VARCHAR NOT NULL,
+			listen_agent_id VARCHAR NOT NULL,
+			listen_port INTEGER NOT NULL CHECK (listen_port > 0),
+			connect_agent_id VARCHAR NOT NULL,
+			connect_port INTEGER NOT NULL CHECK (connect_port > 0),
+			created_at TIMESTAMP NOT NULL,
+			updated_at TIMESTAMP NOT NULL,
+
+			PRIMARY KEY (tunnel_id),
+			FOREIGN KEY (listen_agent_id) REFERENCES agents (agent_id),
+			FOREIGN KEY (connect_agent_id) REFERENCES agents (agent_id)
+		)`,
 	},
 }
 

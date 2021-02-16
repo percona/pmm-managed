@@ -29,10 +29,10 @@ func (v *tunnelTableType) Name() string {
 func (v *tunnelTableType) Columns() []string {
 	return []string{
 		"tunnel_id",
-		"tunnel_type",
-		"pmm_agent_id",
-		"connect_port",
+		"listen_agent_id",
 		"listen_port",
+		"connect_agent_id",
+		"connect_port",
 		"created_at",
 		"updated_at",
 	}
@@ -60,10 +60,10 @@ var TunnelTable = &tunnelTableType{
 		SQLName: "tunnels",
 		Fields: []parse.FieldInfo{
 			{Name: "TunnelID", Type: "string", Column: "tunnel_id"},
-			{Name: "TunnelType", Type: "TunnelType", Column: "tunnel_type"},
-			{Name: "PMMAgentID", Type: "string", Column: "pmm_agent_id"},
-			{Name: "ConnectPort", Type: "uint16", Column: "connect_port"},
+			{Name: "ListenAgentID", Type: "string", Column: "listen_agent_id"},
 			{Name: "ListenPort", Type: "uint16", Column: "listen_port"},
+			{Name: "ConnectAgentID", Type: "string", Column: "connect_agent_id"},
+			{Name: "ConnectPort", Type: "uint16", Column: "connect_port"},
 			{Name: "CreatedAt", Type: "time.Time", Column: "created_at"},
 			{Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"},
 		},
@@ -76,10 +76,10 @@ var TunnelTable = &tunnelTableType{
 func (s Tunnel) String() string {
 	res := make([]string, 7)
 	res[0] = "TunnelID: " + reform.Inspect(s.TunnelID, true)
-	res[1] = "TunnelType: " + reform.Inspect(s.TunnelType, true)
-	res[2] = "PMMAgentID: " + reform.Inspect(s.PMMAgentID, true)
-	res[3] = "ConnectPort: " + reform.Inspect(s.ConnectPort, true)
-	res[4] = "ListenPort: " + reform.Inspect(s.ListenPort, true)
+	res[1] = "ListenAgentID: " + reform.Inspect(s.ListenAgentID, true)
+	res[2] = "ListenPort: " + reform.Inspect(s.ListenPort, true)
+	res[3] = "ConnectAgentID: " + reform.Inspect(s.ConnectAgentID, true)
+	res[4] = "ConnectPort: " + reform.Inspect(s.ConnectPort, true)
 	res[5] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
 	res[6] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
 	return strings.Join(res, ", ")
@@ -90,10 +90,10 @@ func (s Tunnel) String() string {
 func (s *Tunnel) Values() []interface{} {
 	return []interface{}{
 		s.TunnelID,
-		s.TunnelType,
-		s.PMMAgentID,
-		s.ConnectPort,
+		s.ListenAgentID,
 		s.ListenPort,
+		s.ConnectAgentID,
+		s.ConnectPort,
 		s.CreatedAt,
 		s.UpdatedAt,
 	}
@@ -104,10 +104,10 @@ func (s *Tunnel) Values() []interface{} {
 func (s *Tunnel) Pointers() []interface{} {
 	return []interface{}{
 		&s.TunnelID,
-		&s.TunnelType,
-		&s.PMMAgentID,
-		&s.ConnectPort,
+		&s.ListenAgentID,
 		&s.ListenPort,
+		&s.ConnectAgentID,
+		&s.ConnectPort,
 		&s.CreatedAt,
 		&s.UpdatedAt,
 	}
