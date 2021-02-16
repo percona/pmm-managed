@@ -102,3 +102,9 @@ func (this *AddLocationRequest) Validate() error {
 func (this *AddLocationResponse) Validate() error {
 	return nil
 }
+func (this *RemoveLocationRequest) Validate() error {
+	return nil
+}
+func (this *RemoveLocationResponse) Validate() error {
+	return nil
+}
