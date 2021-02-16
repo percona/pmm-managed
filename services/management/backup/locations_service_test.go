@@ -195,14 +195,12 @@ func TestRemoveBackupLocation(t *testing.T) {
 
 	assertNotFound := func(id string, locations []*backupv1beta1.Location) func() bool {
 		return func() bool {
-			found := false
 			for _, loc := range locations {
 				if loc.LocationId == id {
-					found = true
-					break
+					return false
 				}
 			}
-			return !found
+			return true
 		}
 	}
 
