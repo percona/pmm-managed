@@ -169,3 +169,57 @@ func TestListBackupLocations(t *testing.T) {
 	})
 
 }
+
+func TestRemoveBackupLocation(t *testing.T) {
+	ctx := context.Background()
+	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+
+	svc := NewLocationsService(db)
+
+	req := &backupv1beta1.AddLocationRequest{
+		Name: gofakeit.Name(),
+		PmmClientConfig: &backupv1beta1.PMMClientLocationConfig{
+			Path: "/tmp",
+		},
+	}
+	res1, err := svc.AddLocation(ctx, req)
+	require.Nil(t, err)
+	req.Name = gofakeit.Name()
+	_, err = svc.AddLocation(ctx, req)
+	require.Nil(t, err)
+	req.Name = gofakeit.Name()
+	res3, err := svc.AddLocation(ctx, req)
+	require.Nil(t, err)
+	req.Name = gofakeit.Name()
+
+	assertNotFound := func(id string, locations []*backupv1beta1.Location) func() bool {
+		return func() bool {
+			found := false
+			for _, loc := range locations {
+				if loc.LocationId == id {
+					found = true
+					break
+				}
+			}
+			return !found
+		}
+	}
+
+	_, err = svc.RemoveLocation(ctx, &backupv1beta1.RemoveLocationRequest{
+		LocationId: res1.LocationId,
+	})
+	assert.Nil(t, err)
+
+	_, err = svc.RemoveLocation(ctx, &backupv1beta1.RemoveLocationRequest{
+		LocationId: res3.LocationId,
+	})
+	assert.Nil(t, err)
+
+	res, err := svc.ListLocations(ctx, &backupv1beta1.ListLocationsRequest{})
+	require.Nil(t, err)
+
+	assert.Condition(t, assertNotFound(res1.LocationId, res.Locations))
+	assert.Condition(t, assertNotFound(res3.LocationId, res.Locations))
+
+}
