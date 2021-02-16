@@ -5,15 +5,15 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-// go-sumtype:decl isAgentMessage_Payload
-// go-sumtype:decl isServerMessage_Payload
+//go-sumtype:decl isAgentMessage_Payload
+//go-sumtype:decl isServerMessage_Payload
 
-// go-sumtype:decl AgentRequestPayload
-// go-sumtype:decl AgentResponsePayload
-// go-sumtype:decl ServerResponsePayload
-// go-sumtype:decl ServerRequestPayload
+//go-sumtype:decl AgentRequestPayload
+//go-sumtype:decl AgentResponsePayload
+//go-sumtype:decl ServerResponsePayload
+//go-sumtype:decl ServerRequestPayload
 
-// go-sumtype:decl isStartActionRequest_Params
+//go-sumtype:decl isStartActionRequest_Params
 
 // code below uses the same order as payload types at AgentMessage / ServerMessage
 
@@ -46,19 +46,15 @@ type ServerRequestPayload interface {
 func (m *Ping) AgentMessageRequestPayload() isAgentMessage_Payload {
 	return &AgentMessage_Ping{Ping: m}
 }
-
 func (m *StateChangedRequest) AgentMessageRequestPayload() isAgentMessage_Payload {
 	return &AgentMessage_StateChanged{StateChanged: m}
 }
-
 func (m *QANCollectRequest) AgentMessageRequestPayload() isAgentMessage_Payload {
 	return &AgentMessage_QanCollect{QanCollect: m}
 }
-
 func (m *ActionResultRequest) AgentMessageRequestPayload() isAgentMessage_Payload {
 	return &AgentMessage_ActionResult{ActionResult: m}
 }
-
 func (m *TunnelData) AgentMessageRequestPayload() isAgentMessage_Payload {
 	return &AgentMessage_TunnelData{TunnelData: m}
 }
@@ -68,23 +64,18 @@ func (m *TunnelData) AgentMessageRequestPayload() isAgentMessage_Payload {
 func (m *Pong) AgentMessageResponsePayload() isAgentMessage_Payload {
 	return &AgentMessage_Pong{Pong: m}
 }
-
 func (m *SetStateResponse) AgentMessageResponsePayload() isAgentMessage_Payload {
 	return &AgentMessage_SetState{SetState: m}
 }
-
 func (m *StartActionResponse) AgentMessageResponsePayload() isAgentMessage_Payload {
 	return &AgentMessage_StartAction{StartAction: m}
 }
-
 func (m *StopActionResponse) AgentMessageResponsePayload() isAgentMessage_Payload {
 	return &AgentMessage_StopAction{StopAction: m}
 }
-
 func (m *CheckConnectionResponse) AgentMessageResponsePayload() isAgentMessage_Payload {
 	return &AgentMessage_CheckConnection{CheckConnection: m}
 }
-
 func (m *TunnelDataAck) AgentMessageResponsePayload() isAgentMessage_Payload {
 	return &AgentMessage_TunnelDataAck{TunnelDataAck: m}
 }
@@ -94,19 +85,15 @@ func (m *TunnelDataAck) AgentMessageResponsePayload() isAgentMessage_Payload {
 func (m *Pong) ServerMessageResponsePayload() isServerMessage_Payload {
 	return &ServerMessage_Pong{Pong: m}
 }
-
 func (m *StateChangedResponse) ServerMessageResponsePayload() isServerMessage_Payload {
 	return &ServerMessage_StateChanged{StateChanged: m}
 }
-
 func (m *QANCollectResponse) ServerMessageResponsePayload() isServerMessage_Payload {
 	return &ServerMessage_QanCollect{QanCollect: m}
 }
-
 func (m *ActionResultResponse) ServerMessageResponsePayload() isServerMessage_Payload {
 	return &ServerMessage_ActionResult{ActionResult: m}
 }
-
 func (m *TunnelDataAck) ServerMessageResponsePayload() isServerMessage_Payload {
 	return &ServerMessage_TunnelDataAck{TunnelDataAck: m}
 }
@@ -116,23 +103,18 @@ func (m *TunnelDataAck) ServerMessageResponsePayload() isServerMessage_Payload {
 func (m *Ping) ServerMessageRequestPayload() isServerMessage_Payload {
 	return &ServerMessage_Ping{Ping: m}
 }
-
 func (m *SetStateRequest) ServerMessageRequestPayload() isServerMessage_Payload {
 	return &ServerMessage_SetState{SetState: m}
 }
-
 func (m *StartActionRequest) ServerMessageRequestPayload() isServerMessage_Payload {
 	return &ServerMessage_StartAction{StartAction: m}
 }
-
 func (m *StopActionRequest) ServerMessageRequestPayload() isServerMessage_Payload {
 	return &ServerMessage_StopAction{StopAction: m}
 }
-
 func (m *CheckConnectionRequest) ServerMessageRequestPayload() isServerMessage_Payload {
 	return &ServerMessage_CheckConnection{CheckConnection: m}
 }
-
 func (m *TunnelData) ServerMessageRequestPayload() isServerMessage_Payload {
 	return &ServerMessage_TunnelData{TunnelData: m}
 }
@@ -190,7 +172,7 @@ var (
 	_ ServerRequestPayload = (*TunnelData)(nil)
 )
 
-// go-sumtype:decl AgentParams
+//go-sumtype:decl AgentParams
 
 // AgentParams is a common interface for AgentProcess and BuiltinAgent parameters.
 type AgentParams interface {

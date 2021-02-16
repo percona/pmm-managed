@@ -10,7 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// go-sumtype:decl isQueryActionValue_Kind
+//go-sumtype:decl isQueryActionValue_Kind
 
 func makeValue(value interface{}) (*QueryActionValue, error) {
 	// In the future, we may decide to:

@@ -1,6 +1,6 @@
 package inventorypb
 
-// go-sumtype:decl Node
+//go-sumtype:decl Node
 
 // Node is a common interface for all types of Nodes.
 type Node interface {

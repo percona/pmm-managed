@@ -265,6 +265,16 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 					Payload: new(agentpb.ActionResultResponse),
 				})
 
+			case *agentpb.TunnelData:
+				// TODO
+
+				agent.channel.SendResponse(&channel.ServerResponse{
+					ID:      req.ID,
+					Payload: &agentpb.TunnelDataAck{
+						// TODO
+					},
+				})
+
 			case nil:
 				l.Warnf("Unexpected request: %v.", req)
 				disconnectReason = "unimplemented"
