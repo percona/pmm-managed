@@ -1277,7 +1277,7 @@ func (r *Registry) StartPTMongoDBSummaryAction(ctx context.Context, id, pmmAgent
 				Password: password,
 			},
 		},
-		Timeout: defaultActionTimeout,
+		Timeout: defaultPtActionTimeout,
 	}
 
 	// Agent which the action request will be sent to, got by the provided ID
