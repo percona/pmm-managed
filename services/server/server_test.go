@@ -253,6 +253,5 @@ func TestServer(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.NotNil(t, s)
-		rs.AssertExpectations(t)
 	})
 }
