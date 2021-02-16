@@ -19,9 +19,10 @@ package inventory
 import (
 	"context"
 
-	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm/api/inventorypb"
 	"gopkg.in/reform.v1"
+
+	"github.com/percona/pmm-managed/models"
 )
 
 // TunnelsService works with inventory API Tunnels.
@@ -40,10 +41,7 @@ func NewTunnelsService(db *reform.DB, r agentsRegistry) inventorypb.TunnelsServe
 
 // ListTunnels returns a list of all Tunnels.
 func (s *TunnelsService) ListTunnels(ctx context.Context, req *inventorypb.ListTunnelsRequest) (*inventorypb.ListTunnelsResponse, error) {
-	// TODO
-	_ = req.AgentId
-
-	tunnels, err := models.FindTunnels(s.db.Querier)
+	tunnels, err := models.FindTunnels(s.db.Querier, req.AgentId)
 	if err != nil {
 		return nil, err
 	}
@@ -53,6 +51,7 @@ func (s *TunnelsService) ListTunnels(ctx context.Context, req *inventorypb.ListT
 	}
 	for i, t := range tunnels {
 		res.Tunnel[i] = &inventorypb.Tunnel{
+			TunnelId:       t.TunnelID,
 			ListenAgentId:  t.ListenAgentID,
 			ListenPort:     uint32(t.ListenPort),
 			ConnectAgentId: t.ConnectAgentID,

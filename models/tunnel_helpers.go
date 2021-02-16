@@ -40,10 +40,17 @@ func checkUniqueTunnelID(q *reform.Querier, id string) error {
 	}
 }
 
-// FindTunnels returns Tunnels by filters.
-// TODO
-func FindTunnels(q *reform.Querier) ([]*Tunnel, error) {
-	structs, err := q.SelectAllFrom(TunnelTable, "ORDER BY tunnel_id")
+// FindTunnels returns Tunnels for given pmm-agent, or all, if pmmAgentID is empty.
+func FindTunnels(q *reform.Querier, pmmAgentID string) ([]*Tunnel, error) {
+	var args []interface{}
+	tail := "ORDER BY tunnel_id"
+	if pmmAgentID != "" {
+		// TODO check that agent exist
+		args = []interface{}{pmmAgentID, pmmAgentID}
+		tail = "WHERE listen_agent_id = ? OR connect_agent_id = ? " + tail
+	}
+
+	structs, err := q.SelectAllFrom(TunnelTable, tail, args...)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
