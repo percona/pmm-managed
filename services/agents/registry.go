@@ -94,13 +94,14 @@ type pmmAgentInfo struct {
 // TODO Split into several types https://jira.percona.com/browse/PMM-4932
 type Registry struct {
 	db        *reform.DB
-	vmdb      prometheusService
 	qanClient qanClient
+	vmdb      prometheusService
 
 	rw     sync.RWMutex
 	agents map[string]*pmmAgentInfo // id -> info
 
 	roster *roster
+	// tunnels *tunnelRegistry
 
 	mAgents      prom.GaugeFunc
 	mConnects    prom.Counter
@@ -114,12 +115,13 @@ func NewRegistry(db *reform.DB, qanClient qanClient, vmdb prometheusService) *Re
 	agents := make(map[string]*pmmAgentInfo)
 	r := &Registry{
 		db:        db,
-		vmdb:      vmdb,
 		qanClient: qanClient,
+		vmdb:      vmdb,
 
 		agents: agents,
 
 		roster: newRoster(),
+		// tunnels: newTunnelRegistry(),
 
 		mAgents: prom.NewGaugeFunc(prom.GaugeOpts{
 			Namespace: prometheusNamespace,
@@ -751,10 +753,19 @@ func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo)
 			l.Errorf("%+v", err)
 		}
 	}
+
+	tunnels, err := getTunnels(r.db.Querier, agent.id)
+	if err != nil {
+		l.Errorf("Failed to get tunnels for pmm-agent %s: %s.", agent.id, err)
+		return
+	}
+
 	state := &agentpb.SetStateRequest{
 		AgentProcesses: agentProcesses,
 		BuiltinAgents:  builtinAgents,
+		Tunnels:        tunnels,
 	}
+
 	l.Infof("sendSetStateRequest:\n%s", proto.MarshalTextString(state))
 	resp := agent.channel.SendRequest(state)
 	l.Infof("SetState response: %+v.", resp)

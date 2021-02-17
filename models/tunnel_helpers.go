@@ -47,7 +47,7 @@ func FindTunnels(q *reform.Querier, pmmAgentID string) ([]*Tunnel, error) {
 	if pmmAgentID != "" {
 		// TODO check that agent exist
 		args = []interface{}{pmmAgentID, pmmAgentID}
-		tail = "WHERE listen_agent_id = ? OR connect_agent_id = ? " + tail
+		tail = "WHERE listen_agent_id = $1 OR connect_agent_id = $2 " + tail
 	}
 
 	structs, err := q.SelectAllFrom(TunnelTable, tail, args...)
