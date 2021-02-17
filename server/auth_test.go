@@ -96,7 +96,7 @@ func TestSetup(t *testing.T) {
 			Path: "/setup",
 		})
 		t.Logf("URI: %s", uri)
-		req, err := http.NewRequest("GET", uri.String(), nil)
+		req, err := http.NewRequestWithContext(pmmapitests.Context, "GET", uri.String(), nil)
 		require.NoError(t, err)
 		req.Header.Set("X-Test-Must-Setup", "1")
 
@@ -129,7 +129,7 @@ func TestSetup(t *testing.T) {
 					Path: path,
 				})
 				t.Logf("URI: %s", uri)
-				req, err := http.NewRequest("GET", uri.String(), nil)
+				req, err := http.NewRequestWithContext(pmmapitests.Context, "GET", uri.String(), nil)
 				require.NoError(t, err)
 				req.Header.Set("X-Test-Must-Setup", "1")
 
@@ -153,7 +153,7 @@ func TestSetup(t *testing.T) {
 			InstanceID: "123",
 		})
 		require.NoError(t, err)
-		req, err := http.NewRequest("POST", uri.String(), bytes.NewReader(b))
+		req, err := http.NewRequestWithContext(pmmapitests.Context, "POST", uri.String(), bytes.NewReader(b))
 		require.NoError(t, err)
 		req.Header.Set("X-Test-Must-Setup", "1")
 
@@ -185,7 +185,7 @@ func TestSwagger(t *testing.T) {
 					Path: path,
 				})
 				t.Logf("URI: %s", uri)
-				req, err := http.NewRequest("GET", uri.String(), nil)
+				req, err := http.NewRequestWithContext(pmmapitests.Context, "GET", uri.String(), nil)
 				require.NoError(t, err)
 
 				resp, _ := doRequest(t, http.DefaultClient, req)
@@ -200,7 +200,7 @@ func TestSwagger(t *testing.T) {
 					Path: path,
 				})
 				t.Logf("URI: %s", uri)
-				req, err := http.NewRequest("GET", uri.String(), nil)
+				req, err := http.NewRequestWithContext(pmmapitests.Context, "GET", uri.String(), nil)
 				require.NoError(t, err)
 
 				resp, _ := doRequest(t, http.DefaultClient, req)
@@ -230,9 +230,19 @@ func TestPermissions(t *testing.T) {
 	adminID := createUserWithRole(t, admin, "Admin")
 	defer deleteUser(t, adminID)
 
+	viewerAPIKeyID, viewerAPIKey := createAPIKeyWithRole(t, "api-"+viewer, "Viewer")
+	defer deleteAPIKey(t, viewerAPIKeyID)
+
+	editorAPIKeyID, editorAPIKey := createAPIKeyWithRole(t, "api-"+editor, "Editor")
+	defer deleteAPIKey(t, editorAPIKeyID)
+
+	adminAPIKeyID, adminAPIKey := createAPIKeyWithRole(t, "api-"+admin, "Admin")
+	defer deleteAPIKey(t, adminAPIKeyID)
+
 	type userCase struct {
 		userType   string
 		login      string
+		apiKey     string
 		statusCode int
 	}
 
@@ -244,33 +254,33 @@ func TestPermissions(t *testing.T) {
 	}{
 		{name: "settings", url: "/v1/Settings/Get", method: "POST", userCase: []userCase{
 			{userType: "default", login: none, statusCode: 401},
-			{userType: "viewer", login: viewer, statusCode: 401},
-			{userType: "editor", login: editor, statusCode: 401},
-			{userType: "admin", login: admin, statusCode: 200},
+			{userType: "viewer", login: viewer, apiKey: viewerAPIKey, statusCode: 401},
+			{userType: "editor", login: editor, apiKey: editorAPIKey, statusCode: 401},
+			{userType: "admin", login: admin, apiKey: adminAPIKey, statusCode: 200},
 		}},
 		{name: "alerts-default", url: "/alertmanager/api/v2/alerts", method: "GET", userCase: []userCase{
 			{userType: "default", login: none, statusCode: 401},
-			{userType: "viewer", login: viewer, statusCode: 401},
-			{userType: "editor", login: editor, statusCode: 401},
-			{userType: "admin", login: admin, statusCode: 200},
+			{userType: "viewer", login: viewer, apiKey: viewerAPIKey, statusCode: 401},
+			{userType: "editor", login: editor, apiKey: editorAPIKey, statusCode: 401},
+			{userType: "admin", login: admin, apiKey: adminAPIKey, statusCode: 200},
 		}},
 		{name: "platform-sign-up", url: "/v1/Platform/SignUp", method: "POST", userCase: []userCase{
 			{userType: "default", login: none, statusCode: 401},
-			{userType: "viewer", login: viewer, statusCode: 401},
-			{userType: "editor", login: editor, statusCode: 401},
-			{userType: "admin", login: admin, statusCode: 400}, // We send bad request, but have access to endpoint
+			{userType: "viewer", login: viewer, apiKey: viewerAPIKey, statusCode: 401},
+			{userType: "editor", login: editor, apiKey: editorAPIKey, statusCode: 401},
+			{userType: "admin", login: admin, apiKey: adminAPIKey, statusCode: 400}, // We send bad request, but have access to endpoint
 		}},
 		{name: "platform-sign-in", url: "/v1/Platform/SignIn", method: "POST", userCase: []userCase{
 			{userType: "default", login: none, statusCode: 401},
-			{userType: "viewer", login: viewer, statusCode: 401},
-			{userType: "editor", login: editor, statusCode: 401},
-			{userType: "admin", login: admin, statusCode: 400}, // We send bad request, but have access to endpoint
+			{userType: "viewer", login: viewer, apiKey: viewerAPIKey, statusCode: 401},
+			{userType: "editor", login: editor, apiKey: editorAPIKey, statusCode: 401},
+			{userType: "admin", login: admin, apiKey: adminAPIKey, statusCode: 400}, // We send bad request, but have access to endpoint
 		}},
 		{name: "platform-sign-out", url: "/v1/Platform/SignOut", method: "POST", userCase: []userCase{
 			{userType: "default", login: none, statusCode: 401},
-			{userType: "viewer", login: viewer, statusCode: 401},
-			{userType: "editor", login: editor, statusCode: 401},
-			{userType: "admin", login: admin, statusCode: 400}, // We send bad request, but have access to endpoint
+			{userType: "viewer", login: viewer, apiKey: viewerAPIKey, statusCode: 401},
+			{userType: "editor", login: editor, apiKey: editorAPIKey, statusCode: 401},
+			{userType: "admin", login: admin, apiKey: adminAPIKey, statusCode: 400}, // We send bad request, but have access to endpoint
 		}},
 	}
 
@@ -279,11 +289,53 @@ func TestPermissions(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			for _, user := range test.userCase {
 				user := user
-				t.Run(user.userType, func(t *testing.T) {
+				t.Run(fmt.Sprintf("Basic auth %s", user.userType), func(t *testing.T) {
 					// make a BaseURL without authentication
 					u, err := url.Parse(pmmapitests.BaseURL.String())
 					require.NoError(t, err)
 					u.User = url.UserPassword(user.login, user.login)
+					u.Path = test.url
+
+					req, err := http.NewRequestWithContext(pmmapitests.Context, test.method, u.String(), nil)
+					require.NoError(t, err)
+
+					resp, err := http.DefaultClient.Do(req)
+					require.NoError(t, err)
+					defer resp.Body.Close() //nolint:errcheck
+
+					assert.Equal(t, user.statusCode, resp.StatusCode)
+				})
+
+				t.Run(fmt.Sprintf("API Key auth %s", user.userType), func(t *testing.T) {
+					if user.apiKey == "" {
+						t.Skip("API Key is not exist")
+					}
+					// make a BaseURL without authentication
+					u, err := url.Parse(pmmapitests.BaseURL.String())
+					require.NoError(t, err)
+					u.User = nil
+					u.Path = test.url
+
+					req, err := http.NewRequestWithContext(pmmapitests.Context, test.method, u.String(), nil)
+					require.NoError(t, err)
+
+					req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", user.apiKey))
+
+					resp, err := http.DefaultClient.Do(req)
+					require.NoError(t, err)
+					defer resp.Body.Close() //nolint:errcheck
+
+					assert.Equal(t, user.statusCode, resp.StatusCode)
+				})
+
+				t.Run(fmt.Sprintf("API Key Basic auth %s", user.userType), func(t *testing.T) {
+					if user.apiKey == "" {
+						t.Skip("API Key is not exist")
+					}
+					// make a BaseURL without authentication
+					u, err := url.Parse(pmmapitests.BaseURL.String())
+					require.NoError(t, err)
+					u.User = url.UserPassword("api_key", user.apiKey)
 					u.Path = test.url
 
 					req, err := http.NewRequestWithContext(pmmapitests.Context, test.method, u.String(), nil)
@@ -324,7 +376,7 @@ func deleteUser(t *testing.T, userID int) {
 	require.NoError(t, err)
 	u.Path = "/graph/api/admin/users/" + strconv.Itoa(userID)
 
-	req, err := http.NewRequest(http.MethodDelete, u.String(), nil)
+	req, err := http.NewRequestWithContext(pmmapitests.Context, http.MethodDelete, u.String(), nil)
 	require.NoError(t, err)
 
 	resp, b := doRequest(t, http.DefaultClient, req)
@@ -345,7 +397,7 @@ func createUser(t *testing.T, login string) int {
 	})
 	require.NoError(t, err)
 
-	req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewReader(data))
+	req, err := http.NewRequestWithContext(pmmapitests.Context, http.MethodPost, u.String(), bytes.NewReader(data))
 	require.NoError(t, err)
 
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
@@ -371,11 +423,67 @@ func setRole(t *testing.T, userID int, role string) {
 	})
 	require.NoError(t, err)
 
-	req, err := http.NewRequest(http.MethodPatch, u.String(), bytes.NewReader(data))
+	req, err := http.NewRequestWithContext(pmmapitests.Context, http.MethodPatch, u.String(), bytes.NewReader(data))
 	require.NoError(t, err)
 
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	resp, b := doRequest(t, http.DefaultClient, req)
 
 	require.Equalf(t, http.StatusOK, resp.StatusCode, "failed to set role for user, response: %s", b)
+}
+
+func deleteAPIKey(t *testing.T, apiKeyID int) {
+	// https://grafana.com/docs/grafana/latest/http_api/auth/#delete-api-key
+	u, err := url.Parse(pmmapitests.BaseURL.String())
+	require.NoError(t, err)
+	u.Path = "/graph/api/auth/keys/" + strconv.Itoa(apiKeyID)
+
+	req, err := http.NewRequestWithContext(pmmapitests.Context, http.MethodDelete, u.String(), nil)
+	require.NoError(t, err)
+
+	resp, b := doRequest(t, http.DefaultClient, req)
+	require.Equalf(t, http.StatusOK, resp.StatusCode, "failed to delete API Key, status code: %d, response: %s", resp.StatusCode, b)
+}
+
+func createAPIKeyWithRole(t *testing.T, name, role string) (int, string) {
+	u, err := url.Parse(pmmapitests.BaseURL.String())
+	require.NoError(t, err)
+	u.Path = "/graph/api/auth/keys"
+
+	// https://grafana.com/docs/grafana/latest/http_api/auth/#create-api-key
+	data, err := json.Marshal(map[string]string{
+		"name": name,
+		"role": role,
+	})
+	require.NoError(t, err)
+
+	req, err := http.NewRequestWithContext(pmmapitests.Context, http.MethodPost, u.String(), bytes.NewReader(data))
+	require.NoError(t, err)
+
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+	resp, b := doRequest(t, http.DefaultClient, req)
+	require.Equalf(t, http.StatusOK, resp.StatusCode, "failed to create API key, status code: %d, response: %s", resp.StatusCode, b)
+
+	var m map[string]interface{}
+	err = json.Unmarshal(b, &m)
+	require.NoError(t, err)
+	apiKey := m["key"].(string)
+
+	u.User = nil
+	u.Path = "/graph/api/auth/key"
+	req, err = http.NewRequestWithContext(pmmapitests.Context, http.MethodGet, u.String(), bytes.NewReader(data))
+	require.NoError(t, err)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
+
+	resp, b = doRequest(t, http.DefaultClient, req)
+	require.Equalf(t, http.StatusOK, resp.StatusCode, "failed to get API key, status code: %d, response: %s", resp.StatusCode, b)
+
+	var k map[string]interface{}
+	err = json.Unmarshal(b, &k)
+	require.NoError(t, err)
+
+	apiKeyID := int(k["id"].(float64))
+
+	return apiKeyID, apiKey
 }
