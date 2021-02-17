@@ -14,7 +14,7 @@ required = [
 
 [[constraint]]
   name = "github.com/percona/pmm"
-  branch = "PMM-7405-check-conn-external-exporter"
+  branch = "PMM-6797-cli-for-haproxy"
 
 [[constraint]]
   name = "github.com/percona-platform/saas"
