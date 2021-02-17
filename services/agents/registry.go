@@ -20,11 +20,8 @@ package agents
 import (
 	"context"
 	"fmt"
-	"net"
-	"net/url"
 	"runtime/pprof"
 	"sort"
-	"strconv"
 	"sync"
 	"time"
 
@@ -807,25 +804,14 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 			Timeout: ptypes.DurationProto(3 * time.Second),
 		}
 	case models.ExternalServiceType:
-		dsn := agent.DSN(service, 2*time.Second, "", nil)
-		if !agent.PushMetrics {
-			node, err := models.FindNodeByID(q, service.NodeID)
-			if err != nil {
-				return err
-			}
-
-			parsedURL, err := url.Parse(dsn)
-			if err != nil {
-				return status.Error(codes.FailedPrecondition, fmt.Sprintf("Cannot parse url: %v.", err))
-			}
-
-			parsedURL.Host = net.JoinHostPort(node.Address, strconv.Itoa(int(pointer.GetUint16(agent.ListenPort))))
-			dsn = parsedURL.String()
+		exporterURL, err := agent.ExporterURL(q)
+		if err != nil {
+			return err
 		}
 
 		request = &agentpb.CheckConnectionRequest{
 			Type:    inventorypb.ServiceType_EXTERNAL_SERVICE,
-			Dsn:     dsn,
+			Dsn:     exporterURL,
 			Timeout: ptypes.DurationProto(3 * time.Second),
 		}
 	default:
