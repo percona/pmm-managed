@@ -350,7 +350,7 @@ func (s *actionsServer) StartPTPgSummaryAction(ctx context.Context, req *managem
 		return nil, err
 	}
 
-	pmmAgents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, service.NodeID)
+	pmmAgents, err := models.FindPMMAgentsForService(s.db.Querier, service.ServiceID)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "No pmm-agent running on this node")
 	}
