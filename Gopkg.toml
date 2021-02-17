@@ -18,7 +18,7 @@ required = [
 
 [[constraint]]
   name = "github.com/percona-platform/saas"
-  branch = "main"
+  branch = "PMM-7336-checks-execution-intervals"
 
 [[constraint]]
   name = "github.com/percona-platform/dbaas-api"
