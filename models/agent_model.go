@@ -369,7 +369,7 @@ func (s *Agent) ExporterURL(q *reform.Querier) (string, error) {
 	username := pointer.GetString(s.Username)
 	password := pointer.GetString(s.Password)
 
-	host := ""
+	host := "127.0.0.1"
 	if !s.PushMetrics {
 		node, err := FindNodeByID(q, *s.RunsOnNodeID)
 		if err != nil {
