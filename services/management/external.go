@@ -110,11 +110,11 @@ func (e *ExternalService) AddExternal(ctx context.Context, req *managementpb.Add
 			return err
 		}
 
-		if !req.SkipConnectionCheck {
-			if err = e.registry.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
-				return err
-			}
-		}
+		// if !req.SkipConnectionCheck {
+		// 	if err = e.registry.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
+		// 		return err
+		// 	}
+		// }
 
 		agent, err := services.ToAPIAgent(tx.Querier, row)
 		if err != nil {
