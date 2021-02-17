@@ -1262,7 +1262,7 @@ func (r *Registry) StartPTPgSummaryAction(ctx context.Context, id, pmmAgentID, a
 	return nil
 }
 
-// StartPTMongoDBSummaryAction starts pt-pg-summary action on the pmm-agent.
+// StartPTMongoDBSummaryAction starts pt-mongodb-summary action on the pmm-agent.
 // The function returns nil if ok, otherwise an error code
 func (r *Registry) StartPTMongoDBSummaryAction(ctx context.Context, id, pmmAgentID, address string, port uint16, username, password string) error {
 	// Action request data that'll be sent to agent
