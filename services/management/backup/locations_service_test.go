@@ -191,7 +191,6 @@ func TestRemoveBackupLocation(t *testing.T) {
 	req.Name = gofakeit.Name()
 	res3, err := svc.AddLocation(ctx, req)
 	require.NoError(t, err)
-	req.Name = gofakeit.Name()
 
 	assertNotFound := func(id string, locations []*backupv1beta1.Location) func() bool {
 		return func() bool {

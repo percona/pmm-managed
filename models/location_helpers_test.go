@@ -195,9 +195,9 @@ func TestBackupLocations(t *testing.T) {
 		err = models.RemoveBackupLocation(q, loc.ID, models.RemoveRestrict)
 		require.NoError(t, err)
 
-		cs, err := models.FindBackupLocations(q)
+		locations, err := models.FindBackupLocations(q)
 		require.NoError(t, err)
-		assert.Len(t, cs, 0)
+		assert.Empty(t, locations)
 	})
 }
 
