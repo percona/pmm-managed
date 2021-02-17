@@ -101,6 +101,7 @@ func (e HAProxyService) AddHAProxy(ctx context.Context, req *managementpb.AddHAP
 			return err
 		}
 
+		//rerun
 		if !req.SkipConnectionCheck {
 			if err = e.registry.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
 				return err
