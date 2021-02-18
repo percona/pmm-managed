@@ -359,18 +359,31 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 		cfg.Global = &alertmanager.GlobalConfig{}
 	}
 
-	// make sure that "empty" receiver is there
-	var emptyFound bool
-	for _, r := range cfg.Receivers {
-		if r.Name == "empty" {
-			emptyFound = true
-			break
+	findReceiver := func(name string) int {
+		for i, r := range cfg.Receivers {
+			if r.Name == name {
+				return i
+			}
 		}
+		return -1
 	}
+
+	emptyFound := findReceiver("empty") != -1
+	// make sure that "empty" receiver is there
 	if !emptyFound {
 		cfg.Receivers = append(cfg.Receivers, &alertmanager.Receiver{
 			Name: "empty",
 		})
+	}
+
+	disabledReceiver := &alertmanager.Receiver{
+		Name: "disabled",
+	}
+	disabledReceiverIndex := findReceiver("disabled")
+	if disabledReceiverIndex >= 0 {
+		cfg.Receivers[disabledReceiverIndex] = disabledReceiver
+	} else {
+		cfg.Receivers = append(cfg.Receivers, disabledReceiver)
 	}
 
 	// set default route if absent
@@ -397,7 +410,10 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 
 		cfg.Global.SlackAPIURL = settings.IntegratedAlerting.SlackAlertingSettings.URL
 	}
-
+	chanMap := make(map[string]*models.Channel, len(channels))
+	for _, ch := range channels {
+		chanMap[ch.ID] = ch
+	}
 	recvSet := make(map[string]models.ChannelIDs) // stores unique combinations of channel IDs
 	for _, r := range rules {
 		// skip rules with 0 notification channels
@@ -405,7 +421,6 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 			continue
 		}
 
-		// FIXME We should handle disabled channels. https://jira.percona.com/browse/PMM-7231
 		route := &alertmanager.Route{
 			Match: map[string]string{
 				"rule_id": r.ID,
@@ -423,17 +438,28 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 				svc.l.Warnf("Unhandled filter: %+v", f)
 			}
 		}
-
+		enabledChannels := make(models.ChannelIDs, 0, len(r.ChannelIDs))
+		for _, chID := range r.ChannelIDs {
+			if channel, ok := chanMap[chID]; ok {
+				if !channel.Disabled {
+					enabledChannels = append(enabledChannels, chID)
+				}
+			}
+		}
 		// make sure same slice with different order are not considered unique.
-		sort.Strings(r.ChannelIDs)
-		recv := strings.Join(r.ChannelIDs, receiverNameSeparator)
-		recvSet[recv] = r.ChannelIDs
+		sort.Strings(enabledChannels)
+		recv := strings.Join(enabledChannels, receiverNameSeparator)
+		if len(enabledChannels) == 0 {
+			recv = "disabled"
+		} else {
+			recvSet[recv] = enabledChannels
+		}
 		route.Receiver = recv
 
 		cfg.Route.Routes = append(cfg.Route.Routes, route)
 	}
 
-	receivers, err := svc.generateReceivers(channels, recvSet)
+	receivers, err := svc.generateReceivers(chanMap, recvSet)
 	if err != nil {
 		return err
 	}
@@ -443,13 +469,8 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 }
 
 // generateReceivers takes the channel map and a unique set of rule combinations and generates a slice of receivers.
-func (svc *Service) generateReceivers(channels []*models.Channel, recvSet map[string]models.ChannelIDs) ([]*alertmanager.Receiver, error) {
+func (svc *Service) generateReceivers(chanMap map[string]*models.Channel, recvSet map[string]models.ChannelIDs) ([]*alertmanager.Receiver, error) {
 	receivers := make([]*alertmanager.Receiver, 0, len(recvSet))
-
-	chanMap := make(map[string]*models.Channel, len(channels))
-	for _, ch := range channels {
-		chanMap[ch.ID] = ch
-	}
 
 	for name, channelIDs := range recvSet {
 		recv := &alertmanager.Receiver{

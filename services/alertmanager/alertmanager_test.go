@@ -268,15 +268,15 @@ templates: []
 func TestGenerateReceivers(t *testing.T) {
 	t.Parallel()
 
-	chanMap := []*models.Channel{
-		{
+	chanMap := map[string]*models.Channel{
+		"1": {
 			ID:   "1",
 			Type: models.Slack,
 			SlackConfig: &models.SlackConfig{
 				Channel: "channel1",
 			},
 		},
-		{
+		"2": {
 			ID:   "2",
 			Type: models.Slack,
 			SlackConfig: &models.SlackConfig{
