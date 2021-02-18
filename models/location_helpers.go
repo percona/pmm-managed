@@ -135,8 +135,8 @@ type BackupLocationConfig struct {
 	S3Config        *S3LocationConfig
 }
 
-// Validate checks if there is exactly one config with required fields.
-func (c BackupLocationConfig) Validate() error {
+// Validate checks if there is exactly one config with required fields and returns count of filled configs.
+func (c BackupLocationConfig) Validate() (int, error) {
 	var err error
 	configCount := 0
 	if c.S3Config != nil {
@@ -154,19 +154,20 @@ func (c BackupLocationConfig) Validate() error {
 		err = checkPMMClientLocationConfig(c.PMMClientConfig)
 	}
 
-	if configCount == 0 {
-		return status.Error(codes.InvalidArgument, "Missing location type.")
-	}
-
 	if configCount > 1 {
-		return status.Error(codes.InvalidArgument, "Only one config is allowed.")
+		return configCount, status.Error(codes.InvalidArgument, "Only one config is allowed.")
 	}
 
-	return err
+	return configCount, err
 }
 
-// FillLocation fills provided location according to backup config.
-func (c BackupLocationConfig) FillLocation(location *BackupLocation) {
+// FillLocationConfig fills provided location according to backup config.
+func (c BackupLocationConfig) FillLocationConfig(location *BackupLocation) {
+	location.Type = ""
+	location.PMMClientConfig = nil
+	location.PMMServerConfig = nil
+	location.S3Config = nil
+
 	switch {
 	case c.S3Config != nil:
 		location.Type = S3BackupLocationType
@@ -192,8 +193,13 @@ type CreateBackupLocationParams struct {
 
 // CreateBackupLocation creates backup location.
 func CreateBackupLocation(q *reform.Querier, params CreateBackupLocationParams) (*BackupLocation, error) {
-	if err := params.Validate(); err != nil {
+	configCount, err := params.Validate()
+	if err != nil {
 		return nil, err
+	}
+
+	if configCount != 1 {
+		return nil, status.Error(codes.InvalidArgument, "Missing location config.")
 	}
 
 	id := "/location_id/" + uuid.New().String()
@@ -212,7 +218,7 @@ func CreateBackupLocation(q *reform.Querier, params CreateBackupLocationParams) 
 		Description: params.Description,
 	}
 
-	params.FillLocation(row)
+	params.FillLocationConfig(row)
 
 	if err := q.Insert(row); err != nil {
 		return nil, errors.Wrap(err, "failed to create backup location")
@@ -231,7 +237,8 @@ type ChangeBackupLocationParams struct {
 
 // ChangeBackupLocation updates existing location by specified locationID and params.
 func ChangeBackupLocation(q *reform.Querier, locationID string, params ChangeBackupLocationParams) (*BackupLocation, error) {
-	if err := params.Validate(); err != nil {
+	configCount, err := params.Validate()
+	if err != nil {
 		return nil, err
 	}
 
@@ -239,12 +246,6 @@ func ChangeBackupLocation(q *reform.Querier, locationID string, params ChangeBac
 	if err != nil {
 		return nil, err
 	}
-
-	// remove previous configuration
-	row.Type = ""
-	row.PMMClientConfig = nil
-	row.PMMServerConfig = nil
-	row.S3Config = nil
 
 	if params.Name != "" && params.Name != row.Name {
 		if err := checkUniqueBackupLocationName(q, params.Name); err != nil {
@@ -257,7 +258,10 @@ func ChangeBackupLocation(q *reform.Querier, locationID string, params ChangeBac
 		row.Description = params.Description
 	}
 
-	params.FillLocation(row)
+	// Replace old configuration by config from params
+	if configCount == 1 {
+		params.FillLocationConfig(row)
+	}
 
 	if err := q.Update(row); err != nil {
 		return nil, errors.Wrap(err, "failed to update backup location")
