@@ -111,6 +111,23 @@ func FindBackupLocations(q *reform.Querier) ([]*BackupLocation, error) {
 	return locations, nil
 }
 
+// FindBackupLocationByID finds a Backup Location by its ID.
+func FindBackupLocationByID(q *reform.Querier, id string) (*BackupLocation, error) {
+	if id == "" {
+		return nil, status.Error(codes.InvalidArgument, "Empty Location ID.")
+	}
+
+	location := &BackupLocation{ID: id}
+	switch err := q.Reload(location); err {
+	case nil:
+		return location, nil
+	case reform.ErrNoRows:
+		return nil, status.Errorf(codes.NotFound, "Backup location with ID %q not found.", id)
+	default:
+		return nil, errors.WithStack(err)
+	}
+}
+
 // CreateBackupLocationParams are params for creating new backup location.
 type CreateBackupLocationParams struct {
 	Name        string
@@ -189,6 +206,10 @@ func CreateBackupLocation(q *reform.Querier, params CreateBackupLocationParams) 
 
 // RemoveBackupLocation removes BackupLocation by ID.
 func RemoveBackupLocation(q *reform.Querier, id string, mode RemoveMode) error {
+	if _, err := FindBackupLocationByID(q, id); err != nil {
+		return err
+	}
+
 	// @TODO - force delete https://jira.percona.com/browse/PMM-7475
 	if err := q.Delete(&BackupLocation{ID: id}); err != nil {
 		return errors.Wrap(err, "failed to delete BackupLocation")

@@ -186,21 +186,19 @@ func TestRemoveBackupLocation(t *testing.T) {
 	res1, err := svc.AddLocation(ctx, req)
 	require.NoError(t, err)
 	req.Name = gofakeit.Name()
-	_, err = svc.AddLocation(ctx, req)
+	res2, err := svc.AddLocation(ctx, req)
 	require.NoError(t, err)
 	req.Name = gofakeit.Name()
 	res3, err := svc.AddLocation(ctx, req)
 	require.NoError(t, err)
 
-	assertNotFound := func(id string, locations []*backupv1beta1.Location) func() bool {
-		return func() bool {
-			for _, loc := range locations {
-				if loc.LocationId == id {
-					return false
-				}
+	foundLocation := func(id string, locations []*backupv1beta1.Location) bool {
+		for _, loc := range locations {
+			if loc.LocationId == id {
+				return true
 			}
-			return true
 		}
+		return false
 	}
 
 	_, err = svc.RemoveLocation(ctx, &backupv1beta1.RemoveLocationRequest{
@@ -216,7 +214,14 @@ func TestRemoveBackupLocation(t *testing.T) {
 	res, err := svc.ListLocations(ctx, &backupv1beta1.ListLocationsRequest{})
 	require.NoError(t, err)
 
-	assert.Condition(t, assertNotFound(res1.LocationId, res.Locations))
-	assert.Condition(t, assertNotFound(res3.LocationId, res.Locations))
+	assert.False(t, foundLocation(res1.LocationId, res.Locations))
+	assert.False(t, foundLocation(res3.LocationId, res.Locations))
+	assert.True(t, foundLocation(res2.LocationId, res.Locations))
+
+	// Try to remove non-existing location
+	_, err = svc.RemoveLocation(ctx, &backupv1beta1.RemoveLocationRequest{
+		LocationId: "non-existing",
+	})
+	assert.EqualError(t, err, `rpc error: code = NotFound desc = Backup location with ID "non-existing" not found.`)
 
 }
