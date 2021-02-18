@@ -762,7 +762,7 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 	}()
 
 	pmmAgentID := pointer.GetString(agent.PMMAgentID)
-	if !agent.PushMetrics && service.ServiceType == models.ExternalServiceType {
+	if !agent.PushMetrics && (service.ServiceType == models.ExternalServiceType || service.ServiceType == models.HAProxyServiceType) {
 		pmmAgentID = models.PMMServerAgentID
 	}
 
