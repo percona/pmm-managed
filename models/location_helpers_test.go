@@ -52,7 +52,7 @@ func TestBackupLocations(t *testing.T) {
 		params := models.CreateBackupLocationParams{
 			Name:        "some name",
 			Description: "some desc",
-			BackupLocationsConfigs: models.BackupLocationsConfigs{
+			BackupLocationConfig: models.BackupLocationConfig{
 				PMMClientConfig: &models.PMMClientLocationConfig{
 					Path: "/tmp",
 				},
@@ -80,7 +80,7 @@ func TestBackupLocations(t *testing.T) {
 		params := models.CreateBackupLocationParams{
 			Name:        "some name",
 			Description: "some desc",
-			BackupLocationsConfigs: models.BackupLocationsConfigs{
+			BackupLocationConfig: models.BackupLocationConfig{
 				S3Config: &models.S3LocationConfig{
 					Endpoint:  "https://example.com/bucket",
 					AccessKey: "access_key",
@@ -113,7 +113,7 @@ func TestBackupLocations(t *testing.T) {
 		params := models.CreateBackupLocationParams{
 			Name:        "some name",
 			Description: "some desc",
-			BackupLocationsConfigs: models.BackupLocationsConfigs{
+			BackupLocationConfig: models.BackupLocationConfig{
 				PMMClientConfig: &models.PMMClientLocationConfig{
 					Path: "/tmp",
 				},
@@ -141,7 +141,7 @@ func TestBackupLocations(t *testing.T) {
 		params1 := models.CreateBackupLocationParams{
 			Name:        "some name",
 			Description: "some desc",
-			BackupLocationsConfigs: models.BackupLocationsConfigs{
+			BackupLocationConfig: models.BackupLocationConfig{
 				PMMClientConfig: &models.PMMClientLocationConfig{
 					Path: "/tmp",
 				},
@@ -150,7 +150,7 @@ func TestBackupLocations(t *testing.T) {
 		params2 := models.CreateBackupLocationParams{
 			Name:        "some name2",
 			Description: "some desc2",
-			BackupLocationsConfigs: models.BackupLocationsConfigs{
+			BackupLocationConfig: models.BackupLocationConfig{
 				S3Config: &models.S3LocationConfig{
 					Endpoint:  "https://example.com/bucket",
 					AccessKey: "access_key",
@@ -194,7 +194,7 @@ func TestBackupLocations(t *testing.T) {
 		createParams := models.CreateBackupLocationParams{
 			Name:        "some name",
 			Description: "some desc",
-			BackupLocationsConfigs: models.BackupLocationsConfigs{
+			BackupLocationConfig: models.BackupLocationConfig{
 				PMMClientConfig: &models.PMMClientLocationConfig{
 					Path: "/tmp",
 				},
@@ -207,7 +207,7 @@ func TestBackupLocations(t *testing.T) {
 		changeParams := models.ChangeBackupLocationParams{
 			Name:        "some name modified",
 			Description: "",
-			BackupLocationsConfigs: models.BackupLocationsConfigs{
+			BackupLocationConfig: models.BackupLocationConfig{
 				PMMServerConfig: &models.PMMServerLocationConfig{
 					Path: "/tmp/nested",
 				},
@@ -247,7 +247,7 @@ func TestBackupLocationValidation(t *testing.T) {
 			name: "normal client config",
 			location: models.CreateBackupLocationParams{
 				Name: "client-1",
-				BackupLocationsConfigs: models.BackupLocationsConfigs{
+				BackupLocationConfig: models.BackupLocationConfig{
 					PMMClientConfig: &models.PMMClientLocationConfig{
 						Path: "/tmp",
 					},
@@ -259,7 +259,7 @@ func TestBackupLocationValidation(t *testing.T) {
 			name: "client config - missing path",
 			location: models.CreateBackupLocationParams{
 				Name: "client-2",
-				BackupLocationsConfigs: models.BackupLocationsConfigs{
+				BackupLocationConfig: models.BackupLocationConfig{
 					PMMClientConfig: &models.PMMClientLocationConfig{
 						Path: "",
 					},
@@ -271,7 +271,7 @@ func TestBackupLocationValidation(t *testing.T) {
 			name: "normal s3 config",
 			location: models.CreateBackupLocationParams{
 				Name: "s3-1",
-				BackupLocationsConfigs: models.BackupLocationsConfigs{
+				BackupLocationConfig: models.BackupLocationConfig{
 					S3Config: &models.S3LocationConfig{
 						Endpoint:  "https://s3.us-west-2.amazonaws.com/mybucket",
 						AccessKey: "access_key",
@@ -285,7 +285,7 @@ func TestBackupLocationValidation(t *testing.T) {
 			name: "s3 config - missing endpoint",
 			location: models.CreateBackupLocationParams{
 				Name: "s3-2",
-				BackupLocationsConfigs: models.BackupLocationsConfigs{
+				BackupLocationConfig: models.BackupLocationConfig{
 					S3Config: &models.S3LocationConfig{
 						Endpoint:  "",
 						AccessKey: "access_key",
@@ -299,7 +299,7 @@ func TestBackupLocationValidation(t *testing.T) {
 			name: "s3 config - missing access key",
 			location: models.CreateBackupLocationParams{
 				Name: "s3-3",
-				BackupLocationsConfigs: models.BackupLocationsConfigs{
+				BackupLocationConfig: models.BackupLocationConfig{
 					S3Config: &models.S3LocationConfig{
 						Endpoint:  "https://s3.us-west-2.amazonaws.com/mybucket",
 						AccessKey: "",
@@ -313,7 +313,7 @@ func TestBackupLocationValidation(t *testing.T) {
 			name: "s3 config - missing secret key",
 			location: models.CreateBackupLocationParams{
 				Name: "s3-4",
-				BackupLocationsConfigs: models.BackupLocationsConfigs{
+				BackupLocationConfig: models.BackupLocationConfig{
 					S3Config: &models.S3LocationConfig{
 						Endpoint:  "https://s3.us-west-2.amazonaws.com/mybucket",
 						AccessKey: "secret_key",

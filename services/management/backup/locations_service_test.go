@@ -170,7 +170,7 @@ func TestListBackupLocations(t *testing.T) {
 	})
 }
 
-func TestUpdateBackupLocation(t *testing.T) {
+func TestChangeBackupLocation(t *testing.T) {
 	ctx := context.Background()
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
