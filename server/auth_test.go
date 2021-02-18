@@ -111,8 +111,6 @@ func TestSetup(t *testing.T) {
 			"graph/":      303,
 			"prometheus":  303,
 			"prometheus/": 303,
-			"qan":         303,
-			"qan/":        303,
 			"swagger":     200,
 			"swagger/":    301,
 
