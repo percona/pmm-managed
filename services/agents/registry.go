@@ -834,7 +834,7 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 		}
 
 	case models.ExternalServiceType:
-		body := resp.(*agentpb.CheckConnectionResponse).GetBody()
+		body := resp.(*agentpb.CheckConnectionResponse).GetExporterResponseBody()
 		var parser expfmt.TextParser
 		_, err := parser.TextToMetricFamilies(strings.NewReader(body))
 		if err != nil {
