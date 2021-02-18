@@ -343,21 +343,30 @@ func pointerToAgentType(agentType models.AgentType) *models.AgentType {
 // StartPTPgSummaryAction starts pt-pg-summary (PostgreSQL) action and returns the pointer to the response message
 //nolint:lll
 func (s *actionsServer) StartPTPgSummaryAction(ctx context.Context, req *managementpb.StartPTPgSummaryActionRequest) (*managementpb.StartPTPgSummaryActionResponse, error) {
-	// Need to get the service id's pointer to retrieve the list of agent pointers therefrom
-	// to get the particular agentID from the request.
 	service, err := models.FindServiceByID(s.db.Querier, req.ServiceId)
 	if err != nil {
 		return nil, err
 	}
 
-	pmmAgents, err := models.FindPMMAgentsForService(s.db.Querier, service.ServiceID)
-	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "No pmm-agent running on this node")
-	}
-
-	pmmAgentID, err := models.FindPmmAgentIDToRunAction(req.PmmAgentId, pmmAgents)
+	node, err := models.FindNodeByID(s.db.Querier, service.NodeID)
 	if err != nil {
 		return nil, err
+	}
+
+	var pmmAgentID string
+	switch node.NodeType {
+	case models.RemoteNodeType:
+		pmmAgentID = models.PMMServerAgentID
+	default:
+		pmmAgents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, service.NodeID)
+		if err != nil {
+			return nil, status.Errorf(codes.NotFound, "No pmm-agent running node %s", service.NodeID)
+		}
+		pmmAgentID, err = models.FindPmmAgentIDToRunAction(req.PmmAgentId, pmmAgents)
+		if err != nil {
+			return nil, err
+		}
+
 	}
 
 	res, err := models.CreateActionResult(s.db.Querier, pmmAgentID)
@@ -365,11 +374,8 @@ func (s *actionsServer) StartPTPgSummaryAction(ctx context.Context, req *managem
 		return nil, err
 	}
 
-	// Exporters to be filtered by service ID and agent type
-	agentFilter := models.AgentFilters{PMMAgentID: "", NodeID: "",
-		ServiceID: req.ServiceId, AgentType: pointerToAgentType(models.PostgresExporterType)}
+	agentFilter := models.AgentFilters{ServiceID: req.ServiceId, AgentType: pointerToAgentType(models.PostgresExporterType)}
 
-	// Need to get the postgres exporters to get the username and password therefrom
 	postgresExporters, err := models.FindAgents(s.db.Querier, agentFilter)
 	if err != nil {
 		return nil, err
@@ -377,7 +383,6 @@ func (s *actionsServer) StartPTPgSummaryAction(ctx context.Context, req *managem
 
 	exportersCount := len(postgresExporters)
 
-	// Must be only one result
 	if exportersCount < 1 {
 		return nil, status.Errorf(codes.FailedPrecondition, "No postgres exporter")
 	}
@@ -386,7 +391,6 @@ func (s *actionsServer) StartPTPgSummaryAction(ctx context.Context, req *managem
 		return nil, status.Errorf(codes.FailedPrecondition, "Found more than one postgres exporter")
 	}
 
-	// Starts the pt-pg-summary with the host address, port, username and password
 	err = s.r.StartPTPgSummaryAction(ctx, res.ID, pmmAgentID, pointer.GetString(service.Address), pointer.GetUint16(service.Port),
 		pointer.GetString(postgresExporters[0].Username), pointer.GetString(postgresExporters[0].Password))
 	if err != nil {
