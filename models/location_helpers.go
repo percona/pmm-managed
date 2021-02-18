@@ -135,8 +135,8 @@ type BackupLocationConfig struct {
 	S3Config        *S3LocationConfig
 }
 
-// Validate checks if there is exactly one config with required fields and returns count of filled configs.
-func (c BackupLocationConfig) Validate() (int, error) {
+// Validate checks if there is exactly one config with required fields and returns if config is set.
+func (c BackupLocationConfig) Validate() (bool, error) {
 	var err error
 	configCount := 0
 	if c.S3Config != nil {
@@ -155,10 +155,10 @@ func (c BackupLocationConfig) Validate() (int, error) {
 	}
 
 	if configCount > 1 {
-		return configCount, status.Error(codes.InvalidArgument, "Only one config is allowed.")
+		return configCount == 1, status.Error(codes.InvalidArgument, "Only one config is allowed.")
 	}
 
-	return configCount, err
+	return configCount == 1, err
 }
 
 // FillLocationConfig fills provided location according to backup config.
@@ -193,12 +193,12 @@ type CreateBackupLocationParams struct {
 
 // CreateBackupLocation creates backup location.
 func CreateBackupLocation(q *reform.Querier, params CreateBackupLocationParams) (*BackupLocation, error) {
-	configCount, err := params.Validate()
+	configSet, err := params.Validate()
 	if err != nil {
 		return nil, err
 	}
 
-	if configCount != 1 {
+	if !configSet {
 		return nil, status.Error(codes.InvalidArgument, "Missing location config.")
 	}
 
@@ -237,7 +237,7 @@ type ChangeBackupLocationParams struct {
 
 // ChangeBackupLocation updates existing location by specified locationID and params.
 func ChangeBackupLocation(q *reform.Querier, locationID string, params ChangeBackupLocationParams) (*BackupLocation, error) {
-	configCount, err := params.Validate()
+	configSet, err := params.Validate()
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +259,7 @@ func ChangeBackupLocation(q *reform.Querier, locationID string, params ChangeBac
 	}
 
 	// Replace old configuration by config from params
-	if configCount == 1 {
+	if configSet {
 		params.FillLocationConfig(row)
 	}
 
