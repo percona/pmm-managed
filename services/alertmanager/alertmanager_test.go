@@ -88,6 +88,7 @@ route:
     continue: false
 receivers:
     - name: empty
+    - name: disabled
 templates: []
 		`) + "\n"
 		assert.Equal(t, expected, actual, "actual:\n%s", actual)
@@ -250,6 +251,7 @@ route:
           continue: false
 receivers:
     - name: empty
+    - name: disabled
     - name: /channel_id/00000000-0000-4000-8000-000000000001 + /channel_id/00000000-0000-4000-8000-000000000002
       email_configs:
         - send_resolved: false
@@ -282,6 +284,14 @@ func TestGenerateReceivers(t *testing.T) {
 			SlackConfig: &models.SlackConfig{
 				Channel: "channel2",
 			},
+		},
+		"3": {
+			ID:   "3",
+			Type: models.Slack,
+			SlackConfig: &models.SlackConfig{
+				Channel: "channel3",
+			},
+			Disabled: true,
 		},
 	}
 	recvSet := map[string]models.ChannelIDs{
