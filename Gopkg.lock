@@ -408,8 +408,8 @@
   revision = "c158e23a172f892cc389233858238449efec1dbb"
 
 [[projects]]
-  branch = "PMM-7405-check-conn-external-exporter"
-  digest = "1:bd6be66a578873984805ce6bd0ad8cfdf1cec99169a8eebb03d3797755835c9b"
+  branch = "PMM-5778-check-exporter-format"
+  digest = "1:46f5933c09640662cdc8719454bf838b05a8bddbaa44eccd695e684c6d6b67c9"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -433,7 +433,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "55d234bd6bf68886ab3b1868bc8a66585bd78383"
+  revision = "0555047b21c7d5195b43b49dbcf699864fdb8627"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
@@ -897,6 +897,7 @@
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/prometheus/client_golang/prometheus/testutil",
+    "github.com/prometheus/common/expfmt",
     "github.com/prometheus/common/model",
     "github.com/sirupsen/logrus",
     "github.com/stretchr/testify/assert",

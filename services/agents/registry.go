@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"runtime/pprof"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -33,6 +34,7 @@ import (
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/expfmt"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -832,8 +834,12 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 		}
 
 	case models.ExternalServiceType:
-		// TODO: handle check of exporter response format https://jira.percona.com/browse/PMM-5778
-		l.Debugf("CheckConnectionResponse: %+v.", resp)
+		body := resp.(*agentpb.CheckConnectionResponse).GetBody()
+		var parser expfmt.TextParser
+		_, err := parser.TextToMetricFamilies(strings.NewReader(body))
+		if err != nil {
+			return status.Error(codes.FailedPrecondition, fmt.Sprintf("Unexpected exporter format: %v.", err))
+		}
 	case models.PostgreSQLServiceType:
 	case models.MongoDBServiceType:
 	case models.ProxySQLServiceType:
