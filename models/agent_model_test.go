@@ -318,7 +318,6 @@ func TestIsMySQLTablestatsGroupEnabled(t *testing.T) {
 }
 
 func TestExporterURL(t *testing.T) {
-	t.Parallel()
 	now, origNowF := models.Now(), models.Now
 	models.Now = func() time.Time {
 		return now
@@ -414,7 +413,6 @@ func TestExporterURL(t *testing.T) {
 	}
 
 	t.Run("ExporterURL", func(t *testing.T) {
-		t.Parallel()
 		q, teardown := setup(t)
 		defer teardown(t)
 
@@ -424,7 +422,6 @@ func TestExporterURL(t *testing.T) {
 			"ExporterServerless": "http://user:secret@redis_exporter:9121/metrics",
 		} {
 			t.Run(agentID, func(t *testing.T) {
-				t.Parallel()
 				agent, err := models.FindAgentByID(q, agentID)
 				assert.NoError(t, err)
 				actual, err := agent.ExporterURL(q)
