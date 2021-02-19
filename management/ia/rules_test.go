@@ -359,7 +359,7 @@ func TestRulesAPI(t *testing.T) {
 		}
 	})
 
-	t.Run("list", func(t *testing.T) {
+	t.Run("list without pagination", func(t *testing.T) {
 		params := createAlertRuleParams(templateName, channelID, "param2", dummyFilter)
 		rule, err := client.CreateAlertRule(params)
 		require.NoError(t, err)
@@ -398,6 +398,77 @@ func TestRulesAPI(t *testing.T) {
 			}
 		}
 		assert.Truef(t, found, "Rule with id %s not found", rule.Payload.RuleID)
+	})
+
+	t.Run("list pagination", func(t *testing.T) {
+		const rulesCount = 5
+
+		ruleIDs := make(map[string]struct{})
+
+		for i := 0; i < rulesCount; i++ {
+			params := createAlertRuleParams(templateName, channelID, "param2", dummyFilter)
+			rule, err := client.CreateAlertRule(params)
+			require.NoError(t, err)
+
+			ruleIDs[rule.Payload.RuleID] = struct{}{}
+		}
+		defer func() {
+			for id := range ruleIDs {
+				deleteRule(t, client, id)
+			}
+		}()
+
+		// list rules, so they are all on the first page
+		body := rules.ListAlertRulesBody{
+			PageParams: &rules.ListAlertRulesParamsBodyPageParams{
+				PageSize: 20,
+				Index:    0,
+			},
+		}
+		list1, err := client.ListAlertRules(&rules.ListAlertRulesParams{Body: body, Context: pmmapitests.Context})
+		require.NoError(t, err)
+
+		lp1 := list1.Payload
+		// some tests didn't remove rules, so expect more elements than created in current test
+		assert.GreaterOrEqual(t, len(lp1.Rules), rulesCount)
+		assert.Equal(t, int32(len(lp1.Rules)), lp1.Totals.TotalItems)
+		assert.Equal(t, int32(1), lp1.Totals.TotalPages)
+		for id := range ruleIDs {
+			var found bool
+			for _, r := range list1.Payload.Rules {
+				if r.RuleID == id {
+					found = true
+
+					break
+				}
+			}
+
+			assert.Truef(t, found, "rule (%s) not found", id)
+		}
+
+		// paginate page over page with page size 1 and check the order - it should be the same as in list1.
+		// last iteration checks that there is no elements for not existing page.
+		for pageIndex := 0; pageIndex <= len(lp1.Rules); pageIndex++ {
+			body := rules.ListAlertRulesBody{
+				PageParams: &rules.ListAlertRulesParamsBodyPageParams{
+					PageSize: 1,
+					Index:    int32(pageIndex),
+				},
+			}
+			list2, err := client.ListAlertRules(&rules.ListAlertRulesParams{Body: body, Context: pmmapitests.Context})
+			require.NoError(t, err)
+
+			lp2 := list2.Payload
+			assert.Equal(t, lp1.Totals.TotalItems, lp2.Totals.TotalItems)
+			assert.GreaterOrEqual(t, lp2.Totals.TotalPages, int32(rulesCount))
+
+			if pageIndex != len(lp1.Rules) {
+				require.Len(t, lp2.Rules, 1)
+				assert.Equal(t, lp1.Rules[pageIndex].RuleID, lp2.Rules[0].RuleID)
+			} else {
+				assert.Len(t, lp2.Rules, 0)
+			}
+		}
 	})
 }
 
