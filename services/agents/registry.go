@@ -1282,7 +1282,6 @@ func (r *Registry) StartPTPgSummaryAction(ctx context.Context, id, pmmAgentID, a
 	if err != nil {
 		return err
 	}
-
 	pmmAgent.channel.SendRequest(actionRequest)
 
 	return nil

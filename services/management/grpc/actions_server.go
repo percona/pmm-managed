@@ -374,18 +374,15 @@ func (s *actionsServer) StartPTPgSummaryAction(ctx context.Context, req *managem
 	}
 
 	agentFilter := models.AgentFilters{ServiceID: req.ServiceId, AgentType: pointerToAgentType(models.PostgresExporterType)}
-
 	postgresExporters, err := models.FindAgents(s.db.Querier, agentFilter)
 	if err != nil {
 		return nil, err
 	}
 
 	exportersCount := len(postgresExporters)
-
 	if exportersCount < 1 {
 		return nil, status.Errorf(codes.FailedPrecondition, "No postgres exporter")
 	}
-
 	if exportersCount > 1 {
 		return nil, status.Errorf(codes.FailedPrecondition, "Found more than one postgres exporter")
 	}
