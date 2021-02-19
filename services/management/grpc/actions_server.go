@@ -404,14 +404,24 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 		return nil, err
 	}
 
-	pmmAgents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, service.NodeID)
-	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "No pmm-agent running on this node")
-	}
-
-	pmmAgentID, err := models.FindPmmAgentIDToRunAction(req.PmmAgentId, pmmAgents)
+	node, err := models.FindNodeByID(s.db.Querier, service.NodeID)
 	if err != nil {
 		return nil, err
+	}
+
+	var pmmAgentID string
+	switch node.NodeType {
+	case models.RemoteNodeType:
+		pmmAgentID = models.PMMServerAgentID
+	default:
+		pmmAgents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, service.NodeID)
+		if err != nil {
+			return nil, status.Errorf(codes.NotFound, "No pmm-agent running node %s", service.NodeID)
+		}
+		pmmAgentID, err = models.FindPmmAgentIDToRunAction(req.PmmAgentId, pmmAgents)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	res, err := models.CreateActionResult(s.db.Querier, pmmAgentID)
