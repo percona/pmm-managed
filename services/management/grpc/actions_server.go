@@ -340,8 +340,6 @@ func pointerToAgentType(agentType models.AgentType) *models.AgentType {
 // StartPTMySQLSummaryAction starts pt-mysql-summary action and returns the pointer to the response message
 //nolint:lll
 func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
-	// Need to get the service id's pointer to retrieve the list of agent pointers therefrom
-	// to get the particular agentID from the request.
 	service, err := models.FindServiceByID(s.db.Querier, req.ServiceId)
 	if err != nil {
 		return nil, err
@@ -362,28 +360,21 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 		return nil, err
 	}
 
-	// Exporters to be filtered by service ID and agent type
 	agentFilter := models.AgentFilters{PMMAgentID: "", NodeID: "",
 		ServiceID: req.ServiceId, AgentType: pointerToAgentType(models.MySQLdExporterType)}
-
-	// Need to get the mysql exporters to get the username and password therefrom
 	mysqldExporters, err := models.FindAgents(s.db.Querier, agentFilter)
 	if err != nil {
 		return nil, err
 	}
 
 	exportersCount := len(mysqldExporters)
-
-	// Must be only one result
 	if exportersCount < 1 {
 		return nil, status.Errorf(codes.FailedPrecondition, "No mysql exporter")
 	}
-
 	if exportersCount > 1 {
 		return nil, status.Errorf(codes.FailedPrecondition, "Found more than one mysql exporter")
 	}
 
-	// Starts the pt-mysql-summary with the host address, port, socket, mysql username and password
 	err = s.r.StartPTMySQLSummaryAction(ctx, res.ID, pmmAgentID, pointer.GetString(service.Address), pointer.GetUint16(service.Port),
 		pointer.GetString(service.Socket), pointer.GetString(mysqldExporters[0].Username),
 		pointer.GetString(mysqldExporters[0].Password))
