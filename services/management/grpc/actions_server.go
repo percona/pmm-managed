@@ -348,6 +348,10 @@ func (s *actionsServer) StartPTPgSummaryAction(ctx context.Context, req *managem
 		return nil, err
 	}
 
+	if pointer.GetString(service.Socket) != "" {
+		return nil, status.Errorf(codes.FailedPrecondition, "No socket connection supported for action PostgreSQL summary")
+	}
+
 	node, err := models.FindNodeByID(s.db.Querier, service.NodeID)
 	if err != nil {
 		return nil, err
