@@ -73,6 +73,12 @@ func (this *SetStateRequest_BuiltinAgent) Validate() error {
 	return nil
 }
 func (this *SetStateRequest_Tunnel) Validate() error {
+	if !(this.ListenPort < 65536) {
+		return github_com_mwitkow_go_proto_validators.FieldError("ListenPort", fmt.Errorf(`value '%v' must be less than '65536'`, this.ListenPort))
+	}
+	if !(this.ConnectPort < 65536) {
+		return github_com_mwitkow_go_proto_validators.FieldError("ConnectPort", fmt.Errorf(`value '%v' must be less than '65536'`, this.ConnectPort))
+	}
 	return nil
 }
 func (this *SetStateResponse) Validate() error {
@@ -341,8 +347,8 @@ func (this *TunnelData) Validate() error {
 	if this.TunnelId == "" {
 		return github_com_mwitkow_go_proto_validators.FieldError("TunnelId", fmt.Errorf(`value '%v' must not be an empty string`, this.TunnelId))
 	}
-	if !(this.ConnectionId > 0) {
-		return github_com_mwitkow_go_proto_validators.FieldError("ConnectionId", fmt.Errorf(`value '%v' must be greater than '0'`, this.ConnectionId))
+	if this.ConnectionId == "" {
+		return github_com_mwitkow_go_proto_validators.FieldError("ConnectionId", fmt.Errorf(`value '%v' must not be an empty string`, this.ConnectionId))
 	}
 	return nil
 }

@@ -268,13 +268,54 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 				})
 
 			case *agentpb.TunnelData:
-				// TODO
+				t, err := models.FindTunnelByID(r.db.Querier, p.TunnelId)
+				if err != nil {
+					agent.channel.SendResponse(&channel.ServerResponse{
+						ID: req.ID,
+						Payload: &agentpb.TunnelDataAck{
+							Status: status.Convert(err).Proto(),
+						},
+					})
+					continue
+				}
+
+				var otherAgentID string
+				switch agent.id {
+				case t.ListenAgentID:
+					otherAgentID = t.ConnectAgentID
+				case t.ConnectAgentID:
+					otherAgentID = t.ListenAgentID
+				default:
+					agent.channel.SendResponse(&channel.ServerResponse{
+						ID: req.ID,
+						Payload: &agentpb.TunnelDataAck{
+							Status: status.Newf(codes.NotFound, "TODO").Proto(),
+						},
+					})
+					continue
+				}
+
+				otherAgent, err := r.get(otherAgentID)
+				if err != nil {
+					agent.channel.SendResponse(&channel.ServerResponse{
+						ID: req.ID,
+						Payload: &agentpb.TunnelDataAck{
+							Status: status.Convert(err).Proto(),
+						},
+					})
+					continue
+				}
+
+				res := otherAgent.channel.SendRequest(&agentpb.TunnelData{
+					TunnelId:     p.TunnelId,
+					ConnectionId: p.ConnectionId,
+					Close:        p.Close,
+					Data:         p.Data,
+				})
+				l.Debugf("%+v", res)
 
 				agent.channel.SendResponse(&channel.ServerResponse{
-					ID:      req.ID,
-					Payload: &agentpb.TunnelDataAck{
-						// TODO
-					},
+					ID: req.ID,
 				})
 
 			case nil:

@@ -17,9 +17,10 @@
 package agents
 
 import (
-	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm/api/agentpb"
 	"gopkg.in/reform.v1"
+
+	"github.com/percona/pmm-managed/models"
 )
 
 // type tunnelRegistry struct {

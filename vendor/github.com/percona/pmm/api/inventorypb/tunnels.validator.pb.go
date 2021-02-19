@@ -40,11 +40,17 @@ func (this *AddTunnelRequest) Validate() error {
 	if !(this.ListenPort > 0) {
 		return github_com_mwitkow_go_proto_validators.FieldError("ListenPort", fmt.Errorf(`value '%v' must be greater than '0'`, this.ListenPort))
 	}
+	if !(this.ListenPort < 65536) {
+		return github_com_mwitkow_go_proto_validators.FieldError("ListenPort", fmt.Errorf(`value '%v' must be less than '65536'`, this.ListenPort))
+	}
 	if this.ConnectAgentId == "" {
 		return github_com_mwitkow_go_proto_validators.FieldError("ConnectAgentId", fmt.Errorf(`value '%v' must not be an empty string`, this.ConnectAgentId))
 	}
 	if !(this.ConnectPort > 0) {
 		return github_com_mwitkow_go_proto_validators.FieldError("ConnectPort", fmt.Errorf(`value '%v' must be greater than '0'`, this.ConnectPort))
+	}
+	if !(this.ConnectPort < 65536) {
+		return github_com_mwitkow_go_proto_validators.FieldError("ConnectPort", fmt.Errorf(`value '%v' must be less than '65536'`, this.ConnectPort))
 	}
 	return nil
 }

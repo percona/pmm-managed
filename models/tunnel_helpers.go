@@ -63,6 +63,23 @@ func FindTunnels(q *reform.Querier, pmmAgentID string) ([]*Tunnel, error) {
 	return tunnels, nil
 }
 
+// FindTunnelByID finds Tunnel by ID.
+func FindTunnelByID(q *reform.Querier, id string) (*Tunnel, error) {
+	if id == "" {
+		return nil, status.Error(codes.InvalidArgument, "Empty Tunnel ID.")
+	}
+
+	tunnel := &Tunnel{TunnelID: id}
+	switch err := q.Reload(tunnel); err {
+	case nil:
+		return tunnel, nil
+	case reform.ErrNoRows:
+		return nil, status.Errorf(codes.NotFound, "Tunnel with ID %q not found.", id)
+	default:
+		return nil, errors.WithStack(err)
+	}
+}
+
 // CreateTunnelParams TODO.
 type CreateTunnelParams struct {
 	ListenAgentID  string
