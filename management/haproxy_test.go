@@ -34,9 +34,10 @@ func TestAddHAProxy(t *testing.T) {
 		params := &ha_proxy.AddHAProxyParams{
 			Context: pmmapitests.Context,
 			Body: ha_proxy.AddHAProxyBody{
-				ServiceName: serviceName,
-				ListenPort:  8404,
-				NodeID:      nodeID,
+				ServiceName:         serviceName,
+				ListenPort:          8404,
+				NodeID:              nodeID,
+				SkipConnectionCheck: true,
 			},
 		}
 		addHAProxyOK, err := client.Default.HAProxy.AddHAProxy(params)
@@ -101,17 +102,18 @@ func TestAddHAProxy(t *testing.T) {
 		params := &ha_proxy.AddHAProxyParams{
 			Context: pmmapitests.Context,
 			Body: ha_proxy.AddHAProxyBody{
-				ServiceName:    serviceName,
-				Username:       "username",
-				Password:       "password",
-				Scheme:         "https",
-				MetricsPath:    "/metrics-path",
-				ListenPort:     9250,
-				NodeID:         nodeID,
-				Environment:    "some-environment",
-				Cluster:        "cluster-name",
-				ReplicationSet: "replication-set",
-				CustomLabels:   map[string]string{"bar": "foo"},
+				ServiceName:         serviceName,
+				Username:            "username",
+				Password:            "password",
+				Scheme:              "https",
+				MetricsPath:         "/metrics-path",
+				ListenPort:          9250,
+				NodeID:              nodeID,
+				Environment:         "some-environment",
+				Cluster:             "cluster-name",
+				ReplicationSet:      "replication-set",
+				CustomLabels:        map[string]string{"bar": "foo"},
+				SkipConnectionCheck: true,
 			},
 		}
 		addHAProxyOK, err := client.Default.HAProxy.AddHAProxy(params)
@@ -160,9 +162,10 @@ func TestAddHAProxy(t *testing.T) {
 					Region:       "us-west2",
 					CustomLabels: map[string]string{"foo": "bar-for-node"},
 				},
-				Address:     "localhost",
-				ServiceName: serviceName,
-				ListenPort:  8404,
+				Address:             "localhost",
+				ServiceName:         serviceName,
+				ListenPort:          8404,
+				SkipConnectionCheck: true,
 			},
 		}
 		addHAProxyOK, err := client.Default.HAProxy.AddHAProxy(params)
@@ -247,9 +250,10 @@ func TestAddHAProxy(t *testing.T) {
 		params := &ha_proxy.AddHAProxyParams{
 			Context: pmmapitests.Context,
 			Body: ha_proxy.AddHAProxyBody{
-				NodeID:      nodeID,
-				ServiceName: serviceName,
-				ListenPort:  9250,
+				NodeID:              nodeID,
+				ServiceName:         serviceName,
+				ListenPort:          9250,
+				SkipConnectionCheck: true,
 			},
 		}
 		addHAProxyOK, err := client.Default.HAProxy.AddHAProxy(params)
@@ -361,11 +365,12 @@ func TestRemoveHAProxy(t *testing.T) {
 		params := &ha_proxy.AddHAProxyParams{
 			Context: pmmapitests.Context,
 			Body: ha_proxy.AddHAProxyBody{
-				NodeID:      nodeID,
-				ServiceName: serviceName,
-				Username:    "username",
-				Password:    "password",
-				ListenPort:  12345,
+				NodeID:              nodeID,
+				ServiceName:         serviceName,
+				Username:            "username",
+				Password:            "password",
+				ListenPort:          12345,
+				SkipConnectionCheck: true,
 			},
 		}
 		addHAProxyOK, err := client.Default.HAProxy.AddHAProxy(params)
