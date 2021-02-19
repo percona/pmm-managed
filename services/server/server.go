@@ -610,7 +610,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	// When STT moved from disabled state to enabled force checks download and execution
 	if !oldSettings.SaaS.STTEnabled && newSettings.SaaS.STTEnabled {
 		go func() {
-			err = s.checksService.StartChecks(context.Background())
+			err = s.checksService.StartChecks(context.Background(), "")
 			if err != nil {
 				s.l.Error(err)
 			}

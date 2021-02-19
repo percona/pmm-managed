@@ -342,8 +342,22 @@ func TestStartChecks(t *testing.T) {
 	t.Run("stt disabled", func(t *testing.T) {
 		s, err := New(nil, nil, db)
 		require.NoError(t, err)
-		err = s.StartChecks(context.Background())
+		err = s.StartChecks(context.Background(), "")
 		assert.EqualError(t, err, services.ErrSTTDisabled.Error())
+	})
+
+	t.Run("unknown interval", func(t *testing.T) {
+		s, err := New(nil, nil, db)
+		require.NoError(t, err)
+		settings, err := models.GetSettings(db)
+		require.NoError(t, err)
+
+		settings.SaaS.STTEnabled = true
+		err = models.SaveSettings(db, settings)
+		require.NoError(t, err)
+
+		err = s.StartChecks(context.Background(), check.Interval("unknown"))
+		assert.EqualError(t, err, "unknown check interval: unknown")
 	})
 
 	t.Run("stt enabled", func(t *testing.T) {
@@ -359,7 +373,7 @@ func TestStartChecks(t *testing.T) {
 		err = models.SaveSettings(db, settings)
 		require.NoError(t, err)
 
-		err = s.StartChecks(context.Background())
+		err = s.StartChecks(context.Background(), "")
 		require.NoError(t, err)
 	})
 }

@@ -5,6 +5,8 @@ package server
 import (
 	context "context"
 
+	check "github.com/percona-platform/saas/pkg/check"
+
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -18,13 +20,13 @@ func (_m *mockChecksService) CleanupAlerts() {
 	_m.Called()
 }
 
-// StartChecks provides a mock function with given fields: ctx
-func (_m *mockChecksService) StartChecks(ctx context.Context) error {
-	ret := _m.Called(ctx)
+// StartChecks provides a mock function with given fields: ctx, intervale
+func (_m *mockChecksService) StartChecks(ctx context.Context, intervale check.Interval) error {
+	ret := _m.Called(ctx, intervale)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, check.Interval) error); ok {
+		r0 = rf(ctx, intervale)
 	} else {
 		r0 = ret.Error(0)
 	}
