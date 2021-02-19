@@ -1262,8 +1262,32 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID stri
 	return nil
 }
 
-// StartPTMongoDBSummaryAction starts pt-pg-summary action on the pmm-agent.
-// The pt-mongodb-summary may require some of the following params: host, port, username, password.
+// StartPTPgSummaryAction starts pt-pg-summary action on the pmm-agent.
+// The function returns nil if ok, otherwise an error code
+func (r *Registry) StartPTPgSummaryAction(ctx context.Context, id, pmmAgentID, address string, port uint16, username, password string) error {
+	actionRequest := &agentpb.StartActionRequest{
+		ActionId: id,
+		Params: &agentpb.StartActionRequest_PtPgSummaryParams{
+			PtPgSummaryParams: &agentpb.StartActionRequest_PTPgSummaryParams{
+				Host:     address,
+				Port:     uint32(port),
+				Username: username,
+				Password: password,
+			},
+		},
+		Timeout: defaultPtActionTimeout,
+	}
+
+	pmmAgent, err := r.get(pmmAgentID)
+	if err != nil {
+		return err
+	}
+	pmmAgent.channel.SendRequest(actionRequest)
+
+	return nil
+}
+
+// StartPTMongoDBSummaryAction starts pt-mongodb-summary action on the pmm-agent.
 // The function returns nil if ok, otherwise an error code
 func (r *Registry) StartPTMongoDBSummaryAction(ctx context.Context, id, pmmAgentID, address string, port uint16, username, password string) error {
 	// Action request data that'll be sent to agent
@@ -1278,7 +1302,7 @@ func (r *Registry) StartPTMongoDBSummaryAction(ctx context.Context, id, pmmAgent
 				Password: password,
 			},
 		},
-		Timeout: defaultActionTimeout,
+		Timeout: defaultPtActionTimeout,
 	}
 
 	// Agent which the action request will be sent to, got by the provided ID
