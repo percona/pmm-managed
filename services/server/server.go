@@ -583,18 +583,6 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			return status.Error(codes.InvalidArgument, e.Error())
 		}
 
-		if oldSettings.IntegratedAlerting.Enabled {
-			if req.DisableAlerting {
-				// Deletes the alert rules files in case of disabling
-				s.rulesService.RemoveVMAlertRulesFiles()
-			}
-		} else {
-			if req.EnableAlerting {
-				// Regenerates the rules files in case of enabling
-				s.rulesService.WriteVMAlertRulesFiles()
-			}
-		}
-
 		// absent value means "do not change"
 		if req.SshKey != "" {
 			if e = s.writeSSHKey(req.SshKey); e != nil {
@@ -621,6 +609,16 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 
 	if err := s.UpdateConfigurations(); err != nil {
 		return nil, err
+	}
+
+	// When IA moved from disabled state to enabled create rules files.
+	if !oldSettings.IntegratedAlerting.Enabled && req.EnableAlerting {
+		s.rulesService.WriteVMAlertRulesFiles()
+	}
+
+	// When IA moved from enabled state to disables cleanup rules files.
+	if oldSettings.IntegratedAlerting.Enabled && req.DisableAlerting {
+		s.rulesService.RemoveVMAlertRulesFiles()
 	}
 
 	// When STT moved from disabled state to enabled force checks download and execution
