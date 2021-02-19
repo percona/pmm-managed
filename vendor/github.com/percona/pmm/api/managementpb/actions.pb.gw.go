@@ -441,7 +441,6 @@ func local_request_Actions_StartPTMongoDBSummaryAction_0(ctx context.Context, ma
 
 }
 
-<<<<<<< HEAD
 func request_Actions_StartPTMySQLSummaryAction_0(ctx context.Context, marshaler runtime.Marshaler, client ActionsClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq StartPTMySQLSummaryActionRequest
 	var metadata runtime.ServerMetadata
@@ -476,8 +475,6 @@ func local_request_Actions_StartPTMySQLSummaryAction_0(ctx context.Context, mars
 
 }
 
-=======
->>>>>>> PMM-2.0
 func request_Actions_CancelAction_0(ctx context.Context, marshaler runtime.Marshaler, client ActionsClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq CancelActionRequest
 	var metadata runtime.ServerMetadata
@@ -794,7 +791,6 @@ func RegisterActionsHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 
 	})
 
-<<<<<<< HEAD
 	mux.Handle("POST", pattern_Actions_StartPTMySQLSummaryAction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -818,8 +814,6 @@ func RegisterActionsHandlerServer(ctx context.Context, mux *runtime.ServeMux, se
 
 	})
 
-=======
->>>>>>> PMM-2.0
 	mux.Handle("POST", pattern_Actions_CancelAction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -1124,7 +1118,6 @@ func RegisterActionsHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 
 	})
 
-<<<<<<< HEAD
 	mux.Handle("POST", pattern_Actions_StartPTMySQLSummaryAction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -1145,8 +1138,6 @@ func RegisterActionsHandlerClient(ctx context.Context, mux *runtime.ServeMux, cl
 
 	})
 
-=======
->>>>>>> PMM-2.0
 	mux.Handle("POST", pattern_Actions_CancelAction_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -1195,11 +1186,8 @@ var (
 
 	pattern_Actions_StartPTMongoDBSummaryAction_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"v1", "management", "Actions", "StartPTMongoDBSummary"}, "", runtime.AssumeColonVerbOpt(true)))
 
-<<<<<<< HEAD
 	pattern_Actions_StartPTMySQLSummaryAction_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"v1", "management", "Actions", "StartPTMySQLSummary"}, "", runtime.AssumeColonVerbOpt(true)))
 
-=======
->>>>>>> PMM-2.0
 	pattern_Actions_CancelAction_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"v1", "management", "Actions", "Cancel"}, "", runtime.AssumeColonVerbOpt(true)))
 )
 
@@ -1228,10 +1216,7 @@ var (
 
 	forward_Actions_StartPTMongoDBSummaryAction_0 = runtime.ForwardResponseMessage
 
-<<<<<<< HEAD
 	forward_Actions_StartPTMySQLSummaryAction_0 = runtime.ForwardResponseMessage
 
-=======
->>>>>>> PMM-2.0
 	forward_Actions_CancelAction_0 = runtime.ForwardResponseMessage
 )
