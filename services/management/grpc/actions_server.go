@@ -396,10 +396,6 @@ func (s *actionsServer) StartPTMongoDBSummaryAction(ctx context.Context, req *ma
 	return &managementpb.StartPTMongoDBSummaryActionResponse{PmmAgentId: pmmAgentID, ActionId: res.ID}, nil
 }
 
-func pointerToAgentType(agentType models.AgentType) *models.AgentType {
-	return &agentType
-}
-
 // StartPTMySQLSummaryAction starts pt-mysql-summary action and returns the pointer to the response message
 //nolint:lll
 func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
