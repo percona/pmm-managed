@@ -149,7 +149,7 @@ groups:
 
 		matches, err := filepath.Glob(testDir + "/*.yml")
 
-		assert.Zero(t, len(matches))
+		assert.Empty(t, matches)
 		assert.NoError(t, err)
 	})
 
