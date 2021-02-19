@@ -1265,10 +1265,8 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID stri
 // StartPTPgSummaryAction starts pt-pg-summary action on the pmm-agent.
 // The function returns nil if ok, otherwise an error code
 func (r *Registry) StartPTPgSummaryAction(ctx context.Context, id, pmmAgentID, address string, port uint16, username, password string) error {
-	// Action request data that'll be sent to agent
 	actionRequest := &agentpb.StartActionRequest{
 		ActionId: id,
-		// Proper params that'll will be passed to the command on the agent's side, even empty, othervise request's marshal fail.
 		Params: &agentpb.StartActionRequest_PtPgSummaryParams{
 			PtPgSummaryParams: &agentpb.StartActionRequest_PTPgSummaryParams{
 				Host:     address,
@@ -1280,7 +1278,6 @@ func (r *Registry) StartPTPgSummaryAction(ctx context.Context, id, pmmAgentID, a
 		Timeout: defaultPtActionTimeout,
 	}
 
-	// Agent which the action request will be sent to, got by the provided ID
 	pmmAgent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err

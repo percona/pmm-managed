@@ -366,7 +366,6 @@ func (s *actionsServer) StartPTPgSummaryAction(ctx context.Context, req *managem
 		if err != nil {
 			return nil, err
 		}
-
 	}
 
 	res, err := models.CreateActionResult(s.db.Querier, pmmAgentID)
