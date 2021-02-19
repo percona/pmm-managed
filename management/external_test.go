@@ -30,11 +30,12 @@ func TestAddExternal(t *testing.T) {
 		params := &external.AddExternalParams{
 			Context: pmmapitests.Context,
 			Body: external.AddExternalBody{
-				RunsOnNodeID: nodeID,
-				ServiceName:  serviceName,
-				ListenPort:   9104,
-				NodeID:       nodeID,
-				Group:        "", // empty group - pmm-admin does not support group.
+				RunsOnNodeID:        nodeID,
+				ServiceName:         serviceName,
+				ListenPort:          9104,
+				NodeID:              nodeID,
+				Group:               "", // empty group - pmm-admin does not support group.
+				SkipConnectionCheck: true,
 			},
 		}
 		addExternalOK, err := client.Default.External.AddExternal(params)
@@ -96,19 +97,20 @@ func TestAddExternal(t *testing.T) {
 		params := &external.AddExternalParams{
 			Context: pmmapitests.Context,
 			Body: external.AddExternalBody{
-				RunsOnNodeID:   nodeID,
-				ServiceName:    serviceName,
-				Username:       "username",
-				Password:       "password",
-				Scheme:         "https",
-				MetricsPath:    "/metrics-path",
-				ListenPort:     9250,
-				NodeID:         nodeID,
-				Environment:    "some-environment",
-				Cluster:        "cluster-name",
-				ReplicationSet: "replication-set",
-				CustomLabels:   map[string]string{"bar": "foo"},
-				Group:          "redis",
+				RunsOnNodeID:        nodeID,
+				ServiceName:         serviceName,
+				Username:            "username",
+				Password:            "password",
+				Scheme:              "https",
+				MetricsPath:         "/metrics-path",
+				ListenPort:          9250,
+				NodeID:              nodeID,
+				Environment:         "some-environment",
+				Cluster:             "cluster-name",
+				ReplicationSet:      "replication-set",
+				CustomLabels:        map[string]string{"bar": "foo"},
+				Group:               "redis",
+				SkipConnectionCheck: true,
 			},
 		}
 		addExternalOK, err := client.Default.External.AddExternal(params)
@@ -159,10 +161,11 @@ func TestAddExternal(t *testing.T) {
 					Region:       "us-west2",
 					CustomLabels: map[string]string{"foo": "bar-for-node"},
 				},
-				Address:     "localhost",
-				ServiceName: serviceName,
-				ListenPort:  9104,
-				Group:       "", // empty group - pmm-admin does not support group.
+				Address:             "localhost",
+				ServiceName:         serviceName,
+				ListenPort:          9104,
+				Group:               "", // empty group - pmm-admin does not support group.
+				SkipConnectionCheck: true,
 			},
 		}
 		addExternalOK, err := client.Default.External.AddExternal(params)
@@ -245,11 +248,12 @@ func TestAddExternal(t *testing.T) {
 		params := &external.AddExternalParams{
 			Context: pmmapitests.Context,
 			Body: external.AddExternalBody{
-				NodeID:       nodeID,
-				RunsOnNodeID: nodeID,
-				ServiceName:  serviceName,
-				ListenPort:   9250,
-				Group:        "external",
+				NodeID:              nodeID,
+				RunsOnNodeID:        nodeID,
+				ServiceName:         serviceName,
+				ListenPort:          9250,
+				Group:               "external",
+				SkipConnectionCheck: true,
 			},
 		}
 		addExternalOK, err := client.Default.External.AddExternal(params)
@@ -263,11 +267,12 @@ func TestAddExternal(t *testing.T) {
 		params = &external.AddExternalParams{
 			Context: pmmapitests.Context,
 			Body: external.AddExternalBody{
-				NodeID:       nodeID,
-				RunsOnNodeID: nodeID,
-				ServiceName:  serviceName,
-				ListenPort:   9260,
-				Group:        "external",
+				NodeID:              nodeID,
+				RunsOnNodeID:        nodeID,
+				ServiceName:         serviceName,
+				ListenPort:          9260,
+				Group:               "external",
+				SkipConnectionCheck: true,
 			},
 		}
 		addExternalOK, err = client.Default.External.AddExternal(params)
@@ -284,9 +289,10 @@ func TestAddExternal(t *testing.T) {
 		params := &external.AddExternalParams{
 			Context: pmmapitests.Context,
 			Body: external.AddExternalBody{
-				NodeID:       nodeID,
-				RunsOnNodeID: nodeID,
-				Group:        "external",
+				NodeID:              nodeID,
+				RunsOnNodeID:        nodeID,
+				Group:               "external",
+				SkipConnectionCheck: true,
 			},
 		}
 		addExternalOK, err := client.Default.External.AddExternal(params)
@@ -304,10 +310,11 @@ func TestAddExternal(t *testing.T) {
 		params := &external.AddExternalParams{
 			Context: pmmapitests.Context,
 			Body: external.AddExternalBody{
-				NodeID:       nodeID,
-				ServiceName:  serviceName,
-				RunsOnNodeID: nodeID,
-				Group:        "external",
+				NodeID:              nodeID,
+				ServiceName:         serviceName,
+				RunsOnNodeID:        nodeID,
+				Group:               "external",
+				SkipConnectionCheck: true,
 			},
 		}
 		addExternalOK, err := client.Default.External.AddExternal(params)
@@ -325,10 +332,11 @@ func TestAddExternal(t *testing.T) {
 		params := &external.AddExternalParams{
 			Context: pmmapitests.Context,
 			Body: external.AddExternalBody{
-				RunsOnNodeID: nodeID,
-				ServiceName:  serviceName,
-				ListenPort:   12345,
-				Group:        "external",
+				RunsOnNodeID:        nodeID,
+				ServiceName:         serviceName,
+				ListenPort:          12345,
+				Group:               "external",
+				SkipConnectionCheck: true,
 			},
 		}
 		addExternalOK, err := client.Default.External.AddExternal(params)
@@ -346,10 +354,11 @@ func TestAddExternal(t *testing.T) {
 		params := &external.AddExternalParams{
 			Context: pmmapitests.Context,
 			Body: external.AddExternalBody{
-				NodeID:      nodeID,
-				ServiceName: serviceName,
-				ListenPort:  12345,
-				Group:       "external",
+				NodeID:              nodeID,
+				ServiceName:         serviceName,
+				ListenPort:          12345,
+				Group:               "external",
+				SkipConnectionCheck: true,
 			},
 		}
 		addExternalOK, err := client.Default.External.AddExternal(params)
@@ -371,9 +380,10 @@ func TestAddExternal(t *testing.T) {
 					NodeType: pointer.ToString(external.AddExternalParamsBodyAddNodeNodeTypeREMOTENODE),
 					NodeName: "external-serverless",
 				},
-				ServiceName: serviceName,
-				ListenPort:  12345,
-				Group:       "external",
+				ServiceName:         serviceName,
+				ListenPort:          12345,
+				Group:               "external",
+				SkipConnectionCheck: true,
 			},
 		}
 		addExternalOK, err := client.Default.External.AddExternal(params)
@@ -391,13 +401,14 @@ func TestRemoveExternal(t *testing.T) {
 		params := &external.AddExternalParams{
 			Context: pmmapitests.Context,
 			Body: external.AddExternalBody{
-				NodeID:       nodeID,
-				RunsOnNodeID: nodeID,
-				ServiceName:  serviceName,
-				Username:     "username",
-				Password:     "password",
-				ListenPort:   12345,
-				Group:        "external",
+				NodeID:              nodeID,
+				RunsOnNodeID:        nodeID,
+				ServiceName:         serviceName,
+				Username:            "username",
+				Password:            "password",
+				ListenPort:          12345,
+				Group:               "external",
+				SkipConnectionCheck: true,
 			},
 		}
 		addExternalOK, err := client.Default.External.AddExternal(params)
