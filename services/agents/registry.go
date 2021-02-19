@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/AlekSi/pointer"
+	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/golang/protobuf/ptypes"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
@@ -43,6 +44,10 @@ import (
 )
 
 const (
+	// constants for delayed batch updates
+	updateBatchDelay   = time.Second
+	stateChangeTimeout = 5 * time.Second
+
 	prometheusNamespace = "pmm_managed"
 	prometheusSubsystem = "agents"
 )
@@ -51,12 +56,38 @@ var (
 	defaultActionTimeout      = ptypes.DurationProto(10 * time.Second)
 	defaultQueryActionTimeout = ptypes.DurationProto(15 * time.Second) // should be less than checks.resultTimeout
 	defaultPtActionTimeout    = ptypes.DurationProto(30 * time.Second) // Percona-toolkit action timeout
+
+	mSentDesc = prom.NewDesc(
+		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_sent_total"),
+		"A total number of messages sent to pmm-agent.",
+		[]string{"agent_id"},
+		nil,
+	)
+	mRecvDesc = prom.NewDesc(
+		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_received_total"),
+		"A total number of messages received from pmm-agent.",
+		[]string{"agent_id"},
+		nil,
+	)
+	mResponsesDesc = prom.NewDesc(
+		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_response_queue_length"),
+		"The current length of the response queue.",
+		[]string{"agent_id"},
+		nil,
+	)
+	mRequestsDesc = prom.NewDesc(
+		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_request_queue_length"),
+		"The current length of the request queue.",
+		[]string{"agent_id"},
+		nil,
+	)
 )
 
 type pmmAgentInfo struct {
-	channel *channel.Channel
-	id      string
-	kick    chan struct{}
+	channel         *channel.Channel
+	id              string
+	stateChangeChan chan struct{}
+	kick            chan struct{}
 }
 
 // Registry keeps track of all connected pmm-agents.
@@ -72,25 +103,33 @@ type Registry struct {
 
 	roster *roster
 
-	sharedMetrics *channel.SharedChannelMetrics
-	mConnects     prom.Counter
-	mDisconnects  *prom.CounterVec
-	mRoundTrip    prom.Summary
-	mClockDrift   prom.Summary
+	mAgents      prom.GaugeFunc
+	mConnects    prom.Counter
+	mDisconnects *prom.CounterVec
+	mRoundTrip   prom.Summary
+	mClockDrift  prom.Summary
 }
 
 // NewRegistry creates a new registry with given database connection.
 func NewRegistry(db *reform.DB, qanClient qanClient, vmdb prometheusService) *Registry {
+	agents := make(map[string]*pmmAgentInfo)
 	r := &Registry{
 		db:        db,
 		vmdb:      vmdb,
 		qanClient: qanClient,
 
-		agents: make(map[string]*pmmAgentInfo),
+		agents: agents,
 
 		roster: newRoster(),
 
-		sharedMetrics: channel.NewSharedMetrics(),
+		mAgents: prom.NewGaugeFunc(prom.GaugeOpts{
+			Namespace: prometheusNamespace,
+			Subsystem: prometheusSubsystem,
+			Name:      "connected",
+			Help:      "The current number of connected pmm-agents.",
+		}, func() float64 {
+			return float64(len(agents))
+		}),
 		mConnects: prom.NewCounter(prom.CounterOpts{
 			Namespace: prometheusNamespace,
 			Subsystem: prometheusSubsystem,
@@ -150,8 +189,10 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 		l.Infof("Disconnecting client: %s.", disconnectReason)
 	}()
 
-	// send first SetStateRequest concurrently with handling ping from agent
-	go r.SendSetStateRequest(ctx, agent.id)
+	// run pmm-agent state update loop for the current agent.
+	go r.runStateChangeHandler(ctx, agent)
+
+	r.RequestStateUpdate(ctx, agent.id)
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
@@ -160,16 +201,20 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 		case <-ticker.C:
 			r.ping(ctx, agent)
 
+		// see unregister and Kick methods
 		case <-agent.kick:
+			// already unregistered, no need to call unregister method
 			l.Warn("Kicked.")
 			disconnectReason = "kicked"
-			err = status.Errorf(codes.Aborted, "Another pmm-agent with ID %q connected to the server.", agent.id)
+			err = status.Errorf(codes.Aborted, "Kicked.")
 			return err
 
 		case req := <-agent.channel.Requests():
 			if req == nil {
 				disconnectReason = "done"
-				return agent.channel.Wait()
+				err = agent.channel.Wait()
+				r.unregister(agent.id)
+				return err
 			}
 
 			switch p := req.Payload.(type) {
@@ -260,19 +305,22 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*pmmAgentInfo, 
 		return nil, err
 	}
 
+	// pmm-agent with the same ID can still be connected in two cases:
+	//   1. Someone uses the same ID by mistake, glitch, or malicious intent.
+	//   2. pmm-agent detects broken connection and reconnects,
+	//      but pmm-managed still thinks that the previous connection is okay.
+	// In both cases, kick it.
+	l.Warnf("Another pmm-agent with ID %q is already connected.", agentMD.ID)
+	r.Kick(ctx, agentMD.ID)
+
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
-	// do not use r.get() - r.rw is already locked
-	if agent := r.agents[agentMD.ID]; agent != nil {
-		r.roster.clear(agentMD.ID)
-		close(agent.kick)
-	}
-
 	agent := &pmmAgentInfo{
-		channel: channel.New(stream, r.sharedMetrics),
-		id:      agentMD.ID,
-		kick:    make(chan struct{}),
+		channel:         channel.New(stream),
+		id:              agentMD.ID,
+		stateChangeChan: make(chan struct{}, 1),
+		kick:            make(chan struct{}),
 	}
 	r.agents[agentMD.ID] = agent
 	return agent, nil
@@ -314,6 +362,24 @@ func authenticate(md *agentpb.AgentConnectMetadata, q *reform.Querier) (string, 
 	}
 
 	return pointer.GetString(agent.RunsOnNodeID), nil
+}
+
+// unregister removes pmm-agent with given ID from the registry.
+func (r *Registry) unregister(pmmAgentID string) *pmmAgentInfo {
+	r.rw.Lock()
+	defer r.rw.Unlock()
+
+	// We do not check that pmmAgentID is in fact ID of existing pmm-agent because
+	// it may be already deleted from the database, that's why we unregister it.
+
+	agent := r.agents[pmmAgentID]
+	if agent == nil {
+		return nil
+	}
+
+	delete(r.agents, pmmAgentID)
+	r.roster.clear(pmmAgentID)
+	return agent
 }
 
 // addOrRemoveVMAgent - creates vmAgent agentType if pmm-agent's version supports it and agent not exists yet,
@@ -379,25 +445,21 @@ func removeVMAgentFromPMMAgent(q *reform.Querier, pmmAgentID string) error {
 	return nil
 }
 
-// Kick disconnects pmm-agent with given ID.
+// Kick unregisters and forcefully disconnects pmm-agent with given ID.
 func (r *Registry) Kick(ctx context.Context, pmmAgentID string) {
-	// We do not check that pmmAgentID is in fact ID of existing pmm-agent because
-	// it may be already deleted from the database, that's why we disconnect it.
-
-	r.rw.Lock()
-	defer r.rw.Unlock()
-
-	// do not use r.get() - r.rw is already locked
-	l := logger.Get(ctx)
-	agent := r.agents[pmmAgentID]
+	agent := r.unregister(pmmAgentID)
 	if agent == nil {
-		l.Infof("pmm-agent with ID %q is not connected.", pmmAgentID)
 		return
 	}
-	l.Infof("pmm-agent with ID %q is connected, kicking.", pmmAgentID)
-	delete(r.agents, pmmAgentID)
-	r.roster.clear(pmmAgentID)
+
+	l := logger.Get(ctx)
+	l.Debugf("pmm-agent with ID %q will be kicked in a moment.", pmmAgentID)
+
+	// see Run method
 	close(agent.kick)
+
+	// Do not close agent.stateChangeChan to avoid breaking RequestStateUpdate;
+	// closing agent.kick is enough to exit runStateChangeHandler goroutine.
 }
 
 // ping sends Ping message to given Agent, waits for Pong and observes round-trip time and clock drift.
@@ -480,7 +542,7 @@ func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRe
 	if agent.PMMAgentID == nil {
 		return nil
 	}
-	r.SendSetStateRequest(ctx, *agent.PMMAgentID)
+	r.RequestStateUpdate(ctx, *agent.PMMAgentID)
 	return nil
 }
 
@@ -497,7 +559,7 @@ func (r *Registry) UpdateAgentsState(ctx context.Context) error {
 		limiter <- struct{}{}
 		go func(pmmAgentID string) {
 			defer wg.Done()
-			r.SendSetStateRequest(ctx, pmmAgentID)
+			r.RequestStateUpdate(ctx, pmmAgentID)
 			<-limiter
 		}(pmmAgentID)
 	}
@@ -505,23 +567,71 @@ func (r *Registry) UpdateAgentsState(ctx context.Context) error {
 	return nil
 }
 
-// SendSetStateRequest sends SetStateRequest to pmm-agent with given ID.
-func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
+// runStateChangeHandler runs pmm-agent state update loop for given pmm-agent until ctx is canceled or agent is kicked.
+func (r *Registry) runStateChangeHandler(ctx context.Context, agent *pmmAgentInfo) {
+	l := logger.Get(ctx).WithField("agent_id", agent.id)
+
+	l.Info("Starting runStateChangeHandler ...")
+	defer l.Info("Done runStateChangeHandler.")
+
+	// stateChangeChan, state update loop, and RequestStateUpdate method ensure that state
+	// is reloaded when requested, but several requests are batched together to avoid too often reloads.
+	// That allows the caller to just call RequestStateUpdate when it seems fit.
+	if cap(agent.stateChangeChan) != 1 {
+		panic("stateChangeChan should have capacity 1")
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+
+		case <-agent.kick:
+			return
+
+		case <-agent.stateChangeChan:
+			// batch several update requests together by delaying the first one
+			sleepCtx, sleepCancel := context.WithTimeout(ctx, updateBatchDelay)
+			<-sleepCtx.Done()
+			sleepCancel()
+
+			if ctx.Err() != nil {
+				return
+			}
+
+			nCtx, cancel := context.WithTimeout(ctx, stateChangeTimeout)
+			r.sendSetStateRequest(nCtx, agent)
+			cancel()
+		}
+	}
+}
+
+// RequestStateUpdate requests state update on pmm-agent with given ID.
+func (r *Registry) RequestStateUpdate(ctx context.Context, pmmAgentID string) {
+	l := logger.Get(ctx)
+
+	agent, err := r.get(pmmAgentID)
+	if err != nil {
+		l.Infof("RequestStateUpdate: %s.", err)
+		return
+	}
+
+	select {
+	case agent.stateChangeChan <- struct{}{}:
+	default:
+	}
+}
+
+// sendSetStateRequest sends SetStateRequest to given pmm-agent.
+func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo) {
 	l := logger.Get(ctx)
 	start := time.Now()
 	defer func() {
 		if dur := time.Since(start); dur > time.Second {
-			l.Warnf("SendSetStateRequest took %s.", dur)
+			l.Warnf("sendSetStateRequest took %s.", dur)
 		}
 	}()
-
-	agent, err := r.get(pmmAgentID)
-	if err != nil {
-		l.Infof("SendSetStateRequest: %s.", err)
-		return
-	}
-
-	pmmAgent, err := models.FindAgentByID(r.db.Querier, pmmAgentID)
+	pmmAgent, err := models.FindAgentByID(r.db.Querier, agent.id)
 	if err != nil {
 		l.Errorf("Failed to get PMM Agent: %s.", err)
 		return
@@ -532,7 +642,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		return
 	}
 
-	agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{PMMAgentID: pmmAgentID})
+	agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{PMMAgentID: agent.id})
 	if err != nil {
 		l.Errorf("Failed to collect agents: %s.", err)
 		return
@@ -556,9 +666,9 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		case models.PMMAgentType:
 			continue
 		case models.VMAgentType:
-			scrapeCfg, err := r.vmdb.BuildScrapeConfigForVMAgent(pmmAgentID)
+			scrapeCfg, err := r.vmdb.BuildScrapeConfigForVMAgent(agent.id)
 			if err != nil {
-				l.WithError(err).Errorf("cannot get agent scrape config for agent: %s", pmmAgentID)
+				l.WithError(err).Errorf("cannot get agent scrape config for agent: %s", agent.id)
 			}
 			agentProcesses[row.AgentID] = vmAgentConfig(string(scrapeCfg))
 
@@ -624,7 +734,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		}
 		sort.Strings(rdsExporterIDs)
 
-		groupID := r.roster.add(pmmAgentID, rdsGroup, rdsExporterIDs)
+		groupID := r.roster.add(agent.id, rdsGroup, rdsExporterIDs)
 		c, err := rdsExporterConfig(rdsExporters, redactMode)
 		if err == nil {
 			agentProcesses[groupID] = c
@@ -636,7 +746,7 @@ func (r *Registry) SendSetStateRequest(ctx context.Context, pmmAgentID string) {
 		AgentProcesses: agentProcesses,
 		BuiltinAgents:  builtinAgents,
 	}
-	l.Infof("SendSetStateRequest: %+v.", state)
+	l.Infof("sendSetStateRequest:\n%s", proto.MarshalTextString(state))
 	resp := agent.channel.SendRequest(state)
 	l.Infof("SetState response: %+v.", resp)
 }
@@ -653,6 +763,10 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 	}()
 
 	pmmAgentID := pointer.GetString(agent.PMMAgentID)
+	if !agent.PushMetrics && (service.ServiceType == models.ExternalServiceType || service.ServiceType == models.HAProxyServiceType) {
+		pmmAgentID = models.PMMServerAgentID
+	}
+
 	pmmAgent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
@@ -690,6 +804,28 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 			Dsn:     agent.DSN(service, 2*time.Second, "", nil),
 			Timeout: ptypes.DurationProto(3 * time.Second),
 		}
+	case models.ExternalServiceType:
+		exporterURL, err := agent.ExporterURL(q)
+		if err != nil {
+			return err
+		}
+
+		request = &agentpb.CheckConnectionRequest{
+			Type:    inventorypb.ServiceType_EXTERNAL_SERVICE,
+			Dsn:     exporterURL,
+			Timeout: ptypes.DurationProto(3 * time.Second),
+		}
+	case models.HAProxyServiceType:
+		exporterURL, err := agent.ExporterURL(q)
+		if err != nil {
+			return err
+		}
+
+		request = &agentpb.CheckConnectionRequest{
+			Type:    inventorypb.ServiceType_HAPROXY_SERVICE,
+			Dsn:     exporterURL,
+			Timeout: ptypes.DurationProto(3 * time.Second),
+		}
 	default:
 		l.Panicf("unhandled Service type %s", service.ServiceType)
 	}
@@ -707,6 +843,9 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 			return errors.Wrap(err, "failed to update table count")
 		}
 
+	case models.ExternalServiceType, models.HAProxyServiceType:
+		// TODO: handle check of exporter response format https://jira.percona.com/browse/PMM-5778
+		l.Debugf("CheckConnectionResponse: %+v.", resp)
 	case models.PostgreSQLServiceType:
 	case models.MongoDBServiceType:
 	case models.ProxySQLServiceType:
@@ -738,7 +877,12 @@ func (r *Registry) get(pmmAgentID string) (*pmmAgentInfo, error) {
 
 // Describe implements prometheus.Collector.
 func (r *Registry) Describe(ch chan<- *prom.Desc) {
-	r.sharedMetrics.Describe(ch)
+	ch <- mSentDesc
+	ch <- mRecvDesc
+	ch <- mResponsesDesc
+	ch <- mRequestsDesc
+
+	r.mAgents.Describe(ch)
 	r.mConnects.Describe(ch)
 	r.mDisconnects.Describe(ch)
 	r.mRoundTrip.Describe(ch)
@@ -747,7 +891,20 @@ func (r *Registry) Describe(ch chan<- *prom.Desc) {
 
 // Collect implement prometheus.Collector.
 func (r *Registry) Collect(ch chan<- prom.Metric) {
-	r.sharedMetrics.Collect(ch)
+	r.rw.RLock()
+
+	for _, agent := range r.agents {
+		m := agent.channel.Metrics()
+
+		ch <- prom.MustNewConstMetric(mSentDesc, prom.CounterValue, m.Sent, agent.id)
+		ch <- prom.MustNewConstMetric(mRecvDesc, prom.CounterValue, m.Recv, agent.id)
+		ch <- prom.MustNewConstMetric(mResponsesDesc, prom.GaugeValue, m.Responses, agent.id)
+		ch <- prom.MustNewConstMetric(mRequestsDesc, prom.GaugeValue, m.Requests, agent.id)
+	}
+
+	r.rw.RUnlock()
+
+	r.mAgents.Collect(ch)
 	r.mConnects.Collect(ch)
 	r.mDisconnects.Collect(ch)
 	r.mRoundTrip.Collect(ch)
@@ -1102,6 +1259,36 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID stri
 	}
 
 	agent.channel.SendRequest(aRequest)
+	return nil
+}
+
+// StartPTMongoDBSummaryAction starts pt-pg-summary action on the pmm-agent.
+// The pt-mongodb-summary may require some of the following params: host, port, username, password.
+// The function returns nil if ok, otherwise an error code
+func (r *Registry) StartPTMongoDBSummaryAction(ctx context.Context, id, pmmAgentID, address string, port uint16, username, password string) error {
+	// Action request data that'll be sent to agent
+	actionRequest := &agentpb.StartActionRequest{
+		ActionId: id,
+		// Proper params that'll will be passed to the command on the agent's side, even empty, othervise request's marshal fail.
+		Params: &agentpb.StartActionRequest_PtMongodbSummaryParams{
+			PtMongodbSummaryParams: &agentpb.StartActionRequest_PTMongoDBSummaryParams{
+				Host:     address,
+				Port:     uint32(port),
+				Username: username,
+				Password: password,
+			},
+		},
+		Timeout: defaultActionTimeout,
+	}
+
+	// Agent which the action request will be sent to, got by the provided ID
+	pmmAgent, err := r.get(pmmAgentID)
+	if err != nil {
+		return err
+	}
+
+	pmmAgent.channel.SendRequest(actionRequest)
+
 	return nil
 }
 

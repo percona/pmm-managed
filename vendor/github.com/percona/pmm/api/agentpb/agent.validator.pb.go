@@ -191,6 +191,7 @@ func (this *StartActionRequest) Validate() error {
 			}
 		}
 	}
+<<<<<<< HEAD
 	if oneOfNester, ok := this.GetParams().(*StartActionRequest_PtMysqlSummaryParams); ok {
 		if oneOfNester.PtMysqlSummaryParams != nil {
 			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.PtMysqlSummaryParams); err != nil {
@@ -198,6 +199,8 @@ func (this *StartActionRequest) Validate() error {
 			}
 		}
 	}
+=======
+>>>>>>> PMM-2.0
 	if oneOfNester, ok := this.GetParams().(*StartActionRequest_MysqlQueryShowParams); ok {
 		if oneOfNester.MysqlQueryShowParams != nil {
 			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.MysqlQueryShowParams); err != nil {
@@ -286,9 +289,12 @@ func (this *StartActionRequest_PTSummaryParams) Validate() error {
 func (this *StartActionRequest_PTMongoDBSummaryParams) Validate() error {
 	return nil
 }
+<<<<<<< HEAD
 func (this *StartActionRequest_PTMySQLSummaryParams) Validate() error {
 	return nil
 }
+=======
+>>>>>>> PMM-2.0
 func (this *StartActionRequest_MySQLQueryShowParams) Validate() error {
 	return nil
 }

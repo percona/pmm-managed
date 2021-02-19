@@ -81,7 +81,7 @@ var (
 		pointer.ToString("mariadb"),
 		pointer.ToString("mysql"),
 
-		// TODO https://jira.percona.com/browse/PMM-4574
+		// TODO https://jira.percona.com/browse/PMM-5195
 		// pointer.ToString("aurora-postgresql"),
 		// pointer.ToString("postgres"),
 	}
@@ -376,6 +376,6 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 		return nil, e
 	}
 
-	s.registry.SendSetStateRequest(ctx, models.PMMServerAgentID)
+	s.registry.RequestStateUpdate(ctx, models.PMMServerAgentID)
 	return res, nil
 }

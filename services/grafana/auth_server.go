@@ -64,13 +64,14 @@ var rules = map[string]role{
 
 	"/v0/qan/": viewer,
 
+	// mustSetupRules group
 	"/prometheus":      admin,
 	"/victoriametrics": admin,
 	"/alertmanager":    admin,
 	"/graph":           none,
-	"/qan":             none,
 	"/swagger":         none,
 
+	"/logs.zip": admin,
 	// "/auth_request" and "/setup" have auth_request disabled in nginx config
 
 	// "/" is a special case in this code
@@ -81,9 +82,9 @@ var rules = map[string]role{
 // and /agent.Agent/Connect and Management APIs should be available for pmm-agent on PMM Server registration.
 var mustSetupRules = []string{
 	"/prometheus",
+	"/victoriametrics",
 	"/alertmanager",
 	"/graph",
-	"/qan",
 	"/swagger",
 }
 
