@@ -526,9 +526,15 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	var newSettings, oldSettings *models.Settings
 	err := s.db.InTransaction(func(tx *reform.TX) error {
 		metricsRes := req.MetricsResolutions
+		sttCheckIntervals := req.STTCheckIntervals
 		settingsParams := &models.ChangeSettingsParams{
 			DisableTelemetry: req.DisableTelemetry,
 			EnableTelemetry:  req.EnableTelemetry,
+			STTCheckIntervals: models.STTCheckIntervals{
+				RareInterval:     getDuration(sttCheckIntervals.GetRareInterval()),
+				DefaultInterval:  getDuration(sttCheckIntervals.GetDefaultInterval()),
+				FrequentInterval: getDuration(sttCheckIntervals.GetFrequentInterval()),
+			},
 			MetricsResolutions: models.MetricsResolutions{
 				HR: getDuration(metricsRes.GetHr()),
 				MR: getDuration(metricsRes.GetMr()),
