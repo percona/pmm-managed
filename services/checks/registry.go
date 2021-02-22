@@ -46,7 +46,7 @@ func newRegistry(alertTTL time.Duration) *registry {
 	}
 }
 
-// set replaces stored checkResults with a copy of given ones.
+// set replaces stored checkResults with a copy of given ones for specified interval.
 func (r *registry) set(interval check.Interval, checkResults []sttCheckResult) {
 	r.rw.Lock()
 	defer r.rw.Unlock()
@@ -55,6 +55,7 @@ func (r *registry) set(interval check.Interval, checkResults []sttCheckResult) {
 	copy(r.checkResults[interval], checkResults)
 }
 
+// cleanup removes all stt results form registry.
 func (r *registry) cleanup() {
 	r.rw.Lock()
 	defer r.rw.Unlock()

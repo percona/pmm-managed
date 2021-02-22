@@ -51,12 +51,16 @@ const (
 	defaultStartDelay       = time.Minute
 
 	// Environment variables that affect checks service; only for testing.
-	envPublicKey        = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
+	envPublicKey = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
+
+	// TODO: https://jira.percona.com/browse/PMM-7337
+	// remove once intervals will be stored in settings
 	envRareInterval     = "PERCONA_TEST_CHECKS_RARE_INTERVAL"
 	envStandardInterval = "PERCONA_TEST_CHECKS_STANDARD_INTERVAL"
 	envFrequentInterval = "PERCONA_TEST_CHECKS_FREQUENT_INTERVAL"
-	envCheckFile        = "PERCONA_TEST_CHECKS_FILE"
-	envResendInterval   = "PERCONA_TEST_CHECKS_RESEND_INTERVAL"
+
+	envCheckFile      = "PERCONA_TEST_CHECKS_FILE"
+	envResendInterval = "PERCONA_TEST_CHECKS_RESEND_INTERVAL"
 
 	checksTimeout       = 5 * time.Minute  // timeout for checks downloading/execution
 	resultTimeout       = 20 * time.Second // should greater than agents.defaultQueryActionTimeout
@@ -224,6 +228,7 @@ func (s *Service) Run(ctx context.Context) {
 	}()
 
 	// TODO: https://jira.percona.com/browse/PMM-7337
+	// get intervals from settings
 
 	s.rareTicker = time.NewTicker(s.rareInterval)
 	defer s.rareTicker.Stop()
@@ -263,7 +268,7 @@ func (s *Service) resendAlerts(ctx context.Context) {
 // restartChecks restarts checks until ctx is canceled.
 func (s *Service) restartChecks(ctx context.Context) {
 	// First checks run.
-	err := s.StartChecks(ctx, "") // all checks
+	err := s.StartChecks(ctx, "") // start all checks
 
 	for {
 		switch err {
@@ -308,7 +313,8 @@ func (s *Service) GetSecurityCheckResults() ([]check.Result, error) {
 	return checkResults, nil
 }
 
-// StartChecks triggers STT checks downloading and execution. It returns services.ErrSTTDisabled if STT is disabled.
+// StartChecks triggers STT checks downloading and execution. Interval specifies what checks group to start, empty
+// interval means "start everything". It returns services.ErrSTTDisabled if STT is disabled.
 func (s *Service) StartChecks(ctx context.Context, interval check.Interval) error {
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
@@ -493,7 +499,8 @@ func (s *Service) minPMMAgentVersion(t check.Type) *version.Parsed {
 	}
 }
 
-// executeChecks runs all available checks for all reachable services.
+// executeChecks runs all available checks for all reachable services. Interval specifies from what
+// group to execute checks, empty interval means "execute everything".
 func (s *Service) executeChecks(ctx context.Context, interval check.Interval) error {
 	s.l.Infof("Executing %s checks...", interval)
 
@@ -518,7 +525,8 @@ func (s *Service) executeChecks(ctx context.Context, interval check.Interval) er
 	return nil
 }
 
-// executeMySQLChecks runs MySQL checks for available MySQL services.
+// executeMySQLChecks runs MySQL checks for available MySQL services. Interval specifies from what
+// group to execute checks, empty interval means "execute everything".
 func (s *Service) executeMySQLChecks(ctx context.Context, interval check.Interval, except []string) []sttCheckResult {
 	m := make(map[string]struct{}, len(except))
 	for _, e := range except {
@@ -580,7 +588,8 @@ func (s *Service) executeMySQLChecks(ctx context.Context, interval check.Interva
 	return res
 }
 
-// executePostgreSQLChecks runs PostgreSQL checks for available PostgreSQL services.
+// executePostgreSQLChecks runs PostgreSQL checks for available PostgreSQL services. Interval specifies from what
+// group to execute checks, empty interval means "execute everything".
 func (s *Service) executePostgreSQLChecks(ctx context.Context, interval check.Interval, except []string) []sttCheckResult {
 	m := make(map[string]struct{}, len(except))
 	for _, e := range except {
@@ -890,13 +899,13 @@ func (s *Service) groupChecksByDB(checks []check.Check) (mySQLChecks, postgreSQL
 }
 
 func filterChecksByInterval(checks []check.Check, interval check.Interval) []check.Check {
-	if interval == "" { // All checks.
+	if interval == "" { // all checks
 		return checks
 	}
 
 	var res []check.Check
 	for _, c := range checks {
-		// Empty check interval means standard.
+		// Empty check interval equals standard interval.
 		if c.Interval == interval || (interval == check.Standard && c.Interval == "") {
 			res = append(res, c)
 
@@ -1026,6 +1035,7 @@ func (s *Service) updateChecks(mySQLChecks, postgreSQLChecks, mongoDBChecks []ch
 	s.mongoDBChecks = mongoDBChecks
 }
 
+// updateIntervals updates STT restart timers intervals.
 func (s *Service) updateIntervals(rare, standard, frequent time.Duration) {
 	s.tm.Lock()
 	defer s.tm.Unlock()
