@@ -53,7 +53,7 @@ const (
 )
 
 var (
-	checkExternalExporterConnectionPMMVersion = version.MustParse("1.15.0")
+	checkExternalExporterConnectionPMMVersion = version.MustParse("1.14.99")
 
 	defaultActionTimeout      = ptypes.DurationProto(10 * time.Second)
 	defaultQueryActionTimeout = ptypes.DurationProto(15 * time.Second) // should be less than checks.resultTimeout
