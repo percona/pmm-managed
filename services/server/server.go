@@ -618,7 +618,9 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 
 	// When IA moved from enabled state to disables cleanup rules files.
 	if oldSettings.IntegratedAlerting.Enabled && req.DisableAlerting {
-		s.rulesService.RemoveVMAlertRulesFiles()
+		if err := s.rulesService.RemoveVMAlertRulesFiles(); err != nil {
+			s.l.Errorf("Failed to clean old alert rule files: %+v", err)
+		}
 	}
 
 	// When STT moved from disabled state to enabled force checks download and execution

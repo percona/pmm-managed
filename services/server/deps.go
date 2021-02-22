@@ -124,6 +124,6 @@ type agentsRegistry interface {
 // rulesService is a subset of methods of ia.RulesService used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
 type rulesService interface {
-	RemoveVMAlertRulesFiles()
 	WriteVMAlertRulesFiles()
+	RemoveVMAlertRulesFiles() error
 }

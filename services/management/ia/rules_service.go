@@ -97,17 +97,18 @@ type rule struct {
 }
 
 // RemoveVMAlertRulesFiles removes all generated rules files (*.yml) on the ia path.
-func (s *RulesService) RemoveVMAlertRulesFiles() {
+func (s *RulesService) RemoveVMAlertRulesFiles() error {
 	matches, err := filepath.Glob(s.rulesPath + "/*.yml")
 	if err != nil {
-		s.l.Errorf("Failed to clean old alert rule files: %+v", err)
-		return
+		return errors.WithStack(err)
 	}
 	for _, match := range matches {
 		if err = os.RemoveAll(match); err != nil {
-			s.l.Errorf("Failed to remove old rule file: %+v", err)
+			return errors.WithStack(err)
 		}
 	}
+
+	return nil
 }
 
 // writeVMAlertRulesFiles converts all available rules to VMAlert rule files.
@@ -124,7 +125,10 @@ func (s *RulesService) WriteVMAlertRulesFiles() {
 		return
 	}
 
-	s.RemoveVMAlertRulesFiles()
+	if err = s.RemoveVMAlertRulesFiles(); err != nil {
+		s.l.Errorf("Failed to clean old alert rule files: %+v", err)
+		return
+	}
 
 	for _, file := range ruleFiles {
 		err = s.writeRuleFile(&file) //nolint:gosec

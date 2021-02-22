@@ -232,7 +232,7 @@ func TestServer(t *testing.T) {
 		server.UpdateSettingsFromEnv([]string{})
 
 		ctx := context.TODO()
-		rs.On("RemoveVMAlertRulesFiles")
+		rs.On("RemoveVMAlertRulesFiles").Return(nil)
 		defer rs.AssertExpectations(t)
 		s, err := server.ChangeSettings(ctx, &serverpb.ChangeSettingsRequest{
 			DisableAlerting: true,
@@ -247,7 +247,7 @@ func TestServer(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, s)
 
-		rs.On("RemoveVMAlertRulesFiles")
+		rs.On("RemoveVMAlertRulesFiles").Return(nil)
 		s, err = server.ChangeSettings(ctx, &serverpb.ChangeSettingsRequest{
 			DisableAlerting: true,
 		})
