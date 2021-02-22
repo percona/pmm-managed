@@ -408,7 +408,7 @@
   revision = "c158e23a172f892cc389233858238449efec1dbb"
 
 [[projects]]
-  branch = "PMM-7383-backup-location-delete"
+  branch = "PMM-2.0"
   digest = "1:bdca694e4eba9f72207f3571a24b35c968fcf71829763e025f257d360a48ddb7"
   name = "github.com/percona/pmm"
   packages = [
@@ -433,7 +433,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "2380a2055f8b8aeb4d79c88fb62b5d51ffcde7de"
+  revision = "7910ea53ab07693d8f75e2236fe6c94d5984ae94"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
