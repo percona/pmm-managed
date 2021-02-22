@@ -409,7 +409,7 @@
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:f92314d23e56d54823d92fac71343a3b44fb7a91cda7ec6050ebc56b204b9e93"
+  digest = "1:0dc48a97c648889fb44853395c4e311b2f58427b05ca5510b8f5a4fe386c9b92"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -433,7 +433,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "64348c1a59b03b00935a36f83970e00a45870c3d"
+  revision = "1a7db70414d25988f6d9569414dcaa56c3e05f20"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
@@ -897,7 +897,6 @@
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/prometheus/client_golang/prometheus/testutil",
-    "github.com/prometheus/common/expfmt",
     "github.com/prometheus/common/model",
     "github.com/sirupsen/logrus",
     "github.com/stretchr/testify/assert",
