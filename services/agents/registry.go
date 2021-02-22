@@ -53,6 +53,8 @@ const (
 )
 
 var (
+	checkExternalExporterConnectionPMMVersion = version.MustParse("1.15.0")
+
 	defaultActionTimeout      = ptypes.DurationProto(10 * time.Second)
 	defaultQueryActionTimeout = ptypes.DurationProto(15 * time.Second) // should be less than checks.resultTimeout
 
@@ -750,6 +752,22 @@ func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo)
 	l.Infof("SetState response: %+v.", resp)
 }
 
+func (r *Registry) isExternalExporterConnectionCheckSupported(ctx context.Context, q *reform.Querier, pmmAgentID string) (bool, error) {
+	pmmAgent, err := models.FindAgentByID(r.db.Querier, pmmAgentID)
+	if err != nil {
+		return false, fmt.Errorf("failed to get PMM Agent: %s.", err)
+	}
+	pmmAgentVersion, err := version.Parse(*pmmAgent.Version)
+	if err != nil {
+		return false, fmt.Errorf("failed to parse PMM agent version %q: %s", *pmmAgent.Version, err)
+	}
+
+	if pmmAgentVersion.Less(checkExternalExporterConnectionPMMVersion) {
+		return false, nil
+	}
+	return true, nil
+}
+
 // CheckConnectionToService sends request to pmm-agent to check connection to service.
 func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Querier, service *models.Service, agent *models.Agent) error {
 	// TODO: extract to a separate struct to keep Single Responsibility principles: https://jira.percona.com/browse/PMM-4932
@@ -764,6 +782,18 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 	pmmAgentID := pointer.GetString(agent.PMMAgentID)
 	if !agent.PushMetrics && (service.ServiceType == models.ExternalServiceType || service.ServiceType == models.HAProxyServiceType) {
 		pmmAgentID = models.PMMServerAgentID
+	}
+
+	// Skip check connection to external exporter with old pmm-agent.
+	if service.ServiceType == models.ExternalServiceType || service.ServiceType == models.HAProxyServiceType {
+		isCheckConnSupported, err := r.isExternalExporterConnectionCheckSupported(ctx, q, pmmAgentID)
+		if err != nil {
+			return err
+		}
+
+		if !isCheckConnSupported {
+			return nil
+		}
 	}
 
 	pmmAgent, err := r.get(pmmAgentID)
