@@ -885,6 +885,7 @@ type StartActionRequest struct {
 	//	*StartActionRequest_PostgresqlShowIndexParams
 	//	*StartActionRequest_MongodbExplainParams
 	//	*StartActionRequest_PtSummaryParams
+	//	*StartActionRequest_PtPgSummaryParams
 	//	*StartActionRequest_PtMongodbSummaryParams
 	//	*StartActionRequest_PtMysqlSummaryParams
 	//	*StartActionRequest_MysqlQueryShowParams
@@ -1001,6 +1002,13 @@ func (x *StartActionRequest) GetPtSummaryParams() *StartActionRequest_PTSummaryP
 	return nil
 }
 
+func (x *StartActionRequest) GetPtPgSummaryParams() *StartActionRequest_PTPgSummaryParams {
+	if x, ok := x.GetParams().(*StartActionRequest_PtPgSummaryParams); ok {
+		return x.PtPgSummaryParams
+	}
+	return nil
+}
+
 func (x *StartActionRequest) GetPtMongodbSummaryParams() *StartActionRequest_PTMongoDBSummaryParams {
 	if x, ok := x.GetParams().(*StartActionRequest_PtMongodbSummaryParams); ok {
 		return x.PtMongodbSummaryParams
@@ -1107,6 +1115,10 @@ type StartActionRequest_PtSummaryParams struct {
 	PtSummaryParams *StartActionRequest_PTSummaryParams `protobuf:"bytes,10,opt,name=pt_summary_params,json=ptSummaryParams,proto3,oneof"`
 }
 
+type StartActionRequest_PtPgSummaryParams struct {
+	PtPgSummaryParams *StartActionRequest_PTPgSummaryParams `protobuf:"bytes,12,opt,name=pt_pg_summary_params,json=ptPgSummaryParams,proto3,oneof"`
+}
+
 type StartActionRequest_PtMongodbSummaryParams struct {
 	PtMongodbSummaryParams *StartActionRequest_PTMongoDBSummaryParams `protobuf:"bytes,13,opt,name=pt_mongodb_summary_params,json=ptMongodbSummaryParams,proto3,oneof"`
 }
@@ -1158,6 +1170,8 @@ func (*StartActionRequest_PostgresqlShowIndexParams) isStartActionRequest_Params
 func (*StartActionRequest_MongodbExplainParams) isStartActionRequest_Params() {}
 
 func (*StartActionRequest_PtSummaryParams) isStartActionRequest_Params() {}
+
+func (*StartActionRequest_PtPgSummaryParams) isStartActionRequest_Params() {}
 
 func (*StartActionRequest_PtMongodbSummaryParams) isStartActionRequest_Params() {}
 
@@ -2562,6 +2576,78 @@ func (*StartActionRequest_PTSummaryParams) Descriptor() ([]byte, []int) {
 	return file_agentpb_agent_proto_rawDescGZIP(), []int{13, 7}
 }
 
+// PTPgSummaryParams describes parameters for PT PG summary.
+type StartActionRequest_PTPgSummaryParams struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Host     string `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`
+	Port     uint32 `protobuf:"varint,2,opt,name=port,proto3" json:"port,omitempty"`
+	Username string `protobuf:"bytes,3,opt,name=username,proto3" json:"username,omitempty"`
+	Password string `protobuf:"bytes,4,opt,name=password,proto3" json:"password,omitempty"`
+}
+
+func (x *StartActionRequest_PTPgSummaryParams) Reset() {
+	*x = StartActionRequest_PTPgSummaryParams{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_agentpb_agent_proto_msgTypes[38]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *StartActionRequest_PTPgSummaryParams) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartActionRequest_PTPgSummaryParams) ProtoMessage() {}
+
+func (x *StartActionRequest_PTPgSummaryParams) ProtoReflect() protoreflect.Message {
+	mi := &file_agentpb_agent_proto_msgTypes[38]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartActionRequest_PTPgSummaryParams.ProtoReflect.Descriptor instead.
+func (*StartActionRequest_PTPgSummaryParams) Descriptor() ([]byte, []int) {
+	return file_agentpb_agent_proto_rawDescGZIP(), []int{13, 8}
+}
+
+func (x *StartActionRequest_PTPgSummaryParams) GetHost() string {
+	if x != nil {
+		return x.Host
+	}
+	return ""
+}
+
+func (x *StartActionRequest_PTPgSummaryParams) GetPort() uint32 {
+	if x != nil {
+		return x.Port
+	}
+	return 0
+}
+
+func (x *StartActionRequest_PTPgSummaryParams) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *StartActionRequest_PTPgSummaryParams) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
 // PTMongoDBSummaryParams describes parameters for PT MongoDB summary.
 type StartActionRequest_PTMongoDBSummaryParams struct {
 	state         protoimpl.MessageState
@@ -2577,7 +2663,7 @@ type StartActionRequest_PTMongoDBSummaryParams struct {
 func (x *StartActionRequest_PTMongoDBSummaryParams) Reset() {
 	*x = StartActionRequest_PTMongoDBSummaryParams{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_agentpb_agent_proto_msgTypes[38]
+		mi := &file_agentpb_agent_proto_msgTypes[39]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2590,7 +2676,7 @@ func (x *StartActionRequest_PTMongoDBSummaryParams) String() string {
 func (*StartActionRequest_PTMongoDBSummaryParams) ProtoMessage() {}
 
 func (x *StartActionRequest_PTMongoDBSummaryParams) ProtoReflect() protoreflect.Message {
-	mi := &file_agentpb_agent_proto_msgTypes[38]
+	mi := &file_agentpb_agent_proto_msgTypes[39]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2603,7 +2689,7 @@ func (x *StartActionRequest_PTMongoDBSummaryParams) ProtoReflect() protoreflect.
 
 // Deprecated: Use StartActionRequest_PTMongoDBSummaryParams.ProtoReflect.Descriptor instead.
 func (*StartActionRequest_PTMongoDBSummaryParams) Descriptor() ([]byte, []int) {
-	return file_agentpb_agent_proto_rawDescGZIP(), []int{13, 8}
+	return file_agentpb_agent_proto_rawDescGZIP(), []int{13, 9}
 }
 
 func (x *StartActionRequest_PTMongoDBSummaryParams) GetHost() string {
@@ -3379,6 +3465,12 @@ var file_agentpb_agent_proto_rawDesc = []byte{
 	0x72, 0x74, 0x41, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x2e,
 	0x50, 0x54, 0x53, 0x75, 0x6d, 0x6d, 0x61, 0x72, 0x79, 0x50, 0x61, 0x72, 0x61, 0x6d, 0x73, 0x48,
 	0x00, 0x52, 0x0f, 0x70, 0x74, 0x53, 0x75, 0x6d, 0x6d, 0x61, 0x72, 0x79, 0x50, 0x61, 0x72, 0x61,
+	0x6d, 0x73, 0x12, 0x5e, 0x0a, 0x14, 0x70, 0x74, 0x5f, 0x70, 0x67, 0x5f, 0x73, 0x75, 0x6d, 0x6d,
+	0x61, 0x72, 0x79, 0x5f, 0x70, 0x61, 0x72, 0x61, 0x6d, 0x73, 0x18, 0x0c, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x2b, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x53, 0x74, 0x61, 0x72, 0x74, 0x41, 0x63,
+	0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x2e, 0x50, 0x54, 0x50, 0x67,
+	0x53, 0x75, 0x6d, 0x6d, 0x61, 0x72, 0x79, 0x50, 0x61, 0x72, 0x61, 0x6d, 0x73, 0x48, 0x00, 0x52,
+	0x11, 0x70, 0x74, 0x50, 0x67, 0x53, 0x75, 0x6d, 0x6d, 0x61, 0x72, 0x79, 0x50, 0x61, 0x72, 0x61,
 	0x6d, 0x73, 0x12, 0x6d, 0x0a, 0x19, 0x70, 0x74, 0x5f, 0x6d, 0x6f, 0x6e, 0x67, 0x6f, 0x64, 0x62,
 	0x5f, 0x73, 0x75, 0x6d, 0x6d, 0x61, 0x72, 0x79, 0x5f, 0x70, 0x61, 0x72, 0x61, 0x6d, 0x73, 0x18,
 	0x0d, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x30, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x53, 0x74,
@@ -4218,6 +4310,18 @@ func file_agentpb_agent_proto_init() {
 			}
 		}
 		file_agentpb_agent_proto_msgTypes[38].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*StartActionRequest_PTPgSummaryParams); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_agentpb_agent_proto_msgTypes[39].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*StartActionRequest_PTMongoDBSummaryParams); i {
 			case 0:
 				return &v.state
@@ -4358,6 +4462,7 @@ func file_agentpb_agent_proto_init() {
 		(*StartActionRequest_PostgresqlShowIndexParams)(nil),
 		(*StartActionRequest_MongodbExplainParams)(nil),
 		(*StartActionRequest_PtSummaryParams)(nil),
+		(*StartActionRequest_PtPgSummaryParams)(nil),
 		(*StartActionRequest_PtMongodbSummaryParams)(nil),
 		(*StartActionRequest_PtMysqlSummaryParams)(nil),
 		(*StartActionRequest_MysqlQueryShowParams)(nil),
