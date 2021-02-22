@@ -383,12 +383,12 @@
   version = "v0.3.0"
 
 [[projects]]
-  branch = "PMM-7412-create-api-for-getting-logs"
+  branch = "main"
   digest = "1:c60754f36f889a8cb8ad9174d040c090e258f5277a0462b930dd196d5f72c57e"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "e791cbe7b3e8f64962adb3cd14e7d19fc95ca60e"
+  revision = "41f004193c1ac2e6614d8eaac641b18899334d91"
 
 [[projects]]
   branch = "main"
@@ -408,8 +408,8 @@
   revision = "c158e23a172f892cc389233858238449efec1dbb"
 
 [[projects]]
-  branch = "PMM-7412-dbaas-implement-api-for-getting-logs"
-  digest = "1:0081643e1d1a9c40c427f6e3a80c0aed274f65da2f55beeb2c6556da1aefe813"
+  branch = "PMM-2.0"
+  digest = "1:f92314d23e56d54823d92fac71343a3b44fb7a91cda7ec6050ebc56b204b9e93"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -433,7 +433,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "98a7dfbc20012132badaf8a3a4761d2786318edc"
+  revision = "64348c1a59b03b00935a36f83970e00a45870c3d"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
