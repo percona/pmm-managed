@@ -38,7 +38,8 @@ type actionsServer struct {
 	l  *logrus.Entry
 }
 
-var pmmAgent2100 = version.MustParse("2.10.0-HEAD") // TODO: Remove HEAD later once 2.11.0 is released.
+var pmmAgent2100 = version.MustParse("2.10.0")
+var pmmAgent2150 = version.MustParse("2.15.0-HEAD") // TODO: Remove HEAD later once 2.16.0 is released.
 
 // NewActionsServer creates Management Actions Server.
 func NewActionsServer(r *agents.Registry, db *reform.DB) managementpb.ActionsServer {
@@ -476,6 +477,10 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 		pmmAgents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, service.NodeID)
 		if err != nil {
 			return nil, status.Errorf(codes.NotFound, "No pmm-agent running node %s", service.NodeID)
+		}
+		pmmAgents = models.FindPMMAgentsForVersion(s.l, pmmAgents, pmmAgent2150)
+		if len(pmmAgents) == 0 {
+			return nil, status.Error(codes.FailedPrecondition, "all available agents are outdated")
 		}
 		pmmAgentID, err = models.FindPmmAgentIDToRunAction(req.PmmAgentId, pmmAgents)
 		if err != nil {
