@@ -210,6 +210,31 @@ func TestChangeBackupLocation(t *testing.T) {
 		assert.Equal(t, updateReq.S3Config.AccessKey, updatedLocation.S3Config.AccessKey)
 	})
 
+	t.Run("update only name", func(t *testing.T) {
+		addReq := &backupv1beta1.AddLocationRequest{
+			Name: gofakeit.Name(),
+			PmmServerConfig: &backupv1beta1.PMMServerLocationConfig{
+				Path: "/tmp",
+			},
+		}
+		loc, err := svc.AddLocation(ctx, addReq)
+		require.NoError(t, err)
+		require.NotEmpty(t, loc.LocationId)
+
+		updateReq := &backupv1beta1.ChangeLocationRequest{
+			LocationId: loc.LocationId,
+			Name:       gofakeit.Name(),
+		}
+		_, err = svc.ChangeLocation(ctx, updateReq)
+		require.NoError(t, err)
+
+		updatedLocation, err := models.FindBackupLocationByID(db.Querier, loc.LocationId)
+		require.NoError(t, err)
+		assert.Equal(t, updateReq.Name, updatedLocation.Name)
+		require.NotNil(t, updatedLocation.PMMServerConfig)
+		assert.Equal(t, addReq.PmmServerConfig.Path, updatedLocation.PMMServerConfig.Path)
+	})
+
 	t.Run("update to existing name", func(t *testing.T) {
 		name := gofakeit.Name()
 		_, err := svc.AddLocation(ctx, &backupv1beta1.AddLocationRequest{

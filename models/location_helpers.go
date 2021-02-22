@@ -155,7 +155,7 @@ func (c BackupLocationConfig) Validate() (bool, error) {
 	}
 
 	if configCount > 1 {
-		return configCount == 1, status.Error(codes.InvalidArgument, "Only one config is allowed.")
+		return false, status.Error(codes.InvalidArgument, "Only one config is allowed.")
 	}
 
 	return configCount == 1, err
