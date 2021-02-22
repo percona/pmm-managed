@@ -762,6 +762,10 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 	}()
 
 	pmmAgentID := pointer.GetString(agent.PMMAgentID)
+	if !agent.PushMetrics && (service.ServiceType == models.ExternalServiceType || service.ServiceType == models.HAProxyServiceType) {
+		pmmAgentID = models.PMMServerAgentID
+	}
+
 	pmmAgent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
@@ -799,6 +803,28 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 			Dsn:     agent.DSN(service, 2*time.Second, "", nil),
 			Timeout: ptypes.DurationProto(3 * time.Second),
 		}
+	case models.ExternalServiceType:
+		exporterURL, err := agent.ExporterURL(q)
+		if err != nil {
+			return err
+		}
+
+		request = &agentpb.CheckConnectionRequest{
+			Type:    inventorypb.ServiceType_EXTERNAL_SERVICE,
+			Dsn:     exporterURL,
+			Timeout: ptypes.DurationProto(3 * time.Second),
+		}
+	case models.HAProxyServiceType:
+		exporterURL, err := agent.ExporterURL(q)
+		if err != nil {
+			return err
+		}
+
+		request = &agentpb.CheckConnectionRequest{
+			Type:    inventorypb.ServiceType_HAPROXY_SERVICE,
+			Dsn:     exporterURL,
+			Timeout: ptypes.DurationProto(3 * time.Second),
+		}
 	default:
 		l.Panicf("unhandled Service type %s", service.ServiceType)
 	}
@@ -816,6 +842,9 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 			return errors.Wrap(err, "failed to update table count")
 		}
 
+	case models.ExternalServiceType, models.HAProxyServiceType:
+		// TODO: handle check of exporter response format https://jira.percona.com/browse/PMM-5778
+		l.Debugf("CheckConnectionResponse: %+v.", resp)
 	case models.PostgreSQLServiceType:
 	case models.MongoDBServiceType:
 	case models.ProxySQLServiceType:
