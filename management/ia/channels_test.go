@@ -176,6 +176,40 @@ func TestRemoveChannel(t *testing.T) {
 		})
 		require.Error(t, err)
 	})
+
+	t.Run("channel in use", func(t *testing.T) {
+		templateName := createTemplate(t)
+		defer deleteTemplate(t, channelsClient.Default.Templates, templateName)
+
+		channelID := createChannel(t)
+		defer deleteChannel(t, channelsClient.Default.Channels, channelID)
+
+		params := createAlertRuleParams(templateName, channelID, "param2", nil)
+		rule, err := channelsClient.Default.Rules.CreateAlertRule(params)
+		require.NoError(t, err)
+		defer deleteRule(t, channelsClient.Default.Rules, rule.Payload.RuleID)
+
+		_, err = client.RemoveChannel(&channels.RemoveChannelParams{
+			Body: channels.RemoveChannelBody{
+				ChannelID: channelID,
+			},
+			Context: pmmapitests.Context,
+		})
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.FailedPrecondition, "Failed to delete notification channel %s, as it is being used by some rule.", channelID)
+
+		resp, err := client.ListChannels(&channels.ListChannelsParams{
+			Context: pmmapitests.Context,
+		})
+		require.NoError(t, err)
+
+		var found bool
+		for _, channel := range resp.Payload.Channels {
+			if channelID == channel.ChannelID {
+				found = true
+			}
+		}
+		assert.Truef(t, found, "Channel with id %s not found", channelID)
+	})
 }
 
 func TestListChannels(t *testing.T) {
