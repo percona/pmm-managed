@@ -408,8 +408,8 @@
   revision = "c158e23a172f892cc389233858238449efec1dbb"
 
 [[projects]]
-  branch = "PMM-5778-check-exporter-format"
-  digest = "1:9b970e1ebeaf77c24729cab53d47018eef1845098e7bc8d86ec7f60cccd5ca7d"
+  branch = "PMM-2.0"
+  digest = "1:f92314d23e56d54823d92fac71343a3b44fb7a91cda7ec6050ebc56b204b9e93"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -433,7 +433,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "439027b26ce67c2ec18e28c9f9f505958e0c3a01"
+  revision = "64348c1a59b03b00935a36f83970e00a45870c3d"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
