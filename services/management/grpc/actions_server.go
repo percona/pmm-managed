@@ -363,6 +363,10 @@ func (s *actionsServer) StartPTPgSummaryAction(ctx context.Context, req *managem
 		if err != nil {
 			return nil, status.Errorf(codes.NotFound, "No pmm-agent running node %s", service.NodeID)
 		}
+		pmmAgents = models.FindPMMAgentsForVersion(s.l, pmmAgents, pmmAgent2150)
+		if len(pmmAgents) == 0 {
+			return nil, status.Error(codes.FailedPrecondition, "all available agents are outdated")
+		}
 		pmmAgentID, err = models.FindPmmAgentIDToRunAction(req.PmmAgentId, pmmAgents)
 		if err != nil {
 			return nil, err
@@ -386,6 +390,10 @@ func (s *actionsServer) StartPTPgSummaryAction(ctx context.Context, req *managem
 	}
 	if exportersCount > 1 {
 		return nil, status.Errorf(codes.FailedPrecondition, "Found more than one postgres exporter")
+	}
+
+	if pointer.GetString(service.Socket) != "" {
+		service.Address = service.Socket
 	}
 
 	err = s.r.StartPTPgSummaryAction(ctx, res.ID, pmmAgentID, pointer.GetString(service.Address), pointer.GetUint16(service.Port),
