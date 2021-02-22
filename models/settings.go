@@ -76,6 +76,7 @@ type Settings struct {
 		Enabled               bool                   `json:"enabled"`
 		EmailAlertingSettings *EmailAlertingSettings `json:"email_settings"`
 		SlackAlertingSettings *SlackAlertingSettings `json:"slack_settings"`
+		STTCheckIntervals     *STTCheckIntervals     `json:"stt_check_intervals"`
 	} `json:"ia"`
 }
 
@@ -93,6 +94,13 @@ type EmailAlertingSettings struct {
 // SlackAlertingSettings represents Slack settings for Integrated Alerting.
 type SlackAlertingSettings struct {
 	URL string `json:"url"`
+}
+
+// STTCheckIntervals represents intervals between STT checks.
+type STTCheckIntervals struct {
+	DefaultInterval  time.Duration `json:"default_interval"`
+	RareInterval     time.Duration `json:"rare_interval"`
+	FrequentInterval time.Duration `json:"frequent_interval"`
 }
 
 // fillDefaults sets zero values to their default values.
