@@ -872,7 +872,6 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 			return errors.Wrap(err, "failed to update table count")
 		}
 	case models.ExternalServiceType, models.HAProxyServiceType:
-		l.Debugf("CheckConnectionResponse: %+v.", resp)
 	case models.PostgreSQLServiceType:
 	case models.MongoDBServiceType:
 	case models.ProxySQLServiceType:
