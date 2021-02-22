@@ -65,6 +65,8 @@ type Settings struct {
 		STTEnabled bool `json:"stt_enabled"`
 		// List of disabled STT checks
 		DisabledSTTChecks []string `json:"disabled_stt_checks"`
+		// STT check intervals
+		STTCheckIntervals STTCheckIntervals `json:"stt_check_intervals"`
 	} `json:"sass"` // sic :(
 
 	// DBaaS config options
@@ -76,7 +78,6 @@ type Settings struct {
 		Enabled               bool                   `json:"enabled"`
 		EmailAlertingSettings *EmailAlertingSettings `json:"email_settings"`
 		SlackAlertingSettings *SlackAlertingSettings `json:"slack_settings"`
-		STTCheckIntervals     *STTCheckIntervals     `json:"stt_check_intervals"`
 	} `json:"ia"`
 }
 
@@ -124,6 +125,18 @@ func (s *Settings) fillDefaults() {
 
 	if len(s.AWSPartitions) == 0 {
 		s.AWSPartitions = []string{endpoints.AwsPartitionID}
+	}
+
+	if s.STTCheckIntervals.RareInterval = 0 {
+		s.STTCheckIntervals.RareInterval = 78 * time.Hour
+	}
+
+	if s.STTCheckIntervals.DefaultInterval = 0 {
+		s.STTCheckIntervals.DefaultInterval = 24 * time.Hour
+	}
+
+	if s.STTCheckIntervals.FrequentInterval = 0 {
+		s.STTCheckIntervals.FrequentInterval = 4 * time.Hour
 	}
 
 	// AWSInstanceChecked is false by default
