@@ -752,7 +752,7 @@ func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo)
 	l.Infof("SetState response: %+v.", resp)
 }
 
-func (r *Registry) isExternalExporterConnectionCheckSupported(ctx context.Context, q *reform.Querier, pmmAgentID string) (bool, error) {
+func (r *Registry) isExternalExporterConnectionCheckSupported(q *reform.Querier, pmmAgentID string) (bool, error) {
 	pmmAgent, err := models.FindAgentByID(r.db.Querier, pmmAgentID)
 	if err != nil {
 		return false, fmt.Errorf("failed to get PMM Agent: %s.", err)
@@ -786,7 +786,7 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 
 	// Skip check connection to external exporter with old pmm-agent.
 	if service.ServiceType == models.ExternalServiceType || service.ServiceType == models.HAProxyServiceType {
-		isCheckConnSupported, err := r.isExternalExporterConnectionCheckSupported(ctx, q, pmmAgentID)
+		isCheckConnSupported, err := r.isExternalExporterConnectionCheckSupported(q, pmmAgentID)
 		if err != nil {
 			return err
 		}
