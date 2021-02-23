@@ -409,7 +409,7 @@
 
 [[projects]]
   branch = "PMM-7337-stt-check-intervals"
-  digest = "1:2f7264de7f87634168705f61662428bc551b0026f43eea236b7ea4806ebc5b8d"
+  digest = "1:925353148334f2dcc5a738e905061d505d33d402f8ee3348dc0cc8a59678852f"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -433,7 +433,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "17bbede94f23d3fda4c8874ebd2e0a0abbe51e6d"
+  revision = "babfaef450dcfe3b5c84028cd96959874eda3f03"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
