@@ -145,7 +145,8 @@ groups:
 		assert.Equal(t, expected, string(file))
 
 		// Removes the rules files
-		rules.RemoveVMAlertRulesFiles()
+		err = rules.RemoveVMAlertRulesFiles()
+		require.NoError(t, err)
 
 		matches, err := filepath.Glob(testDir + "/*.yml")
 
