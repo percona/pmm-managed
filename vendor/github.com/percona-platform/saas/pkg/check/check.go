@@ -175,9 +175,9 @@ type Check struct {
 	Name        string        `yaml:"name"`
 	Summary     string        `yaml:"summary"`
 	Description string        `yaml:"description"`
-	Tiers       []common.Tier `yaml:"tiers,flow,omitempty"`
-	Interval    Interval      `yaml:"interval"`
 	Type        Type          `yaml:"type"`
+	Tiers       []common.Tier `yaml:"tiers,flow,omitempty"`
+	Interval    Interval      `yaml:"interval,omitempty"`
 	Query       string        `yaml:"query,omitempty"`
 	Script      string        `yaml:"script"`
 }
@@ -198,6 +198,10 @@ func (c *Check) Validate() error {
 	}
 
 	if err = common.ValidateTiers(c.Tiers); err != nil {
+		return err
+	}
+
+	if err = c.Interval.Validate(); err != nil {
 		return err
 	}
 
