@@ -408,8 +408,8 @@
   revision = "c158e23a172f892cc389233858238449efec1dbb"
 
 [[projects]]
-  branch = "release/2.16"
-  digest = "1:6c29de38d29e6cc13676f607480696885a4be1c835045336cde345eb90642500"
+  branch = "PMM-7379-alert-rule-name-edit"
+  digest = "1:184d9994c4540db5e4d3db20c1071d3bca1d37fc34f3f4aa15081bde3dbd8ba0"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -433,7 +433,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "37c694d4aa243ce9f1345bec9da75462e1c2a074"
+  revision = "38cd8a689160a6e091dbe6f75eabd881043e06c9"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
