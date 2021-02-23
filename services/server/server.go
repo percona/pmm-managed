@@ -400,6 +400,11 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 			Mr: ptypes.DurationProto(settings.MetricsResolutions.MR),
 			Lr: ptypes.DurationProto(settings.MetricsResolutions.LR),
 		},
+		SttCheckIntervals: &serverpb.STTCheckIntervals{
+			RareInterval:     ptypes.DurationProto(settings.SaaS.STTCheckIntervals.RareInterval),
+			DefaultInterval:  ptypes.DurationProto(settings.SaaS.STTCheckIntervals.DefaultInterval),
+			FrequentInterval: ptypes.DurationProto(settings.SaaS.STTCheckIntervals.FrequentInterval),
+		},
 		DataRetention:    ptypes.DurationProto(settings.DataRetention),
 		SshKey:           settings.SSHKey,
 		AwsPartitions:    settings.AWSPartitions,
