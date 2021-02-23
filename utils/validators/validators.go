@@ -29,9 +29,9 @@ const (
 	MetricsResolutionMin = time.Second
 	// MetricsResolutionMultipleOf is value metrics resolution should be multiple of.
 	MetricsResolutionMultipleOf = time.Second
-	// STTCheckIntevalMin is the smallest value STT check intervals can accept.
+	// STTCheckIntervalMin is the smallest value STT check intervals can accept.
 	STTCheckIntervalMin = time.Second
-	// STTCheckIntevalMultipleOf is value STT check intervals should be multiple of.
+	// STTCheckIntervalMultipleOf is value STT check intervals should be multiple of.
 	STTCheckIntervalMultipleOf = time.Second
 	// DataRetentionMin is the smallest value data retention can accept.
 	DataRetentionMin = 24 * time.Hour
