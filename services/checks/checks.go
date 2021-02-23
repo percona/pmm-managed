@@ -908,7 +908,6 @@ func filterChecksByInterval(checks []check.Check, interval check.Interval) []che
 		// Empty check interval equals standard interval.
 		if c.Interval == interval || (interval == check.Standard && c.Interval == "") {
 			res = append(res, c)
-
 		}
 	}
 
