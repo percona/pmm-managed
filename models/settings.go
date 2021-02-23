@@ -127,16 +127,16 @@ func (s *Settings) fillDefaults() {
 		s.AWSPartitions = []string{endpoints.AwsPartitionID}
 	}
 
-	if s.STTCheckIntervals.RareInterval = 0 {
-		s.STTCheckIntervals.RareInterval = 78 * time.Hour
+	if s.SaaS.STTCheckIntervals.RareInterval == 0 {
+		s.SaaS.STTCheckIntervals.RareInterval = 78 * time.Hour
 	}
 
-	if s.STTCheckIntervals.DefaultInterval = 0 {
-		s.STTCheckIntervals.DefaultInterval = 24 * time.Hour
+	if s.SaaS.STTCheckIntervals.DefaultInterval == 0 {
+		s.SaaS.STTCheckIntervals.DefaultInterval = 24 * time.Hour
 	}
 
-	if s.STTCheckIntervals.FrequentInterval = 0 {
-		s.STTCheckIntervals.FrequentInterval = 4 * time.Hour
+	if s.SaaS.STTCheckIntervals.FrequentInterval == 0 {
+		s.SaaS.STTCheckIntervals.FrequentInterval = 4 * time.Hour
 	}
 
 	// AWSInstanceChecked is false by default

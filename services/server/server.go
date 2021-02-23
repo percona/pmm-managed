@@ -526,7 +526,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	var newSettings, oldSettings *models.Settings
 	err := s.db.InTransaction(func(tx *reform.TX) error {
 		metricsRes := req.MetricsResolutions
-		sttCheckIntervals := req.STTCheckIntervals
+		sttCheckIntervals := req.SttCheckIntervals
 		settingsParams := &models.ChangeSettingsParams{
 			DisableTelemetry: req.DisableTelemetry,
 			EnableTelemetry:  req.EnableTelemetry,

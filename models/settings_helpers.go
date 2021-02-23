@@ -171,13 +171,13 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 	}
 
 	if params.STTCheckIntervals.RareInterval != 0 {
-		settings.STTCheckIntervals.RareInterval = params.STTCheckIntervals.RareInterval
+		settings.SaaS.STTCheckIntervals.RareInterval = params.STTCheckIntervals.RareInterval
 	}
 	if params.STTCheckIntervals.DefaultInterval != 0 {
-		settings.STTCheckIntervals.DefaultInterval = params.STTCheckIntervals.DefaultInterval
+		settings.SaaS.STTCheckIntervals.DefaultInterval = params.STTCheckIntervals.DefaultInterval
 	}
 	if params.STTCheckIntervals.FrequentInterval != 0 {
-		settings.STTCheckIntervals.FrequentInterval = params.STTCheckIntervals.FrequentInterval
+		settings.SaaS.STTCheckIntervals.FrequentInterval = params.STTCheckIntervals.FrequentInterval
 	}
 
 	if len(params.DisableSTTChecks) != 0 {
