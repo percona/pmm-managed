@@ -359,7 +359,7 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 		cfg.Global = &alertmanager.GlobalConfig{}
 	}
 
-	findReceiver := func(name string) int {
+	findReceiverIdx := func(name string) int {
 		for i, r := range cfg.Receivers {
 			if r.Name == name {
 				return i
@@ -368,9 +368,8 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 		return -1
 	}
 
-	emptyFound := findReceiver("empty") != -1
 	// make sure that "empty" receiver is there
-	if !emptyFound {
+	if findReceiverIdx("empty") == -1 {
 		cfg.Receivers = append(cfg.Receivers, &alertmanager.Receiver{
 			Name: "empty",
 		})
@@ -379,9 +378,9 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 	disabledReceiver := &alertmanager.Receiver{
 		Name: "disabled",
 	}
-	disabledReceiverIndex := findReceiver("disabled")
-	if disabledReceiverIndex >= 0 {
-		cfg.Receivers[disabledReceiverIndex] = disabledReceiver
+	// Override if there is any user defined receiver `disabled, needs to be empty
+	if disabledReceiverIdx := findReceiverIdx("disabled"); disabledReceiverIdx != -1 {
+		cfg.Receivers[disabledReceiverIdx] = disabledReceiver
 	} else {
 		cfg.Receivers = append(cfg.Receivers, disabledReceiver)
 	}
