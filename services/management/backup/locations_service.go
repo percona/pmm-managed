@@ -132,16 +132,29 @@ func (s *LocationsService) ChangeLocation(ctx context.Context, req *backupv1beta
 
 // TestLocationConfig tests backup location and credentials.
 func (s *LocationsService) TestLocationConfig(
-	ctx context.Context,
+	_ context.Context,
 	req *backupv1beta1.TestLocationConfigRequest,
 ) (*backupv1beta1.TestLocationConfigResponse, error) {
 	params := &models.TestBackupLocationParams{}
 
 	if req.S3Config != nil {
 		params.S3Config = &models.S3LocationConfig{
-			Endpoint:  req.S3Config.Endpoint,
-			AccessKey: req.S3Config.AccessKey,
-			SecretKey: req.S3Config.SecretKey,
+			Endpoint:   req.S3Config.Endpoint,
+			AccessKey:  req.S3Config.AccessKey,
+			SecretKey:  req.S3Config.SecretKey,
+			BucketName: req.S3Config.BucketName,
+		}
+	}
+
+	if req.PmmServerConfig != nil {
+		params.PMMServerConfig = &models.PMMServerLocationConfig{
+			Path: req.PmmServerConfig.Path,
+		}
+	}
+
+	if req.PmmClientConfig != nil {
+		params.PMMClientConfig = &models.PMMClientLocationConfig{
+			Path: req.PmmClientConfig.Path,
 		}
 	}
 
@@ -151,7 +164,6 @@ func (s *LocationsService) TestLocationConfig(
 
 	return &backupv1beta1.TestLocationConfigResponse{}, nil
 }
-
 
 func convertLocation(location *models.BackupLocation) (*backupv1beta1.Location, error) {
 	loc := &backupv1beta1.Location{

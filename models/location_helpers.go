@@ -17,12 +17,11 @@
 package models
 
 import (
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"net/url"
+	"path"
+
 	"github.com/google/uuid"
+	"github.com/minio/minio-go"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -280,28 +279,32 @@ func ChangeBackupLocation(q *reform.Querier, locationID string, params ChangeBac
 }
 
 func testS3Config(c *S3LocationConfig) error {
-	// TODO: extract region and bucket
-	const (
-		region = "eu-central-1"
-		bucket = "extracted_bucket"
-	)
-
-	s3Config := &aws.Config{
-		Credentials: credentials.NewStaticCredentials(c.AccessKey, c.SecretKey, ""),
-		Region:      aws.String(region),
-	}
-	newSession, err := session.NewSession(s3Config)
+	parsedURL, err := url.Parse(c.Endpoint)
 	if err != nil {
 		return err
 	}
 
-	s3Client := s3.New(newSession)
-	if _, err := s3Client.ListObjects(&s3.ListObjectsInput{Bucket: aws.String(bucket)}); err != nil {
-		if s3err, ok := err.(awserr.Error); ok {
-			return status.Errorf(codes.InvalidArgument, "%s: %s.", s3err.Code(), s3err.Message())
+	endpoint := path.Join(parsedURL.Host, parsedURL.Path)
+	secure := true
+	if parsedURL.Scheme == "http" {
+		secure = false
+	}
+	minioClient, err := minio.New(endpoint, c.AccessKey, c.SecretKey, secure)
+	if err != nil {
+		return err
+	}
+
+	exists, err := minioClient.BucketExists(c.BucketName)
+	if err != nil {
+		if er, ok := err.(minio.ErrorResponse); ok {
+			return status.Errorf(codes.InvalidArgument, "%s: %s.", er.Code, er.Message)
 		}
 
-		return status.Error(codes.InvalidArgument, err.Error())
+		return err
+	}
+
+	if !exists {
+		return status.Errorf(codes.InvalidArgument, "Bucket doesn't exist")
 	}
 
 	return nil
@@ -320,7 +323,7 @@ func TestBackupLocationConfig(params *TestBackupLocationParams) error {
 	}
 
 	if !configSet {
-		return status.Error(codes.InvalidArgument, "One config is should be set only.")
+		return status.Error(codes.InvalidArgument, "One config should be set only.")
 	}
 
 	switch {
