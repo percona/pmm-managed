@@ -58,6 +58,31 @@ func FindRules(q *reform.Querier) ([]*Rule, error) {
 	return rules, nil
 }
 
+// FindRulesOnPage returns a page with saved alert rules configuration.
+func FindRulesOnPage(q *reform.Querier, pageIndex, pageSize int) ([]*Rule, error) {
+	rows, err := q.SelectAllFrom(RuleTable, "ORDER BY id LIMIT $1 OFFSET $2", pageSize, pageIndex*pageSize)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to select alert rules")
+	}
+
+	rules := make([]*Rule, len(rows))
+	for i, s := range rows {
+		rules[i] = s.(*Rule)
+	}
+
+	return rules, nil
+}
+
+// CountRules returns number of alert rules.
+func CountRules(q *reform.Querier) (int, error) {
+	count, err := q.Count(RuleTable, "")
+	if err != nil {
+		return 0, errors.Wrap(err, "failed to count alert rules")
+	}
+
+	return count, nil
+}
+
 // FindRuleByID finds Rule by ID.
 func FindRuleByID(q *reform.Querier, id string) (*Rule, error) {
 	if id == "" {
@@ -91,7 +116,8 @@ type CreateRuleParams struct {
 // CreateRule persists alert Rule.
 func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 	id := "/rule_id/" + uuid.New().String()
-	if err := checkUniqueRuleID(q, id); err != nil {
+	var err error
+	if err = checkUniqueRuleID(q, id); err != nil {
 		return nil, err
 	}
 
@@ -121,13 +147,11 @@ func CreateRule(q *reform.Querier, params *CreateRuleParams) (*Rule, error) {
 		row.ChannelIDs = channelIDs
 	}
 
-	err := row.SetCustomLabels(params.CustomLabels)
-	if err != nil {
+	if err = row.SetCustomLabels(params.CustomLabels); err != nil {
 		return nil, err
 	}
 
-	err = q.Insert(row)
-	if err != nil {
+	if err = q.Insert(row); err != nil {
 		return nil, errors.Wrap(err, "failed to create alert rule")
 	}
 
@@ -210,12 +234,12 @@ func ToggleRule(q *reform.Querier, ruleID string, params *ToggleRuleParams) (*Ru
 
 // RemoveRule removes alert Rule with specified id.
 func RemoveRule(q *reform.Querier, id string) error {
-	if _, err := FindRuleByID(q, id); err != nil {
+	var err error
+	if _, err = FindRuleByID(q, id); err != nil {
 		return err
 	}
 
-	err := q.Delete(&Rule{ID: id})
-	if err != nil {
+	if err = q.Delete(&Rule{ID: id}); err != nil {
 		return errors.Wrap(err, "failed to delete alert Rule")
 	}
 	return nil

@@ -98,6 +98,10 @@ func checkS3Config(c *S3LocationConfig) error {
 		return status.Error(codes.InvalidArgument, "S3 secretKey field is empty.")
 	}
 
+	if c.BucketName == "" {
+		return status.Error(codes.InvalidArgument, "S3 bucketName field is empty.")
+	}
+
 	return nil
 }
 
@@ -116,24 +120,76 @@ func FindBackupLocations(q *reform.Querier) ([]*BackupLocation, error) {
 	return locations, nil
 }
 
-// ensureOneLocationConfig ensures that only one config in the arguments is set.
-func ensureOneLocationConfig(clc *PMMClientLocationConfig, slc *PMMServerLocationConfig, s3lc *S3LocationConfig) bool {
-	var configCount int
-	if clc != nil {
-		configCount++
-	}
-	if slc != nil {
-		configCount++
-	}
-	if s3lc != nil {
-		configCount++
+// FindBackupLocationByID finds a Backup Location by its ID.
+func FindBackupLocationByID(q *reform.Querier, id string) (*BackupLocation, error) {
+	if id == "" {
+		return nil, status.Error(codes.InvalidArgument, "Empty Location ID.")
 	}
 
-	if configCount == 1 {
-		return true
+	location := &BackupLocation{ID: id}
+	switch err := q.Reload(location); err {
+	case nil:
+		return location, nil
+	case reform.ErrNoRows:
+		return nil, status.Errorf(codes.NotFound, "Backup location with ID %q not found.", id)
+	default:
+		return nil, errors.WithStack(err)
+	}
+}
+
+// BackupLocationConfig groups all backup locations configs.
+type BackupLocationConfig struct {
+	PMMClientConfig *PMMClientLocationConfig
+	PMMServerConfig *PMMServerLocationConfig
+	S3Config        *S3LocationConfig
+}
+
+// Validate checks if there is exactly one config with required fields and returns if config is set.
+func (c BackupLocationConfig) Validate() (bool, error) {
+	var err error
+	configCount := 0
+	if c.S3Config != nil {
+		configCount++
+		err = checkS3Config(c.S3Config)
 	}
 
-	return false
+	if c.PMMServerConfig != nil {
+		configCount++
+		err = checkPMMServerLocationConfig(c.PMMServerConfig)
+	}
+
+	if c.PMMClientConfig != nil {
+		configCount++
+		err = checkPMMClientLocationConfig(c.PMMClientConfig)
+	}
+
+	if configCount > 1 {
+		return false, status.Error(codes.InvalidArgument, "Only one config is allowed.")
+	}
+
+	return configCount == 1, err
+}
+
+// FillLocationConfig fills provided location according to backup config.
+func (c BackupLocationConfig) FillLocationConfig(location *BackupLocation) {
+	location.Type = ""
+	location.PMMClientConfig = nil
+	location.PMMServerConfig = nil
+	location.S3Config = nil
+
+	switch {
+	case c.S3Config != nil:
+		location.Type = S3BackupLocationType
+		location.S3Config = c.S3Config
+
+	case c.PMMServerConfig != nil:
+		location.Type = PMMServerBackupLocationType
+		location.PMMServerConfig = c.PMMServerConfig
+
+	case c.PMMClientConfig != nil:
+		location.Type = PMMClientBackupLocationType
+		location.PMMClientConfig = c.PMMClientConfig
+	}
 }
 
 // CreateBackupLocationParams are params for creating new backup location.
@@ -141,13 +197,20 @@ type CreateBackupLocationParams struct {
 	Name        string
 	Description string
 
-	PMMClientConfig *PMMClientLocationConfig
-	PMMServerConfig *PMMServerLocationConfig
-	S3Config        *S3LocationConfig
+	BackupLocationConfig
 }
 
-// CreateBackupLocation persists backup location.
+// CreateBackupLocation creates backup location.
 func CreateBackupLocation(q *reform.Querier, params CreateBackupLocationParams) (*BackupLocation, error) {
+	configSet, err := params.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	if !configSet {
+		return nil, status.Error(codes.InvalidArgument, "Missing location config.")
+	}
+
 	id := "/location_id/" + uuid.New().String()
 
 	if err := checkUniqueBackupLocationID(q, id); err != nil {
@@ -164,38 +227,53 @@ func CreateBackupLocation(q *reform.Querier, params CreateBackupLocationParams) 
 		Description: params.Description,
 	}
 
-	if !ensureOneLocationConfig(params.PMMClientConfig, params.PMMServerConfig, params.S3Config) {
-		return nil, status.Error(codes.InvalidArgument, "Only one config is allowed.")
-	}
-
-	switch {
-	case params.S3Config != nil:
-		if err := checkS3Config(params.S3Config); err != nil {
-			return nil, err
-		}
-		row.Type = S3BackupLocationType
-		row.S3Config = params.S3Config
-
-	case params.PMMServerConfig != nil:
-		if err := checkPMMServerLocationConfig(params.PMMServerConfig); err != nil {
-			return nil, err
-		}
-		row.Type = PMMServerBackupLocationType
-		row.PMMServerConfig = params.PMMServerConfig
-
-	case params.PMMClientConfig != nil:
-		if err := checkPMMClientLocationConfig(params.PMMClientConfig); err != nil {
-			return nil, err
-		}
-		row.Type = PMMClientBackupLocationType
-		row.PMMClientConfig = params.PMMClientConfig
-
-	default:
-		return nil, status.Error(codes.InvalidArgument, "Missing location type.")
-	}
+	params.FillLocationConfig(row)
 
 	if err := q.Insert(row); err != nil {
 		return nil, errors.Wrap(err, "failed to create backup location")
+	}
+
+	return row, nil
+}
+
+// ChangeBackupLocationParams are params for updating existing backup location.
+type ChangeBackupLocationParams struct {
+	Name        string
+	Description string
+
+	BackupLocationConfig
+}
+
+// ChangeBackupLocation updates existing location by specified locationID and params.
+func ChangeBackupLocation(q *reform.Querier, locationID string, params ChangeBackupLocationParams) (*BackupLocation, error) {
+	configSet, err := params.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	row, err := FindBackupLocationByID(q, locationID)
+	if err != nil {
+		return nil, err
+	}
+
+	if params.Name != "" && params.Name != row.Name {
+		if err := checkUniqueBackupLocationName(q, params.Name); err != nil {
+			return nil, err
+		}
+		row.Name = params.Name
+	}
+
+	if params.Description != "" {
+		row.Description = params.Description
+	}
+
+	// Replace old configuration by config from params
+	if configSet {
+		params.FillLocationConfig(row)
+	}
+
+	if err := q.Update(row); err != nil {
+		return nil, errors.Wrap(err, "failed to update backup location")
 	}
 
 	return row, nil
@@ -231,15 +309,18 @@ func testS3Config(c *S3LocationConfig) error {
 
 // TestBackupLocationParams are params for testing location and credentials.
 type TestBackupLocationParams struct {
-	PMMClientConfig *PMMClientLocationConfig
-	PMMServerConfig *PMMServerLocationConfig
-	S3Config        *S3LocationConfig
+	BackupLocationConfig
 }
 
 // TestBackupLocationConfig tests backup location config.
 func TestBackupLocationConfig(params *TestBackupLocationParams) error {
-	if !ensureOneLocationConfig(params.PMMClientConfig, params.PMMServerConfig, params.S3Config) {
-		return status.Error(codes.InvalidArgument, "Only one config is allowed.")
+	configSet, err := params.Validate()
+	if err != nil {
+		return err
+	}
+
+	if !configSet {
+		return status.Error(codes.InvalidArgument, "One config is should be set only.")
 	}
 
 	switch {
@@ -258,6 +339,19 @@ func TestBackupLocationConfig(params *TestBackupLocationParams) error {
 		if err := checkPMMClientLocationConfig(params.PMMClientConfig); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func RemoveBackupLocation(q *reform.Querier, id string, mode RemoveMode) error {
+	if _, err := FindBackupLocationByID(q, id); err != nil {
+		return err
+	}
+
+	// @TODO - force delete https://jira.percona.com/browse/PMM-7475
+	if err := q.Delete(&BackupLocation{ID: id}); err != nil {
+		return errors.Wrap(err, "failed to delete BackupLocation")
 	}
 
 	return nil
