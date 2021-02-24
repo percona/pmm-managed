@@ -193,9 +193,7 @@ func ChangeRule(q *reform.Querier, ruleID string, params *ChangeRuleParams) (*Ru
 	row.Severity = params.Severity
 	row.Filters = params.Filters
 	row.Params = params.RuleParams
-	if params.Summary != "" {
-		row.Summary = params.Summary
-	}
+	row.Summary = params.Summary
 
 	labels, err := json.Marshal(params.CustomLabels)
 	if err != nil {
