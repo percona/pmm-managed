@@ -413,7 +413,56 @@ func TestChangeLocation(t *testing.T) {
 	})
 }
 
+func TestRemoveLocation(t *testing.T) {
+	t.Parallel()
+	client := backupClient.Default.Locations
+	resp, err := client.AddLocation(&locations.AddLocationParams{
+		Body: locations.AddLocationBody{
+			Name:        gofakeit.Name(),
+			Description: gofakeit.Question(),
+			PMMClientConfig: &locations.AddLocationParamsBodyPMMClientConfig{
+				Path: "/tmp",
+			},
+		},
+		Context: pmmapitests.Context,
+	})
+	require.NoError(t, err)
+
+	_, err = client.RemoveLocation(&locations.RemoveLocationParams{
+		Body: locations.RemoveLocationBody{
+			LocationID: resp.Payload.LocationID,
+			Force:      false,
+		},
+		Context: pmmapitests.Context,
+	})
+
+	require.NoError(t, err)
+
+	assertNotFound := func(id string, locations []*locations.LocationsItems0) func() bool {
+		return func() bool {
+			for _, loc := range locations {
+				if loc.LocationID == id {
+					return false
+				}
+			}
+			return true
+		}
+	}
+
+	listResp, err := client.ListLocations(&locations.ListLocationsParams{Context: pmmapitests.Context})
+	require.NoError(t, err)
+
+	assert.Condition(t, assertNotFound(resp.Payload.LocationID, listResp.Payload.Locations))
+}
+
 func deleteLocation(t *testing.T, client locations.ClientService, id string) {
 	t.Helper()
-	// @TODO call Delete https://jira.percona.com/browse/PMM-7383
+	_, err := client.RemoveLocation(&locations.RemoveLocationParams{
+		Body: locations.RemoveLocationBody{
+			LocationID: id,
+			Force:      false,
+		},
+		Context: pmmapitests.Context,
+	})
+	assert.NoError(t, err)
 }
