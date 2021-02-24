@@ -347,6 +347,7 @@ func TestBackupLocationConfig(params *TestBackupLocationParams) error {
 	return nil
 }
 
+// RemoveBackupLocation removes BackupLocation by ID.
 func RemoveBackupLocation(q *reform.Querier, id string, mode RemoveMode) error {
 	if _, err := FindBackupLocationByID(q, id); err != nil {
 		return err
