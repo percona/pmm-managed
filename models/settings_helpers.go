@@ -279,6 +279,7 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 		return fmt.Errorf("Both enable_alerting and disable_alerting are present.") //nolint:golint,stylecheck
 	}
 
+	// TODO: consider refactoring this and the validation for STT check intervals
 	checkCases := []struct {
 		dur       time.Duration
 		fieldName string
