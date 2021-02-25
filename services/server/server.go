@@ -402,7 +402,7 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 		},
 		SttCheckIntervals: &serverpb.STTCheckIntervals{
 			RareInterval:     ptypes.DurationProto(settings.SaaS.STTCheckIntervals.RareInterval),
-			DefaultInterval:  ptypes.DurationProto(settings.SaaS.STTCheckIntervals.DefaultInterval),
+			StandardInterval: ptypes.DurationProto(settings.SaaS.STTCheckIntervals.StandardInterval),
 			FrequentInterval: ptypes.DurationProto(settings.SaaS.STTCheckIntervals.FrequentInterval),
 		},
 		DataRetention:    ptypes.DurationProto(settings.DataRetention),
@@ -537,7 +537,7 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			EnableTelemetry:  req.EnableTelemetry,
 			STTCheckIntervals: models.STTCheckIntervals{
 				RareInterval:     getDuration(sttCheckIntervals.GetRareInterval()),
-				DefaultInterval:  getDuration(sttCheckIntervals.GetDefaultInterval()),
+				StandardInterval: getDuration(sttCheckIntervals.GetStandardInterval()),
 				FrequentInterval: getDuration(sttCheckIntervals.GetFrequentInterval()),
 			},
 			MetricsResolutions: models.MetricsResolutions{

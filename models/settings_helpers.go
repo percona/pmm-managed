@@ -173,8 +173,8 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 	if params.STTCheckIntervals.RareInterval != 0 {
 		settings.SaaS.STTCheckIntervals.RareInterval = params.STTCheckIntervals.RareInterval
 	}
-	if params.STTCheckIntervals.DefaultInterval != 0 {
-		settings.SaaS.STTCheckIntervals.DefaultInterval = params.STTCheckIntervals.DefaultInterval
+	if params.STTCheckIntervals.StandardInterval != 0 {
+		settings.SaaS.STTCheckIntervals.StandardInterval = params.STTCheckIntervals.StandardInterval
 	}
 	if params.STTCheckIntervals.FrequentInterval != 0 {
 		settings.SaaS.STTCheckIntervals.FrequentInterval = params.STTCheckIntervals.FrequentInterval
@@ -309,7 +309,7 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 		fieldName string
 	}{
 		{params.STTCheckIntervals.RareInterval, "rare_interval"},
-		{params.STTCheckIntervals.DefaultInterval, "default_interval"},
+		{params.STTCheckIntervals.StandardInterval, "standard_interval"},
 		{params.STTCheckIntervals.FrequentInterval, "frequent_interval"},
 	}
 	for _, v := range checkCases {

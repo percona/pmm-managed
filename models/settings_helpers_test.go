@@ -47,7 +47,7 @@ func TestSettings(t *testing.T) {
 			DataRetention: 30 * 24 * time.Hour,
 			AWSPartitions: []string{"aws"},
 		}
-		expected.SaaS.STTCheckIntervals.DefaultInterval = 24 * time.Hour
+		expected.SaaS.STTCheckIntervals.StandardInterval = 24 * time.Hour
 		expected.SaaS.STTCheckIntervals.RareInterval = 78 * time.Hour
 		expected.SaaS.STTCheckIntervals.FrequentInterval = 4 * time.Hour
 		assert.Equal(t, expected, actual)
@@ -66,7 +66,7 @@ func TestSettings(t *testing.T) {
 			DataRetention: 30 * 24 * time.Hour,
 			AWSPartitions: []string{"aws"},
 		}
-		expected.SaaS.STTCheckIntervals.DefaultInterval = 24 * time.Hour
+		expected.SaaS.STTCheckIntervals.StandardInterval = 24 * time.Hour
 		expected.SaaS.STTCheckIntervals.RareInterval = 78 * time.Hour
 		expected.SaaS.STTCheckIntervals.FrequentInterval = 4 * time.Hour
 		assert.Equal(t, expected, s)

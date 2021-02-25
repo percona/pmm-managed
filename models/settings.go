@@ -99,7 +99,7 @@ type SlackAlertingSettings struct {
 
 // STTCheckIntervals represents intervals between STT checks.
 type STTCheckIntervals struct {
-	DefaultInterval  time.Duration `json:"default_interval"`
+	StandardInterval time.Duration `json:"standard_interval"`
 	RareInterval     time.Duration `json:"rare_interval"`
 	FrequentInterval time.Duration `json:"frequent_interval"`
 }
@@ -131,8 +131,8 @@ func (s *Settings) fillDefaults() {
 		s.SaaS.STTCheckIntervals.RareInterval = 78 * time.Hour
 	}
 
-	if s.SaaS.STTCheckIntervals.DefaultInterval == 0 {
-		s.SaaS.STTCheckIntervals.DefaultInterval = 24 * time.Hour
+	if s.SaaS.STTCheckIntervals.StandardInterval == 0 {
+		s.SaaS.STTCheckIntervals.StandardInterval = 24 * time.Hour
 	}
 
 	if s.SaaS.STTCheckIntervals.FrequentInterval == 0 {
