@@ -44,8 +44,7 @@ import (
 )
 
 const (
-	rulesDir        = "/etc/ia/rules"
-	defaultPageSize = 20
+	rulesDir = "/etc/ia/rules"
 )
 
 // RulesService represents API for Integrated Alerting Rules.

@@ -371,6 +371,18 @@ func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.Lis
 		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
 	}
 
+	pageIndex := 0
+	pageSize := defaultPageSize
+	if req.PageParams != nil {
+		pageIndex = int(req.PageParams.Index)
+		pageSize = int(req.PageParams.PageSize)
+	}
+
+	if pageSize <= 0 || pageIndex < 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "Page size (%d) should be positive number and "+
+			"page index (%d) should be non-negative number", req.PageParams.PageSize, req.PageParams.Index)
+	}
+
 	if req.Reload {
 		s.Collect(ctx)
 	}
@@ -378,9 +390,29 @@ func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.Lis
 	templates := s.getTemplates()
 	res := &iav1beta1.ListTemplatesResponse{
 		Templates: make([]*iav1beta1.Template, 0, len(templates)),
+		Totals: &iav1beta1.PageTotals{
+			TotalItems: int32(len(templates)),
+			TotalPages: int32(len(templates) / pageSize),
+		},
 	}
-	for _, template := range templates {
-		t, err := convertTemplate(s.l, template)
+
+	if len(templates)%pageSize > 0 {
+		res.Totals.TotalPages++
+	}
+
+	names := make([]string, len(templates))
+	for name := range templates {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	from, to := pageIndex*pageSize, pageIndex*pageSize+pageSize
+	if to > len(names) {
+		to = len(names)
+	}
+
+	for _, name := range names[from:to] {
+		t, err := convertTemplate(s.l, templates[name])
 		if err != nil {
 			return nil, err
 		}
@@ -388,7 +420,6 @@ func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.Lis
 		res.Templates = append(res.Templates, t)
 	}
 
-	sort.Slice(res.Templates, func(i, j int) bool { return res.Templates[i].Name < res.Templates[j].Name })
 	return res, nil
 }
 
