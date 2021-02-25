@@ -400,7 +400,7 @@ func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.Lis
 		res.Totals.TotalPages++
 	}
 
-	names := make([]string, len(templates))
+	names := make([]string, 0, len(templates))
 	for name := range templates {
 		names = append(names, name)
 	}
