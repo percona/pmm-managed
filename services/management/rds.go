@@ -72,8 +72,8 @@ var (
 		"mysql":        managementpb.DiscoverRDSEngine_DISCOVER_RDS_MYSQL,
 
 		// TODO https://jira.percona.com/browse/PMM-5195
-		// "aurora-postgresql"
-		// "postgres"
+		"aurora-postgresql": managementpb.DiscoverRDSEngine_DISCOVER_RDS_POSTGRESQL,
+		"postgres":          managementpb.DiscoverRDSEngine_DISCOVER_RDS_POSTGRESQL,
 	}
 	rdsEnginesKeys = []*string{
 		pointer.ToString("aurora"),
@@ -82,8 +82,8 @@ var (
 		pointer.ToString("mysql"),
 
 		// TODO https://jira.percona.com/browse/PMM-5195
-		// pointer.ToString("aurora-postgresql"),
-		// pointer.ToString("postgres"),
+		pointer.ToString("aurora-postgresql"),
+		pointer.ToString("postgres"),
 	}
 )
 
@@ -313,6 +313,81 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 				return err
 			}
 			res.Mysql = invService.(*inventorypb.MySQLService)
+
+			_, err = supportedMetricsMode(tx.Querier, req.MetricsMode, models.PMMServerAgentID)
+			if err != nil {
+				return err
+			}
+
+			// add MySQL Exporter
+			mysqldExporter, err := models.CreateAgent(tx.Querier, models.MySQLdExporterType, &models.CreateAgentParams{
+				PMMAgentID:                     models.PMMServerAgentID,
+				ServiceID:                      service.ServiceID,
+				Username:                       req.Username,
+				Password:                       req.Password,
+				TLS:                            req.Tls,
+				TLSSkipVerify:                  req.TlsSkipVerify,
+				TableCountTablestatsGroupLimit: tablestatsGroupTableLimit,
+			})
+			if err != nil {
+				return err
+			}
+			invMySQLdExporter, err := services.ToAPIAgent(tx.Querier, mysqldExporter)
+			if err != nil {
+				return err
+			}
+			res.MysqldExporter = invMySQLdExporter.(*inventorypb.MySQLdExporter)
+
+			if !req.SkipConnectionCheck {
+				if err = s.registry.CheckConnectionToService(ctx, tx.Querier, service, mysqldExporter); err != nil {
+					return err
+				}
+				// CheckConnectionToService updates the table count in row so, let's also update the response
+				res.TableCount = *mysqldExporter.TableCount
+			}
+
+			// add MySQL PerfSchema QAN Agent
+			if req.QanMysqlPerfschema {
+				qanAgent, err := models.CreateAgent(tx.Querier, models.QANMySQLPerfSchemaAgentType, &models.CreateAgentParams{
+					PMMAgentID:            models.PMMServerAgentID,
+					ServiceID:             service.ServiceID,
+					Username:              req.Username,
+					Password:              req.Password,
+					TLS:                   req.Tls,
+					TLSSkipVerify:         req.TlsSkipVerify,
+					QueryExamplesDisabled: req.DisableQueryExamples,
+				})
+				if err != nil {
+					return err
+				}
+				invQANAgent, err := services.ToAPIAgent(tx.Querier, qanAgent)
+				if err != nil {
+					return err
+				}
+				res.QanMysqlPerfschema = invQANAgent.(*inventorypb.QANMySQLPerfSchemaAgent)
+			}
+
+			return nil
+		case managementpb.DiscoverRDSEngine_DISCOVER_RDS_POSTGRESQL:
+			// add MySQL Service
+			service, err := models.AddNewService(tx.Querier, models.PostgreSQLServiceType, &models.AddDBMSServiceParams{
+				ServiceName:    req.ServiceName,
+				NodeID:         node.NodeID,
+				Environment:    req.Environment,
+				Cluster:        req.Cluster,
+				ReplicationSet: req.ReplicationSet,
+				CustomLabels:   req.CustomLabels,
+				Address:        &req.Address,
+				Port:           pointer.ToUint16(uint16(req.Port)),
+			})
+			if err != nil {
+				return err
+			}
+			invService, err := services.ToAPIService(service)
+			if err != nil {
+				return err
+			}
+			res.Postgres = invService.(*inventorypb.PostgreSQLService)
 
 			_, err = supportedMetricsMode(tx.Querier, req.MetricsMode, models.PMMServerAgentID)
 			if err != nil {
