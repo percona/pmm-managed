@@ -408,7 +408,7 @@
   revision = "c158e23a172f892cc389233858238449efec1dbb"
 
 [[projects]]
-  branch = "PMM-7557-add-bucket-name-field"
+  branch = "release/2.16"
   digest = "1:83c931342f75623e3c26ff11830d6c83ac3335473ce0fbadba08b62ef2b651ae"
   name = "github.com/percona/pmm"
   packages = [
@@ -433,7 +433,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "772dae74a60ce92afddf2254254b2a506eca0c39"
+  revision = "37e341821d2be2c66279850b7278dedf3f291663"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
