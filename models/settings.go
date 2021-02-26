@@ -29,6 +29,20 @@ type MetricsResolutions struct {
 	LR time.Duration `json:"lr"`
 }
 
+// SaaS contains settings related to the SaaS platform.
+type SaaS struct {
+	// Percona Platform user email
+	Email string `json:"email"`
+	// Percona Platform session Id
+	SessionID string `json:"session_id"`
+	// Security Threat Tool enabled
+	STTEnabled bool `json:"stt_enabled"`
+	// List of disabled STT checks
+	DisabledSTTChecks []string `json:"disabled_stt_checks"`
+	// STT check intervals
+	STTCheckIntervals STTCheckIntervals `json:"stt_check_intervals"`
+}
+
 // Settings contains PMM Server settings.
 type Settings struct {
 	PMMPublicAddress string `json:"pmm_public_address"`
@@ -55,19 +69,7 @@ type Settings struct {
 		CacheEnabled bool `json:"cache_enabled"`
 	} `json:"victoria_metrics"`
 
-	// Saas config options
-	SaaS struct {
-		// Percona Platform user email
-		Email string `json:"email"`
-		// Percona Platform session Id
-		SessionID string `json:"session_id"`
-		// Security Threat Tool enabled
-		STTEnabled bool `json:"stt_enabled"`
-		// List of disabled STT checks
-		DisabledSTTChecks []string `json:"disabled_stt_checks"`
-		// STT check intervals
-		STTCheckIntervals STTCheckIntervals `json:"stt_check_intervals"`
-	} `json:"sass"` // sic :(
+	SaaS SaaS `json:"sass"` // sic :(
 
 	// DBaaS config options
 	DBaaS struct {
