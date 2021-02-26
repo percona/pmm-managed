@@ -30,7 +30,6 @@ import (
 )
 
 // HAProxyService HAProxy Management Service.
-//nolint:unused
 type HAProxyService struct {
 	db       *reform.DB
 	registry agentsRegistry
@@ -99,6 +98,12 @@ func (e HAProxyService) AddHAProxy(ctx context.Context, req *managementpb.AddHAP
 		row, err := models.CreateExternalExporter(tx.Querier, params)
 		if err != nil {
 			return err
+		}
+
+		if !req.SkipConnectionCheck {
+			if err = e.registry.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
+				return err
+			}
 		}
 
 		agent, err := services.ToAPIAgent(tx.Querier, row)

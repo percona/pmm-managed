@@ -129,6 +129,9 @@ type gRPCServerDeps struct {
 	alertmanager          *alertmanager.Service
 	vmalert               *vmalert.Service
 	settings              *models.Settings
+	alertsService         *ia.AlertsService
+	templatesService      *ia.TemplatesService
+	rulesService          *ia.RulesService
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -183,11 +186,10 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterSecurityChecksServer(gRPCServer, managementgrpc.NewChecksServer(checksSvc))
 
 	iav1beta1.RegisterChannelsServer(gRPCServer, ia.NewChannelsService(deps.db, deps.alertmanager))
-	templatesSvc := ia.NewTemplatesService(deps.db)
-	templatesSvc.Collect(ctx)
-	iav1beta1.RegisterTemplatesServer(gRPCServer, templatesSvc)
-	iav1beta1.RegisterRulesServer(gRPCServer, ia.NewRulesService(deps.db, templatesSvc, deps.vmalert, deps.alertmanager))
-	iav1beta1.RegisterAlertsServer(gRPCServer, ia.NewAlertsService(deps.db, deps.alertmanager, templatesSvc))
+	deps.templatesService.Collect(ctx)
+	iav1beta1.RegisterTemplatesServer(gRPCServer, deps.templatesService)
+	iav1beta1.RegisterRulesServer(gRPCServer, deps.rulesService)
+	iav1beta1.RegisterAlertsServer(gRPCServer, deps.alertsService)
 
 	backupv1beta1.RegisterLocationsServer(gRPCServer, backup.NewLocationsService(deps.db))
 
@@ -196,6 +198,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 		dbaasv1beta1.RegisterKubernetesServer(gRPCServer, managementdbaas.NewKubernetesServer(deps.db, deps.dbaasControllerClient))
 		dbaasv1beta1.RegisterXtraDBClusterServer(gRPCServer, managementdbaas.NewXtraDBClusterService(deps.db, deps.dbaasControllerClient))
 		dbaasv1beta1.RegisterPSMDBClusterServer(gRPCServer, managementdbaas.NewPSMDBClusterService(deps.db, deps.dbaasControllerClient))
+		dbaasv1beta1.RegisterLogsAPIServer(gRPCServer, managementdbaas.NewLogsService(deps.db, deps.dbaasControllerClient))
 	}
 
 	if l.Logger.GetLevel() >= logrus.DebugLevel {
@@ -264,7 +267,7 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 	proxyMux := grpc_gateway.NewServeMux(
 		grpc_gateway.WithMarshalerOption(grpc_gateway.MIMEWildcard, marshaller),
 	)
-	opts := []grpc.DialOption{grpc.WithInsecure()}
+	opts := []grpc.DialOption{grpc.WithInsecure(), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(5 * 1024 * 1024))}
 
 	// TODO switch from RegisterXXXHandlerFromEndpoint to RegisterXXXHandler to avoid extra dials
 	// (even if they dial to localhost)
@@ -300,6 +303,7 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 		dbaasv1beta1.RegisterKubernetesHandlerFromEndpoint,
 		dbaasv1beta1.RegisterXtraDBClusterHandlerFromEndpoint,
 		dbaasv1beta1.RegisterPSMDBClusterHandlerFromEndpoint,
+		dbaasv1beta1.RegisterLogsAPIHandlerFromEndpoint,
 	} {
 		if err := r(ctx, proxyMux, gRPCAddr, opts); err != nil {
 			l.Panic(err)
@@ -626,6 +630,11 @@ func main() {
 		l.Fatalf("Could not create platform service: %s", err)
 	}
 
+	// Integrated alerts services
+	templatesSvc := ia.NewTemplatesService(db)
+	rulesSvc := ia.NewRulesService(db, templatesSvc, vmalert, alertmanager)
+	alertsSvc := ia.NewAlertsService(db, alertmanager, templatesSvc)
+
 	serverParams := &server.Params{
 		DB:                   db,
 		VMDB:                 vmdb,
@@ -639,6 +648,7 @@ func main() {
 		AwsInstanceChecker:   awsInstanceChecker,
 		GrafanaClient:        grafanaClient,
 		VMAlertExternalRules: externalRules,
+		RulesService:         rulesSvc,
 	}
 
 	server, err := server.NewServer(serverParams)
@@ -769,6 +779,9 @@ func main() {
 			alertmanager:          alertmanager,
 			vmalert:               vmalert,
 			settings:              settings,
+			alertsService:         alertsSvc,
+			templatesService:      templatesSvc,
+			rulesService:          rulesSvc,
 		})
 	}()
 
