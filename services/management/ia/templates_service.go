@@ -371,16 +371,18 @@ func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.Lis
 		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
 	}
 
-	pageIndex := 0
-	pageSize := defaultPageSize
+	var pageIndex int
+	var pageSize int
 	if req.PageParams != nil {
 		pageIndex = int(req.PageParams.Index)
 		pageSize = int(req.PageParams.PageSize)
 	}
 
-	if pageSize <= 0 || pageIndex < 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "Page size (%d) should be positive number and "+
-			"page index (%d) should be non-negative number", req.PageParams.PageSize, req.PageParams.Index)
+	if pageSize == 0 {
+		pageSize = defaultPageSize
+	}
+	if pageIndex < 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "Page index (%d) should be non-negative number", req.PageParams.Index)
 	}
 
 	if req.Reload {
@@ -406,7 +408,7 @@ func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.Lis
 	}
 	sort.Strings(names)
 
-	from, to := pageIndex*pageSize, pageIndex*pageSize+pageSize
+	from, to := pageIndex*pageSize, (pageIndex+1)*pageSize
 	if to > len(names) {
 		to = len(names)
 	}

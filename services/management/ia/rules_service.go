@@ -261,16 +261,18 @@ func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAl
 		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
 	}
 
-	pageIndex := 0
-	pageSize := defaultPageSize
+	var pageIndex int
+	var pageSize int
 	if req.PageParams != nil {
 		pageIndex = int(req.PageParams.Index)
 		pageSize = int(req.PageParams.PageSize)
 	}
 
-	if pageSize <= 0 || pageIndex < 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "Page size (%d) should be positive number and "+
-			"page index (%d) should be non-negative number", req.PageParams.PageSize, req.PageParams.Index)
+	if pageSize == 0 {
+		pageSize = defaultPageSize
+	}
+	if pageIndex < 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "Page index (%d) should be non-negative number", req.PageParams.Index)
 	}
 
 	res, pageTotals, err := s.getAlertRulesPage(pageIndex, pageSize)
