@@ -368,8 +368,9 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 			}
 
 			return nil
+		// PostgreSQL RDS
 		case managementpb.DiscoverRDSEngine_DISCOVER_RDS_POSTGRESQL:
-			// add MySQL Service
+			// add PostgreSQL Service
 			service, err := models.AddNewService(tx.Querier, models.PostgreSQLServiceType, &models.AddDBMSServiceParams{
 				ServiceName:    req.ServiceName,
 				NodeID:         node.NodeID,
@@ -387,15 +388,15 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 			if err != nil {
 				return err
 			}
-			res.Postgres = invService.(*inventorypb.PostgreSQLService)
+			res.Postgresql = invService.(*inventorypb.PostgreSQLService)
 
 			_, err = supportedMetricsMode(tx.Querier, req.MetricsMode, models.PMMServerAgentID)
 			if err != nil {
 				return err
 			}
 
-			// add MySQL Exporter
-			mysqldExporter, err := models.CreateAgent(tx.Querier, models.MySQLdExporterType, &models.CreateAgentParams{
+			// add PostgreSQL Exporter
+			postgreExporter, err := models.CreateAgent(tx.Querier, models.PostgresExporterType, &models.CreateAgentParams{
 				PMMAgentID:                     models.PMMServerAgentID,
 				ServiceID:                      service.ServiceID,
 				Username:                       req.Username,
@@ -407,23 +408,23 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 			if err != nil {
 				return err
 			}
-			invMySQLdExporter, err := services.ToAPIAgent(tx.Querier, mysqldExporter)
+			invPostgreExporter, err := services.ToAPIAgent(tx.Querier, postgreExporter)
 			if err != nil {
 				return err
 			}
-			res.MysqldExporter = invMySQLdExporter.(*inventorypb.MySQLdExporter)
+			res.PostgresqlExporter = invPostgreExporter.(*inventorypb.PostgresExporter)
 
 			if !req.SkipConnectionCheck {
-				if err = s.registry.CheckConnectionToService(ctx, tx.Querier, service, mysqldExporter); err != nil {
+				if err = s.registry.CheckConnectionToService(ctx, tx.Querier, service, postgreExporter); err != nil {
 					return err
 				}
 				// CheckConnectionToService updates the table count in row so, let's also update the response
-				res.TableCount = *mysqldExporter.TableCount
+				res.TableCount = *postgreExporter.TableCount
 			}
 
 			// add MySQL PerfSchema QAN Agent
-			if req.QanMysqlPerfschema {
-				qanAgent, err := models.CreateAgent(tx.Querier, models.QANMySQLPerfSchemaAgentType, &models.CreateAgentParams{
+			if req.QanPostgresqlPgstatements {
+				qanAgent, err := models.CreateAgent(tx.Querier, models.QANPostgreSQLPgStatementsAgentType, &models.CreateAgentParams{
 					PMMAgentID:            models.PMMServerAgentID,
 					ServiceID:             service.ServiceID,
 					Username:              req.Username,
@@ -439,7 +440,7 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 				if err != nil {
 					return err
 				}
-				res.QanMysqlPerfschema = invQANAgent.(*inventorypb.QANMySQLPerfSchemaAgent)
+				res.QanPostgresqlPgstatements = invQANAgent.(*inventorypb.QANPostgreSQLPgStatementsAgent)
 			}
 
 			return nil

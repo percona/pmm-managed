@@ -409,7 +409,7 @@
 
 [[projects]]
   branch = "PMM-7313_postgres_rds"
-  digest = "1:902612d7b8ba012fe1d696e70be494b566d7f797612f375588ffa36ff6c78a1d"
+  digest = "1:e639c789a5d78823bc8e77e59cd08a5553a3d0141544236c428511ffaf759be5"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -433,7 +433,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "5ad513833dbcbd8d85f761baf735156afc571f6f"
+  revision = "1980dfafb3fdf3002a3b41ab2da1fd4b0aacf94d"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
