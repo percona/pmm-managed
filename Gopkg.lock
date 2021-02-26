@@ -411,7 +411,7 @@
 
 [[projects]]
   branch = "PMM-7339-invidual-checks"
-  digest = "1:809472a4405569ffa21455d76cdf761a85c283191e456cab9a59ff2a7cd8d81b"
+  digest = "1:dad8765263e3537318f2d23804be726a49a4a1c4ae52e91c574b4f13ee667854"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -435,7 +435,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "a0f4bd2194d20608de2f072a39835b8537588a64"
+  revision = "e9e4448f2e27b49cbf717c34b8204843cd51f607"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
