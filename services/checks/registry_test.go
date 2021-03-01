@@ -29,7 +29,7 @@ import (
 )
 
 func TestRegistry(t *testing.T) {
-	t.Run("Create and Collect Alerts", func(t *testing.T) {
+	t.Run("create and collect Alerts", func(t *testing.T) {
 		alertTTL := resolveTimeoutFactor * defaultResendInterval
 		r := newRegistry(alertTTL)
 
@@ -82,5 +82,198 @@ func TestRegistry(t *testing.T) {
 		require.Len(t, collectedAlerts, 1)
 		require.Equal(t, 1, cap(collectedAlerts))
 		assert.Equal(t, expectedAlert, collectedAlerts[0])
+	})
+
+	t.Run("delete check result", func(t *testing.T) {
+		alertTTL := resolveTimeoutFactor * defaultResendInterval
+		r := newRegistry(alertTTL)
+
+		nowValue := time.Now().UTC().Round(0) // strip a monotonic clock reading
+		r.nowF = func() time.Time { return nowValue }
+		checkResults := []sttCheckResult{
+			{
+				checkName: "name1",
+				target: target{
+					agentID:   "/agent_id/123",
+					serviceID: "/service_id/123",
+					labels: map[string]string{
+						"foo": "bar",
+					},
+				},
+				result: check.Result{
+					Summary:     "check summary 1",
+					Description: "check description 1",
+					ReadMoreURL: "https://www.example.com",
+					Severity:    common.Warning,
+					Labels: map[string]string{
+						"baz": "qux",
+					},
+				},
+			},
+			{
+				checkName: "name2",
+				target: target{
+					agentID:   "/agent_id/321",
+					serviceID: "/service_id/321",
+					labels: map[string]string{
+						"bar": "foo",
+					},
+				},
+				result: check.Result{
+					Summary:     "check summary 2",
+					Description: "check description 2",
+					ReadMoreURL: "https://www.example2.com",
+					Severity:    common.Notice,
+					Labels: map[string]string{
+						"qux": "baz",
+					},
+				},
+			},
+		}
+
+		r.set(checkResults)
+		r.delete([]string{"name1"})
+
+		expectedAlert := &ammodels.PostableAlert{
+			Annotations: map[string]string{
+				"summary":       "check summary 2",
+				"description":   "check description 2",
+				"read_more_url": "https://www.example2.com",
+			},
+			EndsAt: strfmt.DateTime(nowValue.Add(alertTTL)),
+			Alert: ammodels.Alert{
+				Labels: map[string]string{
+					"alert_id":  "/stt/8fa5695dc34160333eeeb05f00bf1ddbd98be59c",
+					"alertname": "name2",
+					"qux":       "baz",
+					"bar":       "foo",
+					"severity":  "notice",
+					"stt_check": "1",
+				},
+			},
+		}
+
+		collectedAlerts := r.collect()
+		require.Len(t, collectedAlerts, 1)
+		require.Equal(t, 1, cap(collectedAlerts))
+		assert.Equal(t, expectedAlert, collectedAlerts[0])
+	})
+
+	t.Run("update check result", func(t *testing.T) {
+		alertTTL := resolveTimeoutFactor * defaultResendInterval
+		r := newRegistry(alertTTL)
+
+		nowValue := time.Now().UTC().Round(0) // strip a monotonic clock reading
+		r.nowF = func() time.Time { return nowValue }
+		checkResults := []sttCheckResult{
+			{
+				checkName: "name1",
+				target: target{
+					agentID:   "/agent_id/123",
+					serviceID: "/service_id/123",
+					labels: map[string]string{
+						"foo": "bar",
+					},
+				},
+				result: check.Result{
+					Summary:     "check summary 1",
+					Description: "check description 1",
+					ReadMoreURL: "https://www.example.com",
+					Severity:    common.Warning,
+					Labels: map[string]string{
+						"baz": "qux",
+					},
+				},
+			},
+			{
+				checkName: "name2",
+				target: target{
+					agentID:   "/agent_id/321",
+					serviceID: "/service_id/321",
+					labels: map[string]string{
+						"bar": "foo",
+					},
+				},
+				result: check.Result{
+					Summary:     "check summary 2",
+					Description: "check description 2",
+					ReadMoreURL: "https://www.example2.com",
+					Severity:    common.Notice,
+					Labels: map[string]string{
+						"qux": "baz",
+					},
+				},
+			},
+		}
+
+		r.set(checkResults)
+
+		updateChecrResults := []sttCheckResult{
+			{
+				checkName: "name1",
+				target: target{
+					agentID:   "/agent_id/456",
+					serviceID: "/service_id/456",
+					labels: map[string]string{
+						"qwe": "asd",
+					},
+				},
+				result: check.Result{
+					Summary:     "updated summary",
+					Description: "updated description",
+					ReadMoreURL: "https://www.example123.com",
+					Severity:    common.Info,
+					Labels: map[string]string{
+						"baz": "xuq",
+					},
+				},
+			},
+		}
+
+		r.update(updateChecrResults)
+
+		expectedAlerts := ammodels.PostableAlerts{
+			{
+				Annotations: map[string]string{
+					"summary":       "updated summary",
+					"description":   "updated description",
+					"read_more_url": "https://www.example123.com",
+				},
+				EndsAt: strfmt.DateTime(nowValue.Add(alertTTL)),
+				Alert: ammodels.Alert{
+					Labels: map[string]string{
+						"alert_id":  "/stt/b533bfb11773661ae21281dd849ad53cb822094f",
+						"alertname": "name1",
+						"baz":       "xuq",
+						"qwe":       "asd",
+						"severity":  "info",
+						"stt_check": "1",
+					},
+				},
+			},
+			{
+				Annotations: map[string]string{
+					"summary":       "check summary 2",
+					"description":   "check description 2",
+					"read_more_url": "https://www.example2.com",
+				},
+				EndsAt: strfmt.DateTime(nowValue.Add(alertTTL)),
+				Alert: ammodels.Alert{
+					Labels: map[string]string{
+						"alert_id":  "/stt/8fa5695dc34160333eeeb05f00bf1ddbd98be59c",
+						"alertname": "name2",
+						"qux":       "baz",
+						"bar":       "foo",
+						"severity":  "notice",
+						"stt_check": "1",
+					},
+				},
+			},
+		}
+
+		collectedAlerts := r.collect()
+		require.Len(t, collectedAlerts, 2)
+		require.Equal(t, 2, cap(collectedAlerts))
+		assert.Equal(t, expectedAlerts, collectedAlerts)
 	})
 }

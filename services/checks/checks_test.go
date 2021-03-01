@@ -342,7 +342,7 @@ func TestStartChecks(t *testing.T) {
 	t.Run("stt disabled", func(t *testing.T) {
 		s, err := New(nil, nil, db)
 		require.NoError(t, err)
-		err = s.StartChecks(context.Background())
+		err = s.StartChecks(context.Background(), nil)
 		assert.EqualError(t, err, services.ErrSTTDisabled.Error())
 	})
 
@@ -359,7 +359,7 @@ func TestStartChecks(t *testing.T) {
 		err = models.SaveSettings(db, settings)
 		require.NoError(t, err)
 
-		err = s.StartChecks(context.Background())
+		err = s.StartChecks(context.Background(), nil)
 		require.NoError(t, err)
 	})
 }

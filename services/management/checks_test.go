@@ -36,22 +36,22 @@ import (
 func TestStartSecurityChecks(t *testing.T) {
 	t.Run("internal error", func(t *testing.T) {
 		var checksService mockChecksService
-		checksService.On("StartChecks", mock.Anything).Return(errors.New("random error"))
+		checksService.On("StartChecks", mock.Anything, []string(nil)).Return(errors.New("random error"))
 
 		s := NewChecksAPIService(&checksService)
 
-		resp, err := s.StartSecurityChecks(context.Background(), nil)
+		resp, err := s.StartSecurityChecks(context.Background(), &managementpb.StartSecurityChecksRequest{})
 		assert.EqualError(t, err, "failed to start security checks: random error")
 		assert.Nil(t, resp)
 	})
 
 	t.Run("STT disabled error", func(t *testing.T) {
 		var checksService mockChecksService
-		checksService.On("StartChecks", mock.Anything).Return(services.ErrSTTDisabled)
+		checksService.On("StartChecks", mock.Anything, []string(nil)).Return(services.ErrSTTDisabled)
 
 		s := NewChecksAPIService(&checksService)
 
-		resp, err := s.StartSecurityChecks(context.Background(), nil)
+		resp, err := s.StartSecurityChecks(context.Background(), &managementpb.StartSecurityChecksRequest{})
 		tests.AssertGRPCError(t, status.New(codes.FailedPrecondition, "STT is disabled."), err)
 		assert.Nil(t, resp)
 	})

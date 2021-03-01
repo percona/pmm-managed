@@ -32,7 +32,7 @@ import (
 // registry stores alerts and delay information by IDs.
 type registry struct {
 	rw           sync.RWMutex
-	checkResults []sttCheckResult
+	checkResults map[string]sttCheckResult
 	alertTTL     time.Duration
 	nowF         func() time.Time // for tests
 }
@@ -50,8 +50,30 @@ func (r *registry) set(checkResults []sttCheckResult) {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
-	r.checkResults = make([]sttCheckResult, len(checkResults))
-	copy(r.checkResults, checkResults)
+	r.checkResults = make(map[string]sttCheckResult, len(checkResults))
+	for _, result := range checkResults {
+		r.checkResults[result.checkName] = result
+	}
+}
+
+// update updates only passed results. It does not affects other results.
+func (r *registry) update(checkResults []sttCheckResult) {
+	r.rw.Lock()
+	defer r.rw.Unlock()
+
+	for _, result := range checkResults {
+		r.checkResults[result.checkName] = result
+	}
+}
+
+// delete removes results for specified checks.
+func (r *registry) delete(checkNames []string) {
+	r.rw.Lock()
+	defer r.rw.Unlock()
+
+	for _, name := range checkNames {
+		delete(r.checkResults, name)
+	}
 }
 
 // collect returns a slice of alerts created from the stored check results.
@@ -59,9 +81,9 @@ func (r *registry) collect() ammodels.PostableAlerts {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
-	alerts := make(ammodels.PostableAlerts, len(r.checkResults))
-	for i, checkResult := range r.checkResults {
-		alerts[i] = r.createAlert(checkResult.checkName, &checkResult.target, &checkResult.result, r.alertTTL)
+	alerts := make(ammodels.PostableAlerts, 0, len(r.checkResults))
+	for _, checkResult := range r.checkResults {
+		alerts = append(alerts, r.createAlert(checkResult.checkName, &checkResult.target, &checkResult.result, r.alertTTL))
 	}
 	return alerts
 }
@@ -70,10 +92,12 @@ func (r *registry) getCheckResults() []sttCheckResult {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
-	checkResults := make([]sttCheckResult, 0, len(r.checkResults))
-	checkResults = append(checkResults, r.checkResults...)
+	results := make([]sttCheckResult, 0, len(r.checkResults))
+	for _, result := range r.checkResults {
+		results = append(results, result)
+	}
 
-	return checkResults
+	return results
 }
 
 func (r *registry) createAlert(name string, target *target, result *check.Result, alertTTL time.Duration) *ammodels.PostableAlert {

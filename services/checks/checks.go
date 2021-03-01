@@ -231,7 +231,7 @@ func (s *Service) restartChecks(ctx context.Context) {
 	defer t.Stop()
 
 	for {
-		err := s.StartChecks(ctx)
+		err := s.StartChecks(ctx, nil)
 		switch err {
 		case nil:
 			// nothing, continue
@@ -270,8 +270,9 @@ func (s *Service) GetSecurityCheckResults() ([]check.Result, error) {
 	return checkResults, nil
 }
 
-// StartChecks triggers STT checks downloading and execution. It returns services.ErrSTTDisabled if STT is disabled.
-func (s *Service) StartChecks(ctx context.Context) error {
+// StartChecks triggers STT checks downloading and execution. If checkNames is empty it will run all available checks,
+// otherwise only specified. It returns services.ErrSTTDisabled if STT is disabled.
+func (s *Service) StartChecks(ctx context.Context, checkNames []string) error {
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		return err
@@ -286,7 +287,7 @@ func (s *Service) StartChecks(ctx context.Context) error {
 
 	s.collectChecks(nCtx)
 
-	if err = s.executeChecks(nCtx); err != nil {
+	if err = s.executeChecks(nCtx, checkNames); err != nil {
 		return err
 	}
 
@@ -451,8 +452,36 @@ func (s *Service) minPMMAgentVersion(t check.Type) *version.Parsed {
 	}
 }
 
-// executeChecks runs all available checks for all reachable services.
-func (s *Service) executeChecks(ctx context.Context) error {
+func (s *Service) filterChecks(checks []check.Check, disable, enable []string) []check.Check {
+	var res []check.Check
+	dm := make(map[string]struct{}, len(disable))
+	for _, e := range disable {
+		dm[e] = struct{}{}
+	}
+
+	em := make(map[string]struct{}, len(enable))
+	for _, e := range enable {
+		em[e] = struct{}{}
+	}
+
+	for _, c := range checks {
+		if _, ok := dm[c.Name]; ok {
+			s.l.Debugf("Skipping disabled mySQL check %s", c.Name)
+			continue
+		}
+
+		// If check enabled explicitly or all checks enabled by passing empty `enable` slice.
+		if _, ok := em[c.Name]; ok || len(em) == 0 {
+			res = append(res, c)
+		}
+	}
+
+	return res
+}
+
+// executeChecks runs checks for all reachable services. If checkNames is empty all available checks will be ran,
+// otherwise only specified.
+func (s *Service) executeChecks(ctx context.Context, checkNames []string) error {
 	s.l.Info("Executing checks...")
 
 	disabledChecks, err := s.GetDisabledChecks()
@@ -462,36 +491,35 @@ func (s *Service) executeChecks(ctx context.Context) error {
 
 	var checkResults []sttCheckResult
 
-	mySQLCheckResults := s.executeMySQLChecks(ctx, disabledChecks)
+	mySQLChecks := s.filterChecks(s.getMySQLChecks(), disabledChecks, checkNames)
+	mySQLCheckResults := s.executeMySQLChecks(ctx, mySQLChecks)
 	checkResults = append(checkResults, mySQLCheckResults...)
 
-	postgreSQLCheckResults := s.executePostgreSQLChecks(ctx, disabledChecks)
+	postgreSQLChecks := s.filterChecks(s.getPostgreSQLChecks(), disabledChecks, checkNames)
+	postgreSQLCheckResults := s.executePostgreSQLChecks(ctx, postgreSQLChecks)
 	checkResults = append(checkResults, postgreSQLCheckResults...)
 
-	mongoDBCheckResults := s.executeMongoDBChecks(ctx, disabledChecks)
+	mongoDBChecks := s.filterChecks(s.getMongoDBChecks(), disabledChecks, checkNames)
+	mongoDBCheckResults := s.executeMongoDBChecks(ctx, mongoDBChecks)
 	checkResults = append(checkResults, mongoDBCheckResults...)
 
-	s.alertsRegistry.set(checkResults)
+	// If we run all checks replace all old results with the new.
+	if len(checkNames) == 0 {
+		s.alertsRegistry.set(checkResults)
+		return nil
+	}
+
+	// If we run some specific checks, update results only for them.
+	s.alertsRegistry.delete(checkNames)
+	s.alertsRegistry.update(checkResults)
 
 	return nil
 }
 
 // executeMySQLChecks runs MySQL checks for available MySQL services.
-func (s *Service) executeMySQLChecks(ctx context.Context, except []string) []sttCheckResult {
-	m := make(map[string]struct{}, len(except))
-	for _, e := range except {
-		m[e] = struct{}{}
-	}
-
-	checks := s.getMySQLChecks()
-
+func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) []sttCheckResult {
 	var res []sttCheckResult
 	for _, c := range checks {
-		if _, ok := m[c.Name]; ok {
-			s.l.Debugf("Skipping disabled mySQL check %s", c.Name)
-			continue
-		}
-
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
 		targets, err := s.findTargets(models.MySQLServiceType, pmmAgentVersion)
 		if err != nil {
@@ -539,21 +567,9 @@ func (s *Service) executeMySQLChecks(ctx context.Context, except []string) []stt
 }
 
 // executePostgreSQLChecks runs PostgreSQL checks for available PostgreSQL services.
-func (s *Service) executePostgreSQLChecks(ctx context.Context, except []string) []sttCheckResult {
-	m := make(map[string]struct{}, len(except))
-	for _, e := range except {
-		m[e] = struct{}{}
-	}
-
-	checks := s.getPostgreSQLChecks()
-
+func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Check) []sttCheckResult {
 	var res []sttCheckResult
 	for _, c := range checks {
-		if _, ok := m[c.Name]; ok {
-			s.l.Debugf("Skipping disabled postgreSQL check %s", c.Name)
-			continue
-		}
-
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
 		targets, err := s.findTargets(models.PostgreSQLServiceType, pmmAgentVersion)
 		if err != nil {
@@ -601,21 +617,9 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context, except []string) 
 }
 
 // executeMongoDBChecks runs MongoDB checks for available MongoDB services.
-func (s *Service) executeMongoDBChecks(ctx context.Context, except []string) []sttCheckResult {
-	m := make(map[string]struct{}, len(except))
-	for _, e := range except {
-		m[e] = struct{}{}
-	}
-
-	checks := s.getMongoDBChecks()
-
+func (s *Service) executeMongoDBChecks(ctx context.Context, checks []check.Check) []sttCheckResult {
 	var res []sttCheckResult
 	for _, c := range checks {
-		if _, ok := m[c.Name]; ok {
-			s.l.Debugf("Skipping disabled mongoDB check %s", c.Name)
-			continue
-		}
-
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
 		targets, err := s.findTargets(models.MongoDBServiceType, pmmAgentVersion)
 		if err != nil {

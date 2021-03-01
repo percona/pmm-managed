@@ -18,13 +18,13 @@ func (_m *mockChecksService) CleanupAlerts() {
 	_m.Called()
 }
 
-// StartChecks provides a mock function with given fields: ctx
-func (_m *mockChecksService) StartChecks(ctx context.Context) error {
-	ret := _m.Called(ctx)
+// StartChecks provides a mock function with given fields: ctx, checkNames
+func (_m *mockChecksService) StartChecks(ctx context.Context, checkNames []string) error {
+	ret := _m.Called(ctx, checkNames)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, []string) error); ok {
+		r0 = rf(ctx, checkNames)
 	} else {
 		r0 = ret.Error(0)
 	}
