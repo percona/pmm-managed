@@ -271,9 +271,6 @@ func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAl
 	if pageSize == 0 {
 		pageSize = defaultPageSize
 	}
-	if pageIndex < 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "Page index (%d) should be non-negative number", req.PageParams.Index)
-	}
 
 	res, pageTotals, err := s.getAlertRulesPage(pageIndex, pageSize)
 	if err != nil {

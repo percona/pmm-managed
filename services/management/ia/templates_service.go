@@ -381,9 +381,6 @@ func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.Lis
 	if pageSize == 0 {
 		pageSize = defaultPageSize
 	}
-	if pageIndex < 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "Page index (%d) should be non-negative number", req.PageParams.Index)
-	}
 
 	if req.Reload {
 		s.Collect(ctx)
