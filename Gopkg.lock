@@ -383,12 +383,12 @@
   version = "v0.3.0"
 
 [[projects]]
-  branch = "pmm-2.16"
-  digest = "1:c60754f36f889a8cb8ad9174d040c090e258f5277a0462b930dd196d5f72c57e"
+  branch = "PMM-7503-kubernetes-resources-cpu-memory"
+  digest = "1:3a3456315d8c3f9f75569955fe5fd6fada00369ab99c90c8acf752143b80c2d7"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "41f004193c1ac2e6614d8eaac641b18899334d91"
+  revision = "4635efc4e85c1c8c7d5033fd96c21265ec195780"
 
 [[projects]]
   branch = "main"
@@ -408,8 +408,8 @@
   revision = "c158e23a172f892cc389233858238449efec1dbb"
 
 [[projects]]
-  branch = "release/2.16"
-  digest = "1:83c931342f75623e3c26ff11830d6c83ac3335473ce0fbadba08b62ef2b651ae"
+  branch = "PMM-7503-dbaas-add-resources-api"
+  digest = "1:d65720e642c205f584bfb45a2101605d19fa0c85399fb8791de66542ff06ad68"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -433,7 +433,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "37e341821d2be2c66279850b7278dedf3f291663"
+  revision = "cbb24e90e12c54ffbf4d7c94954c877b88e16689"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
