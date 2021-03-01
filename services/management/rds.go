@@ -71,7 +71,6 @@ var (
 		"mariadb":      managementpb.DiscoverRDSEngine_DISCOVER_RDS_MYSQL,
 		"mysql":        managementpb.DiscoverRDSEngine_DISCOVER_RDS_MYSQL,
 
-		// TODO https://jira.percona.com/browse/PMM-5195
 		"aurora-postgresql": managementpb.DiscoverRDSEngine_DISCOVER_RDS_POSTGRESQL,
 		"postgres":          managementpb.DiscoverRDSEngine_DISCOVER_RDS_POSTGRESQL,
 	}
@@ -81,7 +80,6 @@ var (
 		pointer.ToString("mariadb"),
 		pointer.ToString("mysql"),
 
-		// TODO https://jira.percona.com/browse/PMM-5195
 		pointer.ToString("aurora-postgresql"),
 		pointer.ToString("postgres"),
 	}
@@ -390,13 +388,13 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 			}
 			res.Postgresql = invService.(*inventorypb.PostgreSQLService)
 
-			_, err = supportedMetricsMode(tx.Querier, req.MetricsMode, models.PMMServerAgentID)
+			_, err = supportedMetricsMode(tx.Querier, managementpb.MetricsMode_PULL, models.PMMServerAgentID)
 			if err != nil {
 				return err
 			}
 
 			// add PostgreSQL Exporter
-			postgreExporter, err := models.CreateAgent(tx.Querier, models.PostgresExporterType, &models.CreateAgentParams{
+			postgresExporter, err := models.CreateAgent(tx.Querier, models.PostgresExporterType, &models.CreateAgentParams{
 				PMMAgentID:                     models.PMMServerAgentID,
 				ServiceID:                      service.ServiceID,
 				Username:                       req.Username,
@@ -408,18 +406,18 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 			if err != nil {
 				return err
 			}
-			invPostgreExporter, err := services.ToAPIAgent(tx.Querier, postgreExporter)
+			invPostgresExporter, err := services.ToAPIAgent(tx.Querier, postgresExporter)
 			if err != nil {
 				return err
 			}
-			res.PostgresqlExporter = invPostgreExporter.(*inventorypb.PostgresExporter)
+			res.PostgresqlExporter = invPostgresExporter.(*inventorypb.PostgresExporter)
 
 			if !req.SkipConnectionCheck {
-				if err = s.registry.CheckConnectionToService(ctx, tx.Querier, service, postgreExporter); err != nil {
+				if err = s.registry.CheckConnectionToService(ctx, tx.Querier, service, postgresExporter); err != nil {
 					return err
 				}
 				// CheckConnectionToService updates the table count in row so, let's also update the response
-				res.TableCount = *postgreExporter.TableCount
+				res.TableCount = *postgresExporter.TableCount
 			}
 
 			// add MySQL PerfSchema QAN Agent
