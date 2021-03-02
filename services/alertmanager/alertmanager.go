@@ -378,7 +378,7 @@ func (svc *Service) populateConfig(cfg *alertmanager.Config) error {
 	disabledReceiver := &alertmanager.Receiver{
 		Name: "disabled",
 	}
-	// Override if there is any user defined receiver `disabled, needs to be empty
+	// Override if there is any user defined receiver `disabled`, needs to be empty
 	if disabledReceiverIdx := findReceiverIdx("disabled"); disabledReceiverIdx != -1 {
 		cfg.Receivers[disabledReceiverIdx] = disabledReceiver
 	} else {
