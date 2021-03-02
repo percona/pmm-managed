@@ -53,8 +53,11 @@ const (
 )
 
 var (
+	checkExternalExporterConnectionPMMVersion = version.MustParse("1.14.99")
+
 	defaultActionTimeout      = ptypes.DurationProto(10 * time.Second)
 	defaultQueryActionTimeout = ptypes.DurationProto(15 * time.Second) // should be less than checks.resultTimeout
+	defaultPtActionTimeout    = ptypes.DurationProto(30 * time.Second) // Percona-toolkit action timeout
 
 	mSentDesc = prom.NewDesc(
 		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_sent_total"),
@@ -750,6 +753,22 @@ func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo)
 	l.Infof("SetState response: %+v.", resp)
 }
 
+func (r *Registry) isExternalExporterConnectionCheckSupported(q *reform.Querier, pmmAgentID string) (bool, error) {
+	pmmAgent, err := models.FindAgentByID(r.db.Querier, pmmAgentID)
+	if err != nil {
+		return false, fmt.Errorf("failed to get PMM Agent: %s.", err)
+	}
+	pmmAgentVersion, err := version.Parse(*pmmAgent.Version)
+	if err != nil {
+		return false, fmt.Errorf("failed to parse PMM agent version %q: %s", *pmmAgent.Version, err)
+	}
+
+	if pmmAgentVersion.Less(checkExternalExporterConnectionPMMVersion) {
+		return false, nil
+	}
+	return true, nil
+}
+
 // CheckConnectionToService sends request to pmm-agent to check connection to service.
 func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Querier, service *models.Service, agent *models.Agent) error {
 	// TODO: extract to a separate struct to keep Single Responsibility principles: https://jira.percona.com/browse/PMM-4932
@@ -764,6 +783,18 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 	pmmAgentID := pointer.GetString(agent.PMMAgentID)
 	if !agent.PushMetrics && (service.ServiceType == models.ExternalServiceType || service.ServiceType == models.HAProxyServiceType) {
 		pmmAgentID = models.PMMServerAgentID
+	}
+
+	// Skip check connection to external exporter with old pmm-agent.
+	if service.ServiceType == models.ExternalServiceType || service.ServiceType == models.HAProxyServiceType {
+		isCheckConnSupported, err := r.isExternalExporterConnectionCheckSupported(q, pmmAgentID)
+		if err != nil {
+			return err
+		}
+
+		if !isCheckConnSupported {
+			return nil
+		}
 	}
 
 	pmmAgent, err := r.get(pmmAgentID)
@@ -841,10 +872,7 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 		if err = q.Update(agent); err != nil {
 			return errors.Wrap(err, "failed to update table count")
 		}
-
 	case models.ExternalServiceType, models.HAProxyServiceType:
-		// TODO: handle check of exporter response format https://jira.percona.com/browse/PMM-5778
-		l.Debugf("CheckConnectionResponse: %+v.", resp)
 	case models.PostgreSQLServiceType:
 	case models.MongoDBServiceType:
 	case models.ProxySQLServiceType:
@@ -1245,10 +1273,11 @@ func (r *Registry) StartMongoDBQueryGetCmdLineOptsAction(ctx context.Context, id
 func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
-		// Need pass params, even empty, because othervise request's marshal fail.
+		// Requires params to be passed, even empty, othervise request's marshal fail.
 		Params: &agentpb.StartActionRequest_PtSummaryParams{
 			PtSummaryParams: &agentpb.StartActionRequest_PTSummaryParams{},
 		},
+		Timeout: defaultPtActionTimeout,
 	}
 
 	agent, err := r.get(pmmAgentID)
@@ -1260,8 +1289,32 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID stri
 	return nil
 }
 
-// StartPTMongoDBSummaryAction starts pt-pg-summary action on the pmm-agent.
-// The pt-mongodb-summary may require some of the following params: host, port, username, password.
+// StartPTPgSummaryAction starts pt-pg-summary action on the pmm-agent.
+// The function returns nil if ok, otherwise an error code
+func (r *Registry) StartPTPgSummaryAction(ctx context.Context, id, pmmAgentID, address string, port uint16, username, password string) error {
+	actionRequest := &agentpb.StartActionRequest{
+		ActionId: id,
+		Params: &agentpb.StartActionRequest_PtPgSummaryParams{
+			PtPgSummaryParams: &agentpb.StartActionRequest_PTPgSummaryParams{
+				Host:     address,
+				Port:     uint32(port),
+				Username: username,
+				Password: password,
+			},
+		},
+		Timeout: defaultPtActionTimeout,
+	}
+
+	pmmAgent, err := r.get(pmmAgentID)
+	if err != nil {
+		return err
+	}
+	pmmAgent.channel.SendRequest(actionRequest)
+
+	return nil
+}
+
+// StartPTMongoDBSummaryAction starts pt-mongodb-summary action on the pmm-agent.
 // The function returns nil if ok, otherwise an error code
 func (r *Registry) StartPTMongoDBSummaryAction(ctx context.Context, id, pmmAgentID, address string, port uint16, username, password string) error {
 	// Action request data that'll be sent to agent
@@ -1276,7 +1329,7 @@ func (r *Registry) StartPTMongoDBSummaryAction(ctx context.Context, id, pmmAgent
 				Password: password,
 			},
 		},
-		Timeout: defaultActionTimeout,
+		Timeout: defaultPtActionTimeout,
 	}
 
 	// Agent which the action request will be sent to, got by the provided ID
@@ -1285,6 +1338,33 @@ func (r *Registry) StartPTMongoDBSummaryAction(ctx context.Context, id, pmmAgent
 		return err
 	}
 
+	pmmAgent.channel.SendRequest(actionRequest)
+
+	return nil
+}
+
+// StartPTMySQLSummaryAction starts pt-mysql-summary action on the pmm-agent.
+// The pt-mysql-summary's execution may require some of the following params: host, port, socket, username, password.
+func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID, address string, port uint16, socket, username, password string) error {
+	actionRequest := &agentpb.StartActionRequest{
+		ActionId: id,
+		// Proper params that'll will be passed to the command on the agent's side.
+		Params: &agentpb.StartActionRequest_PtMysqlSummaryParams{
+			PtMysqlSummaryParams: &agentpb.StartActionRequest_PTMySQLSummaryParams{
+				Host:     address,
+				Port:     uint32(port),
+				Socket:   socket,
+				Username: username,
+				Password: password,
+			},
+		},
+		Timeout: defaultPtActionTimeout,
+	}
+
+	pmmAgent, err := r.get(pmmAgentID)
+	if err != nil {
+		return err
+	}
 	pmmAgent.channel.SendRequest(actionRequest)
 
 	return nil

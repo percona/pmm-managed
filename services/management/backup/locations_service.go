@@ -66,9 +66,10 @@ func (s *LocationsService) AddLocation(ctx context.Context, req *backupv1beta1.A
 
 	if req.S3Config != nil {
 		params.S3Config = &models.S3LocationConfig{
-			Endpoint:  req.S3Config.Endpoint,
-			AccessKey: req.S3Config.AccessKey,
-			SecretKey: req.S3Config.SecretKey,
+			Endpoint:   req.S3Config.Endpoint,
+			AccessKey:  req.S3Config.AccessKey,
+			SecretKey:  req.S3Config.SecretKey,
+			BucketName: req.S3Config.BucketName,
 		}
 	}
 	if req.PmmServerConfig != nil {
@@ -91,6 +92,42 @@ func (s *LocationsService) AddLocation(ctx context.Context, req *backupv1beta1.A
 	return &backupv1beta1.AddLocationResponse{
 		LocationId: loc.ID,
 	}, nil
+}
+
+// ChangeLocation changes existing backup location.
+func (s *LocationsService) ChangeLocation(ctx context.Context, req *backupv1beta1.ChangeLocationRequest) (*backupv1beta1.ChangeLocationResponse, error) {
+	params := models.ChangeBackupLocationParams{
+		Name:        req.Name,
+		Description: req.Description,
+	}
+
+	if req.S3Config != nil {
+		params.S3Config = &models.S3LocationConfig{
+			Endpoint:   req.S3Config.Endpoint,
+			AccessKey:  req.S3Config.AccessKey,
+			SecretKey:  req.S3Config.SecretKey,
+			BucketName: req.S3Config.BucketName,
+		}
+	}
+
+	if req.PmmServerConfig != nil {
+		params.PMMServerConfig = &models.PMMServerLocationConfig{
+			Path: req.PmmServerConfig.Path,
+		}
+	}
+
+	if req.PmmClientConfig != nil {
+		params.PMMClientConfig = &models.PMMClientLocationConfig{
+			Path: req.PmmClientConfig.Path,
+		}
+	}
+
+	_, err := models.ChangeBackupLocation(s.db.Querier, req.LocationId, params)
+	if err != nil {
+		return nil, err
+	}
+
+	return &backupv1beta1.ChangeLocationResponse{}, nil
 }
 
 func convertLocation(location *models.BackupLocation) (*backupv1beta1.Location, error) {
@@ -118,15 +155,28 @@ func convertLocation(location *models.BackupLocation) (*backupv1beta1.Location, 
 		config := location.S3Config
 		loc.Config = &backupv1beta1.Location_S3Config{
 			S3Config: &backupv1beta1.S3LocationConfig{
-				Endpoint:  config.Endpoint,
-				AccessKey: config.AccessKey,
-				SecretKey: config.SecretKey,
+				Endpoint:   config.Endpoint,
+				AccessKey:  config.AccessKey,
+				SecretKey:  config.SecretKey,
+				BucketName: config.BucketName,
 			},
 		}
 	default:
 		return nil, errors.Errorf("unknown backup location type %s", location.Type)
 	}
 	return loc, nil
+}
+
+// RemoveLocation removes backup location.
+func (s *LocationsService) RemoveLocation(ctx context.Context, req *backupv1beta1.RemoveLocationRequest) (*backupv1beta1.RemoveLocationResponse, error) {
+	mode := models.RemoveRestrict
+	if req.Force {
+		mode = models.RemoveCascade
+	}
+	if err := models.RemoveBackupLocation(s.db.Querier, req.LocationId, mode); err != nil {
+		return nil, err
+	}
+	return &backupv1beta1.RemoveLocationResponse{}, nil
 }
 
 // Check interfaces.
