@@ -129,7 +129,7 @@ func FindChannelsOnPage(q *reform.Querier, pageIndex, pageSize int) ([]*Channel,
 func CountChannels(q *reform.Querier) (int, error) {
 	count, err := q.Count(ChannelTable, "")
 	if err != nil {
-		return 0, errors.Wrap(err, "failed to count alert rules")
+		return 0, errors.Wrap(err, "failed to count notification channels")
 	}
 
 	return count, nil
