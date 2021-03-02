@@ -466,7 +466,7 @@ func (s *Service) filterChecks(checks []check.Check, disable, enable []string) [
 
 	for _, c := range checks {
 		if _, ok := dm[c.Name]; ok {
-			s.l.Debugf("Skipping disabled mySQL check %s", c.Name)
+			s.l.Debugf("Skipping disabled check %s", c.Name)
 			continue
 		}
 
