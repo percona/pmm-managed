@@ -352,14 +352,12 @@ func TestRDSService(t *testing.T) {
 				PmmAgentId: "pmm-server",
 				ServiceId:  "/service_id/00000000-0000-4000-8000-00000000000c",
 				Username:   "username",
-				//TablestatsGroupTableLimit: 1000,
 			},
 			QanPostgresqlPgstatements: &inventorypb.QANPostgreSQLPgStatementsAgent{
 				AgentId:    "/agent_id/00000000-0000-4000-8000-00000000000e",
 				PmmAgentId: "pmm-server",
 				ServiceId:  "/service_id/00000000-0000-4000-8000-00000000000c",
 				Username:   "username",
-				//QueryExamplesDisabled: true,
 			},
 		}
 		assert.Equal(t, proto.MarshalTextString(expected), proto.MarshalTextString(resp)) // for better diffs
