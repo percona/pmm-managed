@@ -19,12 +19,12 @@ package ia
 import (
 	"bytes"
 	"context"
-	"html/template"
 	"io/ioutil"
 	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
+	"text/template"
 	"time"
 
 	"github.com/percona-platform/saas/pkg/alert"
@@ -263,20 +263,26 @@ func (s *TemplatesService) loadTemplatesFromDB() ([]templateInfo, error) {
 	res := make([]templateInfo, 0, len(templates))
 	for _, template := range templates {
 		template := template
-		params := make([]alert.Parameter, len(template.Params))
+		params := make([]alert.Parameter, 0, len(template.Params))
 		for _, param := range template.Params {
 			p := alert.Parameter{
 				Name:    param.Name,
 				Summary: param.Summary,
-				Unit:    param.Unit,
+				Unit:    alert.Unit(param.Unit),
 				Type:    alert.Type(param.Type),
 			}
 
 			switch alert.Type(param.Type) {
 			case alert.Float:
 				f := param.FloatParam
-				p.Value = f.Default
-				p.Range = []interface{}{f.Min, f.Max}
+
+				if f.Default != nil {
+					p.Value = *f.Default
+				}
+
+				if f.Min != nil && f.Max != nil {
+					p.Range = []interface{}{*f.Min, *f.Max}
+				}
 			}
 
 			params = append(params, p)
@@ -506,6 +512,9 @@ func (s *TemplatesService) DeleteTemplate(ctx context.Context, req *iav1beta1.De
 	if e != nil {
 		return nil, e
 	}
+
+	s.Collect(ctx)
+
 	return &iav1beta1.DeleteTemplateResponse{}, nil
 }
 

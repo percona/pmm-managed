@@ -19,6 +19,7 @@ package grpc
 import (
 	"context"
 
+	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/managementpb"
 	"github.com/percona/pmm/version"
@@ -37,7 +38,8 @@ type actionsServer struct {
 	l  *logrus.Entry
 }
 
-var pmmAgent2100 = version.MustParse("2.10.0-HEAD") // TODO: Remove HEAD later once 2.11.0 is released.
+var pmmAgent2100 = version.MustParse("2.10.0")
+var pmmAgent2150 = version.MustParse("2.15.0-HEAD") // TODO: Remove HEAD later once 2.16.0 is released.
 
 // NewActionsServer creates Management Actions Server.
 func NewActionsServer(r *agents.Registry, db *reform.DB) managementpb.ActionsServer {
@@ -303,7 +305,10 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 	agents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, req.NodeId)
 	if err != nil {
 		s.l.Warnf("StartPTSummaryAction: %s", err)
-		return nil, status.Errorf(codes.NotFound, "No pmm-agent running on this node")
+		return nil, err
+	}
+	if len(agents) == 0 {
+		return nil, status.Error(codes.NotFound, "no pmm-agent running on this node")
 	}
 
 	agents = models.FindPMMAgentsForVersion(s.l, agents, pmmAgent2100)
@@ -330,6 +335,195 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 		PmmAgentId: agentID,
 		ActionId:   res.ID,
 	}, nil
+}
+
+func pointerToAgentType(agentType models.AgentType) *models.AgentType {
+	return &agentType
+}
+
+// StartPTPgSummaryAction starts pt-pg-summary (PostgreSQL) action and returns the pointer to the response message
+//nolint:lll
+func (s *actionsServer) StartPTPgSummaryAction(ctx context.Context, req *managementpb.StartPTPgSummaryActionRequest) (*managementpb.StartPTPgSummaryActionResponse, error) {
+	service, err := models.FindServiceByID(s.db.Querier, req.ServiceId)
+	if err != nil {
+		return nil, err
+	}
+
+	node, err := models.FindNodeByID(s.db.Querier, service.NodeID)
+	if err != nil {
+		return nil, err
+	}
+
+	var pmmAgentID string
+	switch node.NodeType {
+	case models.RemoteNodeType:
+		pmmAgentID = models.PMMServerAgentID
+	default:
+		pmmAgents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, service.NodeID)
+		if err != nil {
+			return nil, status.Errorf(codes.NotFound, "No pmm-agent running node %s", service.NodeID)
+		}
+		pmmAgents = models.FindPMMAgentsForVersion(s.l, pmmAgents, pmmAgent2150)
+		if len(pmmAgents) == 0 {
+			return nil, status.Error(codes.FailedPrecondition, "all available agents are outdated")
+		}
+		pmmAgentID, err = models.FindPmmAgentIDToRunAction(req.PmmAgentId, pmmAgents)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	res, err := models.CreateActionResult(s.db.Querier, pmmAgentID)
+	if err != nil {
+		return nil, err
+	}
+
+	agentFilter := models.AgentFilters{ServiceID: req.ServiceId, AgentType: pointerToAgentType(models.PostgresExporterType)}
+	postgresExporters, err := models.FindAgents(s.db.Querier, agentFilter)
+	if err != nil {
+		return nil, err
+	}
+
+	exportersCount := len(postgresExporters)
+	if exportersCount < 1 {
+		return nil, status.Errorf(codes.FailedPrecondition, "No postgres exporter")
+	}
+	if exportersCount > 1 {
+		return nil, status.Errorf(codes.FailedPrecondition, "Found more than one postgres exporter")
+	}
+
+	if pointer.GetString(service.Socket) != "" {
+		service.Address = service.Socket
+	}
+
+	err = s.r.StartPTPgSummaryAction(ctx, res.ID, pmmAgentID, pointer.GetString(service.Address), pointer.GetUint16(service.Port),
+		pointer.GetString(postgresExporters[0].Username), pointer.GetString(postgresExporters[0].Password))
+	if err != nil {
+		return nil, err
+	}
+
+	return &managementpb.StartPTPgSummaryActionResponse{PmmAgentId: pmmAgentID, ActionId: res.ID}, nil
+}
+
+// StartPTMongoDBSummaryAction starts pt-mongodb-summary action and returns the pointer to the response message
+//nolint:lll
+func (s *actionsServer) StartPTMongoDBSummaryAction(ctx context.Context, req *managementpb.StartPTMongoDBSummaryActionRequest) (*managementpb.StartPTMongoDBSummaryActionResponse, error) {
+	// Need to get the service id's pointer to retrieve the list of agent pointers therefrom
+	// to get the particular agentID from the request.
+	service, err := models.FindServiceByID(s.db.Querier, req.ServiceId)
+	if err != nil {
+		return nil, err
+	}
+
+	pmmAgents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, service.NodeID)
+	if err != nil {
+		return nil, status.Errorf(codes.NotFound, "No pmm-agent running on this node")
+	}
+
+	pmmAgentID, err := models.FindPmmAgentIDToRunAction(req.PmmAgentId, pmmAgents)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := models.CreateActionResult(s.db.Querier, pmmAgentID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Exporters to be filtered by service ID and agent type
+	agentFilter := models.AgentFilters{PMMAgentID: "", NodeID: "",
+		ServiceID: req.ServiceId, AgentType: pointerToAgentType(models.MongoDBExporterType)}
+
+	// Need to get the mongoDB exporters to get the username and password therefrom
+	mongoDBExporters, err := models.FindAgents(s.db.Querier, agentFilter)
+	if err != nil {
+		return nil, err
+	}
+
+	exportersCount := len(mongoDBExporters)
+
+	// Must be only one result
+	if exportersCount < 1 {
+		return nil, status.Errorf(codes.FailedPrecondition, "No mongoDB exporter")
+	}
+
+	if exportersCount > 1 {
+		return nil, status.Errorf(codes.FailedPrecondition, "Found more than one mongoDB exporter")
+	}
+
+	// Starts the pt-pg-summary with the host address, port, username and password
+	err = s.r.StartPTMongoDBSummaryAction(ctx, res.ID, pmmAgentID, pointer.GetString(service.Address), pointer.GetUint16(service.Port),
+		pointer.GetString(mongoDBExporters[0].Username), pointer.GetString(mongoDBExporters[0].Password))
+	if err != nil {
+		return nil, err
+	}
+
+	return &managementpb.StartPTMongoDBSummaryActionResponse{PmmAgentId: pmmAgentID, ActionId: res.ID}, nil
+}
+
+// StartPTMySQLSummaryAction starts pt-mysql-summary action and returns the pointer to the response message
+//nolint:lll
+func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *managementpb.StartPTMySQLSummaryActionRequest) (*managementpb.StartPTMySQLSummaryActionResponse, error) {
+	service, err := models.FindServiceByID(s.db.Querier, req.ServiceId)
+	if err != nil {
+		return nil, err
+	}
+
+	node, err := models.FindNodeByID(s.db.Querier, service.NodeID)
+	if err != nil {
+		return nil, err
+	}
+
+	var pmmAgentID string
+	switch node.NodeType {
+	case models.RemoteNodeType:
+		// Remove this error after: https://jira.percona.com/browse/PMM-7562
+		return nil, status.Errorf(codes.FailedPrecondition, "PTMySQL Summary doesnt working with remote node yet")
+
+		//pmmAgentID = models.PMMServerAgentID
+	default:
+		pmmAgents, err := models.FindPMMAgentsRunningOnNode(s.db.Querier, service.NodeID)
+		if err != nil {
+			return nil, status.Errorf(codes.NotFound, "No pmm-agent running node %s", service.NodeID)
+		}
+		pmmAgents = models.FindPMMAgentsForVersion(s.l, pmmAgents, pmmAgent2150)
+		if len(pmmAgents) == 0 {
+			return nil, status.Error(codes.FailedPrecondition, "all available agents are outdated")
+		}
+		pmmAgentID, err = models.FindPmmAgentIDToRunAction(req.PmmAgentId, pmmAgents)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	res, err := models.CreateActionResult(s.db.Querier, pmmAgentID)
+	if err != nil {
+		return nil, err
+	}
+
+	agentFilter := models.AgentFilters{PMMAgentID: "", NodeID: "",
+		ServiceID: req.ServiceId, AgentType: pointerToAgentType(models.MySQLdExporterType)}
+	mysqldExporters, err := models.FindAgents(s.db.Querier, agentFilter)
+	if err != nil {
+		return nil, err
+	}
+
+	exportersCount := len(mysqldExporters)
+	if exportersCount < 1 {
+		return nil, status.Errorf(codes.FailedPrecondition, "No mysql exporter")
+	}
+	if exportersCount > 1 {
+		return nil, status.Errorf(codes.FailedPrecondition, "Found more than one mysql exporter")
+	}
+
+	err = s.r.StartPTMySQLSummaryAction(ctx, res.ID, pmmAgentID, pointer.GetString(service.Address), pointer.GetUint16(service.Port),
+		pointer.GetString(service.Socket), pointer.GetString(mysqldExporters[0].Username),
+		pointer.GetString(mysqldExporters[0].Password))
+	if err != nil {
+		return nil, err
+	}
+
+	return &managementpb.StartPTMySQLSummaryActionResponse{PmmAgentId: pmmAgentID, ActionId: res.ID}, nil
 }
 
 // CancelAction stops an Action.

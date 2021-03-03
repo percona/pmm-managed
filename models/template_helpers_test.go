@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AlekSi/pointer"
 	"github.com/brianvoe/gofakeit"
 	"github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona-platform/saas/pkg/common"
@@ -63,12 +64,12 @@ func TestRuleTemplates(t *testing.T) {
 			models.TemplateParams{{
 				Name:    params.Template.Params[0].Name,
 				Summary: params.Template.Params[0].Summary,
-				Unit:    params.Template.Params[0].Unit,
+				Unit:    string(params.Template.Params[0].Unit),
 				Type:    models.Float,
 				FloatParam: &models.FloatParam{
-					Default: params.Template.Params[0].Value.(float64),
-					Min:     params.Template.Params[0].Range[0].(float64),
-					Max:     params.Template.Params[0].Range[1].(float64),
+					Default: pointer.ToFloat64(params.Template.Params[0].Value.(float64)),
+					Min:     pointer.ToFloat64(params.Template.Params[0].Range[0].(float64)),
+					Max:     pointer.ToFloat64(params.Template.Params[0].Range[1].(float64)),
 				},
 			}},
 			created.Params)
@@ -114,12 +115,12 @@ func TestRuleTemplates(t *testing.T) {
 			models.TemplateParams{{
 				Name:    uParams.Template.Params[0].Name,
 				Summary: uParams.Template.Params[0].Summary,
-				Unit:    uParams.Template.Params[0].Unit,
+				Unit:    string(uParams.Template.Params[0].Unit),
 				Type:    models.Float,
 				FloatParam: &models.FloatParam{
-					Default: uParams.Template.Params[0].Value.(float64),
-					Min:     uParams.Template.Params[0].Range[0].(float64),
-					Max:     uParams.Template.Params[0].Range[1].(float64),
+					Default: pointer.ToFloat64(uParams.Template.Params[0].Value.(float64)),
+					Min:     pointer.ToFloat64(uParams.Template.Params[0].Range[0].(float64)),
+					Max:     pointer.ToFloat64(uParams.Template.Params[0].Range[1].(float64)),
 				},
 			}},
 			updated.Params)
@@ -169,15 +170,17 @@ func TestRuleTemplates(t *testing.T) {
 
 		q := tx.Querier
 
-		name := gofakeit.UUID()
+		templateName := gofakeit.UUID()
 
-		_, err = models.CreateTemplate(q, createTemplateParams(name))
+		_, err = models.CreateTemplate(q, createTemplateParams(templateName))
 		require.NoError(t, err)
 
-		_ = createRule(t, q, name)
+		channelID := createChannel(t, q)
 
-		err = models.RemoveTemplate(q, name)
-		tests.AssertGRPCError(t, status.Newf(codes.FailedPrecondition, "Failed to delete rule template %s, as it is being used by some rule.", name), err)
+		_ = createRule(t, q, channelID, templateName)
+
+		err = models.RemoveTemplate(q, templateName)
+		tests.AssertGRPCError(t, status.Newf(codes.FailedPrecondition, "Failed to delete rule template %s, as it is being used by some rule.", templateName), err)
 
 		templates, err := models.FindTemplates(q)
 		require.NoError(t, err)
@@ -228,7 +231,7 @@ func createTemplateParams(name string) *models.CreateTemplateParams {
 			Params: []alert.Parameter{{
 				Name:    gofakeit.UUID(),
 				Summary: gofakeit.Quote(),
-				Unit:    gofakeit.Letter(),
+				Unit:    alert.Percentage,
 				Type:    alert.Float,
 				Range:   []interface{}{float64(10), float64(100)},
 				Value:   float64(50),
@@ -253,7 +256,7 @@ func changeTemplateParams(name string) *models.ChangeTemplateParams {
 			Params: []alert.Parameter{{
 				Name:    gofakeit.UUID(),
 				Summary: gofakeit.Quote(),
-				Unit:    gofakeit.Letter(),
+				Unit:    alert.Seconds,
 				Type:    alert.Float,
 				Range:   []interface{}{float64(10), float64(100)},
 				Value:   float64(50),
@@ -266,17 +269,9 @@ func changeTemplateParams(name string) *models.ChangeTemplateParams {
 	}
 }
 
-func createRule(t *testing.T, q *reform.Querier, name string) string {
-	ch, err := models.CreateChannel(q, &models.CreateChannelParams{
-		Summary: "some summary",
-		EmailConfig: &models.EmailConfig{
-			To: []string{"test@test.test"},
-		},
-		Disabled: false,
-	})
-	require.NoError(t, err)
+func createRule(t *testing.T, q *reform.Querier, channelID, templateName string) string {
 	rule, err := models.CreateRule(q, &models.CreateRuleParams{
-		TemplateName: name,
+		TemplateName: templateName,
 		Disabled:     true,
 		RuleParams: []models.RuleParam{
 			{
@@ -289,7 +284,7 @@ func createRule(t *testing.T, q *reform.Querier, name string) string {
 		Severity:     models.Severity(common.Warning),
 		CustomLabels: map[string]string{"foo": "bar"},
 		Filters:      []models.Filter{{Type: models.Equal, Key: "value", Val: "10"}},
-		ChannelIDs:   []string{ch.ID},
+		ChannelIDs:   []string{channelID},
 	})
 	require.NoError(t, err)
 	return rule.ID

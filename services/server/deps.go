@@ -29,6 +29,7 @@ import (
 //go:generate mockery -name=grafanaClient -case=snake -inpkg -testonly
 //go:generate mockery -name=prometheusService -case=snake -inpkg -testonly
 //go:generate mockery -name=alertmanagerService -case=snake -inpkg -testonly
+//go:generate mockery -name=checksService -case=snake -inpkg -testonly
 //go:generate mockery -name=vmAlertExternalRules -case=snake -inpkg -testonly
 //go:generate mockery -name=supervisordService -case=snake -inpkg -testonly
 //go:generate mockery -name=telemetryService -case=snake -inpkg -testonly
@@ -59,7 +60,15 @@ type prometheusService interface {
 // alertmanagerService is a subset of methods of alertmanager.Service used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
 type alertmanagerService interface {
+	RequestConfigurationUpdate()
 	healthChecker
+}
+
+// checksService is a subset of methods of checks.Service used by this package.
+// We use it instead of real type for testing and to avoid dependency cycle.
+type checksService interface {
+	StartChecks(ctx context.Context) error
+	CleanupAlerts()
 }
 
 // vmAlertService is a subset of methods of vmalert.Service used by this package.

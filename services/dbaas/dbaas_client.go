@@ -29,6 +29,7 @@ type Client struct {
 	kubernetesClient    controllerv1beta1.KubernetesClusterAPIClient
 	xtradbClusterClient controllerv1beta1.XtraDBClusterAPIClient
 	psmdbClusterClient  controllerv1beta1.PSMDBClusterAPIClient
+	logsClient          controllerv1beta1.LogsAPIClient
 }
 
 // NewClient creates new Client object.
@@ -37,6 +38,7 @@ func NewClient(con grpc.ClientConnInterface) *Client {
 		kubernetesClient:    controllerv1beta1.NewKubernetesClusterAPIClient(con),
 		xtradbClusterClient: controllerv1beta1.NewXtraDBClusterAPIClient(con),
 		psmdbClusterClient:  controllerv1beta1.NewPSMDBClusterAPIClient(con),
+		logsClient:          controllerv1beta1.NewLogsAPIClient(con),
 	}
 }
 
@@ -72,9 +74,9 @@ func (c *Client) RestartXtraDBCluster(ctx context.Context, in *controllerv1beta1
 	return c.xtradbClusterClient.RestartXtraDBCluster(ctx, in, opts...)
 }
 
-// GetXtraDBCluster restarts XtraDB cluster.
-func (c *Client) GetXtraDBCluster(ctx context.Context, in *controllerv1beta1.GetXtraDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.GetXtraDBClusterResponse, error) {
-	return c.xtradbClusterClient.GetXtraDBCluster(ctx, in, opts...)
+// GetXtraDBClusterCredentials gets XtraDB cluster credentials.
+func (c *Client) GetXtraDBClusterCredentials(ctx context.Context, in *controllerv1beta1.GetXtraDBClusterCredentialsRequest, opts ...grpc.CallOption) (*controllerv1beta1.GetXtraDBClusterCredentialsResponse, error) {
+	return c.xtradbClusterClient.GetXtraDBClusterCredentials(ctx, in, opts...)
 }
 
 // ListPSMDBClusters returns a list of PSMDB clusters.
@@ -102,7 +104,12 @@ func (c *Client) RestartPSMDBCluster(ctx context.Context, in *controllerv1beta1.
 	return c.psmdbClusterClient.RestartPSMDBCluster(ctx, in, opts...)
 }
 
-// GetPSMDBCluster restarts PSMDB cluster.
-func (c *Client) GetPSMDBCluster(ctx context.Context, in *controllerv1beta1.GetPSMDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.GetPSMDBClusterResponse, error) {
-	return c.psmdbClusterClient.GetPSMDBCluster(ctx, in, opts...)
+// GetPSMDBClusterCredentials gets PSMDB cluster credentials.
+func (c *Client) GetPSMDBClusterCredentials(ctx context.Context, in *controllerv1beta1.GetPSMDBClusterCredentialsRequest, opts ...grpc.CallOption) (*controllerv1beta1.GetPSMDBClusterCredentialsResponse, error) {
+	return c.psmdbClusterClient.GetPSMDBClusterCredentials(ctx, in, opts...)
+}
+
+// GetLogs gets logs out of cluster containers and events out of pods.
+func (c *Client) GetLogs(ctx context.Context, in *controllerv1beta1.GetLogsRequest, opts ...grpc.CallOption) (*controllerv1beta1.GetLogsResponse, error) {
+	return c.logsClient.GetLogs(ctx, in, opts...)
 }
