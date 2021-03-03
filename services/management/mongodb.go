@@ -72,15 +72,21 @@ func (s *MongoDBService) Add(ctx context.Context, req *managementpb.AddMongoDBRe
 
 		mongoDBOptions := models.MongoDBOptionsFromRequest(req)
 
+		req.MetricsMode, err = supportedMetricsMode(tx.Querier, req.MetricsMode, req.PmmAgentId)
+		if err != nil {
+			return err
+		}
+
 		row, err := models.CreateAgent(tx.Querier, models.MongoDBExporterType, &models.CreateAgentParams{
-			PMMAgentID:     req.PmmAgentId,
-			ServiceID:      service.ServiceID,
-			Username:       req.Username,
-			Password:       req.Password,
-			TLS:            req.Tls,
-			TLSSkipVerify:  req.TlsSkipVerify,
-			MongoDBOptions: mongoDBOptions,
-			PushMetrics:    isPushMode(req.MetricsMode),
+			PMMAgentID:        req.PmmAgentId,
+			ServiceID:         service.ServiceID,
+			Username:          req.Username,
+			Password:          req.Password,
+			TLS:               req.Tls,
+			TLSSkipVerify:     req.TlsSkipVerify,
+			MongoDBOptions:    mongoDBOptions,
+			PushMetrics:       isPushMode(req.MetricsMode),
+			DisableCollectors: req.DisableCollectors,
 		})
 		if err != nil {
 			return err
@@ -126,6 +132,6 @@ func (s *MongoDBService) Add(ctx context.Context, req *managementpb.AddMongoDBRe
 		return nil, e
 	}
 
-	s.registry.SendSetStateRequest(ctx, req.PmmAgentId)
+	s.registry.RequestStateUpdate(ctx, req.PmmAgentId)
 	return res, nil
 }

@@ -19,6 +19,7 @@ package models
 import (
 	"time"
 
+	"github.com/AlekSi/pointer"
 	"github.com/percona-platform/saas/pkg/alert"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -120,8 +121,7 @@ func CreateTemplate(q *reform.Querier, params *CreateTemplateParams) (*Template,
 		return nil, err
 	}
 
-	err = q.Insert(row)
-	if err != nil {
+	if err = q.Insert(row); err != nil {
 		return nil, errors.Wrap(err, "failed to create rule template")
 	}
 
@@ -161,16 +161,15 @@ func ChangeTemplate(q *reform.Querier, params *ChangeTemplateParams) (*Template,
 	row.Severity = Severity(template.Severity)
 	row.Yaml = params.Yaml
 
-	if err := row.SetLabels(template.Labels); err != nil {
+	if err = row.SetLabels(template.Labels); err != nil {
 		return nil, err
 	}
 
-	if err := row.SetAnnotations(template.Annotations); err != nil {
+	if err = row.SetAnnotations(template.Annotations); err != nil {
 		return nil, err
 	}
 
-	err = q.Update(row)
-	if err != nil {
+	if err = q.Update(row); err != nil {
 		return nil, errors.Wrap(err, "failed to update rule template")
 	}
 
@@ -192,8 +191,7 @@ func RemoveTemplate(q *reform.Querier, name string) error {
 		return status.Errorf(codes.FailedPrecondition, "Failed to delete rule template %s, as it is being used by some rule.", name)
 	}
 
-	err = q.Delete(&Template{Name: name})
-	if err != nil {
+	if err = q.Delete(&Template{Name: name}); err != nil {
 		return errors.Wrap(err, "failed to delete rule template")
 	}
 	return nil
@@ -212,46 +210,41 @@ func templateInUse(q *reform.Querier, name string) (bool, error) {
 }
 
 func convertTemplateParams(params []alert.Parameter) (TemplateParams, error) {
-	res := make(TemplateParams, len(params))
-	for i, param := range params {
-		t, err := convertParamType(param.Type)
-		if err != nil {
-			return nil, err
-		}
-
-		res[i] = TemplateParam{
+	res := make(TemplateParams, 0, len(params))
+	for _, param := range params {
+		p := TemplateParam{
 			Name:    param.Name,
 			Summary: param.Summary,
-			Unit:    param.Unit,
-			Type:    t,
+			Unit:    string(param.Unit),
+			Type:    ParamType(param.Type),
 		}
 
 		switch param.Type {
 		case alert.Float:
 			var fp FloatParam
-			var err error
-			fp.Default, err = param.GetValueForFloat()
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to parse param value")
+			if param.Value != nil {
+				def, err := param.GetValueForFloat()
+				if err != nil {
+					return nil, errors.Wrap(err, "failed to parse param value")
+				}
+				fp.Default = pointer.ToFloat64(def)
 			}
 
-			fp.Min, fp.Max, err = param.GetRangeForFloat()
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to parse param range")
+			if len(param.Range) != 0 {
+				min, max, err := param.GetRangeForFloat()
+				if err != nil {
+					return nil, errors.Wrap(err, "failed to parse param range")
+				}
+				fp.Min, fp.Max = pointer.ToFloat64(min), pointer.ToFloat64(max)
 			}
 
-			res[i].FloatParam = &fp
+			p.FloatParam = &fp
+		default:
+			return nil, errors.Errorf("Unknown parameter type %s", param.Type)
 		}
+
+		res = append(res, p)
 	}
 
 	return res, nil
-}
-
-func convertParamType(paramType alert.Type) (ParamType, error) {
-	switch paramType {
-	case alert.Float:
-		return Float, nil
-	default:
-		return "", errors.Errorf("UnknownSeverity parameter type %s", paramType)
-	}
 }

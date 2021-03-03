@@ -81,7 +81,7 @@ var (
 		pointer.ToString("mariadb"),
 		pointer.ToString("mysql"),
 
-		// TODO https://jira.percona.com/browse/PMM-4574
+		// TODO https://jira.percona.com/browse/PMM-5195
 		// pointer.ToString("aurora-postgresql"),
 		// pointer.ToString("postgres"),
 	}
@@ -314,6 +314,11 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 			}
 			res.Mysql = invService.(*inventorypb.MySQLService)
 
+			_, err = supportedMetricsMode(tx.Querier, req.MetricsMode, models.PMMServerAgentID)
+			if err != nil {
+				return err
+			}
+
 			// add MySQL Exporter
 			mysqldExporter, err := models.CreateAgent(tx.Querier, models.MySQLdExporterType, &models.CreateAgentParams{
 				PMMAgentID:                     models.PMMServerAgentID,
@@ -323,7 +328,6 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 				TLS:                            req.Tls,
 				TLSSkipVerify:                  req.TlsSkipVerify,
 				TableCountTablestatsGroupLimit: tablestatsGroupTableLimit,
-				PushMetrics:                    isPushMode(req.MetricsMode),
 			})
 			if err != nil {
 				return err
@@ -372,6 +376,6 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 		return nil, e
 	}
 
-	s.registry.SendSetStateRequest(ctx, models.PMMServerAgentID)
+	s.registry.RequestStateUpdate(ctx, models.PMMServerAgentID)
 	return res, nil
 }
