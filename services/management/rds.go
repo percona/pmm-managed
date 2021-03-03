@@ -388,7 +388,7 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 			}
 			res.Postgresql = invService.(*inventorypb.PostgreSQLService)
 
-			_, err = supportedMetricsMode(tx.Querier, managementpb.MetricsMode_PULL, models.PMMServerAgentID)
+			_, err = supportedMetricsMode(tx.Querier, req.MetricsMode, models.PMMServerAgentID)
 			if err != nil {
 				return err
 			}
