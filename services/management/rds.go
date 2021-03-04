@@ -417,7 +417,7 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 					return err
 				}
 				// CheckConnectionToService updates the table count in row so, let's also update the response
-				res.TableCount = *postgresExporter.TableCount
+				// res.TableCount = *postgresExporter.TableCount
 			}
 
 			// add MySQL PerfSchema QAN Agent
