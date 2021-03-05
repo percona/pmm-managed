@@ -20,7 +20,7 @@ func (v *backupTableType) Schema() string {
 	return v.s.SQLSchema
 }
 
-// Name returns a view or table name in SQL database ("backup_locations").
+// Name returns a view or table name in SQL database ("backups").
 func (v *backupTableType) Name() string {
 	return v.s.SQLName
 }
@@ -50,11 +50,11 @@ func (v *backupTableType) PKColumnIndex() uint {
 	return uint(v.s.PKFieldIndex)
 }
 
-// BackupTable represents backup_locations view or table in SQL database.
+// BackupTable represents backups view or table in SQL database.
 var BackupTable = &backupTableType{
 	s: parse.StructInfo{
 		Type:    "Backup",
-		SQLName: "backup_locations",
+		SQLName: "backups",
 		Fields: []parse.FieldInfo{
 			{Name: "ID", Type: "string", Column: "id"},
 			{Name: "Name", Type: "string", Column: "name"},

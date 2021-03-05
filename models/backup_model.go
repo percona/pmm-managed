@@ -25,7 +25,7 @@ import (
 //go:generate reform
 
 // Backup represents destination for backup.
-//reform:backup_locations
+//reform:backups
 type Backup struct {
 	ID           string `reform:"id,pk"`
 	Name         string `reform:"name"`
