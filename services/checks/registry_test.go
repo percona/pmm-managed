@@ -80,7 +80,6 @@ func TestRegistry(t *testing.T) {
 
 		collectedAlerts := r.collect()
 		require.Len(t, collectedAlerts, 1)
-		require.Equal(t, 1, cap(collectedAlerts))
 		assert.Equal(t, expectedAlert, collectedAlerts[0])
 	})
 
@@ -155,7 +154,6 @@ func TestRegistry(t *testing.T) {
 
 		collectedAlerts := r.collect()
 		require.Len(t, collectedAlerts, 1)
-		require.Equal(t, 1, cap(collectedAlerts))
 		assert.Equal(t, expectedAlert, collectedAlerts[0])
 	})
 
@@ -273,7 +271,6 @@ func TestRegistry(t *testing.T) {
 
 		collectedAlerts := r.collect()
 		require.Len(t, collectedAlerts, 2)
-		require.Equal(t, 2, cap(collectedAlerts))
 		assert.Equal(t, expectedAlerts, collectedAlerts)
 	})
 }
