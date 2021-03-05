@@ -408,7 +408,7 @@
   revision = "c158e23a172f892cc389233858238449efec1dbb"
 
 [[projects]]
-  branch = "PMM-7337-stt-check-intervals"
+  branch = "release/2.16"
   digest = "1:5f1cf85d0e88716cd4a17c985deec4127bb14e573ba67b6e9301d1b6a9a933f5"
   name = "github.com/percona/pmm"
   packages = [
@@ -433,7 +433,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "027529e7553ae2f8d0a0ef67222592d33475cfcd"
+  revision = "f37762275e2194cf0e0cf06cc588ee9727e1cad2"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
