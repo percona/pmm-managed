@@ -70,6 +70,7 @@ type alertmanagerService interface {
 type checksService interface {
 	StartChecks(ctx context.Context, interval check.Interval) error
 	CleanupAlerts()
+	UpdateIntervals(rare, standard, frequent time.Duration)
 }
 
 // vmAlertService is a subset of methods of vmalert.Service used by this package.

@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -45,22 +46,14 @@ import (
 )
 
 const (
-	defaultRareInterval     = 4 * time.Hour
-	defaultStandardInterval = 24 * time.Hour
-	defaultFrequentInterval = 78 * time.Hour
-	defaultStartDelay       = time.Minute
+	defaultStartDelay = time.Minute
 
 	// Environment variables that affect checks service; only for testing.
 	envPublicKey = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
 
-	// TODO: https://jira.percona.com/browse/PMM-7337
-	// remove once intervals will be stored in settings
-	envRareInterval     = "PERCONA_TEST_CHECKS_RARE_INTERVAL"
-	envStandardInterval = "PERCONA_TEST_CHECKS_STANDARD_INTERVAL"
-	envFrequentInterval = "PERCONA_TEST_CHECKS_FREQUENT_INTERVAL"
-
-	envCheckFile      = "PERCONA_TEST_CHECKS_FILE"
-	envResendInterval = "PERCONA_TEST_CHECKS_RESEND_INTERVAL"
+	envCheckFile         = "PERCONA_TEST_CHECKS_FILE"
+	envResendInterval    = "PERCONA_TEST_CHECKS_RESEND_INTERVAL"
+	envDisableStartDelay = "PERCONA_TEST_CHECKS_DISABLE_START_DELAY"
 
 	checksTimeout       = 5 * time.Minute  // timeout for checks downloading/execution
 	resultTimeout       = 20 * time.Second // should greater than agents.defaultQueryActionTimeout
@@ -110,10 +103,6 @@ type Service struct {
 	postgreSQLChecks []check.Check
 	mongoDBChecks    []check.Check
 
-	rareInterval     time.Duration
-	standardInterval time.Duration
-	frequentInterval time.Duration
-
 	tm             sync.Mutex
 	rareTicker     *time.Ticker
 	standardTicker *time.Ticker
@@ -127,12 +116,10 @@ type Service struct {
 func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService, db *reform.DB) (*Service, error) {
 	l := logrus.WithField("component", "checks")
 
-	var resendInterval time.Duration
+	resendInterval := defaultResendInterval
 	if d, err := time.ParseDuration(os.Getenv(envResendInterval)); err == nil && d > 0 {
 		l.Warnf("Interval changed to %s.", d)
 		resendInterval = d
-	} else {
-		resendInterval = defaultResendInterval
 	}
 
 	host, err := envvars.GetSAASHost()
@@ -146,15 +133,12 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 		db:                  db,
 		alertsRegistry:      newRegistry(resolveTimeoutFactor * resendInterval),
 
-		l:                l,
-		host:             host,
-		publicKeys:       defaultPublicKeys,
-		rareInterval:     defaultRareInterval,
-		standardInterval: defaultStandardInterval,
-		frequentInterval: defaultFrequentInterval,
-		startDelay:       defaultStartDelay,
-		resendInterval:   resendInterval,
-		localChecksFile:  os.Getenv(envCheckFile),
+		l:               l,
+		host:            host,
+		publicKeys:      defaultPublicKeys,
+		startDelay:      defaultStartDelay,
+		resendInterval:  defaultResendInterval,
+		localChecksFile: os.Getenv(envCheckFile),
 
 		mScriptsExecuted: prom.NewCounterVec(prom.CounterOpts{
 			Namespace: prometheusNamespace,
@@ -175,19 +159,8 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 		s.publicKeys = strings.Split(k, ",")
 		l.Warnf("Public keys changed to %q.", k)
 	}
-	if d, err := time.ParseDuration(os.Getenv(envRareInterval)); err == nil && d > 0 {
-		l.Warnf("Interval changed to %s; start delay disabled.", d)
-		s.rareInterval = d
-		s.startDelay = 0
-	}
-	if d, err := time.ParseDuration(os.Getenv(envStandardInterval)); err == nil && d > 0 {
-		l.Warnf("Interval changed to %s; start delay disabled.", d)
-		s.standardInterval = d
-		s.startDelay = 0
-	}
-	if d, err := time.ParseDuration(os.Getenv(envFrequentInterval)); err == nil && d > 0 {
-		l.Warnf("Interval changed to %s; start delay disabled.", d)
-		s.frequentInterval = d
+	if d, _ := strconv.ParseBool(os.Getenv(envDisableStartDelay)); d {
+		l.Warn("Start delay disabled.")
 		s.startDelay = 0
 	}
 
@@ -211,6 +184,12 @@ func (s *Service) Run(ctx context.Context) {
 	s.l.Info("Starting...")
 	defer s.l.Info("Done.")
 
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		s.l.Errorf("Failed to get settings: %+v.", err)
+		return
+	}
+
 	// delay for the first run to allow all agents to connect
 	startCtx, startCancel := context.WithTimeout(ctx, s.startDelay)
 	<-startCtx.Done()
@@ -227,16 +206,13 @@ func (s *Service) Run(ctx context.Context) {
 		s.resendAlerts(ctx)
 	}()
 
-	// TODO: https://jira.percona.com/browse/PMM-7337
-	// get intervals from settings
-
-	s.rareTicker = time.NewTicker(s.rareInterval)
+	s.rareTicker = time.NewTicker(settings.SaaS.STTCheckIntervals.RareInterval)
 	defer s.rareTicker.Stop()
 
-	s.standardTicker = time.NewTicker(s.standardInterval)
+	s.standardTicker = time.NewTicker(settings.SaaS.STTCheckIntervals.StandardInterval)
 	defer s.standardTicker.Stop()
 
-	s.frequentTicker = time.NewTicker(s.frequentInterval)
+	s.frequentTicker = time.NewTicker(settings.SaaS.STTCheckIntervals.FrequentInterval)
 	defer s.frequentTicker.Stop()
 
 	wg.Add(1)
@@ -1034,14 +1010,15 @@ func (s *Service) updateChecks(mySQLChecks, postgreSQLChecks, mongoDBChecks []ch
 	s.mongoDBChecks = mongoDBChecks
 }
 
-// updateIntervals updates STT restart timers intervals.
-func (s *Service) updateIntervals(rare, standard, frequent time.Duration) {
+// UpdateIntervals updates STT restart timers intervals.
+func (s *Service) UpdateIntervals(rare, standard, frequent time.Duration) {
 	s.tm.Lock()
-	defer s.tm.Unlock()
-
 	s.rareTicker.Reset(rare)
 	s.standardTicker.Reset(standard)
 	s.frequentTicker.Reset(frequent)
+	s.tm.Unlock()
+
+	s.l.Infof("Intervals are changed: rare %s, standard %s, frequent %s", rare, standard, frequent)
 }
 
 // verifySignatures verifies checks signatures and returns error in case of verification problem.

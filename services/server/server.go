@@ -634,7 +634,15 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		}
 	}
 
-	// When STT moved from disabled state to enabled force checks download and execution
+	// If STT intervals are changed reset timers.
+	if oldSettings.SaaS.STTCheckIntervals != newSettings.SaaS.STTCheckIntervals {
+		s.checksService.UpdateIntervals(
+			newSettings.SaaS.STTCheckIntervals.RareInterval,
+			newSettings.SaaS.STTCheckIntervals.StandardInterval,
+			newSettings.SaaS.STTCheckIntervals.FrequentInterval)
+	}
+
+	// When STT moved from disabled state to enabled force checks download and execution.
 	if !oldSettings.SaaS.STTEnabled && newSettings.SaaS.STTEnabled {
 		go func() {
 			err = s.checksService.StartChecks(context.Background(), "")
