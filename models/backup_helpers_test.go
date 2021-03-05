@@ -54,7 +54,7 @@ func TestBackup(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, params.Name, backup.Name)
 		assert.Equal(t, params.LocationName, backup.LocationName)
-		assert.Less(t, time.Now().UTC().Unix(), backup.CreatedAt.Unix())
+		assert.Less(t, time.Now().UTC().Unix()-backup.CreatedAt.Unix(), int64(5))
 	})
 
 	t.Run("list", func(t *testing.T) {
