@@ -454,24 +454,24 @@ func (s *Service) minPMMAgentVersion(t check.Type) *version.Parsed {
 
 func (s *Service) filterChecks(checks []check.Check, disable, enable []string) []check.Check {
 	var res []check.Check
-	dm := make(map[string]struct{}, len(disable))
+	disableMap := make(map[string]struct{}, len(disable))
 	for _, e := range disable {
-		dm[e] = struct{}{}
+		disableMap[e] = struct{}{}
 	}
 
-	em := make(map[string]struct{}, len(enable))
+	enableMap := make(map[string]struct{}, len(enable))
 	for _, e := range enable {
-		em[e] = struct{}{}
+		enableMap[e] = struct{}{}
 	}
 
 	for _, c := range checks {
-		if _, ok := dm[c.Name]; ok {
+		if _, ok := disableMap[c.Name]; ok {
 			s.l.Debugf("Skipping disabled check %s", c.Name)
 			continue
 		}
 
 		// If check enabled explicitly or all checks enabled by passing empty `enable` slice.
-		if _, ok := em[c.Name]; ok || len(em) == 0 {
+		if _, ok := enableMap[c.Name]; ok || len(enableMap) == 0 {
 			res = append(res, c)
 		}
 	}
