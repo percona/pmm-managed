@@ -18,11 +18,13 @@ package grafana
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -100,6 +102,11 @@ type authError struct {
 	message string
 }
 
+type cacheItem struct {
+	r        role
+	lastUsed time.Time
+}
+
 // clientInterface exist only to make fuzzing simpler.
 type clientInterface interface {
 	getRole(context.Context, http.Header) (role, error)
@@ -111,6 +118,9 @@ type AuthServer struct {
 	checker awsInstanceChecker
 	l       *logrus.Entry
 
+	cache map[string]cacheItem
+	rw    sync.RWMutex
+
 	// TODO server metrics should be provided by middleware https://jira.percona.com/browse/PMM-4326
 }
 
@@ -120,6 +130,7 @@ func NewAuthServer(c clientInterface, checker awsInstanceChecker) *AuthServer {
 		c:       c,
 		checker: checker,
 		l:       logrus.WithField("component", "grafana/auth"),
+		cache:   make(map[string]cacheItem),
 	}
 }
 
@@ -296,18 +307,41 @@ func (s *AuthServer) authenticate(ctx context.Context, req *http.Request, l *log
 			authHeaders.Set(k, v)
 		}
 	}
-	role, err := s.c.getRole(ctx, authHeaders)
+	j, err := json.Marshal(authHeaders)
 	if err != nil {
 		l.Warnf("%s", err)
-		if cErr, ok := errors.Cause(err).(*clientError); ok {
-			code := codes.Internal
-			if cErr.Code == 401 || cErr.Code == 403 {
-				code = codes.Unauthenticated
-			}
-			return &authError{code: code, message: cErr.ErrorMessage}
-		}
 		return &authError{code: codes.Internal, message: "Internal server error."}
 	}
+	hash := base64.StdEncoding.EncodeToString(j)
+	var role role
+	s.rw.RLock()
+	item, ok := s.cache[hash]
+	if ok {
+		item.lastUsed = time.Now()
+		s.rw.RUnlock()
+		role = item.r
+	} else {
+		s.rw.RUnlock()
+		role, err := s.c.getRole(ctx, authHeaders)
+		if err != nil {
+			l.Warnf("%s", err)
+			if cErr, ok := errors.Cause(err).(*clientError); ok {
+				code := codes.Internal
+				if cErr.Code == 401 || cErr.Code == 403 {
+					code = codes.Unauthenticated
+				}
+				return &authError{code: code, message: cErr.ErrorMessage}
+			}
+			return &authError{code: codes.Internal, message: "Internal server error."}
+		}
+		s.rw.Lock()
+		s.cache[hash] = cacheItem{
+			r:        role,
+			lastUsed: time.Now(),
+		}
+		s.rw.Unlock()
+	}
+
 	l = l.WithField("role", role.String())
 
 	if role == grafanaAdmin {
@@ -322,4 +356,25 @@ func (s *AuthServer) authenticate(ctx context.Context, req *http.Request, l *log
 
 	l.Warnf("Minimal required role is %q.", minRole)
 	return &authError{code: codes.PermissionDenied, message: "Access denied."}
+}
+
+func (s *AuthServer) Run(ctx context.Context) {
+	t := time.NewTicker(5 * time.Second)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+
+		case <-t.C:
+			now := time.Now()
+			s.rw.Lock()
+			for key, item := range s.cache {
+				if item.lastUsed.Add(5 * time.Second).Before(now) {
+					delete(s.cache, key)
+				}
+			}
+			s.rw.Unlock()
+		}
+	}
 }
