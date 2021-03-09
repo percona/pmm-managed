@@ -61,18 +61,52 @@ func (s *ChannelsService) ListChannels(ctx context.Context, req *iav1beta1.ListC
 		pageSize = int(req.PageParams.PageSize)
 	}
 
-	if pageSize == 0 {
-		pageSize = defaultPageSize
+	var channels []*iav1beta1.Channel
+	pageTotals := &iav1beta1.PageTotals{
+		TotalPages: 1,
 	}
 
-	res, pageTotals, err := s.getNotificationChannelsPage(pageIndex, pageSize)
+	if pageSize == 0 {
+		channels, err = s.getNotificationChannels()
+		pageTotals.TotalItems = int32(len(channels))
+	} else {
+		channels, pageTotals, err = s.getNotificationChannelsPage(pageIndex, pageSize)
+	}
+
 	if err != nil {
 		return nil, err
 	}
 
-	return &iav1beta1.ListChannelsResponse{Channels: res, Totals: pageTotals}, nil
+	return &iav1beta1.ListChannelsResponse{Channels: channels, Totals: pageTotals}, nil
 }
 
+func (s *ChannelsService) getNotificationChannels() ([]*iav1beta1.Channel, error) {
+	var channels []*models.Channel
+	errTx := s.db.InTransaction(func(tx *reform.TX) error {
+		var err error
+		channels, err = models.FindChannels(tx.Querier)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		return nil
+	})
+
+	if errTx != nil {
+		return nil, errors.WithStack(errTx)
+	}
+
+	res := make([]*iav1beta1.Channel, len(channels))
+	for i, channel := range channels {
+		c, err := convertChannel(channel) //nolint:gosec
+		if err != nil {
+			return nil, err
+		}
+		res[i] = c
+	}
+
+	return res, nil
+
+}
 func (s *ChannelsService) getNotificationChannelsPage(pageIndex, pageSize int) ([]*iav1beta1.Channel, *iav1beta1.PageTotals, error) {
 	var channels []*models.Channel
 	var totalItems int
@@ -114,7 +148,6 @@ func (s *ChannelsService) getNotificationChannelsPage(pageIndex, pageSize int) (
 	}
 
 	return res, totals, nil
-
 }
 
 // AddChannel adds new notification channel.
