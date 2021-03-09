@@ -134,6 +134,28 @@ func NewAuthServer(c clientInterface, checker awsInstanceChecker) *AuthServer {
 	}
 }
 
+// Run runs cache invalidator which removes expired cache items.
+func (s *AuthServer) Run(ctx context.Context) {
+	t := time.NewTicker(5 * time.Second)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+
+		case <-t.C:
+			now := time.Now()
+			s.rw.Lock()
+			for key, item := range s.cache {
+				if item.lastUsed.Add(5 * time.Second).Before(now) {
+					delete(s.cache, key)
+				}
+			}
+			s.rw.Unlock()
+		}
+	}
+}
+
 // ServeHTTP serves internal location /auth_request for both authentication subrequests
 // and subsequent normal requests.
 func (s *AuthServer) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
@@ -322,7 +344,7 @@ func (s *AuthServer) authenticate(ctx context.Context, req *http.Request, l *log
 		role = item.r
 	} else {
 		s.rw.RUnlock()
-		role, err := s.c.getRole(ctx, authHeaders)
+		role, err = s.c.getRole(ctx, authHeaders)
 		if err != nil {
 			l.Warnf("%s", err)
 			if cErr, ok := errors.Cause(err).(*clientError); ok {
@@ -356,25 +378,4 @@ func (s *AuthServer) authenticate(ctx context.Context, req *http.Request, l *log
 
 	l.Warnf("Minimal required role is %q.", minRole)
 	return &authError{code: codes.PermissionDenied, message: "Access denied."}
-}
-
-func (s *AuthServer) Run(ctx context.Context) {
-	t := time.NewTicker(5 * time.Second)
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-
-		case <-t.C:
-			now := time.Now()
-			s.rw.Lock()
-			for key, item := range s.cache {
-				if item.lastUsed.Add(5 * time.Second).Before(now) {
-					delete(s.cache, key)
-				}
-			}
-			s.rw.Unlock()
-		}
-	}
 }
