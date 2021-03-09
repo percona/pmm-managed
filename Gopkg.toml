@@ -14,7 +14,7 @@ required = [
 
 [[constraint]]
   name = "github.com/percona/pmm"
-  branch = "PMM-7503-dbaas-add-resources-api"
+  branch = "release/2.16"
 
 [[constraint]]
   name = "github.com/percona-platform/saas"
@@ -22,4 +22,4 @@ required = [
 
 [[constraint]]
   name = "github.com/percona-platform/dbaas-api"
-  branch = "PMM-7503-kubernetes-resources-cpu-memory"
+  branch = "pmm-2.16"
