@@ -484,12 +484,12 @@ func (s *TemplatesService) UpdateTemplate(ctx context.Context, req *iav1beta1.Up
 		return nil, status.Errorf(codes.FailedPrecondition, "%v.", services.ErrAlertingDisabled)
 	}
 
-	pParams := &alert.ParseParams{
+	parseParams := &alert.ParseParams{
 		DisallowUnknownFields:    true,
 		DisallowInvalidTemplates: true,
 	}
 
-	templates, err := alert.Parse(strings.NewReader(req.Yaml), pParams)
+	templates, err := alert.Parse(strings.NewReader(req.Yaml), parseParams)
 	if err != nil {
 		s.l.Errorf("failed to parse rule template form request: +%v", err)
 		return nil, status.Error(codes.InvalidArgument, "Failed to parse rule template.")
@@ -499,20 +499,21 @@ func (s *TemplatesService) UpdateTemplate(ctx context.Context, req *iav1beta1.Up
 		return nil, status.Error(codes.InvalidArgument, "Request should contain exactly one rule template.")
 	}
 
-	for _, t := range templates {
-		if err = validateUserTemplate(&t); err != nil { //nolint:gosec
-			return nil, status.Errorf(codes.InvalidArgument, "%s.", err)
-		}
+	tmpl := templates[0]
+
+	if err = validateUserTemplate(&tmpl); err != nil { //nolint:gosec
+		return nil, status.Errorf(codes.InvalidArgument, "%s.", err)
 	}
 
-	params := &models.ChangeTemplateParams{
-		Template: &templates[0],
+	changeParams := &models.ChangeTemplateParams{
+		Template: &tmpl,
+		Name:     req.Name,
 		Yaml:     req.Yaml,
 	}
 
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
-		_, err = models.ChangeTemplate(tx.Querier, params)
+		_, err = models.ChangeTemplate(tx.Querier, changeParams)
 		return err
 	})
 	if e != nil {
