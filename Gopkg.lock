@@ -384,11 +384,11 @@
 
 [[projects]]
   branch = "pmm-2.16"
-  digest = "1:c60754f36f889a8cb8ad9174d040c090e258f5277a0462b930dd196d5f72c57e"
+  digest = "1:3a3456315d8c3f9f75569955fe5fd6fada00369ab99c90c8acf752143b80c2d7"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "41f004193c1ac2e6614d8eaac641b18899334d91"
+  revision = "c61e37abd915952b3fcbe00663b23c234856a4cc"
 
 [[projects]]
   branch = "main"
@@ -408,8 +408,8 @@
   revision = "c158e23a172f892cc389233858238449efec1dbb"
 
 [[projects]]
-  branch = "PMM-7522-channels-pagination"
-  digest = "1:0e04b7a537c0f1ac5fa3d5b3194d0a9caf7ea0608e79e4de05c7591ba3709e9f"
+  branch = "release/2.16"
+  digest = "1:bad39b0269c855fe3db87f1f19e9380d850b391093243051a362ae9d32800f31"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -433,7 +433,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "6fe4b6064ece1fe3966a5d33d6c98f0f717d0eeb"
+  revision = "ebba3a7f5f8a0039b21acbecd322ef46f74fb950"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
