@@ -378,10 +378,6 @@ func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.Lis
 		pageSize = int(req.PageParams.PageSize)
 	}
 
-	if pageSize == 0 {
-		pageSize = defaultPageSize
-	}
-
 	if req.Reload {
 		s.Collect(ctx)
 	}
@@ -391,12 +387,15 @@ func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.Lis
 		Templates: make([]*iav1beta1.Template, 0, len(templates)),
 		Totals: &iav1beta1.PageTotals{
 			TotalItems: int32(len(templates)),
-			TotalPages: int32(len(templates) / pageSize),
+			TotalPages: 1,
 		},
 	}
 
-	if len(templates)%pageSize > 0 {
-		res.Totals.TotalPages++
+	if pageSize > 0 {
+		res.Totals.TotalPages = int32(len(templates) / pageSize)
+		if len(templates)%pageSize > 0 {
+			res.Totals.TotalPages++
+		}
 	}
 
 	names := make([]string, 0, len(templates))
@@ -406,7 +405,7 @@ func (s *TemplatesService) ListTemplates(ctx context.Context, req *iav1beta1.Lis
 	sort.Strings(names)
 
 	from, to := pageIndex*pageSize, (pageIndex+1)*pageSize
-	if to > len(names) {
+	if to > len(names) || to == 0 {
 		to = len(names)
 	}
 

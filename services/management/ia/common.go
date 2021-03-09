@@ -32,8 +32,7 @@ import (
 )
 
 const (
-	dirPerm         = os.FileMode(0o775)
-	defaultPageSize = 25
+	dirPerm = os.FileMode(0o775)
 )
 
 func convertParamUnit(u alert.Unit) iav1beta1.ParamUnit {

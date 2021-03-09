@@ -268,15 +268,21 @@ func (s *RulesService) ListAlertRules(ctx context.Context, req *iav1beta1.ListAl
 		pageSize = int(req.PageParams.PageSize)
 	}
 
-	if pageSize == 0 {
-		pageSize = defaultPageSize
+	var rules []*iav1beta1.Rule
+	pageTotals := &iav1beta1.PageTotals{
+		TotalPages: 1,
 	}
-
-	res, pageTotals, err := s.getAlertRulesPage(pageIndex, pageSize)
+	if pageSize == 0 {
+		rules, err = s.getAlertRules()
+		pageTotals.TotalItems = int32(len(rules))
+	} else {
+		rules, pageTotals, err = s.getAlertRulesPage(pageIndex, pageSize)
+	}
 	if err != nil {
 		return nil, err
 	}
-	return &iav1beta1.ListAlertRulesResponse{Rules: res, Totals: pageTotals}, nil
+
+	return &iav1beta1.ListAlertRulesResponse{Rules: rules, Totals: pageTotals}, nil
 }
 
 func (s *RulesService) convertAlertRules(rules []*models.Rule, channels []*models.Channel) ([]*iav1beta1.Rule, error) {
