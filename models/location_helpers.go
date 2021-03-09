@@ -281,7 +281,7 @@ func ChangeBackupLocation(q *reform.Querier, locationID string, params ChangeBac
 func testS3Config(c *S3LocationConfig) error {
 	parsedURL, err := url.Parse(c.Endpoint)
 	if err != nil {
-		return err
+		return status.Errorf(codes.InvalidArgument, "%s", err)
 	}
 
 	endpoint := path.Join(parsedURL.Host, parsedURL.Path)
@@ -291,7 +291,7 @@ func testS3Config(c *S3LocationConfig) error {
 	}
 	minioClient, err := minio.New(endpoint, c.AccessKey, c.SecretKey, secure)
 	if err != nil {
-		return err
+		return status.Errorf(codes.InvalidArgument, "%s", err)
 	}
 
 	exists, err := minioClient.BucketExists(c.BucketName)
@@ -300,7 +300,7 @@ func testS3Config(c *S3LocationConfig) error {
 			return status.Errorf(codes.InvalidArgument, "%s: %s.", er.Code, er.Message)
 		}
 
-		return err
+		return status.Errorf(codes.Internal, "%s", err)
 	}
 
 	if !exists {
