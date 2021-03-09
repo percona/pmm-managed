@@ -391,8 +391,8 @@
   revision = "c61e37abd915952b3fcbe00663b23c234856a4cc"
 
 [[projects]]
-  branch = "main"
-  digest = "1:adfc8f23176169e0c810abf12615f8303ffbc5d669cd11f73b145e635634f5c5"
+  branch = "SAAS-487-email-verification"
+  digest = "1:1d6597d442006947bc3feed7eea6aa8002424414626d5476fc983fe738690769"
   name = "github.com/percona-platform/saas"
   packages = [
     "gen/auth",
@@ -405,11 +405,11 @@
     "pkg/starlark",
   ]
   pruneopts = "NUT"
-  revision = "c158e23a172f892cc389233858238449efec1dbb"
+  revision = "b6d12a6a95ca6a6999ccd249f5dd5ed2f6d3390d"
 
 [[projects]]
-  branch = "release/2.16"
-  digest = "1:1452ed5c8d6a6f9d82f91393c93464ea1767fb8e2b7f26839fe2a8a5e5341b21"
+  branch = "SAAS-487-email-verification"
+  digest = "1:d81ea5e8d40e02be3f28e842f601e521b1008dbce0c04bda5c9852416f71ab95"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -433,7 +433,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "ad7804b14f5fb4a78279580f324d527b2c56da87"
+  revision = "f49a1c7d8f4c270a530e5aaa7000e273bb014fcb"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
