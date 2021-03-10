@@ -516,3 +516,23 @@ func TestFindTargets(t *testing.T) {
 		}
 	})
 }
+
+func TestFilterChecksByInterval(t *testing.T) {
+	t.Parallel()
+
+	rareCheck := check.Check{Name: "rareCheck", Interval: check.Rare}
+	standardCheck := check.Check{Name: "standardCheck", Interval: check.Standard}
+	frequentCheck := check.Check{Name: "frequentCheck", Interval: check.Frequent}
+	emptyCheck := check.Check{Name: "emptyCheck"}
+
+	checks := []check.Check{rareCheck, standardCheck, frequentCheck, emptyCheck}
+
+	rareChecks := filterChecksByInterval(checks, check.Rare)
+	assert.ElementsMatch(t, []check.Check{rareCheck}, rareChecks)
+
+	standardChecks := filterChecksByInterval(checks, check.Standard)
+	assert.ElementsMatch(t, []check.Check{standardCheck, emptyCheck}, standardChecks)
+
+	frequentChecks := filterChecksByInterval(checks, check.Frequent)
+	assert.ElementsMatch(t, []check.Check{frequentCheck}, frequentChecks)
+}
