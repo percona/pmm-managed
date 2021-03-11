@@ -96,6 +96,9 @@ var mustSetupRules = []string{
 // as this code is reserved for auth_request.
 const authenticationErrorCode = 401
 
+// cacheInvalidationPeriod is and period when cache for grafana response should be invalidated.
+const cacheInvalidationPeriod = 3 * time.Second
+
 // clientError contains authentication error response details.
 type authError struct {
 	code    codes.Code // error code for API client; not mapped to HTTP status code
@@ -103,8 +106,8 @@ type authError struct {
 }
 
 type cacheItem struct {
-	r        role
-	lastUsed time.Time
+	r       role
+	created time.Time
 }
 
 // clientInterface exist only to make fuzzing simpler.
@@ -136,7 +139,7 @@ func NewAuthServer(c clientInterface, checker awsInstanceChecker) *AuthServer {
 
 // Run runs cache invalidator which removes expired cache items.
 func (s *AuthServer) Run(ctx context.Context) {
-	t := time.NewTicker(5 * time.Second)
+	t := time.NewTicker(cacheInvalidationPeriod)
 
 	for {
 		select {
@@ -147,7 +150,7 @@ func (s *AuthServer) Run(ctx context.Context) {
 			now := time.Now()
 			s.rw.Lock()
 			for key, item := range s.cache {
-				if item.lastUsed.Add(5 * time.Second).Before(now) {
+				if now.Add(-cacheInvalidationPeriod).After(item.created) {
 					delete(s.cache, key)
 				}
 			}
@@ -338,12 +341,10 @@ func (s *AuthServer) authenticate(ctx context.Context, req *http.Request, l *log
 	var role role
 	s.rw.RLock()
 	item, ok := s.cache[hash]
+	s.rw.RUnlock()
 	if ok {
-		item.lastUsed = time.Now()
-		s.rw.RUnlock()
 		role = item.r
 	} else {
-		s.rw.RUnlock()
 		role, err = s.c.getRole(ctx, authHeaders)
 		if err != nil {
 			l.Warnf("%s", err)
@@ -358,8 +359,8 @@ func (s *AuthServer) authenticate(ctx context.Context, req *http.Request, l *log
 		}
 		s.rw.Lock()
 		s.cache[hash] = cacheItem{
-			r:        role,
-			lastUsed: time.Now(),
+			r:       role,
+			created: time.Now(),
 		}
 		s.rw.Unlock()
 	}
