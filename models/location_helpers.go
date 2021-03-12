@@ -315,8 +315,8 @@ type TestBackupLocationParams struct {
 	BackupLocationConfig
 }
 
-// TestBackupLocationConfig tests backup location config.
-func TestBackupLocationConfig(params *TestBackupLocationParams) error {
+// VerifyBackupLocationConfig checks and tests backup location config.
+func VerifyBackupLocationConfig(params *TestBackupLocationParams) error {
 	configSet, err := params.Validate()
 	if err != nil {
 		return err

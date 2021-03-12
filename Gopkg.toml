@@ -23,7 +23,3 @@ required = [
 [[constraint]]
   name = "github.com/percona-platform/dbaas-api"
   branch = "pmm-2.16"
-
-[[constraint]]
-  name = "github.com/minio/minio-go"
-  version = "6.0.25"

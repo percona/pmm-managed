@@ -158,7 +158,7 @@ func (s *LocationsService) TestLocationConfig(
 		}
 	}
 
-	if err := models.TestBackupLocationConfig(&params); err != nil {
+	if err := models.VerifyBackupLocationConfig(&params); err != nil {
 		return nil, err
 	}
 
