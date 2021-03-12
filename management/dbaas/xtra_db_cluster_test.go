@@ -274,4 +274,32 @@ func TestXtraDBClusterServer(t *testing.T) {
 		_, err := dbaasClient.Default.XtraDBCluster.UpdateXtraDBCluster(&paramsUpdatePXC)
 		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `resume and suspend cannot be set together`)
 	})
+
+	t.Run("GetXtraDBClusterResources", func(t *testing.T) {
+		paramsXtraDBClusterResources := xtra_db_cluster.GetXtraDBClusterResourcesParams{
+			Context: pmmapitests.Context,
+			Body: xtra_db_cluster.GetXtraDBClusterResourcesBody{
+				Params: &xtra_db_cluster.GetXtraDBClusterResourcesParamsBodyParams{
+					ClusterSize: 1,
+					Proxysql: &xtra_db_cluster.GetXtraDBClusterResourcesParamsBodyParamsProxysql{
+						ComputeResources: &xtra_db_cluster.GetXtraDBClusterResourcesParamsBodyParamsProxysqlComputeResources{
+							CPUm:        1000,
+							MemoryBytes: "1000000000",
+						},
+					},
+					Pxc: &xtra_db_cluster.GetXtraDBClusterResourcesParamsBodyParamsPxc{
+						ComputeResources: &xtra_db_cluster.GetXtraDBClusterResourcesParamsBodyParamsPxcComputeResources{
+							CPUm:        1000,
+							MemoryBytes: "1000000000",
+						},
+					},
+				},
+			},
+		}
+		resources, err := dbaasClient.Default.XtraDBCluster.GetXtraDBClusterResources(&paramsXtraDBClusterResources)
+		assert.NoError(t, err)
+		assert.Equal(t, resources.Payload.Expected.MemoryBytes, 2000000000)
+		assert.Equal(t, resources.Payload.Expected.CPUm, 2000)
+		assert.Equal(t, resources.Payload.Expected.DiskSize, 2000000000)
+	})
 }

@@ -241,4 +241,26 @@ func TestPSMDBClusterServer(t *testing.T) {
 		_, err := dbaasClient.Default.PSMDBCluster.UpdatePSMDBCluster(&paramsUpdatePSMDB)
 		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `resume and suspend cannot be set together`)
 	})
+
+	t.Run("GetPSMDBClusterResources", func(t *testing.T) {
+		paramsPSMDBClusterResources := psmdbcluster.GetPSMDBClusterResourcesParams{
+			Context: pmmapitests.Context,
+			Body: psmdbcluster.GetPSMDBClusterResourcesBody{
+				Params: &psmdbcluster.GetPSMDBClusterResourcesParamsBodyParams{
+					ClusterSize: 4,
+					Replicaset: &psmdbcluster.GetPSMDBClusterResourcesParamsBodyParamsReplicaset{
+						ComputeResources: &psmdbcluster.GetPSMDBClusterResourcesParamsBodyParamsReplicasetComputeResources{
+							CPUm:        2000,
+							MemoryBytes: "2000000000",
+						},
+					},
+				},
+			},
+		}
+		resources, err := dbaasClient.Default.PSMDBCluster.GetPSMDBClusterResources(&paramsPSMDBClusterResources)
+		assert.NoError(t, err)
+		assert.Equal(t, resources.Payload.Expected.MemoryBytes, 16000000000)
+		assert.Equal(t, resources.Payload.Expected.CPUm, 16000)
+		assert.Equal(t, resources.Payload.Expected.DiskSize, 14000000000)
+	})
 }
