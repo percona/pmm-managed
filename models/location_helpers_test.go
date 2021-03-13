@@ -265,7 +265,7 @@ func TestBackupLocations(t *testing.T) {
 	})
 }
 
-func TestBackupLocationValidation(t *testing.T) {
+func TestCreateBackupLocation_Validation(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	defer func() {
 		require.NoError(t, sqlDB.Close())
@@ -307,7 +307,7 @@ func TestBackupLocationValidation(t *testing.T) {
 				Name: "s3-1",
 				BackupLocationConfig: models.BackupLocationConfig{
 					S3Config: &models.S3LocationConfig{
-						Endpoint:   "https://s3.us-west-2.amazonaws.com/mybucket",
+						Endpoint:   "https://s3.us-west-2.amazonaws.com/",
 						AccessKey:  "access_key",
 						SecretKey:  "secret_key",
 						BucketName: "example_bucket",
@@ -337,7 +337,7 @@ func TestBackupLocationValidation(t *testing.T) {
 				Name: "s3-3",
 				BackupLocationConfig: models.BackupLocationConfig{
 					S3Config: &models.S3LocationConfig{
-						Endpoint:   "https://s3.us-west-2.amazonaws.com/mybucket",
+						Endpoint:   "https://s3.us-west-2.amazonaws.com/",
 						AccessKey:  "",
 						SecretKey:  "secret_key",
 						BucketName: "example_bucket",
@@ -352,7 +352,7 @@ func TestBackupLocationValidation(t *testing.T) {
 				Name: "s3-4",
 				BackupLocationConfig: models.BackupLocationConfig{
 					S3Config: &models.S3LocationConfig{
-						Endpoint:   "https://s3.us-west-2.amazonaws.com/mybucket",
+						Endpoint:   "https://s3.us-west-2.amazonaws.com/",
 						AccessKey:  "secret_key",
 						SecretKey:  "",
 						BucketName: "example_bucket",
@@ -367,7 +367,7 @@ func TestBackupLocationValidation(t *testing.T) {
 				Name: "s3-4",
 				BackupLocationConfig: models.BackupLocationConfig{
 					S3Config: &models.S3LocationConfig{
-						Endpoint:   "https://s3.us-west-2.amazonaws.com/mybucket",
+						Endpoint:   "https://s3.us-west-2.amazonaws.com/",
 						AccessKey:  "secret_key",
 						SecretKey:  "example_key",
 						BucketName: "",
@@ -397,6 +397,129 @@ func TestBackupLocationValidation(t *testing.T) {
 			}
 			assert.NoError(t, err)
 			assert.NotNil(t, c)
+		})
+	}
+}
+
+func TestVerifyBackupLocation_Validation(t *testing.T) {
+	tableTests := []struct {
+		name     string
+		params   *models.VerifyBackupLocationParams
+		errorMsg string
+	}{
+		{
+			name: "client config - missing path",
+			params: &models.VerifyBackupLocationParams{
+				BackupLocationConfig: models.BackupLocationConfig{
+					PMMClientConfig: &models.PMMClientLocationConfig{
+						Path: "",
+					},
+				},
+			},
+			errorMsg: "rpc error: code = InvalidArgument desc = PMM client config path field is empty.",
+		},
+		{
+			name:     "s3 config - missing config",
+			params:   &models.VerifyBackupLocationParams{},
+			errorMsg: "rpc error: code = InvalidArgument desc = Missing location config.",
+		},
+		{
+			name: "s3 config - missing endpoint",
+			params: &models.VerifyBackupLocationParams{
+				BackupLocationConfig: models.BackupLocationConfig{
+					S3Config: &models.S3LocationConfig{
+						Endpoint:   "",
+						AccessKey:  "access_key",
+						SecretKey:  "secret_key",
+						BucketName: "example_bucket",
+					},
+				},
+			},
+			errorMsg: "rpc error: code = InvalidArgument desc = S3 endpoint field is empty.",
+		},
+		{
+			name: "s3 config - missing access key",
+			params: &models.VerifyBackupLocationParams{
+				BackupLocationConfig: models.BackupLocationConfig{
+					S3Config: &models.S3LocationConfig{
+						Endpoint:   "https://s3.us-west-2.amazonaws.com",
+						AccessKey:  "",
+						SecretKey:  "secret_key",
+						BucketName: "example_bucket",
+					},
+				},
+			},
+			errorMsg: "rpc error: code = InvalidArgument desc = S3 accessKey field is empty.",
+		},
+		{
+			name: "s3 config - missing secret key",
+			params: &models.VerifyBackupLocationParams{
+				BackupLocationConfig: models.BackupLocationConfig{
+					S3Config: &models.S3LocationConfig{
+						Endpoint:   "https://s3.us-west-2.amazonaws.com",
+						AccessKey:  "secret_key",
+						SecretKey:  "",
+						BucketName: "example_bucket",
+					},
+				},
+			},
+			errorMsg: "rpc error: code = InvalidArgument desc = S3 secretKey field is empty.",
+		},
+		{
+			name: "s3 config - missing bucket name",
+			params: &models.VerifyBackupLocationParams{
+				BackupLocationConfig: models.BackupLocationConfig{
+					S3Config: &models.S3LocationConfig{
+						Endpoint:   "https://s3.us-west-2.amazonaws.com",
+						AccessKey:  "secret_key",
+						SecretKey:  "example_key",
+						BucketName: "",
+					},
+				},
+			},
+			errorMsg: "rpc error: code = InvalidArgument desc = S3 bucketName field is empty.",
+		},
+		{
+			name: "s3 config - invalid endpoint",
+			params: &models.VerifyBackupLocationParams{
+				BackupLocationConfig: models.BackupLocationConfig{
+					S3Config: &models.S3LocationConfig{
+						Endpoint:   "invalid:endpoint",
+						AccessKey:  "secret_key",
+						SecretKey:  "example_key",
+						BucketName: "example_bucket",
+					},
+				},
+			},
+			errorMsg: "rpc error: code = InvalidArgument desc = Endpoint:  " +
+				"does not follow ip address or domain name standards.",
+		},
+		{
+			name: "s3 config - invalid bucket name",
+			params: &models.VerifyBackupLocationParams{
+				BackupLocationConfig: models.BackupLocationConfig{
+					S3Config: &models.S3LocationConfig{
+						Endpoint:   "https://s3.us-west-2.amazonaws.com/",
+						AccessKey:  "secret_key",
+						SecretKey:  "example_key",
+						BucketName: "invalid@bucket",
+					},
+				},
+			},
+			errorMsg: "rpc error: code = Internal desc = Bucket name contains invalid characters",
+		},
+	}
+
+	for _, test := range tableTests {
+		test := test
+
+		t.Run(test.name, func(t *testing.T) {
+			err := models.VerifyBackupLocationConfig(test.params)
+			if test.errorMsg != "" {
+				assert.EqualError(t, err, test.errorMsg)
+				return
+			}
+			assert.NoError(t, err)
 		})
 	}
 }

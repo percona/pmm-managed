@@ -310,20 +310,20 @@ func testS3Config(c *S3LocationConfig) error {
 	return nil
 }
 
-// TestBackupLocationParams are params for testing location and credentials.
-type TestBackupLocationParams struct {
+// VerifyBackupLocationParams are params for verifying location and credentials.
+type VerifyBackupLocationParams struct {
 	BackupLocationConfig
 }
 
 // VerifyBackupLocationConfig checks and tests backup location config.
-func VerifyBackupLocationConfig(params *TestBackupLocationParams) error {
+func VerifyBackupLocationConfig(params *VerifyBackupLocationParams) error {
 	configSet, err := params.Validate()
 	if err != nil {
 		return err
 	}
 
 	if !configSet {
-		return status.Error(codes.InvalidArgument, "One config should be set only.")
+		return status.Error(codes.InvalidArgument, "Missing location config.")
 	}
 
 	switch {

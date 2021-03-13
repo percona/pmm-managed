@@ -135,7 +135,7 @@ func (s *LocationsService) TestLocationConfig(
 	_ context.Context,
 	req *backupv1beta1.TestLocationConfigRequest,
 ) (*backupv1beta1.TestLocationConfigResponse, error) {
-	var params models.TestBackupLocationParams
+	var params models.VerifyBackupLocationParams
 
 	if req.S3Config != nil {
 		params.S3Config = &models.S3LocationConfig{
