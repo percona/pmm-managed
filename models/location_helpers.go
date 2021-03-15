@@ -79,28 +79,53 @@ func checkPMMClientLocationConfig(c *PMMClientLocationConfig) error {
 	return nil
 }
 
-func checkS3Config(c *S3LocationConfig) error {
+// checkS3Config checks S3 config and returns the flag that indicates if
+// secure connection should be used and the parsed host.
+func checkS3Config(c *S3LocationConfig) (bool, string, error) {
 	if c == nil {
-		return status.Error(codes.InvalidArgument, "S3 location config is empty.")
+		return false, "", status.Error(codes.InvalidArgument, "S3 location config is empty.")
 	}
 
 	if c.Endpoint == "" {
-		return status.Error(codes.InvalidArgument, "S3 endpoint field is empty.")
+		return false, "", status.Error(codes.InvalidArgument, "S3 endpoint field is empty.")
 	}
 
 	if c.AccessKey == "" {
-		return status.Error(codes.InvalidArgument, "S3 accessKey field is empty.")
+		return false, "", status.Error(codes.InvalidArgument, "S3 accessKey field is empty.")
 	}
 
 	if c.SecretKey == "" {
-		return status.Error(codes.InvalidArgument, "S3 secretKey field is empty.")
+		return false, "", status.Error(codes.InvalidArgument, "S3 secretKey field is empty.")
 	}
 
 	if c.BucketName == "" {
-		return status.Error(codes.InvalidArgument, "S3 bucketName field is empty.")
+		return false, "", status.Error(codes.InvalidArgument, "S3 bucketName field is empty.")
 	}
 
-	return nil
+	parsedURL, err := url.Parse(c.Endpoint)
+	if err != nil {
+		return false, "", status.Errorf(codes.InvalidArgument, "%s", err)
+	}
+
+	if parsedURL.Host == "" {
+		return false, "", status.Error(codes.InvalidArgument, "No host found in the Endpoint.")
+	}
+
+	if parsedURL.Path != "" && parsedURL.Path != "/" {
+		return false, "", status.Error(codes.InvalidArgument, "Path is not allowed for Endpoint.")
+	}
+
+	secure := true
+	switch parsedURL.Scheme {
+	case "http":
+		secure = false
+	case "https":
+	case "":
+	default:
+		return false, "", status.Errorf(codes.InvalidArgument, "Invalid scheme '%s'", parsedURL.Scheme)
+	}
+
+	return secure, parsedURL.Host, nil
 }
 
 // FindBackupLocations returns saved backup locations configuration.
@@ -148,7 +173,7 @@ func (c BackupLocationConfig) Validate() (bool, error) {
 	configCount := 0
 	if c.S3Config != nil {
 		configCount++
-		err = checkS3Config(c.S3Config)
+		_, _, err = checkS3Config(c.S3Config)
 	}
 
 	if c.PMMServerConfig != nil {
@@ -278,26 +303,12 @@ func ChangeBackupLocation(q *reform.Querier, locationID string, params ChangeBac
 }
 
 func testS3Config(c *S3LocationConfig) error {
-	parsedURL, err := url.Parse(c.Endpoint)
+	secure, host, err := checkS3Config(c)
 	if err != nil {
-		return status.Errorf(codes.InvalidArgument, "%s", err)
+		return err
 	}
 
-	if parsedURL.Path != "" && parsedURL.Path != "/" {
-		return status.Error(codes.InvalidArgument, "Path is not allowed for Endpoint.")
-	}
-
-	secure := true
-	switch parsedURL.Scheme {
-	case "http":
-		secure = false
-	case "https":
-	case "":
-	default:
-		return status.Errorf(codes.InvalidArgument, "Invalid scheme '%s'", parsedURL.Scheme)
-	}
-
-	minioClient, err := minio.New(parsedURL.Host, c.AccessKey, c.SecretKey, secure)
+	minioClient, err := minio.New(host, c.AccessKey, c.SecretKey, secure)
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "%s", err)
 	}
@@ -336,9 +347,6 @@ func VerifyBackupLocationConfig(params *VerifyBackupLocationParams) error {
 
 	switch {
 	case params.S3Config != nil:
-		if err := checkS3Config(params.S3Config); err != nil {
-			return err
-		}
 		if err := testS3Config(params.S3Config); err != nil {
 			return err
 		}

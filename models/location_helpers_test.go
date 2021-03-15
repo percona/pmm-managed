@@ -272,12 +272,12 @@ func TestCreateBackupLocationValidation(t *testing.T) {
 
 	tableTests := []struct {
 		name     string
-		location models.CreateBackupLocationParams
+		params   models.CreateBackupLocationParams
 		errorMsg string
 	}{
 		{
 			name: "normal client config",
-			location: models.CreateBackupLocationParams{
+			params: models.CreateBackupLocationParams{
 				Name: "client-1",
 				BackupLocationConfig: models.BackupLocationConfig{
 					PMMClientConfig: &models.PMMClientLocationConfig{
@@ -289,7 +289,7 @@ func TestCreateBackupLocationValidation(t *testing.T) {
 		},
 		{
 			name: "client config - missing path",
-			location: models.CreateBackupLocationParams{
+			params: models.CreateBackupLocationParams{
 				Name: "client-2",
 				BackupLocationConfig: models.BackupLocationConfig{
 					PMMClientConfig: &models.PMMClientLocationConfig{
@@ -301,7 +301,7 @@ func TestCreateBackupLocationValidation(t *testing.T) {
 		},
 		{
 			name: "normal s3 config",
-			location: models.CreateBackupLocationParams{
+			params: models.CreateBackupLocationParams{
 				Name: "s3-1",
 				BackupLocationConfig: models.BackupLocationConfig{
 					S3Config: &models.S3LocationConfig{
@@ -316,7 +316,7 @@ func TestCreateBackupLocationValidation(t *testing.T) {
 		},
 		{
 			name: "s3 config - missing endpoint",
-			location: models.CreateBackupLocationParams{
+			params: models.CreateBackupLocationParams{
 				Name: "s3-2",
 				BackupLocationConfig: models.BackupLocationConfig{
 					S3Config: &models.S3LocationConfig{
@@ -331,7 +331,7 @@ func TestCreateBackupLocationValidation(t *testing.T) {
 		},
 		{
 			name: "s3 config - missing access key",
-			location: models.CreateBackupLocationParams{
+			params: models.CreateBackupLocationParams{
 				Name: "s3-3",
 				BackupLocationConfig: models.BackupLocationConfig{
 					S3Config: &models.S3LocationConfig{
@@ -346,7 +346,7 @@ func TestCreateBackupLocationValidation(t *testing.T) {
 		},
 		{
 			name: "s3 config - missing secret key",
-			location: models.CreateBackupLocationParams{
+			params: models.CreateBackupLocationParams{
 				Name: "s3-4",
 				BackupLocationConfig: models.BackupLocationConfig{
 					S3Config: &models.S3LocationConfig{
@@ -361,8 +361,8 @@ func TestCreateBackupLocationValidation(t *testing.T) {
 		},
 		{
 			name: "s3 config - missing bucket name",
-			location: models.CreateBackupLocationParams{
-				Name: "s3-4",
+			params: models.CreateBackupLocationParams{
+				Name: "s3-5",
 				BackupLocationConfig: models.BackupLocationConfig{
 					S3Config: &models.S3LocationConfig{
 						Endpoint:   "https://s3.us-west-2.amazonaws.com/",
@@ -373,6 +373,51 @@ func TestCreateBackupLocationValidation(t *testing.T) {
 				},
 			},
 			errorMsg: "rpc error: code = InvalidArgument desc = S3 bucketName field is empty.",
+		},
+		{
+			name: "s3 config - invalid endpoint",
+			params: models.CreateBackupLocationParams{
+				Name: "s3-6",
+				BackupLocationConfig: models.BackupLocationConfig{
+					S3Config: &models.S3LocationConfig{
+						Endpoint:   "#invalidendpoint",
+						AccessKey:  "secret_key",
+						SecretKey:  "example_key",
+						BucketName: "example_bucket",
+					},
+				},
+			},
+			errorMsg: "rpc error: code = InvalidArgument desc = No host found in the Endpoint.",
+		},
+		{
+			name: "s3 config - invalid endpoint, path is not allowed",
+			params: models.CreateBackupLocationParams{
+				Name: "s3-7",
+				BackupLocationConfig: models.BackupLocationConfig{
+					S3Config: &models.S3LocationConfig{
+						Endpoint:   "https://s3.us-west-2.amazonaws.com/path",
+						AccessKey:  "secret_key",
+						SecretKey:  "example_key",
+						BucketName: "example_bucket",
+					},
+				},
+			},
+			errorMsg: "rpc error: code = InvalidArgument desc = Path is not allowed for Endpoint.",
+		},
+		{
+			name: "s3 config - invalid scheme",
+			params: models.CreateBackupLocationParams{
+				Name: "s3-8",
+				BackupLocationConfig: models.BackupLocationConfig{
+					S3Config: &models.S3LocationConfig{
+						Endpoint:   "tcp://s3.us-west-2.amazonaws.com",
+						AccessKey:  "secret_key",
+						SecretKey:  "example_key",
+						BucketName: "example_bucket",
+					},
+				},
+			},
+			errorMsg: "rpc error: code = InvalidArgument desc = Invalid scheme 'tcp'",
 		},
 	}
 
@@ -388,7 +433,7 @@ func TestCreateBackupLocationValidation(t *testing.T) {
 
 			q := tx.Querier
 
-			c, err := models.CreateBackupLocation(q, test.location)
+			c, err := models.CreateBackupLocation(q, test.params)
 			if test.errorMsg != "" {
 				assert.EqualError(t, err, test.errorMsg)
 				return
@@ -399,7 +444,7 @@ func TestCreateBackupLocationValidation(t *testing.T) {
 	}
 }
 
-func TestVerifyBackupLocation_Validation(t *testing.T) {
+func TestVerifyBackupLocationValidation(t *testing.T) {
 	tableTests := []struct {
 		name     string
 		params   *models.VerifyBackupLocationParams
@@ -489,8 +534,7 @@ func TestVerifyBackupLocation_Validation(t *testing.T) {
 					},
 				},
 			},
-			errorMsg: "rpc error: code = InvalidArgument desc = Endpoint:  " +
-				"does not follow ip address or domain name standards.",
+			errorMsg: "rpc error: code = InvalidArgument desc = No host found in the Endpoint.",
 		},
 		{
 			name: "s3 config - invalid endpoint, path is not allowed",
