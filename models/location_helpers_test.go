@@ -265,7 +265,7 @@ func TestBackupLocations(t *testing.T) {
 	})
 }
 
-func TestCreateBackupLocation_Validation(t *testing.T) {
+func TestCreateBackupLocationValidation(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	defer func() {
 		require.NoError(t, sqlDB.Close())
