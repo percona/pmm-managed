@@ -19,13 +19,11 @@ package models_test
 import (
 	"testing"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/percona/pmm-managed/utils/tests"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
@@ -82,7 +80,7 @@ func TestBackupLocations(t *testing.T) {
 			Description: "some desc",
 			BackupLocationConfig: models.BackupLocationConfig{
 				S3Config: &models.S3LocationConfig{
-					Endpoint:   "https://example.com/",
+					Endpoint:   "https://example.com",
 					AccessKey:  "access_key",
 					SecretKey:  "secret_key",
 					BucketName: "example_bucket",
@@ -120,7 +118,7 @@ func TestBackupLocations(t *testing.T) {
 					Path: "/tmp",
 				},
 				S3Config: &models.S3LocationConfig{
-					Endpoint:   "https://example.com/",
+					Endpoint:   "https://example.com",
 					AccessKey:  "access_key",
 					SecretKey:  "secret_key",
 					BucketName: "example_bucket",
@@ -307,7 +305,7 @@ func TestCreateBackupLocationValidation(t *testing.T) {
 				Name: "s3-1",
 				BackupLocationConfig: models.BackupLocationConfig{
 					S3Config: &models.S3LocationConfig{
-						Endpoint:   "https://s3.us-west-2.amazonaws.com/",
+						Endpoint:   "https://s3.us-west-2.amazonaws.com",
 						AccessKey:  "access_key",
 						SecretKey:  "secret_key",
 						BucketName: "example_bucket",
@@ -337,7 +335,7 @@ func TestCreateBackupLocationValidation(t *testing.T) {
 				Name: "s3-3",
 				BackupLocationConfig: models.BackupLocationConfig{
 					S3Config: &models.S3LocationConfig{
-						Endpoint:   "https://s3.us-west-2.amazonaws.com/",
+						Endpoint:   "https://s3.us-west-2.amazonaws.com",
 						AccessKey:  "",
 						SecretKey:  "secret_key",
 						BucketName: "example_bucket",
@@ -352,7 +350,7 @@ func TestCreateBackupLocationValidation(t *testing.T) {
 				Name: "s3-4",
 				BackupLocationConfig: models.BackupLocationConfig{
 					S3Config: &models.S3LocationConfig{
-						Endpoint:   "https://s3.us-west-2.amazonaws.com/",
+						Endpoint:   "https://s3.us-west-2.amazonaws.com",
 						AccessKey:  "secret_key",
 						SecretKey:  "",
 						BucketName: "example_bucket",
@@ -367,7 +365,7 @@ func TestCreateBackupLocationValidation(t *testing.T) {
 				Name: "s3-4",
 				BackupLocationConfig: models.BackupLocationConfig{
 					S3Config: &models.S3LocationConfig{
-						Endpoint:   "https://s3.us-west-2.amazonaws.com/",
+						Endpoint:   "https://s3.us-west-2.amazonaws.com",
 						AccessKey:  "secret_key",
 						SecretKey:  "example_key",
 						BucketName: "",
@@ -484,7 +482,7 @@ func TestVerifyBackupLocation_Validation(t *testing.T) {
 			params: &models.VerifyBackupLocationParams{
 				BackupLocationConfig: models.BackupLocationConfig{
 					S3Config: &models.S3LocationConfig{
-						Endpoint:   "invalid:endpoint",
+						Endpoint:   "#invalidendpoint",
 						AccessKey:  "secret_key",
 						SecretKey:  "example_key",
 						BucketName: "example_bucket",
@@ -495,11 +493,39 @@ func TestVerifyBackupLocation_Validation(t *testing.T) {
 				"does not follow ip address or domain name standards.",
 		},
 		{
+			name: "s3 config - invalid endpoint, path is not allowed",
+			params: &models.VerifyBackupLocationParams{
+				BackupLocationConfig: models.BackupLocationConfig{
+					S3Config: &models.S3LocationConfig{
+						Endpoint:   "https://s3.us-west-2.amazonaws.com/bucket-name",
+						AccessKey:  "secret_key",
+						SecretKey:  "example_key",
+						BucketName: "example_bucket",
+					},
+				},
+			},
+			errorMsg: "rpc error: code = InvalidArgument desc = Path is not allowed for Endpoint.",
+		},
+		{
+			name: "s3 config - invalid scheme",
+			params: &models.VerifyBackupLocationParams{
+				BackupLocationConfig: models.BackupLocationConfig{
+					S3Config: &models.S3LocationConfig{
+						Endpoint:   "tcp://s3.us-west-2.amazonaws.com",
+						AccessKey:  "secret_key",
+						SecretKey:  "example_key",
+						BucketName: "example_bucket",
+					},
+				},
+			},
+			errorMsg: "rpc error: code = InvalidArgument desc = Invalid scheme 'tcp'",
+		},
+		{
 			name: "s3 config - invalid bucket name",
 			params: &models.VerifyBackupLocationParams{
 				BackupLocationConfig: models.BackupLocationConfig{
 					S3Config: &models.S3LocationConfig{
-						Endpoint:   "https://s3.us-west-2.amazonaws.com/",
+						Endpoint:   "https://s3.us-west-2.amazonaws.com",
 						AccessKey:  "secret_key",
 						SecretKey:  "example_key",
 						BucketName: "invalid@bucket",

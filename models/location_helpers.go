@@ -18,7 +18,6 @@ package models
 
 import (
 	"net/url"
-	"path"
 
 	"github.com/google/uuid"
 	"github.com/minio/minio-go"
@@ -284,12 +283,21 @@ func testS3Config(c *S3LocationConfig) error {
 		return status.Errorf(codes.InvalidArgument, "%s", err)
 	}
 
-	endpoint := path.Join(parsedURL.Host, parsedURL.Path)
-	secure := true
-	if parsedURL.Scheme == "http" {
-		secure = false
+	if parsedURL.Path != "" {
+		return status.Error(codes.InvalidArgument, "Path is not allowed for Endpoint.")
 	}
-	minioClient, err := minio.New(endpoint, c.AccessKey, c.SecretKey, secure)
+
+	secure := true
+	switch parsedURL.Scheme {
+	case "http":
+		secure = false
+	case "https":
+	case "":
+	default:
+		return status.Errorf(codes.InvalidArgument, "Invalid scheme '%s'", parsedURL.Scheme)
+	}
+
+	minioClient, err := minio.New(parsedURL.Host, c.AccessKey, c.SecretKey, secure)
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "%s", err)
 	}
