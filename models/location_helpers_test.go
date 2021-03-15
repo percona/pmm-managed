@@ -19,7 +19,6 @@ package models_test
 import (
 	"testing"
 
-	"github.com/percona/pmm-managed/utils/tests"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -29,6 +28,7 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/testdb"
+	"github.com/percona/pmm-managed/utils/tests"
 )
 
 func TestBackupLocations(t *testing.T) {
