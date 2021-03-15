@@ -283,7 +283,7 @@ func testS3Config(c *S3LocationConfig) error {
 		return status.Errorf(codes.InvalidArgument, "%s", err)
 	}
 
-	if parsedURL.Path != "" {
+	if parsedURL.Path != "" && parsedURL.Path != "/" {
 		return status.Error(codes.InvalidArgument, "Path is not allowed for Endpoint.")
 	}
 
