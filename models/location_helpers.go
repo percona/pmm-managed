@@ -79,27 +79,35 @@ func checkPMMClientLocationConfig(c *PMMClientLocationConfig) error {
 	return nil
 }
 
-// checkS3Config checks S3 config and returns the flag that indicates if
-// secure connection should be used and the parsed host.
-func checkS3Config(c *S3LocationConfig) (bool, string, error) {
+func s3ConfigFilled(c *S3LocationConfig) error {
 	if c == nil {
-		return false, "", status.Error(codes.InvalidArgument, "S3 location config is empty.")
+		return status.Error(codes.InvalidArgument, "S3 location config is empty.")
 	}
 
 	if c.Endpoint == "" {
-		return false, "", status.Error(codes.InvalidArgument, "S3 endpoint field is empty.")
+		return status.Error(codes.InvalidArgument, "S3 endpoint field is empty.")
 	}
 
 	if c.AccessKey == "" {
-		return false, "", status.Error(codes.InvalidArgument, "S3 accessKey field is empty.")
+		return status.Error(codes.InvalidArgument, "S3 accessKey field is empty.")
 	}
 
 	if c.SecretKey == "" {
-		return false, "", status.Error(codes.InvalidArgument, "S3 secretKey field is empty.")
+		return status.Error(codes.InvalidArgument, "S3 secretKey field is empty.")
 	}
 
 	if c.BucketName == "" {
-		return false, "", status.Error(codes.InvalidArgument, "S3 bucketName field is empty.")
+		return status.Error(codes.InvalidArgument, "S3 bucketName field is empty.")
+	}
+
+	return nil
+}
+
+// checkS3Config checks S3 config and returns the flag that indicates if
+// secure connection should be used and the parsed host.
+func checkS3Config(c *S3LocationConfig) (bool, string, error) {
+	if err := s3ConfigFilled(c); err != nil {
+		return false, "", err
 	}
 
 	parsedURL, err := url.Parse(c.Endpoint)
