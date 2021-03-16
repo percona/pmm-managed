@@ -69,15 +69,11 @@ PERCONA_TEST_CHECKS_INTERVAL=10s # set it to any low duration to execute checks 
 * Setup the devcontainer using `make env-up` and run your changes inside it by running `make env` and then`make run`.
 * Follow the steps in the [Add Instances for Monitoring](#add-instances-for-monitoring) to set up instances for monitoring.
 * Go to the PMM dashboard and enable STT in `PMM -> PMM Settings -> Advanced Settings`.
-* Any failed checks will produce result on the dashboard.
+* Any failed checks will produce results on the dashboard.
 
 ## Working with Integrated Alerting
-* Make sure you have instances setup up for monitoring.
-* Enable Integrated Alerting via `PMM -> PMM Settings -> Advanced Settings`.
-* Setup global communication settings for notification channels. Go to "Communications" tab under "PMM Settings" and set either the SMTP config for email alerts or the Slack webhook URL for slack alerts or both.
-* Go to the "Integrated Alerting" dashboard and select the "Notification Channels" tab. Create a notification channel to send the alerts to.
-* Now create an alert rule using the built-in alert rule templates and the notification channel.
-* If the alert rule condition satisfies then the alert will be visible on the "Alerts" tab and notification sent to the channel provided that it was configured correctly.
+
+Please go through the Integrated Alerting section in our [user documentation](https://www.percona.com/doc/percona-monitoring-and-management/2.x/using/alerting.html).
 
 # Internals
 
