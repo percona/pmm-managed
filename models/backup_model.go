@@ -36,6 +36,7 @@ const (
 // BackupStatus shows current status of Backup.
 type BackupStatus string
 
+// BackupStatus status (in the same order as in backups.proto).
 const (
 	PendingBackupStatus    BackupStatus = "pending"
 	InProgressBackupStatus BackupStatus = "in_progress"

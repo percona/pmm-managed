@@ -68,34 +68,42 @@ type CreateBackupParams struct {
 	Status     BackupStatus
 }
 
-// CreateBackup creates backup entry in DB.
-func CreateBackup(q *reform.Querier, params CreateBackupParams) (*Backup, error) {
-	if params.Name == "" {
-		return nil, errors.Wrap(ErrInvalidArgument, "name shouldn't be empty")
+func (p *CreateBackupParams) Validate() error {
+	if p.Name == "" {
+		return errors.Wrap(ErrInvalidArgument, "name shouldn't be empty")
 	}
-	if params.Vendor == "" {
-		return nil, errors.Wrap(ErrInvalidArgument, "vendor shouldn't be empty")
+	if p.Vendor == "" {
+		return errors.Wrap(ErrInvalidArgument, "vendor shouldn't be empty")
 	}
-	if params.LocationID == "" {
-		return nil, errors.Wrap(ErrInvalidArgument, "location_id shouldn't be empty")
+	if p.LocationID == "" {
+		return errors.Wrap(ErrInvalidArgument, "location_id shouldn't be empty")
 	}
-	if params.ServiceID == "" {
-		return nil, errors.Wrap(ErrInvalidArgument, "service_id shouldn't be empty")
+	if p.ServiceID == "" {
+		return errors.Wrap(ErrInvalidArgument, "service_id shouldn't be empty")
 	}
-	switch params.DataModel {
+	switch p.DataModel {
 	case PhysicalDataModel:
 	case LogicalDataModel:
 	default:
-		return nil, errors.Wrapf(ErrInvalidArgument, "invalid data model '%s'", params.DataModel)
+		return errors.Wrapf(ErrInvalidArgument, "invalid data model '%s'", p.DataModel)
 	}
-	switch params.Status {
+	switch p.Status {
 	case PendingBackupStatus:
 	case InProgressBackupStatus:
 	case PausedBackupStatus:
 	case SuccessBackupStatus:
 	case ErrorBackupStatus:
 	default:
-		return nil, errors.Wrapf(ErrInvalidArgument, "invalid dstatus '%s'", params.Status)
+		return errors.Wrapf(ErrInvalidArgument, "invalid status '%s'", p.Status)
+	}
+
+	return nil
+}
+
+// CreateBackup creates backup entry in DB.
+func CreateBackup(q *reform.Querier, params CreateBackupParams) (*Backup, error) {
+	if err := params.Validate(); err != nil {
+		return nil, err
 	}
 
 	id := "/backup_id/" + uuid.New().String()

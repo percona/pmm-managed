@@ -234,7 +234,7 @@ func TestBackupValidation(t *testing.T) {
 				DataModel:  models.PhysicalDataModel,
 				Status:     models.BackupStatus("invalid"),
 			},
-			errorMsg: "invalid dstatus 'invalid': invalid argument",
+			errorMsg: "invalid status 'invalid': invalid argument",
 		},
 	}
 

@@ -69,7 +69,7 @@ func (s *BackupsService) ListBackups(context.Context, *backupv1beta1.ListBackups
 
 	backupsResponse := make([]*backupv1beta1.Backup, 0, len(backups))
 	for _, b := range backups {
-		convertedBackup, err := convertBackup(services, locations, b)
+		convertedBackup, err := convertBackup(b, services, locations)
 		if err != nil {
 			return nil, err
 		}
@@ -80,10 +80,44 @@ func (s *BackupsService) ListBackups(context.Context, *backupv1beta1.ListBackups
 	}, nil
 }
 
+func convertDataModel(dataModel models.DataModel) (*backupv1beta1.DataModel, error) {
+	var dm backupv1beta1.DataModel
+	switch dataModel {
+	case models.PhysicalDataModel:
+		dm = backupv1beta1.DataModel_PHYSICAL
+	case models.LogicalDataModel:
+		dm = backupv1beta1.DataModel_LOGICAL
+	default:
+		return nil, errors.Errorf("invalid data model '%s'", dataModel)
+	}
+
+	return &dm, nil
+}
+
+func convertBackupStatus(status models.BackupStatus) (*backupv1beta1.Status, error) {
+	var s backupv1beta1.Status
+	switch status {
+	case models.PendingBackupStatus:
+		s = backupv1beta1.Status_PENDING
+	case models.InProgressBackupStatus:
+		s = backupv1beta1.Status_IN_PROGRESS
+	case models.PausedBackupStatus:
+		s = backupv1beta1.Status_PAUSED
+	case models.SuccessBackupStatus:
+		s = backupv1beta1.Status_SUCCESS
+	case models.ErrorBackupStatus:
+		s = backupv1beta1.Status_ERROR
+	default:
+		return nil, errors.Errorf("invalid status '%s'", status)
+	}
+
+	return &s, nil
+}
+
 func convertBackup(
+	b *models.Backup,
 	services map[string]*models.Service,
 	locations map[string]*models.BackupLocation,
-	b *models.Backup,
 ) (*backupv1beta1.Backup, error) {
 	createdAt, err := ptypes.TimestampProto(b.CreatedAt)
 	if err != nil {
@@ -102,30 +136,14 @@ func convertBackup(
 			"failed to convert backup with id '%s': no service id '%s' in the map", b.ID, b.ServiceID)
 	}
 
-	var dm backupv1beta1.DataModel
-	switch b.DataModel {
-	case models.PhysicalDataModel:
-		dm = backupv1beta1.DataModel_PHYSICAL
-	case models.LogicalDataModel:
-		dm = backupv1beta1.DataModel_LOGICAL
-	default:
-		return nil, errors.Errorf("invalid data model '%s' in backup with id '%s'", b.DataModel, b.ID)
+	dm, err := convertDataModel(b.DataModel)
+	if err != nil {
+		return nil, errors.Wrapf(err, "backup id '%s'", b.ID)
 	}
 
-	var status backupv1beta1.Status
-	switch b.Status {
-	case models.PendingBackupStatus:
-		status = backupv1beta1.Status_PENDING
-	case models.InProgressBackupStatus:
-		status = backupv1beta1.Status_IN_PROGRESS
-	case models.PausedBackupStatus:
-		status = backupv1beta1.Status_PAUSED
-	case models.SuccessBackupStatus:
-		status = backupv1beta1.Status_SUCCESS
-	case models.ErrorBackupStatus:
-		status = backupv1beta1.Status_ERROR
-	default:
-		return nil, errors.Errorf("invalid status '%s' in backup with id '%s'", b.Status, b.ID)
+	status, err := convertBackupStatus(b.Status)
+	if err != nil {
+		return nil, errors.Wrapf(err, "backup id '%s'", b.ID)
 	}
 
 	return &backupv1beta1.Backup{
@@ -136,8 +154,8 @@ func convertBackup(
 		LocationName: l.Name,
 		ServiceId:    b.ServiceID,
 		ServiceName:  s.ServiceName,
-		DataModel:    dm,
-		Status:       status,
+		DataModel:    *dm,
+		Status:       *status,
 		CreatedAt:    createdAt,
 	}, nil
 }
