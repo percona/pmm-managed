@@ -30,7 +30,11 @@ func (v *backupTableType) Columns() []string {
 	return []string{
 		"id",
 		"name",
-		"location_name",
+		"vendor",
+		"location_id",
+		"service_id",
+		"data_model",
+		"status",
 		"created_at",
 	}
 }
@@ -58,7 +62,11 @@ var BackupTable = &backupTableType{
 		Fields: []parse.FieldInfo{
 			{Name: "ID", Type: "string", Column: "id"},
 			{Name: "Name", Type: "string", Column: "name"},
-			{Name: "LocationName", Type: "string", Column: "location_name"},
+			{Name: "Vendor", Type: "string", Column: "vendor"},
+			{Name: "LocationID", Type: "string", Column: "location_id"},
+			{Name: "ServiceID", Type: "string", Column: "service_id"},
+			{Name: "DataModel", Type: "DataModel", Column: "data_model"},
+			{Name: "Status", Type: "BackupStatus", Column: "status"},
 			{Name: "CreatedAt", Type: "time.Time", Column: "created_at"},
 		},
 		PKFieldIndex: 0,
@@ -68,11 +76,15 @@ var BackupTable = &backupTableType{
 
 // String returns a string representation of this struct or record.
 func (s Backup) String() string {
-	res := make([]string, 4)
+	res := make([]string, 8)
 	res[0] = "ID: " + reform.Inspect(s.ID, true)
 	res[1] = "Name: " + reform.Inspect(s.Name, true)
-	res[2] = "LocationName: " + reform.Inspect(s.LocationName, true)
-	res[3] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
+	res[2] = "Vendor: " + reform.Inspect(s.Vendor, true)
+	res[3] = "LocationID: " + reform.Inspect(s.LocationID, true)
+	res[4] = "ServiceID: " + reform.Inspect(s.ServiceID, true)
+	res[5] = "DataModel: " + reform.Inspect(s.DataModel, true)
+	res[6] = "Status: " + reform.Inspect(s.Status, true)
+	res[7] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
 	return strings.Join(res, ", ")
 }
 
@@ -82,7 +94,11 @@ func (s *Backup) Values() []interface{} {
 	return []interface{}{
 		s.ID,
 		s.Name,
-		s.LocationName,
+		s.Vendor,
+		s.LocationID,
+		s.ServiceID,
+		s.DataModel,
+		s.Status,
 		s.CreatedAt,
 	}
 }
@@ -93,7 +109,11 @@ func (s *Backup) Pointers() []interface{} {
 	return []interface{}{
 		&s.ID,
 		&s.Name,
-		&s.LocationName,
+		&s.Vendor,
+		&s.LocationID,
+		&s.ServiceID,
+		&s.DataModel,
+		&s.Status,
 		&s.CreatedAt,
 	}
 }

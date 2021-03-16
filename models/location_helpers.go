@@ -17,11 +17,13 @@
 package models
 
 import (
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
+	"strings"
 )
 
 func checkUniqueBackupLocationID(q *reform.Querier, id string) error {
@@ -130,6 +132,32 @@ func FindBackupLocationByID(q *reform.Querier, id string) (*BackupLocation, erro
 	default:
 		return nil, errors.WithStack(err)
 	}
+}
+
+// FindBackupLocationsByIDs finds Backup Locations by IDs.
+func FindBackupLocationsByIDs(q *reform.Querier, ids []string) (map[string]*BackupLocation, error) {
+	if len(ids) == 0 {
+		return map[string]*BackupLocation{}, nil
+	}
+
+	p := strings.Join(q.Placeholders(1, len(ids)), ", ")
+	tail := fmt.Sprintf("WHERE id IN (%s)", p) //nolint:gosec
+	args := make([]interface{}, 0, len(ids))
+	for _, id := range ids {
+		args = append(args, id)
+	}
+
+	all, err := q.SelectAllFrom(BackupLocationTable, tail, args...)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	locations := make(map[string]*BackupLocation, len(all))
+	for _, l := range all {
+		location := l.(*BackupLocation)
+		locations[location.ID] = location
+	}
+	return locations, nil
 }
 
 // BackupLocationConfig groups all backup locations configs.

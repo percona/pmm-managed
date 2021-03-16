@@ -60,17 +60,42 @@ func findBackupByID(q *reform.Querier, id string) (*Backup, error) {
 
 // CreateBackupParams are params for creating a new backup.
 type CreateBackupParams struct {
-	Name         string
-	LocationName string
+	Name       string
+	Vendor     string
+	LocationID string
+	ServiceID  string
+	DataModel  DataModel
+	Status     BackupStatus
 }
 
 // CreateBackup creates backup entry in DB.
 func CreateBackup(q *reform.Querier, params CreateBackupParams) (*Backup, error) {
 	if params.Name == "" {
-		return nil, errors.Wrap(ErrInvalidArgument, "backup name shouldn't be empty")
+		return nil, errors.Wrap(ErrInvalidArgument, "name shouldn't be empty")
 	}
-	if params.LocationName == "" {
-		return nil, errors.Wrap(ErrInvalidArgument, "backup location name shouldn't be empty")
+	if params.Vendor == "" {
+		return nil, errors.Wrap(ErrInvalidArgument, "vendor shouldn't be empty")
+	}
+	if params.LocationID == "" {
+		return nil, errors.Wrap(ErrInvalidArgument, "location_id shouldn't be empty")
+	}
+	if params.ServiceID == "" {
+		return nil, errors.Wrap(ErrInvalidArgument, "service_id shouldn't be empty")
+	}
+	switch params.DataModel {
+	case PhysicalDataModel:
+	case LogicalDataModel:
+	default:
+		return nil, errors.Wrapf(ErrInvalidArgument, "invalid data model '%s'", params.DataModel)
+	}
+	switch params.Status {
+	case PendingBackupStatus:
+	case InProgressBackupStatus:
+	case PausedBackupStatus:
+	case SuccessBackupStatus:
+	case ErrorBackupStatus:
+	default:
+		return nil, errors.Wrapf(ErrInvalidArgument, "invalid dstatus '%s'", params.Status)
 	}
 
 	id := "/backup_id/" + uuid.New().String()
@@ -84,9 +109,13 @@ func CreateBackup(q *reform.Querier, params CreateBackupParams) (*Backup, error)
 	}
 
 	row := &Backup{
-		ID:           id,
-		Name:         params.Name,
-		LocationName: params.LocationName,
+		ID:         id,
+		Name:       params.Name,
+		Vendor:     params.Vendor,
+		LocationID: params.LocationID,
+		ServiceID:  params.ServiceID,
+		DataModel:  params.DataModel,
+		Status:     params.Status,
 	}
 
 	if err := q.Insert(row); err != nil {

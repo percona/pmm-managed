@@ -41,14 +41,35 @@ func NewBackupsService(db *reform.DB) *BackupsService {
 
 // ListBackups returns a list of all backups.
 func (s *BackupsService) ListBackups(context.Context, *backupv1beta1.ListBackupsRequest) (*backupv1beta1.ListBackupsResponse, error) {
-	backups, err := models.FindBackups(s.db.Querier)
+	q := s.db.Querier
+
+	backups, err := models.FindBackups(q)
+	if err != nil {
+		return nil, err
+	}
+
+	locationIDs := make([]string, 0, len(backups))
+	for _, b := range backups {
+		locationIDs = append(locationIDs, b.LocationID)
+	}
+	locations, err := models.FindBackupLocationsByIDs(q, locationIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	serviceIDs := make([]string, 0, len(backups))
+	for _, b := range backups {
+		serviceIDs = append(serviceIDs, b.ServiceID)
+	}
+
+	services, err := models.FindServicesByIDs(q, serviceIDs)
 	if err != nil {
 		return nil, err
 	}
 
 	backupsResponse := make([]*backupv1beta1.Backup, 0, len(backups))
 	for _, b := range backups {
-		convertedBackup, err := convertBackup(b)
+		convertedBackup, err := convertBackup(services, locations, b)
 		if err != nil {
 			return nil, err
 		}
@@ -59,16 +80,64 @@ func (s *BackupsService) ListBackups(context.Context, *backupv1beta1.ListBackups
 	}, nil
 }
 
-func convertBackup(b *models.Backup) (*backupv1beta1.Backup, error) {
+func convertBackup(
+	services map[string]*models.Service,
+	locations map[string]*models.BackupLocation,
+	b *models.Backup,
+) (*backupv1beta1.Backup, error) {
 	createdAt, err := ptypes.TimestampProto(b.CreatedAt)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to convert timestamp")
 	}
 
+	l, ok := locations[b.LocationID]
+	if !ok {
+		return nil, errors.Errorf(
+			"failed to convert backup with id '%s': no location id '%s' in the map", b.ID, b.LocationID)
+	}
+
+	s, ok := services[b.ServiceID]
+	if !ok {
+		return nil, errors.Errorf(
+			"failed to convert backup with id '%s': no service id '%s' in the map", b.ID, b.ServiceID)
+	}
+
+	var dm backupv1beta1.DataModel
+	switch b.DataModel {
+	case models.PhysicalDataModel:
+		dm = backupv1beta1.DataModel_PHYSICAL
+	case models.LogicalDataModel:
+		dm = backupv1beta1.DataModel_LOGICAL
+	default:
+		return nil, errors.Errorf("invalid data model '%s' in backup with id '%s'", b.DataModel, b.ID)
+	}
+
+	var status backupv1beta1.Status
+	switch b.Status {
+	case models.PendingBackupStatus:
+		status = backupv1beta1.Status_PENDING
+	case models.InProgressBackupStatus:
+		status = backupv1beta1.Status_IN_PROGRESS
+	case models.PausedBackupStatus:
+		status = backupv1beta1.Status_PAUSED
+	case models.SuccessBackupStatus:
+		status = backupv1beta1.Status_SUCCESS
+	case models.ErrorBackupStatus:
+		status = backupv1beta1.Status_ERROR
+	default:
+		return nil, errors.Errorf("invalid status '%s' in backup with id '%s'", b.Status, b.ID)
+	}
+
 	return &backupv1beta1.Backup{
 		BackupId:     b.ID,
 		Name:         b.Name,
-		LocationName: b.LocationName,
+		Vendor:       b.Vendor,
+		LocationId:   b.LocationID,
+		LocationName: l.Name,
+		ServiceId:    b.ServiceID,
+		ServiceName:  s.ServiceName,
+		DataModel:    dm,
+		Status:       status,
 		CreatedAt:    createdAt,
 	}, nil
 }

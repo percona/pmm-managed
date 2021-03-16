@@ -443,8 +443,11 @@ var databaseSchema = [][]string{
 		`CREATE TABLE backups (
 			id VARCHAR NOT NULL,
 			name VARCHAR NOT NULL CHECK (name <> ''),
-			location_name VARCHAR NOT NULL CHECK (name <> ''),
-
+			vendor VARCHAR NOT NULL CHECK (vendor <> ''),
+			location_id VARCHAR NOT NULL CHECK (location_id <> ''),
+			service_id VARCHAR NOT NULL CHECK (service_id <> ''),
+			data_model VARCHAR NOT NULL CHECK (data_model <> ''),
+			status VARCHAR NOT NULL CHECK (status <> ''),
 			created_at TIMESTAMP NOT NULL,
 
 			PRIMARY KEY (id)

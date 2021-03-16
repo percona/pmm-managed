@@ -46,14 +46,22 @@ func TestBackup(t *testing.T) {
 		q := tx.Querier
 
 		params := models.CreateBackupParams{
-			Name:         "name",
-			LocationName: "location name",
+			Name:       "backup_name",
+			Vendor:     "MySQL",
+			LocationID: "location_id",
+			ServiceID:  "service_id",
+			DataModel:  models.PhysicalDataModel,
+			Status:     models.PendingBackupStatus,
 		}
 
 		backup, err := models.CreateBackup(q, params)
 		require.NoError(t, err)
 		assert.Equal(t, params.Name, backup.Name)
-		assert.Equal(t, params.LocationName, backup.LocationName)
+		assert.Equal(t, params.Vendor, backup.Vendor)
+		assert.Equal(t, params.LocationID, backup.LocationID)
+		assert.Equal(t, params.ServiceID, backup.ServiceID)
+		assert.Equal(t, params.DataModel, backup.DataModel)
+		assert.Equal(t, params.Status, backup.Status)
 		assert.Less(t, time.Now().UTC().Unix()-backup.CreatedAt.Unix(), int64(5))
 	})
 
@@ -67,12 +75,20 @@ func TestBackup(t *testing.T) {
 		q := tx.Querier
 
 		params1 := models.CreateBackupParams{
-			Name:         "name 1",
-			LocationName: "location name 1",
+			Name:       "backup_name_1",
+			Vendor:     "MySQL",
+			LocationID: "location_id_1",
+			ServiceID:  "service_id_1",
+			DataModel:  models.PhysicalDataModel,
+			Status:     models.PendingBackupStatus,
 		}
 		params2 := models.CreateBackupParams{
-			Name:         "name 2",
-			LocationName: "location name 2",
+			Name:       "backup_name_2",
+			Vendor:     "PostgreSQL",
+			LocationID: "location_id_2",
+			ServiceID:  "service_id_2",
+			DataModel:  models.LogicalDataModel,
+			Status:     models.PausedBackupStatus,
 		}
 
 		b1, err := models.CreateBackup(q, params1)
@@ -108,8 +124,12 @@ func TestBackup(t *testing.T) {
 		q := tx.Querier
 
 		params := models.CreateBackupParams{
-			Name:         "some name",
-			LocationName: "some location name",
+			Name:       "backup_name",
+			Vendor:     "MySQL",
+			LocationID: "location_id",
+			ServiceID:  "service_id",
+			DataModel:  models.PhysicalDataModel,
+			Status:     models.PendingBackupStatus,
 		}
 
 		b, err := models.CreateBackup(q, params)
@@ -139,24 +159,82 @@ func TestBackupValidation(t *testing.T) {
 		{
 			name: "normal params",
 			params: models.CreateBackupParams{
-				Name:         "name",
-				LocationName: "location name",
+				Name:       "backup_name",
+				Vendor:     "MySQL",
+				LocationID: "location_id",
+				ServiceID:  "service_id",
+				DataModel:  models.PhysicalDataModel,
+				Status:     models.PendingBackupStatus,
 			},
 			errorMsg: "",
 		},
 		{
 			name: "name missing",
 			params: models.CreateBackupParams{
-				LocationName: "location name",
+				Vendor:     "MySQL",
+				LocationID: "location_id",
+				ServiceID:  "service_id",
+				DataModel:  models.PhysicalDataModel,
+				Status:     models.PendingBackupStatus,
 			},
-			errorMsg: "backup name shouldn't be empty: invalid argument",
+			errorMsg: "name shouldn't be empty: invalid argument",
 		},
 		{
-			name: "location name missing",
+			name: "vendor missing",
 			params: models.CreateBackupParams{
-				Name: "name",
+				Name:       "backup_name",
+				LocationID: "location_id",
+				ServiceID:  "service_id",
+				DataModel:  models.PhysicalDataModel,
+				Status:     models.PendingBackupStatus,
 			},
-			errorMsg: "backup location name shouldn't be empty: invalid argument",
+			errorMsg: "vendor shouldn't be empty: invalid argument",
+		},
+		{
+			name: "location missing",
+			params: models.CreateBackupParams{
+				Name:      "backup_name",
+				Vendor:    "MySQL",
+				ServiceID: "service_id",
+				DataModel: models.PhysicalDataModel,
+				Status:    models.PendingBackupStatus,
+			},
+			errorMsg: "location_id shouldn't be empty: invalid argument",
+		},
+		{
+			name: "service missing",
+			params: models.CreateBackupParams{
+				Name:       "backup_name",
+				Vendor:     "MySQL",
+				LocationID: "location_id",
+				DataModel:  models.PhysicalDataModel,
+				Status:     models.PendingBackupStatus,
+			},
+			errorMsg: "service_id shouldn't be empty: invalid argument",
+		},
+		{
+			name: "invalid data model",
+			params: models.CreateBackupParams{
+				Name:       "backup_name",
+				Vendor:     "MySQL",
+				LocationID: "location_id",
+				ServiceID:  "service_id",
+				DataModel:  models.DataModel("invalid"),
+				Status:     models.PendingBackupStatus,
+			},
+			errorMsg: "invalid data model 'invalid': invalid argument",
+		},
+		{
+			name: "invalid status",
+			params: models.CreateBackupParams{
+				Name:       "backup_name",
+				Vendor:     "MySQL",
+				LocationID: "location_id",
+				ServiceID:  "service_id",
+				DataModel:  models.PhysicalDataModel,
+				Status:     models.BackupStatus("invalid"),
+			},
+			errorMsg: "invalid dstatus 'invalid': invalid argument",
 		},
 	}
 
