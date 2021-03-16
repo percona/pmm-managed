@@ -68,7 +68,7 @@ PERCONA_TEST_CHECKS_INTERVAL=10s # set it to any low duration to execute checks 
 ```
 * Setup the devcontainer using `make env-up` and run your changes inside it by running `make env` and then`make run`.
 * Follow the steps in the [Add Instances for Monitoring](#add-instances-for-monitoring) to set up instances for monitoring.
-* Go to the PMM dashboard and enable STT in `PMM Settings -> Advanced Settings`.
+* Go to the PMM dashboard and enable STT in `PMM -> PMM Settings -> Advanced Settings`.
 * Any failed checks will produce result on the dashboard.
 
 ## Working with Integrated Alerting
