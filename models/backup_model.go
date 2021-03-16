@@ -63,11 +63,6 @@ func (s *Backup) BeforeInsert() error {
 	return nil
 }
 
-// BeforeUpdate implements reform.BeforeUpdater interface.
-func (s *Backup) BeforeUpdate() error {
-	return nil
-}
-
 // AfterFind implements reform.AfterFinder interface.
 func (s *Backup) AfterFind() error {
 	s.CreatedAt = s.CreatedAt.UTC()
@@ -77,6 +72,5 @@ func (s *Backup) AfterFind() error {
 // check interfaces
 var (
 	_ reform.BeforeInserter = (*Backup)(nil)
-	_ reform.BeforeUpdater  = (*Backup)(nil)
 	_ reform.AfterFinder    = (*Backup)(nil)
 )

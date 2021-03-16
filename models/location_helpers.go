@@ -18,12 +18,13 @@ package models
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
-	"strings"
 )
 
 func checkUniqueBackupLocationID(q *reform.Querier, id string) error {
