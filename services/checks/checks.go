@@ -49,8 +49,7 @@ const (
 	defaultStartDelay = time.Minute
 
 	// Environment variables that affect checks service; only for testing.
-	envPublicKey = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
-
+	envPublicKey         = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
 	envCheckFile         = "PERCONA_TEST_CHECKS_FILE"
 	envResendInterval    = "PERCONA_TEST_CHECKS_RESEND_INTERVAL"
 	envDisableStartDelay = "PERCONA_TEST_CHECKS_DISABLE_START_DELAY"
@@ -874,6 +873,7 @@ func (s *Service) groupChecksByDB(checks []check.Check) (mySQLChecks, postgreSQL
 	return
 }
 
+// filterChecksByInterval filters checks according to their interval buckets
 func filterChecksByInterval(checks []check.Check, interval check.Interval) []check.Check {
 	if interval == "" { // all checks
 		return checks
