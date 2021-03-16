@@ -60,16 +60,10 @@ go test -timeout=30s -p 1 ./...
 
 ## Working with STT
 
-* Add the following environment variables to `docker-compose.yml` to dowload checks from Percona's checks service
-```
-PERCONA_TEST_SAAS_HOST=check-dev.percona.com:443
-PERCONA_TEST_CHECKS_PUBLIC_KEY=RWTg+ZmCCjt7O8eWeAmTLAqW+1ozUbpRSKSwNTmO+exlS5KEIPYWuYdX
-PERCONA_TEST_CHECKS_INTERVAL=10s # set it to any low duration to execute checks quickly
-```
 * Setup the devcontainer using `make env-up` and run your changes inside it by running `make env` and then`make run`.
 * Follow the steps in the [Add Instances for Monitoring](#add-instances-for-monitoring) to set up instances for monitoring.
-* Go to the PMM dashboard and enable STT in `PMM -> PMM Settings -> Advanced Settings`.
-* Any failed checks will produce results on the dashboard.
+* Go to the PMM dashboard and enable STT in `PMM -> PMM Settings -> Advanced Settings` which will make managed download STT checks from Percona Platform and execute them.
+* Any failed STT checks will produce check results on the dashboard.
 
 ## Working with Integrated Alerting
 
