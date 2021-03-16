@@ -23,7 +23,9 @@ import (
 )
 
 var (
-	ErrNotFound        = errors.New("not found")
+	// ErrNotFound returned when entity is not found.
+	ErrNotFound = errors.New("not found")
+	// ErrInvalidArgument returned when some passed argument is invalid.
 	ErrInvalidArgument = errors.New("invalid argument")
 )
 
