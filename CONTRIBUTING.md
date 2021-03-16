@@ -47,6 +47,7 @@ go test -timeout=30s -p 1 ./...
 `run` and `run-race` targets replace `/usr/sbin/pmm-managed` and restart pmm-managed with `supervisorctl`. As a result, it will use normal filesystem locations (`/etc/victoriametrics-promscrape.yml`, `/etc/supervisord.d`, etc.) and `pmm-managed` PostgreSQL database. Other locations (inside `testdata`) and `pmm-managed-dev` database are used for unit tests.
 
 # Advanced Setup
+
 ## Add instances for monitoring
 `make env-up` just starts the PMM server but it doesn't setup anything to be monitored. We can use [pmm-admin](https://github.com/percona/pmm-admin) and [pmm-agent](https://github.com/percona/pmm-agent) to add instances to be monitored to pmm-managed.
 
