@@ -92,8 +92,6 @@ Devcontainer initialization code is located in `.devcontainer/setup.py`. It uses
 * If the PR requires any API changes then make your changes in `PMM-2.0` branch of the [API repo](https://github.com/percona/pmm) and pull those changes in your pmm-managed branch by mentioning the API changes branch name in the `Gopkg.toml` constraint and running `dep ensure -v -update github.com/percona/pmm`.
 * If the PR introduces changes to the IA templates make sure to run `make gen` to udpate the generated code.
 * If the PR changes any files named `deps.go` make sure to run `make gen` to generate mock clients.
-* In case a new package is added make sure to udpate `packages.dot` file.
-
 Before making PR, please run these commands locally:
 * `make env TARGET=check-all` to run all checkers and linters.
 * `make env TARGET=test-race` to run tests.
