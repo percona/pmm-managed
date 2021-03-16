@@ -73,7 +73,8 @@ PERCONA_TEST_CHECKS_INTERVAL=10s # set it to any low duration to execute checks 
 
 ## Working with Integrated Alerting
 * Make sure you have instances setup up for monitoring.
-* First we need to setup global communication settings for notification channels. Go to "Communications" tab under "PMM Settings" and set either the SMTP config for email alerts or the Slack webhook URL for slack alerts or both.
+* Enable Integrated Alerting via `PMM -> PMM Settings -> Advanced Settings`.
+* Setup global communication settings for notification channels. Go to "Communications" tab under "PMM Settings" and set either the SMTP config for email alerts or the Slack webhook URL for slack alerts or both.
 * Go to the "Integrated Alerting" dashboard and select the "Notification Channels" tab. Create a notification channel to send the alerts to.
 * Now create an alert rule using the built-in alert rule templates and the notification channel.
 * If the alert rule condition satisfies then the alert will be visible on the "Alerts" tab and notification sent to the channel provided that it was configured correctly.
