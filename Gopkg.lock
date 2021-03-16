@@ -391,7 +391,7 @@
   revision = "41f004193c1ac2e6614d8eaac641b18899334d91"
 
 [[projects]]
-  branch = "PMM-7336-checks-execution-intervals"
+  branch = "main"
   digest = "1:8a1d4fb2211a1d0d2aa24a066bed9518a61118e899c465b93bab02781091c26c"
   name = "github.com/percona-platform/saas"
   packages = [
@@ -405,7 +405,7 @@
     "pkg/starlark",
   ]
   pruneopts = "NUT"
-  revision = "e78ecbd585f5b2108c2705fc53e05945bb5a6f1c"
+  revision = "d0e2249b531c97d9ef898c2401dac14fc2da0006"
 
 [[projects]]
   branch = "release/2.16"
