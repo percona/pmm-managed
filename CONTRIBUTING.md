@@ -59,6 +59,7 @@ go test -timeout=30s -p 1 ./...
 * Now pmm-managed has started monitoring the databases, login to the web client in your browser to verify. The number of monitored instances will have increased.
 
 ## Working with STT
+
 * Add the following environment variables to `docker-compose.yml` to dowload checks from Percona's checks service
 ```
 PERCONA_TEST_SAAS_HOST=check-dev.percona.com:443
