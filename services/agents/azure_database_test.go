@@ -71,38 +71,22 @@ credentials:
   client_secret: "azure_database_client_secret"
   tenant_id: "azure_database_tenant_id"
   subscription_id: "azure_database_subscription_id"
+
 targets:
-  - resource: "/resourceGroups/blog-group/providers/Microsoft.Web/sites/blog"
-    metrics:
-      - name: "BytesReceived"
-      - name: "BytesSent"
-  - resource: "/resourceGroups/app-group/providers/Microsoft.Web/sites/app"
-    metrics:
-      - name: "Http2xx"
-      - name: "Http5xx"
-  - resource: "/resourceGroups/vm-group/providers/Microsoft.Compute/virtualMachines/vm"
-  metric_namespace: "Azure.VM.Windows.GuestMetrics"
-  metrics:
-  - name: 'Process\Thread Count'
-
 resource_groups:
-  - resource_group: "webapps"
+  - resource_group: "pmmdemo"
+    aggregations:
+      - Average
     resource_types:
-      - "Microsoft.Compute/virtualMachines"
-    resource_name_include_re:
-      - "testvm.*"
-    resource_name_exclude_re:
-      - "testvm12"
+      - "Microsoft.DBforMySQL/servers"
     metrics:
-      - name: "CPU Credits Consumed"
-
-resource_tags:
-  - resource_tag_name: "monitoring"
-    resource_tag_value: "enabled"
-    resource_types:
-      - "Microsoft.Compute/virtualMachines"
-    metrics:
-      - name: "CPU Credits consumed"
+      - name: "cpu_percent"
+      - name: "memory_percent"
+      - name: "storage_percent"
+      - name: "storage_used"
+      - name: "storage_limit"
+      - name: "network_bytes_egress"
+      - name: "network_bytes_ingress"
 			`) + "\n",
 		},
 		RedactWords: []string{"azure_database_client_id", "azure_database_client_secret", "azure_database_tenant_id", "azure_database_subscription_id"},

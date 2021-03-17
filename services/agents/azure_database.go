@@ -34,38 +34,22 @@ credentials:
   client_secret: "{{ .AzureDatabaseClientSecret}}"
   tenant_id: "{{ .AzureDatabaseTenantID}}"
   subscription_id: "{{ .AzureDatabaseSubscriptionID}}"
+
 targets:
-  - resource: "/resourceGroups/blog-group/providers/Microsoft.Web/sites/blog"
-    metrics:
-      - name: "BytesReceived"
-      - name: "BytesSent"
-  - resource: "/resourceGroups/app-group/providers/Microsoft.Web/sites/app"
-    metrics:
-      - name: "Http2xx"
-      - name: "Http5xx"
-  - resource: "/resourceGroups/vm-group/providers/Microsoft.Compute/virtualMachines/vm"
-  metric_namespace: "Azure.VM.Windows.GuestMetrics"
-  metrics:
-  - name: 'Process\Thread Count'
-
 resource_groups:
-  - resource_group: "webapps"
+  - resource_group: "pmmdemo"
+    aggregations:
+      - Average
     resource_types:
-      - "Microsoft.Compute/virtualMachines"
-    resource_name_include_re:
-      - "testvm.*"
-    resource_name_exclude_re:
-      - "testvm12"
+      - "Microsoft.DBforMySQL/servers"
     metrics:
-      - name: "CPU Credits Consumed"
-
-resource_tags:
-  - resource_tag_name: "monitoring"
-    resource_tag_value: "enabled"
-    resource_types:
-      - "Microsoft.Compute/virtualMachines"
-    metrics:
-      - name: "CPU Credits consumed"
+      - name: "cpu_percent"
+      - name: "memory_percent"
+      - name: "storage_percent"
+      - name: "storage_used"
+      - name: "storage_limit"
+      - name: "network_bytes_egress"
+      - name: "network_bytes_ingress"
 `
 
 // azureDatabaseInstance represents credentials informations.
