@@ -69,11 +69,11 @@ func (s *ArtifactsService) ListArtifacts(context.Context, *backupv1beta1.ListArt
 
 	artifactsResponse := make([]*backupv1beta1.Artifact, 0, len(artifacts))
 	for _, b := range artifacts {
-		convertedBackup, err := convertArtifact(b, services, locations)
+		convertedArtifact, err := convertArtifact(b, services, locations)
 		if err != nil {
 			return nil, err
 		}
-		artifactsResponse = append(artifactsResponse, convertedBackup)
+		artifactsResponse = append(artifactsResponse, convertedArtifact)
 	}
 	return &backupv1beta1.ListArtifactsResponse{
 		Artifacts: artifactsResponse,
