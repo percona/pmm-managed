@@ -98,9 +98,7 @@ func azureDatabaseExporterConfig(exporter *models.Agent, redactMode redactMode) 
 
 	var words []string
 	if redactMode != exposeSecrets {
-		for _, word := range redactWords(exporter) {
-			words = append(words, word)
-		}
+		words = append(words, redactWords(exporter)...)
 	}
 
 	tdp := models.TemplateDelimsPair()
