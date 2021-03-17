@@ -89,11 +89,7 @@ func (p *CreateArtifactParams) Validate() error {
 		return err
 	}
 
-	if err := p.Status.Validate(); err != nil {
-		return err
-	}
-
-	return nil
+	return p.Status.Validate()
 }
 
 // CreateArtifact creates artifact entry in DB.
