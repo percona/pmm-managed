@@ -27,7 +27,7 @@ import (
 // DataModel represents a data model used for performing a backup.
 type DataModel string
 
-// DataModel types (in the same order as in backups.proto).
+// DataModel types (in the same order as in artifacts.proto).
 const (
 	PhysicalDataModel DataModel = "physical"
 	LogicalDataModel  DataModel = "logical"
