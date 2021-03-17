@@ -33,7 +33,7 @@ const (
 	LogicalDataModel  DataModel = "logical"
 )
 
-// BackupStatus shows current status of Backup.
+// BackupStatus shows current status of backup.
 type BackupStatus string
 
 // BackupStatus status (in the same order as in backups.proto).
