@@ -95,6 +95,7 @@ Devcontainer initialization code is located in `.devcontainer/setup.py`. It uses
 Before making PR, please run these commands locally:
 * `make env TARGET=check-all` to run all checkers and linters.
 * `make env TARGET=test-race` to run tests.
+* For help, please post on the [PMM 2.x Forums](https://forums.percona.com/c/percona-monitoring-and-management-pmm/percona-monitoring-and-management-pmm-v2/)
 
 ## VSCode
 
