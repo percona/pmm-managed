@@ -103,6 +103,24 @@ func s3ConfigFilled(c *S3LocationConfig) error {
 	return nil
 }
 
+func parseEndpoint(endpoint string) (*url.URL, error) {
+	parsedURL, err := url.Parse(endpoint)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "%s", err)
+	}
+
+	// User could specify the endpoint without scheme, so according to RFC 3986 the host won't be parsed.
+	// Try to prepend scheme and parse new url.
+	if parsedURL.Host == "" {
+		parsedURL, err = url.Parse("https://" + endpoint)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "%s", err)
+		}
+	}
+
+	return parsedURL, nil
+}
+
 // checkS3Config checks S3 config and returns the flag that indicates if
 // secure connection should be used and the parsed host.
 func checkS3Config(c *S3LocationConfig) (bool, string, error) {
@@ -110,18 +128,9 @@ func checkS3Config(c *S3LocationConfig) (bool, string, error) {
 		return false, "", err
 	}
 
-	parsedURL, err := url.Parse(c.Endpoint)
+	parsedURL, err := parseEndpoint(c.Endpoint)
 	if err != nil {
-		return false, "", status.Errorf(codes.InvalidArgument, "%s", err)
-	}
-
-	// User could specify the endpoint without scheme, so according to RFC 3986 the host won't be parsed.
-	// Try to prepend scheme and parse new url.
-	if parsedURL.Host == "" {
-		parsedURL, err = url.Parse("https://" + c.Endpoint)
-		if err != nil {
-			return false, "", status.Errorf(codes.InvalidArgument, "%s", err)
-		}
+		return false, "", err
 	}
 
 	if parsedURL.Host == "" {
@@ -137,7 +146,6 @@ func checkS3Config(c *S3LocationConfig) (bool, string, error) {
 	case "http":
 		secure = false
 	case "https":
-	case "":
 	default:
 		return false, "", status.Errorf(codes.InvalidArgument, "Invalid scheme '%s'", parsedURL.Scheme)
 	}
