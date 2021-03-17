@@ -31,10 +31,10 @@ const azureDatabaseTemplate = `---
 active_directory_authority_url: "https://login.microsoftonline.com/"
 resource_manager_url: "https://management.azure.com/"
 credentials:
-	subscription_id: {{ .AzureClientID}}
-	client_id: {{ .AzureClientSecret}}
-	client_secret: {{ .AzureTenantID}}
-	tenant_id: {{ .AzureSubscriptionID}}
+	subscription_id: {{ .AzureDatabaseClientID}}
+	client_id: {{ .AzureDatabaseClientSecret}}
+	client_secret: {{ .AzureDatabaseTenantID}}
+	tenant_id: {{ .AzureDatabaseSubscriptionID}}
 
 targets:
 	- resource: "/resourceGroups/blog-group/providers/Microsoft.Web/sites/blog"
@@ -72,34 +72,39 @@ resource_tags:
 
 // azureDatabaseInstance represents credentials informations.
 type azureDatabaseCredentials struct {
-	AzureClientID       string
-	AzureClientSecret   string
-	AzureTenantID       string
-	AzureSubscriptionID string
+	AzureDatabaseClientID       string
+	AzureDatabaseClientSecret   string
+	AzureDatabaseTenantID       string
+	AzureDatabaseSubscriptionID string
 }
 
 // azureDatabaseInstance represents information from configuration file.
 type azureDatabaseInstance struct {
-	Region                 string         `yaml:"region"`
-	Instance               string         `yaml:"instance"`
-	AzureClientID          string         `yaml:"azure_client_id,omitempty"`
-	AzureClientSecret      string         `yaml:"azure_client_secret,omitempty"`
-	AzureTenantID          string         `yaml:"azure_tenant_id,omitempty"`
-	AzureSubscriptionID    string         `yaml:"azure_subscription_id,omitempty"`
-	DisableBasicMetrics    bool           `yaml:"disable_basic_metrics"`
-	DisableEnhancedMetrics bool           `yaml:"disable_enhanced_metrics"`
-	Labels                 model.LabelSet `yaml:"labels,omitempty"`
+	Region                      string         `yaml:"region"`
+	Instance                    string         `yaml:"instance"`
+	AzureDatabaseClientID       string         `yaml:"azure_client_id,omitempty"`
+	AzureDatabaseClientSecret   string         `yaml:"azure_client_secret,omitempty"`
+	AzureDatabaseTenantID       string         `yaml:"azure_tenant_id,omitempty"`
+	AzureDatabaseSubscriptionID string         `yaml:"azure_subscription_id,omitempty"`
+	DisableBasicMetrics         bool           `yaml:"disable_basic_metrics"`
+	DisableEnhancedMetrics      bool           `yaml:"disable_enhanced_metrics"`
+	Labels                      model.LabelSet `yaml:"labels,omitempty"`
 }
 
 // azureDatabaseExporterConfig returns configuration of azure_database_exporter process.
-func azureDatabaseExporterConfig(pairs map[*models.Node]*models.Agent, redactMode redactMode) (*agentpb.SetStateRequest_AgentProcess, error) {
+func azureDatabaseExporterConfig(exporter *models.Agent, redactMode redactMode) (*agentpb.SetStateRequest_AgentProcess, error) {
 	t, err := template.New("credentials").Parse(azureDatabaseTemplate)
 	if err != nil {
 		return nil, err
 	}
 
 	var config bytes.Buffer
-	credentials := azureDatabaseCredentials{"azure_client_id", "azure_client_secret", "azure_tenant_id", "azure_subscription_id"}
+	credentials := azureDatabaseCredentials{
+		*exporter.AzureDatabaseClientID,
+		*exporter.AzureDatabaseClientSecret,
+		*exporter.AzureDatabaseTenantID,
+		*exporter.AzureDatabaseSubscriptionID,
+	}
 	err = t.Execute(&config, credentials)
 	if err != nil {
 		return nil, err
@@ -118,6 +123,6 @@ func azureDatabaseExporterConfig(pairs map[*models.Node]*models.Agent, redactMod
 		TextFiles: map[string]string{
 			"config": config.String(),
 		},
-		RedactWords: []string{"azure_client_id", "azure_client_secret", "azure_tenant_id", "azure_subscription_id"},
+		RedactWords: []string{"azure_database_client_id", "azure_database_client_secret", "azure_database_tenant_id", "azure_database_subscription_id"},
 	}, nil
 }

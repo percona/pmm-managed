@@ -105,10 +105,10 @@ var AgentTable = &agentTableType{
 			{Name: "TLSSkipVerify", Type: "bool", Column: "tls_skip_verify"},
 			{Name: "AWSAccessKey", Type: "*string", Column: "aws_access_key"},
 			{Name: "AWSSecretKey", Type: "*string", Column: "aws_secret_key"},
-			{Name: "AzureClientID", Type: "*string", Column: "azure_client_id"},
-			{Name: "AzureClientSecret", Type: "*string", Column: "azure_client_secret"},
-			{Name: "AzureTenantID", Type: "*string", Column: "azure_tenant_id"},
-			{Name: "AzureSubscriptionID", Type: "*string", Column: "azure_subscription_id"},
+			{Name: "AzureDatabaseClientID", Type: "*string", Column: "azure_client_id"},
+			{Name: "AzureDatabaseClientSecret", Type: "*string", Column: "azure_client_secret"},
+			{Name: "AzureDatabaseTenantID", Type: "*string", Column: "azure_tenant_id"},
+			{Name: "AzureDatabaseSubscriptionID", Type: "*string", Column: "azure_subscription_id"},
 			{Name: "TableCount", Type: "*int32", Column: "table_count"},
 			{Name: "TableCountTablestatsGroupLimit", Type: "int32", Column: "table_count_tablestats_group_limit"},
 			{Name: "QueryExamplesDisabled", Type: "bool", Column: "query_examples_disabled"},
@@ -148,10 +148,10 @@ func (s Agent) String() string {
 	res[16] = "TLSSkipVerify: " + reform.Inspect(s.TLSSkipVerify, true)
 	res[17] = "AWSAccessKey: " + reform.Inspect(s.AWSAccessKey, true)
 	res[18] = "AWSSecretKey: " + reform.Inspect(s.AWSSecretKey, true)
-	res[19] = "AzureClientID: " + reform.Inspect(s.AzureClientID, true)
-	res[20] = "AzureClientSecret: " + reform.Inspect(s.AzureClientSecret, true)
-	res[21] = "AzureTenantID: " + reform.Inspect(s.AzureTenantID, true)
-	res[22] = "AzureSubscriptionID: " + reform.Inspect(s.AzureSubscriptionID, true)
+	res[19] = "AzureDatabaseClientID: " + reform.Inspect(s.AzureDatabaseClientID, true)
+	res[20] = "AzureDatabaseClientSecret: " + reform.Inspect(s.AzureDatabaseClientSecret, true)
+	res[21] = "AzureDatabaseTenantID: " + reform.Inspect(s.AzureDatabaseTenantID, true)
+	res[22] = "AzureDatabaseSubscriptionID: " + reform.Inspect(s.AzureDatabaseSubscriptionID, true)
 	res[23] = "TableCount: " + reform.Inspect(s.TableCount, true)
 	res[24] = "TableCountTablestatsGroupLimit: " + reform.Inspect(s.TableCountTablestatsGroupLimit, true)
 	res[25] = "QueryExamplesDisabled: " + reform.Inspect(s.QueryExamplesDisabled, true)
@@ -189,10 +189,10 @@ func (s *Agent) Values() []interface{} {
 		s.TLSSkipVerify,
 		s.AWSAccessKey,
 		s.AWSSecretKey,
-		s.AzureClientID,
-		s.AzureClientSecret,
-		s.AzureTenantID,
-		s.AzureSubscriptionID,
+		s.AzureDatabaseClientID,
+		s.AzureDatabaseClientSecret,
+		s.AzureDatabaseTenantID,
+		s.AzureDatabaseSubscriptionID,
 		s.TableCount,
 		s.TableCountTablestatsGroupLimit,
 		s.QueryExamplesDisabled,
@@ -230,10 +230,10 @@ func (s *Agent) Pointers() []interface{} {
 		&s.TLSSkipVerify,
 		&s.AWSAccessKey,
 		&s.AWSSecretKey,
-		&s.AzureClientID,
-		&s.AzureClientSecret,
-		&s.AzureTenantID,
-		&s.AzureSubscriptionID,
+		&s.AzureDatabaseClientID,
+		&s.AzureDatabaseClientSecret,
+		&s.AzureDatabaseTenantID,
+		&s.AzureDatabaseSubscriptionID,
 		&s.TableCount,
 		&s.TableCountTablestatsGroupLimit,
 		&s.QueryExamplesDisabled,

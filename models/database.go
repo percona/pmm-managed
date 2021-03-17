@@ -439,6 +439,15 @@ var databaseSchema = [][]string{
 	28: {
 		`ALTER TABLE agents ADD COLUMN disabled_collectors VARCHAR[]`,
 	},
+	29: {
+		`ALTER TABLE agents
+			ADD COLUMN rds_basic_metrics_disabled BOOLEAN NOT NULL DEFAULT FALSE,
+			ADD COLUMN rds_enhanced_metrics_disabled BOOLEAN NOT NULL DEFAULT FALSE`,
+
+		`ALTER TABLE agents
+			ALTER COLUMN rds_basic_metrics_disabled DROP DEFAULT,
+			ALTER COLUMN rds_enhanced_metrics_disabled DROP DEFAULT`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^

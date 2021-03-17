@@ -42,44 +42,17 @@ func TestAzureExporterConfig(t *testing.T) {
 		"foo": "bar",
 	})
 	require.NoError(t, err)
-	agent1 := &models.Agent{
-		AgentID:             "/agent_id/agent1",
-		AgentType:           models.AzureDatabaseExporterType,
-		NodeID:              &node1.NodeID,
-		AzureClientID:       pointer.ToString("azure_client_id"),
-		AzureClientSecret:   pointer.ToString("azure_client_secret"),
-		AzureTenantID:       pointer.ToString("azure_tenant_id"),
-		AzureSubscriptionID: pointer.ToString("azure_subscription_id"),
+	agent := &models.Agent{
+		AgentID:                     "/agent_id/agent1",
+		AgentType:                   models.AzureDatabaseExporterType,
+		NodeID:                      &node1.NodeID,
+		AzureDatabaseClientID:       pointer.ToString("azure_database_client_id"),
+		AzureDatabaseClientSecret:   pointer.ToString("azure_database_client_secret"),
+		AzureDatabaseTenantID:       pointer.ToString("azure_database_tenant_id"),
+		AzureDatabaseSubscriptionID: pointer.ToString("azure_database_subscription_id"),
 	}
 
-	node2 := &models.Node{
-		NodeID:    "/node_id/node2",
-		NodeType:  models.RemoteAzureNodeType,
-		NodeName:  "test-mysql57",
-		NodeModel: "db.t2.micro",
-		Region:    pointer.ToString("us-east-1"),
-		AZ:        "us-east-1c",
-		Address:   "rds-mysql57",
-	}
-	err = node2.SetCustomLabels(map[string]string{
-		"baz": "qux",
-	})
-	require.NoError(t, err)
-	agent2 := &models.Agent{
-		AgentID:             "/agent_id/agent1",
-		AgentType:           models.AzureDatabaseExporterType,
-		NodeID:              &node1.NodeID,
-		AzureClientID:       pointer.ToString("azure_client_id_2"),
-		AzureClientSecret:   pointer.ToString("azure_client_secret_2"),
-		AzureTenantID:       pointer.ToString("azure_tenant_id_2"),
-		AzureSubscriptionID: pointer.ToString("azure_subscription_id_2"),
-	}
-
-	pairs := map[*models.Node]*models.Agent{
-		node2: agent2,
-		node1: agent1,
-	}
-	actual, err := azureDatabaseExporterConfig(pairs, redactSecrets)
+	actual, err := azureDatabaseExporterConfig(agent, redactSecrets)
 	require.NoError(t, err)
 	expected := &agentpb.SetStateRequest_AgentProcess{
 		Type:               inventorypb.AgentType_AZURE_DATABASE_EXPORTER,
@@ -94,10 +67,10 @@ func TestAzureExporterConfig(t *testing.T) {
 active_directory_authority_url: "https://login.microsoftonline.com/"
 resource_manager_url: "https://management.azure.com/"
 credentials:
-	subscription_id: azure_client_id
-	client_id: azure_client_secret
-	client_secret: azure_tenant_id
-	tenant_id: azure_subscription_id
+	subscription_id: azure_database_client_id
+	client_id: azure_database_client_secret
+	client_secret: azure_database_tenant_id
+	tenant_id: azure_database_subscription_id
 
 targets:
 	- resource: "/resourceGroups/blog-group/providers/Microsoft.Web/sites/blog"
@@ -133,7 +106,7 @@ resource_tags:
 		- name: "CPU Credits consumed"
 			`) + "\n",
 		},
-		RedactWords: []string{"azure_client_id", "azure_client_secret", "azure_tenant_id", "azure_subscription_id"},
+		RedactWords: []string{"azure_database_client_id", "azure_database_client_secret", "azure_database_tenant_id", "azure_database_subscription_id"},
 	}
 	require.Equal(t, expected.Args, actual.Args)
 	require.Equal(t, expected.Env, actual.Env)
