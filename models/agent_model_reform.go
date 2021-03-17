@@ -47,6 +47,10 @@ func (v *agentTableType) Columns() []string {
 		"tls_skip_verify",
 		"aws_access_key",
 		"aws_secret_key",
+		"azure_client_id",
+		"azure_client_secret",
+		"azure_tenant_id",
+		"azure_subscription_id",
 		"table_count",
 		"table_count_tablestats_group_limit",
 		"query_examples_disabled",
@@ -101,6 +105,10 @@ var AgentTable = &agentTableType{
 			{Name: "TLSSkipVerify", Type: "bool", Column: "tls_skip_verify"},
 			{Name: "AWSAccessKey", Type: "*string", Column: "aws_access_key"},
 			{Name: "AWSSecretKey", Type: "*string", Column: "aws_secret_key"},
+			{Name: "AzureClientID", Type: "*string", Column: "azure_client_id"},
+			{Name: "AzureClientSecret", Type: "*string", Column: "azure_client_secret"},
+			{Name: "AzureTenantID", Type: "*string", Column: "azure_tenant_id"},
+			{Name: "AzureSubscriptionID", Type: "*string", Column: "azure_subscription_id"},
 			{Name: "TableCount", Type: "*int32", Column: "table_count"},
 			{Name: "TableCountTablestatsGroupLimit", Type: "int32", Column: "table_count_tablestats_group_limit"},
 			{Name: "QueryExamplesDisabled", Type: "bool", Column: "query_examples_disabled"},
@@ -120,7 +128,7 @@ var AgentTable = &agentTableType{
 
 // String returns a string representation of this struct or record.
 func (s Agent) String() string {
-	res := make([]string, 30)
+	res := make([]string, 34)
 	res[0] = "AgentID: " + reform.Inspect(s.AgentID, true)
 	res[1] = "AgentType: " + reform.Inspect(s.AgentType, true)
 	res[2] = "RunsOnNodeID: " + reform.Inspect(s.RunsOnNodeID, true)
@@ -140,17 +148,21 @@ func (s Agent) String() string {
 	res[16] = "TLSSkipVerify: " + reform.Inspect(s.TLSSkipVerify, true)
 	res[17] = "AWSAccessKey: " + reform.Inspect(s.AWSAccessKey, true)
 	res[18] = "AWSSecretKey: " + reform.Inspect(s.AWSSecretKey, true)
-	res[19] = "TableCount: " + reform.Inspect(s.TableCount, true)
-	res[20] = "TableCountTablestatsGroupLimit: " + reform.Inspect(s.TableCountTablestatsGroupLimit, true)
-	res[21] = "QueryExamplesDisabled: " + reform.Inspect(s.QueryExamplesDisabled, true)
-	res[22] = "MaxQueryLogSize: " + reform.Inspect(s.MaxQueryLogSize, true)
-	res[23] = "MetricsPath: " + reform.Inspect(s.MetricsPath, true)
-	res[24] = "MetricsScheme: " + reform.Inspect(s.MetricsScheme, true)
-	res[25] = "RDSBasicMetricsDisabled: " + reform.Inspect(s.RDSBasicMetricsDisabled, true)
-	res[26] = "RDSEnhancedMetricsDisabled: " + reform.Inspect(s.RDSEnhancedMetricsDisabled, true)
-	res[27] = "PushMetrics: " + reform.Inspect(s.PushMetrics, true)
-	res[28] = "DisabledCollectors: " + reform.Inspect(s.DisabledCollectors, true)
-	res[29] = "MongoDBOptions: " + reform.Inspect(s.MongoDBOptions, true)
+	res[19] = "AzureClientID: " + reform.Inspect(s.AzureClientID, true)
+	res[20] = "AzureClientSecret: " + reform.Inspect(s.AzureClientSecret, true)
+	res[21] = "AzureTenantID: " + reform.Inspect(s.AzureTenantID, true)
+	res[22] = "AzureSubscriptionID: " + reform.Inspect(s.AzureSubscriptionID, true)
+	res[23] = "TableCount: " + reform.Inspect(s.TableCount, true)
+	res[24] = "TableCountTablestatsGroupLimit: " + reform.Inspect(s.TableCountTablestatsGroupLimit, true)
+	res[25] = "QueryExamplesDisabled: " + reform.Inspect(s.QueryExamplesDisabled, true)
+	res[26] = "MaxQueryLogSize: " + reform.Inspect(s.MaxQueryLogSize, true)
+	res[27] = "MetricsPath: " + reform.Inspect(s.MetricsPath, true)
+	res[28] = "MetricsScheme: " + reform.Inspect(s.MetricsScheme, true)
+	res[29] = "RDSBasicMetricsDisabled: " + reform.Inspect(s.RDSBasicMetricsDisabled, true)
+	res[30] = "RDSEnhancedMetricsDisabled: " + reform.Inspect(s.RDSEnhancedMetricsDisabled, true)
+	res[31] = "PushMetrics: " + reform.Inspect(s.PushMetrics, true)
+	res[32] = "DisabledCollectors: " + reform.Inspect(s.DisabledCollectors, true)
+	res[33] = "MongoDBOptions: " + reform.Inspect(s.MongoDBOptions, true)
 	return strings.Join(res, ", ")
 }
 
@@ -177,6 +189,10 @@ func (s *Agent) Values() []interface{} {
 		s.TLSSkipVerify,
 		s.AWSAccessKey,
 		s.AWSSecretKey,
+		s.AzureClientID,
+		s.AzureClientSecret,
+		s.AzureTenantID,
+		s.AzureSubscriptionID,
 		s.TableCount,
 		s.TableCountTablestatsGroupLimit,
 		s.QueryExamplesDisabled,
@@ -214,6 +230,10 @@ func (s *Agent) Pointers() []interface{} {
 		&s.TLSSkipVerify,
 		&s.AWSAccessKey,
 		&s.AWSSecretKey,
+		&s.AzureClientID,
+		&s.AzureClientSecret,
+		&s.AzureTenantID,
+		&s.AzureSubscriptionID,
 		&s.TableCount,
 		&s.TableCountTablestatsGroupLimit,
 		&s.QueryExamplesDisabled,
