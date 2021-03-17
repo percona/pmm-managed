@@ -569,7 +569,7 @@ func TestVerifyBackupLocationValidation(t *testing.T) {
 			params: &models.VerifyBackupLocationParams{
 				BackupLocationConfig: models.BackupLocationConfig{
 					S3Config: &models.S3LocationConfig{
-						Endpoint:   "https://s3.us-west-2.amazonaws.com/",
+						Endpoint:   "s3.us-west-2.amazonaws.com",
 						AccessKey:  "secret_key",
 						SecretKey:  "example_key",
 						BucketName: "invalid@bucket",

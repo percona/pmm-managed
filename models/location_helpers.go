@@ -115,6 +115,15 @@ func checkS3Config(c *S3LocationConfig) (bool, string, error) {
 		return false, "", status.Errorf(codes.InvalidArgument, "%s", err)
 	}
 
+	// User could specify the endpoint without scheme, so according to RFC 3986 the host won't be parsed.
+	// Try to prepend scheme and parse new url.
+	if parsedURL.Host == "" {
+		parsedURL, err = url.Parse("https://" + c.Endpoint)
+		if err != nil {
+			return false, "", status.Errorf(codes.InvalidArgument, "%s", err)
+		}
+	}
+
 	if parsedURL.Host == "" {
 		return false, "", status.Error(codes.InvalidArgument, "No host found in the Endpoint.")
 	}
