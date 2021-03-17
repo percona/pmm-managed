@@ -30,43 +30,42 @@ const azureDatabaseTemplate = `---
 active_directory_authority_url: "https://login.microsoftonline.com/"
 resource_manager_url: "https://management.azure.com/"
 credentials:
-	client_id: {{ .AzureDatabaseClientID}}
-	client_secret: {{ .AzureDatabaseClientSecret}}
-	tenant_id: {{ .AzureDatabaseTenantID}}
-	subscription_id: {{ .AzureDatabaseSubscriptionID}}
-
+  client_id: "{{ .AzureDatabaseClientID}}"
+  client_secret: "{{ .AzureDatabaseClientSecret}}"
+  tenant_id: "{{ .AzureDatabaseTenantID}}"
+  subscription_id: "{{ .AzureDatabaseSubscriptionID}}"
 targets:
-	- resource: "/resourceGroups/blog-group/providers/Microsoft.Web/sites/blog"
-	metrics:
-		- name: "BytesReceived"
-		- name: "BytesSent"
-	- resource: "/resourceGroups/app-group/providers/Microsoft.Web/sites/app"
-	metrics:
-		- name: "Http2xx"
-		- name: "Http5xx"
-	- resource: "/resourceGroups/vm-group/providers/Microsoft.Compute/virtualMachines/vm"
-	metric_namespace: "Azure.VM.Windows.GuestMetrics"
-	metrics:
-	- name: 'Process\Thread Count'
+  - resource: "/resourceGroups/blog-group/providers/Microsoft.Web/sites/blog"
+    metrics:
+      - name: "BytesReceived"
+      - name: "BytesSent"
+  - resource: "/resourceGroups/app-group/providers/Microsoft.Web/sites/app"
+    metrics:
+      - name: "Http2xx"
+      - name: "Http5xx"
+  - resource: "/resourceGroups/vm-group/providers/Microsoft.Compute/virtualMachines/vm"
+  metric_namespace: "Azure.VM.Windows.GuestMetrics"
+  metrics:
+  - name: 'Process\Thread Count'
 
 resource_groups:
-	- resource_group: "webapps"
-	resource_types:
-		- "Microsoft.Compute/virtualMachines"
-	resource_name_include_re:
-		- "testvm.*"
-	resource_name_exclude_re:
-		- "testvm12"
-	metrics:
-		- name: "CPU Credits Consumed"
+  - resource_group: "webapps"
+    resource_types:
+      - "Microsoft.Compute/virtualMachines"
+    resource_name_include_re:
+      - "testvm.*"
+    resource_name_exclude_re:
+      - "testvm12"
+    metrics:
+      - name: "CPU Credits Consumed"
 
 resource_tags:
-	- resource_tag_name: "monitoring"
-	resource_tag_value: "enabled"
-	resource_types:
-		- "Microsoft.Compute/virtualMachines"
-	metrics:
-		- name: "CPU Credits consumed"
+  - resource_tag_name: "monitoring"
+    resource_tag_value: "enabled"
+    resource_types:
+      - "Microsoft.Compute/virtualMachines"
+    metrics:
+      - name: "CPU Credits consumed"
 `
 
 // azureDatabaseInstance represents credentials informations.
@@ -106,6 +105,7 @@ func azureDatabaseExporterConfig(exporter *models.Agent, redactMode redactMode) 
 		"--config.file=" + tdp.Left + " .TextFiles.config " + tdp.Right,
 		"--web.listen-address=:" + tdp.Left + " .listen_port " + tdp.Right,
 	}
+
 	return &agentpb.SetStateRequest_AgentProcess{
 		Type:               inventorypb.AgentType_AZURE_DATABASE_EXPORTER,
 		TemplateLeftDelim:  tdp.Left,
