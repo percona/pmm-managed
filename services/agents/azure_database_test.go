@@ -67,10 +67,10 @@ func TestAzureExporterConfig(t *testing.T) {
 active_directory_authority_url: "https://login.microsoftonline.com/"
 resource_manager_url: "https://management.azure.com/"
 credentials:
-	subscription_id: azure_database_client_id
-	client_id: azure_database_client_secret
-	client_secret: azure_database_tenant_id
-	tenant_id: azure_database_subscription_id
+	client_id: azure_database_client_id
+	client_secret: azure_database_client_secret
+	tenant_id: azure_database_tenant_id
+	subscription_id: azure_database_subscription_id
 
 targets:
 	- resource: "/resourceGroups/blog-group/providers/Microsoft.Web/sites/blog"
