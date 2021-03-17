@@ -33,7 +33,7 @@ var (
 func FindArtifacts(q *reform.Querier) ([]*Artifact, error) {
 	rows, err := q.SelectAllFrom(ArtifactTable, "ORDER BY created_at DESC")
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to select backups")
+		return nil, errors.Wrap(err, "failed to select artifacts")
 	}
 
 	artifacts := make([]*Artifact, 0, len(rows))
