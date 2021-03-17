@@ -441,12 +441,10 @@ var databaseSchema = [][]string{
 	},
 	29: {
 		`ALTER TABLE agents
-			ADD COLUMN rds_basic_metrics_disabled BOOLEAN NOT NULL DEFAULT FALSE,
-			ADD COLUMN rds_enhanced_metrics_disabled BOOLEAN NOT NULL DEFAULT FALSE`,
-
-		`ALTER TABLE agents
-			ALTER COLUMN rds_basic_metrics_disabled DROP DEFAULT,
-			ALTER COLUMN rds_enhanced_metrics_disabled DROP DEFAULT`,
+			ADD COLUMN azure_database_client_id VARCHAR,
+			ADD COLUMN azure_database_client_secret VARCHAR,
+			ADD COLUMN azure_database_tenant_id VARCHAR,
+			ADD COLUMN azure_database_subscription_id VARCHAR`,
 	},
 }
 

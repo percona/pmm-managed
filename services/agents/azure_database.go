@@ -82,10 +82,10 @@ type azureDatabaseCredentials struct {
 type azureDatabaseInstance struct {
 	Region                      string         `yaml:"region"`
 	Instance                    string         `yaml:"instance"`
-	AzureDatabaseClientID       string         `yaml:"azure_client_id,omitempty"`
-	AzureDatabaseClientSecret   string         `yaml:"azure_client_secret,omitempty"`
-	AzureDatabaseTenantID       string         `yaml:"azure_tenant_id,omitempty"`
-	AzureDatabaseSubscriptionID string         `yaml:"azure_subscription_id,omitempty"`
+	AzureDatabaseClientID       string         `yaml:"azure_database_client_id,omitempty"`
+	AzureDatabaseClientSecret   string         `yaml:"azure_database_client_secret,omitempty"`
+	AzureDatabaseTenantID       string         `yaml:"azure_database_tenant_id,omitempty"`
+	AzureDatabaseSubscriptionID string         `yaml:"azure_database_subscription_id,omitempty"`
 	DisableBasicMetrics         bool           `yaml:"disable_basic_metrics"`
 	DisableEnhancedMetrics      bool           `yaml:"disable_enhanced_metrics"`
 	Labels                      model.LabelSet `yaml:"labels,omitempty"`
