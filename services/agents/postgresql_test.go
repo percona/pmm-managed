@@ -97,7 +97,7 @@ func TestPostgresExporterConfig(t *testing.T) {
 			TemplateLeftDelim:  "{{",
 			TemplateRightDelim: "}}",
 			Args: []string{
-				"--auto-discover-databases",,
+				"--auto-discover-databases",
 				"--collect.custom_query.lr",
 				"--collect.custom_query.lr.directory=/usr/local/percona/pmm2/collectors/custom-queries/postgresql/low-resolution",
 				"--collect.custom_query.mr",
