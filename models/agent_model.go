@@ -50,6 +50,7 @@ const (
 	PostgresExporterType                AgentType = "postgres_exporter"
 	ProxySQLExporterType                AgentType = "proxysql_exporter"
 	RDSExporterType                     AgentType = "rds_exporter"
+	AzureDatabaseExporterType           AgentType = "azure_database_exporter"
 	QANMySQLPerfSchemaAgentType         AgentType = "qan-mysql-perfschema-agent"
 	QANMySQLSlowlogAgentType            AgentType = "qan-mysql-slowlog-agent"
 	QANMongoDBProfilerAgentType         AgentType = "qan-mongodb-profiler-agent"
@@ -105,6 +106,11 @@ type Agent struct {
 
 	AWSAccessKey *string `reform:"aws_access_key"`
 	AWSSecretKey *string `reform:"aws_secret_key"`
+
+	AzureClientID       *string `reform:"azure_client_id"`
+	AzureClientSecret   *string `reform:"azure_client_secret"`
+	AzureTenantID       *string `reform:"azure_tenant_id"`
+	AzureSubscriptionID *string `reform:"azure_subscription_id"`
 
 	// TableCount stores last known table count. NULL if unknown.
 	TableCount *int32 `reform:"table_count"`
