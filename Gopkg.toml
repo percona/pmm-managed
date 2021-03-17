@@ -14,7 +14,7 @@ required = [
 
 [[constraint]]
   name = "github.com/percona/pmm"
-  branch = "PMM-7448-location-and-credentials-test"
+  branch = "release/2.16"
 
 [[constraint]]
   name = "github.com/percona-platform/saas"

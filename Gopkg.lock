@@ -439,7 +439,7 @@
   revision = "d0e2249b531c97d9ef898c2401dac14fc2da0006"
 
 [[projects]]
-  branch = "PMM-7448-location-and-credentials-test"
+  branch = "release/2.16"
   digest = "1:c1de8b3790a227d59bad75fb9cde07e1680f238a52315a259d7e60b1abea38ee"
   name = "github.com/percona/pmm"
   packages = [
@@ -464,7 +464,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "063967f19db79287485908557ba9f53e1c5a0544"
+  revision = "5df66e904f51b01960a089f2c009290ac38c9dca"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
