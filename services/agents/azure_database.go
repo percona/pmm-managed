@@ -70,7 +70,7 @@ resource_tags:
 		- name: "CPU Credits consumed"
 `
 
-// azureDatabaseInstance represents a single Azure credentials info.
+// azureDatabaseInstance represents credentials informations.
 type azureDatabaseCredentials struct {
 	AzureClientID       string
 	AzureClientSecret   string
@@ -78,7 +78,7 @@ type azureDatabaseCredentials struct {
 	AzureSubscriptionID string
 }
 
-// azureDatabaseInstance represents a single Azure instance information from configuration file.
+// azureDatabaseInstance represents information from configuration file.
 type azureDatabaseInstance struct {
 	Region                 string         `yaml:"region"`
 	Instance               string         `yaml:"instance"`
@@ -91,12 +91,7 @@ type azureDatabaseInstance struct {
 	Labels                 model.LabelSet `yaml:"labels,omitempty"`
 }
 
-// Config contains configuration file information.
-type azureDatabaseExporterConfigFile struct {
-	Instances []azureDatabaseInstance `yaml:"instances"`
-}
-
-// azureDatabaseExporterConfig returns desired configuration of azure_database_exporter process.
+// azureDatabaseExporterConfig returns configuration of azure_database_exporter process.
 func azureDatabaseExporterConfig(pairs map[*models.Node]*models.Agent, redactMode redactMode) (*agentpb.SetStateRequest_AgentProcess, error) {
 	t, err := template.New("credentials").Parse(azureDatabaseTemplate)
 	if err != nil {
