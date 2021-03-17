@@ -503,10 +503,10 @@ type CreateAgentParams struct {
 	AWSSecretKey                   string
 	RDSBasicMetricsDisabled        bool
 	RDSEnhancedMetricsDisabled     bool
-	AzureClientID                  string
-	AzureClientSecret              string
-	AzureTenantID                  string
-	AzureSubscriptionID            string
+	AzureDatabaseClientID          string
+	AzureDatabaseClientSecret      string
+	AzureDatabaseTenantID          string
+	AzureDatabaseSubscriptionID    string
 	PushMetrics                    bool
 	DisableCollectors              []string
 }
@@ -560,6 +560,10 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 		AWSSecretKey:                   pointer.ToStringOrNil(params.AWSSecretKey),
 		RDSBasicMetricsDisabled:        params.RDSBasicMetricsDisabled,
 		RDSEnhancedMetricsDisabled:     params.RDSEnhancedMetricsDisabled,
+		AzureDatabaseClientID:          pointer.ToStringOrNil(params.AzureDatabaseClientID),
+		AzureDatabaseClientSecret:      pointer.ToStringOrNil(params.AzureDatabaseClientSecret),
+		AzureDatabaseTenantID:          pointer.ToStringOrNil(params.AzureDatabaseTenantID),
+		AzureDatabaseSubscriptionID:    pointer.ToStringOrNil(params.AzureDatabaseSubscriptionID),
 		PushMetrics:                    params.PushMetrics,
 		DisabledCollectors:             params.DisableCollectors,
 	}

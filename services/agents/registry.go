@@ -692,6 +692,14 @@ func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo)
 		case models.ExternalExporterType:
 			// ignore
 
+		case models.AzureDatabaseExporterType:
+			config, err := azureDatabaseExporterConfig(row, redactMode)
+			if err != nil {
+				l.Error(err)
+				return
+			}
+			agentProcesses[row.AgentID] = config
+
 		// Agents with exactly one Service
 		case models.MySQLdExporterType, models.MongoDBExporterType, models.PostgresExporterType, models.ProxySQLExporterType,
 			models.QANMySQLPerfSchemaAgentType, models.QANMySQLSlowlogAgentType, models.QANMongoDBProfilerAgentType, models.QANPostgreSQLPgStatementsAgentType,
