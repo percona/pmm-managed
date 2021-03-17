@@ -440,7 +440,7 @@ var databaseSchema = [][]string{
 		`ALTER TABLE agents ADD COLUMN disabled_collectors VARCHAR[]`,
 	},
 	29: {
-		`CREATE TABLE backups (
+		`CREATE TABLE artifacts (
 			id VARCHAR NOT NULL,
 			name VARCHAR NOT NULL CHECK (name <> ''),
 			vendor VARCHAR NOT NULL CHECK (vendor <> ''),

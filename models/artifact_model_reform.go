@@ -10,23 +10,23 @@ import (
 	"gopkg.in/reform.v1/parse"
 )
 
-type backupTableType struct {
+type artifactTableType struct {
 	s parse.StructInfo
 	z []interface{}
 }
 
 // Schema returns a schema name in SQL database ("").
-func (v *backupTableType) Schema() string {
+func (v *artifactTableType) Schema() string {
 	return v.s.SQLSchema
 }
 
-// Name returns a view or table name in SQL database ("backups").
-func (v *backupTableType) Name() string {
+// Name returns a view or table name in SQL database ("artifacts").
+func (v *artifactTableType) Name() string {
 	return v.s.SQLName
 }
 
 // Columns returns a new slice of column names for that view or table in SQL database.
-func (v *backupTableType) Columns() []string {
+func (v *artifactTableType) Columns() []string {
 	return []string{
 		"id",
 		"name",
@@ -40,25 +40,25 @@ func (v *backupTableType) Columns() []string {
 }
 
 // NewStruct makes a new struct for that view or table.
-func (v *backupTableType) NewStruct() reform.Struct {
-	return new(Backup)
+func (v *artifactTableType) NewStruct() reform.Struct {
+	return new(Artifact)
 }
 
 // NewRecord makes a new record for that table.
-func (v *backupTableType) NewRecord() reform.Record {
-	return new(Backup)
+func (v *artifactTableType) NewRecord() reform.Record {
+	return new(Artifact)
 }
 
 // PKColumnIndex returns an index of primary key column for that table in SQL database.
-func (v *backupTableType) PKColumnIndex() uint {
+func (v *artifactTableType) PKColumnIndex() uint {
 	return uint(v.s.PKFieldIndex)
 }
 
-// BackupTable represents backups view or table in SQL database.
-var BackupTable = &backupTableType{
+// ArtifactTable represents artifacts view or table in SQL database.
+var ArtifactTable = &artifactTableType{
 	s: parse.StructInfo{
-		Type:    "Backup",
-		SQLName: "backups",
+		Type:    "Artifact",
+		SQLName: "artifacts",
 		Fields: []parse.FieldInfo{
 			{Name: "ID", Type: "string", Column: "id"},
 			{Name: "Name", Type: "string", Column: "name"},
@@ -71,11 +71,11 @@ var BackupTable = &backupTableType{
 		},
 		PKFieldIndex: 0,
 	},
-	z: new(Backup).Values(),
+	z: new(Artifact).Values(),
 }
 
 // String returns a string representation of this struct or record.
-func (s Backup) String() string {
+func (s Artifact) String() string {
 	res := make([]string, 8)
 	res[0] = "ID: " + reform.Inspect(s.ID, true)
 	res[1] = "Name: " + reform.Inspect(s.Name, true)
@@ -90,7 +90,7 @@ func (s Backup) String() string {
 
 // Values returns a slice of struct or record field values.
 // Returned interface{} values are never untyped nils.
-func (s *Backup) Values() []interface{} {
+func (s *Artifact) Values() []interface{} {
 	return []interface{}{
 		s.ID,
 		s.Name,
@@ -105,7 +105,7 @@ func (s *Backup) Values() []interface{} {
 
 // Pointers returns a slice of pointers to struct or record fields.
 // Returned interface{} values are never untyped nils.
-func (s *Backup) Pointers() []interface{} {
+func (s *Artifact) Pointers() []interface{} {
 	return []interface{}{
 		&s.ID,
 		&s.Name,
@@ -119,48 +119,48 @@ func (s *Backup) Pointers() []interface{} {
 }
 
 // View returns View object for that struct.
-func (s *Backup) View() reform.View {
-	return BackupTable
+func (s *Artifact) View() reform.View {
+	return ArtifactTable
 }
 
 // Table returns Table object for that record.
-func (s *Backup) Table() reform.Table {
-	return BackupTable
+func (s *Artifact) Table() reform.Table {
+	return ArtifactTable
 }
 
 // PKValue returns a value of primary key for that record.
 // Returned interface{} value is never untyped nil.
-func (s *Backup) PKValue() interface{} {
+func (s *Artifact) PKValue() interface{} {
 	return s.ID
 }
 
 // PKPointer returns a pointer to primary key field for that record.
 // Returned interface{} value is never untyped nil.
-func (s *Backup) PKPointer() interface{} {
+func (s *Artifact) PKPointer() interface{} {
 	return &s.ID
 }
 
 // HasPK returns true if record has non-zero primary key set, false otherwise.
-func (s *Backup) HasPK() bool {
-	return s.ID != BackupTable.z[BackupTable.s.PKFieldIndex]
+func (s *Artifact) HasPK() bool {
+	return s.ID != ArtifactTable.z[ArtifactTable.s.PKFieldIndex]
 }
 
 // SetPK sets record primary key, if possible.
 //
 // Deprecated: prefer direct field assignment where possible: s.ID = pk.
-func (s *Backup) SetPK(pk interface{}) {
+func (s *Artifact) SetPK(pk interface{}) {
 	reform.SetPK(s, pk)
 }
 
 // check interfaces
 var (
-	_ reform.View   = BackupTable
-	_ reform.Struct = (*Backup)(nil)
-	_ reform.Table  = BackupTable
-	_ reform.Record = (*Backup)(nil)
-	_ fmt.Stringer  = (*Backup)(nil)
+	_ reform.View   = ArtifactTable
+	_ reform.Struct = (*Artifact)(nil)
+	_ reform.Table  = ArtifactTable
+	_ reform.Record = (*Artifact)(nil)
+	_ fmt.Stringer  = (*Artifact)(nil)
 )
 
 func init() {
-	parse.AssertUpToDate(&BackupTable.s, new(Backup))
+	parse.AssertUpToDate(&ArtifactTable.s, new(Artifact))
 }

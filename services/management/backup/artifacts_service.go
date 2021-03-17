@@ -27,29 +27,29 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-// BackupsService represents backups API.
-type BackupsService struct {
+// ArtifactsService represents artifacts API.
+type ArtifactsService struct {
 	db *reform.DB
 }
 
-// NewBackupsService creates new backup API service.
-func NewBackupsService(db *reform.DB) *BackupsService {
-	return &BackupsService{
+// NewArtifactsService creates new artifacts API service.
+func NewArtifactsService(db *reform.DB) *ArtifactsService {
+	return &ArtifactsService{
 		db: db,
 	}
 }
 
-// ListBackups returns a list of all backups.
-func (s *BackupsService) ListBackups(context.Context, *backupv1beta1.ListBackupsRequest) (*backupv1beta1.ListBackupsResponse, error) {
+// ListArtifacts returns a list of all artifacts.
+func (s *ArtifactsService) ListArtifacts(context.Context, *backupv1beta1.ListArtifactsRequest) (*backupv1beta1.ListArtifactsResponse, error) {
 	q := s.db.Querier
 
-	backups, err := models.FindBackups(q)
+	artifacts, err := models.FindArtifacts(q)
 	if err != nil {
 		return nil, err
 	}
 
-	locationIDs := make([]string, 0, len(backups))
-	for _, b := range backups {
+	locationIDs := make([]string, 0, len(artifacts))
+	for _, b := range artifacts {
 		locationIDs = append(locationIDs, b.LocationID)
 	}
 	locations, err := models.FindBackupLocationsByIDs(q, locationIDs)
@@ -57,8 +57,8 @@ func (s *BackupsService) ListBackups(context.Context, *backupv1beta1.ListBackups
 		return nil, err
 	}
 
-	serviceIDs := make([]string, 0, len(backups))
-	for _, b := range backups {
+	serviceIDs := make([]string, 0, len(artifacts))
+	for _, b := range artifacts {
 		serviceIDs = append(serviceIDs, b.ServiceID)
 	}
 
@@ -67,16 +67,16 @@ func (s *BackupsService) ListBackups(context.Context, *backupv1beta1.ListBackups
 		return nil, err
 	}
 
-	backupsResponse := make([]*backupv1beta1.Backup, 0, len(backups))
-	for _, b := range backups {
-		convertedBackup, err := convertBackup(b, services, locations)
+	artifactsResponse := make([]*backupv1beta1.Artifact, 0, len(artifacts))
+	for _, b := range artifacts {
+		convertedBackup, err := convertArtifact(b, services, locations)
 		if err != nil {
 			return nil, err
 		}
-		backupsResponse = append(backupsResponse, convertedBackup)
+		artifactsResponse = append(artifactsResponse, convertedBackup)
 	}
-	return &backupv1beta1.ListBackupsResponse{
-		Backups: backupsResponse,
+	return &backupv1beta1.ListArtifactsResponse{
+		Artifacts: artifactsResponse,
 	}, nil
 }
 
@@ -114,45 +114,45 @@ func convertBackupStatus(status models.BackupStatus) (*backupv1beta1.Status, err
 	return &s, nil
 }
 
-func convertBackup(
-	b *models.Backup,
+func convertArtifact(
+	a *models.Artifact,
 	services map[string]*models.Service,
 	locations map[string]*models.BackupLocation,
-) (*backupv1beta1.Backup, error) {
-	createdAt, err := ptypes.TimestampProto(b.CreatedAt)
+) (*backupv1beta1.Artifact, error) {
+	createdAt, err := ptypes.TimestampProto(a.CreatedAt)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to convert timestamp")
 	}
 
-	l, ok := locations[b.LocationID]
+	l, ok := locations[a.LocationID]
 	if !ok {
 		return nil, errors.Errorf(
-			"failed to convert backup with id '%s': no location id '%s' in the map", b.ID, b.LocationID)
+			"failed to convert artifact with id '%s': no location id '%s' in the map", a.ID, a.LocationID)
 	}
 
-	s, ok := services[b.ServiceID]
+	s, ok := services[a.ServiceID]
 	if !ok {
 		return nil, errors.Errorf(
-			"failed to convert backup with id '%s': no service id '%s' in the map", b.ID, b.ServiceID)
+			"failed to convert artifact with id '%s': no service id '%s' in the map", a.ID, a.ServiceID)
 	}
 
-	dm, err := convertDataModel(b.DataModel)
+	dm, err := convertDataModel(a.DataModel)
 	if err != nil {
-		return nil, errors.Wrapf(err, "backup id '%s'", b.ID)
+		return nil, errors.Wrapf(err, "artifact id '%s'", a.ID)
 	}
 
-	status, err := convertBackupStatus(b.Status)
+	status, err := convertBackupStatus(a.Status)
 	if err != nil {
-		return nil, errors.Wrapf(err, "backup id '%s'", b.ID)
+		return nil, errors.Wrapf(err, "artifact id '%s'", a.ID)
 	}
 
-	return &backupv1beta1.Backup{
-		BackupId:     b.ID,
-		Name:         b.Name,
-		Vendor:       b.Vendor,
-		LocationId:   b.LocationID,
+	return &backupv1beta1.Artifact{
+		ArtifactId:   a.ID,
+		Name:         a.Name,
+		Vendor:       a.Vendor,
+		LocationId:   a.LocationID,
 		LocationName: l.Name,
-		ServiceId:    b.ServiceID,
+		ServiceId:    a.ServiceID,
 		ServiceName:  s.ServiceName,
 		DataModel:    *dm,
 		Status:       *status,
@@ -162,5 +162,5 @@ func convertBackup(
 
 // Check interfaces.
 var (
-	_ backupv1beta1.BackupsServer = (*BackupsService)(nil)
+	_ backupv1beta1.ArtifactsServer = (*ArtifactsService)(nil)
 )

@@ -29,39 +29,39 @@ var (
 	ErrInvalidArgument = errors.New("invalid argument")
 )
 
-// FindBackups returns performed backups list.
-func FindBackups(q *reform.Querier) ([]*Backup, error) {
-	rows, err := q.SelectAllFrom(BackupTable, "ORDER BY created_at DESC")
+// FindArtifacts returns artifacts list.
+func FindArtifacts(q *reform.Querier) ([]*Artifact, error) {
+	rows, err := q.SelectAllFrom(ArtifactTable, "ORDER BY created_at DESC")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select backups")
 	}
 
-	backups := make([]*Backup, 0, len(rows))
-	for _, s := range rows {
-		backups = append(backups, s.(*Backup))
+	artifacts := make([]*Artifact, 0, len(rows))
+	for _, r := range rows {
+		artifacts = append(artifacts, r.(*Artifact))
 	}
 
-	return backups, nil
+	return artifacts, nil
 }
 
-func findBackupByID(q *reform.Querier, id string) (*Backup, error) {
+func findArtifactByID(q *reform.Querier, id string) (*Artifact, error) {
 	if id == "" {
-		return nil, errors.New("provided backup id is empty")
+		return nil, errors.New("provided artifact id is empty")
 	}
 
-	backup := &Backup{ID: id}
-	switch err := q.Reload(backup); err {
+	artifact := &Artifact{ID: id}
+	switch err := q.Reload(artifact); err {
 	case nil:
-		return backup, nil
+		return artifact, nil
 	case reform.ErrNoRows:
-		return nil, errors.Wrapf(ErrNotFound, "backup by id '%s'", id)
+		return nil, errors.Wrapf(ErrNotFound, "artifact by id '%s'", id)
 	default:
 		return nil, errors.WithStack(err)
 	}
 }
 
-// CreateBackupParams are params for creating a new backup.
-type CreateBackupParams struct {
+// CreateArtifactParams are params for creating a new artifact.
+type CreateArtifactParams struct {
 	Name       string
 	Vendor     string
 	LocationID string
@@ -70,7 +70,7 @@ type CreateBackupParams struct {
 	Status     BackupStatus
 }
 
-func (p *CreateBackupParams) Validate() error {
+func (p *CreateArtifactParams) validate() error {
 	if p.Name == "" {
 		return errors.Wrap(ErrInvalidArgument, "name shouldn't be empty")
 	}
@@ -102,23 +102,23 @@ func (p *CreateBackupParams) Validate() error {
 	return nil
 }
 
-// CreateBackup creates backup entry in DB.
-func CreateBackup(q *reform.Querier, params CreateBackupParams) (*Backup, error) {
-	if err := params.Validate(); err != nil {
+// CreateArtifact creates artifact entry in DB.
+func CreateArtifact(q *reform.Querier, params CreateArtifactParams) (*Artifact, error) {
+	if err := params.validate(); err != nil {
 		return nil, err
 	}
 
-	id := "/backup_id/" + uuid.New().String()
-	_, err := findBackupByID(q, id)
+	id := "/artifact_id/" + uuid.New().String()
+	_, err := findArtifactByID(q, id)
 	switch {
 	case err == nil:
-		return nil, errors.Errorf("backup with id '%s' already exists", id)
+		return nil, errors.Errorf("artifact with id '%s' already exists", id)
 	case errors.Is(err, ErrNotFound):
 	default:
 		return nil, errors.WithStack(err)
 	}
 
-	row := &Backup{
+	row := &Artifact{
 		ID:         id,
 		Name:       params.Name,
 		Vendor:     params.Vendor,
@@ -129,20 +129,20 @@ func CreateBackup(q *reform.Querier, params CreateBackupParams) (*Backup, error)
 	}
 
 	if err := q.Insert(row); err != nil {
-		return nil, errors.Wrap(err, "failed to insert backup")
+		return nil, errors.Wrap(err, "failed to insert artifact")
 	}
 
 	return row, nil
 }
 
-// RemoveBackup removes Backup by ID.
-func RemoveBackup(q *reform.Querier, id string) error {
-	if _, err := findBackupByID(q, id); err != nil {
+// RemoveArtifact removes artifact by ID.
+func RemoveArtifact(q *reform.Querier, id string) error {
+	if _, err := findArtifactByID(q, id); err != nil {
 		return err
 	}
 
-	if err := q.Delete(&Backup{ID: id}); err != nil {
-		return errors.Wrap(err, "failed to delete Backup")
+	if err := q.Delete(&Artifact{ID: id}); err != nil {
+		return errors.Wrapf(err, "failed to delete artifact by id '%s'", id)
 	}
 	return nil
 }

@@ -29,14 +29,14 @@ import (
 	"github.com/percona/pmm-managed/utils/testdb"
 )
 
-func TestBackup(t *testing.T) {
+func TestArtifacts(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	defer func() {
 		require.NoError(t, sqlDB.Close())
 	}()
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	t.Run("create backup", func(t *testing.T) {
+	t.Run("create", func(t *testing.T) {
 		tx, err := db.Begin()
 		require.NoError(t, err)
 		defer func() {
@@ -45,7 +45,7 @@ func TestBackup(t *testing.T) {
 
 		q := tx.Querier
 
-		params := models.CreateBackupParams{
+		params := models.CreateArtifactParams{
 			Name:       "backup_name",
 			Vendor:     "MySQL",
 			LocationID: "location_id",
@@ -54,15 +54,15 @@ func TestBackup(t *testing.T) {
 			Status:     models.PendingBackupStatus,
 		}
 
-		backup, err := models.CreateBackup(q, params)
+		a, err := models.CreateArtifact(q, params)
 		require.NoError(t, err)
-		assert.Equal(t, params.Name, backup.Name)
-		assert.Equal(t, params.Vendor, backup.Vendor)
-		assert.Equal(t, params.LocationID, backup.LocationID)
-		assert.Equal(t, params.ServiceID, backup.ServiceID)
-		assert.Equal(t, params.DataModel, backup.DataModel)
-		assert.Equal(t, params.Status, backup.Status)
-		assert.Less(t, time.Now().UTC().Unix()-backup.CreatedAt.Unix(), int64(5))
+		assert.Equal(t, params.Name, a.Name)
+		assert.Equal(t, params.Vendor, a.Vendor)
+		assert.Equal(t, params.LocationID, a.LocationID)
+		assert.Equal(t, params.ServiceID, a.ServiceID)
+		assert.Equal(t, params.DataModel, a.DataModel)
+		assert.Equal(t, params.Status, a.Status)
+		assert.Less(t, time.Now().UTC().Unix()-a.CreatedAt.Unix(), int64(5))
 	})
 
 	t.Run("list", func(t *testing.T) {
@@ -74,7 +74,7 @@ func TestBackup(t *testing.T) {
 
 		q := tx.Querier
 
-		params1 := models.CreateBackupParams{
+		params1 := models.CreateArtifactParams{
 			Name:       "backup_name_1",
 			Vendor:     "MySQL",
 			LocationID: "location_id_1",
@@ -82,7 +82,7 @@ func TestBackup(t *testing.T) {
 			DataModel:  models.PhysicalDataModel,
 			Status:     models.PendingBackupStatus,
 		}
-		params2 := models.CreateBackupParams{
+		params2 := models.CreateArtifactParams{
 			Name:       "backup_name_2",
 			Vendor:     "PostgreSQL",
 			LocationID: "location_id_2",
@@ -91,12 +91,12 @@ func TestBackup(t *testing.T) {
 			Status:     models.PausedBackupStatus,
 		}
 
-		b1, err := models.CreateBackup(q, params1)
+		a1, err := models.CreateArtifact(q, params1)
 		require.NoError(t, err)
-		b2, err := models.CreateBackup(q, params2)
+		a2, err := models.CreateArtifact(q, params2)
 		require.NoError(t, err)
 
-		actual, err := models.FindBackups(q)
+		actual, err := models.FindArtifacts(q)
 		require.NoError(t, err)
 
 		found := func(id string) func() bool {
@@ -110,8 +110,8 @@ func TestBackup(t *testing.T) {
 			}
 		}
 
-		assert.Condition(t, found(b1.ID), "The first backup not found")
-		assert.Condition(t, found(b2.ID), "The second backup not found")
+		assert.Condition(t, found(a1.ID), "The first artifact not found")
+		assert.Condition(t, found(a2.ID), "The second artifact not found")
 	})
 
 	t.Run("remove", func(t *testing.T) {
@@ -123,7 +123,7 @@ func TestBackup(t *testing.T) {
 
 		q := tx.Querier
 
-		params := models.CreateBackupParams{
+		params := models.CreateArtifactParams{
 			Name:       "backup_name",
 			Vendor:     "MySQL",
 			LocationID: "location_id",
@@ -132,19 +132,19 @@ func TestBackup(t *testing.T) {
 			Status:     models.PendingBackupStatus,
 		}
 
-		b, err := models.CreateBackup(q, params)
+		b, err := models.CreateArtifact(q, params)
 		require.NoError(t, err)
 
-		err = models.RemoveBackup(q, b.ID)
+		err = models.RemoveArtifact(q, b.ID)
 		require.NoError(t, err)
 
-		backups, err := models.FindBackups(q)
+		artifacts, err := models.FindArtifacts(q)
 		require.NoError(t, err)
-		assert.Empty(t, backups)
+		assert.Empty(t, artifacts)
 	})
 }
 
-func TestBackupValidation(t *testing.T) {
+func TestArtifactValidation(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	defer func() {
 		require.NoError(t, sqlDB.Close())
@@ -153,12 +153,12 @@ func TestBackupValidation(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		params   models.CreateBackupParams
+		params   models.CreateArtifactParams
 		errorMsg string
 	}{
 		{
 			name: "normal params",
-			params: models.CreateBackupParams{
+			params: models.CreateArtifactParams{
 				Name:       "backup_name",
 				Vendor:     "MySQL",
 				LocationID: "location_id",
@@ -170,7 +170,7 @@ func TestBackupValidation(t *testing.T) {
 		},
 		{
 			name: "name missing",
-			params: models.CreateBackupParams{
+			params: models.CreateArtifactParams{
 				Vendor:     "MySQL",
 				LocationID: "location_id",
 				ServiceID:  "service_id",
@@ -181,7 +181,7 @@ func TestBackupValidation(t *testing.T) {
 		},
 		{
 			name: "vendor missing",
-			params: models.CreateBackupParams{
+			params: models.CreateArtifactParams{
 				Name:       "backup_name",
 				LocationID: "location_id",
 				ServiceID:  "service_id",
@@ -192,7 +192,7 @@ func TestBackupValidation(t *testing.T) {
 		},
 		{
 			name: "location missing",
-			params: models.CreateBackupParams{
+			params: models.CreateArtifactParams{
 				Name:      "backup_name",
 				Vendor:    "MySQL",
 				ServiceID: "service_id",
@@ -203,7 +203,7 @@ func TestBackupValidation(t *testing.T) {
 		},
 		{
 			name: "service missing",
-			params: models.CreateBackupParams{
+			params: models.CreateArtifactParams{
 				Name:       "backup_name",
 				Vendor:     "MySQL",
 				LocationID: "location_id",
@@ -214,7 +214,7 @@ func TestBackupValidation(t *testing.T) {
 		},
 		{
 			name: "invalid data model",
-			params: models.CreateBackupParams{
+			params: models.CreateArtifactParams{
 				Name:       "backup_name",
 				Vendor:     "MySQL",
 				LocationID: "location_id",
@@ -226,7 +226,7 @@ func TestBackupValidation(t *testing.T) {
 		},
 		{
 			name: "invalid status",
-			params: models.CreateBackupParams{
+			params: models.CreateArtifactParams{
 				Name:       "backup_name",
 				Vendor:     "MySQL",
 				LocationID: "location_id",
@@ -250,7 +250,7 @@ func TestBackupValidation(t *testing.T) {
 
 			q := tx.Querier
 
-			c, err := models.CreateBackup(q, test.params)
+			c, err := models.CreateArtifact(q, test.params)
 			if test.errorMsg != "" {
 				assert.EqualError(t, err, test.errorMsg)
 				assert.Nil(t, c)

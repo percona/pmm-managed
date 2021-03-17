@@ -45,9 +45,9 @@ const (
 	ErrorBackupStatus      BackupStatus = "error"
 )
 
-// Backup represents destination for backup.
-//reform:backups
-type Backup struct {
+// Artifact represents result of a backup.
+//reform:artifacts
+type Artifact struct {
 	ID         string       `reform:"id,pk"`
 	Name       string       `reform:"name"`
 	Vendor     string       `reform:"vendor"`
@@ -59,19 +59,19 @@ type Backup struct {
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.
-func (s *Backup) BeforeInsert() error {
+func (s *Artifact) BeforeInsert() error {
 	s.CreatedAt = Now()
 	return nil
 }
 
 // AfterFind implements reform.AfterFinder interface.
-func (s *Backup) AfterFind() error {
+func (s *Artifact) AfterFind() error {
 	s.CreatedAt = s.CreatedAt.UTC()
 	return nil
 }
 
 // check interfaces
 var (
-	_ reform.BeforeInserter = (*Backup)(nil)
-	_ reform.AfterFinder    = (*Backup)(nil)
+	_ reform.BeforeInserter = (*Artifact)(nil)
+	_ reform.AfterFinder    = (*Artifact)(nil)
 )

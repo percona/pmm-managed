@@ -409,7 +409,7 @@
 
 [[projects]]
   branch = "PMM-7517-artifacts-list-api"
-  digest = "1:f8e4216ba0dae2f5b487cd335f140f8ff6ea478d456a7effc99f2cb99d0b70e2"
+  digest = "1:eced11597b3ec6907b54ccc4808d536762fc5b91d6004d2078c4aca525923860"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -433,7 +433,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "0db466b52936d9abcdecb829229ff0ff62b7c617"
+  revision = "495b87a8d8d66ec833f56bbd731d22cb79d10a6e"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
