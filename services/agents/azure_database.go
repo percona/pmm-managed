@@ -22,7 +22,6 @@ import (
 
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
-	"github.com/prometheus/common/model"
 
 	"github.com/percona/pmm-managed/models"
 )
@@ -78,19 +77,6 @@ type azureDatabaseCredentials struct {
 	AzureDatabaseSubscriptionID string
 }
 
-// azureDatabaseInstance represents information from configuration file.
-type azureDatabaseInstance struct {
-	Region                      string         `yaml:"region"`
-	Instance                    string         `yaml:"instance"`
-	AzureDatabaseClientID       string         `yaml:"azure_database_client_id,omitempty"`
-	AzureDatabaseClientSecret   string         `yaml:"azure_database_client_secret,omitempty"`
-	AzureDatabaseTenantID       string         `yaml:"azure_database_tenant_id,omitempty"`
-	AzureDatabaseSubscriptionID string         `yaml:"azure_database_subscription_id,omitempty"`
-	DisableBasicMetrics         bool           `yaml:"disable_basic_metrics"`
-	DisableEnhancedMetrics      bool           `yaml:"disable_enhanced_metrics"`
-	Labels                      model.LabelSet `yaml:"labels,omitempty"`
-}
-
 // azureDatabaseExporterConfig returns configuration of azure_database_exporter process.
 func azureDatabaseExporterConfig(exporter *models.Agent, redactMode redactMode) (*agentpb.SetStateRequest_AgentProcess, error) {
 	t, err := template.New("credentials").Parse(azureDatabaseTemplate)
@@ -110,6 +96,13 @@ func azureDatabaseExporterConfig(exporter *models.Agent, redactMode redactMode) 
 		return nil, err
 	}
 
+	var words []string
+	if redactMode != exposeSecrets {
+		for _, word := range redactWords(exporter) {
+			words = append(words, word)
+		}
+	}
+
 	tdp := models.TemplateDelimsPair()
 	args := []string{
 		"--config.file=" + tdp.Left + " .TextFiles.config " + tdp.Right,
@@ -123,6 +116,6 @@ func azureDatabaseExporterConfig(exporter *models.Agent, redactMode redactMode) 
 		TextFiles: map[string]string{
 			"config": config.String(),
 		},
-		RedactWords: []string{"azure_database_client_id", "azure_database_client_secret", "azure_database_tenant_id", "azure_database_subscription_id"},
+		RedactWords: words,
 	}, nil
 }
