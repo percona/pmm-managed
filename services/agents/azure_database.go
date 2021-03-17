@@ -30,10 +30,10 @@ const azureDatabaseTemplate = `---
 active_directory_authority_url: "https://login.microsoftonline.com/"
 resource_manager_url: "https://management.azure.com/"
 credentials:
-	subscription_id: {{ .AzureDatabaseClientID}}
-	client_id: {{ .AzureDatabaseClientSecret}}
-	client_secret: {{ .AzureDatabaseTenantID}}
-	tenant_id: {{ .AzureDatabaseSubscriptionID}}
+	client_id: {{ .AzureDatabaseClientID}}
+	client_secret: {{ .AzureDatabaseClientSecret}}
+	tenant_id: {{ .AzureDatabaseTenantID}}
+	subscription_id: {{ .AzureDatabaseSubscriptionID}}
 
 targets:
 	- resource: "/resourceGroups/blog-group/providers/Microsoft.Web/sites/blog"
