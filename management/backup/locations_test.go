@@ -118,13 +118,12 @@ func TestAddWrongLocation(t *testing.T) {
 
 		resp, err := client.AddLocation(&locations.AddLocationParams{
 			Body: locations.AddLocationBody{
-				Name:        gofakeit.Name(),
 				Description: gofakeit.Question(),
 			},
 			Context: pmmapitests.Context,
 		})
 
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Missing location config.")
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Name: value '' must not be an empty string")
 		assert.Nil(t, resp)
 	})
 
@@ -479,6 +478,96 @@ func TestRemoveLocation(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Condition(t, assertNotFound(resp.Payload.LocationID, listResp.Payload.Locations))
+}
+
+func TestLocationConfigValidation(t *testing.T) {
+	t.Parallel()
+	client := backupClient.Default.Locations
+
+	t.Run("missing config", func(t *testing.T) {
+		t.Parallel()
+
+		resp, err := client.TestLocationConfig(&locations.TestLocationConfigParams{
+			Body:    locations.TestLocationConfigBody{},
+			Context: pmmapitests.Context,
+		})
+
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Missing location config.")
+		assert.Nil(t, resp)
+	})
+
+	t.Run("missing client config path", func(t *testing.T) {
+		t.Parallel()
+
+		resp, err := client.TestLocationConfig(&locations.TestLocationConfigParams{
+			Body: locations.TestLocationConfigBody{
+				PMMClientConfig: &locations.TestLocationConfigParamsBodyPMMClientConfig{},
+			},
+			Context: pmmapitests.Context,
+		})
+
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field PmmClientConfig.Path: value '' must not be an empty string")
+		assert.Nil(t, resp)
+	})
+
+	t.Run("missing s3 endpoint", func(t *testing.T) {
+		t.Parallel()
+
+		resp, err := client.TestLocationConfig(&locations.TestLocationConfigParams{
+			Body: locations.TestLocationConfigBody{
+				S3Config: &locations.TestLocationConfigParamsBodyS3Config{
+					AccessKey:  "access_key",
+					SecretKey:  "secret_key",
+					BucketName: "example_bucket",
+				},
+			},
+			Context: pmmapitests.Context,
+		})
+
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field S3Config.Endpoint: value '' must not be an empty string")
+		assert.Nil(t, resp)
+	})
+
+	t.Run("missing s3 bucket", func(t *testing.T) {
+		t.Parallel()
+
+		resp, err := client.TestLocationConfig(&locations.TestLocationConfigParams{
+			Body: locations.TestLocationConfigBody{
+				S3Config: &locations.TestLocationConfigParamsBodyS3Config{
+					Endpoint:  "http://example.com",
+					AccessKey: "access_key",
+					SecretKey: "secret_key",
+				},
+			},
+			Context: pmmapitests.Context,
+		})
+
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field S3Config.BucketName: value '' must not be an empty string")
+		assert.Nil(t, resp)
+	})
+
+	t.Run("double config", func(t *testing.T) {
+		t.Parallel()
+
+		resp, err := client.TestLocationConfig(&locations.TestLocationConfigParams{
+			Body: locations.TestLocationConfigBody{
+				PMMClientConfig: &locations.TestLocationConfigParamsBodyPMMClientConfig{
+					Path: "/tmp",
+				},
+				S3Config: &locations.TestLocationConfigParamsBodyS3Config{
+					Endpoint:   "http://example.com",
+					AccessKey:  "access_key",
+					SecretKey:  "secret_key",
+					BucketName: "example_bucket",
+				},
+			},
+			Context: pmmapitests.Context,
+		})
+
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Only one config is allowed.")
+
+		assert.Nil(t, resp)
+	})
 }
 
 func deleteLocation(t *testing.T, client locations.ClientService, id string) {
