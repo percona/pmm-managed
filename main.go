@@ -184,6 +184,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterExternalServer(gRPCServer, management.NewExternalService(deps.db, deps.agentsRegistry, deps.vmdb))
 	managementpb.RegisterAnnotationServer(gRPCServer, managementgrpc.NewAnnotationServer(deps.db, deps.grafanaClient))
 	managementpb.RegisterSecurityChecksServer(gRPCServer, managementgrpc.NewChecksServer(checksSvc))
+	managementpb.RegisterJobsServer(gRPCServer, management.NewJobsAPIServer(deps.db, deps.agentsRegistry))
 
 	iav1beta1.RegisterChannelsServer(gRPCServer, ia.NewChannelsService(deps.db, deps.alertmanager))
 	deps.templatesService.Collect(ctx)
@@ -287,6 +288,7 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 		managementpb.RegisterPostgreSQLHandlerFromEndpoint,
 		managementpb.RegisterProxySQLHandlerFromEndpoint,
 		managementpb.RegisterActionsHandlerFromEndpoint,
+		managementpb.RegisterJobsHandlerFromEndpoint,
 		managementpb.RegisterRDSHandlerFromEndpoint,
 		managementpb.RegisterHAProxyHandlerFromEndpoint,
 		managementpb.RegisterExternalHandlerFromEndpoint,

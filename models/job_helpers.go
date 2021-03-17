@@ -36,7 +36,7 @@ func CreateJobResult(q *reform.Querier, pmmAgentID string) (*JobResult, error) {
 	return result, nil
 }
 
-func ChangeJobResult(q *reform.Querier, result *JobResult)  error {
+func ChangeJobResult(q *reform.Querier, result *JobResult) error {
 	if err := q.Update(result); err != nil {
 		return errors.WithStack(err)
 	}

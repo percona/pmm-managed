@@ -20,7 +20,7 @@ func (v *jobResultTableType) Schema() string {
 	return v.s.SQLSchema
 }
 
-// Name returns a view or table name in SQL database ("action_results").
+// Name returns a view or table name in SQL database ("job_results").
 func (v *jobResultTableType) Name() string {
 	return v.s.SQLName
 }
@@ -53,11 +53,11 @@ func (v *jobResultTableType) PKColumnIndex() uint {
 	return uint(v.s.PKFieldIndex)
 }
 
-// JobResultTable represents action_results view or table in SQL database.
+// JobResultTable represents job_results view or table in SQL database.
 var JobResultTable = &jobResultTableType{
 	s: parse.StructInfo{
 		Type:    "JobResult",
-		SQLName: "action_results",
+		SQLName: "job_results",
 		Fields: []parse.FieldInfo{
 			{Name: "ID", Type: "string", Column: "id"},
 			{Name: "PMMAgentID", Type: "string", Column: "pmm_agent_id"},

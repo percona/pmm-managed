@@ -9,12 +9,13 @@ import (
 
 //go:generate reform
 
+// EchoJobResult stores echo job specific result data.
 type EchoJobResult struct {
 	Message string `json:"message"`
 }
 
-// ActionResult describes an action result which is storing in persistent storage.
-//reform:action_results
+// JobResult describes a job result which is storing in persistent storage.
+//reform:job_results
 type JobResult struct {
 	ID         string    `reform:"id,pk"`
 	PMMAgentID string    `reform:"pmm_agent_id"`
@@ -25,6 +26,7 @@ type JobResult struct {
 	UpdatedAt  time.Time `reform:"updated_at"`
 }
 
+// GetEchoJobResult extracts echo job result data.
 func (j *JobResult) GetEchoJobResult() (*EchoJobResult, error) {
 	var result EchoJobResult
 
@@ -35,6 +37,7 @@ func (j *JobResult) GetEchoJobResult() (*EchoJobResult, error) {
 	return &result, nil
 }
 
+// SetEchoJobResult sets echo job result data.
 func (j *JobResult) SetEchoJobResult(result *EchoJobResult) error {
 	var err error
 	if j.Result, err = json.Marshal(result); err != nil {

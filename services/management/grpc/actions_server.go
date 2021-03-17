@@ -72,7 +72,7 @@ func (s *actionsServer) prepareServiceAction(serviceID, pmmAgentID, database str
 			return err
 		}
 
-		if pmmAgentID, err = models.FindPmmAgentIDToRunAction(pmmAgentID, agents); err != nil {
+		if pmmAgentID, err = models.FindPmmAgentIDToRunActionOrJob(pmmAgentID, agents); err != nil {
 			return err
 		}
 
@@ -105,7 +105,7 @@ func (s *actionsServer) prepareServiceActionWithFiles(serviceID, pmmAgentID, dat
 			return err
 		}
 
-		if pmmAgentID, err = models.FindPmmAgentIDToRunAction(pmmAgentID, pmmAgents); err != nil {
+		if pmmAgentID, err = models.FindPmmAgentIDToRunActionOrJob(pmmAgentID, pmmAgents); err != nil {
 			return err
 		}
 
@@ -316,7 +316,7 @@ func (s *actionsServer) StartPTSummaryAction(ctx context.Context, req *managemen
 		return nil, status.Error(codes.NotFound, "all available agents are outdated")
 	}
 
-	agentID, err := models.FindPmmAgentIDToRunAction(req.PmmAgentId, agents)
+	agentID, err := models.FindPmmAgentIDToRunActionOrJob(req.PmmAgentId, agents)
 	if err != nil {
 		return nil, err
 	}
@@ -367,7 +367,7 @@ func (s *actionsServer) StartPTPgSummaryAction(ctx context.Context, req *managem
 		if len(pmmAgents) == 0 {
 			return nil, status.Error(codes.FailedPrecondition, "all available agents are outdated")
 		}
-		pmmAgentID, err = models.FindPmmAgentIDToRunAction(req.PmmAgentId, pmmAgents)
+		pmmAgentID, err = models.FindPmmAgentIDToRunActionOrJob(req.PmmAgentId, pmmAgents)
 		if err != nil {
 			return nil, err
 		}
@@ -420,7 +420,7 @@ func (s *actionsServer) StartPTMongoDBSummaryAction(ctx context.Context, req *ma
 		return nil, status.Errorf(codes.NotFound, "No pmm-agent running on this node")
 	}
 
-	pmmAgentID, err := models.FindPmmAgentIDToRunAction(req.PmmAgentId, pmmAgents)
+	pmmAgentID, err := models.FindPmmAgentIDToRunActionOrJob(req.PmmAgentId, pmmAgents)
 	if err != nil {
 		return nil, err
 	}
@@ -490,7 +490,7 @@ func (s *actionsServer) StartPTMySQLSummaryAction(ctx context.Context, req *mana
 		if len(pmmAgents) == 0 {
 			return nil, status.Error(codes.FailedPrecondition, "all available agents are outdated")
 		}
-		pmmAgentID, err = models.FindPmmAgentIDToRunAction(req.PmmAgentId, pmmAgents)
+		pmmAgentID, err = models.FindPmmAgentIDToRunActionOrJob(req.PmmAgentId, pmmAgents)
 		if err != nil {
 			return nil, err
 		}

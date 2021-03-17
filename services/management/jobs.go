@@ -27,12 +27,12 @@ func (s *JobsAPIService) GetAction(ctx context.Context, req *managementpb.GetJob
 }
 
 func (s *JobsAPIService) StartEchoJob(ctx context.Context, req *managementpb.StartEchoJobRequest) (*managementpb.StartEchoJobResponse, error) {
-	res, _, err := s.prepareServiceJob(req.ServiceId, req.PmmAgentId, "")
+	res, err := s.prepareAgentJob(req.PmmAgentId)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := s.r.StartEchoJob(ctx, res.ID, res.PMMAgentID); err != nil {
+	if err := s.r.StartEchoJob(ctx, res.ID, res.PMMAgentID, req.Message, req.Delay.AsDuration()); err != nil {
 		return nil, err
 	}
 
@@ -44,6 +44,23 @@ func (s *JobsAPIService) StartEchoJob(ctx context.Context, req *managementpb.Sta
 
 func (s *JobsAPIService) CancelAction(ctx context.Context, req *managementpb.CancelJobRequest) (*managementpb.CancelJobResponse, error) {
 	panic("implement me")
+}
+
+func (s *JobsAPIService) prepareAgentJob(pmmAgentID string) (*models.JobResult, error) {
+	var res *models.JobResult
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		_, err := models.FindAgentByID(tx.Querier, pmmAgentID)
+		if err != nil {
+			return err
+		}
+
+		res, err = models.CreateJobResult(tx.Querier, pmmAgentID)
+		return err
+	})
+	if e != nil {
+		return nil, e
+	}
+	return res, nil
 }
 
 func (s *JobsAPIService) prepareServiceJob(serviceID, pmmAgentID, database string) (*models.JobResult, string, error) {

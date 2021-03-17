@@ -268,6 +268,31 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 					Payload: new(agentpb.ActionResultResponse),
 				})
 
+			case *agentpb.JobResult:
+				if e := r.db.InTransaction(func(t *reform.TX) error {
+					res, err := models.FindJobResultByID(t.Querier, p.JobId)
+					if err != nil {
+						return err
+					}
+
+					switch r := p.Result.(type) {
+					case *agentpb.JobResult_Error_:
+						res.Error = r.Error.Message
+					case *agentpb.JobResult_Echo_:
+						if err = res.SetEchoJobResult(&models.EchoJobResult{Message: r.Echo.Message}); err != nil {
+							return err
+						}
+					default:
+						// TODO
+					}
+					res.Done = true
+					return t.Update(res) // TODO
+				}); e != nil {
+					l.Errorf("Failed to save job result: +%v", err)
+				}
+			case *agentpb.JobProgress:
+				// TODO
+
 			case nil:
 				l.Warnf("Unexpected request: %v.", req)
 				disconnectReason = "unimplemented"
@@ -748,7 +773,7 @@ func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo)
 		AgentProcesses: agentProcesses,
 		BuiltinAgents:  builtinAgents,
 	}
-	l.Infof("sendSetStateRequest:\n%s", proto.MarshalTextString(state))
+	l.Debug("sendSetStateRequest:\n%s", proto.MarshalTextString(state))
 	resp := agent.channel.SendRequest(state)
 	l.Infof("SetState response: %+v.", resp)
 }
@@ -1373,13 +1398,39 @@ func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID
 // StopAction stops action with given given id.
 // TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
 func (r *Registry) StopAction(ctx context.Context, actionID string) error {
-	agent, err := r.get(actionID)
+	agent, err := r.get(actionID) // TODO is it a bug???
 	if err != nil {
 		return err
 	}
 
 	agent.channel.SendRequest(&agentpb.StopActionRequest{ActionId: actionID})
 	return nil
+}
+
+func (r *Registry) StartEchoJob(ctx context.Context, id, pmmAgentID, message string, delay time.Duration) error {
+	jobRequest := &agentpb.StartJobRequest{
+		JobId:   id,
+		Timeout: ptypes.DurationProto(20 * time.Second), // TODO
+		Job: &agentpb.StartJobRequest_Echo_{
+			Echo: &agentpb.StartJobRequest_Echo{
+				Message: message,
+				Delay:   ptypes.DurationProto(delay),
+			},
+		},
+	}
+
+	pmmAgent, err := r.get(pmmAgentID)
+	if err != nil {
+		return err
+	}
+
+	pmmAgent.channel.SendRequest(jobRequest)
+
+	return nil
+}
+
+func (r *Registry) StopJob(ctx context.Context, jobID string) {
+	// TODO
 }
 
 // check interfaces

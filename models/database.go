@@ -439,6 +439,20 @@ var databaseSchema = [][]string{
 	28: {
 		`ALTER TABLE agents ADD COLUMN disabled_collectors VARCHAR[]`,
 	},
+	29: {
+		`CREATE TABLE job_results (
+			id VARCHAR NOT NULL,
+			pmm_agent_id VARCHAR CHECK (pmm_agent_id <> ''),
+			done BOOLEAN NOT NULL,
+			error VARCHAR NOT NULL,
+			result TEXT NOT NULL,
+
+			created_at TIMESTAMP NOT NULL,
+			updated_at TIMESTAMP NOT NULL,
+
+			PRIMARY KEY (id)
+		)`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^

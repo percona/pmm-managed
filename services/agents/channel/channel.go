@@ -222,6 +222,17 @@ func (c *Channel) runReceiver() {
 				Payload: p.ActionResult,
 			}
 
+		case *agentpb.AgentMessage_JobResult:
+			c.requests <- &AgentRequest{
+				ID:      msg.Id,
+				Payload: p.JobResult,
+			}
+		case *agentpb.AgentMessage_JobProgress:
+			c.requests <- &AgentRequest{
+				ID:      msg.Id,
+				Payload: p.JobProgress,
+			}
+
 		// responses
 		case *agentpb.AgentMessage_Pong:
 			c.publish(msg.Id, p.Pong)
@@ -231,6 +242,12 @@ func (c *Channel) runReceiver() {
 			c.publish(msg.Id, p.StartAction)
 		case *agentpb.AgentMessage_StopAction:
 			c.publish(msg.Id, p.StopAction)
+		case *agentpb.AgentMessage_StartJob:
+			c.publish(msg.Id, p.StartJob)
+		case *agentpb.AgentMessage_StopJob:
+			c.publish(msg.Id, p.StopJob)
+		case *agentpb.AgentMessage_JobStatus:
+			c.publish(msg.Id, p.JobStatus)
 		case *agentpb.AgentMessage_CheckConnection:
 			c.publish(msg.Id, p.CheckConnection)
 
