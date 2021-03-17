@@ -70,7 +70,8 @@ type CreateArtifactParams struct {
 	Status     BackupStatus
 }
 
-func (p *CreateArtifactParams) validate() error {
+// Validate validates params used for creating an artifact entry.
+func (p *CreateArtifactParams) Validate() error {
 	if p.Name == "" {
 		return errors.Wrap(ErrInvalidArgument, "name shouldn't be empty")
 	}
@@ -83,20 +84,13 @@ func (p *CreateArtifactParams) validate() error {
 	if p.ServiceID == "" {
 		return errors.Wrap(ErrInvalidArgument, "service_id shouldn't be empty")
 	}
-	switch p.DataModel {
-	case PhysicalDataModel:
-	case LogicalDataModel:
-	default:
-		return errors.Wrapf(ErrInvalidArgument, "invalid data model '%s'", p.DataModel)
+
+	if err := p.DataModel.Validate(); err != nil {
+		return err
 	}
-	switch p.Status {
-	case PendingBackupStatus:
-	case InProgressBackupStatus:
-	case PausedBackupStatus:
-	case SuccessBackupStatus:
-	case ErrorBackupStatus:
-	default:
-		return errors.Wrapf(ErrInvalidArgument, "invalid status '%s'", p.Status)
+
+	if err := p.Status.Validate(); err != nil {
+		return err
 	}
 
 	return nil
@@ -104,7 +98,7 @@ func (p *CreateArtifactParams) validate() error {
 
 // CreateArtifact creates artifact entry in DB.
 func CreateArtifact(q *reform.Querier, params CreateArtifactParams) (*Artifact, error) {
-	if err := params.validate(); err != nil {
+	if err := params.Validate(); err != nil {
 		return nil, err
 	}
 

@@ -19,6 +19,7 @@ package models
 import (
 	"time"
 
+	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 )
 
@@ -33,6 +34,18 @@ const (
 	LogicalDataModel  DataModel = "logical"
 )
 
+// Validate validates data model.
+func (dm DataModel) Validate() error {
+	switch dm {
+	case PhysicalDataModel:
+	case LogicalDataModel:
+	default:
+		return errors.Wrapf(ErrInvalidArgument, "invalid data model '%s'", dm)
+	}
+
+	return nil
+}
+
 // BackupStatus shows current status of backup.
 type BackupStatus string
 
@@ -44,6 +57,21 @@ const (
 	SuccessBackupStatus    BackupStatus = "success"
 	ErrorBackupStatus      BackupStatus = "error"
 )
+
+// Validate validates backup status.
+func (bs BackupStatus) Validate() error {
+	switch bs {
+	case PendingBackupStatus:
+	case InProgressBackupStatus:
+	case PausedBackupStatus:
+	case SuccessBackupStatus:
+	case ErrorBackupStatus:
+	default:
+		return errors.Wrapf(ErrInvalidArgument, "invalid status '%s'", bs)
+	}
+
+	return nil
+}
 
 // Artifact represents result of a backup.
 //reform:artifacts
