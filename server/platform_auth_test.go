@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/brianvoe/gofakeit"
+	"github.com/brianvoe/gofakeit/v6"
 	serverClient "github.com/percona/pmm/api/serverpb/json/client"
 	"github.com/percona/pmm/api/serverpb/json/client/server"
 	"github.com/stretchr/testify/require"

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/AlekSi/pointer"
-	"github.com/brianvoe/gofakeit"
+	"github.com/brianvoe/gofakeit/v6"
 	"github.com/percona-platform/saas/pkg/alert"
 	templatesClient "github.com/percona/pmm/api/managementpb/ia/json/client"
 	"github.com/percona/pmm/api/managementpb/ia/json/client/rules"
