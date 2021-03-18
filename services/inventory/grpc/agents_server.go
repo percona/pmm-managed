@@ -149,6 +149,8 @@ func (s *agentsServer) GetAgent(ctx context.Context, req *inventorypb.GetAgentRe
 		res.Agent = &inventorypb.GetAgentResponse_RdsExporter{RdsExporter: agent}
 	case *inventorypb.ExternalExporter:
 		res.Agent = &inventorypb.GetAgentResponse_ExternalExporter{ExternalExporter: agent}
+	case *inventorypb.AzureDatabaseExporter:
+		res.Agent = &inventorypb.GetAgentResponse_AzureDatabaseExporter{AzureDatabaseExporter: agent}
 	case *inventorypb.VMAgent:
 		// skip it, fix later if needed.
 	default:
