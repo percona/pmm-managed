@@ -111,6 +111,7 @@ type Agent struct {
 	AzureDatabaseClientSecret   *string `reform:"azure_database_client_secret"`
 	AzureDatabaseTenantID       *string `reform:"azure_database_tenant_id"`
 	AzureDatabaseSubscriptionID *string `reform:"azure_database_subscription_id"`
+	AzureDatabaseExporterType   *string `reform:"azure_database_exporter_type"`
 
 	// TableCount stores last known table count. NULL if unknown.
 	TableCount *int32 `reform:"table_count"`
