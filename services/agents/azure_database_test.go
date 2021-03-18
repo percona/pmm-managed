@@ -50,7 +50,7 @@ func TestAzureExporterConfig(t *testing.T) {
 		AzureDatabaseClientSecret:   pointer.ToString("azure_database_client_secret"),
 		AzureDatabaseTenantID:       pointer.ToString("azure_database_tenant_id"),
 		AzureDatabaseSubscriptionID: pointer.ToString("azure_database_subscription_id"),
-		AzureDatabaseExporterType:   pointer.ToString("mysql"),
+		AzureDatabaseResourceType:   pointer.ToString("mysql"),
 	}
 
 	actual, err := azureDatabaseExporterConfig(agent, redactSecrets)

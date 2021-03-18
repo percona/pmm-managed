@@ -850,6 +850,7 @@ func (as *AgentsService) ChangeExternalExporter(req *inventorypb.ChangeExternalE
 // AddAzureDatabaseExporter inserts azure_database_exporter Agent with given parameters.
 func (as *AgentsService) AddAzureDatabaseExporter(ctx context.Context, req *inventorypb.AddAzureDatabaseExporterRequest) (*inventorypb.AzureDatabaseExporter, error) {
 	var res *inventorypb.AzureDatabaseExporter
+
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 		params := &models.CreateAgentParams{
 			PMMAgentID:                  req.PmmAgentId,
@@ -858,6 +859,7 @@ func (as *AgentsService) AddAzureDatabaseExporter(ctx context.Context, req *inve
 			AzureDatabaseClientSecret:   req.AzureDatabaseClientSecret,
 			AzureDatabaseTenantID:       req.AzureDatabaseTenantId,
 			AzureDatabaseSubscriptionID: req.AzureDatabaseSubscriptionId,
+			AzureDatabaseResourceType:   req.AzureDatabaseResourceType,
 			CustomLabels:                req.CustomLabels,
 			PushMetrics:                 req.PushMetrics,
 		}

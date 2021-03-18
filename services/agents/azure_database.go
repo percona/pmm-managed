@@ -68,9 +68,9 @@ func azureDatabaseExporterConfig(exporter *models.Agent, redactMode redactMode) 
 		return nil, err
 	}
 
-	exporterType := pointer.GetString(exporter.AzureDatabaseExporterType)
+	resourceType := pointer.GetString(exporter.AzureDatabaseResourceType)
 	var resourceTypes string
-	switch exporterType {
+	switch resourceType {
 	case "mysql":
 		resourceTypes = `    resource_types:
       - "Microsoft.DBforMySQL/servers"
