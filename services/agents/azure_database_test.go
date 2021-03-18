@@ -28,6 +28,7 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
+//RERUN
 func TestAzureExporterConfig(t *testing.T) {
 	node1 := &models.Node{
 		NodeID:    "/node_id/node1",
