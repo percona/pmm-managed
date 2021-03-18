@@ -507,6 +507,7 @@ type CreateAgentParams struct {
 	AzureDatabaseClientSecret      string
 	AzureDatabaseTenantID          string
 	AzureDatabaseSubscriptionID    string
+	AzureDatabaseResourceType      string
 	PushMetrics                    bool
 	DisableCollectors              []string
 }
@@ -564,6 +565,7 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 		AzureDatabaseClientSecret:      pointer.ToStringOrNil(params.AzureDatabaseClientSecret),
 		AzureDatabaseTenantID:          pointer.ToStringOrNil(params.AzureDatabaseTenantID),
 		AzureDatabaseSubscriptionID:    pointer.ToStringOrNil(params.AzureDatabaseSubscriptionID),
+		AzureDatabaseResourceType:      pointer.ToStringOrNil(params.AzureDatabaseResourceType),
 		PushMetrics:                    params.PushMetrics,
 		DisabledCollectors:             params.DisableCollectors,
 	}

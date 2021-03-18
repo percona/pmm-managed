@@ -51,7 +51,7 @@ func (v *agentTableType) Columns() []string {
 		"azure_database_client_secret",
 		"azure_database_tenant_id",
 		"azure_database_subscription_id",
-		"azure_database_exporter_type",
+		"azure_database_resource_type",
 		"table_count",
 		"table_count_tablestats_group_limit",
 		"query_examples_disabled",
@@ -110,7 +110,7 @@ var AgentTable = &agentTableType{
 			{Name: "AzureDatabaseClientSecret", Type: "*string", Column: "azure_database_client_secret"},
 			{Name: "AzureDatabaseTenantID", Type: "*string", Column: "azure_database_tenant_id"},
 			{Name: "AzureDatabaseSubscriptionID", Type: "*string", Column: "azure_database_subscription_id"},
-			{Name: "AzureDatabaseExporterType", Type: "*string", Column: "azure_database_exporter_type"},
+			{Name: "AzureDatabaseResourceType", Type: "*string", Column: "azure_database_resource_type"},
 			{Name: "TableCount", Type: "*int32", Column: "table_count"},
 			{Name: "TableCountTablestatsGroupLimit", Type: "int32", Column: "table_count_tablestats_group_limit"},
 			{Name: "QueryExamplesDisabled", Type: "bool", Column: "query_examples_disabled"},
@@ -154,7 +154,7 @@ func (s Agent) String() string {
 	res[20] = "AzureDatabaseClientSecret: " + reform.Inspect(s.AzureDatabaseClientSecret, true)
 	res[21] = "AzureDatabaseTenantID: " + reform.Inspect(s.AzureDatabaseTenantID, true)
 	res[22] = "AzureDatabaseSubscriptionID: " + reform.Inspect(s.AzureDatabaseSubscriptionID, true)
-	res[23] = "AzureDatabaseExporterType: " + reform.Inspect(s.AzureDatabaseExporterType, true)
+	res[23] = "AzureDatabaseResourceType: " + reform.Inspect(s.AzureDatabaseResourceType, true)
 	res[24] = "TableCount: " + reform.Inspect(s.TableCount, true)
 	res[25] = "TableCountTablestatsGroupLimit: " + reform.Inspect(s.TableCountTablestatsGroupLimit, true)
 	res[26] = "QueryExamplesDisabled: " + reform.Inspect(s.QueryExamplesDisabled, true)
@@ -196,7 +196,7 @@ func (s *Agent) Values() []interface{} {
 		s.AzureDatabaseClientSecret,
 		s.AzureDatabaseTenantID,
 		s.AzureDatabaseSubscriptionID,
-		s.AzureDatabaseExporterType,
+		s.AzureDatabaseResourceType,
 		s.TableCount,
 		s.TableCountTablestatsGroupLimit,
 		s.QueryExamplesDisabled,
@@ -238,7 +238,7 @@ func (s *Agent) Pointers() []interface{} {
 		&s.AzureDatabaseClientSecret,
 		&s.AzureDatabaseTenantID,
 		&s.AzureDatabaseSubscriptionID,
-		&s.AzureDatabaseExporterType,
+		&s.AzureDatabaseResourceType,
 		&s.TableCount,
 		&s.TableCountTablestatsGroupLimit,
 		&s.QueryExamplesDisabled,

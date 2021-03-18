@@ -445,7 +445,7 @@ var databaseSchema = [][]string{
 			ADD COLUMN azure_database_client_secret VARCHAR,
 			ADD COLUMN azure_database_tenant_id VARCHAR,
 			ADD COLUMN azure_database_subscription_id VARCHAR,
-			ADD COLUMN azure_database_exporter_type VARCHAR`,
+			ADD COLUMN azure_database_resource_type VARCHAR`,
 	},
 }
 

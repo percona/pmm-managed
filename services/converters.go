@@ -404,6 +404,7 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 			NodeId:                      nodeID,
 			Disabled:                    agent.Disabled,
 			AzureDatabaseSubscriptionId: pointer.GetString(agent.AzureDatabaseSubscriptionID),
+			AzureDatabaseResourceType:   pointer.GetString(agent.AzureDatabaseResourceType),
 			Status:                      inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
 			ListenPort:                  uint32(pointer.GetUint16(agent.ListenPort)),
 			CustomLabels:                labels,
