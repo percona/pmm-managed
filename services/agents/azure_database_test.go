@@ -31,7 +31,7 @@ import (
 func TestAzureExporterConfig(t *testing.T) {
 	node1 := &models.Node{
 		NodeID:    "/node_id/node1",
-		NodeType:  models.RemoteAzureNodeType,
+		NodeType:  models.RemoteAzureDatabaseNodeType,
 		NodeName:  "prod-mysql56",
 		NodeModel: "db.t2.micro",
 		Region:    pointer.ToString("us-east-1"),
