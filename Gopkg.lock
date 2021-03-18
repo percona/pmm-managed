@@ -10,6 +10,36 @@
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:fc0fa83004779937ecae189f8179ebdbe6bbeb2b7a344ed6ca713647da8d2e56"
+  name = "github.com/Azure/azure-sdk-for-go"
+  packages = [
+    "services/resourcegraph/mgmt/2019-04-01/resourcegraph",
+    "version",
+  ]
+  pruneopts = "NUT"
+  revision = "7ef09e38836be0eea2fee3f8bae5871426be7a9d"
+  version = "v52.4.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:79506304fc8278031cfa194acfe775ff544bc0f8c21e3e6f7973c718cc7a7270"
+  name = "github.com/Azure/go-autorest"
+  packages = [
+    ".",
+    "autorest",
+    "autorest/adal",
+    "autorest/azure",
+    "autorest/azure/auth",
+    "autorest/azure/cli",
+    "autorest/date",
+    "autorest/validation",
+    "logger",
+    "tracing",
+  ]
+  pruneopts = "NUT"
+  revision = "c7f947c0610de1bc279f76e6d453353f95cd1bfa"
+
+[[projects]]
   branch = "master"
   digest = "1:42d4dcc25a908bb5a54ac91cd204c7d15651367f5751c569ccab8097b2f61204"
   name = "github.com/BurntSushi/go-sumtype"
@@ -131,6 +161,22 @@
   pruneopts = "NUT"
   revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
   version = "v1.1.1"
+
+[[projects]]
+  digest = "1:59c7cc76eb7f7987e79326d827d1f6ef20b9adad6ca7e8e968b1845541150d46"
+  name = "github.com/dimchansky/utfbom"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "6ae8f945ca96f30defc7e8ab12ec5d10cf86ded4"
+  version = "v1.1.1"
+
+[[projects]]
+  digest = "1:09bd3999160f4b5c5bd4a991cc07a9c5bb017b195a30dc9d182a450a0b6a27ac"
+  name = "github.com/form3tech-oss/jwt-go"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "9162a5abdbc046b7c8b03ee90052cee67e25caa7"
+  version = "v3.2.2"
 
 [[projects]]
   digest = "1:82ebaeef8f2da43f9c4544f05d1b0dd987189a11e444e013e6c9e529235b7504"
@@ -367,6 +413,14 @@
   version = "v1.0.1"
 
 [[projects]]
+  digest = "1:f9f72e583aaacf1d1ac5d6121abd4afd3c690baa9e14e1d009df26bf831ba347"
+  name = "github.com/mitchellh/go-homedir"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "af06845cf3004701891bf4fdb884bfe4920b3727"
+  version = "v1.1.0"
+
+[[projects]]
   digest = "1:40709da827caf66d1421f7e7251ed840c1c04423597041332d01797403280e49"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
@@ -408,8 +462,8 @@
   revision = "c158e23a172f892cc389233858238449efec1dbb"
 
 [[projects]]
-  branch = "PMM-2.0"
-  digest = "1:6c29de38d29e6cc13676f607480696885a4be1c835045336cde345eb90642500"
+  branch = "PMM-7498-discovery-azure"
+  digest = "1:5c46b04c492e55b741050e0564fce1d2038cd023d426f805fc26e9b98246718b"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -433,7 +487,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "37c694d4aa243ce9f1345bec9da75462e1c2a074"
+  revision = "3d19b3259a724d52020cd0a09a56ac388c6e3f53"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
@@ -575,6 +629,17 @@
   ]
   pruneopts = "NUT"
   revision = "be5394c419b6941c14d194a98925a71512f8f979"
+
+[[projects]]
+  branch = "master"
+  digest = "1:3c9c113a5e5475facaa56d1690def66c4b5077d1c57c190c180835cae6440118"
+  name = "golang.org/x/crypto"
+  packages = [
+    "pkcs12",
+    "pkcs12/internal/rc2",
+  ]
+  pruneopts = "NUT"
+  revision = "e6e6c4f2bb5b5887c7f7dd52f01ea7b2fbeb297d"
 
 [[projects]]
   digest = "1:467bb8fb8fa786448b8d486cd0bb7c1a5577dcd7310441aa02a20110cd9f727d"
@@ -842,6 +907,9 @@
   analyzer-version = 1
   input-imports = [
     "github.com/AlekSi/pointer",
+    "github.com/Azure/azure-sdk-for-go/services/resourcegraph/mgmt/2019-04-01/resourcegraph",
+    "github.com/Azure/go-autorest/autorest/azure",
+    "github.com/Azure/go-autorest/autorest/azure/auth",
     "github.com/BurntSushi/go-sumtype",
     "github.com/aws/aws-sdk-go/aws",
     "github.com/aws/aws-sdk-go/aws/awserr",
