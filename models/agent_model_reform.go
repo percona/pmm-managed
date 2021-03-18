@@ -51,6 +51,7 @@ func (v *agentTableType) Columns() []string {
 		"azure_database_client_secret",
 		"azure_database_tenant_id",
 		"azure_database_subscription_id",
+		"azure_database_exporter_type",
 		"table_count",
 		"table_count_tablestats_group_limit",
 		"query_examples_disabled",
@@ -109,6 +110,7 @@ var AgentTable = &agentTableType{
 			{Name: "AzureDatabaseClientSecret", Type: "*string", Column: "azure_database_client_secret"},
 			{Name: "AzureDatabaseTenantID", Type: "*string", Column: "azure_database_tenant_id"},
 			{Name: "AzureDatabaseSubscriptionID", Type: "*string", Column: "azure_database_subscription_id"},
+			{Name: "AzureDatabaseExporterType", Type: "*string", Column: "azure_database_exporter_type"},
 			{Name: "TableCount", Type: "*int32", Column: "table_count"},
 			{Name: "TableCountTablestatsGroupLimit", Type: "int32", Column: "table_count_tablestats_group_limit"},
 			{Name: "QueryExamplesDisabled", Type: "bool", Column: "query_examples_disabled"},
@@ -128,7 +130,7 @@ var AgentTable = &agentTableType{
 
 // String returns a string representation of this struct or record.
 func (s Agent) String() string {
-	res := make([]string, 34)
+	res := make([]string, 35)
 	res[0] = "AgentID: " + reform.Inspect(s.AgentID, true)
 	res[1] = "AgentType: " + reform.Inspect(s.AgentType, true)
 	res[2] = "RunsOnNodeID: " + reform.Inspect(s.RunsOnNodeID, true)
@@ -152,17 +154,18 @@ func (s Agent) String() string {
 	res[20] = "AzureDatabaseClientSecret: " + reform.Inspect(s.AzureDatabaseClientSecret, true)
 	res[21] = "AzureDatabaseTenantID: " + reform.Inspect(s.AzureDatabaseTenantID, true)
 	res[22] = "AzureDatabaseSubscriptionID: " + reform.Inspect(s.AzureDatabaseSubscriptionID, true)
-	res[23] = "TableCount: " + reform.Inspect(s.TableCount, true)
-	res[24] = "TableCountTablestatsGroupLimit: " + reform.Inspect(s.TableCountTablestatsGroupLimit, true)
-	res[25] = "QueryExamplesDisabled: " + reform.Inspect(s.QueryExamplesDisabled, true)
-	res[26] = "MaxQueryLogSize: " + reform.Inspect(s.MaxQueryLogSize, true)
-	res[27] = "MetricsPath: " + reform.Inspect(s.MetricsPath, true)
-	res[28] = "MetricsScheme: " + reform.Inspect(s.MetricsScheme, true)
-	res[29] = "RDSBasicMetricsDisabled: " + reform.Inspect(s.RDSBasicMetricsDisabled, true)
-	res[30] = "RDSEnhancedMetricsDisabled: " + reform.Inspect(s.RDSEnhancedMetricsDisabled, true)
-	res[31] = "PushMetrics: " + reform.Inspect(s.PushMetrics, true)
-	res[32] = "DisabledCollectors: " + reform.Inspect(s.DisabledCollectors, true)
-	res[33] = "MongoDBOptions: " + reform.Inspect(s.MongoDBOptions, true)
+	res[23] = "AzureDatabaseExporterType: " + reform.Inspect(s.AzureDatabaseExporterType, true)
+	res[24] = "TableCount: " + reform.Inspect(s.TableCount, true)
+	res[25] = "TableCountTablestatsGroupLimit: " + reform.Inspect(s.TableCountTablestatsGroupLimit, true)
+	res[26] = "QueryExamplesDisabled: " + reform.Inspect(s.QueryExamplesDisabled, true)
+	res[27] = "MaxQueryLogSize: " + reform.Inspect(s.MaxQueryLogSize, true)
+	res[28] = "MetricsPath: " + reform.Inspect(s.MetricsPath, true)
+	res[29] = "MetricsScheme: " + reform.Inspect(s.MetricsScheme, true)
+	res[30] = "RDSBasicMetricsDisabled: " + reform.Inspect(s.RDSBasicMetricsDisabled, true)
+	res[31] = "RDSEnhancedMetricsDisabled: " + reform.Inspect(s.RDSEnhancedMetricsDisabled, true)
+	res[32] = "PushMetrics: " + reform.Inspect(s.PushMetrics, true)
+	res[33] = "DisabledCollectors: " + reform.Inspect(s.DisabledCollectors, true)
+	res[34] = "MongoDBOptions: " + reform.Inspect(s.MongoDBOptions, true)
 	return strings.Join(res, ", ")
 }
 
@@ -193,6 +196,7 @@ func (s *Agent) Values() []interface{} {
 		s.AzureDatabaseClientSecret,
 		s.AzureDatabaseTenantID,
 		s.AzureDatabaseSubscriptionID,
+		s.AzureDatabaseExporterType,
 		s.TableCount,
 		s.TableCountTablestatsGroupLimit,
 		s.QueryExamplesDisabled,
@@ -234,6 +238,7 @@ func (s *Agent) Pointers() []interface{} {
 		&s.AzureDatabaseClientSecret,
 		&s.AzureDatabaseTenantID,
 		&s.AzureDatabaseSubscriptionID,
+		&s.AzureDatabaseExporterType,
 		&s.TableCount,
 		&s.TableCountTablestatsGroupLimit,
 		&s.QueryExamplesDisabled,

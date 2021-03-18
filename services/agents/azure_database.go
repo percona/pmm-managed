@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"text/template"
 
+	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
 
@@ -40,8 +41,7 @@ resource_groups:
   - resource_group: "pmmdemo"
     aggregations:
       - Average
-    resource_types:
-      - "Microsoft.DBforMySQL/servers"
+{{ .AzureDatabaseResourceTypes }}
     metrics:
       - name: "cpu_percent"
       - name: "memory_percent"
@@ -58,6 +58,7 @@ type azureDatabaseCredentials struct {
 	AzureDatabaseClientSecret   string
 	AzureDatabaseTenantID       string
 	AzureDatabaseSubscriptionID string
+	AzureDatabaseResourceTypes  string
 }
 
 // azureDatabaseExporterConfig returns configuration of azure_database_exporter process.
@@ -67,12 +68,30 @@ func azureDatabaseExporterConfig(exporter *models.Agent, redactMode redactMode) 
 		return nil, err
 	}
 
+	exporterType := pointer.GetString(exporter.AzureDatabaseExporterType)
+	var resourceTypes string
+	switch exporterType {
+	case "mysql":
+		resourceTypes = `    resource_types:
+      - "Microsoft.DBforMySQL/servers"
+      - "Microsoft.DBforMySQL/felexibleServers"`
+	case "maria":
+		resourceTypes = `    resource_types:
+      - "Microsoft.DBforMariaDB/servers"`
+	case "postgres":
+		resourceTypes = `    resource_types:
+      - "Microsoft.DBforPostgreSQL/servers"
+      - "Microsoft.DBforPostgreSQL/flexibleServers"
+      - "Microsoft.DBforPostgreSQL/serversv2"`
+	}
+
 	var config bytes.Buffer
 	credentials := azureDatabaseCredentials{
-		*exporter.AzureDatabaseClientID,
-		*exporter.AzureDatabaseClientSecret,
-		*exporter.AzureDatabaseTenantID,
-		*exporter.AzureDatabaseSubscriptionID,
+		pointer.GetString(exporter.AzureDatabaseClientID),
+		pointer.GetString(exporter.AzureDatabaseClientSecret),
+		pointer.GetString(exporter.AzureDatabaseTenantID),
+		pointer.GetString(exporter.AzureDatabaseSubscriptionID),
+		resourceTypes,
 	}
 	err = t.Execute(&config, credentials)
 	if err != nil {
