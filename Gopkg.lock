@@ -439,7 +439,7 @@
   revision = "d0e2249b531c97d9ef898c2401dac14fc2da0006"
 
 [[projects]]
-  branch = "PMM-7517-artifacts-list-api"
+  branch = "PMM-2.0"
   digest = "1:5e6e8c2287d1db167275e311f6b6e91eee4d37d01d04d46d2ce01efe4b8dcd9f"
   name = "github.com/percona/pmm"
   packages = [
@@ -464,7 +464,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "ccae28bc2654afc42247c2429089778826da15ea"
+  revision = "a23a0bdf007149f12ca2a843c983f29f34ed07bd"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
