@@ -776,7 +776,7 @@ func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo)
 		AgentProcesses: agentProcesses,
 		BuiltinAgents:  builtinAgents,
 	}
-	l.Debug("sendSetStateRequest:\n%s", proto.MarshalTextString(state))
+	l.Debugf("sendSetStateRequest:\n%s", proto.MarshalTextString(state))
 	resp := agent.channel.SendRequest(state)
 	l.Infof("SetState response: %+v.", resp)
 }
