@@ -283,18 +283,18 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 							return err
 						}
 					default:
-						// TODO
+						return errors.Errorf("unexpected job result type: %T", r)
 					}
 					res.Done = true
 					return t.Update(res) // TODO
 				}); e != nil {
-					l.Errorf("Failed to save job result: +%v", err)
+					l.Errorf("Failed to save job result: %+v", err)
 				}
 			case *agentpb.JobProgress:
 				// TODO
 
 			case nil:
-				l.Warnf("Unexpected request: %v.", req)
+				l.Warnf("Unexpected request: %+v.", req)
 				disconnectReason = "unimplemented"
 				return status.Error(codes.Unimplemented, "Unexpected request payload.")
 			}
@@ -1407,10 +1407,10 @@ func (r *Registry) StopAction(ctx context.Context, actionID string) error {
 	return nil
 }
 
-func (r *Registry) StartEchoJob(ctx context.Context, id, pmmAgentID, message string, delay time.Duration) error {
-	jobRequest := &agentpb.StartJobRequest{
+func (r *Registry) StartEchoJob(id, pmmAgentID string, timeout time.Duration, message string, delay time.Duration) error {
+	req := &agentpb.StartJobRequest{
 		JobId:   id,
-		Timeout: ptypes.DurationProto(20 * time.Second), // TODO
+		Timeout: ptypes.DurationProto(timeout),
 		Job: &agentpb.StartJobRequest_Echo_{
 			Echo: &agentpb.StartJobRequest_Echo{
 				Message: message,
@@ -1424,13 +1424,30 @@ func (r *Registry) StartEchoJob(ctx context.Context, id, pmmAgentID, message str
 		return err
 	}
 
-	pmmAgent.channel.SendRequest(jobRequest)
+	pmmAgent.channel.SendRequest(req)
 
 	return nil
 }
 
-func (r *Registry) StopJob(ctx context.Context, jobID string) {
-	// TODO
+func (r *Registry) StopJob(jobID string) error {
+	jobResult, err := models.FindJobResultByID(r.db.Querier, jobID)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if jobResult.Done {
+		// Job already finished
+		return nil
+	}
+
+	pmmAgent, err := r.get(jobResult.PMMAgentID)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	pmmAgent.channel.SendRequest(&agentpb.StopJobRequest{JobId: jobID})
+
+	return nil
 }
 
 // check interfaces

@@ -30,6 +30,7 @@ func (v *jobResultTableType) Columns() []string {
 	return []string{
 		"id",
 		"pmm_agent_id",
+		"type",
 		"done",
 		"error",
 		"result",
@@ -61,6 +62,7 @@ var JobResultTable = &jobResultTableType{
 		Fields: []parse.FieldInfo{
 			{Name: "ID", Type: "string", Column: "id"},
 			{Name: "PMMAgentID", Type: "string", Column: "pmm_agent_id"},
+			{Name: "Type", Type: "JobType", Column: "type"},
 			{Name: "Done", Type: "bool", Column: "done"},
 			{Name: "Error", Type: "string", Column: "error"},
 			{Name: "Result", Type: "[]uint8", Column: "result"},
@@ -74,14 +76,15 @@ var JobResultTable = &jobResultTableType{
 
 // String returns a string representation of this struct or record.
 func (s JobResult) String() string {
-	res := make([]string, 7)
+	res := make([]string, 8)
 	res[0] = "ID: " + reform.Inspect(s.ID, true)
 	res[1] = "PMMAgentID: " + reform.Inspect(s.PMMAgentID, true)
-	res[2] = "Done: " + reform.Inspect(s.Done, true)
-	res[3] = "Error: " + reform.Inspect(s.Error, true)
-	res[4] = "Result: " + reform.Inspect(s.Result, true)
-	res[5] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
-	res[6] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
+	res[2] = "Type: " + reform.Inspect(s.Type, true)
+	res[3] = "Done: " + reform.Inspect(s.Done, true)
+	res[4] = "Error: " + reform.Inspect(s.Error, true)
+	res[5] = "Result: " + reform.Inspect(s.Result, true)
+	res[6] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
+	res[7] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
 	return strings.Join(res, ", ")
 }
 
@@ -91,6 +94,7 @@ func (s *JobResult) Values() []interface{} {
 	return []interface{}{
 		s.ID,
 		s.PMMAgentID,
+		s.Type,
 		s.Done,
 		s.Error,
 		s.Result,
@@ -105,6 +109,7 @@ func (s *JobResult) Pointers() []interface{} {
 	return []interface{}{
 		&s.ID,
 		&s.PMMAgentID,
+		&s.Type,
 		&s.Done,
 		&s.Error,
 		&s.Result,

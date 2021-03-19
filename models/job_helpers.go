@@ -28,8 +28,12 @@ func FindJobResultByID(q *reform.Querier, id string) (*JobResult, error) {
 }
 
 // CreateJobResult stores an action result in action results storage.
-func CreateJobResult(q *reform.Querier, pmmAgentID string) (*JobResult, error) {
-	result := &JobResult{ID: "/job_id/" + uuid.New().String(), PMMAgentID: pmmAgentID}
+func CreateJobResult(q *reform.Querier, pmmAgentID string, jobType JobType) (*JobResult, error) {
+	result := &JobResult{
+		ID: "/job_id/" + uuid.New().String(),
+		PMMAgentID: pmmAgentID,
+		Type: jobType,
+	}
 	if err := q.Insert(result); err != nil {
 		return nil, errors.WithStack(err)
 	}

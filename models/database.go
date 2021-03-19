@@ -443,6 +443,7 @@ var databaseSchema = [][]string{
 		`CREATE TABLE job_results (
 			id VARCHAR NOT NULL,
 			pmm_agent_id VARCHAR CHECK (pmm_agent_id <> ''),
+			type VARCHAR NOT NULL,
 			done BOOLEAN NOT NULL,
 			error VARCHAR NOT NULL,
 			result TEXT NOT NULL,

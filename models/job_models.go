@@ -14,11 +14,20 @@ type EchoJobResult struct {
 	Message string `json:"message"`
 }
 
+// JobType represents job type.
+type JobType string
+
+// Supported job types.
+const (
+	Echo = JobType("echo")
+)
+
 // JobResult describes a job result which is storing in persistent storage.
 //reform:job_results
 type JobResult struct {
 	ID         string    `reform:"id,pk"`
 	PMMAgentID string    `reform:"pmm_agent_id"`
+	Type       JobType   `reform:"type"`
 	Done       bool      `reform:"done"`
 	Error      string    `reform:"error"`
 	Result     []byte    `reform:"result"`
