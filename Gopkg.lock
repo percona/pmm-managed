@@ -409,7 +409,7 @@
 
 [[projects]]
   branch = "PMM-7590-jobs-api"
-  digest = "1:cfa7055577d9015d525898810be82aa5fdb9eda32b9acd73ef1ed7d60a3feb8a"
+  digest = "1:f9a1e353926ee2926a7ea46a487e78c376832357c88edca961093567694d26d8"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -433,7 +433,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "9e801cd12ce2a2205550e8e72bb8220dd85500ee"
+  revision = "5f79d033ebf4b86569c9d7f121d0d112e84a81ae"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
