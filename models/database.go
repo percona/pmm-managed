@@ -440,6 +440,20 @@ var databaseSchema = [][]string{
 		`ALTER TABLE agents ADD COLUMN disabled_collectors VARCHAR[]`,
 	},
 	29: {
+		`CREATE TABLE artifacts (
+			id VARCHAR NOT NULL,
+			name VARCHAR NOT NULL CHECK (name <> ''),
+			vendor VARCHAR NOT NULL CHECK (vendor <> ''),
+			location_id VARCHAR NOT NULL CHECK (location_id <> ''),
+			service_id VARCHAR NOT NULL CHECK (service_id <> ''),
+			data_model VARCHAR NOT NULL CHECK (data_model <> ''),
+			status VARCHAR NOT NULL CHECK (status <> ''),
+			created_at TIMESTAMP NOT NULL,
+
+			PRIMARY KEY (id)
+		)`,
+	},
+	30: {
 		`CREATE TABLE job_results (
 			id VARCHAR NOT NULL,
 			pmm_agent_id VARCHAR CHECK (pmm_agent_id <> ''),
@@ -450,8 +464,6 @@ var databaseSchema = [][]string{
 
 			created_at TIMESTAMP NOT NULL,
 			updated_at TIMESTAMP NOT NULL,
-
-			PRIMARY KEY (id)
 		)`,
 	},
 }
