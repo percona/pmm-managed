@@ -47,6 +47,8 @@ func (v *agentTableType) Columns() []string {
 		"tls_skip_verify",
 		"aws_access_key",
 		"aws_secret_key",
+		"azure_credentials",
+		"azure_database_resource_type",
 		"table_count",
 		"table_count_tablestats_group_limit",
 		"query_examples_disabled",
@@ -101,6 +103,8 @@ var AgentTable = &agentTableType{
 			{Name: "TLSSkipVerify", Type: "bool", Column: "tls_skip_verify"},
 			{Name: "AWSAccessKey", Type: "*string", Column: "aws_access_key"},
 			{Name: "AWSSecretKey", Type: "*string", Column: "aws_secret_key"},
+			{Name: "AzureCredentials", Type: "*string", Column: "azure_credentials"},
+			{Name: "AzureDatabaseResourceType", Type: "*string", Column: "azure_database_resource_type"},
 			{Name: "TableCount", Type: "*int32", Column: "table_count"},
 			{Name: "TableCountTablestatsGroupLimit", Type: "int32", Column: "table_count_tablestats_group_limit"},
 			{Name: "QueryExamplesDisabled", Type: "bool", Column: "query_examples_disabled"},
@@ -120,7 +124,7 @@ var AgentTable = &agentTableType{
 
 // String returns a string representation of this struct or record.
 func (s Agent) String() string {
-	res := make([]string, 30)
+	res := make([]string, 32)
 	res[0] = "AgentID: " + reform.Inspect(s.AgentID, true)
 	res[1] = "AgentType: " + reform.Inspect(s.AgentType, true)
 	res[2] = "RunsOnNodeID: " + reform.Inspect(s.RunsOnNodeID, true)
@@ -140,17 +144,19 @@ func (s Agent) String() string {
 	res[16] = "TLSSkipVerify: " + reform.Inspect(s.TLSSkipVerify, true)
 	res[17] = "AWSAccessKey: " + reform.Inspect(s.AWSAccessKey, true)
 	res[18] = "AWSSecretKey: " + reform.Inspect(s.AWSSecretKey, true)
-	res[19] = "TableCount: " + reform.Inspect(s.TableCount, true)
-	res[20] = "TableCountTablestatsGroupLimit: " + reform.Inspect(s.TableCountTablestatsGroupLimit, true)
-	res[21] = "QueryExamplesDisabled: " + reform.Inspect(s.QueryExamplesDisabled, true)
-	res[22] = "MaxQueryLogSize: " + reform.Inspect(s.MaxQueryLogSize, true)
-	res[23] = "MetricsPath: " + reform.Inspect(s.MetricsPath, true)
-	res[24] = "MetricsScheme: " + reform.Inspect(s.MetricsScheme, true)
-	res[25] = "RDSBasicMetricsDisabled: " + reform.Inspect(s.RDSBasicMetricsDisabled, true)
-	res[26] = "RDSEnhancedMetricsDisabled: " + reform.Inspect(s.RDSEnhancedMetricsDisabled, true)
-	res[27] = "PushMetrics: " + reform.Inspect(s.PushMetrics, true)
-	res[28] = "DisabledCollectors: " + reform.Inspect(s.DisabledCollectors, true)
-	res[29] = "MongoDBOptions: " + reform.Inspect(s.MongoDBOptions, true)
+	res[19] = "AzureCredentials: " + reform.Inspect(s.AzureCredentials, true)
+	res[20] = "AzureDatabaseResourceType: " + reform.Inspect(s.AzureDatabaseResourceType, true)
+	res[21] = "TableCount: " + reform.Inspect(s.TableCount, true)
+	res[22] = "TableCountTablestatsGroupLimit: " + reform.Inspect(s.TableCountTablestatsGroupLimit, true)
+	res[23] = "QueryExamplesDisabled: " + reform.Inspect(s.QueryExamplesDisabled, true)
+	res[24] = "MaxQueryLogSize: " + reform.Inspect(s.MaxQueryLogSize, true)
+	res[25] = "MetricsPath: " + reform.Inspect(s.MetricsPath, true)
+	res[26] = "MetricsScheme: " + reform.Inspect(s.MetricsScheme, true)
+	res[27] = "RDSBasicMetricsDisabled: " + reform.Inspect(s.RDSBasicMetricsDisabled, true)
+	res[28] = "RDSEnhancedMetricsDisabled: " + reform.Inspect(s.RDSEnhancedMetricsDisabled, true)
+	res[29] = "PushMetrics: " + reform.Inspect(s.PushMetrics, true)
+	res[30] = "DisabledCollectors: " + reform.Inspect(s.DisabledCollectors, true)
+	res[31] = "MongoDBOptions: " + reform.Inspect(s.MongoDBOptions, true)
 	return strings.Join(res, ", ")
 }
 
@@ -177,6 +183,8 @@ func (s *Agent) Values() []interface{} {
 		s.TLSSkipVerify,
 		s.AWSAccessKey,
 		s.AWSSecretKey,
+		s.AzureCredentials,
+		s.AzureDatabaseResourceType,
 		s.TableCount,
 		s.TableCountTablestatsGroupLimit,
 		s.QueryExamplesDisabled,
@@ -214,6 +222,8 @@ func (s *Agent) Pointers() []interface{} {
 		&s.TLSSkipVerify,
 		&s.AWSAccessKey,
 		&s.AWSSecretKey,
+		&s.AzureCredentials,
+		&s.AzureDatabaseResourceType,
 		&s.TableCount,
 		&s.TableCountTablestatsGroupLimit,
 		&s.QueryExamplesDisabled,

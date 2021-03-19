@@ -485,6 +485,14 @@ func CreateExternalExporter(q *reform.Querier, params *CreateExternalExporterPar
 	return row, nil
 }
 
+// AzureCredentials params to compact store Azure Credentials.
+type AzureCredentials struct {
+	SubscriptionID string `json:"subscription_id"`
+	ClientID       string `json:"client_id"`
+	ClientSecret   string `json:"client_secret"`
+	TenantID       string `json:"tenant_id"`
+}
+
 // CreateAgentParams params for add common exporter.
 type CreateAgentParams struct {
 	PMMAgentID                     string
@@ -504,6 +512,7 @@ type CreateAgentParams struct {
 	RDSBasicMetricsDisabled        bool
 	RDSEnhancedMetricsDisabled     bool
 	AzureCredentials               string
+	AzureDatabaseResourceType      string
 	PushMetrics                    bool
 	DisableCollectors              []string
 }
@@ -557,6 +566,7 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 		AWSSecretKey:                   pointer.ToStringOrNil(params.AWSSecretKey),
 		RDSBasicMetricsDisabled:        params.RDSBasicMetricsDisabled,
 		RDSEnhancedMetricsDisabled:     params.RDSEnhancedMetricsDisabled,
+		AzureCredentials:               pointer.ToStringOrNil(params.AzureCredentials),
 		PushMetrics:                    params.PushMetrics,
 		DisabledCollectors:             params.DisableCollectors,
 	}

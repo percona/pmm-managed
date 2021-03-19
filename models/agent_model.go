@@ -107,6 +107,9 @@ type Agent struct {
 	AWSAccessKey *string `reform:"aws_access_key"`
 	AWSSecretKey *string `reform:"aws_secret_key"`
 
+	AzureCredentials          *string `reform:"azure_credentials"`
+	AzureDatabaseResourceType *string `reform:"azure_database_resource_type"`
+
 	// TableCount stores last known table count. NULL if unknown.
 	TableCount *int32 `reform:"table_count"`
 
