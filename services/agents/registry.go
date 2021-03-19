@@ -753,22 +753,6 @@ func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo)
 	l.Infof("SetState response: %+v.", resp)
 }
 
-func (r *Registry) isExternalExporterConnectionCheckSupported(q *reform.Querier, pmmAgentID string) (bool, error) {
-	pmmAgent, err := models.FindAgentByID(r.db.Querier, pmmAgentID)
-	if err != nil {
-		return false, fmt.Errorf("failed to get PMM Agent: %s.", err)
-	}
-	pmmAgentVersion, err := version.Parse(*pmmAgent.Version)
-	if err != nil {
-		return false, fmt.Errorf("failed to parse PMM agent version %q: %s", *pmmAgent.Version, err)
-	}
-
-	if pmmAgentVersion.Less(checkExternalExporterConnectionPMMVersion) {
-		return false, nil
-	}
-	return true, nil
-}
-
 // CheckConnectionToService sends request to pmm-agent to check connection to service.
 func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Querier, service *models.Service, agent *models.Agent) error {
 	// TODO: extract to a separate struct to keep Single Responsibility principles: https://jira.percona.com/browse/PMM-4932
@@ -787,7 +771,7 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 
 	// Skip check connection to external exporter with old pmm-agent.
 	if service.ServiceType == models.ExternalServiceType || service.ServiceType == models.HAProxyServiceType {
-		isCheckConnSupported, err := r.isExternalExporterConnectionCheckSupported(q, pmmAgentID)
+		isCheckConnSupported, err := r.isExternalExporterConnectionCheckSupported(pmmAgentID)
 		if err != nil {
 			return err
 		}
@@ -890,6 +874,22 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 		msg = fmt.Sprintf("timeout (%s)", msg)
 	}
 	return status.Error(codes.FailedPrecondition, fmt.Sprintf("Connection check failed: %s.", msg))
+}
+
+func (r *Registry) isExternalExporterConnectionCheckSupported(pmmAgentID string) (bool, error) {
+	pmmAgent, err := models.FindAgentByID(r.db.Querier, pmmAgentID)
+	if err != nil {
+		return false, fmt.Errorf("failed to get pmm-agent: %s.", err)
+	}
+	pmmAgentVersion, err := version.Parse(*pmmAgent.Version)
+	if err != nil {
+		return false, fmt.Errorf("failed to parse pmm-agent version %q: %s", *pmmAgent.Version, err)
+	}
+
+	if pmmAgentVersion.Less(checkExternalExporterConnectionPMMVersion) {
+		return false, nil
+	}
+	return true, nil
 }
 
 func (r *Registry) get(pmmAgentID string) (*pmmAgentInfo, error) {

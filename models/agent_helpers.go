@@ -503,6 +503,7 @@ type CreateAgentParams struct {
 	AWSSecretKey                   string
 	RDSBasicMetricsDisabled        bool
 	RDSEnhancedMetricsDisabled     bool
+	AzureCredentials               string
 	PushMetrics                    bool
 	DisableCollectors              []string
 }

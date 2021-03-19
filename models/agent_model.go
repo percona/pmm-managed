@@ -50,6 +50,7 @@ const (
 	PostgresExporterType                AgentType = "postgres_exporter"
 	ProxySQLExporterType                AgentType = "proxysql_exporter"
 	RDSExporterType                     AgentType = "rds_exporter"
+	AzureDatabaseExporterType           AgentType = "azure_database_exporter"
 	QANMySQLPerfSchemaAgentType         AgentType = "qan-mysql-perfschema-agent"
 	QANMySQLSlowlogAgentType            AgentType = "qan-mysql-slowlog-agent"
 	QANMongoDBProfilerAgentType         AgentType = "qan-mongodb-profiler-agent"
