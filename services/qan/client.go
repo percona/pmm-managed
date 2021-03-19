@@ -79,12 +79,7 @@ func collectServices(q *reform.Querier, agents map[string]*models.Agent) (map[st
 		}
 	}
 
-	services, err := models.FindServicesByIDs(q, stringset.ToSlice(serviceIDs))
-	if err != nil {
-		return nil, err
-	}
-
-	return services, nil
+	return models.FindServicesByIDs(q, stringset.ToSlice(serviceIDs))
 }
 
 // collectNodes returns Nodes referenced by Services.
