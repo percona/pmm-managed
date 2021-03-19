@@ -31,17 +31,18 @@ import (
 
 func TestArtifacts(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
-	defer func() {
+	t.Cleanup(func() {
 		require.NoError(t, sqlDB.Close())
-	}()
+	})
+
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
 	t.Run("create", func(t *testing.T) {
 		tx, err := db.Begin()
 		require.NoError(t, err)
-		defer func() {
+		t.Cleanup(func() {
 			require.NoError(t, tx.Rollback())
-		}()
+		})
 
 		q := tx.Querier
 
@@ -68,9 +69,9 @@ func TestArtifacts(t *testing.T) {
 	t.Run("list", func(t *testing.T) {
 		tx, err := db.Begin()
 		require.NoError(t, err)
-		defer func() {
+		t.Cleanup(func() {
 			require.NoError(t, tx.Rollback())
-		}()
+		})
 
 		q := tx.Querier
 
@@ -117,9 +118,9 @@ func TestArtifacts(t *testing.T) {
 	t.Run("remove", func(t *testing.T) {
 		tx, err := db.Begin()
 		require.NoError(t, err)
-		defer func() {
+		t.Cleanup(func() {
 			require.NoError(t, tx.Rollback())
-		}()
+		})
 
 		q := tx.Querier
 
@@ -146,9 +147,10 @@ func TestArtifacts(t *testing.T) {
 
 func TestArtifactValidation(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
-	defer func() {
+	t.Cleanup(func() {
 		require.NoError(t, sqlDB.Close())
-	}()
+	})
+
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
 	testCases := []struct {
@@ -244,9 +246,9 @@ func TestArtifactValidation(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			tx, err := db.Begin()
 			require.NoError(t, err)
-			defer func() {
+			t.Cleanup(func() {
 				require.NoError(t, tx.Rollback())
-			}()
+			})
 
 			q := tx.Querier
 
