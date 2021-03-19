@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brianvoe/gofakeit"
+	"github.com/brianvoe/gofakeit/v6"
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/percona/pmm/api/alertmanager/amclient"
@@ -111,6 +111,7 @@ func Transport(baseURL *url.URL, insecureTLS bool) *httptransport.Runtime {
 func init() {
 	seed := time.Now().UnixNano()
 	rand.Seed(seed)
+	gofakeit.SetGlobalFaker(gofakeit.NewCustom(NewConcurrentRand(seed)))
 	gofakeit.Seed(seed)
 
 	debugF := flag.Bool("pmm.debug", false, "Enable debug output [PMM_DEBUG].")

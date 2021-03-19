@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brianvoe/gofakeit"
+	"github.com/brianvoe/gofakeit/v6"
 	"github.com/percona/pmm/api/alertmanager/amclient"
 	"github.com/percona/pmm/api/alertmanager/amclient/alert"
 	serverClient "github.com/percona/pmm/api/serverpb/json/client"
@@ -35,6 +35,12 @@ func TestSettings(t *testing.T) {
 			Lr: "60s",
 		}
 		assert.Equal(t, expected, res.Payload.Settings.MetricsResolutions)
+		expectedSTTCheckIntervals := &server.GetSettingsOKBodySettingsSttCheckIntervals{
+			FrequentInterval: "14400s",
+			StandardInterval: "86400s",
+			RareInterval:     "280800s",
+		}
+		assert.Equal(t, expectedSTTCheckIntervals, res.Payload.Settings.SttCheckIntervals)
 		assert.Equal(t, "2592000s", res.Payload.Settings.DataRetention)
 		assert.Equal(t, []string{"aws"}, res.Payload.Settings.AWSPartitions)
 		assert.True(t, res.Payload.Settings.AlertingEnabled)
@@ -519,6 +525,51 @@ func TestSettings(t *testing.T) {
 				assert.Empty(t, res)
 			})
 
+			t.Run("STTCheckIntervalInvalid", func(t *testing.T) {
+				defer restoreSettingsDefaults(t)
+
+				res, err := serverClient.Default.Server.ChangeSettings(&server.ChangeSettingsParams{
+					Body: server.ChangeSettingsBody{
+						SttCheckIntervals: &server.ChangeSettingsParamsBodySttCheckIntervals{
+							FrequentInterval: "1",
+						},
+					},
+					Context: pmmapitests.Context,
+				})
+				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `bad Duration: time: missing unit in duration "1"`)
+				assert.Empty(t, res)
+			})
+
+			t.Run("STTCheckIntervalTooSmall", func(t *testing.T) {
+				defer restoreSettingsDefaults(t)
+
+				res, err := serverClient.Default.Server.ChangeSettings(&server.ChangeSettingsParams{
+					Body: server.ChangeSettingsBody{
+						SttCheckIntervals: &server.ChangeSettingsParamsBodySttCheckIntervals{
+							StandardInterval: "0.9s",
+						},
+					},
+					Context: pmmapitests.Context,
+				})
+				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `standard_interval: minimal resolution is 1s`)
+				assert.Empty(t, res)
+			})
+
+			t.Run("STTCheckIntervalFractional", func(t *testing.T) {
+				defer restoreSettingsDefaults(t)
+
+				res, err := serverClient.Default.Server.ChangeSettings(&server.ChangeSettingsParams{
+					Body: server.ChangeSettingsBody{
+						SttCheckIntervals: &server.ChangeSettingsParamsBodySttCheckIntervals{
+							RareInterval: "1.5s",
+						},
+					},
+					Context: pmmapitests.Context,
+				})
+				pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, `rare_interval: should be a natural number of seconds`)
+				assert.Empty(t, res)
+			})
+
 			t.Run("DataRetentionInvalid", func(t *testing.T) {
 				defer restoreSettingsDefaults(t)
 
@@ -652,6 +703,63 @@ func TestSettings(t *testing.T) {
 					assert.Equal(t, getExpected, getRes.Payload.Settings.MetricsResolutions)
 					assert.Equal(t, "864000s", res.Payload.Settings.DataRetention)
 					assert.Equal(t, []string{"aws", "aws-cn"}, res.Payload.Settings.AWSPartitions)
+				})
+			})
+
+			t.Run("STTCheckIntervalsValid", func(t *testing.T) {
+				defer restoreSettingsDefaults(t)
+
+				res, err := serverClient.Default.Server.ChangeSettings(&server.ChangeSettingsParams{
+					Body: server.ChangeSettingsBody{
+						SttCheckIntervals: &server.ChangeSettingsParamsBodySttCheckIntervals{
+							RareInterval:     "8h",
+							StandardInterval: "30m",
+							FrequentInterval: "20s",
+						},
+					},
+					Context: pmmapitests.Context,
+				})
+				require.NoError(t, err)
+				expected := &server.ChangeSettingsOKBodySettingsSttCheckIntervals{
+					RareInterval:     "28800s",
+					StandardInterval: "1800s",
+					FrequentInterval: "20s",
+				}
+				assert.Equal(t, expected, res.Payload.Settings.SttCheckIntervals)
+
+				getRes, err := serverClient.Default.Server.GetSettings(nil)
+				require.NoError(t, err)
+				getExpected := &server.GetSettingsOKBodySettingsSttCheckIntervals{
+					RareInterval:     "28800s",
+					StandardInterval: "1800s",
+					FrequentInterval: "20s",
+				}
+				assert.Equal(t, getExpected, getRes.Payload.Settings.SttCheckIntervals)
+
+				t.Run("DefaultsAreNotRestored", func(t *testing.T) {
+					defer restoreSettingsDefaults(t)
+
+					res, err := serverClient.Default.Server.ChangeSettings(&server.ChangeSettingsParams{
+						Body:    server.ChangeSettingsBody{},
+						Context: pmmapitests.Context,
+					})
+					require.NoError(t, err)
+					expected := &server.ChangeSettingsOKBodySettingsSttCheckIntervals{
+						RareInterval:     "28800s",
+						StandardInterval: "1800s",
+						FrequentInterval: "20s",
+					}
+					assert.Equal(t, expected, res.Payload.Settings.SttCheckIntervals)
+
+					// Check if the values were persisted
+					getRes, err := serverClient.Default.Server.GetSettings(nil)
+					require.NoError(t, err)
+					getExpected := &server.GetSettingsOKBodySettingsSttCheckIntervals{
+						RareInterval:     "28800s",
+						StandardInterval: "1800s",
+						FrequentInterval: "20s",
+					}
+					assert.Equal(t, getExpected, getRes.Payload.Settings.SttCheckIntervals)
 				})
 			})
 

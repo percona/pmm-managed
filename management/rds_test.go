@@ -84,4 +84,50 @@ func TestAddRds(t *testing.T) {
 		pmmapitests.RemoveServices(t, body.Mysql.ServiceID)
 		pmmapitests.RemoveNodes(t, body.Mysql.NodeID)
 	})
+
+	t.Run("AddRDSPostgres", func(t *testing.T) {
+		params := &rds.AddRDSParams{
+			Body: rds.AddRDSBody{
+				Region:                    "region",
+				Az:                        "az",
+				InstanceID:                "d752f1a9-31c9-4b8c-bb2d-d26bc000009",
+				NodeModel:                 "some-model",
+				Address:                   "some.example.rds",
+				Port:                      5432,
+				Engine:                    pointer.ToString("DISCOVER_RDS_POSTGRESQL"),
+				NodeName:                  "some-node-name-000009",
+				ServiceName:               "test-add-rds-service000009",
+				Environment:               "some-env",
+				Cluster:                   "cluster-01",
+				ReplicationSet:            "rs-01",
+				Username:                  "some-username",
+				Password:                  "some-password",
+				AWSAccessKey:              "my-aws-access-key",
+				AWSSecretKey:              "my-aws-secret-key",
+				RDSExporter:               true,
+				CustomLabels:              map[string]string{},
+				SkipConnectionCheck:       true,
+				TLS:                       false,
+				TLSSkipVerify:             false,
+				TablestatsGroupTableLimit: 2000,
+				DisableBasicMetrics:       true,
+				DisableEnhancedMetrics:    true,
+				QANPostgresqlPgstatements: true,
+			},
+			Context: pmmapitests.Context,
+		}
+		addRDSOK, err := client.Default.RDS.AddRDS(params)
+		require.NoError(t, err)
+		require.NotNil(t, addRDSOK.Payload)
+
+		body := addRDSOK.Payload
+		assert.True(t, body.RDSExporter.BasicMetricsDisabled)
+		assert.True(t, body.RDSExporter.EnhancedMetricsDisabled)
+
+		pmmapitests.RemoveAgents(t, body.PostgresqlExporter.AgentID)
+		pmmapitests.RemoveAgents(t, body.QANPostgresqlPgstatements.AgentID)
+		pmmapitests.RemoveAgents(t, body.RDSExporter.AgentID)
+		pmmapitests.RemoveServices(t, body.Postgresql.ServiceID)
+		pmmapitests.RemoveNodes(t, body.Postgresql.NodeID)
+	})
 }
