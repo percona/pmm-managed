@@ -729,6 +729,12 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		authServer.Run(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		vmalert.Run(ctx)
 	}()
 
