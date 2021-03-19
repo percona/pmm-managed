@@ -440,7 +440,7 @@
 
 [[projects]]
   branch = "PMM-7676-azure-exporter-integration"
-  digest = "1:6bd8ee593526a5a1465797fd7a4297b34c16d80a68eaf0955abbeb2cf9fa34ce"
+  digest = "1:2b31d0a773dc3066ccbd9d9ce001ccf0c677a63c4e17a6bfebe4f36d9920d47d"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -464,7 +464,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "150711e81f833e5f9d9726806abf5c26bf21c661"
+  revision = "90d72971f4bd08b0d62414c447262fe2c71acc63"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
