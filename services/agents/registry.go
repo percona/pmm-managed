@@ -279,6 +279,9 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 					case *agentpb.JobResult_Error_:
 						res.Error = r.Error.Message
 					case *agentpb.JobResult_Echo_:
+						if res.Type != models.Echo {
+							return errors.Errorf("Result type echo doesn't match job type %s", res.Type)
+						}
 						if err = res.SetEchoJobResult(&models.EchoJobResult{Message: r.Echo.Message}); err != nil {
 							return err
 						}
@@ -286,7 +289,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 						return errors.Errorf("unexpected job result type: %T", r)
 					}
 					res.Done = true
-					return t.Update(res) // TODO
+					return t.Update(res)
 				}); e != nil {
 					l.Errorf("Failed to save job result: %+v", err)
 				}
@@ -1398,7 +1401,8 @@ func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID
 // StopAction stops action with given given id.
 // TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
 func (r *Registry) StopAction(ctx context.Context, actionID string) error {
-	agent, err := r.get(actionID) // TODO is it a bug???
+	// TODO Seems that we have a bug here, we passing actionID to the method that expects pmmAgentID
+	agent, err := r.get(actionID)
 	if err != nil {
 		return err
 	}
