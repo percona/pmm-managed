@@ -129,6 +129,9 @@ type gRPCServerDeps struct {
 	alertmanager          *alertmanager.Service
 	vmalert               *vmalert.Service
 	settings              *models.Settings
+	alertsService         *ia.AlertsService
+	templatesService      *ia.TemplatesService
+	rulesService          *ia.RulesService
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -184,11 +187,10 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterSecurityChecksServer(gRPCServer, managementgrpc.NewChecksServer(checksSvc))
 
 	iav1beta1.RegisterChannelsServer(gRPCServer, ia.NewChannelsService(deps.db, deps.alertmanager))
-	templatesSvc := ia.NewTemplatesService(deps.db)
-	templatesSvc.Collect(ctx)
-	iav1beta1.RegisterTemplatesServer(gRPCServer, templatesSvc)
-	iav1beta1.RegisterRulesServer(gRPCServer, ia.NewRulesService(deps.db, templatesSvc, deps.vmalert, deps.alertmanager))
-	iav1beta1.RegisterAlertsServer(gRPCServer, ia.NewAlertsService(deps.db, deps.alertmanager, templatesSvc))
+	deps.templatesService.Collect(ctx)
+	iav1beta1.RegisterTemplatesServer(gRPCServer, deps.templatesService)
+	iav1beta1.RegisterRulesServer(gRPCServer, deps.rulesService)
+	iav1beta1.RegisterAlertsServer(gRPCServer, deps.alertsService)
 
 	backupv1beta1.RegisterLocationsServer(gRPCServer, backup.NewLocationsService(deps.db))
 
@@ -630,6 +632,11 @@ func main() {
 		l.Fatalf("Could not create platform service: %s", err)
 	}
 
+	// Integrated alerts services
+	templatesSvc := ia.NewTemplatesService(db)
+	rulesSvc := ia.NewRulesService(db, templatesSvc, vmalert, alertmanager)
+	alertsSvc := ia.NewAlertsService(db, alertmanager, templatesSvc)
+
 	serverParams := &server.Params{
 		DB:                   db,
 		VMDB:                 vmdb,
@@ -643,6 +650,7 @@ func main() {
 		AwsInstanceChecker:   awsInstanceChecker,
 		GrafanaClient:        grafanaClient,
 		VMAlertExternalRules: externalRules,
+		RulesService:         rulesSvc,
 	}
 
 	server, err := server.NewServer(serverParams)
@@ -779,6 +787,9 @@ func main() {
 			alertmanager:          alertmanager,
 			vmalert:               vmalert,
 			settings:              settings,
+			alertsService:         alertsSvc,
+			templatesService:      templatesSvc,
+			rulesService:          rulesSvc,
 		})
 	}()
 
