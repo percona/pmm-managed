@@ -439,6 +439,14 @@ var databaseSchema = [][]string{
 	28: {
 		`ALTER TABLE agents ADD COLUMN disabled_collectors VARCHAR[]`,
 	},
+	29: {
+		`ALTER TABLE agents
+			ADD COLUMN azure_database_client_id VARCHAR,
+			ADD COLUMN azure_database_client_secret VARCHAR,
+			ADD COLUMN azure_database_tenant_id VARCHAR,
+			ADD COLUMN azure_database_subscription_id VARCHAR,
+			ADD COLUMN azure_database_resource_type VARCHAR`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^
