@@ -35,11 +35,35 @@ type JobResult struct {
 	UpdatedAt  time.Time `reform:"updated_at"`
 }
 
+// BeforeInsert implements reform.BeforeInserter interface.
+func (r *JobResult) BeforeInsert() error {
+	now := Now()
+	r.CreatedAt = now
+	r.UpdatedAt = now
+
+	return nil
+}
+
+// BeforeUpdate implements reform.BeforeUpdater interface.
+func (r *JobResult) BeforeUpdate() error {
+	r.UpdatedAt = Now()
+
+	return nil
+}
+
+// AfterFind implements reform.AfterFinder interface.
+func (r *JobResult) AfterFind() error {
+	r.CreatedAt = r.CreatedAt.UTC()
+	r.UpdatedAt = r.UpdatedAt.UTC()
+
+	return nil
+}
+
 // GetEchoJobResult extracts echo job result data.
-func (j *JobResult) GetEchoJobResult() (*EchoJobResult, error) {
+func (r *JobResult) GetEchoJobResult() (*EchoJobResult, error) {
 	var result EchoJobResult
 
-	if err := json.Unmarshal(j.Result, &result); err != nil {
+	if err := json.Unmarshal(r.Result, &result); err != nil {
 		return nil, errors.Wrap(err, "failed to parse echo job result")
 	}
 
@@ -47,9 +71,9 @@ func (j *JobResult) GetEchoJobResult() (*EchoJobResult, error) {
 }
 
 // SetEchoJobResult sets echo job result data.
-func (j *JobResult) SetEchoJobResult(result *EchoJobResult) error {
+func (r *JobResult) SetEchoJobResult(result *EchoJobResult) error {
 	var err error
-	if j.Result, err = json.Marshal(result); err != nil {
+	if r.Result, err = json.Marshal(result); err != nil {
 		return errors.Wrap(err, "failed to marshall echo job result")
 	}
 
