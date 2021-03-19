@@ -11,11 +11,13 @@ import (
 	"github.com/percona/pmm-managed/services/agents"
 )
 
+// JobsAPIService provides methods for Jobs starting and management.
 type JobsAPIService struct {
 	db *reform.DB
 	r  *agents.Registry
 }
 
+// NewJobsAPIServer creates new jobs service.
 func NewJobsAPIServer(db *reform.DB, registry *agents.Registry) *JobsAPIService {
 	return &JobsAPIService{
 		db: db,
@@ -23,6 +25,7 @@ func NewJobsAPIServer(db *reform.DB, registry *agents.Registry) *JobsAPIService 
 	}
 }
 
+// GetJob returns job result.
 func (s *JobsAPIService) GetJob(ctx context.Context, req *managementpb.GetJobRequest) (*managementpb.GetJobResponse, error) {
 	result, err := models.FindJobResultByID(s.db.Querier, req.JobId)
 	if err != nil {
@@ -67,6 +70,7 @@ func (s *JobsAPIService) GetJob(ctx context.Context, req *managementpb.GetJobReq
 	return resp, nil
 }
 
+// StartEchoJob starts echo job. Its purpose is testing.
 func (s *JobsAPIService) StartEchoJob(ctx context.Context, req *managementpb.StartEchoJobRequest) (*managementpb.StartEchoJobResponse, error) {
 	res, err := s.prepareAgentJob(req.PmmAgentId, models.Echo)
 	if err != nil {
@@ -83,6 +87,7 @@ func (s *JobsAPIService) StartEchoJob(ctx context.Context, req *managementpb.Sta
 	}, nil
 }
 
+// CancelJob terminates job.
 func (s *JobsAPIService) CancelJob(ctx context.Context, req *managementpb.CancelJobRequest) (*managementpb.CancelJobResponse, error) {
 	if err := s.r.StopJob(req.JobId); err != nil {
 		return nil, err

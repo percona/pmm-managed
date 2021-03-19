@@ -1411,6 +1411,7 @@ func (r *Registry) StopAction(ctx context.Context, actionID string) error {
 	return nil
 }
 
+// StartEchoJob starts echo job on the pmm-agent.
 func (r *Registry) StartEchoJob(id, pmmAgentID string, timeout time.Duration, message string, delay time.Duration) error {
 	req := &agentpb.StartJobRequest{
 		JobId:   id,
@@ -1433,6 +1434,7 @@ func (r *Registry) StartEchoJob(id, pmmAgentID string, timeout time.Duration, me
 	return nil
 }
 
+// StopJob stops job with given given id.
 func (r *Registry) StopJob(jobID string) error {
 	jobResult, err := models.FindJobResultByID(r.db.Querier, jobID)
 	if err != nil {

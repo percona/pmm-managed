@@ -40,13 +40,6 @@ func CreateJobResult(q *reform.Querier, pmmAgentID string, jobType JobType) (*Jo
 	return result, nil
 }
 
-func ChangeJobResult(q *reform.Querier, result *JobResult) error {
-	if err := q.Update(result); err != nil {
-		return errors.WithStack(err)
-	}
-	return nil
-}
-
 // CleanupOldJobResults deletes action results older than a specified date.
 func CleanupOldJobResults(q *reform.Querier, olderThan time.Time) error {
 	_, err := q.DeleteFrom(JobResultTable, " WHERE updated_at <= $1", olderThan)
