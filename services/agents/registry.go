@@ -294,7 +294,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 					l.Errorf("Failed to save job result: %+v", err)
 				}
 			case *agentpb.JobProgress:
-				// TODO
+				// TODO Handle job progress messages https://jira.percona.com/browse/PMM-7756
 
 			case nil:
 				l.Warnf("Unexpected request: %+v.", req)

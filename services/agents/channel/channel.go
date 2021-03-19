@@ -222,6 +222,7 @@ func (c *Channel) runReceiver() {
 				Payload: p.ActionResult,
 			}
 
+		// simple messages
 		case *agentpb.AgentMessage_JobResult:
 			c.requests <- &AgentRequest{
 				ID:      msg.Id,
