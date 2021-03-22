@@ -14,11 +14,11 @@ required = [
 
 [[constraint]]
   name = "github.com/percona/pmm"
-  branch = "PMM-2.0"
+  branch = "SAAS-487-email-verification"
 
 [[constraint]]
   name = "github.com/percona-platform/saas"
-  branch = "main"
+  branch = "SAAS-487-email-verification"
 
 [[constraint]]
   name = "github.com/percona-platform/dbaas-api"
