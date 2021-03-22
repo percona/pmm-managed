@@ -105,8 +105,8 @@ func (s *ChannelsService) getNotificationChannels() ([]*iav1beta1.Channel, error
 	}
 
 	return res, nil
-
 }
+
 func (s *ChannelsService) getNotificationChannelsPage(pageIndex, pageSize int) ([]*iav1beta1.Channel, *iav1beta1.PageTotals, error) {
 	var channels []*models.Channel
 	var totalItems int

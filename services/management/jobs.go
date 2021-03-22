@@ -78,7 +78,8 @@ func (s *JobsAPIService) GetJob(_ context.Context, req *jobsAPI.GetJobRequest) (
 		resp.Result = &jobsAPI.GetJobResponse_Echo_{
 			Echo: &jobsAPI.GetJobResponse_Echo{
 				Message: echoResult.Message,
-			}}
+			},
+		}
 	default:
 		return nil, errors.Errorf("Unexpected job type: %s", result.Type)
 	}
