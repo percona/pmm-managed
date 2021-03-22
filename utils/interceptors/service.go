@@ -41,7 +41,7 @@ func StreamServiceEnabledInterceptor() grpc.StreamServerInterceptor {
 
 func extractServiceName(fullMethod string) string {
 	split := strings.Split(fullMethod, "/")
-	if len(split) < 2{
+	if len(split) < 2 {
 		return fullMethod
 	}
 	return split[1]
