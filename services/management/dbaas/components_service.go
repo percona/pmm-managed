@@ -46,7 +46,7 @@ func NewComponentsService(db *reform.DB, dbaasClient dbaasClient, versionService
 
 func (c componentsService) GetPSMDBComponents(ctx context.Context, req *dbaasv1beta1.GetPSMDBComponentsRequest) (*dbaasv1beta1.GetPSMDBComponentsResponse, error) {
 	params := componentsParams{
-		operator:  "pxc-operator",
+		operator:  PSMDBOperator,
 		dbVersion: req.DbVersion,
 	}
 	if req.KubernetesClusterName != "" {
@@ -60,7 +60,7 @@ func (c componentsService) GetPSMDBComponents(ctx context.Context, req *dbaasv1b
 			return nil, e
 		}
 
-		params.operatorsVersion = checkResponse.Operators.Psmdb.Version
+		params.operatorVersion = checkResponse.Operators.Psmdb.Version
 	}
 
 	versions, err := c.versions(ctx, params)
@@ -72,7 +72,7 @@ func (c componentsService) GetPSMDBComponents(ctx context.Context, req *dbaasv1b
 
 func (c componentsService) GetPXCComponents(ctx context.Context, req *dbaasv1beta1.GetPXCComponentsRequest) (*dbaasv1beta1.GetPXCComponentsResponse, error) {
 	params := componentsParams{
-		operator:  "pxc-operator",
+		operator:  PXCOperator,
 		dbVersion: req.DbVersion,
 	}
 	if req.KubernetesClusterName != "" {
@@ -86,7 +86,7 @@ func (c componentsService) GetPXCComponents(ctx context.Context, req *dbaasv1bet
 			return nil, e
 		}
 
-		params.operatorsVersion = checkResponse.Operators.Psmdb.Version
+		params.operatorVersion = checkResponse.Operators.Psmdb.Version
 	}
 
 	versions, err := c.versions(ctx, params)
@@ -98,7 +98,7 @@ func (c componentsService) GetPXCComponents(ctx context.Context, req *dbaasv1bet
 
 func (c componentsService) versions(ctx context.Context, params componentsParams) ([]*dbaasv1beta1.Version, error) {
 	var versions []*dbaasv1beta1.Version
-	components, err := c.versionServiceClient.components(ctx, params)
+	components, err := c.versionServiceClient.Matrix(ctx, params)
 	if err != nil {
 		return nil, err
 	}

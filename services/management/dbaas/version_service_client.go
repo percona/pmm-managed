@@ -31,6 +31,11 @@ import (
 	"github.com/percona/pmm-managed/utils/irt"
 )
 
+const (
+	PSMDBOperator = "psmdb-operator"
+	PXCOperator   = "pxc-operator"
+)
+
 type component struct {
 	ImagePath string `json:"imagePath"`
 	ImageHash string `json:"imageHash"`
@@ -57,9 +62,9 @@ type versionServiceResponse struct {
 }
 
 type componentsParams struct {
-	operator         string
-	operatorsVersion string
-	dbVersion        string
+	operator        string
+	operatorVersion string
+	dbVersion       string
 }
 
 // VersionServiceClient represents a client for Version Service API.
@@ -105,10 +110,10 @@ func (c *VersionServiceClient) Collect(ch chan<- prom.Metric) {
 	c.irtm.Collect(ch)
 }
 
-func (c *VersionServiceClient) components(ctx context.Context, params componentsParams) (*versionServiceResponse, error) {
-	paths := []string{c.url}
-	if params.operatorsVersion != "" {
-		paths = append(paths, params.operatorsVersion)
+func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsParams) (*versionServiceResponse, error) {
+	paths := []string{c.url, params.operator}
+	if params.operatorVersion != "" {
+		paths = append(paths, params.operatorVersion)
 		if params.dbVersion != "" {
 			paths = append(paths, params.dbVersion)
 		}
