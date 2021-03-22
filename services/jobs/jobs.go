@@ -39,12 +39,12 @@ func (s *Service) StartEchoJob(id, pmmAgentID string, timeout time.Duration, mes
 		},
 	}
 
-	pmmAgent, err := s.r.Get(pmmAgentID)
+	channel, err := s.r.GetAgentChannel(pmmAgentID)
 	if err != nil {
 		return err
 	}
 
-	pmmAgent.Channel.SendRequest(req)
+	channel.SendAndWaitResponse(req)
 
 	return nil
 }
@@ -61,12 +61,12 @@ func (s *Service) StopJob(jobID string) error {
 		return nil
 	}
 
-	pmmAgent, err := s.r.Get(jobResult.PMMAgentID)
+	channel, err := s.r.GetAgentChannel(jobResult.PMMAgentID)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	pmmAgent.Channel.SendRequest(&agentpb.StopJobRequest{JobId: jobID})
+	channel.SendAndWaitResponse(&agentpb.StopJobRequest{JobId: jobID})
 
 	return nil
 }

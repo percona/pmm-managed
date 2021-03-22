@@ -168,7 +168,7 @@ func NewRegistry(db *reform.DB, qanClient qanClient, vmdb prometheusService) *Re
 
 // IsConnected returns true if pmm-agent with given ID is currently connected, false otherwise.
 func (r *Registry) IsConnected(pmmAgentID string) bool {
-	_, err := r.Get(pmmAgentID)
+	_, err := r.get(pmmAgentID)
 	return err == nil
 }
 
@@ -221,7 +221,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 
 			switch p := req.Payload.(type) {
 			case *agentpb.Ping:
-				agent.Channel.SendResponse(&channel.ServerResponse{
+				agent.Channel.Send(&channel.ServerResponse{
 					ID: req.ID,
 					Payload: &agentpb.Pong{
 						CurrentTime: ptypes.TimestampNow(),
@@ -234,7 +234,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 						l.Errorf("%+v", err)
 					}
 
-					agent.Channel.SendResponse(&channel.ServerResponse{
+					agent.Channel.Send(&channel.ServerResponse{
 						ID:      req.ID,
 						Payload: new(agentpb.StateChangedResponse),
 					})
@@ -246,7 +246,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 						l.Errorf("%+v", err)
 					}
 
-					agent.Channel.SendResponse(&channel.ServerResponse{
+					agent.Channel.Send(&channel.ServerResponse{
 						ID:      req.ID,
 						Payload: new(agentpb.QANCollectResponse),
 					})
@@ -263,7 +263,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 					l.Warnf("Action was done with an error: %v.", p.Error)
 				}
 
-				agent.Channel.SendResponse(&channel.ServerResponse{
+				agent.Channel.Send(&channel.ServerResponse{
 					ID:      req.ID,
 					Payload: new(agentpb.ActionResultResponse),
 				})
@@ -500,7 +500,7 @@ func (r *Registry) Kick(ctx context.Context, pmmAgentID string) {
 func (r *Registry) ping(ctx context.Context, agent *PmmAgentInfo) {
 	l := logger.Get(ctx)
 	start := time.Now()
-	resp := agent.Channel.SendRequest(new(agentpb.Ping))
+	resp := agent.Channel.SendAndWaitResponse(new(agentpb.Ping))
 	if resp == nil {
 		return
 	}
@@ -644,7 +644,7 @@ func (r *Registry) runStateChangeHandler(ctx context.Context, agent *PmmAgentInf
 func (r *Registry) RequestStateUpdate(ctx context.Context, pmmAgentID string) {
 	l := logger.Get(ctx)
 
-	agent, err := r.Get(pmmAgentID)
+	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		l.Infof("RequestStateUpdate: %s.", err)
 		return
@@ -781,7 +781,7 @@ func (r *Registry) sendSetStateRequest(ctx context.Context, agent *PmmAgentInfo)
 		BuiltinAgents:  builtinAgents,
 	}
 	l.Debugf("sendSetStateRequest:\n%s", proto.MarshalTextString(state))
-	resp := agent.Channel.SendRequest(state)
+	resp := agent.Channel.SendAndWaitResponse(state)
 	l.Infof("SetState response: %+v.", resp)
 }
 
@@ -829,7 +829,7 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 		}
 	}
 
-	pmmAgent, err := r.Get(pmmAgentID)
+	pmmAgent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
@@ -893,7 +893,7 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 	}
 
 	l.Infof("CheckConnectionRequest: %+v.", request)
-	resp := pmmAgent.Channel.SendRequest(request)
+	resp := pmmAgent.Channel.SendAndWaitResponse(request)
 	l.Infof("CheckConnection response: %+v.", resp)
 
 	switch service.ServiceType {
@@ -924,7 +924,17 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 	return status.Error(codes.FailedPrecondition, fmt.Sprintf("Connection check failed: %s.", msg))
 }
 
-func (r *Registry) Get(pmmAgentID string) (*PmmAgentInfo, error) {
+// GetAgentChannel returns channel associated with given pmm agent id.
+func (r *Registry) GetAgentChannel(pmmAgentID string) (*channel.Channel, error) {
+	agent, err := r.get(pmmAgentID)
+	if err != nil {
+		return nil, err
+	}
+
+	return agent.Channel, nil
+}
+
+func (r *Registry) get(pmmAgentID string) (*PmmAgentInfo, error) {
 	r.rw.RLock()
 	pmmAgent := r.agents[pmmAgentID]
 	r.rw.RUnlock()
@@ -985,12 +995,12 @@ func (r *Registry) StartMySQLExplainAction(ctx context.Context, id, pmmAgentID, 
 		Timeout: defaultActionTimeout,
 	}
 
-	agent, err := r.Get(pmmAgentID)
+	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
 
-	agent.Channel.SendRequest(aRequest)
+	agent.Channel.SendAndWaitResponse(aRequest)
 	return nil
 }
 
@@ -1008,12 +1018,12 @@ func (r *Registry) StartMySQLShowCreateTableAction(ctx context.Context, id, pmmA
 		Timeout: defaultActionTimeout,
 	}
 
-	agent, err := r.Get(pmmAgentID)
+	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
 
-	agent.Channel.SendRequest(aRequest)
+	agent.Channel.SendAndWaitResponse(aRequest)
 	return nil
 }
 
@@ -1031,12 +1041,12 @@ func (r *Registry) StartMySQLShowTableStatusAction(ctx context.Context, id, pmmA
 		Timeout: defaultActionTimeout,
 	}
 
-	agent, err := r.Get(pmmAgentID)
+	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
 
-	agent.Channel.SendRequest(aRequest)
+	agent.Channel.SendAndWaitResponse(aRequest)
 	return nil
 }
 
@@ -1054,12 +1064,12 @@ func (r *Registry) StartMySQLShowIndexAction(ctx context.Context, id, pmmAgentID
 		Timeout: defaultActionTimeout,
 	}
 
-	agent, err := r.Get(pmmAgentID)
+	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
 
-	agent.Channel.SendRequest(aRequest)
+	agent.Channel.SendAndWaitResponse(aRequest)
 	return nil
 }
 
@@ -1077,12 +1087,12 @@ func (r *Registry) StartPostgreSQLShowCreateTableAction(ctx context.Context, id,
 		Timeout: defaultActionTimeout,
 	}
 
-	agent, err := r.Get(pmmAgentID)
+	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
 
-	agent.Channel.SendRequest(aRequest)
+	agent.Channel.SendAndWaitResponse(aRequest)
 	return nil
 }
 
@@ -1100,12 +1110,12 @@ func (r *Registry) StartPostgreSQLShowIndexAction(ctx context.Context, id, pmmAg
 		Timeout: defaultActionTimeout,
 	}
 
-	agent, err := r.Get(pmmAgentID)
+	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
 
-	agent.Channel.SendRequest(aRequest)
+	agent.Channel.SendAndWaitResponse(aRequest)
 	return nil
 }
 
@@ -1127,12 +1137,12 @@ func (r *Registry) StartMongoDBExplainAction(ctx context.Context, id, pmmAgentID
 		Timeout: defaultActionTimeout,
 	}
 
-	agent, err := r.Get(pmmAgentID)
+	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
 
-	agent.Channel.SendRequest(aRequest)
+	agent.Channel.SendAndWaitResponse(aRequest)
 	return nil
 }
 
@@ -1149,12 +1159,12 @@ func (r *Registry) StartMySQLQueryShowAction(ctx context.Context, id, pmmAgentID
 		Timeout: defaultQueryActionTimeout,
 	}
 
-	agent, err := r.Get(pmmAgentID)
+	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
 
-	agent.Channel.SendRequest(aRequest)
+	agent.Channel.SendAndWaitResponse(aRequest)
 	return nil
 }
 
@@ -1171,12 +1181,12 @@ func (r *Registry) StartMySQLQuerySelectAction(ctx context.Context, id, pmmAgent
 		Timeout: defaultQueryActionTimeout,
 	}
 
-	agent, err := r.Get(pmmAgentID)
+	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
 
-	agent.Channel.SendRequest(aRequest)
+	agent.Channel.SendAndWaitResponse(aRequest)
 	return nil
 }
 
@@ -1192,12 +1202,12 @@ func (r *Registry) StartPostgreSQLQueryShowAction(ctx context.Context, id, pmmAg
 		Timeout: defaultQueryActionTimeout,
 	}
 
-	agent, err := r.Get(pmmAgentID)
+	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
 
-	agent.Channel.SendRequest(aRequest)
+	agent.Channel.SendAndWaitResponse(aRequest)
 	return nil
 }
 
@@ -1214,12 +1224,12 @@ func (r *Registry) StartPostgreSQLQuerySelectAction(ctx context.Context, id, pmm
 		Timeout: defaultQueryActionTimeout,
 	}
 
-	agent, err := r.Get(pmmAgentID)
+	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
 
-	agent.Channel.SendRequest(aRequest)
+	agent.Channel.SendAndWaitResponse(aRequest)
 	return nil
 }
 
@@ -1240,12 +1250,12 @@ func (r *Registry) StartMongoDBQueryGetParameterAction(ctx context.Context, id, 
 		Timeout: defaultQueryActionTimeout,
 	}
 
-	agent, err := r.Get(pmmAgentID)
+	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
 
-	agent.Channel.SendRequest(aRequest)
+	agent.Channel.SendAndWaitResponse(aRequest)
 	return nil
 }
 
@@ -1266,12 +1276,12 @@ func (r *Registry) StartMongoDBQueryBuildInfoAction(ctx context.Context, id, pmm
 		Timeout: defaultQueryActionTimeout,
 	}
 
-	agent, err := r.Get(pmmAgentID)
+	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
 
-	agent.Channel.SendRequest(aRequest)
+	agent.Channel.SendAndWaitResponse(aRequest)
 	return nil
 }
 
@@ -1292,12 +1302,12 @@ func (r *Registry) StartMongoDBQueryGetCmdLineOptsAction(ctx context.Context, id
 		Timeout: defaultQueryActionTimeout,
 	}
 
-	agent, err := r.Get(pmmAgentID)
+	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
 
-	agent.Channel.SendRequest(aRequest)
+	agent.Channel.SendAndWaitResponse(aRequest)
 	return nil
 }
 
@@ -1312,12 +1322,12 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID stri
 		Timeout: defaultPtActionTimeout,
 	}
 
-	agent, err := r.Get(pmmAgentID)
+	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
 
-	agent.Channel.SendRequest(aRequest)
+	agent.Channel.SendAndWaitResponse(aRequest)
 	return nil
 }
 
@@ -1337,11 +1347,11 @@ func (r *Registry) StartPTPgSummaryAction(ctx context.Context, id, pmmAgentID, a
 		Timeout: defaultPtActionTimeout,
 	}
 
-	pmmAgent, err := r.Get(pmmAgentID)
+	pmmAgent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
-	pmmAgent.Channel.SendRequest(actionRequest)
+	pmmAgent.Channel.SendAndWaitResponse(actionRequest)
 
 	return nil
 }
@@ -1365,12 +1375,12 @@ func (r *Registry) StartPTMongoDBSummaryAction(ctx context.Context, id, pmmAgent
 	}
 
 	// Agent which the action request will be sent to, got by the provided ID
-	pmmAgent, err := r.Get(pmmAgentID)
+	pmmAgent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
 
-	pmmAgent.Channel.SendRequest(actionRequest)
+	pmmAgent.Channel.SendAndWaitResponse(actionRequest)
 
 	return nil
 }
@@ -1393,11 +1403,11 @@ func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID
 		Timeout: defaultPtActionTimeout,
 	}
 
-	pmmAgent, err := r.Get(pmmAgentID)
+	pmmAgent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
 	}
-	pmmAgent.Channel.SendRequest(actionRequest)
+	pmmAgent.Channel.SendAndWaitResponse(actionRequest)
 
 	return nil
 }
@@ -1406,12 +1416,12 @@ func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID
 // TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
 func (r *Registry) StopAction(ctx context.Context, actionID string) error {
 	// TODO Seems that we have a bug here, we passing actionID to the method that expects pmmAgentID
-	agent, err := r.Get(actionID)
+	agent, err := r.get(actionID)
 	if err != nil {
 		return err
 	}
 
-	agent.Channel.SendRequest(&agentpb.StopActionRequest{ActionId: actionID})
+	agent.Channel.SendAndWaitResponse(&agentpb.StopActionRequest{ActionId: actionID})
 	return nil
 }
 

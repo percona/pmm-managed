@@ -126,8 +126,8 @@ func (c *Channel) Requests() <-chan *AgentRequest {
 	return c.requests
 }
 
-// SendResponse sends message to pmm-managed. It is no-op once channel is closed (see Wait).
-func (c *Channel) SendResponse(resp *ServerResponse) {
+// Send sends message to pmm-managed. It is no-op once channel is closed (see Wait).
+func (c *Channel) Send(resp *ServerResponse) {
 	msg := &agentpb.ServerMessage{
 		Id:      resp.ID,
 		Payload: resp.Payload.ServerMessageResponsePayload(),
@@ -135,10 +135,10 @@ func (c *Channel) SendResponse(resp *ServerResponse) {
 	c.send(msg)
 }
 
-// SendRequest sends request to pmm-managed, blocks until response is available, and returns it.
+// SendAndWaitResponse sends request to pmm-managed, blocks until response is available, and returns it.
 // Response will be nil if channel is closed.
 // It is no-op once channel is closed (see Wait).
-func (c *Channel) SendRequest(payload agentpb.ServerRequestPayload) agentpb.AgentResponsePayload {
+func (c *Channel) SendAndWaitResponse(payload agentpb.ServerRequestPayload) agentpb.AgentResponsePayload {
 	id := atomic.AddUint32(&c.lastSentRequestID, 1)
 	ch := c.subscribe(id)
 
