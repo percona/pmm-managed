@@ -388,7 +388,7 @@
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "0bf22b309628660c4be8b8d5250276c500f8b0e2"
+  revision = "186062445c941a408781e3468b72ad4c606221c5"
 
 [[projects]]
   branch = "main"
@@ -409,7 +409,7 @@
 
 [[projects]]
   branch = "PMM-7595-use-uint64-for-resources"
-  digest = "1:24126a38ecaacb12d4e5268c6426fdf0043d492060df55d4ce6d47e73a2319f9"
+  digest = "1:fbe014886b2ce75fc9d4cf7ad24b06cf13d743e9e4ad17dfde12ee0ba7d5bc89"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -433,7 +433,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "a7a6070dd7aed8fb29b5aad3c4bcc03f2827fff4"
+  revision = "b3f114853113380b1f1efa6df3a3968993abb1cc"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
