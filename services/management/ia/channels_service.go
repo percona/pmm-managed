@@ -130,7 +130,7 @@ func (s *ChannelsService) getNotificationChannelsPage(pageIndex, pageSize int) (
 
 	res := make([]*iav1beta1.Channel, len(channels))
 	for i, channel := range channels {
-		c, err := convertChannel(channel) //nolint:gosec
+		c, err := convertChannel(channel)
 		if err != nil {
 			return nil, nil, err
 		}

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"gopkg.in/reform.v1"
 )
 
 //go:generate reform
@@ -95,3 +96,10 @@ func (r *JobResult) SetEchoJobResult(result *EchoJobResult) error {
 
 	return nil
 }
+
+// check interfaces.
+var (
+	_ reform.BeforeInserter = (*JobResult)(nil)
+	_ reform.BeforeUpdater  = (*JobResult)(nil)
+	_ reform.AfterFinder    = (*JobResult)(nil)
+)

@@ -42,7 +42,7 @@ func NewJobsAPIServer(db *reform.DB, service *jobs.Service) *JobsAPIService {
 }
 
 // GetJob returns job result.
-func (s *JobsAPIService) GetJob(ctx context.Context, req *jobsAPI.GetJobRequest) (*jobsAPI.GetJobResponse, error) {
+func (s *JobsAPIService) GetJob(_ context.Context, req *jobsAPI.GetJobRequest) (*jobsAPI.GetJobResponse, error) {
 	result, err := models.FindJobResultByID(s.db.Querier, req.JobId)
 	if err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func (s *JobsAPIService) GetJob(ctx context.Context, req *jobsAPI.GetJobRequest)
 }
 
 // StartEchoJob starts echo job. Its purpose is testing.
-func (s *JobsAPIService) StartEchoJob(ctx context.Context, req *jobsAPI.StartEchoJobRequest) (*jobsAPI.StartEchoJobResponse, error) {
+func (s *JobsAPIService) StartEchoJob(_ context.Context, req *jobsAPI.StartEchoJobRequest) (*jobsAPI.StartEchoJobResponse, error) {
 	res, err := s.prepareAgentJob(req.PmmAgentId, models.Echo)
 	if err != nil {
 		return nil, err
@@ -104,7 +104,7 @@ func (s *JobsAPIService) StartEchoJob(ctx context.Context, req *jobsAPI.StartEch
 }
 
 // CancelJob terminates job.
-func (s *JobsAPIService) CancelJob(ctx context.Context, req *jobsAPI.CancelJobRequest) (*jobsAPI.CancelJobResponse, error) {
+func (s *JobsAPIService) CancelJob(_ context.Context, req *jobsAPI.CancelJobRequest) (*jobsAPI.CancelJobResponse, error) {
 	if err := s.jobsService.StopJob(req.JobId); err != nil {
 		return nil, err
 	}

@@ -37,7 +37,6 @@ import (
 //go:generate mockery -name=platformService -case=snake -inpkg -testonly
 //go:generate mockery -name=agentsRegistry -case=snake -inpkg -testonly
 //go:generate mockery -name=rulesService -case=snake -inpkg -testonly
-//go:generate mockery -name=jobsService -case=snake -inpkg -testonly
 
 // healthChecker interface wraps all services that implements the IsReady method to report the
 // service health for the Readiness check.
@@ -130,11 +129,4 @@ type agentsRegistry interface {
 type rulesService interface {
 	WriteVMAlertRulesFiles()
 	RemoveVMAlertRulesFiles() error
-}
-
-// jobsService is a subset of methods of jobs.Service used by this package.
-// We use it instead of real type for testing and to avoid dependency cycle.
-type jobsService interface {
-	StartEchoJob(id, pmmAgentID string, timeout time.Duration, message string, delay time.Duration) error
-	StopJob(jobID string) error
 }
