@@ -20,6 +20,7 @@ import (
 	"context"
 
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
+	"github.com/percona/pmm/version"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/reform.v1"
 
@@ -30,17 +31,17 @@ type componentsService struct {
 	l                    *logrus.Entry
 	db                   *reform.DB
 	dbaasClient          dbaasClient
-	versionServiceClient *VersionServiceClient
+	versionServiceClient versionService
 }
 
 // NewComponentsService creates Components Service.
-func NewComponentsService(db *reform.DB, dbaasClient dbaasClient, versionService *VersionServiceClient) dbaasv1beta1.ComponentsServer {
+func NewComponentsService(db *reform.DB, dbaasClient dbaasClient, versionServiceClient versionService) dbaasv1beta1.ComponentsServer {
 	l := logrus.WithField("component", "components_service")
 	return &componentsService{
 		l:                    l,
 		db:                   db,
 		dbaasClient:          dbaasClient,
-		versionServiceClient: versionService,
+		versionServiceClient: versionServiceClient,
 	}
 }
 
@@ -104,7 +105,7 @@ func (c componentsService) versions(ctx context.Context, params componentsParams
 	}
 
 	for _, v := range components.Versions {
-		version := &dbaasv1beta1.Version{
+		respVersion := &dbaasv1beta1.Version{
 			Product:  v.Product,
 			Operator: v.Operator,
 			Matrix: &dbaasv1beta1.Matrix{
@@ -118,7 +119,7 @@ func (c componentsService) versions(ctx context.Context, params componentsParams
 				LogCollector: c.matrix(v.Matrix.LogCollector),
 			},
 		}
-		versions = append(versions, version)
+		versions = append(versions, respVersion)
 	}
 
 	return versions, nil
@@ -127,14 +128,26 @@ func (c componentsService) versions(ctx context.Context, params componentsParams
 func (c componentsService) matrix(m map[string]component) map[string]*dbaasv1beta1.Component {
 	result := make(map[string]*dbaasv1beta1.Component)
 
+	var lastVersion string
+	lastVersionParsed := version.MustParse("0.0.0")
 	for v, component := range m {
 		result[v] = &dbaasv1beta1.Component{
 			ImagePath: component.ImagePath,
 			ImageHash: component.ImageHash,
 			Status:    component.Status,
 			Critical:  component.Critical,
-			Default:   component.Status == "recommended",
 		}
+		parsedVersion, err := version.Parse(v)
+		if err != nil {
+			c.l.Warnf("couldn't parse version %s: %s", v, err.Error())
+		}
+		if lastVersionParsed.Less(parsedVersion) && component.Status == "recommended" {
+			lastVersionParsed = parsedVersion
+			lastVersion = v
+		}
+	}
+	if lastVersion != "" {
+		result[lastVersion].Default = true
 	}
 	return result
 }

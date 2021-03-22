@@ -52,13 +52,12 @@ type matrix struct {
 	Operator     map[string]component `json:"operator"`
 	LogCollector map[string]component `json:"logCollector"`
 }
-type version struct {
-	Product  string `json:"product"`
-	Operator string `json:"operator"`
-	Matrix   matrix `json:"matrix"`
-}
 type versionServiceResponse struct {
-	Versions []version `json:"versions"`
+	Versions []struct {
+		Product  string `json:"product"`
+		Operator string `json:"operator"`
+		Matrix   matrix `json:"matrix"`
+	} `json:"versions"`
 }
 
 type componentsParams struct {
@@ -74,7 +73,7 @@ type VersionServiceClient struct {
 	irtm prom.Collector
 }
 
-// NewVersionServiceClient creates a new client for given version service address.
+// NewVersionServiceClient creates a new client for given version service URL.
 func NewVersionServiceClient(url string) *VersionServiceClient {
 	var t http.RoundTripper = &http.Transport{
 		DialContext: (&net.Dialer{
@@ -110,6 +109,7 @@ func (c *VersionServiceClient) Collect(ch chan<- prom.Metric) {
 	c.irtm.Collect(ch)
 }
 
+// Matrix calls version service with given params and returns components matrix.
 func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsParams) (*versionServiceResponse, error) {
 	paths := []string{c.url, params.operator}
 	if params.operatorVersion != "" {
