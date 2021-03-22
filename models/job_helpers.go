@@ -27,7 +27,7 @@ func FindJobResultByID(q *reform.Querier, id string) (*JobResult, error) {
 	}
 }
 
-// CreateJobResult stores an action result in action results storage.
+// CreateJobResult stores a job result in the storage.
 func CreateJobResult(q *reform.Querier, pmmAgentID string, jobType JobType) (*JobResult, error) {
 	result := &JobResult{
 		ID:         "/job_id/" + uuid.New().String(),
@@ -40,7 +40,7 @@ func CreateJobResult(q *reform.Querier, pmmAgentID string, jobType JobType) (*Jo
 	return result, nil
 }
 
-// CleanupOldJobResults deletes action results older than a specified date.
+// CleanupOldJobResults deletes jobs results older than a specified date.
 func CleanupOldJobResults(q *reform.Querier, olderThan time.Time) error {
 	_, err := q.DeleteFrom(JobResultTable, " WHERE updated_at <= $1", olderThan)
 	return err
