@@ -112,6 +112,11 @@ type ChangeSettingsParams struct {
 	// PMM Server public address.
 	PMMPublicAddress       string
 	RemovePMMPublicAddress bool
+
+	// Enable Backup Management features.
+	EnableBackupManagement bool
+	// Disable Backup Management features.
+	DisableBackupManagement bool
 }
 
 // UpdateSettings updates only non-zero, non-empty values.
@@ -202,6 +207,7 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 	if params.EnableDBaaS {
 		settings.DBaaS.Enabled = true
 	}
+
 	if params.DisableDBaaS {
 		settings.DBaaS.Enabled = false
 	}
@@ -230,6 +236,7 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 	if params.PMMPublicAddress != "" {
 		settings.PMMPublicAddress = params.PMMPublicAddress
 	}
+
 	if params.RemovePMMPublicAddress {
 		settings.PMMPublicAddress = ""
 	}
@@ -255,6 +262,14 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 	}
 	if params.SlackAlertingSettings != nil {
 		settings.IntegratedAlerting.SlackAlertingSettings = params.SlackAlertingSettings
+	}
+
+	if params.DisableBackupManagement {
+		settings.BackupManagement.Enabled = false
+	}
+
+	if params.EnableBackupManagement {
+		settings.BackupManagement.Enabled = true
 	}
 
 	err = SaveSettings(q, settings)
