@@ -3,36 +3,36 @@ package management
 import (
 	"context"
 
-	jobs "github.com/percona/pmm/api/managementpb/jobs"
+	jobsAPI "github.com/percona/pmm/api/managementpb/jobs"
 	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/agents"
+	"github.com/percona/pmm-managed/services/jobs"
 )
 
 // JobsAPIService provides methods for Jobs starting and management.
 type JobsAPIService struct {
-	db *reform.DB
-	r  *agents.Registry
+	db          *reform.DB
+	jobsService *jobs.Service
 }
 
 // NewJobsAPIServer creates new jobs service.
-func NewJobsAPIServer(db *reform.DB, registry *agents.Registry) *JobsAPIService {
+func NewJobsAPIServer(db *reform.DB, service *jobs.Service) *JobsAPIService {
 	return &JobsAPIService{
-		db: db,
-		r:  registry,
+		db:          db,
+		jobsService: service,
 	}
 }
 
 // GetJob returns job result.
-func (s *JobsAPIService) GetJob(ctx context.Context, req *jobs.GetJobRequest) (*jobs.GetJobResponse, error) {
+func (s *JobsAPIService) GetJob(ctx context.Context, req *jobsAPI.GetJobRequest) (*jobsAPI.GetJobResponse, error) {
 	result, err := models.FindJobResultByID(s.db.Querier, req.JobId)
 	if err != nil {
 		return nil, err
 	}
 
-	resp := &jobs.GetJobResponse{
+	resp := &jobsAPI.GetJobResponse{
 		JobId:      result.ID,
 		PmmAgentId: result.PMMAgentID,
 		Done:       result.Done,
@@ -43,8 +43,8 @@ func (s *JobsAPIService) GetJob(ctx context.Context, req *jobs.GetJobRequest) (*
 	}
 
 	if result.Error != "" {
-		resp.Result = &jobs.GetJobResponse_Error_{
-			Error: &jobs.GetJobResponse_Error{
+		resp.Result = &jobsAPI.GetJobResponse_Error_{
+			Error: &jobsAPI.GetJobResponse_Error{
 				Message: result.Error,
 			},
 		}
@@ -59,8 +59,8 @@ func (s *JobsAPIService) GetJob(ctx context.Context, req *jobs.GetJobRequest) (*
 			return nil, err
 		}
 
-		resp.Result = &jobs.GetJobResponse_Echo_{
-			Echo: &jobs.GetJobResponse_Echo{
+		resp.Result = &jobsAPI.GetJobResponse_Echo_{
+			Echo: &jobsAPI.GetJobResponse_Echo{
 				Message: echoResult.Message,
 			}}
 	default:
@@ -71,29 +71,29 @@ func (s *JobsAPIService) GetJob(ctx context.Context, req *jobs.GetJobRequest) (*
 }
 
 // StartEchoJob starts echo job. Its purpose is testing.
-func (s *JobsAPIService) StartEchoJob(ctx context.Context, req *jobs.StartEchoJobRequest) (*jobs.StartEchoJobResponse, error) {
+func (s *JobsAPIService) StartEchoJob(ctx context.Context, req *jobsAPI.StartEchoJobRequest) (*jobsAPI.StartEchoJobResponse, error) {
 	res, err := s.prepareAgentJob(req.PmmAgentId, models.Echo)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := s.r.StartEchoJob(res.ID, res.PMMAgentID, req.Timeout.AsDuration(), req.Message, req.Delay.AsDuration()); err != nil {
+	if err := s.jobsService.StartEchoJob(res.ID, res.PMMAgentID, req.Timeout.AsDuration(), req.Message, req.Delay.AsDuration()); err != nil {
 		return nil, err
 	}
 
-	return &jobs.StartEchoJobResponse{
+	return &jobsAPI.StartEchoJobResponse{
 		PmmAgentId: req.PmmAgentId,
 		JobId:      res.ID,
 	}, nil
 }
 
 // CancelJob terminates job.
-func (s *JobsAPIService) CancelJob(ctx context.Context, req *jobs.CancelJobRequest) (*jobs.CancelJobResponse, error) {
-	if err := s.r.StopJob(req.JobId); err != nil {
+func (s *JobsAPIService) CancelJob(ctx context.Context, req *jobsAPI.CancelJobRequest) (*jobsAPI.CancelJobResponse, error) {
+	if err := s.jobsService.StopJob(req.JobId); err != nil {
 		return nil, err
 	}
 
-	return &jobs.CancelJobResponse{}, nil
+	return &jobsAPI.CancelJobResponse{}, nil
 }
 
 func (s *JobsAPIService) prepareAgentJob(pmmAgentID string, jobType models.JobType) (*models.JobResult, error) {

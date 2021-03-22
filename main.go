@@ -71,6 +71,7 @@ import (
 	"github.com/percona/pmm-managed/services/grafana"
 	"github.com/percona/pmm-managed/services/inventory"
 	inventorygrpc "github.com/percona/pmm-managed/services/inventory/grpc"
+	"github.com/percona/pmm-managed/services/jobs"
 	"github.com/percona/pmm-managed/services/management"
 	"github.com/percona/pmm-managed/services/management/backup"
 	managementdbaas "github.com/percona/pmm-managed/services/management/dbaas"
@@ -133,6 +134,7 @@ type gRPCServerDeps struct {
 	alertsService         *ia.AlertsService
 	templatesService      *ia.TemplatesService
 	rulesService          *ia.RulesService
+	jobsService           *jobs.Service
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -185,7 +187,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterExternalServer(gRPCServer, management.NewExternalService(deps.db, deps.agentsRegistry, deps.vmdb))
 	managementpb.RegisterAnnotationServer(gRPCServer, managementgrpc.NewAnnotationServer(deps.db, deps.grafanaClient))
 	managementpb.RegisterSecurityChecksServer(gRPCServer, managementgrpc.NewChecksServer(checksSvc))
-	jobs1beta1.RegisterJobsServer(gRPCServer, management.NewJobsAPIServer(deps.db, deps.agentsRegistry))
+	jobs1beta1.RegisterJobsServer(gRPCServer, management.NewJobsAPIServer(deps.db, deps.jobsService))
 
 	iav1beta1.RegisterChannelsServer(gRPCServer, ia.NewChannelsService(deps.db, deps.alertmanager))
 	deps.templatesService.Collect(ctx)
@@ -636,10 +638,12 @@ func main() {
 		l.Fatalf("Could not create platform service: %s", err)
 	}
 
+	jobsService := jobs.New(db, agentsRegistry)
+
 	// Integrated alerts services
-	templatesSvc := ia.NewTemplatesService(db)
-	rulesSvc := ia.NewRulesService(db, templatesSvc, vmalert, alertmanager)
-	alertsSvc := ia.NewAlertsService(db, alertmanager, templatesSvc)
+	templatesService := ia.NewTemplatesService(db)
+	rulesService := ia.NewRulesService(db, templatesService, vmalert, alertmanager)
+	alertsService := ia.NewAlertsService(db, alertmanager, templatesService)
 
 	serverParams := &server.Params{
 		DB:                   db,
@@ -654,7 +658,7 @@ func main() {
 		AwsInstanceChecker:   awsInstanceChecker,
 		GrafanaClient:        grafanaClient,
 		VMAlertExternalRules: externalRules,
-		RulesService:         rulesSvc,
+		RulesService:         rulesService,
 	}
 
 	server, err := server.NewServer(serverParams)
@@ -791,9 +795,10 @@ func main() {
 			alertmanager:          alertmanager,
 			vmalert:               vmalert,
 			settings:              settings,
-			alertsService:         alertsSvc,
-			templatesService:      templatesSvc,
-			rulesService:          rulesSvc,
+			alertsService:         alertsService,
+			templatesService:      templatesService,
+			rulesService:          rulesService,
+			jobsService:           jobsService,
 		})
 	}()
 
