@@ -453,6 +453,11 @@ var databaseSchema = [][]string{
 			PRIMARY KEY (id)
 		)`,
 	},
+	30: {
+		`ALTER TABLE agents
+			ADD COLUMN azure_credentials VARCHAR,
+			ADD COLUMN azure_database_resource_type VARCHAR`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^

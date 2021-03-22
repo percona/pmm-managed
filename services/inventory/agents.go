@@ -18,6 +18,7 @@ package inventory
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb"
@@ -844,6 +845,65 @@ func (as *AgentsService) ChangeExternalExporter(req *inventorypb.ChangeExternalE
 	as.vmdb.RequestConfigurationUpdate()
 
 	res := agent.(*inventorypb.ExternalExporter)
+	return res, nil
+}
+
+// AddAzureDatabaseExporter inserts azure_database_exporter Agent with given parameters.
+func (as *AgentsService) AddAzureDatabaseExporter(ctx context.Context, req *inventorypb.AddAzureDatabaseExporterRequest) (*inventorypb.AzureDatabaseExporter, error) {
+	var res *inventorypb.AzureDatabaseExporter
+
+	creds := models.AzureCredentials{
+		SubscriptionID: req.AzureDatabaseSubscriptionId,
+		ClientID:       req.AzureDatabaseClientId,
+		ClientSecret:   req.AzureDatabaseClientSecret,
+		TenantID:       req.AzureDatabaseTenantId,
+	}
+
+	azureCredentials, err := json.Marshal(creds)
+	if err != nil {
+		return nil, err
+	}
+
+	e := as.db.InTransaction(func(tx *reform.TX) error {
+		params := &models.CreateAgentParams{
+			PMMAgentID:                req.PmmAgentId,
+			NodeID:                    req.NodeId,
+			AzureCredentials:          string(azureCredentials),
+			AzureDatabaseResourceType: req.AzureDatabaseResourceType,
+			CustomLabels:              req.CustomLabels,
+			PushMetrics:               req.PushMetrics,
+		}
+		row, err := models.CreateAgent(tx.Querier, models.AzureDatabaseExporterType, params)
+		if err != nil {
+			return err
+		}
+
+		// TODO check connection to Azure
+
+		agent, err := services.ToAPIAgent(tx.Querier, row)
+		if err != nil {
+			return err
+		}
+		res = agent.(*inventorypb.AzureDatabaseExporter)
+		return nil
+	})
+	if e != nil {
+		return nil, e
+	}
+
+	as.r.RequestStateUpdate(ctx, req.PmmAgentId)
+	return res, nil
+}
+
+// ChangeAzureDatabaseExporter updates azure_database_exporter Agent with given parameters.
+func (as *AgentsService) ChangeAzureDatabaseExporter(ctx context.Context, req *inventorypb.ChangeAzureDatabaseExporterRequest) (*inventorypb.AzureDatabaseExporter, error) {
+	agent, err := as.changeAgent(req.AgentId, req.Common)
+	if err != nil {
+		return nil, err
+	}
+
+	res := agent.(*inventorypb.AzureDatabaseExporter)
+	as.r.RequestStateUpdate(ctx, res.PmmAgentId)
 	return res, nil
 }
 

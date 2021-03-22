@@ -18,6 +18,7 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/AlekSi/pointer"
@@ -396,6 +397,26 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 			CustomLabels:       labels,
 			PushMetricsEnabled: agent.PushMetrics,
 		}, nil
+
+	case models.AzureDatabaseExporterType:
+		var creds models.AzureCredentials
+		err := json.Unmarshal([]byte(pointer.GetString(agent.AzureCredentials)), &creds)
+		if err != nil {
+			return nil, err
+		}
+		return &inventorypb.AzureDatabaseExporter{
+			AgentId:                     agent.AgentID,
+			PmmAgentId:                  pointer.GetString(agent.PMMAgentID),
+			NodeId:                      nodeID,
+			Disabled:                    agent.Disabled,
+			AzureDatabaseSubscriptionId: creds.SubscriptionID,
+			AzureDatabaseResourceType:   pointer.GetString(agent.AzureDatabaseResourceType),
+			Status:                      inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
+			ListenPort:                  uint32(pointer.GetUint16(agent.ListenPort)),
+			CustomLabels:                labels,
+			PushMetricsEnabled:          agent.PushMetrics,
+		}, nil
+
 	case models.VMAgentType:
 		return &inventorypb.VMAgent{
 			AgentId:    agent.AgentID,

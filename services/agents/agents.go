@@ -38,5 +38,8 @@ func redactWords(agent *models.Agent) []string {
 	if s := pointer.GetString(agent.AWSSecretKey); s != "" {
 		words = append(words, s)
 	}
+	if s := pointer.GetString(agent.AzureCredentials); s != "" {
+		words = append(words, s)
+	}
 	return words
 }
