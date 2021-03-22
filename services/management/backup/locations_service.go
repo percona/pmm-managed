@@ -19,6 +19,8 @@ package backup
 import (
 	"context"
 
+	"github.com/sirupsen/logrus"
+
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
@@ -29,13 +31,25 @@ import (
 // LocationsService represents backup locations API.
 type LocationsService struct {
 	db *reform.DB
+	l  *logrus.Entry
 }
 
 // NewLocationsService creates new backup locations API service.
 func NewLocationsService(db *reform.DB) *LocationsService {
 	return &LocationsService{
+		l:  logrus.WithField("component", "management/backup/locations"),
 		db: db,
 	}
+}
+
+// Enabled returns if service is enabled and can be used
+func (s *LocationsService) Enabled() bool {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		s.l.WithError(err).Error("enabled: get settings")
+		return false
+	}
+	return settings.BackupManagement.Enabled
 }
 
 // ListLocations returns list of all available backup locations.
