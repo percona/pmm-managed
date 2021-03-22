@@ -203,7 +203,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 		case <-ticker.C:
 			r.ping(ctx, agent)
 
-		// see unregister and kick methods
+		// see unregister and Kick methods
 		case <-agent.kick:
 			// already unregistered, no need to call unregister method
 			l.Warn("Kicked.")
