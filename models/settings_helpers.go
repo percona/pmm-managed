@@ -293,7 +293,9 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 	if params.EnableAlerting && params.DisableAlerting {
 		return fmt.Errorf("Both enable_alerting and disable_alerting are present.") //nolint:golint,stylecheck
 	}
-
+	if params.EnableBackupManagement && params.DisableBackupManagement {
+		return fmt.Errorf("Both enable_backup_management and disable_backup_management are present.") //nolint:golint,stylecheck
+	}
 	// TODO: consider refactoring this and the validation for STT check intervals
 	checkCases := []struct {
 		dur       time.Duration
