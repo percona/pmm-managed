@@ -57,7 +57,7 @@ func TestRegistry(t *testing.T) {
 			},
 		}
 
-		r.set(checkResults)
+		r.set(check.Standard, checkResults)
 
 		expectedAlert := &ammodels.PostableAlert{
 			Annotations: map[string]string{
@@ -228,7 +228,7 @@ func TestRegistry(t *testing.T) {
 			},
 		}
 
-		r.update(updateChecrResults)
+		r.set(updateChecrResults)
 
 		expectedAlerts := ammodels.PostableAlerts{
 			{
