@@ -32,8 +32,8 @@ import (
 )
 
 const (
-	PSMDBOperator = "psmdb-operator"
-	PXCOperator   = "pxc-operator"
+	psmdbOperator = "psmdb-operator"
+	pxcOperator   = "pxc-operator"
 )
 
 type component struct {

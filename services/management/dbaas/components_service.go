@@ -47,7 +47,7 @@ func NewComponentsService(db *reform.DB, dbaasClient dbaasClient, versionService
 
 func (c componentsService) GetPSMDBComponents(ctx context.Context, req *dbaasv1beta1.GetPSMDBComponentsRequest) (*dbaasv1beta1.GetPSMDBComponentsResponse, error) {
 	params := componentsParams{
-		operator:  PSMDBOperator,
+		operator:  psmdbOperator,
 		dbVersion: req.DbVersion,
 	}
 	if req.KubernetesClusterName != "" {
@@ -73,7 +73,7 @@ func (c componentsService) GetPSMDBComponents(ctx context.Context, req *dbaasv1b
 
 func (c componentsService) GetPXCComponents(ctx context.Context, req *dbaasv1beta1.GetPXCComponentsRequest) (*dbaasv1beta1.GetPXCComponentsResponse, error) {
 	params := componentsParams{
-		operator:  PXCOperator,
+		operator:  pxcOperator,
 		dbVersion: req.DbVersion,
 	}
 	if req.KubernetesClusterName != "" {

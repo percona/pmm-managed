@@ -31,12 +31,12 @@ func TestVersionServiceClient(t *testing.T) {
 	for _, tt := range []struct {
 		params componentsParams
 	}{
-		{params: componentsParams{operator: PSMDBOperator}},
-		{params: componentsParams{operator: PSMDBOperator, operatorVersion: "1.6.0"}},
-		{params: componentsParams{operator: PSMDBOperator, operatorVersion: "1.7.0", dbVersion: "4.2.8-8"}},
-		{params: componentsParams{operator: PXCOperator}},
-		{params: componentsParams{operator: PXCOperator, operatorVersion: "1.7.0"}},
-		{params: componentsParams{operator: PXCOperator, operatorVersion: "1.7.0", dbVersion: "8.0.20-11.2"}},
+		{params: componentsParams{operator: psmdbOperator}},
+		{params: componentsParams{operator: psmdbOperator, operatorVersion: "1.6.0"}},
+		{params: componentsParams{operator: psmdbOperator, operatorVersion: "1.7.0", dbVersion: "4.2.8-8"}},
+		{params: componentsParams{operator: pxcOperator}},
+		{params: componentsParams{operator: pxcOperator, operatorVersion: "1.7.0"}},
+		{params: componentsParams{operator: pxcOperator, operatorVersion: "1.7.0", dbVersion: "8.0.20-11.2"}},
 	} {
 		t.Run("NotEmptyMatrix", func(t *testing.T) {
 			response, err := c.Matrix(context.TODO(), tt.params)
@@ -44,9 +44,9 @@ func TestVersionServiceClient(t *testing.T) {
 			require.NotEmpty(t, response.Versions)
 			for _, v := range response.Versions {
 				switch tt.params.operator {
-				case PSMDBOperator:
+				case psmdbOperator:
 					assert.NotEmpty(t, v.Matrix.Mongod)
-				case PXCOperator:
+				case pxcOperator:
 					assert.NotEmpty(t, v.Matrix.Pxc)
 					assert.NotEmpty(t, v.Matrix.Proxysql)
 				}
