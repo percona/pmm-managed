@@ -15,7 +15,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 // Package jobs provides jobs functionality.
-package jobs
+package agents
 
 import (
 	"time"
@@ -26,25 +26,24 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/agents"
 )
 
-// Service provides methods for managing jobs.
-type Service struct {
-	r  *agents.Registry
+// JobsService provides methods for managing jobs.
+type JobsService struct {
+	r  *Registry
 	db *reform.DB
 }
 
-// New returns new jobs service.
-func New(db *reform.DB, registry *agents.Registry) *Service {
-	return &Service{
+// NewJobsService returns new jobs service.
+func NewJobsService(db *reform.DB, registry *Registry) *JobsService {
+	return &JobsService{
 		r:  registry,
 		db: db,
 	}
 }
 
 // StartEchoJob starts echo job on the pmm-agent.
-func (s *Service) StartEchoJob(id, pmmAgentID string, timeout time.Duration, message string, delay time.Duration) error {
+func (s *JobsService) StartEchoJob(id, pmmAgentID string, timeout time.Duration, message string, delay time.Duration) error {
 	req := &agentpb.StartJobRequest{
 		JobId:   id,
 		Timeout: ptypes.DurationProto(timeout),
@@ -67,7 +66,7 @@ func (s *Service) StartEchoJob(id, pmmAgentID string, timeout time.Duration, mes
 }
 
 // StopJob stops job with given given id.
-func (s *Service) StopJob(jobID string) error {
+func (s *JobsService) StopJob(jobID string) error {
 	jobResult, err := models.FindJobResultByID(s.db.Querier, jobID)
 	if err != nil {
 		return errors.WithStack(err)

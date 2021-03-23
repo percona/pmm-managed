@@ -71,7 +71,6 @@ import (
 	"github.com/percona/pmm-managed/services/grafana"
 	"github.com/percona/pmm-managed/services/inventory"
 	inventorygrpc "github.com/percona/pmm-managed/services/inventory/grpc"
-	"github.com/percona/pmm-managed/services/jobs"
 	"github.com/percona/pmm-managed/services/management"
 	"github.com/percona/pmm-managed/services/management/backup"
 	managementdbaas "github.com/percona/pmm-managed/services/management/dbaas"
@@ -134,7 +133,7 @@ type gRPCServerDeps struct {
 	alertsService         *ia.AlertsService
 	templatesService      *ia.TemplatesService
 	rulesService          *ia.RulesService
-	jobsService           *jobs.Service
+	jobsService           *agents.JobsService
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -638,7 +637,7 @@ func main() {
 		l.Fatalf("Could not create platform service: %s", err)
 	}
 
-	jobsService := jobs.New(db, agentsRegistry)
+	jobsService := agents.NewJobsService(db, agentsRegistry)
 
 	// Integrated alerts services
 	templatesService := ia.NewTemplatesService(db)
