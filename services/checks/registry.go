@@ -31,11 +31,11 @@ import (
 
 // registry stores alerts and delay information by IDs.
 type registry struct {
-	rw sync.RWMutex
-
+	rw           sync.RWMutex
 	checkResults map[check.Interval]map[string]sttCheckResult
-	alertTTL     time.Duration
-	nowF         func() time.Time // for tests
+
+	alertTTL time.Duration
+	nowF     func() time.Time // for tests
 }
 
 // newRegistry creates a new registry.
@@ -110,12 +110,10 @@ func (r *registry) getCheckResults() []sttCheckResult {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
-	results := make([]sttCheckResult, 0, len(r.checkResults))
-
-	var checkResults []sttCheckResult
+	var results []sttCheckResult
 	for _, group := range r.checkResults {
 		for _, result := range group {
-			checkResults = append(checkResults, result)
+			results = append(results, result)
 		}
 	}
 

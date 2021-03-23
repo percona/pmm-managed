@@ -521,7 +521,7 @@ func (s *Service) filterChecks(checks []check.Check, group check.Interval, disab
 func (s *Service) executeChecks(ctx context.Context, group check.Interval, checkNames []string) error {
 	disabledChecks, err := s.GetDisabledChecks()
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	var checkResults []sttCheckResult
