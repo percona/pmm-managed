@@ -926,16 +926,6 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 	return status.Error(codes.FailedPrecondition, fmt.Sprintf("Connection check failed: %s.", msg))
 }
 
-// GetAgentChannel returns channel associated with given pmm agent id.
-func (r *Registry) GetAgentChannel(pmmAgentID string) (*channel.Channel, error) {
-	agent, err := r.get(pmmAgentID)
-	if err != nil {
-		return nil, err
-	}
-
-	return agent.channel, nil
-}
-
 func (r *Registry) get(pmmAgentID string) (*pmmAgentInfo, error) {
 	r.rw.RLock()
 	pmmAgent := r.agents[pmmAgentID]
