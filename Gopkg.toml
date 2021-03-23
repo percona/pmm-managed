@@ -14,11 +14,7 @@ required = [
 
 [[constraint]]
   name = "github.com/percona/pmm"
-<<<<<<< HEAD
   branch = "PMM-7339-invidual-checks"
-=======
-  branch = "PMM-2.0"
->>>>>>> origin/PMM-2.0
 
 [[constraint]]
   name = "github.com/percona-platform/saas"
