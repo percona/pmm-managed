@@ -498,10 +498,8 @@ func (s *Service) filterChecks(checks []check.Check, group check.Interval, disab
 		// or check has required interval
 		// or check has empty interval and required interval is `standard`.
 		if group == "" || c.Interval == group || (group == check.Standard && c.Interval == "") {
-
 			// If check enabled explicitly or all checks enabled by passing empty `enable` slice.
 			if _, ok := enableMap[c.Name]; ok || len(enableMap) == 0 {
-
 				// Filter disabled checks.
 				if _, ok := disableMap[c.Name]; ok {
 					s.l.Warnf("Check %s is disabled, skipping it.", c.Name)
