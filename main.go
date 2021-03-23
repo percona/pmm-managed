@@ -627,7 +627,7 @@ func main() {
 
 	prom.MustRegister(checksService)
 
-	platformService, err := platform.New(db)
+	platformService, err := platform.New(db, nil)
 	if err != nil {
 		l.Fatalf("Could not create platform service: %s", err)
 	}
