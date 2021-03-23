@@ -14,15 +14,15 @@ type mockVersionService struct {
 }
 
 // Matrix provides a mock function with given fields: ctx, params
-func (_m *mockVersionService) Matrix(ctx context.Context, params componentsParams) (*versionServiceResponse, error) {
+func (_m *mockVersionService) Matrix(ctx context.Context, params componentsParams) (*VersionServiceResponse, error) {
 	ret := _m.Called(ctx, params)
 
-	var r0 *versionServiceResponse
-	if rf, ok := ret.Get(0).(func(context.Context, componentsParams) *versionServiceResponse); ok {
+	var r0 *VersionServiceResponse
+	if rf, ok := ret.Get(0).(func(context.Context, componentsParams) *VersionServiceResponse); ok {
 		r0 = rf(ctx, params)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*versionServiceResponse)
+			r0 = ret.Get(0).(*VersionServiceResponse)
 		}
 	}
 

@@ -52,7 +52,9 @@ type matrix struct {
 	Operator     map[string]component `json:"operator"`
 	LogCollector map[string]component `json:"logCollector"`
 }
-type versionServiceResponse struct {
+
+// VersionServiceResponse represents response from version service API.
+type VersionServiceResponse struct {
 	Versions []struct {
 		Product  string `json:"product"`
 		Operator string `json:"operator"`
@@ -110,7 +112,7 @@ func (c *VersionServiceClient) Collect(ch chan<- prom.Metric) {
 }
 
 // Matrix calls version service with given params and returns components matrix.
-func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsParams) (*versionServiceResponse, error) {
+func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsParams) (*VersionServiceResponse, error) {
 	paths := []string{c.url, params.operator}
 	if params.operatorVersion != "" {
 		paths = append(paths, params.operatorVersion)
@@ -127,12 +129,13 @@ func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsPara
 	if err != nil {
 		return nil, err
 	}
-	var vsResponse versionServiceResponse
+	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
+	var vsResponse VersionServiceResponse
 	err = json.Unmarshal(body, &vsResponse)
 	if err != nil {
 		return nil, err

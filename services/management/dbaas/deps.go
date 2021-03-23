@@ -62,5 +62,5 @@ type dbaasClient interface {
 
 type versionService interface {
 	// Matrix calls version service with given params and returns components matrix.
-	Matrix(ctx context.Context, params componentsParams) (*versionServiceResponse, error)
+	Matrix(ctx context.Context, params componentsParams) (*VersionServiceResponse, error)
 }

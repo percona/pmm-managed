@@ -98,12 +98,12 @@ func (c componentsService) GetPXCComponents(ctx context.Context, req *dbaasv1bet
 }
 
 func (c componentsService) versions(ctx context.Context, params componentsParams) ([]*dbaasv1beta1.Version, error) {
-	var versions []*dbaasv1beta1.Version
 	components, err := c.versionServiceClient.Matrix(ctx, params)
 	if err != nil {
 		return nil, err
 	}
 
+	versions := make([]*dbaasv1beta1.Version, 0, len(components.Versions))
 	for _, v := range components.Versions {
 		respVersion := &dbaasv1beta1.Version{
 			Product:  v.Product,
