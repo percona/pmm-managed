@@ -291,11 +291,8 @@ func (s *Service) GetSecurityCheckResults() ([]check.Result, error) {
 	return checkResults, nil
 }
 
-// // StartChecks triggers STT checks downloading and execution. If checkNames is empty it will run all available checks,
-// // otherwise only specified. It returns services.ErrSTTDisabled if STT is disabled.
-// func (s *Service) StartChecks(ctx context.Context, checkNames []string) error {
-// StartChecks triggers STT checks downloading and execution. Interval specifies what checks group to start, empty
-// interval means "start everything". It returns services.ErrSTTDisabled if STT is disabled.
+// StartChecks triggers STT checks downloading and execution. If group specified only checks from that group will be
+// executed. If checkNames specified then only matched checks will be executed.
 func (s *Service) StartChecks(ctx context.Context, group check.Interval, checkNames []string) error {
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
@@ -554,10 +551,8 @@ func (s *Service) executeChecks(ctx context.Context, group check.Interval, check
 	return nil
 }
 
-// executeMySQLChecks runs MySQL checks for available MySQL services.
+// executeMySQLChecks runs specified checks for available MySQL service.
 func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) []sttCheckResult {
-	// executeMySQLChecks runs MySQL checks for available MySQL services. Interval specifies from what
-	// group to execute checks, empty interval means "execute everything".
 	var res []sttCheckResult
 	for _, c := range checks {
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
@@ -606,11 +601,8 @@ func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) 
 	return res
 }
 
-// executePostgreSQLChecks runs PostgreSQL checks for available PostgreSQL services.
+// executePostgreSQLChecks runs specified PostgreSQL checks for available PostgreSQL services.
 func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Check) []sttCheckResult {
-	// executePostgreSQLChecks runs PostgreSQL checks for available PostgreSQL services. Interval specifies from what
-	// group to execute checks, empty interval means "execute everything".
-
 	var res []sttCheckResult
 	for _, c := range checks {
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
@@ -659,7 +651,7 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Ch
 	return res
 }
 
-// executeMongoDBChecks runs MongoDB checks for available MongoDB services.
+// executeMongoDBChecks runs specified MongoDB checks for available MongoDB services.
 func (s *Service) executeMongoDBChecks(ctx context.Context, checks []check.Check) []sttCheckResult {
 	var res []sttCheckResult
 	for _, c := range checks {
@@ -786,6 +778,7 @@ func (s *Service) processResults(ctx context.Context, sttCheck check.Check, targ
 	for i, result := range results {
 		checkResults[i] = sttCheckResult{
 			checkName: sttCheck.Name,
+			interval:  sttCheck.Interval,
 			target:    target,
 			result:    result,
 		}

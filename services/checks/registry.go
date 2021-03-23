@@ -47,12 +47,17 @@ func newRegistry(alertTTL time.Duration) *registry {
 	}
 }
 
-// set updates only passed results. It does not affects other results.
+// set adds check results.
 func (r *registry) set(checkResults []sttCheckResult) {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
 	for _, result := range checkResults {
+		// Empty interval means standard.
+		if result.interval == "" {
+			result.interval = check.Standard
+		}
+
 		if _, ok := r.checkResults[result.interval]; !ok {
 			r.checkResults[result.interval] = make(map[string]sttCheckResult)
 		}
