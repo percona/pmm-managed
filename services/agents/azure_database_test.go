@@ -42,11 +42,19 @@ func TestAzureExporterConfig(t *testing.T) {
 		"foo": "bar",
 	})
 	require.NoError(t, err)
+	creds := `
+	{
+		"client_id": "azure_database_client_id",
+		"client_secret": "azure_database_client_secret",
+		"tenant_id": "azure_database_tenant_id",
+		"subscription_id": "azure_database_subscription_id"
+	}
+	`
 	agent := &models.Agent{
 		AgentID:                   "/agent_id/agent1",
 		AgentType:                 models.AzureDatabaseExporterType,
 		NodeID:                    &node1.NodeID,
-		AzureCredentials:          pointer.ToString(`{"client_id": "abc", "client_secret": "xyz", "subscription_id": "bcd", "tenant_id": ""ijl"}`),
+		AzureCredentials:          pointer.ToString(creds),
 		AzureDatabaseResourceType: pointer.ToString("mysql"),
 	}
 

@@ -63,6 +63,7 @@ type azureDatabaseCredentials struct {
 }
 
 // azureDatabaseExporterConfig returns configuration of azure_database_exporter process.
+//nolint:funlen
 func azureDatabaseExporterConfig(exporter *models.Agent, redactMode redactMode) (*agentpb.SetStateRequest_AgentProcess, error) {
 	t, err := template.New("credentials").Parse(azureDatabaseTemplate)
 	if err != nil {

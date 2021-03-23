@@ -86,6 +86,17 @@ func ToAPINode(node *models.Node) (inventorypb.Node, error) {
 			Address:      node.Address,
 		}, nil
 
+	case models.RemoteAzureDatabaseNodeType:
+		return &inventorypb.RemoteAzureDatabaseNode{
+			NodeId:       node.NodeID,
+			NodeName:     node.NodeName,
+			NodeModel:    node.NodeModel,
+			Region:       pointer.GetString(node.Region),
+			Az:           node.AZ,
+			CustomLabels: labels,
+			Address:      node.Address,
+		}, nil
+
 	default:
 		panic(fmt.Errorf("unhandled Node type %s", node.NodeType))
 	}

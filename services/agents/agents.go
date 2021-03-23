@@ -17,6 +17,8 @@
 package agents
 
 import (
+	"encoding/json"
+
 	"github.com/AlekSi/pointer"
 
 	"github.com/percona/pmm-managed/models"
@@ -39,7 +41,15 @@ func redactWords(agent *models.Agent) []string {
 		words = append(words, s)
 	}
 	if s := pointer.GetString(agent.AzureCredentials); s != "" {
-		words = append(words, s)
+		creds := models.AzureCredentials{}
+		err := json.Unmarshal([]byte(s), &creds)
+		if err != nil {
+			// reduct whole string
+			words = append(words, s)
+		}
+
+		// reduct values
+		words = append(words, creds.ClientID, creds.ClientSecret, creds.TenantID, creds.SubscriptionID)
 	}
 	return words
 }

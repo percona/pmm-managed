@@ -192,6 +192,7 @@ func (s *AzureDatabaseService) DiscoverAzureDatabase(
 }
 
 // AddAzureDatabase add azure database to monitoring.
+//nolint:funlen
 func (s *AzureDatabaseService) AddAzureDatabase(ctx context.Context, req *managementpb.AddAzureDatabaseRequest) (*managementpb.AddAzureDatabaseResponse, error) {
 	l := logger.Get(ctx).WithField("component", "discover/azureDatabase")
 	if e := s.db.InTransaction(func(tx *reform.TX) error {

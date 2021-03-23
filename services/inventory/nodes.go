@@ -229,7 +229,7 @@ func (s *NodesService) AddRemoteRDSNode(ctx context.Context, req *inventorypb.Ad
 }
 
 // AddRemoteAzureDatabaseNode adds a new Azure database node
-//nolint:unparam
+//nolint:unparam,dupl
 func (s *NodesService) AddRemoteAzureDatabaseNode(ctx context.Context, req *inventorypb.AddRemoteAzureDatabaseNodeRequest) (*inventorypb.RemoteAzureDatabaseNode, error) {
 	params := &models.CreateNodeParams{
 		NodeName:     req.NodeName,
