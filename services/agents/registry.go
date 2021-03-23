@@ -296,8 +296,10 @@ func (r *Registry) handleJobResult(l *logrus.Entry, result *agentpb.JobResult) {
 			if res.Type != models.Echo {
 				return errors.Errorf("Result type echo doesn't match job type %s", res.Type)
 			}
-			if err = res.SetEchoJobResult(&models.EchoJobResult{Message: r.Echo.Message}); err != nil {
-				return err
+			res.Result = &models.JobResultData{
+				Echo: &models.EchoJobResult{
+					Message: r.Echo.Message,
+				},
 			}
 		default:
 			return errors.Errorf("unexpected job result type: %T", r)

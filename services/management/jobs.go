@@ -70,14 +70,9 @@ func (s *JobsAPIService) GetJob(_ context.Context, req *jobsAPI.GetJobRequest) (
 
 	switch result.Type {
 	case models.Echo:
-		echoResult, err := result.GetEchoJobResult()
-		if err != nil {
-			return nil, err
-		}
-
 		resp.Result = &jobsAPI.GetJobResponse_Echo_{
 			Echo: &jobsAPI.GetJobResponse_Echo{
-				Message: echoResult.Message,
+				Message: result.Result.Echo.Message,
 			},
 		}
 	default:

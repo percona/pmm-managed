@@ -65,7 +65,7 @@ var JobResultTable = &jobResultTableType{
 			{Name: "Type", Type: "JobType", Column: "type"},
 			{Name: "Done", Type: "bool", Column: "done"},
 			{Name: "Error", Type: "string", Column: "error"},
-			{Name: "Result", Type: "[]uint8", Column: "result"},
+			{Name: "Result", Type: "*JobResultData", Column: "result"},
 			{Name: "CreatedAt", Type: "time.Time", Column: "created_at"},
 			{Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"},
 		},

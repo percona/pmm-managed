@@ -17,10 +17,9 @@
 package models
 
 import (
-	"encoding/json"
+	"database/sql/driver"
 	"time"
 
-	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
 )
 
@@ -39,17 +38,28 @@ const (
 	Echo = JobType("echo")
 )
 
+// JobResultData holds result data for different job types.
+type JobResultData struct {
+	Echo *EchoJobResult `json:"echo,omitempty"`
+}
+
+// Value implements database/sql/driver.Valuer interface. Should be defined on the value.
+func (c JobResultData) Value() (driver.Value, error) { return jsonValue(c) }
+
+// Scan implements database/sql.Scanner interface. Should be defined on the pointer.
+func (c *JobResultData) Scan(src interface{}) error { return jsonScan(c, src) }
+
 // JobResult describes a job result which is storing in persistent storage.
 //reform:job_results
 type JobResult struct {
-	ID         string    `reform:"id,pk"`
-	PMMAgentID string    `reform:"pmm_agent_id"`
-	Type       JobType   `reform:"type"`
-	Done       bool      `reform:"done"`
-	Error      string    `reform:"error"`
-	Result     []byte    `reform:"result"`
-	CreatedAt  time.Time `reform:"created_at"`
-	UpdatedAt  time.Time `reform:"updated_at"`
+	ID         string         `reform:"id,pk"`
+	PMMAgentID string         `reform:"pmm_agent_id"`
+	Type       JobType        `reform:"type"`
+	Done       bool           `reform:"done"`
+	Error      string         `reform:"error"`
+	Result     *JobResultData `reform:"result"`
+	CreatedAt  time.Time      `reform:"created_at"`
+	UpdatedAt  time.Time      `reform:"updated_at"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.
@@ -72,27 +82,6 @@ func (r *JobResult) BeforeUpdate() error {
 func (r *JobResult) AfterFind() error {
 	r.CreatedAt = r.CreatedAt.UTC()
 	r.UpdatedAt = r.UpdatedAt.UTC()
-
-	return nil
-}
-
-// GetEchoJobResult extracts echo job result data.
-func (r *JobResult) GetEchoJobResult() (*EchoJobResult, error) {
-	var result EchoJobResult
-
-	if err := json.Unmarshal(r.Result, &result); err != nil {
-		return nil, errors.Wrap(err, "failed to parse echo job result")
-	}
-
-	return &result, nil
-}
-
-// SetEchoJobResult sets echo job result data.
-func (r *JobResult) SetEchoJobResult(result *EchoJobResult) error {
-	var err error
-	if r.Result, err = json.Marshal(result); err != nil {
-		return errors.Wrap(err, "failed to marshall echo job result")
-	}
 
 	return nil
 }

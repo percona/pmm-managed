@@ -460,7 +460,7 @@ var databaseSchema = [][]string{
 			type VARCHAR NOT NULL,
 			done BOOLEAN NOT NULL,
 			error VARCHAR NOT NULL,
-			result TEXT NOT NULL,
+			result JSONB,
 
 			created_at TIMESTAMP NOT NULL,
 			updated_at TIMESTAMP NOT NULL,
