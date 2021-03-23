@@ -332,6 +332,28 @@ func validateUserTemplate(t *alert.Template) error {
 
 	// TODO more validations
 
+	// validate expression template with fake parameter values
+	params := make(map[string]string, len(t.Params))
+	for _, p := range t.Params {
+		var value string
+		switch p.Type {
+		case alert.Float:
+			value = "0"
+		case alert.Bool:
+			value = "false"
+		case alert.String:
+			value = "param_text"
+		default:
+			return errors.Errorf("invalid parameter type %s", p.Type)
+		}
+
+		params[p.Name] = value
+	}
+
+	if _, err := templateRuleExpr(t.Expr, params); err != nil {
+		return err
+	}
+
 	return nil
 }
 
