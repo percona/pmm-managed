@@ -439,7 +439,7 @@
   revision = "e66cc9d89f9739d5f841f847877f12443b37484a"
 
 [[projects]]
-  branch = "SAAS-487-email-verification"
+  branch = "PMM-2.0"
   digest = "1:ef83e804ba83f377b3a145b7dc43f68550f4c7c4f9327f07d84c5b0331cc4d87"
   name = "github.com/percona/pmm"
   packages = [
@@ -464,7 +464,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "ec8d28553029a967a04df79c6f9438f3ddb57520"
+  revision = "533b13cdb92a920a5fe7885bda0f18ae897351e8"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
