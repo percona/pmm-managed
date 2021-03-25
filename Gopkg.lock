@@ -422,7 +422,7 @@
   revision = "0d16006be75233517f1bc89eef1e0b40d2fe3924"
 
 [[projects]]
-  branch = "SAAS-487-email-verification"
+  branch = "main"
   digest = "1:1d6597d442006947bc3feed7eea6aa8002424414626d5476fc983fe738690769"
   name = "github.com/percona-platform/saas"
   packages = [
@@ -436,7 +436,7 @@
     "pkg/starlark",
   ]
   pruneopts = "NUT"
-  revision = "b6d12a6a95ca6a6999ccd249f5dd5ed2f6d3390d"
+  revision = "e66cc9d89f9739d5f841f847877f12443b37484a"
 
 [[projects]]
   branch = "SAAS-487-email-verification"
