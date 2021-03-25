@@ -24,17 +24,16 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/agents"
 )
 
 // JobsAPIService provides methods for Jobs starting and management.
 type JobsAPIService struct {
 	db          *reform.DB
-	jobsService *agents.JobsService
+	jobsService jobsService
 }
 
 // NewJobsAPIServer creates new jobs service.
-func NewJobsAPIServer(db *reform.DB, service *agents.JobsService) *JobsAPIService {
+func NewJobsAPIServer(db *reform.DB, service jobsService) *JobsAPIService {
 	return &JobsAPIService{
 		db:          db,
 		jobsService: service,
