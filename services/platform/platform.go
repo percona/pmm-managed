@@ -25,7 +25,6 @@ import (
 	api "github.com/percona-platform/saas/gen/auth"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -43,34 +42,16 @@ const (
 
 var errNoActiveSessions = status.Error(codes.FailedPrecondition, "No active sessions.")
 
-// saasWrapper servers as a wrapper around platform API calls so that we
-// mock Service and write unit tests easily.
-type saasWrapper struct{}
-
-func (sw *saasWrapper) SignUp(cc *grpc.ClientConn, ctx context.Context, req *api.SignUpRequest) (*api.SignUpResponse, error) {
-	return api.NewAuthAPIClient(cc).SignUp(ctx, req)
-}
-func (sw *saasWrapper) SignIn(cc *grpc.ClientConn, ctx context.Context, req *api.SignInRequest) (*api.SignInResponse, error) {
-	return api.NewAuthAPIClient(cc).SignIn(ctx, req)
-}
-func (sw *saasWrapper) SignOut(cc *grpc.ClientConn, ctx context.Context, req *api.SignOutRequest) (*api.SignOutResponse, error) {
-	return api.NewAuthAPIClient(cc).SignOut(ctx, req)
-}
-func (sw *saasWrapper) RefreshSession(cc *grpc.ClientConn, ctx context.Context, req *api.RefreshSessionRequest) (*api.RefreshSessionResponse, error) {
-	return api.NewAuthAPIClient(cc).RefreshSession(ctx, req)
-}
-
 // Service is responsible for interactions with Percona Platform.
 type Service struct {
 	db                     *reform.DB
 	host                   string
 	sessionRefreshInterval time.Duration
-	sWrapper               saasService
 	l                      *logrus.Entry
 }
 
 // New returns platform Service.
-func New(db *reform.DB, ss saasService) (*Service, error) {
+func New(db *reform.DB) (*Service, error) {
 	l := logrus.WithField("component", "auth")
 
 	host, err := envvars.GetSAASHost()
@@ -78,15 +59,10 @@ func New(db *reform.DB, ss saasService) (*Service, error) {
 		return nil, err
 	}
 
-	if ss == nil {
-		ss = &saasWrapper{}
-	}
-
 	s := Service{
 		host:                   host,
 		sessionRefreshInterval: defaultSessionRefreshInterval,
 		db:                     db,
-		sWrapper:               ss,
 		l:                      l,
 	}
 
@@ -128,7 +104,7 @@ func (s *Service) SignUp(ctx context.Context, email, firstName, lastName string)
 	}
 	defer cc.Close() //nolint:errcheck
 
-	_, err = s.sWrapper.SignUp(cc, ctx, &api.SignUpRequest{Email: email, FirstName: firstName, LastName: lastName})
+	_, err = api.NewAuthAPIClient(cc).SignUp(ctx, &api.SignUpRequest{Email: email, FirstName: firstName, LastName: lastName})
 	if err != nil {
 		return err
 	}
@@ -144,7 +120,7 @@ func (s *Service) SignIn(ctx context.Context, email, password string) error {
 	}
 	defer cc.Close() //nolint:errcheck
 
-	resp, err := s.sWrapper.SignIn(cc, ctx, &api.SignInRequest{Email: email, Password: password})
+	resp, err := api.NewAuthAPIClient(cc).SignIn(ctx, &api.SignInRequest{Email: email, Password: password})
 	if err != nil {
 		return err
 	}
@@ -178,7 +154,7 @@ func (s *Service) SignOut(ctx context.Context) error {
 	}
 	defer cc.Close() //nolint:errcheck
 
-	_, err = s.sWrapper.SignOut(cc, ctx, &api.SignOutRequest{})
+	_, err = api.NewAuthAPIClient(cc).SignOut(ctx, &api.SignOutRequest{})
 	if err != nil {
 		if st, ok := status.FromError(err); !ok || st.Code() != codes.InvalidArgument {
 			return err
@@ -214,7 +190,7 @@ func (s *Service) refreshSession(ctx context.Context) error {
 	}
 	defer cc.Close() //nolint:errcheck
 
-	_, err = s.sWrapper.RefreshSession(cc, ctx, &api.RefreshSessionRequest{})
+	_, err = api.NewAuthAPIClient(cc).RefreshSession(ctx, &api.RefreshSessionRequest{})
 	if err != nil {
 		return errors.Wrap(err, "failed to refresh session")
 	}
