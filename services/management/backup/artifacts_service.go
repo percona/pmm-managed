@@ -43,7 +43,7 @@ func NewArtifactsService(db *reform.DB) *ArtifactsService {
 	}
 }
 
-// Enabled returns if service is enabled and can be used,
+// Enabled returns if service is enabled and can be used.
 func (s *ArtifactsService) Enabled() bool {
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
