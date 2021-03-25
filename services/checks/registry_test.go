@@ -441,6 +441,6 @@ func TestRegistry(t *testing.T) {
 
 		collectedAlerts := r.collect()
 		require.Len(t, collectedAlerts, 2)
-		assert.Equal(t, expectedAlerts, collectedAlerts)
+		assert.ElementsMatch(t, expectedAlerts, collectedAlerts)
 	})
 }
