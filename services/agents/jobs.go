@@ -60,7 +60,11 @@ func (s *JobsService) StartEchoJob(id, pmmAgentID string, timeout time.Duration,
 		return err
 	}
 
-	agent.channel.SendAndWaitResponse(req)
+	resp := agent.channel.SendAndWaitResponse(req)
+
+	if e := resp.(*agentpb.StartJobResponse).Error; e != "" {
+		return errors.Errorf("failed to start echo job: %s", e)
+	}
 
 	return nil
 }

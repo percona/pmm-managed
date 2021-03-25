@@ -21,6 +21,7 @@ import (
 
 	jobsAPI "github.com/percona/pmm/api/managementpb/jobs"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -28,6 +29,8 @@ import (
 
 // JobsAPIService provides methods for Jobs starting and management.
 type JobsAPIService struct {
+	l *logrus.Entry
+
 	db          *reform.DB
 	jobsService jobsService
 }
@@ -35,6 +38,8 @@ type JobsAPIService struct {
 // NewJobsAPIServer creates new jobs service.
 func NewJobsAPIServer(db *reform.DB, service jobsService) *JobsAPIService {
 	return &JobsAPIService{
+		l: logrus.WithField("component", "management/jobs"),
+
 		db:          db,
 		jobsService: service,
 	}
@@ -88,7 +93,9 @@ func (s *JobsAPIService) StartEchoJob(_ context.Context, req *jobsAPI.StartEchoJ
 		return nil, err
 	}
 
-	if err := s.jobsService.StartEchoJob(res.ID, res.PMMAgentID, req.Timeout.AsDuration(), req.Message, req.Delay.AsDuration()); err != nil {
+	err = s.jobsService.StartEchoJob(res.ID, res.PMMAgentID, req.Timeout.AsDuration(), req.Message, req.Delay.AsDuration())
+	if err != nil {
+		s.saveJobError(res.ID, err.Error())
 		return nil, err
 	}
 
@@ -105,6 +112,21 @@ func (s *JobsAPIService) CancelJob(_ context.Context, req *jobsAPI.CancelJobRequ
 	}
 
 	return &jobsAPI.CancelJobResponse{}, nil
+}
+
+func (s *JobsAPIService) saveJobError(resultID string, message string) {
+	if e := s.db.InTransaction(func(t *reform.TX) error {
+		res, err := models.FindJobResultByID(t.Querier, resultID)
+		if err != nil {
+			return err
+		}
+
+		res.Error = message
+		res.Done = true
+		return t.Update(res)
+	}); e != nil {
+		s.l.Errorf("Failed to save job result: %+v", e)
+	}
 }
 
 func (s *JobsAPIService) prepareAgentJob(pmmAgentID string, jobType models.JobType) (*models.JobResult, error) {
