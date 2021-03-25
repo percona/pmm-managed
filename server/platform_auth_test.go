@@ -22,11 +22,12 @@ func TestPlatform(t *testing.T) {
 
 	t.Run("signUp", func(t *testing.T) {
 		t.Run("normal", func(t *testing.T) {
-			email, password := genCredentials(t)
+			email, _, firstName, lastName := genCredentials(t)
 			_, err := client.PlatformSignUp(&server.PlatformSignUpParams{
 				Body: server.PlatformSignUpBody{
-					Email:    email,
-					Password: password,
+					Email:     email,
+					FirstName: firstName,
+					LastName:  lastName,
 				},
 				Context: pmmapitests.Context,
 			})
@@ -34,23 +35,12 @@ func TestPlatform(t *testing.T) {
 		})
 
 		t.Run("invalid email", func(t *testing.T) {
-			_, password := genCredentials(t)
+			_, _, firstName, lastName := genCredentials(t)
 			_, err := client.PlatformSignUp(&server.PlatformSignUpParams{
 				Body: server.PlatformSignUpBody{
-					Email:    "not-email",
-					Password: password,
-				},
-				Context: pmmapitests.Context,
-			})
-			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Error Creating Your Account.")
-		})
-
-		t.Run("invalid password", func(t *testing.T) {
-			email, _ := genCredentials(t)
-			_, err := client.PlatformSignUp(&server.PlatformSignUpParams{
-				Body: server.PlatformSignUpBody{
-					Email:    email,
-					Password: "weak-pass",
+					Email:     "not-email",
+					FirstName: firstName,
+					LastName:  lastName,
 				},
 				Context: pmmapitests.Context,
 			})
@@ -58,32 +48,48 @@ func TestPlatform(t *testing.T) {
 		})
 
 		t.Run("empty email", func(t *testing.T) {
-			_, password := genCredentials(t)
+			_, _, firstName, lastName := genCredentials(t)
 			_, err := client.PlatformSignUp(&server.PlatformSignUpParams{
 				Body: server.PlatformSignUpBody{
-					Email:    "",
-					Password: password,
+					Email:     "",
+					FirstName: firstName,
+					LastName:  lastName,
 				},
 				Context: pmmapitests.Context,
 			})
 			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Email: value '' must not be an empty string")
 		})
 
-		t.Run("empty password", func(t *testing.T) {
-			email, _ := genCredentials(t)
+		t.Run("empty first name", func(t *testing.T) {
+			email, _, _, lastName := genCredentials(t)
 			_, err := client.PlatformSignUp(&server.PlatformSignUpParams{
 				Body: server.PlatformSignUpBody{
-					Email:    email,
-					Password: "",
+					Email:     email,
+					FirstName: "",
+					LastName:  lastName,
 				},
 				Context: pmmapitests.Context,
 			})
-			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "invalid field Password: value '' must not be an empty string")
+			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Error Creating Your Account.")
+		})
+
+		t.Run("empty last name", func(t *testing.T) {
+			email, _, firstName, _ := genCredentials(t)
+			_, err := client.PlatformSignUp(&server.PlatformSignUpParams{
+				Body: server.PlatformSignUpBody{
+					Email:     email,
+					FirstName: firstName,
+					LastName:  "",
+				},
+				Context: pmmapitests.Context,
+			})
+			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Error Creating Your Account.")
 		})
 	})
 
 	t.Run("signIn", func(t *testing.T) {
-		email, password := genCredentials(t)
+		t.Skip("Skip till https://jira.percona.com/browse/SAAS-514 is implemented.")
+		email, password, _, _ := genCredentials(t)
 
 		_, err := client.PlatformSignUp(&server.PlatformSignUpParams{
 			Body: server.PlatformSignUpBody{
@@ -151,7 +157,8 @@ func TestPlatform(t *testing.T) {
 	})
 
 	t.Run("signOut", func(t *testing.T) {
-		email, password := genCredentials(t)
+		t.Skip("Skip till https://jira.percona.com/browse/SAAS-514 is implemented.")
+		email, password, _, _ := genCredentials(t)
 
 		_, err := client.PlatformSignUp(&server.PlatformSignUpParams{
 			Body: server.PlatformSignUpBody{
@@ -195,8 +202,8 @@ func TestPlatform(t *testing.T) {
 	})
 }
 
-// genCredentials creates test user email and password.
-func genCredentials(t *testing.T) (string, string) {
+// genCredentials creates test user email, password, firstName and lastName.
+func genCredentials(t *testing.T) (string, string, string, string) {
 	hostname, err := os.Hostname()
 	require.NoError(t, err)
 
@@ -205,5 +212,7 @@ func genCredentials(t *testing.T) (string, string) {
 
 	email := strings.Join([]string{u.Username, hostname, gofakeit.Email(), "test"}, ".")
 	password := gofakeit.Password(true, true, true, false, false, 14)
-	return email, password
+	firstName := gofakeit.FirstName()
+	lastName := gofakeit.LastName()
+	return email, password, firstName, lastName
 }
