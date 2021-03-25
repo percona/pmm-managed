@@ -19,10 +19,9 @@ package backup
 import (
 	"context"
 
-	"github.com/sirupsen/logrus"
-
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
