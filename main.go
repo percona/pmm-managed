@@ -193,6 +193,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 
 	backupv1beta1.RegisterBackupsServer(gRPCServer, backup.NewBackupsService(deps.db, deps.agentsRegistry))
 	backupv1beta1.RegisterLocationsServer(gRPCServer, backup.NewLocationsService(deps.db))
+	backupv1beta1.RegisterArtifactsServer(gRPCServer, backup.NewArtifactsService(deps.db))
 
 	// TODO Remove once changing settings.DBaaS.Enabled is possible via API.
 	if deps.settings.DBaaS.Enabled {
@@ -301,6 +302,7 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 
 		backupv1beta1.RegisterBackupsHandlerFromEndpoint,
 		backupv1beta1.RegisterLocationsHandlerFromEndpoint,
+		backupv1beta1.RegisterArtifactsHandlerFromEndpoint,
 
 		dbaasv1beta1.RegisterKubernetesHandlerFromEndpoint,
 		dbaasv1beta1.RegisterXtraDBClusterHandlerFromEndpoint,
@@ -725,6 +727,12 @@ func main() {
 
 	l.Info("Starting services...")
 	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		authServer.Run(ctx)
+	}()
 
 	wg.Add(1)
 	go func() {
