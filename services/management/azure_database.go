@@ -153,7 +153,7 @@ func (s *AzureDatabaseService) DiscoverAzureDatabase(
 
 	dataInstData, err := s.fetchAzureDatabaseInstancesData(ctx, req, client)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.Unknown, err.Error())
 	}
 
 	resp := managementpb.DiscoverAzureDatabaseResponse{}
@@ -268,15 +268,11 @@ func (s *AzureDatabaseService) AddAzureDatabase(ctx context.Context, req *manage
 				}
 				l.Infof("Added Azure Database Service with ServiceID: %s", service.ServiceID)
 
-				azureDatabaseExporter, err := models.CreateAgent(
-					tx.Querier,
-					models.AzureDatabaseExporterType,
-					&models.CreateAgentParams{
-						PMMAgentID:       models.PMMServerAgentID,
-						NodeID:           node.NodeID,
-						ServiceID:        service.ServiceID,
-						AzureCredentials: string(azureCredentials),
-					})
+				azureDatabaseExporter, err := models.CreateAgent(tx.Querier, models.AzureDatabaseExporterType, &models.CreateAgentParams{
+					PMMAgentID:       models.PMMServerAgentID,
+					ServiceID:        service.ServiceID,
+					AzureCredentials: string(azureCredentials),
+				})
 				if err != nil {
 					return err
 				}
@@ -337,15 +333,11 @@ func (s *AzureDatabaseService) AddAzureDatabase(ctx context.Context, req *manage
 				}
 				l.Infof("Added Azure Database Service with ServiceID: %s", service.ServiceID)
 
-				azureDatabaseExporter, err := models.CreateAgent(
-					tx.Querier,
-					models.AzureDatabaseExporterType,
-					&models.CreateAgentParams{
-						PMMAgentID:       models.PMMServerAgentID,
-						NodeID:           node.NodeID,
-						ServiceID:        service.ServiceID,
-						AzureCredentials: string(azureCredentials),
-					})
+				azureDatabaseExporter, err := models.CreateAgent(tx.Querier, models.AzureDatabaseExporterType, &models.CreateAgentParams{
+					PMMAgentID:       models.PMMServerAgentID,
+					ServiceID:        service.ServiceID,
+					AzureCredentials: string(azureCredentials),
+				})
 				if err != nil {
 					return err
 				}
