@@ -18,6 +18,7 @@ package management
 
 import (
 	"context"
+	"fmt"
 
 	jobsAPI "github.com/percona/pmm/api/managementpb/jobs"
 	"github.com/pkg/errors"
@@ -111,7 +112,19 @@ func (s *JobsAPIService) StartMySQLBackupJob(ctx context.Context, req *jobsAPI.S
 		return nil, err
 	}
 
-	err = s.jobsService.StartMySQLBackupJob(res.ID, res.PMMAgentID, 0, req.Dsn)
+	var locationConfig models.BackupLocationConfig
+	switch cfg := req.LocationConfig.(type) {
+	case *jobsAPI.StartMySQLBackupJobRequest_S3Config:
+		locationConfig.S3Config = &models.S3LocationConfig{
+			Endpoint:   cfg.S3Config.Endpoint,
+			AccessKey:  cfg.S3Config.AccessKey,
+			SecretKey:  cfg.S3Config.SecretKey,
+			BucketName: cfg.S3Config.BucketName,
+		}
+	default:
+		return nil, fmt.Errorf("invalid location config")
+	}
+	err = s.jobsService.StartMySQLBackupJob(res.ID, res.PMMAgentID, 0, req.Dsn, locationConfig)
 	if err != nil {
 		s.saveJobError(res.ID, err.Error())
 		return nil, err
