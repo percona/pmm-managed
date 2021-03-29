@@ -240,10 +240,10 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 	}
 
 	if params.DisableAzurediscover {
-		settings.AzureDiscover.Enabled = false
+		settings.Azurediscover.Enabled = false
 	}
 	if params.EnableAzurediscover {
-		settings.AzureDiscover.Enabled = true
+		settings.Azurediscover.Enabled = true
 	}
 
 	if params.DisableAlerting {

@@ -415,7 +415,7 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 		SttEnabled:           settings.SaaS.STTEnabled,
 		PlatformEmail:        settings.SaaS.Email,
 		DbaasEnabled:         settings.DBaaS.Enabled,
-		AzurediscoverEnabled: settings.AzureDiscover.Enabled,
+		AzurediscoverEnabled: settings.Azurediscover.Enabled,
 		PmmPublicAddress:     settings.PMMPublicAddress,
 
 		AlertingEnabled:      settings.IntegratedAlerting.Enabled,
