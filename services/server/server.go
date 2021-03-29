@@ -415,7 +415,7 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 		SttEnabled:           settings.SaaS.STTEnabled,
 		PlatformEmail:        settings.SaaS.Email,
 		DbaasEnabled:         settings.DBaaS.Enabled,
-		AzureDiscoverEnabled: settings.AzureDiscover.Enabled,
+		AzurediscoverEnabled: settings.AzureDiscover.Enabled,
 		PmmPublicAddress:     settings.PMMPublicAddress,
 
 		AlertingEnabled:      settings.IntegratedAlerting.Enabled,
@@ -562,8 +562,8 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			SSHKey:                 req.SshKey,
 			EnableSTT:              req.EnableStt,
 			DisableSTT:             req.DisableStt,
-			EnableAzureDiscover:    req.EnableAzureDiscover,
-			DisableAzureDiscover:   req.DisableAzureDiscover,
+			EnableAzurediscover:    req.EnableAzurediscover,
+			DisableAzurediscover:   req.DisableAzurediscover,
 			PMMPublicAddress:       req.PmmPublicAddress,
 			RemovePMMPublicAddress: req.RemovePmmPublicAddress,
 
