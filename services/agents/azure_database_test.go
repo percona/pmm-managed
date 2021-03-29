@@ -51,15 +51,23 @@ func TestAzureExporterConfig(t *testing.T) {
 		"resource_group": "azure_database_resource_group"
 	}
 	`
-	agent := &models.Agent{
-		AgentID:                   "/agent_id/agent1",
-		AgentType:                 models.AzureDatabaseExporterType,
-		NodeID:                    &node1.NodeID,
-		AzureCredentials:          pointer.ToString(creds),
-		AzureDatabaseResourceType: pointer.ToString("mysql"),
+
+	service1 := &models.Service{
+		ServiceID:   "/service_id/service1",
+		NodeID:      node1.NodeID,
+		ServiceName: "service1",
+		ServiceType: "mysql",
 	}
 
-	actual, err := azureDatabaseExporterConfig(agent, redactSecrets)
+	agent := &models.Agent{
+		AgentID:          "/agent_id/agent1",
+		AgentType:        models.AzureDatabaseExporterType,
+		NodeID:           &node1.NodeID,
+		ServiceID:        &service1.ServiceID,
+		AzureCredentials: pointer.ToString(creds),
+	}
+
+	actual, err := azureDatabaseExporterConfig(agent, service1, redactSecrets)
 	require.NoError(t, err)
 	expected := &agentpb.SetStateRequest_AgentProcess{
 		Type:               inventorypb.AgentType_AZURE_DATABASE_EXPORTER,

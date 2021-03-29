@@ -727,7 +727,8 @@ func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo)
 			// ignore
 
 		case models.AzureDatabaseExporterType:
-			config, err := azureDatabaseExporterConfig(row, redactMode)
+			service, err := models.FindServiceByID(r.db.Querier, pointer.GetString(row.ServiceID))
+			config, err := azureDatabaseExporterConfig(row, service, redactMode)
 			if err != nil {
 				l.Error(err)
 				return

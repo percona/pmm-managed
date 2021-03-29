@@ -415,17 +415,20 @@ func ToAPIAgent(q *reform.Querier, agent *models.Agent) (inventorypb.Agent, erro
 		if err != nil {
 			return nil, err
 		}
+		service, err := models.FindServiceByID(q, *agent.ServiceID)
+		if err != nil {
+			return nil, err
+		}
 		return &inventorypb.AzureDatabaseExporter{
 			AgentId:                     agent.AgentID,
 			PmmAgentId:                  pointer.GetString(agent.PMMAgentID),
 			NodeId:                      nodeID,
 			Disabled:                    agent.Disabled,
 			AzureDatabaseSubscriptionId: creds.SubscriptionID,
-			AzureDatabaseResourceType:   pointer.GetString(agent.AzureDatabaseResourceType),
+			AzureDatabaseResourceType:   string(service.ServiceType),
 			Status:                      inventorypb.AgentStatus(inventorypb.AgentStatus_value[agent.Status]),
 			ListenPort:                  uint32(pointer.GetUint16(agent.ListenPort)),
 			CustomLabels:                labels,
-			PushMetricsEnabled:          agent.PushMetrics,
 		}, nil
 
 	case models.VMAgentType:
