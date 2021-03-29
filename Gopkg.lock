@@ -460,15 +460,15 @@
 
 [[projects]]
   branch = "main"
-  digest = "1:3a3456315d8c3f9f75569955fe5fd6fada00369ab99c90c8acf752143b80c2d7"
+  digest = "1:7b3bf9956a9fa753fa167b6e75951fb9654512af4dbbbf813c24a80d632451b3"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "0d16006be75233517f1bc89eef1e0b40d2fe3924"
+  revision = "759c17a8159fbba673bd2286dd5bb19a5041ba37"
 
 [[projects]]
   branch = "main"
-  digest = "1:8a1d4fb2211a1d0d2aa24a066bed9518a61118e899c465b93bab02781091c26c"
+  digest = "1:1d6597d442006947bc3feed7eea6aa8002424414626d5476fc983fe738690769"
   name = "github.com/percona-platform/saas"
   packages = [
     "gen/auth",
@@ -481,11 +481,11 @@
     "pkg/starlark",
   ]
   pruneopts = "NUT"
-  revision = "d0e2249b531c97d9ef898c2401dac14fc2da0006"
+  revision = "e66cc9d89f9739d5f841f847877f12443b37484a"
 
 [[projects]]
   branch = "PMM-7498-discovery-azure"
-  digest = "1:83b882e0913a878fe9754d0fe56cc592bc8ac54e8c4cd5ec75a363595f4c99a1"
+  digest = "1:e15c6889df21611504042b07f448ca76c97bc8c16ccc43eae1041df8ea1ba609"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -501,6 +501,7 @@
     "api/managementpb/backup",
     "api/managementpb/dbaas",
     "api/managementpb/ia",
+    "api/managementpb/jobs",
     "api/qanpb",
     "api/serverpb",
     "utils/pdeathsig",
@@ -509,7 +510,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "06f92c709d5b1d7ad06c6675906a8edf8380886a"
+  revision = "3047f9564dde6beeb907c94867b318699503f245"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
@@ -987,6 +988,7 @@
     "github.com/percona/pmm/api/managementpb/backup",
     "github.com/percona/pmm/api/managementpb/dbaas",
     "github.com/percona/pmm/api/managementpb/ia",
+    "github.com/percona/pmm/api/managementpb/jobs",
     "github.com/percona/pmm/api/qanpb",
     "github.com/percona/pmm/api/serverpb",
     "github.com/percona/pmm/utils/pdeathsig",
