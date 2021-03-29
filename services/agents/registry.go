@@ -728,6 +728,10 @@ func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo)
 
 		case models.AzureDatabaseExporterType:
 			service, err := models.FindServiceByID(r.db.Querier, pointer.GetString(row.ServiceID))
+			if err != nil {
+				l.Error(err)
+				return
+			}
 			config, err := azureDatabaseExporterConfig(row, service, redactMode)
 			if err != nil {
 				l.Error(err)

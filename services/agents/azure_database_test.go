@@ -110,7 +110,6 @@ resource_groups:
 			"azure_database_client_secret",
 			"azure_database_tenant_id",
 			"azure_database_subscription_id",
-			"azure_database_resource_group",
 		},
 	}
 	require.Equal(t, expected.Args, actual.Args)
