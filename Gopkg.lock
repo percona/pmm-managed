@@ -485,7 +485,7 @@
 
 [[projects]]
   branch = "PMM-7498-discovery-azure"
-  digest = "1:8a8214a51d7c20d94a216809ae5d9f9cbb28c9badafbb59ecf4e5d101c2b5d0c"
+  digest = "1:83b882e0913a878fe9754d0fe56cc592bc8ac54e8c4cd5ec75a363595f4c99a1"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -509,7 +509,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "306d5cbd11875c1f65cca048cfd3e29a429ba012"
+  revision = "06f92c709d5b1d7ad06c6675906a8edf8380886a"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"

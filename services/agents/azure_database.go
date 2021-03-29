@@ -32,17 +32,17 @@ const azureDatabaseTemplate = `---
 active_directory_authority_url: "https://login.microsoftonline.com/"
 resource_manager_url: "https://management.azure.com/"
 credentials:
-  client_id: "{{ .AzureDatabaseClientID}}"
-  client_secret: "{{ .AzureDatabaseClientSecret}}"
-  tenant_id: "{{ .AzureDatabaseTenantID}}"
-  subscription_id: "{{ .AzureDatabaseSubscriptionID}}"
+  client_id: "{{ .ClientID}}"
+  client_secret: "{{ .ClientSecret}}"
+  tenant_id: "{{ .TenantID}}"
+  subscription_id: "{{ .SubscriptionID}}"
 
 targets:
 resource_groups:
-  - resource_group: "pmmdemo"
+  - resource_group: "{{ .ResourceGroup }}"
     aggregations:
       - Average
-{{ .AzureDatabaseResourceTypes }}
+{{ .ResourceTypes }}
     metrics:
       - name: "cpu_percent"
       - name: "memory_percent"
@@ -55,11 +55,8 @@ resource_groups:
 
 // azureDatabaseInstance represents credentials informations.
 type azureDatabaseCredentials struct {
-	AzureDatabaseClientID       string
-	AzureDatabaseClientSecret   string
-	AzureDatabaseTenantID       string
-	AzureDatabaseSubscriptionID string
-	AzureDatabaseResourceTypes  string
+	models.AzureCredentials
+	ResourceTypes string
 }
 
 // azureDatabaseExporterConfig returns configuration of azure_database_exporter process.
@@ -96,10 +93,13 @@ func azureDatabaseExporterConfig(exporter *models.Agent, redactMode redactMode) 
 		return nil, err
 	}
 	credentials := azureDatabaseCredentials{
-		creds.ClientID,
-		creds.ClientSecret,
-		creds.TenantID,
-		creds.SubscriptionID,
+		models.AzureCredentials{
+			ClientID:       creds.ClientID,
+			ClientSecret:   creds.ClientSecret,
+			TenantID:       creds.TenantID,
+			SubscriptionID: creds.SubscriptionID,
+			ResourceGroup:  creds.ResourceGroup,
+		},
 		resourceTypes,
 	}
 	err = t.Execute(&config, credentials)

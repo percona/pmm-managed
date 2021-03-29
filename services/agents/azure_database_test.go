@@ -47,7 +47,8 @@ func TestAzureExporterConfig(t *testing.T) {
 		"client_id": "azure_database_client_id",
 		"client_secret": "azure_database_client_secret",
 		"tenant_id": "azure_database_tenant_id",
-		"subscription_id": "azure_database_subscription_id"
+		"subscription_id": "azure_database_subscription_id",
+		"resource_group": "pmmdemo"
 	}
 	`
 	agent := &models.Agent{
@@ -96,7 +97,7 @@ resource_groups:
       - name: "network_bytes_ingress"
 			`) + "\n",
 		},
-		RedactWords: []string{"azure_database_client_id", "azure_database_client_secret", "azure_database_tenant_id", "azure_database_subscription_id"},
+		RedactWords: []string{"azure_database_client_id", "azure_database_client_secret", "azure_database_tenant_id", "azure_database_subscription_id", "pmmdemo"},
 	}
 	require.Equal(t, expected.Args, actual.Args)
 	require.Equal(t, expected.Env, actual.Env)

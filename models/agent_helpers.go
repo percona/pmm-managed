@@ -491,6 +491,7 @@ type AzureCredentials struct {
 	ClientID       string `json:"client_id"`
 	ClientSecret   string `json:"client_secret"`
 	TenantID       string `json:"tenant_id"`
+	ResourceGroup  string `json:"resource_group"`
 }
 
 // CreateAgentParams params for add common exporter.
@@ -512,7 +513,6 @@ type CreateAgentParams struct {
 	RDSBasicMetricsDisabled        bool
 	RDSEnhancedMetricsDisabled     bool
 	AzureCredentials               string
-	AzureDatabaseResourceType      string
 	PushMetrics                    bool
 	DisableCollectors              []string
 }

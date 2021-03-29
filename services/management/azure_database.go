@@ -74,6 +74,7 @@ type AzureDatabaseInstanceData struct {
 	Name          string                 `json:"name"`
 	Properties    map[string]interface{} `json:"properties"`
 	Tags          map[string]string      `json:"tags"`
+	Sku           map[string]interface{} `json:"sku"`
 	ResourceGroup string                 `json:"resourceGroup"`
 	Type          string                 `json:"type"`
 	Zones         string                 `json:"zones"`
@@ -82,10 +83,10 @@ type AzureDatabaseInstanceData struct {
 func (s *AzureDatabaseService) getAzureClient(req *managementpb.DiscoverAzureDatabaseRequest) (*resourcegraph.BaseClient, error) {
 	authSettings := auth.EnvironmentSettings{
 		Values: map[string]string{
-			auth.ClientID:       req.ClientId,
-			auth.ClientSecret:   req.ClientSecret,
-			auth.SubscriptionID: req.SubscriptionId,
-			auth.TenantID:       req.TenantId,
+			auth.ClientID:       req.AzureClientId,
+			auth.ClientSecret:   req.AzureClientSecret,
+			auth.SubscriptionID: req.AzureSubscriptionId,
+			auth.TenantID:       req.AzureTenantId,
 			auth.Resource:       azure.PublicCloud.ResourceManagerEndpoint,
 		},
 		Environment: azure.PublicCloud,
@@ -109,7 +110,7 @@ func (s *AzureDatabaseService) fetchAzureDatabaseInstancesData(
 ) ([]AzureDatabaseInstanceData, error) {
 	query := azureDatabaseResourceQuery
 	request := resourcegraph.QueryRequest{
-		Subscriptions: &[]string{req.SubscriptionId},
+		Subscriptions: &[]string{req.AzureSubscriptionId},
 		Query:         &query,
 		Options: &resourcegraph.QueryRequestOptions{
 			ResultFormat: "objectArray",
@@ -130,6 +131,7 @@ func (s *AzureDatabaseService) fetchAzureDatabaseInstancesData(
 	dataInst := struct {
 		Data []AzureDatabaseInstanceData `json:"data"`
 	}{}
+
 	err = json.Unmarshal(d, &dataInst)
 	if err != nil {
 		return nil, err
@@ -157,12 +159,12 @@ func (s *AzureDatabaseService) DiscoverAzureDatabase(
 
 	for _, instance := range dataInstData {
 		inst := managementpb.DiscoverAzureDatabaseInstance{
-			Id:            instance.ID,
-			Location:      instance.Location,
+			InstanceId:    instance.ID,
+			Region:        instance.Location,
 			Name:          instance.Name,
 			ResourceGroup: instance.ResourceGroup,
 			Environment:   instance.Tags["environment"],
-			Zones:         instance.Zones,
+			Az:            instance.Zones,
 		}
 		switch instance.Type {
 		case "microsoft.dbformysql/servers",
@@ -179,10 +181,13 @@ func (s *AzureDatabaseService) DiscoverAzureDatabase(
 		}
 
 		if val, ok := instance.Properties["administratorLogin"].(string); ok {
-			inst.AdministratorLogin = fmt.Sprintf("%s@%s", val, instance.Name)
+			inst.Username = fmt.Sprintf("%s@%s", val, instance.Name)
 		}
 		if val, ok := instance.Properties["fullyQualifiedDomainName"].(string); ok {
-			inst.FullyQualifiedDomainName = val
+			inst.Address = val
+		}
+		if val, ok := instance.Sku["name"].(string); ok {
+			inst.NodeModel = val
 		}
 
 		resp.AzureDatabaseInstance = append(resp.AzureDatabaseInstance, &inst)
@@ -230,10 +235,11 @@ func (s *AzureDatabaseService) AddAzureDatabase(ctx context.Context, req *manage
 		// add Azure Database Agent
 		if req.AzureDatabaseExporter {
 			creds := models.AzureCredentials{
-				SubscriptionID: req.AzureDatabaseSubscriptionId,
-				ClientID:       req.AzureDatabaseClientId,
-				ClientSecret:   req.AzureDatabaseClientSecret,
-				TenantID:       req.AzureDatabaseTenantId,
+				SubscriptionID: req.AzureSubscriptionId,
+				ClientID:       req.AzureClientId,
+				ClientSecret:   req.AzureClientSecret,
+				TenantID:       req.AzureTenantId,
+				ResourceGroup:  req.AzureResourceGroup,
 			}
 
 			azureCredentials, err := json.Marshal(creds)
@@ -245,10 +251,9 @@ func (s *AzureDatabaseService) AddAzureDatabase(ctx context.Context, req *manage
 				tx.Querier,
 				models.AzureDatabaseExporterType,
 				&models.CreateAgentParams{
-					PMMAgentID:                models.PMMServerAgentID,
-					NodeID:                    node.NodeID,
-					AzureCredentials:          string(azureCredentials),
-					AzureDatabaseResourceType: req.Type.String(),
+					PMMAgentID:       models.PMMServerAgentID,
+					NodeID:           node.NodeID,
+					AzureCredentials: string(azureCredentials),
 				})
 			if err != nil {
 				return err
@@ -301,7 +306,7 @@ func (s *AzureDatabaseService) AddAzureDatabase(ctx context.Context, req *manage
 				}
 
 				// add MySQL PerfSchema QAN Agent
-				if req.QanMysqlPerfschema {
+				if req.Qan {
 					qanAgent, err := models.CreateAgent(tx.Querier, models.QANMySQLPerfSchemaAgentType, &models.CreateAgentParams{
 						PMMAgentID:            models.PMMServerAgentID,
 						ServiceID:             service.ServiceID,
@@ -320,6 +325,61 @@ func (s *AzureDatabaseService) AddAzureDatabase(ctx context.Context, req *manage
 				return nil
 
 			case managementpb.DiscoverAzureDatabaseType_DISCOVER_AZURE_DATABASE_TYPE_POSTGRESQL:
+				// add PostgreSQL Service
+				service, err := models.AddNewService(tx.Querier, models.PostgreSQLServiceType, &models.AddDBMSServiceParams{
+					ServiceName:  req.ServiceName,
+					NodeID:       node.NodeID,
+					Environment:  req.Environment,
+					CustomLabels: req.CustomLabels,
+					Address:      &req.Address,
+					Port:         pointer.ToUint16(uint16(req.Port)),
+				})
+				if err != nil {
+					return err
+				}
+				l.Infof("Added Azure Database Service with ServiceID: %s", service.ServiceID)
+
+				_, err = supportedMetricsMode(tx.Querier, req.MetricsMode, models.PMMServerAgentID)
+				if err != nil {
+					return err
+				}
+
+				// add PostgreSQL Exporter
+				postgresqlExporter, err := models.CreateAgent(tx.Querier, models.PostgresExporterType, &models.CreateAgentParams{
+					PMMAgentID:    models.PMMServerAgentID,
+					ServiceID:     service.ServiceID,
+					Username:      req.Username,
+					Password:      req.Password,
+					TLS:           req.Tls,
+					TLSSkipVerify: req.TlsSkipVerify,
+				})
+				if err != nil {
+					return err
+				}
+				l.Infof("Added Azure Database Exporter with AgentID: %s", postgresqlExporter.AgentID)
+
+				if !req.SkipConnectionCheck {
+					if err = s.registry.CheckConnectionToService(ctx, tx.Querier, service, postgresqlExporter); err != nil {
+						return err
+					}
+				}
+
+				// add MySQL PerfSchema QAN Agent
+				if req.Qan {
+					qanAgent, err := models.CreateAgent(tx.Querier, models.QANPostgreSQLPgStatementsAgentType, &models.CreateAgentParams{
+						PMMAgentID:            models.PMMServerAgentID,
+						ServiceID:             service.ServiceID,
+						Username:              req.Username,
+						Password:              req.Password,
+						TLS:                   req.Tls,
+						TLSSkipVerify:         req.TlsSkipVerify,
+						QueryExamplesDisabled: req.DisableQueryExamples,
+					})
+					if err != nil {
+						return err
+					}
+					l.Infof("Added Azure Database QAN with AgentID: %s", qanAgent.AgentID)
+				}
 
 			default:
 				return status.Errorf(codes.InvalidArgument, "Unsupported Azure Database type %q.", req.Type)

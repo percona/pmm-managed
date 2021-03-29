@@ -455,8 +455,7 @@ var databaseSchema = [][]string{
 	},
 	30: {
 		`ALTER TABLE agents
-			ADD COLUMN azure_credentials VARCHAR,
-			ADD COLUMN azure_database_resource_type VARCHAR`,
+			ADD COLUMN azure_credentials VARCHAR`,
 	},
 }
 

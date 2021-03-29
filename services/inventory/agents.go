@@ -866,12 +866,11 @@ func (as *AgentsService) AddAzureDatabaseExporter(ctx context.Context, req *inve
 
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 		params := &models.CreateAgentParams{
-			PMMAgentID:                req.PmmAgentId,
-			NodeID:                    req.NodeId,
-			AzureCredentials:          string(azureCredentials),
-			AzureDatabaseResourceType: req.AzureDatabaseResourceType,
-			CustomLabels:              req.CustomLabels,
-			PushMetrics:               req.PushMetrics,
+			PMMAgentID:       req.PmmAgentId,
+			NodeID:           req.NodeId,
+			AzureCredentials: string(azureCredentials),
+			CustomLabels:     req.CustomLabels,
+			PushMetrics:      req.PushMetrics,
 		}
 		row, err := models.CreateAgent(tx.Querier, models.AzureDatabaseExporterType, params)
 		if err != nil {
