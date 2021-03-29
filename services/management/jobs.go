@@ -105,6 +105,25 @@ func (s *JobsAPIService) StartEchoJob(_ context.Context, req *jobsAPI.StartEchoJ
 	}, nil
 }
 
+func (s *JobsAPIService) StartMySQLBackupJob(ctx context.Context, req *jobsAPI.StartMySQLBackupJobRequest) (*jobsAPI.StartMySQLBackupJobResponse, error) {
+	res, err := s.prepareAgentJob(req.PmmAgentId, models.MySQLBackupJob)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.jobsService.StartMySQLBackupJob(res.ID, res.PMMAgentID, 0, req.Dsn)
+	if err != nil {
+		s.saveJobError(res.ID, err.Error())
+		return nil, err
+	}
+
+	return &jobsAPI.StartMySQLBackupJobResponse{
+		JobId:      res.ID,
+		PmmAgentId: req.PmmAgentId,
+	}, nil
+
+}
+
 // CancelJob terminates job.
 func (s *JobsAPIService) CancelJob(_ context.Context, req *jobsAPI.CancelJobRequest) (*jobsAPI.CancelJobResponse, error) {
 	if err := s.jobsService.StopJob(req.JobId); err != nil {

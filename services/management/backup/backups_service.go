@@ -18,30 +18,31 @@ package backup
 
 import (
 	"context"
-	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/agents"
+
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
+
+	"github.com/percona/pmm-managed/models"
 )
 
 // BackupsService represents backups API.
 type BackupsService struct {
-	db             *reform.DB
-	agentsRegistry *agents.Registry
+	db          *reform.DB
+	jobsService jobsService
 }
 
 // NewBackupsService creates new backups API service.
-func NewBackupsService(db *reform.DB, agentsRegistry *agents.Registry) *BackupsService {
+func NewBackupsService(db *reform.DB, jobsService jobsService) *BackupsService {
 	return &BackupsService{
-		db:             db,
-		agentsRegistry: agentsRegistry,
+		db:          db,
+		jobsService: jobsService,
 	}
 }
 
 // PerformBackups starts on-demand backup.
-func (s *BackupsService) PerformBackup(ctx context.Context, req *backupv1beta1.PerformBackupRequest) (*backupv1beta1.PerformBackupResponse, error) {
+func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.StartBackupRequest) (*backupv1beta1.StartBackupResponse, error) {
 	svc, err := models.FindServiceByID(s.db.Querier, req.ServiceId)
 	if err != nil {
 		return nil, err
@@ -57,12 +58,12 @@ func (s *BackupsService) PerformBackup(ctx context.Context, req *backupv1beta1.P
 	if err != nil {
 		return nil, err
 	}
-	id, err := s.performBackup(ctx, Options{
+	id, err := s.startBackup(ctx, Options{
 		Service:        svc,
 		Agent:          pmmAgents[0],
 		BackupLocation: backupLocation,
 	})
-	return &backupv1beta1.PerformBackupResponse{
+	return &backupv1beta1.StartBackupResponse{
 		BackupId: id,
 	}, nil
 }
@@ -73,9 +74,17 @@ type Options struct {
 	BackupLocation *models.BackupLocation
 }
 
-func (s *BackupsService) performBackup(ctx context.Context, options Options) (string, error) {
-	id := ""
-	return id, nil
+func (s *BackupsService) startBackup(ctx context.Context, options Options) (string, error) {
+	id := "/jobs/backup/mysql/dummy"
+	err := s.jobsService.StartMySQLBackupJob(id, *options.Agent.PMMAgentID, 0, *options.Service.Address, models.BackupLocationConfig{
+		PMMServerConfig: options.BackupLocation.PMMServerConfig,
+		PMMClientConfig: options.BackupLocation.PMMClientConfig,
+		S3Config:        options.BackupLocation.S3Config,
+	})
+	if err != nil {
+		return "", err
+	}
+	return id, err
 }
 
 // Check interfaces.

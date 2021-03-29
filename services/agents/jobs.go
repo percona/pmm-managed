@@ -69,6 +69,45 @@ func (s *JobsService) StartEchoJob(id, pmmAgentID string, timeout time.Duration,
 	return nil
 }
 
+// StartMySQLBackupJob starts mysql backup job on the pmm-agent.
+func (s *JobsService) StartMySQLBackupJob(id, pmmAgentID string, timeout time.Duration, dsn string, locationConfig models.BackupLocationConfig) error {
+	mySQLReq := &agentpb.StartJobRequest_MySQLBackup{
+		Dsn: dsn,
+	}
+	switch {
+	case locationConfig.S3Config != nil:
+		mySQLReq.LocationConfig = &agentpb.StartJobRequest_MySQLBackup_S3Config{
+			S3Config: &agentpb.S3LocationConfig{
+				Endpoint:   locationConfig.S3Config.Endpoint,
+				AccessKey:  locationConfig.S3Config.AccessKey,
+				SecretKey:  locationConfig.S3Config.SecretKey,
+				BucketName: locationConfig.S3Config.BucketName,
+			},
+		}
+	default:
+		return errors.Errorf("unsupported location config")
+	}
+	req := &agentpb.StartJobRequest{
+		JobId:   id,
+		Timeout: ptypes.DurationProto(timeout),
+		Job: &agentpb.StartJobRequest_MysqlBackup{
+			MysqlBackup: mySQLReq,
+		},
+	}
+
+	agent, err := s.r.get(pmmAgentID)
+	if err != nil {
+		return err
+	}
+
+	resp := agent.channel.SendAndWaitResponse(req)
+	if e := resp.(*agentpb.StartJobResponse).Error; e != "" {
+		return errors.Errorf("failed to start MySQL job: %s", e)
+	}
+
+	return nil
+}
+
 // StopJob stops job with given given id.
 func (s *JobsService) StopJob(jobID string) error {
 	jobResult, err := models.FindJobResultByID(s.db.Querier, jobID)

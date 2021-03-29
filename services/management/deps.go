@@ -71,4 +71,5 @@ type grafanaClient interface {
 type jobsService interface {
 	StopJob(jobID string) error
 	StartEchoJob(id, pmmAgentID string, timeout time.Duration, message string, delay time.Duration) error
+	StartMySQLBackupJob(id, pmmAgentID string, timeout time.Duration, dsn string, locationConfig models.BackupLocationConfig) error
 }
