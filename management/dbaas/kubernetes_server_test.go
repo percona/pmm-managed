@@ -126,8 +126,10 @@ func TestKubernetesServer(t *testing.T) {
 		require.NotNil(t, resources.Payload.Available)
 		assert.Greater(t, resources.Payload.All.CPUm, resources.Payload.Available.CPUm)
 		assert.Greater(t, resources.Payload.All.MemoryBytes, resources.Payload.Available.MemoryBytes)
-		assert.Greater(t, resources.Payload.Available.MemoryBytes, int64(0))
-		assert.Greater(t, resources.Payload.Available.CPUm, int64(0))
+		assert.Greater(t, resources.Payload.All.DiskSize, resources.Payload.Available.DiskSize)
+		assert.Greater(t, resources.Payload.Available.CPUm, uint64(0))
+		assert.Greater(t, resources.Payload.Available.MemoryBytes, uint64(0))
+		assert.Greater(t, resources.Payload.Available.DiskSize, uint64(0))
 	})
 
 	t.Run("UnregisterNotExistCluster", func(t *testing.T) {

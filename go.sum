@@ -346,10 +346,8 @@ github.com/pact-foundation/pact-go v1.0.4/go.mod h1:uExwJY4kCzNPcHRj+hCR/HBbOOIw
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
 github.com/pelletier/go-toml v1.4.0/go.mod h1:PN7xzY2wHTK0K9p34ErDQMlFxa51Fk0OUruD3k1mMwo=
-github.com/percona-platform/saas v0.0.0-20210325112150-e66cc9d89f97 h1:d71H8LxN2B4tzjWgMF1JjhOreS6KQA2wl1ioEMsk+ps=
-github.com/percona-platform/saas v0.0.0-20210325112150-e66cc9d89f97/go.mod h1:jJRyGMxxDJaSiU7AaHNS+8j1TFQQhX6lcYp8s0t8Knc=
-github.com/percona/pmm v2.15.2-0.20210325120332-533b13cdb92a+incompatible h1:fYF06XUTCzGek24Qjt6JhuCyU+1M+8rysxgpEDr7xE8=
-github.com/percona/pmm v2.15.2-0.20210325120332-533b13cdb92a+incompatible/go.mod h1:nN14kK4Dfl2Ub1k05aOnAHv7SmLEQtCsYX+DEfLgrkU=
+github.com/percona/pmm v2.15.2-0.20210329111945-60c2175fe946+incompatible h1:ie7qDeuZd1+D2VArg8UteOlfPp+jN6viRTU1JiyZdOc=
+github.com/percona/pmm v2.15.2-0.20210329111945-60c2175fe946+incompatible/go.mod h1:nN14kK4Dfl2Ub1k05aOnAHv7SmLEQtCsYX+DEfLgrkU=
 github.com/percona/promconfig v0.2.1 h1:LBbCDSQRfy0aTHFJMgrVQIE2WvmPkMTkIoznTfBAvj8=
 github.com/percona/promconfig v0.2.1/go.mod h1:Y2uXi5QNk71+ceJHuI9poank+0S1kjxd3K105fXKVkg=
 github.com/performancecopilot/speed v3.0.0+incompatible/go.mod h1:/CLtqpZ5gBg1M9iaPbIdPPGyKcA8hKdoy6hAWba7Yac=
