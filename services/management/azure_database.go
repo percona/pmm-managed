@@ -38,6 +38,7 @@ import (
 const (
 	// https://docs.microsoft.com/en-us/azure/governance/resource-graph/concepts/query-language
 	// https://docs.microsoft.com/en-us/azure/azure-monitor/essentials/metrics-supported
+	// TODO: add pagination and filtering https://jira.percona.com/browse/PMM-7813
 	azureDatabaseResourceQuery string = `
 		Resources
 			| where type in~ (
@@ -234,6 +235,7 @@ func (s *AzureDatabaseService) AddAzureDatabase(ctx context.Context, req *manage
 
 		// add Azure Database Agent
 		if req.AzureDatabaseExporter {
+
 			creds := models.AzureCredentials{
 				SubscriptionID: req.AzureSubscriptionId,
 				ClientID:       req.AzureClientId,
@@ -246,19 +248,6 @@ func (s *AzureDatabaseService) AddAzureDatabase(ctx context.Context, req *manage
 			if err != nil {
 				return err
 			}
-
-			azureDatabaseExporter, err := models.CreateAgent(
-				tx.Querier,
-				models.AzureDatabaseExporterType,
-				&models.CreateAgentParams{
-					PMMAgentID:       models.PMMServerAgentID,
-					NodeID:           node.NodeID,
-					AzureCredentials: string(azureCredentials),
-				})
-			if err != nil {
-				return err
-			}
-			l.Infof("Created Azure Database Exporter with AgentID: %s", azureDatabaseExporter.AgentID)
 
 			//nolint:exhaustive
 			switch req.Type {
@@ -278,6 +267,20 @@ func (s *AzureDatabaseService) AddAzureDatabase(ctx context.Context, req *manage
 					return err
 				}
 				l.Infof("Added Azure Database Service with ServiceID: %s", service.ServiceID)
+
+				azureDatabaseExporter, err := models.CreateAgent(
+					tx.Querier,
+					models.AzureDatabaseExporterType,
+					&models.CreateAgentParams{
+						PMMAgentID:       models.PMMServerAgentID,
+						NodeID:           node.NodeID,
+						ServiceID:        service.ServiceID,
+						AzureCredentials: string(azureCredentials),
+					})
+				if err != nil {
+					return err
+				}
+				l.Infof("Created Azure Database Exporter with AgentID: %s", azureDatabaseExporter.AgentID)
 
 				// add MySQL Exporter
 				mysqldExporter, err := models.CreateAgent(tx.Querier, models.MySQLdExporterType, &models.CreateAgentParams{
@@ -333,6 +336,20 @@ func (s *AzureDatabaseService) AddAzureDatabase(ctx context.Context, req *manage
 					return err
 				}
 				l.Infof("Added Azure Database Service with ServiceID: %s", service.ServiceID)
+
+				azureDatabaseExporter, err := models.CreateAgent(
+					tx.Querier,
+					models.AzureDatabaseExporterType,
+					&models.CreateAgentParams{
+						PMMAgentID:       models.PMMServerAgentID,
+						NodeID:           node.NodeID,
+						ServiceID:        service.ServiceID,
+						AzureCredentials: string(azureCredentials),
+					})
+				if err != nil {
+					return err
+				}
+				l.Infof("Created Azure Database Exporter with AgentID: %s", azureDatabaseExporter.AgentID)
 
 				// add PostgreSQL Exporter
 				postgresqlExporter, err := models.CreateAgent(tx.Querier, models.PostgresExporterType, &models.CreateAgentParams{
