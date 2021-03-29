@@ -415,11 +415,11 @@
 
 [[projects]]
   branch = "PMM-7595-use-uint64-for-resources"
-  digest = "1:568d3f3a330ef6fdb6aa3b0a1bc80d7694b03ed69ec18942c9e1d5f8cfcf8dc2"
+  digest = "1:9fb472e3f52d391602e2b075638a1e093f2b47a33cc12192ba1add0dac1880c5"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "186062445c941a408781e3468b72ad4c606221c5"
+  revision = "9eb831cb0dcf1b2200368da2f029eeb36d06e196"
 
 [[projects]]
   branch = "main"
