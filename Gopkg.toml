@@ -14,7 +14,7 @@ required = [
 
 [[constraint]]
   name = "github.com/percona/pmm"
-  branch = "PMM-7595-use-uint64-for-resources"
+  branch = "PMM-2.0"
 
 [[constraint]]
   name = "github.com/percona-platform/saas"
@@ -22,4 +22,4 @@ required = [
 
 [[constraint]]
   name = "github.com/percona-platform/dbaas-api"
-  branch = "PMM-7595-use-uint64-for-resources"
+  branch = "main"
