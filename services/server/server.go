@@ -408,16 +408,17 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 			StandardInterval: ptypes.DurationProto(settings.SaaS.STTCheckIntervals.StandardInterval),
 			FrequentInterval: ptypes.DurationProto(settings.SaaS.STTCheckIntervals.FrequentInterval),
 		},
-		DataRetention:    ptypes.DurationProto(settings.DataRetention),
-		SshKey:           settings.SSHKey,
-		AwsPartitions:    settings.AWSPartitions,
-		AlertManagerUrl:  settings.AlertManagerURL,
-		SttEnabled:       settings.SaaS.STTEnabled,
-		PlatformEmail:    settings.SaaS.Email,
-		DbaasEnabled:     settings.DBaaS.Enabled,
-		PmmPublicAddress: settings.PMMPublicAddress,
+		DataRetention:        ptypes.DurationProto(settings.DataRetention),
+		SshKey:               settings.SSHKey,
+		AwsPartitions:        settings.AWSPartitions,
+		AlertManagerUrl:      settings.AlertManagerURL,
+		SttEnabled:           settings.SaaS.STTEnabled,
+		PlatformEmail:        settings.SaaS.Email,
+		DbaasEnabled:         settings.DBaaS.Enabled,
+		AzureDiscoverEnabled: settings.AzureDiscover.Enabled,
+		PmmPublicAddress:     settings.PMMPublicAddress,
 
-		AlertingEnabled: settings.IntegratedAlerting.Enabled,
+		AlertingEnabled:      settings.IntegratedAlerting.Enabled,
 	}
 
 	if settings.IntegratedAlerting.EmailAlertingSettings != nil {
@@ -561,6 +562,8 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			SSHKey:                 req.SshKey,
 			EnableSTT:              req.EnableStt,
 			DisableSTT:             req.DisableStt,
+			EnableAzureDiscover:    req.EnableAzureDiscover,
+			DisableAzureDiscover:   req.DisableAzureDiscover,
 			PMMPublicAddress:       req.PmmPublicAddress,
 			RemovePMMPublicAddress: req.RemovePmmPublicAddress,
 

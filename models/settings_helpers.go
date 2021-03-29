@@ -82,6 +82,11 @@ type ChangeSettingsParams struct {
 	// Disable DBaaS features.
 	DisableDBaaS bool
 
+	// Enable Azure Discover features.
+	EnableAzureDiscover bool
+	// Disable Azure Discover features.
+	DisableAzureDiscover bool
+
 	// Enable Integrated Alerting features.
 	EnableAlerting bool
 	// Disable Integrated Alerting features.
@@ -232,6 +237,13 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 	}
 	if params.RemovePMMPublicAddress {
 		settings.PMMPublicAddress = ""
+	}
+
+	if params.DisableAzureDiscover {
+		settings.AzureDiscover.Enabled = false
+	}
+	if params.EnableAzureDiscover {
+		settings.AzureDiscover.Enabled = true$
 	}
 
 	if params.DisableAlerting {
