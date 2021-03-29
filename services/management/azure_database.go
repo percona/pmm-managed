@@ -159,12 +159,12 @@ func (s *AzureDatabaseService) DiscoverAzureDatabase(
 
 	for _, instance := range dataInstData {
 		inst := managementpb.DiscoverAzureDatabaseInstance{
-			InstanceId:    instance.ID,
-			Region:        instance.Location,
-			Name:          instance.Name,
-			ResourceGroup: instance.ResourceGroup,
-			Environment:   instance.Tags["environment"],
-			Az:            instance.Zones,
+			InstanceId:         instance.ID,
+			Region:             instance.Location,
+			ServiceName:        instance.Name,
+			AzureResourceGroup: instance.ResourceGroup,
+			Environment:        instance.Tags["environment"],
+			Az:                 instance.Zones,
 		}
 		switch instance.Type {
 		case "microsoft.dbformysql/servers",
@@ -279,11 +279,6 @@ func (s *AzureDatabaseService) AddAzureDatabase(ctx context.Context, req *manage
 				}
 				l.Infof("Added Azure Database Service with ServiceID: %s", service.ServiceID)
 
-				_, err = supportedMetricsMode(tx.Querier, req.MetricsMode, models.PMMServerAgentID)
-				if err != nil {
-					return err
-				}
-
 				// add MySQL Exporter
 				mysqldExporter, err := models.CreateAgent(tx.Querier, models.MySQLdExporterType, &models.CreateAgentParams{
 					PMMAgentID:                     models.PMMServerAgentID,
@@ -338,11 +333,6 @@ func (s *AzureDatabaseService) AddAzureDatabase(ctx context.Context, req *manage
 					return err
 				}
 				l.Infof("Added Azure Database Service with ServiceID: %s", service.ServiceID)
-
-				_, err = supportedMetricsMode(tx.Querier, req.MetricsMode, models.PMMServerAgentID)
-				if err != nil {
-					return err
-				}
 
 				// add PostgreSQL Exporter
 				postgresqlExporter, err := models.CreateAgent(tx.Querier, models.PostgresExporterType, &models.CreateAgentParams{
