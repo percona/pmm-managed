@@ -440,7 +440,7 @@
 
 [[projects]]
   branch = "PMM-7386-mysql-backup"
-  digest = "1:b83eab3265786ebc045116da50ee30413e6946da07f59881d668a40e25ba73de"
+  digest = "1:c0e49b8d4451e9432c024dc5f553c27563c3c5e0a0bd191cbd2591f31a92776d"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -456,6 +456,7 @@
     "api/managementpb/backup",
     "api/managementpb/dbaas",
     "api/managementpb/ia",
+    "api/managementpb/jobs",
     "api/qanpb",
     "api/serverpb",
     "utils/pdeathsig",
@@ -464,7 +465,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "d38bb04c2c535456294996917fdb8079c0499787"
+  revision = "66621dd5f5ee0c5d51ec2a2121679d61dbb9ee7a"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
@@ -937,6 +938,7 @@
     "github.com/percona/pmm/api/managementpb/backup",
     "github.com/percona/pmm/api/managementpb/dbaas",
     "github.com/percona/pmm/api/managementpb/ia",
+    "github.com/percona/pmm/api/managementpb/jobs",
     "github.com/percona/pmm/api/qanpb",
     "github.com/percona/pmm/api/serverpb",
     "github.com/percona/pmm/utils/pdeathsig",
