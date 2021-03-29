@@ -440,7 +440,7 @@
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:3831452b90000bf14ce8134a1116a4e20396bf1375136cb52503ca89b0c8c4d5"
+  digest = "1:a837467c6ba33da1c0ab7340be3ee46fec9d20976ac4884e5e845d28308e3e6d"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
