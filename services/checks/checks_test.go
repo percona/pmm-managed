@@ -25,6 +25,7 @@ import (
 	"github.com/AlekSi/pointer"
 	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/percona-platform/saas/pkg/check"
+	"github.com/percona/pmm/api/managementpb"
 	"github.com/percona/pmm/version"
 	promtest "github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
@@ -220,6 +221,67 @@ func TestEnableChecks(t *testing.T) {
 		disChecks, err := s.GetDisabledChecks()
 		require.NoError(t, err)
 		assert.Equal(t, []string{checks[1].Name}, disChecks)
+	})
+}
+
+func TestChangeInterval(t *testing.T) {
+	t.Run("normal", func(t *testing.T) {
+		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
+		s, err := New(nil, nil, db)
+		require.NoError(t, err)
+		s.localChecksFile = testChecksFile
+
+		s.collectChecks(context.Background())
+
+		checks := s.GetAllChecks()
+		assert.Len(t, checks, 3)
+
+		// change all check intervals from standard to rare
+		for _, c := range checks {
+			err = s.ChangeInterval(c.Name, managementpb.SecurityCheckInterval_RARE)
+			require.NoError(t, err)
+		}
+
+		updatedChecks := s.GetAllChecks()
+		for _, c := range updatedChecks {
+			assert.Equal(t, check.Rare, c.Interval)
+		}
+
+		t.Run("preserve intervals on restarts", func(t *testing.T) {
+			settings, err := models.GetSettings(db)
+			require.NoError(t, err)
+
+			settings.SaaS.STTEnabled = true
+			err = models.SaveSettings(db, settings)
+			require.NoError(t, err)
+
+			err = s.StartChecks(context.Background(), "")
+			require.NoError(t, err)
+
+			checks := s.GetAllChecks()
+			for _, c := range checks {
+				assert.Equal(t, check.Rare, c.Interval)
+			}
+		})
+	})
+
+	t.Run("error", func(t *testing.T) {
+		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
+		s, err := New(nil, nil, db)
+		require.NoError(t, err)
+		s.localChecksFile = testChecksFile
+
+		s.collectChecks(context.Background())
+
+		checks := s.GetAllChecks()
+		assert.Len(t, checks, 3)
+
+		for _, c := range checks {
+			err = s.ChangeInterval(c.Name, managementpb.SecurityCheckInterval_SECURITY_CHECK_INTERVAL_INVALID)
+			assert.EqualError(t, err, "invalid security check interval")
+		}
 	})
 }
 

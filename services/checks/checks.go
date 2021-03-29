@@ -32,6 +32,7 @@ import (
 
 	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/percona-platform/saas/pkg/check"
+	"github.com/percona/pmm/api/managementpb"
 	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
@@ -102,6 +103,9 @@ type Service struct {
 	postgreSQLChecks []check.Check
 	mongoDBChecks    []check.Check
 
+	cim               sync.Mutex
+	checksIntervalMap map[string]check.Interval
+
 	tm             sync.Mutex
 	rareTicker     *time.Ticker
 	standardTicker *time.Ticker
@@ -138,6 +142,8 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 		startDelay:      defaultStartDelay,
 		resendInterval:  defaultResendInterval,
 		localChecksFile: os.Getenv(envCheckFile),
+
+		checksIntervalMap: make(map[string]check.Interval),
 
 		mScriptsExecuted: prom.NewCounterVec(prom.CounterOpts{
 			Namespace: prometheusNamespace,
@@ -414,6 +420,82 @@ func (s *Service) EnableChecks(checkNames []string) error {
 	}
 
 	return nil
+}
+
+// ChangeInterval changes a check's interval to the value received from the UI.
+func (s *Service) ChangeInterval(checkName string, interval managementpb.SecurityCheckInterval) error {
+	for _, c := range s.GetAllChecks() {
+		if c.Name == checkName {
+			switch interval {
+			case managementpb.SecurityCheckInterval_STANDARD:
+				c.Interval = check.Standard
+			case managementpb.SecurityCheckInterval_FREQUENT:
+				c.Interval = check.Frequent
+			case managementpb.SecurityCheckInterval_RARE:
+				c.Interval = check.Rare
+			default:
+				return errors.New("invalid security check interval")
+			}
+
+			s.updateCheckInterval(c)
+
+			// since we re-run checks at regular intervals using a call
+			// to s.StartChecks which in turn calls s.collectChecks
+			// to load/download checks, we must record any changes
+			// to check intervals in this map so that they can be re-applied
+			// once the checks have been re-loaded on restarts.
+			s.cim.Lock()
+			defer s.cim.Unlock()
+			s.checksIntervalMap[c.Name] = c.Interval
+			break
+		}
+	}
+	return nil
+}
+
+func (s *Service) updateCheckInterval(newCheck check.Check) {
+	switch newCheck.Type {
+	case check.MySQLSelect:
+		fallthrough
+	case check.MySQLShow:
+		s.cm.Lock()
+		defer s.cm.Unlock()
+		for i, oldCheck := range s.mySQLChecks {
+			if oldCheck.Name == newCheck.Name {
+				s.mySQLChecks[i] = newCheck
+				break
+			}
+		}
+
+	case check.PostgreSQLSelect:
+		fallthrough
+	case check.PostgreSQLShow:
+		s.cm.Lock()
+		defer s.cm.Unlock()
+		for i, oldCheck := range s.postgreSQLChecks {
+			if oldCheck.Name == newCheck.Name {
+				s.postgreSQLChecks[i] = newCheck
+				break
+			}
+		}
+
+	case check.MongoDBGetParameter:
+		fallthrough
+	case check.MongoDBBuildInfo:
+		fallthrough
+	case check.MongoDBGetCmdLineOpts:
+		s.cm.Lock()
+		defer s.cm.Unlock()
+		for i, oldCheck := range s.mongoDBChecks {
+			if oldCheck.Name == newCheck.Name {
+				s.mongoDBChecks[i] = newCheck
+				break
+			}
+		}
+
+	default:
+		s.l.Warnf("Unknown check type %s, skip it.", newCheck.Type)
+	}
 }
 
 // waitForResult periodically checks result state and returns it when complete.
@@ -910,6 +992,15 @@ func (s *Service) collectChecks(ctx context.Context) {
 	}
 
 	checks = s.filterSupportedChecks(checks)
+	for i, c := range checks {
+		s.cim.Lock()
+		if interval, ok := s.checksIntervalMap[c.Name]; ok {
+			c.Interval = interval
+		}
+		s.cim.Unlock()
+		checks[i] = c
+	}
+
 	mySQLChecks, postgreSQLChecks, mongoDBChecks := s.groupChecksByDB(checks)
 
 	s.updateChecks(mySQLChecks, postgreSQLChecks, mongoDBChecks)

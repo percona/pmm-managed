@@ -170,3 +170,37 @@ func TestUpdateSecurityChecks(t *testing.T) {
 		assert.Nil(t, resp)
 	})
 }
+
+func TestChangeSecurityChecksInterval(t *testing.T) {
+	t.Run("ChangeInterval error", func(t *testing.T) {
+		var checksService mockChecksService
+		checksService.On("ChangeInterval", mock.Anything, mock.Anything).Return(errors.New("random error"))
+
+		s := NewChecksAPIService(&checksService)
+
+		resp, err := s.ChangeSecurityChecksInterval(&managementpb.ChangeSecurityChecksIntervalRequest{
+			Param: &managementpb.ChangeSecurityCheckIntervalParams{
+				Name:     "check-name",
+				Interval: managementpb.SecurityCheckInterval_STANDARD,
+			},
+		})
+		assert.EqualError(t, err, "failed to change security check interval: random error")
+		assert.Nil(t, resp)
+	})
+
+	t.Run("ChangeInterval success", func(t *testing.T) {
+		var checksService mockChecksService
+		checksService.On("ChangeInterval", mock.Anything, mock.Anything).Return(nil)
+
+		s := NewChecksAPIService(&checksService)
+
+		resp, err := s.ChangeSecurityChecksInterval(&managementpb.ChangeSecurityChecksIntervalRequest{
+			Param: &managementpb.ChangeSecurityCheckIntervalParams{
+				Name:     "check-name",
+				Interval: managementpb.SecurityCheckInterval_STANDARD,
+			},
+		})
+		require.NoError(t, err)
+		assert.Equal(t, &managementpb.ChangeSecurityChecksIntervalResponse{}, resp)
+	})
+}

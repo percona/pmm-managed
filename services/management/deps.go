@@ -23,6 +23,8 @@ import (
 	"github.com/percona-platform/saas/pkg/check"
 	"gopkg.in/reform.v1"
 
+	"github.com/percona/pmm/api/managementpb"
+
 	"github.com/percona/pmm-managed/models"
 )
 
@@ -57,6 +59,7 @@ type checksService interface {
 	GetDisabledChecks() ([]string, error)
 	DisableChecks(checkNames []string) error
 	EnableChecks(checkNames []string) error
+	ChangeInterval(checkName string, interval managementpb.SecurityCheckInterval) error
 }
 
 // grafanaClient is a subset of methods of grafana.Client used by this package.

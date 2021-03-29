@@ -52,3 +52,8 @@ func (s *checksServer) ListSecurityChecks(ctx context.Context, req *managementpb
 func (s *checksServer) ChangeSecurityChecks(ctx context.Context, req *managementpb.ChangeSecurityChecksRequest) (*managementpb.ChangeSecurityChecksResponse, error) {
 	return s.svc.ChangeSecurityChecks(req)
 }
+
+// ChangeSecurityChecksInterval allows to change STT checks state.
+func (s *checksServer) ChangeSecurityChecksInterval(ctx context.Context, req *managementpb.ChangeSecurityChecksIntervalRequest) (*managementpb.ChangeSecurityChecksIntervalResponse, error) {
+	return s.svc.ChangeSecurityChecksInterval(req)
+}
