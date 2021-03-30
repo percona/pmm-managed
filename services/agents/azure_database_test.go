@@ -42,15 +42,6 @@ func TestAzureExporterConfig(t *testing.T) {
 		"foo": "bar",
 	})
 	require.NoError(t, err)
-	creds := `
-	{
-		"client_id": "azure_database_client_id",
-		"client_secret": "azure_database_client_secret",
-		"tenant_id": "azure_database_tenant_id",
-		"subscription_id": "azure_database_subscription_id",
-		"resource_group": "azure_database_resource_group"
-	}
-	`
 
 	service1 := &models.Service{
 		ServiceID:   "/service_id/service1",
@@ -60,11 +51,17 @@ func TestAzureExporterConfig(t *testing.T) {
 	}
 
 	agent := &models.Agent{
-		AgentID:          "/agent_id/agent1",
-		AgentType:        models.AzureDatabaseExporterType,
-		NodeID:           &node1.NodeID,
-		ServiceID:        &service1.ServiceID,
-		AzureCredentials: pointer.ToString(creds),
+		AgentID:   "/agent_id/agent1",
+		AgentType: models.AzureDatabaseExporterType,
+		NodeID:    &node1.NodeID,
+		ServiceID: &service1.ServiceID,
+		AzureOptions: &models.AzureOptions{
+			ClientID:       "azure_database_client_id",
+			ClientSecret:   "azure_database_client_secret",
+			TenantID:       "azure_database_tenant_id",
+			SubscriptionID: "azure_database_subscription_id",
+			ResourceGroup:  "azure_database_resource_group",
+		},
 	}
 
 	actual, err := azureDatabaseExporterConfig(agent, service1, redactSecrets)
@@ -105,12 +102,7 @@ resource_groups:
       - name: "network_bytes_ingress"
 			`) + "\n",
 		},
-		RedactWords: []string{
-			"azure_database_client_id",
-			"azure_database_client_secret",
-			"azure_database_tenant_id",
-			"azure_database_subscription_id",
-		},
+		RedactWords: []string{"azure_database_client_secret"},
 	}
 	require.Equal(t, expected.Args, actual.Args)
 	require.Equal(t, expected.Env, actual.Env)

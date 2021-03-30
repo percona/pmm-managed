@@ -49,6 +49,30 @@ func MongoDBOptionsFromRequest(params MongoDBOptionsParams) *MongoDBOptions {
 	return nil
 }
 
+// AzureOptionsParams contains methods to create AzureOptions object.
+type AzureOptionsParams interface {
+	GetAzureSubscriptionId() string
+	GetAzureClientId() string
+	GetAzureClientSecret() string
+	GetAzureTenantId() string
+	GetAzureResourceGroup() string
+}
+
+// AzureOptionsFromRequest creates AzureOptions object from request.
+func AzureOptionsFromRequest(params AzureOptionsParams) *AzureOptions {
+	if params.GetAzureSubscriptionId() != "" || params.GetAzureClientId() != "" || params.GetAzureClientSecret() != "" ||
+		params.GetAzureTenantId() != "" || params.GetAzureResourceGroup() != "" {
+		return &AzureOptions{
+			SubscriptionID: params.GetAzureSubscriptionId(),
+			ClientID:       params.GetAzureClientId(),
+			ClientSecret:   params.GetAzureClientSecret(),
+			TenantID:       params.GetAzureTenantId(),
+			ResourceGroup:  params.GetAzureResourceGroup(),
+		}
+	}
+	return nil
+}
+
 func checkUniqueAgentID(q *reform.Querier, id string) error {
 	if id == "" {
 		panic("empty Agent ID")
@@ -506,15 +530,6 @@ func CreateExternalExporter(q *reform.Querier, params *CreateExternalExporterPar
 	return row, nil
 }
 
-// AzureCredentials params to compact store Azure Credentials.
-type AzureCredentials struct {
-	SubscriptionID string `json:"subscription_id"`
-	ClientID       string `json:"client_id"`
-	ClientSecret   string `json:"client_secret"`
-	TenantID       string `json:"tenant_id"`
-	ResourceGroup  string `json:"resource_group"`
-}
-
 // CreateAgentParams params for add common exporter.
 type CreateAgentParams struct {
 	PMMAgentID                     string
@@ -533,7 +548,7 @@ type CreateAgentParams struct {
 	AWSSecretKey                   string
 	RDSBasicMetricsDisabled        bool
 	RDSEnhancedMetricsDisabled     bool
-	AzureCredentials               string
+	AzureOptions                   *AzureOptions
 	PushMetrics                    bool
 	DisableCollectors              []string
 }
@@ -587,7 +602,7 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 		AWSSecretKey:                   pointer.ToStringOrNil(params.AWSSecretKey),
 		RDSBasicMetricsDisabled:        params.RDSBasicMetricsDisabled,
 		RDSEnhancedMetricsDisabled:     params.RDSEnhancedMetricsDisabled,
-		AzureCredentials:               pointer.ToStringOrNil(params.AzureCredentials),
+		AzureOptions:                   params.AzureOptions,
 		PushMetrics:                    params.PushMetrics,
 		DisabledCollectors:             params.DisableCollectors,
 	}

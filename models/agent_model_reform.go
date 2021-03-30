@@ -47,7 +47,7 @@ func (v *agentTableType) Columns() []string {
 		"tls_skip_verify",
 		"aws_access_key",
 		"aws_secret_key",
-		"azure_credentials",
+		"azure_options",
 		"table_count",
 		"table_count_tablestats_group_limit",
 		"query_examples_disabled",
@@ -102,7 +102,7 @@ var AgentTable = &agentTableType{
 			{Name: "TLSSkipVerify", Type: "bool", Column: "tls_skip_verify"},
 			{Name: "AWSAccessKey", Type: "*string", Column: "aws_access_key"},
 			{Name: "AWSSecretKey", Type: "*string", Column: "aws_secret_key"},
-			{Name: "AzureCredentials", Type: "*string", Column: "azure_credentials"},
+			{Name: "AzureOptions", Type: "*AzureOptions", Column: "azure_options"},
 			{Name: "TableCount", Type: "*int32", Column: "table_count"},
 			{Name: "TableCountTablestatsGroupLimit", Type: "int32", Column: "table_count_tablestats_group_limit"},
 			{Name: "QueryExamplesDisabled", Type: "bool", Column: "query_examples_disabled"},
@@ -142,7 +142,7 @@ func (s Agent) String() string {
 	res[16] = "TLSSkipVerify: " + reform.Inspect(s.TLSSkipVerify, true)
 	res[17] = "AWSAccessKey: " + reform.Inspect(s.AWSAccessKey, true)
 	res[18] = "AWSSecretKey: " + reform.Inspect(s.AWSSecretKey, true)
-	res[19] = "AzureCredentials: " + reform.Inspect(s.AzureCredentials, true)
+	res[19] = "AzureOptions: " + reform.Inspect(s.AzureOptions, true)
 	res[20] = "TableCount: " + reform.Inspect(s.TableCount, true)
 	res[21] = "TableCountTablestatsGroupLimit: " + reform.Inspect(s.TableCountTablestatsGroupLimit, true)
 	res[22] = "QueryExamplesDisabled: " + reform.Inspect(s.QueryExamplesDisabled, true)
@@ -180,7 +180,7 @@ func (s *Agent) Values() []interface{} {
 		s.TLSSkipVerify,
 		s.AWSAccessKey,
 		s.AWSSecretKey,
-		s.AzureCredentials,
+		s.AzureOptions,
 		s.TableCount,
 		s.TableCountTablestatsGroupLimit,
 		s.QueryExamplesDisabled,
@@ -218,7 +218,7 @@ func (s *Agent) Pointers() []interface{} {
 		&s.TLSSkipVerify,
 		&s.AWSAccessKey,
 		&s.AWSSecretKey,
-		&s.AzureCredentials,
+		&s.AzureOptions,
 		&s.TableCount,
 		&s.TableCountTablestatsGroupLimit,
 		&s.QueryExamplesDisabled,

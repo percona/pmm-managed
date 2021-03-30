@@ -18,10 +18,8 @@ package agents
 
 import (
 	"bytes"
-	"encoding/json"
 	"text/template"
 
-	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
 
@@ -55,7 +53,7 @@ resource_groups:
 
 // azureDatabaseInstance represents credentials informations.
 type azureDatabaseCredentials struct {
-	models.AzureCredentials
+	models.AzureOptions
 	ResourceTypes string
 }
 
@@ -76,7 +74,7 @@ func azureDatabaseExporterConfig(exporter *models.Agent, service *models.Service
 	case "maria":
 		resourceTypes = `    resource_types:
       - "Microsoft.DBforMariaDB/servers"`
-	case "postgres":
+	case "postgresql":
 		resourceTypes = `    resource_types:
       - "Microsoft.DBforPostgreSQL/servers"
       - "Microsoft.DBforPostgreSQL/flexibleServers"
@@ -84,21 +82,8 @@ func azureDatabaseExporterConfig(exporter *models.Agent, service *models.Service
 	}
 
 	var config bytes.Buffer
-
-	azureCredentials := pointer.GetString(exporter.AzureCredentials)
-	var creds models.AzureCredentials
-	err = json.Unmarshal([]byte(azureCredentials), &creds)
-	if err != nil {
-		return nil, err
-	}
 	credentials := azureDatabaseCredentials{
-		models.AzureCredentials{
-			ClientID:       creds.ClientID,
-			ClientSecret:   creds.ClientSecret,
-			TenantID:       creds.TenantID,
-			SubscriptionID: creds.SubscriptionID,
-			ResourceGroup:  creds.ResourceGroup,
-		},
+		*exporter.AzureOptions,
 		resourceTypes,
 	}
 	err = t.Execute(&config, credentials)

@@ -48,7 +48,7 @@ func postgresExporterConfig(service *models.Service, exporter *models.Agent, red
 		"--collect.custom_query.hr.directory=/usr/local/percona/pmm2/collectors/custom-queries/postgresql/high-resolution",
 
 		"--auto-discover-databases",
-		"--exclude-databases=template0,template1,postgres,pmm-managed-dev",
+		"--exclude-databases=template0,template1,postgres,pmm-managed-dev,azure_maintenance",
 		"--web.listen-address=:" + tdp.Left + " .listen_port " + tdp.Right,
 	}
 
@@ -80,7 +80,7 @@ func postgresExporterConfig(service *models.Service, exporter *models.Agent, red
 func qanPostgreSQLPgStatementsAgentConfig(service *models.Service, agent *models.Agent) *agentpb.SetStateRequest_BuiltinAgent {
 	return &agentpb.SetStateRequest_BuiltinAgent{
 		Type: inventorypb.AgentType_QAN_POSTGRESQL_PGSTATEMENTS_AGENT,
-		Dsn:  agent.DSN(service, time.Second, "postgres", nil),
+		Dsn:  agent.DSN(service, 3*time.Second, "postgres", nil),
 	}
 }
 

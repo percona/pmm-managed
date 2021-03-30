@@ -18,7 +18,6 @@ package inventory
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/inventorypb"
@@ -852,25 +851,13 @@ func (as *AgentsService) ChangeExternalExporter(req *inventorypb.ChangeExternalE
 func (as *AgentsService) AddAzureDatabaseExporter(ctx context.Context, req *inventorypb.AddAzureDatabaseExporterRequest) (*inventorypb.AzureDatabaseExporter, error) {
 	var res *inventorypb.AzureDatabaseExporter
 
-	creds := models.AzureCredentials{
-		SubscriptionID: req.AzureDatabaseSubscriptionId,
-		ClientID:       req.AzureDatabaseClientId,
-		ClientSecret:   req.AzureDatabaseClientSecret,
-		TenantID:       req.AzureDatabaseTenantId,
-	}
-
-	azureCredentials, err := json.Marshal(creds)
-	if err != nil {
-		return nil, err
-	}
-
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 		params := &models.CreateAgentParams{
-			PMMAgentID:       req.PmmAgentId,
-			NodeID:           req.NodeId,
-			AzureCredentials: string(azureCredentials),
-			CustomLabels:     req.CustomLabels,
-			PushMetrics:      req.PushMetrics,
+			PMMAgentID:   req.PmmAgentId,
+			NodeID:       req.NodeId,
+			AzureOptions: models.AzureOptionsFromRequest(req),
+			CustomLabels: req.CustomLabels,
+			PushMetrics:  req.PushMetrics,
 		}
 		row, err := models.CreateAgent(tx.Querier, models.AzureDatabaseExporterType, params)
 		if err != nil {
