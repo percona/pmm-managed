@@ -234,9 +234,7 @@ func (s *AzureDatabaseService) AddAzureDatabase(ctx context.Context, req *manage
 
 		//nolint:exhaustive
 		switch req.Type {
-		case managementpb.DiscoverAzureDatabaseType_DISCOVER_AZURE_DATABASE_TYPE_MYSQL,
-			managementpb.DiscoverAzureDatabaseType_DISCOVER_AZURE_DATABASE_TYPE_MARIADB:
-
+		case managementpb.DiscoverAzureDatabaseType_DISCOVER_AZURE_DATABASE_TYPE_MYSQL:
 			// add MySQL Service
 			service, err := models.AddNewService(tx.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
 				ServiceName:  req.ServiceName,
