@@ -29,10 +29,9 @@ import (
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
-	"github.com/percona/pmm/api/managementpb"
-
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/logger"
+	"github.com/percona/pmm/api/managementpb"
 )
 
 const (
@@ -262,15 +261,17 @@ func (s *AzureDatabaseService) AddAzureDatabase(ctx context.Context, req *manage
 		}
 		l.Infof("Added Azure Database Service %s with ServiceID: %s", service.ServiceType, service.ServiceID)
 
-		azureDatabaseExporter, err := models.CreateAgent(tx.Querier, models.AzureDatabaseExporterType, &models.CreateAgentParams{
-			PMMAgentID:   models.PMMServerAgentID,
-			ServiceID:    service.ServiceID,
-			AzureOptions: models.AzureOptionsFromRequest(req),
-		})
-		if err != nil {
-			return err
+		if req.AzureDatabaseExporter {
+			azureDatabaseExporter, err := models.CreateAgent(tx.Querier, models.AzureDatabaseExporterType, &models.CreateAgentParams{
+				PMMAgentID:   models.PMMServerAgentID,
+				ServiceID:    service.ServiceID,
+				AzureOptions: models.AzureOptionsFromRequest(req),
+			})
+			if err != nil {
+				return err
+			}
+			l.Infof("Created Azure Database Exporter with AgentID: %s", azureDatabaseExporter.AgentID)
 		}
-		l.Infof("Created Azure Database Exporter with AgentID: %s", azureDatabaseExporter.AgentID)
 
 		metricsExporter, err := models.CreateAgent(tx.Querier, exporterType, &models.CreateAgentParams{
 			PMMAgentID:                     models.PMMServerAgentID,
