@@ -63,7 +63,10 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 		return nil, err
 	}
 
-	id, err := s.startBackup(ctx, svc, pmmAgents[0], backupLocation)
+	id, err := s.startBackup(ctx, svc, pmmAgents[0], backupLocation, startBackupOptions{
+		Name:        req.Name,
+		Description: req.Description,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -73,13 +76,31 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 	}, nil
 }
 
-func (s *BackupsService) startBackup(ctx context.Context, svc *models.Service, agent *models.Agent, location *models.BackupLocation) (string, error) {
+type startBackupOptions struct {
+	Name        string
+	Description string
+}
+
+func (s *BackupsService) startBackup(ctx context.Context, svc *models.Service, agent *models.Agent, location *models.BackupLocation, options startBackupOptions) (string, error) {
 	var err error
 	locationConfig := models.BackupLocationConfig{
 		PMMServerConfig: location.PMMServerConfig,
 		PMMClientConfig: location.PMMClientConfig,
 		S3Config:        location.S3Config,
 	}
+
+	artifact, err := models.CreateArtifact(s.db.Querier, models.CreateArtifactParams{
+		Name:       options.Name,
+		Vendor:     string(svc.ServiceType),
+		LocationID: location.ID,
+		ServiceID:  svc.ServiceID,
+		DataModel:  models.PhysicalDataModel,
+		Status:     models.PendingBackupStatus,
+	})
+	if err != nil {
+		return "", err
+	}
+
 	id := "/job_id/" + uuid.New().String()
 	switch svc.ServiceType {
 	case models.MySQLServiceType:
@@ -90,7 +111,8 @@ func (s *BackupsService) startBackup(ctx context.Context, svc *models.Service, a
 	if err != nil {
 		return "", err
 	}
-	return id, err
+
+	return artifact.ID, err
 }
 
 // Check interfaces.
