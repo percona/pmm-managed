@@ -19,6 +19,7 @@ package backup
 import (
 	"context"
 
+	"github.com/google/uuid"
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -47,40 +48,45 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 	if err != nil {
 		return nil, err
 	}
+
 	pmmAgents, err := models.FindPMMAgentsForService(s.db.Querier, req.ServiceId)
 	if err != nil {
 		return nil, err
 	}
+
 	if len(pmmAgents) == 0 {
 		return nil, status.Errorf(codes.NotFound, "No pmm-agent running on service %s", req.ServiceId)
 	}
+
 	backupLocation, err := models.FindBackupLocationByID(s.db.Querier, req.LocationId)
 	if err != nil {
 		return nil, err
 	}
-	id, err := s.startBackup(ctx, Options{
-		Service:        svc,
-		Agent:          pmmAgents[0],
-		BackupLocation: backupLocation,
-	})
+
+	id, err := s.startBackup(ctx, svc, pmmAgents[0], backupLocation)
+	if err != nil {
+		return nil, err
+	}
+
 	return &backupv1beta1.StartBackupResponse{
 		BackupId: id,
 	}, nil
 }
 
-type Options struct {
-	Service        *models.Service
-	Agent          *models.Agent
-	BackupLocation *models.BackupLocation
-}
-
-func (s *BackupsService) startBackup(ctx context.Context, options Options) (string, error) {
-	id := "/jobs/backup/mysql/dummy"
-	err := s.jobsService.StartMySQLBackupJob(id, *options.Agent.PMMAgentID, 0, *options.Service.Address, models.BackupLocationConfig{
-		PMMServerConfig: options.BackupLocation.PMMServerConfig,
-		PMMClientConfig: options.BackupLocation.PMMClientConfig,
-		S3Config:        options.BackupLocation.S3Config,
-	})
+func (s *BackupsService) startBackup(ctx context.Context, svc *models.Service, agent *models.Agent, location *models.BackupLocation) (string, error) {
+	var err error
+	locationConfig := models.BackupLocationConfig{
+		PMMServerConfig: location.PMMServerConfig,
+		PMMClientConfig: location.PMMClientConfig,
+		S3Config:        location.S3Config,
+	}
+	id := "/job_id/" + uuid.New().String()
+	switch svc.ServiceType {
+	case models.MySQLServiceType:
+		err = s.jobsService.StartMySQLBackupJob(id, *agent.PMMAgentID, 0, *svc.Address, locationConfig)
+	default:
+		return "", status.Errorf(codes.Unimplemented, "unsupported service: %s", svc.ServiceType)
+	}
 	if err != nil {
 		return "", err
 	}
