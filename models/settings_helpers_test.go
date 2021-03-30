@@ -326,7 +326,7 @@ func TestSettings(t *testing.T) {
 			_, err := models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{DisableAzurediscover: true})
 			require.NoError(t, err)
 
-			ns, err := models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{EnableAzurediscover: true}})
+			ns, err := models.UpdateSettings(sqlDB, &models.ChangeSettingsParams{EnableAzurediscover: true})
 			assert.NoError(t, err)
 			assert.True(t, ns.Azurediscover.Enabled)
 		})
