@@ -19,7 +19,6 @@ package backup
 import (
 	"context"
 
-	"github.com/google/uuid"
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -42,77 +41,99 @@ func NewBackupsService(db *reform.DB, jobsService jobsService) *BackupsService {
 	}
 }
 
-// PerformBackups starts on-demand backup.
+// StartBackup starts on-demand backup.
 func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.StartBackupRequest) (*backupv1beta1.StartBackupResponse, error) {
-	svc, err := models.FindServiceByID(s.db.Querier, req.ServiceId)
-	if err != nil {
-		return nil, err
-	}
-
-	pmmAgents, err := models.FindPMMAgentsForService(s.db.Querier, req.ServiceId)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(pmmAgents) == 0 {
-		return nil, status.Errorf(codes.NotFound, "No pmm-agent running on service %s", req.ServiceId)
-	}
-
-	backupLocation, err := models.FindBackupLocationByID(s.db.Querier, req.LocationId)
-	if err != nil {
-		return nil, err
-	}
-
-	id, err := s.startBackup(ctx, svc, pmmAgents[0], backupLocation, startBackupOptions{
-		Name:        req.Name,
-		Description: req.Description,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &backupv1beta1.StartBackupResponse{
-		BackupId: id,
-	}, nil
-}
-
-type startBackupOptions struct {
-	Name        string
-	Description string
-}
-
-func (s *BackupsService) startBackup(ctx context.Context, svc *models.Service, agent *models.Agent, location *models.BackupLocation, options startBackupOptions) (string, error) {
 	var err error
+	var artifact *models.Artifact
+	var location *models.BackupLocation
+	var svc *models.Service
+	var job *models.JobResult
+	var dsn string
+
+	errTX := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
+		svc, err = models.FindServiceByID(tx.Querier, req.ServiceId)
+		if err != nil {
+			return err
+		}
+
+		location, err = models.FindBackupLocationByID(tx.Querier, req.LocationId)
+		if err != nil {
+			return err
+		}
+
+		artifact, err = models.CreateArtifact(tx.Querier, models.CreateArtifactParams{
+			Name:       req.Name,
+			Vendor:     string(svc.ServiceType),
+			LocationID: location.ID,
+			ServiceID:  svc.ServiceID,
+			DataModel:  models.PhysicalDataModel,
+			Status:     models.PendingBackupStatus,
+		})
+		if err != nil {
+			return err
+		}
+
+		job, dsn, err = s.prepareBackupJob(req.ServiceId, artifact.ID, models.MySQLBackupJob)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if errTX != nil {
+		return nil, errTX
+	}
+
 	locationConfig := models.BackupLocationConfig{
 		PMMServerConfig: location.PMMServerConfig,
 		PMMClientConfig: location.PMMClientConfig,
 		S3Config:        location.S3Config,
 	}
 
-	artifact, err := models.CreateArtifact(s.db.Querier, models.CreateArtifactParams{
-		Name:       options.Name,
-		Vendor:     string(svc.ServiceType),
-		LocationID: location.ID,
-		ServiceID:  svc.ServiceID,
-		DataModel:  models.PhysicalDataModel,
-		Status:     models.PendingBackupStatus,
-	})
-	if err != nil {
-		return "", err
-	}
-
-	id := "/job_id/" + uuid.New().String()
 	switch svc.ServiceType {
 	case models.MySQLServiceType:
-		err = s.jobsService.StartMySQLBackupJob(id, *agent.PMMAgentID, 0, *svc.Address, locationConfig)
+		err = s.jobsService.StartMySQLBackupJob(job.ID, job.PMMAgentID, 0, dsn, locationConfig)
 	default:
-		return "", status.Errorf(codes.Unimplemented, "unsupported service: %s", svc.ServiceType)
+		return nil, status.Errorf(codes.Unimplemented, "unsupported service: %s", svc.ServiceType)
 	}
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return artifact.ID, err
+	return &backupv1beta1.StartBackupResponse{
+		BackupId: artifact.ID,
+	}, nil
+}
+
+func (s *BackupsService) prepareBackupJob(serviceID, artifactID string, jobType models.JobType) (*models.JobResult, string, error) {
+	var res *models.JobResult
+	var dsn string
+	var pmmAgentID string
+	e := s.db.InTransaction(func(tx *reform.TX) error {
+		agents, err := models.FindPMMAgentsForService(tx.Querier, serviceID)
+		if err != nil {
+			return err
+		}
+
+		if pmmAgentID, err = models.FindPmmAgentIDToRunActionOrJob("", agents); err != nil {
+			return err
+		}
+
+		if dsn, _, err = models.FindDSNByServiceIDandPMMAgentID(tx.Querier, serviceID, pmmAgentID, ""); err != nil {
+			return err
+		}
+
+		res, err = models.CreateJobResult(tx.Querier, pmmAgentID, jobType, &models.JobResultData{
+			MySQLBackup: &models.MySQLBackupJobResult{
+				ArtifactID: artifactID,
+			},
+		})
+		return err
+	})
+	if e != nil {
+		return nil, "", e
+	}
+	return res, dsn, nil
 }
 
 // Check interfaces.
