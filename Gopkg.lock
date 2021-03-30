@@ -440,7 +440,7 @@
 
 [[projects]]
   branch = "PMM-7767-Azure-monitoring-feature-flag"
-  digest = "1:6d7fd123184c780414ff8d4b8dbd3bfb94cfc6064a079eff49d851c73783444b"
+  digest = "1:42f1c5289339fd2800a56ddfc0c28ba69d4bfb645952e9b73343230362fa0c35"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
