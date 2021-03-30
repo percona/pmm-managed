@@ -418,7 +418,7 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 		AzurediscoverEnabled: settings.Azurediscover.Enabled,
 		PmmPublicAddress:     settings.PMMPublicAddress,
 
-		AlertingEnabled:      settings.IntegratedAlerting.Enabled,
+		AlertingEnabled: settings.IntegratedAlerting.Enabled,
 	}
 
 	if settings.IntegratedAlerting.EmailAlertingSettings != nil {

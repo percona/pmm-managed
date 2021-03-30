@@ -83,7 +83,7 @@ type Settings struct {
 	} `json:"ia"`
 
 	Azurediscover struct {
-		Enabled               bool                   `json:"enabled"`
+		Enabled bool `json:"enabled"`
 	} `json:"azure"`
 }
 
