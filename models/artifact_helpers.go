@@ -125,10 +125,12 @@ func CreateArtifact(q *reform.Querier, params CreateArtifactParams) (*Artifact, 
 	return row, nil
 }
 
+// ChangeArtifactParams are params for changing existing artifact.
 type ChangeArtifactParams struct {
 	Status BackupStatus
 }
 
+// ChangeArtifact updates existing artifact.
 func ChangeArtifact(q *reform.Querier, artifactID string, params ChangeArtifactParams) (*Artifact, error) {
 	row, err := findArtifactByID(q, artifactID)
 	if err != nil {

@@ -328,6 +328,8 @@ func (r *Registry) handleJobResult(l *logrus.Entry, result *agentpb.JobResult) {
 func (r *Registry) handleJobError(jobResult *models.JobResult) error {
 	var err error
 	switch jobResult.Type {
+	case models.Echo:
+		// nothing
 	case models.MySQLBackupJob:
 		_, err = models.ChangeArtifact(r.db.Querier, jobResult.Result.MySQLBackup.ArtifactID, models.ChangeArtifactParams{
 			Status: models.ErrorBackupStatus,

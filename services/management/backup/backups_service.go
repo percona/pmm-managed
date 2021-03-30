@@ -91,8 +91,19 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 	}
 
 	switch svc.ServiceType {
+
 	case models.MySQLServiceType:
 		err = s.jobsService.StartMySQLBackupJob(job.ID, job.PMMAgentID, 0, dsn, locationConfig)
+	case models.PostgreSQLServiceType:
+		fallthrough
+	case models.MongoDBServiceType:
+		fallthrough
+	case models.ProxySQLServiceType:
+		fallthrough
+	case models.HAProxyServiceType:
+		fallthrough
+	case models.ExternalServiceType:
+		fallthrough
 	default:
 		return nil, status.Errorf(codes.Unimplemented, "unsupported service: %s", svc.ServiceType)
 	}
