@@ -493,7 +493,10 @@ func (s *agentsServer) ChangeExternalExporter(ctx context.Context, req *inventor
 }
 
 // AddAzureDatabaseExporter adds azure_database_exporter Agent.
-func (s *agentsServer) AddAzureDatabaseExporter(ctx context.Context, req *inventorypb.AddAzureDatabaseExporterRequest) (*inventorypb.AddAzureDatabaseExporterResponse, error) {
+func (s *agentsServer) AddAzureDatabaseExporter(
+	ctx context.Context,
+	req *inventorypb.AddAzureDatabaseExporterRequest,
+) (*inventorypb.AddAzureDatabaseExporterResponse, error) {
 	agent, err := s.s.AddAzureDatabaseExporter(ctx, req)
 	if err != nil {
 		return nil, err
@@ -506,8 +509,10 @@ func (s *agentsServer) AddAzureDatabaseExporter(ctx context.Context, req *invent
 }
 
 // ChangeAzureDatabaseExporter changes disabled flag and custom labels of azure_database_exporter Agent.
-//nolint:lll
-func (s *agentsServer) ChangeAzureDatabaseExporter(ctx context.Context, req *inventorypb.ChangeAzureDatabaseExporterRequest) (*inventorypb.ChangeAzureDatabaseExporterResponse, error) {
+func (s *agentsServer) ChangeAzureDatabaseExporter(
+	ctx context.Context,
+	req *inventorypb.ChangeAzureDatabaseExporterRequest,
+) (*inventorypb.ChangeAzureDatabaseExporterResponse, error) {
 	agent, err := s.s.ChangeAzureDatabaseExporter(ctx, req)
 	if err != nil {
 		return nil, err

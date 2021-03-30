@@ -21,9 +21,10 @@ import (
 	"testing"
 
 	"github.com/AlekSi/pointer"
+	"github.com/stretchr/testify/require"
+
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
-	"github.com/stretchr/testify/require"
 
 	"github.com/percona/pmm-managed/models"
 )
@@ -33,10 +34,10 @@ func TestAzureExporterConfig(t *testing.T) {
 		NodeID:    "/node_id/node1",
 		NodeType:  models.RemoteAzureDatabaseNodeType,
 		NodeName:  "prod-mysql56",
-		NodeModel: "db.t2.micro",
-		Region:    pointer.ToString("us-east-1"),
-		AZ:        "us-east-1c",
-		Address:   "rds-mysql56",
+		NodeModel: "B_Gen5_1",
+		Region:    pointer.ToString("eastus"),
+		AZ:        "eastus-1c",
+		Address:   "pmm-dev-mysql-db1.mysql.database.azure.com",
 	}
 	err := node1.SetCustomLabels(map[string]string{
 		"foo": "bar",
@@ -46,8 +47,10 @@ func TestAzureExporterConfig(t *testing.T) {
 	service1 := &models.Service{
 		ServiceID:   "/service_id/service1",
 		NodeID:      node1.NodeID,
+		Address:     pointer.ToString("pmm-dev-mysql-db1.mysql.database.azure.com"),
+		Port:        pointer.ToUint16(3306),
 		ServiceName: "service1",
-		ServiceType: "mysql",
+		ServiceType: models.MySQLServiceType,
 	}
 
 	agent := &models.Agent{

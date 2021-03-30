@@ -151,7 +151,10 @@ func (s *nodesServer) AddRemoteRDSNode(ctx context.Context, req *inventorypb.Add
 }
 
 // AddRemoteAzureDatabaseNode adds Remote Azure database Node.
-func (s *nodesServer) AddRemoteAzureDatabaseNode(ctx context.Context, req *inventorypb.AddRemoteAzureDatabaseNodeRequest) (*inventorypb.AddRemoteAzureDatabaseNodeResponse, error) {
+func (s *nodesServer) AddRemoteAzureDatabaseNode(
+	ctx context.Context,
+	req *inventorypb.AddRemoteAzureDatabaseNodeRequest,
+) (*inventorypb.AddRemoteAzureDatabaseNodeResponse, error) {
 	node, err := s.svc.AddRemoteAzureDatabaseNode(ctx, req)
 	if err != nil {
 		return nil, err

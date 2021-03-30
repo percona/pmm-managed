@@ -20,6 +20,8 @@ import (
 	"bytes"
 	"text/template"
 
+	"github.com/pkg/errors"
+
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
 
@@ -51,14 +53,7 @@ resource_groups:
       - name: "network_bytes_ingress"
 `
 
-// azureDatabaseInstance represents credentials informations.
-type azureDatabaseCredentials struct {
-	models.AzureOptions
-	ResourceTypes string
-}
-
 // azureDatabaseExporterConfig returns configuration of azure_database_exporter process.
-//nolint:funlen
 func azureDatabaseExporterConfig(exporter *models.Agent, service *models.Service, redactMode redactMode) (*agentpb.SetStateRequest_AgentProcess, error) {
 	t, err := template.New("credentials").Parse(azureDatabaseTemplate)
 	if err != nil {
@@ -66,26 +61,28 @@ func azureDatabaseExporterConfig(exporter *models.Agent, service *models.Service
 	}
 
 	var resourceTypes string
-	switch string(service.ServiceType) {
-	case "mysql":
+	switch service.ServiceType {
+	case models.MySQLServiceType:
 		resourceTypes = `    resource_types:
       - "Microsoft.DBforMySQL/servers"
       - "Microsoft.DBforMySQL/felexibleServers"
       - "Microsoft.DBforMariaDB/servers"`
-	case "postgresql":
+	case models.PostgreSQLServiceType:
 		resourceTypes = `    resource_types:
       - "Microsoft.DBforPostgreSQL/servers"
       - "Microsoft.DBforPostgreSQL/flexibleServers"
       - "Microsoft.DBforPostgreSQL/serversv2"`
+	default:
+		return nil, errors.Errorf("unexpected service type %s", service.ServiceType)
 	}
 
 	var config bytes.Buffer
-	credentials := azureDatabaseCredentials{
-		*exporter.AzureOptions,
-		resourceTypes,
-	}
-	err = t.Execute(&config, credentials)
-	if err != nil {
+	options := struct {
+		models.AzureOptions
+		ResourceTypes string
+	}{*exporter.AzureOptions, resourceTypes}
+
+	if err = t.Execute(&config, options); err != nil {
 		return nil, err
 	}
 

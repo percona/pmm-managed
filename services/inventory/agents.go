@@ -847,7 +847,7 @@ func (as *AgentsService) ChangeExternalExporter(req *inventorypb.ChangeExternalE
 	return res, nil
 }
 
-// AddAzureDatabaseExporter inserts azure_database_exporter Agent with given parameters.
+// AddAzureDatabaseExporter inserts azure_exporter Agent with given parameters.
 func (as *AgentsService) AddAzureDatabaseExporter(ctx context.Context, req *inventorypb.AddAzureDatabaseExporterRequest) (*inventorypb.AzureDatabaseExporter, error) {
 	var res *inventorypb.AzureDatabaseExporter
 
@@ -864,8 +864,6 @@ func (as *AgentsService) AddAzureDatabaseExporter(ctx context.Context, req *inve
 			return err
 		}
 
-		// TODO check connection to Azure
-
 		agent, err := services.ToAPIAgent(tx.Querier, row)
 		if err != nil {
 			return err
@@ -881,8 +879,11 @@ func (as *AgentsService) AddAzureDatabaseExporter(ctx context.Context, req *inve
 	return res, nil
 }
 
-// ChangeAzureDatabaseExporter updates azure_database_exporter Agent with given parameters.
-func (as *AgentsService) ChangeAzureDatabaseExporter(ctx context.Context, req *inventorypb.ChangeAzureDatabaseExporterRequest) (*inventorypb.AzureDatabaseExporter, error) {
+// ChangeAzureDatabaseExporter updates azure_exporter Agent with given parameters.
+func (as *AgentsService) ChangeAzureDatabaseExporter(
+	ctx context.Context,
+	req *inventorypb.ChangeAzureDatabaseExporterRequest,
+) (*inventorypb.AzureDatabaseExporter, error) {
 	agent, err := as.changeAgent(req.AgentId, req.Common)
 	if err != nil {
 		return nil, err
