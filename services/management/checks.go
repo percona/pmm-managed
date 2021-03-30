@@ -19,6 +19,7 @@ package management
 import (
 	"context"
 
+	"github.com/percona-platform/saas/pkg/check"
 	"github.com/percona/pmm/api/managementpb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -102,6 +103,7 @@ func (s *ChecksAPIService) ListSecurityChecks() (*managementpb.ListSecurityCheck
 			Disabled:    disabled,
 			Summary:     c.Summary,
 			Description: c.Description,
+			Interval:    convertInterval(c.Interval),
 		})
 	}
 
@@ -146,4 +148,17 @@ func (s *ChecksAPIService) ChangeSecurityChecksInterval(req *managementpb.Change
 	}
 
 	return &managementpb.ChangeSecurityChecksIntervalResponse{}, nil
+}
+
+func convertInterval(interval check.Interval) managementpb.SecurityCheckInterval {
+	switch interval {
+	case check.Standard:
+		return managementpb.SecurityCheckInterval_STANDARD
+	case check.Frequent:
+		return managementpb.SecurityCheckInterval_FREQUENT
+	case check.Rare:
+		return managementpb.SecurityCheckInterval_RARE
+	default:
+		return managementpb.SecurityCheckInterval_SECURITY_CHECK_INTERVAL_INVALID
+	}
 }

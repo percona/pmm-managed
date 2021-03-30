@@ -440,7 +440,7 @@
 
 [[projects]]
   branch = "PMM-7338-change-default-interval"
-  digest = "1:99ae0206e2cd84b51076c42ded52dbca7e865ec15f9075526a11cebcd79848b1"
+  digest = "1:be51e8e9e8e822ebe603cf3e5f7eb6dfcbde81388ba2b4a4e13a07c4f386af69"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -465,7 +465,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "abf710ecc2b146641dfc6bc4de8eff0b5e959852"
+  revision = "242e1010b89246de52304342ab6c393d2aca6e37"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
