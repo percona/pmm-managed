@@ -169,14 +169,13 @@ func (s *AzureDatabaseService) DiscoverAzureDatabase(
 		}
 		switch instance.Type {
 		case "microsoft.dbformysql/servers",
-			"microsoft.dbformysql/flexibleservers":
+			"microsoft.dbformysql/flexibleservers",
+			"microsoft.dbformariadb/servers":
 			inst.Type = managementpb.DiscoverAzureDatabaseType_DISCOVER_AZURE_DATABASE_TYPE_MYSQL
 		case "microsoft.dbforpostgresql/servers",
 			"microsoft.dbforpostgresql/flexibleservers",
 			"microsoft.dbforpostgresql/serversv2":
 			inst.Type = managementpb.DiscoverAzureDatabaseType_DISCOVER_AZURE_DATABASE_TYPE_POSTGRESQL
-		case "microsoft.dbformariadb/servers":
-			inst.Type = managementpb.DiscoverAzureDatabaseType_DISCOVER_AZURE_DATABASE_TYPE_MARIADB
 		default:
 			inst.Type = managementpb.DiscoverAzureDatabaseType_DISCOVER_AZURE_DATABASE_TYPE_INVALID
 		}
@@ -372,5 +371,7 @@ func (s *AzureDatabaseService) AddAzureDatabase(ctx context.Context, req *manage
 	}); e != nil {
 		return nil, e
 	}
+
+	s.registry.RequestStateUpdate(ctx, models.PMMServerAgentID)
 	return &managementpb.AddAzureDatabaseResponse{}, nil
 }

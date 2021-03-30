@@ -70,9 +70,7 @@ func azureDatabaseExporterConfig(exporter *models.Agent, service *models.Service
 	case "mysql":
 		resourceTypes = `    resource_types:
       - "Microsoft.DBforMySQL/servers"
-      - "Microsoft.DBforMySQL/felexibleServers"`
-	case "maria":
-		resourceTypes = `    resource_types:
+      - "Microsoft.DBforMySQL/felexibleServers"
       - "Microsoft.DBforMariaDB/servers"`
 	case "postgresql":
 		resourceTypes = `    resource_types:

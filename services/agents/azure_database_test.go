@@ -92,6 +92,7 @@ resource_groups:
     resource_types:
       - "Microsoft.DBforMySQL/servers"
       - "Microsoft.DBforMySQL/felexibleServers"
+      - "Microsoft.DBforMariaDB/servers"
     metrics:
       - name: "cpu_percent"
       - name: "memory_percent"

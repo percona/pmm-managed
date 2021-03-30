@@ -66,7 +66,7 @@ func postgresExporterConfig(service *models.Service, exporter *models.Agent, red
 		TemplateRightDelim: tdp.Right,
 		Args:               args,
 		Env: []string{
-			fmt.Sprintf("DATA_SOURCE_NAME=%s", exporter.DSN(service, time.Second, "postgres", nil)),
+			fmt.Sprintf("DATA_SOURCE_NAME=%s", exporter.DSN(service, 5*time.Second, "postgres", nil)),
 			fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.AgentID),
 		},
 	}
@@ -80,7 +80,7 @@ func postgresExporterConfig(service *models.Service, exporter *models.Agent, red
 func qanPostgreSQLPgStatementsAgentConfig(service *models.Service, agent *models.Agent) *agentpb.SetStateRequest_BuiltinAgent {
 	return &agentpb.SetStateRequest_BuiltinAgent{
 		Type: inventorypb.AgentType_QAN_POSTGRESQL_PGSTATEMENTS_AGENT,
-		Dsn:  agent.DSN(service, 3*time.Second, "postgres", nil),
+		Dsn:  agent.DSN(service, 5*time.Second, "postgres", nil),
 	}
 }
 
