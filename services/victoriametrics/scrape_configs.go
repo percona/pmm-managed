@@ -474,9 +474,7 @@ func scrapeConfigsForAzureDatabase(s *models.MetricsResolutions, params *scrapeC
 		JobName:        jobName(params.agent, "mr", interval),
 		ScrapeInterval: config.Duration(interval),
 		ScrapeTimeout:  scrapeTimeout(interval),
-		// Scheme:         "https://", //pointer.GetString(params.agent.MetricsScheme),
-		// MetricsPath: pointer.GetString(params.agent.MetricsPath),
-		MetricsPath: "/metrics",
+		MetricsPath:    "/metrics",
 	}
 
 	port := int(*params.agent.ListenPort)
