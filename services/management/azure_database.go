@@ -197,27 +197,44 @@ func (s *AzureDatabaseService) DiscoverAzureDatabase(
 }
 
 // AddAzureDatabase add azure database to monitoring.
-//nolint:funlen
 func (s *AzureDatabaseService) AddAzureDatabase(ctx context.Context, req *managementpb.AddAzureDatabaseRequest) (*managementpb.AddAzureDatabaseResponse, error) {
 	l := logger.Get(ctx).WithField("component", "discover/azureDatabase")
+	// tweak according to API docs
+	if req.NodeName == "" {
+		req.NodeName = req.InstanceId
+	}
+	if req.ServiceName == "" {
+		req.ServiceName = req.InstanceId
+	}
+
+	// tweak according to API docs
+	tablestatsGroupTableLimit := req.TablestatsGroupTableLimit
+	if tablestatsGroupTableLimit == 0 {
+		tablestatsGroupTableLimit = defaultTablestatsGroupTableLimit
+	}
+	if tablestatsGroupTableLimit < 0 {
+		tablestatsGroupTableLimit = -1
+	}
+
+	var serviceType models.ServiceType
+	var exporterType models.AgentType
+	var qanAgentType models.AgentType
+
+	switch req.Type {
+	case managementpb.DiscoverAzureDatabaseType_DISCOVER_AZURE_DATABASE_TYPE_MYSQL:
+		serviceType = models.MySQLServiceType
+		exporterType = models.MySQLdExporterType
+		qanAgentType = models.QANMySQLPerfSchemaAgentType
+	case managementpb.DiscoverAzureDatabaseType_DISCOVER_AZURE_DATABASE_TYPE_POSTGRESQL:
+		serviceType = models.PostgreSQLServiceType
+		exporterType = models.PostgresExporterType
+		qanAgentType = models.QANPostgreSQLPgStatementsAgentType
+		tablestatsGroupTableLimit = 0
+	default:
+		return nil, status.Errorf(codes.InvalidArgument, "Unsupported Azure Database type %q.", req.Type)
+	}
+
 	if e := s.db.InTransaction(func(tx *reform.TX) error {
-		// tweak according to API docs
-		if req.NodeName == "" {
-			req.NodeName = req.InstanceId
-		}
-		if req.ServiceName == "" {
-			req.ServiceName = req.InstanceId
-		}
-
-		// tweak according to API docs
-		tablestatsGroupTableLimit := req.TablestatsGroupTableLimit
-		if tablestatsGroupTableLimit == 0 {
-			tablestatsGroupTableLimit = defaultTablestatsGroupTableLimit
-		}
-		if tablestatsGroupTableLimit < 0 {
-			tablestatsGroupTableLimit = -1
-		}
-
 		// add Remote Azure Database Node
 		node, err := models.CreateNode(tx.Querier, models.RemoteAzureDatabaseNodeType, &models.CreateNodeParams{
 			NodeName:     req.NodeName,
@@ -232,137 +249,63 @@ func (s *AzureDatabaseService) AddAzureDatabase(ctx context.Context, req *manage
 		}
 		l.Infof("Created Azure Database Node with NodeID: %s", node.NodeID)
 
-		//nolint:exhaustive
-		switch req.Type {
-		case managementpb.DiscoverAzureDatabaseType_DISCOVER_AZURE_DATABASE_TYPE_MYSQL:
-			// add MySQL Service
-			service, err := models.AddNewService(tx.Querier, models.MySQLServiceType, &models.AddDBMSServiceParams{
-				ServiceName:  req.ServiceName,
-				NodeID:       node.NodeID,
-				Environment:  req.Environment,
-				CustomLabels: req.CustomLabels,
-				Address:      &req.Address,
-				Port:         pointer.ToUint16(uint16(req.Port)),
+		service, err := models.AddNewService(tx.Querier, serviceType, &models.AddDBMSServiceParams{
+			ServiceName:  req.ServiceName,
+			NodeID:       node.NodeID,
+			Environment:  req.Environment,
+			CustomLabels: req.CustomLabels,
+			Address:      &req.Address,
+			Port:         pointer.ToUint16(uint16(req.Port)),
+		})
+		if err != nil {
+			return err
+		}
+		l.Infof("Added Azure Database Service %s with ServiceID: %s", service.ServiceType, service.ServiceID)
+
+		azureDatabaseExporter, err := models.CreateAgent(tx.Querier, models.AzureDatabaseExporterType, &models.CreateAgentParams{
+			PMMAgentID:   models.PMMServerAgentID,
+			ServiceID:    service.ServiceID,
+			AzureOptions: models.AzureOptionsFromRequest(req),
+		})
+		if err != nil {
+			return err
+		}
+		l.Infof("Created Azure Database Exporter with AgentID: %s", azureDatabaseExporter.AgentID)
+
+		metricsExporter, err := models.CreateAgent(tx.Querier, exporterType, &models.CreateAgentParams{
+			PMMAgentID:                     models.PMMServerAgentID,
+			ServiceID:                      service.ServiceID,
+			Username:                       req.Username,
+			Password:                       req.Password,
+			TLS:                            req.Tls,
+			TLSSkipVerify:                  req.TlsSkipVerify,
+			TableCountTablestatsGroupLimit: tablestatsGroupTableLimit,
+		})
+		if err != nil {
+			return err
+		}
+		l.Infof("Added %s with AgentID: %s", metricsExporter.AgentType, metricsExporter.AgentID)
+
+		if !req.SkipConnectionCheck {
+			if err = s.registry.CheckConnectionToService(ctx, tx.Querier, service, metricsExporter); err != nil {
+				return err
+			}
+		}
+
+		if req.Qan {
+			qanAgent, err := models.CreateAgent(tx.Querier, qanAgentType, &models.CreateAgentParams{
+				PMMAgentID:            models.PMMServerAgentID,
+				ServiceID:             service.ServiceID,
+				Username:              req.Username,
+				Password:              req.Password,
+				TLS:                   req.Tls,
+				TLSSkipVerify:         req.TlsSkipVerify,
+				QueryExamplesDisabled: req.DisableQueryExamples,
 			})
 			if err != nil {
 				return err
 			}
-			l.Infof("Added Azure Database Service with ServiceID: %s", service.ServiceID)
-
-			azureDatabaseExporter, err := models.CreateAgent(tx.Querier, models.AzureDatabaseExporterType, &models.CreateAgentParams{
-				PMMAgentID:   models.PMMServerAgentID,
-				ServiceID:    service.ServiceID,
-				AzureOptions: models.AzureOptionsFromRequest(req),
-			})
-			if err != nil {
-				return err
-			}
-			l.Infof("Created Azure Database Exporter with AgentID: %s", azureDatabaseExporter.AgentID)
-
-			// add MySQL Exporter
-			mysqldExporter, err := models.CreateAgent(tx.Querier, models.MySQLdExporterType, &models.CreateAgentParams{
-				PMMAgentID:                     models.PMMServerAgentID,
-				ServiceID:                      service.ServiceID,
-				Username:                       req.Username,
-				Password:                       req.Password,
-				TLS:                            req.Tls,
-				TLSSkipVerify:                  req.TlsSkipVerify,
-				TableCountTablestatsGroupLimit: tablestatsGroupTableLimit,
-			})
-			if err != nil {
-				return err
-			}
-			l.Infof("Added Azure Database Exporter with AgentID: %s", mysqldExporter.AgentID)
-
-			if !req.SkipConnectionCheck {
-				if err = s.registry.CheckConnectionToService(ctx, tx.Querier, service, mysqldExporter); err != nil {
-					return err
-				}
-			}
-
-			// add MySQL PerfSchema QAN Agent
-			if req.Qan {
-				qanAgent, err := models.CreateAgent(tx.Querier, models.QANMySQLPerfSchemaAgentType, &models.CreateAgentParams{
-					PMMAgentID:            models.PMMServerAgentID,
-					ServiceID:             service.ServiceID,
-					Username:              req.Username,
-					Password:              req.Password,
-					TLS:                   req.Tls,
-					TLSSkipVerify:         req.TlsSkipVerify,
-					QueryExamplesDisabled: req.DisableQueryExamples,
-				})
-				if err != nil {
-					return err
-				}
-				l.Infof("Added Azure Database QAN with AgentID: %s", qanAgent.AgentID)
-			}
-
-			return nil
-
-		case managementpb.DiscoverAzureDatabaseType_DISCOVER_AZURE_DATABASE_TYPE_POSTGRESQL:
-			// add PostgreSQL Service
-			service, err := models.AddNewService(tx.Querier, models.PostgreSQLServiceType, &models.AddDBMSServiceParams{
-				ServiceName:  req.ServiceName,
-				NodeID:       node.NodeID,
-				Environment:  req.Environment,
-				CustomLabels: req.CustomLabels,
-				Address:      &req.Address,
-				Port:         pointer.ToUint16(uint16(req.Port)),
-			})
-			if err != nil {
-				return err
-			}
-			l.Infof("Added Azure Database Service with ServiceID: %s", service.ServiceID)
-
-			azureDatabaseExporter, err := models.CreateAgent(tx.Querier, models.AzureDatabaseExporterType, &models.CreateAgentParams{
-				PMMAgentID:   models.PMMServerAgentID,
-				ServiceID:    service.ServiceID,
-				AzureOptions: models.AzureOptionsFromRequest(req),
-			})
-			if err != nil {
-				return err
-			}
-			l.Infof("Created Azure Database Exporter with AgentID: %s", azureDatabaseExporter.AgentID)
-
-			// add PostgreSQL Exporter
-			postgresqlExporter, err := models.CreateAgent(tx.Querier, models.PostgresExporterType, &models.CreateAgentParams{
-				PMMAgentID:    models.PMMServerAgentID,
-				ServiceID:     service.ServiceID,
-				Username:      req.Username,
-				Password:      req.Password,
-				TLS:           req.Tls,
-				TLSSkipVerify: req.TlsSkipVerify,
-			})
-			if err != nil {
-				return err
-			}
-			l.Infof("Added Azure Database Exporter with AgentID: %s", postgresqlExporter.AgentID)
-
-			if !req.SkipConnectionCheck {
-				if err = s.registry.CheckConnectionToService(ctx, tx.Querier, service, postgresqlExporter); err != nil {
-					return err
-				}
-			}
-
-			// add PostgreSQL pg_stat_statements QAN Agent
-			if req.Qan {
-				qanAgent, err := models.CreateAgent(tx.Querier, models.QANPostgreSQLPgStatementsAgentType, &models.CreateAgentParams{
-					PMMAgentID:            models.PMMServerAgentID,
-					ServiceID:             service.ServiceID,
-					Username:              req.Username,
-					Password:              req.Password,
-					TLS:                   req.Tls,
-					TLSSkipVerify:         req.TlsSkipVerify,
-					QueryExamplesDisabled: req.DisableQueryExamples,
-				})
-				if err != nil {
-					return err
-				}
-				l.Infof("Added Azure Database QAN with AgentID: %s", qanAgent.AgentID)
-			}
-
-		default:
-			return status.Errorf(codes.InvalidArgument, "Unsupported Azure Database type %q.", req.Type)
+			l.Infof("Added QAN %s with AgentID: %s", qanAgent.AgentType, qanAgent.AgentID)
 		}
 
 		return nil
