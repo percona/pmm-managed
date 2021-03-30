@@ -226,9 +226,11 @@ func TestEnableChecks(t *testing.T) {
 
 func TestChangeInterval(t *testing.T) {
 	t.Run("normal", func(t *testing.T) {
+		var ams mockAlertmanagerService
+		ams.On("SendAlerts", mock.Anything, mock.Anything).Return()
 		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
-		s, err := New(nil, nil, db)
+		s, err := New(nil, &ams, db)
 		require.NoError(t, err)
 		s.localChecksFile = testChecksFile
 
