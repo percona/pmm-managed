@@ -289,20 +289,35 @@ func (r *Registry) handleJobResult(l *logrus.Entry, result *agentpb.JobResult) {
 			return err
 		}
 
-		switch r := result.Result.(type) {
+		switch result := result.Result.(type) {
 		case *agentpb.JobResult_Error_:
-			res.Error = r.Error.Message
+			res.Error = result.Error.Message
 		case *agentpb.JobResult_Echo_:
 			if res.Type != models.Echo {
 				return errors.Errorf("Result type echo doesn't match job type %s", res.Type)
 			}
 			res.Result = &models.JobResultData{
 				Echo: &models.EchoJobResult{
-					Message: r.Echo.Message,
+					Message: result.Echo.Message,
+				},
+			}
+		case *agentpb.JobResult_MysqlBackup:
+			if res.Type != models.MySQLBackupJob {
+				return errors.Errorf("Result type echo doesn't match job type %s", res.Type)
+			}
+			_, err := models.ChangeArtifact(t.Querier, result.MysqlBackup.ArtifactId, models.ChangeArtifactParams{
+				Status: models.SuccessBackupStatus,
+			})
+			if err != nil {
+				return err
+			}
+			res.Result = &models.JobResultData{
+				MySQLBackup: &models.MySQLBackupJobResult{
+					ArtifactID: result.MysqlBackup.ArtifactId,
 				},
 			}
 		default:
-			return errors.Errorf("unexpected job result type: %T", r)
+			return errors.Errorf("unexpected job result type: %T", result)
 		}
 		res.Done = true
 		return t.Update(res)

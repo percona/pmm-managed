@@ -32,6 +32,7 @@ type EchoJobResult struct {
 
 // MySQLBackupJobResult stores MySQL job specific result data.
 type MySQLBackupJobResult struct {
+	ArtifactID string `json:"artifact_id"`
 }
 
 // JobType represents job type.
@@ -46,7 +47,7 @@ const (
 // JobResultData holds result data for different job types.
 type JobResultData struct {
 	Echo        *EchoJobResult        `json:"echo,omitempty"`
-	MySQLBackup *MySQLBackupJobResult `json:"mySQLBackup,omitempty"`
+	MySQLBackup *MySQLBackupJobResult `json:"mysql_backup,omitempty"`
 }
 
 // Value implements database/sql/driver.Valuer interface. Should be defined on the value.

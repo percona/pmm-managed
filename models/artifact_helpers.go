@@ -125,6 +125,24 @@ func CreateArtifact(q *reform.Querier, params CreateArtifactParams) (*Artifact, 
 	return row, nil
 }
 
+type ChangeArtifactParams struct {
+	Status BackupStatus
+}
+
+func ChangeArtifact(q *reform.Querier, artifactID string, params ChangeArtifactParams) (*Artifact, error) {
+	row, err := findArtifactByID(q, artifactID)
+	if err != nil {
+		return nil, err
+	}
+	row.Status = params.Status
+
+	if err := q.Update(row); err != nil {
+		return nil, errors.Wrap(err, "failed to update backup artifact")
+	}
+
+	return row, nil
+}
+
 // RemoveArtifact removes artifact by ID.
 func RemoveArtifact(q *reform.Querier, id string) error {
 	if _, err := findArtifactByID(q, id); err != nil {
