@@ -468,6 +468,11 @@ var databaseSchema = [][]string{
 			PRIMARY KEY (id)
 		)`,
 	},
+	31: {
+		`ALTER TABLE kubernetes_clusters ADD COLUMN pxc JSONB`,
+		`ALTER TABLE kubernetes_clusters ADD COLUMN proxysql JSONB`,
+		`ALTER TABLE kubernetes_clusters ADD COLUMN mongod JSONB`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^
