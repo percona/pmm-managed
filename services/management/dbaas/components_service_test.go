@@ -74,6 +74,7 @@ func TestComponentService(t *testing.T) {
 }
 
 func TestFilteringOutOfDisabledVersions(t *testing.T) {
+	t.Parallel()
 	c := &componentsService{
 		l:                    logrus.WithField("component", "components_service"),
 		db:                   nil,
