@@ -28,5 +28,5 @@ import (
 // We use it instead of real type for testing and to avoid dependency cycle.
 type jobsService interface {
 	StopJob(jobID string) error
-	StartMySQLBackupJob(id, pmmAgentID string, timeout time.Duration, dsn string, locationConfig models.BackupLocationConfig) error
+	StartMySQLBackupJob(id, pmmAgentID string, timeout time.Duration, name, dsn string, locationConfig models.BackupLocationConfig) error
 }

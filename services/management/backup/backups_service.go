@@ -93,7 +93,7 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 	switch svc.ServiceType {
 
 	case models.MySQLServiceType:
-		err = s.jobsService.StartMySQLBackupJob(job.ID, job.PMMAgentID, 0, dsn, locationConfig)
+		err = s.jobsService.StartMySQLBackupJob(job.ID, job.PMMAgentID, 0, req.Name, dsn, locationConfig)
 	case models.PostgreSQLServiceType:
 		fallthrough
 	case models.MongoDBServiceType:

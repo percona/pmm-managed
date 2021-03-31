@@ -70,9 +70,10 @@ func (s *JobsService) StartEchoJob(id, pmmAgentID string, timeout time.Duration,
 }
 
 // StartMySQLBackupJob starts mysql backup job on the pmm-agent.
-func (s *JobsService) StartMySQLBackupJob(id, pmmAgentID string, timeout time.Duration, dsn string, locationConfig models.BackupLocationConfig) error {
+func (s *JobsService) StartMySQLBackupJob(id, pmmAgentID string, timeout time.Duration, name, dsn string, locationConfig models.BackupLocationConfig) error {
 	mySQLReq := &agentpb.StartJobRequest_MySQLBackup{
-		Dsn: dsn,
+		Name: name,
+		Dsn:  dsn,
 	}
 	switch {
 	case locationConfig.S3Config != nil:
@@ -82,6 +83,8 @@ func (s *JobsService) StartMySQLBackupJob(id, pmmAgentID string, timeout time.Du
 				AccessKey:  locationConfig.S3Config.AccessKey,
 				SecretKey:  locationConfig.S3Config.SecretKey,
 				BucketName: locationConfig.S3Config.BucketName,
+				// @TODO replace this
+				BucketRegion: "us-east-2",
 			},
 		}
 	default:
