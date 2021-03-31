@@ -291,9 +291,9 @@ func (s *Service) GetSecurityCheckResults() ([]check.Result, error) {
 	return checkResults, nil
 }
 
-// StartChecks triggers STT checks downloading and execution. If group specified only checks from that group will be
-// executed. If checkNames specified then only matched checks will be executed.
-func (s *Service) StartChecks(ctx context.Context, group check.Interval, checkNames []string) error {
+// StartChecks triggers STT checks downloading and execution. If intervalGroup specified only checks from that group
+// will be executed. If checkNames specified then only matched checks will be executed.
+func (s *Service) StartChecks(ctx context.Context, intervalGroup check.Interval, checkNames []string) error {
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		return errors.WithStack(err)
@@ -303,7 +303,7 @@ func (s *Service) StartChecks(ctx context.Context, group check.Interval, checkNa
 		return services.ErrSTTDisabled
 	}
 
-	if err = group.Validate(); err != nil {
+	if err = intervalGroup.Validate(); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -312,7 +312,7 @@ func (s *Service) StartChecks(ctx context.Context, group check.Interval, checkNa
 
 	s.collectChecks(nCtx)
 
-	if err = s.executeChecks(nCtx, group, checkNames); err != nil {
+	if err = s.executeChecks(nCtx, intervalGroup, checkNames); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -514,9 +514,9 @@ func (s *Service) filterChecks(checks []check.Check, group check.Interval, disab
 	return res
 }
 
-// executeChecks runs checks for all reachable services. If group specified only checks from that group will be executed.
-// If checkNames specified then only matched checks will be executed.
-func (s *Service) executeChecks(ctx context.Context, group check.Interval, checkNames []string) error {
+// executeChecks runs checks for all reachable services. If intervalGroup specified only checks from that group will be
+// executed. If checkNames specified then only matched checks will be executed.
+func (s *Service) executeChecks(ctx context.Context, intervalGroup check.Interval, checkNames []string) error {
 	disabledChecks, err := s.GetDisabledChecks()
 	if err != nil {
 		return errors.WithStack(err)
@@ -524,24 +524,27 @@ func (s *Service) executeChecks(ctx context.Context, group check.Interval, check
 
 	var checkResults []sttCheckResult
 
-	mySQLChecks := s.filterChecks(s.getMySQLChecks(), group, disabledChecks, checkNames)
+	mySQLChecks := s.filterChecks(s.getMySQLChecks(), intervalGroup, disabledChecks, checkNames)
 	mySQLCheckResults := s.executeMySQLChecks(ctx, mySQLChecks)
 	checkResults = append(checkResults, mySQLCheckResults...)
 
-	postgreSQLChecks := s.filterChecks(s.getPostgreSQLChecks(), group, disabledChecks, checkNames)
+	postgreSQLChecks := s.filterChecks(s.getPostgreSQLChecks(), intervalGroup, disabledChecks, checkNames)
 	postgreSQLCheckResults := s.executePostgreSQLChecks(ctx, postgreSQLChecks)
 	checkResults = append(checkResults, postgreSQLCheckResults...)
 
-	mongoDBChecks := s.filterChecks(s.getMongoDBChecks(), group, disabledChecks, checkNames)
+	mongoDBChecks := s.filterChecks(s.getMongoDBChecks(), intervalGroup, disabledChecks, checkNames)
 	mongoDBCheckResults := s.executeMongoDBChecks(ctx, mongoDBChecks)
 	checkResults = append(checkResults, mongoDBCheckResults...)
 
 	if len(checkNames) != 0 {
-		// If we run some specific checks, update results only for them.
+		// If we run some specific checks, delete previous results for them.
 		s.alertsRegistry.deleteByName(checkNames)
+	} else if intervalGroup != "" {
+		// If we run whole interval group, delete previous results for that group.
+		s.alertsRegistry.deleteByInterval(intervalGroup)
 	} else {
-		// If we run whole group, replace all results for that group.
-		s.alertsRegistry.deleteByInterval(group)
+		// If we run all checks, delete all previous results.
+		s.alertsRegistry.cleanup()
 	}
 
 	s.alertsRegistry.set(checkResults)
