@@ -493,7 +493,7 @@
 
 [[projects]]
   branch = "PMM-7498-azure-monitoring"
-  digest = "1:493df80f82a5d79a8399c0614df715cba3e65145b92697f08619d01dfb40ddf2"
+  digest = "1:28323ce7735d95af78ccd5c02288276bffb66187e976213cd7386f25c24551e7"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -518,7 +518,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "4bd85081fb2a3d8fe785d90e2941da7d23859e5d"
+  revision = "253a52f3b6c08203c31218c27562686b7a1fff4d"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
