@@ -21,10 +21,9 @@ import (
 	"testing"
 
 	"github.com/AlekSi/pointer"
-	"github.com/stretchr/testify/require"
-
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
+	"github.com/stretchr/testify/require"
 
 	"github.com/percona/pmm-managed/models"
 )
