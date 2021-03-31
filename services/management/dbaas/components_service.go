@@ -18,6 +18,7 @@ package dbaas
 
 import (
 	"context"
+	"fmt"
 
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
 	"github.com/percona/pmm/version"
@@ -99,7 +100,7 @@ func (c componentsService) GetPXCComponents(ctx context.Context, req *dbaasv1bet
 	return &dbaasv1beta1.GetPXCComponentsResponse{Versions: versions}, nil
 }
 
-func (c componentsService) SetPSMDBComponents(ctx context.Context, req *dbaasv1beta1.SetPSMDBComponentsRequest) (*dbaasv1beta1.SetPSMDBComponentsResponse, error) {
+func (c componentsService) ChangePSMDBComponents(ctx context.Context, req *dbaasv1beta1.ChangePSMDBComponentsRequest) (*dbaasv1beta1.ChangePSMDBComponentsResponse, error) {
 	err := c.db.InTransaction(func(tx *reform.TX) error {
 		kubernetesCluster, e := models.FindKubernetesClusterByName(tx.Querier, req.KubernetesClusterName)
 		if e != nil {
@@ -107,7 +108,10 @@ func (c componentsService) SetPSMDBComponents(ctx context.Context, req *dbaasv1b
 		}
 
 		if req.Mongod != nil {
-			kubernetesCluster.Mongod = setComponent(kubernetesCluster.Mongod, req.Mongod)
+			kubernetesCluster.Mongod, e = setComponent(kubernetesCluster.Mongod, req.Mongod)
+			if e != nil {
+				return e
+			}
 		}
 
 		e = tx.Save(kubernetesCluster)
@@ -121,10 +125,10 @@ func (c componentsService) SetPSMDBComponents(ctx context.Context, req *dbaasv1b
 		return nil, err
 	}
 
-	return &dbaasv1beta1.SetPSMDBComponentsResponse{}, nil
+	return &dbaasv1beta1.ChangePSMDBComponentsResponse{}, nil
 }
 
-func (c componentsService) SetPXCComponents(ctx context.Context, req *dbaasv1beta1.SetPXCComponentsRequest) (*dbaasv1beta1.SetPXCComponentsResponse, error) {
+func (c componentsService) ChangePXCComponents(ctx context.Context, req *dbaasv1beta1.ChangePXCComponentsRequest) (*dbaasv1beta1.ChangePXCComponentsResponse, error) {
 	err := c.db.InTransaction(func(tx *reform.TX) error {
 		kubernetesCluster, e := models.FindKubernetesClusterByName(tx.Querier, req.KubernetesClusterName)
 		if e != nil {
@@ -132,11 +136,17 @@ func (c componentsService) SetPXCComponents(ctx context.Context, req *dbaasv1bet
 		}
 
 		if req.Pxc != nil {
-			kubernetesCluster.PXC = setComponent(kubernetesCluster.PXC, req.Pxc)
+			kubernetesCluster.PXC, e = setComponent(kubernetesCluster.PXC, req.Pxc)
+			if e != nil {
+				return e
+			}
 		}
 
 		if req.Proxysql != nil {
-			kubernetesCluster.ProxySQL = setComponent(kubernetesCluster.ProxySQL, req.Proxysql)
+			kubernetesCluster.ProxySQL, e = setComponent(kubernetesCluster.ProxySQL, req.Proxysql)
+			if e != nil {
+				return e
+			}
 		}
 
 		e = tx.Save(kubernetesCluster)
@@ -150,10 +160,10 @@ func (c componentsService) SetPXCComponents(ctx context.Context, req *dbaasv1bet
 		return nil, err
 	}
 
-	return &dbaasv1beta1.SetPXCComponentsResponse{}, nil
+	return &dbaasv1beta1.ChangePXCComponentsResponse{}, nil
 }
 
-func (c componentsService) versions(ctx context.Context, params componentsParams, cluster *models.KubernetesCluster) ([]*dbaasv1beta1.Version, error) {
+func (c componentsService) versions(ctx context.Context, params componentsParams, cluster *models.KubernetesCluster) ([]*dbaasv1beta1.OperatorVersion, error) {
 	components, err := c.versionServiceClient.Matrix(ctx, params)
 	if err != nil {
 		return nil, err
@@ -166,9 +176,9 @@ func (c componentsService) versions(ctx context.Context, params componentsParams
 		proxySQL = cluster.ProxySQL
 	}
 
-	versions := make([]*dbaasv1beta1.Version, 0, len(components.Versions))
+	versions := make([]*dbaasv1beta1.OperatorVersion, 0, len(components.Versions))
 	for _, v := range components.Versions {
-		respVersion := &dbaasv1beta1.Version{
+		respVersion := &dbaasv1beta1.OperatorVersion{
 			Product:  v.Product,
 			Operator: v.Operator,
 			Matrix: &dbaasv1beta1.Matrix{
@@ -228,7 +238,7 @@ func (c componentsService) matrix(m map[string]component, kc *models.Component) 
 	return result
 }
 
-func setComponent(kc *models.Component, rc *dbaasv1beta1.SetComponent) *models.Component {
+func setComponent(kc *models.Component, rc *dbaasv1beta1.ChangeComponent) (*models.Component, error) {
 	if kc == nil {
 		kc = new(models.Component)
 	}
@@ -238,15 +248,20 @@ func setComponent(kc *models.Component, rc *dbaasv1beta1.SetComponent) *models.C
 	for _, v := range kc.DisabledVersions {
 		disabledVersions[v] = struct{}{}
 	}
-	for _, v := range rc.GetDisableVersions() {
-		disabledVersions[v] = struct{}{}
-	}
-	for _, v := range rc.GetEnableVersions() {
-		delete(disabledVersions, v)
+	for _, v := range rc.Versions {
+		if v.Enable && v.Disable {
+			return nil, fmt.Errorf("enable and disable for version %s can't be passed together", v.Version)
+		}
+		if v.Enable {
+			delete(disabledVersions, v.Version)
+		}
+		if v.Disable {
+			disabledVersions[v.Version] = struct{}{}
+		}
 	}
 	kc.DisabledVersions = make([]string, 0)
 	for v := range disabledVersions {
 		kc.DisabledVersions = append(kc.DisabledVersions, v)
 	}
-	return kc
+	return kc, nil
 }
