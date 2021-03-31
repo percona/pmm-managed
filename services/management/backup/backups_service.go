@@ -112,7 +112,7 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 	}
 
 	return &backupv1beta1.StartBackupResponse{
-		BackupId: artifact.ID,
+		ArtifactId: artifact.ID,
 	}, nil
 }
 
