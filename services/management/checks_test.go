@@ -179,10 +179,8 @@ func TestChangeSecurityChecksInterval(t *testing.T) {
 		s := NewChecksAPIService(&checksService)
 
 		resp, err := s.ChangeSecurityChecksInterval(&managementpb.ChangeSecurityChecksIntervalRequest{
-			Param: &managementpb.ChangeSecurityCheckIntervalParams{
-				Name:     "check-name",
-				Interval: managementpb.SecurityCheckInterval_STANDARD,
-			},
+			Name:     "check-name",
+			Interval: managementpb.SecurityCheckInterval_STANDARD,
 		})
 		assert.EqualError(t, err, "failed to change security check interval: random error")
 		assert.Nil(t, resp)
@@ -195,10 +193,8 @@ func TestChangeSecurityChecksInterval(t *testing.T) {
 		s := NewChecksAPIService(&checksService)
 
 		resp, err := s.ChangeSecurityChecksInterval(&managementpb.ChangeSecurityChecksIntervalRequest{
-			Param: &managementpb.ChangeSecurityCheckIntervalParams{
-				Name:     "check-name",
-				Interval: managementpb.SecurityCheckInterval_STANDARD,
-			},
+			Name:     "check-name",
+			Interval: managementpb.SecurityCheckInterval_STANDARD,
 		})
 		require.NoError(t, err)
 		assert.Equal(t, &managementpb.ChangeSecurityChecksIntervalResponse{}, resp)

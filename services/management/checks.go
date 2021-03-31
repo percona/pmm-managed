@@ -142,7 +142,7 @@ func (s *ChecksAPIService) ChangeSecurityChecks(req *managementpb.ChangeSecurity
 
 // ChangeSecurityChecks enables/disables Security Thread Tool checks by names.
 func (s *ChecksAPIService) ChangeSecurityChecksInterval(req *managementpb.ChangeSecurityChecksIntervalRequest) (*managementpb.ChangeSecurityChecksIntervalResponse, error) {
-	err := s.checksService.ChangeInterval(req.Param.Name, req.Param.Interval)
+	err := s.checksService.ChangeInterval(req.Name, req.Interval)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to change security check interval")
 	}

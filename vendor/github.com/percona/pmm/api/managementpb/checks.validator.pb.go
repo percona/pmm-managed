@@ -26,9 +26,6 @@ func (this *SecurityCheck) Validate() error {
 func (this *ChangeSecurityCheckParams) Validate() error {
 	return nil
 }
-func (this *ChangeSecurityCheckIntervalParams) Validate() error {
-	return nil
-}
 func (this *GetSecurityCheckResultsRequest) Validate() error {
 	return nil
 }
@@ -75,11 +72,6 @@ func (this *ChangeSecurityChecksResponse) Validate() error {
 	return nil
 }
 func (this *ChangeSecurityChecksIntervalRequest) Validate() error {
-	if this.Param != nil {
-		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Param); err != nil {
-			return github_com_mwitkow_go_proto_validators.FieldError("Param", err)
-		}
-	}
 	return nil
 }
 func (this *ChangeSecurityChecksIntervalResponse) Validate() error {
