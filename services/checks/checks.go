@@ -536,13 +536,14 @@ func (s *Service) executeChecks(ctx context.Context, intervalGroup check.Interva
 	mongoDBCheckResults := s.executeMongoDBChecks(ctx, mongoDBChecks)
 	checkResults = append(checkResults, mongoDBCheckResults...)
 
-	if len(checkNames) != 0 {
+	switch {
+	case len(checkNames) != 0:
 		// If we run some specific checks, delete previous results for them.
 		s.alertsRegistry.deleteByName(checkNames)
-	} else if intervalGroup != "" {
+	case intervalGroup != "":
 		// If we run whole interval group, delete previous results for that group.
 		s.alertsRegistry.deleteByInterval(intervalGroup)
-	} else {
+	default:
 		// If we run all checks, delete all previous results.
 		s.alertsRegistry.cleanup()
 	}

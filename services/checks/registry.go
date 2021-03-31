@@ -117,9 +117,7 @@ func (r *registry) getCheckResults() []sttCheckResult {
 	var results []sttCheckResult
 	for _, intervalGroup := range r.checkResults {
 		for _, checkNameGroup := range intervalGroup {
-			for _, checkResult := range checkNameGroup {
-				results = append(results, checkResult)
-			}
+			results = append(results, checkNameGroup...)
 		}
 	}
 
