@@ -47,7 +47,7 @@ func NewArtifactsService(db *reform.DB) *ArtifactsService {
 func (s *ArtifactsService) Enabled() bool {
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
-		s.l.WithError(err).Error("enabled: get settings")
+		s.l.WithError(err).Error("can't get settings")
 		return false
 	}
 	return settings.BackupManagement.Enabled

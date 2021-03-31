@@ -47,7 +47,7 @@ func NewChannelsService(db *reform.DB, alertManager alertManager) *ChannelsServi
 func (s *ChannelsService) Enabled() bool {
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
-		s.l.WithError(err).Error("enabled: get settings")
+		s.l.WithError(err).Error("can't get settings")
 		return false
 	}
 	return settings.IntegratedAlerting.Enabled
