@@ -136,6 +136,7 @@ func (c componentsService) matrix(m map[string]component, minimalVersion *govers
 		parsedVersion, err := goversion.NewVersion(v)
 		if err != nil {
 			c.l.Warnf("couldn't parse version %s: %s", v, err.Error())
+			continue
 		}
 		if minimalVersion != nil && parsedVersion.LessThan(minimalVersion) {
 			continue
