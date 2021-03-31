@@ -319,6 +319,14 @@
   version = "v1.15.0"
 
 [[projects]]
+  digest = "1:62e9b669cad3ce17f72f6a24a6f60eee419015c205c0dbdc36d08c2815f83c1f"
+  name = "github.com/hashicorp/go-version"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "59da58cfd357de719a4d16dac30481391a56c002"
+  version = "v1.2.1"
+
+[[projects]]
   digest = "1:1f2aebae7e7c856562355ec0198d8ca2fa222fb05e5b1b66632a1fce39631885"
   name = "github.com/jmespath/go-jmespath"
   packages = ["."]
@@ -417,11 +425,11 @@
 
 [[projects]]
   branch = "main"
-  digest = "1:3a3456315d8c3f9f75569955fe5fd6fada00369ab99c90c8acf752143b80c2d7"
+  digest = "1:9fb472e3f52d391602e2b075638a1e093f2b47a33cc12192ba1add0dac1880c5"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "0d16006be75233517f1bc89eef1e0b40d2fe3924"
+  revision = "1d3454914a7988a80fedb86bd108062301a30e9b"
 
 [[projects]]
   branch = "main"
@@ -458,6 +466,7 @@
     "api/managementpb/backup",
     "api/managementpb/dbaas",
     "api/managementpb/ia",
+    "api/managementpb/jobs",
     "api/qanpb",
     "api/serverpb",
     "utils/pdeathsig",
@@ -467,6 +476,7 @@
   ]
   pruneopts = "NUT"
   revision = "d2ec8847cd6cc5e2ecab2ffef5eb9ca889a589ba"
+  revision = "9c58412d1b42b2996e6e042fbd80516706cabd6e"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
@@ -918,6 +928,7 @@
     "github.com/grpc-ecosystem/go-grpc-middleware/validator",
     "github.com/grpc-ecosystem/go-grpc-prometheus",
     "github.com/grpc-ecosystem/grpc-gateway/runtime",
+    "github.com/hashicorp/go-version",
     "github.com/kevinburke/go-bindata/go-bindata",
     "github.com/lib/pq",
     "github.com/minio/minio-go",
@@ -940,6 +951,7 @@
     "github.com/percona/pmm/api/managementpb/backup",
     "github.com/percona/pmm/api/managementpb/dbaas",
     "github.com/percona/pmm/api/managementpb/ia",
+    "github.com/percona/pmm/api/managementpb/jobs",
     "github.com/percona/pmm/api/qanpb",
     "github.com/percona/pmm/api/serverpb",
     "github.com/percona/pmm/utils/pdeathsig",
