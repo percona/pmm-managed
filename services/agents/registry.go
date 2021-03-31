@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"runtime/pprof"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -907,7 +908,11 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 		l.Panicf("unhandled Service type %s", service.ServiceType)
 	}
 
-	l.Infof("CheckConnectionRequest: %+v.", request)
+	var sanitizedDSN string
+	for _, word := range redactWords(agent) {
+		sanitizedDSN = strings.ReplaceAll(request.Dsn, word, "****")
+	}
+	l.Infof("CheckConnectionRequest: type: %s, DSN: %s timeout: %s.", request.Type, sanitizedDSN, request.Timeout)
 	resp := pmmAgent.channel.SendAndWaitResponse(request)
 	l.Infof("CheckConnection response: %+v.", resp)
 

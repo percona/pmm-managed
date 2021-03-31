@@ -252,7 +252,7 @@ func (s *AzureDatabaseService) AddAzureDatabase(ctx context.Context, req *azurev
 			NodeName:     req.NodeName,
 			NodeModel:    req.NodeModel,
 			AZ:           req.Az,
-			Address:      req.InstanceId,
+			Address:      req.Address,
 			Region:       &req.Region,
 			CustomLabels: req.CustomLabels,
 		})
