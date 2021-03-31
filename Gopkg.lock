@@ -493,7 +493,7 @@
 
 [[projects]]
   branch = "PMM-7498-azure-monitoring"
-  digest = "1:28323ce7735d95af78ccd5c02288276bffb66187e976213cd7386f25c24551e7"
+  digest = "1:20a67e4cfcd9b488d20429a70d5cc477a8fc6dc42d91b2b2b885dcc24cac733a"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -506,6 +506,7 @@
     "api/alertmanager/ammodels",
     "api/inventorypb",
     "api/managementpb",
+    "api/managementpb/azure",
     "api/managementpb/backup",
     "api/managementpb/dbaas",
     "api/managementpb/ia",
@@ -518,7 +519,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "253a52f3b6c08203c31218c27562686b7a1fff4d"
+  revision = "065ad7a707f94d405e3cb041978a19fdce963837"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
@@ -994,6 +995,7 @@
     "github.com/percona/pmm/api/alertmanager/ammodels",
     "github.com/percona/pmm/api/inventorypb",
     "github.com/percona/pmm/api/managementpb",
+    "github.com/percona/pmm/api/managementpb/azure",
     "github.com/percona/pmm/api/managementpb/backup",
     "github.com/percona/pmm/api/managementpb/dbaas",
     "github.com/percona/pmm/api/managementpb/ia",
