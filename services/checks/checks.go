@@ -437,7 +437,7 @@ func (s *Service) ChangeInterval(checkName string, interval managementpb.Securit
 				return errors.New("invalid security check interval")
 			}
 
-			s.updateCheckInterval(c)
+			s.updateCheck(c)
 
 			// since we re-run checks at regular intervals using a call
 			// to s.StartChecks which in turn calls s.collectChecks
@@ -445,15 +445,16 @@ func (s *Service) ChangeInterval(checkName string, interval managementpb.Securit
 			// to check intervals in this map so that they can be re-applied
 			// once the checks have been re-loaded on restarts.
 			s.cim.Lock()
-			defer s.cim.Unlock()
 			s.checksIntervalMap[c.Name] = c.Interval
+			s.cim.Unlock()
 			break
 		}
 	}
 	return nil
 }
 
-func (s *Service) updateCheckInterval(newCheck check.Check) {
+// updateCheck updates a check with an updated interval in the appropriate check slice.
+func (s *Service) updateCheck(newCheck check.Check) {
 	switch newCheck.Type {
 	case check.MySQLSelect:
 		fallthrough
