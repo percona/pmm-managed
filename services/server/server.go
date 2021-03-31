@@ -418,7 +418,8 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 		AzurediscoverEnabled: settings.Azurediscover.Enabled,
 		PmmPublicAddress:     settings.PMMPublicAddress,
 
-		AlertingEnabled: settings.IntegratedAlerting.Enabled,
+		AlertingEnabled:         settings.IntegratedAlerting.Enabled,
+		BackupManagementEnabled: settings.BackupManagement.Enabled,
 	}
 
 	if settings.IntegratedAlerting.EmailAlertingSettings != nil {
@@ -576,6 +577,8 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			DisableAlerting:             req.DisableAlerting,
 			RemoveEmailAlertingSettings: req.RemoveEmailAlertingSettings,
 			RemoveSlackAlertingSettings: req.RemoveSlackAlertingSettings,
+			EnableBackupManagement:      req.EnableBackupManagement,
+			DisableBackupManagement:     req.DisableBackupManagement,
 		}
 
 		if req.EmailAlertingSettings != nil {

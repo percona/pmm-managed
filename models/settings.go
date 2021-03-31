@@ -85,6 +85,10 @@ type Settings struct {
 	Azurediscover struct {
 		Enabled bool `json:"enabled"`
 	} `json:"azure"`
+
+	BackupManagement struct {
+		Enabled bool `json:"enabled"`
+	} `json:"backup_management"`
 }
 
 // EmailAlertingSettings represents email settings for Integrated Alerting.

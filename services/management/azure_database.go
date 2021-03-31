@@ -26,6 +26,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/percona/pmm/api/managementpb"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -55,6 +56,7 @@ const (
 
 // AzureDatabaseService represents instance discovery service.
 type AzureDatabaseService struct {
+	l        *logrus.Entry
 	db       *reform.DB
 	registry agentsRegistry
 }
@@ -62,9 +64,20 @@ type AzureDatabaseService struct {
 // NewAzureDatabaseService creates new instance discovery service.
 func NewAzureDatabaseService(db *reform.DB, registry agentsRegistry) *AzureDatabaseService {
 	return &AzureDatabaseService{
+		l:        logrus.WithField("component", "management/azure_database"),
 		db:       db,
 		registry: registry,
 	}
+}
+
+// Enabled returns if service is enabled and can be used.
+func (s *AzureDatabaseService) Enabled() bool {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		s.l.WithError(err).Error("can't get settings")
+		return false
+	}
+	return settings.Azurediscover.Enabled
 }
 
 // AzureDatabaseInstanceData reflects Azure Database Instance Data of Discovery Response.
