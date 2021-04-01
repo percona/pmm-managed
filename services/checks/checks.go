@@ -425,50 +425,51 @@ func (s *Service) ChangeInterval(checkName string, interval managementpb.Securit
 	}
 
 	for _, c := range checks {
-		if c.Name == checkName {
-			s.l.Error(c.Name)
-			switch interval {
-			case managementpb.SecurityCheckInterval_STANDARD:
-				c.Interval = check.Standard
-			case managementpb.SecurityCheckInterval_FREQUENT:
-				c.Interval = check.Frequent
-			case managementpb.SecurityCheckInterval_RARE:
-				c.Interval = check.Rare
-			case managementpb.SecurityCheckInterval_SECURITY_CHECK_INTERVAL_INVALID:
-				return errors.New("invalid security check interval")
-			default:
-				return errors.New("unknown security check interval")
-			}
-
-			s.updateCheck(c)
-
-			// since we re-run checks at regular intervals using a call
-			// to s.StartChecks which in turn calls s.collectChecks
-			// to load/download checks, we must persist any changes
-			// to check intervals in the DB so that they can be re-applied
-			// once the checks have been re-loaded on restarts.
-			cs, err := models.FindCheckStateByName(s.db.Querier, c.Name)
-			// record interval change for the first time
-			if err == reform.ErrNoRows {
-				cs, err := models.CreateCheckState(s.db.Querier, c.Name, models.Interval(c.Interval))
-				if err != nil {
-					return err
-				}
-				s.l.Debugf("Saved interval change for check: %s in DB", cs.Name)
-				break
-			}
-
-			// update interval change if already present
-			if cs != nil {
-				cs, err := models.ChangeCheckState(s.db.Querier, c.Name, models.Interval(c.Interval))
-				if err != nil {
-					return err
-				}
-				s.l.Debugf("Updated interval change for check: %s in DB", cs.Name)
-				break
-			}
-			return err
+		if c.Name != checkName {
+			continue
 		}
+
+		switch interval {
+		case managementpb.SecurityCheckInterval_STANDARD:
+			c.Interval = check.Standard
+		case managementpb.SecurityCheckInterval_FREQUENT:
+			c.Interval = check.Frequent
+		case managementpb.SecurityCheckInterval_RARE:
+			c.Interval = check.Rare
+		case managementpb.SecurityCheckInterval_SECURITY_CHECK_INTERVAL_INVALID:
+			return errors.New("invalid security check interval")
+		default:
+			return errors.New("unknown security check interval")
+		}
+
+		s.updateCheck(c)
+
+		// since we re-run checks at regular intervals using a call
+		// to s.StartChecks which in turn calls s.collectChecks
+		// to load/download checks, we must persist any changes
+		// to check intervals in the DB so that they can be re-applied
+		// once the checks have been re-loaded on restarts.
+		cs, err := models.FindCheckStateByName(s.db.Querier, c.Name)
+		// record interval change for the first time
+		if err == reform.ErrNoRows {
+			cs, err := models.CreateCheckState(s.db.Querier, c.Name, models.Interval(c.Interval))
+			if err != nil {
+				return err
+			}
+			s.l.Debugf("Saved interval change for check: %s in DB", cs.Name)
+			break
+		}
+
+		// update interval change if already present
+		if cs != nil {
+			cs, err := models.ChangeCheckState(s.db.Querier, c.Name, models.Interval(c.Interval))
+			if err != nil {
+				return err
+			}
+			s.l.Debugf("Updated interval change for check: %s in DB", cs.Name)
+			break
+		}
+		return err
 	}
 	return nil
 }
