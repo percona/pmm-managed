@@ -449,7 +449,7 @@
   revision = "e66cc9d89f9739d5f841f847877f12443b37484a"
 
 [[projects]]
-  branch = "PMM-7339-invidual-checks"
+  branch = "PMM-2.0"
   digest = "1:a260506501a97c66b1a0f10fcc8f4698823e12b979dcf430554f4b8ed55a9637"
   name = "github.com/percona/pmm"
   packages = [
@@ -475,7 +475,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "d2ec8847cd6cc5e2ecab2ffef5eb9ca889a589ba"
+  revision = "94fed37f0118fe963ee5dd67fed1087b030f7dbc"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
