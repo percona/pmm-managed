@@ -23,6 +23,8 @@ import (
 	goversion "github.com/hashicorp/go-version"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -47,12 +49,14 @@ func NewComponentsService(db *reform.DB, dbaasClient dbaasClient, versionService
 }
 
 func (c componentsService) GetPSMDBComponents(ctx context.Context, req *dbaasv1beta1.GetPSMDBComponentsRequest) (*dbaasv1beta1.GetPSMDBComponentsResponse, error) {
+	var kubernetesCluster *models.KubernetesCluster
 	params := componentsParams{
 		operator:  psmdbOperator,
 		dbVersion: req.DbVersion,
 	}
 	if req.KubernetesClusterName != "" {
-		kubernetesCluster, err := models.FindKubernetesClusterByName(c.db.Querier, req.KubernetesClusterName)
+		var err error
+		kubernetesCluster, err = models.FindKubernetesClusterByName(c.db.Querier, req.KubernetesClusterName)
 		if err != nil {
 			return nil, err
 		}
@@ -62,10 +66,12 @@ func (c componentsService) GetPSMDBComponents(ctx context.Context, req *dbaasv1b
 			return nil, e
 		}
 
-		params.operatorVersion = checkResponse.Operators.Psmdb.Version
+		if checkResponse.Operators.Psmdb != nil {
+			params.operatorVersion = checkResponse.Operators.Psmdb.Version
+		}
 	}
 
-	versions, err := c.versions(ctx, params, nil)
+	versions, err := c.versions(ctx, params, kubernetesCluster)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +96,9 @@ func (c componentsService) GetPXCComponents(ctx context.Context, req *dbaasv1bet
 			return nil, e
 		}
 
-		params.operatorVersion = checkResponse.Operators.Xtradb.Version
+		if checkResponse.Operators.Xtradb != nil {
+			params.operatorVersion = checkResponse.Operators.Xtradb.Version
+		}
 	}
 
 	versions, err := c.versions(ctx, params, kubernetesCluster)
@@ -110,7 +118,8 @@ func (c componentsService) ChangePSMDBComponents(ctx context.Context, req *dbaas
 		if req.Mongod != nil {
 			kubernetesCluster.Mongod, e = setComponent(kubernetesCluster.Mongod, req.Mongod)
 			if e != nil {
-				return e
+				message := fmt.Sprintf("%s, cluster: %s, component: mongod", e.Error(), kubernetesCluster.KubernetesClusterName)
+				return status.Errorf(codes.InvalidArgument, message)
 			}
 		}
 
@@ -138,14 +147,16 @@ func (c componentsService) ChangePXCComponents(ctx context.Context, req *dbaasv1
 		if req.Pxc != nil {
 			kubernetesCluster.PXC, e = setComponent(kubernetesCluster.PXC, req.Pxc)
 			if e != nil {
-				return e
+				message := fmt.Sprintf("%s, cluster: %s, component: pxc", e.Error(), kubernetesCluster.KubernetesClusterName)
+				return status.Errorf(codes.InvalidArgument, message)
 			}
 		}
 
 		if req.Proxysql != nil {
 			kubernetesCluster.ProxySQL, e = setComponent(kubernetesCluster.ProxySQL, req.Proxysql)
 			if e != nil {
-				return e
+				message := fmt.Sprintf("%s, cluster: %s, component: proxySQL", e.Error(), kubernetesCluster.KubernetesClusterName)
+				return status.Errorf(codes.InvalidArgument, message)
 			}
 		}
 
@@ -186,12 +197,12 @@ func (c componentsService) versions(ctx context.Context, params componentsParams
 			Matrix: &dbaasv1beta1.Matrix{
 				Mongod:       c.matrix(v.Matrix.Mongod, mongodMinimalVersion, mongod),
 				Pxc:          c.matrix(v.Matrix.Pxc, pxcMinimalVersion, pxc),
-				Pmm:          c.matrix(v.Matrix.Pmm, nil),
+				Pmm:          c.matrix(v.Matrix.Pmm, nil, nil),
 				Proxysql:     c.matrix(v.Matrix.Proxysql, nil, proxySQL),
-				Haproxy:      c.matrix(v.Matrix.Haproxy, nil),
-				Backup:       c.matrix(v.Matrix.Backup, nil),
-				Operator:     c.matrix(v.Matrix.Operator, nil),
-				LogCollector: c.matrix(v.Matrix.LogCollector, nil),
+				Haproxy:      c.matrix(v.Matrix.Haproxy, nil, nil),
+				Backup:       c.matrix(v.Matrix.Backup, nil, nil),
+				Operator:     c.matrix(v.Matrix.Operator, nil, nil),
+				LogCollector: c.matrix(v.Matrix.LogCollector, nil, nil),
 			},
 		}
 		versions = append(versions, respVersion)
@@ -248,7 +259,9 @@ func setComponent(kc *models.Component, rc *dbaasv1beta1.ChangeComponent) (*mode
 	if kc == nil {
 		kc = new(models.Component)
 	}
-	kc.DefaultVersion = rc.DefaultVersion
+	if rc.DefaultVersion != "" {
+		kc.DefaultVersion = rc.DefaultVersion
+	}
 
 	disabledVersions := make(map[string]struct{})
 	for _, v := range kc.DisabledVersions {
@@ -268,6 +281,9 @@ func setComponent(kc *models.Component, rc *dbaasv1beta1.ChangeComponent) (*mode
 	kc.DisabledVersions = make([]string, 0)
 	for v := range disabledVersions {
 		kc.DisabledVersions = append(kc.DisabledVersions, v)
+	}
+	if _, ok := disabledVersions[kc.DefaultVersion]; ok {
+		return nil, fmt.Errorf("default version can't be disabled")
 	}
 	return kc, nil
 }
