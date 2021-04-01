@@ -20,8 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	goversion "github.com/hashicorp/go-version"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
-	"github.com/percona/pmm/version"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/reform.v1"
 
@@ -177,15 +177,17 @@ func (c componentsService) versions(ctx context.Context, params componentsParams
 	}
 
 	versions := make([]*dbaasv1beta1.OperatorVersion, 0, len(components.Versions))
+	mongodMinimalVersion, _ := goversion.NewVersion("4.2.0")
+	pxcMinimalVersion, _ := goversion.NewVersion("8.0.0")
 	for _, v := range components.Versions {
 		respVersion := &dbaasv1beta1.OperatorVersion{
 			Product:  v.Product,
 			Operator: v.Operator,
 			Matrix: &dbaasv1beta1.Matrix{
-				Mongod:       c.matrix(v.Matrix.Mongod, mongod),
-				Pxc:          c.matrix(v.Matrix.Pxc, pxc),
+				Mongod:       c.matrix(v.Matrix.Mongod, mongodMinimalVersion, mongod),
+				Pxc:          c.matrix(v.Matrix.Pxc, pxcMinimalVersion, pxc),
 				Pmm:          c.matrix(v.Matrix.Pmm, nil),
-				Proxysql:     c.matrix(v.Matrix.Proxysql, proxySQL),
+				Proxysql:     c.matrix(v.Matrix.Proxysql, nil, proxySQL),
 				Haproxy:      c.matrix(v.Matrix.Haproxy, nil),
 				Backup:       c.matrix(v.Matrix.Backup, nil),
 				Operator:     c.matrix(v.Matrix.Operator, nil),
@@ -198,23 +200,27 @@ func (c componentsService) versions(ctx context.Context, params componentsParams
 	return versions, nil
 }
 
-func (c componentsService) matrix(m map[string]component, kc *models.Component) map[string]*dbaasv1beta1.Component {
+func (c componentsService) matrix(m map[string]component, minimalVersion *goversion.Version, kc *models.Component) map[string]*dbaasv1beta1.Component {
 	result := make(map[string]*dbaasv1beta1.Component)
 
 	var lastVersion string
-	lastVersionParsed := version.MustParse("0.0.0")
+	lastVersionParsed, _ := goversion.NewVersion("0.0.0")
 	for v, component := range m {
+		parsedVersion, err := goversion.NewVersion(v)
+		if err != nil {
+			c.l.Warnf("couldn't parse version %s: %s", v, err.Error())
+			continue
+		}
+		if minimalVersion != nil && parsedVersion.LessThan(minimalVersion) {
+			continue
+		}
 		result[v] = &dbaasv1beta1.Component{
 			ImagePath: component.ImagePath,
 			ImageHash: component.ImageHash,
 			Status:    component.Status,
 			Critical:  component.Critical,
 		}
-		parsedVersion, err := version.Parse(v)
-		if err != nil {
-			c.l.Warnf("couldn't parse version %s: %s", v, err.Error())
-		}
-		if lastVersionParsed.Less(parsedVersion) && component.Status == "recommended" {
+		if lastVersionParsed.LessThan(parsedVersion) && component.Status == "recommended" {
 			lastVersionParsed = parsedVersion
 			lastVersion = v
 		}
