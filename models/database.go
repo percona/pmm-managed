@@ -468,6 +468,14 @@ var databaseSchema = [][]string{
 			PRIMARY KEY (id)
 		)`,
 	},
+	31: {
+		`CREATE TABLE checks_state (
+			name VARCHAR NOT NULL,
+			interval VARCHAR NOT NULL,
+
+			PRIMARY KEY (name)
+		)`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^

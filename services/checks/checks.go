@@ -103,9 +103,6 @@ type Service struct {
 	postgreSQLChecks []check.Check
 	mongoDBChecks    []check.Check
 
-	cim               sync.Mutex
-	checksIntervalMap map[string]check.Interval
-
 	tm             sync.Mutex
 	rareTicker     *time.Ticker
 	standardTicker *time.Ticker
@@ -142,8 +139,6 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 		startDelay:      defaultStartDelay,
 		resendInterval:  defaultResendInterval,
 		localChecksFile: os.Getenv(envCheckFile),
-
-		checksIntervalMap: make(map[string]check.Interval),
 
 		mScriptsExecuted: prom.NewCounterVec(prom.CounterOpts{
 			Namespace: prometheusNamespace,
@@ -433,21 +428,40 @@ func (s *Service) ChangeInterval(checkName string, interval managementpb.Securit
 				c.Interval = check.Frequent
 			case managementpb.SecurityCheckInterval_RARE:
 				c.Interval = check.Rare
-			default:
+			case managementpb.SecurityCheckInterval_SECURITY_CHECK_INTERVAL_INVALID:
 				return errors.New("invalid security check interval")
+			default:
+				return errors.New("unknown security check interval")
 			}
 
 			s.updateCheck(c)
 
 			// since we re-run checks at regular intervals using a call
 			// to s.StartChecks which in turn calls s.collectChecks
-			// to load/download checks, we must record any changes
-			// to check intervals in this map so that they can be re-applied
+			// to load/download checks, we must persist any changes
+			// to check intervals in the DB so that they can be re-applied
 			// once the checks have been re-loaded on restarts.
-			s.cim.Lock()
-			s.checksIntervalMap[c.Name] = c.Interval
-			s.cim.Unlock()
-			break
+			cs, err := models.FindCheckStateByName(s.db.Querier, c.Name)
+			// record interval change for the first time
+			if err == reform.ErrNoRows {
+				cs, err := models.CreateCheckState(s.db.Querier, c.Name, models.Interval(c.Interval))
+				if err != nil {
+					return err
+				}
+				s.l.Debugf("Saved interval change for check: %s in DB", cs.Name)
+				break
+			}
+
+			// update interval change if already present
+			if cs != nil {
+				cs, err := models.ChangeCheckState(s.db.Querier, c.Name, models.Interval(c.Interval))
+				if err != nil {
+					return err
+				}
+				s.l.Debugf("Updated interval change for check: %s in DB", cs.Name)
+				break
+			}
+			return err
 		}
 	}
 	return nil
@@ -464,6 +478,7 @@ func (s *Service) updateCheck(newCheck check.Check) {
 		for i, oldCheck := range s.mySQLChecks {
 			if oldCheck.Name == newCheck.Name {
 				s.mySQLChecks[i] = newCheck
+				s.l.Infof("Changed check interval for: %s, from: %s to: %s", oldCheck.Name, oldCheck.Interval, newCheck.Interval)
 				break
 			}
 		}
@@ -476,6 +491,7 @@ func (s *Service) updateCheck(newCheck check.Check) {
 		for i, oldCheck := range s.postgreSQLChecks {
 			if oldCheck.Name == newCheck.Name {
 				s.postgreSQLChecks[i] = newCheck
+				s.l.Infof("Changed check interval for: %s, from: %s to: %s", oldCheck.Name, oldCheck.Interval, newCheck.Interval)
 				break
 			}
 		}
@@ -490,6 +506,7 @@ func (s *Service) updateCheck(newCheck check.Check) {
 		for i, oldCheck := range s.mongoDBChecks {
 			if oldCheck.Name == newCheck.Name {
 				s.mongoDBChecks[i] = newCheck
+				s.l.Infof("Changed check interval for: %s, from: %s to: %s", oldCheck.Name, oldCheck.Interval, newCheck.Interval)
 				break
 			}
 		}
@@ -994,11 +1011,14 @@ func (s *Service) collectChecks(ctx context.Context) {
 
 	checks = s.filterSupportedChecks(checks)
 	for i, c := range checks {
-		s.cim.Lock()
-		if interval, ok := s.checksIntervalMap[c.Name]; ok {
-			c.Interval = interval
+		cs, err := models.FindCheckStateByName(s.db.Querier, c.Name)
+		if err != nil {
+			// we use warn because this might not always be a failure, its possible
+			// that there were no interval changes to be applied in the first place.
+			s.l.Warnf("Unable to re-apply interval changes to check: %s : %+v", c.Name, err)
+			continue
 		}
-		s.cim.Unlock()
+		c.Interval = check.Interval(cs.Interval)
 		checks[i] = c
 	}
 
