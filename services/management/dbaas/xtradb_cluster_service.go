@@ -158,10 +158,12 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 		Params: &dbaascontrollerv1beta1.XtraDBClusterParams{
 			ClusterSize: req.Params.ClusterSize,
 			Pxc: &dbaascontrollerv1beta1.XtraDBClusterParams_PXC{
+				Image:            req.Params.Pxc.Image,
 				ComputeResources: new(dbaascontrollerv1beta1.ComputeResources),
 				DiskSize:         req.Params.Pxc.DiskSize,
 			},
 			Proxysql: &dbaascontrollerv1beta1.XtraDBClusterParams_ProxySQL{
+				Image:            req.Params.Proxysql.Image,
 				ComputeResources: new(dbaascontrollerv1beta1.ComputeResources),
 				DiskSize:         req.Params.Proxysql.DiskSize,
 			},
@@ -294,10 +296,10 @@ func (s XtraDBClusterService) GetXtraDBClusterResources(ctx context.Context, req
 		return nil, err
 	}
 
-	clusterSize := int64(req.Params.ClusterSize)
-	memory := (req.Params.Pxc.ComputeResources.MemoryBytes + req.Params.Proxysql.ComputeResources.MemoryBytes) * clusterSize
-	cpu := int64(req.Params.Pxc.ComputeResources.CpuM+req.Params.Proxysql.ComputeResources.CpuM) * clusterSize
-	disk := (req.Params.Pxc.DiskSize + req.Params.Proxysql.DiskSize) * clusterSize
+	clusterSize := uint64(req.Params.ClusterSize)
+	memory := uint64(req.Params.Pxc.ComputeResources.MemoryBytes+req.Params.Proxysql.ComputeResources.MemoryBytes) * clusterSize
+	cpu := uint64(req.Params.Pxc.ComputeResources.CpuM+req.Params.Proxysql.ComputeResources.CpuM) * clusterSize
+	disk := uint64(req.Params.Pxc.DiskSize+req.Params.Proxysql.DiskSize) * clusterSize
 
 	if settings.PMMPublicAddress != "" {
 		memory += 1000000000 * clusterSize

@@ -417,7 +417,8 @@ func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 		DbaasEnabled:     settings.DBaaS.Enabled,
 		PmmPublicAddress: settings.PMMPublicAddress,
 
-		AlertingEnabled: settings.IntegratedAlerting.Enabled,
+		AlertingEnabled:         settings.IntegratedAlerting.Enabled,
+		BackupManagementEnabled: settings.BackupManagement.Enabled,
 	}
 
 	if settings.IntegratedAlerting.EmailAlertingSettings != nil {
@@ -568,6 +569,8 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			DisableAlerting:             req.DisableAlerting,
 			RemoveEmailAlertingSettings: req.RemoveEmailAlertingSettings,
 			RemoveSlackAlertingSettings: req.RemoveSlackAlertingSettings,
+			EnableBackupManagement:      req.EnableBackupManagement,
+			DisableBackupManagement:     req.DisableBackupManagement,
 		}
 
 		if req.EmailAlertingSettings != nil {
@@ -758,7 +761,7 @@ func (s *Server) AWSInstanceCheck(ctx context.Context, req *serverpb.AWSInstance
 func (s *Server) PlatformSignUp(ctx context.Context, req *serverpb.PlatformSignUpRequest) (*serverpb.PlatformSignUpResponse, error) {
 	nCtx, cancel := context.WithTimeout(ctx, platformAPITimeout)
 	defer cancel()
-	if err := s.platformService.SignUp(nCtx, req.Email, req.Password); err != nil {
+	if err := s.platformService.SignUp(nCtx, req.Email, req.FirstName, req.LastName); err != nil {
 		return nil, err
 	}
 
