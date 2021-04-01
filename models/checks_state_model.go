@@ -18,8 +18,10 @@ package models
 
 //go:generate reform
 
+// Interval represents check execution interval.
 type Interval string
 
+// Available check execution intervals.
 const (
 	Standard Interval = "standard"
 	Frequent Interval = "frequent"

@@ -419,8 +419,14 @@ func (s *Service) EnableChecks(checkNames []string) error {
 
 // ChangeInterval changes a check's interval to the value received from the UI.
 func (s *Service) ChangeInterval(checkName string, interval managementpb.SecurityCheckInterval) error {
-	for _, c := range s.GetAllChecks() {
+	checks := s.GetAllChecks()
+	if len(checks) == 0 {
+		return errors.New("no checks loaded")
+	}
+
+	for _, c := range checks {
 		if c.Name == checkName {
+			s.l.Error(c.Name)
 			switch interval {
 			case managementpb.SecurityCheckInterval_STANDARD:
 				c.Interval = check.Standard
