@@ -240,10 +240,15 @@ func TestChangeInterval(t *testing.T) {
 		assert.Len(t, checks, 3)
 
 		// change all check intervals from standard to rare
+		params := make([]ChangeIntervalParams, 0, len(checks))
 		for _, c := range checks {
-			err = s.ChangeInterval(c.Name, managementpb.SecurityCheckInterval_RARE)
-			require.NoError(t, err)
+			params = append(params, ChangeIntervalParams{
+				Name:     c.Name,
+				Interval: managementpb.SecurityCheckInterval_RARE,
+			})
 		}
+		err = s.ChangeInterval(params)
+		require.NoError(t, err)
 
 		updatedChecks := s.GetAllChecks()
 		for _, c := range updatedChecks {
@@ -280,10 +285,11 @@ func TestChangeInterval(t *testing.T) {
 		checks := s.GetAllChecks()
 		assert.Len(t, checks, 3)
 
-		for _, c := range checks {
-			err = s.ChangeInterval(c.Name, managementpb.SecurityCheckInterval_SECURITY_CHECK_INTERVAL_INVALID)
-			assert.EqualError(t, err, "invalid security check interval")
-		}
+		err = s.ChangeInterval([]ChangeIntervalParams{{
+			Name:     checks[0].Name,
+			Interval: managementpb.SecurityCheckInterval_SECURITY_CHECK_INTERVAL_INVALID,
+		}})
+		assert.EqualError(t, err, "invalid security check interval")
 	})
 }
 

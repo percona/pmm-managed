@@ -27,6 +27,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/percona/pmm-managed/services"
+	"github.com/percona/pmm-managed/services/checks"
 )
 
 // ChecksAPIService represents security checks service API.
@@ -111,13 +112,19 @@ func (s *ChecksAPIService) ListSecurityChecks(ctx context.Context, req *manageme
 	return &managementpb.ListSecurityChecksResponse{Checks: res}, nil
 }
 
-// ChangeSecurityChecks enables/disables Security Thread Tool checks by names.
+// ChangeSecurityChecks enables/disables Security Thread Tool checks by names or changes its execution interval.
 func (s *ChecksAPIService) ChangeSecurityChecks(ctx context.Context, req *managementpb.ChangeSecurityChecksRequest) (*managementpb.ChangeSecurityChecksResponse, error) {
 	var enableChecks, disableChecks []string
+	changeIntervalParams := make([]checks.ChangeIntervalParams, 0, len(req.Params))
 	for _, check := range req.Params {
 		if check.Enable && check.Disable {
 			return nil, status.Errorf(codes.InvalidArgument, "Check %s has enable and disable parameters set to the true.", check.Name)
 		}
+
+		changeIntervalParams = append(changeIntervalParams, checks.ChangeIntervalParams{
+			Name:     check.Name,
+			Interval: check.Interval,
+		})
 
 		if check.Enable {
 			enableChecks = append(enableChecks, check.Name)
@@ -125,6 +132,13 @@ func (s *ChecksAPIService) ChangeSecurityChecks(ctx context.Context, req *manage
 
 		if check.Disable {
 			disableChecks = append(disableChecks, check.Name)
+		}
+	}
+
+	if len(changeIntervalParams) != 0 {
+		err := s.checksService.ChangeInterval(changeIntervalParams)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to change security check interval")
 		}
 	}
 
@@ -139,16 +153,6 @@ func (s *ChecksAPIService) ChangeSecurityChecks(ctx context.Context, req *manage
 	}
 
 	return &managementpb.ChangeSecurityChecksResponse{}, nil
-}
-
-// ChangeSecurityChecks enables/disables Security Thread Tool checks by names.
-func (s *ChecksAPIService) ChangeSecurityChecksInterval(ctx context.Context, req *managementpb.ChangeSecurityChecksIntervalRequest) (*managementpb.ChangeSecurityChecksIntervalResponse, error) {
-	err := s.checksService.ChangeInterval(req.Name, req.Interval)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to change security check interval")
-	}
-
-	return &managementpb.ChangeSecurityChecksIntervalResponse{}, nil
 }
 
 func convertInterval(interval check.Interval) managementpb.SecurityCheckInterval {

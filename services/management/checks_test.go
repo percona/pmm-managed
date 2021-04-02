@@ -169,18 +169,18 @@ func TestUpdateSecurityChecks(t *testing.T) {
 		assert.EqualError(t, err, "failed to disable security checks: random error")
 		assert.Nil(t, resp)
 	})
-}
 
-func TestChangeSecurityChecksInterval(t *testing.T) {
-	t.Run("ChangeInterval error", func(t *testing.T) {
+	t.Run("change interval error", func(t *testing.T) {
 		var checksService mockChecksService
 		checksService.On("ChangeInterval", mock.Anything, mock.Anything).Return(errors.New("random error"))
 
 		s := NewChecksAPIService(&checksService)
 
-		resp, err := s.ChangeSecurityChecksInterval(context.Background(), &managementpb.ChangeSecurityChecksIntervalRequest{
-			Name:     "check-name",
-			Interval: managementpb.SecurityCheckInterval_STANDARD,
+		resp, err := s.ChangeSecurityChecks(context.Background(), &managementpb.ChangeSecurityChecksRequest{
+			Params: []*managementpb.ChangeSecurityCheckParams{{
+				Name:     "check-name",
+				Interval: managementpb.SecurityCheckInterval_STANDARD,
+			}},
 		})
 		assert.EqualError(t, err, "failed to change security check interval: random error")
 		assert.Nil(t, resp)
@@ -192,11 +192,13 @@ func TestChangeSecurityChecksInterval(t *testing.T) {
 
 		s := NewChecksAPIService(&checksService)
 
-		resp, err := s.ChangeSecurityChecksInterval(context.Background(), &managementpb.ChangeSecurityChecksIntervalRequest{
-			Name:     "check-name",
-			Interval: managementpb.SecurityCheckInterval_STANDARD,
+		resp, err := s.ChangeSecurityChecks(context.Background(), &managementpb.ChangeSecurityChecksRequest{
+			Params: []*managementpb.ChangeSecurityCheckParams{{
+				Name:     "check-name",
+				Interval: managementpb.SecurityCheckInterval_STANDARD,
+			}},
 		})
 		require.NoError(t, err)
-		assert.Equal(t, &managementpb.ChangeSecurityChecksIntervalResponse{}, resp)
+		assert.Equal(t, &managementpb.ChangeSecurityChecksResponse{}, resp)
 	})
 }
