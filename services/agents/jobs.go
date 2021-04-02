@@ -83,7 +83,7 @@ func (s *JobsService) StartMySQLBackupJob(id, pmmAgentID string, timeout time.Du
 				AccessKey:  locationConfig.S3Config.AccessKey,
 				SecretKey:  locationConfig.S3Config.SecretKey,
 				BucketName: locationConfig.S3Config.BucketName,
-				// @TODO replace this
+				// TODO: replace hardcoded region with real value https://jira.percona.com/browse/PMM-7832
 				BucketRegion: "us-east-2",
 			},
 		}
