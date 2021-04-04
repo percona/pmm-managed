@@ -361,7 +361,7 @@ func TestComponentService(t *testing.T) {
 }
 
 func TestComponentServiceMatrix(t *testing.T) {
-	input := map[string]component{
+	input := map[string]componentVersion{
 		"5.7.26-31.37":   {ImagePath: "percona/percona-xtradb-cluster:5.7.26-31.37", ImageHash: "9d43d8e435e4aca5c694f726cc736667cb938158635c5f01a0e9412905f1327f", Status: "available", Critical: false},
 		"5.7.27-31.39":   {ImagePath: "percona/percona-xtradb-cluster:5.7.27-31.39", ImageHash: "7d8eb4d2031c32c6e96451655f359d8e5e8e047dc95bada9a28c41c158876c26", Status: "available", Critical: false},
 		"5.7.28-31.41.2": {ImagePath: "percona/percona-xtradb-cluster:5.7.28-31.41.2", ImageHash: "fccd6525aaeedb5e436e9534e2a63aebcf743c043526dd05dba8519ebddc8b30", Status: "available", Critical: true},
@@ -446,7 +446,7 @@ func TestComponentServiceMatrix(t *testing.T) {
 
 	t.Run("EmptyMatrix", func(t *testing.T) {
 		cs := &componentsService{}
-		m := cs.matrix(map[string]component{}, nil, nil)
+		m := cs.matrix(map[string]componentVersion{}, nil, nil)
 		assert.Equal(t, map[string]*dbaasv1beta1.Component{}, m)
 	})
 }
