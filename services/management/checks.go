@@ -120,7 +120,9 @@ func (s *ChecksAPIService) ChangeSecurityChecks(ctx context.Context, req *manage
 			return nil, status.Errorf(codes.InvalidArgument, "Check %s has enable and disable parameters set to the true.", check.Name)
 		}
 
-		changeIntervalParams[check.Name] = check.Interval
+		if check.Interval != managementpb.SecurityCheckInterval_SECURITY_CHECK_INTERVAL_INVALID {
+			changeIntervalParams[check.Name] = check.Interval
+		}
 
 		if check.Enable {
 			enableChecks = append(enableChecks, check.Name)

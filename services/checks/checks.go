@@ -507,7 +507,7 @@ func (s *Service) updateCheck(newCheck check.Check) {
 		for i, oldCheck := range s.postgreSQLChecks {
 			if oldCheck.Name == newCheck.Name {
 				s.postgreSQLChecks[i] = newCheck
-				s.l.Infof("Changed check interval for: %s, from: %s to: %s", oldCheck.Name, oldCheck.Interval, newCheck.Interval)
+				s.l.Infof("Updated check: %s, interval changed from: %s to: %s", oldCheck.Name, oldCheck.Interval, newCheck.Interval)
 				break
 			}
 		}
@@ -522,7 +522,7 @@ func (s *Service) updateCheck(newCheck check.Check) {
 		for i, oldCheck := range s.mongoDBChecks {
 			if oldCheck.Name == newCheck.Name {
 				s.mongoDBChecks[i] = newCheck
-				s.l.Infof("Changed check interval for: %s, from: %s to: %s", oldCheck.Name, oldCheck.Interval, newCheck.Interval)
+				s.l.Infof("Updated check: %s, interval changed from: %s to: %s", oldCheck.Name, oldCheck.Interval, newCheck.Interval)
 				break
 			}
 		}
