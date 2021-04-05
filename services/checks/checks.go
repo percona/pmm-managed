@@ -420,13 +420,8 @@ func (s *Service) EnableChecks(checkNames []string) error {
 	return nil
 }
 
-type ChangeIntervalParams struct {
-	Name     string
-	Interval managementpb.SecurityCheckInterval
-}
-
 // ChangeInterval changes a check's interval to the value received from the UI.
-func (s *Service) ChangeInterval(params []ChangeIntervalParams) error {
+func (s *Service) ChangeInterval(params map[string]managementpb.SecurityCheckInterval) error {
 	checks := s.GetAllChecks()
 	if len(checks) == 0 {
 		return errors.New("no checks loaded")
@@ -437,13 +432,13 @@ func (s *Service) ChangeInterval(params []ChangeIntervalParams) error {
 		checkMap[ch.Name] = ch
 	}
 
-	for _, p := range params {
-		c, ok := checkMap[p.Name]
+	for name, interval := range params {
+		c, ok := checkMap[name]
 		if !ok {
-			return errors.Errorf("check: %s not found", p.Name)
+			return errors.Errorf("check: %s not found", name)
 		}
 
-		switch p.Interval {
+		switch interval {
 		case managementpb.SecurityCheckInterval_STANDARD:
 			c.Interval = check.Standard
 		case managementpb.SecurityCheckInterval_FREQUENT:
@@ -471,7 +466,7 @@ func (s *Service) ChangeInterval(params []ChangeIntervalParams) error {
 				return err
 			}
 			s.l.Debugf("Saved interval change for check: %s in DB", cs.Name)
-			break
+			continue
 		}
 
 		// update interval change if already present
@@ -481,7 +476,7 @@ func (s *Service) ChangeInterval(params []ChangeIntervalParams) error {
 				return err
 			}
 			s.l.Debugf("Updated interval change for check: %s in DB", cs.Name)
-			break
+			continue
 		}
 		return err
 	}

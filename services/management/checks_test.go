@@ -172,7 +172,7 @@ func TestUpdateSecurityChecks(t *testing.T) {
 
 	t.Run("change interval error", func(t *testing.T) {
 		var checksService mockChecksService
-		checksService.On("ChangeInterval", mock.Anything, mock.Anything).Return(errors.New("random error"))
+		checksService.On("ChangeInterval", mock.Anything).Return(errors.New("random error"))
 
 		s := NewChecksAPIService(&checksService)
 
@@ -188,7 +188,7 @@ func TestUpdateSecurityChecks(t *testing.T) {
 
 	t.Run("ChangeInterval success", func(t *testing.T) {
 		var checksService mockChecksService
-		checksService.On("ChangeInterval", mock.Anything, mock.Anything).Return(nil)
+		checksService.On("ChangeInterval", mock.Anything).Return(nil)
 
 		s := NewChecksAPIService(&checksService)
 
