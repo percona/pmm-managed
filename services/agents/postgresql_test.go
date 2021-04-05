@@ -53,7 +53,6 @@ func TestPostgresExporterConfig(t *testing.T) {
 			"--collect.custom_query.lr.directory=/usr/local/percona/pmm2/collectors/custom-queries/postgresql/low-resolution",
 			"--collect.custom_query.mr",
 			"--collect.custom_query.mr.directory=/usr/local/percona/pmm2/collectors/custom-queries/postgresql/medium-resolution",
-			"--exclude-databases=template0,template1,postgres,pmm-managed-dev,azure_maintenance",
 			"--web.listen-address=:{{ .listen_port }}",
 		},
 		Env: []string{
@@ -140,7 +139,7 @@ func TestPostgresExporterConfig(t *testing.T) {
 				"--web.listen-address=:{{ .listen_port }}",
 			},
 			Env: []string{
-				"DATA_SOURCE_NAME=postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:5432/postgres?connect_timeout=1&sslmode=disable",
+				"DATA_SOURCE_NAME=postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:5432/postgres?connect_timeout=5&sslmode=disable",
 				"HTTP_AUTH=pmm:agent-id",
 			},
 			RedactWords: []string{"s3cur3 p@$$w0r4."},

@@ -50,15 +50,13 @@ func postgresExporterConfig(service *models.Service, exporter *models.Agent, red
 		"--collect.custom_query.lr.directory=/usr/local/percona/pmm2/collectors/custom-queries/postgresql/low-resolution",
 		"--collect.custom_query.mr.directory=/usr/local/percona/pmm2/collectors/custom-queries/postgresql/medium-resolution",
 		"--collect.custom_query.hr.directory=/usr/local/percona/pmm2/collectors/custom-queries/postgresql/high-resolution",
-		"--auto-discover-databases",
-		"--exclude-databases=template0,template1,postgres,pmm-managed-dev,azure_maintenance",
 		"--web.listen-address=:" + tdp.Left + " .listen_port " + tdp.Right,
 	}
 
 	if !pmmAgentVersion.Less(postgresExporterAutodiscoveryVersion) {
 		args = append(args,
 			"--auto-discover-databases",
-			"--exclude-databases=template0,template1,postgres,pmm-managed-dev",
+			"--exclude-databases=template0,template1,postgres,pmm-managed-dev,azure_maintenance",
 		)
 	}
 
