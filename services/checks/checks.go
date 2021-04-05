@@ -432,6 +432,11 @@ func (s *Service) ChangeInterval(params map[string]managementpb.SecurityCheckInt
 		checkMap[ch.Name] = ch
 	}
 
+	checkStateMap, err := models.FindCheckStates(s.db.Querier)
+	if err != reform.ErrNoRows && err != nil {
+		return errors.Wrap(err, "failed to retrieve checks state: %+v")
+	}
+
 	for name, interval := range params {
 		c, ok := checkMap[name]
 		if !ok {
@@ -458,9 +463,7 @@ func (s *Service) ChangeInterval(params map[string]managementpb.SecurityCheckInt
 		// to load/download checks, we must persist any changes
 		// to check intervals in the DB so that they can be re-applied
 		// once the checks have been re-loaded on restarts.
-		cs, err := models.FindCheckStateByName(s.db.Querier, c.Name)
-		// record interval change for the first time
-		if err == reform.ErrNoRows {
+		if _, ok := checkStateMap[c.Name]; !ok {
 			cs, err := models.CreateCheckState(s.db.Querier, c.Name, models.Interval(c.Interval))
 			if err != nil {
 				return err
@@ -470,15 +473,11 @@ func (s *Service) ChangeInterval(params map[string]managementpb.SecurityCheckInt
 		}
 
 		// update interval change if already present
-		if cs != nil {
-			cs, err := models.ChangeCheckState(s.db.Querier, c.Name, models.Interval(c.Interval))
-			if err != nil {
-				return err
-			}
-			s.l.Debugf("Updated interval change for check: %s in DB", cs.Name)
-			continue
+		cs, err := models.ChangeCheckState(s.db.Querier, c.Name, models.Interval(c.Interval))
+		if err != nil {
+			return err
 		}
-		return err
+		s.l.Debugf("Updated interval change for check: %s in DB", cs.Name)
 	}
 
 	return nil

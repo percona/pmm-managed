@@ -38,9 +38,9 @@ func TestChecksState(t *testing.T) {
 	t.Run("create", func(t *testing.T) {
 		tx, err := db.Begin()
 		require.NoError(t, err)
-		defer func() {
+		t.Cleanup(func() {
 			require.NoError(t, tx.Rollback())
-		}()
+		})
 
 		q := tx.Querier
 
@@ -53,9 +53,9 @@ func TestChecksState(t *testing.T) {
 	t.Run("change", func(t *testing.T) {
 		tx, err := db.Begin()
 		require.NoError(t, err)
-		defer func() {
+		t.Cleanup(func() {
 			require.NoError(t, tx.Rollback())
-		}()
+		})
 
 		q := tx.Querier
 
@@ -71,12 +71,12 @@ func TestChecksState(t *testing.T) {
 		assert.Equal(t, models.Rare, newState.Interval)
 	})
 
-	t.Run("find", func(t *testing.T) {
+	t.Run("find by name", func(t *testing.T) {
 		tx, err := db.Begin()
 		require.NoError(t, err)
-		defer func() {
+		t.Cleanup(func() {
 			require.NoError(t, tx.Rollback())
-		}()
+		})
 
 		q := tx.Querier
 
@@ -86,5 +86,26 @@ func TestChecksState(t *testing.T) {
 		actual, err := models.FindCheckStateByName(q, "check-name")
 		require.NoError(t, err)
 		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("find all", func(t *testing.T) {
+		tx, err := db.Begin()
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			require.NoError(t, tx.Rollback())
+		})
+
+		q := tx.Querier
+
+		_, err = models.CreateCheckState(q, "check1", models.Standard)
+		require.NoError(t, err)
+		_, err = models.CreateCheckState(q, "check2", models.Standard)
+		require.NoError(t, err)
+
+		actual, err := models.FindCheckStates(q)
+		require.NoError(t, err)
+		assert.Len(t, actual, 2)
+		assert.Equal(t, actual["check1"], models.Standard)
+		assert.Equal(t, actual["check2"], models.Standard)
 	})
 }

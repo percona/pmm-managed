@@ -23,6 +23,24 @@ import (
 	"gopkg.in/reform.v1"
 )
 
+// FindCheckStates returns all CheckStates stored in the table.
+func FindCheckStates(q *reform.Querier) (map[string]Interval, error) {
+	rows, err := q.SelectAllFrom(ChecksStateTable, "")
+	switch err {
+	case nil:
+		cs := make(map[string]Interval)
+		for _, r := range rows {
+			state := r.(*ChecksState)
+			cs[state.Name] = state.Interval
+		}
+		return cs, nil
+	case reform.ErrNoRows:
+		return nil, err
+	default:
+		return nil, errors.WithStack(err)
+	}
+}
+
 // FindCheckStateByName finds ChecksState by name.
 func FindCheckStateByName(q *reform.Querier, name string) (*ChecksState, error) {
 	if name == "" {
