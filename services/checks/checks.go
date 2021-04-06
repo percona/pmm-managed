@@ -494,7 +494,7 @@ func (s *Service) updateCheck(newCheck check.Check) {
 		for i, oldCheck := range s.mySQLChecks {
 			if oldCheck.Name == newCheck.Name {
 				s.mySQLChecks[i] = newCheck
-				s.l.Infof("Changed check interval for: %s, from: %s to: %s", oldCheck.Name, oldCheck.Interval, newCheck.Interval)
+				s.l.Infof("Updated check: %s, interval changed from: %s to: %s", oldCheck.Name, oldCheck.Interval, newCheck.Interval)
 				break
 			}
 		}
