@@ -24,13 +24,17 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
+	"github.com/percona/pmm/version"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/collectors"
 )
 
+var postgresExporterAutodiscoveryVersion = version.MustParse("2.15.99")
+
 // postgresExporterConfig returns desired configuration of postgres_exporter process.
-func postgresExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode) *agentpb.SetStateRequest_AgentProcess {
+func postgresExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode,
+	pmmAgentVersion *version.Parsed) *agentpb.SetStateRequest_AgentProcess {
 	tdp := exporter.TemplateDelimiters(service)
 
 	args := []string{
@@ -46,10 +50,14 @@ func postgresExporterConfig(service *models.Service, exporter *models.Agent, red
 		"--collect.custom_query.lr.directory=/usr/local/percona/pmm2/collectors/custom-queries/postgresql/low-resolution",
 		"--collect.custom_query.mr.directory=/usr/local/percona/pmm2/collectors/custom-queries/postgresql/medium-resolution",
 		"--collect.custom_query.hr.directory=/usr/local/percona/pmm2/collectors/custom-queries/postgresql/high-resolution",
-
-		"--auto-discover-databases",
-		"--exclude-databases=template0,template1,postgres,pmm-managed-dev",
 		"--web.listen-address=:" + tdp.Left + " .listen_port " + tdp.Right,
+	}
+
+	if !pmmAgentVersion.Less(postgresExporterAutodiscoveryVersion) {
+		args = append(args,
+			"--auto-discover-databases",
+			"--exclude-databases=template0,template1,postgres,pmm-managed-dev,azure_maintenance",
+		)
 	}
 
 	if pointer.GetString(exporter.MetricsPath) != "" {
@@ -66,7 +74,7 @@ func postgresExporterConfig(service *models.Service, exporter *models.Agent, red
 		TemplateRightDelim: tdp.Right,
 		Args:               args,
 		Env: []string{
-			fmt.Sprintf("DATA_SOURCE_NAME=%s", exporter.DSN(service, time.Second, "postgres", nil)),
+			fmt.Sprintf("DATA_SOURCE_NAME=%s", exporter.DSN(service, 5*time.Second, "postgres", nil)),
 			fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.AgentID),
 		},
 	}
@@ -80,7 +88,7 @@ func postgresExporterConfig(service *models.Service, exporter *models.Agent, red
 func qanPostgreSQLPgStatementsAgentConfig(service *models.Service, agent *models.Agent) *agentpb.SetStateRequest_BuiltinAgent {
 	return &agentpb.SetStateRequest_BuiltinAgent{
 		Type: inventorypb.AgentType_QAN_POSTGRESQL_PGSTATEMENTS_AGENT,
-		Dsn:  agent.DSN(service, time.Second, "postgres", nil),
+		Dsn:  agent.DSN(service, 5*time.Second, "postgres", nil),
 	}
 }
 

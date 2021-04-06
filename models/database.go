@@ -469,6 +469,10 @@ var databaseSchema = [][]string{
 		)`,
 	},
 	31: {
+		`ALTER TABLE agents
+			ADD COLUMN azure_options VARCHAR`,
+	},
+	32: {
 		`ALTER TABLE kubernetes_clusters ADD COLUMN pxc JSONB`,
 		`ALTER TABLE kubernetes_clusters ADD COLUMN proxysql JSONB`,
 		`ALTER TABLE kubernetes_clusters ADD COLUMN mongod JSONB`,
