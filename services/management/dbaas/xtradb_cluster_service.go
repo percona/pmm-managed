@@ -89,13 +89,24 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 			}
 		}
 
-		if c.Params.Proxysql.ComputeResources != nil {
-			cluster.Params.Proxysql = &dbaasv1beta1.XtraDBClusterParams_ProxySQL{
-				DiskSize: c.Params.Proxysql.DiskSize,
+		if c.Params.Proxysql != nil {
+			if c.Params.Proxysql.ComputeResources != nil {
+				cluster.Params.Proxysql = &dbaasv1beta1.XtraDBClusterParams_ProxySQL{
+					DiskSize: c.Params.Proxysql.DiskSize,
+					ComputeResources: &dbaasv1beta1.ComputeResources{
+						CpuM:        c.Params.Proxysql.ComputeResources.CpuM,
+						MemoryBytes: c.Params.Proxysql.ComputeResources.MemoryBytes,
+					},
+				}
 			}
-			cluster.Params.Proxysql.ComputeResources = &dbaasv1beta1.ComputeResources{
-				CpuM:        c.Params.Proxysql.ComputeResources.CpuM,
-				MemoryBytes: c.Params.Proxysql.ComputeResources.MemoryBytes,
+		} else {
+			if c.Params.Haproxy.ComputeResources != nil {
+				cluster.Params.Haproxy = &dbaasv1beta1.XtraDBClusterParams_HAProxy{
+					ComputeResources: &dbaasv1beta1.ComputeResources{
+						CpuM:        c.Params.Haproxy.ComputeResources.CpuM,
+						MemoryBytes: c.Params.Haproxy.ComputeResources.MemoryBytes,
+					},
+				}
 			}
 		}
 
@@ -147,7 +158,7 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 
 	// Check if one and only one of proxies is set.
 	if (req.Params.Proxysql != nil) == (req.Params.Haproxy != nil) {
-		return nil, errors.New("cluster to be created can have one and only one proxy type defined")
+		return nil, errors.New("xtradb cluster must have one and only one proxy type defined")
 	}
 
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
