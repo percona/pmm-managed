@@ -670,6 +670,7 @@ func (s *Service) executeChecks(ctx context.Context, intervalGroup check.Interva
 func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) []sttCheckResult {
 	var res []sttCheckResult
 	for _, c := range checks {
+		s.l.Infof("Executing check: %s with interval: %s", c.Name, c.Interval)
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
 		targets, err := s.findTargets(models.MySQLServiceType, pmmAgentVersion)
 		if err != nil {
@@ -720,6 +721,7 @@ func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) 
 func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Check) []sttCheckResult {
 	var res []sttCheckResult
 	for _, c := range checks {
+		s.l.Infof("Executing check: %s with interval: %s", c.Name, c.Interval)
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
 		targets, err := s.findTargets(models.PostgreSQLServiceType, pmmAgentVersion)
 		if err != nil {
@@ -770,6 +772,7 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Ch
 func (s *Service) executeMongoDBChecks(ctx context.Context, checks []check.Check) []sttCheckResult {
 	var res []sttCheckResult
 	for _, c := range checks {
+		s.l.Infof("Executing check: %s with interval: %s", c.Name, c.Interval)
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
 		targets, err := s.findTargets(models.MongoDBServiceType, pmmAgentVersion)
 		if err != nil {
@@ -1043,9 +1046,10 @@ func (s *Service) collectChecks(ctx context.Context) {
 	for i, c := range checks {
 		cs, err := models.FindCheckStateByName(s.db.Querier, c.Name)
 		if err != nil {
-			// we use warn because this might not always be a failure, its possible
-			// that there were no interval changes to be applied in the first place.
-			s.l.Warnf("Unable to re-apply interval changes to check: %s : %+v", c.Name, err)
+			// only log error if state was present in the DB and wasn't re-applied
+			if err != reform.ErrNoRows {
+				s.l.Errorf("Unable to re-apply interval changes to check: %s : %+v", c.Name, err)
+			}
 			continue
 		}
 		c.Interval = check.Interval(cs.Interval)
