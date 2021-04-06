@@ -43,6 +43,38 @@ func addRDSExporter(t pmmapitests.TestingT, body agents.AddRDSExporterBody) *age
 	return res.Payload
 }
 
+func addRemoteAzureDatabaseNode(t pmmapitests.TestingT, nodeName string) *nodes.AddRemoteAzureDatabaseNodeOKBody {
+	t.Helper()
+
+	params := &nodes.AddRemoteAzureDatabaseNodeParams{
+		Body: nodes.AddRemoteAzureDatabaseNodeBody{
+			NodeName: nodeName,
+			Address:  "some-address",
+			Region:   "region",
+		},
+
+		Context: pmmapitests.Context,
+	}
+	res, err := client.Default.Nodes.AddRemoteAzureDatabaseNode(params)
+	assert.NoError(t, err)
+	require.NotNil(t, res)
+
+	return res.Payload
+}
+
+func addAzureDatabaseExporter(t pmmapitests.TestingT, body agents.AddAzureDatabaseExporterBody) *agents.AddAzureDatabaseExporterOKBody {
+	t.Helper()
+
+	res, err := client.Default.Agents.AddAzureDatabaseExporter(&agents.AddAzureDatabaseExporterParams{
+		Body:    body,
+		Context: pmmapitests.Context,
+	})
+	assert.NoError(t, err)
+	require.NotNil(t, res)
+
+	return res.Payload
+}
+
 func addMySQLService(t pmmapitests.TestingT, body services.AddMySQLServiceBody) *services.AddMySQLServiceOKBody {
 	t.Helper()
 
