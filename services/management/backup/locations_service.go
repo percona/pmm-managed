@@ -87,7 +87,7 @@ func (s *LocationsService) AddLocation(ctx context.Context, req *backupv1beta1.A
 	var loc *models.BackupLocation
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
-		loc, err = models.CreateBackupLocation(s.db.Querier, params)
+		loc, err = models.CreateBackupLocation(tx.Querier, params)
 		return err
 	})
 	if e != nil {
@@ -128,7 +128,7 @@ func (s *LocationsService) ChangeLocation(ctx context.Context, req *backupv1beta
 	}
 
 	e := s.db.InTransaction(func(tx *reform.TX) error {
-		_, err := models.ChangeBackupLocation(s.db.Querier, req.LocationId, params)
+		_, err := models.ChangeBackupLocation(tx.Querier, req.LocationId, params)
 		return err
 	})
 	if e != nil {
