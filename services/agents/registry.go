@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"runtime/pprof"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -756,6 +757,19 @@ func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo)
 		case models.ExternalExporterType:
 			// ignore
 
+		case models.AzureDatabaseExporterType:
+			service, err := models.FindServiceByID(r.db.Querier, pointer.GetString(row.ServiceID))
+			if err != nil {
+				l.Error(err)
+				return
+			}
+			config, err := azureDatabaseExporterConfig(row, service, redactMode)
+			if err != nil {
+				l.Error(err)
+				return
+			}
+			agentProcesses[row.AgentID] = config
+
 		// Agents with exactly one Service
 		case models.MySQLdExporterType, models.MongoDBExporterType, models.PostgresExporterType, models.ProxySQLExporterType,
 			models.QANMySQLPerfSchemaAgentType, models.QANMySQLSlowlogAgentType, models.QANMongoDBProfilerAgentType, models.QANPostgreSQLPgStatementsAgentType,
@@ -773,7 +787,7 @@ func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo)
 			case models.MongoDBExporterType:
 				agentProcesses[row.AgentID] = mongodbExporterConfig(service, row, redactMode, pmmAgentVersion)
 			case models.PostgresExporterType:
-				agentProcesses[row.AgentID] = postgresExporterConfig(service, row, redactMode)
+				agentProcesses[row.AgentID] = postgresExporterConfig(service, row, redactMode, pmmAgentVersion)
 			case models.ProxySQLExporterType:
 				agentProcesses[row.AgentID] = proxysqlExporterConfig(service, row, redactMode)
 			case models.QANMySQLPerfSchemaAgentType:
@@ -924,7 +938,11 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 		l.Panicf("unhandled Service type %s", service.ServiceType)
 	}
 
-	l.Infof("CheckConnectionRequest: %+v.", request)
+	var sanitizedDSN string
+	for _, word := range redactWords(agent) {
+		sanitizedDSN = strings.ReplaceAll(request.Dsn, word, "****")
+	}
+	l.Infof("CheckConnectionRequest: type: %s, DSN: %s timeout: %s.", request.Type, sanitizedDSN, request.Timeout)
 	resp := pmmAgent.channel.SendAndWaitResponse(request)
 	l.Infof("CheckConnection response: %+v.", resp)
 

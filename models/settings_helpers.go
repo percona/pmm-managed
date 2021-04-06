@@ -82,6 +82,11 @@ type ChangeSettingsParams struct {
 	// Disable DBaaS features.
 	DisableDBaaS bool
 
+	// Enable Azure Discover features.
+	EnableAzurediscover bool
+	// Disable Azure Discover features.
+	DisableAzurediscover bool
+
 	// Enable Integrated Alerting features.
 	EnableAlerting bool
 	// Disable Integrated Alerting features.
@@ -112,6 +117,11 @@ type ChangeSettingsParams struct {
 	// PMM Server public address.
 	PMMPublicAddress       string
 	RemovePMMPublicAddress bool
+
+	// Enable Backup Management features.
+	EnableBackupManagement bool
+	// Disable Backup Management features.
+	DisableBackupManagement bool
 }
 
 // UpdateSettings updates only non-zero, non-empty values.
@@ -202,6 +212,7 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 	if params.EnableDBaaS {
 		settings.DBaaS.Enabled = true
 	}
+
 	if params.DisableDBaaS {
 		settings.DBaaS.Enabled = false
 	}
@@ -230,8 +241,16 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 	if params.PMMPublicAddress != "" {
 		settings.PMMPublicAddress = params.PMMPublicAddress
 	}
+
 	if params.RemovePMMPublicAddress {
 		settings.PMMPublicAddress = ""
+	}
+
+	if params.DisableAzurediscover {
+		settings.Azurediscover.Enabled = false
+	}
+	if params.EnableAzurediscover {
+		settings.Azurediscover.Enabled = true
 	}
 
 	if params.DisableAlerting {
@@ -257,6 +276,14 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 		settings.IntegratedAlerting.SlackAlertingSettings = params.SlackAlertingSettings
 	}
 
+	if params.DisableBackupManagement {
+		settings.BackupManagement.Enabled = false
+	}
+
+	if params.EnableBackupManagement {
+		settings.BackupManagement.Enabled = true
+	}
+
 	err = SaveSettings(q, settings)
 	if err != nil {
 		return nil, err
@@ -278,7 +305,9 @@ func ValidateSettings(params *ChangeSettingsParams) error {
 	if params.EnableAlerting && params.DisableAlerting {
 		return fmt.Errorf("Both enable_alerting and disable_alerting are present.") //nolint:golint,stylecheck
 	}
-
+	if params.EnableBackupManagement && params.DisableBackupManagement {
+		return fmt.Errorf("Both enable_backup_management and disable_backup_management are present.") //nolint:golint,stylecheck
+	}
 	// TODO: consider refactoring this and the validation for STT check intervals
 	checkCases := []struct {
 		dur       time.Duration

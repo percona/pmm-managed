@@ -10,6 +10,35 @@
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:11df7ec396268951e37059807e95c644af8a3ce478fab6a78c21929b39155a17"
+  name = "github.com/Azure/azure-sdk-for-go"
+  packages = [
+    "services/resourcegraph/mgmt/2019-04-01/resourcegraph",
+    "version",
+  ]
+  pruneopts = "NUT"
+  revision = "9ae3bfb4aaff57be7b0a5c4474424158506b56d5"
+  version = "v49.2.0"
+
+[[projects]]
+  digest = "1:0483386cd12340862dfda12024b010c3b38e75317520fbacc095a55a281a2d8a"
+  name = "github.com/Azure/go-autorest"
+  packages = [
+    "autorest",
+    "autorest/adal",
+    "autorest/azure",
+    "autorest/azure/auth",
+    "autorest/azure/cli",
+    "autorest/date",
+    "autorest/validation",
+    "logger",
+    "tracing",
+  ]
+  pruneopts = "NUT"
+  revision = "e7b391b759b050d6719cc6fd8bb87b6dc038bca6"
+  version = "v14.2.0"
+
+[[projects]]
   branch = "master"
   digest = "1:42d4dcc25a908bb5a54ac91cd204c7d15651367f5751c569ccab8097b2f61204"
   name = "github.com/BurntSushi/go-sumtype"
@@ -130,6 +159,22 @@
   packages = ["spew"]
   pruneopts = "NUT"
   revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
+  version = "v1.1.1"
+
+[[projects]]
+  digest = "1:7a6852b35eb5bbc184561443762d225116ae630c26a7c4d90546619f1e7d2ad2"
+  name = "github.com/dgrijalva/jwt-go"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e"
+  version = "v3.2.0"
+
+[[projects]]
+  digest = "1:59c7cc76eb7f7987e79326d827d1f6ef20b9adad6ca7e8e968b1845541150d46"
+  name = "github.com/dimchansky/utfbom"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "6ae8f945ca96f30defc7e8ab12ec5d10cf86ded4"
   version = "v1.1.1"
 
 [[projects]]
@@ -319,6 +364,14 @@
   version = "v1.15.0"
 
 [[projects]]
+  digest = "1:62e9b669cad3ce17f72f6a24a6f60eee419015c205c0dbdc36d08c2815f83c1f"
+  name = "github.com/hashicorp/go-version"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "59da58cfd357de719a4d16dac30481391a56c002"
+  version = "v1.2.1"
+
+[[projects]]
   digest = "1:1f2aebae7e7c856562355ec0198d8ca2fa222fb05e5b1b66632a1fce39631885"
   name = "github.com/jmespath/go-jmespath"
   packages = ["."]
@@ -442,7 +495,7 @@
 
 [[projects]]
   branch = "PMM-7386-mysql-backup"
-  digest = "1:ab7b6cc49ff58c6aa477ef0147635deff24a4804b0f7b24967474bd56f0bee37"
+  digest = "1:9302a83bc7caafa4747d5615b1f12733684ecc1f5ae2b8d003f6444e1b8efb80"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -455,6 +508,7 @@
     "api/alertmanager/ammodels",
     "api/inventorypb",
     "api/managementpb",
+    "api/managementpb/azure",
     "api/managementpb/backup",
     "api/managementpb/dbaas",
     "api/managementpb/ia",
@@ -612,14 +666,16 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:51a061980fcdcafce0694cae0d88eda777769603c4861f461f061f40fe0894ce"
+  digest = "1:b66ee5fcb87a1136cdbf53b6087be83860a42c486207558b1152a8feeb3fb415"
   name = "golang.org/x/crypto"
   packages = [
     "argon2",
     "blake2b",
+    "pkcs12",
+    "pkcs12/internal/rc2",
   ]
   pruneopts = "NUT"
-  revision = "0c34fe9e7dc2486962ef9867e3edb3503537209f"
+  revision = "5ea612d1eb830b38bc4e914e37f55311eb58adce"
 
 [[projects]]
   digest = "1:467bb8fb8fa786448b8d486cd0bb7c1a5577dcd7310441aa02a20110cd9f727d"
@@ -898,6 +954,9 @@
   analyzer-version = 1
   input-imports = [
     "github.com/AlekSi/pointer",
+    "github.com/Azure/azure-sdk-for-go/services/resourcegraph/mgmt/2019-04-01/resourcegraph",
+    "github.com/Azure/go-autorest/autorest/azure",
+    "github.com/Azure/go-autorest/autorest/azure/auth",
     "github.com/BurntSushi/go-sumtype",
     "github.com/aws/aws-sdk-go/aws",
     "github.com/aws/aws-sdk-go/aws/awserr",
@@ -919,6 +978,7 @@
     "github.com/grpc-ecosystem/go-grpc-middleware/validator",
     "github.com/grpc-ecosystem/go-grpc-prometheus",
     "github.com/grpc-ecosystem/grpc-gateway/runtime",
+    "github.com/hashicorp/go-version",
     "github.com/kevinburke/go-bindata/go-bindata",
     "github.com/lib/pq",
     "github.com/minio/minio-go",
@@ -938,6 +998,7 @@
     "github.com/percona/pmm/api/alertmanager/ammodels",
     "github.com/percona/pmm/api/inventorypb",
     "github.com/percona/pmm/api/managementpb",
+    "github.com/percona/pmm/api/managementpb/azure",
     "github.com/percona/pmm/api/managementpb/backup",
     "github.com/percona/pmm/api/managementpb/dbaas",
     "github.com/percona/pmm/api/managementpb/ia",
