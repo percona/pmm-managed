@@ -28,6 +28,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/utils/stringset"
 )
 
 type componentsService struct {
@@ -278,12 +279,9 @@ func setComponent(kc *models.Component, rc *dbaasv1beta1.ChangeComponent) (*mode
 			disabledVersions[v.Version] = struct{}{}
 		}
 	}
-	kc.DisabledVersions = make([]string, 0)
-	for v := range disabledVersions {
-		kc.DisabledVersions = append(kc.DisabledVersions, v)
-	}
 	if _, ok := disabledVersions[kc.DefaultVersion]; ok {
 		return nil, fmt.Errorf("default version can't be disabled")
 	}
+	kc.DisabledVersions = stringset.ToSlice(disabledVersions)
 	return kc, nil
 }
