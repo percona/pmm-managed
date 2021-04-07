@@ -341,9 +341,17 @@ func (s XtraDBClusterService) GetXtraDBClusterResources(ctx context.Context, req
 	}
 
 	clusterSize := uint64(req.Params.ClusterSize)
-	memory := uint64(req.Params.Pxc.ComputeResources.MemoryBytes+req.Params.Proxysql.ComputeResources.MemoryBytes) * clusterSize
-	cpu := uint64(req.Params.Pxc.ComputeResources.CpuM+req.Params.Proxysql.ComputeResources.CpuM) * clusterSize
-	disk := uint64(req.Params.Pxc.DiskSize+req.Params.Proxysql.DiskSize) * clusterSize
+	var proxyComputeResources *dbaasv1beta1.ComputeResources
+	var disk uint64
+	if req.Params.Proxysql != nil {
+		disk = uint64(req.Params.Proxysql.DiskSize) * clusterSize
+		proxyComputeResources = req.Params.Proxysql.ComputeResources
+	} else {
+		proxyComputeResources = req.Params.Haproxy.ComputeResources
+	}
+	memory := uint64(req.Params.Pxc.ComputeResources.MemoryBytes+proxyComputeResources.MemoryBytes) * clusterSize
+	cpu := uint64(req.Params.Pxc.ComputeResources.CpuM+proxyComputeResources.CpuM) * clusterSize
+	disk += uint64(req.Params.Pxc.DiskSize) * clusterSize
 
 	if settings.PMMPublicAddress != "" {
 		memory += 1000000000 * clusterSize
