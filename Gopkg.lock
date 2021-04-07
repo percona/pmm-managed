@@ -10,6 +10,35 @@
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:11df7ec396268951e37059807e95c644af8a3ce478fab6a78c21929b39155a17"
+  name = "github.com/Azure/azure-sdk-for-go"
+  packages = [
+    "services/resourcegraph/mgmt/2019-04-01/resourcegraph",
+    "version",
+  ]
+  pruneopts = "NUT"
+  revision = "9ae3bfb4aaff57be7b0a5c4474424158506b56d5"
+  version = "v49.2.0"
+
+[[projects]]
+  digest = "1:0483386cd12340862dfda12024b010c3b38e75317520fbacc095a55a281a2d8a"
+  name = "github.com/Azure/go-autorest"
+  packages = [
+    "autorest",
+    "autorest/adal",
+    "autorest/azure",
+    "autorest/azure/auth",
+    "autorest/azure/cli",
+    "autorest/date",
+    "autorest/validation",
+    "logger",
+    "tracing",
+  ]
+  pruneopts = "NUT"
+  revision = "e7b391b759b050d6719cc6fd8bb87b6dc038bca6"
+  version = "v14.2.0"
+
+[[projects]]
   branch = "master"
   digest = "1:42d4dcc25a908bb5a54ac91cd204c7d15651367f5751c569ccab8097b2f61204"
   name = "github.com/BurntSushi/go-sumtype"
@@ -130,6 +159,22 @@
   packages = ["spew"]
   pruneopts = "NUT"
   revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
+  version = "v1.1.1"
+
+[[projects]]
+  digest = "1:7a6852b35eb5bbc184561443762d225116ae630c26a7c4d90546619f1e7d2ad2"
+  name = "github.com/dgrijalva/jwt-go"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e"
+  version = "v3.2.0"
+
+[[projects]]
+  digest = "1:59c7cc76eb7f7987e79326d827d1f6ef20b9adad6ca7e8e968b1845541150d46"
+  name = "github.com/dimchansky/utfbom"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "6ae8f945ca96f30defc7e8ab12ec5d10cf86ded4"
   version = "v1.1.1"
 
 [[projects]]
@@ -260,7 +305,7 @@
   version = "v1.3.1"
 
 [[projects]]
-  digest = "1:5c33f5bfab7e87b5d6243f713208ae953aa708eeb83d23642c608edd7d526f49"
+  digest = "1:e3ac40cb5056345c277e16b24cb36407718e9fb6f0d48b3cae4eaec6d7f8e008"
   name = "github.com/golang/protobuf"
   packages = [
     "descriptor",
@@ -270,6 +315,7 @@
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
+    "ptypes/struct",
     "ptypes/timestamp",
     "ptypes/wrappers",
   ]
@@ -305,10 +351,11 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:2a682a0b8b991a25578a6a7cd7f6cc6350c127732e8e58bec530f2f0dff236cf"
+  digest = "1:bdaff8ba3ebb58f2debf644055a3bb9f14938f3b22bfacfbe543102e52f359b7"
   name = "github.com/grpc-ecosystem/grpc-gateway"
   packages = [
     "internal",
+    "protoc-gen-swagger/options",
     "runtime",
     "utilities",
   ]
@@ -461,6 +508,7 @@
     "api/alertmanager/ammodels",
     "api/inventorypb",
     "api/managementpb",
+    "api/managementpb/azure",
     "api/managementpb/backup",
     "api/managementpb/dbaas",
     "api/managementpb/ia",
@@ -474,6 +522,7 @@
   ]
   pruneopts = "NUT"
   revision = "6deaa94f21eadf386454afc35042feb52acb547a"
+
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
@@ -618,11 +667,13 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:51a061980fcdcafce0694cae0d88eda777769603c4861f461f061f40fe0894ce"
+  digest = "1:b66ee5fcb87a1136cdbf53b6087be83860a42c486207558b1152a8feeb3fb415"
   name = "golang.org/x/crypto"
   packages = [
     "argon2",
     "blake2b",
+    "pkcs12",
+    "pkcs12/internal/rc2",
   ]
   pruneopts = "NUT"
   revision = "5ea612d1eb830b38bc4e914e37f55311eb58adce"
@@ -810,7 +861,7 @@
   version = "v1.32.0"
 
 [[projects]]
-  digest = "1:a6bca15378a84c9edbc6a46779f626103e13cc7504d66a113a211f407720f840"
+  digest = "1:648f512fb65061c60482c7475d8ce146785e2e527f1b0b01d7187563e2d82129"
   name = "google.golang.org/protobuf"
   packages = [
     "encoding/protojson",
@@ -845,6 +896,7 @@
     "types/descriptorpb",
     "types/known/anypb",
     "types/known/durationpb",
+    "types/known/structpb",
     "types/known/timestamppb",
     "types/known/wrapperspb",
   ]
@@ -903,6 +955,9 @@
   analyzer-version = 1
   input-imports = [
     "github.com/AlekSi/pointer",
+    "github.com/Azure/azure-sdk-for-go/services/resourcegraph/mgmt/2019-04-01/resourcegraph",
+    "github.com/Azure/go-autorest/autorest/azure",
+    "github.com/Azure/go-autorest/autorest/azure/auth",
     "github.com/BurntSushi/go-sumtype",
     "github.com/aws/aws-sdk-go/aws",
     "github.com/aws/aws-sdk-go/aws/awserr",
@@ -944,6 +999,7 @@
     "github.com/percona/pmm/api/alertmanager/ammodels",
     "github.com/percona/pmm/api/inventorypb",
     "github.com/percona/pmm/api/managementpb",
+    "github.com/percona/pmm/api/managementpb/azure",
     "github.com/percona/pmm/api/managementpb/backup",
     "github.com/percona/pmm/api/managementpb/dbaas",
     "github.com/percona/pmm/api/managementpb/ia",
