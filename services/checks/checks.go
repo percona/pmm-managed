@@ -461,21 +461,27 @@ func (s *Service) ChangeInterval(params map[string]managementpb.SecurityCheckInt
 		// to load/download checks, we must persist any changes
 		// to check intervals in the DB so that they can be re-applied
 		// once the checks have been re-loaded on restarts.
-		if _, ok := checkStateMap[c.Name]; !ok {
-			cs, err := models.CreateCheckState(s.db.Querier, c.Name, models.Interval(c.Interval))
+		e := s.db.InTransaction(func(tx *reform.TX) error {
+			if _, ok := checkStateMap[c.Name]; !ok {
+				cs, err := models.CreateCheckState(s.db.Querier, c.Name, models.Interval(c.Interval))
+				if err != nil {
+					return err
+				}
+				s.l.Debugf("Saved interval change for check: %s in DB", cs.Name)
+				return nil
+			}
+
+			// update interval change if already present
+			cs, err := models.ChangeCheckState(s.db.Querier, c.Name, models.Interval(c.Interval))
 			if err != nil {
 				return err
 			}
-			s.l.Debugf("Saved interval change for check: %s in DB", cs.Name)
-			continue
+			s.l.Debugf("Updated interval change for check: %s in DB", cs.Name)
+			return nil
+		})
+		if e != nil {
+			return e
 		}
-
-		// update interval change if already present
-		cs, err := models.ChangeCheckState(s.db.Querier, c.Name, models.Interval(c.Interval))
-		if err != nil {
-			return err
-		}
-		s.l.Debugf("Updated interval change for check: %s in DB", cs.Name)
 
 		s.updateCheck(c)
 	}
