@@ -432,11 +432,6 @@ func (s *Service) ChangeInterval(params map[string]managementpb.SecurityCheckInt
 		checkMap[ch.Name] = ch
 	}
 
-	checkStateMap, err := models.FindCheckStates(s.db.Querier)
-	if err != nil && err != reform.ErrNoRows {
-		return errors.Wrap(err, "failed to retrieve checks state: %+v")
-	}
-
 	for name, interval := range params {
 		c, ok := checkMap[name]
 		if !ok {
@@ -462,7 +457,9 @@ func (s *Service) ChangeInterval(params map[string]managementpb.SecurityCheckInt
 		// to check intervals in the DB so that they can be re-applied
 		// once the checks have been re-loaded on restarts.
 		e := s.db.InTransaction(func(tx *reform.TX) error {
-			if _, ok := checkStateMap[c.Name]; !ok {
+			cs, err := models.FindCheckStateByName(s.db.Querier, c.Name)
+			// record interval change for the first time.
+			if err == reform.ErrNoRows {
 				cs, err := models.CreateCheckState(s.db.Querier, c.Name, models.Interval(c.Interval))
 				if err != nil {
 					return err
@@ -471,13 +468,16 @@ func (s *Service) ChangeInterval(params map[string]managementpb.SecurityCheckInt
 				return nil
 			}
 
-			// update interval change if already present
-			cs, err := models.ChangeCheckState(s.db.Querier, c.Name, models.Interval(c.Interval))
-			if err != nil {
-				return err
+			// update existing interval change.
+			if cs != nil {
+				cs, err := models.ChangeCheckState(s.db.Querier, c.Name, models.Interval(c.Interval))
+				if err != nil {
+					return err
+				}
+				s.l.Debugf("Updated interval change for check: %s in DB", cs.Name)
+				return nil
 			}
-			s.l.Debugf("Updated interval change for check: %s in DB", cs.Name)
-			return nil
+			return err
 		})
 		if e != nil {
 			return e
@@ -1049,16 +1049,19 @@ func (s *Service) collectChecks(ctx context.Context) {
 	}
 
 	checks = s.filterSupportedChecks(checks)
+
+	checkStateMap, err := models.FindCheckStates(s.db.Querier)
+	if err != nil && err != reform.ErrNoRows {
+		s.l.Errorf("Failed to retrieve checks state: %s.", err)
+		return
+	}
+
 	for i, c := range checks {
-		cs, err := models.FindCheckStateByName(s.db.Querier, c.Name)
-		if err != nil {
-			// only log error if state was present in the DB and wasn't re-applied
-			if err != reform.ErrNoRows {
-				s.l.Errorf("Unable to re-apply interval changes to check: %s : %+v", c.Name, err)
-			}
+		interval, ok := checkStateMap[c.Name]
+		if !ok {
 			continue
 		}
-		c.Interval = check.Interval(cs.Interval)
+		c.Interval = check.Interval(interval)
 		checks[i] = c
 	}
 
