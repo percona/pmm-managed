@@ -456,8 +456,6 @@ func (s *Service) ChangeInterval(params map[string]managementpb.SecurityCheckInt
 			return errors.New("unknown security check interval")
 		}
 
-		s.updateCheck(c)
-
 		// since we re-run checks at regular intervals using a call
 		// to s.StartChecks which in turn calls s.collectChecks
 		// to load/download checks, we must persist any changes
@@ -478,6 +476,8 @@ func (s *Service) ChangeInterval(params map[string]managementpb.SecurityCheckInt
 			return err
 		}
 		s.l.Debugf("Updated interval change for check: %s in DB", cs.Name)
+
+		s.updateCheck(c)
 	}
 
 	return nil
