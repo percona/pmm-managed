@@ -523,7 +523,6 @@
   pruneopts = "NUT"
   revision = "6deaa94f21eadf386454afc35042feb52acb547a"
 
-
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
   name = "github.com/percona/promconfig"
