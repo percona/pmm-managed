@@ -433,7 +433,7 @@ func (s *Service) ChangeInterval(params map[string]managementpb.SecurityCheckInt
 	}
 
 	checkStateMap, err := models.FindCheckStates(s.db.Querier)
-	if err != reform.ErrNoRows && err != nil {
+	if err != nil && err != reform.ErrNoRows {
 		return errors.Wrap(err, "failed to retrieve checks state: %+v")
 	}
 

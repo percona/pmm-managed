@@ -41,7 +41,7 @@ func FindCheckStates(q *reform.Querier) (map[string]Interval, error) {
 	}
 }
 
-// FindCheckStateByName finds ChecksState by name.
+// FindCheckStateByName finds ChecksState by check name.
 func FindCheckStateByName(q *reform.Querier, name string) (*ChecksState, error) {
 	if name == "" {
 		return nil, status.Error(codes.InvalidArgument, "Empty Check name.")
