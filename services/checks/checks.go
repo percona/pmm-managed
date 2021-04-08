@@ -461,6 +461,7 @@ func (s *Service) ChangeInterval(params map[string]check.Interval) error {
 					return err
 				}
 				s.l.Debugf("Saved interval change for check: %s in DB", cs.Name)
+				s.updateCheck(c)
 				return nil
 			}
 
@@ -471,6 +472,7 @@ func (s *Service) ChangeInterval(params map[string]check.Interval) error {
 					return err
 				}
 				s.l.Debugf("Updated interval change for check: %s in DB", cs.Name)
+				s.updateCheck(c)
 				return nil
 			}
 			return err
@@ -478,8 +480,6 @@ func (s *Service) ChangeInterval(params map[string]check.Interval) error {
 		if e != nil {
 			return e
 		}
-
-		s.updateCheck(c)
 	}
 
 	return nil
