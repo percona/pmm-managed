@@ -16,7 +16,7 @@ require (
 	github.com/go-openapi/spec v0.19.9 // indirect
 	github.com/mitchellh/mapstructure v1.3.3 // indirect
 	github.com/percona-platform/saas v0.0.0-20210122115803-1b32ca1828e1
-	github.com/percona/pmm v2.15.2-0.20210405073023-614c31c2cf56+incompatible
+	github.com/percona/pmm v2.15.2-0.20210408121032-ab1dbcacb092+incompatible
 	github.com/prometheus/client_golang v1.9.0
 	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.6.1
