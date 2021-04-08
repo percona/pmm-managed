@@ -28,7 +28,8 @@ import (
 	"github.com/percona/pmm-managed/utils/testdb"
 )
 
-func TestChecksState(t *testing.T) {
+func TestChecksSettings(t *testing.T) {
+	t.Parallel()
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	defer func() {
 		require.NoError(t, sqlDB.Close())
