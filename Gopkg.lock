@@ -495,7 +495,7 @@
 
 [[projects]]
   branch = "PMM-7819-dbaas-use-haproxy"
-  digest = "1:cb829a25ec9b3d206c8319818d4575260325a738ccb59e1350123751aa098841"
+  digest = "1:7bae8cc7d3d0bb0004d1b55e66f6f08019197bfb714af6b6b7ddb9669a4084ff"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -521,7 +521,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "6deaa94f21eadf386454afc35042feb52acb547a"
+  revision = "4b3756c1d2fe128181d03b765fdae996a1d88626"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
