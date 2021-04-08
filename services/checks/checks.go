@@ -496,7 +496,6 @@ func (s *Service) updateCheck(newCheck check.Check) {
 		oldCheck := s.mySQLChecks[newCheck.Name]
 		s.mySQLChecks[newCheck.Name] = newCheck
 		s.l.Infof("Updated check: %s, interval changed from: %s to: %s", oldCheck.Name, oldCheck.Interval, newCheck.Interval)
-		break
 
 	case check.PostgreSQLSelect:
 		fallthrough
@@ -506,7 +505,6 @@ func (s *Service) updateCheck(newCheck check.Check) {
 		oldCheck := s.postgreSQLChecks[newCheck.Name]
 		s.postgreSQLChecks[newCheck.Name] = newCheck
 		s.l.Infof("Updated check: %s, interval changed from: %s to: %s", oldCheck.Name, oldCheck.Interval, newCheck.Interval)
-		break
 
 	case check.MongoDBGetParameter:
 		fallthrough
@@ -518,7 +516,6 @@ func (s *Service) updateCheck(newCheck check.Check) {
 		oldCheck := s.mongoDBChecks[newCheck.Name]
 		s.mongoDBChecks[newCheck.Name] = newCheck
 		s.l.Infof("Updated check: %s, interval changed from: %s to: %s", oldCheck.Name, oldCheck.Interval, newCheck.Interval)
-		break
 
 	default:
 		s.l.Warnf("Unknown check type %s, skip it.", newCheck.Type)
