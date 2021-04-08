@@ -453,10 +453,10 @@ func (s *Service) ChangeInterval(params map[string]check.Interval) error {
 		// to check intervals in the DB so that they can be re-applied
 		// once the checks have been re-loaded on restarts.
 		e := s.db.InTransaction(func(tx *reform.TX) error {
-			cs, err := models.FindCheckStateByName(s.db.Querier, c.Name)
+			cs, err := models.FindCheckSettingsByName(s.db.Querier, c.Name)
 			// record interval change for the first time.
 			if err == reform.ErrNoRows {
-				cs, err := models.CreateCheckState(s.db.Querier, c.Name, models.Interval(c.Interval))
+				cs, err := models.CreateCheckSettings(s.db.Querier, c.Name, models.Interval(c.Interval))
 				if err != nil {
 					return err
 				}
@@ -467,7 +467,7 @@ func (s *Service) ChangeInterval(params map[string]check.Interval) error {
 
 			// update existing interval change.
 			if cs != nil {
-				cs, err := models.ChangeCheckState(s.db.Querier, c.Name, models.Interval(c.Interval))
+				cs, err := models.ChangeCheckSettings(s.db.Querier, c.Name, models.Interval(c.Interval))
 				if err != nil {
 					return err
 				}
@@ -1037,14 +1037,14 @@ func (s *Service) collectChecks(ctx context.Context) {
 
 	checks = s.filterSupportedChecks(checks)
 
-	checkStateMap, err := models.FindCheckStates(s.db.Querier)
+	checkSettingsMap, err := models.FindCheckSettings(s.db.Querier)
 	if err != nil && err != reform.ErrNoRows {
-		s.l.Errorf("Failed to retrieve checks state: %s.", err)
+		s.l.Errorf("Failed to retrieve checks settings: %s.", err)
 		return
 	}
 
 	for i, c := range checks {
-		if interval, ok := checkStateMap[c.Name]; ok {
+		if interval, ok := checkSettingsMap[c.Name]; ok {
 			c.Interval = check.Interval(interval)
 			checks[i] = c
 		}

@@ -23,14 +23,14 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-// FindCheckStates returns all CheckStates stored in the table.
-func FindCheckStates(q *reform.Querier) (map[string]Interval, error) {
-	rows, err := q.SelectAllFrom(ChecksStateTable, "")
+// FindCheckSettings returns all CheckSettings stored in the table.
+func FindCheckSettings(q *reform.Querier) (map[string]Interval, error) {
+	rows, err := q.SelectAllFrom(CheckSettingsTable, "")
 	switch err {
 	case nil:
 		cs := make(map[string]Interval)
 		for _, r := range rows {
-			state := r.(*ChecksState)
+			state := r.(*CheckSettings)
 			cs[state.Name] = state.Interval
 		}
 		return cs, nil
@@ -41,13 +41,13 @@ func FindCheckStates(q *reform.Querier) (map[string]Interval, error) {
 	}
 }
 
-// FindCheckStateByName finds ChecksState by check name.
-func FindCheckStateByName(q *reform.Querier, name string) (*ChecksState, error) {
+// FindCheckSettingsByName finds CheckSettings by check name.
+func FindCheckSettingsByName(q *reform.Querier, name string) (*CheckSettings, error) {
 	if name == "" {
 		return nil, status.Error(codes.InvalidArgument, "Empty Check name.")
 	}
 
-	cs := &ChecksState{Name: name}
+	cs := &CheckSettings{Name: name}
 	switch err := q.Reload(cs); err {
 	case nil:
 		return cs, nil
@@ -58,23 +58,23 @@ func FindCheckStateByName(q *reform.Querier, name string) (*ChecksState, error) 
 	}
 }
 
-// CreateCheckState persists ChecksState.
-func CreateCheckState(q *reform.Querier, name string, interval Interval) (*ChecksState, error) {
-	row := &ChecksState{
+// CreateCheckSettings persists CheckSettings.
+func CreateCheckSettings(q *reform.Querier, name string, interval Interval) (*CheckSettings, error) {
+	row := &CheckSettings{
 		Name:     name,
 		Interval: interval,
 	}
 
 	if err := q.Insert(row); err != nil {
-		return nil, errors.Wrap(err, "failed to create checks state")
+		return nil, errors.Wrap(err, "failed to create check setting")
 	}
 
 	return row, nil
 }
 
-// ChangeCheckState updates the interval of a check state if already present.
-func ChangeCheckState(q *reform.Querier, name string, interval Interval) (*ChecksState, error) {
-	row, err := FindCheckStateByName(q, name)
+// ChangeCheckSettings updates the interval of a check setting if already present.
+func ChangeCheckSettings(q *reform.Querier, name string, interval Interval) (*CheckSettings, error) {
+	row, err := FindCheckSettingsByName(q, name)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func ChangeCheckState(q *reform.Querier, name string, interval Interval) (*Check
 	row.Interval = interval
 
 	if err := q.Update(row); err != nil {
-		return nil, errors.Wrap(err, "failed to update checks state")
+		return nil, errors.Wrap(err, "failed to update check setting")
 	}
 
 	return row, nil

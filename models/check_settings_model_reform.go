@@ -10,23 +10,23 @@ import (
 	"gopkg.in/reform.v1/parse"
 )
 
-type checksStateTableType struct {
+type checkSettingsTableType struct {
 	s parse.StructInfo
 	z []interface{}
 }
 
 // Schema returns a schema name in SQL database ("").
-func (v *checksStateTableType) Schema() string {
+func (v *checkSettingsTableType) Schema() string {
 	return v.s.SQLSchema
 }
 
-// Name returns a view or table name in SQL database ("checks_state").
-func (v *checksStateTableType) Name() string {
+// Name returns a view or table name in SQL database ("check_settings").
+func (v *checkSettingsTableType) Name() string {
 	return v.s.SQLName
 }
 
 // Columns returns a new slice of column names for that view or table in SQL database.
-func (v *checksStateTableType) Columns() []string {
+func (v *checkSettingsTableType) Columns() []string {
 	return []string{
 		"name",
 		"interval",
@@ -34,36 +34,36 @@ func (v *checksStateTableType) Columns() []string {
 }
 
 // NewStruct makes a new struct for that view or table.
-func (v *checksStateTableType) NewStruct() reform.Struct {
-	return new(ChecksState)
+func (v *checkSettingsTableType) NewStruct() reform.Struct {
+	return new(CheckSettings)
 }
 
 // NewRecord makes a new record for that table.
-func (v *checksStateTableType) NewRecord() reform.Record {
-	return new(ChecksState)
+func (v *checkSettingsTableType) NewRecord() reform.Record {
+	return new(CheckSettings)
 }
 
 // PKColumnIndex returns an index of primary key column for that table in SQL database.
-func (v *checksStateTableType) PKColumnIndex() uint {
+func (v *checkSettingsTableType) PKColumnIndex() uint {
 	return uint(v.s.PKFieldIndex)
 }
 
-// ChecksStateTable represents checks_state view or table in SQL database.
-var ChecksStateTable = &checksStateTableType{
+// CheckSettingsTable represents check_settings view or table in SQL database.
+var CheckSettingsTable = &checkSettingsTableType{
 	s: parse.StructInfo{
-		Type:    "ChecksState",
-		SQLName: "checks_state",
+		Type:    "CheckSettings",
+		SQLName: "check_settings",
 		Fields: []parse.FieldInfo{
 			{Name: "Name", Type: "string", Column: "name"},
 			{Name: "Interval", Type: "Interval", Column: "interval"},
 		},
 		PKFieldIndex: 0,
 	},
-	z: new(ChecksState).Values(),
+	z: new(CheckSettings).Values(),
 }
 
 // String returns a string representation of this struct or record.
-func (s ChecksState) String() string {
+func (s CheckSettings) String() string {
 	res := make([]string, 2)
 	res[0] = "Name: " + reform.Inspect(s.Name, true)
 	res[1] = "Interval: " + reform.Inspect(s.Interval, true)
@@ -72,7 +72,7 @@ func (s ChecksState) String() string {
 
 // Values returns a slice of struct or record field values.
 // Returned interface{} values are never untyped nils.
-func (s *ChecksState) Values() []interface{} {
+func (s *CheckSettings) Values() []interface{} {
 	return []interface{}{
 		s.Name,
 		s.Interval,
@@ -81,7 +81,7 @@ func (s *ChecksState) Values() []interface{} {
 
 // Pointers returns a slice of pointers to struct or record fields.
 // Returned interface{} values are never untyped nils.
-func (s *ChecksState) Pointers() []interface{} {
+func (s *CheckSettings) Pointers() []interface{} {
 	return []interface{}{
 		&s.Name,
 		&s.Interval,
@@ -89,48 +89,48 @@ func (s *ChecksState) Pointers() []interface{} {
 }
 
 // View returns View object for that struct.
-func (s *ChecksState) View() reform.View {
-	return ChecksStateTable
+func (s *CheckSettings) View() reform.View {
+	return CheckSettingsTable
 }
 
 // Table returns Table object for that record.
-func (s *ChecksState) Table() reform.Table {
-	return ChecksStateTable
+func (s *CheckSettings) Table() reform.Table {
+	return CheckSettingsTable
 }
 
 // PKValue returns a value of primary key for that record.
 // Returned interface{} value is never untyped nil.
-func (s *ChecksState) PKValue() interface{} {
+func (s *CheckSettings) PKValue() interface{} {
 	return s.Name
 }
 
 // PKPointer returns a pointer to primary key field for that record.
 // Returned interface{} value is never untyped nil.
-func (s *ChecksState) PKPointer() interface{} {
+func (s *CheckSettings) PKPointer() interface{} {
 	return &s.Name
 }
 
 // HasPK returns true if record has non-zero primary key set, false otherwise.
-func (s *ChecksState) HasPK() bool {
-	return s.Name != ChecksStateTable.z[ChecksStateTable.s.PKFieldIndex]
+func (s *CheckSettings) HasPK() bool {
+	return s.Name != CheckSettingsTable.z[CheckSettingsTable.s.PKFieldIndex]
 }
 
 // SetPK sets record primary key, if possible.
 //
 // Deprecated: prefer direct field assignment where possible: s.Name = pk.
-func (s *ChecksState) SetPK(pk interface{}) {
+func (s *CheckSettings) SetPK(pk interface{}) {
 	reform.SetPK(s, pk)
 }
 
 // check interfaces
 var (
-	_ reform.View   = ChecksStateTable
-	_ reform.Struct = (*ChecksState)(nil)
-	_ reform.Table  = ChecksStateTable
-	_ reform.Record = (*ChecksState)(nil)
-	_ fmt.Stringer  = (*ChecksState)(nil)
+	_ reform.View   = CheckSettingsTable
+	_ reform.Struct = (*CheckSettings)(nil)
+	_ reform.Table  = CheckSettingsTable
+	_ reform.Record = (*CheckSettings)(nil)
+	_ fmt.Stringer  = (*CheckSettings)(nil)
 )
 
 func init() {
-	parse.AssertUpToDate(&ChecksStateTable.s, new(ChecksState))
+	parse.AssertUpToDate(&CheckSettingsTable.s, new(CheckSettings))
 }

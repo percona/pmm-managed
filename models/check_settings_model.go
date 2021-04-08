@@ -28,9 +28,9 @@ const (
 	Rare     Interval = "rare"
 )
 
-// ChecksState represents any changes to an STT check loaded in pmm-managed.
-//reform:checks_state
-type ChecksState struct {
+// CheckSettings represents any changes to an STT check loaded in pmm-managed.
+//reform:check_settings
+type CheckSettings struct {
 	Name     string   `reform:"name,pk"`
 	Interval Interval `reform:"interval"`
 }

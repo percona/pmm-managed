@@ -44,7 +44,7 @@ func TestChecksState(t *testing.T) {
 
 		q := tx.Querier
 
-		actual, err := models.CreateCheckState(q, "check-name", models.Standard)
+		actual, err := models.CreateCheckSettings(q, "check-name", models.Standard)
 		require.NoError(t, err)
 		assert.Equal(t, "check-name", actual.Name)
 		assert.Equal(t, models.Standard, actual.Interval)
@@ -59,12 +59,12 @@ func TestChecksState(t *testing.T) {
 
 		q := tx.Querier
 
-		oldState, err := models.CreateCheckState(q, "check-name", models.Standard)
+		oldState, err := models.CreateCheckSettings(q, "check-name", models.Standard)
 		require.NoError(t, err)
 		assert.Equal(t, "check-name", oldState.Name)
 		assert.Equal(t, models.Standard, oldState.Interval)
 
-		newState, err := models.ChangeCheckState(q, "check-name", models.Rare)
+		newState, err := models.ChangeCheckSettings(q, "check-name", models.Rare)
 		require.NoError(t, err)
 		assert.Equal(t, oldState.Name, newState.Name)
 		assert.NotEqual(t, oldState.Interval, newState.Interval)
@@ -80,10 +80,10 @@ func TestChecksState(t *testing.T) {
 
 		q := tx.Querier
 
-		expected, err := models.CreateCheckState(q, "check-name", models.Standard)
+		expected, err := models.CreateCheckSettings(q, "check-name", models.Standard)
 		require.NoError(t, err)
 
-		actual, err := models.FindCheckStateByName(q, "check-name")
+		actual, err := models.FindCheckSettingsByName(q, "check-name")
 		require.NoError(t, err)
 		assert.Equal(t, expected, actual)
 	})
@@ -97,12 +97,12 @@ func TestChecksState(t *testing.T) {
 
 		q := tx.Querier
 
-		_, err = models.CreateCheckState(q, "check1", models.Standard)
+		_, err = models.CreateCheckSettings(q, "check1", models.Standard)
 		require.NoError(t, err)
-		_, err = models.CreateCheckState(q, "check2", models.Standard)
+		_, err = models.CreateCheckSettings(q, "check2", models.Standard)
 		require.NoError(t, err)
 
-		actual, err := models.FindCheckStates(q)
+		actual, err := models.FindCheckSettings(q)
 		require.NoError(t, err)
 		assert.Len(t, actual, 2)
 		assert.Equal(t, actual["check1"], models.Standard)
