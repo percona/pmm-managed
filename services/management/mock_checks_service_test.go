@@ -58,15 +58,15 @@ func (_m *mockChecksService) EnableChecks(checkNames []string) error {
 }
 
 // GetAllChecks provides a mock function with given fields:
-func (_m *mockChecksService) GetAllChecks() []check.Check {
+func (_m *mockChecksService) GetAllChecks() map[string]check.Check {
 	ret := _m.Called()
 
-	var r0 []check.Check
-	if rf, ok := ret.Get(0).(func() []check.Check); ok {
+	var r0 map[string]check.Check
+	if rf, ok := ret.Get(0).(func() map[string]check.Check); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]check.Check)
+			r0 = ret.Get(0).(map[string]check.Check)
 		}
 	}
 

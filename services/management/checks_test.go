@@ -117,7 +117,11 @@ func TestListSecurityChecks(t *testing.T) {
 		var checksService mockChecksService
 		checksService.On("GetDisabledChecks", mock.Anything).Return([]string{"two"}, nil)
 		checksService.On("GetAllChecks", mock.Anything).
-			Return([]check.Check{{Name: "one"}, {Name: "two"}, {Name: "three"}})
+			Return(map[string]check.Check{
+				"one":   {Name: "one"},
+				"two":   {Name: "two"},
+				"three": {Name: "three"},
+			})
 
 		s := NewChecksAPIService(&checksService)
 
@@ -189,6 +193,8 @@ func TestUpdateSecurityChecks(t *testing.T) {
 	t.Run("ChangeInterval success", func(t *testing.T) {
 		var checksService mockChecksService
 		checksService.On("ChangeInterval", mock.Anything).Return(nil)
+		checksService.On("EnableChecks", mock.Anything).Return(nil)
+		checksService.On("DisableChecks", mock.Anything).Return(nil)
 
 		s := NewChecksAPIService(&checksService)
 

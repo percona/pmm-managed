@@ -108,9 +108,9 @@ func TestCollectChecks(t *testing.T) {
 		require.Len(t, mongoDBChecks, 1)
 		require.Len(t, allChecks, 3)
 
-		assert.Equal(t, check.MySQLShow, mySQLChecks[0].Type)
-		assert.Equal(t, check.PostgreSQLSelect, postgreSQLChecks[0].Type)
-		assert.Equal(t, check.MongoDBBuildInfo, mongoDBChecks[0].Type)
+		assert.Equal(t, check.MySQLShow, mySQLChecks["bad_check_mysql"].Type)
+		assert.Equal(t, check.PostgreSQLSelect, postgreSQLChecks["good_check_pg"].Type)
+		assert.Equal(t, check.MongoDBBuildInfo, mongoDBChecks["good_check_mongo"].Type)
 	})
 
 	t.Run("download checks", func(t *testing.T) {
@@ -145,7 +145,7 @@ func TestDisableChecks(t *testing.T) {
 		require.NoError(t, err)
 		assert.Empty(t, disChecks)
 
-		err = s.DisableChecks([]string{checks[0].Name})
+		err = s.DisableChecks([]string{checks["bad_check_mysql"].Name})
 		require.NoError(t, err)
 
 		disChecks, err = s.GetDisabledChecks()
@@ -169,10 +169,10 @@ func TestDisableChecks(t *testing.T) {
 		require.NoError(t, err)
 		assert.Empty(t, disChecks)
 
-		err = s.DisableChecks([]string{checks[0].Name})
+		err = s.DisableChecks([]string{checks["bad_check_mysql"].Name})
 		require.NoError(t, err)
 
-		err = s.DisableChecks([]string{checks[0].Name})
+		err = s.DisableChecks([]string{checks["bad_check_mysql"].Name})
 		require.NoError(t, err)
 
 		disChecks, err = s.GetDisabledChecks()
@@ -211,15 +211,15 @@ func TestEnableChecks(t *testing.T) {
 		checks := s.GetAllChecks()
 		assert.Len(t, checks, 3)
 
-		err = s.DisableChecks([]string{checks[0].Name, checks[1].Name, checks[2].Name})
+		err = s.DisableChecks([]string{checks["bad_check_mysql"].Name, checks["good_check_pg"].Name, checks["good_check_mongo"].Name})
 		require.NoError(t, err)
 
-		err = s.EnableChecks([]string{checks[0].Name, checks[2].Name})
+		err = s.EnableChecks([]string{checks["good_check_pg"].Name, checks["good_check_mongo"].Name})
 		require.NoError(t, err)
 
 		disChecks, err := s.GetDisabledChecks()
 		require.NoError(t, err)
-		assert.Equal(t, []string{checks[1].Name}, disChecks)
+		assert.Equal(t, []string{checks["bad_check_mysql"].Name}, disChecks)
 	})
 }
 
@@ -475,15 +475,15 @@ func TestGroupChecksByDB(t *testing.T) {
 	require.Len(t, postgreSQLChecks, 2)
 	require.Len(t, mongoDBChecks, 3)
 
-	assert.Equal(t, check.MySQLShow, mySQLChecks[0].Type)
-	assert.Equal(t, check.MySQLSelect, mySQLChecks[1].Type)
+	assert.Equal(t, check.MySQLShow, mySQLChecks["MySQLShow"].Type)
+	assert.Equal(t, check.MySQLSelect, mySQLChecks["MySQLSelect"].Type)
 
-	assert.Equal(t, check.PostgreSQLShow, postgreSQLChecks[0].Type)
-	assert.Equal(t, check.PostgreSQLSelect, postgreSQLChecks[1].Type)
+	assert.Equal(t, check.PostgreSQLShow, postgreSQLChecks["PostgreSQLShow"].Type)
+	assert.Equal(t, check.PostgreSQLSelect, postgreSQLChecks["PostgreSQLSelect"].Type)
 
-	assert.Equal(t, check.MongoDBGetParameter, mongoDBChecks[0].Type)
-	assert.Equal(t, check.MongoDBBuildInfo, mongoDBChecks[1].Type)
-	assert.Equal(t, check.MongoDBGetCmdLineOpts, mongoDBChecks[2].Type)
+	assert.Equal(t, check.MongoDBGetParameter, mongoDBChecks["MongoDBGetParameter"].Type)
+	assert.Equal(t, check.MongoDBBuildInfo, mongoDBChecks["MongoDBBuildInfo"].Type)
+	assert.Equal(t, check.MongoDBGetCmdLineOpts, mongoDBChecks["MongoDBGetCmdLineOpts"].Type)
 }
 
 func setup(t *testing.T, db *reform.DB, serviceName, nodeID, pmmAgentVersion string) {
