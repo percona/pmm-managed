@@ -7,8 +7,6 @@ import (
 
 	check "github.com/percona-platform/saas/pkg/check"
 
-	managementpb "github.com/percona/pmm/api/managementpb"
-
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -18,11 +16,11 @@ type mockChecksService struct {
 }
 
 // ChangeInterval provides a mock function with given fields: params
-func (_m *mockChecksService) ChangeInterval(params map[string]managementpb.SecurityCheckInterval) error {
+func (_m *mockChecksService) ChangeInterval(params map[string]check.Interval) error {
 	ret := _m.Called(params)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(map[string]managementpb.SecurityCheckInterval) error); ok {
+	if rf, ok := ret.Get(0).(func(map[string]check.Interval) error); ok {
 		r0 = rf(params)
 	} else {
 		r0 = ret.Error(0)

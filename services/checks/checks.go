@@ -32,7 +32,6 @@ import (
 
 	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/percona-platform/saas/pkg/check"
-	"github.com/percona/pmm/api/managementpb"
 	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
@@ -421,7 +420,7 @@ func (s *Service) EnableChecks(checkNames []string) error {
 }
 
 // ChangeInterval changes a check's interval to the value received from the UI.
-func (s *Service) ChangeInterval(params map[string]managementpb.SecurityCheckInterval) error {
+func (s *Service) ChangeInterval(params map[string]check.Interval) error {
 	checks := s.GetAllChecks()
 	if len(checks) == 0 {
 		return errors.New("no checks loaded")
@@ -437,19 +436,7 @@ func (s *Service) ChangeInterval(params map[string]managementpb.SecurityCheckInt
 		if !ok {
 			return errors.Errorf("check: %s not found", name)
 		}
-
-		switch interval {
-		case managementpb.SecurityCheckInterval_STANDARD:
-			c.Interval = check.Standard
-		case managementpb.SecurityCheckInterval_FREQUENT:
-			c.Interval = check.Frequent
-		case managementpb.SecurityCheckInterval_RARE:
-			c.Interval = check.Rare
-		case managementpb.SecurityCheckInterval_SECURITY_CHECK_INTERVAL_INVALID:
-			return errors.New("invalid security check interval")
-		default:
-			return errors.New("unknown security check interval")
-		}
+		c.Interval = interval
 
 		// since we re-run checks at regular intervals using a call
 		// to s.StartChecks which in turn calls s.collectChecks
@@ -1057,12 +1044,10 @@ func (s *Service) collectChecks(ctx context.Context) {
 	}
 
 	for i, c := range checks {
-		interval, ok := checkStateMap[c.Name]
-		if !ok {
-			continue
+		if interval, ok := checkStateMap[c.Name]; ok {
+			c.Interval = check.Interval(interval)
+			checks[i] = c
 		}
-		c.Interval = check.Interval(interval)
-		checks[i] = c
 	}
 
 	mySQLChecks, postgreSQLChecks, mongoDBChecks := s.groupChecksByDB(checks)

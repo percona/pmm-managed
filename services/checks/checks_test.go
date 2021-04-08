@@ -25,7 +25,6 @@ import (
 	"github.com/AlekSi/pointer"
 	api "github.com/percona-platform/saas/gen/check/retrieval"
 	"github.com/percona-platform/saas/pkg/check"
-	"github.com/percona/pmm/api/managementpb"
 	"github.com/percona/pmm/version"
 	promtest "github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/assert"
@@ -240,9 +239,9 @@ func TestChangeInterval(t *testing.T) {
 		assert.Len(t, checks, 3)
 
 		// change all check intervals from standard to rare
-		params := make(map[string]managementpb.SecurityCheckInterval)
+		params := make(map[string]check.Interval)
 		for _, c := range checks {
-			params[c.Name] = managementpb.SecurityCheckInterval_RARE
+			params[c.Name] = check.Rare
 		}
 		err = s.ChangeInterval(params)
 		require.NoError(t, err)
@@ -268,24 +267,6 @@ func TestChangeInterval(t *testing.T) {
 				assert.Equal(t, check.Rare, c.Interval)
 			}
 		})
-	})
-
-	t.Run("error", func(t *testing.T) {
-		sqlDB := testdb.Open(t, models.SkipFixtures, nil)
-		db := reform.NewDB(sqlDB, postgresql.Dialect, nil)
-		s, err := New(nil, nil, db)
-		require.NoError(t, err)
-		s.localChecksFile = testChecksFile
-
-		s.collectChecks(context.Background())
-
-		checks := s.GetAllChecks()
-		assert.Len(t, checks, 3)
-
-		err = s.ChangeInterval(map[string]managementpb.SecurityCheckInterval{
-			checks[0].Name: managementpb.SecurityCheckInterval_SECURITY_CHECK_INTERVAL_INVALID,
-		})
-		assert.EqualError(t, err, "invalid security check interval")
 	})
 }
 
