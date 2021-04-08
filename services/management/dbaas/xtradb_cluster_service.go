@@ -204,7 +204,6 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 				MemoryBytes: req.Params.Haproxy.ComputeResources.MemoryBytes,
 			}
 		}
-
 	}
 
 	if req.Params.Pxc.ComputeResources != nil {
@@ -244,7 +243,7 @@ func (s XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *dbaa
 
 		// Check if only one or none of proxies is set.
 		if (req.Params.Proxysql != nil) && (req.Params.Haproxy != nil) {
-			return nil, errors.New("can't update both proxies, only one is in use.")
+			return nil, errors.New("can't update both proxies, only one is in use")
 		}
 
 		in.Params = &dbaascontrollerv1beta1.UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams{
