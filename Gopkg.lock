@@ -494,8 +494,8 @@
   revision = "e66cc9d89f9739d5f841f847877f12443b37484a"
 
 [[projects]]
-  branch = "PMM-2.0"
-  digest = "1:51d8fe9f8d715c0ccfde880387b2c6a0ff437b55bf9535918ca444ea6e6f0fb6"
+  branch = "PMM-7847-mysql-ssl"
+  digest = "1:dbec729471a768c70248fa105f372eb8b96917078263bd22d19c1beffe76580b"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -521,7 +521,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "614c31c2cf56aede6ebfc671e78e1c0fe140da83"
+  revision = "2559c5fb56c99ff19b86d85ee6a0ce3dfffeb605"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
