@@ -112,7 +112,6 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 					},
 				}
 			}
-
 		}
 
 		clusters[i] = &cluster
