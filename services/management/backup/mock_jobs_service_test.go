@@ -15,13 +15,13 @@ type mockJobsService struct {
 	mock.Mock
 }
 
-// StartMySQLBackupJob provides a mock function with given fields: id, pmmAgentID, timeout, name, dsn, locationConfig
-func (_m *mockJobsService) StartMySQLBackupJob(id string, pmmAgentID string, timeout time.Duration, name string, dsn string, locationConfig models.BackupLocationConfig) error {
-	ret := _m.Called(id, pmmAgentID, timeout, name, dsn, locationConfig)
+// StartMySQLBackupJob provides a mock function with given fields: id, pmmAgentID, timeout, name, dbConfig, locationConfig
+func (_m *mockJobsService) StartMySQLBackupJob(id string, pmmAgentID string, timeout time.Duration, name string, dbConfig DBConfig, locationConfig models.BackupLocationConfig) error {
+	ret := _m.Called(id, pmmAgentID, timeout, name, dbConfig, locationConfig)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, string, time.Duration, string, string, models.BackupLocationConfig) error); ok {
-		r0 = rf(id, pmmAgentID, timeout, name, dsn, locationConfig)
+	if rf, ok := ret.Get(0).(func(string, string, time.Duration, string, DBConfig, models.BackupLocationConfig) error); ok {
+		r0 = rf(id, pmmAgentID, timeout, name, dbConfig, locationConfig)
 	} else {
 		r0 = ret.Error(0)
 	}

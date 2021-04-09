@@ -19,6 +19,9 @@ package backup
 import (
 	"context"
 
+	"github.com/AlekSi/pointer"
+	"github.com/pkg/errors"
+
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -48,7 +51,7 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 	var location *models.BackupLocation
 	var svc *models.Service
 	var job *models.JobResult
-	var dsn string
+	var config DBConfig
 
 	errTX := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
 		svc, err = models.FindServiceByID(tx.Querier, req.ServiceId)
@@ -73,7 +76,7 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 			return err
 		}
 
-		job, dsn, err = s.prepareBackupJob(req.ServiceId, artifact.ID, models.MySQLBackupJob)
+		job, config, err = s.prepareBackupJob(req.ServiceId, artifact.ID, models.MySQLBackupJob)
 		if err != nil {
 			return err
 		}
@@ -93,7 +96,7 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 	switch svc.ServiceType {
 
 	case models.MySQLServiceType:
-		err = s.jobsService.StartMySQLBackupJob(job.ID, job.PMMAgentID, 0, req.Name, dsn, locationConfig)
+		err = s.jobsService.StartMySQLBackupJob(job.ID, job.PMMAgentID, 0, req.Name, config, locationConfig)
 	case models.PostgreSQLServiceType:
 		fallthrough
 	case models.MongoDBServiceType:
@@ -116,22 +119,61 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 	}, nil
 }
 
-func (s *BackupsService) prepareBackupJob(serviceID, artifactID string, jobType models.JobType) (*models.JobResult, string, error) {
+type DBConfig struct {
+	User     string
+	Password string
+	Address  string
+	Port     int
+	Socket   string
+}
+
+func (s *BackupsService) prepareBackupJob(serviceID, artifactID string, jobType models.JobType) (*models.JobResult, DBConfig, error) {
 	var res *models.JobResult
-	var dsn string
-	var pmmAgentID string
+	var config DBConfig
+	var agentTypes []models.AgentType
 	e := s.db.InTransaction(func(tx *reform.TX) error {
-		agents, err := models.FindPMMAgentsForService(tx.Querier, serviceID)
+		svc, err := models.FindServiceByID(tx.Querier, serviceID)
 		if err != nil {
 			return err
 		}
 
-		if pmmAgentID, err = models.FindPmmAgentIDToRunActionOrJob("", agents); err != nil {
-			return err
+		switch svc.ServiceType {
+		case models.MySQLServiceType:
+			agentTypes = []models.AgentType{
+				models.QANMySQLSlowlogAgentType,
+				models.QANMySQLPerfSchemaAgentType,
+				models.MySQLdExporterType,
+			}
+		default:
+			return errors.Errorf("unsupported service type %s", svc.ServiceType)
 		}
 
-		if dsn, _, err = models.FindDSNByServiceIDandPMMAgentID(tx.Querier, serviceID, pmmAgentID, ""); err != nil {
-			return err
+		agents, err := models.FindAgents(tx.Querier, models.AgentFilters{
+			ServiceID: svc.ServiceID,
+		})
+		var pmmAgent *models.Agent
+	loop:
+		for i, agent := range agents {
+			for _, agentType := range agentTypes {
+				if agent.AgentType == agentType {
+					pmmAgent = agents[i]
+					break loop
+				}
+			}
+		}
+
+		if pmmAgent == nil {
+			return errors.New("pmm agent not found")
+		}
+
+		pmmAgentID := pointer.GetString(pmmAgent.PMMAgentID)
+
+		config = DBConfig{
+			User:     pointer.GetString(pmmAgent.Username),
+			Password: pointer.GetString(pmmAgent.Password),
+			Address:  pointer.GetString(svc.Address),
+			Port:     int(pointer.GetUint16(svc.Port)),
+			Socket:   pointer.GetString(svc.Socket),
 		}
 
 		res, err = models.CreateJobResult(tx.Querier, pmmAgentID, jobType, &models.JobResultData{
@@ -142,9 +184,9 @@ func (s *BackupsService) prepareBackupJob(serviceID, artifactID string, jobType 
 		return err
 	})
 	if e != nil {
-		return nil, "", e
+		return nil, config, e
 	}
-	return res, dsn, nil
+	return res, config, nil
 }
 
 // Check interfaces.

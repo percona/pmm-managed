@@ -18,11 +18,7 @@
 package agents
 
 import (
-	"strconv"
-	"strings"
 	"time"
-
-	"github.com/go-sql-driver/mysql"
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/percona/pmm/api/agentpb"
@@ -30,6 +26,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/management/backup"
 )
 
 // JobsService provides methods for managing jobs.
@@ -74,30 +71,14 @@ func (s *JobsService) StartEchoJob(id, pmmAgentID string, timeout time.Duration,
 }
 
 // StartMySQLBackupJob starts mysql backup job on the pmm-agent.
-func (s *JobsService) StartMySQLBackupJob(id, pmmAgentID string, timeout time.Duration, name, dsn string, locationConfig models.BackupLocationConfig) error {
-	mysqlConfig, err := mysql.ParseDSN(dsn)
-	if err != nil {
-		return err
-	}
+func (s *JobsService) StartMySQLBackupJob(id, pmmAgentID string, timeout time.Duration, name string, dbConfig backup.DBConfig, locationConfig models.BackupLocationConfig) error {
 	mySQLReq := &agentpb.StartJobRequest_MySQLBackup{
 		Name:     name,
-		User:     mysqlConfig.User,
-		Password: mysqlConfig.Passwd,
-	}
-
-	switch mysqlConfig.Net {
-	case "tcp":
-		splitAddr := strings.Split(mysqlConfig.Addr, ":")
-		mySQLReq.Address = splitAddr[0]
-		if len(splitAddr) > 1 {
-			port, err := strconv.ParseInt(splitAddr[1], 10, strconv.IntSize)
-			if err != nil {
-				return err
-			}
-			mySQLReq.Port = int32(port)
-		}
-	case "unix":
-		mySQLReq.Socket = mysqlConfig.Addr
+		User:     dbConfig.User,
+		Password: dbConfig.Password,
+		Address:  dbConfig.Address,
+		Port:     int32(dbConfig.Port),
+		Socket:   dbConfig.Socket,
 	}
 
 	switch {
