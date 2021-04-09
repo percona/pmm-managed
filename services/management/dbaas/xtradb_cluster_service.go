@@ -89,6 +89,19 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 			}
 		}
 
+		if c.Params.Haproxy != nil {
+			if c.Params.Haproxy.ComputeResources != nil {
+				cluster.Params.Haproxy = &dbaasv1beta1.XtraDBClusterParams_HAProxy{
+					ComputeResources: &dbaasv1beta1.ComputeResources{
+						CpuM:        c.Params.Haproxy.ComputeResources.CpuM,
+						MemoryBytes: c.Params.Haproxy.ComputeResources.MemoryBytes,
+					},
+				}
+			}
+			clusters[i] = &cluster
+			continue
+		}
+
 		if c.Params.Proxysql != nil {
 			if c.Params.Proxysql.ComputeResources != nil {
 				cluster.Params.Proxysql = &dbaasv1beta1.XtraDBClusterParams_ProxySQL{
@@ -99,15 +112,7 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 					},
 				}
 			}
-		} else {
-			if c.Params.Haproxy.ComputeResources != nil {
-				cluster.Params.Haproxy = &dbaasv1beta1.XtraDBClusterParams_HAProxy{
-					ComputeResources: &dbaasv1beta1.ComputeResources{
-						CpuM:        c.Params.Haproxy.ComputeResources.CpuM,
-						MemoryBytes: c.Params.Haproxy.ComputeResources.MemoryBytes,
-					},
-				}
-			}
+
 		}
 
 		clusters[i] = &cluster
