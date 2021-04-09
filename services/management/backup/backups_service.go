@@ -51,7 +51,7 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 	var location *models.BackupLocation
 	var svc *models.Service
 	var job *models.JobResult
-	var config DBConfig
+	var config models.DBConfig
 
 	errTX := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
 		svc, err = models.FindServiceByID(tx.Querier, req.ServiceId)
@@ -119,62 +119,28 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 	}, nil
 }
 
-type DBConfig struct {
-	User     string
-	Password string
-	Address  string
-	Port     int
-	Socket   string
-}
-
-func (s *BackupsService) prepareBackupJob(serviceID, artifactID string, jobType models.JobType) (*models.JobResult, DBConfig, error) {
+func (s *BackupsService) prepareBackupJob(serviceID, artifactID string, jobType models.JobType) (*models.JobResult, models.DBConfig, error) {
 	var res *models.JobResult
-	var config DBConfig
-	var agentTypes []models.AgentType
+	var dbConfig models.DBConfig
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		svc, err := models.FindServiceByID(tx.Querier, serviceID)
 		if err != nil {
 			return err
 		}
 
-		switch svc.ServiceType {
-		case models.MySQLServiceType:
-			agentTypes = []models.AgentType{
-				models.QANMySQLSlowlogAgentType,
-				models.QANMySQLPerfSchemaAgentType,
-				models.MySQLdExporterType,
-			}
-		default:
-			return errors.Errorf("unsupported service type %s", svc.ServiceType)
+		agents, err := models.FindPMMAgentsForService(tx.Querier, serviceID)
+		if err != nil {
+			return err
 		}
 
-		agents, err := models.FindAgents(tx.Querier, models.AgentFilters{
-			ServiceID: svc.ServiceID,
-		})
-		var pmmAgent *models.Agent
-	loop:
-		for i, agent := range agents {
-			for _, agentType := range agentTypes {
-				if agent.AgentType == agentType {
-					pmmAgent = agents[i]
-					break loop
-				}
-			}
+		if len(agents) == 0 {
+			return errors.Errorf("agent not found for service")
 		}
 
-		if pmmAgent == nil {
-			return errors.New("pmm agent not found")
-		}
+		agent := agents[0]
 
-		pmmAgentID := pointer.GetString(pmmAgent.PMMAgentID)
-
-		config = DBConfig{
-			User:     pointer.GetString(pmmAgent.Username),
-			Password: pointer.GetString(pmmAgent.Password),
-			Address:  pointer.GetString(svc.Address),
-			Port:     int(pointer.GetUint16(svc.Port)),
-			Socket:   pointer.GetString(svc.Socket),
-		}
+		pmmAgentID := pointer.GetString(agent.PMMAgentID)
+		dbConfig = agent.DBConfig(svc)
 
 		res, err = models.CreateJobResult(tx.Querier, pmmAgentID, jobType, &models.JobResultData{
 			MySQLBackup: &models.MySQLBackupJobResult{
@@ -184,9 +150,9 @@ func (s *BackupsService) prepareBackupJob(serviceID, artifactID string, jobType 
 		return err
 	})
 	if e != nil {
-		return nil, config, e
+		return nil, dbConfig, e
 	}
-	return res, config, nil
+	return res, dbConfig, nil
 }
 
 // Check interfaces.

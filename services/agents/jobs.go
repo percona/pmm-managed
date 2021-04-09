@@ -26,7 +26,6 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/management/backup"
 )
 
 // JobsService provides methods for managing jobs.
@@ -71,7 +70,7 @@ func (s *JobsService) StartEchoJob(id, pmmAgentID string, timeout time.Duration,
 }
 
 // StartMySQLBackupJob starts mysql backup job on the pmm-agent.
-func (s *JobsService) StartMySQLBackupJob(id, pmmAgentID string, timeout time.Duration, name string, dbConfig backup.DBConfig, locationConfig models.BackupLocationConfig) error {
+func (s *JobsService) StartMySQLBackupJob(id, pmmAgentID string, timeout time.Duration, name string, dbConfig models.DBConfig, locationConfig models.BackupLocationConfig) error {
 	mySQLReq := &agentpb.StartJobRequest_MySQLBackup{
 		Name:     name,
 		User:     dbConfig.User,
