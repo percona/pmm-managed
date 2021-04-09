@@ -17,8 +17,11 @@
 package models
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"database/sql/driver"
 	"fmt"
+	"log"
 	"net"
 	"net/url"
 	"strconv"
@@ -255,7 +258,20 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			if s.TLSSkipVerify {
 				cfg.Params["tls"] = "skip-verify"
 			} else {
-				cfg.Params["tls"] = "true"
+				ca := x509.NewCertPool()
+				cert, err := tls.X509KeyPair([]byte(s.MySQLOptions.TLSCert), []byte(s.MySQLOptions.TLSKey))
+				if err != nil {
+					log.Fatal(err)
+				}
+				if ok := ca.AppendCertsFromPEM([]byte(s.MySQLOptions.TLSCa)); ok {
+					mysql.RegisterTLSConfig("custom", &tls.Config{
+						InsecureSkipVerify: false,
+						RootCAs:            ca,
+						Certificates:       []tls.Certificate{cert},
+					})
+				}
+
+				cfg.Params["tls"] = "custom"
 			}
 		}
 
