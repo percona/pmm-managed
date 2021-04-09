@@ -479,6 +479,10 @@ var databaseSchema = [][]string{
 			PRIMARY KEY (name)
 		)`,
 	},
+	33: {
+		`ALTER TABLE agents
+			ADD COLUMN mysql_options VARCHAR`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^

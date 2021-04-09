@@ -65,6 +65,19 @@ const (
 // PMMServerAgentID is a special Agent ID representing pmm-agent on PMM Server.
 const PMMServerAgentID string = "pmm-server" // no /agent_id/ prefix
 
+// MySQLOptions represents structure for special MySQL options.
+type MySQLOptions struct {
+	TLSCa   string `json:"tls_ca"`
+	TLSCert string `json:"tls_cert"`
+	TLSKey  string `json:"tls_key"`
+}
+
+// Value implements database/sql/driver.Valuer interface. Should be defined on the value.
+func (c MySQLOptions) Value() (driver.Value, error) { return jsonValue(c) }
+
+// Scan implements database/sql.Scanner interface. Should be defined on the pointer.
+func (c *MySQLOptions) Scan(src interface{}) error { return jsonScan(c, src) }
+
 // MongoDBOptions represents structure for special MongoDB options.
 type MongoDBOptions struct {
 	TLSCertificateKey             string `json:"tls_certificate_key"`
@@ -145,6 +158,7 @@ type Agent struct {
 	PushMetrics                bool           `reform:"push_metrics"`
 	DisabledCollectors         pq.StringArray `reform:"disabled_collectors"`
 
+	MySQLOptions   *MySQLOptions   `reform:"mysql_options"`
 	MongoDBOptions *MongoDBOptions `reform:"mongo_db_tls_options"`
 }
 
@@ -465,6 +479,9 @@ func (s Agent) TemplateDelimiters(svc *Service) *DelimiterPair {
 
 	switch svc.ServiceType {
 	case MySQLServiceType:
+		if s.MySQLOptions != nil {
+			templateParams = append(templateParams, s.MySQLOptions.TLSKey)
+		}
 	case MongoDBServiceType:
 		if s.MongoDBOptions != nil {
 			templateParams = append(templateParams, s.MongoDBOptions.TLSCertificateKeyFilePassword)
