@@ -233,9 +233,9 @@ func (s *LocationsService) RemoveLocation(ctx context.Context, req *backupv1beta
 
 func (s *LocationsService) createBackupLocation(params models.CreateBackupLocationParams) (*models.BackupLocation, error) {
 	var loc *models.BackupLocation
-	txErr := s.db.InTransaction(func(t *reform.TX) error {
+	txErr := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
-		loc, err = models.PrepareCreateBackupLocation(s.db.Querier, params)
+		loc, err = models.PrepareCreateBackupLocation(tx.Querier, params)
 		if err != nil {
 			return err
 		}
@@ -244,7 +244,7 @@ func (s *LocationsService) createBackupLocation(params models.CreateBackupLocati
 			return err
 		}
 
-		loc, err = models.CreateBackupLocation(s.db.Querier, loc)
+		loc, err = models.CreateBackupLocation(tx.Querier, loc)
 		if err != nil {
 			return err
 		}
@@ -255,9 +255,9 @@ func (s *LocationsService) createBackupLocation(params models.CreateBackupLocati
 
 func (s *LocationsService) changeBackupLocation(locationID string, params models.ChangeBackupLocationParams) (*models.BackupLocation, error) {
 	var loc *models.BackupLocation
-	txErr := s.db.InTransaction(func(t *reform.TX) error {
+	txErr := s.db.InTransaction(func(tx *reform.TX) error {
 		var err error
-		loc, err = models.PrepareChangeBackupLocation(s.db.Querier, locationID, params)
+		loc, err = models.PrepareChangeBackupLocation(tx.Querier, locationID, params)
 		if err != nil {
 			return err
 		}
@@ -266,7 +266,7 @@ func (s *LocationsService) changeBackupLocation(locationID string, params models
 			return err
 		}
 
-		loc, err = models.ChangeBackupLocation(s.db.Querier, loc)
+		loc, err = models.ChangeBackupLocation(tx.Querier, loc)
 		if err != nil {
 			return err
 		}
