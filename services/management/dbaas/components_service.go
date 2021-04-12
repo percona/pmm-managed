@@ -161,6 +161,13 @@ func (c componentsService) ChangePXCComponents(ctx context.Context, req *dbaasv1
 			}
 		}
 
+		if req.Haproxy != nil {
+			kubernetesCluster.HAProxy, e = setComponent(kubernetesCluster.HAProxy, req.Haproxy)
+			if e != nil {
+				message := fmt.Sprintf("%s, cluster: %s, component: HAProxy", e.Error(), kubernetesCluster.KubernetesClusterName)
+				return status.Errorf(codes.InvalidArgument, message)
+			}
+		}
 		e = tx.Save(kubernetesCluster)
 		if e != nil {
 			return e
