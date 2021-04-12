@@ -19,6 +19,7 @@ package dbaas
 
 import (
 	"context"
+	"fmt"
 
 	dbaascontrollerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
@@ -35,12 +36,13 @@ type XtraDBClusterService struct {
 	db               *reform.DB
 	l                *logrus.Entry
 	controllerClient dbaasClient
+	grafanaClient    grafanaClient
 }
 
 // NewXtraDBClusterService creates XtraDB Service.
-func NewXtraDBClusterService(db *reform.DB, client dbaasClient) dbaasv1beta1.XtraDBClusterServer {
+func NewXtraDBClusterService(db *reform.DB, client dbaasClient, grafanaClient grafanaClient) dbaasv1beta1.XtraDBClusterServer {
 	l := logrus.WithField("component", "xtradb_cluster")
-	return &XtraDBClusterService{db: db, l: l, controllerClient: client}
+	return &XtraDBClusterService{db: db, l: l, controllerClient: client, grafanaClient: grafanaClient}
 }
 
 // ListXtraDBClusters returns a list of all XtraDB clusters.
@@ -149,12 +151,25 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 		return nil, err
 	}
 
+	var pmmParams *dbaascontrollerv1beta1.PMMParams
+	if settings.PMMPublicAddress != "" {
+		_, apiKey, err := s.grafanaClient.CreateAdminAPIKey(ctx, fmt.Sprintf("%s-%s", req.KubernetesClusterName, req.Name))
+		if err != nil {
+			return nil, err
+		}
+		pmmParams = &dbaascontrollerv1beta1.PMMParams{
+			PublicAddress: settings.PMMPublicAddress,
+			Login:         "api_key",
+			Password:      apiKey,
+		}
+	}
+
 	in := dbaascontrollerv1beta1.CreateXtraDBClusterRequest{
 		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
-		Name:             req.Name,
-		PmmPublicAddress: settings.PMMPublicAddress,
+		Name: req.Name,
+		Pmm:  pmmParams,
 		Params: &dbaascontrollerv1beta1.XtraDBClusterParams{
 			ClusterSize: req.Params.ClusterSize,
 			Pxc: &dbaascontrollerv1beta1.XtraDBClusterParams_PXC{

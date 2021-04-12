@@ -18,6 +18,7 @@ package dbaas
 
 import (
 	"context"
+	"fmt"
 
 	dbaascontrollerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
@@ -34,12 +35,13 @@ type PSMDBClusterService struct {
 	db               *reform.DB
 	l                *logrus.Entry
 	controllerClient dbaasClient
+	grafanaClient    grafanaClient
 }
 
 // NewPSMDBClusterService creates PSMDB Service.
-func NewPSMDBClusterService(db *reform.DB, client dbaasClient) dbaasv1beta1.PSMDBClusterServer {
+func NewPSMDBClusterService(db *reform.DB, dbaasClient dbaasClient, grafanaClient grafanaClient) dbaasv1beta1.PSMDBClusterServer {
 	l := logrus.WithField("component", "xtradb_cluster")
-	return &PSMDBClusterService{db: db, l: l, controllerClient: client}
+	return &PSMDBClusterService{db: db, l: l, controllerClient: dbaasClient, grafanaClient: grafanaClient}
 }
 
 // ListPSMDBClusters returns a list of all PSMDB clusters.
@@ -142,6 +144,19 @@ func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv
 		return nil, err
 	}
 
+	var pmmParams *dbaascontrollerv1beta1.PMMParams
+	if settings.PMMPublicAddress != "" {
+		_, apiKey, err := s.grafanaClient.CreateAdminAPIKey(ctx, fmt.Sprintf("%s-%s", req.KubernetesClusterName, req.Name))
+		if err != nil {
+			return nil, err
+		}
+		pmmParams = &dbaascontrollerv1beta1.PMMParams{
+			PublicAddress: settings.PMMPublicAddress,
+			Login:         "api_key",
+			Password:      apiKey,
+		}
+	}
+
 	in := dbaascontrollerv1beta1.CreatePSMDBClusterRequest{
 		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
@@ -158,7 +173,7 @@ func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv
 				DiskSize: req.Params.Replicaset.DiskSize,
 			},
 		},
-		PmmPublicAddress: settings.PMMPublicAddress,
+		Pmm: pmmParams,
 	}
 
 	_, err = s.controllerClient.CreatePSMDBCluster(ctx, &in)

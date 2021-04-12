@@ -29,3 +29,6 @@ func (this *KubeAuth) Validate() error {
 func (this *ComputeResources) Validate() error {
 	return nil
 }
+func (this *PMMParams) Validate() error {
+	return nil
+}
