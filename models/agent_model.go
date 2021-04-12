@@ -465,9 +465,14 @@ func (s *Agent) IsMySQLTablestatsGroupEnabled() bool {
 // Files returns files map required to connect to DB.
 func (s Agent) Files() map[string]string {
 	switch s.AgentType {
-	case MySQLdExporterType, ProxySQLExporterType:
-		return nil
-	case QANMySQLPerfSchemaAgentType, QANMySQLSlowlogAgentType:
+	case MySQLdExporterType, QANMySQLPerfSchemaAgentType, QANMySQLSlowlogAgentType, ProxySQLExporterType:
+		if s.MySQLOptions != nil {
+			return map[string]string{
+				"tlsCa":   s.MySQLOptions.TLSCa,
+				"tlsCert": s.MySQLOptions.TLSCert,
+				"tlsKey":  s.MySQLOptions.TLSKey,
+			}
+		}
 		return nil
 	case QANMongoDBProfilerAgentType, MongoDBExporterType:
 		if s.MongoDBOptions != nil {

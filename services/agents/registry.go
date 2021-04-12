@@ -852,17 +852,17 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 
 	var request *agentpb.CheckConnectionRequest
 	switch service.ServiceType {
-	case models.MySQLServiceType:
+	case models.MySQLServiceType, models.PostgreSQLServiceType:
+		tdp := agent.TemplateDelimiters(service)
 		request = &agentpb.CheckConnectionRequest{
 			Type:    inventorypb.ServiceType_MYSQL_SERVICE,
 			Dsn:     agent.DSN(service, 2*time.Second, "", nil),
 			Timeout: ptypes.DurationProto(3 * time.Second),
-		}
-	case models.PostgreSQLServiceType:
-		request = &agentpb.CheckConnectionRequest{
-			Type:    inventorypb.ServiceType_POSTGRESQL_SERVICE,
-			Dsn:     agent.DSN(service, 2*time.Second, "postgres", nil),
-			Timeout: ptypes.DurationProto(3 * time.Second),
+			TextFiles: &agentpb.TextFiles{
+				Files:              agent.Files(),
+				TemplateLeftDelim:  tdp.Left,
+				TemplateRightDelim: tdp.Right,
+			},
 		}
 	case models.MongoDBServiceType:
 		tdp := agent.TemplateDelimiters(service)
