@@ -276,8 +276,8 @@ type CreateBackupLocationParams struct {
 	BackupLocationConfig
 }
 
-// CreateBackupLocation creates backup location.
-func CreateBackupLocation(q *reform.Querier, params CreateBackupLocationParams) (*BackupLocation, error) {
+// PrepareCreateBackupLocation creates backup location object.
+func PrepareCreateBackupLocation(q *reform.Querier, params CreateBackupLocationParams) (*BackupLocation, error) {
 	configSet, err := params.Validate()
 	if err != nil {
 		return nil, err
@@ -304,12 +304,16 @@ func CreateBackupLocation(q *reform.Querier, params CreateBackupLocationParams) 
 	}
 
 	params.FillLocationConfig(row)
+	return row, nil
+}
 
-	if err := q.Insert(row); err != nil {
+// CreateBackupLocation creates backup location in DB.
+func CreateBackupLocation(q *reform.Querier, location *BackupLocation) (*BackupLocation, error) {
+	if err := q.Insert(location); err != nil {
 		return nil, errors.Wrap(err, "failed to create backup location")
 	}
 
-	return row, nil
+	return location, nil
 }
 
 // ChangeBackupLocationParams are params for updating existing backup location.
@@ -320,8 +324,8 @@ type ChangeBackupLocationParams struct {
 	BackupLocationConfig
 }
 
-// ChangeBackupLocation updates existing location by specified locationID and params.
-func ChangeBackupLocation(q *reform.Querier, locationID string, params ChangeBackupLocationParams) (*BackupLocation, error) {
+// PrepareChangeBackupLocation creates backup location object for change.
+func PrepareChangeBackupLocation(q *reform.Querier, locationID string, params ChangeBackupLocationParams) (*BackupLocation, error) {
 	configSet, err := params.Validate()
 	if err != nil {
 		return nil, err
@@ -347,12 +351,15 @@ func ChangeBackupLocation(q *reform.Querier, locationID string, params ChangeBac
 	if configSet {
 		params.FillLocationConfig(row)
 	}
+	return row, nil
+}
 
-	if err := q.Update(row); err != nil {
+// ChangeBackupLocation updates existing location by specified locationID and params.
+func ChangeBackupLocation(q *reform.Querier, location *BackupLocation) (*BackupLocation, error) {
+	if err := q.Update(location); err != nil {
 		return nil, errors.Wrap(err, "failed to update backup location")
 	}
-
-	return row, nil
+	return location, nil
 }
 
 func testS3Config(c *S3LocationConfig) error {

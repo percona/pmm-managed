@@ -18,6 +18,7 @@ package backup
 
 import (
 	"context"
+	"strings"
 
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"github.com/pkg/errors"
@@ -30,14 +31,16 @@ import (
 // LocationsService represents backup locations API.
 type LocationsService struct {
 	db *reform.DB
+	s3 S3
 	l  *logrus.Entry
 }
 
 // NewLocationsService creates new backup locations API service.
-func NewLocationsService(db *reform.DB) *LocationsService {
+func NewLocationsService(db *reform.DB, s3 S3) *LocationsService {
 	return &LocationsService{
 		l:  logrus.WithField("component", "management/backup/locations"),
 		db: db,
+		s3: s3,
 	}
 }
 
@@ -84,6 +87,7 @@ func (s *LocationsService) AddLocation(ctx context.Context, req *backupv1beta1.A
 			SecretKey:  req.S3Config.SecretKey,
 			BucketName: req.S3Config.BucketName,
 		}
+
 	}
 	if req.PmmServerConfig != nil {
 		params.PMMServerConfig = &models.PMMServerLocationConfig{
@@ -97,7 +101,7 @@ func (s *LocationsService) AddLocation(ctx context.Context, req *backupv1beta1.A
 		}
 	}
 
-	loc, err := models.CreateBackupLocation(s.db.Querier, params)
+	loc, err := s.createBackupLocation(params)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +139,7 @@ func (s *LocationsService) ChangeLocation(ctx context.Context, req *backupv1beta
 		}
 	}
 
-	_, err := models.ChangeBackupLocation(s.db.Querier, req.LocationId, params)
+	_, err := s.changeBackupLocation(req.LocationId, params)
 	if err != nil {
 		return nil, err
 	}
@@ -225,6 +229,63 @@ func (s *LocationsService) RemoveLocation(ctx context.Context, req *backupv1beta
 		return nil, err
 	}
 	return &backupv1beta1.RemoveLocationResponse{}, nil
+}
+
+func (s *LocationsService) createBackupLocation(params models.CreateBackupLocationParams) (*models.BackupLocation, error) {
+	var loc *models.BackupLocation
+	txErr := s.db.InTransaction(func(t *reform.TX) error {
+		var err error
+		loc, err = models.PrepareCreateBackupLocation(s.db.Querier, params)
+		if err != nil {
+			return err
+		}
+
+		if err := s.fillLocation(loc, params.BackupLocationConfig); err != nil {
+			return err
+		}
+
+		loc, err = models.CreateBackupLocation(s.db.Querier, loc)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	return loc, txErr
+}
+
+func (s *LocationsService) changeBackupLocation(locationID string, params models.ChangeBackupLocationParams) (*models.BackupLocation, error) {
+	var loc *models.BackupLocation
+	txErr := s.db.InTransaction(func(t *reform.TX) error {
+		var err error
+		loc, err = models.PrepareChangeBackupLocation(s.db.Querier, locationID, params)
+		if err != nil {
+			return err
+		}
+
+		if err := s.fillLocation(loc, params.BackupLocationConfig); err != nil {
+			return err
+		}
+
+		loc, err = models.ChangeBackupLocation(s.db.Querier, loc)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	return loc, txErr
+}
+
+func (s *LocationsService) fillLocation(loc *models.BackupLocation, cfg models.BackupLocationConfig) error {
+	if cfg.S3Config != nil {
+		location, err := s.s3.GetBucketLocation(cfg.S3Config.Endpoint, !strings.HasPrefix(cfg.S3Config.Endpoint, "http"),
+			cfg.S3Config.AccessKey, cfg.S3Config.SecretKey, cfg.S3Config.BucketName)
+		if err != nil {
+			return err
+		}
+		loc.S3Config.BucketLocation = location
+	}
+	return nil
 }
 
 // Check interfaces.

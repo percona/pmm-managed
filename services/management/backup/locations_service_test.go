@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/mock"
+
 	"github.com/brianvoe/gofakeit"
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"github.com/stretchr/testify/assert"
@@ -41,7 +43,10 @@ func TestCreateBackupLocation(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	svc := NewLocationsService(db)
+	mockS3 := &MockS3{}
+	mockS3.On("GetBucketLocation", mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything).Return("us-east-2", nil)
+	svc := NewLocationsService(db, mockS3)
 	t.Run("add server config", func(t *testing.T) {
 		loc, err := svc.AddLocation(ctx, &backupv1beta1.AddLocationRequest{
 			Name: gofakeit.Name(),
@@ -103,7 +108,10 @@ func TestListBackupLocations(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	svc := NewLocationsService(db)
+	mockS3 := &MockS3{}
+	mockS3.On("GetBucketLocation", mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything).Return("us-east-2", nil)
+	svc := NewLocationsService(db, mockS3)
 
 	req1 := &backupv1beta1.AddLocationRequest{
 		Name: gofakeit.Name(),
@@ -177,7 +185,11 @@ func TestChangeBackupLocation(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	svc := NewLocationsService(db)
+	mockS3 := &MockS3{}
+	mockS3.On("GetBucketLocation", mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything).Return("us-east-2", nil)
+
+	svc := NewLocationsService(db, mockS3)
 	t.Run("update existing config", func(t *testing.T) {
 		loc, err := svc.AddLocation(ctx, &backupv1beta1.AddLocationRequest{
 			Name: gofakeit.Name(),
@@ -274,7 +286,9 @@ func TestRemoveBackupLocation(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	svc := NewLocationsService(db)
+	mockS3 := &MockS3{}
+
+	svc := NewLocationsService(db, mockS3)
 
 	req := &backupv1beta1.AddLocationRequest{
 		Name: gofakeit.Name(),

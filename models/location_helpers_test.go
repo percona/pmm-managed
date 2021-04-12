@@ -56,8 +56,9 @@ func TestBackupLocations(t *testing.T) {
 				},
 			},
 		}
-
-		location, err := models.CreateBackupLocation(q, params)
+		location, err := models.PrepareCreateBackupLocation(q, params)
+		require.NoError(t, err)
+		location, err = models.CreateBackupLocation(q, location)
 		require.NoError(t, err)
 		assert.Equal(t, models.PMMClientBackupLocationType, location.Type)
 		assert.Equal(t, params.Name, location.Name)
@@ -88,7 +89,9 @@ func TestBackupLocations(t *testing.T) {
 			},
 		}
 
-		location, err := models.CreateBackupLocation(q, params)
+		location, err := models.PrepareCreateBackupLocation(q, params)
+		require.NoError(t, err)
+		location, err = models.CreateBackupLocation(q, location)
 		require.NoError(t, err)
 		assert.Equal(t, models.S3BackupLocationType, location.Type)
 		assert.Equal(t, params.Name, location.Name)
@@ -126,7 +129,7 @@ func TestBackupLocations(t *testing.T) {
 			},
 		}
 
-		_, err = models.CreateBackupLocation(q, params)
+		_, err = models.PrepareCreateBackupLocation(q, params)
 		tests.AssertGRPCError(t, status.New(codes.InvalidArgument, "Only one config is allowed."), err)
 	})
 
@@ -161,9 +164,13 @@ func TestBackupLocations(t *testing.T) {
 			},
 		}
 
-		loc1, err := models.CreateBackupLocation(q, params1)
+		loc1, err := models.PrepareCreateBackupLocation(q, params1)
 		require.NoError(t, err)
-		loc2, err := models.CreateBackupLocation(q, params2)
+		loc1, err = models.CreateBackupLocation(q, loc1)
+		require.NoError(t, err)
+		loc2, err := models.PrepareCreateBackupLocation(q, params2)
+		require.NoError(t, err)
+		loc2, err = models.CreateBackupLocation(q, loc2)
 		require.NoError(t, err)
 
 		actual, err := models.FindBackupLocations(q)
@@ -203,7 +210,9 @@ func TestBackupLocations(t *testing.T) {
 			},
 		}
 
-		location, err := models.CreateBackupLocation(q, createParams)
+		location, err := models.PrepareCreateBackupLocation(q, createParams)
+		require.NoError(t, err)
+		location, err = models.CreateBackupLocation(q, location)
 		require.NoError(t, err)
 
 		changeParams := models.ChangeBackupLocationParams{
@@ -216,7 +225,9 @@ func TestBackupLocations(t *testing.T) {
 			},
 		}
 
-		updatedLoc, err := models.ChangeBackupLocation(q, location.ID, changeParams)
+		location, err = models.PrepareChangeBackupLocation(q, location.ID, changeParams)
+		require.NoError(t, err)
+		updatedLoc, err := models.ChangeBackupLocation(q, location)
 		require.NoError(t, err)
 		assert.Equal(t, changeParams.Name, updatedLoc.Name)
 		// empty description in request, we expect no change
@@ -250,7 +261,9 @@ func TestBackupLocations(t *testing.T) {
 			},
 		}
 
-		loc, err := models.CreateBackupLocation(q, params)
+		loc, err := models.PrepareCreateBackupLocation(q, params)
+		require.NoError(t, err)
+		loc, err = models.CreateBackupLocation(q, loc)
 		require.NoError(t, err)
 
 		err = models.RemoveBackupLocation(q, loc.ID, models.RemoveRestrict)
@@ -432,13 +445,17 @@ func TestCreateBackupLocationValidation(t *testing.T) {
 
 			q := tx.Querier
 
-			c, err := models.CreateBackupLocation(q, test.params)
+			location, err := models.PrepareCreateBackupLocation(q, test.params)
 			if test.errorMsg != "" {
 				assert.EqualError(t, err, test.errorMsg)
 				return
 			}
-			assert.NoError(t, err)
-			assert.NotNil(t, c)
+			if err != nil {
+				c, err := models.CreateBackupLocation(q, location)
+				assert.NoError(t, err)
+				assert.NotNil(t, c)
+			}
+
 		})
 	}
 }
