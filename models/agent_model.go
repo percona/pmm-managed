@@ -70,6 +70,7 @@ type MongoDBOptions struct {
 	TLSCertificateKey             string `json:"tls_certificate_key"`
 	TLSCertificateKeyFilePassword string `json:"tls_certificate_key_file_password"`
 	TLSCa                         string `json:"tls_ca"`
+	AuthenticationMechanism       string `json:"authentication_mechanism"`
 }
 
 // Value implements database/sql/driver.Valuer interface. Should be defined on the value.
@@ -311,6 +312,9 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 				}
 				if s.MongoDBOptions.TLSCa != "" {
 					q.Add("tlsCaFile", tdp.Left+".TextFiles."+caFilePlaceholder+tdp.Right)
+				}
+				if s.MongoDBOptions.AuthenticationMechanism != "" {
+					q.Add("authMechanism", s.MongoDBOptions.AuthenticationMechanism)
 				}
 			}
 		}
