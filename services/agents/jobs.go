@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package jobs provides jobs functionality.
+// Package agents provides jobs functionality.
 package agents
 
 import (
@@ -64,6 +64,53 @@ func (s *JobsService) StartEchoJob(id, pmmAgentID string, timeout time.Duration,
 
 	if e := resp.(*agentpb.StartJobResponse).Error; e != "" {
 		return errors.Errorf("failed to start echo job: %s", e)
+	}
+
+	return nil
+}
+
+// StartMySQLBackupRestoreJob starts mysql backup restore job on the pmm-agent.
+func (s *JobsService) StartMySQLBackupRestoreJob(
+	jobID string,
+	pmmAgentID string,
+	serviceID string,
+	timeout time.Duration,
+	name string,
+	locationConfig models.BackupLocationConfig,
+) error {
+	if locationConfig.S3Config == nil {
+		return errors.Errorf("location config is not set")
+	}
+
+	req := &agentpb.StartJobRequest{
+		JobId:   jobID,
+		Timeout: ptypes.DurationProto(timeout),
+		Job: &agentpb.StartJobRequest_MysqlBackupRestore{
+			MysqlBackupRestore: &agentpb.StartJobRequest_MySQLBackupRestore{
+				ServiceId: serviceID,
+				Name:      name,
+				LocationConfig: &agentpb.StartJobRequest_MySQLBackupRestore_S3Config{
+					S3Config: &agentpb.S3LocationConfig{
+						Endpoint:   locationConfig.S3Config.Endpoint,
+						AccessKey:  locationConfig.S3Config.AccessKey,
+						SecretKey:  locationConfig.S3Config.SecretKey,
+						BucketName: locationConfig.S3Config.BucketName,
+						// TODO: replace hardcoded region with real value https://jira.percona.com/browse/PMM-7832
+						BucketRegion: "us-east-2",
+					},
+				},
+			},
+		},
+	}
+
+	agent, err := s.r.get(pmmAgentID)
+	if err != nil {
+		return err
+	}
+
+	resp := agent.channel.SendAndWaitResponse(req)
+	if e := resp.(*agentpb.StartJobResponse).Error; e != "" {
+		return errors.Errorf("failed to start MySQL backup restore job: %s", e)
 	}
 
 	return nil

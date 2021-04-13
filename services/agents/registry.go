@@ -283,6 +283,19 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 	}
 }
 
+func (r *Registry) handleJobError(jobResult *models.JobResult) error {
+	switch jobResult.Type {
+	case models.Echo:
+		// nothing
+	case models.MySQLBackupRestoreJob:
+		// TODO: change restore history entry status after implementing https://jira.percona.com/browse/PMM-7872
+	default:
+		return errors.Errorf("uunexpected job result type: %T", jobResult.Type)
+	}
+
+	return nil
+}
+
 func (r *Registry) handleJobResult(l *logrus.Entry, result *agentpb.JobResult) {
 	if e := r.db.InTransaction(func(t *reform.TX) error {
 		res, err := models.FindJobResultByID(t.Querier, result.JobId)
@@ -290,25 +303,36 @@ func (r *Registry) handleJobResult(l *logrus.Entry, result *agentpb.JobResult) {
 			return err
 		}
 
-		switch r := result.Result.(type) {
+		switch result := result.Result.(type) {
 		case *agentpb.JobResult_Error_:
-			res.Error = r.Error.Message
+			if err := r.handleJobError(res); err != nil {
+				l.Errorf("failed to handle job error: %s", err)
+			}
+			res.Error = result.Error.Message
 		case *agentpb.JobResult_Echo_:
 			if res.Type != models.Echo {
-				return errors.Errorf("Result type echo doesn't match job type %s", res.Type)
+				return errors.Errorf("result type echo doesn't match job type %s", res.Type)
 			}
 			res.Result = &models.JobResultData{
 				Echo: &models.EchoJobResult{
-					Message: r.Echo.Message,
+					Message: result.Echo.Message,
 				},
 			}
+		case *agentpb.JobResult_MysqlBackupRestore:
+			if res.Type != models.MySQLBackupRestoreJob {
+				return errors.Errorf("result type %s doesn't match job type %s", models.MySQLBackupRestoreJob, res.Type)
+			}
+
+			// TODO: change restore history entry status after implementing https://jira.percona.com/browse/PMM-7872
 		default:
-			return errors.Errorf("unexpected job result type: %T", r)
+			return errors.Errorf("unexpected job result type: %T", result)
 		}
+
 		res.Done = true
+
 		return t.Update(res)
 	}); e != nil {
-		l.Errorf("Failed to save job result: %+v", e)
+		l.Errorf("failed to save job result: %+v", e)
 	}
 }
 

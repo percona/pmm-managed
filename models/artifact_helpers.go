@@ -44,7 +44,8 @@ func FindArtifacts(q *reform.Querier) ([]*Artifact, error) {
 	return artifacts, nil
 }
 
-func findArtifactByID(q *reform.Querier, id string) (*Artifact, error) {
+// FindArtifactByID returns artifact by given ID if found, ErrNotFound if not.
+func FindArtifactByID(q *reform.Querier, id string) (*Artifact, error) {
 	if id == "" {
 		return nil, errors.New("provided artifact id is empty")
 	}
@@ -99,7 +100,7 @@ func CreateArtifact(q *reform.Querier, params CreateArtifactParams) (*Artifact, 
 	}
 
 	id := "/artifact_id/" + uuid.New().String()
-	_, err := findArtifactByID(q, id)
+	_, err := FindArtifactByID(q, id)
 	switch {
 	case err == nil:
 		return nil, errors.Errorf("artifact with id '%s' already exists", id)
@@ -127,7 +128,7 @@ func CreateArtifact(q *reform.Querier, params CreateArtifactParams) (*Artifact, 
 
 // RemoveArtifact removes artifact by ID.
 func RemoveArtifact(q *reform.Querier, id string) error {
-	if _, err := findArtifactByID(q, id); err != nil {
+	if _, err := FindArtifactByID(q, id); err != nil {
 		return err
 	}
 
