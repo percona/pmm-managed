@@ -31,7 +31,7 @@ type EchoJobResult struct {
 }
 
 // MySQLBackupRestoreJobResult stores MySQL backup restore job specific result data.
-type MySQLBackupRestoreJobResult struct{
+type MySQLBackupRestoreJobResult struct {
 	RestoreID string `json:"restore_id,omitempty"`
 }
 
