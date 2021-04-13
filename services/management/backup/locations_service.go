@@ -20,11 +20,15 @@ import (
 	"context"
 
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
+
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/minio"
 )
 
 // LocationsService represents backup locations API.
@@ -97,6 +101,19 @@ func (s *LocationsService) AddLocation(ctx context.Context, req *backupv1beta1.A
 		}
 	}
 
+	if err := params.Validate(false); err != nil {
+		return nil, err
+	}
+
+	if params.S3Config != nil {
+		bucketLocation, err := getBucketLocation(params.S3Config)
+		if err != nil {
+			return nil, err
+		}
+
+		params.S3Config.BucketLocation = bucketLocation
+	}
+
 	loc, err := models.CreateBackupLocation(s.db.Querier, params)
 	if err != nil {
 		return nil, err
@@ -157,6 +174,10 @@ func (s *LocationsService) TestLocationConfig(
 			SecretKey:  req.S3Config.SecretKey,
 			BucketName: req.S3Config.BucketName,
 		}
+
+		if err := checkBucket(params.S3Config); err != nil {
+			return nil, err
+		}
 	}
 
 	if req.PmmServerConfig != nil {
@@ -171,11 +192,19 @@ func (s *LocationsService) TestLocationConfig(
 		}
 	}
 
-	if err := models.VerifyBackupLocationConfig(&params); err != nil {
+	return &backupv1beta1.TestLocationConfigResponse{}, nil
+}
+
+// RemoveLocation removes backup location.
+func (s *LocationsService) RemoveLocation(ctx context.Context, req *backupv1beta1.RemoveLocationRequest) (*backupv1beta1.RemoveLocationResponse, error) {
+	mode := models.RemoveRestrict
+	if req.Force {
+		mode = models.RemoveCascade
+	}
+	if err := models.RemoveBackupLocation(s.db.Querier, req.LocationId, mode); err != nil {
 		return nil, err
 	}
-
-	return &backupv1beta1.TestLocationConfigResponse{}, nil
+	return &backupv1beta1.RemoveLocationResponse{}, nil
 }
 
 func convertLocation(location *models.BackupLocation) (*backupv1beta1.Location, error) {
@@ -215,16 +244,48 @@ func convertLocation(location *models.BackupLocation) (*backupv1beta1.Location, 
 	return loc, nil
 }
 
-// RemoveLocation removes backup location.
-func (s *LocationsService) RemoveLocation(ctx context.Context, req *backupv1beta1.RemoveLocationRequest) (*backupv1beta1.RemoveLocationResponse, error) {
-	mode := models.RemoveRestrict
-	if req.Force {
-		mode = models.RemoveCascade
+func getBucketLocation(c *models.S3LocationConfig) (string, error) {
+	url, err := models.ParseEndpoint(c.Endpoint)
+	if err != nil {
+		status.Errorf(codes.InvalidArgument, "%s", err)
 	}
-	if err := models.RemoveBackupLocation(s.db.Querier, req.LocationId, mode); err != nil {
-		return nil, err
+
+	secure := true
+	if url.Scheme == "https" {
+		secure = false
 	}
-	return &backupv1beta1.RemoveLocationResponse{}, nil
+
+	m := minio.Service{}
+	bucketLocation, err := m.GetBucketLocation(url.Host, secure, c.AccessKey, c.SecretKey, c.BucketName)
+	if err != nil {
+		return "", err
+	}
+
+	return bucketLocation, nil
+}
+
+func checkBucket(c *models.S3LocationConfig) error {
+	url, err := models.ParseEndpoint(c.Endpoint)
+	if err != nil {
+		status.Errorf(codes.InvalidArgument, "%s", err)
+	}
+
+	secure := true
+	if url.Scheme == "https" {
+		secure = false
+	}
+
+	m := minio.Service{}
+	exists, err := m.BucketExists(url.Host, secure, c.AccessKey, c.SecretKey, c.BucketName)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return status.Errorf(codes.InvalidArgument, "Bucket doesn't exist")
+	}
+
+	return nil
 }
 
 // Check interfaces.

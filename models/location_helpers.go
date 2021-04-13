@@ -22,12 +22,13 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/minio/minio-go"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 )
+
+var invalidLocationConfigError = status.Error(codes.InvalidArgument, "BackupLocation should contain only one type of location configuration.")
 
 func checkUniqueBackupLocationID(q *reform.Querier, id string) error {
 	if id == "" {
@@ -81,7 +82,27 @@ func checkPMMClientLocationConfig(c *PMMClientLocationConfig) error {
 	return nil
 }
 
-func s3ConfigFilled(c *S3LocationConfig) error {
+func ParseEndpoint(endpoint string) (*url.URL, error) {
+	parsedURL, err := url.Parse(endpoint)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "%s", err)
+	}
+
+	// User could specify the endpoint without scheme, so according to RFC 3986 the host won't be parsed.
+	// Try to prepend scheme and parse new url.
+	if parsedURL.Host == "" {
+		parsedURL, err = url.Parse("https://" + endpoint)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "%s", err)
+		}
+	}
+
+	return parsedURL, nil
+}
+
+// checkS3Config checks S3 config and returns the flag that indicates if
+// secure connection should be used and the parsed host.
+func checkS3Config(c *S3LocationConfig, withBucketLocation bool) error {
 	if c == nil {
 		return status.Error(codes.InvalidArgument, "S3 location config is empty.")
 	}
@@ -102,57 +123,31 @@ func s3ConfigFilled(c *S3LocationConfig) error {
 		return status.Error(codes.InvalidArgument, "S3 bucketName field is empty.")
 	}
 
-	return nil
-}
+	if withBucketLocation && c.BucketLocation == "" {
+		return status.Error(codes.InvalidArgument, "S3 bucketLocation field is empty")
+	}
 
-func parseEndpoint(endpoint string) (*url.URL, error) {
-	parsedURL, err := url.Parse(endpoint)
+	parsedURL, err := ParseEndpoint(c.Endpoint)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "%s", err)
-	}
-
-	// User could specify the endpoint without scheme, so according to RFC 3986 the host won't be parsed.
-	// Try to prepend scheme and parse new url.
-	if parsedURL.Host == "" {
-		parsedURL, err = url.Parse("https://" + endpoint)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "%s", err)
-		}
-	}
-
-	return parsedURL, nil
-}
-
-// checkS3Config checks S3 config and returns the flag that indicates if
-// secure connection should be used and the parsed host.
-func checkS3Config(c *S3LocationConfig) (bool, string, error) {
-	if err := s3ConfigFilled(c); err != nil {
-		return false, "", err
-	}
-
-	parsedURL, err := parseEndpoint(c.Endpoint)
-	if err != nil {
-		return false, "", err
+		return err
 	}
 
 	if parsedURL.Host == "" {
-		return false, "", status.Error(codes.InvalidArgument, "No host found in the Endpoint.")
+		return status.Error(codes.InvalidArgument, "No host found in the Endpoint.")
 	}
 
 	if parsedURL.Path != "" && parsedURL.Path != "/" {
-		return false, "", status.Error(codes.InvalidArgument, "Path is not allowed for Endpoint.")
+		return status.Error(codes.InvalidArgument, "Path is not allowed for Endpoint.")
 	}
 
-	secure := true
 	switch parsedURL.Scheme {
-	case "http":
-		secure = false
-	case "https":
+	case "http", "https", "":
+		// valid values
 	default:
-		return false, "", status.Errorf(codes.InvalidArgument, "Invalid scheme '%s'", parsedURL.Scheme)
+		return status.Errorf(codes.InvalidArgument, "Invalid scheme '%s'", parsedURL.Scheme)
 	}
 
-	return secure, parsedURL.Host, nil
+	return nil
 }
 
 // FindBackupLocations returns saved backup locations configuration.
@@ -221,12 +216,12 @@ type BackupLocationConfig struct {
 }
 
 // Validate checks if there is exactly one config with required fields and returns if config is set.
-func (c BackupLocationConfig) Validate() (bool, error) {
+func (c BackupLocationConfig) Validate(withBucketLocation bool) error {
 	var err error
 	configCount := 0
 	if c.S3Config != nil {
 		configCount++
-		_, _, err = checkS3Config(c.S3Config)
+		err = checkS3Config(c.S3Config, withBucketLocation)
 	}
 
 	if c.PMMServerConfig != nil {
@@ -239,11 +234,11 @@ func (c BackupLocationConfig) Validate() (bool, error) {
 		err = checkPMMClientLocationConfig(c.PMMClientConfig)
 	}
 
-	if configCount > 1 {
-		return false, status.Error(codes.InvalidArgument, "Only one config is allowed.")
+	if configCount != 1 {
+		return status.Error(codes.InvalidArgument, "Only one config is allowed.")
 	}
 
-	return configCount == 1, err
+	return err
 }
 
 // FillLocationConfig fills provided location according to backup config.
@@ -278,13 +273,8 @@ type CreateBackupLocationParams struct {
 
 // CreateBackupLocation creates backup location.
 func CreateBackupLocation(q *reform.Querier, params CreateBackupLocationParams) (*BackupLocation, error) {
-	configSet, err := params.Validate()
-	if err != nil {
+	if err := params.Validate(true); err != nil {
 		return nil, err
-	}
-
-	if !configSet {
-		return nil, status.Error(codes.InvalidArgument, "Missing location config.")
 	}
 
 	id := "/location_id/" + uuid.New().String()
@@ -322,8 +312,7 @@ type ChangeBackupLocationParams struct {
 
 // ChangeBackupLocation updates existing location by specified locationID and params.
 func ChangeBackupLocation(q *reform.Querier, locationID string, params ChangeBackupLocationParams) (*BackupLocation, error) {
-	configSet, err := params.Validate()
-	if err != nil {
+	if err := params.Validate(true); err != nil {
 		return nil, err
 	}
 
@@ -344,9 +333,7 @@ func ChangeBackupLocation(q *reform.Querier, locationID string, params ChangeBac
 	}
 
 	// Replace old configuration by config from params
-	if configSet {
-		params.FillLocationConfig(row)
-	}
+	params.FillLocationConfig(row)
 
 	if err := q.Update(row); err != nil {
 		return nil, errors.Wrap(err, "failed to update backup location")
@@ -355,65 +342,9 @@ func ChangeBackupLocation(q *reform.Querier, locationID string, params ChangeBac
 	return row, nil
 }
 
-func testS3Config(c *S3LocationConfig) error {
-	secure, host, err := checkS3Config(c)
-	if err != nil {
-		return err
-	}
-
-	minioClient, err := minio.New(host, c.AccessKey, c.SecretKey, secure)
-	if err != nil {
-		return status.Errorf(codes.InvalidArgument, "%s", err)
-	}
-
-	exists, err := minioClient.BucketExists(c.BucketName)
-	if err != nil {
-		if er, ok := err.(minio.ErrorResponse); ok {
-			return status.Errorf(codes.InvalidArgument, "%s: %s.", er.Code, er.Message)
-		}
-
-		return status.Errorf(codes.Internal, "%s", err)
-	}
-
-	if !exists {
-		return status.Errorf(codes.InvalidArgument, "Bucket doesn't exist")
-	}
-
-	return nil
-}
-
 // VerifyBackupLocationParams are params for verifying location and credentials.
 type VerifyBackupLocationParams struct {
 	BackupLocationConfig
-}
-
-// VerifyBackupLocationConfig checks and tests backup location config.
-func VerifyBackupLocationConfig(params *VerifyBackupLocationParams) error {
-	configSet, err := params.Validate()
-	if err != nil {
-		return err
-	}
-
-	if !configSet {
-		return status.Error(codes.InvalidArgument, "Missing location config.")
-	}
-
-	switch {
-	case params.S3Config != nil:
-		if err := testS3Config(params.S3Config); err != nil {
-			return err
-		}
-	case params.PMMServerConfig != nil:
-		if err := checkPMMServerLocationConfig(params.PMMServerConfig); err != nil {
-			return err
-		}
-	case params.PMMClientConfig != nil:
-		if err := checkPMMClientLocationConfig(params.PMMClientConfig); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // RemoveBackupLocation removes BackupLocation by ID.
