@@ -23,9 +23,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -37,6 +34,9 @@ import (
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 
 	"github.com/percona/pmm-managed/utils/irt"
 )
@@ -303,17 +303,15 @@ func (c *Client) testDeleteUser(ctx context.Context, userID int, authHeaders htt
 	return c.do(ctx, "DELETE", "/api/admin/users/"+strconv.Itoa(userID), "", authHeaders, nil, nil)
 }
 
+// CreateAdminAPIKey creates API key with Admin role and provided name.
 func (c *Client) CreateAdminAPIKey(ctx context.Context, name string) (int, string, error) {
 	headers, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		return 0, "", fmt.Errorf("cannot get headers from metadata %v", headers)
 	}
-	fmt.Println(headers)
 	// get authorization from headers.
 	authorizationHeaders := headers.Get("Authorization")
-	fmt.Println(authorizationHeaders)
 	cookieHeaders := headers.Get("grpcgateway-cookie")
-	fmt.Println(cookieHeaders)
 	if len(authorizationHeaders) == 0 && len(cookieHeaders) == 0 {
 		return 0, "", status.Error(codes.Unauthenticated, "Authorization error.")
 	}
