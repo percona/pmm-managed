@@ -494,8 +494,8 @@
   revision = "e66cc9d89f9739d5f841f847877f12443b37484a"
 
 [[projects]]
-  branch = "PMM-2.0"
-  digest = "1:3ed71548a97111771d39b8b2e618559b107817abd0be7a44ab1c5f10227e23f9"
+  branch = "PMM-7820-add-dbaas-toggle"
+  digest = "1:19e2a0efd3eb78ca04ccd0e63c07eefd493e28c03828be87997fb34f6a8655dd"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -521,7 +521,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "b23824e4facf723fdbb08b0ea28f30c9f51e386e"
+  revision = "9658c1b6f69fda5961b1201271b31cad991654d5"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"

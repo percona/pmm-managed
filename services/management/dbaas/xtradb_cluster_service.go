@@ -28,24 +28,40 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/dbaas"
 )
 
 // XtraDBClusterService implements XtraDBClusterServer methods.
 type XtraDBClusterService struct {
-	db               *reform.DB
-	l                *logrus.Entry
-	controllerClient dbaasClient
+	db                        *reform.DB
+	l                         *logrus.Entry
+	dbaasControllerAPIAddress string
 }
 
 // NewXtraDBClusterService creates XtraDB Service.
-func NewXtraDBClusterService(db *reform.DB, client dbaasClient) dbaasv1beta1.XtraDBClusterServer {
+func NewXtraDBClusterService(db *reform.DB, dbaasControllerAPIAddress string) dbaasv1beta1.XtraDBClusterServer {
 	l := logrus.WithField("component", "xtradb_cluster")
-	return &XtraDBClusterService{db: db, l: l, controllerClient: client}
+	return &XtraDBClusterService{db: db, l: l, dbaasControllerAPIAddress: dbaasControllerAPIAddress}
+}
+
+// Enabled returns if service is enabled and can be used.
+func (s XtraDBClusterService) Enabled() bool {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		s.l.WithError(err).Error("can't get settings")
+		return false
+	}
+	return settings.DBaaS.Enabled
 }
 
 // ListXtraDBClusters returns a list of all XtraDB clusters.
 func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaasv1beta1.ListXtraDBClustersRequest) (*dbaasv1beta1.ListXtraDBClustersResponse, error) {
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := dbaas.NewClient(ctx,s.dbaasControllerAPIAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +72,7 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 		},
 	}
 
-	out, err := s.controllerClient.ListXtraDBClusters(ctx, &in)
+	out, err := client.ListXtraDBClusters(ctx, &in)
 	if err != nil {
 		return nil, err
 	}
@@ -111,6 +127,11 @@ func (s XtraDBClusterService) GetXtraDBClusterCredentials(ctx context.Context, r
 		return nil, err
 	}
 
+	client, err := dbaas.NewClient(ctx,s.dbaasControllerAPIAddress)
+	if err != nil {
+		return nil, err
+	}
+
 	in := &dbaascontrollerv1beta1.GetXtraDBClusterCredentialsRequest{
 		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
@@ -118,7 +139,7 @@ func (s XtraDBClusterService) GetXtraDBClusterCredentials(ctx context.Context, r
 		Name: req.Name,
 	}
 
-	cluster, err := s.controllerClient.GetXtraDBClusterCredentials(ctx, in)
+	cluster, err := client.GetXtraDBClusterCredentials(ctx, in)
 	if err != nil {
 		return nil, err
 	}
@@ -145,6 +166,11 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 	}
 
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := dbaas.NewClient(ctx,s.dbaasControllerAPIAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +210,7 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 		}
 	}
 
-	_, err = s.controllerClient.CreateXtraDBCluster(ctx, &in)
+	_, err = client.CreateXtraDBCluster(ctx, &in)
 	if err != nil {
 		return nil, err
 	}
@@ -196,6 +222,11 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 //nolint:dupl
 func (s XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *dbaasv1beta1.UpdateXtraDBClusterRequest) (*dbaasv1beta1.UpdateXtraDBClusterResponse, error) {
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := dbaas.NewClient(ctx,s.dbaasControllerAPIAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +268,7 @@ func (s XtraDBClusterService) UpdateXtraDBCluster(ctx context.Context, req *dbaa
 		}
 	}
 
-	_, err = s.controllerClient.UpdateXtraDBCluster(ctx, &in)
+	_, err = client.UpdateXtraDBCluster(ctx, &in)
 	if err != nil {
 		return nil, err
 	}
@@ -252,6 +283,11 @@ func (s XtraDBClusterService) DeleteXtraDBCluster(ctx context.Context, req *dbaa
 		return nil, err
 	}
 
+	client, err := dbaas.NewClient(ctx,s.dbaasControllerAPIAddress)
+	if err != nil {
+		return nil, err
+	}
+
 	in := dbaascontrollerv1beta1.DeleteXtraDBClusterRequest{
 		Name: req.Name,
 		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
@@ -259,7 +295,7 @@ func (s XtraDBClusterService) DeleteXtraDBCluster(ctx context.Context, req *dbaa
 		},
 	}
 
-	_, err = s.controllerClient.DeleteXtraDBCluster(ctx, &in)
+	_, err = client.DeleteXtraDBCluster(ctx, &in)
 	if err != nil {
 		return nil, err
 	}
@@ -274,6 +310,11 @@ func (s XtraDBClusterService) RestartXtraDBCluster(ctx context.Context, req *dba
 		return nil, err
 	}
 
+	client, err := dbaas.NewClient(ctx,s.dbaasControllerAPIAddress)
+	if err != nil {
+		return nil, err
+	}
+
 	in := dbaascontrollerv1beta1.RestartXtraDBClusterRequest{
 		Name: req.Name,
 		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
@@ -281,7 +322,7 @@ func (s XtraDBClusterService) RestartXtraDBCluster(ctx context.Context, req *dba
 		},
 	}
 
-	_, err = s.controllerClient.RestartXtraDBCluster(ctx, &in)
+	_, err = client.RestartXtraDBCluster(ctx, &in)
 	if err != nil {
 		return nil, err
 	}

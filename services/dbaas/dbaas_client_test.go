@@ -30,28 +30,22 @@ import (
 
 func TestClient(t *testing.T) {
 	getClient := func(t *testing.T) *Client {
-		opts := []grpc.DialOption{
-			grpc.WithInsecure(),
-			grpc.WithConnectParams(grpc.ConnectParams{Backoff: backoff.Config{MaxDelay: time.Second}}),
-			grpc.WithUserAgent("pmm-managed/" + version.Version),
-		}
-
-		conn, err := grpc.DialContext(context.TODO(), "127.0.0.1:20201", opts...)
+		err, c := NewClient("127.0.0.1:20201")
 		require.NoError(t, err, "Cannot connect to dbaas-controller")
-		t.Cleanup(func() {
-			require.NoError(t, conn.Close())
-		})
-
-		c := NewClient(conn)
 		return c
 	}
-	t.Run("InvalidKubeConfig", func(t *testing.T) {
-		if os.Getenv("PERCONA_TEST_DBAAS") != "1" { // FIXME use strconv.ParseBool
-			t.Skip("PERCONA_TEST_DBAAS env variable is not passed, skipping")
+	t.Run("ValidKubeConfig", func(t *testing.T) {
+		v := os.Getenv("ENABLE_DBAAS")
+		dbaasEnabled, err = strconv.ParseBool(v)
+		if err != nil {
+			t.Skipf("Invalid value %q for environment variable ENABLE_DBAAS", v)
 		}
-		kubeConfig := os.Getenv("PERCONA_TEST_DBAAS_KUBECONFIG")
+		if !dbaasEnabled {
+			t.Skip("DBaaS is not enabled")
+		}
+		kubeConfig := os.Getenv("DBAAS_KUBECONFIG")
 		if kubeConfig == "" {
-			t.Skip("PERCONA_TEST_DBAAS_KUBECONFIG env variable is not provided")
+			t.Skip("DBAAS_KUBECONFIG env variable is not provided")
 		}
 		c := getClient(t)
 		_, err := c.CheckKubernetesClusterConnection(context.TODO(), kubeConfig)
@@ -59,8 +53,13 @@ func TestClient(t *testing.T) {
 	})
 
 	t.Run("InvalidKubeConfig", func(t *testing.T) {
-		if os.Getenv("PERCONA_TEST_DBAAS") != "1" { // FIXME use strconv.ParseBool
-			t.Skip("PERCONA_TEST_DBAAS env variable is not passed, skipping")
+		v := os.Getenv("ENABLE_DBAAS")
+		dbaasEnabled, err = strconv.ParseBool(v)
+		if err != nil {
+			t.Skipf("Invalid value %q for environment variable ENABLE_DBAAS", v)
+		}
+		if !dbaasEnabled {
+			t.Skip("DBaaS is not enabled")
 		}
 
 		c := getClient(t)

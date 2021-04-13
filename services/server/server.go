@@ -512,6 +512,11 @@ func (s *Server) validateChangeSettingsRequest(ctx context.Context, req *serverp
 		return status.Error(codes.FailedPrecondition, "Azure Discover is enabled via ENABLE_AZUREDISCOVER environment variable.")
 	}
 
+	// ignore req.DisableDbaas when DBaaS is enabled through env var.
+	if req.DisableDbaas && s.envSettings.EnableDBaaS {
+		return status.Error(codes.FailedPrecondition, "DBaaS is enabled via ENABLE_DBAAS environment variable.")
+	}
+
 	if getDuration(metricsRes.GetHr()) != 0 && s.envSettings.MetricsResolutions.HR != 0 {
 		return status.Error(codes.FailedPrecondition, "High resolution for metrics is set via METRICS_RESOLUTION_HR (or METRICS_RESOLUTION) environment variable.")
 	}
@@ -579,6 +584,9 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 			RemoveSlackAlertingSettings: req.RemoveSlackAlertingSettings,
 			EnableBackupManagement:      req.EnableBackupManagement,
 			DisableBackupManagement:     req.DisableBackupManagement,
+
+			EnableDBaaS:  req.EnableDbaas,
+			DisableDBaaS: req.DisableDbaas,
 		}
 
 		if req.EmailAlertingSettings != nil {

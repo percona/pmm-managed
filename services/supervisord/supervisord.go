@@ -406,7 +406,7 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 		"DataRetentionDays":  int(settings.DataRetention.Hours() / 24),
 		"VMAlertFlags":       s.vmParams.VMAlertFlags,
 		"VMDBCacheDisable":   !settings.VictoriaMetrics.CacheEnabled,
-		"PerconaTestDbaas":   settings.DBaaS.Enabled,
+		"DbaasEnabled":       settings.DBaaS.Enabled,
 	}
 	if err := addAlertManagerParams(settings.AlertManagerURL, templateParams); err != nil {
 		return nil, errors.Wrap(err, "cannot add AlertManagerParams to supervisor template")
@@ -539,8 +539,8 @@ var templates = template.Must(template.New("").Option("missingkey=error").Parse(
 priority = 6
 command = /usr/sbin/dbaas-controller
 user = pmm
-autorestart = {{ .PerconaTestDbaas }}
-autostart = {{ .PerconaTestDbaas }}
+autorestart = {{ .DbaasEnabled }}
+autostart = {{ .DbaasEnabled }}
 startretries = 10
 startsecs = 1
 stopsignal = TERM

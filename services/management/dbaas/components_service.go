@@ -28,28 +28,44 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/dbaas"
 	"github.com/percona/pmm-managed/utils/stringset"
 )
 
 type componentsService struct {
-	l                    *logrus.Entry
-	db                   *reform.DB
-	dbaasClient          dbaasClient
-	versionServiceClient versionService
+	l                         *logrus.Entry
+	db                        *reform.DB
+	dbaasControllerAPIAddress string
+	versionServiceClient      versionService
+}
+
+// Enabled returns if service is enabled and can be used.
+func (s componentsService) Enabled() bool {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		s.l.WithError(err).Error("can't get settings")
+		return false
+	}
+	return settings.DBaaS.Enabled
 }
 
 // NewComponentsService creates Components Service.
-func NewComponentsService(db *reform.DB, dbaasClient dbaasClient, versionServiceClient versionService) dbaasv1beta1.ComponentsServer {
+func NewComponentsService(db *reform.DB, dbaasControllerAPIAddress string, versionServiceClient versionService) dbaasv1beta1.ComponentsServer {
 	l := logrus.WithField("component", "components_service")
 	return &componentsService{
-		l:                    l,
-		db:                   db,
-		dbaasClient:          dbaasClient,
-		versionServiceClient: versionServiceClient,
+		l:                         l,
+		db:                        db,
+		dbaasControllerAPIAddress: dbaasControllerAPIAddress,
+		versionServiceClient:      versionServiceClient,
 	}
 }
 
 func (c componentsService) GetPSMDBComponents(ctx context.Context, req *dbaasv1beta1.GetPSMDBComponentsRequest) (*dbaasv1beta1.GetPSMDBComponentsResponse, error) {
+	client, err := dbaas.NewClient(ctx,c.dbaasControllerAPIAddress)
+	if err != nil {
+		return nil, err
+	}
+
 	var kubernetesCluster *models.KubernetesCluster
 	params := componentsParams{
 		operator:  psmdbOperator,
@@ -62,7 +78,7 @@ func (c componentsService) GetPSMDBComponents(ctx context.Context, req *dbaasv1b
 			return nil, err
 		}
 
-		checkResponse, e := c.dbaasClient.CheckKubernetesClusterConnection(ctx, kubernetesCluster.KubeConfig)
+		checkResponse, e := client.CheckKubernetesClusterConnection(ctx, kubernetesCluster.KubeConfig)
 		if e != nil {
 			return nil, e
 		}
@@ -80,6 +96,11 @@ func (c componentsService) GetPSMDBComponents(ctx context.Context, req *dbaasv1b
 }
 
 func (c componentsService) GetPXCComponents(ctx context.Context, req *dbaasv1beta1.GetPXCComponentsRequest) (*dbaasv1beta1.GetPXCComponentsResponse, error) {
+	client, err := dbaas.NewClient(ctx,c.dbaasControllerAPIAddress)
+	if err != nil {
+		return nil, err
+	}
+
 	var kubernetesCluster *models.KubernetesCluster
 	params := componentsParams{
 		operator:  pxcOperator,
@@ -92,7 +113,7 @@ func (c componentsService) GetPXCComponents(ctx context.Context, req *dbaasv1bet
 			return nil, err
 		}
 
-		checkResponse, e := c.dbaasClient.CheckKubernetesClusterConnection(ctx, kubernetesCluster.KubeConfig)
+		checkResponse, e := client.CheckKubernetesClusterConnection(ctx, kubernetesCluster.KubeConfig)
 		if e != nil {
 			return nil, e
 		}

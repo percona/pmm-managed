@@ -55,7 +55,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/backoff"
 	channelz "google.golang.org/grpc/channelz/service"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/reflection"
@@ -68,7 +67,6 @@ import (
 	agentgrpc "github.com/percona/pmm-managed/services/agents/grpc"
 	"github.com/percona/pmm-managed/services/alertmanager"
 	"github.com/percona/pmm-managed/services/checks"
-	"github.com/percona/pmm-managed/services/dbaas"
 	"github.com/percona/pmm-managed/services/grafana"
 	"github.com/percona/pmm-managed/services/inventory"
 	inventorygrpc "github.com/percona/pmm-managed/services/inventory/grpc"
@@ -121,21 +119,21 @@ func addLogsHandler(mux *http.ServeMux, logs *supervisord.Logs) {
 }
 
 type gRPCServerDeps struct {
-	db                    *reform.DB
-	vmdb                  *victoriametrics.Service
-	server                *server.Server
-	agentsRegistry        *agents.Registry
-	grafanaClient         *grafana.Client
-	checksService         *checks.Service
-	dbaasControllerClient *dbaas.Client
-	alertmanager          *alertmanager.Service
-	vmalert               *vmalert.Service
-	settings              *models.Settings
-	alertsService         *ia.AlertsService
-	templatesService      *ia.TemplatesService
-	rulesService          *ia.RulesService
-	jobsService           *agents.JobsService
-	versionServiceClient  *managementdbaas.VersionServiceClient
+	db                        *reform.DB
+	vmdb                      *victoriametrics.Service
+	server                    *server.Server
+	agentsRegistry            *agents.Registry
+	grafanaClient             *grafana.Client
+	checksService             *checks.Service
+	dbaasControllerAPIAddress string
+	alertmanager              *alertmanager.Service
+	vmalert                   *vmalert.Service
+	settings                  *models.Settings
+	alertsService             *ia.AlertsService
+	templatesService          *ia.TemplatesService
+	rulesService              *ia.RulesService
+	jobsService               *agents.JobsService
+	versionServiceClient      *managementdbaas.VersionServiceClient
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -201,14 +199,11 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	backupv1beta1.RegisterLocationsServer(gRPCServer, backup.NewLocationsService(deps.db))
 	backupv1beta1.RegisterArtifactsServer(gRPCServer, backup.NewArtifactsService(deps.db))
 
-	// TODO Remove once changing settings.DBaaS.Enabled is possible via API.
-	if deps.settings.DBaaS.Enabled {
-		dbaasv1beta1.RegisterKubernetesServer(gRPCServer, managementdbaas.NewKubernetesServer(deps.db, deps.dbaasControllerClient))
-		dbaasv1beta1.RegisterXtraDBClusterServer(gRPCServer, managementdbaas.NewXtraDBClusterService(deps.db, deps.dbaasControllerClient))
-		dbaasv1beta1.RegisterPSMDBClusterServer(gRPCServer, managementdbaas.NewPSMDBClusterService(deps.db, deps.dbaasControllerClient))
-		dbaasv1beta1.RegisterLogsAPIServer(gRPCServer, managementdbaas.NewLogsService(deps.db, deps.dbaasControllerClient))
-		dbaasv1beta1.RegisterComponentsServer(gRPCServer, managementdbaas.NewComponentsService(deps.db, deps.dbaasControllerClient, deps.versionServiceClient))
-	}
+	dbaasv1beta1.RegisterKubernetesServer(gRPCServer, managementdbaas.NewKubernetesServer(deps.db, deps.dbaasControllerAPIAddress))
+	dbaasv1beta1.RegisterXtraDBClusterServer(gRPCServer, managementdbaas.NewXtraDBClusterService(deps.db, deps.dbaasControllerAPIAddress))
+	dbaasv1beta1.RegisterPSMDBClusterServer(gRPCServer, managementdbaas.NewPSMDBClusterService(deps.db, deps.dbaasControllerAPIAddress))
+	dbaasv1beta1.RegisterLogsAPIServer(gRPCServer, managementdbaas.NewLogsService(deps.db, deps.dbaasControllerAPIAddress))
+	dbaasv1beta1.RegisterComponentsServer(gRPCServer, managementdbaas.NewComponentsService(deps.db, deps.dbaasControllerAPIAddress, deps.versionServiceClient))
 
 	if l.Logger.GetLevel() >= logrus.DebugLevel {
 		l.Debug("Reflection and channelz are enabled.")
@@ -508,28 +503,6 @@ func getQANClient(ctx context.Context, sqlDB *sql.DB, dbName, qanAPIAddr string)
 	return qan.NewClient(conn, db)
 }
 
-func getDBaaSControllerClient(ctx context.Context, dbaasControllerAPIAddr string, settings *models.Settings) *dbaas.Client {
-	// TODO Remove once changing settings.DBaaS.Enabled is possible via API.
-	if !settings.DBaaS.Enabled {
-		return dbaas.NewClient(nil)
-	}
-
-	opts := []grpc.DialOption{
-		grpc.WithInsecure(),
-		grpc.WithConnectParams(grpc.ConnectParams{Backoff: backoff.Config{MaxDelay: 10 * time.Second}, MinConnectTimeout: 10 * time.Second}),
-		grpc.WithUserAgent("pmm-managed/" + version.Version),
-	}
-
-	// Without grpc.WithBlock() DialContext returns an error only if something very wrong with address or options;
-	// it does not return an error of connection failure but tries to reconnect in the background.
-	conn, err := grpc.DialContext(ctx, dbaasControllerAPIAddr, opts...)
-	if err != nil {
-		logrus.Fatalf("Failed to connect DBaaS Controller API %s: %s.", dbaasControllerAPIAddr, err)
-	}
-
-	return dbaas.NewClient(conn)
-}
-
 func main() {
 	// empty version breaks much of pmm-managed logic
 	if version.Version == "" {
@@ -737,8 +710,6 @@ func main() {
 		l.Fatalf("Failed to get settings: %+v.", err)
 	}
 
-	dbaasControllerClient := getDBaaSControllerClient(ctx, *dbaasControllerAPIAddrF, settings)
-
 	authServer := grafana.NewAuthServer(grafanaClient, awsInstanceChecker)
 
 	l.Info("Starting services...")
@@ -795,21 +766,21 @@ func main() {
 	go func() {
 		defer wg.Done()
 		runGRPCServer(ctx, &gRPCServerDeps{
-			db:                    db,
-			vmdb:                  vmdb,
-			server:                server,
-			agentsRegistry:        agentsRegistry,
-			grafanaClient:         grafanaClient,
-			checksService:         checksService,
-			dbaasControllerClient: dbaasControllerClient,
-			alertmanager:          alertmanager,
-			vmalert:               vmalert,
-			settings:              settings,
-			alertsService:         alertsService,
-			templatesService:      templatesService,
-			rulesService:          rulesService,
-			jobsService:           jobsService,
-			versionServiceClient:  versionService,
+			db:                        db,
+			vmdb:                      vmdb,
+			server:                    server,
+			agentsRegistry:            agentsRegistry,
+			grafanaClient:             grafanaClient,
+			checksService:             checksService,
+			dbaasControllerAPIAddress: *dbaasControllerAPIAddrF,
+			alertmanager:              alertmanager,
+			vmalert:                   vmalert,
+			settings:                  settings,
+			alertsService:             alertsService,
+			templatesService:          templatesService,
+			rulesService:              rulesService,
+			jobsService:               jobsService,
+			versionServiceClient:      versionService,
 		})
 	}()
 

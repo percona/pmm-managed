@@ -25,24 +25,40 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/dbaas"
 )
 
 // LogsService implements dbaasv1beta1.LogsAPIServer methods.
 type LogsService struct {
-	l                *logrus.Entry
-	db               *reform.DB
-	controllerClient dbaasClient
+	l                         *logrus.Entry
+	db                        *reform.DB
+	dbaasControllerAPIAddress string
 }
 
 // NewLogsService creates new LogsService.
-func NewLogsService(db *reform.DB, client dbaasClient) dbaasv1beta1.LogsAPIServer {
+func NewLogsService(db *reform.DB, dbaasControllerAPIAddress string) dbaasv1beta1.LogsAPIServer {
 	l := logrus.WithField("component", "logs_api")
-	return &LogsService{db: db, l: l, controllerClient: client}
+	return &LogsService{db: db, l: l, dbaasControllerAPIAddress: dbaasControllerAPIAddress}
+}
+
+// Enabled returns if service is enabled and can be used.
+func (s LogsService) Enabled() bool {
+	settings, err := models.GetSettings(s.db)
+	if err != nil {
+		s.l.WithError(err).Error("can't get settings")
+		return false
+	}
+	return settings.DBaaS.Enabled
 }
 
 // GetLogs returns container's logs of a database cluster and its pods events.
 func (s LogsService) GetLogs(ctx context.Context, in *dbaasv1beta1.GetLogsRequest) (*dbaasv1beta1.GetLogsResponse, error) {
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, in.KubernetesClusterName)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := dbaas.NewClient(ctx, s.dbaasControllerAPIAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +69,7 @@ func (s LogsService) GetLogs(ctx context.Context, in *dbaasv1beta1.GetLogsReques
 		},
 		ClusterName: in.ClusterName,
 	}
-	out, err := s.controllerClient.GetLogs(ctx, req)
+	out, err := client.GetLogs(ctx, req)
 	if err != nil {
 		return nil, err
 	}
