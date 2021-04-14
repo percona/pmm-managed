@@ -21,6 +21,7 @@ import "github.com/minio/minio-go"
 type Service struct {
 }
 
+// BucketExists return true if bucket can be accessed with provided credentials and exists.
 func (s *Service) BucketExists(host string, secure bool, accessKey, secretKey, name string) (bool, error) {
 	minioClient, err := minio.New(host, accessKey, secretKey, secure)
 	if err != nil {
@@ -29,6 +30,7 @@ func (s *Service) BucketExists(host string, secure bool, accessKey, secretKey, n
 	return minioClient.BucketExists(name)
 }
 
+// GetBucketLocation retrieves bucket location by specified bucket name.
 func (s *Service) GetBucketLocation(host string, secure bool, accessKey, secretKey, name string) (string, error) {
 	minioClient, err := minio.New(host, accessKey, secretKey, secure)
 	if err != nil {

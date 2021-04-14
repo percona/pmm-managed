@@ -28,8 +28,6 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-var invalidLocationConfigError = status.Error(codes.InvalidArgument, "BackupLocation should contain only one type of location configuration.")
-
 func checkUniqueBackupLocationID(q *reform.Querier, id string) error {
 	if id == "" {
 		panic("empty Location ID")
@@ -82,6 +80,7 @@ func checkPMMClientLocationConfig(c *PMMClientLocationConfig) error {
 	return nil
 }
 
+// ParseEndpoint parse endpoint and prepend https if no scheme is provided.
 func ParseEndpoint(endpoint string) (*url.URL, error) {
 	parsedURL, err := url.Parse(endpoint)
 	if err != nil {
