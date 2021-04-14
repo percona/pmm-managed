@@ -470,11 +470,11 @@
 
 [[projects]]
   branch = "PMM-7353-pmm-credentials"
-  digest = "1:98584bfc4eb0939bf29b9cc9928972d6a813da9d76f9865238c6760b1dccf207"
+  digest = "1:cf17d4b2e122084a6170bb2c8bbe4a9e95505223c185a5d1648abfc132d013b6"
   name = "github.com/percona-platform/dbaas-api"
   packages = ["gen/controller"]
   pruneopts = "NUT"
-  revision = "67701997c1e21de586c509604b0c4ca7365936c9"
+  revision = "ebe092d5d80fdb6b904fd8e4b51e8e088be918eb"
 
 [[projects]]
   branch = "main"
