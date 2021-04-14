@@ -449,18 +449,6 @@ func TestVerifyBackupLocationValidation(t *testing.T) {
 			},
 			errorMsg: "rpc error: code = InvalidArgument desc = Invalid scheme 'tcp'",
 		},
-		{
-			name: "s3 config - invalid bucket name",
-			req: &backupv1beta1.TestLocationConfigRequest{
-				S3Config: &backupv1beta1.S3LocationConfig{
-					Endpoint:   "s3.us-west-2.amazonaws.com",
-					AccessKey:  "secret_key",
-					SecretKey:  "example_key",
-					BucketName: "invalid@bucket",
-				},
-			},
-			errorMsg: "rpc error: code = Internal desc = Bucket name contains invalid characters",
-		},
 	}
 
 	for _, test := range tableTests {
