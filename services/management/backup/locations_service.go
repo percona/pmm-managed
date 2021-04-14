@@ -28,20 +28,21 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/minio"
 )
 
 // LocationsService represents backup locations API.
 type LocationsService struct {
 	db *reform.DB
+	s3 s3
 	l  *logrus.Entry
 }
 
 // NewLocationsService creates new backup locations API service.
-func NewLocationsService(db *reform.DB) *LocationsService {
+func NewLocationsService(db *reform.DB, s3 s3) *LocationsService {
 	return &LocationsService{
 		l:  logrus.WithField("component", "management/backup/locations"),
 		db: db,
+		s3: s3,
 	}
 }
 
@@ -101,12 +102,12 @@ func (s *LocationsService) AddLocation(ctx context.Context, req *backupv1beta1.A
 		}
 	}
 
-	if err := params.Validate(false); err != nil {
+	if err := params.Validate(true, false); err != nil {
 		return nil, err
 	}
 
 	if params.S3Config != nil {
-		bucketLocation, err := getBucketLocation(params.S3Config)
+		bucketLocation, err := s.getBucketLocation(params.S3Config)
 		if err != nil {
 			return nil, err
 		}
@@ -151,6 +152,18 @@ func (s *LocationsService) ChangeLocation(ctx context.Context, req *backupv1beta
 			Path: req.PmmClientConfig.Path,
 		}
 	}
+	if err := params.Validate(false, false); err != nil {
+		return nil, err
+	}
+
+	if params.S3Config != nil {
+		bucketLocation, err := s.getBucketLocation(params.S3Config)
+		if err != nil {
+			return nil, err
+		}
+
+		params.S3Config.BucketLocation = bucketLocation
+	}
 
 	_, err := models.ChangeBackupLocation(s.db.Querier, req.LocationId, params)
 	if err != nil {
@@ -175,7 +188,7 @@ func (s *LocationsService) TestLocationConfig(
 			BucketName: req.S3Config.BucketName,
 		}
 
-		if err := checkBucket(params.S3Config); err != nil {
+		if err := s.checkBucket(params.S3Config); err != nil {
 			return nil, err
 		}
 	}
@@ -244,10 +257,10 @@ func convertLocation(location *models.BackupLocation) (*backupv1beta1.Location, 
 	return loc, nil
 }
 
-func getBucketLocation(c *models.S3LocationConfig) (string, error) {
+func (s *LocationsService) getBucketLocation(c *models.S3LocationConfig) (string, error) {
 	url, err := models.ParseEndpoint(c.Endpoint)
 	if err != nil {
-		status.Errorf(codes.InvalidArgument, "%s", err)
+		return "", status.Errorf(codes.InvalidArgument, "%s", err)
 	}
 
 	secure := true
@@ -255,8 +268,7 @@ func getBucketLocation(c *models.S3LocationConfig) (string, error) {
 		secure = false
 	}
 
-	m := minio.Service{}
-	bucketLocation, err := m.GetBucketLocation(url.Host, secure, c.AccessKey, c.SecretKey, c.BucketName)
+	bucketLocation, err := s.s3.GetBucketLocation(url.Host, secure, c.AccessKey, c.SecretKey, c.BucketName)
 	if err != nil {
 		return "", err
 	}
@@ -264,10 +276,10 @@ func getBucketLocation(c *models.S3LocationConfig) (string, error) {
 	return bucketLocation, nil
 }
 
-func checkBucket(c *models.S3LocationConfig) error {
+func (s *LocationsService) checkBucket(c *models.S3LocationConfig) error {
 	url, err := models.ParseEndpoint(c.Endpoint)
 	if err != nil {
-		status.Errorf(codes.InvalidArgument, "%s", err)
+		return status.Errorf(codes.InvalidArgument, "%s", err)
 	}
 
 	secure := true
@@ -275,8 +287,7 @@ func checkBucket(c *models.S3LocationConfig) error {
 		secure = false
 	}
 
-	m := minio.Service{}
-	exists, err := m.BucketExists(url.Host, secure, c.AccessKey, c.SecretKey, c.BucketName)
+	exists, err := s.s3.BucketExists(url.Host, secure, c.AccessKey, c.SecretKey, c.BucketName)
 	if err != nil {
 		return err
 	}
