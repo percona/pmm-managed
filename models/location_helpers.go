@@ -216,7 +216,7 @@ type BackupLocationConfig struct {
 }
 
 // Validate checks if there is exactly one config with required fields and returns if config is set.
-func (c BackupLocationConfig) Validate(withBucketLocation bool) error {
+func (c BackupLocationConfig) Validate(requireConfig, withBucketLocation bool) error {
 	var err error
 	configCount := 0
 	if c.S3Config != nil {
@@ -234,8 +234,13 @@ func (c BackupLocationConfig) Validate(withBucketLocation bool) error {
 		err = checkPMMClientLocationConfig(c.PMMClientConfig)
 	}
 
-	if configCount != 1 {
+	if configCount > 1 {
 		return status.Error(codes.InvalidArgument, "Only one config is allowed.")
+	}
+
+	if requireConfig && configCount == 0 {
+		return status.Error(codes.InvalidArgument, "Missing location config.")
+
 	}
 
 	return err
@@ -243,23 +248,22 @@ func (c BackupLocationConfig) Validate(withBucketLocation bool) error {
 
 // FillLocationConfig fills provided location according to backup config.
 func (c BackupLocationConfig) FillLocationConfig(location *BackupLocation) {
-	location.Type = ""
-	location.PMMClientConfig = nil
-	location.PMMServerConfig = nil
-	location.S3Config = nil
-
 	switch {
 	case c.S3Config != nil:
 		location.Type = S3BackupLocationType
 		location.S3Config = c.S3Config
-
+		location.PMMClientConfig = nil
+		location.PMMServerConfig = nil
 	case c.PMMServerConfig != nil:
 		location.Type = PMMServerBackupLocationType
 		location.PMMServerConfig = c.PMMServerConfig
-
+		location.PMMClientConfig = nil
+		location.S3Config = nil
 	case c.PMMClientConfig != nil:
 		location.Type = PMMClientBackupLocationType
 		location.PMMClientConfig = c.PMMClientConfig
+		location.PMMServerConfig = nil
+		location.S3Config = nil
 	}
 }
 
@@ -273,7 +277,7 @@ type CreateBackupLocationParams struct {
 
 // CreateBackupLocation creates backup location.
 func CreateBackupLocation(q *reform.Querier, params CreateBackupLocationParams) (*BackupLocation, error) {
-	if err := params.Validate(true); err != nil {
+	if err := params.Validate(true, true); err != nil {
 		return nil, err
 	}
 
@@ -312,7 +316,7 @@ type ChangeBackupLocationParams struct {
 
 // ChangeBackupLocation updates existing location by specified locationID and params.
 func ChangeBackupLocation(q *reform.Querier, locationID string, params ChangeBackupLocationParams) (*BackupLocation, error) {
-	if err := params.Validate(true); err != nil {
+	if err := params.Validate(false, true); err != nil {
 		return nil, err
 	}
 
