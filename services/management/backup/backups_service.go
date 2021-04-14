@@ -18,7 +18,6 @@ package backup
 
 import (
 	"context"
-
 	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"
 
@@ -54,7 +53,7 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 	var config models.DBConfig
 
 	errTX := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
-		svc, err = models.FindServiceByID(tx.Querier, req.ServiceId)
+		svc, err := models.FindServiceByID(tx.Querier, req.ServiceId)
 		if err != nil {
 			return err
 		}
@@ -106,9 +105,9 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 	case models.HAProxyServiceType:
 		fallthrough
 	case models.ExternalServiceType:
-		fallthrough
+		return nil, status.Errorf(codes.Unimplemented, "unimplemented service: %s", svc.ServiceType)
 	default:
-		return nil, status.Errorf(codes.Unimplemented, "unsupported service: %s", svc.ServiceType)
+		return nil, status.Errorf(codes.Unknown, "unknown service: %s", svc.ServiceType)
 	}
 	if err != nil {
 		return nil, err
@@ -122,7 +121,7 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 func (s *BackupsService) prepareBackupJob(serviceID, artifactID string, jobType models.JobType) (*models.JobResult, models.DBConfig, error) {
 	var res *models.JobResult
 	var dbConfig models.DBConfig
-	e := s.db.InTransaction(func(tx *reform.TX) error {
+	txErr := s.db.InTransaction(func(tx *reform.TX) error {
 		svc, err := models.FindServiceByID(tx.Querier, serviceID)
 		if err != nil {
 			return err
@@ -149,8 +148,9 @@ func (s *BackupsService) prepareBackupJob(serviceID, artifactID string, jobType 
 		})
 		return err
 	})
-	if e != nil {
-		return nil, dbConfig, e
+
+	if txErr != nil {
+		return nil, models.DBConfig{}, txErr
 	}
 	return res, dbConfig, nil
 }

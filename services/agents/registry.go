@@ -307,7 +307,7 @@ func (r *Registry) handleJobResult(l *logrus.Entry, result *agentpb.JobResult) {
 			}
 		case *agentpb.JobResult_MysqlBackup:
 			if res.Type != models.MySQLBackupJob {
-				return errors.Errorf("Result type echo doesn't match job type %s", res.Type)
+				return errors.Errorf("result type %s doesn't match job type %s", models.MySQLBackupJob, res.Type)
 			}
 
 			_, err := models.ChangeArtifact(t.Querier, res.Result.MySQLBackup.ArtifactID, models.ChangeArtifactParams{
