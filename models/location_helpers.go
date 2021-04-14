@@ -346,11 +346,6 @@ func ChangeBackupLocation(q *reform.Querier, locationID string, params ChangeBac
 	return row, nil
 }
 
-// VerifyBackupLocationParams are params for verifying location and credentials.
-type VerifyBackupLocationParams struct {
-	BackupLocationConfig
-}
-
 // RemoveBackupLocation removes BackupLocation by ID.
 func RemoveBackupLocation(q *reform.Querier, id string, mode RemoveMode) error {
 	if _, err := FindBackupLocationByID(q, id); err != nil {
