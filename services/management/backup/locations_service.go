@@ -178,7 +178,7 @@ func (s *LocationsService) TestLocationConfig(
 	_ context.Context,
 	req *backupv1beta1.TestLocationConfigRequest,
 ) (*backupv1beta1.TestLocationConfigResponse, error) {
-	var params models.VerifyBackupLocationParams
+	var params models.BackupLocationConfig
 
 	if req.S3Config != nil {
 		params.S3Config = &models.S3LocationConfig{
@@ -203,6 +203,10 @@ func (s *LocationsService) TestLocationConfig(
 		params.PMMClientConfig = &models.PMMClientLocationConfig{
 			Path: req.PmmClientConfig.Path,
 		}
+	}
+
+	if err := params.Validate(true, false); err != nil {
+		return nil, err
 	}
 
 	return &backupv1beta1.TestLocationConfigResponse{}, nil

@@ -334,3 +334,145 @@ func TestRemoveBackupLocation(t *testing.T) {
 	})
 	assert.EqualError(t, err, `rpc error: code = NotFound desc = Backup location with ID "non-existing" not found.`)
 }
+
+func TestVerifyBackupLocationValidation(t *testing.T) {
+	ctx := context.Background()
+	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+
+	mockedS3 := &mockS3{}
+	mockedS3.On("BucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything).Return(true, nil)
+
+	svc := NewLocationsService(db, mockedS3)
+
+	tableTests := []struct {
+		name     string
+		req      *backupv1beta1.TestLocationConfigRequest
+		errorMsg string
+	}{
+		{
+			name: "client config - missing path",
+			req: &backupv1beta1.TestLocationConfigRequest{
+				PmmClientConfig: &backupv1beta1.PMMClientLocationConfig{
+					Path: "",
+				},
+			},
+			errorMsg: "rpc error: code = InvalidArgument desc = PMM client config path field is empty.",
+		},
+		{
+			name:     "s3 config - missing config",
+			req:      &backupv1beta1.TestLocationConfigRequest{},
+			errorMsg: "rpc error: code = InvalidArgument desc = Missing location config.",
+		},
+		{
+			name: "s3 config - missing endpoint",
+			req: &backupv1beta1.TestLocationConfigRequest{
+				S3Config: &backupv1beta1.S3LocationConfig{
+					Endpoint:   "",
+					AccessKey:  "access_key",
+					SecretKey:  "secret_key",
+					BucketName: "example_bucket",
+				},
+			},
+			errorMsg: "rpc error: code = InvalidArgument desc = S3 endpoint field is empty.",
+		},
+		{
+			name: "s3 config - missing access key",
+			req: &backupv1beta1.TestLocationConfigRequest{
+				S3Config: &backupv1beta1.S3LocationConfig{
+					Endpoint:   "https://s3.us-west-2.amazonaws.com/",
+					AccessKey:  "",
+					SecretKey:  "secret_key",
+					BucketName: "example_bucket",
+				},
+			},
+			errorMsg: "rpc error: code = InvalidArgument desc = S3 accessKey field is empty.",
+		},
+		{
+			name: "s3 config - missing secret key",
+			req: &backupv1beta1.TestLocationConfigRequest{
+				S3Config: &backupv1beta1.S3LocationConfig{
+					Endpoint:   "https://s3.us-west-2.amazonaws.com/",
+					AccessKey:  "secret_key",
+					SecretKey:  "",
+					BucketName: "example_bucket",
+				},
+			},
+			errorMsg: "rpc error: code = InvalidArgument desc = S3 secretKey field is empty.",
+		},
+		{
+			name: "s3 config - missing bucket name",
+			req: &backupv1beta1.TestLocationConfigRequest{
+				S3Config: &backupv1beta1.S3LocationConfig{
+					Endpoint:   "https://s3.us-west-2.amazonaws.com/",
+					AccessKey:  "secret_key",
+					SecretKey:  "example_key",
+					BucketName: "",
+				},
+			},
+			errorMsg: "rpc error: code = InvalidArgument desc = S3 bucketName field is empty.",
+		},
+		{
+			name: "s3 config - invalid endpoint",
+			req: &backupv1beta1.TestLocationConfigRequest{
+				S3Config: &backupv1beta1.S3LocationConfig{
+					Endpoint:   "#invalidendpoint",
+					AccessKey:  "secret_key",
+					SecretKey:  "example_key",
+					BucketName: "example_bucket",
+				},
+			},
+			errorMsg: "rpc error: code = InvalidArgument desc = No host found in the Endpoint.",
+		},
+		{
+			name: "s3 config - invalid endpoint, path is not allowed",
+			req: &backupv1beta1.TestLocationConfigRequest{
+				S3Config: &backupv1beta1.S3LocationConfig{
+					Endpoint:   "https://s3.us-west-2.amazonaws.com/path",
+					AccessKey:  "secret_key",
+					SecretKey:  "example_key",
+					BucketName: "example_bucket",
+				},
+			},
+			errorMsg: "rpc error: code = InvalidArgument desc = Path is not allowed for Endpoint.",
+		},
+		{
+			name: "s3 config - invalid scheme",
+			req: &backupv1beta1.TestLocationConfigRequest{
+				S3Config: &backupv1beta1.S3LocationConfig{
+					Endpoint:   "tcp://s3.us-west-2.amazonaws.com",
+					AccessKey:  "secret_key",
+					SecretKey:  "example_key",
+					BucketName: "example_bucket",
+				},
+			},
+			errorMsg: "rpc error: code = InvalidArgument desc = Invalid scheme 'tcp'",
+		},
+		{
+			name: "s3 config - invalid bucket name",
+			req: &backupv1beta1.TestLocationConfigRequest{
+				S3Config: &backupv1beta1.S3LocationConfig{
+					Endpoint:   "s3.us-west-2.amazonaws.com",
+					AccessKey:  "secret_key",
+					SecretKey:  "example_key",
+					BucketName: "invalid@bucket",
+				},
+			},
+			errorMsg: "rpc error: code = Internal desc = Bucket name contains invalid characters",
+		},
+	}
+
+	for _, test := range tableTests {
+		test := test
+
+		t.Run(test.name, func(t *testing.T) {
+			_, err := svc.TestLocationConfig(ctx, test.req)
+			if test.errorMsg != "" {
+				assert.EqualError(t, err, test.errorMsg)
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
+}
