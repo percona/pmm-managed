@@ -19,42 +19,47 @@ package dbaas
 import (
 	"context"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
-	"github.com/percona/pmm/version"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/backoff"
 )
 
 func TestClient(t *testing.T) {
 	getClient := func(t *testing.T) *Client {
-		err, c := NewClient("127.0.0.1:20201")
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+		defer cancel()
+		c, err := NewClient(ctx, "127.0.0.1:20201")
 		require.NoError(t, err, "Cannot connect to dbaas-controller")
+		t.Cleanup(func() {
+			require.NoError(t, conn.Close())
+		})
+
+		c := NewClient(conn)
 		return c
 	}
 	t.Run("ValidKubeConfig", func(t *testing.T) {
 		v := os.Getenv("ENABLE_DBAAS")
-		dbaasEnabled, err = strconv.ParseBool(v)
+		dbaasEnabled, err := strconv.ParseBool(v)
 		if err != nil {
 			t.Skipf("Invalid value %q for environment variable ENABLE_DBAAS", v)
 		}
 		if !dbaasEnabled {
 			t.Skip("DBaaS is not enabled")
 		}
-		kubeConfig := os.Getenv("DBAAS_KUBECONFIG")
+		kubeConfig := os.Getenv("PERCONA_TEST_DBAAS_KUBECONFIG")
 		if kubeConfig == "" {
-			t.Skip("DBAAS_KUBECONFIG env variable is not provided")
+			t.Skip("PERCONA_TEST_DBAAS_KUBECONFIG env variable is not provided")
 		}
 		c := getClient(t)
-		_, err := c.CheckKubernetesClusterConnection(context.TODO(), kubeConfig)
+		_, err = c.CheckKubernetesClusterConnection(context.TODO(), kubeConfig)
 		require.NoError(t, err)
 	})
 
 	t.Run("InvalidKubeConfig", func(t *testing.T) {
 		v := os.Getenv("ENABLE_DBAAS")
-		dbaasEnabled, err = strconv.ParseBool(v)
+		dbaasEnabled, err := strconv.ParseBool(v)
 		if err != nil {
 			t.Skipf("Invalid value %q for environment variable ENABLE_DBAAS", v)
 		}
@@ -63,7 +68,7 @@ func TestClient(t *testing.T) {
 		}
 
 		c := getClient(t)
-		_, err := c.CheckKubernetesClusterConnection(context.TODO(), "{}")
+		_, err = c.CheckKubernetesClusterConnection(context.TODO(), "{}")
 		require.Error(t, err)
 	})
 }

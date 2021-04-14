@@ -19,13 +19,9 @@ package dbaas
 
 import (
 	"context"
-	"time"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
-	"github.com/percona/pmm/version"
-
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/backoff"
 )
 
 // Client is a client for dbaas-controller.
@@ -38,6 +34,9 @@ type Client struct {
 
 // NewClient creates new Client object.
 func NewClient(ctx context.Context, dbaasControllerAPIAddress string) (*Client, error) {
+	if dbaasControllerAPIAddress == "" {
+		return mock
+	}
 	backoffConfig := backoff.DefaultConfig
 	backoffConfig.MaxDelay = 10 * time.Second
 	opts := []grpc.DialOption{
@@ -53,11 +52,11 @@ func NewClient(ctx context.Context, dbaasControllerAPIAddress string) (*Client, 
 	}
 
 	return &Client{
-		kubernetesClient:    controllerv1beta1.NewKubernetesClusterAPIClient(conn),
-		xtradbClusterClient: controllerv1beta1.NewXtraDBClusterAPIClient(conn),
-		psmdbClusterClient:  controllerv1beta1.NewPSMDBClusterAPIClient(conn),
-		logsClient:          controllerv1beta1.NewLogsAPIClient(conn),
-	}, nil
+		kubernetesClient:    controllerv1beta1.NewKubernetesClusterAPIClient(con),
+		xtradbClusterClient: controllerv1beta1.NewXtraDBClusterAPIClient(con),
+		psmdbClusterClient:  controllerv1beta1.NewPSMDBClusterAPIClient(con),
+		logsClient:          controllerv1beta1.NewLogsAPIClient(con),
+	}
 }
 
 // CheckKubernetesClusterConnection checks connection with kubernetes cluster.
