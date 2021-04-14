@@ -21,6 +21,7 @@ import (
 
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 
+	"github.com/minio/minio-go"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -187,10 +188,6 @@ func (s *LocationsService) TestLocationConfig(
 			SecretKey:  req.S3Config.SecretKey,
 			BucketName: req.S3Config.BucketName,
 		}
-
-		if err := s.checkBucket(params.S3Config); err != nil {
-			return nil, err
-		}
 	}
 
 	if req.PmmServerConfig != nil {
@@ -207,6 +204,12 @@ func (s *LocationsService) TestLocationConfig(
 
 	if err := params.Validate(true, false); err != nil {
 		return nil, err
+	}
+
+	if req.S3Config != nil {
+		if err := s.checkBucket(params.S3Config); err != nil {
+			return nil, err
+		}
 	}
 
 	return &backupv1beta1.TestLocationConfigResponse{}, nil
@@ -274,7 +277,10 @@ func (s *LocationsService) getBucketLocation(c *models.S3LocationConfig) (string
 
 	bucketLocation, err := s.s3.GetBucketLocation(url.Host, secure, c.AccessKey, c.SecretKey, c.BucketName)
 	if err != nil {
-		return "", err
+		if minioErr, ok := err.(minio.ErrorResponse); ok {
+			return "", status.Errorf(codes.InvalidArgument, "%s: %s.", minioErr.Code, minioErr.Message)
+		}
+		return "", status.Errorf(codes.Internal, "%s", err)
 	}
 
 	return bucketLocation, nil
@@ -287,13 +293,17 @@ func (s *LocationsService) checkBucket(c *models.S3LocationConfig) error {
 	}
 
 	secure := true
-	if url.Scheme == "https" {
+	if url.Scheme == "http" {
 		secure = false
 	}
 
 	exists, err := s.s3.BucketExists(url.Host, secure, c.AccessKey, c.SecretKey, c.BucketName)
 	if err != nil {
-		return err
+		if minioErr, ok := err.(minio.ErrorResponse); ok {
+			return status.Errorf(codes.InvalidArgument, "%s: %s.", minioErr.Code, minioErr.Message)
+		}
+
+		return status.Errorf(codes.Internal, "%s", err)
 	}
 
 	if !exists {

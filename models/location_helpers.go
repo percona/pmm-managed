@@ -99,8 +99,7 @@ func ParseEndpoint(endpoint string) (*url.URL, error) {
 	return parsedURL, nil
 }
 
-// checkS3Config checks S3 config and returns the flag that indicates if
-// secure connection should be used and the parsed host.
+// checkS3Config checks S3 config.
 func checkS3Config(c *S3LocationConfig, withBucketLocation bool) error {
 	if c == nil {
 		return status.Error(codes.InvalidArgument, "S3 location config is empty.")
