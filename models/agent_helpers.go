@@ -247,7 +247,7 @@ func FindDBConfigForService(q *reform.Querier, serviceID string) (DBConfig, erro
 	// Find config with specified user.
 	for _, agent := range res {
 		cfg := agent.DBConfig(svc)
-		if cfg.User != "" {
+		if cfg.Valid() {
 			return cfg, nil
 		}
 	}

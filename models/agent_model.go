@@ -218,6 +218,11 @@ type DBConfig struct {
 	Socket   string
 }
 
+// Valid returns true if config is valid.
+func (c DBConfig) Valid() bool {
+	return c.User != "" && (c.Address != "" || c.Socket != "")
+}
+
 // DBConfig returns DBConfig for given Service with this agent.
 func (s *Agent) DBConfig(service *Service) DBConfig {
 	cfg := DBConfig{
