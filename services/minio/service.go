@@ -17,15 +17,19 @@
 // Package minio provides implementation for Minio operations.
 package minio
 
-import "github.com/minio/minio-go"
+import (
+	"github.com/minio/minio-go"
+
+	"github.com/percona/pmm-managed/models"
+)
 
 // Service is wrapper around minio client.
 type Service struct {
 }
 
 // BucketExists return true if bucket can be accessed with provided credentials and exists.
-func (s *Service) BucketExists(host string, secure bool, accessKey, secretKey, name string) (bool, error) {
-	minioClient, err := minio.New(host, accessKey, secretKey, secure)
+func (s *Service) BucketExists(endpoint, accessKey, secretKey, name string) (bool, error) {
+	minioClient, err := newClient(endpoint, accessKey, secretKey)
 	if err != nil {
 		return false, err
 	}
@@ -33,10 +37,24 @@ func (s *Service) BucketExists(host string, secure bool, accessKey, secretKey, n
 }
 
 // GetBucketLocation retrieves bucket location by specified bucket name.
-func (s *Service) GetBucketLocation(host string, secure bool, accessKey, secretKey, name string) (string, error) {
-	minioClient, err := minio.New(host, accessKey, secretKey, secure)
+func (s *Service) GetBucketLocation(endpoint, accessKey, secretKey, name string) (string, error) {
+	minioClient, err := newClient(endpoint, accessKey, secretKey)
 	if err != nil {
 		return "", err
 	}
 	return minioClient.GetBucketLocation(name)
+}
+
+func newClient(endpoint, accessKey, secretKey string) (*minio.Client, error) {
+	url, err := models.ParseEndpoint(endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	secure := true
+	if url.Scheme == "http" {
+		secure = false
+	}
+
+	return minio.New(url.Host, accessKey, secretKey, secure)
 }

@@ -17,6 +17,7 @@
 package models_test
 
 import (
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -450,6 +451,56 @@ func TestCreateBackupLocationValidation(t *testing.T) {
 			}
 			assert.NoError(t, err)
 			assert.NotNil(t, c)
+		})
+	}
+}
+
+func TestParseEndpoint(t *testing.T) {
+	tableTests := []struct {
+		name     string
+		endpoint string
+		url      url.URL
+		errorMsg string
+	}{
+		{
+			name:     "HTTPS S3",
+			endpoint: "https://s3.us-west-2.amazonaws.com",
+			url: url.URL{
+				Scheme: "https",
+				Host:   "s3.us-west-2.amazonaws.com",
+			},
+		},
+		{
+			name:     "HTTP S3",
+			endpoint: "http://s3.us-west-2.amazonaws.com",
+			url: url.URL{
+				Scheme: "http",
+				Host:   "s3.us-west-2.amazonaws.com",
+			},
+		},
+		{
+			name:     "S3 without scheme",
+			endpoint: "s3.us-west-2.amazonaws.com",
+			url: url.URL{
+				Scheme: "https",
+				Host:   "s3.us-west-2.amazonaws.com",
+			},
+		},
+		{
+			name:     "Missing top level domain",
+			endpoint: "1https://s3.us-west-2.amazonaws.com",
+			errorMsg: "parse \"1https://s3.us-west-2.amazonaws.com\": first path segment in URL cannot contain colon",
+		},
+	}
+	for _, test := range tableTests {
+		t.Run(test.name, func(t *testing.T) {
+			res, err := models.ParseEndpoint(test.endpoint)
+			if test.errorMsg != "" {
+				assert.EqualError(t, err, test.errorMsg)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, test.url, *res)
 		})
 	}
 }

@@ -41,7 +41,7 @@ func TestCreateBackupLocation(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	mockedS3 := &mockS3{}
+	mockedS3 := &mockAwsS3{}
 	mockedS3.On("GetBucketLocation", mock.Anything, mock.Anything, mock.Anything, mock.Anything,
 		mock.Anything).Return("us-east-2", nil)
 	svc := NewLocationsService(db, mockedS3)
@@ -69,11 +69,11 @@ func TestCreateBackupLocation(t *testing.T) {
 		assert.NotEmpty(t, loc.LocationId)
 	})
 
-	t.Run("add s3", func(t *testing.T) {
+	t.Run("add awsS3", func(t *testing.T) {
 		loc, err := svc.AddLocation(ctx, &backupv1beta1.AddLocationRequest{
 			Name: gofakeit.Name(),
 			S3Config: &backupv1beta1.S3LocationConfig{
-				Endpoint:   "https://s3.us-west-2.amazonaws.com/",
+				Endpoint:   "https://awsS3.us-west-2.amazonaws.com/",
 				AccessKey:  "access_key",
 				SecretKey:  "secret_key",
 				BucketName: "example_bucket",
@@ -91,7 +91,7 @@ func TestCreateBackupLocation(t *testing.T) {
 				Path: "/tmp",
 			},
 			S3Config: &backupv1beta1.S3LocationConfig{
-				Endpoint:   "https://s3.us-west-2.amazonaws.com/",
+				Endpoint:   "https://awsS3.us-west-2.amazonaws.com/",
 				AccessKey:  "access_key",
 				SecretKey:  "secret_key",
 				BucketName: "example_bucket",
@@ -106,7 +106,7 @@ func TestListBackupLocations(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	mockedS3 := &mockS3{}
+	mockedS3 := &mockAwsS3{}
 	mockedS3.On("GetBucketLocation", mock.Anything, mock.Anything, mock.Anything, mock.Anything,
 		mock.Anything).Return("us-east-2", nil)
 	svc := NewLocationsService(db, mockedS3)
@@ -122,7 +122,7 @@ func TestListBackupLocations(t *testing.T) {
 	req2 := &backupv1beta1.AddLocationRequest{
 		Name: gofakeit.Name(),
 		S3Config: &backupv1beta1.S3LocationConfig{
-			Endpoint:   "https://s3.us-west-2.amazonaws.com/",
+			Endpoint:   "https://awsS3.us-west-2.amazonaws.com/",
 			AccessKey:  "access_key",
 			SecretKey:  "secret_key",
 			BucketName: "example_bucket",
@@ -183,7 +183,7 @@ func TestChangeBackupLocation(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	mockedS3 := &mockS3{}
+	mockedS3 := &mockAwsS3{}
 	mockedS3.On("GetBucketLocation", mock.Anything, mock.Anything, mock.Anything, mock.Anything,
 		mock.Anything).Return("us-east-2", nil)
 	svc := NewLocationsService(db, mockedS3)
@@ -283,7 +283,7 @@ func TestRemoveBackupLocation(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	mockedS3 := &mockS3{}
+	mockedS3 := &mockAwsS3{}
 	svc := NewLocationsService(db, mockedS3)
 	req := &backupv1beta1.AddLocationRequest{
 		Name: gofakeit.Name(),
@@ -338,7 +338,7 @@ func TestVerifyBackupLocationValidation(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	mockedS3 := &mockS3{}
+	mockedS3 := &mockAwsS3{}
 	mockedS3.On("BucketExists", mock.Anything, mock.Anything, mock.Anything, mock.Anything,
 		mock.Anything).Return(true, nil)
 
@@ -359,12 +359,12 @@ func TestVerifyBackupLocationValidation(t *testing.T) {
 			errorMsg: "rpc error: code = InvalidArgument desc = PMM client config path field is empty.",
 		},
 		{
-			name:     "s3 config - missing config",
+			name:     "awsS3 config - missing config",
 			req:      &backupv1beta1.TestLocationConfigRequest{},
 			errorMsg: "rpc error: code = InvalidArgument desc = Missing location config.",
 		},
 		{
-			name: "s3 config - missing endpoint",
+			name: "awsS3 config - missing endpoint",
 			req: &backupv1beta1.TestLocationConfigRequest{
 				S3Config: &backupv1beta1.S3LocationConfig{
 					Endpoint:   "",
@@ -376,10 +376,10 @@ func TestVerifyBackupLocationValidation(t *testing.T) {
 			errorMsg: "rpc error: code = InvalidArgument desc = S3 endpoint field is empty.",
 		},
 		{
-			name: "s3 config - missing access key",
+			name: "awsS3 config - missing access key",
 			req: &backupv1beta1.TestLocationConfigRequest{
 				S3Config: &backupv1beta1.S3LocationConfig{
-					Endpoint:   "https://s3.us-west-2.amazonaws.com/",
+					Endpoint:   "https://awsS3.us-west-2.amazonaws.com/",
 					AccessKey:  "",
 					SecretKey:  "secret_key",
 					BucketName: "example_bucket",
@@ -388,10 +388,10 @@ func TestVerifyBackupLocationValidation(t *testing.T) {
 			errorMsg: "rpc error: code = InvalidArgument desc = S3 accessKey field is empty.",
 		},
 		{
-			name: "s3 config - missing secret key",
+			name: "awsS3 config - missing secret key",
 			req: &backupv1beta1.TestLocationConfigRequest{
 				S3Config: &backupv1beta1.S3LocationConfig{
-					Endpoint:   "https://s3.us-west-2.amazonaws.com/",
+					Endpoint:   "https://awsS3.us-west-2.amazonaws.com/",
 					AccessKey:  "secret_key",
 					SecretKey:  "",
 					BucketName: "example_bucket",
@@ -400,10 +400,10 @@ func TestVerifyBackupLocationValidation(t *testing.T) {
 			errorMsg: "rpc error: code = InvalidArgument desc = S3 secretKey field is empty.",
 		},
 		{
-			name: "s3 config - missing bucket name",
+			name: "awsS3 config - missing bucket name",
 			req: &backupv1beta1.TestLocationConfigRequest{
 				S3Config: &backupv1beta1.S3LocationConfig{
-					Endpoint:   "https://s3.us-west-2.amazonaws.com/",
+					Endpoint:   "https://awsS3.us-west-2.amazonaws.com/",
 					AccessKey:  "secret_key",
 					SecretKey:  "example_key",
 					BucketName: "",
@@ -412,7 +412,7 @@ func TestVerifyBackupLocationValidation(t *testing.T) {
 			errorMsg: "rpc error: code = InvalidArgument desc = S3 bucketName field is empty.",
 		},
 		{
-			name: "s3 config - invalid endpoint",
+			name: "awsS3 config - invalid endpoint",
 			req: &backupv1beta1.TestLocationConfigRequest{
 				S3Config: &backupv1beta1.S3LocationConfig{
 					Endpoint:   "#invalidendpoint",
@@ -424,10 +424,10 @@ func TestVerifyBackupLocationValidation(t *testing.T) {
 			errorMsg: "rpc error: code = InvalidArgument desc = No host found in the Endpoint.",
 		},
 		{
-			name: "s3 config - invalid endpoint, path is not allowed",
+			name: "awsS3 config - invalid endpoint, path is not allowed",
 			req: &backupv1beta1.TestLocationConfigRequest{
 				S3Config: &backupv1beta1.S3LocationConfig{
-					Endpoint:   "https://s3.us-west-2.amazonaws.com/path",
+					Endpoint:   "https://awsS3.us-west-2.amazonaws.com/path",
 					AccessKey:  "secret_key",
 					SecretKey:  "example_key",
 					BucketName: "example_bucket",
@@ -436,10 +436,10 @@ func TestVerifyBackupLocationValidation(t *testing.T) {
 			errorMsg: "rpc error: code = InvalidArgument desc = Path is not allowed for Endpoint.",
 		},
 		{
-			name: "s3 config - invalid scheme",
+			name: "awsS3 config - invalid scheme",
 			req: &backupv1beta1.TestLocationConfigRequest{
 				S3Config: &backupv1beta1.S3LocationConfig{
-					Endpoint:   "tcp://s3.us-west-2.amazonaws.com",
+					Endpoint:   "tcp://awsS3.us-west-2.amazonaws.com",
 					AccessKey:  "secret_key",
 					SecretKey:  "example_key",
 					BucketName: "example_bucket",

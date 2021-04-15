@@ -34,12 +34,12 @@ import (
 // LocationsService represents backup locations API.
 type LocationsService struct {
 	db *reform.DB
-	s3 s3
+	s3 awsS3
 	l  *logrus.Entry
 }
 
 // NewLocationsService creates new backup locations API service.
-func NewLocationsService(db *reform.DB, s3 s3) *LocationsService {
+func NewLocationsService(db *reform.DB, s3 awsS3) *LocationsService {
 	return &LocationsService{
 		l:  logrus.WithField("component", "management/backup/locations"),
 		db: db,
@@ -265,17 +265,7 @@ func convertLocation(location *models.BackupLocation) (*backupv1beta1.Location, 
 }
 
 func (s *LocationsService) getBucketLocation(c *models.S3LocationConfig) (string, error) {
-	url, err := models.ParseEndpoint(c.Endpoint)
-	if err != nil {
-		return "", status.Error(codes.InvalidArgument, err.Error())
-	}
-
-	secure := true
-	if url.Scheme == "http" {
-		secure = false
-	}
-
-	bucketLocation, err := s.s3.GetBucketLocation(url.Host, secure, c.AccessKey, c.SecretKey, c.BucketName)
+	bucketLocation, err := s.s3.GetBucketLocation(c.Endpoint, c.AccessKey, c.SecretKey, c.BucketName)
 	if err != nil {
 		if minioErr, ok := err.(minio.ErrorResponse); ok {
 			return "", status.Errorf(codes.InvalidArgument, "%s: %s.", minioErr.Code, minioErr.Message)
@@ -287,23 +277,13 @@ func (s *LocationsService) getBucketLocation(c *models.S3LocationConfig) (string
 }
 
 func (s *LocationsService) checkBucket(c *models.S3LocationConfig) error {
-	url, err := models.ParseEndpoint(c.Endpoint)
-	if err != nil {
-		return status.Error(codes.InvalidArgument, err.Error())
-	}
-
-	secure := true
-	if url.Scheme == "http" {
-		secure = false
-	}
-
-	exists, err := s.s3.BucketExists(url.Host, secure, c.AccessKey, c.SecretKey, c.BucketName)
+	exists, err := s.s3.BucketExists(c.Endpoint, c.AccessKey, c.SecretKey, c.BucketName)
 	if err != nil {
 		if minioErr, ok := err.(minio.ErrorResponse); ok {
 			return status.Errorf(codes.InvalidArgument, "%s: %s.", minioErr.Code, minioErr.Message)
 		}
 
-		return status.Errorf(codes.Internal, "%s", err)
+		return status.Error(codes.Internal, err.Error())
 	}
 
 	if !exists {

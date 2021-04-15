@@ -16,9 +16,9 @@
 
 package backup
 
-//go:generate mockery -name=s3 -case=snake -inpkg -testonly
+//go:generate mockery -name=awsS3 -case=snake -inpkg -testonly
 
-type s3 interface {
-	GetBucketLocation(host string, secure bool, accessKey, secretKey, name string) (string, error)
-	BucketExists(host string, secure bool, accessKey, secretKey, name string) (bool, error)
+type awsS3 interface {
+	GetBucketLocation(host string, accessKey, secretKey, name string) (string, error)
+	BucketExists(host string, accessKey, secretKey, name string) (bool, error)
 }
