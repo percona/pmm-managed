@@ -53,7 +53,7 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 	var config models.DBConfig
 
 	errTX := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
-		svc, err := models.FindServiceByID(tx.Querier, req.ServiceId)
+		svc, err = models.FindServiceByID(tx.Querier, req.ServiceId)
 		if err != nil {
 			return err
 		}
