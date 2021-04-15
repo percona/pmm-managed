@@ -18,7 +18,6 @@ package backup
 
 import (
 	"context"
-	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"
 
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
@@ -126,22 +125,39 @@ func (s *BackupsService) prepareBackupJob(serviceID, artifactID string, jobType 
 		if err != nil {
 			return err
 		}
+		var agentType models.AgentType
+		switch jobType {
+		case models.MySQLBackupJob:
+			agentType = models.MySQLdExporterType
+		default:
+			return errors.Errorf("unknown job type: %s", jobType)
+		}
 
-		agents, err := models.FindPMMAgentsForService(tx.Querier, serviceID)
+		dbAgents, err := models.FindAgents(tx.Querier, models.AgentFilters{
+			ServiceID: serviceID,
+			AgentType: &agentType,
+		})
 		if err != nil {
 			return err
 		}
 
-		if len(agents) == 0 {
-			return errors.Errorf("agent not found for service")
+		if len(dbAgents) == 0 {
+			return errors.Errorf("agents not found for db service")
 		}
 
-		agent := agents[0]
+		pmmAgents, err := models.FindPMMAgentsForService(tx.Querier, serviceID)
+		if err != nil {
+			return err
+		}
 
-		pmmAgentID := pointer.GetString(agent.PMMAgentID)
-		dbConfig = agent.DBConfig(svc)
+		if len(pmmAgents) == 0 {
+			return errors.Errorf("pmmAgent not found for service")
+		}
 
-		res, err = models.CreateJobResult(tx.Querier, pmmAgentID, jobType, &models.JobResultData{
+		pmmAgent := pmmAgents[0]
+		dbConfig = dbAgents[0].DBConfig(svc)
+
+		res, err = models.CreateJobResult(tx.Querier, pmmAgent.AgentID, jobType, &models.JobResultData{
 			MySQLBackup: &models.MySQLBackupJobResult{
 				ArtifactID: artifactID,
 			},
