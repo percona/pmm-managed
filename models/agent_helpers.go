@@ -193,6 +193,51 @@ func FindAgentsByIDs(q *reform.Querier, ids []string) ([]*Agent, error) {
 	return res, nil
 }
 
+// FindAgentsOnServiceWithType find agents by specified serviceID and serviceType.
+func FindAgentsOnServiceWithType(q *reform.Querier, serviceID string, serviceType ServiceType) ([]*Agent, error) {
+	var agentTypes []AgentType
+	switch serviceType {
+	case MySQLServiceType:
+		agentTypes = []AgentType{
+			MySQLdExporterType,
+			QANMySQLSlowlogAgentType,
+			QANMySQLPerfSchemaAgentType,
+		}
+	case PostgreSQLServiceType:
+		agentTypes = []AgentType{
+			PostgresExporterType,
+			QANPostgreSQLPgStatementsAgentType,
+			QANPostgreSQLPgStatMonitorAgentType,
+		}
+	case MongoDBServiceType:
+		agentTypes = []AgentType{
+			MongoDBExporterType,
+			QANMongoDBProfilerAgentType,
+		}
+	default:
+		return nil, status.Errorf(codes.FailedPrecondition, "Unsupported service")
+	}
+	p := strings.Join(q.Placeholders(2, len(agentTypes)), ", ")
+	tail := fmt.Sprintf("WHERE service_id = $1 AND agent_type IN (%s) ORDER BY agent_id", p) //nolint:gosec
+
+	args := make([]interface{}, len(agentTypes)+1)
+	args[0] = serviceID
+	for i, agentType := range agentTypes {
+		args[i+1] = agentType
+	}
+
+	structs, err := q.SelectAllFrom(AgentTable, tail, args...)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	res := make([]*Agent, len(structs))
+	for i, s := range structs {
+		res[i] = s.(*Agent)
+	}
+	return res, nil
+}
+
 // FindPMMAgentsRunningOnNode gets pmm-agents for node where it runs.
 func FindPMMAgentsRunningOnNode(q *reform.Querier, nodeID string) ([]*Agent, error) {
 	structs, err := q.SelectAllFrom(AgentTable, "WHERE runs_on_node_id = $1 AND agent_type = $2", nodeID, PMMAgentType)
