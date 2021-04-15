@@ -84,16 +84,13 @@ func checkPMMClientLocationConfig(c *PMMClientLocationConfig) error {
 func ParseEndpoint(endpoint string) (*url.URL, error) {
 	parsedURL, err := url.Parse(endpoint)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "%s", err)
+		return nil, err
 	}
 
 	// User could specify the endpoint without scheme, so according to RFC 3986 the host won't be parsed.
 	// Try to prepend scheme and parse new url.
 	if parsedURL.Host == "" {
-		parsedURL, err = url.Parse("https://" + endpoint)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "%s", err)
-		}
+		return url.Parse("https://" + endpoint)
 	}
 
 	return parsedURL, nil
@@ -121,13 +118,13 @@ func checkS3Config(c *S3LocationConfig, withBucketLocation bool) error {
 		return status.Error(codes.InvalidArgument, "S3 bucketName field is empty.")
 	}
 
-	if withBucketLocation && c.BucketLocation == "" {
+	if withBucketLocation && c.BucketRegion == "" {
 		return status.Error(codes.InvalidArgument, "S3 bucketLocation field is empty")
 	}
 
 	parsedURL, err := ParseEndpoint(c.Endpoint)
 	if err != nil {
-		return err
+		return status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	if parsedURL.Host == "" {
@@ -238,7 +235,6 @@ func (c BackupLocationConfig) Validate(requireConfig, withBucketLocation bool) e
 
 	if requireConfig && configCount == 0 {
 		return status.Error(codes.InvalidArgument, "Missing location config.")
-
 	}
 
 	return err

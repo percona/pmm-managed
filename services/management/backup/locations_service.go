@@ -113,7 +113,7 @@ func (s *LocationsService) AddLocation(ctx context.Context, req *backupv1beta1.A
 			return nil, err
 		}
 
-		params.S3Config.BucketLocation = bucketLocation
+		params.S3Config.BucketRegion = bucketLocation
 	}
 
 	loc, err := models.CreateBackupLocation(s.db.Querier, params)
@@ -163,7 +163,7 @@ func (s *LocationsService) ChangeLocation(ctx context.Context, req *backupv1beta
 			return nil, err
 		}
 
-		params.S3Config.BucketLocation = bucketLocation
+		params.S3Config.BucketRegion = bucketLocation
 	}
 
 	_, err := models.ChangeBackupLocation(s.db.Querier, req.LocationId, params)
@@ -267,11 +267,11 @@ func convertLocation(location *models.BackupLocation) (*backupv1beta1.Location, 
 func (s *LocationsService) getBucketLocation(c *models.S3LocationConfig) (string, error) {
 	url, err := models.ParseEndpoint(c.Endpoint)
 	if err != nil {
-		return "", status.Errorf(codes.InvalidArgument, "%s", err)
+		return "", status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	secure := true
-	if url.Scheme == "https" {
+	if url.Scheme == "http" {
 		secure = false
 	}
 
@@ -289,7 +289,7 @@ func (s *LocationsService) getBucketLocation(c *models.S3LocationConfig) (string
 func (s *LocationsService) checkBucket(c *models.S3LocationConfig) error {
 	url, err := models.ParseEndpoint(c.Endpoint)
 	if err != nil {
-		return status.Errorf(codes.InvalidArgument, "%s", err)
+		return status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	secure := true
