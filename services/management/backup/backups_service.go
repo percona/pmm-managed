@@ -18,7 +18,6 @@ package backup
 
 import (
 	"context"
-	"github.com/AlekSi/pointer"
 	"github.com/pkg/errors"
 
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
@@ -148,10 +147,6 @@ func (s *BackupsService) prepareBackupJob(serviceID, artifactID string, jobType 
 		pmmAgent := pmmAgents[0]
 		dbAgent := dbAgents[0]
 		dbConfig = dbAgent.DBConfig(svc)
-
-		if pmmAgent.AgentID != pointer.GetString(dbAgent.PMMAgentID) {
-			return errors.Errorf("service in not installed on the same node as pmm-agent")
-		}
 
 		res, err = models.CreateJobResult(tx.Querier, pmmAgent.AgentID, jobType, &models.JobResultData{
 			MySQLBackup: &models.MySQLBackupJobResult{
