@@ -40,6 +40,7 @@ type apiRequest struct {
 	handler    handler
 	responseCh chan *apiResponse
 }
+
 type apiResponse struct {
 	out interface{}
 	err error
@@ -49,9 +50,11 @@ type connectRequest struct {
 	ctx        context.Context
 	responseCh chan errorResponse
 }
+
 type disconnectRequest struct {
 	responseCh chan errorResponse
 }
+
 type errorResponse struct {
 	err error
 }
