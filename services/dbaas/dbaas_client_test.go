@@ -23,20 +23,34 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
+
+	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/supervisord"
+	"github.com/percona/pmm-managed/services/victoriametrics"
 )
+
+const supervisordConfigDir = "/etc/supervisord.d"
 
 func TestClient(t *testing.T) {
 	getClient := func(t *testing.T) *Client {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 		defer cancel()
-		c, err := NewClient(ctx, "127.0.0.1:20201")
+
+		vmParams, err := models.NewVictoriaMetricsParams(victoriametrics.BasePrometheusConfigPath)
+		if err != nil {
+			t.Fatalf("cannot load victoriametrics params problem: %+v", err)
+		}
+		pmmUpdateCheck := supervisord.NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker"))
+		supervisor := supervisord.New(supervisordConfigDir, pmmUpdateCheck, vmParams)
+
+		c := NewClient(ctx, "127.0.0.1:20201", supervisor)
+		err = c.Connect(ctx)
 		require.NoError(t, err, "Cannot connect to dbaas-controller")
 		t.Cleanup(func() {
-			require.NoError(t, conn.Close())
+			require.NoError(t, c.Disconnect())
 		})
-
-		c := NewClient(conn)
 		return c
 	}
 	t.Run("ValidKubeConfig", func(t *testing.T) {

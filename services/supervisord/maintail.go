@@ -27,12 +27,12 @@ type eventType string
 const (
 	// mirror http://supervisord.org/subprocess.html#process-states
 	stopped          eventType = "STOPPED"
-	stopping         eventType = "STOPPING"
+	Stopping         eventType = "STOPPING"
 	starting         eventType = "STARTING"
-	running          eventType = "RUNNING"
+	Running          eventType = "RUNNING"
 	exitedExpected   eventType = "EXITED (expected)"
-	exitedUnexpected eventType = "EXITED (unexpected)"
-	fatal            eventType = "FATAL"
+	ExitedUnexpected eventType = "EXITED (unexpected)"
+	Fatal            eventType = "FATAL"
 
 	unknown   eventType = "unknown"
 	logReopen eventType = "logreopen"
@@ -50,25 +50,25 @@ var (
 
 	events = map[*regexp.Regexp]eventType{
 		stoppedRE:          stopped,
-		stoppingRE:         stopping,
+		stoppingRE:         Stopping,
 		startingRE:         starting,
-		runningRE:          running,
+		runningRE:          Running,
 		exitedExpectedRE:   exitedExpected,
-		exitedUnexpectedRE: exitedUnexpected,
-		fatalRE:            fatal,
+		exitedUnexpectedRE: ExitedUnexpected,
+		fatalRE:            Fatal,
 		logReopenRE:        logReopen,
 	}
 )
 
 // event represents supervisord program event.
-type event struct {
+type Event struct {
 	Time    time.Time
 	Type    eventType
 	Program string
 }
 
 // parseEvent returns parsed event from supervisord maintail line, or nil.
-func parseEvent(line string) *event {
+func parseEvent(line string) *Event {
 	parts := strings.SplitN(line, " ", 4)
 	if len(parts) != 4 {
 		return nil
@@ -83,7 +83,7 @@ func parseEvent(line string) *event {
 
 	for re, typ := range events {
 		if m := re.FindStringSubmatch(parts[3]); m != nil {
-			return &event{
+			return &Event{
 				Time:    t,
 				Type:    typ,
 				Program: m[1],

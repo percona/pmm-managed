@@ -55,7 +55,7 @@ type Service struct {
 	pmmUpdateCheck    *PMMUpdateChecker
 
 	eventsM    sync.Mutex
-	subs       map[chan *event]sub
+	subs       map[chan *Event]sub
 	lastEvents map[string]eventType
 
 	pmmUpdatePerformLogM sync.Mutex
@@ -84,7 +84,7 @@ func New(configDir string, pmmUpdateCheck *PMMUpdateChecker, vmParams *models.Vi
 		supervisorctlPath: path,
 		l:                 logrus.WithField("component", "supervisord"),
 		pmmUpdateCheck:    pmmUpdateCheck,
-		subs:              make(map[chan *event]sub),
+		subs:              make(map[chan *Event]sub),
 		lastEvents:        make(map[string]eventType),
 		vmParams:          vmParams,
 	}
@@ -119,7 +119,7 @@ func (s *Service) Run(ctx context.Context) {
 		return
 	}
 
-	var lastEvent *event
+	var lastEvent *Event
 	for ctx.Err() == nil {
 		cmd := exec.CommandContext(ctx, s.supervisorctlPath, "maintail", "-f") //nolint:gosec
 		cmdLine := strings.Join(cmd.Args, " ")
@@ -155,7 +155,7 @@ func (s *Service) Run(ctx context.Context) {
 
 			s.lastEvents[e.Program] = e.Type
 
-			var toDelete []chan *event
+			var toDelete []chan *Event
 			for ch, sub := range s.subs {
 				if e.Program == sub.program {
 					var found bool
@@ -205,8 +205,8 @@ func (s *Service) ForceCheckUpdates(ctx context.Context) error {
 	return s.pmmUpdateCheck.check(ctx)
 }
 
-func (s *Service) subscribe(program string, eventTypes ...eventType) chan *event {
-	ch := make(chan *event, 1)
+func (s *Service) Subscribe(program string, eventTypes ...eventType) chan *Event {
+	ch := make(chan *Event, 1)
 	s.eventsM.Lock()
 	s.subs[ch] = sub{
 		program:    program,
@@ -252,7 +252,7 @@ func (s *Service) StartUpdate() (uint32, error) {
 	}
 
 	// send SIGUSR2 to supervisord and wait for it to reopen log file
-	ch := s.subscribe("supervisord", logReopen)
+	ch := s.Subscribe("supervisord", logReopen)
 	b, err := s.supervisorctl("pid")
 	if err != nil {
 		return 0, err
@@ -333,11 +333,11 @@ func (s *Service) programRunning(program string) bool {
 
 	s.l.Debugf("Status result for %q not parsed, inspecting last event %q.", program, lastEvent)
 	switch lastEvent {
-	case stopping, starting, running:
+	case Stopping, starting, Running:
 		return true
-	case exitedUnexpected: // will be restarted
+	case ExitedUnexpected: // will be restarted
 		return true
-	case exitedExpected, fatal: // will not be restarted
+	case exitedExpected, Fatal: // will not be restarted
 		return false
 	case stopped: // we don't know
 		fallthrough

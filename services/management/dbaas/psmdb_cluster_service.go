@@ -27,40 +27,24 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/dbaas"
 )
 
 // PSMDBClusterService implements PSMDBClusterServer methods.
 type PSMDBClusterService struct {
-	db                        *reform.DB
-	l                         *logrus.Entry
-	dbaasControllerAPIAddress string
+	db               *reform.DB
+	l                *logrus.Entry
+	controllerClient dbaasClient
 }
 
 // NewPSMDBClusterService creates PSMDB Service.
-func NewPSMDBClusterService(db *reform.DB, dbaasControllerAPIAddress string) dbaasv1beta1.PSMDBClusterServer {
+func NewPSMDBClusterService(db *reform.DB, client dbaasClient) dbaasv1beta1.PSMDBClusterServer {
 	l := logrus.WithField("component", "xtradb_cluster")
-	return &PSMDBClusterService{db: db, l: l, dbaasControllerAPIAddress: dbaasControllerAPIAddress}
-}
-
-// Enabled returns if service is enabled and can be used.
-func (s PSMDBClusterService) Enabled() bool {
-	settings, err := models.GetSettings(s.db)
-	if err != nil {
-		s.l.WithError(err).Error("can't get settings")
-		return false
-	}
-	return settings.DBaaS.Enabled
+	return &PSMDBClusterService{db: db, l: l, controllerClient: client}
 }
 
 // ListPSMDBClusters returns a list of all PSMDB clusters.
 func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1beta1.ListPSMDBClustersRequest) (*dbaasv1beta1.ListPSMDBClustersResponse, error) {
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := dbaas.NewClient(ctx, s.dbaasControllerAPIAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +55,7 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 		},
 	}
 
-	out, err := client.ListPSMDBClusters(ctx, &in)
+	out, err := s.controllerClient.ListPSMDBClusters(ctx, &in)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Can't get list of PSMDB clusters: %s", err.Error())
 	}
@@ -120,11 +104,6 @@ func (s PSMDBClusterService) GetPSMDBClusterCredentials(ctx context.Context, req
 		return nil, err
 	}
 
-	client, err := dbaas.NewClient(ctx, s.dbaasControllerAPIAddress)
-	if err != nil {
-		return nil, err
-	}
-
 	in := &dbaascontrollerv1beta1.GetPSMDBClusterCredentialsRequest{
 		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
@@ -132,7 +111,7 @@ func (s PSMDBClusterService) GetPSMDBClusterCredentials(ctx context.Context, req
 		Name: req.Name,
 	}
 
-	cluster, err := client.GetPSMDBClusterCredentials(ctx, in)
+	cluster, err := s.controllerClient.GetPSMDBClusterCredentials(ctx, in)
 	if err != nil {
 		return nil, err
 	}
@@ -163,11 +142,6 @@ func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv
 		return nil, err
 	}
 
-	client, err := dbaas.NewClient(ctx, s.dbaasControllerAPIAddress)
-	if err != nil {
-		return nil, err
-	}
-
 	in := dbaascontrollerv1beta1.CreatePSMDBClusterRequest{
 		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
@@ -187,7 +161,7 @@ func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv
 		PmmPublicAddress: settings.PMMPublicAddress,
 	}
 
-	_, err = client.CreatePSMDBCluster(ctx, &in)
+	_, err = s.controllerClient.CreatePSMDBCluster(ctx, &in)
 	if err != nil {
 		return nil, err
 	}
@@ -199,11 +173,6 @@ func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv
 //nolint:dupl
 func (s PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *dbaasv1beta1.UpdatePSMDBClusterRequest) (*dbaasv1beta1.UpdatePSMDBClusterResponse, error) {
 	kubernetesCluster, err := models.FindKubernetesClusterByName(s.db.Querier, req.KubernetesClusterName)
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := dbaas.NewClient(ctx, s.dbaasControllerAPIAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +204,7 @@ func (s PSMDBClusterService) UpdatePSMDBCluster(ctx context.Context, req *dbaasv
 			}
 		}
 	}
-	_, err = client.UpdatePSMDBCluster(ctx, &in)
+	_, err = s.controllerClient.UpdatePSMDBCluster(ctx, &in)
 	if err != nil {
 		return nil, err
 	}
@@ -250,11 +219,6 @@ func (s PSMDBClusterService) DeletePSMDBCluster(ctx context.Context, req *dbaasv
 		return nil, err
 	}
 
-	client, err := dbaas.NewClient(ctx, s.dbaasControllerAPIAddress)
-	if err != nil {
-		return nil, err
-	}
-
 	in := dbaascontrollerv1beta1.DeletePSMDBClusterRequest{
 		Name: req.Name,
 		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
@@ -262,7 +226,7 @@ func (s PSMDBClusterService) DeletePSMDBCluster(ctx context.Context, req *dbaasv
 		},
 	}
 
-	_, err = client.DeletePSMDBCluster(ctx, &in)
+	_, err = s.controllerClient.DeletePSMDBCluster(ctx, &in)
 	if err != nil {
 		return nil, err
 	}
@@ -277,11 +241,6 @@ func (s PSMDBClusterService) RestartPSMDBCluster(ctx context.Context, req *dbaas
 		return nil, err
 	}
 
-	client, err := dbaas.NewClient(ctx, s.dbaasControllerAPIAddress)
-	if err != nil {
-		return nil, err
-	}
-
 	in := dbaascontrollerv1beta1.RestartPSMDBClusterRequest{
 		Name: req.Name,
 		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
@@ -289,7 +248,7 @@ func (s PSMDBClusterService) RestartPSMDBCluster(ctx context.Context, req *dbaas
 		},
 	}
 
-	_, err = client.RestartPSMDBCluster(ctx, &in)
+	_, err = s.controllerClient.RestartPSMDBCluster(ctx, &in)
 	if err != nil {
 		return nil, err
 	}

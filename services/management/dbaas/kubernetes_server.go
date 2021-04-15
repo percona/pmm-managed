@@ -29,7 +29,6 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/dbaas"
 )
 
 var (
@@ -38,35 +37,20 @@ var (
 )
 
 type kubernetesServer struct {
-	l                         *logrus.Entry
-	db                        *reform.DB
-	dbaasControllerAPIAddress string
+	l           *logrus.Entry
+	db          *reform.DB
+	dbaasClient dbaasClient
 }
 
 // NewKubernetesServer creates Kubernetes Server.
-func NewKubernetesServer(db *reform.DB, dbaasControllerAPIAddress string) dbaasv1beta1.KubernetesServer {
+func NewKubernetesServer(db *reform.DB, dbaasClient dbaasClient) dbaasv1beta1.KubernetesServer {
 	l := logrus.WithField("component", "kubernetes_server")
-	return &kubernetesServer{l: l, db: db, dbaasControllerAPIAddress: dbaasControllerAPIAddress}
-}
-
-// Enabled returns if server is enabled and can be used.
-func (k kubernetesServer) Enabled() bool {
-	settings, err := models.GetSettings(k.db)
-	if err != nil {
-		k.l.WithError(err).Error("can't get settings")
-		return false
-	}
-	return settings.DBaaS.Enabled
+	return &kubernetesServer{l: l, db: db, dbaasClient: dbaasClient}
 }
 
 // ListKubernetesClusters returns a list of all registered Kubernetes clusters.
 func (k kubernetesServer) ListKubernetesClusters(ctx context.Context, _ *dbaasv1beta1.ListKubernetesClustersRequest) (*dbaasv1beta1.ListKubernetesClustersResponse, error) {
 	kubernetesClusters, err := models.FindAllKubernetesClusters(k.db.Querier)
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := dbaas.NewClient(ctx, k.dbaasControllerAPIAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +70,7 @@ func (k kubernetesServer) ListKubernetesClusters(ctx context.Context, _ *dbaasv1
 					Psmdb:  new(dbaasv1beta1.Operator),
 				},
 			}
-			resp, e := client.CheckKubernetesClusterConnection(ctx, cluster.KubeConfig)
+			resp, e := k.dbaasClient.CheckKubernetesClusterConnection(ctx, cluster.KubeConfig)
 			if e != nil {
 				clusters[i].Status = dbaasv1beta1.KubernetesClusterStatus_KUBERNETES_CLUSTER_STATUS_UNAVAILABLE
 				return
@@ -107,13 +91,8 @@ func (k kubernetesServer) ListKubernetesClusters(ctx context.Context, _ *dbaasv1
 
 // RegisterKubernetesCluster registers an existing Kubernetes cluster in PMM.
 func (k kubernetesServer) RegisterKubernetesCluster(ctx context.Context, req *dbaasv1beta1.RegisterKubernetesClusterRequest) (*dbaasv1beta1.RegisterKubernetesClusterResponse, error) {
-	client, err := dbaas.NewClient(ctx, k.dbaasControllerAPIAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	err = k.db.InTransaction(func(t *reform.TX) error {
-		_, e := client.CheckKubernetesClusterConnection(ctx, req.KubeAuth.Kubeconfig)
+	err := k.db.InTransaction(func(t *reform.TX) error {
+		_, e := k.dbaasClient.CheckKubernetesClusterConnection(ctx, req.KubeAuth.Kubeconfig)
 		if e != nil {
 			return e
 		}
@@ -133,12 +112,7 @@ func (k kubernetesServer) RegisterKubernetesCluster(ctx context.Context, req *db
 
 // UnregisterKubernetesCluster removes a registered Kubernetes cluster from PMM.
 func (k kubernetesServer) UnregisterKubernetesCluster(ctx context.Context, req *dbaasv1beta1.UnregisterKubernetesClusterRequest) (*dbaasv1beta1.UnregisterKubernetesClusterResponse, error) {
-	client, err := dbaas.NewClient(ctx, k.dbaasControllerAPIAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	err = k.db.InTransaction(func(t *reform.TX) error {
+	err := k.db.InTransaction(func(t *reform.TX) error {
 		kubernetesCluster, err := models.FindKubernetesClusterByName(k.db.Querier, req.KubernetesClusterName)
 		if err != nil {
 			return err
@@ -148,7 +122,7 @@ func (k kubernetesServer) UnregisterKubernetesCluster(ctx context.Context, req *
 			return models.RemoveKubernetesCluster(k.db.Querier, req.KubernetesClusterName)
 		}
 
-		xtraDBClusters, err := client.ListXtraDBClusters(ctx,
+		xtraDBClusters, err := k.dbaasClient.ListXtraDBClusters(ctx,
 			&dbaascontrollerv1beta1.ListXtraDBClustersRequest{
 				KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 					Kubeconfig: kubernetesCluster.KubeConfig,
@@ -163,7 +137,7 @@ func (k kubernetesServer) UnregisterKubernetesCluster(ctx context.Context, req *
 			return status.Errorf(codes.FailedPrecondition, "Kubernetes cluster %s has XtraDB clusters", req.KubernetesClusterName)
 		}
 
-		psmdbClusters, err := client.ListPSMDBClusters(ctx, &dbaascontrollerv1beta1.ListPSMDBClustersRequest{
+		psmdbClusters, err := k.dbaasClient.ListPSMDBClusters(ctx, &dbaascontrollerv1beta1.ListPSMDBClustersRequest{
 			KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 				Kubeconfig: kubernetesCluster.KubeConfig,
 			},
@@ -223,18 +197,12 @@ func (k kubernetesServer) GetResources(ctx context.Context, req *dbaasv1beta1.Ge
 	if err != nil {
 		return nil, err
 	}
-
-	client, err := dbaas.NewClient(ctx, k.dbaasControllerAPIAddress)
-	if err != nil {
-		return nil, err
-	}
-
 	in := &dbaascontrollerv1beta1.GetResourcesRequest{
 		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
 			Kubeconfig: kubernetesCluster.KubeConfig,
 		},
 	}
-	response, err := client.GetResources(ctx, in)
+	response, err := k.dbaasClient.GetResources(ctx, in)
 	if err != nil {
 		return nil, err
 	}

@@ -48,7 +48,7 @@ func TestParseEvent(t *testing.T) {
 			2019-08-08 17:10:28,975 INFO exited: pmm-update-perform (exit status 0; expected)
 		`, "\n")
 
-		var actual []*event
+		var actual []*Event
 		for _, line := range log {
 			line = strings.TrimSpace(line)
 			if line == "" {
@@ -58,20 +58,20 @@ func TestParseEvent(t *testing.T) {
 				actual = append(actual, e)
 			}
 		}
-		expected := []*event{
+		expected := []*Event{
 			{Time: time.Date(2019, 8, 8, 17, 9, 41, 806000000, time.UTC), Type: starting, Program: "pmm-update-perform"},
-			{Time: time.Date(2019, 8, 8, 17, 9, 43, 509000000, time.UTC), Type: running, Program: "pmm-update-perform"},
-			{Time: time.Date(2019, 8, 8, 17, 9, 48, 494000000, time.UTC), Type: exitedUnexpected, Program: "pmm-update-perform"},
+			{Time: time.Date(2019, 8, 8, 17, 9, 43, 509000000, time.UTC), Type: Running, Program: "pmm-update-perform"},
+			{Time: time.Date(2019, 8, 8, 17, 9, 48, 494000000, time.UTC), Type: ExitedUnexpected, Program: "pmm-update-perform"},
 			{Time: time.Date(2019, 8, 8, 17, 9, 48, 506000000, time.UTC), Type: starting, Program: "pmm-update-perform"},
-			{Time: time.Date(2019, 8, 8, 17, 9, 49, 506000000, time.UTC), Type: running, Program: "pmm-update-perform"},
+			{Time: time.Date(2019, 8, 8, 17, 9, 49, 506000000, time.UTC), Type: Running, Program: "pmm-update-perform"},
 			{Time: time.Date(2019, 8, 8, 17, 9, 57, 284000000, time.UTC), Type: logReopen, Program: "supervisord"},
-			{Time: time.Date(2019, 8, 8, 17, 9, 57, 854000000, time.UTC), Type: stopping, Program: "pmm-managed"},
-			{Time: time.Date(2019, 8, 8, 17, 9, 59, 854000000, time.UTC), Type: stopping, Program: "pmm-managed"},
+			{Time: time.Date(2019, 8, 8, 17, 9, 57, 854000000, time.UTC), Type: Stopping, Program: "pmm-managed"},
+			{Time: time.Date(2019, 8, 8, 17, 9, 59, 854000000, time.UTC), Type: Stopping, Program: "pmm-managed"},
 			{Time: time.Date(2019, 8, 8, 17, 10, 0, 863000000, time.UTC), Type: stopped, Program: "pmm-managed"},
 			{Time: time.Date(2019, 8, 8, 17, 10, 01, 932000000, time.UTC), Type: starting, Program: "pmm-managed"},
-			{Time: time.Date(2019, 8, 8, 17, 10, 03, 6000000, time.UTC), Type: running, Program: "pmm-managed"},
+			{Time: time.Date(2019, 8, 8, 17, 10, 03, 6000000, time.UTC), Type: Running, Program: "pmm-managed"},
 			{Time: time.Date(2019, 8, 8, 17, 10, 27, 686000000, time.UTC), Type: starting, Program: "dashboard-upgrade"},
-			{Time: time.Date(2019, 8, 8, 17, 10, 27, 686000000, time.UTC), Type: running, Program: "dashboard-upgrade"},
+			{Time: time.Date(2019, 8, 8, 17, 10, 27, 686000000, time.UTC), Type: Running, Program: "dashboard-upgrade"},
 			{Time: time.Date(2019, 8, 8, 17, 10, 27, 761000000, time.UTC), Type: exitedExpected, Program: "dashboard-upgrade"},
 			{Time: time.Date(2019, 8, 8, 17, 10, 28, 975000000, time.UTC), Type: exitedExpected, Program: "pmm-update-perform"},
 		}
@@ -93,7 +93,7 @@ func TestParseEvent(t *testing.T) {
 			2019-08-09 09:18:35,885 INFO gave up: pmm-update-check entered FATAL state, too many start retries too quickly
 		`, "\n")
 
-		var actual []*event
+		var actual []*Event
 		for _, line := range log {
 			line = strings.TrimSpace(line)
 			if line == "" {
@@ -103,16 +103,16 @@ func TestParseEvent(t *testing.T) {
 				actual = append(actual, e)
 			}
 		}
-		expected := []*event{
+		expected := []*Event{
 			{Time: time.Date(2019, 8, 9, 9, 18, 25, 667000000, time.UTC), Type: starting, Program: "pmm-update-check"},
-			{Time: time.Date(2019, 8, 9, 9, 18, 26, 539000000, time.UTC), Type: exitedUnexpected, Program: "pmm-update-check"},
+			{Time: time.Date(2019, 8, 9, 9, 18, 26, 539000000, time.UTC), Type: ExitedUnexpected, Program: "pmm-update-check"},
 			{Time: time.Date(2019, 8, 9, 9, 18, 27, 543000000, time.UTC), Type: starting, Program: "pmm-update-check"},
-			{Time: time.Date(2019, 8, 9, 9, 18, 28, 324000000, time.UTC), Type: exitedUnexpected, Program: "pmm-update-check"},
+			{Time: time.Date(2019, 8, 9, 9, 18, 28, 324000000, time.UTC), Type: ExitedUnexpected, Program: "pmm-update-check"},
 			{Time: time.Date(2019, 8, 9, 9, 18, 30, 335000000, time.UTC), Type: starting, Program: "pmm-update-check"},
-			{Time: time.Date(2019, 8, 9, 9, 18, 31, 109000000, time.UTC), Type: exitedUnexpected, Program: "pmm-update-check"},
+			{Time: time.Date(2019, 8, 9, 9, 18, 31, 109000000, time.UTC), Type: ExitedUnexpected, Program: "pmm-update-check"},
 			{Time: time.Date(2019, 8, 9, 9, 18, 34, 119000000, time.UTC), Type: starting, Program: "pmm-update-check"},
-			{Time: time.Date(2019, 8, 9, 9, 18, 34, 883000000, time.UTC), Type: exitedUnexpected, Program: "pmm-update-check"},
-			{Time: time.Date(2019, 8, 9, 9, 18, 35, 885000000, time.UTC), Type: fatal, Program: "pmm-update-check"},
+			{Time: time.Date(2019, 8, 9, 9, 18, 34, 883000000, time.UTC), Type: ExitedUnexpected, Program: "pmm-update-check"},
+			{Time: time.Date(2019, 8, 9, 9, 18, 35, 885000000, time.UTC), Type: Fatal, Program: "pmm-update-check"},
 		}
 		assert.Equal(t, expected, actual)
 	})
