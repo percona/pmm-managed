@@ -22,16 +22,16 @@ import (
 	"sync"
 	"time"
 
-	"google.golang.org/grpc/codes"
-
-	"github.com/percona/pmm-managed/services/supervisord"
-	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-
-	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
+	"google.golang.org/grpc/codes"
+
+	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
+	"github.com/percona/pmm/version"
+
+	"github.com/percona/pmm-managed/services/supervisord"
 )
 
 type handler func() (interface{}, error)
