@@ -236,7 +236,7 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 	}
 
 	switch s.AgentType {
-	case MySQLdExporterType, ProxySQLExporterType:
+	case MySQLdExporterType:
 		cfg := mysql.NewConfig()
 		cfg.User = username
 		cfg.Passwd = password
@@ -250,8 +250,6 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		cfg.DBName = database
 		cfg.Params = make(map[string]string)
 		if s.TLS {
-			// TODO: how certs and other parameters are going to be specified? We need to implement calling RegisterTLSConfig
-			// See https://godoc.org/github.com/go-sql-driver/mysql#RegisterTLSConfig
 			if s.TLSSkipVerify {
 				cfg.Params["tls"] = "skip-verify"
 			} else {
@@ -278,8 +276,6 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		cfg.DBName = database
 		cfg.Params = make(map[string]string)
 		if s.TLS {
-			// TODO: how certs and other parameters are going to be specified? We need to implement calling RegisterTLSConfig
-			// See https://godoc.org/github.com/go-sql-driver/mysql#RegisterTLSConfig
 			if s.TLSSkipVerify {
 				cfg.Params["tls"] = "skip-verify"
 			} else {
@@ -293,6 +289,32 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		// QAN code in pmm-agent uses reform which requires those fields
 		cfg.ClientFoundRows = true
 		cfg.ParseTime = true
+
+		return cfg.FormatDSN()
+
+	case ProxySQLExporterType:
+		cfg := mysql.NewConfig()
+		cfg.User = username
+		cfg.Passwd = password
+		cfg.Net = "unix"
+		cfg.Addr = socket
+		if socket == "" {
+			cfg.Net = "tcp"
+			cfg.Addr = net.JoinHostPort(host, strconv.Itoa(int(port)))
+		}
+		cfg.Timeout = dialTimeout
+		cfg.DBName = database
+		cfg.Params = make(map[string]string)
+		if s.TLS {
+			if s.TLSSkipVerify {
+				cfg.Params["tls"] = "skip-verify"
+			} else {
+				cfg.Params["tls"] = "true"
+			}
+		}
+
+		// MultiStatements must not be used as it enables SQL injections (in particular, in pmm-agent's Actions)
+		cfg.MultiStatements = false
 
 		return cfg.FormatDSN()
 

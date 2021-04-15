@@ -106,6 +106,24 @@ func TestMySQLdExporterConfig(t *testing.T) {
 		actual := mysqldExporterConfig(mysql, exporter, exposeSecrets)
 		assert.Equal(t, "DATA_SOURCE_NAME=tcp(1.2.3.4:3306)/?timeout=1s", actual.Env[0])
 	})
+
+	t.Run("SSLEnabled", func(t *testing.T) {
+		exporter.TLS = true
+		exporter.MySQLOptions = &models.MySQLOptions{
+			TLSCa:   "content-of-tls-ca",
+			TLSCert: "content-of-tls-certificate-key",
+			TLSKey:  "content-of-tls-key",
+		}
+		actual := mysqldExporterConfig(mysql, exporter, exposeSecrets)
+		expected := "DATA_SOURCE_NAME=tcp(1.2.3.4:3306)/?timeout=1s&tls=custom"
+		assert.Equal(t, expected, actual.Env[0])
+		expectedFiles := map[string]string{
+			"tlsCa":   exporter.MySQLOptions.TLSCa,
+			"tlsCert": exporter.MySQLOptions.TLSCert,
+			"tlsKey":  exporter.MySQLOptions.TLSKey,
+		}
+		assert.Equal(t, expectedFiles, actual.TextFiles)
+	})
 }
 
 func TestMySQLdExporterConfigTablestatsGroupDisabled(t *testing.T) {
