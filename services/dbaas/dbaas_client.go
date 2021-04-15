@@ -27,6 +27,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/percona/pmm/version"
@@ -165,7 +166,7 @@ func (c *Client) watchDbaasControllerEvents(events chan *supervisord.Event) {
 		case r := <-c.requests:
 			if c.conn == nil {
 				r.responseCh <- &apiResponse{
-					err: grpc.Errorf(codes.Unavailable, "dbaas-controller is not running"),
+					err: status.Errorf(codes.Unavailable, "dbaas-controller is not running"),
 					out: nil,
 				}
 				break
