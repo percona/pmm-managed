@@ -18,9 +18,9 @@ package backup
 
 import (
 	"context"
-	"github.com/pkg/errors"
 
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -121,18 +121,10 @@ func (s *BackupsService) prepareBackupJob(serviceID, artifactID string, jobType 
 	var res *models.JobResult
 	var dbConfig models.DBConfig
 	txErr := s.db.InTransaction(func(tx *reform.TX) error {
-		svc, err := models.FindServiceByID(tx.Querier, serviceID)
+		var err error
+		dbConfig, err = models.FindDBConfigForService(tx.Querier, serviceID)
 		if err != nil {
 			return err
-		}
-
-		dbAgents, err := models.FindAgentsOnServiceWithType(tx.Querier, serviceID, svc.ServiceType)
-		if err != nil {
-			return err
-		}
-
-		if len(dbAgents) == 0 {
-			return errors.Errorf("agents not found for db service")
 		}
 
 		pmmAgents, err := models.FindPMMAgentsForService(tx.Querier, serviceID)
@@ -145,8 +137,6 @@ func (s *BackupsService) prepareBackupJob(serviceID, artifactID string, jobType 
 		}
 
 		pmmAgent := pmmAgents[0]
-		dbAgent := dbAgents[0]
-		dbConfig = dbAgent.DBConfig(svc)
 
 		res, err = models.CreateJobResult(tx.Querier, pmmAgent.AgentID, jobType, &models.JobResultData{
 			MySQLBackup: &models.MySQLBackupJobResult{

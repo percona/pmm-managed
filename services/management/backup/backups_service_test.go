@@ -18,16 +18,18 @@ package backup
 
 import (
 	"context"
+	"testing"
+
 	"github.com/AlekSi/pointer"
-	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/utils/testdb"
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
-	"testing"
+
+	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/utils/testdb"
 )
 
 func setup(t *testing.T, db *reform.DB, serviceName string) *models.Agent {
@@ -51,6 +53,8 @@ func setup(t *testing.T, db *reform.DB, serviceName string) *models.Agent {
 	agent, err := models.CreateAgent(db.Querier, models.MySQLdExporterType, &models.CreateAgentParams{
 		PMMAgentID: pmmAgent.AgentID,
 		ServiceID:  mysql.ServiceID,
+		Username:   "user",
+		Password:   "password",
 	})
 	require.NoError(t, err)
 	return agent
