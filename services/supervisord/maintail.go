@@ -32,7 +32,7 @@ const (
 	Running          eventType = "RUNNING"
 	exitedExpected   eventType = "EXITED (expected)"
 	ExitedUnexpected eventType = "EXITED (unexpected)"
-	Fatal            eventType = "FATAL"
+	fatal            eventType = "FATAL"
 
 	unknown   eventType = "unknown"
 	logReopen eventType = "logreopen"
@@ -55,7 +55,7 @@ var (
 		runningRE:          Running,
 		exitedExpectedRE:   exitedExpected,
 		exitedUnexpectedRE: ExitedUnexpected,
-		fatalRE:            Fatal,
+		fatalRE:            fatal,
 		logReopenRE:        logReopen,
 	}
 )

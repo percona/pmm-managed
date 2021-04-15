@@ -71,7 +71,7 @@ type Client struct {
 }
 
 // NewClient creates new Client object.
-func NewClient(ctx context.Context, dbaasControllerAPIAddress string, supervisor *supervisord.Service) *Client {
+func NewClient(dbaasControllerAPIAddress string, supervisor *supervisord.Service) *Client {
 	c := &Client{
 		l:                         logrus.WithField("component", "dbaas.Client"),
 		dbaasControllerAPIAddress: dbaasControllerAPIAddress,
@@ -168,8 +168,8 @@ func (c *Client) watchDbaasControllerEvents(events chan *supervisord.Event) {
 				break
 			}
 			c.l.Debugf("Got request: %v", r)
+			wg.Add(1)
 			go func(r *apiRequest) {
-				wg.Add(1)
 				out, err := r.handler()
 				r.responseCh <- &apiResponse{err: err, out: out}
 				wg.Done()

@@ -711,7 +711,7 @@ func main() {
 		l.Fatalf("Failed to get settings: %+v.", err)
 	}
 
-	dbaasClient := dbaas.NewClient(ctx, *dbaasControllerAPIAddrF, supervisord)
+	dbaasClient := dbaas.NewClient(*dbaasControllerAPIAddrF, supervisord)
 	if settings.DBaaS.Enabled {
 		ctx, cancel := context.WithTimeout(ctx, time.Second*20)
 		err := dbaasClient.Connect(ctx)

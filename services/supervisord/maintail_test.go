@@ -112,7 +112,7 @@ func TestParseEvent(t *testing.T) {
 			{Time: time.Date(2019, 8, 9, 9, 18, 31, 109000000, time.UTC), Type: ExitedUnexpected, Program: "pmm-update-check"},
 			{Time: time.Date(2019, 8, 9, 9, 18, 34, 119000000, time.UTC), Type: starting, Program: "pmm-update-check"},
 			{Time: time.Date(2019, 8, 9, 9, 18, 34, 883000000, time.UTC), Type: ExitedUnexpected, Program: "pmm-update-check"},
-			{Time: time.Date(2019, 8, 9, 9, 18, 35, 885000000, time.UTC), Type: Fatal, Program: "pmm-update-check"},
+			{Time: time.Date(2019, 8, 9, 9, 18, 35, 885000000, time.UTC), Type: fatal, Program: "pmm-update-check"},
 		}
 		assert.Equal(t, expected, actual)
 	})

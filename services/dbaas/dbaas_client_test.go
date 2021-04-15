@@ -45,7 +45,7 @@ func TestClient(t *testing.T) {
 		pmmUpdateCheck := supervisord.NewPMMUpdateChecker(logrus.WithField("component", "supervisord/pmm-update-checker"))
 		supervisor := supervisord.New(supervisordConfigDir, pmmUpdateCheck, vmParams)
 
-		c := NewClient(ctx, "127.0.0.1:20201", supervisor)
+		c := NewClient("127.0.0.1:20201", supervisor)
 		err = c.Connect(ctx)
 		require.NoError(t, err, "Cannot connect to dbaas-controller")
 		t.Cleanup(func() {
