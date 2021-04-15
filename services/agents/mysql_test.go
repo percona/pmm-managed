@@ -137,6 +137,12 @@ func TestMySQLdExporterConfigTablestatsGroupDisabled(t *testing.T) {
 		Username:                       pointer.ToString("username"),
 		Password:                       pointer.ToString("s3cur3 p@$$w0r4."),
 		TableCountTablestatsGroupLimit: -1,
+		TLS:                            true,
+		MySQLOptions: &models.MySQLOptions{
+			TLSCa:   "content-of-tls-ca",
+			TLSCert: "content-of-tls-cert",
+			TLSKey:  "content-of-tls-key",
+		},
 	}
 	actual := mysqldExporterConfig(mysql, exporter, redactSecrets)
 	expected := &agentpb.SetStateRequest_AgentProcess{
@@ -176,10 +182,15 @@ func TestMySQLdExporterConfigTablestatsGroupDisabled(t *testing.T) {
 			"--web.listen-address=:{{ .listen_port }}",
 		},
 		Env: []string{
-			"DATA_SOURCE_NAME=username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:3306)/?timeout=1s",
+			"DATA_SOURCE_NAME=username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:3306)/?timeout=1s&tls=custom",
 			"HTTP_AUTH=pmm:agent-id",
 		},
 		RedactWords: []string{"s3cur3 p@$$w0r4."},
+		TextFiles: map[string]string{
+			"tlsCa":   "content-of-tls-ca",
+			"tlsCert": "content-of-tls-cert",
+			"tlsKey":  "content-of-tls-key",
+		},
 	}
 	requireNoDuplicateFlags(t, actual.Args)
 	require.Equal(t, expected.Args, actual.Args)
@@ -189,13 +200,13 @@ func TestMySQLdExporterConfigTablestatsGroupDisabled(t *testing.T) {
 	t.Run("EmptyPassword", func(t *testing.T) {
 		exporter.Password = nil
 		actual := mysqldExporterConfig(mysql, exporter, exposeSecrets)
-		assert.Equal(t, "DATA_SOURCE_NAME=username@tcp(1.2.3.4:3306)/?timeout=1s", actual.Env[0])
+		assert.Equal(t, "DATA_SOURCE_NAME=username@tcp(1.2.3.4:3306)/?timeout=1s&tls=custom", actual.Env[0])
 	})
 
 	t.Run("EmptyUsername", func(t *testing.T) {
 		exporter.Username = nil
 		actual := mysqldExporterConfig(mysql, exporter, exposeSecrets)
-		assert.Equal(t, "DATA_SOURCE_NAME=tcp(1.2.3.4:3306)/?timeout=1s", actual.Env[0])
+		assert.Equal(t, "DATA_SOURCE_NAME=tcp(1.2.3.4:3306)/?timeout=1s&tls=custom", actual.Env[0])
 	})
 }
 
