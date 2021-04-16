@@ -7,6 +7,10 @@ required = [
   "gopkg.in/reform.v1/reform",
 ]
 
+ignored = [
+  "github.com/percona/pmm-managed/api-tests*"
+]
+
 [prune]
   go-tests = true
   non-go = true
