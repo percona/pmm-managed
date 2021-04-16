@@ -365,7 +365,7 @@ func testS3Config(c *S3LocationConfig) error {
 
 	minioClient, err := minio.New(host, &minio.Options{
 		Secure: secure,
-		Creds: credentials.NewStaticV4(c.AccessKey, c.SecretKey, ""),
+		Creds:  credentials.NewStaticV4(c.AccessKey, c.SecretKey, ""),
 	})
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "%s", err)
