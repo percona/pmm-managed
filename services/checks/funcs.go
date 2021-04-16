@@ -63,6 +63,7 @@ func parseVersion(args ...interface{}) (interface{}, error) {
 		"patch": int64(p.Patch),
 		"rest":  p.Rest,
 		"num":   int64(p.Num),
+		"numrest":   int64(p.NumRest),
 	}, nil
 }
 
