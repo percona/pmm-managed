@@ -14,15 +14,22 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-
 //go:build tools
 // +build tools
 
 package tools
 
 import (
-	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
-	_ "github.com/jstemmer/go-junit-report"
-	_ "github.com/reviewdog/reviewdog/cmd/reviewdog"
+	_ "github.com/kevinburke/go-bindata/go-bindata"
+	_ "github.com/vektra/mockery/cmd/mockery"
 	_ "golang.org/x/tools/cmd/goimports"
+	_ "gopkg.in/reform.v1/reform"
+
+	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
+	_ "github.com/reviewdog/reviewdog/cmd/reviewdog"
+	_ "github.com/vektra/mockery/cmd/mockery"
+	_ "golang.org/x/perf/cmd/benchstat"
+	_ "golang.org/x/tools/cmd/goimports"
+	_ "gopkg.in/reform.v1/reform"
+	_ "gopkg.in/reform.v1/reform-db"
 )

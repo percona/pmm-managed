@@ -17,12 +17,14 @@
 package models
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/minio/minio-go"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -361,12 +363,15 @@ func testS3Config(c *S3LocationConfig) error {
 		return err
 	}
 
-	minioClient, err := minio.New(host, c.AccessKey, c.SecretKey, secure)
+	minioClient, err := minio.New(host, &minio.Options{
+		Secure: secure,
+		Creds: credentials.NewStaticV4(c.AccessKey, c.SecretKey, ""),
+	})
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "%s", err)
 	}
 
-	exists, err := minioClient.BucketExists(c.BucketName)
+	exists, err := minioClient.BucketExists(context.Background(), c.BucketName)
 	if err != nil {
 		if er, ok := err.(minio.ErrorResponse); ok {
 			return status.Errorf(codes.InvalidArgument, "%s: %s.", er.Code, er.Message)
