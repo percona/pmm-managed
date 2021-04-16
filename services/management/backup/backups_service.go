@@ -18,7 +18,6 @@ package backup
 
 import (
 	"context"
-	"github.com/AlekSi/pointer"
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -92,7 +91,7 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 			return err
 		}
 
-		job, config, err = s.prepareBackupJob(svc, artifact.ID, models.MySQLBackupJob, dataModel)
+		job, config, err = s.prepareBackupJob(svc, artifact.ID, models.MySQLBackupJob)
 		if err != nil {
 			return err
 		}
@@ -135,7 +134,7 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 	}, nil
 }
 
-func (s *BackupsService) prepareBackupJob(service *models.Service, artifactID string, jobType models.JobType, dataModel models.DataModel) (*models.JobResult, models.DBConfig, error) {
+func (s *BackupsService) prepareBackupJob(service *models.Service, artifactID string, jobType models.JobType) (*models.JobResult, models.DBConfig, error) {
 	var res *models.JobResult
 	var dbConfig models.DBConfig
 	txErr := s.db.InTransaction(func(tx *reform.TX) error {
@@ -154,20 +153,7 @@ func (s *BackupsService) prepareBackupJob(service *models.Service, artifactID st
 			return errors.Errorf("pmmAgent not found for service")
 		}
 
-		var pmmAgent *models.Agent
-		for _, agent := range pmmAgents {
-			// If dataModel is physical then also nodes have to be same.
-			if dataModel != models.PhysicalDataModel || service.NodeID == pointer.GetString(agent.RunsOnNodeID) {
-				pmmAgent = agent
-				break
-			}
-		}
-
-		if pmmAgent == nil {
-			return errors.Errorf("no suitable pmmAgent found")
-		}
-
-		res, err = models.CreateJobResult(tx.Querier, pmmAgent.AgentID, jobType, &models.JobResultData{
+		res, err = models.CreateJobResult(tx.Querier, pmmAgents[0].AgentID, jobType, &models.JobResultData{
 			MySQLBackup: &models.MySQLBackupJobResult{
 				ArtifactID: artifactID,
 			},
