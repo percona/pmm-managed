@@ -19,7 +19,7 @@ package backup
 import (
 	"testing"
 
-	"github.com/brianvoe/gofakeit/v6"
+	gofakeit "github.com/brianvoe/gofakeit/v6"
 	backupClient "github.com/percona/pmm/api/managementpb/backup/json/client"
 	"github.com/percona/pmm/api/managementpb/backup/json/client/locations"
 	"github.com/stretchr/testify/assert"

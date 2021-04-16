@@ -19,7 +19,7 @@ package ia
 import (
 	"testing"
 
-	"github.com/brianvoe/gofakeit/v6"
+	gofakeit "github.com/brianvoe/gofakeit/v6"
 	channelsClient "github.com/percona/pmm/api/managementpb/ia/json/client"
 	"github.com/percona/pmm/api/managementpb/ia/json/client/channels"
 	"github.com/stretchr/testify/assert"

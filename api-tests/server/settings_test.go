@@ -27,7 +27,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brianvoe/gofakeit/v6"
+	gofakeit "github.com/brianvoe/gofakeit/v6"
 	"github.com/percona/pmm/api/alertmanager/amclient"
 	"github.com/percona/pmm/api/alertmanager/amclient/alert"
 	serverClient "github.com/percona/pmm/api/serverpb/json/client"
