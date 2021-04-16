@@ -33,7 +33,7 @@ const (
 	Running eventType = "RUNNING"
 	// ExitedExpected indicates that a process exited expectedly.
 	ExitedExpected eventType = "EXITED (expected)"
-	// ExitedExpected indicates that a process exited unexpectedly.
+	// ExitedUnexpected indicates that a process exited unexpectedly.
 	ExitedUnexpected eventType = "EXITED (unexpected)"
 
 	stopped  eventType = "STOPPED"

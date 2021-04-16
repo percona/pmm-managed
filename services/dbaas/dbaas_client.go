@@ -161,7 +161,7 @@ func (c *Client) watchDbaasControllerEvents() {
 			c.l.Info("Connected to dbaas-controller API.")
 		// Handle supervisord events.
 		case event := <-c.events:
-			c.l.Debug("Processing supervisord event: %v", event)
+			c.l.Debugf("Processing supervisord event: %v", event)
 			c.subscribeToSupervisordEvents()
 			if event.Time.Before(watchStarted) {
 				c.l.Warnf("Skipping supervisord event because it was created before the watch of events started: %v", event)
