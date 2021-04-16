@@ -20,7 +20,7 @@ branches:
   except:
     - /^PMM\-\d{4}/
 
-go_import_path: github.com/Percona-Lab/pmm-api-tests
+go_import_path: github.com/percona/pmm-managed/api-tests
 
 before_cache:
   - go clean -testcache

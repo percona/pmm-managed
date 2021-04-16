@@ -10,7 +10,7 @@ linters-settings:
       - github.com/gogo/protobuf/proto
 
   goimports:
-    local-prefixes: github.com/Percona-Lab/pmm-api-tests
+    local-prefixes: github.com/percona/pmm-managed/api-tests
 
   lll:
     line-length: 170

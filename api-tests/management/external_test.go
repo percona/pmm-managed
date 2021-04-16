@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 
-	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
+	pmmapitests "github.com/percona/pmm-managed/api-tests"
 )
 
 func TestAddExternal(t *testing.T) {

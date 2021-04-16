@@ -104,7 +104,7 @@ func main() {
 		}
 		if info.IsDir() {
 			switch info.Name() {
-			case ".git", "vendor":
+			case ".git", "vendor", "api-tests":
 				return filepath.SkipDir
 			default:
 				return nil

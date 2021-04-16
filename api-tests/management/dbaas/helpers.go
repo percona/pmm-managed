@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
+	pmmapitests "github.com/percona/pmm-managed/api-tests"
 )
 
 func registerKubernetesCluster(t *testing.T, kubernetesClusterName string, kubeconfig string) {

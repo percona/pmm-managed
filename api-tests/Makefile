@@ -32,7 +32,7 @@ FILES = $(shell find . -type f -name '*.go')
 
 format:                         ## Format source code.
 	gofmt -w -s $(FILES)
-	$(BIN_PATH)/goimports -local github.com/Percona-Lab/pmm-api-tests -l -w $(FILES)
+	$(BIN_PATH)/goimports -local github.com/percona/pmm-managed/api-tests -l -w $(FILES)
 
 clean:
 	rm -f ./pmm-api-tests-output.txt
