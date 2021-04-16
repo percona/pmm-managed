@@ -1,0 +1,48 @@
+dist: bionic
+language: go
+
+go:
+  - 1.15.x
+  - tip
+
+env:
+  global:
+    # REVIEWDOG_GITHUB_API_TOKEN
+    secure: "jgi0U8P36xvBnfdkBSXfgkx3dB9byizRXL1EuIQRSjM0e+tVi1X6+pq6lfWusLixKX2j78trK0+0vSwbkdjkk0uOIAB1dx/9EoRJoNg+pMfKQNXC83OwuCVYAbZnEd7Ln8Dfxw9Y0+SH0+KdwgQnNqJohN9SivzBn3WQSNQrNaqGbM3Q63jFzT/pn1Ddq9XqaeO1LJbqY2u0+Sw/SSVO8VBlLnmXa/UOjed8IEIuy25qVDW++cbUgKRXMKoAeZ16IjgCxNL72m31KYjfqyRXhJSLVp0UzIRoIM1b1q4qxFiBoiIBkkMrE9WqF2AbpwqglJALEGnzHw1LAqwkTKnTVy557qgbETeKmLlj7fZ7LYmzKckdlgHKfImUO0GzFjqaPRS1dj61dUDMQ9OwS6es3MOg4EM+ZkOG7tZaa/PxDP2gUoS1ppP6XDUCXtrOlefwgA8mK9sZED2DG9AQFQ1/5b8QLg/7iX6Kf/2LvjMPqd8E1ZFOm7VLMCQe2fub9MlYSgkiRphKdp2RSYQjo3edSno1A3TrXEVxeIRGS+oGOQ51dUminrPEn04GO0fK0svNPX1qTQg8OSdfdvw+agaYB8UqozMWnx4ESXXYIPyLR3bplyD1/1gsGC36rk6PujUZfhcTtp9O2hl/o+OebYgoNU5KTE+OE6TaB+575MSA6SM="
+
+matrix:
+  fast_finish: true
+  allow_failures:
+    - go: tip
+
+# skip non-trunk PMM-XXXX branch builds, but still build pull requests
+branches:
+  except:
+    - /^PMM\-\d{4}/
+
+go_import_path: github.com/Percona-Lab/pmm-api-tests
+
+before_cache:
+  - go clean -testcache
+
+cache:
+  directories:
+    - /home/travis/.cache/go-build
+    - /home/travis/gopath/pkg
+
+install: skip
+
+before_script:
+  - make init
+  # static analyze
+  - make ci-reviewdog
+
+script:
+  - make build
+
+notifications:
+  slack:
+    on_success: change
+    on_failure: always
+    rooms:
+      secure: jl8m0thPSqXXGZqjh5ysqKz+SsAupsEcJdiaMvO4hemjJYqWvsXLjRX7DXNyery05/82LvBHuuop7uDkW/kRVRoX8QDv1clafXXaOe/llHQu3aYwPIkKM1vk+PFkK2A+yHK/pnLSuiA4/bT8qo8U0oVHIxoNiaBtbK1jx3theA/QDZZoUUwI/nt7AT8yld4uPCSl/pJlc2H01yJTw7mpWSNARBtIQkhjlHpT0NGvcvdIPk7MzcYaBNdbHBp1b8jLmTvY4ji4J/QxlUmtMFiaokcRoBjmcWq4x7cwqrNPLYc3fBADIk8ZZi/NS6O6Tl95OqEpqrLon0zgAEYrA0ahBwgJ1aW1t2D/Nl4Z3tZV4IfJkks59kjZvjIOABzYcxxrh/CiBU4XbM0Oqn4R7w2FuS1xi/SQLrTgEkVtchUDuYpNmTyczQdFu8/+edNX0WkZwe+F7qtlotPZZ9hlSdtsMwsWJ6PM+/Clp1Z9dSghHI5rRqwiByVz67TM22Jz6R8TRXK94qS0BC4x2WKJGbDvcnCWtV1Vjjv5arEx6jNUAeipsgqHYat3TQoLWDnbqRca2w6QkmJgSV3Utccbtv51dSvLOo7gbE7ijjUB+zGe/Q5JY9jD4pXnso7gClTTV/G4QOX/mkh9829W0V2J7Miv0Nt8mNI0r5USiInxpTqgdFY=
