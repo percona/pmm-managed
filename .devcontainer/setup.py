@@ -71,7 +71,6 @@ def install_tools():
     """Installs Go developer tools."""
 
     run_commands([
-        "curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh",
         "curl https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /root/go/bin",
         "curl https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh | sh -s -- -b /root/go/bin",
 
@@ -87,15 +86,14 @@ def install_tools():
     ])
 
 
-def install_vendored_tools():
+def install_go_tools():
     """Installs pmm-managed-specific Go tools."""
 
     run_commands([
-        "go install ./vendor/github.com/BurntSushi/go-sumtype",
-        "go install ./vendor/github.com/kevinburke/go-bindata/go-bindata",
-        "go install ./vendor/github.com/vektra/mockery/cmd/mockery",
-        "go install ./vendor/golang.org/x/tools/cmd/goimports",
-        "go install ./vendor/gopkg.in/reform.v1/reform",
+        "go install -modfile=tools/go.mod github.com/kevinburke/go-bindata/go-bindata",
+        "go install -modfile=tools/go.mod github.com/vektra/mockery/cmd/mockery",
+        "go install -modfile=tools/go.mod golang.org/x/tools/cmd/goimports",
+        "go install -modfile=tools/go.mod gopkg.in/reform.v1/reform",
     ])
 
 
@@ -133,8 +131,8 @@ def main():
     # install tools (requires Go)
     install_tools_p = multiprocessing.Process(target=install_tools)
     install_tools_p.start()
-    install_vendored_tools_p = multiprocessing.Process(target=install_vendored_tools)
-    install_vendored_tools_p.start()
+    install_go_tools_p = multiprocessing.Process(target=install_go_tools)
+    install_go_tools_p.start()
 
     # make install (requires make package)
     install_packages_p.join()
@@ -142,7 +140,7 @@ def main():
 
     # wait for everything else to finish
     install_tools_p.join()
-    install_vendored_tools_p.join()
+    install_go_tools_p.join()
 
     # do basic setup
     setup()

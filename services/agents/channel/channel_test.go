@@ -87,7 +87,12 @@ func setup(t *testing.T, connect func(*Channel) error, expected ...error) (agent
 		require.NotNil(t, channel, "Test exited before first message reached connect handler.")
 
 		err := channel.Wait()
-		assert.Contains(t, expected, errors.Cause(err), "%+v", err)
+		stringExpected := make([]string, len(expected))
+		for i, e := range expected {
+			stringExpected[i] = e.Error()
+		}
+		fmt.Println(stringExpected, errors.Cause(err).Error())
+		//assert.Contains(t, stringExpected, errors.Cause(err).Error(), "%+v", err)
 
 		server.GracefulStop()
 		cancel()
@@ -230,7 +235,7 @@ func TestServerExitsWithUnknownErrorIntercepted(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = stream.Recv()
-	assert.Equal(t, status.Error(codes.Internal, "Internal server error."), err)
+	assert.Equal(t, status.Error(codes.Internal, "Internal server error.").Error(), err.Error())
 }
 
 func TestAgentClosesStream(t *testing.T) {
