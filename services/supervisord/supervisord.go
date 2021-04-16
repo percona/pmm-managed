@@ -205,9 +205,9 @@ func (s *Service) ForceCheckUpdates(ctx context.Context) error {
 	return s.pmmUpdateCheck.check(ctx)
 }
 
-// Subscribe returns a channel that is fed by one of eventTypes when it comes,
-// the channel is then closed. User of this method should call the method again
-// after recieving the event if continuous watch for events is desired.
+// Subscribe returns a channel that is fed by one of eventTypes. When when event
+// is sent to the channle, the channel is closed. User of this method should call
+// the method again after recieving the event if continuous watch for events is desired.
 func (s *Service) Subscribe(program string, eventTypes ...eventType) chan *Event {
 	ch := make(chan *Event, 1)
 	s.eventsM.Lock()

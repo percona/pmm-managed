@@ -66,7 +66,7 @@ var (
 	}
 )
 
-// event represents supervisord program event.
+// Event represents supervisord program event.
 type Event struct {
 	Time    time.Time
 	Type    eventType

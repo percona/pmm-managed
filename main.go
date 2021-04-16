@@ -710,7 +710,7 @@ func main() {
 	if err != nil {
 		l.Fatalf("Failed to get settings: %+v.", err)
 	}
-	l.Debug("creating a new dbaas client in main")
+
 	dbaasClient := dbaas.NewClient(*dbaasControllerAPIAddrF, supervisord)
 	if settings.DBaaS.Enabled {
 		l.Debug("creating a new dbaas client in main - dbaas is enabled")
@@ -718,16 +718,15 @@ func main() {
 		err := dbaasClient.Connect(ctx)
 		cancel()
 		if err != nil {
-			l.Fatalf("failed to connect to dbaas-controller API on %s: %v", *dbaasControllerAPIAddrF, err)
+			l.Fatalf("Failed to connect to dbaas-controller API on %s: %v", *dbaasControllerAPIAddrF, err)
 		}
 		defer func() {
 			err := dbaasClient.Disconnect()
 			if err != nil {
-				l.Fatalf("failed to disconnect from dbaas-controller API: %v", err)
+				l.Fatalf("Failed to disconnect from dbaas-controller API: %v", err)
 			}
 		}()
 	}
-	l.Debug("after creating a new dbaas client in main")
 
 	authServer := grafana.NewAuthServer(grafanaClient, awsInstanceChecker)
 
