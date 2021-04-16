@@ -337,7 +337,7 @@ func (s *Service) programRunning(program string) bool {
 		return true
 	case ExitedUnexpected: // will be restarted
 		return true
-	case exitedExpected, fatal: // will not be restarted
+	case ExitedExpected, fatal: // will not be restarted
 		return false
 	case stopped: // we don't know
 		fallthrough

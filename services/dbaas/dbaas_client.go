@@ -69,9 +69,11 @@ type Client struct {
 	logsClient                controllerv1beta1.LogsAPIClient
 	conn                      *grpc.ClientConn
 	dbaasControllerAPIAddress string
+	supervisor                *supervisord.Service
 	disconnectCh              chan disconnectRequest
 	connectCh                 chan connectRequest
 	requests                  chan *apiRequest
+	events                    chan *supervisord.Event
 }
 
 // NewClient creates new Client object.
@@ -79,27 +81,33 @@ func NewClient(dbaasControllerAPIAddress string, supervisor *supervisord.Service
 	c := &Client{
 		l:                         logrus.WithField("component", "dbaas.Client"),
 		dbaasControllerAPIAddress: dbaasControllerAPIAddress,
-		disconnectCh:              make(chan disconnectRequest),
-		connectCh:                 make(chan connectRequest),
+		supervisor:                supervisor,
+		disconnectCh:              make(chan disconnectRequest, 2),
+		connectCh:                 make(chan connectRequest, 2),
 		requests:                  make(chan *apiRequest, 8),
 	}
-	events := supervisor.Subscribe("dbaas-controller", supervisord.Running, supervisord.Stopping, supervisord.ExitedUnexpected)
-	go c.watchDbaasControllerEvents(events)
+
+	go c.watchDbaasControllerEvents()
 	return c
 }
 
-func (c *Client) watchDbaasControllerEvents(events chan *supervisord.Event) {
+func (c *Client) subscribeToSupervisordEvents() {
+	c.events = c.supervisor.Subscribe("dbaas-controller", supervisord.Running, supervisord.Stopping, supervisord.ExitedUnexpected, supervisord.ExitedExpected)
+}
+
+func (c *Client) watchDbaasControllerEvents() {
+	watchStarted := time.Now()
+	c.subscribeToSupervisordEvents()
 	wg := new(sync.WaitGroup)
 	var cancel context.CancelFunc
 	for {
 		select {
 		case r := <-c.disconnectCh:
-			c.l.Debug("Disconnecting from dbaas-controller API...")
+			c.l.Info("Disconnecting from dbaas-controller API.")
 			wg.Wait()
-			c.l.Debug("...all requests done.")
 
 			if c.conn == nil {
-				c.l.Warnf("trying to disconnect from dbaas-controller API but the connection is not up")
+				c.l.Warnf("Trying to disconnect from dbaas-controller API but the connection is not up.")
 				if r.responseCh != nil {
 					r.responseCh <- errorResponse{}
 				}
@@ -121,15 +129,16 @@ func (c *Client) watchDbaasControllerEvents(events chan *supervisord.Event) {
 			if r.responseCh != nil {
 				r.responseCh <- errorResponse{}
 			}
+			c.l.Info("Disconected from dbaas-controller API.")
 		case r := <-c.connectCh:
+			c.l.Infof("Connecting to dbaas-controller API on %s.", c.dbaasControllerAPIAddress)
 			if c.conn != nil {
-				c.l.Warnf("trying to connect to dbaas-controller API but connection is already up")
+				c.l.Warnf("Trying to connect to dbaas-controller API but connection is already up.")
 				if r.responseCh != nil {
 					r.responseCh <- errorResponse{}
 				}
 				break
 			}
-			c.l.Debug("Connecting")
 			err := c.connect(r.ctx)
 			// If connect request originates from this watch loop, cancel the request's context.
 			if cancel != nil {
@@ -149,18 +158,34 @@ func (c *Client) watchDbaasControllerEvents(events chan *supervisord.Event) {
 			if r.responseCh != nil {
 				r.responseCh <- errorResponse{}
 			}
+			c.l.Info("Connected to dbaas-controller API.")
 		// Handle supervisord events.
-		case event := <-events:
-			c.l.Debugf("got event type %v", event)
+		case event := <-c.events:
+			c.l.Debug("Processing supervisord event: %v", event)
+			c.subscribeToSupervisordEvents()
+			if event.Time.Before(watchStarted) {
+				c.l.Warnf("Skipping supervisord event because it was created before the watch of events started: %v", event)
+				break
+			}
 			switch event.Type {
 			case supervisord.Running:
 				var ctx context.Context
-				ctx, cancel = context.WithTimeout(context.Background(), time.Second*20)
-				c.connectCh <- connectRequest{ctx: ctx}
-			case supervisord.Stopping, supervisord.ExitedUnexpected:
-				c.disconnectCh <- disconnectRequest{}
+				ctx, localCancel := context.WithTimeout(context.Background(), time.Second*20)
+				select {
+				case c.connectCh <- connectRequest{ctx: ctx}:
+					cancel = localCancel
+				default:
+					localCancel()
+					c.l.Warn("Request to connect to dbaas-controller API was already sent.")
+				}
+			case supervisord.Stopping, supervisord.ExitedUnexpected, supervisord.ExitedExpected:
+				select {
+				case c.disconnectCh <- disconnectRequest{}:
+				default:
+					c.l.Warn("Request to disconnect from dbaas-controller API was already sent.")
+				}
 			default:
-				c.l.Errorf("unsupported event type %v", event)
+				c.l.Errorf("Unsupported supervisord event type: %v", event)
 			}
 		// Handle requests to dbaas-controller API.
 		case r := <-c.requests:
@@ -171,7 +196,6 @@ func (c *Client) watchDbaasControllerEvents(events chan *supervisord.Event) {
 				}
 				break
 			}
-			c.l.Debugf("Got request: %v", r)
 			wg.Add(1)
 			go func(r *apiRequest) {
 				out, err := r.handler()
@@ -182,6 +206,7 @@ func (c *Client) watchDbaasControllerEvents(events chan *supervisord.Event) {
 	}
 }
 
+// Connect connects the client to dbaas-controller API.
 func (c *Client) Connect(ctx context.Context) error {
 	respCh := make(chan errorResponse)
 	c.connectCh <- connectRequest{ctx: ctx, responseCh: respCh}
@@ -189,6 +214,7 @@ func (c *Client) Connect(ctx context.Context) error {
 	return resp.err
 }
 
+// Disconnect disconnects the client from dbaas-controller API.
 func (c *Client) Disconnect() error {
 	respCh := make(chan errorResponse)
 	c.disconnectCh <- disconnectRequest{responseCh: respCh}
@@ -231,11 +257,15 @@ func (c *Client) CheckKubernetesClusterConnection(ctx context.Context, kubeConfi
 					Kubeconfig: kubeConfig,
 				},
 			}
-			return c.kubernetesClient.CheckKubernetesClusterConnection(ctx, in)
+			out, err := c.kubernetesClient.CheckKubernetesClusterConnection(ctx, in)
+			return out, err
 		},
 		responseCh: responseCh,
 	}
 	resp := <-responseCh
+	if resp.err != nil {
+		return nil, resp.err
+	}
 	return resp.out.(*controllerv1beta1.CheckKubernetesClusterConnectionResponse), resp.err
 }
 
@@ -249,6 +279,9 @@ func (c *Client) ListXtraDBClusters(ctx context.Context, in *controllerv1beta1.L
 		responseCh: responseCh,
 	}
 	resp := <-responseCh
+	if resp.err != nil {
+		return nil, resp.err
+	}
 	return resp.out.(*controllerv1beta1.ListXtraDBClustersResponse), resp.err
 }
 
@@ -262,6 +295,9 @@ func (c *Client) CreateXtraDBCluster(ctx context.Context, in *controllerv1beta1.
 		responseCh: responseCh,
 	}
 	resp := <-responseCh
+	if resp.err != nil {
+		return nil, resp.err
+	}
 	return resp.out.(*controllerv1beta1.CreateXtraDBClusterResponse), resp.err
 }
 
@@ -275,6 +311,9 @@ func (c *Client) UpdateXtraDBCluster(ctx context.Context, in *controllerv1beta1.
 		responseCh: responseCh,
 	}
 	resp := <-responseCh
+	if resp.err != nil {
+		return nil, resp.err
+	}
 	return resp.out.(*controllerv1beta1.UpdateXtraDBClusterResponse), resp.err
 }
 
@@ -288,6 +327,9 @@ func (c *Client) DeleteXtraDBCluster(ctx context.Context, in *controllerv1beta1.
 		responseCh: responseCh,
 	}
 	resp := <-responseCh
+	if resp.err != nil {
+		return nil, resp.err
+	}
 	return resp.out.(*controllerv1beta1.DeleteXtraDBClusterResponse), resp.err
 }
 
@@ -301,6 +343,9 @@ func (c *Client) RestartXtraDBCluster(ctx context.Context, in *controllerv1beta1
 		responseCh: responseCh,
 	}
 	resp := <-responseCh
+	if resp.err != nil {
+		return nil, resp.err
+	}
 	return resp.out.(*controllerv1beta1.RestartXtraDBClusterResponse), resp.err
 }
 
@@ -314,6 +359,9 @@ func (c *Client) GetXtraDBClusterCredentials(ctx context.Context, in *controller
 		responseCh: responseCh,
 	}
 	resp := <-responseCh
+	if resp.err != nil {
+		return nil, resp.err
+	}
 	return resp.out.(*controllerv1beta1.GetXtraDBClusterCredentialsResponse), resp.err
 }
 
@@ -327,6 +375,9 @@ func (c *Client) ListPSMDBClusters(ctx context.Context, in *controllerv1beta1.Li
 		responseCh: responseCh,
 	}
 	resp := <-responseCh
+	if resp.err != nil {
+		return nil, resp.err
+	}
 	return resp.out.(*controllerv1beta1.ListPSMDBClustersResponse), resp.err
 }
 
@@ -340,6 +391,9 @@ func (c *Client) CreatePSMDBCluster(ctx context.Context, in *controllerv1beta1.C
 		responseCh: responseCh,
 	}
 	resp := <-responseCh
+	if resp.err != nil {
+		return nil, resp.err
+	}
 	return resp.out.(*controllerv1beta1.CreatePSMDBClusterResponse), resp.err
 }
 
@@ -353,6 +407,9 @@ func (c *Client) UpdatePSMDBCluster(ctx context.Context, in *controllerv1beta1.U
 		responseCh: responseCh,
 	}
 	resp := <-responseCh
+	if resp.err != nil {
+		return nil, resp.err
+	}
 	return resp.out.(*controllerv1beta1.UpdatePSMDBClusterResponse), resp.err
 }
 
@@ -366,6 +423,9 @@ func (c *Client) DeletePSMDBCluster(ctx context.Context, in *controllerv1beta1.D
 		responseCh: responseCh,
 	}
 	resp := <-responseCh
+	if resp.err != nil {
+		return nil, resp.err
+	}
 	return resp.out.(*controllerv1beta1.DeletePSMDBClusterResponse), resp.err
 }
 
@@ -379,6 +439,9 @@ func (c *Client) RestartPSMDBCluster(ctx context.Context, in *controllerv1beta1.
 		responseCh: responseCh,
 	}
 	resp := <-responseCh
+	if resp.err != nil {
+		return nil, resp.err
+	}
 	return resp.out.(*controllerv1beta1.RestartPSMDBClusterResponse), resp.err
 }
 
@@ -392,6 +455,9 @@ func (c *Client) GetPSMDBClusterCredentials(ctx context.Context, in *controllerv
 		responseCh: responseCh,
 	}
 	resp := <-responseCh
+	if resp.err != nil {
+		return nil, resp.err
+	}
 	return resp.out.(*controllerv1beta1.GetPSMDBClusterCredentialsResponse), resp.err
 }
 
@@ -405,6 +471,9 @@ func (c *Client) GetLogs(ctx context.Context, in *controllerv1beta1.GetLogsReque
 		responseCh: responseCh,
 	}
 	resp := <-responseCh
+	if resp.err != nil {
+		return nil, resp.err
+	}
 	return resp.out.(*controllerv1beta1.GetLogsResponse), resp.err
 }
 
@@ -418,5 +487,8 @@ func (c *Client) GetResources(ctx context.Context, in *controllerv1beta1.GetReso
 		responseCh: responseCh,
 	}
 	resp := <-responseCh
+	if resp.err != nil {
+		return nil, resp.err
+	}
 	return resp.out.(*controllerv1beta1.GetResourcesResponse), resp.err
 }

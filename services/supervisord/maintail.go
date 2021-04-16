@@ -26,13 +26,19 @@ type eventType string
 
 const (
 	// mirror http://supervisord.org/subprocess.html#process-states
-	stopped          eventType = "STOPPED"
-	Stopping         eventType = "STOPPING"
-	starting         eventType = "STARTING"
-	Running          eventType = "RUNNING"
-	exitedExpected   eventType = "EXITED (expected)"
+
+	// Stopping indicates that stop of a process was requested.
+	Stopping eventType = "STOPPING"
+	// Running indicates that a process is running.
+	Running eventType = "RUNNING"
+	// ExitedExpected indicates that a process exited expectedly.
+	ExitedExpected eventType = "EXITED (expected)"
+	// ExitedExpected indicates that a process exited unexpectedly.
 	ExitedUnexpected eventType = "EXITED (unexpected)"
-	fatal            eventType = "FATAL"
+
+	stopped  eventType = "STOPPED"
+	starting eventType = "STARTING"
+	fatal    eventType = "FATAL"
 
 	unknown   eventType = "unknown"
 	logReopen eventType = "logreopen"
@@ -53,7 +59,7 @@ var (
 		stoppingRE:         Stopping,
 		startingRE:         starting,
 		runningRE:          Running,
-		exitedExpectedRE:   exitedExpected,
+		exitedExpectedRE:   ExitedExpected,
 		exitedUnexpectedRE: ExitedUnexpected,
 		fatalRE:            fatal,
 		logReopenRE:        logReopen,

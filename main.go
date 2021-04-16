@@ -710,9 +710,10 @@ func main() {
 	if err != nil {
 		l.Fatalf("Failed to get settings: %+v.", err)
 	}
-
+	l.Debug("creating a new dbaas client in main")
 	dbaasClient := dbaas.NewClient(*dbaasControllerAPIAddrF, supervisord)
 	if settings.DBaaS.Enabled {
+		l.Debug("creating a new dbaas client in main - dbaas is enabled")
 		ctx, cancel := context.WithTimeout(ctx, time.Second*20)
 		err := dbaasClient.Connect(ctx)
 		cancel()
@@ -726,6 +727,7 @@ func main() {
 			}
 		}()
 	}
+	l.Debug("after creating a new dbaas client in main")
 
 	authServer := grafana.NewAuthServer(grafanaClient, awsInstanceChecker)
 
