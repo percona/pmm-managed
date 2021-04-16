@@ -91,8 +91,7 @@ func setup(t *testing.T, connect func(*Channel) error, expected ...error) (agent
 		for i, e := range expected {
 			stringExpected[i] = e.Error()
 		}
-		fmt.Println(stringExpected, errors.Cause(err).Error())
-		//assert.Contains(t, stringExpected, errors.Cause(err).Error(), "%+v", err)
+		assert.Contains(t, stringExpected, errors.Cause(err).Error(), "%+v", err)
 
 		server.GracefulStop()
 		cancel()
