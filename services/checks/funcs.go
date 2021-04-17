@@ -34,7 +34,6 @@ func GetFuncsForVersion(version uint32) (map[string]starlark.GoFunc, error) {
 		return map[string]starlark.GoFunc{
 			"parse_version":      parseVersion,
 			"format_version_num": formatVersionNum,
-			"format_cve_version_num": formatCVEVersionNum,
 		}, nil
 	default:
 		return nil, errors.Errorf("unsupported check version: %d", version)
@@ -80,31 +79,19 @@ func formatVersionNum(args ...interface{}) (interface{}, error) {
 		return nil, errors.Errorf("expected int64 argument, got %[1]T (%[1]v)", args[0])
 	}
 
-	p := &version.Parsed{
-		Major: int(num / 10000),
-		Minor: int(num / 100 % 100),
-		Patch: int(num % 100),
-	}
-	return p.String(), nil
-}
-
-// formatVersionNum accepts a single int64 argument (version num MMmmpprrr), and returns
-// MM.mm.pp-rrr as a string.
-func formatCVEVersionNum(args ...interface{}) (interface{}, error) {
-	if l := len(args); l != 1 {
-		return nil, errors.Errorf("expected 1 argument, got %d", l)
-	}
-
-	num, ok := args[0].(int64)
-	if !ok {
-		return nil, errors.Errorf("expected int64 argument, got %[1]T (%[1]v)", args[0])
-	}
-
-	p := &version.Parsed{
-		Major: int(num / 10000000),
-		Minor: int(num / 100000 % 100),
-		Patch: int(num / 1000 % 100),
-        NumRest: int(num % 1000),
+    if num > 10000000 {
+        p := &version.Parsed{
+            Major: int(num / 10000000),
+            Minor: int(num / 100000 % 100),
+            Patch: int(num / 1000 % 100),
+            NumRest: int(num % 1000),
+        }
+    } else {
+	    p := &version.Parsed{
+		    Major: int(num / 10000),
+		    Minor: int(num / 100 % 100),
+		    Patch: int(num % 100),
+        }
 	}
 	return p.String(), nil
 }
@@ -115,7 +102,6 @@ func GetAdditionalContext() map[string]starlark.GoFunc {
 		"ip_is_private":      ipIsPrivate,
 		"parse_version":      parseVersion,
 		"format_version_num": formatVersionNum,
-		"format_cve_version_num": formatCVEVersionNum,
 	}
 }
 
