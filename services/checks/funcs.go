@@ -88,15 +88,15 @@ func formatVersionNum(args ...interface{}) (interface{}, error) {
 		}
 
 		return p.String(), nil
-	} else {
-		p := &version.Parsed{
-			Major: int(num / 10000),
-			Minor: int(num / 100 % 100),
-			Patch: int(num % 100),
-		}
-
-		return p.String(), nil
 	}
+
+	p := &version.Parsed{
+		Major: int(num / 10000),
+		Minor: int(num / 100 % 100),
+		Patch: int(num % 100),
+	}
+
+	return p.String(), nil
 }
 
 // GetAdditionalContext returns additional functions to be used in check scripts.
