@@ -58,12 +58,12 @@ func parseVersion(args ...interface{}) (interface{}, error) {
 	}
 
 	return map[string]interface{}{
-		"major": int64(p.Major),
-		"minor": int64(p.Minor),
-		"patch": int64(p.Patch),
-		"rest":  p.Rest,
-		"num":   int64(p.Num),
-		"numrest":   int64(p.NumRest),
+		"major":   int64(p.Major),
+		"minor":   int64(p.Minor),
+		"patch":   int64(p.Patch),
+		"rest":    p.Rest,
+		"num":     int64(p.Num),
+		"numrest": int64(p.NumRest),
 	}, nil
 }
 
@@ -79,19 +79,19 @@ func formatVersionNum(args ...interface{}) (interface{}, error) {
 		return nil, errors.Errorf("expected int64 argument, got %[1]T (%[1]v)", args[0])
 	}
 
-    if num > 10000000 {
-        p := &version.Parsed{
-            Major: int(num / 10000000),
-            Minor: int(num / 100000 % 100),
-            Patch: int(num / 1000 % 100),
-            NumRest: int(num % 1000),
-        }
-    } else {
-	    p := &version.Parsed{
-		    Major: int(num / 10000),
-		    Minor: int(num / 100 % 100),
-		    Patch: int(num % 100),
-        }
+	if num > 10000000 {
+		p := &version.Parsed{
+			Major:   int(num / 10000000),
+			Minor:   int(num / 100000 % 100),
+			Patch:   int(num / 1000 % 100),
+			NumRest: int(num % 1000),
+		}
+	} else {
+		p := &version.Parsed{
+			Major: int(num / 10000),
+			Minor: int(num / 100 % 100),
+			Patch: int(num % 100),
+		}
 	}
 	return p.String(), nil
 }
