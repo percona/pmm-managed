@@ -33,6 +33,7 @@ import (
 )
 
 func setup(t *testing.T, db *reform.DB, serviceName string) *models.Agent {
+	t.Helper()
 	node, err := models.CreateNode(db.Querier, models.GenericNodeType, &models.CreateNodeParams{
 		NodeName: "test-node",
 	})
