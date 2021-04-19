@@ -31,8 +31,6 @@ import (
 
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	"github.com/percona/pmm/version"
-
-	"github.com/percona/pmm-managed/services/supervisord"
 )
 
 type handler func() (interface{}, error)
@@ -47,17 +45,8 @@ type apiResponse struct {
 	err error
 }
 
-type connectRequest struct {
-	ctx        context.Context
-	responseCh chan errorResponse
-}
-
 type disconnectRequest struct {
-	responseCh chan errorResponse
-}
-
-type errorResponse struct {
-	err error
+	responseCh chan error
 }
 
 // Client is a client for dbaas-controller.
@@ -69,124 +58,49 @@ type Client struct {
 	logsClient                controllerv1beta1.LogsAPIClient
 	conn                      *grpc.ClientConn
 	dbaasControllerAPIAddress string
-	supervisor                *supervisord.Service
 	disconnectCh              chan disconnectRequest
-	connectCh                 chan connectRequest
 	requests                  chan *apiRequest
-	events                    chan *supervisord.Event
+	stop                      chan struct{}
 }
 
 // NewClient creates new Client object.
-func NewClient(dbaasControllerAPIAddress string, supervisor *supervisord.Service) *Client {
+func NewClient(dbaasControllerAPIAddress string) *Client {
 	c := &Client{
 		l:                         logrus.WithField("component", "dbaas.Client"),
 		dbaasControllerAPIAddress: dbaasControllerAPIAddress,
-		supervisor:                supervisor,
-		disconnectCh:              make(chan disconnectRequest, 2),
-		connectCh:                 make(chan connectRequest, 2),
+		disconnectCh:              make(chan disconnectRequest),
 		requests:                  make(chan *apiRequest, 8),
 	}
 
-	go c.watchDbaasControllerEvents()
 	return c
 }
 
-func (c *Client) subscribeToSupervisordEvents() {
-	c.events = c.supervisor.Subscribe("dbaas-controller", supervisord.Running, supervisord.Stopping, supervisord.ExitedUnexpected, supervisord.ExitedExpected)
-}
-
-func (c *Client) watchDbaasControllerEvents() {
-	watchStarted := time.Now()
-	c.subscribeToSupervisordEvents()
+// STARTED WORKING 19:20
+func (c *Client) serve() {
 	wg := new(sync.WaitGroup)
-	var cancel context.CancelFunc
+loop:
 	for {
 		select {
+		case <-c.stop:
+			break loop
 		case r := <-c.disconnectCh:
 			c.l.Info("Disconnecting from dbaas-controller API.")
 			wg.Wait()
-
 			if c.conn == nil {
 				c.l.Warnf("Trying to disconnect from dbaas-controller API but the connection is not up.")
 				if r.responseCh != nil {
-					r.responseCh <- errorResponse{}
+					r.responseCh <- nil
 				}
 				break
 			}
 			err := c.conn.Close()
 			if err != nil {
-				err := errors.Errorf("failed to close conn to dbaas-controller API: %v", err)
-				// Connect request can come from Connect method or from internal watch of supervisord events.
-				// That's why we either return error outside or log it.
-				if r.responseCh != nil {
-					r.responseCh <- errorResponse{err: err}
-					break
-				}
-				c.l.Error(err)
+				r.responseCh <- errors.Errorf("failed to close conn to dbaas-controller API: %v", err)
 				break
 			}
 			c.conn = nil
-			if r.responseCh != nil {
-				r.responseCh <- errorResponse{}
-			}
+			r.responseCh <- nil
 			c.l.Info("Disconected from dbaas-controller API.")
-		case r := <-c.connectCh:
-			c.l.Infof("Connecting to dbaas-controller API on %s.", c.dbaasControllerAPIAddress)
-			if c.conn != nil {
-				c.l.Warnf("Trying to connect to dbaas-controller API but connection is already up.")
-				if r.responseCh != nil {
-					r.responseCh <- errorResponse{}
-				}
-				break
-			}
-			err := c.connect(r.ctx)
-			// If connect request originates from this watch loop, cancel the request's context.
-			if cancel != nil {
-				cancel()
-				cancel = nil
-			}
-			if err != nil {
-				err := errors.Errorf("failed to connect to dbaas-controller API: %v", err)
-				// Disconnect request can come from Disconnect method or from internal watch of supervisord events.
-				// That's why we either return error outside or log it.
-				if r.responseCh != nil {
-					r.responseCh <- errorResponse{err: err}
-					break
-				}
-				c.l.Error(err)
-			}
-			if r.responseCh != nil {
-				r.responseCh <- errorResponse{}
-			}
-			c.l.Info("Connected to dbaas-controller API.")
-		// Handle supervisord events.
-		case event := <-c.events:
-			c.l.Debugf("Processing supervisord event: %v", event)
-			c.subscribeToSupervisordEvents()
-			if event.Time.Before(watchStarted) {
-				c.l.Warnf("Skipping supervisord event because it was created before the watch of events started: %v", event)
-				break
-			}
-			switch event.Type {
-			case supervisord.Running:
-				var ctx context.Context
-				ctx, localCancel := context.WithTimeout(context.Background(), time.Second*20)
-				select {
-				case c.connectCh <- connectRequest{ctx: ctx}:
-					cancel = localCancel
-				default:
-					localCancel()
-					c.l.Warn("Request to connect to dbaas-controller API was already sent.")
-				}
-			case supervisord.Stopping, supervisord.ExitedUnexpected, supervisord.ExitedExpected:
-				select {
-				case c.disconnectCh <- disconnectRequest{}:
-				default:
-					c.l.Warn("Request to disconnect from dbaas-controller API was already sent.")
-				}
-			default:
-				c.l.Errorf("Unsupported supervisord event type: %v", event)
-			}
 		// Handle requests to dbaas-controller API.
 		case r := <-c.requests:
 			if c.conn == nil {
@@ -206,23 +120,38 @@ func (c *Client) watchDbaasControllerEvents() {
 	}
 }
 
-// Connect connects the client to dbaas-controller API.
+// Connect connects the client to dbaas-controller API and starts loop that
+// handles requests and disconnection from the API.
 func (c *Client) Connect(ctx context.Context) error {
-	respCh := make(chan errorResponse)
-	c.connectCh <- connectRequest{ctx: ctx, responseCh: respCh}
-	resp := <-respCh
-	return resp.err
+	c.l.Infof("Connecting to dbaas-controller API on %s.", c.dbaasControllerAPIAddress)
+	if c.conn != nil {
+		c.l.Warnf("Trying to connect to dbaas-controller API but connection is already up.")
+		return nil
+	}
+	err := c.connect(ctx)
+	if err != nil {
+		return errors.Errorf("failed to connect to dbaas-controller API: %v", err)
+	}
+	c.l.Info("Connected to dbaas-controller API.")
+	c.stop = make(chan struct{})
+	go c.serve()
+	return nil
 }
 
-// Disconnect disconnects the client from dbaas-controller API.
+// Disconnect disconnects the client from dbaas-controller API by sending disconnect request,
+// it waits until all user requests are done and then closes connection to the API.
+// If successful, stops the loop that handles requests and disconnection from the API.
 func (c *Client) Disconnect() error {
-	respCh := make(chan errorResponse)
+	respCh := make(chan error)
 	c.disconnectCh <- disconnectRequest{responseCh: respCh}
-	resp := <-respCh
-	return resp.err
+	err := <-respCh
+	if err != nil {
+		close(c.stop)
+	}
+	return err
 }
 
-// connect connects/reconnects to dbaas controller API.
+// connect connects the client to dbaas-controller API.
 func (c *Client) connect(ctx context.Context) error {
 	backoffConfig := backoff.DefaultConfig
 	backoffConfig.MaxDelay = 10 * time.Second

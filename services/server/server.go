@@ -47,6 +47,7 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/dbaas"
 	"github.com/percona/pmm-managed/utils/envvars"
 )
 
@@ -67,6 +68,7 @@ type Server struct {
 	awsInstanceChecker   *AWSInstanceChecker
 	grafanaClient        grafanaClient
 	rulesService         rulesService
+	dbaasClient          dbaasClient
 	l                    *logrus.Entry
 
 	pmmUpdateAuthFileM sync.Mutex
@@ -76,6 +78,11 @@ type Server struct {
 	envSettings *models.ChangeSettingsParams
 
 	sshKeyM sync.Mutex
+}
+
+type dbaasClient interface {
+	Connect(ctx context.Context) error
+	Disconnect() error
 }
 
 type pmmUpdateAuth struct {
@@ -675,6 +682,22 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 	// When STT moved from enabled state to disabled drop all existing STT alerts.
 	if oldSettings.SaaS.STTEnabled && !newSettings.SaaS.STTEnabled {
 		s.checksService.CleanupAlerts()
+	}
+
+	// When DBaaS is enabled, connect to the dbaas-controller API.
+	if !oldSettings.DBaaS.Enabled && newSettings.DBaaS.Enabled {
+		err := s.dbaasClient.Connect(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// When DBaaS is disabled, disconnect from the dbaas-controller API.
+	if oldSettings.DBaaS.Enabled && !newSettings.DBaaS.Enabled {
+		err := s.dbaasClient.Disconnect()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if isAgentsStateUpdateNeeded(req.MetricsResolutions) {
