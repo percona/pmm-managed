@@ -108,7 +108,9 @@ func mysqldExporterConfig(service *models.Service, exporter *models.Agent, redac
 			fmt.Sprintf("DATA_SOURCE_NAME=%s", exporter.DSN(service, time.Second, "", nil)),
 			fmt.Sprintf("HTTP_AUTH=pmm:%s", exporter.AgentID),
 		},
-		TextFiles: exporter.Files(),
+		TextFiles:     exporter.Files(),
+		Tls:           exporter.TLS,
+		TlsSkipVerify: exporter.TLSSkipVerify,
 	}
 	if redactMode != exposeSecrets {
 		res.RedactWords = redactWords(exporter)
@@ -128,6 +130,8 @@ func qanMySQLPerfSchemaAgentConfig(service *models.Service, agent *models.Agent)
 			TemplateLeftDelim:  tdp.Left,
 			TemplateRightDelim: tdp.Right,
 		},
+		Tls:           agent.TLS,
+		TlsSkipVerify: agent.TLSSkipVerify,
 	}
 }
 
@@ -144,5 +148,7 @@ func qanMySQLSlowlogAgentConfig(service *models.Service, agent *models.Agent) *a
 			TemplateLeftDelim:  tdp.Left,
 			TemplateRightDelim: tdp.Right,
 		},
+		Tls:           agent.TLS,
+		TlsSkipVerify: agent.TLSSkipVerify,
 	}
 }

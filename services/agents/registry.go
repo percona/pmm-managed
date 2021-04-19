@@ -863,6 +863,8 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 				TemplateLeftDelim:  tdp.Left,
 				TemplateRightDelim: tdp.Right,
 			},
+			Tls:           agent.TLS,
+			TlsSkipVerify: agent.TLSSkipVerify,
 		}
 	case models.PostgreSQLServiceType:
 		request = &agentpb.CheckConnectionRequest{
