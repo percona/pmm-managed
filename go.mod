@@ -2,6 +2,12 @@ module github.com/percona/pmm-managed
 
 go 1.16
 
+// Update pmm with:
+// go get -v github.com/percona/pmm@PMM-2.0
+
+// Update saas with:
+// go get -v github.com/percona-platform/saas@latest
+
 require (
 	github.com/AlekSi/pointer v1.1.0
 	github.com/Azure/azure-sdk-for-go v49.2.0+incompatible
@@ -10,7 +16,6 @@ require (
 	github.com/Azure/go-autorest/autorest/validation v0.3.1 // indirect
 	github.com/aws/aws-sdk-go v1.33.10
 	github.com/brianvoe/gofakeit/v6 v6.4.0
-	github.com/davecgh/go-spew v1.1.1
 	github.com/go-openapi/runtime v0.19.20
 	github.com/go-openapi/spec v0.19.9 // indirect
 	github.com/go-openapi/strfmt v0.19.5

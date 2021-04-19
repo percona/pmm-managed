@@ -20,13 +20,12 @@
 package tools
 
 import (
+	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
 	_ "github.com/kevinburke/go-bindata/go-bindata"
+	_ "github.com/reviewdog/reviewdog/cmd/reviewdog"
 	_ "github.com/vektra/mockery/cmd/mockery"
+	_ "golang.org/x/perf/cmd/benchstat"
 	_ "golang.org/x/tools/cmd/goimports"
 	_ "gopkg.in/reform.v1/reform"
-
-	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
-	_ "github.com/reviewdog/reviewdog/cmd/reviewdog"
-	_ "golang.org/x/perf/cmd/benchstat"
 	_ "gopkg.in/reform.v1/reform-db"
 )

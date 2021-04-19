@@ -34,6 +34,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/percona/pmm-managed/utils/interceptors"
+	"github.com/percona/pmm-managed/utils/tests"
 )
 
 type testServer struct {
@@ -234,7 +235,7 @@ func TestServerExitsWithUnknownErrorIntercepted(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = stream.Recv()
-	assert.Equal(t, status.Error(codes.Internal, "Internal server error.").Error(), err.Error())
+	tests.AssertGRPCError(t, status.New(codes.Internal, "Internal server error."), err)
 }
 
 func TestAgentClosesStream(t *testing.T) {
