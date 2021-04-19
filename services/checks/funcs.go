@@ -48,7 +48,7 @@ func pmmServerVersion(args ...interface{}) (interface{}, error) {
                 return nil, err
         }
 
-	return p, nil
+	return int64(p), nil
 }
 
 // parseVersion accepts a single string argument (version), and returns map[string]interface{}
