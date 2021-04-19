@@ -495,7 +495,7 @@
 
 [[projects]]
   branch = "SAAS-529-two-types-of-MongoDB-version-check"
-  digest = "1:9256c23345c437d10a421f202ac62f6040db15dc3bca05bbaa83afcc407224a3"
+  digest = "1:f4f39655f650f7be86e9c0e230a00b8c6dcc2e4f487e3e746b3ad32bf85a215f"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -521,7 +521,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "f5f65c2fdf778957fceeab217021b86149d9e502"
+  revision = "a7ec736e49b3016694333685729810952bcc3949"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
