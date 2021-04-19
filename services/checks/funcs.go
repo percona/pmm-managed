@@ -18,7 +18,6 @@ package checks
 
 import (
 	"net"
-        "regexp"
 
 	"github.com/percona-platform/saas/pkg/starlark"
 	"github.com/percona/pmm/version"
@@ -27,7 +26,6 @@ import (
 )
 
 var privateNetworks []*net.IPNet
-var versionPmm regexp.MustCompile(`^.*?v(\d+)\.(\d+)\.(\d+).*?$`)
 
 // GetFuncsForVersion returns predefined functions for specified check version.
 func GetFuncsForVersion(version uint32) (map[string]starlark.GoFunc, error) {
@@ -44,12 +42,17 @@ func GetFuncsForVersion(version uint32) (map[string]starlark.GoFunc, error) {
 }
 
 func pmmServerVersion(args ...interface{}) (interface{}, error) {
-        m := versionPmm.FindStringSubmatch(version.ShortInfo())
-        if len(m) != 4 {
-                return nil, fmt.Errorf("failed to parse %q", s)
+        s, ok := version.ShortInfo().(string)
+        if !ok {
+                return nil, errors.Errorf("expected string argument, got %[1]T (%[1]v)", version.ShortInfo())
         }
-        res := strconv.Atoi(m[1])*1000 + strconv.Atoi(m[2])*100 + strconv.Atoi(m[3])
-	return res, nil
+
+        p, err := version.pmmVersionParse(s)
+        if err != nil {
+                return nil, err
+        }
+
+	return p, nil
 }
 
 // parseVersion accepts a single string argument (version), and returns map[string]interface{}
