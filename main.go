@@ -713,7 +713,7 @@ func main() {
 
 	dbaasClient := dbaas.NewClient(*dbaasControllerAPIAddrF, supervisord)
 	if settings.DBaaS.Enabled {
-		l.Debug("creating a new dbaas client in main - dbaas is enabled")
+		l.Debug("DBaaS is enabled - creating a DBaaS client.")
 		ctx, cancel := context.WithTimeout(ctx, time.Second*20)
 		err := dbaasClient.Connect(ctx)
 		cancel()
