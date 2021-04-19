@@ -92,9 +92,9 @@ import (
 const (
 	shutdownTimeout = 3 * time.Second
 
-	gRPCAddr  = "localhost:7771"
-	http1Addr = "localhost:7772"
-	debugAddr = "localhost:7773"
+	gRPCAddr  = "127.0.0.1:7771"
+	http1Addr = "127.0.0.1:7772"
+	debugAddr = "127.0.0.1:7773"
 
 	cleanInterval  = 10 * time.Minute
 	cleanOlderThan = 30 * time.Minute
