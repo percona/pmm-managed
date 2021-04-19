@@ -67,35 +67,12 @@ def make_install():
         "make install",
     ])
 
-def install_tools():
-    """Installs Go developer tools."""
+def make_init():
+    """Runs make init."""
 
     run_commands([
-        "curl https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /root/go/bin",
-        "curl https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh | sh -s -- -b /root/go/bin",
-
-        "rm -fr /tmp/tools && \
-            mkdir -p /tmp/tools && \
-            cd /tmp/tools && \
-            go mod init tools && \
-            env GOPROXY=https://proxy.golang.org go get -v \
-                github.com/go-delve/delve/cmd/dlv@latest \
-                golang.org/x/tools/gopls@latest \
-                mvdan.cc/gofumpt@latest \
-                mvdan.cc/gofumpt/gofumports"
+        "make init",
     ])
-
-
-def install_go_tools():
-    """Installs pmm-managed-specific Go tools."""
-
-    run_commands([
-        "go install -modfile=tools/go.mod github.com/kevinburke/go-bindata/go-bindata",
-        "go install -modfile=tools/go.mod github.com/vektra/mockery/cmd/mockery",
-        "go install -modfile=tools/go.mod golang.org/x/tools/cmd/goimports",
-        "go install -modfile=tools/go.mod gopkg.in/reform.v1/reform",
-    ])
-
 
 def setup():
     """Runs various setup commands."""
@@ -128,19 +105,11 @@ def main():
     # install Go and wait for it
     install_go()
 
-    # install tools (requires Go)
-    install_tools_p = multiprocessing.Process(target=install_tools)
-    install_tools_p.start()
-    install_go_tools_p = multiprocessing.Process(target=install_go_tools)
-    install_go_tools_p.start()
+    make_init()
 
     # make install (requires make package)
     install_packages_p.join()
     make_install()
-
-    # wait for everything else to finish
-    install_tools_p.join()
-    install_go_tools_p.join()
 
     # do basic setup
     setup()

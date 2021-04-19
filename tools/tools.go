@@ -20,12 +20,15 @@
 package tools
 
 import (
+	_ "github.com/go-delve/delve/cmd/dlv"
 	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
 	_ "github.com/kevinburke/go-bindata/go-bindata"
 	_ "github.com/reviewdog/reviewdog/cmd/reviewdog"
 	_ "github.com/vektra/mockery/cmd/mockery"
 	_ "golang.org/x/perf/cmd/benchstat"
 	_ "golang.org/x/tools/cmd/goimports"
+	_ "golang.org/x/tools/gopls"
 	_ "gopkg.in/reform.v1/reform"
 	_ "gopkg.in/reform.v1/reform-db"
+	_ "mvdan.cc/gofumpt"
 )
