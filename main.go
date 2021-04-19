@@ -200,6 +200,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 
 	backupv1beta1.RegisterLocationsServer(gRPCServer, backup.NewLocationsService(deps.db))
 	backupv1beta1.RegisterArtifactsServer(gRPCServer, backup.NewArtifactsService(deps.db))
+	backupv1beta1.RegisterRestoreHistoryServer(gRPCServer, backup.NewRestoreHistoryService(deps.db))
 
 	// TODO Remove once changing settings.DBaaS.Enabled is possible via API.
 	if deps.settings.DBaaS.Enabled {
@@ -310,6 +311,7 @@ func runHTTP1Server(ctx context.Context, deps *http1ServerDeps) {
 
 		backupv1beta1.RegisterLocationsHandlerFromEndpoint,
 		backupv1beta1.RegisterArtifactsHandlerFromEndpoint,
+		backupv1beta1.RegisterRestoreHistoryHandlerFromEndpoint,
 
 		jobs1beta1.RegisterJobsHandlerFromEndpoint,
 

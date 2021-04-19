@@ -484,6 +484,18 @@ var databaseSchema = [][]string{
 		`ALTER TABLE kubernetes_clusters ADD COLUMN proxysql JSONB`,
 		`ALTER TABLE kubernetes_clusters ADD COLUMN mongod JSONB`,
 	},
+	34: {
+		`CREATE TABLE restore_history (
+			id VARCHAR NOT NULL,
+			artifact_id VARCHAR NOT NULL CHECK (artifact_id <> ''),
+			service_id VARCHAR NOT NULL CHECK (service_id <> ''),
+			status VARCHAR NOT NULL CHECK (status <> ''),
+			started_at TIMESTAMP NOT NULL,
+			finished_at TIMESTAMP,
+
+			PRIMARY KEY (id)
+		)`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^
