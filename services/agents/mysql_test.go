@@ -191,6 +191,7 @@ func TestMySQLdExporterConfigTablestatsGroupDisabled(t *testing.T) {
 			"tlsCert": "content-of-tls-cert",
 			"tlsKey":  "content-of-tls-key",
 		},
+		Tls: true,
 	}
 	requireNoDuplicateFlags(t, actual.Args)
 	require.Equal(t, expected.Args, actual.Args)
