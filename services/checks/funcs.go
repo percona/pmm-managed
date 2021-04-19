@@ -42,12 +42,8 @@ func GetFuncsForVersion(version uint32) (map[string]starlark.GoFunc, error) {
 }
 
 func pmmServerVersion(args ...interface{}) (interface{}, error) {
-        s, ok := version.ShortInfo().(string)
-        if !ok {
-                return nil, errors.Errorf("expected string argument, got %[1]T (%[1]v)", version.ShortInfo())
-        }
-
-        p, err := version.pmmVersionParse(s)
+        s := version.ShortInfo()
+        p, err := version.ParsePmmVersion(s)
         if err != nil {
                 return nil, err
         }
