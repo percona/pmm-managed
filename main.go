@@ -784,14 +784,13 @@ func main() {
 	go func() {
 		defer wg.Done()
 		runGRPCServer(ctx, &gRPCServerDeps{
-			db:             db,
-			vmdb:           vmdb,
-			server:         server,
-			agentsRegistry: agentsRegistry,
-			grafanaClient:  grafanaClient,
-			checksService:  checksService,
-			dbaasClient:    dbaasClient,
-
+			db:                   db,
+			vmdb:                 vmdb,
+			server:               server,
+			agentsRegistry:       agentsRegistry,
+			grafanaClient:        grafanaClient,
+			checksService:        checksService,
+			dbaasClient:          dbaasClient,
 			alertmanager:         alertmanager,
 			vmalert:              vmalert,
 			settings:             settings,
