@@ -31,22 +31,6 @@ import (
 	"github.com/percona/pmm/version"
 )
 
-type handler func() (interface{}, error)
-
-type apiRequest struct {
-	handler    handler
-	responseCh chan *apiResponse
-}
-
-type apiResponse struct {
-	out interface{}
-	err error
-}
-
-type disconnectRequest struct {
-	responseCh chan error
-}
-
 // Client is a client for dbaas-controller.
 type Client struct {
 	l                         *logrus.Entry
@@ -69,11 +53,6 @@ func NewClient(dbaasControllerAPIAddress string) *Client {
 		wg:                        new(sync.WaitGroup),
 	}
 	return c
-}
-
-func (c *Client) Enabled() bool {
-	// todo return
-	return false
 }
 
 // Connect connects the client to dbaas-controller API.
@@ -119,8 +98,8 @@ func (c *Client) Disconnect() error {
 		c.l.Warnf("Trying to disconnect from dbaas-controller API but the connection is not up.")
 		return nil
 	}
-	err := c.conn.Close()
-	if err != nil {
+
+	if err := c.conn.Close(); err != nil {
 		return errors.Errorf("failed to close conn to dbaas-controller API: %v", err)
 	}
 	c.conn = nil
