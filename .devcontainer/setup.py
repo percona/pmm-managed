@@ -105,10 +105,9 @@ def main():
     # install Go and wait for it
     install_go()
 
-    make_init()
-
     # make install (requires make package)
     install_packages_p.join()
+    make_init()
     make_install()
 
     # do basic setup
