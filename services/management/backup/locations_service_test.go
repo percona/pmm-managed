@@ -450,8 +450,6 @@ func TestVerifyBackupLocationValidation(t *testing.T) {
 	}
 
 	for _, test := range tableTests {
-		test := test
-
 		t.Run(test.name, func(t *testing.T) {
 			_, err := svc.TestLocationConfig(ctx, test.req)
 			if test.errorMsg != "" {
