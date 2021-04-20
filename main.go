@@ -629,28 +629,6 @@ func main() {
 
 	versionService := managementdbaas.NewVersionServiceClient(*versionServiceAPIURLF)
 
-	settings, err := models.GetSettings(sqlDB)
-	if err != nil {
-		l.Fatalf("Failed to get settings: %+v.", err)
-	}
-
-	dbaasClient := dbaas.NewClient(*dbaasControllerAPIAddrF)
-	if settings.DBaaS.Enabled {
-		l.Debug("DBaaS is enabled - creating a DBaaS client.")
-		ctx, cancel := context.WithTimeout(ctx, time.Second*20)
-		err := dbaasClient.Connect(ctx)
-		cancel()
-		if err != nil {
-			l.Fatalf("Failed to connect to dbaas-controller API on %s: %v", *dbaasControllerAPIAddrF, err)
-		}
-		defer func() {
-			err := dbaasClient.Disconnect()
-			if err != nil {
-				l.Fatalf("Failed to disconnect from dbaas-controller API: %v", err)
-			}
-		}()
-	}
-
 	serverParams := &server.Params{
 		DB:                   db,
 		VMDB:                 vmdb,
@@ -665,7 +643,6 @@ func main() {
 		GrafanaClient:        grafanaClient,
 		VMAlertExternalRules: externalRules,
 		RulesService:         rulesService,
-		DbaasClient:          dbaasClient,
 	}
 
 	server, err := server.NewServer(serverParams)
@@ -726,6 +703,29 @@ func main() {
 				if setup(ctx, deps) {
 					return
 				}
+			}
+		}()
+	}
+
+	settings, err := models.GetSettings(sqlDB)
+	if err != nil {
+		l.Fatalf("Failed to get settings: %+v.", err)
+	}
+
+	dbaasClient := dbaas.NewClient(*dbaasControllerAPIAddrF)
+	server.SetDbaasClient(dbaasClient)
+	if settings.DBaaS.Enabled {
+		l.Debug("DBaaS is enabled - creating a DBaaS client.")
+		ctx, cancel := context.WithTimeout(ctx, time.Second*20)
+		err := dbaasClient.Connect(ctx)
+		cancel()
+		if err != nil {
+			l.Fatalf("Failed to connect to dbaas-controller API on %s: %v", *dbaasControllerAPIAddrF, err)
+		}
+		defer func() {
+			err := dbaasClient.Disconnect()
+			if err != nil {
+				l.Fatalf("Failed to disconnect from dbaas-controller API: %v", err)
 			}
 		}()
 	}
