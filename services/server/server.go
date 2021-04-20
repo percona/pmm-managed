@@ -47,7 +47,6 @@ import (
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/services/dbaas"
 	"github.com/percona/pmm-managed/utils/envvars"
 )
 
@@ -104,6 +103,7 @@ type Params struct {
 	AwsInstanceChecker   *AWSInstanceChecker
 	GrafanaClient        grafanaClient
 	RulesService         rulesService
+	DbaasClient          dbaasClient
 }
 
 // NewServer returns new server for Server service.
@@ -128,6 +128,7 @@ func NewServer(params *Params) (*Server, error) {
 		awsInstanceChecker:   params.AwsInstanceChecker,
 		grafanaClient:        params.GrafanaClient,
 		rulesService:         params.RulesService,
+		dbaasClient:          params.DbaasClient,
 		l:                    logrus.WithField("component", "server"),
 		pmmUpdateAuthFile:    path,
 		envSettings:          new(models.ChangeSettingsParams),
