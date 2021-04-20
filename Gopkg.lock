@@ -494,8 +494,8 @@
   revision = "e66cc9d89f9739d5f841f847877f12443b37484a"
 
 [[projects]]
-  branch = "PMM-2.0"
-  digest = "1:49b32523ca65e63e55e40790a764364991e65a871c28d2f89f1f4f8c0bb5c822"
+  branch = "PMM-7278_mongodb_auth_mechanism"
+  digest = "1:4c01ea9019575f6b210b4ad1999d71bd169e311e780e99b7354078461d85e345"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -521,7 +521,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "a4ee02c384219fa238877bdf4f7f49170627b2b7"
+  revision = "b87503e928f33e6de7267c21959b9f907f3a0e95"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
