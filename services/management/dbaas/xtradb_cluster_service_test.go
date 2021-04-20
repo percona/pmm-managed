@@ -452,7 +452,7 @@ func TestXtraDBClusterService(t *testing.T) {
 
 		t.Run("HAProxy", func(t *testing.T) {
 			t.Parallel()
-			s := NewXtraDBClusterService(db, dbaasClient)
+			s := NewXtraDBClusterService(db, dbaasClient, grafanaClient)
 			v := int64(1000000000)
 
 			in := dbaasv1beta1.GetXtraDBClusterResourcesRequest{
