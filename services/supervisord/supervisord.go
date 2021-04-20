@@ -55,7 +55,7 @@ type Service struct {
 	pmmUpdateCheck    *PMMUpdateChecker
 
 	eventsM    sync.Mutex
-	subs       map[chan *Event]sub
+	subs       map[chan *event]sub
 	lastEvents map[string]eventType
 
 	pmmUpdatePerformLogM sync.Mutex
@@ -84,7 +84,7 @@ func New(configDir string, pmmUpdateCheck *PMMUpdateChecker, vmParams *models.Vi
 		supervisorctlPath: path,
 		l:                 logrus.WithField("component", "supervisord"),
 		pmmUpdateCheck:    pmmUpdateCheck,
-		subs:              make(map[chan *Event]sub),
+		subs:              make(map[chan *event]sub),
 		lastEvents:        make(map[string]eventType),
 		vmParams:          vmParams,
 	}
@@ -119,7 +119,7 @@ func (s *Service) Run(ctx context.Context) {
 		return
 	}
 
-	var lastEvent *Event
+	var lastEvent *event
 	for ctx.Err() == nil {
 		cmd := exec.CommandContext(ctx, s.supervisorctlPath, "maintail", "-f") //nolint:gosec
 		cmdLine := strings.Join(cmd.Args, " ")
@@ -155,7 +155,7 @@ func (s *Service) Run(ctx context.Context) {
 
 			s.lastEvents[e.Program] = e.Type
 
-			var toDelete []chan *Event
+			var toDelete []chan *event
 			for ch, sub := range s.subs {
 				if e.Program == sub.program {
 					var found bool
@@ -205,11 +205,8 @@ func (s *Service) ForceCheckUpdates(ctx context.Context) error {
 	return s.pmmUpdateCheck.check(ctx)
 }
 
-// Subscribe returns a channel that is fed by one of eventTypes. When an event
-// is sent to the channel, the channel is closed. User of this method should call
-// the method again after receiving the event if continuous watch for events is desired.
-func (s *Service) Subscribe(program string, eventTypes ...eventType) chan *Event {
-	ch := make(chan *Event, 1)
+func (s *Service) subscribe(program string, eventTypes ...eventType) chan *event {
+	ch := make(chan *event, 1)
 	s.eventsM.Lock()
 	s.subs[ch] = sub{
 		program:    program,
@@ -255,7 +252,7 @@ func (s *Service) StartUpdate() (uint32, error) {
 	}
 
 	// send SIGUSR2 to supervisord and wait for it to reopen log file
-	ch := s.Subscribe("supervisord", logReopen)
+	ch := s.subscribe("supervisord", logReopen)
 	b, err := s.supervisorctl("pid")
 	if err != nil {
 		return 0, err
@@ -336,11 +333,11 @@ func (s *Service) programRunning(program string) bool {
 
 	s.l.Debugf("Status result for %q not parsed, inspecting last event %q.", program, lastEvent)
 	switch lastEvent {
-	case Stopping, starting, Running:
+	case stopping, starting, running:
 		return true
-	case ExitedUnexpected: // will be restarted
+	case exitedUnexpected: // will be restarted
 		return true
-	case ExitedExpected, fatal: // will not be restarted
+	case exitedExpected, fatal: // will not be restarted
 		return false
 	case stopped: // we don't know
 		fallthrough
@@ -409,7 +406,7 @@ func (s *Service) marshalConfig(tmpl *template.Template, settings *models.Settin
 		"DataRetentionDays":  int(settings.DataRetention.Hours() / 24),
 		"VMAlertFlags":       s.vmParams.VMAlertFlags,
 		"VMDBCacheDisable":   !settings.VictoriaMetrics.CacheEnabled,
-		"DbaasEnabled":       settings.DBaaS.Enabled,
+		"PerconaTestDbaas":   settings.DBaaS.Enabled,
 	}
 	if err := addAlertManagerParams(settings.AlertManagerURL, templateParams); err != nil {
 		return nil, errors.Wrap(err, "cannot add AlertManagerParams to supervisor template")
@@ -542,8 +539,8 @@ var templates = template.Must(template.New("").Option("missingkey=error").Parse(
 priority = 6
 command = /usr/sbin/dbaas-controller
 user = pmm
-autorestart = {{ .DbaasEnabled }}
-autostart = {{ .DbaasEnabled }}
+autorestart = {{ .PerconaTestDbaas }}
+autostart = {{ .PerconaTestDbaas }}
 startretries = 10
 startsecs = 1
 stopsignal = TERM

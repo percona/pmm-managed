@@ -26,19 +26,13 @@ type eventType string
 
 const (
 	// mirror http://supervisord.org/subprocess.html#process-states
-
-	// Stopping indicates that stop of a process was requested.
-	Stopping eventType = "STOPPING"
-	// Running indicates that a process is running.
-	Running eventType = "RUNNING"
-	// ExitedExpected indicates that a process exited expectedly.
-	ExitedExpected eventType = "EXITED (expected)"
-	// ExitedUnexpected indicates that a process exited unexpectedly.
-	ExitedUnexpected eventType = "EXITED (unexpected)"
-
-	stopped  eventType = "STOPPED"
-	starting eventType = "STARTING"
-	fatal    eventType = "FATAL"
+	stopped          eventType = "STOPPED"
+	stopping         eventType = "STOPPING"
+	starting         eventType = "STARTING"
+	running          eventType = "RUNNING"
+	exitedExpected   eventType = "EXITED (expected)"
+	exitedUnexpected eventType = "EXITED (unexpected)"
+	fatal            eventType = "FATAL"
 
 	unknown   eventType = "unknown"
 	logReopen eventType = "logreopen"
@@ -56,25 +50,25 @@ var (
 
 	events = map[*regexp.Regexp]eventType{
 		stoppedRE:          stopped,
-		stoppingRE:         Stopping,
+		stoppingRE:         stopping,
 		startingRE:         starting,
-		runningRE:          Running,
-		exitedExpectedRE:   ExitedExpected,
-		exitedUnexpectedRE: ExitedUnexpected,
+		runningRE:          running,
+		exitedExpectedRE:   exitedExpected,
+		exitedUnexpectedRE: exitedUnexpected,
 		fatalRE:            fatal,
 		logReopenRE:        logReopen,
 	}
 )
 
-// Event represents supervisord program event.
-type Event struct {
+// event represents supervisord program event.
+type event struct {
 	Time    time.Time
 	Type    eventType
 	Program string
 }
 
 // parseEvent returns parsed event from supervisord maintail line, or nil.
-func parseEvent(line string) *Event {
+func parseEvent(line string) *event {
 	parts := strings.SplitN(line, " ", 4)
 	if len(parts) != 4 {
 		return nil
@@ -89,7 +83,7 @@ func parseEvent(line string) *Event {
 
 	for re, typ := range events {
 		if m := re.FindStringSubmatch(parts[3]); m != nil {
-			return &Event{
+			return &event{
 				Time:    t,
 				Type:    typ,
 				Program: m[1],
