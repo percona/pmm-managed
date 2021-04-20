@@ -171,6 +171,13 @@ func (c componentsService) ChangePXCComponents(ctx context.Context, req *dbaasv1
 			}
 		}
 
+		if req.Haproxy != nil {
+			kubernetesCluster.HAProxy, e = setComponent(kubernetesCluster.HAProxy, req.Haproxy)
+			if e != nil {
+				message := fmt.Sprintf("%s, cluster: %s, component: HAProxy", e.Error(), kubernetesCluster.KubernetesClusterName)
+				return status.Errorf(codes.InvalidArgument, message)
+			}
+		}
 		e = tx.Save(kubernetesCluster)
 		if e != nil {
 			return e
@@ -191,11 +198,12 @@ func (c componentsService) versions(ctx context.Context, params componentsParams
 		return nil, err
 	}
 
-	var mongod, pxc, proxySQL *models.Component
+	var mongod, pxc, proxySQL, haproxy *models.Component
 	if cluster != nil {
 		mongod = cluster.Mongod
 		pxc = cluster.PXC
 		proxySQL = cluster.ProxySQL
+		haproxy = cluster.HAProxy
 	}
 
 	versions := make([]*dbaasv1beta1.OperatorVersion, 0, len(components.Versions))
@@ -210,7 +218,7 @@ func (c componentsService) versions(ctx context.Context, params componentsParams
 				Pxc:          c.matrix(v.Matrix.Pxc, pxcMinimalVersion, pxc),
 				Pmm:          c.matrix(v.Matrix.Pmm, nil, nil),
 				Proxysql:     c.matrix(v.Matrix.Proxysql, nil, proxySQL),
-				Haproxy:      c.matrix(v.Matrix.Haproxy, nil, nil),
+				Haproxy:      c.matrix(v.Matrix.Haproxy, nil, haproxy),
 				Backup:       c.matrix(v.Matrix.Backup, nil, nil),
 				Operator:     c.matrix(v.Matrix.Operator, nil, nil),
 				LogCollector: c.matrix(v.Matrix.LogCollector, nil, nil),
