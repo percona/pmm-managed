@@ -136,6 +136,11 @@ func (this *UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams) Validate() err
 			return github_com_mwitkow_go_proto_validators.FieldError("Proxysql", err)
 		}
 	}
+	if this.Haproxy != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Haproxy); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("Haproxy", err)
+		}
+	}
 	return nil
 }
 func (this *UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC) Validate() error {
@@ -147,6 +152,14 @@ func (this *UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_PXC) Validate()
 	return nil
 }
 func (this *UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_ProxySQL) Validate() error {
+	if this.ComputeResources != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.ComputeResources); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("ComputeResources", err)
+		}
+	}
+	return nil
+}
+func (this *UpdateXtraDBClusterRequest_UpdateXtraDBClusterParams_HAProxy) Validate() error {
 	if this.ComputeResources != nil {
 		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.ComputeResources); err != nil {
 			return github_com_mwitkow_go_proto_validators.FieldError("ComputeResources", err)
