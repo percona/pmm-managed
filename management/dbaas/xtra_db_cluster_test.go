@@ -31,12 +31,11 @@ func TestXtraDBClusterServer(t *testing.T) {
 				Name:                  "first-pxc-test",
 				Params: &xtra_db_cluster.CreateXtraDBClusterParamsBodyParams{
 					ClusterSize: 3,
-					Proxysql: &xtra_db_cluster.CreateXtraDBClusterParamsBodyParamsProxysql{
-						ComputeResources: &xtra_db_cluster.CreateXtraDBClusterParamsBodyParamsProxysqlComputeResources{
+					Haproxy: &xtra_db_cluster.CreateXtraDBClusterParamsBodyParamsHaproxy{
+						ComputeResources: &xtra_db_cluster.CreateXtraDBClusterParamsBodyParamsHaproxyComputeResources{
 							CPUm:        500,
 							MemoryBytes: "1000000000",
 						},
-						DiskSize: "1000000000",
 					},
 					Pxc: &xtra_db_cluster.CreateXtraDBClusterParamsBodyParamsPxc{
 						ComputeResources: &xtra_db_cluster.CreateXtraDBClusterParamsBodyParamsPxcComputeResources{
@@ -111,7 +110,7 @@ func TestXtraDBClusterServer(t *testing.T) {
 		xtraDBCluster, err := dbaasClient.Default.XtraDBCluster.GetXtraDBClusterCredentials(&getXtraDBClusterParamsParam)
 		assert.NoError(t, err)
 		assert.Equal(t, xtraDBCluster.Payload.ConnectionCredentials.Username, "root")
-		assert.Equal(t, xtraDBCluster.Payload.ConnectionCredentials.Host, "first-pxc-test-proxysql")
+		assert.Equal(t, xtraDBCluster.Payload.ConnectionCredentials.Host, "first-pxc-test-haproxy")
 		assert.Equal(t, xtraDBCluster.Payload.ConnectionCredentials.Port, int32(3306))
 		assert.NotEmpty(t, xtraDBCluster.Payload.ConnectionCredentials.Password)
 
