@@ -1,6 +1,7 @@
 package backup
 
 import (
+	"os"
 	"testing"
 
 	"github.com/brianvoe/gofakeit/v6"
@@ -57,16 +58,19 @@ func TestAddLocation(t *testing.T) {
 
 	t.Run("normal s3 config", func(t *testing.T) {
 		t.Parallel()
-
+		accessKey, secretKey, bucketName := os.Getenv("AWS_ACCESS_KEY"), os.Getenv("AWS_SECRET_KEY"), os.Getenv("AWS_BUCKET_NAME")
+		if accessKey == "" || secretKey == "" || bucketName == "" {
+			t.Skip("Skipping add S3 backup location - missing credentials")
+		}
 		resp, err := client.AddLocation(&locations.AddLocationParams{
 			Body: locations.AddLocationBody{
 				Name:        gofakeit.Name(),
 				Description: gofakeit.Question(),
 				S3Config: &locations.AddLocationParamsBodyS3Config{
-					Endpoint:   "http://example.com",
-					AccessKey:  "access_key",
-					SecretKey:  "secret_key",
-					BucketName: "example_bucket",
+					Endpoint:   "https://s3.us-west-2.amazonaws.com",
+					AccessKey:  accessKey,
+					SecretKey:  secretKey,
+					BucketName: bucketName,
 				},
 			},
 			Context: pmmapitests.Context,
@@ -371,11 +375,8 @@ func TestChangeLocation(t *testing.T) {
 		updateBody := locations.ChangeLocationBody{
 			LocationID: resp.Payload.LocationID,
 			Name:       gofakeit.Name(),
-			S3Config: &locations.ChangeLocationParamsBodyS3Config{
-				Endpoint:   "https://example.com",
-				AccessKey:  "access_key",
-				SecretKey:  "secret_key",
-				BucketName: "example_bucket",
+			PMMClientConfig: &locations.ChangeLocationParamsBodyPMMClientConfig{
+				Path: "/root",
 			},
 		}
 		_, err = client.ChangeLocation(&locations.ChangeLocationParams{
