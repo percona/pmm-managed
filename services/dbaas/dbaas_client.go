@@ -114,118 +114,103 @@ func (c *Client) CheckKubernetesClusterConnection(ctx context.Context, kubeConfi
 			Kubeconfig: kubeConfig,
 		},
 	}
-	out, err := c.kubernetesClient.CheckKubernetesClusterConnection(ctx, in)
-	out.GetStatus()
-	return out, err
+	return c.kubernetesClient.CheckKubernetesClusterConnection(ctx, in)
 }
 
 func (c *Client) ListXtraDBClusters(ctx context.Context, in *controllerv1beta1.ListXtraDBClustersRequest, opts ...grpc.CallOption) (*controllerv1beta1.ListXtraDBClustersResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	resp, err := c.xtradbClusterClient.ListXtraDBClusters(ctx, in, opts...)
-	return resp, err
+	return c.xtradbClusterClient.ListXtraDBClusters(ctx, in, opts...)
 }
 
 // CreateXtraDBCluster creates a new XtraDB cluster.
 func (c *Client) CreateXtraDBCluster(ctx context.Context, in *controllerv1beta1.CreateXtraDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.CreateXtraDBClusterResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	resp, err := c.xtradbClusterClient.CreateXtraDBCluster(ctx, in, opts...)
-	return resp, err
+	return c.xtradbClusterClient.CreateXtraDBCluster(ctx, in, opts...)
 }
 
 // UpdateXtraDBCluster updates existing XtraDB cluster.
 func (c *Client) UpdateXtraDBCluster(ctx context.Context, in *controllerv1beta1.UpdateXtraDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.UpdateXtraDBClusterResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	resp, err := c.xtradbClusterClient.UpdateXtraDBCluster(ctx, in, opts...)
-	return resp, err
+	return c.xtradbClusterClient.UpdateXtraDBCluster(ctx, in, opts...)
+
 }
 
 // DeleteXtraDBCluster deletes XtraDB cluster.
 func (c *Client) DeleteXtraDBCluster(ctx context.Context, in *controllerv1beta1.DeleteXtraDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.DeleteXtraDBClusterResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	resp, err := c.xtradbClusterClient.DeleteXtraDBCluster(ctx, in, opts...)
-	return resp, err
+	return c.xtradbClusterClient.DeleteXtraDBCluster(ctx, in, opts...)
 }
 
 // RestartXtraDBCluster restarts XtraDB cluster.
 func (c *Client) RestartXtraDBCluster(ctx context.Context, in *controllerv1beta1.RestartXtraDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.RestartXtraDBClusterResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	resp, err := c.xtradbClusterClient.RestartXtraDBCluster(ctx, in, opts...)
-	return resp, err
+	return c.xtradbClusterClient.RestartXtraDBCluster(ctx, in, opts...)
 }
 
 // GetXtraDBClusterCredentials gets XtraDB cluster credentials.
 func (c *Client) GetXtraDBClusterCredentials(ctx context.Context, in *controllerv1beta1.GetXtraDBClusterCredentialsRequest, opts ...grpc.CallOption) (*controllerv1beta1.GetXtraDBClusterCredentialsResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	resp, err := c.xtradbClusterClient.GetXtraDBClusterCredentials(ctx, in, opts...)
-	return resp, err
+	return c.xtradbClusterClient.GetXtraDBClusterCredentials(ctx, in, opts...)
 }
 
 // ListPSMDBClusters returns a list of PSMDB clusters.
 func (c *Client) ListPSMDBClusters(ctx context.Context, in *controllerv1beta1.ListPSMDBClustersRequest, opts ...grpc.CallOption) (*controllerv1beta1.ListPSMDBClustersResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	resp, err := c.psmdbClusterClient.ListPSMDBClusters(ctx, in, opts...)
-	return resp, err
+	return c.psmdbClusterClient.ListPSMDBClusters(ctx, in, opts...)
 }
 
 // CreatePSMDBCluster creates a new PSMDB cluster.
 func (c *Client) CreatePSMDBCluster(ctx context.Context, in *controllerv1beta1.CreatePSMDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.CreatePSMDBClusterResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	resp, err := c.psmdbClusterClient.CreatePSMDBCluster(ctx, in, opts...)
-	return resp, err
+	return c.psmdbClusterClient.CreatePSMDBCluster(ctx, in, opts...)
 }
 
 // UpdatePSMDBCluster updates existing PSMDB cluster.
 func (c *Client) UpdatePSMDBCluster(ctx context.Context, in *controllerv1beta1.UpdatePSMDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.UpdatePSMDBClusterResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	resp, err := c.psmdbClusterClient.UpdatePSMDBCluster(ctx, in, opts...)
-	return resp, err
+	return c.psmdbClusterClient.UpdatePSMDBCluster(ctx, in, opts...)
 }
 
 // DeletePSMDBCluster deletes PSMDB cluster.
 func (c *Client) DeletePSMDBCluster(ctx context.Context, in *controllerv1beta1.DeletePSMDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.DeletePSMDBClusterResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	resp, err := c.psmdbClusterClient.DeletePSMDBCluster(ctx, in, opts...)
-	return resp, err
+	return c.psmdbClusterClient.DeletePSMDBCluster(ctx, in, opts...)
 }
 
 // RestartPSMDBCluster restarts PSMDB cluster.
 func (c *Client) RestartPSMDBCluster(ctx context.Context, in *controllerv1beta1.RestartPSMDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.RestartPSMDBClusterResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	resp, err := c.psmdbClusterClient.RestartPSMDBCluster(ctx, in, opts...)
-	return resp, err
+	return c.psmdbClusterClient.RestartPSMDBCluster(ctx, in, opts...)
 }
 
 // GetPSMDBClusterCredentials gets PSMDB cluster credentials.
 func (c *Client) GetPSMDBClusterCredentials(ctx context.Context, in *controllerv1beta1.GetPSMDBClusterCredentialsRequest, opts ...grpc.CallOption) (*controllerv1beta1.GetPSMDBClusterCredentialsResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	resp, err := c.psmdbClusterClient.GetPSMDBClusterCredentials(ctx, in, opts...)
-	return resp, err
+	return c.psmdbClusterClient.GetPSMDBClusterCredentials(ctx, in, opts...)
 }
 
 // GetLogs gets logs out of cluster containers and events out of pods.
 func (c *Client) GetLogs(ctx context.Context, in *controllerv1beta1.GetLogsRequest, opts ...grpc.CallOption) (*controllerv1beta1.GetLogsResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	resp, err := c.logsClient.GetLogs(ctx, in, opts...)
-	return resp, err
+	return c.logsClient.GetLogs(ctx, in, opts...)
 }
 
 // GetResources returns all and available resources of a Kubernetes cluster.
 func (c *Client) GetResources(ctx context.Context, in *controllerv1beta1.GetResourcesRequest, opts ...grpc.CallOption) (*controllerv1beta1.GetResourcesResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	resp, err := c.kubernetesClient.GetResources(ctx, in, opts...)
-	return resp, err
+	return c.kubernetesClient.GetResources(ctx, in, opts...)
 }

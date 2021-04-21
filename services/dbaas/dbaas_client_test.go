@@ -26,9 +26,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const supervisordConfigDir = "/etc/supervisord.d"
-
 func TestClient(t *testing.T) {
+	v := os.Getenv("ENABLE_DBAAS")
+	dbaasEnabled, err := strconv.ParseBool(v)
+	if err != nil {
+		t.Skipf("Invalid value %q for environment variable ENABLE_DBAAS", v)
+	}
+	if !dbaasEnabled {
+		t.Skip("DBaaS is not enabled")
+	}
+
 	getClient := func(t *testing.T) *Client {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 		defer cancel()
@@ -41,15 +48,8 @@ func TestClient(t *testing.T) {
 		})
 		return c
 	}
+
 	t.Run("ValidKubeConfig", func(t *testing.T) {
-		v := os.Getenv("ENABLE_DBAAS")
-		dbaasEnabled, err := strconv.ParseBool(v)
-		if err != nil {
-			t.Skipf("Invalid value %q for environment variable ENABLE_DBAAS", v)
-		}
-		if !dbaasEnabled {
-			t.Skip("DBaaS is not enabled")
-		}
 		kubeConfig := os.Getenv("PERCONA_TEST_DBAAS_KUBECONFIG")
 		if kubeConfig == "" {
 			t.Skip("PERCONA_TEST_DBAAS_KUBECONFIG env variable is not provided")
@@ -60,15 +60,6 @@ func TestClient(t *testing.T) {
 	})
 
 	t.Run("InvalidKubeConfig", func(t *testing.T) {
-		v := os.Getenv("ENABLE_DBAAS")
-		dbaasEnabled, err := strconv.ParseBool(v)
-		if err != nil {
-			t.Skipf("Invalid value %q for environment variable ENABLE_DBAAS", v)
-		}
-		if !dbaasEnabled {
-			t.Skip("DBaaS is not enabled")
-		}
-
 		c := getClient(t)
 		_, err = c.CheckKubernetesClusterConnection(context.TODO(), "{}")
 		require.Error(t, err)
