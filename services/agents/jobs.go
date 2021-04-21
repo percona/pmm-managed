@@ -84,12 +84,11 @@ func (s *JobsService) StartMySQLBackupJob(id, pmmAgentID string, timeout time.Du
 	case locationConfig.S3Config != nil:
 		mySQLReq.LocationConfig = &agentpb.StartJobRequest_MySQLBackup_S3Config{
 			S3Config: &agentpb.S3LocationConfig{
-				Endpoint:   locationConfig.S3Config.Endpoint,
-				AccessKey:  locationConfig.S3Config.AccessKey,
-				SecretKey:  locationConfig.S3Config.SecretKey,
-				BucketName: locationConfig.S3Config.BucketName,
-				// TODO: replace hardcoded region with real value https://jira.percona.com/browse/PMM-7832
-				BucketRegion: "us-east-2",
+				Endpoint:     locationConfig.S3Config.Endpoint,
+				AccessKey:    locationConfig.S3Config.AccessKey,
+				SecretKey:    locationConfig.S3Config.SecretKey,
+				BucketName:   locationConfig.S3Config.BucketName,
+				BucketRegion: locationConfig.S3Config.BucketRegion,
 			},
 		}
 	default:

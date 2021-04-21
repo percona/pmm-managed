@@ -76,10 +76,11 @@ func TestStartBackup(t *testing.T) {
 		Description: "Test description",
 		BackupLocationConfig: models.BackupLocationConfig{
 			S3Config: &models.S3LocationConfig{
-				Endpoint:   "https://s3.us-west-2.amazonaws.com/",
-				AccessKey:  "access_key",
-				SecretKey:  "secret_key",
-				BucketName: "example_bucket",
+				Endpoint:     "https://s3.us-west-2.amazonaws.com/",
+				AccessKey:    "access_key",
+				SecretKey:    "secret_key",
+				BucketName:   "example_bucket",
+				BucketRegion: "us-east-2",
 			},
 		},
 	})

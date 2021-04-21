@@ -119,7 +119,7 @@ func checkS3Config(c *S3LocationConfig, withBucketLocation bool) error {
 	}
 
 	if withBucketLocation && c.BucketRegion == "" {
-		return status.Error(codes.InvalidArgument, "S3 bucketLocation field is empty")
+		return status.Error(codes.InvalidArgument, "S3 bucketRegion field is empty")
 	}
 
 	parsedURL, err := ParseEndpoint(c.Endpoint)
