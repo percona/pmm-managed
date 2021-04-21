@@ -709,7 +709,6 @@ func main() {
 			}
 		}()
 	}
-
 	settings, err := models.GetSettings(sqlDB)
 	if err != nil {
 		l.Fatalf("Failed to get settings: %+v.", err)
