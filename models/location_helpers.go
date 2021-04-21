@@ -210,6 +210,7 @@ type BackupLocationConfig struct {
 	S3Config        *S3LocationConfig
 }
 
+// BackupLocationValidationParams contains typed params for backup location validate.
 type BackupLocationValidationParams struct {
 	RequireConfig    bool
 	WithBucketRegion bool
