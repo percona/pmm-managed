@@ -131,7 +131,7 @@ func (s *actionsServer) prepareServiceActionWithFiles(serviceID, pmmAgentID, dat
 // StartMySQLExplainAction starts MySQL EXPLAIN Action with traditional output.
 //nolint:lll
 func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *managementpb.StartMySQLExplainActionRequest) (*managementpb.StartMySQLExplainActionResponse, error) {
-	res, dsn, files, tdp, err := s.prepareServiceActionWithFiles(req.ServiceId, req.PmmAgentId, "admin")
+	res, dsn, files, tdp, err := s.prepareServiceActionWithFiles(req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +150,7 @@ func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *manage
 // StartMySQLExplainJSONAction starts MySQL EXPLAIN Action with JSON output.
 //nolint:lll
 func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *managementpb.StartMySQLExplainJSONActionRequest) (*managementpb.StartMySQLExplainJSONActionResponse, error) {
-	res, dsn, files, tdp, err := s.prepareServiceActionWithFiles(req.ServiceId, req.PmmAgentId, "admin")
+	res, dsn, files, tdp, err := s.prepareServiceActionWithFiles(req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +169,7 @@ func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *ma
 // StartMySQLExplainTraditionalJSONAction starts MySQL EXPLAIN Action with traditional JSON output.
 //nolint:lll
 func (s *actionsServer) StartMySQLExplainTraditionalJSONAction(ctx context.Context, req *managementpb.StartMySQLExplainTraditionalJSONActionRequest) (*managementpb.StartMySQLExplainTraditionalJSONActionResponse, error) {
-	res, dsn, files, tdp, err := s.prepareServiceActionWithFiles(req.ServiceId, req.PmmAgentId, "admin")
+	res, dsn, files, tdp, err := s.prepareServiceActionWithFiles(req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +188,7 @@ func (s *actionsServer) StartMySQLExplainTraditionalJSONAction(ctx context.Conte
 // StartMySQLShowCreateTableAction starts MySQL SHOW CREATE TABLE Action.
 //nolint:lll
 func (s *actionsServer) StartMySQLShowCreateTableAction(ctx context.Context, req *managementpb.StartMySQLShowCreateTableActionRequest) (*managementpb.StartMySQLShowCreateTableActionResponse, error) {
-	res, dsn, files, tdp, err := s.prepareServiceActionWithFiles(req.ServiceId, req.PmmAgentId, "admin")
+	res, dsn, files, tdp, err := s.prepareServiceActionWithFiles(req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +207,7 @@ func (s *actionsServer) StartMySQLShowCreateTableAction(ctx context.Context, req
 // StartMySQLShowTableStatusAction starts MySQL SHOW TABLE STATUS Action.
 //nolint:lll
 func (s *actionsServer) StartMySQLShowTableStatusAction(ctx context.Context, req *managementpb.StartMySQLShowTableStatusActionRequest) (*managementpb.StartMySQLShowTableStatusActionResponse, error) {
-	res, dsn, files, tdp, err := s.prepareServiceActionWithFiles(req.ServiceId, req.PmmAgentId, "admin")
+	res, dsn, files, tdp, err := s.prepareServiceActionWithFiles(req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +226,7 @@ func (s *actionsServer) StartMySQLShowTableStatusAction(ctx context.Context, req
 // StartMySQLShowIndexAction starts MySQL SHOW INDEX Action.
 //nolint:lll
 func (s *actionsServer) StartMySQLShowIndexAction(ctx context.Context, req *managementpb.StartMySQLShowIndexActionRequest) (*managementpb.StartMySQLShowIndexActionResponse, error) {
-	res, dsn, files, tdp, err := s.prepareServiceActionWithFiles(req.ServiceId, req.PmmAgentId, "admin")
+	res, dsn, files, tdp, err := s.prepareServiceActionWithFiles(req.ServiceId, req.PmmAgentId, req.Database)
 	if err != nil {
 		return nil, err
 	}
