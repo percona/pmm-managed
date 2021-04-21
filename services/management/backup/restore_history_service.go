@@ -59,37 +59,50 @@ func (s *RestoreHistoryService) ListRestoreHistory(
 	context.Context,
 	*backupv1beta1.ListRestoreHistoryRequest,
 ) (*backupv1beta1.ListRestoreHistoryResponse, error) {
-	q := s.db.Querier
+	var items []*models.RestoreHistoryItem
+	var services map[string]*models.Service
+	var artifacts map[string]*models.Artifact
+	var locations map[string]*models.BackupLocation
 
-	items, err := models.FindRestoreHistoryItems(q)
-	if err != nil {
-		return nil, err
-	}
+	err := s.db.InTransaction(func(tx *reform.TX) error {
+		q := tx.Querier
 
-	artifactIDs := make([]string, 0, len(items))
-	for _, i := range items {
-		artifactIDs = append(artifactIDs, i.ArtifactID)
-	}
-	artifacts, err := models.FindArtifactsByIDs(q, artifactIDs)
-	if err != nil {
-		return nil, err
-	}
+		var err error
+		items, err = models.FindRestoreHistoryItems(q)
+		if err != nil {
+			return err
+		}
 
-	locationIDs := make([]string, 0, len(items))
-	for _, a := range artifacts {
-		locationIDs = append(locationIDs, a.LocationID)
-	}
-	locations, err := models.FindBackupLocationsByIDs(q, locationIDs)
-	if err != nil {
-		return nil, err
-	}
+		artifactIDs := make([]string, 0, len(items))
+		for _, i := range items {
+			artifactIDs = append(artifactIDs, i.ArtifactID)
+		}
+		artifacts, err = models.FindArtifactsByIDs(q, artifactIDs)
+		if err != nil {
+			return err
+		}
 
-	serviceIDs := make([]string, 0, len(items))
-	for _, b := range items {
-		serviceIDs = append(serviceIDs, b.ServiceID)
-	}
+		locationIDs := make([]string, 0, len(items))
+		for _, a := range artifacts {
+			locationIDs = append(locationIDs, a.LocationID)
+		}
+		locations, err = models.FindBackupLocationsByIDs(q, locationIDs)
+		if err != nil {
+			return err
+		}
 
-	services, err := models.FindServicesByIDs(q, serviceIDs)
+		serviceIDs := make([]string, 0, len(items))
+		for _, b := range items {
+			serviceIDs = append(serviceIDs, b.ServiceID)
+		}
+
+		services, err = models.FindServicesByIDs(q, serviceIDs)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -100,6 +113,7 @@ func (s *RestoreHistoryService) ListRestoreHistory(
 		if err != nil {
 			return nil, err
 		}
+
 		artifactsResponse = append(artifactsResponse, convertedArtifact)
 	}
 	return &backupv1beta1.ListRestoreHistoryResponse{
