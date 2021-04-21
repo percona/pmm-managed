@@ -863,7 +863,6 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 				TemplateLeftDelim:  tdp.Left,
 				TemplateRightDelim: tdp.Right,
 			},
-			Tls:           agent.TLS,
 			TlsSkipVerify: agent.TLSSkipVerify,
 		}
 	case models.PostgreSQLServiceType:
@@ -1000,7 +999,7 @@ func (r *Registry) Collect(ch chan<- prom.Metric) {
 
 // StartMySQLExplainAction starts MySQL EXPLAIN Action on pmm-agent.
 // TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
-func (r *Registry) StartMySQLExplainAction(ctx context.Context, id, pmmAgentID, dsn, query string, format agentpb.MysqlExplainOutputFormat, files map[string]string, tdp *models.DelimiterPair) error {
+func (r *Registry) StartMySQLExplainAction(ctx context.Context, id, pmmAgentID, dsn, query string, format agentpb.MysqlExplainOutputFormat, files map[string]string, tdp *models.DelimiterPair, tlsSkipVerify bool) error {
 	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		return err
@@ -1018,6 +1017,7 @@ func (r *Registry) StartMySQLExplainAction(ctx context.Context, id, pmmAgentID, 
 					TemplateLeftDelim:  tdp.Left,
 					TemplateRightDelim: tdp.Right,
 				},
+				TlsSkipVerify: tlsSkipVerify,
 			},
 		},
 		Timeout: defaultActionTimeout,
@@ -1029,7 +1029,7 @@ func (r *Registry) StartMySQLExplainAction(ctx context.Context, id, pmmAgentID, 
 
 // StartMySQLShowCreateTableAction starts mysql-show-create-table action on pmm-agent.
 // TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
-func (r *Registry) StartMySQLShowCreateTableAction(ctx context.Context, id, pmmAgentID, dsn, table string, files map[string]string, tdp *models.DelimiterPair) error {
+func (r *Registry) StartMySQLShowCreateTableAction(ctx context.Context, id, pmmAgentID, dsn, table string, files map[string]string, tdp *models.DelimiterPair, tlsSkipVerify bool) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_MysqlShowCreateTableParams{
@@ -1041,6 +1041,7 @@ func (r *Registry) StartMySQLShowCreateTableAction(ctx context.Context, id, pmmA
 					TemplateLeftDelim:  tdp.Left,
 					TemplateRightDelim: tdp.Right,
 				},
+				TlsSkipVerify: tlsSkipVerify,
 			},
 		},
 		Timeout: defaultActionTimeout,
@@ -1057,7 +1058,7 @@ func (r *Registry) StartMySQLShowCreateTableAction(ctx context.Context, id, pmmA
 
 // StartMySQLShowTableStatusAction starts mysql-show-table-status action on pmm-agent.
 // TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
-func (r *Registry) StartMySQLShowTableStatusAction(ctx context.Context, id, pmmAgentID, dsn, table string, files map[string]string, tdp *models.DelimiterPair) error {
+func (r *Registry) StartMySQLShowTableStatusAction(ctx context.Context, id, pmmAgentID, dsn, table string, files map[string]string, tdp *models.DelimiterPair, tlsSkipVerify bool) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_MysqlShowTableStatusParams{
@@ -1069,6 +1070,7 @@ func (r *Registry) StartMySQLShowTableStatusAction(ctx context.Context, id, pmmA
 					TemplateLeftDelim:  tdp.Left,
 					TemplateRightDelim: tdp.Right,
 				},
+				TlsSkipVerify: tlsSkipVerify,
 			},
 		},
 		Timeout: defaultActionTimeout,
@@ -1085,7 +1087,7 @@ func (r *Registry) StartMySQLShowTableStatusAction(ctx context.Context, id, pmmA
 
 // StartMySQLShowIndexAction starts mysql-show-index action on pmm-agent.
 // TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
-func (r *Registry) StartMySQLShowIndexAction(ctx context.Context, id, pmmAgentID, dsn, table string, files map[string]string, tdp *models.DelimiterPair) error {
+func (r *Registry) StartMySQLShowIndexAction(ctx context.Context, id, pmmAgentID, dsn, table string, files map[string]string, tdp *models.DelimiterPair, tlsSkipVerify bool) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_MysqlShowIndexParams{
@@ -1097,6 +1099,7 @@ func (r *Registry) StartMySQLShowIndexAction(ctx context.Context, id, pmmAgentID
 					TemplateLeftDelim:  tdp.Left,
 					TemplateRightDelim: tdp.Right,
 				},
+				TlsSkipVerify: tlsSkipVerify,
 			},
 		},
 		Timeout: defaultActionTimeout,
@@ -1185,7 +1188,7 @@ func (r *Registry) StartMongoDBExplainAction(ctx context.Context, id, pmmAgentID
 }
 
 // StartMySQLQueryShowAction starts MySQL SHOW query action on pmm-agent.
-func (r *Registry) StartMySQLQueryShowAction(ctx context.Context, id, pmmAgentID, dsn, query string, files map[string]string, tdp *models.DelimiterPair) error {
+func (r *Registry) StartMySQLQueryShowAction(ctx context.Context, id, pmmAgentID, dsn, query string, files map[string]string, tdp *models.DelimiterPair, tlsSkipVerify bool) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_MysqlQueryShowParams{
@@ -1197,6 +1200,7 @@ func (r *Registry) StartMySQLQueryShowAction(ctx context.Context, id, pmmAgentID
 					TemplateLeftDelim:  tdp.Left,
 					TemplateRightDelim: tdp.Right,
 				},
+				TlsSkipVerify: tlsSkipVerify,
 			},
 		},
 		Timeout: defaultQueryActionTimeout,
@@ -1212,7 +1216,7 @@ func (r *Registry) StartMySQLQueryShowAction(ctx context.Context, id, pmmAgentID
 }
 
 // StartMySQLQuerySelectAction starts MySQL SELECT query action on pmm-agent.
-func (r *Registry) StartMySQLQuerySelectAction(ctx context.Context, id, pmmAgentID, dsn, query string, files map[string]string, tdp *models.DelimiterPair) error {
+func (r *Registry) StartMySQLQuerySelectAction(ctx context.Context, id, pmmAgentID, dsn, query string, files map[string]string, tdp *models.DelimiterPair, tlsSkipVerify bool) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
 		Params: &agentpb.StartActionRequest_MysqlQuerySelectParams{
@@ -1224,6 +1228,7 @@ func (r *Registry) StartMySQLQuerySelectAction(ctx context.Context, id, pmmAgent
 					TemplateLeftDelim:  tdp.Left,
 					TemplateRightDelim: tdp.Right,
 				},
+				TlsSkipVerify: tlsSkipVerify,
 			},
 		},
 		Timeout: defaultQueryActionTimeout,

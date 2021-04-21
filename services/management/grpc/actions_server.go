@@ -136,7 +136,15 @@ func (s *actionsServer) StartMySQLExplainAction(ctx context.Context, req *manage
 		return nil, err
 	}
 
-	err = s.r.StartMySQLExplainAction(ctx, res.ID, res.PMMAgentID, dsn, req.Query, agentpb.MysqlExplainOutputFormat_MYSQL_EXPLAIN_OUTPUT_FORMAT_DEFAULT, files, tdp)
+	agents, err := models.FindAgents(s.db.Querier, models.AgentFilters{ServiceID: req.ServiceId, PMMAgentID: req.PmmAgentId, AgentType: pointerToAgentType(models.MySQLdExporterType)})
+	if err != nil {
+		return nil, err
+	}
+	if len(agents) != 1 {
+		return nil, status.Errorf(codes.FailedPrecondition, "Cannot find right agent")
+	}
+
+	err = s.r.StartMySQLExplainAction(ctx, res.ID, res.PMMAgentID, dsn, req.Query, agentpb.MysqlExplainOutputFormat_MYSQL_EXPLAIN_OUTPUT_FORMAT_DEFAULT, files, tdp, agents[0].TLSSkipVerify)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +163,15 @@ func (s *actionsServer) StartMySQLExplainJSONAction(ctx context.Context, req *ma
 		return nil, err
 	}
 
-	err = s.r.StartMySQLExplainAction(ctx, res.ID, res.PMMAgentID, dsn, req.Query, agentpb.MysqlExplainOutputFormat_MYSQL_EXPLAIN_OUTPUT_FORMAT_JSON, files, tdp)
+	agents, err := models.FindAgents(s.db.Querier, models.AgentFilters{ServiceID: req.ServiceId, PMMAgentID: req.PmmAgentId, AgentType: pointerToAgentType(models.MySQLdExporterType)})
+	if err != nil {
+		return nil, err
+	}
+	if len(agents) != 1 {
+		return nil, status.Errorf(codes.FailedPrecondition, "Cannot find right agent")
+	}
+
+	err = s.r.StartMySQLExplainAction(ctx, res.ID, res.PMMAgentID, dsn, req.Query, agentpb.MysqlExplainOutputFormat_MYSQL_EXPLAIN_OUTPUT_FORMAT_JSON, files, tdp, agents[0].TLSSkipVerify)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +190,15 @@ func (s *actionsServer) StartMySQLExplainTraditionalJSONAction(ctx context.Conte
 		return nil, err
 	}
 
-	err = s.r.StartMySQLExplainAction(ctx, res.ID, res.PMMAgentID, dsn, req.Query, agentpb.MysqlExplainOutputFormat_MYSQL_EXPLAIN_OUTPUT_FORMAT_TRADITIONAL_JSON, files, tdp)
+	agents, err := models.FindAgents(s.db.Querier, models.AgentFilters{ServiceID: req.ServiceId, PMMAgentID: req.PmmAgentId, AgentType: pointerToAgentType(models.MySQLdExporterType)})
+	if err != nil {
+		return nil, err
+	}
+	if len(agents) != 1 {
+		return nil, status.Errorf(codes.FailedPrecondition, "Cannot find right agent")
+	}
+
+	err = s.r.StartMySQLExplainAction(ctx, res.ID, res.PMMAgentID, dsn, req.Query, agentpb.MysqlExplainOutputFormat_MYSQL_EXPLAIN_OUTPUT_FORMAT_TRADITIONAL_JSON, files, tdp, agents[0].TLSSkipVerify)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +217,15 @@ func (s *actionsServer) StartMySQLShowCreateTableAction(ctx context.Context, req
 		return nil, err
 	}
 
-	err = s.r.StartMySQLShowCreateTableAction(ctx, res.ID, res.PMMAgentID, dsn, req.TableName, files, tdp)
+	agents, err := models.FindAgents(s.db.Querier, models.AgentFilters{ServiceID: req.ServiceId, PMMAgentID: req.PmmAgentId, AgentType: pointerToAgentType(models.MySQLdExporterType)})
+	if err != nil {
+		return nil, err
+	}
+	if len(agents) != 1 {
+		return nil, status.Errorf(codes.FailedPrecondition, "Cannot find right agent")
+	}
+
+	err = s.r.StartMySQLShowCreateTableAction(ctx, res.ID, res.PMMAgentID, dsn, req.TableName, files, tdp, agents[0].TLSSkipVerify)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +244,15 @@ func (s *actionsServer) StartMySQLShowTableStatusAction(ctx context.Context, req
 		return nil, err
 	}
 
-	err = s.r.StartMySQLShowTableStatusAction(ctx, res.ID, res.PMMAgentID, dsn, req.TableName, files, tdp)
+	agents, err := models.FindAgents(s.db.Querier, models.AgentFilters{ServiceID: req.ServiceId, PMMAgentID: req.PmmAgentId, AgentType: pointerToAgentType(models.MySQLdExporterType)})
+	if err != nil {
+		return nil, err
+	}
+	if len(agents) != 1 {
+		return nil, status.Errorf(codes.FailedPrecondition, "Cannot find right agent")
+	}
+
+	err = s.r.StartMySQLShowTableStatusAction(ctx, res.ID, res.PMMAgentID, dsn, req.TableName, files, tdp, agents[0].TLSSkipVerify)
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +271,15 @@ func (s *actionsServer) StartMySQLShowIndexAction(ctx context.Context, req *mana
 		return nil, err
 	}
 
-	err = s.r.StartMySQLShowIndexAction(ctx, res.ID, res.PMMAgentID, dsn, req.TableName, files, tdp)
+	agents, err := models.FindAgents(s.db.Querier, models.AgentFilters{ServiceID: req.ServiceId, PMMAgentID: req.PmmAgentId, AgentType: pointerToAgentType(models.MySQLdExporterType)})
+	if err != nil {
+		return nil, err
+	}
+	if len(agents) != 1 {
+		return nil, status.Errorf(codes.FailedPrecondition, "Cannot find right agent")
+	}
+
+	err = s.r.StartMySQLShowIndexAction(ctx, res.ID, res.PMMAgentID, dsn, req.TableName, files, tdp, agents[0].TLSSkipVerify)
 	if err != nil {
 		return nil, err
 	}
