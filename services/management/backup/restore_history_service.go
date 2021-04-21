@@ -74,26 +74,23 @@ func (s *RestoreHistoryService) ListRestoreHistory(
 		}
 
 		artifactIDs := make([]string, 0, len(items))
+		serviceIDs := make([]string, 0, len(items))
 		for _, i := range items {
 			artifactIDs = append(artifactIDs, i.ArtifactID)
+			serviceIDs = append(serviceIDs, i.ServiceID)
 		}
 		artifacts, err = models.FindArtifactsByIDs(q, artifactIDs)
 		if err != nil {
 			return err
 		}
 
-		locationIDs := make([]string, 0, len(items))
+		locationIDs := make([]string, 0, len(artifacts))
 		for _, a := range artifacts {
 			locationIDs = append(locationIDs, a.LocationID)
 		}
 		locations, err = models.FindBackupLocationsByIDs(q, locationIDs)
 		if err != nil {
 			return err
-		}
-
-		serviceIDs := make([]string, 0, len(items))
-		for _, b := range items {
-			serviceIDs = append(serviceIDs, b.ServiceID)
 		}
 
 		services, err = models.FindServicesByIDs(q, serviceIDs)
@@ -137,6 +134,7 @@ func convertRestoreStatus(status models.RestoreStatus) (*backupv1beta1.RestoreSt
 	return &s, nil
 }
 
+//nolint:funlen
 func convertRestoreHistoryItem(
 	i *models.RestoreHistoryItem,
 	services map[string]*models.Service,
