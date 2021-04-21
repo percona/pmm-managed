@@ -197,7 +197,7 @@ func TestFindDSNByServiceID(t *testing.T) {
 
 		dsn, agent, err := models.FindDSNByServiceIDandPMMAgentID(q, "S1", "PA1", "test")
 		require.NoError(t, err)
-		expected := "unix(/var/run/mysqld/mysqld.sock)/test?clientFoundRows=true&parseTime=true&timeout=1s"
+		expected := "unix(/var/run/mysqld/mysqld.sock)/test?timeout=1s"
 		assert.Equal(t, expected, dsn)
 		assert.NotNil(t, agent)
 	})

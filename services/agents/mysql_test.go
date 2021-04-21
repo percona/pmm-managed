@@ -85,7 +85,7 @@ func TestMySQLdExporterConfig(t *testing.T) {
 			"--web.listen-address=:{{ .listen_port }}",
 		},
 		Env: []string{
-			"DATA_SOURCE_NAME=username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:3306)/?clientFoundRows=true&parseTime=true&timeout=1s",
+			"DATA_SOURCE_NAME=username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:3306)/?timeout=1s",
 			"HTTP_AUTH=pmm:agent-id",
 		},
 		RedactWords: []string{"s3cur3 p@$$w0r4."},
@@ -98,13 +98,13 @@ func TestMySQLdExporterConfig(t *testing.T) {
 	t.Run("EmptyPassword", func(t *testing.T) {
 		exporter.Password = nil
 		actual := mysqldExporterConfig(mysql, exporter, exposeSecrets)
-		assert.Equal(t, "DATA_SOURCE_NAME=username@tcp(1.2.3.4:3306)/?clientFoundRows=true&parseTime=true&timeout=1s", actual.Env[0])
+		assert.Equal(t, "DATA_SOURCE_NAME=username@tcp(1.2.3.4:3306)/?timeout=1s", actual.Env[0])
 	})
 
 	t.Run("EmptyUsername", func(t *testing.T) {
 		exporter.Username = nil
 		actual := mysqldExporterConfig(mysql, exporter, exposeSecrets)
-		assert.Equal(t, "DATA_SOURCE_NAME=tcp(1.2.3.4:3306)/?clientFoundRows=true&parseTime=true&timeout=1s", actual.Env[0])
+		assert.Equal(t, "DATA_SOURCE_NAME=tcp(1.2.3.4:3306)/?timeout=1s", actual.Env[0])
 	})
 
 	t.Run("SSLEnabled", func(t *testing.T) {
@@ -115,7 +115,7 @@ func TestMySQLdExporterConfig(t *testing.T) {
 			TLSKey:  "content-of-tls-key",
 		}
 		actual := mysqldExporterConfig(mysql, exporter, exposeSecrets)
-		expected := "DATA_SOURCE_NAME=tcp(1.2.3.4:3306)/?clientFoundRows=true&parseTime=true&timeout=1s&tls=custom"
+		expected := "DATA_SOURCE_NAME=tcp(1.2.3.4:3306)/?timeout=1s&tls=custom"
 		assert.Equal(t, expected, actual.Env[0])
 		expectedFiles := map[string]string{
 			"tlsCa":   exporter.MySQLOptions.TLSCa,
@@ -184,7 +184,7 @@ func TestMySQLdExporterConfigTablestatsGroupDisabled(t *testing.T) {
 			"--web.listen-address=:{{ .listen_port }}",
 		},
 		Env: []string{
-			"DATA_SOURCE_NAME=username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:3306)/?clientFoundRows=true&parseTime=true&timeout=1s&tls=custom",
+			"DATA_SOURCE_NAME=username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:3306)/?timeout=1s&tls=custom",
 			"HTTP_AUTH=pmm:agent-id",
 		},
 		RedactWords: []string{"s3cur3 p@$$w0r4."},
@@ -202,13 +202,13 @@ func TestMySQLdExporterConfigTablestatsGroupDisabled(t *testing.T) {
 	t.Run("EmptyPassword", func(t *testing.T) {
 		exporter.Password = nil
 		actual := mysqldExporterConfig(mysql, exporter, exposeSecrets)
-		assert.Equal(t, "DATA_SOURCE_NAME=username@tcp(1.2.3.4:3306)/?clientFoundRows=true&parseTime=true&timeout=1s&tls=custom", actual.Env[0])
+		assert.Equal(t, "DATA_SOURCE_NAME=username@tcp(1.2.3.4:3306)/?timeout=1s&tls=custom", actual.Env[0])
 	})
 
 	t.Run("EmptyUsername", func(t *testing.T) {
 		exporter.Username = nil
 		actual := mysqldExporterConfig(mysql, exporter, exposeSecrets)
-		assert.Equal(t, "DATA_SOURCE_NAME=tcp(1.2.3.4:3306)/?clientFoundRows=true&parseTime=true&timeout=1s&tls=custom", actual.Env[0])
+		assert.Equal(t, "DATA_SOURCE_NAME=tcp(1.2.3.4:3306)/?timeout=1s&tls=custom", actual.Env[0])
 	})
 }
 
@@ -266,7 +266,7 @@ func TestMySQLdExporterConfigDisabledCollectors(t *testing.T) {
 			"--web.listen-address=:{{ .listen_port }}",
 		},
 		Env: []string{
-			"DATA_SOURCE_NAME=username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:3306)/?clientFoundRows=true&parseTime=true&timeout=1s",
+			"DATA_SOURCE_NAME=username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:3306)/?timeout=1s",
 			"HTTP_AUTH=pmm:agent-id",
 		},
 		RedactWords: []string{"s3cur3 p@$$w0r4."},
