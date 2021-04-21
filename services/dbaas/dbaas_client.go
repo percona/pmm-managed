@@ -41,7 +41,6 @@ type Client struct {
 	connM                     *sync.RWMutex
 	conn                      *grpc.ClientConn
 	dbaasControllerAPIAddress string
-	wg                        *sync.WaitGroup
 }
 
 // NewClient creates new Client object.
@@ -50,7 +49,6 @@ func NewClient(dbaasControllerAPIAddress string) *Client {
 		l:                         logrus.WithField("component", "dbaas.Client"),
 		connM:                     new(sync.RWMutex),
 		dbaasControllerAPIAddress: dbaasControllerAPIAddress,
-		wg:                        new(sync.WaitGroup),
 	}
 	return c
 }
@@ -93,7 +91,7 @@ func (c *Client) Disconnect() error {
 	c.connM.Lock()
 	defer c.connM.Unlock()
 	c.l.Info("Disconnecting from dbaas-controller API.")
-	c.wg.Wait()
+
 	if c.conn == nil {
 		c.l.Warnf("Trying to disconnect from dbaas-controller API but the connection is not up.")
 		return nil
@@ -111,24 +109,20 @@ func (c *Client) Disconnect() error {
 func (c *Client) CheckKubernetesClusterConnection(ctx context.Context, kubeConfig string) (*controllerv1beta1.CheckKubernetesClusterConnectionResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	c.wg.Add(1)
-
 	in := &controllerv1beta1.CheckKubernetesClusterConnectionRequest{
 		KubeAuth: &controllerv1beta1.KubeAuth{
 			Kubeconfig: kubeConfig,
 		},
 	}
 	out, err := c.kubernetesClient.CheckKubernetesClusterConnection(ctx, in)
-	c.wg.Done()
+	out.GetStatus()
 	return out, err
 }
 
 func (c *Client) ListXtraDBClusters(ctx context.Context, in *controllerv1beta1.ListXtraDBClustersRequest, opts ...grpc.CallOption) (*controllerv1beta1.ListXtraDBClustersResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	c.wg.Add(1)
 	resp, err := c.xtradbClusterClient.ListXtraDBClusters(ctx, in, opts...)
-	c.wg.Done()
 	return resp, err
 }
 
@@ -136,9 +130,7 @@ func (c *Client) ListXtraDBClusters(ctx context.Context, in *controllerv1beta1.L
 func (c *Client) CreateXtraDBCluster(ctx context.Context, in *controllerv1beta1.CreateXtraDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.CreateXtraDBClusterResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	c.wg.Add(1)
 	resp, err := c.xtradbClusterClient.CreateXtraDBCluster(ctx, in, opts...)
-	c.wg.Done()
 	return resp, err
 }
 
@@ -146,9 +138,7 @@ func (c *Client) CreateXtraDBCluster(ctx context.Context, in *controllerv1beta1.
 func (c *Client) UpdateXtraDBCluster(ctx context.Context, in *controllerv1beta1.UpdateXtraDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.UpdateXtraDBClusterResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	c.wg.Add(1)
 	resp, err := c.xtradbClusterClient.UpdateXtraDBCluster(ctx, in, opts...)
-	c.wg.Done()
 	return resp, err
 }
 
@@ -156,9 +146,7 @@ func (c *Client) UpdateXtraDBCluster(ctx context.Context, in *controllerv1beta1.
 func (c *Client) DeleteXtraDBCluster(ctx context.Context, in *controllerv1beta1.DeleteXtraDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.DeleteXtraDBClusterResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	c.wg.Add(1)
 	resp, err := c.xtradbClusterClient.DeleteXtraDBCluster(ctx, in, opts...)
-	c.wg.Done()
 	return resp, err
 }
 
@@ -166,9 +154,7 @@ func (c *Client) DeleteXtraDBCluster(ctx context.Context, in *controllerv1beta1.
 func (c *Client) RestartXtraDBCluster(ctx context.Context, in *controllerv1beta1.RestartXtraDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.RestartXtraDBClusterResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	c.wg.Add(1)
 	resp, err := c.xtradbClusterClient.RestartXtraDBCluster(ctx, in, opts...)
-	c.wg.Done()
 	return resp, err
 }
 
@@ -176,9 +162,7 @@ func (c *Client) RestartXtraDBCluster(ctx context.Context, in *controllerv1beta1
 func (c *Client) GetXtraDBClusterCredentials(ctx context.Context, in *controllerv1beta1.GetXtraDBClusterCredentialsRequest, opts ...grpc.CallOption) (*controllerv1beta1.GetXtraDBClusterCredentialsResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	c.wg.Add(1)
 	resp, err := c.xtradbClusterClient.GetXtraDBClusterCredentials(ctx, in, opts...)
-	c.wg.Done()
 	return resp, err
 }
 
@@ -186,9 +170,7 @@ func (c *Client) GetXtraDBClusterCredentials(ctx context.Context, in *controller
 func (c *Client) ListPSMDBClusters(ctx context.Context, in *controllerv1beta1.ListPSMDBClustersRequest, opts ...grpc.CallOption) (*controllerv1beta1.ListPSMDBClustersResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	c.wg.Add(1)
 	resp, err := c.psmdbClusterClient.ListPSMDBClusters(ctx, in, opts...)
-	c.wg.Done()
 	return resp, err
 }
 
@@ -196,9 +178,7 @@ func (c *Client) ListPSMDBClusters(ctx context.Context, in *controllerv1beta1.Li
 func (c *Client) CreatePSMDBCluster(ctx context.Context, in *controllerv1beta1.CreatePSMDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.CreatePSMDBClusterResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	c.wg.Add(1)
 	resp, err := c.psmdbClusterClient.CreatePSMDBCluster(ctx, in, opts...)
-	c.wg.Done()
 	return resp, err
 }
 
@@ -206,9 +186,7 @@ func (c *Client) CreatePSMDBCluster(ctx context.Context, in *controllerv1beta1.C
 func (c *Client) UpdatePSMDBCluster(ctx context.Context, in *controllerv1beta1.UpdatePSMDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.UpdatePSMDBClusterResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	c.wg.Add(1)
 	resp, err := c.psmdbClusterClient.UpdatePSMDBCluster(ctx, in, opts...)
-	c.wg.Done()
 	return resp, err
 }
 
@@ -216,9 +194,7 @@ func (c *Client) UpdatePSMDBCluster(ctx context.Context, in *controllerv1beta1.U
 func (c *Client) DeletePSMDBCluster(ctx context.Context, in *controllerv1beta1.DeletePSMDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.DeletePSMDBClusterResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	c.wg.Add(1)
 	resp, err := c.psmdbClusterClient.DeletePSMDBCluster(ctx, in, opts...)
-	c.wg.Done()
 	return resp, err
 }
 
@@ -226,9 +202,7 @@ func (c *Client) DeletePSMDBCluster(ctx context.Context, in *controllerv1beta1.D
 func (c *Client) RestartPSMDBCluster(ctx context.Context, in *controllerv1beta1.RestartPSMDBClusterRequest, opts ...grpc.CallOption) (*controllerv1beta1.RestartPSMDBClusterResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	c.wg.Add(1)
 	resp, err := c.psmdbClusterClient.RestartPSMDBCluster(ctx, in, opts...)
-	c.wg.Done()
 	return resp, err
 }
 
@@ -236,9 +210,7 @@ func (c *Client) RestartPSMDBCluster(ctx context.Context, in *controllerv1beta1.
 func (c *Client) GetPSMDBClusterCredentials(ctx context.Context, in *controllerv1beta1.GetPSMDBClusterCredentialsRequest, opts ...grpc.CallOption) (*controllerv1beta1.GetPSMDBClusterCredentialsResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	c.wg.Add(1)
 	resp, err := c.psmdbClusterClient.GetPSMDBClusterCredentials(ctx, in, opts...)
-	c.wg.Done()
 	return resp, err
 }
 
@@ -246,9 +218,7 @@ func (c *Client) GetPSMDBClusterCredentials(ctx context.Context, in *controllerv
 func (c *Client) GetLogs(ctx context.Context, in *controllerv1beta1.GetLogsRequest, opts ...grpc.CallOption) (*controllerv1beta1.GetLogsResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	c.wg.Add(1)
 	resp, err := c.logsClient.GetLogs(ctx, in, opts...)
-	c.wg.Done()
 	return resp, err
 }
 
@@ -256,8 +226,6 @@ func (c *Client) GetLogs(ctx context.Context, in *controllerv1beta1.GetLogsReque
 func (c *Client) GetResources(ctx context.Context, in *controllerv1beta1.GetResourcesRequest, opts ...grpc.CallOption) (*controllerv1beta1.GetResourcesResponse, error) {
 	c.connM.RLock()
 	defer c.connM.RUnlock()
-	c.wg.Add(1)
 	resp, err := c.kubernetesClient.GetResources(ctx, in, opts...)
-	c.wg.Done()
 	return resp, err
 }
