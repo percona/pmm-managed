@@ -135,7 +135,6 @@ func (c *Client) UpdateXtraDBCluster(ctx context.Context, in *controllerv1beta1.
 	c.connM.RLock()
 	defer c.connM.RUnlock()
 	return c.xtradbClusterClient.UpdateXtraDBCluster(ctx, in, opts...)
-
 }
 
 // DeleteXtraDBCluster deletes XtraDB cluster.
