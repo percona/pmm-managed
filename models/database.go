@@ -472,6 +472,21 @@ var databaseSchema = [][]string{
 		`ALTER TABLE agents
 			ADD COLUMN azure_options VARCHAR`,
 	},
+	32: {
+		`CREATE TABLE check_settings (
+			name VARCHAR NOT NULL,
+			interval VARCHAR NOT NULL,
+			PRIMARY KEY (name)
+		)`,
+	},
+	33: {
+		`ALTER TABLE kubernetes_clusters ADD COLUMN pxc JSONB`,
+		`ALTER TABLE kubernetes_clusters ADD COLUMN proxysql JSONB`,
+		`ALTER TABLE kubernetes_clusters ADD COLUMN mongod JSONB`,
+	},
+	34: {
+		`ALTER TABLE kubernetes_clusters ADD COLUMN haproxy JSONB`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^
