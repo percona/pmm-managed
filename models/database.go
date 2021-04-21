@@ -497,7 +497,7 @@ var databaseSchema = [][]string{
 			finished_at TIMESTAMP,
 
 			PRIMARY KEY (id),
-			FOREIGN KEY (artifact_id) REFERENCES artifacts (artifact_id),
+			FOREIGN KEY (artifact_id) REFERENCES artifacts (id),
 			FOREIGN KEY (service_id) REFERENCES services (service_id)
 		)`,
 	},

@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AlekSi/pointer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/reform.v1"
@@ -37,6 +38,58 @@ func TestRestoreHistory(t *testing.T) {
 
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
+	nodeID1 := "node_id_1"
+	artifactID1, artifactID2 := "artifact_id_1", "artifact_id_2"
+	serviceID1, serviceID2 := "service_id_1", "service_id_2"
+
+	prepareArtifactsAndService := func(q *reform.Querier) {
+		for _, str := range []reform.Struct{
+			&models.Node{
+				NodeID:   nodeID1,
+				NodeType: models.GenericNodeType,
+				NodeName: "Node",
+			},
+			&models.Service{
+				ServiceID:   serviceID1,
+				ServiceType: models.MySQLServiceType,
+				ServiceName: "Service 1",
+				NodeID:      nodeID1,
+				Address:     pointer.ToString("127.0.0.1"),
+				Port:        pointer.ToUint16OrNil(777),
+			},
+			&models.Service{
+				ServiceID:   serviceID2,
+				ServiceType: models.MySQLServiceType,
+				ServiceName: "Service 2",
+				NodeID:      nodeID1,
+				Address:     pointer.ToString("127.0.0.1"),
+				Port:        pointer.ToUint16OrNil(777),
+			},
+			&models.Artifact{
+				ID:         artifactID1,
+				Name:       "artifact 1",
+				Vendor:     "MySQL",
+				LocationID: "location_id_1",
+				ServiceID:  serviceID1,
+				DataModel:  models.PhysicalDataModel,
+				Status:     models.SuccessBackupStatus,
+				CreatedAt:  time.Now(),
+			},
+			&models.Artifact{
+				ID:         artifactID2,
+				Name:       "artifact 2",
+				Vendor:     "MySQL",
+				LocationID: "location_id_1",
+				ServiceID:  serviceID2,
+				DataModel:  models.PhysicalDataModel,
+				Status:     models.SuccessBackupStatus,
+				CreatedAt:  time.Now(),
+			},
+		} {
+			require.NoError(t, q.Insert(str))
+		}
+	}
+
 	t.Run("create", func(t *testing.T) {
 		tx, err := db.Begin()
 		require.NoError(t, err)
@@ -45,10 +98,11 @@ func TestRestoreHistory(t *testing.T) {
 		})
 
 		q := tx.Querier
+		prepareArtifactsAndService(q)
 
 		params := models.CreateRestoreHistoryItemParams{
-			ArtifactID: "artifact_id",
-			ServiceID:  "service_id",
+			ArtifactID: artifactID1,
+			ServiceID:  serviceID1,
 			Status:     models.InProgressRestoreStatus,
 		}
 
@@ -68,15 +122,16 @@ func TestRestoreHistory(t *testing.T) {
 		})
 
 		q := tx.Querier
+		prepareArtifactsAndService(q)
 
 		params1 := models.CreateRestoreHistoryItemParams{
-			ArtifactID: "artifact_id_1",
-			ServiceID:  "service_id_1",
+			ArtifactID: artifactID1,
+			ServiceID:  serviceID1,
 			Status:     models.InProgressRestoreStatus,
 		}
 		params2 := models.CreateRestoreHistoryItemParams{
-			ArtifactID: "artifact_id_2",
-			ServiceID:  "service_id_2",
+			ArtifactID: artifactID1,
+			ServiceID:  serviceID2,
 			Status:     models.SuccessRestoreStatus,
 		}
 
@@ -111,10 +166,11 @@ func TestRestoreHistory(t *testing.T) {
 		})
 
 		q := tx.Querier
+		prepareArtifactsAndService(q)
 
 		params := models.CreateRestoreHistoryItemParams{
-			ArtifactID: "artifact_id",
-			ServiceID:  "service_id",
+			ArtifactID: artifactID1,
+			ServiceID:  serviceID1,
 			Status:     models.SuccessRestoreStatus,
 		}
 		i, err := models.CreateRestoreHistoryItem(q, params)
@@ -130,27 +186,11 @@ func TestRestoreHistory(t *testing.T) {
 }
 
 func TestRestoreHistoryValidation(t *testing.T) {
-	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
-	t.Cleanup(func() {
-		require.NoError(t, sqlDB.Close())
-	})
-
-	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-
 	testCases := []struct {
 		name     string
 		params   models.CreateRestoreHistoryItemParams
 		errorMsg string
 	}{
-		{
-			name: "normal params",
-			params: models.CreateRestoreHistoryItemParams{
-				ArtifactID: "artifact_id",
-				ServiceID:  "service_id",
-				Status:     models.SuccessRestoreStatus,
-			},
-			errorMsg: "",
-		},
 		{
 			name: "artifact missing",
 			params: models.CreateRestoreHistoryItemParams{
@@ -179,18 +219,10 @@ func TestRestoreHistoryValidation(t *testing.T) {
 	}
 
 	for _, test := range testCases {
-		test := test
-
 		t.Run(test.name, func(t *testing.T) {
-			tx, err := db.Begin()
-			require.NoError(t, err)
-			t.Cleanup(func() {
-				require.NoError(t, tx.Rollback())
-			})
+			t.Parallel()
 
-			q := tx.Querier
-
-			c, err := models.CreateRestoreHistoryItem(q, test.params)
+			c, err := models.CreateRestoreHistoryItem(nil, test.params)
 			if test.errorMsg != "" {
 				assert.EqualError(t, err, test.errorMsg)
 				assert.Nil(t, c)
