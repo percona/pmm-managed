@@ -103,7 +103,10 @@ func (s *LocationsService) AddLocation(ctx context.Context, req *backupv1beta1.A
 		}
 	}
 
-	if err := params.Validate(true, false); err != nil {
+	if err := params.Validate(models.BackupLocationValidationParams{
+		RequireConfig:    true,
+		WithBucketRegion: false,
+	}); err != nil {
 		return nil, err
 	}
 
@@ -153,7 +156,10 @@ func (s *LocationsService) ChangeLocation(ctx context.Context, req *backupv1beta
 			Path: req.PmmClientConfig.Path,
 		}
 	}
-	if err := params.Validate(false, false); err != nil {
+	if err := params.Validate(models.BackupLocationValidationParams{
+		RequireConfig:    false,
+		WithBucketRegion: false,
+	}); err != nil {
 		return nil, err
 	}
 
@@ -202,7 +208,10 @@ func (s *LocationsService) TestLocationConfig(
 		}
 	}
 
-	if err := params.Validate(true, false); err != nil {
+	if err := params.Validate(models.BackupLocationValidationParams{
+		RequireConfig:    true,
+		WithBucketRegion: false,
+	}); err != nil {
 		return nil, err
 	}
 

@@ -210,13 +210,18 @@ type BackupLocationConfig struct {
 	S3Config        *S3LocationConfig
 }
 
+type BackupLocationValidationParams struct {
+	RequireConfig    bool
+	WithBucketRegion bool
+}
+
 // Validate checks if there is exactly one config with required fields and returns if config is set.
-func (c BackupLocationConfig) Validate(requireConfig, withBucketLocation bool) error {
+func (c BackupLocationConfig) Validate(params BackupLocationValidationParams) error {
 	var err error
 	configCount := 0
 	if c.S3Config != nil {
 		configCount++
-		err = checkS3Config(c.S3Config, withBucketLocation)
+		err = checkS3Config(c.S3Config, params.WithBucketRegion)
 	}
 
 	if c.PMMServerConfig != nil {
@@ -233,7 +238,7 @@ func (c BackupLocationConfig) Validate(requireConfig, withBucketLocation bool) e
 		return status.Error(codes.InvalidArgument, "Only one config is allowed.")
 	}
 
-	if requireConfig && configCount == 0 {
+	if params.RequireConfig && configCount == 0 {
 		return status.Error(codes.InvalidArgument, "Missing location config.")
 	}
 
@@ -271,7 +276,10 @@ type CreateBackupLocationParams struct {
 
 // CreateBackupLocation creates backup location.
 func CreateBackupLocation(q *reform.Querier, params CreateBackupLocationParams) (*BackupLocation, error) {
-	if err := params.Validate(true, true); err != nil {
+	if err := params.Validate(BackupLocationValidationParams{
+		RequireConfig:    true,
+		WithBucketRegion: true,
+	}); err != nil {
 		return nil, err
 	}
 
@@ -310,7 +318,10 @@ type ChangeBackupLocationParams struct {
 
 // ChangeBackupLocation updates existing location by specified locationID and params.
 func ChangeBackupLocation(q *reform.Querier, locationID string, params ChangeBackupLocationParams) (*BackupLocation, error) {
-	if err := params.Validate(false, true); err != nil {
+	if err := params.Validate(BackupLocationValidationParams{
+		RequireConfig:    false,
+		WithBucketRegion: true,
+	}); err != nil {
 		return nil, err
 	}
 
