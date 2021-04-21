@@ -97,6 +97,24 @@ func mysqldExporterConfig(service *models.Service, exporter *models.Agent, redac
 		args = append(args, "--web.telemetry-path="+*exporter.MetricsPath)
 	}
 
+	files := exporter.Files()
+	if files != nil {
+		for k := range files {
+			switch k {
+			case "tlsCert":
+				args = append(args, fmt.Sprintf("--%s=%s", "mysql.ssl-cert-file", "tlsCert"))
+			case "tlsKey":
+				args = append(args, fmt.Sprintf("--%s=%s", "mysql.ssl-key-file", "tlsKey"))
+			default:
+				continue
+			}
+		}
+
+		if exporter.TLSSkipVerify {
+			args = append(args, "--mysql.ssl-skip-verify")
+		}
+	}
+
 	sort.Strings(args)
 
 	res := &agentpb.SetStateRequest_AgentProcess{
