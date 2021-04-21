@@ -629,6 +629,8 @@ func main() {
 
 	versionService := managementdbaas.NewVersionServiceClient(*versionServiceAPIURLF)
 
+	dbaasClient := dbaas.NewClient(*dbaasControllerAPIAddrF)
+
 	serverParams := &server.Params{
 		DB:                   db,
 		VMDB:                 vmdb,
@@ -643,6 +645,7 @@ func main() {
 		GrafanaClient:        grafanaClient,
 		VMAlertExternalRules: externalRules,
 		RulesService:         rulesService,
+		DbaasClient:          dbaasClient,
 	}
 
 	server, err := server.NewServer(serverParams)
@@ -712,8 +715,6 @@ func main() {
 		l.Fatalf("Failed to get settings: %+v.", err)
 	}
 
-	dbaasClient := dbaas.NewClient(*dbaasControllerAPIAddrF)
-	server.SetDbaasClient(dbaasClient)
 	if settings.DBaaS.Enabled {
 		l.Debug("DBaaS is enabled - creating a DBaaS client.")
 		ctx, cancel := context.WithTimeout(ctx, time.Second*20)

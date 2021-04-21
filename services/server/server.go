@@ -103,6 +103,7 @@ type Params struct {
 	AwsInstanceChecker   *AWSInstanceChecker
 	GrafanaClient        grafanaClient
 	RulesService         rulesService
+	DbaasClient          dbaasClient
 }
 
 // NewServer returns new server for Server service.
@@ -127,17 +128,12 @@ func NewServer(params *Params) (*Server, error) {
 		awsInstanceChecker:   params.AwsInstanceChecker,
 		grafanaClient:        params.GrafanaClient,
 		rulesService:         params.RulesService,
+		dbaasClient:          params.DbaasClient,
 		l:                    logrus.WithField("component", "server"),
 		pmmUpdateAuthFile:    path,
 		envSettings:          new(models.ChangeSettingsParams),
 	}
 	return s, nil
-}
-
-// SetDbaasClient sets the dbaasClient. We can't set it using Params because it's
-// creation needs to be done after setup and for the setup we need the server.
-func (s *Server) SetDbaasClient(dbaasClient dbaasClient) {
-	s.dbaasClient = dbaasClient
 }
 
 // UpdateSettingsFromEnv updates settings in the database with environment variables values.
