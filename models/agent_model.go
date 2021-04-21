@@ -256,10 +256,6 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		// MultiStatements must not be used as it enables SQL injections (in particular, in pmm-agent's Actions)
 		cfg.MultiStatements = false
 
-		// QAN code in pmm-agent uses reform which requires those fields
-		cfg.ClientFoundRows = true
-		cfg.ParseTime = true
-
 		return cfg.FormatDSN()
 
 	case QANMySQLPerfSchemaAgentType, QANMySQLSlowlogAgentType:
