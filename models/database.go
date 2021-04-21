@@ -485,6 +485,9 @@ var databaseSchema = [][]string{
 		`ALTER TABLE kubernetes_clusters ADD COLUMN mongod JSONB`,
 	},
 	34: {
+		`ALTER TABLE kubernetes_clusters ADD COLUMN haproxy JSONB`,
+	},
+	35: {
 		`ALTER TABLE agents
 			ADD COLUMN mysql_options VARCHAR`,
 	},
