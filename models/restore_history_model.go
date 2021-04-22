@@ -60,14 +60,12 @@ type RestoreHistoryItem struct {
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.
-//nolint:unparam
 func (s *RestoreHistoryItem) BeforeInsert() error {
 	s.StartedAt = Now()
 	return nil
 }
 
 // AfterFind implements reform.AfterFinder interface.
-//nolint:unparam
 func (s *RestoreHistoryItem) AfterFind() error {
 	s.StartedAt = s.StartedAt.UTC()
 	return nil
