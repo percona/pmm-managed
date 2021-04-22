@@ -136,7 +136,7 @@ type gRPCServerDeps struct {
 	rulesService         *ia.RulesService
 	jobsService          *agents.JobsService
 	versionServiceClient *managementdbaas.VersionServiceClient
-	minio                 *minio.Service
+	minio                *minio.Service
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -805,7 +805,7 @@ func main() {
 			rulesService:         rulesService,
 			jobsService:          jobsService,
 			versionServiceClient: versionService,
-			minio:                 &minio.Service{},
+			minio:                &minio.Service{},
 		})
 	}()
 
