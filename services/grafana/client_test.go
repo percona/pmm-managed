@@ -133,7 +133,7 @@ func TestClient(t *testing.T) {
 				require.NotEmpty(t, apiKey)
 				if err != nil {
 					defer func() {
-						err = c.testDeleteAPIKey(ctx, apiKeyID, authHeaders)
+						err = c.deleteAPIKey(ctx, apiKeyID, authHeaders)
 						require.NoError(t, err)
 					}()
 				}

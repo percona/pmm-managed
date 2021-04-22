@@ -69,5 +69,6 @@ type versionService interface {
 // grafanaClient is a subset of methods of grafana.Client used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
 type grafanaClient interface {
-	CreateAdminAPIKey(ctx context.Context, name string) (int, string, error)
+	CreateAdminAPIKey(ctx context.Context, name string) (int64, string, error)
+	DeleteAPIKeyWithPrefix(ctx context.Context, name string) error
 }
