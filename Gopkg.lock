@@ -495,7 +495,7 @@
 
 [[projects]]
   branch = "PMM-7872-restores-history"
-  digest = "1:9880b7e745ca3715a9944c7eb86b8a6115708bcc72eaa2deeb790d91564963c4"
+  digest = "1:efbf379a8f6c43148e52ece7e54c6e8aea260146fbae893541e7e3ad0f5e47b3"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -521,7 +521,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "7b5b114598a8e9fc73d25be0366cd273efaf17b0"
+  revision = "7470cd28caeb6ef7a99b27c1e0afe66b9ac3f1b2"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
