@@ -522,7 +522,7 @@ func (s *Server) validateChangeSettingsRequest(ctx context.Context, req *serverp
 
 	// ignore req.DisableDbaas when DBaaS is enabled through env var.
 	if req.DisableDbaas && s.envSettings.EnableDBaaS {
-		return status.Error(codes.FailedPrecondition, "DBaaS is enabled via ENABLE_DBAAS environment variable.")
+		return status.Error(codes.FailedPrecondition, "DBaaS is enabled via ENABLE_DBAAS or via deprecated PERCONA_TEST_DBAAS environment variable.")
 	}
 
 	if getDuration(metricsRes.GetHr()) != 0 && s.envSettings.MetricsResolutions.HR != 0 {
