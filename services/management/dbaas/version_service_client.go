@@ -19,6 +19,7 @@ package dbaas
 import (
 	"context"
 	"encoding/json"
+	"github.com/golang/protobuf/ptypes/any"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -114,6 +115,17 @@ func (c *VersionServiceClient) Collect(ch chan<- prom.Metric) {
 	c.irtm.Collect(ch)
 }
 
+// grpcError is the generic error returned from unary RPCs.
+type grpcError struct {
+	Error string `protobuf:"bytes,1,opt,name=error,proto3" json:"error,omitempty"`
+	// This is to make the error more compatible with users that expect errors to be Status objects:
+	// https://github.com/grpc/grpc/blob/master/src/proto/grpc/status/status.proto
+	// It should be the exact same message as the Error field.
+	Code    int32      `protobuf:"varint,2,opt,name=code,proto3" json:"code,omitempty"`
+	Message string     `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	Details []*any.Any `protobuf:"bytes,4,rep,name=details,proto3" json:"details,omitempty"`
+}
+
 // Matrix calls version service with given params and returns components matrix.
 func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsParams) (*VersionServiceResponse, error) {
 	paths := []string{c.url, params.operator}
@@ -142,6 +154,13 @@ func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsPara
 	err = json.Unmarshal(body, &vsResponse)
 	if err != nil {
 		return nil, err
+	}
+
+	var e grpcError
+	err = json.Unmarshal(body, &e)
+	if err == nil && e.Message != "" && e.Code != 0 {
+		params.operatorVersion = "1.7.0"
+		return c.Matrix(ctx, params)
 	}
 
 	return &vsResponse, nil

@@ -501,4 +501,28 @@ func TestFilteringOutOfUnsupportedVersions(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("upcoming operator version", func(t *testing.T) {
+		t.Parallel()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+		defer cancel()
+
+		params := componentsParams{
+			operator:        pxcOperator,
+			operatorVersion: "1.8.0",
+		}
+		versions, err := c.versions(ctx, params, nil)
+		require.NoError(t, err)
+		parsedSupportedVersion, err := goversion.NewVersion("8.0.0")
+		require.NoError(t, err)
+		require.NotEmpty(t, versions)
+		require.NotEmpty(t, versions[0].Matrix.Pxc)
+		for _, v := range versions {
+			for version := range v.Matrix.Pxc {
+				parsedVersion, err := goversion.NewVersion(version)
+				require.NoError(t, err)
+				assert.True(t, parsedVersion.GreaterThanOrEqual(parsedSupportedVersion), "%s is not greater or equal to 8.0.0", version)
+			}
+		}
+	})
 }
