@@ -34,21 +34,10 @@ func GetFuncsForVersion(version uint32) (map[string]starlark.GoFunc, error) {
 		return map[string]starlark.GoFunc{
 			"parse_version":      parseVersion,
 			"format_version_num": formatVersionNum,
-			"pmm_version_num":    pmmServerVersion,
 		}, nil
 	default:
 		return nil, errors.Errorf("unsupported check version: %d", version)
 	}
-}
-
-func pmmServerVersion(args ...interface{}) (interface{}, error) {
-        s := version.ShortInfo()
-        p, err := version.ParsePmmVersion(s)
-        if err != nil {
-                return nil, err
-        }
-
-	return int64(p), nil
 }
 
 // parseVersion accepts a single string argument (version), and returns map[string]interface{}
@@ -116,7 +105,6 @@ func GetAdditionalContext() map[string]starlark.GoFunc {
 		"ip_is_private":      ipIsPrivate,
 		"parse_version":      parseVersion,
 		"format_version_num": formatVersionNum,
-		"pmm_version_num":    pmmServerVersion,
 	}
 }
 
