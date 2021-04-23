@@ -84,6 +84,7 @@ func formatVersionNum(args ...interface{}) (interface{}, error) {
 			Major:   int(num / 10000000),
 			Minor:   int(num / 100000 % 100),
 			Patch:   int(num / 1000 % 100),
+			Rest:    "-"+string(num % 1000),
 			NumRest: int(num % 1000),
 		}
 
