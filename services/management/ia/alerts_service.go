@@ -67,9 +67,23 @@ func (s *AlertsService) Enabled() bool {
 
 // ListAlerts returns list of existing alerts.
 func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlertsRequest) (*iav1beta1.ListAlertsResponse, error) {
+	var pageIndex int
+	var pageSize int
+	if req.PageParams != nil {
+		pageIndex = int(req.PageParams.Index)
+		pageSize = int(req.PageParams.PageSize)
+	}
+	var err error
+
+	skip := pageIndex * pageSize
+
 	alerts, err := s.alertManager.GetAlerts(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get alerts form alertmanager")
+	}
+
+	pageTotals := &iav1beta1.PageTotals{
+		TotalItems: 0,
 	}
 
 	res := make([]*iav1beta1.Alert, 0, len(alerts))
@@ -143,21 +157,39 @@ func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlert
 			return nil, err
 		}
 
-		if pass {
-			res = append(res, &iav1beta1.Alert{
-				AlertId:   getAlertID(alert),
-				Summary:   alert.Annotations["summary"],
-				Severity:  managementpb.Severity(common.ParseSeverity(alert.Labels["severity"])),
-				Status:    st,
-				Labels:    alert.Labels,
-				Rule:      rule,
-				CreatedAt: createdAt,
-				UpdatedAt: updatedAt,
-			})
+		if !pass {
+			continue
 		}
+
+		pageTotals.TotalItems++
+		if skip > 0 {
+			skip--
+			continue
+		}
+
+		if len(res) >= pageSize {
+			continue
+		}
+
+		res = append(res, &iav1beta1.Alert{
+			AlertId:   getAlertID(alert),
+			Summary:   alert.Annotations["summary"],
+			Severity:  managementpb.Severity(common.ParseSeverity(alert.Labels["severity"])),
+			Status:    st,
+			Labels:    alert.Labels,
+			Rule:      rule,
+			CreatedAt: createdAt,
+			UpdatedAt: updatedAt,
+		})
+
 	}
 
-	return &iav1beta1.ListAlertsResponse{Alerts: res}, nil
+	pageTotals.TotalPages = int32(len(res) / pageSize)
+	if len(res)%pageSize > 0 {
+		pageTotals.TotalPages++
+	}
+
+	return &iav1beta1.ListAlertsResponse{Alerts: res, Totals: pageTotals}, nil
 }
 
 // satisfiesFilters checks that alert passes filters, returns true in case of success.
