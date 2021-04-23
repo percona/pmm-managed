@@ -253,8 +253,7 @@ func (c *Channel) runReceiver() {
 			c.publish(msg.Id, p.CheckConnection)
 
 		case nil:
-			c.close(errors.Errorf("failed to handle received message %s", msg))
-			return
+			l.Errorf("failed to handle received message %s", msg)
 		}
 	}
 }
