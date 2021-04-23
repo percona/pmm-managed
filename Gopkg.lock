@@ -494,7 +494,7 @@
   revision = "e66cc9d89f9739d5f841f847877f12443b37484a"
 
 [[projects]]
-  branch = "PMM-7820-add-dbaas-toggle"
+  branch = "PMM-2.0"
   digest = "1:40350dc9ae49c63b50ce616146516f079c7339156d4b5371d57a9a62992af389"
   name = "github.com/percona/pmm"
   packages = [
@@ -521,7 +521,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "f0b06f269363e1679041e616e67902717efc3e32"
+  revision = "62a44668dc68d229e18c31799fe9ffcc5204c2d4"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
