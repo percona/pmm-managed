@@ -179,6 +179,7 @@ func TestMySQLdExporterConfigTablestatsGroupDisabled(t *testing.T) {
 			"--exporter.global-conn-pool",
 			"--exporter.max-idle-conns=3",
 			"--exporter.max-open-conns=3",
+			"--mysql.ssl-ca-file={{ .TextFiles.tlsCa }}",
 			"--mysql.ssl-cert-file={{ .TextFiles.tlsCert }}",
 			"--mysql.ssl-key-file={{ .TextFiles.tlsKey }}",
 			"--web.listen-address=:{{ .listen_port }}",

@@ -101,6 +101,8 @@ func mysqldExporterConfig(service *models.Service, exporter *models.Agent, redac
 	if files != nil {
 		for k := range files {
 			switch k {
+			case "tlsCa":
+				args = append(args, "--mysql.ssl-ca-file="+tdp.Left+" .TextFiles.tlsCa "+tdp.Right)
 			case "tlsCert":
 				args = append(args, "--mysql.ssl-cert-file="+tdp.Left+" .TextFiles.tlsCert "+tdp.Right)
 			case "tlsKey":
