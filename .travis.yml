@@ -1,5 +1,6 @@
 dist: bionic
-language: minimal
+language: shell
+os: linux
 
 services:
   - docker
@@ -44,7 +45,7 @@ env:
     # REVIEWDOG_GITHUB_USERNAME
     - secure: "qb8oXkidpOBqBd36XpVgvsotmpGpeIxplGMgytm08pyC4bt9ouYWOB+8b2X2VvoNAdlY7Tbao5yEpFWEustjaMUW9eX7V4mtTm4Cjuk3gpU6taiHsmbzikVhgEu19Z85TOpOHRV8vklK+M1LbJiBQDbyH+aLK0/KObv5J3YBm7KcyAGrWU6KSly8eYJqNaN5eykzNgoszH6hnVTzGb+1IfAsb9NFV0HHSZYTrfMJaE2IKWcu190VFT8Y3ppDy5RfAPC5dUS/pYvIhAlywdPamGaMqC7eJxi0GFMVYnG4TtOkqgJjh8ff/1+WWO9j6fYLlYO/+dVQOCLMzz2iJEO6gxO11DsA6TPxhIZrqMyVI4UnKYwBAcEaQ3Emu92oxkojnvGvOiXMf+6B1lIqMyVIlklOM8sOXJt8ceJmBlKrbbXeXLQWYf9EBp8VXZAsEqGYWQjV7AK+rEMgM0FY6JTYP00qEwdVqPfc8uVFU/HyViOvtN+9Hbzrn25ohGYhiv2oOsriOGyrxAXHPB8OjiCSRs/5yOzE6v8gFr2tR+XXC+OXVjdRmRGLfIqaSo3bazj+siANAvfEk5af/dDDHDSuNR0Ueq3lvjIoX63uhY9Fp+sE0mW2hLsDWPor6YgyrZE00yL8aoxaxL1A6NG/wyLydRJHVJyS7IRKvRoxTPUuK+Y="
 
-  matrix:
+  jobs:
     # what we used for the latest PMM release
     - GO_VERSION=1.15.x
     # what will be used for PMM releases soon
@@ -52,7 +53,7 @@ env:
     # the latest HEAD
     - GO_VERSION=tip
 
-matrix:
+jobs:
   fast_finish: true
   allow_failures:
     - env: GO_VERSION=tip
@@ -65,7 +66,6 @@ before_install:
   - docker cp /home/travis/go-build pmm-managed-server:/root/.cache/go-build
   - docker exec pmm-managed-server ls /root/.cache/go-build
 
-sudo: required
 install:
   # install devcontainer
   - make env-devcontainer
