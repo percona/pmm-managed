@@ -54,7 +54,8 @@ env:
 jobs:
   fast_finish: true
   allow_failures:
-    - env: GO_VERSION=tip
+    - env: GO_VERSION=1.16.x
+    - env: GO_VERSION=master
 
 before_install:
   - env
