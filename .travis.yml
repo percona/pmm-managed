@@ -47,9 +47,9 @@ env:
     # what we used for the latest PMM release
     - GO_VERSION=1.15.x
     # what will be used for PMM releases soon
-    # - GO_VERSION=1.16.x
+    - GO_VERSION=1.16.x
     # the latest HEAD
-    - GO_VERSION=tip
+    - GO_VERSION=master
 
 jobs:
   fast_finish: true
