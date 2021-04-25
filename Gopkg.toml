@@ -18,7 +18,7 @@ required = [
 
 [[constraint]]
   name = "github.com/percona-platform/saas"
-  branch = "main"
+  branch = "SAAS-479-stt-ia-usage-data"
 
 [[constraint]]
   name = "github.com/percona-platform/dbaas-api"

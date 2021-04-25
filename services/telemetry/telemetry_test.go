@@ -26,6 +26,7 @@ import (
 	pmmv1 "github.com/percona-platform/saas/gen/telemetry/events/pmm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
@@ -71,7 +72,7 @@ func TestMakeV2Payload(t *testing.T) {
 	u, err := generateUUID()
 	require.NoError(t, err)
 
-	r, err := s.makeV2Payload(u)
+	r, err := s.makeV2Payload(u, true, true)
 	require.NoError(t, err)
 	assert.NoError(t, r.Validate())
 	require.Len(t, r.Events, 1)
@@ -88,6 +89,8 @@ func TestMakeV2Payload(t *testing.T) {
 	assert.LessOrEqual(t, float64(uEv.UpDuration.Seconds), (delay + 2*time.Second).Seconds())
 	assert.GreaterOrEqual(t, float64(uEv.UpDuration.Seconds), delay.Seconds())
 	assert.Equal(t, u, hex.EncodeToString(uEv.Id))
+	assert.Equal(t, uEv.SttEnabled, wrapperspb.Bool(true))
+	assert.Equal(t, uEv.IaEnabled, wrapperspb.Bool(true))
 }
 
 func TestSendV2Request(t *testing.T) {
@@ -101,7 +104,7 @@ func TestSendV2Request(t *testing.T) {
 
 		u, err := generateUUID()
 		require.NoError(t, err)
-		payload, err := s.makeV2Payload(u)
+		payload, err := s.makeV2Payload(u, true, true)
 		require.NoError(t, err)
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -118,7 +121,7 @@ func TestSendV2Request(t *testing.T) {
 
 		u, err := generateUUID()
 		require.NoError(t, err)
-		req, err := s.makeV2Payload(u)
+		req, err := s.makeV2Payload(u, true, true)
 		require.NoError(t, err)
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)

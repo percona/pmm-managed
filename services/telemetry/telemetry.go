@@ -38,6 +38,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -208,7 +209,7 @@ func (s *Service) sendOneEvent(ctx context.Context) error {
 	})
 
 	wg.Go(func() error {
-		req, err := s.makeV2Payload(settings.Telemetry.UUID)
+		req, err := s.makeV2Payload(settings.Telemetry.UUID, settings.SaaS.STTEnabled, settings.IntegratedAlerting.Enabled)
 		if err != nil {
 			return err
 		}
@@ -256,7 +257,7 @@ func (s *Service) sendV1Request(ctx context.Context, data []byte) error {
 	return nil
 }
 
-func (s *Service) makeV2Payload(serverUUID string) (*reporter.ReportRequest, error) {
+func (s *Service) makeV2Payload(serverUUID string, sttEnabled, iaEnabled bool) (*reporter.ReportRequest, error) {
 	serverID, err := hex.DecodeString(serverUUID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to decode UUID %q", serverUUID)
@@ -267,6 +268,8 @@ func (s *Service) makeV2Payload(serverUUID string) (*reporter.ReportRequest, err
 		Version:            s.pmmVersion,
 		UpDuration:         ptypes.DurationProto(time.Since(s.start)),
 		DistributionMethod: s.tDistributionMethod,
+		SttEnabled:         wrapperspb.Bool(sttEnabled),
+		IaEnabled:          wrapperspb.Bool(iaEnabled),
 	}
 	if err = event.Validate(); err != nil {
 		// log and ignore
