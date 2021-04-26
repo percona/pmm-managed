@@ -320,8 +320,8 @@ func (c *Client) CreateAdminAPIKey(ctx context.Context, name string) (int64, str
 	return c.createAPIKey(ctx, name, admin, authHeaders)
 }
 
-// DeleteAPIKeyWithPrefix deletes all API keys with provided prefix. If there is no api key with provided prefix just ignores it.
-func (c *Client) DeleteAPIKeyWithPrefix(ctx context.Context, prefix string) error {
+// DeleteAPIKeysWithPrefix deletes all API keys with provided prefix. If there is no api key with provided prefix just ignores it.
+func (c *Client) DeleteAPIKeysWithPrefix(ctx context.Context, prefix string) error {
 	authHeaders, err := c.authHeadersFromContext(ctx)
 	if err != nil {
 		return err

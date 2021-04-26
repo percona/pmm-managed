@@ -248,7 +248,7 @@ func (s PSMDBClusterService) DeletePSMDBCluster(ctx context.Context, req *dbaasv
 	}
 
 	// ignore if API Key is not deleted.
-	_ = s.grafanaClient.DeleteAPIKeyWithPrefix(ctx, fmt.Sprintf("%s-%s", req.KubernetesClusterName, req.Name))
+	_ = s.grafanaClient.DeleteAPIKeysWithPrefix(ctx, fmt.Sprintf("%s-%s", req.KubernetesClusterName, req.Name))
 
 	return &dbaasv1beta1.DeletePSMDBClusterResponse{}, nil
 }
