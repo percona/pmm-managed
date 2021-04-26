@@ -15,6 +15,7 @@ required = [
 [[constraint]]
   name = "github.com/percona/pmm"
   branch = "PMM-3449-keep-channel-up"
+#  branch = "PMM-2.0"
 
 [[constraint]]
   name = "github.com/percona-platform/saas"

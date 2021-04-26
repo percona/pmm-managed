@@ -25,6 +25,8 @@ import (
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/percona/pmm-managed/utils/logger"
 )
@@ -46,6 +48,7 @@ type AgentRequest struct {
 // and the payload is already unwrapped (XXX instead of ServerMessage_XXX).
 type ServerResponse struct {
 	ID      uint32
+	Status  int32
 	Payload agentpb.ServerResponsePayload
 }
 
@@ -55,6 +58,11 @@ type Metrics struct {
 	Recv      float64 // a total number of messages received from pmm-agent
 	Responses float64 // the current length of the response queue
 	Requests  float64 // the current length of the request queue
+}
+
+type Response struct {
+	Payload agentpb.AgentResponsePayload
+	Error   error
 }
 
 // Channel encapsulates two-way communication channel between pmm-managed and pmm-agent.
@@ -71,7 +79,7 @@ type Channel struct {
 	sendM sync.Mutex
 
 	rw        sync.RWMutex
-	responses map[uint32]chan agentpb.AgentResponsePayload
+	responses map[uint32]chan Response
 	requests  chan *AgentRequest
 
 	closeOnce sync.Once
@@ -86,7 +94,7 @@ func New(stream agentpb.Agent_ConnectServer) *Channel {
 	s := &Channel{
 		s: stream,
 
-		responses: make(map[uint32]chan agentpb.AgentResponsePayload),
+		responses: make(map[uint32]chan Response),
 		requests:  make(chan *AgentRequest, agentRequestsCap),
 
 		closeWait: make(chan struct{}),
@@ -138,7 +146,7 @@ func (c *Channel) Send(resp *ServerResponse) {
 // SendAndWaitResponse sends request to pmm-managed, blocks until response is available, and returns it.
 // Response will be nil if channel is closed.
 // It is no-op once channel is closed (see Wait).
-func (c *Channel) SendAndWaitResponse(payload agentpb.ServerRequestPayload) agentpb.AgentResponsePayload {
+func (c *Channel) SendAndWaitResponse(payload agentpb.ServerRequestPayload) (agentpb.AgentResponsePayload, error) {
 	id := atomic.AddUint32(&c.lastSentRequestID, 1)
 	ch := c.subscribe(id)
 
@@ -146,8 +154,8 @@ func (c *Channel) SendAndWaitResponse(payload agentpb.ServerRequestPayload) agen
 		Id:      id,
 		Payload: payload.ServerMessageRequestPayload(),
 	})
-
-	return <-ch
+	resp := <-ch
+	return resp.Payload, resp.Error
 }
 
 func (c *Channel) send(msg *agentpb.ServerMessage) {
@@ -199,6 +207,11 @@ func (c *Channel) runReceiver() {
 			l.Debugf("Received message (%d bytes):\n%s\n", size, proto.MarshalTextString(msg))
 		}
 
+		msgStatus := status.FromProto(msg.Status)
+		if msgStatus.Code() != codes.OK {
+			c.cancel(msg.Id, msgStatus.Err())
+		}
+
 		switch p := msg.Payload.(type) {
 		// requests
 		case *agentpb.AgentMessage_Ping:
@@ -236,34 +249,34 @@ func (c *Channel) runReceiver() {
 
 		// responses
 		case *agentpb.AgentMessage_Pong:
-			c.publish(msg.Id, p.Pong)
+			c.publish(msg.Id, p.Pong, msgStatus)
 		case *agentpb.AgentMessage_SetState:
-			c.publish(msg.Id, p.SetState)
+			c.publish(msg.Id, p.SetState, msgStatus)
 		case *agentpb.AgentMessage_StartAction:
-			c.publish(msg.Id, p.StartAction)
+			c.publish(msg.Id, p.StartAction, msgStatus)
 		case *agentpb.AgentMessage_StopAction:
-			c.publish(msg.Id, p.StopAction)
+			c.publish(msg.Id, p.StopAction, msgStatus)
 		case *agentpb.AgentMessage_StartJob:
-			c.publish(msg.Id, p.StartJob)
+			c.publish(msg.Id, p.StartJob, msgStatus)
 		case *agentpb.AgentMessage_StopJob:
-			c.publish(msg.Id, p.StopJob)
+			c.publish(msg.Id, p.StopJob, msgStatus)
 		case *agentpb.AgentMessage_JobStatus:
-			c.publish(msg.Id, p.JobStatus)
+			c.publish(msg.Id, p.JobStatus, msgStatus)
 		case *agentpb.AgentMessage_CheckConnection:
-			c.publish(msg.Id, p.CheckConnection)
+			c.publish(msg.Id, p.CheckConnection, msgStatus)
 
 		case nil:
-			l.Errorf("failed to handle received message %s", msg)
+			c.cancel(msg.Id, errors.Errorf("unimplemented: failed to handle received message %s", msg))
 			c.Send(&ServerResponse{
-				ID:      msg.Id,
-				Payload: &agentpb.UnknownPayloadResponse{},
+				ID:     msg.Id,
+				Status: int32(codes.Unimplemented),
 			})
 		}
 	}
 }
 
-func (c *Channel) subscribe(id uint32) chan agentpb.AgentResponsePayload {
-	ch := make(chan agentpb.AgentResponsePayload, 1)
+func (c *Channel) subscribe(id uint32) chan Response {
+	ch := make(chan Response, 1)
 
 	c.rw.Lock()
 	if c.responses == nil { // Channel is closed, no more subscriptions
@@ -283,23 +296,34 @@ func (c *Channel) subscribe(id uint32) chan agentpb.AgentResponsePayload {
 	return ch
 }
 
-func (c *Channel) publish(id uint32, resp agentpb.AgentResponsePayload) {
+func (c *Channel) removeResponseChannel(id uint32) chan Response {
 	c.rw.Lock()
-	if c.responses == nil { // Channel is closed, no more publishing
+	defer c.rw.Unlock()
+	if c.responses == nil { // Channel is closed
 		c.rw.Unlock()
-		return
+		return nil
 	}
 
 	ch := c.responses[id]
 	if ch == nil {
-		c.rw.Unlock()
 		c.close(errors.WithStack(fmt.Errorf("no subscriber for ID %d", id)))
-		return
+		return nil
 	}
-
 	delete(c.responses, id)
-	c.rw.Unlock()
-	ch <- resp
+	return ch
+}
+
+// cancel sends an error to the subscriber based on a given status code.
+func (c *Channel) cancel(id uint32, err error) {
+	if ch := c.removeResponseChannel(id); ch != nil {
+		ch <- Response{Error: err}
+	}
+}
+
+func (c *Channel) publish(id uint32, resp agentpb.AgentResponsePayload, s *status.Status) {
+	if ch := c.removeResponseChannel(id); ch != nil {
+		ch <- Response{Payload: resp, Error: s.Err()}
+	}
 }
 
 // Metrics returns current channel metrics.

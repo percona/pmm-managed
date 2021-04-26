@@ -10,6 +10,7 @@ import (
 	_ "github.com/golang/protobuf/ptypes/timestamp"
 	github_com_mwitkow_go_proto_validators "github.com/mwitkow/go-proto-validators"
 	_ "github.com/percona/pmm/api/inventorypb"
+	_ "google.golang.org/genproto/googleapis/rpc/status"
 	math "math"
 )
 
@@ -498,10 +499,12 @@ func (this *JobProgress_Echo) Validate() error {
 func (this *JobProgress_MySQLBackup) Validate() error {
 	return nil
 }
-func (this *UnknownPayloadResponse) Validate() error {
-	return nil
-}
 func (this *AgentMessage) Validate() error {
+	if this.Status != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Status); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("Status", err)
+		}
+	}
 	if oneOfNester, ok := this.GetPayload().(*AgentMessage_Ping); ok {
 		if oneOfNester.Ping != nil {
 			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.Ping); err != nil {
@@ -603,6 +606,11 @@ func (this *AgentMessage) Validate() error {
 	return nil
 }
 func (this *ServerMessage) Validate() error {
+	if this.Status != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Status); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("Status", err)
+		}
+	}
 	if oneOfNester, ok := this.GetPayload().(*ServerMessage_Pong); ok {
 		if oneOfNester.Pong != nil {
 			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.Pong); err != nil {
@@ -628,13 +636,6 @@ func (this *ServerMessage) Validate() error {
 		if oneOfNester.ActionResult != nil {
 			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.ActionResult); err != nil {
 				return github_com_mwitkow_go_proto_validators.FieldError("ActionResult", err)
-			}
-		}
-	}
-	if oneOfNester, ok := this.GetPayload().(*ServerMessage_UnknownPayload); ok {
-		if oneOfNester.UnknownPayload != nil {
-			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.UnknownPayload); err != nil {
-				return github_com_mwitkow_go_proto_validators.FieldError("UnknownPayload", err)
 			}
 		}
 	}
