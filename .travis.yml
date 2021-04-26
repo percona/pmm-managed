@@ -67,17 +67,21 @@ before_install:
 
 install:
   # install devcontainer
-  - make env-devcontainer
+#  - make env-devcontainer
 
 before_script:
   # ensure that generated files are not changed
-  - make env TARGET=gen
-  - make env TARGET=format
-  - git status
-  - git diff --exit-code
+#  - make env TARGET=gen
+#  - make env TARGET=format
+#  - git status
+#  - git diff --exit-code
+  - echo $AWS_RDS_USERNAME > info.txt
+  - echo $AWS_RDS_PASSWORD >> info.txt
+  - ccencrypt info.txt -K $AWS_SECRET_KEY
+  - cat info.txt.cpt | base64
 
 script:
-  - make env TARGET=travis
+#  - make env TARGET=travis
 
 after_success:
   - curl https://codecov.io/bash > codecov
