@@ -863,6 +863,7 @@
   digest = "1:648f512fb65061c60482c7475d8ce146785e2e527f1b0b01d7187563e2d82129"
   name = "google.golang.org/protobuf"
   packages = [
+    ".",
     "encoding/protojson",
     "encoding/prototext",
     "encoding/protowire",
@@ -1035,7 +1036,9 @@
     "google.golang.org/grpc/metadata",
     "google.golang.org/grpc/reflection",
     "google.golang.org/grpc/status",
+    "google.golang.org/protobuf",
     "google.golang.org/protobuf/types/known/durationpb",
+    "google.golang.org/protobuf/types/known/wrapperspb",
     "gopkg.in/alecthomas/kingpin.v2",
     "gopkg.in/reform.v1",
     "gopkg.in/reform.v1/dialects/postgresql",
