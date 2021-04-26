@@ -254,6 +254,10 @@ func (c *Channel) runReceiver() {
 
 		case nil:
 			l.Errorf("failed to handle received message %s", msg)
+			c.Send(&ServerResponse{
+				ID:      msg.Id,
+				Payload: &agentpb.UnknownPayloadResponse{},
+			})
 		}
 	}
 }

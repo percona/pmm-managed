@@ -106,6 +106,9 @@ func (m *QANCollectResponse) ServerMessageResponsePayload() isServerMessage_Payl
 func (m *ActionResultResponse) ServerMessageResponsePayload() isServerMessage_Payload {
 	return &ServerMessage_ActionResult{ActionResult: m}
 }
+func (m *UnknownPayloadResponse) ServerMessageResponsePayload() isServerMessage_Payload {
+	return &ServerMessage_UnknownPayload{UnknownPayload: m}
+}
 
 // ServerMessage request payloads
 func (m *Ping) ServerMessageRequestPayload() isServerMessage_Payload {
@@ -158,6 +161,7 @@ func (*StopActionRequest) sealed()       {}
 func (*StopActionResponse) sealed()      {}
 func (*StopJobRequest) sealed()          {}
 func (*StopJobResponse) sealed()         {}
+func (*UnknownPayloadResponse) sealed()  {}
 
 // check interfaces
 var (
@@ -184,6 +188,7 @@ var (
 	_ ServerResponsePayload = (*StateChangedResponse)(nil)
 	_ ServerResponsePayload = (*QANCollectResponse)(nil)
 	_ ServerResponsePayload = (*ActionResultResponse)(nil)
+	_ ServerResponsePayload = (*UnknownPayloadResponse)(nil)
 
 	// ServerMessage request payloads
 	_ ServerRequestPayload = (*Ping)(nil)

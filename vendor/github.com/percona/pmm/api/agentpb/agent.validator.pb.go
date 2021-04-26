@@ -498,6 +498,9 @@ func (this *JobProgress_Echo) Validate() error {
 func (this *JobProgress_MySQLBackup) Validate() error {
 	return nil
 }
+func (this *UnknownPayloadResponse) Validate() error {
+	return nil
+}
 func (this *AgentMessage) Validate() error {
 	if oneOfNester, ok := this.GetPayload().(*AgentMessage_Ping); ok {
 		if oneOfNester.Ping != nil {
@@ -625,6 +628,13 @@ func (this *ServerMessage) Validate() error {
 		if oneOfNester.ActionResult != nil {
 			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.ActionResult); err != nil {
 				return github_com_mwitkow_go_proto_validators.FieldError("ActionResult", err)
+			}
+		}
+	}
+	if oneOfNester, ok := this.GetPayload().(*ServerMessage_UnknownPayload); ok {
+		if oneOfNester.UnknownPayload != nil {
+			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.UnknownPayload); err != nil {
+				return github_com_mwitkow_go_proto_validators.FieldError("UnknownPayload", err)
 			}
 		}
 	}
