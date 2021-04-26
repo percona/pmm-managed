@@ -327,8 +327,11 @@ func (s XtraDBClusterService) DeleteXtraDBCluster(ctx context.Context, req *dbaa
 		return nil, err
 	}
 
-	// ignore if API Key is not deleted.
-	_ = s.grafanaClient.DeleteAPIKeysWithPrefix(ctx, fmt.Sprintf("%s-%s", req.KubernetesClusterName, req.Name))
+	err = s.grafanaClient.DeleteAPIKeysWithPrefix(ctx, fmt.Sprintf("%s-%s", req.KubernetesClusterName, req.Name))
+	if err != nil {
+		// ignore if API Key is not deleted.
+		s.l.Warnf("Couldn't delete API key: %s", err)
+	}
 
 	return &dbaasv1beta1.DeleteXtraDBClusterResponse{}, nil
 }

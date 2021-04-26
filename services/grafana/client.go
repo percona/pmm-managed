@@ -346,7 +346,7 @@ func (c *Client) DeleteAPIKeysWithPrefix(ctx context.Context, prefix string) err
 func (c *Client) authHeadersFromContext(ctx context.Context) (http.Header, error) {
 	headers, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
-		return nil, fmt.Errorf("cannot get headers from metadata %v", headers)
+		return nil, fmt.Errorf("cannot get headers from metadata")
 	}
 	// get authorization from headers.
 	authorizationHeaders := headers.Get("Authorization")
