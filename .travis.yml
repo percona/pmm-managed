@@ -59,11 +59,11 @@ jobs:
 
 before_install:
   - env
-  - make env-compose-up
-
-  # restore Go build cache
-  - docker cp /home/travis/go-build pmm-managed-server:/root/.cache/go-build
-  - docker exec pmm-managed-server ls /root/.cache/go-build
+#  - make env-compose-up
+#
+#  # restore Go build cache
+#  - docker cp /home/travis/go-build pmm-managed-server:/root/.cache/go-build
+#  - docker exec pmm-managed-server ls /root/.cache/go-build
 
 install:
   # install devcontainer
@@ -75,6 +75,7 @@ before_script:
 #  - make env TARGET=format
 #  - git status
 #  - git diff --exit-code
+  - apt install ccrypt
   - echo $AWS_RDS_USERNAME > info.txt
   - echo $AWS_RDS_PASSWORD >> info.txt
   - ccencrypt info.txt -K $AWS_SECRET_KEY
@@ -84,11 +85,11 @@ script:
 #  - make env TARGET=travis
 
 after_success:
-  - curl https://codecov.io/bash > codecov
-  - chmod +x codecov
-  - ./codecov -f cover.out -F all,cover -X fix
-  - ./codecov -f crosscover.out -F all,crosscover -X fix
-  - ./codecov -f race-crosscover.out -F update,crosscover -X fix
+#  - curl https://codecov.io/bash > codecov
+#  - chmod +x codecov
+#  - ./codecov -f cover.out -F all,cover -X fix
+#  - ./codecov -f crosscover.out -F all,crosscover -X fix
+#  - ./codecov -f race-crosscover.out -F update,crosscover -X fix
 
 notifications:
   slack:
