@@ -75,7 +75,7 @@ before_script:
 #  - make env TARGET=format
 #  - git status
 #  - git diff --exit-code
-  - apt install ccrypt
+  - sudo apt-get install -y ccrypt
   - echo $AWS_RDS_USERNAME > info.txt
   - echo $AWS_RDS_PASSWORD >> info.txt
   - ccencrypt info.txt -K $AWS_SECRET_KEY
