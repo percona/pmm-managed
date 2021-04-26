@@ -1043,7 +1043,8 @@ func (r *Registry) StartMySQLExplainAction(ctx context.Context, id, pmmAgentID, 
 	if err != nil {
 		return err
 	}
-	return agent.channel.SendAndWaitResponse(aRequest)
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartMySQLShowCreateTableAction starts mysql-show-create-table action on pmm-agent.
@@ -1064,7 +1065,8 @@ func (r *Registry) StartMySQLShowCreateTableAction(ctx context.Context, id, pmmA
 	if err != nil {
 		return err
 	}
-	return agent.channel.SendAndWaitResponse(aRequest)
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartMySQLShowTableStatusAction starts mysql-show-table-status action on pmm-agent.
@@ -1085,7 +1087,8 @@ func (r *Registry) StartMySQLShowTableStatusAction(ctx context.Context, id, pmmA
 	if err != nil {
 		return err
 	}
-	return agent.channel.SendAndWaitResponse(aRequest)
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartMySQLShowIndexAction starts mysql-show-index action on pmm-agent.
@@ -1106,7 +1109,8 @@ func (r *Registry) StartMySQLShowIndexAction(ctx context.Context, id, pmmAgentID
 	if err != nil {
 		return err
 	}
-	return agent.channel.SendAndWaitResponse(aRequest)
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartPostgreSQLShowCreateTableAction starts postgresql-show-create-table action on pmm-agent.
@@ -1127,7 +1131,8 @@ func (r *Registry) StartPostgreSQLShowCreateTableAction(ctx context.Context, id,
 	if err != nil {
 		return err
 	}
-	return agent.channel.SendAndWaitResponse(aRequest)
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartPostgreSQLShowIndexAction starts postgresql-show-index action on pmm-agent.
@@ -1148,7 +1153,8 @@ func (r *Registry) StartPostgreSQLShowIndexAction(ctx context.Context, id, pmmAg
 	if err != nil {
 		return err
 	}
-	return agent.channel.SendAndWaitResponse(aRequest)
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartMongoDBExplainAction starts MongoDB query explain action on pmm-agent.
@@ -1173,7 +1179,8 @@ func (r *Registry) StartMongoDBExplainAction(ctx context.Context, id, pmmAgentID
 	if err != nil {
 		return err
 	}
-	return agent.channel.SendAndWaitResponse(aRequest)
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartMySQLQueryShowAction starts MySQL SHOW query action on pmm-agent.
@@ -1193,7 +1200,8 @@ func (r *Registry) StartMySQLQueryShowAction(ctx context.Context, id, pmmAgentID
 	if err != nil {
 		return err
 	}
-	return agent.channel.SendAndWaitResponse(aRequest)
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartMySQLQuerySelectAction starts MySQL SELECT query action on pmm-agent.
@@ -1213,7 +1221,8 @@ func (r *Registry) StartMySQLQuerySelectAction(ctx context.Context, id, pmmAgent
 	if err != nil {
 		return err
 	}
-	return agent.channel.SendAndWaitResponse(aRequest)
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartPostgreSQLQueryShowAction starts PostgreSQL SHOW query action on pmm-agent.
@@ -1232,7 +1241,8 @@ func (r *Registry) StartPostgreSQLQueryShowAction(ctx context.Context, id, pmmAg
 	if err != nil {
 		return err
 	}
-	return agent.channel.SendAndWaitResponse(aRequest)
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartPostgreSQLQuerySelectAction starts PostgreSQL SELECT query action on pmm-agent.
@@ -1252,7 +1262,8 @@ func (r *Registry) StartPostgreSQLQuerySelectAction(ctx context.Context, id, pmm
 	if err != nil {
 		return err
 	}
-	return agent.channel.SendAndWaitResponse(aRequest)
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartMongoDBQueryGetParameterAction starts MongoDB getParameter query action on pmm-agent.
@@ -1276,7 +1287,8 @@ func (r *Registry) StartMongoDBQueryGetParameterAction(ctx context.Context, id, 
 	if err != nil {
 		return err
 	}
-	return agent.channel.SendAndWaitResponse(aRequest)
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartMongoDBQueryBuildInfoAction starts MongoDB buildInfo query action on pmm-agent.
@@ -1300,7 +1312,8 @@ func (r *Registry) StartMongoDBQueryBuildInfoAction(ctx context.Context, id, pmm
 	if err != nil {
 		return err
 	}
-	return agent.channel.SendAndWaitResponse(aRequest)
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartMongoDBQueryGetCmdLineOptsAction starts MongoDB getCmdLineOpts query action on pmm-agent.
@@ -1324,7 +1337,8 @@ func (r *Registry) StartMongoDBQueryGetCmdLineOptsAction(ctx context.Context, id
 	if err != nil {
 		return err
 	}
-	return agent.channel.SendAndWaitResponse(aRequest)
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartPTSummaryAction starts pt-summary action on pmm-agent.
@@ -1342,7 +1356,8 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID stri
 	if err != nil {
 		return err
 	}
-	return agent.channel.SendAndWaitResponse(aRequest)
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartPTPgSummaryAction starts pt-pg-summary action on the pmm-agent.
@@ -1365,7 +1380,8 @@ func (r *Registry) StartPTPgSummaryAction(ctx context.Context, id, pmmAgentID, a
 	if err != nil {
 		return err
 	}
-	return pmmAgent.channel.SendAndWaitResponse(actionRequest)
+	_, err = pmmAgent.channel.SendAndWaitResponse(actionRequest)
+	return err
 }
 
 // StartPTMongoDBSummaryAction starts pt-mongodb-summary action on the pmm-agent.
@@ -1391,7 +1407,8 @@ func (r *Registry) StartPTMongoDBSummaryAction(ctx context.Context, id, pmmAgent
 	if err != nil {
 		return err
 	}
-	return pmmAgent.channel.SendAndWaitResponse(actionRequest)
+	_, err = pmmAgent.channel.SendAndWaitResponse(actionRequest)
+	return err
 }
 
 // StartPTMySQLSummaryAction starts pt-mysql-summary action on the pmm-agent.
@@ -1416,7 +1433,8 @@ func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID
 	if err != nil {
 		return err
 	}
-	return pmmAgent.channel.SendAndWaitResponse(actionRequest)
+	_, err = pmmAgent.channel.SendAndWaitResponse(actionRequest)
+	return err
 }
 
 // StopAction stops action with given given id.
@@ -1427,7 +1445,8 @@ func (r *Registry) StopAction(ctx context.Context, actionID string) error {
 	if err != nil {
 		return err
 	}
-	return agent.channel.SendAndWaitResponse(&agentpb.StopActionRequest{ActionId: actionID})
+	_, err = agent.channel.SendAndWaitResponse(&agentpb.StopActionRequest{ActionId: actionID})
+	return err
 }
 
 // check interfaces
