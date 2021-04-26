@@ -180,7 +180,6 @@ func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlert
 			CreatedAt: createdAt,
 			UpdatedAt: updatedAt,
 		})
-
 	}
 
 	if pageSize > 0 {
