@@ -83,7 +83,7 @@ func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlert
 	}
 
 	pageTotals := &iav1beta1.PageTotals{
-		TotalItems: 0,
+		TotalPages: 1,
 	}
 
 	res := make([]*iav1beta1.Alert, 0, len(alerts))
@@ -151,7 +151,6 @@ func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlert
 				return nil, errors.Wrapf(err, "failed to convert alert rule")
 			}
 		}
-
 		pass, err := satisfiesFilters(alert, rule.Filters)
 		if err != nil {
 			return nil, err
@@ -167,7 +166,7 @@ func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlert
 			continue
 		}
 
-		if len(res) >= pageSize {
+		if pageSize > 0 && len(res) >= pageSize {
 			continue
 		}
 
@@ -184,9 +183,11 @@ func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlert
 
 	}
 
-	pageTotals.TotalPages = int32(len(res) / pageSize)
-	if len(res)%pageSize > 0 {
-		pageTotals.TotalPages++
+	if pageSize > 0 {
+		pageTotals.TotalPages = int32(len(res) / pageSize)
+		if len(res)%pageSize > 0 {
+			pageTotals.TotalPages++
+		}
 	}
 
 	return &iav1beta1.ListAlertsResponse{Alerts: res, Totals: pageTotals}, nil
