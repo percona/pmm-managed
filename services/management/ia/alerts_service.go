@@ -72,7 +72,7 @@ func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlert
 		return nil, errors.Wrap(err, "failed to get alerts form alertmanager")
 	}
 
-	res := make([]*iav1beta1.Alert, 0, len(alerts))
+	var res []*iav1beta1.Alert
 	for _, alert := range alerts {
 		if _, ok := alert.Labels["ia"]; !ok { // Skip non-IA alerts
 			continue
