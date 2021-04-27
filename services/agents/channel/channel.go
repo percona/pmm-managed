@@ -137,8 +137,10 @@ func (c *Channel) Requests() <-chan *AgentRequest {
 // Send sends message to pmm-managed. It is no-op once channel is closed (see Wait).
 func (c *Channel) Send(resp *ServerResponse) {
 	msg := &agentpb.ServerMessage{
-		Id:      resp.ID,
-		Payload: resp.Payload.ServerMessageResponsePayload(),
+		Id: resp.ID,
+	}
+	if resp.Payload != nil {
+		msg.Payload = resp.Payload.ServerMessageResponsePayload()
 	}
 	c.send(msg)
 }
@@ -297,34 +299,37 @@ func (c *Channel) subscribe(id uint32) chan Response {
 	return ch
 }
 
-func (c *Channel) removeResponseChannel(id uint32) chan Response {
+func (c *Channel) removeResponseChannel(id uint32) (chan Response, error) {
 	c.rw.Lock()
 	if c.responses == nil { // Channel is closed
 		c.rw.Unlock()
-		return nil
+		return nil, nil
 	}
 
 	ch := c.responses[id]
 	c.rw.Unlock()
 	if ch == nil {
-		c.close(errors.WithStack(fmt.Errorf("no subscriber for ID %d", id)))
-		return nil
+		return nil, errors.WithStack(fmt.Errorf("no subscriber for ID %d", id))
 	}
 	c.rw.Lock()
 	delete(c.responses, id)
 	c.rw.Unlock()
-	return ch
+	return ch, nil
 }
 
-// cancel sends an error to the subscriber based on a given status code.
+// cancel sends an error to the subscriber.
 func (c *Channel) cancel(id uint32, err error) {
-	if ch := c.removeResponseChannel(id); ch != nil {
+	if ch, _ := c.removeResponseChannel(id); ch != nil {
 		ch <- Response{Error: err}
 	}
 }
 
 func (c *Channel) publish(id uint32, resp agentpb.AgentResponsePayload, s *status.Status) {
-	if ch := c.removeResponseChannel(id); ch != nil {
+	ch, err := c.removeResponseChannel(id)
+	if err != nil {
+		c.close(err)
+	}
+	if ch != nil {
 		ch <- Response{Payload: resp, Error: s.Err()}
 	}
 }

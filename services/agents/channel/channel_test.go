@@ -276,7 +276,7 @@ func TestAgentClosesConnection(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestUnexpectedResponseFromAgent(t *testing.T) {
+func TestUnexpectedResponseIdFromAgent(t *testing.T) {
 	connect := func(ch *Channel) error {
 		// after receiving unexpected response, channel is closed
 		resp, err := ch.SendAndWaitResponse(new(agentpb.Ping))
@@ -310,4 +310,23 @@ func TestUnexpectedResponseFromAgent(t *testing.T) {
 
 	_, err = stream.Recv()
 	assert.NoError(t, err)
+}
+
+func TestUnexpectedResponsePayloadFromAgent(t *testing.T) {
+	stop := make(chan struct{})
+	connect := func(ch *Channel) error {
+		<-stop
+		return nil
+	}
+	stream, _, teardown := setup(t, connect)
+	defer teardown(t)
+
+	// this message triggers "no subscriber for ID" error
+	err := stream.Send(&agentpb.AgentMessage{
+		Id: 4242,
+	})
+	assert.NoError(t, err)
+	msg, err := stream.Recv()
+	assert.Equal(t, *msg.Status, codes.Unimplemented)
+	close(stop)
 }
