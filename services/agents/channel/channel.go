@@ -210,6 +210,7 @@ func (c *Channel) runReceiver() {
 		msgStatus := status.FromProto(msg.Status)
 		if msgStatus.Code() != codes.OK {
 			c.cancel(msg.Id, msgStatus.Err())
+			continue
 		}
 
 		switch p := msg.Payload.(type) {
