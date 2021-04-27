@@ -18,6 +18,7 @@ package ia
 
 import (
 	"context"
+	"strconv"
 	"testing"
 	"time"
 
@@ -261,7 +262,7 @@ func TestListAlerts(t *testing.T) {
 					"alertname": rule.ID,
 				},
 			},
-			Fingerprint: pointer.ToString(gofakeit.UUID()),
+			Fingerprint: pointer.ToString(strconv.Itoa(i)),
 			Status: &ammodels.AlertStatus{
 				State: pointer.ToString("active"),
 			},
@@ -274,6 +275,35 @@ func TestListAlerts(t *testing.T) {
 	tmplSvc := NewTemplatesService(db)
 	tmplSvc.Collect(ctx)
 	svc := NewAlertsService(db, mockAlert, tmplSvc)
+
+	findAlerts := func(alerts []*iav1beta1.Alert, alertIDs ...string) bool {
+		if len(alerts) != len(alertIDs) {
+			return false
+		}
+		m := make(map[string]bool)
+		for _, alertID := range alertIDs {
+			m[alertID] = false
+		}
+		for _, a := range alerts {
+			val, ok := m[a.AlertId]
+			// Extra alert
+			if !ok {
+				return false
+			}
+			// Duplicate
+			if val {
+				return false
+			}
+			m[a.AlertId] = true
+		}
+		for _, v := range m {
+			// AlertID was not in alerts
+			if !v {
+				return false
+			}
+		}
+		return true
+	}
 
 	t.Run("without pagination", func(t *testing.T) {
 		res, err := svc.ListAlerts(ctx, &iav1beta1.ListAlertsRequest{})
@@ -290,7 +320,9 @@ func TestListAlerts(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		assert.Len(t, res.Alerts, 1)
+		assert.True(t, findAlerts(res.Alerts, "0"), "wrong alerts returned")
 		assert.EqualValues(t, res.Totals.TotalItems, alertsCount)
+		assert.EqualValues(t, res.Totals.TotalPages, alertsCount)
 
 		res, err = svc.ListAlerts(ctx, &iav1beta1.ListAlertsRequest{
 			PageParams: &iav1beta1.PageParams{
@@ -300,7 +332,10 @@ func TestListAlerts(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		assert.Len(t, res.Alerts, 5)
+		assert.True(t, findAlerts(res.Alerts, "20", "21", "22", "23", "24"), "wrong alerts returned")
 		assert.EqualValues(t, res.Totals.TotalItems, alertsCount)
+		assert.EqualValues(t, res.Totals.TotalPages, 3)
+
 	})
 
 }

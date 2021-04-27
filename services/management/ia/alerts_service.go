@@ -67,28 +67,13 @@ func (s *AlertsService) Enabled() bool {
 
 // ListAlerts returns list of existing alerts.
 func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlertsRequest) (*iav1beta1.ListAlertsResponse, error) {
-	var pageIndex int
-	var pageSize int
-	if req.PageParams != nil {
-		pageIndex = int(req.PageParams.Index)
-		pageSize = int(req.PageParams.PageSize)
-	}
-	var err error
-
-	skip := pageIndex * pageSize
-
 	alerts, err := s.alertManager.GetAlerts(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get alerts form alertmanager")
 	}
 
-	pageTotals := &iav1beta1.PageTotals{
-		TotalPages: 1,
-	}
-
 	res := make([]*iav1beta1.Alert, 0, len(alerts))
 	for _, alert := range alerts {
-
 		if _, ok := alert.Labels["ia"]; !ok { // Skip non-IA alerts
 			continue
 		}
@@ -160,16 +145,6 @@ func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlert
 			continue
 		}
 
-		pageTotals.TotalItems++
-		if skip > 0 {
-			skip--
-			continue
-		}
-
-		if pageSize > 0 && len(res) >= pageSize {
-			continue
-		}
-
 		res = append(res, &iav1beta1.Alert{
 			AlertId:   getAlertID(alert),
 			Summary:   alert.Annotations["summary"],
@@ -182,12 +157,31 @@ func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlert
 		})
 	}
 
+	pageTotals := &iav1beta1.PageTotals{
+		TotalPages: 1,
+	}
+
+	var pageIndex int
+	var pageSize int
+	if req.PageParams != nil {
+		pageIndex = int(req.PageParams.Index)
+		pageSize = int(req.PageParams.PageSize)
+	}
+
+	from, to := pageIndex*pageSize, (pageIndex+1)*pageSize
+	if to > len(res) || to == 0 {
+		to = len(res)
+	}
+
 	if pageSize > 0 {
 		pageTotals.TotalPages = int32(len(res) / pageSize)
 		if len(res)%pageSize > 0 {
 			pageTotals.TotalPages++
 		}
 	}
+	pageTotals.TotalItems = int32(len(res))
+
+	res = res[from:to]
 
 	return &iav1beta1.ListAlertsResponse{Alerts: res, Totals: pageTotals}, nil
 }
