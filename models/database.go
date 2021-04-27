@@ -488,8 +488,22 @@ var databaseSchema = [][]string{
 		`ALTER TABLE kubernetes_clusters ADD COLUMN haproxy JSONB`,
 	},
 	35: {
+		`CREATE TABLE restore_history (
+			id VARCHAR NOT NULL,
+			artifact_id VARCHAR NOT NULL CHECK (artifact_id <> ''),
+			service_id VARCHAR NOT NULL CHECK (service_id <> ''),
+			status VARCHAR NOT NULL CHECK (status <> ''),
+			started_at TIMESTAMP NOT NULL,
+			finished_at TIMESTAMP,
+
+			PRIMARY KEY (id),
+			FOREIGN KEY (artifact_id) REFERENCES artifacts (id),
+			FOREIGN KEY (service_id) REFERENCES services (service_id)
+		)`,
+	},
+	36: {
 		`ALTER TABLE agents
-			ADD COLUMN mysql_options VARCHAR`,
+		ADD COLUMN mysql_options VARCHAR`,
 	},
 }
 
