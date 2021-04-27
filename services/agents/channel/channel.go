@@ -48,7 +48,7 @@ type AgentRequest struct {
 // and the payload is already unwrapped (XXX instead of ServerMessage_XXX).
 type ServerResponse struct {
 	ID      uint32
-	Status  int32
+	Status  *status.Status
 	Payload agentpb.ServerResponsePayload
 }
 
@@ -137,7 +137,8 @@ func (c *Channel) Requests() <-chan *AgentRequest {
 // Send sends message to pmm-managed. It is no-op once channel is closed (see Wait).
 func (c *Channel) Send(resp *ServerResponse) {
 	msg := &agentpb.ServerMessage{
-		Id: resp.ID,
+		Id:     resp.ID,
+		Status: resp.Status.Proto(),
 	}
 	if resp.Payload != nil {
 		msg.Payload = resp.Payload.ServerMessageResponsePayload()
@@ -172,7 +173,7 @@ func (c *Channel) send(msg *agentpb.ServerMessage) {
 	// do not use default compact representation for large/complex messages
 	l := logger.Get(c.s.Context())
 	if size := proto.Size(msg); size < 100 {
-		l.Debugf("Sending message (%d bytes): %s.", size, msg)
+		l.Debugf("Sending message (%d bytes): %v.", size, msg.Status)
 	} else {
 		l.Debugf("Sending message (%d bytes):\n%s\n", size, proto.MarshalTextString(msg))
 	}
@@ -184,6 +185,7 @@ func (c *Channel) send(msg *agentpb.ServerMessage) {
 		return
 	}
 	atomic.AddUint32(&c.mSent, 1)
+	l.Debugf("Done sending message")
 }
 
 // runReader receives messages from server.
@@ -203,11 +205,13 @@ func (c *Channel) runReceiver() {
 		atomic.AddUint32(&c.mRecv, 1)
 
 		// do not use default compact representation for large/complex messages
-		if size := proto.Size(msg); size < 100 {
-			l.Debugf("Received message (%d bytes): %s.", size, msg)
-		} else {
-			l.Debugf("Received message (%d bytes):\n%s\n", size, proto.MarshalTextString(msg))
-		}
+		// if size := proto.Size(msg); size < 100 {
+		size := proto.Size(msg)
+		bytes, _ := proto.Marshal(msg)
+		l.Debugf("Received message (%d bytes): %v.", size, bytes)
+		// } else {
+		// 	l.Debugf("Received message (%d bytes):\n%s\n", size, proto.MarshalTextString(msg))
+		// }
 
 		msgStatus := status.FromProto(msg.Status)
 		if msgStatus.Code() != codes.OK {
@@ -270,9 +274,10 @@ func (c *Channel) runReceiver() {
 
 		case nil:
 			c.cancel(msg.Id, errors.Errorf("unimplemented: failed to handle received message %s", msg))
+			l.Errorf("I am here failing to handle unimplmented recieved message %s ", msg)
 			c.Send(&ServerResponse{
 				ID:     msg.Id,
-				Status: int32(codes.Unimplemented),
+				Status: status.New(codes.Unimplemented, "can't handle message type send, it is not implemented"),
 			})
 		}
 	}

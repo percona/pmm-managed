@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/golang/protobuf/ptypes"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/pkg/errors"
@@ -47,7 +49,7 @@ func (s *testServer) Connect(stream agentpb.Agent_ConnectServer) error {
 var _ agentpb.AgentServer = (*testServer)(nil)
 
 func setup(t *testing.T, connect func(*Channel) error, expected ...error) (agentpb.Agent_ConnectClient, *grpc.ClientConn, func(*testing.T)) {
-	// logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetLevel(logrus.DebugLevel)
 
 	t.Parallel()
 
@@ -71,7 +73,7 @@ func setup(t *testing.T, connect func(*Channel) error, expected ...error) (agent
 		require.NoError(t, err)
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 
 	// make client and channel
 	opts := []grpc.DialOption{
@@ -321,12 +323,14 @@ func TestUnexpectedResponsePayloadFromAgent(t *testing.T) {
 	stream, _, teardown := setup(t, connect)
 	defer teardown(t)
 
-	// this message triggers "no subscriber for ID" error
 	err := stream.Send(&agentpb.AgentMessage{
 		Id: 4242,
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
+
 	msg, err := stream.Recv()
-	assert.Equal(t, *msg.Status, codes.Unimplemented)
+	assert.Equal(t, int32(codes.Unimplemented), msg.GetStatus().GetCode())
+	assert.NoError(t, err)
+
 	close(stop)
 }
