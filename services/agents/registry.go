@@ -283,19 +283,6 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 	}
 }
 
-func (r *Registry) handleJobError(jobResult *models.JobResult) error {
-	switch jobResult.Type {
-	case models.Echo:
-		// nothing
-	case models.MySQLBackupRestoreJob:
-		// TODO: change restore history entry status after implementing https://jira.percona.com/browse/PMM-7872
-	default:
-		return errors.Errorf("uunexpected job result type: %T", jobResult.Type)
-	}
-
-	return nil
-}
-
 func (r *Registry) handleJobResult(l *logrus.Entry, result *agentpb.JobResult) {
 	if e := r.db.InTransaction(func(t *reform.TX) error {
 		res, err := models.FindJobResultByID(t.Querier, result.JobId)
@@ -318,6 +305,17 @@ func (r *Registry) handleJobResult(l *logrus.Entry, result *agentpb.JobResult) {
 					Message: result.Echo.Message,
 				},
 			}
+		case *agentpb.JobResult_MysqlBackup:
+			if res.Type != models.MySQLBackupJob {
+				return errors.Errorf("result type %s doesn't match job type %s", models.MySQLBackupJob, res.Type)
+			}
+
+			_, err := models.ChangeArtifact(t.Querier, res.Result.MySQLBackup.ArtifactID, models.ChangeArtifactParams{
+				Status: models.SuccessBackupStatus,
+			})
+			if err != nil {
+				return err
+			}
 		case *agentpb.JobResult_MysqlBackupRestore:
 			if res.Type != models.MySQLBackupRestoreJob {
 				return errors.Errorf("result type %s doesn't match job type %s", models.MySQLBackupRestoreJob, res.Type)
@@ -334,6 +332,24 @@ func (r *Registry) handleJobResult(l *logrus.Entry, result *agentpb.JobResult) {
 	}); e != nil {
 		l.Errorf("failed to save job result: %+v", e)
 	}
+}
+
+func (r *Registry) handleJobError(jobResult *models.JobResult) error {
+	var err error
+	switch jobResult.Type {
+	case models.Echo:
+		// nothing
+	case models.MySQLBackupJob:
+		_, err = models.ChangeArtifact(r.db.Querier, jobResult.Result.MySQLBackup.ArtifactID, models.ChangeArtifactParams{
+			Status: models.ErrorBackupStatus,
+		})
+	case models.MySQLBackupRestoreJob:
+		// TODO: change restore history entry status after implementing https://jira.percona.com/browse/PMM-7872
+	default:
+		// Don't do anything without explicit handling
+	}
+
+	return err
 }
 
 func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*pmmAgentInfo, error) {

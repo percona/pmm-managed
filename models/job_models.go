@@ -25,9 +25,24 @@ import (
 
 //go:generate reform
 
+// JobType represents job type.
+type JobType string
+
+// Supported job types.
+const (
+	Echo           = JobType("echo")
+	MySQLBackupJob = JobType("mysql_backup")
+	MySQLBackupRestoreJob = JobType("mysql_backup_restore")
+)
+
 // EchoJobResult stores echo job specific result data.
 type EchoJobResult struct {
 	Message string `json:"message"`
+}
+
+// MySQLBackupJobResult stores MySQL job specific result data.
+type MySQLBackupJobResult struct {
+	ArtifactID string `json:"artifact_id"`
 }
 
 // MySQLBackupRestoreJobResult stores MySQL backup restore job specific result data.
@@ -35,18 +50,10 @@ type MySQLBackupRestoreJobResult struct {
 	RestoreID string `json:"restore_id,omitempty"`
 }
 
-// JobType represents job type.
-type JobType string
-
-// Supported job types.
-const (
-	Echo                  = JobType("echo")
-	MySQLBackupRestoreJob = JobType("mysql_backup_restore")
-)
-
 // JobResultData holds result data for different job types.
 type JobResultData struct {
-	Echo               *EchoJobResult               `json:"echo,omitempty"`
+	Echo        *EchoJobResult        `json:"echo,omitempty"`
+	MySQLBackup *MySQLBackupJobResult `json:"mysql_backup,omitempty"`
 	MySQLBackupRestore *MySQLBackupRestoreJobResult `json:"mysql_backup_restore,omitempty"`
 }
 
