@@ -204,13 +204,45 @@ func (s *BackupsService) prepareRestoreJob(
 	}, nil
 }
 
+func (s *BackupsService) startRestoreJob(jobID, serviceID string, params *prepareRestoreJobParams) error {
+	locationConfig := models.BackupLocationConfig{
+		PMMServerConfig: params.Location.PMMServerConfig,
+		PMMClientConfig: params.Location.PMMClientConfig,
+		S3Config:        params.Location.S3Config,
+	}
+
+	switch params.ServiceType {
+	case models.MySQLServiceType:
+		if err := s.jobsService.StartMySQLBackupRestoreJob(
+			jobID,
+			params.AgentID,
+			serviceID,
+			0,
+			params.ArtifactName,
+			locationConfig,
+		); err != nil {
+			return err
+		}
+	case models.PostgreSQLServiceType,
+		models.MongoDBServiceType,
+		models.ProxySQLServiceType,
+		models.HAProxyServiceType,
+		models.ExternalServiceType:
+		return status.Errorf(codes.Unimplemented, "unimplemented service: %s", params.ServiceType)
+	default:
+		return status.Errorf(codes.Unknown, "unknown service: %s", params.ServiceType)
+	}
+
+	return nil
+}
+
 // RestoreBackup starts restore backup job.
 func (s *BackupsService) RestoreBackup(
 	ctx context.Context,
 	req *backupv1beta1.RestoreBackupRequest,
 ) (*backupv1beta1.RestoreBackupResponse, error) {
 	var params *prepareRestoreJobParams
-	var job *models.JobResult
+	var jobID, restoreID string
 
 	err := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
 		var err error
@@ -228,11 +260,18 @@ func (s *BackupsService) RestoreBackup(
 			return err
 		}
 
-		job, err = models.CreateJobResult(tx.Querier, params.AgentID, models.MySQLBackupRestoreJob, &models.JobResultData{
+		restoreID = restore.ID
+
+		job, err := models.CreateJobResult(tx.Querier, params.AgentID, models.MySQLBackupRestoreJob, &models.JobResultData{
 			MySQLBackupRestore: &models.MySQLBackupRestoreJobResult{
-				RestoreID: restore.ID,
+				RestoreID: restoreID,
 			},
 		})
+		if err != nil {
+			return err
+		}
+
+		jobID = job.ID
 
 		return err
 	})
@@ -240,36 +279,12 @@ func (s *BackupsService) RestoreBackup(
 		return nil, err
 	}
 
-	locationConfig := models.BackupLocationConfig{
-		PMMServerConfig: params.Location.PMMServerConfig,
-		PMMClientConfig: params.Location.PMMClientConfig,
-		S3Config:        params.Location.S3Config,
-	}
-
-	switch params.ServiceType {
-	case models.MySQLServiceType:
-		if err := s.jobsService.StartMySQLBackupRestoreJob(
-			job.ID,
-			params.AgentID,
-			req.ServiceId,
-			0,
-			params.ArtifactName,
-			locationConfig,
-		); err != nil {
-			return nil, err
-		}
-	case models.PostgreSQLServiceType,
-		models.MongoDBServiceType,
-		models.ProxySQLServiceType,
-		models.HAProxyServiceType,
-		models.ExternalServiceType:
-		return nil, status.Errorf(codes.Unimplemented, "unimplemented service: %s", params.ServiceType)
-	default:
-		return nil, status.Errorf(codes.Unknown, "unknown service: %s", params.ServiceType)
+	if err := s.startRestoreJob(jobID, req.ServiceId, params); err != nil {
+		return nil, err
 	}
 
 	return &backupv1beta1.RestoreBackupResponse{
-		RestoreId: job.Result.MySQLBackupRestore.RestoreID,
+		RestoreId: restoreID,
 	}, nil
 }
 
