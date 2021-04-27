@@ -19,7 +19,6 @@ package backup
 import (
 	"context"
 
-	"github.com/google/uuid"
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -93,13 +92,12 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 			return err
 		}
 
-		job, config, err = s.prepareBackupJob(svc, artifact.ID, models.MySQLBackupJob)
+		job, config, err = s.prepareBackupJob(tx.Querier, svc, artifact.ID, models.MySQLBackupJob)
 		if err != nil {
 			return err
 		}
 		return nil
 	})
-
 	if errTX != nil {
 		return nil, errTX
 	}
@@ -113,15 +111,11 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 	switch svc.ServiceType {
 	case models.MySQLServiceType:
 		err = s.jobsService.StartMySQLBackupJob(job.ID, job.PMMAgentID, 0, req.Name, config, locationConfig)
-	case models.PostgreSQLServiceType:
-		fallthrough
-	case models.MongoDBServiceType:
-		fallthrough
-	case models.ProxySQLServiceType:
-		fallthrough
-	case models.HAProxyServiceType:
-		fallthrough
-	case models.ExternalServiceType:
+	case models.PostgreSQLServiceType,
+		models.MongoDBServiceType,
+		models.ProxySQLServiceType,
+		models.HAProxyServiceType,
+		models.ExternalServiceType:
 		return nil, status.Errorf(codes.Unimplemented, "unimplemented service: %s", svc.ServiceType)
 	default:
 		return nil, status.Errorf(codes.Unknown, "unknown service: %s", svc.ServiceType)
@@ -135,37 +129,79 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 	}, nil
 }
 
-func (s *BackupsService) prepareBackupJob(service *models.Service, artifactID string, jobType models.JobType) (*models.JobResult, models.DBConfig, error) {
-	var res *models.JobResult
-	var dbConfig models.DBConfig
-	txErr := s.db.InTransaction(func(tx *reform.TX) error {
-		var err error
-		dbConfig, err = models.FindDBConfigForService(tx.Querier, service.ServiceID)
-		if err != nil {
-			return err
-		}
-
-		pmmAgents, err := models.FindPMMAgentsForService(tx.Querier, service.ServiceID)
-		if err != nil {
-			return err
-		}
-
-		if len(pmmAgents) == 0 {
-			return errors.Errorf("pmmAgent not found for service")
-		}
-
-		res, err = models.CreateJobResult(tx.Querier, pmmAgents[0].AgentID, jobType, &models.JobResultData{
-			MySQLBackup: &models.MySQLBackupJobResult{
-				ArtifactID: artifactID,
-			},
-		})
-		return err
-	})
-
-	if txErr != nil {
-		return nil, models.DBConfig{}, txErr
+func (s *BackupsService) prepareBackupJob(
+	q *reform.Querier,
+	service *models.Service,
+	artifactID string,
+	jobType models.JobType,
+) (*models.JobResult, models.DBConfig, error) {
+	dbConfig, err := models.FindDBConfigForService(q, service.ServiceID)
+	if err != nil {
+		return nil, models.DBConfig{}, err
 	}
+
+	pmmAgents, err := models.FindPMMAgentsForService(q, service.ServiceID)
+	if err != nil {
+		return nil, models.DBConfig{}, err
+	}
+
+	if len(pmmAgents) == 0 {
+		return nil, models.DBConfig{}, errors.Errorf("pmmAgent not found for service")
+	}
+
+	res, err := models.CreateJobResult(q, pmmAgents[0].AgentID, jobType, &models.JobResultData{
+		MySQLBackup: &models.MySQLBackupJobResult{
+			ArtifactID: artifactID,
+		},
+	})
+	if err != nil {
+		return nil, models.DBConfig{}, err
+	}
+
 	return res, dbConfig, nil
+}
+
+type prepareRestoreJobParams struct {
+	AgentID      string
+	ArtifactName string
+	Location     *models.BackupLocation
+	ServiceType  models.ServiceType
+}
+
+func (s *BackupsService) prepareRestoreJob(
+	q *reform.Querier,
+	serviceID string,
+	artifactID string,
+) (*prepareRestoreJobParams, error) {
+	service, err := models.FindServiceByID(q, serviceID)
+	if err != nil {
+		return nil, err
+	}
+
+	artifact, err := models.FindArtifactByID(q, artifactID)
+	if err != nil {
+		return nil, err
+	}
+
+	location, err := models.FindBackupLocationByID(q, artifact.LocationID)
+	if err != nil {
+		return nil, err
+	}
+
+	agents, err := models.FindPMMAgentsForService(q, serviceID)
+	if err != nil {
+		return nil, err
+	}
+	if len(agents) == 0 {
+		return nil, errors.Errorf("cannot find pmm agent for service %s", serviceID)
+	}
+
+	return &prepareRestoreJobParams{
+		AgentID:      agents[0].AgentID,
+		ArtifactName: artifact.Name,
+		Location:     location,
+		ServiceType:  service.ServiceType,
+	}, nil
 }
 
 // RestoreBackup starts restore backup job.
@@ -173,47 +209,28 @@ func (s *BackupsService) RestoreBackup(
 	ctx context.Context,
 	req *backupv1beta1.RestoreBackupRequest,
 ) (*backupv1beta1.RestoreBackupResponse, error) {
-	var restoreID string
-
-	var artifact *models.Artifact
-	var location *models.BackupLocation
-	var service *models.Service
+	var params *prepareRestoreJobParams
 	var job *models.JobResult
 
 	err := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
 		var err error
-		q := tx.Querier
-
-		service, err = models.FindServiceByID(q, req.ServiceId)
+		params, err = s.prepareRestoreJob(tx.Querier, req.ServiceId, req.ArtifactId)
 		if err != nil {
 			return err
 		}
 
-		artifact, err = models.FindArtifactByID(q, req.ArtifactId)
+		restore, err := models.CreateRestoreHistoryItem(tx.Querier, models.CreateRestoreHistoryItemParams{
+			ArtifactID: req.ArtifactId,
+			ServiceID:  req.ServiceId,
+			Status:     models.InProgressRestoreStatus,
+		})
 		if err != nil {
 			return err
 		}
 
-		location, err = models.FindBackupLocationByID(q, artifact.LocationID)
-		if err != nil {
-			return err
-		}
-
-		agents, err := models.FindPMMAgentsForService(tx.Querier, req.ServiceId)
-		if err != nil {
-			return err
-		}
-
-		if len(agents) == 0 {
-			return errors.Errorf("cannot find pmm agent for service %s", req.ServiceId)
-		}
-
-		// TODO: replace with restore id created in restores table
-		restoreID = "/restore_id/" + uuid.New().String()
-
-		job, err = models.CreateJobResult(tx.Querier, agents[0].AgentID, models.MySQLBackupRestoreJob, &models.JobResultData{
+		job, err = models.CreateJobResult(tx.Querier, params.AgentID, models.MySQLBackupRestoreJob, &models.JobResultData{
 			MySQLBackupRestore: &models.MySQLBackupRestoreJobResult{
-				RestoreID: restoreID,
+				RestoreID: restore.ID,
 			},
 		})
 
@@ -224,19 +241,19 @@ func (s *BackupsService) RestoreBackup(
 	}
 
 	locationConfig := models.BackupLocationConfig{
-		PMMServerConfig: location.PMMServerConfig,
-		PMMClientConfig: location.PMMClientConfig,
-		S3Config:        location.S3Config,
+		PMMServerConfig: params.Location.PMMServerConfig,
+		PMMClientConfig: params.Location.PMMClientConfig,
+		S3Config:        params.Location.S3Config,
 	}
 
-	switch service.ServiceType {
+	switch params.ServiceType {
 	case models.MySQLServiceType:
 		if err := s.jobsService.StartMySQLBackupRestoreJob(
 			job.ID,
-			job.PMMAgentID,
-			service.ServiceID,
+			params.AgentID,
+			req.ServiceId,
 			0,
-			artifact.Name,
+			params.ArtifactName,
 			locationConfig,
 		); err != nil {
 			return nil, err
@@ -246,13 +263,13 @@ func (s *BackupsService) RestoreBackup(
 		models.ProxySQLServiceType,
 		models.HAProxyServiceType,
 		models.ExternalServiceType:
-		return nil, status.Errorf(codes.Unimplemented, "unimplemented service: %s", service.ServiceType)
+		return nil, status.Errorf(codes.Unimplemented, "unimplemented service: %s", params.ServiceType)
 	default:
-		return nil, status.Errorf(codes.Unknown, "unknown service: %s", service.ServiceType)
+		return nil, status.Errorf(codes.Unknown, "unknown service: %s", params.ServiceType)
 	}
 
 	return &backupv1beta1.RestoreBackupResponse{
-		RestoreId: restoreID,
+		RestoreId: job.Result.MySQLBackupRestore.RestoreID,
 	}, nil
 }
 

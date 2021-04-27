@@ -30,8 +30,8 @@ type JobType string
 
 // Supported job types.
 const (
-	Echo           = JobType("echo")
-	MySQLBackupJob = JobType("mysql_backup")
+	Echo                  = JobType("echo")
+	MySQLBackupJob        = JobType("mysql_backup")
 	MySQLBackupRestoreJob = JobType("mysql_backup_restore")
 )
 
@@ -52,8 +52,8 @@ type MySQLBackupRestoreJobResult struct {
 
 // JobResultData holds result data for different job types.
 type JobResultData struct {
-	Echo        *EchoJobResult        `json:"echo,omitempty"`
-	MySQLBackup *MySQLBackupJobResult `json:"mysql_backup,omitempty"`
+	Echo               *EchoJobResult               `json:"echo,omitempty"`
+	MySQLBackup        *MySQLBackupJobResult        `json:"mysql_backup,omitempty"`
 	MySQLBackupRestore *MySQLBackupRestoreJobResult `json:"mysql_backup_restore,omitempty"`
 }
 

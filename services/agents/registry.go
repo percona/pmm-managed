@@ -321,7 +321,15 @@ func (r *Registry) handleJobResult(l *logrus.Entry, result *agentpb.JobResult) {
 				return errors.Errorf("result type %s doesn't match job type %s", models.MySQLBackupRestoreJob, res.Type)
 			}
 
-			// TODO: change restore history entry status after implementing https://jira.percona.com/browse/PMM-7872
+			_, err := models.ChangeRestoreHistoryItem(
+				t.Querier,
+				res.Result.MySQLBackupRestore.RestoreID,
+				models.ChangeRestoreHistoryItemParams{
+					Status: models.SuccessRestoreStatus,
+				})
+			if err != nil {
+				return err
+			}
 		default:
 			return errors.Errorf("unexpected job result type: %T", result)
 		}
@@ -344,7 +352,15 @@ func (r *Registry) handleJobError(jobResult *models.JobResult) error {
 			Status: models.ErrorBackupStatus,
 		})
 	case models.MySQLBackupRestoreJob:
-		// TODO: change restore history entry status after implementing https://jira.percona.com/browse/PMM-7872
+		_, err := models.ChangeRestoreHistoryItem(
+			r.db.Querier,
+			jobResult.Result.MySQLBackupRestore.RestoreID,
+			models.ChangeRestoreHistoryItemParams{
+				Status: models.ErrorRestoreStatus,
+			})
+		if err != nil {
+			return err
+		}
 	default:
 		// Don't do anything without explicit handling
 	}
