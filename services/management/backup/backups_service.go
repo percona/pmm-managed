@@ -20,7 +20,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/AlekSi/pointer"
 	"github.com/google/uuid"
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"github.com/pkg/errors"
@@ -82,12 +81,12 @@ func (s *BackupsService) RestoreBackup(
 			return err
 		}
 
-		location, err = models.FindBackupLocationByID(q, req.LocationId)
+		artifact, err = models.FindArtifactByID(q, req.ArtifactId)
 		if err != nil {
 			return err
 		}
 
-		artifact, err = models.FindArtifactByID(q, req.ArtifactId)
+		location, err = models.FindBackupLocationByID(q, artifact.LocationID)
 		if err != nil {
 			return err
 		}
@@ -97,16 +96,14 @@ func (s *BackupsService) RestoreBackup(
 			return err
 		}
 
-		if len(agents) != 1 {
-			return errors.Errorf("only one agent expected for service, but got %d", len(agents))
+		if len(agents) == 0 {
+			return errors.Errorf("cannot find pmm agent for service %s", req.ServiceId)
 		}
 
-		agent := agents[0]
-		pmmAgentID := pointer.GetString(agent.PMMAgentID)
 		// TODO: replace with restore id created in restores table
 		restoreID = "/restore_id/" + uuid.New().String()
 
-		job, err = models.CreateJobResult(tx.Querier, pmmAgentID, models.MySQLBackupRestoreJob, &models.JobResultData{
+		job, err = models.CreateJobResult(tx.Querier, agents[0].AgentID, models.MySQLBackupRestoreJob, &models.JobResultData{
 			MySQLBackupRestore: &models.MySQLBackupRestoreJobResult{
 				RestoreID: restoreID,
 			},
