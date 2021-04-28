@@ -403,6 +403,13 @@ func (this *StartJobRequest) Validate() error {
 			}
 		}
 	}
+	if oneOfNester, ok := this.GetJob().(*StartJobRequest_MongodbBackup); ok {
+		if oneOfNester.MongodbBackup != nil {
+			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.MongodbBackup); err != nil {
+				return github_com_mwitkow_go_proto_validators.FieldError("MongodbBackup", err)
+			}
+		}
+	}
 	return nil
 }
 func (this *StartJobRequest_Echo) Validate() error {
@@ -415,6 +422,16 @@ func (this *StartJobRequest_Echo) Validate() error {
 }
 func (this *StartJobRequest_MySQLBackup) Validate() error {
 	if oneOfNester, ok := this.GetLocationConfig().(*StartJobRequest_MySQLBackup_S3Config); ok {
+		if oneOfNester.S3Config != nil {
+			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.S3Config); err != nil {
+				return github_com_mwitkow_go_proto_validators.FieldError("S3Config", err)
+			}
+		}
+	}
+	return nil
+}
+func (this *StartJobRequest_MongoDBBackup) Validate() error {
+	if oneOfNester, ok := this.GetLocationConfig().(*StartJobRequest_MongoDBBackup_S3Config); ok {
 		if oneOfNester.S3Config != nil {
 			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.S3Config); err != nil {
 				return github_com_mwitkow_go_proto_validators.FieldError("S3Config", err)
@@ -459,12 +476,22 @@ func (this *JobResult) Validate() error {
 			}
 		}
 	}
+	if oneOfNester, ok := this.GetResult().(*JobResult_MongodbBackup); ok {
+		if oneOfNester.MongodbBackup != nil {
+			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(oneOfNester.MongodbBackup); err != nil {
+				return github_com_mwitkow_go_proto_validators.FieldError("MongodbBackup", err)
+			}
+		}
+	}
 	return nil
 }
 func (this *JobResult_Error) Validate() error {
 	return nil
 }
 func (this *JobResult_Echo) Validate() error {
+	return nil
+}
+func (this *JobResult_MongoDBBackup) Validate() error {
 	return nil
 }
 func (this *JobResult_MySQLBackup) Validate() error {

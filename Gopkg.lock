@@ -494,8 +494,8 @@
   revision = "e66cc9d89f9739d5f841f847877f12443b37484a"
 
 [[projects]]
-  branch = "PMM-2.0"
-  digest = "1:9e6245d38123bbfeb784dca31cceba5fea0632501e0c75d081a87bfb94844303"
+  branch = "PMM-7567-mongo-backup"
+  digest = "1:812f3d38131fc8c767bb138d87a0159e82a553e5f9f678cae02f11452dc44588"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -521,7 +521,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "5096b8d865353b590f53f7ee38b22304f9d7b55c"
+  revision = "13e829922131eb112bb79f5c33e2ae0eeea1faa0"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
