@@ -35,19 +35,26 @@ type MySQLBackupJobResult struct {
 	ArtifactID string `json:"artifact_id"`
 }
 
+// MongoDBBackupJobResult stores MongoDB job specific result data.
+type MongoDBBackupJobResult struct {
+	ArtifactID string `json:"artifact_id"`
+}
+
 // JobType represents job type.
 type JobType string
 
 // Supported job types.
 const (
-	Echo           = JobType("echo")
-	MySQLBackupJob = JobType("mysql_backup")
+	Echo             = JobType("echo")
+	MySQLBackupJob   = JobType("mysql_backup")
+	MongoDBBackupJob = JobType("mongodb_backup")
 )
 
 // JobResultData holds result data for different job types.
 type JobResultData struct {
-	Echo        *EchoJobResult        `json:"echo,omitempty"`
-	MySQLBackup *MySQLBackupJobResult `json:"mysql_backup,omitempty"`
+	Echo          *EchoJobResult          `json:"echo,omitempty"`
+	MySQLBackup   *MySQLBackupJobResult   `json:"mysql_backup,omitempty"`
+	MongoDBBackup *MongoDBBackupJobResult `json:"mongo_db_backup,omitempty"`
 }
 
 // Value implements database/sql/driver.Valuer interface. Should be defined on the value.

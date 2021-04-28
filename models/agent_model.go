@@ -220,7 +220,7 @@ type DBConfig struct {
 
 // Valid returns true if config is valid.
 func (c DBConfig) Valid() bool {
-	return c.User != "" && (c.Address != "" || c.Socket != "")
+	return c.Address != "" || c.Socket != ""
 }
 
 // DBConfig returns DBConfig for given Service with this agent.

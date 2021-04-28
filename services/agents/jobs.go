@@ -115,6 +115,54 @@ func (s *JobsService) StartMySQLBackupJob(id, pmmAgentID string, timeout time.Du
 	return nil
 }
 
+func (s *JobsService) StartMongoDBBackupJob(id, pmmAgentID string, timeout time.Duration, name string, dbConfig models.DBConfig, locationConfig models.BackupLocationConfig) error {
+	if dbConfig.Socket != "" {
+		return errors.New("Socket connection is unavailable for mongo backups")
+	}
+
+	mongoDBReq := &agentpb.StartJobRequest_MongoDBBackup{
+		Name:     name,
+		User:     dbConfig.User,
+		Password: dbConfig.Password,
+		Address:  dbConfig.Address,
+		Port:     int32(dbConfig.Port),
+	}
+
+	switch {
+	case locationConfig.S3Config != nil:
+		mongoDBReq.LocationConfig = &agentpb.StartJobRequest_MongoDBBackup_S3Config{
+			S3Config: &agentpb.S3LocationConfig{
+				Endpoint:     locationConfig.S3Config.Endpoint,
+				AccessKey:    locationConfig.S3Config.AccessKey,
+				SecretKey:    locationConfig.S3Config.SecretKey,
+				BucketName:   locationConfig.S3Config.BucketName,
+				BucketRegion: locationConfig.S3Config.BucketRegion,
+			},
+		}
+	default:
+		return errors.Errorf("unsupported location config")
+	}
+	req := &agentpb.StartJobRequest{
+		JobId:   id,
+		Timeout: ptypes.DurationProto(timeout),
+		Job: &agentpb.StartJobRequest_MongodbBackup{
+			MongodbBackup: mongoDBReq,
+		},
+	}
+
+	agent, err := s.r.get(pmmAgentID)
+	if err != nil {
+		return err
+	}
+
+	resp := agent.channel.SendAndWaitResponse(req)
+	if e := resp.(*agentpb.StartJobResponse).Error; e != "" {
+		return errors.Errorf("failed to start MongoDB job: %s", e)
+	}
+
+	return nil
+}
+
 // StopJob stops job with given given id.
 func (s *JobsService) StopJob(jobID string) error {
 	jobResult, err := models.FindJobResultByID(s.db.Querier, jobID)

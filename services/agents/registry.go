@@ -316,6 +316,17 @@ func (r *Registry) handleJobResult(l *logrus.Entry, result *agentpb.JobResult) {
 			if err != nil {
 				return err
 			}
+		case *agentpb.JobResult_MongodbBackup:
+			if res.Type != models.MongoDBBackupJob {
+				return errors.Errorf("result type %s doesn't match job type %s", models.MongoDBBackupJob, res.Type)
+			}
+
+			_, err := models.ChangeArtifact(t.Querier, res.Result.MongoDBBackup.ArtifactID, models.ChangeArtifactParams{
+				Status: models.SuccessBackupStatus,
+			})
+			if err != nil {
+				return err
+			}
 		default:
 			return errors.Errorf("unexpected job result type: %T", result)
 		}
@@ -333,6 +344,10 @@ func (r *Registry) handleJobError(jobResult *models.JobResult) error {
 		// nothing
 	case models.MySQLBackupJob:
 		_, err = models.ChangeArtifact(r.db.Querier, jobResult.Result.MySQLBackup.ArtifactID, models.ChangeArtifactParams{
+			Status: models.ErrorBackupStatus,
+		})
+	case models.MongoDBBackupJob:
+		_, err = models.ChangeArtifact(r.db.Querier, jobResult.Result.MongoDBBackup.ArtifactID, models.ChangeArtifactParams{
 			Status: models.ErrorBackupStatus,
 		})
 	default:

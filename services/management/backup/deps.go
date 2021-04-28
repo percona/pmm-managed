@@ -30,6 +30,7 @@ import (
 type jobsService interface {
 	StopJob(jobID string) error
 	StartMySQLBackupJob(id, pmmAgentID string, timeout time.Duration, name string, dbConfig models.DBConfig, locationConfig models.BackupLocationConfig) error
+	StartMongoDBBackupJob(id, pmmAgentID string, timeout time.Duration, name string, dbConfig models.DBConfig, locationConfig models.BackupLocationConfig) error
 }
 
 type awsS3 interface {

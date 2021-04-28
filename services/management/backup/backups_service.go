@@ -63,12 +63,15 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 		}
 
 		var dataModel models.DataModel
+		var jobType models.JobType
 		switch svc.ServiceType {
 		case models.MySQLServiceType:
 			dataModel = models.PhysicalDataModel
-		case models.PostgreSQLServiceType:
-			fallthrough
+			jobType = models.MySQLBackupJob
 		case models.MongoDBServiceType:
+			dataModel = models.LogicalDataModel
+			jobType = models.MongoDBBackupJob
+		case models.PostgreSQLServiceType:
 			fallthrough
 		case models.ProxySQLServiceType:
 			fallthrough
@@ -92,7 +95,7 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 			return err
 		}
 
-		job, config, err = s.prepareBackupJob(svc, artifact.ID, models.MySQLBackupJob)
+		job, config, err = s.prepareBackupJob(svc, artifact.ID, jobType)
 		if err != nil {
 			return err
 		}
@@ -112,9 +115,9 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 	switch svc.ServiceType {
 	case models.MySQLServiceType:
 		err = s.jobsService.StartMySQLBackupJob(job.ID, job.PMMAgentID, 0, req.Name, config, locationConfig)
-	case models.PostgreSQLServiceType:
-		fallthrough
 	case models.MongoDBServiceType:
+		err = s.jobsService.StartMongoDBBackupJob(job.ID, job.PMMAgentID, 0, req.Name, config, locationConfig)
+	case models.PostgreSQLServiceType:
 		fallthrough
 	case models.ProxySQLServiceType:
 		fallthrough
@@ -153,11 +156,26 @@ func (s *BackupsService) prepareBackupJob(service *models.Service, artifactID st
 			return errors.Errorf("pmmAgent not found for service")
 		}
 
-		res, err = models.CreateJobResult(tx.Querier, pmmAgents[0].AgentID, jobType, &models.JobResultData{
-			MySQLBackup: &models.MySQLBackupJobResult{
-				ArtifactID: artifactID,
-			},
-		})
+		var jobResultData *models.JobResultData
+		switch jobType {
+		case models.Echo:
+			// nothing
+		case models.MySQLBackupJob:
+			jobResultData = &models.JobResultData{
+				MySQLBackup: &models.MySQLBackupJobResult{
+					ArtifactID: artifactID,
+				},
+			}
+		case models.MongoDBBackupJob:
+			jobResultData = &models.JobResultData{
+				MongoDBBackup: &models.MongoDBBackupJobResult{
+					ArtifactID: artifactID,
+				},
+			}
+		}
+
+		res, err = models.CreateJobResult(tx.Querier, pmmAgents[0].AgentID, jobType, jobResultData)
+
 		return err
 	})
 
