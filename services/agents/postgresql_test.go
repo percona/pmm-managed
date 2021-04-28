@@ -150,7 +150,7 @@ func TestPostgresExporterConfig(t *testing.T) {
 		require.Equal(t, expected, actual)
 	})
 
-	t.Run("AuzeTimeout", func(t *testing.T) {
+	t.Run("AzureTimeout", func(t *testing.T) {
 		pmmAgentVersion := version.MustParse("2.16.0")
 
 		postgresql := &models.Service{
