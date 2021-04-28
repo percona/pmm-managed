@@ -307,7 +307,11 @@ func TestListAlerts(t *testing.T) {
 	t.Run("without pagination", func(t *testing.T) {
 		res, err := svc.ListAlerts(ctx, &iav1beta1.ListAlertsRequest{})
 		assert.NoError(t, err)
-		assert.Len(t, res.Alerts, len(mockedAlerts))
+		var expect []string
+		for _, m := range mockedAlerts {
+			expect = append(expect, *m.Fingerprint)
+		}
+		assert.True(t, findAlerts(res.Alerts, expect...), "wrong alerts returned")
 		assert.EqualValues(t, res.Totals.TotalItems, len(mockedAlerts))
 	})
 
