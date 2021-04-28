@@ -27,16 +27,15 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/percona-platform/saas/pkg/alert"
 	"github.com/percona-platform/saas/pkg/common"
+	"github.com/percona/pmm/api/alertmanager/ammodels"
+	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/testdb"
-
-	"github.com/percona/pmm/api/alertmanager/ammodels"
-	iav1beta1 "github.com/percona/pmm/api/managementpb/ia"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSatisfiesFilters(t *testing.T) {

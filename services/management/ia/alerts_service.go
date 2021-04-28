@@ -181,9 +181,7 @@ func (s *AlertsService) ListAlerts(ctx context.Context, req *iav1beta1.ListAlert
 	}
 	pageTotals.TotalItems = int32(len(res))
 
-	res = res[from:to]
-
-	return &iav1beta1.ListAlertsResponse{Alerts: res, Totals: pageTotals}, nil
+	return &iav1beta1.ListAlertsResponse{Alerts: res[from:to], Totals: pageTotals}, nil
 }
 
 // satisfiesFilters checks that alert passes filters, returns true in case of success.
