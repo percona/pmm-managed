@@ -19,6 +19,7 @@ package dbaas
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -309,18 +310,20 @@ func TestPSMDBClusterService(t *testing.T) {
 
 	t.Run("BasicDeletePSMDBCluster", func(t *testing.T) {
 		s := NewPSMDBClusterService(db, dbaasClient, grafanaClient)
+		dbClusterName := "delete-psmdb-test"
 		mockReq := controllerv1beta1.DeletePSMDBClusterRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
 				Kubeconfig: kubeconfTest,
 			},
-			Name: "third-psmdb-test",
+			Name: dbClusterName,
 		}
 
 		dbaasClient.On("DeletePSMDBCluster", ctx, &mockReq).Return(&controllerv1beta1.DeletePSMDBClusterResponse{}, nil)
+		grafanaClient.On("DeleteAPIKeysWithPrefix", ctx, fmt.Sprintf("%s-%s", kubernetesClusterNameTest, dbClusterName)).Return(nil)
 
 		in := dbaasv1beta1.DeletePSMDBClusterRequest{
 			KubernetesClusterName: kubernetesClusterNameTest,
-			Name:                  "third-psmdb-test",
+			Name:                  dbClusterName,
 		}
 
 		_, err := s.DeletePSMDBCluster(ctx, &in)

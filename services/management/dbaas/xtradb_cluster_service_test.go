@@ -19,6 +19,7 @@ package dbaas
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -397,18 +398,20 @@ func TestXtraDBClusterService(t *testing.T) {
 
 	t.Run("BasicDeleteXtraDBCluster", func(t *testing.T) {
 		s := NewXtraDBClusterService(db, dbaasClient, grafanaClient)
+		dbClusterName := "delete-pxc-test"
 		mockReq := controllerv1beta1.DeleteXtraDBClusterRequest{
 			KubeAuth: &controllerv1beta1.KubeAuth{
 				Kubeconfig: pxcKubeconfigTest,
 			},
-			Name: "third-pxc-test",
+			Name: dbClusterName,
 		}
 
 		dbaasClient.On("DeleteXtraDBCluster", ctx, &mockReq).Return(&controllerv1beta1.DeleteXtraDBClusterResponse{}, nil)
+		grafanaClient.On("DeleteAPIKeysWithPrefix", ctx, fmt.Sprintf("%s-%s", kubernetesClusterNameTest, dbClusterName)).Return(nil)
 
 		in := dbaasv1beta1.DeleteXtraDBClusterRequest{
 			KubernetesClusterName: pxcKubernetesClusterNameTest,
-			Name:                  "third-pxc-test",
+			Name:                  dbClusterName,
 		}
 
 		_, err := s.DeleteXtraDBCluster(ctx, &in)
