@@ -3,13 +3,13 @@ module github.com/percona/pmm-managed
 go 1.16
 
 // Use for local development, but do not commit:
-// replace github.com/percona-platform/platform => /local-path/platform
+// replace github.com/percona-platform/saas => ../saas
+// replace github.com/percona-platform/dbaas-api => ../dbaas-api
 
-// Update pmm with:
+// Update depedencies with:
 // go get -v github.com/percona/pmm@PMM-2.0
-
-// Update saas with:
 // go get -v github.com/percona-platform/saas@latest
+// go get -v github.com/percona-platform/dbaas-api@latest
 
 require (
 	github.com/AlekSi/pointer v1.1.0
@@ -34,7 +34,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.10
 	github.com/mitchellh/mapstructure v1.3.3 // indirect
 	github.com/percona-platform/dbaas-api v0.0.0-20210420093041-724dc163a829
-	github.com/percona-platform/saas v0.0.0-20210325112150-e66cc9d89f97
+	github.com/percona-platform/saas v0.0.0-20210422103915-f67d8f87cdb5
 	github.com/percona/pmm v2.16.1-0.20210424104446-5096b8d86535+incompatible
 	github.com/percona/promconfig v0.2.1
 	github.com/pkg/errors v0.9.1
