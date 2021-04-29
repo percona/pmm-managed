@@ -116,16 +116,13 @@ func (s *JobsService) StartMySQLBackupJob(id, pmmAgentID string, timeout time.Du
 }
 
 func (s *JobsService) StartMongoDBBackupJob(id, pmmAgentID string, timeout time.Duration, name string, dbConfig models.DBConfig, locationConfig models.BackupLocationConfig) error {
-	if dbConfig.Socket != "" {
-		return errors.New("Socket connection is unavailable for mongo backups")
-	}
-
 	mongoDBReq := &agentpb.StartJobRequest_MongoDBBackup{
 		Name:     name,
 		User:     dbConfig.User,
 		Password: dbConfig.Password,
 		Address:  dbConfig.Address,
 		Port:     int32(dbConfig.Port),
+		Socket:   dbConfig.Socket,
 	}
 
 	switch {
