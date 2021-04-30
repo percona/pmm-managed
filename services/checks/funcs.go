@@ -18,6 +18,7 @@ package checks
 
 import (
 	"net"
+	"strconv"
 
 	"github.com/percona-platform/saas/pkg/starlark"
 	"github.com/percona/pmm/version"
@@ -78,13 +79,13 @@ func formatVersionNum(args ...interface{}) (interface{}, error) {
 	if !ok {
 		return nil, errors.Errorf("expected int64 argument, got %[1]T (%[1]v)", args[0])
 	}
-    // process numbers with a rest part included
+	// process numbers with a rest part included
 	if num > 10000000 {
 		p := &version.Parsed{
 			Major:   int(num / 10000000),
 			Minor:   int(num / 100000 % 100),
 			Patch:   int(num / 1000 % 100),
-			Rest:    "-" + string(num%1000),
+			Rest:    "-" + strconv.FormatInt(num%1000, 10),
 			NumRest: int(num % 1000),
 		}
 
