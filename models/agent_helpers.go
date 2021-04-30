@@ -540,14 +540,10 @@ type CreateAgentParams struct {
 	CustomLabels                   map[string]string
 	TLS                            bool
 	TLSSkipVerify                  bool
-	MongoDBOptions                 *MongoDBOptions
 	TableCountTablestatsGroupLimit int32
-	QueryExamplesDisabled          bool
-	MaxQueryLogSize                int64
-	AWSAccessKey                   string
-	AWSSecretKey                   string
-	RDSBasicMetricsDisabled        bool
-	RDSEnhancedMetricsDisabled     bool
+	MongoDBOptions                 *MongoDBOptions
+	QANOptions                     *QANOptions
+	AWSOptions                     *AWSOptions
 	AzureOptions                   *AzureOptions
 	PushMetrics                    bool
 	DisableCollectors              []string
@@ -596,12 +592,8 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 		TLSSkipVerify:                  params.TLSSkipVerify,
 		MongoDBOptions:                 params.MongoDBOptions,
 		TableCountTablestatsGroupLimit: params.TableCountTablestatsGroupLimit,
-		QueryExamplesDisabled:          params.QueryExamplesDisabled,
-		MaxQueryLogSize:                params.MaxQueryLogSize,
-		AWSAccessKey:                   pointer.ToStringOrNil(params.AWSAccessKey),
-		AWSSecretKey:                   pointer.ToStringOrNil(params.AWSSecretKey),
-		RDSBasicMetricsDisabled:        params.RDSBasicMetricsDisabled,
-		RDSEnhancedMetricsDisabled:     params.RDSEnhancedMetricsDisabled,
+		QANOptions:                     params.QANOptions,
+		AWSOptions:                     params.AWSOptions,
 		AzureOptions:                   params.AzureOptions,
 		PushMetrics:                    params.PushMetrics,
 		DisabledCollectors:             params.DisableCollectors,

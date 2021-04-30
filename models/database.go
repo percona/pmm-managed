@@ -487,6 +487,31 @@ var databaseSchema = [][]string{
 	34: {
 		`ALTER TABLE kubernetes_clusters ADD COLUMN haproxy JSONB`,
 	},
+	35: {
+		`ALTER TABLE agents ALTER COLUMN azure_options TYPE JSONB USING azure_options::jsonb`,
+		`ALTER TABLE agents ADD COLUMN aws_options JSONB`,
+		`ALTER TABLE agents ADD COLUMN qan_options JSONB`,
+
+		`UPDATE agents SET aws_options=jsonb_build_object(
+			'aws_access_key', aws_access_key,
+			'aws_secret_key', aws_secret_key,
+			'rds_basic_metrics_disabled', rds_basic_metrics_disabled,
+			'rds_enhanced_metrics_disabled', rds_enhanced_metrics_disabled
+		)
+		WHERE aws_access_key != NULL OR aws_secret_key != NULL OR rds_basic_metrics_disabled OR rds_enhanced_metrics_disabled`,
+
+		`UPDATE agents SET aws_options=jsonb_build_object(
+			'query_examples_disabled', query_examples_disabled,
+			'max_query_log_size', max_query_log_size
+		)`,
+		`ALTER TABLE agents
+			DROP COLUMN aws_access_key,
+			DROP COLUMN aws_secret_key,
+			DROP COLUMN rds_basic_metrics_disabled,
+			DROP COLUMN rds_enhanced_metrics_disabled,
+			DROP COLUMN query_examples_disabled,
+			DROP COLUMN max_query_log_size`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^

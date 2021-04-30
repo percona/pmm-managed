@@ -93,6 +93,32 @@ func (c AzureOptions) Value() (driver.Value, error) { return jsonValue(c) }
 // Scan implements database/sql.Scanner interface. Should be defined on the pointer.
 func (c *AzureOptions) Scan(src interface{}) error { return jsonScan(c, src) }
 
+// AWSOptions represents structure for special AWS options.
+type AWSOptions struct {
+	RDSBasicMetricsDisabled    bool    `reform:"rds_basic_metrics_disabled"`
+	RDSEnhancedMetricsDisabled bool    `reform:"rds_enhanced_metrics_disabled"`
+	AWSAccessKey               *string `reform:"aws_access_key"`
+	AWSSecretKey               *string `reform:"aws_secret_key"`
+}
+
+// Value implements database/sql/driver.Valuer interface. Should be defined on the value.
+func (c AWSOptions) Value() (driver.Value, error) { return jsonValue(c) }
+
+// Scan implements database/sql.Scanner interface. Should be defined on the pointer.
+func (c *AWSOptions) Scan(src interface{}) error { return jsonScan(c, src) }
+
+// QANOptions represents structure for special Query Analytics options.
+type QANOptions struct {
+	QueryExamplesDisabled bool  `reform:"query_examples_disabled"`
+	MaxQueryLogSize       int64 `reform:"max_query_log_size"`
+}
+
+// Value implements database/sql/driver.Valuer interface. Should be defined on the value.
+func (c QANOptions) Value() (driver.Value, error) { return jsonValue(c) }
+
+// Scan implements database/sql.Scanner interface. Should be defined on the pointer.
+func (c *QANOptions) Scan(src interface{}) error { return jsonScan(c, src) }
+
 // PMMAgentWithPushMetricsSupport - version of pmmAgent,
 // that support vmagent and push metrics mode
 // will be released with PMM Agent v2.12.
@@ -121,11 +147,6 @@ type Agent struct {
 	TLS           bool    `reform:"tls"`
 	TLSSkipVerify bool    `reform:"tls_skip_verify"`
 
-	AWSAccessKey *string `reform:"aws_access_key"`
-	AWSSecretKey *string `reform:"aws_secret_key"`
-
-	AzureOptions *AzureOptions `reform:"azure_options"`
-
 	// TableCount stores last known table count. NULL if unknown.
 	TableCount *int32 `reform:"table_count"`
 
@@ -135,17 +156,16 @@ type Agent struct {
 	// See IsMySQLTablestatsGroupEnabled method.
 	TableCountTablestatsGroupLimit int32 `reform:"table_count_tablestats_group_limit"`
 
-	QueryExamplesDisabled bool    `reform:"query_examples_disabled"`
-	MaxQueryLogSize       int64   `reform:"max_query_log_size"`
-	MetricsPath           *string `reform:"metrics_path"`
-	MetricsScheme         *string `reform:"metrics_scheme"`
+	MetricsPath   *string `reform:"metrics_path"`
+	MetricsScheme *string `reform:"metrics_scheme"`
 
-	RDSBasicMetricsDisabled    bool           `reform:"rds_basic_metrics_disabled"`
-	RDSEnhancedMetricsDisabled bool           `reform:"rds_enhanced_metrics_disabled"`
-	PushMetrics                bool           `reform:"push_metrics"`
-	DisabledCollectors         pq.StringArray `reform:"disabled_collectors"`
+	PushMetrics        bool           `reform:"push_metrics"`
+	DisabledCollectors pq.StringArray `reform:"disabled_collectors"`
 
+	QANOptions     *QANOptions     `reform:"qan_options"`
 	MongoDBOptions *MongoDBOptions `reform:"mongo_db_tls_options"`
+	AzureOptions   *AzureOptions   `reform:"azure_options"`
+	AWSOptions     *AWSOptions     `reform:"aws_options"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.
