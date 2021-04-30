@@ -67,8 +67,8 @@ func parseVersion(args ...interface{}) (interface{}, error) {
 	}, nil
 }
 
-// formatVersionNum accepts a single int64 argument (version num MMmmpp), and returns
-// MM.mm.pp as a string.
+// formatVersionNum accepts a single int64 argument (version num MMmmpp or MMmmppRRR), and returns
+// MM.mm.pp or MM.mm.pp-RRR as a string.
 func formatVersionNum(args ...interface{}) (interface{}, error) {
 	if l := len(args); l != 1 {
 		return nil, errors.Errorf("expected 1 argument, got %d", l)
@@ -78,13 +78,13 @@ func formatVersionNum(args ...interface{}) (interface{}, error) {
 	if !ok {
 		return nil, errors.Errorf("expected int64 argument, got %[1]T (%[1]v)", args[0])
 	}
-
+    // process numbers with a rest part included
 	if num > 10000000 {
 		p := &version.Parsed{
 			Major:   int(num / 10000000),
 			Minor:   int(num / 100000 % 100),
 			Patch:   int(num / 1000 % 100),
-			Rest:    "-"+string(num % 1000),
+			Rest:    "-" + string(num%1000),
 			NumRest: int(num % 1000),
 		}
 
