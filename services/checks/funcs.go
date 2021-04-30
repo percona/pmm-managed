@@ -78,7 +78,7 @@ func formatVersionNum(args ...interface{}) (interface{}, error) {
 	if !ok {
 		return nil, errors.Errorf("expected int64 argument, got %[1]T (%[1]v)", args[0])
 	}
-    // process numbers with a rest part included
+	// process numbers with a rest part included
 	if num > 10000000 {
 		p := &version.Parsed{
 			Major:   int(num / 10000000),
