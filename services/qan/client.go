@@ -237,7 +237,8 @@ func (c *Client) Collect(ctx context.Context, metricsBuckets []*agentpb.MetricsB
 	// Slice metrics, so request to qan-api is not too big
 	const bucketSize = 25000
 	from, to := 0, bucketSize
-	for from > len(convertedMetricsBuckets) {
+	// Send at least one time, even though it's empty
+	for from <= len(convertedMetricsBuckets) {
 		if to > len(convertedMetricsBuckets) {
 			to = len(convertedMetricsBuckets)
 		}
