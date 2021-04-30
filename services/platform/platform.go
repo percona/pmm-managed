@@ -156,7 +156,9 @@ func (s *Service) SignOut(ctx context.Context) error {
 
 	_, err = api.NewAuthAPIClient(cc).SignOut(ctx, &api.SignOutRequest{})
 	if err != nil {
-		if st, ok := status.FromError(err); !ok || st.Code() != codes.InvalidArgument {
+		// If SaaS credentials have become invalid then go ahead with the log out instead of returning error.
+		// For more details see this: https://jira.percona.com/browse/PMM-7965
+		if st, ok := status.FromError(err); !ok || st.Code() != codes.InvalidArgument && st.Message() != "Invalid credentials." {
 			return err
 		}
 	}

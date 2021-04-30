@@ -38,6 +38,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -343,6 +344,19 @@ func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest
 	defer cc.Close() //nolint:errcheck
 
 	if _, err = reporter.NewReporterAPIClient(cc).Report(ctx, req); err != nil {
+		// If SaaS credentials have become invalid then force a log out so that the next
+		// check download attempt is successfull. Details: https://jira.percona.com/browse/PMM-7965
+		if st, _ := status.FromError(err); st.Message() == "Invalid credentials." {
+			s.l.Error("Platform session invalid, forcing a log out.")
+			err = s.db.InTransaction(func(tx *reform.TX) error {
+				params := models.ChangeSettingsParams{LogOut: true}
+				_, err := models.UpdateSettings(tx.Querier, &params)
+				return err
+			})
+			if err != nil {
+				return errors.Wrap(err, "failed to remove session id")
+			}
+		}
 		return errors.Wrap(err, "failed to report")
 	}
 	return nil
