@@ -495,7 +495,7 @@
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:9d315bdfe3c5b4ceb67c28a77c9d3294e3c8f77a2f69a9eb5030364187bac954"
+  digest = "1:9e6245d38123bbfeb784dca31cceba5fea0632501e0c75d081a87bfb94844303"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -521,7 +521,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "40d570e7d1676a9a216a38d9bfd5c3193a7fc807"
+  revision = "5096b8d865353b590f53f7ee38b22304f9d7b55c"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
@@ -1039,6 +1039,7 @@
     "google.golang.org/protobuf",
     "google.golang.org/protobuf/types/known/durationpb",
     "google.golang.org/protobuf/types/known/wrapperspb",
+    "google.golang.org/protobuf/types/known/timestamppb",
     "gopkg.in/alecthomas/kingpin.v2",
     "gopkg.in/reform.v1",
     "gopkg.in/reform.v1/dialects/postgresql",
