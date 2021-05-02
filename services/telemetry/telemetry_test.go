@@ -72,7 +72,14 @@ func TestMakeV2Payload(t *testing.T) {
 	u, err := generateUUID()
 	require.NoError(t, err)
 
-	r, err := s.makeV2Payload(u, true, true)
+	r, err := s.makeV2Payload(u, &models.Settings{
+		SaaS: models.SaaS{
+			STTEnabled: true,
+		},
+		IntegratedAlerting: models.IntegratedAlerting{
+			Enabled: true,
+		},
+	})
 	require.NoError(t, err)
 	assert.NoError(t, r.Validate())
 	require.Len(t, r.Events, 1)
@@ -104,7 +111,14 @@ func TestSendV2Request(t *testing.T) {
 
 		u, err := generateUUID()
 		require.NoError(t, err)
-		payload, err := s.makeV2Payload(u, true, true)
+		payload, err := s.makeV2Payload(u, &models.Settings{
+			SaaS: models.SaaS{
+				STTEnabled: true,
+			},
+			IntegratedAlerting: models.IntegratedAlerting{
+				Enabled: true,
+			},
+		})
 		require.NoError(t, err)
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -121,7 +135,14 @@ func TestSendV2Request(t *testing.T) {
 
 		u, err := generateUUID()
 		require.NoError(t, err)
-		req, err := s.makeV2Payload(u, true, true)
+		req, err := s.makeV2Payload(u, &models.Settings{
+			SaaS: models.SaaS{
+				STTEnabled: true,
+			},
+			IntegratedAlerting: models.IntegratedAlerting{
+				Enabled: true,
+			},
+		})
 		require.NoError(t, err)
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
