@@ -157,7 +157,7 @@ func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv
 
 	var pmmParams *dbaascontrollerv1beta1.PMMParams
 	if settings.PMMPublicAddress != "" {
-		_, apiKey, err := s.grafanaClient.CreateAdminAPIKey(ctx, fmt.Sprintf("%s-%s-%d", req.KubernetesClusterName, req.Name, rand.Int63()))
+		_, apiKey, err := s.grafanaClient.CreateAdminAPIKey(ctx, fmt.Sprintf("psmdb-%s-%s-%d", req.KubernetesClusterName, req.Name, rand.Int63()))
 		if err != nil {
 			return nil, err
 		}
@@ -189,6 +189,9 @@ func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv
 
 	_, err = s.controllerClient.CreatePSMDBCluster(ctx, &in)
 	if err != nil {
+		if pmmParams != nil {
+			_ = s.grafanaClient.DeleteAPIKeysWithPrefix(ctx, pmmParams.Password)
+		}
 		return nil, err
 	}
 
@@ -257,7 +260,7 @@ func (s PSMDBClusterService) DeletePSMDBCluster(ctx context.Context, req *dbaasv
 		return nil, err
 	}
 
-	err = s.grafanaClient.DeleteAPIKeysWithPrefix(ctx, fmt.Sprintf("%s-%s", req.KubernetesClusterName, req.Name))
+	err = s.grafanaClient.DeleteAPIKeysWithPrefix(ctx, fmt.Sprintf("psmdb-%s-%s", req.KubernetesClusterName, req.Name))
 	if err != nil {
 		// ignore if API Key is not deleted.
 		s.l.Warnf("Couldn't delete API key: %s", err)

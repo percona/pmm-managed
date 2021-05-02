@@ -175,7 +175,7 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 
 	var pmmParams *dbaascontrollerv1beta1.PMMParams
 	if settings.PMMPublicAddress != "" {
-		_, apiKey, err := s.grafanaClient.CreateAdminAPIKey(ctx, fmt.Sprintf("%s-%s-%d", req.KubernetesClusterName, req.Name, rand.Int63()))
+		_, apiKey, err := s.grafanaClient.CreateAdminAPIKey(ctx, fmt.Sprintf("pxc-%s-%s-%d", req.KubernetesClusterName, req.Name, rand.Int63()))
 		if err != nil {
 			return nil, err
 		}
@@ -235,6 +235,9 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 
 	_, err = s.controllerClient.CreateXtraDBCluster(ctx, &in)
 	if err != nil {
+		if pmmParams != nil {
+			_ = s.grafanaClient.DeleteAPIKeysWithPrefix(ctx, pmmParams.Password)
+		}
 		return nil, err
 	}
 
@@ -327,7 +330,7 @@ func (s XtraDBClusterService) DeleteXtraDBCluster(ctx context.Context, req *dbaa
 		return nil, err
 	}
 
-	err = s.grafanaClient.DeleteAPIKeysWithPrefix(ctx, fmt.Sprintf("%s-%s", req.KubernetesClusterName, req.Name))
+	err = s.grafanaClient.DeleteAPIKeysWithPrefix(ctx, fmt.Sprintf("pxc-%s-%s", req.KubernetesClusterName, req.Name))
 	if err != nil {
 		// ignore if API Key is not deleted.
 		s.l.Warnf("Couldn't delete API key: %s", err)
