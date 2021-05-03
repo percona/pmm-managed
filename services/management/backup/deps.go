@@ -37,7 +37,7 @@ type jobsService interface {
 		dbConfig models.DBConfig,
 		locationConfig models.BackupLocationConfig,
 	) error
-	StartMySQLBackupRestoreJob(
+	StartMySQLRestoreBackupJob(
 		jobID string,
 		pmmAgentID string,
 		serviceID string,

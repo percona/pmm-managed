@@ -115,8 +115,8 @@ func (s *JobsService) StartMySQLBackupJob(id, pmmAgentID string, timeout time.Du
 	return nil
 }
 
-// StartMySQLBackupRestoreJob starts mysql backup restore job on the pmm-agent.
-func (s *JobsService) StartMySQLBackupRestoreJob(
+// StartMySQLRestoreBackupJob starts mysql restore backup job on the pmm-agent.
+func (s *JobsService) StartMySQLRestoreBackupJob(
 	jobID string,
 	pmmAgentID string,
 	serviceID string,
@@ -131,7 +131,7 @@ func (s *JobsService) StartMySQLBackupRestoreJob(
 	req := &agentpb.StartJobRequest{
 		JobId:   jobID,
 		Timeout: ptypes.DurationProto(timeout),
-		Job: &agentpb.StartJobRequest_MysqlBackupRestore{
+		Job: &agentpb.StartJobRequest_MysqlRestoreBackup{
 			MysqlBackupRestore: &agentpb.StartJobRequest_MySQLBackupRestore{
 				ServiceId: serviceID,
 				Name:      name,
@@ -155,7 +155,7 @@ func (s *JobsService) StartMySQLBackupRestoreJob(
 
 	resp := agent.channel.SendAndWaitResponse(req)
 	if e := resp.(*agentpb.StartJobResponse).Error; e != "" {
-		return errors.Errorf("failed to start MySQL backup restore job: %s", e)
+		return errors.Errorf("failed to start MySQL restore backup job: %s", e)
 	}
 
 	return nil

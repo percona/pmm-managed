@@ -213,7 +213,7 @@ func (s *BackupsService) startRestoreJob(jobID, serviceID string, params *prepar
 
 	switch params.ServiceType {
 	case models.MySQLServiceType:
-		if err := s.jobsService.StartMySQLBackupRestoreJob(
+		if err := s.jobsService.StartMySQLRestoreBackupJob(
 			jobID,
 			params.AgentID,
 			serviceID,
@@ -262,8 +262,8 @@ func (s *BackupsService) RestoreBackup(
 
 		restoreID = restore.ID
 
-		job, err := models.CreateJobResult(tx.Querier, params.AgentID, models.MySQLBackupRestoreJob, &models.JobResultData{
-			MySQLBackupRestore: &models.MySQLBackupRestoreJobResult{
+		job, err := models.CreateJobResult(tx.Querier, params.AgentID, models.MySQLRestoreBackupJob, &models.JobResultData{
+			MySQLRestoreBackup: &models.MySQLRestoreBackupJobResult{
 				RestoreID: restoreID,
 			},
 		})

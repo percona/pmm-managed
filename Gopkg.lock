@@ -495,7 +495,7 @@
 
 [[projects]]
   branch = "PMM-7385-mysql-backup-restore"
-  digest = "1:c494a51928344693bb070e19b5ad21038d925241e487d3d440350400564176c8"
+  digest = "1:a187aa5ab4de4cbec66b8c7aee63131b94f148fa1b7071e78ac44dd987f6ef5b"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -521,7 +521,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "1e13a99edd8d791256c0e1aa5a8e30d1c2a36b8b"
+  revision = "d113e71f216a0625f3d0a5128e0fff5e481532f9"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
