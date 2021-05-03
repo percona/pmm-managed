@@ -3,6 +3,7 @@ module github.com/percona/pmm-managed/tools
 go 1.16
 
 require (
+	github.com/BurntSushi/go-sumtype v0.0.0-20190304192233-fcb4a6205bdc
 	github.com/go-delve/delve v1.6.0
 	github.com/golangci/golangci-lint v1.39.0
 	github.com/kevinburke/go-bindata v3.22.0+incompatible

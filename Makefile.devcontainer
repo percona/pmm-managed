@@ -20,6 +20,7 @@ gen:                            ## Generate files.
 init:                   ## Install development tools
 	go build -modfile=tools/go.mod -o $(BIN_PATH)/dlv github.com/go-delve/delve/cmd/dlv
 	go build -modfile=tools/go.mod -o $(BIN_PATH)/golangci-lint github.com/golangci/golangci-lint/cmd/golangci-lint
+	go build -modfile=tools/go.mod -o $(BIN_PATH)/go-sumtype github.com/BurntSushi/go-sumtype
 	go build -modfile=tools/go.mod -o $(BIN_PATH)/go-bindata github.com/kevinburke/go-bindata/go-bindata
 	go build -modfile=tools/go.mod -o $(BIN_PATH)/reviewdog github.com/reviewdog/reviewdog/cmd/reviewdog
 	go build -modfile=tools/go.mod -o $(BIN_PATH)/mockery github.com/vektra/mockery/cmd/mockery

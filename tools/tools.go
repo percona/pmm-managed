@@ -20,6 +20,7 @@
 package tools
 
 import (
+	_ "github.com/BurntSushi/go-sumtype"
 	_ "github.com/go-delve/delve/cmd/dlv"
 	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
 	_ "github.com/kevinburke/go-bindata/go-bindata"
