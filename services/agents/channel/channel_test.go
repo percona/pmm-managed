@@ -320,8 +320,9 @@ func TestUnexpectedResponsePayloadFromAgent(t *testing.T) {
 		<-stop
 		return nil
 	}
-	stream, _, teardown := setup(t, connect)
+	stream, _, teardown := setup(t, connect, status.Error(codes.Canceled, context.Canceled.Error()))
 	defer teardown(t)
+	defer close(stop)
 
 	err := stream.Send(&agentpb.AgentMessage{
 		Id: 4242,
@@ -332,5 +333,4 @@ func TestUnexpectedResponsePayloadFromAgent(t *testing.T) {
 	assert.Equal(t, int32(codes.Unimplemented), msg.GetStatus().GetCode())
 	assert.NoError(t, err)
 
-	close(stop)
 }
