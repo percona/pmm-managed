@@ -157,8 +157,7 @@ func (s *Service) SignOut(ctx context.Context) error {
 	_, err = api.NewAuthAPIClient(cc).SignOut(ctx, &api.SignOutRequest{})
 	if err != nil {
 		// If SaaS credentials have become invalid then go ahead with the log out instead of returning error.
-		// For more details see this: https://jira.percona.com/browse/PMM-7965
-		if st, ok := status.FromError(err); !ok || st.Code() != codes.InvalidArgument && st.Message() != "Invalid credentials." {
+		if st, ok := status.FromError(err); !ok || st.Code() != codes.InvalidArgument && st.Code() != codes.Unauthenticated {
 			return err
 		}
 	}
@@ -194,6 +193,14 @@ func (s *Service) refreshSession(ctx context.Context) error {
 
 	_, err = api.NewAuthAPIClient(cc).RefreshSession(ctx, &api.RefreshSessionRequest{})
 	if err != nil {
+		// If SaaS credentials become invalid then force a logout so that the next
+		// refresh session attempt is successful.
+		if st, _ := status.FromError(err); st.Code() == codes.Unauthenticated {
+			err = saasdial.ForceLogout(s.db, s.l, err)
+			if err != nil {
+				return errors.Wrap(err, "failed to force logout")
+			}
+		}
 		return errors.Wrap(err, "failed to refresh session")
 	}
 

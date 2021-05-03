@@ -19,7 +19,13 @@ package saasdial
 import (
 	"context"
 
+	"github.com/percona/pmm-managed/models"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/status"
+	"gopkg.in/reform.v1"
 )
 
 const platformAuthType = "PP-1"
@@ -38,6 +44,25 @@ func (b *platformAuth) GetRequestMetadata(ctx context.Context, uri ...string) (m
 // RequireTransportSecurity implements credentials.PerRPCCredentials interface.
 func (*platformAuth) RequireTransportSecurity() bool {
 	return true
+}
+
+// ForceLogout will force a log out if SaaS credentials become invalid.
+// Note: This is a special case that occurs if a user's password is reset from
+// the Okta dashboard but the PMM server is left logged in and is not able to log out
+// after the password reset.
+func ForceLogout(db *reform.DB, l *logrus.Entry, platformErr error) error {
+	l.Error("Platform session invalid, forcing a logout.")
+	if st, _ := status.FromError(platformErr); st.Code() == codes.Unauthenticated {
+		err := db.InTransaction(func(tx *reform.TX) error {
+			params := models.ChangeSettingsParams{LogOut: true}
+			_, err := models.UpdateSettings(tx.Querier, &params)
+			return err
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to remove session id")
+		}
+	}
+	return nil
 }
 
 // check interfaces
