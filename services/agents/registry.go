@@ -316,7 +316,7 @@ func (r *Registry) handleJobResult(l *logrus.Entry, result *agentpb.JobResult) {
 			if err != nil {
 				return err
 			}
-		case *agentpb.JobResult_MysqlRestoreBacup:
+		case *agentpb.JobResult_MysqlRestoreBackup:
 			if res.Type != models.MySQLRestoreBackupJob {
 				return errors.Errorf("result type %s doesn't match job type %s", models.MySQLRestoreBackupJob, res.Type)
 			}

@@ -132,10 +132,10 @@ func (s *JobsService) StartMySQLRestoreBackupJob(
 		JobId:   jobID,
 		Timeout: ptypes.DurationProto(timeout),
 		Job: &agentpb.StartJobRequest_MysqlRestoreBackup{
-			MysqlBackupRestore: &agentpb.StartJobRequest_MySQLBackupRestore{
+			MysqlRestoreBackup: &agentpb.StartJobRequest_MySQLRestoreBackup{
 				ServiceId: serviceID,
 				Name:      name,
-				LocationConfig: &agentpb.StartJobRequest_MySQLBackupRestore_S3Config{
+				LocationConfig: &agentpb.StartJobRequest_MySQLRestoreBackup_S3Config{
 					S3Config: &agentpb.S3LocationConfig{
 						Endpoint:     locationConfig.S3Config.Endpoint,
 						AccessKey:    locationConfig.S3Config.AccessKey,
