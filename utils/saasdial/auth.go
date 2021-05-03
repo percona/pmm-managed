@@ -19,13 +19,14 @@ package saasdial
 import (
 	"context"
 
-	"github.com/percona/pmm-managed/models"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
+
+	"github.com/percona/pmm-managed/models"
 )
 
 const platformAuthType = "PP-1"
