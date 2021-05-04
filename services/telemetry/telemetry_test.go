@@ -77,7 +77,7 @@ func TestMakeV2Payload(t *testing.T) {
 			STTEnabled: true,
 		},
 		IntegratedAlerting: models.IntegratedAlerting{
-			Enabled: true,
+			Enabled: false,
 		},
 	})
 	require.NoError(t, err)
@@ -91,13 +91,13 @@ func TestMakeV2Payload(t *testing.T) {
 	err = proto.Unmarshal(ev.Event.Binary, &uEv)
 	require.NoError(t, err)
 
-	assert.Equal(t, uEv.Version, "2.4.0")
-	assert.Equal(t, uEv.DistributionMethod, pmmv1.DistributionMethod_DOCKER)
-	assert.LessOrEqual(t, float64(uEv.UpDuration.Seconds), (delay + 2*time.Second).Seconds())
-	assert.GreaterOrEqual(t, float64(uEv.UpDuration.Seconds), delay.Seconds())
+	assert.Equal(t, "2.4.0", uEv.Version)
+	assert.Equal(t, pmmv1.DistributionMethod_DOCKER, uEv.DistributionMethod)
+	assert.LessOrEqual(t, (delay + 2*time.Second).Seconds(), float64(uEv.UpDuration.Seconds))
+	assert.GreaterOrEqual(t, delay.Seconds(), float64(uEv.UpDuration.Seconds))
 	assert.Equal(t, u, hex.EncodeToString(uEv.Id))
-	assert.Equal(t, uEv.SttEnabled, wrapperspb.Bool(true))
-	assert.Equal(t, uEv.IaEnabled, wrapperspb.Bool(true))
+	assert.Equal(t, wrapperspb.Bool(true), uEv.SttEnabled)
+	assert.Equal(t, wrapperspb.Bool(false), uEv.IaEnabled)
 }
 
 func TestSendV2Request(t *testing.T) {
@@ -116,7 +116,7 @@ func TestSendV2Request(t *testing.T) {
 				STTEnabled: true,
 			},
 			IntegratedAlerting: models.IntegratedAlerting{
-				Enabled: true,
+				Enabled: false,
 			},
 		})
 		require.NoError(t, err)
@@ -140,7 +140,7 @@ func TestSendV2Request(t *testing.T) {
 				STTEnabled: true,
 			},
 			IntegratedAlerting: models.IntegratedAlerting{
-				Enabled: true,
+				Enabled: false,
 			},
 		})
 		require.NoError(t, err)

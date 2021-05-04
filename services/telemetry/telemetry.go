@@ -165,9 +165,9 @@ func (s *Service) Run(ctx context.Context) {
 
 		err := s.sendOneEvent(ctx)
 		if err == nil {
-			s.l.Debug("Telemetry info send.")
+			s.l.Debug("Telemetry info sent.")
 		} else {
-			s.l.Debugf("Telemetry info not send: %s.", err)
+			s.l.Debugf("Telemetry info not sent: %s.", err)
 		}
 	}
 }
@@ -268,9 +268,20 @@ func (s *Service) makeV2Payload(serverUUID string, settings *models.Settings) (*
 		Version:            s.pmmVersion,
 		UpDuration:         ptypes.DurationProto(time.Since(s.start)),
 		DistributionMethod: s.tDistributionMethod,
-		SttEnabled:         wrapperspb.Bool(settings.SaaS.STTEnabled),
-		IaEnabled:          wrapperspb.Bool(settings.IntegratedAlerting.Enabled),
 	}
+	if settings.SaaS.STTEnabled {
+		event.SttEnabled = &wrapperspb.BoolValue{Value: true}
+	} else {
+		event.SttEnabled = &wrapperspb.BoolValue{Value: false}
+	}
+
+	if settings.IntegratedAlerting.Enabled {
+		event.IaEnabled = &wrapperspb.BoolValue{Value: true}
+	} else {
+		event.IaEnabled = &wrapperspb.BoolValue{Value: false}
+	}
+	s.l.Debugf("Event: %+v", event)
+
 	if err = event.Validate(); err != nil {
 		// log and ignore
 		s.l.Debugf("Failed to validate event: %s.", err)
