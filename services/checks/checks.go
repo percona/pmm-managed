@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -1096,7 +1097,7 @@ func (s *Service) downloadChecks(ctx context.Context) ([]check.Check, error) {
 		// attempt can be successful.
 		logoutErr := saasdial.LogoutIfInvalidAuth(s.db, s.l, err)
 		if logoutErr != nil {
-			return nil, errors.Wrap(logoutErr, "failed to request checks service")
+			return nil, errors.Wrap(fmt.Errorf("%v %v", err, logoutErr), "failed to request checks service")
 		}
 		return nil, errors.Wrap(err, "failed to request checks service")
 	}
