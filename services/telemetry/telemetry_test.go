@@ -93,8 +93,8 @@ func TestMakeV2Payload(t *testing.T) {
 
 	assert.Equal(t, "2.4.0", uEv.Version)
 	assert.Equal(t, pmmv1.DistributionMethod_DOCKER, uEv.DistributionMethod)
-	assert.LessOrEqual(t, (delay + 2*time.Second).Seconds(), float64(uEv.UpDuration.Seconds))
-	assert.GreaterOrEqual(t, delay.Seconds(), float64(uEv.UpDuration.Seconds))
+	assert.LessOrEqual(t, float64(uEv.UpDuration.Seconds), (delay + 2*time.Second).Seconds())
+	assert.GreaterOrEqual(t, float64(uEv.UpDuration.Seconds), delay.Seconds())
 	assert.Equal(t, u, hex.EncodeToString(uEv.Id))
 	assert.Equal(t, wrapperspb.Bool(true), uEv.SttEnabled)
 	assert.Equal(t, wrapperspb.Bool(false), uEv.IaEnabled)
