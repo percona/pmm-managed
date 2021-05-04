@@ -47,11 +47,11 @@ func (*platformAuth) RequireTransportSecurity() bool {
 	return true
 }
 
-// ForceLogout will force a log out if SaaS credentials become invalid.
+// LogoutIfInvalidAuth will force a log out if SaaS credentials become invalid.
 // Note: This is a special case that occurs if a user's password is reset from
 // the Okta dashboard but the PMM server is left logged in and is not able to log out
 // after the password reset.
-func ForceLogout(db *reform.DB, l *logrus.Entry, platformErr error) error {
+func LogoutIfInvalidAuth(db *reform.DB, l *logrus.Entry, platformErr error) error {
 	l.Error("Platform session invalid, forcing a logout.")
 	if st, _ := status.FromError(platformErr); st.Code() == codes.Unauthenticated {
 		err := db.InTransaction(func(tx *reform.TX) error {

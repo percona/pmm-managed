@@ -345,7 +345,7 @@ func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest
 	if _, err = reporter.NewReporterAPIClient(cc).Report(ctx, req); err != nil {
 		// if credentials are invalid then force a logout so that the next retry can
 		// successfully send the telemetry event to platform.
-		err = saasdial.ForceLogout(s.db, s.l, err)
+		err = saasdial.LogoutIfInvalidAuth(s.db, s.l, err)
 		if err != nil {
 			return errors.Wrap(err, "failed to force logout")
 		}
