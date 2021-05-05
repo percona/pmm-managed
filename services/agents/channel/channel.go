@@ -61,6 +61,7 @@ type Metrics struct {
 	Requests  float64 // the current length of the request queue
 }
 
+// Response is a type used to pass response from pmm-agent to the subscriber.
 type Response struct {
 	Payload agentpb.AgentResponsePayload
 	Error   error
