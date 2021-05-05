@@ -362,7 +362,7 @@ func TestListAlerts(t *testing.T) {
 			},
 		})
 		assert.NoError(t, err)
-		assert.True(t, findAlerts(res.Alerts), "wrong alerts returned")
+		assert.Len(t, res.Alerts, 0)
 		assert.EqualValues(t, res.Totals.TotalItems, len(mockedAlerts))
 	})
 
