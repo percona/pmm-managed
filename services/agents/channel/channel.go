@@ -25,8 +25,9 @@ import (
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/pkg/errors"
+	protostatus "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	grpcstatus "google.golang.org/grpc/status"
 
 	"github.com/percona/pmm-managed/utils/logger"
 )
@@ -48,7 +49,7 @@ type AgentRequest struct {
 // and the payload is already unwrapped (XXX instead of ServerMessage_XXX).
 type ServerResponse struct {
 	ID      uint32
-	Status  *status.Status
+	Status  *grpcstatus.Status
 	Payload agentpb.ServerResponsePayload
 }
 
@@ -213,12 +214,6 @@ func (c *Channel) runReceiver() {
 		// 	l.Debugf("Received message (%d bytes):\n%s\n", size, proto.MarshalTextString(msg))
 		// }
 
-		msgStatus := status.FromProto(msg.Status)
-		if msgStatus.Code() != codes.OK {
-			c.cancel(msg.Id, msgStatus.Err())
-			continue
-		}
-
 		switch p := msg.Payload.(type) {
 		// requests
 		case *agentpb.AgentMessage_Ping:
@@ -256,27 +251,27 @@ func (c *Channel) runReceiver() {
 
 		// responses
 		case *agentpb.AgentMessage_Pong:
-			c.publish(msg.Id, p.Pong)
+			c.publish(msg.Id, msg.Status, p.Pong)
 		case *agentpb.AgentMessage_SetState:
-			c.publish(msg.Id, p.SetState)
+			c.publish(msg.Id, msg.Status, p.SetState)
 		case *agentpb.AgentMessage_StartAction:
-			c.publish(msg.Id, p.StartAction)
+			c.publish(msg.Id, msg.Status, p.StartAction)
 		case *agentpb.AgentMessage_StopAction:
-			c.publish(msg.Id, p.StopAction)
+			c.publish(msg.Id, msg.Status, p.StopAction)
 		case *agentpb.AgentMessage_StartJob:
-			c.publish(msg.Id, p.StartJob)
+			c.publish(msg.Id, msg.Status, p.StartJob)
 		case *agentpb.AgentMessage_StopJob:
-			c.publish(msg.Id, p.StopJob)
+			c.publish(msg.Id, msg.Status, p.StopJob)
 		case *agentpb.AgentMessage_JobStatus:
-			c.publish(msg.Id, p.JobStatus)
+			c.publish(msg.Id, msg.Status, p.JobStatus)
 		case *agentpb.AgentMessage_CheckConnection:
-			c.publish(msg.Id, p.CheckConnection)
+			c.publish(msg.Id, msg.Status, p.CheckConnection)
 
 		case nil:
 			c.cancel(msg.Id, errors.Errorf("unimplemented: failed to handle received message %s", msg))
 			c.Send(&ServerResponse{
 				ID:     msg.Id,
-				Status: status.New(codes.Unimplemented, "can't handle message type send, it is not implemented"),
+				Status: grpcstatus.New(codes.Unimplemented, "can't handle message type send, it is not implemented"),
 			})
 		}
 	}
@@ -328,7 +323,13 @@ func (c *Channel) cancel(id uint32, err error) {
 	}
 }
 
-func (c *Channel) publish(id uint32, resp agentpb.AgentResponsePayload) {
+func (c *Channel) publish(id uint32, status *protostatus.Status, resp agentpb.AgentResponsePayload) {
+	if status != nil {
+		l := logger.Get(c.s.Context())
+		l.Errorf("got response %v with status %v", resp, status)
+		c.cancel(id, grpcstatus.FromProto(status).Err())
+		return
+	}
 	ch, err := c.removeResponseChannel(id)
 	if err != nil {
 		c.close(err)
