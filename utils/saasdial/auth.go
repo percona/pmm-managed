@@ -52,15 +52,15 @@ func (*platformAuth) RequireTransportSecurity() bool {
 // the Okta dashboard but the PMM server is left logged in and is not able to log out
 // after the password reset.
 func LogoutIfInvalidAuth(db *reform.DB, l *logrus.Entry, platformErr error) error {
-	l.Error("Platform session invalid, forcing a logout.")
+	l.Warn("Platform session invalid, forcing a logout.")
 	if st, _ := status.FromError(platformErr); st.Code() == codes.Unauthenticated {
-		err := db.InTransaction(func(tx *reform.TX) error {
+		e := db.InTransaction(func(tx *reform.TX) error {
 			params := models.ChangeSettingsParams{LogOut: true}
 			_, err := models.UpdateSettings(tx.Querier, &params)
 			return err
 		})
-		if err != nil {
-			return errors.Wrap(err, "failed to remove session id")
+		if e != nil {
+			return errors.Wrap(e, "failed to remove session id")
 		}
 	}
 	return nil

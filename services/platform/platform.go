@@ -19,7 +19,6 @@ package platform
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"time"
 
@@ -198,7 +197,7 @@ func (s *Service) refreshSession(ctx context.Context) error {
 		// refresh session attempt is successful.
 		logoutErr := saasdial.LogoutIfInvalidAuth(s.db, s.l, err)
 		if logoutErr != nil {
-			return errors.Wrap(fmt.Errorf("%v %v", err, logoutErr), "failed to refresh session")
+			s.l.Warn("Failed to force logout: %v", logoutErr)
 		}
 
 		return errors.Wrap(err, "failed to refresh session")
