@@ -48,7 +48,7 @@ import (
 
 const (
 	defaultV1URL        = "https://v.percona.com/"
-	defaultInterval     = 24 * time.Hour
+	defaultInterval     = 5 * time.Second
 	defaultRetryBackoff = time.Hour
 	defaultRetryCount   = 20
 
@@ -268,17 +268,8 @@ func (s *Service) makeV2Payload(serverUUID string, settings *models.Settings) (*
 		Version:            s.pmmVersion,
 		UpDuration:         ptypes.DurationProto(time.Since(s.start)),
 		DistributionMethod: s.tDistributionMethod,
-	}
-	if settings.SaaS.STTEnabled {
-		event.SttEnabled = &wrapperspb.BoolValue{Value: true}
-	} else {
-		event.SttEnabled = &wrapperspb.BoolValue{Value: false}
-	}
-
-	if settings.IntegratedAlerting.Enabled {
-		event.IaEnabled = &wrapperspb.BoolValue{Value: true}
-	} else {
-		event.IaEnabled = &wrapperspb.BoolValue{Value: false}
+		SttEnabled:         wrapperspb.Bool(settings.SaaS.STTEnabled),
+		IaEnabled:          wrapperspb.Bool(settings.IntegratedAlerting.Enabled),
 	}
 	s.l.Debugf("Event: %+v", event)
 
