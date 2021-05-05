@@ -277,6 +277,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 			case nil:
 				l.Warnf("Unexpected request: %+v.", req)
 				disconnectReason = "unimplemented"
+				// This case shuould be covered by the channel package. To avoid bugs during development, we leave the case here, too.
 				return status.Error(codes.Unimplemented, "Unexpected request payload.")
 			}
 		}
