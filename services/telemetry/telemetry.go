@@ -347,7 +347,7 @@ func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest
 		// successfully send the telemetry event to platform.
 		logoutErr := saasdial.LogoutIfInvalidAuth(s.db, s.l, err)
 		if logoutErr != nil {
-			s.l.Warn("Failed to force logout: %v", logoutErr)
+			s.l.Warnf("Failed to force logout: %v", logoutErr)
 		}
 		return errors.Wrap(err, "failed to report")
 	}
