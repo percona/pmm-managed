@@ -478,7 +478,7 @@
 
 [[projects]]
   branch = "main"
-  digest = "1:1d6597d442006947bc3feed7eea6aa8002424414626d5476fc983fe738690769"
+  digest = "1:4fc910217cd3991c1210354fb1f0610a5fb54db6303b85698a401e77036b070d"
   name = "github.com/percona-platform/saas"
   packages = [
     "gen/auth",
@@ -491,11 +491,11 @@
     "pkg/starlark",
   ]
   pruneopts = "NUT"
-  revision = "e66cc9d89f9739d5f841f847877f12443b37484a"
+  revision = "c18b6f47c9329975e089f1c0396e5fa55bfb06d5"
 
 [[projects]]
   branch = "PMM-2.0"
-  digest = "1:9e6245d38123bbfeb784dca31cceba5fea0632501e0c75d081a87bfb94844303"
+  digest = "1:ab77a80267a54c51e3e997fde1cf66cc94da1c92b6c5be3d93d8df6cf5bacfa9"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -521,7 +521,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "5096b8d865353b590f53f7ee38b22304f9d7b55c"
+  revision = "8bb9d3638e7bb5ed74038da2fb44acd053a0815b"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
@@ -863,6 +863,7 @@
   digest = "1:648f512fb65061c60482c7475d8ce146785e2e527f1b0b01d7187563e2d82129"
   name = "google.golang.org/protobuf"
   packages = [
+    ".",
     "encoding/protojson",
     "encoding/prototext",
     "encoding/protowire",
@@ -1035,8 +1036,10 @@
     "google.golang.org/grpc/metadata",
     "google.golang.org/grpc/reflection",
     "google.golang.org/grpc/status",
+    "google.golang.org/protobuf",
     "google.golang.org/protobuf/types/known/durationpb",
     "google.golang.org/protobuf/types/known/timestamppb",
+    "google.golang.org/protobuf/types/known/wrapperspb",
     "gopkg.in/alecthomas/kingpin.v2",
     "gopkg.in/reform.v1",
     "gopkg.in/reform.v1/dialects/postgresql",
