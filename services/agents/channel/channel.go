@@ -256,25 +256,24 @@ func (c *Channel) runReceiver() {
 
 		// responses
 		case *agentpb.AgentMessage_Pong:
-			c.publish(msg.Id, p.Pong, msgStatus)
+			c.publish(msg.Id, p.Pong)
 		case *agentpb.AgentMessage_SetState:
-			c.publish(msg.Id, p.SetState, msgStatus)
+			c.publish(msg.Id, p.SetState)
 		case *agentpb.AgentMessage_StartAction:
-			c.publish(msg.Id, p.StartAction, msgStatus)
+			c.publish(msg.Id, p.StartAction)
 		case *agentpb.AgentMessage_StopAction:
-			c.publish(msg.Id, p.StopAction, msgStatus)
+			c.publish(msg.Id, p.StopAction)
 		case *agentpb.AgentMessage_StartJob:
-			c.publish(msg.Id, p.StartJob, msgStatus)
+			c.publish(msg.Id, p.StartJob)
 		case *agentpb.AgentMessage_StopJob:
-			c.publish(msg.Id, p.StopJob, msgStatus)
+			c.publish(msg.Id, p.StopJob)
 		case *agentpb.AgentMessage_JobStatus:
-			c.publish(msg.Id, p.JobStatus, msgStatus)
+			c.publish(msg.Id, p.JobStatus)
 		case *agentpb.AgentMessage_CheckConnection:
-			c.publish(msg.Id, p.CheckConnection, msgStatus)
+			c.publish(msg.Id, p.CheckConnection)
 
 		case nil:
 			c.cancel(msg.Id, errors.Errorf("unimplemented: failed to handle received message %s", msg))
-			l.Errorf("I am here failing to handle unimplmented recieved message %s ", msg)
 			c.Send(&ServerResponse{
 				ID:     msg.Id,
 				Status: status.New(codes.Unimplemented, "can't handle message type send, it is not implemented"),
@@ -329,13 +328,14 @@ func (c *Channel) cancel(id uint32, err error) {
 	}
 }
 
-func (c *Channel) publish(id uint32, resp agentpb.AgentResponsePayload, s *status.Status) {
+func (c *Channel) publish(id uint32, resp agentpb.AgentResponsePayload) {
 	ch, err := c.removeResponseChannel(id)
 	if err != nil {
 		c.close(err)
+		return
 	}
 	if ch != nil {
-		ch <- Response{Payload: resp, Error: s.Err()}
+		ch <- Response{Payload: resp}
 	}
 }
 
