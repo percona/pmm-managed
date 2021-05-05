@@ -173,7 +173,7 @@ func TestRestoreHistory(t *testing.T) {
 		i2, err := models.CreateRestoreHistoryItem(q, params2)
 		require.NoError(t, err)
 
-		actual, err := models.FindRestoreHistoryItems(q)
+		actual, err := models.FindRestoreHistoryItems(q, nil)
 		require.NoError(t, err)
 
 		found := func(id string) func() bool {
@@ -212,7 +212,7 @@ func TestRestoreHistory(t *testing.T) {
 		err = models.RemoveRestoreHistoryItem(q, i.ID)
 		require.NoError(t, err)
 
-		artifacts, err := models.FindRestoreHistoryItems(q)
+		artifacts, err := models.FindRestoreHistoryItems(q, nil)
 		require.NoError(t, err)
 		assert.Empty(t, artifacts)
 	})

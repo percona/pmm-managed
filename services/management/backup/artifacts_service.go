@@ -57,7 +57,7 @@ func (s *ArtifactsService) Enabled() bool {
 func (s *ArtifactsService) ListArtifacts(context.Context, *backupv1beta1.ListArtifactsRequest) (*backupv1beta1.ListArtifactsResponse, error) {
 	q := s.db.Querier
 
-	artifacts, err := models.FindArtifacts(q)
+	artifacts, err := models.FindArtifacts(q, nil)
 	if err != nil {
 		return nil, err
 	}

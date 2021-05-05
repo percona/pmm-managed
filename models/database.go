@@ -505,6 +505,10 @@ var databaseSchema = [][]string{
 		`ALTER TABLE agents
 		ADD COLUMN mysql_options VARCHAR`,
 	},
+	37: {
+		`ALTER TABLE artifacts ADD FOREIGN KEY (location_id) REFERENCES backup_locations (id)`,
+		`ALTER TABLE artifacts ADD FOREIGN KEY (service_id) REFERENCES services (service_id)`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^

@@ -97,7 +97,7 @@ func TestArtifacts(t *testing.T) {
 		a2, err := models.CreateArtifact(q, params2)
 		require.NoError(t, err)
 
-		actual, err := models.FindArtifacts(q)
+		actual, err := models.FindArtifacts(q, nil)
 		require.NoError(t, err)
 
 		found := func(id string) func() bool {
@@ -139,7 +139,7 @@ func TestArtifacts(t *testing.T) {
 		err = models.RemoveArtifact(q, b.ID)
 		require.NoError(t, err)
 
-		artifacts, err := models.FindArtifacts(q)
+		artifacts, err := models.FindArtifacts(q, nil)
 		require.NoError(t, err)
 		assert.Empty(t, artifacts)
 	})

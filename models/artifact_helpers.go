@@ -32,9 +32,31 @@ var (
 	ErrInvalidArgument = errors.New("invalid argument")
 )
 
+// ArtifactFilters represents filters for artifacts list.
+type ArtifactFilters struct {
+	// Return only Agents that provide insights for that Service.
+	ServiceID string
+}
+
 // FindArtifacts returns artifacts list.
-func FindArtifacts(q *reform.Querier) ([]*Artifact, error) {
-	rows, err := q.SelectAllFrom(ArtifactTable, "ORDER BY created_at DESC")
+func FindArtifacts(q *reform.Querier, filters *ArtifactFilters) ([]*Artifact, error) {
+	var conditions []string
+	var args []interface{}
+	idx := 1
+	if filters.ServiceID != "" {
+		if _, err := FindServiceByID(q, filters.ServiceID); err != nil {
+			return nil, err
+		}
+		conditions = append(conditions, fmt.Sprintf("service_id = %s", q.Placeholder(idx)))
+		args = append(args, filters.ServiceID)
+		idx++
+	}
+
+	var whereClause string
+	if len(conditions) != 0 {
+		whereClause = fmt.Sprintf("WHERE %s", strings.Join(conditions, " AND "))
+	}
+	rows, err := q.SelectAllFrom(ArtifactTable, fmt.Sprintf("%s ORDER BY created_at DESC", whereClause), args...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to select artifacts")
 	}
