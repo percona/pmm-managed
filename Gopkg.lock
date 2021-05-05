@@ -495,7 +495,7 @@
 
 [[projects]]
   branch = "PMM-3449-keep-channel-up"
-  digest = "1:dc6549c09968a878b45fa350b2ea22706aec51729e43c7e6292c0341edca007e"
+  digest = "1:0b51318be09e78d6a225ba1faca0c02e31c6b64af488e29582ec9e8bfef16a97"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -521,7 +521,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "0f412b84f65b4a1c3bee973574a8332db2c91686"
+  revision = "1ffec67a88319ef56141af6ed2d7befaa7883281"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
@@ -1026,6 +1026,7 @@
     "golang.org/x/sync/errgroup",
     "golang.org/x/sys/unix",
     "golang.org/x/tools/cmd/goimports",
+    "google.golang.org/genproto/googleapis/rpc/status",
     "google.golang.org/grpc",
     "google.golang.org/grpc/backoff",
     "google.golang.org/grpc/channelz/service",
