@@ -71,4 +71,5 @@ type versionService interface {
 type grafanaClient interface {
 	CreateAdminAPIKey(ctx context.Context, name string) (int64, string, error)
 	DeleteAPIKeysWithPrefix(ctx context.Context, name string) error
+	DeleteAPIKeyByID(ctx context.Context, id int64) error
 }

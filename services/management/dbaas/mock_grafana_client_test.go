@@ -41,6 +41,20 @@ func (_m *mockGrafanaClient) CreateAdminAPIKey(ctx context.Context, name string)
 	return r0, r1, r2
 }
 
+// DeleteAPIKeyByID provides a mock function with given fields: ctx, id
+func (_m *mockGrafanaClient) DeleteAPIKeyByID(ctx context.Context, id int64) error {
+	ret := _m.Called(ctx, id)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) error); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // DeleteAPIKeysWithPrefix provides a mock function with given fields: ctx, name
 func (_m *mockGrafanaClient) DeleteAPIKeysWithPrefix(ctx context.Context, name string) error {
 	ret := _m.Called(ctx, name)

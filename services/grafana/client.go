@@ -343,6 +343,15 @@ func (c *Client) DeleteAPIKeysWithPrefix(ctx context.Context, prefix string) err
 	return nil
 }
 
+// DeleteAPIKeyByID deletes API key by ID.
+func (c *Client) DeleteAPIKeyByID(ctx context.Context, id int64) error {
+	authHeaders, err := c.authHeadersFromContext(ctx)
+	if err != nil {
+		return err
+	}
+	return c.deleteAPIKey(ctx, id, authHeaders)
+}
+
 func (c *Client) authHeadersFromContext(ctx context.Context) (http.Header, error) {
 	headers, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
