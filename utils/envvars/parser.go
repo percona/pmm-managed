@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	defaultSaaSHost = "check-dev.percona.com:443"
+	defaultSaaSHost = "check.percona.com:443"
 	envSaaSHost     = "PERCONA_TEST_SAAS_HOST"
 	// TODO REMOVE PERCONA_TEST_DBAAS IN FUTURE RELEASES.
 	envTestDbaas   = "PERCONA_TEST_DBAAS"
