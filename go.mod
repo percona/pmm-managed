@@ -18,6 +18,7 @@ require (
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.7
 	github.com/Azure/go-autorest/autorest/validation v0.3.1 // indirect
 	github.com/aws/aws-sdk-go v1.33.10
+	github.com/brianvoe/gofakeit v3.18.0+incompatible
 	github.com/brianvoe/gofakeit/v6 v6.4.0
 	github.com/go-openapi/runtime v0.19.20
 	github.com/go-openapi/spec v0.19.9 // indirect
