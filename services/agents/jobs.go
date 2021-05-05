@@ -159,7 +159,10 @@ func (s *JobsService) StartMySQLRestoreBackupJob(
 		return err
 	}
 
-	resp := agent.channel.SendAndWaitResponse(req)
+	resp, err := agent.channel.SendAndWaitResponse(req)
+	if err != nil {
+		return err
+	}
 	if e := resp.(*agentpb.StartJobResponse).Error; e != "" {
 		return errors.Errorf("failed to start MySQL restore backup job: %s", e)
 	}
