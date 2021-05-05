@@ -477,7 +477,7 @@
   revision = "724dc163a82970df28e10845e0e9d1a61cfb6242"
 
 [[projects]]
-  branch = "SAAS-479-stt-ia-usage-data"
+  branch = "main"
   digest = "1:4fc910217cd3991c1210354fb1f0610a5fb54db6303b85698a401e77036b070d"
   name = "github.com/percona-platform/saas"
   packages = [
@@ -491,7 +491,7 @@
     "pkg/starlark",
   ]
   pruneopts = "NUT"
-  revision = "31fb82efcbbda78a2ec56e2fc5f1e52a5f823824"
+  revision = "c18b6f47c9329975e089f1c0396e5fa55bfb06d5"
 
 [[projects]]
   branch = "PMM-2.0"
@@ -1038,8 +1038,8 @@
     "google.golang.org/grpc/status",
     "google.golang.org/protobuf",
     "google.golang.org/protobuf/types/known/durationpb",
-    "google.golang.org/protobuf/types/known/wrapperspb",
     "google.golang.org/protobuf/types/known/timestamppb",
+    "google.golang.org/protobuf/types/known/wrapperspb",
     "gopkg.in/alecthomas/kingpin.v2",
     "gopkg.in/reform.v1",
     "gopkg.in/reform.v1/dialects/postgresql",
