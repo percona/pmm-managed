@@ -495,7 +495,7 @@
 
 [[projects]]
   branch = "PMM-7567-mongo-backup"
-  digest = "1:f26de37691bb105be8aaae44b0eb91948b49f87bfded835c9ce2982eebe06bad"
+  digest = "1:5119a162cb6de50b5b487b332ee8a191482ce98ca3d781ca36b9017979644203"
   name = "github.com/percona/pmm"
   packages = [
     "api/agentpb",
@@ -521,7 +521,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "79b5e58eba2a719f07533614e88c28c1e59c09af"
+  revision = "44d6192d900177a00130d211874f80310487b64d"
 
 [[projects]]
   digest = "1:65230c46134944510adb8844cf4098b5c9fdd1dd11992c3980afc1d3e0c8e4bd"
@@ -1037,7 +1037,6 @@
     "google.golang.org/grpc/status",
     "google.golang.org/protobuf/types/known/durationpb",
     "google.golang.org/protobuf/types/known/timestamppb",
-    "google.golang.org/protobuf/types/known/wrapperspb",
     "gopkg.in/alecthomas/kingpin.v2",
     "gopkg.in/reform.v1",
     "gopkg.in/reform.v1/dialects/postgresql",
