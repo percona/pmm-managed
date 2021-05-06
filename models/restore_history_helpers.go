@@ -18,11 +18,12 @@ package models
 
 import (
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
-	"strings"
-	"time"
 )
 
 // RestoreHistoryItemFilters represents filters for restore history items.
