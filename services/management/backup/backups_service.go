@@ -49,7 +49,7 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 	var location *models.BackupLocation
 	var svc *models.Service
 	var job *models.JobResult
-	var config models.DBConfig
+	var config *models.DBConfig
 
 	errTX := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
 		svc, err = models.FindServiceByID(tx.Querier, req.ServiceId)
@@ -105,7 +105,7 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 		return nil, errTX
 	}
 
-	locationConfig := models.BackupLocationConfig{
+	locationConfig := &models.BackupLocationConfig{
 		PMMServerConfig: location.PMMServerConfig,
 		PMMClientConfig: location.PMMClientConfig,
 		S3Config:        location.S3Config,
@@ -190,25 +190,23 @@ func (s *BackupsService) prepareBackupJob(
 	service *models.Service,
 	artifactID string,
 	jobType models.JobType,
-) (*models.JobResult, models.DBConfig, error) {
+) (*models.JobResult, *models.DBConfig, error) {
 	dbConfig, err := models.FindDBConfigForService(q, service.ServiceID)
 	if err != nil {
-		return nil, models.DBConfig{}, err
+		return nil, nil, err
 	}
 
 	pmmAgents, err := models.FindPMMAgentsForService(q, service.ServiceID)
 	if err != nil {
-		return nil, models.DBConfig{}, err
+		return nil, nil, err
 	}
 
 	if len(pmmAgents) == 0 {
-		return nil, models.DBConfig{}, errors.Errorf("pmmAgent not found for service")
+		return nil, nil, errors.Errorf("pmmAgent not found for service")
 	}
 
 	var jobResultData *models.JobResultData
 	switch jobType {
-	case models.Echo:
-		// nothing
 	case models.MySQLBackupJob:
 		jobResultData = &models.JobResultData{
 			MySQLBackup: &models.MySQLBackupJobResult{
@@ -221,12 +219,17 @@ func (s *BackupsService) prepareBackupJob(
 				ArtifactID: artifactID,
 			},
 		}
+	case models.Echo,
+		models.MySQLRestoreBackupJob:
+		return nil, nil, errors.Errorf("%s is not a backup job type", jobType)
+	default:
+		return nil, nil, errors.Errorf("unsupported backup job type: %s", jobType)
 	}
 
 	res, err := models.CreateJobResult(q, pmmAgents[0].AgentID, jobType, jobResultData)
 
 	if err != nil {
-		return nil, models.DBConfig{}, err
+		return nil, nil, err
 	}
 
 	return res, dbConfig, nil
@@ -276,7 +279,7 @@ func (s *BackupsService) prepareRestoreJob(
 }
 
 func (s *BackupsService) startRestoreJob(jobID, serviceID string, params *prepareRestoreJobParams) error {
-	locationConfig := models.BackupLocationConfig{
+	locationConfig := &models.BackupLocationConfig{
 		PMMServerConfig: params.Location.PMMServerConfig,
 		PMMClientConfig: params.Location.PMMClientConfig,
 		S3Config:        params.Location.S3Config,

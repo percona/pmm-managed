@@ -70,7 +70,7 @@ func (s *JobsService) StartEchoJob(id, pmmAgentID string, timeout time.Duration,
 }
 
 // StartMySQLBackupJob starts mysql backup job on the pmm-agent.
-func (s *JobsService) StartMySQLBackupJob(id, pmmAgentID string, timeout time.Duration, name string, dbConfig models.DBConfig, locationConfig models.BackupLocationConfig) error {
+func (s *JobsService) StartMySQLBackupJob(id, pmmAgentID string, timeout time.Duration, name string, dbConfig *models.DBConfig, locationConfig *models.BackupLocationConfig) error {
 	mySQLReq := &agentpb.StartJobRequest_MySQLBackup{
 		Name:     name,
 		User:     dbConfig.User,
@@ -115,7 +115,7 @@ func (s *JobsService) StartMySQLBackupJob(id, pmmAgentID string, timeout time.Du
 	return nil
 }
 
-func (s *JobsService) StartMongoDBBackupJob(id, pmmAgentID string, timeout time.Duration, name string, dbConfig models.DBConfig, locationConfig models.BackupLocationConfig) error {
+func (s *JobsService) StartMongoDBBackupJob(id, pmmAgentID string, timeout time.Duration, name string, dbConfig *models.DBConfig, locationConfig *models.BackupLocationConfig) error {
 	mongoDBReq := &agentpb.StartJobRequest_MongoDBBackup{
 		Name:     name,
 		User:     dbConfig.User,
@@ -167,7 +167,7 @@ func (s *JobsService) StartMySQLRestoreBackupJob(
 	serviceID string,
 	timeout time.Duration,
 	name string,
-	locationConfig models.BackupLocationConfig,
+	locationConfig *models.BackupLocationConfig,
 ) error {
 	if locationConfig.S3Config == nil {
 		return errors.Errorf("location config is not set")

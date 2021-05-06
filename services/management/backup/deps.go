@@ -34,8 +34,8 @@ type jobsService interface {
 		pmmAgentID string,
 		timeout time.Duration,
 		name string,
-		dbConfig models.DBConfig,
-		locationConfig models.BackupLocationConfig,
+		dbConfig *models.DBConfig,
+		locationConfig *models.BackupLocationConfig,
 	) error
 	StartMySQLRestoreBackupJob(
 		jobID string,
@@ -43,15 +43,15 @@ type jobsService interface {
 		serviceID string,
 		timeout time.Duration,
 		name string,
-		locationConfig models.BackupLocationConfig,
+		locationConfig *models.BackupLocationConfig,
 	) error
 	StartMongoDBBackupJob(
 		id string,
 		pmmAgentID string,
 		timeout time.Duration,
 		name string,
-		dbConfig models.DBConfig,
-		locationConfig models.BackupLocationConfig,
+		dbConfig *models.DBConfig,
+		locationConfig *models.BackupLocationConfig,
 	) error
 }
 
