@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
@@ -62,9 +63,13 @@ func setup(t *testing.T, connect func(*Channel) error, expected ...error) (agent
 		grpc.UnaryInterceptor(interceptors.Unary),
 		grpc.StreamInterceptor(interceptors.Stream),
 	)
+
+	channelM := &sync.Mutex{}
 	agentpb.RegisterAgentServer(server, &testServer{
 		connectFunc: func(stream agentpb.Agent_ConnectServer) error {
+			channelM.Lock()
 			channel = New(stream)
+			channelM.Unlock()
 			return connect(channel)
 		},
 	})
@@ -86,6 +91,8 @@ func setup(t *testing.T, connect func(*Channel) error, expected ...error) (agent
 	require.NoError(t, err, "failed to create stream")
 
 	teardown := func(t *testing.T) {
+		channelM.Lock()
+		defer channelM.Unlock()
 		require.NotNil(t, channel, "Test exited before first message reached connect handler.")
 
 		err := channel.Wait()
@@ -332,5 +339,4 @@ func TestUnexpectedResponsePayloadFromAgent(t *testing.T) {
 	msg, err := stream.Recv()
 	assert.Equal(t, int32(codes.Unimplemented), msg.GetStatus().GetCode())
 	assert.NoError(t, err)
-
 }
