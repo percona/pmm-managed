@@ -38,6 +38,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -164,9 +165,9 @@ func (s *Service) Run(ctx context.Context) {
 
 		err := s.sendOneEvent(ctx)
 		if err == nil {
-			s.l.Debug("Telemetry info send.")
+			s.l.Debug("Telemetry info sent.")
 		} else {
-			s.l.Debugf("Telemetry info not send: %s.", err)
+			s.l.Debugf("Telemetry info not sent: %s.", err)
 		}
 	}
 }
@@ -208,7 +209,7 @@ func (s *Service) sendOneEvent(ctx context.Context) error {
 	})
 
 	wg.Go(func() error {
-		req, err := s.makeV2Payload(settings.Telemetry.UUID)
+		req, err := s.makeV2Payload(settings.Telemetry.UUID, settings)
 		if err != nil {
 			return err
 		}
@@ -256,7 +257,7 @@ func (s *Service) sendV1Request(ctx context.Context, data []byte) error {
 	return nil
 }
 
-func (s *Service) makeV2Payload(serverUUID string) (*reporter.ReportRequest, error) {
+func (s *Service) makeV2Payload(serverUUID string, settings *models.Settings) (*reporter.ReportRequest, error) {
 	serverID, err := hex.DecodeString(serverUUID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to decode UUID %q", serverUUID)
@@ -267,7 +268,10 @@ func (s *Service) makeV2Payload(serverUUID string) (*reporter.ReportRequest, err
 		Version:            s.pmmVersion,
 		UpDuration:         ptypes.DurationProto(time.Since(s.start)),
 		DistributionMethod: s.tDistributionMethod,
+		SttEnabled:         wrapperspb.Bool(settings.SaaS.STTEnabled),
+		IaEnabled:          wrapperspb.Bool(settings.IntegratedAlerting.Enabled),
 	}
+
 	if err = event.Validate(); err != nil {
 		// log and ignore
 		s.l.Debugf("Failed to validate event: %s.", err)
@@ -343,6 +347,12 @@ func (s *Service) sendV2Request(ctx context.Context, req *reporter.ReportRequest
 	defer cc.Close() //nolint:errcheck
 
 	if _, err = reporter.NewReporterAPIClient(cc).Report(ctx, req); err != nil {
+		// if credentials are invalid then force a logout so that the next retry can
+		// successfully send the telemetry event to platform.
+		logoutErr := saasdial.LogoutIfInvalidAuth(s.db, s.l, err)
+		if logoutErr != nil {
+			s.l.Warnf("Failed to force logout: %v", logoutErr)
+		}
 		return errors.Wrap(err, "failed to report")
 	}
 	return nil
