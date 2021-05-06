@@ -42,14 +42,12 @@ type ArtifactFilters struct {
 func FindArtifacts(q *reform.Querier, filters *ArtifactFilters) ([]*Artifact, error) {
 	var conditions []string
 	var args []interface{}
-	idx := 1
 	if filters.ServiceID != "" {
 		if _, err := FindServiceByID(q, filters.ServiceID); err != nil {
 			return nil, err
 		}
-		conditions = append(conditions, fmt.Sprintf("service_id = %s", q.Placeholder(idx)))
+		conditions = append(conditions, fmt.Sprintf("service_id = %s", q.Placeholder(1)))
 		args = append(args, filters.ServiceID)
-		idx++
 	}
 
 	var whereClause string
