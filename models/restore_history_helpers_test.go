@@ -30,6 +30,8 @@ import (
 	"github.com/percona/pmm-managed/utils/testdb"
 )
 
+// TODO: Add a test for the case when service removed, restore history items that belong to the service should be removed too
+
 func TestRestoreHistory(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	t.Cleanup(func() {
@@ -41,6 +43,7 @@ func TestRestoreHistory(t *testing.T) {
 	nodeID1 := "node_id_1"
 	artifactID1, artifactID2 := "artifact_id_1", "artifact_id_2"
 	serviceID1, serviceID2 := "service_id_1", "service_id_2"
+	locationID1 := "location_id_1"
 
 	prepareArtifactsAndService := func(q *reform.Querier) {
 		for _, str := range []reform.Struct{
@@ -65,11 +68,20 @@ func TestRestoreHistory(t *testing.T) {
 				Address:     pointer.ToString("127.0.0.1"),
 				Port:        pointer.ToUint16OrNil(777),
 			},
+			&models.BackupLocation{
+				ID:          locationID1,
+				Name:        "Location 1",
+				Description: "Description for location 1",
+				Type:        models.S3BackupLocationType,
+				S3Config:    &models.S3LocationConfig{},
+				CreatedAt:   time.Now(),
+				UpdatedAt:   time.Now(),
+			},
 			&models.Artifact{
 				ID:         artifactID1,
 				Name:       "artifact 1",
 				Vendor:     "MySQL",
-				LocationID: "location_id_1",
+				LocationID: locationID1,
 				ServiceID:  serviceID1,
 				DataModel:  models.PhysicalDataModel,
 				Status:     models.SuccessBackupStatus,
@@ -79,7 +91,7 @@ func TestRestoreHistory(t *testing.T) {
 				ID:         artifactID2,
 				Name:       "artifact 2",
 				Vendor:     "MySQL",
-				LocationID: "location_id_1",
+				LocationID: locationID1,
 				ServiceID:  serviceID2,
 				DataModel:  models.PhysicalDataModel,
 				Status:     models.SuccessBackupStatus,

@@ -42,7 +42,7 @@ type ArtifactFilters struct {
 func FindArtifacts(q *reform.Querier, filters *ArtifactFilters) ([]*Artifact, error) {
 	var conditions []string
 	var args []interface{}
-	if filters.ServiceID != "" {
+	if filters != nil && filters.ServiceID != "" {
 		if _, err := FindServiceByID(q, filters.ServiceID); err != nil {
 			return nil, err
 		}
