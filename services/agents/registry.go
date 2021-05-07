@@ -217,6 +217,22 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 				disconnectReason = "done"
 				err = agent.channel.Wait()
 				r.unregister(agent.id)
+				l.Debug("channel is closed, agent done, calling updateAgentStatus")
+				// TODO run THIS IN TRANSACTION
+				agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{
+					PMMAgentID: agent.id,
+				})
+				for _, agent := range agents {
+					if err := updateAgentStatus(ctx, r.db.Querier, agent.AgentID, inventorypb.AgentStatus_DONE, nil); err != nil {
+						l.Debug("err after calling updateAgentStatus")
+						l.Errorf("Failed to update agent's status after it's done: %v.", err)
+					}
+				}
+				if err := updateAgentStatus(ctx, r.db.Querier, agent.id, inventorypb.AgentStatus_DONE, nil); err != nil {
+					l.Debug("err after calling updateAgentStatus")
+					l.Errorf("Failed to update agent's status after it's done: %v.", err)
+				}
+				l.Debug("Done and donner updateAgentStatus")
 				return err
 			}
 
@@ -578,15 +594,12 @@ func (r *Registry) ping(ctx context.Context, agent *pmmAgentInfo) {
 	r.mClockDrift.Observe(clockDrift.Seconds())
 }
 
-func updateAgentStatus(ctx context.Context, q *reform.Querier, agentID string, status inventorypb.AgentStatus, listenPort uint32) error {
+func updateAgentStatus(ctx context.Context, q *reform.Querier, agentID string, status inventorypb.AgentStatus, listenPort *uint32) error {
 	l := logger.Get(ctx)
 	l.Debugf("updateAgentStatus: %s %s %d", agentID, status, listenPort)
 
 	agent := &models.Agent{AgentID: agentID}
 	err := q.Reload(agent)
-
-	// TODO set ListenPort to NULL when agent is done?
-	// https://jira.percona.com/browse/PMM-4932
 
 	// FIXME that requires more investigation: https://jira.percona.com/browse/PMM-4932
 	if err == reform.ErrNoRows {
@@ -601,12 +614,19 @@ func updateAgentStatus(ctx context.Context, q *reform.Querier, agentID string, s
 	if err != nil {
 		return errors.Wrap(err, "failed to select Agent by ID")
 	}
+	l.Debug("updateAgentStatus agent reloaded")
 
 	agent.Status = status.String()
-	agent.ListenPort = pointer.ToUint16(uint16(listenPort))
+	if listenPort != nil {
+		port := (uint16)(*listenPort)
+		agent.ListenPort = &port
+	} else {
+		agent.ListenPort = nil
+	}
 	if err = q.Update(agent); err != nil {
 		return errors.Wrap(err, "failed to update Agent")
 	}
+	l.Debug("updateAgentStatus agent updated")
 	return nil
 }
 
@@ -618,7 +638,7 @@ func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRe
 		}
 
 		for _, agentID := range agentIDs {
-			if err := updateAgentStatus(ctx, tx.Querier, agentID, req.Status, req.ListenPort); err != nil {
+			if err := updateAgentStatus(ctx, tx.Querier, agentID, req.Status, &req.ListenPort); err != nil {
 				return err
 			}
 		}
