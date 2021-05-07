@@ -228,7 +228,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 				})
 				err = r.db.InTransaction(func(t *reform.TX) error {
 					for _, agent := range agents {
-						if err := updateAgentStatus(ctx, r.db.Querier, agent.AgentID, inventorypb.AgentStatus_DONE, nil); err != nil {
+						if err := updateAgentStatus(ctx, t.Querier, agent.AgentID, inventorypb.AgentStatus_DONE, nil); err != nil {
 							return errors.Wrap(err, "failed to update agent's status after it's done")
 						}
 					}
