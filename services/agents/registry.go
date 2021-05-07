@@ -217,23 +217,24 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 				disconnectReason = "done"
 				err = agent.channel.Wait()
 				r.unregister(agent.id)
-				l.Debug("channel is closed, agent done, calling updateAgentStatus")
-				// TODO run THIS IN TRANSACTION
 				agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{
 					PMMAgentID: agent.id,
 				})
-				for _, agent := range agents {
-					if err := updateAgentStatus(ctx, r.db.Querier, agent.AgentID, inventorypb.AgentStatus_DONE, nil); err != nil {
-						l.Debug("err after calling updateAgentStatus")
-						l.Errorf("Failed to update agent's status after it's done: %v.", err)
+				if err != nil {
+					return errors.Wrap(err, "failed to get pmm-agent's subordinate agents after pmm-agent is done")
+				}
+				agents = append(agents, &models.Agent{
+					AgentID: agent.id,
+				})
+				err = r.db.InTransaction(func(t *reform.TX) error {
+					for _, agent := range agents {
+						if err := updateAgentStatus(ctx, r.db.Querier, agent.AgentID, inventorypb.AgentStatus_DONE, nil); err != nil {
+							return errors.Wrap(err, "failed to update agent's status after it's done")
+						}
 					}
-				}
-				if err := updateAgentStatus(ctx, r.db.Querier, agent.id, inventorypb.AgentStatus_DONE, nil); err != nil {
-					l.Debug("err after calling updateAgentStatus")
-					l.Errorf("Failed to update agent's status after it's done: %v.", err)
-				}
-				l.Debug("Done and donner updateAgentStatus")
-				return err
+					return nil
+				})
+				return errors.Wrap(err, "failed to update all of agents to status DONE, status changes were not applied")
 			}
 
 			switch p := req.Payload.(type) {
