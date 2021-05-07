@@ -207,13 +207,11 @@ func (c *Channel) runReceiver() {
 		atomic.AddUint32(&c.mRecv, 1)
 
 		// do not use default compact representation for large/complex messages
-		// if size := proto.Size(msg); size < 100 {
-		size := proto.Size(msg)
-		bytes, _ := proto.Marshal(msg)
-		l.Debugf("Received message (%d bytes): %v.", size, bytes)
-		// } else {
-		// 	l.Debugf("Received message (%d bytes):\n%s\n", size, proto.MarshalTextString(msg))
-		// }
+		if size := proto.Size(msg); size < 100 {
+			l.Debugf("Received message (%d bytes): %s.", size, msg)
+		} else {
+			l.Debugf("Received message (%d bytes):\n%s\n", size, proto.MarshalTextString(msg))
+		}
 
 		switch p := msg.Payload.(type) {
 		// requests
