@@ -323,7 +323,7 @@ func (c *Channel) cancel(id uint32, err error) {
 }
 
 func (c *Channel) publish(id uint32, status *protostatus.Status, resp agentpb.AgentResponsePayload) {
-	if status != nil {
+	if status != nil && status.Code != int32(codes.OK) {
 		l := logger.Get(c.s.Context())
 		l.Errorf("got response %v with status %v", resp, status)
 		c.cancel(id, grpcstatus.FromProto(status).Err())
