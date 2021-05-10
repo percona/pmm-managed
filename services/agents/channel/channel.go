@@ -298,7 +298,7 @@ func (c *Channel) subscribe(id uint32) chan Response {
 
 func (c *Channel) removeResponseChannel(id uint32) (chan Response, error) {
 	c.rw.Lock()
-	if c.responses == nil { // Channel is closed
+	if c.responses == nil { // Channel is closed, no more publishing
 		c.rw.Unlock()
 		return nil, nil
 	}
