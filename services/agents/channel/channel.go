@@ -175,7 +175,7 @@ func (c *Channel) send(msg *agentpb.ServerMessage) {
 	// do not use default compact representation for large/complex messages
 	l := logger.Get(c.s.Context())
 	if size := proto.Size(msg); size < 100 {
-		l.Debugf("Sending message (%d bytes): %v.", size, msg.Status)
+		l.Debugf("Sending message (%d bytes): %v.", size, msg)
 	} else {
 		l.Debugf("Sending message (%d bytes):\n%s\n", size, proto.MarshalTextString(msg))
 	}
