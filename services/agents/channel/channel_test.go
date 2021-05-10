@@ -27,7 +27,6 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
