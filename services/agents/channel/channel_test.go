@@ -324,7 +324,6 @@ func TestUnexpectedResponseIdFromAgent(t *testing.T) {
 
 	_, err = stream.Recv()
 	assert.NoError(t, err)
-
 }
 
 func TestUnexpectedResponsePayloadFromAgent(t *testing.T) {
