@@ -275,10 +275,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 				// TODO Handle job progress messages https://jira.percona.com/browse/PMM-7756
 
 			case nil:
-				l.Warnf("Unexpected request: %+v.", req)
-				disconnectReason = "unimplemented"
-				// This case shuould be covered by the channel package. To avoid bugs during development, we leave the case here, too.
-				return status.Error(codes.Unimplemented, "Unexpected request payload.")
+				l.Errorf("Unexpected request: %+v.", req)
 			}
 		}
 	}
@@ -828,7 +825,7 @@ func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo)
 			}
 
 		default:
-			l.Panicf("unhandled Agent type %s", row.AgentType)
+			return errors.Errorf("unhandled Agent type %s", row.AgentType)
 		}
 	}
 
@@ -970,7 +967,7 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 			Timeout: ptypes.DurationProto(3 * time.Second),
 		}
 	default:
-		l.Panicf("unhandled Service type %s", service.ServiceType)
+		return errors.Errorf("unhandled Service type %s", service.ServiceType)
 	}
 
 	var sanitizedDSN string
@@ -999,7 +996,7 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 		// nothing yet
 
 	default:
-		l.Panicf("unhandled Service type %s", service.ServiceType)
+		return errors.Errorf("unhandled Service type %s", service.ServiceType)
 	}
 
 	msg := resp.(*agentpb.CheckConnectionResponse).Error

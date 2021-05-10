@@ -18,7 +18,6 @@ package channel
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net"
 	"sync"
@@ -284,39 +283,48 @@ func TestAgentClosesConnection(t *testing.T) {
 }
 
 func TestUnexpectedResponseIdFromAgent(t *testing.T) {
+	invalidIdSent := make(chan struct{})
 	connect := func(ch *Channel) error {
-		// after receiving unexpected response, channel is closed
-		resp, err := ch.SendAndWaitResponse(new(agentpb.Ping))
-		require.NoError(t, err)
-		assert.Nil(t, resp)
-
-		// future requests are ignored
-		resp, err = ch.SendAndWaitResponse(new(agentpb.Ping))
-		require.NoError(t, err)
-		assert.Nil(t, resp)
+		<-invalidIdSent
+		select {
+		case req := <-ch.Requests():
+			t.Fatalf("Request with invalid id should have been ignored: %v", req)
+		default:
+		}
+		// We can read the message with proper id.
+		respCh := ch.subscribe(9898)
+		ch.send(&agentpb.ServerMessage{
+			Id:      9898,
+			Payload: new(agentpb.Ping).ServerMessageRequestPayload(),
+		})
+		response := <-respCh
+		require.NoError(t, response.Error)
+		require.NotNil(t, response.Payload)
 
 		return nil
 	}
 
-	stream, _, teardown := setup(t, connect, fmt.Errorf("no subscriber for ID 111"))
+	stream, _, teardown := setup(t, connect, status.Error(codes.Canceled, context.Canceled.Error()))
 	defer teardown(t)
 
-	// this message triggers "no subscriber for ID" error
+	// This request with unexpected id is ignored by the pmm-managed, channel stays open.
 	err := stream.Send(&agentpb.AgentMessage{
 		Id:      111,
 		Payload: new(agentpb.Pong).AgentMessageResponsePayload(),
 	})
 	assert.NoError(t, err)
+	close(invalidIdSent)
 
-	// this message should not trigger new error
+	// This is a request with a proper id.
 	err = stream.Send(&agentpb.AgentMessage{
-		Id:      222,
+		Id:      9898,
 		Payload: new(agentpb.Pong).AgentMessageResponsePayload(),
 	})
 	assert.NoError(t, err)
 
 	_, err = stream.Recv()
 	assert.NoError(t, err)
+
 }
 
 func TestUnexpectedResponsePayloadFromAgent(t *testing.T) {

@@ -18,13 +18,13 @@
 package channel
 
 import (
-	"fmt"
 	"sync"
 	"sync/atomic"
 
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	protostatus "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
@@ -87,6 +87,8 @@ type Channel struct {
 	closeOnce sync.Once
 	closeWait chan struct{}
 	closeErr  error
+
+	l *logrus.Entry
 }
 
 // New creates new two-way communication channel with given stream.
@@ -100,6 +102,8 @@ func New(stream agentpb.Agent_ConnectServer) *Channel {
 		requests:  make(chan *AgentRequest, agentRequestsCap),
 
 		closeWait: make(chan struct{}),
+
+		l: logger.Get(stream.Context()),
 	}
 
 	go s.runReceiver()
@@ -109,7 +113,7 @@ func New(stream agentpb.Agent_ConnectServer) *Channel {
 // close marks channel as closed with given error - only once.
 func (c *Channel) close(err error) {
 	c.closeOnce.Do(func() {
-		logger.Get(c.s.Context()).Debugf("Closing with error: %+v", err)
+		c.l.Debugf("Closing with error: %+v", err)
 		c.closeErr = err
 
 		c.rw.Lock()
@@ -173,11 +177,10 @@ func (c *Channel) send(msg *agentpb.ServerMessage) {
 	}
 
 	// do not use default compact representation for large/complex messages
-	l := logger.Get(c.s.Context())
 	if size := proto.Size(msg); size < 100 {
-		l.Debugf("Sending message (%d bytes): %s.", size, msg)
+		c.l.Debugf("Sending message (%d bytes): %s.", size, msg)
 	} else {
-		l.Debugf("Sending message (%d bytes):\n%s\n", size, proto.MarshalTextString(msg))
+		c.l.Debugf("Sending message (%d bytes):\n%s\n", size, proto.MarshalTextString(msg))
 	}
 
 	err := c.s.Send(msg)
@@ -191,10 +194,9 @@ func (c *Channel) send(msg *agentpb.ServerMessage) {
 
 // runReader receives messages from server.
 func (c *Channel) runReceiver() {
-	l := logger.Get(c.s.Context())
 	defer func() {
 		close(c.requests)
-		l.Debug("Exiting receiver goroutine.")
+		c.l.Debug("Exiting receiver goroutine.")
 	}()
 
 	for {
@@ -207,9 +209,9 @@ func (c *Channel) runReceiver() {
 
 		// do not use default compact representation for large/complex messages
 		if size := proto.Size(msg); size < 100 {
-			l.Debugf("Received message (%d bytes): %s.", size, msg)
+			c.l.Debugf("Received message (%d bytes): %s.", size, msg)
 		} else {
-			l.Debugf("Received message (%d bytes):\n%s\n", size, proto.MarshalTextString(msg))
+			c.l.Debugf("Received message (%d bytes):\n%s\n", size, proto.MarshalTextString(msg))
 		}
 
 		switch p := msg.Payload.(type) {
@@ -277,7 +279,6 @@ func (c *Channel) runReceiver() {
 
 func (c *Channel) subscribe(id uint32) chan Response {
 	ch := make(chan Response, 1)
-
 	c.rw.Lock()
 	if c.responses == nil { // Channel is closed, no more subscriptions
 		c.rw.Unlock()
@@ -288,7 +289,7 @@ func (c *Channel) subscribe(id uint32) chan Response {
 	_, ok := c.responses[id]
 	if ok {
 		// it is possible only on lastSentRequestID wrap around, and we can't recover from that
-		logger.Get(c.s.Context()).Panicf("Already have subscriber for ID %d.", id)
+		c.l.Panicf("Already have subscriber for ID %d.", id)
 	}
 
 	c.responses[id] = ch
@@ -296,44 +297,40 @@ func (c *Channel) subscribe(id uint32) chan Response {
 	return ch
 }
 
-func (c *Channel) removeResponseChannel(id uint32) (chan Response, error) {
+func (c *Channel) removeResponseChannel(id uint32) chan Response {
 	c.rw.Lock()
 	if c.responses == nil { // Channel is closed, no more publishing
 		c.rw.Unlock()
-		return nil, nil
+		return nil
 	}
 
 	ch := c.responses[id]
 	c.rw.Unlock()
 	if ch == nil {
-		return nil, errors.WithStack(fmt.Errorf("no subscriber for ID %d", id))
+		c.l.Errorf("No subscriber for ID %d", id)
+		return nil
 	}
 	c.rw.Lock()
 	delete(c.responses, id)
 	c.rw.Unlock()
-	return ch, nil
+	return ch
 }
 
 // cancel sends an error to the subscriber.
 func (c *Channel) cancel(id uint32, err error) {
-	if ch, _ := c.removeResponseChannel(id); ch != nil {
+	if ch := c.removeResponseChannel(id); ch != nil {
 		ch <- Response{Error: err}
 	}
 }
 
 func (c *Channel) publish(id uint32, status *protostatus.Status, resp agentpb.AgentResponsePayload) {
 	if status != nil && status.Code != int32(codes.OK) {
-		l := logger.Get(c.s.Context())
-		l.Errorf("got response %v with status %v", resp, status)
+		c.l.Errorf("got response %v with status %v", resp, status)
 		c.cancel(id, grpcstatus.FromProto(status).Err())
 		return
 	}
-	ch, err := c.removeResponseChannel(id)
-	if err != nil {
-		c.close(err)
-		return
-	}
-	if ch != nil {
+
+	if ch := c.removeResponseChannel(id); ch != nil {
 		ch <- Response{Payload: resp}
 	}
 }
