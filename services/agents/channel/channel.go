@@ -187,7 +187,6 @@ func (c *Channel) send(msg *agentpb.ServerMessage) {
 		return
 	}
 	atomic.AddUint32(&c.mSent, 1)
-	l.Debugf("Done sending message")
 }
 
 // runReader receives messages from server.
