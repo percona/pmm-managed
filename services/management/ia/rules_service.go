@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/AlekSi/pointer"
@@ -105,7 +106,7 @@ type rule struct {
 
 // RemoveVMAlertRulesFiles removes all generated rules files (*.yml) on the ia path.
 func (s *RulesService) RemoveVMAlertRulesFiles() error {
-	matches, err := dir.FindFilesWithExtensions(s.rulesPath, "yml", "yaml")
+	matches, err := filepath.Glob(s.rulesPath + "/*.yml")
 	if err != nil {
 		return errors.WithStack(err)
 	}
