@@ -705,6 +705,26 @@ func (r *Registry) runStateChangeHandler(ctx context.Context, agent *pmmAgentInf
 	}
 }
 
+// CheckRunningAgents goes through all pmm-agents and checks if they are connected.
+// It sets status to done if the agent is not connected - agent is not running.
+func (r *Registry) CheckRunningAgents(ctx context.Context) error {
+	agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{})
+	if err != nil {
+		return errors.Wrap(err, "failed to get all agents")
+
+	}
+	for _, agent := range agents {
+		// The agents without PMMAgentID set are PMM agents itself.
+		if agent.PMMAgentID == nil && !r.IsConnected(agent.AgentID) {
+			err = r.updateAgentStatusIncludingChildren(ctx, agent.AgentID, inventorypb.AgentStatus_DONE, nil)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func (r *Registry) updateAgentStatusIncludingChildren(ctx context.Context, agentID string, status inventorypb.AgentStatus, listenPort *uint32) error {
 	agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{
 		PMMAgentID: agentID,
@@ -733,7 +753,7 @@ func (r *Registry) RequestStateUpdate(ctx context.Context, pmmAgentID string) {
 	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		l.Infof("RequestStateUpdate: %s.", err)
-		err = r.updateAgentStatusIncludingChildren(ctx, pmmAgentID, inventorypb.AgentStatus_DONE, nil)
+		err = updateAgentStatus(ctx, r.db.Querier, pmmAgentID, inventorypb.AgentStatus_DONE, nil)
 		if err != nil {
 			l.Error(errors.WithStack(err))
 		}
