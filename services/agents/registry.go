@@ -163,6 +163,7 @@ func NewRegistry(db *reform.DB, qanClient qanClient, vmdb prometheusService) *Re
 
 	// initialize metrics with labels
 	r.mDisconnects.WithLabelValues("unknown")
+
 	return r
 }
 
