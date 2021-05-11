@@ -216,24 +216,10 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 				disconnectReason = "done"
 				err = agent.channel.Wait()
 				r.unregister(agent.id)
-				agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{
-					PMMAgentID: agent.id,
-				})
 				if err != nil {
-					return errors.Wrap(err, "failed to get pmm-agent's subordinate agents after pmm-agent is done")
+					l.Error(errors.WithStack(err))
 				}
-				agents = append(agents, &models.Agent{
-					AgentID: agent.id,
-				})
-				err = r.db.InTransaction(func(t *reform.TX) error {
-					for _, agent := range agents {
-						if err := updateAgentStatus(ctx, t.Querier, agent.AgentID, inventorypb.AgentStatus_DONE, nil); err != nil {
-							return errors.Wrap(err, "failed to update agent's status after it's done")
-						}
-					}
-					return nil
-				})
-				return errors.Wrap(err, "failed to update all of agents to status DONE, status changes were not applied")
+				return r.updateAgentStatusIncludingChildren(ctx, agent.id, inventorypb.AgentStatus_DONE, nil)
 			}
 
 			switch p := req.Payload.(type) {
@@ -719,6 +705,26 @@ func (r *Registry) runStateChangeHandler(ctx context.Context, agent *pmmAgentInf
 	}
 }
 
+func (Registry *r) updateAgentStatusIncludingChildren(ctx context.Context, agentID string, status inventorypb.AgentStatus, listenPort *uint32) error {
+	agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{
+		PMMAgentID: agentID,
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to get pmm-agent's subordinate agents")
+	}
+	agents = append(agents, &models.Agent{
+		AgentID: agentID,
+	})
+	return r.db.InTransaction(func(t *reform.TX) error {
+		for _, agent := range agents {
+			if err := updateAgentStatus(ctx, t.Querier, pmmAgentID, status, listenPort); err != nil {
+				return errors.Wrap(err, "failed to update agent's status")
+			}
+		}
+		return nil
+	})
+}
+
 // RequestStateUpdate requests state update on pmm-agent with given ID. It sets
 // the status to done if the agent is not connected.
 func (r *Registry) RequestStateUpdate(ctx context.Context, pmmAgentID string) {
@@ -727,16 +733,9 @@ func (r *Registry) RequestStateUpdate(ctx context.Context, pmmAgentID string) {
 	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		l.Infof("RequestStateUpdate: %s.", err)
-		err = r.db.InTransaction(func(t *reform.TX) error {
-			for _, agent := range agents {
-				if err := updateAgentStatus(ctx, t.Querier, pmmAgentID, inventorypb.AgentStatus_DONE, nil); err != nil {
-					return errors.Wrap(err, "failed to update agent's status after it's done")
-				}
-			}
-			return nil
-		})
+		err = r.updateAgentStatusIncludingChildren(ctx, pmmAgentID, inventorypb.AgentStatus_DONE, nil)
 		if err != nil {
-			l.Error("failed to update agent's to status DONE")
+			l.Error(errors.WithStack(err))
 		}
 		return
 	}
