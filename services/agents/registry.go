@@ -163,7 +163,6 @@ func NewRegistry(db *reform.DB, qanClient qanClient, vmdb prometheusService) *Re
 
 	// initialize metrics with labels
 	r.mDisconnects.WithLabelValues("unknown")
-
 	return r
 }
 
@@ -703,13 +702,33 @@ func (r *Registry) runStateChangeHandler(ctx context.Context, agent *pmmAgentInf
 	}
 }
 
-// RequestStateUpdate requests state update on pmm-agent with given ID.
+// RequestStateUpdate requests state update on pmm-agent with given ID. It sets
+// the status to done if the agent is not connected.
 func (r *Registry) RequestStateUpdate(ctx context.Context, pmmAgentID string) {
 	l := logger.Get(ctx)
 
 	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		l.Infof("RequestStateUpdate: %s.", err)
+		agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{
+			PMMAgentID: agent.id,
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to get pmm-agent's subordinate agents after pmm-agent is done")
+		}
+		agents = append(agents, &models.Agent{
+			AgentID: agent.id,
+		})
+		err = r.db.InTransaction(func(t *reform.TX) error {
+			for _, agent := range agents {
+				if err := updateAgentStatus(ctx, t.Querier, agent.AgentID, inventorypb.AgentStatus_DONE, nil); err != nil {
+					return errors.Wrap(err, "failed to update agent's status after it's done")
+				}
+			}
+			return nil
+		})
+		return errors.Wrap(err, "failed to update all of agents to status DONE, status changes were not applied")
+
 		return
 	}
 

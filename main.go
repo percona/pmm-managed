@@ -832,5 +832,23 @@ func main() {
 		cleaner.Run(ctx, cleanInterval, cleanOlderThan)
 	}()
 
+	wg.Add(1)
+	go func() {
+		// update status of all agents
+		defer wg.Done()
+		time.Sleep(20 * time.Second) // give agents some time to connect
+		agents, err := models.FindAgents(db.Querier, models.AgentFilters{})
+		if err != nil {
+			l.Errorf("Failed to update status of all agents on startup: %s", err)
+			return
+		}
+		for _, agent := range agents {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+			ctx = logger.Set(ctx, "update-agents-status")
+			agentsRegistry.RequestStateUpdate(ctx, agent.AgentID)
+			cancel()
+		}
+	}()
+
 	wg.Wait()
 }
