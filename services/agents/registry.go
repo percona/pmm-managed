@@ -710,25 +710,17 @@ func (r *Registry) RequestStateUpdate(ctx context.Context, pmmAgentID string) {
 	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		l.Infof("RequestStateUpdate: %s.", err)
-		agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{
-			PMMAgentID: agent.id,
-		})
-		if err != nil {
-			return errors.Wrap(err, "failed to get pmm-agent's subordinate agents after pmm-agent is done")
-		}
-		agents = append(agents, &models.Agent{
-			AgentID: agent.id,
-		})
 		err = r.db.InTransaction(func(t *reform.TX) error {
 			for _, agent := range agents {
-				if err := updateAgentStatus(ctx, t.Querier, agent.AgentID, inventorypb.AgentStatus_DONE, nil); err != nil {
+				if err := updateAgentStatus(ctx, t.Querier, pmmAgentID, inventorypb.AgentStatus_DONE, nil); err != nil {
 					return errors.Wrap(err, "failed to update agent's status after it's done")
 				}
 			}
 			return nil
 		})
-		return errors.Wrap(err, "failed to update all of agents to status DONE, status changes were not applied")
-
+		if err != nil {
+			l.Error("failed to update agent's to status DONE")
+		}
 		return
 	}
 
