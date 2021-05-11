@@ -836,6 +836,7 @@ func main() {
 	go func() {
 		// update status of all agents
 		defer wg.Done()
+		updated := make(map[string]struct{})
 		time.Sleep(20 * time.Second) // give agents some time to connect
 		agents, err := models.FindAgents(db.Querier, models.AgentFilters{})
 		if err != nil {
@@ -843,10 +844,14 @@ func main() {
 			return
 		}
 		for _, agent := range agents {
+			if _, ok := updated[*agent.PMMAgentID]; ok || *agent.PMMAgentID == "" {
+				continue
+			}
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 			ctx = logger.Set(ctx, "update-agents-status")
-			agentsRegistry.RequestStateUpdate(ctx, agent.AgentID)
+			agentsRegistry.RequestStateUpdate(ctx, *agent.PMMAgentID)
 			cancel()
+			updated[*agent.PMMAgentID] = struct{}{}
 		}
 	}()
 

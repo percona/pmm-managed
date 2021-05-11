@@ -705,7 +705,7 @@ func (r *Registry) runStateChangeHandler(ctx context.Context, agent *pmmAgentInf
 	}
 }
 
-func (Registry *r) updateAgentStatusIncludingChildren(ctx context.Context, agentID string, status inventorypb.AgentStatus, listenPort *uint32) error {
+func (r *Registry) updateAgentStatusIncludingChildren(ctx context.Context, agentID string, status inventorypb.AgentStatus, listenPort *uint32) error {
 	agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{
 		PMMAgentID: agentID,
 	})
@@ -717,7 +717,7 @@ func (Registry *r) updateAgentStatusIncludingChildren(ctx context.Context, agent
 	})
 	return r.db.InTransaction(func(t *reform.TX) error {
 		for _, agent := range agents {
-			if err := updateAgentStatus(ctx, t.Querier, pmmAgentID, status, listenPort); err != nil {
+			if err := updateAgentStatus(ctx, t.Querier, agent.AgentID, status, listenPort); err != nil {
 				return errors.Wrap(err, "failed to update agent's status")
 			}
 		}
