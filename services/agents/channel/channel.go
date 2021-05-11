@@ -299,20 +299,17 @@ func (c *Channel) subscribe(id uint32) chan Response {
 
 func (c *Channel) removeResponseChannel(id uint32) chan Response {
 	c.rw.Lock()
+	defer c.rw.Unlock()
 	if c.responses == nil { // Channel is closed, no more publishing
-		c.rw.Unlock()
 		return nil
 	}
 
 	ch := c.responses[id]
-	c.rw.Unlock()
 	if ch == nil {
 		c.l.Errorf("No subscriber for ID %d", id)
 		return nil
 	}
-	c.rw.Lock()
 	delete(c.responses, id)
-	c.rw.Unlock()
 	return ch
 }
 
