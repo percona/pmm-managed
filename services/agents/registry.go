@@ -600,7 +600,6 @@ func updateAgentStatus(ctx context.Context, q *reform.Querier, agentID string, s
 	if err != nil {
 		return errors.Wrap(err, "failed to select Agent by ID")
 	}
-	l.Debug("updateAgentStatus agent reloaded")
 
 	agent.Status = status.String()
 	if listenPort != nil {
@@ -612,7 +611,6 @@ func updateAgentStatus(ctx context.Context, q *reform.Querier, agentID string, s
 	if err = q.Update(agent); err != nil {
 		return errors.Wrap(err, "failed to update Agent")
 	}
-	l.Debug("updateAgentStatus agent updated")
 	return nil
 }
 
@@ -753,10 +751,6 @@ func (r *Registry) RequestStateUpdate(ctx context.Context, pmmAgentID string) {
 	agent, err := r.get(pmmAgentID)
 	if err != nil {
 		l.Infof("RequestStateUpdate: %s.", err)
-		err = updateAgentStatus(ctx, r.db.Querier, pmmAgentID, inventorypb.AgentStatus_DONE, nil)
-		if err != nil {
-			l.Error(errors.WithStack(err))
-		}
 		return
 	}
 
