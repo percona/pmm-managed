@@ -20,7 +20,6 @@ import (
 	"context"
 	"io"
 	"net"
-	"sync"
 	"testing"
 	"time"
 
@@ -62,12 +61,9 @@ func setup(t *testing.T, connect func(*Channel) error, expected ...error) (agent
 		grpc.StreamInterceptor(interceptors.Stream),
 	)
 
-	channelM := &sync.Mutex{}
 	agentpb.RegisterAgentServer(server, &testServer{
 		connectFunc: func(stream agentpb.Agent_ConnectServer) error {
-			channelM.Lock()
 			channel = New(stream)
-			channelM.Unlock()
 			return connect(channel)
 		},
 	})
@@ -89,8 +85,6 @@ func setup(t *testing.T, connect func(*Channel) error, expected ...error) (agent
 	require.NoError(t, err, "failed to create stream")
 
 	teardown := func(t *testing.T) {
-		channelM.Lock()
-		defer channelM.Unlock()
 		require.NotNil(t, channel, "Test exited before first message reached connect handler.")
 
 		err := channel.Wait()
@@ -288,9 +282,9 @@ func TestAgentClosesConnection(t *testing.T) {
 }
 
 func TestUnexpectedResponseIdFromAgent(t *testing.T) {
-	invalidIdSent := make(chan struct{})
+	invalidIDSent := make(chan struct{})
 	connect := func(ch *Channel) error {
-		<-invalidIdSent
+		<-invalidIDSent
 		select {
 		case req := <-ch.Requests():
 			t.Fatalf("Request with invalid id should have been ignored: %v", req)
@@ -318,7 +312,7 @@ func TestUnexpectedResponseIdFromAgent(t *testing.T) {
 		Payload: new(agentpb.Pong).AgentMessageResponsePayload(),
 	})
 	assert.NoError(t, err)
-	close(invalidIdSent)
+	close(invalidIDSent)
 
 	// This is a request with a proper id.
 	err = stream.Send(&agentpb.AgentMessage{
@@ -334,12 +328,12 @@ func TestUnexpectedResponseIdFromAgent(t *testing.T) {
 func TestUnexpectedResponsePayloadFromAgent(t *testing.T) {
 	stop := make(chan struct{})
 	connect := func(ch *Channel) error {
-		<-stop
+		<-ch.Requests()
+		close(stop)
 		return nil
 	}
 	stream, _, teardown := setup(t, connect, status.Error(codes.Canceled, context.Canceled.Error()))
 	defer teardown(t)
-	defer close(stop)
 
 	err := stream.Send(&agentpb.AgentMessage{
 		Id: 4242,
@@ -349,4 +343,5 @@ func TestUnexpectedResponsePayloadFromAgent(t *testing.T) {
 	msg, err := stream.Recv()
 	assert.Equal(t, int32(codes.Unimplemented), msg.GetStatus().GetCode())
 	assert.NoError(t, err)
+	<-stop
 }
