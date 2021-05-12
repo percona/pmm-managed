@@ -220,7 +220,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 				if err != nil {
 					l.Error(errors.WithStack(err))
 				}
-				return r.updateAgentStatusIncludingChildren(ctx, agent.id, inventorypb.AgentStatus_DONE, nil)
+				return r.updateAgentStatusForChildren(ctx, agent.id, inventorypb.AgentStatus_DONE, nil)
 			}
 
 			switch p := req.Payload.(type) {
@@ -715,7 +715,7 @@ func (r *Registry) CheckRunningAgents(ctx context.Context) error {
 	for _, agent := range agents {
 		// The agents without PMMAgentID set are PMM agents itself.
 		if agent.PMMAgentID == nil && !r.IsConnected(agent.AgentID) {
-			err = r.updateAgentStatusIncludingChildren(ctx, agent.AgentID, inventorypb.AgentStatus_DONE, nil)
+			err = r.updateAgentStatusForChildren(ctx, agent.AgentID, inventorypb.AgentStatus_DONE, nil)
 			if err != nil {
 				return err
 			}
@@ -724,16 +724,13 @@ func (r *Registry) CheckRunningAgents(ctx context.Context) error {
 	return nil
 }
 
-func (r *Registry) updateAgentStatusIncludingChildren(ctx context.Context, agentID string, status inventorypb.AgentStatus, listenPort *uint32) error {
+func (r *Registry) updateAgentStatusForChildren(ctx context.Context, agentID string, status inventorypb.AgentStatus, listenPort *uint32) error {
 	agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{
 		PMMAgentID: agentID,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to get pmm-agent's subordinate agents")
 	}
-	agents = append(agents, &models.Agent{
-		AgentID: agentID,
-	})
 	return r.db.InTransaction(func(t *reform.TX) error {
 		for _, agent := range agents {
 			if err := updateAgentStatus(ctx, t.Querier, agent.AgentID, status, listenPort); err != nil {
