@@ -47,6 +47,8 @@ func TestKubernetesServer(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SetupFixtures, nil)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 		dbaasClient = new(mockDbaasClient)
+		dbaasClient.On("InstallXtraDBOperator", ctx, mock.Anything).Return(nil)
+		dbaasClient.On("InstallPSMDBOperator", ctx, mock.Anything).Return(nil)
 
 		teardown = func(t *testing.T) {
 			uuid.SetRand(nil)
