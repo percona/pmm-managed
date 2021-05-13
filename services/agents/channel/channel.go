@@ -152,8 +152,9 @@ func (c *Channel) Send(resp *ServerResponse) {
 	c.send(msg)
 }
 
-// SendAndWaitResponse sends request to pmm-managed, blocks until response is available, and returns it.
-// Response will be nil if channel is closed.
+// SendAndWaitResponse sends request to pmm-managed, blocks until response is available.
+// If error occured - subscribtion got canceled - returned payload is nil and error contains reason for cancelation.
+// Response and error will be both nil if channel is closed.
 // It is no-op once channel is closed (see Wait).
 func (c *Channel) SendAndWaitResponse(payload agentpb.ServerRequestPayload) (agentpb.AgentResponsePayload, error) {
 	id := atomic.AddUint32(&c.lastSentRequestID, 1)
@@ -313,7 +314,7 @@ func (c *Channel) removeResponseChannel(id uint32) chan Response {
 	return ch
 }
 
-// cancel sends an error to the subscriber.
+// cancel sends an error to the subscriber and closes the subscribtion channel.
 func (c *Channel) cancel(id uint32, err error) {
 	if ch := c.removeResponseChannel(id); ch != nil {
 		ch <- Response{Error: err}
