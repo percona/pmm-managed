@@ -317,6 +317,7 @@ func (c *Channel) removeResponseChannel(id uint32) chan Response {
 func (c *Channel) cancel(id uint32, err error) {
 	if ch := c.removeResponseChannel(id); ch != nil {
 		ch <- Response{Error: err}
+		close(ch)
 	}
 }
 
