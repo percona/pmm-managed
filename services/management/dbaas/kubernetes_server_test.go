@@ -47,8 +47,6 @@ func TestKubernetesServer(t *testing.T) {
 		sqlDB := testdb.Open(t, models.SetupFixtures, nil)
 		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 		dbaasClient = new(mockDbaasClient)
-		dbaasClient.On("InstallXtraDBOperator", ctx, mock.Anything).Return(nil)
-		dbaasClient.On("InstallPSMDBOperator", ctx, mock.Anything).Return(nil)
 
 		teardown = func(t *testing.T) {
 			uuid.SetRand(nil)
@@ -75,6 +73,9 @@ func TestKubernetesServer(t *testing.T) {
 		clusters, err := ks.ListKubernetesClusters(ctx, new(dbaasv1beta1.ListKubernetesClustersRequest))
 		require.NoError(t, err)
 		require.Empty(t, clusters.KubernetesClusters)
+
+		dc.On("InstallXtraDBOperator", mock.Anything, mock.Anything).Return(&controllerv1beta1.InstallXtraDBOperatorResponse{}, nil)
+		dc.On("InstallPSMDBOperator", mock.Anything, mock.Anything).Return(&controllerv1beta1.InstallPSMDBOperatorResponse{}, nil)
 
 		kubernetesClusterName := "test-cluster"
 		registerKubernetesClusterResponse, err := ks.RegisterKubernetesCluster(ctx, &dbaasv1beta1.RegisterKubernetesClusterRequest{
