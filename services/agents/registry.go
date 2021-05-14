@@ -585,7 +585,7 @@ func updateAgentStatus(ctx context.Context, q *reform.Querier, agentID string, s
 	l := logger.Get(ctx)
 	l.Debugf("updateAgentStatus: %s %s %d", agentID, status, listenPort)
 
-	agent := &models.Agent{AgentID: agentID, ListenPort: pointer.ToUint16(uint16(listenPort))}
+	agent := &models.Agent{AgentID: agentID}
 	err := q.Reload(agent)
 
 	// FIXME that requires more investigation: https://jira.percona.com/browse/PMM-4932
