@@ -270,6 +270,12 @@ func (c *Channel) runReceiver() {
 
 		case nil:
 			c.cancel(msg.Id, errors.Errorf("unimplemented: failed to handle received message %s", msg))
+			if msg.Status != nil && grpcstatus.FromProto(msg.Status).Code() == codes.Unimplemented {
+				// This means pmm-agent does not know the message payload type we just sent.
+				// We continue here to stop endless cycle of Unimplemented messages between pmm-managed and pmm-agent.
+				c.l.Warnf("pmm-agent was not able to process message with id: %d, handling of that payload type is unimplemented", msg.Id)
+				continue
+			}
 			c.Send(&ServerResponse{
 				ID:     msg.Id,
 				Status: grpcstatus.New(codes.Unimplemented, "can't handle message type send, it is not implemented"),
