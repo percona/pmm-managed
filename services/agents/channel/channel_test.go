@@ -327,8 +327,9 @@ func TestUnexpectedResponseIdFromAgent(t *testing.T) {
 
 func TestUnexpectedResponsePayloadFromAgent(t *testing.T) {
 	stop := make(chan struct{})
+	stopServer := make(chan struct{})
 	connect := func(ch *Channel) error {
-		<-ch.Requests()
+		<-stopServer
 		close(stop)
 		return nil
 	}
@@ -343,5 +344,6 @@ func TestUnexpectedResponsePayloadFromAgent(t *testing.T) {
 	msg, err := stream.Recv()
 	assert.Equal(t, int32(codes.Unimplemented), msg.GetStatus().GetCode())
 	assert.NoError(t, err)
+	close(stopServer)
 	<-stop
 }
