@@ -834,12 +834,12 @@ func main() {
 
 	wg.Add(1)
 	go func() {
-		// update status of all agents
 		defer wg.Done()
-		time.Sleep(20 * time.Second) // give agents some time to connect
-		err := agentsRegistry.CheckRunningAgents(ctx)
+		// Set all agents status to unknown at startup. The ones that are alive
+		// will get their status updated after they connect to the pmm-managed.
+		err := agentsRegistry.SetAllAgentsStatusUnknown(ctx)
 		if err != nil {
-			l.Errorf("Failed to check status of running agents: %s", err)
+			l.Errorf("Failed to set status of all agents to invalid at startup: %s", err)
 		}
 	}()
 

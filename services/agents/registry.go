@@ -220,7 +220,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 				if err != nil {
 					l.Error(errors.WithStack(err))
 				}
-				return r.updateAgentStatusForChildren(ctx, agent.id, inventorypb.AgentStatus_DONE, nil)
+				return r.updateAgentStatusForChildren(ctx, agent.id, inventorypb.AgentStatus_DONE, 0)
 			}
 
 			switch p := req.Payload.(type) {
@@ -581,11 +581,11 @@ func (r *Registry) ping(ctx context.Context, agent *pmmAgentInfo) {
 	r.mClockDrift.Observe(clockDrift.Seconds())
 }
 
-func updateAgentStatus(ctx context.Context, q *reform.Querier, agentID string, status inventorypb.AgentStatus, listenPort *uint32) error {
+func updateAgentStatus(ctx context.Context, q *reform.Querier, agentID string, status inventorypb.AgentStatus, listenPort uint32) error {
 	l := logger.Get(ctx)
 	l.Debugf("updateAgentStatus: %s %s %d", agentID, status, listenPort)
 
-	agent := &models.Agent{AgentID: agentID}
+	agent := &models.Agent{AgentID: agentID, ListenPort: pointer.ToUint16(uint16(listenPort))}
 	err := q.Reload(agent)
 
 	// FIXME that requires more investigation: https://jira.percona.com/browse/PMM-4932
@@ -597,18 +597,12 @@ func updateAgentStatus(ctx context.Context, q *reform.Querier, agentID string, s
 			return nil
 		}
 	}
-
 	if err != nil {
 		return errors.Wrap(err, "failed to select Agent by ID")
 	}
 
+	agent.ListenPort = pointer.ToUint16(uint16(listenPort))
 	agent.Status = status.String()
-	if listenPort != nil {
-		port := (uint16)(*listenPort)
-		agent.ListenPort = &port
-	} else {
-		agent.ListenPort = nil
-	}
 	if err = q.Update(agent); err != nil {
 		return errors.Wrap(err, "failed to update Agent")
 	}
@@ -623,7 +617,7 @@ func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRe
 		}
 
 		for _, agentID := range agentIDs {
-			if err := updateAgentStatus(ctx, tx.Querier, agentID, req.Status, &req.ListenPort); err != nil {
+			if err := updateAgentStatus(ctx, tx.Querier, agentID, req.Status, req.ListenPort); err != nil {
 				return err
 			}
 		}
@@ -704,9 +698,8 @@ func (r *Registry) runStateChangeHandler(ctx context.Context, agent *pmmAgentInf
 	}
 }
 
-// CheckRunningAgents goes through all pmm-agents and checks if they are connected.
-// It sets status to done if the agent is not connected - agent is not running.
-func (r *Registry) CheckRunningAgents(ctx context.Context) error {
+// SetAllAgentsStatusUnknown goes through all pmm-agents and sets status to UNKNOWN.
+func (r *Registry) SetAllAgentsStatusUnknown(ctx context.Context) error {
 	agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{})
 	if err != nil {
 		return errors.Wrap(err, "failed to get all agents")
@@ -715,7 +708,7 @@ func (r *Registry) CheckRunningAgents(ctx context.Context) error {
 	for _, agent := range agents {
 		// The agents without PMMAgentID set are PMM agents itself.
 		if agent.PMMAgentID == nil && !r.IsConnected(agent.AgentID) {
-			err = r.updateAgentStatusForChildren(ctx, agent.AgentID, inventorypb.AgentStatus_DONE, nil)
+			err = r.updateAgentStatusForChildren(ctx, agent.AgentID, inventorypb.AgentStatus_UNKNOWN, 0)
 			if err != nil {
 				return err
 			}
@@ -724,7 +717,7 @@ func (r *Registry) CheckRunningAgents(ctx context.Context) error {
 	return nil
 }
 
-func (r *Registry) updateAgentStatusForChildren(ctx context.Context, agentID string, status inventorypb.AgentStatus, listenPort *uint32) error {
+func (r *Registry) updateAgentStatusForChildren(ctx context.Context, agentID string, status inventorypb.AgentStatus, listenPort uint32) error {
 	agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{
 		PMMAgentID: agentID,
 	})
