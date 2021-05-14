@@ -38,6 +38,7 @@ func proxysqlExporterConfig(service *models.Service, exporter *models.Agent, red
 		"-collect.mysql_connection_pool",
 		"-collect.mysql_status",
 		"-collect.stats_memory_metrics",
+		"-collect.runtime_mysql_servers",
 		"-web.listen-address=:" + tdp.Left + " .listen_port " + tdp.Right,
 	}
 
