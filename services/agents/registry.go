@@ -706,6 +706,9 @@ func (r *Registry) SetAllAgentsStatusUnknown(ctx context.Context) error {
 
 	}
 	for _, agent := range agents {
+		if agent.AgentType == models.ExternalExporterType && !agent.PushMetrics {
+			continue
+		}
 		// The agents without PMMAgentID set are PMM agents itself.
 		if agent.PMMAgentID == nil && !r.IsConnected(agent.AgentID) {
 			err = r.updateAgentStatusForChildren(ctx, agent.AgentID, inventorypb.AgentStatus_UNKNOWN, 0)
