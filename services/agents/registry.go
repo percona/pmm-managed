@@ -706,7 +706,8 @@ func (r *Registry) SetAllAgentsStatusUnknown(ctx context.Context) error {
 
 	}
 	for _, agent := range agents {
-		if agent.AgentType == models.ExternalExporterType && !agent.PushMetrics {
+		// Since we don't set status for external exporters we can skip them.
+		if agent.AgentType == models.ExternalExporterType {
 			continue
 		}
 		// The agents without PMMAgentID set are PMM agents itself.
