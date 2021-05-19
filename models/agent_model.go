@@ -171,7 +171,7 @@ func (s *Agent) BeforeInsert() error {
 	if len(s.CustomLabels) == 0 {
 		s.CustomLabels = nil
 	}
-	if s.Status == "" && s.PMMAgentID != nil {
+	if s.Status == "" && s.AgentType != ExternalExporterType && s.PMMAgentID != nil {
 		s.Status = inventorypb.AgentStatus_name[int32(inventorypb.AgentStatus_UNKNOWN)]
 	}
 	return nil
