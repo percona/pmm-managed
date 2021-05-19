@@ -34,7 +34,7 @@ require (
 	github.com/lib/pq v1.8.0
 	github.com/minio/minio-go/v7 v7.0.10
 	github.com/mitchellh/mapstructure v1.3.3 // indirect
-	github.com/percona-platform/dbaas-api v0.0.0-20210507104513-7da6c5473f86
+	github.com/percona-platform/dbaas-api v0.0.0-20210518140815-21d371355e30
 	github.com/percona-platform/saas v0.0.0-20210505183502-c18b6f47c932
 	github.com/percona/pmm v2.17.1-0.20210517151953-327f26661ac8+incompatible
 	github.com/percona/promconfig v0.2.1
@@ -51,6 +51,7 @@ require (
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	golang.org/x/sys v0.0.0-20201214210602-f9fddec55a1e
+	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
 	google.golang.org/grpc v1.36.1
 	google.golang.org/protobuf v1.25.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
