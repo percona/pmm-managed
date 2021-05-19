@@ -65,6 +65,19 @@ const (
 // PMMServerAgentID is a special Agent ID representing pmm-agent on PMM Server.
 const PMMServerAgentID string = "pmm-server" // no /agent_id/ prefix
 
+// MySQLOptions represents structure for special MySQL options.
+type MySQLOptions struct {
+	TLSCa   string `json:"tls_ca"`
+	TLSCert string `json:"tls_cert"`
+	TLSKey  string `json:"tls_key"`
+}
+
+// Value implements database/sql/driver.Valuer interface. Should be defined on the value.
+func (c MySQLOptions) Value() (driver.Value, error) { return jsonValue(c) }
+
+// Scan implements database/sql.Scanner interface. Should be defined on the pointer.
+func (c *MySQLOptions) Scan(src interface{}) error { return jsonScan(c, src) }
+
 // MongoDBOptions represents structure for special MongoDB options.
 type MongoDBOptions struct {
 	TLSCertificateKey             string `json:"tls_certificate_key"`
@@ -146,6 +159,7 @@ type Agent struct {
 	PushMetrics                bool           `reform:"push_metrics"`
 	DisabledCollectors         pq.StringArray `reform:"disabled_collectors"`
 
+	MySQLOptions   *MySQLOptions   `reform:"mysql_options"`
 	MongoDBOptions *MongoDBOptions `reform:"mongo_db_tls_options"`
 }
 
@@ -210,6 +224,32 @@ func (s *Agent) UnifiedLabels() (map[string]string, error) {
 	return res, nil
 }
 
+// DBConfig contains values required to connect to DB.
+type DBConfig struct {
+	User     string
+	Password string
+	Address  string
+	Port     int
+	Socket   string
+}
+
+// Valid returns true if config is valid.
+func (c DBConfig) Valid() bool {
+	return c.User != "" && (c.Address != "" || c.Socket != "")
+}
+
+// DBConfig returns DBConfig for given Service with this agent.
+func (s *Agent) DBConfig(service *Service) DBConfig {
+	cfg := DBConfig{
+		User:     pointer.GetString(s.Username),
+		Password: pointer.GetString(s.Password),
+		Address:  pointer.GetString(service.Address),
+		Port:     int(pointer.GetUint16(service.Port)),
+		Socket:   pointer.GetString(service.Socket),
+	}
+	return cfg
+}
+
 // DSN returns DSN string for accessing given Service with this Agent (and implicit driver).
 func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string, tdp *DelimiterPair) string {
 	host := pointer.GetString(service.Address)
@@ -223,7 +263,7 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 	}
 
 	switch s.AgentType {
-	case MySQLdExporterType, ProxySQLExporterType:
+	case MySQLdExporterType:
 		cfg := mysql.NewConfig()
 		cfg.User = username
 		cfg.Passwd = password
@@ -237,13 +277,7 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		cfg.DBName = database
 		cfg.Params = make(map[string]string)
 		if s.TLS {
-			// TODO: how certs and other parameters are going to be specified? We need to implement calling RegisterTLSConfig
-			// See https://godoc.org/github.com/go-sql-driver/mysql#RegisterTLSConfig
-			if s.TLSSkipVerify {
-				cfg.Params["tls"] = "skip-verify"
-			} else {
-				cfg.Params["tls"] = "true"
-			}
+			cfg.Params["tls"] = "custom"
 		}
 
 		// MultiStatements must not be used as it enables SQL injections (in particular, in pmm-agent's Actions)
@@ -265,8 +299,32 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		cfg.DBName = database
 		cfg.Params = make(map[string]string)
 		if s.TLS {
-			// TODO: how certs and other parameters are going to be specified? We need to implement calling RegisterTLSConfig
-			// See https://godoc.org/github.com/go-sql-driver/mysql#RegisterTLSConfig
+			cfg.Params["tls"] = "custom"
+		}
+
+		// MultiStatements must not be used as it enables SQL injections (in particular, in pmm-agent's Actions)
+		cfg.MultiStatements = false
+
+		// QAN code in pmm-agent uses reform which requires those fields
+		cfg.ClientFoundRows = true
+		cfg.ParseTime = true
+
+		return cfg.FormatDSN()
+
+	case ProxySQLExporterType:
+		cfg := mysql.NewConfig()
+		cfg.User = username
+		cfg.Passwd = password
+		cfg.Net = "unix"
+		cfg.Addr = socket
+		if socket == "" {
+			cfg.Net = "tcp"
+			cfg.Addr = net.JoinHostPort(host, strconv.Itoa(int(port)))
+		}
+		cfg.Timeout = dialTimeout
+		cfg.DBName = database
+		cfg.Params = make(map[string]string)
+		if s.TLS {
 			if s.TLSSkipVerify {
 				cfg.Params["tls"] = "skip-verify"
 			} else {
@@ -276,10 +334,6 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 
 		// MultiStatements must not be used as it enables SQL injections (in particular, in pmm-agent's Actions)
 		cfg.MultiStatements = false
-
-		// QAN code in pmm-agent uses reform which requires those fields
-		cfg.ClientFoundRows = true
-		cfg.ParseTime = true
 
 		return cfg.FormatDSN()
 
@@ -439,9 +493,16 @@ func (s *Agent) IsMySQLTablestatsGroupEnabled() bool {
 // Files returns files map required to connect to DB.
 func (s Agent) Files() map[string]string {
 	switch s.AgentType {
-	case MySQLdExporterType, ProxySQLExporterType:
+	case MySQLdExporterType, QANMySQLPerfSchemaAgentType, QANMySQLSlowlogAgentType:
+		if s.MySQLOptions != nil {
+			return map[string]string{
+				"tlsCa":   s.MySQLOptions.TLSCa,
+				"tlsCert": s.MySQLOptions.TLSCert,
+				"tlsKey":  s.MySQLOptions.TLSKey,
+			}
+		}
 		return nil
-	case QANMySQLPerfSchemaAgentType, QANMySQLSlowlogAgentType:
+	case ProxySQLExporterType:
 		return nil
 	case QANMongoDBProfilerAgentType, MongoDBExporterType:
 		if s.MongoDBOptions != nil {
@@ -469,6 +530,9 @@ func (s Agent) TemplateDelimiters(svc *Service) *DelimiterPair {
 
 	switch svc.ServiceType {
 	case MySQLServiceType:
+		if s.MySQLOptions != nil {
+			templateParams = append(templateParams, s.MySQLOptions.TLSKey)
+		}
 	case MongoDBServiceType:
 		if s.MongoDBOptions != nil {
 			templateParams = append(templateParams, s.MongoDBOptions.TLSCertificateKeyFilePassword)
