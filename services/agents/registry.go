@@ -726,7 +726,7 @@ func (r *Registry) updateAgentStatusForChildren(ctx context.Context, agentID str
 		PMMAgentID: agentID,
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to get pmm-agent's subordinate agents")
+		return errors.Wrap(err, "failed to get pmm-agent's child agents")
 	}
 	return r.db.InTransaction(func(t *reform.TX) error {
 		for _, agent := range agents {
