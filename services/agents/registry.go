@@ -602,8 +602,8 @@ func updateAgentStatus(ctx context.Context, q *reform.Querier, agentID string, s
 		return errors.Wrap(err, "failed to select Agent by ID")
 	}
 
-	agent.ListenPort = pointer.ToUint16(uint16(listenPort))
 	agent.Status = status.String()
+	agent.ListenPort = pointer.ToUint16(uint16(listenPort))
 	if err = q.Update(agent); err != nil {
 		return errors.Wrap(err, "failed to update Agent")
 	}
