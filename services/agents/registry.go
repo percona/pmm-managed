@@ -704,13 +704,14 @@ func (r *Registry) runStateChangeHandler(ctx context.Context, agent *pmmAgentInf
 
 // SetAllAgentsStatusUnknown goes through all pmm-agents and sets status to UNKNOWN.
 func (r *Registry) SetAllAgentsStatusUnknown(ctx context.Context) error {
-	agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{})
+	agentType := models.PMMAgentType
+	agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{AgentType: &agentType})
 	if err != nil {
-		return errors.Wrap(err, "failed to get all agents")
+		return errors.Wrap(err, "failed to get pmm-agents")
 
 	}
 	for _, agent := range agents {
-		if agent.AgentType == models.PMMAgentType && !r.IsConnected(agent.AgentID) {
+		if !r.IsConnected(agent.AgentID) {
 			err = r.updateAgentStatusForChildren(ctx, agent.AgentID, inventorypb.AgentStatus_UNKNOWN, 0)
 			if err != nil {
 				return err
