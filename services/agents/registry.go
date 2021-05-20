@@ -710,12 +710,7 @@ func (r *Registry) SetAllAgentsStatusUnknown(ctx context.Context) error {
 
 	}
 	for _, agent := range agents {
-		// Since we don't set status for external exporters we can skip them.
-		if agent.AgentType == models.ExternalExporterType {
-			continue
-		}
-		// The agents without PMMAgentID set are PMM agents itself.
-		if agent.PMMAgentID == nil && !r.IsConnected(agent.AgentID) {
+		if agent.AgentType == models.PMMAgentType && !r.IsConnected(agent.AgentID) {
 			err = r.updateAgentStatusForChildren(ctx, agent.AgentID, inventorypb.AgentStatus_UNKNOWN, 0)
 			if err != nil {
 				return err
@@ -726,13 +721,13 @@ func (r *Registry) SetAllAgentsStatusUnknown(ctx context.Context) error {
 }
 
 func (r *Registry) updateAgentStatusForChildren(ctx context.Context, agentID string, status inventorypb.AgentStatus, listenPort uint32) error {
-	agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{
-		PMMAgentID: agentID,
-	})
-	if err != nil {
-		return errors.Wrap(err, "failed to get pmm-agent's child agents")
-	}
 	return r.db.InTransaction(func(t *reform.TX) error {
+		agents, err := models.FindAgents(t.Querier, models.AgentFilters{
+			PMMAgentID: agentID,
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to get pmm-agent's child agents")
+		}
 		for _, agent := range agents {
 			if err := updateAgentStatus(ctx, t.Querier, agent.AgentID, status, listenPort); err != nil {
 				return errors.Wrap(err, "failed to update agent's status")
