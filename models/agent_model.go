@@ -28,7 +28,6 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/go-sql-driver/mysql"
 	"github.com/lib/pq"
-	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/version"
 	"gopkg.in/reform.v1"
 )
@@ -172,7 +171,7 @@ func (s *Agent) BeforeInsert() error {
 		s.CustomLabels = nil
 	}
 	if s.Status == "" && s.AgentType != ExternalExporterType && s.AgentType != PMMAgentType {
-		s.Status = inventorypb.AgentStatus_name[int32(inventorypb.AgentStatus_UNKNOWN)]
+		s.Status = "UNKNOWN"
 	}
 	return nil
 }

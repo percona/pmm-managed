@@ -249,6 +249,7 @@ func TestRDSService(t *testing.T) {
 				PmmAgentId:   "pmm-server",
 				NodeId:       "/node_id/00000000-0000-4000-8000-000000000005",
 				AwsAccessKey: "AKIAIOSFODNN7EXAMPLE",
+				Status:       inventorypb.AgentStatus_UNKNOWN,
 			},
 			Mysql: &inventorypb.MySQLService{
 				ServiceId:      "/service_id/00000000-0000-4000-8000-000000000007",
@@ -269,6 +270,7 @@ func TestRDSService(t *testing.T) {
 				ServiceId:                 "/service_id/00000000-0000-4000-8000-000000000007",
 				Username:                  "username",
 				TablestatsGroupTableLimit: 1000,
+				Status:                    inventorypb.AgentStatus_UNKNOWN,
 			},
 			QanMysqlPerfschema: &inventorypb.QANMySQLPerfSchemaAgent{
 				AgentId:               "/agent_id/00000000-0000-4000-8000-000000000009",
@@ -276,6 +278,7 @@ func TestRDSService(t *testing.T) {
 				ServiceId:             "/service_id/00000000-0000-4000-8000-000000000007",
 				Username:              "username",
 				QueryExamplesDisabled: true,
+				Status:                inventorypb.AgentStatus_UNKNOWN,
 			},
 		}
 		assert.Equal(t, proto.MarshalTextString(expected), proto.MarshalTextString(resp)) // for better diffs
@@ -333,6 +336,7 @@ func TestRDSService(t *testing.T) {
 				PmmAgentId:   "pmm-server",
 				NodeId:       "/node_id/00000000-0000-4000-8000-00000000000a",
 				AwsAccessKey: "AKIAIOSFODNN7EXAMPLE",
+				Status:       inventorypb.AgentStatus_UNKNOWN,
 			},
 			Postgresql: &inventorypb.PostgreSQLService{
 				ServiceId:      "/service_id/00000000-0000-4000-8000-00000000000c",
@@ -352,12 +356,14 @@ func TestRDSService(t *testing.T) {
 				PmmAgentId: "pmm-server",
 				ServiceId:  "/service_id/00000000-0000-4000-8000-00000000000c",
 				Username:   "username",
+				Status:     inventorypb.AgentStatus_UNKNOWN,
 			},
 			QanPostgresqlPgstatements: &inventorypb.QANPostgreSQLPgStatementsAgent{
 				AgentId:    "/agent_id/00000000-0000-4000-8000-00000000000e",
 				PmmAgentId: "pmm-server",
 				ServiceId:  "/service_id/00000000-0000-4000-8000-00000000000c",
 				Username:   "username",
+				Status:     inventorypb.AgentStatus_UNKNOWN,
 			},
 		}
 		assert.Equal(t, proto.MarshalTextString(expected), proto.MarshalTextString(resp)) // for better diffs
