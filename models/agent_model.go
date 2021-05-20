@@ -276,7 +276,14 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		cfg.DBName = database
 		cfg.Params = make(map[string]string)
 		if s.TLS {
-			cfg.Params["tls"] = "custom"
+			switch {
+			case s.TLSSkipVerify:
+				cfg.Params["tls"] = "skip-verify"
+			case s.Files() == nil:
+				cfg.Params["tls"] = "custom"
+			default:
+				cfg.Params["tls"] = "true"
+			}
 		}
 
 		// MultiStatements must not be used as it enables SQL injections (in particular, in pmm-agent's Actions)
@@ -298,7 +305,14 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		cfg.DBName = database
 		cfg.Params = make(map[string]string)
 		if s.TLS {
-			cfg.Params["tls"] = "custom"
+			switch {
+			case s.TLSSkipVerify:
+				cfg.Params["tls"] = "skip-verify"
+			case s.Files() == nil:
+				cfg.Params["tls"] = "custom"
+			default:
+				cfg.Params["tls"] = "true"
+			}
 		}
 
 		// MultiStatements must not be used as it enables SQL injections (in particular, in pmm-agent's Actions)
