@@ -279,7 +279,7 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			switch {
 			case s.TLSSkipVerify:
 				cfg.Params["tls"] = "skip-verify"
-			case s.Files() == nil:
+			case s.Files() != nil:
 				cfg.Params["tls"] = "custom"
 			default:
 				cfg.Params["tls"] = "true"
@@ -308,7 +308,7 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			switch {
 			case s.TLSSkipVerify:
 				cfg.Params["tls"] = "skip-verify"
-			case s.Files() == nil:
+			case s.Files() != nil:
 				cfg.Params["tls"] = "custom"
 			default:
 				cfg.Params["tls"] = "true"
