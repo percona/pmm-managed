@@ -104,6 +104,9 @@ func TestXtraDBClusterService(t *testing.T) {
 		Status: controllerv1beta1.KubernetesClusterStatus_KUBERNETES_CLUSTER_STATUS_OK,
 	}, nil)
 
+	dbaasClient.On("InstallXtraDBOperator", mock.Anything, mock.Anything).Return(&controllerv1beta1.InstallXtraDBOperatorResponse{}, nil)
+	dbaasClient.On("InstallPSMDBOperator", mock.Anything, mock.Anything).Return(&controllerv1beta1.InstallPSMDBOperatorResponse{}, nil)
+
 	registerKubernetesClusterResponse, err := ks.RegisterKubernetesCluster(ctx, &dbaasv1beta1.RegisterKubernetesClusterRequest{
 		KubernetesClusterName: pxcKubernetesClusterNameTest,
 		KubeAuth:              &dbaasv1beta1.KubeAuth{Kubeconfig: pxcKubeconfigTest},
@@ -407,7 +410,7 @@ func TestXtraDBClusterService(t *testing.T) {
 		}
 
 		dbaasClient.On("DeleteXtraDBCluster", ctx, &mockReq).Return(&controllerv1beta1.DeleteXtraDBClusterResponse{}, nil)
-		grafanaClient.On("DeleteAPIKeysWithPrefix", ctx, fmt.Sprintf("%s-%s", kubernetesClusterNameTest, dbClusterName)).Return(nil)
+		grafanaClient.On("DeleteAPIKeysWithPrefix", ctx, fmt.Sprintf("pxc-%s-%s", kubernetesClusterNameTest, dbClusterName)).Return(nil)
 
 		in := dbaasv1beta1.DeleteXtraDBClusterRequest{
 			KubernetesClusterName: pxcKubernetesClusterNameTest,
