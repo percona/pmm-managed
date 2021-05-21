@@ -18,15 +18,20 @@ package dbaas
 
 import (
 	"context"
+	"encoding/json"
+	"log"
+	"net"
+	"net/http"
 	"testing"
+	"time"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
-
 	"github.com/stretchr/testify/require"
 )
 
 func TestVersionServiceClient(t *testing.T) {
-	c := NewVersionServiceClient("https://check.percona.com/versions/v1")
+	c := NewVersionServiceClient(versionServiceURL)
 
 	for _, tt := range []struct {
 		params componentsParams
@@ -54,4 +59,68 @@ func TestVersionServiceClient(t *testing.T) {
 			}
 		})
 	}
+}
+
+type fakeLatestVersionServer struct {
+	response *VersionServiceResponse
+}
+
+func (f fakeLatestVersionServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	encoder := json.NewEncoder(w)
+	err := encoder.Encode(f.response)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func TestLatestVersionGetting(t *testing.T) {
+	t.Parallel()
+	t.Run("Invalid url", func(t *testing.T) {
+		t.Parallel()
+		c := NewVersionServiceClient("https://check.percona.com/versions/invalid")
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
+		v, err := c.getLatestVersion(ctx, psmdbOperator)
+		assert.True(t, errors.Is(err, ErrZeroLatestVersion), "err is expected to be ErrZeroLatestVersion")
+		assert.Equal(t, "", v)
+	})
+	t.Run("get latest", func(t *testing.T) {
+		t.Parallel()
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
+		hostAndPort := "localhost:7453"
+		fakeServer := fakeLatestVersionServer{
+			response: &VersionServiceResponse{
+				Versions: []struct {
+					Product  string `json:"product"`
+					Operator string `json:"operator"`
+					Matrix   matrix `json:"matrix"`
+				}{
+					{Operator: "0.8.0"},
+					{Operator: "1.8.0"},
+					{Operator: "1.7.0"},
+				},
+			},
+		}
+		var httpServer *http.Server
+		waitForListener := make(chan struct{})
+		go func() {
+			httpServer = &http.Server{Addr: hostAndPort, Handler: fakeServer}
+			listener, err := net.Listen("tcp", hostAndPort)
+			if err != nil {
+				log.Fatal(err)
+			}
+			close(waitForListener)
+			_ = httpServer.Serve(listener)
+		}()
+		<-waitForListener
+		defer httpServer.Shutdown(ctx)
+
+		c := NewVersionServiceClient("http://" + hostAndPort)
+		v, err := c.getLatestVersion(ctx, psmdbOperator)
+		require.NoError(t, err, "request to fakeserver for latest version should not fail")
+		assert.Equal(t, "1.8.0", v)
+	})
+
 }

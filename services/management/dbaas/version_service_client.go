@@ -19,12 +19,14 @@ package dbaas
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"strings"
 	"time"
 
+	goversion "github.com/hashicorp/go-version"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
@@ -34,7 +36,11 @@ import (
 const (
 	psmdbOperator = "psmdb-operator"
 	pxcOperator   = "pxc-operator"
+	zeroVersion   = "0.0.0"
 )
+
+// ErrZeroLatestVersion indicates that there is no version greater than zero version, hence we failed to get latest version.
+var ErrZeroLatestVersion error = errors.New("no version greater than zero version")
 
 // componentVersion contains info about exact component version.
 type componentVersion struct {
@@ -53,6 +59,11 @@ type matrix struct {
 	Backup       map[string]componentVersion `json:"backup"`
 	Operator     map[string]componentVersion `json:"operator"`
 	LogCollector map[string]componentVersion `json:"logCollector"`
+}
+
+type LatestVersions struct {
+	PSMDBOperator string `json:"psmdbOperator"`
+	PXCOperator   string `json:"pxcOperator"`
 }
 
 // VersionServiceResponse represents response from version service API.
@@ -145,4 +156,25 @@ func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsPara
 	}
 
 	return &vsResponse, nil
+}
+
+func (c *VersionServiceClient) GetLatestVersion(ctx context.Context, operatorType string) (string, error) {
+	versions, err := c.Matrix(ctx, componentsParams{operator: operatorType})
+	if err != nil {
+		return "", err
+	}
+	latestVersion, _ := goversion.NewVersion(zeroVersion)
+	for _, version := range versions.Versions {
+		operatorVersion, err := goversion.NewVersion(version.Operator)
+		if err != nil {
+			return "", err
+		}
+		if operatorVersion.GreaterThan(latestVersion) {
+			latestVersion = operatorVersion
+		}
+	}
+	if latestVersion.String() == zeroVersion {
+		return "", ErrZeroLatestVersion
+	}
+	return latestVersion.String(), nil
 }
