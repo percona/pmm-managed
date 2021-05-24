@@ -61,6 +61,7 @@ type matrix struct {
 	LogCollector map[string]componentVersion `json:"logCollector"`
 }
 
+// LatestVersions contains latest version of PXC and PSMDB operator.
 type LatestVersions struct {
 	PSMDBOperator string `json:"psmdbOperator"`
 	PXCOperator   string `json:"pxcOperator"`
