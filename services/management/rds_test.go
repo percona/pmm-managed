@@ -143,16 +143,6 @@ func TestRDSService(t *testing.T) {
 					EngineVersion: "5.6.mysql_aurora.1.22.2",
 				},
 				{
-					Region:        "us-east-1",
-					Az:            "us-east-1d",
-					InstanceId:    "autotest-psql-10",
-					NodeModel:     "db.t2.micro",
-					Address:       "autotest-aurora-mysql-56.cstdx0tr6tzx.us-east-1.rds.amazonaws.com",
-					Port:          5432,
-					Engine:        managementpb.DiscoverRDSEngine_DISCOVER_RDS_POSTGRESQL,
-					EngineVersion: "autotest-psql-10.cstdx0tr6tzx.us-east-1.rds.amazonaws.com",
-				},
-				{
 					Region:        "us-west-2",
 					Az:            "us-west-2c",
 					InstanceId:    "autotest-mysql-57",
@@ -161,6 +151,16 @@ func TestRDSService(t *testing.T) {
 					Port:          3306,
 					Engine:        managementpb.DiscoverRDSEngine_DISCOVER_RDS_MYSQL,
 					EngineVersion: "5.7.22",
+				},
+				{
+					Region:        "us-east-1",
+					Az:            "us-east-1d",
+					InstanceId:    "autotest-psql-10",
+					NodeModel:     "db.t2.micro",
+					Address:       "autotest-aurora-mysql-56.cstdx0tr6tzx.us-east-1.rds.amazonaws.com",
+					Port:          5432,
+					Engine:        managementpb.DiscoverRDSEngine_DISCOVER_RDS_POSTGRESQL,
+					EngineVersion: "autotest-psql-10.cstdx0tr6tzx.us-east-1.rds.amazonaws.com",
 				},
 			}, instances.RdsInstances)
 		})
@@ -175,6 +175,7 @@ func TestRDSService(t *testing.T) {
 			instances []instance
 		}{
 			{"us-east-1", []instance{{"us-east-1a", "autotest-aurora-mysql-56"}}},
+			{"us-east-1", []instance{{"us-east-1d", "autotest-psql-10"}}},
 			{"us-west-2", []instance{{"us-west-2c", "autotest-mysql-57"}}},
 		} {
 			t.Run(fmt.Sprintf("discoverRDSRegion %s", tt.region), func(t *testing.T) {
