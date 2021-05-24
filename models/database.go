@@ -506,8 +506,10 @@ var databaseSchema = [][]string{
 		ADD COLUMN mysql_options VARCHAR`,
 	},
 	37: {
+		`ALTER TABLE agents ALTER COLUMN max_query_log_size TYPE BIGINT`,
+	},
+	38: {
 		`ALTER TABLE artifacts ADD FOREIGN KEY (location_id) REFERENCES backup_locations (id)`,
-		`ALTER TABLE artifacts ADD FOREIGN KEY (service_id) REFERENCES services (service_id)`,
 	},
 }
 
