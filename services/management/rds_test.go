@@ -207,7 +207,7 @@ func TestRDSService(t *testing.T) {
 				instances, err := discoverRDSRegion(ctx, sess, tt.region)
 
 				require.NoError(t, err)
-				require.Equal(t, len(instances), len(tt.instances), "Should have one instance")
+				require.Equal(t, len(instances), len(tt.instances), "Should have two instances")
 				// we compare instances this way because there are too much fields that we don't need to compare.
 				for i, instance := range tt.instances {
 					assert.Equal(t, instance.az, pointer.GetString(instances[i].AvailabilityZone))
