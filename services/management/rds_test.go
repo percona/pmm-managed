@@ -130,7 +130,7 @@ func TestRDSService(t *testing.T) {
 			})
 
 			require.NoError(t, err)
-			assert.Equal(t, len(instances.RdsInstances), 3, "Should have four instances")
+			assert.Equal(t, len(instances.RdsInstances), 4, "Should have four instances")
 			assert.Equal(t, []*managementpb.DiscoverRDSInstance{
 				{
 					Region:        "us-east-1",
@@ -141,6 +141,16 @@ func TestRDSService(t *testing.T) {
 					Port:          3306,
 					Engine:        managementpb.DiscoverRDSEngine_DISCOVER_RDS_MYSQL,
 					EngineVersion: "5.6.mysql_aurora.1.22.2",
+				},
+				{
+					Region:        "us-east-1",
+					Az:            "us-east-1d",
+					InstanceId:    "autotest-psql-10",
+					NodeModel:     "db.t2.micro",
+					Address:       "autotest-aurora-mysql-56.cstdx0tr6tzx.us-east-1.rds.amazonaws.com",
+					Port:          5432,
+					Engine:        managementpb.DiscoverRDSEngine_DISCOVER_RDS_POSTGRESQL,
+					EngineVersion: "autotest-psql-10.cstdx0tr6tzx.us-east-1.rds.amazonaws.com",
 				},
 				{
 					Region:        "us-west-2",
