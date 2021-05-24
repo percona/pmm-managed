@@ -158,7 +158,8 @@ func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsPara
 	return &vsResponse, nil
 }
 
-func (c *VersionServiceClient) GetLatestVersion(ctx context.Context, operatorType string) (string, error) {
+// GetLatestOperatorVersion returns the latest operator version for a given operator type.
+func (c *VersionServiceClient) GetLatestOperatorVersion(ctx context.Context, operatorType string) (string, error) {
 	versions, err := c.Matrix(ctx, componentsParams{operator: operatorType})
 	if err != nil {
 		return "", err

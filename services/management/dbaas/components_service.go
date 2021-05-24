@@ -22,6 +22,7 @@ import (
 
 	goversion "github.com/hashicorp/go-version"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -192,6 +193,20 @@ func (c componentsService) ChangePXCComponents(ctx context.Context, req *dbaasv1
 	return &dbaasv1beta1.ChangePXCComponentsResponse{}, nil
 }
 
+func (c componentsService) GetLatestOperatorVersions(ctx context.Context, req *dbaasv1beta1.GetLatestOperatorVersionsRequest) (*dbaasv1beta1.GetLatestOperatorVersionsResponse, error) {
+	pxcOperatorVersion, err := c.versionServiceClient.GetLatestOperatorVersion(ctx, pxcOperator)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get latest PSMDB operator version")
+	}
+	psmdbOperatorVersion, err := c.versionServiceClient.GetLatestOperatorVersion(ctx, psmdbOperator)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get latest PSMDB operator version")
+	}
+	return &dbaasv1beta1.GetLatestOperatorVersionsResponse{
+		Pxc:   pxcOperatorVersion,
+		Psmdb: psmdbOperatorVersion,
+	}, nil
+}
 func (c componentsService) versions(ctx context.Context, params componentsParams, cluster *models.KubernetesCluster) ([]*dbaasv1beta1.OperatorVersion, error) {
 	components, err := c.versionServiceClient.Matrix(ctx, params)
 	if err != nil {
