@@ -154,16 +154,6 @@ func TestRDSService(t *testing.T) {
 				},
 				{
 					Region:        "us-west-2",
-					Az:            "us-west-2c",
-					InstanceId:    "autotest-mysql-57",
-					NodeModel:     "db.t2.micro",
-					Address:       "autotest-mysql-57.c3uoaol27cbb.us-west-2.rds.amazonaws.com",
-					Port:          3306,
-					Engine:        managementpb.DiscoverRDSEngine_DISCOVER_RDS_MYSQL,
-					EngineVersion: "5.7.22",
-				},
-				{
-					Region:        "us-west-2",
 					Az:            "us-west-2b",
 					InstanceId:    "autotest-aurora-psql-11",
 					NodeModel:     "db.r4.large",
@@ -171,6 +161,16 @@ func TestRDSService(t *testing.T) {
 					Port:          5432,
 					Engine:        managementpb.DiscoverRDSEngine_DISCOVER_RDS_POSTGRESQL,
 					EngineVersion: "11.9",
+				},
+				{
+					Region:        "us-west-2",
+					Az:            "us-west-2c",
+					InstanceId:    "autotest-mysql-57",
+					NodeModel:     "db.t2.micro",
+					Address:       "autotest-mysql-57.c3uoaol27cbb.us-west-2.rds.amazonaws.com",
+					Port:          3306,
+					Engine:        managementpb.DiscoverRDSEngine_DISCOVER_RDS_MYSQL,
+					EngineVersion: "5.7.22",
 				},
 			}, instances.RdsInstances)
 		})
@@ -184,10 +184,8 @@ func TestRDSService(t *testing.T) {
 			region    string
 			instances []instance
 		}{
-			{"us-east-1", []instance{{"us-east-1a", "autotest-aurora-mysql-56"}}},
-			{"us-east-1", []instance{{"us-east-1d", "autotest-psql-10"}}},
-			{"us-west-2", []instance{{"us-west-2c", "autotest-mysql-57"}}},
-			{"us-west-2", []instance{{"us-west-2b", "autotest-aurora-psql-11"}}},
+			{"us-east-1", []instance{{"us-east-1a", "autotest-aurora-mysql-56"}, {"us-east-1d", "autotest-psql-10"}}},
+			{"us-west-2", []instance{{"us-west-2b", "autotest-aurora-psql-11"}, {"us-west-2c", "autotest-mysql-57"}}},
 		} {
 			t.Run(fmt.Sprintf("discoverRDSRegion %s", tt.region), func(t *testing.T) {
 				ctx := logger.Set(context.Background(), t.Name())
