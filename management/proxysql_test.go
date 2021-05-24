@@ -710,6 +710,6 @@ func TestRemoveProxySQL(t *testing.T) {
 			Context: pmmapitests.Context,
 		})
 		assert.Nil(t, removeServiceOK)
-		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "params not found")
+		pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "service_id or service_name expected")
 	})
 }
