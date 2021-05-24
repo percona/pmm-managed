@@ -92,8 +92,10 @@ func (k kubernetesServer) ListKubernetesClusters(ctx context.Context, _ *dbaasv1
 				return
 			}
 			clusters[i].Operators.Xtradb.Status = dbaasv1beta1.OperatorsStatus(resp.Operators.Xtradb.Status)
-			// todo return version, too
+			clusters[i].Operators.Xtradb.Version = resp.Operators.Xtradb.Version
+
 			clusters[i].Operators.Psmdb.Status = dbaasv1beta1.OperatorsStatus(resp.Operators.Psmdb.Status)
+			clusters[i].Operators.Psmdb.Version = resp.Operators.Psmdb.Version
 		}()
 	}
 	wg.Wait()
