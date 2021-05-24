@@ -130,7 +130,7 @@ func TestRDSService(t *testing.T) {
 			})
 
 			require.NoError(t, err)
-			assert.Equal(t, len(instances.RdsInstances), 2, "Should have two instances")
+			assert.Equal(t, len(instances.RdsInstances), 3, "Should have four instances")
 			assert.Equal(t, []*managementpb.DiscoverRDSInstance{
 				{
 					Region:        "us-east-1",
