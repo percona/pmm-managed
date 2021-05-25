@@ -510,6 +510,7 @@ var databaseSchema = [][]string{
 	},
 	38: {
 		`ALTER TABLE artifacts ADD FOREIGN KEY (location_id) REFERENCES backup_locations (id)`,
+		`ALTER TABLE artifacts DROP CONSTRAINT artifacts_service_id_check`,
 	},
 }
 

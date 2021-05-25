@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/AlekSi/pointer"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -290,7 +291,9 @@ func RemoveService(q *reform.Querier, id string, mode RemoveMode) error {
 				}
 			}
 			for _, a := range artifacts {
-				if err := RemoveArtifact(q, a.ID); err != nil {
+				if _, err := ChangeArtifact(q, a.ID, ChangeArtifactParams{
+					ServiceID: pointer.ToString(""),
+				}); err != nil {
 					return err
 				}
 			}

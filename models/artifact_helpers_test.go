@@ -30,8 +30,6 @@ import (
 	"github.com/percona/pmm-managed/utils/testdb"
 )
 
-// TODO: Add a test for the case when service removed, artifacts that belong to the service should be removed too
-
 func TestArtifacts(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	t.Cleanup(func() {

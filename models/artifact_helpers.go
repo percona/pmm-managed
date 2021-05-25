@@ -177,7 +177,8 @@ func CreateArtifact(q *reform.Querier, params CreateArtifactParams) (*Artifact, 
 
 // ChangeArtifactParams are params for changing existing artifact.
 type ChangeArtifactParams struct {
-	Status BackupStatus
+	ServiceID *string
+	Status    *BackupStatus
 }
 
 // ChangeArtifact updates existing artifact.
@@ -186,7 +187,12 @@ func ChangeArtifact(q *reform.Querier, artifactID string, params ChangeArtifactP
 	if err != nil {
 		return nil, err
 	}
-	row.Status = params.Status
+	if params.ServiceID != nil {
+		row.ServiceID = *params.ServiceID
+	}
+	if params.Status != nil {
+		row.Status = *params.Status
+	}
 
 	if err := q.Update(row); err != nil {
 		return nil, errors.Wrap(err, "failed to update backup artifact")

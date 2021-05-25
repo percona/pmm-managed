@@ -309,7 +309,7 @@ func (r *Registry) handleJobResult(l *logrus.Entry, result *agentpb.JobResult) {
 			}
 
 			_, err := models.ChangeArtifact(t.Querier, res.Result.MySQLBackup.ArtifactID, models.ChangeArtifactParams{
-				Status: models.SuccessBackupStatus,
+				Status: models.SuccessBackupStatus.Pointer(),
 			})
 			if err != nil {
 				return err
@@ -347,7 +347,7 @@ func (r *Registry) handleJobError(jobResult *models.JobResult) error {
 		// nothing
 	case models.MySQLBackupJob:
 		_, err = models.ChangeArtifact(r.db.Querier, jobResult.Result.MySQLBackup.ArtifactID, models.ChangeArtifactParams{
-			Status: models.ErrorBackupStatus,
+			Status: models.ErrorBackupStatus.Pointer(),
 		})
 	case models.MySQLRestoreBackupJob:
 		_, err := models.ChangeRestoreHistoryItem(
