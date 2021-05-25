@@ -34,7 +34,7 @@ var (
 
 // ArtifactFilters represents filters for artifacts list.
 type ArtifactFilters struct {
-	// Return only Agents that provide insights for that Service.
+	// Return only artifacts that provide insights for that Service.
 	ServiceID string
 }
 
