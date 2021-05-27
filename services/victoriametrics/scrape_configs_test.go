@@ -1023,7 +1023,7 @@ func TestScrapeConfig(t *testing.T) {
 			expected := []*config.ScrapeConfig{{
 				JobName:        "rds_exporter_1_1_1_1_12345_mr-5s",
 				ScrapeInterval: config.Duration(s.MR),
-				ScrapeTimeout:  scrapeTimeoutRemote(s.MR),
+				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/enhanced",
 				HonorLabels:    true,
 				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
@@ -1034,7 +1034,7 @@ func TestScrapeConfig(t *testing.T) {
 			}, {
 				JobName:        "rds_exporter_1_1_1_1_12345_lr-1m0s",
 				ScrapeInterval: config.Duration(s.LR),
-				ScrapeTimeout:  scrapeTimeoutRemote(s.LR),
+				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/basic",
 				HonorLabels:    true,
 				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
@@ -1045,7 +1045,7 @@ func TestScrapeConfig(t *testing.T) {
 			}, {
 				JobName:        "rds_exporter_2_2_2_2_12345_mr-5s",
 				ScrapeInterval: config.Duration(s.MR),
-				ScrapeTimeout:  scrapeTimeoutRemote(s.MR),
+				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/enhanced",
 				HonorLabels:    true,
 				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
@@ -1056,7 +1056,7 @@ func TestScrapeConfig(t *testing.T) {
 			}, {
 				JobName:        "rds_exporter_2_2_2_2_12345_lr-1m0s",
 				ScrapeInterval: config.Duration(s.LR),
-				ScrapeTimeout:  scrapeTimeoutRemote(s.LR),
+				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/basic",
 				HonorLabels:    true,
 				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
@@ -1067,7 +1067,7 @@ func TestScrapeConfig(t *testing.T) {
 			}, {
 				JobName:        "rds_exporter_2_2_2_2_12346_mr-5s",
 				ScrapeInterval: config.Duration(s.MR),
-				ScrapeTimeout:  scrapeTimeoutRemote(s.MR),
+				ScrapeTimeout:  scrapeTimeout(s.MR),
 				MetricsPath:    "/enhanced",
 				HonorLabels:    true,
 				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
@@ -1078,7 +1078,7 @@ func TestScrapeConfig(t *testing.T) {
 			}, {
 				JobName:        "rds_exporter_2_2_2_2_12346_lr-1m0s",
 				ScrapeInterval: config.Duration(s.LR),
-				ScrapeTimeout:  scrapeTimeoutRemote(s.LR),
+				ScrapeTimeout:  scrapeTimeout(s.LR),
 				MetricsPath:    "/basic",
 				HonorLabels:    true,
 				ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
