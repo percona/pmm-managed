@@ -50,6 +50,17 @@ func scrapeTimeout(interval time.Duration) config.Duration {
 	}
 }
 
+// scrapeTimeoutRemote returns default scrape timeout for given scrape interval for remote instances.
+// This is different from scrapeTimeout because due to network latencies, this has to be higher.
+func scrapeTimeoutRemote(interval time.Duration) config.Duration {
+	switch {
+	case interval <= 2*time.Second:
+		return config.Duration(time.Second)
+	default:
+		return config.Duration(float64(interval) * 0.9)
+	}
+}
+
 func scrapeConfigForAlertmanager(interval time.Duration) *config.ScrapeConfig {
 	return &config.ScrapeConfig{
 		JobName:        "alertmanager",
@@ -207,7 +218,7 @@ func scrapeConfigForRDSExporter(intervalName string, interval time.Duration, hos
 	return &config.ScrapeConfig{
 		JobName:        jobName,
 		ScrapeInterval: config.Duration(interval),
-		ScrapeTimeout:  scrapeTimeout(interval),
+		ScrapeTimeout:  scrapeTimeoutRemote(interval),
 		MetricsPath:    metricsPath,
 		HonorLabels:    true,
 		ServiceDiscoveryConfig: config.ServiceDiscoveryConfig{
