@@ -35,6 +35,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/percona/pmm-managed/services/scheduler"
+
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_validator "github.com/grpc-ecosystem/go-grpc-middleware/validator"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -737,7 +739,12 @@ func main() {
 			}
 		}()
 	}
-
+	go func() {
+		sch := scheduler.New(db)
+		//j := &scheduler.EchoJob{Value: "42"}
+		//sch.Add(j, "* * * * *", time.Time{}, 3)
+		sch.Run()
+	}()
 	authServer := grafana.NewAuthServer(grafanaClient, awsInstanceChecker)
 
 	l.Info("Starting services...")
