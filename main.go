@@ -35,6 +35,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/percona/pmm-managed/services/scheduler"
+
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_validator "github.com/grpc-ecosystem/go-grpc-middleware/validator"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -638,6 +640,7 @@ func main() {
 	versionService := managementdbaas.NewVersionServiceClient(*versionServiceAPIURLF)
 
 	dbaasClient := dbaas.NewClient(*dbaasControllerAPIAddrF)
+	schedulerService := scheduler.New(db)
 
 	serverParams := &server.Params{
 		DB:                   db,
@@ -654,6 +657,7 @@ func main() {
 		VMAlertExternalRules: externalRules,
 		RulesService:         rulesService,
 		DbaasClient:          dbaasClient,
+		SchedulerService:     schedulerService,
 	}
 
 	server, err := server.NewServer(serverParams)
@@ -745,7 +749,6 @@ func main() {
 			}
 		}()
 	}
-
 	authServer := grafana.NewAuthServer(grafanaClient, awsInstanceChecker)
 
 	l.Info("Starting services...")
@@ -796,6 +799,12 @@ func main() {
 	go func() {
 		defer wg.Done()
 		telemetry.Run(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		schedulerService.Run(ctx)
 	}()
 
 	wg.Add(1)

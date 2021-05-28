@@ -508,6 +508,24 @@ var databaseSchema = [][]string{
 	37: {
 		`ALTER TABLE agents ALTER COLUMN max_query_log_size TYPE BIGINT`,
 	},
+	38: {
+		`CREATE TABLE schedule_jobs (
+			id VARCHAR NOT NULL,
+			cron_expression VARCHAR NOT NULL,
+			type VARCHAR NOT NULL,
+			start_at TIMESTAMP,
+			last_run TIMESTAMP,
+			next_run TIMESTAMP,
+			data JSONB,
+			retries SMALLINT,
+			retry_interval BIGINT
+
+			created_at TIMESTAMP NOT NULL,
+			updated_at TIMESTAMP NOT NULL,
+
+			PRIMARY KEY (id)
+		)`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^
