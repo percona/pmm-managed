@@ -257,6 +257,7 @@ func (ss *ServicesService) Remove(ctx context.Context, id string, force bool) er
 				return err
 			}
 
+			// For RDS and Azure remove also node.
 			if node.NodeType == models.RemoteRDSNodeType || node.NodeType == models.RemoteAzureDatabaseNodeType {
 				agents, err := models.FindAgents(tx.Querier, models.AgentFilters{NodeID: node.NodeID})
 				if err != nil {

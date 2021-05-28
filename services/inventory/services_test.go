@@ -134,8 +134,64 @@ func TestServices(t *testing.T) {
 			NodeId:       node.NodeId,
 			AwsAccessKey: "AKIAIOSFODNN7EXAMPLE",
 			AwsSecretKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
-			CustomLabels: map[string]string{"baz": "qux"},
 			PushMetrics:  true,
+		})
+		require.NoError(t, err)
+
+		mySQLService, err := ss.AddMySQL(ctx, &models.AddDBMSServiceParams{
+			ServiceName: "test-mysql-socket",
+			NodeID:      node.NodeId,
+			Socket:      pointer.ToString("/var/run/mysqld/mysqld.sock"),
+		})
+		require.NoError(t, err)
+
+		mySQLAgent, _, err := as.AddMySQLdExporter(ctx, &inventorypb.AddMySQLdExporterRequest{
+			PmmAgentId: "pmm-server",
+			ServiceId:  mySQLService.ServiceId,
+			Username:   "username",
+		})
+		require.NoError(t, err)
+
+		err = ss.Remove(ctx, mySQLService.ServiceId, true)
+		require.NoError(t, err)
+
+		_, err = ss.Get(ctx, mySQLService.ServiceId)
+		tests.AssertGRPCError(t, status.New(codes.NotFound, fmt.Sprintf(`Service with ID "%s" not found.`, mySQLService.ServiceId)), err)
+
+		_, err = as.Get(ctx, rdsAgent.AgentId)
+		tests.AssertGRPCError(t, status.New(codes.NotFound, fmt.Sprintf(`Agent with ID "%s" not found.`, rdsAgent.AgentId)), err)
+
+		_, err = as.Get(ctx, mySQLAgent.AgentId)
+		tests.AssertGRPCError(t, status.New(codes.NotFound, fmt.Sprintf(`Agent with ID "%s" not found.`, mySQLAgent.AgentId)), err)
+
+		_, err = ns.Get(ctx, &inventorypb.GetNodeRequest{NodeId: node.NodeId})
+		tests.AssertGRPCError(t, status.New(codes.NotFound, fmt.Sprintf(`Node with ID "%s" not found.`, node.NodeId)), err)
+	})
+
+	t.Run("AzureServiceRemoving", func(t *testing.T) {
+		ss, as, ns, teardown, ctx := setup(t)
+		defer teardown(t)
+
+		actualServices, err := ss.List(ctx, models.ServiceFilters{})
+		require.NoError(t, err)
+		require.Len(t, actualServices, 1) // PMM Server PostgreSQL
+
+		as.vmdb.(*mockPrometheusService).On("RequestConfigurationUpdate")
+		as.r.(*mockAgentsRegistry).On("RequestStateUpdate", ctx, "pmm-server").Times(0)
+		as.r.(*mockAgentsRegistry).On("CheckConnectionToService", ctx,
+			mock.AnythingOfType(reflect.TypeOf(&reform.TX{}).Name()),
+			mock.AnythingOfType(reflect.TypeOf(&models.Service{}).Name()),
+			mock.AnythingOfType(reflect.TypeOf(&models.Agent{}).Name()),
+		).Return(nil)
+
+		node, err := ns.AddRemoteAzureDatabaseNode(ctx, &inventorypb.AddRemoteAzureDatabaseNodeRequest{NodeName: "test1", Region: "test-region", Address: "test"})
+		require.NoError(t, err)
+
+		rdsAgent, err := as.AddAzureDatabaseExporter(ctx, &inventorypb.AddAzureDatabaseExporterRequest{
+			PmmAgentId:    "pmm-server",
+			NodeId:        node.NodeId,
+			PushMetrics:   true,
+			AzureClientId: "test",
 		})
 		require.NoError(t, err)
 

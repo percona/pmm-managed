@@ -98,31 +98,36 @@ func (s *ServiceService) RemoveService(ctx context.Context, req *managementpb.Re
 			}
 		}
 
+		err = models.RemoveService(s.db.Querier, service.ServiceID, models.RemoveCascade)
+		if err != nil {
+			return err
+		}
+
 		node, err := models.FindNodeByID(s.db.Querier, service.NodeID)
 		if err != nil {
 			return err
 		}
 
+		// For RDS and Azure remove also node.
 		if node.NodeType == models.RemoteRDSNodeType || node.NodeType == models.RemoteAzureDatabaseNodeType {
 			agents, err = models.FindAgents(tx.Querier, models.AgentFilters{NodeID: node.NodeID})
 			if err != nil {
 				return err
 			}
 			for _, a := range agents {
+				_, err := models.RemoveAgent(s.db.Querier, a.AgentID, models.RemoveRestrict)
+				if err != nil {
+					return err
+				}
 				if a.PMMAgentID != nil {
 					pmmAgentIDs[pointer.GetString(a.PMMAgentID)] = struct{}{}
 				}
 			}
-
 			if err = models.RemoveNode(tx.Querier, node.NodeID, models.RemoveCascade); err != nil {
 				return err
 			}
 		}
 
-		err = models.RemoveService(s.db.Querier, service.ServiceID, models.RemoveCascade)
-		if err != nil {
-			return err
-		}
 		return nil
 	}); e != nil {
 		return nil, e
