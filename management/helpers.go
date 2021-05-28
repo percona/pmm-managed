@@ -3,6 +3,7 @@ package management
 import (
 	"context"
 
+	"github.com/percona/pmm/api/inventorypb"
 	inventoryClient "github.com/percona/pmm/api/inventorypb/json/client"
 	"github.com/percona/pmm/api/inventorypb/json/client/agents"
 	"github.com/percona/pmm/api/inventorypb/json/client/nodes"
@@ -14,9 +15,11 @@ import (
 	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
 )
 
+// AgentStatusUnknown means agent is not connected and we don't know anything about its status.
+var AgentStatusUnknown = inventorypb.AgentStatus_name[int32(inventorypb.AgentStatus_UNKNOWN)]
+
 func registerGenericNode(t pmmapitests.TestingT, body node.RegisterNodeBody) (string, string) {
 	t.Helper()
-
 	params := node.RegisterNodeParams{
 		Context: pmmapitests.Context,
 		Body:    body,
@@ -64,6 +67,7 @@ func assertNodeExporterCreated(t pmmapitests.TestingT, pmmAgentID string) (strin
 		PMMAgentID:         pmmAgentID,
 		AgentID:            nodeExporterAgentID,
 		PushMetricsEnabled: true,
+		Status:             &AgentStatusUnknown,
 	}, *listAgentsOK.Payload.NodeExporter[0])
 	return nodeExporterAgentID, asserted
 }

@@ -67,6 +67,7 @@ func TestProxySQLExporter(t *testing.T) {
 					CustomLabels: map[string]string{
 						"custom_label_proxysql_exporter": "proxysql_exporter",
 					},
+					Status: &AgentStatusUnknown,
 				},
 			},
 		}, getAgentRes)
@@ -91,6 +92,7 @@ func TestProxySQLExporter(t *testing.T) {
 					Username:   "username",
 					PMMAgentID: pmmAgentID,
 					Disabled:   true,
+					Status:     &AgentStatusUnknown,
 				},
 			},
 		}, changeProxySQLExporterOK)
@@ -119,6 +121,7 @@ func TestProxySQLExporter(t *testing.T) {
 					CustomLabels: map[string]string{
 						"new_label": "proxysql_exporter",
 					},
+					Status: &AgentStatusUnknown,
 				},
 			},
 		}, changeProxySQLExporterOK)
@@ -286,6 +289,7 @@ func TestProxySQLExporter(t *testing.T) {
 					CustomLabels: map[string]string{
 						"custom_label_proxysql_exporter": "proxysql_exporter",
 					},
+					Status: &AgentStatusUnknown,
 				},
 			},
 		}, getAgentRes)
@@ -312,6 +316,7 @@ func TestProxySQLExporter(t *testing.T) {
 						"custom_label_proxysql_exporter": "proxysql_exporter",
 					},
 					PushMetricsEnabled: true,
+					Status:             &AgentStatusUnknown,
 				},
 			},
 		}, changeProxySQLExporterOK)
@@ -336,6 +341,7 @@ func TestProxySQLExporter(t *testing.T) {
 					CustomLabels: map[string]string{
 						"custom_label_proxysql_exporter": "proxysql_exporter",
 					},
+					Status: &AgentStatusUnknown,
 				},
 			},
 		}, changeProxySQLExporterOK)

@@ -87,6 +87,7 @@ func TestAddProxySQL(t *testing.T) {
 					Username:           "username",
 					DisabledCollectors: []string{"mysql_status", "mysql_connection_pool"},
 					PushMetricsEnabled: true,
+					Status:             &AgentStatusUnknown,
 				},
 			},
 		}, *listAgents.Payload)
@@ -163,6 +164,7 @@ func TestAddProxySQL(t *testing.T) {
 					PMMAgentID:         pmmAgentID,
 					Username:           "username",
 					PushMetricsEnabled: true,
+					Status:             &AgentStatusUnknown,
 				},
 			},
 		}, *listAgents.Payload)
@@ -390,6 +392,7 @@ func TestAddProxySQL(t *testing.T) {
 					PMMAgentID:         pmmAgentID,
 					Username:           "username",
 					PushMetricsEnabled: true,
+					Status:             &AgentStatusUnknown,
 				},
 			},
 		}, *listAgents.Payload)

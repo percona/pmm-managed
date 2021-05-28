@@ -85,6 +85,7 @@ func TestAddMongoDB(t *testing.T) {
 					PMMAgentID:         pmmAgentID,
 					DisabledCollectors: []string{"database"},
 					PushMetricsEnabled: true,
+					Status:             &AgentStatusUnknown,
 				},
 			},
 		}, *listAgents.Payload)
@@ -164,6 +165,7 @@ func TestAddMongoDB(t *testing.T) {
 					PMMAgentID:         pmmAgentID,
 					Username:           "username",
 					PushMetricsEnabled: true,
+					Status:             &AgentStatusUnknown,
 				},
 			},
 			QANMongodbProfilerAgent: []*agents.QANMongodbProfilerAgentItems0{
@@ -172,6 +174,7 @@ func TestAddMongoDB(t *testing.T) {
 					ServiceID:  serviceID,
 					PMMAgentID: pmmAgentID,
 					Username:   "username",
+					Status:     &AgentStatusUnknown,
 				},
 			},
 		}, *listAgents.Payload)
@@ -391,6 +394,7 @@ func TestAddMongoDB(t *testing.T) {
 					ServiceID:          serviceID,
 					PMMAgentID:         pmmAgentID,
 					PushMetricsEnabled: true,
+					Status:             &AgentStatusUnknown,
 				},
 			},
 		}, *listAgents.Payload)
@@ -607,6 +611,7 @@ func TestAddMongoDB(t *testing.T) {
 					ServiceID:          serviceID,
 					PMMAgentID:         pmmAgentID,
 					PushMetricsEnabled: true,
+					Status:             &AgentStatusUnknown,
 				},
 			},
 		}, *listAgents.Payload)
@@ -678,6 +683,7 @@ func TestAddMongoDB(t *testing.T) {
 					ServiceID:          serviceID,
 					PMMAgentID:         pmmAgentID,
 					PushMetricsEnabled: true,
+					Status:             &AgentStatusUnknown,
 				},
 			},
 		}, *listAgents.Payload)
@@ -748,6 +754,7 @@ func TestAddMongoDB(t *testing.T) {
 					AgentID:    listAgents.Payload.MongodbExporter[0].AgentID,
 					ServiceID:  serviceID,
 					PMMAgentID: pmmAgentID,
+					Status:     &AgentStatusUnknown,
 				},
 			},
 		}, *listAgents.Payload)
@@ -819,6 +826,7 @@ func TestAddMongoDB(t *testing.T) {
 					ServiceID:          serviceID,
 					PMMAgentID:         pmmAgentID,
 					PushMetricsEnabled: true,
+					Status:             &AgentStatusUnknown,
 				},
 			},
 		}, *listAgents.Payload)

@@ -87,6 +87,7 @@ func TestAddPostgreSQL(t *testing.T) {
 					Username:           "username",
 					DisabledCollectors: []string{"custom_query.ml", "custom_query.mr.directory"},
 					PushMetricsEnabled: true,
+					Status:             &AgentStatusUnknown,
 				},
 			},
 		}, *listAgents.Payload)
@@ -168,6 +169,7 @@ func TestAddPostgreSQL(t *testing.T) {
 					PMMAgentID:         pmmAgentID,
 					Username:           "username",
 					PushMetricsEnabled: true,
+					Status:             &AgentStatusUnknown,
 				},
 			},
 			QANPostgresqlPgstatementsAgent: []*agents.QANPostgresqlPgstatementsAgentItems0{
@@ -176,6 +178,7 @@ func TestAddPostgreSQL(t *testing.T) {
 					ServiceID:  serviceID,
 					PMMAgentID: pmmAgentID,
 					Username:   "username",
+					Status:     &AgentStatusUnknown,
 				},
 			},
 			QANPostgresqlPgstatmonitorAgent: []*agents.QANPostgresqlPgstatmonitorAgentItems0{
@@ -185,6 +188,7 @@ func TestAddPostgreSQL(t *testing.T) {
 					PMMAgentID:            pmmAgentID,
 					Username:              "username",
 					QueryExamplesDisabled: true,
+					Status:                &AgentStatusUnknown,
 				},
 			},
 		}, *listAgents.Payload)
@@ -407,6 +411,7 @@ func TestAddPostgreSQL(t *testing.T) {
 					PMMAgentID:         pmmAgentID,
 					Username:           "username",
 					PushMetricsEnabled: true,
+					Status:             &AgentStatusUnknown,
 				},
 			},
 		}, *listAgents.Payload)
@@ -631,6 +636,7 @@ func TestAddPostgreSQL(t *testing.T) {
 					PMMAgentID:         pmmAgentID,
 					Username:           "username",
 					PushMetricsEnabled: true,
+					Status:             &AgentStatusUnknown,
 				},
 			},
 		}, *listAgents.Payload)
@@ -703,6 +709,7 @@ func TestAddPostgreSQL(t *testing.T) {
 					ServiceID:  serviceID,
 					PMMAgentID: pmmAgentID,
 					Username:   "username",
+					Status:     &AgentStatusUnknown,
 				},
 			},
 		}, *listAgents.Payload)
@@ -776,6 +783,7 @@ func TestAddPostgreSQL(t *testing.T) {
 					PMMAgentID:         pmmAgentID,
 					Username:           "username",
 					PushMetricsEnabled: true,
+					Status:             &AgentStatusUnknown,
 				},
 			},
 		}, *listAgents.Payload)

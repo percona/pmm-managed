@@ -70,6 +70,7 @@ func TestMySQLdExporter(t *testing.T) {
 					"custom_label_mysql_exporter": "mysql_exporter",
 				},
 				TablestatsGroupTableLimit: 2000,
+				Status:                    &AgentStatusUnknown,
 			},
 		}, getAgentRes.Payload)
 
@@ -93,6 +94,7 @@ func TestMySQLdExporter(t *testing.T) {
 				PMMAgentID:                pmmAgentID,
 				Disabled:                  true,
 				TablestatsGroupTableLimit: 2000,
+				Status:                    &AgentStatusUnknown,
 			},
 		}, changeMySQLdExporterOK.Payload)
 
@@ -120,6 +122,7 @@ func TestMySQLdExporter(t *testing.T) {
 					"new_label": "mysql_exporter",
 				},
 				TablestatsGroupTableLimit: 2000,
+				Status:                    &AgentStatusUnknown,
 			},
 		}, changeMySQLdExporterOK.Payload)
 	})
@@ -348,6 +351,7 @@ func TestMySQLdExporter(t *testing.T) {
 				},
 				TablestatsGroupTableLimit: 2000,
 				PushMetricsEnabled:        true,
+				Status:                    &AgentStatusUnknown,
 			},
 		}, getAgentRes.Payload)
 
@@ -372,6 +376,7 @@ func TestMySQLdExporter(t *testing.T) {
 					"custom_label_mysql_exporter": "mysql_exporter",
 				},
 				TablestatsGroupTableLimit: 2000,
+				Status:                    &AgentStatusUnknown,
 			},
 		}, changeMySQLdExporterOK.Payload)
 
@@ -396,6 +401,7 @@ func TestMySQLdExporter(t *testing.T) {
 				},
 				TablestatsGroupTableLimit: 2000,
 				PushMetricsEnabled:        true,
+				Status:                    &AgentStatusUnknown,
 			},
 		}, changeMySQLdExporterOK.Payload)
 		_, err = client.Default.Agents.ChangeMySQLdExporter(&agents.ChangeMySQLdExporterParams{

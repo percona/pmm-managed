@@ -88,6 +88,7 @@ func TestAddMySQL(t *testing.T) {
 					TablestatsGroupTableLimit: 1000,
 					DisabledCollectors:        []string{"global_status", "perf_schema.tablelocks"},
 					PushMetricsEnabled:        true,
+					Status:                    &AgentStatusUnknown,
 				},
 			},
 		}, *listAgents.Payload)
@@ -171,6 +172,7 @@ func TestAddMySQL(t *testing.T) {
 					TablestatsGroupTableLimit: -1,
 					TablestatsGroupDisabled:   true,
 					PushMetricsEnabled:        true,
+					Status:                    &AgentStatusUnknown,
 				},
 			},
 			QANMysqlSlowlogAgent: []*agents.QANMysqlSlowlogAgentItems0{
@@ -180,6 +182,7 @@ func TestAddMySQL(t *testing.T) {
 					PMMAgentID:         pmmAgentID,
 					Username:           "username",
 					MaxSlowlogFileSize: "1073741824",
+					Status:             &AgentStatusUnknown,
 				},
 			},
 			QANMysqlPerfschemaAgent: []*agents.QANMysqlPerfschemaAgentItems0{
@@ -188,6 +191,7 @@ func TestAddMySQL(t *testing.T) {
 					ServiceID:  serviceID,
 					PMMAgentID: pmmAgentID,
 					Username:   "username",
+					Status:     &AgentStatusUnknown,
 				},
 			},
 		}, *listAgents.Payload)
@@ -416,6 +420,7 @@ func TestAddMySQL(t *testing.T) {
 					Username:                  "username",
 					TablestatsGroupTableLimit: 1000,
 					PushMetricsEnabled:        true,
+					Status:                    &AgentStatusUnknown,
 				},
 			},
 		}, *listAgents.Payload)
@@ -668,6 +673,7 @@ func TestAddMySQL(t *testing.T) {
 					Username:                  "username",
 					TablestatsGroupTableLimit: 1000,
 					PushMetricsEnabled:        true,
+					Status:                    &AgentStatusUnknown,
 				},
 			},
 		}, *listAgents.Payload)
@@ -741,6 +747,7 @@ func TestAddMySQL(t *testing.T) {
 					PMMAgentID:                pmmAgentID,
 					Username:                  "username",
 					TablestatsGroupTableLimit: 1000,
+					Status:                    &AgentStatusUnknown,
 				},
 			},
 		}, *listAgents.Payload)
@@ -815,6 +822,7 @@ func TestAddMySQL(t *testing.T) {
 					Username:                  "username",
 					TablestatsGroupTableLimit: 1000,
 					PushMetricsEnabled:        true,
+					Status:                    &AgentStatusUnknown,
 				},
 			},
 		}, *listAgents.Payload)

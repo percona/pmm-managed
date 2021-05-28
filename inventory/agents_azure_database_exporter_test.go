@@ -56,6 +56,7 @@ func TestAzureDatabaseExporter(t *testing.T) {
 					CustomLabels: map[string]string{
 						"custom_label_azure_database_exporter": "azure_database_exporter",
 					},
+					Status: &AgentStatusUnknown,
 				},
 			},
 		}, getAgentRes)
@@ -80,6 +81,7 @@ func TestAzureDatabaseExporter(t *testing.T) {
 					PMMAgentID:                  pmmAgentID,
 					AzureDatabaseSubscriptionID: "azure_subscription_id",
 					Disabled:                    true,
+					Status:                      &AgentStatusUnknown,
 				},
 			},
 		}, changeAzureDatabaseExporterOK)
@@ -108,6 +110,7 @@ func TestAzureDatabaseExporter(t *testing.T) {
 					CustomLabels: map[string]string{
 						"new_label": "azure_database_exporter",
 					},
+					Status: &AgentStatusUnknown,
 				},
 			},
 		}, changeAzureDatabaseExporterOK)
@@ -224,6 +227,7 @@ func TestAzureDatabaseExporter(t *testing.T) {
 					CustomLabels: map[string]string{
 						"custom_label_azure_database_exporter": "azure_database_exporter",
 					},
+					Status: &AgentStatusUnknown,
 				},
 			},
 		}, getAgentRes)
@@ -249,6 +253,7 @@ func TestAzureDatabaseExporter(t *testing.T) {
 					CustomLabels: map[string]string{
 						"custom_label_azure_database_exporter": "azure_database_exporter",
 					},
+					Status: &AgentStatusUnknown,
 				},
 			},
 		}, changeAzureDatabaseExporterOK)
@@ -273,6 +278,7 @@ func TestAzureDatabaseExporter(t *testing.T) {
 					CustomLabels: map[string]string{
 						"custom_label_azure_database_exporter": "azure_database_exporter",
 					},
+					Status: &AgentStatusUnknown,
 				},
 			},
 		}, changeAzureDatabaseExporterOK)

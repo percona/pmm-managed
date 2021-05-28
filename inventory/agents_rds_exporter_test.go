@@ -58,6 +58,7 @@ func TestRDSExporter(t *testing.T) {
 					},
 					BasicMetricsDisabled:    true,
 					EnhancedMetricsDisabled: true,
+					Status:                  &AgentStatusUnknown,
 				},
 			},
 		}, getAgentRes)
@@ -83,6 +84,7 @@ func TestRDSExporter(t *testing.T) {
 					Disabled:                true,
 					BasicMetricsDisabled:    true,
 					EnhancedMetricsDisabled: true,
+					Status:                  &AgentStatusUnknown,
 				},
 			},
 		}, changeRDSExporterOK)
@@ -112,6 +114,7 @@ func TestRDSExporter(t *testing.T) {
 					},
 					BasicMetricsDisabled:    true,
 					EnhancedMetricsDisabled: true,
+					Status:                  &AgentStatusUnknown,
 				},
 			},
 		}, changeRDSExporterOK)
@@ -227,6 +230,7 @@ func TestRDSExporter(t *testing.T) {
 					},
 					BasicMetricsDisabled:    true,
 					EnhancedMetricsDisabled: true,
+					Status:                  &AgentStatusUnknown,
 				},
 			},
 		}, getAgentRes)
@@ -254,6 +258,7 @@ func TestRDSExporter(t *testing.T) {
 					BasicMetricsDisabled:    true,
 					EnhancedMetricsDisabled: true,
 					PushMetricsEnabled:      true,
+					Status:                  &AgentStatusUnknown,
 				},
 			},
 		}, changeRDSExporterOK)
@@ -279,6 +284,7 @@ func TestRDSExporter(t *testing.T) {
 					},
 					BasicMetricsDisabled:    true,
 					EnhancedMetricsDisabled: true,
+					Status:                  &AgentStatusUnknown,
 				},
 			},
 		}, changeRDSExporterOK)

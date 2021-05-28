@@ -43,6 +43,7 @@ func TestNodeExporter(t *testing.T) {
 					PMMAgentID:   pmmAgentID,
 					Disabled:     false,
 					CustomLabels: customLabels,
+					Status:       &AgentStatusUnknown,
 				},
 			},
 		}, getAgentRes)
@@ -65,6 +66,7 @@ func TestNodeExporter(t *testing.T) {
 					AgentID:    agentID,
 					PMMAgentID: pmmAgentID,
 					Disabled:   true,
+					Status:     &AgentStatusUnknown,
 				},
 			},
 		}, changeNodeExporterOK)
@@ -91,6 +93,7 @@ func TestNodeExporter(t *testing.T) {
 					CustomLabels: map[string]string{
 						"new_label": "node_exporter",
 					},
+					Status: &AgentStatusUnknown,
 				},
 			},
 		}, changeNodeExporterOK)
@@ -164,6 +167,7 @@ func TestNodeExporter(t *testing.T) {
 					Disabled:           false,
 					CustomLabels:       customLabels,
 					PushMetricsEnabled: true,
+					Status:             &AgentStatusUnknown,
 				},
 			},
 		}, getAgentRes)
@@ -186,6 +190,7 @@ func TestNodeExporter(t *testing.T) {
 					PMMAgentID:   pmmAgentID,
 					Disabled:     false,
 					CustomLabels: customLabels,
+					Status:       &AgentStatusUnknown,
 				},
 			},
 		}, changeNodeExporterOK)
@@ -208,6 +213,7 @@ func TestNodeExporter(t *testing.T) {
 					Disabled:           false,
 					CustomLabels:       customLabels,
 					PushMetricsEnabled: true,
+					Status:             &AgentStatusUnknown,
 				},
 			},
 		}, changeNodeExporterOK)

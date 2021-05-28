@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/AlekSi/pointer"
+	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/api/inventorypb/json/client"
 	"github.com/percona/pmm/api/inventorypb/json/client/agents"
 	"github.com/percona/pmm/api/inventorypb/json/client/services"
@@ -14,6 +15,9 @@ import (
 
 	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
 )
+
+// AgentStatusUnknown means agent is not connected and we don't know anything about its status.
+var AgentStatusUnknown = inventorypb.AgentStatus_name[int32(inventorypb.AgentStatus_UNKNOWN)]
 
 func TestAgents(t *testing.T) {
 	t.Run("List", func(t *testing.T) {
@@ -337,6 +341,7 @@ func TestPMMAgent(t *testing.T) {
 				{
 					PMMAgentID: pmmAgentID,
 					AgentID:    nodeExporterID,
+					Status:     &AgentStatusUnknown,
 				},
 			},
 			MysqldExporter: []*agents.MysqldExporterItems0{
@@ -348,6 +353,7 @@ func TestPMMAgent(t *testing.T) {
 					CustomLabels: map[string]string{
 						"custom_label_mysql_exporter": "mysql_exporter",
 					},
+					Status: &AgentStatusUnknown,
 				},
 			},
 		}, listAgentsOK.Payload)
@@ -477,6 +483,7 @@ func TestQanAgentExporter(t *testing.T) {
 					CustomLabels: map[string]string{
 						"new_label": "QANMysqlPerfschemaAgent",
 					},
+					Status: &AgentStatusUnknown,
 				},
 			},
 		}, getAgentRes)
@@ -501,6 +508,7 @@ func TestQanAgentExporter(t *testing.T) {
 					Username:   "username",
 					PMMAgentID: pmmAgentID,
 					Disabled:   true,
+					Status:     &AgentStatusUnknown,
 				},
 			},
 		}, changeQANMySQLPerfSchemaAgentOK)
@@ -529,6 +537,7 @@ func TestQanAgentExporter(t *testing.T) {
 					CustomLabels: map[string]string{
 						"new_label": "QANMysqlPerfschemaAgent",
 					},
+					Status: &AgentStatusUnknown,
 				},
 			},
 		}, changeQANMySQLPerfSchemaAgentOK)
@@ -703,6 +712,7 @@ func TestPGStatStatementsQanAgent(t *testing.T) {
 					CustomLabels: map[string]string{
 						"new_label": "QANPostgreSQLPgStatementsAgent",
 					},
+					Status: &AgentStatusUnknown,
 				},
 			},
 		}, getAgentRes)
@@ -727,6 +737,7 @@ func TestPGStatStatementsQanAgent(t *testing.T) {
 					Username:   "username",
 					PMMAgentID: pmmAgentID,
 					Disabled:   true,
+					Status:     &AgentStatusUnknown,
 				},
 			},
 		}, changeQANPostgreSQLPgStatementsAgentOK)
@@ -755,6 +766,7 @@ func TestPGStatStatementsQanAgent(t *testing.T) {
 					CustomLabels: map[string]string{
 						"new_label": "QANPostgreSQLPgStatementsAgent",
 					},
+					Status: &AgentStatusUnknown,
 				},
 			},
 		}, changeQANPostgreSQLPgStatementsAgentOK)
@@ -930,6 +942,7 @@ func TestPGStatMonitorQanAgent(t *testing.T) {
 					CustomLabels: map[string]string{
 						"new_label": "QANPostgreSQLPgStatMonitorAgent",
 					},
+					Status: &AgentStatusUnknown,
 				},
 			},
 		}, getAgentRes)
@@ -954,6 +967,7 @@ func TestPGStatMonitorQanAgent(t *testing.T) {
 					Username:   "username",
 					PMMAgentID: pmmAgentID,
 					Disabled:   true,
+					Status:     &AgentStatusUnknown,
 				},
 			},
 		}, changeQANPostgreSQLPgStatMonitorAgentOK)
@@ -982,6 +996,7 @@ func TestPGStatMonitorQanAgent(t *testing.T) {
 					CustomLabels: map[string]string{
 						"new_label": "QANPostgreSQLPgStatMonitorAgent",
 					},
+					Status: &AgentStatusUnknown,
 				},
 			},
 		}, changeQANPostgreSQLPgStatMonitorAgentOK)
@@ -1042,6 +1057,7 @@ func TestPGStatMonitorQanAgent(t *testing.T) {
 					CustomLabels: map[string]string{
 						"new_label": "QANPostgreSQLPgStatMonitorAgent",
 					},
+					Status: &AgentStatusUnknown,
 				},
 			},
 		}, getAgentRes)
