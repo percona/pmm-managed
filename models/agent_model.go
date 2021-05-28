@@ -41,7 +41,7 @@ type AgentType string
 const (
 	certificateKeyFilePlaceholder = "certificateKeyFilePlaceholder"
 	caFilePlaceholder             = "caFilePlaceholder"
-	agentStatusUnknown            = "UNKNOWN"
+	AgentStatusUnknown            = "UNKNOWN"
 )
 
 // Agent types (in the same order as in agents.proto).
@@ -172,7 +172,7 @@ func (s *Agent) BeforeInsert() error {
 		s.CustomLabels = nil
 	}
 	if s.Status == "" && s.AgentType != ExternalExporterType && s.AgentType != PMMAgentType {
-		s.Status = agentStatusUnknown
+		s.Status = AgentStatusUnknown
 	}
 	return nil
 }
