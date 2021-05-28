@@ -36,6 +36,8 @@ var (
 type ArtifactFilters struct {
 	// Return only artifacts that provide insights for that Service.
 	ServiceID string
+	// Return only artifacts that belong to specified location.
+	LocationID string
 }
 
 // FindArtifacts returns artifacts list.
@@ -48,6 +50,10 @@ func FindArtifacts(q *reform.Querier, filters *ArtifactFilters) ([]*Artifact, er
 		}
 		conditions = append(conditions, fmt.Sprintf("service_id = %s", q.Placeholder(1)))
 		args = append(args, filters.ServiceID)
+	}
+	if filters != nil && filters.LocationID != "" {
+		conditions = append(conditions, fmt.Sprintf("location_id = %s", q.Placeholder(1)))
+		args = append(args, filters.LocationID)
 	}
 
 	var whereClause string

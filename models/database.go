@@ -509,6 +509,11 @@ var databaseSchema = [][]string{
 		`ALTER TABLE agents ALTER COLUMN max_query_log_size TYPE BIGINT`,
 	},
 	38: {
+		`DELETE FROM artifacts a
+			WHERE NOT EXISTS (
+				SELECT FROM backup_locations
+   				WHERE id = a.location_id
+   			)`,
 		`ALTER TABLE artifacts ADD FOREIGN KEY (location_id) REFERENCES backup_locations (id)`,
 		`ALTER TABLE artifacts DROP CONSTRAINT artifacts_service_id_check`,
 	},
