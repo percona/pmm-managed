@@ -18,12 +18,15 @@ package inventory
 
 import (
 	"context"
+	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/AlekSi/pointer"
 	"github.com/google/uuid"
 	"github.com/percona/pmm/api/inventorypb"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -105,6 +108,65 @@ func TestServices(t *testing.T) {
 		actualService, err = ss.Get(ctx, "/service_id/00000000-0000-4000-8000-000000000005")
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Service with ID "/service_id/00000000-0000-4000-8000-000000000005" not found.`), err)
 		assert.Nil(t, actualService)
+	})
+
+	t.Run("RDSServiceRemoving", func(t *testing.T) {
+		ss, as, ns, teardown, ctx := setup(t)
+		defer teardown(t)
+
+		actualServices, err := ss.List(ctx, models.ServiceFilters{})
+		require.NoError(t, err)
+		require.Len(t, actualServices, 1) // PMM Server PostgreSQL
+
+		as.r.(*mockAgentsRegistry).On("RequestStateUpdate", ctx, "pmm-server")
+		as.vmdb.(*mockPrometheusService).On("RequestConfigurationUpdate")
+		as.r.(*mockAgentsRegistry).On("CheckConnectionToService", ctx,
+			mock.AnythingOfType(reflect.TypeOf(&reform.TX{}).Name()),
+			mock.AnythingOfType(reflect.TypeOf(&models.Service{}).Name()),
+			mock.AnythingOfType(reflect.TypeOf(&models.Agent{}).Name()),
+		).Return(nil)
+
+		node, err := ns.AddRemoteRDSNode(ctx, &inventorypb.AddRemoteRDSNodeRequest{NodeName: "test1", Region: "test-region", Address: "test"})
+		require.NoError(t, err)
+
+		rdsAgent, err := as.AddRDSExporter(ctx, &inventorypb.AddRDSExporterRequest{
+			PmmAgentId:   "pmm-server",
+			NodeId:       node.NodeId,
+			AwsAccessKey: "AKIAIOSFODNN7EXAMPLE",
+			AwsSecretKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+			CustomLabels: map[string]string{"baz": "qux"},
+			PushMetrics:  true,
+		})
+		require.NoError(t, err)
+
+		mySQLService, err := ss.AddMySQL(ctx, &models.AddDBMSServiceParams{
+			ServiceName: "test-mysql-socket",
+			NodeID:      node.NodeId,
+			Socket:      pointer.ToString("/var/run/mysqld/mysqld.sock"),
+		})
+		require.NoError(t, err)
+
+		mySQLAgent, _, err := as.AddMySQLdExporter(ctx, &inventorypb.AddMySQLdExporterRequest{
+			PmmAgentId: "pmm-server",
+			ServiceId:  mySQLService.ServiceId,
+			Username:   "username",
+		})
+		require.NoError(t, err)
+
+		err = ss.Remove(ctx, mySQLService.ServiceId, true)
+		require.NoError(t, err)
+
+		_, err = ss.Get(ctx, mySQLService.ServiceId)
+		tests.AssertGRPCError(t, status.New(codes.NotFound, fmt.Sprintf(`Service with ID "%s" not found.`, mySQLService.ServiceId)), err)
+
+		_, err = as.Get(ctx, rdsAgent.AgentId)
+		tests.AssertGRPCError(t, status.New(codes.NotFound, fmt.Sprintf(`Agent with ID "%s" not found.`, rdsAgent.AgentId)), err)
+
+		_, err = as.Get(ctx, mySQLAgent.AgentId)
+		tests.AssertGRPCError(t, status.New(codes.NotFound, fmt.Sprintf(`Agent with ID "%s" not found.`, mySQLAgent.AgentId)), err)
+
+		_, err = ns.Get(ctx, &inventorypb.GetNodeRequest{NodeId: node.NodeId})
+		tests.AssertGRPCError(t, status.New(codes.NotFound, fmt.Sprintf(`Node with ID "%s" not found.`, node.NodeId)), err)
 	})
 
 	t.Run("BasicMySQLWithSocket", func(t *testing.T) {
