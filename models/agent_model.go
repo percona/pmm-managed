@@ -42,7 +42,7 @@ const (
 	certificateKeyFilePlaceholder = "certificateKeyFilePlaceholder"
 	caFilePlaceholder             = "caFilePlaceholder"
 	// AgentStatusUnknown indicates we know nothing about agent because it is not connected.
-	AgentStatusUnknown            = "UNKNOWN"
+	AgentStatusUnknown = "UNKNOWN"
 )
 
 // Agent types (in the same order as in agents.proto).
