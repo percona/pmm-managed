@@ -2,7 +2,6 @@ package scheduler
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -36,7 +35,7 @@ func New(db *reform.DB) *Service {
 
 func (s *Service) Run() {
 	if err := s.loadFromDB(); err != nil {
-		panic(err)
+		s.l.Warn(err)
 	}
 	s.scheduler.StartBlocking()
 }
@@ -99,6 +98,8 @@ func (s *Service) Add(job Job, cronExpr string, startAt time.Time, retry uint) e
 
 func (s *Service) loadFromDB() error {
 	s.scheduler.Clear()
+	// Reset tags
+	s.scheduler.TagsUnique()
 	structs, err := s.db.SelectAllFrom(models.ScheduleJobTable, "")
 	if err != nil {
 		return err
@@ -155,11 +156,11 @@ func (s *Service) wrapJob(job Job, id string, retry int) func() {
 			}
 			retry--
 		}
-		s.jobFinished(id, err)
+		s.jobFinished(id)
 	}
 }
 
-func (s *Service) jobFinished(id string, err error) {
+func (s *Service) jobFinished(id string) {
 	var job *gocron.Job
 	for _, j := range s.scheduler.Jobs() {
 		if len(j.Tags()) > 0 && j.Tags()[0] == id {
@@ -170,5 +171,14 @@ func (s *Service) jobFinished(id string, err error) {
 	if job == nil {
 		return
 	}
-	fmt.Println(job.LastRun(), job.NextRun())
+	record, err := s.db.FindOneFrom(models.ScheduleJobTable, "id", id)
+	if err != nil {
+		return
+	}
+	entry := record.(*models.ScheduleJob)
+	entry.LastRun = job.LastRun()
+	entry.NextRun = job.NextRun()
+	if err := s.db.Update(entry); err != nil {
+		return
+	}
 }
