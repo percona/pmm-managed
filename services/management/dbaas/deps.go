@@ -26,6 +26,7 @@ import (
 
 //go:generate mockery -name=dbaasClient -case=snake -inpkg -testonly
 //go:generate mockery -name=versionService -case=snake -inpkg -testonly
+//go:generate mockery -name=grafanaClient -case=snake -inpkg -testonly
 
 type dbaasClient interface {
 	// CheckKubernetesClusterConnection checks connection to Kubernetes cluster and returns statuses of the cluster and operators.
@@ -58,9 +59,21 @@ type dbaasClient interface {
 	GetLogs(ctx context.Context, in *controllerv1beta1.GetLogsRequest, opts ...grpc.CallOption) (*controllerv1beta1.GetLogsResponse, error)
 	// GetResources returns all and available resources of a Kubernetes cluster.
 	GetResources(ctx context.Context, in *controllerv1beta1.GetResourcesRequest, opts ...grpc.CallOption) (*controllerv1beta1.GetResourcesResponse, error)
+	// InstallXtraDBOperator installs kubernetes pxc operator.
+	InstallXtraDBOperator(ctx context.Context, in *controllerv1beta1.InstallXtraDBOperatorRequest, opts ...grpc.CallOption) (*controllerv1beta1.InstallXtraDBOperatorResponse, error)
+	// InstallPSMDBOperator installs kubernetes psmdb operator.
+	InstallPSMDBOperator(ctx context.Context, in *controllerv1beta1.InstallPSMDBOperatorRequest, opts ...grpc.CallOption) (*controllerv1beta1.InstallPSMDBOperatorResponse, error)
 }
 
 type versionService interface {
 	// Matrix calls version service with given params and returns components matrix.
 	Matrix(ctx context.Context, params componentsParams) (*VersionServiceResponse, error)
+}
+
+// grafanaClient is a subset of methods of grafana.Client used by this package.
+// We use it instead of real type for testing and to avoid dependency cycle.
+type grafanaClient interface {
+	CreateAdminAPIKey(ctx context.Context, name string) (int64, string, error)
+	DeleteAPIKeysWithPrefix(ctx context.Context, name string) error
+	DeleteAPIKeyByID(ctx context.Context, id int64) error
 }

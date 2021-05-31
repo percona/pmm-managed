@@ -18,7 +18,6 @@ package channel
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net"
 	"testing"
@@ -34,6 +33,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/percona/pmm-managed/utils/interceptors"
+	"github.com/percona/pmm-managed/utils/tests"
 )
 
 type testServer struct {
@@ -60,6 +60,7 @@ func setup(t *testing.T, connect func(*Channel) error, expected ...error) (agent
 		grpc.UnaryInterceptor(interceptors.Unary),
 		grpc.StreamInterceptor(interceptors.Stream),
 	)
+
 	agentpb.RegisterAgentServer(server, &testServer{
 		connectFunc: func(stream agentpb.Agent_ConnectServer) error {
 			channel = New(stream)
@@ -157,7 +158,8 @@ func TestServerRequest(t *testing.T) {
 
 	connect := func(ch *Channel) error {
 		for i := uint32(1); i <= count; i++ {
-			resp := ch.SendAndWaitResponse(new(agentpb.Ping))
+			resp, err := ch.SendAndWaitResponse(new(agentpb.Ping))
+			require.NoError(t, err)
 			pong := resp.(*agentpb.Pong)
 			ts, err := ptypes.Timestamp(pong.CurrentTime)
 			assert.NoError(t, err)
@@ -234,12 +236,13 @@ func TestServerExitsWithUnknownErrorIntercepted(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = stream.Recv()
-	assert.Equal(t, status.Error(codes.Internal, "Internal server error.").Error(), err.Error())
+	tests.AssertGRPCError(t, status.New(codes.Internal, "Internal server error."), err)
 }
 
 func TestAgentClosesStream(t *testing.T) {
 	connect := func(ch *Channel) error {
-		resp := ch.SendAndWaitResponse(new(agentpb.Ping))
+		resp, err := ch.SendAndWaitResponse(new(agentpb.Ping))
+		require.NoError(t, err)
 		assert.Nil(t, resp)
 
 		assert.Nil(t, <-ch.Requests())
@@ -259,7 +262,8 @@ func TestAgentClosesStream(t *testing.T) {
 
 func TestAgentClosesConnection(t *testing.T) {
 	connect := func(ch *Channel) error {
-		resp := ch.SendAndWaitResponse(new(agentpb.Ping))
+		resp, err := ch.SendAndWaitResponse(new(agentpb.Ping))
+		require.NoError(t, err)
 		assert.Nil(t, resp)
 
 		assert.Nil(t, <-ch.Requests())
@@ -277,36 +281,69 @@ func TestAgentClosesConnection(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestUnexpectedResponseFromAgent(t *testing.T) {
+func TestUnexpectedResponseIdFromAgent(t *testing.T) {
+	invalidIDSent := make(chan struct{})
 	connect := func(ch *Channel) error {
-		// after receiving unexpected response, channel is closed
-		resp := ch.SendAndWaitResponse(new(agentpb.Ping))
-		assert.Nil(t, resp)
-
-		// future requests are ignored
-		resp = ch.SendAndWaitResponse(new(agentpb.Ping))
-		assert.Nil(t, resp)
+		<-invalidIDSent
+		select {
+		case req := <-ch.Requests():
+			t.Fatalf("Request with invalid id should have been ignored: %v", req)
+		default:
+		}
+		// We can read the message with proper id.
+		respCh := ch.subscribe(9898)
+		ch.send(&agentpb.ServerMessage{
+			Id:      9898,
+			Payload: new(agentpb.Ping).ServerMessageRequestPayload(),
+		})
+		response := <-respCh
+		require.NoError(t, response.Error)
+		require.NotNil(t, response.Payload)
 
 		return nil
 	}
 
-	stream, _, teardown := setup(t, connect, fmt.Errorf("no subscriber for ID 111"))
+	stream, _, teardown := setup(t, connect, status.Error(codes.Canceled, context.Canceled.Error()))
 	defer teardown(t)
 
-	// this message triggers "no subscriber for ID" error
+	// This request with unexpected id is ignored by the pmm-managed, channel stays open.
 	err := stream.Send(&agentpb.AgentMessage{
 		Id:      111,
 		Payload: new(agentpb.Pong).AgentMessageResponsePayload(),
 	})
 	assert.NoError(t, err)
+	close(invalidIDSent)
 
-	// this message should not trigger new error
+	// This is a request with a proper id.
 	err = stream.Send(&agentpb.AgentMessage{
-		Id:      222,
+		Id:      9898,
 		Payload: new(agentpb.Pong).AgentMessageResponsePayload(),
 	})
 	assert.NoError(t, err)
 
 	_, err = stream.Recv()
 	assert.NoError(t, err)
+}
+
+func TestUnexpectedResponsePayloadFromAgent(t *testing.T) {
+	stop := make(chan struct{})
+	stopServer := make(chan struct{})
+	connect := func(ch *Channel) error {
+		<-stopServer
+		close(stop)
+		return nil
+	}
+	stream, _, teardown := setup(t, connect, status.Error(codes.Canceled, context.Canceled.Error()))
+	defer teardown(t)
+
+	err := stream.Send(&agentpb.AgentMessage{
+		Id: 4242,
+	})
+	require.NoError(t, err)
+
+	msg, err := stream.Recv()
+	assert.Equal(t, int32(codes.Unimplemented), msg.GetStatus().GetCode())
+	assert.NoError(t, err)
+	close(stopServer)
+	<-stop
 }

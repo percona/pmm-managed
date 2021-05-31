@@ -30,6 +30,25 @@ import (
 	"gopkg.in/reform.v1"
 )
 
+// MySQLOptionsParams contains methods to create MySQLOptions object.
+type MySQLOptionsParams interface {
+	GetTlsCa() string
+	GetTlsCert() string
+	GetTlsKey() string
+}
+
+// MySQLOptionsFromRequest creates MySQLOptions object from request.
+func MySQLOptionsFromRequest(params MySQLOptionsParams) *MySQLOptions {
+	if params.GetTlsCa() != "" || params.GetTlsCert() != "" || params.GetTlsKey() != "" {
+		return &MySQLOptions{
+			TLSCa:   params.GetTlsCa(),
+			TLSCert: params.GetTlsCert(),
+			TLSKey:  params.GetTlsKey(),
+		}
+	}
+	return nil
+}
+
 // MongoDBOptionsParams contains methods to create MongoDBOptions object.
 type MongoDBOptionsParams interface {
 	GetTlsCertificateKey() string
@@ -191,6 +210,70 @@ func FindAgentsByIDs(q *reform.Querier, ids []string) ([]*Agent, error) {
 		res[i] = s.(*Agent)
 	}
 	return res, nil
+}
+
+// FindDBConfigForService find DB config from agents running on service specified by serviceID.
+func FindDBConfigForService(q *reform.Querier, serviceID string) (DBConfig, error) {
+	svc, err := FindServiceByID(q, serviceID)
+	if err != nil {
+		return DBConfig{}, err
+	}
+	var agentTypes []AgentType
+	switch svc.ServiceType {
+	case MySQLServiceType:
+		agentTypes = []AgentType{
+			MySQLdExporterType,
+			QANMySQLSlowlogAgentType,
+			QANMySQLPerfSchemaAgentType,
+		}
+	case PostgreSQLServiceType:
+		agentTypes = []AgentType{
+			PostgresExporterType,
+			QANPostgreSQLPgStatementsAgentType,
+			QANPostgreSQLPgStatMonitorAgentType,
+		}
+	case MongoDBServiceType:
+		agentTypes = []AgentType{
+			MongoDBExporterType,
+			QANMongoDBProfilerAgentType,
+		}
+	case ExternalServiceType, HAProxyServiceType, ProxySQLServiceType:
+		fallthrough
+	default:
+		return DBConfig{}, status.Error(codes.FailedPrecondition, "Unsupported service.")
+	}
+	p := strings.Join(q.Placeholders(2, len(agentTypes)), ", ")
+	tail := fmt.Sprintf("WHERE service_id = $1 AND agent_type IN (%s) ORDER BY agent_id", p)
+
+	args := make([]interface{}, len(agentTypes)+1)
+	args[0] = serviceID
+	for i, agentType := range agentTypes {
+		args[i+1] = agentType
+	}
+
+	structs, err := q.SelectAllFrom(AgentTable, tail, args...)
+	if err != nil {
+		return DBConfig{}, errors.WithStack(err)
+	}
+
+	res := make([]*Agent, len(structs))
+	for i, s := range structs {
+		res[i] = s.(*Agent)
+	}
+
+	if len(res) == 0 {
+		return DBConfig{}, status.Error(codes.FailedPrecondition, "No agents available.")
+	}
+
+	// Find config with specified user.
+	for _, agent := range res {
+		cfg := agent.DBConfig(svc)
+		if cfg.Valid() {
+			return cfg, nil
+		}
+	}
+
+	return DBConfig{}, status.Error(codes.FailedPrecondition, "No DB config found.")
 }
 
 // FindPMMAgentsRunningOnNode gets pmm-agents for node where it runs.
@@ -540,6 +623,7 @@ type CreateAgentParams struct {
 	CustomLabels                   map[string]string
 	TLS                            bool
 	TLSSkipVerify                  bool
+	MySQLOptions                   *MySQLOptions
 	MongoDBOptions                 *MongoDBOptions
 	TableCountTablestatsGroupLimit int32
 	QueryExamplesDisabled          bool
@@ -594,6 +678,7 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 		Password:                       pointer.ToStringOrNil(params.Password),
 		TLS:                            params.TLS,
 		TLSSkipVerify:                  params.TLSSkipVerify,
+		MySQLOptions:                   params.MySQLOptions,
 		MongoDBOptions:                 params.MongoDBOptions,
 		TableCountTablestatsGroupLimit: params.TableCountTablestatsGroupLimit,
 		QueryExamplesDisabled:          params.QueryExamplesDisabled,

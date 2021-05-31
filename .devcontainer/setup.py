@@ -67,8 +67,8 @@ def make_install():
         "make install",
     ])
 
-def install_tools():
-    """Installs Go developer tools."""
+def make_init():
+    """Runs make init."""
 
     run_commands([
         "curl https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /root/go/bin",
@@ -136,6 +136,7 @@ def main():
 
     # make install (requires make package)
     install_packages_p.join()
+    make_init()
     make_install()
 
     # wait for everything else to finish

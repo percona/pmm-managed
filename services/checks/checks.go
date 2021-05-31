@@ -81,6 +81,7 @@ var (
 var defaultPublicKeys = []string{
 	"RWTfyQTP3R7VzZggYY7dzuCbuCQWqTiGCqOvWRRAMVEiw0eSxHMVBBE5", // PMM 2.6
 	"RWRxgu1w3alvJsQf+sHVUYiF6guAdEsBWXDe8jHZuB9dXVE9b5vw7ONM", // PMM 2.12
+	"RWTHhufOlJ38dWt+DrprOg702YvZgqQJsx1XKfzF+MaB/pe9eCJgKkiF", // PMM 2.17
 }
 
 // Service is responsible for interactions with Percona Check service.
@@ -678,12 +679,12 @@ func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) 
 
 			switch c.Type {
 			case check.MySQLShow:
-				if err := s.agentsRegistry.StartMySQLQueryShowAction(ctx, r.ID, target.agentID, target.dsn, c.Query); err != nil {
+				if err := s.agentsRegistry.StartMySQLQueryShowAction(ctx, r.ID, target.agentID, target.dsn, c.Query, target.files, target.tdp, target.tlsSkipVerify); err != nil {
 					s.l.Warnf("Failed to start MySQL show query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
 			case check.MySQLSelect:
-				if err := s.agentsRegistry.StartMySQLQuerySelectAction(ctx, r.ID, target.agentID, target.dsn, c.Query); err != nil {
+				if err := s.agentsRegistry.StartMySQLQuerySelectAction(ctx, r.ID, target.agentID, target.dsn, c.Query, target.files, target.tdp, target.tlsSkipVerify); err != nil {
 					s.l.Warnf("Failed to start MySQL select query action for agent %s, reason: %s.", target.agentID, err)
 					continue
 				}
@@ -896,12 +897,13 @@ func (s *Service) processResults(ctx context.Context, sttCheck check.Check, targ
 
 // target contains required info about check target.
 type target struct {
-	agentID   string
-	serviceID string
-	labels    map[string]string
-	dsn       string
-	files     map[string]string
-	tdp       *models.DelimiterPair
+	agentID       string
+	serviceID     string
+	labels        map[string]string
+	dsn           string
+	files         map[string]string
+	tdp           *models.DelimiterPair
+	tlsSkipVerify bool
 }
 
 // findTargets returns slice of available targets for specified service type.
@@ -950,12 +952,13 @@ func (s *Service) findTargets(serviceType models.ServiceType, minPMMAgentVersion
 			}
 
 			targets = append(targets, target{
-				agentID:   pmmAgent.AgentID,
-				serviceID: service.ServiceID,
-				labels:    labels,
-				dsn:       dsn,
-				files:     agent.Files(),
-				tdp:       agent.TemplateDelimiters(service),
+				agentID:       pmmAgent.AgentID,
+				serviceID:     service.ServiceID,
+				labels:        labels,
+				dsn:           dsn,
+				files:         agent.Files(),
+				tdp:           agent.TemplateDelimiters(service),
+				tlsSkipVerify: agent.TLSSkipVerify,
 			})
 			return nil
 		})
@@ -1092,6 +1095,12 @@ func (s *Service) downloadChecks(ctx context.Context) ([]check.Check, error) {
 
 	resp, err := api.NewRetrievalAPIClient(cc).GetAllChecks(ctx, &api.GetAllChecksRequest{})
 	if err != nil {
+		// if credentials are invalid then force a logout so that the next check download
+		// attempt can be successful.
+		logoutErr := saasdial.LogoutIfInvalidAuth(s.db, s.l, err)
+		if logoutErr != nil {
+			s.l.Warnf("Failed to force logout: %v", logoutErr)
+		}
 		return nil, errors.Wrap(err, "failed to request checks service")
 	}
 

@@ -17,6 +17,9 @@
 package models
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"gopkg.in/reform.v1"
@@ -44,7 +47,34 @@ func FindArtifacts(q *reform.Querier) ([]*Artifact, error) {
 	return artifacts, nil
 }
 
-func findArtifactByID(q *reform.Querier, id string) (*Artifact, error) {
+// FindArtifactsByIDs finds artifacts by IDs.
+func FindArtifactsByIDs(q *reform.Querier, ids []string) (map[string]*Artifact, error) {
+	if len(ids) == 0 {
+		return map[string]*Artifact{}, nil
+	}
+
+	p := strings.Join(q.Placeholders(1, len(ids)), ", ")
+	tail := fmt.Sprintf("WHERE id IN (%s)", p)
+	args := make([]interface{}, 0, len(ids))
+	for _, id := range ids {
+		args = append(args, id)
+	}
+
+	all, err := q.SelectAllFrom(ArtifactTable, tail, args...)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	artifacts := make(map[string]*Artifact, len(all))
+	for _, l := range all {
+		artifact := l.(*Artifact)
+		artifacts[artifact.ID] = artifact
+	}
+	return artifacts, nil
+}
+
+// FindArtifactByID returns artifact by given ID if found, ErrNotFound if not.
+func FindArtifactByID(q *reform.Querier, id string) (*Artifact, error) {
 	if id == "" {
 		return nil, errors.New("provided artifact id is empty")
 	}
@@ -99,7 +129,7 @@ func CreateArtifact(q *reform.Querier, params CreateArtifactParams) (*Artifact, 
 	}
 
 	id := "/artifact_id/" + uuid.New().String()
-	_, err := findArtifactByID(q, id)
+	_, err := FindArtifactByID(q, id)
 	switch {
 	case err == nil:
 		return nil, errors.Errorf("artifact with id '%s' already exists", id)
@@ -125,9 +155,29 @@ func CreateArtifact(q *reform.Querier, params CreateArtifactParams) (*Artifact, 
 	return row, nil
 }
 
+// ChangeArtifactParams are params for changing existing artifact.
+type ChangeArtifactParams struct {
+	Status BackupStatus
+}
+
+// ChangeArtifact updates existing artifact.
+func ChangeArtifact(q *reform.Querier, artifactID string, params ChangeArtifactParams) (*Artifact, error) {
+	row, err := FindArtifactByID(q, artifactID)
+	if err != nil {
+		return nil, err
+	}
+	row.Status = params.Status
+
+	if err := q.Update(row); err != nil {
+		return nil, errors.Wrap(err, "failed to update backup artifact")
+	}
+
+	return row, nil
+}
+
 // RemoveArtifact removes artifact by ID.
 func RemoveArtifact(q *reform.Querier, id string) error {
-	if _, err := findArtifactByID(q, id); err != nil {
+	if _, err := FindArtifactByID(q, id); err != nil {
 		return err
 	}
 
