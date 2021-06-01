@@ -373,7 +373,6 @@ func RemoveBackupLocation(q *reform.Querier, id string, mode RemoveMode) error {
 		}
 	}
 
-	// @TODO - force delete https://jira.percona.com/browse/PMM-7475
 	if err := q.Delete(&BackupLocation{ID: id}); err != nil {
 		return errors.Wrap(err, "failed to delete BackupLocation")
 	}

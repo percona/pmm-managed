@@ -45,13 +45,13 @@ func FindArtifacts(q *reform.Querier, filters *ArtifactFilters) ([]*Artifact, er
 	var conditions []string
 	var args []interface{}
 	if filters != nil && filters.ServiceID != "" {
-		if _, err := FindServiceByID(q, filters.ServiceID); err != nil {
-			return nil, err
-		}
 		conditions = append(conditions, fmt.Sprintf("service_id = %s", q.Placeholder(1)))
 		args = append(args, filters.ServiceID)
 	}
 	if filters != nil && filters.LocationID != "" {
+		if _, err := FindBackupLocationByID(q, filters.LocationID); err != nil {
+			return nil, err
+		}
 		conditions = append(conditions, fmt.Sprintf("location_id = %s", q.Placeholder(1)))
 		args = append(args, filters.LocationID)
 	}
