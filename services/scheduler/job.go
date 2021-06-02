@@ -13,19 +13,22 @@ type Job interface {
 	Data() models.ScheduleJobData
 }
 
-type EchoJob models.EchoJobData
+type EchoJob struct {
+	jobsDeps
+	models.EchoJobData
+}
 
 func (j *EchoJob) Do(ctx context.Context) error {
 	fmt.Println(j.Value)
 	return nil
 }
+
 func (j *EchoJob) Type() models.ScheduleJobType {
 	return models.ScheduleEchoJob
 }
 
 func (j *EchoJob) Data() models.ScheduleJobData {
-	val := models.EchoJobData(*j)
 	return models.ScheduleJobData{
-		Echo: &val,
+		Echo: &j.EchoJobData,
 	}
 }

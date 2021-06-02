@@ -13,6 +13,9 @@ import (
 	"gopkg.in/reform.v1"
 )
 
+type jobsDeps struct {
+}
+
 // Service is responsive for executing jobs and storing them to DB.
 type Service struct {
 	db        *reform.DB
@@ -20,12 +23,14 @@ type Service struct {
 	l         *logrus.Entry
 	jobs      map[string]context.CancelFunc
 	jobsMx    sync.RWMutex
+	jobsDeps  jobsDeps
 }
 
 // New creates new scheduler service.
 func New(db *reform.DB) *Service {
 	scheduler := gocron.NewScheduler(time.UTC)
 	scheduler.TagsUnique()
+	// @TODO accept deps and fill jobsDeps
 	return &Service{
 		db:        db,
 		scheduler: scheduler,
@@ -115,7 +120,7 @@ func (s *Service) loadFromDB() error {
 	}
 
 	for _, dbJob := range jobs {
-		job, err := convertDBJob(dbJob)
+		job, err := s.convertDBJob(dbJob)
 		if err != nil {
 			return err
 		}
@@ -191,11 +196,14 @@ func (s *Service) jobFinished(id string) {
 	}
 }
 
-func convertDBJob(dbJob *models.ScheduleJob) (Job, error) {
+func (s *Service) convertDBJob(dbJob *models.ScheduleJob) (Job, error) {
 	var job Job
 	switch dbJob.Type {
 	case models.ScheduleEchoJob:
-		val := EchoJob(*dbJob.Data.Echo)
+		val := EchoJob{
+			jobsDeps:    s.jobsDeps,
+			EchoJobData: *dbJob.Data.Echo,
+		}
 		job = &val
 	default:
 		return job, fmt.Errorf("unknown job type: %s", dbJob.Type)
