@@ -6,8 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gofrs/uuid"
-
 	"github.com/percona/pmm-managed/models"
 
 	"github.com/go-co-op/gocron"
@@ -54,27 +52,31 @@ func (s *Service) Add(job Job, cronExpr string, startAt time.Time, retry uint, r
 	}
 
 	err := s.db.InTransaction(func(tx *reform.TX) error {
-		id := uuid.Must(uuid.NewV4()).String()
-		fn := s.wrapJob(job, id, int(retry), retryInterval)
-		scheduledJob, err := j.Tag(id).Do(fn)
-		if err != nil {
-			return err
-		}
-
-		_, err = models.CreateScheduleJob(tx.Querier, models.CreateScheduleJobParams{
+		dbJob, err := models.CreateScheduleJob(tx.Querier, models.CreateScheduleJobParams{
 			CronExpression: cronExpr,
 			StartAt:        startAt,
-			NextRun:        scheduledJob.NextRun(),
 			Type:           job.Type(),
 			Data:           job.Data(),
 			Retries:        retry,
 			RetryInterval:  retryInterval,
 		})
-
 		if err != nil {
-			s.scheduler.RemoveByReference(scheduledJob)
 			return err
 		}
+		fn := s.wrapJob(job, dbJob.ID, int(retry), retryInterval)
+		scheduleJob, err := j.Tag(dbJob.ID).Do(fn)
+		if err != nil {
+			return err
+		}
+
+		_, err = models.ChangeScheduleJob(tx.Querier, dbJob.ID, models.ChangeScheduleJobParams{
+			NextRun: scheduleJob.NextRun(),
+			LastRun: scheduleJob.LastRun(),
+		})
+		if err != nil {
+			s.l.WithField("id", dbJob.ID).Errorf("failed to set next run for new created job")
+		}
+
 		return nil
 	})
 	return err
@@ -95,6 +97,7 @@ func (s *Service) Remove(id string) error {
 	if err := models.RemoveScheduleJob(s.db.Querier, id); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -110,6 +113,7 @@ func (s *Service) loadFromDB() error {
 	if err != nil {
 		return err
 	}
+
 	for _, dbJob := range jobs {
 		job, err := convertDBJob(dbJob)
 		if err != nil {
@@ -144,18 +148,18 @@ func (s *Service) wrapJob(job Job, id string, retry int, retryInterval time.Dura
 			s.jobsMx.Unlock()
 		}()
 
-		for once := true; once || retry > 0; once = false {
+		for {
 			t := time.Now()
 			l.Debug("Starting job")
 			err = job.Do(ctx)
 			l.WithField("duration", time.Since(t)).Debug("Ended  job")
-			if err == nil {
+			if err == nil || err == context.Canceled {
 				break
 			} else {
 				l.Error(err)
-				if err == context.Canceled {
-					break
-				}
+			}
+			if retry <= 0 {
+				break
 			}
 			retry--
 			time.Sleep(retryInterval)
