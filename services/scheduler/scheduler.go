@@ -50,14 +50,17 @@ func (s *Service) Run(ctx context.Context) {
 }
 
 // Add adds job to scheduler and save it to DB.
-func (s *Service) Add(job Job, cronExpr string, startAt time.Time, retry uint, retryInterval time.Duration) error {
-	j := s.scheduler.Cron(cronExpr).SingletonMode()
-	if !startAt.IsZero() {
-		j = j.StartAt(startAt)
-	}
+func (s *Service) Add(job Job, cronExpr string, startAt time.Time, retry uint, retryInterval time.Duration) (*models.ScheduleJob, error) {
+	var dbJob *models.ScheduleJob
+	var err error
 
-	err := s.db.InTransaction(func(tx *reform.TX) error {
-		dbJob, err := models.CreateScheduleJob(tx.Querier, models.CreateScheduleJobParams{
+	err = s.db.InTransaction(func(tx *reform.TX) error {
+		j := s.scheduler.Cron(cronExpr).SingletonMode()
+		if !startAt.IsZero() {
+			j = j.StartAt(startAt)
+		}
+
+		dbJob, err = models.CreateScheduleJob(tx.Querier, models.CreateScheduleJobParams{
 			CronExpression: cronExpr,
 			StartAt:        startAt,
 			Type:           job.Type(),
@@ -68,23 +71,26 @@ func (s *Service) Add(job Job, cronExpr string, startAt time.Time, retry uint, r
 		if err != nil {
 			return err
 		}
-		fn := s.wrapJob(job, dbJob.ID, int(retry), retryInterval)
-		scheduleJob, err := j.Tag(dbJob.ID).Do(fn)
+
+		id := dbJob.ID
+		fn := s.wrapJob(job, id, int(retry), retryInterval)
+
+		scheduleJob, err := j.Tag(id).Do(fn)
 		if err != nil {
 			return err
 		}
 
-		_, err = models.ChangeScheduleJob(tx.Querier, dbJob.ID, models.ChangeScheduleJobParams{
+		dbJob, err = models.ChangeScheduleJob(tx.Querier, id, models.ChangeScheduleJobParams{
 			NextRun: scheduleJob.NextRun(),
 			LastRun: scheduleJob.LastRun(),
 		})
 		if err != nil {
-			s.l.WithField("id", dbJob.ID).Errorf("failed to set next run for new created job")
+			s.l.WithField("id", id).Errorf("failed to set next run for new created job")
 		}
 
 		return nil
 	})
-	return err
+	return dbJob, err
 }
 
 // Remove stops job specified by id and removes it from DB and scheduler.

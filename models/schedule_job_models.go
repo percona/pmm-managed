@@ -85,6 +85,9 @@ func (r *ScheduleJob) BeforeUpdate() error {
 func (r *ScheduleJob) AfterFind() error {
 	r.CreatedAt = r.CreatedAt.UTC()
 	r.UpdatedAt = r.UpdatedAt.UTC()
+	r.StartAt = r.StartAt.UTC()
+	r.NextRun = r.NextRun.UTC()
+	r.LastRun = r.LastRun.UTC()
 
 	return nil
 }

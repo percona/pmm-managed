@@ -518,7 +518,8 @@ var databaseSchema = [][]string{
 			next_run TIMESTAMP,
 			data JSONB,
 			retries SMALLINT,
-			retry_interval BIGINT
+			retry_interval BIGINT,
+			disabled BOOLEAN,
 
 			created_at TIMESTAMP NOT NULL,
 			updated_at TIMESTAMP NOT NULL,
