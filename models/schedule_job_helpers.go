@@ -79,6 +79,7 @@ type CreateScheduleJobParams struct {
 	Data           ScheduleJobData
 	Retries        uint
 	RetryInterval  time.Duration
+	Disabled       bool
 }
 
 // Validate checks if required params are set and valid.
@@ -105,7 +106,7 @@ func CreateScheduleJob(q *reform.Querier, params CreateScheduleJobParams) (*Sche
 
 	job := &ScheduleJob{
 		ID:             id,
-		Disabled:       false,
+		Disabled:       params.Disabled,
 		CronExpression: params.CronExpression,
 		StartAt:        params.StartAt,
 		NextRun:        params.NextRun,

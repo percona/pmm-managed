@@ -67,6 +67,7 @@ func (s *Service) Add(job Job, cronExpr string, startAt time.Time, retry uint, r
 			Data:           job.Data(),
 			Retries:        retry,
 			RetryInterval:  retryInterval,
+			Disabled:       false,
 		})
 		if err != nil {
 			return err
@@ -113,23 +114,29 @@ func (s *Service) Remove(id string) error {
 }
 
 func (s *Service) loadFromDB() error {
-	s.scheduler.Clear()
-	// Reset tags
-	s.scheduler.TagsUnique()
-
 	disabled := false
-	jobs, err := models.FindScheduleJobs(s.db.Querier, models.ScheduleJobsFilter{
+	dbJobs, err := models.FindScheduleJobs(s.db.Querier, models.ScheduleJobsFilter{
 		Disabled: &disabled,
 	})
 	if err != nil {
 		return err
 	}
 
-	for _, dbJob := range jobs {
+	jobs := make([]Job, 0, len(dbJobs))
+	for _, dbJob := range dbJobs {
 		job, err := s.convertDBJob(dbJob)
 		if err != nil {
 			return err
 		}
+		jobs = append(jobs, job)
+	}
+
+	s.scheduler.Clear()
+	// Reset tags
+	s.scheduler.TagsUnique()
+
+	for i, job := range jobs {
+		dbJob := dbJobs[i]
 		fn := s.wrapJob(job, dbJob.ID, int(dbJob.Retries), dbJob.RetryInterval)
 		j := s.scheduler.Cron(dbJob.CronExpression).SingletonMode()
 		if !dbJob.StartAt.IsZero() {
@@ -145,7 +152,10 @@ func (s *Service) loadFromDB() error {
 func (s *Service) wrapJob(job Job, id string, retry int, retryInterval time.Duration) func() {
 	return func() {
 		var err error
-		l := s.l.WithField("jobType", job.Type())
+		l := s.l.WithFields(logrus.Fields{
+			"id":      id,
+			"jobType": job.Type(),
+		})
 		ctx, cancel := context.WithCancel(context.Background())
 
 		s.jobsMx.Lock()
@@ -173,7 +183,13 @@ func (s *Service) wrapJob(job Job, id string, retry int, retryInterval time.Dura
 				break
 			}
 			retry--
-			time.Sleep(retryInterval)
+
+			timer := time.NewTimer(retryInterval)
+			select {
+			case <-ctx.Done():
+			case <-timer.C:
+			}
+			timer.Stop()
 		}
 		s.jobFinished(id)
 	}

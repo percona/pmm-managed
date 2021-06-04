@@ -2,13 +2,18 @@ package scheduler
 
 import (
 	"context"
-	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/utils/testdb"
-	"github.com/stretchr/testify/assert"
-	"gopkg.in/reform.v1"
-	"gopkg.in/reform.v1/dialects/postgresql"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"gopkg.in/reform.v1"
+	"gopkg.in/reform.v1/dialects/postgresql"
+
+	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/utils/testdb"
+	"github.com/percona/pmm-managed/utils/tests"
 )
 
 func setup(t *testing.T) *Service {
@@ -47,5 +52,11 @@ func TestService(t *testing.T) {
 	assert.Equal(t, retryInterval, dbJob.RetryInterval)
 	assert.Equal(t, cronExpr, findJob.CronExpression)
 	assert.Truef(t, dbJob.NextRun.After(startAt), "next run %s is before startAt %s", dbJob.NextRun, startAt)
+
+	err = svc.Remove(dbJob.ID)
+	assert.NoError(t, err)
+	assert.Len(t, svc.scheduler.Jobs(), 0)
+	_, err = models.FindScheduleJobByID(svc.db.Querier, dbJob.ID)
+	tests.AssertGRPCError(t, status.Newf(codes.NotFound, `ScheduleJob with ID "%s" not found.`, dbJob.ID), err)
 
 }
