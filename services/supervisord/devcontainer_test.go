@@ -52,7 +52,7 @@ func TestDevContainer(t *testing.T) {
 		assert.True(t, strings.HasPrefix(fullVersion, "2."), "%s", fullVersion)
 		require.NotEmpty(t, info.BuildTime)
 		assert.True(t, info.BuildTime.After(gaReleaseDate), "BuildTime = %s", info.BuildTime)
-		assert.Equal(t, "pmm2-server", info.Repo)
+		assert.Equal(t, "local", info.Repo)
 
 		info2 := checker.Installed(ctx)
 		assert.Equal(t, info, info2)
@@ -70,7 +70,7 @@ func TestDevContainer(t *testing.T) {
 		assert.True(t, strings.HasPrefix(installedFullVersion, "2."), "%s", installedFullVersion)
 		require.NotEmpty(t, res.Installed.BuildTime)
 		assert.True(t, res.Installed.BuildTime.After(gaReleaseDate), "Installed.BuildTime = %s", res.Installed.BuildTime)
-		assert.Equal(t, "pmm2-server", res.Installed.Repo)
+		assert.Equal(t, "local", res.Installed.Repo)
 
 		assert.True(t, strings.HasPrefix(res.Latest.Version, "2."), "%s", res.Latest.Version)
 		latestFullVersion, isFeatureBranch := normalizeFullversion(&res.Latest)
@@ -90,7 +90,7 @@ func TestDevContainer(t *testing.T) {
 		assert.Empty(t, res.LatestNewsURL, "latest_news_url should be empty")
 		assert.Equal(t, res.Installed, res.Latest, "version should be the same (latest)")
 		assert.Equal(t, *res.Installed.BuildTime, *res.Latest.BuildTime, "build times should be the same")
-		assert.Equal(t, "pmm2-server", res.Latest.Repo)
+		assert.Equal(t, "local", res.Latest.Repo)
 
 		// cached result
 		res2, resT2 := checker.checkResult(ctx)
