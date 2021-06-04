@@ -29,6 +29,7 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/stringset"
+	pmmversion "github.com/percona/pmm/version"
 )
 
 type componentsService struct {
@@ -62,8 +63,8 @@ func (c *componentsService) Enabled() bool {
 func (c componentsService) GetPSMDBComponents(ctx context.Context, req *dbaasv1beta1.GetPSMDBComponentsRequest) (*dbaasv1beta1.GetPSMDBComponentsResponse, error) {
 	var kubernetesCluster *models.KubernetesCluster
 	params := componentsParams{
-		operator:  psmdbOperator,
-		dbVersion: req.DbVersion,
+		product:        psmdbOperator,
+		versionToApply: req.DbVersion,
 	}
 	if req.KubernetesClusterName != "" {
 		var err error
@@ -78,7 +79,7 @@ func (c componentsService) GetPSMDBComponents(ctx context.Context, req *dbaasv1b
 		}
 
 		if checkResponse.Operators.Psmdb != nil {
-			params.operatorVersion = checkResponse.Operators.Psmdb.Version
+			params.productVersion = checkResponse.Operators.Psmdb.Version
 		}
 	}
 
@@ -92,8 +93,8 @@ func (c componentsService) GetPSMDBComponents(ctx context.Context, req *dbaasv1b
 func (c componentsService) GetPXCComponents(ctx context.Context, req *dbaasv1beta1.GetPXCComponentsRequest) (*dbaasv1beta1.GetPXCComponentsResponse, error) {
 	var kubernetesCluster *models.KubernetesCluster
 	params := componentsParams{
-		operator:  pxcOperator,
-		dbVersion: req.DbVersion,
+		product:        pxcOperator,
+		versionToApply: req.DbVersion,
 	}
 	if req.KubernetesClusterName != "" {
 		var err error
@@ -108,7 +109,7 @@ func (c componentsService) GetPXCComponents(ctx context.Context, req *dbaasv1bet
 		}
 
 		if checkResponse.Operators.Xtradb != nil {
-			params.operatorVersion = checkResponse.Operators.Xtradb.Version
+			params.productVersion = checkResponse.Operators.Xtradb.Version
 		}
 	}
 
@@ -192,6 +193,36 @@ func (c componentsService) ChangePXCComponents(ctx context.Context, req *dbaasv1
 	return &dbaasv1beta1.ChangePXCComponentsResponse{}, nil
 }
 
+func (c componentsService) CheckForOperatorUpdate(ctx context.Context, req *dbaasv1beta1.CheckForOperatorUpdateRequest) (*dbaasv1beta1.CheckForOperatorUpdateResponse, error) {
+	latest, err := c.versionServiceClient.GetLatestOperatorVersion(ctx, req.OperatorType, pmmversion.PMMVersion)
+	if err != nil {
+		return nil, err
+	}
+	if latest.GreaterThan(installedVersion) {
+		return &dbaasv1beta1.CheckForOperatorUpdateResponse{
+			Status:                   dbaasv1beta1.OperatorUpdateStatus_UPDATE_AVAILABLE,
+			AvailableOperatorVersion: latest.String(),
+		}
+	} else if latest.EqualTo(installedVersion) {
+		// omit pmm version to get latest operator for pmm versions
+		latest, err := c.versionServiceClient.GetLatestOperatorVersion(ctx, req.OperatorType, "")
+		if err != nil {
+			return nil, err
+		}
+		if latest.GreaterThan(installedVersion) {
+		return &dbaasv1beta1.CheckForOperatorUpdateResponse{
+			Status:                   dbaasv1beta1.OperatorUpdateStatus_UPDATE_AVAILABLE_BUT_NOT_COMPATIBLE,
+			AvailableOperatorVersion: latest.String(),
+			AvailablePmmServerVersion: TODO,
+		}
+	}
+	return &dbaasv1beta1.CheckForOperatorUpdateResponse{
+		Status:                   dbaasv1beta1.OperatorUpdateStatus_UPDATE_NOT_AVAILABLE,
+	}
+
+	return nil, nil
+}
+
 func (c componentsService) versions(ctx context.Context, params componentsParams, cluster *models.KubernetesCluster) ([]*dbaasv1beta1.OperatorVersion, error) {
 	components, err := c.versionServiceClient.Matrix(ctx, params)
 	if err != nil {
@@ -212,7 +243,7 @@ func (c componentsService) versions(ctx context.Context, params componentsParams
 	for _, v := range components.Versions {
 		respVersion := &dbaasv1beta1.OperatorVersion{
 			Product:  v.Product,
-			Operator: v.Operator,
+			Operator: v.ProductVersion,
 			Matrix: &dbaasv1beta1.Matrix{
 				Mongod:       c.matrix(v.Matrix.Mongod, mongodMinimalVersion, mongod),
 				Pxc:          c.matrix(v.Matrix.Pxc, pxcMinimalVersion, pxc),
