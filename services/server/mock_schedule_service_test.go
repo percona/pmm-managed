@@ -7,6 +7,8 @@ import (
 
 	mock "github.com/stretchr/testify/mock"
 
+	models "github.com/percona/pmm-managed/models"
+
 	scheduler "github.com/percona/pmm-managed/services/scheduler"
 
 	time "time"
@@ -17,18 +19,27 @@ type mockScheduleService struct {
 	mock.Mock
 }
 
-// Add provides a mock function with given fields: job, cronExpr, startAt, retry, retryInterval
-func (_m *mockScheduleService) Add(job scheduler.Task, cronExpr string, startAt time.Time, retry uint, retryInterval time.Duration) error {
-	ret := _m.Called(job, cronExpr, startAt, retry, retryInterval)
+// Add provides a mock function with given fields: task, cronExpr, startAt, retry, retryInterval
+func (_m *mockScheduleService) Add(task scheduler.Task, cronExpr string, startAt time.Time, retry uint, retryInterval time.Duration) (*models.ScheduledTask, error) {
+	ret := _m.Called(task, cronExpr, startAt, retry, retryInterval)
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(scheduler.Task, string, time.Time, uint, time.Duration) error); ok {
-		r0 = rf(job, cronExpr, startAt, retry, retryInterval)
+	var r0 *models.ScheduledTask
+	if rf, ok := ret.Get(0).(func(scheduler.Task, string, time.Time, uint, time.Duration) *models.ScheduledTask); ok {
+		r0 = rf(task, cronExpr, startAt, retry, retryInterval)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.ScheduledTask)
+		}
 	}
 
-	return r0
+	var r1 error
+	if rf, ok := ret.Get(1).(func(scheduler.Task, string, time.Time, uint, time.Duration) error); ok {
+		r1 = rf(task, cronExpr, startAt, retry, retryInterval)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // Remove provides a mock function with given fields: id

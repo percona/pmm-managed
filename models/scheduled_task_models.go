@@ -25,7 +25,7 @@ import (
 
 //go:generate reform
 
-// ScheduledTaskType represents schedule job type.
+// ScheduledTaskType represents scheduled task type.
 type ScheduledTaskType string
 
 // Supported scheduled task types.
@@ -53,7 +53,7 @@ type ScheduledTask struct {
 	UpdatedAt        time.Time          `reform:"updated_at"`
 }
 
-// ScheduledTaskData holds result data for different job types.
+// ScheduledTaskData holds result data for different task types.
 type ScheduledTaskData struct {
 	Print *PrintTaskData `json:"print,omitempty"`
 }

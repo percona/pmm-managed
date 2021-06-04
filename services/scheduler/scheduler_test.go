@@ -35,28 +35,28 @@ func TestService(t *testing.T) {
 		time.Sleep(time.Millisecond * 10)
 	}
 
-	job := NewPrintTask("test")
+	task := NewPrintTask("test")
 	cronExpr := "* * * * *"
 	startAt := time.Now().Truncate(time.Second).UTC()
 	retries := uint(3)
 	retryInterval := time.Millisecond
-	dbJob, err := svc.Add(job, "* * * * *", startAt, retries, retryInterval)
+	dbTask, err := svc.Add(task, "* * * * *", startAt, retries, retryInterval)
 	assert.NoError(t, err)
 
 	assert.Len(t, svc.scheduler.Jobs(), 1)
-	findJob, err := models.FindScheduledTaskByID(svc.db.Querier, dbJob.ID)
+	findJob, err := models.FindScheduledTaskByID(svc.db.Querier, dbTask.ID)
 	assert.NoError(t, err)
 
-	assert.Equal(t, startAt, dbJob.StartAt)
-	assert.Equal(t, retries, dbJob.Retries)
-	assert.Equal(t, retryInterval, dbJob.RetryInterval)
+	assert.Equal(t, startAt, dbTask.StartAt)
+	assert.Equal(t, retries, dbTask.Retries)
+	assert.Equal(t, retryInterval, dbTask.RetryInterval)
 	assert.Equal(t, cronExpr, findJob.CronExpression)
-	assert.Truef(t, dbJob.NextRun.After(startAt), "next run %s is before startAt %s", dbJob.NextRun, startAt)
+	assert.Truef(t, dbTask.NextRun.After(startAt), "next run %s is before startAt %s", dbTask.NextRun, startAt)
 
-	err = svc.Remove(dbJob.ID)
+	err = svc.Remove(dbTask.ID)
 	assert.NoError(t, err)
 	assert.Len(t, svc.scheduler.Jobs(), 0)
-	_, err = models.FindScheduledTaskByID(svc.db.Querier, dbJob.ID)
-	tests.AssertGRPCError(t, status.Newf(codes.NotFound, `ScheduledTask with ID "%s" not found.`, dbJob.ID), err)
+	_, err = models.FindScheduledTaskByID(svc.db.Querier, dbTask.ID)
+	tests.AssertGRPCError(t, status.Newf(codes.NotFound, `ScheduledTask with ID "%s" not found.`, dbTask.ID), err)
 
 }

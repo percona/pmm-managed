@@ -47,7 +47,7 @@ func (s *Service) Run(ctx context.Context) {
 	s.scheduler.Stop()
 }
 
-// Add adds job to scheduler and save it to DB.
+// Add adds task to scheduler and save it to DB.
 func (s *Service) Add(task Task, cronExpr string, startAt time.Time, retry uint, retryInterval time.Duration) (*models.ScheduledTask, error) {
 	var scheduledTask *models.ScheduledTask
 	var err error
@@ -93,7 +93,7 @@ func (s *Service) Add(task Task, cronExpr string, startAt time.Time, retry uint,
 	return scheduledTask, err
 }
 
-// Remove stops job specified by id and removes it from DB and scheduler.
+// Remove stops task specified by id and removes it from DB and scheduler.
 func (s *Service) Remove(id string) error {
 	s.taskMx.RLock()
 	if cancel, ok := s.tasks[id]; ok {
@@ -120,16 +120,16 @@ func (s *Service) loadFromDB() error {
 	defer s.jobsMx.Unlock()
 
 	disabled := false
-	dbJobs, err := models.FindScheduledTasks(s.db.Querier, models.ScheduledTasksFilter{
+	dbTasks, err := models.FindScheduledTasks(s.db.Querier, models.ScheduledTasksFilter{
 		Disabled: &disabled,
 	})
 	if err != nil {
 		return err
 	}
 
-	jobs := make([]Task, 0, len(dbJobs))
-	for _, dbJob := range dbJobs {
-		job, err := s.convertDBTask(dbJob)
+	jobs := make([]Task, 0, len(dbTasks))
+	for _, dbTask := range dbTasks {
+		job, err := s.convertDBTask(dbTask)
 		if err != nil {
 			return err
 		}
@@ -141,13 +141,13 @@ func (s *Service) loadFromDB() error {
 	s.scheduler.TagsUnique()
 
 	for i, job := range jobs {
-		dbJob := dbJobs[i]
-		fn := s.wrapTask(job, dbJob.ID, int(dbJob.RetriesRemaining), dbJob.RetryInterval)
-		j := s.scheduler.Cron(dbJob.CronExpression).SingletonMode()
-		if !dbJob.StartAt.IsZero() {
-			j = j.StartAt(dbJob.StartAt)
+		dbTask := dbTasks[i]
+		fn := s.wrapTask(job, dbTask.ID, int(dbTask.RetriesRemaining), dbTask.RetryInterval)
+		j := s.scheduler.Cron(dbTask.CronExpression).SingletonMode()
+		if !dbTask.StartAt.IsZero() {
+			j = j.StartAt(dbTask.StartAt)
 		}
-		if _, err := j.Tag(dbJob.ID).Do(fn); err != nil {
+		if _, err := j.Tag(dbTask.ID).Do(fn); err != nil {
 			return err
 		}
 
