@@ -251,14 +251,9 @@ func (s *Service) taskFinished(id string, succeeded bool) {
 func (s *Service) convertDBTask(dbTask *models.ScheduledTask) (Task, error) {
 	var task Task
 	switch dbTask.Type {
-	case models.ScheduledEchoTask:
-		val := EchoTask{
-			jobsDeps:     s.jobsDeps,
-			EchoTaskData: *dbTask.Data.Echo,
-		}
-		task = &val
+	case models.ScheduledPrintTask:
+		return NewPrintTask(dbTask.Data.Print.Message), nil
 	default:
 		return task, fmt.Errorf("unknown task type: %s", dbTask.Type)
 	}
-	return task, nil
 }

@@ -85,7 +85,7 @@ type CreateScheduledTaskParams struct {
 // Validate checks if required params are set and valid.
 func (p CreateScheduledTaskParams) Validate() error {
 	switch p.Type {
-	case ScheduledEchoTask:
+	case ScheduledPrintTask:
 	default:
 		return status.Errorf(codes.InvalidArgument, "Unknown type: %s", p.Type)
 	}

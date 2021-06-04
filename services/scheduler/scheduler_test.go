@@ -35,7 +35,7 @@ func TestService(t *testing.T) {
 		time.Sleep(time.Millisecond * 10)
 	}
 
-	job := &EchoTask{EchoTaskData: models.EchoTaskData{Value: "test"}}
+	job := NewPrintTask("test")
 	cronExpr := "* * * * *"
 	startAt := time.Now().Truncate(time.Second).UTC()
 	retries := uint(3)

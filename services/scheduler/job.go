@@ -13,22 +13,29 @@ type Task interface {
 	Data() models.ScheduledTaskData
 }
 
-type EchoTask struct {
-	jobsDeps
-	models.EchoTaskData
+type printTask struct {
+	Message string
 }
 
-func (j *EchoTask) Do(ctx context.Context) error {
-	fmt.Println(j.Value)
+func NewPrintTask(message string) *printTask {
+	return &printTask{
+		Message: message,
+	}
+}
+
+func (j *printTask) Do(ctx context.Context) error {
+	fmt.Println(j.Message)
 	return nil
 }
 
-func (j *EchoTask) Type() models.ScheduledTaskType {
-	return models.ScheduledEchoTask
+func (j *printTask) Type() models.ScheduledTaskType {
+	return models.ScheduledPrintTask
 }
 
-func (j *EchoTask) Data() models.ScheduledTaskData {
+func (j *printTask) Data() models.ScheduledTaskData {
 	return models.ScheduledTaskData{
-		Echo: &j.EchoTaskData,
+		Print: &models.PrintTaskData{
+			Message: j.Message,
+		},
 	}
 }

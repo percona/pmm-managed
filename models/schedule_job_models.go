@@ -28,9 +28,9 @@ import (
 // ScheduledTaskType represents schedule job type.
 type ScheduledTaskType string
 
-// Supported schedule task types.
+// Supported scheduled task types.
 const (
-	ScheduledEchoTask = ScheduledTaskType("echo")
+	ScheduledPrintTask = ScheduledTaskType("print")
 )
 
 // ScheduledTask describes a scheduled task.
@@ -55,11 +55,11 @@ type ScheduledTask struct {
 
 // ScheduledTaskData holds result data for different job types.
 type ScheduledTaskData struct {
-	Echo *EchoTaskData `json:"echo,omitempty"`
+	Print *PrintTaskData `json:"echo,omitempty"`
 }
 
-type EchoTaskData struct {
-	Value string
+type PrintTaskData struct {
+	Message string
 }
 
 // Value implements database/sql/driver.Valuer interface. Should be defined on the value.
