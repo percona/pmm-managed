@@ -18,11 +18,11 @@ type mockScheduleService struct {
 }
 
 // Add provides a mock function with given fields: job, cronExpr, startAt, retry, retryInterval
-func (_m *mockScheduleService) Add(job scheduler.Job, cronExpr string, startAt time.Time, retry uint, retryInterval time.Duration) error {
+func (_m *mockScheduleService) Add(job scheduler.Task, cronExpr string, startAt time.Time, retry uint, retryInterval time.Duration) error {
 	ret := _m.Called(job, cronExpr, startAt, retry, retryInterval)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(scheduler.Job, string, time.Time, uint, time.Duration) error); ok {
+	if rf, ok := ret.Get(0).(func(scheduler.Task, string, time.Time, uint, time.Duration) error); ok {
 		r0 = rf(job, cronExpr, startAt, retry, retryInterval)
 	} else {
 		r0 = ret.Error(0)

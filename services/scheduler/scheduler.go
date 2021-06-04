@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/AlekSi/pointer"
+
 	"github.com/percona/pmm-managed/models"
 
 	"github.com/go-co-op/gocron"
@@ -16,13 +18,13 @@ import (
 type jobsDeps struct {
 }
 
-// Service is responsive for executing jobs and storing them to DB.
+// Service is responsive for executing tasks and storing them to DB.
 type Service struct {
 	db        *reform.DB
 	scheduler *gocron.Scheduler
 	l         *logrus.Entry
-	jobs      map[string]context.CancelFunc
-	jobsMx    sync.RWMutex
+	tasks     map[string]context.CancelFunc
+	taskMx    sync.RWMutex
 	jobsDeps  jobsDeps
 }
 
@@ -34,12 +36,12 @@ func New(db *reform.DB) *Service {
 	return &Service{
 		db:        db,
 		scheduler: scheduler,
-		jobs:      make(map[string]context.CancelFunc),
+		tasks:     make(map[string]context.CancelFunc),
 		l:         logrus.WithField("component", "scheduler"),
 	}
 }
 
-// Run loads jobs from DB and starts scheduler.
+// Run loads tasks from DB and starts scheduler.
 func (s *Service) Run(ctx context.Context) {
 	if err := s.loadFromDB(); err != nil {
 		s.l.Warn(err)
@@ -50,8 +52,8 @@ func (s *Service) Run(ctx context.Context) {
 }
 
 // Add adds job to scheduler and save it to DB.
-func (s *Service) Add(job Job, cronExpr string, startAt time.Time, retry uint, retryInterval time.Duration) (*models.ScheduleJob, error) {
-	var dbJob *models.ScheduleJob
+func (s *Service) Add(task Task, cronExpr string, startAt time.Time, retry uint, retryInterval time.Duration) (*models.ScheduledTask, error) {
+	var scheduledTask *models.ScheduledTask
 	var err error
 
 	err = s.db.InTransaction(func(tx *reform.TX) error {
@@ -60,11 +62,11 @@ func (s *Service) Add(job Job, cronExpr string, startAt time.Time, retry uint, r
 			j = j.StartAt(startAt)
 		}
 
-		dbJob, err = models.CreateScheduleJob(tx.Querier, models.CreateScheduleJobParams{
+		scheduledTask, err = models.CreateScheduledTask(tx.Querier, models.CreateScheduledTaskParams{
 			CronExpression: cronExpr,
 			StartAt:        startAt,
-			Type:           job.Type(),
-			Data:           job.Data(),
+			Type:           task.Type(),
+			Data:           task.Data(),
 			Retries:        retry,
 			RetryInterval:  retryInterval,
 			Disabled:       false,
@@ -73,40 +75,40 @@ func (s *Service) Add(job Job, cronExpr string, startAt time.Time, retry uint, r
 			return err
 		}
 
-		id := dbJob.ID
-		fn := s.wrapJob(job, id, int(retry), retryInterval)
+		id := scheduledTask.ID
+		fn := s.wrapTask(task, id, int(retry), retryInterval)
 
 		scheduleJob, err := j.Tag(id).Do(fn)
 		if err != nil {
 			return err
 		}
 
-		dbJob, err = models.ChangeScheduleJob(tx.Querier, id, models.ChangeScheduleJobParams{
+		scheduledTask, err = models.ChangeScheduledTask(tx.Querier, id, models.ChangeScheduledTaskParams{
 			NextRun: scheduleJob.NextRun(),
 			LastRun: scheduleJob.LastRun(),
 		})
 		if err != nil {
-			s.l.WithField("id", id).Errorf("failed to set next run for new created job")
+			s.l.WithField("id", id).Errorf("failed to set next run for new created task")
 		}
 
 		return nil
 	})
-	return dbJob, err
+	return scheduledTask, err
 }
 
 // Remove stops job specified by id and removes it from DB and scheduler.
 func (s *Service) Remove(id string) error {
-	s.jobsMx.RLock()
-	if cancel, ok := s.jobs[id]; ok {
+	s.taskMx.RLock()
+	if cancel, ok := s.tasks[id]; ok {
 		cancel()
 	}
-	s.jobsMx.RUnlock()
+	s.taskMx.RUnlock()
 	err := s.scheduler.RemoveByTag(id)
 	if err != nil {
 		return err
 	}
 
-	if err := models.RemoveScheduleJob(s.db.Querier, id); err != nil {
+	if err := models.RemoveScheduledTask(s.db.Querier, id); err != nil {
 		return err
 	}
 
@@ -115,16 +117,16 @@ func (s *Service) Remove(id string) error {
 
 func (s *Service) loadFromDB() error {
 	disabled := false
-	dbJobs, err := models.FindScheduleJobs(s.db.Querier, models.ScheduleJobsFilter{
+	dbJobs, err := models.FindScheduledTasks(s.db.Querier, models.ScheduledTasksFilter{
 		Disabled: &disabled,
 	})
 	if err != nil {
 		return err
 	}
 
-	jobs := make([]Job, 0, len(dbJobs))
+	jobs := make([]Task, 0, len(dbJobs))
 	for _, dbJob := range dbJobs {
-		job, err := s.convertDBJob(dbJob)
+		job, err := s.convertDBTask(dbJob)
 		if err != nil {
 			return err
 		}
@@ -137,7 +139,7 @@ func (s *Service) loadFromDB() error {
 
 	for i, job := range jobs {
 		dbJob := dbJobs[i]
-		fn := s.wrapJob(job, dbJob.ID, int(dbJob.Retries), dbJob.RetryInterval)
+		fn := s.wrapTask(job, dbJob.ID, int(dbJob.RetriesRemaining), dbJob.RetryInterval)
 		j := s.scheduler.Cron(dbJob.CronExpression).SingletonMode()
 		if !dbJob.StartAt.IsZero() {
 			j = j.StartAt(dbJob.StartAt)
@@ -149,40 +151,52 @@ func (s *Service) loadFromDB() error {
 	}
 	return nil
 }
-func (s *Service) wrapJob(job Job, id string, retry int, retryInterval time.Duration) func() {
+func (s *Service) wrapTask(task Task, id string, retry int, retryInterval time.Duration) func() {
 	return func() {
 		var err error
 		l := s.l.WithFields(logrus.Fields{
-			"id":      id,
-			"jobType": job.Type(),
+			"id":       id,
+			"taskType": task.Type(),
 		})
 		ctx, cancel := context.WithCancel(context.Background())
 
-		s.jobsMx.Lock()
-		s.jobs[id] = cancel
-		s.jobsMx.Unlock()
+		s.taskMx.Lock()
+		s.tasks[id] = cancel
+		s.taskMx.Unlock()
 
 		defer func() {
 			cancel()
-			s.jobsMx.Lock()
-			delete(s.jobs, id)
-			s.jobsMx.Unlock()
+			s.taskMx.Lock()
+			delete(s.tasks, id)
+			s.taskMx.Unlock()
 		}()
-
+		retriesRemaining := retry
+		succeeded := false
 		for {
 			t := time.Now()
-			l.Debug("Starting job")
-			err = job.Do(ctx)
-			l.WithField("duration", time.Since(t)).Debug("Ended  job")
-			if err == nil || err == context.Canceled {
+			l.Debug("Starting task")
+			err = task.Do(ctx)
+			l.WithField("duration", time.Since(t)).Debug("Ended task")
+			if err == nil {
+				succeeded = true
 				break
 			} else {
+				if err == context.Canceled {
+					break
+				}
 				l.Error(err)
 			}
-			if retry <= 0 {
+			if retriesRemaining <= 0 {
 				break
 			}
-			retry--
+			retriesRemaining--
+			_, err = models.ChangeScheduledTask(s.db.Querier, id, models.ChangeScheduledTaskParams{
+				RetriesRemaining: pointer.ToUint(uint(retriesRemaining)),
+			})
+
+			if err != nil {
+				l.Errorf("failed to change retries remaining: %v", err)
+			}
 
 			timer := time.NewTimer(retryInterval)
 			select {
@@ -191,11 +205,11 @@ func (s *Service) wrapJob(job Job, id string, retry int, retryInterval time.Dura
 			}
 			timer.Stop()
 		}
-		s.jobFinished(id)
+		s.taskFinished(id, succeeded)
 	}
 }
 
-func (s *Service) jobFinished(id string) {
+func (s *Service) taskFinished(id string, succeeded bool) {
 	var job *gocron.Job
 	for _, j := range s.scheduler.Jobs() {
 		if len(j.Tags()) > 0 && j.Tags()[0] == id {
@@ -203,32 +217,48 @@ func (s *Service) jobFinished(id string) {
 			break
 		}
 	}
-	l := s.l.WithField("schedule_job_id", id)
+	l := s.l.WithField("id", id)
 	if job == nil {
 		l.Warn("couldn't find finished job in scheduler")
 		return
 	}
 
-	_, err := models.ChangeScheduleJob(s.db.Querier, id, models.ChangeScheduleJobParams{
-		NextRun: job.NextRun(),
-		LastRun: job.LastRun(),
-	})
+	dbTask, err := models.FindScheduledTaskByID(s.db.Querier, id)
 	if err != nil {
-		l.Error("failed to change schedule job")
+		l.Errorf("failed to find scheduled task: %v", err)
+		return
+	}
+
+	if succeeded {
+		dbTask.Succeeded++
+	} else {
+		dbTask.Failed++
+	}
+	params := models.ChangeScheduledTaskParams{
+		RetriesRemaining: pointer.ToUint(dbTask.Retries),
+		NextRun:          job.NextRun(),
+		LastRun:          job.LastRun(),
+		Succeeded:        pointer.ToUint(dbTask.Succeeded),
+		Failed:           pointer.ToUint(dbTask.Failed),
+	}
+
+	_, err = models.ChangeScheduledTask(s.db.Querier, id, params)
+	if err != nil {
+		l.Errorf("failed to change scheduled task: %v", err)
 	}
 }
 
-func (s *Service) convertDBJob(dbJob *models.ScheduleJob) (Job, error) {
-	var job Job
-	switch dbJob.Type {
-	case models.ScheduleEchoJob:
-		val := EchoJob{
-			jobsDeps:    s.jobsDeps,
-			EchoJobData: *dbJob.Data.Echo,
+func (s *Service) convertDBTask(dbTask *models.ScheduledTask) (Task, error) {
+	var task Task
+	switch dbTask.Type {
+	case models.ScheduledEchoTask:
+		val := EchoTask{
+			jobsDeps:     s.jobsDeps,
+			EchoTaskData: *dbTask.Data.Echo,
 		}
-		job = &val
+		task = &val
 	default:
-		return job, fmt.Errorf("unknown job type: %s", dbJob.Type)
+		return task, fmt.Errorf("unknown task type: %s", dbTask.Type)
 	}
-	return job, nil
+	return task, nil
 }

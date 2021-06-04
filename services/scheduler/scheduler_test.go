@@ -35,7 +35,7 @@ func TestService(t *testing.T) {
 		time.Sleep(time.Millisecond * 10)
 	}
 
-	job := &EchoJob{EchoJobData: models.EchoJobData{Value: "test"}}
+	job := &EchoTask{EchoTaskData: models.EchoTaskData{Value: "test"}}
 	cronExpr := "* * * * *"
 	startAt := time.Now().Truncate(time.Second).UTC()
 	retries := uint(3)
@@ -44,7 +44,7 @@ func TestService(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Len(t, svc.scheduler.Jobs(), 1)
-	findJob, err := models.FindScheduleJobByID(svc.db.Querier, dbJob.ID)
+	findJob, err := models.FindScheduledTaskByID(svc.db.Querier, dbJob.ID)
 	assert.NoError(t, err)
 
 	assert.Equal(t, startAt, dbJob.StartAt)
@@ -56,7 +56,7 @@ func TestService(t *testing.T) {
 	err = svc.Remove(dbJob.ID)
 	assert.NoError(t, err)
 	assert.Len(t, svc.scheduler.Jobs(), 0)
-	_, err = models.FindScheduleJobByID(svc.db.Querier, dbJob.ID)
-	tests.AssertGRPCError(t, status.Newf(codes.NotFound, `ScheduleJob with ID "%s" not found.`, dbJob.ID), err)
+	_, err = models.FindScheduledTaskByID(svc.db.Querier, dbJob.ID)
+	tests.AssertGRPCError(t, status.Newf(codes.NotFound, `ScheduledTask with ID "%s" not found.`, dbJob.ID), err)
 
 }

@@ -509,7 +509,7 @@ var databaseSchema = [][]string{
 		`ALTER TABLE agents ALTER COLUMN max_query_log_size TYPE BIGINT`,
 	},
 	38: {
-		`CREATE TABLE schedule_jobs (
+		`CREATE TABLE scheduled_tasks (
 			id VARCHAR NOT NULL,
 			cron_expression VARCHAR NOT NULL,
 			type VARCHAR NOT NULL,
@@ -518,8 +518,11 @@ var databaseSchema = [][]string{
 			next_run TIMESTAMP,
 			data JSONB,
 			retries SMALLINT,
+			retries_remaining SMALLINT,
 			retry_interval BIGINT,
 			disabled BOOLEAN,
+			succeeded INTEGER,
+			failed INTEGER,
 
 			created_at TIMESTAMP NOT NULL,
 			updated_at TIMESTAMP NOT NULL,

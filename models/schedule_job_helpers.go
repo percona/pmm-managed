@@ -27,29 +27,29 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-// FindScheduleJobByID finds ScheduleJob by ID.
-func FindScheduleJobByID(q *reform.Querier, id string) (*ScheduleJob, error) {
+// FindScheduledTaskByID finds ScheduledTask by ID.
+func FindScheduledTaskByID(q *reform.Querier, id string) (*ScheduledTask, error) {
 	if id == "" {
-		return nil, status.Error(codes.InvalidArgument, "Empty JobResult ID.")
+		return nil, status.Error(codes.InvalidArgument, "Empty ScheduledTask ID.")
 	}
 
-	res := &ScheduleJob{ID: id}
+	res := &ScheduledTask{ID: id}
 	switch err := q.Reload(res); err {
 	case nil:
 		return res, nil
 	case reform.ErrNoRows:
-		return nil, status.Errorf(codes.NotFound, "ScheduleJob with ID %q not found.", id)
+		return nil, status.Errorf(codes.NotFound, "ScheduledTask with ID %q not found.", id)
 	default:
 		return nil, errors.WithStack(err)
 	}
 }
 
-type ScheduleJobsFilter struct {
+type ScheduledTasksFilter struct {
 	Disabled *bool
 }
 
-// FindScheduleJobs returns all scheduled satisfying filter.
-func FindScheduleJobs(q *reform.Querier, filters ScheduleJobsFilter) ([]*ScheduleJob, error) {
+// FindScheduledTasks returns all scheduled tasks satisfying filter.
+func FindScheduledTasks(q *reform.Querier, filters ScheduledTasksFilter) ([]*ScheduledTask, error) {
 	tail := ""
 	if filters.Disabled != nil {
 		tail = "WHERE disabled IS"
@@ -59,33 +59,33 @@ func FindScheduleJobs(q *reform.Querier, filters ScheduleJobsFilter) ([]*Schedul
 			tail += "FALSE"
 		}
 	}
-	structs, err := q.SelectAllFrom(ScheduleJobTable, "")
+	structs, err := q.SelectAllFrom(ScheduledTaskTable, "")
 	if err != nil {
 		return nil, err
 	}
-	jobs := make([]*ScheduleJob, len(structs))
+	tasks := make([]*ScheduledTask, len(structs))
 	for i, s := range structs {
-		jobs[i] = s.(*ScheduleJob)
+		tasks[i] = s.(*ScheduledTask)
 	}
-	return jobs, nil
+	return tasks, nil
 }
 
-// CreateScheduleJobParams are params for creating new schedule job.
-type CreateScheduleJobParams struct {
+// CreateScheduledTaskParams are params for creating new scheduled task.
+type CreateScheduledTaskParams struct {
 	CronExpression string
 	StartAt        time.Time
 	NextRun        time.Time
-	Type           ScheduleJobType
-	Data           ScheduleJobData
+	Type           ScheduledTaskType
+	Data           ScheduledTaskData
 	Retries        uint
 	RetryInterval  time.Duration
 	Disabled       bool
 }
 
 // Validate checks if required params are set and valid.
-func (p CreateScheduleJobParams) Validate() error {
+func (p CreateScheduledTaskParams) Validate() error {
 	switch p.Type {
-	case ScheduleEchoJob:
+	case ScheduledEchoTask:
 	default:
 		return status.Errorf(codes.InvalidArgument, "Unknown type: %s", p.Type)
 	}
@@ -97,14 +97,14 @@ func (p CreateScheduleJobParams) Validate() error {
 	return nil
 }
 
-// CreateScheduleJob creates schedule job.
-func CreateScheduleJob(q *reform.Querier, params CreateScheduleJobParams) (*ScheduleJob, error) {
-	id := "/schedule_job_id/" + uuid.New().String()
-	if err := checkUniqueScheduleJobID(q, id); err != nil {
+// CreateScheduledTask creates scheduled task.
+func CreateScheduledTask(q *reform.Querier, params CreateScheduledTaskParams) (*ScheduledTask, error) {
+	id := "/scheduled_task_id/" + uuid.New().String()
+	if err := checkUniqueScheduledTaskID(q, id); err != nil {
 		return nil, err
 	}
 
-	job := &ScheduleJob{
+	task := &ScheduledTask{
 		ID:             id,
 		Disabled:       params.Disabled,
 		CronExpression: params.CronExpression,
@@ -115,22 +115,26 @@ func CreateScheduleJob(q *reform.Querier, params CreateScheduleJobParams) (*Sche
 		Retries:        params.Retries,
 		RetryInterval:  params.RetryInterval,
 	}
-	if err := q.Insert(job); err != nil {
+	if err := q.Insert(task); err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return job, nil
+	return task, nil
 }
 
-// ChangeScheduleJobParams are params for updating existing schedule job.
-type ChangeScheduleJobParams struct {
-	NextRun time.Time
-	LastRun time.Time
-	Disable *bool
+// ChangeScheduledTaskParams are params for updating existing schedule task.
+type ChangeScheduledTaskParams struct {
+	NextRun          time.Time
+	LastRun          time.Time
+	Disable          *bool
+	Retries          *uint
+	RetriesRemaining *uint
+	Succeeded        *uint
+	Failed           *uint
 }
 
-// ChangeScheduleJob updates existing schedule job.
-func ChangeScheduleJob(q *reform.Querier, scheduleJobID string, params ChangeScheduleJobParams) (*ScheduleJob, error) {
-	row, err := FindScheduleJobByID(q, scheduleJobID)
+// ChangeScheduledTask updates existing scheduled task.
+func ChangeScheduledTask(q *reform.Querier, id string, params ChangeScheduledTaskParams) (*ScheduledTask, error) {
+	row, err := FindScheduledTaskByID(q, id)
 	if err != nil {
 		return nil, err
 	}
@@ -141,33 +145,49 @@ func ChangeScheduleJob(q *reform.Querier, scheduleJobID string, params ChangeSch
 		row.Disabled = *params.Disable
 	}
 
+	if params.Retries != nil {
+		row.Retries = *params.Retries
+	}
+
+	if params.RetriesRemaining != nil {
+		row.RetriesRemaining = *params.RetriesRemaining
+	}
+
+	if params.Succeeded != nil {
+		row.Succeeded = *params.Succeeded
+	}
+
+	if params.Failed != nil {
+		row.Failed = *params.Failed
+	}
+
 	if err := q.Update(row); err != nil {
-		return nil, errors.Wrap(err, "failed to update schedule job")
+		return nil, errors.Wrap(err, "failed to update scheduled task")
 	}
 
 	return row, nil
 }
 
-func RemoveScheduleJob(q *reform.Querier, id string) error {
-	if _, err := FindScheduleJobByID(q, id); err != nil {
+func RemoveScheduledTask(q *reform.Querier, id string) error {
+	if _, err := FindScheduledTaskByID(q, id); err != nil {
 		return err
 	}
-	if err := q.Delete(&ScheduleJob{ID: id}); err != nil {
-		return errors.Wrap(err, "failed to delete ScheduleJob")
+	if err := q.Delete(&ScheduledTask{ID: id}); err != nil {
+		return errors.Wrap(err, "failed to delete scheduled task")
 	}
 
 	return nil
 }
 
-func checkUniqueScheduleJobID(q *reform.Querier, id string) error {
+func checkUniqueScheduledTaskID(q *reform.Querier, id string) error {
 	if id == "" {
-		panic("empty schedule job ID")
+		panic("empty schedule task ID")
 	}
 
-	location := &BackupLocation{ID: id}
+	location := &ScheduledTask{ID: id}
 	switch err := q.Reload(location); err {
 	case nil:
-		return status.Errorf(codes.AlreadyExists, "Location with ID %q already exists.", id)
+		return status.Errorf(codes.AlreadyExists, "Scheduled task with ID %q already exists.", id)
 	case reform.ErrNoRows:
 		return nil
 	default:

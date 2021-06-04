@@ -7,28 +7,28 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-type Job interface {
+type Task interface {
 	Do(ctx context.Context) error
-	Type() models.ScheduleJobType
-	Data() models.ScheduleJobData
+	Type() models.ScheduledTaskType
+	Data() models.ScheduledTaskData
 }
 
-type EchoJob struct {
+type EchoTask struct {
 	jobsDeps
-	models.EchoJobData
+	models.EchoTaskData
 }
 
-func (j *EchoJob) Do(ctx context.Context) error {
+func (j *EchoTask) Do(ctx context.Context) error {
 	fmt.Println(j.Value)
 	return nil
 }
 
-func (j *EchoJob) Type() models.ScheduleJobType {
-	return models.ScheduleEchoJob
+func (j *EchoTask) Type() models.ScheduledTaskType {
+	return models.ScheduledEchoTask
 }
 
-func (j *EchoJob) Data() models.ScheduleJobData {
-	return models.ScheduleJobData{
-		Echo: &j.EchoJobData,
+func (j *EchoTask) Data() models.ScheduledTaskData {
+	return models.ScheduledTaskData{
+		Echo: &j.EchoTaskData,
 	}
 }

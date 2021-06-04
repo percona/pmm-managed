@@ -25,48 +25,51 @@ import (
 
 //go:generate reform
 
-// ScheduleJobType represents schedule job type.
-type ScheduleJobType string
+// ScheduledTaskType represents schedule job type.
+type ScheduledTaskType string
 
-// Supported schedule job types.
+// Supported schedule task types.
 const (
-	ScheduleEchoJob = ScheduleJobType("echo")
+	ScheduledEchoTask = ScheduledTaskType("echo")
 )
 
-// ScheduleJob describes a scheduled job.
-//reform:schedule_jobs
-type ScheduleJob struct {
-	ID             string           `reform:"id,pk"`
-	CronExpression string           `reform:"cron_expression"`
-	Disabled       bool             `reform:"disabled"`
-	StartAt        time.Time        `reform:"start_at"`
-	LastRun        time.Time        `reform:"last_run"`
-	NextRun        time.Time        `reform:"next_run"`
-	Type           ScheduleJobType  `reform:"type"`
-	Data           *ScheduleJobData `reform:"data"`
-	Retries        uint             `reform:"retries"`
-	RetryInterval  time.Duration    `reform:"retry_interval"`
-	CreatedAt      time.Time        `reform:"created_at"`
-	UpdatedAt      time.Time        `reform:"updated_at"`
+// ScheduledTask describes a scheduled task.
+//reform:scheduled_tasks
+type ScheduledTask struct {
+	ID               string             `reform:"id,pk"`
+	CronExpression   string             `reform:"cron_expression"`
+	Disabled         bool               `reform:"disabled"`
+	StartAt          time.Time          `reform:"start_at"`
+	LastRun          time.Time          `reform:"last_run"`
+	NextRun          time.Time          `reform:"next_run"`
+	Type             ScheduledTaskType  `reform:"type"`
+	Data             *ScheduledTaskData `reform:"data"`
+	Retries          uint               `reform:"retries"`
+	RetryInterval    time.Duration      `reform:"retry_interval"`
+	RetriesRemaining uint               `reform:"retries_remaining"`
+	Succeeded        uint               `reform:"succeeded"`
+	Failed           uint               `reform:"failed"`
+	CreatedAt        time.Time          `reform:"created_at"`
+	UpdatedAt        time.Time          `reform:"updated_at"`
 }
 
-// ScheduleJobData holds result data for different job types.
-type ScheduleJobData struct {
-	Echo *EchoJobData `json:"echo,omitempty"`
+// ScheduledTaskData holds result data for different job types.
+type ScheduledTaskData struct {
+	Echo *EchoTaskData `json:"echo,omitempty"`
 }
 
-type EchoJobData struct {
+type EchoTaskData struct {
 	Value string
 }
 
 // Value implements database/sql/driver.Valuer interface. Should be defined on the value.
-func (c ScheduleJobData) Value() (driver.Value, error) { return jsonValue(c) }
+func (c ScheduledTaskData) Value() (driver.Value, error) { return jsonValue(c) }
 
 // Scan implements database/sql.Scanner interface. Should be defined on the pointer.
-func (c *ScheduleJobData) Scan(src interface{}) error { return jsonScan(c, src) }
+func (c *ScheduledTaskData) Scan(src interface{}) error { return jsonScan(c, src) }
 
 // BeforeInsert implements reform.BeforeInserter interface.
-func (r *ScheduleJob) BeforeInsert() error {
+func (r *ScheduledTask) BeforeInsert() error {
 	now := Now()
 	r.CreatedAt = now
 	r.UpdatedAt = now
@@ -75,14 +78,14 @@ func (r *ScheduleJob) BeforeInsert() error {
 }
 
 // BeforeUpdate implements reform.BeforeUpdater interface.
-func (r *ScheduleJob) BeforeUpdate() error {
+func (r *ScheduledTask) BeforeUpdate() error {
 	r.UpdatedAt = Now()
 
 	return nil
 }
 
 // AfterFind implements reform.AfterFinder interface.
-func (r *ScheduleJob) AfterFind() error {
+func (r *ScheduledTask) AfterFind() error {
 	r.CreatedAt = r.CreatedAt.UTC()
 	r.UpdatedAt = r.UpdatedAt.UTC()
 	r.StartAt = r.StartAt.UTC()
@@ -94,7 +97,7 @@ func (r *ScheduleJob) AfterFind() error {
 
 // check interfaces.
 var (
-	_ reform.BeforeInserter = (*ScheduleJob)(nil)
-	_ reform.BeforeUpdater  = (*ScheduleJob)(nil)
-	_ reform.AfterFinder    = (*ScheduleJob)(nil)
+	_ reform.BeforeInserter = (*ScheduledTask)(nil)
+	_ reform.BeforeUpdater  = (*ScheduledTask)(nil)
+	_ reform.AfterFinder    = (*ScheduledTask)(nil)
 )

@@ -10,23 +10,23 @@ import (
 	"gopkg.in/reform.v1/parse"
 )
 
-type scheduleJobTableType struct {
+type scheduledTaskTableType struct {
 	s parse.StructInfo
 	z []interface{}
 }
 
 // Schema returns a schema name in SQL database ("").
-func (v *scheduleJobTableType) Schema() string {
+func (v *scheduledTaskTableType) Schema() string {
 	return v.s.SQLSchema
 }
 
-// Name returns a view or table name in SQL database ("schedule_jobs").
-func (v *scheduleJobTableType) Name() string {
+// Name returns a view or table name in SQL database ("scheduled_tasks").
+func (v *scheduledTaskTableType) Name() string {
 	return v.s.SQLName
 }
 
 // Columns returns a new slice of column names for that view or table in SQL database.
-func (v *scheduleJobTableType) Columns() []string {
+func (v *scheduledTaskTableType) Columns() []string {
 	return []string{
 		"id",
 		"cron_expression",
@@ -38,31 +38,34 @@ func (v *scheduleJobTableType) Columns() []string {
 		"data",
 		"retries",
 		"retry_interval",
+		"retries_remaining",
+		"succeeded",
+		"failed",
 		"created_at",
 		"updated_at",
 	}
 }
 
 // NewStruct makes a new struct for that view or table.
-func (v *scheduleJobTableType) NewStruct() reform.Struct {
-	return new(ScheduleJob)
+func (v *scheduledTaskTableType) NewStruct() reform.Struct {
+	return new(ScheduledTask)
 }
 
 // NewRecord makes a new record for that table.
-func (v *scheduleJobTableType) NewRecord() reform.Record {
-	return new(ScheduleJob)
+func (v *scheduledTaskTableType) NewRecord() reform.Record {
+	return new(ScheduledTask)
 }
 
 // PKColumnIndex returns an index of primary key column for that table in SQL database.
-func (v *scheduleJobTableType) PKColumnIndex() uint {
+func (v *scheduledTaskTableType) PKColumnIndex() uint {
 	return uint(v.s.PKFieldIndex)
 }
 
-// ScheduleJobTable represents schedule_jobs view or table in SQL database.
-var ScheduleJobTable = &scheduleJobTableType{
+// ScheduledTaskTable represents scheduled_tasks view or table in SQL database.
+var ScheduledTaskTable = &scheduledTaskTableType{
 	s: parse.StructInfo{
-		Type:    "ScheduleJob",
-		SQLName: "schedule_jobs",
+		Type:    "ScheduledTask",
+		SQLName: "scheduled_tasks",
 		Fields: []parse.FieldInfo{
 			{Name: "ID", Type: "string", Column: "id"},
 			{Name: "CronExpression", Type: "string", Column: "cron_expression"},
@@ -70,21 +73,24 @@ var ScheduleJobTable = &scheduleJobTableType{
 			{Name: "StartAt", Type: "time.Time", Column: "start_at"},
 			{Name: "LastRun", Type: "time.Time", Column: "last_run"},
 			{Name: "NextRun", Type: "time.Time", Column: "next_run"},
-			{Name: "Type", Type: "ScheduleJobType", Column: "type"},
-			{Name: "Data", Type: "*ScheduleJobData", Column: "data"},
+			{Name: "Type", Type: "ScheduledTaskType", Column: "type"},
+			{Name: "Data", Type: "*ScheduledTaskData", Column: "data"},
 			{Name: "Retries", Type: "uint", Column: "retries"},
 			{Name: "RetryInterval", Type: "time.Duration", Column: "retry_interval"},
+			{Name: "RetriesRemaining", Type: "uint", Column: "retries_remaining"},
+			{Name: "Succeeded", Type: "uint", Column: "succeeded"},
+			{Name: "Failed", Type: "uint", Column: "failed"},
 			{Name: "CreatedAt", Type: "time.Time", Column: "created_at"},
 			{Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"},
 		},
 		PKFieldIndex: 0,
 	},
-	z: new(ScheduleJob).Values(),
+	z: new(ScheduledTask).Values(),
 }
 
 // String returns a string representation of this struct or record.
-func (s ScheduleJob) String() string {
-	res := make([]string, 12)
+func (s ScheduledTask) String() string {
+	res := make([]string, 15)
 	res[0] = "ID: " + reform.Inspect(s.ID, true)
 	res[1] = "CronExpression: " + reform.Inspect(s.CronExpression, true)
 	res[2] = "Disabled: " + reform.Inspect(s.Disabled, true)
@@ -95,14 +101,17 @@ func (s ScheduleJob) String() string {
 	res[7] = "Data: " + reform.Inspect(s.Data, true)
 	res[8] = "Retries: " + reform.Inspect(s.Retries, true)
 	res[9] = "RetryInterval: " + reform.Inspect(s.RetryInterval, true)
-	res[10] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
-	res[11] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
+	res[10] = "RetriesRemaining: " + reform.Inspect(s.RetriesRemaining, true)
+	res[11] = "Succeeded: " + reform.Inspect(s.Succeeded, true)
+	res[12] = "Failed: " + reform.Inspect(s.Failed, true)
+	res[13] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
+	res[14] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
 	return strings.Join(res, ", ")
 }
 
 // Values returns a slice of struct or record field values.
 // Returned interface{} values are never untyped nils.
-func (s *ScheduleJob) Values() []interface{} {
+func (s *ScheduledTask) Values() []interface{} {
 	return []interface{}{
 		s.ID,
 		s.CronExpression,
@@ -114,6 +123,9 @@ func (s *ScheduleJob) Values() []interface{} {
 		s.Data,
 		s.Retries,
 		s.RetryInterval,
+		s.RetriesRemaining,
+		s.Succeeded,
+		s.Failed,
 		s.CreatedAt,
 		s.UpdatedAt,
 	}
@@ -121,7 +133,7 @@ func (s *ScheduleJob) Values() []interface{} {
 
 // Pointers returns a slice of pointers to struct or record fields.
 // Returned interface{} values are never untyped nils.
-func (s *ScheduleJob) Pointers() []interface{} {
+func (s *ScheduledTask) Pointers() []interface{} {
 	return []interface{}{
 		&s.ID,
 		&s.CronExpression,
@@ -133,54 +145,57 @@ func (s *ScheduleJob) Pointers() []interface{} {
 		&s.Data,
 		&s.Retries,
 		&s.RetryInterval,
+		&s.RetriesRemaining,
+		&s.Succeeded,
+		&s.Failed,
 		&s.CreatedAt,
 		&s.UpdatedAt,
 	}
 }
 
 // View returns View object for that struct.
-func (s *ScheduleJob) View() reform.View {
-	return ScheduleJobTable
+func (s *ScheduledTask) View() reform.View {
+	return ScheduledTaskTable
 }
 
 // Table returns Table object for that record.
-func (s *ScheduleJob) Table() reform.Table {
-	return ScheduleJobTable
+func (s *ScheduledTask) Table() reform.Table {
+	return ScheduledTaskTable
 }
 
 // PKValue returns a value of primary key for that record.
 // Returned interface{} value is never untyped nil.
-func (s *ScheduleJob) PKValue() interface{} {
+func (s *ScheduledTask) PKValue() interface{} {
 	return s.ID
 }
 
 // PKPointer returns a pointer to primary key field for that record.
 // Returned interface{} value is never untyped nil.
-func (s *ScheduleJob) PKPointer() interface{} {
+func (s *ScheduledTask) PKPointer() interface{} {
 	return &s.ID
 }
 
 // HasPK returns true if record has non-zero primary key set, false otherwise.
-func (s *ScheduleJob) HasPK() bool {
-	return s.ID != ScheduleJobTable.z[ScheduleJobTable.s.PKFieldIndex]
+func (s *ScheduledTask) HasPK() bool {
+	return s.ID != ScheduledTaskTable.z[ScheduledTaskTable.s.PKFieldIndex]
 }
 
 // SetPK sets record primary key, if possible.
 //
 // Deprecated: prefer direct field assignment where possible: s.ID = pk.
-func (s *ScheduleJob) SetPK(pk interface{}) {
+func (s *ScheduledTask) SetPK(pk interface{}) {
 	reform.SetPK(s, pk)
 }
 
 // check interfaces
 var (
-	_ reform.View   = ScheduleJobTable
-	_ reform.Struct = (*ScheduleJob)(nil)
-	_ reform.Table  = ScheduleJobTable
-	_ reform.Record = (*ScheduleJob)(nil)
-	_ fmt.Stringer  = (*ScheduleJob)(nil)
+	_ reform.View   = ScheduledTaskTable
+	_ reform.Struct = (*ScheduledTask)(nil)
+	_ reform.Table  = ScheduledTaskTable
+	_ reform.Record = (*ScheduledTask)(nil)
+	_ fmt.Stringer  = (*ScheduledTask)(nil)
 )
 
 func init() {
-	parse.AssertUpToDate(&ScheduleJobTable.s, new(ScheduleJob))
+	parse.AssertUpToDate(&ScheduledTaskTable.s, new(ScheduledTask))
 }
