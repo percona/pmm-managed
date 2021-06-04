@@ -105,15 +105,18 @@ func CreateScheduledTask(q *reform.Querier, params CreateScheduledTaskParams) (*
 	}
 
 	task := &ScheduledTask{
-		ID:             id,
-		Disabled:       params.Disabled,
-		CronExpression: params.CronExpression,
-		StartAt:        params.StartAt,
-		NextRun:        params.NextRun,
-		Type:           params.Type,
-		Data:           &params.Data,
-		Retries:        params.Retries,
-		RetryInterval:  params.RetryInterval,
+		ID:               id,
+		CronExpression:   params.CronExpression,
+		Disabled:         params.Disabled,
+		StartAt:          params.StartAt,
+		NextRun:          params.NextRun,
+		Type:             params.Type,
+		Data:             &params.Data,
+		Retries:          params.Retries,
+		RetryInterval:    params.RetryInterval,
+		RetriesRemaining: params.Retries,
+		Succeeded:        0,
+		Failed:           0,
 	}
 	if err := q.Insert(task); err != nil {
 		return nil, errors.WithStack(err)

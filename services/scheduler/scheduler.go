@@ -15,9 +15,6 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-type jobsDeps struct {
-}
-
 // Service is responsive for executing tasks and storing them to DB.
 type Service struct {
 	db        *reform.DB
@@ -25,14 +22,13 @@ type Service struct {
 	l         *logrus.Entry
 	tasks     map[string]context.CancelFunc
 	taskMx    sync.RWMutex
-	jobsDeps  jobsDeps
+	jobsMx    sync.Mutex
 }
 
 // New creates new scheduler service.
 func New(db *reform.DB) *Service {
 	scheduler := gocron.NewScheduler(time.UTC)
 	scheduler.TagsUnique()
-	// @TODO accept deps and fill jobsDeps
 	return &Service{
 		db:        db,
 		scheduler: scheduler,
@@ -55,13 +51,10 @@ func (s *Service) Run(ctx context.Context) {
 func (s *Service) Add(task Task, cronExpr string, startAt time.Time, retry uint, retryInterval time.Duration) (*models.ScheduledTask, error) {
 	var scheduledTask *models.ScheduledTask
 	var err error
+	s.jobsMx.Lock()
+	defer s.jobsMx.Unlock()
 
 	err = s.db.InTransaction(func(tx *reform.TX) error {
-		j := s.scheduler.Cron(cronExpr).SingletonMode()
-		if !startAt.IsZero() {
-			j = j.StartAt(startAt)
-		}
-
 		scheduledTask, err = models.CreateScheduledTask(tx.Querier, models.CreateScheduledTaskParams{
 			CronExpression: cronExpr,
 			StartAt:        startAt,
@@ -78,6 +71,10 @@ func (s *Service) Add(task Task, cronExpr string, startAt time.Time, retry uint,
 		id := scheduledTask.ID
 		fn := s.wrapTask(task, id, int(retry), retryInterval)
 
+		j := s.scheduler.Cron(cronExpr).SingletonMode()
+		if !startAt.IsZero() {
+			j = j.StartAt(startAt)
+		}
 		scheduleJob, err := j.Tag(id).Do(fn)
 		if err != nil {
 			return err
@@ -103,6 +100,9 @@ func (s *Service) Remove(id string) error {
 		cancel()
 	}
 	s.taskMx.RUnlock()
+
+	s.jobsMx.Lock()
+	defer s.jobsMx.Unlock()
 	err := s.scheduler.RemoveByTag(id)
 	if err != nil {
 		return err
@@ -116,6 +116,9 @@ func (s *Service) Remove(id string) error {
 }
 
 func (s *Service) loadFromDB() error {
+	s.jobsMx.Lock()
+	defer s.jobsMx.Unlock()
+
 	disabled := false
 	dbJobs, err := models.FindScheduledTasks(s.db.Querier, models.ScheduledTasksFilter{
 		Disabled: &disabled,

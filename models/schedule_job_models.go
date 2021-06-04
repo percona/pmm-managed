@@ -55,7 +55,7 @@ type ScheduledTask struct {
 
 // ScheduledTaskData holds result data for different job types.
 type ScheduledTaskData struct {
-	Print *PrintTaskData `json:"echo,omitempty"`
+	Print *PrintTaskData `json:"print,omitempty"`
 }
 
 type PrintTaskData struct {
