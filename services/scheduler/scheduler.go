@@ -139,7 +139,6 @@ func (s *Service) loadFromDB() error {
 	s.scheduler.Clear()
 	// Reset tags
 	s.scheduler.TagsUnique()
-
 	for i, job := range jobs {
 		dbTask := dbTasks[i]
 		fn := s.wrapTask(job, dbTask.ID, int(dbTask.RetriesRemaining), dbTask.RetryInterval)

@@ -17,6 +17,8 @@
 package models
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -46,20 +48,40 @@ func FindScheduledTaskByID(q *reform.Querier, id string) (*ScheduledTask, error)
 
 type ScheduledTasksFilter struct {
 	Disabled *bool
+	Types    []ScheduledTaskType
 }
 
 // FindScheduledTasks returns all scheduled tasks satisfying filter.
 func FindScheduledTasks(q *reform.Querier, filters ScheduledTasksFilter) ([]*ScheduledTask, error) {
-	tail := ""
-	if filters.Disabled != nil {
-		tail = "WHERE disabled IS"
-		if *filters.Disabled {
-			tail += "TRUE"
-		} else {
-			tail += "FALSE"
+	var args []interface{}
+	var andConds []string
+	if len(filters.Types) > 0 {
+		p := strings.Join(q.Placeholders(1, len(filters.Types)), ", ")
+		for _, fType := range filters.Types {
+			args = append(args, fType)
 		}
+		andConds = append(andConds, fmt.Sprintf("type IN (%s)", p))
 	}
-	structs, err := q.SelectAllFrom(ScheduledTaskTable, "")
+
+	if filters.Disabled != nil {
+		cond := "disabled IS "
+		if *filters.Disabled {
+			cond += "TRUE"
+		} else {
+			cond += "FALSE"
+		}
+		andConds = append(andConds, cond)
+	}
+
+	var tail strings.Builder
+	if len(andConds) > 0 {
+		tail.WriteString("WHERE ")
+		tail.WriteString(strings.Join(andConds, " AND "))
+		tail.WriteRune(' ')
+	}
+	tail.WriteString("ORDER BY created_at")
+
+	structs, err := q.SelectAllFrom(ScheduledTaskTable, tail.String(), args...)
 	if err != nil {
 		return nil, err
 	}
