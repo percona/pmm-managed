@@ -48,8 +48,8 @@ func TestProxySQLExporterConfig(t *testing.T) {
 			"-collect.mysql_connection_list",
 			"-collect.mysql_connection_pool",
 			"-collect.mysql_status",
-			"-collect.stats_memory_metrics",
 			"-collect.stats_command_counter",
+			"-collect.stats_memory_metrics",
 			"-web.listen-address=:{{ .listen_port }}",
 		},
 		Env: []string{
