@@ -183,7 +183,6 @@ func (s *BackupsService) RestoreBackup(
 			return errors.Errorf("backup restore unimplemeted for : %s", service.ServiceType)
 		default:
 			return errors.Errorf("unsupported service type: %s", service.ServiceType)
-
 		}
 
 		job, err := models.CreateJobResult(tx.Querier, params.AgentID, jobType, jobResultData)

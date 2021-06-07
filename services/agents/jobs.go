@@ -121,6 +121,7 @@ func (s *JobsService) StartMySQLBackupJob(jobID, pmmAgentID string, timeout time
 	return nil
 }
 
+// StartMongoDBBackupJob starts mongoDB backup job on the pmm-agent.
 func (s *JobsService) StartMongoDBBackupJob(
 	jobID string,
 	pmmAgentID string,
@@ -280,7 +281,7 @@ func (s *JobsService) StartMongoDBRestoreBackupJob(
 		return err
 	}
 	if e := resp.(*agentpb.StartJobResponse).Error; e != "" {
-		return errors.Errorf("failed to start MySQL restore backup job: %s", e)
+		return errors.Errorf("failed to start MonogDB restore backup job: %s", e)
 	}
 
 	return nil
