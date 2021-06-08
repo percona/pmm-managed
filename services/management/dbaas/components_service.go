@@ -17,6 +17,7 @@
 package dbaas
 
 import (
+	"strings"
 	"context"
 	"fmt"
 
@@ -194,7 +195,11 @@ func (c componentsService) ChangePXCComponents(ctx context.Context, req *dbaasv1
 }
 
 func (c componentsService) CheckForOperatorUpdate(ctx context.Context, req *dbaasv1beta1.CheckForOperatorUpdateRequest) (*dbaasv1beta1.CheckForOperatorUpdateResponse, error) {
-	latest, err := c.versionServiceClient.GetLatestOperatorVersion(ctx, req.OperatorType, pmmversion.PMMVersion)
+	if pmmversion.PMMVersion == "" {
+		return nil, status.Error(codes.Internal, "failed to get current PMM version")
+	}
+	pmmVersionParts := strings.Split(pmmversion.PMMVersion, "-")
+	latest, err := c.versionServiceClient.GetLatestOperatorVersion(ctx, req.OperatorType, pmmVersionParts[0])
 	if err != nil {
 		return nil, err
 	}
