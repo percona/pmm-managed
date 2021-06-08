@@ -39,6 +39,7 @@ import (
 	"github.com/percona/pmm-managed/utils/logger"
 	"github.com/percona/pmm-managed/utils/testdb"
 	"github.com/percona/pmm-managed/utils/tests"
+	pmmversion "github.com/percona/pmm/version"
 )
 
 const versionServiceURL = "https://check.percona.com/versions/v1"
@@ -500,5 +501,92 @@ func TestFilteringOutOfUnsupportedVersions(t *testing.T) {
 				assert.True(t, parsedVersion.GreaterThanOrEqual(parsedSupportedVersion), "%s is not greater or equal to 8.0.0", version)
 			}
 		}
+	})
+}
+
+func TestCheckForOperatorUpdate(t *testing.T) {
+	setup := func(t *testing.T, clusterName string, response *VersionServiceResponse, port string) (dbaasv1beta1.ComponentsServer, *mockDbaasClient) {
+		t.Helper()
+
+		uuid.SetRand(new(tests.IDReader))
+
+		sqlDB := testdb.Open(t, models.SetupFixtures, nil)
+		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+		dbaasClient := new(mockDbaasClient)
+
+		kubernetesCluster, err := models.CreateKubernetesCluster(db.Querier, &models.CreateKubernetesClusterParams{
+			KubernetesClusterName: clusterName,
+			KubeConfig:            "{}",
+		})
+		require.NoError(t, err)
+
+		vsc, cleanup := newFakeVersionService(response, port)
+		t.Cleanup(func() {
+			cleanup(t)
+			uuid.SetRand(nil)
+			dbaasClient.AssertExpectations(t)
+			assert.NoError(t, db.Delete(kubernetesCluster))
+			require.NoError(t, sqlDB.Close())
+		})
+
+		return NewComponentsService(db, dbaasClient, vsc), dbaasClient
+	}
+
+	t.Parallel()
+	t.Run("Update available", func(t *testing.T) {
+		t.Parallel()
+
+		response := &VersionServiceResponse{
+			Versions: []struct {
+				Product        string `json:"product"`
+				ProductVersion string `json:"operator"`
+				Matrix         matrix `json:"matrix"`
+			}{
+				{
+					ProductVersion: "2.18.0",
+					Product:        "pmm-server",
+					Matrix: matrix{
+						PSMDBOperator: map[string]componentVersion{
+							"1.8.0": {},
+							"1.7.0": {},
+						},
+					},
+				},
+			},
+		}
+		pmmversion.PMMVersion = "2.18.0"
+		clusterName := "minikube"
+		cs, dbaasClient := setup(t, clusterName, response, "9873")
+		ctx := context.Background()
+		dbaasClient.On("CheckKubernetesClusterConnection", ctx, "{}").Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
+			Operators: &controllerv1beta1.Operators{
+				Psmdb: &controllerv1beta1.Operator{
+					Version: "1.7.0",
+				},
+				Xtradb: &controllerv1beta1.Operator{
+					Version: "1.7.0",
+				},
+			},
+		}, nil)
+
+		// PSMDB
+		resp, err := cs.CheckForOperatorUpdate(ctx, &dbaasv1beta1.CheckForOperatorUpdateRequest{
+			OperatorType:          psmdbOperator,
+			KubernetesClusterName: "minikube",
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, dbaasv1beta1.OperatorUpdateStatus_UPDATE_AVAILABLE, resp.Status)
+		assert.Equal(t, "", resp.AvailablePmmServerVersion)
+		assert.Equal(t, "1.8.0", resp.AvailableOperatorVersion)
+
+		// PXC
+		resp, err = cs.CheckForOperatorUpdate(ctx, &dbaasv1beta1.CheckForOperatorUpdateRequest{
+			OperatorType:          pxcOperator,
+			KubernetesClusterName: "minikube",
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, dbaasv1beta1.OperatorUpdateStatus_UPDATE_AVAILABLE, resp.Status)
+		assert.Equal(t, "", resp.AvailablePmmServerVersion)
+		assert.Equal(t, "1.8.0", resp.AvailableOperatorVersion)
 	})
 }

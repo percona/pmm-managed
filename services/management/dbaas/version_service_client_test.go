@@ -62,10 +62,6 @@ func TestVersionServiceClient(t *testing.T) {
 	}
 }
 
-const fakeHostAndPort = "localhost:7453"
-
-type fakeVersionServerTestfunc func(*testing.T, context.Context, versionService)
-
 type fakeLatestVersionServer struct {
 	response *VersionServiceResponse
 }
@@ -98,12 +94,13 @@ func (f fakeLatestVersionServer) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func runTestWithFakeVersionServer(t *testing.T, response *VersionServiceResponse, timeout time.Duration, f fakeVersionServerTestfunc) {
+func newFakeVersionService(response *VersionServiceResponse, port string) (versionService, func(*testing.T)) {
 	var httpServer *http.Server
 	waitForListener := make(chan struct{})
 	server := fakeLatestVersionServer{
 		response: response,
 	}
+	fakeHostAndPort := "localhost:" + port
 	go func() {
 		httpServer = &http.Server{Addr: fakeHostAndPort, Handler: server}
 		listener, err := net.Listen("tcp", fakeHostAndPort)
@@ -114,11 +111,10 @@ func runTestWithFakeVersionServer(t *testing.T, response *VersionServiceResponse
 		_ = httpServer.Serve(listener)
 	}()
 	<-waitForListener
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	c := NewVersionServiceClient("http://" + fakeHostAndPort + "/versions/v1")
-	f(t, ctx, c)
-	assert.NoError(t, httpServer.Shutdown(ctx))
+
+	return NewVersionServiceClient("http://" + fakeHostAndPort + "/versions/v1"), func(t *testing.T) {
+		assert.NoError(t, httpServer.Shutdown(context.TODO()))
+	}
 }
 
 func TestLatestVersionGetting(t *testing.T) {
@@ -164,19 +160,17 @@ func TestLatestVersionGetting(t *testing.T) {
 				},
 			},
 		}
-		runTestWithFakeVersionServer(t, response, time.Second*5,
-			func(t *testing.T, ctx context.Context, c versionService) {
-				opeator, pmm, err := c.GetLatestOperatorVersion(ctx, psmdbOperator, "2.18.0")
-				require.NoError(t, err, "request to fakeserver for latest version should not fail")
-				assert.Equal(t, "1.8.0", opeator.String())
-				assert.Equal(t, "2.18.0", pmm.String())
+		c, cleanup := newFakeVersionService(response, "5897")
+		ctx := context.Background()
+		opeator, pmm, err := c.GetLatestOperatorVersion(ctx, psmdbOperator, "2.18.0")
+		require.NoError(t, err, "request to fakeserver for latest version should not fail")
+		assert.Equal(t, "1.8.0", opeator.String())
+		assert.Equal(t, "2.18.0", pmm.String())
 
-				opeator, pmm, err = c.GetLatestOperatorVersion(ctx, psmdbOperator, "")
-				require.NoError(t, err, "request to fakeserver for latest version should not fail")
-				assert.Equal(t, "1.9.0", opeator.String())
-				assert.Equal(t, "2.19.0", pmm.String())
-			},
-		)
+		opeator, pmm, err = c.GetLatestOperatorVersion(ctx, psmdbOperator, "")
+		require.NoError(t, err, "request to fakeserver for latest version should not fail")
+		assert.Equal(t, "1.9.0", opeator.String())
+		assert.Equal(t, "2.19.0", pmm.String())
+		cleanup(t)
 	})
-
 }
