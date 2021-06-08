@@ -37,19 +37,19 @@ func TestVersionServiceClient(t *testing.T) {
 	for _, tt := range []struct {
 		params componentsParams
 	}{
-		{params: componentsParams{operator: psmdbOperator}},
-		{params: componentsParams{operator: psmdbOperator, operatorVersion: "1.6.0"}},
-		{params: componentsParams{operator: psmdbOperator, operatorVersion: "1.7.0", dbVersion: "4.2.8-8"}},
-		{params: componentsParams{operator: pxcOperator}},
-		{params: componentsParams{operator: pxcOperator, operatorVersion: "1.7.0"}},
-		{params: componentsParams{operator: pxcOperator, operatorVersion: "1.7.0", dbVersion: "8.0.20-11.2"}},
+		{params: componentsParams{product: psmdbOperator}},
+		{params: componentsParams{product: psmdbOperator, productVersion: "1.6.0"}},
+		{params: componentsParams{product: psmdbOperator, productVersion: "1.7.0", versionToApply: "4.2.8-8"}},
+		{params: componentsParams{product: pxcOperator}},
+		{params: componentsParams{product: pxcOperator, productVersion: "1.7.0"}},
+		{params: componentsParams{product: pxcOperator, productVersion: "1.7.0", versionToApply: "8.0.20-11.2"}},
 	} {
 		t.Run("NotEmptyMatrix", func(t *testing.T) {
 			response, err := c.Matrix(context.TODO(), tt.params)
 			require.NoError(t, err)
 			require.NotEmpty(t, response.Versions)
 			for _, v := range response.Versions {
-				switch tt.params.operator {
+				switch tt.params.product {
 				case psmdbOperator:
 					assert.NotEmpty(t, v.Matrix.Mongod)
 				case pxcOperator:
@@ -69,14 +69,20 @@ type fakeLatestVersionServer struct {
 func (f fakeLatestVersionServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	encoder := json.NewEncoder(w)
 	var response *VersionServiceResponse
-	if strings.HasSuffix(r.URL, "pmm-server/2.18.0") {
+	if strings.HasSuffix(r.URL.Path, "pmm-server/2.18.0") {
 		response = &VersionServiceResponse{
-			Versions: {f.response.Versions[0]},
+			Versions: []struct {
+				Product        string `json:"product"`
+				ProductVersion string `json:"operator"`
+				Matrix         matrix `json:"matrix"`
+			}{f.response.Versions[0]},
 		}
-	} else if strings.HasSuffix(r.URL, "pmm-server") {
+	} else if strings.HasSuffix(r.URL.Path, "pmm-server") {
 		response = f.response
+	} else {
+		panic("path not expected")
 	}
-	err := encoder.Encode(f.response)
+	err := encoder.Encode(response)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -91,8 +97,8 @@ func TestLatestVersionGetting(t *testing.T) {
 		defer cancel()
 		operator, pmm, err := c.GetLatestOperatorVersion(ctx, psmdbOperator, "")
 		assert.True(t, errors.Is(err, ErrNoVersionsFound), "err is expected to be ErrNoVersionsFound")
-		assert.Equal(t, "", operator.String())
-		assert.Equal(t, "", pmm.String())
+		assert.Nil(t, operator)
+		assert.Nil(t, pmm)
 	})
 	t.Run("Get latest", func(t *testing.T) {
 		t.Parallel()
@@ -110,8 +116,8 @@ func TestLatestVersionGetting(t *testing.T) {
 					{
 						ProductVersion: "2.18.0",
 						Product:        "pmm-server",
-						Matrix: {
-							PSMDBOperator: {
+						Matrix: matrix{
+							PSMDBOperator: map[string]componentVersion{
 								"1.8.0": {},
 								"1.7.0": {},
 							},
@@ -121,7 +127,7 @@ func TestLatestVersionGetting(t *testing.T) {
 						ProductVersion: "2.19.0",
 						Product:        "pmm-server",
 						Matrix: matrix{
-							PSMDBOperator: {
+							PSMDBOperator: map[string]componentVersion{
 								"1.9.0": {},
 								"1.8.0": {},
 								"1.7.0": {},

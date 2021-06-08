@@ -73,7 +73,6 @@ func TestComponentService(t *testing.T) {
 		})
 
 		vsc := NewVersionServiceClient(versionServiceURL)
-		vsc := NewVersionServiceClient(versionServiceURL)
 		cs = NewComponentsService(db, dbaasClient, vsc)
 
 		return
@@ -465,8 +464,8 @@ func TestFilteringOutOfUnsupportedVersions(t *testing.T) {
 		defer cancel()
 
 		params := componentsParams{
-			operator:        psmdbOperator,
-			operatorVersion: "1.6.0",
+			product:        psmdbOperator,
+			productVersion: "1.6.0",
 		}
 		versions, err := c.versions(ctx, params, nil)
 		require.NoError(t, err)
@@ -487,8 +486,8 @@ func TestFilteringOutOfUnsupportedVersions(t *testing.T) {
 		defer cancel()
 
 		params := componentsParams{
-			operator:        pxcOperator,
-			operatorVersion: "1.7.0",
+			product:        pxcOperator,
+			productVersion: "1.7.0",
 		}
 		versions, err := c.versions(ctx, params, nil)
 		require.NoError(t, err)

@@ -208,8 +208,6 @@ func (c componentsService) CheckForOperatorUpdate(ctx context.Context, req *dbaa
 	if pmmversion.PMMVersion == "" {
 		return nil, status.Error(codes.Internal, "failed to get current PMM version")
 	}
-	pmmVersionParts := strings.Split(pmmversion.PMMVersion, "-")
-	latest, err := c.versionServiceClient.GetLatestOperatorVersion(ctx, req.OperatorType, pmmVersionParts[0])
 
 	responseCh := make(chan checkResponse)
 	// Fetch installed version of the operator.
@@ -240,7 +238,8 @@ func (c componentsService) CheckForOperatorUpdate(ctx context.Context, req *dbaa
 		}
 	}(responseCh, c.db.Querier)
 
-	latestOperator, latestPMM, err := c.versionServiceClient.GetLatestOperatorVersion(ctx, req.OperatorType, pmmversion.PMMVersion)
+	pmmVersionParts := strings.Split(pmmversion.PMMVersion, "-")
+	latestOperator, latestPMM, err := c.versionServiceClient.GetLatestOperatorVersion(ctx, req.OperatorType, pmmVersionParts[0])
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
