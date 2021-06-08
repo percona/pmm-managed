@@ -186,7 +186,7 @@ func (s PSMDBClusterService) CreatePSMDBCluster(ctx context.Context, req *dbaasv
 				},
 				DiskSize: req.Params.Replicaset.DiskSize,
 			},
-			External: req.Params.External,
+			Expose: req.Params.Expose,
 		},
 		Pmm: pmmParams,
 	}
