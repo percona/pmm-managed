@@ -71,6 +71,7 @@ func (s *Service) Add(task Task, cronExpr string, startAt time.Time, retry uint,
 		}
 
 		id := scheduledTask.ID
+		task.SetID(id)
 		fn := s.wrapTask(task, id, int(retry), retryInterval)
 
 		j := s.scheduler.Cron(cronExpr).SingletonMode()
@@ -308,11 +309,13 @@ func (s *Service) convertDBTask(dbTask *models.ScheduledTask) (Task, error) {
 	var task Task
 	switch dbTask.Type {
 	case models.ScheduledPrintTask:
-		return NewPrintTask(dbTask.Data.Print.Message), nil
+		task = NewPrintTask(dbTask.Data.Print.Message)
 	case models.ScheduledMySQLBackupTask:
 		data := dbTask.Data.MySQLBackupTask
-		return NewMySQLBackupTask(s.backupsLogicService, data.ServiceID, data.LocationID, data.Name, data.Description), nil
+		task = NewMySQLBackupTask(s.backupsLogicService, data.ServiceID, data.LocationID, data.Name, data.Description)
 	default:
 		return task, fmt.Errorf("unknown task type: %s", dbTask.Type)
 	}
+	task.SetID(dbTask.ID)
+	return task, nil
 }

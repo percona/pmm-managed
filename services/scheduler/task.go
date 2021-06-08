@@ -12,14 +12,30 @@ type Task interface {
 	Do(ctx context.Context) error
 	Type() models.ScheduledTaskType
 	Data() models.ScheduledTaskData
+	ID() string
+	SetID(string)
+}
+
+type common struct {
+	id string
+}
+
+func (c *common) ID() string {
+	return c.id
+}
+
+func (c *common) SetID(id string) {
+	c.id = id
 }
 
 type printTask struct {
+	*common
 	Message string
 }
 
 func NewPrintTask(message string) *printTask {
 	return &printTask{
+		common:  &common{},
 		Message: message,
 	}
 }
@@ -42,6 +58,7 @@ func (j *printTask) Data() models.ScheduledTaskData {
 }
 
 type mySQLBackupTask struct {
+	*common
 	backupsLogicService backupsLogicService
 	ServiceID           string
 	LocationID          string
@@ -51,6 +68,7 @@ type mySQLBackupTask struct {
 
 func NewMySQLBackupTask(backupsLogicService backupsLogicService, serviceID, locationID, name, description string) *mySQLBackupTask {
 	return &mySQLBackupTask{
+		common: &common{},
 		backupsLogicService: backupsLogicService,
 		ServiceID:           serviceID,
 		LocationID:          locationID,
@@ -80,6 +98,7 @@ func (t *mySQLBackupTask) Data() models.ScheduledTaskData {
 }
 
 type mongoBackupTask struct {
+	*common
 	backupsLogicService backupsLogicService
 	ServiceID           string
 	LocationID          string
@@ -89,6 +108,7 @@ type mongoBackupTask struct {
 
 func NewMongoBackupTask(backupsLogicService backupsLogicService, serviceID, locationID, name, description string) *mongoBackupTask {
 	return &mongoBackupTask{
+		common: &common{},
 		backupsLogicService: backupsLogicService,
 		ServiceID:           serviceID,
 		LocationID:          locationID,
