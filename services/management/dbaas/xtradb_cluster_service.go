@@ -78,6 +78,7 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 				FinishedSteps: c.Operation.FinishedSteps,
 				Message:       c.Operation.Message,
 			},
+			Exposed: c.Exposed,
 		}
 
 		if c.Params.Pxc != nil {
@@ -101,11 +102,7 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 					},
 				}
 			}
-			clusters[i] = &cluster
-			continue
-		}
-
-		if c.Params.Proxysql != nil {
+		} else if c.Params.Proxysql != nil {
 			if c.Params.Proxysql.ComputeResources != nil {
 				cluster.Params.Proxysql = &dbaasv1beta1.XtraDBClusterParams_ProxySQL{
 					DiskSize: c.Params.Proxysql.DiskSize,
@@ -202,8 +199,8 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 				ComputeResources: new(dbaascontrollerv1beta1.ComputeResources),
 				DiskSize:         req.Params.Pxc.DiskSize,
 			},
-			Expose: req.Params.Expose,
 		},
+		Expose: req.Expose,
 	}
 	if req.Params.Proxysql != nil {
 		in.Params.Proxysql = &dbaascontrollerv1beta1.XtraDBClusterParams_ProxySQL{
