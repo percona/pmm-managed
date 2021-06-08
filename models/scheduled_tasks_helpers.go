@@ -158,6 +158,7 @@ type ChangeScheduledTaskParams struct {
 	RetryInterval    *time.Duration
 	Succeeded        *uint
 	Failed           *uint
+	Running          *bool
 	Data             *ScheduledTaskData
 	CronExpression   *string
 }
@@ -209,6 +210,10 @@ func ChangeScheduledTask(q *reform.Querier, id string, params ChangeScheduledTas
 
 	if params.Failed != nil {
 		row.Failed = *params.Failed
+	}
+
+	if params.Running != nil {
+		row.Running = *params.Running
 	}
 
 	if params.Data != nil {
