@@ -263,7 +263,54 @@ func (s *BackupsService) ListScheduledBackups(ctx context.Context, req *backupv1
 }
 
 func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv1beta1.ChangeScheduledBackupRequest) (*backupv1beta1.ChangeScheduledBackupResponse, error) {
-	panic("implement me")
+	scheduledTask, err := models.FindScheduledTaskByID(s.db.Querier, req.ScheduleBackupId)
+	if err != nil {
+		return nil, err
+	}
+	switch scheduledTask.Type {
+	case models.ScheduledMySQLBackupTask:
+		data := scheduledTask.Data.MySQLBackupTask
+		if req.Name != nil {
+			data.Name = req.Name.Value
+		}
+		if req.Description != nil {
+			data.Description = req.Description.Value
+		}
+	case models.ScheduledMongoBackupTask:
+	default:
+		return nil, status.Errorf(codes.InvalidArgument, "Unsupported type: %s", scheduledTask.Type)
+	}
+
+	params := models.ChangeScheduledTaskParams{
+		Data: scheduledTask.Data,
+	}
+
+	if req.Enabled != nil {
+		disabled := !req.Enabled.Value
+		params.Disable = &disabled
+	}
+
+	if req.CronExpression != nil {
+		val := req.CronExpression.Value
+		params.CronExpression = &val
+	}
+
+	if req.RetryTimes != nil {
+		val := uint(req.RetryTimes.Value)
+		params.Retries = &val
+	}
+
+	if req.RetryInterval != nil {
+		val := req.RetryInterval.AsDuration()
+		params.RetryInterval = &val
+	}
+
+	_, err = models.ChangeScheduledTask(s.db.Querier, req.ScheduleBackupId, params)
+	if err != nil {
+		return nil, err
+	}
+
+	return &backupv1beta1.ChangeScheduledBackupResponse{}, nil
 }
 
 func (s *BackupsService) RemoveScheduledBackup(ctx context.Context, req *backupv1beta1.RemoveScheduledBackupRequest) (*backupv1beta1.RemoveScheduledBackupResponse, error) {
