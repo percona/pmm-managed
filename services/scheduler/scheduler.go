@@ -17,23 +17,25 @@ import (
 
 // Service is responsive for executing tasks and storing them to DB.
 type Service struct {
-	db        *reform.DB
-	scheduler *gocron.Scheduler
-	l         *logrus.Entry
-	tasks     map[string]context.CancelFunc
-	taskMx    sync.RWMutex
-	jobsMx    sync.Mutex
+	db                  *reform.DB
+	scheduler           *gocron.Scheduler
+	l                   *logrus.Entry
+	tasks               map[string]context.CancelFunc
+	taskMx              sync.RWMutex
+	jobsMx              sync.Mutex
+	backupsLogicService backupsLogicService
 }
 
 // New creates new scheduler service.
-func New(db *reform.DB) *Service {
+func New(db *reform.DB, backupsLogicService backupsLogicService) *Service {
 	scheduler := gocron.NewScheduler(time.UTC)
 	scheduler.TagsUnique()
 	return &Service{
-		db:        db,
-		scheduler: scheduler,
-		tasks:     make(map[string]context.CancelFunc),
-		l:         logrus.WithField("component", "scheduler"),
+		db:                  db,
+		scheduler:           scheduler,
+		tasks:               make(map[string]context.CancelFunc),
+		l:                   logrus.WithField("component", "scheduler"),
+		backupsLogicService: backupsLogicService,
 	}
 }
 

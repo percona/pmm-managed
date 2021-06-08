@@ -69,7 +69,9 @@ type Server struct {
 	rulesService         rulesService
 	dbaasClient          dbaasClient
 	schedulerService     scheduleService
-	l                    *logrus.Entry
+	backupsLogicService  backupsLogicService
+
+	l *logrus.Entry
 
 	pmmUpdateAuthFileM sync.Mutex
 	pmmUpdateAuthFile  string
@@ -106,6 +108,7 @@ type Params struct {
 	RulesService         rulesService
 	DbaasClient          dbaasClient
 	SchedulerService     scheduleService
+	BackupsLogicService  backupsLogicService
 }
 
 // NewServer returns new server for Server service.

@@ -30,7 +30,9 @@ type ScheduledTaskType string
 
 // Supported scheduled task types.
 const (
-	ScheduledPrintTask = ScheduledTaskType("print")
+	ScheduledPrintTask       = ScheduledTaskType("print")
+	ScheduledMySQLBackupTask = ScheduledTaskType("mysql_backup")
+	ScheduledMongoBackupTask = ScheduledTaskType("mongo_backup")
 )
 
 // ScheduledTask describes a scheduled task.
@@ -55,11 +57,19 @@ type ScheduledTask struct {
 
 // ScheduledTaskData holds result data for different task types.
 type ScheduledTaskData struct {
-	Print *PrintTaskData `json:"print,omitempty"`
+	Print           *PrintTaskData       `json:"print,omitempty"`
+	MySQLBackupTask *MySQLBackupTaskData `json:"mySQLBackup,omitempty"`
 }
 
 type PrintTaskData struct {
 	Message string
+}
+
+type MySQLBackupTaskData struct {
+	ServiceID   string `json:"serviceID"`
+	LocationID  string `json:"locationID"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
 }
 
 // Value implements database/sql/driver.Valuer interface. Should be defined on the value.

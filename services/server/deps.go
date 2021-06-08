@@ -141,3 +141,7 @@ type scheduleService interface {
 	Add(task scheduler.Task, cronExpr string, startAt time.Time, retry uint, retryInterval time.Duration) (*models.ScheduledTask, error)
 	Remove(id string) error
 }
+
+type backupsLogicService interface {
+	PerformBackup(ctx context.Context, serviceID, locationID, name string) (string, error)
+}

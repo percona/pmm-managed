@@ -139,6 +139,8 @@ type gRPCServerDeps struct {
 	rulesService         *ia.RulesService
 	jobsService          *agents.JobsService
 	versionServiceClient *managementdbaas.VersionServiceClient
+	schedulerService     *scheduler.Service
+	backupsLogicService  *backup.BackupsLogicService
 	minio                *minio.Service
 }
 
@@ -202,7 +204,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	iav1beta1.RegisterRulesServer(gRPCServer, deps.rulesService)
 	iav1beta1.RegisterAlertsServer(gRPCServer, deps.alertsService)
 
-	backupv1beta1.RegisterBackupsServer(gRPCServer, backup.NewBackupsService(deps.db, deps.jobsService))
+	backupv1beta1.RegisterBackupsServer(gRPCServer, backup.NewBackupsService(deps.db, deps.jobsService, deps.backupsLogicService, deps.schedulerService))
 	backupv1beta1.RegisterLocationsServer(gRPCServer, backup.NewLocationsService(deps.db, deps.minio))
 	backupv1beta1.RegisterArtifactsServer(gRPCServer, backup.NewArtifactsService(deps.db))
 	backupv1beta1.RegisterRestoreHistoryServer(gRPCServer, backup.NewRestoreHistoryService(deps.db))
@@ -640,7 +642,8 @@ func main() {
 	versionService := managementdbaas.NewVersionServiceClient(*versionServiceAPIURLF)
 
 	dbaasClient := dbaas.NewClient(*dbaasControllerAPIAddrF)
-	schedulerService := scheduler.New(db)
+	backupsLogicService := backup.NewBackupsLogicService(db, jobsService)
+	schedulerService := scheduler.New(db, backupsLogicService)
 
 	serverParams := &server.Params{
 		DB:                   db,
@@ -658,6 +661,7 @@ func main() {
 		RulesService:         rulesService,
 		DbaasClient:          dbaasClient,
 		SchedulerService:     schedulerService,
+		BackupsLogicService:  backupsLogicService,
 	}
 
 	server, err := server.NewServer(serverParams)
@@ -826,6 +830,8 @@ func main() {
 			rulesService:         rulesService,
 			jobsService:          jobsService,
 			versionServiceClient: versionService,
+			schedulerService:     schedulerService,
+			backupsLogicService:  backupsLogicService,
 			minio:                &minio.Service{},
 		})
 	}()
