@@ -62,6 +62,10 @@ func TestVersionServiceClient(t *testing.T) {
 	}
 }
 
+const fakeHostAndPort = "localhost:7453"
+
+type fakeVersionServerTestfunc func(*testing.T, context.Context, versionService)
+
 type fakeLatestVersionServer struct {
 	response *VersionServiceResponse
 }
@@ -94,6 +98,29 @@ func (f fakeLatestVersionServer) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+func runTestWithFakeVersionServer(t *testing.T, response *VersionServiceResponse, timeout time.Duration, f fakeVersionServerTestfunc) {
+	var httpServer *http.Server
+	waitForListener := make(chan struct{})
+	server := fakeLatestVersionServer{
+		response: response,
+	}
+	go func() {
+		httpServer = &http.Server{Addr: fakeHostAndPort, Handler: server}
+		listener, err := net.Listen("tcp", fakeHostAndPort)
+		if err != nil {
+			log.Fatal(err)
+		}
+		close(waitForListener)
+		_ = httpServer.Serve(listener)
+	}()
+	<-waitForListener
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	c := NewVersionServiceClient("http://" + fakeHostAndPort + "/versions/v1")
+	f(t, ctx, c)
+	assert.NoError(t, httpServer.Shutdown(ctx))
+}
+
 func TestLatestVersionGetting(t *testing.T) {
 	t.Parallel()
 	t.Run("Invalid url", func(t *testing.T) {
@@ -108,65 +135,48 @@ func TestLatestVersionGetting(t *testing.T) {
 	})
 	t.Run("Get latest", func(t *testing.T) {
 		t.Parallel()
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-		defer cancel()
-		hostAndPort := "localhost:7453"
-		fakeServer := fakeLatestVersionServer{
-			response: &VersionServiceResponse{
-				Versions: []struct {
-					Product        string `json:"product"`
-					ProductVersion string `json:"operator"`
-					Matrix         matrix `json:"matrix"`
-				}{
-					{
-						ProductVersion: "2.18.0",
-						Product:        "pmm-server",
-						Matrix: matrix{
-							PSMDBOperator: map[string]componentVersion{
-								"1.8.0": {},
-								"1.7.0": {},
-							},
+		response := &VersionServiceResponse{
+			Versions: []struct {
+				Product        string `json:"product"`
+				ProductVersion string `json:"operator"`
+				Matrix         matrix `json:"matrix"`
+			}{
+				{
+					ProductVersion: "2.18.0",
+					Product:        "pmm-server",
+					Matrix: matrix{
+						PSMDBOperator: map[string]componentVersion{
+							"1.8.0": {},
+							"1.7.0": {},
 						},
 					},
-					{
-						ProductVersion: "2.19.0",
-						Product:        "pmm-server",
-						Matrix: matrix{
-							PSMDBOperator: map[string]componentVersion{
-								"1.9.0": {},
-								"1.8.0": {},
-								"1.7.0": {},
-							},
+				},
+				{
+					ProductVersion: "2.19.0",
+					Product:        "pmm-server",
+					Matrix: matrix{
+						PSMDBOperator: map[string]componentVersion{
+							"1.9.0": {},
+							"1.8.0": {},
+							"1.7.0": {},
 						},
 					},
 				},
 			},
 		}
-		var httpServer *http.Server
-		waitForListener := make(chan struct{})
-		go func() {
-			httpServer = &http.Server{Addr: hostAndPort, Handler: fakeServer}
-			listener, err := net.Listen("tcp", hostAndPort)
-			if err != nil {
-				log.Fatal(err)
-			}
-			close(waitForListener)
-			_ = httpServer.Serve(listener)
-		}()
-		<-waitForListener
-		defer httpServer.Shutdown(ctx)
+		runTestWithFakeVersionServer(t, response, time.Second*5,
+			func(t *testing.T, ctx context.Context, c versionService) {
+				opeator, pmm, err := c.GetLatestOperatorVersion(ctx, psmdbOperator, "2.18.0")
+				require.NoError(t, err, "request to fakeserver for latest version should not fail")
+				assert.Equal(t, "1.8.0", opeator.String())
+				assert.Equal(t, "2.18.0", pmm.String())
 
-		c := NewVersionServiceClient("http://" + hostAndPort)
-		opeator, pmm, err := c.GetLatestOperatorVersion(ctx, psmdbOperator, "2.18.0")
-		require.NoError(t, err, "request to fakeserver for latest version should not fail")
-		assert.Equal(t, "1.8.0", opeator.String())
-		assert.Equal(t, "2.18.0", pmm.String())
-
-		opeator, pmm, err = c.GetLatestOperatorVersion(ctx, psmdbOperator, "")
-		require.NoError(t, err, "request to fakeserver for latest version should not fail")
-		assert.Equal(t, "1.9.0", opeator.String())
-		assert.Equal(t, "2.19.0", pmm.String())
+				opeator, pmm, err = c.GetLatestOperatorVersion(ctx, psmdbOperator, "")
+				require.NoError(t, err, "request to fakeserver for latest version should not fail")
+				assert.Equal(t, "1.9.0", opeator.String())
+				assert.Equal(t, "2.19.0", pmm.String())
+			},
+		)
 	})
 
 }
