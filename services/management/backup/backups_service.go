@@ -246,9 +246,35 @@ func (s *BackupsService) ListScheduledBackups(ctx context.Context, req *backupv1
 		return nil, err
 	}
 
+	locationIDs := make([]string, 0, len(tasks))
+	serviceIDs := make([]string, 0, len(tasks))
+	for _, t := range tasks {
+		var serviceID string
+		var locationID string
+		switch t.Type {
+		case models.ScheduledMySQLBackupTask:
+			serviceID = t.Data.MySQLBackupTask.ServiceID
+			locationID = t.Data.MySQLBackupTask.LocationID
+		case models.ScheduledMongoBackupTask:
+		default:
+			continue
+		}
+		serviceIDs = append(serviceIDs, serviceID)
+		locationIDs = append(locationIDs, locationID)
+	}
+	locations, err := models.FindBackupLocationsByIDs(s.db.Querier, locationIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	services, err := models.FindServicesByIDs(s.db.Querier, serviceIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	scheduledBackups := make([]*backupv1beta1.ScheduledBackup, 0, len(tasks))
 	for _, task := range tasks {
-		backup, err := convertTaskToScheduledBackup(task)
+		backup, err := convertTaskToScheduledBackup(task, services, locations)
 		if err != nil {
 			s.l.WithError(err).Warnf("convert task to scheduled backup")
 			continue
@@ -329,22 +355,19 @@ func (s *BackupsService) RemoveScheduledBackup(ctx context.Context, req *backupv
 	return &backupv1beta1.RemoveScheduledBackupResponse{}, nil
 }
 
-func convertTaskToScheduledBackup(task *models.ScheduledTask) (*backupv1beta1.ScheduledBackup, error) {
+func convertTaskToScheduledBackup(task *models.ScheduledTask,
+	services map[string]*models.Service,
+	locations map[string]*models.BackupLocation) (*backupv1beta1.ScheduledBackup, error) {
 	backup := &backupv1beta1.ScheduledBackup{
 		ScheduledBackupId: task.ID,
-		ServiceId:         "",
-		LocationId:        "",
 		CronExpression:    task.CronExpression,
 		StartTime:         timestamppb.New(task.StartAt),
-		Name:              "",
-		Description:       "",
 		RetryMode:         backupv1beta1.RetryMode_MANUAL,
 		RetryInterval:     durationpb.New(task.RetryInterval),
 		RetryTimes:        uint32(task.Retries),
 		Enabled:           !task.Disabled,
 		LastRun:           timestamppb.New(task.LastRun),
-		NextRun:           timestamppb.New(task.NextRun),
-	}
+		NextRun:           timestamppb.New(task.NextRun)}
 	if task.Retries > 0 {
 		backup.RetryMode = backupv1beta1.RetryMode_AUTO
 	}
@@ -355,11 +378,16 @@ func convertTaskToScheduledBackup(task *models.ScheduledTask) (*backupv1beta1.Sc
 		backup.LocationId = data.LocationID
 		backup.Name = data.Name
 		backup.Description = data.Description
+		backup.DataModel = backupv1beta1.DataModel_PHYSICAL
 	case models.ScheduledMongoBackupTask:
 		// @TODO
 	default:
 		return nil, fmt.Errorf("unsupported task type: %s", task.Type)
 	}
+
+	backup.ServiceName = services[backup.ServiceId].ServiceName
+	backup.Vendor = string(services[backup.ServiceId].ServiceType)
+	backup.LocationName = locations[backup.LocationId].Name
 
 	return backup, nil
 }
