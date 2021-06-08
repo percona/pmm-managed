@@ -57,7 +57,7 @@ func NewBackupsService(db *reform.DB, jobsService jobsService, backupsLogicServi
 
 // StartBackup starts on-demand backup.
 func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.StartBackupRequest) (*backupv1beta1.StartBackupResponse, error) {
-	artifactID, err := s.backupsLogicService.PerformBackup(ctx, req.ServiceId, req.LocationId, req.Name)
+	artifactID, err := s.backupsLogicService.PerformBackup(ctx, req.ServiceId, req.LocationId, req.Name, "")
 	if err != nil {
 		return nil, err
 	}

@@ -132,5 +132,5 @@ type rulesService interface {
 }
 
 type backupsLogicService interface {
-	PerformBackup(ctx context.Context, serviceID, locationID, name string) (string, error)
+	PerformBackup(ctx context.Context, serviceID, locationID, name, scheduleID string) (string, error)
 }

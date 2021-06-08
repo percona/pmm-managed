@@ -531,6 +531,9 @@ var databaseSchema = [][]string{
 			PRIMARY KEY (id)
 		)`,
 	},
+	39: {
+		`ALTER TABLE artifacts ADD COLUMN schedule_id VARCHAR`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^

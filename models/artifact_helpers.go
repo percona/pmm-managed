@@ -116,6 +116,7 @@ type CreateArtifactParams struct {
 	ServiceID  string
 	DataModel  DataModel
 	Status     BackupStatus
+	ScheduleID string
 }
 
 // Validate validates params used for creating an artifact entry.
@@ -168,6 +169,7 @@ func CreateArtifact(q *reform.Querier, params CreateArtifactParams) (*Artifact, 
 		ServiceID:  params.ServiceID,
 		DataModel:  params.DataModel,
 		Status:     params.Status,
+		ScheduleID: params.ScheduleID,
 	}
 
 	if err := q.Insert(row); err != nil {

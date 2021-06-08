@@ -45,7 +45,8 @@ func NewBackupsLogicService(db *reform.DB, jobsService jobsService) *BackupsLogi
 }
 
 // PerformBackup starts on-demand backup.
-func (s *BackupsLogicService) PerformBackup(ctx context.Context, serviceID, locationID, name string) (string, error) {
+func (s *BackupsLogicService) PerformBackup(ctx context.Context, serviceID, locationID, name,
+	scheduleID string) (string, error) {
 	var err error
 	var artifact *models.Artifact
 	var location *models.BackupLocation
@@ -92,6 +93,7 @@ func (s *BackupsLogicService) PerformBackup(ctx context.Context, serviceID, loca
 			ServiceID:  svc.ServiceID,
 			DataModel:  dataModel,
 			Status:     models.PendingBackupStatus,
+			ScheduleID: scheduleID,
 		})
 		if err != nil {
 			return err

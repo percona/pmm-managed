@@ -83,6 +83,7 @@ type Artifact struct {
 	ServiceID  string       `reform:"service_id"`
 	DataModel  DataModel    `reform:"data_model"`
 	Status     BackupStatus `reform:"status"`
+	ScheduleID string       `reform:"schedule_id"`
 	CreatedAt  time.Time    `reform:"created_at"`
 }
 

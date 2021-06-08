@@ -68,7 +68,7 @@ type mySQLBackupTask struct {
 
 func NewMySQLBackupTask(backupsLogicService backupsLogicService, serviceID, locationID, name, description string) *mySQLBackupTask {
 	return &mySQLBackupTask{
-		common: &common{},
+		common:              &common{},
 		backupsLogicService: backupsLogicService,
 		ServiceID:           serviceID,
 		LocationID:          locationID,
@@ -78,7 +78,7 @@ func NewMySQLBackupTask(backupsLogicService backupsLogicService, serviceID, loca
 }
 
 func (t *mySQLBackupTask) Do(ctx context.Context) error {
-	_, err := t.backupsLogicService.PerformBackup(ctx, t.ServiceID, t.LocationID, t.Name)
+	_, err := t.backupsLogicService.PerformBackup(ctx, t.ServiceID, t.LocationID, t.Name, t.ID())
 	return err
 }
 
@@ -108,7 +108,7 @@ type mongoBackupTask struct {
 
 func NewMongoBackupTask(backupsLogicService backupsLogicService, serviceID, locationID, name, description string) *mongoBackupTask {
 	return &mongoBackupTask{
-		common: &common{},
+		common:              &common{},
 		backupsLogicService: backupsLogicService,
 		ServiceID:           serviceID,
 		LocationID:          locationID,
@@ -118,7 +118,7 @@ func NewMongoBackupTask(backupsLogicService backupsLogicService, serviceID, loca
 }
 
 func (t *mongoBackupTask) Do(ctx context.Context) error {
-	_, err := t.backupsLogicService.PerformBackup(ctx, t.ServiceID, t.LocationID, t.Name)
+	_, err := t.backupsLogicService.PerformBackup(ctx, t.ServiceID, t.LocationID, t.Name, t.ID())
 	return err
 }
 
