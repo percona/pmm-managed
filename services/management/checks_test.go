@@ -30,6 +30,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/percona/pmm-managed/services"
+	"github.com/percona/pmm-managed/utils"
 	"github.com/percona/pmm-managed/utils/tests"
 )
 
@@ -81,13 +82,16 @@ func TestGetSecurityCheckResults(t *testing.T) {
 	})
 
 	t.Run("STT enabled", func(t *testing.T) {
-		checkResult := []check.Result{
+		checkResult := []utils.STTCheckResult{
 			{
-				Summary:     "Check summary",
-				Description: "Check Description",
-				ReadMoreURL: "https://www.example.com",
-				Severity:    1,
-				Labels:      map[string]string{"label_key": "label_value"},
+				Result: check.Result{
+					Summary:     "Check summary",
+					Description: "Check Description",
+					ReadMoreURL: "https://www.example.com",
+					Severity:    1,
+					Labels:      map[string]string{"label_key": "label_value"},
+				},
+				Target: utils.Target{ServiceName: "svc"},
 			},
 		}
 		response := &managementpb.GetSecurityCheckResultsResponse{
@@ -98,6 +102,7 @@ func TestGetSecurityCheckResults(t *testing.T) {
 					ReadMoreUrl: "https://www.example.com",
 					Severity:    1,
 					Labels:      map[string]string{"label_key": "label_value"},
+					ServiceName: "svc",
 				},
 			},
 		}
