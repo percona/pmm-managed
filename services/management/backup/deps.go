@@ -75,4 +75,5 @@ type scheduleService interface {
 	Run(ctx context.Context)
 	Add(task scheduler.Task, cronExpr string, startAt time.Time, retry uint, retryInterval time.Duration) (*models.ScheduledTask, error)
 	Remove(id string) error
+	Reload(id string) error
 }

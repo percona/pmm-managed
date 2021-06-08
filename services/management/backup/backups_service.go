@@ -305,7 +305,15 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 		params.RetryInterval = &val
 	}
 
-	_, err = models.ChangeScheduledTask(s.db.Querier, req.ScheduleBackupId, params)
+	err = s.db.InTransaction(func(tx *reform.TX) error {
+		_, err := models.ChangeScheduledTask(s.db.Querier, req.ScheduleBackupId, params)
+		if err != nil {
+			return err
+		}
+
+		return s.scheduleService.Reload(req.ScheduleBackupId)
+	})
+
 	if err != nil {
 		return nil, err
 	}
