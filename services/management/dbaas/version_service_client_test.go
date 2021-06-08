@@ -69,13 +69,19 @@ type fakeLatestVersionServer struct {
 func (f fakeLatestVersionServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	encoder := json.NewEncoder(w)
 	var response *VersionServiceResponse
-	if strings.HasSuffix(r.URL.Path, "pmm-server/2.18.0") {
-		response = &VersionServiceResponse{
-			Versions: []struct {
-				Product        string `json:"product"`
-				ProductVersion string `json:"operator"`
-				Matrix         matrix `json:"matrix"`
-			}{f.response.Versions[0]},
+	if strings.Contains(r.URL.Path, "pmm-server/") {
+		segments := strings.Split(r.URL.Path, "/")
+		pmmServerVersion := segments[len(segments)-1]
+		for _, v := range f.response.Versions {
+			if v.ProductVersion == pmmServerVersion {
+				response = &VersionServiceResponse{
+					Versions: []struct {
+						Product        string `json:"product"`
+						ProductVersion string `json:"operator"`
+						Matrix         matrix `json:"matrix"`
+					}{v},
+				}
+			}
 		}
 	} else if strings.HasSuffix(r.URL.Path, "pmm-server") {
 		response = f.response
