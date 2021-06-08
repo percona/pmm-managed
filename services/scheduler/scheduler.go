@@ -257,6 +257,9 @@ func (s *Service) convertDBTask(dbTask *models.ScheduledTask) (Task, error) {
 	switch dbTask.Type {
 	case models.ScheduledPrintTask:
 		return NewPrintTask(dbTask.Data.Print.Message), nil
+	case models.ScheduledMySQLBackupTask:
+		data := dbTask.Data.MySQLBackupTask
+		return NewMySQLBackupTask(s.backupsLogicService, data.ServiceID, data.LocationID, data.Name, data.Description), nil
 	default:
 		return task, fmt.Errorf("unknown task type: %s", dbTask.Type)
 	}

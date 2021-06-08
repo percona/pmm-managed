@@ -68,7 +68,9 @@ func TestStartBackup(t *testing.T) {
 	mockedJobsService := &mockJobsService{}
 	mockedJobsService.On("StartMySQLBackupJob", mock.Anything, mock.Anything, mock.Anything,
 		mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	backupSvc := NewBackupsService(db, mockedJobsService)
+	backupLogicService := NewBackupsLogicService(db, mockedJobsService)
+	schedulerService := &mockScheduleService{}
+	backupSvc := NewBackupsService(db, mockedJobsService, backupLogicService, schedulerService)
 
 	agent := setup(t, db, "test-service")
 	locationRes, err := models.CreateBackupLocation(db.Querier, models.CreateBackupLocationParams{

@@ -20,8 +20,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/percona/pmm-managed/services/scheduler"
-
 	"github.com/percona-platform/saas/pkg/check"
 	"github.com/percona/pmm/api/serverpb"
 	"github.com/percona/pmm/version"
@@ -39,7 +37,6 @@ import (
 //go:generate mockery -name=platformService -case=snake -inpkg -testonly
 //go:generate mockery -name=agentsRegistry -case=snake -inpkg -testonly
 //go:generate mockery -name=rulesService -case=snake -inpkg -testonly
-//go:generate mockery -name=scheduleService -case=snake -inpkg -testonly
 
 // healthChecker interface wraps all services that implements the IsReady method to report the
 // service health for the Readiness check.
@@ -132,14 +129,6 @@ type agentsRegistry interface {
 type rulesService interface {
 	WriteVMAlertRulesFiles()
 	RemoveVMAlertRulesFiles() error
-}
-
-// schedulerService is a subset of method of scheduler.Service used by this package.
-// We use it instead of real type for testing and to avoid dependency cycle.
-type scheduleService interface {
-	Run(ctx context.Context)
-	Add(task scheduler.Task, cronExpr string, startAt time.Time, retry uint, retryInterval time.Duration) (*models.ScheduledTask, error)
-	Remove(id string) error
 }
 
 type backupsLogicService interface {

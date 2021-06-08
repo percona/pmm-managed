@@ -20,7 +20,8 @@ func setup(t *testing.T) *Service {
 	t.Helper()
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-	return New(db)
+	backupsLogicService := &mockBackupsLogicService{}
+	return New(db, backupsLogicService)
 
 }
 func TestService(t *testing.T) {

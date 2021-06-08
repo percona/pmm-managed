@@ -41,23 +41,26 @@ func (j *printTask) Data() models.ScheduledTaskData {
 }
 
 type mySQLBackupTask struct {
-	ServiceID   string
-	LocationID  string
-	Name        string
-	Description string
+	backupsLogicService backupsLogicService
+	ServiceID           string
+	LocationID          string
+	Name                string
+	Description         string
 }
 
-func NewMySQLBackupTask(serviceID, locationID, name, description string) *mySQLBackupTask {
+func NewMySQLBackupTask(backupsLogicService backupsLogicService, serviceID, locationID, name, description string) *mySQLBackupTask {
 	return &mySQLBackupTask{
-		ServiceID:   serviceID,
-		LocationID:  locationID,
-		Name:        name,
-		Description: description,
+		backupsLogicService: backupsLogicService,
+		ServiceID:           serviceID,
+		LocationID:          locationID,
+		Name:                name,
+		Description:         description,
 	}
 }
 
 func (t *mySQLBackupTask) Do(ctx context.Context) error {
-	panic("implement me")
+	_, err := t.backupsLogicService.PerformBackup(ctx, t.ServiceID, t.LocationID, t.Name)
+	return err
 }
 
 func (t *mySQLBackupTask) Type() models.ScheduledTaskType {

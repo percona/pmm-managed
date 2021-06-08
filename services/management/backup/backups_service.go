@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/percona/pmm-managed/services/scheduler"
+
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -204,15 +206,27 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 		if err != nil {
 			return err
 		}
+		var task scheduler.Task
 		switch svc.ServiceType {
+		case models.MySQLServiceType:
+			task = scheduler.NewMySQLBackupTask(s.backupsLogicService, req.ServiceId, req.LocationId, req.Name, req.Description)
+		case models.MongoDBServiceType:
+		// @TODO
+		case models.PostgreSQLServiceType,
+			models.ProxySQLServiceType,
+			models.HAProxyServiceType,
+			models.ExternalServiceType:
+			return status.Errorf(codes.Unimplemented, "unimplemented service: %s", svc.ServiceType)
+		default:
+			return status.Errorf(codes.Unknown, "unknown service: %s", svc.ServiceType)
 
 		}
-		task, err := s.scheduleService.Add(nil, req.CronExpression, req.StartTime.AsTime(), uint(req.RetryTimes), req.RetryInterval.AsDuration())
+		scheduledTask, err := s.scheduleService.Add(task, req.CronExpression, req.StartTime.AsTime(), uint(req.RetryTimes), req.RetryInterval.AsDuration())
 		if err != nil {
 			return err
 		}
 
-		id = task.ID
+		id = scheduledTask.ID
 		return nil
 	})
 	if err != nil {
@@ -253,7 +267,7 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 }
 
 func (s *BackupsService) RemoveScheduledBackup(ctx context.Context, req *backupv1beta1.RemoveScheduledBackupRequest) (*backupv1beta1.RemoveScheduledBackupResponse, error) {
-	err := models.RemoveScheduledTask(s.db.Querier, req.ScheduleBackupId)
+	err := s.scheduleService.Remove(req.ScheduleBackupId)
 	if err != nil {
 		return nil, err
 	}

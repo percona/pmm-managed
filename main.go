@@ -660,7 +660,6 @@ func main() {
 		VMAlertExternalRules: externalRules,
 		RulesService:         rulesService,
 		DbaasClient:          dbaasClient,
-		SchedulerService:     schedulerService,
 		BackupsLogicService:  backupsLogicService,
 	}
 
