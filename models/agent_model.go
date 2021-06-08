@@ -108,6 +108,19 @@ func (c AzureOptions) Value() (driver.Value, error) { return jsonValue(c) }
 // Scan implements database/sql.Scanner interface. Should be defined on the pointer.
 func (c *AzureOptions) Scan(src interface{}) error { return jsonScan(c, src) }
 
+// PostgreSQLOptions represents structure for special MySQL options.
+type PostgreSQLOptions struct {
+	TLSCa   string `json:"tls_ca"`
+	TLSCert string `json:"tls_cert"`
+	TLSKey  string `json:"tls_key"`
+}
+
+// Value implements database/sql/driver.Valuer interface. Should be defined on the value.
+func (c PostgreSQLOptions) Value() (driver.Value, error) { return jsonValue(c) }
+
+// Scan implements database/sql.Scanner interface. Should be defined on the pointer.
+func (c *PostgreSQLOptions) Scan(src interface{}) error { return jsonScan(c, src) }
+
 // PMMAgentWithPushMetricsSupport - version of pmmAgent,
 // that support vmagent and push metrics mode
 // will be released with PMM Agent v2.12.
@@ -160,8 +173,9 @@ type Agent struct {
 	PushMetrics                bool           `reform:"push_metrics"`
 	DisabledCollectors         pq.StringArray `reform:"disabled_collectors"`
 
-	MySQLOptions   *MySQLOptions   `reform:"mysql_options"`
-	MongoDBOptions *MongoDBOptions `reform:"mongo_db_tls_options"`
+	MySQLOptions      *MySQLOptions      `reform:"mysql_options"`
+	MongoDBOptions    *MongoDBOptions    `reform:"mongo_db_tls_options"`
+	PostgreSQLOptions *PostgreSQLOptions `reform:"postgresql_options"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.

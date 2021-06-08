@@ -517,6 +517,9 @@ var databaseSchema = [][]string{
 		`ALTER TABLE artifacts ADD FOREIGN KEY (location_id) REFERENCES backup_locations (id)`,
 		`ALTER TABLE artifacts DROP CONSTRAINT artifacts_service_id_check`,
 	},
+	39: {
+		`ALTER TABLE agents ALTER COLUMN postgresql_options TYPE JSONB`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^
