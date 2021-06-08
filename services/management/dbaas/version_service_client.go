@@ -19,14 +19,15 @@ package dbaas
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"strings"
 	"time"
 
 	goversion "github.com/hashicorp/go-version"
+	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
@@ -37,6 +38,8 @@ const (
 	psmdbOperator = "psmdb-operator"
 	pxcOperator   = "pxc-operator"
 )
+
+var ErrNoVersionsFound = errors.New("no versions to compare current version with found")
 
 // componentVersion contains info about exact component version.
 type componentVersion struct {
@@ -123,13 +126,14 @@ func (c *VersionServiceClient) Collect(ch chan<- prom.Metric) {
 // Matrix calls version service with given params and returns components matrix.
 func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsParams) (*VersionServiceResponse, error) {
 	paths := []string{c.url, params.product}
-	if params.operatorVersion != "" {
-		paths = append(paths, params.operatorVersion)
-		if params.dbVersion != "" {
-			paths = append(paths, params.dbVersion)
+	if params.productVersion != "" {
+		paths = append(paths, params.productVersion)
+		if params.versionToApply != "" {
+			paths = append(paths, params.versionToApply)
 		}
 	}
 	url := strings.Join(paths, "/")
+	log.Printf("metrix url: %v", url)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -153,8 +157,9 @@ func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsPara
 	return &vsResponse, nil
 }
 
-// GetLatestOperatorVersion return latest oprator for given pmm version, if it's empty, it returns latest of all versions.
-func (v *VersionServiceClient) GetLatestOperatorVersion(ctx context.Context, operatorType, pmmVersion string) (*goversion.Version, error) {
+// GetLatestOperatorVersion return latest operator and pmm version for given pmm version.
+// If given PMM version is empty, it returns latest of all operator versions and it's compatible PMM version.
+func (v *VersionServiceClient) GetLatestOperatorVersion(ctx context.Context, operatorType, pmmVersion string) (*goversion.Version, *goversion.Version, error) {
 	params := componentsParams{
 		product: "pmm-server",
 	}
@@ -163,51 +168,72 @@ func (v *VersionServiceClient) GetLatestOperatorVersion(ctx context.Context, ope
 	}
 	resp, err := v.Matrix(ctx, params)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	latestPerPMMVersion := make([]string, 0, len(resp.Versions))
+	log.Printf("response versions: %v", resp.Versions)
+	pmmForLatestOperator := make(map[*goversion.Version]*goversion.Version)
 	for _, pmmVersionDeps := range resp.Versions {
-		var operatorVersions componentVersion
+		var operatorVersions map[string]componentVersion
 		switch operatorType {
 		case pxcOperator:
 			operatorVersions = pmmVersionDeps.Matrix.PXCOperator
 		case psmdbOperator:
 			operatorVersions = pmmVersionDeps.Matrix.PSMDBOperator
-		default:
-			return nil, errors.New("unsupported operator type")
 		}
-		latest, err := getLatest(keysToSliceOfVersions(operatorVersions))
+		versions, err := fromStringKeysToSliceOfVersions(operatorVersions)
+		log.Printf("fromStringKeysToSliceOfVersions: %v", versions)
 		if err != nil {
-			return "", err
+			return nil, nil, err
 		}
-		latestPerPMMVersion = append(latestPerPMMVersion, latest)
+		latestOperatorVersion, err := getLatest(versions)
+		if err != nil {
+			return nil, nil, err
+		}
+		// Store PMM version for latest operator version.
+		parsedPMMVersion, err := goversion.NewVersion(pmmVersionDeps.ProductVersion)
+		if err != nil {
+			return nil, nil, err
+		}
+		pmmForLatestOperator[latestOperatorVersion] = parsedPMMVersion
 	}
-	return getLatest(latestPerPMMVersion)
+	latestOperatorVersion, err := getLatest(fromVersionMapToSliceOfVersions(pmmForLatestOperator))
+	log.Printf("fromVersionMapToSliceOfVersions: %v", latestOperatorVersion)
+	return latestOperatorVersion, pmmForLatestOperator[latestOperatorVersion], err
 }
 
-func keysToSliceOfVersions(m map[string]interface{}) ([]*goversion.Version, error) {
+func fromStringKeysToSliceOfVersions(m map[string]componentVersion) ([]*goversion.Version, error) {
 	keys := make([]*goversion.Version, len(m))
 	i := 0
 	var err error
 	for k := range m {
 		keys[i], err = goversion.NewVersion(k)
 		if err != nil {
-			return []*goversion.Version{}, err
+			return nil, err
 		}
 		i++
 	}
 	return keys, nil
 }
 
-func (v *VersionServiceClient) getLatest(versions []*goversion.Version) (*goversion.Version, error) {
-	if len(versions) == 0 {
-		return "", errors.New("no latest version found")
+func fromVersionMapToSliceOfVersions(m map[*goversion.Version]*goversion.Version) []*goversion.Version {
+	keys := make([]*goversion.Version, len(m))
+	i := 0
+	for k := range m {
+		keys[i] = k
+		i++
 	}
-	latest := goversion.Must("v0.0.0")
+	return keys
+}
+
+func getLatest(versions []*goversion.Version) (*goversion.Version, error) {
+	if len(versions) == 0 {
+		return nil, ErrNoVersionsFound
+	}
+	latest := goversion.Must(goversion.NewVersion("v0.0.0"))
 	for _, version := range versions {
 		if version.GreaterThan(latest) {
 			latest = version
 		}
 	}
-	return latest
+	return latest, nil
 }

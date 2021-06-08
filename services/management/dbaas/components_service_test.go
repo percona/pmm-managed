@@ -73,6 +73,7 @@ func TestComponentService(t *testing.T) {
 		})
 
 		vsc := NewVersionServiceClient(versionServiceURL)
+		vsc := NewVersionServiceClient(versionServiceURL)
 		cs = NewComponentsService(db, dbaasClient, vsc)
 
 		return
