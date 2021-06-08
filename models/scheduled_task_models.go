@@ -49,6 +49,7 @@ type ScheduledTask struct {
 	RetriesRemaining uint               `reform:"retries_remaining"`
 	Succeeded        uint               `reform:"succeeded"`
 	Failed           uint               `reform:"failed"`
+	Running          bool               `reform:"running"`
 	CreatedAt        time.Time          `reform:"created_at"`
 	UpdatedAt        time.Time          `reform:"updated_at"`
 }

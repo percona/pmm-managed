@@ -115,6 +115,51 @@ func (s *Service) Remove(id string) error {
 	return nil
 }
 
+// Reload removes job from scheduler and add it again from DB.
+func (s *Service) Reload(id string) error {
+	dbTask, err := models.FindScheduledTaskByID(s.db.Querier, id)
+	if err != nil {
+		return err
+	}
+
+	if dbTask.Running {
+		return fmt.Errorf("task is running")
+	}
+
+	s.jobsMx.Lock()
+	defer s.jobsMx.Unlock()
+	var job *gocron.Job
+	for _, j := range s.scheduler.Jobs() {
+		if len(j.Tags()) > 0 && j.Tags()[0] == id {
+			job = j
+			break
+		}
+	}
+
+	if job == nil {
+		return fmt.Errorf("job not found")
+	}
+
+	task, err := s.convertDBTask(dbTask)
+	if err != nil {
+		return err
+	}
+
+	s.scheduler.RemoveByReference(job)
+
+	j := s.scheduler.Cron(dbTask.CronExpression).SingletonMode()
+	if !dbTask.StartAt.IsZero() {
+		j = j.StartAt(dbTask.StartAt)
+	}
+
+	fn := s.wrapTask(task, dbTask.ID, int(dbTask.RetriesRemaining), dbTask.RetryInterval)
+	if _, err := j.Tag(dbTask.ID).Do(fn); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *Service) loadFromDB() error {
 	s.jobsMx.Lock()
 	defer s.jobsMx.Unlock()
@@ -127,21 +172,21 @@ func (s *Service) loadFromDB() error {
 		return err
 	}
 
-	jobs := make([]Task, 0, len(dbTasks))
+	tasks := make([]Task, 0, len(dbTasks))
 	for _, dbTask := range dbTasks {
-		job, err := s.convertDBTask(dbTask)
+		task, err := s.convertDBTask(dbTask)
 		if err != nil {
 			return err
 		}
-		jobs = append(jobs, job)
+		tasks = append(tasks, task)
 	}
 
 	s.scheduler.Clear()
 	// Reset tags
 	s.scheduler.TagsUnique()
-	for i, job := range jobs {
+	for i, task := range tasks {
 		dbTask := dbTasks[i]
-		fn := s.wrapTask(job, dbTask.ID, int(dbTask.RetriesRemaining), dbTask.RetryInterval)
+		fn := s.wrapTask(task, dbTask.ID, int(dbTask.RetriesRemaining), dbTask.RetryInterval)
 		j := s.scheduler.Cron(dbTask.CronExpression).SingletonMode()
 		if !dbTask.StartAt.IsZero() {
 			j = j.StartAt(dbTask.StartAt)
@@ -177,6 +222,10 @@ func (s *Service) wrapTask(task Task, id string, retry int, retryInterval time.D
 		for {
 			t := time.Now()
 			l.Debug("Starting task")
+			_, err = models.ChangeScheduledTask(s.db.Querier, id, models.ChangeScheduledTaskParams{
+				Running: pointer.ToBool(true),
+			})
+
 			err = task.Do(ctx)
 			l.WithField("duration", time.Since(t)).Debug("Ended task")
 			if err == nil {
@@ -194,6 +243,7 @@ func (s *Service) wrapTask(task Task, id string, retry int, retryInterval time.D
 			retriesRemaining--
 			_, err = models.ChangeScheduledTask(s.db.Querier, id, models.ChangeScheduledTaskParams{
 				RetriesRemaining: pointer.ToUint(uint(retriesRemaining)),
+				Running:          pointer.ToBool(false),
 			})
 
 			if err != nil {
@@ -236,12 +286,14 @@ func (s *Service) taskFinished(id string, succeeded bool) {
 	} else {
 		dbTask.Failed++
 	}
+
 	params := models.ChangeScheduledTaskParams{
 		RetriesRemaining: pointer.ToUint(dbTask.Retries),
 		NextRun:          job.NextRun(),
 		LastRun:          job.LastRun(),
 		Succeeded:        pointer.ToUint(dbTask.Succeeded),
 		Failed:           pointer.ToUint(dbTask.Failed),
+		Running:          pointer.ToBool(false),
 	}
 
 	_, err = models.ChangeScheduledTask(s.db.Querier, id, params)

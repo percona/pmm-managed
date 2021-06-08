@@ -155,6 +155,7 @@ type ChangeScheduledTaskParams struct {
 	RetriesRemaining *uint
 	Succeeded        *uint
 	Failed           *uint
+	Running          *bool
 }
 
 // ChangeScheduledTask updates existing scheduled task.
@@ -184,6 +185,10 @@ func ChangeScheduledTask(q *reform.Querier, id string, params ChangeScheduledTas
 
 	if params.Failed != nil {
 		row.Failed = *params.Failed
+	}
+
+	if params.Running != nil {
+		row.Running = *params.Running
 	}
 
 	if err := q.Update(row); err != nil {
