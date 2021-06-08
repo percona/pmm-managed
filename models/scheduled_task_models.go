@@ -60,13 +60,24 @@ type ScheduledTask struct {
 type ScheduledTaskData struct {
 	Print           *PrintTaskData       `json:"print,omitempty"`
 	MySQLBackupTask *MySQLBackupTaskData `json:"mySQLBackup,omitempty"`
+	MongoBackupTask *MongoBackupTaskData `json:"mongoBackup,omitempty"`
 }
 
+// PrintTaskData holds data for print task.
 type PrintTaskData struct {
 	Message string
 }
 
+// MySQLBackupTaskData holds data for mysql backup task.
 type MySQLBackupTaskData struct {
+	ServiceID   string `json:"serviceID"`
+	LocationID  string `json:"locationID"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+// MongoBackupTaskData holds data for mysql backup task.
+type MongoBackupTaskData struct {
 	ServiceID   string `json:"serviceID"`
 	LocationID  string `json:"locationID"`
 	Name        string `json:"name"`

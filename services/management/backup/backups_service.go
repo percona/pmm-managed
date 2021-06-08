@@ -194,6 +194,7 @@ func (s *BackupsService) startRestoreJob(jobID, serviceID string, params *prepar
 	return nil
 }
 
+// ScheduleBackup add new backup task to scheduler.
 func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.ScheduleBackupRequest) (*backupv1beta1.ScheduleBackupResponse, error) {
 	var id string
 	err := s.db.InTransaction(func(tx *reform.TX) error {
@@ -211,7 +212,7 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 		case models.MySQLServiceType:
 			task = scheduler.NewMySQLBackupTask(s.backupsLogicService, req.ServiceId, req.LocationId, req.Name, req.Description)
 		case models.MongoDBServiceType:
-		// @TODO
+			task = scheduler.NewMongoBackupTask(s.backupsLogicService, req.ServiceId, req.LocationId, req.Name, req.Description)
 		case models.PostgreSQLServiceType,
 			models.ProxySQLServiceType,
 			models.HAProxyServiceType,
@@ -235,6 +236,7 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 	return &backupv1beta1.ScheduleBackupResponse{ScheduleBackupId: id}, nil
 }
 
+// ListScheduledBackups lists all tasks related to backup.
 func (s *BackupsService) ListScheduledBackups(ctx context.Context, req *backupv1beta1.ListScheduledBackupsRequest) (*backupv1beta1.ListScheduledBackupsResponse, error) {
 	tasks, err := models.FindScheduledTasks(s.db.Querier, models.ScheduledTasksFilter{
 		Types: []models.ScheduledTaskType{
@@ -256,6 +258,8 @@ func (s *BackupsService) ListScheduledBackups(ctx context.Context, req *backupv1
 			serviceID = t.Data.MySQLBackupTask.ServiceID
 			locationID = t.Data.MySQLBackupTask.LocationID
 		case models.ScheduledMongoBackupTask:
+			serviceID = t.Data.MongoBackupTask.ServiceID
+			locationID = t.Data.MongoBackupTask.LocationID
 		default:
 			continue
 		}
@@ -288,6 +292,7 @@ func (s *BackupsService) ListScheduledBackups(ctx context.Context, req *backupv1
 
 }
 
+// ChangeScheduledBackup changes existing scheduled backup task.
 func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv1beta1.ChangeScheduledBackupRequest) (*backupv1beta1.ChangeScheduledBackupResponse, error) {
 	scheduledTask, err := models.FindScheduledTaskByID(s.db.Querier, req.ScheduleBackupId)
 	if err != nil {
@@ -303,6 +308,13 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 			data.Description = req.Description.Value
 		}
 	case models.ScheduledMongoBackupTask:
+		data := scheduledTask.Data.MongoBackupTask
+		if req.Name != nil {
+			data.Name = req.Name.Value
+		}
+		if req.Description != nil {
+			data.Description = req.Description.Value
+		}
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "Unsupported type: %s", scheduledTask.Type)
 	}
@@ -347,6 +359,7 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 	return &backupv1beta1.ChangeScheduledBackupResponse{}, nil
 }
 
+// RemoveScheduledBackup stops and removes existing scheduled backup task.
 func (s *BackupsService) RemoveScheduledBackup(ctx context.Context, req *backupv1beta1.RemoveScheduledBackupRequest) (*backupv1beta1.RemoveScheduledBackupResponse, error) {
 	err := s.scheduleService.Remove(req.ScheduleBackupId)
 	if err != nil {
@@ -380,7 +393,12 @@ func convertTaskToScheduledBackup(task *models.ScheduledTask,
 		backup.Description = data.Description
 		backup.DataModel = backupv1beta1.DataModel_PHYSICAL
 	case models.ScheduledMongoBackupTask:
-		// @TODO
+		data := task.Data.MongoBackupTask
+		backup.ServiceId = data.ServiceID
+		backup.LocationId = data.LocationID
+		backup.Name = data.Name
+		backup.Description = data.Description
+		backup.DataModel = backupv1beta1.DataModel_LOGICAL
 	default:
 		return nil, fmt.Errorf("unsupported task type: %s", task.Type)
 	}
