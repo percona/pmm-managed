@@ -41,6 +41,7 @@ func (v *scheduledTaskTableType) Columns() []string {
 		"retries_remaining",
 		"succeeded",
 		"failed",
+		"running",
 		"created_at",
 		"updated_at",
 	}
@@ -80,6 +81,7 @@ var ScheduledTaskTable = &scheduledTaskTableType{
 			{Name: "RetriesRemaining", Type: "uint", Column: "retries_remaining"},
 			{Name: "Succeeded", Type: "uint", Column: "succeeded"},
 			{Name: "Failed", Type: "uint", Column: "failed"},
+			{Name: "Running", Type: "bool", Column: "running"},
 			{Name: "CreatedAt", Type: "time.Time", Column: "created_at"},
 			{Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"},
 		},
@@ -90,7 +92,7 @@ var ScheduledTaskTable = &scheduledTaskTableType{
 
 // String returns a string representation of this struct or record.
 func (s ScheduledTask) String() string {
-	res := make([]string, 15)
+	res := make([]string, 16)
 	res[0] = "ID: " + reform.Inspect(s.ID, true)
 	res[1] = "CronExpression: " + reform.Inspect(s.CronExpression, true)
 	res[2] = "Disabled: " + reform.Inspect(s.Disabled, true)
@@ -104,8 +106,9 @@ func (s ScheduledTask) String() string {
 	res[10] = "RetriesRemaining: " + reform.Inspect(s.RetriesRemaining, true)
 	res[11] = "Succeeded: " + reform.Inspect(s.Succeeded, true)
 	res[12] = "Failed: " + reform.Inspect(s.Failed, true)
-	res[13] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
-	res[14] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
+	res[13] = "Running: " + reform.Inspect(s.Running, true)
+	res[14] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
+	res[15] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
 	return strings.Join(res, ", ")
 }
 
@@ -126,6 +129,7 @@ func (s *ScheduledTask) Values() []interface{} {
 		s.RetriesRemaining,
 		s.Succeeded,
 		s.Failed,
+		s.Running,
 		s.CreatedAt,
 		s.UpdatedAt,
 	}
@@ -148,6 +152,7 @@ func (s *ScheduledTask) Pointers() []interface{} {
 		&s.RetriesRemaining,
 		&s.Succeeded,
 		&s.Failed,
+		&s.Running,
 		&s.CreatedAt,
 		&s.UpdatedAt,
 	}
