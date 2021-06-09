@@ -35,11 +35,12 @@ import (
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
+	pmmversion "github.com/percona/pmm/version"
+
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/logger"
 	"github.com/percona/pmm-managed/utils/testdb"
 	"github.com/percona/pmm-managed/utils/tests"
-	pmmversion "github.com/percona/pmm/version"
 )
 
 const versionServiceURL = "https://check.percona.com/versions/v1"

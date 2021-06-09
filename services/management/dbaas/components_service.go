@@ -30,9 +30,10 @@ import (
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
 
+	pmmversion "github.com/percona/pmm/version"
+
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/stringset"
-	pmmversion "github.com/percona/pmm/version"
 )
 
 type componentsService struct {
