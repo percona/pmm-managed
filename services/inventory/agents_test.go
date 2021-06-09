@@ -360,8 +360,8 @@ func TestAgents(t *testing.T) {
 		agent, err := as.AddRDSExporter(ctx, &inventorypb.AddRDSExporterRequest{
 			PmmAgentId:   "pmm-server",
 			NodeId:       node.NodeId,
-			AwsAccessKey: "AKIAIOSFODNN7EXAMPLE",
-			AwsSecretKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+			AwsAccessKey: "EXAMPLE_ACCESS_KEY",
+			AwsSecretKey: "EXAMPLE_SECRET_KEY",
 			CustomLabels: map[string]string{"baz": "qux"},
 		})
 		require.NoError(t, err)
@@ -369,7 +369,7 @@ func TestAgents(t *testing.T) {
 			AgentId:      "/agent_id/00000000-0000-4000-8000-000000000006",
 			PmmAgentId:   "pmm-server",
 			NodeId:       "/node_id/00000000-0000-4000-8000-000000000005",
-			AwsAccessKey: "AKIAIOSFODNN7EXAMPLE",
+			AwsAccessKey: "EXAMPLE_ACCESS_KEY",
 			CustomLabels: map[string]string{"baz": "qux"},
 			Status:       inventorypb.AgentStatus_UNKNOWN,
 		}
@@ -657,8 +657,8 @@ func TestAgents(t *testing.T) {
 		agent, err := as.AddRDSExporter(ctx, &inventorypb.AddRDSExporterRequest{
 			PmmAgentId:   "pmm-server",
 			NodeId:       node.NodeId,
-			AwsAccessKey: "AKIAIOSFODNN7EXAMPLE",
-			AwsSecretKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+			AwsAccessKey: "EXAMPLE_ACCESS_KEY",
+			AwsSecretKey: "EXAMPLE_SECRET_KEY",
 			CustomLabels: map[string]string{"baz": "qux"},
 			PushMetrics:  true,
 		})
@@ -667,7 +667,7 @@ func TestAgents(t *testing.T) {
 			AgentId:            "/agent_id/00000000-0000-4000-8000-000000000006",
 			PmmAgentId:         "pmm-server",
 			NodeId:             "/node_id/00000000-0000-4000-8000-000000000005",
-			AwsAccessKey:       "AKIAIOSFODNN7EXAMPLE",
+			AwsAccessKey:       "EXAMPLE_ACCESS_KEY",
 			CustomLabels:       map[string]string{"baz": "qux"},
 			PushMetricsEnabled: true,
 			Status:             inventorypb.AgentStatus_UNKNOWN,

@@ -132,8 +132,8 @@ func TestServices(t *testing.T) {
 		rdsAgent, err := as.AddRDSExporter(ctx, &inventorypb.AddRDSExporterRequest{
 			PmmAgentId:   "pmm-server",
 			NodeId:       node.NodeId,
-			AwsAccessKey: "AKIAIOSFODNN7EXAMPLE",
-			AwsSecretKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+			AwsAccessKey: "EXAMPLE_ACCESS_KEY",
+			AwsSecretKey: "EXAMPLE_SECRET_KEY",
 			PushMetrics:  true,
 		})
 		require.NoError(t, err)
