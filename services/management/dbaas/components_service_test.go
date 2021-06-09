@@ -534,33 +534,33 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 	}
 
 	t.Parallel()
-	t.Run("Update available", func(t *testing.T) {
-		response := &VersionServiceResponse{
-			Versions: []struct {
-				Product        string `json:"product"`
-				ProductVersion string `json:"operator"`
-				Matrix         matrix `json:"matrix"`
-			}{
-				{
-					ProductVersion: "2.18.0",
-					Product:        "pmm-server",
-					Matrix: matrix{
-						PSMDBOperator: map[string]componentVersion{
-							"1.8.0": {},
-							"1.7.0": {},
-						},
-						PXCOperator: map[string]componentVersion{
-							"1.8.0": {},
-							"1.7.0": {},
-						},
+	response := &VersionServiceResponse{
+		Versions: []struct {
+			Product        string `json:"product"`
+			ProductVersion string `json:"operator"`
+			Matrix         matrix `json:"matrix"`
+		}{
+			{
+				ProductVersion: "2.18.0",
+				Product:        "pmm-server",
+				Matrix: matrix{
+					PSMDBOperator: map[string]componentVersion{
+						"1.8.0": {},
+						"1.7.0": {},
+					},
+					PXCOperator: map[string]componentVersion{
+						"1.8.0": {},
+						"1.7.0": {},
 					},
 				},
 			},
-		}
-		pmmversion.PMMVersion = "2.18.0"
+		},
+	}
+	pmmversion.PMMVersion = "2.18.0"
+	ctx := context.Background()
+	t.Run("Update available", func(t *testing.T) {
 		clusterName := "update-available"
 		cs, dbaasClient := setup(t, clusterName, response, "9873")
-		ctx := context.Background()
 		dbaasClient.On("CheckKubernetesClusterConnection", ctx, "{}").Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
 			Operators: &controllerv1beta1.Operators{
 				Psmdb: &controllerv1beta1.Operator{
@@ -593,32 +593,8 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 		assert.Equal(t, "1.8.0", resp.AvailableOperatorVersion)
 	})
 	t.Run("Update NOT available", func(t *testing.T) {
-		response := &VersionServiceResponse{
-			Versions: []struct {
-				Product        string `json:"product"`
-				ProductVersion string `json:"operator"`
-				Matrix         matrix `json:"matrix"`
-			}{
-				{
-					ProductVersion: "2.18.0",
-					Product:        "pmm-server",
-					Matrix: matrix{
-						PSMDBOperator: map[string]componentVersion{
-							"1.8.0": {},
-							"1.7.0": {},
-						},
-						PXCOperator: map[string]componentVersion{
-							"1.8.0": {},
-							"1.7.0": {},
-						},
-					},
-				},
-			},
-		}
-		pmmversion.PMMVersion = "2.18.0"
 		clusterName := "update-not-available"
 		cs, dbaasClient := setup(t, clusterName, response, "7895")
-		ctx := context.Background()
 		dbaasClient.On("CheckKubernetesClusterConnection", ctx, "{}").Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
 			Operators: &controllerv1beta1.Operators{
 				Psmdb: &controllerv1beta1.Operator{
@@ -685,10 +661,8 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 				},
 			},
 		}
-		pmmversion.PMMVersion = "2.18.0"
 		clusterName := "update-available-pmm-update"
 		cs, dbaasClient := setup(t, clusterName, response, "5873")
-		ctx := context.Background()
 		dbaasClient.On("CheckKubernetesClusterConnection", ctx, "{}").Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
 			Operators: &controllerv1beta1.Operators{
 				Psmdb: &controllerv1beta1.Operator{
@@ -721,32 +695,8 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 		assert.Equal(t, "1.9.0", resp.AvailableOperatorVersion)
 	})
 	t.Run("Error - user's version is ahead of version service", func(t *testing.T) {
-		response := &VersionServiceResponse{
-			Versions: []struct {
-				Product        string `json:"product"`
-				ProductVersion string `json:"operator"`
-				Matrix         matrix `json:"matrix"`
-			}{
-				{
-					ProductVersion: "2.18.0",
-					Product:        "pmm-server",
-					Matrix: matrix{
-						PSMDBOperator: map[string]componentVersion{
-							"1.8.0": {},
-							"1.7.0": {},
-						},
-						PXCOperator: map[string]componentVersion{
-							"1.8.0": {},
-							"1.7.0": {},
-						},
-					},
-				},
-			},
-		}
-		pmmversion.PMMVersion = "2.18.0"
 		clusterName := "update-available-pmm-update"
-		cs, dbaasClient := setup(t, clusterName, response, "5873")
-		ctx := context.Background()
+		cs, dbaasClient := setup(t, clusterName, response, "5863")
 		dbaasClient.On("CheckKubernetesClusterConnection", ctx, "{}").Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
 			Operators: &controllerv1beta1.Operators{
 				Psmdb: &controllerv1beta1.Operator{
