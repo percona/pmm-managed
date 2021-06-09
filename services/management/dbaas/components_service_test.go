@@ -43,7 +43,10 @@ import (
 	"github.com/percona/pmm-managed/utils/tests"
 )
 
-const versionServiceURL = "https://check.percona.com/versions/v1"
+const (
+	versionServiceURL = "https://check.percona.com/versions/v1"
+	twoPointEighteen  = "2.18.0"
+)
 
 func TestComponentService(t *testing.T) {
 	const (
@@ -541,7 +544,7 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 			Matrix         matrix `json:"matrix"`
 		}{
 			{
-				ProductVersion: "2.18.0",
+				ProductVersion: twoPointEighteen,
 				Product:        "pmm-server",
 				Matrix: matrix{
 					PSMDBOperator: map[string]componentVersion{
@@ -556,7 +559,7 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 			},
 		},
 	}
-	pmmversion.PMMVersion = "2.18.0"
+	pmmversion.PMMVersion = twoPointEighteen
 	ctx := context.Background()
 	t.Run("Update available", func(t *testing.T) {
 		clusterName := "update-available"
@@ -634,7 +637,7 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 				Matrix         matrix `json:"matrix"`
 			}{
 				{
-					ProductVersion: "2.18.0",
+					ProductVersion: twoPointEighteen,
 					Product:        "pmm-server",
 					Matrix: matrix{
 						PSMDBOperator: map[string]componentVersion{

@@ -138,7 +138,7 @@ func TestLatestVersionGetting(t *testing.T) {
 				Matrix         matrix `json:"matrix"`
 			}{
 				{
-					ProductVersion: "2.18.0",
+					ProductVersion: twoPointEighteen,
 					Product:        "pmm-server",
 					Matrix: matrix{
 						PSMDBOperator: map[string]componentVersion{
@@ -162,10 +162,10 @@ func TestLatestVersionGetting(t *testing.T) {
 		}
 		c, cleanup := newFakeVersionService(response, "5897")
 		ctx := context.Background()
-		opeator, pmm, err := c.GetLatestOperatorVersion(ctx, psmdbOperator, "2.18.0")
+		opeator, pmm, err := c.GetLatestOperatorVersion(ctx, psmdbOperator, twoPointEighteen)
 		require.NoError(t, err, "request to fakeserver for latest version should not fail")
 		assert.Equal(t, "1.8.0", opeator.String())
-		assert.Equal(t, "2.18.0", pmm.String())
+		assert.Equal(t, twoPointEighteen, pmm.String())
 
 		opeator, pmm, err = c.GetLatestOperatorVersion(ctx, psmdbOperator, "")
 		require.NoError(t, err, "request to fakeserver for latest version should not fail")
