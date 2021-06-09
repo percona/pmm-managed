@@ -157,14 +157,14 @@ func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsPara
 
 // GetLatestOperatorVersion return latest operator and pmm version for given pmm version.
 // If given PMM version is empty, it returns latest of all operator versions and it's compatible PMM version.
-func (v *VersionServiceClient) GetLatestOperatorVersion(ctx context.Context, operatorType, pmmVersion string) (*goversion.Version, *goversion.Version, error) {
+func (c *VersionServiceClient) GetLatestOperatorVersion(ctx context.Context, operatorType, pmmVersion string) (*goversion.Version, *goversion.Version, error) {
 	params := componentsParams{
 		product: "pmm-server",
 	}
 	if pmmVersion != "" {
 		params.productVersion = pmmVersion
 	}
-	resp, err := v.Matrix(ctx, params)
+	resp, err := c.Matrix(ctx, params)
 	if err != nil {
 		return nil, nil, err
 	}
