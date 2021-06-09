@@ -235,10 +235,6 @@ func (s *JobsService) StartMongoDBRestoreBackupJob(
 	dbConfig *models.DBConfig,
 	locationConfig *models.BackupLocationConfig,
 ) error {
-	if locationConfig.S3Config == nil {
-		return errors.Errorf("location config is not set")
-	}
-
 	mongoDBReq := &agentpb.StartJobRequest_MongoDBRestoreBackup{
 		Name:     name,
 		User:     dbConfig.User,

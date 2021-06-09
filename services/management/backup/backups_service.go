@@ -180,7 +180,7 @@ func (s *BackupsService) RestoreBackup(
 			models.ProxySQLServiceType,
 			models.HAProxyServiceType,
 			models.ExternalServiceType:
-			return errors.Errorf("backup restore unimplemeted for : %s", service.ServiceType)
+			return errors.Errorf("backup restore unimplemented for service type: %s", service.ServiceType)
 		default:
 			return errors.Errorf("unsupported service type: %s", service.ServiceType)
 		}
