@@ -38,7 +38,7 @@ const (
 	pxcOperator   = "pxc-operator"
 )
 
-var ErrNoVersionsFound = errors.New("no versions to compare current version with found")
+var errNoVersionsFound = errors.New("no versions to compare current version with found")
 
 // componentVersion contains info about exact component version.
 type componentVersion struct {
@@ -222,7 +222,7 @@ func fromVersionMapToSliceOfVersions(m map[*goversion.Version]*goversion.Version
 
 func getLatest(versions []*goversion.Version) (*goversion.Version, error) {
 	if len(versions) == 0 {
-		return nil, ErrNoVersionsFound
+		return nil, errNoVersionsFound
 	}
 	latest := goversion.Must(goversion.NewVersion("v0.0.0"))
 	for _, version := range versions {

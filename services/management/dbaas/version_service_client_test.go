@@ -125,7 +125,7 @@ func TestLatestVersionGetting(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		defer cancel()
 		operator, pmm, err := c.GetLatestOperatorVersion(ctx, psmdbOperator, "")
-		assert.True(t, errors.Is(err, ErrNoVersionsFound), "err is expected to be ErrNoVersionsFound")
+		assert.True(t, errors.Is(err, errNoVersionsFound), "err is expected to be errNoVersionsFound")
 		assert.Nil(t, operator)
 		assert.Nil(t, pmm)
 	})
