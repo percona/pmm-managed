@@ -133,7 +133,6 @@ func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsPara
 		}
 	}
 	url := strings.Join(paths, "/")
-	log.Printf("metrix url: %v", url)
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -170,7 +169,6 @@ func (v *VersionServiceClient) GetLatestOperatorVersion(ctx context.Context, ope
 	if err != nil {
 		return nil, nil, err
 	}
-	log.Printf("response versions: %v", resp.Versions)
 	pmmForLatestOperator := make(map[*goversion.Version]*goversion.Version)
 	for _, pmmVersionDeps := range resp.Versions {
 		var operatorVersions map[string]componentVersion
@@ -181,7 +179,6 @@ func (v *VersionServiceClient) GetLatestOperatorVersion(ctx context.Context, ope
 			operatorVersions = pmmVersionDeps.Matrix.PSMDBOperator
 		}
 		versions, err := fromStringKeysToSliceOfVersions(operatorVersions)
-		log.Printf("fromStringKeysToSliceOfVersions: %v", versions)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -197,7 +194,6 @@ func (v *VersionServiceClient) GetLatestOperatorVersion(ctx context.Context, ope
 		pmmForLatestOperator[latestOperatorVersion] = parsedPMMVersion
 	}
 	latestOperatorVersion, err := getLatest(fromVersionMapToSliceOfVersions(pmmForLatestOperator))
-	log.Printf("fromVersionMapToSliceOfVersions: %v", latestOperatorVersion)
 	return latestOperatorVersion, pmmForLatestOperator[latestOperatorVersion], err
 }
 
