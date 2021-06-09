@@ -217,7 +217,10 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 				disconnectReason = "done"
 				err = agent.channel.Wait()
 				r.unregister(agent.id)
-				return err
+				if err != nil {
+					l.Error(errors.WithStack(err))
+				}
+				return r.updateAgentStatusForChildren(ctx, agent.id, inventorypb.AgentStatus_DONE, 0)
 			}
 
 			switch p := req.Payload.(type) {
@@ -309,7 +312,18 @@ func (r *Registry) handleJobResult(l *logrus.Entry, result *agentpb.JobResult) {
 			}
 
 			_, err := models.ChangeArtifact(t.Querier, res.Result.MySQLBackup.ArtifactID, models.ChangeArtifactParams{
-				Status: models.SuccessBackupStatus,
+				Status: models.SuccessBackupStatus.Pointer(),
+			})
+			if err != nil {
+				return err
+			}
+		case *agentpb.JobResult_MongodbBackup:
+			if res.Type != models.MongoDBBackupJob {
+				return errors.Errorf("result type %s doesn't match job type %s", models.MongoDBBackupJob, res.Type)
+			}
+
+			_, err := models.ChangeArtifact(t.Querier, res.Result.MongoDBBackup.ArtifactID, models.ChangeArtifactParams{
+				Status: models.SuccessBackupStatus.Pointer(),
 			})
 			if err != nil {
 				return err
@@ -331,12 +345,10 @@ func (r *Registry) handleJobResult(l *logrus.Entry, result *agentpb.JobResult) {
 		default:
 			return errors.Errorf("unexpected job result type: %T", result)
 		}
-
 		res.Done = true
-
 		return t.Update(res)
 	}); e != nil {
-		l.Errorf("failed to save job result: %+v", e)
+		l.Errorf("Failed to save job result: %+v", e)
 	}
 }
 
@@ -347,23 +359,24 @@ func (r *Registry) handleJobError(jobResult *models.JobResult) error {
 		// nothing
 	case models.MySQLBackupJob:
 		_, err = models.ChangeArtifact(r.db.Querier, jobResult.Result.MySQLBackup.ArtifactID, models.ChangeArtifactParams{
-			Status: models.ErrorBackupStatus,
+			Status: models.ErrorBackupStatus.Pointer(),
+		})
+	case models.MongoDBBackupJob:
+		_, err = models.ChangeArtifact(r.db.Querier, jobResult.Result.MongoDBBackup.ArtifactID, models.ChangeArtifactParams{
+			Status: models.ErrorBackupStatus.Pointer(),
 		})
 	case models.MySQLRestoreBackupJob:
-		_, err := models.ChangeRestoreHistoryItem(
+		_, err = models.ChangeRestoreHistoryItem(
 			r.db.Querier,
 			jobResult.Result.MySQLRestoreBackup.RestoreID,
 			models.ChangeRestoreHistoryItemParams{
 				Status: models.ErrorRestoreStatus,
 			})
-		if err != nil {
-			return err
-		}
 	default:
 		// Don't do anything without explicit handling
 	}
-
 	return err
+
 }
 
 func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*pmmAgentInfo, error) {
@@ -586,9 +599,6 @@ func updateAgentStatus(ctx context.Context, q *reform.Querier, agentID string, s
 	agent := &models.Agent{AgentID: agentID}
 	err := q.Reload(agent)
 
-	// TODO set ListenPort to NULL when agent is done?
-	// https://jira.percona.com/browse/PMM-4932
-
 	// FIXME that requires more investigation: https://jira.percona.com/browse/PMM-4932
 	if err == reform.ErrNoRows {
 		l.Warnf("Failed to select Agent by ID for (%s, %s).", agentID, status)
@@ -598,7 +608,6 @@ func updateAgentStatus(ctx context.Context, q *reform.Querier, agentID string, s
 			return nil
 		}
 	}
-
 	if err != nil {
 		return errors.Wrap(err, "failed to select Agent by ID")
 	}
@@ -703,7 +712,44 @@ func (r *Registry) runStateChangeHandler(ctx context.Context, agent *pmmAgentInf
 	}
 }
 
-// RequestStateUpdate requests state update on pmm-agent with given ID.
+// SetAllAgentsStatusUnknown goes through all pmm-agents and sets status to UNKNOWN.
+func (r *Registry) SetAllAgentsStatusUnknown(ctx context.Context) error {
+	agentType := models.PMMAgentType
+	agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{AgentType: &agentType})
+	if err != nil {
+		return errors.Wrap(err, "failed to get pmm-agents")
+
+	}
+	for _, agent := range agents {
+		if !r.IsConnected(agent.AgentID) {
+			err = r.updateAgentStatusForChildren(ctx, agent.AgentID, inventorypb.AgentStatus_UNKNOWN, 0)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (r *Registry) updateAgentStatusForChildren(ctx context.Context, agentID string, status inventorypb.AgentStatus, listenPort uint32) error {
+	return r.db.InTransaction(func(t *reform.TX) error {
+		agents, err := models.FindAgents(t.Querier, models.AgentFilters{
+			PMMAgentID: agentID,
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to get pmm-agent's child agents")
+		}
+		for _, agent := range agents {
+			if err := updateAgentStatus(ctx, t.Querier, agent.AgentID, status, listenPort); err != nil {
+				return errors.Wrap(err, "failed to update agent's status")
+			}
+		}
+		return nil
+	})
+}
+
+// RequestStateUpdate requests state update on pmm-agent with given ID. It sets
+// the status to done if the agent is not connected.
 func (r *Registry) RequestStateUpdate(ctx context.Context, pmmAgentID string) {
 	l := logger.Get(ctx)
 
