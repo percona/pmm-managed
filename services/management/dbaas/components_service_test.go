@@ -534,8 +534,6 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 
 	t.Parallel()
 	t.Run("Update available", func(t *testing.T) {
-		t.Parallel()
-
 		response := &VersionServiceResponse{
 			Versions: []struct {
 				Product        string `json:"product"`
@@ -550,12 +548,16 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 							"1.8.0": {},
 							"1.7.0": {},
 						},
+						PXCOperator: map[string]componentVersion{
+							"1.8.0": {},
+							"1.7.0": {},
+						},
 					},
 				},
 			},
 		}
 		pmmversion.PMMVersion = "2.18.0"
-		clusterName := "minikube"
+		clusterName := "update-available"
 		cs, dbaasClient := setup(t, clusterName, response, "9873")
 		ctx := context.Background()
 		dbaasClient.On("CheckKubernetesClusterConnection", ctx, "{}").Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
@@ -572,9 +574,9 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 		// PSMDB
 		resp, err := cs.CheckForOperatorUpdate(ctx, &dbaasv1beta1.CheckForOperatorUpdateRequest{
 			OperatorType:          psmdbOperator,
-			KubernetesClusterName: "minikube",
+			KubernetesClusterName: clusterName,
 		})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, dbaasv1beta1.OperatorUpdateStatus_UPDATE_AVAILABLE, resp.Status)
 		assert.Equal(t, "", resp.AvailablePmmServerVersion)
 		assert.Equal(t, "1.8.0", resp.AvailableOperatorVersion)
@@ -582,11 +584,69 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 		// PXC
 		resp, err = cs.CheckForOperatorUpdate(ctx, &dbaasv1beta1.CheckForOperatorUpdateRequest{
 			OperatorType:          pxcOperator,
-			KubernetesClusterName: "minikube",
+			KubernetesClusterName: clusterName,
 		})
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, dbaasv1beta1.OperatorUpdateStatus_UPDATE_AVAILABLE, resp.Status)
 		assert.Equal(t, "", resp.AvailablePmmServerVersion)
 		assert.Equal(t, "1.8.0", resp.AvailableOperatorVersion)
+	})
+	t.Run("Update NOT available", func(t *testing.T) {
+		response := &VersionServiceResponse{
+			Versions: []struct {
+				Product        string `json:"product"`
+				ProductVersion string `json:"operator"`
+				Matrix         matrix `json:"matrix"`
+			}{
+				{
+					ProductVersion: "2.18.0",
+					Product:        "pmm-server",
+					Matrix: matrix{
+						PSMDBOperator: map[string]componentVersion{
+							"1.8.0": {},
+							"1.7.0": {},
+						},
+						PXCOperator: map[string]componentVersion{
+							"1.8.0": {},
+							"1.7.0": {},
+						},
+					},
+				},
+			},
+		}
+		pmmversion.PMMVersion = "2.18.0"
+		clusterName := "update-not-available"
+		cs, dbaasClient := setup(t, clusterName, response, "7895")
+		ctx := context.Background()
+		dbaasClient.On("CheckKubernetesClusterConnection", ctx, "{}").Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
+			Operators: &controllerv1beta1.Operators{
+				Psmdb: &controllerv1beta1.Operator{
+					Version: "1.8.0",
+				},
+				Xtradb: &controllerv1beta1.Operator{
+					Version: "1.8.0",
+				},
+			},
+		}, nil)
+
+		// PSMDB
+		resp, err := cs.CheckForOperatorUpdate(ctx, &dbaasv1beta1.CheckForOperatorUpdateRequest{
+			OperatorType:          psmdbOperator,
+			KubernetesClusterName: clusterName,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, dbaasv1beta1.OperatorUpdateStatus_UPDATE_NOT_AVAILABLE, resp.Status)
+		assert.Equal(t, "", resp.AvailablePmmServerVersion)
+		assert.Equal(t, "", resp.AvailableOperatorVersion)
+
+		// PXC
+		resp, err = cs.CheckForOperatorUpdate(ctx, &dbaasv1beta1.CheckForOperatorUpdateRequest{
+			OperatorType:          pxcOperator,
+			KubernetesClusterName: clusterName,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, dbaasv1beta1.OperatorUpdateStatus_UPDATE_NOT_AVAILABLE, resp.Status)
+		assert.Equal(t, "", resp.AvailablePmmServerVersion)
+		assert.Equal(t, "", resp.AvailableOperatorVersion)
 	})
 }
