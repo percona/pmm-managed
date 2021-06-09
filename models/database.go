@@ -518,7 +518,7 @@ var databaseSchema = [][]string{
 		`ALTER TABLE artifacts DROP CONSTRAINT artifacts_service_id_check`,
 	},
 	39: {
-		`ALTER TABLE agents ALTER COLUMN postgresql_options TYPE JSONB`,
+		`ALTER TABLE agents ADD COLUMN postgresql_options JSONB`,
 	},
 }
 

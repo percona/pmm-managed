@@ -419,6 +419,20 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			} else {
 				sslmode = "verify-full"
 			}
+			if s.PostgreSQLOptions != nil {
+				if files := s.Files(); len(files) > 0 {
+					for key := range files {
+						switch key {
+						case "tlsCa":
+							q.Set(key, tdp.Left+" .TextFiles.tlsCa "+tdp.Right)
+						case "tlsCert":
+							q.Set(key, tdp.Left+" .TextFiles.tlsCert "+tdp.Right)
+						case "tlsKey":
+							q.Set(key, tdp.Left+" .TextFiles.tlsKey "+tdp.Right)
+						}
+					}
+				}
+			}
 		}
 		q.Set("sslmode", sslmode)
 
@@ -527,6 +541,13 @@ func (s Agent) Files() map[string]string {
 		}
 		return nil
 	case PostgresExporterType, QANPostgreSQLPgStatementsAgentType, QANPostgreSQLPgStatMonitorAgentType:
+		if s.PostgreSQLOptions != nil {
+			return map[string]string{
+				"ssl_ca_file":   s.PostgreSQLOptions.TLSCa,
+				"ssl_cert_file": s.PostgreSQLOptions.TLSCert,
+				"ssl_key_file":  s.PostgreSQLOptions.TLSKey,
+			}
+		}
 		return nil
 	default:
 		panic(fmt.Errorf("unhandled AgentType %q", s.AgentType))
@@ -552,6 +573,9 @@ func (s Agent) TemplateDelimiters(svc *Service) *DelimiterPair {
 			templateParams = append(templateParams, s.MongoDBOptions.TLSCertificateKeyFilePassword)
 		}
 	case PostgreSQLServiceType:
+		if s.PostgreSQLOptions != nil {
+			templateParams = append(templateParams, s.PostgreSQLOptions.TLSKey)
+		}
 	case ProxySQLServiceType:
 	case HAProxyServiceType:
 	case ExternalServiceType:
