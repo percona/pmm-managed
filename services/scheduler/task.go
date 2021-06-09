@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/percona/pmm-managed/models"
 )
@@ -78,7 +79,8 @@ func NewMySQLBackupTask(backupsLogicService backupsLogicService, serviceID, loca
 }
 
 func (t *mySQLBackupTask) Do(ctx context.Context) error {
-	_, err := t.backupsLogicService.PerformBackup(ctx, t.ServiceID, t.LocationID, t.Name, t.ID())
+	name := t.Name + "_" + time.Now().String()
+	_, err := t.backupsLogicService.PerformBackup(ctx, t.ServiceID, t.LocationID, name, t.ID())
 	return err
 }
 
@@ -118,7 +120,8 @@ func NewMongoBackupTask(backupsLogicService backupsLogicService, serviceID, loca
 }
 
 func (t *mongoBackupTask) Do(ctx context.Context) error {
-	_, err := t.backupsLogicService.PerformBackup(ctx, t.ServiceID, t.LocationID, t.Name, t.ID())
+	name := t.Name + "_" + time.Now().String()
+	_, err := t.backupsLogicService.PerformBackup(ctx, t.ServiceID, t.LocationID, name, t.ID())
 	return err
 }
 
