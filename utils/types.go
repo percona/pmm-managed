@@ -29,9 +29,9 @@ type Target struct {
 	ServiceID     string
 	ServiceName   string
 	Labels        map[string]string
-	Dsn           string
+	DSN           string
 	Files         map[string]string
-	Tdp           *models.DelimiterPair
+	TDP           *models.DelimiterPair
 	TLSSkipVerify bool
 }
 

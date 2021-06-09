@@ -674,12 +674,12 @@ func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) 
 
 			switch c.Type {
 			case check.MySQLShow:
-				if err := s.agentsRegistry.StartMySQLQueryShowAction(ctx, r.ID, target.AgentID, target.Dsn, c.Query, target.Files, target.Tdp, target.TLSSkipVerify); err != nil {
+				if err := s.agentsRegistry.StartMySQLQueryShowAction(ctx, r.ID, target.AgentID, target.DSN, c.Query, target.Files, target.TDP, target.TLSSkipVerify); err != nil {
 					s.l.Warnf("Failed to start MySQL show query action for agent %s, reason: %s.", target.AgentID, err)
 					continue
 				}
 			case check.MySQLSelect:
-				if err := s.agentsRegistry.StartMySQLQuerySelectAction(ctx, r.ID, target.AgentID, target.Dsn, c.Query, target.Files, target.Tdp, target.TLSSkipVerify); err != nil {
+				if err := s.agentsRegistry.StartMySQLQuerySelectAction(ctx, r.ID, target.AgentID, target.DSN, c.Query, target.Files, target.TDP, target.TLSSkipVerify); err != nil {
 					s.l.Warnf("Failed to start MySQL select query action for agent %s, reason: %s.", target.AgentID, err)
 					continue
 				}
@@ -725,12 +725,12 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Ch
 
 			switch c.Type {
 			case check.PostgreSQLShow:
-				if err := s.agentsRegistry.StartPostgreSQLQueryShowAction(ctx, r.ID, target.AgentID, target.Dsn); err != nil {
+				if err := s.agentsRegistry.StartPostgreSQLQueryShowAction(ctx, r.ID, target.AgentID, target.DSN); err != nil {
 					s.l.Warnf("Failed to start PostgreSQL show query action for agent %s, reason: %s.", target.AgentID, err)
 					continue
 				}
 			case check.PostgreSQLSelect:
-				if err := s.agentsRegistry.StartPostgreSQLQuerySelectAction(ctx, r.ID, target.AgentID, target.Dsn, c.Query); err != nil {
+				if err := s.agentsRegistry.StartPostgreSQLQuerySelectAction(ctx, r.ID, target.AgentID, target.DSN, c.Query); err != nil {
 					s.l.Warnf("Failed to start PostgreSQL select query action for agent %s, reason: %s.", target.AgentID, err)
 					continue
 				}
@@ -776,17 +776,17 @@ func (s *Service) executeMongoDBChecks(ctx context.Context, checks []check.Check
 
 			switch c.Type {
 			case check.MongoDBGetParameter:
-				if err := s.agentsRegistry.StartMongoDBQueryGetParameterAction(ctx, r.ID, target.AgentID, target.Dsn, target.Files, target.Tdp); err != nil {
+				if err := s.agentsRegistry.StartMongoDBQueryGetParameterAction(ctx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP); err != nil {
 					s.l.Warnf("Failed to start MongoDB get parameter query action for agent %s, reason: %s.", target.AgentID, err)
 					continue
 				}
 			case check.MongoDBBuildInfo:
-				if err := s.agentsRegistry.StartMongoDBQueryBuildInfoAction(ctx, r.ID, target.AgentID, target.Dsn, target.Files, target.Tdp); err != nil {
+				if err := s.agentsRegistry.StartMongoDBQueryBuildInfoAction(ctx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP); err != nil {
 					s.l.Warnf("Failed to start MongoDB build info query action for agent %s, reason: %s.", target.AgentID, err)
 					continue
 				}
 			case check.MongoDBGetCmdLineOpts:
-				if err := s.agentsRegistry.StartMongoDBQueryGetCmdLineOptsAction(ctx, r.ID, target.AgentID, target.Dsn, target.Files, target.Tdp); err != nil {
+				if err := s.agentsRegistry.StartMongoDBQueryGetCmdLineOptsAction(ctx, r.ID, target.AgentID, target.DSN, target.Files, target.TDP); err != nil {
 					s.l.Warnf("Failed to start MongoDB getCmdLineOpts query action for agent %s, reason: %s.", target.AgentID, err)
 					continue
 				}
@@ -913,7 +913,7 @@ func (s *Service) findTargets(serviceType models.ServiceType, minPMMAgentVersion
 			}
 			pmmAgent := pmmAgents[0]
 
-			dsn, agent, err := models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, service.ServiceID, pmmAgents[0].AgentID, "")
+			DSN, agent, err := models.FindDSNByServiceIDandPMMAgentID(s.db.Querier, service.ServiceID, pmmAgents[0].AgentID, "")
 			if err != nil {
 				return err
 			}
@@ -933,9 +933,9 @@ func (s *Service) findTargets(serviceType models.ServiceType, minPMMAgentVersion
 				ServiceID:     service.ServiceID,
 				ServiceName:   service.ServiceName,
 				Labels:        labels,
-				Dsn:           dsn,
+				DSN:           DSN,
 				Files:         agent.Files(),
-				Tdp:           agent.TemplateDelimiters(service),
+				TDP:           agent.TemplateDelimiters(service),
 				TLSSkipVerify: agent.TLSSkipVerify,
 			})
 			return nil
