@@ -19,6 +19,7 @@ package backup
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/percona/pmm-managed/services/scheduler"
 
@@ -220,11 +221,18 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 			return status.Errorf(codes.Unimplemented, "unimplemented service: %s", svc.ServiceType)
 		default:
 			return status.Errorf(codes.Unknown, "unknown service: %s", svc.ServiceType)
-
 		}
-		scheduledTask, err := s.scheduleService.Add(task, req.CronExpression, req.StartTime.AsTime(), uint(req.RetryTimes), req.RetryInterval.AsDuration())
+
+		// If start time is empty (1.1.1970), set time as now
+		// Without it, scheduler would try to compute next run from the beginning, which can take some time.
+		t := req.StartTime.AsTime()
+		if t.Unix() == 0 {
+			t = time.Now()
+		}
+
+		scheduledTask, err := s.scheduleService.Add(task, req.CronExpression, t, uint(req.RetryTimes), req.RetryInterval.AsDuration())
 		if err != nil {
-			return err
+			return status.Errorf(codes.InvalidArgument, "Couldn't schedule backup: %v", err)
 		}
 
 		id = scheduledTask.ID
@@ -233,7 +241,7 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 	if err != nil {
 		return nil, err
 	}
-	return &backupv1beta1.ScheduleBackupResponse{ScheduleBackupId: id}, nil
+	return &backupv1beta1.ScheduleBackupResponse{ScheduledBackupId: id}, nil
 }
 
 // ListScheduledBackups lists all tasks related to backup.
@@ -294,7 +302,7 @@ func (s *BackupsService) ListScheduledBackups(ctx context.Context, req *backupv1
 
 // ChangeScheduledBackup changes existing scheduled backup task.
 func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv1beta1.ChangeScheduledBackupRequest) (*backupv1beta1.ChangeScheduledBackupResponse, error) {
-	scheduledTask, err := models.FindScheduledTaskByID(s.db.Querier, req.ScheduleBackupId)
+	scheduledTask, err := models.FindScheduledTaskByID(s.db.Querier, req.ScheduledBackupId)
 	if err != nil {
 		return nil, err
 	}
@@ -344,12 +352,12 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 	}
 
 	err = s.db.InTransaction(func(tx *reform.TX) error {
-		_, err := models.ChangeScheduledTask(s.db.Querier, req.ScheduleBackupId, params)
+		_, err := models.ChangeScheduledTask(s.db.Querier, req.ScheduledBackupId, params)
 		if err != nil {
 			return err
 		}
 
-		return s.scheduleService.Reload(req.ScheduleBackupId)
+		return s.scheduleService.Reload(req.ScheduledBackupId)
 	})
 
 	if err != nil {
@@ -361,7 +369,7 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 
 // RemoveScheduledBackup stops and removes existing scheduled backup task.
 func (s *BackupsService) RemoveScheduledBackup(ctx context.Context, req *backupv1beta1.RemoveScheduledBackupRequest) (*backupv1beta1.RemoveScheduledBackupResponse, error) {
-	err := s.scheduleService.Remove(req.ScheduleBackupId)
+	err := s.scheduleService.Remove(req.ScheduledBackupId)
 	if err != nil {
 		return nil, err
 	}

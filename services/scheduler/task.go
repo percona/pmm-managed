@@ -79,7 +79,7 @@ func NewMySQLBackupTask(backupsLogicService backupsLogicService, serviceID, loca
 }
 
 func (t *mySQLBackupTask) Do(ctx context.Context) error {
-	name := t.Name + "_" + time.Now().String()
+	name := t.Name + "_" + time.Now().Format(time.RFC3339)
 	_, err := t.backupsLogicService.PerformBackup(ctx, t.ServiceID, t.LocationID, name, t.ID())
 	return err
 }
@@ -120,7 +120,7 @@ func NewMongoBackupTask(backupsLogicService backupsLogicService, serviceID, loca
 }
 
 func (t *mongoBackupTask) Do(ctx context.Context) error {
-	name := t.Name + "_" + time.Now().String()
+	name := t.Name + "_" + time.Now().Format(time.RFC3339)
 	_, err := t.backupsLogicService.PerformBackup(ctx, t.ServiceID, t.LocationID, name, t.ID())
 	return err
 }
