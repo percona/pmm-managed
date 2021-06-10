@@ -109,11 +109,7 @@ func (s *Service) Remove(id string) error {
 		return err
 	}
 
-	if err := models.RemoveScheduledTask(s.db.Querier, id); err != nil {
-		return err
-	}
-
-	return nil
+	return models.RemoveScheduledTask(s.db.Querier, id)
 }
 
 // Reload removes job from scheduler and add it again from DB.
@@ -227,17 +223,22 @@ func (s *Service) wrapTask(task Task, id string, retry int, retryInterval time.D
 				Running: pointer.ToBool(true),
 			})
 
-			err = task.Do(ctx)
+			if err != nil {
+				l.Errorf("failed to change running state: %v", err)
+			}
+
+			err = task.Run(ctx)
 			l.WithField("duration", time.Since(t)).Debug("Ended task")
 			if err == nil {
 				succeeded = true
 				break
-			} else {
-				if err == context.Canceled {
-					break
-				}
-				l.Error(err)
 			}
+
+			if err == context.Canceled {
+				break
+			}
+			l.Error(err)
+
 			if retriesRemaining <= 0 {
 				break
 			}

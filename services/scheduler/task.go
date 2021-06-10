@@ -7,14 +7,16 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
+// Task represents task which will be run inside scheduler.
 type Task interface {
-	Do(ctx context.Context) error
+	Run(ctx context.Context) error
 	Type() models.ScheduledTaskType
 	Data() models.ScheduledTaskData
 	ID() string
 	SetID(string)
 }
 
+// common implementation for all tasks.
 type common struct {
 	id string
 }
@@ -32,6 +34,7 @@ type printTask struct {
 	Message string
 }
 
+// NewPrintTask creates new task which prints message.
 func NewPrintTask(message string) *printTask {
 	return &printTask{
 		common:  &common{},
@@ -39,7 +42,7 @@ func NewPrintTask(message string) *printTask {
 	}
 }
 
-func (j *printTask) Do(ctx context.Context) error {
+func (j *printTask) Run(ctx context.Context) error {
 	fmt.Println(j.Message)
 	return nil
 }

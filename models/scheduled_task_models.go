@@ -59,6 +59,7 @@ type ScheduledTaskData struct {
 	Print *PrintTaskData `json:"print,omitempty"`
 }
 
+// PrintTaskData contains data needed for print task.
 type PrintTaskData struct {
 	Message string
 }

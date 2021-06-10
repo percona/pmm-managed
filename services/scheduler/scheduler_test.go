@@ -21,7 +21,6 @@ func setup(t *testing.T) *Service {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 	return New(db)
-
 }
 func TestService(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
