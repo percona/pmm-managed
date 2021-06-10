@@ -46,6 +46,7 @@ func FindScheduledTaskByID(q *reform.Querier, id string) (*ScheduledTask, error)
 	}
 }
 
+// ScheduledTasksFilter represents filters for scheduled tasks.
 type ScheduledTasksFilter struct {
 	Disabled *bool
 	Types    []ScheduledTaskType
@@ -231,6 +232,7 @@ func ChangeScheduledTask(q *reform.Querier, id string, params ChangeScheduledTas
 	return row, nil
 }
 
+// RemoveScheduledTask removes task from DB.
 func RemoveScheduledTask(q *reform.Querier, id string) error {
 	if _, err := FindScheduledTaskByID(q, id); err != nil {
 		return err

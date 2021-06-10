@@ -10,13 +10,14 @@ import (
 
 // Task represents task which will be run inside scheduler.
 type Task interface {
-	Do(ctx context.Context) error
+	Run(ctx context.Context) error
 	Type() models.ScheduledTaskType
 	Data() models.ScheduledTaskData
 	ID() string
 	SetID(string)
 }
 
+// common implementation for all tasks.
 type common struct {
 	id string
 }
@@ -34,6 +35,7 @@ type printTask struct {
 	Message string
 }
 
+// NewPrintTask creates new task which prints message.
 func NewPrintTask(message string) *printTask {
 	return &printTask{
 		common:  &common{},
@@ -41,7 +43,7 @@ func NewPrintTask(message string) *printTask {
 	}
 }
 
-func (j *printTask) Do(ctx context.Context) error {
+func (j *printTask) Run(ctx context.Context) error {
 	fmt.Println(j.Message)
 	return nil
 }
@@ -78,7 +80,7 @@ func NewMySQLBackupTask(backupsLogicService backupsLogicService, serviceID, loca
 	}
 }
 
-func (t *mySQLBackupTask) Do(ctx context.Context) error {
+func (t *mySQLBackupTask) Run(ctx context.Context) error {
 	name := t.Name + "_" + time.Now().Format(time.RFC3339)
 	_, err := t.backupsLogicService.PerformBackup(ctx, t.ServiceID, t.LocationID, name, t.ID())
 	return err
@@ -119,7 +121,7 @@ func NewMongoBackupTask(backupsLogicService backupsLogicService, serviceID, loca
 	}
 }
 
-func (t *mongoBackupTask) Do(ctx context.Context) error {
+func (t *mongoBackupTask) Run(ctx context.Context) error {
 	name := t.Name + "_" + time.Now().Format(time.RFC3339)
 	_, err := t.backupsLogicService.PerformBackup(ctx, t.ServiceID, t.LocationID, name, t.ID())
 	return err
