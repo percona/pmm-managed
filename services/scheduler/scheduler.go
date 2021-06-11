@@ -104,7 +104,15 @@ func (s *Service) Remove(id string) error {
 
 	s.jobsMx.Lock()
 	defer s.jobsMx.Unlock()
-	err := s.scheduler.RemoveByTag(id)
+
+	err := s.db.InTransaction(func(tx *reform.TX) error {
+		if err := models.RemoveScheduledTask(tx.Querier, id); err != nil {
+			return err
+		}
+
+		_ = s.scheduler.RemoveByTag(id)
+		return nil
+	})
 	if err != nil {
 		return err
 	}
@@ -125,17 +133,6 @@ func (s *Service) Reload(id string) error {
 
 	s.jobsMx.Lock()
 	defer s.jobsMx.Unlock()
-	var job *gocron.Job
-	for _, j := range s.scheduler.Jobs() {
-		if len(j.Tags()) > 0 && j.Tags()[0] == id {
-			job = j
-			break
-		}
-	}
-
-	if job == nil {
-		return fmt.Errorf("job not found")
-	}
 
 	task, err := s.convertDBTask(dbTask)
 	if err != nil {
@@ -143,6 +140,11 @@ func (s *Service) Reload(id string) error {
 	}
 
 	_ = s.scheduler.RemoveByTag(id)
+
+	// Don't add it to scheduler, if it's disabled.
+	if dbTask.Disabled {
+		return nil
+	}
 
 	j := s.scheduler.Cron(dbTask.CronExpression).SingletonMode()
 	if !dbTask.StartAt.IsZero() {
