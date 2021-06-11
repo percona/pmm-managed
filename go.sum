@@ -435,6 +435,8 @@ github.com/percona/pmm v0.0.0-20210601163123-a8b03f81a484 h1:vRkesxO336lhpzkSxQ1
 github.com/percona/pmm v0.0.0-20210601163123-a8b03f81a484/go.mod h1:Cm2JKvJMlMimtAhmF/1BUvz3qVJZ2O2zxQXRvtQh93Q=
 github.com/percona/pmm v0.0.0-20210607200640-0ae8199be7a4 h1:UbCR5ozhD4/0OWuEPU/JyHT/0IIGcy/3gLUEz7rKPpA=
 github.com/percona/pmm v0.0.0-20210607200640-0ae8199be7a4/go.mod h1:8f3KQUn5ksaOSVLxtUHdfpPuUVKPqLOv+ksOKaWqAPE=
+github.com/percona/pmm v0.0.0-20210611163857-e3977b360a45 h1:aj8QGn5A4dvnJHCk7QNos8ASVxqyLHRO7qfrZ1L7Gdg=
+github.com/percona/pmm v0.0.0-20210611163857-e3977b360a45/go.mod h1:Cm2JKvJMlMimtAhmF/1BUvz3qVJZ2O2zxQXRvtQh93Q=
 github.com/percona/promconfig v0.2.1 h1:LBbCDSQRfy0aTHFJMgrVQIE2WvmPkMTkIoznTfBAvj8=
 github.com/percona/promconfig v0.2.1/go.mod h1:Y2uXi5QNk71+ceJHuI9poank+0S1kjxd3K105fXKVkg=
 github.com/performancecopilot/speed v3.0.0+incompatible/go.mod h1:/CLtqpZ5gBg1M9iaPbIdPPGyKcA8hKdoy6hAWba7Yac=
