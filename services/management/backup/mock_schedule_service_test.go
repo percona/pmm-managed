@@ -19,13 +19,13 @@ type mockScheduleService struct {
 	mock.Mock
 }
 
-// Add provides a mock function with given fields: task, cronExpr, startAt, retry, retryInterval
-func (_m *mockScheduleService) Add(task scheduler.Task, cronExpr string, startAt time.Time, retry uint, retryInterval time.Duration) (*models.ScheduledTask, error) {
-	ret := _m.Called(task, cronExpr, startAt, retry, retryInterval)
+// Add provides a mock function with given fields: task, enabled, cronExpr, startAt, retry, retryInterval
+func (_m *mockScheduleService) Add(task scheduler.Task, enabled bool, cronExpr string, startAt time.Time, retry uint, retryInterval time.Duration) (*models.ScheduledTask, error) {
+	ret := _m.Called(task, enabled, cronExpr, startAt, retry, retryInterval)
 
 	var r0 *models.ScheduledTask
-	if rf, ok := ret.Get(0).(func(scheduler.Task, string, time.Time, uint, time.Duration) *models.ScheduledTask); ok {
-		r0 = rf(task, cronExpr, startAt, retry, retryInterval)
+	if rf, ok := ret.Get(0).(func(scheduler.Task, bool, string, time.Time, uint, time.Duration) *models.ScheduledTask); ok {
+		r0 = rf(task, enabled, cronExpr, startAt, retry, retryInterval)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*models.ScheduledTask)
@@ -33,8 +33,8 @@ func (_m *mockScheduleService) Add(task scheduler.Task, cronExpr string, startAt
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(scheduler.Task, string, time.Time, uint, time.Duration) error); ok {
-		r1 = rf(task, cronExpr, startAt, retry, retryInterval)
+	if rf, ok := ret.Get(1).(func(scheduler.Task, bool, string, time.Time, uint, time.Duration) error); ok {
+		r1 = rf(task, enabled, cronExpr, startAt, retry, retryInterval)
 	} else {
 		r1 = ret.Error(1)
 	}

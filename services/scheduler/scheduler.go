@@ -50,7 +50,7 @@ func (s *Service) Run(ctx context.Context) {
 }
 
 // Add adds task to scheduler and save it to DB.
-func (s *Service) Add(task Task, cronExpr string, startAt time.Time, retry uint, retryInterval time.Duration) (*models.ScheduledTask, error) {
+func (s *Service) Add(task Task, enabled bool, cronExpr string, startAt time.Time, retry uint, retryInterval time.Duration) (*models.ScheduledTask, error) {
 	var scheduledTask *models.ScheduledTask
 	var err error
 	s.jobsMx.Lock()
@@ -64,7 +64,7 @@ func (s *Service) Add(task Task, cronExpr string, startAt time.Time, retry uint,
 			Data:           task.Data(),
 			Retries:        retry,
 			RetryInterval:  retryInterval,
-			Disabled:       false,
+			Disabled:       !enabled,
 		})
 		if err != nil {
 			return err
@@ -144,7 +144,7 @@ func (s *Service) Reload(id string) error {
 		return err
 	}
 
-	s.scheduler.RemoveByReference(job)
+	_ = s.scheduler.RemoveByTag(id)
 
 	j := s.scheduler.Cron(dbTask.CronExpression).SingletonMode()
 	if !dbTask.StartAt.IsZero() {
