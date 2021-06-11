@@ -230,7 +230,7 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 			t = time.Now()
 		}
 
-		scheduledTask, err := s.scheduleService.Add(task, req.CronExpression, t, uint(req.RetryTimes), req.RetryInterval.AsDuration())
+		scheduledTask, err := s.scheduleService.Add(task, req.Enabled, req.CronExpression, t, uint(req.RetryTimes), req.RetryInterval.AsDuration())
 		if err != nil {
 			return status.Errorf(codes.InvalidArgument, "Couldn't schedule backup: %v", err)
 		}
