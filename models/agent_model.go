@@ -41,6 +41,8 @@ type AgentType string
 const (
 	certificateKeyFilePlaceholder = "certificateKeyFilePlaceholder"
 	caFilePlaceholder             = "caFilePlaceholder"
+	// AgentStatusUnknown indicates we know nothing about agent because it is not connected.
+	AgentStatusUnknown = "UNKNOWN"
 )
 
 // Agent types (in the same order as in agents.proto).
@@ -170,6 +172,9 @@ func (s *Agent) BeforeInsert() error {
 	if len(s.CustomLabels) == 0 {
 		s.CustomLabels = nil
 	}
+	if s.Status == "" && s.AgentType != ExternalExporterType && s.AgentType != PMMAgentType {
+		s.Status = AgentStatusUnknown
+	}
 	return nil
 }
 
@@ -233,20 +238,19 @@ type DBConfig struct {
 }
 
 // Valid returns true if config is valid.
-func (c DBConfig) Valid() bool {
-	return c.User != "" && (c.Address != "" || c.Socket != "")
+func (c *DBConfig) Valid() bool {
+	return c.Address != "" || c.Socket != ""
 }
 
 // DBConfig returns DBConfig for given Service with this agent.
-func (s *Agent) DBConfig(service *Service) DBConfig {
-	cfg := DBConfig{
+func (s *Agent) DBConfig(service *Service) *DBConfig {
+	return &DBConfig{
 		User:     pointer.GetString(s.Username),
 		Password: pointer.GetString(s.Password),
 		Address:  pointer.GetString(service.Address),
 		Port:     int(pointer.GetUint16(service.Port)),
 		Socket:   pointer.GetString(service.Socket),
 	}
-	return cfg
 }
 
 // DSN returns DSN string for accessing given Service with this Agent (and implicit driver).
