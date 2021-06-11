@@ -138,6 +138,6 @@ type rulesService interface {
 // We use it instead of real type for testing and to avoid dependency cycle.
 type scheduleService interface {
 	Run(ctx context.Context)
-	Add(task scheduler.Task, cronExpr string, startAt time.Time, retry uint, retryInterval time.Duration) (*models.ScheduledTask, error)
+	Add(task scheduler.Task, enabled bool, cronExpr string, startAt time.Time, retry uint, retryInterval time.Duration) (*models.ScheduledTask, error)
 	Remove(id string) error
 }
