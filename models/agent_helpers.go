@@ -60,9 +60,9 @@ type PostgreSQLOptionsParams interface {
 func PostgreSQLOptionsFromRequest(params PostgreSQLOptionsParams) *PostgreSQLOptions {
 	if params.GetTlsCa() != "" || params.GetTlsCert() != "" || params.GetTlsKey() != "" {
 		return &PostgreSQLOptions{
-			TLSCa:   params.GetTlsCa(),
-			TLSCert: params.GetTlsCert(),
-			TLSKey:  params.GetTlsKey(),
+			SSLCa:   params.GetTlsCa(),
+			SSLCert: params.GetTlsCert(),
+			SSLKey:  params.GetTlsKey(),
 		}
 	}
 	return nil
@@ -700,6 +700,7 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 		TLSSkipVerify:                  params.TLSSkipVerify,
 		MySQLOptions:                   params.MySQLOptions,
 		MongoDBOptions:                 params.MongoDBOptions,
+		PostgreSQLOptions:              params.PostgreSQLOptions,
 		TableCountTablestatsGroupLimit: params.TableCountTablestatsGroupLimit,
 		QueryExamplesDisabled:          params.QueryExamplesDisabled,
 		MaxQueryLogSize:                params.MaxQueryLogSize,

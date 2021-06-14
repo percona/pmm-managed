@@ -110,9 +110,9 @@ func (c *AzureOptions) Scan(src interface{}) error { return jsonScan(c, src) }
 
 // PostgreSQLOptions represents structure for special MySQL options.
 type PostgreSQLOptions struct {
-	TLSCa   string `json:"tls_ca"`
-	TLSCert string `json:"tls_cert"`
-	TLSKey  string `json:"tls_key"`
+	SSLCa   string `json:"ssl_ca"`
+	SSLCert string `json:"ssl_cert"`
+	SSLKey  string `json:"ssl_key"`
 }
 
 // Value implements database/sql/driver.Valuer interface. Should be defined on the value.
@@ -423,11 +423,11 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 				if files := s.Files(); len(files) > 0 {
 					for key := range files {
 						switch key {
-						case "tlsCa":
+						case "ssl_ca_file":
 							q.Set(key, tdp.Left+" .TextFiles.tlsCa "+tdp.Right)
-						case "tlsCert":
+						case "ssl_cert_file":
 							q.Set(key, tdp.Left+" .TextFiles.tlsCert "+tdp.Right)
-						case "tlsKey":
+						case "ssl_key_file":
 							q.Set(key, tdp.Left+" .TextFiles.tlsKey "+tdp.Right)
 						}
 					}
@@ -543,9 +543,9 @@ func (s Agent) Files() map[string]string {
 	case PostgresExporterType, QANPostgreSQLPgStatementsAgentType, QANPostgreSQLPgStatMonitorAgentType:
 		if s.PostgreSQLOptions != nil {
 			return map[string]string{
-				"ssl_ca_file":   s.PostgreSQLOptions.TLSCa,
-				"ssl_cert_file": s.PostgreSQLOptions.TLSCert,
-				"ssl_key_file":  s.PostgreSQLOptions.TLSKey,
+				"ssl_ca_file":   s.PostgreSQLOptions.SSLCa,
+				"ssl_cert_file": s.PostgreSQLOptions.SSLCert,
+				"ssl_key_file":  s.PostgreSQLOptions.SSLKey,
 			}
 		}
 		return nil
@@ -574,7 +574,7 @@ func (s Agent) TemplateDelimiters(svc *Service) *DelimiterPair {
 		}
 	case PostgreSQLServiceType:
 		if s.PostgreSQLOptions != nil {
-			templateParams = append(templateParams, s.PostgreSQLOptions.TLSKey)
+			templateParams = append(templateParams, s.PostgreSQLOptions.SSLKey)
 		}
 	case ProxySQLServiceType:
 	case HAProxyServiceType:
@@ -587,7 +587,7 @@ func (s Agent) TemplateDelimiters(svc *Service) *DelimiterPair {
 	return &tdp
 }
 
-// check interfaces
+// check interfaces.
 var (
 	_ reform.BeforeInserter = (*Agent)(nil)
 	_ reform.BeforeUpdater  = (*Agent)(nil)
