@@ -98,7 +98,7 @@ jobs:
           make env-compose-up
 
           # restore Go build cache
-          docker cp ~/.cache/go-build pmm-managed-server:/root/.cache/go-build
+          docker cp ~/.cache/go-build pmm-managed-server:/root/.cache/go-build || echo 'No cache built yet'
 
       - name: Setup dev-container
         run: make env-devcontainer
