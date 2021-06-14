@@ -86,13 +86,7 @@ func (s *JobsService) StartMySQLBackupJob(jobID, pmmAgentID string, timeout time
 	switch {
 	case locationConfig.S3Config != nil:
 		mySQLReq.LocationConfig = &agentpb.StartJobRequest_MySQLBackup_S3Config{
-			S3Config: &agentpb.S3LocationConfig{
-				Endpoint:     locationConfig.S3Config.Endpoint,
-				AccessKey:    locationConfig.S3Config.AccessKey,
-				SecretKey:    locationConfig.S3Config.SecretKey,
-				BucketName:   locationConfig.S3Config.BucketName,
-				BucketRegion: locationConfig.S3Config.BucketRegion,
-			},
+			S3Config: convertS3ConfigModel(locationConfig.S3Config),
 		}
 	default:
 		return errors.Errorf("unsupported location config")
@@ -142,13 +136,7 @@ func (s *JobsService) StartMongoDBBackupJob(
 	switch {
 	case locationConfig.S3Config != nil:
 		mongoDBReq.LocationConfig = &agentpb.StartJobRequest_MongoDBBackup_S3Config{
-			S3Config: &agentpb.S3LocationConfig{
-				Endpoint:     locationConfig.S3Config.Endpoint,
-				AccessKey:    locationConfig.S3Config.AccessKey,
-				SecretKey:    locationConfig.S3Config.SecretKey,
-				BucketName:   locationConfig.S3Config.BucketName,
-				BucketRegion: locationConfig.S3Config.BucketRegion,
-			},
+			S3Config: convertS3ConfigModel(locationConfig.S3Config),
 		}
 	default:
 		return errors.Errorf("unsupported location config")
@@ -198,13 +186,7 @@ func (s *JobsService) StartMySQLRestoreBackupJob(
 				ServiceId: serviceID,
 				Name:      name,
 				LocationConfig: &agentpb.StartJobRequest_MySQLRestoreBackup_S3Config{
-					S3Config: &agentpb.S3LocationConfig{
-						Endpoint:     locationConfig.S3Config.Endpoint,
-						AccessKey:    locationConfig.S3Config.AccessKey,
-						SecretKey:    locationConfig.S3Config.SecretKey,
-						BucketName:   locationConfig.S3Config.BucketName,
-						BucketRegion: locationConfig.S3Config.BucketRegion,
-					},
+					S3Config: convertS3ConfigModel(locationConfig.S3Config),
 				},
 			},
 		},
@@ -247,13 +229,7 @@ func (s *JobsService) StartMongoDBRestoreBackupJob(
 	switch {
 	case locationConfig.S3Config != nil:
 		mongoDBReq.LocationConfig = &agentpb.StartJobRequest_MongoDBRestoreBackup_S3Config{
-			S3Config: &agentpb.S3LocationConfig{
-				Endpoint:     locationConfig.S3Config.Endpoint,
-				AccessKey:    locationConfig.S3Config.AccessKey,
-				SecretKey:    locationConfig.S3Config.SecretKey,
-				BucketName:   locationConfig.S3Config.BucketName,
-				BucketRegion: locationConfig.S3Config.BucketRegion,
-			},
+			S3Config: convertS3ConfigModel(locationConfig.S3Config),
 		}
 	default:
 		return errors.Errorf("unsupported location config")
@@ -303,4 +279,14 @@ func (s *JobsService) StopJob(jobID string) error {
 	_, err = agent.channel.SendAndWaitResponse(&agentpb.StopJobRequest{JobId: jobID})
 
 	return err
+}
+
+func convertS3ConfigModel(config *models.S3LocationConfig) *agentpb.S3LocationConfig {
+	return &agentpb.S3LocationConfig{
+		Endpoint:     config.Endpoint,
+		AccessKey:    config.AccessKey,
+		SecretKey:    config.SecretKey,
+		BucketName:   config.BucketName,
+		BucketRegion: config.BucketRegion,
+	}
 }
