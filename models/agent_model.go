@@ -39,6 +39,7 @@ import (
 type AgentType string
 
 const (
+	certificateFilePlaceholder    = "certificateFilePlaceholder"
 	certificateKeyFilePlaceholder = "certificateKeyFilePlaceholder"
 	caFilePlaceholder             = "caFilePlaceholder"
 	// AgentStatusUnknown indicates we know nothing about agent because it is not connected.
@@ -419,22 +420,24 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			} else {
 				sslmode = "verify-full"
 			}
-			if s.PostgreSQLOptions != nil {
-				if files := s.Files(); len(files) > 0 {
-					for key := range files {
-						switch key {
-						case "ssl_ca_file":
-							q.Set(key, tdp.Left+" .TextFiles.tlsCa "+tdp.Right)
-						case "ssl_cert_file":
-							q.Set(key, tdp.Left+" .TextFiles.tlsCert "+tdp.Right)
-						case "ssl_key_file":
-							q.Set(key, tdp.Left+" .TextFiles.tlsKey "+tdp.Right)
-						}
+		}
+		q.Set("sslmode", sslmode)
+
+		if s.PostgreSQLOptions != nil {
+			if files := s.Files(); len(files) > 0 {
+				for key := range files {
+					switch key {
+					case caFilePlaceholder:
+						//q.Set("ssl_ca_file", tdp.Left+".TextFiles.tlsCa"+tdp.Right)
+						q.Add("ssl_ca_file", tdp.Left+".TextFiles."+caFilePlaceholder+tdp.Right)
+					case certificateFilePlaceholder:
+						q.Add("ssl_cert_file", tdp.Left+".TextFiles."+certificateFilePlaceholder+tdp.Right)
+					case certificateKeyFilePlaceholder:
+						q.Add("ssl_key_file", tdp.Left+".TextFiles."+certificateKeyFilePlaceholder+tdp.Right)
 					}
 				}
 			}
 		}
-		q.Set("sslmode", sslmode)
 
 		if dialTimeout != 0 {
 			q.Set("connect_timeout", strconv.Itoa(int(dialTimeout.Seconds())))
@@ -462,7 +465,12 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		case username != "":
 			u.User = url.User(username)
 		}
-		return u.String()
+
+		dsn := u.String()
+		dsn = strings.ReplaceAll(dsn, url.QueryEscape(tdp.Left), tdp.Left)
+		dsn = strings.ReplaceAll(dsn, url.QueryEscape(tdp.Right), tdp.Right)
+
+		return dsn
 	default:
 		panic(fmt.Errorf("unhandled AgentType %q", s.AgentType))
 	}
@@ -543,9 +551,9 @@ func (s Agent) Files() map[string]string {
 	case PostgresExporterType, QANPostgreSQLPgStatementsAgentType, QANPostgreSQLPgStatMonitorAgentType:
 		if s.PostgreSQLOptions != nil {
 			return map[string]string{
-				"ssl_ca_file":   s.PostgreSQLOptions.SSLCa,
-				"ssl_cert_file": s.PostgreSQLOptions.SSLCert,
-				"ssl_key_file":  s.PostgreSQLOptions.SSLKey,
+				caFilePlaceholder:             s.PostgreSQLOptions.SSLCa,
+				certificateFilePlaceholder:    s.PostgreSQLOptions.SSLCert,
+				certificateKeyFilePlaceholder: s.PostgreSQLOptions.SSLKey,
 			}
 		}
 		return nil
