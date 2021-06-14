@@ -103,6 +103,8 @@ jobs:
           docker cp ~/.cache/go-build pmm-managed-server:/root/.cache/go-build
 
       - name: Setup dev-container
+        env:
+          COMPOSE_INTERACTIVE_NO_CLI: 1
         run: make env-devcontainer
 
       - name: Ensure that generated files are not changed
