@@ -69,6 +69,12 @@ test-crosscover:                ## Run tests and collect cross-package coverage 
 test-race-crosscover:           ## Run tests with race detector and collect cross-package coverage information.
 	go test $(PMM_TEST_FLAGS) -p 1 -race -coverprofile=race-crosscover.out -covermode=atomic -coverpkg=./... $(PMM_TEST_PACKAGES)
 
+test-all: test-race test-cover test-crosscover
+	env PMM_TEST_FLAGS='-timeout=180s -v' \
+		PMM_TEST_PACKAGES=./services/supervisord \
+		PMM_TEST_RUN_UPDATE=1 \
+		make test-race-crosscover
+
 fuzz-grafana:                   ## Run fuzzer for services/grafana package.
 	# go get -u github.com/dvyukov/go-fuzz/go-fuzz github.com/dvyukov/go-fuzz/go-fuzz-build
 	mkdir -p services/grafana/fuzzdata/corpus
@@ -113,13 +119,6 @@ psql:                           ## Open database for the pmm-managed instance in
 
 psql-test:                      ## Open database used in unit tests in psql shell.
 	env psql -U postgres pmm-managed-dev
-
-travis: ci-reviewdog test-race test-cover test-crosscover
-	env PMM_TEST_FLAGS='-timeout=180s -v' \
-		PMM_TEST_PACKAGES=./services/supervisord \
-		PMM_TEST_RUN_UPDATE=1 \
-		make test-race-crosscover
-	make check
 
 ci-reviewdog:
 	golangci-lint run -c=.golangci-required.yml --out-format=line-number | reviewdog -f=golangci-lint -level=error -reporter=github-pr-check
