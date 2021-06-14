@@ -99,7 +99,6 @@ jobs:
 
           # restore Go build cache
           docker cp ~/.cache/go-build pmm-managed-server:/root/.cache/go-build
-          docker exec pmm-managed-server ls /root/.cache/go-build
 
       - name: Setup dev-container
         run: make env-devcontainer
