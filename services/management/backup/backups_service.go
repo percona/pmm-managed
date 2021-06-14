@@ -223,11 +223,9 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 			return status.Errorf(codes.Unknown, "unknown service: %s", svc.ServiceType)
 		}
 
-		// If start time is empty (1.1.1970), set time as now
-		// Without it, scheduler would try to compute next run from the beginning, which can take some time.
 		t := req.StartTime.AsTime()
 		if t.Unix() == 0 {
-			t = time.Now()
+			t = time.Time{}
 		}
 
 		scheduledTask, err := s.scheduleService.Add(task, req.Enabled, req.CronExpression, t, uint(req.RetryTimes), req.RetryInterval.AsDuration())
