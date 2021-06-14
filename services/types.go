@@ -14,8 +14,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-// Package utils contains helper functions and common types used by pmm-managed.
-package utils
+package services
 
 import (
 	"github.com/percona-platform/saas/pkg/check"

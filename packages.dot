@@ -30,14 +30,12 @@ digraph packages {
 	"/services/alertmanager" -> "/models";
 	"/services/checks" -> "/models";
 	"/services/checks" -> "/services";
-	"/services/checks" -> "/utils";
 	"/services/inventory" -> "/models";
 	"/services/inventory" -> "/services";
 	"/services/inventory/grpc" -> "/models";
 	"/services/inventory/grpc" -> "/services/inventory";
 	"/services/management" -> "/models";
 	"/services/management" -> "/services";
-	"/services/management" -> "/utils";
 	"/services/management/grpc" -> "/models";
 	"/services/management/grpc" -> "/services/agents";
 	"/services/management/grpc" -> "/services/grafana";

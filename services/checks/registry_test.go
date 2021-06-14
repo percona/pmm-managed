@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/percona/pmm-managed/utils"
+	"github.com/percona/pmm-managed/services"
 )
 
 func TestRegistry(t *testing.T) {
@@ -37,11 +37,11 @@ func TestRegistry(t *testing.T) {
 
 		nowValue := time.Now().UTC().Round(0) // strip a monotonic clock reading
 		r.nowF = func() time.Time { return nowValue }
-		checkResults := []utils.STTCheckResult{
+		checkResults := []services.STTCheckResult{
 			{
 				CheckName: "name",
 				Interval:  check.Standard,
-				Target: utils.Target{
+				Target: services.Target{
 					AgentID:   "/agent_id/123",
 					ServiceID: "/service_id/123",
 					Labels: map[string]string{
@@ -60,7 +60,7 @@ func TestRegistry(t *testing.T) {
 			},
 			{
 				CheckName: "name2",
-				Target: utils.Target{
+				Target: services.Target{
 					AgentID:   "/agent_id/321",
 					ServiceID: "/service_id/321",
 					Labels: map[string]string{
@@ -130,11 +130,11 @@ func TestRegistry(t *testing.T) {
 
 		nowValue := time.Now().UTC().Round(0) // strip a monotonic clock reading
 		r.nowF = func() time.Time { return nowValue }
-		checkResults := []utils.STTCheckResult{
+		checkResults := []services.STTCheckResult{
 			{
 				CheckName: "name",
 				Interval:  check.Standard,
-				Target: utils.Target{
+				Target: services.Target{
 					AgentID:   "/agent_id/123",
 					ServiceID: "/service_id/123",
 					Labels: map[string]string{
@@ -154,7 +154,7 @@ func TestRegistry(t *testing.T) {
 			{
 				CheckName: "name2",
 				Interval:  check.Frequent,
-				Target: utils.Target{
+				Target: services.Target{
 					AgentID:   "/agent_id/321",
 					ServiceID: "/service_id/321",
 					Labels: map[string]string{
@@ -206,10 +206,10 @@ func TestRegistry(t *testing.T) {
 
 		nowValue := time.Now().UTC().Round(0) // strip a monotonic clock reading
 		r.nowF = func() time.Time { return nowValue }
-		checkResults := []utils.STTCheckResult{
+		checkResults := []services.STTCheckResult{
 			{
 				CheckName: "name1",
-				Target: utils.Target{
+				Target: services.Target{
 					AgentID:   "/agent_id/123",
 					ServiceID: "/service_id/123",
 					Labels: map[string]string{
@@ -228,7 +228,7 @@ func TestRegistry(t *testing.T) {
 			},
 			{
 				CheckName: "name2",
-				Target: utils.Target{
+				Target: services.Target{
 					AgentID:   "/agent_id/321",
 					ServiceID: "/service_id/321",
 					Labels: map[string]string{
@@ -280,11 +280,11 @@ func TestRegistry(t *testing.T) {
 
 		nowValue := time.Now().UTC().Round(0) // strip a monotonic clock reading
 		r.nowF = func() time.Time { return nowValue }
-		checkResults := []utils.STTCheckResult{
+		checkResults := []services.STTCheckResult{
 			{
 				CheckName: "name",
 				Interval:  check.Standard,
-				Target: utils.Target{
+				Target: services.Target{
 					AgentID:   "/agent_id/123",
 					ServiceID: "/service_id/123",
 					Labels: map[string]string{
@@ -303,7 +303,7 @@ func TestRegistry(t *testing.T) {
 			},
 			{
 				CheckName: "name2",
-				Target: utils.Target{
+				Target: services.Target{
 					AgentID:   "/agent_id/321",
 					ServiceID: "/service_id/321",
 					Labels: map[string]string{

@@ -41,7 +41,6 @@ import (
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services"
-	"github.com/percona/pmm-managed/utils"
 	"github.com/percona/pmm-managed/utils/envvars"
 	"github.com/percona/pmm-managed/utils/saasdial"
 )
@@ -274,7 +273,7 @@ func (s *Service) restartChecks(ctx context.Context) {
 }
 
 // GetSecurityCheckResults returns the results of the STT checks that were run. It returns services.ErrSTTDisabled if STT is disabled.
-func (s *Service) GetSecurityCheckResults() ([]utils.STTCheckResult, error) {
+func (s *Service) GetSecurityCheckResults() ([]services.STTCheckResult, error) {
 	settings, err := models.GetSettings(s.db)
 	if err != nil {
 		return nil, err
@@ -621,7 +620,7 @@ func (s *Service) executeChecks(ctx context.Context, intervalGroup check.Interva
 		return errors.WithStack(err)
 	}
 
-	var checkResults []utils.STTCheckResult
+	var checkResults []services.STTCheckResult
 
 	mySQLChecks := s.filterChecks(s.getMySQLChecks(), intervalGroup, disabledChecks, checkNames)
 	mySQLCheckResults := s.executeMySQLChecks(ctx, mySQLChecks)
@@ -653,8 +652,8 @@ func (s *Service) executeChecks(ctx context.Context, intervalGroup check.Interva
 }
 
 // executeMySQLChecks runs specified checks for available MySQL service.
-func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) []utils.STTCheckResult {
-	var res []utils.STTCheckResult
+func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) []services.STTCheckResult {
+	var res []services.STTCheckResult
 	for _, c := range checks {
 		s.l.Infof("Executing check: %s with interval: %s", c.Name, c.Interval)
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
@@ -704,8 +703,8 @@ func (s *Service) executeMySQLChecks(ctx context.Context, checks []check.Check) 
 }
 
 // executePostgreSQLChecks runs specified PostgreSQL checks for available PostgreSQL services.
-func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Check) []utils.STTCheckResult {
-	var res []utils.STTCheckResult
+func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Check) []services.STTCheckResult {
+	var res []services.STTCheckResult
 	for _, c := range checks {
 		s.l.Infof("Executing check: %s with interval: %s", c.Name, c.Interval)
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
@@ -755,8 +754,8 @@ func (s *Service) executePostgreSQLChecks(ctx context.Context, checks []check.Ch
 }
 
 // executeMongoDBChecks runs specified MongoDB checks for available MongoDB services.
-func (s *Service) executeMongoDBChecks(ctx context.Context, checks []check.Check) []utils.STTCheckResult {
-	var res []utils.STTCheckResult
+func (s *Service) executeMongoDBChecks(ctx context.Context, checks []check.Check) []services.STTCheckResult {
+	var res []services.STTCheckResult
 	for _, c := range checks {
 		s.l.Infof("Executing check: %s with interval: %s", c.Name, c.Interval)
 		pmmAgentVersion := s.minPMMAgentVersion(c.Type)
@@ -819,7 +818,7 @@ type StarlarkScriptData struct {
 	QueryResult []byte `json:"query_result"`
 }
 
-func (s *Service) processResults(ctx context.Context, sttCheck check.Check, target utils.Target, resID string) ([]utils.STTCheckResult, error) {
+func (s *Service) processResults(ctx context.Context, sttCheck check.Check, target services.Target, resID string) ([]services.STTCheckResult, error) {
 	nCtx, cancel := context.WithTimeout(ctx, resultTimeout)
 	r, err := s.waitForResult(nCtx, resID)
 	cancel()
@@ -871,9 +870,9 @@ func (s *Service) processResults(ctx context.Context, sttCheck check.Check, targ
 	l.Infof("Check script returned %d results.", len(results))
 	l.Debugf("Results: %+v.", results)
 
-	checkResults := make([]utils.STTCheckResult, len(results))
+	checkResults := make([]services.STTCheckResult, len(results))
 	for i, result := range results {
-		checkResults[i] = utils.STTCheckResult{
+		checkResults[i] = services.STTCheckResult{
 			CheckName: sttCheck.Name,
 			Interval:  sttCheck.Interval,
 			Target:    target,
@@ -884,14 +883,14 @@ func (s *Service) processResults(ctx context.Context, sttCheck check.Check, targ
 }
 
 // findTargets returns slice of available targets for specified service type.
-func (s *Service) findTargets(serviceType models.ServiceType, minPMMAgentVersion *version.Parsed) ([]utils.Target, error) {
-	var targets []utils.Target
-	services, err := models.FindServices(s.db.Querier, models.ServiceFilters{ServiceType: &serviceType})
+func (s *Service) findTargets(serviceType models.ServiceType, minPMMAgentVersion *version.Parsed) ([]services.Target, error) {
+	var targets []services.Target
+	monitoredServices, err := models.FindServices(s.db.Querier, models.ServiceFilters{ServiceType: &serviceType})
 	if err != nil {
 		return nil, err
 	}
 
-	for _, service := range services {
+	for _, service := range monitoredServices {
 		// skip pmm own services
 		if service.NodeID == models.PMMServerNodeID {
 			s.l.Debugf("Skip PMM service, name: %s, type: %s.", service.ServiceName, service.ServiceType)
@@ -928,7 +927,7 @@ func (s *Service) findTargets(serviceType models.ServiceType, minPMMAgentVersion
 				return err
 			}
 
-			targets = append(targets, utils.Target{
+			targets = append(targets, services.Target{
 				AgentID:       pmmAgent.AgentID,
 				ServiceID:     service.ServiceID,
 				ServiceName:   service.ServiceName,

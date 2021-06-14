@@ -28,14 +28,14 @@ import (
 	"github.com/percona/pmm/api/alertmanager/ammodels"
 	"github.com/prometheus/common/model"
 
-	"github.com/percona/pmm-managed/utils"
+	"github.com/percona/pmm-managed/services"
 )
 
 // registry stores alerts and delay information by IDs.
 type registry struct {
 	rw sync.RWMutex
 	// Results stored grouped by interval and by check name. It allows us to remove results for specific group.
-	checkResults map[check.Interval]map[string][]utils.STTCheckResult
+	checkResults map[check.Interval]map[string][]services.STTCheckResult
 
 	alertTTL time.Duration
 	nowF     func() time.Time // for tests
@@ -44,14 +44,14 @@ type registry struct {
 // newRegistry creates a new registry.
 func newRegistry(alertTTL time.Duration) *registry {
 	return &registry{
-		checkResults: make(map[check.Interval]map[string][]utils.STTCheckResult),
+		checkResults: make(map[check.Interval]map[string][]services.STTCheckResult),
 		alertTTL:     alertTTL,
 		nowF:         time.Now,
 	}
 }
 
 // set adds check results.
-func (r *registry) set(checkResults []utils.STTCheckResult) {
+func (r *registry) set(checkResults []services.STTCheckResult) {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
@@ -62,7 +62,7 @@ func (r *registry) set(checkResults []utils.STTCheckResult) {
 		}
 
 		if _, ok := r.checkResults[result.Interval]; !ok {
-			r.checkResults[result.Interval] = make(map[string][]utils.STTCheckResult)
+			r.checkResults[result.Interval] = make(map[string][]services.STTCheckResult)
 		}
 
 		r.checkResults[result.Interval][result.CheckName] = append(r.checkResults[result.Interval][result.CheckName], result)
@@ -93,7 +93,7 @@ func (r *registry) cleanup() {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
-	r.checkResults = make(map[check.Interval]map[string][]utils.STTCheckResult)
+	r.checkResults = make(map[check.Interval]map[string][]services.STTCheckResult)
 }
 
 // collect returns a slice of alerts created from the stored check results.
@@ -112,11 +112,11 @@ func (r *registry) collect() ammodels.PostableAlerts {
 	return alerts
 }
 
-func (r *registry) getCheckResults() []utils.STTCheckResult {
+func (r *registry) getCheckResults() []services.STTCheckResult {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
-	var results []utils.STTCheckResult
+	var results []services.STTCheckResult
 	for _, intervalGroup := range r.checkResults {
 		for _, checkNameGroup := range intervalGroup {
 			results = append(results, checkNameGroup...)
@@ -126,7 +126,7 @@ func (r *registry) getCheckResults() []utils.STTCheckResult {
 	return results
 }
 
-func (r *registry) createAlert(name string, target *utils.Target, result *check.Result, alertTTL time.Duration) *ammodels.PostableAlert {
+func (r *registry) createAlert(name string, target *services.Target, result *check.Result, alertTTL time.Duration) *ammodels.PostableAlert {
 	labels := make(map[string]string, len(target.Labels)+len(result.Labels)+4)
 	annotations := make(map[string]string, 2)
 	for k, v := range target.Labels {
@@ -157,7 +157,7 @@ func (r *registry) createAlert(name string, target *utils.Target, result *check.
 }
 
 // makeID creates an ID for STT check alert.
-func makeID(target *utils.Target, result *check.Result) string {
+func makeID(target *services.Target, result *check.Result) string {
 	s := sha1.New() //nolint:gosec
 	fmt.Fprintf(s, "%s\n", target.AgentID)
 	fmt.Fprintf(s, "%s\n", target.ServiceID)
