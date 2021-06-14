@@ -70,7 +70,7 @@ jobs:
           GOFLAGS: ""
         run: |
           go version
-          echo "GO_VERSION=$(go version)" >> $GITHUB_ENV
+          echo "GO_VERSION=${{ matrix.go-version }}" >> $GITHUB_ENV
 
       - name: Check out code into the Go module directory
         uses: percona-platform/checkout@v2
