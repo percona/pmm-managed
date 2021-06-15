@@ -250,7 +250,7 @@ func (c componentsService) CheckForOperatorUpdate(ctx context.Context, req *dbaa
 	}()
 
 	// Meanwhile, get latest operators version compatible with installed PMM.
-	pmmVersionParts := strings.Split(pmmversion.PMMVersion, "-")
+	pmmVersionParts := strings.Split(pmmversion.PMMVersion, "-") // handle development builds, for example: 2.18.0-27-g1e5f59d-dirty
 	latestPXCOperatorForInstalledPMM, latestPSMDBOperatorForInstalledPMM, err := c.versionServiceClient.GetLatestOperatorVersion(ctx, pmmVersionParts[0])
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
