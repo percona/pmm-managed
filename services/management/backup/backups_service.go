@@ -94,11 +94,36 @@ func (s *BackupsService) RestoreBackup(
 
 		restoreID = restore.ID
 
-		job, err := models.CreateJobResult(tx.Querier, params.AgentID, models.MySQLRestoreBackupJob, &models.JobResultData{
-			MySQLRestoreBackup: &models.MySQLRestoreBackupJobResult{
-				RestoreID: restoreID,
-			},
-		})
+		service, err := models.FindServiceByID(tx.Querier, req.ServiceId)
+		if err != nil {
+			return err
+		}
+
+		var jobType models.JobType
+		var jobResultData *models.JobResultData
+		switch service.ServiceType {
+		case models.MySQLServiceType:
+			jobType = models.MySQLRestoreBackupJob
+			jobResultData = &models.JobResultData{
+				MySQLRestoreBackup: &models.MySQLRestoreBackupJobResult{
+					RestoreID: restoreID,
+				}}
+		case models.MongoDBServiceType:
+			jobType = models.MongoDBRestoreBackupJob
+			jobResultData = &models.JobResultData{
+				MongoDBRestoreBackup: &models.MongoDBRestoreBackupJobResult{
+					RestoreID: restoreID,
+				}}
+		case models.PostgreSQLServiceType,
+			models.ProxySQLServiceType,
+			models.HAProxyServiceType,
+			models.ExternalServiceType:
+			return errors.Errorf("backup restore unimplemented for service type: %s", service.ServiceType)
+		default:
+			return errors.Errorf("unsupported service type: %s", service.ServiceType)
+		}
+
+		job, err := models.CreateJobResult(tx.Querier, params.AgentID, jobType, jobResultData)
 		if err != nil {
 			return err
 		}
@@ -120,11 +145,13 @@ func (s *BackupsService) RestoreBackup(
 	}, nil
 }
 
+
 type prepareRestoreJobParams struct {
 	AgentID      string
 	ArtifactName string
 	Location     *models.BackupLocation
 	ServiceType  models.ServiceType
+	DBConfig     *models.DBConfig
 }
 
 func (s *BackupsService) prepareRestoreJob(
@@ -147,6 +174,11 @@ func (s *BackupsService) prepareRestoreJob(
 		return nil, err
 	}
 
+	dbConfig, err := models.FindDBConfigForService(q, service.ServiceID)
+	if err != nil {
+		return nil, err
+	}
+
 	agents, err := models.FindPMMAgentsForService(q, serviceID)
 	if err != nil {
 		return nil, err
@@ -160,6 +192,7 @@ func (s *BackupsService) prepareRestoreJob(
 		ArtifactName: artifact.Name,
 		Location:     location,
 		ServiceType:  service.ServiceType,
+		DBConfig:     dbConfig,
 	}, nil
 }
 
@@ -182,8 +215,18 @@ func (s *BackupsService) startRestoreJob(jobID, serviceID string, params *prepar
 		); err != nil {
 			return err
 		}
+	case models.MongoDBServiceType:
+		if err := s.jobsService.StartMongoDBRestoreBackupJob(
+			jobID,
+			params.AgentID,
+			0,
+			params.ArtifactName,
+			params.DBConfig,
+			locationConfig,
+		); err != nil {
+			return err
+		}
 	case models.PostgreSQLServiceType,
-		models.MongoDBServiceType,
 		models.ProxySQLServiceType,
 		models.HAProxyServiceType,
 		models.ExternalServiceType:

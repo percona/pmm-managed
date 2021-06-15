@@ -74,13 +74,10 @@ func (s *BackupsLogicService) PerformBackup(ctx context.Context, serviceID, loca
 		case models.MongoDBServiceType:
 			dataModel = models.LogicalDataModel
 			jobType = models.MongoDBBackupJob
-		case models.PostgreSQLServiceType:
-			fallthrough
-		case models.ProxySQLServiceType:
-			fallthrough
-		case models.HAProxyServiceType:
-			fallthrough
-		case models.ExternalServiceType:
+		case models.PostgreSQLServiceType,
+			models.ProxySQLServiceType,
+			models.HAProxyServiceType,
+			models.ExternalServiceType:
 			return status.Errorf(codes.Unimplemented, "unimplemented service: %s", svc.ServiceType)
 		default:
 			return status.Errorf(codes.Unknown, "unknown service: %s", svc.ServiceType)
@@ -170,7 +167,8 @@ func (s *BackupsLogicService) prepareBackupJob(
 			},
 		}
 	case models.Echo,
-		models.MySQLRestoreBackupJob:
+		models.MySQLRestoreBackupJob,
+		models.MongoDBRestoreBackupJob:
 		return nil, nil, errors.Errorf("%s is not a backup job type", jobType)
 	default:
 		return nil, nil, errors.Errorf("unsupported backup job type: %s", jobType)

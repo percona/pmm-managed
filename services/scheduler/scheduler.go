@@ -119,7 +119,7 @@ func (s *Service) Remove(id string) error {
 		return err
 	}
 
-	return models.RemoveScheduledTask(s.db.Querier, id)
+	return nil
 }
 
 // Reload removes job from scheduler and add it again from DB.
