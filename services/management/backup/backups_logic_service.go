@@ -132,6 +132,170 @@ func (s *BackupsLogicService) PerformBackup(ctx context.Context, serviceID, loca
 	return artifact.ID, nil
 }
 
+type prepareRestoreJobParams struct {
+	AgentID      string
+	ArtifactName string
+	Location     *models.BackupLocation
+	ServiceType  models.ServiceType
+	DBConfig     *models.DBConfig
+}
+
+// RestoreBackup starts restore backup job.
+func (s *BackupsLogicService) RestoreBackup(ctx context.Context, serviceID, artifactID string) (string, error) {
+	var params *prepareRestoreJobParams
+	var jobID, restoreID string
+
+	err := s.db.InTransactionContext(ctx, nil, func(tx *reform.TX) error {
+		var err error
+		params, err = s.prepareRestoreJob(tx.Querier, serviceID, artifactID)
+		if err != nil {
+			return err
+		}
+
+		restore, err := models.CreateRestoreHistoryItem(tx.Querier, models.CreateRestoreHistoryItemParams{
+			ArtifactID: artifactID,
+			ServiceID:  serviceID,
+			Status:     models.InProgressRestoreStatus,
+		})
+		if err != nil {
+			return err
+		}
+
+		restoreID = restore.ID
+
+		service, err := models.FindServiceByID(tx.Querier, serviceID)
+		if err != nil {
+			return err
+		}
+
+		var jobType models.JobType
+		var jobResultData *models.JobResultData
+		switch service.ServiceType {
+		case models.MySQLServiceType:
+			jobType = models.MySQLRestoreBackupJob
+			jobResultData = &models.JobResultData{
+				MySQLRestoreBackup: &models.MySQLRestoreBackupJobResult{
+					RestoreID: restoreID,
+				}}
+		case models.MongoDBServiceType:
+			jobType = models.MongoDBRestoreBackupJob
+			jobResultData = &models.JobResultData{
+				MongoDBRestoreBackup: &models.MongoDBRestoreBackupJobResult{
+					RestoreID: restoreID,
+				}}
+		case models.PostgreSQLServiceType,
+			models.ProxySQLServiceType,
+			models.HAProxyServiceType,
+			models.ExternalServiceType:
+			return errors.Errorf("backup restore unimplemented for service type: %s", service.ServiceType)
+		default:
+			return errors.Errorf("unsupported service type: %s", service.ServiceType)
+		}
+
+		job, err := models.CreateJobResult(tx.Querier, params.AgentID, jobType, jobResultData)
+		if err != nil {
+			return err
+		}
+
+		jobID = job.ID
+
+		return err
+	})
+	if err != nil {
+		return "", err
+	}
+
+	if err := s.startRestoreJob(jobID, serviceID, params); err != nil {
+		return "", err
+	}
+
+	return restoreID, nil
+}
+
+func (s *BackupsLogicService) prepareRestoreJob(
+	q *reform.Querier,
+	serviceID string,
+	artifactID string,
+) (*prepareRestoreJobParams, error) {
+	service, err := models.FindServiceByID(q, serviceID)
+	if err != nil {
+		return nil, err
+	}
+
+	artifact, err := models.FindArtifactByID(q, artifactID)
+	if err != nil {
+		return nil, err
+	}
+
+	location, err := models.FindBackupLocationByID(q, artifact.LocationID)
+	if err != nil {
+		return nil, err
+	}
+
+	dbConfig, err := models.FindDBConfigForService(q, service.ServiceID)
+	if err != nil {
+		return nil, err
+	}
+
+	agents, err := models.FindPMMAgentsForService(q, serviceID)
+	if err != nil {
+		return nil, err
+	}
+	if len(agents) == 0 {
+		return nil, errors.Errorf("cannot find pmm agent for service %s", serviceID)
+	}
+
+	return &prepareRestoreJobParams{
+		AgentID:      agents[0].AgentID,
+		ArtifactName: artifact.Name,
+		Location:     location,
+		ServiceType:  service.ServiceType,
+		DBConfig:     dbConfig,
+	}, nil
+}
+
+func (s *BackupsLogicService) startRestoreJob(jobID, serviceID string, params *prepareRestoreJobParams) error {
+	locationConfig := &models.BackupLocationConfig{
+		PMMServerConfig: params.Location.PMMServerConfig,
+		PMMClientConfig: params.Location.PMMClientConfig,
+		S3Config:        params.Location.S3Config,
+	}
+
+	switch params.ServiceType {
+	case models.MySQLServiceType:
+		if err := s.jobsService.StartMySQLRestoreBackupJob(
+			jobID,
+			params.AgentID,
+			serviceID,
+			0,
+			params.ArtifactName,
+			locationConfig,
+		); err != nil {
+			return err
+		}
+	case models.MongoDBServiceType:
+		if err := s.jobsService.StartMongoDBRestoreBackupJob(
+			jobID,
+			params.AgentID,
+			0,
+			params.ArtifactName,
+			params.DBConfig,
+			locationConfig,
+		); err != nil {
+			return err
+		}
+	case models.PostgreSQLServiceType,
+		models.ProxySQLServiceType,
+		models.HAProxyServiceType,
+		models.ExternalServiceType:
+		return status.Errorf(codes.Unimplemented, "unimplemented service: %s", params.ServiceType)
+	default:
+		return status.Errorf(codes.Unknown, "unknown service: %s", params.ServiceType)
+	}
+
+	return nil
+}
+
 func (s *BackupsLogicService) prepareBackupJob(
 	q *reform.Querier,
 	service *models.Service,

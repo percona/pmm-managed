@@ -18,15 +18,17 @@ package backup
 
 import (
 	"context"
-	"github.com/percona/pmm-managed/services/scheduler"
-	"github.com/percona/pmm-managed/utils/tests"
+	"testing"
+	"time"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
-	"testing"
-	"time"
+
+	"github.com/percona/pmm-managed/services/scheduler"
+	"github.com/percona/pmm-managed/utils/tests"
 
 	"github.com/AlekSi/pointer"
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"

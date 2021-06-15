@@ -75,6 +75,7 @@ type awsS3 interface {
 
 type backupsLogicService interface {
 	PerformBackup(ctx context.Context, serviceID, locationID, name, scheduleID string) (string, error)
+	RestoreBackup(ctx context.Context, serviceID, artifactID string) (string, error)
 }
 
 // schedulerService is a subset of method of scheduler.Service used by this package.

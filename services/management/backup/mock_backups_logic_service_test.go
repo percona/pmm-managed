@@ -33,3 +33,24 @@ func (_m *mockBackupsLogicService) PerformBackup(ctx context.Context, serviceID 
 
 	return r0, r1
 }
+
+// RestoreBackup provides a mock function with given fields: ctx, serviceID, artifactID
+func (_m *mockBackupsLogicService) RestoreBackup(ctx context.Context, serviceID string, artifactID string) (string, error) {
+	ret := _m.Called(ctx, serviceID, artifactID)
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) string); ok {
+		r0 = rf(ctx, serviceID, artifactID)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, serviceID, artifactID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
