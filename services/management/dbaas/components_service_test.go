@@ -619,92 +619,33 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 		assert.Equal(t, dbaasv1beta1.OperatorUpdateStatus_UPDATE_NOT_AVAILABLE, cluster.PxcOperator.Status)
 		assert.Equal(t, "", cluster.PxcOperator.AvailableOperatorVersion)
 	})
-	// t.Run("Update available BUT NOT compatible with installed PMM version", func(t *testing.T) {
-	// 	response := &VersionServiceResponse{
-	// 		Versions: []struct {
-	// 			Product        string `json:"product"`
-	// 			ProductVersion string `json:"operator"`
-	// 			Matrix         matrix `json:"matrix"`
-	// 		}{
-	// 			{
-	// 				ProductVersion: twoPointEighteen,
-	// 				Product:        "pmm-server",
-	// 				Matrix: matrix{
-	// 					PSMDBOperator: map[string]componentVersion{
-	// 						"1.8.0": {},
-	// 						"1.7.0": {},
-	// 					},
-	// 					PXCOperator: map[string]componentVersion{
-	// 						"1.8.0": {},
-	// 						"1.7.0": {},
-	// 					},
-	// 				},
-	// 			},
-	// 			{
-	// 				ProductVersion: "2.19.0",
-	// 				Product:        "pmm-server",
-	// 				Matrix: matrix{
-	// 					PSMDBOperator: map[string]componentVersion{
-	// 						"1.9.0": {},
-	// 					},
-	// 					PXCOperator: map[string]componentVersion{
-	// 						"1.9.0": {},
-	// 					},
-	// 				},
-	// 			},
-	// 		},
-	// 	}
-	// 	clusterName := "update-available-pmm-update"
-	// 	cs, dbaasClient := setup(t, clusterName, response, "5873")
-	// 	dbaasClient.On("CheckKubernetesClusterConnection", ctx, "{}").Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
-	// 		Operators: &controllerv1beta1.Operators{
-	// 			Psmdb: &controllerv1beta1.Operator{
-	// 				Version: "1.8.0",
-	// 			},
-	// 			Xtradb: &controllerv1beta1.Operator{
-	// 				Version: "1.8.0",
-	// 			},
-	// 		},
-	// 	}, nil)
+	t.Run("User's operators version is ahead of version service", func(t *testing.T) {
+		clusterName := "update-available-pmm-update"
+		cs, dbaasClient := setup(t, clusterName, response, "5863")
+		dbaasClient.On("CheckKubernetesClusterConnection", ctx, "{}").Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
+			Operators: &controllerv1beta1.Operators{
+				Psmdb: &controllerv1beta1.Operator{
+					Version: "1.9.0",
+				},
+				Xtradb: &controllerv1beta1.Operator{
+					Version: "1.9.0",
+				},
+			},
+		}, nil)
 
-	// 	resp, err := cs.CheckForOperatorUpdate(ctx, &dbaasv1beta1.CheckForOperatorUpdateRequest{})
-	// 	require.NoError(t, err)
+		resp, err := cs.CheckForOperatorUpdate(ctx, &dbaasv1beta1.CheckForOperatorUpdateRequest{})
+		require.NoError(t, err)
+		cluster := resp.UpdateInformation[clusterName]
+		require.NotNil(t, cluster)
+		require.NotNil(t, cluster.PsmdbOperator)
+		require.NotNil(t, cluster.PxcOperator)
 
-	// 	// PSMDB
-	// 	assert.Equal(t, dbaasv1beta1.OperatorUpdateStatus_UPDATE_AVAILABLE_BUT_NOT_COMPATIBLE, resp.Status)
-	// 	assert.Equal(t, "2.19.0", resp.AvailablePmmServerVersion)
-	// 	assert.Equal(t, "1.9.0", resp.AvailableOperatorVersion)
+		// PSMDB
+		assert.Equal(t, dbaasv1beta1.OperatorUpdateStatus_UPDATE_NOT_AVAILABLE, cluster.PsmdbOperator.Status)
+		assert.Equal(t, "", cluster.PsmdbOperator.AvailableOperatorVersion)
 
-	// 	// PXC
-	// 	assert.Equal(t, dbaasv1beta1.OperatorUpdateStatus_UPDATE_AVAILABLE_BUT_NOT_COMPATIBLE, resp.Status)
-	// 	assert.Equal(t, "2.19.0", resp.AvailablePmmServerVersion)
-	// 	assert.Equal(t, "1.9.0", resp.AvailableOperatorVersion)
-	// })
-	// t.Run("Error - user's version is ahead of version service", func(t *testing.T) {
-	// 	clusterName := "update-available-pmm-update"
-	// 	cs, dbaasClient := setup(t, clusterName, response, "5863")
-	// 	dbaasClient.On("CheckKubernetesClusterConnection", ctx, "{}").Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
-	// 		Operators: &controllerv1beta1.Operators{
-	// 			Psmdb: &controllerv1beta1.Operator{
-	// 				Version: "1.9.0",
-	// 			},
-	// 			Xtradb: &controllerv1beta1.Operator{
-	// 				Version: "1.9.0",
-	// 			},
-	// 		},
-	// 	}, nil)
-
-	// 	resp, err := cs.CheckForOperatorUpdate(ctx, &dbaasv1beta1.CheckForOperatorUpdateRequest{})
-	// 	assert.Error(t, err)
-
-	// 	// PSMDB
-	// 	assert.Equal(t, dbaasv1beta1.OperatorUpdateStatus_UPDATE_NOT_AVAILABLE, resp.Status)
-	// 	assert.Equal(t, "", resp.AvailablePmmServerVersion)
-	// 	assert.Equal(t, "", resp.AvailableOperatorVersion)
-
-	// 	// PXC
-	// 	assert.Equal(t, dbaasv1beta1.OperatorUpdateStatus_UPDATE_NOT_AVAILABLE, resp.Status)
-	// 	assert.Equal(t, "", resp.AvailablePmmServerVersion)
-	// 	assert.Equal(t, "", resp.AvailableOperatorVersion)
-	// })
+		// PXC
+		assert.Equal(t, dbaasv1beta1.OperatorUpdateStatus_UPDATE_NOT_AVAILABLE, cluster.PxcOperator.Status)
+		assert.Equal(t, "", cluster.PxcOperator.AvailableOperatorVersion)
+	})
 }
