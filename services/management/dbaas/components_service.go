@@ -19,7 +19,6 @@ package dbaas
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 

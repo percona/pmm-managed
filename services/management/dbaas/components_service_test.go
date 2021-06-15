@@ -561,33 +561,35 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 	}
 	pmmversion.PMMVersion = twoPointEighteen
 	ctx := context.Background()
-	// t.Run("Update available", func(t *testing.T) {
-	// 	clusterName := "update-available"
-	// 	cs, dbaasClient := setup(t, clusterName, response, "9873")
-	// 	dbaasClient.On("CheckKubernetesClusterConnection", ctx, "{}").Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
-	// 		Operators: &controllerv1beta1.Operators{
-	// 			Psmdb: &controllerv1beta1.Operator{
-	// 				Version: "1.7.0",
-	// 			},
-	// 			Xtradb: &controllerv1beta1.Operator{
-	// 				Version: "1.7.0",
-	// 			},
-	// 		},
-	// 	}, nil)
+	t.Run("Update available", func(t *testing.T) {
+		clusterName := "update-available"
+		cs, dbaasClient := setup(t, clusterName, response, "9873")
+		dbaasClient.On("CheckKubernetesClusterConnection", ctx, "{}").Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
+			Operators: &controllerv1beta1.Operators{
+				Psmdb: &controllerv1beta1.Operator{
+					Version: "1.7.0",
+				},
+				Xtradb: &controllerv1beta1.Operator{
+					Version: "1.7.0",
+				},
+			},
+		}, nil)
 
-	// 	resp, err := cs.CheckForOperatorUpdate(ctx, &dbaasv1beta1.CheckForOperatorUpdateRequest{})
-	// 	require.NoError(t, err)
+		resp, err := cs.CheckForOperatorUpdate(ctx, &dbaasv1beta1.CheckForOperatorUpdateRequest{})
+		require.NoError(t, err)
+		cluster := resp.UpdateInformation[clusterName]
+		require.NotNil(t, cluster)
+		require.NotNil(t, cluster.PsmdbOperator)
+		require.NotNil(t, cluster.PxcOperator)
 
-	// 	// PSMDB
-	// 	assert.Equal(t, dbaasv1beta1.OperatorUpdateStatus_UPDATE_AVAILABLE, resp.Status)
-	// 	assert.Equal(t, "", resp.AvailablePmmServerVersion)
-	// 	assert.Equal(t, "1.8.0", resp.AvailableOperatorVersion)
+		// PSMDB
+		assert.Equal(t, dbaasv1beta1.OperatorUpdateStatus_UPDATE_AVAILABLE, cluster.PsmdbOperator.Status)
+		assert.Equal(t, "1.8.0", cluster.PsmdbOperator.AvailableOperatorVersion)
 
-	// 	// PXC
-	// 	assert.Equal(t, dbaasv1beta1.OperatorUpdateStatus_UPDATE_AVAILABLE, resp.Status)
-	// 	assert.Equal(t, "", resp.AvailablePmmServerVersion)
-	// 	assert.Equal(t, "1.8.0", resp.AvailableOperatorVersion)
-	// })
+		// PXC
+		assert.Equal(t, dbaasv1beta1.OperatorUpdateStatus_UPDATE_AVAILABLE, cluster.PxcOperator.Status)
+		assert.Equal(t, "1.8.0", cluster.PxcOperator.AvailableOperatorVersion)
+	})
 	t.Run("Update NOT available", func(t *testing.T) {
 		clusterName := "update-not-available"
 		cs, dbaasClient := setup(t, clusterName, response, "7895")
