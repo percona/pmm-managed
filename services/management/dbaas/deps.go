@@ -69,9 +69,9 @@ type dbaasClient interface {
 type versionService interface {
 	// Matrix calls version service with given params and returns components matrix.
 	Matrix(ctx context.Context, params componentsParams) (*VersionServiceResponse, error)
-	// GetLatestOperatorVersion returns latest operator available based on given params.
-	// It also returns PMM version that is compatible with returned operator version.
-	GetLatestOperatorVersion(ctx context.Context, operatorType, pmmVersion string) (latestOperatorVersion *goversion.Version, latestPMMVersion *goversion.Version, err error)
+	// GetLatestOperatorVersion returns latest operators versions available based on given params.
+	// It also returns PMM version that is compatible with returned operators version.
+	GetLatestOperatorVersion(ctx context.Context, pmmVersion string) (latestPSMDBOperatorVersion, latestPXCOperatorVersion *goversion.Version, err error)
 }
 
 // grafanaClient is a subset of methods of grafana.Client used by this package.

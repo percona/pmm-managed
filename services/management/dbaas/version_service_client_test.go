@@ -26,7 +26,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -124,8 +123,8 @@ func TestLatestVersionGetting(t *testing.T) {
 		c := NewVersionServiceClient("https://check.percona.com/versions/invalid")
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		defer cancel()
-		operator, pmm, err := c.GetLatestOperatorVersion(ctx, psmdbOperator, "")
-		assert.True(t, errors.Is(err, errNoVersionsFound), "err is expected to be errNoVersionsFound")
+		operator, pmm, err := c.GetLatestOperatorVersion(ctx, "2.19")
+		assert.Error(t, err, "err is expected")
 		assert.Nil(t, operator)
 		assert.Nil(t, pmm)
 	})
@@ -141,16 +140,10 @@ func TestLatestVersionGetting(t *testing.T) {
 					ProductVersion: twoPointEighteen,
 					Product:        "pmm-server",
 					Matrix: matrix{
-						PSMDBOperator: map[string]componentVersion{
+						PXCOperator: map[string]componentVersion{
 							"1.8.0": {},
 							"1.7.0": {},
 						},
-					},
-				},
-				{
-					ProductVersion: "2.19.0",
-					Product:        "pmm-server",
-					Matrix: matrix{
 						PSMDBOperator: map[string]componentVersion{
 							"1.9.0": {},
 							"1.8.0": {},
@@ -162,15 +155,10 @@ func TestLatestVersionGetting(t *testing.T) {
 		}
 		c, cleanup := newFakeVersionService(response, "5897")
 		ctx := context.Background()
-		opeator, pmm, err := c.GetLatestOperatorVersion(ctx, psmdbOperator, twoPointEighteen)
+		pxcOperatorVersion, psmdbOperatorVersion, err := c.GetLatestOperatorVersion(ctx, twoPointEighteen)
 		require.NoError(t, err, "request to fakeserver for latest version should not fail")
-		assert.Equal(t, "1.8.0", opeator.String())
-		assert.Equal(t, twoPointEighteen, pmm.String())
-
-		opeator, pmm, err = c.GetLatestOperatorVersion(ctx, psmdbOperator, "")
-		require.NoError(t, err, "request to fakeserver for latest version should not fail")
-		assert.Equal(t, "1.9.0", opeator.String())
-		assert.Equal(t, "2.19.0", pmm.String())
+		assert.Equal(t, "1.8.0", pxcOperatorVersion.String())
+		assert.Equal(t, "1.9.0", psmdbOperatorVersion.String())
 		cleanup(t)
 	})
 }

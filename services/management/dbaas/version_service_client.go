@@ -155,48 +155,10 @@ func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsPara
 	return &vsResponse, nil
 }
 
-// GetLatestOperatorVersion return latest operator and pmm version for given pmm version.
-// If given PMM version is empty, it returns latest of all operator versions and it's compatible PMM version.
-func (c *VersionServiceClient) GetLatestOperatorVersion(ctx context.Context, operatorType, pmmVersion string) (*goversion.Version, *goversion.Version, error) {
-	params := componentsParams{
-		product: "pmm-server",
+func getLatest(m map[string]componentVersion) (*goversion.Version, error) {
+	if len(m) == 0 {
+		return nil, errNoVersionsFound
 	}
-	if pmmVersion != "" {
-		params.productVersion = pmmVersion
-	}
-	resp, err := c.Matrix(ctx, params)
-	if err != nil {
-		return nil, nil, err
-	}
-	pmmForLatestOperator := make(map[*goversion.Version]*goversion.Version)
-	for _, pmmVersionDeps := range resp.Versions {
-		var operatorVersions map[string]componentVersion
-		switch operatorType {
-		case pxcOperator:
-			operatorVersions = pmmVersionDeps.Matrix.PXCOperator
-		case psmdbOperator:
-			operatorVersions = pmmVersionDeps.Matrix.PSMDBOperator
-		}
-		versions, err := fromStringKeysToSliceOfVersions(operatorVersions)
-		if err != nil {
-			return nil, nil, err
-		}
-		latestOperatorVersion, err := getLatest(versions)
-		if err != nil {
-			return nil, nil, err
-		}
-		// Store PMM version for latest operator version.
-		parsedPMMVersion, err := goversion.NewVersion(pmmVersionDeps.ProductVersion)
-		if err != nil {
-			return nil, nil, err
-		}
-		pmmForLatestOperator[latestOperatorVersion] = parsedPMMVersion
-	}
-	latestOperatorVersion, err := getLatest(fromVersionMapToSliceOfVersions(pmmForLatestOperator))
-	return latestOperatorVersion, pmmForLatestOperator[latestOperatorVersion], err
-}
-
-func fromStringKeysToSliceOfVersions(m map[string]componentVersion) ([]*goversion.Version, error) {
 	keys := make([]*goversion.Version, len(m))
 	i := 0
 	var err error
@@ -207,28 +169,37 @@ func fromStringKeysToSliceOfVersions(m map[string]componentVersion) ([]*goversio
 		}
 		i++
 	}
-	return keys, nil
-}
 
-func fromVersionMapToSliceOfVersions(m map[*goversion.Version]*goversion.Version) []*goversion.Version {
-	keys := make([]*goversion.Version, len(m))
-	i := 0
-	for k := range m {
-		keys[i] = k
-		i++
-	}
-	return keys
-}
-
-func getLatest(versions []*goversion.Version) (*goversion.Version, error) {
-	if len(versions) == 0 {
-		return nil, errNoVersionsFound
-	}
 	latest := goversion.Must(goversion.NewVersion("v0.0.0"))
-	for _, version := range versions {
+	for _, version := range keys {
 		if version.GreaterThan(latest) {
 			latest = version
 		}
 	}
 	return latest, nil
+}
+
+// GetLatestOperatorVersion return latest PXC and PSMDB operators for given PMM version.
+func (c *VersionServiceClient) GetLatestOperatorVersion(ctx context.Context, pmmVersion string) (*goversion.Version, *goversion.Version, error) {
+	if pmmVersion == "" {
+		return nil, nil, errors.New("given PMM version is empty")
+	}
+	params := componentsParams{
+		product:        "pmm-server",
+		productVersion: pmmVersion,
+	}
+	resp, err := c.Matrix(ctx, params)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(resp.Versions) != 1 {
+		return nil, nil, errors.Errorf("version service response does not cointain deps for single PMM version: length is %d", len(resp.Versions))
+	}
+	pmmVersionDeps := resp.Versions[0]
+	latestPSMDBOperator, err := getLatest(pmmVersionDeps.Matrix.PSMDBOperator)
+	if err != nil {
+		return nil, nil, err
+	}
+	latestPXCOperator, err := getLatest(pmmVersionDeps.Matrix.PXCOperator)
+	return latestPXCOperator, latestPSMDBOperator, err
 }
