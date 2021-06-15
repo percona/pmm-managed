@@ -342,6 +342,21 @@ func (r *Registry) handleJobResult(l *logrus.Entry, result *agentpb.JobResult) {
 			if err != nil {
 				return err
 			}
+
+		case *agentpb.JobResult_MongodbRestoreBackup:
+			if res.Type != models.MongoDBRestoreBackupJob {
+				return errors.Errorf("result type %s doesn't match job type %s", models.MongoDBRestoreBackupJob, res.Type)
+			}
+
+			_, err := models.ChangeRestoreHistoryItem(
+				t.Querier,
+				res.Result.MongoDBRestoreBackup.RestoreID,
+				models.ChangeRestoreHistoryItemParams{
+					Status: models.SuccessRestoreStatus,
+				})
+			if err != nil {
+				return err
+			}
 		default:
 			return errors.Errorf("unexpected job result type: %T", result)
 		}
@@ -369,6 +384,13 @@ func (r *Registry) handleJobError(jobResult *models.JobResult) error {
 		_, err = models.ChangeRestoreHistoryItem(
 			r.db.Querier,
 			jobResult.Result.MySQLRestoreBackup.RestoreID,
+			models.ChangeRestoreHistoryItemParams{
+				Status: models.ErrorRestoreStatus,
+			})
+	case models.MongoDBRestoreBackupJob:
+		_, err = models.ChangeRestoreHistoryItem(
+			r.db.Querier,
+			jobResult.Result.MongoDBRestoreBackup.RestoreID,
 			models.ChangeRestoreHistoryItemParams{
 				Status: models.ErrorRestoreStatus,
 			})
@@ -409,16 +431,19 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*pmmAgentInfo, 
 		return nil, err
 	}
 
-	// pmm-agent with the same ID can still be connected in two cases:
-	//   1. Someone uses the same ID by mistake, glitch, or malicious intent.
-	//   2. pmm-agent detects broken connection and reconnects,
-	//      but pmm-managed still thinks that the previous connection is okay.
-	// In both cases, kick it.
-	l.Warnf("Another pmm-agent with ID %q is already connected.", agentMD.ID)
-	r.Kick(ctx, agentMD.ID)
-
 	r.rw.Lock()
 	defer r.rw.Unlock()
+
+	// do not use r.get() - r.rw is already locked
+	if agent := r.agents[agentMD.ID]; agent != nil {
+		// pmm-agent with the same ID can still be connected in two cases:
+		//   1. Someone uses the same ID by mistake, glitch, or malicious intent.
+		//   2. pmm-agent detects broken connection and reconnects,
+		//      but pmm-managed still thinks that the previous connection is okay.
+		// In both cases, kick it.
+		l.Warnf("Another pmm-agent with ID %q is already connected.", agentMD.ID)
+		r.Kick(ctx, agentMD.ID)
+	}
 
 	agent := &pmmAgentInfo{
 		channel:         channel.New(stream),
@@ -706,6 +731,7 @@ func (r *Registry) runStateChangeHandler(ctx context.Context, agent *pmmAgentInf
 			err := r.sendSetStateRequest(nCtx, agent)
 			if err != nil {
 				l.Error(err)
+				r.RequestStateUpdate(ctx, agent.id)
 			}
 			cancel()
 		}
