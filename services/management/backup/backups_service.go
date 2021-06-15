@@ -145,7 +145,6 @@ func (s *BackupsService) RestoreBackup(
 	}, nil
 }
 
-
 type prepareRestoreJobParams struct {
 	AgentID      string
 	ArtifactName string
@@ -414,6 +413,7 @@ func (s *BackupsService) RemoveScheduledBackup(ctx context.Context, req *backupv
 	if err != nil {
 		return nil, err
 	}
+
 	return &backupv1beta1.RemoveScheduledBackupResponse{}, nil
 }
 

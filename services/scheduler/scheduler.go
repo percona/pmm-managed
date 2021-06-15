@@ -111,7 +111,6 @@ func (s *Service) Remove(id string) error {
 		if err := models.RemoveScheduledTask(tx.Querier, id); err != nil {
 			return err
 		}
-
 		_ = s.scheduler.RemoveByTag(id)
 		return nil
 	})

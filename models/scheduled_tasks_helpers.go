@@ -205,6 +205,10 @@ func ChangeScheduledTask(q *reform.Querier, id string, params ChangeScheduledTas
 		row.RetriesRemaining = *params.RetriesRemaining
 	}
 
+	if params.RetryInterval != nil {
+		row.RetryInterval = *params.RetryInterval
+	}
+
 	if params.Succeeded != nil {
 		row.Succeeded = *params.Succeeded
 	}

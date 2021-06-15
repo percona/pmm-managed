@@ -540,7 +540,7 @@ var databaseSchema = [][]string{
 			PRIMARY KEY (id)
 		)`,
 	},
-	39: {
+	40: {
 		`ALTER TABLE artifacts ADD COLUMN schedule_id VARCHAR`,
 	},
 }
