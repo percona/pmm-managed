@@ -505,7 +505,7 @@ func fillPostgreSQL(mb *qanpb.MetricsBucket, bp *agentpb.MetricsBucket_PostgreSQ
 	mb.MWalBytesCnt = bp.MWalBytesCnt
 	mb.MWalBytesSum = bp.MWalBytesSum
 
-	mb.MPlanTotalTime = bp.MPlanTotalTime
-	mb.MPlanMaxTime = bp.MPlanMaxTime
-	mb.MPlanMinTime = bp.MPlanMinTime
+	mb.MPlanTimeSum = bp.MPlanTimeSum
+	mb.MPlanTimeMin = bp.MPlanTimeMin
+	mb.MPlanTimeMax = bp.MPlanTimeMax
 }
