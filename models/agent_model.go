@@ -423,22 +423,6 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 		}
 		q.Set("sslmode", sslmode)
 
-		if s.PostgreSQLOptions != nil {
-			if files := s.Files(); len(files) > 0 {
-				for key := range files {
-					switch key {
-					case caFilePlaceholder:
-						//q.Set("ssl_ca_file", tdp.Left+".TextFiles.tlsCa"+tdp.Right)
-						q.Add("ssl_ca_file", tdp.Left+".TextFiles."+caFilePlaceholder+tdp.Right)
-					case certificateFilePlaceholder:
-						q.Add("ssl_cert_file", tdp.Left+".TextFiles."+certificateFilePlaceholder+tdp.Right)
-					case certificateKeyFilePlaceholder:
-						q.Add("ssl_key_file", tdp.Left+".TextFiles."+certificateKeyFilePlaceholder+tdp.Right)
-					}
-				}
-			}
-		}
-
 		if dialTimeout != 0 {
 			q.Set("connect_timeout", strconv.Itoa(int(dialTimeout.Seconds())))
 		}
@@ -466,11 +450,7 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			u.User = url.User(username)
 		}
 
-		dsn := u.String()
-		dsn = strings.ReplaceAll(dsn, url.QueryEscape(tdp.Left), tdp.Left)
-		dsn = strings.ReplaceAll(dsn, url.QueryEscape(tdp.Right), tdp.Right)
-
-		return dsn
+		return u.String()
 	default:
 		panic(fmt.Errorf("unhandled AgentType %q", s.AgentType))
 	}
@@ -551,9 +531,9 @@ func (s Agent) Files() map[string]string {
 	case PostgresExporterType, QANPostgreSQLPgStatementsAgentType, QANPostgreSQLPgStatMonitorAgentType:
 		if s.PostgreSQLOptions != nil {
 			return map[string]string{
-				caFilePlaceholder:             s.PostgreSQLOptions.SSLCa,
-				certificateFilePlaceholder:    s.PostgreSQLOptions.SSLCert,
-				certificateKeyFilePlaceholder: s.PostgreSQLOptions.SSLKey,
+				"tsCa":    s.PostgreSQLOptions.SSLCa,
+				"tlsCert": s.PostgreSQLOptions.SSLCert,
+				"tlsKey":  s.PostgreSQLOptions.SSLKey,
 			}
 		}
 		return nil
