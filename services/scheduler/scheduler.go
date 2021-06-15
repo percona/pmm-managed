@@ -71,6 +71,12 @@ func (s *Service) Add(task Task, enabled bool, cronExpr string, startAt time.Tim
 
 		id := scheduledTask.ID
 		task.SetID(id)
+
+		// Don't add job to scheduler if task is disabled.
+		if scheduledTask.Disabled {
+			return nil
+		}
+
 		fn := s.wrapTask(task, id, int(retry), retryInterval)
 
 		j := s.scheduler.Cron(cronExpr).SingletonMode()
@@ -182,8 +188,6 @@ func (s *Service) loadFromDB() error {
 	}
 
 	s.scheduler.Clear()
-	// Reset tags
-	s.scheduler.TagsUnique()
 	for i, task := range tasks {
 		dbTask := dbTasks[i]
 		fn := s.wrapTask(task, dbTask.ID, int(dbTask.RetriesRemaining), dbTask.RetryInterval)
