@@ -29,6 +29,7 @@ type Service struct {
 func New(db *reform.DB) *Service {
 	scheduler := gocron.NewScheduler(time.UTC)
 	scheduler.TagsUnique()
+	scheduler.WaitForScheduleAll()
 	return &Service{
 		db:        db,
 		scheduler: scheduler,
