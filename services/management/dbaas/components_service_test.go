@@ -577,18 +577,11 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 
 		resp, err := cs.CheckForOperatorUpdate(ctx, &dbaasv1beta1.CheckForOperatorUpdateRequest{})
 		require.NoError(t, err)
-		cluster := resp.UpdateInformation[clusterName]
+		cluster := resp.ClusterToComponents[clusterName]
 		require.NotNil(t, cluster)
-		require.NotNil(t, cluster.PsmdbOperator)
-		require.NotNil(t, cluster.PxcOperator)
-
-		// PSMDB
-		assert.Equal(t, dbaasv1beta1.OperatorUpdateStatus_UPDATE_AVAILABLE, cluster.PsmdbOperator.Status)
-		assert.Equal(t, "1.8.0", cluster.PsmdbOperator.AvailableOperatorVersion)
-
-		// PXC
-		assert.Equal(t, dbaasv1beta1.OperatorUpdateStatus_UPDATE_AVAILABLE, cluster.PxcOperator.Status)
-		assert.Equal(t, "1.8.0", cluster.PxcOperator.AvailableOperatorVersion)
+		require.NotNil(t, cluster.ComponentToVersion)
+		assert.Equal(t, "1.8.0", cluster.ComponentToVersion[psmdbOperator])
+		assert.Equal(t, "1.8.0", cluster.ComponentToVersion[pxcOperator])
 	})
 	t.Run("Update NOT available", func(t *testing.T) {
 		clusterName := "update-not-available"
@@ -606,18 +599,11 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 
 		resp, err := cs.CheckForOperatorUpdate(ctx, &dbaasv1beta1.CheckForOperatorUpdateRequest{})
 		require.NoError(t, err)
-		cluster := resp.UpdateInformation[clusterName]
+		cluster := resp.ClusterToComponents[clusterName]
 		require.NotNil(t, cluster)
-		require.NotNil(t, cluster.PsmdbOperator)
-		require.NotNil(t, cluster.PxcOperator)
-
-		// PSMDB
-		assert.Equal(t, dbaasv1beta1.OperatorUpdateStatus_UPDATE_NOT_AVAILABLE, cluster.PsmdbOperator.Status)
-		assert.Equal(t, "", cluster.PsmdbOperator.AvailableOperatorVersion)
-
-		// PXC
-		assert.Equal(t, dbaasv1beta1.OperatorUpdateStatus_UPDATE_NOT_AVAILABLE, cluster.PxcOperator.Status)
-		assert.Equal(t, "", cluster.PxcOperator.AvailableOperatorVersion)
+		require.NotNil(t, cluster.ComponentToVersion)
+		assert.Equal(t, "", cluster.ComponentToVersion[psmdbOperator])
+		assert.Equal(t, "", cluster.ComponentToVersion[pxcOperator])
 	})
 	t.Run("User's operators version is ahead of version service", func(t *testing.T) {
 		clusterName := "update-available-pmm-update"
@@ -635,17 +621,10 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 
 		resp, err := cs.CheckForOperatorUpdate(ctx, &dbaasv1beta1.CheckForOperatorUpdateRequest{})
 		require.NoError(t, err)
-		cluster := resp.UpdateInformation[clusterName]
+		cluster := resp.ClusterToComponents[clusterName]
 		require.NotNil(t, cluster)
-		require.NotNil(t, cluster.PsmdbOperator)
-		require.NotNil(t, cluster.PxcOperator)
-
-		// PSMDB
-		assert.Equal(t, dbaasv1beta1.OperatorUpdateStatus_UPDATE_NOT_AVAILABLE, cluster.PsmdbOperator.Status)
-		assert.Equal(t, "", cluster.PsmdbOperator.AvailableOperatorVersion)
-
-		// PXC
-		assert.Equal(t, dbaasv1beta1.OperatorUpdateStatus_UPDATE_NOT_AVAILABLE, cluster.PxcOperator.Status)
-		assert.Equal(t, "", cluster.PxcOperator.AvailableOperatorVersion)
+		require.NotNil(t, cluster.ComponentToVersion)
+		assert.Equal(t, "", cluster.ComponentToVersion[psmdbOperator])
+		assert.Equal(t, "", cluster.ComponentToVersion[pxcOperator])
 	})
 }
