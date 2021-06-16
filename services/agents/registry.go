@@ -28,7 +28,6 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
-	"github.com/golang/protobuf/ptypes"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/version"
@@ -37,6 +36,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -56,9 +57,9 @@ const (
 var (
 	checkExternalExporterConnectionPMMVersion = version.MustParse("1.14.99")
 
-	defaultActionTimeout      = ptypes.DurationProto(10 * time.Second)
-	defaultQueryActionTimeout = ptypes.DurationProto(15 * time.Second) // should be less than checks.resultTimeout
-	defaultPtActionTimeout    = ptypes.DurationProto(30 * time.Second) // Percona-toolkit action timeout
+	defaultActionTimeout      = durationpb.New(10 * time.Second)
+	defaultQueryActionTimeout = durationpb.New(15 * time.Second) // should be less than checks.resultTimeout
+	defaultPtActionTimeout    = durationpb.New(30 * time.Second) // Percona-toolkit action timeout
 
 	mSentDesc = prom.NewDesc(
 		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_sent_total"),
@@ -217,7 +218,10 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 				disconnectReason = "done"
 				err = agent.channel.Wait()
 				r.unregister(agent.id)
-				return err
+				if err != nil {
+					l.Error(errors.WithStack(err))
+				}
+				return r.updateAgentStatusForChildren(ctx, agent.id, inventorypb.AgentStatus_DONE, 0)
 			}
 
 			switch p := req.Payload.(type) {
@@ -225,7 +229,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 				agent.channel.Send(&channel.ServerResponse{
 					ID: req.ID,
 					Payload: &agentpb.Pong{
-						CurrentTime: ptypes.TimestampNow(),
+						CurrentTime: timestamppb.Now(),
 					},
 				})
 
@@ -275,9 +279,7 @@ func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 				// TODO Handle job progress messages https://jira.percona.com/browse/PMM-7756
 
 			case nil:
-				l.Warnf("Unexpected request: %+v.", req)
-				disconnectReason = "unimplemented"
-				return status.Error(codes.Unimplemented, "Unexpected request payload.")
+				l.Errorf("Unexpected request: %+v.", req)
 			}
 		}
 	}
@@ -311,7 +313,18 @@ func (r *Registry) handleJobResult(l *logrus.Entry, result *agentpb.JobResult) {
 			}
 
 			_, err := models.ChangeArtifact(t.Querier, res.Result.MySQLBackup.ArtifactID, models.ChangeArtifactParams{
-				Status: models.SuccessBackupStatus,
+				Status: models.SuccessBackupStatus.Pointer(),
+			})
+			if err != nil {
+				return err
+			}
+		case *agentpb.JobResult_MongodbBackup:
+			if res.Type != models.MongoDBBackupJob {
+				return errors.Errorf("result type %s doesn't match job type %s", models.MongoDBBackupJob, res.Type)
+			}
+
+			_, err := models.ChangeArtifact(t.Querier, res.Result.MongoDBBackup.ArtifactID, models.ChangeArtifactParams{
+				Status: models.SuccessBackupStatus.Pointer(),
 			})
 			if err != nil {
 				return err
@@ -330,15 +343,28 @@ func (r *Registry) handleJobResult(l *logrus.Entry, result *agentpb.JobResult) {
 			if err != nil {
 				return err
 			}
+
+		case *agentpb.JobResult_MongodbRestoreBackup:
+			if res.Type != models.MongoDBRestoreBackupJob {
+				return errors.Errorf("result type %s doesn't match job type %s", models.MongoDBRestoreBackupJob, res.Type)
+			}
+
+			_, err := models.ChangeRestoreHistoryItem(
+				t.Querier,
+				res.Result.MongoDBRestoreBackup.RestoreID,
+				models.ChangeRestoreHistoryItemParams{
+					Status: models.SuccessRestoreStatus,
+				})
+			if err != nil {
+				return err
+			}
 		default:
 			return errors.Errorf("unexpected job result type: %T", result)
 		}
-
 		res.Done = true
-
 		return t.Update(res)
 	}); e != nil {
-		l.Errorf("failed to save job result: %+v", e)
+		l.Errorf("Failed to save job result: %+v", e)
 	}
 }
 
@@ -349,23 +375,31 @@ func (r *Registry) handleJobError(jobResult *models.JobResult) error {
 		// nothing
 	case models.MySQLBackupJob:
 		_, err = models.ChangeArtifact(r.db.Querier, jobResult.Result.MySQLBackup.ArtifactID, models.ChangeArtifactParams{
-			Status: models.ErrorBackupStatus,
+			Status: models.ErrorBackupStatus.Pointer(),
+		})
+	case models.MongoDBBackupJob:
+		_, err = models.ChangeArtifact(r.db.Querier, jobResult.Result.MongoDBBackup.ArtifactID, models.ChangeArtifactParams{
+			Status: models.ErrorBackupStatus.Pointer(),
 		})
 	case models.MySQLRestoreBackupJob:
-		_, err := models.ChangeRestoreHistoryItem(
+		_, err = models.ChangeRestoreHistoryItem(
 			r.db.Querier,
 			jobResult.Result.MySQLRestoreBackup.RestoreID,
 			models.ChangeRestoreHistoryItemParams{
 				Status: models.ErrorRestoreStatus,
 			})
-		if err != nil {
-			return err
-		}
+	case models.MongoDBRestoreBackupJob:
+		_, err = models.ChangeRestoreHistoryItem(
+			r.db.Querier,
+			jobResult.Result.MongoDBRestoreBackup.RestoreID,
+			models.ChangeRestoreHistoryItemParams{
+				Status: models.ErrorRestoreStatus,
+			})
 	default:
 		// Don't do anything without explicit handling
 	}
-
 	return err
+
 }
 
 func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*pmmAgentInfo, error) {
@@ -398,16 +432,19 @@ func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*pmmAgentInfo, 
 		return nil, err
 	}
 
-	// pmm-agent with the same ID can still be connected in two cases:
-	//   1. Someone uses the same ID by mistake, glitch, or malicious intent.
-	//   2. pmm-agent detects broken connection and reconnects,
-	//      but pmm-managed still thinks that the previous connection is okay.
-	// In both cases, kick it.
-	l.Warnf("Another pmm-agent with ID %q is already connected.", agentMD.ID)
-	r.Kick(ctx, agentMD.ID)
-
 	r.rw.Lock()
 	defer r.rw.Unlock()
+
+	// do not use r.get() - r.rw is already locked
+	if agent := r.agents[agentMD.ID]; agent != nil {
+		// pmm-agent with the same ID can still be connected in two cases:
+		//   1. Someone uses the same ID by mistake, glitch, or malicious intent.
+		//   2. pmm-agent detects broken connection and reconnects,
+		//      but pmm-managed still thinks that the previous connection is okay.
+		// In both cases, kick it.
+		l.Warnf("Another pmm-agent with ID %q is already connected.", agentMD.ID)
+		r.Kick(ctx, agentMD.ID)
+	}
 
 	agent := &pmmAgentInfo{
 		channel:         channel.New(stream),
@@ -556,18 +593,20 @@ func (r *Registry) Kick(ctx context.Context, pmmAgentID string) {
 }
 
 // ping sends Ping message to given Agent, waits for Pong and observes round-trip time and clock drift.
-func (r *Registry) ping(ctx context.Context, agent *pmmAgentInfo) {
+func (r *Registry) ping(ctx context.Context, agent *pmmAgentInfo) error {
 	l := logger.Get(ctx)
 	start := time.Now()
-	resp := agent.channel.SendAndWaitResponse(new(agentpb.Ping))
+	resp, err := agent.channel.SendAndWaitResponse(new(agentpb.Ping))
+	if err != nil {
+		return err
+	}
 	if resp == nil {
-		return
+		return nil
 	}
 	roundtrip := time.Since(start)
-	agentTime, err := ptypes.Timestamp(resp.(*agentpb.Pong).CurrentTime)
-	if err != nil {
-		l.Errorf("Failed to decode Pong.current_time: %s.", err)
-		return
+	agentTime := resp.(*agentpb.Pong).CurrentTime.AsTime()
+	if err := resp.(*agentpb.Pong).CurrentTime.CheckValid(); err != nil {
+		return errors.Wrap(err, "failed to decode Pong.current_time")
 	}
 	clockDrift := agentTime.Sub(start) - roundtrip/2
 	if clockDrift < 0 {
@@ -576,6 +615,7 @@ func (r *Registry) ping(ctx context.Context, agent *pmmAgentInfo) {
 	l.Infof("Round-trip time: %s. Estimated clock drift: %s.", roundtrip, clockDrift)
 	r.mRoundTrip.Observe(roundtrip.Seconds())
 	r.mClockDrift.Observe(clockDrift.Seconds())
+	return nil
 }
 
 func updateAgentStatus(ctx context.Context, q *reform.Querier, agentID string, status inventorypb.AgentStatus, listenPort uint32) error {
@@ -584,9 +624,6 @@ func updateAgentStatus(ctx context.Context, q *reform.Querier, agentID string, s
 
 	agent := &models.Agent{AgentID: agentID}
 	err := q.Reload(agent)
-
-	// TODO set ListenPort to NULL when agent is done?
-	// https://jira.percona.com/browse/PMM-4932
 
 	// FIXME that requires more investigation: https://jira.percona.com/browse/PMM-4932
 	if err == reform.ErrNoRows {
@@ -597,7 +634,6 @@ func updateAgentStatus(ctx context.Context, q *reform.Querier, agentID string, s
 			return nil
 		}
 	}
-
 	if err != nil {
 		return errors.Wrap(err, "failed to select Agent by ID")
 	}
@@ -693,13 +729,54 @@ func (r *Registry) runStateChangeHandler(ctx context.Context, agent *pmmAgentInf
 			}
 
 			nCtx, cancel := context.WithTimeout(ctx, stateChangeTimeout)
-			r.sendSetStateRequest(nCtx, agent)
+			err := r.sendSetStateRequest(nCtx, agent)
+			if err != nil {
+				l.Error(err)
+				r.RequestStateUpdate(ctx, agent.id)
+			}
 			cancel()
 		}
 	}
 }
 
-// RequestStateUpdate requests state update on pmm-agent with given ID.
+// SetAllAgentsStatusUnknown goes through all pmm-agents and sets status to UNKNOWN.
+func (r *Registry) SetAllAgentsStatusUnknown(ctx context.Context) error {
+	agentType := models.PMMAgentType
+	agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{AgentType: &agentType})
+	if err != nil {
+		return errors.Wrap(err, "failed to get pmm-agents")
+
+	}
+	for _, agent := range agents {
+		if !r.IsConnected(agent.AgentID) {
+			err = r.updateAgentStatusForChildren(ctx, agent.AgentID, inventorypb.AgentStatus_UNKNOWN, 0)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (r *Registry) updateAgentStatusForChildren(ctx context.Context, agentID string, status inventorypb.AgentStatus, listenPort uint32) error {
+	return r.db.InTransaction(func(t *reform.TX) error {
+		agents, err := models.FindAgents(t.Querier, models.AgentFilters{
+			PMMAgentID: agentID,
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to get pmm-agent's child agents")
+		}
+		for _, agent := range agents {
+			if err := updateAgentStatus(ctx, t.Querier, agent.AgentID, status, listenPort); err != nil {
+				return errors.Wrap(err, "failed to update agent's status")
+			}
+		}
+		return nil
+	})
+}
+
+// RequestStateUpdate requests state update on pmm-agent with given ID. It sets
+// the status to done if the agent is not connected.
 func (r *Registry) RequestStateUpdate(ctx context.Context, pmmAgentID string) {
 	l := logger.Get(ctx)
 
@@ -716,7 +793,7 @@ func (r *Registry) RequestStateUpdate(ctx context.Context, pmmAgentID string) {
 }
 
 // sendSetStateRequest sends SetStateRequest to given pmm-agent.
-func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo) {
+func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo) error {
 	l := logger.Get(ctx)
 	start := time.Now()
 	defer func() {
@@ -726,19 +803,16 @@ func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo)
 	}()
 	pmmAgent, err := models.FindAgentByID(r.db.Querier, agent.id)
 	if err != nil {
-		l.Errorf("Failed to get PMM Agent: %s.", err)
-		return
+		return errors.Wrap(err, "failed to get PMM Agent")
 	}
 	pmmAgentVersion, err := version.Parse(*pmmAgent.Version)
 	if err != nil {
-		l.Errorf("Failed to parse PMM agent version %q: %s", *pmmAgent.Version, err)
-		return
+		return errors.Wrapf(err, "failed to parse PMM agent version %q", *pmmAgent.Version)
 	}
 
 	agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{PMMAgentID: agent.id})
 	if err != nil {
-		l.Errorf("Failed to collect agents: %s.", err)
-		return
+		return errors.Wrap(err, "failed to collect agents")
 	}
 
 	redactMode := redactSecrets
@@ -761,23 +835,21 @@ func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo)
 		case models.VMAgentType:
 			scrapeCfg, err := r.vmdb.BuildScrapeConfigForVMAgent(agent.id)
 			if err != nil {
-				l.WithError(err).Errorf("cannot get agent scrape config for agent: %s", agent.id)
+				return errors.Wrapf(err, "cannot get agent scrape config for agent: %s", agent.id)
 			}
 			agentProcesses[row.AgentID] = vmAgentConfig(string(scrapeCfg))
 
 		case models.NodeExporterType:
 			node, err := models.FindNodeByID(r.db.Querier, pointer.GetString(row.NodeID))
 			if err != nil {
-				l.Error(err)
-				return
+				return err
 			}
 			agentProcesses[row.AgentID] = nodeExporterConfig(node, row)
 
 		case models.RDSExporterType:
 			node, err := models.FindNodeByID(r.db.Querier, pointer.GetString(row.NodeID))
 			if err != nil {
-				l.Error(err)
-				return
+				return err
 			}
 			rdsExporters[node] = row
 		case models.ExternalExporterType:
@@ -786,13 +858,11 @@ func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo)
 		case models.AzureDatabaseExporterType:
 			service, err := models.FindServiceByID(r.db.Querier, pointer.GetString(row.ServiceID))
 			if err != nil {
-				l.Error(err)
-				return
+				return err
 			}
 			config, err := azureDatabaseExporterConfig(row, service, redactMode)
 			if err != nil {
-				l.Error(err)
-				return
+				return err
 			}
 			agentProcesses[row.AgentID] = config
 
@@ -803,8 +873,7 @@ func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo)
 
 			service, err := models.FindServiceByID(r.db.Querier, pointer.GetString(row.ServiceID))
 			if err != nil {
-				l.Error(err)
-				return
+				return err
 			}
 
 			switch row.AgentType {
@@ -829,7 +898,7 @@ func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo)
 			}
 
 		default:
-			l.Panicf("unhandled Agent type %s", row.AgentType)
+			return errors.Errorf("unhandled Agent type %s", row.AgentType)
 		}
 	}
 
@@ -842,19 +911,22 @@ func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo)
 
 		groupID := r.roster.add(agent.id, rdsGroup, rdsExporterIDs)
 		c, err := rdsExporterConfig(rdsExporters, redactMode)
-		if err == nil {
-			agentProcesses[groupID] = c
-		} else {
-			l.Errorf("%+v", err)
+		if err != nil {
+			return err
 		}
+		agentProcesses[groupID] = c
 	}
 	state := &agentpb.SetStateRequest{
 		AgentProcesses: agentProcesses,
 		BuiltinAgents:  builtinAgents,
 	}
 	l.Debugf("sendSetStateRequest:\n%s", proto.MarshalTextString(state))
-	resp := agent.channel.SendAndWaitResponse(state)
+	resp, err := agent.channel.SendAndWaitResponse(state)
+	if err != nil {
+		return err
+	}
 	l.Infof("SetState response: %+v.", resp)
+	return nil
 }
 
 func (r *Registry) isExternalExporterConnectionCheckSupported(q *reform.Querier, pmmAgentID string) (bool, error) {
@@ -913,7 +985,7 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 		request = &agentpb.CheckConnectionRequest{
 			Type:    inventorypb.ServiceType_MYSQL_SERVICE,
 			Dsn:     agent.DSN(service, 2*time.Second, "", nil),
-			Timeout: ptypes.DurationProto(3 * time.Second),
+			Timeout: durationpb.New(3 * time.Second),
 			TextFiles: &agentpb.TextFiles{
 				Files:              agent.Files(),
 				TemplateLeftDelim:  tdp.Left,
@@ -925,14 +997,14 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 		request = &agentpb.CheckConnectionRequest{
 			Type:    inventorypb.ServiceType_POSTGRESQL_SERVICE,
 			Dsn:     agent.DSN(service, 2*time.Second, "postgres", nil),
-			Timeout: ptypes.DurationProto(3 * time.Second),
+			Timeout: durationpb.New(3 * time.Second),
 		}
 	case models.MongoDBServiceType:
 		tdp := agent.TemplateDelimiters(service)
 		request = &agentpb.CheckConnectionRequest{
 			Type:    inventorypb.ServiceType_MONGODB_SERVICE,
 			Dsn:     agent.DSN(service, 2*time.Second, "", nil),
-			Timeout: ptypes.DurationProto(3 * time.Second),
+			Timeout: durationpb.New(3 * time.Second),
 			TextFiles: &agentpb.TextFiles{
 				Files:              agent.Files(),
 				TemplateLeftDelim:  tdp.Left,
@@ -943,7 +1015,7 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 		request = &agentpb.CheckConnectionRequest{
 			Type:    inventorypb.ServiceType_PROXYSQL_SERVICE,
 			Dsn:     agent.DSN(service, 2*time.Second, "", nil),
-			Timeout: ptypes.DurationProto(3 * time.Second),
+			Timeout: durationpb.New(3 * time.Second),
 		}
 	case models.ExternalServiceType:
 		exporterURL, err := agent.ExporterURL(q)
@@ -954,7 +1026,7 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 		request = &agentpb.CheckConnectionRequest{
 			Type:    inventorypb.ServiceType_EXTERNAL_SERVICE,
 			Dsn:     exporterURL,
-			Timeout: ptypes.DurationProto(3 * time.Second),
+			Timeout: durationpb.New(3 * time.Second),
 		}
 	case models.HAProxyServiceType:
 		exporterURL, err := agent.ExporterURL(q)
@@ -965,10 +1037,10 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 		request = &agentpb.CheckConnectionRequest{
 			Type:    inventorypb.ServiceType_HAPROXY_SERVICE,
 			Dsn:     exporterURL,
-			Timeout: ptypes.DurationProto(3 * time.Second),
+			Timeout: durationpb.New(3 * time.Second),
 		}
 	default:
-		l.Panicf("unhandled Service type %s", service.ServiceType)
+		return errors.Errorf("unhandled Service type %s", service.ServiceType)
 	}
 
 	var sanitizedDSN string
@@ -976,7 +1048,10 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 		sanitizedDSN = strings.ReplaceAll(request.Dsn, word, "****")
 	}
 	l.Infof("CheckConnectionRequest: type: %s, DSN: %s timeout: %s.", request.Type, sanitizedDSN, request.Timeout)
-	resp := pmmAgent.channel.SendAndWaitResponse(request)
+	resp, err := pmmAgent.channel.SendAndWaitResponse(request)
+	if err != nil {
+		return err
+	}
 	l.Infof("CheckConnection response: %+v.", resp)
 
 	switch service.ServiceType {
@@ -994,7 +1069,7 @@ func (r *Registry) CheckConnectionToService(ctx context.Context, q *reform.Queri
 		// nothing yet
 
 	default:
-		l.Panicf("unhandled Service type %s", service.ServiceType)
+		return errors.Errorf("unhandled Service type %s", service.ServiceType)
 	}
 
 	msg := resp.(*agentpb.CheckConnectionResponse).Error
@@ -1079,8 +1154,8 @@ func (r *Registry) StartMySQLExplainAction(ctx context.Context, id, pmmAgentID, 
 		Timeout: defaultActionTimeout,
 	}
 
-	agent.channel.SendAndWaitResponse(aRequest)
-	return nil
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartMySQLShowCreateTableAction starts mysql-show-create-table action on pmm-agent.
@@ -1107,9 +1182,8 @@ func (r *Registry) StartMySQLShowCreateTableAction(ctx context.Context, id, pmmA
 	if err != nil {
 		return err
 	}
-
-	agent.channel.SendAndWaitResponse(aRequest)
-	return nil
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartMySQLShowTableStatusAction starts mysql-show-table-status action on pmm-agent.
@@ -1136,9 +1210,8 @@ func (r *Registry) StartMySQLShowTableStatusAction(ctx context.Context, id, pmmA
 	if err != nil {
 		return err
 	}
-
-	agent.channel.SendAndWaitResponse(aRequest)
-	return nil
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartMySQLShowIndexAction starts mysql-show-index action on pmm-agent.
@@ -1165,9 +1238,8 @@ func (r *Registry) StartMySQLShowIndexAction(ctx context.Context, id, pmmAgentID
 	if err != nil {
 		return err
 	}
-
-	agent.channel.SendAndWaitResponse(aRequest)
-	return nil
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartPostgreSQLShowCreateTableAction starts postgresql-show-create-table action on pmm-agent.
@@ -1188,9 +1260,8 @@ func (r *Registry) StartPostgreSQLShowCreateTableAction(ctx context.Context, id,
 	if err != nil {
 		return err
 	}
-
-	agent.channel.SendAndWaitResponse(aRequest)
-	return nil
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartPostgreSQLShowIndexAction starts postgresql-show-index action on pmm-agent.
@@ -1211,9 +1282,8 @@ func (r *Registry) StartPostgreSQLShowIndexAction(ctx context.Context, id, pmmAg
 	if err != nil {
 		return err
 	}
-
-	agent.channel.SendAndWaitResponse(aRequest)
-	return nil
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartMongoDBExplainAction starts MongoDB query explain action on pmm-agent.
@@ -1238,9 +1308,8 @@ func (r *Registry) StartMongoDBExplainAction(ctx context.Context, id, pmmAgentID
 	if err != nil {
 		return err
 	}
-
-	agent.channel.SendAndWaitResponse(aRequest)
-	return nil
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartMySQLQueryShowAction starts MySQL SHOW query action on pmm-agent.
@@ -1266,9 +1335,8 @@ func (r *Registry) StartMySQLQueryShowAction(ctx context.Context, id, pmmAgentID
 	if err != nil {
 		return err
 	}
-
-	agent.channel.SendAndWaitResponse(aRequest)
-	return nil
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartMySQLQuerySelectAction starts MySQL SELECT query action on pmm-agent.
@@ -1294,9 +1362,8 @@ func (r *Registry) StartMySQLQuerySelectAction(ctx context.Context, id, pmmAgent
 	if err != nil {
 		return err
 	}
-
-	agent.channel.SendAndWaitResponse(aRequest)
-	return nil
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartPostgreSQLQueryShowAction starts PostgreSQL SHOW query action on pmm-agent.
@@ -1315,9 +1382,8 @@ func (r *Registry) StartPostgreSQLQueryShowAction(ctx context.Context, id, pmmAg
 	if err != nil {
 		return err
 	}
-
-	agent.channel.SendAndWaitResponse(aRequest)
-	return nil
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartPostgreSQLQuerySelectAction starts PostgreSQL SELECT query action on pmm-agent.
@@ -1337,9 +1403,8 @@ func (r *Registry) StartPostgreSQLQuerySelectAction(ctx context.Context, id, pmm
 	if err != nil {
 		return err
 	}
-
-	agent.channel.SendAndWaitResponse(aRequest)
-	return nil
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartMongoDBQueryGetParameterAction starts MongoDB getParameter query action on pmm-agent.
@@ -1363,9 +1428,8 @@ func (r *Registry) StartMongoDBQueryGetParameterAction(ctx context.Context, id, 
 	if err != nil {
 		return err
 	}
-
-	agent.channel.SendAndWaitResponse(aRequest)
-	return nil
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartMongoDBQueryBuildInfoAction starts MongoDB buildInfo query action on pmm-agent.
@@ -1389,9 +1453,8 @@ func (r *Registry) StartMongoDBQueryBuildInfoAction(ctx context.Context, id, pmm
 	if err != nil {
 		return err
 	}
-
-	agent.channel.SendAndWaitResponse(aRequest)
-	return nil
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartMongoDBQueryGetCmdLineOptsAction starts MongoDB getCmdLineOpts query action on pmm-agent.
@@ -1415,9 +1478,8 @@ func (r *Registry) StartMongoDBQueryGetCmdLineOptsAction(ctx context.Context, id
 	if err != nil {
 		return err
 	}
-
-	agent.channel.SendAndWaitResponse(aRequest)
-	return nil
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartPTSummaryAction starts pt-summary action on pmm-agent.
@@ -1435,9 +1497,8 @@ func (r *Registry) StartPTSummaryAction(ctx context.Context, id, pmmAgentID stri
 	if err != nil {
 		return err
 	}
-
-	agent.channel.SendAndWaitResponse(aRequest)
-	return nil
+	_, err = agent.channel.SendAndWaitResponse(aRequest)
+	return err
 }
 
 // StartPTPgSummaryAction starts pt-pg-summary action on the pmm-agent.
@@ -1460,9 +1521,8 @@ func (r *Registry) StartPTPgSummaryAction(ctx context.Context, id, pmmAgentID, a
 	if err != nil {
 		return err
 	}
-	pmmAgent.channel.SendAndWaitResponse(actionRequest)
-
-	return nil
+	_, err = pmmAgent.channel.SendAndWaitResponse(actionRequest)
+	return err
 }
 
 // StartPTMongoDBSummaryAction starts pt-mongodb-summary action on the pmm-agent.
@@ -1488,10 +1548,8 @@ func (r *Registry) StartPTMongoDBSummaryAction(ctx context.Context, id, pmmAgent
 	if err != nil {
 		return err
 	}
-
-	pmmAgent.channel.SendAndWaitResponse(actionRequest)
-
-	return nil
+	_, err = pmmAgent.channel.SendAndWaitResponse(actionRequest)
+	return err
 }
 
 // StartPTMySQLSummaryAction starts pt-mysql-summary action on the pmm-agent.
@@ -1516,9 +1574,8 @@ func (r *Registry) StartPTMySQLSummaryAction(ctx context.Context, id, pmmAgentID
 	if err != nil {
 		return err
 	}
-	pmmAgent.channel.SendAndWaitResponse(actionRequest)
-
-	return nil
+	_, err = pmmAgent.channel.SendAndWaitResponse(actionRequest)
+	return err
 }
 
 // StopAction stops action with given given id.
@@ -1529,9 +1586,8 @@ func (r *Registry) StopAction(ctx context.Context, actionID string) error {
 	if err != nil {
 		return err
 	}
-
-	agent.channel.SendAndWaitResponse(&agentpb.StopActionRequest{ActionId: actionID})
-	return nil
+	_, err = agent.channel.SendAndWaitResponse(&agentpb.StopActionRequest{ActionId: actionID})
+	return err
 }
 
 // check interfaces
