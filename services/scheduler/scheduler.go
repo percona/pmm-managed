@@ -48,8 +48,17 @@ func (s *Service) Run(ctx context.Context) {
 	s.scheduler.Stop()
 }
 
+// AddParams contains parameters for adding new add to service.
+type AddParams struct {
+	CronExpression string
+	Disabled       bool
+	StartAt        time.Time
+	Retry          uint
+	RetryInterval  time.Duration
+}
+
 // Add adds task to scheduler and save it to DB.
-func (s *Service) Add(task Task, enabled bool, cronExpr string, startAt time.Time, retry uint, retryInterval time.Duration) (*models.ScheduledTask, error) {
+func (s *Service) Add(task Task, params AddParams) (*models.ScheduledTask, error) {
 	var scheduledTask *models.ScheduledTask
 	var err error
 	s.jobsMx.Lock()
@@ -57,13 +66,13 @@ func (s *Service) Add(task Task, enabled bool, cronExpr string, startAt time.Tim
 
 	err = s.db.InTransaction(func(tx *reform.TX) error {
 		scheduledTask, err = models.CreateScheduledTask(tx.Querier, models.CreateScheduledTaskParams{
-			CronExpression: cronExpr,
-			StartAt:        startAt,
+			CronExpression: params.CronExpression,
+			StartAt:        params.StartAt,
 			Type:           task.Type(),
 			Data:           task.Data(),
-			Retries:        retry,
-			RetryInterval:  retryInterval,
-			Disabled:       !enabled,
+			Retries:        params.Retry,
+			RetryInterval:  params.RetryInterval,
+			Disabled:       params.Disabled,
 		})
 		if err != nil {
 			return err
@@ -77,11 +86,11 @@ func (s *Service) Add(task Task, enabled bool, cronExpr string, startAt time.Tim
 			return nil
 		}
 
-		fn := s.wrapTask(task, id, int(retry), retryInterval)
+		fn := s.wrapTask(task, id, int(params.Retry), params.RetryInterval)
 
-		j := s.scheduler.Cron(cronExpr).SingletonMode()
-		if !startAt.IsZero() {
-			j = j.StartAt(startAt)
+		j := s.scheduler.Cron(params.CronExpression).SingletonMode()
+		if !params.StartAt.IsZero() {
+			j = j.StartAt(params.StartAt)
 		}
 		scheduleJob, err := j.Tag(id).Do(fn)
 		if err != nil {
