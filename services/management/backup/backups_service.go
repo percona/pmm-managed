@@ -226,6 +226,11 @@ func (s *BackupsService) findCompatibleServices(
 	serviceType models.ServiceType,
 	artifactDBVersion string,
 ) ([]*models.Service, error) {
+	if artifactDBVersion == "" {
+		s.l.Info("skip finding compatible services: artifact db version is unknown")
+		return []*models.Service{}, nil
+	}
+
 	filters := models.ServiceFilters{
 		ServiceType: &serviceType,
 	}

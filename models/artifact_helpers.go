@@ -153,9 +153,6 @@ func (p *CreateArtifactParams) Validate() error {
 	if p.Vendor == "" {
 		return errors.Wrap(ErrInvalidArgument, "vendor shouldn't be empty")
 	}
-	if p.Version == "" {
-		return errors.Wrap(ErrInvalidArgument, "version shouldn't be empty")
-	}
 	if p.LocationID == "" {
 		return errors.Wrap(ErrInvalidArgument, "location_id shouldn't be empty")
 	}
