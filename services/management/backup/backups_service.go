@@ -96,12 +96,16 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 		if err != nil {
 			return err
 		}
+		retry := scheduler.BackupRetryData{
+			Retries:  uint(req.RetryTimes),
+			Interval: req.RetryInterval.AsDuration(),
+		}
 		var task scheduler.Task
 		switch svc.ServiceType {
 		case models.MySQLServiceType:
-			task = scheduler.NewMySQLBackupTask(s.backupsLogicService, req.ServiceId, req.LocationId, req.Name, req.Description)
+			task = scheduler.NewMySQLBackupTask(s.backupsLogicService, req.ServiceId, req.LocationId, req.Name, req.Description, retry)
 		case models.MongoDBServiceType:
-			task = scheduler.NewMongoBackupTask(s.backupsLogicService, req.ServiceId, req.LocationId, req.Name, req.Description)
+			task = scheduler.NewMongoBackupTask(s.backupsLogicService, req.ServiceId, req.LocationId, req.Name, req.Description, retry)
 		case models.PostgreSQLServiceType,
 			models.ProxySQLServiceType,
 			models.HAProxyServiceType,
@@ -205,6 +209,12 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 		if req.Description != nil {
 			data.Description = req.Description.Value
 		}
+		if req.RetryTimes != nil {
+			data.Retry.Retries = uint(req.RetryTimes.Value)
+		}
+		if req.RetryInterval != nil {
+			data.Retry.Interval = req.RetryInterval.AsDuration()
+		}
 	case models.ScheduledMongoBackupTask:
 		data := scheduledTask.Data.MongoBackupTask
 		if req.Name != nil {
@@ -212,6 +222,12 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 		}
 		if req.Description != nil {
 			data.Description = req.Description.Value
+		}
+		if req.RetryTimes != nil {
+			data.Retry.Retries = uint(req.RetryTimes.Value)
+		}
+		if req.RetryInterval != nil {
+			data.Retry.Interval = req.RetryInterval.AsDuration()
 		}
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "Unsupported type: %s", scheduledTask.Type)
@@ -229,16 +245,6 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 	if req.CronExpression != nil {
 		val := req.CronExpression.Value
 		params.CronExpression = &val
-	}
-
-	if req.RetryTimes != nil {
-		val := uint(req.RetryTimes.Value)
-		params.Retries = &val
-	}
-
-	if req.RetryInterval != nil {
-		val := req.RetryInterval.AsDuration()
-		params.RetryInterval = &val
 	}
 
 	err = s.db.InTransaction(func(tx *reform.TX) error {

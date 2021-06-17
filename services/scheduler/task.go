@@ -60,8 +60,15 @@ func (j *printTask) Data() models.ScheduledTaskData {
 	}
 }
 
+// BackupRetryData holds common data for backup retrying.
+type BackupRetryData struct {
+	Retries  uint
+	Interval time.Duration
+}
+
 type mySQLBackupTask struct {
 	*common
+	retry               BackupRetryData
 	backupsLogicService backupsLogicService
 	ServiceID           string
 	LocationID          string
@@ -69,7 +76,7 @@ type mySQLBackupTask struct {
 	Description         string
 }
 
-func NewMySQLBackupTask(backupsLogicService backupsLogicService, serviceID, locationID, name, description string) *mySQLBackupTask {
+func NewMySQLBackupTask(backupsLogicService backupsLogicService, serviceID, locationID, name, description string, retry BackupRetryData) *mySQLBackupTask {
 	return &mySQLBackupTask{
 		common:              &common{},
 		backupsLogicService: backupsLogicService,
@@ -77,6 +84,7 @@ func NewMySQLBackupTask(backupsLogicService backupsLogicService, serviceID, loca
 		LocationID:          locationID,
 		Name:                name,
 		Description:         description,
+		retry:               retry,
 	}
 }
 
@@ -97,12 +105,17 @@ func (t *mySQLBackupTask) Data() models.ScheduledTaskData {
 			LocationID:  t.LocationID,
 			Name:        t.Name,
 			Description: t.Description,
+			Retry: models.BackupRetryData{
+				Retries:  t.retry.Retries,
+				Interval: t.retry.Interval,
+			},
 		},
 	}
 }
 
 type mongoBackupTask struct {
 	*common
+	retry               BackupRetryData
 	backupsLogicService backupsLogicService
 	ServiceID           string
 	LocationID          string
@@ -110,7 +123,7 @@ type mongoBackupTask struct {
 	Description         string
 }
 
-func NewMongoBackupTask(backupsLogicService backupsLogicService, serviceID, locationID, name, description string) *mongoBackupTask {
+func NewMongoBackupTask(backupsLogicService backupsLogicService, serviceID, locationID, name, description string, retry BackupRetryData) *mongoBackupTask {
 	return &mongoBackupTask{
 		common:              &common{},
 		backupsLogicService: backupsLogicService,
@@ -118,6 +131,7 @@ func NewMongoBackupTask(backupsLogicService backupsLogicService, serviceID, loca
 		LocationID:          locationID,
 		Name:                name,
 		Description:         description,
+		retry:               retry,
 	}
 }
 
@@ -138,6 +152,10 @@ func (t *mongoBackupTask) Data() models.ScheduledTaskData {
 			LocationID:  t.LocationID,
 			Name:        t.Name,
 			Description: t.Description,
+			Retry: models.BackupRetryData{
+				Retries:  t.retry.Retries,
+				Interval: t.retry.Interval,
+			},
 		},
 	}
 }
