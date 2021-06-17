@@ -25,6 +25,7 @@ import (
 
 //go:generate mockery -name=jobsService -case=snake -inpkg -testonly
 //go:generate mockery -name=awsS3 -case=snake -inpkg -testonly
+//go:generate mockery -name=versionService -case=snake -inpkg -testonly
 
 // jobsService is a subset of methods of agents.JobsService used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
@@ -67,4 +68,10 @@ type jobsService interface {
 type awsS3 interface {
 	GetBucketLocation(ctx context.Context, host string, accessKey, secretKey, name string) (string, error)
 	BucketExists(ctx context.Context, host string, accessKey, secretKey, name string) (bool, error)
+}
+
+type versionService interface {
+	GetRemoteMySQLVersion(agentID string, config *models.DBConfig) (string, error)
+	GetLocalMySQLVersion(agentID string) (string, error)
+	GetXtrabackupVersion(agentID string) (string, error)
 }

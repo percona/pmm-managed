@@ -65,10 +65,13 @@ func TestStartBackup(t *testing.T) {
 	ctx := context.Background()
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-	mockedJobsService := &mockJobsService{}
-	mockedJobsService.On("StartMySQLBackupJob", mock.Anything, mock.Anything, mock.Anything,
+	jobsServiceMock := &mockJobsService{}
+	jobsServiceMock.On("StartMySQLBackupJob", mock.Anything, mock.Anything, mock.Anything,
 		mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	backupSvc := NewBackupsService(db, mockedJobsService)
+	versionServiceMock := &mockVersionService{}
+	versionServiceMock.On("GetRemoteMySQLVersion", mock.Anything, mock.Anything).Return("8.0.23", nil)
+	versionServiceMock.On("GetXtrabackupVersion", mock.Anything).Return("8.0.23-16", nil)
+	backupSvc := NewBackupsService(db, jobsServiceMock, versionServiceMock)
 
 	agent := setup(t, db, "test-service")
 	locationRes, err := models.CreateBackupLocation(db.Querier, models.CreateBackupLocationParams{

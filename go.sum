@@ -433,6 +433,10 @@ github.com/percona-platform/saas v0.0.0-20210505183502-c18b6f47c932 h1:EDe5KfOdE
 github.com/percona-platform/saas v0.0.0-20210505183502-c18b6f47c932/go.mod h1:jJRyGMxxDJaSiU7AaHNS+8j1TFQQhX6lcYp8s0t8Knc=
 github.com/percona/pmm v0.0.0-20210614135543-382f67def1ce h1:2XgZm0ke+dymeJFcHeVeK8/Ju57jIvHnZCTxMERCV2M=
 github.com/percona/pmm v0.0.0-20210614135543-382f67def1ce/go.mod h1:Cm2JKvJMlMimtAhmF/1BUvz3qVJZ2O2zxQXRvtQh93Q=
+github.com/percona/pmm v0.0.0-20210615082654-8a4677758407 h1:u71yw+QXYGR5+fJ8PHGz0E+g3RZag7YS8aKNg3gCDV4=
+github.com/percona/pmm v0.0.0-20210615082654-8a4677758407/go.mod h1:Cm2JKvJMlMimtAhmF/1BUvz3qVJZ2O2zxQXRvtQh93Q=
+github.com/percona/pmm v0.0.0-20210617103045-e68ef4430948 h1:bCmxHfoL4p1PSWm8DsrDmv2gAkcNNgxkbXr2p9F/XHw=
+github.com/percona/pmm v0.0.0-20210617103045-e68ef4430948/go.mod h1:Cm2JKvJMlMimtAhmF/1BUvz3qVJZ2O2zxQXRvtQh93Q=
 github.com/percona/promconfig v0.2.1 h1:LBbCDSQRfy0aTHFJMgrVQIE2WvmPkMTkIoznTfBAvj8=
 github.com/percona/promconfig v0.2.1/go.mod h1:Y2uXi5QNk71+ceJHuI9poank+0S1kjxd3K105fXKVkg=
 github.com/performancecopilot/speed v3.0.0+incompatible/go.mod h1:/CLtqpZ5gBg1M9iaPbIdPPGyKcA8hKdoy6hAWba7Yac=

@@ -138,6 +138,7 @@ func checkUniqueArtifactName(q *reform.Querier, name string) error {
 type CreateArtifactParams struct {
 	Name       string
 	Vendor     string
+	Version    string
 	LocationID string
 	ServiceID  string
 	DataModel  DataModel
@@ -151,6 +152,9 @@ func (p *CreateArtifactParams) Validate() error {
 	}
 	if p.Vendor == "" {
 		return errors.Wrap(ErrInvalidArgument, "vendor shouldn't be empty")
+	}
+	if p.Version == "" {
+		return errors.Wrap(ErrInvalidArgument, "version shouldn't be empty")
 	}
 	if p.LocationID == "" {
 		return errors.Wrap(ErrInvalidArgument, "location_id shouldn't be empty")
@@ -190,6 +194,7 @@ func CreateArtifact(q *reform.Querier, params CreateArtifactParams) (*Artifact, 
 		ID:         id,
 		Name:       params.Name,
 		Vendor:     params.Vendor,
+		Version:    params.Version,
 		LocationID: params.LocationID,
 		ServiceID:  params.ServiceID,
 		DataModel:  params.DataModel,
