@@ -68,7 +68,6 @@ type Server struct {
 	grafanaClient        grafanaClient
 	rulesService         rulesService
 	dbaasClient          dbaasClient
-	schedulerService     scheduleService
 	l                    *logrus.Entry
 
 	pmmUpdateAuthFileM sync.Mutex
@@ -105,7 +104,6 @@ type Params struct {
 	GrafanaClient        grafanaClient
 	RulesService         rulesService
 	DbaasClient          dbaasClient
-	SchedulerService     scheduleService
 }
 
 // NewServer returns new server for Server service.
@@ -131,7 +129,6 @@ func NewServer(params *Params) (*Server, error) {
 		grafanaClient:        params.GrafanaClient,
 		rulesService:         params.RulesService,
 		dbaasClient:          params.DbaasClient,
-		schedulerService:     params.SchedulerService,
 		l:                    logrus.WithField("component", "server"),
 		pmmUpdateAuthFile:    path,
 		envSettings:          new(models.ChangeSettingsParams),
