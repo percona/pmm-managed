@@ -260,14 +260,14 @@ func (c componentsService) CheckForOperatorUpdate(ctx context.Context, req *dbaa
 	}
 
 	resp := &dbaasv1beta1.CheckForOperatorUpdateResponse{
-		ClusterToComponents: make(map[string]*dbaasv1beta1.AvailableComponentsVersions),
+		ClusterToComponents: make(map[string]*dbaasv1beta1.ComponentsUpdateInformation),
 	}
 	// Some of the requests to kuberenetes clusters for getting operators versions should be done.
 	// Go through them and decide what operator needs update.
 	for operatorsVersion := range responseCh {
 		if operatorsVersion.err != nil {
 			c.l.Error(operatorsVersion.err)
-			resp.ClusterToComponents[operatorsVersion.kuberentesClusterName] = &dbaasv1beta1.AvailableComponentsVersions{}
+			resp.ClusterToComponents[operatorsVersion.kuberentesClusterName] = &dbaasv1beta1.ComponentsUpdateInformation{}
 			continue
 		}
 		installedPXCOperatorVersion, pxcErr := goversion.NewVersion(operatorsVersion.pxcOperatorVersion)
@@ -278,11 +278,15 @@ func (c componentsService) CheckForOperatorUpdate(ctx context.Context, req *dbaa
 		}
 		pxcOperatorVersion := doesOperatorNeedUpdate(installedPXCOperatorVersion, latestPXCOperatorForInstalledPMM)
 		psmdbOperatorVersion := doesOperatorNeedUpdate(installedPSMDBOperatorVersion, latestPSMDBOperatorForInstalledPMM)
-		resp.ClusterToComponents[operatorsVersion.kuberentesClusterName] = &dbaasv1beta1.AvailableComponentsVersions{
-			ComponentToVersion: make(map[string]string),
+		resp.ClusterToComponents[operatorsVersion.kuberentesClusterName] = &dbaasv1beta1.ComponentsUpdateInformation{
+			ComponentToUpdateInformation: make(map[string]*dbaasv1beta1.ComponentUpdateInformation),
 		}
-		resp.ClusterToComponents[operatorsVersion.kuberentesClusterName].ComponentToVersion[pxcOperator] = pxcOperatorVersion
-		resp.ClusterToComponents[operatorsVersion.kuberentesClusterName].ComponentToVersion[psmdbOperator] = psmdbOperatorVersion
+		resp.ClusterToComponents[operatorsVersion.kuberentesClusterName].ComponentToUpdateInformation[pxcOperator] = &dbaasv1beta1.ComponentUpdateInformation{
+			AvailableVersion: pxcOperatorVersion,
+		}
+		resp.ClusterToComponents[operatorsVersion.kuberentesClusterName].ComponentToUpdateInformation[psmdbOperator] = &dbaasv1beta1.ComponentUpdateInformation{
+			AvailableVersion: psmdbOperatorVersion,
+		}
 	}
 	return resp, nil
 }

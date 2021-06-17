@@ -579,9 +579,9 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 		require.NoError(t, err)
 		cluster := resp.ClusterToComponents[clusterName]
 		require.NotNil(t, cluster)
-		require.NotNil(t, cluster.ComponentToVersion)
-		assert.Equal(t, "1.8.0", cluster.ComponentToVersion[psmdbOperator])
-		assert.Equal(t, "1.8.0", cluster.ComponentToVersion[pxcOperator])
+		require.NotNil(t, cluster.ComponentToUpdateInformation)
+		assert.Equal(t, "1.8.0", cluster.ComponentToUpdateInformation[psmdbOperator].AvailableVersion)
+		assert.Equal(t, "1.8.0", cluster.ComponentToUpdateInformation[pxcOperator].AvailableVersion)
 	})
 	t.Run("Update NOT available", func(t *testing.T) {
 		clusterName := "update-not-available"
@@ -601,9 +601,9 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 		require.NoError(t, err)
 		cluster := resp.ClusterToComponents[clusterName]
 		require.NotNil(t, cluster)
-		require.NotNil(t, cluster.ComponentToVersion)
-		assert.Equal(t, "", cluster.ComponentToVersion[psmdbOperator])
-		assert.Equal(t, "", cluster.ComponentToVersion[pxcOperator])
+		require.NotNil(t, cluster.ComponentToUpdateInformation)
+		assert.Equal(t, "", cluster.ComponentToUpdateInformation[psmdbOperator].AvailableVersion)
+		assert.Equal(t, "", cluster.ComponentToUpdateInformation[pxcOperator].AvailableVersion)
 	})
 	t.Run("User's operators version is ahead of version service", func(t *testing.T) {
 		clusterName := "update-available-pmm-update"
@@ -623,8 +623,10 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 		require.NoError(t, err)
 		cluster := resp.ClusterToComponents[clusterName]
 		require.NotNil(t, cluster)
-		require.NotNil(t, cluster.ComponentToVersion)
-		assert.Equal(t, "", cluster.ComponentToVersion[psmdbOperator])
-		assert.Equal(t, "", cluster.ComponentToVersion[pxcOperator])
+		require.NotNil(t, cluster.ComponentToUpdateInformation)
+		require.NotNil(t, cluster.ComponentToUpdateInformation[psmdbOperator])
+
+		assert.Equal(t, "", cluster.ComponentToUpdateInformation[psmdbOperator].AvailableVersion)
+		assert.Equal(t, "", cluster.ComponentToUpdateInformation[pxcOperator].AvailableVersion)
 	})
 }
