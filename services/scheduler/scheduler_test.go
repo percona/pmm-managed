@@ -41,7 +41,11 @@ func TestService(t *testing.T) {
 	startAt := time.Now().Truncate(time.Second).UTC()
 	retries := uint(3)
 	retryInterval := time.Millisecond
-	dbTask, err := svc.Add(task, true, "* * * * *", startAt, retries, retryInterval)
+	dbTask, err := svc.Add(task, AddParams{
+		CronExpression: cronExpr,
+		Retry:          retries,
+		RetryInterval:  retryInterval,
+	})
 	assert.NoError(t, err)
 
 	assert.Len(t, svc.scheduler.Jobs(), 1)

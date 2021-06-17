@@ -30,6 +30,7 @@ type Service struct {
 func New(db *reform.DB, backupsLogicService backupsLogicService) *Service {
 	scheduler := gocron.NewScheduler(time.UTC)
 	scheduler.TagsUnique()
+	scheduler.WaitForScheduleAll()
 	return &Service{
 		db:                  db,
 		scheduler:           scheduler,
@@ -49,8 +50,17 @@ func (s *Service) Run(ctx context.Context) {
 	s.scheduler.Stop()
 }
 
+// AddParams contains parameters for adding new add to service.
+type AddParams struct {
+	CronExpression string
+	Disabled       bool
+	StartAt        time.Time
+	Retry          uint
+	RetryInterval  time.Duration
+}
+
 // Add adds task to scheduler and save it to DB.
-func (s *Service) Add(task Task, enabled bool, cronExpr string, startAt time.Time, retry uint, retryInterval time.Duration) (*models.ScheduledTask, error) {
+func (s *Service) Add(task Task, params AddParams) (*models.ScheduledTask, error) {
 	var scheduledTask *models.ScheduledTask
 	var err error
 	s.jobsMx.Lock()
@@ -58,13 +68,13 @@ func (s *Service) Add(task Task, enabled bool, cronExpr string, startAt time.Tim
 
 	err = s.db.InTransaction(func(tx *reform.TX) error {
 		scheduledTask, err = models.CreateScheduledTask(tx.Querier, models.CreateScheduledTaskParams{
-			CronExpression: cronExpr,
-			StartAt:        startAt,
+			CronExpression: params.CronExpression,
+			StartAt:        params.StartAt,
 			Type:           task.Type(),
 			Data:           task.Data(),
-			Retries:        retry,
-			RetryInterval:  retryInterval,
-			Disabled:       !enabled,
+			Retries:        params.Retry,
+			RetryInterval:  params.RetryInterval,
+			Disabled:       params.Disabled,
 		})
 		if err != nil {
 			return err
@@ -72,11 +82,17 @@ func (s *Service) Add(task Task, enabled bool, cronExpr string, startAt time.Tim
 
 		id := scheduledTask.ID
 		task.SetID(id)
-		fn := s.wrapTask(task, id, int(retry), retryInterval)
 
-		j := s.scheduler.Cron(cronExpr).SingletonMode()
-		if !startAt.IsZero() {
-			j = j.StartAt(startAt)
+		// Don't add job to scheduler if task is disabled.
+		if scheduledTask.Disabled {
+			return nil
+		}
+
+		fn := s.wrapTask(task, id, int(params.Retry), params.RetryInterval)
+
+		j := s.scheduler.Cron(params.CronExpression).SingletonMode()
+		if !params.StartAt.IsZero() {
+			j = j.StartAt(params.StartAt)
 		}
 		scheduleJob, err := j.Tag(id).Do(fn)
 		if err != nil {
@@ -182,8 +198,6 @@ func (s *Service) loadFromDB() error {
 	}
 
 	s.scheduler.Clear()
-	// Reset tags
-	s.scheduler.TagsUnique()
 	for i, task := range tasks {
 		dbTask := dbTasks[i]
 		fn := s.wrapTask(task, dbTask.ID, int(dbTask.RetriesRemaining), dbTask.RetryInterval)
