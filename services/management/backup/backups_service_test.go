@@ -69,7 +69,7 @@ func TestStartBackup(t *testing.T) {
 	jobsServiceMock.On("StartMySQLBackupJob", mock.Anything, mock.Anything, mock.Anything,
 		mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	versionServiceMock := &mockVersionService{}
-	versionServiceMock.On("GetRemoteMySQLVersion", mock.Anything, mock.Anything).Return("8.0.23", nil)
+	versionServiceMock.On("GetLocalMySQLVersion", mock.Anything, mock.Anything).Return("8.0.23", nil)
 	versionServiceMock.On("GetXtrabackupVersion", mock.Anything).Return("8.0.23-16", nil)
 	backupSvc := NewBackupsService(db, jobsServiceMock, versionServiceMock)
 

@@ -20,8 +20,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/percona/pmm/api/agentpb"
-
-	"github.com/percona/pmm-managed/models"
 )
 
 // VersionService provides methods for retrieving versions of different software.
@@ -34,32 +32,6 @@ func NewVersionService(registry *Registry) *VersionService {
 	return &VersionService{
 		r: registry,
 	}
-}
-
-// GetRemoteMySQLVersion retrieves remote MySQL version using provided credentials.
-func (s *VersionService) GetRemoteMySQLVersion(agentID string, dbConfig *models.DBConfig) (string, error) {
-	agent, err := s.r.get(agentID)
-	if err != nil {
-		return "", errors.WithStack(err)
-	}
-
-	req := &agentpb.GetVersionRequest{
-		Software: &agentpb.GetVersionRequest_RemoteMysql{
-			RemoteMysql: &agentpb.GetVersionRequest_RemoteMySQL{
-				User:     dbConfig.User,
-				Password: dbConfig.Password,
-				Address:  dbConfig.Address,
-				Port:     int32(dbConfig.Port),
-				Socket:   dbConfig.Socket,
-			},
-		},
-	}
-	resp, err := agent.channel.SendAndWaitResponse(req)
-	if err != nil {
-		return "", errors.WithStack(err)
-	}
-
-	return resp.(*agentpb.GetVersionResponse).Version, nil
 }
 
 // GetLocalMySQLVersion retrieves local MySQL version.

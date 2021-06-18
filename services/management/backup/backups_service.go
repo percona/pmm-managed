@@ -115,14 +115,13 @@ func (s *BackupsService) checkService(ctx context.Context, serviceID string) (*c
 func (s *BackupsService) checkVersionCompatibility(
 	agentID string,
 	serviceType models.ServiceType,
-	dbConfig *models.DBConfig,
 ) (string, error) {
 	// TODO: add support for mongodb, provide ticket
 	if serviceType != models.MySQLServiceType {
 		return "", nil
 	}
 
-	dbVersion, err := s.versionService.GetRemoteMySQLVersion(agentID, dbConfig)
+	dbVersion, err := s.versionService.GetLocalMySQLVersion(agentID)
 	if err != nil {
 		return "", err
 	}
@@ -145,7 +144,7 @@ func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.Sta
 		return nil, err
 	}
 
-	dbVersion, err := s.checkVersionCompatibility(csr.AgentID, csr.ServiceType, csr.DBConfig)
+	dbVersion, err := s.checkVersionCompatibility(csr.AgentID, csr.ServiceType)
 	if err != nil {
 		return nil, err
 	}

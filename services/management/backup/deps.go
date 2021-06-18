@@ -71,7 +71,6 @@ type awsS3 interface {
 }
 
 type versionService interface {
-	GetRemoteMySQLVersion(agentID string, config *models.DBConfig) (string, error)
 	GetLocalMySQLVersion(agentID string) (string, error)
 	GetXtrabackupVersion(agentID string) (string, error)
 }
