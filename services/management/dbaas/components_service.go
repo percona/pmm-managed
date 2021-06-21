@@ -254,8 +254,7 @@ func (c componentsService) CheckForOperatorUpdate(ctx context.Context, req *dbaa
 	latestPXCOperatorForInstalledPMM, latestPSMDBOperatorForInstalledPMM, err := c.versionServiceClient.GetLatestOperatorVersion(ctx, pmmVersionParts[0])
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
-	}
-	if latestPXCOperatorForInstalledPMM == nil || latestPSMDBOperatorForInstalledPMM == nil {
+	} else if latestPXCOperatorForInstalledPMM == nil || latestPSMDBOperatorForInstalledPMM == nil {
 		return nil, status.Error(codes.Internal, "latest versions are of invalid values")
 	}
 

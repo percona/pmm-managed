@@ -186,7 +186,7 @@ func (c *VersionServiceClient) GetLatestOperatorVersion(ctx context.Context, pmm
 		return nil, nil, err
 	}
 	if len(resp.Versions) != 1 {
-		return nil, nil, errors.Errorf("version service response does not cointain deps for single PMM version: length is %d", len(resp.Versions))
+		return nil, nil, nil // no deps for the PMM version passed to c.Matrix
 	}
 	pmmVersionDeps := resp.Versions[0]
 	latestPSMDBOperator, err := getLatest(pmmVersionDeps.Matrix.PSMDBOperator)

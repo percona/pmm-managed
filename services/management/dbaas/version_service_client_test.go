@@ -120,7 +120,7 @@ func TestLatestVersionGetting(t *testing.T) {
 	t.Parallel()
 	t.Run("Invalid url", func(t *testing.T) {
 		t.Parallel()
-		c := NewVersionServiceClient("https://check.percona.com/versions/invalid")
+		c := NewVersionServiceClient("wrongschema://check.percona.com/versions/invalid")
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		defer cancel()
 		operator, pmm, err := c.GetLatestOperatorVersion(ctx, "2.19")
@@ -128,37 +128,44 @@ func TestLatestVersionGetting(t *testing.T) {
 		assert.Nil(t, operator)
 		assert.Nil(t, pmm)
 	})
-	t.Run("Get latest", func(t *testing.T) {
-		t.Parallel()
-		response := &VersionServiceResponse{
-			Versions: []struct {
-				Product        string `json:"product"`
-				ProductVersion string `json:"operator"`
-				Matrix         matrix `json:"matrix"`
-			}{
-				{
-					ProductVersion: twoPointEighteen,
-					Product:        "pmm-server",
-					Matrix: matrix{
-						PXCOperator: map[string]componentVersion{
-							"1.8.0": {},
-							"1.7.0": {},
-						},
-						PSMDBOperator: map[string]componentVersion{
-							"1.9.0": {},
-							"1.8.0": {},
-							"1.7.0": {},
-						},
+	response := &VersionServiceResponse{
+		Versions: []struct {
+			Product        string `json:"product"`
+			ProductVersion string `json:"operator"`
+			Matrix         matrix `json:"matrix"`
+		}{
+			{
+				ProductVersion: twoPointEighteen,
+				Product:        "pmm-server",
+				Matrix: matrix{
+					PXCOperator: map[string]componentVersion{
+						"1.8.0": {},
+						"1.7.0": {},
+					},
+					PSMDBOperator: map[string]componentVersion{
+						"1.9.0": {},
+						"1.8.0": {},
+						"1.7.0": {},
 					},
 				},
 			},
-		}
-		c, cleanup := newFakeVersionService(response, "5897")
+		},
+	}
+	c, cleanup := newFakeVersionService(response, "5897")
+	defer cleanup(t)
+	t.Run("Get latest", func(t *testing.T) {
 		ctx := context.Background()
 		pxcOperatorVersion, psmdbOperatorVersion, err := c.GetLatestOperatorVersion(ctx, twoPointEighteen)
 		require.NoError(t, err, "request to fakeserver for latest version should not fail")
 		assert.Equal(t, "1.8.0", pxcOperatorVersion.String())
 		assert.Equal(t, "1.9.0", psmdbOperatorVersion.String())
-		cleanup(t)
 	})
+	t.Run("Get latest", func(t *testing.T) {
+		ctx := context.Background()
+		pxcOperatorVersion, psmdbOperatorVersion, err := c.GetLatestOperatorVersion(ctx, "2.220.0")
+		require.NoError(t, err, "request to fakeserver for latest version should not fail")
+		assert.Nil(t, pxcOperatorVersion)
+		assert.Nil(t, psmdbOperatorVersion)
+	})
+
 }
