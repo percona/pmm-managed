@@ -74,7 +74,7 @@ type VersionServiceResponse struct {
 type componentsParams struct {
 	product        string
 	productVersion string
-	dbVersion string
+	dbVersion      string
 }
 
 // VersionServiceClient represents a client for Version Service API.

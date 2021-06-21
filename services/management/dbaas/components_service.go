@@ -64,7 +64,7 @@ func (c *componentsService) Enabled() bool {
 func (c componentsService) GetPSMDBComponents(ctx context.Context, req *dbaasv1beta1.GetPSMDBComponentsRequest) (*dbaasv1beta1.GetPSMDBComponentsResponse, error) {
 	var kubernetesCluster *models.KubernetesCluster
 	params := componentsParams{
-		product:        psmdbOperator,
+		product:   psmdbOperator,
 		dbVersion: req.DbVersion,
 	}
 	if req.KubernetesClusterName != "" {
@@ -94,7 +94,7 @@ func (c componentsService) GetPSMDBComponents(ctx context.Context, req *dbaasv1b
 func (c componentsService) GetPXCComponents(ctx context.Context, req *dbaasv1beta1.GetPXCComponentsRequest) (*dbaasv1beta1.GetPXCComponentsResponse, error) {
 	var kubernetesCluster *models.KubernetesCluster
 	params := componentsParams{
-		product:        pxcOperator,
+		product:   pxcOperator,
 		dbVersion: req.DbVersion,
 	}
 	if req.KubernetesClusterName != "" {
