@@ -23,11 +23,9 @@ import (
 
 	"github.com/percona/pmm-managed/services/scheduler"
 
-	"github.com/sirupsen/logrus"
-	"google.golang.org/protobuf/types/known/durationpb"
-	"google.golang.org/protobuf/types/known/timestamppb"
-
+	"github.com/golang/protobuf/ptypes"
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
@@ -279,16 +277,37 @@ func convertTaskToScheduledBackup(task *models.ScheduledTask,
 	backup := &backupv1beta1.ScheduledBackup{
 		ScheduledBackupId: task.ID,
 		CronExpression:    task.CronExpression,
-		StartTime:         timestamppb.New(task.StartAt),
 		RetryMode:         backupv1beta1.RetryMode_MANUAL,
-		RetryInterval:     durationpb.New(task.RetryInterval),
+		RetryInterval:     ptypes.DurationProto(task.RetryInterval),
 		RetryTimes:        uint32(task.Retries),
 		Enabled:           !task.Disabled,
-		LastRun:           timestamppb.New(task.LastRun),
-		NextRun:           timestamppb.New(task.NextRun)}
+	}
 	if task.Retries > 0 {
 		backup.RetryMode = backupv1beta1.RetryMode_AUTO
 	}
+
+	var err error
+	if !task.LastRun.IsZero() {
+		backup.LastRun, err = ptypes.TimestampProto(task.LastRun)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if !task.NextRun.IsZero() {
+		backup.NextRun, err = ptypes.TimestampProto(task.NextRun)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if !task.StartAt.IsZero() {
+		backup.StartTime, err = ptypes.TimestampProto(task.StartAt)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	switch task.Type {
 	case models.ScheduledMySQLBackupTask:
 		data := task.Data.MySQLBackupTask

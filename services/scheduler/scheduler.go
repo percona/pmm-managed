@@ -100,8 +100,8 @@ func (s *Service) Add(task Task, params AddParams) (*models.ScheduledTask, error
 		}
 
 		scheduledTask, err = models.ChangeScheduledTask(tx.Querier, id, models.ChangeScheduledTaskParams{
-			NextRun: scheduleJob.NextRun(),
-			LastRun: scheduleJob.LastRun(),
+			NextRun: scheduleJob.NextRun().UTC(),
+			LastRun: scheduleJob.LastRun().UTC(),
 		})
 		if err != nil {
 			s.l.WithField("id", id).Errorf("failed to set next run for new created task")
@@ -308,8 +308,8 @@ func (s *Service) taskFinished(id string, succeeded bool) {
 
 	params := models.ChangeScheduledTaskParams{
 		RetriesRemaining: pointer.ToUint(dbTask.Retries),
-		NextRun:          job.NextRun(),
-		LastRun:          job.LastRun(),
+		NextRun:          job.NextRun().UTC(),
+		LastRun:          job.LastRun().UTC(),
 		Succeeded:        pointer.ToUint(dbTask.Succeeded),
 		Failed:           pointer.ToUint(dbTask.Failed),
 		Running:          pointer.ToBool(false),
