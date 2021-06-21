@@ -159,21 +159,14 @@ func getLatest(m map[string]componentVersion) (*goversion.Version, error) {
 	if len(m) == 0 {
 		return nil, errNoVersionsFound
 	}
-	keys := make([]*goversion.Version, len(m))
-	i := 0
-	var err error
-	for k := range m {
-		keys[i], err = goversion.NewVersion(k)
+	latest := goversion.Must(goversion.NewVersion("v0.0.0"))
+	for version, _ := range m {
+		parsedVersion, err := goversion.NewVersion(version)
 		if err != nil {
 			return nil, err
 		}
-		i++
-	}
-
-	latest := goversion.Must(goversion.NewVersion("v0.0.0"))
-	for _, version := range keys {
-		if version.GreaterThan(latest) {
-			latest = version
+		if parsedVersion.GreaterThan(latest) {
+			latest = parsedVersion
 		}
 	}
 	return latest, nil
