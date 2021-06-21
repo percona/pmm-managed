@@ -45,14 +45,16 @@ type componentVersion struct {
 }
 
 type matrix struct {
-	Mongod       map[string]componentVersion `json:"mongod"`
-	Pxc          map[string]componentVersion `json:"pxc"`
-	Pmm          map[string]componentVersion `json:"pmm"`
-	Proxysql     map[string]componentVersion `json:"proxysql"`
-	Haproxy      map[string]componentVersion `json:"haproxy"`
-	Backup       map[string]componentVersion `json:"backup"`
-	Operator     map[string]componentVersion `json:"operator"`
-	LogCollector map[string]componentVersion `json:"logCollector"`
+	Mongod        map[string]componentVersion `json:"mongod"`
+	Pxc           map[string]componentVersion `json:"pxc"`
+	Pmm           map[string]componentVersion `json:"pmm"`
+	Proxysql      map[string]componentVersion `json:"proxysql"`
+	Haproxy       map[string]componentVersion `json:"haproxy"`
+	Backup        map[string]componentVersion `json:"backup"`
+	Operator      map[string]componentVersion `json:"operator"`
+	PXCOperator   map[string]componentVersion `json:"pxcOperator"`
+	PSMDBOperator map[string]componentVersion `json:"psmdbOperator"`
+	LogCollector  map[string]componentVersion `json:"logCollector"`
 }
 
 // VersionServiceResponse represents response from version service API.

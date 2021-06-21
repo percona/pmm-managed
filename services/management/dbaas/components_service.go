@@ -21,7 +21,10 @@ import (
 	"fmt"
 
 	goversion "github.com/hashicorp/go-version"
+	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
+	pmmversion "github.com/percona/pmm/version"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -302,4 +305,51 @@ func setComponent(kc *models.Component, rc *dbaasv1beta1.ChangeComponent) (*mode
 	}
 	kc.DisabledVersions = stringset.ToSlice(disabledVersions)
 	return kc, nil
+}
+
+func (c componentsService) InstallOperator(ctx context.Context, req *dbaasv1beta1.InstallOperatorRequest) (*dbaasv1beta1.InstallOperatorResponse, error) {
+	kubernetesCluster, err := models.FindKubernetesClusterByName(c.db.Querier, req.KubernetesClusterName)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	pmmVersion, err := goversion.NewVersion(pmmversion.PMMVersion)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	// Just check the version we are asked to update to is present in version service.
+	resp, err := c.versionServiceClient.Matrix(ctx, componentsParams{operator: "pmm-server", operatorVersion: pmmVersion.Core().String()})
+	if len(resp.Versions) == 0 {
+		return nil, errors.Errorf("failed to validate operator version")
+	}
+	switch req.OperatorType {
+	case pxcOperator:
+		if _, ok := resp.Versions[0].Matrix.PXCOperator[req.Version]; !ok {
+			return nil, errors.Errorf("requested operator version is not supported right now")
+		}
+		_, err = c.dbaasClient.InstallXtraDBOperator(ctx, &controllerv1beta1.InstallXtraDBOperatorRequest{
+			KubeAuth: &controllerv1beta1.KubeAuth{
+				Kubeconfig: kubernetesCluster.KubeConfig,
+			},
+			Version: req.Version,
+		})
+	case psmdbOperator:
+		if _, ok := resp.Versions[0].Matrix.PSMDBOperator[req.Version]; !ok {
+			return nil, errors.Errorf("requested operator version is not supported right now")
+		}
+		_, err = c.dbaasClient.InstallPSMDBOperator(ctx, &controllerv1beta1.InstallPSMDBOperatorRequest{
+			KubeAuth: &controllerv1beta1.KubeAuth{
+				Kubeconfig: kubernetesCluster.KubeConfig,
+			},
+			Version: req.Version,
+		})
+	default:
+		return nil, errors.Errorf("%q is an unknown operator type")
+	}
+	if err != nil {
+		return &dbaasv1beta1.InstallOperatorResponse{Status: dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_NOT_INSTALLED},
+			status.Error(codes.Internal, err.Error())
+	}
+	return &dbaasv1beta1.InstallOperatorResponse{Status: dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_OK}, nil
 }
