@@ -74,7 +74,7 @@ type VersionServiceResponse struct {
 type componentsParams struct {
 	product        string
 	productVersion string
-	versionToApply string
+	dbVersion string
 }
 
 // VersionServiceClient represents a client for Version Service API.
@@ -127,8 +127,8 @@ func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsPara
 	paths := []string{c.url, params.product}
 	if params.productVersion != "" {
 		paths = append(paths, params.productVersion)
-		if params.versionToApply != "" {
-			paths = append(paths, params.versionToApply)
+		if params.dbVersion != "" {
+			paths = append(paths, params.dbVersion)
 		}
 	}
 	url := strings.Join(paths, "/")
@@ -160,7 +160,7 @@ func getLatest(m map[string]componentVersion) (*goversion.Version, error) {
 		return nil, errNoVersionsFound
 	}
 	latest := goversion.Must(goversion.NewVersion("v0.0.0"))
-	for version, _ := range m {
+	for version := range m {
 		parsedVersion, err := goversion.NewVersion(version)
 		if err != nil {
 			return nil, err

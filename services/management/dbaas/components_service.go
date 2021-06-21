@@ -19,17 +19,15 @@ package dbaas
 import (
 	"context"
 	"fmt"
-	"strings"
 	"sync"
 
 	goversion "github.com/hashicorp/go-version"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
+	pmmversion "github.com/percona/pmm/version"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
-
-	pmmversion "github.com/percona/pmm/version"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/stringset"
@@ -67,7 +65,7 @@ func (c componentsService) GetPSMDBComponents(ctx context.Context, req *dbaasv1b
 	var kubernetesCluster *models.KubernetesCluster
 	params := componentsParams{
 		product:        psmdbOperator,
-		versionToApply: req.DbVersion,
+		dbVersion: req.DbVersion,
 	}
 	if req.KubernetesClusterName != "" {
 		var err error
@@ -97,7 +95,7 @@ func (c componentsService) GetPXCComponents(ctx context.Context, req *dbaasv1bet
 	var kubernetesCluster *models.KubernetesCluster
 	params := componentsParams{
 		product:        pxcOperator,
-		versionToApply: req.DbVersion,
+		dbVersion: req.DbVersion,
 	}
 	if req.KubernetesClusterName != "" {
 		var err error
@@ -196,23 +194,20 @@ func (c componentsService) ChangePXCComponents(ctx context.Context, req *dbaasv1
 	return &dbaasv1beta1.ChangePXCComponentsResponse{}, nil
 }
 
-type checkResponse struct {
-	err                   error
+type installedComponentsVersion struct {
 	kuberentesClusterName string
 	pxcOperatorVersion    string
 	psmdbOperatorVersion  string
 }
 
-func (c componentsService) getInstalledOperatorsVersion(ctx context.Context, wg *sync.WaitGroup, responseCh chan checkResponse, kuberentesCluster *models.KubernetesCluster) {
+func (c componentsService) getInstalledOperatorsVersion(ctx context.Context, wg *sync.WaitGroup, responseCh chan installedComponentsVersion, kuberentesCluster *models.KubernetesCluster) {
 	defer wg.Done()
 	resp, err := c.dbaasClient.CheckKubernetesClusterConnection(ctx, kuberentesCluster.KubeConfig)
 	if err != nil {
-		responseCh <- checkResponse{
-			err: err,
-		}
+		c.l.Errorf("failed to check kubernetes cluster connection: %v", err)
 		return
 	}
-	responseCh <- checkResponse{
+	responseCh <- installedComponentsVersion{
 		kuberentesClusterName: kuberentesCluster.KubernetesClusterName,
 		pxcOperatorVersion:    resp.Operators.Xtradb.Version,
 		psmdbOperatorVersion:  resp.Operators.Psmdb.Version,
@@ -237,7 +232,7 @@ func (c componentsService) CheckForOperatorUpdate(ctx context.Context, req *dbaa
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	// And get operators version from all of them.
-	responseCh := make(chan checkResponse, len(clusters))
+	responseCh := make(chan installedComponentsVersion, len(clusters))
 	go func() {
 		wg := &sync.WaitGroup{}
 		wg.Add(len(clusters))
@@ -250,12 +245,13 @@ func (c componentsService) CheckForOperatorUpdate(ctx context.Context, req *dbaa
 	}()
 
 	// Meanwhile, get latest operators version compatible with installed PMM.
-	pmmVersionParts := strings.Split(pmmversion.PMMVersion, "-") // handle development builds, for example: 2.18.0-27-g1e5f59d-dirty
-	latestPXCOperatorForInstalledPMM, latestPSMDBOperatorForInstalledPMM, err := c.versionServiceClient.GetLatestOperatorVersion(ctx, pmmVersionParts[0])
+	pmmVersion, err := goversion.NewVersion(pmmversion.PMMVersion)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
-	} else if latestPXCOperatorForInstalledPMM == nil || latestPSMDBOperatorForInstalledPMM == nil {
-		return nil, status.Error(codes.Internal, "latest versions are of invalid values")
+	}
+	latestPXCOperatorForInstalledPMM, latestPSMDBOperatorForInstalledPMM, err := c.versionServiceClient.GetLatestOperatorVersion(ctx, pmmVersion.Core().String())
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	resp := &dbaasv1beta1.CheckForOperatorUpdateResponse{
@@ -264,27 +260,22 @@ func (c componentsService) CheckForOperatorUpdate(ctx context.Context, req *dbaa
 	// Some of the requests to kuberenetes clusters for getting operators versions should be done.
 	// Go through them and decide what operator needs update.
 	for operatorsVersion := range responseCh {
-		if operatorsVersion.err != nil {
-			c.l.Error(operatorsVersion.err)
-			resp.ClusterToComponents[operatorsVersion.kuberentesClusterName] = &dbaasv1beta1.ComponentsUpdateInformation{}
-			continue
-		}
 		installedPXCOperatorVersion, pxcErr := goversion.NewVersion(operatorsVersion.pxcOperatorVersion)
 		installedPSMDBOperatorVersion, psmdbErr := goversion.NewVersion(operatorsVersion.psmdbOperatorVersion)
-		if pxcErr != nil || psmdbErr != nil {
-			c.l.Errorf("failed to parse versions: pxc operator: %q, psmdb operator: %q", operatorsVersion.pxcOperatorVersion, operatorsVersion.psmdbOperatorVersion)
-			continue
-		}
-		pxcOperatorVersion := doesOperatorNeedUpdate(installedPXCOperatorVersion, latestPXCOperatorForInstalledPMM)
-		psmdbOperatorVersion := doesOperatorNeedUpdate(installedPSMDBOperatorVersion, latestPSMDBOperatorForInstalledPMM)
 		resp.ClusterToComponents[operatorsVersion.kuberentesClusterName] = &dbaasv1beta1.ComponentsUpdateInformation{
 			ComponentToUpdateInformation: make(map[string]*dbaasv1beta1.ComponentUpdateInformation),
 		}
-		resp.ClusterToComponents[operatorsVersion.kuberentesClusterName].ComponentToUpdateInformation[pxcOperator] = &dbaasv1beta1.ComponentUpdateInformation{
-			AvailableVersion: pxcOperatorVersion,
+		if pxcErr == nil && latestPXCOperatorForInstalledPMM != nil {
+			pxcOperatorVersion := doesOperatorNeedUpdate(installedPXCOperatorVersion, latestPXCOperatorForInstalledPMM)
+			resp.ClusterToComponents[operatorsVersion.kuberentesClusterName].ComponentToUpdateInformation[pxcOperator] = &dbaasv1beta1.ComponentUpdateInformation{
+				AvailableVersion: pxcOperatorVersion,
+			}
 		}
-		resp.ClusterToComponents[operatorsVersion.kuberentesClusterName].ComponentToUpdateInformation[psmdbOperator] = &dbaasv1beta1.ComponentUpdateInformation{
-			AvailableVersion: psmdbOperatorVersion,
+		if psmdbErr == nil && latestPSMDBOperatorForInstalledPMM != nil {
+			psmdbOperatorVersion := doesOperatorNeedUpdate(installedPSMDBOperatorVersion, latestPSMDBOperatorForInstalledPMM)
+			resp.ClusterToComponents[operatorsVersion.kuberentesClusterName].ComponentToUpdateInformation[psmdbOperator] = &dbaasv1beta1.ComponentUpdateInformation{
+				AvailableVersion: psmdbOperatorVersion,
+			}
 		}
 	}
 	return resp, nil

@@ -38,10 +38,10 @@ func TestVersionServiceClient(t *testing.T) {
 	}{
 		{params: componentsParams{product: psmdbOperator}},
 		{params: componentsParams{product: psmdbOperator, productVersion: "1.6.0"}},
-		{params: componentsParams{product: psmdbOperator, productVersion: "1.7.0", versionToApply: "4.2.8-8"}},
+		{params: componentsParams{product: psmdbOperator, productVersion: "1.7.0", dbVersion: "4.2.8-8"}},
 		{params: componentsParams{product: pxcOperator}},
 		{params: componentsParams{product: pxcOperator, productVersion: "1.7.0"}},
-		{params: componentsParams{product: pxcOperator, productVersion: "1.7.0", versionToApply: "8.0.20-11.2"}},
+		{params: componentsParams{product: pxcOperator, productVersion: "1.7.0", dbVersion: "8.0.20-11.2"}},
 	} {
 		t.Run("NotEmptyMatrix", func(t *testing.T) {
 			response, err := c.Matrix(context.TODO(), tt.params)
@@ -152,8 +152,9 @@ func TestLatestVersionGetting(t *testing.T) {
 		},
 	}
 	c, cleanup := newFakeVersionService(response, "5897")
-	defer cleanup(t)
+	t.Cleanup(func() { cleanup(t) })
 	t.Run("Get latest", func(t *testing.T) {
+		t.Parallel()
 		ctx := context.Background()
 		pxcOperatorVersion, psmdbOperatorVersion, err := c.GetLatestOperatorVersion(ctx, twoPointEighteen)
 		require.NoError(t, err, "request to fakeserver for latest version should not fail")
@@ -161,11 +162,11 @@ func TestLatestVersionGetting(t *testing.T) {
 		assert.Equal(t, "1.9.0", psmdbOperatorVersion.String())
 	})
 	t.Run("Get latest", func(t *testing.T) {
+		t.Parallel()
 		ctx := context.Background()
 		pxcOperatorVersion, psmdbOperatorVersion, err := c.GetLatestOperatorVersion(ctx, "2.220.0")
 		require.NoError(t, err, "request to fakeserver for latest version should not fail")
 		assert.Nil(t, pxcOperatorVersion)
 		assert.Nil(t, psmdbOperatorVersion)
 	})
-
 }

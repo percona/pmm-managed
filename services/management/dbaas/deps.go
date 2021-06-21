@@ -70,7 +70,6 @@ type versionService interface {
 	// Matrix calls version service with given params and returns components matrix.
 	Matrix(ctx context.Context, params componentsParams) (*VersionServiceResponse, error)
 	// GetLatestOperatorVersion returns latest operators versions available based on given params.
-	// It also returns PMM version that is compatible with returned operators version.
 	GetLatestOperatorVersion(ctx context.Context, pmmVersion string) (latestPSMDBOperatorVersion, latestPXCOperatorVersion *goversion.Version, err error)
 }
 
