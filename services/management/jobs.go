@@ -47,7 +47,7 @@ func NewJobsAPIServer(db *reform.DB, service jobsService) *JobsAPIService {
 
 // GetJob returns job result.
 func (s *JobsAPIService) GetJob(_ context.Context, req *jobsAPI.GetJobRequest) (*jobsAPI.GetJobResponse, error) {
-	result, err := models.FindJobResultByID(s.db.Querier, req.JobId)
+	result, err := models.FindJobByID(s.db.Querier, req.JobId)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,16 @@ func (s *JobsAPIService) GetJob(_ context.Context, req *jobsAPI.GetJobRequest) (
 
 // StartEchoJob starts echo job. Its purpose is testing.
 func (s *JobsAPIService) StartEchoJob(_ context.Context, req *jobsAPI.StartEchoJobRequest) (*jobsAPI.StartEchoJobResponse, error) {
-	res, err := s.prepareAgentJob(req.PmmAgentId, models.Echo)
+	res, err := s.prepareAgentJob(
+		req.PmmAgentId,
+		models.Echo,
+		&models.JobData{
+			Echo: &models.EchoJobData{
+				Message: req.Message,
+				Delay:   req.Delay.AsDuration(),
+			},
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +125,7 @@ func (s *JobsAPIService) CancelJob(_ context.Context, req *jobsAPI.CancelJobRequ
 
 func (s *JobsAPIService) saveJobError(resultID string, message string) {
 	if e := s.db.InTransaction(func(t *reform.TX) error {
-		res, err := models.FindJobResultByID(t.Querier, resultID)
+		res, err := models.FindJobByID(t.Querier, resultID)
 		if err != nil {
 			return err
 		}
@@ -129,15 +138,15 @@ func (s *JobsAPIService) saveJobError(resultID string, message string) {
 	}
 }
 
-func (s *JobsAPIService) prepareAgentJob(pmmAgentID string, jobType models.JobType) (*models.JobResult, error) {
-	var res *models.JobResult
+func (s *JobsAPIService) prepareAgentJob(pmmAgentID string, jobType models.JobType, jobData *models.JobData) (*models.Job, error) {
+	var res *models.Job
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		_, err := models.FindAgentByID(tx.Querier, pmmAgentID)
 		if err != nil {
 			return err
 		}
 
-		res, err = models.CreateJobResult(tx.Querier, pmmAgentID, jobType, nil)
+		res, err = models.CreateJob(tx.Querier, pmmAgentID, jobType, jobData)
 		return err
 	})
 	if e != nil {
@@ -146,8 +155,8 @@ func (s *JobsAPIService) prepareAgentJob(pmmAgentID string, jobType models.JobTy
 	return res, nil
 }
 
-func (s *JobsAPIService) prepareServiceJob(serviceID, pmmAgentID, database string, jobType models.JobType) (*models.JobResult, string, error) {
-	var res *models.JobResult
+func (s *JobsAPIService) prepareServiceJob(serviceID, pmmAgentID, database string, jobType models.JobType) (*models.Job, string, error) {
+	var res *models.Job
 	var dsn string
 	e := s.db.InTransaction(func(tx *reform.TX) error {
 		agents, err := models.FindPMMAgentsForService(tx.Querier, serviceID)
@@ -163,7 +172,7 @@ func (s *JobsAPIService) prepareServiceJob(serviceID, pmmAgentID, database strin
 			return err
 		}
 
-		res, err = models.CreateJobResult(tx.Querier, pmmAgentID, jobType, nil)
+		res, err = models.CreateJob(tx.Querier, pmmAgentID, jobType, nil)
 		return err
 	})
 	if e != nil {

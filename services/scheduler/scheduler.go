@@ -59,6 +59,10 @@ type AddParams struct {
 	RetryInterval  time.Duration
 }
 
+func (s *Service) RetryJob(jobID string) {
+
+}
+
 // Add adds task to scheduler and save it to DB.
 func (s *Service) Add(task Task, params AddParams) (*models.ScheduledTask, error) {
 	var scheduledTask *models.ScheduledTask

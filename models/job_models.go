@@ -44,26 +44,22 @@ type EchoJobResult struct {
 
 // MySQLBackupJobResult stores MySQL job specific result data.
 type MySQLBackupJobResult struct {
-	ArtifactID string `json:"artifact_id"`
 }
 
 // MySQLRestoreBackupJobResult stores MySQL restore backup job specific result data.
 type MySQLRestoreBackupJobResult struct {
-	RestoreID string `json:"restore_id,omitempty"`
 }
 
 // MongoDBBackupJobResult stores MongoDB job specific result data.
 type MongoDBBackupJobResult struct {
-	ArtifactID string `json:"artifact_id"`
 }
 
 // MongoDBRestoreBackupJobResult stores MongoDB restore backup job specific result data.
 type MongoDBRestoreBackupJobResult struct {
-	RestoreID string `json:"restore_id,omitempty"`
 }
 
-// JobResultData holds result data for different job types.
-type JobResultData struct {
+// JobResult holds result data for different job types.
+type JobResult struct {
 	Echo                 *EchoJobResult                 `json:"echo,omitempty"`
 	MySQLBackup          *MySQLBackupJobResult          `json:"mysql_backup,omitempty"`
 	MySQLRestoreBackup   *MySQLRestoreBackupJobResult   `json:"mysql_restore_backup,omitempty"`
@@ -72,26 +68,74 @@ type JobResultData struct {
 }
 
 // Value implements database/sql/driver.Valuer interface. Should be defined on the value.
-func (c JobResultData) Value() (driver.Value, error) { return jsonValue(c) }
+func (c JobResult) Value() (driver.Value, error) { return jsonValue(c) }
 
 // Scan implements database/sql.Scanner interface. Should be defined on the pointer.
-func (c *JobResultData) Scan(src interface{}) error { return jsonScan(c, src) }
+func (c *JobResult) Scan(src interface{}) error { return jsonScan(c, src) }
 
-// JobResult describes a job result which is storing in persistent storage.
+type EchoJobData struct {
+	Message string        `json:"message"`
+	Delay   time.Duration `json:"delay"`
+}
+
+// MySQLBackupJobData holds data for mysql backup task.
+type MySQLBackupJobData struct {
+	ServiceID  string `json:"serviceID"`
+	ArtifactID string `json:"artifactID"`
+}
+
+// MongoBackupJobData holds data for mysql backup task.
+type MongoBackupJobData struct {
+	ServiceID  string `json:"serviceID"`
+	ArtifactID string `json:"artifactID"`
+}
+
+// MySQLRestoreBackupJobData stores MySQL restore backup job data.
+type MySQLRestoreBackupJobData struct {
+	ServiceID string `json:"serviceID"`
+	RestoreID string `json:"restore_id"`
+}
+
+// MongoDBRestoreBackupJobData stores MongoDB restore backup job data.
+type MongoDBRestoreBackupJobData struct {
+	ServiceID string `json:"serviceID"`
+	RestoreID string `json:"restore_id"`
+}
+
+type JobData struct {
+	Echo                 *EchoJobData                 `json:"echo,omitempty"`
+	MySQLBackup          *MySQLBackupJobData          `json:"mySQLBackup,omitempty"`
+	MySQLRestoreBackup   *MySQLRestoreBackupJobData   `json:"mysql_restore_backup,omitempty"`
+	MongoDBBackup        *MongoBackupJobData          `json:"mongoDBBackup,omitempty"`
+	MongoDBRestoreBackup *MongoDBRestoreBackupJobData `json:"mongoDBRestoreBackup,omitempty"`
+}
+
+// Value implements database/sql/driver.Valuer interface. Should be defined on the value.
+func (c JobData) Value() (driver.Value, error) { return jsonValue(c) }
+
+// Scan implements database/sql.Scanner interface. Should be defined on the pointer.
+func (c *JobData) Scan(src interface{}) error { return jsonScan(c, src) }
+
+// Job describes a job which is storing in persistent storage.
 //reform:job_results
-type JobResult struct {
-	ID         string         `reform:"id,pk"`
-	PMMAgentID string         `reform:"pmm_agent_id"`
-	Type       JobType        `reform:"type"`
-	Done       bool           `reform:"done"`
-	Error      string         `reform:"error"`
-	Result     *JobResultData `reform:"result"`
-	CreatedAt  time.Time      `reform:"created_at"`
-	UpdatedAt  time.Time      `reform:"updated_at"`
+type Job struct {
+	ID             string        `reform:"id,pk"`
+	PMMAgentID     string        `reform:"pmm_agent_id"`
+	Type           JobType       `reform:"type"`
+	Data           *JobData      `reform:"data"`
+	Timeout        time.Duration `reform:"timeout"`
+	Retries        uint          `reform:"retries"`
+	RetriesReaming uint          `reform:"retries_reaming"`
+	Interval       time.Duration `reform:"retry_interval"`
+	Done           bool          `reform:"done"`
+	Error          string        `reform:"error"`
+	Result         *JobResult    `reform:"result"`
+	CreatedAt      time.Time     `reform:"created_at"`
+	UpdatedAt      time.Time     `reform:"updated_at"`
 }
 
 // BeforeInsert implements reform.BeforeInserter interface.
-func (r *JobResult) BeforeInsert() error {
+func (r *Job) BeforeInsert() error {
 	now := Now()
 	r.CreatedAt = now
 	r.UpdatedAt = now
@@ -100,14 +144,14 @@ func (r *JobResult) BeforeInsert() error {
 }
 
 // BeforeUpdate implements reform.BeforeUpdater interface.
-func (r *JobResult) BeforeUpdate() error {
+func (r *Job) BeforeUpdate() error {
 	r.UpdatedAt = Now()
 
 	return nil
 }
 
 // AfterFind implements reform.AfterFinder interface.
-func (r *JobResult) AfterFind() error {
+func (r *Job) AfterFind() error {
 	r.CreatedAt = r.CreatedAt.UTC()
 	r.UpdatedAt = r.UpdatedAt.UTC()
 
@@ -116,7 +160,7 @@ func (r *JobResult) AfterFind() error {
 
 // check interfaces.
 var (
-	_ reform.BeforeInserter = (*JobResult)(nil)
-	_ reform.BeforeUpdater  = (*JobResult)(nil)
-	_ reform.AfterFinder    = (*JobResult)(nil)
+	_ reform.BeforeInserter = (*Job)(nil)
+	_ reform.BeforeUpdater  = (*Job)(nil)
+	_ reform.AfterFinder    = (*Job)(nil)
 )

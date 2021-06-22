@@ -10,27 +10,32 @@ import (
 	"gopkg.in/reform.v1/parse"
 )
 
-type jobResultTableType struct {
+type jobTableType struct {
 	s parse.StructInfo
 	z []interface{}
 }
 
 // Schema returns a schema name in SQL database ("").
-func (v *jobResultTableType) Schema() string {
+func (v *jobTableType) Schema() string {
 	return v.s.SQLSchema
 }
 
 // Name returns a view or table name in SQL database ("job_results").
-func (v *jobResultTableType) Name() string {
+func (v *jobTableType) Name() string {
 	return v.s.SQLName
 }
 
 // Columns returns a new slice of column names for that view or table in SQL database.
-func (v *jobResultTableType) Columns() []string {
+func (v *jobTableType) Columns() []string {
 	return []string{
 		"id",
 		"pmm_agent_id",
 		"type",
+		"data",
+		"timeout",
+		"retries",
+		"retries_reaming",
+		"retry_interval",
 		"done",
 		"error",
 		"result",
@@ -40,61 +45,76 @@ func (v *jobResultTableType) Columns() []string {
 }
 
 // NewStruct makes a new struct for that view or table.
-func (v *jobResultTableType) NewStruct() reform.Struct {
-	return new(JobResult)
+func (v *jobTableType) NewStruct() reform.Struct {
+	return new(Job)
 }
 
 // NewRecord makes a new record for that table.
-func (v *jobResultTableType) NewRecord() reform.Record {
-	return new(JobResult)
+func (v *jobTableType) NewRecord() reform.Record {
+	return new(Job)
 }
 
 // PKColumnIndex returns an index of primary key column for that table in SQL database.
-func (v *jobResultTableType) PKColumnIndex() uint {
+func (v *jobTableType) PKColumnIndex() uint {
 	return uint(v.s.PKFieldIndex)
 }
 
-// JobResultTable represents job_results view or table in SQL database.
-var JobResultTable = &jobResultTableType{
+// JobTable represents job_results view or table in SQL database.
+var JobTable = &jobTableType{
 	s: parse.StructInfo{
-		Type:    "JobResult",
+		Type:    "Job",
 		SQLName: "job_results",
 		Fields: []parse.FieldInfo{
 			{Name: "ID", Type: "string", Column: "id"},
 			{Name: "PMMAgentID", Type: "string", Column: "pmm_agent_id"},
 			{Name: "Type", Type: "JobType", Column: "type"},
+			{Name: "Data", Type: "*JobData", Column: "data"},
+			{Name: "Timeout", Type: "time.Duration", Column: "timeout"},
+			{Name: "Retries", Type: "uint", Column: "retries"},
+			{Name: "RetriesReaming", Type: "uint", Column: "retries_reaming"},
+			{Name: "Interval", Type: "time.Duration", Column: "retry_interval"},
 			{Name: "Done", Type: "bool", Column: "done"},
 			{Name: "Error", Type: "string", Column: "error"},
-			{Name: "Result", Type: "*JobResultData", Column: "result"},
+			{Name: "Result", Type: "*JobResult", Column: "result"},
 			{Name: "CreatedAt", Type: "time.Time", Column: "created_at"},
 			{Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"},
 		},
 		PKFieldIndex: 0,
 	},
-	z: new(JobResult).Values(),
+	z: new(Job).Values(),
 }
 
 // String returns a string representation of this struct or record.
-func (s JobResult) String() string {
-	res := make([]string, 8)
+func (s Job) String() string {
+	res := make([]string, 13)
 	res[0] = "ID: " + reform.Inspect(s.ID, true)
 	res[1] = "PMMAgentID: " + reform.Inspect(s.PMMAgentID, true)
 	res[2] = "Type: " + reform.Inspect(s.Type, true)
-	res[3] = "Done: " + reform.Inspect(s.Done, true)
-	res[4] = "Error: " + reform.Inspect(s.Error, true)
-	res[5] = "Result: " + reform.Inspect(s.Result, true)
-	res[6] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
-	res[7] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
+	res[3] = "Data: " + reform.Inspect(s.Data, true)
+	res[4] = "Timeout: " + reform.Inspect(s.Timeout, true)
+	res[5] = "Retries: " + reform.Inspect(s.Retries, true)
+	res[6] = "RetriesReaming: " + reform.Inspect(s.RetriesReaming, true)
+	res[7] = "Interval: " + reform.Inspect(s.Interval, true)
+	res[8] = "Done: " + reform.Inspect(s.Done, true)
+	res[9] = "Error: " + reform.Inspect(s.Error, true)
+	res[10] = "Result: " + reform.Inspect(s.Result, true)
+	res[11] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
+	res[12] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
 	return strings.Join(res, ", ")
 }
 
 // Values returns a slice of struct or record field values.
 // Returned interface{} values are never untyped nils.
-func (s *JobResult) Values() []interface{} {
+func (s *Job) Values() []interface{} {
 	return []interface{}{
 		s.ID,
 		s.PMMAgentID,
 		s.Type,
+		s.Data,
+		s.Timeout,
+		s.Retries,
+		s.RetriesReaming,
+		s.Interval,
 		s.Done,
 		s.Error,
 		s.Result,
@@ -105,11 +125,16 @@ func (s *JobResult) Values() []interface{} {
 
 // Pointers returns a slice of pointers to struct or record fields.
 // Returned interface{} values are never untyped nils.
-func (s *JobResult) Pointers() []interface{} {
+func (s *Job) Pointers() []interface{} {
 	return []interface{}{
 		&s.ID,
 		&s.PMMAgentID,
 		&s.Type,
+		&s.Data,
+		&s.Timeout,
+		&s.Retries,
+		&s.RetriesReaming,
+		&s.Interval,
 		&s.Done,
 		&s.Error,
 		&s.Result,
@@ -119,48 +144,48 @@ func (s *JobResult) Pointers() []interface{} {
 }
 
 // View returns View object for that struct.
-func (s *JobResult) View() reform.View {
-	return JobResultTable
+func (s *Job) View() reform.View {
+	return JobTable
 }
 
 // Table returns Table object for that record.
-func (s *JobResult) Table() reform.Table {
-	return JobResultTable
+func (s *Job) Table() reform.Table {
+	return JobTable
 }
 
 // PKValue returns a value of primary key for that record.
 // Returned interface{} value is never untyped nil.
-func (s *JobResult) PKValue() interface{} {
+func (s *Job) PKValue() interface{} {
 	return s.ID
 }
 
 // PKPointer returns a pointer to primary key field for that record.
 // Returned interface{} value is never untyped nil.
-func (s *JobResult) PKPointer() interface{} {
+func (s *Job) PKPointer() interface{} {
 	return &s.ID
 }
 
 // HasPK returns true if record has non-zero primary key set, false otherwise.
-func (s *JobResult) HasPK() bool {
-	return s.ID != JobResultTable.z[JobResultTable.s.PKFieldIndex]
+func (s *Job) HasPK() bool {
+	return s.ID != JobTable.z[JobTable.s.PKFieldIndex]
 }
 
 // SetPK sets record primary key, if possible.
 //
 // Deprecated: prefer direct field assignment where possible: s.ID = pk.
-func (s *JobResult) SetPK(pk interface{}) {
+func (s *Job) SetPK(pk interface{}) {
 	reform.SetPK(s, pk)
 }
 
 // check interfaces
 var (
-	_ reform.View   = JobResultTable
-	_ reform.Struct = (*JobResult)(nil)
-	_ reform.Table  = JobResultTable
-	_ reform.Record = (*JobResult)(nil)
-	_ fmt.Stringer  = (*JobResult)(nil)
+	_ reform.View   = JobTable
+	_ reform.Struct = (*Job)(nil)
+	_ reform.Table  = JobTable
+	_ reform.Record = (*Job)(nil)
+	_ fmt.Stringer  = (*Job)(nil)
 )
 
 func init() {
-	parse.AssertUpToDate(&JobResultTable.s, new(JobResult))
+	parse.AssertUpToDate(&JobTable.s, new(Job))
 }

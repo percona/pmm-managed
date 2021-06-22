@@ -20,7 +20,6 @@ package agents
 import (
 	"context"
 	"fmt"
-	"runtime/pprof"
 	"sort"
 	"strings"
 	"sync"
@@ -53,39 +52,6 @@ const (
 	prometheusSubsystem = "agents"
 )
 
-var (
-	checkExternalExporterConnectionPMMVersion = version.MustParse("1.14.99")
-
-	defaultActionTimeout      = ptypes.DurationProto(10 * time.Second)
-	defaultQueryActionTimeout = ptypes.DurationProto(15 * time.Second) // should be less than checks.resultTimeout
-	defaultPtActionTimeout    = ptypes.DurationProto(30 * time.Second) // Percona-toolkit action timeout
-
-	mSentDesc = prom.NewDesc(
-		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_sent_total"),
-		"A total number of messages sent to pmm-agent.",
-		[]string{"agent_id"},
-		nil,
-	)
-	mRecvDesc = prom.NewDesc(
-		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_received_total"),
-		"A total number of messages received from pmm-agent.",
-		[]string{"agent_id"},
-		nil,
-	)
-	mResponsesDesc = prom.NewDesc(
-		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_response_queue_length"),
-		"The current length of the response queue.",
-		[]string{"agent_id"},
-		nil,
-	)
-	mRequestsDesc = prom.NewDesc(
-		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_request_queue_length"),
-		"The current length of the request queue.",
-		[]string{"agent_id"},
-		nil,
-	)
-)
-
 type pmmAgentInfo struct {
 	channel         *channel.Channel
 	id              string
@@ -97,29 +63,24 @@ type pmmAgentInfo struct {
 //
 // TODO Split into several types https://jira.percona.com/browse/PMM-4932
 type Registry struct {
-	db        *reform.DB
-	vmdb      prometheusService
-	qanClient qanClient
+	db      *reform.DB
+	vmdb    prometheusService
+	handler *Handler
 
 	rw     sync.RWMutex
 	agents map[string]*pmmAgentInfo // id -> info
 
 	roster *roster
 
-	mAgents      prom.GaugeFunc
-	mConnects    prom.Counter
-	mDisconnects *prom.CounterVec
-	mRoundTrip   prom.Summary
-	mClockDrift  prom.Summary
+	mAgents prom.GaugeFunc
 }
 
 // NewRegistry creates a new registry with given database connection.
-func NewRegistry(db *reform.DB, qanClient qanClient, vmdb prometheusService) *Registry {
+func NewRegistry(db *reform.DB, vmdb prometheusService) *Registry {
 	agents := make(map[string]*pmmAgentInfo)
 	r := &Registry{
-		db:        db,
-		vmdb:      vmdb,
-		qanClient: qanClient,
+		db:   db,
+		vmdb: vmdb,
 
 		agents: agents,
 
@@ -133,37 +94,7 @@ func NewRegistry(db *reform.DB, qanClient qanClient, vmdb prometheusService) *Re
 		}, func() float64 {
 			return float64(len(agents))
 		}),
-		mConnects: prom.NewCounter(prom.CounterOpts{
-			Namespace: prometheusNamespace,
-			Subsystem: prometheusSubsystem,
-			Name:      "connects_total",
-			Help:      "A total number of pmm-agent connects.",
-		}),
-		mDisconnects: prom.NewCounterVec(prom.CounterOpts{
-			Namespace: prometheusNamespace,
-			Subsystem: prometheusSubsystem,
-			Name:      "disconnects_total",
-			Help:      "A total number of pmm-agent disconnects.",
-		}, []string{"reason"}),
-		mRoundTrip: prom.NewSummary(prom.SummaryOpts{
-			Namespace:  prometheusNamespace,
-			Subsystem:  prometheusSubsystem,
-			Name:       "round_trip_seconds",
-			Help:       "Round-trip time.",
-			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
-		}),
-		mClockDrift: prom.NewSummary(prom.SummaryOpts{
-			Namespace:  prometheusNamespace,
-			Subsystem:  prometheusSubsystem,
-			Name:       "clock_drift_seconds",
-			Help:       "Clock drift.",
-			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
-		}),
 	}
-
-	// initialize metrics with labels
-	r.mDisconnects.WithLabelValues("unknown")
-
 	return r
 }
 
@@ -171,234 +102,6 @@ func NewRegistry(db *reform.DB, qanClient qanClient, vmdb prometheusService) *Re
 func (r *Registry) IsConnected(pmmAgentID string) bool {
 	_, err := r.get(pmmAgentID)
 	return err == nil
-}
-
-// Run takes over pmm-agent gRPC stream and runs it until completion.
-func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
-	r.mConnects.Inc()
-	disconnectReason := "unknown"
-	defer func() {
-		r.mDisconnects.WithLabelValues(disconnectReason).Inc()
-	}()
-
-	ctx := stream.Context()
-	l := logger.Get(ctx)
-	agent, err := r.register(stream)
-	if err != nil {
-		disconnectReason = "auth"
-		return err
-	}
-	defer func() {
-		l.Infof("Disconnecting client: %s.", disconnectReason)
-	}()
-
-	// run pmm-agent state update loop for the current agent.
-	go r.runStateChangeHandler(ctx, agent)
-
-	r.RequestStateUpdate(ctx, agent.id)
-
-	ticker := time.NewTicker(10 * time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			r.ping(ctx, agent)
-
-		// see unregister and Kick methods
-		case <-agent.kick:
-			// already unregistered, no need to call unregister method
-			l.Warn("Kicked.")
-			disconnectReason = "kicked"
-			err = status.Errorf(codes.Aborted, "Kicked.")
-			return err
-
-		case req := <-agent.channel.Requests():
-			if req == nil {
-				disconnectReason = "done"
-				err = agent.channel.Wait()
-				r.unregister(agent.id)
-				if err != nil {
-					l.Error(errors.WithStack(err))
-				}
-				return r.updateAgentStatusForChildren(ctx, agent.id, inventorypb.AgentStatus_DONE, 0)
-			}
-
-			switch p := req.Payload.(type) {
-			case *agentpb.Ping:
-				agent.channel.Send(&channel.ServerResponse{
-					ID: req.ID,
-					Payload: &agentpb.Pong{
-						CurrentTime: ptypes.TimestampNow(),
-					},
-				})
-
-			case *agentpb.StateChangedRequest:
-				pprof.Do(ctx, pprof.Labels("request", "StateChangedRequest"), func(ctx context.Context) {
-					if err := r.stateChanged(ctx, p); err != nil {
-						l.Errorf("%+v", err)
-					}
-
-					agent.channel.Send(&channel.ServerResponse{
-						ID:      req.ID,
-						Payload: new(agentpb.StateChangedResponse),
-					})
-				})
-
-			case *agentpb.QANCollectRequest:
-				pprof.Do(ctx, pprof.Labels("request", "QANCollectRequest"), func(ctx context.Context) {
-					if err := r.qanClient.Collect(ctx, p.MetricsBucket); err != nil {
-						l.Errorf("%+v", err)
-					}
-
-					agent.channel.Send(&channel.ServerResponse{
-						ID:      req.ID,
-						Payload: new(agentpb.QANCollectResponse),
-					})
-				})
-
-			case *agentpb.ActionResultRequest:
-				// TODO: PMM-3978: In the future we need to merge action parts before send it to storage.
-				err := models.ChangeActionResult(r.db.Querier, p.ActionId, agent.id, p.Error, string(p.Output), p.Done)
-				if err != nil {
-					l.Warnf("Failed to change action: %+v", err)
-				}
-
-				if !p.Done && p.Error != "" {
-					l.Warnf("Action was done with an error: %v.", p.Error)
-				}
-
-				agent.channel.Send(&channel.ServerResponse{
-					ID:      req.ID,
-					Payload: new(agentpb.ActionResultResponse),
-				})
-
-			case *agentpb.JobResult:
-				r.handleJobResult(l, p)
-			case *agentpb.JobProgress:
-				// TODO Handle job progress messages https://jira.percona.com/browse/PMM-7756
-
-			case nil:
-				l.Errorf("Unexpected request: %+v.", req)
-			}
-		}
-	}
-}
-
-func (r *Registry) handleJobResult(l *logrus.Entry, result *agentpb.JobResult) {
-	if e := r.db.InTransaction(func(t *reform.TX) error {
-		res, err := models.FindJobResultByID(t.Querier, result.JobId)
-		if err != nil {
-			return err
-		}
-
-		switch result := result.Result.(type) {
-		case *agentpb.JobResult_Error_:
-			if err := r.handleJobError(res); err != nil {
-				l.Errorf("failed to handle job error: %s", err)
-			}
-			res.Error = result.Error.Message
-		case *agentpb.JobResult_Echo_:
-			if res.Type != models.Echo {
-				return errors.Errorf("result type echo doesn't match job type %s", res.Type)
-			}
-			res.Result = &models.JobResultData{
-				Echo: &models.EchoJobResult{
-					Message: result.Echo.Message,
-				},
-			}
-		case *agentpb.JobResult_MysqlBackup:
-			if res.Type != models.MySQLBackupJob {
-				return errors.Errorf("result type %s doesn't match job type %s", models.MySQLBackupJob, res.Type)
-			}
-
-			_, err := models.ChangeArtifact(t.Querier, res.Result.MySQLBackup.ArtifactID, models.ChangeArtifactParams{
-				Status: models.SuccessBackupStatus.Pointer(),
-			})
-			if err != nil {
-				return err
-			}
-		case *agentpb.JobResult_MongodbBackup:
-			if res.Type != models.MongoDBBackupJob {
-				return errors.Errorf("result type %s doesn't match job type %s", models.MongoDBBackupJob, res.Type)
-			}
-
-			_, err := models.ChangeArtifact(t.Querier, res.Result.MongoDBBackup.ArtifactID, models.ChangeArtifactParams{
-				Status: models.SuccessBackupStatus.Pointer(),
-			})
-			if err != nil {
-				return err
-			}
-		case *agentpb.JobResult_MysqlRestoreBackup:
-			if res.Type != models.MySQLRestoreBackupJob {
-				return errors.Errorf("result type %s doesn't match job type %s", models.MySQLRestoreBackupJob, res.Type)
-			}
-
-			_, err := models.ChangeRestoreHistoryItem(
-				t.Querier,
-				res.Result.MySQLRestoreBackup.RestoreID,
-				models.ChangeRestoreHistoryItemParams{
-					Status: models.SuccessRestoreStatus,
-				})
-			if err != nil {
-				return err
-			}
-
-		case *agentpb.JobResult_MongodbRestoreBackup:
-			if res.Type != models.MongoDBRestoreBackupJob {
-				return errors.Errorf("result type %s doesn't match job type %s", models.MongoDBRestoreBackupJob, res.Type)
-			}
-
-			_, err := models.ChangeRestoreHistoryItem(
-				t.Querier,
-				res.Result.MongoDBRestoreBackup.RestoreID,
-				models.ChangeRestoreHistoryItemParams{
-					Status: models.SuccessRestoreStatus,
-				})
-			if err != nil {
-				return err
-			}
-		default:
-			return errors.Errorf("unexpected job result type: %T", result)
-		}
-		res.Done = true
-		return t.Update(res)
-	}); e != nil {
-		l.Errorf("Failed to save job result: %+v", e)
-	}
-}
-
-func (r *Registry) handleJobError(jobResult *models.JobResult) error {
-	var err error
-	switch jobResult.Type {
-	case models.Echo:
-		// nothing
-	case models.MySQLBackupJob:
-		_, err = models.ChangeArtifact(r.db.Querier, jobResult.Result.MySQLBackup.ArtifactID, models.ChangeArtifactParams{
-			Status: models.ErrorBackupStatus.Pointer(),
-		})
-	case models.MongoDBBackupJob:
-		_, err = models.ChangeArtifact(r.db.Querier, jobResult.Result.MongoDBBackup.ArtifactID, models.ChangeArtifactParams{
-			Status: models.ErrorBackupStatus.Pointer(),
-		})
-	case models.MySQLRestoreBackupJob:
-		_, err = models.ChangeRestoreHistoryItem(
-			r.db.Querier,
-			jobResult.Result.MySQLRestoreBackup.RestoreID,
-			models.ChangeRestoreHistoryItemParams{
-				Status: models.ErrorRestoreStatus,
-			})
-	case models.MongoDBRestoreBackupJob:
-		_, err = models.ChangeRestoreHistoryItem(
-			r.db.Querier,
-			jobResult.Result.MongoDBRestoreBackup.RestoreID,
-			models.ChangeRestoreHistoryItemParams{
-				Status: models.ErrorRestoreStatus,
-			})
-	default:
-		// Don't do anything without explicit handling
-	}
-	return err
-
 }
 
 func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*pmmAgentInfo, error) {
@@ -591,32 +294,6 @@ func (r *Registry) Kick(ctx context.Context, pmmAgentID string) {
 	// closing agent.kick is enough to exit runStateChangeHandler goroutine.
 }
 
-// ping sends Ping message to given Agent, waits for Pong and observes round-trip time and clock drift.
-func (r *Registry) ping(ctx context.Context, agent *pmmAgentInfo) error {
-	l := logger.Get(ctx)
-	start := time.Now()
-	resp, err := agent.channel.SendAndWaitResponse(new(agentpb.Ping))
-	if err != nil {
-		return err
-	}
-	if resp == nil {
-		return nil
-	}
-	roundtrip := time.Since(start)
-	agentTime, err := ptypes.Timestamp(resp.(*agentpb.Pong).CurrentTime)
-	if err != nil {
-		return errors.Wrap(err, "failed to decode Pong.current_time")
-	}
-	clockDrift := agentTime.Sub(start) - roundtrip/2
-	if clockDrift < 0 {
-		clockDrift = -clockDrift
-	}
-	l.Infof("Round-trip time: %s. Estimated clock drift: %s.", roundtrip, clockDrift)
-	r.mRoundTrip.Observe(roundtrip.Seconds())
-	r.mClockDrift.Observe(clockDrift.Seconds())
-	return nil
-}
-
 func updateAgentStatus(ctx context.Context, q *reform.Querier, agentID string, status inventorypb.AgentStatus, listenPort uint32) error {
 	l := logger.Get(ctx)
 	l.Debugf("updateAgentStatus: %s %s %d", agentID, status, listenPort)
@@ -693,49 +370,6 @@ func (r *Registry) UpdateAgentsState(ctx context.Context) error {
 	}
 	wg.Wait()
 	return nil
-}
-
-// runStateChangeHandler runs pmm-agent state update loop for given pmm-agent until ctx is canceled or agent is kicked.
-func (r *Registry) runStateChangeHandler(ctx context.Context, agent *pmmAgentInfo) {
-	l := logger.Get(ctx).WithField("agent_id", agent.id)
-
-	l.Info("Starting runStateChangeHandler ...")
-	defer l.Info("Done runStateChangeHandler.")
-
-	// stateChangeChan, state update loop, and RequestStateUpdate method ensure that state
-	// is reloaded when requested, but several requests are batched together to avoid too often reloads.
-	// That allows the caller to just call RequestStateUpdate when it seems fit.
-	if cap(agent.stateChangeChan) != 1 {
-		panic("stateChangeChan should have capacity 1")
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-
-		case <-agent.kick:
-			return
-
-		case <-agent.stateChangeChan:
-			// batch several update requests together by delaying the first one
-			sleepCtx, sleepCancel := context.WithTimeout(ctx, updateBatchDelay)
-			<-sleepCtx.Done()
-			sleepCancel()
-
-			if ctx.Err() != nil {
-				return
-			}
-
-			nCtx, cancel := context.WithTimeout(ctx, stateChangeTimeout)
-			err := r.sendSetStateRequest(nCtx, agent)
-			if err != nil {
-				l.Error(err)
-				r.RequestStateUpdate(ctx, agent.id)
-			}
-			cancel()
-		}
-	}
 }
 
 // SetAllAgentsStatusUnknown goes through all pmm-agents and sets status to UNKNOWN.
@@ -1093,16 +727,7 @@ func (r *Registry) get(pmmAgentID string) (*pmmAgentInfo, error) {
 
 // Describe implements prometheus.Collector.
 func (r *Registry) Describe(ch chan<- *prom.Desc) {
-	ch <- mSentDesc
-	ch <- mRecvDesc
-	ch <- mResponsesDesc
-	ch <- mRequestsDesc
-
 	r.mAgents.Describe(ch)
-	r.mConnects.Describe(ch)
-	r.mDisconnects.Describe(ch)
-	r.mRoundTrip.Describe(ch)
-	r.mClockDrift.Describe(ch)
 }
 
 // Collect implement prometheus.Collector.
@@ -1121,10 +746,6 @@ func (r *Registry) Collect(ch chan<- prom.Metric) {
 	r.rw.RUnlock()
 
 	r.mAgents.Collect(ch)
-	r.mConnects.Collect(ch)
-	r.mDisconnects.Collect(ch)
-	r.mRoundTrip.Collect(ch)
-	r.mClockDrift.Collect(ch)
 }
 
 // StartMySQLExplainAction starts MySQL EXPLAIN Action on pmm-agent.
