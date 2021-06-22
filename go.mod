@@ -32,7 +32,7 @@ require (
 	github.com/hashicorp/go-version v1.3.0
 	github.com/lib/pq v1.8.0
 	github.com/minio/minio-go/v7 v7.0.10
-	github.com/percona-platform/dbaas-api v0.0.0-20210621124634-ff486adcab71
+	github.com/percona-platform/dbaas-api v0.0.0-20210622115133-da2b84a74270
 	github.com/percona-platform/saas v0.0.0-20210505183502-c18b6f47c932
 	github.com/percona/pmm v0.0.0-20210618151220-08e7e61b106a
 	github.com/percona/promconfig v0.2.1

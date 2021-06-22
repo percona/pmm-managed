@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	goversion "github.com/hashicorp/go-version"
+	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 
@@ -148,3 +150,55 @@ func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsPara
 
 	return &vsResponse, nil
 }
+
+func (c *VersionServiceClient) IsOperatorVersionSupported(ctx context.Context, operatorType string, pmmVersion string, operatorVersion string) (bool, error) {
+	return false, nil
+}
+
+// TODO THIS IS JUST COPY PASTED CODE SO I DON'T HAVE TO REBASE EVERYTIME THE ORIGIN OF THIS CODE CHANGES -> IT'S IN REVEIW
+// --------------------
+var errNoVersionsFound error = errors.New("no version found")
+
+func getLatest(m map[string]componentVersion) (*goversion.Version, error) {
+	if len(m) == 0 {
+		return nil, errNoVersionsFound
+	}
+	latest := goversion.Must(goversion.NewVersion("v0.0.0"))
+	for version := range m {
+		parsedVersion, err := goversion.NewVersion(version)
+		if err != nil {
+			return nil, err
+		}
+		if parsedVersion.GreaterThan(latest) {
+			latest = parsedVersion
+		}
+	}
+	return latest, nil
+}
+
+// GetLatestOperatorVersion return latest PXC and PSMDB operators for given PMM version.
+func (c *VersionServiceClient) GetLatestOperatorVersion(ctx context.Context, pmmVersion string) (*goversion.Version, *goversion.Version, error) {
+	if pmmVersion == "" {
+		return nil, nil, errors.New("given PMM version is empty")
+	}
+	params := componentsParams{
+		operator:        "pmm-server",
+		operatorVersion: pmmVersion,
+	}
+	resp, err := c.Matrix(ctx, params)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(resp.Versions) != 1 {
+		return nil, nil, nil // no deps for the PMM version passed to c.Matrix
+	}
+	pmmVersionDeps := resp.Versions[0]
+	latestPSMDBOperator, err := getLatest(pmmVersionDeps.Matrix.PSMDBOperator)
+	if err != nil {
+		return nil, nil, err
+	}
+	latestPXCOperator, err := getLatest(pmmVersionDeps.Matrix.PXCOperator)
+	return latestPXCOperator, latestPSMDBOperator, err
+}
+
+// -------------------- TODO REMOVE THIS SECTION
