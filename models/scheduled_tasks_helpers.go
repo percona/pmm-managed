@@ -100,8 +100,6 @@ type CreateScheduledTaskParams struct {
 	NextRun        time.Time
 	Type           ScheduledTaskType
 	Data           ScheduledTaskData
-	Retries        uint
-	RetryInterval  time.Duration
 	Disabled       bool
 }
 
@@ -128,18 +126,15 @@ func CreateScheduledTask(q *reform.Querier, params CreateScheduledTaskParams) (*
 	}
 
 	task := &ScheduledTask{
-		ID:               id,
-		CronExpression:   params.CronExpression,
-		Disabled:         params.Disabled,
-		StartAt:          params.StartAt,
-		NextRun:          params.NextRun,
-		Type:             params.Type,
-		Data:             &params.Data,
-		Retries:          params.Retries,
-		RetryInterval:    params.RetryInterval,
-		RetriesRemaining: params.Retries,
-		Succeeded:        0,
-		Failed:           0,
+		ID:             id,
+		CronExpression: params.CronExpression,
+		Disabled:       params.Disabled,
+		StartAt:        params.StartAt,
+		NextRun:        params.NextRun,
+		Type:           params.Type,
+		Data:           &params.Data,
+		Succeeded:      0,
+		Failed:         0,
 	}
 	if err := q.Insert(task); err != nil {
 		return nil, errors.WithStack(err)
@@ -149,14 +144,12 @@ func CreateScheduledTask(q *reform.Querier, params CreateScheduledTaskParams) (*
 
 // ChangeScheduledTaskParams are params for updating existing schedule task.
 type ChangeScheduledTaskParams struct {
-	NextRun          time.Time
-	LastRun          time.Time
-	Disable          *bool
-	Retries          *uint
-	RetriesRemaining *uint
-	Succeeded        *uint
-	Failed           *uint
-	Running          *bool
+	NextRun   time.Time
+	LastRun   time.Time
+	Disable   *bool
+	Succeeded *uint
+	Failed    *uint
+	Running   *bool
 }
 
 // ChangeScheduledTask updates existing scheduled task.
@@ -170,14 +163,6 @@ func ChangeScheduledTask(q *reform.Querier, id string, params ChangeScheduledTas
 
 	if params.Disable != nil {
 		row.Disabled = *params.Disable
-	}
-
-	if params.Retries != nil {
-		row.Retries = *params.Retries
-	}
-
-	if params.RetriesRemaining != nil {
-		row.RetriesRemaining = *params.RetriesRemaining
 	}
 
 	if params.Succeeded != nil {

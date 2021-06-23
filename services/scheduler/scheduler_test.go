@@ -53,12 +53,8 @@ func TestService(t *testing.T) {
 	task := NewPrintTask("test")
 	cronExpr := "* * * * *"
 	startAt := time.Now().Truncate(time.Second).UTC()
-	retries := uint(3)
-	retryInterval := time.Millisecond
 	dbTask, err := svc.Add(task, AddParams{
 		CronExpression: cronExpr,
-		Retry:          retries,
-		RetryInterval:  retryInterval,
 		StartAt:        startAt,
 	})
 	assert.NoError(t, err)
@@ -68,8 +64,6 @@ func TestService(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, startAt, dbTask.StartAt)
-	assert.Equal(t, retries, dbTask.Retries)
-	assert.Equal(t, retryInterval, dbTask.RetryInterval)
 	assert.Equal(t, cronExpr, findJob.CronExpression)
 	assert.Truef(t, dbTask.NextRun.After(startAt), "next run %s is before startAt %s", dbTask.NextRun, startAt)
 

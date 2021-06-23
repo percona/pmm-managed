@@ -69,8 +69,6 @@ type AddParams struct {
 	CronExpression string
 	Disabled       bool
 	StartAt        time.Time
-	Retry          uint
-	RetryInterval  time.Duration
 }
 
 // Add adds task to scheduler and save it to DB.
@@ -86,8 +84,6 @@ func (s *Service) Add(task Task, params AddParams) (*models.ScheduledTask, error
 			StartAt:        params.StartAt,
 			Type:           task.Type(),
 			Data:           task.Data(),
-			Retries:        params.Retry,
-			RetryInterval:  params.RetryInterval,
 			Disabled:       params.Disabled,
 		})
 		if err != nil {
@@ -102,7 +98,7 @@ func (s *Service) Add(task Task, params AddParams) (*models.ScheduledTask, error
 			return nil
 		}
 
-		fn := s.wrapTask(task, id, int(params.Retry), params.RetryInterval)
+		fn := s.wrapTask(task, id)
 
 		j := s.scheduler.Cron(params.CronExpression).SingletonMode()
 		if !params.StartAt.IsZero() {
@@ -183,7 +179,7 @@ func (s *Service) Reload(id string) error {
 		j = j.StartAt(dbTask.StartAt)
 	}
 
-	fn := s.wrapTask(task, dbTask.ID, int(dbTask.RetriesRemaining), dbTask.RetryInterval)
+	fn := s.wrapTask(task, dbTask.ID)
 	if _, err := j.Tag(dbTask.ID).Do(fn); err != nil {
 		return err
 	}
@@ -215,7 +211,7 @@ func (s *Service) loadFromDB() error {
 	s.scheduler.Clear()
 	for i, task := range tasks {
 		dbTask := dbTasks[i]
-		fn := s.wrapTask(task, dbTask.ID, int(dbTask.RetriesRemaining), dbTask.RetryInterval)
+		fn := s.wrapTask(task, dbTask.ID)
 		j := s.scheduler.Cron(dbTask.CronExpression).SingletonMode()
 		if !dbTask.StartAt.IsZero() {
 			j = j.StartAt(dbTask.StartAt)
@@ -227,7 +223,7 @@ func (s *Service) loadFromDB() error {
 
 	return nil
 }
-func (s *Service) wrapTask(task Task, id string, retry int, retryInterval time.Duration) func() {
+func (s *Service) wrapTask(task Task, id string) func() {
 	return func() {
 		var err error
 		l := s.l.WithFields(logrus.Fields{
@@ -246,51 +242,34 @@ func (s *Service) wrapTask(task Task, id string, retry int, retryInterval time.D
 			delete(s.tasks, id)
 			s.taskMx.Unlock()
 		}()
-		retriesRemaining := retry
+
 		succeeded := false
-		for {
-			t := time.Now()
-			l.Debug("Starting task")
-			_, err = models.ChangeScheduledTask(s.db.Querier, id, models.ChangeScheduledTaskParams{
-				Running: pointer.ToBool(true),
-			})
+		t := time.Now()
+		l.Debug("Starting task")
+		_, err = models.ChangeScheduledTask(s.db.Querier, id, models.ChangeScheduledTaskParams{
+			Running: pointer.ToBool(true),
+		})
 
-			if err != nil {
-				l.Errorf("failed to change running state: %v", err)
-			}
-
-			err = task.Run(ctx)
-			l.WithField("duration", time.Since(t)).Debug("Ended task")
-			if err == nil {
-				succeeded = true
-				break
-			}
-
-			if err == context.Canceled {
-				break
-			}
-			l.Error(err)
-
-			if retriesRemaining <= 0 {
-				break
-			}
-			retriesRemaining--
-			_, err = models.ChangeScheduledTask(s.db.Querier, id, models.ChangeScheduledTaskParams{
-				RetriesRemaining: pointer.ToUint(uint(retriesRemaining)),
-				Running:          pointer.ToBool(false),
-			})
-
-			if err != nil {
-				l.Errorf("failed to change retries remaining: %v", err)
-			}
-
-			timer := time.NewTimer(retryInterval)
-			select {
-			case <-ctx.Done():
-			case <-timer.C:
-			}
-			timer.Stop()
+		if err != nil {
+			l.Errorf("failed to change running state: %v", err)
 		}
+
+		err = task.Run(ctx)
+		l.WithField("duration", time.Since(t)).Debug("Ended task")
+		if err == nil {
+			succeeded = true
+		} else {
+			l.Error(err)
+		}
+
+		_, err = models.ChangeScheduledTask(s.db.Querier, id, models.ChangeScheduledTaskParams{
+			Running: pointer.ToBool(false),
+		})
+
+		if err != nil {
+			l.Errorf("failed to change retries remaining: %v", err)
+		}
+
 		s.taskFinished(id, succeeded)
 	}
 }
@@ -322,12 +301,11 @@ func (s *Service) taskFinished(id string, succeeded bool) {
 	}
 
 	params := models.ChangeScheduledTaskParams{
-		RetriesRemaining: pointer.ToUint(dbTask.Retries),
-		NextRun:          job.NextRun(),
-		LastRun:          job.LastRun(),
-		Succeeded:        pointer.ToUint(dbTask.Succeeded),
-		Failed:           pointer.ToUint(dbTask.Failed),
-		Running:          pointer.ToBool(false),
+		NextRun:   job.NextRun(),
+		LastRun:   job.LastRun(),
+		Succeeded: pointer.ToUint(dbTask.Succeeded),
+		Failed:    pointer.ToUint(dbTask.Failed),
+		Running:   pointer.ToBool(false),
 	}
 
 	_, err = models.ChangeScheduledTask(s.db.Querier, id, params)
