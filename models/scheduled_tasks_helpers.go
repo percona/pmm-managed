@@ -100,8 +100,6 @@ type CreateScheduledTaskParams struct {
 	NextRun        time.Time
 	Type           ScheduledTaskType
 	Data           ScheduledTaskData
-	Retries        uint
-	RetryInterval  time.Duration
 	Disabled       bool
 }
 
@@ -130,18 +128,15 @@ func CreateScheduledTask(q *reform.Querier, params CreateScheduledTaskParams) (*
 	}
 
 	task := &ScheduledTask{
-		ID:               id,
-		CronExpression:   params.CronExpression,
-		Disabled:         params.Disabled,
-		StartAt:          params.StartAt,
-		NextRun:          params.NextRun,
-		Type:             params.Type,
-		Data:             &params.Data,
-		Retries:          params.Retries,
-		RetryInterval:    params.RetryInterval,
-		RetriesRemaining: params.Retries,
-		Succeeded:        0,
-		Failed:           0,
+		ID:             id,
+		CronExpression: params.CronExpression,
+		Disabled:       params.Disabled,
+		StartAt:        params.StartAt,
+		NextRun:        params.NextRun,
+		Type:           params.Type,
+		Data:           &params.Data,
+		Succeeded:      0,
+		Failed:         0,
 	}
 	if err := q.Insert(task); err != nil {
 		return nil, errors.WithStack(err)
@@ -151,15 +146,13 @@ func CreateScheduledTask(q *reform.Querier, params CreateScheduledTaskParams) (*
 
 // ChangeScheduledTaskParams are params for updating existing schedule task.
 type ChangeScheduledTaskParams struct {
-	NextRun          time.Time
-	LastRun          time.Time
-	Disable          *bool
-	Retries          *uint
-	RetriesRemaining *uint
-	RetryInterval    *time.Duration
-	Succeeded        *uint
-	Failed           *uint
-	Running          *bool
+	NextRun   time.Time
+	LastRun   time.Time
+	Disable   *bool
+	Succeeded *uint
+	Failed    *uint
+	Running   *bool
+	Error     *string
 	Data             *ScheduledTaskData
 	CronExpression   *string
 }
@@ -197,18 +190,6 @@ func ChangeScheduledTask(q *reform.Querier, id string, params ChangeScheduledTas
 		row.Disabled = *params.Disable
 	}
 
-	if params.Retries != nil {
-		row.Retries = *params.Retries
-	}
-
-	if params.RetriesRemaining != nil {
-		row.RetriesRemaining = *params.RetriesRemaining
-	}
-
-	if params.RetryInterval != nil {
-		row.RetryInterval = *params.RetryInterval
-	}
-
 	if params.Succeeded != nil {
 		row.Succeeded = *params.Succeeded
 	}
@@ -227,6 +208,10 @@ func ChangeScheduledTask(q *reform.Querier, id string, params ChangeScheduledTas
 
 	if params.CronExpression != nil {
 		row.CronExpression = *params.CronExpression
+	}
+
+	if params.Error != nil {
+		row.Error = *params.Error
 	}
 
 	if err := q.Update(row); err != nil {

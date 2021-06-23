@@ -1,3 +1,19 @@
+// pmm-managed
+// Copyright (C) 2017 Percona LLC
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package scheduler
 
 import (
@@ -39,12 +55,9 @@ func TestService(t *testing.T) {
 	task := NewPrintTask("test")
 	cronExpr := "* * * * *"
 	startAt := time.Now().Truncate(time.Second).UTC()
-	retries := uint(3)
-	retryInterval := time.Millisecond
 	dbTask, err := svc.Add(task, AddParams{
 		CronExpression: cronExpr,
-		Retry:          retries,
-		RetryInterval:  retryInterval,
+		StartAt:        startAt,
 	})
 	assert.NoError(t, err)
 
@@ -53,8 +66,6 @@ func TestService(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, startAt, dbTask.StartAt)
-	assert.Equal(t, retries, dbTask.Retries)
-	assert.Equal(t, retryInterval, dbTask.RetryInterval)
 	assert.Equal(t, cronExpr, findJob.CronExpression)
 	assert.Truef(t, dbTask.NextRun.After(startAt), "next run %s is before startAt %s", dbTask.NextRun, startAt)
 

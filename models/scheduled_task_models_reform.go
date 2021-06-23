@@ -36,12 +36,10 @@ func (v *scheduledTaskTableType) Columns() []string {
 		"next_run",
 		"type",
 		"data",
-		"retries",
-		"retry_interval",
-		"retries_remaining",
 		"succeeded",
 		"failed",
 		"running",
+		"error",
 		"created_at",
 		"updated_at",
 	}
@@ -76,12 +74,10 @@ var ScheduledTaskTable = &scheduledTaskTableType{
 			{Name: "NextRun", Type: "time.Time", Column: "next_run"},
 			{Name: "Type", Type: "ScheduledTaskType", Column: "type"},
 			{Name: "Data", Type: "*ScheduledTaskData", Column: "data"},
-			{Name: "Retries", Type: "uint", Column: "retries"},
-			{Name: "RetryInterval", Type: "time.Duration", Column: "retry_interval"},
-			{Name: "RetriesRemaining", Type: "uint", Column: "retries_remaining"},
 			{Name: "Succeeded", Type: "uint", Column: "succeeded"},
 			{Name: "Failed", Type: "uint", Column: "failed"},
 			{Name: "Running", Type: "bool", Column: "running"},
+			{Name: "Error", Type: "string", Column: "error"},
 			{Name: "CreatedAt", Type: "time.Time", Column: "created_at"},
 			{Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"},
 		},
@@ -92,7 +88,7 @@ var ScheduledTaskTable = &scheduledTaskTableType{
 
 // String returns a string representation of this struct or record.
 func (s ScheduledTask) String() string {
-	res := make([]string, 16)
+	res := make([]string, 14)
 	res[0] = "ID: " + reform.Inspect(s.ID, true)
 	res[1] = "CronExpression: " + reform.Inspect(s.CronExpression, true)
 	res[2] = "Disabled: " + reform.Inspect(s.Disabled, true)
@@ -101,14 +97,12 @@ func (s ScheduledTask) String() string {
 	res[5] = "NextRun: " + reform.Inspect(s.NextRun, true)
 	res[6] = "Type: " + reform.Inspect(s.Type, true)
 	res[7] = "Data: " + reform.Inspect(s.Data, true)
-	res[8] = "Retries: " + reform.Inspect(s.Retries, true)
-	res[9] = "RetryInterval: " + reform.Inspect(s.RetryInterval, true)
-	res[10] = "RetriesRemaining: " + reform.Inspect(s.RetriesRemaining, true)
-	res[11] = "Succeeded: " + reform.Inspect(s.Succeeded, true)
-	res[12] = "Failed: " + reform.Inspect(s.Failed, true)
-	res[13] = "Running: " + reform.Inspect(s.Running, true)
-	res[14] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
-	res[15] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
+	res[8] = "Succeeded: " + reform.Inspect(s.Succeeded, true)
+	res[9] = "Failed: " + reform.Inspect(s.Failed, true)
+	res[10] = "Running: " + reform.Inspect(s.Running, true)
+	res[11] = "Error: " + reform.Inspect(s.Error, true)
+	res[12] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
+	res[13] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
 	return strings.Join(res, ", ")
 }
 
@@ -124,12 +118,10 @@ func (s *ScheduledTask) Values() []interface{} {
 		s.NextRun,
 		s.Type,
 		s.Data,
-		s.Retries,
-		s.RetryInterval,
-		s.RetriesRemaining,
 		s.Succeeded,
 		s.Failed,
 		s.Running,
+		s.Error,
 		s.CreatedAt,
 		s.UpdatedAt,
 	}
@@ -147,12 +139,10 @@ func (s *ScheduledTask) Pointers() []interface{} {
 		&s.NextRun,
 		&s.Type,
 		&s.Data,
-		&s.Retries,
-		&s.RetryInterval,
-		&s.RetriesRemaining,
 		&s.Succeeded,
 		&s.Failed,
 		&s.Running,
+		&s.Error,
 		&s.CreatedAt,
 		&s.UpdatedAt,
 	}

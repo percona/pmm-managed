@@ -38,22 +38,20 @@ const (
 // ScheduledTask describes a scheduled task.
 //reform:scheduled_tasks
 type ScheduledTask struct {
-	ID               string             `reform:"id,pk"`
-	CronExpression   string             `reform:"cron_expression"`
-	Disabled         bool               `reform:"disabled"`
-	StartAt          time.Time          `reform:"start_at"`
-	LastRun          time.Time          `reform:"last_run"`
-	NextRun          time.Time          `reform:"next_run"`
-	Type             ScheduledTaskType  `reform:"type"`
-	Data             *ScheduledTaskData `reform:"data"`
-	Retries          uint               `reform:"retries"`
-	RetryInterval    time.Duration      `reform:"retry_interval"`
-	RetriesRemaining uint               `reform:"retries_remaining"`
-	Succeeded        uint               `reform:"succeeded"`
-	Failed           uint               `reform:"failed"`
-	Running          bool               `reform:"running"`
-	CreatedAt        time.Time          `reform:"created_at"`
-	UpdatedAt        time.Time          `reform:"updated_at"`
+	ID             string             `reform:"id,pk"`
+	CronExpression string             `reform:"cron_expression"`
+	Disabled       bool               `reform:"disabled"`
+	StartAt        time.Time          `reform:"start_at"`
+	LastRun        time.Time          `reform:"last_run"`
+	NextRun        time.Time          `reform:"next_run"`
+	Type           ScheduledTaskType  `reform:"type"`
+	Data           *ScheduledTaskData `reform:"data"`
+	Succeeded      uint               `reform:"succeeded"`
+	Failed         uint               `reform:"failed"`
+	Running        bool               `reform:"running"`
+	Error          string             `reform:"error"`
+	CreatedAt      time.Time          `reform:"created_at"`
+	UpdatedAt      time.Time          `reform:"updated_at"`
 }
 
 // ScheduledTaskData holds result data for different task types.

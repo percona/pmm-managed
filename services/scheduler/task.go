@@ -1,9 +1,27 @@
+// pmm-managed
+// Copyright (C) 2017 Percona LLC
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package scheduler
 
 import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/percona/pmm-managed/models"
 )
@@ -30,29 +48,33 @@ func (c *common) SetID(id string) {
 	c.id = id
 }
 
-type printTask struct {
+// PrintTask implements Task for logging mesage.
+type PrintTask struct {
 	*common
 	Message string
 }
 
 // NewPrintTask creates new task which prints message.
-func NewPrintTask(message string) *printTask {
-	return &printTask{
+func NewPrintTask(message string) *PrintTask {
+	return &PrintTask{
 		common:  &common{},
 		Message: message,
 	}
 }
 
-func (j *printTask) Run(ctx context.Context) error {
-	fmt.Println(j.Message)
+// Run starts task.
+func (j *PrintTask) Run(ctx context.Context) error {
+	logrus.Info(j.Message)
 	return nil
 }
 
-func (j *printTask) Type() models.ScheduledTaskType {
+// Type returns task type.
+func (j *PrintTask) Type() models.ScheduledTaskType {
 	return models.ScheduledPrintTask
 }
 
-func (j *printTask) Data() models.ScheduledTaskData {
+// Data returns data needed for running a task.
+func (j *PrintTask) Data() models.ScheduledTaskData {
 	return models.ScheduledTaskData{
 		Print: &models.PrintTaskData{
 			Message: j.Message,

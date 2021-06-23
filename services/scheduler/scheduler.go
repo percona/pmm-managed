@@ -1,3 +1,19 @@
+// pmm-managed
+// Copyright (C) 2017 Percona LLC
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
 package scheduler
 
 import (
@@ -55,8 +71,6 @@ type AddParams struct {
 	CronExpression string
 	Disabled       bool
 	StartAt        time.Time
-	Retry          uint
-	RetryInterval  time.Duration
 }
 
 // Add adds task to scheduler and save it to DB.
@@ -72,8 +86,6 @@ func (s *Service) Add(task Task, params AddParams) (*models.ScheduledTask, error
 			StartAt:        params.StartAt,
 			Type:           task.Type(),
 			Data:           task.Data(),
-			Retries:        params.Retry,
-			RetryInterval:  params.RetryInterval,
 			Disabled:       params.Disabled,
 		})
 		if err != nil {
@@ -88,7 +100,7 @@ func (s *Service) Add(task Task, params AddParams) (*models.ScheduledTask, error
 			return nil
 		}
 
-		fn := s.wrapTask(task, id, int(params.Retry), params.RetryInterval)
+		fn := s.wrapTask(task, id)
 
 		j := s.scheduler.Cron(params.CronExpression).SingletonMode()
 		if !params.StartAt.IsZero() {
@@ -168,7 +180,7 @@ func (s *Service) Reload(id string) error {
 		j = j.StartAt(dbTask.StartAt)
 	}
 
-	fn := s.wrapTask(task, dbTask.ID, int(dbTask.RetriesRemaining), dbTask.RetryInterval)
+	fn := s.wrapTask(task, dbTask.ID)
 	if _, err := j.Tag(dbTask.ID).Do(fn); err != nil {
 		return err
 	}
@@ -200,7 +212,7 @@ func (s *Service) loadFromDB() error {
 	s.scheduler.Clear()
 	for i, task := range tasks {
 		dbTask := dbTasks[i]
-		fn := s.wrapTask(task, dbTask.ID, int(dbTask.RetriesRemaining), dbTask.RetryInterval)
+		fn := s.wrapTask(task, dbTask.ID)
 		j := s.scheduler.Cron(dbTask.CronExpression).SingletonMode()
 		if !dbTask.StartAt.IsZero() {
 			j = j.StartAt(dbTask.StartAt)
@@ -208,11 +220,11 @@ func (s *Service) loadFromDB() error {
 		if _, err := j.Tag(dbTask.ID).Do(fn); err != nil {
 			return err
 		}
-
 	}
+
 	return nil
 }
-func (s *Service) wrapTask(task Task, id string, retry int, retryInterval time.Duration) func() {
+func (s *Service) wrapTask(task Task, id string) func() {
 	return func() {
 		var err error
 		l := s.l.WithFields(logrus.Fields{
@@ -231,56 +243,36 @@ func (s *Service) wrapTask(task Task, id string, retry int, retryInterval time.D
 			delete(s.tasks, id)
 			s.taskMx.Unlock()
 		}()
-		retriesRemaining := retry
-		succeeded := false
-		for {
-			t := time.Now()
-			l.Debug("Starting task")
-			_, err = models.ChangeScheduledTask(s.db.Querier, id, models.ChangeScheduledTaskParams{
-				Running: pointer.ToBool(true),
-			})
 
-			if err != nil {
-				l.Errorf("failed to change running state: %v", err)
-			}
+		t := time.Now()
+		l.Debug("Starting task")
+		_, err = models.ChangeScheduledTask(s.db.Querier, id, models.ChangeScheduledTaskParams{
+			Running: pointer.ToBool(true),
+		})
 
-			err = task.Run(ctx)
-			l.WithField("duration", time.Since(t)).Debug("Ended task")
-			if err == nil {
-				succeeded = true
-				break
-			}
-
-			if err == context.Canceled {
-				break
-			}
-			l.Error(err)
-
-			if retriesRemaining <= 0 {
-				break
-			}
-			retriesRemaining--
-			_, err = models.ChangeScheduledTask(s.db.Querier, id, models.ChangeScheduledTaskParams{
-				RetriesRemaining: pointer.ToUint(uint(retriesRemaining)),
-				Running:          pointer.ToBool(false),
-			})
-
-			if err != nil {
-				l.Errorf("failed to change retries remaining: %v", err)
-			}
-
-			timer := time.NewTimer(retryInterval)
-			select {
-			case <-ctx.Done():
-			case <-timer.C:
-			}
-			timer.Stop()
+		if err != nil {
+			l.Errorf("failed to change running state: %v", err)
 		}
-		s.taskFinished(id, succeeded)
+
+		taskErr := task.Run(ctx)
+		if taskErr != nil {
+			l.Error(taskErr)
+		}
+		l.WithField("duration", time.Since(t)).Debug("Ended task")
+
+		_, err = models.ChangeScheduledTask(s.db.Querier, id, models.ChangeScheduledTaskParams{
+			Running: pointer.ToBool(false),
+		})
+
+		if err != nil {
+			l.Errorf("failed to change running status: %v", err)
+		}
+
+		s.taskFinished(id, taskErr)
 	}
 }
 
-func (s *Service) taskFinished(id string, succeeded bool) {
+func (s *Service) taskFinished(id string, taskErr error) {
 	var job *gocron.Job
 	for _, j := range s.scheduler.Jobs() {
 		if len(j.Tags()) > 0 && j.Tags()[0] == id {
@@ -289,30 +281,31 @@ func (s *Service) taskFinished(id string, succeeded bool) {
 		}
 	}
 	l := s.l.WithField("id", id)
-	if job == nil {
-		l.Warn("couldn't find finished job in scheduler")
-		return
-	}
 
 	dbTask, err := models.FindScheduledTaskByID(s.db.Querier, id)
 	if err != nil {
-		l.Errorf("failed to find scheduled task: %v", err)
 		return
 	}
 
-	if succeeded {
-		dbTask.Succeeded++
-	} else {
-		dbTask.Failed++
+	params := models.ChangeScheduledTaskParams{
+		Succeeded: pointer.ToUint(dbTask.Succeeded),
+		Failed:    pointer.ToUint(dbTask.Failed),
+		Running:   pointer.ToBool(false),
 	}
 
-	params := models.ChangeScheduledTaskParams{
-		RetriesRemaining: pointer.ToUint(dbTask.Retries),
-		NextRun:          job.NextRun().UTC(),
-		LastRun:          job.LastRun().UTC(),
-		Succeeded:        pointer.ToUint(dbTask.Succeeded),
-		Failed:           pointer.ToUint(dbTask.Failed),
-		Running:          pointer.ToBool(false),
+	if taskErr == nil {
+		params.Succeeded = pointer.ToUint(dbTask.Succeeded + 1)
+		params.Error = pointer.ToString("")
+	} else {
+		params.Failed = pointer.ToUint(dbTask.Failed + 1)
+		params.Error = pointer.ToString(taskErr.Error())
+	}
+
+	if job != nil {
+		params.NextRun = job.NextRun().UTC()
+		params.LastRun = job.LastRun().UTC()
+	} else {
+		l.Errorf("failed to find scheduled task: %v", err)
 	}
 
 	_, err = models.ChangeScheduledTask(s.db.Querier, id, params)
@@ -343,6 +336,7 @@ func (s *Service) convertDBTask(dbTask *models.ScheduledTask) (Task, error) {
 	default:
 		return task, fmt.Errorf("unknown task type: %s", dbTask.Type)
 	}
+
 	task.SetID(dbTask.ID)
 	return task, nil
 }
