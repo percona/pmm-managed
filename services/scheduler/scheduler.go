@@ -243,7 +243,6 @@ func (s *Service) wrapTask(task Task, id string) func() {
 			s.taskMx.Unlock()
 		}()
 
-		succeeded := false
 		t := time.Now()
 		l.Debug("Starting task")
 		_, err = models.ChangeScheduledTask(s.db.Querier, id, models.ChangeScheduledTaskParams{
@@ -254,14 +253,11 @@ func (s *Service) wrapTask(task Task, id string) func() {
 			l.Errorf("failed to change running state: %v", err)
 		}
 
-		err = task.Run(ctx)
+		taskErr := task.Run(ctx)
 		l.WithField("duration", time.Since(t)).Debug("Ended task")
-		if err == nil {
-			succeeded = true
-		} else {
+		if err != nil {
 			l.Error(err)
 		}
-
 		_, err = models.ChangeScheduledTask(s.db.Querier, id, models.ChangeScheduledTaskParams{
 			Running: pointer.ToBool(false),
 		})
@@ -270,11 +266,11 @@ func (s *Service) wrapTask(task Task, id string) func() {
 			l.Errorf("failed to change retries remaining: %v", err)
 		}
 
-		s.taskFinished(id, succeeded)
+		s.taskFinished(id, taskErr)
 	}
 }
 
-func (s *Service) taskFinished(id string, succeeded bool) {
+func (s *Service) taskFinished(id string, taskErr error) {
 	var job *gocron.Job
 	for _, j := range s.scheduler.Jobs() {
 		if len(j.Tags()) > 0 && j.Tags()[0] == id {
@@ -283,29 +279,29 @@ func (s *Service) taskFinished(id string, succeeded bool) {
 		}
 	}
 	l := s.l.WithField("id", id)
-	if job == nil {
-		l.Warn("couldn't find finished job in scheduler")
-		return
-	}
 
 	dbTask, err := models.FindScheduledTaskByID(s.db.Querier, id)
 	if err != nil {
-		l.Errorf("failed to find scheduled task: %v", err)
 		return
 	}
 
-	if succeeded {
+	if taskErr == nil {
 		dbTask.Succeeded++
 	} else {
 		dbTask.Failed++
 	}
 
 	params := models.ChangeScheduledTaskParams{
-		NextRun:   job.NextRun(),
-		LastRun:   job.LastRun(),
 		Succeeded: pointer.ToUint(dbTask.Succeeded),
 		Failed:    pointer.ToUint(dbTask.Failed),
 		Running:   pointer.ToBool(false),
+	}
+
+	if job != nil {
+		params.NextRun = job.NextRun().UTC()
+		params.LastRun = job.LastRun().UTC()
+	} else {
+		l.Errorf("failed to find scheduled task: %v", err)
 	}
 
 	_, err = models.ChangeScheduledTask(s.db.Querier, id, params)
