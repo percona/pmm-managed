@@ -79,12 +79,6 @@ var (
 	pmmAgentInvalid = version.MustParse("3.0.0-invalid")
 )
 
-var defaultPublicKeys = []string{
-	"RWTfyQTP3R7VzZggYY7dzuCbuCQWqTiGCqOvWRRAMVEiw0eSxHMVBBE5", // PMM 2.6
-	"RWRxgu1w3alvJsQf+sHVUYiF6guAdEsBWXDe8jHZuB9dXVE9b5vw7ONM", // PMM 2.12
-	"RWTHhufOlJ38dWt+DrprOg702YvZgqQJsx1XKfzF+MaB/pe9eCJgKkiF", // PMM 2.17
-}
-
 // Service is responsible for interactions with Percona Check service.
 type Service struct {
 	agentsRegistry      agentsRegistry
@@ -136,7 +130,7 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 
 		l:               l,
 		host:            host,
-		publicKeys:      defaultPublicKeys,
+		publicKeys:      signatures.DefaultPublicKeys,
 		startDelay:      defaultStartDelay,
 		resendInterval:  defaultResendInterval,
 		localChecksFile: os.Getenv(envCheckFile),

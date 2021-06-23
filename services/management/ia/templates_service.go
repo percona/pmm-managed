@@ -52,12 +52,6 @@ const (
 	envPublicKey = "PERCONA_TEST_CHECKS_PUBLIC_KEY"
 )
 
-var defaultPublicKeys = []string{
-	"RWTfyQTP3R7VzZggYY7dzuCbuCQWqTiGCqOvWRRAMVEiw0eSxHMVBBE5", // PMM 2.6
-	"RWRxgu1w3alvJsQf+sHVUYiF6guAdEsBWXDe8jHZuB9dXVE9b5vw7ONM", // PMM 2.12
-	"RWTHhufOlJ38dWt+DrprOg702YvZgqQJsx1XKfzF+MaB/pe9eCJgKkiF", // PMM 2.17
-}
-
 // templateInfo represents alerting rule template information from various sources.
 //
 // TODO We already have models.Template, iav1beta1.Template, and alert.Template.
@@ -100,7 +94,7 @@ func NewTemplatesService(db *reform.DB) (*TemplatesService, error) {
 		db:                db,
 		l:                 l,
 		userTemplatesPath: templatesDir,
-		publicKeys:        defaultPublicKeys,
+		publicKeys:        signatures.DefaultPublicKeys,
 		host:              host,
 		templates:         make(map[string]templateInfo),
 	}
