@@ -43,6 +43,7 @@ func TestService(t *testing.T) {
 		CronExpression: cronExpr,
 		Retry:          retries,
 		RetryInterval:  retryInterval,
+		StartAt:        startAt,
 	})
 	assert.NoError(t, err)
 

@@ -2,7 +2,8 @@ package scheduler
 
 import (
 	"context"
-	"fmt"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/percona/pmm-managed/models"
 )
@@ -29,29 +30,30 @@ func (c *common) SetID(id string) {
 	c.id = id
 }
 
-type printTask struct {
+// PrintTask implements Task for logging mesage.
+type PrintTask struct {
 	*common
 	Message string
 }
 
 // NewPrintTask creates new task which prints message.
-func NewPrintTask(message string) *printTask {
-	return &printTask{
+func NewPrintTask(message string) *PrintTask {
+	return &PrintTask{
 		common:  &common{},
 		Message: message,
 	}
 }
 
-func (j *printTask) Run(ctx context.Context) error {
-	fmt.Println(j.Message)
+func (j *PrintTask) Run(ctx context.Context) error {
+	logrus.Info(j.Message)
 	return nil
 }
 
-func (j *printTask) Type() models.ScheduledTaskType {
+func (j *PrintTask) Type() models.ScheduledTaskType {
 	return models.ScheduledPrintTask
 }
 
-func (j *printTask) Data() models.ScheduledTaskData {
+func (j *PrintTask) Data() models.ScheduledTaskData {
 	return models.ScheduledTaskData{
 		Print: &models.PrintTaskData{
 			Message: j.Message,

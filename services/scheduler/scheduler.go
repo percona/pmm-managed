@@ -207,8 +207,8 @@ func (s *Service) loadFromDB() error {
 		if _, err := j.Tag(dbTask.ID).Do(fn); err != nil {
 			return err
 		}
-
 	}
+
 	return nil
 }
 func (s *Service) wrapTask(task Task, id string, retry int, retryInterval time.Duration) func() {
