@@ -530,6 +530,7 @@ var databaseSchema = [][]string{
 			succeeded INTEGER,
 			failed INTEGER,
 			running BOOLEAN,
+			error VARCHAR,
 
 			created_at TIMESTAMP NOT NULL,
 			updated_at TIMESTAMP NOT NULL,

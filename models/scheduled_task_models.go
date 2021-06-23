@@ -47,6 +47,7 @@ type ScheduledTask struct {
 	Succeeded      uint               `reform:"succeeded"`
 	Failed         uint               `reform:"failed"`
 	Running        bool               `reform:"running"`
+	Error          string             `reform:"error"`
 	CreatedAt      time.Time          `reform:"created_at"`
 	UpdatedAt      time.Time          `reform:"updated_at"`
 }

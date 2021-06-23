@@ -286,16 +286,18 @@ func (s *Service) taskFinished(id string, taskErr error) {
 		return
 	}
 
-	if taskErr == nil {
-		dbTask.Succeeded++
-	} else {
-		dbTask.Failed++
-	}
-
 	params := models.ChangeScheduledTaskParams{
 		Succeeded: pointer.ToUint(dbTask.Succeeded),
 		Failed:    pointer.ToUint(dbTask.Failed),
 		Running:   pointer.ToBool(false),
+	}
+
+	if taskErr == nil {
+		params.Succeeded = pointer.ToUint(dbTask.Succeeded + 1)
+		params.Error = pointer.ToString("")
+	} else {
+		params.Failed = pointer.ToUint(dbTask.Failed + 1)
+		params.Error = pointer.ToString(taskErr.Error())
 	}
 
 	if job != nil {
