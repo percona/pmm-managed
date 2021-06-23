@@ -66,28 +66,20 @@ type PrintTaskData struct {
 	Message string
 }
 
-// BackupRetryData holds common data for backup retrying.
-type BackupRetryData struct {
-	Retries  uint          `json:"retries"`
-	Interval time.Duration `json:"interval"`
-}
-
 // MySQLBackupTaskData holds data for mysql backup task.
 type MySQLBackupTaskData struct {
-	Retry       BackupRetryData `json:"retry"`
-	ServiceID   string          `json:"serviceID"`
-	LocationID  string          `json:"locationID"`
-	Name        string          `json:"name"`
-	Description string          `json:"description"`
+	ServiceID   string `json:"serviceID"`
+	LocationID  string `json:"locationID"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
 }
 
 // MongoBackupTaskData holds data for mysql backup task.
 type MongoBackupTaskData struct {
-	Retry       BackupRetryData `json:"retry"`
-	ServiceID   string          `json:"serviceID"`
-	LocationID  string          `json:"locationID"`
-	Name        string          `json:"name"`
-	Description string          `json:"description"`
+	ServiceID   string `json:"serviceID"`
+	LocationID  string `json:"locationID"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
 }
 
 // Value implements database/sql/driver.Valuer interface. Should be defined on the value.

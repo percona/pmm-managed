@@ -23,11 +23,12 @@ import (
 
 	"github.com/percona/pmm-managed/services/scheduler"
 
-	"github.com/golang/protobuf/ptypes"
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -94,16 +95,13 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 		if err != nil {
 			return err
 		}
-		retry := scheduler.BackupRetryData{
-			Retries:  uint(req.RetryTimes),
-			Interval: req.RetryInterval.AsDuration(),
-		}
+
 		var task scheduler.Task
 		switch svc.ServiceType {
 		case models.MySQLServiceType:
-			task = scheduler.NewMySQLBackupTask(s.backupsLogicService, req.ServiceId, req.LocationId, req.Name, req.Description, retry)
+			task = scheduler.NewMySQLBackupTask(s.backupsLogicService, req.ServiceId, req.LocationId, req.Name, req.Description)
 		case models.MongoDBServiceType:
-			task = scheduler.NewMongoBackupTask(s.backupsLogicService, req.ServiceId, req.LocationId, req.Name, req.Description, retry)
+			task = scheduler.NewMongoBackupTask(s.backupsLogicService, req.ServiceId, req.LocationId, req.Name, req.Description)
 		case models.PostgreSQLServiceType,
 			models.ProxySQLServiceType,
 			models.HAProxyServiceType,
@@ -207,12 +205,6 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 		if req.Description != nil {
 			data.Description = req.Description.Value
 		}
-		if req.RetryTimes != nil {
-			data.Retry.Retries = uint(req.RetryTimes.Value)
-		}
-		if req.RetryInterval != nil {
-			data.Retry.Interval = req.RetryInterval.AsDuration()
-		}
 	case models.ScheduledMongoBackupTask:
 		data := scheduledTask.Data.MongoBackupTask
 		if req.Name != nil {
@@ -220,12 +212,6 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 		}
 		if req.Description != nil {
 			data.Description = req.Description.Value
-		}
-		if req.RetryTimes != nil {
-			data.Retry.Retries = uint(req.RetryTimes.Value)
-		}
-		if req.RetryInterval != nil {
-			data.Retry.Interval = req.RetryInterval.AsDuration()
 		}
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "Unsupported type: %s", scheduledTask.Type)
@@ -277,35 +263,19 @@ func convertTaskToScheduledBackup(task *models.ScheduledTask,
 	backup := &backupv1beta1.ScheduledBackup{
 		ScheduledBackupId: task.ID,
 		CronExpression:    task.CronExpression,
-		RetryMode:         backupv1beta1.RetryMode_MANUAL,
-		RetryInterval:     ptypes.DurationProto(task.RetryInterval),
-		RetryTimes:        uint32(task.Retries),
 		Enabled:           !task.Disabled,
 	}
-	if task.Retries > 0 {
-		backup.RetryMode = backupv1beta1.RetryMode_AUTO
-	}
 
-	var err error
 	if !task.LastRun.IsZero() {
-		backup.LastRun, err = ptypes.TimestampProto(task.LastRun)
-		if err != nil {
-			return nil, err
-		}
+		backup.LastRun = timestamppb.New(task.LastRun)
 	}
 
 	if !task.NextRun.IsZero() {
-		backup.NextRun, err = ptypes.TimestampProto(task.NextRun)
-		if err != nil {
-			return nil, err
-		}
+		backup.NextRun = timestamppb.New(task.NextRun)
 	}
 
 	if !task.StartAt.IsZero() {
-		backup.StartTime, err = ptypes.TimestampProto(task.StartAt)
-		if err != nil {
-			return nil, err
-		}
+		backup.StartTime = timestamppb.New(task.StartAt)
 	}
 
 	switch task.Type {
