@@ -254,16 +254,17 @@ func (s *Service) wrapTask(task Task, id string) func() {
 		}
 
 		taskErr := task.Run(ctx)
-		l.WithField("duration", time.Since(t)).Debug("Ended task")
-		if err != nil {
-			l.Error(err)
+		if taskErr != nil {
+			l.Error(taskErr)
 		}
+		l.WithField("duration", time.Since(t)).Debug("Ended task")
+
 		_, err = models.ChangeScheduledTask(s.db.Querier, id, models.ChangeScheduledTaskParams{
 			Running: pointer.ToBool(false),
 		})
 
 		if err != nil {
-			l.Errorf("failed to change retries remaining: %v", err)
+			l.Errorf("failed to change running status: %v", err)
 		}
 
 		s.taskFinished(id, taskErr)
@@ -318,6 +319,7 @@ func (s *Service) convertDBTask(dbTask *models.ScheduledTask) (Task, error) {
 	default:
 		return task, fmt.Errorf("unknown task type: %s", dbTask.Type)
 	}
+
 	task.SetID(dbTask.ID)
 	return task, nil
 }
