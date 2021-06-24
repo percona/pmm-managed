@@ -325,7 +325,8 @@ func TestBackupLocations(t *testing.T) {
 		require.NoError(t, err)
 
 		err = models.RemoveBackupLocation(q, loc.ID, models.RemoveRestrict)
-		require.EqualError(t, err, fmt.Sprintf("rpc error: code = FailedPrecondition desc = backup location with ID \"%s\" has artifacts or restore history items.", loc.ID))
+		require.EqualError(t, err, fmt.Sprintf("rpc error: code = FailedPrecondition desc = " +
+			"backup location with ID \"%s\" has artifacts or restore history items.", loc.ID))
 
 		err = models.RemoveBackupLocation(q, loc.ID, models.RemoveCascade)
 		require.NoError(t, err)
