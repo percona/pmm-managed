@@ -152,6 +152,32 @@ func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsPara
 }
 
 func (c *VersionServiceClient) IsOperatorVersionSupported(ctx context.Context, operatorType string, pmmVersion string, operatorVersion string) (bool, error) {
+	pmm, err := goversion.NewVersion(pmmVersion)
+	if err != nil {
+		return false, err
+	}
+	resp, err := c.Matrix(ctx, componentsParams{operator: "pmm-server", operatorVersion: pmm.Core().String()})
+	if err != nil {
+		return false, err
+	}
+	if len(resp.Versions) == 0 {
+		return false, nil
+	}
+	var operator map[string]componentVersion
+	switch operatorType {
+	case pxcOperator:
+		operator = resp.Versions[0].Matrix.PXCOperator
+	case psmdbOperator:
+		operator = resp.Versions[0].Matrix.PSMDBOperator
+	default:
+		return false, errors.Errorf("%q is an unknown operator type")
+	}
+
+	for version, _ := range operator {
+		if version == operatorVersion {
+			return true, nil
+		}
+	}
 	return false, nil
 }
 

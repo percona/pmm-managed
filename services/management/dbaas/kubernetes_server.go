@@ -67,7 +67,7 @@ func (k kubernetesServer) convertOperatorStatus(ctx context.Context, inputOperat
 	case dbaascontrollerv1beta1.OperatorsStatus_OPERATORS_STATUS_NOT_INSTALLED:
 		outputOperator.Status = dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_NOT_INSTALLED
 	case dbaascontrollerv1beta1.OperatorsStatus_OPERATORS_STATUS_OK:
-		supported, err := k.versionService.IsOperatorVersionSupported(ctx, pmmversion.PMMVersion, pxcOperator, inputOperator.Version)
+		supported, err := k.versionService.IsOperatorVersionSupported(ctx, pxcOperator, pmmversion.PMMVersion, inputOperator.Version)
 		if err != nil {
 			return err
 		}
@@ -148,23 +148,27 @@ func (k kubernetesServer) RegisterKubernetesCluster(ctx context.Context, req *db
 		return nil, err
 	}
 
-	_, err = k.dbaasClient.InstallXtraDBOperator(ctx, &dbaascontrollerv1beta1.InstallXtraDBOperatorRequest{
-		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
-			Kubeconfig: req.KubeAuth.Kubeconfig,
-		},
-		Version: pxcOperatorVersion.String(),
-	})
-	if err != nil {
-		return nil, err
+	if pxcOperatorVersion != nil {
+		_, err = k.dbaasClient.InstallXtraDBOperator(ctx, &dbaascontrollerv1beta1.InstallXtraDBOperatorRequest{
+			KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
+				Kubeconfig: req.KubeAuth.Kubeconfig,
+			},
+			Version: pxcOperatorVersion.String(),
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
-	_, err = k.dbaasClient.InstallPSMDBOperator(ctx, &dbaascontrollerv1beta1.InstallPSMDBOperatorRequest{
-		KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
-			Kubeconfig: req.KubeAuth.Kubeconfig,
-		},
-		Version: psmdbOperatorVersion.String(),
-	})
-	if err != nil {
-		return nil, err
+	if psmdbOperatorVersion != nil {
+		_, err = k.dbaasClient.InstallPSMDBOperator(ctx, &dbaascontrollerv1beta1.InstallPSMDBOperatorRequest{
+			KubeAuth: &dbaascontrollerv1beta1.KubeAuth{
+				Kubeconfig: req.KubeAuth.Kubeconfig,
+			},
+			Version: psmdbOperatorVersion.String(),
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &dbaasv1beta1.RegisterKubernetesClusterResponse{}, nil
