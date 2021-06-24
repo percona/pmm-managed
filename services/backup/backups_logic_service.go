@@ -28,7 +28,7 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-// BackupsLogicService represents core logic for backuping.
+// BackupsLogicService represents core logic for db backup.
 type BackupsLogicService struct {
 	db          *reform.DB
 	jobsService jobsService

@@ -18,55 +18,15 @@ package backup
 
 import (
 	"context"
-	"time"
 
 	"github.com/percona/pmm-managed/services/scheduler"
 
 	"github.com/percona/pmm-managed/models"
 )
 
-//go:generate mockery -name=jobsService -case=snake -inpkg -testonly
 //go:generate mockery -name=awsS3 -case=snake -inpkg -testonly
 //go:generate mockery -name=backupsLogicService -case=snake -inpkg -testonly
 //go:generate mockery -name=scheduleService -case=snake -inpkg -testonly
-
-// jobsService is a subset of methods of agents.JobsService used by this package.
-// We use it instead of real type for testing and to avoid dependency cycle.
-type jobsService interface {
-	StopJob(jobID string) error
-	StartMySQLBackupJob(
-		jobID string,
-		pmmAgentID string,
-		timeout time.Duration,
-		name string,
-		dbConfig *models.DBConfig,
-		locationConfig *models.BackupLocationConfig,
-	) error
-	StartMySQLRestoreBackupJob(
-		jobID string,
-		pmmAgentID string,
-		serviceID string,
-		timeout time.Duration,
-		name string,
-		locationConfig *models.BackupLocationConfig,
-	) error
-	StartMongoDBBackupJob(
-		jobID string,
-		pmmAgentID string,
-		timeout time.Duration,
-		name string,
-		dbConfig *models.DBConfig,
-		locationConfig *models.BackupLocationConfig,
-	) error
-	StartMongoDBRestoreBackupJob(
-		jobID string,
-		pmmAgentID string,
-		timeout time.Duration,
-		name string,
-		dbConfig *models.DBConfig,
-		locationConfig *models.BackupLocationConfig,
-	) error
-}
 
 type awsS3 interface {
 	GetBucketLocation(ctx context.Context, host string, accessKey, secretKey, name string) (string, error)

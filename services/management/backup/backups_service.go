@@ -38,17 +38,15 @@ import (
 type BackupsService struct {
 	db                  *reform.DB
 	backupsLogicService backupsLogicService
-	jobsService         jobsService
 	scheduleService     scheduleService
 	l                   *logrus.Entry
 }
 
 // NewBackupsService creates new backups API service.
-func NewBackupsService(db *reform.DB, jobsService jobsService, backupsLogicService backupsLogicService, scheduleService scheduleService) *BackupsService {
+func NewBackupsService(db *reform.DB, backupsLogicService backupsLogicService, scheduleService scheduleService) *BackupsService {
 	return &BackupsService{
 		l:                   logrus.WithField("component", "management/backup/backups"),
 		db:                  db,
-		jobsService:         jobsService,
 		backupsLogicService: backupsLogicService,
 		scheduleService:     scheduleService,
 	}

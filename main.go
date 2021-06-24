@@ -68,6 +68,7 @@ import (
 	"github.com/percona/pmm-managed/services/agents"
 	agentgrpc "github.com/percona/pmm-managed/services/agents/grpc"
 	"github.com/percona/pmm-managed/services/alertmanager"
+	backupLogic "github.com/percona/pmm-managed/services/backup"
 	"github.com/percona/pmm-managed/services/checks"
 	"github.com/percona/pmm-managed/services/dbaas"
 	"github.com/percona/pmm-managed/services/grafana"
@@ -140,7 +141,7 @@ type gRPCServerDeps struct {
 	jobsService          *agents.JobsService
 	versionServiceClient *managementdbaas.VersionServiceClient
 	schedulerService     *scheduler.Service
-	backupsLogicService  *backup.BackupsLogicService
+	backupsLogicService  *backupLogic.BackupsLogicService
 	minio                *minio.Service
 }
 
@@ -204,7 +205,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	iav1beta1.RegisterRulesServer(gRPCServer, deps.rulesService)
 	iav1beta1.RegisterAlertsServer(gRPCServer, deps.alertsService)
 
-	backupv1beta1.RegisterBackupsServer(gRPCServer, backup.NewBackupsService(deps.db, deps.jobsService, deps.backupsLogicService, deps.schedulerService))
+	backupv1beta1.RegisterBackupsServer(gRPCServer, backup.NewBackupsService(deps.db, deps.backupsLogicService, deps.schedulerService))
 	backupv1beta1.RegisterLocationsServer(gRPCServer, backup.NewLocationsService(deps.db, deps.minio))
 	backupv1beta1.RegisterArtifactsServer(gRPCServer, backup.NewArtifactsService(deps.db))
 	backupv1beta1.RegisterRestoreHistoryServer(gRPCServer, backup.NewRestoreHistoryService(deps.db))
@@ -642,7 +643,7 @@ func main() {
 	versionService := managementdbaas.NewVersionServiceClient(*versionServiceAPIURLF)
 
 	dbaasClient := dbaas.NewClient(*dbaasControllerAPIAddrF)
-	backupsLogicService := backup.NewBackupsLogicService(db, jobsService)
+	backupsLogicService := backupLogic.NewBackupsLogicService(db, jobsService)
 	schedulerService := scheduler.New(db, backupsLogicService)
 
 	serverParams := &server.Params{

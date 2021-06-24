@@ -1,19 +1,3 @@
-// pmm-managed
-// Copyright (C) 2017 Percona LLC
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
-
 package backup
 
 import (
@@ -21,25 +5,21 @@ import (
 	"testing"
 	"time"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/durationpb"
-	"google.golang.org/protobuf/types/known/timestamppb"
-	"google.golang.org/protobuf/types/known/wrapperspb"
-
-	"github.com/percona/pmm-managed/services/scheduler"
-	"github.com/percona/pmm-managed/utils/tests"
-
 	"github.com/AlekSi/pointer"
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/scheduler"
 	"github.com/percona/pmm-managed/utils/testdb"
+	"github.com/percona/pmm-managed/utils/tests"
 )
 
 func setup(t *testing.T, q *reform.Querier, serviceName string) *models.Agent {
@@ -71,65 +51,13 @@ func setup(t *testing.T, q *reform.Querier, serviceName string) *models.Agent {
 	return agent
 }
 
-func TestStartBackup(t *testing.T) {
-	ctx := context.Background()
-	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
-	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-	mockedJobsService := &mockJobsService{}
-	mockedJobsService.On("StartMySQLBackupJob", mock.Anything, mock.Anything, mock.Anything,
-		mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	backupLogicService := NewBackupsLogicService(db, mockedJobsService)
-	schedulerService := &mockScheduleService{}
-	backupSvc := NewBackupsService(db, mockedJobsService, backupLogicService, schedulerService)
-
-	tx, err := db.Begin()
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		_ = tx.Rollback()
-		_ = sqlDB.Close()
-	})
-
-	agent := setup(t, tx.Querier, "test-service")
-	locationRes, err := models.CreateBackupLocation(db.Querier, models.CreateBackupLocationParams{
-		Name:        "Test location",
-		Description: "Test description",
-		BackupLocationConfig: models.BackupLocationConfig{
-			S3Config: &models.S3LocationConfig{
-				Endpoint:     "https://s3.us-west-2.amazonaws.com/",
-				AccessKey:    "access_key",
-				SecretKey:    "secret_key",
-				BucketName:   "example_bucket",
-				BucketRegion: "us-east-2",
-			},
-		},
-	})
-	require.NoError(t, err)
-
-	backupRes, err := backupSvc.StartBackup(ctx, &backupv1beta1.StartBackupRequest{
-		ServiceId:  pointer.GetString(agent.ServiceID),
-		LocationId: locationRes.ID,
-		Name:       "Test backup",
-	})
-
-	assert.NoError(t, err)
-	var artifact models.Artifact
-	err = db.SelectOneTo(&artifact, "WHERE id = $1", backupRes.ArtifactId)
-	assert.NoError(t, err)
-	assert.Equal(t, locationRes.ID, artifact.LocationID)
-	assert.Equal(t, *agent.ServiceID, artifact.ServiceID)
-	assert.EqualValues(t, models.MySQLServiceType, artifact.Vendor)
-}
-
 func TestScheduledBackups(t *testing.T) {
 	ctx := context.Background()
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-	mockedJobsService := &mockJobsService{}
-	backupLogicService := NewBackupsLogicService(db, mockedJobsService)
+	backupLogicService := &mockBackupsLogicService{}
 	schedulerService := scheduler.New(db, backupLogicService)
-	backupSvc := NewBackupsService(db, mockedJobsService, backupLogicService, schedulerService)
-
+	backupSvc := NewBackupsService(db, backupLogicService, schedulerService)
 	t.Cleanup(func() {
 		_ = sqlDB.Close()
 	})
@@ -158,7 +86,6 @@ func TestScheduledBackups(t *testing.T) {
 			StartTime:      timestamppb.New(time.Now()),
 			Name:           t.Name(),
 			Description:    t.Name(),
-			RetryMode:      0,
 			Enabled:        true,
 		}
 		res, err := backupSvc.ScheduleBackup(ctx, req)
@@ -183,9 +110,6 @@ func TestScheduledBackups(t *testing.T) {
 			StartTime:         timestamppb.New(time.Now()),
 			Name:              wrapperspb.String("test"),
 			Description:       wrapperspb.String("test"),
-			RetryMode:         backupv1beta1.RetryMode_AUTO,
-			RetryInterval:     durationpb.New(time.Second),
-			RetryTimes:        wrapperspb.UInt32(3),
 		}
 		_, err = backupSvc.ChangeScheduledBackup(ctx, changeReq)
 
@@ -197,8 +121,6 @@ func TestScheduledBackups(t *testing.T) {
 		assert.Equal(t, changeReq.Enabled.GetValue(), !task.Disabled)
 		assert.Equal(t, changeReq.Name.GetValue(), data.Name)
 		assert.Equal(t, changeReq.Description.GetValue(), data.Description)
-		assert.Equal(t, changeReq.RetryInterval.AsDuration(), task.RetryInterval)
-		assert.Equal(t, changeReq.RetryTimes.Value, uint32(task.Retries))
 	})
 
 	t.Run("list", func(t *testing.T) {
