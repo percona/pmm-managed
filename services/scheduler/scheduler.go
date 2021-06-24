@@ -322,7 +322,7 @@ func (s *Service) convertDBTask(dbTask *models.ScheduledTask) (Task, error) {
 	case models.ScheduledMySQLBackupTask:
 		data := dbTask.Data.MySQLBackupTask
 		task = NewMySQLBackupTask(s.backupsLogicService, data.ServiceID, data.LocationID, data.Name, data.Description)
-	case models.ScheduledMongoBackupTask:
+	case models.ScheduledMongoDBBackupTask:
 		data := dbTask.Data.MySQLBackupTask
 		task = NewMongoBackupTask(s.backupsLogicService, data.ServiceID, data.LocationID, data.Name, data.Description)
 	default:

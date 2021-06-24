@@ -149,12 +149,12 @@ func (t *mongoBackupTask) Run(ctx context.Context) error {
 }
 
 func (t *mongoBackupTask) Type() models.ScheduledTaskType {
-	return models.ScheduledMongoBackupTask
+	return models.ScheduledMongoDBBackupTask
 }
 
 func (t *mongoBackupTask) Data() models.ScheduledTaskData {
 	return models.ScheduledTaskData{
-		MongoBackupTask: &models.MongoBackupTaskData{
+		MongoDBBackupTask: &models.MongoBackupTaskData{
 			ServiceID:   t.ServiceID,
 			LocationID:  t.LocationID,
 			Name:        t.Name,

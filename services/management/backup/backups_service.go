@@ -139,7 +139,7 @@ func (s *BackupsService) ListScheduledBackups(ctx context.Context, req *backupv1
 	tasks, err := models.FindScheduledTasks(s.db.Querier, models.ScheduledTasksFilter{
 		Types: []models.ScheduledTaskType{
 			models.ScheduledMySQLBackupTask,
-			models.ScheduledMongoBackupTask,
+			models.ScheduledMongoDBBackupTask,
 		},
 	})
 	if err != nil {
@@ -155,9 +155,9 @@ func (s *BackupsService) ListScheduledBackups(ctx context.Context, req *backupv1
 		case models.ScheduledMySQLBackupTask:
 			serviceID = t.Data.MySQLBackupTask.ServiceID
 			locationID = t.Data.MySQLBackupTask.LocationID
-		case models.ScheduledMongoBackupTask:
-			serviceID = t.Data.MongoBackupTask.ServiceID
-			locationID = t.Data.MongoBackupTask.LocationID
+		case models.ScheduledMongoDBBackupTask:
+			serviceID = t.Data.MongoDBBackupTask.ServiceID
+			locationID = t.Data.MongoDBBackupTask.LocationID
 		default:
 			continue
 		}
@@ -205,8 +205,8 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 		if req.Description != nil {
 			data.Description = req.Description.Value
 		}
-	case models.ScheduledMongoBackupTask:
-		data := scheduledTask.Data.MongoBackupTask
+	case models.ScheduledMongoDBBackupTask:
+		data := scheduledTask.Data.MongoDBBackupTask
 		if req.Name != nil {
 			data.Name = req.Name.Value
 		}
@@ -286,8 +286,8 @@ func convertTaskToScheduledBackup(task *models.ScheduledTask,
 		backup.Name = data.Name
 		backup.Description = data.Description
 		backup.DataModel = backupv1beta1.DataModel_PHYSICAL
-	case models.ScheduledMongoBackupTask:
-		data := task.Data.MongoBackupTask
+	case models.ScheduledMongoDBBackupTask:
+		data := task.Data.MongoDBBackupTask
 		backup.ServiceId = data.ServiceID
 		backup.LocationId = data.LocationID
 		backup.Name = data.Name

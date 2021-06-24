@@ -30,9 +30,9 @@ type ScheduledTaskType string
 
 // Supported scheduled task types.
 const (
-	ScheduledPrintTask       = ScheduledTaskType("print")
-	ScheduledMySQLBackupTask = ScheduledTaskType("mysql_backup")
-	ScheduledMongoBackupTask = ScheduledTaskType("mongo_backup")
+	ScheduledPrintTask         = ScheduledTaskType("print")
+	ScheduledMySQLBackupTask   = ScheduledTaskType("mysql_backup")
+	ScheduledMongoDBBackupTask = ScheduledTaskType("mongodb_backup")
 )
 
 // ScheduledTask describes a scheduled task.
@@ -56,9 +56,9 @@ type ScheduledTask struct {
 
 // ScheduledTaskData holds result data for different task types.
 type ScheduledTaskData struct {
-	Print           *PrintTaskData       `json:"print,omitempty"`
-	MySQLBackupTask *MySQLBackupTaskData `json:"mySQLBackup,omitempty"`
-	MongoBackupTask *MongoBackupTaskData `json:"mongoBackup,omitempty"`
+	Print             *PrintTaskData       `json:"print,omitempty"`
+	MySQLBackupTask   *MySQLBackupTaskData `json:"mysql_backup,omitempty"`
+	MongoDBBackupTask *MongoBackupTaskData `json:"mongodb_backup,omitempty"`
 }
 
 // PrintTaskData holds data for print task.
@@ -68,16 +68,16 @@ type PrintTaskData struct {
 
 // MySQLBackupTaskData holds data for mysql backup task.
 type MySQLBackupTaskData struct {
-	ServiceID   string `json:"serviceID"`
-	LocationID  string `json:"locationID"`
+	ServiceID   string `json:"service_id"`
+	LocationID  string `json:"location_id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
 }
 
 // MongoBackupTaskData holds data for mysql backup task.
 type MongoBackupTaskData struct {
-	ServiceID   string `json:"serviceID"`
-	LocationID  string `json:"locationID"`
+	ServiceID   string `json:"service_id"`
+	LocationID  string `json:"location_id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
 }

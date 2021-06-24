@@ -108,7 +108,7 @@ func (p CreateScheduledTaskParams) Validate() error {
 	switch p.Type {
 	case ScheduledPrintTask:
 	case ScheduledMySQLBackupTask:
-	case ScheduledMongoBackupTask:
+	case ScheduledMongoDBBackupTask:
 	default:
 		return status.Errorf(codes.InvalidArgument, "Unknown type: %s", p.Type)
 	}
