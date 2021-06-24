@@ -151,6 +151,18 @@ func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsPara
 	return &vsResponse, nil
 }
 
+func (c *VersionServiceClient) IsDatabaseVersionSupportedByOperator(ctx context.Context, operatorType, operatorVersion, databaseVersion string) (bool, error) {
+	m, err := c.Matrix(ctx, componentsParams{
+		operator:        operatorType,
+		operatorVersion: operatorVersion,
+		dbVersion:       databaseVersion,
+	})
+	if err != nil {
+		return false, err
+	}
+	return len(m.Versions) != 0, nil
+}
+
 func (c *VersionServiceClient) IsOperatorVersionSupported(ctx context.Context, operatorType string, pmmVersion string, operatorVersion string) (bool, error) {
 	pmm, err := goversion.NewVersion(pmmVersion)
 	if err != nil {
