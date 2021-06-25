@@ -334,6 +334,9 @@ func (c componentsService) InstallOperator(ctx context.Context, req *dbaasv1beta
 
 	// Just check the version we are asked to update to is present in version service.
 	resp, err := c.versionServiceClient.Matrix(ctx, componentsParams{operator: "pmm-server", operatorVersion: pmmVersion})
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 	if len(resp.Versions) == 0 {
 		return nil, errors.Errorf("failed to validate operator version")
 	}
@@ -364,7 +367,7 @@ func (c componentsService) InstallOperator(ctx context.Context, req *dbaasv1beta
 		component = kubernetesCluster.Mongod
 	default:
 		return &dbaasv1beta1.InstallOperatorResponse{Status: dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_NOT_INSTALLED},
-			errors.Errorf("%q is not supported operator")
+			errors.Errorf("%q is not supported operator", req.OperatorType)
 	}
 	if err != nil {
 		return &dbaasv1beta1.InstallOperatorResponse{Status: dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_NOT_INSTALLED},

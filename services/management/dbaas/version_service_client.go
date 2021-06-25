@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"strings"
@@ -182,7 +183,7 @@ func (c *VersionServiceClient) IsOperatorVersionSupported(ctx context.Context, o
 	case psmdbOperator:
 		operator = resp.Versions[0].Matrix.PSMDBOperator
 	default:
-		return false, errors.Errorf("%q is an unknown operator type")
+		return false, errors.Errorf("%q is an unknown operator type", operatorType)
 	}
 
 	for version, _ := range operator {

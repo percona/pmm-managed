@@ -26,6 +26,7 @@ import (
 	goversion "github.com/hashicorp/go-version"
 	controllerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
+	pmmversion "github.com/percona/pmm/version"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -501,4 +502,138 @@ func TestFilteringOutOfUnsupportedVersions(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestInstallOperator(t *testing.T) {
+	pmmversion.PMMVersion = "2.19.0"
+	const (
+		onePointEight       = "1.8.0"
+		defaultPXCVersion   = "5.7.26-31.37"
+		latestPXCVersion    = "8.0.0"
+		defaultPSMDBVersion = "3.6.18-5.0"
+		latestPSMDBVersion  = "4.5.0"
+		port                = "5497"
+		clusterName         = "installoperator"
+	)
+	setup := func(t *testing.T, clusterName string, response *VersionServiceResponse, port, defaultPXC, defaultPSMDB string) (*reform.Querier, dbaasv1beta1.ComponentsServer, *mockDbaasClient) {
+		t.Helper()
+
+		uuid.SetRand(new(tests.IDReader))
+
+		sqlDB := testdb.Open(t, models.SetupFixtures, nil)
+		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+		dbaasClient := new(mockDbaasClient)
+
+		kubernetesCluster, err := models.CreateKubernetesCluster(db.Querier, &models.CreateKubernetesClusterParams{
+			KubernetesClusterName: clusterName,
+			KubeConfig:            "{}",
+		})
+		require.NoError(t, err)
+		kubernetesCluster.Mongod = &models.Component{
+			DefaultVersion: defaultPSMDB,
+		}
+		kubernetesCluster.PXC = &models.Component{
+			DefaultVersion: defaultPXC,
+		}
+		require.NoError(t, db.Save(kubernetesCluster))
+
+		vsc, cleanup := newFakeVersionService(response, port, pxcOperator, psmdbOperator, "pmm-server")
+		t.Cleanup(func() {
+			cleanup(t)
+			uuid.SetRand(nil)
+			dbaasClient.AssertExpectations(t)
+			assert.NoError(t, db.Delete(kubernetesCluster))
+			require.NoError(t, sqlDB.Close())
+		})
+
+		return db.Querier, NewComponentsService(db, dbaasClient, vsc), dbaasClient
+	}
+
+	response := &VersionServiceResponse{
+		Versions: []struct {
+			Product  string `json:"product"`
+			Operator string `json:"operator"`
+			Matrix   matrix `json:"matrix"`
+		}{
+			{
+				Product:  pxcOperator,
+				Operator: "1.7.0",
+				Matrix: matrix{
+					Pxc: map[string]componentVersion{
+						defaultPXCVersion: componentVersion{},
+					},
+				},
+			},
+			{
+				Product:  pxcOperator,
+				Operator: onePointEight,
+				Matrix: matrix{
+					Pxc: map[string]componentVersion{
+						latestPXCVersion: componentVersion{},
+						"5.8.0":          componentVersion{},
+					},
+				},
+			},
+			{
+				Product:  psmdbOperator,
+				Operator: "1.7.0",
+				Matrix: matrix{
+					Mongod: map[string]componentVersion{
+						defaultPSMDBVersion: componentVersion{},
+					},
+				},
+			},
+			{
+				Product:  psmdbOperator,
+				Operator: onePointEight,
+				Matrix: matrix{
+					Pxc: map[string]componentVersion{
+						latestPSMDBVersion: componentVersion{},
+						"3.7.0":            componentVersion{},
+					},
+				},
+			},
+			{
+				Product:  "pmm-server",
+				Operator: "2.19.0",
+				Matrix: matrix{
+					PXCOperator: map[string]componentVersion{
+						onePointEight: componentVersion{},
+					},
+					PSMDBOperator: map[string]componentVersion{
+						onePointEight: componentVersion{},
+					},
+				},
+			},
+		},
+	}
+	db, c, dbaasClient := setup(t, clusterName, response, port, defaultPXCVersion, defaultPSMDBVersion)
+
+	dbaasClient.On("InstallXtraDBOperator", mock.Anything, mock.Anything).Return(&controllerv1beta1.InstallXtraDBOperatorResponse{}, nil)
+	dbaasClient.On("InstallPSMDBOperator", mock.Anything, mock.Anything).Return(&controllerv1beta1.InstallPSMDBOperatorResponse{}, nil)
+
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Second*5)
+	defer cancel()
+	resp, err := c.InstallOperator(ctx, &dbaasv1beta1.InstallOperatorRequest{
+		KubernetesClusterName: clusterName,
+		OperatorType:          pxcOperator,
+		Version:               onePointEight,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_OK, resp.Status)
+
+	resp, err = c.InstallOperator(ctx, &dbaasv1beta1.InstallOperatorRequest{
+		KubernetesClusterName: clusterName,
+		OperatorType:          psmdbOperator,
+		Version:               onePointEight,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_OK, resp.Status)
+
+	kubernetesCluster, err := models.FindKubernetesClusterByName(db, clusterName)
+	require.NoError(t, err)
+	assert.Equal(t, "", kubernetesCluster.Mongod.DefaultVersion)
+	assert.Equal(t, "", kubernetesCluster.PXC.DefaultVersion)
+
+	// TODO TEST THIS DOES NOT GET UNSET WHEN SUPPORTED VERSION IS A DEFAULT VERSION.
 }
