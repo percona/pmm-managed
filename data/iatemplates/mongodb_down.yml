@@ -1,0 +1,13 @@
+---
+templates:
+  - name: pmm_mongodb_down
+    version: 1
+    summary: MongoDB down
+    expr: |-
+      up{service_type="mongodb"} == 0
+    for: 5s
+    severity: critical
+    annotations:
+      summary: MongoDB down ({{ $labels.service_name }})
+      description: |-
+        MongoDB {{ $labels.service_name }} on {{ $labels.node_name }} is down.
