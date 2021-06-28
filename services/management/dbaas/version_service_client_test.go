@@ -25,8 +25,8 @@ import (
 	"strings"
 	"testing"
 
+	goversion "github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -78,14 +78,33 @@ func (f fakeLatestVersionServer) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			break
 		}
 	}
-	log.Printf("---------ServeHTTP: %q and %v         --------------", r.URL.Path, f.components)
-	log.Printf("---------ServeHTTP: component: %q, version: %v    --------------", component, certainVersionRequested)
 	if certainVersionRequested {
 		segments := strings.Split(r.URL.Path, "/")
-		version := segments[len(segments)-1]
+		version := segments[len(segments)-2]
+		var dbVersion string
+		// handle product/version/applyversion
+		if _, err := goversion.NewVersion(version); err == nil {
+			dbVersion = segments[len(segments)-1]
+		} else {
+			version = segments[len(segments)-1]
+		}
 		for _, v := range f.response.Versions {
-			log.Printf("%q == %q && %q == %q => %v", v.Operator, version, v.Product, component, v.Operator == version && v.Product == component)
 			if v.Operator == version && v.Product == component {
+				if dbVersion != "" {
+					var database map[string]componentVersion
+					switch component {
+					case pxcOperator:
+						database = v.Matrix.Pxc
+					case psmdbOperator:
+						database = v.Matrix.Mongod
+					default:
+						panic(component + " not supported")
+					}
+					if _, ok := database[dbVersion]; !ok {
+						response = nil
+						break
+					}
+				}
 				response = &VersionServiceResponse{
 					Versions: []struct {
 						Product  string `json:"product"`
@@ -106,7 +125,6 @@ func (f fakeLatestVersionServer) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	} else {
 		panic("path " + r.URL.Path + " not expected")
 	}
-	log.Printf("---------ServerHTTP returning ----------\n\t%v", response)
 	err := encoder.Encode(response)
 	if err != nil {
 		log.Fatal(err)

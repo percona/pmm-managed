@@ -72,6 +72,7 @@ type versionService interface {
 	// TODO REMOVE THIS AND REBASE
 	GetLatestOperatorVersion(context.Context, string) (*goversion.Version, *goversion.Version, error)
 	IsOperatorVersionSupported(ctx context.Context, operatorType string, pmmVersion string, operatorVersion string) (bool, error)
+	IsDatabaseVersionSupportedByOperator(ctx context.Context, operatorType, operatorVersion, databaseVersion string) (bool, error)
 }
 
 // grafanaClient is a subset of methods of grafana.Client used by this package.

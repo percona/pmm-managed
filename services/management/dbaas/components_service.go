@@ -307,8 +307,8 @@ func setComponent(kc *models.Component, rc *dbaasv1beta1.ChangeComponent) (*mode
 	return kc, nil
 }
 
-func (c componentsService) unsetDefaultVersionIfUnsupported(ctx context.Context, operatorType, pmmVersion string, component *models.Component) (bool, error) {
-	supported, err := c.versionServiceClient.IsOperatorVersionSupported(ctx, operatorType, pmmVersion, component.DefaultVersion)
+func (c componentsService) unsetDefaultVersionIfUnsupported(ctx context.Context, operatorType, operatorVersion string, component *models.Component) (bool, error) {
+	supported, err := c.versionServiceClient.IsDatabaseVersionSupportedByOperator(ctx, operatorType, operatorVersion, component.DefaultVersion)
 	if !supported {
 		if err != nil {
 			return false, err
@@ -375,7 +375,7 @@ func (c componentsService) InstallOperator(ctx context.Context, req *dbaasv1beta
 	}
 
 	// Default version of database could have become unsupported when update was installed.
-	unset, err := c.unsetDefaultVersionIfUnsupported(ctx, req.OperatorType, pmmVersion, component)
+	unset, err := c.unsetDefaultVersionIfUnsupported(ctx, req.OperatorType, req.Version, component)
 	if err != nil {
 		return &dbaasv1beta1.InstallOperatorResponse{Status: dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_OK},
 			status.Errorf(codes.Internal, "failed to unset unsupported default database version: %v", err)

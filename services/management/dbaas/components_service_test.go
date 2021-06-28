@@ -587,7 +587,7 @@ func TestInstallOperator(t *testing.T) {
 				Product:  psmdbOperator,
 				Operator: onePointEight,
 				Matrix: matrix{
-					Pxc: map[string]componentVersion{
+					Mongod: map[string]componentVersion{
 						latestPSMDBVersion: componentVersion{},
 						"3.7.0":            componentVersion{},
 					},
@@ -614,26 +614,59 @@ func TestInstallOperator(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Second*5)
 	defer cancel()
-	resp, err := c.InstallOperator(ctx, &dbaasv1beta1.InstallOperatorRequest{
-		KubernetesClusterName: clusterName,
-		OperatorType:          pxcOperator,
-		Version:               onePointEight,
+
+	t.Run("Defaults get unset", func(t *testing.T) {
+		resp, err := c.InstallOperator(ctx, &dbaasv1beta1.InstallOperatorRequest{
+			KubernetesClusterName: clusterName,
+			OperatorType:          pxcOperator,
+			Version:               onePointEight,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_OK, resp.Status)
+
+		resp, err = c.InstallOperator(ctx, &dbaasv1beta1.InstallOperatorRequest{
+			KubernetesClusterName: clusterName,
+			OperatorType:          psmdbOperator,
+			Version:               onePointEight,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_OK, resp.Status)
+
+		kubernetesCluster, err := models.FindKubernetesClusterByName(db, clusterName)
+		require.NoError(t, err)
+		assert.Equal(t, "", kubernetesCluster.Mongod.DefaultVersion)
+		assert.Equal(t, "", kubernetesCluster.PXC.DefaultVersion)
 	})
-	require.NoError(t, err)
-	assert.Equal(t, dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_OK, resp.Status)
 
-	resp, err = c.InstallOperator(ctx, &dbaasv1beta1.InstallOperatorRequest{
-		KubernetesClusterName: clusterName,
-		OperatorType:          psmdbOperator,
-		Version:               onePointEight,
+	t.Run("Defaults stay set", func(t *testing.T) {
+		response.Versions[1].Matrix.Pxc[defaultPXCVersion] = componentVersion{}
+		response.Versions[3].Matrix.Mongod[defaultPSMDBVersion] = componentVersion{}
+
+		kubernetesCluster, err := models.FindKubernetesClusterByName(db, clusterName)
+		require.NoError(t, err)
+		kubernetesCluster.Mongod.DefaultVersion = defaultPSMDBVersion
+		kubernetesCluster.PXC.DefaultVersion = defaultPXCVersion
+		require.NoError(t, db.Save(kubernetesCluster))
+
+		resp, err := c.InstallOperator(ctx, &dbaasv1beta1.InstallOperatorRequest{
+			KubernetesClusterName: clusterName,
+			OperatorType:          pxcOperator,
+			Version:               onePointEight,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_OK, resp.Status)
+
+		resp, err = c.InstallOperator(ctx, &dbaasv1beta1.InstallOperatorRequest{
+			KubernetesClusterName: clusterName,
+			OperatorType:          psmdbOperator,
+			Version:               onePointEight,
+		})
+		require.NoError(t, err)
+		assert.Equal(t, dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_OK, resp.Status)
+
+		kubernetesCluster, err = models.FindKubernetesClusterByName(db, clusterName)
+		require.NoError(t, err)
+		assert.Equal(t, defaultPSMDBVersion, kubernetesCluster.Mongod.DefaultVersion)
+		assert.Equal(t, defaultPXCVersion, kubernetesCluster.PXC.DefaultVersion)
 	})
-	require.NoError(t, err)
-	assert.Equal(t, dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_OK, resp.Status)
-
-	kubernetesCluster, err := models.FindKubernetesClusterByName(db, clusterName)
-	require.NoError(t, err)
-	assert.Equal(t, "", kubernetesCluster.Mongod.DefaultVersion)
-	assert.Equal(t, "", kubernetesCluster.PXC.DefaultVersion)
-
-	// TODO TEST THIS DOES NOT GET UNSET WHEN SUPPORTED VERSION IS A DEFAULT VERSION.
 }
