@@ -22,10 +22,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/AlekSi/pointer"
-
 	"github.com/percona/pmm-managed/models"
 
+	"github.com/AlekSi/pointer"
 	"github.com/go-co-op/gocron"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/reform.v1"
@@ -109,9 +108,11 @@ func (s *Service) Add(task Task, params AddParams) (*models.ScheduledTask, error
 			return err
 		}
 
+		nextRun := scheduleJob.NextRun().UTC()
+		lastRun := scheduleJob.LastRun().UTC()
 		scheduledTask, err = models.ChangeScheduledTask(tx.Querier, id, models.ChangeScheduledTaskParams{
-			NextRun: scheduleJob.NextRun(),
-			LastRun: scheduleJob.LastRun(),
+			NextRun: &nextRun,
+			LastRun: &lastRun,
 		})
 		if err != nil {
 			s.l.WithField("id", id).Errorf("failed to set next run for new created task")
@@ -259,14 +260,6 @@ func (s *Service) wrapTask(task Task, id string) func() {
 		}
 		l.WithField("duration", time.Since(t)).Debug("Ended task")
 
-		_, err = models.ChangeScheduledTask(s.db.Querier, id, models.ChangeScheduledTaskParams{
-			Running: pointer.ToBool(false),
-		})
-
-		if err != nil {
-			l.Errorf("failed to change running status: %v", err)
-		}
-
 		s.taskFinished(id, taskErr)
 	}
 }
@@ -287,9 +280,7 @@ func (s *Service) taskFinished(id string, taskErr error) {
 	}
 
 	params := models.ChangeScheduledTaskParams{
-		Succeeded: pointer.ToUint(dbTask.Succeeded),
-		Failed:    pointer.ToUint(dbTask.Failed),
-		Running:   pointer.ToBool(false),
+		Running: pointer.ToBool(false),
 	}
 
 	if taskErr == nil {
@@ -301,8 +292,10 @@ func (s *Service) taskFinished(id string, taskErr error) {
 	}
 
 	if job != nil {
-		params.NextRun = job.NextRun().UTC()
-		params.LastRun = job.LastRun().UTC()
+		nextRun := job.NextRun().UTC()
+		lastRun := job.LastRun().UTC()
+		params.NextRun = &nextRun
+		params.LastRun = &lastRun
 	} else {
 		l.Errorf("failed to find scheduled task: %v", err)
 	}

@@ -144,8 +144,8 @@ func CreateScheduledTask(q *reform.Querier, params CreateScheduledTaskParams) (*
 
 // ChangeScheduledTaskParams are params for updating existing schedule task.
 type ChangeScheduledTaskParams struct {
-	NextRun   time.Time
-	LastRun   time.Time
+	NextRun   *time.Time
+	LastRun   *time.Time
 	Disable   *bool
 	Succeeded *uint
 	Failed    *uint
@@ -159,8 +159,14 @@ func ChangeScheduledTask(q *reform.Querier, id string, params ChangeScheduledTas
 	if err != nil {
 		return nil, err
 	}
-	row.NextRun = params.NextRun
-	row.LastRun = params.LastRun
+
+	if params.NextRun != nil {
+		row.NextRun = *params.NextRun
+	}
+
+	if params.LastRun != nil {
+		row.LastRun = *params.LastRun
+	}
 
 	if params.Disable != nil {
 		row.Disabled = *params.Disable
