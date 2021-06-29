@@ -71,8 +71,13 @@ type versionService interface {
 	Matrix(ctx context.Context, params componentsParams) (*VersionServiceResponse, error)
 	// TODO REMOVE THIS AND REBASE
 	GetLatestOperatorVersion(context.Context, string) (*goversion.Version, *goversion.Version, error)
-	IsOperatorVersionSupported(ctx context.Context, operatorType string, pmmVersion string, operatorVersion string) (bool, error)
+	// IsDatabaseVersionSupportedByOperator returns false and err when request to version service fails. Otherwise returns boolen telling
+	// if given database version is supported by given operator version, error is nil in that case.
 	IsDatabaseVersionSupportedByOperator(ctx context.Context, operatorType, operatorVersion, databaseVersion string) (bool, error)
+	// IsOperatorVersionSupported returns true and nil if given operator version is supported in given PMM version.
+	// It returns false and error when fetching or parsing fails. False and nil when no error is encountered but
+	// version service does not have any matching versions.
+	IsOperatorVersionSupported(ctx context.Context, operatorType string, pmmVersion string, operatorVersion string) (bool, error)
 }
 
 // grafanaClient is a subset of methods of grafana.Client used by this package.

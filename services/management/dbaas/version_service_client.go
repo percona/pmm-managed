@@ -151,6 +151,8 @@ func (c *VersionServiceClient) Matrix(ctx context.Context, params componentsPara
 	return &vsResponse, nil
 }
 
+// IsDatabaseVersionSupportedByOperator returns false and err when request to version service fails. Otherwise returns boolen telling
+// if given database version is supported by given operator version, error is nil in that case.
 func (c *VersionServiceClient) IsDatabaseVersionSupportedByOperator(ctx context.Context, operatorType, operatorVersion, databaseVersion string) (bool, error) {
 	m, err := c.Matrix(ctx, componentsParams{
 		operator:        operatorType,
@@ -163,6 +165,9 @@ func (c *VersionServiceClient) IsDatabaseVersionSupportedByOperator(ctx context.
 	return len(m.Versions) != 0, nil
 }
 
+// IsOperatorVersionSupported returns true and nil if given operator version is supported in given PMM version.
+// It returns false and error when fetching or parsing fails. False and nil when no error is encountered but
+// version service does not have any matching versions.
 func (c *VersionServiceClient) IsOperatorVersionSupported(ctx context.Context, operatorType string, pmmVersion string, operatorVersion string) (bool, error) {
 	pmm, err := goversion.NewVersion(pmmVersion)
 	if err != nil {
