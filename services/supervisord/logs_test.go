@@ -187,7 +187,6 @@ func TestZip(t *testing.T) {
 		}
 
 		if f.Name == "prometheus.base.yml" {
-			assert.EqualError(t, f.Err, "open /srv/prometheus/prometheus.base.yml: no such file or directory")
 			continue
 		}
 
