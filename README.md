@@ -6,7 +6,7 @@ API tests for PMM 2.x
 
 # Setup Instructions
 
-Make sure you have Go 1.13.x installed on your systems, execute the following steps
+Make sure you have Go 1.15.x installed on your systems, execute the following steps
 to setup API-tests in your local systems.
 
 1. Run PMM Server.
@@ -42,7 +42,7 @@ where `PMM_SERVER_URL` should be pointing to pmm-server.
 If pmm-server located locally:
 
 - Use --network=host while running docker container or add both containers to the same docker network.
-- Use non-secure url if you use self generated certificate.
+- Use the insecure url if you default to a self-generated certificate.
 
 # Contributing
 
