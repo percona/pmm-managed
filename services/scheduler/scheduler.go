@@ -18,7 +18,6 @@ package scheduler
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -119,11 +118,9 @@ func (s *Service) Add(task Task, params AddParams) (*models.ScheduledTask, error
 		s.jobs[id] = scheduleJob
 		s.jobsMx.Unlock()
 
-		nextRun := scheduleJob.NextRun().UTC()
-		lastRun := scheduleJob.LastRun().UTC()
 		scheduledTask, err = models.ChangeScheduledTask(tx.Querier, id, models.ChangeScheduledTaskParams{
-			NextRun: &nextRun,
-			LastRun: &lastRun,
+			NextRun: pointer.ToTime(scheduleJob.NextRun().UTC()),
+			LastRun: pointer.ToTime(scheduleJob.LastRun().UTC()),
 		})
 		if err != nil {
 			s.l.WithField("id", id).Errorf("failed to set next run for new created task")
@@ -291,33 +288,24 @@ func (s *Service) taskFinished(id string, taskErr error) {
 	l := s.l.WithField("id", id)
 
 	txErr := s.db.InTransaction(func(tx *reform.TX) error {
-		dbTask, err := models.FindScheduledTaskByID(tx.Querier, id)
-		if err != nil {
-			return err
-		}
-
 		params := models.ChangeScheduledTaskParams{
 			Running: pointer.ToBool(false),
 		}
 
-		if taskErr == nil {
-			params.Succeeded = pointer.ToUint(dbTask.Succeeded + 1)
-			params.Error = pointer.ToString("")
-		} else {
-			params.Failed = pointer.ToUint(dbTask.Failed + 1)
+		if taskErr != nil {
 			params.Error = pointer.ToString(taskErr.Error())
+		} else {
+			params.Error = pointer.ToString("")
 		}
 
 		if job != nil {
-			nextRun := job.NextRun().UTC()
-			lastRun := job.LastRun().UTC()
-			params.NextRun = &nextRun
-			params.LastRun = &lastRun
+			params.NextRun = pointer.ToTime(job.NextRun().UTC())
+			params.LastRun = pointer.ToTime(job.LastRun().UTC())
 		} else {
-			l.Errorf("failed to find scheduled task: %v", err)
+			l.Errorf("failed to find scheduled task")
 		}
 
-		_, err = models.ChangeScheduledTask(tx.Querier, id, params)
+		_, err := models.ChangeScheduledTask(tx.Querier, id, params)
 		if err != nil {
 			return err
 		}
@@ -335,7 +323,7 @@ func (s *Service) convertDBTask(dbTask *models.ScheduledTask) (Task, error) {
 	case models.ScheduledPrintTask:
 		task = NewPrintTask(dbTask.Data.Print.Message)
 	default:
-		return task, fmt.Errorf("unknown task type: %s", dbTask.Type)
+		return task, errors.Errorf("unknown task type: %s", dbTask.Type)
 	}
 
 	task.SetID(dbTask.ID)

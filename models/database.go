@@ -527,8 +527,6 @@ var databaseSchema = [][]string{
 			next_run TIMESTAMP,
 			data JSONB,
 			disabled BOOLEAN,
-			succeeded INTEGER,
-			failed INTEGER,
 			running BOOLEAN,
 			error VARCHAR,
 
