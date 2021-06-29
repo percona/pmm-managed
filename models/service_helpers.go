@@ -279,11 +279,16 @@ func RemoveService(q *reform.Querier, id string, mode RemoveMode) error {
 		return errors.Wrap(err, "failed to select restore history items")
 	}
 
-	if len(agents) != 0 || len(artifacts) != 0 || len(restoreItems) != 0 {
+	tasks, err := FindScheduledTasks(q, ScheduledTasksFilter{ServiceID: id})
+	if err != nil {
+		return errors.Wrap(err, "failed to select scheduled tasks")
+	}
+
+	if len(agents) != 0 || len(artifacts) != 0 || len(restoreItems) != 0 || len(tasks) != 0 {
 		switch mode {
 		case RemoveRestrict:
 			return status.Errorf(codes.FailedPrecondition,
-				"Service with ID %q has agents, artifacts or restore history items.", id)
+				"Service with ID %q has agents, artifacts, restore history items or scheduled tasks.", id)
 		case RemoveCascade:
 			for _, a := range agents {
 				if _, err := RemoveAgent(q, a.AgentID, RemoveCascade); err != nil {
@@ -299,6 +304,11 @@ func RemoveService(q *reform.Querier, id string, mode RemoveMode) error {
 			}
 			for _, i := range restoreItems {
 				if err := RemoveRestoreHistoryItem(q, i.ID); err != nil {
+					return err
+				}
+			}
+			for _, t := range tasks {
+				if err := RemoveScheduledTask(q, t.ID); err != nil {
 					return err
 				}
 			}
