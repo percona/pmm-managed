@@ -22,10 +22,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/AlekSi/pointer"
-
 	"github.com/percona/pmm-managed/models"
 
+	"github.com/AlekSi/pointer"
 	"github.com/go-co-op/gocron"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/reform.v1"
@@ -38,7 +37,9 @@ type Service struct {
 	l                   *logrus.Entry
 	tasks               map[string]context.CancelFunc
 	taskMx              sync.RWMutex
-	jobsMx              sync.Mutex
+	jobs                map[string]*gocron.Job
+	jobsMx              sync.RWMutex
+	mx                  sync.Mutex
 	backupsLogicService backupsLogicService
 }
 
@@ -53,6 +54,7 @@ func New(db *reform.DB, backupsLogicService backupsLogicService) *Service {
 		tasks:               make(map[string]context.CancelFunc),
 		l:                   logrus.WithField("component", "scheduler"),
 		backupsLogicService: backupsLogicService,
+		jobs:                make(map[string]*gocron.Job),
 	}
 }
 
@@ -77,8 +79,6 @@ type AddParams struct {
 func (s *Service) Add(task Task, params AddParams) (*models.ScheduledTask, error) {
 	var scheduledTask *models.ScheduledTask
 	var err error
-	s.jobsMx.Lock()
-	defer s.jobsMx.Unlock()
 
 	err = s.db.InTransaction(func(tx *reform.TX) error {
 		scheduledTask, err = models.CreateScheduledTask(tx.Querier, models.CreateScheduledTaskParams{
@@ -102,18 +102,26 @@ func (s *Service) Add(task Task, params AddParams) (*models.ScheduledTask, error
 
 		fn := s.wrapTask(task, id)
 
+		s.mx.Lock()
 		j := s.scheduler.Cron(params.CronExpression).SingletonMode()
 		if !params.StartAt.IsZero() {
 			j = j.StartAt(params.StartAt)
 		}
 		scheduleJob, err := j.Tag(id).Do(fn)
+		s.mx.Unlock()
 		if err != nil {
 			return err
 		}
 
+		s.jobsMx.Lock()
+		s.jobs[id] = scheduleJob
+		s.jobsMx.Unlock()
+
+		nextRun := scheduleJob.NextRun().UTC()
+		lastRun := scheduleJob.LastRun().UTC()
 		scheduledTask, err = models.ChangeScheduledTask(tx.Querier, id, models.ChangeScheduledTaskParams{
-			NextRun: scheduleJob.NextRun().UTC(),
-			LastRun: scheduleJob.LastRun().UTC(),
+			NextRun: &nextRun,
+			LastRun: &lastRun,
 		})
 		if err != nil {
 			s.l.WithField("id", id).Errorf("failed to set next run for new created task")
@@ -133,13 +141,18 @@ func (s *Service) Remove(id string) error {
 	s.taskMx.RUnlock()
 
 	s.jobsMx.Lock()
-	defer s.jobsMx.Unlock()
+	delete(s.jobs, id)
+	s.jobsMx.Unlock()
 
 	err := s.db.InTransaction(func(tx *reform.TX) error {
 		if err := models.RemoveScheduledTask(tx.Querier, id); err != nil {
 			return err
 		}
+
+		s.mx.Lock()
 		_ = s.scheduler.RemoveByTag(id)
+		s.mx.Unlock()
+
 		return nil
 	})
 	if err != nil {
@@ -160,8 +173,8 @@ func (s *Service) Reload(id string) error {
 		return fmt.Errorf("task is running")
 	}
 
-	s.jobsMx.Lock()
-	defer s.jobsMx.Unlock()
+	s.mx.Lock()
+	defer s.mx.Unlock()
 
 	task, err := s.convertDBTask(dbTask)
 	if err != nil {
@@ -189,8 +202,8 @@ func (s *Service) Reload(id string) error {
 }
 
 func (s *Service) loadFromDB() error {
-	s.jobsMx.Lock()
-	defer s.jobsMx.Unlock()
+	s.mx.Lock()
+	defer s.mx.Unlock()
 
 	disabled := false
 	dbTasks, err := models.FindScheduledTasks(s.db.Querier, models.ScheduledTasksFilter{
@@ -200,26 +213,28 @@ func (s *Service) loadFromDB() error {
 		return err
 	}
 
-	tasks := make([]Task, 0, len(dbTasks))
+	s.scheduler.Clear()
+
+	s.jobsMx.Lock()
+	defer s.jobsMx.Unlock()
+
 	for _, dbTask := range dbTasks {
 		task, err := s.convertDBTask(dbTask)
 		if err != nil {
 			return err
 		}
-		tasks = append(tasks, task)
-	}
 
-	s.scheduler.Clear()
-	for i, task := range tasks {
-		dbTask := dbTasks[i]
 		fn := s.wrapTask(task, dbTask.ID)
 		j := s.scheduler.Cron(dbTask.CronExpression).SingletonMode()
 		if !dbTask.StartAt.IsZero() {
 			j = j.StartAt(dbTask.StartAt)
 		}
-		if _, err := j.Tag(dbTask.ID).Do(fn); err != nil {
+		scheduleJob, err := j.Tag(dbTask.ID).Do(fn)
+		if err != nil {
 			return err
 		}
+
+		s.jobs[dbTask.ID] = scheduleJob
 	}
 
 	return nil
@@ -260,26 +275,15 @@ func (s *Service) wrapTask(task Task, id string) func() {
 		}
 		l.WithField("duration", time.Since(t)).Debug("Ended task")
 
-		_, err = models.ChangeScheduledTask(s.db.Querier, id, models.ChangeScheduledTaskParams{
-			Running: pointer.ToBool(false),
-		})
-
-		if err != nil {
-			l.Errorf("failed to change running status: %v", err)
-		}
-
 		s.taskFinished(id, taskErr)
 	}
 }
 
 func (s *Service) taskFinished(id string, taskErr error) {
-	var job *gocron.Job
-	for _, j := range s.scheduler.Jobs() {
-		if len(j.Tags()) > 0 && j.Tags()[0] == id {
-			job = j
-			break
-		}
-	}
+	s.jobsMx.RLock()
+	job := s.jobs[id]
+	s.jobsMx.RUnlock()
+
 	l := s.l.WithField("id", id)
 
 	dbTask, err := models.FindScheduledTaskByID(s.db.Querier, id)
@@ -288,9 +292,7 @@ func (s *Service) taskFinished(id string, taskErr error) {
 	}
 
 	params := models.ChangeScheduledTaskParams{
-		Succeeded: pointer.ToUint(dbTask.Succeeded),
-		Failed:    pointer.ToUint(dbTask.Failed),
-		Running:   pointer.ToBool(false),
+		Running: pointer.ToBool(false),
 	}
 
 	if taskErr == nil {
@@ -302,8 +304,10 @@ func (s *Service) taskFinished(id string, taskErr error) {
 	}
 
 	if job != nil {
-		params.NextRun = job.NextRun().UTC()
-		params.LastRun = job.LastRun().UTC()
+		nextRun := job.NextRun().UTC()
+		lastRun := job.LastRun().UTC()
+		params.NextRun = &nextRun
+		params.LastRun = &lastRun
 	} else {
 		l.Errorf("failed to find scheduled task: %v", err)
 	}

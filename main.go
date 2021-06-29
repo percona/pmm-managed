@@ -35,8 +35,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/percona/pmm-managed/services/scheduler"
-
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_validator "github.com/grpc-ecosystem/go-grpc-middleware/validator"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -82,6 +80,7 @@ import (
 	"github.com/percona/pmm-managed/services/minio"
 	"github.com/percona/pmm-managed/services/platform"
 	"github.com/percona/pmm-managed/services/qan"
+	"github.com/percona/pmm-managed/services/scheduler"
 	"github.com/percona/pmm-managed/services/server"
 	"github.com/percona/pmm-managed/services/supervisord"
 	"github.com/percona/pmm-managed/services/telemetry"
