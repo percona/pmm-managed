@@ -25,11 +25,6 @@ jobs:
         os: [ubuntu-latest]
         may-fail: [false]
 
-        include:
-          - go-version: master
-            os: ubuntu-latest
-            may-fail: true
-
     continue-on-error: ${{ matrix.may-fail }}
     runs-on: ${{ matrix.os }}
 
@@ -43,17 +38,8 @@ jobs:
       GO_VERSION: ${{ matrix.go-version }}
 
     steps:
-
       - name: Check out code into the Go module directory
         uses: percona-platform/checkout@v2
-
-      - name: Enable Go modules cache
-        uses: percona-platform/cache@v2
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ matrix.os }}-go-${{ matrix.go-version }}-modules-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ matrix.os }}-go-${{ matrix.go-version }}-modules-
 
       - name: Enable Go build cache
         uses: percona-platform/cache@v2
@@ -73,7 +59,6 @@ jobs:
         continue-on-error: true
         run: |
           docker cp ~/.cache/go-build pmm-managed-server:/root/.cache/go-build
-          docker cp ~/go/pkg/mod pmm-managed-server:/root/go/pkg/mod
 
       - name: Setup dev-container
         run: docker exec -i --workdir=/root/go/src/github.com/percona/pmm-managed pmm-managed-server .devcontainer/setup.py
@@ -126,9 +111,7 @@ jobs:
         run: |
           docker exec pmm-managed-server go clean -testcache
           rm -fr ~/.cache/go-build
-          rm -fr ~/go/pkg/mod
           docker cp pmm-managed-server:/root/.cache/go-build ~/.cache/go-build
-          docker cp pmm-managed-server:/root/go/pkg/mod ~/go/pkg/mod
 
       - name: Run debug commands on failure
         if: ${{ failure() }}
@@ -169,14 +152,6 @@ jobs:
         with:
           lfs: true
 
-      - name: Enable Go modules cache
-        uses: percona-platform/cache@v2
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ matrix.os }}-go-${{ matrix.go-version }}-modules-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ matrix.os }}-go-${{ matrix.go-version }}-modules-
-
       - name: Enable Go build cache
         uses: percona-platform/cache@v2
         with:
@@ -197,6 +172,11 @@ jobs:
           docker cp ~/.cache/go-build pmm-managed-server:/root/.cache/go-build
           docker cp ~/go/pkg/mod pmm-managed-server:/root/go/pkg/mod
 
+      - name: Setup dev-container
+        run: |
+          env
+          make env-devcontainer
+
       - name: Run required checks/linters
         run: |
           make env-ci TARGET=check
@@ -216,11 +196,8 @@ jobs:
         run: |
           docker exec pmm-managed-server go clean -testcache
           rm -fr ~/.cache/go-build
-          rm -fr ~/go/pkg/mod
           mkdir -p ~/.cache
-          mkdir -p ~/go/pkg
           docker cp pmm-managed-server:/root/.cache/go-build ~/.cache/go-build
-          docker cp pmm-managed-server:/root/go/pkg/mod ~/go/pkg/mod
 
       - name: Run debug commands on failure
         if: ${{ failure() }}
