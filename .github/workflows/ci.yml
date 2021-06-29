@@ -121,7 +121,7 @@ jobs:
       - name: Run tests
         run: |
           go clean -testcache
-          make test
+          make env-ci TARGET=test-all
 
       - name: Upload coverage results
         uses: percona-platform/codecov-action@v1
@@ -182,6 +182,7 @@ jobs:
       # no `-mod=readonly` to test PRs made by @dependabot;
       # `git diff --exit-code` step below still checks what we need
       GOFLAGS: -v
+      REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Set up Go ${{ matrix.go-version }}
@@ -218,28 +219,9 @@ jobs:
         run: make init
 
       - name: Run required checks/linters
-        env:
-          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          make check
-          # use GITHUB_TOKEN because only it has access to GitHub Checks API
-          bin/golangci-lint run -c=.golangci-required.yml --out-format=line-number | bin/reviewdog -f=golangci-lint -name='Required checks' -reporter=github-pr-check
-
-          # run it like that until some of those issues/PRs are resolved:
-          # * https://github.com/quasilyte/go-consistent/issues/33
-          # * https://github.com/golangci/golangci-lint/issues/288
-          # * https://github.com/reviewdog/errorformat/pull/47 (once it is atually used by reviewdog)
-          bin/go-consistent -pedantic -exclude "tests" ./... | bin/reviewdog -f=go-consistent -name='Required go-consistent checks' -reporter=github-pr-check
-          cd tests && ../bin/go-consistent -pedantic ./... | bin/reviewdog -f=go-consistent -name='Required go-consistent checks' -reporter=github-pr-check
-
-      - name: Run optional checks/linters
-        run: |
-          # use ROBOT_TOKEN for better reviewer's name
-          if [[ ! -z "${{ secrets.ROBOT_TOKEN }}" ]]; then
-            bin/golangci-lint run --out-format=line-number | env REVIEWDOG_GITHUB_API_TOKEN=${{ secrets.ROBOT_TOKEN }} bin/reviewdog -f=golangci-lint -name='Linters' -reporter=github-pr-review
-          else
-            bin/golangci-lint run --out-format=line-number | env REVIEWDOG_GITHUB_API_TOKEN=${{ secrets.GITHUB_TOKEN }} bin/reviewdog -f=golangci-lint -name='Linters' -reporter=github-pr-review
-          fi
+          make env-ci TARGET=check
+          make env-ci TARGET=ci-reviewdog
 
       - name: Check that there are no source code changes
         run: |
