@@ -123,7 +123,7 @@ func TestAddAdminSummary(t *testing.T) {
 func TestFiles(t *testing.T) {
 	checker := NewPMMUpdateChecker(logrus.WithField("test", t.Name()))
 	l := NewLogs("2.4.5", checker)
-	ctx := logger.Set(context.Background(), t.Name()) 
+	ctx := logger.Set(context.Background(), t.Name())
 
 	files := l.files(ctx)
 	actual := make([]string, 0, len(files))
@@ -144,7 +144,7 @@ func TestFiles(t *testing.T) {
 	}
 
 	sort.Strings(actual)
-	assert.Equal(t, CommonExpectedFiles, actual)
+	assert.Equal(t, commonExpectedFiles, actual)
 }
 
 func TestZip(t *testing.T) {
