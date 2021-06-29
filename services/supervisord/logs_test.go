@@ -163,26 +163,23 @@ func TestZip(t *testing.T) {
 	r, err := zip.NewReader(reader, reader.Size())
 	require.NoError(t, err)
 
-	clientFiles := []string{
+	additionalFiles := []string{
 		"client/list.txt",
 		"client/pmm-admin-version.txt",
 		"client/pmm-agent-config.yaml",
 		"client/pmm-agent-version.txt",
 		"client/status.json",
 		"systemctl_status.log",
+		"prometheus.base.yml",
 	}
 
 	// zip file includes client files
-	expected := append(commonExpectedFiles, clientFiles...)
+	expected := append(commonExpectedFiles, additionalFiles...)
 
 	actual := make([]string, 0, len(r.File))
 	for _, f := range r.File {
 		// present only after update
 		if f.Name == "pmm-update-perform.log" {
-			continue
-		}
-
-		if f.Name == "prometheus.base.yml" {
 			continue
 		}
 
