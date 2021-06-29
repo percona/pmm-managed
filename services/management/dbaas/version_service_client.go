@@ -185,7 +185,7 @@ func (c *VersionServiceClient) IsOperatorVersionSupported(ctx context.Context, o
 		return false, errors.Errorf("%q is an unknown operator type", operatorType)
 	}
 
-	for version, _ := range operator {
+	for version := range operator {
 		if version == operatorVersion {
 			return true, nil
 		}

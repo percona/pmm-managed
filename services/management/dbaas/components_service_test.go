@@ -560,7 +560,7 @@ func TestInstallOperator(t *testing.T) {
 				Operator: "1.7.0",
 				Matrix: matrix{
 					Pxc: map[string]componentVersion{
-						defaultPXCVersion: componentVersion{},
+						defaultPXCVersion: {},
 					},
 				},
 			},
@@ -569,8 +569,8 @@ func TestInstallOperator(t *testing.T) {
 				Operator: onePointEight,
 				Matrix: matrix{
 					Pxc: map[string]componentVersion{
-						latestPXCVersion: componentVersion{},
-						"5.8.0":          componentVersion{},
+						latestPXCVersion: {},
+						"5.8.0":          {},
 					},
 				},
 			},
@@ -579,7 +579,7 @@ func TestInstallOperator(t *testing.T) {
 				Operator: "1.7.0",
 				Matrix: matrix{
 					Mongod: map[string]componentVersion{
-						defaultPSMDBVersion: componentVersion{},
+						defaultPSMDBVersion: {},
 					},
 				},
 			},
@@ -588,8 +588,8 @@ func TestInstallOperator(t *testing.T) {
 				Operator: onePointEight,
 				Matrix: matrix{
 					Mongod: map[string]componentVersion{
-						latestPSMDBVersion: componentVersion{},
-						"3.7.0":            componentVersion{},
+						latestPSMDBVersion: {},
+						"3.7.0":            {},
 					},
 				},
 			},
@@ -598,10 +598,10 @@ func TestInstallOperator(t *testing.T) {
 				Operator: "2.19.0",
 				Matrix: matrix{
 					PXCOperator: map[string]componentVersion{
-						onePointEight: componentVersion{},
+						onePointEight: {},
 					},
 					PSMDBOperator: map[string]componentVersion{
-						onePointEight: componentVersion{},
+						onePointEight: {},
 					},
 				},
 			},
