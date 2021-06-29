@@ -1,7 +1,6 @@
 # pmm-api-tests
 
 [![Build Status](https://travis-ci.com/Percona-Lab/pmm-api-tests.svg?branch=master)](https://travis-ci.com/Percona-Lab/pmm-api-tests)
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FPercona-Lab%2Fpmm-api-tests.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FPercona-Lab%2Fpmm-api-tests?ref=badge_shield)
 
 API tests for PMM 2.x
 
@@ -48,5 +47,6 @@ If pmm-server located locally:
 # Contributing
 
 All tests should follow these rules:
-* Tests can work in parallel and in real system, so take into account that there might be records in database.
-* Always revert changes made by test.
+
+- Tests can work in parallel and in real system, so take into account that there might be records in database.
+- Always revert changes made by test.
