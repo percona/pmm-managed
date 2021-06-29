@@ -134,6 +134,11 @@ func TestFiles(t *testing.T) {
 			continue
 		}
 
+		if f.Name == "prometheus.base.yml" {
+			assert.EqualError(t, f.Err, "open /srv/prometheus/prometheus.base.yml: no such file or directory")
+			continue
+		}
+
 		if f.Name == "systemctl_status.log" {
 			assert.EqualError(t, f.Err, "exit status 1")
 			continue
@@ -174,6 +179,15 @@ func TestZip(t *testing.T) {
 	for _, f := range r.File {
 		// present only after update
 		if f.Name == "pmm-update-perform.log" {
+			continue
+		}
+
+		if f.Name == "systemctl_status.log" {
+			continue
+		}
+
+		if f.Name == "prometheus.base.yml" {
+			assert.EqualError(t, f.Err, "open /srv/prometheus/prometheus.base.yml: no such file or directory")
 			continue
 		}
 
