@@ -36,6 +36,39 @@ import (
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
+var commonExpectedFiles := []string{
+	"alertmanager.base.yml",
+	"alertmanager.ini",
+	"alertmanager.log",
+	"alertmanager.yml",
+	"clickhouse-server.log",
+	"cron.log",
+	"dashboard-upgrade.log",
+	"grafana.log",
+	"installed.json",
+	"nginx.conf",
+	"nginx.log",
+	"pmm-agent.log",
+	"pmm-agent.yaml",
+	"pmm-managed.log",
+	"pmm-ssl.conf",
+	"pmm-version.txt",
+	"pmm.conf",
+	"pmm.ini",
+	"postgresql.log",
+	"qan-api2.ini",
+	"qan-api2.log",
+	"supervisorctl_status.log",
+	"supervisord.conf",
+	"supervisord.log",
+	"victoriametrics-promscrape.yml",
+	"victoriametrics.ini",
+	"victoriametrics.log",
+	"victoriametrics_targets.json",
+	"vmalert.ini",
+	"vmalert.log",
+}
+
 func TestReadLog(t *testing.T) {
 	f, err := ioutil.TempFile("", "pmm-managed-supervisord-tests-")
 	require.NoError(t, err)
@@ -90,51 +123,13 @@ func TestAddAdminSummary(t *testing.T) {
 func TestFiles(t *testing.T) {
 	checker := NewPMMUpdateChecker(logrus.WithField("test", t.Name()))
 	l := NewLogs("2.4.5", checker)
-	ctx := logger.Set(context.Background(), t.Name())
-
-	expected := []string{
-		"alertmanager.base.yml",
-		"alertmanager.ini",
-		"alertmanager.log",
-		"alertmanager.yml",
-		"clickhouse-server.log",
-		"cron.log",
-		"dashboard-upgrade.log",
-		"grafana.log",
-		"installed.json",
-		"nginx.conf",
-		"nginx.log",
-		"pmm-agent.log",
-		"pmm-agent.yaml",
-		"pmm-managed.log",
-		"pmm-ssl.conf",
-		"pmm-version.txt",
-		"pmm.conf",
-		"pmm.ini",
-		"postgresql.log",
-		"qan-api2.ini",
-		"qan-api2.log",
-		"supervisorctl_status.log",
-		"supervisord.conf",
-		"supervisord.log",
-		"victoriametrics-promscrape.yml",
-		"victoriametrics.ini",
-		"victoriametrics.log",
-		"victoriametrics_targets.json",
-		"vmalert.ini",
-		"vmalert.log",
-	}
+	ctx := logger.Set(context.Background(), t.Name()) 
 
 	files := l.files(ctx)
 	actual := make([]string, 0, len(files))
 	for _, f := range files {
 		// present only after update
 		if f.Name == "pmm-update-perform.log" {
-			continue
-		}
-
-		if f.Name == "prometheus.base.yml" {
-			assert.EqualError(t, f.Err, "open /srv/prometheus/prometheus.base.yml: no such file or directory")
 			continue
 		}
 
@@ -149,7 +144,7 @@ func TestFiles(t *testing.T) {
 	}
 
 	sort.Strings(actual)
-	assert.Equal(t, expected, actual)
+	assert.Equal(t, CommonExpectedFiles, actual)
 }
 
 func TestZip(t *testing.T) {
@@ -163,46 +158,16 @@ func TestZip(t *testing.T) {
 	r, err := zip.NewReader(reader, reader.Size())
 	require.NoError(t, err)
 
-	// zip file includes client files
-	expected := []string{
-		"alertmanager.base.yml",
-		"alertmanager.ini",
-		"alertmanager.log",
-		"alertmanager.yml",
-		"clickhouse-server.log",
+	clientFiles := []string{
 		"client/list.txt",
 		"client/pmm-admin-version.txt",
 		"client/pmm-agent-config.yaml",
 		"client/pmm-agent-version.txt",
 		"client/status.json",
-		"cron.log",
-		"dashboard-upgrade.log",
-		"grafana.log",
-		"installed.json",
-		"nginx.conf",
-		"nginx.log",
-		"pmm-agent.log",
-		"pmm-agent.yaml",
-		"pmm-managed.log",
-		"pmm-ssl.conf",
-		"pmm-version.txt",
-		"pmm.conf",
-		"pmm.ini",
-		"postgresql.log",
-		"prometheus.base.yml",
-		"qan-api2.ini",
-		"qan-api2.log",
-		"supervisorctl_status.log",
-		"supervisord.conf",
-		"supervisord.log",
-		"systemctl_status.log",
-		"victoriametrics-promscrape.yml",
-		"victoriametrics.ini",
-		"victoriametrics.log",
-		"victoriametrics_targets.json",
-		"vmalert.ini",
-		"vmalert.log",
 	}
+
+	// zip file includes client files
+	expected := append(commonExpectedFiles, clientFiles...)
 
 	actual := make([]string, 0, len(r.File))
 	for _, f := range r.File {
