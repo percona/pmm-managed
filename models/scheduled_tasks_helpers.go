@@ -48,19 +48,23 @@ func FindScheduledTaskByID(q *reform.Querier, id string) (*ScheduledTask, error)
 
 // ScheduledTasksFilter represents filters for scheduled tasks.
 type ScheduledTasksFilter struct {
-	Disabled *bool
-	Types    []ScheduledTaskType
+	Disabled   *bool
+	Types      []ScheduledTaskType
+	ServiceID  string
+	LocationID string
 }
 
 // FindScheduledTasks returns all scheduled tasks satisfying filter.
 func FindScheduledTasks(q *reform.Querier, filters ScheduledTasksFilter) ([]*ScheduledTask, error) {
 	var args []interface{}
 	var andConds []string
+	idx := 1
 	if len(filters.Types) > 0 {
-		p := strings.Join(q.Placeholders(1, len(filters.Types)), ", ")
+		p := strings.Join(q.Placeholders(idx, len(filters.Types)), ", ")
 		for _, fType := range filters.Types {
 			args = append(args, fType)
 		}
+		idx += len(filters.Types)
 		andConds = append(andConds, fmt.Sprintf("type IN (%s)", p))
 	}
 
@@ -74,7 +78,25 @@ func FindScheduledTasks(q *reform.Querier, filters ScheduledTasksFilter) ([]*Sch
 		andConds = append(andConds, cond)
 	}
 
+	crossJoin := false
+	if filters.ServiceID != "" {
+		crossJoin = true
+		andConds = append(andConds, "value ->> 'service_id' = "+q.Placeholder(idx))
+		args = append(args, filters.ServiceID)
+		idx++
+	}
+	if filters.LocationID != "" {
+		crossJoin = true
+		andConds = append(andConds, "value ->> 'location_id' = "+q.Placeholder(idx))
+		args = append(args, filters.LocationID)
+		idx++
+	}
+
 	var tail strings.Builder
+	if crossJoin {
+		tail.WriteString("CROSS JOIN jsonb_each(data) ")
+	}
+
 	if len(andConds) > 0 {
 		tail.WriteString("WHERE ")
 		tail.WriteString(strings.Join(andConds, " AND "))
