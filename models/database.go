@@ -519,6 +519,7 @@ var databaseSchema = [][]string{
 	},
 }
 
+//
 // ^^^ Avoid default values in schema definition. ^^^
 // aleksi: Go's zero values and non-zero default values in database do play nicely together in INSERTs and UPDATEs.
 
