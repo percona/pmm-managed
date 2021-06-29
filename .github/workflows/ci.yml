@@ -22,7 +22,6 @@ jobs:
       matrix:
         go-version:
           - 1.16.x
-          - tip
         os: [ubuntu-latest]
         may-fail: [false]
 
