@@ -101,6 +101,7 @@ jobs:
         continue-on-error: true
         run: |
           docker cp ~/.cache/go-build pmm-managed-server:/root/.cache/go-build
+          docker cp ~/go/pkg/mod pmm-managed-server:/root/go/pkg/mod
 
       - name: Setup dev-container
         run: docker exec -i --workdir=/root/go/src/github.com/percona/pmm-managed pmm-managed-server .devcontainer/setup.py
@@ -153,8 +154,10 @@ jobs:
       - name: Cache
         run: |
           docker exec pmm-managed-server go clean -testcache
-          rm -fr /home/travis/go-build
+          rm -fr ~/.cache/go-build
+          rm -fr ~/go/pkg/mod
           docker cp pmm-managed-server:/root/.cache/go-build ~/.cache/go-build
+          docker cp pmm-managed-server:/root/go/pkg/mod ~/go/pkg/mod
 
       - name: Run debug commands on failure
         if: ${{ failure() }}
@@ -212,11 +215,16 @@ jobs:
             ${{ matrix.os }}-go-${{ matrix.go-version }}-build-${{ github.ref }}-
             ${{ matrix.os }}-go-${{ matrix.go-version }}-build-
 
-      - name: Download Go modules
-        run: go mod download
+      - name: Initialize CI environment
+        run: |
+          env
+          make env-compose-up
 
-      - name: Install tools
-        run: make init
+      - name: Restore Go build cache
+        continue-on-error: true
+        run: |
+          docker cp ~/.cache/go-build pmm-managed-server:/root/.cache/go-build
+          docker cp ~/go/pkg/mod pmm-managed-server:/root/go/pkg/mod
 
       - name: Run required checks/linters
         run: |
@@ -232,6 +240,14 @@ jobs:
           pushd tools && go mod tidy && git checkout go.sum
           popd        && go mod tidy && git checkout go.sum
           git diff --exit-code
+
+      - name: Cache
+        run: |
+          docker exec pmm-managed-server go clean -testcache
+          rm -fr ~/.cache/go-build
+          rm -fr ~/go/pkg/mod
+          docker cp pmm-managed-server:/root/.cache/go-build ~/.cache/go-build
+          docker cp pmm-managed-server:/root/go/pkg/mod ~/go/pkg/mod
 
       - name: Run debug commands on failure
         if: ${{ failure() }}
