@@ -107,8 +107,8 @@ jobs:
 
       - name: Ensure that generated files are not changed
         run: |
-          make env TARGET=gen
-          make env TARGET=format
+          make env-ci TARGET=gen
+          make env-ci TARGET=format
           # Break job if any files were changed during its run (code generation, etc), except go.sum.
           # `go mod tidy` could remove old checksums from that file, and that's okay on CI,
           # and actually expected for PRs made by @dependabot.
