@@ -165,6 +165,7 @@ jobs:
         run: |
           env
           make env-compose-up
+          make init
 
       - name: Restore Go build cache
         continue-on-error: true
