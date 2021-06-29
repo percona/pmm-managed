@@ -520,8 +520,8 @@ var databaseSchema = [][]string{
 	39: {
 		`CREATE TABLE scheduled_tasks (
 			id VARCHAR NOT NULL,
-			cron_expression VARCHAR NOT NULL,
-			type VARCHAR NOT NULL,
+			cron_expression VARCHAR NOT NULL CHECK (cron_expression <> ''),
+			type VARCHAR NOT NULL CHECK (type <> ''),
 			start_at TIMESTAMP,
 			last_run TIMESTAMP,
 			next_run TIMESTAMP,

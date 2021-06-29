@@ -30,7 +30,7 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-// Service is responsive for executing tasks and storing them to DB.
+// Service is responsible for executing tasks and storing them to DB.
 type Service struct {
 	db        *reform.DB
 	scheduler *gocron.Scheduler
@@ -123,6 +123,10 @@ func (s *Service) Add(task Task, params AddParams) (*models.ScheduledTask, error
 		})
 		if err != nil {
 			s.l.WithField("id", id).Errorf("failed to set next run for new created task")
+			s.mx.Lock()
+			s.scheduler.RemoveByReference(scheduleJob)
+			s.mx.Unlock()
+			return err
 		}
 
 		return nil
@@ -146,16 +150,15 @@ func (s *Service) Remove(id string) error {
 		if err := models.RemoveScheduledTask(tx.Querier, id); err != nil {
 			return err
 		}
-
-		s.mx.Lock()
-		_ = s.scheduler.RemoveByTag(id)
-		s.mx.Unlock()
-
 		return nil
 	})
 	if err != nil {
 		return err
 	}
+
+	s.mx.Lock()
+	_ = s.scheduler.RemoveByTag(id)
+	s.mx.Unlock()
 
 	return nil
 }
@@ -284,35 +287,42 @@ func (s *Service) taskFinished(id string, taskErr error) {
 
 	l := s.l.WithField("id", id)
 
-	dbTask, err := models.FindScheduledTaskByID(s.db.Querier, id)
-	if err != nil {
-		return
-	}
+	txErr := s.db.InTransaction(func(tx *reform.TX) error {
+		dbTask, err := models.FindScheduledTaskByID(tx.Querier, id)
+		if err != nil {
+			return err
+		}
 
-	params := models.ChangeScheduledTaskParams{
-		Running: pointer.ToBool(false),
-	}
+		params := models.ChangeScheduledTaskParams{
+			Running: pointer.ToBool(false),
+		}
 
-	if taskErr == nil {
-		params.Succeeded = pointer.ToUint(dbTask.Succeeded + 1)
-		params.Error = pointer.ToString("")
-	} else {
-		params.Failed = pointer.ToUint(dbTask.Failed + 1)
-		params.Error = pointer.ToString(taskErr.Error())
-	}
+		if taskErr == nil {
+			params.Succeeded = pointer.ToUint(dbTask.Succeeded + 1)
+			params.Error = pointer.ToString("")
+		} else {
+			params.Failed = pointer.ToUint(dbTask.Failed + 1)
+			params.Error = pointer.ToString(taskErr.Error())
+		}
 
-	if job != nil {
-		nextRun := job.NextRun().UTC()
-		lastRun := job.LastRun().UTC()
-		params.NextRun = &nextRun
-		params.LastRun = &lastRun
-	} else {
-		l.Errorf("failed to find scheduled task: %v", err)
-	}
+		if job != nil {
+			nextRun := job.NextRun().UTC()
+			lastRun := job.LastRun().UTC()
+			params.NextRun = &nextRun
+			params.LastRun = &lastRun
+		} else {
+			l.Errorf("failed to find scheduled task: %v", err)
+		}
 
-	_, err = models.ChangeScheduledTask(s.db.Querier, id, params)
-	if err != nil {
-		l.Errorf("failed to change scheduled task: %v", err)
+		_, err = models.ChangeScheduledTask(tx.Querier, id, params)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if txErr != nil {
+		l.Errorf("failed to commit finished task: %v", txErr)
 	}
 }
 

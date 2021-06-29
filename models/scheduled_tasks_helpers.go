@@ -102,7 +102,7 @@ func FindScheduledTasks(q *reform.Querier, filters ScheduledTasksFilter) ([]*Sch
 		tail.WriteString(strings.Join(andConds, " AND "))
 		tail.WriteRune(' ')
 	}
-	tail.WriteString("ORDER BY created_at")
+	tail.WriteString("ORDER BY created_at DESC")
 
 	structs, err := q.SelectAllFrom(ScheduledTaskTable, tail.String(), args...)
 	if err != nil {
