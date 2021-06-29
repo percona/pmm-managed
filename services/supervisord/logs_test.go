@@ -182,5 +182,6 @@ func TestZip(t *testing.T) {
 	}
 
 	sort.Strings(actual)
+	sort.Strings(expected)
 	assert.Equal(t, expected, actual)
 }
