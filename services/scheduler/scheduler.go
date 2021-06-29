@@ -26,20 +26,24 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/go-co-op/gocron"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/reform.v1"
 )
 
 // Service is responsible for executing tasks and storing them to DB.
 type Service struct {
-	db        *reform.DB
-	scheduler *gocron.Scheduler
-	l         *logrus.Entry
-	tasks     map[string]context.CancelFunc
-	taskMx    sync.RWMutex
-	jobs      map[string]*gocron.Job
-	jobsMx    sync.RWMutex
+	db *reform.DB
+	l  *logrus.Entry
+
 	mx        sync.Mutex
+	scheduler *gocron.Scheduler
+
+	taskMx sync.RWMutex
+	tasks  map[string]context.CancelFunc
+
+	jobsMx sync.RWMutex
+	jobs   map[string]*gocron.Job
 }
 
 // New creates new scheduler service.
@@ -171,7 +175,7 @@ func (s *Service) Reload(id string) error {
 	}
 
 	if dbTask.Running {
-		return fmt.Errorf("task is running")
+		return errors.New("task is running")
 	}
 
 	s.mx.Lock()
@@ -206,9 +210,8 @@ func (s *Service) loadFromDB() error {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 
-	disabled := false
 	dbTasks, err := models.FindScheduledTasks(s.db.Querier, models.ScheduledTasksFilter{
-		Disabled: &disabled,
+		Disabled: pointer.ToBool(false),
 	})
 	if err != nil {
 		return err
