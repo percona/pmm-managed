@@ -36,7 +36,7 @@ import (
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
-var commonExpectedFiles := []string{
+var commonExpectedFiles = []string{
 	"alertmanager.base.yml",
 	"alertmanager.ini",
 	"alertmanager.log",
