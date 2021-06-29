@@ -51,6 +51,7 @@ func New(db *reform.DB) *Service {
 		db:        db,
 		scheduler: scheduler,
 		tasks:     make(map[string]context.CancelFunc),
+		jobs:      make(map[string]*gocron.Job),
 		l:         logrus.WithField("component", "scheduler"),
 	}
 }
