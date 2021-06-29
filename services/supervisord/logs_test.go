@@ -61,6 +61,7 @@ var commonExpectedFiles = []string{
 	"supervisorctl_status.log",
 	"supervisord.conf",
 	"supervisord.log",
+	"systemctl_status.log",
 	"victoriametrics-promscrape.yml",
 	"victoriametrics.ini",
 	"victoriametrics.log",
