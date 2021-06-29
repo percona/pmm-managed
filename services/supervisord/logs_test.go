@@ -61,7 +61,6 @@ var commonExpectedFiles = []string{
 	"supervisorctl_status.log",
 	"supervisord.conf",
 	"supervisord.log",
-	"systemctl_status.log",
 	"victoriametrics-promscrape.yml",
 	"victoriametrics.ini",
 	"victoriametrics.log",
@@ -170,6 +169,7 @@ func TestZip(t *testing.T) {
 		"client/pmm-agent-config.yaml",
 		"client/pmm-agent-version.txt",
 		"client/status.json",
+		"systemctl_status.log",
 	}
 
 	// zip file includes client files
@@ -179,10 +179,6 @@ func TestZip(t *testing.T) {
 	for _, f := range r.File {
 		// present only after update
 		if f.Name == "pmm-update-perform.log" {
-			continue
-		}
-
-		if f.Name == "systemctl_status.log" {
 			continue
 		}
 
