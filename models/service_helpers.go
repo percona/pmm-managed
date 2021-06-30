@@ -291,7 +291,7 @@ func RemoveService(q *reform.Querier, id string, mode RemoveMode) error {
 				}
 			}
 			for _, a := range artifacts {
-				if _, err := ChangeArtifact(q, a.ID, ChangeArtifactParams{
+				if _, err := UpdateArtifact(q, a.ID, UpdateArtifactParams{
 					ServiceID: pointer.ToString(""),
 				}); err != nil {
 					return err

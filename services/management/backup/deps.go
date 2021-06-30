@@ -67,4 +67,5 @@ type jobsService interface {
 type awsS3 interface {
 	GetBucketLocation(ctx context.Context, host string, accessKey, secretKey, name string) (string, error)
 	BucketExists(ctx context.Context, host string, accessKey, secretKey, name string) (bool, error)
+	RemoveRecursive(ctx context.Context, endpoint, accessKey, secretKey, bucketName, prefix string) error
 }

@@ -30,18 +30,32 @@ import (
 type RestoreHistoryItemFilters struct {
 	// Return only items that belongs to specified service id.
 	ServiceID string
+	// Return only items that has specified location id.
+	ArtifactID string
 }
 
 // FindRestoreHistoryItems returns restore history list.
 func FindRestoreHistoryItems(q *reform.Querier, filters *RestoreHistoryItemFilters) ([]*RestoreHistoryItem, error) {
 	var conditions []string
 	var args []interface{}
+
+	idx := 1
 	if filters != nil && filters.ServiceID != "" {
 		if _, err := FindServiceByID(q, filters.ServiceID); err != nil {
 			return nil, err
 		}
 		conditions = append(conditions, fmt.Sprintf("service_id = %s", q.Placeholder(1)))
+		conditions = append(conditions, fmt.Sprintf("service_id = %s", q.Placeholder(idx)))
 		args = append(args, filters.ServiceID)
+		idx++
+	}
+
+	if filters != nil && filters.ArtifactID != "" {
+		if _, err := FindArtifactByID(q, filters.ArtifactID); err != nil {
+			return nil, err
+		}
+		conditions = append(conditions, fmt.Sprintf("artifact_id = %s", q.Placeholder(idx)))
+		args = append(args, filters.ArtifactID)
 	}
 
 	var whereClause string

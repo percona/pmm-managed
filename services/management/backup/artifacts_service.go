@@ -23,6 +23,8 @@ import (
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"gopkg.in/reform.v1"
 
@@ -33,13 +35,15 @@ import (
 type ArtifactsService struct {
 	l  *logrus.Entry
 	db *reform.DB
+	s3 awsS3
 }
 
 // NewArtifactsService creates new artifacts API service.
-func NewArtifactsService(db *reform.DB) *ArtifactsService {
+func NewArtifactsService(db *reform.DB, s3 awsS3) *ArtifactsService {
 	return &ArtifactsService{
 		l:  logrus.WithField("component", "management/backup/artifacts"),
 		db: db,
+		s3: s3,
 	}
 }
 
@@ -94,6 +98,90 @@ func (s *ArtifactsService) ListArtifacts(context.Context, *backupv1beta1.ListArt
 	return &backupv1beta1.ListArtifactsResponse{
 		Artifacts: artifactsResponse,
 	}, nil
+}
+
+// DeleteArtifact deletes specified artifact.
+func (s *ArtifactsService) DeleteArtifact(
+	ctx context.Context,
+	req *backupv1beta1.DeleteArtifactRequest,
+) (*backupv1beta1.DeleteArtifactResponse, error) {
+	var s3Config *models.S3LocationConfig
+	var artifactName string
+	if err := s.db.InTransaction(func(tx *reform.TX) error {
+		artifact, err := models.FindArtifactByID(tx.Querier, req.ArtifactId)
+		switch {
+		case err == nil:
+		case errors.Is(err, models.ErrNotFound):
+			return status.Errorf(codes.NotFound, "Artifact with ID %q not found.", req.ArtifactId)
+		default:
+			return err
+		}
+
+		artifactName = artifact.Name
+
+		location, err := models.FindBackupLocationByID(tx.Querier, artifact.LocationID)
+		if err != nil {
+			return err
+		}
+		if location.S3Config == nil {
+			return errors.Errorf("s3 location config is nil")
+		}
+
+		s3Config = location.S3Config
+
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	if req.RemoveFiles {
+		if err := s.s3.RemoveRecursive(
+			ctx,
+			s3Config.Endpoint,
+			s3Config.AccessKey,
+			s3Config.SecretKey,
+			s3Config.BucketName,
+			// Recursive listing finds all the objects with the specified prefix.
+			// There could be a problem e.g. when we have artifacts `backup-daily` and `backup-daily-1`, so
+			// listing by prefix `backup-daily` gives us both artifacts.
+			// To avoid such a situation we need to append a slash.
+			artifactName+"/",
+		); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := s.db.InTransaction(func(tx *reform.TX) error {
+		_, err := models.FindArtifactByID(tx.Querier, req.ArtifactId)
+		switch {
+		case err == nil:
+		case errors.Is(err, models.ErrNotFound):
+			return status.Errorf(codes.NotFound, "Artifact with ID %q not found.", req.ArtifactId)
+		default:
+			return err
+		}
+		restoreItems, err := models.FindRestoreHistoryItems(tx.Querier, &models.RestoreHistoryItemFilters{
+			ArtifactID: req.ArtifactId,
+		})
+		if err != nil {
+			return err
+		}
+
+		for _, ri := range restoreItems {
+			if err := models.RemoveRestoreHistoryItem(tx.Querier, ri.ID); err != nil {
+				return err
+			}
+		}
+
+		if err := models.DeleteArtifact(tx.Querier, req.ArtifactId); err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return &backupv1beta1.DeleteArtifactResponse{}, nil
 }
 
 func convertDataModel(dataModel models.DataModel) (*backupv1beta1.DataModel, error) {
