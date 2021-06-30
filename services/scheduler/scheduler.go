@@ -164,43 +164,42 @@ func (s *Service) Remove(id string) error {
 	return nil
 }
 
-// Reload removes job from scheduler and add it again from DB.
-func (s *Service) Reload(id string) error {
-	dbTask, err := models.FindScheduledTaskByID(s.db.Querier, id)
-	if err != nil {
-		return err
-	}
+// Update changes scheduled task in DB and re-add it to scheduler.
+func (s *Service) Update(id string, params models.ChangeScheduledTaskParams) error {
+	txErr := s.db.InTransaction(func(tx *reform.TX) error {
+		dbTask, err := models.ChangeScheduledTask(tx.Querier, id, params)
+		if err != nil {
+			return err
+		}
+		s.mx.Lock()
+		defer s.mx.Unlock()
 
-	if dbTask.Running {
-		return errors.New("task is running")
-	}
+		task, err := s.convertDBTask(dbTask)
+		if err != nil {
+			return err
+		}
 
-	s.mx.Lock()
-	defer s.mx.Unlock()
+		_ = s.scheduler.RemoveByTag(id)
 
-	task, err := s.convertDBTask(dbTask)
-	if err != nil {
-		return err
-	}
+		// Don't add it to scheduler, if it's disabled.
+		if dbTask.Disabled {
+			return nil
+		}
 
-	_ = s.scheduler.RemoveByTag(id)
+		j := s.scheduler.Cron(dbTask.CronExpression).SingletonMode()
+		if !dbTask.StartAt.IsZero() {
+			j = j.StartAt(dbTask.StartAt)
+		}
 
-	// Don't add it to scheduler, if it's disabled.
-	if dbTask.Disabled {
+		fn := s.wrapTask(task, dbTask.ID)
+		if _, err := j.Tag(dbTask.ID).Do(fn); err != nil {
+			return err
+		}
+
 		return nil
-	}
+	})
 
-	j := s.scheduler.Cron(dbTask.CronExpression).SingletonMode()
-	if !dbTask.StartAt.IsZero() {
-		j = j.StartAt(dbTask.StartAt)
-	}
-
-	fn := s.wrapTask(task, dbTask.ID)
-	if _, err := j.Tag(dbTask.ID).Do(fn); err != nil {
-		return err
-	}
-
-	return nil
+	return txErr
 }
 
 func (s *Service) loadFromDB() error {
