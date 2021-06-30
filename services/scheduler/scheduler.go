@@ -18,7 +18,6 @@ package scheduler
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -26,21 +25,25 @@ import (
 
 	"github.com/AlekSi/pointer"
 	"github.com/go-co-op/gocron"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/reform.v1"
 )
 
-// Service is responsive for executing tasks and storing them to DB.
+// Service is responsible for executing tasks and storing them to DB.
 type Service struct {
 	db                  *reform.DB
-	scheduler           *gocron.Scheduler
 	l                   *logrus.Entry
-	tasks               map[string]context.CancelFunc
-	taskMx              sync.RWMutex
-	jobs                map[string]*gocron.Job
-	jobsMx              sync.RWMutex
-	mx                  sync.Mutex
 	backupsLogicService backupsLogicService
+
+	mx        sync.Mutex
+	scheduler *gocron.Scheduler
+
+	taskMx sync.RWMutex
+	tasks  map[string]context.CancelFunc
+
+	jobsMx sync.RWMutex
+	jobs   map[string]*gocron.Job
 }
 
 // New creates new scheduler service.
@@ -51,9 +54,9 @@ func New(db *reform.DB, backupsLogicService backupsLogicService) *Service {
 	return &Service{
 		db:                  db,
 		scheduler:           scheduler,
-		tasks:               make(map[string]context.CancelFunc),
 		l:                   logrus.WithField("component", "scheduler"),
 		backupsLogicService: backupsLogicService,
+		tasks:               make(map[string]context.CancelFunc),
 		jobs:                make(map[string]*gocron.Job),
 	}
 }
@@ -117,14 +120,16 @@ func (s *Service) Add(task Task, params AddParams) (*models.ScheduledTask, error
 		s.jobs[id] = scheduleJob
 		s.jobsMx.Unlock()
 
-		nextRun := scheduleJob.NextRun().UTC()
-		lastRun := scheduleJob.LastRun().UTC()
 		scheduledTask, err = models.ChangeScheduledTask(tx.Querier, id, models.ChangeScheduledTaskParams{
-			NextRun: &nextRun,
-			LastRun: &lastRun,
+			NextRun: pointer.ToTime(scheduleJob.NextRun().UTC()),
+			LastRun: pointer.ToTime(scheduleJob.LastRun().UTC()),
 		})
 		if err != nil {
 			s.l.WithField("id", id).Errorf("failed to set next run for new created task")
+			s.mx.Lock()
+			s.scheduler.RemoveByReference(scheduleJob)
+			s.mx.Unlock()
+			return err
 		}
 
 		return nil
@@ -148,66 +153,63 @@ func (s *Service) Remove(id string) error {
 		if err := models.RemoveScheduledTask(tx.Querier, id); err != nil {
 			return err
 		}
-
-		s.mx.Lock()
-		_ = s.scheduler.RemoveByTag(id)
-		s.mx.Unlock()
-
 		return nil
 	})
 	if err != nil {
 		return err
 	}
 
+	s.mx.Lock()
+	_ = s.scheduler.RemoveByTag(id)
+	s.mx.Unlock()
+
 	return nil
 }
 
-// Reload removes job from scheduler and add it again from DB.
-func (s *Service) Reload(id string) error {
-	dbTask, err := models.FindScheduledTaskByID(s.db.Querier, id)
-	if err != nil {
-		return err
-	}
+// Update changes scheduled task in DB and re-add it to scheduler.
+func (s *Service) Update(id string, params models.ChangeScheduledTaskParams) error {
+	txErr := s.db.InTransaction(func(tx *reform.TX) error {
+		dbTask, err := models.ChangeScheduledTask(tx.Querier, id, params)
+		if err != nil {
+			return err
+		}
+		s.mx.Lock()
+		defer s.mx.Unlock()
 
-	if dbTask.Running {
-		return fmt.Errorf("task is running")
-	}
+		task, err := s.convertDBTask(dbTask)
+		if err != nil {
+			return err
+		}
 
-	s.mx.Lock()
-	defer s.mx.Unlock()
+		_ = s.scheduler.RemoveByTag(id)
 
-	task, err := s.convertDBTask(dbTask)
-	if err != nil {
-		return err
-	}
+		// Don't add it to scheduler, if it's disabled.
+		if dbTask.Disabled {
+			return nil
+		}
 
-	_ = s.scheduler.RemoveByTag(id)
+		j := s.scheduler.Cron(dbTask.CronExpression).SingletonMode()
+		if !dbTask.StartAt.IsZero() {
+			j = j.StartAt(dbTask.StartAt)
+		}
 
-	// Don't add it to scheduler, if it's disabled.
-	if dbTask.Disabled {
+		fn := s.wrapTask(task, dbTask.ID)
+		if _, err := j.Tag(dbTask.ID).Do(fn); err != nil {
+			return err
+		}
+
 		return nil
-	}
+	})
 
-	j := s.scheduler.Cron(dbTask.CronExpression).SingletonMode()
-	if !dbTask.StartAt.IsZero() {
-		j = j.StartAt(dbTask.StartAt)
-	}
-
-	fn := s.wrapTask(task, dbTask.ID)
-	if _, err := j.Tag(dbTask.ID).Do(fn); err != nil {
-		return err
-	}
-
-	return nil
+	return txErr
 }
 
 func (s *Service) loadFromDB() error {
 	s.mx.Lock()
 	defer s.mx.Unlock()
 
-	disabled := false
 	dbTasks, err := models.FindScheduledTasks(s.db.Querier, models.ScheduledTasksFilter{
-		Disabled: &disabled,
+		Disabled: pointer.ToBool(false),
 	})
 	if err != nil {
 		return err
@@ -286,35 +288,33 @@ func (s *Service) taskFinished(id string, taskErr error) {
 
 	l := s.l.WithField("id", id)
 
-	dbTask, err := models.FindScheduledTaskByID(s.db.Querier, id)
-	if err != nil {
-		return
-	}
+	txErr := s.db.InTransaction(func(tx *reform.TX) error {
+		params := models.ChangeScheduledTaskParams{
+			Running: pointer.ToBool(false),
+		}
 
-	params := models.ChangeScheduledTaskParams{
-		Running: pointer.ToBool(false),
-	}
+		if taskErr != nil {
+			params.Error = pointer.ToString(taskErr.Error())
+		} else {
+			params.Error = pointer.ToString("")
+		}
 
-	if taskErr == nil {
-		params.Succeeded = pointer.ToUint(dbTask.Succeeded + 1)
-		params.Error = pointer.ToString("")
-	} else {
-		params.Failed = pointer.ToUint(dbTask.Failed + 1)
-		params.Error = pointer.ToString(taskErr.Error())
-	}
+		if job != nil {
+			params.NextRun = pointer.ToTime(job.NextRun().UTC())
+			params.LastRun = pointer.ToTime(job.LastRun().UTC())
+		} else {
+			l.Errorf("failed to find scheduled task")
+		}
 
-	if job != nil {
-		nextRun := job.NextRun().UTC()
-		lastRun := job.LastRun().UTC()
-		params.NextRun = &nextRun
-		params.LastRun = &lastRun
-	} else {
-		l.Errorf("failed to find scheduled task: %v", err)
-	}
+		_, err := models.ChangeScheduledTask(tx.Querier, id, params)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 
-	_, err = models.ChangeScheduledTask(s.db.Querier, id, params)
-	if err != nil {
-		l.Errorf("failed to change scheduled task: %v", err)
+	if txErr != nil {
+		l.Errorf("failed to commit finished task: %v", txErr)
 	}
 }
 
@@ -330,7 +330,7 @@ func (s *Service) convertDBTask(dbTask *models.ScheduledTask) (Task, error) {
 		data := dbTask.Data.MongoDBBackupTask
 		task = NewMongoBackupTask(s.backupsLogicService, data.ServiceID, data.LocationID, data.Name, data.Description)
 	default:
-		return task, fmt.Errorf("unknown task type: %s", dbTask.Type)
+		return task, errors.Errorf("unknown task type: %s", dbTask.Type)
 	}
 
 	task.SetID(dbTask.ID)

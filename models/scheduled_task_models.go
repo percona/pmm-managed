@@ -46,8 +46,6 @@ type ScheduledTask struct {
 	NextRun        time.Time          `reform:"next_run"`
 	Type           ScheduledTaskType  `reform:"type"`
 	Data           *ScheduledTaskData `reform:"data"`
-	Succeeded      uint               `reform:"succeeded"`
-	Failed         uint               `reform:"failed"`
 	Running        bool               `reform:"running"`
 	Error          string             `reform:"error"`
 	CreatedAt      time.Time          `reform:"created_at"`

@@ -102,7 +102,7 @@ func FindScheduledTasks(q *reform.Querier, filters ScheduledTasksFilter) ([]*Sch
 		tail.WriteString(strings.Join(andConds, " AND "))
 		tail.WriteRune(' ')
 	}
-	tail.WriteString("ORDER BY created_at")
+	tail.WriteString("ORDER BY created_at DESC")
 
 	structs, err := q.SelectAllFrom(ScheduledTaskTable, tail.String(), args...)
 	if err != nil {
@@ -157,8 +157,6 @@ func CreateScheduledTask(q *reform.Querier, params CreateScheduledTaskParams) (*
 		NextRun:        params.NextRun,
 		Type:           params.Type,
 		Data:           &params.Data,
-		Succeeded:      0,
-		Failed:         0,
 	}
 	if err := q.Insert(task); err != nil {
 		return nil, errors.WithStack(err)
@@ -171,8 +169,6 @@ type ChangeScheduledTaskParams struct {
 	NextRun        *time.Time
 	LastRun        *time.Time
 	Disable        *bool
-	Succeeded      *uint
-	Failed         *uint
 	Running        *bool
 	Error          *string
 	Data           *ScheduledTaskData
@@ -210,14 +206,6 @@ func ChangeScheduledTask(q *reform.Querier, id string, params ChangeScheduledTas
 
 	if params.Disable != nil {
 		row.Disabled = *params.Disable
-	}
-
-	if params.Succeeded != nil {
-		row.Succeeded = *params.Succeeded
-	}
-
-	if params.Failed != nil {
-		row.Failed = *params.Failed
 	}
 
 	if params.Running != nil {

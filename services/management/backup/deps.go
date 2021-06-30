@@ -44,5 +44,5 @@ type scheduleService interface {
 	Run(ctx context.Context)
 	Add(task scheduler.Task, params scheduler.AddParams) (*models.ScheduledTask, error)
 	Remove(id string) error
-	Reload(id string) error
+	Update(id string, params models.ChangeScheduledTaskParams) error
 }

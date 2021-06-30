@@ -40,20 +40,6 @@ func (_m *mockScheduleService) Add(task scheduler.Task, params scheduler.AddPara
 	return r0, r1
 }
 
-// Reload provides a mock function with given fields: id
-func (_m *mockScheduleService) Reload(id string) error {
-	ret := _m.Called(id)
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(string) error); ok {
-		r0 = rf(id)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
 // Remove provides a mock function with given fields: id
 func (_m *mockScheduleService) Remove(id string) error {
 	ret := _m.Called(id)
@@ -71,4 +57,18 @@ func (_m *mockScheduleService) Remove(id string) error {
 // Run provides a mock function with given fields: ctx
 func (_m *mockScheduleService) Run(ctx context.Context) {
 	_m.Called(ctx)
+}
+
+// Update provides a mock function with given fields: id, params
+func (_m *mockScheduleService) Update(id string, params models.ChangeScheduledTaskParams) error {
+	ret := _m.Called(id, params)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, models.ChangeScheduledTaskParams) error); ok {
+		r0 = rf(id, params)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }

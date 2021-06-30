@@ -229,16 +229,7 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 		params.CronExpression = &val
 	}
 
-	err = s.db.InTransaction(func(tx *reform.TX) error {
-		_, err := models.ChangeScheduledTask(s.db.Querier, req.ScheduledBackupId, params)
-		if err != nil {
-			return err
-		}
-
-		return s.scheduleService.Reload(req.ScheduledBackupId)
-	})
-
-	if err != nil {
+	if err := s.scheduleService.Update(req.ScheduledBackupId, params); err != nil {
 		return nil, err
 	}
 
