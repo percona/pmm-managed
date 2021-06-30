@@ -36,39 +36,6 @@ import (
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
-var commonExpectedFiles = []string{
-	"alertmanager.base.yml",
-	"alertmanager.ini",
-	"alertmanager.log",
-	"alertmanager.yml",
-	"clickhouse-server.log",
-	"cron.log",
-	"dashboard-upgrade.log",
-	"grafana.log",
-	"installed.json",
-	"nginx.conf",
-	"nginx.log",
-	"pmm-agent.log",
-	"pmm-agent.yaml",
-	"pmm-managed.log",
-	"pmm-ssl.conf",
-	"pmm-version.txt",
-	"pmm.conf",
-	"pmm.ini",
-	"postgresql.log",
-	"qan-api2.ini",
-	"qan-api2.log",
-	"supervisorctl_status.log",
-	"supervisord.conf",
-	"supervisord.log",
-	"victoriametrics-promscrape.yml",
-	"victoriametrics.ini",
-	"victoriametrics.log",
-	"victoriametrics_targets.json",
-	"vmalert.ini",
-	"vmalert.log",
-}
-
 func TestReadLog(t *testing.T) {
 	f, err := ioutil.TempFile("", "pmm-managed-supervisord-tests-")
 	require.NoError(t, err)
@@ -125,6 +92,46 @@ func TestFiles(t *testing.T) {
 	l := NewLogs("2.4.5", checker)
 	ctx := logger.Set(context.Background(), t.Name())
 
+	expected := []string{
+		"alertmanager.base.yml",
+		"alertmanager.ini",
+		"alertmanager.log",
+		"alertmanager.yml",
+		"clickhouse-server.err.log",
+		"clickhouse-server.log",
+		"clickhouse-server.startup.log",
+		"cron.log",
+		"dashboard-upgrade.log",
+		"grafana.log",
+		"installed.json",
+		"nginx.access.log",
+		"nginx.conf",
+		"nginx.error.log",
+		"nginx.startup.log",
+		"pmm-agent.log",
+		"pmm-agent.yaml",
+		"pmm-managed.log",
+		"pmm-ssl.conf",
+		"pmm-version.txt",
+		"pmm.conf",
+		"pmm.ini",
+		"postgresql.log",
+		"postgresql.startup.log",
+		"prometheus.ini",
+		"prometheus.yml",
+		"qan-api2.ini",
+		"qan-api2.log",
+		"supervisorctl_status.log",
+		"supervisord.conf",
+		"supervisord.log",
+		"victoriametrics-promscrape.yml",
+		"victoriametrics.ini",
+		"victoriametrics.log",
+		"victoriametrics_targets.json",
+		"vmalert.ini",
+		"vmalert.log",
+	}
+
 	files := l.files(ctx)
 	actual := make([]string, 0, len(files))
 	for _, f := range files {
@@ -149,7 +156,7 @@ func TestFiles(t *testing.T) {
 	}
 
 	sort.Strings(actual)
-	assert.Equal(t, commonExpectedFiles, actual)
+	assert.Equal(t, expected, actual)
 }
 
 func TestZip(t *testing.T) {
@@ -163,18 +170,53 @@ func TestZip(t *testing.T) {
 	r, err := zip.NewReader(reader, reader.Size())
 	require.NoError(t, err)
 
-	additionalFiles := []string{
+	// zip file includes client files
+	expected := []string{
+		"alertmanager.base.yml",
+		"alertmanager.ini",
+		"alertmanager.log",
+		"alertmanager.yml",
+		"clickhouse-server.err.log",
+		"clickhouse-server.log",
+		"clickhouse-server.startup.log",
 		"client/list.txt",
 		"client/pmm-admin-version.txt",
 		"client/pmm-agent-config.yaml",
 		"client/pmm-agent-version.txt",
 		"client/status.json",
-		"systemctl_status.log",
+		"cron.log",
+		"dashboard-upgrade.log",
+		"grafana.log",
+		"installed.json",
+		"nginx.access.log",
+		"nginx.conf",
+		"nginx.error.log",
+		"nginx.startup.log",
+		"pmm-agent.log",
+		"pmm-agent.yaml",
+		"pmm-managed.log",
+		"pmm-ssl.conf",
+		"pmm-version.txt",
+		"pmm.conf",
+		"pmm.ini",
+		"postgresql.log",
+		"postgresql.startup.log",
 		"prometheus.base.yml",
+		"prometheus.ini",
+		"prometheus.yml",
+		"qan-api2.ini",
+		"qan-api2.log",
+		"supervisorctl_status.log",
+		"supervisord.conf",
+		"supervisord.log",
+		"systemctl_status.log",
+		"victoriametrics-promscrape.yml",
+		"victoriametrics.ini",
+		"victoriametrics.log",
+		"victoriametrics_targets.json",
+		"vmalert.ini",
+		"vmalert.log",
 	}
-
-	// zip file includes client files
-	expected := append(commonExpectedFiles, additionalFiles...)
 
 	actual := make([]string, 0, len(r.File))
 	for _, f := range r.File {
@@ -189,6 +231,5 @@ func TestZip(t *testing.T) {
 	}
 
 	sort.Strings(actual)
-	sort.Strings(expected)
 	assert.Equal(t, expected, actual)
 }
