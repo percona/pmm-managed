@@ -36,25 +36,25 @@ import (
 
 // BackupsService represents backups API.
 type BackupsService struct {
-	db                  *reform.DB
-	backupsLogicService backupsLogicService
-	scheduleService     scheduleService
-	l                   *logrus.Entry
+	db              *reform.DB
+	backupService   backupService
+	scheduleService scheduleService
+	l               *logrus.Entry
 }
 
 // NewBackupsService creates new backups API service.
-func NewBackupsService(db *reform.DB, backupsLogicService backupsLogicService, scheduleService scheduleService) *BackupsService {
+func NewBackupsService(db *reform.DB, backupService backupService, scheduleService scheduleService) *BackupsService {
 	return &BackupsService{
-		l:                   logrus.WithField("component", "management/backup/backups"),
-		db:                  db,
-		backupsLogicService: backupsLogicService,
-		scheduleService:     scheduleService,
+		l:               logrus.WithField("component", "management/backup/backups"),
+		db:              db,
+		backupService:   backupService,
+		scheduleService: scheduleService,
 	}
 }
 
 // StartBackup starts on-demand backup.
 func (s *BackupsService) StartBackup(ctx context.Context, req *backupv1beta1.StartBackupRequest) (*backupv1beta1.StartBackupResponse, error) {
-	artifactID, err := s.backupsLogicService.PerformBackup(ctx, req.ServiceId, req.LocationId, req.Name, "")
+	artifactID, err := s.backupService.PerformBackup(ctx, req.ServiceId, req.LocationId, req.Name, "")
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func (s *BackupsService) RestoreBackup(
 	req *backupv1beta1.RestoreBackupRequest,
 ) (*backupv1beta1.RestoreBackupResponse, error) {
 
-	id, err := s.backupsLogicService.RestoreBackup(ctx, req.ServiceId, req.ArtifactId)
+	id, err := s.backupService.RestoreBackup(ctx, req.ServiceId, req.ArtifactId)
 	if err != nil {
 		return nil, err
 	}
@@ -97,9 +97,9 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 		var task scheduler.Task
 		switch svc.ServiceType {
 		case models.MySQLServiceType:
-			task = scheduler.NewMySQLBackupTask(s.backupsLogicService, req.ServiceId, req.LocationId, req.Name, req.Description)
+			task = scheduler.NewMySQLBackupTask(s.backupService, req.ServiceId, req.LocationId, req.Name, req.Description)
 		case models.MongoDBServiceType:
-			task = scheduler.NewMongoBackupTask(s.backupsLogicService, req.ServiceId, req.LocationId, req.Name, req.Description)
+			task = scheduler.NewMongoBackupTask(s.backupService, req.ServiceId, req.LocationId, req.Name, req.Description)
 		case models.PostgreSQLServiceType,
 			models.ProxySQLServiceType,
 			models.HAProxyServiceType,

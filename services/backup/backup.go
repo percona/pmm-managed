@@ -28,16 +28,16 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-// BackupsLogicService represents core logic for db backup.
-type BackupsLogicService struct {
+// Service represents core logic for db backup.
+type Service struct {
 	db          *reform.DB
 	jobsService jobsService
 	l           *logrus.Entry
 }
 
-// NewBackupsLogicService creates new backups logic service.
-func NewBackupsLogicService(db *reform.DB, jobsService jobsService) *BackupsLogicService {
-	return &BackupsLogicService{
+// NewService creates new backups logic service.
+func NewService(db *reform.DB, jobsService jobsService) *Service {
+	return &Service{
 		l:           logrus.WithField("component", "management/backup/backups-logic"),
 		db:          db,
 		jobsService: jobsService,
@@ -45,7 +45,7 @@ func NewBackupsLogicService(db *reform.DB, jobsService jobsService) *BackupsLogi
 }
 
 // PerformBackup starts on-demand backup.
-func (s *BackupsLogicService) PerformBackup(ctx context.Context, serviceID, locationID, name,
+func (s *Service) PerformBackup(ctx context.Context, serviceID, locationID, name,
 	scheduleID string) (string, error) {
 	var err error
 	var artifact *models.Artifact
@@ -141,7 +141,7 @@ type prepareRestoreJobParams struct {
 }
 
 // RestoreBackup starts restore backup job.
-func (s *BackupsLogicService) RestoreBackup(ctx context.Context, serviceID, artifactID string) (string, error) {
+func (s *Service) RestoreBackup(ctx context.Context, serviceID, artifactID string) (string, error) {
 	var params *prepareRestoreJobParams
 	var jobID, restoreID string
 
@@ -212,7 +212,7 @@ func (s *BackupsLogicService) RestoreBackup(ctx context.Context, serviceID, arti
 	return restoreID, nil
 }
 
-func (s *BackupsLogicService) prepareRestoreJob(
+func (s *Service) prepareRestoreJob(
 	q *reform.Querier,
 	serviceID string,
 	artifactID string,
@@ -254,7 +254,7 @@ func (s *BackupsLogicService) prepareRestoreJob(
 	}, nil
 }
 
-func (s *BackupsLogicService) startRestoreJob(jobID, serviceID string, params *prepareRestoreJobParams) error {
+func (s *Service) startRestoreJob(jobID, serviceID string, params *prepareRestoreJobParams) error {
 	locationConfig := &models.BackupLocationConfig{
 		PMMServerConfig: params.Location.PMMServerConfig,
 		PMMClientConfig: params.Location.PMMClientConfig,
@@ -296,7 +296,7 @@ func (s *BackupsLogicService) startRestoreJob(jobID, serviceID string, params *p
 	return nil
 }
 
-func (s *BackupsLogicService) prepareBackupJob(
+func (s *Service) prepareBackupJob(
 	q *reform.Querier,
 	service *models.Service,
 	artifactID string,

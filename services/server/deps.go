@@ -131,6 +131,6 @@ type rulesService interface {
 	RemoveVMAlertRulesFiles() error
 }
 
-type backupsLogicService interface {
+type backupService interface {
 	PerformBackup(ctx context.Context, serviceID, locationID, name, scheduleID string) (string, error)
 }

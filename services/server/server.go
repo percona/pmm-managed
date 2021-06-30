@@ -68,7 +68,7 @@ type Server struct {
 	grafanaClient        grafanaClient
 	rulesService         rulesService
 	dbaasClient          dbaasClient
-	backupsLogicService  backupsLogicService
+	backupService        backupService
 
 	l *logrus.Entry
 
@@ -106,7 +106,7 @@ type Params struct {
 	GrafanaClient        grafanaClient
 	RulesService         rulesService
 	DbaasClient          dbaasClient
-	BackupsLogicService  backupsLogicService
+	BackupService        backupService
 }
 
 // NewServer returns new server for Server service.

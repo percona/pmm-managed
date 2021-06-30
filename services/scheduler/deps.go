@@ -2,8 +2,8 @@ package scheduler
 
 import "context"
 
-//go:generate mockery -name=backupsLogicService -case=snake -inpkg -testonly
+//go:generate mockery -name=backupService -case=snake -inpkg -testonly
 
-type backupsLogicService interface {
+type backupService interface {
 	PerformBackup(ctx context.Context, serviceID, locationID, name, scheduleID string) (string, error)
 }

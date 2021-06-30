@@ -83,27 +83,27 @@ func (j *PrintTask) Data() models.ScheduledTaskData {
 
 type mySQLBackupTask struct {
 	*common
-	backupsLogicService backupsLogicService
-	ServiceID           string
-	LocationID          string
-	Name                string
-	Description         string
+	backupService backupService
+	ServiceID     string
+	LocationID    string
+	Name          string
+	Description   string
 }
 
-func NewMySQLBackupTask(backupsLogicService backupsLogicService, serviceID, locationID, name, description string) *mySQLBackupTask {
+func NewMySQLBackupTask(backupService backupService, serviceID, locationID, name, description string) *mySQLBackupTask {
 	return &mySQLBackupTask{
-		common:              &common{},
-		backupsLogicService: backupsLogicService,
-		ServiceID:           serviceID,
-		LocationID:          locationID,
-		Name:                name,
-		Description:         description,
+		common:        &common{},
+		backupService: backupService,
+		ServiceID:     serviceID,
+		LocationID:    locationID,
+		Name:          name,
+		Description:   description,
 	}
 }
 
 func (t *mySQLBackupTask) Run(ctx context.Context) error {
 	name := t.Name + "_" + time.Now().Format(time.RFC3339)
-	_, err := t.backupsLogicService.PerformBackup(ctx, t.ServiceID, t.LocationID, name, t.ID())
+	_, err := t.backupService.PerformBackup(ctx, t.ServiceID, t.LocationID, name, t.ID())
 	return err
 }
 
@@ -124,27 +124,27 @@ func (t *mySQLBackupTask) Data() models.ScheduledTaskData {
 
 type mongoBackupTask struct {
 	*common
-	backupsLogicService backupsLogicService
-	ServiceID           string
-	LocationID          string
-	Name                string
-	Description         string
+	backupService backupService
+	ServiceID     string
+	LocationID    string
+	Name          string
+	Description   string
 }
 
-func NewMongoBackupTask(backupsLogicService backupsLogicService, serviceID, locationID, name, description string) *mongoBackupTask {
+func NewMongoBackupTask(backupService backupService, serviceID, locationID, name, description string) *mongoBackupTask {
 	return &mongoBackupTask{
-		common:              &common{},
-		backupsLogicService: backupsLogicService,
-		ServiceID:           serviceID,
-		LocationID:          locationID,
-		Name:                name,
-		Description:         description,
+		common:        &common{},
+		backupService: backupService,
+		ServiceID:     serviceID,
+		LocationID:    locationID,
+		Name:          name,
+		Description:   description,
 	}
 }
 
 func (t *mongoBackupTask) Run(ctx context.Context) error {
 	name := t.Name + "_" + time.Now().Format(time.RFC3339)
-	_, err := t.backupsLogicService.PerformBackup(ctx, t.ServiceID, t.LocationID, name, t.ID())
+	_, err := t.backupService.PerformBackup(ctx, t.ServiceID, t.LocationID, name, t.ID())
 	return err
 }
 

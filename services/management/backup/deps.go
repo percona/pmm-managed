@@ -25,7 +25,7 @@ import (
 )
 
 //go:generate mockery -name=awsS3 -case=snake -inpkg -testonly
-//go:generate mockery -name=backupsLogicService -case=snake -inpkg -testonly
+//go:generate mockery -name=backupService -case=snake -inpkg -testonly
 //go:generate mockery -name=scheduleService -case=snake -inpkg -testonly
 
 type awsS3 interface {
@@ -33,7 +33,7 @@ type awsS3 interface {
 	BucketExists(ctx context.Context, host string, accessKey, secretKey, name string) (bool, error)
 }
 
-type backupsLogicService interface {
+type backupService interface {
 	PerformBackup(ctx context.Context, serviceID, locationID, name, scheduleID string) (string, error)
 	RestoreBackup(ctx context.Context, serviceID, artifactID string) (string, error)
 }

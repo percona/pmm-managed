@@ -32,9 +32,9 @@ import (
 
 // Service is responsible for executing tasks and storing them to DB.
 type Service struct {
-	db                  *reform.DB
-	l                   *logrus.Entry
-	backupsLogicService backupsLogicService
+	db            *reform.DB
+	l             *logrus.Entry
+	backupService backupService
 
 	mx        sync.Mutex
 	scheduler *gocron.Scheduler
@@ -47,17 +47,17 @@ type Service struct {
 }
 
 // New creates new scheduler service.
-func New(db *reform.DB, backupsLogicService backupsLogicService) *Service {
+func New(db *reform.DB, backupService backupService) *Service {
 	scheduler := gocron.NewScheduler(time.UTC)
 	scheduler.TagsUnique()
 	scheduler.WaitForScheduleAll()
 	return &Service{
-		db:                  db,
-		scheduler:           scheduler,
-		l:                   logrus.WithField("component", "scheduler"),
-		backupsLogicService: backupsLogicService,
-		tasks:               make(map[string]context.CancelFunc),
-		jobs:                make(map[string]*gocron.Job),
+		db:            db,
+		scheduler:     scheduler,
+		l:             logrus.WithField("component", "scheduler"),
+		backupService: backupService,
+		tasks:         make(map[string]context.CancelFunc),
+		jobs:          make(map[string]*gocron.Job),
 	}
 }
 
@@ -325,10 +325,10 @@ func (s *Service) convertDBTask(dbTask *models.ScheduledTask) (Task, error) {
 		task = NewPrintTask(dbTask.Data.Print.Message)
 	case models.ScheduledMySQLBackupTask:
 		data := dbTask.Data.MySQLBackupTask
-		task = NewMySQLBackupTask(s.backupsLogicService, data.ServiceID, data.LocationID, data.Name, data.Description)
+		task = NewMySQLBackupTask(s.backupService, data.ServiceID, data.LocationID, data.Name, data.Description)
 	case models.ScheduledMongoDBBackupTask:
 		data := dbTask.Data.MongoDBBackupTask
-		task = NewMongoBackupTask(s.backupsLogicService, data.ServiceID, data.LocationID, data.Name, data.Description)
+		task = NewMongoBackupTask(s.backupService, data.ServiceID, data.LocationID, data.Name, data.Description)
 	default:
 		return task, errors.Errorf("unknown task type: %s", dbTask.Type)
 	}
