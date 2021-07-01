@@ -156,7 +156,8 @@ func (l *Logs) files(ctx context.Context) []fileContent {
 		"/srv/prometheus/prometheus.base.yml",
 
 		"/etc/alertmanager.yml",
-		"/etc/prometheus.yml",
+		// This file has been removed in latest server
+		// "/etc/prometheus.yml",
 		"/etc/victoriametrics-promscrape.yml",
 
 		"/etc/supervisord.conf",
