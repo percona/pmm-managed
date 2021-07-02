@@ -41,9 +41,8 @@ import (
 	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
-	"github.com/prometheus/common/log"
+	"github.com/raintank/go-pinger"
 	"github.com/sirupsen/logrus"
-	"github.com/tatsushid/go-fastping"
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -54,8 +53,9 @@ import (
 )
 
 const platformAPITimeout = 10 * time.Second
-const googleDNS = "8.8.8.8"
 const emptyVersion = "0.0.0"
+
+var googleDNS = net.IPv4(8, 8, 8, 8)
 
 // Server represents service for checking PMM Server status and changing settings.
 type Server struct {
@@ -252,36 +252,12 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 	s.envRW.RUnlock()
 
 	// check internet connection with ping
-	var isOffline chan bool
-	p := fastping.NewPinger()
-	// timeout for ping
-	p.MaxRTT = 3 * time.Second
-	ra, err := net.ResolveIPAddr("ip4:icmp", googleDNS)
+	p, err := pinger.NewPinger("ipv4", 1)
 	if err != nil {
 		return nil, err
 	}
-	p.AddIPAddr(ra)
-	p.OnRecv = func(addr *net.IPAddr, rtt time.Duration) {
-		log.Infof("\n\n\n\n\n\n\n\n internet \n\n\n\n\n\n\n\n\n\n\n")
-		isOffline <- false
-		p.Done()
-	}
-	p.OnIdle = func() {
-		log.Infof("\n\n\n\n\n\n\n\n no internet \n\n\n\n\n\n\n\n\n\n\n")
-		isOffline <- true
-		p.Done()
-	}
-	log.Infof("\n\n\n\n\n\n\n\n waiting... \n\n\n\n\n\n\n\n\n\n\n")
-	err = p.Run()
-	if err != nil {
-		log.Infof("\n\n\n\n\n\n\n\n eerr \n\n\n\n\n\n\n\n\n\n\n")
-		return nil, err
-	}
-
-	log.Infof("\n\n\n\n\n\n\n\n waiting \n\n\n\n\n\n\n\n\n\n\n")
-	o := <-isOffline
-	if o {
-		log.Infof("\n\n\n\n\n\n\n\n no internet got \n\n\n\n\n\n\n\n\n\n\n")
+	r, err := p.Ping(googleDNS, 3, 3*time.Second)
+	if r.Sent != r.Received || err != nil {
 		v := s.supervisord.InstalledPMMVersion(ctx)
 		res := &serverpb.CheckUpdatesResponse{
 			Installed: &serverpb.VersionInfo{
