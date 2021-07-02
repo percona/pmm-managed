@@ -95,6 +95,26 @@ func TestMongodbExporterConfig(t *testing.T) {
 		assert.Equal(t, expectedFiles, actual.TextFiles)
 	})
 
+	t.Run("AuthenticationDatabase", func(t *testing.T) {
+		exporter.TLS = true
+		exporter.MongoDBOptions = &models.MongoDBOptions{
+			TLSCertificateKey:             "content-of-tls-certificate-key",
+			TLSCertificateKeyFilePassword: "passwordoftls",
+			TLSCa:                         "content-of-tls-ca",
+			AuthenticationMechanism:       "MONGODB-X509",
+			AuthenticationDatabase:        "$external",
+		}
+		actual := mongodbExporterConfig(mongodb, exporter, exposeSecrets, pmmAgentVersion)
+		expected := "MONGODB_URI=mongodb://1.2.3.4:27017/$external?authMechanism=MONGODB-X509&connectTimeoutMS=1000&ssl=true&" +
+			"tlsCaFile={{.TextFiles.caFilePlaceholder}}&tlsCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}&tlsCertificateKeyFilePassword=passwordoftls"
+		assert.Equal(t, expected, actual.Env[0])
+		expectedFiles := map[string]string{
+			"certificateKeyFilePlaceholder": exporter.MongoDBOptions.TLSCertificateKey,
+			"caFilePlaceholder":             exporter.MongoDBOptions.TLSCa,
+		}
+		assert.Equal(t, expectedFiles, actual.TextFiles)
+	})
+
 	t.Run("DisabledCollectors", func(t *testing.T) {
 		exporter.DisabledCollectors = []string{"topmetrics"}
 		actual := mongodbExporterConfig(mongodb, exporter, exposeSecrets, pmmAgentVersion)

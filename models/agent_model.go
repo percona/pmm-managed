@@ -86,6 +86,7 @@ type MongoDBOptions struct {
 	TLSCertificateKeyFilePassword string `json:"tls_certificate_key_file_password"`
 	TLSCa                         string `json:"tls_ca"`
 	AuthenticationMechanism       string `json:"authentication_mechanism"`
+	AuthenticationDatabase        string `json:"authentication_database"`
 }
 
 // Value implements database/sql/driver.Valuer interface. Should be defined on the value.
