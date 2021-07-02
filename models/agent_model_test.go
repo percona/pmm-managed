@@ -105,6 +105,7 @@ func TestAgent(t *testing.T) {
 			TLSCertificateKey:             "key",
 			TLSCertificateKeyFilePassword: "pass",
 			TLSCa:                         "cert",
+			AuthenticationMechanism:       "MONGODB-X509",
 		}
 		mysqlOptions := models.MySQLOptions{
 			TLSCa:   "ca",
@@ -127,8 +128,8 @@ func TestAgent(t *testing.T) {
 			models.ProxySQLExporterType:        "username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:12345)/database?timeout=1s&tls=true",
 			models.QANMySQLPerfSchemaAgentType: "username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:12345)/database?clientFoundRows=true&parseTime=true&timeout=1s&tls=custom",
 			models.QANMySQLSlowlogAgentType:    "username:s3cur3 p@$$w0r4.@tcp(1.2.3.4:12345)/database?clientFoundRows=true&parseTime=true&timeout=1s&tls=custom",
-			models.MongoDBExporterType:         "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000&ssl=true&tlsCaFile={{.TextFiles.caFilePlaceholder}}&tlsCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}&tlsCertificateKeyFilePassword=pass",
-			models.QANMongoDBProfilerAgentType: "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connectTimeoutMS=1000&ssl=true&tlsCaFile={{.TextFiles.caFilePlaceholder}}&tlsCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}&tlsCertificateKeyFilePassword=pass",
+			models.MongoDBExporterType:         "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?authMechanism=MONGODB-X509&connectTimeoutMS=1000&ssl=true&tlsCaFile={{.TextFiles.caFilePlaceholder}}&tlsCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}&tlsCertificateKeyFilePassword=pass",
+			models.QANMongoDBProfilerAgentType: "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?authMechanism=MONGODB-X509&connectTimeoutMS=1000&ssl=true&tlsCaFile={{.TextFiles.caFilePlaceholder}}&tlsCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}&tlsCertificateKeyFilePassword=pass",
 			models.PostgresExporterType:        "postgres://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/database?connect_timeout=1&sslmode=verify-full",
 		} {
 			t.Run(string(typ), func(t *testing.T) {
@@ -139,7 +140,9 @@ func TestAgent(t *testing.T) {
 
 		t.Run("MongoDBNoDatabase", func(t *testing.T) {
 			agent.AgentType = models.MongoDBExporterType
+			// reset values from the previous test
 			agent.MongoDBOptions.TLSCertificateKeyFilePassword = ""
+			agent.MongoDBOptions.AuthenticationMechanism = ""
 
 			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?connectTimeoutMS=1000&ssl=true&tlsCaFile={{.TextFiles.caFilePlaceholder}}&tlsCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}", agent.DSN(service, time.Second, "", nil))
 			assert.Equal(t, "mongodb://username:s3cur3%20p%40$$w0r4.@1.2.3.4:12345/?ssl=true&tlsCaFile={{.TextFiles.caFilePlaceholder}}&tlsCertificateKeyFile={{.TextFiles.certificateKeyFilePlaceholder}}", agent.DSN(service, 0, "", nil))
