@@ -884,7 +884,7 @@ func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo)
 			case models.PostgresExporterType:
 				agentProcesses[row.AgentID] = postgresExporterConfig(service, row, redactMode, pmmAgentVersion)
 			case models.ProxySQLExporterType:
-				agentProcesses[row.AgentID] = proxysqlExporterConfig(service, row, redactMode)
+				agentProcesses[row.AgentID] = proxysqlExporterConfig(service, row, redactMode, pmmAgentVersion)
 			case models.QANMySQLPerfSchemaAgentType:
 				builtinAgents[row.AgentID] = qanMySQLPerfSchemaAgentConfig(service, row)
 			case models.QANMySQLSlowlogAgentType:
