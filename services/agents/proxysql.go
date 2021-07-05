@@ -24,13 +24,17 @@ import (
 	"github.com/AlekSi/pointer"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
+	"github.com/percona/pmm/version"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/utils/collectors"
 )
 
+var proxysqlExporterStatsCommandVersion = version.MustParse("2.19.99")
+var proxysqlExporterRuntimeVersion = version.MustParse("2.20.99")
+
 // proxysqlExporterConfig returns desired configuration of proxysql_exporter process.
-func proxysqlExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode) *agentpb.SetStateRequest_AgentProcess {
+func proxysqlExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode, pmmAgentVersion *version.Parsed) *agentpb.SetStateRequest_AgentProcess {
 	tdp := exporter.TemplateDelimiters(service)
 
 	args := []string{
@@ -38,9 +42,19 @@ func proxysqlExporterConfig(service *models.Service, exporter *models.Agent, red
 		"-collect.mysql_connection_pool",
 		"-collect.mysql_status",
 		"-collect.stats_memory_metrics",
-		"-collect.runtime_mysql_servers",
-		"-collect.stats_command_counter",
 		"-web.listen-address=:" + tdp.Left + " .listen_port " + tdp.Right,
+	}
+
+	if !pmmAgentVersion.Less(postgresExporterStatsCommandVersion) {
+		args = append(args,
+		    "-collect.stats_command_counter",
+		)
+	}
+
+	if !pmmAgentVersion.Less(postgresExporterRuntimeVersion) {
+		args = append(args,
+		    "-collect.runtime_mysql_servers",
+		)
 	}
 
 	if pointer.GetString(exporter.MetricsPath) != "" {
