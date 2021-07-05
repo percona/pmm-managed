@@ -45,13 +45,13 @@ func proxysqlExporterConfig(service *models.Service, exporter *models.Agent, red
 		"-web.listen-address=:" + tdp.Left + " .listen_port " + tdp.Right,
 	}
 
-	if !pmmAgentVersion.Less(postgresExporterStatsCommandVersion) {
+	if !pmmAgentVersion.Less(proxysqlExporterStatsCommandVersion) {
 		args = append(args,
 		    "-collect.stats_command_counter",
 		)
 	}
 
-	if !pmmAgentVersion.Less(postgresExporterRuntimeVersion) {
+	if !pmmAgentVersion.Less(proxysqlExporterRuntimeVersion) {
 		args = append(args,
 		    "-collect.runtime_mysql_servers",
 		)
