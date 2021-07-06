@@ -44,7 +44,7 @@ func FindRestoreHistoryItems(q *reform.Querier, filters *RestoreHistoryItemFilte
 		if _, err := FindServiceByID(q, filters.ServiceID); err != nil {
 			return nil, err
 		}
-		conditions = append(conditions, fmt.Sprintf("service_id = %s", q.Placeholder(1)))
+
 		conditions = append(conditions, fmt.Sprintf("service_id = %s", q.Placeholder(idx)))
 		args = append(args, filters.ServiceID)
 		idx++
@@ -75,7 +75,8 @@ func FindRestoreHistoryItems(q *reform.Querier, filters *RestoreHistoryItemFilte
 	return items, nil
 }
 
-func findRestoreHistoryItemByID(q *reform.Querier, id string) (*RestoreHistoryItem, error) {
+// FindRestoreHistoryItemByID finds restore history item. Returns ErrNotFound if requested item not found.
+func FindRestoreHistoryItemByID(q *reform.Querier, id string) (*RestoreHistoryItem, error) {
 	if id == "" {
 		return nil, errors.New("provided id is empty")
 	}
@@ -117,7 +118,7 @@ func CreateRestoreHistoryItem(q *reform.Querier, params CreateRestoreHistoryItem
 	}
 
 	id := "/restore_id/" + uuid.New().String()
-	_, err := findRestoreHistoryItemByID(q, id)
+	_, err := FindRestoreHistoryItemByID(q, id)
 	switch {
 	case err == nil:
 		return nil, errors.Errorf("restore history item with id '%s' already exists", id)
@@ -151,7 +152,7 @@ func ChangeRestoreHistoryItem(
 	restoreID string,
 	params ChangeRestoreHistoryItemParams,
 ) (*RestoreHistoryItem, error) {
-	row, err := findRestoreHistoryItemByID(q, restoreID)
+	row, err := FindRestoreHistoryItemByID(q, restoreID)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +171,7 @@ func ChangeRestoreHistoryItem(
 
 // RemoveRestoreHistoryItem removes restore history item by ID.
 func RemoveRestoreHistoryItem(q *reform.Querier, id string) error {
-	if _, err := findRestoreHistoryItemByID(q, id); err != nil {
+	if _, err := FindRestoreHistoryItemByID(q, id); err != nil {
 		return err
 	}
 
