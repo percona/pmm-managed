@@ -30,11 +30,14 @@ import (
 	"github.com/percona/pmm-managed/utils/collectors"
 )
 
-var proxysqlExporterStatsCommandVersion = version.MustParse("2.19.99")
-var proxysqlExporterRuntimeVersion = version.MustParse("2.20.99")
+var (
+	proxysqlExporterStatsCommandVersion = version.MustParse("2.18.99")
+	proxysqlExporterRuntimeVersion      = version.MustParse("2.19.99")
+)
 
 // proxysqlExporterConfig returns desired configuration of proxysql_exporter process.
-func proxysqlExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode, pmmAgentVersion *version.Parsed) *agentpb.SetStateRequest_AgentProcess {
+func proxysqlExporterConfig(service *models.Service, exporter *models.Agent, redactMode redactMode,
+	pmmAgentVersion *version.Parsed) *agentpb.SetStateRequest_AgentProcess {
 	tdp := exporter.TemplateDelimiters(service)
 
 	args := []string{
@@ -47,13 +50,13 @@ func proxysqlExporterConfig(service *models.Service, exporter *models.Agent, red
 
 	if !pmmAgentVersion.Less(proxysqlExporterStatsCommandVersion) {
 		args = append(args,
-		    "-collect.stats_command_counter",
+			"-collect.stats_command_counter",
 		)
 	}
 
 	if !pmmAgentVersion.Less(proxysqlExporterRuntimeVersion) {
 		args = append(args,
-		    "-collect.runtime_mysql_servers",
+			"-collect.runtime_mysql_servers",
 		)
 	}
 
