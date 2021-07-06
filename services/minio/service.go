@@ -66,7 +66,7 @@ func (s *Service) RemoveRecursive(ctx context.Context, endpoint, accessKey, secr
 	}
 
 	objectsCh := make(chan minio.ObjectInfo)
-	g := errgroup.Group{}
+	var g errgroup.Group
 	g.Go(func() error {
 		defer close(objectsCh)
 
