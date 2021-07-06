@@ -54,6 +54,7 @@ func FindRestoreHistoryItems(q *reform.Querier, filters *RestoreHistoryItemFilte
 		if _, err := FindArtifactByID(q, filters.ArtifactID); err != nil {
 			return nil, err
 		}
+
 		conditions = append(conditions, fmt.Sprintf("artifact_id = %s", q.Placeholder(idx)))
 		args = append(args, filters.ArtifactID)
 	}

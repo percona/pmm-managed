@@ -34,7 +34,8 @@ type Service struct {
 	l *logrus.Entry
 }
 
-func NewService(l *logrus.Entry) *Service {
+// New creates new minio service.
+func New(l *logrus.Entry) *Service {
 	return &Service{
 		l: l,
 	}

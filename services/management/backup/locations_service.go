@@ -246,11 +246,9 @@ func (s *LocationsService) RemoveLocation(ctx context.Context, req *backupv1beta
 	if req.Force {
 		mode = models.RemoveCascade
 	}
+
 	err := s.db.InTransaction(func(tx *reform.TX) error {
-		if err := models.RemoveBackupLocation(tx.Querier, req.LocationId, mode); err != nil {
-			return err
-		}
-		return nil
+		return models.RemoveBackupLocation(tx.Querier, req.LocationId, mode)
 	})
 
 	if err != nil {

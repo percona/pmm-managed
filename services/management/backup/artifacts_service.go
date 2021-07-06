@@ -100,19 +100,15 @@ func (s *ArtifactsService) ListArtifacts(context.Context, *backupv1beta1.ListArt
 	}, nil
 }
 
-// DeleteArtifact deletes specified artifact.
-func (s *ArtifactsService) DeleteArtifact(
-	ctx context.Context,
-	req *backupv1beta1.DeleteArtifactRequest,
-) (*backupv1beta1.DeleteArtifactResponse, error) {
+func (s *ArtifactsService) removeArtifactFromS3(ctx context.Context, artifactID string) error {
 	var s3Config *models.S3LocationConfig
 	var artifactName string
 	if err := s.db.InTransaction(func(tx *reform.TX) error {
-		artifact, err := models.FindArtifactByID(tx.Querier, req.ArtifactId)
+		artifact, err := models.FindArtifactByID(tx.Querier, artifactID)
 		switch {
 		case err == nil:
 		case errors.Is(err, models.ErrNotFound):
-			return status.Errorf(codes.NotFound, "Artifact with ID %q not found.", req.ArtifactId)
+			return status.Errorf(codes.NotFound, "Artifact with ID %q not found.", artifactID)
 		default:
 			return err
 		}
@@ -123,30 +119,43 @@ func (s *ArtifactsService) DeleteArtifact(
 		if err != nil {
 			return err
 		}
-		if location.S3Config == nil {
-			return errors.Errorf("s3 location config is nil")
-		}
 
 		s3Config = location.S3Config
 
 		return nil
 	}); err != nil {
-		return nil, err
+		return err
 	}
 
+	if s3Config == nil {
+		return nil
+	}
+
+	if err := s.s3.RemoveRecursive(
+		ctx,
+		s3Config.Endpoint,
+		s3Config.AccessKey,
+		s3Config.SecretKey,
+		s3Config.BucketName,
+		// Recursive listing finds all the objects with the specified prefix.
+		// There could be a problem e.g. when we have artifacts `backup-daily` and `backup-daily-1`, so
+		// listing by prefix `backup-daily` gives us both artifacts.
+		// To avoid such a situation we need to append a slash.
+		artifactName+"/",
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// DeleteArtifact deletes specified artifact.
+func (s *ArtifactsService) DeleteArtifact(
+	ctx context.Context,
+	req *backupv1beta1.DeleteArtifactRequest,
+) (*backupv1beta1.DeleteArtifactResponse, error) {
 	if req.RemoveFiles {
-		if err := s.s3.RemoveRecursive(
-			ctx,
-			s3Config.Endpoint,
-			s3Config.AccessKey,
-			s3Config.SecretKey,
-			s3Config.BucketName,
-			// Recursive listing finds all the objects with the specified prefix.
-			// There could be a problem e.g. when we have artifacts `backup-daily` and `backup-daily-1`, so
-			// listing by prefix `backup-daily` gives us both artifacts.
-			// To avoid such a situation we need to append a slash.
-			artifactName+"/",
-		); err != nil {
+		if err := s.removeArtifactFromS3(ctx, req.ArtifactId); err != nil {
 			return nil, err
 		}
 	}
@@ -173,10 +182,7 @@ func (s *ArtifactsService) DeleteArtifact(
 			}
 		}
 
-		if err := models.DeleteArtifact(tx.Querier, req.ArtifactId); err != nil {
-			return err
-		}
-		return nil
+		return models.DeleteArtifact(tx.Querier, req.ArtifactId)
 	}); err != nil {
 		return nil, err
 	}
