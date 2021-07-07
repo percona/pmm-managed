@@ -100,7 +100,10 @@ func (s *ArtifactsService) ListArtifacts(context.Context, *backupv1beta1.ListArt
 	}, nil
 }
 
-func (s *ArtifactsService) removeArtifactFromS3(ctx context.Context, artifactID string) error {
+func (s *ArtifactsService) deleteArtifactRequirements(
+	ctx context.Context,
+	artifactID string,
+) (string, *models.S3LocationConfig, error) {
 	var s3Config *models.S3LocationConfig
 	var artifactName string
 	if err := s.db.InTransaction(func(tx *reform.TX) error {
@@ -112,8 +115,25 @@ func (s *ArtifactsService) removeArtifactFromS3(ctx context.Context, artifactID 
 		default:
 			return err
 		}
+		if artifact.Status != models.SuccessBackupStatus && artifact.Status != models.ErrorBackupStatus {
+			return status.Errorf(codes.FailedPrecondition, "Artifact with ID %q isn't in the final state.", artifactID)
+		}
 
 		artifactName = artifact.Name
+
+		restoreItems, err := models.FindRestoreHistoryItems(tx.Querier, &models.RestoreHistoryItemFilters{
+			ArtifactID: artifactID,
+		})
+		if err != nil {
+			return err
+		}
+
+		for _, ri := range restoreItems {
+			if ri.Status == models.InProgressRestoreStatus {
+				return status.Errorf(codes.FailedPrecondition,
+					"Cannot delete artifact with ID %q: restore operation is in progress %q", artifactID, ri.ID)
+			}
+		}
 
 		location, err := models.FindBackupLocationByID(tx.Querier, artifact.LocationID)
 		if err != nil {
@@ -124,29 +144,10 @@ func (s *ArtifactsService) removeArtifactFromS3(ctx context.Context, artifactID 
 
 		return nil
 	}); err != nil {
-		return err
+		return "", nil, err
 	}
 
-	if s3Config == nil {
-		return nil
-	}
-
-	if err := s.s3.RemoveRecursive(
-		ctx,
-		s3Config.Endpoint,
-		s3Config.AccessKey,
-		s3Config.SecretKey,
-		s3Config.BucketName,
-		// Recursive listing finds all the objects with the specified prefix.
-		// There could be a problem e.g. when we have artifacts `backup-daily` and `backup-daily-1`, so
-		// listing by prefix `backup-daily` gives us both artifacts.
-		// To avoid such a situation we need to append a slash.
-		artifactName+"/",
-	); err != nil {
-		return err
-	}
-
-	return nil
+	return artifactName, s3Config, nil
 }
 
 // DeleteArtifact deletes specified artifact.
@@ -154,21 +155,29 @@ func (s *ArtifactsService) DeleteArtifact(
 	ctx context.Context,
 	req *backupv1beta1.DeleteArtifactRequest,
 ) (*backupv1beta1.DeleteArtifactResponse, error) {
-	if req.RemoveFiles {
-		if err := s.removeArtifactFromS3(ctx, req.ArtifactId); err != nil {
+	artifactName, s3Config, err := s.deleteArtifactRequirements(ctx, req.ArtifactId)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.RemoveFiles && s3Config != nil {
+		if err := s.s3.RemoveRecursive(
+			ctx,
+			s3Config.Endpoint,
+			s3Config.AccessKey,
+			s3Config.SecretKey,
+			s3Config.BucketName,
+			// Recursive listing finds all the objects with the specified prefix.
+			// There could be a problem e.g. when we have artifacts `backup-daily` and `backup-daily-1`, so
+			// listing by prefix `backup-daily` gives us both artifacts.
+			// To avoid such a situation we need to append a slash.
+			artifactName+"/",
+		); err != nil {
 			return nil, err
 		}
 	}
 
 	if err := s.db.InTransaction(func(tx *reform.TX) error {
-		_, err := models.FindArtifactByID(tx.Querier, req.ArtifactId)
-		switch {
-		case err == nil:
-		case errors.Is(err, models.ErrNotFound):
-			return status.Errorf(codes.NotFound, "Artifact with ID %q not found.", req.ArtifactId)
-		default:
-			return err
-		}
 		restoreItems, err := models.FindRestoreHistoryItems(tx.Querier, &models.RestoreHistoryItemFilters{
 			ArtifactID: req.ArtifactId,
 		})
@@ -250,7 +259,7 @@ func convertArtifact(
 		return nil, errors.Wrapf(err, "artifact id '%s'", a.ID)
 	}
 
-	status, err := convertBackupStatus(a.Status)
+	backupStatus, err := convertBackupStatus(a.Status)
 	if err != nil {
 		return nil, errors.Wrapf(err, "artifact id '%s'", a.ID)
 	}
@@ -264,7 +273,7 @@ func convertArtifact(
 		ServiceId:    a.ServiceID,
 		ServiceName:  serviceName,
 		DataModel:    *dm,
-		Status:       *status,
+		Status:       *backupStatus,
 		CreatedAt:    createdAt,
 	}, nil
 }
