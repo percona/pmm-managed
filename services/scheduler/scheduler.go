@@ -102,10 +102,14 @@ func (s *Service) Add(task Task, params AddParams) (*models.ScheduledTask, error
 		s.jobsMx.RLock()
 		scheduleJob := s.jobs[scheduledTask.ID]
 		s.jobsMx.RUnlock()
-		scheduledTask, err = models.ChangeScheduledTask(tx.Querier, scheduledTask.ID, models.ChangeScheduledTaskParams{
-			NextRun: pointer.ToTime(scheduleJob.NextRun().UTC()),
-			LastRun: pointer.ToTime(scheduleJob.LastRun().UTC()),
-		})
+
+		// If it's not disabled, update next run.
+		if scheduleJob != nil {
+			scheduledTask, err = models.ChangeScheduledTask(tx.Querier, scheduledTask.ID, models.ChangeScheduledTaskParams{
+				NextRun: pointer.ToTime(scheduleJob.NextRun().UTC()),
+				LastRun: pointer.ToTime(scheduleJob.LastRun().UTC()),
+			})
+		}
 		if err != nil {
 			s.l.WithField("id", scheduledTask.ID).Errorf("failed to set next run for new created task")
 			s.mx.Lock()
