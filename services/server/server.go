@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"os"
 	"os/exec"
 	"os/user"
@@ -39,7 +38,6 @@ import (
 	"github.com/percona/pmm/utils/pdeathsig"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
-	"github.com/raintank/go-pinger"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc/codes"
@@ -53,9 +51,6 @@ import (
 )
 
 const platformAPITimeout = 10 * time.Second
-const emptyVersion = "0.0.0"
-
-var googleDNS = net.IPv4(8, 8, 8, 8)
 
 // Server represents service for checking PMM Server status and changing settings.
 type Server struct {
@@ -244,49 +239,44 @@ func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) 
 	return &serverpb.ReadinessResponse{}, nil
 }
 
+func (s *Server) noInternetResponse(ctx context.Context) (*serverpb.CheckUpdatesResponse, error) {
+	v := s.supervisord.InstalledPMMVersion(ctx)
+	r := &serverpb.CheckUpdatesResponse{
+		Installed: &serverpb.VersionInfo{
+			Version:     v.Version,
+			FullVersion: v.FullVersion,
+		},
+		Latest: &serverpb.VersionInfo{
+			Version:     "0.0.0",
+			FullVersion: "0.0.0",
+		},
+		UpdateAvailable: false,
+	}
+
+	if v.BuildTime != nil {
+		t := v.BuildTime.UTC().Truncate(24 * time.Hour) // return only date
+		r.Installed.Timestamp = timestamppb.New(t)
+		r.LastCheck = timestamppb.New(time.Now())
+	}
+
+	return r, nil
+}
+
 // CheckUpdates checks PMM Server updates availability.
 func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesRequest) (*serverpb.CheckUpdatesResponse, error) {
 	s.envRW.RLock()
 	updatesDisabled := s.envSettings.DisableUpdates
 	s.envRW.RUnlock()
 
-	// check internet connection with ping
-	p, err := pinger.NewPinger("ipv4", 1)
-	if err != nil {
-		return nil, err
-	}
-	r, err := p.Ping(googleDNS, 3, 3*time.Second)
-	if r.Sent != r.Received || err != nil {
-		v := s.supervisord.InstalledPMMVersion(ctx)
-		res := &serverpb.CheckUpdatesResponse{
-			Installed: &serverpb.VersionInfo{
-				Version:     v.Version,
-				FullVersion: v.FullVersion,
-			},
-			Latest: &serverpb.VersionInfo{
-				Version:     emptyVersion,
-				FullVersion: emptyVersion,
-			},
-			UpdateAvailable: false,
-		}
-
-		if v.BuildTime != nil {
-			t := v.BuildTime.UTC().Truncate(24 * time.Hour) // return only date
-			res.Installed.Timestamp, _ = ptypes.TimestampProto(t)
-		}
-
-		return res, nil
-	}
-
 	if req.Force {
 		if err := s.supervisord.ForceCheckUpdates(ctx); err != nil {
-			return nil, err
+			return s.noInternetResponse(ctx)
 		}
 	}
 
 	v, lastCheck := s.supervisord.LastCheckUpdatesResult(ctx)
 	if v == nil {
-		return nil, status.Error(codes.Unavailable, "failed to check for updates")
+		return s.noInternetResponse(ctx)
 	}
 
 	res := &serverpb.CheckUpdatesResponse{
