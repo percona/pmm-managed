@@ -93,37 +93,19 @@ func (s *Service) Add(task Task, params AddParams) (*models.ScheduledTask, error
 			return err
 		}
 
-		id := scheduledTask.ID
-		task.SetID(id)
-
-		// Don't add job to scheduler if task is disabled.
-		if scheduledTask.Disabled {
-			return nil
-		}
-
-		fn := s.wrapTask(task, id)
-
-		s.mx.Lock()
-		j := s.scheduler.Cron(params.CronExpression).SingletonMode()
-		if !params.StartAt.IsZero() {
-			j = j.StartAt(params.StartAt)
-		}
-		scheduleJob, err := j.Tag(id).Do(fn)
-		s.mx.Unlock()
-		if err != nil {
+		if err := s.addDBTask(scheduledTask); err != nil {
 			return err
 		}
 
-		s.jobsMx.Lock()
-		s.jobs[id] = scheduleJob
-		s.jobsMx.Unlock()
-
-		scheduledTask, err = models.ChangeScheduledTask(tx.Querier, id, models.ChangeScheduledTaskParams{
+		s.jobsMx.RLock()
+		scheduleJob := s.jobs[scheduledTask.ID]
+		s.jobsMx.RUnlock()
+		scheduledTask, err = models.ChangeScheduledTask(tx.Querier, scheduledTask.ID, models.ChangeScheduledTaskParams{
 			NextRun: pointer.ToTime(scheduleJob.NextRun().UTC()),
 			LastRun: pointer.ToTime(scheduleJob.LastRun().UTC()),
 		})
 		if err != nil {
-			s.l.WithField("id", id).Errorf("failed to set next run for new created task")
+			s.l.WithField("id", scheduledTask.ID).Errorf("failed to set next run for new created task")
 			s.mx.Lock()
 			s.scheduler.RemoveByReference(scheduleJob)
 			s.mx.Unlock()
@@ -172,27 +154,10 @@ func (s *Service) Update(id string, params models.ChangeScheduledTaskParams) err
 			return err
 		}
 		s.mx.Lock()
-		defer s.mx.Unlock()
-
-		task, err := s.convertDBTask(dbTask)
-		if err != nil {
-			return err
-		}
-
 		_ = s.scheduler.RemoveByTag(id)
+		s.mx.Unlock()
 
-		// Don't add it to scheduler, if it's disabled.
-		if dbTask.Disabled {
-			return nil
-		}
-
-		j := s.scheduler.Cron(dbTask.CronExpression).SingletonMode()
-		if !dbTask.StartAt.IsZero() {
-			j = j.StartAt(dbTask.StartAt)
-		}
-
-		fn := s.wrapTask(task, dbTask.ID)
-		if _, err := j.Tag(dbTask.ID).Do(fn); err != nil {
+		if err := s.addDBTask(dbTask); err != nil {
 			return err
 		}
 
@@ -203,9 +168,6 @@ func (s *Service) Update(id string, params models.ChangeScheduledTaskParams) err
 }
 
 func (s *Service) loadFromDB() error {
-	s.mx.Lock()
-	defer s.mx.Unlock()
-
 	dbTasks, err := models.FindScheduledTasks(s.db.Querier, models.ScheduledTasksFilter{
 		Disabled: pointer.ToBool(false),
 	})
@@ -213,29 +175,45 @@ func (s *Service) loadFromDB() error {
 		return err
 	}
 
+	s.mx.Lock()
 	s.scheduler.Clear()
-
-	s.jobsMx.Lock()
-	defer s.jobsMx.Unlock()
+	s.mx.Unlock()
 
 	for _, dbTask := range dbTasks {
-		task, err := s.convertDBTask(dbTask)
-		if err != nil {
+		if err := s.addDBTask(dbTask); err != nil {
 			return err
 		}
-
-		fn := s.wrapTask(task, dbTask.ID)
-		j := s.scheduler.Cron(dbTask.CronExpression).SingletonMode()
-		if !dbTask.StartAt.IsZero() {
-			j = j.StartAt(dbTask.StartAt)
-		}
-		scheduleJob, err := j.Tag(dbTask.ID).Do(fn)
-		if err != nil {
-			return err
-		}
-
-		s.jobs[dbTask.ID] = scheduleJob
 	}
+
+	return nil
+}
+
+func (s *Service) addDBTask(dbTask *models.ScheduledTask) error {
+	task, err := s.convertDBTask(dbTask)
+	if err != nil {
+		return err
+	}
+
+	if dbTask.Disabled {
+		return nil
+	}
+
+	s.mx.Lock()
+	fn := s.wrapTask(task, dbTask.ID)
+	j := s.scheduler.Cron(dbTask.CronExpression).SingletonMode()
+	if !dbTask.StartAt.IsZero() {
+		j = j.StartAt(dbTask.StartAt)
+	}
+	scheduleJob, err := j.Tag(dbTask.ID).Do(fn)
+	if err != nil {
+		s.mx.Unlock()
+		return err
+	}
+	s.mx.Unlock()
+
+	s.jobsMx.Lock()
+	s.jobs[dbTask.ID] = scheduleJob
+	s.jobsMx.Unlock()
 
 	return nil
 }

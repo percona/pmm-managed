@@ -89,7 +89,6 @@ func FindScheduledTasks(q *reform.Querier, filters ScheduledTasksFilter) ([]*Sch
 		crossJoin = true
 		andConds = append(andConds, "value ->> 'location_id' = "+q.Placeholder(idx))
 		args = append(args, filters.LocationID)
-		idx++
 	}
 
 	var tail strings.Builder
@@ -142,6 +141,9 @@ func (p CreateScheduledTaskParams) Validate() error {
 
 // CreateScheduledTask creates scheduled task.
 func CreateScheduledTask(q *reform.Querier, params CreateScheduledTaskParams) (*ScheduledTask, error) {
+	if err := params.Validate(); err != nil {
+		return nil, err
+	}
 	id := "/scheduled_task_id/" + uuid.New().String()
 	if err := checkUniqueScheduledTaskID(q, id); err != nil {
 		return nil, err
