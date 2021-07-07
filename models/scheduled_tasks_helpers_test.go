@@ -118,6 +118,27 @@ func TestScheduledTaskHelpers(t *testing.T) {
 		task2, err := models.CreateScheduledTask(findTX.Querier, createParams2)
 		require.NoError(t, err)
 
+		createParams2.Disabled = false
+		createParams2.Type = models.ScheduledMySQLBackupTask
+		createParams2.Data = models.ScheduledTaskData{
+			MySQLBackupTask: &models.MySQLBackupTaskData{
+				ServiceID:  "svc1",
+				LocationID: "loc1",
+				Name:       "mysql",
+			},
+		}
+		task3, err := models.CreateScheduledTask(findTX.Querier, createParams2)
+
+		createParams2.Type = models.ScheduledMongoDBBackupTask
+		createParams2.Data = models.ScheduledTaskData{
+			MongoDBBackupTask: &models.MongoBackupTaskData{
+				ServiceID:  "svc2",
+				LocationID: "loc1",
+				Name:       "mongo",
+			},
+		}
+		task4, err := models.CreateScheduledTask(findTX.Querier, createParams2)
+		require.NoError(t, err)
 		type testCase struct {
 			filter models.ScheduledTasksFilter
 			ids    []string
@@ -126,7 +147,7 @@ func TestScheduledTaskHelpers(t *testing.T) {
 		tests := []testCase{
 			{
 				filter: models.ScheduledTasksFilter{},
-				ids:    []string{task1.ID, task2.ID},
+				ids:    []string{task1.ID, task2.ID, task3.ID, task4.ID},
 			},
 			{
 				filter: models.ScheduledTasksFilter{
@@ -138,7 +159,28 @@ func TestScheduledTaskHelpers(t *testing.T) {
 				filter: models.ScheduledTasksFilter{
 					Disabled: pointer.ToBool(false),
 				},
-				ids: []string{task1.ID},
+				ids: []string{task1.ID, task3.ID, task4.ID},
+			},
+			{
+				filter: models.ScheduledTasksFilter{
+					Types: []models.ScheduledTaskType{
+						models.ScheduledMySQLBackupTask,
+						models.ScheduledMongoDBBackupTask,
+					},
+				},
+				ids: []string{task3.ID, task4.ID},
+			},
+			{
+				filter: models.ScheduledTasksFilter{
+					LocationID: "loc1",
+				},
+				ids: []string{task3.ID, task4.ID},
+			},
+			{
+				filter: models.ScheduledTasksFilter{
+					ServiceID: "svc2",
+				},
+				ids: []string{task4.ID},
 			},
 		}
 
