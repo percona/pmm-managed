@@ -189,13 +189,13 @@ func (s *Service) loadFromDB() error {
 }
 
 func (s *Service) addDBTask(dbTask *models.ScheduledTask) error {
+	if dbTask.Disabled {
+		return nil
+	}
+
 	task, err := s.convertDBTask(dbTask)
 	if err != nil {
 		return err
-	}
-
-	if dbTask.Disabled {
-		return nil
 	}
 
 	s.mx.Lock()
