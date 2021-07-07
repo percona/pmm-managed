@@ -65,7 +65,7 @@ func TestScheduledTaskHelpers(t *testing.T) {
 		require.NotNil(t, task.Data.Print)
 		assert.Equal(t, createParams.Data.Print.Message, task.Data.Print.Message)
 
-		task, err = models.CreateScheduledTask(tx.Querier, models.CreateScheduledTaskParams{
+		_, err = models.CreateScheduledTask(tx.Querier, models.CreateScheduledTaskParams{
 			CronExpression: "a * * * *",
 			Type:           models.ScheduledPrintTask,
 		})
