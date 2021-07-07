@@ -47,14 +47,14 @@ func (c *common) SetID(id string) {
 	c.id = id
 }
 
-// PrintTask implements Task for logging mesage.
+// PrintTask implements Task for logging message.
 type PrintTask struct {
 	*common
 	Message string
 }
 
 // NewPrintTask creates new task which prints message.
-func NewPrintTask(message string) *PrintTask {
+func NewPrintTask(message string) Task {
 	return &PrintTask{
 		common:  &common{},
 		Message: message,
@@ -91,7 +91,7 @@ type mySQLBackupTask struct {
 }
 
 // NewMySQLBackupTask create new task for mysql backup.
-func NewMySQLBackupTask(backupService backupService, serviceID, locationID, name, description string) *mySQLBackupTask {
+func NewMySQLBackupTask(backupService backupService, serviceID, locationID, name, description string) Task {
 	return &mySQLBackupTask{
 		common:        &common{},
 		backupService: backupService,
@@ -133,7 +133,7 @@ type mongoBackupTask struct {
 }
 
 // NewMongoBackupTask create new task for mongo backup.
-func NewMongoBackupTask(backupService backupService, serviceID, locationID, name, description string) *mongoBackupTask {
+func NewMongoBackupTask(backupService backupService, serviceID, locationID, name, description string) Task {
 	return &mongoBackupTask{
 		common:        &common{},
 		backupService: backupService,
