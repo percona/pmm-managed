@@ -132,10 +132,7 @@ func (s *Service) Remove(id string) error {
 	s.jobsMx.Unlock()
 
 	err := s.db.InTransaction(func(tx *reform.TX) error {
-		if err := models.RemoveScheduledTask(tx.Querier, id); err != nil {
-			return err
-		}
-		return nil
+		return models.RemoveScheduledTask(tx.Querier, id)
 	})
 	if err != nil {
 		return err
@@ -159,11 +156,7 @@ func (s *Service) Update(id string, params models.ChangeScheduledTaskParams) err
 		_ = s.scheduler.RemoveByTag(id)
 		s.mx.Unlock()
 
-		if err := s.addDBTask(dbTask); err != nil {
-			return err
-		}
-
-		return nil
+		return s.addDBTask(dbTask)
 	})
 
 	return txErr

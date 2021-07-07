@@ -128,6 +128,7 @@ func TestScheduledTaskHelpers(t *testing.T) {
 			},
 		}
 		task3, err := models.CreateScheduledTask(findTX.Querier, createParams2)
+		require.NoError(t, err)
 
 		createParams2.Type = models.ScheduledMongoDBBackupTask
 		createParams2.Data = models.ScheduledTaskData{
@@ -194,7 +195,6 @@ func TestScheduledTaskHelpers(t *testing.T) {
 			sort.Strings(tc.ids)
 			sort.Strings(ids)
 			assert.Equal(t, tc.ids, ids)
-
 		}
 	})
 }
