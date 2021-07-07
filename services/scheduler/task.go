@@ -90,6 +90,7 @@ type mySQLBackupTask struct {
 	Description   string
 }
 
+// NewMySQLBackupTask create new task for mysql backup.
 func NewMySQLBackupTask(backupService backupService, serviceID, locationID, name, description string) *mySQLBackupTask {
 	return &mySQLBackupTask{
 		common:        &common{},
@@ -131,6 +132,7 @@ type mongoBackupTask struct {
 	Description   string
 }
 
+// NewMongoBackupTask create new task for mongo backup.
 func NewMongoBackupTask(backupService backupService, serviceID, locationID, name, description string) *mongoBackupTask {
 	return &mongoBackupTask{
 		common:        &common{},

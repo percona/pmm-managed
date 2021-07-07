@@ -38,8 +38,8 @@ func setup(t *testing.T) *Service {
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 	backupService := &mockBackupService{}
 	return New(db, backupService)
-
 }
+
 func TestService(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

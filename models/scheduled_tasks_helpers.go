@@ -177,6 +177,7 @@ type ChangeScheduledTaskParams struct {
 	CronExpression *string
 }
 
+// Validate checks if params for scheduled tasks are valid.
 func (p ChangeScheduledTaskParams) Validate() error {
 	if p.CronExpression != nil {
 		_, err := cron.ParseStandard(*p.CronExpression)

@@ -117,7 +117,7 @@ func (s *BackupsService) ScheduleBackup(ctx context.Context, req *backupv1beta1.
 		scheduledTask, err := s.scheduleService.Add(task, scheduler.AddParams{
 			CronExpression: req.CronExpression,
 			Disabled:       !req.Enabled,
-			StartAt:        req.StartTime.AsTime(),
+			StartAt:        t,
 		})
 		if err != nil {
 			return status.Errorf(codes.InvalidArgument, "Couldn't schedule backup: %v", err)
@@ -156,6 +156,8 @@ func (s *BackupsService) ListScheduledBackups(ctx context.Context, req *backupv1
 		case models.ScheduledMongoDBBackupTask:
 			serviceID = t.Data.MongoDBBackupTask.ServiceID
 			locationID = t.Data.MongoDBBackupTask.LocationID
+		case models.ScheduledPrintTask:
+			continue
 		default:
 			continue
 		}
@@ -211,8 +213,10 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 		if req.Description != nil {
 			data.Description = req.Description.Value
 		}
-	default:
+	case models.ScheduledPrintTask:
 		return nil, status.Errorf(codes.InvalidArgument, "Unsupported type: %s", scheduledTask.Type)
+	default:
+		return nil, status.Errorf(codes.InvalidArgument, "Unknown type: %s", scheduledTask.Type)
 	}
 
 	params := models.ChangeScheduledTaskParams{
@@ -282,8 +286,10 @@ func convertTaskToScheduledBackup(task *models.ScheduledTask,
 		backup.Name = data.Name
 		backup.Description = data.Description
 		backup.DataModel = backupv1beta1.DataModel_LOGICAL
-	default:
+	case models.ScheduledPrintTask:
 		return nil, fmt.Errorf("unsupported task type: %s", task.Type)
+	default:
+		return nil, fmt.Errorf("unknown task type: %s", task.Type)
 	}
 
 	backup.ServiceName = services[backup.ServiceId].ServiceName
