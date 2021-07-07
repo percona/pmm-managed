@@ -101,7 +101,6 @@ func (s *ArtifactsService) ListArtifacts(context.Context, *backupv1beta1.ListArt
 }
 
 func (s *ArtifactsService) deleteArtifactRequirements(
-	ctx context.Context,
 	artifactID string,
 ) (string, *models.S3LocationConfig, error) {
 	var s3Config *models.S3LocationConfig
@@ -155,7 +154,7 @@ func (s *ArtifactsService) DeleteArtifact(
 	ctx context.Context,
 	req *backupv1beta1.DeleteArtifactRequest,
 ) (*backupv1beta1.DeleteArtifactResponse, error) {
-	artifactName, s3Config, err := s.deleteArtifactRequirements(ctx, req.ArtifactId)
+	artifactName, s3Config, err := s.deleteArtifactRequirements(req.ArtifactId)
 	if err != nil {
 		return nil, err
 	}
