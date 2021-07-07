@@ -152,7 +152,6 @@ func TestScheduledTaskHelpers(t *testing.T) {
 			sort.Strings(tc.ids)
 			sort.Strings(ids)
 			assert.Equal(t, tc.ids, ids)
-
 		}
 	})
 }
