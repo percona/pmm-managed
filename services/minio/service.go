@@ -35,9 +35,9 @@ type Service struct {
 }
 
 // New creates new minio service.
-func New(l *logrus.Entry) *Service {
+func New() *Service {
 	return &Service{
-		l: l,
+		l: logrus.WithField("component", "minio-client"),
 	}
 }
 

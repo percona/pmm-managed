@@ -121,6 +121,11 @@ func TestStartBackup(t *testing.T) {
 	assert.Equal(t, *agent.ServiceID, artifact.ServiceId)
 	assert.EqualValues(t, models.MySQLServiceType, artifact.Vendor)
 
+	_, err = models.UpdateArtifact(db.Querier, backupRes.ArtifactId, models.UpdateArtifactParams{
+		Status: models.SuccessBackupStatus.Pointer(),
+	})
+	require.NoError(t, err)
+
 	mockedS3.On(
 		"RemoveRecursive",
 		mock.Anything,

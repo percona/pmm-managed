@@ -824,7 +824,7 @@ func main() {
 			rulesService:         rulesService,
 			jobsService:          jobsService,
 			versionServiceClient: versionService,
-			minio:                minio.New(logrus.WithField("component", "minio-client")),
+			minio:                minio.New(),
 		})
 	}()
 
