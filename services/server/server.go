@@ -239,18 +239,14 @@ func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) 
 	return &serverpb.ReadinessResponse{}, nil
 }
 
-func (s *Server) noInternetResponse(ctx context.Context) (*serverpb.CheckUpdatesResponse, error) {
+func (s *Server) offlineResponse(ctx context.Context) (*serverpb.CheckUpdatesResponse, error) {
 	v := s.supervisord.InstalledPMMVersion(ctx)
 	r := &serverpb.CheckUpdatesResponse{
 		Installed: &serverpb.VersionInfo{
 			Version:     v.Version,
 			FullVersion: v.FullVersion,
 		},
-		Latest: &serverpb.VersionInfo{
-			Version:     "0.0.0",
-			FullVersion: "0.0.0",
-		},
-		UpdateAvailable: false,
+		OfflineMode: true,
 	}
 
 	if v.BuildTime != nil {
@@ -270,23 +266,21 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 
 	if req.Force {
 		if err := s.supervisord.ForceCheckUpdates(ctx); err != nil {
-			return s.noInternetResponse(ctx)
+			s.l.Warn(err)
+			return s.offlineResponse(ctx)
 		}
 	}
 
 	v, lastCheck := s.supervisord.LastCheckUpdatesResult(ctx)
 	if v == nil {
-		return s.noInternetResponse(ctx)
+		status.Error(codes.Unavailable, "failed to check for updates")
+		return s.offlineResponse(ctx)
 	}
 
 	res := &serverpb.CheckUpdatesResponse{
 		Installed: &serverpb.VersionInfo{
 			Version:     v.Installed.Version,
 			FullVersion: v.Installed.FullVersion,
-		},
-		Latest: &serverpb.VersionInfo{
-			Version:     v.Latest.Version,
-			FullVersion: v.Latest.FullVersion,
 		},
 		UpdateAvailable: v.UpdateAvailable,
 		LatestNewsUrl:   v.LatestNewsURL,
@@ -303,9 +297,16 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 		res.Installed.Timestamp = timestamppb.New(t)
 	}
 
-	if v.Latest.BuildTime != nil {
-		t := v.Latest.BuildTime.UTC().Truncate(24 * time.Hour) // return only date
-		res.Latest.Timestamp = timestamppb.New(t)
+	if !req.OnlyInstalledVersion {
+		res.Latest = &serverpb.VersionInfo{
+			Version:     v.Latest.Version,
+			FullVersion: v.Latest.FullVersion,
+		}
+
+		if v.Latest.BuildTime != nil {
+			t := v.Latest.BuildTime.UTC().Truncate(24 * time.Hour) // return only date
+			res.Latest.Timestamp = timestamppb.New(t)
+		}
 	}
 
 	return res, nil
