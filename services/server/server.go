@@ -252,8 +252,9 @@ func (s *Server) offlineResponse(ctx context.Context) *serverpb.CheckUpdatesResp
 	if v.BuildTime != nil {
 		t := v.BuildTime.UTC().Truncate(24 * time.Hour) // return only date
 		r.Installed.Timestamp = timestamppb.New(t)
-		r.LastCheck = timestamppb.New(time.Now())
 	}
+
+	r.LastCheck = timestamppb.New(time.Now())
 
 	return r
 }
