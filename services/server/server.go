@@ -284,6 +284,10 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 			Version:     v.Installed.Version,
 			FullVersion: v.Installed.FullVersion,
 		},
+		Latest: &serverpb.VersionInfo{
+			Version:     v.Latest.Version,
+			FullVersion: v.Latest.FullVersion,
+		},
 		UpdateAvailable: v.UpdateAvailable,
 		LatestNewsUrl:   v.LatestNewsURL,
 	}
@@ -299,16 +303,9 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 		res.Installed.Timestamp = timestamppb.New(t)
 	}
 
-	if !req.OnlyInstalledVersion {
-		res.Latest = &serverpb.VersionInfo{
-			Version:     v.Latest.Version,
-			FullVersion: v.Latest.FullVersion,
-		}
-
-		if v.Latest.BuildTime != nil {
-			t := v.Latest.BuildTime.UTC().Truncate(24 * time.Hour) // return only date
-			res.Latest.Timestamp = timestamppb.New(t)
-		}
+	if v.Latest.BuildTime != nil {
+		t := v.Latest.BuildTime.UTC().Truncate(24 * time.Hour) // return only date
+		res.Latest.Timestamp = timestamppb.New(t)
 	}
 
 	return res, nil
