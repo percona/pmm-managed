@@ -109,13 +109,13 @@ func (s *Service) Add(task Task, params AddParams) (*models.ScheduledTask, error
 				NextRun: pointer.ToTime(scheduleJob.NextRun().UTC()),
 				LastRun: pointer.ToTime(scheduleJob.LastRun().UTC()),
 			})
-		}
-		if err != nil {
-			s.l.WithField("id", scheduledTask.ID).Errorf("failed to set next run for new created task")
-			s.mx.Lock()
-			s.scheduler.RemoveByReference(scheduleJob)
-			s.mx.Unlock()
-			return err
+			if err != nil {
+				s.l.WithField("id", scheduledTask.ID).Errorf("failed to set next run for new created task")
+				s.mx.Lock()
+				s.scheduler.RemoveByReference(scheduleJob)
+				s.mx.Unlock()
+				return err
+			}
 		}
 
 		return nil

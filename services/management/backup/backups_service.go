@@ -21,17 +21,17 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/percona/pmm-managed/services/scheduler"
-
+	"github.com/AlekSi/pointer"
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
-
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/scheduler"
 )
 
 // BackupsService represents backups API.
@@ -242,9 +242,41 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 
 // RemoveScheduledBackup stops and removes existing scheduled backup task.
 func (s *BackupsService) RemoveScheduledBackup(ctx context.Context, req *backupv1beta1.RemoveScheduledBackupRequest) (*backupv1beta1.RemoveScheduledBackupResponse, error) {
-	err := s.scheduleService.Remove(req.ScheduledBackupId)
+	task, err := models.FindScheduledTaskByID(s.db.Querier, req.ScheduledBackupId)
 	if err != nil {
 		return nil, err
+	}
+	switch task.Type {
+	case models.ScheduledMySQLBackupTask:
+	case models.ScheduledMongoDBBackupTask:
+	case models.ScheduledPrintTask:
+		fallthrough
+	default:
+		return nil, errors.Errorf("non-backup task: %s", task.Type)
+	}
+
+	errTx := s.db.InTransaction(func(tx *reform.TX) error {
+		artifacts, err := models.FindArtifacts(tx.Querier, &models.ArtifactFilters{
+			ScheduleID: req.ScheduledBackupId,
+		})
+		if err != nil {
+			return err
+		}
+
+		for _, artifact := range artifacts {
+			_, err := models.ChangeArtifact(tx.Querier, artifact.ID, models.ChangeArtifactParams{
+				ScheduleID: pointer.ToString(""),
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		return s.scheduleService.Remove(req.ScheduledBackupId)
+	})
+
+	if errTx != nil {
+		return nil, errTx
 	}
 
 	return &backupv1beta1.RemoveScheduledBackupResponse{}, nil

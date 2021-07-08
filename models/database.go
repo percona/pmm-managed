@@ -537,7 +537,10 @@ var databaseSchema = [][]string{
 		)`,
 	},
 	40: {
-		`ALTER TABLE artifacts ADD COLUMN schedule_id VARCHAR`,
+		`ALTER TABLE artifacts
+			ADD COLUMN type VARCHAR NOT NULL CHECK (type <> '') DEFAULT 'on_demand',
+			ADD COLUMN schedule_id VARCHAR`,
+		`ALTER TABLE artifacts ALTER COLUMN type DROP DEFAULT`,
 	},
 }
 
