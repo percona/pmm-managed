@@ -24,7 +24,7 @@ import (
 )
 
 // DefaultPublicKeys are the public keys used to download content from Percona Platform.
-var DefaultPublicKeys = []string{
+var defaultPublicKeys = []string{
 	"RWTfyQTP3R7VzZggYY7dzuCbuCQWqTiGCqOvWRRAMVEiw0eSxHMVBBE5", // PMM 2.6
 	"RWRxgu1w3alvJsQf+sHVUYiF6guAdEsBWXDe8jHZuB9dXVE9b5vw7ONM", // PMM 2.12
 	"RWTHhufOlJ38dWt+DrprOg702YvZgqQJsx1XKfzF+MaB/pe9eCJgKkiF", // PMM 2.17
@@ -34,6 +34,10 @@ var DefaultPublicKeys = []string{
 func VerifySignatures(l *logrus.Entry, file string, signatures, publicKeys []string) error {
 	if len(signatures) == 0 {
 		return errors.New("zero signatures received")
+	}
+
+	if publicKeys == nil {
+		publicKeys = defaultPublicKeys
 	}
 
 	var err error

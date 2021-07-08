@@ -94,7 +94,6 @@ func NewTemplatesService(db *reform.DB) (*TemplatesService, error) {
 		db:                db,
 		l:                 l,
 		userTemplatesPath: templatesDir,
-		publicKeys:        signatures.DefaultPublicKeys,
 		host:              host,
 		templates:         make(map[string]templateInfo),
 	}

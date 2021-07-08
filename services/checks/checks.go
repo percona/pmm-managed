@@ -130,7 +130,6 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 
 		l:               l,
 		host:            host,
-		publicKeys:      signatures.DefaultPublicKeys,
 		startDelay:      defaultStartDelay,
 		resendInterval:  defaultResendInterval,
 		localChecksFile: os.Getenv(envCheckFile),
