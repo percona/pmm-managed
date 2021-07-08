@@ -167,6 +167,18 @@ func TestScheduledBackups(t *testing.T) {
 		require.NoError(t, err)
 
 		id := task.ID
+
+		_, err = models.CreateArtifact(db.Querier, models.CreateArtifactParams{
+			Name:       "artifact",
+			Vendor:     "mysql",
+			LocationID: locationRes.ID,
+			ServiceID:  *agent.ServiceID,
+			DataModel:  "physical",
+			Status:     "pending",
+			ScheduleID: id,
+		})
+		require.NoError(t, err)
+
 		_, err = backupSvc.RemoveScheduledBackup(ctx, &backupv1beta1.RemoveScheduledBackupRequest{
 			ScheduledBackupId: task.ID,
 		})
@@ -175,6 +187,13 @@ func TestScheduledBackups(t *testing.T) {
 		task, err = models.FindScheduledTaskByID(db.Querier, task.ID)
 		assert.Nil(t, task)
 		tests.AssertGRPCError(t, status.Newf(codes.NotFound, `ScheduledTask with ID "%s" not found.`, id), err)
+
+		artifacts, err := models.FindArtifacts(db.Querier, &models.ArtifactFilters{
+			ScheduleID: id,
+		})
+
+		assert.NoError(t, err)
+		assert.Len(t, artifacts, 0)
 	})
 
 }

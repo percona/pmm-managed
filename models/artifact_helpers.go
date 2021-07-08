@@ -64,6 +64,7 @@ func FindArtifacts(q *reform.Querier, filters *ArtifactFilters) ([]*Artifact, er
 			args = append(args, filters.LocationID)
 			idx++
 		}
+
 		if filters.ScheduleID != "" {
 			conditions = append(conditions, fmt.Sprintf("schedule_id = %s", q.Placeholder(idx)))
 			args = append(args, filters.ScheduleID)
