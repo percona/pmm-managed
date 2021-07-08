@@ -239,14 +239,13 @@ func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) 
 	return &serverpb.ReadinessResponse{}, nil
 }
 
-func (s *Server) offlineResponse(ctx context.Context) *serverpb.CheckUpdatesResponse {
+func (s *Server) onlyInstalledVersionResponse(ctx context.Context) *serverpb.CheckUpdatesResponse {
 	v := s.supervisord.InstalledPMMVersion(ctx)
 	r := &serverpb.CheckUpdatesResponse{
 		Installed: &serverpb.VersionInfo{
 			Version:     v.Version,
 			FullVersion: v.FullVersion,
 		},
-		OfflineMode: true,
 	}
 
 	if v.BuildTime != nil {
@@ -265,19 +264,19 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 	updatesDisabled := s.envSettings.DisableUpdates
 	s.envRW.RUnlock()
 
+	if req.OnlyInstalledVersion {
+		return s.onlyInstalledVersionResponse(ctx), nil
+	}
+
 	if req.Force {
 		if err := s.supervisord.ForceCheckUpdates(ctx); err != nil {
-			res := s.offlineResponse(ctx)
-			res.ErrorMessage = err.Error()
-			return res, nil
+			return nil, err
 		}
 	}
 
 	v, lastCheck := s.supervisord.LastCheckUpdatesResult(ctx)
 	if v == nil {
-		res := s.offlineResponse(ctx)
-		res.ErrorMessage = "failed to check for updates"
-		return res, nil
+		return nil, status.Error(codes.Unavailable, "failed to check for updates")
 	}
 
 	res := &serverpb.CheckUpdatesResponse{
