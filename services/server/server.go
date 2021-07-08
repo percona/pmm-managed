@@ -239,7 +239,7 @@ func (s *Server) Readiness(ctx context.Context, req *serverpb.ReadinessRequest) 
 	return &serverpb.ReadinessResponse{}, nil
 }
 
-func (s *Server) offlineResponse(ctx context.Context) (*serverpb.CheckUpdatesResponse, error) {
+func (s *Server) offlineResponse(ctx context.Context) *serverpb.CheckUpdatesResponse {
 	v := s.supervisord.InstalledPMMVersion(ctx)
 	r := &serverpb.CheckUpdatesResponse{
 		Installed: &serverpb.VersionInfo{
@@ -255,7 +255,7 @@ func (s *Server) offlineResponse(ctx context.Context) (*serverpb.CheckUpdatesRes
 		r.LastCheck = timestamppb.New(time.Now())
 	}
 
-	return r, nil
+	return r
 }
 
 // CheckUpdates checks PMM Server updates availability.
@@ -266,15 +266,17 @@ func (s *Server) CheckUpdates(ctx context.Context, req *serverpb.CheckUpdatesReq
 
 	if req.Force {
 		if err := s.supervisord.ForceCheckUpdates(ctx); err != nil {
-			s.l.Warn(err)
-			return s.offlineResponse(ctx)
+			res := s.offlineResponse(ctx)
+			res.ErrorMessage = err.Error()
+			return res, nil
 		}
 	}
 
 	v, lastCheck := s.supervisord.LastCheckUpdatesResult(ctx)
 	if v == nil {
-		status.Error(codes.Unavailable, "failed to check for updates")
-		return s.offlineResponse(ctx)
+		res := s.offlineResponse(ctx)
+		res.ErrorMessage = "failed to check for updates"
+		return res, nil
 	}
 
 	res := &serverpb.CheckUpdatesResponse{
