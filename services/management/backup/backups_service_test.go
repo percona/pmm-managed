@@ -67,20 +67,26 @@ func TestStartBackup(t *testing.T) {
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 	mockedJobsService := &mockJobsService{}
 	mockedJobsService.On("StartMySQLBackupJob", mock.Anything, mock.Anything, mock.Anything,
-		mock.Anything, mock.Anything, mock.Anything).Return(nil)
+		mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 	backupSvc := NewBackupsService(db, mockedJobsService)
 
+	mockedS3 := &mockAwsS3{}
+	artifactsSvc := NewArtifactsService(db, mockedS3)
+
 	agent := setup(t, db, "test-service")
+	endpoint := "https://s3.us-west-2.amazonaws.com/"
+	accessKey, secretKey, bucketName, bucketRegion := "access_key", "secret_key", "example_bucket", "us-east-2"
+
 	locationRes, err := models.CreateBackupLocation(db.Querier, models.CreateBackupLocationParams{
 		Name:        "Test location",
 		Description: "Test description",
 		BackupLocationConfig: models.BackupLocationConfig{
 			S3Config: &models.S3LocationConfig{
-				Endpoint:     "https://s3.us-west-2.amazonaws.com/",
-				AccessKey:    "access_key",
-				SecretKey:    "secret_key",
-				BucketName:   "example_bucket",
-				BucketRegion: "us-east-2",
+				Endpoint:     endpoint,
+				AccessKey:    accessKey,
+				SecretKey:    secretKey,
+				BucketName:   bucketName,
+				BucketRegion: bucketRegion,
 			},
 		},
 	})
@@ -91,12 +97,48 @@ func TestStartBackup(t *testing.T) {
 		LocationId: locationRes.ID,
 		Name:       "Test backup",
 	})
+	require.NoError(t, err)
 
-	assert.NoError(t, err)
-	var artifact models.Artifact
-	err = db.SelectOneTo(&artifact, "WHERE id = $1", backupRes.ArtifactId)
-	assert.NoError(t, err)
-	assert.Equal(t, locationRes.ID, artifact.LocationID)
-	assert.Equal(t, *agent.ServiceID, artifact.ServiceID)
+	findArtifact := func(artifactID string) *backupv1beta1.Artifact {
+		artifacts, err := artifactsSvc.ListArtifacts(ctx, &backupv1beta1.ListArtifactsRequest{})
+		require.NoError(t, err)
+		require.NotNil(t, artifacts)
+
+		var artifact *backupv1beta1.Artifact
+		for _, a := range artifacts.Artifacts {
+			if a.ArtifactId == artifactID {
+				artifact = a
+				break
+			}
+		}
+
+		return artifact
+	}
+
+	artifact := findArtifact(backupRes.ArtifactId)
+	require.NotNil(t, artifact)
+	assert.Equal(t, locationRes.ID, artifact.LocationId)
+	assert.Equal(t, *agent.ServiceID, artifact.ServiceId)
 	assert.EqualValues(t, models.MySQLServiceType, artifact.Vendor)
+
+	mockedS3.On(
+		"RemoveRecursive",
+		mock.Anything,
+		endpoint,
+		accessKey,
+		secretKey,
+		bucketName,
+		artifact.Name+"/",
+	).Return(nil).Once()
+
+	_, err = artifactsSvc.DeleteArtifact(ctx, &backupv1beta1.DeleteArtifactRequest{
+		ArtifactId:  backupRes.ArtifactId,
+		RemoveFiles: true,
+	})
+	require.NoError(t, err)
+
+	artifact = findArtifact(backupRes.ArtifactId)
+	require.Nil(t, artifact)
+
+	mock.AssertExpectationsForObjects(t, mockedS3, mockedJobsService)
 }
