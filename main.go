@@ -79,6 +79,7 @@ import (
 	"github.com/percona/pmm-managed/services/minio"
 	"github.com/percona/pmm-managed/services/platform"
 	"github.com/percona/pmm-managed/services/qan"
+	"github.com/percona/pmm-managed/services/scheduler"
 	"github.com/percona/pmm-managed/services/server"
 	"github.com/percona/pmm-managed/services/supervisord"
 	"github.com/percona/pmm-managed/services/telemetry"
@@ -641,6 +642,7 @@ func main() {
 	versionService := managementdbaas.NewVersionServiceClient(*versionServiceAPIURLF)
 
 	dbaasClient := dbaas.NewClient(*dbaasControllerAPIAddrF)
+	schedulerService := scheduler.New(db)
 
 	serverParams := &server.Params{
 		DB:                   db,
@@ -748,7 +750,6 @@ func main() {
 			}
 		}()
 	}
-
 	authServer := grafana.NewAuthServer(grafanaClient, awsInstanceChecker)
 
 	l.Info("Starting services...")
@@ -799,6 +800,12 @@ func main() {
 	go func() {
 		defer wg.Done()
 		telemetry.Run(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		schedulerService.Run(ctx)
 	}()
 
 	wg.Add(1)
