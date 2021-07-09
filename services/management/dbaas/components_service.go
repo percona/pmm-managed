@@ -308,6 +308,9 @@ func setComponent(kc *models.Component, rc *dbaasv1beta1.ChangeComponent) (*mode
 }
 
 func (c componentsService) unsetDefaultVersionIfUnsupported(ctx context.Context, operatorType, operatorVersion string, component *models.Component) (bool, error) {
+	if component == nil {
+		return false, nil
+	}
 	supported, err := c.versionServiceClient.IsDatabaseVersionSupportedByOperator(ctx, operatorType, operatorVersion, component.DefaultVersion)
 	if !supported {
 		if err != nil {
