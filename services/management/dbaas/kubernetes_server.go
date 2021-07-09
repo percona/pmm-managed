@@ -21,6 +21,7 @@ import (
 	"regexp"
 	"sync"
 
+	goversion "github.com/hashicorp/go-version"
 	dbaascontrollerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
 	pmmversion "github.com/percona/pmm/version"
@@ -143,7 +144,12 @@ func (k kubernetesServer) RegisterKubernetesCluster(ctx context.Context, req *db
 		return nil, err
 	}
 
-	pxcOperatorVersion, psmdbOperatorVersion, err := k.versionService.GetLatestOperatorVersion(ctx, pmmversion.PMMVersion)
+	pmmVersion, err := goversion.NewVersion(pmmversion.PMMVersion)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	pxcOperatorVersion, psmdbOperatorVersion, err := k.versionService.GetLatestOperatorVersion(ctx, pmmVersion.Core().String())
 	if err != nil {
 		return nil, err
 	}
