@@ -132,7 +132,7 @@ func (s *ArtifactsService) beginDeletingArtifact(
 		}
 
 		if len(restoreItems) != 0 {
-			return status.Errorf(codes.FailedPrecondition, "Cannot delete artifact with ID %q: " +
+			return status.Errorf(codes.FailedPrecondition, "Cannot delete artifact with ID %q: "+
 				"artifact is used by currently running restore operation.", artifactID)
 		}
 
