@@ -20,8 +20,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/AlekSi/pointer"
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -32,43 +32,10 @@ import (
 	"github.com/percona/pmm-managed/utils/testdb"
 )
 
-func setup(t *testing.T, q *reform.Querier, serviceName string) *models.Agent {
-	t.Helper()
-	node, err := models.CreateNode(q, models.GenericNodeType, &models.CreateNodeParams{
-		NodeName: "test-node",
-	})
-	require.NoError(t, err)
-
-	pmmAgent, err := models.CreatePMMAgent(q, node.NodeID, nil)
-	require.NoError(t, err)
-	require.NoError(t, q.Update(pmmAgent))
-
-	mysql, err := models.AddNewService(q, models.MySQLServiceType, &models.AddDBMSServiceParams{
-		ServiceName: serviceName,
-		NodeID:      node.NodeID,
-		Address:     pointer.ToString("127.0.0.1"),
-		Port:        pointer.ToUint16(3306),
-	})
-	require.NoError(t, err)
-
-	agent, err := models.CreateAgent(q, models.MySQLdExporterType, &models.CreateAgentParams{
-		PMMAgentID: pmmAgent.AgentID,
-		ServiceID:  mysql.ServiceID,
-		Username:   "user",
-		Password:   "password",
-	})
-	require.NoError(t, err)
-	return agent
-}
-
-func TestBackup(t *testing.T) {
+func TestDeleteArtifact(t *testing.T) {
 	ctx := context.Background()
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-	mockedJobsService := &mockJobsService{}
-	mockedJobsService.On("StartMySQLBackupJob", mock.Anything, mock.Anything, mock.Anything,
-		mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
-	backupSvc := NewBackupsService(db, mockedJobsService)
 
 	mockedS3 := &mockAwsS3{}
 	artifactsSvc := NewArtifactsService(db, mockedS3)
@@ -92,10 +59,13 @@ func TestBackup(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	backupRes, err := backupSvc.StartBackup(ctx, &backupv1beta1.StartBackupRequest{
-		ServiceId:  pointer.GetString(agent.ServiceID),
-		LocationId: locationRes.ID,
-		Name:       "Test backup",
+	artifact, err := models.CreateArtifact(db.Querier, models.CreateArtifactParams{
+		Name:       "artifact_name",
+		Vendor:     "MySQL",
+		LocationID: locationRes.ID,
+		ServiceID:  *agent.ServiceID,
+		DataModel:  "physical",
+		Status:     models.SuccessBackupStatus,
 	})
 	require.NoError(t, err)
 
@@ -115,35 +85,36 @@ func TestBackup(t *testing.T) {
 		return artifact
 	}
 
-	artifact := findArtifact(backupRes.ArtifactId)
-	require.NotNil(t, artifact)
-	assert.Equal(t, locationRes.ID, artifact.LocationId)
-	assert.Equal(t, *agent.ServiceID, artifact.ServiceId)
-	assert.EqualValues(t, models.MySQLServiceType, artifact.Vendor)
+	mockedS3.On("RemoveRecursive", mock.Anything, endpoint, accessKey, secretKey, bucketName,
+		artifact.Name+"/",
+	).Return(errors.Errorf("failed to remove")).Run(func(args mock.Arguments) {
+		artifact := findArtifact(artifact.ID)
+		require.NotNil(t, artifact)
+		assert.Equal(t, artifact.Status, backupv1beta1.BackupStatus_BACKUP_STATUS_DELETING)
+	}).Once()
 
-	_, err = models.UpdateArtifact(db.Querier, backupRes.ArtifactId, models.UpdateArtifactParams{
-		Status: models.SuccessBackupStatus.Pointer(),
+	_, err = artifactsSvc.DeleteArtifact(ctx, &backupv1beta1.DeleteArtifactRequest{
+		ArtifactId:  artifact.ID,
+		RemoveFiles: true,
 	})
-	require.NoError(t, err)
+	require.EqualError(t, err, "failed to remove")
 
-	mockedS3.On(
-		"RemoveRecursive",
-		mock.Anything,
-		endpoint,
-		accessKey,
-		secretKey,
-		bucketName,
+	foundArtifact := findArtifact(artifact.ID)
+	require.NotNil(t, foundArtifact)
+	assert.Equal(t, foundArtifact.Status, backupv1beta1.BackupStatus_BACKUP_STATUS_FAILED_TO_DELETE)
+
+	mockedS3.On("RemoveRecursive", mock.Anything, endpoint, accessKey, secretKey, bucketName,
 		artifact.Name+"/",
 	).Return(nil).Once()
 
 	_, err = artifactsSvc.DeleteArtifact(ctx, &backupv1beta1.DeleteArtifactRequest{
-		ArtifactId:  backupRes.ArtifactId,
+		ArtifactId:  artifact.ID,
 		RemoveFiles: true,
 	})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
-	artifact = findArtifact(backupRes.ArtifactId)
-	require.Nil(t, artifact)
+	foundArtifact = findArtifact(artifact.ID)
+	require.Nil(t, foundArtifact)
 
-	mock.AssertExpectationsForObjects(t, mockedS3, mockedJobsService)
+	mock.AssertExpectationsForObjects(t, mockedS3)
 }

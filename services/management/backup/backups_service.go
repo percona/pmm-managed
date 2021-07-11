@@ -280,6 +280,9 @@ func (s *BackupsService) prepareRestoreJob(
 	if err != nil {
 		return nil, err
 	}
+	if artifact.Status != models.SuccessBackupStatus {
+		return nil, errors.Errorf("artifact %q status is not succesful, status: %q", artifactID, artifact.Status)
+	}
 
 	location, err := models.FindBackupLocationByID(q, artifact.LocationID)
 	if err != nil {

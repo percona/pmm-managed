@@ -100,7 +100,7 @@ func (s *ArtifactsService) ListArtifacts(context.Context, *backupv1beta1.ListArt
 	}, nil
 }
 
-func (s *ArtifactsService) deleteArtifactRequirements(
+func (s *ArtifactsService) beginDeletingArtifact(
 	artifactID string,
 ) (string, *models.S3LocationConfig, error) {
 	var s3Config *models.S3LocationConfig
@@ -114,7 +114,9 @@ func (s *ArtifactsService) deleteArtifactRequirements(
 		default:
 			return err
 		}
-		if artifact.Status != models.SuccessBackupStatus && artifact.Status != models.ErrorBackupStatus {
+		if artifact.Status != models.SuccessBackupStatus &&
+			artifact.Status != models.ErrorBackupStatus &&
+			artifact.Status != models.FailedToDeleteBackupStatus {
 			return status.Errorf(codes.FailedPrecondition, "Artifact with ID %q isn't in the final state.", artifactID)
 		}
 
@@ -141,6 +143,12 @@ func (s *ArtifactsService) deleteArtifactRequirements(
 
 		s3Config = location.S3Config
 
+		if _, err := models.UpdateArtifact(tx.Querier, artifactID, models.UpdateArtifactParams{
+			Status: models.DeletingBackupStatus.Pointer(),
+		}); err != nil {
+			return err
+		}
+
 		return nil
 	}); err != nil {
 		return "", nil, err
@@ -154,7 +162,7 @@ func (s *ArtifactsService) DeleteArtifact(
 	ctx context.Context,
 	req *backupv1beta1.DeleteArtifactRequest,
 ) (*backupv1beta1.DeleteArtifactResponse, error) {
-	artifactName, s3Config, err := s.deleteArtifactRequirements(req.ArtifactId)
+	artifactName, s3Config, err := s.beginDeletingArtifact(req.ArtifactId)
 	if err != nil {
 		return nil, err
 	}
@@ -172,6 +180,13 @@ func (s *ArtifactsService) DeleteArtifact(
 			// To avoid such a situation we need to append a slash.
 			artifactName+"/",
 		); err != nil {
+			if _, updateErr := models.UpdateArtifact(s.db.Querier, req.ArtifactId, models.UpdateArtifactParams{
+				Status: models.FailedToDeleteBackupStatus.Pointer(),
+			}); updateErr != nil {
+				s.l.WithError(updateErr).
+					Errorf("failed to set status %q for artifact %q", models.FailedToDeleteBackupStatus, req.ArtifactId)
+			}
+
 			return nil, err
 		}
 	}
@@ -225,6 +240,10 @@ func convertBackupStatus(status models.BackupStatus) (*backupv1beta1.BackupStatu
 		s = backupv1beta1.BackupStatus_BACKUP_STATUS_SUCCESS
 	case models.ErrorBackupStatus:
 		s = backupv1beta1.BackupStatus_BACKUP_STATUS_ERROR
+	case models.DeletingBackupStatus:
+		s = backupv1beta1.BackupStatus_BACKUP_STATUS_DELETING
+	case models.FailedToDeleteBackupStatus:
+		s = backupv1beta1.BackupStatus_BACKUP_STATUS_FAILED_TO_DELETE
 	default:
 		return nil, errors.Errorf("invalid status '%s'", status)
 	}
