@@ -122,18 +122,18 @@ func (s *ArtifactsService) beginDeletingArtifact(
 
 		artifactName = artifact.Name
 
+		inProgressStatus := models.InProgressRestoreStatus
 		restoreItems, err := models.FindRestoreHistoryItems(tx.Querier, &models.RestoreHistoryItemFilters{
 			ArtifactID: artifactID,
+			Status:     &inProgressStatus,
 		})
 		if err != nil {
 			return err
 		}
 
-		for _, ri := range restoreItems {
-			if ri.Status == models.InProgressRestoreStatus {
-				return status.Errorf(codes.FailedPrecondition,
-					"Cannot delete artifact with ID %q: restore operation is in progress %q", artifactID, ri.ID)
-			}
+		if len(restoreItems) != 0 {
+			return status.Errorf(codes.FailedPrecondition, "Cannot delete artifact with ID %q: " +
+				"artifact is used by currently running restore operation.", artifactID)
 		}
 
 		location, err := models.FindBackupLocationByID(tx.Querier, artifact.LocationID)

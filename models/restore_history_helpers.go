@@ -32,6 +32,8 @@ type RestoreHistoryItemFilters struct {
 	ServiceID string
 	// Return only items that has specified location id.
 	ArtifactID string
+	// Return only items with specified status.
+	Status *RestoreStatus
 }
 
 // FindRestoreHistoryItems returns restore history list.
@@ -57,6 +59,12 @@ func FindRestoreHistoryItems(q *reform.Querier, filters *RestoreHistoryItemFilte
 
 		conditions = append(conditions, fmt.Sprintf("artifact_id = %s", q.Placeholder(idx)))
 		args = append(args, filters.ArtifactID)
+		idx++
+	}
+
+	if filters != nil && filters.Status != nil {
+		conditions = append(conditions, fmt.Sprintf("status = %s", q.Placeholder(idx)))
+		args = append(args, *filters.Status)
 	}
 
 	var whereClause string
