@@ -432,8 +432,8 @@ github.com/pact-foundation/pact-go v1.0.4/go.mod h1:uExwJY4kCzNPcHRj+hCR/HBbOOIw
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
 github.com/pelletier/go-toml v1.4.0/go.mod h1:PN7xzY2wHTK0K9p34ErDQMlFxa51Fk0OUruD3k1mMwo=
-github.com/percona-platform/dbaas-api v0.0.0-20210615150140-d73f4b901e83 h1:/floanBqayIcAiw3FdT4IJhNhNjleJTnCRuWYbcPfCQ=
-github.com/percona-platform/dbaas-api v0.0.0-20210615150140-d73f4b901e83/go.mod h1:e4GV2MvJ+kPRP7406bya+lsPbtTlr3wangPdn3qpq7U=
+github.com/percona-platform/dbaas-api v0.0.0-20210707191635-9bbcfabdd7a3 h1:Z92gmnRO5Gr2OcenuvLeZY0S0yVZaLMVR0GN/SfUVcA=
+github.com/percona-platform/dbaas-api v0.0.0-20210707191635-9bbcfabdd7a3/go.mod h1:zgb9gTJusc8Jv2zRNAlWV0/XQ8IK+hwHMc9lIqfK0tM=
 github.com/percona-platform/saas v0.0.0-20210505183502-c18b6f47c932 h1:EDe5KfOdEoEBKg33BsFsMrdazZu8vaRj4fTKdg4zjCc=
 github.com/percona-platform/saas v0.0.0-20210505183502-c18b6f47c932/go.mod h1:jJRyGMxxDJaSiU7AaHNS+8j1TFQQhX6lcYp8s0t8Knc=
 github.com/percona/pmm v0.0.0-20210629094649-72e6ecae869b h1:Q6tx2DJjITfjIZRNSccs/mCMe+YO6JKWnBS6sgI1bBE=
