@@ -274,7 +274,7 @@ func RemoveService(q *reform.Querier, id string, mode RemoveMode) error {
 		return errors.Wrap(err, "failed to select artifacts")
 	}
 
-	restoreItems, err := FindRestoreHistoryItems(q, &RestoreHistoryItemFilters{ServiceID: id})
+	restoreItems, err := FindRestoreHistoryItems(q, RestoreHistoryItemFilters{ServiceID: id})
 	if err != nil {
 		return errors.Wrap(err, "failed to select restore history items")
 	}

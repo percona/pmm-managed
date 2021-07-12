@@ -365,7 +365,7 @@ func RemoveBackupLocation(q *reform.Querier, id string, mode RemoveMode) error {
 
 	var restoreItems []*RestoreHistoryItem
 	for _, a := range artifacts {
-		items, err := FindRestoreHistoryItems(q, &RestoreHistoryItemFilters{ArtifactID: a.ID})
+		items, err := FindRestoreHistoryItems(q, RestoreHistoryItemFilters{ArtifactID: a.ID})
 		if err != nil {
 			return err
 		}

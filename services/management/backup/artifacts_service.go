@@ -139,7 +139,7 @@ func (s *ArtifactsService) beginDeletingArtifact(
 		artifactName = artifact.Name
 
 		inProgressStatus := models.InProgressRestoreStatus
-		restoreItems, err := models.FindRestoreHistoryItems(tx.Querier, &models.RestoreHistoryItemFilters{
+		restoreItems, err := models.FindRestoreHistoryItems(tx.Querier, models.RestoreHistoryItemFilters{
 			ArtifactID: artifactID,
 			Status:     &inProgressStatus,
 		})
@@ -208,7 +208,7 @@ func (s *ArtifactsService) DeleteArtifact(
 	}
 
 	if err := s.db.InTransaction(func(tx *reform.TX) error {
-		restoreItems, err := models.FindRestoreHistoryItems(tx.Querier, &models.RestoreHistoryItemFilters{
+		restoreItems, err := models.FindRestoreHistoryItems(tx.Querier, models.RestoreHistoryItemFilters{
 			ArtifactID: req.ArtifactId,
 		})
 		if err != nil {
