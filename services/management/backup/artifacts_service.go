@@ -100,28 +100,42 @@ func (s *ArtifactsService) ListArtifacts(context.Context, *backupv1beta1.ListArt
 	}, nil
 }
 
+func (s *ArtifactsService) canDeleteArtifact(q *reform.Querier, artifactID string) (*models.Artifact, error) {
+	artifact, err := models.FindArtifactByID(q, artifactID)
+	switch {
+	case err == nil:
+	case errors.Is(err, models.ErrNotFound):
+		return nil, status.Errorf(codes.NotFound, "Artifact with ID %q not found.", artifactID)
+	default:
+		return nil, err
+	}
+
+	switch artifact.Status {
+	case models.SuccessBackupStatus,
+		models.ErrorBackupStatus,
+		models.FailedToDeleteBackupStatus:
+	case models.DeletingBackupStatus,
+		models.InProgressBackupStatus,
+		models.PausedBackupStatus,
+		models.PendingBackupStatus:
+		return nil, status.Errorf(codes.FailedPrecondition, "Artifact with ID %q isn't in the final state.", artifactID)
+	default:
+		return nil, status.Errorf(codes.Internal, "Unhandled status %q", artifact.Status)
+	}
+
+	return artifact, nil
+}
+
 func (s *ArtifactsService) beginDeletingArtifact(
 	artifactID string,
 ) (string, *models.S3LocationConfig, error) {
 	var s3Config *models.S3LocationConfig
 	var artifactName string
 	if err := s.db.InTransaction(func(tx *reform.TX) error {
-		artifact, err := models.FindArtifactByID(tx.Querier, artifactID)
-		switch {
-		case err == nil:
-		case errors.Is(err, models.ErrNotFound):
-			return status.Errorf(codes.NotFound, "Artifact with ID %q not found.", artifactID)
-		default:
+		artifact, err := s.canDeleteArtifact(tx.Querier, artifactID)
+		if err != nil {
 			return err
 		}
-		switch artifact.Status {
-		case models.SuccessBackupStatus,
-			models.ErrorBackupStatus,
-			models.FailedToDeleteBackupStatus:
-		default:
-			return status.Errorf(codes.FailedPrecondition, "Artifact with ID %q isn't in the final state.", artifactID)
-		}
-
 		artifactName = artifact.Name
 
 		inProgressStatus := models.InProgressRestoreStatus
