@@ -174,6 +174,7 @@ func (r *Registry) IsConnected(pmmAgentID string) bool {
 	return err == nil
 }
 
+// rerun
 // Run takes over pmm-agent gRPC stream and runs it until completion.
 func (r *Registry) Run(stream agentpb.Agent_ConnectServer) error {
 	r.mConnects.Inc()
