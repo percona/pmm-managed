@@ -69,8 +69,6 @@ type dbaasClient interface {
 type versionService interface {
 	// Matrix calls version service with given params and returns components matrix.
 	Matrix(ctx context.Context, params componentsParams) (*VersionServiceResponse, error)
-	// TODO REMOVE THIS AND REBASE
-	GetLatestOperatorVersion(context.Context, string) (*goversion.Version, *goversion.Version, error)
 	// IsDatabaseVersionSupportedByOperator returns false and err when request to version service fails. Otherwise returns boolen telling
 	// if given database version is supported by given operator version, error is nil in that case.
 	IsDatabaseVersionSupportedByOperator(ctx context.Context, operatorType, operatorVersion, databaseVersion string) (bool, error)
