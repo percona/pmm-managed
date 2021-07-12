@@ -14,13 +14,13 @@ type mockVersionService struct {
 	mock.Mock
 }
 
-// GetLatestOperatorVersion provides a mock function with given fields: _a0, _a1
-func (_m *mockVersionService) GetLatestOperatorVersion(_a0 context.Context, _a1 string) (*version.Version, *version.Version, error) {
-	ret := _m.Called(_a0, _a1)
+// GetLatestOperatorVersion provides a mock function with given fields: ctx, pmmVersion
+func (_m *mockVersionService) GetLatestOperatorVersion(ctx context.Context, pmmVersion string) (*version.Version, *version.Version, error) {
+	ret := _m.Called(ctx, pmmVersion)
 
 	var r0 *version.Version
 	if rf, ok := ret.Get(0).(func(context.Context, string) *version.Version); ok {
-		r0 = rf(_a0, _a1)
+		r0 = rf(ctx, pmmVersion)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*version.Version)
@@ -29,7 +29,7 @@ func (_m *mockVersionService) GetLatestOperatorVersion(_a0 context.Context, _a1 
 
 	var r1 *version.Version
 	if rf, ok := ret.Get(1).(func(context.Context, string) *version.Version); ok {
-		r1 = rf(_a0, _a1)
+		r1 = rf(ctx, pmmVersion)
 	} else {
 		if ret.Get(1) != nil {
 			r1 = ret.Get(1).(*version.Version)
@@ -38,7 +38,7 @@ func (_m *mockVersionService) GetLatestOperatorVersion(_a0 context.Context, _a1 
 
 	var r2 error
 	if rf, ok := ret.Get(2).(func(context.Context, string) error); ok {
-		r2 = rf(_a0, _a1)
+		r2 = rf(ctx, pmmVersion)
 	} else {
 		r2 = ret.Error(2)
 	}

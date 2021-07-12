@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	goversion "github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
@@ -31,24 +32,24 @@ import (
 )
 
 func TestVersionServiceClient(t *testing.T) {
-	c := NewVersionServiceClient("https://check.percona.com/versions/v1")
+	c := NewVersionServiceClient(versionServiceURL)
 
 	for _, tt := range []struct {
 		params componentsParams
 	}{
-		{params: componentsParams{operator: psmdbOperator}},
-		{params: componentsParams{operator: psmdbOperator, operatorVersion: "1.6.0"}},
-		{params: componentsParams{operator: psmdbOperator, operatorVersion: "1.7.0", dbVersion: "4.2.8-8"}},
-		{params: componentsParams{operator: pxcOperator}},
-		{params: componentsParams{operator: pxcOperator, operatorVersion: "1.7.0"}},
-		{params: componentsParams{operator: pxcOperator, operatorVersion: "1.7.0", dbVersion: "8.0.20-11.2"}},
+		{params: componentsParams{product: psmdbOperator}},
+		{params: componentsParams{product: psmdbOperator, productVersion: "1.6.0"}},
+		{params: componentsParams{product: psmdbOperator, productVersion: "1.7.0", dbVersion: "4.2.8-8"}},
+		{params: componentsParams{product: pxcOperator}},
+		{params: componentsParams{product: pxcOperator, productVersion: "1.7.0"}},
+		{params: componentsParams{product: pxcOperator, productVersion: "1.7.0", dbVersion: "8.0.20-11.2"}},
 	} {
 		t.Run("NotEmptyMatrix", func(t *testing.T) {
 			response, err := c.Matrix(context.TODO(), tt.params)
 			require.NoError(t, err)
 			require.NotEmpty(t, response.Versions)
 			for _, v := range response.Versions {
-				switch tt.params.operator {
+				switch tt.params.product {
 				case psmdbOperator:
 					assert.NotEmpty(t, v.Matrix.Mongod)
 				case pxcOperator:
@@ -153,4 +154,59 @@ func newFakeVersionService(response *VersionServiceResponse, port string, compon
 	return NewVersionServiceClient("http://" + fakeHostAndPort + "/versions/v1"), func(t *testing.T) {
 		assert.NoError(t, httpServer.Shutdown(context.TODO()))
 	}
+}
+
+func TestLatestVersionGetting(t *testing.T) {
+	t.Parallel()
+	t.Run("Invalid url", func(t *testing.T) {
+		t.Parallel()
+		c := NewVersionServiceClient("wrongschema://check.percona.com/versions/invalid")
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
+		operator, pmm, err := c.GetLatestOperatorVersion(ctx, "2.19")
+		assert.Error(t, err, "err is expected")
+		assert.Nil(t, operator)
+		assert.Nil(t, pmm)
+	})
+	response := &VersionServiceResponse{
+		Versions: []struct {
+			Product        string `json:"product"`
+			ProductVersion string `json:"operator"`
+			Matrix         matrix `json:"matrix"`
+		}{
+			{
+				ProductVersion: twoPointEighteen,
+				Product:        "pmm-server",
+				Matrix: matrix{
+					PXCOperator: map[string]componentVersion{
+						"1.8.0": {},
+						"1.7.0": {},
+					},
+					PSMDBOperator: map[string]componentVersion{
+						"1.9.0": {},
+						"1.8.0": {},
+						"1.7.0": {},
+					},
+				},
+			},
+		},
+	}
+	c, cleanup := newFakeVersionService(response, "5897")
+	t.Cleanup(func() { cleanup(t) })
+	t.Run("Get latest", func(t *testing.T) {
+		t.Parallel()
+		ctx := context.Background()
+		pxcOperatorVersion, psmdbOperatorVersion, err := c.GetLatestOperatorVersion(ctx, twoPointEighteen)
+		require.NoError(t, err, "request to fakeserver for latest version should not fail")
+		assert.Equal(t, "1.8.0", pxcOperatorVersion.String())
+		assert.Equal(t, "1.9.0", psmdbOperatorVersion.String())
+	})
+	t.Run("Get latest", func(t *testing.T) {
+		t.Parallel()
+		ctx := context.Background()
+		pxcOperatorVersion, psmdbOperatorVersion, err := c.GetLatestOperatorVersion(ctx, "2.220.0")
+		require.NoError(t, err, "request to fakeserver for latest version should not fail")
+		assert.Nil(t, pxcOperatorVersion)
+		assert.Nil(t, psmdbOperatorVersion)
+	})
 }

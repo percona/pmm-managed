@@ -42,7 +42,10 @@ import (
 	"github.com/percona/pmm-managed/utils/tests"
 )
 
-const versionServiceURL = "https://check.percona.com/versions/v1"
+const (
+	versionServiceURL = "https://check.percona.com/versions/v1"
+	twoPointEighteen  = "2.18.0"
+)
 
 func TestComponentService(t *testing.T) {
 	const (
@@ -504,17 +507,18 @@ func TestFilteringOutOfUnsupportedVersions(t *testing.T) {
 	})
 }
 
+const (
+	onePointEight       = "1.8.0"
+	defaultPXCVersion   = "5.7.26-31.37"
+	latestPXCVersion    = "8.0.0"
+	defaultPSMDBVersion = "3.6.18-5.0"
+	latestPSMDBVersion  = "4.5.0"
+	port                = "5497"
+	clusterName         = "installoperator"
+)
+
 func TestInstallOperator(t *testing.T) {
 	pmmversion.PMMVersion = "2.19.0"
-	const (
-		onePointEight       = "1.8.0"
-		defaultPXCVersion   = "5.7.26-31.37"
-		latestPXCVersion    = "8.0.0"
-		defaultPSMDBVersion = "3.6.18-5.0"
-		latestPSMDBVersion  = "4.5.0"
-		port                = "5497"
-		clusterName         = "installoperator"
-	)
 	setup := func(t *testing.T, clusterName string, response *VersionServiceResponse, port, defaultPXC, defaultPSMDB string) (*reform.Querier, dbaasv1beta1.ComponentsServer, *mockDbaasClient) {
 		t.Helper()
 
@@ -538,6 +542,7 @@ func TestInstallOperator(t *testing.T) {
 		require.NoError(t, db.Save(kubernetesCluster))
 
 		vsc, cleanup := newFakeVersionService(response, port, pxcOperator, psmdbOperator, "pmm-server")
+
 		t.Cleanup(func() {
 			cleanup(t)
 			uuid.SetRand(nil)
@@ -545,7 +550,6 @@ func TestInstallOperator(t *testing.T) {
 			assert.NoError(t, db.Delete(kubernetesCluster))
 			require.NoError(t, sqlDB.Close())
 		})
-
 		return db.Querier, NewComponentsService(db, dbaasClient, vsc), dbaasClient
 	}
 
@@ -668,5 +672,131 @@ func TestInstallOperator(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, defaultPSMDBVersion, kubernetesCluster.Mongod.DefaultVersion)
 		assert.Equal(t, defaultPXCVersion, kubernetesCluster.PXC.DefaultVersion)
+
+	})
+}
+
+func TestCheckForOperatorUpdate(t *testing.T) {
+	setup := func(t *testing.T, clusterName string, response *VersionServiceResponse, port string) (dbaasv1beta1.ComponentsServer, *mockDbaasClient) {
+		t.Helper()
+
+		uuid.SetRand(new(tests.IDReader))
+
+		sqlDB := testdb.Open(t, models.SetupFixtures, nil)
+		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+		dbaasClient := new(mockDbaasClient)
+
+		kubernetesCluster, err := models.CreateKubernetesCluster(db.Querier, &models.CreateKubernetesClusterParams{
+			KubernetesClusterName: clusterName,
+			KubeConfig:            "{}",
+		})
+		require.NoError(t, err)
+
+		vsc, cleanup := newFakeVersionService(response, port)
+
+		t.Cleanup(func() {
+			cleanup(t)
+			uuid.SetRand(nil)
+			dbaasClient.AssertExpectations(t)
+			assert.NoError(t, db.Delete(kubernetesCluster))
+			require.NoError(t, sqlDB.Close())
+		})
+
+		return NewComponentsService(db, dbaasClient, vsc), dbaasClient
+	}
+
+	t.Parallel()
+	response := &VersionServiceResponse{
+		Versions: []struct {
+			Product  string `json:"product"`
+			Operator string `json:"operator"`
+			Matrix   matrix `json:"matrix"`
+		}{
+			{
+				Operator: twoPointEighteen,
+				Product:  "pmm-server",
+				Matrix: matrix{
+					PSMDBOperator: map[string]componentVersion{
+						"1.8.0": {},
+						"1.7.0": {},
+					},
+					PXCOperator: map[string]componentVersion{
+						"1.8.0": {},
+						"1.7.0": {},
+					},
+				},
+			},
+		},
+	}
+
+	pmmversion.PMMVersion = twoPointEighteen
+	ctx := context.Background()
+	t.Run("Update available", func(t *testing.T) {
+		clusterName := "update-available"
+		cs, dbaasClient := setup(t, clusterName, response, "9873")
+		dbaasClient.On("CheckKubernetesClusterConnection", ctx, "{}").Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
+			Operators: &controllerv1beta1.Operators{
+				Psmdb: &controllerv1beta1.Operator{
+					Version: "1.7.0",
+				},
+				Xtradb: &controllerv1beta1.Operator{
+					Version: "1.7.0",
+				},
+			},
+		}, nil)
+
+		resp, err := cs.CheckForOperatorUpdate(ctx, &dbaasv1beta1.CheckForOperatorUpdateRequest{})
+		require.NoError(t, err)
+		cluster := resp.ClusterToComponents[clusterName]
+		require.NotNil(t, cluster)
+		require.NotNil(t, cluster.ComponentToUpdateInformation)
+		assert.Equal(t, "1.8.0", cluster.ComponentToUpdateInformation[psmdbOperator].AvailableVersion)
+		assert.Equal(t, "1.8.0", cluster.ComponentToUpdateInformation[pxcOperator].AvailableVersion)
+	})
+	t.Run("Update NOT available", func(t *testing.T) {
+		clusterName := "update-not-available"
+		cs, dbaasClient := setup(t, clusterName, response, "7895")
+		dbaasClient.On("CheckKubernetesClusterConnection", ctx, "{}").Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
+			Operators: &controllerv1beta1.Operators{
+				Psmdb: &controllerv1beta1.Operator{
+					Version: "1.8.0",
+				},
+				Xtradb: &controllerv1beta1.Operator{
+					Version: "1.8.0",
+				},
+			},
+		}, nil)
+
+		resp, err := cs.CheckForOperatorUpdate(ctx, &dbaasv1beta1.CheckForOperatorUpdateRequest{})
+		require.NoError(t, err)
+		cluster := resp.ClusterToComponents[clusterName]
+		require.NotNil(t, cluster)
+		require.NotNil(t, cluster.ComponentToUpdateInformation)
+		assert.Equal(t, "", cluster.ComponentToUpdateInformation[psmdbOperator].AvailableVersion)
+		assert.Equal(t, "", cluster.ComponentToUpdateInformation[pxcOperator].AvailableVersion)
+	})
+	t.Run("User's operators version is ahead of version service", func(t *testing.T) {
+		clusterName := "update-available-pmm-update"
+		cs, dbaasClient := setup(t, clusterName, response, "5863")
+		dbaasClient.On("CheckKubernetesClusterConnection", ctx, "{}").Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
+			Operators: &controllerv1beta1.Operators{
+				Psmdb: &controllerv1beta1.Operator{
+					Version: "1.9.0",
+				},
+				Xtradb: &controllerv1beta1.Operator{
+					Version: "1.9.0",
+				},
+			},
+		}, nil)
+
+		resp, err := cs.CheckForOperatorUpdate(ctx, &dbaasv1beta1.CheckForOperatorUpdateRequest{})
+		require.NoError(t, err)
+		cluster := resp.ClusterToComponents[clusterName]
+		require.NotNil(t, cluster)
+		require.NotNil(t, cluster.ComponentToUpdateInformation)
+		require.NotNil(t, cluster.ComponentToUpdateInformation[psmdbOperator])
+
+		assert.Equal(t, "", cluster.ComponentToUpdateInformation[psmdbOperator].AvailableVersion)
+		assert.Equal(t, "", cluster.ComponentToUpdateInformation[pxcOperator].AvailableVersion)
 	})
 }
