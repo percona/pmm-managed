@@ -468,8 +468,8 @@ func TestFilteringOutOfUnsupportedVersions(t *testing.T) {
 		defer cancel()
 
 		params := componentsParams{
-			operator:        psmdbOperator,
-			operatorVersion: "1.6.0",
+			product:        psmdbOperator,
+			productVersion: "1.6.0",
 		}
 		versions, err := c.versions(ctx, params, nil)
 		require.NoError(t, err)
@@ -490,8 +490,8 @@ func TestFilteringOutOfUnsupportedVersions(t *testing.T) {
 		defer cancel()
 
 		params := componentsParams{
-			operator:        pxcOperator,
-			operatorVersion: "1.7.0",
+			product:        pxcOperator,
+			productVersion: "1.7.0",
 		}
 		versions, err := c.versions(ctx, params, nil)
 		require.NoError(t, err)
@@ -555,13 +555,13 @@ func TestInstallOperator(t *testing.T) {
 
 	response := &VersionServiceResponse{
 		Versions: []struct {
-			Product  string `json:"product"`
-			Operator string `json:"operator"`
-			Matrix   matrix `json:"matrix"`
+			Product        string `json:"product"`
+			ProductVersion string `json:"operator"`
+			Matrix         matrix `json:"matrix"`
 		}{
 			{
-				Product:  pxcOperator,
-				Operator: "1.7.0",
+				Product:        pxcOperator,
+				productVersion: "1.7.0",
 				Matrix: matrix{
 					Pxc: map[string]componentVersion{
 						defaultPXCVersion: {},
@@ -569,8 +569,8 @@ func TestInstallOperator(t *testing.T) {
 				},
 			},
 			{
-				Product:  pxcOperator,
-				Operator: onePointEight,
+				Product:        pxcOperator,
+				ProductVersion: onePointEight,
 				Matrix: matrix{
 					Pxc: map[string]componentVersion{
 						latestPXCVersion: {},
@@ -579,8 +579,8 @@ func TestInstallOperator(t *testing.T) {
 				},
 			},
 			{
-				Product:  psmdbOperator,
-				Operator: "1.7.0",
+				Product:        psmdbOperator,
+				ProductVersion: "1.7.0",
 				Matrix: matrix{
 					Mongod: map[string]componentVersion{
 						defaultPSMDBVersion: {},
@@ -588,8 +588,8 @@ func TestInstallOperator(t *testing.T) {
 				},
 			},
 			{
-				Product:  psmdbOperator,
-				Operator: onePointEight,
+				Product:        psmdbOperator,
+				ProductVersion: onePointEight,
 				Matrix: matrix{
 					Mongod: map[string]componentVersion{
 						latestPSMDBVersion: {},
@@ -598,8 +598,8 @@ func TestInstallOperator(t *testing.T) {
 				},
 			},
 			{
-				Product:  "pmm-server",
-				Operator: "2.19.0",
+				Product:        "pmm-server",
+				ProductVersion: "2.19.0",
 				Matrix: matrix{
 					PXCOperator: map[string]componentVersion{
 						onePointEight: {},
@@ -708,13 +708,13 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 	t.Parallel()
 	response := &VersionServiceResponse{
 		Versions: []struct {
-			Product  string `json:"product"`
-			Operator string `json:"operator"`
-			Matrix   matrix `json:"matrix"`
+			Product        string `json:"product"`
+			ProductVersion string `json:"operator"`
+			Matrix         matrix `json:"matrix"`
 		}{
 			{
-				Operator: twoPointEighteen,
-				Product:  "pmm-server",
+				ProductVersion: twoPointEighteen,
+				Product:        "pmm-server",
 				Matrix: matrix{
 					PSMDBOperator: map[string]componentVersion{
 						"1.8.0": {},
