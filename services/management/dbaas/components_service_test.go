@@ -561,7 +561,7 @@ func TestInstallOperator(t *testing.T) {
 		}{
 			{
 				Product:        pxcOperator,
-				productVersion: "1.7.0",
+				ProductVersion: "1.7.0",
 				Matrix: matrix{
 					Pxc: map[string]componentVersion{
 						defaultPXCVersion: {},

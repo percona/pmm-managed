@@ -90,7 +90,7 @@ func (f fakeLatestVersionServer) ServeHTTP(w http.ResponseWriter, r *http.Reques
 			version = segments[len(segments)-1]
 		}
 		for _, v := range f.response.Versions {
-			if v.Operator == version && v.Product == component {
+			if v.ProductVersion == version && v.Product == component {
 				if dbVersion != "" {
 					var database map[string]componentVersion
 					switch component {
@@ -108,9 +108,9 @@ func (f fakeLatestVersionServer) ServeHTTP(w http.ResponseWriter, r *http.Reques
 				}
 				response = &VersionServiceResponse{
 					Versions: []struct {
-						Product  string `json:"product"`
-						Operator string `json:"operator"`
-						Matrix   matrix `json:"matrix"`
+						Product        string `json:"product"`
+						ProductVersion string `json:"operator"`
+						Matrix         matrix `json:"matrix"`
 					}{v},
 				}
 				break
