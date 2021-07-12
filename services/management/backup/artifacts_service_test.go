@@ -69,50 +69,42 @@ func TestDeleteArtifact(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	findArtifact := func(artifactID string) *backupv1beta1.Artifact {
-		artifacts, err := artifactsSvc.ListArtifacts(ctx, &backupv1beta1.ListArtifactsRequest{})
+	t.Run("failed to delete from s3", func(t *testing.T) {
+		mockedS3.On("RemoveRecursive", mock.Anything, endpoint, accessKey, secretKey, bucketName,
+			artifact.Name+"/",
+		).Return(errors.Errorf("failed to remove")).Run(func(args mock.Arguments) {
+			artifact, err := models.FindArtifactByID(db.Querier, artifact.ID)
+			require.NoError(t, err)
+			require.NotNil(t, artifact)
+			assert.Equal(t, artifact.Status, models.DeletingBackupStatus)
+		}).Once()
+
+		_, err = artifactsSvc.DeleteArtifact(ctx, &backupv1beta1.DeleteArtifactRequest{
+			ArtifactId:  artifact.ID,
+			RemoveFiles: true,
+		})
+		require.EqualError(t, err, "failed to remove")
+
+		artifact, err := models.FindArtifactByID(db.Querier, artifact.ID)
 		require.NoError(t, err)
-		require.NotNil(t, artifacts)
-
-		for _, a := range artifacts.Artifacts {
-			if a.ArtifactId == artifactID {
-				return a
-			}
-		}
-
-		return nil
-	}
-
-	mockedS3.On("RemoveRecursive", mock.Anything, endpoint, accessKey, secretKey, bucketName,
-		artifact.Name+"/",
-	).Return(errors.Errorf("failed to remove")).Run(func(args mock.Arguments) {
-		artifact := findArtifact(artifact.ID)
 		require.NotNil(t, artifact)
-		assert.Equal(t, artifact.Status, backupv1beta1.BackupStatus_BACKUP_STATUS_DELETING)
-	}).Once()
-
-	_, err = artifactsSvc.DeleteArtifact(ctx, &backupv1beta1.DeleteArtifactRequest{
-		ArtifactId:  artifact.ID,
-		RemoveFiles: true,
+		assert.Equal(t, artifact.Status, models.FailedToDeleteBackupStatus)
 	})
-	require.EqualError(t, err, "failed to remove")
 
-	foundArtifact := findArtifact(artifact.ID)
-	require.NotNil(t, foundArtifact)
-	assert.Equal(t, foundArtifact.Status, backupv1beta1.BackupStatus_BACKUP_STATUS_FAILED_TO_DELETE)
+	t.Run("successful delete", func(t *testing.T) {
+		mockedS3.On("RemoveRecursive", mock.Anything, endpoint, accessKey, secretKey, bucketName,
+			artifact.Name+"/",
+		).Return(nil).Once()
 
-	mockedS3.On("RemoveRecursive", mock.Anything, endpoint, accessKey, secretKey, bucketName,
-		artifact.Name+"/",
-	).Return(nil).Once()
+		_, err = artifactsSvc.DeleteArtifact(ctx, &backupv1beta1.DeleteArtifactRequest{
+			ArtifactId:  artifact.ID,
+			RemoveFiles: true,
+		})
+		assert.NoError(t, err)
 
-	_, err = artifactsSvc.DeleteArtifact(ctx, &backupv1beta1.DeleteArtifactRequest{
-		ArtifactId:  artifact.ID,
-		RemoveFiles: true,
+		_, err := models.FindArtifactByID(db.Querier, artifact.ID)
+		assert.True(t, errors.Is(err, models.ErrNotFound))
 	})
-	assert.NoError(t, err)
-
-	foundArtifact = findArtifact(artifact.ID)
-	require.Nil(t, foundArtifact)
 
 	mock.AssertExpectationsForObjects(t, mockedS3)
 }

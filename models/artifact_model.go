@@ -77,9 +77,9 @@ func (bs BackupStatus) Validate() error {
 	return nil
 }
 
-// Pointer returns a pointer of backup status.
-func (bs BackupStatus) Pointer() *BackupStatus {
-	return &bs
+// BackupStatusPointer returns a pointer of backup status.
+func BackupStatusPointer(status BackupStatus) *BackupStatus {
+	return &status
 }
 
 // Artifact represents result of a backup.

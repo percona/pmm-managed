@@ -313,7 +313,7 @@ func (r *Registry) handleJobResult(l *logrus.Entry, result *agentpb.JobResult) {
 			}
 
 			_, err := models.UpdateArtifact(t.Querier, res.Result.MySQLBackup.ArtifactID, models.UpdateArtifactParams{
-				Status: models.SuccessBackupStatus.Pointer(),
+				Status: models.BackupStatusPointer(models.SuccessBackupStatus),
 			})
 			if err != nil {
 				return err
@@ -324,7 +324,7 @@ func (r *Registry) handleJobResult(l *logrus.Entry, result *agentpb.JobResult) {
 			}
 
 			_, err := models.UpdateArtifact(t.Querier, res.Result.MongoDBBackup.ArtifactID, models.UpdateArtifactParams{
-				Status: models.SuccessBackupStatus.Pointer(),
+				Status: models.BackupStatusPointer(models.SuccessBackupStatus),
 			})
 			if err != nil {
 				return err
@@ -375,11 +375,11 @@ func (r *Registry) handleJobError(jobResult *models.JobResult) error {
 		// nothing
 	case models.MySQLBackupJob:
 		_, err = models.UpdateArtifact(r.db.Querier, jobResult.Result.MySQLBackup.ArtifactID, models.UpdateArtifactParams{
-			Status: models.ErrorBackupStatus.Pointer(),
+			Status: models.BackupStatusPointer(models.ErrorBackupStatus),
 		})
 	case models.MongoDBBackupJob:
 		_, err = models.UpdateArtifact(r.db.Querier, jobResult.Result.MongoDBBackup.ArtifactID, models.UpdateArtifactParams{
-			Status: models.ErrorBackupStatus.Pointer(),
+			Status: models.BackupStatusPointer(models.ErrorBackupStatus),
 		})
 	case models.MySQLRestoreBackupJob:
 		_, err = models.ChangeRestoreHistoryItem(

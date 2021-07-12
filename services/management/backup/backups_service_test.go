@@ -120,7 +120,7 @@ func TestBackup(t *testing.T) {
 	assert.EqualValues(t, models.MySQLServiceType, artifact.Vendor)
 
 	_, err = models.UpdateArtifact(db.Querier, backupRes.ArtifactId, models.UpdateArtifactParams{
-		Status: models.SuccessBackupStatus.Pointer(),
+		Status: models.BackupStatusPointer(models.SuccessBackupStatus),
 	})
 	require.NoError(t, err)
 

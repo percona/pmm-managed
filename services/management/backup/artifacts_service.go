@@ -126,6 +126,8 @@ func (s *ArtifactsService) canDeleteArtifact(q *reform.Querier, artifactID strin
 	return artifact, nil
 }
 
+// beginDeletingArtifact checks if the artifact isn't in use at the moment and sets deleting status,
+// so it will not be used to restore backup.
 func (s *ArtifactsService) beginDeletingArtifact(
 	artifactID string,
 ) (string, *models.S3LocationConfig, error) {
@@ -160,7 +162,7 @@ func (s *ArtifactsService) beginDeletingArtifact(
 		s3Config = location.S3Config
 
 		if _, err := models.UpdateArtifact(tx.Querier, artifactID, models.UpdateArtifactParams{
-			Status: models.DeletingBackupStatus.Pointer(),
+			Status: models.BackupStatusPointer(models.DeletingBackupStatus),
 		}); err != nil {
 			return err
 		}
@@ -197,7 +199,7 @@ func (s *ArtifactsService) DeleteArtifact(
 			artifactName+"/",
 		); err != nil {
 			if _, updateErr := models.UpdateArtifact(s.db.Querier, req.ArtifactId, models.UpdateArtifactParams{
-				Status: models.FailedToDeleteBackupStatus.Pointer(),
+				Status: models.BackupStatusPointer(models.FailedToDeleteBackupStatus),
 			}); updateErr != nil {
 				s.l.WithError(updateErr).
 					Errorf("failed to set status %q for artifact %q", models.FailedToDeleteBackupStatus, req.ArtifactId)
