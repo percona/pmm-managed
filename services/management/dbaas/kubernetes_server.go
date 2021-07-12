@@ -170,7 +170,8 @@ func (k kubernetesServer) RegisterKubernetesCluster(ctx context.Context, req *db
 			if e != nil {
 				k.l.Warnf("couldn't delete created API Key %v: %s", apiKeyID, e)
 			}
-			return nil, err
+			k.l.Warnf("couldn't start monitoring of the kubernetes cluster: %s", err)
+			return nil, status.Errorf(codes.Internal, "couldn't start monitoring of the kubernetes cluster: %s", err.Error())
 		}
 	}
 
