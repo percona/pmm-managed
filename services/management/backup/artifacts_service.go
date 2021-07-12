@@ -114,9 +114,11 @@ func (s *ArtifactsService) beginDeletingArtifact(
 		default:
 			return err
 		}
-		if artifact.Status != models.SuccessBackupStatus &&
-			artifact.Status != models.ErrorBackupStatus &&
-			artifact.Status != models.FailedToDeleteBackupStatus {
+		switch artifact.Status {
+		case models.SuccessBackupStatus,
+			models.ErrorBackupStatus,
+			models.FailedToDeleteBackupStatus:
+		default:
 			return status.Errorf(codes.FailedPrecondition, "Artifact with ID %q isn't in the final state.", artifactID)
 		}
 

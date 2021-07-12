@@ -104,15 +104,13 @@ func TestBackup(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, artifacts)
 
-		var artifact *backupv1beta1.Artifact
 		for _, a := range artifacts.Artifacts {
 			if a.ArtifactId == artifactID {
-				artifact = a
-				break
+				return a
 			}
 		}
 
-		return artifact
+		return nil
 	}
 
 	artifact := findArtifact(backupRes.ArtifactId)
