@@ -168,11 +168,10 @@ func TestScheduledTaskHelpers(t *testing.T) {
 			{
 				filter: models.ScheduledTasksFilter{
 					Types: []models.ScheduledTaskType{
-						models.ScheduledMySQLBackupTask,
 						models.ScheduledMongoDBBackupTask,
 					},
 				},
-				ids: []string{task3.ID, task4.ID},
+				ids: []string{task4.ID},
 			},
 			{
 				filter: models.ScheduledTasksFilter{
