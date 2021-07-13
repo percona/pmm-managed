@@ -19,6 +19,7 @@ package backup
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/AlekSi/pointer"
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
@@ -26,11 +27,19 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
+	"github.com/percona/pmm-managed/services/backup"
+
 	"github.com/percona/pmm-managed/models"
+	"github.com/percona/pmm-managed/services/scheduler"
 	"github.com/percona/pmm-managed/utils/testdb"
+	"github.com/percona/pmm-managed/utils/tests"
 )
 
 func setup(t *testing.T, q *reform.Querier, serviceName string) *models.Agent {
@@ -69,7 +78,8 @@ func TestBackup(t *testing.T) {
 	mockedJobsService := &mockJobsService{}
 	mockedJobsService.On("StartMySQLBackupJob", mock.Anything, mock.Anything, mock.Anything,
 		mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
-	backupSvc := NewBackupsService(db, mockedJobsService)
+	s := backup.NewService(db, mockedJobsService)
+	backupSvc := NewBackupsService(db, s, nil)
 
 	mockedS3 := &mockAwsS3{}
 	artifactsSvc := NewArtifactsService(db, mockedS3)
@@ -134,4 +144,123 @@ func TestBackup(t *testing.T) {
 	assert.True(t, assert.True(t, errors.Is(err, models.ErrNotFound)))
 
 	mock.AssertExpectationsForObjects(t, mockedS3, mockedJobsService)
+}
+
+func TestScheduledBackups(t *testing.T) {
+	ctx := context.Background()
+	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
+	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+	backupService := &mockBackupService{}
+	schedulerService := scheduler.New(db, backupService)
+	backupSvc := NewBackupsService(db, backupService, schedulerService)
+	t.Cleanup(func() {
+		_ = sqlDB.Close()
+	})
+
+	agent := setup(t, db.Querier, t.Name())
+	locationRes, err := models.CreateBackupLocation(db.Querier, models.CreateBackupLocationParams{
+		Name:        "Test location",
+		Description: "Test description",
+		BackupLocationConfig: models.BackupLocationConfig{
+			S3Config: &models.S3LocationConfig{
+				Endpoint:     "https://s3.us-west-2.amazonaws.com/",
+				AccessKey:    "access_key",
+				SecretKey:    "secret_key",
+				BucketName:   "example_bucket",
+				BucketRegion: "us-east-2",
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	t.Run("schedule/change", func(t *testing.T) {
+		req := &backupv1beta1.ScheduleBackupRequest{
+			ServiceId:      pointer.GetString(agent.ServiceID),
+			LocationId:     locationRes.ID,
+			CronExpression: "1 * * * *",
+			StartTime:      timestamppb.New(time.Now()),
+			Name:           t.Name(),
+			Description:    t.Name(),
+			Enabled:        true,
+		}
+		res, err := backupSvc.ScheduleBackup(ctx, req)
+
+		assert.NoError(t, err)
+		assert.NotEmpty(t, res.ScheduledBackupId)
+
+		task, err := models.FindScheduledTaskByID(db.Querier, res.ScheduledBackupId)
+		require.NoError(t, err)
+		assert.Equal(t, models.ScheduledMySQLBackupTask, task.Type)
+		assert.Equal(t, req.CronExpression, task.CronExpression)
+		data := task.Data.MySQLBackupTask
+		assert.Equal(t, req.Name, data.Name)
+		assert.Equal(t, req.Description, data.Description)
+		assert.Equal(t, req.ServiceId, data.ServiceID)
+		assert.Equal(t, req.LocationId, data.LocationID)
+
+		changeReq := &backupv1beta1.ChangeScheduledBackupRequest{
+			ScheduledBackupId: task.ID,
+			Enabled:           wrapperspb.Bool(false),
+			CronExpression:    wrapperspb.String("2 * * * *"),
+			StartTime:         timestamppb.New(time.Now()),
+			Name:              wrapperspb.String("test"),
+			Description:       wrapperspb.String("test"),
+		}
+		_, err = backupSvc.ChangeScheduledBackup(ctx, changeReq)
+
+		assert.NoError(t, err)
+		task, err = models.FindScheduledTaskByID(db.Querier, res.ScheduledBackupId)
+		require.NoError(t, err)
+		data = task.Data.MySQLBackupTask
+		assert.Equal(t, changeReq.CronExpression.GetValue(), task.CronExpression)
+		assert.Equal(t, changeReq.Enabled.GetValue(), !task.Disabled)
+		assert.Equal(t, changeReq.Name.GetValue(), data.Name)
+		assert.Equal(t, changeReq.Description.GetValue(), data.Description)
+	})
+
+	t.Run("list", func(t *testing.T) {
+		res, err := backupSvc.ListScheduledBackups(ctx, &backupv1beta1.ListScheduledBackupsRequest{})
+
+		assert.NoError(t, err)
+		assert.Len(t, res.ScheduledBackups, 1)
+	})
+
+	t.Run("remove", func(t *testing.T) {
+		task, err := models.CreateScheduledTask(db.Querier, models.CreateScheduledTaskParams{
+			CronExpression: "* * * * *",
+			Type:           models.ScheduledMySQLBackupTask,
+			Data:           models.ScheduledTaskData{},
+		})
+		require.NoError(t, err)
+
+		id := task.ID
+
+		_, err = models.CreateArtifact(db.Querier, models.CreateArtifactParams{
+			Name:       "artifact",
+			Vendor:     "mysql",
+			LocationID: locationRes.ID,
+			ServiceID:  *agent.ServiceID,
+			DataModel:  "physical",
+			Status:     "pending",
+			ScheduleID: id,
+		})
+		require.NoError(t, err)
+
+		_, err = backupSvc.RemoveScheduledBackup(ctx, &backupv1beta1.RemoveScheduledBackupRequest{
+			ScheduledBackupId: task.ID,
+		})
+		assert.NoError(t, err)
+
+		task, err = models.FindScheduledTaskByID(db.Querier, task.ID)
+		assert.Nil(t, task)
+		tests.AssertGRPCError(t, status.Newf(codes.NotFound, `ScheduledTask with ID "%s" not found.`, id), err)
+
+		artifacts, err := models.FindArtifacts(db.Querier, &models.ArtifactFilters{
+			ScheduleID: id,
+		})
+
+		assert.NoError(t, err)
+		assert.Len(t, artifacts, 0)
+	})
+
 }

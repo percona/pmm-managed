@@ -82,6 +82,15 @@ func BackupStatusPointer(status BackupStatus) *BackupStatus {
 	return &status
 }
 
+// ArtifactType represents type how artifact was created.
+type ArtifactType string
+
+// ArtifactType types.
+const (
+	OnDemandArtifactType  ArtifactType = "on_demand"
+	ScheduledArtifactType ArtifactType = "scheduled"
+)
+
 // Artifact represents result of a backup.
 //reform:artifacts
 type Artifact struct {
@@ -92,6 +101,8 @@ type Artifact struct {
 	ServiceID  string       `reform:"service_id"`
 	DataModel  DataModel    `reform:"data_model"`
 	Status     BackupStatus `reform:"status"`
+	Type       ArtifactType `reform:"type"`
+	ScheduleID string       `reform:"schedule_id"`
 	CreatedAt  time.Time    `reform:"created_at"`
 }
 
