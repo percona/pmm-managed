@@ -20,8 +20,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/percona/pmm-managed/models"
 )
 
@@ -45,40 +43,6 @@ func (c *common) ID() string {
 
 func (c *common) SetID(id string) {
 	c.id = id
-}
-
-// PrintTask implements Task for logging message.
-type PrintTask struct {
-	*common
-	Message string
-}
-
-// NewPrintTask creates new task which prints message.
-func NewPrintTask(message string) Task {
-	return &PrintTask{
-		common:  &common{},
-		Message: message,
-	}
-}
-
-// Run starts task.
-func (j *PrintTask) Run(ctx context.Context) error {
-	logrus.Info(j.Message)
-	return nil
-}
-
-// Type returns task type.
-func (j *PrintTask) Type() models.ScheduledTaskType {
-	return models.ScheduledPrintTask
-}
-
-// Data returns data needed for running a task.
-func (j *PrintTask) Data() models.ScheduledTaskData {
-	return models.ScheduledTaskData{
-		Print: &models.PrintTaskData{
-			Message: j.Message,
-		},
-	}
 }
 
 type mySQLBackupTask struct {

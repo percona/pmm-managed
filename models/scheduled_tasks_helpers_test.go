@@ -43,10 +43,13 @@ func TestScheduledTaskHelpers(t *testing.T) {
 
 	createParams := models.CreateScheduledTaskParams{
 		CronExpression: "* * * * *",
-		Type:           models.ScheduledPrintTask,
+		Type:           models.ScheduledMySQLBackupTask,
 		Data: models.ScheduledTaskData{
-			Print: &models.PrintTaskData{
-				Message: "test",
+			MySQLBackupTask: &models.MySQLBackupTaskData{
+				ServiceID:   "",
+				LocationID:  "",
+				Name:        "task",
+				Description: "",
 			},
 		},
 		Disabled: false,
@@ -62,12 +65,12 @@ func TestScheduledTaskHelpers(t *testing.T) {
 		assert.Equal(t, createParams.CronExpression, task.CronExpression)
 		assert.Equal(t, createParams.Type, task.Type)
 		assert.Equal(t, createParams.Disabled, task.Disabled)
-		require.NotNil(t, task.Data.Print)
-		assert.Equal(t, createParams.Data.Print.Message, task.Data.Print.Message)
+		require.NotNil(t, task.Data.MySQLBackupTask)
+		assert.Equal(t, createParams.Data.MySQLBackupTask.Name, task.Data.MySQLBackupTask.Name)
 
 		_, err = models.CreateScheduledTask(tx.Querier, models.CreateScheduledTaskParams{
 			CronExpression: "a * * * *",
-			Type:           models.ScheduledPrintTask,
+			Type:           models.ScheduledMySQLBackupTask,
 		})
 		require.NotNil(t, err)
 		assert.Contains(t, err.Error(), "Invalid cron expression")

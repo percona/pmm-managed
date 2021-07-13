@@ -156,8 +156,6 @@ func (s *BackupsService) ListScheduledBackups(ctx context.Context, req *backupv1
 		case models.ScheduledMongoDBBackupTask:
 			serviceID = t.Data.MongoDBBackupTask.ServiceID
 			locationID = t.Data.MongoDBBackupTask.LocationID
-		case models.ScheduledPrintTask:
-			continue
 		default:
 			continue
 		}
@@ -213,8 +211,6 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 		if req.Description != nil {
 			data.Description = req.Description.Value
 		}
-	case models.ScheduledPrintTask:
-		return nil, status.Errorf(codes.InvalidArgument, "Unsupported type: %s", scheduledTask.Type)
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "Unknown type: %s", scheduledTask.Type)
 	}
@@ -249,8 +245,6 @@ func (s *BackupsService) RemoveScheduledBackup(ctx context.Context, req *backupv
 	switch task.Type {
 	case models.ScheduledMySQLBackupTask:
 	case models.ScheduledMongoDBBackupTask:
-	case models.ScheduledPrintTask:
-		fallthrough
 	default:
 		return nil, errors.Errorf("non-backup task: %s", task.Type)
 	}
@@ -318,8 +312,6 @@ func convertTaskToScheduledBackup(task *models.ScheduledTask,
 		backup.Name = data.Name
 		backup.Description = data.Description
 		backup.DataModel = backupv1beta1.DataModel_LOGICAL
-	case models.ScheduledPrintTask:
-		return nil, fmt.Errorf("unsupported task type: %s", task.Type)
 	default:
 		return nil, fmt.Errorf("unknown task type: %s", task.Type)
 	}

@@ -296,8 +296,6 @@ func (s *Service) taskFinished(id string, taskErr error) {
 func (s *Service) convertDBTask(dbTask *models.ScheduledTask) (Task, error) {
 	var task Task
 	switch dbTask.Type {
-	case models.ScheduledPrintTask:
-		task = NewPrintTask(dbTask.Data.Print.Message)
 	case models.ScheduledMySQLBackupTask:
 		data := dbTask.Data.MySQLBackupTask
 		task = NewMySQLBackupTask(s.backupService, data.ServiceID, data.LocationID, data.Name, data.Description)

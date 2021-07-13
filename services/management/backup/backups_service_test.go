@@ -140,18 +140,6 @@ func TestScheduledBackups(t *testing.T) {
 	})
 
 	t.Run("list", func(t *testing.T) {
-		// Add non-backup task
-		_, err := models.CreateScheduledTask(db.Querier, models.CreateScheduledTaskParams{
-			CronExpression: "* * * * *",
-			Type:           models.ScheduledPrintTask,
-			Data: models.ScheduledTaskData{
-				Print: &models.PrintTaskData{
-					Message: "42",
-				},
-			},
-		})
-		require.NoError(t, err)
-
 		res, err := backupSvc.ListScheduledBackups(ctx, &backupv1beta1.ListScheduledBackupsRequest{})
 
 		assert.NoError(t, err)

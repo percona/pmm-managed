@@ -127,7 +127,6 @@ type CreateScheduledTaskParams struct {
 // Validate checks if required params are set and valid.
 func (p CreateScheduledTaskParams) Validate() error {
 	switch p.Type {
-	case ScheduledPrintTask:
 	case ScheduledMySQLBackupTask:
 	case ScheduledMongoDBBackupTask:
 	default:
