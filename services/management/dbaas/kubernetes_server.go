@@ -154,7 +154,7 @@ func (k kubernetesServer) RegisterKubernetesCluster(ctx context.Context, req *db
 			return nil, err
 		}
 		pmmParams := &dbaascontrollerv1beta1.PMMParams{
-			PublicAddress: settings.PMMPublicAddress,
+			PublicAddress: fmt.Sprintf("https://%s", settings.PMMPublicAddress),
 			Login:         "api_key",
 			Password:      apiKey,
 		}
