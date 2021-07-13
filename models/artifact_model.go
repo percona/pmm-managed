@@ -81,6 +81,7 @@ func (bs BackupStatus) Pointer() *BackupStatus {
 // ArtifactType represents type how artifact was created.
 type ArtifactType string
 
+// ArtifactType types.
 const (
 	OnDemandArtifactType  ArtifactType = "on_demand"
 	ScheduledArtifactType ArtifactType = "scheduled"
