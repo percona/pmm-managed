@@ -51,7 +51,7 @@ trusted comment: some comment
 uEF33ScMPYpvHvBKv8+yBkJ9k4+DCfV4nDs6kKYwGhalvkkqwWkyfJffO+KW7a1m3y42WHpOnzBxLJ+INVALID==
 `)
 
-		err := VerifySignatures(l, "random data", []string{invalidSign, validSign}, publicKeys)
+		err := Verify(l, "random data", []string{invalidSign, validSign}, publicKeys)
 		assert.NoError(t, err)
 	})
 
@@ -60,7 +60,7 @@ uEF33ScMPYpvHvBKv8+yBkJ9k4+DCfV4nDs6kKYwGhalvkkqwWkyfJffO+KW7a1m3y42WHpOnzBxLJ+I
 
 		publicKeys := []string{"RWSdGihBPffV2c4IysqHAIxc5c5PLfmQStbRPkuLXDr3igJOqFWt7aml"}
 
-		err := VerifySignatures(l, "random data", []string{}, publicKeys)
+		err := Verify(l, "random data", []string{}, publicKeys)
 		assert.EqualError(t, err, "zero signatures received")
 	})
 }
