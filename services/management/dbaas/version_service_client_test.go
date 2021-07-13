@@ -132,7 +132,12 @@ func (f fakeLatestVersionServer) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	}
 }
 
+// newFakeVersionService creates new fake version service on given port.
+// It returns values based on given response but only for specified components.
 func newFakeVersionService(response *VersionServiceResponse, port string, components ...string) (versionService, func(*testing.T)) {
+	if len(components) == 0 {
+		panic("failed to create fake version service, at least one component has to be given, none recieved")
+	}
 	var httpServer *http.Server
 	waitForListener := make(chan struct{})
 	server := fakeLatestVersionServer{
@@ -191,7 +196,7 @@ func TestLatestVersionGetting(t *testing.T) {
 			},
 		},
 	}
-	c, cleanup := newFakeVersionService(response, "5897")
+	c, cleanup := newFakeVersionService(response, "5897", "pmm-server")
 	t.Cleanup(func() { cleanup(t) })
 	t.Run("Get latest", func(t *testing.T) {
 		t.Parallel()

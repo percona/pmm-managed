@@ -517,41 +517,42 @@ const (
 	clusterName         = "installoperator"
 )
 
+func setup(t *testing.T, clusterName string, response *VersionServiceResponse, port, defaultPXC, defaultPSMDB string) (*reform.Querier, dbaasv1beta1.ComponentsServer, *mockDbaasClient) {
+	t.Helper()
+
+	uuid.SetRand(new(tests.IDReader))
+
+	sqlDB := testdb.Open(t, models.SetupFixtures, nil)
+	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
+	dbaasClient := new(mockDbaasClient)
+
+	kubernetesCluster, err := models.CreateKubernetesCluster(db.Querier, &models.CreateKubernetesClusterParams{
+		KubernetesClusterName: clusterName,
+		KubeConfig:            "{}",
+	})
+	require.NoError(t, err)
+	kubernetesCluster.Mongod = &models.Component{
+		DefaultVersion: defaultPSMDB,
+	}
+	kubernetesCluster.PXC = &models.Component{
+		DefaultVersion: defaultPXC,
+	}
+	require.NoError(t, db.Save(kubernetesCluster))
+
+	vsc, cleanup := newFakeVersionService(response, port, pxcOperator, psmdbOperator, "pmm-server")
+
+	t.Cleanup(func() {
+		cleanup(t)
+		uuid.SetRand(nil)
+		dbaasClient.AssertExpectations(t)
+		assert.NoError(t, db.Delete(kubernetesCluster))
+		require.NoError(t, sqlDB.Close())
+	})
+	return db.Querier, NewComponentsService(db, dbaasClient, vsc), dbaasClient
+}
+
 func TestInstallOperator(t *testing.T) {
 	pmmversion.PMMVersion = "2.19.0"
-	setup := func(t *testing.T, clusterName string, response *VersionServiceResponse, port, defaultPXC, defaultPSMDB string) (*reform.Querier, dbaasv1beta1.ComponentsServer, *mockDbaasClient) {
-		t.Helper()
-
-		uuid.SetRand(new(tests.IDReader))
-
-		sqlDB := testdb.Open(t, models.SetupFixtures, nil)
-		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-		dbaasClient := new(mockDbaasClient)
-
-		kubernetesCluster, err := models.CreateKubernetesCluster(db.Querier, &models.CreateKubernetesClusterParams{
-			KubernetesClusterName: clusterName,
-			KubeConfig:            "{}",
-		})
-		require.NoError(t, err)
-		kubernetesCluster.Mongod = &models.Component{
-			DefaultVersion: defaultPSMDB,
-		}
-		kubernetesCluster.PXC = &models.Component{
-			DefaultVersion: defaultPXC,
-		}
-		require.NoError(t, db.Save(kubernetesCluster))
-
-		vsc, cleanup := newFakeVersionService(response, port, pxcOperator, psmdbOperator, "pmm-server")
-
-		t.Cleanup(func() {
-			cleanup(t)
-			uuid.SetRand(nil)
-			dbaasClient.AssertExpectations(t)
-			assert.NoError(t, db.Delete(kubernetesCluster))
-			require.NoError(t, sqlDB.Close())
-		})
-		return db.Querier, NewComponentsService(db, dbaasClient, vsc), dbaasClient
-	}
 
 	response := &VersionServiceResponse{
 		Versions: []struct {
@@ -677,34 +678,6 @@ func TestInstallOperator(t *testing.T) {
 }
 
 func TestCheckForOperatorUpdate(t *testing.T) {
-	setup := func(t *testing.T, clusterName string, response *VersionServiceResponse, port string) (dbaasv1beta1.ComponentsServer, *mockDbaasClient) {
-		t.Helper()
-
-		uuid.SetRand(new(tests.IDReader))
-
-		sqlDB := testdb.Open(t, models.SetupFixtures, nil)
-		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-		dbaasClient := new(mockDbaasClient)
-
-		kubernetesCluster, err := models.CreateKubernetesCluster(db.Querier, &models.CreateKubernetesClusterParams{
-			KubernetesClusterName: clusterName,
-			KubeConfig:            "{}",
-		})
-		require.NoError(t, err)
-
-		vsc, cleanup := newFakeVersionService(response, port)
-
-		t.Cleanup(func() {
-			cleanup(t)
-			uuid.SetRand(nil)
-			dbaasClient.AssertExpectations(t)
-			assert.NoError(t, db.Delete(kubernetesCluster))
-			require.NoError(t, sqlDB.Close())
-		})
-
-		return NewComponentsService(db, dbaasClient, vsc), dbaasClient
-	}
-
 	t.Parallel()
 	response := &VersionServiceResponse{
 		Versions: []struct {
@@ -733,7 +706,7 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 	ctx := context.Background()
 	t.Run("Update available", func(t *testing.T) {
 		clusterName := "update-available"
-		cs, dbaasClient := setup(t, clusterName, response, "9873")
+		_, cs, dbaasClient := setup(t, clusterName, response, "9873", defaultPXCVersion, defaultPSMDBVersion)
 		dbaasClient.On("CheckKubernetesClusterConnection", ctx, "{}").Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
 			Operators: &controllerv1beta1.Operators{
 				Psmdb: &controllerv1beta1.Operator{
@@ -755,7 +728,7 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 	})
 	t.Run("Update NOT available", func(t *testing.T) {
 		clusterName := "update-not-available"
-		cs, dbaasClient := setup(t, clusterName, response, "7895")
+		_, cs, dbaasClient := setup(t, clusterName, response, "7895", defaultPXCVersion, defaultPSMDBVersion)
 		dbaasClient.On("CheckKubernetesClusterConnection", ctx, "{}").Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
 			Operators: &controllerv1beta1.Operators{
 				Psmdb: &controllerv1beta1.Operator{
@@ -777,7 +750,7 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 	})
 	t.Run("User's operators version is ahead of version service", func(t *testing.T) {
 		clusterName := "update-available-pmm-update"
-		cs, dbaasClient := setup(t, clusterName, response, "5863")
+		_, cs, dbaasClient := setup(t, clusterName, response, "5863", defaultPXCVersion, defaultPSMDBVersion)
 		dbaasClient.On("CheckKubernetesClusterConnection", ctx, "{}").Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
 			Operators: &controllerv1beta1.Operators{
 				Psmdb: &controllerv1beta1.Operator{
