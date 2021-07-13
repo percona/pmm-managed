@@ -21,12 +21,12 @@ import (
 func TestAddMongoDB(t *testing.T) {
 	t.Run("Basic", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-for-basic-name")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+		nodeID, pmmAgentID := RegisterGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
 			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
-		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+		defer RemovePMMAgentWithSubAgents(t, pmmAgentID)
 
 		serviceName := pmmapitests.TestString(t, "service-name-for-basic-name")
 
@@ -94,12 +94,12 @@ func TestAddMongoDB(t *testing.T) {
 
 	t.Run("With agents", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-name-for-all-fields")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+		nodeID, pmmAgentID := RegisterGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
 			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
-		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+		defer RemovePMMAgentWithSubAgents(t, pmmAgentID)
 
 		serviceName := pmmapitests.TestString(t, "service-name-for-all-fields")
 
@@ -182,12 +182,12 @@ func TestAddMongoDB(t *testing.T) {
 
 	t.Run("With labels", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-name-for-all-fields")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+		nodeID, pmmAgentID := RegisterGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
 			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
-		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+		defer RemovePMMAgentWithSubAgents(t, pmmAgentID)
 
 		serviceName := pmmapitests.TestString(t, "service-name-for-all-fields")
 
@@ -241,12 +241,12 @@ func TestAddMongoDB(t *testing.T) {
 
 	t.Run("With the same name", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-for-the-same-name")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+		nodeID, pmmAgentID := RegisterGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
 			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
-		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+		defer RemovePMMAgentWithSubAgents(t, pmmAgentID)
 
 		serviceName := pmmapitests.TestString(t, "service-for-the-same-name")
 
@@ -287,12 +287,12 @@ func TestAddMongoDB(t *testing.T) {
 
 	t.Run("With add_node block", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-for-basic-name")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+		nodeID, pmmAgentID := RegisterGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
 			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
-		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+		defer RemovePMMAgentWithSubAgents(t, pmmAgentID)
 
 		nodeNameAddNode := pmmapitests.TestString(t, "node-for-add-node-name")
 		serviceName := pmmapitests.TestString(t, "service-name-for-basic-name")
@@ -403,12 +403,12 @@ func TestAddMongoDB(t *testing.T) {
 
 	t.Run("With Wrong Node Type", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "generic-node-for-wrong-node-type")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+		nodeID, pmmAgentID := RegisterGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
 			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
-		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+		defer RemovePMMAgentWithSubAgents(t, pmmAgentID)
 
 		remoteNodeOKBody := pmmapitests.AddRemoteNode(t, pmmapitests.TestString(t, "Remote Node for wrong type test"))
 		remoteNodeID := remoteNodeOKBody.Remote.NodeID
@@ -434,12 +434,12 @@ func TestAddMongoDB(t *testing.T) {
 
 	t.Run("Empty Service Name", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-name")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+		nodeID, pmmAgentID := RegisterGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
 			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
-		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+		defer RemovePMMAgentWithSubAgents(t, pmmAgentID)
 
 		params := &mongodb.AddMongoDBParams{
 			Context: pmmapitests.Context,
@@ -452,12 +452,12 @@ func TestAddMongoDB(t *testing.T) {
 
 	t.Run("Empty Address", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-name")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+		nodeID, pmmAgentID := RegisterGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
 			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
-		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+		defer RemovePMMAgentWithSubAgents(t, pmmAgentID)
 
 		serviceName := pmmapitests.TestString(t, "service-name")
 		params := &mongodb.AddMongoDBParams{
@@ -475,12 +475,12 @@ func TestAddMongoDB(t *testing.T) {
 
 	t.Run("Empty Port", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-name")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+		nodeID, pmmAgentID := RegisterGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
 			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
-		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+		defer RemovePMMAgentWithSubAgents(t, pmmAgentID)
 
 		serviceName := pmmapitests.TestString(t, "service-name")
 		params := &mongodb.AddMongoDBParams{
@@ -499,12 +499,12 @@ func TestAddMongoDB(t *testing.T) {
 
 	t.Run("Empty Pmm Agent ID", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-name")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+		nodeID, pmmAgentID := RegisterGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
 			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
-		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+		defer RemovePMMAgentWithSubAgents(t, pmmAgentID)
 
 		serviceName := pmmapitests.TestString(t, "service-name")
 		params := &mongodb.AddMongoDBParams{
@@ -523,12 +523,12 @@ func TestAddMongoDB(t *testing.T) {
 
 	t.Run("Address And Socket Conflict.", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-name")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+		nodeID, pmmAgentID := RegisterGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
 			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
-		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+		defer RemovePMMAgentWithSubAgents(t, pmmAgentID)
 
 		serviceName := pmmapitests.TestString(t, "service-name")
 		params := &mongodb.AddMongoDBParams{
@@ -551,12 +551,12 @@ func TestAddMongoDB(t *testing.T) {
 
 	t.Run("Socket", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-for-mongo-socket-name")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+		nodeID, pmmAgentID := RegisterGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
 			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
-		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+		defer RemovePMMAgentWithSubAgents(t, pmmAgentID)
 
 		serviceName := pmmapitests.TestString(t, "service-name-for-mongo-socket-name")
 
@@ -620,12 +620,12 @@ func TestAddMongoDB(t *testing.T) {
 
 	t.Run("With MetricsModePush", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-for-basic-name")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+		nodeID, pmmAgentID := RegisterGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
 			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
-		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+		defer RemovePMMAgentWithSubAgents(t, pmmAgentID)
 
 		serviceName := pmmapitests.TestString(t, "service-name-for-basic-name")
 
@@ -692,12 +692,12 @@ func TestAddMongoDB(t *testing.T) {
 
 	t.Run("With MetricsModePull", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-for-basic-name")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+		nodeID, pmmAgentID := RegisterGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
 			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
-		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+		defer RemovePMMAgentWithSubAgents(t, pmmAgentID)
 
 		serviceName := pmmapitests.TestString(t, "service-name-for-basic-name")
 
@@ -763,12 +763,12 @@ func TestAddMongoDB(t *testing.T) {
 
 	t.Run("With MetricsModeAuto", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-for-basic-name")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+		nodeID, pmmAgentID := RegisterGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
 			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
-		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+		defer RemovePMMAgentWithSubAgents(t, pmmAgentID)
 
 		serviceName := pmmapitests.TestString(t, "service-name-for-basic-name")
 
@@ -837,7 +837,7 @@ func TestAddMongoDB(t *testing.T) {
 func TestRemoveMongoDB(t *testing.T) {
 	addMongoDB := func(t *testing.T, serviceName, nodeName string, withAgents bool) (nodeID string, pmmAgentID string, serviceID string) {
 		t.Helper()
-		nodeID, pmmAgentID = registerGenericNode(t, node.RegisterNodeBody{
+		nodeID, pmmAgentID = RegisterGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
 			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
@@ -870,7 +870,7 @@ func TestRemoveMongoDB(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-remove-by-name")
 		nodeID, pmmAgentID, serviceID := addMongoDB(t, serviceName, nodeName, true)
 		defer pmmapitests.RemoveNodes(t, nodeID)
-		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+		defer RemovePMMAgentWithSubAgents(t, pmmAgentID)
 
 		removeServiceOK, err := client.Default.Service.RemoveService(&service.RemoveServiceParams{
 			Body: service.RemoveServiceBody{
@@ -901,7 +901,7 @@ func TestRemoveMongoDB(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "node-remove-by-id")
 		nodeID, pmmAgentID, serviceID := addMongoDB(t, serviceName, nodeName, true)
 		defer pmmapitests.RemoveNodes(t, nodeID)
-		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+		defer RemovePMMAgentWithSubAgents(t, pmmAgentID)
 
 		removeServiceOK, err := client.Default.Service.RemoveService(&service.RemoveServiceParams{
 			Body: service.RemoveServiceBody{
@@ -933,7 +933,7 @@ func TestRemoveMongoDB(t *testing.T) {
 		nodeID, pmmAgentID, serviceID := addMongoDB(t, serviceName, nodeName, false)
 		defer pmmapitests.RemoveNodes(t, nodeID)
 		defer pmmapitests.RemoveServices(t, serviceID)
-		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+		defer RemovePMMAgentWithSubAgents(t, pmmAgentID)
 
 		removeServiceOK, err := client.Default.Service.RemoveService(&service.RemoveServiceParams{
 			Body: service.RemoveServiceBody{
@@ -953,7 +953,7 @@ func TestRemoveMongoDB(t *testing.T) {
 		nodeID, pmmAgentID, serviceID := addMongoDB(t, serviceName, nodeName, false)
 		defer pmmapitests.RemoveNodes(t, nodeID)
 		defer pmmapitests.RemoveServices(t, serviceID)
-		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+		defer RemovePMMAgentWithSubAgents(t, pmmAgentID)
 
 		removeServiceOK, err := client.Default.Service.RemoveService(&service.RemoveServiceParams{
 			Body: service.RemoveServiceBody{

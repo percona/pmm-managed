@@ -22,12 +22,12 @@ import (
 func TestAddHAProxy(t *testing.T) {
 	t.Run("Basic", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "genericNode-for-basic-name")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+		nodeID, pmmAgentID := RegisterGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
 			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
-		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+		defer RemovePMMAgentWithSubAgents(t, pmmAgentID)
 
 		serviceName := pmmapitests.TestString(t, "service-for-basic-name")
 
@@ -90,12 +90,12 @@ func TestAddHAProxy(t *testing.T) {
 
 	t.Run("With labels", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "genericNode-for-basic-name")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+		nodeID, pmmAgentID := RegisterGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
 			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
-		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+		defer RemovePMMAgentWithSubAgents(t, pmmAgentID)
 
 		serviceName := pmmapitests.TestString(t, "service-for-all-fields-name")
 
@@ -238,12 +238,12 @@ func TestAddHAProxy(t *testing.T) {
 
 	t.Run("With the same name", func(t *testing.T) {
 		nodeName := pmmapitests.TestString(t, "genericNode-for-basic-name")
-		nodeID, pmmAgentID := registerGenericNode(t, node.RegisterNodeBody{
+		nodeID, pmmAgentID := RegisterGenericNode(t, node.RegisterNodeBody{
 			NodeName: nodeName,
 			NodeType: pointer.ToString(node.RegisterNodeBodyNodeTypeGENERICNODE),
 		})
 		defer pmmapitests.RemoveNodes(t, nodeID)
-		defer removePMMAgentWithSubAgents(t, pmmAgentID)
+		defer RemovePMMAgentWithSubAgents(t, pmmAgentID)
 
 		serviceName := pmmapitests.TestString(t, "service-for-the-same-name")
 
