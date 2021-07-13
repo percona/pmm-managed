@@ -22,6 +22,7 @@ import (
 
 	"github.com/AlekSi/pointer"
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -99,24 +100,12 @@ func TestBackup(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	findArtifact := func(artifactID string) *backupv1beta1.Artifact {
-		artifacts, err := artifactsSvc.ListArtifacts(ctx, &backupv1beta1.ListArtifactsRequest{})
-		require.NoError(t, err)
-		require.NotNil(t, artifacts)
+	artifact, err := models.FindArtifactByID(db.Querier, backupRes.ArtifactId)
+	require.NoError(t, err)
 
-		for _, a := range artifacts.Artifacts {
-			if a.ArtifactId == artifactID {
-				return a
-			}
-		}
-
-		return nil
-	}
-
-	artifact := findArtifact(backupRes.ArtifactId)
 	require.NotNil(t, artifact)
-	assert.Equal(t, locationRes.ID, artifact.LocationId)
-	assert.Equal(t, *agent.ServiceID, artifact.ServiceId)
+	assert.Equal(t, locationRes.ID, artifact.LocationID)
+	assert.Equal(t, *agent.ServiceID, artifact.ServiceID)
 	assert.EqualValues(t, models.MySQLServiceType, artifact.Vendor)
 
 	_, err = models.UpdateArtifact(db.Querier, backupRes.ArtifactId, models.UpdateArtifactParams{
@@ -140,8 +129,9 @@ func TestBackup(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	artifact = findArtifact(backupRes.ArtifactId)
-	require.Nil(t, artifact)
+	artifact, err = models.FindArtifactByID(db.Querier, backupRes.ArtifactId)
+	assert.Nil(t, artifact)
+	assert.True(t, assert.True(t, errors.Is(err, models.ErrNotFound)))
 
 	mock.AssertExpectationsForObjects(t, mockedS3, mockedJobsService)
 }
