@@ -149,6 +149,7 @@ func New(agentsRegistry agentsRegistry, alertmanagerService alertmanagerService,
 		}, []string{"service_type", "check_type"}),
 	}
 
+	// TODO: same code exists in templates service, move it to a better place.
 	if k := os.Getenv(envPublicKey); k != "" {
 		s.publicKeys = strings.Split(k, ",")
 		l.Warnf("Public keys changed to %q.", k)
@@ -1075,7 +1076,7 @@ func (s *Service) downloadChecks(ctx context.Context) ([]check.Check, error) {
 		return nil, errors.Wrap(err, "failed to request checks service")
 	}
 
-	if err = signatures.VerifySignatures(s.l, resp.File, resp.Signatures, s.publicKeys); err != nil {
+	if err = signatures.Verify(s.l, resp.File, resp.Signatures, s.publicKeys); err != nil {
 		return nil, err
 	}
 
