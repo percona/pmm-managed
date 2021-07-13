@@ -637,6 +637,63 @@ type CreateAgentParams struct {
 	DisableCollectors              []string
 }
 
+func verifyNodeAndAgent(nodeType NodeType, agentType AgentType) error {
+	switch nodeType {
+	case GenericNodeType:
+		return nil
+	case ContainerNodeType:
+		return nil
+	case RemoteNodeType:
+		if agentType == ExternalExporterType {
+			return nil
+		}
+	case RemoteRDSNodeType:
+		if agentType == RDSExporterType {
+			return nil
+		}
+	case RemoteAzureDatabaseNodeType:
+		if agentType == AzureDatabaseExporterType {
+			return nil
+		}
+	default:
+		return nil
+	}
+	return errors.Errorf("invalid combination of node type %s and agent type %s", nodeType, agentType)
+}
+
+func verifyServiceAndAgent(serviceType ServiceType, agentType AgentType) error {
+	switch agentType {
+	case PMMAgentType:
+	case NodeExporterType:
+	case RDSExporterType:
+	case AzureDatabaseExporterType:
+	case VMAgentType:
+	case MySQLdExporterType, QANMySQLPerfSchemaAgentType, QANMySQLSlowlogAgentType:
+		if serviceType == MySQLServiceType {
+			return nil
+		}
+	case MongoDBExporterType, QANMongoDBProfilerAgentType:
+		if serviceType == MongoDBServiceType {
+			return nil
+		}
+	case PostgresExporterType, QANPostgreSQLPgStatementsAgentType, QANPostgreSQLPgStatMonitorAgentType:
+		if serviceType == PostgreSQLServiceType {
+			return nil
+		}
+	case ProxySQLExporterType:
+		if serviceType == ProxySQLServiceType {
+			return nil
+		}
+	case ExternalExporterType:
+		if serviceType == ExternalServiceType {
+			return nil
+		}
+	default:
+		return nil
+	}
+	return errors.Errorf("invalid combination of service type %s and agent type %s", serviceType, agentType)
+}
+
 // CreateAgent creates Agent with given type.
 func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentParams) (*Agent, error) {
 	id := "/agent_id/" + uuid.New().String()
@@ -658,13 +715,22 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 	}
 
 	if params.NodeID != "" {
-		if _, err := FindNodeByID(q, params.NodeID); err != nil {
+		node, err := FindNodeByID(q, params.NodeID)
+		if err != nil {
 			return nil, err
 		}
+		if err := verifyNodeAndAgent(node.NodeType, agentType); err != nil {
+			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
+		}
 	}
+
 	if params.ServiceID != "" {
-		if _, err := FindServiceByID(q, params.ServiceID); err != nil {
+		svc, err := FindServiceByID(q, params.ServiceID)
+		if err != nil {
 			return nil, err
+		}
+		if err := verifyServiceAndAgent(svc.ServiceType, agentType); err != nil {
+			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
 		}
 	}
 
