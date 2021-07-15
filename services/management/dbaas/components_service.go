@@ -81,9 +81,7 @@ func (c componentsService) GetPSMDBComponents(ctx context.Context, req *dbaasv1b
 			return nil, e
 		}
 
-		if checkResponse.Operators.Psmdb != nil {
-			params.productVersion = checkResponse.Operators.Psmdb.Version
-		}
+		params.productVersion = checkResponse.Operators.PsmdbOperatorVersion
 	}
 
 	versions, err := c.versions(ctx, params, kubernetesCluster)
@@ -111,9 +109,7 @@ func (c componentsService) GetPXCComponents(ctx context.Context, req *dbaasv1bet
 			return nil, e
 		}
 
-		if checkResponse.Operators.Xtradb != nil {
-			params.productVersion = checkResponse.Operators.Xtradb.Version
-		}
+		params.productVersion = checkResponse.Operators.XtradbOperatorVersion
 	}
 
 	versions, err := c.versions(ctx, params, kubernetesCluster)
@@ -211,8 +207,8 @@ func (c componentsService) getInstalledOperatorsVersion(ctx context.Context, wg 
 	}
 	responseCh <- installedComponentsVersion{
 		kuberentesClusterName: kuberentesCluster.KubernetesClusterName,
-		pxcOperatorVersion:    resp.Operators.Xtradb.Version,
-		psmdbOperatorVersion:  resp.Operators.Psmdb.Version,
+		pxcOperatorVersion:    resp.Operators.XtradbOperatorVersion,
+		psmdbOperatorVersion:  resp.Operators.PsmdbOperatorVersion,
 	}
 }
 
