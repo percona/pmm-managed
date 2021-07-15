@@ -313,7 +313,6 @@ func RemoveService(q *reform.Querier, id string, mode RemoveMode) error {
 			}); err != nil {
 				return err
 			}
-
 		}
 		for _, i := range restoreItems {
 			if err := RemoveRestoreHistoryItem(q, i.ID); err != nil {
