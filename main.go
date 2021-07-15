@@ -597,8 +597,8 @@ func main() {
 	prom.MustRegister(vmalert)
 
 	qanClient := getQANClient(ctx, sqlDB, *postgresDBNameF, *qanAPIAddrF)
-
-	agentsRegistry := agents.NewRegistry(db, qanClient, vmdb)
+	retentionService := backup.NewRetentionService(db)
+	agentsRegistry := agents.NewRegistry(db, qanClient, vmdb, retentionService)
 	prom.MustRegister(agentsRegistry)
 
 	alertmanager := alertmanager.New(db)
