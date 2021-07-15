@@ -177,13 +177,16 @@ func (c *VersionServiceClient) IsOperatorVersionSupported(ctx context.Context, o
 	if err != nil {
 		return false, err
 	}
+
 	resp, err := c.Matrix(ctx, componentsParams{product: "pmm-server", productVersion: pmm.Core().String()})
 	if err != nil {
 		return false, err
 	}
+
 	if len(resp.Versions) == 0 {
 		return false, nil
 	}
+
 	var operator map[string]componentVersion
 	switch operatorType {
 	case pxcOperator:
