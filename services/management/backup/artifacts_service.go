@@ -138,6 +138,7 @@ func (s *ArtifactsService) beginDeletingArtifact(
 		if err != nil {
 			return err
 		}
+
 		artifactName = artifact.Name
 
 		inProgressStatus := models.InProgressRestoreStatus

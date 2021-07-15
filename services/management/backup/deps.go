@@ -23,7 +23,6 @@ import (
 	"github.com/percona/pmm-managed/services/scheduler"
 )
 
-//go:generate mockery -name=jobsService -case=snake -inpkg -testonly
 //go:generate mockery -name=awsS3 -case=snake -inpkg -testonly
 //go:generate mockery -name=backupService -case=snake -inpkg -testonly
 //go:generate mockery -name=scheduleService -case=snake -inpkg -testonly
