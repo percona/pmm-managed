@@ -363,12 +363,51 @@ func RemoveBackupLocation(q *reform.Querier, id string, mode RemoveMode) error {
 		return err
 	}
 
-	if len(artifacts) != 0 && mode == RemoveRestrict {
-		return status.Errorf(codes.FailedPrecondition, "backup location with ID %q has artifacts.", id)
+	var restoreItems []*RestoreHistoryItem
+	for _, a := range artifacts {
+		items, err := FindRestoreHistoryItems(q, &RestoreHistoryItemFilters{ArtifactID: a.ID})
+		if err != nil {
+			return err
+		}
+
+		restoreItems = append(restoreItems, items...)
+	}
+
+	tasks, err := FindScheduledTasks(q, ScheduledTasksFilter{
+		LocationID: id,
+	})
+	if err != nil {
+		return err
+	}
+
+	if mode == RemoveRestrict {
+		if len(artifacts) != 0 {
+			return status.Errorf(codes.FailedPrecondition, "backup location with ID %q has artifacts.", id)
+		}
+
+		if len(restoreItems) != 0 {
+			return status.Errorf(codes.FailedPrecondition, "backup location with ID %q has restore history items.", id)
+		}
+
+		if len(tasks) != 0 {
+			return status.Errorf(codes.FailedPrecondition, "backup location with ID %q has scheduled tasks.", id)
+		}
+	}
+
+	for _, i := range restoreItems {
+		if err := RemoveRestoreHistoryItem(q, i.ID); err != nil {
+			return err
+		}
 	}
 
 	for _, a := range artifacts {
 		if err := RemoveArtifact(q, a.ID); err != nil {
+			return err
+		}
+	}
+
+	for _, t := range tasks {
+		if err := RemoveScheduledTask(q, t.ID); err != nil {
 			return err
 		}
 	}
