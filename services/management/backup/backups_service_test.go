@@ -23,9 +23,7 @@ import (
 
 	"github.com/AlekSi/pointer"
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -33,8 +31,6 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
-
-	"github.com/percona/pmm-managed/services/backup"
 
 	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services/scheduler"
@@ -69,81 +65,6 @@ func setup(t *testing.T, q *reform.Querier, serviceName string) *models.Agent {
 	})
 	require.NoError(t, err)
 	return agent
-}
-
-func TestBackup(t *testing.T) {
-	ctx := context.Background()
-	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
-	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-	mockedJobsService := &mockJobsService{}
-	mockedJobsService.On("StartMySQLBackupJob", mock.Anything, mock.Anything, mock.Anything,
-		mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
-	s := backup.NewService(db, mockedJobsService)
-	backupSvc := NewBackupsService(db, s, nil)
-
-	mockedS3 := &mockAwsS3{}
-	artifactsSvc := NewArtifactsService(db, mockedS3)
-
-	agent := setup(t, db.Querier, "test-service")
-	endpoint := "https://s3.us-west-2.amazonaws.com/"
-	accessKey, secretKey, bucketName, bucketRegion := "access_key", "secret_key", "example_bucket", "us-east-2"
-
-	locationRes, err := models.CreateBackupLocation(db.Querier, models.CreateBackupLocationParams{
-		Name:        "Test location",
-		Description: "Test description",
-		BackupLocationConfig: models.BackupLocationConfig{
-			S3Config: &models.S3LocationConfig{
-				Endpoint:     endpoint,
-				AccessKey:    accessKey,
-				SecretKey:    secretKey,
-				BucketName:   bucketName,
-				BucketRegion: bucketRegion,
-			},
-		},
-	})
-	require.NoError(t, err)
-
-	backupRes, err := backupSvc.StartBackup(ctx, &backupv1beta1.StartBackupRequest{
-		ServiceId:  pointer.GetString(agent.ServiceID),
-		LocationId: locationRes.ID,
-		Name:       "Test backup",
-	})
-	require.NoError(t, err)
-
-	artifact, err := models.FindArtifactByID(db.Querier, backupRes.ArtifactId)
-	require.NoError(t, err)
-
-	require.NotNil(t, artifact)
-	assert.Equal(t, locationRes.ID, artifact.LocationID)
-	assert.Equal(t, *agent.ServiceID, artifact.ServiceID)
-	assert.EqualValues(t, models.MySQLServiceType, artifact.Vendor)
-
-	_, err = models.UpdateArtifact(db.Querier, backupRes.ArtifactId, models.UpdateArtifactParams{
-		Status: models.BackupStatusPointer(models.SuccessBackupStatus),
-	})
-	require.NoError(t, err)
-
-	mockedS3.On(
-		"RemoveRecursive",
-		mock.Anything,
-		endpoint,
-		accessKey,
-		secretKey,
-		bucketName,
-		artifact.Name+"/",
-	).Return(nil).Once()
-
-	_, err = artifactsSvc.DeleteArtifact(ctx, &backupv1beta1.DeleteArtifactRequest{
-		ArtifactId:  backupRes.ArtifactId,
-		RemoveFiles: true,
-	})
-	require.NoError(t, err)
-
-	artifact, err = models.FindArtifactByID(db.Querier, backupRes.ArtifactId)
-	assert.Nil(t, artifact)
-	assert.True(t, assert.True(t, errors.Is(err, models.ErrNotFound)))
-
-	mock.AssertExpectationsForObjects(t, mockedS3, mockedJobsService)
 }
 
 func TestScheduledBackups(t *testing.T) {
@@ -262,5 +183,4 @@ func TestScheduledBackups(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, artifacts, 0)
 	})
-
 }

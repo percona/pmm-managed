@@ -306,14 +306,14 @@ func RemoveService(q *reform.Querier, id string, mode RemoveMode) error {
 			if _, err := RemoveAgent(q, a.AgentID, RemoveCascade); err != nil {
 				return err
 			}
-			for _, a := range artifacts {
-				if _, err := UpdateArtifact(q, a.ID, UpdateArtifactParams{
-					ServiceID: pointer.ToString(""),
-				}); err != nil {
-					return err
-				}
-
+		}
+		for _, a := range artifacts {
+			if _, err := UpdateArtifact(q, a.ID, UpdateArtifactParams{
+				ServiceID: pointer.ToString(""),
+			}); err != nil {
+				return err
 			}
+
 		}
 		for _, i := range restoreItems {
 			if err := RemoveRestoreHistoryItem(q, i.ID); err != nil {
