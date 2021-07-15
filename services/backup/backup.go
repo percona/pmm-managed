@@ -212,6 +212,59 @@ func (s *Service) RestoreBackup(ctx context.Context, serviceID, artifactID strin
 	return restoreID, nil
 }
 
+func (s *Service) EnforceRetention(ctx context.Context, scheduleID string) error {
+	if scheduleID == "" {
+		return nil
+	}
+
+	var artifacts []*models.Artifact
+	var retention uint32
+
+	txErr := s.db.InTransaction(func(tx *reform.TX) error {
+		task, err := models.FindScheduledTaskByID(tx.Querier, scheduleID)
+		if err != nil {
+			return err
+		}
+
+		switch task.Type {
+		case models.ScheduledMySQLBackupTask:
+			retention = task.Data.MySQLBackupTask.Retention
+		case models.ScheduledMongoDBBackupTask:
+			retention = task.Data.MongoDBBackupTask.Retention
+		default:
+			return errors.Errorf("invalid backup type %s", task.Type)
+		}
+
+		if retention == 0 {
+			return nil
+		}
+
+		artifacts, err = models.FindArtifacts(tx.Querier, &models.ArtifactFilters{
+			ScheduleID: scheduleID,
+		})
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if txErr != nil {
+		return txErr
+	}
+
+	if retention == 0 || int(retention) > len(artifacts) {
+		return nil
+	}
+
+	for _, artifact := range artifacts[retention:] {
+		_ = artifact
+	}
+
+	return nil
+
+}
+
 func (s *Service) prepareRestoreJob(
 	q *reform.Querier,
 	serviceID string,

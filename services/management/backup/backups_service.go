@@ -226,13 +226,11 @@ func (s *BackupsService) ChangeScheduledBackup(ctx context.Context, req *backupv
 	}
 
 	if req.Enabled != nil {
-		disabled := !req.Enabled.Value
-		params.Disable = &disabled
+		params.Disable = pointer.ToBool(!req.Enabled.Value)
 	}
 
 	if req.CronExpression != nil {
-		val := req.CronExpression.Value
-		params.CronExpression = &val
+		params.CronExpression = pointer.ToString(req.CronExpression.Value)
 	}
 
 	if err := s.scheduleService.Update(req.ScheduledBackupId, params); err != nil {
