@@ -657,7 +657,6 @@ func compatibleNodeAndAgent(nodeType NodeType, agentType AgentType) bool {
 	}
 
 	return allowed == agentType
-
 }
 
 func compatibleServiceAndAgent(serviceType ServiceType, agentType AgentType) bool {
