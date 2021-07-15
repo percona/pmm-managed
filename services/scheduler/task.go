@@ -52,10 +52,11 @@ type mySQLBackupTask struct {
 	LocationID    string
 	Name          string
 	Description   string
+	Retention     uint32
 }
 
 // NewMySQLBackupTask create new task for mysql backup.
-func NewMySQLBackupTask(backupService backupService, serviceID, locationID, name, description string) Task {
+func NewMySQLBackupTask(backupService backupService, serviceID, locationID, name, description string, retention uint32) Task {
 	return &mySQLBackupTask{
 		common:        &common{},
 		backupService: backupService,
@@ -63,6 +64,7 @@ func NewMySQLBackupTask(backupService backupService, serviceID, locationID, name
 		LocationID:    locationID,
 		Name:          name,
 		Description:   description,
+		Retention:     retention,
 	}
 }
 
@@ -94,10 +96,11 @@ type mongoBackupTask struct {
 	LocationID    string
 	Name          string
 	Description   string
+	Retention     uint32
 }
 
 // NewMongoBackupTask create new task for mongo backup.
-func NewMongoBackupTask(backupService backupService, serviceID, locationID, name, description string) Task {
+func NewMongoBackupTask(backupService backupService, serviceID, locationID, name, description string, retention uint32) Task {
 	return &mongoBackupTask{
 		common:        &common{},
 		backupService: backupService,
@@ -105,6 +108,7 @@ func NewMongoBackupTask(backupService backupService, serviceID, locationID, name
 		LocationID:    locationID,
 		Name:          name,
 		Description:   description,
+		Retention:     retention,
 	}
 }
 
