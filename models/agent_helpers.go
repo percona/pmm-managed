@@ -637,61 +637,54 @@ type CreateAgentParams struct {
 	DisableCollectors              []string
 }
 
-func verifyNodeAndAgent(nodeType NodeType, agentType AgentType) error {
-	switch nodeType {
-	case GenericNodeType:
-		return nil
-	case ContainerNodeType:
-		return nil
-	case RemoteNodeType:
-		if agentType == ExternalExporterType {
-			return nil
-		}
-	case RemoteRDSNodeType:
-		if agentType == RDSExporterType {
-			return nil
-		}
-	case RemoteAzureDatabaseNodeType:
-		if agentType == AzureDatabaseExporterType {
-			return nil
-		}
-	default:
-		return nil
+func compatibleNodeAndAgent(nodeType NodeType, agentType AgentType) bool {
+	const allowAll = "allow_all"
+	allow := map[NodeType]AgentType{
+		GenericNodeType:             allowAll,
+		ContainerNodeType:           allowAll,
+		RemoteNodeType:              ExternalExporterType,
+		RemoteRDSNodeType:           RDSExporterType,
+		RemoteAzureDatabaseNodeType: AzureDatabaseExporterType,
 	}
-	return errors.Errorf("invalid combination of node type %s and agent type %s", nodeType, agentType)
+
+	allowed, ok := allow[nodeType]
+	if !ok {
+		return true
+	}
+
+	if allowed == allowAll {
+		return true
+	}
+
+	return allowed == agentType
+
 }
 
-func verifyServiceAndAgent(serviceType ServiceType, agentType AgentType) error {
-	switch agentType {
-	case PMMAgentType:
-	case NodeExporterType:
-	case RDSExporterType:
-	case AzureDatabaseExporterType:
-	case VMAgentType:
-	case MySQLdExporterType, QANMySQLPerfSchemaAgentType, QANMySQLSlowlogAgentType:
-		if serviceType == MySQLServiceType {
-			return nil
-		}
-	case MongoDBExporterType, QANMongoDBProfilerAgentType:
-		if serviceType == MongoDBServiceType {
-			return nil
-		}
-	case PostgresExporterType, QANPostgreSQLPgStatementsAgentType, QANPostgreSQLPgStatMonitorAgentType:
-		if serviceType == PostgreSQLServiceType {
-			return nil
-		}
-	case ProxySQLExporterType:
-		if serviceType == ProxySQLServiceType {
-			return nil
-		}
-	case ExternalExporterType:
-		if serviceType == ExternalServiceType {
-			return nil
-		}
-	default:
-		return nil
+func compatibleServiceAndAgent(serviceType ServiceType, agentType AgentType) bool {
+	const forbidden = "forbidden"
+	allow := map[AgentType]ServiceType{
+		PMMAgentType:                        forbidden,
+		NodeExporterType:                    forbidden,
+		RDSExporterType:                     forbidden,
+		AzureDatabaseExporterType:           forbidden,
+		VMAgentType:                         forbidden,
+		MySQLdExporterType:                  MySQLServiceType,
+		QANMySQLSlowlogAgentType:            MySQLServiceType,
+		QANMySQLPerfSchemaAgentType:         MySQLServiceType,
+		MongoDBExporterType:                 MongoDBServiceType,
+		QANMongoDBProfilerAgentType:         MongoDBServiceType,
+		PostgresExporterType:                PostgreSQLServiceType,
+		QANPostgreSQLPgStatMonitorAgentType: PostgreSQLServiceType,
+		QANPostgreSQLPgStatementsAgentType:  PostgreSQLServiceType,
+		ExternalExporterType:                ExternalServiceType,
 	}
-	return errors.Errorf("invalid combination of service type %s and agent type %s", serviceType, agentType)
+
+	allowed, ok := allow[agentType]
+	if !ok {
+		return true
+	}
+
+	return allowed == serviceType
 }
 
 // CreateAgent creates Agent with given type.
@@ -719,8 +712,9 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 		if err != nil {
 			return nil, err
 		}
-		if err := verifyNodeAndAgent(node.NodeType, agentType); err != nil {
-			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
+
+		if !compatibleNodeAndAgent(node.NodeType, agentType) {
+			return nil, status.Errorf(codes.FailedPrecondition, "invalid combination of node type %s and agent type %s", node.NodeType, agentType)
 		}
 	}
 
@@ -729,8 +723,9 @@ func CreateAgent(q *reform.Querier, agentType AgentType, params *CreateAgentPara
 		if err != nil {
 			return nil, err
 		}
-		if err := verifyServiceAndAgent(svc.ServiceType, agentType); err != nil {
-			return nil, status.Errorf(codes.FailedPrecondition, "%v", err)
+
+		if !compatibleServiceAndAgent(svc.ServiceType, agentType) {
+			return nil, status.Errorf(codes.FailedPrecondition, "invalid combination of service type %s and agent type %s", svc.ServiceType, agentType)
 		}
 	}
 
