@@ -227,7 +227,7 @@ func (ss *ServicesService) Remove(ctx context.Context, id string, force bool) er
 	pmmAgentIds := make(map[string]struct{})
 
 	if e := ss.db.InTransaction(func(tx *reform.TX) error {
-		service, err := models.FindServiceByID(ss.db.Querier, id)
+		service, err := models.FindServiceByID(tx.Querier, id)
 		if err != nil {
 			return err
 		}
@@ -252,7 +252,7 @@ func (ss *ServicesService) Remove(ctx context.Context, id string, force bool) er
 		}
 
 		if force {
-			node, err := models.FindNodeByID(ss.db.Querier, service.NodeID)
+			node, err := models.FindNodeByID(tx.Querier, service.NodeID)
 			if err != nil {
 				return err
 			}
