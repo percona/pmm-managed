@@ -390,6 +390,9 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 			if s.MongoDBOptions.AuthenticationMechanism != "" {
 				q.Add("authMechanism", s.MongoDBOptions.AuthenticationMechanism)
 			}
+			if s.MongoDBOptions.AuthenticationDatabase != "" {
+				q.Add("authSource", s.MongoDBOptions.AuthenticationDatabase)
+			}
 		}
 
 		address := socket
