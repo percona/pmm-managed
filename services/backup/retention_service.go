@@ -53,8 +53,9 @@ func (s *RetentionService) EnforceRetention(ctx context.Context, scheduleID stri
 			return nil
 		}
 
-		artifacts, err = models.FindArtifacts(tx.Querier, &models.ArtifactFilters{
+		artifacts, err = models.FindArtifacts(tx.Querier, models.ArtifactFilters{
 			ScheduleID: scheduleID,
+			Status:     models.SuccessBackupStatus,
 		})
 		if err != nil {
 			return err

@@ -254,7 +254,7 @@ func (s *BackupsService) RemoveScheduledBackup(ctx context.Context, req *backupv
 	}
 
 	errTx := s.db.InTransaction(func(tx *reform.TX) error {
-		artifacts, err := models.FindArtifacts(tx.Querier, &models.ArtifactFilters{
+		artifacts, err := models.FindArtifacts(tx.Querier, models.ArtifactFilters{
 			ScheduleID: req.ScheduledBackupId,
 		})
 		if err != nil {
