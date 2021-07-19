@@ -496,6 +496,7 @@ func TestFilteringOutOfUnsupportedVersions(t *testing.T) {
 }
 
 const (
+	onePointNine        = "1.9.0"
 	onePointEight       = "1.8.0"
 	onePointSeven       = "1.7.0"
 	onePointSix         = "1.6.0"
@@ -723,9 +724,9 @@ func TestCheckForOperatorUpdate(t *testing.T) {
 		clusterName := "update-available-pmm-update"
 		_, cs, dbaasClient := setup(t, clusterName, response, "5863", defaultPXCVersion, defaultPSMDBVersion)
 		dbaasClient.On("CheckKubernetesClusterConnection", ctx, "{}").Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
-			Operators: &controllerv1beta1.Operators{
-				PsmdbOperatorVersion:  "1.9.0",
-				XtradbOperatorVersion: "1.9.0",
+			Operators: &controllerv1b1.Operators{
+				PsmdbOperatorVersion:  onePointNine,
+				XtradbOperatorVersion: onePointNine,
 			},
 		}, nil)
 

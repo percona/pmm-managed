@@ -188,7 +188,7 @@ func TestLatestVersionGetting(t *testing.T) {
 						onePointSeven: {},
 					},
 					PSMDBOperator: map[string]componentVersion{
-						"1.9.0": {},
+						onePointNine: {},
 						onePointEight: {},
 						onePointSeven: {},
 					},
@@ -204,7 +204,7 @@ func TestLatestVersionGetting(t *testing.T) {
 		pxcOperatorVersion, psmdbOperatorVersion, err := c.GetLatestOperatorVersion(ctx, twoPointEighteen)
 		require.NoError(t, err, "request to fakeserver for latest version should not fail")
 		assert.Equal(t, onePointEight, pxcOperatorVersion.String())
-		assert.Equal(t, "1.9.0", psmdbOperatorVersion.String())
+		assert.Equal(t, onePointNine, psmdbOperatorVersion.String())
 	})
 	t.Run("Get latest", func(t *testing.T) {
 		t.Parallel()
