@@ -38,11 +38,11 @@ func TestVersionServiceClient(t *testing.T) {
 		params componentsParams
 	}{
 		{params: componentsParams{product: psmdbOperator}},
-		{params: componentsParams{product: psmdbOperator, productVersion: "1.6.0"}},
-		{params: componentsParams{product: psmdbOperator, productVersion: "1.7.0", dbVersion: "4.2.8-8"}},
+		{params: componentsParams{product: psmdbOperator, productVersion: onePointSix}},
+		{params: componentsParams{product: psmdbOperator, productVersion: onePointSeven, dbVersion: "4.2.8-8"}},
 		{params: componentsParams{product: pxcOperator}},
-		{params: componentsParams{product: pxcOperator, productVersion: "1.7.0"}},
-		{params: componentsParams{product: pxcOperator, productVersion: "1.7.0", dbVersion: "8.0.20-11.2"}},
+		{params: componentsParams{product: pxcOperator, productVersion: onePointSeven}},
+		{params: componentsParams{product: pxcOperator, productVersion: onePointSeven, dbVersion: "8.0.20-11.2"}},
 	} {
 		t.Run("NotEmptyMatrix", func(t *testing.T) {
 			response, err := c.Matrix(context.TODO(), tt.params)
@@ -184,13 +184,13 @@ func TestLatestVersionGetting(t *testing.T) {
 				Product:        "pmm-server",
 				Matrix: matrix{
 					PXCOperator: map[string]componentVersion{
-						"1.8.0": {},
-						"1.7.0": {},
+						onePointEight: {},
+						onePointSeven: {},
 					},
 					PSMDBOperator: map[string]componentVersion{
 						"1.9.0": {},
-						"1.8.0": {},
-						"1.7.0": {},
+						onePointEight: {},
+						onePointSeven: {},
 					},
 				},
 			},
@@ -203,7 +203,7 @@ func TestLatestVersionGetting(t *testing.T) {
 		ctx := context.Background()
 		pxcOperatorVersion, psmdbOperatorVersion, err := c.GetLatestOperatorVersion(ctx, twoPointEighteen)
 		require.NoError(t, err, "request to fakeserver for latest version should not fail")
-		assert.Equal(t, "1.8.0", pxcOperatorVersion.String())
+		assert.Equal(t, onePointEight, pxcOperatorVersion.String())
 		assert.Equal(t, "1.9.0", psmdbOperatorVersion.String())
 	})
 	t.Run("Get latest", func(t *testing.T) {

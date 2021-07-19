@@ -100,7 +100,7 @@ func TestPSMDBClusterService(t *testing.T) {
 	dbaasClient.On("CheckKubernetesClusterConnection", ctx, kubeconfTest).Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
 		Operators: &controllerv1beta1.Operators{
 			XtradbOperatorVersion: "",
-			PsmdbOperatorVersion:  "1.8.0",
+			PsmdbOperatorVersion:  onePointEight,
 		},
 		Status: controllerv1beta1.KubernetesClusterStatus_KUBERNETES_CLUSTER_STATUS_OK,
 	}, nil)
