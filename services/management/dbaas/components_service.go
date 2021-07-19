@@ -409,7 +409,7 @@ func (c componentsService) InstallOperator(ctx context.Context, req *dbaasv1beta
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if len(resp.Versions) == 0 {
-		return nil, errors.Errorf("failed to validate operator version")
+		return nil, errors.Errorf("failed to get operators compatible with PMM version")
 	}
 
 	var component *models.Component
