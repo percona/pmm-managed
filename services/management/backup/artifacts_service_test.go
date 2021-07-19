@@ -20,6 +20,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/percona/pmm-managed/services/backup"
+
 	backupv1beta1 "github.com/percona/pmm/api/managementpb/backup"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -38,7 +40,8 @@ func TestDeleteArtifact(t *testing.T) {
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
 	mockedS3 := &mockAwsS3{}
-	artifactsSvc := NewArtifactsService(db, mockedS3)
+	removalService := backup.NewRemovalService(db, mockedS3)
+	artifactsSvc := NewArtifactsService(db, removalService)
 
 	agent := setup(t, db.Querier, "test-service")
 	endpoint := "https://s3.us-west-2.amazonaws.com/"

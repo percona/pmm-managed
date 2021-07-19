@@ -85,6 +85,7 @@ func (t *mySQLBackupTask) Data() models.ScheduledTaskData {
 			LocationID:  t.LocationID,
 			Name:        t.Name,
 			Description: t.Description,
+			Retention:   t.Retention,
 		},
 	}
 }
@@ -129,6 +130,7 @@ func (t *mongoBackupTask) Data() models.ScheduledTaskData {
 			LocationID:  t.LocationID,
 			Name:        t.Name,
 			Description: t.Description,
+			Retention:   t.Retention,
 		},
 	}
 }

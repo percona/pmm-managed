@@ -320,7 +320,7 @@ func (r *Registry) handleJobResult(ctx context.Context, l *logrus.Entry, result 
 			if err != nil {
 				return err
 			}
-			
+
 			if artifact.ScheduleID != "" {
 				if err := r.retentionService.EnforceRetention(ctx, artifact.ScheduleID); err != nil {
 					l.Errorf("failed to enforce retention: %v", err)
