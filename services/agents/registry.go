@@ -314,12 +314,13 @@ func (r *Registry) handleJobResult(ctx context.Context, l *logrus.Entry, result 
 				return errors.Errorf("result type %s doesn't match job type %s", models.MySQLBackupJob, res.Type)
 			}
 
-			artifact, err := models.ChangeArtifact(t.Querier, res.Result.MySQLBackup.ArtifactID, models.ChangeArtifactParams{
-				Status: models.SuccessBackupStatus.Pointer(),
+			artifact, err := models.UpdateArtifact(t.Querier, res.Result.MySQLBackup.ArtifactID, models.UpdateArtifactParams{
+				Status: models.BackupStatusPointer(models.SuccessBackupStatus),
 			})
 			if err != nil {
 				return err
 			}
+			
 			if artifact.ScheduleID != "" {
 				if err := r.retentionService.EnforceRetention(ctx, artifact.ScheduleID); err != nil {
 					l.Errorf("failed to enforce retention: %v", err)
@@ -330,8 +331,8 @@ func (r *Registry) handleJobResult(ctx context.Context, l *logrus.Entry, result 
 				return errors.Errorf("result type %s doesn't match job type %s", models.MongoDBBackupJob, res.Type)
 			}
 
-			artifact, err := models.ChangeArtifact(t.Querier, res.Result.MongoDBBackup.ArtifactID, models.ChangeArtifactParams{
-				Status: models.SuccessBackupStatus.Pointer(),
+			artifact, err := models.UpdateArtifact(t.Querier, res.Result.MongoDBBackup.ArtifactID, models.UpdateArtifactParams{
+				Status: models.BackupStatusPointer(models.SuccessBackupStatus),
 			})
 			if err != nil {
 				return err
@@ -386,12 +387,12 @@ func (r *Registry) handleJobError(jobResult *models.JobResult) error {
 	case models.Echo:
 		// nothing
 	case models.MySQLBackupJob:
-		_, err = models.ChangeArtifact(r.db.Querier, jobResult.Result.MySQLBackup.ArtifactID, models.ChangeArtifactParams{
-			Status: models.ErrorBackupStatus.Pointer(),
+		_, err = models.UpdateArtifact(r.db.Querier, jobResult.Result.MySQLBackup.ArtifactID, models.UpdateArtifactParams{
+			Status: models.BackupStatusPointer(models.ErrorBackupStatus),
 		})
 	case models.MongoDBBackupJob:
-		_, err = models.ChangeArtifact(r.db.Querier, jobResult.Result.MongoDBBackup.ArtifactID, models.ChangeArtifactParams{
-			Status: models.ErrorBackupStatus.Pointer(),
+		_, err = models.UpdateArtifact(r.db.Querier, jobResult.Result.MongoDBBackup.ArtifactID, models.UpdateArtifactParams{
+			Status: models.BackupStatusPointer(models.ErrorBackupStatus),
 		})
 	case models.MySQLRestoreBackupJob:
 		_, err = models.ChangeRestoreHistoryItem(
