@@ -391,22 +391,6 @@ func setComponent(kc *models.Component, rc *dbaasv1beta1.ChangeComponent) (*mode
 	return kc, nil
 }
 
-func (c componentsService) unsetDefaultVersionIfUnsupported(ctx context.Context, operatorType, operatorVersion string, component *models.Component) (bool, error) {
-	if component == nil {
-		return false, nil
-	}
-	supported, err := c.versionServiceClient.IsDatabaseVersionSupportedByOperator(ctx, operatorType, operatorVersion, component.DefaultVersion)
-	if !supported {
-		if err != nil {
-			return false, err
-		}
-		// When default version is empty, the latest recommended version is used.
-		component.DefaultVersion = ""
-		return true, nil
-	}
-	return false, nil
-}
-
 func (c componentsService) InstallOperator(ctx context.Context, req *dbaasv1beta1.InstallOperatorRequest) (*dbaasv1beta1.InstallOperatorResponse, error) {
 	kubernetesCluster, err := models.FindKubernetesClusterByName(c.db.Querier, req.KubernetesClusterName)
 	if err != nil {
@@ -429,50 +413,56 @@ func (c componentsService) InstallOperator(ctx context.Context, req *dbaasv1beta
 	}
 
 	var component *models.Component
+	var installFunc func() error
 	switch req.OperatorType {
 	case pxcOperator:
 		if _, ok := resp.Versions[0].Matrix.PXCOperator[req.Version]; !ok {
 			return nil, errors.Errorf("requested update to operator version %s is not supported", req.Version)
 		}
-		_, err = c.dbaasClient.InstallXtraDBOperator(ctx, &controllerv1beta1.InstallXtraDBOperatorRequest{
-			KubeAuth: &controllerv1beta1.KubeAuth{
-				Kubeconfig: kubernetesCluster.KubeConfig,
-			},
-			Version: req.Version,
-		})
+		installFunc = func() error {
+			_, err := c.dbaasClient.InstallXtraDBOperator(ctx, &controllerv1beta1.InstallXtraDBOperatorRequest{
+				KubeAuth: &controllerv1beta1.KubeAuth{
+					Kubeconfig: kubernetesCluster.KubeConfig,
+				},
+				Version: req.Version,
+			})
+			return err
+		}
 		component = kubernetesCluster.PXC
 	case psmdbOperator:
 		if _, ok := resp.Versions[0].Matrix.PSMDBOperator[req.Version]; !ok {
 			return nil, errors.Errorf("requested update to operator version %s is not supported", req.Version)
 		}
-		_, err = c.dbaasClient.InstallPSMDBOperator(ctx, &controllerv1beta1.InstallPSMDBOperatorRequest{
-			KubeAuth: &controllerv1beta1.KubeAuth{
-				Kubeconfig: kubernetesCluster.KubeConfig,
-			},
-			Version: req.Version,
-		})
+		installFunc = func() error {
+			_, err := c.dbaasClient.InstallPSMDBOperator(ctx, &controllerv1beta1.InstallPSMDBOperatorRequest{
+				KubeAuth: &controllerv1beta1.KubeAuth{
+					Kubeconfig: kubernetesCluster.KubeConfig,
+				},
+				Version: req.Version,
+			})
+			return err
+		}
 		component = kubernetesCluster.Mongod
 	default:
 		return &dbaasv1beta1.InstallOperatorResponse{Status: dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_NOT_INSTALLED},
 			errors.Errorf("%q is not supported operator", req.OperatorType)
 	}
+
+	// Default version of database could be unsupported be a new operator version.
+	supported, err := c.versionServiceClient.IsDatabaseVersionSupportedByOperator(ctx, req.OperatorType, req.Version, component.DefaultVersion)
 	if err != nil {
 		return &dbaasv1beta1.InstallOperatorResponse{Status: dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_NOT_INSTALLED},
-			status.Errorf(codes.Internal, "failed to install operator: %v", err)
+			status.Errorf(codes.Internal, "failed to check if default database version is supported: %v", err)
+	}
+	if !supported {
+		return &dbaasv1beta1.InstallOperatorResponse{Status: dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_NOT_INSTALLED},
+			status.Errorf(codes.Internal, "default database version %s is unsupported by the operator version %s, please change default version.", component.DefaultVersion, req.Version)
 	}
 
-	// Default version of database could have become unsupported when update was installed.
-	unset, err := c.unsetDefaultVersionIfUnsupported(ctx, req.OperatorType, req.Version, component)
-	if err != nil {
-		return &dbaasv1beta1.InstallOperatorResponse{Status: dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_OK},
-			status.Errorf(codes.Internal, "failed to unset unsupported default database version: %v", err)
-	}
-	if unset {
-		err = c.db.Save(kubernetesCluster)
-		if err != nil {
-			return &dbaasv1beta1.InstallOperatorResponse{Status: dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_OK},
-				status.Errorf(codes.Internal, "failed to unset unsupported default database version: %v", err)
-		}
+	// Install operator.
+	if err := installFunc(); err != nil {
+		return &dbaasv1beta1.InstallOperatorResponse{Status: dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_NOT_INSTALLED},
+			status.Errorf(codes.Internal, "failed to install operator: %v", err)
 	}
 
 	return &dbaasv1beta1.InstallOperatorResponse{Status: dbaasv1beta1.OperatorsStatus_OPERATORS_STATUS_OK}, nil
