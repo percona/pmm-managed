@@ -187,17 +187,17 @@ func (c *VersionServiceClient) IsOperatorVersionSupported(ctx context.Context, o
 		return false, nil
 	}
 
-	var operator map[string]componentVersion
+	var operatorVersions map[string]componentVersion
 	switch operatorType {
 	case pxcOperator:
-		operator = resp.Versions[0].Matrix.PXCOperator
+		operatorVersions = resp.Versions[0].Matrix.PXCOperator
 	case psmdbOperator:
-		operator = resp.Versions[0].Matrix.PSMDBOperator
+		operatorVersions = resp.Versions[0].Matrix.PSMDBOperator
 	default:
 		return false, errors.Errorf("%q is an unknown operator type", operatorType)
 	}
 
-	for version := range operator {
+	for version := range operatorVersions {
 		if version == operatorVersion {
 			return true, nil
 		}
