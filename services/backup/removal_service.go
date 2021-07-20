@@ -28,12 +28,14 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
+// RemovalService manage removing of backup artifacts.
 type RemovalService struct {
 	l  *logrus.Entry
 	db *reform.DB
 	s3 awsS3
 }
 
+// NewRemovalService creates new backup removal service.
 func NewRemovalService(db *reform.DB, s3 awsS3) *RemovalService {
 	return &RemovalService{
 		l:  logrus.WithField("component", "services/backup/removal"),
@@ -73,7 +75,7 @@ func (s *RemovalService) DeleteArtifact(ctx context.Context, artifactID string, 
 		}
 	}
 
-	if err := s.db.InTransaction(func(tx *reform.TX) error {
+	return s.db.InTransaction(func(tx *reform.TX) error {
 		restoreItems, err := models.FindRestoreHistoryItems(tx.Querier, models.RestoreHistoryItemFilters{
 			ArtifactID: artifactID,
 		})
@@ -88,11 +90,7 @@ func (s *RemovalService) DeleteArtifact(ctx context.Context, artifactID string, 
 		}
 
 		return models.DeleteArtifact(tx.Querier, artifactID)
-	}); err != nil {
-		return err
-	}
-
-	return nil
+	})
 }
 
 // beginDeletingArtifact checks if the artifact isn't in use at the moment and sets deleting status,

@@ -42,11 +42,9 @@ func NewRetentionService(db *reform.DB, removalSVC removalService) *RetentionSer
 	}
 }
 
+// EnforceRetention enforce retention on provided scheduled backup task
+// it removes any old successful artifacts below retention threshold.
 func (s *RetentionService) EnforceRetention(ctx context.Context, scheduleID string) error {
-	if scheduleID == "" {
-		return nil
-	}
-
 	var artifacts []*models.Artifact
 	var retention uint32
 
