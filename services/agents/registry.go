@@ -321,10 +321,12 @@ func (r *Registry) handleJobResult(ctx context.Context, l *logrus.Entry, result 
 				return err
 			}
 
-			if artifact.ScheduleID != "" {
-				if err := r.retentionService.EnforceRetention(ctx, artifact.ScheduleID); err != nil {
-					l.Errorf("failed to enforce retention: %v", err)
-				}
+			if artifact.Type == models.ScheduledArtifactType {
+				go func() {
+					if err := r.retentionService.EnforceRetention(ctx, artifact.ScheduleID); err != nil {
+						l.Errorf("failed to enforce retention: %v", err)
+					}
+				}()
 			}
 		case *agentpb.JobResult_MongodbBackup:
 			if res.Type != models.MongoDBBackupJob {
@@ -337,10 +339,13 @@ func (r *Registry) handleJobResult(ctx context.Context, l *logrus.Entry, result 
 			if err != nil {
 				return err
 			}
-			if artifact.ScheduleID != "" {
-				if err := r.retentionService.EnforceRetention(ctx, artifact.ScheduleID); err != nil {
-					l.Errorf("failed to enforce retention: %v", err)
-				}
+
+			if artifact.Type == models.ScheduledArtifactType {
+				go func() {
+					if err := r.retentionService.EnforceRetention(ctx, artifact.ScheduleID); err != nil {
+						l.Errorf("failed to enforce retention: %v", err)
+					}
+				}()
 			}
 		case *agentpb.JobResult_MysqlRestoreBackup:
 			if res.Type != models.MySQLRestoreBackupJob {

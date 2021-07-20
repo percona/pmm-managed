@@ -93,5 +93,4 @@ func (s *RetentionService) EnforceRetention(ctx context.Context, scheduleID stri
 	}
 
 	return nil
-
 }
