@@ -45,44 +45,35 @@ func NewRetentionService(db *reform.DB, removalSVC removalService) *RetentionSer
 // EnforceRetention enforce retention on provided scheduled backup task
 // it removes any old successful artifacts below retention threshold.
 func (s *RetentionService) EnforceRetention(ctx context.Context, scheduleID string) error {
-	var artifacts []*models.Artifact
 	var retention uint32
 
-	txErr := s.db.InTransaction(func(tx *reform.TX) error {
-		task, err := models.FindScheduledTaskByID(tx.Querier, scheduleID)
-		if err != nil {
-			return err
-		}
-
-		switch task.Type {
-		case models.ScheduledMySQLBackupTask:
-			retention = task.Data.MySQLBackupTask.Retention
-		case models.ScheduledMongoDBBackupTask:
-			retention = task.Data.MongoDBBackupTask.Retention
-		default:
-			return errors.Errorf("invalid backup type %s", task.Type)
-		}
-
-		if retention == 0 {
-			return nil
-		}
-
-		artifacts, err = models.FindArtifacts(tx.Querier, models.ArtifactFilters{
-			ScheduleID: scheduleID,
-			Status:     models.SuccessBackupStatus,
-		})
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	if txErr != nil {
-		return txErr
+	task, err := models.FindScheduledTaskByID(s.db.Querier, scheduleID)
+	if err != nil {
+		return err
 	}
 
-	if retention == 0 || int(retention) > len(artifacts) {
+	switch task.Type {
+	case models.ScheduledMySQLBackupTask:
+		retention = task.Data.MySQLBackupTask.Retention
+	case models.ScheduledMongoDBBackupTask:
+		retention = task.Data.MongoDBBackupTask.Retention
+	default:
+		return errors.Errorf("invalid backup type %s", task.Type)
+	}
+
+	if retention == 0 {
+		return nil
+	}
+
+	artifacts, err := models.FindArtifacts(s.db.Querier, models.ArtifactFilters{
+		ScheduleID: scheduleID,
+		Status:     models.SuccessBackupStatus,
+	})
+	if err != nil {
+		return err
+	}
+
+	if int(retention) > len(artifacts) {
 		return nil
 	}
 
