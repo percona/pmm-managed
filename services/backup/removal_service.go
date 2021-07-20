@@ -43,13 +43,13 @@ func NewRemovalService(db *reform.DB, s3 awsS3) *RemovalService {
 }
 
 // DeleteArtifact deletes specified artifact.
-func (s *RemovalService) DeleteArtifact(ctx context.Context, artifactID string) error {
+func (s *RemovalService) DeleteArtifact(ctx context.Context, artifactID string, removeFiles bool) error {
 	artifactName, s3Config, err := s.beginDeletingArtifact(artifactID)
 	if err != nil {
 		return err
 	}
 
-	if s3Config != nil {
+	if s3Config != nil && removeFiles {
 		if err := s.s3.RemoveRecursive(
 			ctx,
 			s3Config.Endpoint,

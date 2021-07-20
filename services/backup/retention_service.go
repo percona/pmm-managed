@@ -89,7 +89,7 @@ func (s *RetentionService) EnforceRetention(ctx context.Context, scheduleID stri
 	}
 
 	for _, artifact := range artifacts[retention:] {
-		if err := s.removalSVC.DeleteArtifact(ctx, artifact.ID); err != nil {
+		if err := s.removalSVC.DeleteArtifact(ctx, artifact.ID, true); err != nil {
 			return err
 		}
 	}

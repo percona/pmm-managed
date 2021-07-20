@@ -13,13 +13,13 @@ type mockRemovalService struct {
 	mock.Mock
 }
 
-// DeleteArtifact provides a mock function with given fields: ctx, artifactID
-func (_m *mockRemovalService) DeleteArtifact(ctx context.Context, artifactID string) error {
-	ret := _m.Called(ctx, artifactID)
+// DeleteArtifact provides a mock function with given fields: ctx, artifactID, removeFiles
+func (_m *mockRemovalService) DeleteArtifact(ctx context.Context, artifactID string, removeFiles bool) error {
+	ret := _m.Called(ctx, artifactID, removeFiles)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) error); ok {
-		r0 = rf(ctx, artifactID)
+	if rf, ok := ret.Get(0).(func(context.Context, string, bool) error); ok {
+		r0 = rf(ctx, artifactID, removeFiles)
 	} else {
 		r0 = ret.Error(0)
 	}

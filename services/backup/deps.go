@@ -69,5 +69,5 @@ type awsS3 interface {
 }
 
 type removalService interface {
-	DeleteArtifact(ctx context.Context, artifactID string) error
+	DeleteArtifact(ctx context.Context, artifactID string, removeFiles bool) error
 }
