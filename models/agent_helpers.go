@@ -649,7 +649,7 @@ func compatibleNodeAndAgent(nodeType NodeType, agentType AgentType) bool {
 
 	allowed, ok := allow[nodeType]
 	if !ok {
-		return true
+		return false
 	}
 
 	if allowed == allowAll {
@@ -660,13 +660,7 @@ func compatibleNodeAndAgent(nodeType NodeType, agentType AgentType) bool {
 }
 
 func compatibleServiceAndAgent(serviceType ServiceType, agentType AgentType) bool {
-	const forbidden = "forbidden"
 	allow := map[AgentType]ServiceType{
-		PMMAgentType:                        forbidden,
-		NodeExporterType:                    forbidden,
-		RDSExporterType:                     forbidden,
-		AzureDatabaseExporterType:           forbidden,
-		VMAgentType:                         forbidden,
 		MySQLdExporterType:                  MySQLServiceType,
 		QANMySQLSlowlogAgentType:            MySQLServiceType,
 		QANMySQLPerfSchemaAgentType:         MySQLServiceType,
@@ -680,7 +674,7 @@ func compatibleServiceAndAgent(serviceType ServiceType, agentType AgentType) boo
 
 	allowed, ok := allow[agentType]
 	if !ok {
-		return true
+		return false
 	}
 
 	return allowed == serviceType
