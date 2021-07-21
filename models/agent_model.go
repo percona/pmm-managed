@@ -208,6 +208,16 @@ func (s *Agent) SetCustomLabels(m map[string]string) error {
 	return setLabels(m, &s.CustomLabels)
 }
 
+// GetAgentPassword returns agent password, if it is empty then agent ID.
+func (s *Agent) GetAgentPassword() string {
+	password := s.AgentID
+	if pointer.GetString(s.AgentPassword) != "" {
+		password = *s.AgentPassword
+	}
+
+	return password
+}
+
 // UnifiedLabels returns combined standard and custom labels with empty labels removed.
 func (s *Agent) UnifiedLabels() (map[string]string, error) {
 	custom, err := s.GetCustomLabels()

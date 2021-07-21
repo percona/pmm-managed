@@ -151,15 +151,10 @@ func jobName(agent *models.Agent, intervalName string, interval time.Duration) s
 }
 
 func httpClientConfig(agent *models.Agent) config.HTTPClientConfig {
-	password := agent.AgentID
-	if pointer.GetString(agent.AgentPassword) != "" {
-		password = *agent.AgentPassword
-	}
-
 	return config.HTTPClientConfig{
 		BasicAuth: &config.BasicAuth{
 			Username: "pmm",
-			Password: password,
+			Password: agent.GetAgentPassword(),
 		},
 	}
 }
