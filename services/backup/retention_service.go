@@ -45,35 +45,12 @@ func NewRetentionService(db *reform.DB, removalSVC removalService) *RetentionSer
 // EnforceRetention enforce retention on provided scheduled backup task
 // it removes any old successful artifacts below retention threshold.
 func (s *RetentionService) EnforceRetention(ctx context.Context, scheduleID string) error {
-	var retention uint32
-
-	task, err := models.FindScheduledTaskByID(s.db.Querier, scheduleID)
+	artifacts, retention, err := s.findArtifacts(s.db.Querier, scheduleID)
 	if err != nil {
 		return err
 	}
 
-	switch task.Type {
-	case models.ScheduledMySQLBackupTask:
-		retention = task.Data.MySQLBackupTask.Retention
-	case models.ScheduledMongoDBBackupTask:
-		retention = task.Data.MongoDBBackupTask.Retention
-	default:
-		return errors.Errorf("invalid backup type %s", task.Type)
-	}
-
-	if retention == 0 {
-		return nil
-	}
-
-	artifacts, err := models.FindArtifacts(s.db.Querier, models.ArtifactFilters{
-		ScheduleID: scheduleID,
-		Status:     models.SuccessBackupStatus,
-	})
-	if err != nil {
-		return err
-	}
-
-	if int(retention) > len(artifacts) {
+	if retention == 0 || int(retention) > len(artifacts) {
 		return nil
 	}
 
@@ -84,4 +61,37 @@ func (s *RetentionService) EnforceRetention(ctx context.Context, scheduleID stri
 	}
 
 	return nil
+}
+
+// findArtifacts returns successful artifacts belong to scheduled task and it's retention.
+func (s *RetentionService) findArtifacts(q *reform.Querier, scheduleID string) ([]*models.Artifact, uint32, error) {
+	var retention uint32
+
+	task, err := models.FindScheduledTaskByID(q, scheduleID)
+	if err != nil {
+		return nil, retention, err
+	}
+
+	switch task.Type {
+	case models.ScheduledMySQLBackupTask:
+		retention = task.Data.MySQLBackupTask.Retention
+	case models.ScheduledMongoDBBackupTask:
+		retention = task.Data.MongoDBBackupTask.Retention
+	default:
+		return nil, retention, errors.Errorf("invalid backup type %s", task.Type)
+	}
+
+	if retention == 0 {
+		return nil, retention, nil
+	}
+
+	artifacts, err := models.FindArtifacts(q, models.ArtifactFilters{
+		ScheduleID: scheduleID,
+		Status:     models.SuccessBackupStatus,
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return artifacts, retention, nil
 }
