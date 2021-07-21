@@ -36,7 +36,7 @@ func TestDeleteArtifact(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	mockedS3 := &mockAwsS3{}
+	mockedS3 := &mockS3{}
 	removalService := NewRemovalService(db, mockedS3)
 
 	agent := setup(t, db.Querier, "test-service")

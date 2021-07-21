@@ -32,11 +32,11 @@ import (
 type RemovalService struct {
 	l  *logrus.Entry
 	db *reform.DB
-	s3 awsS3
+	s3 s3
 }
 
 // NewRemovalService creates new backup removal service.
-func NewRemovalService(db *reform.DB, s3 awsS3) *RemovalService {
+func NewRemovalService(db *reform.DB, s3 s3) *RemovalService {
 	return &RemovalService{
 		l:  logrus.WithField("component", "services/backup/removal"),
 		db: db,

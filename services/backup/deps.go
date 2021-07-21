@@ -24,7 +24,7 @@ import (
 )
 
 //go:generate mockery -name=jobsService -case=snake -inpkg -testonly
-//go:generate mockery -name=awsS3 -case=snake -inpkg -testonly
+//go:generate mockery -name=s3 -case=snake -inpkg -testonly
 
 // jobsService is a subset of methods of agents.JobsService used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
@@ -64,7 +64,7 @@ type jobsService interface {
 	) error
 }
 
-type awsS3 interface {
+type s3 interface {
 	RemoveRecursive(ctx context.Context, endpoint, accessKey, secretKey, bucketName, prefix string) error
 }
 

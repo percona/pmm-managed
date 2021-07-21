@@ -26,14 +26,14 @@ import (
 	"github.com/percona/pmm-managed/models"
 )
 
-// RetentionService represents core logic for db backup.
+// RetentionService handles retention for artifacts.
 type RetentionService struct {
 	db         *reform.DB
 	l          *logrus.Entry
 	removalSVC removalService
 }
 
-// NewRetentionService creates new backups logic service.
+// NewRetentionService creates new retention service for artifacts.
 func NewRetentionService(db *reform.DB, removalSVC removalService) *RetentionService {
 	return &RetentionService{
 		l:          logrus.WithField("component", "management/backup/retention"),

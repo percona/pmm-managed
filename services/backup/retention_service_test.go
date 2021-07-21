@@ -36,7 +36,7 @@ func TestEnsureRetention(t *testing.T) {
 	sqlDB := testdb.Open(t, models.SkipFixtures, nil)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 
-	mockedS3 := &mockAwsS3{}
+	mockedS3 := &mockS3{}
 	removalService := NewRemovalService(db, mockedS3)
 	retentionService := NewRetentionService(db, removalService)
 	mockedS3.On("RemoveRecursive", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
