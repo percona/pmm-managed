@@ -442,11 +442,11 @@ func (s *Agent) DSN(service *Service, dialTimeout time.Duration, database string
 				for key := range files {
 					switch key {
 					case caFilePlaceholder:
-						q.Add("ssl_ca_file", tdp.Left+".TextFiles."+caFilePlaceholder+tdp.Right)
+						q.Add("sslrootcert", tdp.Left+".TextFiles."+caFilePlaceholder+tdp.Right)
 					case certificateFilePlaceholder:
-						q.Add("ssl_cert_file", tdp.Left+".TextFiles."+certificateFilePlaceholder+tdp.Right)
+						q.Add("sslcert", tdp.Left+".TextFiles."+certificateFilePlaceholder+tdp.Right)
 					case certificateKeyFilePlaceholder:
-						q.Add("ssl_key_file", tdp.Left+".TextFiles."+certificateKeyFilePlaceholder+tdp.Right)
+						q.Add("sslkey", tdp.Left+".TextFiles."+certificateKeyFilePlaceholder+tdp.Right)
 					}
 				}
 			}
