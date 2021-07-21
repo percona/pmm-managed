@@ -542,6 +542,10 @@ var databaseSchema = [][]string{
 			ADD COLUMN schedule_id VARCHAR`,
 		`ALTER TABLE artifacts ALTER COLUMN type DROP DEFAULT`,
 	},
+	41: {
+		`ALTER TABLE agents
+		ADD COLUMN agent_password VARCHAR CHECK (agent_password <> '')`,
+	},
 }
 
 // ^^^ Avoid default values in schema definition. ^^^

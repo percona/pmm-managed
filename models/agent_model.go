@@ -133,6 +133,7 @@ type Agent struct {
 
 	Username      *string `reform:"username"`
 	Password      *string `reform:"password"`
+	AgentPassword *string `reform:"agent_password"`
 	TLS           bool    `reform:"tls"`
 	TLSSkipVerify bool    `reform:"tls_skip_verify"`
 
