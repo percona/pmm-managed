@@ -63,5 +63,6 @@ func proxysqlExporterConfig(service *models.Service, exporter *models.Agent, red
 	if redactMode != exposeSecrets {
 		res.RedactWords = redactWords(exporter)
 	}
+	//
 	return res
 }
