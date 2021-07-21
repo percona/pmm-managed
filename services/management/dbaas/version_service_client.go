@@ -196,3 +196,52 @@ func (c *VersionServiceClient) GetLatestOperatorVersion(ctx context.Context, pmm
 	latestPXCOperator, err := getLatest(pmmVersionDeps.Matrix.PXCOperator)
 	return latestPXCOperator, latestPSMDBOperator, err
 }
+
+func (c *VersionServiceClient) GetNextDatabaseVersion(ctx context.Context, operatorType, operatorVersion, currentVersion string) {
+	params := componentsParams{
+		product:        operatorType,
+		productVersion: operatorVersion,
+	}
+	matrix, err := c.Matrix(ctx, params)
+	if len(matrix.Versions) != 1 {
+		return "" //
+	}
+	operatorVersion := matrix.Versions[0]
+
+	// najit pocet verzi, ktery je vetsi nez current. Pokud je len(greater) > 1 -> najdi nejmensi z nich a tu return.
+	var versions map[string]componentVersion
+	switch operatorType {
+	case psmdbOperator:
+		versions = operatorVersion.Matrix.Mongod
+	case pxcOperator:
+		versions = operatorVersion.Matrix.Pxc
+	default:
+		return "", errors.Errorf("%q operator not supported", operatorType)
+	}
+
+	//
+	var greaterThanCurrent []*goversion.Version
+	currentVersionParsed, _ := goversion.NewVersion(currentVersion)
+	for version := range versions {
+		v, err := goversion.NewVersion(version)
+		if err != nil {
+			return "", err
+		}
+		if v.GreaterThen(currentVersionParsed) {
+			greaterThanCurrent = append(greaterThanCurrent, v)
+		}
+	}
+
+	if len(greaterThanCurrent) == 0 {
+		return "", nil
+	}
+
+	lowestVersion := greaterThanCurrent[0]
+	// find min version
+	for i:=1, i < len(greaterThanCurrent); i++{
+		if greaterThanCurrent[i].LessThan(lowestVersion) {
+			lowestVersion = greaterThanCurrent[i]
+		}
+	}
+	return lowestVersion.String(), nil
+}

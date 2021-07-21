@@ -114,6 +114,12 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 			}
 		}
 
+		nextVersion, err := s.versionService.GetNextDatabaseVersion(databaseType, currentVersion)
+		if err != nil {
+			return nil, err
+		}
+		cluster.AvalableVersion = nextVersion
+
 		clusters[i] = &cluster
 	}
 
