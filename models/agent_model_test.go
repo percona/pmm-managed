@@ -217,7 +217,7 @@ func TestPostgresAgentTLS(t *testing.T) {
 }
 
 func TestPostgresWithSocket(t *testing.T) {
-	t.Run("empty-passowrd", func(t *testing.T) {
+	t.Run("empty-password", func(t *testing.T) {
 		agent := &models.Agent{
 			Username:      pointer.ToString("username"),
 			AgentType:     models.PostgresExporterType,
@@ -231,7 +231,7 @@ func TestPostgresWithSocket(t *testing.T) {
 		assert.Equal(t, expect, agent.DSN(service, time.Second, "database", nil))
 	})
 
-	t.Run("empty-user-passowrd", func(t *testing.T) {
+	t.Run("empty-user-password", func(t *testing.T) {
 		agent := &models.Agent{
 			AgentType: models.PostgresExporterType,
 		}
@@ -255,7 +255,7 @@ func TestPostgresWithSocket(t *testing.T) {
 }
 
 func TestMongoWithSocket(t *testing.T) {
-	t.Run("empty-passowrd", func(t *testing.T) {
+	t.Run("empty-password", func(t *testing.T) {
 		agent := &models.Agent{
 			Username:      pointer.ToString("username"),
 			AgentType:     models.MongoDBExporterType,
@@ -269,7 +269,7 @@ func TestMongoWithSocket(t *testing.T) {
 		assert.Equal(t, expect, agent.DSN(service, time.Second, "database", nil))
 	})
 
-	t.Run("empty-user-passowrd", func(t *testing.T) {
+	t.Run("empty-user-password", func(t *testing.T) {
 		agent := &models.Agent{
 			AgentType: models.MongoDBExporterType,
 		}
