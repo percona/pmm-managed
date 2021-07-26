@@ -22,10 +22,9 @@ import (
 
 	"gopkg.in/reform.v1"
 
-	"github.com/percona/pmm-managed/models"
-
 	"github.com/percona-platform/saas/pkg/check"
 
+	"github.com/percona/pmm-managed/models"
 	"github.com/percona/pmm-managed/services"
 )
 
