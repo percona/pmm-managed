@@ -296,14 +296,14 @@ func updateAgentStatus(ctx context.Context, q *reform.Querier, agentID string, s
 	agent := &models.Agent{AgentID: agentID}
 	err := q.Reload(agent)
 
-	// FIXME that requires more investigation: https://jira.percona.com/browse/PMM-4932
+	// agent can be already deleted, but we still can receive status message from pmm-agent.
 	if err == reform.ErrNoRows {
-		l.Warnf("Failed to select Agent by ID for (%s, %s).", agentID, status)
-
 		switch status {
 		case inventorypb.AgentStatus_STOPPING, inventorypb.AgentStatus_DONE:
 			return nil
 		}
+
+		l.Warnf("Failed to select Agent by ID for (%s, %s).", agentID, status)
 	}
 	if err != nil {
 		return errors.Wrap(err, "failed to select Agent by ID")
