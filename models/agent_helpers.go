@@ -667,6 +667,7 @@ func compatibleServiceAndAgent(serviceType ServiceType, agentType AgentType) boo
 		MongoDBExporterType:                 MongoDBServiceType,
 		QANMongoDBProfilerAgentType:         MongoDBServiceType,
 		PostgresExporterType:                PostgreSQLServiceType,
+		ProxySQLExporterType:                ProxySQLServiceType,
 		QANPostgreSQLPgStatMonitorAgentType: PostgreSQLServiceType,
 		QANPostgreSQLPgStatementsAgentType:  PostgreSQLServiceType,
 		ExternalExporterType:                ExternalServiceType,
