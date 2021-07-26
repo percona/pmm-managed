@@ -128,6 +128,7 @@ type gRPCServerDeps struct {
 	vmdb                 *victoriametrics.Service
 	server               *server.Server
 	agentsRegistry       *agents.Registry
+	handler              *agents.Handler
 	grafanaClient        *grafana.Client
 	checksService        *checks.Service
 	dbaasClient          *dbaas.Client
@@ -166,7 +167,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 
 	serverpb.RegisterServerServer(gRPCServer, deps.server)
 
-	agentpb.RegisterAgentServer(gRPCServer, agentgrpc.NewAgentServer(deps.agentsRegistry))
+	agentpb.RegisterAgentServer(gRPCServer, agentgrpc.NewAgentServer(deps.handler))
 
 	nodesSvc := inventory.NewNodesService(deps.db, deps.agentsRegistry, deps.vmdb)
 	servicesSvc := inventory.NewServicesService(deps.db, deps.agentsRegistry, deps.vmdb)
@@ -189,7 +190,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterMongoDBServer(gRPCServer, managementgrpc.NewManagementMongoDBServer(mongodbSvc))
 	managementpb.RegisterPostgreSQLServer(gRPCServer, managementgrpc.NewManagementPostgreSQLServer(postgresqlSvc))
 	managementpb.RegisterProxySQLServer(gRPCServer, managementgrpc.NewManagementProxySQLServer(proxysqlSvc))
-	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(deps.agentsRegistry, deps.db))
+	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(deps.handler, deps.db))
 	managementpb.RegisterRDSServer(gRPCServer, management.NewRDSService(deps.db, deps.agentsRegistry))
 	azurev1beta1.RegisterAzureDatabaseServer(gRPCServer, management.NewAzureDatabaseService(deps.db, deps.agentsRegistry))
 	managementpb.RegisterHAProxyServer(gRPCServer, management.NewHAProxyService(deps.db, deps.agentsRegistry, deps.vmdb))
@@ -598,7 +599,7 @@ func main() {
 
 	qanClient := getQANClient(ctx, sqlDB, *postgresDBNameF, *qanAPIAddrF)
 
-	agentsRegistry := agents.NewRegistry(db, qanClient, vmdb)
+	agentsRegistry := agents.NewRegistry(db, vmdb)
 	prom.MustRegister(agentsRegistry)
 
 	alertmanager := alertmanager.New(db)
@@ -620,7 +621,11 @@ func main() {
 	grafanaClient := grafana.NewClient(*grafanaAddrF)
 	prom.MustRegister(grafanaClient)
 
-	checksService, err := checks.New(agentsRegistry, alertmanager, db)
+	jobsService := agents.NewJobsService(db, agentsRegistry)
+	agentsHandler := agents.NewHandler(db, qanClient, agentsRegistry, jobsService)
+	prom.MustRegister(agentsHandler)
+
+	checksService, err := checks.New(agentsHandler, alertmanager, db)
 	if err != nil {
 		l.Fatalf("Could not create checks service: %s", err)
 	}
@@ -631,8 +636,6 @@ func main() {
 	if err != nil {
 		l.Fatalf("Could not create platform service: %s", err)
 	}
-
-	jobsService := agents.NewJobsService(db, agentsRegistry)
 
 	// Integrated alerts services
 	templatesService := ia.NewTemplatesService(db)
@@ -818,6 +821,7 @@ func main() {
 			vmdb:                 vmdb,
 			server:               server,
 			agentsRegistry:       agentsRegistry,
+			handler:              agentsHandler,
 			grafanaClient:        grafanaClient,
 			checksService:        checksService,
 			dbaasClient:          dbaasClient,
