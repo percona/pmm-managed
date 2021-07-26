@@ -55,8 +55,13 @@ func TestRDSService(t *testing.T) {
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
 	r := new(mockAgentsRegistry)
 	r.Test(t)
-	defer r.AssertExpectations(t)
-	s := NewRDSService(db, r)
+	cc := new(mockConnectionChecker)
+	cc.Test(t)
+	defer func() {
+		r.AssertExpectations(t)
+		cc.AssertExpectations(t)
+	}()
+	s := NewRDSService(db, r, cc)
 
 	t.Run("DiscoverRDS", func(t *testing.T) {
 		t.Run("ListRegions", func(t *testing.T) {

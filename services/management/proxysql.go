@@ -32,11 +32,12 @@ import (
 type ProxySQLService struct {
 	db       *reform.DB
 	registry agentsRegistry
+	cc       connectionChecker
 }
 
 // NewProxySQLService creates new ProxySQL Management Service.
-func NewProxySQLService(db *reform.DB, registry agentsRegistry) *ProxySQLService {
-	return &ProxySQLService{db, registry}
+func NewProxySQLService(db *reform.DB, registry agentsRegistry, cc connectionChecker) *ProxySQLService {
+	return &ProxySQLService{db, registry, cc}
 }
 
 // Add adds "ProxySQL Service", "ProxySQL Exporter Agent" and "QAN ProxySQL PerfSchema Agent".
@@ -89,7 +90,7 @@ func (s *ProxySQLService) Add(ctx context.Context, req *managementpb.AddProxySQL
 		}
 
 		if !req.SkipConnectionCheck {
-			if err = s.registry.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
+			if err = s.cc.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
 				return err
 			}
 		}

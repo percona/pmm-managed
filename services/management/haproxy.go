@@ -34,11 +34,12 @@ type HAProxyService struct {
 	db       *reform.DB
 	registry agentsRegistry
 	vmdb     prometheusService
+	cc       connectionChecker
 }
 
 // NewHAProxyService creates new HAProxy Management Service.
-func NewHAProxyService(db *reform.DB, registry agentsRegistry, vmdb prometheusService) *HAProxyService {
-	return &HAProxyService{db: db, registry: registry, vmdb: vmdb}
+func NewHAProxyService(db *reform.DB, registry agentsRegistry, vmdb prometheusService, cc connectionChecker) *HAProxyService {
+	return &HAProxyService{db: db, registry: registry, vmdb: vmdb, cc: cc}
 }
 
 func (e HAProxyService) AddHAProxy(ctx context.Context, req *managementpb.AddHAProxyRequest) (*managementpb.AddHAProxyResponse, error) {
@@ -101,7 +102,7 @@ func (e HAProxyService) AddHAProxy(ctx context.Context, req *managementpb.AddHAP
 		}
 
 		if !req.SkipConnectionCheck {
-			if err = e.registry.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
+			if err = e.cc.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
 				return err
 			}
 		}

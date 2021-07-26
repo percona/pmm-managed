@@ -35,14 +35,16 @@ type AgentsService struct {
 	r    agentsRegistry
 	vmdb prometheusService
 	db   *reform.DB
+	cc   connectionChecker
 }
 
 // NewAgentsService creates new AgentsService
-func NewAgentsService(db *reform.DB, r agentsRegistry, vmdb prometheusService) *AgentsService {
+func NewAgentsService(db *reform.DB, r agentsRegistry, vmdb prometheusService, cc connectionChecker) *AgentsService {
 	return &AgentsService{
 		r:    r,
 		vmdb: vmdb,
 		db:   db,
+		cc:   cc,
 	}
 }
 
@@ -240,7 +242,7 @@ func (as *AgentsService) AddMySQLdExporter(ctx context.Context, req *inventorypb
 				return err
 			}
 
-			if err = as.r.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
+			if err = as.cc.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
 				return err
 			}
 		}
@@ -298,7 +300,7 @@ func (as *AgentsService) AddMongoDBExporter(ctx context.Context, req *inventoryp
 				return err
 			}
 
-			if err = as.r.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
+			if err = as.cc.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
 				return err
 			}
 		}
@@ -356,7 +358,7 @@ func (as *AgentsService) AddQANMySQLPerfSchemaAgent(ctx context.Context, req *in
 				return err
 			}
 
-			if err = as.r.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
+			if err = as.cc.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
 				return err
 			}
 		}
@@ -421,7 +423,7 @@ func (as *AgentsService) AddQANMySQLSlowlogAgent(ctx context.Context, req *inven
 				return err
 			}
 
-			if err = as.r.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
+			if err = as.cc.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
 				return err
 			}
 		}
@@ -478,7 +480,7 @@ func (as *AgentsService) AddPostgresExporter(ctx context.Context, req *inventory
 				return err
 			}
 
-			if err = as.r.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
+			if err = as.cc.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
 				return err
 			}
 		}
@@ -537,7 +539,7 @@ func (as *AgentsService) AddQANMongoDBProfilerAgent(ctx context.Context, req *in
 				return err
 			}
 
-			if err = as.r.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
+			if err = as.cc.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
 				return err
 			}
 		}
@@ -595,7 +597,7 @@ func (as *AgentsService) AddProxySQLExporter(ctx context.Context, req *inventory
 				return err
 			}
 
-			if err = as.r.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
+			if err = as.cc.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
 				return err
 			}
 		}
@@ -651,7 +653,7 @@ func (as *AgentsService) AddQANPostgreSQLPgStatementsAgent(ctx context.Context, 
 				return err
 			}
 
-			if err = as.r.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
+			if err = as.cc.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
 				return err
 			}
 		}
@@ -708,7 +710,7 @@ func (as *AgentsService) AddQANPostgreSQLPgStatMonitorAgent(ctx context.Context,
 				return err
 			}
 
-			if err = as.r.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
+			if err = as.cc.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
 				return err
 			}
 		}

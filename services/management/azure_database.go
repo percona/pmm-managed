@@ -59,14 +59,16 @@ type AzureDatabaseService struct {
 	l        *logrus.Entry
 	db       *reform.DB
 	registry agentsRegistry
+	cc       connectionChecker
 }
 
 // NewAzureDatabaseService creates new instance discovery service.
-func NewAzureDatabaseService(db *reform.DB, registry agentsRegistry) *AzureDatabaseService {
+func NewAzureDatabaseService(db *reform.DB, registry agentsRegistry, cc connectionChecker) *AzureDatabaseService {
 	return &AzureDatabaseService{
 		l:        logrus.WithField("component", "management/azure_database"),
 		db:       db,
 		registry: registry,
+		cc:       cc,
 	}
 }
 
@@ -301,7 +303,7 @@ func (s *AzureDatabaseService) AddAzureDatabase(ctx context.Context, req *azurev
 		l.Infof("Added %s with AgentID: %s", metricsExporter.AgentType, metricsExporter.AgentID)
 
 		if !req.SkipConnectionCheck {
-			if err = s.registry.CheckConnectionToService(ctx, tx.Querier, service, metricsExporter); err != nil {
+			if err = s.cc.CheckConnectionToService(ctx, tx.Querier, service, metricsExporter); err != nil {
 				return err
 			}
 		}

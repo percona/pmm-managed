@@ -56,16 +56,20 @@ func TestAgents(t *testing.T) {
 		vmdb := new(mockPrometheusService)
 		vmdb.Test(t)
 
+		cc := new(mockConnectionChecker)
+		cc.Test(t)
+
 		teardown = func(t *testing.T) {
 			uuid.SetRand(nil)
 
 			r.AssertExpectations(t)
 			vmdb.AssertExpectations(t)
+			cc.AssertExpectations(t)
 			require.NoError(t, sqlDB.Close())
 		}
 		ns = NewNodesService(db, r, vmdb)
 		ss = NewServicesService(db, r, vmdb)
-		as = NewAgentsService(db, r, vmdb)
+		as = NewAgentsService(db, r, vmdb, cc)
 
 		return
 	}
@@ -83,7 +87,7 @@ func TestAgents(t *testing.T) {
 
 		as.r.(*mockAgentsRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000005").Return(true)
 		as.r.(*mockAgentsRegistry).On("RequestStateUpdate", ctx, "/agent_id/00000000-0000-4000-8000-000000000005")
-		as.r.(*mockAgentsRegistry).On("CheckConnectionToService", ctx,
+		as.cc.(*mockConnectionChecker).On("CheckConnectionToService", ctx,
 			mock.AnythingOfType(reflect.TypeOf(&reform.TX{}).Name()),
 			mock.AnythingOfType(reflect.TypeOf(&models.Service{}).Name()),
 			mock.AnythingOfType(reflect.TypeOf(&models.Agent{}).Name()),
@@ -484,7 +488,7 @@ func TestAgents(t *testing.T) {
 
 		as.r.(*mockAgentsRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000005").Return(true)
 		as.r.(*mockAgentsRegistry).On("RequestStateUpdate", ctx, "/agent_id/00000000-0000-4000-8000-000000000005")
-		as.r.(*mockAgentsRegistry).On("CheckConnectionToService", ctx,
+		as.cc.(*mockConnectionChecker).On("CheckConnectionToService", ctx,
 			mock.AnythingOfType(reflect.TypeOf(&reform.TX{}).Name()),
 			mock.AnythingOfType(reflect.TypeOf(&models.Service{}).Name()),
 			mock.AnythingOfType(reflect.TypeOf(&models.Agent{}).Name()),
@@ -571,7 +575,7 @@ func TestAgents(t *testing.T) {
 
 		as.r.(*mockAgentsRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000005").Return(true)
 		as.r.(*mockAgentsRegistry).On("RequestStateUpdate", ctx, "/agent_id/00000000-0000-4000-8000-000000000005")
-		as.r.(*mockAgentsRegistry).On("CheckConnectionToService", ctx,
+		as.cc.(*mockConnectionChecker).On("CheckConnectionToService", ctx,
 			mock.AnythingOfType(reflect.TypeOf(&reform.TX{}).Name()),
 			mock.AnythingOfType(reflect.TypeOf(&models.Service{}).Name()),
 			mock.AnythingOfType(reflect.TypeOf(&models.Agent{}).Name()),
@@ -623,7 +627,7 @@ func TestAgents(t *testing.T) {
 
 		as.r.(*mockAgentsRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000005").Return(true)
 		as.r.(*mockAgentsRegistry).On("RequestStateUpdate", ctx, "/agent_id/00000000-0000-4000-8000-000000000005")
-		as.r.(*mockAgentsRegistry).On("CheckConnectionToService", ctx,
+		as.cc.(*mockConnectionChecker).On("CheckConnectionToService", ctx,
 			mock.AnythingOfType(reflect.TypeOf(&reform.TX{}).Name()),
 			mock.AnythingOfType(reflect.TypeOf(&models.Service{}).Name()),
 			mock.AnythingOfType(reflect.TypeOf(&models.Agent{}).Name()),

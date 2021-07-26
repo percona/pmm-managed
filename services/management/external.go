@@ -35,11 +35,12 @@ type ExternalService struct {
 	db       *reform.DB
 	registry agentsRegistry
 	vmdb     prometheusService
+	cc       connectionChecker
 }
 
 // NewExternalService creates new External Management Service.
-func NewExternalService(db *reform.DB, registry agentsRegistry, vmdb prometheusService) *ExternalService {
-	return &ExternalService{db: db, registry: registry, vmdb: vmdb}
+func NewExternalService(db *reform.DB, registry agentsRegistry, vmdb prometheusService, cc connectionChecker) *ExternalService {
+	return &ExternalService{db: db, registry: registry, vmdb: vmdb, cc: cc}
 }
 
 func (e *ExternalService) AddExternal(ctx context.Context, req *managementpb.AddExternalRequest) (*managementpb.AddExternalResponse, error) {
@@ -111,7 +112,7 @@ func (e *ExternalService) AddExternal(ctx context.Context, req *managementpb.Add
 		}
 
 		if !req.SkipConnectionCheck {
-			if err = e.registry.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
+			if err = e.cc.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
 				return err
 			}
 		}

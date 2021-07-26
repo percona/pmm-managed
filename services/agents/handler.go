@@ -387,7 +387,6 @@ func (h *Handler) StartMySQLShowTableStatusAction(ctx context.Context, id, pmmAg
 }
 
 // StartMySQLShowIndexAction starts mysql-show-index action on pmm-agent.
-// TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
 func (h *Handler) StartMySQLShowIndexAction(ctx context.Context, id, pmmAgentID, dsn, table string, files map[string]string, tdp *models.DelimiterPair, tlsSkipVerify bool) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,
@@ -436,7 +435,6 @@ func (h *Handler) StartPostgreSQLShowCreateTableAction(ctx context.Context, id, 
 }
 
 // StartPostgreSQLShowIndexAction starts postgresql-show-index action on pmm-agent.
-// TODO: Extract it from here: https://jira.percona.com/browse/PMM-4932
 func (h *Handler) StartPostgreSQLShowIndexAction(ctx context.Context, id, pmmAgentID, dsn, table string) error {
 	aRequest := &agentpb.StartActionRequest{
 		ActionId: id,

@@ -52,13 +52,15 @@ const (
 type RDSService struct {
 	db       *reform.DB
 	registry agentsRegistry
+	cc       connectionChecker
 }
 
 // NewRDSService creates new instance discovery service.
-func NewRDSService(db *reform.DB, registry agentsRegistry) *RDSService {
+func NewRDSService(db *reform.DB, registry agentsRegistry, cc connectionChecker) *RDSService {
 	return &RDSService{
 		db:       db,
 		registry: registry,
+		cc:       cc,
 	}
 }
 
@@ -337,7 +339,7 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 			res.MysqldExporter = invMySQLdExporter.(*inventorypb.MySQLdExporter)
 
 			if !req.SkipConnectionCheck {
-				if err = s.registry.CheckConnectionToService(ctx, tx.Querier, service, mysqldExporter); err != nil {
+				if err = s.cc.CheckConnectionToService(ctx, tx.Querier, service, mysqldExporter); err != nil {
 					return err
 				}
 				// CheckConnectionToService updates the table count in row so, let's also update the response
@@ -413,7 +415,7 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 			res.PostgresqlExporter = invPostgresExporter.(*inventorypb.PostgresExporter)
 
 			if !req.SkipConnectionCheck {
-				if err = s.registry.CheckConnectionToService(ctx, tx.Querier, service, postgresExporter); err != nil {
+				if err = s.cc.CheckConnectionToService(ctx, tx.Querier, service, postgresExporter); err != nil {
 					return err
 				}
 			}

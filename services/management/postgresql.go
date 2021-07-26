@@ -32,11 +32,12 @@ import (
 type PostgreSQLService struct {
 	db       *reform.DB
 	registry agentsRegistry
+	cc       connectionChecker
 }
 
 // NewPostgreSQLService creates new PostgreSQL Management Service.
-func NewPostgreSQLService(db *reform.DB, registry agentsRegistry) *PostgreSQLService {
-	return &PostgreSQLService{db, registry}
+func NewPostgreSQLService(db *reform.DB, registry agentsRegistry, cc connectionChecker) *PostgreSQLService {
+	return &PostgreSQLService{db, registry, cc}
 }
 
 // Add adds "PostgreSQL Service", "PostgreSQL Exporter Agent" and "QAN PostgreSQL PerfSchema Agent".
@@ -90,7 +91,7 @@ func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgr
 		}
 
 		if !req.SkipConnectionCheck {
-			if err = s.registry.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
+			if err = s.cc.CheckConnectionToService(ctx, tx.Querier, service, row); err != nil {
 				return err
 			}
 		}
