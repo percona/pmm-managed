@@ -129,6 +129,7 @@ type gRPCServerDeps struct {
 	server               *server.Server
 	agentsRegistry       *agents.Registry
 	handler              *agents.Handler
+	actions              *agents.ActionsService
 	connectionCheck      *agents.ConnectionCheck
 	grafanaClient        *grafana.Client
 	checksService        *checks.Service
@@ -191,7 +192,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	managementpb.RegisterMongoDBServer(gRPCServer, managementgrpc.NewManagementMongoDBServer(mongodbSvc))
 	managementpb.RegisterPostgreSQLServer(gRPCServer, managementgrpc.NewManagementPostgreSQLServer(postgresqlSvc))
 	managementpb.RegisterProxySQLServer(gRPCServer, managementgrpc.NewManagementProxySQLServer(proxysqlSvc))
-	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(deps.handler, deps.db))
+	managementpb.RegisterActionsServer(gRPCServer, managementgrpc.NewActionsServer(deps.actions, deps.db))
 	managementpb.RegisterRDSServer(gRPCServer, management.NewRDSService(deps.db, deps.agentsRegistry, deps.connectionCheck))
 	azurev1beta1.RegisterAzureDatabaseServer(gRPCServer, management.NewAzureDatabaseService(deps.db, deps.agentsRegistry, deps.connectionCheck))
 	managementpb.RegisterHAProxyServer(gRPCServer, management.NewHAProxyService(deps.db, deps.agentsRegistry, deps.vmdb, deps.connectionCheck))
@@ -628,7 +629,9 @@ func main() {
 	agentsHandler := agents.NewHandler(db, qanClient, agentsRegistry, jobsService)
 	prom.MustRegister(agentsHandler)
 
-	checksService, err := checks.New(agentsHandler, alertmanager, db)
+	actionsService := agents.NewActionsService(agentsRegistry)
+
+	checksService, err := checks.New(actionsService, alertmanager, db)
 	if err != nil {
 		l.Fatalf("Could not create checks service: %s", err)
 	}
@@ -825,6 +828,7 @@ func main() {
 			server:               server,
 			agentsRegistry:       agentsRegistry,
 			handler:              agentsHandler,
+			actions:              actionsService,
 			connectionCheck:      connectionCheck,
 			grafanaClient:        grafanaClient,
 			checksService:        checksService,
