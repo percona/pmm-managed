@@ -32,6 +32,7 @@ import (
 //go:generate mockery -name=checksService -case=snake -inpkg -testonly
 //go:generate mockery -name=grafanaClient -case=snake -inpkg -testonly
 //go:generate mockery -name=jobsService -case=snake -inpkg -testonly
+//go:generate mockery -name=versionCache -case=snake -inpkg -testonly
 
 // agentsRegistry is a subset of methods of agents.Registry used by this package.
 // We use it instead of real type for testing and to avoid dependency cycle.
@@ -73,4 +74,10 @@ type grafanaClient interface {
 type jobsService interface {
 	StopJob(jobID string) error
 	StartEchoJob(id, pmmAgentID string, timeout time.Duration, message string, delay time.Duration) error
+}
+
+// versionCache is a subset of methods of versioncache.Service used by this package.
+// We use it instead of real type for testing and to avoid dependency cycle.
+type versionCache interface {
+	SyncAndUpdate()
 }

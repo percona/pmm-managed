@@ -84,6 +84,7 @@ import (
 	"github.com/percona/pmm-managed/services/server"
 	"github.com/percona/pmm-managed/services/supervisord"
 	"github.com/percona/pmm-managed/services/telemetry"
+	"github.com/percona/pmm-managed/services/versioncache"
 	"github.com/percona/pmm-managed/services/victoriametrics"
 	"github.com/percona/pmm-managed/services/vmalert"
 	"github.com/percona/pmm-managed/utils/clean"
@@ -142,6 +143,7 @@ type gRPCServerDeps struct {
 	schedulerService     *scheduler.Service
 	backupService        *backup.Service
 	minio                *minio.Service
+	versionCache         *versioncache.Service
 }
 
 // runGRPCServer runs gRPC server until context is canceled, then gracefully stops it.
@@ -177,7 +179,7 @@ func runGRPCServer(ctx context.Context, deps *gRPCServerDeps) {
 	inventorypb.RegisterAgentsServer(gRPCServer, inventorygrpc.NewAgentsServer(agentsSvc))
 
 	nodeSvc := management.NewNodeService(deps.db, deps.agentsRegistry)
-	serviceSvc := management.NewServiceService(deps.db, deps.agentsRegistry, deps.vmdb)
+	serviceSvc := management.NewServiceService(deps.db, deps.agentsRegistry, deps.vmdb, deps.versionCache)
 	mysqlSvc := management.NewMySQLService(deps.db, deps.agentsRegistry)
 	mongodbSvc := management.NewMongoDBService(deps.db, deps.agentsRegistry)
 	postgresqlSvc := management.NewPostgreSQLService(deps.db, deps.agentsRegistry)
@@ -644,6 +646,8 @@ func main() {
 	dbaasClient := dbaas.NewClient(*dbaasControllerAPIAddrF)
 	backupService := backup.NewService(db, jobsService)
 	schedulerService := scheduler.New(db, backupService)
+	versioner := agents.NewVersionerService(agentsRegistry)
+	versionCache := versioncache.New(db, versioner)
 
 	serverParams := &server.Params{
 		DB:                   db,
@@ -808,6 +812,12 @@ func main() {
 	go func() {
 		defer wg.Done()
 		schedulerService.Run(ctx)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		versionCache.Run(ctx)
 	}()
 
 	wg.Add(1)

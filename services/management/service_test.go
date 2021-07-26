@@ -53,13 +53,16 @@ func TestServiceService(t *testing.T) {
 		vmdb := new(mockPrometheusService)
 		vmdb.Test(t)
 
+		vc := new(mockVersionCache)
+		vc.Test(t)
+
 		teardown = func(t *testing.T) {
 			uuid.SetRand(nil)
 
 			require.NoError(t, sqlDB.Close())
 			r.AssertExpectations(t)
 		}
-		s = NewServiceService(db, r, vmdb)
+		s = NewServiceService(db, r, vmdb, vc)
 
 		return
 	}
