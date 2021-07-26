@@ -74,21 +74,6 @@ def make_init():
         "make init",
     ])
 
-def setup():
-    """Runs various setup commands."""
-
-    run_commands([
-        "supervisorctl stop pmm-managed",
-    ])
-
-    # FIXME Remove when https://jira.percona.com/browse/PMM-5197 is done.
-    # This is a hack, not a proper solution for this ticket.
-    run_commands([
-        "psql --username=postgres -l",
-        "supervisorctl start pmm-managed",
-    ])
-
-
 def main():
     # install packages early as they will be required below
     install_packages_p = multiprocessing.Process(target=install_packages)
@@ -101,9 +86,6 @@ def main():
     install_packages_p.join()
     make_init()
     make_install()
-
-    # do basic setup
-    setup()
 
 
 MARKER = "/tmp/devcontainer-setup-done"
