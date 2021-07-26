@@ -197,48 +197,58 @@ func (c *VersionServiceClient) GetLatestOperatorVersion(ctx context.Context, pmm
 	return latestPXCOperator, latestPSMDBOperator, err
 }
 
-func (c *VersionServiceClient) GetNextDatabaseVersion(ctx context.Context, operatorType, operatorVersion, currentVersion string) {
+// GetNextDatabaseVersion returns version that is a direct successor of currently installed version.
+// It returns empty string if update is not available or error occured.
+func (c *VersionServiceClient) GetNextDatabaseVersion(ctx context.Context, operatorType, operatorVersion, installedDBVersion string) (string, error) {
+	// Get dependencies of operator type at given version.
 	params := componentsParams{
 		product:        operatorType,
 		productVersion: operatorVersion,
 	}
 	matrix, err := c.Matrix(ctx, params)
-	if len(matrix.Versions) != 1 {
-		return "" //
+	if err != nil {
+		return "", err
 	}
-	operatorVersion := matrix.Versions[0]
+	if len(matrix.Versions) != 1 {
+		return "", nil
+	}
+	operatorDependencies := matrix.Versions[0]
 
-	// najit pocet verzi, ktery je vetsi nez current. Pokud je len(greater) > 1 -> najdi nejmensi z nich a tu return.
+	// Choose proper versions map.
 	var versions map[string]componentVersion
 	switch operatorType {
 	case psmdbOperator:
-		versions = operatorVersion.Matrix.Mongod
+		versions = operatorDependencies.Matrix.Mongod
 	case pxcOperator:
-		versions = operatorVersion.Matrix.Pxc
+		versions = operatorDependencies.Matrix.Pxc
 	default:
 		return "", errors.Errorf("%q operator not supported", operatorType)
 	}
 
-	//
+	// Get versions greater than currently installed one.
 	var greaterThanCurrent []*goversion.Version
-	currentVersionParsed, _ := goversion.NewVersion(currentVersion)
+	installed, err := goversion.NewVersion(installedDBVersion)
+	if err != nil {
+		return "", err
+	}
 	for version := range versions {
 		v, err := goversion.NewVersion(version)
 		if err != nil {
 			return "", err
 		}
-		if v.GreaterThen(currentVersionParsed) {
+		if v.GreaterThan(installed) {
 			greaterThanCurrent = append(greaterThanCurrent, v)
 		}
 	}
 
 	if len(greaterThanCurrent) == 0 {
+		// No update available.
 		return "", nil
 	}
 
+	// Find lowest version.
 	lowestVersion := greaterThanCurrent[0]
-	// find min version
-	for i:=1, i < len(greaterThanCurrent); i++{
+	for i := 1; i < len(greaterThanCurrent); i++ {
 		if greaterThanCurrent[i].LessThan(lowestVersion) {
 			lowestVersion = greaterThanCurrent[i]
 		}

@@ -170,3 +170,70 @@ func TestLatestVersionGetting(t *testing.T) {
 		assert.Nil(t, psmdbOperatorVersion)
 	})
 }
+
+func TestGetNextDatabaseVersion(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
+	response := &VersionServiceResponse{
+		Versions: []struct {
+			Product        string `json:"product"`
+			ProductVersion string `json:"operator"`
+			Matrix         matrix `json:"matrix"`
+		}{
+			{
+				ProductVersion: "1.8.0",
+				Product:        pxcOperator,
+				Matrix: matrix{
+					Pxc: map[string]componentVersion{
+						"5.7.26-31.37":   componentVersion{},
+						"5.7.29-31.43":   componentVersion{},
+						"5.7.31-31.45.2": componentVersion{},
+					},
+				},
+			},
+			{
+				ProductVersion: "1.8.0",
+				Product:        psmdbOperator,
+				Matrix: matrix{
+					Mongod: map[string]componentVersion{
+						"3.6.19-7.0":  componentVersion{},
+						"3.6.18-5.0":  componentVersion{},
+						"3.6.23-13.0": componentVersion{},
+					},
+				},
+			},
+		},
+	}
+	c, cleanup := newFakeVersionService(response, "5899")
+	t.Cleanup(func() { cleanup(t); cancel() })
+	t.Run("Update available", func(t *testing.T) {
+		t.Parallel()
+		nextVersion, err := c.GetNextDatabaseVersion(ctx, pxcOperator, "1.8.0", "5.7.26-31.37")
+		require.NoError(t, err)
+		assert.Equal(t, "5.7.29-31.43", nextVersion)
+
+		nextVersion, err = c.GetNextDatabaseVersion(ctx, psmdbOperator, "1.8.0", "3.6.19-7.0")
+		require.NoError(t, err)
+		assert.Equal(t, "3.6.23-13.0", nextVersion)
+
+		// older than supported version of database
+		nextVersion, err = c.GetNextDatabaseVersion(ctx, pxcOperator, "1.8.0", "5.0.0")
+		require.NoError(t, err)
+		assert.Equal(t, "5.7.26-31.37", nextVersion)
+	})
+	t.Run("Update not available", func(t *testing.T) {
+		t.Parallel()
+		nextVersion, err := c.GetNextDatabaseVersion(ctx, pxcOperator, "1.8.0", "5.7.31-31.45.2")
+		require.NoError(t, err)
+		assert.Equal(t, "", nextVersion)
+
+		nextVersion, err = c.GetNextDatabaseVersion(ctx, psmdbOperator, "1.8.0", "3.6.23-13.0")
+		require.NoError(t, err)
+		assert.Equal(t, "", nextVersion)
+
+		// more up to date than is supported
+		nextVersion, err = c.GetNextDatabaseVersion(ctx, psmdbOperator, "1.8.0", "4.0.0")
+		require.NoError(t, err)
+		assert.Equal(t, "", nextVersion)
+
+	})
+}

@@ -20,9 +20,11 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"strings"
 
 	dbaascontrollerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -33,16 +35,23 @@ import (
 
 // PSMDBClusterService implements PSMDBClusterServer methods.
 type PSMDBClusterService struct {
-	db               *reform.DB
-	l                *logrus.Entry
-	controllerClient dbaasClient
-	grafanaClient    grafanaClient
+	db                   *reform.DB
+	l                    *logrus.Entry
+	controllerClient     dbaasClient
+	grafanaClient        grafanaClient
+	versionServiceClient versionService
 }
 
 // NewPSMDBClusterService creates PSMDB Service.
-func NewPSMDBClusterService(db *reform.DB, dbaasClient dbaasClient, grafanaClient grafanaClient) dbaasv1beta1.PSMDBClusterServer {
+func NewPSMDBClusterService(db *reform.DB, dbaasClient dbaasClient, grafanaClient grafanaClient, versionServiceClient versionService) dbaasv1beta1.PSMDBClusterServer {
 	l := logrus.WithField("component", "xtradb_cluster")
-	return &PSMDBClusterService{db: db, l: l, controllerClient: dbaasClient, grafanaClient: grafanaClient}
+	return &PSMDBClusterService{
+		db:                   db,
+		l:                    l,
+		controllerClient:     dbaasClient,
+		grafanaClient:        grafanaClient,
+		versionServiceClient: versionServiceClient,
+	}
 }
 
 // Enabled returns if service is enabled and can be used.
@@ -72,6 +81,12 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Can't get list of PSMDB clusters: %s", err.Error())
 	}
+
+	checkResponse, err := s.controllerClient.CheckKubernetesClusterConnection(ctx, kubernetesCluster.KubeConfig)
+	if err != nil {
+		return nil, err
+	}
+	operatorVersion := checkResponse.Operators.Xtradb.Version
 
 	clusters := make([]*dbaasv1beta1.ListPSMDBClustersResponse_Cluster, len(out.Clusters))
 	for i, c := range out.Clusters {
@@ -103,6 +118,21 @@ func (s PSMDBClusterService) ListPSMDBClusters(ctx context.Context, req *dbaasv1
 				Message:       c.Operation.Message,
 			},
 			Exposed: c.Exposed,
+		}
+
+		if c.Params.Image != "" {
+			imageAndTag := strings.Split(c.Params.Image, ":")
+			if len(imageAndTag) != 2 {
+				return nil, errors.Errorf("failed to parse PSMDB version out of %q", c.Params.Image)
+			}
+			currentDBVersion := imageAndTag[1]
+
+			nextVersion, err := s.versionServiceClient.GetNextDatabaseVersion(ctx, psmdbOperator, operatorVersion, currentDBVersion)
+			if err != nil {
+				return nil, err
+			}
+			cluster.AvalableVersion = nextVersion
+			cluster.InstalledVersion = currentDBVersion
 		}
 
 		clusters[i] = &cluster

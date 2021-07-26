@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"strings"
 
 	dbaascontrollerv1beta1 "github.com/percona-platform/dbaas-api/gen/controller"
 	dbaasv1beta1 "github.com/percona/pmm/api/managementpb/dbaas"
@@ -35,16 +36,23 @@ import (
 
 // XtraDBClusterService implements XtraDBClusterServer methods.
 type XtraDBClusterService struct {
-	db               *reform.DB
-	l                *logrus.Entry
-	controllerClient dbaasClient
-	grafanaClient    grafanaClient
+	db                   *reform.DB
+	l                    *logrus.Entry
+	controllerClient     dbaasClient
+	grafanaClient        grafanaClient
+	versionServiceClient versionService
 }
 
 // NewXtraDBClusterService creates XtraDB Service.
-func NewXtraDBClusterService(db *reform.DB, client dbaasClient, grafanaClient grafanaClient) dbaasv1beta1.XtraDBClusterServer {
+func NewXtraDBClusterService(db *reform.DB, client dbaasClient, grafanaClient grafanaClient, versionServiceClient versionService) dbaasv1beta1.XtraDBClusterServer {
 	l := logrus.WithField("component", "xtradb_cluster")
-	return &XtraDBClusterService{db: db, l: l, controllerClient: client, grafanaClient: grafanaClient}
+	return &XtraDBClusterService{
+		db:                   db,
+		l:                    l,
+		controllerClient:     client,
+		grafanaClient:        grafanaClient,
+		versionServiceClient: versionServiceClient,
+	}
 }
 
 // ListXtraDBClusters returns a list of all XtraDB clusters.
@@ -65,6 +73,12 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 		return nil, err
 	}
 
+	checkResponse, err := s.controllerClient.CheckKubernetesClusterConnection(ctx, kubernetesCluster.KubeConfig)
+	if err != nil {
+		return nil, err
+	}
+	operatorVersion := checkResponse.Operators.Xtradb.Version
+
 	clusters := make([]*dbaasv1beta1.ListXtraDBClustersResponse_Cluster, len(out.Clusters))
 	for i, c := range out.Clusters {
 		cluster := dbaasv1beta1.ListXtraDBClustersResponse_Cluster{
@@ -83,8 +97,7 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 
 		if c.Params.Pxc != nil {
 			cluster.Params.Pxc = &dbaasv1beta1.XtraDBClusterParams_PXC{
-				DiskSize: c.Params.Pxc.DiskSize,
-			}
+				DiskSize: c.Params.Pxc.DiskSize}
 			if c.Params.Pxc.ComputeResources != nil {
 				cluster.Params.Pxc.ComputeResources = &dbaasv1beta1.ComputeResources{
 					CpuM:        c.Params.Pxc.ComputeResources.CpuM,
@@ -114,11 +127,20 @@ func (s XtraDBClusterService) ListXtraDBClusters(ctx context.Context, req *dbaas
 			}
 		}
 
-		nextVersion, err := s.versionService.GetNextDatabaseVersion(databaseType, currentVersion)
-		if err != nil {
-			return nil, err
+		if c.Params.Pxc.Image != "" {
+			imageAndTag := strings.Split(c.Params.Pxc.Image, ":")
+			if len(imageAndTag) != 2 {
+				return nil, errors.Errorf("failed to parse Xtradb Cluster version out of %q", c.Params.Pxc.Image)
+			}
+			currentDBVersion := imageAndTag[1]
+
+			nextVersion, err := s.versionServiceClient.GetNextDatabaseVersion(ctx, pxcOperator, operatorVersion, currentDBVersion)
+			if err != nil {
+				return nil, err
+			}
+			cluster.AvalableVersion = nextVersion
+			cluster.InstalledVersion = currentDBVersion
 		}
-		cluster.AvalableVersion = nextVersion
 
 		clusters[i] = &cluster
 	}
