@@ -269,8 +269,10 @@ func (ss *ServicesService) Remove(ctx context.Context, id string, force bool) er
 					}
 				}
 
-				if err = models.RemoveNode(tx.Querier, node.NodeID, models.RemoveCascade); err != nil {
-					return err
+				if len(pmmAgentIds) <= 1 {
+					if err = models.RemoveNode(tx.Querier, node.NodeID, models.RemoveCascade); err != nil {
+						return err
+					}
 				}
 			}
 		}

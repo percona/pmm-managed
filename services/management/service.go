@@ -123,8 +123,11 @@ func (s *ServiceService) RemoveService(ctx context.Context, req *managementpb.Re
 					pmmAgentIDs[pointer.GetString(a.PMMAgentID)] = struct{}{}
 				}
 			}
-			if err = models.RemoveNode(tx.Querier, node.NodeID, models.RemoveCascade); err != nil {
-				return err
+
+			if len(pmmAgentIDs) <= 1 {
+				if err = models.RemoveNode(tx.Querier, node.NodeID, models.RemoveCascade); err != nil {
+					return err
+				}
 			}
 		}
 
