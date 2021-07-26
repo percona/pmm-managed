@@ -83,15 +83,7 @@ def setup():
 
     # FIXME Remove when https://jira.percona.com/browse/PMM-5197 is done.
     # This is a hack, not a proper solution for this ticket.
-    with open("/tmp/setup.sql", "w") as f:
-        f.writelines([
-            # for run database
-            "UPDATE pg_database SET encoding = pg_char_to_encoding('UTF8'), datcollate = 'en_US.utf8', datctype = 'en_US.utf8' WHERE datname = 'pmm-managed';\n",
-            # for all future databases, including pmm-managed-dev
-            "UPDATE pg_database SET encoding = pg_char_to_encoding('UTF8'), datcollate = 'en_US.utf8', datctype = 'en_US.utf8' WHERE datname = 'template1';\n",
-        ])
     run_commands([
-        "psql --username=postgres --file=/tmp/setup.sql",
         "psql --username=postgres -l",
         "supervisorctl start pmm-managed",
     ])
