@@ -61,6 +61,7 @@ func (v *agentTableType) Columns() []string {
 		"disabled_collectors",
 		"mysql_options",
 		"mongo_db_tls_options",
+		"postgresql_options",
 	}
 }
 
@@ -118,6 +119,7 @@ var AgentTable = &agentTableType{
 			{Name: "DisabledCollectors", Type: "pq.StringArray", Column: "disabled_collectors"},
 			{Name: "MySQLOptions", Type: "*MySQLOptions", Column: "mysql_options"},
 			{Name: "MongoDBOptions", Type: "*MongoDBOptions", Column: "mongo_db_tls_options"},
+			{Name: "PostgreSQLOptions", Type: "*PostgreSQLOptions", Column: "postgresql_options"},
 		},
 		PKFieldIndex: 0,
 	},
@@ -142,24 +144,24 @@ func (s Agent) String() string {
 	res[12] = "Version: " + reform.Inspect(s.Version, true)
 	res[13] = "Username: " + reform.Inspect(s.Username, true)
 	res[14] = "Password: " + reform.Inspect(s.Password, true)
-	res[15] = "AgentPassword: " + reform.Inspect(s.AgentPassword, true)
-	res[16] = "TLS: " + reform.Inspect(s.TLS, true)
-	res[17] = "TLSSkipVerify: " + reform.Inspect(s.TLSSkipVerify, true)
-	res[18] = "AWSAccessKey: " + reform.Inspect(s.AWSAccessKey, true)
-	res[19] = "AWSSecretKey: " + reform.Inspect(s.AWSSecretKey, true)
-	res[20] = "AzureOptions: " + reform.Inspect(s.AzureOptions, true)
-	res[21] = "TableCount: " + reform.Inspect(s.TableCount, true)
-	res[22] = "TableCountTablestatsGroupLimit: " + reform.Inspect(s.TableCountTablestatsGroupLimit, true)
-	res[23] = "QueryExamplesDisabled: " + reform.Inspect(s.QueryExamplesDisabled, true)
-	res[24] = "MaxQueryLogSize: " + reform.Inspect(s.MaxQueryLogSize, true)
-	res[25] = "MetricsPath: " + reform.Inspect(s.MetricsPath, true)
-	res[26] = "MetricsScheme: " + reform.Inspect(s.MetricsScheme, true)
-	res[27] = "RDSBasicMetricsDisabled: " + reform.Inspect(s.RDSBasicMetricsDisabled, true)
-	res[28] = "RDSEnhancedMetricsDisabled: " + reform.Inspect(s.RDSEnhancedMetricsDisabled, true)
-	res[29] = "PushMetrics: " + reform.Inspect(s.PushMetrics, true)
-	res[30] = "DisabledCollectors: " + reform.Inspect(s.DisabledCollectors, true)
-	res[31] = "MySQLOptions: " + reform.Inspect(s.MySQLOptions, true)
-	res[32] = "MongoDBOptions: " + reform.Inspect(s.MongoDBOptions, true)
+	res[15] = "TLS: " + reform.Inspect(s.TLS, true)
+	res[16] = "TLSSkipVerify: " + reform.Inspect(s.TLSSkipVerify, true)
+	res[17] = "AWSAccessKey: " + reform.Inspect(s.AWSAccessKey, true)
+	res[18] = "AWSSecretKey: " + reform.Inspect(s.AWSSecretKey, true)
+	res[19] = "AzureOptions: " + reform.Inspect(s.AzureOptions, true)
+	res[20] = "TableCount: " + reform.Inspect(s.TableCount, true)
+	res[21] = "TableCountTablestatsGroupLimit: " + reform.Inspect(s.TableCountTablestatsGroupLimit, true)
+	res[22] = "QueryExamplesDisabled: " + reform.Inspect(s.QueryExamplesDisabled, true)
+	res[23] = "MaxQueryLogSize: " + reform.Inspect(s.MaxQueryLogSize, true)
+	res[24] = "MetricsPath: " + reform.Inspect(s.MetricsPath, true)
+	res[25] = "MetricsScheme: " + reform.Inspect(s.MetricsScheme, true)
+	res[26] = "RDSBasicMetricsDisabled: " + reform.Inspect(s.RDSBasicMetricsDisabled, true)
+	res[27] = "RDSEnhancedMetricsDisabled: " + reform.Inspect(s.RDSEnhancedMetricsDisabled, true)
+	res[28] = "PushMetrics: " + reform.Inspect(s.PushMetrics, true)
+	res[29] = "DisabledCollectors: " + reform.Inspect(s.DisabledCollectors, true)
+	res[30] = "MySQLOptions: " + reform.Inspect(s.MySQLOptions, true)
+	res[31] = "MongoDBOptions: " + reform.Inspect(s.MongoDBOptions, true)
+	res[32] = "PostgreSQLOptions: " + reform.Inspect(s.PostgreSQLOptions, true)
 	return strings.Join(res, ", ")
 }
 
@@ -200,6 +202,7 @@ func (s *Agent) Values() []interface{} {
 		s.DisabledCollectors,
 		s.MySQLOptions,
 		s.MongoDBOptions,
+		s.PostgreSQLOptions,
 	}
 }
 
@@ -240,6 +243,7 @@ func (s *Agent) Pointers() []interface{} {
 		&s.DisabledCollectors,
 		&s.MySQLOptions,
 		&s.MongoDBOptions,
+		&s.PostgreSQLOptions,
 	}
 }
 
