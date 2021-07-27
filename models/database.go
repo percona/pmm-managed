@@ -545,7 +545,7 @@ var databaseSchema = [][]string{
       ADD COLUMN schedule_id VARCHAR`,
 		`ALTER TABLE artifacts ALTER COLUMN type DROP DEFAULT`,
 	},
-	41: {
+	42: {
 		`ALTER TABLE agents
 		ADD COLUMN agent_password VARCHAR CHECK (agent_password <> '')`,
 	},
