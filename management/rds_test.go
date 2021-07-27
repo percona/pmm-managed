@@ -1,14 +1,19 @@
 package management
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
 	"github.com/AlekSi/pointer"
+	inventoryClient "github.com/percona/pmm/api/inventorypb/json/client"
+	"github.com/percona/pmm/api/inventorypb/json/client/agents"
+	"github.com/percona/pmm/api/inventorypb/json/client/nodes"
 	"github.com/percona/pmm/api/managementpb/json/client"
 	"github.com/percona/pmm/api/managementpb/json/client/rds"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
 
 	pmmapitests "github.com/Percona-Lab/pmm-api-tests"
 )
@@ -80,9 +85,23 @@ func TestAddRds(t *testing.T) {
 
 		pmmapitests.RemoveAgents(t, body.MysqldExporter.AgentID)
 		pmmapitests.RemoveAgents(t, body.QANMysqlPerfschema.AgentID)
-		pmmapitests.RemoveAgents(t, body.RDSExporter.AgentID)
 		pmmapitests.RemoveServices(t, body.Mysql.ServiceID)
-		pmmapitests.RemoveNodes(t, body.Mysql.NodeID)
+
+		_, err = inventoryClient.Default.Agents.GetAgent(&agents.GetAgentParams{
+			Body: agents.GetAgentBody{
+				AgentID: body.RDSExporter.AgentID,
+			},
+			Context: pmmapitests.Context,
+		})
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, fmt.Sprintf(`Agent with ID "%s" not found.`, body.RDSExporter.AgentID))
+
+		_, err = inventoryClient.Default.Nodes.GetNode(&nodes.GetNodeParams{
+			Body: nodes.GetNodeBody{
+				NodeID: body.Mysql.NodeID,
+			},
+			Context: pmmapitests.Context,
+		})
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, fmt.Sprintf(`Node with ID "%s" not found.`, body.Mysql.NodeID))
 	})
 
 	t.Run("AddRDSPostgres", func(t *testing.T) {
@@ -126,8 +145,22 @@ func TestAddRds(t *testing.T) {
 
 		pmmapitests.RemoveAgents(t, body.PostgresqlExporter.AgentID)
 		pmmapitests.RemoveAgents(t, body.QANPostgresqlPgstatements.AgentID)
-		pmmapitests.RemoveAgents(t, body.RDSExporter.AgentID)
 		pmmapitests.RemoveServices(t, body.Postgresql.ServiceID)
-		pmmapitests.RemoveNodes(t, body.Postgresql.NodeID)
+
+		_, err = inventoryClient.Default.Agents.GetAgent(&agents.GetAgentParams{
+			Body: agents.GetAgentBody{
+				AgentID: body.RDSExporter.AgentID,
+			},
+			Context: pmmapitests.Context,
+		})
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, fmt.Sprintf(`Agent with ID "%s" not found.`, body.RDSExporter.AgentID))
+
+		_, err = inventoryClient.Default.Nodes.GetNode(&nodes.GetNodeParams{
+			Body: nodes.GetNodeBody{
+				NodeID: body.Postgresql.NodeID,
+			},
+			Context: pmmapitests.Context,
+		})
+		pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, fmt.Sprintf(`Node with ID "%s" not found.`, body.Postgresql.NodeID))
 	})
 }

@@ -370,8 +370,6 @@ github.com/pborman/uuid v1.2.0/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtP
 github.com/pelletier/go-toml v1.4.0/go.mod h1:PN7xzY2wHTK0K9p34ErDQMlFxa51Fk0OUruD3k1mMwo=
 github.com/percona-platform/saas v0.0.0-20210122115803-1b32ca1828e1 h1:VyKdL2wWYqwV79Sa4LHmLkQMjoSF+5uusQPBr4VoHWw=
 github.com/percona-platform/saas v0.0.0-20210122115803-1b32ca1828e1/go.mod h1:jJRyGMxxDJaSiU7AaHNS+8j1TFQQhX6lcYp8s0t8Knc=
-github.com/percona/pmm v0.0.0-20210623141315-548ea77bf619 h1:PL0yZoocCjZkFU7eJPR9EkIM5J4IUZDD9t7tksX3ZbI=
-github.com/percona/pmm v0.0.0-20210623141315-548ea77bf619/go.mod h1:Cm2JKvJMlMimtAhmF/1BUvz3qVJZ2O2zxQXRvtQh93Q=
 github.com/percona/pmm v0.0.0-20210707115905-36eb37dae44c h1:6UtqOTbcZ02ekP8kIkbY2VEFR8h/j8ddby2z47dlfzw=
 github.com/percona/pmm v0.0.0-20210707115905-36eb37dae44c/go.mod h1:Cm2JKvJMlMimtAhmF/1BUvz3qVJZ2O2zxQXRvtQh93Q=
 github.com/percona/promconfig v0.2.1 h1:LBbCDSQRfy0aTHFJMgrVQIE2WvmPkMTkIoznTfBAvj8=

@@ -155,7 +155,7 @@ func TestRemoveChannel(t *testing.T) {
 		}
 	})
 	t.Run("unknown id", func(t *testing.T) {
-		_, err := client.AddChannel(&channels.AddChannelParams{
+		resp, err := client.AddChannel(&channels.AddChannelParams{
 			Body: channels.AddChannelBody{
 				Summary:  gofakeit.Quote(),
 				Disabled: gofakeit.Bool(),
@@ -167,6 +167,7 @@ func TestRemoveChannel(t *testing.T) {
 			Context: pmmapitests.Context,
 		})
 		require.NoError(t, err)
+		defer deleteChannel(t, client, resp.Payload.ChannelID)
 
 		_, err = client.RemoveChannel(&channels.RemoveChannelParams{
 			Body: channels.RemoveChannelBody{

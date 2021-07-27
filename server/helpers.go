@@ -26,6 +26,11 @@ func restoreSettingsDefaults(t *testing.T) {
 				Mr: "10s",
 				Lr: "60s",
 			},
+			SttCheckIntervals: &server.ChangeSettingsParamsBodySttCheckIntervals{
+				FrequentInterval: "14400s",
+				StandardInterval: "86400s",
+				RareInterval:     "280800s",
+			},
 			DataRetention:               "2592000s",
 			AWSPartitions:               []string{"aws"},
 			RemoveAlertManagerURL:       true,
@@ -38,12 +43,18 @@ func restoreSettingsDefaults(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, true, res.Payload.Settings.TelemetryEnabled)
 	assert.Equal(t, false, res.Payload.Settings.SttEnabled)
-	expected := &server.ChangeSettingsOKBodySettingsMetricsResolutions{
+	expectedResolutions := &server.ChangeSettingsOKBodySettingsMetricsResolutions{
 		Hr: "5s",
 		Mr: "10s",
 		Lr: "60s",
 	}
-	assert.Equal(t, expected, res.Payload.Settings.MetricsResolutions)
+	assert.Equal(t, expectedResolutions, res.Payload.Settings.MetricsResolutions)
+	expectedSTTIntervals := &server.ChangeSettingsOKBodySettingsSttCheckIntervals{
+		FrequentInterval: "14400s",
+		StandardInterval: "86400s",
+		RareInterval:     "280800s",
+	}
+	assert.Equal(t, expectedSTTIntervals, res.Payload.Settings.SttCheckIntervals)
 	assert.Equal(t, "2592000s", res.Payload.Settings.DataRetention)
 	assert.Equal(t, []string{"aws"}, res.Payload.Settings.AWSPartitions)
 	assert.Equal(t, "", res.Payload.Settings.AlertManagerURL)

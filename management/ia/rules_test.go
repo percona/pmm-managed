@@ -22,6 +22,9 @@ import (
 // we don't enable or disable IA explicit in our tests since it is enabled by default through
 // ENABLE_ALERTING env var.
 func TestRulesAPI(t *testing.T) {
+	rulesClient := client.Default.Rules
+	channelsClient := client.Default.Channels
+
 	dummyFilter := &rules.FiltersItems0{
 		Type:  pointer.ToString("EQUAL"),
 		Key:   "threshold",
@@ -32,43 +35,41 @@ func TestRulesAPI(t *testing.T) {
 	defer deleteTemplate(t, client.Default.Templates, templateName)
 
 	channelID := createChannel(t)
-	defer deleteChannel(t, client.Default.Channels, channelID)
-
-	client := client.Default.Rules
+	defer deleteChannel(t, channelsClient, channelID)
 
 	t.Run("add", func(t *testing.T) {
 		t.Run("normal", func(t *testing.T) {
 			params := createAlertRuleParams(templateName, channelID, "param2", dummyFilter)
-			rule, err := client.CreateAlertRule(params)
+			rule, err := rulesClient.CreateAlertRule(params)
 			require.NoError(t, err)
-			defer deleteRule(t, client, rule.Payload.RuleID)
+			defer deleteRule(t, rulesClient, rule.Payload.RuleID)
 
 			assert.NotEmpty(t, rule.Payload.RuleID)
 		})
 
 		t.Run("without channels and filters", func(t *testing.T) {
 			params := createAlertRuleParams(templateName, "", "param2", nil)
-			rule, err := client.CreateAlertRule(params)
+			rule, err := rulesClient.CreateAlertRule(params)
 			require.NoError(t, err)
-			defer deleteRule(t, client, rule.Payload.RuleID)
+			defer deleteRule(t, rulesClient, rule.Payload.RuleID)
 
 			assert.NotEmpty(t, rule.Payload.RuleID)
 		})
 
 		t.Run("builtin_template", func(t *testing.T) {
 			params := createAlertRuleParams("pmm_mongodb_restarted", channelID, "threshold", dummyFilter)
-			rule, err := client.CreateAlertRule(params)
+			rule, err := rulesClient.CreateAlertRule(params)
 			require.NoError(t, err)
-			defer deleteRule(t, client, rule.Payload.RuleID)
+			defer deleteRule(t, rulesClient, rule.Payload.RuleID)
 
 			assert.NotEmpty(t, rule.Payload.RuleID)
 		})
 
 		t.Run("use default value for parameter", func(t *testing.T) {
 			params := createAlertRuleParams(templateName, channelID, "param2", dummyFilter)
-			rule, err := client.CreateAlertRule(params)
+			rule, err := rulesClient.CreateAlertRule(params)
 			require.NoError(t, err)
-			defer deleteRule(t, client, rule.Payload.RuleID)
+			defer deleteRule(t, rulesClient, rule.Payload.RuleID)
 
 			assert.NotEmpty(t, rule.Payload.RuleID)
 		})
@@ -76,14 +77,14 @@ func TestRulesAPI(t *testing.T) {
 		t.Run("unknown template", func(t *testing.T) {
 			templateName := gofakeit.UUID()
 			params := createAlertRuleParams(templateName, channelID, "param2", dummyFilter)
-			_, err := client.CreateAlertRule(params)
+			_, err := rulesClient.CreateAlertRule(params)
 			pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Unknown template %s.", templateName)
 		})
 
 		t.Run("unknown channel", func(t *testing.T) {
 			channelID := gofakeit.UUID()
 			params := createAlertRuleParams(templateName, channelID, "param2", dummyFilter)
-			_, err := client.CreateAlertRule(params)
+			_, err := rulesClient.CreateAlertRule(params)
 			pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Failed to find all required channels: [%s].", channelID)
 		})
 
@@ -96,7 +97,7 @@ func TestRulesAPI(t *testing.T) {
 					Type:  pointer.ToString("FLOAT"),
 					Float: 12,
 				})
-			_, err := client.CreateAlertRule(params)
+			_, err := rulesClient.CreateAlertRule(params)
 			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Unknown parameters [unknown parameter].")
 		})
 
@@ -107,19 +108,20 @@ func TestRulesAPI(t *testing.T) {
 				Type: pointer.ToString("BOOL"),
 				Bool: true,
 			}}
-			_, err := client.CreateAlertRule(params)
+			_, err := rulesClient.CreateAlertRule(params)
 			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Parameter param1 has type bool instead of float.")
 		})
 	})
 
 	t.Run("update", func(t *testing.T) {
 		newChannelID := createChannel(t)
+		defer deleteChannel(t, channelsClient, newChannelID)
 
 		t.Run("normal", func(t *testing.T) {
 			cParams := createAlertRuleParams(templateName, channelID, "param2", dummyFilter)
-			rule, err := client.CreateAlertRule(cParams)
+			rule, err := rulesClient.CreateAlertRule(cParams)
 			require.NoError(t, err)
-			defer deleteRule(t, client, rule.Payload.RuleID)
+			defer deleteRule(t, rulesClient, rule.Payload.RuleID)
 
 			params := &rules.UpdateAlertRuleParams{
 				Body: rules.UpdateAlertRuleBody{
@@ -142,10 +144,10 @@ func TestRulesAPI(t *testing.T) {
 				},
 				Context: pmmapitests.Context,
 			}
-			_, err = client.UpdateAlertRule(params)
+			_, err = rulesClient.UpdateAlertRule(params)
 			require.NoError(t, err)
 
-			list, err := client.ListAlertRules(&rules.ListAlertRulesParams{Context: pmmapitests.Context})
+			list, err := rulesClient.ListAlertRules(&rules.ListAlertRulesParams{Context: pmmapitests.Context})
 			require.NoError(t, err)
 
 			var found bool
@@ -172,9 +174,9 @@ func TestRulesAPI(t *testing.T) {
 
 		t.Run("unknown channel", func(t *testing.T) {
 			cParams := createAlertRuleParams(templateName, channelID, "param2", dummyFilter)
-			rule, err := client.CreateAlertRule(cParams)
+			rule, err := rulesClient.CreateAlertRule(cParams)
 			require.NoError(t, err)
-			defer deleteRule(t, client, rule.Payload.RuleID)
+			defer deleteRule(t, rulesClient, rule.Payload.RuleID)
 
 			unknownChannelID := gofakeit.UUID()
 			params := &rules.UpdateAlertRuleParams{
@@ -198,15 +200,15 @@ func TestRulesAPI(t *testing.T) {
 				},
 				Context: pmmapitests.Context,
 			}
-			_, err = client.UpdateAlertRule(params)
+			_, err = rulesClient.UpdateAlertRule(params)
 			pmmapitests.AssertAPIErrorf(t, err, 404, codes.NotFound, "Failed to find all required channels: [%s].", unknownChannelID)
 		})
 
 		t.Run("wrong parameter", func(t *testing.T) {
 			cParams := createAlertRuleParams(templateName, channelID, "param2", dummyFilter)
-			rule, err := client.CreateAlertRule(cParams)
+			rule, err := rulesClient.CreateAlertRule(cParams)
 			require.NoError(t, err)
-			defer deleteRule(t, client, rule.Payload.RuleID)
+			defer deleteRule(t, rulesClient, rule.Payload.RuleID)
 
 			params := &rules.UpdateAlertRuleParams{
 				Body: rules.UpdateAlertRuleBody{
@@ -233,15 +235,15 @@ func TestRulesAPI(t *testing.T) {
 				},
 				Context: pmmapitests.Context,
 			}
-			_, err = client.UpdateAlertRule(params)
+			_, err = rulesClient.UpdateAlertRule(params)
 			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Unknown parameters [unknown parameter].")
 		})
 
 		t.Run("missing parameter", func(t *testing.T) {
 			cParams := createAlertRuleParams(templateName, channelID, "param2", dummyFilter)
-			rule, err := client.CreateAlertRule(cParams)
+			rule, err := rulesClient.CreateAlertRule(cParams)
 			require.NoError(t, err)
-			defer deleteRule(t, client, rule.Payload.RuleID)
+			defer deleteRule(t, rulesClient, rule.Payload.RuleID)
 
 			params := &rules.UpdateAlertRuleParams{
 				Body: rules.UpdateAlertRuleBody{
@@ -260,15 +262,15 @@ func TestRulesAPI(t *testing.T) {
 				},
 				Context: pmmapitests.Context,
 			}
-			_, err = client.UpdateAlertRule(params)
+			_, err = rulesClient.UpdateAlertRule(params)
 			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Parameter param2 defined in template %s doesn't have default value, so it should be specified in rule", templateName)
 		})
 
 		t.Run("wrong parameter type", func(t *testing.T) {
 			cParams := createAlertRuleParams(templateName, channelID, "param2", dummyFilter)
-			rule, err := client.CreateAlertRule(cParams)
+			rule, err := rulesClient.CreateAlertRule(cParams)
 			require.NoError(t, err)
-			defer deleteRule(t, client, rule.Payload.RuleID)
+			defer deleteRule(t, rulesClient, rule.Payload.RuleID)
 
 			params := &rules.UpdateAlertRuleParams{
 				Body: rules.UpdateAlertRuleBody{
@@ -291,7 +293,7 @@ func TestRulesAPI(t *testing.T) {
 				},
 				Context: pmmapitests.Context,
 			}
-			_, err = client.UpdateAlertRule(params)
+			_, err = rulesClient.UpdateAlertRule(params)
 			pmmapitests.AssertAPIErrorf(t, err, 400, codes.InvalidArgument, "Parameter param1 has type bool instead of float.")
 		})
 	})
@@ -299,11 +301,11 @@ func TestRulesAPI(t *testing.T) {
 	t.Run("toggle", func(t *testing.T) {
 		t.Run("normal", func(t *testing.T) {
 			cParams := createAlertRuleParams(templateName, channelID, "param2", dummyFilter)
-			rule, err := client.CreateAlertRule(cParams)
+			rule, err := rulesClient.CreateAlertRule(cParams)
 			require.NoError(t, err)
-			defer deleteRule(t, client, rule.Payload.RuleID)
+			defer deleteRule(t, rulesClient, rule.Payload.RuleID)
 
-			list, err := client.ListAlertRules(&rules.ListAlertRulesParams{Context: pmmapitests.Context})
+			list, err := rulesClient.ListAlertRules(&rules.ListAlertRulesParams{Context: pmmapitests.Context})
 			require.NoError(t, err)
 
 			var found bool
@@ -316,7 +318,7 @@ func TestRulesAPI(t *testing.T) {
 			}
 			assert.Truef(t, found, "Rule with id %s not found", rule.Payload.RuleID)
 
-			_, err = client.ToggleAlertRule(&rules.ToggleAlertRuleParams{
+			_, err = rulesClient.ToggleAlertRule(&rules.ToggleAlertRuleParams{
 				Body: rules.ToggleAlertRuleBody{
 					RuleID:   rule.Payload.RuleID,
 					Disabled: pointer.ToString(rules.ToggleAlertRuleBodyDisabledFALSE),
@@ -325,7 +327,7 @@ func TestRulesAPI(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			list, err = client.ListAlertRules(&rules.ListAlertRulesParams{Context: pmmapitests.Context})
+			list, err = rulesClient.ListAlertRules(&rules.ListAlertRulesParams{Context: pmmapitests.Context})
 			require.NoError(t, err)
 
 			found = false
@@ -342,16 +344,16 @@ func TestRulesAPI(t *testing.T) {
 
 	t.Run("delete", func(t *testing.T) {
 		params := createAlertRuleParams(templateName, channelID, "param2", dummyFilter)
-		rule, err := client.CreateAlertRule(params)
+		rule, err := rulesClient.CreateAlertRule(params)
 		require.NoError(t, err)
 
-		_, err = client.DeleteAlertRule(&rules.DeleteAlertRuleParams{
+		_, err = rulesClient.DeleteAlertRule(&rules.DeleteAlertRuleParams{
 			Body:    rules.DeleteAlertRuleBody{RuleID: rule.Payload.RuleID},
 			Context: pmmapitests.Context,
 		})
 		require.NoError(t, err)
 
-		list, err := client.ListAlertRules(&rules.ListAlertRulesParams{Context: pmmapitests.Context})
+		list, err := rulesClient.ListAlertRules(&rules.ListAlertRulesParams{Context: pmmapitests.Context})
 		require.NoError(t, err)
 
 		for _, r := range list.Payload.Rules {
@@ -361,11 +363,11 @@ func TestRulesAPI(t *testing.T) {
 
 	t.Run("list without pagination", func(t *testing.T) {
 		params := createAlertRuleParams(templateName, channelID, "param2", dummyFilter)
-		rule, err := client.CreateAlertRule(params)
+		rule, err := rulesClient.CreateAlertRule(params)
 		require.NoError(t, err)
-		defer deleteRule(t, client, rule.Payload.RuleID)
+		defer deleteRule(t, rulesClient, rule.Payload.RuleID)
 
-		list, err := client.ListAlertRules(&rules.ListAlertRulesParams{Context: pmmapitests.Context})
+		list, err := rulesClient.ListAlertRules(&rules.ListAlertRulesParams{Context: pmmapitests.Context})
 		require.NoError(t, err)
 
 		var found bool
@@ -407,14 +409,14 @@ func TestRulesAPI(t *testing.T) {
 
 		for i := 0; i < rulesCount; i++ {
 			params := createAlertRuleParams(templateName, channelID, "param2", dummyFilter)
-			rule, err := client.CreateAlertRule(params)
+			rule, err := rulesClient.CreateAlertRule(params)
 			require.NoError(t, err)
 
 			ruleIDs[rule.Payload.RuleID] = struct{}{}
 		}
 		defer func() {
 			for id := range ruleIDs {
-				deleteRule(t, client, id)
+				deleteRule(t, rulesClient, id)
 			}
 		}()
 
@@ -425,7 +427,7 @@ func TestRulesAPI(t *testing.T) {
 				Index:    0,
 			},
 		}
-		list1, err := client.ListAlertRules(&rules.ListAlertRulesParams{Body: body, Context: pmmapitests.Context})
+		list1, err := rulesClient.ListAlertRules(&rules.ListAlertRulesParams{Body: body, Context: pmmapitests.Context})
 		require.NoError(t, err)
 
 		lp1 := list1.Payload
@@ -455,7 +457,7 @@ func TestRulesAPI(t *testing.T) {
 					Index:    int32(pageIndex),
 				},
 			}
-			list2, err := client.ListAlertRules(&rules.ListAlertRulesParams{Body: body, Context: pmmapitests.Context})
+			list2, err := rulesClient.ListAlertRules(&rules.ListAlertRulesParams{Body: body, Context: pmmapitests.Context})
 			require.NoError(t, err)
 
 			lp2 := list2.Payload
