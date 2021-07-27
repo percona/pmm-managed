@@ -660,17 +660,45 @@ func compatibleNodeAndAgent(nodeType NodeType, agentType AgentType) bool {
 }
 
 func compatibleServiceAndAgent(serviceType ServiceType, agentType AgentType) bool {
-	allow := map[AgentType]ServiceType{
-		MySQLdExporterType:                  MySQLServiceType,
-		QANMySQLSlowlogAgentType:            MySQLServiceType,
-		QANMySQLPerfSchemaAgentType:         MySQLServiceType,
-		MongoDBExporterType:                 MongoDBServiceType,
-		QANMongoDBProfilerAgentType:         MongoDBServiceType,
-		PostgresExporterType:                PostgreSQLServiceType,
-		ProxySQLExporterType:                ProxySQLServiceType,
-		QANPostgreSQLPgStatMonitorAgentType: PostgreSQLServiceType,
-		QANPostgreSQLPgStatementsAgentType:  PostgreSQLServiceType,
-		ExternalExporterType:                ExternalServiceType,
+	allow := map[AgentType][]ServiceType{
+		MySQLdExporterType: {
+			MySQLServiceType,
+		},
+		QANMySQLSlowlogAgentType: {
+			MySQLServiceType,
+		},
+		QANMySQLPerfSchemaAgentType: {
+			MySQLServiceType,
+		},
+		MongoDBExporterType: {
+			MongoDBServiceType,
+		},
+		QANMongoDBProfilerAgentType: {
+			MongoDBServiceType,
+		},
+		PostgresExporterType: {
+			PostgreSQLServiceType,
+		},
+		ProxySQLExporterType: {
+			ProxySQLServiceType,
+		},
+		AzureDatabaseExporterType: {
+			PostgreSQLServiceType,
+			MySQLServiceType,
+		},
+		RDSExporterType: {
+			PostgreSQLServiceType,
+			MySQLServiceType,
+		},
+		QANPostgreSQLPgStatMonitorAgentType: {
+			PostgreSQLServiceType,
+		},
+		QANPostgreSQLPgStatementsAgentType: {
+			PostgreSQLServiceType,
+		},
+		ExternalExporterType: {
+			ExternalServiceType,
+		},
 	}
 
 	allowed, ok := allow[agentType]
@@ -678,7 +706,13 @@ func compatibleServiceAndAgent(serviceType ServiceType, agentType AgentType) boo
 		return false
 	}
 
-	return allowed == serviceType
+	for _, svcType := range allowed {
+		if svcType == serviceType {
+			return true
+		}
+	}
+
+	return false
 }
 
 // CreateAgent creates Agent with given type.
