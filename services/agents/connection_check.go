@@ -94,10 +94,16 @@ func (c *ConnectionCheck) CheckConnectionToService(ctx context.Context, q *refor
 			TlsSkipVerify: agent.TLSSkipVerify,
 		}
 	case models.PostgreSQLServiceType:
+		tdp := agent.TemplateDelimiters(service)
 		request = &agentpb.CheckConnectionRequest{
 			Type:    inventorypb.ServiceType_POSTGRESQL_SERVICE,
 			Dsn:     agent.DSN(service, 2*time.Second, "postgres", nil),
 			Timeout: durationpb.New(3 * time.Second),
+			TextFiles: &agentpb.TextFiles{
+				Files:              agent.Files(),
+				TemplateLeftDelim:  tdp.Left,
+				TemplateRightDelim: tdp.Right,
+			},
 		}
 	case models.MongoDBServiceType:
 		tdp := agent.TemplateDelimiters(service)

@@ -85,6 +85,7 @@ func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgr
 			TLSSkipVerify:     req.TlsSkipVerify,
 			PushMetrics:       isPushMode(req.MetricsMode),
 			DisableCollectors: req.DisableCollectors,
+			PostgreSQLOptions: models.PostgreSQLOptionsFromRequest(req),
 		})
 		if err != nil {
 			return err
@@ -104,12 +105,13 @@ func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgr
 
 		if req.QanPostgresqlPgstatementsAgent {
 			row, err = models.CreateAgent(tx.Querier, models.QANPostgreSQLPgStatementsAgentType, &models.CreateAgentParams{
-				PMMAgentID:    req.PmmAgentId,
-				ServiceID:     service.ServiceID,
-				Username:      req.Username,
-				Password:      req.Password,
-				TLS:           req.Tls,
-				TLSSkipVerify: req.TlsSkipVerify,
+				PMMAgentID:        req.PmmAgentId,
+				ServiceID:         service.ServiceID,
+				Username:          req.Username,
+				Password:          req.Password,
+				TLS:               req.Tls,
+				TLSSkipVerify:     req.TlsSkipVerify,
+				PostgreSQLOptions: models.PostgreSQLOptionsFromRequest(req),
 			})
 			if err != nil {
 				return err
@@ -131,6 +133,7 @@ func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgr
 				QueryExamplesDisabled: req.DisableQueryExamples,
 				TLS:                   req.Tls,
 				TLSSkipVerify:         req.TlsSkipVerify,
+				PostgreSQLOptions:     models.PostgreSQLOptionsFromRequest(req),
 			})
 			if err != nil {
 				return err

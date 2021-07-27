@@ -469,6 +469,7 @@ func (as *AgentsService) AddPostgresExporter(ctx context.Context, req *inventory
 			TLSSkipVerify:     req.TlsSkipVerify,
 			PushMetrics:       req.PushMetrics,
 			DisableCollectors: req.DisableCollectors,
+			PostgreSQLOptions: models.PostgreSQLOptionsFromRequest(req),
 		}
 		row, err := models.CreateAgent(tx.Querier, models.PostgresExporterType, params)
 		if err != nil {
@@ -635,13 +636,14 @@ func (as *AgentsService) AddQANPostgreSQLPgStatementsAgent(ctx context.Context, 
 	var res *inventorypb.QANPostgreSQLPgStatementsAgent
 	e := as.db.InTransaction(func(tx *reform.TX) error {
 		params := &models.CreateAgentParams{
-			PMMAgentID:    req.PmmAgentId,
-			ServiceID:     req.ServiceId,
-			Username:      req.Username,
-			Password:      req.Password,
-			CustomLabels:  req.CustomLabels,
-			TLS:           req.Tls,
-			TLSSkipVerify: req.TlsSkipVerify,
+			PMMAgentID:        req.PmmAgentId,
+			ServiceID:         req.ServiceId,
+			Username:          req.Username,
+			Password:          req.Password,
+			CustomLabels:      req.CustomLabels,
+			TLS:               req.Tls,
+			TLSSkipVerify:     req.TlsSkipVerify,
+			PostgreSQLOptions: models.PostgreSQLOptionsFromRequest(req),
 		}
 		row, err := models.CreateAgent(tx.Querier, models.QANPostgreSQLPgStatementsAgentType, params)
 		if err != nil {
@@ -699,6 +701,7 @@ func (as *AgentsService) AddQANPostgreSQLPgStatMonitorAgent(ctx context.Context,
 			CustomLabels:          req.CustomLabels,
 			TLS:                   req.Tls,
 			TLSSkipVerify:         req.TlsSkipVerify,
+			PostgreSQLOptions:     models.PostgreSQLOptionsFromRequest(req),
 		}
 		row, err := models.CreateAgent(tx.Querier, models.QANPostgreSQLPgStatMonitorAgentType, params)
 		if err != nil {
