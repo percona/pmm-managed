@@ -200,11 +200,6 @@ func (c componentsService) ChangePXCComponents(ctx context.Context, req *dbaasv1
 	return &dbaasv1beta1.ChangePXCComponentsResponse{}, nil
 }
 
-func (c componentsService) UpgradeDatabaseVersion(ctx context.Context, req *dbaasv1beta1.UpgradeDatabaseVersionRequest) (*dbaasv1beta1.UpgradeDatabaseVersionResponse, error) {
-
-	return nil, nil
-}
-
 func (c componentsService) getInstalledOperatorsVersion(ctx context.Context, wg *sync.WaitGroup, responseCh chan installedComponentsVersion, kuberentesCluster *models.KubernetesCluster) {
 	defer wg.Done()
 	resp, err := c.dbaasClient.CheckKubernetesClusterConnection(ctx, kuberentesCluster.KubeConfig)

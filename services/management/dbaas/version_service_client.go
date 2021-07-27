@@ -255,3 +255,7 @@ func (c *VersionServiceClient) GetNextDatabaseVersion(ctx context.Context, opera
 	}
 	return lowestVersion.String(), nil
 }
+
+func (c *VersionServiceClient) GetVersionServiceURL() string {
+	return c.url
+}

@@ -227,6 +227,7 @@ func (s XtraDBClusterService) CreateXtraDBCluster(ctx context.Context, req *dbaa
 				ComputeResources: new(dbaascontrollerv1beta1.ComputeResources),
 				DiskSize:         req.Params.Pxc.DiskSize,
 			},
+			VersionServiceUrl: s.versionServiceClient.GetVersionServiceURL(),
 		},
 		Expose: req.Expose,
 	}

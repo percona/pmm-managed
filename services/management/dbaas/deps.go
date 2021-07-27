@@ -64,10 +64,6 @@ type dbaasClient interface {
 	InstallXtraDBOperator(ctx context.Context, in *controllerv1beta1.InstallXtraDBOperatorRequest, opts ...grpc.CallOption) (*controllerv1beta1.InstallXtraDBOperatorResponse, error)
 	// InstallPSMDBOperator installs kubernetes psmdb operator.
 	InstallPSMDBOperator(ctx context.Context, in *controllerv1beta1.InstallPSMDBOperatorRequest, opts ...grpc.CallOption) (*controllerv1beta1.InstallPSMDBOperatorResponse, error)
-	// UpgradeXtraDBCluster upgrades the XtraDB database cluster to given version.
-	UpgradeXtraDBCluster(ctx context.Context, in *controllerv1beta1.InstallXtraDBOperatorRequest, opts ...grpc.CallOption) (*controllerv1beta1.InstallXtraDBOperatorResponse, error)
-	// UpgradePSMDBCluster upgrades the PSMDB database cluster to given version.
-	UpgradePSMDBCluster(ctx context.Context, in *controllerv1beta1.InstallPSMDBOperatorRequest, opts ...grpc.CallOption) (*controllerv1beta1.InstallPSMDBOperatorResponse, error)
 }
 
 type versionService interface {
@@ -77,6 +73,8 @@ type versionService interface {
 	GetLatestOperatorVersion(ctx context.Context, pmmVersion string) (latestPSMDBOperatorVersion, latestPXCOperatorVersion *goversion.Version, err error)
 	// GetNextDatabaseVersion returns version that is a direct successor of currently installed version.
 	GetNextDatabaseVersion(ctx context.Context, operatorType, operatorVersion, installedDBVersion string) (string, error)
+	// GetVersionServiceURL version service used by version service client.
+	GetVersionServiceURL() string
 }
 
 // grafanaClient is a subset of methods of grafana.Client used by this package.
