@@ -525,6 +525,9 @@ func (s *Server) validateChangeSettingsRequest(ctx context.Context, req *serverp
 	if req.DisableUpdates && !s.envSettings.DisableUpdates {
 		return status.Error(codes.FailedPrecondition, "Updates are enabled via DISABLE_UPDATES environment variable.")
 	}
+	if req.EnableUpdates && s.envSettings.DisableUpdates {
+		return status.Error(codes.FailedPrecondition, "Updates are disabled via DISABLE_UPDATES environment variable.")
+	}
 
 	// ignore req.DisableTelemetry and req.DisableStt even if they are present since that will not change anything
 	if req.EnableTelemetry && s.envSettings.DisableTelemetry {
