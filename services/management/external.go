@@ -35,12 +35,19 @@ type ExternalService struct {
 	db       *reform.DB
 	registry agentsRegistry
 	vmdb     prometheusService
+	state    agentsStateUpdater
 	cc       connectionChecker
 }
 
 // NewExternalService creates new External Management Service.
-func NewExternalService(db *reform.DB, registry agentsRegistry, vmdb prometheusService, cc connectionChecker) *ExternalService {
-	return &ExternalService{db: db, registry: registry, vmdb: vmdb, cc: cc}
+func NewExternalService(db *reform.DB, registry agentsRegistry, vmdb prometheusService, state agentsStateUpdater, cc connectionChecker) *ExternalService {
+	return &ExternalService{
+		db:       db,
+		registry: registry,
+		vmdb:     vmdb,
+		state:    state,
+		cc:       cc,
+	}
 }
 
 func (e *ExternalService) AddExternal(ctx context.Context, req *managementpb.AddExternalRequest) (*managementpb.AddExternalResponse, error) {
@@ -131,7 +138,7 @@ func (e *ExternalService) AddExternal(ctx context.Context, req *managementpb.Add
 	// we have to trigger after transaction
 	if pmmAgentID != nil {
 		// It's required to regenerate victoriametrics config file.
-		e.registry.RequestStateUpdate(ctx, *pmmAgentID)
+		e.state.RequestStateUpdate(ctx, *pmmAgentID)
 	} else {
 		e.vmdb.RequestConfigurationUpdate()
 	}

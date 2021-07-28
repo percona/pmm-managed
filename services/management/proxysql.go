@@ -32,12 +32,18 @@ import (
 type ProxySQLService struct {
 	db       *reform.DB
 	registry agentsRegistry
+	state    agentsStateUpdater
 	cc       connectionChecker
 }
 
 // NewProxySQLService creates new ProxySQL Management Service.
-func NewProxySQLService(db *reform.DB, registry agentsRegistry, cc connectionChecker) *ProxySQLService {
-	return &ProxySQLService{db, registry, cc}
+func NewProxySQLService(db *reform.DB, registry agentsRegistry, state agentsStateUpdater, cc connectionChecker) *ProxySQLService {
+	return &ProxySQLService{
+		db:       db,
+		registry: registry,
+		state:    state,
+		cc:       cc,
+	}
 }
 
 // Add adds "ProxySQL Service", "ProxySQL Exporter Agent" and "QAN ProxySQL PerfSchema Agent".
@@ -106,6 +112,6 @@ func (s *ProxySQLService) Add(ctx context.Context, req *managementpb.AddProxySQL
 		return nil, e
 	}
 
-	s.registry.RequestStateUpdate(ctx, req.PmmAgentId)
+	s.state.RequestStateUpdate(ctx, req.PmmAgentId)
 	return res, nil
 }

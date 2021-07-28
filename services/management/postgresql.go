@@ -32,12 +32,18 @@ import (
 type PostgreSQLService struct {
 	db       *reform.DB
 	registry agentsRegistry
+	state    agentsStateUpdater
 	cc       connectionChecker
 }
 
 // NewPostgreSQLService creates new PostgreSQL Management Service.
-func NewPostgreSQLService(db *reform.DB, registry agentsRegistry, cc connectionChecker) *PostgreSQLService {
-	return &PostgreSQLService{db, registry, cc}
+func NewPostgreSQLService(db *reform.DB, registry agentsRegistry, state agentsStateUpdater, cc connectionChecker) *PostgreSQLService {
+	return &PostgreSQLService{
+		db:       db,
+		registry: registry,
+		state:    state,
+		cc:       cc,
+	}
 }
 
 // Add adds "PostgreSQL Service", "PostgreSQL Exporter Agent" and "QAN PostgreSQL PerfSchema Agent".
@@ -151,6 +157,6 @@ func (s *PostgreSQLService) Add(ctx context.Context, req *managementpb.AddPostgr
 		return nil, e
 	}
 
-	s.registry.RequestStateUpdate(ctx, req.PmmAgentId)
+	s.state.RequestStateUpdate(ctx, req.PmmAgentId)
 	return res, nil
 }

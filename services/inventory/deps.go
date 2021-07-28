@@ -25,6 +25,7 @@ import (
 )
 
 //go:generate mockery -name=agentsRegistry -case=snake -inpkg -testonly
+//go:generate mockery -name=agentsStateUpdater -case=snake -inpkg -testonly
 //go:generate mockery -name=prometheusService -case=snake -inpkg -testonly
 //go:generate mockery -name=connectionChecker -case=snake -inpkg -testonly
 
@@ -33,6 +34,11 @@ import (
 type agentsRegistry interface {
 	IsConnected(pmmAgentID string) bool
 	Kick(ctx context.Context, pmmAgentID string)
+}
+
+// agentsRegistry is a subset of methods of agents.StateUpdater used by this package.
+// We use it instead of real type for testing and to avoid dependency cycle.
+type agentsStateUpdater interface {
 	RequestStateUpdate(ctx context.Context, pmmAgentID string)
 }
 

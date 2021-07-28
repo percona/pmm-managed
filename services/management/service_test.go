@@ -53,13 +53,18 @@ func TestServiceService(t *testing.T) {
 		vmdb := new(mockPrometheusService)
 		vmdb.Test(t)
 
+		state := new(mockAgentsStateUpdater)
+		state.Test(t)
+
 		teardown = func(t *testing.T) {
 			uuid.SetRand(nil)
 
 			require.NoError(t, sqlDB.Close())
 			r.AssertExpectations(t)
+			vmdb.AssertExpectations(t)
+			state.AssertExpectations(t)
 		}
-		s = NewServiceService(db, r, vmdb)
+		s = NewServiceService(db, r, state, vmdb)
 
 		return
 	}
@@ -133,7 +138,7 @@ func TestServiceService(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			s.registry.(*mockAgentsRegistry).On("RequestStateUpdate", ctx, pmmAgent.AgentID)
+			s.state.(*mockAgentsStateUpdater).On("RequestStateUpdate", ctx, pmmAgent.AgentID)
 			response, err := s.RemoveService(ctx, &managementpb.RemoveServiceRequest{ServiceName: service.ServiceName, ServiceType: inventorypb.ServiceType_MYSQL_SERVICE})
 			assert.NotNil(t, response)
 			assert.NoError(t, err)

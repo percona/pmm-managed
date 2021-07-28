@@ -21,15 +21,13 @@ import (
 	"runtime/pprof"
 	"time"
 
+	"github.com/AlekSi/pointer"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
-	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
-	prom "github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/durationpb"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -37,101 +35,27 @@ import (
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
-var (
-	checkExternalExporterConnectionPMMVersion = version.MustParse("1.14.99")
-
-	defaultActionTimeout      = durationpb.New(10 * time.Second)
-	defaultQueryActionTimeout = durationpb.New(15 * time.Second) // should be less than checks.resultTimeout
-	defaultPtActionTimeout    = durationpb.New(30 * time.Second) // Percona-toolkit action timeout
-
-	mSentDesc = prom.NewDesc(
-		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_sent_total"),
-		"A total number of messages sent to pmm-agent.",
-		[]string{"agent_id"},
-		nil,
-	)
-	mRecvDesc = prom.NewDesc(
-		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_received_total"),
-		"A total number of messages received from pmm-agent.",
-		[]string{"agent_id"},
-		nil,
-	)
-	mResponsesDesc = prom.NewDesc(
-		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_response_queue_length"),
-		"The current length of the response queue.",
-		[]string{"agent_id"},
-		nil,
-	)
-	mRequestsDesc = prom.NewDesc(
-		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_request_queue_length"),
-		"The current length of the request queue.",
-		[]string{"agent_id"},
-		nil,
-	)
-)
-
 // Handler handles agent requests.
 type Handler struct {
-	db          *reform.DB
-	r           *Registry
-	qanClient   qanClient
-	jobsService *JobsService
-
-	mConnects    prom.Counter
-	mDisconnects *prom.CounterVec
-	mRoundTrip   prom.Summary
-	mClockDrift  prom.Summary
+	r         *Registry
+	qanClient qanClient
+	state     *StateUpdater
 }
 
 // NewHandler creates new agents handler.
-func NewHandler(db *reform.DB, qanClient qanClient, registry *Registry, service *JobsService) *Handler {
+func NewHandler(qanClient qanClient, registry *Registry, state *StateUpdater) *Handler {
 	h := &Handler{
-		db:          db,
-		qanClient:   qanClient,
-		r:           registry,
-		jobsService: service,
-
-		mConnects: prom.NewCounter(prom.CounterOpts{
-			Namespace: prometheusNamespace,
-			Subsystem: prometheusSubsystem,
-			Name:      "connects_total",
-			Help:      "A total number of pmm-agent connects.",
-		}),
-		mDisconnects: prom.NewCounterVec(prom.CounterOpts{
-			Namespace: prometheusNamespace,
-			Subsystem: prometheusSubsystem,
-			Name:      "disconnects_total",
-			Help:      "A total number of pmm-agent disconnects.",
-		}, []string{"reason"}),
-		mRoundTrip: prom.NewSummary(prom.SummaryOpts{
-			Namespace:  prometheusNamespace,
-			Subsystem:  prometheusSubsystem,
-			Name:       "round_trip_seconds",
-			Help:       "Round-trip time.",
-			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
-		}),
-		mClockDrift: prom.NewSummary(prom.SummaryOpts{
-			Namespace:  prometheusNamespace,
-			Subsystem:  prometheusSubsystem,
-			Name:       "clock_drift_seconds",
-			Help:       "Clock drift.",
-			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
-		}),
+		qanClient: qanClient,
+		r:         registry,
+		state:     state,
 	}
-
-	// initialize metrics with labels
-	h.mDisconnects.WithLabelValues("unknown")
 	return h
 
 }
 
 // Run takes over pmm-agent gRPC stream and runs it until completion.
 func (h *Handler) Run(stream agentpb.Agent_ConnectServer) error {
-	h.mConnects.Inc()
 	disconnectReason := "unknown"
-	defer func() {
-		h.mDisconnects.WithLabelValues(disconnectReason).Inc()
-	}()
 
 	ctx := stream.Context()
 	l := logger.Get(ctx)
@@ -145,16 +69,19 @@ func (h *Handler) Run(stream agentpb.Agent_ConnectServer) error {
 	}()
 
 	// run pmm-agent state update loop for the current agent.
-	go h.runStateChangeHandler(ctx, agent)
+	go h.state.runStateChangeHandler(ctx, agent)
 
-	h.r.RequestStateUpdate(ctx, agent.id)
+	h.state.RequestStateUpdate(ctx, agent.id)
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
-			h.ping(ctx, agent)
+			err := h.r.ping(ctx, agent)
+			if err != nil {
+				l.Errorf("agent %s ping: %v", agent.id, err)
+			}
 
 		// see unregister and Kick methods
 		case <-agent.kick:
@@ -168,11 +95,11 @@ func (h *Handler) Run(stream agentpb.Agent_ConnectServer) error {
 			if req == nil {
 				disconnectReason = "done"
 				err = agent.channel.Wait()
-				h.r.unregister(agent.id)
+				h.r.unregister(agent.id, disconnectReason)
 				if err != nil {
 					l.Error(errors.WithStack(err))
 				}
-				return h.r.updateAgentStatusForChildren(ctx, agent.id, inventorypb.AgentStatus_DONE, 0)
+				return h.updateAgentStatusForChildren(ctx, agent.id, inventorypb.AgentStatus_DONE, 0)
 			}
 
 			switch p := req.Payload.(type) {
@@ -186,7 +113,7 @@ func (h *Handler) Run(stream agentpb.Agent_ConnectServer) error {
 
 			case *agentpb.StateChangedRequest:
 				pprof.Do(ctx, pprof.Labels("request", "StateChangedRequest"), func(ctx context.Context) {
-					if err := h.r.stateChanged(ctx, p); err != nil {
+					if err := h.stateChanged(ctx, p); err != nil {
 						l.Errorf("%+v", err)
 					}
 
@@ -210,7 +137,7 @@ func (h *Handler) Run(stream agentpb.Agent_ConnectServer) error {
 
 			case *agentpb.ActionResultRequest:
 				// TODO: PMM-3978: In the future we need to merge action parts before send it to storage.
-				err := models.ChangeActionResult(h.db.Querier, p.ActionId, agent.id, p.Error, string(p.Output), p.Done)
+				err := models.ChangeActionResult(h.r.db.Querier, p.ActionId, agent.id, p.Error, string(p.Output), p.Done)
 				if err != nil {
 					l.Warnf("Failed to change action: %+v", err)
 				}
@@ -236,97 +163,95 @@ func (h *Handler) Run(stream agentpb.Agent_ConnectServer) error {
 	}
 }
 
-// runStateChangeHandler runs pmm-agent state update loop for given pmm-agent until ctx is canceled or agent is kicked.
-func (h *Handler) runStateChangeHandler(ctx context.Context, agent *pmmAgentInfo) {
-	l := logger.Get(ctx).WithField("agent_id", agent.id)
-
-	l.Info("Starting runStateChangeHandler ...")
-	defer l.Info("Done runStateChangeHandler.")
-
-	// stateChangeChan, state update loop, and RequestStateUpdate method ensure that state
-	// is reloaded when requested, but several requests are batched together to avoid too often reloads.
-	// That allows the caller to just call RequestStateUpdate when it seems fit.
-	if cap(agent.stateChangeChan) != 1 {
-		panic("stateChangeChan should have capacity 1")
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-
-		case <-agent.kick:
-			return
-
-		case <-agent.stateChangeChan:
-			// batch several update requests together by delaying the first one
-			sleepCtx, sleepCancel := context.WithTimeout(ctx, updateBatchDelay)
-			<-sleepCtx.Done()
-			sleepCancel()
-
-			if ctx.Err() != nil {
-				return
-			}
-
-			nCtx, cancel := context.WithTimeout(ctx, stateChangeTimeout)
-			err := h.r.sendSetStateRequest(nCtx, agent)
-			if err != nil {
-				l.Error(err)
-				h.r.RequestStateUpdate(ctx, agent.id)
-			}
-			cancel()
+func (h *Handler) updateAgentStatusForChildren(ctx context.Context, agentID string, status inventorypb.AgentStatus, listenPort uint32) error {
+	return h.r.db.InTransaction(func(t *reform.TX) error {
+		agents, err := models.FindAgents(t.Querier, models.AgentFilters{
+			PMMAgentID: agentID,
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to get pmm-agent's child agents")
 		}
-	}
+		for _, agent := range agents {
+			if err := updateAgentStatus(ctx, t.Querier, agent.AgentID, status, listenPort); err != nil {
+				return errors.Wrap(err, "failed to update agent's status")
+			}
+		}
+		return nil
+	})
 }
 
-// ping sends Ping message to given Agent, waits for Pong and observes round-trip time and clock drift.
-func (h *Handler) ping(ctx context.Context, agent *pmmAgentInfo) error {
-	l := logger.Get(ctx)
-	start := time.Now()
-	resp, err := agent.channel.SendAndWaitResponse(new(agentpb.Ping))
+func (h *Handler) stateChanged(ctx context.Context, req *agentpb.StateChangedRequest) error {
+	e := h.r.db.InTransaction(func(tx *reform.TX) error {
+		agentIDs := h.r.roster.get(req.AgentId)
+		if agentIDs == nil {
+			agentIDs = []string{req.AgentId}
+		}
+
+		for _, agentID := range agentIDs {
+			if err := updateAgentStatus(ctx, tx.Querier, agentID, req.Status, req.ListenPort); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if e != nil {
+		return e
+	}
+	h.r.vmdb.RequestConfigurationUpdate()
+	agent, err := models.FindAgentByID(h.r.db.Querier, req.AgentId)
 	if err != nil {
 		return err
 	}
-	if resp == nil {
+	if agent.PMMAgentID == nil {
 		return nil
 	}
-	roundtrip := time.Since(start)
-	agentTime, err := ptypes.Timestamp(resp.(*agentpb.Pong).CurrentTime)
-	if err != nil {
-		return errors.Wrap(err, "failed to decode Pong.current_time")
-	}
-	clockDrift := agentTime.Sub(start) - roundtrip/2
-	if clockDrift < 0 {
-		clockDrift = -clockDrift
-	}
-	l.Infof("Round-trip time: %s. Estimated clock drift: %s.", roundtrip, clockDrift)
-	h.mRoundTrip.Observe(roundtrip.Seconds())
-	h.mClockDrift.Observe(clockDrift.Seconds())
+	h.state.RequestStateUpdate(ctx, *agent.PMMAgentID)
 	return nil
 }
 
-// Describe implements prometheus.Collector.
-func (h *Handler) Describe(ch chan<- *prom.Desc) {
-	ch <- mSentDesc
-	ch <- mRecvDesc
-	ch <- mResponsesDesc
-	ch <- mRequestsDesc
+// SetAllAgentsStatusUnknown goes through all pmm-agents and sets status to UNKNOWN.
+func (h *Handler) SetAllAgentsStatusUnknown(ctx context.Context) error {
+	agentType := models.PMMAgentType
+	agents, err := models.FindAgents(h.r.db.Querier, models.AgentFilters{AgentType: &agentType})
+	if err != nil {
+		return errors.Wrap(err, "failed to get pmm-agents")
 
-	h.mConnects.Describe(ch)
-	h.mDisconnects.Describe(ch)
-	h.mRoundTrip.Describe(ch)
-	h.mClockDrift.Describe(ch)
+	}
+	for _, agent := range agents {
+		if !h.r.IsConnected(agent.AgentID) {
+			err = h.updateAgentStatusForChildren(ctx, agent.AgentID, inventorypb.AgentStatus_UNKNOWN, 0)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
-// Collect implement prometheus.Collector.
-func (h *Handler) Collect(ch chan<- prom.Metric) {
-	h.mConnects.Collect(ch)
-	h.mDisconnects.Collect(ch)
-	h.mRoundTrip.Collect(ch)
-	h.mClockDrift.Collect(ch)
-}
+func updateAgentStatus(ctx context.Context, q *reform.Querier, agentID string, status inventorypb.AgentStatus, listenPort uint32) error {
+	l := logger.Get(ctx)
+	l.Debugf("updateAgentStatus: %s %s %d", agentID, status, listenPort)
 
-// check interfaces
-var (
-	_ prom.Collector = (*Handler)(nil)
-)
+	agent := &models.Agent{AgentID: agentID}
+	err := q.Reload(agent)
+
+	// agent can be already deleted, but we still can receive status message from pmm-agent.
+	if err == reform.ErrNoRows {
+		switch status {
+		case inventorypb.AgentStatus_STOPPING, inventorypb.AgentStatus_DONE:
+			return nil
+		}
+
+		l.Warnf("Failed to select Agent by ID for (%s, %s).", agentID, status)
+	}
+	if err != nil {
+		return errors.Wrap(err, "failed to select Agent by ID")
+	}
+
+	agent.Status = status.String()
+	agent.ListenPort = pointer.ToUint16(uint16(listenPort))
+	if err = q.Update(agent); err != nil {
+		return errors.Wrap(err, "failed to update Agent")
+	}
+	return nil
+}

@@ -59,15 +59,17 @@ type AzureDatabaseService struct {
 	l        *logrus.Entry
 	db       *reform.DB
 	registry agentsRegistry
+	state    agentsStateUpdater
 	cc       connectionChecker
 }
 
 // NewAzureDatabaseService creates new instance discovery service.
-func NewAzureDatabaseService(db *reform.DB, registry agentsRegistry, cc connectionChecker) *AzureDatabaseService {
+func NewAzureDatabaseService(db *reform.DB, registry agentsRegistry, state agentsStateUpdater, cc connectionChecker) *AzureDatabaseService {
 	return &AzureDatabaseService{
 		l:        logrus.WithField("component", "management/azure_database"),
 		db:       db,
 		registry: registry,
+		state:    state,
 		cc:       cc,
 	}
 }
@@ -329,6 +331,6 @@ func (s *AzureDatabaseService) AddAzureDatabase(ctx context.Context, req *azurev
 		return nil, e
 	}
 
-	s.registry.RequestStateUpdate(ctx, models.PMMServerAgentID)
+	s.state.RequestStateUpdate(ctx, models.PMMServerAgentID)
 	return &azurev1beta1.AddAzureDatabaseResponse{}, nil
 }

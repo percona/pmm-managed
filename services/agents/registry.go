@@ -19,14 +19,13 @@ package agents
 
 import (
 	"context"
-	"sort"
 	"sync"
 	"time"
 
 	"github.com/AlekSi/pointer"
-	"github.com/golang/protobuf/proto" //nolint:staticcheck
+	//nolint:staticcheck
+	"github.com/golang/protobuf/ptypes"
 	"github.com/percona/pmm/api/agentpb"
-	"github.com/percona/pmm/api/inventorypb"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
 	prom "github.com/prometheus/client_golang/prometheus"
@@ -41,12 +40,35 @@ import (
 )
 
 const (
-	// constants for delayed batch updates
-	updateBatchDelay   = time.Second
-	stateChangeTimeout = 5 * time.Second
-
 	prometheusNamespace = "pmm_managed"
 	prometheusSubsystem = "agents"
+)
+
+var (
+	mSentDesc = prom.NewDesc(
+		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_sent_total"),
+		"A total number of messages sent to pmm-agent.",
+		[]string{"agent_id"},
+		nil,
+	)
+	mRecvDesc = prom.NewDesc(
+		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_received_total"),
+		"A total number of messages received from pmm-agent.",
+		[]string{"agent_id"},
+		nil,
+	)
+	mResponsesDesc = prom.NewDesc(
+		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_response_queue_length"),
+		"The current length of the response queue.",
+		[]string{"agent_id"},
+		nil,
+	)
+	mRequestsDesc = prom.NewDesc(
+		prom.BuildFQName(prometheusNamespace, prometheusSubsystem, "messages_request_queue_length"),
+		"The current length of the request queue.",
+		[]string{"agent_id"},
+		nil,
+	)
 )
 
 type pmmAgentInfo struct {
@@ -66,7 +88,11 @@ type Registry struct {
 
 	roster *roster
 
-	mAgents prom.GaugeFunc
+	mConnects    prom.Counter
+	mDisconnects *prom.CounterVec
+	mRoundTrip   prom.Summary
+	mClockDrift  prom.Summary
+	mAgents      prom.GaugeFunc
 }
 
 // NewRegistry creates a new registry with given database connection.
@@ -80,6 +106,32 @@ func NewRegistry(db *reform.DB, vmdb prometheusService) *Registry {
 
 		roster: newRoster(),
 
+		mConnects: prom.NewCounter(prom.CounterOpts{
+			Namespace: prometheusNamespace,
+			Subsystem: prometheusSubsystem,
+			Name:      "connects_total",
+			Help:      "A total number of pmm-agent connects.",
+		}),
+		mDisconnects: prom.NewCounterVec(prom.CounterOpts{
+			Namespace: prometheusNamespace,
+			Subsystem: prometheusSubsystem,
+			Name:      "disconnects_total",
+			Help:      "A total number of pmm-agent disconnects.",
+		}, []string{"reason"}),
+		mRoundTrip: prom.NewSummary(prom.SummaryOpts{
+			Namespace:  prometheusNamespace,
+			Subsystem:  prometheusSubsystem,
+			Name:       "round_trip_seconds",
+			Help:       "Round-trip time.",
+			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+		}),
+		mClockDrift: prom.NewSummary(prom.SummaryOpts{
+			Namespace:  prometheusNamespace,
+			Subsystem:  prometheusSubsystem,
+			Name:       "clock_drift_seconds",
+			Help:       "Clock drift.",
+			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+		}),
 		mAgents: prom.NewGaugeFunc(prom.GaugeOpts{
 			Namespace: prometheusNamespace,
 			Subsystem: prometheusSubsystem,
@@ -89,6 +141,8 @@ func NewRegistry(db *reform.DB, vmdb prometheusService) *Registry {
 			return float64(len(agents))
 		}),
 	}
+	// initialize metrics with labels
+	r.mDisconnects.WithLabelValues("unknown")
 
 	return r
 }
@@ -102,6 +156,8 @@ func (r *Registry) IsConnected(pmmAgentID string) bool {
 func (r *Registry) register(stream agentpb.Agent_ConnectServer) (*pmmAgentInfo, error) {
 	ctx := stream.Context()
 	l := logger.Get(ctx)
+	r.mConnects.Inc()
+
 	agentMD, err := agentpb.ReceiveAgentConnectMetadata(stream)
 	if err != nil {
 		return nil, err
@@ -192,7 +248,9 @@ func authenticate(md *agentpb.AgentConnectMetadata, q *reform.Querier) (string, 
 }
 
 // unregister removes pmm-agent with given ID from the registry.
-func (r *Registry) unregister(pmmAgentID string) *pmmAgentInfo {
+func (r *Registry) unregister(pmmAgentID, disconnectReason string) *pmmAgentInfo {
+	r.mDisconnects.WithLabelValues(disconnectReason).Inc()
+
 	r.rw.Lock()
 	defer r.rw.Unlock()
 
@@ -207,6 +265,32 @@ func (r *Registry) unregister(pmmAgentID string) *pmmAgentInfo {
 	delete(r.agents, pmmAgentID)
 	r.roster.clear(pmmAgentID)
 	return agent
+}
+
+// ping sends Ping message to given Agent, waits for Pong and observes round-trip time and clock drift.
+func (r *Registry) ping(ctx context.Context, agent *pmmAgentInfo) error {
+	l := logger.Get(ctx)
+	start := time.Now()
+	resp, err := agent.channel.SendAndWaitResponse(new(agentpb.Ping))
+	if err != nil {
+		return err
+	}
+	if resp == nil {
+		return nil
+	}
+	roundtrip := time.Since(start)
+	agentTime, err := ptypes.Timestamp(resp.(*agentpb.Pong).CurrentTime)
+	if err != nil {
+		return errors.Wrap(err, "failed to decode Pong.current_time")
+	}
+	clockDrift := agentTime.Sub(start) - roundtrip/2
+	if clockDrift < 0 {
+		clockDrift = -clockDrift
+	}
+	l.Infof("Round-trip time: %s. Estimated clock drift: %s.", roundtrip, clockDrift)
+	r.mRoundTrip.Observe(roundtrip.Seconds())
+	r.mClockDrift.Observe(clockDrift.Seconds())
+	return nil
 }
 
 // addOrRemoveVMAgent - creates vmAgent agentType if pmm-agent's version supports it and agent not exists yet,
@@ -274,7 +358,7 @@ func removeVMAgentFromPMMAgent(q *reform.Querier, pmmAgentID string) error {
 
 // Kick unregisters and forcefully disconnects pmm-agent with given ID.
 func (r *Registry) Kick(ctx context.Context, pmmAgentID string) {
-	agent := r.unregister(pmmAgentID)
+	agent := r.unregister(pmmAgentID, "kick")
 	if agent == nil {
 		return
 	}
@@ -289,274 +373,6 @@ func (r *Registry) Kick(ctx context.Context, pmmAgentID string) {
 	// closing agent.kick is enough to exit runStateChangeHandler goroutine.
 }
 
-func updateAgentStatus(ctx context.Context, q *reform.Querier, agentID string, status inventorypb.AgentStatus, listenPort uint32) error {
-	l := logger.Get(ctx)
-	l.Debugf("updateAgentStatus: %s %s %d", agentID, status, listenPort)
-
-	agent := &models.Agent{AgentID: agentID}
-	err := q.Reload(agent)
-
-	// agent can be already deleted, but we still can receive status message from pmm-agent.
-	if err == reform.ErrNoRows {
-		switch status {
-		case inventorypb.AgentStatus_STOPPING, inventorypb.AgentStatus_DONE:
-			return nil
-		}
-
-		l.Warnf("Failed to select Agent by ID for (%s, %s).", agentID, status)
-	}
-	if err != nil {
-		return errors.Wrap(err, "failed to select Agent by ID")
-	}
-
-	agent.Status = status.String()
-	agent.ListenPort = pointer.ToUint16(uint16(listenPort))
-	if err = q.Update(agent); err != nil {
-		return errors.Wrap(err, "failed to update Agent")
-	}
-	return nil
-}
-
-func (r *Registry) stateChanged(ctx context.Context, req *agentpb.StateChangedRequest) error {
-	e := r.db.InTransaction(func(tx *reform.TX) error {
-		agentIDs := r.roster.get(req.AgentId)
-		if agentIDs == nil {
-			agentIDs = []string{req.AgentId}
-		}
-
-		for _, agentID := range agentIDs {
-			if err := updateAgentStatus(ctx, tx.Querier, agentID, req.Status, req.ListenPort); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	if e != nil {
-		return e
-	}
-	r.vmdb.RequestConfigurationUpdate()
-	agent, err := models.FindAgentByID(r.db.Querier, req.AgentId)
-	if err != nil {
-		return err
-	}
-	if agent.PMMAgentID == nil {
-		return nil
-	}
-	r.RequestStateUpdate(ctx, *agent.PMMAgentID)
-	return nil
-}
-
-// UpdateAgentsState sends SetStateRequest to all pmm-agents with push metrics agents.
-func (r *Registry) UpdateAgentsState(ctx context.Context) error {
-	pmmAgents, err := models.FindPMMAgentsIDsWithPushMetrics(r.db.Querier)
-	if err != nil {
-		return errors.Wrap(err, "cannot find pmmAgentsIDs for AgentsState update")
-	}
-	var wg sync.WaitGroup
-	limiter := make(chan struct{}, 10)
-	for _, pmmAgentID := range pmmAgents {
-		wg.Add(1)
-		limiter <- struct{}{}
-		go func(pmmAgentID string) {
-			defer wg.Done()
-			r.RequestStateUpdate(ctx, pmmAgentID)
-			<-limiter
-		}(pmmAgentID)
-	}
-	wg.Wait()
-	return nil
-}
-
-// SetAllAgentsStatusUnknown goes through all pmm-agents and sets status to UNKNOWN.
-func (r *Registry) SetAllAgentsStatusUnknown(ctx context.Context) error {
-	agentType := models.PMMAgentType
-	agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{AgentType: &agentType})
-	if err != nil {
-		return errors.Wrap(err, "failed to get pmm-agents")
-
-	}
-	for _, agent := range agents {
-		if !r.IsConnected(agent.AgentID) {
-			err = r.updateAgentStatusForChildren(ctx, agent.AgentID, inventorypb.AgentStatus_UNKNOWN, 0)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func (r *Registry) updateAgentStatusForChildren(ctx context.Context, agentID string, status inventorypb.AgentStatus, listenPort uint32) error {
-	return r.db.InTransaction(func(t *reform.TX) error {
-		agents, err := models.FindAgents(t.Querier, models.AgentFilters{
-			PMMAgentID: agentID,
-		})
-		if err != nil {
-			return errors.Wrap(err, "failed to get pmm-agent's child agents")
-		}
-		for _, agent := range agents {
-			if err := updateAgentStatus(ctx, t.Querier, agent.AgentID, status, listenPort); err != nil {
-				return errors.Wrap(err, "failed to update agent's status")
-			}
-		}
-		return nil
-	})
-}
-
-// RequestStateUpdate requests state update on pmm-agent with given ID. It sets
-// the status to done if the agent is not connected.
-func (r *Registry) RequestStateUpdate(ctx context.Context, pmmAgentID string) {
-	l := logger.Get(ctx)
-
-	agent, err := r.get(pmmAgentID)
-	if err != nil {
-		l.Infof("RequestStateUpdate: %s.", err)
-		return
-	}
-
-	select {
-	case agent.stateChangeChan <- struct{}{}:
-	default:
-	}
-}
-
-// sendSetStateRequest sends SetStateRequest to given pmm-agent.
-func (r *Registry) sendSetStateRequest(ctx context.Context, agent *pmmAgentInfo) error {
-	l := logger.Get(ctx)
-	start := time.Now()
-	defer func() {
-		if dur := time.Since(start); dur > time.Second {
-			l.Warnf("sendSetStateRequest took %s.", dur)
-		}
-	}()
-	pmmAgent, err := models.FindAgentByID(r.db.Querier, agent.id)
-	if err != nil {
-		return errors.Wrap(err, "failed to get PMM Agent")
-	}
-	pmmAgentVersion, err := version.Parse(*pmmAgent.Version)
-	if err != nil {
-		return errors.Wrapf(err, "failed to parse PMM agent version %q", *pmmAgent.Version)
-	}
-
-	agents, err := models.FindAgents(r.db.Querier, models.AgentFilters{PMMAgentID: agent.id})
-	if err != nil {
-		return errors.Wrap(err, "failed to collect agents")
-	}
-
-	redactMode := redactSecrets
-	if l.Logger.GetLevel() >= logrus.DebugLevel {
-		redactMode = exposeSecrets
-	}
-
-	rdsExporters := make(map[*models.Node]*models.Agent)
-	agentProcesses := make(map[string]*agentpb.SetStateRequest_AgentProcess)
-	builtinAgents := make(map[string]*agentpb.SetStateRequest_BuiltinAgent)
-	for _, row := range agents {
-		if row.Disabled {
-			continue
-		}
-
-		// in order of AgentType consts
-		switch row.AgentType {
-		case models.PMMAgentType:
-			continue
-		case models.VMAgentType:
-			scrapeCfg, err := r.vmdb.BuildScrapeConfigForVMAgent(agent.id)
-			if err != nil {
-				return errors.Wrapf(err, "cannot get agent scrape config for agent: %s", agent.id)
-			}
-			agentProcesses[row.AgentID] = vmAgentConfig(string(scrapeCfg))
-
-		case models.NodeExporterType:
-			node, err := models.FindNodeByID(r.db.Querier, pointer.GetString(row.NodeID))
-			if err != nil {
-				return err
-			}
-			agentProcesses[row.AgentID] = nodeExporterConfig(node, row)
-
-		case models.RDSExporterType:
-			node, err := models.FindNodeByID(r.db.Querier, pointer.GetString(row.NodeID))
-			if err != nil {
-				return err
-			}
-			rdsExporters[node] = row
-		case models.ExternalExporterType:
-			// ignore
-
-		case models.AzureDatabaseExporterType:
-			service, err := models.FindServiceByID(r.db.Querier, pointer.GetString(row.ServiceID))
-			if err != nil {
-				return err
-			}
-			config, err := azureDatabaseExporterConfig(row, service, redactMode)
-			if err != nil {
-				return err
-			}
-			agentProcesses[row.AgentID] = config
-
-		// Agents with exactly one Service
-		case models.MySQLdExporterType, models.MongoDBExporterType, models.PostgresExporterType, models.ProxySQLExporterType,
-			models.QANMySQLPerfSchemaAgentType, models.QANMySQLSlowlogAgentType, models.QANMongoDBProfilerAgentType, models.QANPostgreSQLPgStatementsAgentType,
-			models.QANPostgreSQLPgStatMonitorAgentType:
-
-			service, err := models.FindServiceByID(r.db.Querier, pointer.GetString(row.ServiceID))
-			if err != nil {
-				return err
-			}
-
-			switch row.AgentType {
-			case models.MySQLdExporterType:
-				agentProcesses[row.AgentID] = mysqldExporterConfig(service, row, redactMode)
-			case models.MongoDBExporterType:
-				agentProcesses[row.AgentID] = mongodbExporterConfig(service, row, redactMode, pmmAgentVersion)
-			case models.PostgresExporterType:
-				agentProcesses[row.AgentID] = postgresExporterConfig(service, row, redactMode, pmmAgentVersion)
-			case models.ProxySQLExporterType:
-				agentProcesses[row.AgentID] = proxysqlExporterConfig(service, row, redactMode)
-			case models.QANMySQLPerfSchemaAgentType:
-				builtinAgents[row.AgentID] = qanMySQLPerfSchemaAgentConfig(service, row)
-			case models.QANMySQLSlowlogAgentType:
-				builtinAgents[row.AgentID] = qanMySQLSlowlogAgentConfig(service, row)
-			case models.QANMongoDBProfilerAgentType:
-				builtinAgents[row.AgentID] = qanMongoDBProfilerAgentConfig(service, row)
-			case models.QANPostgreSQLPgStatementsAgentType:
-				builtinAgents[row.AgentID] = qanPostgreSQLPgStatementsAgentConfig(service, row)
-			case models.QANPostgreSQLPgStatMonitorAgentType:
-				builtinAgents[row.AgentID] = qanPostgreSQLPgStatMonitorAgentConfig(service, row)
-			}
-
-		default:
-			return errors.Errorf("unhandled Agent type %s", row.AgentType)
-		}
-	}
-
-	if len(rdsExporters) > 0 {
-		rdsExporterIDs := make([]string, 0, len(rdsExporters))
-		for _, rdsExporter := range rdsExporters {
-			rdsExporterIDs = append(rdsExporterIDs, rdsExporter.AgentID)
-		}
-		sort.Strings(rdsExporterIDs)
-
-		groupID := r.roster.add(agent.id, rdsGroup, rdsExporterIDs)
-		c, err := rdsExporterConfig(rdsExporters, redactMode)
-		if err != nil {
-			return err
-		}
-		agentProcesses[groupID] = c
-	}
-	state := &agentpb.SetStateRequest{
-		AgentProcesses: agentProcesses,
-		BuiltinAgents:  builtinAgents,
-	}
-	l.Debugf("sendSetStateRequest:\n%s", proto.MarshalTextString(state))
-	resp, err := agent.channel.SendAndWaitResponse(state)
-	if err != nil {
-		return err
-	}
-	l.Infof("SetState response: %+v.", resp)
-	return nil
-}
-
 func (r *Registry) get(pmmAgentID string) (*pmmAgentInfo, error) {
 	r.rw.RLock()
 	pmmAgent := r.agents[pmmAgentID]
@@ -569,6 +385,10 @@ func (r *Registry) get(pmmAgentID string) (*pmmAgentInfo, error) {
 
 // Describe implements prometheus.Collector.
 func (r *Registry) Describe(ch chan<- *prom.Desc) {
+	r.mConnects.Describe(ch)
+	r.mDisconnects.Describe(ch)
+	r.mRoundTrip.Describe(ch)
+	r.mClockDrift.Describe(ch)
 	r.mAgents.Describe(ch)
 }
 
@@ -584,10 +404,13 @@ func (r *Registry) Collect(ch chan<- prom.Metric) {
 		ch <- prom.MustNewConstMetric(mResponsesDesc, prom.GaugeValue, m.Responses, agent.id)
 		ch <- prom.MustNewConstMetric(mRequestsDesc, prom.GaugeValue, m.Requests, agent.id)
 	}
-
 	r.rw.RUnlock()
 
 	r.mAgents.Collect(ch)
+	r.mConnects.Collect(ch)
+	r.mDisconnects.Collect(ch)
+	r.mRoundTrip.Collect(ch)
+	r.mClockDrift.Collect(ch)
 }
 
 // check interfaces

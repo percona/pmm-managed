@@ -37,12 +37,18 @@ const (
 type MySQLService struct {
 	db       *reform.DB
 	registry agentsRegistry
+	state    agentsStateUpdater
 	cc       connectionChecker
 }
 
 // NewMySQLService creates new MySQL Management Service.
-func NewMySQLService(db *reform.DB, registry agentsRegistry, cc connectionChecker) *MySQLService {
-	return &MySQLService{db, registry, cc}
+func NewMySQLService(db *reform.DB, registry agentsRegistry, state agentsStateUpdater, cc connectionChecker) *MySQLService {
+	return &MySQLService{
+		db:       db,
+		registry: registry,
+		state:    state,
+		cc:       cc,
+	}
 }
 
 // Add adds "MySQL Service", "MySQL Exporter Agent" and "QAN MySQL PerfSchema Agent".
@@ -177,6 +183,6 @@ func (s *MySQLService) Add(ctx context.Context, req *managementpb.AddMySQLReques
 		return nil, e
 	}
 
-	s.registry.RequestStateUpdate(ctx, req.PmmAgentId)
+	s.state.RequestStateUpdate(ctx, req.PmmAgentId)
 	return res, nil
 }

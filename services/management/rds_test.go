@@ -57,11 +57,14 @@ func TestRDSService(t *testing.T) {
 	r.Test(t)
 	cc := new(mockConnectionChecker)
 	cc.Test(t)
+	state := new(mockAgentsStateUpdater)
+	state.Test(t)
 	defer func() {
 		r.AssertExpectations(t)
 		cc.AssertExpectations(t)
+		state.AssertExpectations(t)
 	}()
-	s := NewRDSService(db, r, cc)
+	s := NewRDSService(db, r, state, cc)
 
 	t.Run("DiscoverRDS", func(t *testing.T) {
 		t.Run("ListRegions", func(t *testing.T) {
@@ -253,7 +256,7 @@ func TestRDSService(t *testing.T) {
 			TablestatsGroupTableLimit: 0,
 		}
 
-		r.On("RequestStateUpdate", ctx, "pmm-server")
+		state.On("RequestStateUpdate", ctx, "pmm-server")
 		resp, err := s.AddRDS(ctx, req)
 		require.NoError(t, err)
 
@@ -340,7 +343,7 @@ func TestRDSService(t *testing.T) {
 			TablestatsGroupTableLimit: 0,
 		}
 
-		r.On("RequestStateUpdate", ctx, "pmm-server")
+		state.On("RequestStateUpdate", ctx, "pmm-server")
 		resp, err := s.AddRDS(ctx, req)
 		require.NoError(t, err)
 

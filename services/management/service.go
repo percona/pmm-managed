@@ -42,14 +42,16 @@ var serviceTypes = map[inventorypb.ServiceType]models.ServiceType{
 type ServiceService struct {
 	db       *reform.DB
 	registry agentsRegistry
+	state    agentsStateUpdater
 	vmdb     prometheusService
 }
 
 // NewServiceService creates ServiceService instance.
-func NewServiceService(db *reform.DB, registry agentsRegistry, vmdb prometheusService) *ServiceService {
+func NewServiceService(db *reform.DB, registry agentsRegistry, state agentsStateUpdater, vmdb prometheusService) *ServiceService {
 	return &ServiceService{
 		db:       db,
 		registry: registry,
+		state:    state,
 		vmdb:     vmdb,
 	}
 }
@@ -106,7 +108,7 @@ func (s *ServiceService) RemoveService(ctx context.Context, req *managementpb.Re
 		return nil, e
 	}
 	for agentID := range pmmAgentIDs {
-		s.registry.RequestStateUpdate(ctx, agentID)
+		s.state.RequestStateUpdate(ctx, agentID)
 	}
 	if reloadPrometheusConfig {
 		// It's required to regenerate victoriametrics config file for the agents which aren't run by pmm-agent.

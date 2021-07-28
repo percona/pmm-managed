@@ -18,10 +18,18 @@ package agents
 
 import (
 	"context"
+	"time"
 
 	"github.com/percona/pmm/api/agentpb"
+	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/percona/pmm-managed/models"
+)
+
+var (
+	defaultActionTimeout      = durationpb.New(10 * time.Second)
+	defaultQueryActionTimeout = durationpb.New(15 * time.Second) // should be less than checks.resultTimeout
+	defaultPtActionTimeout    = durationpb.New(30 * time.Second) // Percona-toolkit action timeout
 )
 
 // ActionsService handles sending actions to pmm agents.

@@ -31,8 +31,3 @@ func (_m *mockAgentsRegistry) IsConnected(pmmAgentID string) bool {
 func (_m *mockAgentsRegistry) Kick(ctx context.Context, pmmAgentID string) {
 	_m.Called(ctx, pmmAgentID)
 }
-
-// RequestStateUpdate provides a mock function with given fields: ctx, pmmAgentID
-func (_m *mockAgentsRegistry) RequestStateUpdate(ctx context.Context, pmmAgentID string) {
-	_m.Called(ctx, pmmAgentID)
-}

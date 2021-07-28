@@ -34,12 +34,19 @@ type HAProxyService struct {
 	db       *reform.DB
 	registry agentsRegistry
 	vmdb     prometheusService
+	state    agentsStateUpdater
 	cc       connectionChecker
 }
 
 // NewHAProxyService creates new HAProxy Management Service.
-func NewHAProxyService(db *reform.DB, registry agentsRegistry, vmdb prometheusService, cc connectionChecker) *HAProxyService {
-	return &HAProxyService{db: db, registry: registry, vmdb: vmdb, cc: cc}
+func NewHAProxyService(db *reform.DB, registry agentsRegistry, vmdb prometheusService, state agentsStateUpdater, cc connectionChecker) *HAProxyService {
+	return &HAProxyService{
+		db:       db,
+		registry: registry,
+		vmdb:     vmdb,
+		state:    state,
+		cc:       cc,
+	}
 }
 
 func (e HAProxyService) AddHAProxy(ctx context.Context, req *managementpb.AddHAProxyRequest) (*managementpb.AddHAProxyResponse, error) {
@@ -121,7 +128,7 @@ func (e HAProxyService) AddHAProxy(ctx context.Context, req *managementpb.AddHAP
 	// we have to trigger after transaction
 	if pmmAgentID != nil {
 		// It's required to regenerate victoriametrics config file.
-		e.registry.RequestStateUpdate(ctx, *pmmAgentID)
+		e.state.RequestStateUpdate(ctx, *pmmAgentID)
 	} else {
 		e.vmdb.RequestConfigurationUpdate()
 	}

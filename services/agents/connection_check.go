@@ -36,10 +36,16 @@ import (
 	"github.com/percona/pmm-managed/utils/logger"
 )
 
+var (
+	checkExternalExporterConnectionPMMVersion = version.MustParse("1.14.99")
+)
+
+// ConnectionCheck checks if connection can be established to service.
 type ConnectionCheck struct {
 	r *Registry
 }
 
+// NewConnectionCheck creates new connection check.
 func NewConnectionCheck(r *Registry) *ConnectionCheck {
 	return &ConnectionCheck{
 		r: r,

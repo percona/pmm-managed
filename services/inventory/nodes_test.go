@@ -53,6 +53,9 @@ func TestNodes(t *testing.T) {
 		vmdb := new(mockPrometheusService)
 		vmdb.Test(t)
 
+		state := new(mockAgentsStateUpdater)
+		state.Test(t)
+
 		teardown = func(t *testing.T) {
 			uuid.SetRand(nil)
 
@@ -61,7 +64,7 @@ func TestNodes(t *testing.T) {
 			r.AssertExpectations(t)
 			vmdb.AssertExpectations(t)
 		}
-		ns = NewNodesService(db, r, vmdb)
+		ns = NewNodesService(db, r, state, vmdb)
 
 		return
 	}

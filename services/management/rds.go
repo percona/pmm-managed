@@ -52,14 +52,16 @@ const (
 type RDSService struct {
 	db       *reform.DB
 	registry agentsRegistry
+	state    agentsStateUpdater
 	cc       connectionChecker
 }
 
 // NewRDSService creates new instance discovery service.
-func NewRDSService(db *reform.DB, registry agentsRegistry, cc connectionChecker) *RDSService {
+func NewRDSService(db *reform.DB, registry agentsRegistry, state agentsStateUpdater, cc connectionChecker) *RDSService {
 	return &RDSService{
 		db:       db,
 		registry: registry,
+		state:    state,
 		cc:       cc,
 	}
 }
@@ -450,6 +452,6 @@ func (s *RDSService) AddRDS(ctx context.Context, req *managementpb.AddRDSRequest
 		return nil, e
 	}
 
-	s.registry.RequestStateUpdate(ctx, models.PMMServerAgentID)
+	s.state.RequestStateUpdate(ctx, models.PMMServerAgentID)
 	return res, nil
 }
