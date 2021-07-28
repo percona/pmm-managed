@@ -96,7 +96,7 @@ func TestPSMDBClusterService(t *testing.T) {
 	ctx, db, dbaasClient, grafanaClient, teardown := setup(t)
 	defer teardown(t)
 
-	ks := NewKubernetesServer(db, dbaasClient, NewVersionServiceClient(versionServiceURL))
+	ks := NewKubernetesServer(db, dbaasClient, grafanaClient, NewVersionServiceClient(versionServiceURL))
 	dbaasClient.On("CheckKubernetesClusterConnection", ctx, kubeconfTest).Return(&controllerv1beta1.CheckKubernetesClusterConnectionResponse{
 		Operators: &controllerv1beta1.Operators{
 			XtradbOperatorVersion: "",
