@@ -429,7 +429,7 @@ func (s *Server) readUpdateAuthToken() (string, error) {
 // convertSettings merges database settings and settings from environment variables into API response.
 func (s *Server) convertSettings(settings *models.Settings) *serverpb.Settings {
 	res := &serverpb.Settings{
-		UpdatesDisabled:  s.envSettings.DisableUpdates,
+		UpdatesDisabled:  !settings.Updates.Disabled,
 		TelemetryEnabled: !settings.Telemetry.Disabled,
 		MetricsResolutions: &serverpb.MetricsResolutions{
 			Hr: durationpb.New(settings.MetricsResolutions.HR),
@@ -521,6 +521,11 @@ func (s *Server) validateChangeSettingsRequest(ctx context.Context, req *serverp
 	}
 
 	// check request parameters compatibility with environment variables
+
+	// cannot disable updates when telemetry is enabled.
+	if req.DisableUpdates && s.envSettings.EnableTelemetry {
+		return status.Error(codes.FailedPrecondition, "Updates cannot be disabled because Telemetry is enabled via ENABLE_TELEMETRY environment variable.")
+	}
 
 	// ignore req.DisableTelemetry and req.DisableStt even if they are present since that will not change anything
 	if req.EnableTelemetry && s.envSettings.DisableTelemetry {

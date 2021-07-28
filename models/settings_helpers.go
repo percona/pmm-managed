@@ -48,8 +48,8 @@ func GetSettings(q reform.DBTX) (*Settings, error) {
 
 // ChangeSettingsParams contains values to change data in settings table.
 type ChangeSettingsParams struct {
-	// We don't save it to db
 	DisableUpdates bool
+	EnableUpdates  bool
 
 	DisableTelemetry bool
 	EnableTelemetry  bool
@@ -140,6 +140,12 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 		return nil, err
 	}
 
+	if params.DisableUpdates {
+		settings.Updates.Disabled = true
+	}
+	if params.EnableUpdates {
+		settings.Updates.Disabled = false
+	}
 	if params.DisableTelemetry {
 		settings.Telemetry.Disabled = true
 		settings.Telemetry.UUID = ""
@@ -422,9 +428,14 @@ func validateSettingsConflicts(params *ChangeSettingsParams, settings *Settings)
 	if params.DisableTelemetry && !params.DisableSTT && settings.SaaS.STTEnabled {
 		return fmt.Errorf("Cannot disable telemetry while STT is enabled.") //nolint:golint,stylecheck
 	}
-
 	if params.LogOut && (params.Email != "" || params.SessionID != "") {
-		return fmt.Errorf("Cannot loguot while updating Percona Platform user data.") //nolint:golint,stylecheck
+		return fmt.Errorf("Cannot logout while updating Percona Platform user data.") //nolint:golint,stylecheck
+	}
+	if params.DisableUpdates && !params.DisableTelemetry && !settings.Telemetry.Disabled {
+		return fmt.Errorf("Cannot disable updates while telemetry is enabled.") //nolint:golint,stylecheck
+	}
+	if params.DisableUpdates && params.EnableTelemetry {
+		return fmt.Errorf("Cannot disable updates while enabling telemetry.") //nolint:golint,stylecheck
 	}
 
 	return nil
