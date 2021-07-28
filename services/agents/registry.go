@@ -19,7 +19,6 @@ package agents
 
 import (
 	"context"
-	"github.com/golang/protobuf/ptypes"
 	"sync"
 	"time"
 
@@ -278,10 +277,7 @@ func (r *Registry) ping(ctx context.Context, agent *pmmAgentInfo) error {
 		return nil
 	}
 	roundtrip := time.Since(start)
-	agentTime, err := ptypes.Timestamp(resp.(*agentpb.Pong).CurrentTime)
-	if err != nil {
-		return errors.Wrap(err, "failed to decode Pong.current_time")
-	}
+	agentTime := resp.(*agentpb.Pong).CurrentTime.AsTime()
 	clockDrift := agentTime.Sub(start) - roundtrip/2
 	if clockDrift < 0 {
 		clockDrift = -clockDrift

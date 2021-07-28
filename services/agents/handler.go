@@ -22,12 +22,12 @@ import (
 	"time"
 
 	"github.com/AlekSi/pointer"
-	"github.com/golang/protobuf/ptypes"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/api/inventorypb"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"gopkg.in/reform.v1"
 
 	"github.com/percona/pmm-managed/models"
@@ -107,7 +107,7 @@ func (h *Handler) Run(stream agentpb.Agent_ConnectServer) error {
 				agent.channel.Send(&channel.ServerResponse{
 					ID: req.ID,
 					Payload: &agentpb.Pong{
-						CurrentTime: ptypes.TimestampNow(),
+						CurrentTime: timestamppb.Now(),
 					},
 				})
 
