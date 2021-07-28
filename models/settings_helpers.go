@@ -431,12 +431,6 @@ func validateSettingsConflicts(params *ChangeSettingsParams, settings *Settings)
 	if params.LogOut && (params.Email != "" || params.SessionID != "") {
 		return fmt.Errorf("Cannot logout while updating Percona Platform user data.") //nolint:golint,stylecheck
 	}
-	if params.DisableUpdates && !params.DisableTelemetry && !settings.Telemetry.Disabled {
-		return fmt.Errorf("Cannot disable updates while telemetry is enabled.") //nolint:golint,stylecheck
-	}
-	if params.DisableUpdates && params.EnableTelemetry {
-		return fmt.Errorf("Cannot disable updates while enabling telemetry.") //nolint:golint,stylecheck
-	}
 
 	return nil
 }
