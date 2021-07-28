@@ -299,6 +299,9 @@ func UpdateSettings(q reform.DBTX, params *ChangeSettingsParams) (*Settings, err
 
 // ValidateSettings validates settings changes.
 func ValidateSettings(params *ChangeSettingsParams) error {
+	if params.EnableUpdates && params.DisableUpdates {
+		return fmt.Errorf("Both enable_updates and disable_updates are present.") //nolint:golint,stylecheck
+	}
 	if params.EnableTelemetry && params.DisableTelemetry {
 		return fmt.Errorf("Both enable_telemetry and disable_telemetry are present.") //nolint:golint,stylecheck
 	}
