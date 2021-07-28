@@ -203,6 +203,9 @@ func (c componentsService) getInstalledOperatorsVersion(ctx context.Context, wg 
 	resp, err := c.dbaasClient.CheckKubernetesClusterConnection(ctx, kuberentesCluster.KubeConfig)
 	if err != nil {
 		c.l.Errorf("failed to check kubernetes cluster connection: %v", err)
+		responseCh <- installedComponentsVersion{
+			kuberentesClusterName: kuberentesCluster.KubernetesClusterName,
+		}
 		return
 	}
 	responseCh <- installedComponentsVersion{
