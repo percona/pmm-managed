@@ -191,7 +191,6 @@ func TestServiceService(t *testing.T) {
 			require.NoError(t, err)
 
 			s.state.(*mockAgentsStateUpdater).On("RequestStateUpdate", ctx, pmmAgent.AgentID)
-			s.vmdb.(*mockPrometheusService).On("RequestConfigurationUpdate")
 			_, err = s.RemoveService(ctx, &managementpb.RemoveServiceRequest{ServiceName: service.ServiceName, ServiceType: inventorypb.ServiceType_MYSQL_SERVICE})
 			assert.NoError(t, err)
 
