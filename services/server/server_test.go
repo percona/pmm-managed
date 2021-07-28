@@ -189,8 +189,13 @@ func TestServer(t *testing.T) {
 		}))
 
 		s.envSettings.EnableUpdates = true
-
 		expected = status.New(codes.FailedPrecondition, "Updates are enabled via ENABLE_UPDATES environment variable.")
+		tests.AssertGRPCError(t, expected, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
+			DisableUpdates: true,
+		}))
+		s.envSettings.EnableUpdates = false
+		s.envSettings.EnableTelemetry = true
+		expected = status.New(codes.FailedPrecondition, "Updates cannot be disabled because telemetry is enabled via ENABLE_TELEMETRY environment variable.")
 		tests.AssertGRPCError(t, expected, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
 			DisableUpdates: true,
 		}))
@@ -199,7 +204,6 @@ func TestServer(t *testing.T) {
 		}))
 
 		s.envSettings.DisableTelemetry = true
-
 		expected = status.New(codes.FailedPrecondition, "Telemetry is disabled via DISABLE_TELEMETRY environment variable.")
 		tests.AssertGRPCError(t, expected, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
 			EnableTelemetry: true,
