@@ -522,9 +522,6 @@ func (s *Server) validateChangeSettingsRequest(ctx context.Context, req *serverp
 
 	// check request parameters compatibility with environment variables
 
-	if req.DisableUpdates && !s.envSettings.DisableUpdates {
-		return status.Error(codes.FailedPrecondition, "Updates are enabled via DISABLE_UPDATES environment variable.")
-	}
 	if req.EnableUpdates && s.envSettings.DisableUpdates {
 		return status.Error(codes.FailedPrecondition, "Updates are disabled via DISABLE_UPDATES environment variable.")
 	}
