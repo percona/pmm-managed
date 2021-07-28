@@ -188,22 +188,24 @@ func TestServer(t *testing.T) {
 			RemoveAlertManagerRules: true,
 		}))
 
-		s.envSettings.DisableTelemetry = true
+		s.envSettings.EnableTelemetry = true
 
 		expected = status.New(codes.FailedPrecondition, "Updates cannot be disabled because Telemetry is enabled via ENABLE_TELEMETRY environment variable.")
-		tests.AssertGRPCError(t, expected, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
-			EnableTelemetry: true,
-		}))
-		assert.NoError(t, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
-			DisableTelemetry: true,
-		}))
-
-		expected = status.New(codes.FailedPrecondition, "Telemetry is disabled via DISABLE_TELEMETRY environment variable.")
 		tests.AssertGRPCError(t, expected, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
 			EnableUpdates: true,
 		}))
 		assert.NoError(t, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
 			DisableUpdates: true,
+		}))
+
+		s.envSettings.DisableTelemetry = true
+
+		expected = status.New(codes.FailedPrecondition, "Telemetry is disabled via DISABLE_TELEMETRY environment variable.")
+		tests.AssertGRPCError(t, expected, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
+			EnableTelemetry: true,
+		}))
+		assert.NoError(t, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
+			DisableTelemetry: true,
 		}))
 
 		expected = status.New(codes.FailedPrecondition, "STT cannot be enabled because telemetry is disabled via DISABLE_TELEMETRY environment variable.")
