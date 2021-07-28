@@ -188,18 +188,13 @@ func TestServer(t *testing.T) {
 			RemoveAlertManagerRules: true,
 		}))
 
-		expected = status.New(codes.FailedPrecondition, "Updates are enabled via DISABLE_UPDATES environment variable.")
-		tests.AssertGRPCError(t, expected, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
-			DisableUpdates: true,
-		}))
 		s.envSettings.DisableUpdates = true
 		expected = status.New(codes.FailedPrecondition, "Updates are disabled via DISABLE_UPDATES environment variable.")
 		tests.AssertGRPCError(t, expected, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
 			EnableUpdates: true,
 		}))
-		s.envSettings.DisableUpdates = false
 		assert.NoError(t, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
-			EnableUpdates: true,
+			DisableUpdates: true,
 		}))
 
 		s.envSettings.DisableTelemetry = true
