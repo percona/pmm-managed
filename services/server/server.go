@@ -586,6 +586,8 @@ func (s *Server) ChangeSettings(ctx context.Context, req *serverpb.ChangeSetting
 		metricsRes := req.MetricsResolutions
 		sttCheckIntervals := req.SttCheckIntervals
 		settingsParams := &models.ChangeSettingsParams{
+			DisableUpdates:   req.DisableUpdates,
+			EnableUpdates:    req.EnableUpdates,
 			DisableTelemetry: req.DisableTelemetry,
 			EnableTelemetry:  req.EnableTelemetry,
 			STTCheckIntervals: models.STTCheckIntervals{
