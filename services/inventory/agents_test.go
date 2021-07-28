@@ -17,12 +17,10 @@
 package inventory
 
 import (
-	"context"
 	"reflect"
 	"testing"
 
 	"github.com/AlekSi/pointer"
-	"github.com/google/uuid"
 	"github.com/percona/pmm/api/inventorypb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -30,58 +28,17 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gopkg.in/reform.v1"
-	"gopkg.in/reform.v1/dialects/postgresql"
 
 	"github.com/percona/pmm-managed/models"
-	"github.com/percona/pmm-managed/utils/logger"
-	"github.com/percona/pmm-managed/utils/testdb"
 	"github.com/percona/pmm-managed/utils/tests"
 )
 
 func TestAgents(t *testing.T) {
-	var ctx context.Context
-
-	setup := func(t *testing.T) (ns *NodesService, ss *ServicesService, as *AgentsService, teardown func(t *testing.T)) {
-		t.Helper()
-
-		ctx = logger.Set(context.Background(), t.Name())
-		uuid.SetRand(new(tests.IDReader))
-
-		sqlDB := testdb.Open(t, models.SetupFixtures, nil)
-		db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(t.Logf))
-
-		r := new(mockAgentsRegistry)
-		r.Test(t)
-
-		vmdb := new(mockPrometheusService)
-		vmdb.Test(t)
-
-		cc := new(mockConnectionChecker)
-		cc.Test(t)
-
-		state := new(mockAgentsStateUpdater)
-		state.Test(t)
-
-		teardown = func(t *testing.T) {
-			uuid.SetRand(nil)
-
-			r.AssertExpectations(t)
-			vmdb.AssertExpectations(t)
-			cc.AssertExpectations(t)
-			state.AssertExpectations(t)
-			require.NoError(t, sqlDB.Close())
-		}
-		ns = NewNodesService(db, r, state, vmdb)
-		ss = NewServicesService(db, r, state, vmdb)
-		as = NewAgentsService(db, r, state, vmdb, cc)
-
-		return
-	}
 
 	t.Run("Basic", func(t *testing.T) {
 		// FIXME split this test into several smaller
 
-		_, ss, as, teardown := setup(t)
+		ss, as, _, teardown, ctx := setup(t)
 		defer teardown(t)
 
 		as.r.(*mockAgentsRegistry).On("IsConnected", models.PMMServerAgentID).Return(true)
@@ -328,7 +285,7 @@ func TestAgents(t *testing.T) {
 	})
 
 	t.Run("GetEmptyID", func(t *testing.T) {
-		_, _, as, teardown := setup(t)
+		_, as, _, teardown, ctx := setup(t)
 		defer teardown(t)
 
 		actualNode, err := as.Get(ctx, "")
@@ -337,7 +294,7 @@ func TestAgents(t *testing.T) {
 	})
 
 	t.Run("AddPMMAgent", func(t *testing.T) {
-		_, _, as, teardown := setup(t)
+		_, as, _, teardown, ctx := setup(t)
 		defer teardown(t)
 
 		as.r.(*mockAgentsRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000005").Return(false)
@@ -366,7 +323,7 @@ func TestAgents(t *testing.T) {
 	})
 
 	t.Run("AddPmmAgentNotFound", func(t *testing.T) {
-		_, _, as, teardown := setup(t)
+		_, as, _, teardown, ctx := setup(t)
 		defer teardown(t)
 
 		_, err := as.AddNodeExporter(ctx, &inventorypb.AddNodeExporterRequest{
@@ -376,7 +333,7 @@ func TestAgents(t *testing.T) {
 	})
 
 	t.Run("AddRDSExporter", func(t *testing.T) {
-		ns, _, as, teardown := setup(t)
+		_, as, ns, teardown, ctx := setup(t)
 		defer teardown(t)
 
 		node, err := ns.AddRemoteRDSNode(ctx, &inventorypb.AddRemoteRDSNodeRequest{
@@ -404,8 +361,8 @@ func TestAgents(t *testing.T) {
 		agent, err := as.AddRDSExporter(ctx, &inventorypb.AddRDSExporterRequest{
 			PmmAgentId:   "pmm-server",
 			NodeId:       node.NodeId,
-			AwsAccessKey: "AKIAIOSFODNN7EXAMPLE",
-			AwsSecretKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+			AwsAccessKey: "EXAMPLE_ACCESS_KEY",
+			AwsSecretKey: "EXAMPLE_SECRET_KEY",
 			CustomLabels: map[string]string{"baz": "qux"},
 		})
 		require.NoError(t, err)
@@ -413,7 +370,7 @@ func TestAgents(t *testing.T) {
 			AgentId:      "/agent_id/00000000-0000-4000-8000-000000000006",
 			PmmAgentId:   "pmm-server",
 			NodeId:       "/node_id/00000000-0000-4000-8000-000000000005",
-			AwsAccessKey: "AKIAIOSFODNN7EXAMPLE",
+			AwsAccessKey: "EXAMPLE_ACCESS_KEY",
 			CustomLabels: map[string]string{"baz": "qux"},
 			Status:       inventorypb.AgentStatus_UNKNOWN,
 		}
@@ -421,7 +378,7 @@ func TestAgents(t *testing.T) {
 	})
 
 	t.Run("AddExternalExporter", func(t *testing.T) {
-		_, ss, as, teardown := setup(t)
+		ss, as, _, teardown, ctx := setup(t)
 		defer teardown(t)
 
 		as.vmdb.(*mockPrometheusService).On("RequestConfigurationUpdate").Return()
@@ -458,7 +415,7 @@ func TestAgents(t *testing.T) {
 	})
 
 	t.Run("AddServiceNotFound", func(t *testing.T) {
-		_, _, as, teardown := setup(t)
+		_, as, _, teardown, ctx := setup(t)
 		defer teardown(t)
 
 		as.r.(*mockAgentsRegistry).On("IsConnected", "/agent_id/00000000-0000-4000-8000-000000000005").Return(true)
@@ -475,14 +432,14 @@ func TestAgents(t *testing.T) {
 	})
 
 	t.Run("RemoveNotFound", func(t *testing.T) {
-		_, _, as, teardown := setup(t)
+		_, as, _, teardown, ctx := setup(t)
 		defer teardown(t)
 
 		err := as.Remove(ctx, "no-such-id", false)
 		tests.AssertGRPCError(t, status.New(codes.NotFound, `Agent with ID "no-such-id" not found.`), err)
 	})
 	t.Run("PushMetricsMongodbExporter", func(t *testing.T) {
-		_, ss, as, teardown := setup(t)
+		ss, as, _, teardown, ctx := setup(t)
 		defer teardown(t)
 
 		as.r.(*mockAgentsRegistry).On("IsConnected", models.PMMServerAgentID).Return(true)
@@ -533,7 +490,7 @@ func TestAgents(t *testing.T) {
 		assert.Equal(t, expectedMongoDBExporter, actualAgent)
 	})
 	t.Run("PushMetricsNodeExporter", func(t *testing.T) {
-		_, _, as, teardown := setup(t)
+		_, as, _, teardown, ctx := setup(t)
 		defer teardown(t)
 
 		as.r.(*mockAgentsRegistry).On("IsConnected", models.PMMServerAgentID).Return(true)
@@ -569,7 +526,7 @@ func TestAgents(t *testing.T) {
 		assert.Equal(t, expectedNodeExporter, actualNodeExporter)
 	})
 	t.Run("PushMetricsPostgresSQLExporter", func(t *testing.T) {
-		_, ss, as, teardown := setup(t)
+		ss, as, _, teardown, ctx := setup(t)
 		defer teardown(t)
 
 		as.r.(*mockAgentsRegistry).On("IsConnected", models.PMMServerAgentID).Return(true)
@@ -621,7 +578,7 @@ func TestAgents(t *testing.T) {
 		assert.Equal(t, expectedPostgresExporter, actualAgent)
 	})
 	t.Run("PushMetricsMySQLExporter", func(t *testing.T) {
-		_, ss, as, teardown := setup(t)
+		ss, as, _, teardown, ctx := setup(t)
 		defer teardown(t)
 
 		as.r.(*mockAgentsRegistry).On("IsConnected", models.PMMServerAgentID).Return(true)
@@ -673,7 +630,7 @@ func TestAgents(t *testing.T) {
 		assert.Equal(t, expectedMySQLdExporter, actualAgent)
 	})
 	t.Run("PushMetricsRdsExporter", func(t *testing.T) {
-		ns, _, as, teardown := setup(t)
+		_, as, ns, teardown, ctx := setup(t)
 		defer teardown(t)
 
 		node, err := ns.AddRemoteRDSNode(ctx, &inventorypb.AddRemoteRDSNodeRequest{
@@ -701,8 +658,8 @@ func TestAgents(t *testing.T) {
 		agent, err := as.AddRDSExporter(ctx, &inventorypb.AddRDSExporterRequest{
 			PmmAgentId:   "pmm-server",
 			NodeId:       node.NodeId,
-			AwsAccessKey: "AKIAIOSFODNN7EXAMPLE",
-			AwsSecretKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+			AwsAccessKey: "EXAMPLE_ACCESS_KEY",
+			AwsSecretKey: "EXAMPLE_SECRET_KEY",
 			CustomLabels: map[string]string{"baz": "qux"},
 			PushMetrics:  true,
 		})
@@ -711,7 +668,7 @@ func TestAgents(t *testing.T) {
 			AgentId:            "/agent_id/00000000-0000-4000-8000-000000000006",
 			PmmAgentId:         "pmm-server",
 			NodeId:             "/node_id/00000000-0000-4000-8000-000000000005",
-			AwsAccessKey:       "AKIAIOSFODNN7EXAMPLE",
+			AwsAccessKey:       "EXAMPLE_ACCESS_KEY",
 			CustomLabels:       map[string]string{"baz": "qux"},
 			PushMetricsEnabled: true,
 			Status:             inventorypb.AgentStatus_UNKNOWN,
@@ -719,7 +676,7 @@ func TestAgents(t *testing.T) {
 		assert.Equal(t, expectedAgent, agent)
 	})
 	t.Run("PushMetricsExternalExporter", func(t *testing.T) {
-		_, ss, as, teardown := setup(t)
+		ss, as, _, teardown, ctx := setup(t)
 		defer teardown(t)
 		as.state.(*mockAgentsStateUpdater).On("RequestStateUpdate", ctx, "pmm-server")
 

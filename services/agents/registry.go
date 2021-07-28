@@ -19,12 +19,11 @@ package agents
 
 import (
 	"context"
+	"github.com/golang/protobuf/ptypes"
 	"sync"
 	"time"
 
 	"github.com/AlekSi/pointer"
-	//nolint:staticcheck
-	"github.com/golang/protobuf/ptypes"
 	"github.com/percona/pmm/api/agentpb"
 	"github.com/percona/pmm/version"
 	"github.com/pkg/errors"
