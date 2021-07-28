@@ -2,6 +2,7 @@ package inventory
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
 	"github.com/AlekSi/pointer"
@@ -203,18 +204,19 @@ func TestAgents(t *testing.T) {
 		}).Mysql.ServiceID
 		defer pmmapitests.RemoveServices(t, serviceID)
 
-		tt := pmmapitests.ExpectFailure(t, "https://jira.percona.com/browse/PMM-5016")
-		defer tt.Check()
-		agent := addMongoDBExporter(tt, agents.AddMongoDBExporterBody{
-			ServiceID:           serviceID,
-			Username:            "username",
-			Password:            "password",
-			PMMAgentID:          pmmAgentID,
-			SkipConnectionCheck: true,
+		_, err := client.Default.Agents.AddMongoDBExporter(&agents.AddMongoDBExporterParams{
+			Body: agents.AddMongoDBExporterBody{
+				ServiceID:           serviceID,
+				Username:            "username",
+				Password:            "password",
+				PMMAgentID:          pmmAgentID,
+				SkipConnectionCheck: true,
+			},
+			Context: pmmapitests.Context,
 		})
-		if !assert.Nil(tt, agent) {
-			pmmapitests.RemoveAgents(tt, agent.MongodbExporter.AgentID)
-		}
+
+		pmmapitests.AssertAPIErrorf(t, err, http.StatusBadRequest, codes.FailedPrecondition, "invalid combination of service type mysql and agent type mongodb_exporter")
+
 	})
 }
 
