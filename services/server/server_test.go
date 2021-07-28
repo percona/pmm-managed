@@ -188,7 +188,7 @@ func TestServer(t *testing.T) {
 			RemoveAlertManagerRules: true,
 		}))
 
-		s.envSettings.EnableTelemetry = true
+		s.envSettings.EnableUpdates = true
 
 		expected = status.New(codes.FailedPrecondition, "Updates cannot be disabled because Telemetry is enabled via ENABLE_TELEMETRY environment variable.")
 		tests.AssertGRPCError(t, expected, s.validateChangeSettingsRequest(ctx, &serverpb.ChangeSettingsRequest{
